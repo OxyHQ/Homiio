@@ -10,26 +10,20 @@
  * Buttons are Bloom `Button`s so they inherit the brand styling.
  */
 import React, { useCallback, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { useTranslation } from 'react-i18next';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { useMediaQuery } from 'react-responsive';
 
 import { Button } from '@oxy.so/bloom/button';
+import { Card } from '@oxy.so/bloom/card';
+import { RiCheckLine, RiFileCopyLine, RiLink, RiShare2Line } from '@oxy.so/bloom/icons';
+import { useTheme } from '@oxy.so/bloom/theme';
+import { toast } from '@oxy.so/bloom/toast';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 
-import { toast } from '@oxy.so/bloom/toast';
 import { shareReferralLink } from '@/utils/shareReferral';
-import { colors } from '@/styles/colors';
-import {
-  hairline,
-  ICON_SIZES,
-  radius,
-  resolvePagePadding,
-  spacing,
-  tracker,
-} from '@/constants/styles';
-import { useMediaQuery } from 'react-responsive';
+import { resolvePagePadding } from '@/constants/styles';
 
 interface ReferralLinkCardProps {
   link: string;
@@ -37,6 +31,7 @@ interface ReferralLinkCardProps {
 
 export const ReferralLinkCard: React.FC<ReferralLinkCardProps> = ({ link }) => {
   const { t } = useTranslation();
+  const theme = useTheme();
   const isWide = useMediaQuery({ minWidth: 768 });
   const horizontalPadding = resolvePagePadding(isWide);
   const [copied, setCopied] = useState(false);
@@ -68,91 +63,53 @@ export const ReferralLinkCard: React.FC<ReferralLinkCardProps> = ({ link }) => {
 
   return (
     <View style={{ paddingHorizontal: horizontalPadding }}>
-      <View style={styles.card}>
-        <BloomText style={styles.label}>
+      <Card
+        variant="outlined"
+        radius="radius-24"
+        className="w-full max-w-[720px] self-center gap-4 p-6"
+      >
+        <BloomText
+          variant="caption-1-semibold"
+          style={{ color: theme.colors.textSecondary, textTransform: 'uppercase' }}
+        >
           {t('agent.referral.title')}
         </BloomText>
 
-        <View style={styles.linkRow}>
-          <Ionicons
-            name="link-outline"
-            size={ICON_SIZES.md}
-            color={colors.COLOR_BLACK_LIGHT_3}
-          />
-          <BloomText style={styles.linkText} numberOfLines={1} ellipsizeMode="middle">
+        <Card variant="filled" radius="radius-12" className="flex-row items-center gap-2 px-4 py-3">
+          <RiLink width={20} height={20} fill={theme.colors.icon} />
+          <BloomText
+            variant="body-medium"
+            style={{ flex: 1, minWidth: 0, color: theme.colors.text }}
+            numberOfLines={1}
+            ellipsizeMode="middle"
+          >
             {link}
           </BloomText>
-        </View>
+        </Card>
 
-        <View style={styles.actions}>
+        <View className="flex-row flex-wrap gap-3">
           <Button
             variant="primary"
             size="medium"
+            leadingIcon={copied ? RiCheckLine : RiFileCopyLine}
             onPress={handleCopy}
-            style={styles.action}
+            style={{ flexGrow: 1, flexBasis: 140 }}
           >
-            {copied
-              ? t('agent.referral.copiedShort')
-              : t('agent.referral.copy')}
+            {copied ? t('agent.referral.copiedShort') : t('agent.referral.copy')}
           </Button>
           <Button
             variant="secondary"
             size="medium"
+            leadingIcon={RiShare2Line}
             onPress={handleShare}
-            style={styles.action}
+            style={{ flexGrow: 1, flexBasis: 140 }}
           >
             {t('agent.referral.share')}
           </Button>
         </View>
-      </View>
+      </Card>
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  card: {
-    width: '100%',
-    maxWidth: 720,
-    alignSelf: 'center',
-    backgroundColor: colors.surfaceElevated,
-    borderRadius: radius.xl,
-    borderWidth: hairline.width,
-    borderColor: colors.border,
-    padding: spacing['2xl'],
-    gap: spacing.lg,
-  },
-  label: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: colors.COLOR_BLACK_LIGHT_3,
-    textTransform: 'uppercase',
-    letterSpacing: tracker.eyebrow,
-  },
-  linkRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.mutedSubtle,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-  },
-  linkText: {
-    flex: 1,
-    minWidth: 0,
-    fontSize: 15,
-    color: colors.COLOR_BLACK,
-    fontWeight: '500',
-  },
-  actions: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.md,
-  },
-  action: {
-    flexGrow: 1,
-    flexBasis: 140,
-  },
-});
 
 export default ReferralLinkCard;

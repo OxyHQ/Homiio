@@ -5,10 +5,11 @@
  * lives under different routes; the parent supplies `href`).
  */
 import React, { useMemo } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
+import { useTheme } from '@oxy.so/bloom/theme';
 import { Avatar } from '@oxy.so/bloom/avatar';
 import { TenantApplication, formatMoney } from '@homiio/shared-types';
 import { ApplicationStatusBadge } from '@/components/ApplicationStatusBadge';
@@ -18,7 +19,6 @@ import { useProperty } from '@/hooks';
 import { getPropertyImageSource, getPropertyTitle } from '@/utils/propertyUtils';
 import { useFormatting } from '@/utils/format';
 import { formatLocalized } from '@/utils/dateLocale';
-import { colors } from '@/styles/colors';
 import { spacing } from '@/constants/styles';
 
 export interface ApplicationCardProps {
@@ -49,6 +49,9 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
   const { t } = useTranslation();
   const { locale } = useFormatting();
   const router = useRouter();
+  const theme = useTheme();
+  const secondary = { color: theme.colors.textSecondary };
+  const tertiary = { color: theme.colors.textTertiary };
   const { property } = useProperty(application.propertyId);
 
   const propertyTitle = useMemo(() => {
@@ -80,13 +83,15 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
   };
 
   return (
-    <Card variant="outlined" radius="radius-16" style={styles.card}>
-      <Pressable
-        style={styles.row}
-        onPress={handlePress}
-        accessibilityRole="button"
-        accessibilityLabel={t('applications.card.accessibility', { id: application.id })}
-      >
+    <Card
+      variant="outlined"
+      radius="radius-16"
+      style={styles.card}
+      onPress={handlePress}
+      accessibilityRole="button"
+      accessibilityLabel={t('applications.card.accessibility', { id: application.id })}
+    >
+      <View style={styles.row}>
         <View style={styles.thumb}><ThumbnailImage source={imageSource} /></View>
         <View style={styles.body}>
           <View style={styles.headerRow}>
@@ -104,11 +109,11 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
                   source={applicantAvatarFileId ?? null}
                   variant="thumb"
                 />
-                <BloomText style={styles.subtitle} numberOfLines={1}>
+                <BloomText style={[styles.subtitle, secondary]} numberOfLines={1}>
                   {propertyTitle}
                 </BloomText>
               </View>
-              <BloomText style={styles.meta} numberOfLines={1}>
+              <BloomText style={[styles.meta, tertiary]} numberOfLines={1}>
                 {formatMoney(application.monthlyIncome, APPLICATION_INCOME_CURRENCY, locale)}
                 {t('applications.card.perMonth')} ·{' '}
                 {t(`profile.edit.options.employmentStatus.${application.employmentStatus}`)} ·{' '}
@@ -117,17 +122,17 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
             </>
           ) : (
             <>
-              <BloomText style={styles.subtitle} numberOfLines={1}>
+              <BloomText style={[styles.subtitle, secondary]} numberOfLines={1}>
                 {t('applications.card.monthLease', { count: application.leaseTermMonths })} ·{' '}
                 {t('applications.card.moveIn')} {moveInLabel}
               </BloomText>
-              <BloomText style={styles.meta} numberOfLines={1}>
+              <BloomText style={[styles.meta, tertiary]} numberOfLines={1}>
                 {t('applications.card.submitted', { date: submittedLabel })}
               </BloomText>
             </>
           )}
         </View>
-      </Pressable>
+      </View>
     </Card>
   );
 };
@@ -138,6 +143,7 @@ const THUMBNAIL_SIZE = 96;
 const styles = StyleSheet.create({
   card: {
     marginBottom: spacing.md,
+    overflow: 'hidden',
   },
   row: {
     flexDirection: 'row',
@@ -169,12 +175,10 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 13,
-    color: colors.COLOR_BLACK_LIGHT_3,
     flex: 1,
   },
   meta: {
     fontSize: 12,
-    color: colors.COLOR_BLACK_LIGHT_4,
   },
 });
 

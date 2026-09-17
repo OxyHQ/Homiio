@@ -4,7 +4,7 @@
  * Stream Q polish:
  *   - Bloom Button for modify/cancel, Bloom Chip filter row, Bloom Skeleton
  *     while loading, Bloom Typography throughout.
- *   - Flat cards with radius.lg + hairline borders.
+ *   - Bloom outlined Card per viewing, status as a Chip data hue.
  *   - Shared EmptyState / ErrorState components.
  *   - Confirm cancel via Bloom `confirm()`.
  */
@@ -17,9 +17,9 @@ import { deviceTimeZone, formatDate } from '@homiio/shared-types';
 import { useFormatting } from '@/utils/format';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@oxy.so/bloom/toast';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { Button } from '@oxy.so/bloom/button';
-import { Chip } from '@oxy.so/bloom/chip';
+import { Card } from '@oxy.so/bloom/card';
+import { Chip, type ChipHue } from '@oxy.so/bloom/chip';
 import * as Skeleton from '@oxy.so/bloom/skeleton';
 import { Text as BloomText, H2, H3 } from '@oxy.so/bloom/typography';
 import { useOxy, openAccountDialog } from '@oxy.so/services';
@@ -30,52 +30,25 @@ import { ErrorState } from '@/components/ui/ErrorState';
 import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
 import { viewingService, ViewingRequest } from '@/services/viewingService';
 import { ApiError } from '@/utils/api';
-import { radius, spacing } from '@/constants/styles';
+import { spacing } from '@/constants/styles';
 import { colors } from '@/styles/colors';
 
-type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 type ViewingStatus = 'pending' | 'approved' | 'declined' | 'cancelled';
 
-interface StatusToken {
-  bg: string;
-  fg: string;
-  label: string;
-  icon: IoniconName;
-}
-
-const STATUS_TOKENS: Record<ViewingStatus, StatusToken> = {
-  pending: {
-    bg: colors.warningSubtle,
-    fg: colors.warning,
-    label: 'Pending',
-    icon: 'time-outline',
-  },
-  approved: {
-    bg: colors.successSubtle,
-    fg: colors.success,
-    label: 'Approved',
-    icon: 'checkmark-circle-outline',
-  },
-  declined: {
-    bg: colors.dangerSubtle,
-    fg: colors.danger,
-    label: 'Declined',
-    icon: 'close-circle-outline',
-  },
-  cancelled: {
-    bg: colors.mutedSubtle,
-    fg: colors.muted,
-    label: 'Cancelled',
-    icon: 'remove-circle-outline',
-  },
+/** Viewing status → Bloom Chip data hue + i18n label key. */
+const STATUS_TOKENS: Record<ViewingStatus, { hue: ChipHue; i18nKey: string }> = {
+  pending: { hue: 'yellow', i18nKey: 'viewings.status.pending' },
+  approved: { hue: 'lime', i18nKey: 'viewings.status.approved' },
+  declined: { hue: 'rose', i18nKey: 'viewings.status.declined' },
+  cancelled: { hue: 'neutral', i18nKey: 'viewings.status.cancelled' },
 };
 
-const FILTERS: { id: 'all' | ViewingStatus; label: string }[] = [
-  { id: 'all', label: 'All' },
-  { id: 'pending', label: 'Pending' },
-  { id: 'approved', label: 'Approved' },
-  { id: 'declined', label: 'Declined' },
-  { id: 'cancelled', label: 'Cancelled' },
+const FILTERS: { id: 'all' | ViewingStatus; i18nKey: string }[] = [
+  { id: 'all', i18nKey: 'common.all' },
+  { id: 'pending', i18nKey: 'viewings.status.pending' },
+  { id: 'approved', i18nKey: 'viewings.status.approved' },
+  { id: 'declined', i18nKey: 'viewings.status.declined' },
+  { id: 'cancelled', i18nKey: 'viewings.status.cancelled' },
 ];
 
 /**
@@ -102,14 +75,14 @@ const formatDateTime = (scheduledAt: string, locale: string, timeZone: string): 
 const ViewingsSkeleton: React.FC = () => (
   <View style={styles.listWrap}>
     {Array.from({ length: 3 }).map((_, idx) => (
-      <View key={idx} style={styles.skeletonCard}>
+      <Card key={idx} variant="outlined" radius="radius-16" className="gap-2 p-4">
         <View style={styles.skeletonHeader}>
           <Skeleton.Text style={{ width: 160, lineHeight: 18 }} />
           <Skeleton.Pill size={20} />
         </View>
         <Skeleton.Text style={{ width: 220, lineHeight: 14 }} />
         <Skeleton.Text style={{ width: 180, lineHeight: 14 }} />
-      </View>
+      </Card>
     ))}
   </View>
 );
@@ -127,29 +100,25 @@ const ViewingCard: React.FC<ViewingCardProps> = ({
   onModify,
   cancelling,
 }) => {
+  const { t } = useTranslation();
   const { locale } = useFormatting();
   const status = viewing.status as ViewingStatus;
   const token = STATUS_TOKENS[status] ?? STATUS_TOKENS.pending;
   const isActionable = status === 'pending' || status === 'approved';
 
   return (
-    <View style={styles.card}>
+    <Card variant="outlined" radius="radius-16" className="gap-2 p-4">
       <View style={styles.headerRow}>
         <H3 style={styles.cardTitle}>{formatDateTime(viewing.scheduledAt, locale, deviceTimeZone())}</H3>
-        <View style={[styles.statusBadge, { backgroundColor: token.bg }]}>
-          <Ionicons name={token.icon} size={14} color={token.fg} />
-          <BloomText style={[styles.statusLabel, { color: token.fg }]}>
-            {token.label}
-          </BloomText>
-        </View>
+        <Chip size="small" hue={token.hue}>
+          {t(token.i18nKey)}
+        </Chip>
       </View>
       {viewing.propertyTitle ? (
-        <BloomText style={styles.propertyTitle}>
-          {viewing.propertyTitle}
-        </BloomText>
+        <BloomText className="text-sm text-foreground">{viewing.propertyTitle}</BloomText>
       ) : null}
       {viewing.message ? (
-        <BloomText style={styles.message}>{viewing.message}</BloomText>
+        <BloomText className="text-sm italic text-muted-foreground">{viewing.message}</BloomText>
       ) : null}
 
       {isActionable ? (
@@ -161,7 +130,7 @@ const ViewingCard: React.FC<ViewingCardProps> = ({
               onPress={onModify}
               style={styles.actionButton}
             >
-              Reschedule
+              {t('viewings.actions.modify')}
             </Button>
           ) : null}
           <Button
@@ -172,11 +141,11 @@ const ViewingCard: React.FC<ViewingCardProps> = ({
             disabled={cancelling}
             style={styles.actionButton}
           >
-            Cancel
+            {t('viewings.actions.cancel')}
           </Button>
         </View>
       ) : null}
-    </View>
+    </Card>
   );
 };
 
@@ -276,7 +245,7 @@ export default function ViewingsPage() {
               icon="calendar-outline"
               title="Sign in to see your viewings"
               description="Schedule property visits and track host responses."
-              actionText="Sign in"
+              actionText={t('common.signIn')}
               actionIcon="log-in-outline"
               onAction={() => openAccountDialog()}
             />
@@ -311,16 +280,14 @@ export default function ViewingsPage() {
             contentContainerStyle={styles.filterRow}
           >
             {FILTERS.map((entry) => {
-              const isActive = filter === entry.id;
               return (
                 <Chip
                   key={entry.id}
                   onPress={() => setFilter(entry.id)}
-                  variant={isActive ? 'solid' : 'outlined'}
-                  color={isActive ? 'primary' : 'default'}
-                  selected={isActive}
+                  variant="subtle"
+                  selected={filter === entry.id}
                 >
-                  {entry.label}
+                  {t(entry.i18nKey)}
                 </Chip>
               );
             })}
@@ -332,7 +299,7 @@ export default function ViewingsPage() {
             <ErrorState
               icon="cloud-offline-outline"
               title={t('viewings.error.generic')}
-              description={viewingsQuery.error?.message ?? 'Please try again.'}
+              description={viewingsQuery.error?.message ?? t('common.tryAgain')}
               onRetry={() => viewingsQuery.refetch()}
             />
           ) : null}
@@ -405,14 +372,6 @@ const styles = StyleSheet.create({
   listWrap: {
     gap: spacing.md,
   },
-  card: {
-    backgroundColor: colors.surfaceElevated,
-    padding: spacing.lg,
-    borderRadius: radius.lg,
-    gap: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -424,27 +383,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     letterSpacing: -0.2,
   },
-  statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.pill,
-  },
-  statusLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  propertyTitle: {
-    fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_2,
-  },
-  message: {
-    fontSize: 14,
-    color: colors.muted,
-    fontStyle: 'italic',
-  },
   actionRow: {
     flexDirection: 'row',
     gap: spacing.sm,
@@ -452,14 +390,6 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     flex: 1,
-  },
-  skeletonCard: {
-    backgroundColor: colors.surfaceElevated,
-    padding: spacing.lg,
-    borderRadius: radius.lg,
-    gap: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
   },
   skeletonHeader: {
     flexDirection: 'row',

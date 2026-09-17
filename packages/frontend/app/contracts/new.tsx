@@ -15,8 +15,10 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { toast } from '@oxy.so/bloom/toast';
 
+import { Admonition } from '@oxy.so/bloom/admonition';
 import { Button } from '@oxy.so/bloom/button';
 import { Loading } from '@oxy.so/bloom/loading';
+import { useTheme } from '@oxy.so/bloom/theme';
 import { Text as BloomText, H2 } from '@oxy.so/bloom/typography';
 import { TenantApplicationStatus } from '@homiio/shared-types';
 
@@ -29,7 +31,6 @@ import { useApplicationById } from '@/hooks/useApplicationQueries';
 import { useCreateLeaseFromApplication } from '@/hooks/useLeaseQueries';
 import { getPropertyImageSource, getPropertyTitle } from '@/utils/propertyUtils';
 import { formatLocalized } from '@/utils/dateLocale';
-import { colors } from '@/styles/colors';
 import { radius, spacing, tracker } from '@/constants/styles';
 
 interface DetailRowProps {
@@ -37,12 +38,15 @@ interface DetailRowProps {
   value: string;
 }
 
-const DetailRow: React.FC<DetailRowProps> = ({ label, value }) => (
-  <View style={styles.detailRow}>
-    <BloomText style={styles.detailLabel}>{label}</BloomText>
-    <BloomText style={styles.detailValue}>{value}</BloomText>
-  </View>
-);
+const DetailRow: React.FC<DetailRowProps> = ({ label, value }) => {
+  const { colors } = useTheme();
+  return (
+    <View style={[styles.detailRow, { borderBottomColor: colors.border }]}>
+      <BloomText style={[styles.detailLabel, { color: colors.textSecondary }]}>{label}</BloomText>
+      <BloomText style={styles.detailValue}>{value}</BloomText>
+    </View>
+  );
+};
 
 export default function NewContractScreen() {
   const { t } = useTranslation();
@@ -55,6 +59,7 @@ export default function NewContractScreen() {
   const application = applicationQuery.data;
   const { property } = useProperty(application?.propertyId ?? '');
   const createLease = useCreateLeaseFromApplication();
+  const { colors: themeColors } = useTheme();
 
   const formatDate = useCallback((raw?: string): string => {
     if (!raw) return '—';
@@ -87,7 +92,7 @@ export default function NewContractScreen() {
 
   if (!applicationId) {
     return (
-      <View style={styles.root}>
+      <View style={[styles.root, { backgroundColor: themeColors.background }]}>
         {header}
         <SafeAreaView edges={['bottom']} style={styles.safeArea}>
           <View style={styles.centerWrap}>
@@ -107,7 +112,7 @@ export default function NewContractScreen() {
 
   if (applicationQuery.isPending) {
     return (
-      <View style={styles.root}>
+      <View style={[styles.root, { backgroundColor: themeColors.background }]}>
         {header}
         <View style={styles.centerWrap}>
           <Loading variant="spinner" size="medium" />
@@ -118,7 +123,7 @@ export default function NewContractScreen() {
 
   if (applicationQuery.isError || !application) {
     return (
-      <View style={styles.root}>
+      <View style={[styles.root, { backgroundColor: themeColors.background }]}>
         {header}
         <View style={styles.centerWrap}>
           <ErrorState
@@ -141,25 +146,25 @@ export default function NewContractScreen() {
   const imageSource = property ? getPropertyImageSource(property) : null;
 
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, { backgroundColor: themeColors.background }]}>
       {header}
       <SafeAreaView edges={['bottom']} style={styles.safeArea}>
         <ScrollView contentContainerStyle={styles.content}>
-          <View style={styles.thumbWrap}>
+          <View style={[styles.thumbWrap, { backgroundColor: themeColors.backgroundSecondary }]}>
             {imageSource ? (
               <Image source={imageSource} style={styles.thumb} resizeMode="cover" />
             ) : (
-              <View style={[styles.thumb, styles.thumbPlaceholder]} />
+              <View style={styles.thumb} />
             )}
           </View>
 
           <Card variant="outlined" radius="radius-16" className="p-5">
             <H2 style={styles.title}>{propertyTitle}</H2>
-            <BloomText style={styles.subtitle}>{t('contracts.new.subtitle')}</BloomText>
+            <BloomText style={[styles.subtitle, { color: themeColors.textSecondary }]}>{t('contracts.new.subtitle')}</BloomText>
           </Card>
 
           <Card variant="outlined" radius="radius-16" className="p-5">
-            <BloomText style={styles.sectionLabel}>{t('contracts.new.seededTerms')}</BloomText>
+            <BloomText style={[styles.sectionLabel, { color: themeColors.textSecondary }]}>{t('contracts.new.seededTerms')}</BloomText>
             <DetailRow
               label={t('contracts.new.moveIn')}
               value={formatDate(application.moveInDate)}
@@ -171,7 +176,7 @@ export default function NewContractScreen() {
           </Card>
 
           {!isApproved ? (
-            <BloomText style={styles.warning}>{t('contracts.new.notApprovedWarning')}</BloomText>
+            <Admonition type="warning">{t('contracts.new.notApprovedWarning')}</Admonition>
           ) : null}
         </ScrollView>
 
@@ -195,7 +200,6 @@ export default function NewContractScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: colors.background,
   },
   safeArea: {
     flex: 1,
@@ -215,14 +219,10 @@ const styles = StyleSheet.create({
     aspectRatio: 16 / 9,
     borderRadius: radius.photo,
     overflow: 'hidden',
-    backgroundColor: colors.mutedSubtle,
   },
   thumb: {
     width: '100%',
     height: '100%',
-  },
-  thumbPlaceholder: {
-    backgroundColor: colors.mutedSubtle,
   },
   title: {
     fontSize: 22,
@@ -231,13 +231,11 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 13,
-    color: colors.muted,
   },
   sectionLabel: {
     fontSize: 11,
     fontWeight: '700',
     textTransform: 'uppercase',
-    color: colors.muted,
     letterSpacing: tracker.eyebrow,
     marginBottom: spacing.sm,
   },
@@ -246,21 +244,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: spacing.sm,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.COLOR_BLACK_LIGHT_6,
   },
   detailLabel: {
     fontSize: 13,
-    color: colors.muted,
   },
   detailValue: {
     fontSize: 13,
     fontWeight: '600',
-    color: colors.COLOR_BLACK,
-  },
-  warning: {
-    fontSize: 13,
-    color: colors.warning,
-    fontStyle: 'italic',
   },
   footer: {
     padding: spacing.lg,

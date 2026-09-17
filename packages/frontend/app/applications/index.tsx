@@ -2,7 +2,7 @@
  * My Applications — applicant-side list of long-term tenant applications.
  *
  * Polished to the Stream P personal-surface language:
- * - Bloom Chip filter row (All / Active / Decided / Withdrawn)
+ * - Bloom SegmentedControl filter (All / Active / Decided / Withdrawn)
  * - Bloom Skeleton.Box list while loading (no spinner)
  * - Shared EmptyState / ErrorState components
  * - Bloom typography (H2, Text) for every label and title
@@ -10,13 +10,18 @@
  *   Earlier instead of one wall of cards
  */
 import React, { useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { isThisWeek, isToday } from 'date-fns';
 
-import { Chip } from '@oxy.so/bloom/chip';
+import {
+  SegmentedControl,
+  SegmentedControlItem,
+  SegmentedControlItemText,
+} from '@oxy.so/bloom/segmented-control';
+import { useTheme } from '@oxy.so/bloom/theme';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 import { useOxy, openAccountDialog } from '@oxy.so/services';
 import {
@@ -25,12 +30,12 @@ import {
 } from '@homiio/shared-types';
 
 import { Header } from '@/components/Header';
+import { PageScrollView } from '@/components/PageScrollView';
 import { ApplicationCard } from '@/components/ApplicationCard';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { ListSkeleton } from '@/components/ui/ListSkeleton';
 import { useMyApplications } from '@/hooks/useApplicationQueries';
-import { colors } from '@/styles/colors';
 import { spacing, tracker } from '@/constants/styles';
 
 type Filter = 'all' | 'active' | 'decided' | 'withdrawn';
@@ -105,6 +110,7 @@ const groupByDate = (items: TenantApplication[], t: (key: string) => string): Da
 export default function MyApplicationsScreen() {
   const { t } = useTranslation();
   const router = useRouter();
+  const theme = useTheme();
   const { isAuthenticated } = useOxy();
   const applicationsQuery = useMyApplications();
   const [filter, setFilter] = useState<Filter>('all');
@@ -140,7 +146,7 @@ export default function MyApplicationsScreen() {
 
   if (!isAuthenticated) {
     return (
-      <View style={styles.root}>
+      <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
         {header}
         <SafeAreaView edges={['bottom']} style={styles.safeArea}>
           <View style={styles.centerWrap}>
@@ -160,7 +166,7 @@ export default function MyApplicationsScreen() {
 
   if (applicationsQuery.isPending) {
     return (
-      <View style={styles.root}>
+      <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
         {header}
         <SafeAreaView edges={['bottom']} style={styles.safeArea}>
           <View style={styles.content}>
@@ -174,7 +180,7 @@ export default function MyApplicationsScreen() {
 
   if (applicationsQuery.isError) {
     return (
-      <View style={styles.root}>
+      <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
         {header}
         <SafeAreaView edges={['bottom']} style={styles.safeArea}>
           <View style={styles.centerWrap}>
@@ -193,10 +199,10 @@ export default function MyApplicationsScreen() {
   }
 
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
       {header}
       <SafeAreaView edges={['bottom']} style={styles.safeArea}>
-        <ScrollView contentContainerStyle={styles.content}>
+        <PageScrollView contentContainerStyle={styles.content}>
           <FilterRow value={filter} onChange={setFilter} t={t} />
 
           {filtered.length === 0 ? (
@@ -223,7 +229,7 @@ export default function MyApplicationsScreen() {
           ) : (
             dateGroups.map((group) => (
               <View key={group.label} style={styles.section}>
-                <BloomText style={styles.sectionEyebrow}>{group.label}</BloomText>
+                <BloomText style={[styles.sectionEyebrow, { color: theme.colors.textSecondary }]}>{group.label}</BloomText>
                 <View style={styles.cards}>
                   {group.items.map((application) => (
                     <ApplicationCard
@@ -235,7 +241,7 @@ export default function MyApplicationsScreen() {
               </View>
             ))
           )}
-        </ScrollView>
+        </PageScrollView>
       </SafeAreaView>
     </View>
   );
@@ -248,30 +254,23 @@ interface FilterRowProps {
 }
 
 const FilterRow: React.FC<FilterRowProps> = ({ value, onChange, t }) => (
-  <ScrollView
-    horizontal
-    showsHorizontalScrollIndicator={false}
-    contentContainerStyle={styles.filterRow}
+  <SegmentedControl<Filter>
+    label={t('applications.list.title')}
+    type="tabs"
+    value={value}
+    onChange={onChange}
   >
     {FILTERS.map((option) => (
-      <Chip
-        key={option.value}
-        variant={value === option.value ? 'solid' : 'outlined'}
-        color={value === option.value ? 'primary' : 'default'}
-        size="medium"
-        selected={value === option.value}
-        onPress={() => onChange(option.value)}
-      >
-        {t(option.i18nKey)}
-      </Chip>
+      <SegmentedControlItem key={option.value} value={option.value}>
+        <SegmentedControlItemText>{t(option.i18nKey)}</SegmentedControlItemText>
+      </SegmentedControlItem>
     ))}
-  </ScrollView>
+  </SegmentedControl>
 );
 
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: colors.background,
   },
   safeArea: {
     flex: 1,
@@ -287,19 +286,12 @@ const styles = StyleSheet.create({
   emptyWrap: {
     paddingVertical: spacing['3xl'],
   },
-  filterRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.xs,
-  },
   section: {
     gap: spacing.md,
   },
   sectionEyebrow: {
     fontSize: 11,
     fontWeight: '700',
-    color: colors.muted,
     textTransform: 'uppercase',
     letterSpacing: tracker.eyebrow,
   },

@@ -13,16 +13,18 @@
  * surfaces actions the backend would accept.
  */
 import React, { useCallback, useMemo } from 'react';
-import { Image, Linking, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Image, Linking, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import i18next from 'i18next';
 import * as ImagePicker from 'expo-image-picker';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { toast } from '@oxy.so/bloom/toast';
 
 import { Button } from '@oxy.so/bloom/button';
+import { RiAddLine, RiExternalLinkLine, RiFileTextLine } from '@oxy.so/bloom/icons';
+import { Item } from '@oxy.so/bloom/item';
+import { useTheme } from '@oxy.so/bloom/theme';
 import { Loading } from '@oxy.so/bloom/loading';
 import { Text as BloomText, H2 } from '@oxy.so/bloom/typography';
 import { LeaseStatus } from '@homiio/shared-types';
@@ -30,7 +32,7 @@ import { LeaseStatus } from '@homiio/shared-types';
 import { Header } from '@/components/Header';
 import { Card } from '@oxy.so/bloom/card';
 import { ErrorState } from '@/components/ui/ErrorState';
-import { StatusBadge, type StatusType } from '@/components/ui/StatusBadge';
+import { ContractStatusBadge, LeasePaymentStatusBadge } from '@/components/ContractStatusBadge';
 import { confirm } from '@oxy.so/bloom/surfaces';
 import { useProperty } from '@/hooks';
 import { useProfile } from '@/context/ProfileContext';
@@ -43,7 +45,6 @@ import {
 } from '@/hooks/useLeaseQueries';
 import { getPropertyImageSource, getPropertyTitle } from '@/utils/propertyUtils';
 import { formatLocalized } from '@/utils/dateLocale';
-import { colors } from '@/styles/colors';
 import { radius, spacing, tracker } from '@/constants/styles';
 
 type Role = 'landlord' | 'tenant' | 'cotenant';
@@ -81,12 +82,15 @@ interface DetailRowProps {
   value: string;
 }
 
-const DetailRow: React.FC<DetailRowProps> = ({ label, value }) => (
-  <View style={styles.detailRow}>
-    <BloomText style={styles.detailLabel}>{label}</BloomText>
-    <BloomText style={styles.detailValue}>{value}</BloomText>
-  </View>
-);
+const DetailRow: React.FC<DetailRowProps> = ({ label, value }) => {
+  const { colors } = useTheme();
+  return (
+    <View style={[styles.detailRow, { borderBottomColor: colors.border }]}>
+      <BloomText style={[styles.detailLabel, { color: colors.textSecondary }]}>{label}</BloomText>
+      <BloomText style={styles.detailValue}>{value}</BloomText>
+    </View>
+  );
+};
 
 export default function ContractDetailScreen() {
   const { t } = useTranslation();
@@ -94,6 +98,7 @@ export default function ContractDetailScreen() {
   const params = useLocalSearchParams<{ id: string }>();
   const id = typeof params.id === 'string' ? params.id : params.id?.[0];
 
+  const { colors } = useTheme();
   const leaseQuery = useLease(id);
   const lease = leaseQuery.data;
   const { profile } = useProfile();
@@ -216,7 +221,7 @@ export default function ContractDetailScreen() {
 
   if (!id) {
     return (
-      <View style={styles.root}>
+      <View style={[styles.root, { backgroundColor: colors.background }]}>
         {header}
         <View style={styles.centerWrap}>
           <ErrorState
@@ -233,7 +238,7 @@ export default function ContractDetailScreen() {
 
   if (leaseQuery.isPending) {
     return (
-      <View style={styles.root}>
+      <View style={[styles.root, { backgroundColor: colors.background }]}>
         {header}
         <View style={styles.centerWrap}>
           <Loading variant="spinner" size="medium" />
@@ -244,7 +249,7 @@ export default function ContractDetailScreen() {
 
   if (leaseQuery.isError || !lease) {
     return (
-      <View style={styles.root}>
+      <View style={[styles.root, { backgroundColor: colors.background }]}>
         {header}
         <View style={styles.centerWrap}>
           <ErrorState
@@ -289,25 +294,25 @@ export default function ContractDetailScreen() {
     signMutation.isPending || terminateMutation.isPending || deleteMutation.isPending;
 
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, { backgroundColor: colors.background }]}>
       {header}
       <SafeAreaView edges={['bottom']} style={styles.safeArea}>
         <ScrollView contentContainerStyle={styles.content}>
-          <View style={styles.thumbWrap}>
+          <View style={[styles.thumbWrap, { backgroundColor: colors.backgroundSecondary }]}>
             {imageSource ? (
               <Image source={imageSource} style={styles.thumb} resizeMode="cover" />
             ) : (
-              <View style={[styles.thumb, styles.thumbPlaceholder]} />
+              <View style={styles.thumb} />
             )}
           </View>
 
           <Card variant="outlined" radius="radius-16" className="p-5">
             <View style={styles.headerRow}>
               <H2 style={styles.title}>{propertyTitle}</H2>
-              <StatusBadge status={lease.status as StatusType} />
+              <ContractStatusBadge status={lease.status} />
             </View>
             {property?.address ? (
-              <BloomText style={styles.subtitle}>
+              <BloomText style={[styles.subtitle, { color: colors.textSecondary }]}>
                 {[property.address.cityName, property.address.countryName]
                   .filter(Boolean)
                   .join(', ')}
@@ -316,13 +321,13 @@ export default function ContractDetailScreen() {
           </Card>
 
           <Card variant="outlined" radius="radius-16" className="p-5">
-            <BloomText style={styles.sectionLabel}>{t('contracts.detail.term')}</BloomText>
+            <BloomText style={[styles.sectionLabel, { color: colors.textSecondary }]}>{t('contracts.detail.term')}</BloomText>
             <DetailRow label={t('contracts.detail.start')} value={formatDate(lease.leaseTerms?.startDate)} />
             <DetailRow label={t('contracts.detail.end')} value={formatDate(lease.leaseTerms?.endDate)} />
           </Card>
 
           <Card variant="outlined" radius="radius-16" className="p-5">
-            <BloomText style={styles.sectionLabel}>{t('contracts.detail.rent')}</BloomText>
+            <BloomText style={[styles.sectionLabel, { color: colors.textSecondary }]}>{t('contracts.detail.rent')}</BloomText>
             <DetailRow
               label={t('contracts.detail.monthlyRent')}
               value={formatMoney(lease.rentDetails?.monthlyRent, lease.rentDetails?.currency)}
@@ -342,7 +347,7 @@ export default function ContractDetailScreen() {
           </Card>
 
           <Card variant="outlined" radius="radius-16" className="p-5">
-            <BloomText style={styles.sectionLabel}>{t('contracts.detail.signatures')}</BloomText>
+            <BloomText style={[styles.sectionLabel, { color: colors.textSecondary }]}>{t('contracts.detail.signatures')}</BloomText>
             <DetailRow
               label={t('contracts.detail.landlord')}
               value={
@@ -363,42 +368,31 @@ export default function ContractDetailScreen() {
 
           {payments.length > 0 ? (
             <Card variant="outlined" radius="radius-16" className="p-5">
-              <BloomText style={styles.sectionLabel}>{t('contracts.detail.payments')}</BloomText>
+              <BloomText style={[styles.sectionLabel, { color: colors.textSecondary }]}>{t('contracts.detail.payments')}</BloomText>
               {payments.map((payment) => (
-                <View key={payment.id} style={styles.paymentRow}>
-                  <View style={styles.paymentMeta}>
-                    <BloomText style={styles.paymentPrimary}>
-                      {payment.description || payment.type}
-                    </BloomText>
-                    <BloomText style={styles.paymentSecondary}>
-                      {formatDate(payment.dueDate)}
-                    </BloomText>
-                  </View>
-                  <View style={styles.paymentAmountWrap}>
-                    <BloomText style={styles.paymentAmount}>
-                      {formatMoney(payment.amount, lease.rentDetails?.currency)}
-                    </BloomText>
-                    <StatusBadge
-                      status={
-                        (payment.status === 'paid'
-                          ? 'completed'
-                          : payment.status === 'overdue'
-                            ? 'error'
-                            : payment.status === 'cancelled'
-                              ? 'cancelled'
-                              : 'pending') as StatusType
-                      }
-                      size="small"
-                    />
-                  </View>
-                </View>
+                <Item
+                  key={payment.id}
+                  role="listitem"
+                  density="compact"
+                  title={payment.description || payment.type}
+                  subtitle={formatDate(payment.dueDate)}
+                  titleStyle={styles.paymentTitle}
+                  trailing={
+                    <View style={styles.paymentAmountWrap}>
+                      <BloomText style={styles.paymentAmount}>
+                        {formatMoney(payment.amount, lease.rentDetails?.currency)}
+                      </BloomText>
+                      <LeasePaymentStatusBadge status={payment.status} />
+                    </View>
+                  }
+                />
               ))}
             </Card>
           ) : null}
 
           <Card variant="outlined" radius="radius-16" className="p-5">
             <View style={styles.docHeader}>
-              <BloomText style={styles.sectionLabel}>{t('contracts.detail.documents')}</BloomText>
+              <BloomText style={[styles.sectionLabel, { color: colors.textSecondary }]}>{t('contracts.detail.documents')}</BloomText>
               {isParty ? (
                 <Button
                   variant="secondary"
@@ -406,34 +400,26 @@ export default function ContractDetailScreen() {
                   onPress={handleAddDocument}
                   disabled={uploadMutation.isPending}
                   loading={uploadMutation.isPending}
-                  icon={<Ionicons name="add" size={16} color={colors.COLOR_BLACK} />}
+                  leadingIcon={RiAddLine}
                 >
                   {t('contracts.detail.addShort')}
                 </Button>
               ) : null}
             </View>
             {documents.length === 0 ? (
-              <BloomText style={styles.emptyHint}>{t('contracts.detail.emptyDocuments')}</BloomText>
+              <BloomText style={[styles.emptyHint, { color: colors.textSecondary }]}>{t('contracts.detail.emptyDocuments')}</BloomText>
             ) : (
               documents.map((document) => (
-                <Pressable
+                <Item
                   key={document.id}
                   onPress={() => openDocument(document.url, t)}
-                  style={styles.documentRow}
                   accessibilityRole="link"
                   accessibilityLabel={t('contracts.detail.openDocument', { name: document.name })}
-                >
-                  <Ionicons name="document-text-outline" size={20} color={colors.primaryDark} />
-                  <View style={styles.documentMeta}>
-                    <BloomText style={styles.documentName} numberOfLines={1}>
-                      {document.name}
-                    </BloomText>
-                    <BloomText style={styles.documentType}>
-                      {t(`contracts.documentType.${document.type}`)}
-                    </BloomText>
-                  </View>
-                  <Ionicons name="open-outline" size={18} color={colors.muted} />
-                </Pressable>
+                  leading={<RiFileTextLine width={20} height={20} fill={colors.primary} />}
+                  title={document.name}
+                  subtitle={t(`contracts.documentType.${document.type}`)}
+                  trailing={<RiExternalLinkLine width={18} height={18} fill={colors.icon} />}
+                />
               ))
             )}
           </Card>
@@ -484,7 +470,6 @@ export default function ContractDetailScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: colors.background,
   },
   safeArea: {
     flex: 1,
@@ -504,14 +489,10 @@ const styles = StyleSheet.create({
     aspectRatio: 16 / 9,
     borderRadius: radius.photo,
     overflow: 'hidden',
-    backgroundColor: colors.mutedSubtle,
   },
   thumb: {
     width: '100%',
     height: '100%',
-  },
-  thumbPlaceholder: {
-    backgroundColor: colors.mutedSubtle,
   },
   headerRow: {
     flexDirection: 'row',
@@ -527,13 +508,11 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 13,
-    color: colors.muted,
   },
   sectionLabel: {
     fontSize: 11,
     fontWeight: '700',
     textTransform: 'uppercase',
-    color: colors.muted,
     letterSpacing: tracker.eyebrow,
     marginBottom: spacing.sm,
   },
@@ -542,39 +521,16 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: spacing.sm,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.COLOR_BLACK_LIGHT_6,
   },
   detailLabel: {
     fontSize: 13,
-    color: colors.muted,
   },
   detailValue: {
     fontSize: 13,
     fontWeight: '600',
-    color: colors.COLOR_BLACK,
   },
-  paymentRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: spacing.sm,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.COLOR_BLACK_LIGHT_6,
-    gap: spacing.md,
-  },
-  paymentMeta: {
-    flex: 1,
-    gap: 2,
-  },
-  paymentPrimary: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.COLOR_BLACK,
+  paymentTitle: {
     textTransform: 'capitalize',
-  },
-  paymentSecondary: {
-    fontSize: 12,
-    color: colors.muted,
   },
   paymentAmountWrap: {
     alignItems: 'flex-end',
@@ -583,7 +539,6 @@ const styles = StyleSheet.create({
   paymentAmount: {
     fontSize: 13,
     fontWeight: '700',
-    color: colors.COLOR_BLACK,
   },
   docHeader: {
     flexDirection: 'row',
@@ -592,30 +547,7 @@ const styles = StyleSheet.create({
   },
   emptyHint: {
     fontSize: 13,
-    color: colors.muted,
     fontStyle: 'italic',
-  },
-  documentRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    paddingVertical: spacing.md - 2,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.COLOR_BLACK_LIGHT_6,
-  },
-  documentMeta: {
-    flex: 1,
-    gap: 2,
-  },
-  documentName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.COLOR_BLACK,
-  },
-  documentType: {
-    fontSize: 12,
-    color: colors.muted,
-    textTransform: 'capitalize',
   },
   actionRow: {
     flexDirection: 'row',

@@ -4,7 +4,8 @@ import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
 import { Text as BloomText } from '@oxy.so/bloom/typography';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { RiArrowLeftRightLine, RiHotelBedLine } from '@oxy.so/bloom/icons';
+import { useTheme } from '@oxy.so/bloom/theme';
 import { ExchangeMode, type ExchangeRequest } from '@homiio/shared-types';
 
 import { ExchangeStatusBadge } from '@/components/exchange/ExchangeStatusBadge';
@@ -22,15 +23,13 @@ export interface ExchangeRequestCardProps {
   actions?: React.ReactNode;
 }
 
-/** Glyph size for the small mode line ("Home swap" / "Free hosting"). */
-const MODE_ICON_SIZE = 13;
-
 export const ExchangeRequestCard: React.FC<ExchangeRequestCardProps> = ({
   request,
   actions,
 }) => {
   const router = useRouter();
   const { t } = useTranslation();
+  const theme = useTheme();
   const { property } = useProperty(request.propertyId);
 
   const title = useMemo(
@@ -58,21 +57,21 @@ export const ExchangeRequestCard: React.FC<ExchangeRequestCardProps> = ({
         <View style={styles.thumb}><ThumbnailImage source={imageSource} /></View>
         <View style={styles.body}>
           <View style={styles.headerRow}>
-            <BloomText style={styles.title} numberOfLines={1}>
+            <BloomText style={[styles.title, { color: theme.colors.text }]} numberOfLines={1}>
               {title}
             </BloomText>
             <ExchangeStatusBadge status={request.status} />
           </View>
-          <BloomText style={styles.dates} numberOfLines={1}>
+          <BloomText style={[styles.dates, { color: theme.colors.textSecondary }]} numberOfLines={1}>
             {formatDateRange(request.requestedWindow.start, request.requestedWindow.end)}
           </BloomText>
           <View style={styles.metaRow}>
-            <Ionicons
-              name={request.mode === ExchangeMode.SWAP ? 'swap-horizontal' : 'bed-outline'}
-              size={MODE_ICON_SIZE}
-              color={colors.exchangeAccent}
-            />
-            <BloomText style={styles.meta} numberOfLines={1}>
+            {request.mode === ExchangeMode.SWAP ? (
+              <RiArrowLeftRightLine size="xs" fill={colors.exchangeAccent} />
+            ) : (
+              <RiHotelBedLine size="xs" fill={colors.exchangeAccent} />
+            )}
+            <BloomText style={[styles.meta, { color: theme.colors.textTertiary }]} numberOfLines={1}>
               {modeLabel}
             </BloomText>
           </View>
@@ -121,7 +120,6 @@ const styles = StyleSheet.create({
   },
   dates: {
     fontSize: 13,
-    color: colors.COLOR_BLACK_LIGHT_3,
   },
   metaRow: {
     flexDirection: 'row',
@@ -130,7 +128,6 @@ const styles = StyleSheet.create({
   },
   meta: {
     fontSize: 12,
-    color: colors.COLOR_BLACK_LIGHT_4,
   },
 });
 

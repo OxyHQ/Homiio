@@ -23,10 +23,13 @@
  * stable.
  */
 import React, { useCallback, useMemo, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { View, type TextStyle } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
-import { H1, Text as BloomText } from '@oxy.so/bloom/typography';
+import { Card } from '@oxy.so/bloom/card';
+import { Divider } from '@oxy.so/bloom/divider';
+import { useTheme } from '@oxy.so/bloom/theme';
+import { H2, Text as BloomText } from '@oxy.so/bloom/typography';
 import {
   SegmentedControl,
   SegmentedControlItem,
@@ -34,12 +37,14 @@ import {
 } from '@oxy.so/bloom/segmented-control';
 
 import { Slider } from '@oxy.so/bloom/slider';
-import { colors } from '@/styles/colors';
-import { hairline, radius, resolvePagePadding, spacing, tracker } from '@/constants/styles';
+import { resolvePagePadding } from '@/constants/styles';
 import { formatMoney } from '@homiio/shared-types';
 import { useFormatting } from '@/utils/format';
 import { useMediaQuery } from 'react-responsive';
 import { COMMISSION_CONFIG, commissionAmount, type CommissionOffering } from '@homiio/shared-types';
+
+/** Tabular figures so the live amounts don't jitter while the slider drags. */
+const TABULAR: TextStyle = { fontVariant: ['tabular-nums'] };
 
 /** Whole-€ display (no decimals) for the calculator's amounts. */
 const WHOLE_CURRENCY = { minimumFractionDigits: 0, maximumFractionDigits: 0 } as const;
@@ -97,11 +102,14 @@ interface RentControlProps {
 const RentControl: React.FC<RentControlProps> = React.memo(
   ({ rent, onChange, label, perMonth, currency }) => {
     const { locale } = useFormatting();
+    const theme = useTheme();
     return (
-      <View style={styles.control}>
-        <View style={styles.controlHeader}>
-          <BloomText style={styles.controlLabel}>{label}</BloomText>
-          <BloomText style={styles.controlValue}>
+      <View className="gap-2">
+        <View className="flex-row items-center justify-between gap-3">
+          <BloomText variant="body-medium" style={{ color: theme.colors.text }}>
+            {label}
+          </BloomText>
+          <BloomText variant="body-semibold" style={[TABULAR, { color: theme.colors.text }]}>
             {`${formatMoney(rent, currency, locale, WHOLE_CURRENCY)} / ${perMonth}`}
           </BloomText>
         </View>
@@ -122,6 +130,7 @@ RentControl.displayName = 'RentControl';
 
 export const EarningsCalculator: React.FC = () => {
   const { t } = useTranslation();
+  const theme = useTheme();
   const { locale } = useFormatting();
   const isWide = useMediaQuery({ minWidth: 768 });
   const horizontalPadding = resolvePagePadding(isWide);
@@ -166,10 +175,12 @@ export const EarningsCalculator: React.FC = () => {
 
   return (
     <View style={{ paddingHorizontal: horizontalPadding }}>
-      <View style={styles.card}>
-        <View style={styles.header}>
-          <H1 style={styles.title}>{title}</H1>
-        </View>
+      <Card
+        variant="outlined"
+        radius="radius-24"
+        className="w-full max-w-[720px] self-center gap-6 p-6"
+      >
+        <H2 style={{ color: theme.colors.text }}>{title}</H2>
 
         <OfferingSelector
           offering={offering}
@@ -187,95 +198,33 @@ export const EarningsCalculator: React.FC = () => {
             currency={currency}
           />
         ) : (
-          <BloomText style={styles.flatNote}>{flatNote}</BloomText>
+          <BloomText variant="body-regular" style={{ color: theme.colors.textSecondary }}>
+            {flatNote}
+          </BloomText>
         )}
 
-        <View style={styles.resultBlock}>
-          <BloomText style={styles.resultLabel}>
+        <Divider />
+
+        <View className="items-center gap-1">
+          <BloomText
+            variant="caption-1-semibold"
+            style={{ color: theme.colors.textSecondary, textTransform: 'uppercase' }}
+          >
             {t('agent.calculator.result')}
           </BloomText>
-          <H1 style={styles.resultAmount}>{formatMoney(payout, currency, locale, WHOLE_CURRENCY)}</H1>
-          <BloomText style={styles.resultCaption}>
+          <BloomText variant="display-2-bold" style={[TABULAR, { color: theme.colors.primary }]}>
+            {formatMoney(payout, currency, locale, WHOLE_CURRENCY)}
+          </BloomText>
+          <BloomText
+            variant="body-2-regular"
+            style={{ color: theme.colors.textSecondary, textAlign: 'center' }}
+          >
             {t('agent.calculator.caption')}
           </BloomText>
         </View>
-      </View>
+      </Card>
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  card: {
-    width: '100%',
-    maxWidth: 720,
-    alignSelf: 'center',
-    backgroundColor: colors.surfaceElevated,
-    borderRadius: radius.xl,
-    borderWidth: hairline.width,
-    borderColor: colors.border,
-    padding: spacing['2xl'],
-    gap: spacing.xl,
-  },
-  header: {
-    gap: spacing.xs,
-  },
-  title: {
-    fontSize: 26,
-    fontWeight: '700',
-    color: colors.COLOR_BLACK,
-    letterSpacing: tracker.tight,
-    lineHeight: 32,
-  },
-  control: {
-    gap: spacing.sm,
-  },
-  controlHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.md,
-  },
-  controlLabel: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: colors.COLOR_BLACK,
-  },
-  controlValue: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: colors.COLOR_BLACK,
-  },
-  flatNote: {
-    fontSize: 14,
-    lineHeight: 20,
-    color: colors.COLOR_BLACK_LIGHT_3,
-  },
-  resultBlock: {
-    alignItems: 'center',
-    gap: spacing.xs,
-    paddingTop: spacing.lg,
-    borderTopWidth: hairline.width,
-    borderTopColor: hairline.color,
-  },
-  resultLabel: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: colors.COLOR_BLACK_LIGHT_3,
-    textTransform: 'uppercase',
-    letterSpacing: tracker.eyebrow,
-  },
-  resultAmount: {
-    fontSize: 48,
-    fontWeight: '800',
-    color: colors.primaryColor,
-    letterSpacing: tracker.tight,
-    lineHeight: 54,
-  },
-  resultCaption: {
-    fontSize: 13,
-    color: colors.COLOR_BLACK_LIGHT_3,
-    textAlign: 'center',
-  },
-});
 
 export default EarningsCalculator;

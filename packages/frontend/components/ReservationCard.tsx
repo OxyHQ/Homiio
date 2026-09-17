@@ -11,7 +11,6 @@ import { useProperty } from '@/hooks';
 import { getPropertyImageSource, getPropertyTitle } from '@/utils/propertyUtils';
 import { useFormatting } from '@/utils/format';
 import { formatDateRange } from '@/utils/dateFormatting';
-import { colors } from '@/styles/colors';
 import { spacing } from '@/constants/styles';
 
 export interface ReservationCardProps {
@@ -56,7 +55,7 @@ export const ReservationCard: React.FC<ReservationCardProps> = ({
       : t('reservations.card.nights');
 
   return (
-    <Card variant="outlined" radius="radius-16" style={styles.card}>
+    <Card variant="outlined" radius="radius-16">
       <Pressable
         style={styles.row}
         onPress={handlePress}
@@ -66,15 +65,15 @@ export const ReservationCard: React.FC<ReservationCardProps> = ({
         <View style={styles.thumb}><ThumbnailImage source={imageSource} /></View>
         <View style={styles.body}>
           <View style={styles.headerRow}>
-            <BloomText style={styles.title} numberOfLines={1}>
+            <BloomText className="flex-1 text-[15px] font-bold text-foreground" numberOfLines={1}>
               {title}
             </BloomText>
             <ReservationStatusBadge status={reservation.status} />
           </View>
-          <BloomText style={styles.dates} numberOfLines={1}>
+          <BloomText className="text-[13px] text-muted-foreground" numberOfLines={1}>
             {formatDateRange(reservation.checkIn, reservation.checkOut)}
           </BloomText>
-          <BloomText style={styles.meta} numberOfLines={1}>
+          <BloomText className="text-xs text-muted-foreground" numberOfLines={1}>
             {reservation.nights} {nightLabel} · {reservation.guestCount} {guestLabel}
             {variant === 'host' ? ` ${t('reservations.card.hostGuestSuffix')}` : ''} ·{' '}
             {formatMoney(reservation.total, reservation.currency, locale)}
@@ -90,9 +89,6 @@ export const ReservationCard: React.FC<ReservationCardProps> = ({
 const THUMBNAIL_SIZE = 96;
 
 const styles = StyleSheet.create({
-  card: {
-    marginBottom: spacing.md,
-  },
   row: {
     flexDirection: 'row',
   },
@@ -116,19 +112,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: spacing.sm,
-  },
-  title: {
-    fontSize: 15,
-    fontWeight: '700',
-    flex: 1,
-  },
-  dates: {
-    fontSize: 13,
-    color: colors.COLOR_BLACK_LIGHT_3,
-  },
-  meta: {
-    fontSize: 12,
-    color: colors.COLOR_BLACK_LIGHT_4,
   },
 });
 

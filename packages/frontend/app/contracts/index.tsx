@@ -1,31 +1,44 @@
 /**
  * Contracts inbox — leases the user signs (tenant) or holds (landlord).
  *
- * Stream Q polish:
- *   - Bloom Chip filter row, Bloom Button "New contract" CTA in the header.
- *   - Flat ContractCard list with radius.lg + hairline borders.
- *   - Bloom Skeleton + shared EmptyState / ErrorState.
- *   - Bloom Typography (H2, Text) and SectionEyebrow for hierarchy.
+ * - Phones: Bloom Chip status filters over a ContractCard list.
+ * - Wide web (1024px+): a Bloom DataTable — sortable columns, a status filter
+ *   and a search over property and party names in its toolbar, and a "View"
+ *   row action — so a landlord scanning many leases gets a real table.
+ * - "New contract" routes to `/contracts/new`, which only creates a lease from
+ *   an `?application=` id (and otherwise guides to applications).
  */
 import React, { useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { Button } from '@oxy.so/bloom/button';
 import { Chip } from '@oxy.so/bloom/chip';
+import {
+  DataTable,
+  DataTableFilter,
+  DataTableRowActions,
+  DataTableSearch,
+  type DataTableColumn,
+} from '@oxy.so/bloom/data-table';
+import { RiAddLine, RiEyeLine } from '@oxy.so/bloom/icons';
 import * as Skeleton from '@oxy.so/bloom/skeleton';
 import { H2, Text as BloomText } from '@oxy.so/bloom/typography';
+import { formatMoney } from '@homiio/shared-types';
 import { Header } from '@/components/Header';
 import { ContractCard, ContractStatus } from '@/components/ContractCard';
+import { ContractStatusBadge } from '@/components/ContractStatusBadge';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
 import { useUserLeases, useHasRentalProperties } from '@/hooks/useLeaseQueries';
+import { useIsDesktop } from '@/hooks/useOptimizedMediaQuery';
 import type { Lease } from '@/services/leaseService';
 import type { Profile } from '@homiio/shared-types';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
+import { useFormatting } from '@/utils/format';
+import { formatLocalized } from '@/utils/dateLocale';
 import { radius, spacing } from '@/constants/styles';
 import { colors } from '@/styles/colors';
 
@@ -53,6 +66,17 @@ const leasePropertyTitle = (property?: Lease['property']): string => {
   });
 };
 
+const toDate = (raw: string): Date | null => {
+  if (!raw) return null;
+  const date = new Date(raw);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const formatDate = (raw: string): string => {
+  const date = toDate(raw);
+  return date ? formatLocalized(date, 'MMM d, yyyy') : raw || '—';
+};
+
 type FilterOption = 'all' | 'active' | 'pending_signatures' | 'expired' | 'draft';
 
 const FILTERS: { id: FilterOption; i18nKey: string }[] = [
@@ -62,6 +86,20 @@ const FILTERS: { id: FilterOption; i18nKey: string }[] = [
   { id: 'expired', i18nKey: 'contracts.list.filterExpired' },
   { id: 'draft', i18nKey: 'contracts.list.filterDrafts' },
 ];
+
+interface ContractRow {
+  id: string;
+  title: string;
+  propertyId: string;
+  propertyName: string;
+  startDate: string;
+  endDate: string;
+  status: ContractStatus;
+  landlordName: string;
+  tenantName: string;
+  monthlyRent: number;
+  currency?: string;
+}
 
 const ContractsSkeleton: React.FC = () => (
   <View style={styles.listWrap}>
@@ -82,7 +120,11 @@ const ContractsSkeleton: React.FC = () => (
 export default function ContractsScreen() {
   const { t } = useTranslation();
   const router = useRouter();
+  const { locale } = useFormatting();
+  const isDesktop = useIsDesktop();
+  const showTable = Platform.OS === 'web' && isDesktop;
   const [filter, setFilter] = useState<FilterOption>('all');
+  const [query, setQuery] = useState('');
 
   const {
     data: leasesData,
@@ -93,7 +135,7 @@ export default function ContractsScreen() {
   const { hasRentalProperties, isLoading: hasPropertiesLoading } =
     useHasRentalProperties();
 
-  const contracts = useMemo(() => {
+  const contracts = useMemo<ContractRow[]>(() => {
     if (!leasesData?.leases) return [];
     return leasesData.leases.map((lease: Lease) => {
       const propertyTitle = leasePropertyTitle(lease.property);
@@ -114,9 +156,16 @@ export default function ContractsScreen() {
   }, [leasesData]);
 
   const filteredContracts = useMemo(() => {
-    if (filter === 'all') return contracts;
-    return contracts.filter((contract) => contract.status === filter);
-  }, [contracts, filter]);
+    const byStatus =
+      filter === 'all' ? contracts : contracts.filter((contract) => contract.status === filter);
+    const needle = showTable ? query.trim().toLowerCase() : '';
+    if (!needle) return byStatus;
+    return byStatus.filter((contract) =>
+      [contract.propertyName, contract.landlordName, contract.tenantName].some((value) =>
+        value.toLowerCase().includes(needle),
+      ),
+    );
+  }, [contracts, filter, query, showTable]);
 
   const handleContractPress = (contractId: string) => {
     router.push(`/contracts/${contractId}`);
@@ -125,6 +174,94 @@ export default function ContractsScreen() {
   const handleAddNewContract = () => {
     router.push('/contracts/new');
   };
+
+  const filterLabel = (entry: FilterOption) =>
+    t(`statusBadge.${entry === 'pending_signatures' ? 'pendingSignatures' : entry}`);
+
+  const emptyDescription =
+    filter === 'all'
+      ? t('contracts.list.emptyAllDescription')
+      : t('contracts.list.emptyFilteredDescription', { filter: filterLabel(filter) });
+
+  const columns = useMemo<DataTableColumn<ContractRow>[]>(
+    () => [
+      {
+        id: 'property',
+        header: t('contracts.detail.propertyFallback'),
+        basis: 260,
+        accessor: (row) => row.propertyName,
+        cell: ({ row }) => (
+          <BloomText style={styles.cellPrimary} numberOfLines={1}>
+            {row.propertyName}
+          </BloomText>
+        ),
+      },
+      {
+        id: 'status',
+        header: t('contracts.list.columnStatus'),
+        basis: 150,
+        accessor: (row) => row.status,
+        cell: ({ row }) => <ContractStatusBadge status={row.status} />,
+      },
+      {
+        id: 'landlord',
+        header: t('contracts.card.landlord'),
+        basis: 160,
+        accessor: (row) => row.landlordName,
+      },
+      {
+        id: 'tenant',
+        header: t('contracts.card.tenant'),
+        basis: 160,
+        accessor: (row) => row.tenantName,
+      },
+      {
+        id: 'start',
+        header: t('contracts.card.start'),
+        basis: 120,
+        accessor: (row) => toDate(row.startDate),
+        cell: ({ row }) => <BloomText style={styles.cellText}>{formatDate(row.startDate)}</BloomText>,
+      },
+      {
+        id: 'end',
+        header: t('contracts.card.end'),
+        basis: 120,
+        accessor: (row) => toDate(row.endDate),
+        cell: ({ row }) => <BloomText style={styles.cellText}>{formatDate(row.endDate)}</BloomText>,
+      },
+      {
+        id: 'rent',
+        header: t('contracts.detail.monthlyRent'),
+        basis: 130,
+        align: 'end',
+        accessor: (row) => row.monthlyRent,
+        cell: ({ row }) => (
+          <BloomText style={styles.cellPrimary}>
+            {formatMoney(row.monthlyRent, row.currency ?? 'EUR', locale)}
+          </BloomText>
+        ),
+      },
+      {
+        id: 'actions',
+        header: '',
+        width: 64,
+        sortable: false,
+        cell: ({ row }) => (
+          <DataTableRowActions
+            name={row.propertyName}
+            actions={[
+              {
+                icon: RiEyeLine,
+                label: t('contracts.actions.view'),
+                onPress: () => router.push(`/contracts/${row.id}`),
+              },
+            ]}
+          />
+        ),
+      },
+    ],
+    [t, locale, router],
+  );
 
   if (!hasPropertiesLoading && !hasRentalProperties) {
     return (
@@ -148,6 +285,21 @@ export default function ContractsScreen() {
     );
   }
 
+  const newContractButton = (
+    <Button
+      variant="primary"
+      size={showTable ? 'medium' : 'large'}
+      onPress={handleAddNewContract}
+      leadingIcon={RiAddLine}
+      style={showTable ? undefined : styles.footerButton}
+    >
+      {t('contracts.list.newContract')}
+    </Button>
+  );
+
+  const isLoading = leasesLoading || hasPropertiesLoading;
+  const hasNoContracts = !leasesLoading && !leasesError && contracts.length === 0;
+
   return (
     <View style={styles.root}>
       <Header
@@ -157,34 +309,35 @@ export default function ContractsScreen() {
       />
       <SafeAreaView edges={['bottom']} style={styles.safeArea}>
         <ScrollView contentContainerStyle={styles.content}>
-          <View style={styles.titleBlock}>
-            <SectionEyebrow>{t('contracts.list.eyebrow')}</SectionEyebrow>
-            <H2 style={styles.title}>{t('contracts.list.title')}</H2>
-            <BloomText style={styles.subtitle}>{t('contracts.list.subtitle')}</BloomText>
+          <View style={styles.titleRow}>
+            <View style={styles.titleBlock}>
+              <SectionEyebrow>{t('contracts.list.eyebrow')}</SectionEyebrow>
+              <H2 style={styles.title}>{t('contracts.list.title')}</H2>
+              <BloomText style={styles.subtitle}>{t('contracts.list.subtitle')}</BloomText>
+            </View>
+            {showTable ? newContractButton : null}
           </View>
 
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.filterRow}
-          >
-            {FILTERS.map((entry) => {
-              const isActive = filter === entry.id;
-              return (
+          {!showTable ? (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.filterRow}
+            >
+              {FILTERS.map((entry) => (
                 <Chip
                   key={entry.id}
+                  size="large"
                   onPress={() => setFilter(entry.id)}
-                  variant={isActive ? 'solid' : 'outlined'}
-                  color={isActive ? 'primary' : 'default'}
-                  selected={isActive}
+                  selected={filter === entry.id}
                 >
                   {t(entry.i18nKey)}
                 </Chip>
-              );
-            })}
-          </ScrollView>
+              ))}
+            </ScrollView>
+          ) : null}
 
-          {leasesLoading || hasPropertiesLoading ? <ContractsSkeleton /> : null}
+          {isLoading ? <ContractsSkeleton /> : null}
 
           {leasesError ? (
             <ErrorState
@@ -195,20 +348,45 @@ export default function ContractsScreen() {
             />
           ) : null}
 
-          {!leasesLoading && !leasesError && filteredContracts.length === 0 ? (
+          {showTable && !isLoading && !leasesError && !hasNoContracts ? (
+            <DataTable
+              accessibilityLabel={t('contracts.list.title')}
+              rows={filteredContracts}
+              columns={columns}
+              getRowId={(row) => row.id}
+              toolbar={
+                <>
+                  <DataTableFilter
+                    label={t('contracts.list.filterLabel')}
+                    value={filter}
+                    onValueChange={(value) => setFilter(value as FilterOption)}
+                    options={FILTERS.map((entry) => ({ value: entry.id, label: t(entry.i18nKey) }))}
+                  />
+                  <DataTableSearch
+                    label={t('contracts.list.searchLabel')}
+                    placeholder={t('common.search')}
+                    value={query}
+                    onChangeText={setQuery}
+                  />
+                </>
+              }
+              defaultSort={{ columnId: 'start', direction: 'descending' }}
+              pageSize={20}
+              minWidth={1000}
+              emptyState={
+                <BloomText style={styles.subtitle}>
+                  {query.trim() ? t('contracts.list.emptyTitle') : emptyDescription}
+                </BloomText>
+              }
+            />
+          ) : null}
+
+          {!isLoading && !leasesError && (showTable ? hasNoContracts : filteredContracts.length === 0) ? (
             <View style={styles.emptyWrap}>
               <EmptyState
                 icon="document-text-outline"
                 title={t('contracts.list.emptyTitle')}
-                description={
-                  filter === 'all'
-                    ? t('contracts.list.emptyAllDescription')
-                    : t('contracts.list.emptyFilteredDescription', {
-                        filter: t(
-                          `statusBadge.${filter === 'pending_signatures' ? 'pendingSignatures' : filter}`,
-                        ),
-                      })
-                }
+                description={emptyDescription}
                 actionText={t('contracts.list.createNew')}
                 actionIcon="add"
                 onAction={handleAddNewContract}
@@ -216,7 +394,7 @@ export default function ContractsScreen() {
             </View>
           ) : null}
 
-          {filteredContracts.length > 0 ? (
+          {!showTable && filteredContracts.length > 0 ? (
             <View style={styles.listWrap}>
               {filteredContracts.map((contract) => (
                 <ContractCard
@@ -229,17 +407,7 @@ export default function ContractsScreen() {
           ) : null}
         </ScrollView>
 
-        <View style={styles.footer}>
-          <Button
-            variant="primary"
-            size="large"
-            onPress={handleAddNewContract}
-            icon={<Ionicons name="add" size={20} color={colors.primaryForeground} />}
-            style={styles.footerButton}
-          >
-            {t('contracts.list.newContract')}
-          </Button>
-        </View>
+        {!showTable ? <View style={styles.footer}>{newContractButton}</View> : null}
       </SafeAreaView>
     </View>
   );
@@ -258,7 +426,14 @@ const styles = StyleSheet.create({
     gap: spacing.lg,
     paddingBottom: spacing['4xl'],
   },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    gap: spacing.lg,
+  },
   titleBlock: {
+    flex: 1,
     gap: spacing.xs,
   },
   title: {
@@ -279,6 +454,13 @@ const styles = StyleSheet.create({
   },
   listWrap: {
     gap: spacing.md,
+  },
+  cellPrimary: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  cellText: {
+    fontSize: 14,
   },
   skeletonCard: {
     backgroundColor: colors.surfaceElevated,

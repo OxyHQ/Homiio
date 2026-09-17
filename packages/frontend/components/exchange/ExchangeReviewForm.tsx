@@ -1,15 +1,17 @@
 import React, { useCallback, useState } from 'react';
-import { Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { Button } from '@oxy.so/bloom/button';
+import { RiStarFill, RiStarLine } from '@oxy.so/bloom/icons';
+import { Textarea } from '@oxy.so/bloom/textarea';
+import { useTheme } from '@oxy.so/bloom/theme';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { useCreateExchangeReview } from '@/hooks/useExchangeQueries';
 import { toast } from '@oxy.so/bloom/toast';
 import { colors } from '@/styles/colors';
-import { radius, spacing } from '@/constants/styles';
+import { spacing } from '@/constants/styles';
 
 export interface ExchangeReviewFormProps {
   exchangeRequestId: string;
@@ -18,7 +20,6 @@ export interface ExchangeReviewFormProps {
 }
 
 const STAR_COUNT = 5;
-const STAR_SIZE = 32;
 const MAX_COMMENT = 2000;
 
 /** A tappable 1–5 star picker (the read-only `Stars` component is display-only). */
@@ -27,8 +28,9 @@ const StarPicker: React.FC<{ value: number; onChange: (next: number) => void }> 
   onChange,
 }) => {
   const { t } = useTranslation();
+  const theme = useTheme();
   return (
-    <View style={styles.starRow}>
+    <View style={styles.starRow} accessibilityRole="radiogroup">
       {Array.from({ length: STAR_COUNT }).map((_, index) => {
         const rating = index + 1;
         const filled = rating <= value;
@@ -36,17 +38,18 @@ const StarPicker: React.FC<{ value: number; onChange: (next: number) => void }> 
           <Pressable
             key={rating}
             onPress={() => onChange(rating)}
-            accessibilityRole="button"
+            accessibilityRole="radio"
+            accessibilityState={{ checked: rating === value }}
             accessibilityLabel={t('listing.exchange.review.starLabel', {
               count: rating,
             })}
             hitSlop={6}
           >
-            <Ionicons
-              name={filled ? 'star' : 'star-outline'}
-              size={STAR_SIZE}
-              color={filled ? colors.ratingStar : colors.COLOR_BLACK_LIGHT_5}
-            />
+            {filled ? (
+              <RiStarFill size="2xl" fill={colors.ratingStar} />
+            ) : (
+              <RiStarLine size="2xl" fill={theme.colors.textTertiary} />
+            )}
           </Pressable>
         );
       })}
@@ -64,6 +67,7 @@ export const ExchangeReviewForm: React.FC<ExchangeReviewFormProps> = ({
   onSubmitted,
 }) => {
   const { t } = useTranslation();
+  const theme = useTheme();
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
   const mutation = useCreateExchangeReview(exchangeRequestId);
@@ -91,21 +95,20 @@ export const ExchangeReviewForm: React.FC<ExchangeReviewFormProps> = ({
 
   return (
     <View style={styles.container}>
-      <BloomText style={styles.title}>
+      <BloomText style={[styles.title, { color: theme.colors.text }]}>
         {t('listing.exchange.review.title')}
       </BloomText>
-      <BloomText style={styles.subtitle}>
+      <BloomText style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
         {t('listing.exchange.review.subtitle')}
       </BloomText>
       <StarPicker value={rating} onChange={setRating} />
-      <TextInput
-        style={styles.input}
+      <Textarea
         value={comment}
         onChangeText={setComment}
         placeholder={t('listing.exchange.review.placeholder')}
-        placeholderTextColor={colors.COLOR_BLACK_LIGHT_4}
-        multiline
-        textAlignVertical="top"
+        accessibilityLabel={t('listing.exchange.review.placeholder')}
+        rows={4}
+        autoResize
         maxLength={MAX_COMMENT}
       />
       <Button
@@ -129,25 +132,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 16,
     fontWeight: '700',
-    color: colors.COLOR_BLACK,
   },
   subtitle: {
     fontSize: 13,
-    color: colors.COLOR_BLACK_LIGHT_3,
   },
   starRow: {
     flexDirection: 'row',
     gap: spacing.sm,
-  },
-  input: {
-    backgroundColor: colors.COLOR_BLACK_LIGHT_9,
-    borderWidth: 1,
-    borderColor: colors.COLOR_BLACK_LIGHT_6,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    fontSize: 15,
-    color: colors.COLOR_BLACK,
-    minHeight: 96,
   },
   submit: {
     alignSelf: 'flex-start',

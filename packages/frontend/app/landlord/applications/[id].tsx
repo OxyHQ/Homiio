@@ -2,21 +2,14 @@
  * Landlord application detail — full applicant payload + review actions.
  *
  * Stream Q polish:
- *   - Bloom Typography (H2 / Text), Bloom Avatar, Bloom Button, Divider.
- *   - Flat cards with radius.lg + hairline borders.
- *   - All Pressables replaced by Bloom Button.
+ *   - Bloom Typography, Avatar, Card sections, Item rows for documents.
+ *   - Review decisions go through a Bloom Dialog holding a Textarea for notes.
+ *   - An approved application links to `/contracts/new?application=<id>`, the
+ *     only lease-create entry point.
  *   - Shared EmptyState / ErrorState components.
  */
 import React, { useCallback, useMemo, useState } from 'react';
-import {
-  Image,
-  Linking,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  View,
-} from 'react-native';
+import { Image, Linking, Platform, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
@@ -25,12 +18,25 @@ import { useTranslation } from 'react-i18next';
 import { useFormatting } from '@/utils/format';
 import i18next from 'i18next';
 import { toast } from '@oxy.so/bloom/toast';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { Button } from '@oxy.so/bloom/button';
+import { Card } from '@oxy.so/bloom/card';
+import { Item } from '@oxy.so/bloom/item';
+import { useTheme } from '@oxy.so/bloom/theme';
+import {
+  RiCheckLine,
+  RiCloseLine,
+  RiEditLine,
+  RiExternalLinkLine,
+  RiEyeLine,
+  RiFileTextLine,
+  RiMailLine,
+  RiUserLine,
+  RiWallet3Line,
+} from '@oxy.so/bloom/icons';
 import * as Skeleton from '@oxy.so/bloom/skeleton';
 import { Text as BloomText, H2, H3 } from '@oxy.so/bloom/typography';
 import { Avatar } from '@oxy.so/bloom/avatar';
-import { TextFieldInput } from '@oxy.so/bloom/text-field';
+import { Textarea } from '@oxy.so/bloom/textarea';
 import {
   Profile,
   TenantApplication,
@@ -39,6 +45,7 @@ import {
   formatMoney,
 } from '@homiio/shared-types';
 import { Header } from '@/components/Header';
+import { PageScrollView } from '@/components/PageScrollView';
 import { ApplicationStatusBadge } from '@/components/ApplicationStatusBadge';
 import { Dialog } from '@oxy.so/bloom/dialog';
 import { ErrorState } from '@/components/ui/ErrorState';
@@ -56,9 +63,6 @@ import {
   getPropertyTitle,
 } from '@/utils/propertyUtils';
 import { radius, spacing } from '@/constants/styles';
-import { colors } from '@/styles/colors';
-
-type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
 /** A tenant's declared income has no currency field; it is quoted in euros. */
 const APPLICATION_INCOME_CURRENCY = 'EUR';
@@ -105,16 +109,16 @@ const formatDate = (raw: string): string => {
   return format(date, 'EEE, MMM d, yyyy');
 };
 
-const docIcon = (type: string): IoniconName => {
+const DocIcon: React.FC<{ type: string; size: number; fill: string }> = ({ type, size, fill }) => {
   switch (type) {
     case 'id':
-      return 'card-outline';
+      return <RiUserLine width={size} height={size} fill={fill} />;
     case 'income':
-      return 'cash-outline';
+      return <RiWallet3Line width={size} height={size} fill={fill} />;
     case 'reference':
-      return 'mail-outline';
+      return <RiMailLine width={size} height={size} fill={fill} />;
     default:
-      return 'document-text-outline';
+      return <RiFileTextLine width={size} height={size} fill={fill} />;
   }
 };
 
@@ -159,35 +163,22 @@ interface DocumentRowProps {
 
 const DocumentRow: React.FC<DocumentRowProps> = ({ document }) => {
   const { t } = useTranslation();
+  const theme = useTheme();
 
   return (
-  <Pressable
-    onPress={() => openDocument(document.url)}
-    style={styles.documentRow}
-    accessibilityRole="link"
-    accessibilityLabel={`Open document ${document.filename}`}
-  >
-    <View style={styles.documentIcon}>
-      <Ionicons
-        name={docIcon(document.type)}
-        size={18}
-        color={colors.COLOR_BLACK_LIGHT_2}
-      />
-    </View>
-    <View style={styles.documentMeta}>
-      <BloomText style={styles.documentName} numberOfLines={1}>
-        {document.filename}
-      </BloomText>
-      <BloomText style={styles.documentType}>
-        {t(`applications.documentType.${document.type}`)}
-      </BloomText>
-    </View>
-    <Ionicons
-      name="open-outline"
-      size={18}
-      color={colors.COLOR_BLACK_LIGHT_3}
+    <Item
+      onPress={() => openDocument(document.url)}
+      accessibilityRole="link"
+      accessibilityLabel={`Open document ${document.filename}`}
+      leading={
+        <View style={[styles.documentIcon, { backgroundColor: theme.colors.backgroundSecondary }]}>
+          <DocIcon type={document.type} size={18} fill={theme.colors.icon} />
+        </View>
+      }
+      title={document.filename}
+      subtitle={t(`applications.documentType.${document.type}`)}
+      trailing={<RiExternalLinkLine width={18} height={18} fill={theme.colors.textSecondary} />}
     />
-  </Pressable>
   );
 };
 
@@ -196,12 +187,15 @@ interface DetailRowProps {
   value: string;
 }
 
-const DetailRow: React.FC<DetailRowProps> = ({ label, value }) => (
-  <View style={styles.detailRow}>
-    <BloomText style={styles.detailLabel}>{label}</BloomText>
-    <BloomText style={styles.detailValue}>{value}</BloomText>
-  </View>
-);
+const DetailRow: React.FC<DetailRowProps> = ({ label, value }) => {
+  const theme = useTheme();
+  return (
+    <View style={[styles.detailRow, { borderBottomColor: theme.colors.border }]}>
+      <BloomText style={[styles.detailLabel, { color: theme.colors.textSecondary }]}>{label}</BloomText>
+      <BloomText style={styles.detailValue}>{value}</BloomText>
+    </View>
+  );
+};
 
 const DetailSkeleton: React.FC = () => (
   <View style={styles.content}>
@@ -214,11 +208,11 @@ const DetailSkeleton: React.FC = () => (
       <Skeleton.Pill size={20} />
     </View>
     <Skeleton.Box width="100%" height={180} borderRadius={radius.xl} />
-    <View style={styles.card}>
+    <Card variant="outlined" radius="radius-16" style={styles.card}>
       <Skeleton.Text style={{ width: 140, lineHeight: 16 }} />
       <Skeleton.Text style={{ width: 220, lineHeight: 14 }} />
       <Skeleton.Text style={{ width: 200, lineHeight: 14 }} />
-    </View>
+    </Card>
   </View>
 );
 
@@ -226,6 +220,7 @@ export default function LandlordApplicationDetailScreen() {
   const { t } = useTranslation();
   const { locale } = useFormatting();
   const router = useRouter();
+  const theme = useTheme();
   const params = useLocalSearchParams<{ id: string }>();
   const id = typeof params.id === 'string' ? params.id : params.id?.[0];
   const applicationQuery = useApplicationById(id);
@@ -269,6 +264,11 @@ export default function LandlordApplicationDetailScreen() {
     setActionNotes('');
   }, [updateMutation.isPending]);
 
+  const handleCreateLease = useCallback(() => {
+    if (!id) return;
+    router.push({ pathname: '/contracts/new', params: { application: id } });
+  }, [id, router]);
+
   const handleConfirm = useCallback(async () => {
     if (!id || !pendingAction) return;
     const status = REVIEW_TRANSITIONS[pendingAction];
@@ -293,7 +293,7 @@ export default function LandlordApplicationDetailScreen() {
 
   if (!id) {
     return (
-      <View style={styles.root}>
+      <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
         <Header
           options={{
             showBackButton: true,
@@ -313,23 +313,23 @@ export default function LandlordApplicationDetailScreen() {
 
   if (applicationQuery.isPending) {
     return (
-      <View style={styles.root}>
+      <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
         <Header
           options={{
             showBackButton: true,
             title: 'Applicant',
           }}
         />
-        <ScrollView contentContainerStyle={styles.content}>
+        <PageScrollView>
           <DetailSkeleton />
-        </ScrollView>
+        </PageScrollView>
       </View>
     );
   }
 
   if (applicationQuery.isError || !application) {
     return (
-      <View style={styles.root}>
+      <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
         <Header
           options={{
             showBackButton: true,
@@ -351,7 +351,7 @@ export default function LandlordApplicationDetailScreen() {
 
   if (!isLandlord) {
     return (
-      <View style={styles.root}>
+      <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
         <Header
           options={{
             showBackButton: true,
@@ -377,12 +377,14 @@ export default function LandlordApplicationDetailScreen() {
 
   const canMoveToReviewing =
     application.status === TenantApplicationStatus.SUBMITTED;
+  const canCreateLease = application.status === TenantApplicationStatus.APPROVED;
+  const secondaryText = { color: theme.colors.textSecondary };
   const canDecide =
     application.status === TenantApplicationStatus.SUBMITTED ||
     application.status === TenantApplicationStatus.REVIEWING;
 
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
       <Header
         options={{
           showBackButton: true,
@@ -390,7 +392,7 @@ export default function LandlordApplicationDetailScreen() {
         }}
       />
       <SafeAreaView edges={['bottom']} style={styles.safeArea}>
-        <ScrollView contentContainerStyle={styles.content}>
+        <PageScrollView contentContainerStyle={styles.content}>
           <View style={styles.applicantHeader}>
             <Avatar
               size={56}
@@ -400,7 +402,7 @@ export default function LandlordApplicationDetailScreen() {
             />
             <View style={styles.applicantHeaderText}>
               <H2 style={styles.applicantName}>{applicantName}</H2>
-              <BloomText style={styles.subtitle}>
+              <BloomText style={[styles.subtitle, secondaryText]}>
                 {t(`profile.edit.options.employmentStatus.${application.employmentStatus}`)} ·{' '}
                 {formatMoney(application.monthlyIncome, APPLICATION_INCOME_CURRENCY, locale, INCOME_FORMAT)} / mo
               </BloomText>
@@ -408,7 +410,7 @@ export default function LandlordApplicationDetailScreen() {
             <ApplicationStatusBadge status={application.status} />
           </View>
 
-          <View style={styles.heroCard}>
+          <View style={[styles.heroCard, { backgroundColor: theme.colors.backgroundSecondary }]}>
             {imageSource ? (
               <Image
                 source={imageSource}
@@ -416,23 +418,23 @@ export default function LandlordApplicationDetailScreen() {
                 resizeMode="cover"
               />
             ) : (
-              <View style={[styles.thumb, styles.thumbPlaceholder]} />
+              <View style={styles.thumb} />
             )}
           </View>
 
-          <View style={styles.card}>
+          <Card variant="outlined" radius="radius-16" style={styles.card}>
             <SectionEyebrow>Property</SectionEyebrow>
             <H3 style={styles.cardHeading}>{propertyTitle}</H3>
             {property?.address ? (
-              <BloomText style={styles.subtitle}>
+              <BloomText style={[styles.subtitle, secondaryText]}>
                 {[property.address.cityName, property.address.countryName]
                   .filter(Boolean)
                   .join(', ')}
               </BloomText>
             ) : null}
-          </View>
+          </Card>
 
-          <View style={styles.card}>
+          <Card variant="outlined" radius="radius-16" style={styles.card}>
             <SectionEyebrow>Tenancy</SectionEyebrow>
             <View style={styles.detailList}>
               <DetailRow label="Move-in" value={formatDate(application.moveInDate)} />
@@ -451,12 +453,12 @@ export default function LandlordApplicationDetailScreen() {
                 />
               ) : null}
             </View>
-          </View>
+          </Card>
 
-          <View style={styles.card}>
+          <Card variant="outlined" radius="radius-16" style={styles.card}>
             <SectionEyebrow>References</SectionEyebrow>
             {application.referenceContacts.length === 0 ? (
-              <BloomText style={styles.emptyHint}>
+              <BloomText style={[styles.emptyHint, secondaryText]}>
                 No references provided.
               </BloomText>
             ) : (
@@ -464,28 +466,28 @@ export default function LandlordApplicationDetailScreen() {
                 {application.referenceContacts.map((reference, index) => (
                   <View
                     key={`${reference.email}-${index}`}
-                    style={styles.referenceCard}
+                    style={[styles.referenceCard, { borderBottomColor: theme.colors.border }]}
                   >
                     <BloomText style={styles.referenceName}>
                       {reference.name}
                     </BloomText>
-                    <BloomText style={styles.referenceMeta}>
+                    <BloomText style={[styles.referenceMeta, secondaryText]}>
                       {t(`profile.edit.options.referenceRelationship.${reference.relationship}`)} ·{' '}
                       {reference.phone}
                     </BloomText>
-                    <BloomText style={styles.referenceMeta}>
+                    <BloomText style={[styles.referenceMeta, secondaryText]}>
                       {reference.email}
                     </BloomText>
                   </View>
                 ))}
               </View>
             )}
-          </View>
+          </Card>
 
-          <View style={styles.card}>
+          <Card variant="outlined" radius="radius-16" style={styles.card}>
             <SectionEyebrow>Documents</SectionEyebrow>
             {application.documents.length === 0 ? (
-              <BloomText style={styles.emptyHint}>
+              <BloomText style={[styles.emptyHint, secondaryText]}>
                 No documents attached.
               </BloomText>
             ) : (
@@ -495,45 +497,62 @@ export default function LandlordApplicationDetailScreen() {
                 ))}
               </View>
             )}
-          </View>
+          </Card>
 
           {application.notes ? (
-            <View style={styles.card}>
+            <Card variant="outlined" radius="radius-16" style={styles.card}>
               <SectionEyebrow>Notes</SectionEyebrow>
               <BloomText style={styles.notesBody}>{application.notes}</BloomText>
-            </View>
+            </Card>
           ) : null}
 
-          <View style={styles.actionRow}>
-            <Button
-              variant="secondary"
-              size="medium"
-              onPress={() => handleOpen('reviewing')}
-              disabled={!canMoveToReviewing || updateMutation.isPending}
-              style={styles.actionButton}
-            >
-              Mark as reviewing
-            </Button>
-            <Button
-              variant="primary"
-              size="medium"
-              onPress={() => handleOpen('approve')}
-              disabled={!canDecide || updateMutation.isPending}
-              style={styles.actionButton}
-            >
-              Approve
-            </Button>
-            <Button
-              variant="ghost"
-              size="medium"
-              onPress={() => handleOpen('reject')}
-              disabled={!canDecide || updateMutation.isPending}
-              style={styles.actionButton}
-            >
-              Reject
-            </Button>
-          </View>
-        </ScrollView>
+          {canCreateLease ? (
+            <View style={styles.actionRow}>
+              <Button
+                variant="primary"
+                size="medium"
+                leadingIcon={RiEditLine}
+                onPress={handleCreateLease}
+                style={styles.actionButton}
+              >
+                Create lease
+              </Button>
+            </View>
+          ) : canDecide ? (
+            <View style={styles.actionRow}>
+              <Button
+                variant="secondary"
+                size="medium"
+                leadingIcon={RiEyeLine}
+                onPress={() => handleOpen('reviewing')}
+                disabled={!canMoveToReviewing || updateMutation.isPending}
+                style={styles.actionButton}
+              >
+                Mark as reviewing
+              </Button>
+              <Button
+                variant="primary"
+                size="medium"
+                leadingIcon={RiCheckLine}
+                onPress={() => handleOpen('approve')}
+                disabled={updateMutation.isPending}
+                style={styles.actionButton}
+              >
+                Approve
+              </Button>
+              <Button
+                variant="ghost"
+                size="medium"
+                leadingIcon={RiCloseLine}
+                onPress={() => handleOpen('reject')}
+                disabled={updateMutation.isPending}
+                style={styles.actionButton}
+              >
+                Reject
+              </Button>
+            </View>
+          ) : null}
+        </PageScrollView>
 
         <Dialog
           placement="center"
@@ -561,12 +580,14 @@ export default function LandlordApplicationDetailScreen() {
             },
           ]}
         >
-          <TextFieldInput
+          <Textarea
             label="Notes to applicant (optional)"
             value={actionNotes}
             onChangeText={setActionNotes}
-            multiline
+            rows={4}
+            autoResize
             maxLength={4000}
+            disabled={updateMutation.isPending}
             placeholder="Share next steps or a reason for your decision."
           />
         </Dialog>
@@ -578,7 +599,6 @@ export default function LandlordApplicationDetailScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: colors.background,
   },
   safeArea: {
     flex: 1,
@@ -610,29 +630,20 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 13,
-    color: colors.muted,
   },
   heroCard: {
     width: '100%',
     aspectRatio: 16 / 9,
     borderRadius: radius.xl,
     overflow: 'hidden',
-    backgroundColor: colors.mutedSubtle,
   },
   thumb: {
     width: '100%',
     height: '100%',
   },
-  thumbPlaceholder: {
-    backgroundColor: colors.mutedSubtle,
-  },
   card: {
-    backgroundColor: colors.surfaceElevated,
     padding: spacing.lg,
-    borderRadius: radius.lg,
     gap: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
   },
   cardHeading: {
     letterSpacing: -0.3,
@@ -645,20 +656,16 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: spacing.sm,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
   },
   detailLabel: {
     fontSize: 13,
-    color: colors.muted,
   },
   detailValue: {
     fontSize: 13,
     fontWeight: '600',
-    color: colors.COLOR_BLACK,
   },
   emptyHint: {
     fontSize: 13,
-    color: colors.muted,
   },
   referenceList: {
     gap: 0,
@@ -666,53 +673,27 @@ const styles = StyleSheet.create({
   referenceCard: {
     paddingVertical: spacing.sm,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
     gap: 2,
   },
   referenceName: {
     fontSize: 14,
     fontWeight: '600',
-    color: colors.COLOR_BLACK,
   },
   referenceMeta: {
     fontSize: 12,
-    color: colors.muted,
   },
   documentList: {
     gap: 0,
-  },
-  documentRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    paddingVertical: spacing.sm,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
   },
   documentIcon: {
     width: 36,
     height: 36,
     borderRadius: radius.md,
-    backgroundColor: colors.mutedSubtle,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  documentMeta: {
-    flex: 1,
-    gap: 2,
-  },
-  documentName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.COLOR_BLACK,
-  },
-  documentType: {
-    fontSize: 12,
-    color: colors.muted,
-  },
   notesBody: {
     fontSize: 14,
-    color: colors.COLOR_BLACK,
     lineHeight: 20,
   },
   actionRow: {

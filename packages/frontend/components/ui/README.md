@@ -15,49 +15,13 @@ These primitives were removed in favour of Bloom; do not re-add local copies.
 | Card surface, thumbnail card, card action row | `Card` / `CardFooter` from `@oxy.so/bloom/card` |
 | Horizontal card row | `HomeCarouselSection` (on Bloom `Carousel`) |
 | Screen header | `Header` (on Bloom `PageHeader`) |
+| Status badge | `Chip` with a data `hue` from `@oxy.so/bloom/chip` (see `ApplicationStatusBadge`, `ContractStatusBadge`) |
 | Date / date-range picking | `@oxy.so/bloom/date-picker`; listing availability through `AvailabilityCalendar` |
 
 Import Bloom only through `@oxy.so/bloom/<family>` — `bun run check:bundle-imports`
 fails on the root `'@oxy.so/bloom'` specifier.
 
 ## Components
-
-### StatusBadge
-
-A flexible status badge component that displays status information with icons and colors.
-
-```tsx
-import { StatusBadge, type StatusType } from '@/components/ui/StatusBadge';
-
-// Basic usage
-<StatusBadge status="active" />
-
-// With custom styling
-<StatusBadge
-  status="pending"
-  size="large"
-  showIcon={false}
-  customText="Custom Status"
-/>
-```
-
-**Props:**
-
-- `status`: StatusType - The status to display
-- `size`: 'small' | 'medium' | 'large' - Badge size
-- `showIcon`: boolean - Whether to show the status icon
-- `showText`: boolean - Whether to show the status text
-- `style`: ViewStyle - Custom styling
-- `customColor`: string - Override the default status color
-- `customIcon`: string - Override the default status icon
-- `customText`: string - Override the default status text
-
-**Supported Status Types:**
-
-- Contract: `draft`, `pending`, `active`, `expired`, `terminated`
-- Payment: `processing`, `completed`, `failed`, `refunded`
-- General: `success`, `warning`, `error`, `info`
-- Custom: `investigating`, `resolved`, `online`, `offline`
 
 ### FilterChip
 
@@ -130,24 +94,6 @@ import { EmptyState } from '@/components/ui/EmptyState';
 - `iconColor`: string - Icon color
 
 ## Usage Examples
-
-### Contract Card with Status Badge
-
-```tsx
-import { StatusBadge } from '@/components/ui/StatusBadge';
-
-function ContractCard({ contract }) {
-  return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>{contract.title}</Text>
-        <StatusBadge status={contract.status} size="small" />
-      </View>
-      {/* ... rest of card content */}
-    </View>
-  );
-}
-```
 
 ### Filter Interface with FilterChips
 

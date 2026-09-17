@@ -5,20 +5,20 @@
  * hooks, so both the board card and the detail screen import from here.
  */
 import { EvictionCaseStatus, type EvictionContactInfo } from '@homiio/shared-types';
-import type { AccentTone } from '@oxy.so/bloom/theme';
+import type { ChipHue } from '@oxy.so/bloom/chip';
 
-/** Bloom badge color + i18n label key per lifecycle status. */
+/** Bloom Chip data hue + i18n label key per lifecycle status. */
 export interface EvictionStatusMeta {
-  color: AccentTone;
+  hue: ChipHue;
   i18nKey: string;
 }
 
 export const EVICTION_STATUS_META: Record<EvictionCaseStatus, EvictionStatusMeta> = {
-  [EvictionCaseStatus.UPCOMING]: { color: 'warning', i18nKey: 'evictions.status.upcoming' },
-  [EvictionCaseStatus.STOPPED]: { color: 'success', i18nKey: 'evictions.status.stopped' },
-  [EvictionCaseStatus.POSTPONED]: { color: 'info', i18nKey: 'evictions.status.postponed' },
-  [EvictionCaseStatus.EXECUTED]: { color: 'error', i18nKey: 'evictions.status.executed' },
-  [EvictionCaseStatus.CANCELLED]: { color: 'default', i18nKey: 'evictions.status.cancelled' },
+  [EvictionCaseStatus.UPCOMING]: { hue: 'yellow', i18nKey: 'evictions.status.upcoming' },
+  [EvictionCaseStatus.STOPPED]: { hue: 'lime', i18nKey: 'evictions.status.stopped' },
+  [EvictionCaseStatus.POSTPONED]: { hue: 'cyan', i18nKey: 'evictions.status.postponed' },
+  [EvictionCaseStatus.EXECUTED]: { hue: 'rose', i18nKey: 'evictions.status.executed' },
+  [EvictionCaseStatus.CANCELLED]: { hue: 'neutral', i18nKey: 'evictions.status.cancelled' },
 };
 
 /** The day/month/time pieces rendered by the calendar-style date block. */

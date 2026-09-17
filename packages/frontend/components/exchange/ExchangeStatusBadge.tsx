@@ -1,35 +1,25 @@
+import React from 'react';
+import { useTranslation } from 'react-i18next';
+import { Chip, type ChipHue } from '@oxy.so/bloom/chip';
 import { ExchangeRequestStatus } from '@homiio/shared-types';
-import { createStatusBadge, type StatusBadgeEntry } from '@/components/ui/createStatusBadge';
 
-/** Exchange status → Bloom badge color + i18n key (mirrors ReservationStatusBadge). */
-const STATUS_MAP: Record<ExchangeRequestStatus, StatusBadgeEntry> = {
-  [ExchangeRequestStatus.PENDING]: {
-    i18nKey: 'listing.exchange.status.pending',
-    label: 'Pending',
-    color: 'warning',
-  },
-  [ExchangeRequestStatus.CONFIRMED]: {
-    i18nKey: 'listing.exchange.status.confirmed',
-    label: 'Confirmed',
-    color: 'success',
-  },
-  [ExchangeRequestStatus.DECLINED]: {
-    i18nKey: 'listing.exchange.status.declined',
-    label: 'Declined',
-    color: 'error',
-  },
-  [ExchangeRequestStatus.CANCELLED]: {
-    i18nKey: 'listing.exchange.status.cancelled',
-    label: 'Cancelled',
-    color: 'default',
-  },
-  [ExchangeRequestStatus.COMPLETED]: {
-    i18nKey: 'listing.exchange.status.completed',
-    label: 'Completed',
-    color: 'info',
-  },
+/** Exchange status → Bloom Chip data hue + i18n label key (mirrors ReservationStatusBadge). */
+const STATUS_MAP: Record<ExchangeRequestStatus, { hue: ChipHue; i18nKey: string }> = {
+  [ExchangeRequestStatus.PENDING]: { hue: 'yellow', i18nKey: 'listing.exchange.status.pending' },
+  [ExchangeRequestStatus.CONFIRMED]: { hue: 'lime', i18nKey: 'listing.exchange.status.confirmed' },
+  [ExchangeRequestStatus.DECLINED]: { hue: 'rose', i18nKey: 'listing.exchange.status.declined' },
+  [ExchangeRequestStatus.CANCELLED]: { hue: 'neutral', i18nKey: 'listing.exchange.status.cancelled' },
+  [ExchangeRequestStatus.COMPLETED]: { hue: 'cyan', i18nKey: 'listing.exchange.status.completed' },
 };
 
-export const ExchangeStatusBadge = createStatusBadge(STATUS_MAP);
+export function ExchangeStatusBadge({ status }: { status: ExchangeRequestStatus }) {
+  const { t } = useTranslation();
+  const entry = STATUS_MAP[status];
+  return (
+    <Chip size="small" hue={entry.hue}>
+      {t(entry.i18nKey)}
+    </Chip>
+  );
+}
 
 export default ExchangeStatusBadge;

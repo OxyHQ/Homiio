@@ -13,26 +13,32 @@
  * mis-states a payout via FX. Loading and empty states are handled inline.
  */
 import React, { useMemo } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { useMediaQuery } from 'react-responsive';
 
-import { H1, Text as BloomText } from '@oxy.so/bloom/typography';
-
-import { colors } from '@/styles/colors';
+import { Card } from '@oxy.so/bloom/card';
+import { Chip, type ChipHue } from '@oxy.so/bloom/chip';
+import { Divider } from '@oxy.so/bloom/divider';
+import {
+  RiBuilding2Line,
+  RiCoinsLine,
+  RiHandCoinLine,
+  RiHome4Line,
+  RiUserAddLine,
+  RiVipCrownLine,
+} from '@oxy.so/bloom/icons';
+import { Item } from '@oxy.so/bloom/item';
+import { Loading } from '@oxy.so/bloom/loading';
 import { StatBar } from '@oxy.so/bloom/stat-bar';
+import { StatCards, type StatCardsItem } from '@oxy.so/bloom/stat-cards';
+import { useTheme } from '@oxy.so/bloom/theme';
+import { H2, Text as BloomText } from '@oxy.so/bloom/typography';
+
 import { formatMoney } from '@homiio/shared-types';
 import { useFormatting } from '@/utils/format';
 import { formatLocalized } from '@/utils/dateLocale';
-import {
-  hairline,
-  ICON_SIZES,
-  radius,
-  resolvePagePadding,
-  spacing,
-  tracker,
-} from '@/constants/styles';
+import { resolvePagePadding } from '@/constants/styles';
 import {
   REWARD_TIERS,
   tierForPoints,
@@ -98,7 +104,6 @@ interface ListSectionProps {
   title: string;
   loading: boolean;
   isEmpty: boolean;
-  loadingText: string;
   emptyText: string;
   children: React.ReactNode;
 }
@@ -112,21 +117,36 @@ const ListSection: React.FC<ListSectionProps> = ({
   title,
   loading,
   isEmpty,
-  loadingText,
   emptyText,
   children,
-}) => (
-  <View style={styles.listBlock}>
-    <BloomText style={styles.listTitle}>{title}</BloomText>
-    {loading ? (
-      <BloomText style={styles.muted}>{loadingText}</BloomText>
-    ) : isEmpty ? (
-      <BloomText style={styles.muted}>{emptyText}</BloomText>
-    ) : (
-      children
-    )}
-  </View>
-);
+}) => {
+  const theme = useTheme();
+  return (
+    <View className="gap-2">
+      <Divider />
+      <BloomText variant="headline-semibold" style={{ color: theme.colors.text }}>
+        {title}
+      </BloomText>
+      {loading ? (
+        <Loading size="small" />
+      ) : isEmpty ? (
+        <BloomText variant="body-regular" style={{ color: theme.colors.textSecondary }}>
+          {emptyText}
+        </BloomText>
+      ) : (
+        children
+      )}
+    </View>
+  );
+};
+
+/** Ledger status → Bloom Chip data hue. */
+const STATUS_HUE: Record<CommissionStatus, ChipHue> = {
+  paid: 'lime',
+  approved: 'blue',
+  cancelled: 'rose',
+  pending: 'yellow',
+};
 
 export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({
   stats,
@@ -137,6 +157,7 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({
   earningsLoading,
 }) => {
   const { t } = useTranslation();
+  const theme = useTheme();
   const { locale } = useFormatting();
   const isWide = useMediaQuery({ minWidth: 768 });
   const horizontalPadding = resolvePagePadding(isWide);
@@ -167,76 +188,75 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({
   const offeringLabel = (offering: CommissionOffering): string =>
     t(`agent.calculator.offerings.${offering}`);
 
-  const statusLabel = (status: CommissionStatus): string =>
-    t(`agent.dashboard.status.${status}`);
+  const statusLabel = (status: CommissionStatus): string => t(`agent.dashboard.status.${status}`);
 
-  const statusColor = (status: CommissionStatus): string => {
-    switch (status) {
-      case 'paid':
-        return colors.success;
-      case 'approved':
-        return colors.primaryColor;
-      case 'cancelled':
-        return colors.danger;
-      case 'pending':
-      default:
-        return colors.warning;
-    }
-  };
-
-  // The 4-up summary grid. Counts render as-is; the two money figures are shown
-  // in the ledger's own currency (no FX) via `formatMoney`.
-  const summaryCells: readonly { key: string; label: string; value: string }[] = [
-    {
-      key: 'referrals',
-      label: t('agent.dashboard.referrals'),
-      value: String(stats.referredCount),
-    },
-    {
-      key: 'listings',
-      label: t('agent.dashboard.listings'),
-      value: String(stats.activeListings),
-    },
-    {
-      key: 'pending',
-      label: t('agent.dashboard.pending'),
-      value: formatMoney(stats.pendingEarnings, stats.currency, locale, WHOLE_CURRENCY),
-    },
-    {
-      key: 'earned',
-      label: t('agent.dashboard.earned'),
-      value: formatMoney(stats.paidEarnings, stats.currency, locale, WHOLE_CURRENCY),
-    },
-  ];
+  // The KPI cards. Counts render as-is; the two money figures are shown in the
+  // ledger's own currency (no FX) via `formatMoney`. Each card's chip carries a
+  // derived, copy-free companion figure: points earned, the live share of
+  // referrals, the pending share of all earnings, and the current tier.
+  const summaryCards = useMemo<StatCardsItem[]>(() => {
+    const percent = new Intl.NumberFormat(locale, { style: 'percent', maximumFractionDigits: 0 });
+    const liveShare = stats.referredCount > 0 ? stats.activeListings / stats.referredCount : 0;
+    const totalEarnings = stats.pendingEarnings + stats.paidEarnings;
+    const pendingShare = totalEarnings > 0 ? stats.pendingEarnings / totalEarnings : 0;
+    return [
+      {
+        icon: RiUserAddLine,
+        label: t('agent.dashboard.referrals'),
+        value: String(stats.referredCount),
+        delta: t('agent.dashboard.pointsValue', { count: points }),
+        deltaColor: points > 0 ? 'lime' : 'neutral',
+      },
+      {
+        icon: RiBuilding2Line,
+        label: t('agent.dashboard.listings'),
+        value: String(stats.activeListings),
+        delta: percent.format(liveShare),
+        deltaColor: 'neutral',
+      },
+      {
+        icon: RiHandCoinLine,
+        label: t('agent.dashboard.pending'),
+        value: formatMoney(stats.pendingEarnings, stats.currency, locale, WHOLE_CURRENCY),
+        delta: percent.format(pendingShare),
+        deltaColor: 'neutral',
+      },
+      {
+        icon: RiCoinsLine,
+        label: t('agent.dashboard.earned'),
+        value: formatMoney(stats.paidEarnings, stats.currency, locale, WHOLE_CURRENCY),
+        delta: t(`agent.rewards.tiers.${currentTier.key}`),
+        deltaColor: stats.paidEarnings > 0 ? 'lime' : 'neutral',
+      },
+    ];
+  }, [stats, points, currentTier, locale, t]);
 
   const recentReferrals = referrals.slice(0, 4);
   const recentCommissions = commissions.slice(0, 4);
 
   return (
     <View style={{ paddingHorizontal: horizontalPadding }}>
-      <View style={styles.panel}>
-        <H1 style={styles.heading}>{t('agent.dashboard.title')}</H1>
+      <Card
+        variant="outlined"
+        radius="radius-24"
+        className="w-full max-w-[720px] self-center gap-6 p-6"
+      >
+        <H2 style={{ color: theme.colors.text }}>{t('agent.dashboard.title')}</H2>
 
-        {/* Stat grid */}
-        <View style={styles.statGrid}>
-          {summaryCells.map((cell) => (
-            <View key={cell.key} style={styles.statCell}>
-              <H1 style={styles.statValue}>{cell.value}</H1>
-              <BloomText style={styles.statLabel}>{cell.label}</BloomText>
-            </View>
-          ))}
-        </View>
+        <StatCards stats={summaryCards} columns={2} />
 
         {/* Points + tier + progress */}
-        <View style={styles.tierBlock}>
-          <View style={styles.tierHead}>
-            <View style={styles.tierBadge}>
-              <Ionicons name="medal" size={ICON_SIZES.md} color={colors.primaryColor} />
-              <BloomText style={styles.tierName}>{tierName(currentTier.key)}</BloomText>
+        <View className="gap-2">
+          <View className="flex-row items-center justify-between gap-3">
+            <View className="flex-row items-center gap-2">
+              <RiVipCrownLine width={20} height={20} fill={theme.colors.primary} />
+              <BloomText variant="headline-semibold" style={{ color: theme.colors.text }}>
+                {tierName(currentTier.key)}
+              </BloomText>
             </View>
-            <BloomText style={styles.pointsValue}>
+            <Chip size="medium" hue="gray">
               {t('agent.dashboard.pointsValue', { count: points })}
-            </BloomText>
+            </Chip>
           </View>
           {/* The caption is the bar's label: StatBar requires one, and it is
               exactly what the bar measures. */}
@@ -252,8 +272,6 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({
             value={progress}
             max={1}
             height={8}
-            fillColor={colors.primaryColor}
-            trackColor={colors.COLOR_BLACK_LIGHT_7}
           />
         </View>
 
@@ -262,20 +280,15 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({
           title={t('agent.dashboard.recentReferrals')}
           loading={referralsLoading}
           isEmpty={recentReferrals.length === 0}
-          loadingText={t('common.loading')}
           emptyText={t('agent.dashboard.noReferrals')}
         >
           {recentReferrals.map((property) => (
-            <View key={String(property.id)} style={styles.row}>
-              <Ionicons
-                name="home-outline"
-                size={ICON_SIZES.md}
-                color={colors.COLOR_BLACK_LIGHT_3}
-              />
-              <BloomText style={styles.rowText} numberOfLines={1}>
-                {propertyLabel(property)}
-              </BloomText>
-            </View>
+            <Item
+              key={String(property.id)}
+              density="compact"
+              leading={<RiHome4Line width={20} height={20} fill={theme.colors.icon} />}
+              title={propertyLabel(property)}
+            />
           ))}
         </ListSection>
 
@@ -284,163 +297,28 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({
           title={t('agent.dashboard.recentEarnings')}
           loading={earningsLoading}
           isEmpty={recentCommissions.length === 0}
-          loadingText={t('common.loading')}
           emptyText={t('agent.dashboard.noEarnings')}
         >
-          {recentCommissions.map((commission) => {
-            const tint = statusColor(commission.status);
-            return (
-              <View key={commission.id} style={styles.ledgerRow}>
-                <View style={styles.ledgerLeft}>
-                  <BloomText style={styles.ledgerAmount}>
-                    {formatMoney(commission.amount, commission.currency, locale, WHOLE_CURRENCY)}
-                  </BloomText>
-                  <BloomText style={styles.ledgerMeta}>
-                    {`${offeringLabel(commission.basis.offering)} · ${formatLocalized(
-                      new Date(commission.createdAt),
-                      'MMM d, yyyy',
-                    )}`}
-                  </BloomText>
-                </View>
-                <View style={[styles.statusPill, { backgroundColor: `${tint}1A` }]}>
-                  <BloomText style={[styles.statusText, { color: tint }]}>
-                    {statusLabel(commission.status)}
-                  </BloomText>
-                </View>
-              </View>
-            );
-          })}
+          {recentCommissions.map((commission) => (
+            <Item
+              key={commission.id}
+              density="compact"
+              title={formatMoney(commission.amount, commission.currency, locale, WHOLE_CURRENCY)}
+              subtitle={`${offeringLabel(commission.basis.offering)} · ${formatLocalized(
+                new Date(commission.createdAt),
+                'MMM d, yyyy',
+              )}`}
+              trailing={
+                <Chip size="medium" hue={STATUS_HUE[commission.status] ?? 'yellow'}>
+                  {statusLabel(commission.status)}
+                </Chip>
+              }
+            />
+          ))}
         </ListSection>
-      </View>
+      </Card>
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  panel: {
-    width: '100%',
-    maxWidth: 720,
-    alignSelf: 'center',
-    backgroundColor: colors.surfaceElevated,
-    borderRadius: radius.xl,
-    borderWidth: hairline.width,
-    borderColor: colors.border,
-    padding: spacing['2xl'],
-    gap: spacing.xl,
-  },
-  heading: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: colors.COLOR_BLACK,
-    letterSpacing: tracker.tight,
-  },
-  statGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  statCell: {
-    width: '50%',
-    paddingVertical: spacing.md,
-    gap: 2,
-  },
-  statValue: {
-    fontSize: 26,
-    fontWeight: '800',
-    color: colors.COLOR_BLACK,
-    letterSpacing: tracker.tight,
-    lineHeight: 30,
-  },
-  statLabel: {
-    fontSize: 13,
-    color: colors.COLOR_BLACK_LIGHT_3,
-    fontWeight: '600',
-  },
-  tierBlock: {
-    gap: spacing.sm,
-    paddingTop: spacing.lg,
-    borderTopWidth: hairline.width,
-    borderTopColor: hairline.color,
-  },
-  tierHead: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  tierBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
-  tierName: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: colors.COLOR_BLACK,
-  },
-  pointsValue: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: colors.COLOR_BLACK_LIGHT_3,
-  },
-  listBlock: {
-    gap: spacing.sm,
-    paddingTop: spacing.lg,
-    borderTopWidth: hairline.width,
-    borderTopColor: hairline.color,
-  },
-  listTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: colors.COLOR_BLACK,
-    marginBottom: spacing.xs,
-  },
-  muted: {
-    fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_3,
-    lineHeight: 20,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.xs,
-  },
-  rowText: {
-    flex: 1,
-    minWidth: 0,
-    fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_2,
-  },
-  ledgerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  ledgerLeft: {
-    flex: 1,
-    minWidth: 0,
-    gap: 2,
-  },
-  ledgerAmount: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: colors.COLOR_BLACK,
-  },
-  ledgerMeta: {
-    fontSize: 13,
-    color: colors.COLOR_BLACK_LIGHT_3,
-  },
-  statusPill: {
-    borderRadius: radius.pill,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-  },
-  statusText: {
-    fontSize: 12,
-    fontWeight: '700',
-    textTransform: 'capitalize',
-  },
-});
 
 export default PartnerDashboard;

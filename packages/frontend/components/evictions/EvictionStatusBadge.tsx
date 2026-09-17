@@ -1,23 +1,21 @@
 /**
- * Eviction lifecycle status badge. Built from the shared `createStatusBadge`
- * factory so it renders identically to the applications/reservations/exchange
- * badges — each status maps to a Bloom color + an i18n label key.
+ * Eviction lifecycle status badge — a Bloom `Chip` in the status's data hue,
+ * rendered identically to the applications/reservations/exchange badges.
  */
-import { EvictionCaseStatus } from '@homiio/shared-types';
-import { createStatusBadge, type StatusBadgeEntry } from '@/components/ui/createStatusBadge';
+import React from 'react';
+import { useTranslation } from 'react-i18next';
+import { Chip } from '@oxy.so/bloom/chip';
+import type { EvictionCaseStatus } from '@homiio/shared-types';
 import { EVICTION_STATUS_META } from './evictionUtils';
 
-const STATUS_MAP = Object.fromEntries(
-  (Object.values(EvictionCaseStatus) as EvictionCaseStatus[]).map((status) => [
-    status,
-    {
-      color: EVICTION_STATUS_META[status].color,
-      label: status,
-      i18nKey: EVICTION_STATUS_META[status].i18nKey,
-    } satisfies StatusBadgeEntry,
-  ]),
-) as Record<EvictionCaseStatus, StatusBadgeEntry>;
-
-export const EvictionStatusBadge = createStatusBadge<EvictionCaseStatus>(STATUS_MAP);
+export function EvictionStatusBadge({ status }: { status: EvictionCaseStatus }) {
+  const { t } = useTranslation();
+  const meta = EVICTION_STATUS_META[status];
+  return (
+    <Chip size="small" hue={meta.hue}>
+      {t(meta.i18nKey)}
+    </Chip>
+  );
+}
 
 export default EvictionStatusBadge;
