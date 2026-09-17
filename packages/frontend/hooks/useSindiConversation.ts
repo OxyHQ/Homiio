@@ -17,6 +17,7 @@ import { logger } from '@/utils/logger';
 import { API_URL } from '@/config';
 import i18next from 'i18next';
 import { requestSindiConsentAndRetry, SindiConsentRequiredError } from './sindiConsent';
+import { shouldPersistSindiTranscript } from './sindiTurnPersistence';
 
 /** Key under which we record that the file-upsell sheet has been shown once. */
 const FILE_UPSELL_KEY = 'sindi:fileUpsellShown';
@@ -215,6 +216,11 @@ export function useSindiConversation({
 
     if (syncable && currentConversation && conversationId) {
       if (isLoading) return;
+      // A failed turn must not reach the store: see `shouldPersistSindiTranscript`.
+      if (!shouldPersistSindiTranscript({ isLoading, error })) {
+        scrollToEnd();
+        return;
+      }
 
       const conversationMessages: ConversationMessage[] = messages.map((msg, index) => {
         const existing = currentConversation.messages?.[index];
@@ -273,6 +279,7 @@ export function useSindiConversation({
     currentConversation,
     conversationId,
     isLoading,
+    error,
     updateConversationMessages,
     saveConversation,
     authenticatedFetch,
