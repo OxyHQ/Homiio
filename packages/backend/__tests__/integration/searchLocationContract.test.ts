@@ -127,6 +127,7 @@ describe('search location contract', () => {
       ['a box and a region', 'swLat=41.3&swLng=2.0&neLat=41.5&neLng=2.3&state=catalonia'],
       ['a box and a neighborhood', 'swLat=41.3&swLng=2.0&neLat=41.5&neLng=2.3&neighborhood=gracia'],
       ['a radius and a city', 'lat=41.38&lng=2.17&radius=25000&city=barcelona'],
+      ['a box and a country', 'swLat=41.3&swLng=2.0&neLat=41.5&neLng=2.3&country=ES'],
     ])('rejects %s with INVALID_LOCATION', async (_label, qs) => {
       const res = await request(buildApp()).get(`/properties/search?${qs}`);
       expect(res.status).toBe(400);
@@ -134,7 +135,7 @@ describe('search location contract', () => {
       // The message names BOTH scopes, because the caller has to know which
       // two it sent — "invalid location" alone sends people to the wrong half.
       expect(res.body.message).toMatch(/bounding box|centre and radius/);
-      expect(res.body.message).toMatch(/city|state|neighborhood/);
+      expect(res.body.message).toMatch(/city|state|neighborhood|country/);
     });
 
     it('still accepts place ids that NEST rather than compete', async () => {
@@ -463,6 +464,61 @@ describe('search location contract', () => {
         status: 'unresolved',
         appliedLocationKind: 'none',
         requested: { param: 'neighborhood', value: 'NoSuchBarrio' },
+      });
+    });
+
+    it('scopes by an ISO COUNTRY code, case-insensitively, and echoes it', async () => {
+      // A homiio country had no param on this endpoint, so the client refused
+      // to run it at all. It scopes by `addresses.country_code`, and the
+      // assertion is on WHICH listing comes back: a Portuguese listing seeded
+      // beside the Spanish one is what a widened scope would also return.
+      const { chain, propertyId } = await seedBarcelonaListing();
+      const lisbonAddress = await seedAddress({
+        chain,
+        street: 'Rua Augusta',
+        countryCode: 'PT',
+        longitude: -9.1393,
+        latitude: 38.7223,
+      });
+      const lisbonProperty = await seedProperty({
+        addressId: lisbonAddress,
+        overrides: {
+          status: PropertyStatus.PUBLISHED,
+          type: PropertyType.APARTMENT,
+          availabilityIsAvailable: true,
+          offerings: [OfferingType.LONG_TERM_RENT],
+          longTermRentMonthlyAmount: 900,
+          longTermRentCurrency: 'EUR',
+        },
+      });
+
+      const res = await request(buildApp()).get('/properties/search?country=es');
+
+      expect(res.status).toBe(200);
+      const ids = res.body.data.map((p: { id: string }) => p.id);
+      expect(ids).toEqual([propertyId]);
+      expect(ids).not.toContain(lisbonProperty);
+      expect(res.body.location).toEqual({
+        status: 'resolved',
+        appliedLocationKind: 'country',
+        countryCode: 'ES',
+      });
+    });
+
+    it('marks a malformed country as unresolved rather than ignoring it', async () => {
+      const { propertyId } = await seedBarcelonaListing();
+
+      const unfiltered = await request(buildApp()).get('/properties/search');
+      expect(unfiltered.body.data.map((p: { id: string }) => p.id)).toContain(propertyId);
+
+      const res = await request(buildApp()).get('/properties/search?country=Spain');
+
+      expect(res.status).toBe(200);
+      expect(res.body.data).toHaveLength(0);
+      expect(res.body.location).toEqual({
+        status: 'unresolved',
+        appliedLocationKind: 'none',
+        requested: { param: 'country', value: 'Spain' },
       });
     });
 

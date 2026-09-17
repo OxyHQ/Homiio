@@ -349,6 +349,16 @@ export interface ParsedSearchParams {
    * answered globally" failure wearing a place's name.
    */
   neighborhood?: string;
+  /**
+   * Explicit country filter: an ISO-3166-1 alpha-2 code, matched against the
+   * denormalized `addresses.country_code`, so it needs no join and no lookup.
+   *
+   * Added because a Homiio COUNTRY place had no param at all: `precision:
+   * 'area'` carries no centre and its record often carries no bounds, so the
+   * client had nothing to send and refused to run the search. A country is
+   * scoped by identity exactly like a city, never by a radius around a centroid.
+   */
+  country?: string;
   boundingBox?: BoundingBox;
   centerRadius?: CenterRadius;
   /**
@@ -521,6 +531,7 @@ export function buildSearchPlan(
   const city = asString(query.city);
   const state = asString(query.state);
   const neighborhood = asString(query.neighborhood) ?? asString(query.neighborhoodId);
+  const country = asString(query.country);
 
   // A request names AT MOST ONE authoritative geographic scope, and a SHAPE and
   // a PLACE are two of them.
@@ -542,6 +553,7 @@ export function buildSearchPlan(
       city === undefined ? null : 'city',
       state === undefined ? null : 'state',
       neighborhood === undefined ? null : 'neighborhood',
+      country === undefined ? null : 'country',
     ].filter((name): name is string => name !== null);
     if (namedPlaces.length > 0) {
       throw new GeoParamError(
@@ -568,6 +580,7 @@ export function buildSearchPlan(
       city,
       state,
       neighborhood,
+      country,
       boundingBox,
       centerRadius,
       queryId,

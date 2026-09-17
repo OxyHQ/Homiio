@@ -61,6 +61,7 @@ import {
 import { withinBoundingBox, withinCircle } from '../../db/properties/propertyGeo';
 import {
   inCity,
+  inCountry,
   inNeighborhood,
   inRegion,
   matchesText,
@@ -74,15 +75,20 @@ import { serializeProperty } from '../../db/properties/propertySerializer';
  * distinct from "no location constraint", which is an empty condition list. The
  * caller answers the first with an empty page and applies the second.
  */
+/** The named place params a caller can send, and so the ones an echo can report as unresolved. */
+type UnresolvedParam = 'city' | 'state' | 'neighborhood' | 'country';
+
 interface ResolvedPlace {
   conditions: SQL[];
   unresolved: boolean;
   /** Which named parameter failed to resolve, for the response's echo. */
-  unresolvedParam?: 'city' | 'state' | 'neighborhood';
+  unresolvedParam?: UnresolvedParam;
   /** The canonical ids the scope was actually narrowed to, for the echo. */
   cityId?: string;
   regionId?: string;
   neighborhoodId?: string;
+  /** The ISO-2 code (upper-cased) the scope was narrowed to, for the echo. */
+  countryCode?: string;
 }
 
 /**
@@ -105,6 +111,7 @@ type LocationEcho =
       cityId?: string;
       regionId?: string;
       neighborhoodId?: string;
+      countryCode?: string;
       bounds?: { west: number; south: number; east: number; north: number };
       center?: { longitude: number; latitude: number };
       radiusMeters?: number;
@@ -112,7 +119,7 @@ type LocationEcho =
   | {
       status: 'unresolved';
       appliedLocationKind: LocationKind;
-      requested: { param: 'city' | 'state' | 'neighborhood'; value: string };
+      requested: { param: UnresolvedParam; value: string };
     }
   | { status: 'none'; appliedLocationKind: LocationKind };
 
@@ -141,6 +148,7 @@ function appliedLocationKind(params: ParsedSearchParams, place: ResolvedPlace): 
   if (place.neighborhoodId) return 'neighborhood';
   if (place.cityId) return 'city';
   if (place.regionId) return 'region';
+  if (place.countryCode) return 'country';
   return 'none';
 }
 
@@ -162,7 +170,8 @@ function buildLocationEcho(params: ParsedSearchParams, place: ResolvedPlace): Lo
     params.centerRadius !== undefined ||
     place.cityId !== undefined ||
     place.regionId !== undefined ||
-    place.neighborhoodId !== undefined;
+    place.neighborhoodId !== undefined ||
+    place.countryCode !== undefined;
 
   // "No location" is a legitimate query and answers normally — the failure mode
   // this contract forbids is a location REQUESTED AND LOST, never one that was
@@ -176,6 +185,7 @@ function buildLocationEcho(params: ParsedSearchParams, place: ResolvedPlace): Lo
     ...(place.cityId ? { cityId: place.cityId } : {}),
     ...(place.regionId ? { regionId: place.regionId } : {}),
     ...(place.neighborhoodId ? { neighborhoodId: place.neighborhoodId } : {}),
+    ...(place.countryCode ? { countryCode: place.countryCode } : {}),
     ...(params.boundingBox
       ? {
           bounds: {
@@ -249,7 +259,20 @@ async function resolvePlaceConditions(params: ParsedSearchParams): Promise<Resol
     conditions.push(inNeighborhood(neighborhoodId));
   }
 
-  return { conditions, unresolved: false, cityId, regionId, neighborhoodId };
+  let countryCode: string | undefined;
+  if (params.country) {
+    // The FORMAT is validated and membership is not: `ZZ` is a well-formed
+    // country Homiio has no listings in, which is a legitimate empty page,
+    // whereas `Spain` is a caller error and must be reported rather than
+    // silently ignored into an unscoped search.
+    if (!/^[A-Za-z]{2}$/.test(params.country)) {
+      return { conditions: [], unresolved: true, unresolvedParam: 'country' };
+    }
+    countryCode = params.country.toUpperCase();
+    conditions.push(inCountry(countryCode));
+  }
+
+  return { conditions, unresolved: false, cityId, regionId, neighborhoodId, countryCode };
 }
 
 /**
