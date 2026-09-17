@@ -15,9 +15,9 @@ interface UIState {
   /** Whether the desktop sidebar is collapsed to the icon-only rail. */
   sidebarCollapsed: boolean;
   /**
-   * Whether the navigation drawer is open as an overlay on small (mobile)
-   * screens, where the persistent sidebar is hidden in favor of the bottom
-   * bar. Always closed on large screens (the sidebar is always visible there).
+   * Whether `AppShell`'s navigation drawer is open (it drives the shell's
+   * controlled `drawerOpen`). Only meaningful below Bloom's `lg`, where the
+   * sidebar is a drawer; the shell ignores it while the rail sits in flow.
    */
   mobileDrawerOpen: boolean;
   /**

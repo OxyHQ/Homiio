@@ -36,8 +36,13 @@ export function useIsLargeDesktop() {
   return useOptimizedMediaQuery({ minWidth: 1440 });
 }
 
+/**
+ * Whether the width allows the right rail: Bloom's `lg`, the `asideFrom` the
+ * layout hands `AppShell`. Keep the two equal, or a screen that inlines what
+ * the rail would show (the property booking card) shows it nowhere in between.
+ */
 export function useIsRightBarVisible() {
-  return useOptimizedMediaQuery({ minWidth: 990 });
+  return useOptimizedMediaQuery({ minWidth: 1024 });
 }
 
 export function useIsScreenNotMobile() {

@@ -1,34 +1,19 @@
 import React from 'react';
-import {
-  View,
-  Pressable,
-  Platform,
-  Linking,
-  StyleSheet,
-  useWindowDimensions,
-  type ViewStyle,
-} from 'react-native';
-import Animated, {
-  Easing,
-  FadeIn,
-  FadeOut,
-  SlideInLeft,
-  SlideOutLeft,
-} from 'react-native-reanimated';
+import { Platform, Linking } from 'react-native';
 import { useRouter, usePathname } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import { Portal } from '@oxy.so/bloom/portal';
-import {
-  Sidebar,
-  type SidebarIcon,
-  type SidebarMode,
-  type SidebarNavItem,
-  type SidebarTree,
-  type SidebarTreeFolder,
-  type SidebarTreeItem,
+import type {
+  SidebarIcon,
+  SidebarMode,
+  SidebarNavItem,
+  SidebarProps,
+  SidebarTeam,
+  SidebarTree,
+  SidebarTreeFolder,
+  SidebarTreeItem,
 } from '@oxy.so/bloom/sidebar';
 import {
+  RiAccountCircleLine,
   RiArrowLeftRightLine,
   RiBookmarkLine,
   RiCalendarLine,
@@ -40,45 +25,32 @@ import {
   RiHotelBedLine,
   RiKey2Line,
   RiLightbulbLine,
+  RiLoginBoxLine,
   RiMegaphoneLine,
   RiSearchLine,
+  RiSettings3Line,
   RiShieldLine,
   RiStarLine,
   RiUserLine,
 } from '@oxy.so/bloom/icons';
-import { openAccountDialog, useOxy, ProfileButton } from '@oxy.so/services';
+import { getAccountDisplayName, getAccountFallbackHandle } from '@oxy.so/core';
+import { openAccountDialog, useAuth, useOxy } from '@oxy.so/services';
 
+import { LogoIcon } from '@/assets/logo';
 import { useRentalMode } from '@/context/RentalModeContext';
 import { useProfile } from '@/context/ProfileContext';
 import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
 import { useHostStatus } from '@/hooks/useHostStatus';
 import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
+import { useColors } from '@/hooks/useThemeColor';
 import { useUIStore } from '@/store/uiStore';
 import { useIsScreenNotMobile } from '@/hooks/useOptimizedMediaQuery';
 import { getPropertyTitle } from '@/utils/propertyUtils';
 import { SindiIcon } from '@/assets/icons';
 import type { BrowseMode } from '@/components/search/types';
 
-import { SIDEBAR_EXPANDED_WIDTH, SIDEBAR_GUTTER, SIDEBAR_MASK_CLEARANCE } from './dimensions';
-
-/**
- * Sliver of viewport kept to the right of the mobile overlay drawer so the
- * panel never spans the full width on the narrowest phones and the underlying
- * screen always peeks through behind the dimming scrim.
- */
-const MOBILE_DRAWER_EDGE_GAP = 56;
-
-/**
- * Dimming scrim painted over the whole viewport behind the mobile overlay
- * drawer. Matches the `overlayColor` of the inbox app's `front`-type drawer.
- */
-const MOBILE_DRAWER_SCRIM = 'rgba(0, 0, 0, 0.3)';
-
-/** Slide / fade duration (ms) for the mobile overlay drawer. */
-const MOBILE_DRAWER_DURATION = 250;
-
-/** Pressable that participates in Reanimated entering/exiting transitions. */
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+/** What `AppShell` takes as `sidebar`: the drawer-only props are the shell's. */
+export type HomiioSidebarProps = Omit<SidebarProps, 'mobile' | 'onClose' | 'flat'>;
 
 const TERMS_URL = 'https://oxy.so/company/transparency/policies/terms-of-service';
 const PRIVACY_URL = 'https://oxy.so/company/transparency/policies/privacy';
@@ -162,60 +134,29 @@ function useModeShortcuts(setBrowseMode: (mode: BrowseMode) => void) {
 }
 
 /**
- * Web pins the column to the viewport (the document is the scroll owner);
- * native fills the row it sits in.
- */
-const pinnedColumnStyle: ViewStyle =
-  Platform.OS === 'web'
-    ? ({
-        position: 'sticky',
-        top: 0,
-        alignSelf: 'flex-start',
-        height: '100vh',
-        maxHeight: '100vh',
-      } as unknown as ViewStyle)
-    : { height: '100%' };
-
-const styles = StyleSheet.create({
-  column: {
-    flexShrink: 0,
-    flexDirection: 'column',
-    padding: SIDEBAR_GUTTER,
-    paddingRight: SIDEBAR_GUTTER + SIDEBAR_MASK_CLEARANCE,
-    gap: SIDEBAR_GUTTER,
-  },
-  // Bloom's panel defaults to `height: '100%'`; in the column it shares the
-  // height with the account button below it.
-  panel: {
-    height: undefined,
-    flex: 1,
-    minHeight: 0,
-  },
-});
-
-/**
- * Homiio's navigation sidebar: Bloom `Sidebar` (panel variant) plus the Oxy
- * `ProfileButton` beneath it.
+ * Homiio's navigation sidebar, as the PROPS for Bloom's `Sidebar`. It renders
+ * nothing: `app/_layout.tsx` hands the result to `AppShell`, which owns the
+ * frame — the rail in flow from `lg`, the overlay drawer below it — so there is
+ * one sidebar mount and one drawer, not a copy per breakpoint.
  *
- * - Wide screens (>= 500): an inline column, collapsible to Bloom's icon rail;
- *   the collapse choice persists in `uiStore`.
- * - Below that the native bottom tabs own navigation and the sidebar becomes
- *   an on-demand slide-in overlay drawer (`mobileDrawerOpen`), rendered through
- *   Bloom's root Portal so it covers the whole viewport. It stays mounted on
- *   native phones for that reason.
+ * Call it ONCE per app (it binds the `⌥⌃1..4` mode shortcuts). The collapse
+ * choice persists in `uiStore`.
+ *
+ * The Oxy account lives in the `team` card at the foot of the rail (signed in)
+ * or a "Sign in" row (signed out): Bloom's `Sidebar` has no slot for an
+ * arbitrary `ProfileButton`, and the card's menu reaches the same Oxy account
+ * dialog.
  */
-export function SideBar() {
+export function useHomiioSidebarProps(): HomiioSidebarProps {
   const router = useRouter();
   const pathname = usePathname() || '/';
   const { t } = useTranslation();
-  const { width } = useWindowDimensions();
-  const insets = useSafeAreaInsets();
+  const colors = useColors();
 
   const isMobile = !useIsScreenNotMobile();
 
   const sidebarCollapsed = useUIStore((s) => s.sidebarCollapsed);
   const setSidebarCollapsed = useUIStore((s) => s.setSidebarCollapsed);
-  const mobileDrawerOpen = useUIStore((s) => s.mobileDrawerOpen);
   const closeMobileDrawer = useUIStore((s) => s.closeMobileDrawer);
   const sindiPanelOpen = useUIStore((s) => s.sindiPanelOpen);
   const toggleSindiPanel = useUIStore((s) => s.toggleSindiPanel);
@@ -223,7 +164,8 @@ export function SideBar() {
   const { mode, browseMode, setBrowseMode } = useRentalMode();
   const { canAccessRoommates } = useProfile();
   const { isHost } = useHostStatus();
-  const { isAuthenticated } = useOxy();
+  const { user, isAuthenticated, isAuthResolved, signIn } = useAuth();
+  const { oxyServices } = useOxy();
 
   const { folders } = useSavedPropertiesContext();
   const { properties: recentProperties } = useRecentlyViewed();
@@ -235,8 +177,8 @@ export function SideBar() {
      -------------------------------------------------------------- */
   const handleNavigate = React.useCallback(
     (route: string) => {
-      // Dismiss the mobile overlay drawer on any navigation so the
-      // destination screen isn't hidden behind it. No-op on wide screens.
+      // Dismiss the drawer on any navigation so the destination screen isn't
+      // hidden behind it. A no-op while the rail sits in flow.
       closeMobileDrawer();
       if (pathname !== route) router.push(route);
     },
@@ -244,8 +186,8 @@ export function SideBar() {
   );
 
   // Sindi is a docked panel on wide screens (toggle inline, no navigation) but
-  // the panel is wide-only, so from the mobile drawer Sindi keeps navigating to
-  // the full-screen `/sindi` route (closing the drawer first).
+  // the panel is wide-only, so on a phone Sindi keeps navigating to the
+  // full-screen `/sindi` route (closing the drawer first).
   const handleSindi = React.useCallback(() => {
     if (!isMobile) {
       toggleSindiPanel();
@@ -256,7 +198,7 @@ export function SideBar() {
 
   const handleSettings = React.useCallback(() => handleNavigate('/settings'), [handleNavigate]);
   const handleProfile = React.useCallback(() => handleNavigate('/profile'), [handleNavigate]);
-  const handleSignIn = React.useCallback(() => openAccountDialog(), []);
+  const handleSignIn = React.useCallback(() => void signIn(), [signIn]);
 
   /* --------------------------------------------------------------
      Navigation rows — mode-aware and role-gated
@@ -312,28 +254,68 @@ export function SideBar() {
     return entries;
   }, [t, isAuthenticated, mode, canAccessRoommates, isHost, handleSindi]);
 
-  // The legal links were a web-only footer; they are external, so they are
-  // action rows rather than `href` rows.
-  const secondaryItems = React.useMemo<SidebarNavItem[]>(
-    () =>
-      Platform.OS === 'web'
-        ? [
+  // Signed out, the account is a "Sign in" row above the legal links; signed
+  // in it is the `team` card below. Nothing while auth is still resolving, so
+  // a returning user never sees "Sign in" flash first.
+  const secondaryItems = React.useMemo<SidebarNavItem[]>(() => {
+    const entries: SidebarNavItem[] = [];
+    if (isAuthResolved && !isAuthenticated) {
+      entries.push({
+        key: 'sign-in',
+        label: t('sidebar.actions.signIn'),
+        icon: RiLoginBoxLine,
+        onPress: handleSignIn,
+      });
+    }
+    // The legal links were a web-only footer; they are external, so they are
+    // action rows rather than `href` rows.
+    if (Platform.OS === 'web') {
+      entries.push(
+        {
+          key: 'privacy',
+          label: t('sidebar.menu.privacy'),
+          icon: RiShieldLine,
+          onPress: () => void Linking.openURL(PRIVACY_URL),
+        },
+        {
+          key: 'terms',
+          label: t('sidebar.menu.terms'),
+          icon: RiFilePaper2Line,
+          onPress: () => void Linking.openURL(TERMS_URL),
+        },
+      );
+    }
+    return entries;
+  }, [t, isAuthResolved, isAuthenticated, handleSignIn]);
+
+  // The signed-in account: identity on the card, and a menu that reaches the
+  // Oxy account dialog (switch, add, sign out) plus Homiio's own pages.
+  const team = React.useMemo<SidebarTeam | undefined>(() => {
+    if (!isAuthenticated || !user) return undefined;
+    const name = getAccountDisplayName(user);
+    const handle = getAccountFallbackHandle(user);
+    const avatarUrl = user.avatar ? oxyServices.getFileDownloadUrl(user.avatar, 'thumb') : undefined;
+    return {
+      name,
+      email: handle ? `@${handle}` : undefined,
+      avatar: avatarUrl ? { source: avatarUrl } : { initials: name.charAt(0).toUpperCase() },
+      groups: [
+        {
+          id: 'account',
+          items: [
+            { key: 'profile', label: t('sidebar.navigation.profile'), icon: RiUserLine, onPress: handleProfile },
+            { key: 'settings', label: t('sidebar.navigation.settings'), icon: RiSettings3Line, onPress: handleSettings },
             {
-              key: 'privacy',
-              label: t('sidebar.menu.privacy'),
-              icon: RiShieldLine,
-              onPress: () => void Linking.openURL(PRIVACY_URL),
+              key: 'account',
+              label: t('sidebar.menu.account'),
+              icon: RiAccountCircleLine,
+              onPress: () => openAccountDialog('accounts'),
             },
-            {
-              key: 'terms',
-              label: t('sidebar.menu.terms'),
-              icon: RiFilePaper2Line,
-              onPress: () => void Linking.openURL(TERMS_URL),
-            },
-          ]
-        : [],
-    [t],
-  );
+          ],
+        },
+      ],
+    };
+  }, [isAuthenticated, user, oxyServices, t, handleProfile, handleSettings]);
 
   const selected = React.useMemo(() => {
     const exact = items.find((item) => item.href === pathname);
@@ -440,108 +422,34 @@ export function SideBar() {
     [handleNavigate],
   );
 
-  const renderColumn = (options: { mobile: boolean; collapsed: boolean }) => (
-    <>
-      <Sidebar
-        variant="panel"
-        items={items}
-        secondaryItems={secondaryItems}
-        selected={selected}
-        onNavigate={handleNavItem}
-        modes={modes}
-        mode={browseMode}
-        onModeChange={handleModeChange}
-        tree={tree}
-        selectedTreeItem={selectedTreeItem}
-        onTreeItemPress={handleNavItem}
-        collapsed={options.collapsed}
-        onCollapsedChange={setSidebarCollapsed}
-        mobile={options.mobile}
-        onClose={closeMobileDrawer}
-        fluid={options.mobile}
-        showThemeToggle={false}
-        showSearch={false}
-        style={styles.panel}
-      />
-      <View style={options.collapsed ? { alignItems: 'center' } : undefined}>
-        <ProfileButton
-          expanded={!options.collapsed}
-          onNavigateManage={handleSettings}
-          onNavigateProfile={handleProfile}
-          onAddAccount={handleSignIn}
-        />
-      </View>
-    </>
+  const logo = React.useMemo<HomiioSidebarProps['logo']>(
+    () => ({
+      icon: <LogoIcon size={26} color={colors.primary} />,
+      wordmark: 'Homiio',
+      href: '/',
+      onPress: () => handleNavigate('/'),
+      accessibilityLabel: 'Homiio',
+    }),
+    [colors.primary, handleNavigate],
   );
 
-  /* ==============================================================
-     MOBILE OVERLAY DRAWER (small screens)
-     The panel slides in from the left over the current screen with a
-     full-viewport dimming scrim behind it as a tap-to-dismiss target.
-     ============================================================== */
-  if (isMobile) {
-    // No ContentPanel mask beside the drawer, so no mask clearance either.
-    const drawerWidth = Math.min(
-      SIDEBAR_EXPANDED_WIDTH - SIDEBAR_MASK_CLEARANCE,
-      width - MOBILE_DRAWER_EDGE_GAP,
-    );
-    const slideIn = SlideInLeft.duration(MOBILE_DRAWER_DURATION).easing(Easing.out(Easing.cubic));
-    const slideOut = SlideOutLeft.duration(MOBILE_DRAWER_DURATION).easing(Easing.in(Easing.cubic));
-
-    // The Portal host stays mounted while on mobile so Reanimated can play the
-    // exit when `mobileDrawerOpen` flips to false. The full-screen wrapper is
-    // `pointerEvents:'none'` so WHEN CLOSED it passes every touch through (the
-    // RN-only `'box-none'` is invalid CSS — RN-Web drops it and freezes the
-    // mobile-web screen); the scrim + drawer re-enable themselves with 'auto'.
-    return (
-      <Portal>
-        <View className="flex-row" style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]}>
-          {mobileDrawerOpen && (
-            <>
-              <AnimatedPressable
-                entering={FadeIn.duration(MOBILE_DRAWER_DURATION)}
-                exiting={FadeOut.duration(MOBILE_DRAWER_DURATION)}
-                accessibilityRole="button"
-                accessibilityLabel={t('sidebar.close')}
-                onPress={closeMobileDrawer}
-                style={[
-                  StyleSheet.absoluteFill,
-                  { backgroundColor: MOBILE_DRAWER_SCRIM, pointerEvents: 'auto' },
-                ]}
-              />
-              <Animated.View
-                entering={slideIn}
-                exiting={slideOut}
-                className="h-full bg-background"
-                style={[
-                  styles.column,
-                  {
-                    width: drawerWidth,
-                    paddingRight: SIDEBAR_GUTTER,
-                    paddingTop: SIDEBAR_GUTTER + insets.top,
-                    paddingBottom: SIDEBAR_GUTTER + insets.bottom,
-                    pointerEvents: 'auto',
-                  },
-                ]}
-              >
-                {renderColumn({ mobile: true, collapsed: false })}
-              </Animated.View>
-            </>
-          )}
-        </View>
-      </Portal>
-    );
-  }
-
-  return (
-    <View
-      style={[
-        styles.column,
-        pinnedColumnStyle,
-        Platform.OS !== 'web' && { paddingTop: SIDEBAR_GUTTER + insets.top, paddingBottom: SIDEBAR_GUTTER + insets.bottom },
-      ]}
-    >
-      {renderColumn({ mobile: false, collapsed: sidebarCollapsed })}
-    </View>
-  );
+  return {
+    variant: 'panel',
+    logo,
+    items,
+    secondaryItems,
+    selected,
+    onNavigate: handleNavItem,
+    modes,
+    mode: browseMode,
+    onModeChange: handleModeChange,
+    tree,
+    selectedTreeItem,
+    onTreeItemPress: handleNavItem,
+    team,
+    collapsed: sidebarCollapsed,
+    onCollapsedChange: setSidebarCollapsed,
+    showThemeToggle: false,
+    showSearch: false,
+  };
 }

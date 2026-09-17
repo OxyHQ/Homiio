@@ -86,7 +86,7 @@ codebase.
 | State (local) | Zustand, per-domain stores in `packages/frontend/store/` |
 | State (server) | TanStack Query |
 | Identity | `@oxy.so/services` (`OxyProvider`, `useOxy`) — see [Auth](./auth) |
-| UI primitives + theme | `@oxy.so/bloom` (`BloomProvider`, `ContentPanel`, `Typography`) |
+| UI primitives + theme | `@oxy.so/bloom` (`BloomProvider`, `AppShell`, `Typography`) |
 | Maps + geolocation | `expo-location`, `react-native-svg` |
 | Charts | `react-native-chart-kit` over `react-native-svg` |
 | AI streaming | `@ai-sdk/react`, wired to the backend streaming endpoint |
@@ -117,7 +117,7 @@ no console output.
                             <ErrorBoundary>
                               <MapStateProvider>
                                 <SearchModeProvider>
-                                  <AppShell />   {/* SideBar + ContentPanel + <Slot /> + RightBar */}
+                                  <AppFrame />   {/* Bloom AppShell: sidebar + <Slot /> + RightBar aside */}
 ```
 
 Two rules this shape encodes:
