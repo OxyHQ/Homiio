@@ -849,7 +849,7 @@ endpoint returns rather than a side effect of a store migration:
 CONSTRUCTOR, not an array parameter.** `sql` + "`${values}::text[]`" emits
 `($1, $2)::text[]`, which Postgres rejects outright — a RUNTIME error that
 `tsc` cannot see and that four predicates shipped with (`typeIn`,
-`exchangeModeIn`, `hasAnyAmenity`, `hasAllAmenities`). `sql.param(values)` binds
+`exchangeModeIn`, `hasAnyAmenity` — since removed — and `hasAllAmenities`). `sql.param(values)` binds
 the whole array as ONE parameter. It was caught by the real-database suite and
 by nothing else, which is the argument for that suite.
 

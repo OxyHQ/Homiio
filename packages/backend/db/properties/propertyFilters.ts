@@ -146,13 +146,11 @@ export function booleanIs(column: AnyPgColumn, value: boolean): SQL {
   return sql`${column} = ${value}`;
 }
 
-/** Any of the requested amenities (the list feed's `$in`). */
-export function hasAnyAmenity(amenities: readonly string[]): SQL | undefined {
-  if (amenities.length === 0) return undefined;
-  return sql`${properties.amenities} && ${sql.param([...amenities])}::text[]`;
-}
-
-/** All of the requested amenities (the search endpoint's `$all`). */
+/**
+ * All of the requested amenities — the ONE amenity reading of every catalogue
+ * feed. The list feed and `/rooms` used to match ANY (Mongo's `$in`), so a
+ * multi-select widened with each chip instead of narrowing.
+ */
 export function hasAllAmenities(amenities: readonly string[]): SQL | undefined {
   if (amenities.length === 0) return undefined;
   return sql`${properties.amenities} @> ${sql.param([...amenities])}::text[]`;

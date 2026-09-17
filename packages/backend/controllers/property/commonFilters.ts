@@ -29,7 +29,7 @@ import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 import { properties } from '../../db/schema';
 import {
   booleanIs,
-  hasAnyAmenity,
+  hasAllAmenities,
   hasPhotos,
   idNotIn,
   inDateRange,
@@ -38,7 +38,7 @@ import {
   notModerationRestricted,
   typeIn,
 } from '../../db/properties/propertyFilters';
-import { getQueryString } from '../queryParams';
+import { getAmenitiesParam, getQueryString } from '../queryParams';
 
 type RawQuery = Record<string, unknown>;
 
@@ -122,10 +122,10 @@ export function buildCommonPropertyFilters(query: RawQuery): (SQL | undefined)[]
   conditions.push(inRange(properties.squareFootage, num(query.minSquareFootage), num(query.maxSquareFootage)));
   conditions.push(inRange(properties.yearBuilt, num(query.minYearBuilt), num(query.maxYearBuilt)));
 
-  const amenities = getQueryString(query.amenities);
-  if (amenities) {
-    conditions.push(hasAnyAmenity(amenities.split(',').map((a) => a.trim()).filter(Boolean)));
-  }
+  // ALL must match, the same reading as `/properties/search`. This used to be
+  // `getQueryString` + an ANY match: a repeated `amenities=` key kept only its
+  // first value, and "wifi AND parking" returned every listing with either.
+  conditions.push(hasAllAmenities(getAmenitiesParam(query.amenities)));
 
   if (isTrue(query.hasPhotos)) conditions.push(hasPhotos());
   if (isTrue(query.verified)) conditions.push(booleanIs(properties.isVerified, true));

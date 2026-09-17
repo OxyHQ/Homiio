@@ -24,6 +24,7 @@ import {
   EDITABLE_PROPERTY_FIELDS,
 } from './property/editableFields';
 import { pickFields } from '../utils/pickFields';
+import { getAmenitiesParam } from './queryParams';
 import { onPropertyTransacted } from '../services/commissionService';
 import { resolveCityId, resolveRegionId } from '../services/geoQueryService';
 import { findOrCreateCanonicalAddress } from '../services/addressService';
@@ -37,7 +38,7 @@ import {
 } from '../db/properties/propertyReads';
 import {
   furnishedStatusIs,
-  hasAnyAmenity,
+  hasAllAmenities,
   inCity,
   inRange,
   inRegion,
@@ -142,10 +143,9 @@ class RoomController {
 
       if (furnishedStatus) conditions.push(furnishedStatusIs(String(furnishedStatus)));
 
-      if (amenities) {
-        const amenityList = String(amenities).split(',').map((a) => a.trim().toLowerCase()).filter(Boolean);
-        conditions.push(hasAnyAmenity(amenityList));
-      }
+      // ALL must match — the reading every catalogue feed shares.
+      const amenityFilter = hasAllAmenities(getAmenitiesParam(amenities));
+      if (amenityFilter) conditions.push(amenityFilter);
 
       // Exclude drafts from public listings unless explicitly requested.
       conditions.push(status ? statusIs(String(status)) : statusIsNot('draft'));
