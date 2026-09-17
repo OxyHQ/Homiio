@@ -1249,12 +1249,13 @@ frontend's belief about it.
 | `lat`, `lng`, `radius` (metres, default 25 000, max 200 000) | `parseCenterRadius`, `:265-282` | unchanged; **units documented as metres at every call site** |
 | `propertyType` / `type`, `offering`, `exchangeMode` | `:366,371,442` | unchanged |
 | `priceMin`/`priceMax` (aliases `minRent`/`maxRent`), `minSalePrice`/`maxSalePrice` | `:385-386,431` | unchanged |
-| `bedrooms`/`minBedrooms`, `bathrooms`/`minBathrooms`, `amenities`, `guests`/`minGuests` | `:393,398,405,422` | unchanged |
+| `bedrooms`/`minBedrooms`, `bathrooms`/`minBathrooms`, `amenities`, `guests`/`minGuests` | `:393,398,405,422` | unchanged; `amenities` requires ALL, as a comma list or a repeated key — the same reading on `GET /api/properties` and `/rooms` |
 | `verified`, `eco`, `instantBook`, `petFriendly`, `hasPhotos`, `fairPrice` | `:409-419` | unchanged |
 | `status` (`available` alias) | `statusConditions`, `:305-317` | unchanged |
 | `excludeIds`, `page`, `limit` (≤50), `sortBy`, `sortOrder` | `:452-464` | unchanged |
 | — | — | **new** `location` echo in the response (§6.3) |
 | — | — | **new** `location.status: 'unresolved'` on an unresolvable place (§4.3) |
+| — | — | **new** sibling `GET /api/properties/search/price-histogram`: the same params resolved through the same `resolveSearchScope`, with every price bound (`priceMin`/`priceMax`, `minRent`/`maxRent`, `minSalePrice`/`maxSalePrice`) ignored; plus `histogramMin`/`histogramMax` (the span, default the scope's lowest price and 98th percentile), `histogramBuckets` (8–40, default 24) and `currency` (ISO 4217, default the scope's most common). Answers the same `location` echo and `priceHistogram: { offering, currency, min, max, count, otherCurrencyCount, buckets: [{ from, to, count }] }`, whose edge buckets are open-ended; `null` on an unresolved place (never a worldwide distribution), for `exchange`, or when nothing in scope is priced in that currency |
 
 Naming drift this exposes, worth fixing while the contract is open: the text
 parameter is `q`/`query`/`search` on property search

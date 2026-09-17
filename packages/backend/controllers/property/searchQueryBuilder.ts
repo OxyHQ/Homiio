@@ -60,6 +60,7 @@ import {
   typeIn,
 } from '../../db/properties/propertyFilters';
 import { nullsLast } from '../../db/properties/propertyReads';
+import { getAmenitiesParam, getQueryList } from '../queryParams';
 
 // ---- Per-offering price columns ----
 
@@ -300,16 +301,7 @@ export function parseCenterRadius(query: Record<string, RawQueryValue>): CenterR
 // ---- Non-geo filter parsing ----
 
 /** Split a comma-separated or repeated query param into a unique, trimmed list. */
-function parseList(value: RawQueryValue): string[] {
-  const collect = (raw: string): string[] => raw.split(',').map((p) => p.trim()).filter(Boolean);
-  if (Array.isArray(value)) {
-    return Array.from(new Set(value.flatMap((v) => (typeof v === 'string' ? collect(v) : []))));
-  }
-  if (typeof value === 'string') {
-    return Array.from(new Set(collect(value)));
-  }
-  return [];
-}
+const parseList = (value: RawQueryValue): string[] => getQueryList(value);
 
 const PROPERTY_TYPE_VALUES: ReadonlySet<string> = new Set(Object.values(PropertyType));
 const PROPERTY_STATUS_VALUES: ReadonlySet<string> = new Set(Object.values(PropertyStatus));
@@ -448,7 +440,7 @@ export function buildSearchPlan(
   }
 
   // --- Amenities (must include all requested) ---
-  const amenities = hasAllAmenities(parseList(query.amenities).map((a) => a.toLowerCase()));
+  const amenities = hasAllAmenities(getAmenitiesParam(query.amenities));
   if (amenities) conditions.push(amenities);
 
   // --- Boolean feature flags ---

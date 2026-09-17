@@ -579,6 +579,45 @@ function identifyingParams(
   return rest;
 }
 
+/** Every param a price BOUND travels in — none of them narrows a price histogram. */
+const PRICE_BOUND_PARAMS = ['priceMin', 'priceMax', 'minSalePrice', 'maxSalePrice'] as const;
+
+/**
+ * The params for `GET /api/properties/search/price-histogram`: the search's own
+ * params — same scope, offering and filters — minus paging, sort and the price
+ * bounds.
+ *
+ * Built FROM {@link buildSearchParams} rather than beside it, so a filter added
+ * to the search reaches the histogram without being named twice. The bounds are
+ * dropped on purpose: the bars show where prices sit in this scope, and
+ * narrowing them to the selected range would erase every bar outside the thumbs.
+ */
+export function buildPriceHistogramParams(query: SearchQuery): Record<string, string | number> {
+  const { page: _page, limit: _limit, sortBy: _sortBy, sortOrder: _sortOrder, ...params } =
+    buildSearchParams(query);
+  for (const key of PRICE_BOUND_PARAMS) delete params[key];
+  return params;
+}
+
+/**
+ * The cache key for a scope's price histogram.
+ *
+ * The geographic dimension goes through `locationKey`, exactly as
+ * {@link searchQueryKey} does, so no coordinate reaches the key. The price
+ * bounds are absent, so releasing a slider thumb reuses the cached histogram.
+ */
+export function priceHistogramQueryKey(
+  query: SearchQuery,
+  span: Record<string, string | number>,
+): readonly unknown[] {
+  return [
+    'propertySearchPriceHistogram',
+    locationKey(query.location),
+    identifyingParams(buildPriceHistogramParams(query)),
+    span,
+  ];
+}
+
 /** Shared by {@link searchQueryKey} and the hook, so the two cannot drift. */
 function buildSearchQueryKey(
   params: Record<string, string | number>,

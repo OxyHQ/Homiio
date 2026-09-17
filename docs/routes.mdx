@@ -58,6 +58,7 @@ All under `/api`. Source: `packages/backend/routes/public.ts`.
 |---|---|---|
 | `GET` | `/api/properties` | Paginated list with `PropertyFilters` |
 | `GET` | `/api/properties/search` | Text + filters + geography |
+| `GET` | `/api/properties/search/price-histogram` | Price buckets for the same params, price bounds ignored (ADR 0002 §14.2) |
 | `GET` | `/api/properties/by-ids` | Batched hydration |
 | `GET` | `/api/properties/nearby` | `lat`, `lng`, `radius` — PostGIS `ST_DWithin` |
 | `GET` | `/api/properties/radius` | Bounding-box variant — `ST_MakeEnvelope` |

@@ -65,6 +65,7 @@ import { H3 } from '@oxy.so/bloom/typography';
 
 import { OfferingType, type LocationSelection, type PropertyType } from '@homiio/shared-types';
 import { useIsScreenNotMobile } from '@/hooks/useOptimizedMediaQuery';
+import { useSearchPriceHistogram } from '@/hooks/useSearchPriceHistogram';
 import { useColors } from '@/hooks/useThemeColor';
 import { useFormatting } from '@/utils/format';
 import { useRecentSearchesStore, type RecentSearch } from '@/store/recentSearchesStore';
@@ -72,7 +73,7 @@ import { spacing } from '@/constants/styles';
 
 import { DatesStep } from './steps/DatesStep';
 import { GuestsStep, type GuestsValue } from './steps/GuestsStep';
-import { PriceStep } from './steps/PriceStep';
+import { PriceStep, priceTrackFor } from './steps/PriceStep';
 import { TypeStep } from './steps/TypeStep';
 import { WhereStep, WhereSuggestions, useWhereSearch } from './steps/WhereStep';
 import {
@@ -215,6 +216,11 @@ export function StaySearch({
   // seeding it from the label is how a place turned back into a text search.
   const [whereText, setWhereText] = useState<string>(query.queryText ?? '');
   const [guestCounts, setGuestCounts] = useState<GuestCounts | undefined>(undefined);
+  // Fetched only while the price step is on screen; keyed without the bounds,
+  // so moving the thumbs never refetches the bars.
+  const priceBuckets = useSearchPriceHistogram(draft, priceTrackFor(draft.offering), {
+    enabled: openStep === 'price',
+  });
   if (seedKey !== queryKey) {
     setSeedKey(queryKey);
     setDraft(query);
@@ -384,6 +390,7 @@ export function StaySearch({
             offering={draft.offering}
             priceMin={draft.priceMin}
             priceMax={draft.priceMax}
+            buckets={priceBuckets}
             onChange={handlePrice}
           />
         );
