@@ -1947,6 +1947,12 @@
     "chat": {
       "placeholder": "Ask Sindi about your tenant rights...",
       "you": "You",
+      "field": "Message",
+      "attach": "Attach a file",
+      "send": "Send message",
+      "stop": "Stop generating",
+      "messageCount_one": "{{count}} message",
+      "messageCount_other": "{{count}} messages",
       "disclaimer": "Sindi advocates for tenant rights and housing justice. For legal action, consult a qualified attorney. Connect with local tenant organizations for community support."
     },
     "errors": {

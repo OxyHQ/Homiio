@@ -11,18 +11,23 @@ import {
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
 import type { Message } from '@ai-sdk/react';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { Portal } from '@oxy.so/bloom/portal';
-import { H3, Text as BloomText } from '@oxy.so/bloom/typography';
+import { Button } from '@oxy.so/bloom/button';
+import {
+  RiAddLine,
+  RiArrowLeftSLine,
+  RiChat3Line,
+  RiCloseLine,
+  RiEditBoxLine,
+} from '@oxy.so/bloom/icons';
+import { useTheme } from '@oxy.so/bloom/theme';
+import { Text } from '@oxy.so/bloom/typography';
 import * as Skeleton from '@oxy.so/bloom/skeleton';
 import { useOxy, openAccountDialog } from '@oxy.so/services';
 import { SindiIcon } from '@/assets/icons';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ChatContent } from '@/components/sindi/ChatContent';
-import {
-  ConversationItem,
-  conversationListStyles,
-} from '@/components/sindi/ConversationItem';
+import { ConversationItem, ConversationList } from '@/components/sindi/ConversationItem';
 import { useSidebarWidth } from '@/components/SideBar/dimensions';
 import { useSindiAuthenticatedFetch } from '@/hooks/useSindiAuthenticatedFetch';
 import {
@@ -172,6 +177,7 @@ const PanelSkeleton: React.FC = () => (
  */
 export function SindiPanel() {
   const { t } = useTranslation();
+  const { colors: themeColors } = useTheme();
   const { oxyServices, activeSessionId } = useOxy();
 
   const sindiPanelOpen = useUIStore((s) => s.sindiPanelOpen);
@@ -305,45 +311,46 @@ export function SindiPanel() {
       <View style={[styles.header, panelBorders.headerDivider]}>
         <View style={styles.headerLeft}>
           {hasActiveConversation ? (
-            <Pressable
+            <Button
+              variant="icon"
+              iconOnly
+              leadingIcon={RiArrowLeftSLine}
               onPress={handleBackToList}
-              accessibilityRole="button"
               accessibilityLabel={t('sindi.panel.conversations')}
-              style={styles.headerIconButton}
-            >
-              <Ionicons name="chevron-back" size={20} color={colors.primaryDark} />
-            </Pressable>
+            />
           ) : (
-            <View style={styles.headerBrand}>
-              <SindiIcon size={22} color={colors.primaryColor} />
+            <View style={[styles.headerBrand, { backgroundColor: themeColors.primarySubtle }]}>
+              <SindiIcon size={22} color={themeColors.primary} />
             </View>
           )}
           <View style={styles.headerTitleWrap}>
-            <BloomText style={styles.headerTitle} numberOfLines={1}>
+            <Text variant="body-semibold" numberOfLines={1} style={{ color: themeColors.text }}>
               {t('sindi.panel.title')}
-            </BloomText>
-            <BloomText style={styles.headerSubtitle} numberOfLines={1}>
+            </Text>
+            <Text
+              variant="caption-1-regular"
+              numberOfLines={1}
+              style={{ color: themeColors.textSecondary }}
+            >
               {t('sindi.panel.subtitle')}
-            </BloomText>
+            </Text>
           </View>
         </View>
         <View style={styles.headerActions}>
-          <Pressable
+          <Button
+            variant="icon"
+            iconOnly
+            leadingIcon={RiEditBoxLine}
             onPress={handleNewChat}
-            accessibilityRole="button"
             accessibilityLabel={t('sindi.panel.newChat')}
-            style={styles.headerIconButton}
-          >
-            <Ionicons name="create-outline" size={20} color={colors.primaryDark} />
-          </Pressable>
-          <Pressable
+          />
+          <Button
+            variant="icon"
+            iconOnly
+            leadingIcon={RiCloseLine}
             onPress={closeSindiPanel}
-            accessibilityRole="button"
             accessibilityLabel={t('sindi.panel.close')}
-            style={styles.headerIconButton}
-          >
-            <Ionicons name="close" size={20} color={colors.primaryDark} />
-          </Pressable>
+          />
         </View>
       </View>
 
@@ -359,78 +366,62 @@ export function SindiPanel() {
           iconColor={colors.primaryColor}
         />
       ) : hasActiveConversation ? (
-        <View style={styles.chatBody}>
-          <ChatContent
-            key={`${activeConversationId}|${initialMessages.length}`}
-            conversationId={activeConversationId ?? undefined}
-            currentConversation={
-              currentConversation?.id === activeConversationId
-                ? currentConversation
-                : null
-            }
-            isAuthenticated={isAuthenticated}
-            authenticatedFetch={conversationFetch}
-            initialMessages={initialMessages}
-          />
-        </View>
+        <ChatContent
+          key={`${activeConversationId}|${initialMessages.length}`}
+          conversationId={activeConversationId ?? undefined}
+          currentConversation={
+            currentConversation?.id === activeConversationId ? currentConversation : null
+          }
+          isAuthenticated={isAuthenticated}
+          authenticatedFetch={conversationFetch}
+          initialMessages={initialMessages}
+        />
       ) : (
-        <ScrollView
-          contentContainerStyle={styles.landing}
-          showsVerticalScrollIndicator={false}
-        >
+        <ScrollView contentContainerStyle={styles.landing} showsVerticalScrollIndicator={false}>
           <View style={styles.intro}>
-            <View style={styles.introIcon}>
-              <SindiIcon size={40} color={colors.primaryColor} />
-            </View>
-            <BloomText style={styles.introTitle}>
+            <SindiIcon size={40} color={themeColors.primary} />
+            <Text variant="headline-semibold" style={[styles.center, { color: themeColors.text }]}>
               {t('sindi.panel.title')}
-            </BloomText>
-            <BloomText style={styles.introBody}>
+            </Text>
+            <Text
+              variant="body-2-regular"
+              style={[styles.center, { color: themeColors.textSecondary }]}
+            >
               {t('sindi.panel.intro')}
-            </BloomText>
+            </Text>
           </View>
 
-          <Pressable
-            onPress={handleNewChat}
-            accessibilityRole="button"
-            accessibilityLabel={t('sindi.panel.startNew')}
-            style={styles.startButton}
-          >
-            <Ionicons name="add" size={18} color={colors.primaryForeground} />
-            <BloomText style={styles.startButtonLabel}>
-              {t('sindi.panel.startNew')}
-            </BloomText>
-          </Pressable>
+          <Button variant="primary" leadingIcon={RiAddLine} onPress={handleNewChat} fullWidth>
+            {t('sindi.panel.startNew')}
+          </Button>
 
           <View style={styles.historyBlock}>
-            <H3 style={styles.historyTitle}>
+            <Text variant="body-semibold" style={{ color: themeColors.text }}>
               {t('sindi.panel.conversations')}
-            </H3>
+            </Text>
             {loading ? (
               <PanelSkeleton />
             ) : sortedConversations.length === 0 ? (
               <View style={styles.emptyHistory}>
-                <Ionicons
-                  name="chatbubbles-outline"
-                  size={28}
-                  color={colors.muted}
-                />
-                <BloomText style={styles.emptyHistoryText}>
+                <RiChat3Line width={28} height={28} fill={themeColors.textTertiary} />
+                <Text
+                  variant="body-2-regular"
+                  style={[styles.center, { color: themeColors.textSecondary }]}
+                >
                   {t('sindi.panel.empty')}
-                </BloomText>
+                </Text>
               </View>
             ) : (
-              <View style={conversationListStyles.list}>
-                {sortedConversations.map((conversation, idx) => (
+              <ConversationList>
+                {sortedConversations.map((conversation) => (
                   <ConversationItem
                     key={conversation.id}
                     conversation={conversation}
-                    isLast={idx === sortedConversations.length - 1}
                     isActive={conversation.id === activeConversationId}
                     onPress={() => setActiveConversationId(conversation.id)}
                   />
                 ))}
-              </View>
+              </ConversationList>
             )}
           </View>
         </ScrollView>
@@ -538,7 +529,6 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: colors.infoSubtle,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -546,31 +536,11 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
   },
-  headerTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: colors.COLOR_BLACK,
-  },
-  headerSubtitle: {
-    fontSize: 11,
-    color: colors.muted,
-  },
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
     flexShrink: 0,
-  },
-  headerIconButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  chatBody: {
-    flex: 1,
-    minHeight: 0,
   },
   landing: {
     padding: spacing.lg,
@@ -582,60 +552,17 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     paddingVertical: spacing.md,
   },
-  introIcon: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: colors.infoSubtle,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.xs,
-  },
-  introTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.COLOR_BLACK,
+  center: {
     textAlign: 'center',
-  },
-  introBody: {
-    fontSize: 13,
-    color: colors.muted,
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-  startButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.primaryColor,
-    borderRadius: radius.pill,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
-  },
-  startButtonLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.primaryForeground,
+    maxWidth: 280,
   },
   historyBlock: {
     gap: spacing.md,
-  },
-  historyTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    letterSpacing: -0.3,
   },
   emptyHistory: {
     alignItems: 'center',
     gap: spacing.sm,
     paddingVertical: spacing.xl,
-  },
-  emptyHistoryText: {
-    fontSize: 13,
-    color: colors.muted,
-    textAlign: 'center',
-    maxWidth: 240,
   },
   skeletonList: {
     gap: spacing.md,

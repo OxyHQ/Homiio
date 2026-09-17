@@ -1,17 +1,27 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet, Platform, type ViewStyle } from 'react-native';
+import { View, ScrollView, StyleSheet, Platform, type ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { useLocalSearchParams } from 'expo-router';
-import { API_URL } from '@/config';
 import { fetch as expoFetch } from 'expo/fetch';
-import { colors } from '@/styles/colors';
+import { useTranslation } from 'react-i18next';
+import {
+  AdmonitionContent,
+  AdmonitionIcon,
+  AdmonitionRoot,
+  AdmonitionRow,
+  AdmonitionText,
+} from '@oxy.so/bloom/admonition';
+import { Chip } from '@oxy.so/bloom/chip';
+import { RiShare2Line } from '@oxy.so/bloom/icons';
+import { Loading } from '@oxy.so/bloom/loading';
+import { useTheme } from '@oxy.so/bloom/theme';
+import { Text } from '@oxy.so/bloom/typography';
+import { deviceTimeZone, formatDate } from '@homiio/shared-types';
+import { API_URL } from '@/config';
 import { SindiIcon } from '@/assets/icons';
 import { Header } from '@/components/Header';
-import { useTranslation } from 'react-i18next';
+import { ChatMessage } from '@/components/sindi/ChatMessage';
 import { logger } from '@/utils/logger';
-import { deviceTimeZone, formatDate } from '@homiio/shared-types';
 import { useFormatting } from '@/utils/format';
 
 interface ConversationMessage {
@@ -34,8 +44,27 @@ interface SharedConversationResponse {
   conversation?: SharedConversation;
 }
 
+/**
+ * Web shell: a viewport-tall column whose transcript scrolls inside it.
+ * Viewport units are valid on react-native-web but absent from RN's types.
+ */
+const webContainer: ViewStyle | undefined =
+  Platform.OS === 'web'
+    ? {
+        height: '100vh' as unknown as ViewStyle['height'],
+        display: 'flex',
+        flexDirection: 'column',
+      }
+    : undefined;
+
+/**
+ * A read-only shared Sindi transcript (`/sindi/shared/<token>`), drawn with the
+ * same Bloom ai-chat turns as the live chat, each turn settled and footnoted
+ * with its real timestamp.
+ */
 export default function SharedConversationView() {
   const { locale } = useFormatting();
+  const { colors } = useTheme();
   const { token } = useLocalSearchParams<{ token: string }>();
   const { t } = useTranslation();
   const [conversation, setConversation] = useState<SharedConversation | null>(null);
@@ -73,85 +102,40 @@ export default function SharedConversationView() {
     loadSharedConversation();
   }, [token, t]);
 
+  const containerStyle = [styles.container, { backgroundColor: colors.background }, webContainer];
+
   if (loading) {
     return (
-      <SafeAreaView style={styles.container} edges={['bottom']}>
-        <Header
-          options={{
-            title: t('sindi.shared.loading'),
-            showBackButton: true,
-          }}
-        />
-        <View style={styles.loadingContainer}>
-          <Ionicons name="hourglass" size={48} color={colors.primaryColor} />
-          <Text style={styles.loadingText}>{t('sindi.shared.loadingMessage')}</Text>
-        </View>
+      <SafeAreaView style={containerStyle} edges={['bottom']}>
+        <Header options={{ title: t('sindi.shared.loading'), showBackButton: true }} />
+        <Loading size="large" text={t('sindi.shared.loadingMessage')} style={styles.fill} />
       </SafeAreaView>
     );
   }
 
-  if (error) {
+  if (error || !conversation) {
     return (
-      <SafeAreaView style={styles.container} edges={['bottom']}>
-        <Header
-          options={{
-            title: t('sindi.shared.error.title'),
-            showBackButton: true,
-          }}
-        />
-        <LinearGradient
-          colors={[colors.primaryColor, colors.secondaryLight]}
-          style={styles.errorContainer}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-        >
-          <View style={styles.errorContent}>
-            <Ionicons name="alert-circle" size={48} color={colors.primaryForeground} />
-            <Text style={styles.errorText}>{error}</Text>
-            <Text style={styles.errorSubtext}>{t('sindi.shared.error.description')}</Text>
-          </View>
-        </LinearGradient>
+      <SafeAreaView style={containerStyle} edges={['bottom']}>
+        <Header options={{ title: t('sindi.shared.error.title'), showBackButton: true }} />
+        <AdmonitionRoot type="error" style={styles.callout}>
+          <AdmonitionRow>
+            <AdmonitionIcon />
+            <AdmonitionContent>
+              <AdmonitionText style={styles.calloutTitle}>
+                {error ?? t('sindi.shared.error.notFound')}
+              </AdmonitionText>
+              <AdmonitionText>{t('sindi.shared.error.description')}</AdmonitionText>
+            </AdmonitionContent>
+          </AdmonitionRow>
+        </AdmonitionRoot>
       </SafeAreaView>
     );
   }
 
-  if (!conversation) {
-    return (
-      <SafeAreaView style={styles.container} edges={['bottom']}>
-        <Header
-          options={{
-            title: t('sindi.shared.error.title'),
-            showBackButton: true,
-          }}
-        />
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>{t('sindi.shared.error.notFound')}</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  // Web-specific styles for sticky positioning. Viewport units and the `auto`
-  // overflow value are valid for React Native Web but absent from RN's style
-  // types, so the web-only values are widened to the corresponding RN fields.
-  const webStyles: { container?: ViewStyle; messagesContainer?: ViewStyle } =
-    Platform.OS === 'web'
-      ? {
-          container: {
-            height: '100vh' as unknown as ViewStyle['height'],
-            display: 'flex',
-            flexDirection: 'column',
-          },
-          messagesContainer: {
-            flex: 1,
-            overflow: 'auto' as unknown as ViewStyle['overflow'],
-          },
-        }
-      : {};
+  const lastIndex = conversation.messages.length - 1;
 
   return (
-    <SafeAreaView style={[styles.container, webStyles.container]} edges={['bottom']}>
-      {/* Header */}
+    <SafeAreaView style={containerStyle} edges={['bottom']}>
       <Header
         options={{
           title: conversation.title,
@@ -160,88 +144,54 @@ export default function SharedConversationView() {
         }}
       />
 
-      {/* Shared Badge */}
-      <View style={styles.sharedBadgeContainer}>
-        <LinearGradient
-          colors={[colors.primaryColor, colors.secondaryLight]}
-          style={styles.sharedBadge}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
+      <View style={styles.badge}>
+        <Chip
+          size="small"
+          startIcon={<RiShare2Line width={14} height={14} fill={colors.textSecondary} />}
         >
-          <Ionicons name="share-outline" size={16} color={colors.primaryForeground} />
-          <Text style={styles.sharedBadgeText}>{t('sindi.shared.badge')}</Text>
-        </LinearGradient>
+          {t('sindi.shared.badge')}
+        </Chip>
       </View>
 
-      {/* Messages */}
       <ScrollView
-        style={[styles.messagesContainer, webStyles.messagesContainer]}
+        style={styles.fill}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.messagesContent}
+        contentContainerStyle={styles.thread}
       >
         {conversation.messages.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <LinearGradient
-              colors={[colors.primaryColor, colors.secondaryLight]}
-              style={styles.emptyHeader}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-            >
-              <SindiIcon size={48} color={colors.primaryForeground} />
-              <Text style={styles.emptyTitle}>{t('sindi.shared.empty.title')}</Text>
-              <Text style={styles.emptySubtitle}>{t('sindi.shared.empty.subtitle')}</Text>
-            </LinearGradient>
+          <View style={styles.empty}>
+            <SindiIcon size={48} color={colors.primary} />
+            <Text variant="title-2-medium" style={[styles.center, { color: colors.text }]}>
+              {t('sindi.shared.empty.title')}
+            </Text>
+            <Text variant="body-regular" style={[styles.center, { color: colors.textSecondary }]}>
+              {t('sindi.shared.empty.subtitle')}
+            </Text>
           </View>
         ) : (
           conversation.messages.map((m, index) => (
-            <View
-              key={index}
-              style={[
-                styles.messageContainer,
-                m.role === 'user' ? styles.userMessage : styles.assistantMessage,
-              ]}
-            >
-              <View
-                style={[
-                  styles.messageBubble,
-                  m.role === 'user' ? styles.userBubble : styles.assistantBubble,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.messageText,
-                    m.role === 'user' ? styles.userText : styles.assistantText,
-                  ]}
-                >
-                  {m.content}
-                </Text>
-              </View>
-              <Text style={styles.messageTime}>
-                {m.role === 'user' ? t('sindi.chat.you') : t('sindi.name')} •{' '}
-                {formatDate(m.timestamp, locale, deviceTimeZone(), {
-                  year: 'numeric',
-                  month: 'short',
-                  day: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
-              </Text>
-            </View>
+            <ChatMessage
+              key={m.id ?? index}
+              message={{ id: m.id ?? String(index), role: m.role, content: m.content }}
+              isLast={index === lastIndex}
+              isLoading={false}
+              footnote={`${m.role === 'user' ? t('sindi.chat.you') : t('sindi.name')} • ${formatDate(
+                m.timestamp,
+                locale,
+                deviceTimeZone(),
+                { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' },
+              )}`}
+            />
           ))
         )}
       </ScrollView>
 
-      {/* Footer */}
-      <View style={styles.footer}>
-        <LinearGradient
-          colors={[colors.primaryColor, colors.secondaryLight]}
-          style={styles.footerGradient}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-        >
-          <Text style={styles.footerText}>{t('sindi.shared.footer')}</Text>
-        </LinearGradient>
-      </View>
+      <Text
+        variant="caption-1-regular"
+        style={[styles.center, styles.footer, { color: colors.textTertiary }]}
+      >
+        {t('sindi.shared.footer')}
+      </Text>
     </SafeAreaView>
   );
 }
@@ -249,148 +199,37 @@ export default function SharedConversationView() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
   },
-  loadingContainer: {
+  fill: {
     flex: 1,
+  },
+  callout: {
+    margin: 16,
+  },
+  calloutTitle: {
+    fontWeight: '600',
+  },
+  badge: {
+    flexDirection: 'row',
     justifyContent: 'center',
-    alignItems: 'center',
-    padding: 40,
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: colors.COLOR_BLACK_LIGHT_3,
-  },
-  sharedBadgeContainer: {
     paddingHorizontal: 16,
     paddingVertical: 8,
   },
-  sharedBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    alignSelf: 'center',
-  },
-  sharedBadgeText: {
-    fontSize: 12,
-    color: colors.primaryForeground,
-    fontWeight: '500',
-    marginLeft: 4,
-  },
-  messagesContainer: {
-    flex: 1,
-  },
-  messagesContent: {
+  thread: {
+    gap: 12,
     paddingHorizontal: 16,
-    paddingVertical: 20,
+    paddingVertical: 16,
   },
-  emptyContainer: {
-    paddingVertical: 20,
-  },
-  emptyHeader: {
+  empty: {
     alignItems: 'center',
-    marginBottom: 30,
-    padding: 24,
-    borderRadius: 25,
-    borderWidth: 1,
-    borderColor: colors.COLOR_BLACK,
-    marginHorizontal: 16,
+    gap: 8,
+    paddingVertical: 32,
   },
-  emptyTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: colors.primaryForeground,
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  emptySubtitle: {
-    fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.9)',
+  center: {
     textAlign: 'center',
-    lineHeight: 24,
-    paddingHorizontal: 20,
-  },
-  messageContainer: {
-    marginVertical: 8,
-  },
-  userMessage: {
-    alignItems: 'flex-end',
-  },
-  assistantMessage: {
-    alignItems: 'flex-start',
-  },
-  messageBubble: {
-    maxWidth: '80%',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 20,
-    overflow: 'hidden',
-  },
-  userBubble: {
-    backgroundColor: colors.primaryColor,
-  },
-  assistantBubble: {
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  messageText: {
-    fontSize: 16,
-    lineHeight: 22,
-  },
-  userText: {
-    color: colors.primaryForeground,
-  },
-  assistantText: {
-    color: colors.COLOR_BLACK_LIGHT_2,
-  },
-  messageTime: {
-    fontSize: 12,
-    color: colors.textTertiary,
-    marginTop: 4,
-    marginHorizontal: 8,
   },
   footer: {
     paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
-  footerGradient: {
-    padding: 12,
-    borderRadius: 20,
-    alignItems: 'center',
-  },
-  footerText: {
-    fontSize: 12,
-    color: colors.primaryForeground,
-    textAlign: 'center',
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 40,
-    margin: 16,
-    borderRadius: 25,
-    borderWidth: 1,
-    borderColor: colors.COLOR_BLACK,
-  },
-  errorContent: {
-    alignItems: 'center',
-  },
-  errorText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: colors.primaryForeground,
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  errorSubtext: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.8)',
-    textAlign: 'center',
+    paddingVertical: 12,
   },
 });

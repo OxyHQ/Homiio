@@ -22,11 +22,14 @@
  * primary CTA — its label/icon use `colors.primaryForeground` (BLACK on the
  * `yellow` preset), resolved automatically by the Bloom `Button`.
  */
-import React, { useContext, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import React, { useContext } from 'react';
+import { StyleSheet, View } from 'react-native';
 
 import { Button } from '@oxy.so/bloom/button';
-import { Text as BloomText } from '@oxy.so/bloom/typography';
+import { Chip } from '@oxy.so/bloom/chip';
+import { RiVerifiedBadgeFill } from '@oxy.so/bloom/icons';
+import { useTheme } from '@oxy.so/bloom/theme';
+import { Text } from '@oxy.so/bloom/typography';
 
 import { SECTION_GUTTER } from '@/components/property/Section';
 import { SindiIcon } from '@/assets/icons';
@@ -34,7 +37,7 @@ import { BottomSheetContext } from '@/context/BottomSheetContext';
 import { SindiChatBottomSheet } from './SindiChatBottomSheet';
 import { useSindiSuggestions } from '@/hooks/useSindiSuggestions';
 import { colors } from '@/styles/colors';
-import { hairline, radius, spacing } from '@/constants/styles';
+import { radius, spacing } from '@/constants/styles';
 import { Property, SindiSuggestion } from '@homiio/shared-types';
 
 interface SindiSectionProps {
@@ -42,42 +45,12 @@ interface SindiSectionProps {
 }
 
 const SINDI_ICON_SIZE = 28;
-const VERIFIED_DOT_SIZE = 8;
 /** Quick-prompt chips are capped so the row stays a tidy two lines on phones. */
 const MAX_SUGGESTIONS = 4;
 
-interface SuggestionChipProps {
-  label: string;
-  onPress: () => void;
-}
-
-/**
- * Quick-prompt chip — owns its own pressed/hovered state because it renders
- * inside a `.map()` (hooks can't run in the map body). Static style array +
- * onPressIn/Out/Hover state, never a function-form `style` (NativeWind v4
- * swallows the function and the chip renders unstyled).
- */
-const SuggestionChip: React.FC<SuggestionChipProps> = ({ label, onPress }) => {
-  const [pressed, setPressed] = useState(false);
-  const [hovered, setHovered] = useState(false);
-  return (
-    <Pressable
-      onPress={onPress}
-      onPressIn={() => setPressed(true)}
-      onPressOut={() => setPressed(false)}
-      onHoverIn={() => setHovered(true)}
-      onHoverOut={() => setHovered(false)}
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      style={[styles.chip, (pressed || hovered) && styles.chipActive]}
-    >
-      <BloomText style={styles.chipLabel}>{label}</BloomText>
-    </Pressable>
-  );
-};
-
 export function SindiSection({ property }: SindiSectionProps) {
   const bottomSheet = useContext(BottomSheetContext);
+  const { colors: themeColors } = useTheme();
   const { suggestions } = useSindiSuggestions({ property });
 
   const openSindi = (initialMessage?: string) => {
@@ -106,29 +79,41 @@ export function SindiSection({ property }: SindiSectionProps) {
           <SindiIcon size={SINDI_ICON_SIZE} color={colors.primaryForeground} />
         </View>
         <View style={styles.headerText}>
-          <BloomText style={styles.title}>Ask Sindi about this home</BloomText>
-          <BloomText style={styles.subtitle}>{subtitle}</BloomText>
+          <Text variant="title-3-bold" style={{ color: themeColors.text }}>
+            Ask Sindi about this home
+          </Text>
+          <Text variant="body-2-regular" style={{ color: themeColors.textSecondary }}>
+            {subtitle}
+          </Text>
         </View>
       </View>
 
       <View style={styles.body}>
         {isVerified ? (
-          <View style={styles.verifiedRow} accessibilityRole="text">
-            <View style={styles.verifiedDot} />
-            <BloomText style={styles.verifiedLabel}>
+          <View style={styles.verifiedRow}>
+            <Chip
+              variant="subtle"
+              color="success"
+              startIcon={
+                <RiVerifiedBadgeFill width={16} height={16} fill={themeColors.success} />
+              }
+            >
               Verified by Sindi
-            </BloomText>
+            </Chip>
           </View>
         ) : null}
 
         {visibleSuggestions.length > 0 ? (
           <View style={styles.chipRow}>
             {visibleSuggestions.map((suggestion: SindiSuggestion, index: number) => (
-              <SuggestionChip
+              <Chip
                 key={`${suggestion.text}-${index}`}
-                label={suggestion.text}
+                size="medium"
                 onPress={() => openSindi(suggestion.text)}
-              />
+                accessibilityLabel={suggestion.text}
+              >
+                {suggestion.text}
+              </Chip>
             ))}
           </View>
         ) : null}
@@ -175,17 +160,6 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: spacing.xs,
   },
-  title: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: colors.COLOR_BLACK,
-    letterSpacing: -0.2,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_3,
-    lineHeight: 20,
-  },
   body: {
     paddingHorizontal: SECTION_GUTTER,
     marginTop: spacing.lg,
@@ -193,44 +167,10 @@ const styles = StyleSheet.create({
   },
   verifiedRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    alignSelf: 'flex-start',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.pill,
-    backgroundColor: colors.mutedSubtle,
-  },
-  verifiedDot: {
-    width: VERIFIED_DOT_SIZE,
-    height: VERIFIED_DOT_SIZE,
-    borderRadius: VERIFIED_DOT_SIZE / 2,
-    backgroundColor: colors.success,
-  },
-  verifiedLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.COLOR_BLACK,
   },
   chipRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.sm,
-  },
-  chip: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.pill,
-    borderWidth: hairline.width,
-    borderColor: colors.COLOR_BLACK_LIGHT_6,
-    backgroundColor: colors.surfaceElevated,
-  },
-  chipActive: {
-    backgroundColor: colors.COLOR_BLACK_LIGHT_7,
-  },
-  chipLabel: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: colors.COLOR_BLACK,
   },
 });

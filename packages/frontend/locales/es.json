@@ -2279,6 +2279,12 @@
     "chat": {
       "placeholder": "Pregúntale a Sindi sobre tus derechos como inquilino...",
       "you": "Tú",
+      "field": "Mensaje",
+      "attach": "Adjuntar un archivo",
+      "send": "Enviar mensaje",
+      "stop": "Detener respuesta",
+      "messageCount_one": "{{count}} mensaje",
+      "messageCount_other": "{{count}} mensajes",
       "disclaimer": "Sindi aboga por los derechos de los inquilinos y la justicia habitacional. Para acciones legales, consulta a un abogado calificado. Conéctate con organizaciones locales de inquilinos para apoyo comunitario."
     },
     "errors": {

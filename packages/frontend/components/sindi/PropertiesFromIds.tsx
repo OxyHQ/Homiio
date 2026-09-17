@@ -1,11 +1,10 @@
 import React from 'react';
-import { View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import type { Property } from '@homiio/shared-types';
 import { PropertyCard } from '@/components/PropertyCard';
 import { propertyService } from '@/services/propertyService';
-import { sindiStyles } from './styles';
 
 /** Resolve the routable ID for a property (DB `id` or external `id`). */
 function propertyKey(property: Property): string | undefined {
@@ -42,7 +41,7 @@ export const PropertiesFromIds = React.memo<PropertiesFromIdsProps>(({ ids }) =>
   if (validProperties.length === 0) return null;
 
   return (
-    <View style={sindiStyles.propertyCardsContainer}>
+    <View style={styles.cards}>
       {validProperties.map((property) => {
         const key = propertyKey(property);
         return (
@@ -60,3 +59,9 @@ export const PropertiesFromIds = React.memo<PropertiesFromIdsProps>(({ ids }) =>
   );
 });
 PropertiesFromIds.displayName = 'PropertiesFromIds';
+
+const styles = StyleSheet.create({
+  cards: {
+    gap: 12,
+  },
+});

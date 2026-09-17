@@ -1,26 +1,29 @@
 import React from 'react';
-import { Linking, Text, View, type StyleProp, type TextStyle } from 'react-native';
-import { sindiStyles } from './styles';
+import { Linking } from 'react-native';
+import {
+  AiChatBullet,
+  AiChatBulletList,
+  AiChatLinkChip,
+  AiChatMessageLine,
+  AiChatStrong,
+} from '@oxy.so/bloom/ai-chat';
+import { Code, CodeBlock, Pre } from '@oxy.so/bloom/code';
+import { Blockquote, Text } from '@oxy.so/bloom/typography';
 
 /**
- * Hermes-friendly markdown renderer for Sindi chat messages.
+ * Hermes-friendly markdown for Sindi replies, rendered as Bloom ai-chat blocks.
  *
- * Deliberately hand-rolled (rather than a markdown library) so it stays fast on
- * Hermes and renders to native `<Text>`/`<View>` without an HTML layer. Supports
- * the subset the assistant actually emits: headings (`#`/`##`/`###`), bold
- * (`**…**`), inline code (`` `…` ``), fenced code blocks, ordered/unordered
- * lists, blockquotes, and inline links (`[label](https://…)`).
+ * Bloom ships no markdown parser (ai-chat takes pre-built `AiChatMessageLine`s,
+ * agent-chat renders plain paragraphs), so the tiny line parser stays local and
+ * only the OUTPUT is Bloom: paragraphs are `AiChatMessageLine`, bold is
+ * `AiChatStrong`, links are `AiChatLinkChip`, inline code is `Code`, fenced
+ * code is `CodeBlock` (JS/TS, highlighted) or `Pre`, bullet runs are one
+ * `AiChatBulletList`, headings are the type ramp and quotes are `Blockquote`.
  *
- * Pure functions (`renderInlineSpans`/`renderMarkdownNodes`) do the parsing so
- * the component is a thin, memoized wrapper.
+ * `renderMarkdownBlocks` returns one node per block so an `AiChatAssistantMessage`
+ * reveals each on its own beat; a block already on screen keeps its key while
+ * the stream grows, so it never re-animates.
  */
-
-type ChatRole = 'user' | 'assistant';
-
-/** Resolve the role-specific text color style. */
-function roleTextStyle(role: ChatRole): StyleProp<TextStyle> {
-  return role === 'user' ? sindiStyles.userText : sindiStyles.assistantText;
-}
 
 const INLINE_CODE_REGEX = /(`[^`]+`)/g;
 const INLINE_CODE_MATCH = /^`([^`]+)`$/;
@@ -33,25 +36,17 @@ const TRAILING_WHITESPACE_REGEX = /\s+$/;
 const UNORDERED_LIST_REGEX = /^[-*]\s+(.*)$/;
 const ORDERED_LIST_REGEX = /^(\d+)\.\s+(.*)$/;
 
-/**
- * Render inline spans within a single line: inline code, then bold, then links,
- * falling through to plain text. Returns an array of `<Text>` nodes.
- */
-function renderInlineSpans(
-  text: string,
-  baseStyle: StyleProp<TextStyle>,
-  keyPrefix: string,
-): React.ReactNode[] {
+/** Grammars Bloom's `CodeBlock` highlights; anything else renders in a plain `Pre`. */
+const HIGHLIGHTED_LANGUAGES = new Set(['js', 'jsx', 'ts', 'tsx', 'javascript', 'typescript']);
+
+/** Inline runs of one line: inline code, then bold, then links, then plain text. */
+function renderInline(text: string, keyPrefix: string): React.ReactNode[] {
   const nodes: React.ReactNode[] = [];
 
   text.split(INLINE_CODE_REGEX).forEach((segment, i) => {
     const codeMatch = segment.match(INLINE_CODE_MATCH);
     if (codeMatch) {
-      nodes.push(
-        <Text key={`${keyPrefix}-code-${i}`} style={[baseStyle, sindiStyles.codeInline]}>
-          {codeMatch[1]}
-        </Text>,
-      );
+      nodes.push(<Code key={`${keyPrefix}-code-${i}`}>{codeMatch[1]}</Code>);
       return;
     }
     if (!segment) return;
@@ -59,11 +54,7 @@ function renderInlineSpans(
     segment.split(INLINE_BOLD_REGEX).forEach((boldSegment, j) => {
       const boldMatch = boldSegment.match(INLINE_BOLD_MATCH);
       if (boldMatch) {
-        nodes.push(
-          <Text key={`${keyPrefix}-bold-${i}-${j}`} style={[baseStyle, sindiStyles.markdownBold]}>
-            {boldMatch[1]}
-          </Text>,
-        );
+        nodes.push(<AiChatStrong key={`${keyPrefix}-bold-${i}-${j}`}>{boldMatch[1]}</AiChatStrong>);
         return;
       }
       if (!boldSegment) return;
@@ -74,71 +65,77 @@ function renderInlineSpans(
       while ((match = INLINE_LINK_REGEX.exec(boldSegment)) !== null) {
         const [full, label, url] = match;
         const before = boldSegment.substring(lastIndex, match.index);
-        if (before) {
-          nodes.push(
-            <Text key={`${keyPrefix}-txt-${i}-${j}-${lastIndex}`} style={baseStyle}>
-              {before}
-            </Text>,
-          );
-        }
+        if (before) nodes.push(before);
         nodes.push(
-          <Text
+          <AiChatLinkChip
             key={`${keyPrefix}-lnk-${i}-${j}-${match.index}`}
-            style={[baseStyle, sindiStyles.link]}
             onPress={() => {
               Linking.openURL(url);
             }}
-            suppressHighlighting
           >
             {label}
-          </Text>,
+          </AiChatLinkChip>,
         );
         lastIndex = match.index + full.length;
       }
       const rest = boldSegment.substring(lastIndex);
-      if (rest) {
-        nodes.push(
-          <Text key={`${keyPrefix}-rest-${i}-${j}-${lastIndex}`} style={baseStyle}>
-            {rest}
-          </Text>,
-        );
-      }
+      if (rest) nodes.push(rest);
     });
   });
 
   return nodes;
 }
 
-/** Parse a full markdown string into a list of block-level React nodes. */
-function renderMarkdownNodes(content: string, role: ChatRole): React.ReactNode[] {
+/** A fenced code block: highlighted card for JS/TS, a plain `Pre` otherwise. */
+function renderCode(code: string, language: string | undefined, key: string): React.ReactNode {
+  if (language && HIGHLIGHTED_LANGUAGES.has(language.toLowerCase())) {
+    return <CodeBlock key={key} code={code} language={language} wrap />;
+  }
+  return <Pre key={key}>{code}</Pre>;
+}
+
+/** Parse a markdown string into Bloom ai-chat blocks, one node per block. */
+export function renderMarkdownBlocks(content: string): React.ReactNode[] {
   if (!content) return [];
 
   const lines = content.split('\n');
   const out: React.ReactNode[] = [];
-  const baseTextStyle: StyleProp<TextStyle> = [sindiStyles.markdownParagraph, roleTextStyle(role)];
 
   let inCodeBlock = false;
+  let codeLanguage: string | undefined;
   let codeBuffer: string[] = [];
+  let bullets: { key: string; text: string }[] = [];
+
+  const flushBullets = (): void => {
+    if (bullets.length === 0) return;
+    const first = bullets[0].key;
+    out.push(
+      <AiChatBulletList key={`ul-${first}`}>
+        {bullets.map((bullet) => (
+          <AiChatBullet key={bullet.key}>{renderInline(bullet.text, bullet.key)}</AiChatBullet>
+        ))}
+      </AiChatBulletList>,
+    );
+    bullets = [];
+  };
 
   const flushCode = (key: string): void => {
     if (codeBuffer.length === 0) return;
-    const codeText = codeBuffer.join('\n');
-    out.push(
-      <View key={`code-${key}`} style={sindiStyles.codeBlock}>
-        <Text style={[sindiStyles.codeText, roleTextStyle(role)]}>{codeText}</Text>
-      </View>,
-    );
+    out.push(renderCode(codeBuffer.join('\n'), codeLanguage, `code-${key}`));
     codeBuffer = [];
+    codeLanguage = undefined;
   };
 
   for (let i = 0; i < lines.length; i++) {
-    const raw = lines[i] ?? '';
-    const line = raw.replace(TRAILING_WHITESPACE_REGEX, '');
+    const line = (lines[i] ?? '').replace(TRAILING_WHITESPACE_REGEX, '');
     const key = `ln-${i}`;
 
-    if (CODE_FENCE_REGEX.test(line)) {
+    const fence = line.match(CODE_FENCE_REGEX);
+    if (fence) {
       if (!inCodeBlock) {
+        flushBullets();
         inCodeBlock = true;
+        codeLanguage = fence[1];
       } else {
         inCodeBlock = false;
         flushCode(key);
@@ -152,104 +149,66 @@ function renderMarkdownNodes(content: string, role: ChatRole): React.ReactNode[]
     }
 
     const trimmed = line.trim();
-    if (!trimmed) {
-      out.push(<View key={`sp-${key}`} style={sindiStyles.markdownSpacer} />);
+    const ulMatch = trimmed.match(UNORDERED_LIST_REGEX);
+    if (ulMatch) {
+      bullets.push({ key, text: ulMatch[1] });
       continue;
     }
+    flushBullets();
+
+    // Blank lines only separate blocks; the message's own gap spaces them.
+    if (!trimmed) continue;
 
     if (trimmed.startsWith('# ')) {
       out.push(
-        <Text key={key} style={[sindiStyles.markdownH1, roleTextStyle(role)]}>
-          {trimmed.substring(2)}
-        </Text>,
+        <AiChatMessageLine key={key} block>
+          <Text variant="title-3-semibold">{trimmed.substring(2)}</Text>
+        </AiChatMessageLine>,
       );
       continue;
     }
     if (trimmed.startsWith('## ')) {
       out.push(
-        <Text key={key} style={[sindiStyles.markdownH2, roleTextStyle(role)]}>
-          {trimmed.substring(3)}
-        </Text>,
+        <AiChatMessageLine key={key} block>
+          <Text variant="headline-semibold">{trimmed.substring(3)}</Text>
+        </AiChatMessageLine>,
       );
       continue;
     }
     if (trimmed.startsWith('### ')) {
       out.push(
-        <Text key={key} style={[sindiStyles.markdownH3, roleTextStyle(role)]}>
-          {trimmed.substring(4)}
-        </Text>,
-      );
-      continue;
-    }
-
-    if (trimmed.startsWith('**') && trimmed.endsWith('**')) {
-      const text = trimmed.substring(2, trimmed.length - 2);
-      const style: StyleProp<TextStyle> = [sindiStyles.markdownBold, roleTextStyle(role)];
-      out.push(
-        <Text key={key} style={style}>
-          {renderInlineSpans(text, style, `${key}-bold`)}
-        </Text>,
-      );
-      continue;
-    }
-
-    const ulMatch = trimmed.match(UNORDERED_LIST_REGEX);
-    if (ulMatch) {
-      const style: StyleProp<TextStyle> = [sindiStyles.markdownListItem, roleTextStyle(role)];
-      out.push(
-        <Text key={key} style={style}>
-          {'• '}
-          {renderInlineSpans(ulMatch[1], style, `${key}-li`)}
-        </Text>,
+        <AiChatMessageLine key={key} block>
+          <Text variant="body-semibold">{trimmed.substring(4)}</Text>
+        </AiChatMessageLine>,
       );
       continue;
     }
 
     const olMatch = trimmed.match(ORDERED_LIST_REGEX);
     if (olMatch) {
-      const style: StyleProp<TextStyle> = [sindiStyles.markdownListItem, roleTextStyle(role)];
       out.push(
-        <Text key={key} style={style}>
-          {olMatch[1]}
-          {'. '}
-          {renderInlineSpans(olMatch[2], style, `${key}-ol`)}
-        </Text>,
+        <AiChatMessageLine key={key}>
+          {`${olMatch[1]}. `}
+          {renderInline(olMatch[2], key)}
+        </AiChatMessageLine>,
       );
       continue;
     }
 
     if (trimmed.startsWith('> ')) {
-      const style: StyleProp<TextStyle> = [sindiStyles.markdownBlockquote, roleTextStyle(role)];
       out.push(
-        <Text key={key} style={style}>
-          {renderInlineSpans(trimmed.substring(2), style, `${key}-bq`)}
-        </Text>,
+        <AiChatMessageLine key={key} block>
+          <Blockquote style={{ marginTop: 0 }}>{renderInline(trimmed.substring(2), key)}</Blockquote>
+        </AiChatMessageLine>,
       );
       continue;
     }
 
-    out.push(
-      <Text key={key} style={baseTextStyle}>
-        {renderInlineSpans(trimmed, baseTextStyle, `${key}-p`)}
-      </Text>,
-    );
+    out.push(<AiChatMessageLine key={key}>{renderInline(trimmed, key)}</AiChatMessageLine>);
   }
 
+  flushBullets();
   if (inCodeBlock) flushCode('eof');
 
   return out;
 }
-
-export interface ChatMarkdownProps {
-  content: string;
-  role: ChatRole;
-}
-
-/**
- * Render markdown chat content. Wrapped in `React.memo` so a streaming sibling
- * message does not force already-rendered bubbles to re-parse their markdown.
- */
-export const ChatMarkdown = React.memo<ChatMarkdownProps>(({ content, role }) => {
-  return <>{renderMarkdownNodes(content, role)}</>;
-});
-ChatMarkdown.displayName = 'ChatMarkdown';

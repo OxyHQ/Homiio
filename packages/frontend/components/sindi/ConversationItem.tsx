@@ -1,17 +1,18 @@
-import React, { memo, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { Text as BloomText } from '@oxy.so/bloom/typography';
-import { radius, spacing } from '@/constants/styles';
-import { colors } from '@/styles/colors';
-import type { Conversation } from '@/store/conversationStore';
+import React, { memo } from 'react';
+import { StyleSheet, View } from 'react-native';
+import { Card } from '@oxy.so/bloom/card';
+import { RiChat3Line } from '@oxy.so/bloom/icons';
+import { Item } from '@oxy.so/bloom/item';
+import { useTheme } from '@oxy.so/bloom/theme';
+import { Text } from '@oxy.so/bloom/typography';
 import { deviceTimeZone, formatDate } from '@homiio/shared-types';
+import type { Conversation } from '@/store/conversationStore';
 import { useFormatting } from '@/utils/format';
+import { extractPropertiesJson, stripAttachmentDataUrls } from './propertyParsing';
 
 /**
  * Compact label for a conversation's last-activity time (today → time, else
- * date), in the reader's chosen language rather than the device's — the
- * `undefined` locale these calls used to pass is the runtime's, not Homiio's.
+ * date), in the reader's chosen language rather than the device's.
  */
 const formatTimestamp = (date: Date, locale: string, timeZone: string): string => {
   const now = new Date();
@@ -23,8 +24,6 @@ const formatTimestamp = (date: Date, locale: string, timeZone: string): string =
 
 export interface ConversationItemProps {
   conversation: Conversation;
-  /** Suppresses the bottom hairline on the final row of a grouped list. */
-  isLast: boolean;
   onPress: () => void;
   /** Marks the row as the currently open conversation (panel selection). */
   isActive?: boolean;
@@ -33,110 +32,68 @@ export interface ConversationItemProps {
 }
 
 /**
- * One row in a Sindi conversation list: avatar glyph, title + last-activity
- * time, and a single-line preview of the most recent message.
+ * One Sindi conversation as a Bloom `Item`: a chat glyph, the title with its
+ * last-activity time, and a one-line preview of the latest message (with the
+ * machine-only property and attachment tags removed).
  *
- * Shared by the `/sindi` index screen and the docked `SindiPanel` so both
- * lists render identically. Owns its own pressed/active visuals (the function
- * form of `style` is unsupported under NativeWind — see CLAUDE.md).
+ * Shared by the `/sindi` index screen and the docked `SindiPanel`; group rows
+ * in a `ConversationList`.
  */
 export const ConversationItem = memo<ConversationItemProps>(
-  ({ conversation, isLast, onPress, isActive = false, emptyPreview = 'No messages yet' }) => {
-    const last = conversation.messages[conversation.messages.length - 1];
-    const [pressed, setPressed] = useState(false);
+  ({ conversation, onPress, isActive = false, emptyPreview = 'No messages yet' }) => {
+    const { colors } = useTheme();
     const { locale } = useFormatting();
+    const last = conversation.messages[conversation.messages.length - 1];
+    const preview = last
+      ? stripAttachmentDataUrls(extractPropertiesJson(last.content || '').visible)
+      : emptyPreview;
+
     return (
-      <Pressable
+      <Item
         onPress={onPress}
-        onPressIn={() => setPressed(true)}
-        onPressOut={() => setPressed(false)}
-        style={[
-          styles.conversationItem,
-          isLast && styles.conversationItemLast,
-          (pressed || isActive) && styles.conversationItemPressed,
-        ]}
-        accessibilityRole="button"
-        accessibilityState={{ selected: isActive }}
+        active={isActive}
         accessibilityLabel={conversation.title}
-      >
-        <View style={styles.conversationAvatar}>
-          <Ionicons name="chatbubble" size={18} color={colors.info} />
-        </View>
-        <View style={styles.conversationBody}>
-          <View style={styles.conversationHeader}>
-            <BloomText style={styles.conversationTitle} numberOfLines={1}>
-              {conversation.title}
-            </BloomText>
-            <BloomText style={styles.conversationDate}>
-              {formatTimestamp(new Date(conversation.updatedAt), locale, deviceTimeZone())}
-            </BloomText>
+        leading={
+          <View style={[styles.glyph, { backgroundColor: colors.backgroundSecondary }]}>
+            <RiChat3Line width={18} height={18} fill={colors.textSecondary} />
           </View>
-          <BloomText style={styles.conversationPreview} numberOfLines={1}>
-            {last ? last.content : emptyPreview}
-          </BloomText>
-        </View>
-      </Pressable>
+        }
+        title={conversation.title}
+        subtitle={
+          <Text variant="body-2-regular" numberOfLines={1} style={{ color: colors.textSecondary }}>
+            {preview}
+          </Text>
+        }
+        trailing={
+          <Text variant="caption-1-regular" style={{ color: colors.textTertiary }}>
+            {formatTimestamp(new Date(conversation.updatedAt), locale, deviceTimeZone())}
+          </Text>
+        }
+      />
     );
   },
 );
 ConversationItem.displayName = 'ConversationItem';
 
+/** The card a run of `ConversationItem` rows sits in. */
+export function ConversationList({ children }: { children: React.ReactNode }) {
+  return (
+    <Card variant="outlined" style={styles.list}>
+      {children}
+    </Card>
+  );
+}
+
 const styles = StyleSheet.create({
-  conversationItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    padding: spacing.lg,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
-  },
-  conversationItemLast: {
-    borderBottomWidth: 0,
-  },
-  conversationItemPressed: {
-    backgroundColor: colors.mutedSubtle,
-  },
-  conversationAvatar: {
+  glyph: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: colors.infoSubtle,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  conversationBody: {
-    flex: 1,
-    gap: 2,
-  },
-  conversationHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  conversationTitle: {
-    flex: 1,
-    fontSize: 14,
-    fontWeight: '700',
-    color: colors.COLOR_BLACK,
-  },
-  conversationDate: {
-    fontSize: 12,
-    color: colors.muted,
-  },
-  conversationPreview: {
-    fontSize: 13,
-    color: colors.muted,
-    lineHeight: 18,
-  },
-});
-
-/** Card surface that hosts a list of `ConversationItem` rows (rounded, elevated). */
-export const conversationListStyles = StyleSheet.create({
   list: {
-    backgroundColor: colors.surfaceElevated,
-    borderRadius: radius.lg,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: colors.border,
+    padding: 4,
+    gap: 2,
   },
 });
