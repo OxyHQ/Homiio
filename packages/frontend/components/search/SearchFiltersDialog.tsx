@@ -22,7 +22,9 @@
  * from the cache instead of fetching it again. Dragging the price slider only
  * moves the thumbs; the count follows when the drag ends.
  *
- * No price histogram — see `steps/PriceStep.tsx` for why.
+ * The bars over the price slider come from `useSearchPriceHistogram`: the same
+ * scope and draft filters, without the price bounds, so releasing a thumb
+ * refetches the count and not the bars.
  */
 import React, { useCallback, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet } from 'react-native';
@@ -45,6 +47,7 @@ import { StepperRow } from '@oxy.so/bloom/stepper';
 import { OfferingType, type PropertyType } from '@homiio/shared-types';
 import { getAmenityById } from '@/constants/amenities';
 import { usePropertySearch } from '@/hooks/usePropertySearch';
+import { useSearchPriceHistogram } from '@/hooks/useSearchPriceHistogram';
 import type { SearchFilterPatch } from '@/store/searchQueryStore';
 import { spacing } from '@/constants/styles';
 
@@ -232,6 +235,7 @@ function FiltersBody({ query, onApply, onClose, showTypes }: FiltersBodyProps): 
   const draftQuery = useMemo<SearchQuery>(() => ({ ...query, ...draft }), [query, draft]);
   const preview = usePropertySearch(draftQuery);
   const previewTotal = preview.data?.pages[0]?.total;
+  const priceBuckets = useSearchPriceHistogram(draftQuery, track);
   const resultsLabel =
     typeof previewTotal === 'number'
       ? t('search.filters.showResults', { count: previewTotal })
@@ -279,6 +283,7 @@ function FiltersBody({ query, onApply, onClose, showTypes }: FiltersBodyProps): 
           description={unitKey ? t(unitKey) : undefined}
         >
           <PriceRangeFilter
+            buckets={priceBuckets}
             min={0}
             max={track.max}
             step={track.step}

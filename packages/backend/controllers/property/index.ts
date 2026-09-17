@@ -3,6 +3,7 @@ export * from './retrieve';
 export * from './updateDelete';
 export * from './transact';
 export * from './search';
+export * from './priceHistogram';
 export * from './geospatial';
 export * from './stats';
 export * from './areaInsights';

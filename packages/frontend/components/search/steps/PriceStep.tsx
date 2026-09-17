@@ -5,15 +5,15 @@
  * is stated under the control, never reinterpreted. A thumb resting on its end
  * of the track means "no limit" on that side, so both bounds can be left open.
  *
- * ## No histogram, on purpose
+ * ## The histogram
  *
- * `PriceRangeFilter` draws a histogram of listing counts per price bucket when
- * it is given one. Homiio has no endpoint that returns that distribution for a
- * SEARCH — scoped to the chosen area, the active offering and its unit. The only
- * buckets that exist are app-wide monthly rent (`/analytics/stats`), and drawing
- * those under a Barcelona nightly search would be a worldwide picture presented
- * as a local one. So the range renders without bars until the search API can
- * answer for the scope it is asked about.
+ * `PriceRangeFilter` draws listing counts per price bucket when given them. The
+ * caller passes `buckets` from `useSearchPriceHistogram` — the distribution of
+ * the SEARCH's own scope, offering and filters, bucketed over this track — and
+ * omits them while loading or when nothing in scope is priced. There is no
+ * app-wide fallback: `/analytics/stats` buckets are worldwide monthly rent, and
+ * drawing them under a Barcelona nightly search would present a worldwide
+ * picture as a local one.
  */
 import React, { useCallback, useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -93,10 +93,12 @@ interface PriceStepProps {
   offering: OfferingType;
   priceMin?: number;
   priceMax?: number;
+  /** Listing counts per bucket over `0`..`track.max`; omit to draw no bars. */
+  buckets?: number[];
   onChange: (min: number | undefined, max: number | undefined) => void;
 }
 
-export const PriceStep: React.FC<PriceStepProps> = ({ offering, priceMin, priceMax, onChange }) => {
+export const PriceStep: React.FC<PriceStepProps> = ({ offering, priceMin, priceMax, buckets, onChange }) => {
   const { t } = useTranslation();
   const colors = useColors();
   const track = priceTrackFor(offering);
@@ -119,6 +121,7 @@ export const PriceStep: React.FC<PriceStepProps> = ({ offering, priceMin, priceM
         <BloomText style={[styles.unit, { color: colors.textSecondary }]}>{t(unitKey)}</BloomText>
       ) : null}
       <PriceRangeFilter
+        buckets={buckets}
         min={0}
         max={track.max}
         step={track.step}

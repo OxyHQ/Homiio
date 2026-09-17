@@ -104,7 +104,7 @@ interface ResolvedPlace {
  * could not tell "there are no homes here" from "we did not understand where".
  * Those are different sentences and the UI has to be able to pick one.
  */
-type LocationEcho =
+export type LocationEcho =
   | {
       status: 'resolved';
       appliedLocationKind: LocationKind;
@@ -308,24 +308,90 @@ function buildSearchResponse(
   };
 }
 
+/**
+ * A search's scope, resolved: the parsed params, the location echo and — unless
+ * the named place could not be resolved — the ONE `where` every read answering
+ * this search runs under.
+ */
+export type SearchScope =
+  | { status: 'unresolved'; params: ParsedSearchParams; location: LocationEcho }
+  | { status: 'scoped'; params: ParsedSearchParams; location: LocationEcho; where: SQL | undefined };
+
+/** Answer a {@link GeoParamError} with a clean 400; `false` when `error` is anything else. */
+export function sendGeoParamError(res: Response, error: unknown): boolean {
+  if (!(error instanceof GeoParamError)) return false;
+  res.status(400).json({ success: false, message: error.message, error: error.code });
+  return true;
+}
+
+/**
+ * Parse a search request and resolve it to the predicate it runs under.
+ *
+ * Shared by the search page and its price histogram
+ * (`controllers/property/priceHistogram.ts`) so the two cannot answer about
+ * different scopes: a histogram built beside the search, predicate by
+ * predicate, is the second copy that drifts the day a filter is added to one.
+ *
+ * Throws {@link GeoParamError} on a malformed geographic param; the caller maps
+ * it to a 400 with {@link sendGeoParamError}.
+ */
+export async function resolveSearchScope(
+  query: Record<string, string | string[] | undefined>,
+): Promise<SearchScope> {
+  const { conditions, params } = buildSearchPlan(query);
+
+  const place = await resolvePlaceConditions(params);
+  if (place.unresolved) {
+    return { status: 'unresolved', params, location: buildLocationEcho(params, place) };
+  }
+  conditions.push(...place.conditions);
+
+  // --- Free-text query ---
+  //
+  // `q` is matched against the listing's own text and its street. It is ALSO
+  // read as a place name — but ONLY when nothing else said where, and that
+  // condition is the fix rather than a tuning knob.
+  //
+  // With a scope already applied the place expansion is at best redundant and
+  // at worst the bug: a viewport over Madrid plus `q=Barcelona` produced
+  // `inside Madrid AND (text matches Barcelona OR city = Barcelona)`, whose
+  // honest answer is zero, rendered as "this area is empty". A person who has
+  // said where by picking a place or moving the map has already answered the
+  // question `q` would be re-answering; what they typed is a description of
+  // the home, not of the city (ADR 0002 §4.1 — the two dimensions are
+  // independent, and only one of them is geographic).
+  //
+  // It also removes two place lookups per scoped request.
+  if (params.text) {
+    const scoped = appliedLocationKind(params, place) !== 'none';
+    const [textCityId, textRegionId] = scoped
+      ? [undefined, undefined]
+      : await Promise.all([resolveCityId(params.text), resolveRegionId(params.text)]);
+    conditions.push(matchesText(params.text, { cityId: textCityId, regionId: textRegionId }));
+  }
+
+  return {
+    status: 'scoped',
+    params,
+    location: buildLocationEcho(params, place),
+    where: allOf(conditions),
+  };
+}
+
 export async function searchProperties(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     // Parse + validate the request. Geo parsing can reject malformed params
     // with a GeoParamError, which maps to a clean 400 rather than a 500.
-    let plan: ReturnType<typeof buildSearchPlan>;
+    let scope: SearchScope;
     try {
-      plan = buildSearchPlan(req.query as Record<string, string | string[] | undefined>);
+      scope = await resolveSearchScope(req.query as Record<string, string | string[] | undefined>);
     } catch (error) {
-      if (error instanceof GeoParamError) {
-        res.status(400).json({ success: false, message: error.message, error: error.code });
-        return;
-      }
+      if (sendGeoParamError(res, error)) return;
       throw error;
     }
-    const { conditions, params } = plan;
+    const { params } = scope;
 
-    const place = await resolvePlaceConditions(params);
-    if (place.unresolved) {
+    if (scope.status === 'unresolved') {
       // Still an empty page rather than an unfiltered one — a location that was
       // requested and lost must never widen into a global feed — but now it
       // says so, so the screen can render "we could not find that place".
@@ -335,35 +401,10 @@ export async function searchProperties(req: Request, res: Response, next: NextFu
         params.limit,
         0,
         'No properties found for the specified location',
-        buildLocationEcho(params, place),
+        scope.location,
         params.queryId,
       ));
       return;
-    }
-    conditions.push(...place.conditions);
-
-    // --- Free-text query ---
-    //
-    // `q` is matched against the listing's own text and its street. It is ALSO
-    // read as a place name — but ONLY when nothing else said where, and that
-    // condition is the fix rather than a tuning knob.
-    //
-    // With a scope already applied the place expansion is at best redundant and
-    // at worst the bug: a viewport over Madrid plus `q=Barcelona` produced
-    // `inside Madrid AND (text matches Barcelona OR city = Barcelona)`, whose
-    // honest answer is zero, rendered as "this area is empty". A person who has
-    // said where by picking a place or moving the map has already answered the
-    // question `q` would be re-answering; what they typed is a description of
-    // the home, not of the city (ADR 0002 §4.1 — the two dimensions are
-    // independent, and only one of them is geographic).
-    //
-    // It also removes two place lookups per scoped request.
-    if (params.text) {
-      const scoped = appliedLocationKind(params, place) !== 'none';
-      const [textCityId, textRegionId] = scoped
-        ? [undefined, undefined]
-        : await Promise.all([resolveCityId(params.text), resolveRegionId(params.text)]);
-      conditions.push(matchesText(params.text, { cityId: textCityId, regionId: textRegionId }));
     }
 
     // ONE `where`, built once, handed to BOTH reads. The count and the page
@@ -371,7 +412,7 @@ export async function searchProperties(req: Request, res: Response, next: NextFu
     // the list it is labelling the moment a predicate is added to one of them,
     // and the result — "1,204 homes" over eleven cards — looks like paging
     // rather than like a bug.
-    const where = allOf(conditions);
+    const { where } = scope;
     const orderBy = propertyOrderBy(...buildSort(params, params.text));
     const skip = (params.page - 1) * params.limit;
 
@@ -386,7 +427,7 @@ export async function searchProperties(req: Request, res: Response, next: NextFu
       params.limit,
       total,
       'Search completed successfully',
-      buildLocationEcho(params, place),
+      scope.location,
       params.queryId,
     ));
   } catch (error) {
