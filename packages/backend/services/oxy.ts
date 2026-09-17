@@ -14,7 +14,13 @@ const sindiOxyService = new OxyServices({ baseURL: config.oxy.baseURL });
 
 export const SINDI_OXY_APPLICATION_ID = '6a2f851751b784a86fd0e922';
 export const SINDI_OXY_SERVICE_CREDENTIAL_ID = '01a0648e-ad3f-7608-aa8b-c07bfef6cf73';
-export const SINDI_OXY_OWNER_ACCOUNT_ID = '01a0646a-078f-72ea-8759-86326484a7e0';
+// The Homiio PROJECT account that owns application 6a2f851751b784a86fd0e922 —
+// Oxy signs `ownerAccountId` from `applications.owner_account_id`. Oxy's
+// native-product bootstrap ADOPTED this existing project rather than minting
+// the planned `01a0646a-078f-72ea-…` account, so pinning the planned id made
+// every Sindi token fail this canary in production. Source of truth:
+// OxyHQServices `packages/api/src/config/nativeProductAgents.ts` (homiio.project.id).
+export const SINDI_OXY_OWNER_ACCOUNT_ID = '6a50444ce8026582b949089d';
 
 if (config.oxy.serviceApiKey && config.oxy.serviceApiSecret) {
   oxyService.configureServiceAuth(config.oxy.serviceApiKey, config.oxy.serviceApiSecret);

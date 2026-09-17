@@ -18,6 +18,15 @@ describe('Sindi service identity canary', () => {
     exp: Math.floor(Date.now() / 1000) + 600,
   };
 
+  it('pins the adopted Homiio project account Oxy actually signs, not the planned one', () => {
+    expect(SINDI_OXY_OWNER_ACCOUNT_ID).toBe('6a50444ce8026582b949089d');
+    expect(() =>
+      assertCanonicalSindiServiceToken(
+        token({ ...canonical, ownerAccountId: '01a0646a-078f-72ea-8759-86326484a7e0' }),
+      ),
+    ).toThrow('unexpected Sindi service identity');
+  });
+
   it('accepts only the exact app, dedicated credential and project owner claims', () => {
     const value = token(canonical);
     expect(assertCanonicalSindiServiceToken(value)).toBe(value);
