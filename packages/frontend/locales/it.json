@@ -380,7 +380,27 @@
       "defaultPlace": "Spagna"
     },
     "insights": {
-      "title": "Dati della piattaforma"
+      "title": "Dati della piattaforma",
+      "screenTitle": "Statistiche",
+      "subtitle": "Panoramica del mercato degli affitti",
+      "loadError": "Impossibile caricare le statistiche",
+      "kpi": {
+        "properties": "Immobili",
+        "cities": "Città",
+        "saves": "Salvataggi",
+        "uniqueSavers": "Utenti unici",
+        "perCity": "{{value}} / città",
+        "perListing": "{{value}} / annuncio",
+        "savesEach": "{{value}} salvataggi ciascuno"
+      },
+      "averageRent": "Affitto medio",
+      "min": "Min",
+      "max": "Max",
+      "priceDistribution": "Distribuzione dei prezzi",
+      "listings": "Annunci",
+      "topCities": "Città principali",
+      "rent": "Affitto",
+      "topProperties": "Immobili in evidenza"
     },
     "recommended": {
       "title": "Case consigliate",
@@ -1496,7 +1516,8 @@
       "distributionLabel": "Distribuzione dei prezzi delle case vicine",
       "lowDataNote": "Non ci sono ancora abbastanza annunci vicini per confrontare.",
       "lowSampleCaveat_one": "Basato su solo {{count}} annuncio vicino: usalo come riferimento.",
-      "lowSampleCaveat_other": "Basato su solo {{count}} annunci vicini: usalo come riferimento."
+      "lowSampleCaveat_other": "Basato su solo {{count}} annunci vicini: usalo come riferimento.",
+      "homesMetric": "Abitazioni"
     },
     "nearbyServices": {
       "title": "Cosa c'è nei dintorni",
@@ -1823,7 +1844,10 @@
       "emptyAllDescription": "Non hai ancora contratti di affitto",
       "emptyFilteredDescription": "Nessun contratto {{filter}} da mostrare",
       "newContract": "Nuovo contratto",
-      "createNew": "Crea nuovo contratto"
+      "createNew": "Crea nuovo contratto",
+      "columnStatus": "Stato",
+      "filterLabel": "Filtra per stato",
+      "searchLabel": "Cerca contratti"
     },
     "card": {
       "start": "Inizio",
@@ -1917,6 +1941,36 @@
     }
   },
   "roommates": {
+    "rooms": {
+      "filtersTitle": "Filtra stanze",
+      "location": "Posizione",
+      "city": "Città",
+      "state": "Provincia / regione",
+      "cityPlaceholder": "Inserisci una città",
+      "statePlaceholder": "Inserisci una provincia o regione",
+      "anyPrice": "Qualsiasi",
+      "smokingAllowed": "Fumatori ammessi",
+      "amenity": {
+        "privateBathroom": "Bagno privato",
+        "walkInCloset": "Cabina armadio"
+      },
+      "sort": {
+        "bestMatch": "Più compatibili",
+        "price": "Prezzo",
+        "newest": "Più recenti",
+        "name": "Nome"
+      },
+      "searchPlaceholder": "Cerca stanze…",
+      "emptyTitle": "Nessuna stanza trovata",
+      "emptyDescription": "Modifica i filtri per vedere più stanze",
+      "capacity_one": "Fino a {{count}} ospite",
+      "capacity_other": "Fino a {{count}} ospiti",
+      "available": "Disponibile",
+      "unavailable": "Non disponibile",
+      "match": "Compatibilità {{score}}%",
+      "selectedCount": "{{count}} selezionati",
+      "roomType": "Stanza"
+    },
     "title": "Coinquilini",
     "find": "Trova Coinquilini",
     "myMatches": "Le Mie Corrispondenze",
@@ -1991,7 +2045,11 @@
       "pending": "Pending",
       "accepted": "Accepted",
       "declined": "Declined",
-      "responsePlaceholder": "Add an optional message..."
+      "responsePlaceholder": "Add an optional message...",
+      "expired": "Scaduta",
+      "yourMessage": "Il tuo messaggio",
+      "responseLabel": "Aggiungi una risposta (facoltativo)",
+      "waiting": "In attesa di risposta…"
     },
     "relationship": {
       "endRelationship": "End relationship",
@@ -2293,6 +2351,12 @@
     "chat": {
       "placeholder": "Chiedi a Sindi sui tuoi diritti come inquilino...",
       "you": "Tu",
+      "field": "Messaggio",
+      "attach": "Allega un file",
+      "send": "Invia messaggio",
+      "stop": "Interrompi la risposta",
+      "messageCount_one": "{{count}} messaggio",
+      "messageCount_other": "{{count}} messaggi",
       "disclaimer": "Sindi difende i diritti degli inquilini e la giustizia abitativa. Per azioni legali, consulta un avvocato qualificato. Connettiti con organizzazioni locali di inquilini per supporto comunitario."
     },
     "errors": {
@@ -2437,7 +2501,22 @@
       "title": "Note Proprietà",
       "placeholder": "Aggiungi note su questa proprietà...",
       "save": "Salva Note",
-      "cancel": "Annulla"
+      "cancel": "Annulla",
+      "filters": {
+        "active": "Attive",
+        "pinned": "Fissate",
+        "archived": "Archiviate"
+      },
+      "emptyTitle": "Ancora nessuna nota",
+      "emptyDescription": "Le note che aggiungi agli immobili salvati appariranno qui.",
+      "deleteTitle": "Eliminare questa nota?",
+      "deleteMessage": "L'operazione non può essere annullata.",
+      "saved": "Nota salvata",
+      "deleted": "Nota eliminata",
+      "pin": "Fissa la nota",
+      "unpin": "Non fissare più la nota",
+      "archive": "Archivia la nota",
+      "unarchive": "Ripristina la nota"
     },
     "actions": {
       "addNotes": "Aggiungi Note",
@@ -2450,6 +2529,11 @@
       "updateNotesFailed": "Errore nell'aggiornare le note",
       "loadFailed": "Errore nel caricare le proprietà salvate"
     },
+    "filters": {
+      "thisWeek": "Questa settimana",
+      "withNotes": "Con note"
+    },
+    "openFolder": "Apri la cartella {{name}}",
     "sorting": {
       "newest": "Prima i Più Recenti",
       "oldest": "Prima i Più Vecchi",
@@ -2540,7 +2624,8 @@
     "primary": "Primary",
     "addMore": "Add More",
     "helperText": "Upload high-quality images of your property. Include photos of all rooms, exterior, and any special features.",
-    "helperPrimaryNote": " The first image will be set as the primary image."
+    "helperPrimaryNote": " The first image will be set as the primary image.",
+    "setPrimary": "Imposta come immagine principale"
   },
   "listing": {
     "exchange": {
@@ -2947,7 +3032,39 @@
           "successToast": "Domanda rifiutata"
         }
       },
-      "toastUpdateFailed": "Impossibile aggiornare la domanda"
+      "toastUpdateFailed": "Impossibile aggiornare la domanda",
+      "inboxTitle": "Candidature ricevute",
+      "inboxEyebrow": "Posta in arrivo",
+      "title": "Candidati",
+      "subtitle": "Valuta i potenziali inquilini e decidi su ogni candidatura.",
+      "searchLabel": "Cerca per nome del candidato",
+      "filterLabel": "Filtra per stato",
+      "columnStatus": "Stato",
+      "openApplication": "Apri candidatura",
+      "createLease": "Crea contratto",
+      "emptyTitle": "Ancora nessun candidato",
+      "emptyDescription": "Le candidature dei potenziali inquilini appariranno qui.",
+      "signInTitle": "Accedi per valutare i candidati",
+      "signInDescription": "Scopri chi vuole affittare i tuoi immobili, tutto in un unico posto.",
+      "hostsOnlyTitle": "Solo per host",
+      "hostsOnlyDescription": "Pubblica un immobile per iniziare a ricevere candidature dagli inquilini.",
+      "loadError": "Impossibile caricare i candidati",
+      "openDocument": "Apri il documento {{filename}}",
+      "invalidTitle": "Candidatura non valida",
+      "invalidDescription": "Non abbiamo trovato l'ID di questa candidatura.",
+      "unavailableTitle": "Candidatura non disponibile",
+      "unavailableDescription": "Impossibile caricare questa candidatura.",
+      "notAuthorisedTitle": "Non autorizzato",
+      "notAuthorisedDescription": "Solo il proprietario assegnato a questo immobile può valutare la candidatura.",
+      "sectionTenancy": "Locazione",
+      "submittedLabel": "Inviata",
+      "decidedLabel": "Decisa",
+      "noReferences": "Nessuna referenza fornita.",
+      "sectionDocuments": "Documenti",
+      "noDocuments": "Nessun documento allegato.",
+      "sectionNotes": "Note",
+      "notesLabel": "Note per il candidato (facoltativo)",
+      "notesPlaceholder": "Indica i prossimi passi o il motivo della tua decisione."
     },
     "field": {
       "moveInDate": "Move-in date",
@@ -2967,9 +3084,9 @@
       "monthlyIncome": "Gross monthly income",
       "leaseTermCustomPlaceholder": "Number of months",
       "leaseTermCustom": "Other",
-      "leaseTerm": "Lease term",
+      "leaseTerm": "Durata del contratto",
       "moveInHelper": "Within the next 6 months.",
-      "leaseTermMonths": "{{count}} months"
+      "leaseTermMonths": "{{count}} mesi"
     },
     "cta": {
       "apply": "Apply to rent",
@@ -2990,7 +3107,7 @@
       "documentsHelp": "Upload up to {{max}} PDFs or images (10 MB each). Pick a category per file.",
       "documents": "Documents (optional)",
       "referencesHelp": "Add 1 to 3 contacts the landlord can call to vouch for you.",
-      "references": "References",
+      "references": "Referenze",
       "finances": "Income & employment",
       "timing": "Move-in & lease term"
     },
@@ -3249,7 +3366,8 @@
         "reviewTitle": "Riassumi la tua esperienza",
         "opinion": "Condividi la tua esperienza (più di 10 caratteri)",
         "pros": "Aggiungi qualcosa che ti è piaciuto",
-        "cons": "Aggiungi qualcosa da migliorare"
+        "cons": "Aggiungi qualcosa da migliorare",
+        "selectDate": "Seleziona una data"
       },
       "currencies": {
         "EUR": "EUR (€)",
@@ -3480,7 +3598,8 @@
       "toastBlocked": "Date bloccate",
       "toastBlockFailed": "Impossibile bloccare",
       "propertyNotFound": "Proprietà non trovata",
-      "property": "Proprietà"
+      "property": "Proprietà",
+      "blockDates": "Blocca date"
     },
     "reservations": {
       "title": "Prenotazioni",
@@ -3615,7 +3734,9 @@
       "availableFrom": "Disponibile da",
       "availableFromPlaceholder": "Data di disponibilità",
       "leaseTerm": "Durata contratto",
-      "leaseTermPlaceholder": "Durata contratto"
+      "leaseTermPlaceholder": "Durata contratto",
+      "openFullscreenMap": "Apri la mappa a schermo intero",
+      "mapPickerTitle": "Seleziona la posizione"
     },
     "amenities": {
       "title": "Amenities",
@@ -3645,6 +3766,37 @@
       "selectDates": "Select dates",
       "selectGuests": "Select guests",
       "close": "Close"
+    },
+    "guests": {
+      "adults": "Adulti",
+      "adultsHint": "Dai 13 anni in su",
+      "children": "Bambini",
+      "childrenHint": "Da 2 a 12 anni",
+      "infants": "Neonati",
+      "infantsHint": "Sotto i 2 anni",
+      "decrease": "Diminuisci {{title}}",
+      "increase": "Aumenta {{title}}",
+      "maxNote": "Questo alloggio può ospitare al massimo {{count}} ospiti, neonati esclusi.",
+      "count_one": "{{count}} ospite",
+      "count_other": "{{count}} ospiti",
+      "infantCount_one": "{{count}} neonato",
+      "infantCount_other": "{{count}} neonati"
+    },
+    "widget": {
+      "requestToBook": "Richiedi di prenotare",
+      "perNight": "notte",
+      "dates": "Date",
+      "requestNote": "Non ti verrà ancora addebitato nulla. L'host ha 24 ore per rispondere."
+    },
+    "policy": {
+      "flexible": "Cancellazione flessibile — rimborso completo in qualsiasi momento prima del check-in.",
+      "moderate": "Cancellazione moderata — rimborso completo fino a 5 giorni prima del check-in.",
+      "strict": "Cancellazione rigida — rimborso completo fino a 7 giorni prima del check-in.",
+      "superStrict": "Cancellazione molto rigida — rimborso completo fino a 30 giorni prima del check-in."
+    },
+    "calendar": {
+      "selectRange": "Seleziona check-in e check-out",
+      "apply": "Applica"
     }
   },
   "searchBar": {

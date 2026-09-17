@@ -245,7 +245,27 @@
       "defaultPlace": "Espanya"
     },
     "insights": {
-      "title": "Dades de la plataforma"
+      "title": "Dades de la plataforma",
+      "screenTitle": "Estadístiques",
+      "subtitle": "Panorama del mercat de lloguer",
+      "loadError": "No s'han pogut carregar les estadístiques",
+      "kpi": {
+        "properties": "Propietats",
+        "cities": "Ciutats",
+        "saves": "Desats",
+        "uniqueSavers": "Usuaris que desen",
+        "perCity": "{{value}} / ciutat",
+        "perListing": "{{value}} / anunci",
+        "savesEach": "{{value}} desats cadascun"
+      },
+      "averageRent": "Lloguer mitjà",
+      "min": "Mín.",
+      "max": "Màx.",
+      "priceDistribution": "Distribució de preus",
+      "listings": "Anuncis",
+      "topCities": "Ciutats principals",
+      "rent": "Lloguer",
+      "topProperties": "Propietats destacades"
     },
     "recommended": {
       "title": "Habitatges recomanats",
@@ -1349,7 +1369,8 @@
       "distributionLabel": "Distribució de preus d'habitatges propers",
       "lowDataNote": "Encara no hi ha prou anuncis propers per comparar.",
       "lowSampleCaveat_one": "Basat en només {{count}} anunci proper: pren-ho com a orientació.",
-      "lowSampleCaveat_other": "Basat en només {{count}} anuncis propers: pren-ho com a orientació."
+      "lowSampleCaveat_other": "Basat en només {{count}} anuncis propers: pren-ho com a orientació.",
+      "homesMetric": "Habitatges"
     },
     "nearbyServices": {
       "title": "Què hi ha a prop",
@@ -1676,7 +1697,10 @@
       "emptyAllDescription": "Encara no tens contractes de lloguer",
       "emptyFilteredDescription": "No hi ha contractes {{filter}} per mostrar",
       "newContract": "Nou contracte",
-      "createNew": "Crear nou contracte"
+      "createNew": "Crear nou contracte",
+      "columnStatus": "Estat",
+      "filterLabel": "Filtra per estat",
+      "searchLabel": "Cerca contractes"
     },
     "card": {
       "start": "Inici",
@@ -1770,6 +1794,36 @@
     }
   },
   "roommates": {
+    "rooms": {
+      "filtersTitle": "Filtra habitacions",
+      "location": "Ubicació",
+      "city": "Ciutat",
+      "state": "Província / regió",
+      "cityPlaceholder": "Escriu una ciutat",
+      "statePlaceholder": "Escriu una província o regió",
+      "anyPrice": "Qualsevol",
+      "smokingAllowed": "Es permet fumar",
+      "amenity": {
+        "privateBathroom": "Bany privat",
+        "walkInCloset": "Vestidor"
+      },
+      "sort": {
+        "bestMatch": "Millor coincidència",
+        "price": "Preu",
+        "newest": "Més recents",
+        "name": "Nom"
+      },
+      "searchPlaceholder": "Cerca habitacions…",
+      "emptyTitle": "No s'han trobat habitacions",
+      "emptyDescription": "Ajusta els filtres per veure més habitacions",
+      "capacity_one": "Fins a {{count}} hoste",
+      "capacity_other": "Fins a {{count}} hostes",
+      "available": "Disponible",
+      "unavailable": "No disponible",
+      "match": "{{score}} % de coincidència",
+      "selectedCount": "{{count}} seleccionats",
+      "roomType": "Habitació"
+    },
     "title": "Companys de Pis",
     "find": "Trobar Companys de Pis",
     "myMatches": "Les Meves Coincidències",
@@ -1844,7 +1898,11 @@
       "pending": "Pending",
       "accepted": "Accepted",
       "declined": "Declined",
-      "responsePlaceholder": "Add an optional message..."
+      "responsePlaceholder": "Add an optional message...",
+      "expired": "Caducada",
+      "yourMessage": "El teu missatge",
+      "responseLabel": "Afegeix una resposta (opcional)",
+      "waiting": "Esperant resposta…"
     },
     "relationship": {
       "endRelationship": "End relationship",
@@ -2297,6 +2355,12 @@
     "chat": {
       "placeholder": "Pregunteu a Sindi sobre els vostres drets com a llogater...",
       "you": "Vosaltres",
+      "field": "Missatge",
+      "attach": "Adjunta un fitxer",
+      "send": "Envia el missatge",
+      "stop": "Atura la resposta",
+      "messageCount_one": "{{count}} missatge",
+      "messageCount_other": "{{count}} missatges",
       "disclaimer": "Sindi advoca pels drets dels llogaters i la justícia habitacional. Per a accions legals, consulteu un advocat qualificat. Connecteu-vos amb organitzacions locals de llogaters per suport comunitari."
     },
     "errors": {
@@ -2442,7 +2506,22 @@
       "title": "Notes de la Propietat",
       "placeholder": "Afegir notes sobre aquesta propietat...",
       "save": "Desar Notes",
-      "cancel": "Cancel·lar"
+      "cancel": "Cancel·lar",
+      "filters": {
+        "active": "Actives",
+        "pinned": "Fixades",
+        "archived": "Arxivades"
+      },
+      "emptyTitle": "Encara no hi ha notes",
+      "emptyDescription": "Les notes que afegeixis a les propietats desades apareixeran aquí.",
+      "deleteTitle": "Vols eliminar aquesta nota?",
+      "deleteMessage": "Aquesta acció no es pot desfer.",
+      "saved": "Nota desada",
+      "deleted": "Nota eliminada",
+      "pin": "Fixa la nota",
+      "unpin": "Deixa de fixar la nota",
+      "archive": "Arxiva la nota",
+      "unarchive": "Desarxiva la nota"
     },
     "actions": {
       "addNotes": "Afegir Notes",
@@ -2455,6 +2534,11 @@
       "updateNotesFailed": "Error en actualitzar notes",
       "loadFailed": "Error en carregar propietats desades"
     },
+    "filters": {
+      "thisWeek": "Aquesta setmana",
+      "withNotes": "Amb notes"
+    },
+    "openFolder": "Obre la carpeta {{name}}",
     "sorting": {
       "newest": "Més Recents Primer",
       "oldest": "Més Antics Primer",
@@ -2544,7 +2628,8 @@
     "primary": "Primary",
     "addMore": "Add More",
     "helperText": "Upload high-quality images of your property. Include photos of all rooms, exterior, and any special features.",
-    "helperPrimaryNote": " The first image will be set as the primary image."
+    "helperPrimaryNote": " The first image will be set as the primary image.",
+    "setPrimary": "Estableix com a imatge principal"
   },
   "listing": {
     "exchange": {
@@ -2963,7 +3048,39 @@
           "successToast": "Sol·licitud rebutjada"
         }
       },
-      "toastUpdateFailed": "No s'ha pogut actualitzar la sol·licitud"
+      "toastUpdateFailed": "No s'ha pogut actualitzar la sol·licitud",
+      "inboxTitle": "Safata de sol·licitants",
+      "inboxEyebrow": "Safata",
+      "title": "Sol·licitants",
+      "subtitle": "Revisa els possibles llogaters i decideix sobre cada sol·licitud.",
+      "searchLabel": "Cerca pel nom del sol·licitant",
+      "filterLabel": "Filtra per estat",
+      "columnStatus": "Estat",
+      "openApplication": "Obre la sol·licitud",
+      "createLease": "Crea el contracte",
+      "emptyTitle": "Encara no hi ha sol·licitants",
+      "emptyDescription": "Les sol·licituds dels possibles llogaters apareixeran aquí.",
+      "signInTitle": "Inicia la sessió per revisar sol·licitants",
+      "signInDescription": "Mira qui vol llogar els teus habitatges, tot en un sol lloc.",
+      "hostsOnlyTitle": "Només per a amfitrions",
+      "hostsOnlyDescription": "Publica una propietat per començar a rebre sol·licituds de llogaters.",
+      "loadError": "No s'han pogut carregar els sol·licitants",
+      "openDocument": "Obre el document {{filename}}",
+      "invalidTitle": "Sol·licitud no vàlida",
+      "invalidDescription": "No hem trobat l'identificador d'aquesta sol·licitud.",
+      "unavailableTitle": "Sol·licitud no disponible",
+      "unavailableDescription": "No s'ha pogut carregar aquesta sol·licitud.",
+      "notAuthorisedTitle": "Sense autorització",
+      "notAuthorisedDescription": "Només el propietari assignat a aquesta propietat pot revisar la sol·licitud.",
+      "sectionTenancy": "Arrendament",
+      "submittedLabel": "Enviada",
+      "decidedLabel": "Resolta",
+      "noReferences": "No s'han indicat referències.",
+      "sectionDocuments": "Documents",
+      "noDocuments": "No hi ha documents adjunts.",
+      "sectionNotes": "Notes",
+      "notesLabel": "Notes per al sol·licitant (opcional)",
+      "notesPlaceholder": "Indica els propers passos o el motiu de la teva decisió."
     },
     "field": {
       "moveInDate": "Move-in date",
@@ -2983,9 +3100,9 @@
       "monthlyIncome": "Gross monthly income",
       "leaseTermCustomPlaceholder": "Number of months",
       "leaseTermCustom": "Other",
-      "leaseTerm": "Lease term",
+      "leaseTerm": "Durada del contracte",
       "moveInHelper": "Within the next 6 months.",
-      "leaseTermMonths": "{{count}} months"
+      "leaseTermMonths": "{{count}} mesos"
     },
     "cta": {
       "apply": "Apply to rent",
@@ -3006,7 +3123,7 @@
       "documentsHelp": "Upload up to {{max}} PDFs or images (10 MB each). Pick a category per file.",
       "documents": "Documents (optional)",
       "referencesHelp": "Add 1 to 3 contacts the landlord can call to vouch for you.",
-      "references": "References",
+      "references": "Referències",
       "finances": "Income & employment",
       "timing": "Move-in & lease term"
     },
@@ -3265,7 +3382,8 @@
         "reviewTitle": "Resumeix la teva experiència",
         "opinion": "Comparteix la teva experiència (més de 10 caràcters)",
         "pros": "Afegeix una cosa que t'agradés",
-        "cons": "Afegeix una cosa a millorar"
+        "cons": "Afegeix una cosa a millorar",
+        "selectDate": "Selecciona una data"
       },
       "currencies": {
         "EUR": "EUR (€)",
@@ -3496,7 +3614,8 @@
       "toastBlocked": "Dates bloquejades",
       "toastBlockFailed": "No s'ha pogut bloquejar",
       "propertyNotFound": "Propietat no trobada",
-      "property": "Propietat"
+      "property": "Propietat",
+      "blockDates": "Bloqueja dates"
     },
     "reservations": {
       "title": "Reserves",
@@ -3631,7 +3750,9 @@
       "availableFrom": "Disponible des de",
       "availableFromPlaceholder": "Data de disponibilitat",
       "leaseTerm": "Durada del contracte",
-      "leaseTermPlaceholder": "Durada del contracte"
+      "leaseTermPlaceholder": "Durada del contracte",
+      "openFullscreenMap": "Obre el mapa a pantalla completa",
+      "mapPickerTitle": "Selecciona la ubicació"
     },
     "amenities": {
       "title": "Amenities",
@@ -3661,6 +3782,37 @@
       "selectDates": "Select dates",
       "selectGuests": "Select guests",
       "close": "Close"
+    },
+    "guests": {
+      "adults": "Adults",
+      "adultsHint": "13 anys o més",
+      "children": "Nens",
+      "childrenHint": "De 2 a 12 anys",
+      "infants": "Nadons",
+      "infantsHint": "Menys de 2 anys",
+      "decrease": "Redueix {{title}}",
+      "increase": "Augmenta {{title}}",
+      "maxNote": "Aquest allotjament admet un màxim de {{count}} hostes, sense comptar els nadons.",
+      "count_one": "{{count}} hoste",
+      "count_other": "{{count}} hostes",
+      "infantCount_one": "{{count}} nadó",
+      "infantCount_other": "{{count}} nadons"
+    },
+    "widget": {
+      "requestToBook": "Sol·licita la reserva",
+      "perNight": "nit",
+      "dates": "Dates",
+      "requestNote": "Encara no se't cobrarà res. L'amfitrió té 24 hores per respondre."
+    },
+    "policy": {
+      "flexible": "Cancel·lació flexible: reemborsament complet en qualsevol moment abans de l'arribada.",
+      "moderate": "Cancel·lació moderada: reemborsament complet fins a 5 dies abans de l'arribada.",
+      "strict": "Cancel·lació estricta: reemborsament complet fins a 7 dies abans de l'arribada.",
+      "superStrict": "Cancel·lació molt estricta: reemborsament complet fins a 30 dies abans de l'arribada."
+    },
+    "calendar": {
+      "selectRange": "Selecciona l'arribada i la sortida",
+      "apply": "Aplica"
     }
   },
   "searchBar": {

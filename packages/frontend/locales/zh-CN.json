@@ -122,7 +122,27 @@
   },
   "home": {
     "insights": {
-      "title": "平台数据"
+      "title": "平台数据",
+      "screenTitle": "数据洞察",
+      "subtitle": "租赁市场概览",
+      "loadError": "加载统计数据失败",
+      "kpi": {
+        "properties": "房源",
+        "cities": "城市",
+        "saves": "收藏",
+        "uniqueSavers": "收藏用户",
+        "perCity": "{{value}} / 城市",
+        "perListing": "{{value}} / 房源",
+        "savesEach": "人均收藏 {{value}} 次"
+      },
+      "averageRent": "平均租金",
+      "min": "最低",
+      "max": "最高",
+      "priceDistribution": "价格分布",
+      "listings": "房源",
+      "topCities": "热门城市",
+      "rent": "租金",
+      "topProperties": "热门房源"
     },
     "hero": {
       "title": "找到你的理想之家",
@@ -1323,7 +1343,10 @@
       "emptyAllDescription": "You don't have any rental contracts yet",
       "emptyFilteredDescription": "No {{filter}} contracts to show",
       "newContract": "New contract",
-      "createNew": "Create new contract"
+      "createNew": "Create new contract",
+      "columnStatus": "状态",
+      "filterLabel": "按状态筛选",
+      "searchLabel": "搜索合同"
     },
     "card": {
       "start": "Start",
@@ -1417,6 +1440,36 @@
     }
   },
   "roommates": {
+    "rooms": {
+      "filtersTitle": "筛选房间",
+      "location": "位置",
+      "city": "城市",
+      "state": "省 / 地区",
+      "cityPlaceholder": "输入城市",
+      "statePlaceholder": "输入省份或地区",
+      "anyPrice": "不限",
+      "smokingAllowed": "允许吸烟",
+      "amenity": {
+        "privateBathroom": "独立卫浴",
+        "walkInCloset": "步入式衣帽间"
+      },
+      "sort": {
+        "bestMatch": "最佳匹配",
+        "price": "价格",
+        "newest": "最新",
+        "name": "名称"
+      },
+      "searchPlaceholder": "搜索房间…",
+      "emptyTitle": "未找到房间",
+      "emptyDescription": "请调整筛选条件以查看更多房间",
+      "capacity_one": "最多 {{count}} 位住客",
+      "capacity_other": "最多 {{count}} 位住客",
+      "available": "可入住",
+      "unavailable": "不可入住",
+      "match": "匹配度 {{score}}%",
+      "selectedCount": "已选择 {{count}} 项",
+      "roomType": "房间"
+    },
     "title": "Roommates",
     "find": "Find Roommates",
     "myMatches": "My Matches",
@@ -1571,7 +1624,11 @@
       "pending": "Pending",
       "accepted": "Accepted",
       "declined": "Declined",
-      "responsePlaceholder": "Add an optional message..."
+      "responsePlaceholder": "Add an optional message...",
+      "expired": "已过期",
+      "yourMessage": "你的留言",
+      "responseLabel": "添加回复（可选）",
+      "waiting": "等待回复…"
     },
     "relationship": {
       "title": "Roommate Relationship",
@@ -1944,6 +2001,12 @@
     "chat": {
       "placeholder": "Ask Sindi about your tenant rights...",
       "you": "You",
+      "field": "消息",
+      "attach": "添加附件",
+      "send": "发送消息",
+      "stop": "停止生成",
+      "messageCount_one": "{{count}} 条消息",
+      "messageCount_other": "{{count}} 条消息",
       "disclaimer": "Sindi advocates for tenant rights and housing justice. For legal action, consult a qualified attorney. Connect with local tenant organizations for community support."
     },
     "errors": {
@@ -2127,8 +2190,42 @@
     "searchPlaceholder": "Search saved properties",
     "header": "Saved",
     "notes": {
-      "title": "Notes"
-    }
+      "title": "Notes",
+      "placeholder": "为此房源添加笔记…",
+      "save": "保存笔记",
+      "cancel": "取消",
+      "filters": {
+        "active": "活跃",
+        "pinned": "已置顶",
+        "archived": "已归档"
+      },
+      "emptyTitle": "还没有笔记",
+      "emptyDescription": "你为已收藏房源添加的笔记会显示在这里。",
+      "deleteTitle": "删除这条笔记？",
+      "deleteMessage": "此操作无法撤销。",
+      "saved": "笔记已保存",
+      "deleted": "笔记已删除",
+      "pin": "置顶笔记",
+      "unpin": "取消置顶",
+      "archive": "归档笔记",
+      "unarchive": "取消归档"
+    },
+    "actions": {
+      "addNotes": "添加笔记",
+      "editNotes": "编辑笔记",
+      "unsave": "从收藏中移除",
+      "viewProperty": "查看房源"
+    },
+    "errors": {
+      "unsaveFailed": "从收藏中移除失败",
+      "updateNotesFailed": "更新笔记失败",
+      "loadFailed": "加载已收藏房源失败"
+    },
+    "filters": {
+      "thisWeek": "本周",
+      "withNotes": "有笔记"
+    },
+    "openFolder": "打开文件夹 {{name}}"
   },
   "imageUpload": {
     "permissionTitle": "Permission Required",
@@ -2148,7 +2245,8 @@
     "primary": "Primary",
     "addMore": "Add More",
     "helperText": "Upload high-quality images of your property. Include photos of all rooms, exterior, and any special features.",
-    "helperPrimaryNote": " The first image will be set as the primary image."
+    "helperPrimaryNote": " The first image will be set as the primary image.",
+    "setPrimary": "设为主图"
   },
   "property": {
     "loading": "Loading property details...",
@@ -2250,7 +2348,8 @@
       "distributionLabel": "Price distribution of nearby homes",
       "lowDataNote": "Not enough nearby listings to compare yet.",
       "lowSampleCaveat_one": "Based on just {{count}} nearby listing — treat as a rough guide.",
-      "lowSampleCaveat_other": "Based on only {{count}} nearby listings — treat as a rough guide."
+      "lowSampleCaveat_other": "Based on only {{count}} nearby listings — treat as a rough guide.",
+      "homesMetric": "住房"
     },
     "nearbyServices": {
       "title": "What's nearby",
@@ -2898,7 +2997,39 @@
           "confirm": "Reject",
           "successToast": "Application rejected"
         }
-      }
+      },
+      "inboxTitle": "申请人收件箱",
+      "inboxEyebrow": "收件箱",
+      "title": "申请人",
+      "subtitle": "查看潜在租客，并对每份申请做出决定。",
+      "searchLabel": "按申请人姓名搜索",
+      "filterLabel": "按状态筛选",
+      "columnStatus": "状态",
+      "openApplication": "打开申请",
+      "createLease": "创建租约",
+      "emptyTitle": "还没有申请人",
+      "emptyDescription": "潜在租客的申请会显示在这里。",
+      "signInTitle": "登录以查看申请人",
+      "signInDescription": "在一个地方查看所有想租你房子的人。",
+      "hostsOnlyTitle": "仅限房东",
+      "hostsOnlyDescription": "发布房源即可开始接收租客申请。",
+      "loadError": "无法加载申请人",
+      "openDocument": "打开文件 {{filename}}",
+      "invalidTitle": "无效的申请",
+      "invalidDescription": "找不到此申请 ID。",
+      "unavailableTitle": "申请不可用",
+      "unavailableDescription": "无法加载此申请。",
+      "notAuthorisedTitle": "无权访问",
+      "notAuthorisedDescription": "只有此房源指定的房东才能审核该申请。",
+      "sectionTenancy": "租期信息",
+      "submittedLabel": "提交时间",
+      "decidedLabel": "决定时间",
+      "noReferences": "未提供推荐人。",
+      "sectionDocuments": "文件",
+      "noDocuments": "未附加文件。",
+      "sectionNotes": "备注",
+      "notesLabel": "给申请人的备注（可选）",
+      "notesPlaceholder": "说明下一步安排或你做出决定的原因。"
     },
     "field": {
       "moveInDate": "Move-in date",
@@ -2918,8 +3049,8 @@
       "monthlyIncome": "Gross monthly income",
       "leaseTermCustomPlaceholder": "Number of months",
       "leaseTermCustom": "Other",
-      "leaseTerm": "Lease term",
-      "leaseTermMonths": "{{count}} months",
+      "leaseTerm": "租期",
+      "leaseTermMonths": "{{count}} 个月",
       "moveInHelper": "Within the next 6 months."
     },
     "employment": {
@@ -2961,7 +3092,7 @@
       "documentsHelp": "Upload up to {{max}} PDFs or images (10 MB each). Pick a category per file.",
       "documents": "Documents (optional)",
       "referencesHelp": "Add 1 to 3 contacts the landlord can call to vouch for you.",
-      "references": "References",
+      "references": "推荐人",
       "finances": "Income & employment",
       "timing": "Move-in & lease term"
     },
@@ -3200,7 +3331,8 @@
         "reviewTitle": "Sum up your experience",
         "opinion": "Share your experience (10+ characters)",
         "pros": "Add something you liked",
-        "cons": "Add something to improve"
+        "cons": "Add something to improve",
+        "selectDate": "选择日期"
       },
       "currencies": {
         "EUR": "EUR (€)",
@@ -3431,7 +3563,8 @@
       "toastBlocked": "Dates blocked",
       "toastBlockFailed": "Block failed",
       "propertyNotFound": "Property not found",
-      "property": "Property"
+      "property": "Property",
+      "blockDates": "封锁日期"
     },
     "reservations": {
       "title": "Reservations",
@@ -3493,6 +3626,37 @@
       "selectDates": "Select dates",
       "selectGuests": "Select guests",
       "close": "Close"
+    },
+    "guests": {
+      "adults": "成人",
+      "adultsHint": "13 岁及以上",
+      "children": "儿童",
+      "childrenHint": "2–12 岁",
+      "infants": "婴儿",
+      "infantsHint": "2 岁以下",
+      "decrease": "减少{{title}}",
+      "increase": "增加{{title}}",
+      "maxNote": "此房源最多可容纳 {{count}} 位住客（不含婴儿）。",
+      "count_one": "{{count}} 位住客",
+      "count_other": "{{count}} 位住客",
+      "infantCount_one": "{{count}} 名婴儿",
+      "infantCount_other": "{{count}} 名婴儿"
+    },
+    "widget": {
+      "requestToBook": "申请预订",
+      "perNight": "晚",
+      "dates": "日期",
+      "requestNote": "目前不会向你收费。房东将在 24 小时内回复。"
+    },
+    "policy": {
+      "flexible": "灵活取消政策 — 入住前任何时间取消均可全额退款。",
+      "moderate": "中等取消政策 — 入住前 5 天取消可全额退款。",
+      "strict": "严格取消政策 — 入住前 7 天取消可全额退款。",
+      "superStrict": "超严格取消政策 — 入住前 30 天取消可全额退款。"
+    },
+    "calendar": {
+      "selectRange": "选择入住和退房日期",
+      "apply": "应用"
     }
   },
   "addresses": {
@@ -3581,7 +3745,9 @@
       "availableFrom": "Available From",
       "availableFromPlaceholder": "Available from date",
       "leaseTerm": "Lease Term",
-      "leaseTermPlaceholder": "Lease term"
+      "leaseTermPlaceholder": "Lease term",
+      "openFullscreenMap": "打开全屏地图",
+      "mapPickerTitle": "选择位置"
     },
     "amenities": {
       "title": "Amenities",

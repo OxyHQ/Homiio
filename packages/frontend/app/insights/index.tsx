@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useSharedValue } from 'react-native-reanimated';
 import { StatCards, type StatCardsItem } from '@oxy.so/bloom/stat-cards';
 import {
@@ -34,6 +35,7 @@ interface AppStats {
 type CityTab = 'listings' | 'rent';
 
 export default function InsightsScreen() {
+  const { t } = useTranslation();
   const { locale } = useFormatting();
   const theme = useTheme();
   const router = useRouter();
@@ -68,7 +70,7 @@ export default function InsightsScreen() {
           });
       } catch (e: unknown) {
         logger.error('Failed to load analytics:', e);
-        const message = e instanceof Error ? e.message : 'Failed to load analytics';
+        const message = e instanceof Error ? e.message : '';
         if (active) setError(message);
       } finally {
         if (active) setLoading(false);
@@ -93,43 +95,45 @@ export default function InsightsScreen() {
     return [
       {
         icon: RiHome4Line,
-        label: 'Properties',
+        label: t('home.insights.kpi.properties'),
         value: number.format(totals.properties),
-        delta: `${per(totals.properties, totals.cities)} / city`,
+        delta: t('home.insights.kpi.perCity', { value: per(totals.properties, totals.cities) }),
         deltaColor: 'neutral',
       },
       {
         icon: RiBuilding2Line,
-        label: 'Cities',
+        label: t('home.insights.kpi.cities'),
         value: number.format(totals.cities),
         delta: appStats?.topCities[0]?.city ?? '—',
         deltaColor: 'neutral',
       },
       {
         icon: RiBookmarkLine,
-        label: 'Saves',
+        label: t('home.insights.kpi.saves'),
         value: number.format(totals.saves),
-        delta: `${per(totals.saves, totals.properties)} / listing`,
+        delta: t('home.insights.kpi.perListing', { value: per(totals.saves, totals.properties) }),
         deltaColor: 'neutral',
       },
       {
         icon: RiGroupLine,
-        label: 'Unique Savers',
+        label: t('home.insights.kpi.uniqueSavers'),
         value: number.format(totals.uniqueSavers),
-        delta: `${per(totals.saves, totals.uniqueSavers)} saves each`,
+        delta: t('home.insights.kpi.savesEach', { value: per(totals.saves, totals.uniqueSavers) }),
         deltaColor: 'neutral',
       },
     ];
-  }, [appStats, locale]);
+  }, [appStats, locale, t]);
 
   if (loading) {
     return <InsightsSkeleton />;
   }
 
-  if (error) {
+  if (error !== null) {
     return (
       <View className="flex-1 items-center justify-center p-6">
-        <BloomText style={{ color: theme.colors.text }}>{error}</BloomText>
+        <BloomText style={{ color: theme.colors.text }}>
+          {error || t('home.insights.loadError')}
+        </BloomText>
       </View>
     );
   }
@@ -147,8 +151,8 @@ export default function InsightsScreen() {
     <View className="flex-1">
       <Header
         options={{
-          title: 'Insights',
-          subtitle: 'Marketplace overview for rentals',
+          title: t('home.insights.screenTitle'),
+          subtitle: t('home.insights.subtitle'),
           showBackButton: true,
         }}
         scrollY={scrollY}
@@ -162,11 +166,11 @@ export default function InsightsScreen() {
           <View className="gap-4 md:flex-row md:items-start">
             <View className="md:flex-1">
               <ChartCardSurface height="auto">
-                <ChartHeadline label="Average Rent" value={pricing.averageRent} format={money} />
+                <ChartHeadline label={t('home.insights.averageRent')} value={pricing.averageRent} format={money} />
                 <ChartStatTiles
                   items={[
-                    { label: 'Min', value: money(pricing.minRent) },
-                    { label: 'Max', value: money(pricing.maxRent) },
+                    { label: t('home.insights.min'), value: money(pricing.minRent) },
+                    { label: t('home.insights.max'), value: money(pricing.maxRent) },
                   ]}
                 />
               </ChartCardSurface>
@@ -174,8 +178,8 @@ export default function InsightsScreen() {
 
             <View className="md:flex-1">
               <BarListCard
-                title="Price Distribution"
-                metricLabel="Listings"
+                title={t('home.insights.priceDistribution')}
+                metricLabel={t('home.insights.listings')}
                 metric="value"
                 items={buckets}
                 limit={6}
@@ -188,18 +192,18 @@ export default function InsightsScreen() {
               tabs={[
                 {
                   id: 'listings',
-                  label: 'Top Cities',
+                  label: t('home.insights.topCities'),
                   items: topCities.map((c) => ({ label: cityLabel(c), value: c.properties })),
                 },
                 {
                   id: 'rent',
-                  label: 'Average Rent',
+                  label: t('home.insights.averageRent'),
                   items: topCities.map((c) => ({ label: cityLabel(c), value: c.averageRent })),
                 },
               ]}
               onTabChange={(id) => setCityTab(id === 'rent' ? 'rent' : 'listings')}
               metric={cityTab === 'rent' ? 'value' : 'share'}
-              metricLabel={cityTab === 'rent' ? 'Rent' : 'Listings'}
+              metricLabel={cityTab === 'rent' ? t('home.insights.rent') : t('home.insights.listings')}
               format={money}
               limit={6}
             />
@@ -207,7 +211,7 @@ export default function InsightsScreen() {
 
           <View className="gap-2">
             <BloomText variant="title-3-semibold" style={{ color: theme.colors.text }}>
-              Top Properties
+              {t('home.insights.topProperties')}
             </BloomText>
             <HomeCarouselSection
               title=""

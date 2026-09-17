@@ -122,7 +122,27 @@
   },
   "home": {
     "insights": {
-      "title": "প্ল্যাটফর্মের তথ্য"
+      "title": "প্ল্যাটফর্মের তথ্য",
+      "screenTitle": "পরিসংখ্যান",
+      "subtitle": "ভাড়া বাজারের সংক্ষিপ্ত চিত্র",
+      "loadError": "পরিসংখ্যান লোড করা যায়নি",
+      "kpi": {
+        "properties": "প্রপার্টি",
+        "cities": "শহর",
+        "saves": "সংরক্ষণ",
+        "uniqueSavers": "স্বতন্ত্র ব্যবহারকারী",
+        "perCity": "{{value}} / শহর",
+        "perListing": "{{value}} / বিজ্ঞাপন",
+        "savesEach": "জনপ্রতি {{value}}টি সংরক্ষণ"
+      },
+      "averageRent": "গড় ভাড়া",
+      "min": "সর্বনিম্ন",
+      "max": "সর্বোচ্চ",
+      "priceDistribution": "মূল্যের বণ্টন",
+      "listings": "বিজ্ঞাপন",
+      "topCities": "শীর্ষ শহর",
+      "rent": "ভাড়া",
+      "topProperties": "শীর্ষ প্রপার্টি"
     },
     "hero": {
       "title": "আপনার ন্যায্য বাসা খুঁজুন",
@@ -1323,7 +1343,10 @@
       "emptyAllDescription": "You don't have any rental contracts yet",
       "emptyFilteredDescription": "No {{filter}} contracts to show",
       "newContract": "New contract",
-      "createNew": "Create new contract"
+      "createNew": "Create new contract",
+      "columnStatus": "অবস্থা",
+      "filterLabel": "অবস্থা অনুযায়ী ফিল্টার করুন",
+      "searchLabel": "চুক্তি খুঁজুন"
     },
     "card": {
       "start": "Start",
@@ -1417,6 +1440,36 @@
     }
   },
   "roommates": {
+    "rooms": {
+      "filtersTitle": "রুম ফিল্টার করুন",
+      "location": "অবস্থান",
+      "city": "শহর",
+      "state": "বিভাগ / অঞ্চল",
+      "cityPlaceholder": "একটি শহর লিখুন",
+      "statePlaceholder": "একটি বিভাগ বা অঞ্চল লিখুন",
+      "anyPrice": "যেকোনো",
+      "smokingAllowed": "ধূমপানের অনুমতি আছে",
+      "amenity": {
+        "privateBathroom": "ব্যক্তিগত বাথরুম",
+        "walkInCloset": "ওয়াক-ইন ক্লোজেট"
+      },
+      "sort": {
+        "bestMatch": "সেরা মিল",
+        "price": "মূল্য",
+        "newest": "সবচেয়ে নতুন",
+        "name": "নাম"
+      },
+      "searchPlaceholder": "রুম খুঁজুন…",
+      "emptyTitle": "কোনো রুম পাওয়া যায়নি",
+      "emptyDescription": "আরও রুম দেখতে ফিল্টার পরিবর্তন করে দেখুন",
+      "capacity_one": "সর্বোচ্চ {{count}} জন অতিথি",
+      "capacity_other": "সর্বোচ্চ {{count}} জন অতিথি",
+      "available": "উপলব্ধ",
+      "unavailable": "অনুপলব্ধ",
+      "match": "{{score}}% মিল",
+      "selectedCount": "{{count}}টি নির্বাচিত",
+      "roomType": "রুম"
+    },
     "title": "Roommates",
     "find": "Find Roommates",
     "myMatches": "My Matches",
@@ -1571,7 +1624,11 @@
       "pending": "Pending",
       "accepted": "Accepted",
       "declined": "Declined",
-      "responsePlaceholder": "Add an optional message..."
+      "responsePlaceholder": "Add an optional message...",
+      "expired": "মেয়াদোত্তীর্ণ",
+      "yourMessage": "আপনার বার্তা",
+      "responseLabel": "একটি উত্তর যোগ করুন (ঐচ্ছিক)",
+      "waiting": "উত্তরের অপেক্ষায়…"
     },
     "relationship": {
       "title": "Roommate Relationship",
@@ -1944,6 +2001,12 @@
     "chat": {
       "placeholder": "Ask Sindi about your tenant rights...",
       "you": "You",
+      "field": "বার্তা",
+      "attach": "ফাইল সংযুক্ত করুন",
+      "send": "বার্তা পাঠান",
+      "stop": "উত্তর তৈরি থামান",
+      "messageCount_one": "{{count}}টি বার্তা",
+      "messageCount_other": "{{count}}টি বার্তা",
       "disclaimer": "Sindi advocates for tenant rights and housing justice. For legal action, consult a qualified attorney. Connect with local tenant organizations for community support."
     },
     "errors": {
@@ -2127,8 +2190,42 @@
     "searchPlaceholder": "Search saved properties",
     "header": "Saved",
     "notes": {
-      "title": "Notes"
-    }
+      "title": "Notes",
+      "placeholder": "এই প্রপার্টি সম্পর্কে নোট যোগ করুন...",
+      "save": "নোট সংরক্ষণ করুন",
+      "cancel": "বাতিল",
+      "filters": {
+        "active": "সক্রিয়",
+        "pinned": "পিন করা",
+        "archived": "আর্কাইভ করা"
+      },
+      "emptyTitle": "এখনও কোনো নোট নেই",
+      "emptyDescription": "সংরক্ষিত প্রপার্টিতে আপনি যে নোট যোগ করবেন সেগুলো এখানে দেখা যাবে।",
+      "deleteTitle": "এই নোটটি মুছবেন?",
+      "deleteMessage": "এটি আর ফেরানো যাবে না।",
+      "saved": "নোট সংরক্ষিত হয়েছে",
+      "deleted": "নোট মুছে ফেলা হয়েছে",
+      "pin": "নোট পিন করুন",
+      "unpin": "নোট আনপিন করুন",
+      "archive": "নোট আর্কাইভ করুন",
+      "unarchive": "নোট আর্কাইভ থেকে সরান"
+    },
+    "actions": {
+      "addNotes": "নোট যোগ করুন",
+      "editNotes": "নোট সম্পাদনা করুন",
+      "unsave": "সংরক্ষিত থেকে সরান",
+      "viewProperty": "প্রপার্টি দেখুন"
+    },
+    "errors": {
+      "unsaveFailed": "সংরক্ষিত থেকে সরানো যায়নি",
+      "updateNotesFailed": "নোট হালনাগাদ করা যায়নি",
+      "loadFailed": "সংরক্ষিত প্রপার্টি লোড করা যায়নি"
+    },
+    "filters": {
+      "thisWeek": "এই সপ্তাহ",
+      "withNotes": "নোটসহ"
+    },
+    "openFolder": "{{name}} ফোল্ডার খুলুন"
   },
   "imageUpload": {
     "permissionTitle": "Permission Required",
@@ -2148,7 +2245,8 @@
     "primary": "Primary",
     "addMore": "Add More",
     "helperText": "Upload high-quality images of your property. Include photos of all rooms, exterior, and any special features.",
-    "helperPrimaryNote": " The first image will be set as the primary image."
+    "helperPrimaryNote": " The first image will be set as the primary image.",
+    "setPrimary": "প্রধান ছবি হিসেবে সেট করুন"
   },
   "property": {
     "loading": "Loading property details...",
@@ -2250,7 +2348,8 @@
       "distributionLabel": "Price distribution of nearby homes",
       "lowDataNote": "Not enough nearby listings to compare yet.",
       "lowSampleCaveat_one": "Based on just {{count}} nearby listing — treat as a rough guide.",
-      "lowSampleCaveat_other": "Based on only {{count}} nearby listings — treat as a rough guide."
+      "lowSampleCaveat_other": "Based on only {{count}} nearby listings — treat as a rough guide.",
+      "homesMetric": "বাসা"
     },
     "nearbyServices": {
       "title": "What's nearby",
@@ -2898,7 +2997,39 @@
           "confirm": "Reject",
           "successToast": "Application rejected"
         }
-      }
+      },
+      "inboxTitle": "আবেদনকারীদের ইনবক্স",
+      "inboxEyebrow": "ইনবক্স",
+      "title": "আবেদনকারী",
+      "subtitle": "সম্ভাব্য ভাড়াটিয়াদের পর্যালোচনা করুন এবং প্রতিটি আবেদনের বিষয়ে সিদ্ধান্ত নিন।",
+      "searchLabel": "আবেদনকারীর নাম দিয়ে খুঁজুন",
+      "filterLabel": "অবস্থা অনুযায়ী ফিল্টার করুন",
+      "columnStatus": "অবস্থা",
+      "openApplication": "আবেদন খুলুন",
+      "createLease": "লিজ তৈরি করুন",
+      "emptyTitle": "এখনও কোনো আবেদনকারী নেই",
+      "emptyDescription": "সম্ভাব্য ভাড়াটিয়াদের আবেদন এখানে দেখা যাবে।",
+      "signInTitle": "আবেদনকারীদের পর্যালোচনা করতে সাইন ইন করুন",
+      "signInDescription": "কারা আপনার জায়গা ভাড়া নিতে চান, সব এক জায়গায় দেখুন।",
+      "hostsOnlyTitle": "শুধু হোস্টদের জন্য",
+      "hostsOnlyDescription": "ভাড়াটিয়াদের আবেদন পেতে একটি প্রপার্টি তালিকাভুক্ত করুন।",
+      "loadError": "আবেদনকারীদের লোড করা যায়নি",
+      "openDocument": "{{filename}} নথি খুলুন",
+      "invalidTitle": "অবৈধ আবেদন",
+      "invalidDescription": "আমরা এই আবেদনের আইডি খুঁজে পাইনি।",
+      "unavailableTitle": "আবেদন পাওয়া যাচ্ছে না",
+      "unavailableDescription": "এই আবেদনটি লোড করা যায়নি।",
+      "notAuthorisedTitle": "অনুমতি নেই",
+      "notAuthorisedDescription": "শুধু এই প্রপার্টির জন্য নির্ধারিত বাড়িওয়ালা আবেদনটি পর্যালোচনা করতে পারেন।",
+      "sectionTenancy": "ভাড়াটিয়া-চুক্তি",
+      "submittedLabel": "জমা দেওয়া হয়েছে",
+      "decidedLabel": "সিদ্ধান্ত নেওয়া হয়েছে",
+      "noReferences": "কোনো রেফারেন্স দেওয়া হয়নি।",
+      "sectionDocuments": "নথিপত্র",
+      "noDocuments": "কোনো নথি সংযুক্ত নেই।",
+      "sectionNotes": "নোট",
+      "notesLabel": "আবেদনকারীর জন্য নোট (ঐচ্ছিক)",
+      "notesPlaceholder": "পরবর্তী পদক্ষেপ বা আপনার সিদ্ধান্তের কারণ জানান।"
     },
     "field": {
       "moveInDate": "Move-in date",
@@ -2918,8 +3049,8 @@
       "monthlyIncome": "Gross monthly income",
       "leaseTermCustomPlaceholder": "Number of months",
       "leaseTermCustom": "Other",
-      "leaseTerm": "Lease term",
-      "leaseTermMonths": "{{count}} months",
+      "leaseTerm": "লিজের মেয়াদ",
+      "leaseTermMonths": "{{count}} মাস",
       "moveInHelper": "Within the next 6 months."
     },
     "employment": {
@@ -2961,7 +3092,7 @@
       "documentsHelp": "Upload up to {{max}} PDFs or images (10 MB each). Pick a category per file.",
       "documents": "Documents (optional)",
       "referencesHelp": "Add 1 to 3 contacts the landlord can call to vouch for you.",
-      "references": "References",
+      "references": "রেফারেন্স",
       "finances": "Income & employment",
       "timing": "Move-in & lease term"
     },
@@ -3200,7 +3331,8 @@
         "reviewTitle": "Sum up your experience",
         "opinion": "Share your experience (10+ characters)",
         "pros": "Add something you liked",
-        "cons": "Add something to improve"
+        "cons": "Add something to improve",
+        "selectDate": "একটি তারিখ বেছে নিন"
       },
       "currencies": {
         "EUR": "EUR (€)",
@@ -3431,7 +3563,8 @@
       "toastBlocked": "Dates blocked",
       "toastBlockFailed": "Block failed",
       "propertyNotFound": "Property not found",
-      "property": "Property"
+      "property": "Property",
+      "blockDates": "তারিখ ব্লক করুন"
     },
     "reservations": {
       "title": "Reservations",
@@ -3493,6 +3626,37 @@
       "selectDates": "Select dates",
       "selectGuests": "Select guests",
       "close": "Close"
+    },
+    "guests": {
+      "adults": "প্রাপ্তবয়স্ক",
+      "adultsHint": "১৩ বছর বা তার বেশি",
+      "children": "শিশু",
+      "childrenHint": "২–১২ বছর",
+      "infants": "নবজাতক",
+      "infantsHint": "২ বছরের কম",
+      "decrease": "{{title}} কমান",
+      "increase": "{{title}} বাড়ান",
+      "maxNote": "এই জায়গায় সর্বোচ্চ {{count}} জন অতিথি থাকতে পারবেন, নবজাতক বাদে।",
+      "count_one": "{{count}} জন অতিথি",
+      "count_other": "{{count}} জন অতিথি",
+      "infantCount_one": "{{count}}টি নবজাতক",
+      "infantCount_other": "{{count}}টি নবজাতক"
+    },
+    "widget": {
+      "requestToBook": "বুকিংয়ের অনুরোধ করুন",
+      "perNight": "রাত",
+      "dates": "তারিখ",
+      "requestNote": "এখনই আপনার কাছ থেকে কোনো অর্থ কাটা হবে না। হোস্টের উত্তর দেওয়ার জন্য ২৪ ঘণ্টা সময় আছে।"
+    },
+    "policy": {
+      "flexible": "নমনীয় বাতিলকরণ — চেক-ইনের আগে যেকোনো সময় সম্পূর্ণ ফেরত।",
+      "moderate": "মাঝারি বাতিলকরণ — চেক-ইনের ৫ দিন আগ পর্যন্ত সম্পূর্ণ ফেরত।",
+      "strict": "কঠোর বাতিলকরণ — চেক-ইনের ৭ দিন আগ পর্যন্ত সম্পূর্ণ ফেরত।",
+      "superStrict": "অতি কঠোর বাতিলকরণ — চেক-ইনের ৩০ দিন আগ পর্যন্ত সম্পূর্ণ ফেরত।"
+    },
+    "calendar": {
+      "selectRange": "চেক-ইন ও চেক-আউট বেছে নিন",
+      "apply": "প্রয়োগ করুন"
     }
   },
   "addresses": {
@@ -3581,7 +3745,9 @@
       "availableFrom": "Available From",
       "availableFromPlaceholder": "Available from date",
       "leaseTerm": "Lease Term",
-      "leaseTermPlaceholder": "Lease term"
+      "leaseTermPlaceholder": "Lease term",
+      "openFullscreenMap": "পূর্ণ স্ক্রিনে ম্যাপ খুলুন",
+      "mapPickerTitle": "অবস্থান নির্বাচন করুন"
     },
     "amenities": {
       "title": "Amenities",

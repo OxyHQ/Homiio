@@ -122,7 +122,27 @@
   },
   "home": {
     "insights": {
-      "title": "Data platform"
+      "title": "Data platform",
+      "screenTitle": "Wawasan",
+      "subtitle": "Ringkasan pasar sewa",
+      "loadError": "Gagal memuat statistik",
+      "kpi": {
+        "properties": "Properti",
+        "cities": "Kota",
+        "saves": "Simpanan",
+        "uniqueSavers": "Pengguna unik",
+        "perCity": "{{value}} / kota",
+        "perListing": "{{value}} / iklan",
+        "savesEach": "{{value}} simpanan per orang"
+      },
+      "averageRent": "Rata-rata sewa",
+      "min": "Min",
+      "max": "Maks",
+      "priceDistribution": "Sebaran harga",
+      "listings": "Iklan",
+      "topCities": "Kota teratas",
+      "rent": "Sewa",
+      "topProperties": "Properti teratas"
     },
     "hero": {
       "title": "Temukan hunian yang etis",
@@ -1323,7 +1343,10 @@
       "emptyAllDescription": "You don't have any rental contracts yet",
       "emptyFilteredDescription": "No {{filter}} contracts to show",
       "newContract": "New contract",
-      "createNew": "Create new contract"
+      "createNew": "Create new contract",
+      "columnStatus": "Status",
+      "filterLabel": "Filter menurut status",
+      "searchLabel": "Cari kontrak"
     },
     "card": {
       "start": "Start",
@@ -1417,6 +1440,36 @@
     }
   },
   "roommates": {
+    "rooms": {
+      "filtersTitle": "Filter kamar",
+      "location": "Lokasi",
+      "city": "Kota",
+      "state": "Provinsi / wilayah",
+      "cityPlaceholder": "Masukkan kota",
+      "statePlaceholder": "Masukkan provinsi atau wilayah",
+      "anyPrice": "Berapa saja",
+      "smokingAllowed": "Boleh merokok",
+      "amenity": {
+        "privateBathroom": "Kamar mandi pribadi",
+        "walkInCloset": "Walk-in closet"
+      },
+      "sort": {
+        "bestMatch": "Paling cocok",
+        "price": "Harga",
+        "newest": "Terbaru",
+        "name": "Nama"
+      },
+      "searchPlaceholder": "Cari kamar…",
+      "emptyTitle": "Kamar tidak ditemukan",
+      "emptyDescription": "Coba ubah filter untuk melihat lebih banyak kamar",
+      "capacity_one": "Hingga {{count}} tamu",
+      "capacity_other": "Hingga {{count}} tamu",
+      "available": "Tersedia",
+      "unavailable": "Tidak tersedia",
+      "match": "{{score}}% cocok",
+      "selectedCount": "{{count}} dipilih",
+      "roomType": "Kamar"
+    },
     "title": "Roommates",
     "find": "Find Roommates",
     "myMatches": "My Matches",
@@ -1571,7 +1624,11 @@
       "pending": "Pending",
       "accepted": "Accepted",
       "declined": "Declined",
-      "responsePlaceholder": "Add an optional message..."
+      "responsePlaceholder": "Add an optional message...",
+      "expired": "Kedaluwarsa",
+      "yourMessage": "Pesan Anda",
+      "responseLabel": "Tambahkan balasan (opsional)",
+      "waiting": "Menunggu balasan…"
     },
     "relationship": {
       "title": "Roommate Relationship",
@@ -1944,6 +2001,12 @@
     "chat": {
       "placeholder": "Ask Sindi about your tenant rights...",
       "you": "You",
+      "field": "Pesan",
+      "attach": "Lampirkan file",
+      "send": "Kirim pesan",
+      "stop": "Hentikan jawaban",
+      "messageCount_one": "{{count}} pesan",
+      "messageCount_other": "{{count}} pesan",
       "disclaimer": "Sindi advocates for tenant rights and housing justice. For legal action, consult a qualified attorney. Connect with local tenant organizations for community support."
     },
     "errors": {
@@ -2127,8 +2190,42 @@
     "searchPlaceholder": "Search saved properties",
     "header": "Saved",
     "notes": {
-      "title": "Notes"
-    }
+      "title": "Notes",
+      "placeholder": "Tambahkan catatan tentang properti ini...",
+      "save": "Simpan catatan",
+      "cancel": "Batal",
+      "filters": {
+        "active": "Aktif",
+        "pinned": "Disematkan",
+        "archived": "Diarsipkan"
+      },
+      "emptyTitle": "Belum ada catatan",
+      "emptyDescription": "Catatan yang Anda tambahkan ke properti tersimpan akan muncul di sini.",
+      "deleteTitle": "Hapus catatan ini?",
+      "deleteMessage": "Tindakan ini tidak dapat dibatalkan.",
+      "saved": "Catatan disimpan",
+      "deleted": "Catatan dihapus",
+      "pin": "Sematkan catatan",
+      "unpin": "Lepas sematan catatan",
+      "archive": "Arsipkan catatan",
+      "unarchive": "Keluarkan dari arsip"
+    },
+    "actions": {
+      "addNotes": "Tambah catatan",
+      "editNotes": "Edit catatan",
+      "unsave": "Hapus dari tersimpan",
+      "viewProperty": "Lihat properti"
+    },
+    "errors": {
+      "unsaveFailed": "Gagal menghapus dari tersimpan",
+      "updateNotesFailed": "Gagal memperbarui catatan",
+      "loadFailed": "Gagal memuat properti tersimpan"
+    },
+    "filters": {
+      "thisWeek": "Minggu ini",
+      "withNotes": "Dengan catatan"
+    },
+    "openFolder": "Buka folder {{name}}"
   },
   "imageUpload": {
     "permissionTitle": "Permission Required",
@@ -2148,7 +2245,8 @@
     "primary": "Primary",
     "addMore": "Add More",
     "helperText": "Upload high-quality images of your property. Include photos of all rooms, exterior, and any special features.",
-    "helperPrimaryNote": " The first image will be set as the primary image."
+    "helperPrimaryNote": " The first image will be set as the primary image.",
+    "setPrimary": "Jadikan gambar utama"
   },
   "property": {
     "loading": "Loading property details...",
@@ -2250,7 +2348,8 @@
       "distributionLabel": "Price distribution of nearby homes",
       "lowDataNote": "Not enough nearby listings to compare yet.",
       "lowSampleCaveat_one": "Based on just {{count}} nearby listing — treat as a rough guide.",
-      "lowSampleCaveat_other": "Based on only {{count}} nearby listings — treat as a rough guide."
+      "lowSampleCaveat_other": "Based on only {{count}} nearby listings — treat as a rough guide.",
+      "homesMetric": "Hunian"
     },
     "nearbyServices": {
       "title": "What's nearby",
@@ -2898,7 +2997,39 @@
           "confirm": "Reject",
           "successToast": "Application rejected"
         }
-      }
+      },
+      "inboxTitle": "Kotak masuk pelamar",
+      "inboxEyebrow": "Kotak masuk",
+      "title": "Pelamar",
+      "subtitle": "Tinjau calon penyewa dan putuskan setiap lamaran.",
+      "searchLabel": "Cari berdasarkan nama pelamar",
+      "filterLabel": "Filter menurut status",
+      "columnStatus": "Status",
+      "openApplication": "Buka lamaran",
+      "createLease": "Buat kontrak sewa",
+      "emptyTitle": "Belum ada pelamar",
+      "emptyDescription": "Lamaran dari calon penyewa akan muncul di sini.",
+      "signInTitle": "Masuk untuk meninjau pelamar",
+      "signInDescription": "Lihat siapa saja yang ingin menyewa tempat Anda, semuanya di satu tempat.",
+      "hostsOnlyTitle": "Khusus tuan rumah",
+      "hostsOnlyDescription": "Pasang properti untuk mulai menerima lamaran penyewa.",
+      "loadError": "Gagal memuat pelamar",
+      "openDocument": "Buka dokumen {{filename}}",
+      "invalidTitle": "Lamaran tidak valid",
+      "invalidDescription": "Kami tidak dapat menemukan ID lamaran ini.",
+      "unavailableTitle": "Lamaran tidak tersedia",
+      "unavailableDescription": "Lamaran ini tidak dapat dimuat.",
+      "notAuthorisedTitle": "Tidak diizinkan",
+      "notAuthorisedDescription": "Hanya pemilik yang ditugaskan untuk properti ini yang dapat meninjau lamaran.",
+      "sectionTenancy": "Penyewaan",
+      "submittedLabel": "Dikirim",
+      "decidedLabel": "Diputuskan",
+      "noReferences": "Tidak ada referensi yang diberikan.",
+      "sectionDocuments": "Dokumen",
+      "noDocuments": "Tidak ada dokumen terlampir.",
+      "sectionNotes": "Catatan",
+      "notesLabel": "Catatan untuk pelamar (opsional)",
+      "notesPlaceholder": "Sampaikan langkah selanjutnya atau alasan keputusan Anda."
     },
     "field": {
       "moveInDate": "Move-in date",
@@ -2918,8 +3049,8 @@
       "monthlyIncome": "Gross monthly income",
       "leaseTermCustomPlaceholder": "Number of months",
       "leaseTermCustom": "Other",
-      "leaseTerm": "Lease term",
-      "leaseTermMonths": "{{count}} months",
+      "leaseTerm": "Masa sewa",
+      "leaseTermMonths": "{{count}} bulan",
       "moveInHelper": "Within the next 6 months."
     },
     "employment": {
@@ -2961,7 +3092,7 @@
       "documentsHelp": "Upload up to {{max}} PDFs or images (10 MB each). Pick a category per file.",
       "documents": "Documents (optional)",
       "referencesHelp": "Add 1 to 3 contacts the landlord can call to vouch for you.",
-      "references": "References",
+      "references": "Referensi",
       "finances": "Income & employment",
       "timing": "Move-in & lease term"
     },
@@ -3200,7 +3331,8 @@
         "reviewTitle": "Sum up your experience",
         "opinion": "Share your experience (10+ characters)",
         "pros": "Add something you liked",
-        "cons": "Add something to improve"
+        "cons": "Add something to improve",
+        "selectDate": "Pilih tanggal"
       },
       "currencies": {
         "EUR": "EUR (€)",
@@ -3431,7 +3563,8 @@
       "toastBlocked": "Dates blocked",
       "toastBlockFailed": "Block failed",
       "propertyNotFound": "Property not found",
-      "property": "Property"
+      "property": "Property",
+      "blockDates": "Blokir tanggal"
     },
     "reservations": {
       "title": "Reservations",
@@ -3493,6 +3626,37 @@
       "selectDates": "Select dates",
       "selectGuests": "Select guests",
       "close": "Close"
+    },
+    "guests": {
+      "adults": "Dewasa",
+      "adultsHint": "Usia 13 tahun ke atas",
+      "children": "Anak-anak",
+      "childrenHint": "Usia 2–12 tahun",
+      "infants": "Bayi",
+      "infantsHint": "Di bawah 2 tahun",
+      "decrease": "Kurangi {{title}}",
+      "increase": "Tambah {{title}}",
+      "maxNote": "Tempat ini menampung maksimal {{count}} tamu, tidak termasuk bayi.",
+      "count_one": "{{count}} tamu",
+      "count_other": "{{count}} tamu",
+      "infantCount_one": "{{count}} bayi",
+      "infantCount_other": "{{count}} bayi"
+    },
+    "widget": {
+      "requestToBook": "Ajukan pemesanan",
+      "perNight": "malam",
+      "dates": "Tanggal",
+      "requestNote": "Anda belum akan dikenai biaya. Tuan rumah memiliki waktu 24 jam untuk merespons."
+    },
+    "policy": {
+      "flexible": "Pembatalan fleksibel — pengembalian dana penuh kapan saja sebelum check-in.",
+      "moderate": "Pembatalan sedang — pengembalian dana penuh hingga 5 hari sebelum check-in.",
+      "strict": "Pembatalan ketat — pengembalian dana penuh hingga 7 hari sebelum check-in.",
+      "superStrict": "Pembatalan sangat ketat — pengembalian dana penuh hingga 30 hari sebelum check-in."
+    },
+    "calendar": {
+      "selectRange": "Pilih check-in dan check-out",
+      "apply": "Terapkan"
     }
   },
   "addresses": {
@@ -3581,7 +3745,9 @@
       "availableFrom": "Available From",
       "availableFromPlaceholder": "Available from date",
       "leaseTerm": "Lease Term",
-      "leaseTermPlaceholder": "Lease term"
+      "leaseTermPlaceholder": "Lease term",
+      "openFullscreenMap": "Buka peta layar penuh",
+      "mapPickerTitle": "Pilih lokasi"
     },
     "amenities": {
       "title": "Amenities",
