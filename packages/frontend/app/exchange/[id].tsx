@@ -26,6 +26,7 @@ import {
 } from '@oxy.so/bloom/icons';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { Loading } from '@oxy.so/bloom/loading';
+import { SettingsListGroup, SettingsListItem } from '@oxy.so/bloom/settings-list';
 import { Text as BloomText, H2 } from '@oxy.so/bloom/typography';
 import {
   ExchangeMode,
@@ -269,28 +270,25 @@ export default function ExchangeRequestDetailScreen() {
             ) : null}
           </Card>
 
-          <Card variant="outlined" radius="radius-16" className="p-5">
-            <BloomText style={[styles.sectionLabel, { color: theme.colors.textSecondary }]}>
-              {t('listing.exchange.detailsLabel')}
-            </BloomText>
-            <DetailRow label={t('listing.exchange.modeLabelShort')} value={modeLabel} />
-            <DetailRow
-              label={t('listing.exchange.requestedStay')}
+          <SettingsListGroup title={t('listing.exchange.detailsLabel')}>
+            <SettingsListItem title={t('listing.exchange.modeLabelShort')} value={modeLabel} />
+            <SettingsListItem
+              title={t('listing.exchange.requestedStay')}
               value={formatWindow(request.requestedWindow)}
             />
             {isSwap && request.offeredWindow ? (
-              <DetailRow
-                label={t('listing.exchange.offeredStay')}
+              <SettingsListItem
+                title={t('listing.exchange.offeredStay')}
                 value={formatWindow(request.offeredWindow)}
               />
             ) : null}
             {isSwap && offeredProperty ? (
-              <DetailRow
-                label={t('listing.exchange.offeredHome')}
+              <SettingsListItem
+                title={t('listing.exchange.offeredHome')}
                 value={getPropertyTitle(offeredProperty)}
               />
             ) : null}
-          </Card>
+          </SettingsListGroup>
 
           {request.message ? (
             <Card variant="outlined" radius="radius-16" className="p-5">
@@ -374,21 +372,6 @@ export default function ExchangeRequestDetailScreen() {
   );
 }
 
-interface DetailRowProps {
-  label: string;
-  value: string;
-}
-
-const DetailRow: React.FC<DetailRowProps> = ({ label, value }) => {
-  const theme = useTheme();
-  return (
-    <View style={[styles.detailRow, { borderBottomColor: theme.colors.border }]}>
-      <BloomText style={[styles.detailLabel, { color: theme.colors.textSecondary }]}>{label}</BloomText>
-      <BloomText style={[styles.detailValue, { color: theme.colors.text }]}>{value}</BloomText>
-    </View>
-  );
-};
-
 const styles = StyleSheet.create({
   root: {
     flex: 1,
@@ -437,22 +420,6 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: tracker.eyebrow,
     marginBottom: spacing.sm,
-  },
-  detailRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: spacing.sm,
-    gap: spacing.lg,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  detailLabel: {
-    fontSize: 13,
-  },
-  detailValue: {
-    fontSize: 13,
-    fontWeight: '600',
-    flexShrink: 1,
-    textAlign: 'right',
   },
   messageText: {
     fontSize: 14,

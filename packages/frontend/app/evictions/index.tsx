@@ -21,8 +21,9 @@
  * on this board a pin the list does not explain is a place nobody can account
  * for.
  *
- * Layout: Header (+ auth-gated "Publicar") → scope bar → status and help-need
- * filters → sort → flat `EvictionCard` list → floating map toggle. Paginates
+ * Layout: Header (+ auth-gated "Publicar") → the privacy note → scope bar →
+ * status and help-need filters → sort → `EvictionCard` list (Bloom
+ * `EvictionReportCard`s) → floating map toggle. Paginates
  * through BOTH infinite-scroll primitives (native `onScroll` + web
  * `LoadMoreSentinel`).
  */
@@ -32,8 +33,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
+import { Admonition } from '@oxy.so/bloom/admonition';
 import { Button } from '@oxy.so/bloom/button';
-import { Card } from '@oxy.so/bloom/card';
 import { Chip } from '@oxy.so/bloom/chip';
 import {
   RiAddLine,
@@ -42,7 +43,6 @@ import {
   RiMapPinLine,
 } from '@oxy.so/bloom/icons';
 import { Tabs, TabsTrigger } from '@oxy.so/bloom/tabs';
-import * as Skeleton from '@oxy.so/bloom/skeleton';
 import { H2, H3, Text as BloomText } from '@oxy.so/bloom/typography';
 import { useOxy, openAccountDialog } from '@oxy.so/services';
 
@@ -56,6 +56,7 @@ import { Header } from '@/components/Header';
 import Map from '@/components/Map';
 import { MapFab } from '@/components/ui/MapFab';
 import { ErrorState } from '@/components/ui/ErrorState';
+import { ListSkeleton } from '@/components/ui/ListSkeleton';
 import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
 import { LoadMoreSentinel } from '@/components/common/LoadMoreSentinel';
 import { LocationScopeBar } from '@/components/location/LocationScopeBar';
@@ -66,7 +67,7 @@ import { EvictionCard } from '@/components/evictions/EvictionCard';
 import { selectionToBoardScope } from '@/components/evictions/evictionScope';
 import { formatEvictionShortDate } from '@/components/evictions/evictionUtils';
 import { colors } from '@/styles/colors';
-import { radius, spacing } from '@/constants/styles';
+import { spacing } from '@/constants/styles';
 
 const EMPTY_ILLUSTRATION: ImageSourcePropType = require('@/assets/illustrations/empty-evictions.png');
 
@@ -90,21 +91,6 @@ const HELP_FILTERS: readonly EvictionHelpNeedType[] = [
 
 /** `distance` is offered only when the scope carries a centre — see below. */
 const SORTS: readonly EvictionBoardSort[] = ['soonest', 'distance', 'recently_updated', 'newest'];
-
-const BoardSkeleton: React.FC = () => (
-  <View style={styles.listWrap}>
-    {Array.from({ length: 4 }).map((_, idx) => (
-      <Card key={idx} variant="outlined" radius="radius-16" style={styles.skeletonCard}>
-        <Skeleton.Box width={60} height={60} borderRadius={radius.md} />
-        <View style={styles.skeletonBody}>
-          <Skeleton.Text style={{ width: 200, lineHeight: 18 }} />
-          <Skeleton.Text style={{ width: 140, lineHeight: 14 }} />
-          <Skeleton.Text style={{ width: 90, lineHeight: 14 }} />
-        </View>
-      </Card>
-    ))}
-  </View>
-);
 
 export default function EvictionsBoardScreen() {
   const { t, i18n } = useTranslation();
@@ -245,7 +231,7 @@ export default function EvictionsBoardScreen() {
 
   const listBody = () => {
     if (!boardScope) return scopePrompt;
-    if (isLoading && cases.length === 0) return <BoardSkeleton />;
+    if (isLoading && cases.length === 0) return <ListSkeleton rows={3} rowHeight={240} />;
     if (isError) {
       return (
         <ErrorState
@@ -293,7 +279,7 @@ export default function EvictionsBoardScreen() {
             onPress={() => openDetail(eviction.id)}
           />
         ))}
-        {isFetchingNextPage ? <BoardSkeleton /> : null}
+        {isFetchingNextPage ? <ListSkeleton rows={1} rowHeight={240} /> : null}
         <LoadMoreSentinel enabled={hasNextPage} onLoadMore={handleEndReached} />
       </View>
     );
@@ -325,6 +311,10 @@ export default function EvictionsBoardScreen() {
               <H2 style={styles.title}>{t('evictions.title')}</H2>
               <BloomText style={styles.subtitle}>{t('evictions.subtitle')}</BloomText>
             </View>
+
+            {/* Why no card names a home: said once, before the first case,
+                so a coarse area reads as protection rather than as missing data. */}
+            <Admonition type="info">{t('evictions.privacyNote')}</Admonition>
 
             <LocationScopeBar
               selection={scope.selection}
@@ -442,16 +432,6 @@ const styles = StyleSheet.create({
   },
   listWrap: {
     gap: spacing.md,
-  },
-  skeletonCard: {
-    flexDirection: 'row',
-    gap: spacing.md,
-    padding: spacing.md,
-  },
-  skeletonBody: {
-    flex: 1,
-    gap: spacing.sm,
-    justifyContent: 'center',
   },
   scopePrompt: {
     alignItems: 'center',

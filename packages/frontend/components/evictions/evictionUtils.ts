@@ -1,49 +1,93 @@
 /**
- * Shared, pure helpers for the eviction solidarity board — status → badge
- * metadata, the day/month/time date block, short marker labels, and the
+ * Shared, pure helpers for the eviction solidarity board — status and timeline
+ * mappings onto Bloom's eviction family, the report card's date / time / area
+ * lines, short marker labels, and the
  * tel:/mailto:/https://wa.me/https://t.me contact link builders. No JSX, no
  * hooks, so both the board card and the detail screen import from here.
  */
-import { EvictionCaseStatus, type EvictionContactInfo } from '@homiio/shared-types';
-import type { ChipHue } from '@oxy.so/bloom/chip';
+import {
+  EvictionCaseStatus,
+  EvictionTimelineEventType,
+  type EvictionCase,
+  type EvictionContactInfo,
+} from '@homiio/shared-types';
+import type { EvictionEventKind, EvictionStatus } from '@oxy.so/bloom/eviction';
 
-/** Bloom Chip data hue + i18n label key per lifecycle status. */
+/** The Bloom status (badge tone) + Homiio's own i18n label key per lifecycle status. */
 export interface EvictionStatusMeta {
-  hue: ChipHue;
+  status: EvictionStatus;
   i18nKey: string;
 }
 
+/**
+ * `stopped` is Bloom's `suspended` (success): stopped for now, by a court, an
+ * agreement or the people who turned up. Homiio keeps its own words for each.
+ */
 export const EVICTION_STATUS_META: Record<EvictionCaseStatus, EvictionStatusMeta> = {
-  [EvictionCaseStatus.UPCOMING]: { hue: 'yellow', i18nKey: 'evictions.status.upcoming' },
-  [EvictionCaseStatus.STOPPED]: { hue: 'lime', i18nKey: 'evictions.status.stopped' },
-  [EvictionCaseStatus.POSTPONED]: { hue: 'cyan', i18nKey: 'evictions.status.postponed' },
-  [EvictionCaseStatus.EXECUTED]: { hue: 'rose', i18nKey: 'evictions.status.executed' },
-  [EvictionCaseStatus.CANCELLED]: { hue: 'neutral', i18nKey: 'evictions.status.cancelled' },
+  [EvictionCaseStatus.UPCOMING]: { status: 'scheduled', i18nKey: 'evictions.status.upcoming' },
+  [EvictionCaseStatus.STOPPED]: { status: 'suspended', i18nKey: 'evictions.status.stopped' },
+  [EvictionCaseStatus.POSTPONED]: { status: 'postponed', i18nKey: 'evictions.status.postponed' },
+  [EvictionCaseStatus.EXECUTED]: { status: 'executed', i18nKey: 'evictions.status.executed' },
+  [EvictionCaseStatus.CANCELLED]: { status: 'cancelled', i18nKey: 'evictions.status.cancelled' },
 };
 
-/** The day/month/time pieces rendered by the calendar-style date block. */
-export interface EvictionDateParts {
-  day: string;
-  month: string;
-  time: string;
-  weekday: string;
-}
+/**
+ * One Bloom marker per timeline event type. Exhaustive, so a new type fails to
+ * compile here. Bloom has eight kinds; the administrative events (a location or
+ * contact change, a correction, a hold, a note) all read as an `update`.
+ */
+export const EVICTION_EVENT_KIND: Readonly<Record<EvictionTimelineEventType, EvictionEventKind>> = {
+  [EvictionTimelineEventType.CASE_CREATED]: 'published',
+  [EvictionTimelineEventType.DATE_CHANGED]: 'date-set',
+  [EvictionTimelineEventType.LOCATION_PRECISION_CHANGED]: 'update',
+  [EvictionTimelineEventType.INSTRUCTIONS_UPDATED]: 'update',
+  [EvictionTimelineEventType.POSTPONED]: 'postponed',
+  [EvictionTimelineEventType.STOPPED]: 'suspended',
+  [EvictionTimelineEventType.EXECUTED]: 'executed',
+  [EvictionTimelineEventType.CANCELLED]: 'cancelled',
+  [EvictionTimelineEventType.LEGAL_RESOURCE_ADDED]: 'update',
+  [EvictionTimelineEventType.ORGANIZATION_VERIFIED]: 'mobilisation',
+  [EvictionTimelineEventType.CORRECTION_PUBLISHED]: 'update',
+  [EvictionTimelineEventType.PRECAUTIONARY_HOLD_APPLIED]: 'update',
+  [EvictionTimelineEventType.NOTE]: 'update',
+};
 
 const safeDate = (iso: string): Date | null => {
   const date = new Date(iso);
   return Number.isNaN(date.getTime()) ? null : date;
 };
 
-/** Split an ISO date into the calendar block's day / month / time / weekday. */
-export function formatEvictionDateParts(iso: string, locale: string): EvictionDateParts {
+/**
+ * The scheduled day as the report card's heading ("Tuesday, 23 September"),
+ * with the year only when it is not this year's.
+ */
+export function formatEvictionDay(iso: string, locale: string, now: Date = new Date()): string {
   const date = safeDate(iso);
-  if (!date) return { day: '--', month: '', time: '', weekday: '' };
-  return {
-    day: new Intl.DateTimeFormat(locale, { day: 'numeric' }).format(date),
-    month: new Intl.DateTimeFormat(locale, { month: 'short' }).format(date).replace('.', ''),
-    time: new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit' }).format(date),
-    weekday: new Intl.DateTimeFormat(locale, { weekday: 'long' }).format(date),
-  };
+  if (!date) return '';
+  return new Intl.DateTimeFormat(locale, {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    ...(date.getFullYear() === now.getFullYear() ? {} : { year: 'numeric' }),
+  }).format(date);
+}
+
+/** The scheduled time ("09:00"). */
+export function formatEvictionTime(iso: string, locale: string): string {
+  const date = safeDate(iso);
+  if (!date) return '';
+  return new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit' }).format(date);
+}
+
+/**
+ * The PUBLISHED area line: the label the server sanitised to a street-or-coarser
+ * form, and the city. Never anything finer — the card draws what it is given.
+ */
+export function formatEvictionArea(location: EvictionCase['location']): string {
+  const label = location.label?.trim() ?? '';
+  const city = location.city?.trim() ?? '';
+  if (!city || label.toLowerCase().includes(city.toLowerCase())) return label || city;
+  return label ? `${label}, ${city}` : city;
 }
 
 /** Full, human-readable date + time (detail "when" line). */

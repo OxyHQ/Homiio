@@ -3,23 +3,19 @@
  * phone / WhatsApp / Telegram / email actions (only the fields the reporter
  * provided — contacts are never invented) plus the free-text instructions.
  *
- * Each action is a Bloom `Item` row, which owns its own press feedback, so no
- * hooks run inside the `.map`.
+ * The actions are a Bloom `SettingsListGroup` in its `filled` variant: the
+ * block sits inside the detail screen's "How to help" card, which already
+ * paints the `card` colour, so a `plain` group would lose its edge there.
  */
 import React from 'react';
 import { Linking, StyleSheet, View } from 'react-native';
-import { Item } from '@oxy.so/bloom/item';
+import { SettingsListGroup, SettingsListItem } from '@oxy.so/bloom/settings-list';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
-import {
-  RiChat3Line,
-  RiExternalLinkLine,
-  RiMailLine,
-  RiPhoneLine,
-  RiSendPlaneLine,
-} from '@oxy.so/bloom/icons';
+import { RiChat3Line, RiMailLine, RiPhoneLine, RiSendPlaneLine } from '@oxy.so/bloom/icons';
 import type { EvictionContactInfo } from '@homiio/shared-types';
 
 import { toast } from '@oxy.so/bloom/toast';
+import { SettingsRowIcon } from '@/components/profile/SettingsRowIcon';
 import { colors } from '@/styles/colors';
 import { spacing } from '@/constants/styles';
 import { buildEvictionContactActions, type EvictionContactAction } from './evictionUtils';
@@ -53,28 +49,23 @@ export const EvictionContactActions: React.FC<EvictionContactActionsProps> = ({
 
   return (
     <View style={styles.wrap}>
-      {actions.map((action) => {
-        const Icon = ICON_BY_KIND[action.kind];
-        return (
-          <Item
-            key={action.kind}
-            role="listitem"
-            accessibilityRole="link"
-            accessibilityLabel={`${labels[action.kind]}: ${action.value}`}
-            title={labels[action.kind]}
-            subtitle={action.value}
-            leading={
-              <View style={styles.iconCircle}>
-                <Icon width={18} height={18} fill={colors.primaryColor} />
-              </View>
-            }
-            trailing={<RiExternalLinkLine size="sm" fill={colors.textSecondary} />}
-            onPress={() => {
-              Linking.openURL(action.url).catch(() => toast.error(openFailedLabel));
-            }}
-          />
-        );
-      })}
+      {actions.length > 0 ? (
+        <SettingsListGroup variant="filled">
+          {actions.map((action) => (
+            <SettingsListItem
+              key={action.kind}
+              icon={<SettingsRowIcon icon={ICON_BY_KIND[action.kind]} />}
+              title={labels[action.kind]}
+              description={action.value}
+              accessibilityRole="link"
+              accessibilityLabel={`${labels[action.kind]}: ${action.value}`}
+              onPress={() => {
+                Linking.openURL(action.url).catch(() => toast.error(openFailedLabel));
+              }}
+            />
+          ))}
+        </SettingsListGroup>
+      ) : null}
       {instructions ? (
         <View style={styles.instructions}>
           <BloomText style={styles.instructionsLabel}>{instructionsLabel}</BloomText>
@@ -87,20 +78,11 @@ export const EvictionContactActions: React.FC<EvictionContactActionsProps> = ({
 
 const styles = StyleSheet.create({
   wrap: {
-    gap: spacing.xs,
-  },
-  iconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.primaryColor + '1A',
+    gap: spacing.sm,
   },
   instructions: {
     gap: spacing.xs,
     paddingHorizontal: spacing.xs,
-    paddingTop: spacing.xs,
   },
   instructionsLabel: {
     fontSize: 12,

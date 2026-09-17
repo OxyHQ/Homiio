@@ -2,25 +2,25 @@
  * Landlord application detail — full applicant payload + review actions.
  *
  * Stream Q polish:
- *   - Bloom Typography, Avatar, Card sections, Item rows for documents.
+ *   - Bloom Typography and Avatar; the property is a Card, and the terms,
+ *     references and documents are Bloom `SettingsListGroup`s shared with the
+ *     applicant's view (`components/applications/ApplicationDetailGroups`).
+ *   - The applicant is their Oxy display name, never a raw account id.
  *   - Review decisions go through a Bloom Dialog holding a Textarea for notes.
  *   - An approved application links to `/contracts/new?application=<id>`, the
  *     only lease-create entry point.
  *   - Shared EmptyState / ErrorState components.
  */
 import React, { useCallback, useMemo, useState } from 'react';
-import { Image, Linking, Platform, StyleSheet, View } from 'react-native';
+import { Image, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
-import { format } from 'date-fns';
 import { useTranslation } from 'react-i18next';
 import { useFormatting } from '@/utils/format';
-import i18next from 'i18next';
 import { toast } from '@oxy.so/bloom/toast';
 import { Button } from '@oxy.so/bloom/button';
 import { Card } from '@oxy.so/bloom/card';
-import { Item } from '@oxy.so/bloom/item';
 import { useTheme } from '@oxy.so/bloom/theme';
 import {
   RiAlertLine,
@@ -28,28 +28,23 @@ import {
   RiCloseLine,
   RiEditLine,
   RiErrorWarningFill,
-  RiExternalLinkLine,
   RiEyeLine,
-  RiFileTextLine,
   RiLockLine,
-  RiMailLine,
-  RiUserLine,
-  RiWallet3Line,
 } from '@oxy.so/bloom/icons';
 import * as Skeleton from '@oxy.so/bloom/skeleton';
 import { Text as BloomText, H2, H3 } from '@oxy.so/bloom/typography';
 import { Avatar } from '@oxy.so/bloom/avatar';
 import { Textarea } from '@oxy.so/bloom/textarea';
-import {
-  Profile,
-  TenantApplication,
-  TenantApplicationDocument,
-  TenantApplicationStatus,
-  formatMoney,
-} from '@homiio/shared-types';
+import { Profile, TenantApplication, TenantApplicationStatus } from '@homiio/shared-types';
 import { Header } from '@/components/Header';
 import { PageScrollView } from '@/components/PageScrollView';
 import { ApplicationStatusBadge } from '@/components/ApplicationStatusBadge';
+import {
+  ApplicationDocumentsGroup,
+  ApplicationReferencesGroup,
+  ApplicationTermsGroup,
+  formatApplicationIncome,
+} from '@/components/applications/ApplicationDetailGroups';
 import { Dialog } from '@oxy.so/bloom/dialog';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
@@ -66,11 +61,6 @@ import {
   getPropertyTitle,
 } from '@/utils/propertyUtils';
 import { radius, spacing } from '@/constants/styles';
-
-/** A tenant's declared income has no currency field; it is quoted in euros. */
-const APPLICATION_INCOME_CURRENCY = 'EUR';
-/** Income reads as a round figure — cents on a salary are noise. */
-const INCOME_FORMAT = { minimumFractionDigits: 0, maximumFractionDigits: 0 } as const;
 
 type ReviewAction = 'reviewing' | 'approve' | 'reject';
 
@@ -106,44 +96,6 @@ const getReviewLabels = (
   },
 });
 
-const formatDate = (raw: string): string => {
-  const date = new Date(raw);
-  if (Number.isNaN(date.getTime())) return raw;
-  return format(date, 'EEE, MMM d, yyyy');
-};
-
-const DocIcon: React.FC<{ type: string; size: number; fill: string }> = ({ type, size, fill }) => {
-  switch (type) {
-    case 'id':
-      return <RiUserLine width={size} height={size} fill={fill} />;
-    case 'income':
-      return <RiWallet3Line width={size} height={size} fill={fill} />;
-    case 'reference':
-      return <RiMailLine width={size} height={size} fill={fill} />;
-    default:
-      return <RiFileTextLine width={size} height={size} fill={fill} />;
-  }
-};
-
-const openDocument = (url: string) => {
-  if (Platform.OS === 'web') {
-    window.open(url, '_blank', 'noopener,noreferrer');
-    return;
-  }
-  Linking.openURL(url).catch(() => {
-    toast.error(i18next.t('applications.landlord.toastOpenDocumentFailed'));
-  });
-};
-
-const getApplicantDisplayName = (
-  profile: Profile | null | undefined,
-  fallback: string,
-): string => {
-  if (!profile) return fallback;
-  const bio = profile.personalProfile?.personalInfo?.bio;
-  return bio?.trim() || profile.oxyUserId || fallback;
-};
-
 /**
  * Applicant avatar to render: prefer the Oxy avatar file id (resolved to a URL
  * downstream by the registered ImageResolver), else a profile-local custom
@@ -158,46 +110,6 @@ const getApplicantAvatarFileId = (
     getAvatarFileId(profile.oxyUserId) ||
     profile.personalProfile?.personalInfo?.avatar ||
     profile.avatar
-  );
-};
-
-interface DocumentRowProps {
-  document: TenantApplicationDocument;
-}
-
-const DocumentRow: React.FC<DocumentRowProps> = ({ document }) => {
-  const { t } = useTranslation();
-  const theme = useTheme();
-
-  return (
-    <Item
-      onPress={() => openDocument(document.url)}
-      accessibilityRole="link"
-      accessibilityLabel={t('applications.landlord.openDocument', { filename: document.filename })}
-      leading={
-        <View style={[styles.documentIcon, { backgroundColor: theme.colors.backgroundSecondary }]}>
-          <DocIcon type={document.type} size={18} fill={theme.colors.icon} />
-        </View>
-      }
-      title={document.filename}
-      subtitle={t(`applications.documentType.${document.type}`)}
-      trailing={<RiExternalLinkLine width={18} height={18} fill={theme.colors.textSecondary} />}
-    />
-  );
-};
-
-interface DetailRowProps {
-  label: string;
-  value: string;
-}
-
-const DetailRow: React.FC<DetailRowProps> = ({ label, value }) => {
-  const theme = useTheme();
-  return (
-    <View style={[styles.detailRow, { borderBottomColor: theme.colors.border }]}>
-      <BloomText style={[styles.detailLabel, { color: theme.colors.textSecondary }]}>{label}</BloomText>
-      <BloomText style={styles.detailValue}>{value}</BloomText>
-    </View>
   );
 };
 
@@ -244,7 +156,7 @@ export default function LandlordApplicationDetailScreen() {
 
   // Resolve the applicant's Oxy avatar file id (batched, cached). Called
   // unconditionally so hook order is stable across the loading/error branches.
-  const { getAvatarFileId } = useOxyAvatars([applicantQuery.data?.oxyUserId]);
+  const { getAvatarFileId, usersById } = useOxyAvatars([application?.applicantOxyUserId]);
 
   const isLandlord = useMemo<boolean>(() => {
     if (!application || !profile) return false;
@@ -374,10 +286,11 @@ export default function LandlordApplicationDetailScreen() {
   }
 
   const applicant = applicantQuery.data ?? null;
-  const applicantName = getApplicantDisplayName(
-    applicant,
-    t('applications.card.applicantFallback'),
-  );
+  const applicantUser = usersById.get(application.applicantOxyUserId);
+  const applicantName =
+    applicantUser?.name?.displayName?.trim() ||
+    applicantUser?.username ||
+    t('applications.card.applicantFallback');
   const applicantAvatar = getApplicantAvatarFileId(applicant, getAvatarFileId);
   const propertyTitle = property ? getPropertyTitle(property) : t('applications.card.propertyFallback');
   const imageSource = property ? getPropertyImageSource(property) : null;
@@ -411,7 +324,7 @@ export default function LandlordApplicationDetailScreen() {
               <H2 style={styles.applicantName}>{applicantName}</H2>
               <BloomText style={[styles.subtitle, secondaryText]}>
                 {t(`profile.edit.options.employmentStatus.${application.employmentStatus}`)} ·{' '}
-                {formatMoney(application.monthlyIncome, APPLICATION_INCOME_CURRENCY, locale, INCOME_FORMAT)}{' '}
+                {formatApplicationIncome(application, locale)}{' '}
                 {t('applications.card.perMonth')}
               </BloomText>
             </View>
@@ -442,70 +355,9 @@ export default function LandlordApplicationDetailScreen() {
             ) : null}
           </Card>
 
-          <Card variant="outlined" radius="radius-16" style={styles.card}>
-            <SectionEyebrow>{t('applications.landlord.sectionTenancy')}</SectionEyebrow>
-            <View style={styles.detailList}>
-              <DetailRow label={t('applications.card.moveIn')} value={formatDate(application.moveInDate)} />
-              <DetailRow
-                label={t('applications.field.leaseTerm')}
-                value={t('applications.field.leaseTermMonths', { count: application.leaseTermMonths })}
-              />
-              <DetailRow
-                label={t('applications.landlord.submittedLabel')}
-                value={formatDate(application.submittedAt)}
-              />
-              {application.decidedAt ? (
-                <DetailRow
-                  label={t('applications.landlord.decidedLabel')}
-                  value={formatDate(application.decidedAt)}
-                />
-              ) : null}
-            </View>
-          </Card>
-
-          <Card variant="outlined" radius="radius-16" style={styles.card}>
-            <SectionEyebrow>{t('applications.section.references')}</SectionEyebrow>
-            {application.referenceContacts.length === 0 ? (
-              <BloomText style={[styles.emptyHint, secondaryText]}>
-                {t('applications.landlord.noReferences')}
-              </BloomText>
-            ) : (
-              <View style={styles.referenceList}>
-                {application.referenceContacts.map((reference, index) => (
-                  <View
-                    key={`${reference.email}-${index}`}
-                    style={[styles.referenceCard, { borderBottomColor: theme.colors.border }]}
-                  >
-                    <BloomText style={styles.referenceName}>
-                      {reference.name}
-                    </BloomText>
-                    <BloomText style={[styles.referenceMeta, secondaryText]}>
-                      {t(`profile.edit.options.referenceRelationship.${reference.relationship}`)} ·{' '}
-                      {reference.phone}
-                    </BloomText>
-                    <BloomText style={[styles.referenceMeta, secondaryText]}>
-                      {reference.email}
-                    </BloomText>
-                  </View>
-                ))}
-              </View>
-            )}
-          </Card>
-
-          <Card variant="outlined" radius="radius-16" style={styles.card}>
-            <SectionEyebrow>{t('applications.landlord.sectionDocuments')}</SectionEyebrow>
-            {application.documents.length === 0 ? (
-              <BloomText style={[styles.emptyHint, secondaryText]}>
-                {t('applications.landlord.noDocuments')}
-              </BloomText>
-            ) : (
-              <View style={styles.documentList}>
-                {application.documents.map((document) => (
-                  <DocumentRow key={document.url} document={document} />
-                ))}
-              </View>
-            )}
-          </Card>
+          <ApplicationTermsGroup application={application} />
+          <ApplicationReferencesGroup application={application} />
+          <ApplicationDocumentsGroup application={application} />
 
           {application.notes ? (
             <Card variant="outlined" radius="radius-16" style={styles.card}>
@@ -655,50 +507,6 @@ const styles = StyleSheet.create({
   },
   cardHeading: {
     letterSpacing: -0.3,
-  },
-  detailList: {
-    gap: 0,
-  },
-  detailRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: spacing.sm,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  detailLabel: {
-    fontSize: 13,
-  },
-  detailValue: {
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  emptyHint: {
-    fontSize: 13,
-  },
-  referenceList: {
-    gap: 0,
-  },
-  referenceCard: {
-    paddingVertical: spacing.sm,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    gap: 2,
-  },
-  referenceName: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  referenceMeta: {
-    fontSize: 12,
-  },
-  documentList: {
-    gap: 0,
-  },
-  documentIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: radius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   notesBody: {
     fontSize: 14,

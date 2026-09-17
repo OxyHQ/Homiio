@@ -146,18 +146,6 @@ export function useEvictionComments(
   return { ...result, comments, total };
 }
 
-/** Cases the caller RSVP'd to. Only runs when authenticated. */
-export function useMyAttendingEvictions(
-  options: { enabled?: boolean } = {},
-): UseQueryResult<EvictionListResponse, Error> {
-  return useQuery<EvictionListResponse, Error>({
-    queryKey: evictionKeys.attending(),
-    queryFn: () => evictionService.myAttending(),
-    enabled: options.enabled ?? true,
-    staleTime: LIST_STALE_TIME,
-  });
-}
-
 export function useCreateEviction(): UseMutationResult<
   EvictionWriteResult,
   Error,
