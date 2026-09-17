@@ -59,6 +59,15 @@ const BARRELS = [
     message:
       "Import Bloom through its family subpath (@oxy.so/bloom/<family>); the root '@oxy.so/bloom' barrel bundles every family.",
   },
+  {
+    // Any non-English locale file, by alias or relative path. Web fetches the
+    // active locale from public/locales/, so one static import puts that whole
+    // language back into every web page's JavaScript.
+    pattern: new RegExp(`${SPECIFIER_PREFIX}['"](?:@/|(?:\\.\\.?/)+)(?:[^'"]*/)?locales/(?!en\\.json['"])[^'"/]+\\.json['"]`),
+    exempt: (file) => file === 'utils/localeResources.ts' || file.startsWith('__tests__/'),
+    message:
+      'Do not import a non-English locale JSON in app code; switch languages with setStoredLanguage (utils/languagePreference.ts), which loads it on demand.',
+  },
 ];
 
 function isCommentLine(line) {
@@ -87,7 +96,8 @@ for (const file of sourceFiles(ROOT)) {
   const lines = readFileSync(file, 'utf8').split('\n');
   lines.forEach((line, index) => {
     if (isCommentLine(line)) return;
-    BARRELS.forEach(({ pattern }, barrel) => {
+    BARRELS.forEach(({ pattern, exempt }, barrel) => {
+      if (exempt?.(relative(ROOT, file))) return;
       if (pattern.test(line)) {
         violations[barrel].push(`${relative(ROOT, file)}:${index + 1}: ${line.trim()}`);
       }
@@ -104,5 +114,5 @@ BARRELS.forEach(({ message }, barrel) => {
 if (failed) process.exit(1);
 
 console.log(
-  'Frontend bundle imports: no @expo/vector-icons, lucide-react-native or @oxy.so/bloom root-barrel imports.',
+  'Frontend bundle imports: no @expo/vector-icons, lucide-react-native, @oxy.so/bloom root-barrel or bundled non-English locale imports.',
 );

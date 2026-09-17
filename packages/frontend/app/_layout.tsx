@@ -34,17 +34,6 @@ import {
 import i18n, { use as i18nUse, init as i18nInit } from 'i18next';
 import { initReactI18next, I18nextProvider } from 'react-i18next';
 import enUS from '@/locales/en.json';
-import esES from '@/locales/es.json';
-import caES from '@/locales/ca-ES.json';
-import itIT from '@/locales/it.json';
-import zhCN from '@/locales/zh-CN.json';
-import hiIN from '@/locales/hi-IN.json';
-import frFR from '@/locales/fr-FR.json';
-import ar from '@/locales/ar.json';
-import bnBD from '@/locales/bn-BD.json';
-import ptBR from '@/locales/pt-BR.json';
-import ruRU from '@/locales/ru-RU.json';
-import idID from '@/locales/id-ID.json';
 import { MenuProvider } from 'react-native-popup-menu';
 
 import AppSplashScreen from '@/components/AppSplashScreen';
@@ -74,19 +63,11 @@ import {
 i18nUse(initReactI18next);
 
 i18nInit({
+  // Only the fallback language is registered up front. Every other locale is
+  // loaded on first use by `setStoredLanguage` (utils/localeResources*), which on
+  // web keeps eleven locale files out of the JavaScript bundle.
   resources: {
     'en-US': { translation: enUS },
-    'es-ES': { translation: esES },
-    'ca-ES': { translation: caES },
-    'it-IT': { translation: itIT },
-    'zh-CN': { translation: zhCN },
-    'hi-IN': { translation: hiIN },
-    'fr-FR': { translation: frFR },
-    ar: { translation: ar },
-    'bn-BD': { translation: bnBD },
-    'pt-BR': { translation: ptBR },
-    'ru-RU': { translation: ruRU },
-    'id-ID': { translation: idID },
   },
   lng: 'en-US',
   fallbackLng: 'en-US',
