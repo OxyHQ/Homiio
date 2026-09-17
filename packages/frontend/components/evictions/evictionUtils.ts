@@ -60,7 +60,40 @@ export function formatEvictionFullDate(iso: string, locale: string): string {
   }).format(date);
 }
 
-/** Compact label for a map marker (e.g. "15 jul"). */
+const TIME_PATTERN = /^([01]?\d|2[0-3]):([0-5]\d)$/;
+
+/**
+ * Combine a picked day (a local-midnight `Date` from Bloom's `DatePicker`) and
+ * an optional typed `HH:mm` into the ISO string the API takes. `undefined` when
+ * no day is picked or the time does not parse — the caller decides whether that
+ * is "no change" or an error.
+ */
+export function combineDateAndTime(day: Date | null, time: string): string | undefined {
+  if (!day || Number.isNaN(day.getTime())) return undefined;
+  const trimmed = time.trim();
+  const match = trimmed ? TIME_PATTERN.exec(trimmed) : null;
+  if (trimmed && !match) return undefined;
+  const combined = new Date(
+    day.getFullYear(),
+    day.getMonth(),
+    day.getDate(),
+    match ? Number(match[1]) : 0,
+    match ? Number(match[2]) : 0,
+  );
+  return combined.toISOString();
+}
+
+/** Split an ISO date into the local day (for `DatePicker`) and `HH:mm` text. */
+export function splitDateAndTime(iso: string): { day: Date | null; time: string } {
+  const parsed = safeDate(iso);
+  if (!parsed) return { day: null, time: '' };
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return {
+    day: new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate()),
+    time: `${pad(parsed.getHours())}:${pad(parsed.getMinutes())}`,
+  };
+}
+
 /**
  * A timeline entry's timestamp: the date AND the time.
  *
@@ -78,6 +111,7 @@ export function formatEvictionDateTime(iso: string, locale: string): string {
   }).format(date);
 }
 
+/** Compact label for a map marker (e.g. "15 jul"). */
 export function formatEvictionShortDate(iso: string, locale: string): string {
   const date = safeDate(iso);
   if (!date) return '';
@@ -89,7 +123,6 @@ export function formatEvictionShortDate(iso: string, locale: string): string {
 /** A single tappable contact action derived from the case's `contactInfo`. */
 export interface EvictionContactAction {
   kind: 'phone' | 'whatsapp' | 'email' | 'telegram';
-  icon: 'call-outline' | 'logo-whatsapp' | 'mail-outline' | 'paper-plane-outline';
   /** Display value (the raw handle / number / address). */
   value: string;
   /** The `Linking.openURL` target. */
@@ -97,9 +130,7 @@ export interface EvictionContactAction {
 }
 
 const buildWhatsAppUrl = (value: string): string =>
-  /wa\.me\/|api\.whatsapp\.com/i.test(value)
-    ? value
-    : `https://wa.me/${value.replace(/\D/g, '')}`;
+  /wa\.me\/|api\.whatsapp\.com/i.test(value) ? value : `https://wa.me/${value.replace(/\D/g, '')}`;
 
 const buildTelegramUrl = (value: string): string => {
   const trimmed = value.trim();
@@ -120,7 +151,6 @@ export function buildEvictionContactActions(
   if (contact.phone?.trim()) {
     actions.push({
       kind: 'phone',
-      icon: 'call-outline',
       value: contact.phone.trim(),
       url: `tel:${contact.phone.trim()}`,
     });
@@ -128,7 +158,6 @@ export function buildEvictionContactActions(
   if (contact.whatsapp?.trim()) {
     actions.push({
       kind: 'whatsapp',
-      icon: 'logo-whatsapp',
       value: contact.whatsapp.trim(),
       url: buildWhatsAppUrl(contact.whatsapp.trim()),
     });
@@ -136,7 +165,6 @@ export function buildEvictionContactActions(
   if (contact.telegram?.trim()) {
     actions.push({
       kind: 'telegram',
-      icon: 'paper-plane-outline',
       value: contact.telegram.trim(),
       url: buildTelegramUrl(contact.telegram.trim()),
     });
@@ -144,7 +172,6 @@ export function buildEvictionContactActions(
   if (contact.email?.trim()) {
     actions.push({
       kind: 'email',
-      icon: 'mail-outline',
       value: contact.email.trim(),
       url: `mailto:${contact.email.trim()}`,
     });

@@ -6,16 +6,30 @@
  * `Avatar` (variant-aware resolver) + display name (falling back to the handle,
  * then an anonymous label). Body: title, stars, recommendation line, opinion,
  * pros/cons (falling back to the legacy `positiveComment`/`negativeComment`),
- * dimension chips grouped by section (apartment / management / building / area,
- * only the present ones), advice blocks, an agency link, and a photo row.
- * Footer: a real Helpful toggle (disabled on your own review) + a Report action.
+ * dimension `Chip`s grouped by section (apartment / management / building /
+ * area, only the present ones), advice blocks, an agency link, and a photo row.
+ * Footer: a real Helpful toggle (disabled on your own review) + a Report action
+ * (a per-user community report — never a moderator action), both Bloom `Button`s.
  */
 import React, { useState } from 'react';
-import { Image, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Image, ScrollView, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { Avatar } from '@oxy.so/bloom/avatar';
+import { Button } from '@oxy.so/bloom/button';
+import { Chip } from '@oxy.so/bloom/chip';
+import {
+  RiAddCircleLine,
+  RiAlertLine,
+  RiArrowRightSLine,
+  RiBuilding2Line,
+  RiCloseCircleLine,
+  RiFlagLine,
+  RiThumbDownLine,
+  RiThumbUpLine,
+  RiVerifiedBadgeFill,
+} from '@oxy.so/bloom/icons';
+import { useTheme } from '@oxy.so/bloom/theme';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 import { useOxy } from '@oxy.so/services';
 import type { User } from '@oxy.so/core';
@@ -39,12 +53,11 @@ import { useToggleHelpful, useReportReview } from '@/hooks/useReviewMutations';
 import { resolveBackendImageUrl } from '@/utils/imageUrl';
 import { formatLocalized } from '@/utils/dateLocale';
 import { colors } from '@/styles/colors';
-import { hairline, radius, spacing } from '@/constants/styles';
-
-const IS_WEB = Platform.OS === 'web';
+import { radius, spacing } from '@/constants/styles';
 
 interface DimensionChipData {
-  label: string;
+  /** Dimension name; omitted for a chip that is one value of a multi-value field. */
+  label?: string;
   value: string;
 }
 
@@ -63,13 +76,6 @@ function collectEnumKeys(
   return chips;
 }
 
-const DimensionChip: React.FC<DimensionChipData> = ({ label, value }) => (
-  <View style={styles.dimChip}>
-    <BloomText style={styles.dimChipLabel}>{label}</BloomText>
-    <BloomText style={styles.dimChipValue}>{value}</BloomText>
-  </View>
-);
-
 interface DimensionGroupProps {
   title: string;
   chips: DimensionChipData[];
@@ -79,49 +85,18 @@ const DimensionGroup: React.FC<DimensionGroupProps> = ({ title, chips }) => {
   if (chips.length === 0) return null;
   return (
     <View style={styles.dimGroup}>
-      <BloomText style={styles.dimGroupTitle}>{title}</BloomText>
+      <BloomText style={styles.eyebrow}>{title}</BloomText>
       <View style={styles.dimChips}>
-        {chips.map((chip) => (
-          <DimensionChip key={chip.label} label={chip.label} value={chip.value} />
-        ))}
+        {chips.map((chip) => {
+          const text = chip.label ? `${chip.label}: ${chip.value}` : chip.value;
+          return (
+            <Chip key={text} size="small" hue="gray">
+              {text}
+            </Chip>
+          );
+        })}
       </View>
     </View>
-  );
-};
-
-interface FooterButtonProps {
-  icon: React.ComponentProps<typeof Ionicons>['name'];
-  label: string;
-  active?: boolean;
-  disabled?: boolean;
-  onPress: () => void;
-}
-
-/** Footer affordance (Helpful / Report) — owns its own pressed/hovered state. */
-const FooterButton: React.FC<FooterButtonProps> = ({ icon, label, active, disabled, onPress }) => {
-  const [pressed, setPressed] = useState(false);
-  const [hovered, setHovered] = useState(false);
-  const tint = active ? colors.success : colors.COLOR_BLACK_LIGHT_3;
-  return (
-    <Pressable
-      onPress={onPress}
-      onPressIn={() => setPressed(true)}
-      onPressOut={() => setPressed(false)}
-      onHoverIn={IS_WEB ? () => setHovered(true) : undefined}
-      onHoverOut={IS_WEB ? () => setHovered(false) : undefined}
-      disabled={disabled}
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      accessibilityState={{ disabled: Boolean(disabled), selected: Boolean(active) }}
-      style={[
-        styles.footerButton,
-        !disabled && (pressed || hovered) && styles.footerButtonActive,
-        disabled && styles.footerButtonDisabled,
-      ]}
-    >
-      <Ionicons name={icon} size={16} color={tint} />
-      <BloomText style={[styles.footerButtonLabel, { color: tint }]}>{label}</BloomText>
-    </Pressable>
   );
 };
 
@@ -135,6 +110,7 @@ export interface ReviewCardProps {
 
 export const ReviewCard: React.FC<ReviewCardProps> = ({ review, author, onPressAgency }) => {
   const { t } = useTranslation();
+  const theme = useTheme();
   const { user } = useOxy();
   const toggleHelpful = useToggleHelpful();
   const reportReview = useReportReview();
@@ -168,11 +144,10 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ review, author, onPressA
       value: review.touristApartments ? t('common.yes') : t('common.no'),
     });
   }
-  if (review.services && review.services.length > 0) {
-    buildingChips.push({
-      label: t('reviews.write.fields.services'),
-      value: review.services.map((service) => t(`reviews.enums.services.${service}`)).join(', '),
-    });
+  // One chip per shared service: a chip is a single line, and a joined list
+  // would truncate.
+  for (const service of review.services ?? []) {
+    buildingChips.push({ value: t(`reviews.enums.services.${service}`) });
   }
   const areaChips = translateChips(collectEnumKeys(review, AREA_DIMENSIONS));
 
@@ -185,28 +160,39 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ review, author, onPressA
     );
   };
 
+  const recommendColor = review.recommendation ? theme.colors.success : theme.colors.textSecondary;
+  const RecommendIcon = review.recommendation ? RiThumbUpLine : RiThumbDownLine;
+
   return (
     <View style={styles.card}>
       <View style={styles.header}>
-        <Avatar source={author?.avatar ?? undefined} variant="thumb" size={44} />
+        <Avatar source={author?.avatar ?? undefined} variant="thumb" size={44} name={displayName} />
         <View style={styles.headerText}>
           <View style={styles.nameRow}>
-            <BloomText style={styles.authorName}>{displayName}</BloomText>
+            <BloomText style={[styles.authorName, { color: theme.colors.text }]}>
+              {displayName}
+            </BloomText>
             {review.verified ? (
-              <View style={styles.chip}>
-                <Ionicons name="checkmark-circle" size={13} color={colors.success} />
-                <BloomText style={[styles.chipText, { color: colors.success }]}>
-                  {t('reviews.card.verified')}
-                </BloomText>
-              </View>
+              <Chip
+                size="small"
+                variant="subtle"
+                color="success"
+                startIcon={
+                  <RiVerifiedBadgeFill width={12} height={12} fill={theme.colors.success} />
+                }
+              >
+                {t('reviews.card.verified')}
+              </Chip>
             ) : null}
             {isUnderReview ? (
-              <View style={[styles.chip, styles.chipWarning]}>
-                <Ionicons name="warning-outline" size={12} color={colors.warning} />
-                <BloomText style={[styles.chipText, { color: colors.warning }]}>
-                  {t('reviews.card.underReview')}
-                </BloomText>
-              </View>
+              <Chip
+                size="small"
+                variant="subtle"
+                color="warning"
+                startIcon={<RiAlertLine width={12} height={12} fill={theme.colors.warning} />}
+              >
+                {t('reviews.card.underReview')}
+              </Chip>
             ) : null}
           </View>
           <View style={styles.metaRow}>
@@ -233,22 +219,15 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ review, author, onPressA
         </View>
       </View>
 
-      {review.title ? <BloomText style={styles.title}>{review.title}</BloomText> : null}
+      {review.title ? (
+        <BloomText style={[styles.title, { color: theme.colors.text }]}>{review.title}</BloomText>
+      ) : null}
 
       <View style={styles.ratingRow}>
         <Stars rating={review.rating} size={16} />
         <View style={styles.recommendRow}>
-          <Ionicons
-            name={review.recommendation ? 'thumbs-up' : 'thumbs-down'}
-            size={14}
-            color={review.recommendation ? colors.success : colors.COLOR_BLACK_LIGHT_3}
-          />
-          <BloomText
-            style={[
-              styles.recommendText,
-              { color: review.recommendation ? colors.success : colors.COLOR_BLACK_LIGHT_3 },
-            ]}
-          >
+          <RecommendIcon width={14} height={14} fill={recommendColor} />
+          <BloomText style={[styles.recommendText, { color: recommendColor }]}>
             {review.recommendation
               ? t('reviews.card.recommends')
               : t('reviews.card.doesNotRecommend')}
@@ -260,12 +239,12 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ review, author, onPressA
 
       {pros.length > 0 ? (
         <View style={styles.prosConsBlock}>
-          <BloomText style={[styles.prosConsLabel, { color: colors.success }]}>
+          <BloomText style={[styles.eyebrow, { color: theme.colors.success }]}>
             {t('reviews.card.pros')}
           </BloomText>
           {pros.map((item, index) => (
             <View key={`pro-${index}`} style={styles.prosConsRow}>
-              <Ionicons name="add-circle-outline" size={14} color={colors.success} />
+              <RiAddCircleLine width={14} height={14} fill={theme.colors.success} />
               <BloomText style={styles.prosConsText}>{item}</BloomText>
             </View>
           ))}
@@ -274,12 +253,12 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ review, author, onPressA
 
       {cons.length > 0 ? (
         <View style={styles.prosConsBlock}>
-          <BloomText style={[styles.prosConsLabel, { color: colors.error }]}>
+          <BloomText style={[styles.eyebrow, { color: theme.colors.error }]}>
             {t('reviews.card.cons')}
           </BloomText>
           {cons.map((item, index) => (
             <View key={`con-${index}`} style={styles.prosConsRow}>
-              <Ionicons name="remove-circle-outline" size={14} color={colors.error} />
+              <RiCloseCircleLine width={14} height={14} fill={theme.colors.error} />
               <BloomText style={styles.prosConsText}>{item}</BloomText>
             </View>
           ))}
@@ -292,34 +271,31 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ review, author, onPressA
       <DimensionGroup title={t('reviews.card.sections.area')} chips={areaChips} />
 
       {review.adviceToLandlord ? (
-        <View style={styles.adviceBlock}>
-          <BloomText style={styles.adviceLabel}>{t('reviews.card.adviceToLandlord')}</BloomText>
+        <View style={[styles.adviceBlock, { borderLeftColor: theme.colors.border }]}>
+          <BloomText style={styles.eyebrow}>{t('reviews.card.adviceToLandlord')}</BloomText>
           <BloomText style={styles.adviceText}>{review.adviceToLandlord}</BloomText>
         </View>
       ) : null}
       {review.adviceToAgency ? (
-        <View style={styles.adviceBlock}>
-          <BloomText style={styles.adviceLabel}>{t('reviews.card.adviceToAgency')}</BloomText>
+        <View style={[styles.adviceBlock, { borderLeftColor: theme.colors.border }]}>
+          <BloomText style={styles.eyebrow}>{t('reviews.card.adviceToAgency')}</BloomText>
           <BloomText style={styles.adviceText}>{review.adviceToAgency}</BloomText>
         </View>
       ) : null}
 
       {review.agency ? (
-        <Pressable
+        <Button
+          variant="ghost"
+          size="small"
+          leadingIcon={RiBuilding2Line}
+          trailingIcon={onPressAgency ? RiArrowRightSLine : undefined}
           onPress={() => onPressAgency?.(review.agency?.slug ?? '')}
           disabled={!onPressAgency}
-          accessibilityRole="link"
           accessibilityLabel={t('reviews.card.managedBy', { name: review.agency.name })}
-          style={styles.agencyRow}
+          style={styles.agencyLink}
         >
-          <Ionicons name="business-outline" size={15} color={colors.primaryColor} />
-          <BloomText style={styles.agencyText}>
-            {t('reviews.card.managedBy', { name: review.agency.name })}
-          </BloomText>
-          {onPressAgency ? (
-            <Ionicons name="chevron-forward" size={14} color={colors.primaryColor} />
-          ) : null}
-        </Pressable>
+          {t('reviews.card.managedBy', { name: review.agency.name })}
+        </Button>
       ) : null}
 
       {images.length > 0 ? (
@@ -339,19 +315,26 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ review, author, onPressA
       ) : null}
 
       <View style={styles.footer}>
-        <FooterButton
-          icon={review.viewerHasVotedHelpful ? 'thumbs-up' : 'thumbs-up-outline'}
-          label={t('reviews.card.helpful', { count: review.helpfulCount })}
-          active={review.viewerHasVotedHelpful}
-          disabled={isOwnReview || toggleHelpful.isPending}
+        <Button
+          variant={review.viewerHasVotedHelpful ? 'secondary' : 'ghost'}
+          size="small"
+          leadingIcon={RiThumbUpLine}
           onPress={() => toggleHelpful.mutate(review.id)}
-        />
+          disabled={isOwnReview || toggleHelpful.isPending}
+          accessibilityLabel={t('reviews.card.helpful', { count: review.helpfulCount })}
+        >
+          {t('reviews.card.helpful', { count: review.helpfulCount })}
+        </Button>
         {isOwnReview ? null : (
-          <FooterButton
-            icon="flag-outline"
-            label={t('reviews.card.report')}
+          <Button
+            variant="ghost"
+            size="small"
+            leadingIcon={RiFlagLine}
             onPress={() => setReportVisible(true)}
-          />
+            accessibilityLabel={t('reviews.card.report')}
+          >
+            {t('reviews.card.report')}
+          </Button>
         )}
       </View>
 
@@ -389,23 +372,6 @@ const styles = StyleSheet.create({
   authorName: {
     fontSize: 15,
     fontWeight: '700',
-    color: colors.COLOR_BLACK,
-  },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-    borderRadius: radius.pill,
-    backgroundColor: colors.successSubtle,
-  },
-  chipWarning: {
-    backgroundColor: colors.warningSubtle,
-  },
-  chipText: {
-    fontSize: 11,
-    fontWeight: '700',
   },
   metaRow: {
     flexDirection: 'row',
@@ -424,7 +390,6 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 17,
     fontWeight: '700',
-    color: colors.COLOR_BLACK,
     letterSpacing: -0.3,
   },
   ratingRow: {
@@ -447,14 +412,15 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     color: colors.COLOR_BLACK_LIGHT_2,
   },
-  prosConsBlock: {
-    gap: spacing.xs,
-  },
-  prosConsLabel: {
+  eyebrow: {
     fontSize: 12,
     fontWeight: '700',
+    color: colors.COLOR_BLACK_LIGHT_3,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+  },
+  prosConsBlock: {
+    gap: spacing.xs,
   },
   prosConsRow: {
     flexDirection: 'row',
@@ -470,65 +436,23 @@ const styles = StyleSheet.create({
   dimGroup: {
     gap: spacing.xs,
   },
-  dimGroupTitle: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.COLOR_BLACK_LIGHT_3,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
   dimChips: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.xs,
   },
-  dimChip: {
-    flexDirection: 'row',
-    gap: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.md,
-    borderWidth: hairline.width,
-    borderColor: colors.COLOR_BLACK_LIGHT_6,
-    backgroundColor: colors.surfaceElevated,
-  },
-  dimChipLabel: {
-    fontSize: 12,
-    color: colors.COLOR_BLACK_LIGHT_3,
-  },
-  dimChipValue: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.COLOR_BLACK,
-  },
   adviceBlock: {
     gap: 2,
     paddingLeft: spacing.md,
     borderLeftWidth: 2,
-    borderLeftColor: colors.COLOR_BLACK_LIGHT_6,
-  },
-  adviceLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.COLOR_BLACK_LIGHT_3,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
   },
   adviceText: {
     fontSize: 14,
     lineHeight: 20,
     color: colors.COLOR_BLACK_LIGHT_2,
   },
-  agencyRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
+  agencyLink: {
     alignSelf: 'flex-start',
-  },
-  agencyText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.primaryColor,
   },
   imagesRow: {
     gap: spacing.sm,
@@ -544,24 +468,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
     marginTop: spacing.xs,
-  },
-  footerButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.md,
-  },
-  footerButtonActive: {
-    backgroundColor: colors.COLOR_BLACK_LIGHT_7,
-  },
-  footerButtonDisabled: {
-    opacity: 0.6,
-  },
-  footerButtonLabel: {
-    fontSize: 13,
-    fontWeight: '600',
   },
 });
 

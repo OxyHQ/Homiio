@@ -4,34 +4,31 @@
  * prefilled edit form, and cancel the case (a confirmed status → `cancelled`).
  *
  * Owns its own form state + mutations (`useCreateEvictionUpdate`,
- * `useUpdateEviction`) so the detail screen stays lean. Bloom controls only;
- * status chips use static styles (no function-form `style`).
+ * `useUpdateEviction`) so the detail screen stays lean. Bloom controls only:
+ * a `Card` surface, `Textarea` for the message, `DatePicker` for the new day,
+ * `Chip`s for the (deselectable) status, `confirm()` for the cancellation.
  */
 import React, { useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@oxy.so/bloom/button';
+import { Card } from '@oxy.so/bloom/card';
 import { Chip } from '@oxy.so/bloom/chip';
+import { DatePicker } from '@oxy.so/bloom/date-picker';
+import { Field } from '@oxy.so/bloom/field';
+import { RiCloseCircleLine, RiEditLine } from '@oxy.so/bloom/icons';
 import { TextFieldInput } from '@oxy.so/bloom/text-field';
-import { H3, Text as BloomText } from '@oxy.so/bloom/typography';
+import { Textarea } from '@oxy.so/bloom/textarea';
+import { H3 } from '@oxy.so/bloom/typography';
 
 import { EvictionCaseStatus } from '@homiio/shared-types';
 import { useCreateEvictionUpdate, useUpdateEviction } from '@/hooks/useEvictionQueries';
-import { alert } from '@oxy.so/bloom/surfaces';
+import { confirm } from '@oxy.so/bloom/surfaces';
 import { toast } from '@oxy.so/bloom/toast';
-import { colors } from '@/styles/colors';
-import { radius, spacing } from '@/constants/styles';
-import { EVICTION_STATUS_META } from './evictionUtils';
+import { spacing } from '@/constants/styles';
+import { EVICTION_STATUS_META, combineDateAndTime } from './evictionUtils';
 
 const STATUS_OPTIONS = Object.values(EvictionCaseStatus) as EvictionCaseStatus[];
-
-/** Combine a `YYYY-MM-DD` date + optional `HH:mm` time into an ISO string. */
-const toIso = (date: string, time: string): string | undefined => {
-  const trimmed = date.trim();
-  if (!trimmed) return undefined;
-  const parsed = new Date(`${trimmed}T${time.trim() || '00:00'}`);
-  return Number.isNaN(parsed.getTime()) ? undefined : parsed.toISOString();
-};
 
 interface EvictionOwnerControlsProps {
   caseId: string;
@@ -44,17 +41,17 @@ export const EvictionOwnerControls: React.FC<EvictionOwnerControlsProps> = ({
   currentStatus,
   onEdit,
 }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const createUpdate = useCreateEvictionUpdate(caseId);
   const updateCase = useUpdateEviction(caseId);
 
   const [message, setMessage] = useState('');
-  const [newDate, setNewDate] = useState('');
+  const [newDate, setNewDate] = useState<Date | null>(null);
   const [newTime, setNewTime] = useState('');
   const [newStatus, setNewStatus] = useState<EvictionCaseStatus | null>(null);
 
   const dateInvalid = useMemo(
-    () => Boolean(newDate.trim()) && toIso(newDate, newTime) === undefined,
+    () => newDate !== null && combineDateAndTime(newDate, newTime) === undefined,
     [newDate, newTime],
   );
 
@@ -65,12 +62,12 @@ export const EvictionOwnerControls: React.FC<EvictionOwnerControlsProps> = ({
     try {
       await createUpdate.mutateAsync({
         message: message.trim(),
-        newScheduledAt: toIso(newDate, newTime),
+        newScheduledAt: combineDateAndTime(newDate, newTime),
         newStatus: newStatus ?? undefined,
       });
       toast.success(t('evictions.update.success'));
       setMessage('');
-      setNewDate('');
+      setNewDate(null);
       setNewTime('');
       setNewStatus(null);
     } catch {
@@ -78,60 +75,63 @@ export const EvictionOwnerControls: React.FC<EvictionOwnerControlsProps> = ({
     }
   };
 
-  const handleCancelCase = () => {
-    alert(t('evictions.cancel.confirmTitle'), t('evictions.cancel.confirmMessage'), [
-      { text: t('common.cancel'), style: 'cancel' },
-      {
-        text: t('evictions.cancel.confirm'),
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await updateCase.mutateAsync({ status: EvictionCaseStatus.CANCELLED });
-            toast.success(t('evictions.cancel.success'));
-          } catch {
-            toast.error(t('evictions.cancel.error'));
-          }
-        },
-      },
-    ]);
+  const handleCancelCase = async () => {
+    const ok = await confirm({
+      title: t('evictions.cancel.confirmTitle'),
+      description: t('evictions.cancel.confirmMessage'),
+      confirmLabel: t('evictions.cancel.confirm'),
+      cancelLabel: t('common.cancel'),
+      destructive: true,
+    });
+    if (!ok) return;
+    try {
+      await updateCase.mutateAsync({ status: EvictionCaseStatus.CANCELLED });
+      toast.success(t('evictions.cancel.success'));
+    } catch {
+      toast.error(t('evictions.cancel.error'));
+    }
   };
 
   return (
-    <View style={styles.wrap}>
+    <Card variant="outlined" radius="radius-16" style={styles.wrap}>
       <H3 style={styles.title}>{t('evictions.owner.title')}</H3>
 
-      <TextFieldInput
+      <Textarea
         label={t('evictions.update.messageLabel')}
         placeholder={t('evictions.update.messagePlaceholder')}
         value={message}
         onChangeText={setMessage}
-        multiline
+        rows={3}
+        autoResize
+        maxRows={8}
       />
 
       <View style={styles.row}>
-        <View style={styles.rowField}>
-          <TextFieldInput
-            label={t('evictions.update.newDateLabel')}
-            placeholder="YYYY-MM-DD"
+        <Field
+          label={t('evictions.update.newDateLabel')}
+          error={dateInvalid ? t('evictions.form.invalidDate') : null}
+          style={styles.rowField}
+        >
+          <DatePicker
             value={newDate}
-            onChangeText={setNewDate}
+            onChange={setNewDate}
+            locale={i18n.language}
+            accessibilityLabel={t('evictions.update.newDateLabel')}
           />
-        </View>
+        </Field>
         <View style={styles.rowField}>
-          <TextFieldInput
-            label={t('evictions.update.newTimeLabel')}
-            placeholder="HH:MM"
-            value={newTime}
-            onChangeText={setNewTime}
-          />
+          <Field label={t('evictions.update.newTimeLabel')}>
+            <TextFieldInput
+              label={t('evictions.update.newTimeLabel')}
+              placeholder="HH:MM"
+              value={newTime}
+              onChangeText={setNewTime}
+            />
+          </Field>
         </View>
       </View>
-      {dateInvalid ? (
-        <BloomText style={styles.error}>{t('evictions.form.invalidDate')}</BloomText>
-      ) : null}
 
-      <View>
-        <BloomText style={styles.fieldLabel}>{t('evictions.update.newStatusLabel')}</BloomText>
+      <Field label={t('evictions.update.newStatusLabel')}>
         <View style={styles.chipRow}>
           {STATUS_OPTIONS.map((option) => (
             <Chip
@@ -143,7 +143,7 @@ export const EvictionOwnerControls: React.FC<EvictionOwnerControlsProps> = ({
             </Chip>
           ))}
         </View>
-      </View>
+      </Field>
 
       <Button
         variant="primary"
@@ -157,22 +157,29 @@ export const EvictionOwnerControls: React.FC<EvictionOwnerControlsProps> = ({
       </Button>
 
       <View style={styles.ownerActions}>
-        <Button variant="secondary" size="medium" onPress={onEdit} style={styles.ownerAction}>
+        <Button
+          variant="secondary"
+          size="medium"
+          onPress={onEdit}
+          leadingIcon={RiEditLine}
+          style={styles.ownerAction}
+        >
           {t('evictions.owner.edit')}
         </Button>
         {currentStatus !== EvictionCaseStatus.CANCELLED ? (
           <Button
-            variant="secondary"
+            variant="destructive"
             size="medium"
             onPress={handleCancelCase}
             loading={updateCase.isPending}
+            leadingIcon={RiCloseCircleLine}
             style={styles.ownerAction}
           >
             {t('evictions.owner.cancelCase')}
           </Button>
         ) : null}
       </View>
-    </View>
+    </Card>
   );
 };
 
@@ -180,30 +187,18 @@ const styles = StyleSheet.create({
   wrap: {
     gap: spacing.md,
     padding: spacing.lg,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surfaceElevated,
   },
   title: {
     letterSpacing: -0.3,
   },
   row: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: spacing.md,
   },
   rowField: {
     flex: 1,
-  },
-  error: {
-    fontSize: 12,
-    color: colors.danger,
-  },
-  fieldLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.textSecondary,
-    marginBottom: spacing.sm,
+    minWidth: 160,
   },
   chipRow: {
     flexDirection: 'row',

@@ -5,15 +5,13 @@
  * Stream Q polish:
  *   - Bloom Typography (H1/H2/H3/Text) replaces RN Text.
  *   - Bloom Button replaces TouchableOpacity CTAs.
- *   - Tab bar uses semantic tokens + Pressable + Bloom Text instead of
- *     raw TouchableOpacity.
+ *   - Tab bar is Bloom `Tabs` (pill variant, Remix leading icons).
+ *   - Feedback is Bloom `toast`.
  *   - Shared EmptyState + Loading (Bloom) component.
  *   - Flat wrappers (hairline border) around list content.
  */
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  Alert,
-  Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -22,10 +20,18 @@ import {
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { Button } from '@oxy.so/bloom/button';
+import {
+  RiGroupLine,
+  RiHotelBedLine,
+  RiMailLine,
+  RiSearchLine,
+  RiSettings3Line,
+} from '@oxy.so/bloom/icons';
+import { Tabs, TabsTrigger, type TabsIconComponent } from '@oxy.so/bloom/tabs';
+import { toast } from '@oxy.so/bloom/toast';
 import { Loading } from '@oxy.so/bloom/loading';
-import { H1, Text as BloomText } from '@oxy.so/bloom/typography';
+import { H1 } from '@oxy.so/bloom/typography';
 import { useOxy } from '@oxy.so/services';
 import { useTranslation } from 'react-i18next';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -40,70 +46,19 @@ import { useRoommate } from '@/hooks/useRoommate';
 import { roommateService } from '@/services/roommateService';
 import { type PropertyFilters } from '@/services/propertyService';
 import { useProfileStore } from '@/store/profileStore';
-import { radius, spacing } from '@/constants/styles';
+import { spacing } from '@/constants/styles';
 import { colors } from '@/styles/colors';
 
-type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 type Tab = 'discover' | 'requests' | 'relationships' | 'rooms';
 
-const TAB_IDS: { id: Tab; icon: IoniconName; labelKey: string }[] = [
-  { id: 'discover', labelKey: 'roommates.tabs.discover', icon: 'search-outline' },
-  { id: 'requests', labelKey: 'roommates.tabs.requests', icon: 'mail-outline' },
-  { id: 'relationships', labelKey: 'roommates.tabs.matches', icon: 'people-circle-outline' },
-  { id: 'rooms', labelKey: 'roommates.tabs.rooms', icon: 'bed-outline' },
+const TAB_IDS: { id: Tab; icon: TabsIconComponent; labelKey: string }[] = [
+  { id: 'discover', labelKey: 'roommates.tabs.discover', icon: RiSearchLine },
+  { id: 'requests', labelKey: 'roommates.tabs.requests', icon: RiMailLine },
+  { id: 'relationships', labelKey: 'roommates.tabs.matches', icon: RiGroupLine },
+  { id: 'rooms', labelKey: 'roommates.tabs.rooms', icon: RiHotelBedLine },
 ];
 
-const TabButton: React.FC<{
-  tab: { id: Tab; label: string; icon: IoniconName };
-  isActive: boolean;
-  onPress: () => void;
-}> = ({ tab, isActive, onPress }) => {
-  const [pressed, setPressed] = useState(false);
-  return (
-    <Pressable
-      onPress={onPress}
-      onPressIn={() => setPressed(true)}
-      onPressOut={() => setPressed(false)}
-      style={[
-        styles.tab,
-        isActive && styles.tabActive,
-        pressed && styles.tabPressed,
-      ]}
-      accessibilityRole="tab"
-      accessibilityState={{ selected: isActive }}
-    >
-      <Ionicons
-        name={tab.icon}
-        size={16}
-        color={isActive ? colors.white : colors.COLOR_BLACK_LIGHT_2}
-      />
-      <BloomText style={[styles.tabLabel, isActive && styles.tabLabelActive]}>
-        {tab.label}
-      </BloomText>
-    </Pressable>
-  );
-};
-
-const TabBar: React.FC<{
-  activeTab: Tab;
-  onChange: (tab: Tab) => void;
-  tabs: { id: Tab; label: string; icon: IoniconName }[];
-}> = ({ activeTab, onChange, tabs }) => (
-  <ScrollView
-    horizontal
-    showsHorizontalScrollIndicator={false}
-    contentContainerStyle={styles.tabBarContent}
-  >
-    {tabs.map((tab) => (
-      <TabButton
-        key={tab.id}
-        tab={tab}
-        isActive={tab.id === activeTab}
-        onPress={() => onChange(tab.id)}
-      />
-    ))}
-  </ScrollView>
-);
+const isTab = (value: string): value is Tab => TAB_IDS.some((entry) => entry.id === value);
 
 export default function RoommatesPage() {
   const { t } = useTranslation();
@@ -208,12 +163,6 @@ export default function RoommatesPage() {
     }
   }, [activeTab, fetchProfiles, fetchRequests, fetchRelationships]);
 
-  const tabs = TAB_IDS.map((entry) => ({
-    id: entry.id,
-    icon: entry.icon,
-    label: t(entry.labelKey),
-  }));
-
   const personalProfileEmpty = (
     <EmptyState
       icon="person-outline"
@@ -243,15 +192,14 @@ export default function RoommatesPage() {
       if (result.enabled) {
         fetchProfiles();
       }
-      Alert.alert(
-        t('roommates.alert.successTitle'),
+      toast.success(
         result.message ||
           (result.enabled
             ? t('roommates.screen.matchingEnabled')
             : t('roommates.screen.matchingDisabled')),
       );
     } catch {
-      Alert.alert(t('roommates.alert.errorTitle'), t('roommates.alert.toggleFailed'));
+      toast.error(t('roommates.alert.toggleFailed'));
     } finally {
       setIsToggling(false);
     }
@@ -536,18 +484,27 @@ export default function RoommatesPage() {
             variant="secondary"
             size="small"
             onPress={() => router.push('/roommates/preferences')}
-            icon={
-              <Ionicons
-                name="settings-outline"
-                size={16}
-                color={colors.COLOR_BLACK}
-              />
-            }
+            leadingIcon={RiSettings3Line}
           >
             {t('roommates.preferences')}
           </Button>
         </View>
-        <TabBar activeTab={activeTab} onChange={setActiveTab} tabs={tabs} />
+        <Tabs
+          variant="pill"
+          value={activeTab}
+          onValueChange={(value) => {
+            if (isTab(value)) setActiveTab(value);
+          }}
+        >
+          {TAB_IDS.map((entry) => (
+            <TabsTrigger
+              key={entry.id}
+              value={entry.id}
+              label={t(entry.labelKey)}
+              leadingIcon={entry.icon}
+            />
+          ))}
+        </Tabs>
       </SafeAreaView>
 
       <View style={styles.content}>{renderTabContent()}</View>
@@ -580,34 +537,6 @@ const styles = StyleSheet.create({
   },
   title: {
     letterSpacing: -0.5,
-  },
-  tabBarContent: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    paddingVertical: spacing.xs,
-  },
-  tab: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.pill,
-    backgroundColor: colors.mutedSubtle,
-  },
-  tabActive: {
-    backgroundColor: colors.COLOR_BLACK,
-  },
-  tabPressed: {
-    opacity: 0.85,
-  },
-  tabLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.COLOR_BLACK_LIGHT_2,
-  },
-  tabLabelActive: {
-    color: colors.white,
   },
   content: {
     flex: 1,

@@ -3,16 +3,18 @@
  *
  * Layout: [ date block ] [ title · location · status + attendees ] [ cover ]
  *
- * The whole card owns ONE hover/press state and feeds `active` to the cover
- * `ZoomableImage` so the photo zooms inside its rounded mask on hover anywhere
- * on the card — the card itself never scales (AGENTS.md §ZoomableImage). Static
- * style arrays + `onPressIn/Out` (never the NativeWind-incompatible function-form
- * `style`); it's its own component, so no hooks run inside the board's `.map`.
+ * The surface is a pressable Bloom `Card` (it owns the press feedback). On web
+ * the wrapper owns ONE `onPointerEnter`/`onPointerLeave` pair and feeds `active`
+ * to the cover `ZoomableImage`, so the photo zooms inside its rounded mask on
+ * hover anywhere on the card — the card itself never scales (see
+ * docs/frontend-conventions.md §ZoomableImage). It's its own component, so no
+ * hooks run inside the board's `.map`.
  */
 import React, { useState } from 'react';
-import { Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 import { Image } from 'expo-image';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Card } from '@oxy.so/bloom/card';
+import { RiGroupLine, RiMapPinLine } from '@oxy.so/bloom/icons';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 import type { EvictionCase } from '@homiio/shared-types';
 
@@ -32,7 +34,6 @@ interface EvictionCardProps {
 }
 
 export const EvictionCard: React.FC<EvictionCardProps> = ({ eviction, locale, onPress }) => {
-  const [pressed, setPressed] = useState(false);
   const [hovered, setHovered] = useState(false);
 
   const coverUrl = eviction.coverImage?.url
@@ -44,55 +45,58 @@ export const EvictionCard: React.FC<EvictionCardProps> = ({ eviction, locale, on
     .join(' · ');
 
   return (
-    <Pressable
-      onPress={onPress}
-      onPressIn={() => setPressed(true)}
-      onPressOut={() => setPressed(false)}
-      onHoverIn={IS_WEB ? () => setHovered(true) : undefined}
-      onHoverOut={IS_WEB ? () => setHovered(false) : undefined}
-      accessibilityRole="button"
-      accessibilityLabel={eviction.title}
-      style={[styles.card, pressed && styles.cardPressed]}
+    <View
+      onPointerEnter={IS_WEB ? () => setHovered(true) : undefined}
+      onPointerLeave={IS_WEB ? () => setHovered(false) : undefined}
     >
-      <EvictionDateBlock scheduledAt={eviction.scheduledAt} locale={locale} />
+      <Card
+        variant="outlined"
+        radius="radius-16"
+        onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel={eviction.title}
+        style={styles.card}
+      >
+        <EvictionDateBlock scheduledAt={eviction.scheduledAt} locale={locale} />
 
-      <View style={styles.body}>
-        <BloomText style={styles.title} numberOfLines={2} ellipsizeMode="tail">
-          {eviction.title}
-        </BloomText>
-        {locationLine ? (
-          <View style={styles.locationRow}>
-            <Ionicons name="location-outline" size={14} color={colors.textSecondary} />
-            <BloomText style={styles.location} numberOfLines={1} ellipsizeMode="tail">
-              {locationLine}
-            </BloomText>
-          </View>
-        ) : null}
-        <View style={styles.metaRow}>
-          <EvictionStatusBadge status={eviction.status} />
-          <View style={styles.attendees}>
-            <Ionicons name="people-outline" size={14} color={colors.textSecondary} />
-            <BloomText style={styles.attendeeCount}>{eviction.attendeeCount}</BloomText>
+        <View style={styles.body}>
+          <BloomText style={styles.title} numberOfLines={2} ellipsizeMode="tail">
+            {eviction.title}
+          </BloomText>
+          {locationLine ? (
+            <View style={styles.inlineRow}>
+              <RiMapPinLine width={14} height={14} fill={colors.textSecondary} />
+              <BloomText style={styles.location} numberOfLines={1} ellipsizeMode="tail">
+                {locationLine}
+              </BloomText>
+            </View>
+          ) : null}
+          <View style={styles.metaRow}>
+            <EvictionStatusBadge status={eviction.status} />
+            <View style={styles.inlineRow}>
+              <RiGroupLine width={14} height={14} fill={colors.textSecondary} />
+              <BloomText style={styles.attendeeCount}>{eviction.attendeeCount}</BloomText>
+            </View>
           </View>
         </View>
-      </View>
 
-      {coverUrl ? (
-        <ZoomableImage
-          borderRadius={radius.md}
-          aspectRatio={1}
-          active={hovered || pressed}
-          style={styles.cover}
-        >
-          <Image
-            source={{ uri: coverUrl }}
-            style={styles.coverImage}
-            contentFit="cover"
-            accessibilityIgnoresInvertColors
-          />
-        </ZoomableImage>
-      ) : null}
-    </Pressable>
+        {coverUrl ? (
+          <ZoomableImage
+            borderRadius={radius.md}
+            aspectRatio={1}
+            active={hovered}
+            style={styles.cover}
+          >
+            <Image
+              source={{ uri: coverUrl }}
+              style={styles.coverImage}
+              contentFit="cover"
+              accessibilityIgnoresInvertColors
+            />
+          </ZoomableImage>
+        ) : null}
+      </Card>
+    </View>
   );
 };
 
@@ -102,13 +106,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.md,
     padding: spacing.md,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surfaceElevated,
-  },
-  cardPressed: {
-    backgroundColor: colors.mutedSubtle,
   },
   body: {
     flex: 1,
@@ -120,10 +117,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.text,
   },
-  locationRow: {
+  inlineRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
+    minWidth: 0,
   },
   location: {
     flex: 1,
@@ -137,11 +135,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: spacing.sm,
     marginTop: spacing.xs,
-  },
-  attendees: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
   },
   attendeeCount: {
     fontSize: 13,

@@ -1,5 +1,6 @@
 /**
- * Address detail — properties + reviews at one address.
+ * Address detail — properties + reviews at one address. Keyed by the ADDRESS
+ * id (ADR 0001: the dwelling is the permanent identity; listings point at it).
  *
  * The reviews tab has sub-tabs (Overall / Apartment / Management / Building /
  * Area): each non-overall tab shows a client-side aggregate distribution per
@@ -7,14 +8,19 @@
  * fields, rendered with the shared `ReviewCard`. Authors are hydrated ONCE at
  * the screen level (`useOxyAvatars`). No fake confidence/evidence badges, no
  * Alert stubs — Helpful / Report are real inside `ReviewCard`.
+ *
+ * Sections sit on outlined Bloom `Card`s; the Properties/Reviews switch and the
+ * review sub-tabs are Bloom `Tabs`.
  */
 import React, { useMemo, useState } from 'react';
-import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { Button } from '@oxy.so/bloom/button';
+import { Card } from '@oxy.so/bloom/card';
+import { RiDiscussLine, RiEditBoxLine, RiHomeLine } from '@oxy.so/bloom/icons';
+import { Tabs, TabsTrigger } from '@oxy.so/bloom/tabs';
 import { H2, H3, Text as BloomText } from '@oxy.so/bloom/typography';
 import { useTranslation } from 'react-i18next';
 
@@ -28,16 +34,13 @@ import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
 import { NeighborhoodRatingWidget } from '@/components/widgets/NeighborhoodRatingWidget';
 import { ReviewCard } from '@/components/ReviewCard';
 import { DimensionBreakdown } from '@/components/reviews/DimensionBreakdown';
-import { ReviewTabPill } from '@/components/reviews/ReviewTabPill';
 import { reviewHasSection, type ReviewSection } from '@/components/reviews/dimensions';
 import { useOxyAvatars } from '@/hooks/useOxyAvatars';
 import { reviewService } from '@/services/reviewService';
 import { api } from '@/utils/api';
 import type { Property, ReviewDTO } from '@homiio/shared-types';
-import { radius, spacing } from '@/constants/styles';
+import { spacing } from '@/constants/styles';
 import { colors } from '@/styles/colors';
-
-type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
 interface AddressData {
   id: string;
@@ -65,32 +68,6 @@ const REVIEW_TABS: { id: ReviewTab; labelKey: string }[] = [
   { id: 'area', labelKey: 'addresses.detail.tabArea' },
 ];
 
-interface ContentTabButtonProps {
-  label: string;
-  icon: IoniconName;
-  active: boolean;
-  onPress: () => void;
-}
-
-const ContentTabButton: React.FC<ContentTabButtonProps> = ({ label, icon, active, onPress }) => {
-  const [pressed, setPressed] = useState(false);
-  return (
-    <Pressable
-      onPress={onPress}
-      onPressIn={() => setPressed(true)}
-      onPressOut={() => setPressed(false)}
-      accessibilityRole="tab"
-      accessibilityState={{ selected: active }}
-      style={[styles.tabPill, active && styles.tabPillActive, pressed && styles.tabPillPressed]}
-    >
-      <Ionicons name={icon} size={16} color={active ? colors.white : colors.COLOR_BLACK_LIGHT_2} />
-      <BloomText style={[styles.tabPillLabel, active && styles.tabPillLabelActive]}>
-        {label}
-      </BloomText>
-    </Pressable>
-  );
-};
-
 const computeSummary = (reviews: ReviewDTO[]) => {
   if (reviews.length === 0) {
     return { averageRating: 0, totalReviews: 0, recommendationPercentage: 0 };
@@ -103,6 +80,14 @@ const computeSummary = (reviews: ReviewDTO[]) => {
     recommendationPercentage: (recommended / reviews.length) * 100,
   };
 };
+
+/** One summary figure on a filled Bloom `Card`. */
+const MetricTile: React.FC<{ value: string; label: string }> = ({ value, label }) => (
+  <Card variant="filled" radius="radius-12" style={styles.metric}>
+    <BloomText style={styles.metricValue}>{value}</BloomText>
+    <BloomText style={styles.metricLabel}>{label}</BloomText>
+  </Card>
+);
 
 export default function AddressDetailsPage() {
   const { t } = useTranslation();
@@ -241,65 +226,58 @@ export default function AddressDetailsPage() {
             />
           }
         >
-          <View style={styles.sectionCard}>
+          <Card variant="outlined" radius="radius-16" style={styles.sectionCard}>
             <AddressDisplay address={addressForDisplay} variant="detailed" showActions />
-          </View>
+          </Card>
 
           {reviews.length > 0 ? (
-            <View style={styles.sectionCard}>
+            <Card variant="outlined" radius="radius-16" style={styles.sectionCard}>
               <SectionEyebrow>{t('addresses.detail.reviewsSection')}</SectionEyebrow>
               <View style={styles.metricsRow}>
-                <View style={styles.metric}>
-                  <BloomText style={styles.metricValue}>
-                    {summary.averageRating.toFixed(1)}
-                  </BloomText>
-                  <BloomText style={styles.metricLabel}>
-                    {t('addresses.detail.metricRating')}
-                  </BloomText>
-                </View>
-                <View style={styles.metric}>
-                  <BloomText style={styles.metricValue}>{summary.totalReviews}</BloomText>
-                  <BloomText style={styles.metricLabel}>
-                    {t('addresses.detail.metricReviews')}
-                  </BloomText>
-                </View>
-                <View style={styles.metric}>
-                  <BloomText style={styles.metricValue}>
-                    {Math.round(summary.recommendationPercentage)}%
-                  </BloomText>
-                  <BloomText style={styles.metricLabel}>
-                    {t('addresses.detail.metricRecommend')}
-                  </BloomText>
-                </View>
+                <MetricTile
+                  value={summary.averageRating.toFixed(1)}
+                  label={t('addresses.detail.metricRating')}
+                />
+                <MetricTile
+                  value={String(summary.totalReviews)}
+                  label={t('addresses.detail.metricReviews')}
+                />
+                <MetricTile
+                  value={`${Math.round(summary.recommendationPercentage)}%`}
+                  label={t('addresses.detail.metricRecommend')}
+                />
               </View>
-            </View>
+            </Card>
           ) : null}
 
-          <View style={styles.sectionCard}>
+          <Card variant="outlined" radius="radius-16" style={styles.sectionCard}>
             <NeighborhoodRatingWidget
               neighborhoodName={address.neighborhoodName || ''}
               city={address.cityName ?? ''}
               state={address.regionName ?? ''}
             />
-          </View>
+          </Card>
 
-          <View style={styles.tabSwitcher}>
-            <ContentTabButton
+          <Tabs
+            variant="pill"
+            fullWidth
+            value={contentTab}
+            onValueChange={(next) => setContentTab(next as ContentTab)}
+          >
+            <TabsTrigger
+              value="properties"
               label={t('addresses.detail.tabProperties', { count: properties.length })}
-              icon="home-outline"
-              active={contentTab === 'properties'}
-              onPress={() => setContentTab('properties')}
+              leadingIcon={RiHomeLine}
             />
-            <ContentTabButton
+            <TabsTrigger
+              value="reviews"
               label={t('addresses.detail.tabReviews', { count: reviews.length })}
-              icon="chatbubbles-outline"
-              active={contentTab === 'reviews'}
-              onPress={() => setContentTab('reviews')}
+              leadingIcon={RiDiscussLine}
             />
-          </View>
+          </Tabs>
 
           {contentTab === 'properties' ? (
-            <View style={styles.sectionCard}>
+            <Card variant="outlined" radius="radius-16" style={styles.sectionCard}>
               <H3 style={styles.cardHeading}>{t('addresses.detail.propertiesSection')}</H3>
               {properties.length === 0 ? (
                 <EmptyState
@@ -320,9 +298,9 @@ export default function AddressDetailsPage() {
                   ))}
                 </View>
               )}
-            </View>
+            </Card>
           ) : (
-            <View style={styles.sectionCard}>
+            <Card variant="outlined" radius="radius-16" style={styles.sectionCard}>
               <View style={styles.reviewsHeader}>
                 <View style={styles.headerText}>
                   <SectionEyebrow>{t('addresses.detail.reviewsSection')}</SectionEyebrow>
@@ -332,22 +310,21 @@ export default function AddressDetailsPage() {
                   variant="primary"
                   size="medium"
                   onPress={handleWriteReview}
-                  icon={<Ionicons name="create-outline" size={16} color={colors.primaryForeground} />}
+                  leadingIcon={RiEditBoxLine}
                 >
                   {t('addresses.detail.writeReview')}
                 </Button>
               </View>
 
-              <View style={styles.reviewTabBar}>
+              <Tabs
+                variant="filled"
+                value={reviewTab}
+                onValueChange={(next) => setReviewTab(next as ReviewTab)}
+              >
                 {REVIEW_TABS.map((entry) => (
-                  <ReviewTabPill
-                    key={entry.id}
-                    label={t(entry.labelKey)}
-                    active={reviewTab === entry.id}
-                    onPress={() => setReviewTab(entry.id)}
-                  />
+                  <TabsTrigger key={entry.id} value={entry.id} label={t(entry.labelKey)} />
                 ))}
-              </View>
+              </Tabs>
 
               {reviewTab !== 'overall' && reviews.length > 0 ? (
                 <DimensionBreakdown reviews={reviews} section={reviewTab} />
@@ -371,7 +348,7 @@ export default function AddressDetailsPage() {
                   ))}
                 </View>
               )}
-            </View>
+            </Card>
           )}
         </ScrollView>
       </SafeAreaView>
@@ -393,12 +370,8 @@ const styles = StyleSheet.create({
     paddingBottom: spacing['4xl'],
   },
   sectionCard: {
-    backgroundColor: colors.surfaceElevated,
     padding: spacing.lg,
-    borderRadius: radius.lg,
     gap: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
   },
   cardHeading: {
     letterSpacing: -0.3,
@@ -410,9 +383,7 @@ const styles = StyleSheet.create({
   metric: {
     flex: 1,
     alignItems: 'center',
-    backgroundColor: colors.mutedSubtle,
     padding: spacing.md,
-    borderRadius: radius.md,
     gap: spacing.xs,
   },
   metricValue: {
@@ -429,52 +400,18 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     textAlign: 'center',
   },
-  tabSwitcher: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    padding: spacing.xs,
-    backgroundColor: colors.mutedSubtle,
-    borderRadius: radius.pill,
-  },
-  tabPill: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.xs,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.pill,
-  },
-  tabPillActive: {
-    backgroundColor: colors.COLOR_BLACK,
-  },
-  tabPillPressed: {
-    opacity: 0.85,
-  },
-  tabPillLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.COLOR_BLACK_LIGHT_2,
-  },
-  tabPillLabelActive: {
-    color: colors.white,
-  },
   propertiesList: {
     gap: spacing.md,
   },
   reviewsHeader: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     gap: spacing.md,
   },
   headerText: {
     flex: 1,
-    gap: spacing.xs,
-  },
-  reviewTabBar: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    minWidth: 180,
     gap: spacing.xs,
   },
   reviewsList: {

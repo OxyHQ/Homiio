@@ -1,41 +1,85 @@
+/**
+ * Horizon initiative — an editorial landing page.
+ *
+ * Built from Bloom: `Card` sections, `IconCircle` benefit marks, numbered
+ * `Avatar` discs for the steps, initials `Avatar`s on the member stories and a
+ * Bloom `Button` for the external join link.
+ */
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import * as Linking from 'expo-linking';
-import { colors } from '@/styles/colors';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Avatar } from '@oxy.so/bloom/avatar';
+import { Button } from '@oxy.so/bloom/button';
+import { Card } from '@oxy.so/bloom/card';
+import { IconCircle } from '@oxy.so/bloom/icon-circle';
+import {
+  RiArrowRightUpLine,
+  RiEarthLine,
+  RiFlightTakeoffLine,
+  RiHomeHeartLine,
+  RiStethoscopeLine,
+  RiTeamLine,
+} from '@oxy.so/bloom/icons';
+import { useTheme } from '@oxy.so/bloom/theme';
+import { H2, H3, Text as BloomText } from '@oxy.so/bloom/typography';
 import { Header } from '@/components/Header';
+import { spacing } from '@/constants/styles';
+
+const HORIZON_URL = 'https://oxy.so/horizon';
+
+const STORIES = [
+  { initials: 'JS', name: 'Julia S.', route: 'Barcelona → Berlin', bodyKey: 'horizon.page.story1' },
+  { initials: 'MR', name: 'Marco R.', route: 'Amsterdam → Stockholm', bodyKey: 'horizon.page.story2' },
+] as const;
 
 export default function HorizonPage() {
   const { t } = useTranslation();
+  const theme = useTheme();
+  const secondary = { color: theme.colors.textSecondary };
 
-  const benefitItems: {
-    icon: 'home-outline' | 'medkit-outline' | 'airplane-outline' | 'people-outline';
-    title: string;
-    description: string;
-  }[] = [
+  const benefitItems = [
     {
-      icon: 'home-outline',
+      icon: RiHomeHeartLine,
       title: t('horizon.page.benefits.fairHousing.title'),
       description: t('horizon.page.benefits.fairHousing.description'),
     },
     {
-      icon: 'medkit-outline',
+      icon: RiStethoscopeLine,
       title: t('horizon.page.benefits.healthcare.title'),
       description: t('horizon.page.benefits.healthcare.description'),
     },
     {
-      icon: 'airplane-outline',
+      icon: RiFlightTakeoffLine,
       title: t('horizon.page.benefits.travel.title'),
       description: t('horizon.page.benefits.travel.description'),
     },
     {
-      icon: 'people-outline',
+      icon: RiTeamLine,
       title: t('horizon.page.benefits.community.title'),
       description: t('horizon.page.benefits.community.description'),
     },
   ];
+
+  const steps = [
+    {
+      title: t('horizon.page.steps.apply.title'),
+      description: t('horizon.page.steps.apply.description'),
+    },
+    {
+      title: t('horizon.page.steps.verify.title'),
+      description: t('horizon.page.steps.verify.description'),
+    },
+    {
+      title: t('horizon.page.steps.access.title'),
+      description: t('horizon.page.steps.access.description'),
+    },
+  ];
+
+  const openHorizon = () => {
+    Linking.openURL(HORIZON_URL).catch(() => undefined);
+  };
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['bottom']}>
@@ -46,136 +90,87 @@ export default function HorizonPage() {
         }}
       />
 
-      <ScrollView style={styles.container}>
-        {/* Hero Section */}
-        <View style={styles.heroSection}>
-          <View style={styles.heroOverlay}>
-            <Ionicons name="globe-outline" size={80} color={colors.ratingStar} style={styles.heroIcon} />
-            <Text style={styles.heroTitle}>{t('horizon.page.heroTitle')}</Text>
-            <Text style={styles.heroSubtitle}>
-              {t('horizon.page.heroSubtitle')}
-            </Text>
+      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+        <View style={[styles.hero, { backgroundColor: theme.colors.primary }]}>
+          <RiEarthLine width={72} height={72} fill={theme.colors.primaryForeground} />
+          <H2 style={[styles.heroTitle, { color: theme.colors.primaryForeground }]}>
+            {t('horizon.page.heroTitle')}
+          </H2>
+          <BloomText style={[styles.heroSubtitle, { color: theme.colors.primaryForeground }]}>
+            {t('horizon.page.heroSubtitle')}
+          </BloomText>
+        </View>
+
+        <View style={styles.section}>
+          <H3>{t('horizon.page.aboutTitle')}</H3>
+          <BloomText style={[styles.bodyText, secondary]}>{t('horizon.page.aboutBody1')}</BloomText>
+          <BloomText style={[styles.bodyText, secondary]}>{t('horizon.page.aboutBody2')}</BloomText>
+        </View>
+
+        <View style={styles.section}>
+          <H3>{t('horizon.page.benefitsTitle')}</H3>
+          <View style={styles.benefitGrid}>
+            {benefitItems.map((item) => (
+              <Card
+                key={item.title}
+                variant="outlined"
+                radius="radius-16"
+                style={styles.benefitCard}
+              >
+                <IconCircle icon={item.icon} />
+                <BloomText style={styles.itemTitle}>{item.title}</BloomText>
+                <BloomText style={[styles.itemDescription, secondary]}>
+                  {item.description}
+                </BloomText>
+              </Card>
+            ))}
           </View>
         </View>
 
-        {/* About Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('horizon.page.aboutTitle')}</Text>
-          <Text style={styles.sectionText}>
-            {t('horizon.page.aboutBody1')}
-          </Text>
-          <Text style={styles.sectionText}>
-            {t('horizon.page.aboutBody2')}
-          </Text>
-        </View>
-
-        {/* Benefits Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('horizon.page.benefitsTitle')}</Text>
-
-          {benefitItems.map((item, index) => (
-            <View key={index} style={styles.benefitItem}>
-              <View style={styles.benefitIcon}>
-                <Ionicons name={item.icon} size={28} color={colors.ratingStar} />
-              </View>
-              <View style={styles.benefitContent}>
-                <Text style={styles.benefitTitle}>{item.title}</Text>
-                <Text style={styles.benefitDescription}>{item.description}</Text>
+          <H3>{t('horizon.page.howItWorksTitle')}</H3>
+          {steps.map((step, index) => (
+            <View key={step.title} style={styles.step}>
+              <Avatar initials={String(index + 1)} color="blue" size={36} />
+              <View style={styles.stepContent}>
+                <BloomText style={styles.itemTitle}>{step.title}</BloomText>
+                <BloomText style={[styles.itemDescription, secondary]}>
+                  {step.description}
+                </BloomText>
               </View>
             </View>
           ))}
         </View>
 
-        {/* How It Works */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('horizon.page.howItWorksTitle')}</Text>
-
-          <View style={styles.stepContainer}>
-            <View style={styles.stepCircle}>
-              <Text style={styles.stepNumber}>1</Text>
-            </View>
-            <View style={styles.stepContent}>
-              <Text style={styles.stepTitle}>{t('horizon.page.steps.apply.title')}</Text>
-              <Text style={styles.stepDescription}>
-                {t('horizon.page.steps.apply.description')}
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.stepContainer}>
-            <View style={styles.stepCircle}>
-              <Text style={styles.stepNumber}>2</Text>
-            </View>
-            <View style={styles.stepContent}>
-              <Text style={styles.stepTitle}>{t('horizon.page.steps.verify.title')}</Text>
-              <Text style={styles.stepDescription}>
-                {t('horizon.page.steps.verify.description')}
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.stepContainer}>
-            <View style={styles.stepCircle}>
-              <Text style={styles.stepNumber}>3</Text>
-            </View>
-            <View style={styles.stepContent}>
-              <Text style={styles.stepTitle}>{t('horizon.page.steps.access.title')}</Text>
-              <Text style={styles.stepDescription}>
-                {t('horizon.page.steps.access.description')}
-              </Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Join Now */}
-        <View style={styles.joinSection}>
-          <Text style={styles.joinTitle}>{t('horizon.page.joinTitle')}</Text>
-          <Text style={styles.joinDescription}>
+        <Card variant="filled" radius="radius-24" style={styles.joinCard}>
+          <H3 style={styles.centerText}>{t('horizon.page.joinTitle')}</H3>
+          <BloomText style={[styles.bodyText, styles.centerText, secondary]}>
             {t('horizon.page.joinSubtitle')}
-          </Text>
-          <TouchableOpacity
-            style={styles.joinButton}
-            onPress={() => {
-              Linking.openURL('https://oxy.so/horizon').catch(() => undefined);
-            }}
+          </BloomText>
+          <Button
+            variant="primary"
+            size="large"
+            trailingIcon={RiArrowRightUpLine}
+            onPress={openHorizon}
           >
-            <Text style={styles.joinButtonText}>{t('horizon.page.steps.apply.title')}</Text>
-          </TouchableOpacity>
-        </View>
+            {t('horizon.page.steps.apply.title')}
+          </Button>
+        </Card>
 
-        {/* Testimonials */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('horizon.page.storiesTitle')}</Text>
-
-          <View style={styles.testimonialCard}>
-            <View style={styles.testimonialHeader}>
-              <View style={styles.testimonialAvatar}>
-                <Text style={styles.testimonialAvatarText}>JS</Text>
+          <H3>{t('horizon.page.storiesTitle')}</H3>
+          {STORIES.map((story) => (
+            <Card key={story.name} variant="outlined" radius="radius-16" style={styles.storyCard}>
+              <View style={styles.storyHeader}>
+                <Avatar name={story.name} initials={story.initials} size={40} />
+                <View>
+                  <BloomText style={styles.itemTitle}>{story.name}</BloomText>
+                  <BloomText style={[styles.itemDescription, secondary]}>{story.route}</BloomText>
+                </View>
               </View>
-              <View>
-                <Text style={styles.testimonialName}>Julia S.</Text>
-                <Text style={styles.testimonialLocation}>Barcelona → Berlin</Text>
-              </View>
-            </View>
-            <Text style={styles.testimonialText}>
-              {t('horizon.page.story1')}
-            </Text>
-          </View>
-
-          <View style={styles.testimonialCard}>
-            <View style={styles.testimonialHeader}>
-              <View style={styles.testimonialAvatar}>
-                <Text style={styles.testimonialAvatarText}>MR</Text>
-              </View>
-              <View>
-                <Text style={styles.testimonialName}>Marco R.</Text>
-                <Text style={styles.testimonialLocation}>Amsterdam → Stockholm</Text>
-              </View>
-            </View>
-            <Text style={styles.testimonialText}>
-              {t('horizon.page.story2')}
-            </Text>
-          </View>
+              <BloomText style={[styles.storyText, secondary]}>{t(story.bodyKey)}</BloomText>
+            </Card>
+          ))}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -189,187 +184,82 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  heroSection: {
-    height: 250,
-    backgroundColor: colors.primaryColor,
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
+  content: {
+    gap: spacing.xl,
+    paddingBottom: spacing['4xl'],
   },
-  heroOverlay: {
-    width: '100%',
-    height: '100%',
-    justifyContent: 'center',
+  hero: {
+    minHeight: 250,
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.2)',
-    padding: 20,
-  },
-  heroIcon: {
-    marginBottom: 15,
+    justifyContent: 'center',
+    padding: spacing.xl,
+    gap: spacing.sm,
   },
   heroTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: colors.white,
     textAlign: 'center',
-    marginBottom: 10,
   },
   heroSubtitle: {
     fontSize: 16,
-    color: colors.white,
     textAlign: 'center',
     opacity: 0.9,
   },
   section: {
-    padding: 20,
-    borderBottomWidth: 8,
-    borderBottomColor: colors.surface,
+    paddingHorizontal: spacing.lg,
+    gap: spacing.md,
   },
-  sectionTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    marginBottom: 15,
-    color: colors.COLOR_BLACK,
-  },
-  sectionText: {
+  bodyText: {
     fontSize: 16,
     lineHeight: 24,
-    color: colors.COLOR_BLACK_LIGHT_3,
-    marginBottom: 15,
   },
-  benefitItem: {
+  benefitGrid: {
     flexDirection: 'row',
-    marginBottom: 20,
-    alignItems: 'flex-start',
+    flexWrap: 'wrap',
+    gap: spacing.md,
   },
-  benefitIcon: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: colors.primaryLight,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 15,
+  benefitCard: {
+    flexGrow: 1,
+    flexBasis: 260,
+    padding: spacing.lg,
+    gap: spacing.sm,
   },
-  benefitContent: {
-    flex: 1,
-  },
-  benefitTitle: {
-    fontSize: 18,
+  itemTitle: {
+    fontSize: 16,
     fontWeight: '600',
-    marginBottom: 5,
-    color: colors.COLOR_BLACK,
   },
-  benefitDescription: {
+  itemDescription: {
     fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_3,
     lineHeight: 20,
   },
-  stepContainer: {
+  step: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginBottom: 25,
-  },
-  stepCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.ratingStar,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 15,
-  },
-  stepNumber: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: colors.COLOR_BLACK,
+    gap: spacing.md,
   },
   stepContent: {
     flex: 1,
+    gap: 2,
   },
-  stepTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 5,
-    color: colors.COLOR_BLACK,
-  },
-  stepDescription: {
-    fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_3,
-    lineHeight: 20,
-  },
-  joinSection: {
-    backgroundColor: colors.primaryLight,
-    padding: 30,
-    borderRadius: 20,
-    margin: 20,
+  joinCard: {
+    marginHorizontal: spacing.lg,
+    padding: spacing.xl,
     alignItems: 'center',
+    gap: spacing.md,
   },
-  joinTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: colors.COLOR_BLACK,
-    marginBottom: 10,
+  centerText: {
     textAlign: 'center',
   },
-  joinDescription: {
-    fontSize: 16,
-    color: colors.COLOR_BLACK_LIGHT_3,
-    textAlign: 'center',
-    marginBottom: 20,
-    lineHeight: 22,
+  storyCard: {
+    padding: spacing.lg,
+    gap: spacing.md,
   },
-  joinButton: {
-    backgroundColor: colors.ratingStar,
-    paddingVertical: 15,
-    paddingHorizontal: 30,
-    borderRadius: 30,
-    alignItems: 'center',
-  },
-  joinButtonText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: colors.COLOR_BLACK,
-  },
-  testimonialCard: {
-    backgroundColor: colors.white,
-    borderRadius: 15,
-    padding: 20,
-    marginBottom: 15,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  testimonialHeader: {
+  storyHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 15,
+    gap: spacing.md,
   },
-  testimonialAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.primaryLight,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 10,
-  },
-  testimonialAvatarText: {
-    fontWeight: 'bold',
-    color: colors.primaryColor,
-  },
-  testimonialName: {
-    fontWeight: 'bold',
-    fontSize: 16,
-    color: colors.COLOR_BLACK,
-  },
-  testimonialLocation: {
-    fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_3,
-  },
-  testimonialText: {
+  storyText: {
     fontSize: 14,
     lineHeight: 22,
-    color: colors.COLOR_BLACK_LIGHT_3,
     fontStyle: 'italic',
   },
 });

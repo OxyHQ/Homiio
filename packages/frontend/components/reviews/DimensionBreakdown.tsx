@@ -2,12 +2,13 @@
  * DimensionBreakdown — the client-side aggregate distribution for one review
  * section (apartment / management / building / area), computed from the loaded
  * reviews. For each dimension present in the set it shows the count of each
- * enum value as a proportional bar. Renders nothing when the section has no data.
+ * enum value as a proportional Bloom `StatBar`. Renders nothing when the section has no data.
  */
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
+import { StatBar } from '@oxy.so/bloom/stat-bar';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 
 import type { ReviewDTO } from '@homiio/shared-types';
@@ -18,7 +19,7 @@ import {
   type ReviewSection,
 } from '@/components/reviews/dimensions';
 import { colors } from '@/styles/colors';
-import { radius, spacing } from '@/constants/styles';
+import { spacing } from '@/constants/styles';
 
 interface DistributionEntry {
   label: string;
@@ -35,20 +36,15 @@ interface DimensionBreakdownProps {
   section: ReviewSection;
 }
 
-const DistributionRow: React.FC<{ entry: DistributionEntry; max: number }> = ({ entry, max }) => {
-  const ratio = max > 0 ? entry.count / max : 0;
-  return (
-    <View style={styles.row}>
-      <BloomText style={styles.rowLabel} numberOfLines={1}>
-        {entry.label}
-      </BloomText>
-      <View style={styles.track}>
-        <View style={[styles.fill, { width: `${Math.round(ratio * 100)}%` }]} />
-      </View>
-      <BloomText style={styles.rowCount}>{entry.count}</BloomText>
-    </View>
-  );
-};
+/** One enum value's share of its dimension, as a Bloom `StatBar` (count top-right). */
+const DistributionRow: React.FC<{ entry: DistributionEntry; max: number }> = ({ entry, max }) => (
+  <StatBar
+    label={entry.label}
+    value={entry.count}
+    max={max}
+    icon={<BloomText style={styles.rowCount}>{entry.count}</BloomText>}
+  />
+);
 
 export const DimensionBreakdown: React.FC<DimensionBreakdownProps> = ({ reviews, section }) => {
   const { t } = useTranslation();
@@ -125,40 +121,17 @@ const styles = StyleSheet.create({
     gap: spacing.lg,
   },
   block: {
-    gap: spacing.xs,
+    gap: spacing.sm,
   },
   blockTitle: {
     fontSize: 13,
     fontWeight: '700',
     color: colors.COLOR_BLACK,
   },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  rowLabel: {
-    width: 120,
-    fontSize: 12,
-    color: colors.COLOR_BLACK_LIGHT_2,
-  },
-  track: {
-    flex: 1,
-    height: 6,
-    borderRadius: radius.pill,
-    backgroundColor: colors.COLOR_BLACK_LIGHT_7,
-    overflow: 'hidden',
-  },
-  fill: {
-    height: '100%',
-    borderRadius: radius.pill,
-    backgroundColor: colors.primaryColor,
-  },
   rowCount: {
-    minWidth: 20,
     fontSize: 12,
+    fontVariant: ['tabular-nums'],
     color: colors.COLOR_BLACK_LIGHT_3,
-    textAlign: 'right',
   },
 });
 

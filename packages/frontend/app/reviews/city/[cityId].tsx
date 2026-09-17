@@ -13,7 +13,7 @@ import * as Skeleton from '@oxy.so/bloom/skeleton';
 import { Header } from '@/components/Header';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
-import { ExploreRow } from '@/components/reviews/ExploreRow';
+import { ExploreList, ExploreRow } from '@/components/reviews/ExploreRow';
 import { useExploreCity } from '@/hooks/useExploreReviews';
 import { colors } from '@/styles/colors';
 import { radius, spacing } from '@/constants/styles';
@@ -51,19 +51,19 @@ export default function ReviewExploreCityScreen() {
               description={t('reviews.explore.emptyNeighborhoodsDescription')}
             />
           ) : (
-            <View style={styles.list}>
+            <ExploreList>
               {neighborhoods.map((neighborhood) => (
                 <ExploreRow
                   key={neighborhood.neighborhoodId}
                   title={neighborhood.name}
                   subtitle={t('reviews.explore.reviewCount', { count: neighborhood.reviewCount })}
-                  rightLabel={`${neighborhood.averageRating.toFixed(1)} ★`}
+                  rating={neighborhood.averageRating}
                   onPress={() =>
                     router.push(`/reviews/neighborhood/${neighborhood.neighborhoodId}`)
                   }
                 />
               ))}
-            </View>
+            </ExploreList>
           )}
         </ScrollView>
       </SafeAreaView>

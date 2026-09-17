@@ -1,14 +1,26 @@
 /**
  * Roommate profile detail — `/roommates/:id`.
+ *
+ * Sections are Bloom `Card`s, identity is a Bloom `Avatar`, trust signals are
+ * Bloom `Chip`s and the request outcome is a Bloom `toast`.
  */
 import React, { useState } from 'react';
-import { Alert, ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Avatar } from '@oxy.so/bloom/avatar';
 import { Button } from '@oxy.so/bloom/button';
+import { Card } from '@oxy.so/bloom/card';
+import { Chip } from '@oxy.so/bloom/chip';
+import {
+  RiCheckboxBlankCircleLine,
+  RiCheckboxCircleFill,
+  RiMapPinLine,
+} from '@oxy.so/bloom/icons';
 import { Loading } from '@oxy.so/bloom/loading';
+import { useTheme } from '@oxy.so/bloom/theme';
+import { toast } from '@oxy.so/bloom/toast';
 import { H2, H3, Text as BloomText } from '@oxy.so/bloom/typography';
 import { FollowButton, useFollow, useOxy } from '@oxy.so/services';
 import { useTranslation } from 'react-i18next';
@@ -19,11 +31,12 @@ import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
 import { useRoommate } from '@/hooks/useRoommate';
 import profileService from '@/services/profileService';
 import { roommateService } from '@/services/roommateService';
-import { radius, spacing } from '@/constants/styles';
+import { spacing } from '@/constants/styles';
 import { colors } from '@/styles/colors';
 
 export default function RoommateProfilePage() {
   const { t } = useTranslation();
+  const theme = useTheme();
   const { user } = useOxy();
   const params = useLocalSearchParams<{ id: string }>();
   const oxyUserId = String(params.id);
@@ -46,12 +59,15 @@ export default function RoommateProfilePage() {
     setIsSending(true);
     try {
       const ok = await sendRequest(oxyUserId);
-      Alert.alert(
-        ok ? t('roommates.profileDetail.requestSentTitle') : t('roommates.profileDetail.requestFailedTitle'),
-        ok
-          ? t('roommates.profileDetail.requestSentBody')
-          : t('roommates.profileDetail.requestFailedBody'),
-      );
+      if (ok) {
+        toast.success(t('roommates.profileDetail.requestSentTitle'), {
+          description: t('roommates.profileDetail.requestSentBody'),
+        });
+      } else {
+        toast.error(t('roommates.profileDetail.requestFailedTitle'), {
+          description: t('roommates.profileDetail.requestFailedBody'),
+        });
+      }
     } finally {
       setIsSending(false);
     }
@@ -78,10 +94,8 @@ export default function RoommateProfilePage() {
 
     return (
       <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.headerCard}>
-          <View style={styles.avatar}>
-            <Ionicons name="person" size={36} color={colors.COLOR_BLACK_LIGHT_4} />
-          </View>
+        <Card variant="outlined" radius="radius-16" style={styles.headerCard}>
+          <Avatar name={info.name} size={72} style={styles.avatar} />
           <SectionEyebrow>{t('roommates.profileDetail.title')}</SectionEyebrow>
           <H2 style={styles.name}>{info.name}</H2>
           {info.occupation ? (
@@ -89,7 +103,7 @@ export default function RoommateProfilePage() {
           ) : null}
           {info.location ? (
             <View style={styles.metaRow}>
-              <Ionicons name="location-outline" size={16} color={colors.muted} />
+              <RiMapPinLine width={16} height={16} fill={theme.colors.textSecondary} />
               <BloomText style={styles.metaText}>{info.location}</BloomText>
             </View>
           ) : null}
@@ -112,16 +126,16 @@ export default function RoommateProfilePage() {
               ) : null}
             </View>
           )}
-        </View>
+        </Card>
 
         {info.bio ? (
-          <View style={styles.card}>
+          <Card variant="outlined" radius="radius-16" style={styles.card}>
             <H3 style={styles.cardTitle}>{t('roommates.profileDetail.about')}</H3>
             <BloomText style={styles.bodyText}>{info.bio}</BloomText>
-          </View>
+          </Card>
         ) : null}
 
-        <View style={styles.card}>
+        <Card variant="outlined" radius="radius-16" style={styles.card}>
           <H3 style={styles.cardTitle}>{t('roommates.profileDetail.preferencesTitle')}</H3>
           <View style={styles.detailRow}>
             <BloomText style={styles.detailLabel}>{t('roommates.profileDetail.budget')}</BloomText>
@@ -139,21 +153,22 @@ export default function RoommateProfilePage() {
             <BloomText style={styles.detailLabel}>{t('roommates.profileDetail.leaseLength')}</BloomText>
             <BloomText style={styles.detailValue}>{info.duration}</BloomText>
           </View>
-        </View>
+        </Card>
 
-        <View style={styles.card}>
+        <Card variant="outlined" radius="radius-16" style={styles.card}>
           <H3 style={styles.cardTitle}>{t('roommates.profileDetail.trust')}</H3>
           <View style={styles.badgeRow}>
             <TrustBadge label={t('roommates.profileDetail.verified')} active={info.isVerified} />
             <TrustBadge label={t('roommates.profileDetail.references')} active={info.hasReferences} />
             <TrustBadge label={t('roommates.profileDetail.rentalHistory')} active={info.rentalHistory} />
           </View>
-        </View>
+        </Card>
 
         <Button
           variant="primary"
           size="large"
           onPress={handleSendRequest}
+          loading={isSending}
           disabled={isSending}
           style={styles.sendButton}
         >
@@ -178,18 +193,27 @@ export default function RoommateProfilePage() {
   );
 }
 
-const TrustBadge: React.FC<{ label: string; active: boolean }> = ({ label, active }) => (
-  <View style={[styles.badge, active ? styles.badgeActive : styles.badgeInactive]}>
-    <Ionicons
-      name={active ? 'checkmark-circle' : 'ellipse-outline'}
-      size={14}
-      color={active ? colors.success : colors.muted}
-    />
-    <BloomText style={[styles.badgeText, active ? styles.badgeTextActive : undefined]}>
+/** A trust signal: a success-tinted chip when present, a quiet one when not. */
+const TrustBadge: React.FC<{ label: string; active: boolean }> = ({ label, active }) => {
+  const theme = useTheme();
+  const Icon = active ? RiCheckboxCircleFill : RiCheckboxBlankCircleLine;
+  return (
+    <Chip
+      size="small"
+      variant="subtle"
+      color={active ? 'success' : 'default'}
+      startIcon={
+        <Icon
+          width={14}
+          height={14}
+          fill={active ? theme.colors.success : theme.colors.textSecondary}
+        />
+      }
+    >
       {label}
-    </BloomText>
-  </View>
-);
+    </Chip>
+  );
+};
 
 const styles = StyleSheet.create({
   root: {
@@ -212,20 +236,10 @@ const styles = StyleSheet.create({
   },
   headerCard: {
     alignItems: 'center',
-    backgroundColor: colors.surfaceElevated,
-    borderRadius: radius.lg,
     padding: spacing.xl,
     gap: spacing.xs,
-    borderWidth: 1,
-    borderColor: colors.border,
   },
   avatar: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: colors.mutedSubtle,
-    alignItems: 'center',
-    justifyContent: 'center',
     marginBottom: spacing.sm,
   },
   name: {
@@ -260,12 +274,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   card: {
-    backgroundColor: colors.surfaceElevated,
-    borderRadius: radius.lg,
     padding: spacing.lg,
     gap: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
   },
   cardTitle: {
     letterSpacing: -0.3,
@@ -295,28 +305,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.sm,
-  },
-  badge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.pill,
-  },
-  badgeActive: {
-    backgroundColor: colors.successSubtle,
-  },
-  badgeInactive: {
-    backgroundColor: colors.mutedSubtle,
-  },
-  badgeText: {
-    fontSize: 12,
-    color: colors.muted,
-    fontWeight: '600',
-  },
-  badgeTextActive: {
-    color: colors.success,
   },
   sendButton: {
     alignSelf: 'stretch',

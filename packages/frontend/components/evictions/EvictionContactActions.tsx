@@ -3,59 +3,33 @@
  * phone / WhatsApp / Telegram / email actions (only the fields the reporter
  * provided — contacts are never invented) plus the free-text instructions.
  *
- * Each row owns its own pressed state via a static style array + `onPressIn/Out`
- * (the NativeWind function-form `style` is unsupported), and the row is its own
- * component so no hook runs inside the `.map`.
+ * Each action is a Bloom `Item` row, which owns its own press feedback, so no
+ * hooks run inside the `.map`.
  */
-import React, { useState } from 'react';
-import { Linking, Pressable, StyleSheet, View } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import React from 'react';
+import { Linking, StyleSheet, View } from 'react-native';
+import { Item } from '@oxy.so/bloom/item';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
+import {
+  RiChat3Line,
+  RiExternalLinkLine,
+  RiMailLine,
+  RiPhoneLine,
+  RiSendPlaneLine,
+} from '@oxy.so/bloom/icons';
 import type { EvictionContactInfo } from '@homiio/shared-types';
 
 import { toast } from '@oxy.so/bloom/toast';
 import { colors } from '@/styles/colors';
-import { radius, spacing } from '@/constants/styles';
+import { spacing } from '@/constants/styles';
 import { buildEvictionContactActions, type EvictionContactAction } from './evictionUtils';
 
-interface ContactRowProps {
-  action: EvictionContactAction;
-  label: string;
-  openFailedLabel: string;
-}
-
-const ContactRow: React.FC<ContactRowProps> = ({ action, label, openFailedLabel }) => {
-  const [pressed, setPressed] = useState(false);
-
-  const handlePress = async () => {
-    try {
-      await Linking.openURL(action.url);
-    } catch {
-      toast.error(openFailedLabel);
-    }
-  };
-
-  return (
-    <Pressable
-      onPress={handlePress}
-      onPressIn={() => setPressed(true)}
-      onPressOut={() => setPressed(false)}
-      accessibilityRole="button"
-      accessibilityLabel={`${label}: ${action.value}`}
-      style={[styles.row, pressed && styles.rowPressed]}
-    >
-      <View style={styles.iconCircle}>
-        <Ionicons name={action.icon} size={18} color={colors.primaryColor} />
-      </View>
-      <View style={styles.rowText}>
-        <BloomText style={styles.rowLabel}>{label}</BloomText>
-        <BloomText style={styles.rowValue} numberOfLines={1} ellipsizeMode="middle">
-          {action.value}
-        </BloomText>
-      </View>
-      <Ionicons name="open-outline" size={16} color={colors.textTertiary} />
-    </Pressable>
-  );
+/** One Remix glyph per contact kind. Exhaustive, so a new kind fails to compile. */
+const ICON_BY_KIND: Readonly<Record<EvictionContactAction['kind'], typeof RiPhoneLine>> = {
+  phone: RiPhoneLine,
+  whatsapp: RiChat3Line,
+  telegram: RiSendPlaneLine,
+  email: RiMailLine,
 };
 
 interface EvictionContactActionsProps {
@@ -79,14 +53,28 @@ export const EvictionContactActions: React.FC<EvictionContactActionsProps> = ({
 
   return (
     <View style={styles.wrap}>
-      {actions.map((action) => (
-        <ContactRow
-          key={action.kind}
-          action={action}
-          label={labels[action.kind]}
-          openFailedLabel={openFailedLabel}
-        />
-      ))}
+      {actions.map((action) => {
+        const Icon = ICON_BY_KIND[action.kind];
+        return (
+          <Item
+            key={action.kind}
+            role="listitem"
+            accessibilityRole="link"
+            accessibilityLabel={`${labels[action.kind]}: ${action.value}`}
+            title={labels[action.kind]}
+            subtitle={action.value}
+            leading={
+              <View style={styles.iconCircle}>
+                <Icon width={18} height={18} fill={colors.primaryColor} />
+              </View>
+            }
+            trailing={<RiExternalLinkLine size="sm" fill={colors.textSecondary} />}
+            onPress={() => {
+              Linking.openURL(action.url).catch(() => toast.error(openFailedLabel));
+            }}
+          />
+        );
+      })}
       {instructions ? (
         <View style={styles.instructions}>
           <BloomText style={styles.instructionsLabel}>{instructionsLabel}</BloomText>
@@ -99,43 +87,15 @@ export const EvictionContactActions: React.FC<EvictionContactActionsProps> = ({
 
 const styles = StyleSheet.create({
   wrap: {
-    gap: spacing.sm,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    padding: spacing.sm,
-    borderRadius: radius.md,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  rowPressed: {
-    backgroundColor: colors.mutedSubtle,
+    gap: spacing.xs,
   },
   iconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.infoSubtle,
-  },
-  rowText: {
-    flex: 1,
-    minWidth: 0,
-    gap: 2,
-  },
-  rowLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.textSecondary,
-  },
-  rowValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.text,
+    backgroundColor: colors.primaryColor + '1A',
   },
   instructions: {
     gap: spacing.xs,

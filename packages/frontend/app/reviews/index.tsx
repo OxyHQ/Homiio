@@ -1,23 +1,24 @@
 /**
  * Review explore — landing. An intro, a "Write a review" CTA, and the list of
- * cities that have reviews (name + review count + average rating). Tapping a
- * city drills into its neighborhoods.
+ * cities that have reviews (name + review count + average rating) as Bloom
+ * `Item` rows on one outlined `Card`. Tapping a city drills into its
+ * neighborhoods.
  */
 import React from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { Button } from '@oxy.so/bloom/button';
+import { RiEditBoxLine } from '@oxy.so/bloom/icons';
 import * as Skeleton from '@oxy.so/bloom/skeleton';
-import { H1, Text as BloomText } from '@oxy.so/bloom/typography';
+import { H1, H3, Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { Header } from '@/components/Header';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
-import { ExploreRow } from '@/components/reviews/ExploreRow';
+import { ExploreList, ExploreRow } from '@/components/reviews/ExploreRow';
 import { useExploreCities } from '@/hooks/useExploreReviews';
 import { colors } from '@/styles/colors';
 import { radius, spacing } from '@/constants/styles';
@@ -40,14 +41,14 @@ export default function ReviewExploreScreen() {
               variant="primary"
               size="large"
               onPress={() => router.push('/reviews/write')}
-              icon={<Ionicons name="create-outline" size={18} color={colors.primaryForeground} />}
+              leadingIcon={RiEditBoxLine}
               style={styles.cta}
             >
               {t('reviews.explore.writeCta')}
             </Button>
           </View>
 
-          <BloomText style={styles.sectionTitle}>{t('reviews.explore.citiesTitle')}</BloomText>
+          <H3 style={styles.sectionTitle}>{t('reviews.explore.citiesTitle')}</H3>
 
           {citiesQuery.isLoading ? (
             <View style={styles.list}>
@@ -70,17 +71,17 @@ export default function ReviewExploreScreen() {
               description={t('reviews.explore.emptyCitiesDescription')}
             />
           ) : (
-            <View style={styles.list}>
+            <ExploreList>
               {cities.map((city) => (
                 <ExploreRow
                   key={city.cityId}
                   title={city.name}
                   subtitle={t('reviews.explore.reviewCount', { count: city.reviewCount })}
-                  rightLabel={`${city.averageRating.toFixed(1)} ★`}
+                  rating={city.averageRating}
                   onPress={() => router.push(`/reviews/city/${city.cityId}`)}
                 />
               ))}
-            </View>
+            </ExploreList>
           )}
         </ScrollView>
       </SafeAreaView>
@@ -105,9 +106,6 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   introTitle: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: colors.COLOR_BLACK,
     letterSpacing: -0.6,
   },
   introText: {
@@ -120,9 +118,6 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.COLOR_BLACK,
     letterSpacing: -0.3,
   },
   list: {

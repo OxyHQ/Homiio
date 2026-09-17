@@ -1,61 +1,23 @@
 /**
- * EnumChipSelector — a generic chip row for a dimension enum.
+ * EnumChipSelector — a Bloom `Chip` filter group for a dimension enum.
  *
  * Give it the enum's values + an i18n key prefix (`reviews.enums.<field>`) and
- * it renders one labelled chip per value. `multiple` switches between
+ * it renders one selectable `Chip` per value. `multiple` switches between
  * single-select (tap replaces, tapping the selected chip clears) and
  * multi-select (toggle in/out of the set). The value in and out is ALWAYS a
  * flat array, so a single-select field wraps its optional value:
  * `selected={value ? [value] : []}` / `onChange={(next) => update(field, next[0])}`.
  *
- * The chip is its OWN component (`EnumChip`) with static style arrays +
- * `onPressIn`/`onPressOut`/`onHoverIn`/`onHoverOut` state — never the
- * NativeWind-incompatible function-form `style`, and safe inside the `.map`
- * (AGENTS.md §NativeWind Pressable).
+ * Chips (not a RadioGroup) even for single choice: the wizard's dimensions are
+ * OPTIONAL and clearable, which a radio cannot express, and a wrapped chip row
+ * keeps a dozen short enum values scannable.
  */
-import React, { useState } from 'react';
-import { Platform, Pressable, StyleSheet, View } from 'react-native';
+import React from 'react';
+import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
-import { Text as BloomText } from '@oxy.so/bloom/typography';
-
-import { colors } from '@/styles/colors';
-import { hairline, radius, spacing } from '@/constants/styles';
-
-const IS_WEB = Platform.OS === 'web';
-
-interface EnumChipProps {
-  label: string;
-  selected: boolean;
-  onPress: () => void;
-}
-
-/** One selectable chip — owns its own pressed/hovered state. */
-const EnumChip: React.FC<EnumChipProps> = ({ label, selected, onPress }) => {
-  const [pressed, setPressed] = useState(false);
-  const [hovered, setHovered] = useState(false);
-  return (
-    <Pressable
-      onPress={onPress}
-      onPressIn={() => setPressed(true)}
-      onPressOut={() => setPressed(false)}
-      onHoverIn={IS_WEB ? () => setHovered(true) : undefined}
-      onHoverOut={IS_WEB ? () => setHovered(false) : undefined}
-      accessibilityRole="button"
-      accessibilityState={{ selected }}
-      accessibilityLabel={label}
-      style={[
-        styles.chip,
-        selected && styles.chipSelected,
-        !selected && (pressed || hovered) && styles.chipHovered,
-      ]}
-    >
-      <BloomText style={[styles.chipLabel, selected && styles.chipLabelSelected]}>
-        {label}
-      </BloomText>
-    </Pressable>
-  );
-};
+import { Chip } from '@oxy.so/bloom/chip';
+import { Label } from '@oxy.so/bloom/label';
 
 export interface EnumChipSelectorProps<T extends string> {
   /** Enum values to render, in display order. */
@@ -95,59 +57,27 @@ export function EnumChipSelector<T extends string>({
   };
 
   return (
-    <View style={styles.container}>
-      {label ? <BloomText style={styles.label}>{label}</BloomText> : null}
-      <View style={styles.chips}>
-        {values.map((value) => (
-          <EnumChip
-            key={value}
-            label={t(`${labelPrefix}.${value}`)}
-            selected={selected.includes(value)}
-            onPress={() => toggle(value)}
-          />
-        ))}
+    <View className="gap-2">
+      {label ? <Label>{label}</Label> : null}
+      <View className="flex-row flex-wrap gap-2">
+        {values.map((value) => {
+          const chipLabel = t(`${labelPrefix}.${value}`);
+          return (
+            <Chip
+              key={value}
+              size="medium"
+              variant="outlined"
+              selected={selected.includes(value)}
+              onPress={() => toggle(value)}
+              accessibilityLabel={chipLabel}
+            >
+              {chipLabel}
+            </Chip>
+          );
+        })}
       </View>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    gap: spacing.sm,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.COLOR_BLACK_LIGHT_2,
-  },
-  chips: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-  },
-  chip: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.pill,
-    borderWidth: hairline.width,
-    borderColor: colors.COLOR_BLACK_LIGHT_6,
-    backgroundColor: colors.surfaceElevated,
-  },
-  chipHovered: {
-    backgroundColor: colors.COLOR_BLACK_LIGHT_7,
-  },
-  chipSelected: {
-    backgroundColor: colors.COLOR_BLACK,
-    borderColor: colors.COLOR_BLACK,
-  },
-  chipLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.COLOR_BLACK,
-  },
-  chipLabelSelected: {
-    color: colors.white,
-  },
-});
 
 export default EnumChipSelector;

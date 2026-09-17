@@ -1,20 +1,28 @@
 /**
  * EditableList — the pros / cons capped string-list editor. Type an item, tap
  * Add (or submit), and it appends to the list (max `maxItems`, each clamped to
- * `maxLength`). Each row shows the text with a remove button; the remove button
- * is the shared `IconButton` (owns its own press state → safe in the `.map`).
+ * `maxLength`). Each entry is an outlined Bloom `Card` row with a tone glyph,
+ * the full (wrapping) text and an icon-only Bloom `Button` to remove it.
+ *
+ * Not a `Chip` list: a chip truncates to one line and its close button carries
+ * a fixed English label, while an entry here runs to 140 characters.
  */
 import React, { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@oxy.so/bloom/button';
+import { Card } from '@oxy.so/bloom/card';
+import {
+  RiAddCircleLine,
+  RiAddLine,
+  RiCloseCircleLine,
+  RiCloseLine,
+} from '@oxy.so/bloom/icons';
+import { Label } from '@oxy.so/bloom/label';
 import { TextFieldInput } from '@oxy.so/bloom/text-field';
+import { useTheme } from '@oxy.so/bloom/theme';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
-
-import { IconButton } from '@/components/ui/IconButton';
-import { colors } from '@/styles/colors';
-import { hairline, radius, spacing } from '@/constants/styles';
 
 interface EditableListProps {
   label: string;
@@ -23,7 +31,7 @@ interface EditableListProps {
   placeholder: string;
   addLabel: string;
   removeLabel: string;
-  /** Accent tint for the row bullet. */
+  /** Accent tone for the row glyph. */
   tone: 'positive' | 'negative';
   maxItems?: number;
   maxLength?: number;
@@ -41,6 +49,7 @@ export const EditableList: React.FC<EditableListProps> = ({
   maxLength = 140,
 }) => {
   const { t } = useTranslation();
+  const theme = useTheme();
   const [draft, setDraft] = useState('');
   const atCapacity = items.length >= maxItems;
 
@@ -55,38 +64,42 @@ export const EditableList: React.FC<EditableListProps> = ({
     onChange(items.filter((_, i) => i !== index));
   };
 
-  const bulletColor = tone === 'positive' ? colors.success : colors.error;
+  const ToneIcon = tone === 'positive' ? RiAddCircleLine : RiCloseCircleLine;
+  const toneColor = tone === 'positive' ? theme.colors.success : theme.colors.error;
 
   return (
-    <View style={styles.container}>
-      <View style={styles.labelRow}>
-        <BloomText style={styles.label}>{label}</BloomText>
-        <BloomText style={styles.count}>
+    <View className="gap-2">
+      <View className="flex-row items-center justify-between">
+        <Label>{label}</Label>
+        <BloomText className="text-xs text-muted-foreground">
           {t('reviews.write.listCount', { current: items.length, max: maxItems })}
         </BloomText>
       </View>
 
       {items.length > 0 ? (
-        <View style={styles.list}>
+        <View className="gap-2">
           {items.map((item, index) => (
-            <View key={`${item}-${index}`} style={styles.itemRow}>
-              <View style={[styles.bullet, { backgroundColor: bulletColor }]} />
-              <BloomText style={styles.itemText}>{item}</BloomText>
-              <IconButton
-                icon="close"
-                variant="ghost"
-                size={16}
-                onPress={() => removeItem(index)}
-                accessibilityLabel={removeLabel}
-              />
-            </View>
+            <Card key={`${item}-${index}`} variant="outlined" radius="radius-12">
+              <View className="flex-row items-center gap-2 py-1 pl-3 pr-1">
+                <ToneIcon width={16} height={16} fill={toneColor} />
+                <BloomText className="flex-1 text-sm text-foreground">{item}</BloomText>
+                <Button
+                  variant="ghost"
+                  size="small"
+                  iconOnly
+                  leadingIcon={RiCloseLine}
+                  onPress={() => removeItem(index)}
+                  accessibilityLabel={removeLabel}
+                />
+              </View>
+            </Card>
           ))}
         </View>
       ) : null}
 
       {atCapacity ? null : (
-        <View style={styles.addRow}>
-          <View style={styles.addField}>
+        <View className="flex-row items-end gap-2">
+          <View className="flex-1">
             <TextFieldInput
               label={placeholder}
               value={draft}
@@ -99,6 +112,7 @@ export const EditableList: React.FC<EditableListProps> = ({
           <Button
             variant="secondary"
             size="medium"
+            leadingIcon={RiAddLine}
             onPress={addItem}
             disabled={draft.trim().length === 0}
           >
@@ -109,57 +123,5 @@ export const EditableList: React.FC<EditableListProps> = ({
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    gap: spacing.sm,
-  },
-  labelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.COLOR_BLACK_LIGHT_2,
-  },
-  count: {
-    fontSize: 12,
-    color: colors.COLOR_BLACK_LIGHT_4,
-  },
-  list: {
-    gap: spacing.xs,
-  },
-  itemRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    borderRadius: radius.md,
-    borderWidth: hairline.width,
-    borderColor: colors.COLOR_BLACK_LIGHT_6,
-    backgroundColor: colors.surfaceElevated,
-  },
-  bullet: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  itemText: {
-    flex: 1,
-    fontSize: 14,
-    color: colors.COLOR_BLACK,
-  },
-  addRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.sm,
-  },
-  addField: {
-    flex: 1,
-  },
-});
 
 export default EditableList;

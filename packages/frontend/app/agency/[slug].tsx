@@ -1,27 +1,31 @@
 /**
  * Agency profile — an agency's aggregate reputation, reviews, and listings.
  *
- * Header: name + stat tiles (avg rating, total reviews, recommend %, deposit-full
- * %, listings count). Tabs: Reviews (paginated `useAgencyReviews`, each review
- * linking to its address page) and Listings (paginated `useAgencyProperties`
- * rendered with the shared `PropertyResultsGrid`). Infinite scroll wires BOTH
- * primitives — `LoadMoreSentinel` (web) + `useInfiniteScroll` (native).
+ * Header: name + stat tiles on Bloom `Card`s (avg rating, total reviews,
+ * recommend %, deposit-full %, listings count). Bloom `Tabs`: Reviews
+ * (paginated `useAgencyReviews`, each review linking to its address page) and
+ * Listings (paginated `useAgencyProperties` rendered with the shared
+ * `PropertyResultsGrid`). Infinite scroll wires BOTH primitives —
+ * `LoadMoreSentinel` (web) + `useInfiniteScroll` (native).
  */
 import React, { useState } from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import Ionicons from '@expo/vector-icons/Ionicons';
 
+import { Button } from '@oxy.so/bloom/button';
+import { Card } from '@oxy.so/bloom/card';
+import { RiArrowRightSLine, RiBuilding2Line, RiMapPinLine } from '@oxy.so/bloom/icons';
 import * as Skeleton from '@oxy.so/bloom/skeleton';
+import { Tabs, TabsTrigger } from '@oxy.so/bloom/tabs';
+import { useTheme } from '@oxy.so/bloom/theme';
 import { H1, Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { formatPercentage } from '@homiio/shared-types';
 import { Header } from '@/components/Header';
 import { useFormatting } from '@/utils/format';
 import { ReviewCard } from '@/components/ReviewCard';
-import { ReviewTabPill } from '@/components/reviews/ReviewTabPill';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { PropertyResultsGrid } from '@/components/ui/PropertyResultsGrid';
@@ -34,8 +38,6 @@ import type { User } from '@oxy.so/core';
 import { colors } from '@/styles/colors';
 import { hairline, radius, spacing } from '@/constants/styles';
 
-const IS_WEB = Platform.OS === 'web';
-
 type AgencyTab = 'reviews' | 'listings';
 
 interface StatTileProps {
@@ -44,10 +46,10 @@ interface StatTileProps {
 }
 
 const StatTile: React.FC<StatTileProps> = ({ value, label }) => (
-  <View style={styles.statTile}>
+  <Card variant="outlined" radius="radius-12" style={styles.statTile}>
     <BloomText style={styles.statValue}>{value}</BloomText>
     <BloomText style={styles.statLabel}>{label}</BloomText>
-  </View>
+  </Card>
 );
 
 interface AgencyReviewItemProps {
@@ -56,28 +58,23 @@ interface AgencyReviewItemProps {
   onPressAddress: () => void;
 }
 
-/** One agency review — an address link (own press state) above the review card. */
+/** One agency review — a Bloom link `Button` to its address above the review card. */
 const AgencyReviewItem: React.FC<AgencyReviewItemProps> = ({ review, author, onPressAddress }) => {
   const { t } = useTranslation();
-  const [pressed, setPressed] = useState(false);
-  const [hovered, setHovered] = useState(false);
   const label = review.populatedAddress?.street || t('agency.viewAddress');
   return (
     <View style={styles.reviewItem}>
-      <Pressable
+      <Button
+        variant="ghost"
+        size="small"
+        leadingIcon={RiMapPinLine}
+        trailingIcon={RiArrowRightSLine}
         onPress={onPressAddress}
-        onPressIn={() => setPressed(true)}
-        onPressOut={() => setPressed(false)}
-        onHoverIn={IS_WEB ? () => setHovered(true) : undefined}
-        onHoverOut={IS_WEB ? () => setHovered(false) : undefined}
-        accessibilityRole="link"
         accessibilityLabel={label}
-        style={[styles.addressLink, (pressed || hovered) && styles.addressLinkActive]}
+        style={styles.addressLink}
       >
-        <Ionicons name="location-outline" size={14} color={colors.primaryColor} />
-        <BloomText style={styles.addressLinkText}>{label}</BloomText>
-        <Ionicons name="chevron-forward" size={13} color={colors.primaryColor} />
-      </Pressable>
+        {label}
+      </Button>
       <ReviewCard review={review} author={author} />
     </View>
   );
@@ -88,6 +85,7 @@ export default function AgencyProfileScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const router = useRouter();
   const { t } = useTranslation();
+  const theme = useTheme();
   const [tab, setTab] = useState<AgencyTab>('reviews');
 
   const agencyQuery = useAgency(slug);
@@ -158,8 +156,8 @@ export default function AgencyProfileScreen() {
           scrollEventThrottle={16}
         >
           <View style={styles.headerBlock}>
-            <View style={styles.agencyIcon}>
-              <Ionicons name="business" size={28} color={colors.primaryColor} />
+            <View style={[styles.agencyIcon, { backgroundColor: theme.colors.primarySubtle }]}>
+              <RiBuilding2Line width={28} height={28} fill={theme.colors.primary} />
             </View>
             <H1 style={styles.agencyName}>{agency.name}</H1>
           </View>
@@ -188,18 +186,10 @@ export default function AgencyProfileScreen() {
             ) : null}
           </View>
 
-          <View style={styles.tabsRow}>
-            <ReviewTabPill
-              label={t('agency.tabs.reviews')}
-              active={tab === 'reviews'}
-              onPress={() => setTab('reviews')}
-            />
-            <ReviewTabPill
-              label={t('agency.tabs.listings')}
-              active={tab === 'listings'}
-              onPress={() => setTab('listings')}
-            />
-          </View>
+          <Tabs value={tab} onValueChange={(next) => setTab(next as AgencyTab)}>
+            <TabsTrigger value="reviews" label={t('agency.tabs.reviews')} />
+            <TabsTrigger value="listings" label={t('agency.tabs.listings')} />
+          </Tabs>
 
           {tab === 'reviews' ? (
             reviewsQuery.isLoading ? (
@@ -276,15 +266,11 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: radius.md,
-    backgroundColor: colors.primaryLight_2,
     alignItems: 'center',
     justifyContent: 'center',
   },
   agencyName: {
     flex: 1,
-    fontSize: 26,
-    fontWeight: '700',
-    color: colors.COLOR_BLACK,
     letterSpacing: -0.5,
   },
   statsRow: {
@@ -299,10 +285,6 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.sm,
-    borderRadius: radius.md,
-    borderWidth: hairline.width,
-    borderColor: colors.COLOR_BLACK_LIGHT_6,
-    backgroundColor: colors.surfaceElevated,
   },
   statValue: {
     fontSize: 20,
@@ -318,10 +300,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
     textAlign: 'center',
   },
-  tabsRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
   reviewsList: {
     gap: spacing.lg,
   },
@@ -332,20 +310,6 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.lg,
   },
   addressLink: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
     alignSelf: 'flex-start',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.md,
-  },
-  addressLinkActive: {
-    backgroundColor: colors.COLOR_BLACK_LIGHT_7,
-  },
-  addressLinkText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.primaryColor,
   },
 });

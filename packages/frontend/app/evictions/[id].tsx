@@ -27,13 +27,28 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Image } from 'expo-image';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import {
+  AdmonitionButton,
+  AdmonitionContent,
+  AdmonitionIcon,
+  AdmonitionRoot,
+  AdmonitionRow,
+  AdmonitionText,
+} from '@oxy.so/bloom/admonition';
 import { Avatar } from '@oxy.so/bloom/avatar';
 import { Button } from '@oxy.so/bloom/button';
+import { Card, CardTitle } from '@oxy.so/bloom/card';
 import { Divider } from '@oxy.so/bloom/divider';
+import {
+  RiCheckboxCircleFill,
+  RiMegaphoneLine,
+  RiNotification3Fill,
+  RiNotification3Line,
+} from '@oxy.so/bloom/icons';
+import { Loading } from '@oxy.so/bloom/loading';
 import * as Skeleton from '@oxy.so/bloom/skeleton';
-import { TextFieldInput } from '@oxy.so/bloom/text-field';
-import { H2, H3, Text as BloomText } from '@oxy.so/bloom/typography';
+import { Textarea } from '@oxy.so/bloom/textarea';
+import { H2, Text as BloomText } from '@oxy.so/bloom/typography';
 import { useOxy, openAccountDialog } from '@oxy.so/services';
 
 import { Header } from '@/components/Header';
@@ -68,17 +83,10 @@ import { BottomSheetContext } from '@/context/BottomSheetContext';
 import { shareContent } from '@/utils/share';
 import { resolveBackendImageUrl } from '@/utils/imageUrl';
 import { formatRelativeTime } from '@/utils/dateLocale';
-import { alert } from '@oxy.so/bloom/surfaces';
+import { confirm } from '@oxy.so/bloom/surfaces';
 import { toast } from '@oxy.so/bloom/toast';
 import { colors } from '@/styles/colors';
 import { radius, spacing } from '@/constants/styles';
-
-const SectionCard: React.FC<React.PropsWithChildren<{ title?: string }>> = ({ title, children }) => (
-  <View style={styles.section}>
-    {title ? <H3 style={styles.sectionTitle}>{title}</H3> : null}
-    {children}
-  </View>
-);
 
 const DetailSkeleton: React.FC = () => (
   <View style={styles.content}>
@@ -91,7 +99,7 @@ const DetailSkeleton: React.FC = () => (
 
 export default function EvictionDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const caseId = Array.isArray(id) ? id[0] : id ?? '';
+  const caseId = Array.isArray(id) ? id[0] : (id ?? '');
   const { t, i18n } = useTranslation();
   const router = useRouter();
   const bottomSheet = useContext(BottomSheetContext);
@@ -134,9 +142,7 @@ export default function EvictionDetailScreen() {
     (oxyUserId: string): string => {
       const resolved = usersById.get(oxyUserId);
       return (
-        resolved?.name?.displayName?.trim() ||
-        resolved?.username ||
-        t('evictions.detail.anonymous')
+        resolved?.name?.displayName?.trim() || resolved?.username || t('evictions.detail.anonymous')
       );
     },
     [usersById, t],
@@ -201,21 +207,20 @@ export default function EvictionDetailScreen() {
   }, [commentText, createComment, t]);
 
   const handleDeleteComment = useCallback(
-    (commentId: string) => {
-      alert(t('evictions.comments.deleteTitle'), t('evictions.comments.deleteMessage'), [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('common.delete'),
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteComment.mutateAsync(commentId);
-            } catch {
-              toast.error(t('evictions.comments.deleteError'));
-            }
-          },
-        },
-      ]);
+    async (commentId: string) => {
+      const ok = await confirm({
+        title: t('evictions.comments.deleteTitle'),
+        description: t('evictions.comments.deleteMessage'),
+        confirmLabel: t('common.delete'),
+        cancelLabel: t('common.cancel'),
+        destructive: true,
+      });
+      if (!ok) return;
+      try {
+        await deleteComment.mutateAsync(commentId);
+      } catch {
+        toast.error(t('evictions.comments.deleteError'));
+      }
     },
     [deleteComment, t],
   );
@@ -348,7 +353,8 @@ export default function EvictionDetailScreen() {
           )}
 
           {eviction.organization ? (
-            <SectionCard title={t('evictions.detail.organization')}>
+            <Card variant="outlined" radius="radius-16" style={styles.section}>
+              <CardTitle>{t('evictions.detail.organization')}</CardTitle>
               <BloomText style={styles.organizationName}>{eviction.organization.name}</BloomText>
               <BloomText style={styles.muted}>
                 {/* Verification is STRICTLY stronger than authorship, and the
@@ -362,43 +368,36 @@ export default function EvictionDetailScreen() {
                     })
                   : t('evictions.detail.organizationUnverified')}
               </BloomText>
-            </SectionCard>
+            </Card>
           ) : null}
 
-          <SectionCard title={t('evictions.detail.howToHelp')}>
+          <Card variant="outlined" radius="radius-16" style={styles.section}>
+            <CardTitle>{t('evictions.detail.howToHelp')}</CardTitle>
             <EvictionHelpNeeds needs={eviction.helpNeeds} />
             <Divider />
             {eviction.contactLocked ? (
-              <View style={styles.lockedContact}>
-                <View style={styles.lockedIcon}>
-                  <Ionicons name="lock-closed" size={22} color={colors.textSecondary} />
-                </View>
-                <BloomText style={styles.lockedText}>
-                  {/* The REASON, not a generic lock: "RSVP first" and "your
-                      account is too new" ask the reader for different things,
-                      and one message for both teaches people to re-tap. */}
-                  {t(
-                    `evictions.detail.contactLocked.${eviction.contactLockReason ?? 'not_attending'}`,
-                  )}
-                </BloomText>
-                <Button
-                  variant="primary"
-                  size="medium"
-                  onPress={handleRSVP}
-                  loading={toggleAttend.isPending}
-                  icon={
-                    <Ionicons
-                      name="megaphone-outline"
-                      size={18}
-                      color={colors.primaryForeground}
-                    />
-                  }
-                  iconPosition="left"
-                  style={styles.lockedCta}
-                >
-                  {t('evictions.attend')}
-                </Button>
-              </View>
+              <AdmonitionRoot type="info">
+                <AdmonitionRow>
+                  <AdmonitionIcon />
+                  <AdmonitionContent>
+                    <AdmonitionText>
+                      {/* The REASON, not a generic lock: "RSVP first" and "your
+                          account is too new" ask the reader for different things,
+                          and one message for both teaches people to re-tap. */}
+                      {t(
+                        `evictions.detail.contactLocked.${eviction.contactLockReason ?? 'not_attending'}`,
+                      )}
+                    </AdmonitionText>
+                    <AdmonitionButton
+                      onPress={handleRSVP}
+                      loading={toggleAttend.isPending}
+                      leadingIcon={RiMegaphoneLine}
+                    >
+                      {t('evictions.attend')}
+                    </AdmonitionButton>
+                  </AdmonitionContent>
+                </AdmonitionRow>
+              </AdmonitionRoot>
             ) : (
               <>
                 <EvictionContactActions
@@ -412,10 +411,11 @@ export default function EvictionDetailScreen() {
                 ) : null}
               </>
             )}
-          </SectionCard>
+          </Card>
 
-          {hasPin ? (
-            <SectionCard title={t('evictions.detail.where')}>
+          <Card variant="outlined" radius="radius-16" style={styles.section}>
+            <CardTitle>{t('evictions.detail.where')}</CardTitle>
+            {hasPin ? (
               <View style={styles.mapWrap}>
                 <Map
                   style={styles.mapInner}
@@ -432,25 +432,17 @@ export default function EvictionDetailScreen() {
                   ]}
                 />
               </View>
-              <BloomText style={styles.locationLabel}>{eviction.location.label}</BloomText>
-              <EvictionPrecisionNote
-                location={eviction.location}
-                moderation={eviction.moderation}
-                locale={i18n.language}
-              />
-            </SectionCard>
-          ) : (
-            <SectionCard title={t('evictions.detail.where')}>
-              <BloomText style={styles.locationLabel}>{eviction.location.label}</BloomText>
-              <EvictionPrecisionNote
-                location={eviction.location}
-                moderation={eviction.moderation}
-                locale={i18n.language}
-              />
-            </SectionCard>
-          )}
+            ) : null}
+            <BloomText style={styles.locationLabel}>{eviction.location.label}</BloomText>
+            <EvictionPrecisionNote
+              location={eviction.location}
+              moderation={eviction.moderation}
+              locale={i18n.language}
+            />
+          </Card>
 
-          <SectionCard title={t('evictions.detail.localResources')}>
+          <Card variant="outlined" radius="radius-16" style={styles.section}>
+            <CardTitle>{t('evictions.detail.localResources')}</CardTitle>
             <EvictionResources
               resources={resources.data?.resources ?? []}
               disclaimer={resources.data?.disclaimer}
@@ -458,11 +450,12 @@ export default function EvictionDetailScreen() {
               isLoading={resources.isLoading}
               isError={resources.isError}
             />
-          </SectionCard>
+          </Card>
 
-          <SectionCard title={t('evictions.detail.timeline')}>
+          <Card variant="outlined" radius="radius-16" style={styles.section}>
+            <CardTitle>{t('evictions.detail.timeline')}</CardTitle>
             <EvictionTimeline events={eviction.timeline} locale={i18n.language} />
-          </SectionCard>
+          </Card>
 
           {eviction.isOwner ? (
             <EvictionOwnerControls
@@ -472,9 +465,10 @@ export default function EvictionDetailScreen() {
             />
           ) : null}
 
-          <SectionCard
-            title={`${t('evictions.detail.comments')}${commentTotal > 0 ? ` · ${commentTotal}` : ''}`}
-          >
+          <Card variant="outlined" radius="radius-16" style={styles.section}>
+            <CardTitle>
+              {`${t('evictions.detail.comments')}${commentTotal > 0 ? ` · ${commentTotal}` : ''}`}
+            </CardTitle>
             {comments.length === 0 ? (
               <BloomText style={styles.muted}>{t('evictions.comments.empty')}</BloomText>
             ) : (
@@ -499,7 +493,7 @@ export default function EvictionDetailScreen() {
                   );
                 })}
                 {isFetchingNextPage ? (
-                  <BloomText style={styles.muted}>{t('common.loading')}</BloomText>
+                  <Loading variant="inline" size="small" text={t('common.loading')} />
                 ) : null}
                 <LoadMoreSentinel enabled={hasNextPage} onLoadMore={handleEndReached} />
               </View>
@@ -507,17 +501,19 @@ export default function EvictionDetailScreen() {
 
             {isAuthenticated ? (
               <View style={styles.composer}>
-                <View style={styles.composerField}>
-                  <TextFieldInput
-                    label={t('evictions.comments.placeholder')}
-                    value={commentText}
-                    onChangeText={setCommentText}
-                    multiline
-                  />
-                </View>
+                <Textarea
+                  accessibilityLabel={t('evictions.comments.placeholder')}
+                  placeholder={t('evictions.comments.placeholder')}
+                  value={commentText}
+                  onChangeText={setCommentText}
+                  rows={2}
+                  autoResize
+                  maxRows={6}
+                />
                 <Button
                   variant="primary"
                   size="medium"
+                  style={styles.composerSend}
                   onPress={handlePostComment}
                   disabled={!commentText.trim() || createComment.isPending}
                   loading={createComment.isPending}
@@ -530,7 +526,7 @@ export default function EvictionDetailScreen() {
                 {t('evictions.comments.signInToComment')}
               </Button>
             )}
-          </SectionCard>
+          </Card>
         </ScrollView>
 
         <View style={styles.footer}>
@@ -542,14 +538,7 @@ export default function EvictionDetailScreen() {
             accessibilityLabel={
               eviction.isAttending ? t('evictions.attending') : t('evictions.attend')
             }
-            icon={
-              <Ionicons
-                name={eviction.isAttending ? 'checkmark-circle' : 'megaphone-outline'}
-                size={20}
-                color={eviction.isAttending ? colors.success : colors.primaryForeground}
-              />
-            }
-            iconPosition="left"
+            leadingIcon={eviction.isAttending ? RiCheckboxCircleFill : RiMegaphoneLine}
             style={styles.footerButton}
           >
             {`${eviction.isAttending ? t('evictions.attending') : t('evictions.attend')} · ${t('evictions.attendeesCount', { count: eviction.attendeeCount })}`}
@@ -566,14 +555,7 @@ export default function EvictionDetailScreen() {
             accessibilityLabel={
               eviction.isFollowing ? t('evictions.unfollow') : t('evictions.follow')
             }
-            icon={
-              <Ionicons
-                name={eviction.isFollowing ? 'notifications' : 'notifications-outline'}
-                size={20}
-                color={colors.text}
-              />
-            }
-            iconPosition="left"
+            leadingIcon={eviction.isFollowing ? RiNotification3Fill : RiNotification3Line}
           >
             {eviction.isFollowing ? t('evictions.following') : t('evictions.follow')}
           </Button>
@@ -646,40 +628,10 @@ const styles = StyleSheet.create({
   section: {
     gap: spacing.md,
     padding: spacing.lg,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surfaceElevated,
-  },
-  sectionTitle: {
-    letterSpacing: -0.3,
   },
   muted: {
     fontSize: 14,
     color: colors.textSecondary,
-  },
-  lockedContact: {
-    alignItems: 'center',
-    gap: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  lockedIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.mutedSubtle,
-  },
-  lockedText: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 20,
-    maxWidth: 320,
-  },
-  lockedCta: {
-    alignSelf: 'center',
   },
   mapWrap: {
     borderRadius: radius.md,
@@ -699,55 +651,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.text,
   },
-  disclaimerRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.sm,
-  },
-  disclaimer: {
-    flex: 1,
-    fontSize: 13,
-    color: colors.textSecondary,
-    lineHeight: 18,
-  },
-  timeline: {
-    gap: spacing.md,
-  },
-  timelineItem: {
-    flexDirection: 'row',
-    gap: spacing.md,
-  },
-  timelineDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    marginTop: 4,
-    backgroundColor: colors.primaryColor,
-  },
-  timelineBody: {
-    flex: 1,
-    gap: spacing.xs,
-  },
-  timelineTime: {
-    fontSize: 12,
-    color: colors.textTertiary,
-  },
-  timelineMessage: {
-    fontSize: 14,
-    color: colors.text,
-    lineHeight: 20,
-  },
-  timelineMeta: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.textSecondary,
-  },
   composer: {
     gap: spacing.sm,
     marginTop: spacing.sm,
   },
-  composerField: {
-    minWidth: 0,
+  composerSend: {
+    alignSelf: 'flex-end',
   },
   footer: {
     padding: spacing.lg,

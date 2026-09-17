@@ -1857,7 +1857,11 @@
       "pending": "Pending",
       "accepted": "Accepted",
       "declined": "Declined",
-      "responsePlaceholder": "Add an optional message..."
+      "responsePlaceholder": "Add an optional message...",
+      "expired": "Caducada",
+      "yourMessage": "Tu mensaje",
+      "responseLabel": "Añade una respuesta (opcional)",
+      "waiting": "Esperando respuesta…"
     },
     "relationship": {
       "endRelationship": "End relationship",
@@ -3305,7 +3309,8 @@
         "reviewTitle": "Resume tu experiencia",
         "opinion": "Comparte tu experiencia (más de 10 caracteres)",
         "pros": "Añade algo que te gustó",
-        "cons": "Añade algo mejorable"
+        "cons": "Añade algo mejorable",
+        "selectDate": "Selecciona una fecha"
       },
       "currencies": {
         "EUR": "EUR (€)",

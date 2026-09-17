@@ -1,5 +1,9 @@
 /**
  * Tips index — magazine-style editorial list fed by the website Newsroom API.
+ *
+ * Each tip is a Bloom `Card` (the cover photo zooms inside its mask through
+ * `ZoomableImage`), tag filters and the category pill are Bloom `Chip`s, and
+ * meta glyphs are Remix icons.
  */
 import React, { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
@@ -7,8 +11,10 @@ import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Card } from '@oxy.so/bloom/card';
 import { Chip } from '@oxy.so/bloom/chip';
+import { RiCalendarLine, RiNewspaperLine, RiTimeLine } from '@oxy.so/bloom/icons';
+import { useTheme } from '@oxy.so/bloom/theme';
 import { H2, H3, Text as BloomText } from '@oxy.so/bloom/typography';
 import { useMediaQuery } from 'react-responsive';
 
@@ -22,7 +28,7 @@ import {
   toNewsroomLocale,
   type TipArticle,
 } from '@/services/tipsService';
-import { radius, spacing } from '@/constants/styles';
+import { spacing } from '@/constants/styles';
 import { colors } from '@/styles/colors';
 import { ZoomableImage } from '@/components/ui/ZoomableImage';
 
@@ -33,9 +39,12 @@ interface TipCardProps {
 }
 
 const TipCard: React.FC<TipCardProps> = ({ tip, onPress, featured = false }) => {
+  const theme = useTheme();
   const [pressed, setPressed] = useState(false);
   // Hover anywhere on the card zooms its cover photo (web); press on native.
   const [hovered, setHovered] = useState(false);
+  const metaFill = theme.colors.textSecondary;
+  const secondary = { color: theme.colors.textSecondary };
 
   return (
     <Pressable
@@ -44,62 +53,72 @@ const TipCard: React.FC<TipCardProps> = ({ tip, onPress, featured = false }) => 
       onPressOut={() => setPressed(false)}
       onHoverIn={() => setHovered(true)}
       onHoverOut={() => setHovered(false)}
-      style={[
-        styles.tipCard,
-        featured && styles.tipCardFeatured,
-        pressed && styles.tipCardPressed,
-      ]}
       accessibilityRole="button"
       accessibilityLabel={tip.title}
     >
-      <View style={[styles.tipImageContainer, featured && styles.tipImageFeatured]}>
-        {tip.coverImageUrl ? (
-          // The photo zooms inside its mask on hover anywhere on the card / press;
-          // the category badge is a sibling above the zoom, so it stays put and
-          // unclipped.
-          <ZoomableImage active={hovered || pressed} style={styles.tipImageFill}>
-            <Image
-              source={{ uri: tip.coverImageUrl }}
-              style={styles.tipImage}
-              contentFit="cover"
-              transition={200}
-              cachePolicy="memory-disk"
-            />
-          </ZoomableImage>
-        ) : (
-          <View style={styles.tipImagePlaceholder}>
-            <Ionicons name="newspaper-outline" size={featured ? 48 : 32} color={colors.muted} />
-          </View>
-        )}
-        <View style={styles.tipCategoryBadge}>
-          <BloomText style={styles.tipCategoryText}>{tip.category}</BloomText>
-        </View>
-      </View>
-
-      <View style={styles.tipContent}>
-        <H3 style={featured ? styles.tipTitleFeatured : styles.tipTitle}>{tip.title}</H3>
-        <BloomText
-          style={featured ? styles.tipDescriptionFeatured : styles.tipDescription}
-          numberOfLines={featured ? 3 : 2}
-        >
-          {tip.description}
-        </BloomText>
-
-        <View style={styles.tipMeta}>
-          <View style={styles.tipMetaItem}>
-            <Ionicons name="time-outline" size={14} color={colors.muted} />
-            <BloomText style={styles.tipMetaText}>{tip.readTime}</BloomText>
-          </View>
-          {tip.publishedAt ? (
-            <View style={styles.tipMetaItem}>
-              <Ionicons name="calendar-outline" size={14} color={colors.muted} />
-              <BloomText style={styles.tipMetaText}>
-                {formatPublishDate(tip.publishedAt)}
-              </BloomText>
+      <Card
+        variant="filled"
+        radius={featured ? 'radius-24' : 'radius-16'}
+        style={styles.tipCard}
+      >
+        <View style={[styles.tipImageContainer, featured && styles.tipImageFeatured]}>
+          {tip.coverImageUrl ? (
+            // The photo zooms inside its mask on hover anywhere on the card / press;
+            // the category chip is a sibling above the zoom, so it stays put and
+            // unclipped.
+            <ZoomableImage active={hovered || pressed} style={styles.tipImageFill}>
+              <Image
+                source={{ uri: tip.coverImageUrl }}
+                style={styles.tipImage}
+                contentFit="cover"
+                transition={200}
+                cachePolicy="memory-disk"
+              />
+            </ZoomableImage>
+          ) : (
+            <View
+              style={[
+                styles.tipImagePlaceholder,
+                { backgroundColor: theme.colors.backgroundSecondary },
+              ]}
+            >
+              <RiNewspaperLine
+                width={featured ? 48 : 32}
+                height={featured ? 48 : 32}
+                fill={metaFill}
+              />
             </View>
-          ) : null}
+          )}
+          <Chip size="small" variant="solid" color="default" style={styles.tipCategoryBadge}>
+            {tip.category}
+          </Chip>
         </View>
-      </View>
+
+        <View style={styles.tipContent}>
+          <H3 style={featured ? styles.tipTitleFeatured : styles.tipTitle}>{tip.title}</H3>
+          <BloomText
+            style={[featured ? styles.tipDescriptionFeatured : styles.tipDescription, secondary]}
+            numberOfLines={featured ? 3 : 2}
+          >
+            {tip.description}
+          </BloomText>
+
+          <View style={styles.tipMeta}>
+            <View style={styles.tipMetaItem}>
+              <RiTimeLine width={14} height={14} fill={metaFill} />
+              <BloomText style={[styles.tipMetaText, secondary]}>{tip.readTime}</BloomText>
+            </View>
+            {tip.publishedAt ? (
+              <View style={styles.tipMetaItem}>
+                <RiCalendarLine width={14} height={14} fill={metaFill} />
+                <BloomText style={[styles.tipMetaText, secondary]}>
+                  {formatPublishDate(tip.publishedAt)}
+                </BloomText>
+              </View>
+            ) : null}
+          </View>
+        </View>
+      </Card>
     </Pressable>
   );
 };
@@ -116,7 +135,7 @@ export default function TipsScreen() {
     queryFn: () => tipsService.getTips({ locale }),
   });
 
-  const allTips = tipsQuery.data?.data ?? [];
+  const allTips = useMemo(() => tipsQuery.data?.data ?? [], [tipsQuery.data]);
 
   const tips = useMemo(() => {
     if (!activeTag) return allTips;
@@ -272,15 +291,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   tipCard: {
-    backgroundColor: colors.surfaceElevated,
-    borderRadius: radius.lg,
     overflow: 'hidden',
-  },
-  tipCardFeatured: {
-    borderRadius: radius.xl,
-  },
-  tipCardPressed: {
-    opacity: 0.92,
   },
   tipImageContainer: {
     position: 'relative',
@@ -304,7 +315,6 @@ const styles = StyleSheet.create({
   tipImagePlaceholder: {
     width: '100%',
     height: '100%',
-    backgroundColor: colors.infoSubtle,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -312,17 +322,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: spacing.md,
     left: spacing.md,
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderRadius: radius.pill,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-  },
-  tipCategoryText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: colors.COLOR_BLACK,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
   },
   tipContent: {
     padding: spacing.lg,
@@ -337,12 +336,10 @@ const styles = StyleSheet.create({
   },
   tipDescription: {
     fontSize: 14,
-    color: colors.muted,
     lineHeight: 20,
   },
   tipDescriptionFeatured: {
     fontSize: 15,
-    color: colors.muted,
     lineHeight: 22,
   },
   tipMeta: {
@@ -357,6 +354,5 @@ const styles = StyleSheet.create({
   },
   tipMetaText: {
     fontSize: 12,
-    color: colors.muted,
   },
 });

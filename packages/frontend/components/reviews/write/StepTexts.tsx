@@ -6,7 +6,9 @@ import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
+import { Field } from '@oxy.so/bloom/field';
 import { TextFieldInput } from '@oxy.so/bloom/text-field';
+import { Textarea } from '@oxy.so/bloom/textarea';
 
 import { EditableList } from '@/components/reviews/write/EditableList';
 import { StepHeader } from '@/components/reviews/write/StepHeader';
@@ -25,19 +27,24 @@ export const StepTexts: React.FC<StepProps> = ({ data, update }) => {
         subtitle={t('reviews.write.steps.texts.subtitle')}
       />
 
-      <TextFieldInput
-        label={t('reviews.write.fields.reviewTitle')}
-        placeholder={t('reviews.write.placeholders.reviewTitle')}
-        value={data.title}
-        onChangeText={(text) => update('title', text)}
-        maxLength={TITLE_MAX_LENGTH}
-      />
-      <TextFieldInput
+      <Field label={t('reviews.write.fields.reviewTitle')}>
+        <TextFieldInput
+          label={t('reviews.write.fields.reviewTitle')}
+          placeholder={t('reviews.write.placeholders.reviewTitle')}
+          value={data.title}
+          onChangeText={(text) => update('title', text)}
+          maxLength={TITLE_MAX_LENGTH}
+        />
+      </Field>
+      <Textarea
         label={t('reviews.write.fields.opinion')}
         placeholder={t('reviews.write.placeholders.opinion')}
         value={data.opinion}
         onChangeText={(text) => update('opinion', text)}
-        multiline
+        rows={5}
+        autoResize
+        maxRows={14}
+        required
       />
 
       <EditableList

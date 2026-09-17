@@ -15,7 +15,7 @@ import * as Skeleton from '@oxy.so/bloom/skeleton';
 import { Header } from '@/components/Header';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
-import { ExploreRow } from '@/components/reviews/ExploreRow';
+import { ExploreList, ExploreRow } from '@/components/reviews/ExploreRow';
 import { LoadMoreSentinel } from '@/components/common/LoadMoreSentinel';
 import { useExploreNeighborhood } from '@/hooks/useExploreReviews';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
@@ -73,23 +73,25 @@ export default function ReviewExploreNeighborhoodScreen() {
               description={t('reviews.explore.emptyBuildingsDescription')}
             />
           ) : (
-            <View style={styles.list}>
-              {buildings.map((building) => (
-                <ExploreRow
-                  key={building.buildingLevelId}
-                  title={buildingTitle(building.street, building.number)}
-                  subtitle={t('reviews.explore.buildingMeta', {
-                    count: building.reviewCount,
-                    recommend: Math.round(building.recommendationPercentage),
-                  })}
-                  rightLabel={`${building.averageRating.toFixed(1)} ★`}
-                  onPress={() =>
-                    router.push(`/addresses/${building.buildingLevelId}?tab=reviews`)
-                  }
-                />
-              ))}
+            <>
+              <ExploreList>
+                {buildings.map((building) => (
+                  <ExploreRow
+                    key={building.buildingLevelId}
+                    title={buildingTitle(building.street, building.number)}
+                    subtitle={t('reviews.explore.buildingMeta', {
+                      count: building.reviewCount,
+                      recommend: Math.round(building.recommendationPercentage),
+                    })}
+                    rating={building.averageRating}
+                    onPress={() =>
+                      router.push(`/addresses/${building.buildingLevelId}?tab=reviews`)
+                    }
+                  />
+                ))}
+              </ExploreList>
               <LoadMoreSentinel onLoadMore={loadMore} enabled={Boolean(query.hasNextPage)} />
-            </View>
+            </>
           )}
         </ScrollView>
       </SafeAreaView>

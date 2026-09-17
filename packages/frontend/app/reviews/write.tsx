@@ -18,8 +18,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
+import { Admonition } from '@oxy.so/bloom/admonition';
 import * as Skeleton from '@oxy.so/bloom/skeleton';
-import { Text as BloomText } from '@oxy.so/bloom/typography';
 import { useOxy } from '@oxy.so/services';
 
 import { Header } from '@/components/Header';
@@ -324,9 +324,7 @@ export default function WriteReviewPage() {
           keyboardShouldPersistTaps="handled"
         >
           {renderStep()}
-          {submitError ? (
-            <BloomText style={styles.submitError}>{submitError}</BloomText>
-          ) : null}
+          {submitError ? <Admonition type="error">{submitError}</Admonition> : null}
         </ScrollView>
         <WizardProgress
           step={step}
@@ -359,10 +357,5 @@ const styles = StyleSheet.create({
   },
   skeletonBlock: {
     gap: spacing.md,
-  },
-  submitError: {
-    fontSize: 14,
-    color: colors.error,
-    textAlign: 'center',
   },
 });
