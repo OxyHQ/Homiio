@@ -122,7 +122,27 @@
   },
   "home": {
     "insights": {
-      "title": "بيانات المنصة"
+      "title": "بيانات المنصة",
+      "screenTitle": "الإحصاءات",
+      "subtitle": "نظرة عامة على سوق الإيجار",
+      "loadError": "تعذّر تحميل الإحصاءات",
+      "kpi": {
+        "properties": "العقارات",
+        "cities": "المدن",
+        "saves": "مرات الحفظ",
+        "uniqueSavers": "المستخدمون الفريدون",
+        "perCity": "{{value}} / مدينة",
+        "perListing": "{{value}} / إعلان",
+        "savesEach": "{{value}} مرات حفظ لكل مستخدم"
+      },
+      "averageRent": "متوسط الإيجار",
+      "min": "الأدنى",
+      "max": "الأعلى",
+      "priceDistribution": "توزيع الأسعار",
+      "listings": "الإعلانات",
+      "topCities": "أبرز المدن",
+      "rent": "الإيجار",
+      "topProperties": "أبرز العقارات"
     },
     "hero": {
       "title": "اعثر على سكنك العادل",
@@ -1323,7 +1343,10 @@
       "emptyAllDescription": "You don't have any rental contracts yet",
       "emptyFilteredDescription": "No {{filter}} contracts to show",
       "newContract": "New contract",
-      "createNew": "Create new contract"
+      "createNew": "Create new contract",
+      "columnStatus": "الحالة",
+      "filterLabel": "تصفية حسب الحالة",
+      "searchLabel": "البحث في العقود"
     },
     "card": {
       "start": "Start",
@@ -1417,6 +1440,40 @@
     }
   },
   "roommates": {
+    "rooms": {
+      "filtersTitle": "تصفية الغرف",
+      "location": "الموقع",
+      "city": "المدينة",
+      "state": "الولاية / المنطقة",
+      "cityPlaceholder": "أدخل مدينة",
+      "statePlaceholder": "أدخل ولاية أو منطقة",
+      "anyPrice": "أي سعر",
+      "smokingAllowed": "التدخين مسموح",
+      "amenity": {
+        "privateBathroom": "حمّام خاص",
+        "walkInCloset": "غرفة ملابس"
+      },
+      "sort": {
+        "bestMatch": "الأكثر توافقًا",
+        "price": "السعر",
+        "newest": "الأحدث",
+        "name": "الاسم"
+      },
+      "searchPlaceholder": "ابحث عن غرف…",
+      "emptyTitle": "لم يتم العثور على غرف",
+      "emptyDescription": "جرّب تعديل عوامل التصفية لرؤية المزيد من الغرف",
+      "capacity_zero": "حتى {{count}} ضيف",
+      "capacity_one": "حتى {{count}} ضيف",
+      "capacity_two": "حتى {{count}} ضيفين",
+      "capacity_few": "حتى {{count}} ضيوف",
+      "capacity_many": "حتى {{count}} ضيفًا",
+      "capacity_other": "حتى {{count}} ضيف",
+      "available": "متاحة",
+      "unavailable": "غير متاحة",
+      "match": "توافق {{score}}%",
+      "selectedCount": "تم تحديد {{count}}",
+      "roomType": "غرفة"
+    },
     "title": "Roommates",
     "find": "Find Roommates",
     "myMatches": "My Matches",
@@ -1571,7 +1628,11 @@
       "pending": "Pending",
       "accepted": "Accepted",
       "declined": "Declined",
-      "responsePlaceholder": "Add an optional message..."
+      "responsePlaceholder": "Add an optional message...",
+      "expired": "منتهية الصلاحية",
+      "yourMessage": "رسالتك",
+      "responseLabel": "أضف ردًا (اختياري)",
+      "waiting": "في انتظار الرد…"
     },
     "relationship": {
       "title": "Roommate Relationship",
@@ -1944,7 +2005,17 @@
     "chat": {
       "placeholder": "Ask Sindi about your tenant rights...",
       "you": "You",
-      "disclaimer": "Sindi advocates for tenant rights and housing justice. For legal action, consult a qualified attorney. Connect with local tenant organizations for community support."
+      "field": "الرسالة",
+      "attach": "إرفاق ملف",
+      "send": "إرسال الرسالة",
+      "stop": "إيقاف الإنشاء",
+      "disclaimer": "Sindi advocates for tenant rights and housing justice. For legal action, consult a qualified attorney. Connect with local tenant organizations for community support.",
+      "messageCount_zero": "{{count}} رسالة",
+      "messageCount_one": "{{count}} رسالة",
+      "messageCount_two": "{{count}} رسالتان",
+      "messageCount_few": "{{count}} رسائل",
+      "messageCount_many": "{{count}} رسالة",
+      "messageCount_other": "{{count}} رسالة"
     },
     "errors": {
       "connection": "Connection Error",
@@ -2127,8 +2198,42 @@
     "searchPlaceholder": "Search saved properties",
     "header": "Saved",
     "notes": {
-      "title": "Notes"
-    }
+      "title": "Notes",
+      "placeholder": "أضف ملاحظات حول هذا العقار...",
+      "save": "حفظ الملاحظات",
+      "cancel": "إلغاء",
+      "filters": {
+        "active": "النشطة",
+        "pinned": "المثبّتة",
+        "archived": "المؤرشفة"
+      },
+      "emptyTitle": "لا توجد ملاحظات بعد",
+      "emptyDescription": "ستظهر هنا الملاحظات التي تضيفها إلى العقارات المحفوظة.",
+      "deleteTitle": "حذف هذه الملاحظة؟",
+      "deleteMessage": "لا يمكن التراجع عن هذا الإجراء.",
+      "saved": "تم حفظ الملاحظة",
+      "deleted": "تم حذف الملاحظة",
+      "pin": "تثبيت الملاحظة",
+      "unpin": "إلغاء تثبيت الملاحظة",
+      "archive": "أرشفة الملاحظة",
+      "unarchive": "إلغاء أرشفة الملاحظة"
+    },
+    "actions": {
+      "addNotes": "إضافة ملاحظات",
+      "editNotes": "تعديل الملاحظات",
+      "unsave": "إزالة من المحفوظات",
+      "viewProperty": "عرض العقار"
+    },
+    "errors": {
+      "unsaveFailed": "تعذّرت الإزالة من المحفوظات",
+      "updateNotesFailed": "تعذّر تحديث الملاحظات",
+      "loadFailed": "تعذّر تحميل العقارات المحفوظة"
+    },
+    "filters": {
+      "thisWeek": "هذا الأسبوع",
+      "withNotes": "مع ملاحظات"
+    },
+    "openFolder": "فتح المجلد {{name}}"
   },
   "imageUpload": {
     "permissionTitle": "Permission Required",
@@ -2148,7 +2253,8 @@
     "primary": "Primary",
     "addMore": "Add More",
     "helperText": "Upload high-quality images of your property. Include photos of all rooms, exterior, and any special features.",
-    "helperPrimaryNote": " The first image will be set as the primary image."
+    "helperPrimaryNote": " The first image will be set as the primary image.",
+    "setPrimary": "تعيين كصورة رئيسية"
   },
   "property": {
     "loading": "Loading property details...",
@@ -2250,7 +2356,8 @@
       "distributionLabel": "Price distribution of nearby homes",
       "lowDataNote": "Not enough nearby listings to compare yet.",
       "lowSampleCaveat_one": "Based on just {{count}} nearby listing — treat as a rough guide.",
-      "lowSampleCaveat_other": "Based on only {{count}} nearby listings — treat as a rough guide."
+      "lowSampleCaveat_other": "Based on only {{count}} nearby listings — treat as a rough guide.",
+      "homesMetric": "المساكن"
     },
     "nearbyServices": {
       "title": "What's nearby",
@@ -2898,7 +3005,39 @@
           "confirm": "Reject",
           "successToast": "Application rejected"
         }
-      }
+      },
+      "inboxTitle": "صندوق المتقدمين",
+      "inboxEyebrow": "الوارد",
+      "title": "المتقدمون",
+      "subtitle": "راجع المستأجرين المحتملين واتخذ قرارًا بشأن كل طلب.",
+      "searchLabel": "البحث باسم المتقدم",
+      "filterLabel": "تصفية حسب الحالة",
+      "columnStatus": "الحالة",
+      "openApplication": "فتح الطلب",
+      "createLease": "إنشاء عقد الإيجار",
+      "emptyTitle": "لا يوجد متقدمون بعد",
+      "emptyDescription": "ستظهر هنا طلبات المستأجرين المحتملين.",
+      "signInTitle": "سجّل الدخول لمراجعة المتقدمين",
+      "signInDescription": "اطّلع على من يرغب في استئجار أماكنك، كل ذلك في مكان واحد.",
+      "hostsOnlyTitle": "للمضيفين فقط",
+      "hostsOnlyDescription": "أضف عقارًا لتبدأ في تلقي طلبات المستأجرين.",
+      "loadError": "تعذّر تحميل المتقدمين",
+      "openDocument": "فتح المستند {{filename}}",
+      "invalidTitle": "طلب غير صالح",
+      "invalidDescription": "لم نتمكن من العثور على معرّف هذا الطلب.",
+      "unavailableTitle": "الطلب غير متاح",
+      "unavailableDescription": "تعذّر تحميل هذا الطلب.",
+      "notAuthorisedTitle": "غير مصرّح",
+      "notAuthorisedDescription": "يمكن فقط للمالك المعيَّن لهذا العقار مراجعة الطلب.",
+      "sectionTenancy": "الإيجار",
+      "submittedLabel": "تاريخ الإرسال",
+      "decidedLabel": "تاريخ القرار",
+      "noReferences": "لم يتم تقديم مراجع.",
+      "sectionDocuments": "المستندات",
+      "noDocuments": "لا توجد مستندات مرفقة.",
+      "sectionNotes": "الملاحظات",
+      "notesLabel": "ملاحظات للمتقدم (اختياري)",
+      "notesPlaceholder": "شارك الخطوات التالية أو سبب قرارك."
     },
     "field": {
       "moveInDate": "Move-in date",
@@ -2918,8 +3057,8 @@
       "monthlyIncome": "Gross monthly income",
       "leaseTermCustomPlaceholder": "Number of months",
       "leaseTermCustom": "Other",
-      "leaseTerm": "Lease term",
-      "leaseTermMonths": "{{count}} months",
+      "leaseTerm": "مدة الإيجار",
+      "leaseTermMonths": "{{count}} أشهر",
       "moveInHelper": "Within the next 6 months."
     },
     "employment": {
@@ -2961,7 +3100,7 @@
       "documentsHelp": "Upload up to {{max}} PDFs or images (10 MB each). Pick a category per file.",
       "documents": "Documents (optional)",
       "referencesHelp": "Add 1 to 3 contacts the landlord can call to vouch for you.",
-      "references": "References",
+      "references": "المراجع",
       "finances": "Income & employment",
       "timing": "Move-in & lease term"
     },
@@ -3200,7 +3339,8 @@
         "reviewTitle": "Sum up your experience",
         "opinion": "Share your experience (10+ characters)",
         "pros": "Add something you liked",
-        "cons": "Add something to improve"
+        "cons": "Add something to improve",
+        "selectDate": "اختر تاريخًا"
       },
       "currencies": {
         "EUR": "EUR (€)",
@@ -3431,7 +3571,8 @@
       "toastBlocked": "Dates blocked",
       "toastBlockFailed": "Block failed",
       "propertyNotFound": "Property not found",
-      "property": "Property"
+      "property": "Property",
+      "blockDates": "حظر التواريخ"
     },
     "reservations": {
       "title": "Reservations",
@@ -3493,6 +3634,45 @@
       "selectDates": "Select dates",
       "selectGuests": "Select guests",
       "close": "Close"
+    },
+    "guests": {
+      "adults": "البالغون",
+      "adultsHint": "13 عامًا فأكثر",
+      "children": "الأطفال",
+      "childrenHint": "من 2 إلى 12 عامًا",
+      "infants": "الرضّع",
+      "infantsHint": "أقل من عامين",
+      "decrease": "تقليل {{title}}",
+      "increase": "زيادة {{title}}",
+      "maxNote": "يتسع هذا المكان لـ {{count}} ضيوف كحد أقصى، دون احتساب الرضّع.",
+      "count_zero": "{{count}} ضيف",
+      "count_one": "{{count}} ضيف",
+      "count_two": "{{count}} ضيفان",
+      "count_few": "{{count}} ضيوف",
+      "count_many": "{{count}} ضيفًا",
+      "count_other": "{{count}} ضيف",
+      "infantCount_zero": "{{count}} رضيع",
+      "infantCount_one": "{{count}} رضيع",
+      "infantCount_two": "{{count}} رضيعان",
+      "infantCount_few": "{{count}} رضّع",
+      "infantCount_many": "{{count}} رضيعًا",
+      "infantCount_other": "{{count}} رضيع"
+    },
+    "widget": {
+      "requestToBook": "طلب الحجز",
+      "perNight": "الليلة",
+      "dates": "التواريخ",
+      "requestNote": "لن يتم تحصيل أي مبلغ منك الآن. أمام المضيف 24 ساعة للرد."
+    },
+    "policy": {
+      "flexible": "إلغاء مرن — استرداد كامل في أي وقت قبل تسجيل الوصول.",
+      "moderate": "إلغاء معتدل — استرداد كامل حتى 5 أيام قبل تسجيل الوصول.",
+      "strict": "إلغاء صارم — استرداد كامل حتى 7 أيام قبل تسجيل الوصول.",
+      "superStrict": "إلغاء صارم جدًا — استرداد كامل حتى 30 يومًا قبل تسجيل الوصول."
+    },
+    "calendar": {
+      "selectRange": "اختر تاريخي الوصول والمغادرة",
+      "apply": "تطبيق"
     }
   },
   "addresses": {
@@ -3581,7 +3761,9 @@
       "availableFrom": "Available From",
       "availableFromPlaceholder": "Available from date",
       "leaseTerm": "Lease Term",
-      "leaseTermPlaceholder": "Lease term"
+      "leaseTermPlaceholder": "Lease term",
+      "openFullscreenMap": "فتح الخريطة بملء الشاشة",
+      "mapPickerTitle": "تحديد الموقع"
     },
     "amenities": {
       "title": "Amenities",

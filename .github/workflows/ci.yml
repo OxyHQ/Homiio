@@ -280,6 +280,10 @@ jobs:
       - name: Check frontend bundle imports
         run: bun run check:bundle-imports
 
+      # Every en.json key path must exist in all eleven other locales (~30 ms).
+      - name: Check locale parity
+        run: bun run --cwd packages/frontend check:i18n
+
       - name: Test frontend
         run: >-
           bun run --cwd packages/frontend test --

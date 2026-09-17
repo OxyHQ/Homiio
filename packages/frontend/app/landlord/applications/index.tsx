@@ -76,10 +76,10 @@ const FILTERS: { id: StatusFilter; i18nKey: string }[] = [
   { id: TenantApplicationStatus.WITHDRAWN, i18nKey: 'statusBadge.application.withdrawn' },
 ];
 
-const getProfileDisplayName = (profile: Profile | null | undefined): string => {
-  if (!profile) return 'Applicant';
+const getProfileDisplayName = (profile: Profile | null | undefined, fallback: string): string => {
+  if (!profile) return fallback;
   const bio = profile.personalProfile?.personalInfo?.bio;
-  return bio?.trim() || profile.oxyUserId || 'Applicant';
+  return bio?.trim() || profile.oxyUserId || fallback;
 };
 
 /**
@@ -131,12 +131,13 @@ const PropertyGroupBlock: React.FC<PropertyGroupBlockProps> = ({
   applicants,
   getAvatarFileId,
 }) => {
+  const { t } = useTranslation();
   const { property } = useProperty(propertyId);
-  const title = property ? getPropertyTitle(property) : 'Property';
+  const title = property ? getPropertyTitle(property) : t('applications.card.propertyFallback');
   return (
     <View style={styles.groupBlock}>
       <View style={styles.groupHeader}>
-        <SectionEyebrow>Property</SectionEyebrow>
+        <SectionEyebrow>{t('applications.card.propertyFallback')}</SectionEyebrow>
         <H3 style={styles.groupTitle}>{title}</H3>
       </View>
       {applications.map((application) => {
@@ -148,7 +149,7 @@ const PropertyGroupBlock: React.FC<PropertyGroupBlockProps> = ({
             application={application}
             variant="landlord"
             href={`/landlord/applications/${application.id}`}
-            applicantName={getProfileDisplayName(applicant)}
+            applicantName={getProfileDisplayName(applicant, t('applications.card.applicantFallback'))}
             applicantAvatarFileId={getProfileAvatarFileId(applicant, getAvatarFileId)}
           />
         );
@@ -262,7 +263,7 @@ const ApplicantsTable: React.FC<ApplicantsTableProps> = ({
       },
       {
         id: 'status',
-        header: 'Status',
+        header: t('applications.landlord.columnStatus'),
         basis: 120,
         accessor: (row) => row.application.status,
         cell: ({ row }) => <ApplicationStatusBadge status={row.application.status} />,
@@ -276,14 +277,14 @@ const ApplicantsTable: React.FC<ApplicantsTableProps> = ({
           const actions: DataTableRowActionItem[] = [
             {
               icon: RiArrowRightUpLine,
-              label: 'Open application',
+              label: t('applications.landlord.openApplication'),
               onPress: () => router.push(`/landlord/applications/${application.id}`),
             },
           ];
           if (application.status === TenantApplicationStatus.APPROVED) {
             actions.push({
               icon: RiEditLine,
-              label: 'Create lease',
+              label: t('applications.landlord.createLease'),
               onPress: () =>
                 router.push({
                   pathname: '/contracts/new',
@@ -300,11 +301,11 @@ const ApplicantsTable: React.FC<ApplicantsTableProps> = ({
 
   return (
     <DataTable
-      accessibilityLabel="Applicants"
+      accessibilityLabel={t('applications.landlord.title')}
       rows={rows}
       columns={columns}
       getRowId={(row) => String(row.application.id)}
-      title="Applicants"
+      title={t('applications.landlord.title')}
       summary={String(rows.length)}
       defaultSort={{ columnId: 'submitted', direction: 'descending' }}
       pageSize={20}
@@ -312,19 +313,19 @@ const ApplicantsTable: React.FC<ApplicantsTableProps> = ({
       toolbar={
         <>
           <DataTableFilter
-            label="Filter by status"
+            label={t('applications.landlord.filterLabel')}
             value={statusFilter}
             onValueChange={(value) => onStatusFilterChange(value as StatusFilter)}
             options={FILTERS.map((entry) => ({ value: entry.id, label: t(entry.i18nKey) }))}
           />
           <DataTableSearch
-            label="Search by applicant name"
+            label={t('applications.landlord.searchLabel')}
             value={searchQuery}
             onChangeText={onSearchQueryChange}
           />
         </>
       }
-      emptyState="Applications from prospective tenants will show up here."
+      emptyState={t('applications.landlord.emptyDescription')}
     />
   );
 };
@@ -410,10 +411,10 @@ export default function LandlordApplicationsScreen() {
     if (!trimmed) return items;
     return items.filter((application) => {
       const applicant = applicantMap.get(String(application.applicantOxyUserId));
-      const name = getProfileDisplayName(applicant).toLowerCase();
+      const name = getProfileDisplayName(applicant, t('applications.card.applicantFallback')).toLowerCase();
       return name.includes(trimmed);
     });
-  }, [items, applicantMap, searchQuery]);
+  }, [items, applicantMap, searchQuery, t]);
 
   const groups = useMemo(() => groupByProperty(filteredItems), [filteredItems]);
 
@@ -423,11 +424,11 @@ export default function LandlordApplicationsScreen() {
         const applicant = applicantMap.get(String(application.applicantOxyUserId)) ?? null;
         return {
           application,
-          name: getProfileDisplayName(applicant),
+          name: getProfileDisplayName(applicant, t('applications.card.applicantFallback')),
           avatar: getProfileAvatarFileId(applicant, getAvatarFileId),
         };
       }),
-    [filteredItems, applicantMap, getAvatarFileId],
+    [filteredItems, applicantMap, getAvatarFileId, t],
   );
 
   const rootStyle = [styles.root, { backgroundColor: theme.colors.background }];
@@ -435,7 +436,7 @@ export default function LandlordApplicationsScreen() {
     <Header
       options={{
         showBackButton: true,
-        title: 'Applicant inbox',
+        title: t('applications.landlord.inboxTitle'),
       }}
     />
   );
@@ -448,9 +449,9 @@ export default function LandlordApplicationsScreen() {
           <View style={styles.emptyWrap}>
             <EmptyState
               icon={RiGroupLine}
-              title="Sign in to review applicants"
-              description="See who wants to rent your places, all in one place."
-              actionText="Sign in"
+              title={t('applications.landlord.signInTitle')}
+              description={t('applications.landlord.signInDescription')}
+              actionText={t('applications.list.signIn')}
               actionIcon={RiLoginBoxLine}
               onAction={() => openAccountDialog()}
             />
@@ -479,8 +480,8 @@ export default function LandlordApplicationsScreen() {
           <View style={styles.emptyWrap}>
             <EmptyState
               icon={RiLockLine}
-              title="Hosts only"
-              description="List a property to start receiving tenant applications."
+              title={t('applications.landlord.hostsOnlyTitle')}
+              description={t('applications.landlord.hostsOnlyDescription')}
             />
           </View>
         </SafeAreaView>
@@ -496,10 +497,10 @@ export default function LandlordApplicationsScreen() {
       <SafeAreaView edges={['bottom']} style={styles.safeArea}>
         <PageScrollView contentContainerStyle={styles.content}>
           <View style={styles.titleBlock}>
-            <SectionEyebrow>Inbox</SectionEyebrow>
-            <H2 style={styles.title}>Applicants</H2>
+            <SectionEyebrow>{t('applications.landlord.inboxEyebrow')}</SectionEyebrow>
+            <H2 style={styles.title}>{t('applications.landlord.title')}</H2>
             <BloomText style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
-              Review prospective tenants and decide on each application.
+              {t('applications.landlord.subtitle')}
             </BloomText>
           </View>
 
@@ -509,7 +510,7 @@ export default function LandlordApplicationsScreen() {
                 value={searchQuery}
                 onChangeText={setSearchQuery}
                 onClearText={() => setSearchQuery('')}
-                label="Search by applicant name"
+                label={t('applications.landlord.searchLabel')}
               />
 
               <View style={styles.filterRow}>
@@ -532,9 +533,9 @@ export default function LandlordApplicationsScreen() {
           {applicationsQuery.isError ? (
             <ErrorState
               icon={RiAlertLine}
-              title="Couldn't load applicants"
+              title={t('applications.landlord.loadError')}
               description={
-                applicationsQuery.error?.message ?? 'Please try again.'
+                applicationsQuery.error?.message ?? t('applications.list.tryAgain')
               }
               onRetry={() => applicationsQuery.refetch()}
             />
@@ -554,8 +555,8 @@ export default function LandlordApplicationsScreen() {
             <View style={styles.emptyWrap}>
               <EmptyState
                 icon={RiGroupLine}
-                title="No applicants yet"
-                description="Applications from prospective tenants will show up here."
+                title={t('applications.landlord.emptyTitle')}
+                description={t('applications.landlord.emptyDescription')}
               />
             </View>
           ) : null}

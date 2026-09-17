@@ -122,7 +122,27 @@
   },
   "home": {
     "insights": {
-      "title": "Données de la plateforme"
+      "title": "Données de la plateforme",
+      "screenTitle": "Statistiques",
+      "subtitle": "Vue d'ensemble du marché locatif",
+      "loadError": "Impossible de charger les statistiques",
+      "kpi": {
+        "properties": "Logements",
+        "cities": "Villes",
+        "saves": "Enregistrements",
+        "uniqueSavers": "Utilisateurs uniques",
+        "perCity": "{{value}} / ville",
+        "perListing": "{{value}} / annonce",
+        "savesEach": "{{value}} enregistrements chacun"
+      },
+      "averageRent": "Loyer moyen",
+      "min": "Min.",
+      "max": "Max.",
+      "priceDistribution": "Répartition des prix",
+      "listings": "Annonces",
+      "topCities": "Villes principales",
+      "rent": "Loyer",
+      "topProperties": "Logements à la une"
     },
     "hero": {
       "title": "Trouvez votre logement éthique",
@@ -1323,7 +1343,10 @@
       "emptyAllDescription": "You don't have any rental contracts yet",
       "emptyFilteredDescription": "No {{filter}} contracts to show",
       "newContract": "New contract",
-      "createNew": "Create new contract"
+      "createNew": "Create new contract",
+      "columnStatus": "Statut",
+      "filterLabel": "Filtrer par statut",
+      "searchLabel": "Rechercher des contrats"
     },
     "card": {
       "start": "Start",
@@ -1417,6 +1440,36 @@
     }
   },
   "roommates": {
+    "rooms": {
+      "filtersTitle": "Filtrer les chambres",
+      "location": "Emplacement",
+      "city": "Ville",
+      "state": "Région / département",
+      "cityPlaceholder": "Saisissez une ville",
+      "statePlaceholder": "Saisissez une région ou un département",
+      "anyPrice": "Indifférent",
+      "smokingAllowed": "Fumeurs acceptés",
+      "amenity": {
+        "privateBathroom": "Salle de bain privée",
+        "walkInCloset": "Dressing"
+      },
+      "sort": {
+        "bestMatch": "Meilleure correspondance",
+        "price": "Prix",
+        "newest": "Plus récentes",
+        "name": "Nom"
+      },
+      "searchPlaceholder": "Rechercher des chambres…",
+      "emptyTitle": "Aucune chambre trouvée",
+      "emptyDescription": "Modifiez vos filtres pour voir plus de chambres",
+      "capacity_one": "Jusqu'à {{count}} personne",
+      "capacity_other": "Jusqu'à {{count}} personnes",
+      "available": "Disponible",
+      "unavailable": "Indisponible",
+      "match": "{{score}} % de compatibilité",
+      "selectedCount": "{{count}} sélectionnée(s)",
+      "roomType": "Chambre"
+    },
     "title": "Roommates",
     "find": "Find Roommates",
     "myMatches": "My Matches",
@@ -1571,7 +1624,11 @@
       "pending": "Pending",
       "accepted": "Accepted",
       "declined": "Declined",
-      "responsePlaceholder": "Add an optional message..."
+      "responsePlaceholder": "Add an optional message...",
+      "expired": "Expirée",
+      "yourMessage": "Votre message",
+      "responseLabel": "Ajouter une réponse (facultatif)",
+      "waiting": "En attente de réponse…"
     },
     "relationship": {
       "title": "Roommate Relationship",
@@ -1944,6 +2001,12 @@
     "chat": {
       "placeholder": "Ask Sindi about your tenant rights...",
       "you": "You",
+      "field": "Message",
+      "attach": "Joindre un fichier",
+      "send": "Envoyer le message",
+      "stop": "Arrêter la génération",
+      "messageCount_one": "{{count}} message",
+      "messageCount_other": "{{count}} messages",
       "disclaimer": "Sindi advocates for tenant rights and housing justice. For legal action, consult a qualified attorney. Connect with local tenant organizations for community support."
     },
     "errors": {
@@ -2127,8 +2190,42 @@
     "searchPlaceholder": "Search saved properties",
     "header": "Saved",
     "notes": {
-      "title": "Notes"
-    }
+      "title": "Notes",
+      "placeholder": "Ajoutez des notes sur ce logement…",
+      "save": "Enregistrer les notes",
+      "cancel": "Annuler",
+      "filters": {
+        "active": "Actives",
+        "pinned": "Épinglées",
+        "archived": "Archivées"
+      },
+      "emptyTitle": "Aucune note pour l'instant",
+      "emptyDescription": "Les notes que vous ajoutez à vos logements enregistrés apparaîtront ici.",
+      "deleteTitle": "Supprimer cette note ?",
+      "deleteMessage": "Cette action est irréversible.",
+      "saved": "Note enregistrée",
+      "deleted": "Note supprimée",
+      "pin": "Épingler la note",
+      "unpin": "Désépingler la note",
+      "archive": "Archiver la note",
+      "unarchive": "Désarchiver la note"
+    },
+    "actions": {
+      "addNotes": "Ajouter des notes",
+      "editNotes": "Modifier les notes",
+      "unsave": "Retirer des favoris",
+      "viewProperty": "Voir le logement"
+    },
+    "errors": {
+      "unsaveFailed": "Impossible de retirer des favoris",
+      "updateNotesFailed": "Impossible de mettre à jour les notes",
+      "loadFailed": "Impossible de charger les logements enregistrés"
+    },
+    "filters": {
+      "thisWeek": "Cette semaine",
+      "withNotes": "Avec notes"
+    },
+    "openFolder": "Ouvrir le dossier {{name}}"
   },
   "imageUpload": {
     "permissionTitle": "Permission Required",
@@ -2148,7 +2245,8 @@
     "primary": "Primary",
     "addMore": "Add More",
     "helperText": "Upload high-quality images of your property. Include photos of all rooms, exterior, and any special features.",
-    "helperPrimaryNote": " The first image will be set as the primary image."
+    "helperPrimaryNote": " The first image will be set as the primary image.",
+    "setPrimary": "Définir comme image principale"
   },
   "property": {
     "loading": "Loading property details...",
@@ -2250,7 +2348,8 @@
       "distributionLabel": "Price distribution of nearby homes",
       "lowDataNote": "Not enough nearby listings to compare yet.",
       "lowSampleCaveat_one": "Based on just {{count}} nearby listing — treat as a rough guide.",
-      "lowSampleCaveat_other": "Based on only {{count}} nearby listings — treat as a rough guide."
+      "lowSampleCaveat_other": "Based on only {{count}} nearby listings — treat as a rough guide.",
+      "homesMetric": "Logements"
     },
     "nearbyServices": {
       "title": "What's nearby",
@@ -2898,7 +2997,39 @@
           "confirm": "Reject",
           "successToast": "Application rejected"
         }
-      }
+      },
+      "inboxTitle": "Boîte des candidatures",
+      "inboxEyebrow": "Boîte de réception",
+      "title": "Candidats",
+      "subtitle": "Examinez les locataires potentiels et statuez sur chaque candidature.",
+      "searchLabel": "Rechercher par nom du candidat",
+      "filterLabel": "Filtrer par statut",
+      "columnStatus": "Statut",
+      "openApplication": "Ouvrir la candidature",
+      "createLease": "Créer le bail",
+      "emptyTitle": "Aucun candidat pour l'instant",
+      "emptyDescription": "Les candidatures des locataires potentiels apparaîtront ici.",
+      "signInTitle": "Connectez-vous pour examiner les candidats",
+      "signInDescription": "Voyez qui souhaite louer vos logements, au même endroit.",
+      "hostsOnlyTitle": "Réservé aux hôtes",
+      "hostsOnlyDescription": "Publiez un logement pour commencer à recevoir des candidatures.",
+      "loadError": "Impossible de charger les candidats",
+      "openDocument": "Ouvrir le document {{filename}}",
+      "invalidTitle": "Candidature invalide",
+      "invalidDescription": "Nous n'avons pas trouvé cet identifiant de candidature.",
+      "unavailableTitle": "Candidature indisponible",
+      "unavailableDescription": "Impossible de charger cette candidature.",
+      "notAuthorisedTitle": "Accès non autorisé",
+      "notAuthorisedDescription": "Seul le propriétaire associé à ce logement peut examiner la candidature.",
+      "sectionTenancy": "Location",
+      "submittedLabel": "Envoyée le",
+      "decidedLabel": "Décision le",
+      "noReferences": "Aucune référence fournie.",
+      "sectionDocuments": "Documents",
+      "noDocuments": "Aucun document joint.",
+      "sectionNotes": "Notes",
+      "notesLabel": "Notes pour le candidat (facultatif)",
+      "notesPlaceholder": "Indiquez les prochaines étapes ou la raison de votre décision."
     },
     "field": {
       "moveInDate": "Move-in date",
@@ -2918,8 +3049,8 @@
       "monthlyIncome": "Gross monthly income",
       "leaseTermCustomPlaceholder": "Number of months",
       "leaseTermCustom": "Other",
-      "leaseTerm": "Lease term",
-      "leaseTermMonths": "{{count}} months",
+      "leaseTerm": "Durée du bail",
+      "leaseTermMonths": "{{count}} mois",
       "moveInHelper": "Within the next 6 months."
     },
     "employment": {
@@ -2961,7 +3092,7 @@
       "documentsHelp": "Upload up to {{max}} PDFs or images (10 MB each). Pick a category per file.",
       "documents": "Documents (optional)",
       "referencesHelp": "Add 1 to 3 contacts the landlord can call to vouch for you.",
-      "references": "References",
+      "references": "Références",
       "finances": "Income & employment",
       "timing": "Move-in & lease term"
     },
@@ -3200,7 +3331,8 @@
         "reviewTitle": "Sum up your experience",
         "opinion": "Share your experience (10+ characters)",
         "pros": "Add something you liked",
-        "cons": "Add something to improve"
+        "cons": "Add something to improve",
+        "selectDate": "Sélectionnez une date"
       },
       "currencies": {
         "EUR": "EUR (€)",
@@ -3431,7 +3563,8 @@
       "toastBlocked": "Dates blocked",
       "toastBlockFailed": "Block failed",
       "propertyNotFound": "Property not found",
-      "property": "Property"
+      "property": "Property",
+      "blockDates": "Bloquer des dates"
     },
     "reservations": {
       "title": "Reservations",
@@ -3493,6 +3626,37 @@
       "selectDates": "Select dates",
       "selectGuests": "Select guests",
       "close": "Close"
+    },
+    "guests": {
+      "adults": "Adultes",
+      "adultsHint": "13 ans et plus",
+      "children": "Enfants",
+      "childrenHint": "De 2 à 12 ans",
+      "infants": "Bébés",
+      "infantsHint": "Moins de 2 ans",
+      "decrease": "Diminuer : {{title}}",
+      "increase": "Augmenter : {{title}}",
+      "maxNote": "Ce logement peut accueillir {{count}} voyageurs maximum, bébés non compris.",
+      "count_one": "{{count}} voyageur",
+      "count_other": "{{count}} voyageurs",
+      "infantCount_one": "{{count}} bébé",
+      "infantCount_other": "{{count}} bébés"
+    },
+    "widget": {
+      "requestToBook": "Demander à réserver",
+      "perNight": "nuit",
+      "dates": "Dates",
+      "requestNote": "Aucun montant ne vous sera débité pour le moment. L'hôte dispose de 24 heures pour répondre."
+    },
+    "policy": {
+      "flexible": "Annulation flexible — remboursement intégral à tout moment avant l'arrivée.",
+      "moderate": "Annulation modérée — remboursement intégral jusqu'à 5 jours avant l'arrivée.",
+      "strict": "Annulation stricte — remboursement intégral jusqu'à 7 jours avant l'arrivée.",
+      "superStrict": "Annulation très stricte — remboursement intégral jusqu'à 30 jours avant l'arrivée."
+    },
+    "calendar": {
+      "selectRange": "Sélectionnez l'arrivée et le départ",
+      "apply": "Appliquer"
     }
   },
   "addresses": {
@@ -3581,7 +3745,9 @@
       "availableFrom": "Available From",
       "availableFromPlaceholder": "Available from date",
       "leaseTerm": "Lease Term",
-      "leaseTermPlaceholder": "Lease term"
+      "leaseTermPlaceholder": "Lease term",
+      "openFullscreenMap": "Ouvrir la carte en plein écran",
+      "mapPickerTitle": "Choisir l'emplacement"
     },
     "amenities": {
       "title": "Amenities",

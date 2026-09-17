@@ -122,7 +122,27 @@
   },
   "home": {
     "insights": {
-      "title": "Platform Insights"
+      "title": "Platform Insights",
+      "screenTitle": "Insights",
+      "subtitle": "Marketplace overview for rentals",
+      "loadError": "Failed to load analytics",
+      "kpi": {
+        "properties": "Properties",
+        "cities": "Cities",
+        "saves": "Saves",
+        "uniqueSavers": "Unique Savers",
+        "perCity": "{{value}} / city",
+        "perListing": "{{value}} / listing",
+        "savesEach": "{{value}} saves each"
+      },
+      "averageRent": "Average Rent",
+      "min": "Min",
+      "max": "Max",
+      "priceDistribution": "Price Distribution",
+      "listings": "Listings",
+      "topCities": "Top Cities",
+      "rent": "Rent",
+      "topProperties": "Top Properties"
     },
     "hero": {
       "title": "Find your ethical home",
@@ -1421,35 +1441,35 @@
   },
   "roommates": {
     "rooms": {
-        "filtersTitle": "Filter rooms",
-        "location": "Location",
-        "city": "City",
-        "state": "State / region",
-        "cityPlaceholder": "Enter a city",
-        "statePlaceholder": "Enter a state or region",
-        "anyPrice": "Any",
-        "smokingAllowed": "Smoking allowed",
-        "amenity": {
-          "privateBathroom": "Private bathroom",
-          "walkInCloset": "Walk-in closet"
-        },
-        "sort": {
-          "bestMatch": "Best match",
-          "price": "Price",
-          "newest": "Newest",
-          "name": "Name"
-        },
-        "searchPlaceholder": "Search rooms…",
-        "emptyTitle": "No rooms found",
-        "emptyDescription": "Try adjusting your filters to see more rooms",
-        "capacity_one": "Up to {{count}} guest",
-        "capacity_other": "Up to {{count}} guests",
-        "available": "Available",
-        "unavailable": "Unavailable",
-        "match": "{{score}}% match",
-        "selectedCount": "{{count}} selected",
-        "roomType": "Room"
+      "filtersTitle": "Filter rooms",
+      "location": "Location",
+      "city": "City",
+      "state": "State / region",
+      "cityPlaceholder": "Enter a city",
+      "statePlaceholder": "Enter a state or region",
+      "anyPrice": "Any",
+      "smokingAllowed": "Smoking allowed",
+      "amenity": {
+        "privateBathroom": "Private bathroom",
+        "walkInCloset": "Walk-in closet"
       },
+      "sort": {
+        "bestMatch": "Best match",
+        "price": "Price",
+        "newest": "Newest",
+        "name": "Name"
+      },
+      "searchPlaceholder": "Search rooms…",
+      "emptyTitle": "No rooms found",
+      "emptyDescription": "Try adjusting your filters to see more rooms",
+      "capacity_one": "Up to {{count}} guest",
+      "capacity_other": "Up to {{count}} guests",
+      "available": "Available",
+      "unavailable": "Unavailable",
+      "match": "{{score}}% match",
+      "selectedCount": "{{count}} selected",
+      "roomType": "Room"
+    },
     "title": "Roommates",
     "find": "Find Roommates",
     "myMatches": "My Matches",
@@ -2977,7 +2997,39 @@
           "confirm": "Reject",
           "successToast": "Application rejected"
         }
-      }
+      },
+      "inboxTitle": "Applicant inbox",
+      "inboxEyebrow": "Inbox",
+      "title": "Applicants",
+      "subtitle": "Review prospective tenants and decide on each application.",
+      "searchLabel": "Search by applicant name",
+      "filterLabel": "Filter by status",
+      "columnStatus": "Status",
+      "openApplication": "Open application",
+      "createLease": "Create lease",
+      "emptyTitle": "No applicants yet",
+      "emptyDescription": "Applications from prospective tenants will show up here.",
+      "signInTitle": "Sign in to review applicants",
+      "signInDescription": "See who wants to rent your places, all in one place.",
+      "hostsOnlyTitle": "Hosts only",
+      "hostsOnlyDescription": "List a property to start receiving tenant applications.",
+      "loadError": "Couldn't load applicants",
+      "openDocument": "Open document {{filename}}",
+      "invalidTitle": "Invalid application",
+      "invalidDescription": "We couldn't find this application id.",
+      "unavailableTitle": "Application unavailable",
+      "unavailableDescription": "This application could not be loaded.",
+      "notAuthorisedTitle": "Not authorised",
+      "notAuthorisedDescription": "Only the landlord assigned to this property can review the application.",
+      "sectionTenancy": "Tenancy",
+      "submittedLabel": "Submitted",
+      "decidedLabel": "Decided",
+      "noReferences": "No references provided.",
+      "sectionDocuments": "Documents",
+      "noDocuments": "No documents attached.",
+      "sectionNotes": "Notes",
+      "notesLabel": "Notes to applicant (optional)",
+      "notesPlaceholder": "Share next steps or a reason for your decision."
     },
     "field": {
       "moveInDate": "Move-in date",

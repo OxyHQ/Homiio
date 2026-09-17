@@ -137,10 +137,11 @@ const openDocument = (url: string) => {
 
 const getApplicantDisplayName = (
   profile: Profile | null | undefined,
+  fallback: string,
 ): string => {
-  if (!profile) return 'Applicant';
+  if (!profile) return fallback;
   const bio = profile.personalProfile?.personalInfo?.bio;
-  return bio?.trim() || profile.oxyUserId || 'Applicant';
+  return bio?.trim() || profile.oxyUserId || fallback;
 };
 
 /**
@@ -172,7 +173,7 @@ const DocumentRow: React.FC<DocumentRowProps> = ({ document }) => {
     <Item
       onPress={() => openDocument(document.url)}
       accessibilityRole="link"
-      accessibilityLabel={`Open document ${document.filename}`}
+      accessibilityLabel={t('applications.landlord.openDocument', { filename: document.filename })}
       leading={
         <View style={[styles.documentIcon, { backgroundColor: theme.colors.backgroundSecondary }]}>
           <DocIcon type={document.type} size={18} fill={theme.colors.icon} />
@@ -300,15 +301,15 @@ export default function LandlordApplicationDetailScreen() {
         <Header
           options={{
             showBackButton: true,
-            title: 'Applicant',
+            title: t('applications.card.applicantFallback'),
           }}
         />
         <ErrorState
           icon={RiErrorWarningFill}
-          title="Invalid application"
-          description="We couldn't find this application id."
+          title={t('applications.landlord.invalidTitle')}
+          description={t('applications.landlord.invalidDescription')}
           onRetry={() => router.back()}
-          retryLabel="Go back"
+          retryLabel={t('goBack')}
         />
       </View>
     );
@@ -320,7 +321,7 @@ export default function LandlordApplicationDetailScreen() {
         <Header
           options={{
             showBackButton: true,
-            title: 'Applicant',
+            title: t('applications.card.applicantFallback'),
           }}
         />
         <PageScrollView>
@@ -336,15 +337,15 @@ export default function LandlordApplicationDetailScreen() {
         <Header
           options={{
             showBackButton: true,
-            title: 'Applicant',
+            title: t('applications.card.applicantFallback'),
           }}
         />
         <ErrorState
           icon={RiAlertLine}
-          title="Application unavailable"
+          title={t('applications.landlord.unavailableTitle')}
           description={
             applicationQuery.error?.message ??
-            'This application could not be loaded.'
+            t('applications.landlord.unavailableDescription')
           }
           onRetry={() => applicationQuery.refetch()}
         />
@@ -358,24 +359,27 @@ export default function LandlordApplicationDetailScreen() {
         <Header
           options={{
             showBackButton: true,
-            title: 'Applicant',
+            title: t('applications.card.applicantFallback'),
           }}
         />
         <ErrorState
           icon={RiLockLine}
-          title="Not authorised"
-          description="Only the landlord assigned to this property can review the application."
+          title={t('applications.landlord.notAuthorisedTitle')}
+          description={t('applications.landlord.notAuthorisedDescription')}
           onRetry={() => router.back()}
-          retryLabel="Go back"
+          retryLabel={t('goBack')}
         />
       </View>
     );
   }
 
   const applicant = applicantQuery.data ?? null;
-  const applicantName = getApplicantDisplayName(applicant);
+  const applicantName = getApplicantDisplayName(
+    applicant,
+    t('applications.card.applicantFallback'),
+  );
   const applicantAvatar = getApplicantAvatarFileId(applicant, getAvatarFileId);
-  const propertyTitle = property ? getPropertyTitle(property) : 'Property';
+  const propertyTitle = property ? getPropertyTitle(property) : t('applications.card.propertyFallback');
   const imageSource = property ? getPropertyImageSource(property) : null;
 
   const canMoveToReviewing =
@@ -391,7 +395,7 @@ export default function LandlordApplicationDetailScreen() {
       <Header
         options={{
           showBackButton: true,
-          title: 'Applicant',
+          title: t('applications.card.applicantFallback'),
         }}
       />
       <SafeAreaView edges={['bottom']} style={styles.safeArea}>
@@ -407,7 +411,8 @@ export default function LandlordApplicationDetailScreen() {
               <H2 style={styles.applicantName}>{applicantName}</H2>
               <BloomText style={[styles.subtitle, secondaryText]}>
                 {t(`profile.edit.options.employmentStatus.${application.employmentStatus}`)} ·{' '}
-                {formatMoney(application.monthlyIncome, APPLICATION_INCOME_CURRENCY, locale, INCOME_FORMAT)} / mo
+                {formatMoney(application.monthlyIncome, APPLICATION_INCOME_CURRENCY, locale, INCOME_FORMAT)}{' '}
+                {t('applications.card.perMonth')}
               </BloomText>
             </View>
             <ApplicationStatusBadge status={application.status} />
@@ -426,7 +431,7 @@ export default function LandlordApplicationDetailScreen() {
           </View>
 
           <Card variant="outlined" radius="radius-16" style={styles.card}>
-            <SectionEyebrow>Property</SectionEyebrow>
+            <SectionEyebrow>{t('applications.card.propertyFallback')}</SectionEyebrow>
             <H3 style={styles.cardHeading}>{propertyTitle}</H3>
             {property?.address ? (
               <BloomText style={[styles.subtitle, secondaryText]}>
@@ -438,20 +443,20 @@ export default function LandlordApplicationDetailScreen() {
           </Card>
 
           <Card variant="outlined" radius="radius-16" style={styles.card}>
-            <SectionEyebrow>Tenancy</SectionEyebrow>
+            <SectionEyebrow>{t('applications.landlord.sectionTenancy')}</SectionEyebrow>
             <View style={styles.detailList}>
-              <DetailRow label="Move-in" value={formatDate(application.moveInDate)} />
+              <DetailRow label={t('applications.card.moveIn')} value={formatDate(application.moveInDate)} />
               <DetailRow
-                label="Lease term"
-                value={`${application.leaseTermMonths} months`}
+                label={t('applications.field.leaseTerm')}
+                value={t('applications.field.leaseTermMonths', { count: application.leaseTermMonths })}
               />
               <DetailRow
-                label="Submitted"
+                label={t('applications.landlord.submittedLabel')}
                 value={formatDate(application.submittedAt)}
               />
               {application.decidedAt ? (
                 <DetailRow
-                  label="Decided"
+                  label={t('applications.landlord.decidedLabel')}
                   value={formatDate(application.decidedAt)}
                 />
               ) : null}
@@ -459,10 +464,10 @@ export default function LandlordApplicationDetailScreen() {
           </Card>
 
           <Card variant="outlined" radius="radius-16" style={styles.card}>
-            <SectionEyebrow>References</SectionEyebrow>
+            <SectionEyebrow>{t('applications.section.references')}</SectionEyebrow>
             {application.referenceContacts.length === 0 ? (
               <BloomText style={[styles.emptyHint, secondaryText]}>
-                No references provided.
+                {t('applications.landlord.noReferences')}
               </BloomText>
             ) : (
               <View style={styles.referenceList}>
@@ -488,10 +493,10 @@ export default function LandlordApplicationDetailScreen() {
           </Card>
 
           <Card variant="outlined" radius="radius-16" style={styles.card}>
-            <SectionEyebrow>Documents</SectionEyebrow>
+            <SectionEyebrow>{t('applications.landlord.sectionDocuments')}</SectionEyebrow>
             {application.documents.length === 0 ? (
               <BloomText style={[styles.emptyHint, secondaryText]}>
-                No documents attached.
+                {t('applications.landlord.noDocuments')}
               </BloomText>
             ) : (
               <View style={styles.documentList}>
@@ -504,7 +509,7 @@ export default function LandlordApplicationDetailScreen() {
 
           {application.notes ? (
             <Card variant="outlined" radius="radius-16" style={styles.card}>
-              <SectionEyebrow>Notes</SectionEyebrow>
+              <SectionEyebrow>{t('applications.landlord.sectionNotes')}</SectionEyebrow>
               <BloomText style={styles.notesBody}>{application.notes}</BloomText>
             </Card>
           ) : null}
@@ -518,7 +523,7 @@ export default function LandlordApplicationDetailScreen() {
                 onPress={handleCreateLease}
                 style={styles.actionButton}
               >
-                Create lease
+                {t('applications.landlord.createLease')}
               </Button>
             </View>
           ) : canDecide ? (
@@ -531,7 +536,7 @@ export default function LandlordApplicationDetailScreen() {
                 disabled={!canMoveToReviewing || updateMutation.isPending}
                 style={styles.actionButton}
               >
-                Mark as reviewing
+                {t('applications.landlord.review.reviewing.confirm')}
               </Button>
               <Button
                 variant="primary"
@@ -541,7 +546,7 @@ export default function LandlordApplicationDetailScreen() {
                 disabled={updateMutation.isPending}
                 style={styles.actionButton}
               >
-                Approve
+                {t('applications.landlord.review.approve.confirm')}
               </Button>
               <Button
                 variant="ghost"
@@ -551,7 +556,7 @@ export default function LandlordApplicationDetailScreen() {
                 disabled={updateMutation.isPending}
                 style={styles.actionButton}
               >
-                Reject
+                {t('applications.landlord.review.reject.confirm')}
               </Button>
             </View>
           ) : null}
@@ -584,14 +589,14 @@ export default function LandlordApplicationDetailScreen() {
           ]}
         >
           <Textarea
-            label="Notes to applicant (optional)"
+            label={t('applications.landlord.notesLabel')}
             value={actionNotes}
             onChangeText={setActionNotes}
             rows={4}
             autoResize
             maxLength={4000}
             disabled={updateMutation.isPending}
-            placeholder="Share next steps or a reason for your decision."
+            placeholder={t('applications.landlord.notesPlaceholder')}
           />
         </Dialog>
       </SafeAreaView>

@@ -109,7 +109,27 @@
   },
   "home": {
     "insights": {
-      "title": "Información de la Plataforma"
+      "title": "Información de la Plataforma",
+      "screenTitle": "Estadísticas",
+      "subtitle": "Panorama del mercado de alquiler",
+      "loadError": "No se pudieron cargar las estadísticas",
+      "kpi": {
+        "properties": "Propiedades",
+        "cities": "Ciudades",
+        "saves": "Guardados",
+        "uniqueSavers": "Usuarios que guardan",
+        "perCity": "{{value}} / ciudad",
+        "perListing": "{{value}} / anuncio",
+        "savesEach": "{{value}} guardados cada uno"
+      },
+      "averageRent": "Alquiler medio",
+      "min": "Mín.",
+      "max": "Máx.",
+      "priceDistribution": "Distribución de precios",
+      "listings": "Anuncios",
+      "topCities": "Ciudades principales",
+      "rent": "Alquiler",
+      "topProperties": "Propiedades destacadas"
     },
     "hero": {
       "title": "Encuentra tu hogar ético",
@@ -1754,35 +1774,35 @@
   },
   "roommates": {
     "rooms": {
-        "filtersTitle": "Filtrar habitaciones",
-        "location": "Ubicación",
-        "city": "Ciudad",
-        "state": "Provincia / región",
-        "cityPlaceholder": "Escribe una ciudad",
-        "statePlaceholder": "Escribe una provincia o región",
-        "anyPrice": "Cualquiera",
-        "smokingAllowed": "Se permite fumar",
-        "amenity": {
-          "privateBathroom": "Baño privado",
-          "walkInCloset": "Vestidor"
-        },
-        "sort": {
-          "bestMatch": "Mejor coincidencia",
-          "price": "Precio",
-          "newest": "Más recientes",
-          "name": "Nombre"
-        },
-        "searchPlaceholder": "Buscar habitaciones…",
-        "emptyTitle": "No se encontraron habitaciones",
-        "emptyDescription": "Ajusta los filtros para ver más habitaciones",
-        "capacity_one": "Hasta {{count}} huésped",
-        "capacity_other": "Hasta {{count}} huéspedes",
-        "available": "Disponible",
-        "unavailable": "No disponible",
-        "match": "{{score}} % de coincidencia",
-        "selectedCount": "{{count}} seleccionados",
-        "roomType": "Habitación"
+      "filtersTitle": "Filtrar habitaciones",
+      "location": "Ubicación",
+      "city": "Ciudad",
+      "state": "Provincia / región",
+      "cityPlaceholder": "Escribe una ciudad",
+      "statePlaceholder": "Escribe una provincia o región",
+      "anyPrice": "Cualquiera",
+      "smokingAllowed": "Se permite fumar",
+      "amenity": {
+        "privateBathroom": "Baño privado",
+        "walkInCloset": "Vestidor"
       },
+      "sort": {
+        "bestMatch": "Mejor coincidencia",
+        "price": "Precio",
+        "newest": "Más recientes",
+        "name": "Nombre"
+      },
+      "searchPlaceholder": "Buscar habitaciones…",
+      "emptyTitle": "No se encontraron habitaciones",
+      "emptyDescription": "Ajusta los filtros para ver más habitaciones",
+      "capacity_one": "Hasta {{count}} huésped",
+      "capacity_other": "Hasta {{count}} huéspedes",
+      "available": "Disponible",
+      "unavailable": "No disponible",
+      "match": "{{score}} % de coincidencia",
+      "selectedCount": "{{count}} seleccionados",
+      "roomType": "Habitación"
+    },
     "title": "Compañeros de Cuarto",
     "find": "Encontrar Compañeros de Cuarto",
     "myMatches": "Mis Coincidencias",
@@ -1795,10 +1815,10 @@
       "viewProfile": "Ver Perfil"
     },
     "tabs": {
-      "discover": "Descubrir",
+      "discover": "Explorar",
       "requests": "Solicitudes",
-      "matches": "Coincidencias",
-      "rooms": "Habitaciones"
+      "matches": "Contactos",
+      "rooms": "Cuartos"
     },
     "alert": {
       "requestSent": "¡Solicitud de compañero de piso enviada correctamente!",
@@ -3007,7 +3027,39 @@
           "successToast": "Solicitud rechazada"
         }
       },
-      "toastUpdateFailed": "No se pudo actualizar la solicitud"
+      "toastUpdateFailed": "No se pudo actualizar la solicitud",
+      "inboxTitle": "Bandeja de solicitantes",
+      "inboxEyebrow": "Bandeja",
+      "title": "Solicitantes",
+      "subtitle": "Revisa a los posibles inquilinos y decide sobre cada solicitud.",
+      "searchLabel": "Buscar por nombre del solicitante",
+      "filterLabel": "Filtrar por estado",
+      "columnStatus": "Estado",
+      "openApplication": "Abrir solicitud",
+      "createLease": "Crear contrato",
+      "emptyTitle": "Aún no hay solicitantes",
+      "emptyDescription": "Las solicitudes de posibles inquilinos aparecerán aquí.",
+      "signInTitle": "Inicia sesión para revisar solicitantes",
+      "signInDescription": "Mira quién quiere alquilar tus viviendas, todo en un solo lugar.",
+      "hostsOnlyTitle": "Solo para anfitriones",
+      "hostsOnlyDescription": "Publica una propiedad para empezar a recibir solicitudes de inquilinos.",
+      "loadError": "No se pudieron cargar los solicitantes",
+      "openDocument": "Abrir documento {{filename}}",
+      "invalidTitle": "Solicitud no válida",
+      "invalidDescription": "No encontramos el identificador de esta solicitud.",
+      "unavailableTitle": "Solicitud no disponible",
+      "unavailableDescription": "No se pudo cargar esta solicitud.",
+      "notAuthorisedTitle": "Sin autorización",
+      "notAuthorisedDescription": "Solo el propietario asignado a esta propiedad puede revisar la solicitud.",
+      "sectionTenancy": "Arrendamiento",
+      "submittedLabel": "Enviada",
+      "decidedLabel": "Resuelta",
+      "noReferences": "No se han indicado referencias.",
+      "sectionDocuments": "Documentos",
+      "noDocuments": "No hay documentos adjuntos.",
+      "sectionNotes": "Notas",
+      "notesLabel": "Notas para el solicitante (opcional)",
+      "notesPlaceholder": "Indica los próximos pasos o el motivo de tu decisión."
     },
     "field": {
       "moveInDate": "Move-in date",
@@ -3027,9 +3079,9 @@
       "monthlyIncome": "Gross monthly income",
       "leaseTermCustomPlaceholder": "Number of months",
       "leaseTermCustom": "Other",
-      "leaseTerm": "Lease term",
+      "leaseTerm": "Duración del contrato",
       "moveInHelper": "Within the next 6 months.",
-      "leaseTermMonths": "{{count}} months"
+      "leaseTermMonths": "{{count}} meses"
     },
     "cta": {
       "apply": "Apply to rent",
@@ -3050,7 +3102,7 @@
       "documentsHelp": "Upload up to {{max}} PDFs or images (10 MB each). Pick a category per file.",
       "documents": "Documents (optional)",
       "referencesHelp": "Add 1 to 3 contacts the landlord can call to vouch for you.",
-      "references": "References",
+      "references": "Referencias",
       "finances": "Income & employment",
       "timing": "Move-in & lease term"
     },

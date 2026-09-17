@@ -122,7 +122,27 @@
   },
   "home": {
     "insights": {
-      "title": "प्लेटफ़ॉर्म के आँकड़े"
+      "title": "प्लेटफ़ॉर्म के आँकड़े",
+      "screenTitle": "इनसाइट्स",
+      "subtitle": "किराये के बाज़ार का अवलोकन",
+      "loadError": "आँकड़े लोड नहीं हो सके",
+      "kpi": {
+        "properties": "प्रॉपर्टी",
+        "cities": "शहर",
+        "saves": "सेव",
+        "uniqueSavers": "अद्वितीय उपयोगकर्ता",
+        "perCity": "{{value}} / शहर",
+        "perListing": "{{value}} / लिस्टिंग",
+        "savesEach": "प्रति उपयोगकर्ता {{value}} सेव"
+      },
+      "averageRent": "औसत किराया",
+      "min": "न्यूनतम",
+      "max": "अधिकतम",
+      "priceDistribution": "कीमतों का वितरण",
+      "listings": "लिस्टिंग",
+      "topCities": "शीर्ष शहर",
+      "rent": "किराया",
+      "topProperties": "शीर्ष प्रॉपर्टी"
     },
     "hero": {
       "title": "अपना ईमानदार घर खोजें",
@@ -1323,7 +1343,10 @@
       "emptyAllDescription": "You don't have any rental contracts yet",
       "emptyFilteredDescription": "No {{filter}} contracts to show",
       "newContract": "New contract",
-      "createNew": "Create new contract"
+      "createNew": "Create new contract",
+      "columnStatus": "स्थिति",
+      "filterLabel": "स्थिति के अनुसार फ़िल्टर करें",
+      "searchLabel": "अनुबंध खोजें"
     },
     "card": {
       "start": "Start",
@@ -1417,6 +1440,36 @@
     }
   },
   "roommates": {
+    "rooms": {
+      "filtersTitle": "कमरे फ़िल्टर करें",
+      "location": "स्थान",
+      "city": "शहर",
+      "state": "राज्य / क्षेत्र",
+      "cityPlaceholder": "शहर दर्ज करें",
+      "statePlaceholder": "राज्य या क्षेत्र दर्ज करें",
+      "anyPrice": "कोई भी",
+      "smokingAllowed": "धूम्रपान की अनुमति है",
+      "amenity": {
+        "privateBathroom": "निजी बाथरूम",
+        "walkInCloset": "वॉक-इन क्लोज़ेट"
+      },
+      "sort": {
+        "bestMatch": "सबसे अच्छा मेल",
+        "price": "कीमत",
+        "newest": "सबसे नए",
+        "name": "नाम"
+      },
+      "searchPlaceholder": "कमरे खोजें…",
+      "emptyTitle": "कोई कमरा नहीं मिला",
+      "emptyDescription": "और कमरे देखने के लिए अपने फ़िल्टर बदलकर देखें",
+      "capacity_one": "अधिकतम {{count}} मेहमान",
+      "capacity_other": "अधिकतम {{count}} मेहमान",
+      "available": "उपलब्ध",
+      "unavailable": "उपलब्ध नहीं",
+      "match": "{{score}}% मेल",
+      "selectedCount": "{{count}} चुने गए",
+      "roomType": "कमरा"
+    },
     "title": "Roommates",
     "find": "Find Roommates",
     "myMatches": "My Matches",
@@ -1571,7 +1624,11 @@
       "pending": "Pending",
       "accepted": "Accepted",
       "declined": "Declined",
-      "responsePlaceholder": "Add an optional message..."
+      "responsePlaceholder": "Add an optional message...",
+      "expired": "समाप्त",
+      "yourMessage": "आपका संदेश",
+      "responseLabel": "जवाब जोड़ें (वैकल्पिक)",
+      "waiting": "जवाब की प्रतीक्षा है…"
     },
     "relationship": {
       "title": "Roommate Relationship",
@@ -1944,6 +2001,12 @@
     "chat": {
       "placeholder": "Ask Sindi about your tenant rights...",
       "you": "You",
+      "field": "संदेश",
+      "attach": "फ़ाइल संलग्न करें",
+      "send": "संदेश भेजें",
+      "stop": "जवाब बनाना रोकें",
+      "messageCount_one": "{{count}} संदेश",
+      "messageCount_other": "{{count}} संदेश",
       "disclaimer": "Sindi advocates for tenant rights and housing justice. For legal action, consult a qualified attorney. Connect with local tenant organizations for community support."
     },
     "errors": {
@@ -2127,8 +2190,42 @@
     "searchPlaceholder": "Search saved properties",
     "header": "Saved",
     "notes": {
-      "title": "Notes"
-    }
+      "title": "Notes",
+      "placeholder": "इस प्रॉपर्टी के बारे में नोट जोड़ें...",
+      "save": "नोट सहेजें",
+      "cancel": "रद्द करें",
+      "filters": {
+        "active": "सक्रिय",
+        "pinned": "पिन किए गए",
+        "archived": "संग्रहीत"
+      },
+      "emptyTitle": "अभी तक कोई नोट नहीं",
+      "emptyDescription": "सहेजी गई प्रॉपर्टी में आप जो नोट जोड़ेंगे, वे यहाँ दिखेंगे।",
+      "deleteTitle": "यह नोट हटाएँ?",
+      "deleteMessage": "इसे पूर्ववत नहीं किया जा सकता।",
+      "saved": "नोट सहेजा गया",
+      "deleted": "नोट हटाया गया",
+      "pin": "नोट पिन करें",
+      "unpin": "नोट अनपिन करें",
+      "archive": "नोट संग्रहीत करें",
+      "unarchive": "नोट को संग्रह से निकालें"
+    },
+    "actions": {
+      "addNotes": "नोट जोड़ें",
+      "editNotes": "नोट संपादित करें",
+      "unsave": "सहेजे गए से हटाएँ",
+      "viewProperty": "प्रॉपर्टी देखें"
+    },
+    "errors": {
+      "unsaveFailed": "सहेजे गए से हटाया नहीं जा सका",
+      "updateNotesFailed": "नोट अपडेट नहीं किए जा सके",
+      "loadFailed": "सहेजी गई प्रॉपर्टी लोड नहीं हो सकीं"
+    },
+    "filters": {
+      "thisWeek": "इस सप्ताह",
+      "withNotes": "नोट वाले"
+    },
+    "openFolder": "फ़ोल्डर {{name}} खोलें"
   },
   "imageUpload": {
     "permissionTitle": "Permission Required",
@@ -2148,7 +2245,8 @@
     "primary": "Primary",
     "addMore": "Add More",
     "helperText": "Upload high-quality images of your property. Include photos of all rooms, exterior, and any special features.",
-    "helperPrimaryNote": " The first image will be set as the primary image."
+    "helperPrimaryNote": " The first image will be set as the primary image.",
+    "setPrimary": "मुख्य छवि के रूप में सेट करें"
   },
   "property": {
     "loading": "Loading property details...",
@@ -2250,7 +2348,8 @@
       "distributionLabel": "Price distribution of nearby homes",
       "lowDataNote": "Not enough nearby listings to compare yet.",
       "lowSampleCaveat_one": "Based on just {{count}} nearby listing — treat as a rough guide.",
-      "lowSampleCaveat_other": "Based on only {{count}} nearby listings — treat as a rough guide."
+      "lowSampleCaveat_other": "Based on only {{count}} nearby listings — treat as a rough guide.",
+      "homesMetric": "घर"
     },
     "nearbyServices": {
       "title": "What's nearby",
@@ -2898,7 +2997,39 @@
           "confirm": "Reject",
           "successToast": "Application rejected"
         }
-      }
+      },
+      "inboxTitle": "आवेदक इनबॉक्स",
+      "inboxEyebrow": "इनबॉक्स",
+      "title": "आवेदक",
+      "subtitle": "संभावित किरायेदारों की समीक्षा करें और हर आवेदन पर निर्णय लें।",
+      "searchLabel": "आवेदक के नाम से खोजें",
+      "filterLabel": "स्थिति के अनुसार फ़िल्टर करें",
+      "columnStatus": "स्थिति",
+      "openApplication": "आवेदन खोलें",
+      "createLease": "लीज़ बनाएँ",
+      "emptyTitle": "अभी तक कोई आवेदक नहीं",
+      "emptyDescription": "संभावित किरायेदारों के आवेदन यहाँ दिखेंगे।",
+      "signInTitle": "आवेदकों की समीक्षा के लिए साइन इन करें",
+      "signInDescription": "देखें कि कौन आपकी जगह किराये पर लेना चाहता है, सब एक ही जगह।",
+      "hostsOnlyTitle": "केवल होस्ट के लिए",
+      "hostsOnlyDescription": "किरायेदारों के आवेदन पाने के लिए कोई प्रॉपर्टी सूचीबद्ध करें।",
+      "loadError": "आवेदक लोड नहीं हो सके",
+      "openDocument": "दस्तावेज़ {{filename}} खोलें",
+      "invalidTitle": "अमान्य आवेदन",
+      "invalidDescription": "हमें इस आवेदन की आईडी नहीं मिली।",
+      "unavailableTitle": "आवेदन उपलब्ध नहीं है",
+      "unavailableDescription": "यह आवेदन लोड नहीं हो सका।",
+      "notAuthorisedTitle": "अनुमति नहीं है",
+      "notAuthorisedDescription": "केवल इस प्रॉपर्टी का निर्धारित मकान मालिक ही आवेदन की समीक्षा कर सकता है।",
+      "sectionTenancy": "किरायेदारी",
+      "submittedLabel": "जमा किया गया",
+      "decidedLabel": "निर्णय लिया गया",
+      "noReferences": "कोई संदर्भ नहीं दिया गया।",
+      "sectionDocuments": "दस्तावेज़",
+      "noDocuments": "कोई दस्तावेज़ संलग्न नहीं है।",
+      "sectionNotes": "नोट",
+      "notesLabel": "आवेदक के लिए नोट (वैकल्पिक)",
+      "notesPlaceholder": "अगले कदम या अपने निर्णय का कारण बताएँ।"
     },
     "field": {
       "moveInDate": "Move-in date",
@@ -2918,8 +3049,8 @@
       "monthlyIncome": "Gross monthly income",
       "leaseTermCustomPlaceholder": "Number of months",
       "leaseTermCustom": "Other",
-      "leaseTerm": "Lease term",
-      "leaseTermMonths": "{{count}} months",
+      "leaseTerm": "लीज़ अवधि",
+      "leaseTermMonths": "{{count}} महीने",
       "moveInHelper": "Within the next 6 months."
     },
     "employment": {
@@ -2961,7 +3092,7 @@
       "documentsHelp": "Upload up to {{max}} PDFs or images (10 MB each). Pick a category per file.",
       "documents": "Documents (optional)",
       "referencesHelp": "Add 1 to 3 contacts the landlord can call to vouch for you.",
-      "references": "References",
+      "references": "संदर्भ",
       "finances": "Income & employment",
       "timing": "Move-in & lease term"
     },
@@ -3200,7 +3331,8 @@
         "reviewTitle": "Sum up your experience",
         "opinion": "Share your experience (10+ characters)",
         "pros": "Add something you liked",
-        "cons": "Add something to improve"
+        "cons": "Add something to improve",
+        "selectDate": "तारीख चुनें"
       },
       "currencies": {
         "EUR": "EUR (€)",
@@ -3431,7 +3563,8 @@
       "toastBlocked": "Dates blocked",
       "toastBlockFailed": "Block failed",
       "propertyNotFound": "Property not found",
-      "property": "Property"
+      "property": "Property",
+      "blockDates": "तारीखें ब्लॉक करें"
     },
     "reservations": {
       "title": "Reservations",
@@ -3493,6 +3626,37 @@
       "selectDates": "Select dates",
       "selectGuests": "Select guests",
       "close": "Close"
+    },
+    "guests": {
+      "adults": "वयस्क",
+      "adultsHint": "13 वर्ष या उससे अधिक",
+      "children": "बच्चे",
+      "childrenHint": "2–12 वर्ष",
+      "infants": "शिशु",
+      "infantsHint": "2 वर्ष से कम",
+      "decrease": "{{title}} घटाएँ",
+      "increase": "{{title}} बढ़ाएँ",
+      "maxNote": "इस जगह पर अधिकतम {{count}} मेहमान ठहर सकते हैं, शिशुओं को छोड़कर।",
+      "count_one": "{{count}} मेहमान",
+      "count_other": "{{count}} मेहमान",
+      "infantCount_one": "{{count}} शिशु",
+      "infantCount_other": "{{count}} शिशु"
+    },
+    "widget": {
+      "requestToBook": "बुकिंग का अनुरोध करें",
+      "perNight": "रात",
+      "dates": "तारीखें",
+      "requestNote": "अभी आपसे कोई शुल्क नहीं लिया जाएगा। होस्ट के पास जवाब देने के लिए 24 घंटे हैं।"
+    },
+    "policy": {
+      "flexible": "लचीला रद्दीकरण — चेक-इन से पहले कभी भी पूरा रिफ़ंड।",
+      "moderate": "मध्यम रद्दीकरण — चेक-इन से 5 दिन पहले तक पूरा रिफ़ंड।",
+      "strict": "सख्त रद्दीकरण — चेक-इन से 7 दिन पहले तक पूरा रिफ़ंड।",
+      "superStrict": "अत्यधिक सख्त रद्दीकरण — चेक-इन से 30 दिन पहले तक पूरा रिफ़ंड।"
+    },
+    "calendar": {
+      "selectRange": "चेक-इन और चेक-आउट चुनें",
+      "apply": "लागू करें"
     }
   },
   "addresses": {
@@ -3581,7 +3745,9 @@
       "availableFrom": "Available From",
       "availableFromPlaceholder": "Available from date",
       "leaseTerm": "Lease Term",
-      "leaseTermPlaceholder": "Lease term"
+      "leaseTermPlaceholder": "Lease term",
+      "openFullscreenMap": "फ़ुल-स्क्रीन मैप खोलें",
+      "mapPickerTitle": "स्थान चुनें"
     },
     "amenities": {
       "title": "Amenities",

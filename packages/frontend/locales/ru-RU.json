@@ -122,7 +122,27 @@
   },
   "home": {
     "insights": {
-      "title": "Данные платформы"
+      "title": "Данные платформы",
+      "screenTitle": "Аналитика",
+      "subtitle": "Обзор рынка аренды",
+      "loadError": "Не удалось загрузить аналитику",
+      "kpi": {
+        "properties": "Объекты",
+        "cities": "Города",
+        "saves": "Сохранения",
+        "uniqueSavers": "Уникальные пользователи",
+        "perCity": "{{value}} / город",
+        "perListing": "{{value}} / объявление",
+        "savesEach": "{{value}} сохранений на человека"
+      },
+      "averageRent": "Средняя аренда",
+      "min": "Мин.",
+      "max": "Макс.",
+      "priceDistribution": "Распределение цен",
+      "listings": "Объявления",
+      "topCities": "Популярные города",
+      "rent": "Аренда",
+      "topProperties": "Популярные объекты"
     },
     "hero": {
       "title": "Найдите своё этичное жильё",
@@ -1323,7 +1343,10 @@
       "emptyAllDescription": "You don't have any rental contracts yet",
       "emptyFilteredDescription": "No {{filter}} contracts to show",
       "newContract": "New contract",
-      "createNew": "Create new contract"
+      "createNew": "Create new contract",
+      "columnStatus": "Статус",
+      "filterLabel": "Фильтр по статусу",
+      "searchLabel": "Поиск договоров"
     },
     "card": {
       "start": "Start",
@@ -1417,6 +1440,38 @@
     }
   },
   "roommates": {
+    "rooms": {
+      "filtersTitle": "Фильтр комнат",
+      "location": "Местоположение",
+      "city": "Город",
+      "state": "Регион / область",
+      "cityPlaceholder": "Введите город",
+      "statePlaceholder": "Введите регион или область",
+      "anyPrice": "Любая",
+      "smokingAllowed": "Можно курить",
+      "amenity": {
+        "privateBathroom": "Отдельная ванная",
+        "walkInCloset": "Гардеробная"
+      },
+      "sort": {
+        "bestMatch": "Лучшее совпадение",
+        "price": "Цена",
+        "newest": "Сначала новые",
+        "name": "Название"
+      },
+      "searchPlaceholder": "Поиск комнат…",
+      "emptyTitle": "Комнаты не найдены",
+      "emptyDescription": "Измените фильтры, чтобы увидеть больше комнат",
+      "capacity_one": "До {{count}} гостя",
+      "capacity_few": "До {{count}} гостей",
+      "capacity_many": "До {{count}} гостей",
+      "capacity_other": "До {{count}} гостя",
+      "available": "Доступна",
+      "unavailable": "Недоступна",
+      "match": "Совпадение {{score}}%",
+      "selectedCount": "Выбрано: {{count}}",
+      "roomType": "Комната"
+    },
     "title": "Roommates",
     "find": "Find Roommates",
     "myMatches": "My Matches",
@@ -1571,7 +1626,11 @@
       "pending": "Pending",
       "accepted": "Accepted",
       "declined": "Declined",
-      "responsePlaceholder": "Add an optional message..."
+      "responsePlaceholder": "Add an optional message...",
+      "expired": "Истёк срок",
+      "yourMessage": "Ваше сообщение",
+      "responseLabel": "Добавьте ответ (необязательно)",
+      "waiting": "Ожидание ответа…"
     },
     "relationship": {
       "title": "Roommate Relationship",
@@ -1944,6 +2003,14 @@
     "chat": {
       "placeholder": "Ask Sindi about your tenant rights...",
       "you": "You",
+      "field": "Сообщение",
+      "attach": "Прикрепить файл",
+      "send": "Отправить сообщение",
+      "stop": "Остановить генерацию",
+      "messageCount_one": "{{count}} сообщение",
+      "messageCount_few": "{{count}} сообщения",
+      "messageCount_many": "{{count}} сообщений",
+      "messageCount_other": "{{count}} сообщения",
       "disclaimer": "Sindi advocates for tenant rights and housing justice. For legal action, consult a qualified attorney. Connect with local tenant organizations for community support."
     },
     "errors": {
@@ -2127,8 +2194,42 @@
     "searchPlaceholder": "Search saved properties",
     "header": "Saved",
     "notes": {
-      "title": "Notes"
-    }
+      "title": "Notes",
+      "placeholder": "Добавьте заметки об этом объекте...",
+      "save": "Сохранить заметки",
+      "cancel": "Отмена",
+      "filters": {
+        "active": "Активные",
+        "pinned": "Закреплённые",
+        "archived": "В архиве"
+      },
+      "emptyTitle": "Заметок пока нет",
+      "emptyDescription": "Здесь появятся заметки, которые вы добавите к сохранённым объектам.",
+      "deleteTitle": "Удалить эту заметку?",
+      "deleteMessage": "Это действие нельзя отменить.",
+      "saved": "Заметка сохранена",
+      "deleted": "Заметка удалена",
+      "pin": "Закрепить заметку",
+      "unpin": "Открепить заметку",
+      "archive": "Архивировать заметку",
+      "unarchive": "Вернуть из архива"
+    },
+    "actions": {
+      "addNotes": "Добавить заметки",
+      "editNotes": "Редактировать заметки",
+      "unsave": "Удалить из сохранённых",
+      "viewProperty": "Посмотреть объект"
+    },
+    "errors": {
+      "unsaveFailed": "Не удалось удалить из сохранённых",
+      "updateNotesFailed": "Не удалось обновить заметки",
+      "loadFailed": "Не удалось загрузить сохранённые объекты"
+    },
+    "filters": {
+      "thisWeek": "На этой неделе",
+      "withNotes": "С заметками"
+    },
+    "openFolder": "Открыть папку {{name}}"
   },
   "imageUpload": {
     "permissionTitle": "Permission Required",
@@ -2148,7 +2249,8 @@
     "primary": "Primary",
     "addMore": "Add More",
     "helperText": "Upload high-quality images of your property. Include photos of all rooms, exterior, and any special features.",
-    "helperPrimaryNote": " The first image will be set as the primary image."
+    "helperPrimaryNote": " The first image will be set as the primary image.",
+    "setPrimary": "Сделать основным изображением"
   },
   "property": {
     "loading": "Loading property details...",
@@ -2250,7 +2352,8 @@
       "distributionLabel": "Price distribution of nearby homes",
       "lowDataNote": "Not enough nearby listings to compare yet.",
       "lowSampleCaveat_one": "Based on just {{count}} nearby listing — treat as a rough guide.",
-      "lowSampleCaveat_other": "Based on only {{count}} nearby listings — treat as a rough guide."
+      "lowSampleCaveat_other": "Based on only {{count}} nearby listings — treat as a rough guide.",
+      "homesMetric": "Жильё"
     },
     "nearbyServices": {
       "title": "What's nearby",
@@ -2898,7 +3001,39 @@
           "confirm": "Reject",
           "successToast": "Application rejected"
         }
-      }
+      },
+      "inboxTitle": "Входящие заявки",
+      "inboxEyebrow": "Входящие",
+      "title": "Заявители",
+      "subtitle": "Изучите потенциальных арендаторов и примите решение по каждой заявке.",
+      "searchLabel": "Поиск по имени заявителя",
+      "filterLabel": "Фильтр по статусу",
+      "columnStatus": "Статус",
+      "openApplication": "Открыть заявку",
+      "createLease": "Создать договор",
+      "emptyTitle": "Заявителей пока нет",
+      "emptyDescription": "Здесь появятся заявки потенциальных арендаторов.",
+      "signInTitle": "Войдите, чтобы просматривать заявителей",
+      "signInDescription": "Все, кто хочет снять ваше жильё, — в одном месте.",
+      "hostsOnlyTitle": "Только для арендодателей",
+      "hostsOnlyDescription": "Разместите объект, чтобы начать получать заявки от арендаторов.",
+      "loadError": "Не удалось загрузить заявителей",
+      "openDocument": "Открыть документ {{filename}}",
+      "invalidTitle": "Недействительная заявка",
+      "invalidDescription": "Не удалось найти заявку с таким идентификатором.",
+      "unavailableTitle": "Заявка недоступна",
+      "unavailableDescription": "Не удалось загрузить эту заявку.",
+      "notAuthorisedTitle": "Нет доступа",
+      "notAuthorisedDescription": "Рассмотреть заявку может только арендодатель, закреплённый за этим объектом.",
+      "sectionTenancy": "Аренда",
+      "submittedLabel": "Отправлена",
+      "decidedLabel": "Решение принято",
+      "noReferences": "Рекомендации не указаны.",
+      "sectionDocuments": "Документы",
+      "noDocuments": "Документы не приложены.",
+      "sectionNotes": "Примечания",
+      "notesLabel": "Примечания для заявителя (необязательно)",
+      "notesPlaceholder": "Опишите следующие шаги или причину вашего решения."
     },
     "field": {
       "moveInDate": "Move-in date",
@@ -2918,8 +3053,8 @@
       "monthlyIncome": "Gross monthly income",
       "leaseTermCustomPlaceholder": "Number of months",
       "leaseTermCustom": "Other",
-      "leaseTerm": "Lease term",
-      "leaseTermMonths": "{{count}} months",
+      "leaseTerm": "Срок аренды",
+      "leaseTermMonths": "{{count}} мес.",
       "moveInHelper": "Within the next 6 months."
     },
     "employment": {
@@ -2961,7 +3096,7 @@
       "documentsHelp": "Upload up to {{max}} PDFs or images (10 MB each). Pick a category per file.",
       "documents": "Documents (optional)",
       "referencesHelp": "Add 1 to 3 contacts the landlord can call to vouch for you.",
-      "references": "References",
+      "references": "Рекомендации",
       "finances": "Income & employment",
       "timing": "Move-in & lease term"
     },
@@ -3200,7 +3335,8 @@
         "reviewTitle": "Sum up your experience",
         "opinion": "Share your experience (10+ characters)",
         "pros": "Add something you liked",
-        "cons": "Add something to improve"
+        "cons": "Add something to improve",
+        "selectDate": "Выберите дату"
       },
       "currencies": {
         "EUR": "EUR (€)",
@@ -3431,7 +3567,8 @@
       "toastBlocked": "Dates blocked",
       "toastBlockFailed": "Block failed",
       "propertyNotFound": "Property not found",
-      "property": "Property"
+      "property": "Property",
+      "blockDates": "Заблокировать даты"
     },
     "reservations": {
       "title": "Reservations",
@@ -3493,6 +3630,41 @@
       "selectDates": "Select dates",
       "selectGuests": "Select guests",
       "close": "Close"
+    },
+    "guests": {
+      "adults": "Взрослые",
+      "adultsHint": "От 13 лет",
+      "children": "Дети",
+      "childrenHint": "От 2 до 12 лет",
+      "infants": "Младенцы",
+      "infantsHint": "До 2 лет",
+      "decrease": "Уменьшить: {{title}}",
+      "increase": "Увеличить: {{title}}",
+      "maxNote": "Максимальное число гостей здесь — {{count}}, не считая младенцев.",
+      "count_one": "{{count}} гость",
+      "count_few": "{{count}} гостя",
+      "count_many": "{{count}} гостей",
+      "count_other": "{{count}} гостя",
+      "infantCount_one": "{{count}} младенец",
+      "infantCount_few": "{{count}} младенца",
+      "infantCount_many": "{{count}} младенцев",
+      "infantCount_other": "{{count}} младенца"
+    },
+    "widget": {
+      "requestToBook": "Запросить бронирование",
+      "perNight": "ночь",
+      "dates": "Даты",
+      "requestNote": "Оплата пока не списывается. Хозяин ответит в течение 24 часов."
+    },
+    "policy": {
+      "flexible": "Гибкие условия отмены — полный возврат в любое время до заезда.",
+      "moderate": "Умеренные условия отмены — полный возврат не позднее чем за 5 дней до заезда.",
+      "strict": "Строгие условия отмены — полный возврат не позднее чем за 7 дней до заезда.",
+      "superStrict": "Очень строгие условия отмены — полный возврат не позднее чем за 30 дней до заезда."
+    },
+    "calendar": {
+      "selectRange": "Выберите даты заезда и выезда",
+      "apply": "Применить"
     }
   },
   "addresses": {
@@ -3581,7 +3753,9 @@
       "availableFrom": "Available From",
       "availableFromPlaceholder": "Available from date",
       "leaseTerm": "Lease Term",
-      "leaseTermPlaceholder": "Lease term"
+      "leaseTermPlaceholder": "Lease term",
+      "openFullscreenMap": "Открыть карту на весь экран",
+      "mapPickerTitle": "Выберите местоположение"
     },
     "amenities": {
       "title": "Amenities",
