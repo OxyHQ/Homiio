@@ -51,7 +51,7 @@ import { colors } from '@/styles/colors';
 /**
  * Derive a human-readable name from a Homiio Profile. Profiles do not carry a
  * raw person name; the displayable identity depends on the profile type
- * (matches the derivation used in LandlordSection / HostStatsCard).
+ * (matches the derivation used in LandlordSection).
  */
 const profileDisplayName = (profile?: Profile): string => {
   if (!profile) return 'Unknown';

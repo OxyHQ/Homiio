@@ -221,7 +221,6 @@ export default function InsightsScreen() {
               renderItem={(property) => (
                 <PropertyCard
                   property={property}
-                  variant="featured"
                   // Horizontal carousel row — keep one cover photo so the
                   // in-card pager doesn't fight the row swipe.
                   enableImageCarousel={false}

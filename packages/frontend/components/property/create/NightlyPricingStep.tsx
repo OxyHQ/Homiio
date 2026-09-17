@@ -134,7 +134,6 @@ export function NightlyPricingStep({
             serviceFee={pricing.serviceFee ?? 0}
             taxesPercent={pricing.taxesPercent ?? 0}
             currency={currency}
-            compact
           />
         </Field>
       ) : null}

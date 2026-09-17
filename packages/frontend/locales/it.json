@@ -1626,7 +1626,8 @@
       "openProfile": "Open host profile",
       "publicSubtitle": "Government-managed affordable housing",
       "publicAuthority": "Public Housing Authority",
-      "superHost": "Super host"
+      "superHost": "Super host",
+      "regionAuthority": "Autorità per la casa di {{region}}"
     },
     "report": {
       "actions": {
@@ -1685,7 +1686,9 @@
       "recommend": "Recommend",
       "count": "reviews",
       "countWithNumber": "({{count}} recensioni)",
-      "showAll": "Mostra tutte le {{count}} recensioni"
+      "showAll": "Mostra tutte le {{count}} recensioni",
+      "total_one": "{{count}} recensione",
+      "total_other": "{{count}} recensioni"
     },
     "notFoundHelp": "It may have been removed or the link is broken.",
     "sections": {
@@ -1744,6 +1747,12 @@
         "aboveMarketGeneric": "Questo prezzo è sopra la media locale per alloggi simili.",
         "generic": "Questo annuncio non soddisfa i criteri di prezzo giusto di Homiio."
       }
+    },
+    "photos": {
+      "showAll": "Mostra tutte le foto",
+      "label": "Foto dell'annuncio",
+      "photoOf": "Foto {{position}} di {{total}}",
+      "namedPhotoOf": "{{name}}, foto {{position}} di {{total}}"
     }
   },
   "viewings": {
@@ -2837,6 +2846,16 @@
       "viewOnSourceWebsite": "Vedi sul portale di origine",
       "callNow": "Chiama ora",
       "moreByOwner": "Altri immobili di questo proprietario"
+    },
+    "card": {
+      "beds_one": "{{count}} camera",
+      "beds_other": "{{count}} camere",
+      "baths_one": "{{count}} bagno",
+      "baths_other": "{{count}} bagni",
+      "previousPhoto": "Foto precedente",
+      "nextPhoto": "Foto successiva",
+      "save": "Salva",
+      "unsave": "Rimuovi dai salvati"
     }
   },
   "goBack": "Indietro",
@@ -3786,7 +3805,8 @@
       "requestToBook": "Richiedi di prenotare",
       "perNight": "notte",
       "dates": "Date",
-      "requestNote": "Non ti verrà ancora addebitato nulla. L'host ha 24 ore per rispondere."
+      "requestNote": "Non ti verrà ancora addebitato nulla. L'host ha 24 ore per rispondere.",
+      "checkAvailability": "Verifica disponibilità"
     },
     "policy": {
       "flexible": "Cancellazione flessibile — rimborso completo in qualsiasi momento prima del check-in.",
@@ -3797,6 +3817,12 @@
     "calendar": {
       "selectRange": "Seleziona check-in e check-out",
       "apply": "Applica"
+    },
+    "breakdown": {
+      "nights_one": "{{price}} × {{count}} notte",
+      "nights_other": "{{price}} × {{count}} notti",
+      "total": "Totale",
+      "selectDates": "Seleziona le date per vedere il prezzo totale."
     }
   },
   "searchBar": {

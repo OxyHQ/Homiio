@@ -159,9 +159,9 @@ and corners stay clipped. There is **one** primitive,
 - The card-level hover must ONLY feed the image `active`. NEVER re-add a
   `transform:[{scale}]`, lift or shadow on the card itself; that is the
   "cutrada" removed in #164.
-- For the in-card carousel, thread `imageActive` through
-  `PropertyImageCarousel` to each page's `ZoomableImage`, OR-ed with the page's
-  own touch press.
+- Listing cards are the exception: `PropertyCard` is Bloom `ListingCard`
+  (paged photos, dots, hover arrows, heart), which draws its own photo track
+  and has no image zoom. Do not wrap its photos in `ZoomableImage`.
 - The web transition and the Safari corner-clip fix are baked in (web-cast
   `transitionProperty` and `willChange`, the sanctioned
   `as unknown as ViewStyle` web-CSS pattern). NEVER add a per-component variant;

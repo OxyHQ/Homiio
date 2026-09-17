@@ -2439,7 +2439,8 @@
       "openProfile": "Open host profile",
       "publicSubtitle": "Government-managed affordable housing",
       "publicAuthority": "Public Housing Authority",
-      "superHost": "Super host"
+      "superHost": "Super host",
+      "regionAuthority": "{{region}} আবাসন কর্তৃপক্ষ"
     },
     "report": {
       "reason": {
@@ -2498,7 +2499,9 @@
       "recommend": "Recommend",
       "count": "reviews",
       "countWithNumber": "({{count}} reviews)",
-      "showAll": "Show all {{count}} reviews"
+      "showAll": "Show all {{count}} reviews",
+      "total_one": "{{count}}টি রিভিউ",
+      "total_other": "{{count}}টি রিভিউ"
     },
     "notFoundHelp": "It may have been removed or the link is broken.",
     "sections": {
@@ -2557,6 +2560,12 @@
         "aboveMarketGeneric": "This price is above the local average for similar homes.",
         "generic": "This listing does not meet Homiio's fair-price criteria."
       }
+    },
+    "photos": {
+      "showAll": "সব ছবি দেখুন",
+      "label": "বিজ্ঞাপনের ছবি",
+      "photoOf": "{{total}}টির মধ্যে ছবি {{position}}",
+      "namedPhotoOf": "{{name}}, {{total}}টির মধ্যে ছবি {{position}}"
     }
   },
   "viewings": {
@@ -2891,6 +2900,16 @@
       "viewOnSourceWebsite": "View on Source Website",
       "callNow": "Call Now",
       "moreByOwner": "More properties by this owner"
+    },
+    "card": {
+      "beds_one": "{{count}}টি শয়নকক্ষ",
+      "beds_other": "{{count}}টি শয়নকক্ষ",
+      "baths_one": "{{count}}টি বাথরুম",
+      "baths_other": "{{count}}টি বাথরুম",
+      "previousPhoto": "আগের ছবি",
+      "nextPhoto": "পরের ছবি",
+      "save": "সংরক্ষণ করুন",
+      "unsave": "সংরক্ষিত থেকে সরান"
     }
   },
   "goBack": "Go back",
@@ -3649,7 +3668,8 @@
       "requestToBook": "বুকিংয়ের অনুরোধ করুন",
       "perNight": "রাত",
       "dates": "তারিখ",
-      "requestNote": "এখনই আপনার কাছ থেকে কোনো অর্থ কাটা হবে না। হোস্টের উত্তর দেওয়ার জন্য ২৪ ঘণ্টা সময় আছে।"
+      "requestNote": "এখনই আপনার কাছ থেকে কোনো অর্থ কাটা হবে না। হোস্টের উত্তর দেওয়ার জন্য ২৪ ঘণ্টা সময় আছে।",
+      "checkAvailability": "প্রাপ্যতা দেখুন"
     },
     "policy": {
       "flexible": "নমনীয় বাতিলকরণ — চেক-ইনের আগে যেকোনো সময় সম্পূর্ণ ফেরত।",
@@ -3660,6 +3680,12 @@
     "calendar": {
       "selectRange": "চেক-ইন ও চেক-আউট বেছে নিন",
       "apply": "প্রয়োগ করুন"
+    },
+    "breakdown": {
+      "nights_one": "{{price}} × {{count}} রাত",
+      "nights_other": "{{price}} × {{count}} রাত",
+      "total": "মোট",
+      "selectDates": "মোট মূল্য দেখতে তারিখ বেছে নিন।"
     }
   },
   "addresses": {

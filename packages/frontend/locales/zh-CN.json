@@ -2439,7 +2439,8 @@
       "openProfile": "Open host profile",
       "publicSubtitle": "Government-managed affordable housing",
       "publicAuthority": "Public Housing Authority",
-      "superHost": "Super host"
+      "superHost": "Super host",
+      "regionAuthority": "{{region}}住房管理局"
     },
     "report": {
       "reason": {
@@ -2498,7 +2499,9 @@
       "recommend": "Recommend",
       "count": "reviews",
       "countWithNumber": "({{count}} reviews)",
-      "showAll": "Show all {{count}} reviews"
+      "showAll": "Show all {{count}} reviews",
+      "total_one": "{{count}} 条评价",
+      "total_other": "{{count}} 条评价"
     },
     "notFoundHelp": "It may have been removed or the link is broken.",
     "sections": {
@@ -2557,6 +2560,12 @@
         "aboveMarketGeneric": "This price is above the local average for similar homes.",
         "generic": "This listing does not meet Homiio's fair-price criteria."
       }
+    },
+    "photos": {
+      "showAll": "查看全部照片",
+      "label": "房源照片",
+      "photoOf": "第 {{position}} 张照片，共 {{total}} 张",
+      "namedPhotoOf": "{{name}}，第 {{position}} 张照片，共 {{total}} 张"
     }
   },
   "viewings": {
@@ -2891,6 +2900,16 @@
       "viewOnSourceWebsite": "View on Source Website",
       "callNow": "Call Now",
       "moreByOwner": "More properties by this owner"
+    },
+    "card": {
+      "beds_one": "{{count}} 间卧室",
+      "beds_other": "{{count}} 间卧室",
+      "baths_one": "{{count}} 间浴室",
+      "baths_other": "{{count}} 间浴室",
+      "previousPhoto": "上一张照片",
+      "nextPhoto": "下一张照片",
+      "save": "收藏",
+      "unsave": "取消收藏"
     }
   },
   "goBack": "Go back",
@@ -3649,7 +3668,8 @@
       "requestToBook": "申请预订",
       "perNight": "晚",
       "dates": "日期",
-      "requestNote": "目前不会向你收费。房东将在 24 小时内回复。"
+      "requestNote": "目前不会向你收费。房东将在 24 小时内回复。",
+      "checkAvailability": "查看空房情况"
     },
     "policy": {
       "flexible": "灵活取消政策 — 入住前任何时间取消均可全额退款。",
@@ -3660,6 +3680,12 @@
     "calendar": {
       "selectRange": "选择入住和退房日期",
       "apply": "应用"
+    },
+    "breakdown": {
+      "nights_one": "{{price}} × {{count}} 晚",
+      "nights_other": "{{price}} × {{count}} 晚",
+      "total": "总计",
+      "selectDates": "选择日期以查看总价。"
     }
   },
   "addresses": {

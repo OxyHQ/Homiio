@@ -352,7 +352,6 @@ export default function HomePage() {
               renderItem={(property) => (
                 <PropertyCard
                   property={property}
-                  variant="featured"
                   enableImageCarousel={false}
                   onPress={() => router.push(`/properties/${property.id}`)}
                 />
@@ -368,7 +367,6 @@ export default function HomePage() {
               renderItem={(property) => (
                 <PropertyCard
                   property={property}
-                  variant="featured"
                   enableImageCarousel={false}
                   onPress={() => router.push(`/properties/${property.id}`)}
                 />

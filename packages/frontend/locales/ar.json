@@ -2447,7 +2447,8 @@
       "openProfile": "Open host profile",
       "publicSubtitle": "Government-managed affordable housing",
       "publicAuthority": "Public Housing Authority",
-      "superHost": "Super host"
+      "superHost": "Super host",
+      "regionAuthority": "هيئة الإسكان في {{region}}"
     },
     "report": {
       "reason": {
@@ -2506,7 +2507,13 @@
       "recommend": "Recommend",
       "count": "reviews",
       "countWithNumber": "({{count}} reviews)",
-      "showAll": "Show all {{count}} reviews"
+      "showAll": "Show all {{count}} reviews",
+      "total_zero": "{{count}} مراجعات",
+      "total_one": "{{count}} مراجعة",
+      "total_two": "مراجعتان",
+      "total_few": "{{count}} مراجعات",
+      "total_many": "{{count}} مراجعة",
+      "total_other": "{{count}} مراجعة"
     },
     "notFoundHelp": "It may have been removed or the link is broken.",
     "sections": {
@@ -2565,6 +2572,12 @@
         "aboveMarketGeneric": "This price is above the local average for similar homes.",
         "generic": "This listing does not meet Homiio's fair-price criteria."
       }
+    },
+    "photos": {
+      "showAll": "عرض كل الصور",
+      "label": "صور الإعلان",
+      "photoOf": "الصورة {{position}} من {{total}}",
+      "namedPhotoOf": "{{name}}، الصورة {{position}} من {{total}}"
     }
   },
   "viewings": {
@@ -2899,6 +2912,24 @@
       "viewOnSourceWebsite": "View on Source Website",
       "callNow": "Call Now",
       "moreByOwner": "More properties by this owner"
+    },
+    "card": {
+      "beds_zero": "{{count}} غرف نوم",
+      "beds_one": "{{count}} غرفة نوم",
+      "beds_two": "غرفتا نوم",
+      "beds_few": "{{count}} غرف نوم",
+      "beds_many": "{{count}} غرفة نوم",
+      "beds_other": "{{count}} غرفة نوم",
+      "baths_zero": "{{count}} حمامات",
+      "baths_one": "{{count}} حمام",
+      "baths_two": "حمامان",
+      "baths_few": "{{count}} حمامات",
+      "baths_many": "{{count}} حمامًا",
+      "baths_other": "{{count}} حمام",
+      "previousPhoto": "الصورة السابقة",
+      "nextPhoto": "الصورة التالية",
+      "save": "حفظ",
+      "unsave": "إزالة من المحفوظات"
     }
   },
   "goBack": "Go back",
@@ -3665,7 +3696,8 @@
       "requestToBook": "طلب الحجز",
       "perNight": "الليلة",
       "dates": "التواريخ",
-      "requestNote": "لن يتم تحصيل أي مبلغ منك الآن. أمام المضيف 24 ساعة للرد."
+      "requestNote": "لن يتم تحصيل أي مبلغ منك الآن. أمام المضيف 24 ساعة للرد.",
+      "checkAvailability": "تحقق من التوفر"
     },
     "policy": {
       "flexible": "إلغاء مرن — استرداد كامل في أي وقت قبل تسجيل الوصول.",
@@ -3676,6 +3708,16 @@
     "calendar": {
       "selectRange": "اختر تاريخي الوصول والمغادرة",
       "apply": "تطبيق"
+    },
+    "breakdown": {
+      "nights_zero": "{{price}} × {{count}} ليالٍ",
+      "nights_one": "{{price}} × {{count}} ليلة",
+      "nights_two": "{{price}} × ليلتان",
+      "nights_few": "{{price}} × {{count}} ليالٍ",
+      "nights_many": "{{price}} × {{count}} ليلة",
+      "nights_other": "{{price}} × {{count}} ليلة",
+      "total": "الإجمالي",
+      "selectDates": "اختر التواريخ لرؤية السعر الإجمالي."
     }
   },
   "addresses": {

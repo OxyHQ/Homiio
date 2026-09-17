@@ -1,168 +1,132 @@
+/**
+ * PriceBreakdown — a short-stay quote (nights × rate, fees, taxes, total) drawn
+ * with Bloom's `PriceBreakdown`.
+ *
+ * Homiio owns the arithmetic and the money formatting (the listing's currency,
+ * the reader's locale, always cents); Bloom owns the rows. The same quote feeds
+ * the booking card on a listing, the reservation detail and the host's nightly
+ * pricing preview, so all three read one total.
+ */
 import React, { useMemo } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
-import { colors } from '@/styles/colors';
+import {
+  PriceBreakdown as BloomPriceBreakdown,
+  type PriceBreakdownProps as BloomPriceBreakdownProps,
+} from '@oxy.so/bloom/booking';
 import { formatMoney } from '@homiio/shared-types';
 import { useFormatting } from '@/utils/format';
 
 /** A price breakdown always shows cents, so fix precision at 2 fraction digits. */
-const MONEY_FORMAT: { minimumFractionDigits: number; maximumFractionDigits: number } = {
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-};
+const MONEY_FORMAT = { minimumFractionDigits: 2, maximumFractionDigits: 2 } as const;
 
-export interface PriceBreakdownProps {
+export interface StayQuoteInput {
   nights: number;
   nightlyRate: number;
   cleaningFee?: number;
   serviceFee?: number;
   /** Percentage 0-100. Applied to (nightly * nights + cleaningFee + serviceFee). */
   taxesPercent?: number;
-  currency: string;
-  /** Style override for the wrapper. */
-  compact?: boolean;
 }
 
-interface LineProps {
-  label: string;
-  amount: number;
-  currency: string;
-  emphasis?: boolean;
+export interface StayQuote {
+  nights: number;
+  nightlyRate: number;
+  subtotal: number;
+  cleaningFee: number;
+  serviceFee: number;
+  taxes: number;
+  total: number;
 }
 
-const Line: React.FC<LineProps> = ({ label, amount, currency, emphasis }) => {
-  const { locale } = useFormatting();
-  return (
-    <View style={styles.line}>
-      <BloomText
-        style={[styles.lineLabel, emphasis ? styles.lineLabelEmphasis : null]}
-      >
-        {label}
-      </BloomText>
-      <BloomText
-        style={[styles.lineAmount, emphasis ? styles.lineAmountEmphasis : null]}
-      >
-        {formatMoney(amount, currency, locale, MONEY_FORMAT)}
-      </BloomText>
-    </View>
-  );
-};
-
-export const PriceBreakdown: React.FC<PriceBreakdownProps> = ({
+/** The quote's amounts. Negative inputs count as zero; taxes and total round to cents. */
+export function computeStayQuote({
   nights,
   nightlyRate,
   cleaningFee = 0,
   serviceFee = 0,
   taxesPercent = 0,
-  currency,
-  compact = false,
-}) => {
-  const { locale } = useFormatting();
-  const breakdown = useMemo(() => {
-    const safeNights = Math.max(0, Math.floor(nights));
-    const safeRate = Math.max(0, nightlyRate);
-    const subtotal = safeNights * safeRate;
-    const cleaning = Math.max(0, cleaningFee);
-    const service = Math.max(0, serviceFee);
-    const taxableBase = subtotal + cleaning + service;
-    const taxes =
-      Math.round(taxableBase * (Math.max(0, taxesPercent) / 100) * 100) / 100;
-    const total = Math.round((taxableBase + taxes) * 100) / 100;
-    return {
-      safeNights,
-      safeRate,
-      subtotal,
-      cleaning,
-      service,
-      taxes,
-      total,
-    };
-  }, [nights, nightlyRate, cleaningFee, serviceFee, taxesPercent]);
+}: StayQuoteInput): StayQuote {
+  const safeNights = Math.max(0, Math.floor(nights));
+  const safeRate = Math.max(0, nightlyRate);
+  const subtotal = safeNights * safeRate;
+  const cleaning = Math.max(0, cleaningFee);
+  const service = Math.max(0, serviceFee);
+  const taxableBase = subtotal + cleaning + service;
+  const taxes = Math.round(taxableBase * (Math.max(0, taxesPercent) / 100) * 100) / 100;
+  const total = Math.round((taxableBase + taxes) * 100) / 100;
+  return {
+    nights: safeNights,
+    nightlyRate: safeRate,
+    subtotal,
+    cleaningFee: cleaning,
+    serviceFee: service,
+    taxes,
+    total,
+  };
+}
 
-  if (breakdown.safeNights === 0) {
+/**
+ * The Bloom `PriceBreakdown` props for a quote, or `null` while no night is
+ * selected (there is nothing to itemise yet).
+ */
+export function useStayQuoteBreakdown(
+  input: StayQuoteInput & { currency: string },
+): BloomPriceBreakdownProps | null {
+  const { t } = useTranslation();
+  const { locale } = useFormatting();
+  const { nights, nightlyRate, cleaningFee, serviceFee, taxesPercent, currency } = input;
+
+  return useMemo(() => {
+    const quote = computeStayQuote({ nights, nightlyRate, cleaningFee, serviceFee, taxesPercent });
+    if (quote.nights === 0) return null;
+    const money = (amount: number) => formatMoney(amount, currency, locale, MONEY_FORMAT);
+    const rows: BloomPriceBreakdownProps['rows'] = [
+      {
+        key: 'nights',
+        label: t('booking.breakdown.nights', {
+          count: quote.nights,
+          price: money(quote.nightlyRate),
+        }),
+        amount: money(quote.subtotal),
+      },
+    ];
+    if (quote.cleaningFee > 0) {
+      rows.push({
+        key: 'cleaning',
+        label: t('property.moveInCost.cleaningFee'),
+        amount: money(quote.cleaningFee),
+      });
+    }
+    if (quote.serviceFee > 0) {
+      rows.push({
+        key: 'service',
+        label: t('property.moveInCost.serviceFee'),
+        amount: money(quote.serviceFee),
+      });
+    }
+    if (quote.taxes > 0) {
+      rows.push({ key: 'taxes', label: t('property.moveInCost.taxes'), amount: money(quote.taxes) });
+    }
+    return { rows, totalLabel: t('booking.breakdown.total'), total: money(quote.total) };
+  }, [nights, nightlyRate, cleaningFee, serviceFee, taxesPercent, currency, locale, t]);
+}
+
+export interface PriceBreakdownProps extends StayQuoteInput {
+  currency: string;
+}
+
+export const PriceBreakdown: React.FC<PriceBreakdownProps> = (props) => {
+  const { t } = useTranslation();
+  const breakdown = useStayQuoteBreakdown(props);
+  if (!breakdown) {
     return (
-      <View style={[styles.container, compact ? styles.containerCompact : null]}>
-        <BloomText style={styles.emptyHint}>
-          Select dates to see the total price.
-        </BloomText>
-      </View>
+      <BloomText variant="body-2-regular" className="text-center text-muted-foreground">
+        {t('booking.breakdown.selectDates')}
+      </BloomText>
     );
   }
-
-  return (
-    <View style={[styles.container, compact ? styles.containerCompact : null]}>
-      <Line
-        label={`${formatMoney(breakdown.safeRate, currency, locale, MONEY_FORMAT)} × ${breakdown.safeNights} ${
-          breakdown.safeNights === 1 ? 'night' : 'nights'
-        }`}
-        amount={breakdown.subtotal}
-        currency={currency}
-      />
-      {breakdown.cleaning > 0 ? (
-        <Line label="Cleaning fee" amount={breakdown.cleaning} currency={currency} />
-      ) : null}
-      {breakdown.service > 0 ? (
-        <Line label="Service fee" amount={breakdown.service} currency={currency} />
-      ) : null}
-      {breakdown.taxes > 0 ? (
-        <Line label="Taxes" amount={breakdown.taxes} currency={currency} />
-      ) : null}
-      <View style={styles.separator} />
-      <Line
-        label="Total"
-        amount={breakdown.total}
-        currency={currency}
-        emphasis
-      />
-    </View>
-  );
+  return <BloomPriceBreakdown {...breakdown} />;
 };
-
-const styles = StyleSheet.create({
-  container: {
-    backgroundColor: colors.white,
-    borderRadius: 12,
-    padding: 16,
-    gap: 8,
-  },
-  containerCompact: {
-    padding: 12,
-  },
-  emptyHint: {
-    fontSize: 13,
-    color: colors.COLOR_BLACK_LIGHT_4,
-    textAlign: 'center',
-  },
-  line: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  lineLabel: {
-    fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_2,
-    flexShrink: 1,
-    paddingRight: 8,
-  },
-  lineLabelEmphasis: {
-    fontWeight: '700',
-    color: colors.COLOR_BLACK,
-  },
-  lineAmount: {
-    fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_2,
-    fontVariant: ['tabular-nums'],
-  },
-  lineAmountEmphasis: {
-    fontWeight: '700',
-    color: colors.COLOR_BLACK,
-    fontSize: 16,
-  },
-  separator: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: colors.COLOR_BLACK_LIGHT_6,
-    marginVertical: 4,
-  },
-});
 
 export default PriceBreakdown;

@@ -1456,7 +1456,8 @@
       "openProfile": "Open host profile",
       "publicSubtitle": "Government-managed affordable housing",
       "publicAuthority": "Public Housing Authority",
-      "superHost": "Super host"
+      "superHost": "Super host",
+      "regionAuthority": "Autoridad de Vivienda de {{region}}"
     },
     "report": {
       "actions": {
@@ -1515,7 +1516,9 @@
       "recommend": "Recommend",
       "count": "reviews",
       "countWithNumber": "({{count}} reseñas)",
-      "showAll": "Ver las {{count}} reseñas"
+      "showAll": "Ver las {{count}} reseñas",
+      "total_one": "{{count}} reseña",
+      "total_other": "{{count}} reseñas"
     },
     "notFoundHelp": "It may have been removed or the link is broken.",
     "sections": {
@@ -1574,6 +1577,12 @@
         "aboveMarketGeneric": "Este precio está por encima de la media local para viviendas similares.",
         "generic": "Este anuncio no cumple los criterios de precio justo de Homiio."
       }
+    },
+    "photos": {
+      "showAll": "Ver todas las fotos",
+      "label": "Fotos del anuncio",
+      "photoOf": "Foto {{position}} de {{total}}",
+      "namedPhotoOf": "{{name}}, foto {{position}} de {{total}}"
     }
   },
   "viewings": {
@@ -2896,6 +2905,16 @@
       "viewOnSourceWebsite": "Ver en el portal de origen",
       "callNow": "Llamar ahora",
       "moreByOwner": "Más propiedades de este propietario"
+    },
+    "card": {
+      "beds_one": "{{count}} dormitorio",
+      "beds_other": "{{count}} dormitorios",
+      "baths_one": "{{count}} baño",
+      "baths_other": "{{count}} baños",
+      "previousPhoto": "Foto anterior",
+      "nextPhoto": "Foto siguiente",
+      "save": "Guardar",
+      "unsave": "Quitar de guardados"
     }
   },
   "goBack": "Volver",
@@ -3781,7 +3800,8 @@
       "requestToBook": "Solicitar reserva",
       "perNight": "noche",
       "dates": "Fechas",
-      "requestNote": "Aún no se te cobrará. El anfitrión tiene 24 horas para responder."
+      "requestNote": "Aún no se te cobrará. El anfitrión tiene 24 horas para responder.",
+      "checkAvailability": "Consultar disponibilidad"
     },
     "policy": {
       "flexible": "Cancelación flexible: reembolso completo en cualquier momento antes de la llegada.",
@@ -3792,6 +3812,12 @@
     "calendar": {
       "selectRange": "Selecciona la llegada y la salida",
       "apply": "Aplicar"
+    },
+    "breakdown": {
+      "nights_one": "{{price}} × {{count}} noche",
+      "nights_other": "{{price}} × {{count}} noches",
+      "total": "Total",
+      "selectDates": "Selecciona las fechas para ver el precio total."
     }
   },
   "searchBar": {

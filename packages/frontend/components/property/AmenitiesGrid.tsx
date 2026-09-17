@@ -1,9 +1,9 @@
 /**
  * AmenitiesGrid — Airbnb-2026 "What this place offers".
  *
- * In-page: a flat, hairline-free 2-column grid of amenities (line icon +
- * label) capped at `maxVisible`. When the listing has more, a Bloom outline
- * (`secondary`) button reveals the full list.
+ * In-page: Bloom's `AmenityList` — icon + label rows in one or two columns
+ * (by its own width), capped at `maxVisible`, with its "Show all N amenities"
+ * button when the listing has more.
  *
  * Show-all: a bottom sheet (via the app's `BottomSheetContext`, the same
  * mechanism `SortControl` / `SearchFiltersBottomSheet` use) listing every
@@ -14,12 +14,13 @@
  *
  * Icons + labels come from the shared amenity catalog (`getAmenityById`,
  * `groupAmenitiesByCategory`) so the visual + textual language matches the
- * rest of the app. Chrome (typography, button, section header) is Bloom.
+ * rest of the app. The sheet keeps the catalog's illustrated icons; the
+ * in-page list draws the line glyphs, which is all `AmenityList` takes.
  */
 import React, { useCallback, useContext, useMemo } from 'react';
 import { ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Button } from '@oxy.so/bloom/button';
+import { AmenityList, type Amenity as ListedAmenity } from '@oxy.so/bloom/listing-details';
 import { RiCheckboxCircleLine } from '@oxy.so/bloom/icons';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 
@@ -27,8 +28,6 @@ import { BottomSheetContext } from '@/context/BottomSheetContext';
 import { Section, SectionHeader } from '@/components/property/Section';
 import {
   DetailIcon,
-  DetailIconCell,
-  DetailIconGrid,
   DetailIconRow,
   type DetailFallbackIcon,
 } from '@/components/property/DetailIconGrid';
@@ -170,9 +169,13 @@ export const AmenitiesGrid: React.FC<AmenitiesGridProps> = ({
     [property?.amenities],
   );
 
-  const previewEntries = useMemo<ResolvedAmenity[]>(
-    () => groupAmenitiesByCategory(ids).flatMap((group) => group.amenities).slice(0, maxVisible),
-    [ids, maxVisible],
+  // Catalog order (grouped by category), so the preview leads with essentials.
+  const items = useMemo<ListedAmenity[]>(
+    () =>
+      groupAmenitiesByCategory(ids)
+        .flatMap((group) => group.amenities)
+        .map((entry) => ({ label: resolveLabel(entry), icon: resolveIcon(entry.amenity) })),
+    [ids, resolveLabel],
   );
 
   const maxScrollHeight = useMemo(
@@ -188,39 +191,19 @@ export const AmenitiesGrid: React.FC<AmenitiesGridProps> = ({
 
   if (ids.length === 0) return null;
 
-  const hasMore = ids.length > maxVisible;
-  const showAllLabel = t('property.amenities.showAll', { count: ids.length });
-
   return (
     <Section title={t('property.amenities.title')}>
-      <DetailIconGrid>
-        {previewEntries.map((entry, idx) => (
-          <DetailIconCell key={`${entry.id}-${idx}`}>
-            <AmenityRow entry={entry} label={resolveLabel(entry)} />
-          </DetailIconCell>
-        ))}
-      </DetailIconGrid>
-      {hasMore ? (
-        <View style={styles.actionAnchor}>
-          <Button
-            onPress={handleShowAll}
-            variant="secondary"
-            size="large"
-            accessibilityLabel={showAllLabel}
-          >
-            {showAllLabel}
-          </Button>
-        </View>
-      ) : null}
+      <AmenityList
+        items={items}
+        limit={maxVisible}
+        onShowAll={handleShowAll}
+        showAllLabel={(count) => t('property.amenities.showAll', { count })}
+      />
     </Section>
   );
 };
 
 const styles = StyleSheet.create({
-  actionAnchor: {
-    marginTop: spacing['2xl'],
-    alignSelf: 'flex-start',
-  },
   sheet: {
     paddingBottom: spacing['2xl'],
   },
