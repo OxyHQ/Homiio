@@ -9,9 +9,9 @@
  * bar would arrive as an invisible title over the content. The fade is the
  * mount itself.
  *
- * Anchoring: web keeps PageHeader's `position: sticky`, pinned at
- * `PANEL_TOP_INSET` on framed web so the ContentPanel bleed-mask does not clip
- * it; native overlays the floating `Header` absolutely. zIndex sits above the
+ * Anchoring: web keeps PageHeader's `position: sticky`, pinned at `top: 0` like
+ * `Header` (the shell draws no band above the content); native overlays the
+ * floating `Header` absolutely. zIndex sits above the
  * `Header`'s 1000.
  */
 import React from 'react';
@@ -19,12 +19,10 @@ import { Platform, type ViewStyle } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@oxy.so/bloom/button';
-import { PANEL_TOP_INSET } from '@oxy.so/bloom/content-panel';
 import { RiShare2Line } from '@oxy.so/bloom/icons';
 import { PageHeader } from '@oxy.so/bloom/page-header';
 
 import { SaveButton } from '@/components/SaveButton';
-import { useIsScreenNotMobile } from '@/hooks/useOptimizedMediaQuery';
 import { colors } from '@/styles/colors';
 import type { Property } from '@homiio/shared-types';
 
@@ -53,14 +51,12 @@ export const StickyPropertyHeader: React.FC<StickyPropertyHeaderProps> = ({
   onCtaPress,
 }) => {
   const { t } = useTranslation();
-  const isScreenNotMobile = useIsScreenNotMobile();
 
   if (!visible) return null;
 
-  const framed = Platform.OS === 'web' && isScreenNotMobile;
   const containerStyle: ViewStyle =
     Platform.OS === 'web'
-      ? { top: framed ? PANEL_TOP_INSET : 0, zIndex: STICKY_PROPERTY_HEADER_Z_INDEX }
+      ? { top: 0, zIndex: STICKY_PROPERTY_HEADER_Z_INDEX }
       : {
           position: 'absolute',
           top: 0,

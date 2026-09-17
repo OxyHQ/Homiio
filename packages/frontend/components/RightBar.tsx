@@ -20,8 +20,7 @@ import { View } from 'react-native';
 import { usePathname } from 'expo-router';
 import { WidgetManager } from './widgets';
 import { railForPathname } from './widgets/routeRail';
-import { useIsLargeDesktop } from '@/hooks/useOptimizedMediaQuery';
-import { useUIStore } from '@/store/uiStore';
+import { useSindiPanelLayout } from './sindi/sindiPanelLayout';
 
 /** The column's width, handed to `AppShell` as `asideWidth`. */
 export const RIGHT_BAR_WIDTH = 350;
@@ -35,14 +34,13 @@ export const RIGHT_BAR_WIDTH = 350;
  *
  * - No rail for this route (its `ROUTE_RAIL` entry says so, or the pathname is
  *   not a route at all) → no column.
- * - The docked Sindi panel takes the fourth column below large-desktop (1440).
+ * - The docked Sindi panel is the aside while it is open: the shell has one.
  */
 export function useHasRightBar(): boolean {
   const pathname = usePathname() || '/';
-  const isLargeDesktop = useIsLargeDesktop();
-  const sindiPanelOpen = useUIStore((s) => s.sindiPanelOpen);
+  const sindiDocked = useSindiPanelLayout().docked;
   const hasRail = useMemo(() => railForPathname(pathname).screenId !== null, [pathname]);
-  return hasRail && !(sindiPanelOpen && !isLargeDesktop);
+  return hasRail && !sindiDocked;
 }
 
 export const RightBar = React.memo(function RightBar() {

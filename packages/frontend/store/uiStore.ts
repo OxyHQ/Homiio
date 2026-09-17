@@ -21,10 +21,10 @@ interface UIState {
    */
   mobileDrawerOpen: boolean;
   /**
-   * Whether the docked Sindi AI chat panel is open. It sits inline between the
-   * SideBar and the main content on wide screens and pushes the content (not an
-   * overlay). A desktop-layout preference like `sidebarCollapsed`, so it is
-   * persisted and restores on reload. Self-gated to wide screens by the panel.
+   * Whether the Sindi AI chat panel is open: `AppShell`'s aside from `lg`, an
+   * overlay from 500 (see `components/sindi/sindiPanelLayout.ts`). A
+   * wide-layout preference like `sidebarCollapsed`, so it is persisted and
+   * restores on reload.
    */
   sindiPanelOpen: boolean;
 

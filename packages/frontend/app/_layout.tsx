@@ -20,6 +20,8 @@ import { useIsScreenNotMobile } from '@/hooks/useOptimizedMediaQuery';
 import { useHomiioSidebarProps, type HomiioSidebarProps } from '@/components/SideBar';
 import { SIDEBAR_IN_FLOW_FROM } from '@/components/SideBar/dimensions';
 import { RightBar, RIGHT_BAR_WIDTH, useHasRightBar } from '@/components/RightBar';
+import { SindiPanel } from '@/components/sindi/SindiPanel';
+import { useSindiPanelLayout } from '@/components/sindi/sindiPanelLayout';
 import { InAppShellContext, useIsScreenHeaderMounted } from '@/components/Header';
 import { useUIStore } from '@/store/uiStore';
 import { AppShell } from '@oxy.so/bloom/app-shell';
@@ -154,6 +156,10 @@ const NO_SHELL_HEADER = <></>;
  * The menu button: a screen `Header` renders `AppShellMenuButton` itself; a
  * screen without one gets `AppShell`'s default header, which below `lg` is
  * that button alone. Home below 500 draws its own in the hero.
+ *
+ * The aside: the open Sindi panel from `lg`, otherwise the route's right rail
+ * (if it has one). Between 500 and `lg` the panel is an overlay, mounted as the
+ * shell's `overlay` and rendering nothing outside that tier.
  */
 function AppFrame() {
   const isScreenNotMobile = useIsScreenNotMobile();
@@ -170,6 +176,7 @@ function AppFrame() {
     [openMobileDrawer, closeMobileDrawer],
   );
   const hasRightBar = useHasRightBar();
+  const sindiPanel = useSindiPanelLayout();
   const screenHeaderMounted = useIsScreenHeaderMounted();
 
   const isNative = Platform.OS !== 'web';
@@ -215,11 +222,14 @@ function AppFrame() {
         drawerOpen={drawerOpen}
         onDrawerOpenChange={onDrawerOpenChange}
         header={pageDrawsMenuButton ? NO_SHELL_HEADER : undefined}
-        aside={hasRightBar ? <RightBar /> : null}
-        asideWidth={RIGHT_BAR_WIDTH}
+        aside={
+          sindiPanel.docked ? <SindiPanel placement="aside" /> : hasRightBar ? <RightBar /> : null
+        }
+        asideWidth={sindiPanel.docked ? sindiPanel.width : RIGHT_BAR_WIDTH}
         asideFrom="lg"
         asideCollapse="hidden"
         scroll={isNative || isExploreRoute ? 'fixed' : 'document'}
+        overlay={<SindiPanel placement="overlay" />}
       >
         <Slot />
       </AppShell>

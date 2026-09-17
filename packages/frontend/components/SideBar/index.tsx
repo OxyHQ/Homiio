@@ -185,16 +185,18 @@ export function useHomiioSidebarProps(): HomiioSidebarProps {
     [pathname, router, closeMobileDrawer],
   );
 
-  // Sindi is a docked panel on wide screens (toggle inline, no navigation) but
-  // the panel is wide-only, so on a phone Sindi keeps navigating to the
-  // full-screen `/sindi` route (closing the drawer first).
+  // Sindi is a panel from 500 (the shell's aside from `lg`, an overlay below
+  // it): toggle it, no navigation, and close the drawer it may have been
+  // pressed from. On a phone Sindi keeps navigating to the full-screen `/sindi`
+  // route.
   const handleSindi = React.useCallback(() => {
     if (!isMobile) {
+      closeMobileDrawer();
       toggleSindiPanel();
       return;
     }
     handleNavigate('/sindi');
-  }, [isMobile, toggleSindiPanel, handleNavigate]);
+  }, [isMobile, closeMobileDrawer, toggleSindiPanel, handleNavigate]);
 
   const handleSettings = React.useCallback(() => handleNavigate('/settings'), [handleNavigate]);
   const handleProfile = React.useCallback(() => handleNavigate('/profile'), [handleNavigate]);
