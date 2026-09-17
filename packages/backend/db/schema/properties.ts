@@ -111,6 +111,7 @@ import {
   HousingType,
   LayoutType,
   LeaseDuration,
+  LISTING_ADDRESS_PRECISIONS,
   LISTING_CURRENCIES,
   OfferingType,
   PROVIDER_IDS,
@@ -537,6 +538,20 @@ export const properties = pgTable(
       .references(() => addresses.id, { onDelete: 'restrict' }),
     /** Whether the street number may be shown publicly. */
     showAddressNumber: boolean().notNull().default(true),
+    /**
+     * The most precise address anybody but the owner is served — the
+     * advertiser's `published_precision` ceiling, ADR 0003 §3.2. The row keeps
+     * the finest address Homiio holds (on `addresses`, and `floor` below); this
+     * column only decides what a read path may put on the wire, and
+     * `db/properties/propertySerializer.ts` is where that is decided.
+     *
+     * `building` by default, which withholds the floor and the unit. It is the
+     * default for EVERY row, including the ones written before the choice
+     * existed: the wizard's "floor: private" toggle was never sent to the API,
+     * so no stored listing carries evidence its owner meant to publish either,
+     * and the safe reading of silence is not to.
+     */
+    addressPublishedPrecision: text({ enum: LISTING_ADDRESS_PRECISIONS }).notNull().default('building'),
 
     type: text({ enum: PROPERTY_TYPES }).notNull().default('apartment'),
     housingType: text({ enum: HOUSING_TYPES }).notNull().default('private'),
@@ -939,6 +954,10 @@ export const properties = pgTable(
     // ── Vocabularies ──
     check('properties_source_check', sql`${table.source} in (${sql.raw(inList(PROPERTY_SOURCES))})`),
     check('properties_type_check', sql`${table.type} in (${sql.raw(inList(PROPERTY_TYPES))})`),
+    check(
+      'properties_address_published_precision_check',
+      sql`${table.addressPublishedPrecision} in (${sql.raw(inList(LISTING_ADDRESS_PRECISIONS))})`,
+    ),
     check('properties_status_check', sql`${table.status} in (${sql.raw(inList(PROPERTY_STATUSES))})`),
     check(
       'properties_housing_type_check',

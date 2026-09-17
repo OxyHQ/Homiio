@@ -48,6 +48,7 @@
  */
 
 import type { InferSelectModel } from 'drizzle-orm';
+import { coarserListingAddressPrecision, type ListingAddressPrecision } from '@homiio/shared-types';
 
 import imageUploadService from '../../services/imageUploadService';
 import { publicColumns } from '../schema/protectedColumns';
@@ -174,15 +175,76 @@ function serializeAvailabilityWindow(row: PropertyAvailabilityWindowRow): Record
 }
 
 /**
- * Build the API representation of one listing.
+ * WHO a listing body is being built for — ADR 0003 §4.1's `audience`, which a
+ * serializer takes explicitly and never infers.
+ *
+ *  - `public` — anybody who is not the owner, signed in or not. Served the
+ *    listing's `addressPublishedPrecision` ceiling (see
+ *    {@link publishedAddressPrecision}).
+ *  - `owner` — the session user the row's `oxy_user_id` names. Served `exact`.
+ *  - `system` — a body that never leaves the process (a price score, a
+ *    commission, a coordinate lookup). Served `exact`, and named separately
+ *    from `owner` so a reader can tell "the owner may see this" from "nobody
+ *    outside sees this" at the call site.
+ *
+ * A body built for `public` is the only one a feed, a notification or an
+ * outbound message may carry.
+ */
+export type PropertyAudience = 'public' | 'owner' | 'system';
+
+/**
+ * `owner` when the session user owns this listing, otherwise `public`.
+ *
+ * The id must be the SESSION's — `req.user` as the Oxy auth middleware set it
+ * — never an id from a parameter, a query string or a body: comparing a
+ * client-supplied id against the row would let anybody name the owner.
+ */
+export function propertyAudienceFor(
+  hydrated: HydratedProperty,
+  sessionOxyUserId: string | null | undefined,
+): PropertyAudience {
+  const owner = hydrated.property.oxyUserId;
+  return typeof sessionOxyUserId === 'string' && sessionOxyUserId.length > 0 && owner === sessionOxyUserId
+    ? 'owner'
+    : 'public';
+}
+
+/**
+ * The precision a listing's address and floor are served at, for one audience.
+ *
+ * `min(published ceiling, what this audience may see)` — ADR 0003 §3.2. Two
+ * advertiser choices feed the public ceiling: `address_published_precision`,
+ * and the older `show_address_number`, which caps it at `street` when the
+ * advertiser hid the number (until now it was honoured only by the moderation
+ * snapshot, and published beside the number it was meant to withhold).
+ */
+export function publishedAddressPrecision(
+  row: Pick<PropertyRow, 'addressPublishedPrecision' | 'showAddressNumber'>,
+  audience: PropertyAudience,
+): ListingAddressPrecision {
+  if (audience !== 'public') return 'exact';
+  const ceiling = row.addressPublishedPrecision;
+  return row.showAddressNumber ? ceiling : coarserListingAddressPrecision(ceiling, 'street');
+}
+
+/**
+ * Build the API representation of one listing, for a stated audience.
  *
  * The `address` is nested under `address` and there is no `addressId` on the
  * wire, reproducing `utils/helpers.transformAddressFields` — which existed
  * because Mongoose named the populated reference after the column. A join has
  * no such constraint, so the shape is simply built correctly here instead.
+ *
+ * Below `exact`, `floor` is ABSENT alongside the address's own floor and unit:
+ * the listing's floor is the same fact about the same dwelling, and withholding
+ * one while publishing the other withholds nothing.
  */
-export function serializeProperty(hydrated: HydratedProperty): Record<string, unknown> {
+export function serializeProperty(
+  hydrated: HydratedProperty,
+  audience: PropertyAudience,
+): Record<string, unknown> {
   const row = hydrated.property;
+  const precision = publishedAddressPrecision(row, audience);
 
   const longTermRent = row.longTermRentMonthlyAmount === null ? undefined : withoutAbsent({
     monthlyAmount: row.longTermRentMonthlyAmount,
@@ -270,8 +332,9 @@ export function serializeProperty(hydrated: HydratedProperty): Record<string, un
 
     title: row.title,
     description: row.description,
-    address: serializeAddressRow(hydrated.address),
+    address: serializeAddressRow(hydrated.address, precision),
     showAddressNumber: row.showAddressNumber,
+    addressPublishedPrecision: row.addressPublishedPrecision,
 
     type: row.type,
     housingType: row.housingType,
@@ -279,7 +342,7 @@ export function serializeProperty(hydrated: HydratedProperty): Record<string, un
     bedrooms: row.bedrooms,
     bathrooms: row.bathrooms,
     squareFootage: row.squareFootage,
-    floor: row.floor,
+    floor: precision === 'exact' ? row.floor : undefined,
     yearBuilt: row.yearBuilt,
 
     hasElevator: row.hasElevator,

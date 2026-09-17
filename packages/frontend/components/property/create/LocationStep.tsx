@@ -48,7 +48,12 @@ export function LocationStep({
     [updateFormField],
   );
 
+  // The toggle is the listing's address publication ceiling
+  // (`addressPublishedPrecision`, `buildPropertyPayload`): public is `exact`,
+  // private is `building`. It covers the floor AND the unit/sub-unit — the
+  // precision ladder has no rung that publishes one without the other.
   const FloorVisibilityIcon = location.showFloor ? RiEyeLine : RiEyeOffLine;
+  const hasUnitDetail = Boolean(location.floor || location.unit || location.subunit);
 
   return (
     <View style={styles.step}>
@@ -151,11 +156,7 @@ export function LocationStep({
           placeholder={t('propertyCreate.location.floorPlaceholder')}
           keyboardType="numeric"
           error={validationErrors.floor}
-          description={
-            location.floor && !location.showFloor
-              ? t('propertyCreate.location.floorPrivacyHint')
-              : undefined
-          }
+          description={hasUnitDetail && !location.showFloor ? t('propertyCreate.location.floorPrivacyHint') : undefined}
         />
       </View>
 
@@ -170,11 +171,11 @@ export function LocationStep({
               fill={location.showFloor ? theme.colors.primaryForeground : theme.colors.textSecondary}
             />
           }
-          accessibilityLabel={`${t('propertyCreate.location.floor')}: ${
+          accessibilityLabel={
             location.showFloor
               ? t('propertyCreate.location.floorPublic')
               : t('propertyCreate.location.floorPrivate')
-          }`}
+          }
         >
           {location.showFloor
             ? t('propertyCreate.location.floorPublic')

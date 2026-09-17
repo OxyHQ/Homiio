@@ -156,7 +156,8 @@ async function readIngested(
     .limit(1);
   if (!row) return null;
   const hydrated = await findPropertyById(row.id);
-  return hydrated ? serializeProperty(hydrated) : null;
+  // 'system': these assert what ingest STORED, not what a feed publishes.
+  return hydrated ? serializeProperty(hydrated, 'system') : null;
 }
 
 /** The canonical `images` rows the pipeline persisted for a listing. */

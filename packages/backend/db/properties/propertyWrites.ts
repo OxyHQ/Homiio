@@ -159,6 +159,7 @@ export function toPropertyColumns(input: PropertyWriteInput): PropertyUpdate {
     'description',
     'addressId',
     'showAddressNumber',
+    'addressPublishedPrecision',
     'type',
     'housingType',
     'layoutType',

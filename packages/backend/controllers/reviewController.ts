@@ -1002,7 +1002,7 @@ export const getAgencyProperties = async (req: Request, res: Response) => {
     const totalPages = Math.max(1, Math.ceil(total / limit));
     return res.json({
       success: true,
-      data: hydrated.map(serializeProperty),
+      data: hydrated.map((listing) => serializeProperty(listing, 'public')),
       pagination: { page, limit, total, totalPages },
       total,
       page,

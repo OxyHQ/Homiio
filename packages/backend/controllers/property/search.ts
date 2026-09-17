@@ -422,7 +422,7 @@ export async function searchProperties(req: Request, res: Response, next: NextFu
     ]);
 
     res.json(buildSearchResponse(
-      hydrated.map(serializeProperty),
+      hydrated.map((listing) => serializeProperty(listing, 'public')),
       params.page,
       params.limit,
       total,

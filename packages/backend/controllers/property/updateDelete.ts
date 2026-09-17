@@ -1,6 +1,6 @@
 import { PropertyStatus } from '@homiio/shared-types';
 import { applyOfferingRulesForUpdate, OfferingValidationError, type OfferingBearingPayload } from './offeringRules';
-import { EDITABLE_PROPERTY_FIELDS } from './editableFields';
+import { EDITABLE_PROPERTY_FIELDS, invalidAddressPublishedPrecision } from './editableFields';
 import { pickFields } from '../../utils/pickFields';
 import { onPropertyTransacted } from '../../services/commissionService';
 import { schedulePriceEthicsScore } from '../../services/priceEthicsService';
@@ -26,6 +26,8 @@ export async function updateProperty(req: ControllerRequest, res: ControllerResp
   try {
     const { propertyId } = req.params;
     const updateData = pickFields<OfferingBearingPayload>(req.body, EDITABLE_PROPERTY_FIELDS);
+    const precisionError = invalidAddressPublishedPrecision(updateData);
+    if (precisionError) return next(precisionError);
 
     const oxyUserId = requireSessionOxyUserId(req);
     // Read the CURRENT listing first: the offering rules are evaluated against
@@ -37,7 +39,7 @@ export async function updateProperty(req: ControllerRequest, res: ControllerResp
     if (!existing || existing.property.oxyUserId !== oxyUserId) {
       return next(new AppError('Property not found', 404, 'PROPERTY_NOT_FOUND'));
     }
-    const current = serializeProperty(existing);
+    const current = serializeProperty(existing, 'system');
 
     applyOfferingRulesForUpdate(updateData, {
       offerings: current.offerings,
@@ -71,7 +73,7 @@ export async function updateProperty(req: ControllerRequest, res: ControllerResp
     // are one statement and a change of owner cannot interleave between them.
     const updated = await updatePropertyRow(propertyId, updateData, { ownedBy: oxyUserId });
     if (!updated) return next(new AppError('Failed to update property', 500, 'UPDATE_FAILED'));
-    const updatedProperty = serializeProperty(updated);
+    const updatedProperty = serializeProperty(updated, 'owner');
 
     if (beforeSnapshot) {
       const afterSnapshot = await readPropertySnapshot(getDb(), String(propertyId));

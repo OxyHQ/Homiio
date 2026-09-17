@@ -36,7 +36,7 @@ import { inArray } from 'drizzle-orm';
 import { getDb } from '../../db/postgres';
 import { properties } from '../../db/schema';
 import { findProperties } from '../../db/properties/propertyReads';
-import { serializeProperty } from '../../db/properties/propertySerializer';
+import { propertyAudienceFor, serializeProperty } from '../../db/properties/propertySerializer';
 import {
   listSavedProperties,
   saveProperty as savePropertyRow,
@@ -86,7 +86,7 @@ export async function getSavedProperties(req: Request, res: Response, next: Next
       // Only reachable if a listing is deleted BETWEEN the two statements above;
       // the foreign key rules out every other case. See the header.
       if (!listing) return [];
-      return [{ ...serializeProperty(listing), ...toSavedPropertyFields(row) }];
+      return [{ ...serializeProperty(listing, propertyAudienceFor(listing, oxyUserId)), ...toSavedPropertyFields(row) }];
     });
 
     res.json(successResponse(merged, "Saved properties retrieved successfully"));

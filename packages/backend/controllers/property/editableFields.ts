@@ -13,6 +13,10 @@
  * `models/schemas/PropertySchema.ts`. Owner/system fields are intentionally absent.
  */
 
+import { LISTING_ADDRESS_PRECISIONS, isListingAddressPrecision } from '@homiio/shared-types';
+
+import { AppError } from '../../middlewares/errorHandler';
+
 /**
  * Fields a user may set when CREATING a listing. `type` is allowed here (it is
  * fixed at creation) but is intentionally NOT in {@link EDITABLE_PROPERTY_FIELDS}
@@ -58,7 +62,26 @@ export const CREATABLE_PROPERTY_FIELDS: readonly string[] = [
   'sale',
   'exchange',
   'isEcoFriendly',
+  'addressPublishedPrecision',
 ];
+
+/**
+ * The owner's own publication choice, validated before it reaches the CHECK.
+ *
+ * A value outside the ladder would otherwise surface as a constraint violation
+ * and a 500. Returns the 400 to send, or `null` when the payload either names a
+ * valid precision or does not mention one (a create then stores the column
+ * default, `building`; an update leaves the stored choice alone).
+ */
+export function invalidAddressPublishedPrecision(payload: Record<string, unknown>): AppError | null {
+  if (!Object.prototype.hasOwnProperty.call(payload, 'addressPublishedPrecision')) return null;
+  if (isListingAddressPrecision(payload.addressPublishedPrecision)) return null;
+  return new AppError(
+    `addressPublishedPrecision must be one of: ${LISTING_ADDRESS_PRECISIONS.join(', ')}`,
+    400,
+    'INVALID_ADDRESS_PRECISION',
+  );
+}
 
 /**
  * Fields a user may change when UPDATING an existing listing. Identical to the

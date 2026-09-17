@@ -264,7 +264,7 @@ class PartnerController {
         where: allOf([eq(properties.sourcedByPartnerId, partner.id)]),
         orderBy: propertyOrderBy(NEWEST_FIRST),
       });
-      const payload = { properties: sourced.map(serializeProperty) };
+      const payload = { properties: sourced.map((listing) => serializeProperty(listing, 'public')) };
       return res.json(successResponse(payload, 'Partner referrals'));
     } catch (error) {
       next(error);

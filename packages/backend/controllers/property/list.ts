@@ -329,7 +329,7 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
       countProperties(where),
     ]);
 
-    const serialized = hydrated.map(serializeProperty);
+    const serialized = hydrated.map((listing) => serializeProperty(listing, 'public'));
 
     const ids = serialized
       .map((property) => property.id)

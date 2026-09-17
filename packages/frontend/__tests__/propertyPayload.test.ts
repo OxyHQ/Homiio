@@ -12,6 +12,14 @@
  * A saved draft is JSON in AsyncStorage, so the second case round-trips the form
  * through JSON first: resuming a draft must publish the same body the unsaved
  * form would have.
+ *
+ * ONE deliberate change since that capture: `addressPublishedPrecision`. The
+ * Location step's floor "Private" toggle was never sent, so every listing
+ * published its floor and unit whatever the host chose (found in #491). The
+ * body now carries the choice — `building` for private (and for an untouched
+ * toggle), `exact` for public — and nothing else in it moved. Both values are
+ * pinned below, because a body that always sent one of them would pass a test
+ * that only looked at the other.
  */
 import { ExchangeMode, OfferingType, AvailabilityWindowStatus } from '@homiio/shared-types';
 
@@ -123,6 +131,8 @@ const EXPECTED_BODY = {
     number: '14',
     unit: '3-2',
   },
+  // The form's `showFloor: false` — floor and door private.
+  addressPublishedPrecision: 'building',
   type: 'apartment',
   description: 'Bright corner flat with a long balcony over the square.',
   bedrooms: 3,
@@ -176,6 +186,15 @@ describe('buildPropertyPayload', () => {
     expect(wire(buildPropertyPayload(resumed))).toEqual(EXPECTED_BODY);
   });
 
+  it('publishes the floor and door only when the host made them public', () => {
+    const form = populatedForm();
+    form.location.showFloor = true;
+    expect(wire(buildPropertyPayload(form))).toEqual({
+      ...EXPECTED_BODY,
+      addressPublishedPrecision: 'exact',
+    });
+  });
+
   it('keeps the default new-listing body (long-term rent only) unchanged', () => {
     expect(wire(buildPropertyPayload(createDefaultFormData()))).toEqual({
       address: {
@@ -187,6 +206,8 @@ describe('buildPropertyPayload', () => {
         countryCode: 'US',
         coordinates: { type: 'Point', coordinates: [2.16538, 41.38723] },
       },
+      // An untouched toggle is private.
+      addressPublishedPrecision: 'building',
       type: '',
       description: '',
       bedrooms: 1,

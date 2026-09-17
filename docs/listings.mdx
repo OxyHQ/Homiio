@@ -49,6 +49,7 @@ interface Property {
   };
 
   address: PropertyAddress;       // building-level fields + geo ids + resolved NAMES
+  addressPublishedPrecision?: 'exact' | 'building' | 'street'; // what non-owners are served
   location?: GeoJSONPoint;
 
   type: PropertyType;
@@ -136,6 +137,16 @@ deliberate.
   `cityName`, `regionName`, `countryName`, `neighborhoodName`, plus a ready-made
   `location` label. Render the resolved NAMES. The `*Id` fields are ids, not
   human strings.
+- **Wire, per audience.** `serializeProperty(hydrated, audience)` has no default
+  audience. The owner (the session user the row's `oxy_user_id` names) gets the
+  address exactly as stored; everybody else gets it at the listing's
+  `addressPublishedPrecision` — `building` unless the owner chose `exact`, and
+  `street` when `showAddressNumber` is false. Below `exact`, `floor` (top-level
+  and on the address), `unit`, `subunit` and the free-form address fields are
+  absent, coordinates are rounded, and a unit row's `id` is replaced by its
+  building's or withheld. The rules themselves are
+  [ADR 0003](./adr/0003-privacy-verification-publication) §3; this is only where
+  they are applied.
 
 Because the address is a row rather than a blob, several listings and several
 reviews can point at the same physical place, which is what makes rent history

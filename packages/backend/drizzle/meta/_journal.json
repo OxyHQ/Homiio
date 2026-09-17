@@ -120,6 +120,13 @@
       "when": 1786412763991,
       "tag": "0016_address_merge_collision_refusal",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1789642763154,
+      "tag": "0017_listing_address_published_precision",
+      "breakpoints": true
     }
   ]
 }

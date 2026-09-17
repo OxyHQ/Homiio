@@ -22,6 +22,7 @@ import { requireSessionOxyUserId } from '../utils/sessionUser';
 import {
   CREATABLE_PROPERTY_FIELDS,
   EDITABLE_PROPERTY_FIELDS,
+  invalidAddressPublishedPrecision,
 } from './property/editableFields';
 import { pickFields } from '../utils/pickFields';
 import { getAmenitiesParam } from './queryParams';
@@ -47,7 +48,7 @@ import {
   statusIsNot,
   typeIn,
 } from '../db/properties/propertyFilters';
-import { serializeProperty } from '../db/properties/propertySerializer';
+import { propertyAudienceFor, serializeProperty } from '../db/properties/propertySerializer';
 import {
   incrementPropertyViews,
   insertProperty,
@@ -170,7 +171,7 @@ class RoomController {
 
       res.json(
         paginationResponse(
-          rooms.map(serializeProperty),
+          rooms.map((listing) => serializeProperty(listing, 'public')),
           pageNumber,
           limitNumber,
           total,
@@ -209,6 +210,8 @@ class RoomController {
         addressId = parent.property.addressId;
       }
       const roomData = pickFields<PropertyWriteInput>(req.body, CREATABLE_PROPERTY_FIELDS);
+      const precisionError = invalidAddressPublishedPrecision(roomData);
+      if (precisionError) return next(precisionError);
       const created = await insertProperty({
         ...roomData,
         oxyUserId,
@@ -216,7 +219,7 @@ class RoomController {
         parentPropertyId: parent.property.id,
         type: ROOM_TYPE,
       });
-      const savedRoom = serializeProperty(created);
+      const savedRoom = serializeProperty(created, 'owner');
       logger.info('Room created', {
         roomId: created.property.id,
         oxyUserId,
@@ -245,7 +248,11 @@ class RoomController {
         logger.warn('Failed to increment room view count', { roomId: id, error });
       });
 
-      res.json(successResponse(serializeProperty(hydrated), 'Room retrieved successfully'));
+      // Owner-exact for the session that owns the room, published precision for
+      // every other signed-in caller.
+      const audience = propertyAudienceFor(hydrated, req.user?.id || req.user?._id);
+      if (audience === 'owner') res.set('Cache-Control', 'private, no-store');
+      res.json(successResponse(serializeProperty(hydrated, audience), 'Room retrieved successfully'));
     } catch (error) {
       next(error);
     }
@@ -267,10 +274,12 @@ class RoomController {
         return next(new AppError('Room not found', 404, 'NOT_FOUND'));
       }
       const updateData = pickFields<PropertyWriteInput>(req.body, EDITABLE_PROPERTY_FIELDS);
+      const precisionError = invalidAddressPublishedPrecision(updateData);
+      if (precisionError) return next(precisionError);
       const previousStatus = existing.property.status;
       const updated = await updateProperty(id, updateData, { ownedBy: oxyUserId });
       if (!updated) return next(new AppError('Room not found', 404, 'NOT_FOUND'));
-      const updatedRoom = serializeProperty(updated);
+      const updatedRoom = serializeProperty(updated, 'owner');
 
       const transitionedToTerminal =
         previousStatus !== updated.property.status &&

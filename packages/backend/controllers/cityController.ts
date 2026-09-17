@@ -575,7 +575,7 @@ class CityController {
         success: true,
         data: {
           city,
-          properties: hydrated.map(serializeProperty),
+          properties: hydrated.map((listing) => serializeProperty(listing, 'public')),
           pagination: { page: numericPage, limit: numericLimit, total, pages },
           // Flat aliases for parity with `/properties/search` — the infinite city
           // hook reads `hasMore` in `getNextPageParam` and `totalPages` for display.

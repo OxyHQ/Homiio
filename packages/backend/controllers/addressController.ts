@@ -68,14 +68,21 @@ const logger = {
  */
 function serializeAddress(row: AddressRow | AddressWithGeoNames): Record<string, unknown> {
   const geo = row as Partial<AddressWithGeoNames>;
-  return serializeAddressRow({
-    ...row,
-    cityName: geo.cityName ?? null,
-    regionName: geo.regionName ?? null,
-    countryName: geo.countryName ?? null,
-    countryCodeName: geo.countryCodeName ?? null,
-    neighborhoodName: geo.neighborhoodName ?? null,
-  });
+  // `exact`, unchanged. These endpoints serve an address by its own id, with no
+  // listing and no listing's publication choice in the request — which is why a
+  // listing below `exact` does not publish a UNIT row's id at all (see
+  // `serializeAddressRow`). Their own precision rule is ADR 0003 F1.
+  return serializeAddressRow(
+    {
+      ...row,
+      cityName: geo.cityName ?? null,
+      regionName: geo.regionName ?? null,
+      countryName: geo.countryName ?? null,
+      countryCodeName: geo.countryCodeName ?? null,
+      neighborhoodName: geo.neighborhoodName ?? null,
+    },
+    'exact',
+  );
 }
 
 /**

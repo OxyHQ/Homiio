@@ -37,7 +37,7 @@ import { inArray } from 'drizzle-orm';
 import { getDb } from '../../db/postgres';
 import { properties } from '../../db/schema';
 import { findProperties } from '../../db/properties/propertyReads';
-import { serializeProperty } from '../../db/properties/propertySerializer';
+import { propertyAudienceFor, serializeProperty } from '../../db/properties/propertySerializer';
 import {
   clearRecentlyViewed,
   listRecentlyViewed,
@@ -101,7 +101,7 @@ export async function getRecentProperties(req: Request, res: Response, next: Nex
       // Only reachable if a listing is deleted BETWEEN the two statements above;
       // the foreign key rules out every other case.
       if (!listing) return [];
-      return [{ ...serializeProperty(listing), viewedAt: view.viewedAt }];
+      return [{ ...serializeProperty(listing, propertyAudienceFor(listing, oxyUserId)), viewedAt: view.viewedAt }];
     });
 
     res.json(successResponse(recent, "Recent properties retrieved successfully"));

@@ -203,7 +203,7 @@ export async function scoreAndPersistProperty(propertyId: string): Promise<void>
     return;
   }
 
-  const priceEthics = await computePriceEthics(serializeProperty(hydrated) as ScorableProperty);
+  const priceEthics = await computePriceEthics(serializeProperty(hydrated, 'system') as ScorableProperty);
   if (!priceEthics) {
     logger.warn('Price ethics scoring produced no result', { propertyId });
     return;

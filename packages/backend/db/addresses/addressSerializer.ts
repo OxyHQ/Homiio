@@ -32,6 +32,7 @@
  */
 
 import { eq, type InferSelectModel } from 'drizzle-orm';
+import { PUBLIC_PRECISION_MAX_DECIMALS, type ListingAddressPrecision } from '@homiio/shared-types';
 
 import { addresses, cities, countries, neighborhoods, regions } from '../schema';
 
@@ -102,8 +103,47 @@ function withoutAbsent(record: Record<string, unknown>): Record<string, unknown>
   return out;
 }
 
+/** Round a coordinate to `decimals` places, as a number rather than a string. */
+function roundCoordinate(value: number, decimals: number): number {
+  const factor = 10 ** decimals;
+  return Math.round(value * factor) / factor;
+}
+
 /**
- * Serialize one address onto the wire.
+ * The place id a reduced address may carry.
+ *
+ * `id` is not a neutral field: `GET /api/addresses/:id` serves the row at full
+ * precision to any signed-in caller, so publishing a UNIT row's id beside a
+ * withheld unit hands the unit back one request later. ADR 0001 §6.2 decides
+ * the shape — at building precision the place id is the BUILDING's — and where
+ * no parent is recorded there is no building id to give, so the key is absent.
+ */
+function publishedPlaceId(row: AddressWithGeoNames, precision: ListingAddressPrecision): string | undefined {
+  if (precision === 'exact') return row.id;
+  if (precision === 'building') {
+    if (row.addressLevel !== 'UNIT') return row.id;
+    return row.parentAddressId ?? undefined;
+  }
+  return row.addressLevel === 'STREET' ? row.id : undefined;
+}
+
+/**
+ * Serialize one address onto the wire, at a stated precision.
+ *
+ * `precision` has NO default, on purpose (ADR 0003 §4.1): whether a caller may
+ * see a unit is a fact about the request, and a serializer that guessed it would
+ * guess for every call site at once.
+ *
+ *  - `exact` — the whole row, exactly the body this function has always built.
+ *  - `building` — street and number. ABSENT: `floor`, `unit`, `subunit`, and the
+ *    free-form `address_lines` / `po_box` / `reference` / `extras` (tier R in
+ *    ADR 0003 §2.1, because a portal or a person can type "3r 2a" into any of
+ *    them), plus `normalizedKey`, a hash over `unit` that a short list of door
+ *    labels inverts. Coordinates are rounded to the ladder's building decimals.
+ *  - `street` — additionally withholds `number`, `building_name`, `block`,
+ *    `entrance` and `land_plot`, and rounds to the street decimals.
+ *
+ * Withheld keys are ABSENT, never `null`: a `null` reads as "not recorded".
  *
  * The Mongo FIELD SPELLINGS are preserved deliberately: the schema declares them
  * camelCase in TypeScript and drizzle derives the identical snake_case SQL name
@@ -118,7 +158,10 @@ function withoutAbsent(record: Record<string, unknown>): Record<string, unknown>
  * reconstructed, and it is written once, here — which is the point of naming the
  * columns in the first place.
  */
-export function serializeAddressRow(row: AddressWithGeoNames): Record<string, unknown> {
+export function serializeAddressRow(
+  row: AddressWithGeoNames,
+  precision: ListingAddressPrecision,
+): Record<string, unknown> {
   const landPlot = withoutAbsent({
     block: row.landPlotBlock,
     lot: row.landPlotLot,
@@ -131,8 +174,15 @@ export function serializeAddressRow(row: AddressWithGeoNames): Record<string, un
     .filter((part): part is string => Boolean(part))
     .join(', ');
 
+  const exact = precision === 'exact';
+  const withNumber = precision !== 'street';
+  const decimals = PUBLIC_PRECISION_MAX_DECIMALS[precision === 'street' ? 'street' : 'building'];
+  const longitude = exact ? row.longitude : roundCoordinate(row.longitude, decimals);
+  const latitude = exact ? row.latitude : roundCoordinate(row.latitude, decimals);
+  const placeId = publishedPlaceId(row, precision);
+
   return withoutAbsent({
-    id: row.id,
+    id: placeId,
     countryId: row.countryId,
     regionId: row.regionId,
     cityId: row.cityId,
@@ -140,22 +190,24 @@ export function serializeAddressRow(row: AddressWithGeoNames): Record<string, un
     countryCode: row.countryCode,
     street: row.street,
     postal_code: row.postalCode,
-    number: row.number,
-    building_name: row.buildingName,
-    block: row.block,
-    entrance: row.entrance,
-    floor: row.floor,
-    unit: row.unit,
-    subunit: row.subunit,
+    number: withNumber ? row.number : undefined,
+    building_name: withNumber ? row.buildingName : undefined,
+    block: withNumber ? row.block : undefined,
+    entrance: withNumber ? row.entrance : undefined,
+    floor: exact ? row.floor : undefined,
+    unit: exact ? row.unit : undefined,
+    subunit: exact ? row.subunit : undefined,
     district: row.district,
-    address_lines: row.addressLines,
-    po_box: row.poBox,
-    reference: row.reference,
-    land_plot: Object.keys(landPlot).length > 0 ? landPlot : undefined,
-    extras: row.extras,
-    coordinates: { type: 'Point', coordinates: [row.longitude, row.latitude] },
-    addressLevel: row.addressLevel,
-    normalizedKey: row.normalizedKey,
+    address_lines: exact ? row.addressLines : undefined,
+    po_box: exact ? row.poBox : undefined,
+    reference: exact ? row.reference : undefined,
+    land_plot: withNumber && Object.keys(landPlot).length > 0 ? landPlot : undefined,
+    extras: exact ? row.extras : undefined,
+    coordinates: { type: 'Point', coordinates: [longitude, latitude] },
+    // The level of the place `id` names. When the id was swapped for the
+    // building's, or withheld, the row's own level would announce the unit.
+    addressLevel: placeId === row.id ? row.addressLevel : undefined,
+    normalizedKey: exact ? row.normalizedKey : undefined,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
     cityName: row.cityName,
