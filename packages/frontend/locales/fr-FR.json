@@ -4478,5 +4478,8 @@
       "evictionNearby": "Une expulsion est prévue à environ {{radius}} m de {{area}}.",
       "sourceConflict": "{{title}} apparaît maintenant sur {{count}} sources."
     }
+  },
+  "map": {
+    "clusterLabel": "Groupe sur la carte : {{count}}. Zoomez pour voir chaque repère."
   }
 }

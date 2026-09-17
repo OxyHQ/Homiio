@@ -4514,5 +4514,8 @@
       "evictionNearby": "هناك إخلاء مقرر على بُعد نحو {{radius}} م من {{area}}.",
       "sourceConflict": "يظهر {{title}} الآن على {{count}} مصادر."
     }
+  },
+  "map": {
+    "clusterLabel": "مجموعة على الخريطة: {{count}}. كبّر الخريطة لرؤية كل علامة."
   }
 }

@@ -4529,5 +4529,8 @@
       "evictionNearby": "Hi ha un desnonament previst a uns {{radius}} m de {{area}}.",
       "sourceConflict": "{{title}} apareix ara en {{count}} fonts."
     }
+  },
+  "map": {
+    "clusterLabel": "Grup al mapa: {{count}}. Apropa el mapa per veure cada marcador."
   }
 }

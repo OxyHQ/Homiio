@@ -4513,5 +4513,8 @@
       "evictionNearby": "È previsto uno sfratto entro circa {{radius}} m da {{area}}.",
       "sourceConflict": "{{title}} ora compare su {{count}} fonti."
     }
+  },
+  "map": {
+    "clusterLabel": "Gruppo sulla mappa: {{count}}. Ingrandisci per vedere ogni segnaposto."
   }
 }

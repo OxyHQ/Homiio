@@ -21,11 +21,12 @@ import React, {
   useRef,
   useState,
 } from 'react';
+import { createPortal } from 'react-dom';
 import { View, type ViewStyle, Text } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import * as maplibregl from 'maplibre-gl';
 import type {
   GeoJSONSource,
-  MapLayerMouseEvent,
   MapMouseEvent,
   MapOptions,
   Marker,
@@ -34,17 +35,20 @@ import type {
 import 'maplibre-gl/dist/maplibre-gl.css';
 import type { Feature, FeatureCollection, Point } from 'geojson';
 import * as Location from 'expo-location';
+import { MapClusterMarker, MapPriceMarker } from '@oxy.so/bloom/map-marker';
 
 import { useMapState } from '@/context/MapStateContext';
 import { boundsCenter } from '@homiio/shared-types';
 import { isDegenerateBounds, toCameraBounds } from './mapCamera';
 import { api, type ApiResponse } from '@/utils/api';
+import { ATTRIBUTION } from './mapDocument';
 import {
-  ATTRIBUTION,
-  PRICE_PILL_CLASS,
-  PRICE_PILL_CSS,
-  PRICE_PILL_SELECTED_CLASS,
-} from './mapDocument';
+  clusterOverlayState,
+  collectOverlays,
+  overlaySignature,
+  pointOverlayState,
+  type OverlayItem,
+} from './mapOverlays';
 import {
   DEFAULT_STYLE_URL,
   fetchSanitizedMapStyle,
@@ -60,7 +64,6 @@ import type {
   MapApi,
   MapMoveSource,
   MarkerInput,
-  MarkerStyle,
 } from './mapTypes';
 
 // Re-export the public map types so existing call sites can keep importing
@@ -71,7 +74,6 @@ export type {
   LonLat,
   MapApi,
   MarkerInput,
-  MarkerStyle,
 } from './mapTypes';
 
 /**
@@ -105,7 +107,6 @@ export interface MapProps {
   startFromCurrentLocation?: boolean;
   markers?: MarkerInput[];
   cluster?: ClusterOptions;
-  markerStyle?: MarkerStyle;
   screenId?: string;
   enableAddressLookup?: boolean;
   showAddressInstructions?: boolean;
@@ -122,8 +123,13 @@ const DEFAULT_CENTER: LonLat = [2.16538, 41.38723];
 const DEFAULT_ZOOM = 12;
 
 const SOURCE_ID = 'markers';
-const CLUSTER_LAYER_ID = 'clusters';
-const CLUSTER_COUNT_LAYER_ID = 'cluster-count';
+/**
+ * An invisible layer over the marker source. It draws nothing — the pills and
+ * cluster bubbles are Bloom components in DOM markers — but MapLibre only loads
+ * the tiles of a source some layer uses, and `querySourceFeatures` reads those
+ * tiles, so without it there would be no features to draw from.
+ */
+const SOURCE_ANCHOR_LAYER_ID = 'markers-anchor';
 const ADDRESS_MARKER_COLOR = '#007AFF';
 
 /** Throttle window (ms) for streaming intermediate region updates while panning. */
@@ -153,8 +159,17 @@ const FINE_ZOOM = 14;
  * component scope. This module-scope alias + factory capture the JS built-in so
  * the per-marker bookkeeping map stays correctly typed and constructable.
  */
-type MarkerMap = Map<string, Marker>;
-const createMarkerMap = (): MarkerMap => new Map<string, Marker>();
+interface OverlayMarker {
+  marker: Marker;
+  element: HTMLDivElement;
+}
+type OverlayMarkerMap = Map<string, OverlayMarker>;
+const createOverlayMarkerMap = (): OverlayMarkerMap => new Map<string, OverlayMarker>();
+type MarkerInputMap = Map<string, MarkerInput>;
+const createMarkerInputMap = (list: readonly MarkerInput[]): MarkerInputMap =>
+  new Map<string, MarkerInput>(list.map((marker) => [String(marker.id), marker]));
+type ClusterLeafCache = Map<number, readonly string[]>;
+const createClusterLeafCache = (): ClusterLeafCache => new Map<number, readonly string[]>();
 
 // Address lookup function using backend API (Nominatim-backed, no API key).
 const lookupAddressFromCoordinates = async (coordinates: LonLat): Promise<GeocodedAddress | null> => {
@@ -175,9 +190,6 @@ const lookupAddressFromCoordinates = async (coordinates: LonLat): Promise<Geocod
   }
 };
 
-/** Narrow a GeoJSON `Position` (number[]) to our `[lng, lat]` tuple. */
-const toLonLat = (position: number[]): LonLat => [position[0] ?? 0, position[1] ?? 0];
-
 /** Build the GeoJSON FeatureCollection the GL source consumes from marker inputs. */
 const toFeatureCollection = (list: MarkerInput[]): FeatureCollection<Point> => ({
   type: 'FeatureCollection',
@@ -189,17 +201,6 @@ const toFeatureCollection = (list: MarkerInput[]): FeatureCollection<Point> => (
   })),
 });
 
-/** Inject the shared price-pill stylesheet into <head> exactly once per document. */
-const PILL_STYLE_ELEMENT_ID = 'homiio-map-pill-styles';
-const ensurePillStyles = (): void => {
-  if (typeof document === 'undefined') return;
-  if (document.getElementById(PILL_STYLE_ELEMENT_ID)) return;
-  const styleEl = document.createElement('style');
-  styleEl.id = PILL_STYLE_ELEMENT_ID;
-  styleEl.textContent = PRICE_PILL_CSS;
-  document.head.appendChild(styleEl);
-};
-
 const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref) {
   const {
     style,
@@ -209,10 +210,6 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
     startFromCurrentLocation = true,
     markers = [],
     cluster,
-    // The Airbnb-style pill uses a fixed palette baked into the shared
-    // stylesheet (see mapTypes.ts: `chipBg`/`chipText` are deprecated no-ops),
-    // so `markerStyle` is accepted for API parity but intentionally unused.
-    markerStyle: _markerStyle,
     screenId,
     enableAddressLookup = false,
     showAddressInstructions = false,
@@ -226,6 +223,7 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
   } = props;
 
   const { getMapState, setMapState } = useMapState();
+  const { t } = useTranslation();
 
   const [showInstructions, setShowInstructions] = useState(
     enableAddressLookup && showAddressInstructions,
@@ -242,16 +240,18 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
     enabled: cluster?.enabled ?? true,
     radius: cluster?.radius ?? 40,
     maxZoom: cluster?.maxZoom ?? 17,
-    color: cluster?.color ?? colors.info,
-    textColor: cluster?.textColor ?? colors.white,
   }), [cluster]);
 
   // Imperative handles to the live maplibre instance + per-marker DOM bubbles.
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
-  const pillMarkersRef = useRef<MarkerMap>(createMarkerMap());
+  const overlayMarkersRef = useRef<OverlayMarkerMap>(createOverlayMarkerMap());
+  /** The published marker inputs by id — the only source of a pin's position. */
+  const markerInputsRef = useRef<MarkerInputMap>(createMarkerInputMap([]));
+  /** Resolved cluster members, keyed by cluster id; reset with every data set. */
+  const clusterLeavesRef = useRef<ClusterLeafCache>(createClusterLeafCache());
+  const overlaySignatureRef = useRef('');
   const addressMarkerRef = useRef<Marker | null>(null);
-  const highlightedIdRef = useRef<string | null>(null);
   const lastRegionEmitRef = useRef<number>(0);
   const loadedRef = useRef(false);
 
@@ -282,73 +282,108 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
   const showInstructionsRef = useRef(showInstructions);
   showInstructionsRef.current = showInstructions;
 
-  // Reconcile DOM bubble markers against the source feature set: update existing
-  // ones in place, add new ones, and reap markers that are gone — mirroring
-  // `renderPillMarkers` in mapDocument.ts.
-  const renderPillMarkers = useCallback((collection: FeatureCollection<Point>) => {
+  /**
+   * The markers drawn over the canvas: one Bloom pill per unclustered point and
+   * one Bloom bubble per cluster, each mounted (by portal, below) into the DOM
+   * node of a MapLibre `Marker`.
+   *
+   * `highlightedId` is the one the results list or a pin press highlighted;
+   * `visitedIds` are the pins pressed before in this map's lifetime, drawn
+   * muted so the reader can see what they have already looked at.
+   */
+  const [overlays, setOverlays] = useState<OverlayItem<HTMLDivElement>[]>([]);
+  const [highlightedId, setHighlightedId] = useState<string | null>(null);
+  const [visitedIds, setVisitedIds] = useState<ReadonlySet<string>>(() => new Set<string>());
+
+  /**
+   * Re-read the source and reconcile the DOM markers with it.
+   *
+   * Runs on every rendered frame, because clusters split and merge as the zoom
+   * crosses a level and there is no event for that. It is cheap — a search page
+   * is a few dozen features — and React only hears about it when the drawn set
+   * actually changed (`overlaySignature`).
+   */
+  const syncOverlays = useCallback(() => {
     const map = mapRef.current;
-    if (!map) return;
-    const pillMarkers = pillMarkersRef.current;
+    if (!map || !loadedRef.current) return;
+    const source = map.getSource<GeoJSONSource>(SOURCE_ID);
+    if (!source) return;
+
+    const descriptors = collectOverlays(
+      map.querySourceFeatures(SOURCE_ID),
+      markerInputsRef.current,
+    );
+    const overlayMarkers = overlayMarkersRef.current;
+    const leafCache = clusterLeavesRef.current;
     const seen = new Set<string>();
 
-    collection.features.forEach((feature) => {
-      const id = String(feature.properties?.id ?? '');
-      if (!id) return;
-      seen.add(id);
-      const coordinates = toLonLat(feature.geometry.coordinates);
-      const price = String(feature.properties?.price ?? '');
-
-      const existing = pillMarkers.get(id);
-      if (existing) {
-        existing.setLngLat(coordinates);
-        const label = existing.getElement().firstChild;
-        if (label instanceof HTMLElement && label.textContent !== price) {
-          label.textContent = price;
-        }
-        return;
+    const items = descriptors.map<OverlayItem<HTMLDivElement>>((descriptor) => {
+      seen.add(descriptor.key);
+      let entry = overlayMarkers.get(descriptor.key);
+      if (entry) {
+        entry.marker.setLngLat(descriptor.coordinates);
+      } else {
+        const element = document.createElement('div');
+        // A press on a pill is not a press on the map beneath it.
+        element.addEventListener('click', (event) => event.stopPropagation());
+        const marker = new maplibregl.Marker({ element, anchor: 'center' })
+          .setLngLat(descriptor.coordinates)
+          .addTo(map);
+        entry = { marker, element };
+        overlayMarkers.set(descriptor.key, entry);
       }
 
-      const wrapper = document.createElement('div');
-      const pill = document.createElement('div');
-      pill.className = PRICE_PILL_CLASS;
-      pill.textContent = price;
-      pill.addEventListener('click', (event) => {
-        event.stopPropagation();
-        onMarkerPressRef.current?.({ id, lngLat: coordinates });
-      });
-      wrapper.appendChild(pill);
-
-      const marker = new maplibregl.Marker({ element: wrapper, anchor: 'center' })
-        .setLngLat(coordinates)
-        .addTo(map);
-      pillMarkers.set(id, marker);
+      if (descriptor.kind === 'point') {
+        return { ...descriptor, element: entry.element, leafIds: null };
+      }
+      const leafIds = leafCache.get(descriptor.clusterId) ?? null;
+      if (!leafIds) {
+        const { clusterId } = descriptor;
+        source
+          .getClusterLeaves(clusterId, Infinity, 0)
+          .then((leaves) => {
+            // A data set replaced while this resolved has its own cache.
+            if (clusterLeavesRef.current !== leafCache) return;
+            leafCache.set(
+              clusterId,
+              leaves.map((leaf) => String(leaf.properties?.id ?? '')),
+            );
+            syncOverlaysRef.current();
+          })
+          .catch(() => {
+            // Cluster ids go stale when the zoom changes; the next frame asks again.
+          });
+      }
+      return { ...descriptor, element: entry.element, leafIds };
     });
 
-    pillMarkers.forEach((marker, id) => {
-      if (!seen.has(id)) {
-        marker.remove();
-        pillMarkers.delete(id);
+    overlayMarkers.forEach((entry, key) => {
+      if (!seen.has(key)) {
+        entry.marker.remove();
+        overlayMarkers.delete(key);
       }
     });
 
-    // Re-apply highlight if the highlighted id was removed and re-added.
-    if (highlightedIdRef.current) {
-      const target = pillMarkers.get(highlightedIdRef.current);
-      const label = target?.getElement().firstChild;
-      if (label instanceof HTMLElement) label.classList.add(PRICE_PILL_SELECTED_CLASS);
+    const signature = overlaySignature(items);
+    if (signature !== overlaySignatureRef.current) {
+      overlaySignatureRef.current = signature;
+      setOverlays(items);
     }
   }, []);
+  const syncOverlaysRef = useRef(syncOverlays);
+  syncOverlaysRef.current = syncOverlays;
 
-  // Push a marker set into both the GL source (clusters) and the DOM bubbles.
+  // Push a marker set into the clustered GL source; the frame it renders
+  // re-reads the source and redraws the pills.
   const setData = useCallback((features: MarkerInput[]) => {
     const map = mapRef.current;
     if (!map || !loadedRef.current) return;
     const source = map.getSource<GeoJSONSource>(SOURCE_ID);
     if (!source) return;
-    const collection = toFeatureCollection(features);
-    source.setData(collection);
-    renderPillMarkers(collection);
-  }, [renderPillMarkers]);
+    markerInputsRef.current = createMarkerInputMap(features);
+    clusterLeavesRef.current = createClusterLeafCache();
+    source.setData(toFeatureCollection(features));
+  }, []);
 
   // Emit a region change, throttling the streaming (non-final) updates.
   //
@@ -398,11 +433,9 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
     const container = containerRef.current;
     if (!container || mapRef.current) return;
 
-    // The pill-marker store is created once and never reassigned; capture it for
-    // the cleanup so it doesn't read a possibly-changed ref at teardown time.
-    const pillMarkers = pillMarkersRef.current;
-
-    ensurePillStyles();
+    // The overlay-marker store is created once and never reassigned; capture it
+    // for the cleanup so it doesn't read a possibly-changed ref at teardown time.
+    const overlayMarkers = overlayMarkersRef.current;
 
     // The OpenFreeMap liberty style ships layer filters that throw on
     // null-numeric tile properties. Construct against the HARDENED style object
@@ -451,80 +484,21 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
           promoteId: 'id',
         });
 
-        if (clusterEnabled) {
-          map.addLayer({
-            id: CLUSTER_LAYER_ID,
-            type: 'circle',
-            source: SOURCE_ID,
-            filter: ['has', 'point_count'],
-            paint: {
-              'circle-color': clusterFinal.color,
-              'circle-radius': ['step', ['get', 'point_count'], 16, 20, 18, 50, 22],
-              'circle-stroke-color': colors.white,
-              'circle-stroke-width': 2,
-            },
-          });
-          map.addLayer({
-            id: CLUSTER_COUNT_LAYER_ID,
-            type: 'symbol',
-            source: SOURCE_ID,
-            filter: ['has', 'point_count'],
-            layout: {
-              'text-field': ['get', 'point_count_abbreviated'],
-              'text-font': ['Noto Sans Bold'],
-              'text-size': 12,
-            },
-            paint: { 'text-color': clusterFinal.textColor },
-          });
-
-          map.on('click', CLUSTER_LAYER_ID, (event: MapLayerMouseEvent) => {
-            const features = map.queryRenderedFeatures(event.point, { layers: [CLUSTER_LAYER_ID] });
-            const feature = features[0];
-            if (!feature) return;
-            const clusterId = feature.properties?.cluster_id;
-            const source = map.getSource<GeoJSONSource>(SOURCE_ID);
-            if (typeof clusterId !== 'number' || !source) return;
-            source.getClusterExpansionZoom(clusterId).then((zoom) => {
-              const geometry = feature.geometry;
-              if (geometry.type === 'Point') {
-                // Expanding a cluster is a click on a cluster, not a statement
-                // about which area to search — so it must not arm the button.
-                map.easeTo({ center: toLonLat(geometry.coordinates), zoom }, PROGRAMMATIC_MOVE);
-              }
-            }).catch(() => {
-              // Cluster expansion is best-effort; ignore lookup failures.
-            });
-
-            const leaves: ClusterLeaf[] = features.map((f) => ({
-              geometry: f.geometry.type === 'Point'
-                ? { type: 'Point', coordinates: toLonLat(f.geometry.coordinates) }
-                : undefined,
-              properties: {
-                id: String(f.properties?.id ?? ''),
-                price: String(f.properties?.price ?? ''),
-              },
-            }));
-            onClusterPressRef.current?.({ leaves });
-          });
-
-          map.on('mouseenter', CLUSTER_LAYER_ID, () => {
-            map.getCanvas().style.cursor = 'pointer';
-          });
-          map.on('mouseleave', CLUSTER_LAYER_ID, () => {
-            map.getCanvas().style.cursor = '';
-          });
-        }
+        map.addLayer({
+          id: SOURCE_ANCHOR_LAYER_ID,
+          type: 'circle',
+          source: SOURCE_ID,
+          paint: { 'circle-radius': 0, 'circle-opacity': 0, 'circle-stroke-width': 0 },
+        });
 
         // Render any markers/state that arrived before `load` completed.
         const initialFeatures = savedState?.markers && savedState.markers.length > 0
           ? savedState.markers
           : markersRef.current;
-        if (initialFeatures.length > 0) {
-          const collection = toFeatureCollection(initialFeatures);
-          map.getSource<GeoJSONSource>(SOURCE_ID)?.setData(collection);
-          renderPillMarkers(collection);
-        }
+        setData(initialFeatures);
       });
+
+      map.on('render', () => syncOverlaysRef.current());
 
       map.on('click', (event: MapMouseEvent) => {
         const coordinates: LonLat = [event.lngLat.lng, event.lngLat.lat];
@@ -575,8 +549,8 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
       disposed = true;
       resizeObserver?.disconnect();
       resizeObserver = null;
-      pillMarkers.forEach((marker) => marker.remove());
-      pillMarkers.clear();
+      overlayMarkers.forEach((entry) => entry.marker.remove());
+      overlayMarkers.clear();
       addressMarkerRef.current?.remove();
       addressMarkerRef.current = null;
       loadedRef.current = false;
@@ -658,6 +632,58 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
     };
   }, [startFromCurrentLocation, savedState, initialCoordinates, initialZoom]);
 
+  const handlePointPress = useCallback((id: string, coordinates: LonLat) => {
+    setVisitedIds((previous) => {
+      if (previous.has(id)) return previous;
+      const next = new Set(previous);
+      next.add(id);
+      return next;
+    });
+    onMarkerPressRef.current?.({ id, lngLat: coordinates });
+  }, []);
+
+  const handleClusterPress = useCallback((clusterId: number, coordinates: LonLat) => {
+    const map = mapRef.current;
+    const source = map?.getSource<GeoJSONSource>(SOURCE_ID);
+    if (!map || !source) return;
+    source.getClusterExpansionZoom(clusterId).then((zoom) => {
+      // Expanding a cluster is a press on a cluster, not a statement about
+      // which area to search — so it must not arm the button.
+      map.easeTo({ center: coordinates, zoom }, PROGRAMMATIC_MOVE);
+    }).catch(() => {
+      // Cluster expansion is best-effort; ignore lookup failures.
+    });
+
+    if (!onClusterPressRef.current) return;
+    source.getClusterLeaves(clusterId, Infinity, 0).then((features) => {
+      const inputs = markerInputsRef.current;
+      const leaves = features.flatMap<ClusterLeaf>((feature) => {
+        const input = inputs.get(String(feature.properties?.id ?? ''));
+        // Positions come from the published input, never the tile geometry.
+        return input
+          ? [{
+              geometry: { type: 'Point', coordinates: input.coordinates },
+              properties: { id: String(input.id), price: input.priceLabel },
+            }]
+          : [];
+      });
+      onClusterPressRef.current?.({ leaves });
+    }).catch(() => {
+      // Stale cluster id after a zoom; nothing to report.
+    });
+  }, []);
+
+  // Raise the highlighted pill (or the cluster holding it) above its
+  // neighbours, which Bloom leaves to the app that positions it.
+  useEffect(() => {
+    overlays.forEach((item) => {
+      const active = item.kind === 'point'
+        ? item.id === highlightedId
+        : clusterOverlayState(item.leafIds, highlightedId) === 'active';
+      item.element.style.zIndex = active ? '2' : '';
+    });
+  }, [overlays, highlightedId]);
+
   // Expose the imperative MapApi — identical to the native component.
   useImperativeHandle(ref, () => ({
     navigateToLocation: (center: LonLat, zoom: number = 15) => {
@@ -690,22 +716,7 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
       );
     },
     highlightMarker: (id: string | null) => {
-      const pillMarkers = pillMarkersRef.current;
-      if (highlightedIdRef.current) {
-        const prevLabel = pillMarkers.get(highlightedIdRef.current)?.getElement().firstChild;
-        if (prevLabel instanceof HTMLElement) {
-          prevLabel.classList.remove(PRICE_PILL_SELECTED_CLASS);
-        }
-      }
-      if (id) {
-        const nextLabel = pillMarkers.get(String(id))?.getElement().firstChild;
-        if (nextLabel instanceof HTMLElement) {
-          nextLabel.classList.add(PRICE_PILL_SELECTED_CLASS);
-        }
-        highlightedIdRef.current = String(id);
-      } else {
-        highlightedIdRef.current = null;
-      }
+      setHighlightedId(id ? String(id) : null);
     },
     lookupAddress: async (coordinates: LonLat) => lookupAddressFromCoordinates(coordinates),
   }), []);
@@ -720,6 +731,28 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
         </View>
       )}
       <div ref={containerRef} style={mapDivStyle} />
+      {overlays.map((item) =>
+        createPortal(
+          item.kind === 'point' ? (
+            <MapPriceMarker
+              price={item.price}
+              state={pointOverlayState(item.id, highlightedId, visitedIds)}
+              onPress={() => handlePointPress(item.id, item.coordinates)}
+              testID={`map-marker-${item.id}`}
+            />
+          ) : (
+            <MapClusterMarker
+              count={item.count}
+              state={clusterOverlayState(item.leafIds, highlightedId)}
+              onPress={() => handleClusterPress(item.clusterId, item.coordinates)}
+              accessibilityLabel={t('map.clusterLabel', { count: item.count })}
+              testID={`map-cluster-${item.clusterId}`}
+            />
+          ),
+          item.element,
+          item.key,
+        ),
+      )}
     </View>
   );
 });
@@ -739,7 +772,6 @@ const MemoizedMap = React.memo(MapComponent, (prevProps, nextProps) => {
       prevProps.startFromCurrentLocation === nextProps.startFromCurrentLocation &&
       JSON.stringify(prevProps.markers) === JSON.stringify(nextProps.markers) &&
       JSON.stringify(prevProps.cluster) === JSON.stringify(nextProps.cluster) &&
-      JSON.stringify(prevProps.markerStyle) === JSON.stringify(nextProps.markerStyle) &&
       JSON.stringify(prevProps.style) === JSON.stringify(nextProps.style)
     );
   }
@@ -751,7 +783,6 @@ const MemoizedMap = React.memo(MapComponent, (prevProps, nextProps) => {
       prevProps.initialZoom === nextProps.initialZoom &&
       prevProps.startFromCurrentLocation === nextProps.startFromCurrentLocation &&
       JSON.stringify(prevProps.cluster) === JSON.stringify(nextProps.cluster) &&
-      JSON.stringify(prevProps.markerStyle) === JSON.stringify(nextProps.markerStyle) &&
       JSON.stringify(prevProps.style) === JSON.stringify(nextProps.style) &&
       prevProps.onMapPress === nextProps.onMapPress &&
       prevProps.onMarkerPress === nextProps.onMarkerPress &&
