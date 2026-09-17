@@ -2026,9 +2026,11 @@
       "attach": "Attach a file",
       "send": "Send message",
       "stop": "Stop generating",
-      "messageCount_one": "{{count}} message",
-      "messageCount_other": "{{count}} messages",
-      "disclaimer": "Sindi advocates for tenant rights and housing justice. For legal action, consult a qualified attorney. Connect with local tenant organizations for community support."
+      "disclaimer": "Sindi advocates for tenant rights and housing justice. For legal action, consult a qualified attorney. Connect with local tenant organizations for community support.",
+      "addMenu": "Add to chat",
+      "addGroup": "Add",
+      "voice": "Voice input",
+      "removeAttachment": "Remove"
     },
     "errors": {
       "connection": "Connection Error",
@@ -2094,6 +2096,13 @@
       "behavior": "Behavior",
       "title": "Sindi preferences",
       "resetDone": "Sindi preferences reset."
+    },
+    "voice": {
+      "unsupportedBrowser": "Voice input isn't supported in this browser",
+      "unsupportedDevice": "Voice input isn't available on this device",
+      "deniedTitle": "Microphone access denied",
+      "deniedMessage": "Allow microphone and speech recognition access in your settings to dictate messages.",
+      "failed": "Voice input stopped unexpectedly"
     }
   },
   "sidebar": {

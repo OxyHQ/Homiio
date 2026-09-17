@@ -2035,12 +2035,10 @@
       "send": "إرسال الرسالة",
       "stop": "إيقاف الإنشاء",
       "disclaimer": "Sindi advocates for tenant rights and housing justice. For legal action, consult a qualified attorney. Connect with local tenant organizations for community support.",
-      "messageCount_zero": "{{count}} رسالة",
-      "messageCount_one": "{{count}} رسالة",
-      "messageCount_two": "{{count}} رسالتان",
-      "messageCount_few": "{{count}} رسائل",
-      "messageCount_many": "{{count}} رسالة",
-      "messageCount_other": "{{count}} رسالة"
+      "addMenu": "إضافة إلى المحادثة",
+      "addGroup": "إضافة",
+      "voice": "الإدخال الصوتي",
+      "removeAttachment": "إزالة"
     },
     "errors": {
       "connection": "Connection Error",
@@ -2106,6 +2104,13 @@
       "behavior": "Behavior",
       "title": "Sindi preferences",
       "resetDone": "Sindi preferences reset."
+    },
+    "voice": {
+      "unsupportedBrowser": "الإدخال الصوتي غير مدعوم في هذا المتصفح",
+      "unsupportedDevice": "الإدخال الصوتي غير متاح على هذا الجهاز",
+      "deniedTitle": "تم رفض الوصول إلى الميكروفون",
+      "deniedMessage": "اسمح بالوصول إلى الميكروفون والتعرّف على الكلام من الإعدادات لإملاء الرسائل.",
+      "failed": "توقف الإدخال الصوتي بشكل غير متوقع"
     }
   },
   "sidebar": {

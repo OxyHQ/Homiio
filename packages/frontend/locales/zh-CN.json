@@ -2026,9 +2026,11 @@
       "attach": "添加附件",
       "send": "发送消息",
       "stop": "停止生成",
-      "messageCount_one": "{{count}} 条消息",
-      "messageCount_other": "{{count}} 条消息",
-      "disclaimer": "Sindi advocates for tenant rights and housing justice. For legal action, consult a qualified attorney. Connect with local tenant organizations for community support."
+      "disclaimer": "Sindi advocates for tenant rights and housing justice. For legal action, consult a qualified attorney. Connect with local tenant organizations for community support.",
+      "addMenu": "添加到聊天",
+      "addGroup": "添加",
+      "voice": "语音输入",
+      "removeAttachment": "移除"
     },
     "errors": {
       "connection": "Connection Error",
@@ -2094,6 +2096,13 @@
       "behavior": "Behavior",
       "title": "Sindi preferences",
       "resetDone": "Sindi preferences reset."
+    },
+    "voice": {
+      "unsupportedBrowser": "此浏览器不支持语音输入",
+      "unsupportedDevice": "此设备上无法使用语音输入",
+      "deniedTitle": "麦克风访问被拒绝",
+      "deniedMessage": "请在设置中允许访问麦克风和语音识别，以便口述消息。",
+      "failed": "语音输入意外停止"
     }
   },
   "sidebar": {

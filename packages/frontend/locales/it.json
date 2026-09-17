@@ -2387,9 +2387,11 @@
       "attach": "Allega un file",
       "send": "Invia messaggio",
       "stop": "Interrompi la risposta",
-      "messageCount_one": "{{count}} messaggio",
-      "messageCount_other": "{{count}} messaggi",
-      "disclaimer": "Sindi difende i diritti degli inquilini e la giustizia abitativa. Per azioni legali, consulta un avvocato qualificato. Connettiti con organizzazioni locali di inquilini per supporto comunitario."
+      "disclaimer": "Sindi difende i diritti degli inquilini e la giustizia abitativa. Per azioni legali, consulta un avvocato qualificato. Connettiti con organizzazioni locali di inquilini per supporto comunitario.",
+      "addMenu": "Aggiungi alla chat",
+      "addGroup": "Aggiungi",
+      "voice": "Input vocale",
+      "removeAttachment": "Rimuovi"
     },
     "errors": {
       "connection": "Errore di Connessione",
@@ -2455,6 +2457,13 @@
       "behavior": "Behavior",
       "title": "Sindi preferences",
       "resetDone": "Sindi preferences reset."
+    },
+    "voice": {
+      "unsupportedBrowser": "L'input vocale non è supportato da questo browser",
+      "unsupportedDevice": "L'input vocale non è disponibile su questo dispositivo",
+      "deniedTitle": "Accesso al microfono negato",
+      "deniedMessage": "Consenti l'accesso al microfono e al riconoscimento vocale nelle impostazioni per dettare i messaggi.",
+      "failed": "L'input vocale si è interrotto inaspettatamente"
     }
   },
   "sidebar": {

@@ -2026,9 +2026,11 @@
       "attach": "Lampirkan file",
       "send": "Kirim pesan",
       "stop": "Hentikan jawaban",
-      "messageCount_one": "{{count}} pesan",
-      "messageCount_other": "{{count}} pesan",
-      "disclaimer": "Sindi advocates for tenant rights and housing justice. For legal action, consult a qualified attorney. Connect with local tenant organizations for community support."
+      "disclaimer": "Sindi advocates for tenant rights and housing justice. For legal action, consult a qualified attorney. Connect with local tenant organizations for community support.",
+      "addMenu": "Tambahkan ke obrolan",
+      "addGroup": "Tambah",
+      "voice": "Input suara",
+      "removeAttachment": "Hapus"
     },
     "errors": {
       "connection": "Connection Error",
@@ -2094,6 +2096,13 @@
       "behavior": "Behavior",
       "title": "Sindi preferences",
       "resetDone": "Sindi preferences reset."
+    },
+    "voice": {
+      "unsupportedBrowser": "Input suara tidak didukung di browser ini",
+      "unsupportedDevice": "Input suara tidak tersedia di perangkat ini",
+      "deniedTitle": "Akses mikrofon ditolak",
+      "deniedMessage": "Izinkan akses mikrofon dan pengenalan ucapan di pengaturan untuk mendikte pesan.",
+      "failed": "Input suara berhenti secara tidak terduga"
     }
   },
   "sidebar": {
