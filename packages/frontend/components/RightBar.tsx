@@ -1,5 +1,5 @@
 /**
- * The right rail.
+ * The right rail — `AppShell`'s `aside`.
  *
  * It decides NOTHING about which widgets a route gets — `routeRail.ts` owns
  * that, as a total map from every route in `app/` to a widget set or to `null`.
@@ -10,22 +10,42 @@
  * re-derived a property id by counting slashes — guarded by a hand-maintained
  * list of path segments that are not ids, which is exactly the kind of list
  * that goes stale. Read `routeRail.ts`'s header for the full measurement.
+ *
+ * The frame is not this file's: `AppShell` gives the column its width, pins it
+ * (sticky, scrolling its own overflow) and drops it below its breakpoint. What
+ * stays here is whether there is a column at all — see {@link useHasRightBar}.
  */
 import React, { useMemo } from 'react';
-import { View, Platform, type ViewStyle } from 'react-native';
+import { View } from 'react-native';
 import { usePathname } from 'expo-router';
 import { WidgetManager } from './widgets';
 import { railForPathname } from './widgets/routeRail';
-import {
-  useIsRightBarVisible,
-  useIsLargeDesktop,
-} from '@/hooks/useOptimizedMediaQuery';
+import { useIsLargeDesktop } from '@/hooks/useOptimizedMediaQuery';
 import { useUIStore } from '@/store/uiStore';
 
-export const RightBar = React.memo(function RightBar() {
-  const isRightBarVisible = useIsRightBarVisible();
+/** The column's width, handed to `AppShell` as `asideWidth`. */
+export const RIGHT_BAR_WIDTH = 350;
+
+/**
+ * Whether the layout should give `AppShell` an `aside` at all.
+ *
+ * `AppShell` sizes a column for any non-null `aside`, so an empty rail must be
+ * decided BEFORE the element is created — a `RightBar` that renders `null`
+ * would still leave a 350px hole.
+ *
+ * - No rail for this route (its `ROUTE_RAIL` entry says so, or the pathname is
+ *   not a route at all) → no column.
+ * - The docked Sindi panel takes the fourth column below large-desktop (1440).
+ */
+export function useHasRightBar(): boolean {
+  const pathname = usePathname() || '/';
   const isLargeDesktop = useIsLargeDesktop();
   const sindiPanelOpen = useUIStore((s) => s.sindiPanelOpen);
+  const hasRail = useMemo(() => railForPathname(pathname).screenId !== null, [pathname]);
+  return hasRail && !(sindiPanelOpen && !isLargeDesktop);
+}
+
+export const RightBar = React.memo(function RightBar() {
   const pathname = usePathname() || '/';
 
   // One lookup: the rail AND the params it needs, both read off the pattern
@@ -34,30 +54,13 @@ export const RightBar = React.memo(function RightBar() {
   // back to their own data sources rather than rendering placeholders.
   const rail = useMemo(() => railForPathname(pathname), [pathname]);
 
-  if (!isRightBarVisible) return null;
   // No rail for this route. A route reaches this either because its entry in
   // `ROUTE_RAIL` says so, or because the pathname is not a route at all — and
   // for both, rendering somebody else's widgets is the thing #423 removed.
   if (rail.screenId === null) return null;
-  // Drop the 4th column while the Sindi panel is docked, unless the screen is
-  // large-desktop (>= 1440) where all four columns fit.
-  if (sindiPanelOpen && !isLargeDesktop) return null;
-
-  // Web sticky pin — RN style system has no sticky utility that survives
-  // react-native-web cleanly for this rail; keep the numeric sticky object.
-  const stickyStyle =
-    Platform.OS === 'web'
-      ? ({
-          position: 'sticky',
-          // Keep the column at its content height so sticky pins while the
-          // center feed scrolls (default flex stretch would stretch to the row).
-          alignSelf: 'flex-start',
-          top: 0,
-        } as unknown as ViewStyle)
-      : undefined;
 
   return (
-    <View className="w-[350px] flex-col px-4 pt-4 gap-4" style={stickyStyle}>
+    <View className="flex-col gap-4 px-2 pt-2 pb-4">
       <WidgetManager
         screenId={rail.screenId}
         propertyId={rail.propertyId}

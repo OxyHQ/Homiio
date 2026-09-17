@@ -5,34 +5,50 @@
 
 ## Layout shell and design tokens (CRITICAL)
 
-### ContentPanel (Bloom, Mention-shaped)
+### The frame is Bloom `AppShell`
 
-The center column uses Bloom `ContentPanel` (`framed` plus `maskColor`), **not** a
-flat `mainContentWrapper` or a custom bleed mask. Reference: Mention
-`app/(app)/_layout.tsx`.
+`app/_layout.tsx` renders Bloom `AppShell` (`@oxy.so/bloom/app-shell`) and
+nothing else as the frame. **Do not hand-roll a sidebar column, drawer, scrim,
+sticky right rail or `ContentPanel` around it** — the shell owns all of them.
 
-- `framed={Platform.OS === 'web' && isScreenNotMobile}` (500 px wide or more).
-- `maskColor={theme.colors.background}`, unscoped, matching the page background.
-- Native phone: `framed={false}`, full bleed.
-- Explore is fixed-viewport: no page scroll, but it still wraps the center in
-  ContentPanel when framed.
-- **Never hand-roll a bleed mask.** ContentPanel owns it.
+- `sidebar` is `useHomiioSidebarProps()` (`components/SideBar`): Bloom `Sidebar`
+  PROPS, not a component. Call it once. In flow from Bloom's `lg` (1024); below
+  that the same props drive an `overlay` drawer.
+- The drawer's open state is `uiStore.mobileDrawerOpen` (controlled), so a
+  screen can open it and the sidebar's navigation closes it.
+- `aside` is `RightBar`, 350 wide from `lg`, `asideCollapse="hidden"`. Decide
+  whether there is a column with `useHasRightBar()` BEFORE creating the element:
+  `AppShell` sizes a column for any non-null `aside`, so a `RightBar` that
+  renders `null` would leave an empty 350 px hole.
+- The Oxy account is the sidebar's `team` card (signed in) or a "Sign in"
+  secondary row. `Sidebar` has no slot for `ProfileButton`.
+- The menu button: `Header` renders `AppShellMenuButton` while the shell is in
+  drawer mode. A screen without `Header` gets `AppShell`'s default header, which
+  is that button alone — the layout counts mounted `Header`s to choose, so a
+  screen adopting `Header` needs no layout change. `AppShellMenuButton` and
+  `useAppShell()` throw outside a shell; gate on `InAppShellContext`.
+- Native phones: `NativeTabs` own the screen and `<Slot/>` is full-bleed.
+  `AppShell` is mounted beside it in a zero-size box only for its drawer. Never
+  wrap `NativeTabs` in the shell.
+- Anything anchored beside the rail (the Sindi panel) reads
+  `useSidebarWidth()` from `components/SideBar/dimensions.ts`, which mirrors
+  Bloom's numbers. Re-check it on a Bloom upgrade.
 
 ### Scroll ownership (one owner per surface)
 
-Web default is **document scroll**. Do NOT wrap SideBar plus Slot in a
-layout-level `Animated.ScrollView`. The layout is a static flex row; only the
-screen (or the document on web) scrolls.
+Web default is **document scroll**. Do NOT wrap the shell or `<Slot/>` in a
+layout-level `ScrollView`; only the screen (or the document on web) scrolls.
 
-| Surface | Owner |
-|---|---|
-| Web (default) | Document |
-| Native tabs | Screen `Animated.ScrollView` (local SharedValue) |
-| Explore | Fixed shell (no page scroll) |
+| Surface | `AppShell` `scroll` | Owner |
+|---|---|---|
+| Web (default) | `document` | Document; rail and aside are sticky |
+| Web `/explore` | `fixed` (`100dvh`) | The explore surface: map pinned, list scrolls |
+| Native tablets (>= 500) | `fixed` | The screen's own scroll view |
+| Native phones | none (drawer host only) | Screen `Animated.ScrollView` |
 
-Remove `LayoutScrollProvider` and the layout scroll handler when not needed. No
-dual writers of `scrollY`. Sticky header `top` is Bloom `PANEL_TOP_INSET` when
-framed.
+`document` and `container` on native wrap every screen in the shell's
+`ScrollView` on top of the screen's own — never use them there. Sticky headers
+pin at `top: 0`: the shell draws no band above the content.
 
 ### Section stacking (NativeWind gap)
 
@@ -199,7 +215,8 @@ The mapping table lives in `packages/frontend/components/ui/README.md`.
   `OxyProvider` (`@oxy.so/services`) already mounts `SurfaceProvider`, and a
   second host renders every surface twice.
 - **`Header` is an adapter over Bloom `PageHeader`**, keeping the `options` API;
-  it pins at `PANEL_TOP_INSET` when framed. Do not fork a second header.
+  it pins at `top: 0` and leads with the shell's menu button in drawer mode. Do
+  not fork a second header.
 - **`HomeCarouselSection` scrolls, snaps and pages through Bloom `Carousel`**; it
   only owns the section header and the card width.
 - **`AvailabilityCalendar` stays as a listing-rules wrapper over Bloom

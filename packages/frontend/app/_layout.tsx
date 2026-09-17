@@ -1,18 +1,28 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { Platform, View, AppState, AppStateStatus } from 'react-native';
+import {
+  Platform,
+  View,
+  AppState,
+  AppStateStatus,
+  useWindowDimensions,
+  type ViewStyle,
+} from 'react-native';
 import {
   SafeAreaProvider,
   initialWindowMetrics,
+  useSafeAreaInsets,
 } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { preventNativeSplashAutoHide, useHideNativeSplashWhenReady } from '@oxy.so/expo-splash';
 import { Slot, usePathname } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useIsScreenNotMobile } from '@/hooks/useOptimizedMediaQuery';
-import { SideBar } from '@/components/SideBar';
-import { RightBar } from '@/components/RightBar';
-import { ContentPanel } from '@oxy.so/bloom/content-panel';
-import { useTheme } from '@oxy.so/bloom/theme';
+import { useHomiioSidebarProps, type HomiioSidebarProps } from '@/components/SideBar';
+import { SIDEBAR_IN_FLOW_FROM } from '@/components/SideBar/dimensions';
+import { RightBar, RIGHT_BAR_WIDTH, useHasRightBar } from '@/components/RightBar';
+import { InAppShellContext, useIsScreenHeaderMounted } from '@/components/Header';
+import { useUIStore } from '@/store/uiStore';
+import { AppShell } from '@oxy.so/bloom/app-shell';
 import { ConnectionStatusToasts } from '@oxy.so/bloom/connection-status';
 import {
   setupNotifications,
@@ -117,119 +127,103 @@ function MediaResolverProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
+/** A header that draws nothing: the page (or nothing at all) owns the menu button. */
+const NO_SHELL_HEADER = <></>;
+
 /**
- * The persistent visual shell (Mention shape): `SideBar · gutter · ContentPanel
- * · RightBar`. This lives BELOW `BloomProvider` so it can read the unscoped
- * app theme (`useTheme().colors.background`) for the panel's bleed-mask.
+ * The page frame is Bloom's `AppShell`: the sidebar in flow from `lg` (1024)
+ * and an overlay drawer below it, the route's right rail as the `aside`, and
+ * the routed screen as the content. Everything below chooses its props.
  *
- * There is exactly ONE scroll owner per surface and NO page-level `ScrollView`:
- * - Web default: the DOCUMENT scrolls (the `html/body/#root` reset in
- *   `global.css` re-enables it); each screen flows in normal document flow and
- *   the sticky `SideBar`/`RightBar`/panel chrome pin to the viewport.
+ * ONE scroll owner per surface and NO page-level `ScrollView`:
+ * - Web: `scroll="document"` — the document scrolls, the rail and aside are
+ *   sticky. `/explore` is `scroll="fixed"` instead: one `100dvh` screen where
+ *   nothing scrolls, so the explore surface pins its map and scrolls only its
+ *   results list.
+ * - Native tablets (>= 500): `scroll="fixed"` everywhere. Native has no
+ *   document, and `document`/`container` would wrap every screen in the shell's
+ *   `ScrollView` on top of the screen's own — a double scroller.
  * - Native phones: the `(tabs)` `NativeTabs` navigator owns the screen, so
- *   `<Slot/>` renders full-bleed (no `ContentPanel` frame) and each screen's own
- *   `Animated.ScrollView` is the scroll owner. `SideBar` stays mounted for its
- *   Portal overlay drawer.
- * - Explore (`/explore`): a FIXED-VIEWPORT shell clamped to `100dvh` with
- *   `overflow:'hidden'` so the page never scrolls; the explore surface pins its
- *   map and scrolls only its results list. Still framed in a `ContentPanel` on
- *   web/wide.
+ *   `<Slot/>` renders full-bleed and each screen's own scroll view is the owner.
+ *   `AppShell` is mounted beside it in a zero-size box purely for its drawer
+ *   (portaled to the root `PortalOutlet`), which home's hero menu button opens.
+ *
+ * The drawer's open state is `uiStore.mobileDrawerOpen`, so screens and the
+ * sidebar's own navigation (which closes it) share one switch.
+ *
+ * The menu button: a screen `Header` renders `AppShellMenuButton` itself; a
+ * screen without one gets `AppShell`'s default header, which below `lg` is
+ * that button alone. Home below 500 draws its own in the hero.
  */
-function AppShell() {
+function AppFrame() {
   const isScreenNotMobile = useIsScreenNotMobile();
   const pathname = usePathname() || '/';
-  // Unscoped app theme (this runs outside any `BloomColorScope`), passed to the
-  // panel as `maskColor` so the sticky gutter bleed-mask matches the outer band.
-  const theme = useTheme();
+  const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
 
-  const useNativeTabBar = Platform.OS !== 'web' && !isScreenNotMobile;
-  const isExploreRoute = pathname === '/explore' || pathname.startsWith('/explore/');
-  const useFixedViewport = !useNativeTabBar && isExploreRoute;
-  // Framed (floating rounded panel + bleed-mask) only on wide WEB; native and
-  // narrow web are full-bleed.
-  const framed = Platform.OS === 'web' && isScreenNotMobile;
-  // Desktop-web gutter: `p-2 pl-0` (8px, flush to the rail) only while framed.
-  const gutterPad = framed ? 'p-2 pl-0' : '';
+  const sidebar = useHomiioSidebarProps();
+  const drawerOpen = useUIStore((s) => s.mobileDrawerOpen);
+  const openMobileDrawer = useUIStore((s) => s.openMobileDrawer);
+  const closeMobileDrawer = useUIStore((s) => s.closeMobileDrawer);
+  const onDrawerOpenChange = useCallback(
+    (open: boolean) => (open ? openMobileDrawer() : closeMobileDrawer()),
+    [openMobileDrawer, closeMobileDrawer],
+  );
+  const hasRightBar = useHasRightBar();
+  const screenHeaderMounted = useIsScreenHeaderMounted();
 
-  if (useNativeTabBar) {
-    // Native phones: the `(tabs)` `NativeTabs` navigator owns the screen
-    // container, so `<Slot/>` renders directly (no shell frame / right rail).
-    // `SideBar` stays mounted for its Portal overlay drawer.
+  const isNative = Platform.OS !== 'web';
+  const railInFlow = width >= SIDEBAR_IN_FLOW_FROM;
+
+  // Native: keep the rail clear of the status bar and home indicator. The
+  // in-flow rail stretches in the shell's row; the drawer's fills its column.
+  const nativeSidebar = useMemo<HomiioSidebarProps>(() => {
+    const safeArea: ViewStyle = { marginTop: insets.top, marginBottom: insets.bottom, height: undefined };
+    return {
+      ...sidebar,
+      style: railInFlow
+        ? { ...safeArea, alignSelf: 'stretch' }
+        : { ...safeArea, flex: 1, minHeight: 0 },
+    };
+  }, [sidebar, insets.top, insets.bottom, railInFlow]);
+
+  if (isNative && !isScreenNotMobile) {
     return (
       <>
-        <SideBar />
         <Slot />
+        <View pointerEvents="none" style={{ position: 'absolute', width: 0, height: 0, overflow: 'hidden' }}>
+          <AppShell
+            sidebar={nativeSidebar}
+            header={NO_SHELL_HEADER}
+            drawerOpen={drawerOpen}
+            onDrawerOpenChange={onDrawerOpenChange}
+            scroll="fixed"
+          />
+        </View>
       </>
     );
   }
 
-  if (useFixedViewport) {
-    return (
-      <View
-        className={
-          Platform.OS === 'web'
-            ? 'h-dvh w-full mx-auto flex-row overflow-hidden bg-background'
-            : 'flex-1 w-full flex-row bg-background'
-        }
-      >
-        <SideBar />
-        <View
-          className={
-            Platform.OS === 'web'
-              ? 'flex-1 min-w-0 h-full flex-row justify-between overflow-hidden'
-              : 'flex-1 min-w-0 flex-row justify-between'
-          }
-        >
-          <View
-            className={
-              Platform.OS === 'web'
-                ? `flex-1 min-w-0 h-full overflow-hidden ${gutterPad}`
-                : 'flex-1 min-w-0'
-            }
-          >
-            <ContentPanel framed={framed} maskColor={theme.colors.background}>
-              <Slot />
-            </ContentPanel>
-          </View>
-          <View className={Platform.OS === 'web' ? 'h-full overflow-auto' : undefined}>
-            <RightBar />
-          </View>
-        </View>
-      </View>
-    );
-  }
+  const isExploreRoute = pathname === '/explore' || pathname.startsWith('/explore/');
+  const pageDrawsMenuButton = screenHeaderMounted || (pathname === '/' && !isScreenNotMobile);
 
   return (
-    <View
-      className={
-        isScreenNotMobile
-          ? 'flex-1 w-full mx-auto flex-row justify-center bg-background'
-          : 'flex-1 w-full flex-col bg-background'
-      }
-    >
-      <SideBar />
-      <View
-        className={
-          isScreenNotMobile
-            ? 'flex-1 flex-row justify-between'
-            : 'flex-1 flex-col justify-between'
-        }
+    <InAppShellContext.Provider value>
+      <AppShell
+        sidebar={isNative ? nativeSidebar : sidebar}
+        drawer="overlay"
+        drawerOpen={drawerOpen}
+        onDrawerOpenChange={onDrawerOpenChange}
+        header={pageDrawsMenuButton ? NO_SHELL_HEADER : undefined}
+        aside={hasRightBar ? <RightBar /> : null}
+        asideWidth={RIGHT_BAR_WIDTH}
+        asideFrom="lg"
+        asideCollapse="hidden"
+        scroll={isNative || isExploreRoute ? 'fixed' : 'document'}
       >
-        {/* flex-[2.2] keeps the center column wider than the right rail on desktop */}
-        <View
-          className={
-            isScreenNotMobile
-              ? `flex-[2.2] bg-background ${gutterPad}`
-              : 'flex-1 bg-background'
-          }
-        >
-          <ContentPanel framed={framed} maskColor={theme.colors.background}>
-            <Slot />
-          </ContentPanel>
-        </View>
-        <RightBar />
-      </View>
-    </View>
+        <Slot />
+      </AppShell>
+    </InAppShellContext.Provider>
   );
 }
 
@@ -401,19 +395,17 @@ export default function RootLayout() {
                                 <ErrorBoundary>
                                   <MapStateProvider>
                                     <SearchModeProvider>
-                                      <AppShell />
+                                      <AppFrame />
                                     </SearchModeProvider>
                                   </MapStateProvider>
                                   <StatusBar style="auto" />
                                 </ErrorBoundary>
                                 {/*
-                                  Root overlay outlet. The mobile navigation
-                                  drawer (SideBar's small-screen branch) renders
-                                  here via Bloom's Portal so its slide-in panel
-                                  and dimming scrim cover the whole viewport —
-                                  mirroring the inbox app's `front` drawer that
-                                  overlays the entire screen. Placed last so it
-                                  sits above all app chrome.
+                                  Root overlay outlet. `AppShell`'s navigation
+                                  drawer renders here through Bloom's Portal so
+                                  the panel and its backdrop cover the whole
+                                  viewport. Placed last so it sits above all app
+                                  chrome.
                                 */}
                                 <PortalOutlet />
                               </PortalProvider>

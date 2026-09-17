@@ -14,7 +14,7 @@
  * nothing at all, because "renders no rail" cannot be asserted by inspecting
  * props that were never passed.
  *
- * The rail's own visibility rules (>=990px, the Sindi panel) are forced ON, so a
+ * The rail's own visibility rules (the breakpoint, the Sindi panel) are forced ON, so a
  * failure here is about the ROUTE and never about a breakpoint.
  */
 import React from 'react';
