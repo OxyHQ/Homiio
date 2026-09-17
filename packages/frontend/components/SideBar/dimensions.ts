@@ -3,8 +3,8 @@ import { useWindowDimensions } from 'react-native';
 import { useUIStore } from '@/store/uiStore';
 
 /**
- * The inline width the navigation rail takes inside Bloom's `AppShell`, for the
- * surfaces that anchor beside it (the Sindi panel).
+ * The inline widths Bloom's `AppShell` gives its frame, for the surface sized
+ * against them (the Sindi panel, docked as the `aside`).
  *
  * These are Bloom's numbers, not Homiio's — `AppShell` and `Sidebar` own them
  * and export no constants. If a Bloom upgrade moves the rail, this is the one
@@ -13,7 +13,8 @@ import { useUIStore } from '@/store/uiStore';
  * - the rail sits in flow from Bloom's `lg` breakpoint (1024); below it the
  *   sidebar is a drawer and takes no inline width;
  * - the panel is 260 wide expanded, 52 collapsed;
- * - the `overlay` frame pads 12 and puts 16 between the rail and the content.
+ * - the `overlay` frame pads 12 and puts 16 between the rail, the content and
+ *   the `aside` (which is also Bloom's `lg`, the layout's `asideFrom`).
  */
 
 /** Bloom `BREAKPOINTS.lg`: the width the rail sits in flow from. */
@@ -27,6 +28,9 @@ export const SIDEBAR_PANEL_COLLAPSED_WIDTH = 52;
 
 /** `AppShell`'s frame padding left of the rail plus the gap right of it. */
 const SHELL_INSET = 12 + 16;
+
+/** `AppShell`'s gap left of the `aside` plus the frame padding right of it. */
+export const SHELL_ASIDE_INSET = 16 + 12;
 
 /**
  * Where the content column starts: the frame inset plus the rail's CURRENT

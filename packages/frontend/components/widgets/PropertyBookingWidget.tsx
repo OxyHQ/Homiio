@@ -9,14 +9,13 @@
  * host line + Super-host badge), and renders the flat `BookingCard`.
  *
  * The card itself is FLAT (no border), and so is its shell: `BaseWidget` adds
- * no card chrome, because the rail reads as one continuous panel. On web a
- * `position: sticky` wrapper keeps the card in view as the user scrolls the
- * long detail page. Returns null while loading, when there is
+ * no card chrome, because the rail reads as one continuous panel. It is not
+ * sticky itself: `AppShell` pins the whole rail, and a sticky card inside the
+ * rail's own scroller slid over the widgets below it. Returns null while loading, when there is
  * no property, or when the listing has no booking/apply surface for the
  * current mode, so the column never shows a broken card.
  */
 import React from 'react';
-import { Platform, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 
@@ -34,8 +33,6 @@ import profileService from '@/services/profileService';
 interface PropertyBookingWidgetProps {
   propertyId?: string;
 }
-
-const STICKY_TOP_OFFSET = 80;
 
 export function PropertyBookingWidget({ propertyId }: PropertyBookingWidgetProps) {
   const { t } = useTranslation();
@@ -66,24 +63,13 @@ export function PropertyBookingWidget({ propertyId }: PropertyBookingWidgetProps
   const { priceLabel, priceSubtitle } = resolveHeadlinePrice(property, rentalMode, t, formatting);
 
   return (
-    <View style={Platform.OS === 'web' ? styles.stickyWrapperWeb : undefined}>
-      <BaseWidget>
-        <BookingCard
-          property={property}
-          priceLabel={priceLabel}
-          priceSubtitle={priceSubtitle}
-          landlordProfile={landlordProfile}
-        />
-      </BaseWidget>
-    </View>
+    <BaseWidget>
+      <BookingCard
+        property={property}
+        priceLabel={priceLabel}
+        priceSubtitle={priceSubtitle}
+        landlordProfile={landlordProfile}
+      />
+    </BaseWidget>
   );
 }
-
-const styles = StyleSheet.create({
-  stickyWrapperWeb: {
-    // react-native-web emits `position: sticky` from this; the cast is
-    // contained here so consumers don't see it.
-    position: 'sticky' as 'absolute',
-    top: STICKY_TOP_OFFSET,
-  },
-});

@@ -20,6 +20,11 @@ sticky right rail or `ContentPanel` around it** — the shell owns all of them.
   whether there is a column with `useHasRightBar()` BEFORE creating the element:
   `AppShell` sizes a column for any non-null `aside`, so a `RightBar` that
   renders `null` would leave an empty 350 px hole.
+- The open Sindi panel REPLACES `RightBar` as the `aside` from `lg` (the shell
+  has one aside) and is an overlay from 500 to `lg`, mounted as the shell's
+  `overlay`. `useSindiPanelLayout()` (`components/sindi/sindiPanelLayout.ts`)
+  is the one place that decides placement and width; the layout, `RightBar` and
+  the panel all read it. Never mount `SindiPanel` anywhere else.
 - The Oxy account is the sidebar's `team` card (signed in) or a "Sign in"
   secondary row. `Sidebar` has no slot for `ProfileButton`.
 - The menu button: `Header` renders `AppShellMenuButton` while the shell is in
@@ -30,9 +35,9 @@ sticky right rail or `ContentPanel` around it** — the shell owns all of them.
 - Native phones: `NativeTabs` own the screen and `<Slot/>` is full-bleed.
   `AppShell` is mounted beside it in a zero-size box only for its drawer. Never
   wrap `NativeTabs` in the shell.
-- Anything anchored beside the rail (the Sindi panel) reads
-  `useSidebarWidth()` from `components/SideBar/dimensions.ts`, which mirrors
-  Bloom's numbers. Re-check it on a Bloom upgrade.
+- Anything sized against the frame (the Sindi panel's width clamp) reads
+  `components/SideBar/dimensions.ts`, which mirrors Bloom's numbers. Re-check
+  it on a Bloom upgrade.
 
 ### Scroll ownership (one owner per surface)
 
