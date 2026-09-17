@@ -36,7 +36,7 @@ if (config.alia.sindiServiceApiKey && config.alia.sindiServiceApiSecret) {
 /**
  * Pin the signed attribution tuple returned by Oxy before the token can leave
  * Homiio. This is a defence-in-depth/canary check: Alia still verifies the JWT
- * signature and delegation grant itself.
+ * signature itself, and the requester assertion that names the person.
  */
 export function assertCanonicalSindiServiceToken(token: string): string {
   try {
@@ -71,3 +71,88 @@ export function assertCanonicalSindiServiceToken(token: string): string {
 export async function getCanonicalSindiServiceToken(): Promise<string> {
   return assertCanonicalSindiServiceToken(await sindiOxyService.getServiceToken());
 }
+
+/**
+ * What Oxy answered a Sindi requester-assertion mint with, checked.
+ *
+ * ADR 0025 (OxyHQServices): a signed-in person reaches Sindi without any
+ * consent grant because Homiio trades their LIVE session with Oxy for a
+ * one-use, two-minute assertion naming Sindi. The person's bearer goes to Oxy
+ * only — this is the one place the backend sends it anywhere — and Alia gets
+ * the Sindi service token plus this assertion.
+ *
+ * The same canary discipline as the service token: before the assertion can
+ * leave Homiio, its claims must name exactly the pinned application,
+ * credential, agent and the requester this request verified. Alia and Oxy
+ * verify it cryptographically and live; this catches a misconfiguration here.
+ */
+export function assertCanonicalSindiRequesterAssertion(
+  grant: unknown,
+  expected: { requesterAccountId: string; agentId: string },
+): string {
+  try {
+    const record = grant as {
+      assertion?: unknown;
+      requesterAccountId?: unknown;
+      agentId?: unknown;
+    };
+    if (typeof record?.assertion !== 'string') throw new Error('missing assertion');
+    const payloadPart = record.assertion.split('.')[1];
+    if (!payloadPart) throw new Error('missing payload');
+    const claims = JSON.parse(Buffer.from(payloadPart, 'base64url').toString('utf8')) as {
+      aud?: unknown;
+      sub?: unknown;
+      azp?: unknown;
+      cid?: unknown;
+      agentId?: unknown;
+      exp?: unknown;
+    };
+    if (
+      record.requesterAccountId !== expected.requesterAccountId ||
+      record.agentId !== expected.agentId ||
+      claims.aud !== 'alia' ||
+      claims.sub !== expected.requesterAccountId ||
+      claims.azp !== SINDI_OXY_APPLICATION_ID ||
+      claims.cid !== SINDI_OXY_SERVICE_CREDENTIAL_ID ||
+      claims.agentId !== expected.agentId ||
+      typeof claims.exp !== 'number' ||
+      claims.exp * 1000 <= Date.now()
+    ) {
+      throw new Error('unexpected requester assertion');
+    }
+    return record.assertion;
+  } catch {
+    throw new Error('Oxy minted a requester assertion for an unexpected Sindi identity');
+  }
+}
+
+/** Why a mint did not produce an assertion, as far as chat needs to know. */
+export class SindiRequesterAssertionError extends Error {
+  constructor(readonly kind: 'refused' | 'unavailable') {
+    super(kind === 'refused' ? 'Oxy refused the requester assertion' : 'Requester assertions are unavailable');
+    this.name = 'SindiRequesterAssertionError';
+  }
+}
+
+/**
+ * Mint a Sindi requester assertion for the person on this request. One per
+ * chat turn and never cached: Oxy consumes it on first use.
+ */
+export async function mintSindiRequesterAssertion(input: {
+  subjectToken: string;
+  requesterAccountId: string;
+  agentId: string;
+}): Promise<string> {
+  let grant: unknown;
+  try {
+    grant = await sindiOxyService.mintRequesterAssertion({
+      agentId: input.agentId,
+      subjectToken: input.subjectToken,
+    });
+  } catch (error) {
+    const status = (error as { status?: unknown } | null)?.status;
+    throw new SindiRequesterAssertionError(status === 401 || status === 403 ? 'refused' : 'unavailable');
+  }
+  return assertCanonicalSindiRequesterAssertion(grant, input);
+}
+

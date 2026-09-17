@@ -93,12 +93,19 @@ describe('Homiio never reaches an inference provider directly', () => {
     expect(route).toContain("req.once('aborted', abortUpstream)");
     expect(route).not.toMatch(/feature:\s*['"]sindi-chat['"]/);
     expect(source).toContain('/v1/chat/completions');
-    expect(source).toContain('agentId: this.#agentId');
+    expect(source).toMatch(/body: JSON\.stringify\(\{\s*agentId,/);
     expect(source).toContain('stream: true');
     expect(source).toContain('Authorization: `Bearer ${serviceToken}`');
-    expect(source).toContain("'X-Oxy-User-Id': input.delegatedUserId");
-    expect(source).not.toContain('input.accessToken');
+    // ADR 0025: Alia gets the service token and a requester assertion. The
+    // person's bearer is traded with Oxy and never becomes an Alia header.
+    expect(source).toContain("'X-Oxy-Requester-Assertion': assertion");
+    expect(source).not.toMatch(/['"]X-Oxy-User-Id['"]\s*:/i);
+    expect(source).not.toMatch(/Authorization:\s*`Bearer \$\{input\.requester/);
     expect(route).not.toContain('getUserAccessToken');
+    // The bearer handed to the service is the one the auth middleware verified
+    // for a USER; a service-token caller has none to trade.
+    expect(route).toContain('requester: { accountId: userId, accessToken: getVerifiedUserAccessToken(req) }');
+    expect(route).toMatch(/authenticated\.serviceApp === undefined && typeof authenticated\.accessToken === 'string'/);
     expect(route).toContain(
       "message.role === 'user' || message.role === 'assistant'",
     );

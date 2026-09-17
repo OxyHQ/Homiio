@@ -140,9 +140,13 @@ and core changes in dependency order, then run `bun install` here to refresh
 `bun.lock` before building Homiio. An older lock/package is not a deployable
 substitute and must fail closed rather than be cast to the new request shape.
 
-Existing users also need an explicit OAuth reconsent path for the exact scopes
-`inference:invoke acting-as:offline`. The frontend may offer that action only
-after the backend returns exact code `SERVICE_ACTING_AS_UNAUTHORIZED`, and may
+Sindi chat needs no user consent: each turn carries a requester assertion Oxy
+mints from the signed-in user's live session (OxyHQServices ADR 0025), so the
+backend never returns `SERVICE_ACTING_AS_UNAUTHORIZED` for chat. Deploy order is
+Oxy (mint + introspection), then Alia (accepts the assertion), then Homiio.
+The OAuth reconsent path below is kept for a future absent-user feature using
+`inference:invoke acting-as:offline`: the frontend may offer that action only
+after a backend returns exact code `SERVICE_ACTING_AS_UNAUTHORIZED`, and may
 retry only after Oxy reports `consented`. Web uses exact redirect
 `https://homiio.com`; native uses exact redirect `homiio://oauth/consent` with
 the SDK-owned state and PKCE flow. Until the `@oxy.so/services` release exposing

@@ -2,6 +2,7 @@ import {
   SINDI_OXY_APPLICATION_ID,
   SINDI_OXY_OWNER_ACCOUNT_ID,
   SINDI_OXY_SERVICE_CREDENTIAL_ID,
+  assertCanonicalSindiRequesterAssertion,
   assertCanonicalSindiServiceToken,
 } from '../../services/oxy';
 
@@ -49,6 +50,49 @@ describe('Sindi service identity canary', () => {
   ])('rejects correct ids with missing/extra scope or an expired token: %j', (payload) => {
     expect(() => assertCanonicalSindiServiceToken(token(payload))).toThrow(
       'unexpected Sindi service identity',
+    );
+  });
+});
+
+describe('Sindi requester assertion canary (ADR 0025)', () => {
+  const agentId = '01a0646a-078f-7514-9800-9f43ceed7df8';
+  const requesterAccountId = '6981c9178fcdefaf81988ffb';
+  const claims = {
+    iss: 'https://api.oxy.so',
+    aud: 'alia',
+    sub: requesterAccountId,
+    jti: '6f1f0c52-6b0c-4a4f-9d44-6a4a5d3b2c11',
+    iat: Math.floor(Date.now() / 1000),
+    exp: Math.floor(Date.now() / 1000) + 120,
+    azp: SINDI_OXY_APPLICATION_ID,
+    cid: SINDI_OXY_SERVICE_CREDENTIAL_ID,
+    agentId,
+  };
+  const grant = (payload: Record<string, unknown>, overrides: Record<string, unknown> = {}) => ({
+    assertion: token(payload),
+    expiresAt: new Date(Number(payload.exp) * 1000).toISOString(),
+    requesterAccountId,
+    agentId,
+    ...overrides,
+  });
+
+  it('passes an assertion naming exactly Sindi, the Sindi credential and this requester', () => {
+    const value = grant(claims);
+    expect(assertCanonicalSindiRequesterAssertion(value, { requesterAccountId, agentId })).toBe(value.assertion);
+  });
+
+  it.each([
+    ['another requester', grant({ ...claims, sub: '69b2d3df5d12f58c9800d651' })],
+    ['a response naming another requester', grant(claims, { requesterAccountId: '69b2d3df5d12f58c9800d651' })],
+    ['another agent', grant({ ...claims, agentId: '01a0646a-078f-7642-95ef-439952f4f3f9' })],
+    ['another application', grant({ ...claims, azp: '6a2f851751b784a86fd0e934' })],
+    ['another credential', grant({ ...claims, cid: '01a0648b-8d74-7240-adba-80707fdfdf9c' })],
+    ['another audience', grant({ ...claims, aud: 'syra' })],
+    ['an expired assertion', grant({ ...claims, exp: Math.floor(Date.now() / 1000) - 1 })],
+    ['no assertion at all', { requesterAccountId, agentId }],
+  ])('refuses %s before it can leave Homiio', (_label, value) => {
+    expect(() => assertCanonicalSindiRequesterAssertion(value, { requesterAccountId, agentId })).toThrow(
+      'unexpected Sindi identity',
     );
   });
 });

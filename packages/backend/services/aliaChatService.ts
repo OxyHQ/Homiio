@@ -1,5 +1,9 @@
 import config from '../config';
-import { getCanonicalSindiServiceToken } from './oxy';
+import {
+  getCanonicalSindiServiceToken,
+  mintSindiRequesterAssertion,
+  SindiRequesterAssertionError,
+} from './oxy';
 
 export interface AliaChatMessage {
   role: 'system' | 'user' | 'assistant';
@@ -14,24 +18,17 @@ type AliaAgentId = string & { readonly [aliaAgentIdBrand]: true };
 export const CANONICAL_SINDI_ALIA_AGENT_ID =
   '01a0646a-078f-7514-9800-9f43ceed7df8' as AliaAgentId;
 
-export const SERVICE_ACTING_AS_UNAUTHORIZED = 'SERVICE_ACTING_AS_UNAUTHORIZED' as const;
-
-type AliaChatErrorCode = typeof SERVICE_ACTING_AS_UNAUTHORIZED;
-const MAX_ERROR_BODY_BYTES = 4096;
-
 function parseAliaAgentId(value: string | undefined): AliaAgentId | undefined {
   return value === CANONICAL_SINDI_ALIA_AGENT_ID ? CANONICAL_SINDI_ALIA_AGENT_ID : undefined;
 }
 
 export class AliaChatError extends Error {
   readonly status: number;
-  readonly code?: AliaChatErrorCode;
 
-  constructor(status: number, code?: AliaChatErrorCode) {
+  constructor(status: number) {
     super('Alia chat request failed');
     this.name = 'AliaChatError';
     this.status = status;
-    this.code = code;
   }
 }
 
@@ -45,24 +42,22 @@ export class AliaChatConfigurationError extends Error {
 }
 
 export interface AliaChatHttpFailure {
-  status: 401 | 403 | 503;
+  status: 401 | 503;
   body: {
     error: string;
-    code: 'chat_auth_required' | 'chat_unavailable' | typeof SERVICE_ACTING_AS_UNAUTHORIZED;
+    code: 'chat_auth_required' | 'chat_unavailable';
   };
 }
 
-/** Map only the explicit consent condition to a client-actionable response. */
+/**
+ * The client-facing answer for a failed chat turn.
+ *
+ * Chat NEVER asks for consent: the person is signed in and present, and ADR
+ * 0025 (OxyHQServices) admits them through a requester assertion rather than
+ * an `acting-as:offline` grant. The frontend's consent banner remains for
+ * future absent-user features and is unreachable from this route.
+ */
 export function aliaChatHttpFailure(error: AliaChatError): AliaChatHttpFailure {
-  if (error.status === 403 && error.code === SERVICE_ACTING_AS_UNAUTHORIZED) {
-    return {
-      status: 403,
-      body: {
-        error: 'Sindi needs your permission to continue',
-        code: SERVICE_ACTING_AS_UNAUTHORIZED,
-      },
-    };
-  }
   const isAuthenticationFailure = error.status === 401 || error.status === 403;
   return {
     status: isAuthenticationFailure ? 401 : 503,
@@ -73,47 +68,87 @@ export function aliaChatHttpFailure(error: AliaChatError): AliaChatHttpFailure {
   };
 }
 
+/** The person this turn is for, as the incoming request VERIFIED them. */
+export interface AliaChatRequester {
+  /** `getOxyUserId(req)` — the account Homiio's auth middleware validated. */
+  accountId: string;
+  /**
+   * That request's own Oxy access token. It is sent to OXY ONLY, to mint the
+   * requester assertion, and never to Alia.
+   */
+  accessToken: string;
+}
+
+export type RequesterAssertionMinter = (input: {
+  subjectToken: string;
+  requesterAccountId: string;
+  agentId: string;
+}) => Promise<string>;
+
 /**
- * Product chat goes through Alia, which owns chat, tools and memory. Homiio
- * authenticates with Homiio's verified Oxy service credential and delegates
- * the already-validated user id in a separate header. A human bearer is never
- * forwarded; this adapter stores no Alia or provider credential.
+ * Product chat goes through Alia, which owns chat, tools and memory.
+ *
+ * Alia receives exactly two credentials: Homiio's verified Sindi service token
+ * as the bearer (so Oxy bills the Homiio application, ADR 0007) and a one-use
+ * requester assertion Oxy minted for the signed-in person (ADR 0025). The
+ * person's own bearer and `X-Oxy-User-Id` are never sent. The assertion is
+ * minted per turn and not cached, because Oxy consumes it on first use.
  */
 export class AliaChatService {
   readonly #apiUrl: string;
   readonly #agentId: AliaAgentId | undefined;
   readonly #fetch: FetchClient;
   readonly #serviceToken: () => Promise<string>;
+  readonly #requesterAssertion: RequesterAssertionMinter;
 
   constructor(input: {
     apiUrl: string;
     agentId?: string;
     serviceToken: () => Promise<string>;
+    requesterAssertion: RequesterAssertionMinter;
     fetch?: FetchClient;
   }) {
     this.#apiUrl = input.apiUrl.replace(/\/+$/, '');
     this.#agentId = parseAliaAgentId(input.agentId);
     this.#fetch = input.fetch ?? fetch;
     this.#serviceToken = input.serviceToken;
+    this.#requesterAssertion = input.requesterAssertion;
   }
 
   async streamText(input: {
-    delegatedUserId: string;
+    requester: AliaChatRequester;
     messages: readonly AliaChatMessage[];
     signal?: AbortSignal;
   }): Promise<AsyncIterable<string>> {
-    if (!this.#agentId) throw new AliaChatConfigurationError();
-    const serviceToken = await this.#serviceToken();
+    const agentId = this.#agentId;
+    if (!agentId) throw new AliaChatConfigurationError();
+    if (input.requester.accountId === '' || input.requester.accessToken === '') {
+      throw new AliaChatError(401);
+    }
+
+    const [serviceToken, assertion] = await Promise.all([
+      this.#serviceToken(),
+      this.#requesterAssertion({
+        subjectToken: input.requester.accessToken,
+        requesterAccountId: input.requester.accountId,
+        agentId,
+      }).catch((error: unknown) => {
+        if (error instanceof SindiRequesterAssertionError && error.kind === 'refused') {
+          throw new AliaChatError(401);
+        }
+        throw new AliaChatError(503);
+      }),
+    ]);
 
     const response = await this.#fetch(`${this.#apiUrl}/v1/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${serviceToken}`,
-        'X-Oxy-User-Id': input.delegatedUserId,
+        'X-Oxy-Requester-Assertion': assertion,
       },
       body: JSON.stringify({
-        agentId: this.#agentId,
+        agentId,
         messages: input.messages,
         stream: true,
       }),
@@ -121,7 +156,10 @@ export class AliaChatService {
     });
 
     if (!response.ok) {
-      throw new AliaChatError(response.status, await readAllowlistedErrorCode(response));
+      // The body is not read: nothing upstream decides what Homiio tells the
+      // person beyond the status class.
+      await response.body?.cancel().catch(() => undefined);
+      throw new AliaChatError(response.status);
     }
     if (!response.headers.get('content-type')?.toLowerCase().startsWith('text/event-stream')) {
       throw new AliaChatError(502);
@@ -136,33 +174,6 @@ type JsonRecord = Record<string, unknown>;
 
 function isRecord(value: unknown): value is JsonRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-/** Preserve only the upstream condition Homiio can safely act on. */
-async function readAllowlistedErrorCode(
-  response: Response,
-): Promise<AliaChatErrorCode | undefined> {
-  if (response.status !== 403) return undefined;
-
-  const declaredLength = Number(response.headers.get('content-length'));
-  if (Number.isFinite(declaredLength) && declaredLength > MAX_ERROR_BODY_BYTES) return undefined;
-
-  let body: string;
-  try {
-    body = await response.text();
-  } catch {
-    return undefined;
-  }
-  if (new TextEncoder().encode(body).byteLength > MAX_ERROR_BODY_BYTES) return undefined;
-
-  try {
-    const value = JSON.parse(body) as unknown;
-    return isRecord(value) && value.code === SERVICE_ACTING_AS_UNAUTHORIZED
-      ? SERVICE_ACTING_AS_UNAUTHORIZED
-      : undefined;
-  } catch {
-    return undefined;
-  }
 }
 
 function textDeltaFromChunk(data: string): string | undefined {
@@ -268,4 +279,5 @@ export const aliaChat = new AliaChatService({
   apiUrl: config.alia.apiUrl,
   agentId: config.alia.sindiAgentId,
   serviceToken: getCanonicalSindiServiceToken,
+  requesterAssertion: mintSindiRequesterAssertion,
 });
