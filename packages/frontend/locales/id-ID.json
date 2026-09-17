@@ -2485,7 +2485,8 @@
     "sleep": {
       "title": "Where you'll sleep",
       "oneBed": "1 bed",
-      "mainBedroom": "Main bedroom"
+      "mainBedroom": "Main bedroom",
+      "bedroomN": "Kamar tidur {{n}}"
     },
     "reviews": {
       "writeAction": "Write a review",
@@ -2537,7 +2538,8 @@
       "nearbyAmenities": "Nearby Amenities",
       "publicTransport": "Public Transport",
       "schools": "Schools",
-      "shopping": "Shopping"
+      "shopping": "Shopping",
+      "propertyType": "Jenis properti"
     },
     "neighborhood": {
       "title": "Neighborhood",

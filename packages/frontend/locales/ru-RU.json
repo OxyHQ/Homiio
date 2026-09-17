@@ -2489,7 +2489,8 @@
     "sleep": {
       "title": "Where you'll sleep",
       "oneBed": "1 bed",
-      "mainBedroom": "Main bedroom"
+      "mainBedroom": "Main bedroom",
+      "bedroomN": "Спальня {{n}}"
     },
     "reviews": {
       "writeAction": "Write a review",
@@ -2543,7 +2544,8 @@
       "nearbyAmenities": "Nearby Amenities",
       "publicTransport": "Public Transport",
       "schools": "Schools",
-      "shopping": "Shopping"
+      "shopping": "Shopping",
+      "propertyType": "Тип недвижимости"
     },
     "neighborhood": {
       "title": "Neighborhood",

@@ -1672,7 +1672,8 @@
     "sleep": {
       "title": "Where you'll sleep",
       "oneBed": "1 bed",
-      "mainBedroom": "Main bedroom"
+      "mainBedroom": "Main bedroom",
+      "bedroomN": "Camera da letto {{n}}"
     },
     "reviews": {
       "writeAction": "Write a review",
@@ -1724,7 +1725,8 @@
       "nearbyAmenities": "Servizi nelle vicinanze",
       "publicTransport": "Trasporto pubblico",
       "schools": "Scuole",
-      "shopping": "Negozi"
+      "shopping": "Negozi",
+      "propertyType": "Tipo di immobile"
     },
     "neighborhood": {
       "title": "Neighborhood",

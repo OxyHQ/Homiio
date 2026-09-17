@@ -514,19 +514,6 @@ export default function PropertyDetailPage() {
     }
   }, [property]);
 
-  const handleCtaPress = useCallback(() => {
-    if (apiProperty?.housingType === 'public') {
-      handlePublicHousingApply();
-      return;
-    }
-    if (rentalMode === 'vacation') {
-      handleContact();
-      return;
-    }
-    if (apiProperty?.id) {
-      router.push(`/properties/${apiProperty.id}/apply`);
-    }
-  }, [apiProperty, rentalMode, router, handleContact, handlePublicHousingApply]);
 
   // Sale-listing primary CTA: open the existing viewing-request flow.
   const handleRequestViewing = useCallback(() => {
@@ -612,6 +599,31 @@ export default function PropertyDetailPage() {
     enabled: !isRightBarVisible && bookingMode === 'vacation',
   });
   const showBookingBar = !isRightBarVisible && bookingMode === 'vacation' && stay.bookable;
+
+  const handleCtaPress = useCallback(() => {
+    if (apiProperty?.housingType === 'public') {
+      handlePublicHousingApply();
+      return;
+    }
+    if (apiProperty?.isExternal) {
+      handleContact();
+      return;
+    }
+    if (rentalMode === 'vacation') {
+      // A stay is reserved through the same booking selection the phone bar
+      // and inline card share (dates first when none are picked) — not the
+      // viewing-request flow, which is for sale listings.
+      if (showBookingBar) {
+        stay.reserve();
+      } else {
+        handleContact();
+      }
+      return;
+    }
+    if (apiProperty?.id) {
+      router.push(`/properties/${apiProperty.id}/apply`);
+    }
+  }, [apiProperty, rentalMode, router, handleContact, handlePublicHousingApply, showBookingBar, stay]);
 
   if (isLoading) {
     return <PropertyDetailSkeleton />;
@@ -796,7 +808,13 @@ export default function PropertyDetailPage() {
         visible={stickyHeaderVisible}
         onBack={() => router.back()}
         onShare={handleShare}
-        onCtaPress={handleCtaPress}
+        onCtaPress={
+          // Wide screens pin the booking card in the rail beside the page, so a
+          // second Reserve button in the sticky header would only duplicate it.
+          isRightBarVisible && bookingMode === 'vacation' && !apiProperty?.isExternal
+            ? undefined
+            : handleCtaPress
+        }
       />
 
       <PageScrollView

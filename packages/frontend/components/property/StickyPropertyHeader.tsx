@@ -35,7 +35,8 @@ interface StickyPropertyHeaderProps {
   visible: boolean;
   onBack: () => void;
   onShare: () => void;
-  onCtaPress: () => void;
+  /** Omitted when the page already shows its own booking surface (the pinned rail card). */
+  onCtaPress?: () => void;
 }
 
 const STICKY_PROPERTY_HEADER_Z_INDEX = 1001;
@@ -96,14 +97,16 @@ export const StickyPropertyHeader: React.FC<StickyPropertyHeaderProps> = ({
               activeColor={colors.error}
             />
           ) : null}
-          <Button
-            onPress={onCtaPress}
-            variant="primary"
-            size="medium"
-            accessibilityLabel={ctaLabel}
-          >
-            {ctaLabel}
-          </Button>
+          {onCtaPress ? (
+            <Button
+              onPress={onCtaPress}
+              variant="primary"
+              size="medium"
+              accessibilityLabel={ctaLabel}
+            >
+              {ctaLabel}
+            </Button>
+          ) : null}
         </>
       }
     />
