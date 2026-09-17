@@ -54,6 +54,7 @@ export interface SearchLocationEcho {
   cityId?: string;
   regionId?: string;
   neighborhoodId?: string;
+  countryCode?: string;
   bounds?: GeoBounds;
   center?: GeoPoint;
   radiusMeters?: number;
@@ -139,16 +140,22 @@ function boundsToParams(bounds: GeoBounds): Record<string, number> {
  * with a different answer. `homiio`-sourced places go out as a canonical id, so
  * two cities named Barcelona stay two different requests.
  *
+ * A homiio COUNTRY scopes by its ISO-2 code (`country`), not by geometry: its
+ * `precision: 'area'` carries no centre and its record often carries no bounds,
+ * and a box derived from its cities' extent overlaps its neighbours anyway.
+ *
  * **`null` means "this selection cannot be scoped", and it is NOT the same as
- * `{}`.** A homiio COUNTRY has no id param on this endpoint (`city`, `state`
- * and `neighborhood` are the three it takes), `precision: 'area'` means it
- * carries no centre, and its record may carry no bounds either — so there is
+ * `{}`.** A place with no id param this endpoint takes and no geometry either —
+ * a country whose `admin.countryCode` is not a well-formed ISO-2 code, say — has
  * genuinely nothing to send. Returning `{}` there would run the query with no
- * geographic filter at all and answer globally under the country's name, which
+ * geographic filter at all and answer globally under the place's name, which
  * is the same bug as substituting `(0,0)`, only quieter: `(0,0)` returns a
  * suspicious zero, an unscoped query returns a confident everything. The caller
  * refuses to run instead — see `usePropertySearch`.
  */
+/** ISO-3166-1 alpha-2 — the only shape the endpoint's `country` param accepts. */
+const ISO_COUNTRY_CODE = /^[A-Za-z]{2}$/;
+
 function locationParams(selection: LocationSelection): Record<string, string | number> | null {
   switch (selection.kind) {
     case 'current_location':
@@ -173,6 +180,9 @@ function locationParams(selection: LocationSelection): Record<string, string | n
         if (entity === 'city') return { city: id };
         if (entity === 'region') return { state: id };
         if (entity === 'neighborhood') return { neighborhood: id };
+        if (entity === 'country' && ISO_COUNTRY_CODE.test(selection.admin.countryCode)) {
+          return { country: selection.admin.countryCode.toUpperCase() };
+        }
       }
       // An external candidate carries no id this backend can resolve, so it is
       // scoped by the geometry it inlined — which is why an `external` place is
@@ -378,9 +388,9 @@ export function buildSearchParams(query: SearchQuery): Record<string, string | n
  * accepts.
  *
  * Exported so a screen can say "we cannot search that area yet" rather than
- * rendering a global feed under a place's name. Today the only shape that
- * reaches it is a homiio place that is neither a city, a region nor a
- * neighborhood — a COUNTRY — carrying no geometry.
+ * rendering a global feed under a place's name. It is reached only by a place
+ * with neither an id param the endpoint takes nor any geometry — for example a
+ * country record whose code is malformed, or a homiio address with no point.
  */
 export function isUnscopeableLocation(location: SearchQuery['location']): boolean {
   return location !== null && locationParams(location) === null;

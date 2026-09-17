@@ -366,45 +366,61 @@ describe('searchQueryKey', () => {
  * Guinea; emitting NOTHING returns a confident everything, under the name of
  * the place the user picked. Both are wrong and only the second looks fine.
  *
- * A homiio COUNTRY is the shape that reaches it: `/api/properties/search` takes
- * `city`, `state` and `neighborhood` and no country param, `precision: 'area'`
- * means it carries no centre, and its record may carry no bounds either — so
- * there is genuinely nothing to send, and the honest answer is not to send.
+ * A homiio COUNTRY used to be the shape that reached it, because the endpoint
+ * had no country param. It now scopes by ISO-2 code, so the refusal is reached
+ * only by a country whose code is not one — and it must still refuse.
  */
 describe('an unscopeable location refuses rather than widening', () => {
   const country: LocationSelection = {
     kind: 'place',
-    source: { kind: 'homiio', entity: 'country', id: 'ES' },
+    source: { kind: 'homiio', entity: 'country', id: 'COUNTRY-ES' },
     placeType: 'country',
     label: { primary: 'Spain', kind: 'place' },
     admin: { countryCode: 'ES' },
     precision: 'area',
   };
 
-  it('reports a geometry-less country as unscopeable', () => {
-    expect(isUnscopeableLocation(country)).toBe(true);
-  });
-
-  it('emits NO geographic params for it — which is why the query must not run', () => {
+  it('scopes a geometry-less country by its ISO code, not by a radius', () => {
+    expect(isUnscopeableLocation(country)).toBe(false);
     const params = buildSearchParams(baseQuery({ location: country }));
-
-    // Every geographic param absent. Sent as-is this is a global feed labelled
-    // "Spain", so `usePropertySearch` gates `enabled` on the predicate above.
+    expect(params).toMatchObject({ country: 'ES' });
+    // Identity only: no centroid, no box, no competing place id.
     for (const key of ['city', 'state', 'neighborhood', 'lat', 'lng', 'swLat', 'neLat']) {
       expect(params).not.toHaveProperty(key);
     }
   });
 
-  it('becomes scopeable the moment it has bounds', () => {
-    // The floor: the predicate must not be true of every country forever, or it
-    // would be indistinguishable from "countries are unsupported".
+  it('prefers the code over a derived box, which would overlap the neighbours', () => {
     const withBounds: LocationSelection = {
       ...country,
       bounds: { west: -9.3, south: 36.0, east: 3.3, north: 43.8 },
     };
+    const params = buildSearchParams(baseQuery({ location: withBounds }));
+    expect(params).toMatchObject({ country: 'ES' });
+    expect(params).not.toHaveProperty('swLng');
+  });
 
-    expect(isUnscopeableLocation(withBounds)).toBe(false);
-    expect(buildSearchParams(baseQuery({ location: withBounds }))).toMatchObject({
+  it('refuses a country with a malformed code and no geometry', () => {
+    // The floor: the predicate must not become false of every place forever,
+    // or a broken record would run a global search under its own name.
+    const malformed: LocationSelection = { ...country, admin: { countryCode: 'Spain' } };
+
+    expect(isUnscopeableLocation(malformed)).toBe(true);
+    const params = buildSearchParams(baseQuery({ location: malformed }));
+    for (const key of ['country', 'city', 'state', 'neighborhood', 'lat', 'lng', 'swLat', 'neLat']) {
+      expect(params).not.toHaveProperty(key);
+    }
+  });
+
+  it('falls back to geometry for a malformed code when it has bounds', () => {
+    const malformedWithBounds: LocationSelection = {
+      ...country,
+      admin: { countryCode: 'Spain' },
+      bounds: { west: -9.3, south: 36.0, east: 3.3, north: 43.8 },
+    };
+
+    expect(isUnscopeableLocation(malformedWithBounds)).toBe(false);
+    expect(buildSearchParams(baseQuery({ location: malformedWithBounds }))).toMatchObject({
       swLng: -9.3,
       neLng: 3.3,
     });
