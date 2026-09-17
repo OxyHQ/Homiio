@@ -17,12 +17,13 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
+import { getLocales } from 'expo-localization';
 import { Button } from '@oxy.so/bloom/button';
 import { Card, CardTitle } from '@oxy.so/bloom/card';
 import { DatePicker } from '@oxy.so/bloom/date-picker';
 import { Field } from '@oxy.so/bloom/field';
 import { RiImageAddLine } from '@oxy.so/bloom/icons';
-import { COUNTRIES, PhoneInput } from '@oxy.so/bloom/phone-input';
+import { PhoneInput } from '@oxy.so/bloom/phone-input';
 import * as Skeleton from '@oxy.so/bloom/skeleton';
 import { Switch } from '@oxy.so/bloom/switch';
 import { TextFieldInput } from '@oxy.so/bloom/text-field';
@@ -40,6 +41,16 @@ import {
   useUpdateEviction,
 } from '@/hooks/useEvictionQueries';
 import { combineDateAndTime, splitDateAndTime } from '@/components/evictions/evictionUtils';
+import {
+  type EvictionPhoneValue,
+  countryCodeFromPlace,
+  emptyEvictionPhone,
+  joinEvictionPhone,
+  resolveDefaultPhoneCountry,
+  splitEvictionPhone,
+  withPhoneCountry,
+  withPhoneNumber,
+} from '@/components/evictions/evictionPhone';
 import { imageUploadService } from '@/services/imageUploadService';
 import { resolveBackendImageUrl } from '@/utils/imageUrl';
 import { toast } from '@oxy.so/bloom/toast';
@@ -55,79 +66,34 @@ interface EvictionFormState {
   date: Date | null;
   time: string;
   /** Phone numbers are edited as ISO country + national number. */
-  phone: PhoneValue;
+  phone: EvictionPhoneValue;
   email: string;
   telegram: string;
-  whatsapp: PhoneValue;
+  whatsapp: EvictionPhoneValue;
   instructions: string;
   agencyName: string;
 }
 
-interface PhoneValue {
-  country: string;
-  number: string;
-}
-
-/**
- * The country a number starts in when nothing says otherwise. The board is a
- * Spanish-first surface (the placeholder was always `+34 …`).
- */
-const DEFAULT_PHONE_COUNTRY = 'ES';
-
-/**
- * Split a stored `+<dial> <number>` into the select's country and the typed
- * number. The longest matching dial code wins; among countries that share one
- * (`+1`), the default country is preferred, else the first by name. A value with
- * no `+` is kept whole as the number under the default country.
- */
-const splitPhone = (raw: string | undefined): PhoneValue => {
-  const value = (raw ?? '').trim();
-  if (!value.startsWith('+')) return { country: DEFAULT_PHONE_COUNTRY, number: value };
-  const digits = value.slice(1).replace(/\D/g, '');
-  const matches = COUNTRIES.filter((country) => digits.startsWith(country.dial));
-  if (matches.length === 0) return { country: DEFAULT_PHONE_COUNTRY, number: value };
-  const longest = Math.max(...matches.map((country) => country.dial.length));
-  const best = matches.filter((country) => country.dial.length === longest);
-  const chosen = best.find((country) => country.iso2 === DEFAULT_PHONE_COUNTRY) ?? best[0];
-  // Drop the dial code (and any separator right after it) from the typed text.
-  let consumed = 0;
-  let index = 1;
-  while (index < value.length && consumed < chosen.dial.length) {
-    if (/\d/.test(value[index])) consumed += 1;
-    index += 1;
-  }
-  return { country: chosen.iso2, number: value.slice(index).trim() };
-};
-
-/** `+<dial> <number>`, or `undefined` when no number was typed. */
-const joinPhone = ({ country, number }: PhoneValue): string | undefined => {
-  const trimmed = number.trim();
-  if (!trimmed) return undefined;
-  // A number typed with its own international prefix is already complete.
-  if (trimmed.startsWith('+')) return trimmed;
-  const dial = COUNTRIES.find((entry) => entry.iso2 === country)?.dial;
-  return dial ? `+${dial} ${trimmed}` : trimmed;
-};
-
-const EMPTY_PHONE: PhoneValue = { country: DEFAULT_PHONE_COUNTRY, number: '' };
-
-const EMPTY_STATE: EvictionFormState = {
+const emptyState = (phoneCountry: string): EvictionFormState => ({
   title: '',
   description: '',
   label: '',
   city: '',
   date: null,
   time: '',
-  phone: EMPTY_PHONE,
+  phone: emptyEvictionPhone(phoneCountry),
   email: '',
   telegram: '',
-  whatsapp: EMPTY_PHONE,
+  whatsapp: emptyEvictionPhone(phoneCountry),
   instructions: '',
   agencyName: '',
-};
+});
 
-const buildInitialState = (existing?: EvictionCase): EvictionFormState => {
-  if (!existing) return EMPTY_STATE;
+const buildInitialState = (
+  existing: EvictionCase | undefined,
+  phoneCountry: string,
+): EvictionFormState => {
+  if (!existing) return emptyState(phoneCountry);
   const { day, time } = splitDateAndTime(existing.scheduledAt);
   return {
     title: existing.title,
@@ -138,10 +104,10 @@ const buildInitialState = (existing?: EvictionCase): EvictionFormState => {
     city: existing.location.city ?? '',
     date: day,
     time,
-    phone: splitPhone(existing.contactInfo?.phone),
+    phone: splitEvictionPhone(existing.contactInfo?.phone, phoneCountry),
     email: existing.contactInfo?.email ?? '',
     telegram: existing.contactInfo?.telegram ?? '',
-    whatsapp: splitPhone(existing.contactInfo?.whatsapp),
+    whatsapp: splitEvictionPhone(existing.contactInfo?.whatsapp, phoneCountry),
     instructions: existing.contactInfo?.instructions ?? '',
     agencyName: '',
   };
@@ -173,7 +139,16 @@ const EvictionForm: React.FC<EvictionFormProps> = ({ mode, editId, existing }) =
     return published ? [published[0], published[1]] : null;
   }, [existing]);
 
-  const [form, setForm] = useState<EvictionFormState>(() => buildInitialState(existing));
+  const [form, setForm] = useState<EvictionFormState>(() =>
+    buildInitialState(
+      existing,
+      resolveDefaultPhoneCountry({
+        caseCountryCode: existing?.location.countryCode,
+        deviceRegion: getLocales()[0]?.regionCode,
+        localeTag: i18n.language,
+      }),
+    ),
+  );
   /**
    * Whether the affected household itself asked for the exact location to be
    * shareable.
@@ -215,11 +190,22 @@ const EvictionForm: React.FC<EvictionFormProps> = ({ mode, editId, existing }) =
       address.neighborhood ||
       address.city ||
       '';
-    setForm((prev) => ({
-      ...prev,
-      label: composed || prev.label,
-      city: address.city || prev.city,
-    }));
+    setForm((prev) => {
+      // A phone field the user has not touched follows the picked place, so a
+      // case in Lisbon starts its numbers at +351 wherever the organiser is.
+      const placeCountry = countryCodeFromPlace(address.country);
+      const follow = (field: EvictionPhoneValue) =>
+        placeCountry && !field.edited && field.original === undefined
+          ? { ...field, country: placeCountry }
+          : field;
+      return {
+        ...prev,
+        label: composed || prev.label,
+        city: address.city || prev.city,
+        phone: follow(prev.phone),
+        whatsapp: follow(prev.whatsapp),
+      };
+    });
   }, []);
 
   const handlePickCover = useCallback(async () => {
@@ -273,10 +259,10 @@ const EvictionForm: React.FC<EvictionFormProps> = ({ mode, editId, existing }) =
     }
 
     const contactInfo = {
-      phone: joinPhone(form.phone),
+      phone: joinEvictionPhone(form.phone),
       email: form.email.trim() || undefined,
       telegram: form.telegram.trim() || undefined,
-      whatsapp: joinPhone(form.whatsapp),
+      whatsapp: joinEvictionPhone(form.whatsapp),
       instructions: form.instructions.trim() || undefined,
     };
     const hasContact = Object.values(contactInfo).some((value) => value !== undefined);
@@ -467,17 +453,17 @@ const EvictionForm: React.FC<EvictionFormProps> = ({ mode, editId, existing }) =
               label={t('evictions.detail.contact.phone')}
               placeholder="600 000 000"
               country={form.phone.country}
-              onCountryChange={(iso2) => update('phone', { ...form.phone, country: iso2 })}
+              onCountryChange={(iso2) => update('phone', withPhoneCountry(form.phone, iso2))}
               value={form.phone.number}
-              onChangeText={(number) => update('phone', { ...form.phone, number })}
+              onChangeText={(number) => update('phone', withPhoneNumber(form.phone, number))}
             />
             <PhoneInput
               label={t('evictions.detail.contact.whatsapp')}
               placeholder="600 000 000"
               country={form.whatsapp.country}
-              onCountryChange={(iso2) => update('whatsapp', { ...form.whatsapp, country: iso2 })}
+              onCountryChange={(iso2) => update('whatsapp', withPhoneCountry(form.whatsapp, iso2))}
               value={form.whatsapp.number}
-              onChangeText={(number) => update('whatsapp', { ...form.whatsapp, number })}
+              onChangeText={(number) => update('whatsapp', withPhoneNumber(form.whatsapp, number))}
             />
             <Field label={t('evictions.detail.contact.telegram')}>
               <TextFieldInput

@@ -42,6 +42,7 @@ import { RoommateRequestComponent } from '@/components/RoommateRequest';
 import { RoommateRelationshipComponent } from '@/components/RoommateRelationship';
 import { RoomList } from '@/components/RoomList';
 import { useProfile } from '@/context/ProfileContext';
+import { useIsScreenNotMobile } from '@/hooks/useOptimizedMediaQuery';
 import { useRoommate } from '@/hooks/useRoommate';
 import { roommateService } from '@/services/roommateService';
 import { type PropertyFilters } from '@/services/propertyService';
@@ -67,6 +68,10 @@ export default function RoommatesPage() {
   const { oxyServices, activeSessionId } = useOxy();
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>('discover');
+  // On a phone the four icons alone cost ~96px, which is what pushed the last
+  // tab off a 390px screen. Labels carry the meaning; longer translations still
+  // scroll, and Bloom `Tabs` centres the selected trigger when they do.
+  const isWide = useIsScreenNotMobile();
   const [isToggling, setIsToggling] = useState(false);
 
   const {
@@ -485,8 +490,11 @@ export default function RoommatesPage() {
             size="small"
             onPress={() => router.push('/roommates/preferences')}
             leadingIcon={RiSettings3Line}
+            iconOnly={!isWide}
+            accessibilityLabel={t('roommates.preferences')}
+            style={styles.headerAction}
           >
-            {t('roommates.preferences')}
+            {isWide ? t('roommates.preferences') : null}
           </Button>
         </View>
         <Tabs
@@ -501,7 +509,7 @@ export default function RoommatesPage() {
               key={entry.id}
               value={entry.id}
               label={t(entry.labelKey)}
-              leadingIcon={entry.icon}
+              leadingIcon={isWide ? entry.icon : undefined}
             />
           ))}
         </Tabs>
@@ -533,7 +541,12 @@ const styles = StyleSheet.create({
     paddingTop: spacing.sm,
   },
   titleBlock: {
+    flex: 1,
+    minWidth: 0,
     gap: spacing.xs,
+  },
+  headerAction: {
+    flexShrink: 0,
   },
   title: {
     letterSpacing: -0.5,
