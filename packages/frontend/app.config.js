@@ -18,9 +18,19 @@ module.exports = function (config) {
   const IS_PRODUCTION = process.env.EXPO_PUBLIC_ENV === 'production';
   const IS_DEV = !IS_TESTFLIGHT || !IS_PRODUCTION;
 
+  /**
+   * App variant — lets a development build sit next to the production app on the
+   * SAME device by giving it a distinct applicationId/bundleId + name. Build the
+   * dev variant with `APP_VARIANT=development`; production is the default, so
+   * nothing changes unless the variable is set.
+   */
+  const IS_DEV_VARIANT = process.env.APP_VARIANT === 'development';
+  const APP_ID = IS_DEV_VARIANT ? 'com.homiio.android.dev' : 'com.homiio.android';
+  const APP_NAME = IS_DEV_VARIANT ? 'Homiio (Dev)' : 'Homiio';
+
   return {
     expo: {
-      name: 'Homiio',
+      name: APP_NAME,
       slug: 'homiio',
       version: VERSION,
       orientation: 'portrait',
@@ -43,7 +53,7 @@ module.exports = function (config) {
       //     values and zustand stores in plenty of places.
       ios: {
         supportsTablet: true,
-        bundleIdentifier: 'com.homiio.android',
+        bundleIdentifier: APP_ID,
       },
       android: {
         adaptiveIcon: {
@@ -52,7 +62,7 @@ module.exports = function (config) {
           monochromeImage: './assets/images/mention-icon_monochrome.png',
         },
         permissions: ['android.permission.CAMERA', 'android.permission.RECORD_AUDIO'],
-        package: 'com.homiio.android',
+        package: APP_ID,
         intentFilters: [
           {
             action: 'VIEW',
