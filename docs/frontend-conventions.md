@@ -197,6 +197,12 @@ again.
   `Header` and
   `StickyPropertyHeader` draw their buttons through Bloom `PageHeader` instead.
 
+## Locales load on demand on web
+
+- `locales/*.json` is the only source of truth. **Only `en.json` is bundled**; every other language registers on first use through `setStoredLanguage` / `ensureLanguageLoaded` (`utils/languagePreference.ts`).
+- Web fetches `/locales/<file>.json`, which `scripts/publish-web-locales.js` copies into `public/locales/` from `metro.config.js` (gitignored). Native `require`s the file (`utils/localeResources.ts`).
+- **Never import a non-English locale JSON in app code** — one static import puts that whole language back into every web page's JavaScript (the twelve bundled locales were ~517 KB gzipped, ~17% of the JS budget). `check:bundle-imports` enforces it.
+
 ## Bloom primitives (no local copies)
 
 The local confirm dialog, action button, slider, progress bar and card shells

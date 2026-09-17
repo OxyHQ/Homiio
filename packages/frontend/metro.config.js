@@ -7,6 +7,9 @@ const monorepoRoot = path.resolve(projectRoot, '../..');
 // maplibre-gl 6 starts its worker by URL; put the worker modules where the web
 // map points `setWorkerUrl` before Metro serves or exports `public/`.
 require('./scripts/vendor-maplibre-worker').vendorMaplibreWorker();
+// Web fetches the active locale from `public/locales/` instead of bundling all
+// twelve; publish this checkout's `locales/` there before Metro serves `public/`.
+require('./scripts/publish-web-locales').publishWebLocales();
 
 const config = getDefaultConfig(projectRoot);
 
