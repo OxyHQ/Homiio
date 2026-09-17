@@ -102,7 +102,7 @@ import { BasicInfoSection } from '@/components/property/BasicInfoSection';
 import { ExternalContactSection } from '@/components/property/ExternalContactSection';
 import { PropertyDetailsCard } from '@/components/property/PropertyDetailsCard';
 import { PropertyFeatures } from '@/components/property/PropertyFeatures';
-import { PricingDetails } from '@/components/property/PricingDetails';
+import { PricingDetails, hasPricingDetails } from '@/components/property/PricingDetails';
 import { SaleDetailsSection } from '@/components/property/SaleDetailsSection';
 import { MortgageCalculatorSection } from '@/components/property/MortgageCalculatorSection';
 import { ExchangeSection } from '@/components/property/ExchangeSection';
@@ -828,9 +828,11 @@ export default function PropertyDetailPage() {
             </View>
           ) : null}
 
-          <View style={[styles.section, styles.divider]}>
-            <PricingDetails property={apiProperty} mode={rentalMode} />
-          </View>
+          {hasPricingDetails(apiProperty, rentalMode) ? (
+            <View style={[styles.section, styles.divider]}>
+              <PricingDetails property={apiProperty} mode={rentalMode} />
+            </View>
+          ) : null}
 
           {/* Sale details + mortgage calculator — only for sale listings that
               carry a sale block (gated together so neither leaves a bare

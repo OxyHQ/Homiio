@@ -24,8 +24,8 @@ import { Section } from '@/components/property/Section';
 import { MoneyText } from '@/components/MoneyText';
 import { colors } from '@/styles/colors';
 import { hairline, radius, spacing } from '@/constants/styles';
-import { type Property } from '@homiio/shared-types';
-import type { RentalMode } from '@/utils/propertyUtils';
+import { OfferingType, type Property } from '@homiio/shared-types';
+import { hasOffering, type RentalMode } from '@/utils/propertyUtils';
 
 interface Props {
   property: Property | null | undefined;
@@ -42,16 +42,39 @@ interface MoneyRow {
   amount: number;
 }
 
+/**
+ * Whether the block has anything to show — the detail screen uses it to skip the
+ * section wrapper (and its divider) instead of leaving an empty band.
+ */
+export function hasPricingDetails(property: Property | null | undefined, mode: RentalMode): boolean {
+  if (!property) return false;
+  const isVacation = mode === 'vacation';
+  if (!hasOffering(property, isVacation ? OfferingType.SHORT_TERM_RENT : OfferingType.LONG_TERM_RENT)) {
+    return false;
+  }
+  const block = isVacation ? property.shortTermRent : property.longTermRent;
+  const rent = isVacation ? property.shortTermRent?.nightlyRate : property.longTermRent?.monthlyAmount;
+  return Boolean(rent) || block?.deposit !== undefined || (!isVacation && property.longTermRent?.utilities !== undefined);
+}
+
 export const PricingDetails: React.FC<Props> = ({ property, mode }) => {
   const { t } = useTranslation();
 
   const isVacation = mode === 'vacation';
-  const longTerm = property?.longTermRent;
-  const shortTerm = property?.shortTermRent;
+  // The priced block counts only when the listing actually OFFERS it. A sale
+  // listing can still carry an empty `longTermRent` object, and reading it here
+  // rendered "Monthly Rent $0" under the sale price.
+  const offersActiveRent =
+    !!property &&
+    hasOffering(property, isVacation ? OfferingType.SHORT_TERM_RENT : OfferingType.LONG_TERM_RENT);
+  const longTerm = offersActiveRent ? property?.longTermRent : undefined;
+  const shortTerm = offersActiveRent ? property?.shortTermRent : undefined;
 
   // The headline rent amount + its currency + per-unit suffix come from the
   // active mode's block. The unit is fixed per block (month vs night).
-  const rentAmount = isVacation ? shortTerm?.nightlyRate : longTerm?.monthlyAmount;
+  // A zero rate is an unset price, not a free home: show nothing rather than 0.
+  const rawRent = isVacation ? shortTerm?.nightlyRate : longTerm?.monthlyAmount;
+  const rentAmount = rawRent ? rawRent : undefined;
   const currency = (isVacation ? shortTerm?.currency : longTerm?.currency) ?? 'EUR';
   const rentUnit = isVacation
     ? t('listing.offering.perNightUnit')
