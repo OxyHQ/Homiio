@@ -36,7 +36,8 @@
  */
 
 import { useCallback, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Platform } from 'react-native';
 import * as Location from 'expo-location';
 import {
   KEY_COORD_DECIMALS,
@@ -92,6 +93,8 @@ const DEVICE_AREA_STALE_MS = 1000 * 60 * 30;
 type DeviceFixOutcome =
   | { readonly status: 'granted'; readonly longitude: number; readonly latitude: number }
   | { readonly status: 'denied' }
+  /** Never asked, and this read may not ask. NOT a denial — see `resolvePermission`. */
+  | { readonly status: 'not_asked' }
   | { readonly status: 'unavailable' };
 
 /**
@@ -119,17 +122,27 @@ async function withDeadline<T>(work: Promise<T>, ms: number): Promise<T | 'timeo
  * Split out because the distinction is the whole of the "do not re-prompt" rule
  * and it is one boolean away from being lost.
  */
-async function resolvePermission(mayPrompt: boolean): Promise<boolean> {
+async function resolvePermission(mayPrompt: boolean): Promise<'granted' | 'denied' | 'not_asked'> {
   const current = await Location.getForegroundPermissionsAsync();
-  if (current.status === 'granted') return true;
-  if (!mayPrompt) return false;
+  if (current.status === 'granted') return 'granted';
+  if (!mayPrompt) {
+    // "Never asked" is not "denied", and the difference is what the user is
+    // told: calling an unasked permission a denial said "location is off" to
+    // somebody who had never been offered it, and disabled the one row that
+    // would have asked. A denial counts only when asking again cannot help — on
+    // web a `denied` state is final (expo-location reports `canAskAgain: true`
+    // there regardless), on native only once the OS says it will not ask.
+    const final = current.status === 'denied' && (Platform.OS === 'web' || !current.canAskAgain);
+    return final ? 'denied' : 'not_asked';
+  }
   const requested = await Location.requestForegroundPermissionsAsync();
-  return requested.status === 'granted';
+  return requested.status === 'granted' ? 'granted' : 'denied';
 }
 
 async function takeDeviceFix(mayPrompt: boolean): Promise<DeviceFixOutcome> {
-  const granted = await resolvePermission(mayPrompt);
-  if (!granted) return { status: 'denied' };
+  const permission = await resolvePermission(mayPrompt);
+  if (permission === 'not_asked') return { status: 'not_asked' };
+  if (permission === 'denied') return { status: 'denied' };
 
   const position = await withDeadline(
     Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }),
@@ -202,6 +215,7 @@ export interface LocationScope extends LocationScopeState {
  */
 
 export function useLocationScope(): LocationScope {
+  const queryClient = useQueryClient();
   const sessionSelection = useLocationScopeStore((s) => s.sessionSelection);
   const explicitGlobal = useLocationScopeStore((s) => s.explicitGlobal);
   const lastChosenArea = useLocationScopeStore((s) => s.lastChosenArea);
@@ -286,6 +300,7 @@ export function useLocationScope(): LocationScope {
       // than telling them we could not get a fix.
       return { status: 'failed', reason: 'position_unavailable' };
     }
+    if (outcome.status === 'not_asked') return { status: 'idle' };
     if (outcome.status === 'denied') return { status: 'failed', reason: 'permission_denied' };
     if (outcome.status === 'unavailable') return { status: 'failed', reason: 'position_unavailable' };
     return {
@@ -307,8 +322,9 @@ export function useLocationScope(): LocationScope {
         savedAreaSelection,
         lastChosenSelection: lastChosenArea,
         device,
+        deviceRequested,
       }),
-    [explicitGlobal, sessionSelection, savedAreaSelection, lastChosenArea, device],
+    [explicitGlobal, sessionSelection, savedAreaSelection, lastChosenArea, device, deviceRequested],
   );
 
   const choose = useCallback((selection: LocationSelection) => {
@@ -321,9 +337,15 @@ export function useLocationScope(): LocationScope {
 
   const useCurrentLocation = useCallback(() => {
     const store = useLocationScopeStore.getState();
+    const alreadyRequested = store.deviceRequested;
     store.requestDevice();
     store.markPermissionPromptShown();
-  }, []);
+    // A second press after a failed fix is a RETRY. The key has not changed, so
+    // without a reset the cached failure would answer it and nothing would run.
+    if (alreadyRequested) {
+      void queryClient.resetQueries({ queryKey: ['locationScope', 'deviceFix', true] });
+    }
+  }, [queryClient]);
 
   return {
     ...state,

@@ -4212,7 +4212,6 @@
     "scope": {
       "title": "Where are you looking?",
       "subtitle": "This board is local. Pick an area so you see the evictions you can actually get to — or browse everywhere on purpose.",
-      "useMyLocation": "Use my location",
       "browseGlobal": "Browse everywhere"
     },
     "sort": {
@@ -4333,20 +4332,16 @@
   },
   "location": {
     "scope": {
-      "eyebrow": "Buscando em",
       "announce": "Buscando em {{scope}}",
-      "change": "Alterar",
       "changeAccessible": "Alterar a área em que você está buscando",
       "everywhere": "Em todo lugar",
       "nearYou": "Perto de você · {{distance}}",
       "nearPlace": "Perto de {{place}} · {{distance}}",
       "resolving": "Localizando você…",
       "useCurrent": "Usar minha localização",
-      "useCurrentAccessible": "Usar minha localização atual para buscar por perto",
       "exploreGlobal": "Explorar todo lugar",
       "exploreGlobalAccessible": "Explorar imóveis em todo lugar, sem filtro de área",
       "pickerTitle": "Onde você está procurando moradia?",
-      "deviceUnavailable": "Sua localização atual não está mais disponível. Mostrando a última área que você escolheu.",
       "showingCached": "Cópia salva de {{when}}. Não está atualizada.",
       "failure": {
         "permission_denied": "A localização está desativada, então não dá para buscar perto de você. Escolha um lugar: a localização é opcional.",
@@ -4357,7 +4352,12 @@
         "no_results": "Não encontramos esse lugar. Tente outro nome.",
         "unsupported": "O Homiio ainda não busca nesse tipo de lugar. Escolha uma cidade."
       },
-      "notChosen": "Ainda não escolhida"
+      "chooseArea": "Escolha uma área",
+      "useCurrentHint": "Num raio de {{distance}} de onde você está",
+      "locationOff": "A localização está desativada nas configurações",
+      "positionRetry": "Não conseguimos obter sua posição. Tente de novo",
+      "everywhereHint": "Todas as áreas, sem filtro de localização",
+      "lastArea": "A última área que você escolheu"
     }
   },
   "alerts": {

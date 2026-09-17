@@ -4,14 +4,15 @@
  *
  * ## The board asks WHERE before it asks anything else
  *
- * There is no default feed. Until a scope is chosen the screen shows the scope
- * bar and an explanation, and the query does not run — `enabled: false`, not a
+ * There is no default feed. Until a scope is chosen the screen shows the area
+ * chip and an explanation, and the query does not run — `enabled: false`, not a
  * placeholder scope. The server refuses a scope-less request
  * (`LOCATION_SCOPE_REQUIRED`), and inventing `global` here to keep a spinner
  * moving would be exactly the silent widening ADR 0002 §2 forbids: *"a
  * geocoding failure never degrades into a worldwide feed"*.
  *
- * `?global=true` stays reachable, as a button somebody presses.
+ * `?global=true` stays reachable, as a row somebody presses in the area picker
+ * or the "Browse everywhere" button of the explanation.
  *
  * ## List, map and count are ONE query
  *
@@ -21,8 +22,9 @@
  * on this board a pin the list does not explain is a place nobody can account
  * for.
  *
- * Layout: Header (+ auth-gated "Publicar") → the privacy note → scope bar →
- * status and help-need filters → sort → `EvictionCard` list (Bloom
+ * Layout: Header (+ auth-gated "Publicar") → the privacy note → the filter
+ * row, led by the area chip (`AreaChip`: the area stated, its picker behind it)
+ * beside the count → status and help-need filters → sort → `EvictionCard` list (Bloom
  * `EvictionReportCard`s) → floating map toggle. Paginates
  * through BOTH infinite-scroll primitives (native `onScroll` + web
  * `LoadMoreSentinel`).
@@ -36,12 +38,7 @@ import { Image } from 'expo-image';
 import { Admonition } from '@oxy.so/bloom/admonition';
 import { Button } from '@oxy.so/bloom/button';
 import { Chip } from '@oxy.so/bloom/chip';
-import {
-  RiAddLine,
-  RiAlertLine,
-  RiFocus3Line,
-  RiMapPinLine,
-} from '@oxy.so/bloom/icons';
+import { RiAddLine, RiAlertLine, RiMapPinLine } from '@oxy.so/bloom/icons';
 import { Tabs, TabsTrigger } from '@oxy.so/bloom/tabs';
 import { H2, H3, Text as BloomText } from '@oxy.so/bloom/typography';
 import { useOxy, openAccountDialog } from '@oxy.so/services';
@@ -59,7 +56,7 @@ import { ErrorState } from '@/components/ui/ErrorState';
 import { ListSkeleton } from '@/components/ui/ListSkeleton';
 import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
 import { LoadMoreSentinel } from '@/components/common/LoadMoreSentinel';
-import { LocationScopeBar } from '@/components/location/LocationScopeBar';
+import { AreaChip } from '@/components/location/AreaChip';
 import { useLocationScope } from '@/hooks/useLocationScope';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import { useEvictions } from '@/hooks/useEvictionQueries';
@@ -106,6 +103,7 @@ export default function EvictionsBoardScreen() {
   const [helpNeed, setHelpNeed] = useState<EvictionHelpNeedType | undefined>(undefined);
   const [sort, setSort] = useState<EvictionBoardSort>('soonest');
   const [showMap, setShowMap] = useState(false);
+  const [areaPickerOpen, setAreaPickerOpen] = useState(false);
 
   /**
    * The board scope, from the shared selection or the EXPLICIT global mode.
@@ -214,13 +212,15 @@ export default function EvictionsBoardScreen() {
       <H3 style={styles.emptyTitle}>{t('evictions.scope.title')}</H3>
       <BloomText style={styles.emptyMessage}>{t('evictions.scope.subtitle')}</BloomText>
       <View style={styles.scopeActions}>
+        {/* The picker, not a bare "use my location": when location is off the
+            picker says so on the row, where a button here could only fail. */}
         <Button
           variant="primary"
           size="medium"
-          onPress={scope.useCurrentLocation}
-          leadingIcon={RiFocus3Line}
+          onPress={() => setAreaPickerOpen(true)}
+          leadingIcon={RiMapPinLine}
         >
-          {t('evictions.scope.useMyLocation')}
+          {t('location.scope.chooseArea')}
         </Button>
         <Button variant="outline" size="medium" onPress={scope.exploreGlobal}>
           {t('evictions.scope.browseGlobal')}
@@ -316,26 +316,25 @@ export default function EvictionsBoardScreen() {
                 so a coarse area reads as protection rather than as missing data. */}
             <Admonition type="info">{t('evictions.privacyNote')}</Admonition>
 
-            <LocationScopeBar
-              selection={scope.selection}
-              resolution={scope.resolution}
-              onChange={(next) => {
-                if (next) scope.choose(next);
-              }}
-              onExploreGlobal={scope.isGlobal ? undefined : scope.exploreGlobal}
-              isGlobal={scope.isGlobal}
-              nearbyPlace={scope.nearbyPlace}
-              deviceUnavailable={scope.deviceIssue !== null}
-              {...(scope.source === 'device'
-                ? {}
-                : { onUseCurrentLocation: scope.useCurrentLocation })}
-            />
-
-            {boardScope ? (
-              <>
+            {/* The area, stated where the filters are: the first control of
+                the filter row, with the count of what it holds beside it. */}
+            <View style={styles.scopeRow}>
+              <AreaChip
+                scope={scope}
+                title={t('evictions.scope.title')}
+                open={areaPickerOpen}
+                onOpenChange={setAreaPickerOpen}
+                testID="evictions-area"
+              />
+              {boardScope && !(isLoading && cases.length === 0) ? (
                 <BloomText style={styles.count} accessibilityRole="header">
                   {t('evictions.countInScope', { count: total })}
                 </BloomText>
+              ) : null}
+            </View>
+
+            {boardScope ? (
+              <>
 
                 {/* One paginated server status at a time: a single-choice
                     strip, not a set of toggles. */}
@@ -419,6 +418,12 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 14,
     color: colors.muted,
+  },
+  scopeRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: spacing.md,
   },
   count: {
     fontSize: 14,

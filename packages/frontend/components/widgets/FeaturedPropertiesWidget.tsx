@@ -8,16 +8,16 @@
  * client-side and rendered in the rail beside a page whose whole premise is an
  * explicit, visible area. It was the global feed ADR 0002 principle 2 forbids,
  * still alive inside a widget: four homes from anywhere on earth, under a
- * heading that named no place, next to a scope bar that named one.
+ * heading that named no place, next to a search bar that named one.
  *
  * ## Where its scope comes from
  *
  * `useLocationScope()` — the SAME hook Home and the eviction board read, not a
  * second location source. The widget commits nothing and derives nothing: it has
- * no picker, no "use my location" button and no fallback of its own, because
- * `LocationScopeBar` is the one surface allowed to commit a selection. A widget
- * that could commit one would be exactly the second authority the shared
- * contract exists to prevent.
+ * no picker, no "use my location" button and no fallback of its own: the area
+ * is chosen in the page's own "where?" control (Home's search bar, the eviction
+ * board's area chip), and a rail widget that also committed one would be a
+ * second place to change the area, beside a page already showing the first.
  *
  * The rail is a sibling of the page rather than its child, so the scope cannot
  * arrive as a prop. Reading the shared hook is what makes the two agree anyway:
@@ -56,7 +56,7 @@ import { BaseWidget } from './BaseWidget';
 import { usePropertySearch } from '@/hooks/usePropertySearch';
 import { useLocationScope } from '@/hooks/useLocationScope';
 import { useRentalMode } from '@/context/RentalModeContext';
-import { describeScope } from '@/components/location/LocationScopeBar';
+import { describeScope } from '@/components/location/scopeWhere';
 import { DEFAULT_SEARCH_QUERY } from '@/store/searchQueryStore';
 import type { SearchQuery } from '@/components/search/types';
 import { exploreHref } from '@/utils/searchUrl';
@@ -130,7 +130,7 @@ export function FeaturedPropertiesWidget() {
   );
 
   /**
-   * The area, in the same words the scope bar uses.
+   * The area, in the same words the page's "where?" control uses.
    *
    * `describeScope` rather than a local formatter: two surfaces naming one area
    * differently is the confusion the shared bar was built to remove, and a
@@ -226,8 +226,8 @@ export function FeaturedPropertiesWidget() {
  *
  * The failure REASON when there is one — "location is off" and "we could not
  * reach Homiio" call for different actions, and a single generic sentence sends
- * half of the people who read it to the wrong setting. Same keys the scope bar
- * uses, so the rail and the bar cannot describe one failure two ways.
+ * half of the people who read it to the wrong setting. Same keys the "where?"
+ * controls use, so the rail and the page cannot describe one failure two ways.
  */
 export function scopeNotice(resolution: LocationResolution, t: TFunction): string {
   switch (resolution.status) {

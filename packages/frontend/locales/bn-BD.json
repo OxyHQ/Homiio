@@ -4212,7 +4212,6 @@
     "scope": {
       "title": "Where are you looking?",
       "subtitle": "This board is local. Pick an area so you see the evictions you can actually get to — or browse everywhere on purpose.",
-      "useMyLocation": "Use my location",
       "browseGlobal": "Browse everywhere"
     },
     "sort": {
@@ -4333,20 +4332,16 @@
   },
   "location": {
     "scope": {
-      "eyebrow": "খোঁজা হচ্ছে",
       "announce": "{{scope}}-এ খোঁজা হচ্ছে",
-      "change": "বদলান",
       "changeAccessible": "আপনি যে এলাকায় খুঁজছেন তা বদলান",
       "everywhere": "সব জায়গায়",
       "nearYou": "আপনার কাছে · {{distance}}",
       "nearPlace": "{{place}}-এর কাছে · {{distance}}",
       "resolving": "আপনি কোথায় আছেন খোঁজা হচ্ছে…",
       "useCurrent": "আমার লোকেশন ব্যবহার করুন",
-      "useCurrentAccessible": "কাছাকাছি খুঁজতে আমার বর্তমান লোকেশন ব্যবহার করুন",
       "exploreGlobal": "সব জায়গায় দেখুন",
       "exploreGlobalAccessible": "এলাকার ফিল্টার ছাড়াই সব জায়গার বাসা দেখুন",
       "pickerTitle": "আপনি কোথায় বাসা খুঁজছেন?",
-      "deviceUnavailable": "আপনার বর্তমান লোকেশন আর পাওয়া যাচ্ছে না। আপনার বেছে নেওয়া শেষ এলাকাটি দেখানো হচ্ছে।",
       "showingCached": "{{when}}-এর সংরক্ষিত কপি। এটি হালনাগাদ নয়।",
       "failure": {
         "permission_denied": "লোকেশন বন্ধ, তাই আপনার কাছাকাছি খোঁজা যাচ্ছে না। বরং একটি জায়গা বেছে নিন — লোকেশন বাধ্যতামূলক নয়।",
@@ -4357,7 +4352,12 @@
         "no_results": "জায়গাটি খুঁজে পাওয়া যায়নি। অন্য নাম দিয়ে চেষ্টা করুন।",
         "unsupported": "Homiio এখনো এই ধরনের জায়গায় খুঁজতে পারে না। একটি শহর বেছে নিন।"
       },
-      "notChosen": "এখনো বাছাই করা হয়নি"
+      "chooseArea": "এলাকা বাছাই করুন",
+      "useCurrentHint": "আপনি যেখানে আছেন তার {{distance}} এর মধ্যে",
+      "locationOff": "সেটিংসে লোকেশন বন্ধ আছে",
+      "positionRetry": "আপনার অবস্থান পাওয়া যায়নি। আবার চেষ্টা করুন",
+      "everywhereHint": "সব এলাকা, লোকেশন ফিল্টার ছাড়া",
+      "lastArea": "আপনার শেষ বাছাই করা এলাকা"
     }
   },
   "alerts": {

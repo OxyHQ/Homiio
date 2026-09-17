@@ -4212,7 +4212,6 @@
     "scope": {
       "title": "Where are you looking?",
       "subtitle": "This board is local. Pick an area so you see the evictions you can actually get to — or browse everywhere on purpose.",
-      "useMyLocation": "Use my location",
       "browseGlobal": "Browse everywhere"
     },
     "sort": {
@@ -4333,20 +4332,16 @@
   },
   "location": {
     "scope": {
-      "eyebrow": "搜索范围",
       "announce": "正在搜索{{scope}}",
-      "change": "更改",
       "changeAccessible": "更改你正在搜索的区域",
       "everywhere": "全部地区",
       "nearYou": "在你附近 · {{distance}}",
       "nearPlace": "{{place}}附近 · {{distance}}",
       "resolving": "正在确定你的位置…",
       "useCurrent": "使用我的位置",
-      "useCurrentAccessible": "使用我当前的位置搜索附近房源",
       "exploreGlobal": "浏览全部地区",
       "exploreGlobalAccessible": "浏览全部地区的房源，不限定区域",
       "pickerTitle": "你想在哪里找房？",
-      "deviceUnavailable": "已无法获取你的当前位置。显示的是你上次选择的区域。",
       "showingCached": "{{when}}保存的副本，内容可能已过时。",
       "failure": {
         "permission_denied": "定位已关闭，无法搜索你附近的房源。请改为选择一个地点——定位不是必需的。",
@@ -4357,7 +4352,12 @@
         "no_results": "找不到这个地点。请换个名称再试。",
         "unsupported": "Homiio 暂时无法搜索这类地点。请改选一个城市。"
       },
-      "notChosen": "尚未选择"
+      "chooseArea": "选择区域",
+      "useCurrentHint": "你所在位置 {{distance}} 范围内",
+      "locationOff": "设置中已关闭定位",
+      "positionRetry": "无法获取你的位置，请重试",
+      "everywhereHint": "所有区域，不按位置筛选",
+      "lastArea": "你上次选择的区域"
     }
   },
   "alerts": {

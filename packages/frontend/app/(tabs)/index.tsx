@@ -13,12 +13,17 @@
  *
  * ## The shape now
  *
- *  1. **The scope bar, ABOVE the hero.** Position is the requirement: "el hero no
- *     debe ocultar la ubicación o consumir la mayor parte de una pantalla
- *     pequeña". Putting the bar first means the area is on screen at first paint
- *     on the narrowest device, before any image has decoded.
- *  2. **A shorter hero.** It is a brand moment and a search entry point, not the
- *     page: the mode tabs (rent, stays, buy, swap) over the search composer.
+ *  1. **A shorter hero whose search bar STATES THE AREA.** The mode tabs (rent,
+ *     stays, buy, swap) over the search composer, bound to the app-wide scope
+ *     (`where="scope"`): its first segment — the compact trigger's title on a
+ *     phone — reads "Near Madrid · 25 km", "Everywhere", "Finding where you
+ *     are…" or "Choose an area", and its panel is where the area changes: use
+ *     my location (disabled with the reason when it is off), the last area,
+ *     explore everywhere, typed places. It is drawn in the hero's first paint,
+ *     not behind its photo, so the area is readable before any image decodes
+ *     ("el hero no debe ocultar la ubicación").
+ *  2. **The prompt when there is no area** — an explanation and a button that
+ *     opens the Where step, never a global list.
  *  3. **Finite sections**, each stating its rule and its data source, all
  *     computed under ONE scope by one request.
  *  4. **Your own things** — continue browsing, saved — which are yours wherever
@@ -42,20 +47,20 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 import { Button } from '@oxy.so/bloom/button';
 import { FrostedIconButton } from '@oxy.so/bloom/frosted-icon-button';
-import { RiMenuLine } from '@oxy.so/bloom/icons';
+import { RiMapPinLine, RiMenuLine } from '@oxy.so/bloom/icons';
 import { H1, P } from '@oxy.so/bloom/typography';
 
-import { serializeLocationToken, type LocationSelection, type Property } from '@homiio/shared-types';
+import { formatRelativeDate, serializeLocationToken, type Property } from '@homiio/shared-types';
 
 import { useLocationScope } from '@/hooks/useLocationScope';
 import { homeSurfaceState, useHomeSections } from '@/hooks/useHomeSections';
-import { LocationScopeBar } from '@/components/location/LocationScopeBar';
 import { HomeSectionBand } from '@/components/home/HomeSectionBand';
 import { PropertyResultsGridSkeleton } from '@/components/ui/PropertyResultsGridSkeleton';
 import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
 import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
 import { useRentalMode } from '@/context/RentalModeContext';
 import { useSearchQueryStore } from '@/store/searchQueryStore';
+import { useFormatting } from '@/utils/format';
 
 import { PropertyCard } from '@/components/PropertyCard';
 import { HomeCarouselSection } from '@/components/HomeCarouselSection';
@@ -92,6 +97,7 @@ export default function HomePage() {
   const [searchStep, setSearchStep] = useState<SearchStep | null>(null);
 
   const scope = useLocationScope();
+  const { locale } = useFormatting();
   const home = useHomeSections(scope.selection, browseOffering, { enabled: scope.canQuery });
 
   // ONE exclusive answer, so "we could not load this" can never be rendered as
@@ -146,12 +152,7 @@ export default function HomePage() {
     }
   }, [home, loadSavedProperties, refetchRecentlyViewed]);
 
-  const onScopeChange = useCallback(
-    (selection: LocationSelection | null) => {
-      if (selection) scope.choose(selection);
-    },
-    [scope],
-  );
+  const chooseArea = useCallback(() => setSearchStep('where'), []);
 
   const scrollY = useSharedValue(0);
   const heroParallaxStyle = useAnimatedStyle(() => ({
@@ -166,24 +167,6 @@ export default function HomePage() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         showsVerticalScrollIndicator={false}
       >
-        {/* The scope, FIRST. See the header: on the narrowest device the area
-            must be readable before the hero image has decoded. */}
-        <View className={`${PAGE_GUTTER_CLASS} pt-[max(0.5rem,env(safe-area-inset-top))]`}>
-          <View className="w-full max-w-[1200px] self-center">
-            <LocationScopeBar
-              selection={scope.selection}
-              resolution={scope.resolution}
-              onChange={onScopeChange}
-              onExploreGlobal={scope.isGlobal ? undefined : scope.exploreGlobal}
-              isGlobal={scope.isGlobal}
-              nearbyPlace={scope.nearbyPlace}
-              deviceUnavailable={scope.deviceIssue !== null}
-              {...(home.staleAt ? { staleAt: home.staleAt } : {})}
-              {...(scope.source === 'device' ? {} : { onUseCurrentLocation: scope.useCurrentLocation })}
-            />
-          </View>
-        </View>
-
         {/* The hero does NOT clip: the wide search bar's panel drops below it,
             over the sections. The photo clips in its own layer instead, and the
             hero lifts above the sections while a panel is open (RN-Web gives
@@ -216,7 +199,7 @@ export default function HomePage() {
           </View>
 
           {!isScreenNotMobile ? (
-            <View className="absolute left-4 top-3 z-10">
+            <View className="absolute left-4 top-[max(0.75rem,env(safe-area-inset-top))] z-10">
               <FrostedIconButton
                 onPress={openMobileDrawer}
                 icon={<RiMenuLine width={22} height={22} />}
@@ -259,6 +242,8 @@ export default function HomePage() {
                 // same selection as the sidebar — and the scoped sections follow.
                 modeTabs="segmented"
                 onModeChange={setBrowseMode}
+                // The first segment IS the scope statement (see the header).
+                where="scope"
                 onSubmit={(query) => {
                   const href = exploreHref(query);
                   if (href) router.push(href);
@@ -281,7 +266,25 @@ export default function HomePage() {
                 {t('home.scopePrompt.title')}
               </H1>
               <P className="text-sm text-muted-foreground">{t('home.scopePrompt.body')}</P>
+              <View className="flex-row pt-1">
+                <Button
+                  variant="primary"
+                  size="medium"
+                  leadingIcon={RiMapPinLine}
+                  onPress={chooseArea}
+                  accessibilityLabel={t('location.scope.changeAccessible')}
+                >
+                  {t('location.scope.chooseArea')}
+                </Button>
+              </View>
             </View>
+          ) : null}
+
+          {/* Served from the offline snapshot: said once, above what it describes. */}
+          {home.staleAt && surface === 'sections' ? (
+            <P className={`text-[13px] text-muted-foreground ${PAGE_GUTTER_CLASS}`}>
+              {t('location.scope.showingCached', { when: formatRelativeDate(home.staleAt, locale) })}
+            </P>
           ) : null}
 
           {/* Skeletons that PRESERVE the layout, so nothing jumps when the

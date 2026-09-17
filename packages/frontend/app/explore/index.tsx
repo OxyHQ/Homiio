@@ -303,6 +303,8 @@ export default function SearchScreen() {
   // The composer heads every state below: each of them offers "choose a place",
   // and it stays on screen so the area being asked about is always stated. The
   // results surface draws its own inside its top bar.
+  // Every state below is one where the requested place is NOT in force, so the
+  // composer must not describe the empty location as "Everywhere".
   const searchPanel = (
     <View style={styles.composer}>
       <HomeSearch
@@ -310,6 +312,7 @@ export default function SearchScreen() {
         openStep={openStep}
         onOpenStepChange={setOpenStep}
         onSubmit={handleSubmitSearch}
+        locationUnresolved
       />
     </View>
   );

@@ -17,7 +17,13 @@
  *  - {@link WhereSuggestions} draws the answer — the rows, the state line and
  *    the attribution — for whichever field asked.
  *  - {@link WhereStep} is both with a Bloom `Search` field on top, for the
- *    mobile sheet and the scope bar's picker.
+ *    mobile sheet and the eviction board's area picker.
+ *
+ * **The scope rows.** Before anything is typed, the panel leads with the
+ * choices that are not a place name ({@link WhereOptions}): "Use my location"
+ * (disabled, with the reason, when location is off), "Explore everywhere" — a
+ * deliberate row, never a fallback — and the last area chosen on this device.
+ * They replace the strip that used to sit above Home.
  *
  * Two things here are contract rather than styling.
  *
@@ -36,7 +42,7 @@ import React, { useCallback, useMemo } from 'react';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
-import { RiMapPinLine, RiTimeLine } from '@oxy.so/bloom/icons';
+import { RiEarthLine, RiFocus3Line, RiHistoryLine, RiMapPinLine, RiTimeLine } from '@oxy.so/bloom/icons';
 import { Search } from '@oxy.so/bloom/search';
 import { DestinationSuggestions, type DestinationSuggestion } from '@oxy.so/bloom/stay-search';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
@@ -60,6 +66,7 @@ import {
 import { useColors } from '@/hooks/useThemeColor';
 import { spacing } from '@/constants/styles';
 import { selectionLabel } from '../types';
+import type { DeviceOptionState } from '@/components/location/scopeWhere';
 
 /**
  * Half-width (degrees) of the box drawn around a picked point when the gateway
@@ -77,6 +84,33 @@ const MAX_RESULTS = 6;
 /** Row ids are namespaced so a recent search and a place can never collide. */
 const RECENT_PREFIX = 'recent:';
 const PLACE_PREFIX = 'place:';
+const OPTION_DEVICE = 'option:device';
+const OPTION_EVERYWHERE = 'option:everywhere';
+const OPTION_LAST_AREA = 'option:last-area';
+
+const NO_RECENTS: readonly RecentSearch[] = [];
+
+/** Unused by a disabled row, which is never selectable. */
+const noop = (): void => undefined;
+
+/**
+ * The rows a "where?" panel offers before anything is typed.
+ *
+ * Every field is optional so a surface offers only what it can honour.
+ */
+export interface WhereOptions {
+  /** "Use my location". `hidden` (or absent) omits the row. */
+  device?: {
+    readonly state: DeviceOptionState;
+    /** The one line under the title: the radius, the progress or the reason. */
+    readonly description?: string;
+    readonly onPress: () => void;
+  };
+  /** "Explore everywhere". Absent when everywhere is already in force. */
+  onEverywhere?: () => void;
+  /** The last area chosen on this device. Absent when it is the area in force. */
+  lastArea?: LocationSelection | null;
+}
 
 /**
  * Place types that describe an AREA rather than a point.
@@ -196,9 +230,12 @@ interface WhereSuggestionsProps {
   value: string;
   search: WhereSearch;
   onSelectLocation: (selection: LocationSelection) => void;
-  onSelectRecent: (recent: RecentSearch) => void;
+  /** Omit to list no recent searches (a surface that only picks an area). */
+  onSelectRecent?: (recent: RecentSearch) => void;
   /** A line shown when there is nothing to list yet (no recents, nothing typed). */
   emptyHint?: string;
+  /** The scope rows shown before anything is typed. */
+  options?: WhereOptions;
   style?: StyleProp<ViewStyle>;
 }
 
@@ -209,11 +246,13 @@ export function WhereSuggestions({
   onSelectLocation,
   onSelectRecent,
   emptyHint,
+  options,
   style,
 }: WhereSuggestionsProps): React.ReactElement | null {
   const { t } = useTranslation();
   const colors = useColors();
-  const recentSearches = useRecentSearchesStore((s) => s.searches);
+  const storedSearches = useRecentSearchesStore((s) => s.searches);
+  const recentSearches = onSelectRecent ? storedSearches : NO_RECENTS;
   const { state, attribution } = search;
 
   const places = useMemo<LocationSelection[]>(
@@ -279,7 +318,7 @@ export function WhereSuggestions({
     (item: DestinationSuggestion) => {
       if (item.id.startsWith(RECENT_PREFIX)) {
         const recent = recentSearches.find((r) => `${RECENT_PREFIX}${r.id}` === item.id);
-        if (recent) onSelectRecent(recent);
+        if (recent) onSelectRecent?.(recent);
         return;
       }
       const selection = places.find((s) => `${PLACE_PREFIX}${locationKey(s)}` === item.id);
@@ -288,9 +327,95 @@ export function WhereSuggestions({
     [recentSearches, places, onSelectRecent, onSelectLocation],
   );
 
+  /**
+   * The scope rows, split by whether they can be pressed.
+   *
+   * Bloom's `DestinationSuggestion` has no `disabled` (its props are `id`,
+   * `title`, `description`, `icon`), so a device row that cannot help — location
+   * off, or a fix already in flight — is drawn as its own dimmed, inert list
+   * rather than as a row that silently does nothing when pressed.
+   */
+  const device = options?.device && options.device.state !== 'hidden' ? options.device : null;
+  const deviceDisabled = device !== null && (device.state === 'denied' || device.state === 'locating');
+  const deviceItem = useMemo<DestinationSuggestion | null>(
+    () =>
+      device
+        ? {
+            id: OPTION_DEVICE,
+            title: t('location.scope.useCurrent'),
+            description: device.description,
+            icon: RiFocus3Line,
+          }
+        : null,
+    [device, t],
+  );
+  const lastArea = options?.lastArea ?? null;
+  const onEverywhere = options?.onEverywhere;
+  const optionItems = useMemo<DestinationSuggestion[]>(() => {
+    if (!showRecents) return [];
+    const rows: DestinationSuggestion[] = [];
+    if (deviceItem && !deviceDisabled) rows.push(deviceItem);
+    if (lastArea) {
+      const label = selectionLabel(lastArea);
+      rows.push({
+        id: OPTION_LAST_AREA,
+        title: label?.primary ?? '',
+        description: label?.secondary ?? t('location.scope.lastArea'),
+        icon: RiHistoryLine,
+      });
+    }
+    if (onEverywhere) {
+      rows.push({
+        id: OPTION_EVERYWHERE,
+        title: t('location.scope.exploreGlobal'),
+        description: t('location.scope.everywhereHint'),
+        icon: RiEarthLine,
+      });
+    }
+    return rows;
+  }, [showRecents, deviceItem, deviceDisabled, lastArea, onEverywhere, t]);
+
+  const handleSelectOption = useCallback(
+    (item: DestinationSuggestion) => {
+      if (item.id === OPTION_DEVICE) device?.onPress();
+      else if (item.id === OPTION_EVERYWHERE) onEverywhere?.();
+      else if (item.id === OPTION_LAST_AREA && lastArea) onSelectLocation(lastArea);
+    },
+    [device, onEverywhere, lastArea, onSelectLocation],
+  );
+
+  const disabledDeviceRow =
+    showRecents && deviceItem && deviceDisabled ? (
+      <View
+        style={styles.disabledRow}
+        accessibilityState={{ disabled: true }}
+        aria-disabled
+      >
+        <DestinationSuggestions
+          items={[deviceItem]}
+          onSelect={noop}
+          accessibilityLabel={`${deviceItem.title}, ${deviceItem.description ?? ''}`}
+        />
+      </View>
+    ) : null;
+  const hasOptions = disabledDeviceRow !== null || optionItems.length > 0;
+  const optionRows = hasOptions ? (
+    <>
+      {disabledDeviceRow}
+      {optionItems.length > 0 ? (
+        <DestinationSuggestions
+          items={optionItems}
+          onSelect={handleSelectOption}
+          accessibilityLabel={t('location.scope.pickerTitle')}
+        />
+      ) : null}
+    </>
+  ) : null;
+
   const degraded = !showRecents && state.status === 'results' && state.degraded;
   const status = showRecents ? null : statusMessage ?? (items.length === 0 ? emptyHint ?? null : null);
   if (items.length === 0 && !status) {
+    if (hasOptions) return <View style={[styles.list, style]}>{optionRows}</View>;
     return emptyHint ? (
       <BloomText style={[styles.statusText, { color: colors.textSecondary }, style]}>{emptyHint}</BloomText>
     ) : null;
@@ -298,6 +423,7 @@ export function WhereSuggestions({
 
   return (
     <View style={[styles.list, style]}>
+      {showRecents ? optionRows : null}
       {status ? (
         <BloomText style={[styles.statusText, { color: colors.textSecondary }]}>{status}</BloomText>
       ) : null}
@@ -331,8 +457,12 @@ interface WhereStepProps {
   onChangeText: (text: string) => void;
   /** Fired when a place suggestion is chosen. */
   onSelectLocation: (selection: LocationSelection) => void;
-  /** Fired when a recent search row is chosen. */
-  onSelectRecent: (recent: RecentSearch) => void;
+  /** Fired when a recent search row is chosen. Omit to list no recent searches. */
+  onSelectRecent?: (recent: RecentSearch) => void;
+  /** The scope rows shown before anything is typed. */
+  options?: WhereOptions;
+  /** Focus the field on mount. Default `true`. */
+  autoFocus?: boolean;
 }
 
 /** A Bloom `Search` field over its suggestions. */
@@ -341,6 +471,8 @@ export const WhereStep: React.FC<WhereStepProps> = ({
   onChangeText,
   onSelectLocation,
   onSelectRecent,
+  options,
+  autoFocus = true,
 }) => {
   const { t } = useTranslation();
   const search = useWhereSearch(onChangeText);
@@ -351,7 +483,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
         value={value}
         onChangeText={search.onChangeText}
         onClearText={search.onClear}
-        autoFocus
+        autoFocus={autoFocus}
         label={t('search.input.placeholder')}
       />
       <WhereSuggestions
@@ -359,6 +491,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
         search={search}
         onSelectLocation={onSelectLocation}
         onSelectRecent={onSelectRecent}
+        options={options}
         // The rows carry their own 12 inset; pull them back to the field's edge.
         style={styles.bleed}
       />
@@ -375,6 +508,12 @@ const styles = StyleSheet.create({
   },
   bleed: {
     marginHorizontal: -12,
+  },
+  // Inert and dimmed: see `disabledDeviceRow`. `none` is valid CSS, unlike the
+  // RN-only `box-none` (docs/frontend-conventions.md).
+  disabledRow: {
+    opacity: 0.5,
+    pointerEvents: 'none',
   },
   statusText: {
     fontSize: 14,

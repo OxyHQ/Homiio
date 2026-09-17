@@ -4212,7 +4212,6 @@
     "scope": {
       "title": "Where are you looking?",
       "subtitle": "This board is local. Pick an area so you see the evictions you can actually get to — or browse everywhere on purpose.",
-      "useMyLocation": "Use my location",
       "browseGlobal": "Browse everywhere"
     },
     "sort": {
@@ -4333,20 +4332,16 @@
   },
   "location": {
     "scope": {
-      "eyebrow": "Recherche à",
       "announce": "Recherche à {{scope}}",
-      "change": "Modifier",
       "changeAccessible": "Modifier la zone dans laquelle vous cherchez",
       "everywhere": "Partout",
       "nearYou": "Près de vous · {{distance}}",
       "nearPlace": "Près de {{place}} · {{distance}}",
       "resolving": "Recherche de votre position…",
       "useCurrent": "Utiliser ma position",
-      "useCurrentAccessible": "Utiliser ma position actuelle pour chercher à proximité",
       "exploreGlobal": "Explorer partout",
       "exploreGlobalAccessible": "Explorer des logements partout, sans filtre de zone",
       "pickerTitle": "Où cherchez-vous un logement ?",
-      "deviceUnavailable": "Votre position actuelle n'est plus disponible. Nous affichons la dernière zone que vous avez choisie.",
       "showingCached": "Copie enregistrée du {{when}}. Elle n'est pas à jour.",
       "failure": {
         "permission_denied": "La localisation est désactivée, nous ne pouvons donc pas chercher près de vous. Choisissez un lieu : la localisation est facultative.",
@@ -4357,7 +4352,12 @@
         "no_results": "Nous n'avons pas trouvé ce lieu. Essayez un autre nom.",
         "unsupported": "Homiio ne sait pas encore chercher dans ce type de lieu. Choisissez une ville."
       },
-      "notChosen": "Pas encore choisie"
+      "chooseArea": "Choisir une zone",
+      "useCurrentHint": "Dans un rayon de {{distance}} autour de vous",
+      "locationOff": "La localisation est désactivée dans vos réglages",
+      "positionRetry": "Position introuvable. Réessayez",
+      "everywhereHint": "Toutes les zones, sans filtre de lieu",
+      "lastArea": "La dernière zone choisie"
     }
   },
   "alerts": {

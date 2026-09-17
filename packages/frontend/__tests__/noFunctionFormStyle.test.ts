@@ -18,7 +18,7 @@
  * `grep -rn "style={({" app components --include=*.tsx` must return ZERO — and a
  * grep is LINE-based, so it cannot tell code from prose. It began returning `1`
  * the moment a component's own doc comment quoted the forbidden form in order to
- * warn about it (`components/location/LocationScopeBar.tsx`). A gate that cries
+ * warn about it (the since-deleted `components/location/LocationScopeBar.tsx`). A gate that cries
  * wolf gets switched off by whoever hits it next, and an off gate is worse than
  * the hole it was covering.
  *
@@ -140,7 +140,7 @@ describe('the predicate can tell code from prose', () => {
   it('does NOT match a doc comment quoting the forbidden form', () => {
     // The NEGATIVE control, and the reason this file replaced a grep: a
     // component warning about the rule in its own header is not a violation of
-    // it. This is the exact text at `components/location/LocationScopeBar.tsx`.
+    // it. This is the exact text that stood in `components/location/LocationScopeBar.tsx`.
     const comment = [
       '/**',
       " * `style={({ pressed }) => [...]}` — the css-interop swallows the function",

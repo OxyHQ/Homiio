@@ -20,6 +20,24 @@
  * on a given step from anywhere — "Choose a place" on an error state opens it on
  * Where.
  *
+ * ## Where: the area this screen queries, stated in the first segment
+ *
+ * The Where segment (and, on a phone, the compact trigger's title) IS the
+ * statement of the area — ADR 0002's "every where-surface states the area it
+ * queries". Its panel leads with the choices that are not a typed place: "Use
+ * my location" (disabled with the reason when location is off), the last area
+ * chosen on this device, and "Explore everywhere", a deliberate row.
+ *
+ * `where` picks what the segment is bound to:
+ *
+ *  - **`query`** (default, Explore): the draft's own `location`. `null` is a
+ *    real, location-less query and reads "Everywhere".
+ *  - **`scope`** (Home): the app-wide scope (`useLocationScope`). A pick commits
+ *    to the scope immediately; the segment reads "Choose an area" while nothing
+ *    is chosen and "Finding where you are…" while the device answers. Searching
+ *    with no area OPENS Where instead of running a global search, because
+ *    "everywhere" is only ever a row somebody pressed.
+ *
  * ## The draft
  *
  * Both presentations edit a local draft of the {@link SearchQuery}; the live
@@ -63,6 +81,14 @@ import {
 import { H3 } from '@oxy.so/bloom/typography';
 
 import { OfferingType, type LocationSelection, type PropertyType } from '@homiio/shared-types';
+import { useScopeWhere } from '@/components/location/useScopeWhere';
+import {
+  deviceOptionDescription,
+  deviceOptionState,
+  scopedSearchQuery,
+  type DeviceOptionState,
+} from '@/components/location/scopeWhere';
+import { useLocationScope } from '@/hooks/useLocationScope';
 import { useIsScreenNotMobile } from '@/hooks/useOptimizedMediaQuery';
 import { useSearchPriceHistogram } from '@/hooks/useSearchPriceHistogram';
 import { useColors } from '@/hooks/useThemeColor';
@@ -74,7 +100,7 @@ import { DatesStep } from './steps/DatesStep';
 import { GuestsStep, type GuestsValue } from './steps/GuestsStep';
 import { PriceStep, priceTrackFor } from './steps/PriceStep';
 import { TypeStep } from './steps/TypeStep';
-import { WhereStep, WhereSuggestions, useWhereSearch } from './steps/WhereStep';
+import { WhereStep, WhereSuggestions, useWhereSearch, type WhereOptions } from './steps/WhereStep';
 import {
   datesLabel,
   guestsLabel,
@@ -198,6 +224,18 @@ export interface HomeSearchProps {
   modeTabs?: 'tabs' | 'segmented';
   /** A mode tab was chosen: the screen switches the offering it browses. */
   onModeChange?: (mode: BrowseMode) => void;
+  /**
+   * What the Where segment is bound to: the draft's `location` (`query`, the
+   * default) or the app-wide scope (`scope`). See the header.
+   */
+  where?: 'query' | 'scope';
+  /**
+   * `query` only: the URL asked for a place that did not resolve. With no
+   * location in the draft, Where then reads "Choose an area" rather than
+   * "Everywhere" — the search that failed was not a global one, and saying so
+   * beside "We could not find that place" would be ADR 0002's failure in words.
+   */
+  locationUnresolved?: boolean;
   style?: StyleProp<ViewStyle>;
 }
 
@@ -209,6 +247,8 @@ export function HomeSearch({
   onApply,
   modeTabs,
   onModeChange,
+  where = 'query',
+  locationUnresolved = false,
   style,
 }: HomeSearchProps): React.ReactElement {
   const { t } = useTranslation();
@@ -261,9 +301,21 @@ export function HomeSearch({
     [isWide, segmentSteps, steps],
   );
 
+  // --- where ---
+  const scoped = where === 'scope';
+  const scope = useLocationScope();
+  const scopeWhere = useScopeWhere(scope, scoped ? scope.selection : draft.location);
+  /** Explore pressed "use my location" and is waiting for the app-wide fix. */
+  const [awaitingDevice, setAwaitingDevice] = useState(false);
+
   // --- draft edits ---
   const handleSelectLocation = useCallback(
     (location: LocationSelection) => {
+      setAwaitingDevice(false);
+      // Home: the pick IS the scope, committed now rather than on submit, so the
+      // sections below the bar follow it and the segment never names a place
+      // the page is not using.
+      if (scoped) scope.choose(location);
       // Committing a PLACE clears the free text: the user told us WHERE, not
       // WHAT. Copying the label into the text is how a place search turned into
       // a text search for its own name, ANDed with the geographic filter.
@@ -271,7 +323,106 @@ export function HomeSearch({
       setWhereText('');
       onOpenStepChange(nextStepAfter('where'));
     },
-    [nextStepAfter, onOpenStepChange],
+    [scoped, scope, nextStepAfter, onOpenStepChange],
+  );
+
+  // Explore's "use my location": the fix is taken by the app-wide scope and
+  // lands in the draft once it is there — adjusted during render, like the
+  // seed above, rather than in an effect. Any other pick clears the wait, so a
+  // late fix cannot replace a place chosen after the press.
+  const deviceFix = scope.source === 'device' ? scope.selection : null;
+  const deviceIssue = scope.deviceIssue;
+  if (awaitingDevice) {
+    if (deviceFix) {
+      setAwaitingDevice(false);
+      setDraft((prev) => ({ ...prev, location: deviceFix, queryText: null }));
+      setWhereText('');
+    } else if (deviceIssue !== null && scope.resolution.status !== 'resolving') {
+      setAwaitingDevice(false);
+    }
+  }
+
+  const whereOptions = useMemo<WhereOptions>(() => {
+    if (scoped) {
+      return {
+        device: {
+          ...scopeWhere.device,
+          onPress: () => {
+            scope.useCurrentLocation();
+            onOpenStepChange(nextStepAfter('where'));
+          },
+        },
+        lastArea: scopeWhere.lastArea,
+        onEverywhere: scope.isGlobal
+          ? undefined
+          : () => {
+              scope.exploreGlobal();
+              setDraft((prev) => ({ ...prev, location: null }));
+              onOpenStepChange(nextStepAfter('where'));
+            },
+      };
+    }
+    // Explore: the draft's own location. A fix the app already holds is a ready
+    // row; otherwise the row asks the app-wide scope for one.
+    const state: DeviceOptionState =
+      !scopeWhere.geolocationSupported || draft.location?.kind === 'current_location'
+        ? 'hidden'
+        : deviceFix
+          ? 'ready'
+          : awaitingDevice && deviceIssue === null
+            ? 'locating'
+            : deviceOptionState({
+                source: null,
+                resolution: scope.resolution,
+                deviceIssue,
+                geolocationSupported: true,
+              });
+    return {
+      device: {
+        state,
+        description: deviceOptionDescription(state, t, scopeWhere.radius),
+        onPress: () => {
+          if (deviceFix) {
+            handleSelectLocation(deviceFix);
+            return;
+          }
+          setAwaitingDevice(true);
+          scope.useCurrentLocation();
+        },
+      },
+      lastArea: scopeWhere.lastArea,
+      onEverywhere:
+        draft.location === null && !locationUnresolved
+          ? undefined
+          : () => {
+              setDraft((prev) => ({ ...prev, location: null }));
+              setWhereText('');
+              onOpenStepChange(nextStepAfter('where'));
+            },
+    };
+  }, [
+    scoped,
+    scope,
+    scopeWhere,
+    draft.location,
+    locationUnresolved,
+    deviceFix,
+    deviceIssue,
+    awaitingDevice,
+    t,
+    handleSelectLocation,
+    nextStepAfter,
+    onOpenStepChange,
+  ]);
+
+  /**
+   * What a submit runs: on Home the location is the scope, never the draft's —
+   * and `null` while no area is chosen, when a search would be a global one
+   * nobody asked for.
+   */
+  const committed = useCallback(
+    (next: SearchQuery): SearchQuery | null => (scoped ? scopedSearchQuery(next, scope) : next),
+    [scoped, scope],
   );
 
   const handleSelectRecent = useCallback(
@@ -349,17 +500,38 @@ export function HomeSearch({
   }, [onOpenStepChange]);
 
   const handleSubmit = useCallback(() => {
-    addRecentSearch(draft, buildRecentLabel(draft, t, locale));
+    const next = committed(draft);
+    if (!next) {
+      // Ask, rather than run the world under a bar that says "Choose an area".
+      onOpenStepChange('where');
+      return;
+    }
+    addRecentSearch(next, buildRecentLabel(next, t, locale));
     onOpenStepChange(null);
-    onSubmit(draft);
-  }, [addRecentSearch, draft, t, locale, onOpenStepChange, onSubmit]);
+    onSubmit(next);
+  }, [committed, addRecentSearch, draft, t, locale, onOpenStepChange, onSubmit]);
+
+  /** The Where value: the scope's statement, or the draft's own place. */
+  const whereValue = (location: LocationSelection | null): string | null =>
+    scoped
+      ? scopeWhere.statement.value
+      : location
+        ? locationDisplayLabel(location, t)
+        : locationUnresolved
+          ? null
+          : t('location.scope.everywhere');
+  const wherePlaceholder = scoped
+    ? scopeWhere.statement.placeholder
+    : locationUnresolved
+      ? t('location.scope.chooseArea')
+      : t(STEP_EMPTY_KEYS.where);
 
   // --- labels ---
   /** A step's value in the draft, or `null` while it holds nothing. */
   const stepValue = (step: SearchStep): string | null => {
     switch (step) {
       case 'where':
-        return draft.location ? locationDisplayLabel(draft.location, t) : null;
+        return whereValue(draft.location);
       case 'type':
         return typeLabel(draft, t);
       case 'dates':
@@ -410,6 +582,7 @@ export function HomeSearch({
             onSelectLocation={handleSelectLocation}
             onSelectRecent={handleSelectRecent}
             emptyHint={t('search.input.placeholder')}
+            options={whereOptions}
           />
         ) : (
           <WhereStep
@@ -417,6 +590,7 @@ export function HomeSearch({
             onChangeText={setWhereText}
             onSelectLocation={handleSelectLocation}
             onSelectRecent={handleSelectRecent}
+            options={whereOptions}
           />
         );
       case 'type':
@@ -456,7 +630,7 @@ export function HomeSearch({
       key: step,
       label: t(STEP_LABEL_KEYS[step]),
       value: stepValue(step) ?? undefined,
-      placeholder: t(STEP_EMPTY_KEYS[step]),
+      placeholder: step === 'where' ? wherePlaceholder : t(STEP_EMPTY_KEYS[step]),
       flex: SEGMENT_FLEX[step],
     }));
 
@@ -466,7 +640,8 @@ export function HomeSearch({
         return;
       }
       onOpenStepChange(null);
-      if (JSON.stringify(draft) !== queryKey) apply(draft);
+      const next = committed(draft);
+      if (next && JSON.stringify(draft) !== queryKey) apply(next);
     };
 
     let panel: React.ReactNode = null;
@@ -546,12 +721,13 @@ export function HomeSearch({
     reset();
   };
 
+  const compactTitle = whereValue(query.location) ?? wherePlaceholder;
   const compact = (
     <StaySearchCompact
       onPress={() => onOpenStepChange('where')}
-      title={locationDisplayLabel(query.location, t)}
+      title={compactTitle}
       summary={summaryLine(query, t, locale)}
-      accessibilityLabel={`${t('search.summary.edit')}: ${locationDisplayLabel(query.location, t)}, ${summaryLine(query, t, locale)}`}
+      accessibilityLabel={`${t('search.summary.edit')}: ${compactTitle}, ${summaryLine(query, t, locale)}`}
       style={modeTabs === 'segmented' ? undefined : style}
     />
   );
@@ -594,7 +770,7 @@ export function HomeSearch({
                 key={step}
                 label={t(STEP_LABEL_KEYS[step])}
                 title={t(STEP_TITLE_KEYS[step])}
-                summary={step === 'where' ? locationDisplayLabel(draft.location, t) : (stepValue(step) ?? t(STEP_EMPTY_KEYS[step]))}
+                summary={step === 'where' ? (whereValue(draft.location) ?? wherePlaceholder) : (stepValue(step) ?? t(STEP_EMPTY_KEYS[step]))}
                 expanded={openStep === step}
                 onPress={() => onOpenStepChange(step)}
               >
