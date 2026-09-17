@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, type DimensionValue, type ViewStyle } from 'react-native';
-import { Skeleton } from '@oxy.so/bloom';
+import * as Skeleton from '@oxy.so/bloom/skeleton';
 
 interface TextLinesProps {
   /** Number of placeholder lines (defaults to 1). */
