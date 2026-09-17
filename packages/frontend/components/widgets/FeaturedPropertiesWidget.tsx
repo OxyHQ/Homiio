@@ -38,8 +38,10 @@
  * "no area chosen yet" is a statement about the area.
  */
 import React, { useMemo } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View } from 'react-native';
+import { Admonition } from '@oxy.so/bloom/admonition';
 import { Loading } from '@oxy.so/bloom/loading';
+import { Text as BloomText } from '@oxy.so/bloom/typography';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
@@ -50,7 +52,6 @@ import {
   type OfferingType,
   type Property,
 } from '@homiio/shared-types';
-import { colors } from '@/styles/colors';
 import { BaseWidget } from './BaseWidget';
 import { usePropertySearch } from '@/hooks/usePropertySearch';
 import { useLocationScope } from '@/hooks/useLocationScope';
@@ -61,7 +62,6 @@ import type { SearchQuery } from '@/components/search/types';
 import { exploreHref } from '@/utils/searchUrl';
 import { useFormatting } from '@/utils/format';
 import { PropertyCard } from '../PropertyCard';
-import { ThemedText } from '../ThemedText';
 import { Button } from '@oxy.so/bloom/button';
 
 // The API decorates listings with an aggregate save count that is not part of
@@ -165,8 +165,10 @@ export function FeaturedPropertiesWidget() {
   if (!scope.canQuery) {
     return (
       <BaseWidget title={title}>
-        <View style={styles.emptyContainer}>
-          <ThemedText style={styles.emptyText}>{scopeNotice(scope.resolution, t)}</ThemedText>
+        <View className="items-center p-5">
+          <BloomText className="text-center text-sm text-muted-foreground">
+            {scopeNotice(scope.resolution, t)}
+          </BloomText>
         </View>
       </BaseWidget>
     );
@@ -175,24 +177,24 @@ export function FeaturedPropertiesWidget() {
   if (search.isError) {
     return (
       <BaseWidget title={title}>
-        <View style={styles.errorContainer}>
-          <ThemedText style={styles.errorText}>{t('home.featured.loadFailed')}</ThemedText>
-        </View>
+        <Admonition type="error">{t('home.featured.loadFailed')}</Admonition>
       </BaseWidget>
     );
   }
 
   return (
     <BaseWidget title={title}>
-      <View>
+      <View className="gap-3">
         {search.isLoading ? (
-          <View style={styles.loadingContainer}>
+          <View className="items-center gap-2.5 p-4">
             <Loading iconSize={16} showText={false} />
-            <ThemedText style={styles.loadingText}>{t('state.loading')}</ThemedText>
+            <BloomText className="text-sm text-muted-foreground">{t('state.loading')}</BloomText>
           </View>
         ) : featured.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <ThemedText style={styles.emptyText}>{t('home.featured.empty')}</ThemedText>
+          <View className="items-center p-5">
+            <BloomText className="text-center text-sm text-muted-foreground">
+              {t('home.featured.empty')}
+            </BloomText>
           </View>
         ) : (
           <>
@@ -211,12 +213,13 @@ export function FeaturedPropertiesWidget() {
                 showRating={false}
                 showSaveCount={true}
                 saveCountDisplayMode="inline"
-                style={styles.propertyCard}
                 onPress={() => router.push(`/properties/${property.id}`)}
               />
             ))}
             {seeAllHref ? (
-              <Button onPress={() => router.push(seeAllHref)}>{t('home.viewAll')}</Button>
+              <Button variant="secondary" onPress={() => router.push(seeAllHref)}>
+                {t('home.viewAll')}
+              </Button>
             ) : null}
           </>
         )}
@@ -247,37 +250,3 @@ export function scopeNotice(resolution: LocationResolution, t: TFunction): strin
       return t('home.featured.chooseArea');
   }
 }
-
-const styles = StyleSheet.create({
-  loadingContainer: {
-    padding: 15,
-    alignItems: 'center',
-    borderRadius: 15,
-    gap: 10,
-  },
-  loadingText: {
-    color: colors.COLOR_BLACK_LIGHT_4,
-  },
-  errorContainer: {
-    padding: 15,
-    alignItems: 'center',
-    borderRadius: 15,
-  },
-  errorText: {
-    color: colors.danger,
-    fontWeight: '500',
-  },
-  emptyContainer: {
-    padding: 20,
-    alignItems: 'center',
-    borderRadius: 15,
-  },
-  emptyText: {
-    color: colors.COLOR_BLACK_LIGHT_4,
-    fontSize: 14,
-    textAlign: 'center',
-  },
-  propertyCard: {
-    marginBottom: 12,
-  },
-});

@@ -1,9 +1,14 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, TextInput, Switch, TouchableOpacity } from 'react-native';
-
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { colors } from '@/styles/colors';
+
+import { Button, CloseButton } from '@oxy.so/bloom/button';
+import { Item } from '@oxy.so/bloom/item';
+import { Switch } from '@oxy.so/bloom/switch';
+import { TextFieldInput } from '@oxy.so/bloom/text-field';
+import { H3 } from '@oxy.so/bloom/typography';
+
+import { spacing } from '@/constants/styles';
 import { useSavedSearches } from '@/hooks/useSavedSearches';
 import type { SavedSearchFilters } from '@/store/savedSearchesStore';
 import type { LocationSelection } from '@homiio/shared-types';
@@ -38,14 +43,13 @@ export const SaveSearchBottomSheet: React.FC<SaveSearchBottomSheetProps> = ({
     const [notificationsEnabled, setNotificationsEnabled] = useState(false);
     const [submitting, setSubmitting] = useState(false);
 
+    // A name, and SOMETHING to search: a place, free text, or both. The button
+    // used to require non-empty `query`, which is the free-text dimension and
+    // empty for every place search — so saving a city was impossible from here.
+    const canSave = name.trim().length > 0 && (location !== null || query.trim().length > 0);
+
     const handleSave = useCallback(async () => {
-        if (!isAuthenticated) return;
-        // A name, and SOMETHING to search: a place, free text, or both. This
-        // used to require non-empty `query`, which was the location's label —
-        // so once `query` became the free-text dimension (usually empty for a
-        // place search) that guard would have silently refused every save of a
-        // city, with no message, by returning early.
-        if (!name.trim() || (!location && !query.trim())) return;
+        if (!isAuthenticated || !canSave) return;
         try {
             setSubmitting(true);
             const ok = await saveSearch(name.trim(), query.trim(), filters, notificationsEnabled, location);
@@ -56,49 +60,48 @@ export const SaveSearchBottomSheet: React.FC<SaveSearchBottomSheetProps> = ({
         } finally {
             setSubmitting(false);
         }
-    }, [isAuthenticated, name, query, location, filters, notificationsEnabled, saveSearch, onClose, onSaved]);
+    }, [isAuthenticated, canSave, name, query, location, filters, notificationsEnabled, saveSearch, onClose, onSaved]);
 
     return (
         <View style={styles.container}>
             <View style={styles.header}>
-                <Text style={styles.title}>{t('search.save.title')}</Text>
-                <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-                    <Ionicons name="close" size={22} color={colors.COLOR_BLACK_LIGHT_4} />
-                </TouchableOpacity>
+                <H3>{t('search.save.title')}</H3>
+                <CloseButton onPress={onClose} accessibilityLabel={t('common.close')} />
             </View>
 
-            <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>{t('common.name')}</Text>
-                <TextInput
-                    style={styles.input}
-                    placeholder={t('search.save.namePlaceholder')}
-                    value={name}
-                    onChangeText={setName}
-                    maxLength={60}
-                />
-            </View>
+            <TextFieldInput
+                label={t('common.name')}
+                placeholder={t('search.save.namePlaceholder')}
+                value={name}
+                onChangeText={setName}
+                maxLength={60}
+            />
 
-            <View style={styles.row}>
-                <Text style={styles.toggleLabel}>{t('search.save.enableNotifications')}</Text>
-                <Switch
-                    value={notificationsEnabled}
-                    onValueChange={setNotificationsEnabled}
-                    trackColor={{ false: colors.COLOR_BLACK_LIGHT_5, true: colors.primaryColor + '40' }}
-                    thumbColor={notificationsEnabled ? colors.primaryColor : colors.white}
-                />
-            </View>
+            <Item
+                title={t('search.save.enableNotifications')}
+                trailing={
+                    <Switch
+                        value={notificationsEnabled}
+                        onValueChange={setNotificationsEnabled}
+                        accessibilityLabel={t('search.save.enableNotifications')}
+                    />
+                }
+            />
 
             <View style={styles.actions}>
-                <TouchableOpacity style={styles.cancelBtn} onPress={onClose}>
-                    <Text style={styles.cancelText}>{t('common.cancel')}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                    style={[styles.saveBtn, (!name.trim() || !query.trim()) && styles.saveBtnDisabled]}
-                    disabled={!name.trim() || !query.trim() || submitting}
+                <Button variant="secondary" size="medium" onPress={onClose} style={styles.action}>
+                    {t('common.cancel')}
+                </Button>
+                <Button
+                    variant="primary"
+                    size="medium"
+                    disabled={!canSave || submitting}
+                    loading={submitting}
                     onPress={handleSave}
+                    style={styles.action}
                 >
-                    <Text style={styles.saveText}>{submitting ? t('common.saving') : t('common.save')}</Text>
-                </TouchableOpacity>
+                    {submitting ? t('common.saving') : t('common.save')}
+                </Button>
             </View>
         </View>
     );
@@ -107,81 +110,19 @@ export const SaveSearchBottomSheet: React.FC<SaveSearchBottomSheetProps> = ({
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        padding: 20,
+        padding: spacing.xl,
+        gap: spacing.lg,
     },
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 12,
-    },
-    title: {
-        fontSize: 18,
-        fontWeight: '600',
-        color: colors.primaryDark,
-    },
-    closeBtn: {
-        padding: 4,
-    },
-    inputGroup: {
-        marginTop: 8,
-        marginBottom: 14,
-    },
-    inputLabel: {
-        fontSize: 14,
-        color: colors.COLOR_BLACK_LIGHT_4,
-        marginBottom: 6,
-    },
-    input: {
-        borderWidth: 1,
-        borderColor: colors.COLOR_BLACK_LIGHT_5,
-        borderRadius: 10,
-        paddingHorizontal: 12,
-        paddingVertical: 10,
-        fontSize: 16,
-        backgroundColor: colors.primaryLight,
-        color: colors.COLOR_BLACK,
-    },
-    row: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        marginBottom: 16,
-    },
-    toggleLabel: {
-        fontSize: 14,
-        color: colors.COLOR_BLACK_LIGHT_4,
     },
     actions: {
         flexDirection: 'row',
-        gap: 10,
+        gap: spacing.md,
     },
-    cancelBtn: {
+    action: {
         flex: 1,
-        paddingVertical: 10,
-        borderRadius: 10,
-        borderWidth: 1,
-        borderColor: colors.COLOR_BLACK_LIGHT_5,
-        alignItems: 'center',
-    },
-    cancelText: {
-        color: colors.COLOR_BLACK_LIGHT_4,
-        fontWeight: '600',
-    },
-    saveBtn: {
-        flex: 1,
-        paddingVertical: 10,
-        borderRadius: 10,
-        backgroundColor: colors.primaryColor,
-        alignItems: 'center',
-    },
-    saveBtnDisabled: {
-        backgroundColor: colors.COLOR_BLACK_LIGHT_5,
-    },
-    saveText: {
-        color: colors.primaryForeground,
-        fontWeight: '600',
     },
 });
-
-

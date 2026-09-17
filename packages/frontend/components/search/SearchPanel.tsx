@@ -11,9 +11,9 @@
  *    applies the draft to the live query (so the pill updates) and closes. There
  *    is no multi-step back/next chrome on wide; the pill's own circular Search
  *    button runs the actual search.
- *  - Narrow screens: a full-screen slide-up `Modal` sheet that walks the full
- *    Where → Type → (Dates) → Price flow with a browse-mode toggle and
- *    Back/Next/Search footer.
+ *  - Narrow screens: the same Bloom `Dialog` as a bottom sheet
+ *    (`placement="bottom"`) that walks the full Where → Type → (Dates) → Price
+ *    flow with a browse-mode toggle and a Back/Next/Search footer.
  *
  * Steps (long-term, the default): Where → Type → Price. A Long-term/Vacation
  * toggle reveals an extra Dates step in vacation mode (Where → Type → Dates →
@@ -26,14 +26,14 @@
  * the live `searchQueryStore` stable while the user composes.
  */
 import React, { useCallback, useMemo, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
-import Ionicons from '@expo/vector-icons/Ionicons';
 
-import { Button } from '@oxy.so/bloom/button';
+import { Button, CloseButton } from '@oxy.so/bloom/button';
 import { Dialog } from '@oxy.so/bloom/dialog';
+import { RiSearchLine } from '@oxy.so/bloom/icons';
 import {
   SegmentedControl,
   SegmentedControlItem,
@@ -45,8 +45,8 @@ import { OfferingType, PropertyType, formatMoney } from '@homiio/shared-types';
 import { useIsScreenNotMobile } from '@/hooks/useOptimizedMediaQuery';
 import { useFormatting } from '@/utils/format';
 import { useRecentSearchesStore, type RecentSearch } from '@/store/recentSearchesStore';
-import { colors } from '@/styles/colors';
-import { cardShadow, radius, spacing } from '@/constants/styles';
+import { useColors } from '@/hooks/useThemeColor';
+import { spacing } from '@/constants/styles';
 
 import { WhereStep } from './steps/WhereStep';
 import { TypeStep } from './steps/TypeStep';
@@ -106,6 +106,13 @@ const STEP_TITLE: Record<SearchStep, string> = {
  * off-screen; we only set the width here.
  */
 const DIALOG_MAX_WIDTH = 420;
+
+/**
+ * The narrow sheet's height, as a share of the window. Fixed rather than sized
+ * to its step, so walking from the short type step to the long place list does
+ * not make the sheet jump under the user's thumb.
+ */
+const SHEET_HEIGHT_RATIO = 0.88;
 
 /**
  * Build a short recent-search label from a committed query.
@@ -176,6 +183,8 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
   const { locale } = useFormatting();
   const isWide = useIsScreenNotMobile();
   const insets = useSafeAreaInsets();
+  const colors = useColors();
+  const { height: windowHeight } = useWindowDimensions();
   const addRecentSearch = useRecentSearchesStore((s) => s.addSearch);
   // Apply (wide "Done") falls back to submit when the caller doesn't separate
   // the two (the results route applies in place; the home hero navigates).
@@ -386,33 +395,23 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
 
   const header = (
     <View style={styles.header}>
-      <Pressable
-        onPress={onClose}
-        accessibilityRole="button"
-        accessibilityLabel={t('common.close')}
-        hitSlop={spacing.sm}
-        style={styles.headerClose}
-      >
-        <Ionicons name="close" size={22} color={colors.COLOR_BLACK} />
-      </Pressable>
-      <View style={styles.modeToggle}>
-        <SegmentedControl<BrowseMode>
-          label={t('search.mode.label')}
-          type="tabs"
-          size="small"
-          value={draftBrowseMode}
-          onChange={handleBrowseMode}
-        >
-          {BROWSE_MODE_ORDER.map((browseMode) => (
-            <SegmentedControlItem key={browseMode} value={browseMode}>
-              <SegmentedControlItemText>
-                {t(BROWSE_MODE_LABELS[browseMode])}
-              </SegmentedControlItemText>
-            </SegmentedControlItem>
-          ))}
-        </SegmentedControl>
+      <View style={styles.headerTitleRow}>
+        <H3>{t('search.panel.title')}</H3>
+        <CloseButton onPress={onClose} accessibilityLabel={t('common.close')} />
       </View>
-      <View style={styles.headerClose} />
+      <SegmentedControl<BrowseMode>
+        label={t('search.mode.label')}
+        type="tabs"
+        size="small"
+        value={draftBrowseMode}
+        onChange={handleBrowseMode}
+      >
+        {BROWSE_MODE_ORDER.map((browseMode) => (
+          <SegmentedControlItem key={browseMode} value={browseMode}>
+            <SegmentedControlItemText>{t(BROWSE_MODE_LABELS[browseMode])}</SegmentedControlItemText>
+          </SegmentedControlItem>
+        ))}
+      </SegmentedControl>
     </View>
   );
 
@@ -420,8 +419,9 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
     <View
       style={[
         styles.footer,
-        // The full-screen sheet pins this footer to the bottom edge, so the CTA
-        // must clear the home indicator.
+        { borderTopColor: colors.border },
+        // The sheet is pinned to the bottom edge, so the CTA must clear the
+        // home indicator.
         { paddingBottom: spacing.md + insets.bottom },
       ]}
     >
@@ -449,8 +449,7 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
             variant="primary"
             size="medium"
             onPress={handleSubmit}
-            icon={<Ionicons name="search" size={16} color={colors.primaryForeground} />}
-            iconPosition="left"
+            leadingIcon={RiSearchLine}
             accessibilityLabel={t('search.actions.search')}
           >
             {t('search.actions.search')}
@@ -502,51 +501,36 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({
     );
   }
 
-  // Narrow: full-screen slide-up sheet that walks the full multi-step flow.
+  // Narrow: the same Bloom dialog as a bottom sheet, walking the full flow. The
+  // body owns its scroll (a fixed-height column: header, scrolling step,
+  // pinned footer), so the dialog's own scroll wrapper is turned off.
   return (
-    <Modal visible={open} animationType="slide" transparent onRequestClose={onClose}>
-      <View style={styles.modalRoot}>
-        <Pressable
-          style={styles.backdrop}
-          accessibilityRole="button"
-          accessibilityLabel={t('common.close')}
-          onPress={onClose}
-        />
-        <View style={styles.modalSheet}>
-          <View style={styles.sheetHandleWrap}>
-            <H3 style={styles.sheetTitle}>
-              {t('search.panel.title')}
-            </H3>
-          </View>
-          <View style={[styles.panel, styles.panelFull, cardShadow.lg]}>
-            {header}
-            <ScrollView
-              style={styles.scroll}
-              contentContainerStyle={styles.scrollContent}
-              keyboardShouldPersistTaps="handled"
-              showsVerticalScrollIndicator={false}
-            >
-              {stepContent}
-            </ScrollView>
-            {footer}
-          </View>
-        </View>
+    <Dialog
+      placement="bottom"
+      open={open}
+      onClose={onClose}
+      label={t('search.panel.title')}
+      contentPadding={0}
+      scrollable={false}
+      maxHeightRatio={0.95}
+    >
+      <View style={{ height: Math.round(windowHeight * SHEET_HEIGHT_RATIO) }}>
+        {header}
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {stepContent}
+        </ScrollView>
+        {footer}
       </View>
-    </Modal>
+    </Dialog>
   );
 };
 
 const styles = StyleSheet.create({
-  panel: {
-    backgroundColor: colors.surfaceElevated,
-    borderRadius: radius.xl,
-    overflow: 'hidden',
-  },
-  panelFull: {
-    flex: 1,
-    borderRadius: 0,
-  },
-
   // --- Wide compact dialog (single step) ---
   // Bloom's `Dialog` owns the header and body padding; this footer row right-
   // aligns the "Done" button below the step content inside the dialog body.
@@ -556,31 +540,20 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
   },
 
-  // --- Narrow full-screen sheet ---
+  // --- Narrow bottom sheet ---
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
+    paddingTop: spacing.sm,
     paddingBottom: spacing.md,
     gap: spacing.md,
   },
-  headerClose: {
-    width: 32,
-    height: 32,
+  headerTitleRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-  },
-  modeToggle: {
-    flex: 1,
-    // Wide enough for the four browse segments (Long-term / Vacation / Buy /
-    // Exchange) to read on one line each at the small segmented size.
-    maxWidth: 380,
-    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   scroll: {
-    flexGrow: 0,
+    flex: 1,
   },
   scrollContent: {
     paddingHorizontal: spacing.lg,
@@ -593,40 +566,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
+    borderTopWidth: StyleSheet.hairlineWidth,
     gap: spacing.md,
   },
   footerActions: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-  },
-  modalRoot: {
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-  backdrop: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: colors.overlay,
-  },
-  modalSheet: {
-    flex: 1,
-    marginTop: spacing['5xl'],
-    backgroundColor: colors.surfaceElevated,
-    borderTopLeftRadius: radius.xl,
-    borderTopRightRadius: radius.xl,
-    overflow: 'hidden',
-  },
-  sheetHandleWrap: {
-    alignItems: 'center',
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.sm,
-  },
-  sheetTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.COLOR_BLACK,
   },
 });
 

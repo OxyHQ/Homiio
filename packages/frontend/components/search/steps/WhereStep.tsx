@@ -23,11 +23,13 @@
  * surface showing results can display it, and a client cannot render what it
  * was never given.
  */
-import React, { useCallback, useMemo, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import React, { useCallback, useMemo } from 'react';
+import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import Ionicons from '@expo/vector-icons/Ionicons';
 
+import { IconCircle } from '@oxy.so/bloom/icon-circle';
+import { RiMapPinLine, RiTimeLine } from '@oxy.so/bloom/icons';
+import { Item } from '@oxy.so/bloom/item';
 import { Search } from '@oxy.so/bloom/search';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 
@@ -43,8 +45,8 @@ import {
   type LocationSelection,
   type GeoPoint,
 } from '@homiio/shared-types';
-import { colors } from '@/styles/colors';
-import { radius, spacing } from '@/constants/styles';
+import { useColors } from '@/hooks/useThemeColor';
+import { spacing } from '@/constants/styles';
 import { selectionLabel } from '../types';
 
 /**
@@ -136,21 +138,18 @@ function toLocationSelection(place: GeoPlace): LocationSelection {
   return geoPlaceToSelection(bounds === undefined ? place : { ...place, bounds });
 }
 
-type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
+/** The two row glyphs: a place, or a search the user ran before. */
+const SUGGESTION_ICONS = { place: RiMapPinLine, recent: RiTimeLine } as const;
 
 interface SuggestionRowProps {
-  icon: IoniconName;
+  icon: keyof typeof SUGGESTION_ICONS;
   title: string;
   subtitle?: string;
   accessibilityLabel: string;
   onPress: () => void;
 }
 
-/**
- * A single tappable suggestion / recent-search row. NativeWind's css-interop
- * swallows the function form of `style`, so the pressed background is driven by
- * onPressIn/onPressOut state over a static style array instead.
- */
+/** A single tappable suggestion / recent-search row, on Bloom `Item`. */
 const SuggestionRow: React.FC<SuggestionRowProps> = ({
   icon,
   title,
@@ -158,30 +157,15 @@ const SuggestionRow: React.FC<SuggestionRowProps> = ({
   accessibilityLabel,
   onPress,
 }) => {
-  const [pressed, setPressed] = useState(false);
+  const Icon = SUGGESTION_ICONS[icon];
   return (
-    <Pressable
+    <Item
+      title={title}
+      subtitle={subtitle}
+      leading={<IconCircle icon={Icon} size="sm" />}
       onPress={onPress}
-      onPressIn={() => setPressed(true)}
-      onPressOut={() => setPressed(false)}
-      accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
-      style={[styles.row, pressed ? styles.rowPressed : null]}
-    >
-      <View style={styles.iconWrap}>
-        <Ionicons name={icon} size={18} color={colors.COLOR_BLACK_LIGHT_3} />
-      </View>
-      <View style={styles.rowText}>
-        <BloomText style={styles.rowTitle} numberOfLines={1}>
-          {title}
-        </BloomText>
-        {subtitle ? (
-          <BloomText style={styles.rowSubtitle} numberOfLines={1}>
-            {subtitle}
-          </BloomText>
-        ) : null}
-      </View>
-    </Pressable>
+    />
   );
 };
 
@@ -210,6 +194,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
   compact = false,
 }) => {
   const { t } = useTranslation();
+  const colors = useColors();
   const recentSearches = useRecentSearchesStore((s) => s.searches);
 
   const { state, attribution, debouncedSearch, clear } = useDebouncedAddressSearch({
@@ -292,13 +277,13 @@ export const WhereStep: React.FC<WhereStepProps> = ({
       {showRecents ? (
         recentSearches.length > 0 ? (
           <View style={styles.list}>
-            <BloomText style={styles.sectionLabel}>
+            <BloomText style={[styles.sectionLabel, { color: colors.textSecondary }]}>
               {t('search.recent.title')}
             </BloomText>
             {recentSearches.map((recent) => (
               <SuggestionRow
                 key={recent.id}
-                icon="time-outline"
+                icon="recent"
                 title={recent.label}
                 subtitle={recent.sublabel}
                 accessibilityLabel={recent.label}
@@ -310,10 +295,10 @@ export const WhereStep: React.FC<WhereStepProps> = ({
       ) : (
         <View style={styles.list}>
           {statusMessage ? (
-            <BloomText style={styles.statusText}>{statusMessage}</BloomText>
+            <BloomText style={[styles.statusText, { color: colors.textSecondary }]}>{statusMessage}</BloomText>
           ) : null}
           {state.status === 'results' && state.degraded ? (
-            <BloomText style={styles.statusText}>{t('search.where.degraded')}</BloomText>
+            <BloomText style={[styles.statusText, { color: colors.textSecondary }]}>{t('search.where.degraded')}</BloomText>
           ) : null}
           {resolvedSuggestions.map((selection) => (
             <SuggestionRow
@@ -321,7 +306,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
               // a rounded centre — and one may now have no centre at all — so a
               // coordinate key would collide and silently drop a row.
               key={locationKey(selection)}
-              icon="location-outline"
+              icon="place"
               title={selectionLabel(selection)?.primary ?? ''}
               subtitle={selectionLabel(selection)?.secondary}
               accessibilityLabel={selectionLabel(selection)?.primary ?? ''}
@@ -330,7 +315,7 @@ export const WhereStep: React.FC<WhereStepProps> = ({
           ))}
           {/* Required by the provider's data licence wherever results appear. */}
           {resolvedSuggestions.length > 0 && attribution ? (
-            <BloomText style={styles.attribution}>{attribution.text}</BloomText>
+            <BloomText style={[styles.attribution, { color: colors.textSecondary }]}>{attribution.text}</BloomText>
           ) : null}
         </View>
       )}
@@ -352,50 +337,15 @@ const styles = StyleSheet.create({
   sectionLabel: {
     fontSize: 13,
     fontWeight: '600',
-    color: colors.COLOR_BLACK_LIGHT_4,
     marginBottom: spacing.xs,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.sm,
-    borderRadius: radius.md,
-  },
-  rowPressed: {
-    backgroundColor: colors.mutedSubtle,
-  },
-  iconWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.COLOR_BLACK_LIGHT_7,
-  },
-  rowText: {
-    flex: 1,
-    gap: 2,
-  },
-  rowTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: colors.COLOR_BLACK,
-  },
-  rowSubtitle: {
-    fontSize: 13,
-    color: colors.COLOR_BLACK_LIGHT_4,
   },
   statusText: {
     fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_4,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.sm,
   },
   attribution: {
     fontSize: 11,
-    color: colors.COLOR_BLACK_LIGHT_4,
     paddingTop: spacing.xs,
     paddingHorizontal: spacing.sm,
   },

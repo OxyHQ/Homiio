@@ -31,18 +31,20 @@
  *
  * ## NativeWind
  *
- * Static style arrays plus `onPressIn`/`onPressOut`, never
- * `style={({ pressed }) => …}` — the css-interop swallows the function form and
- * the element renders unstyled. `components/search/SearchSummaryBar.tsx` is the
- * canonical template.
+ * Every control is a Bloom `Button`, so there is no hand-rolled pressed state
+ * here at all. Should one come back: static style arrays plus
+ * `onPressIn`/`onPressOut`, never `style={({ pressed }) => …}` — the css-interop
+ * swallows the function form and the element renders unstyled.
+ * `components/search/SearchSummaryBar.tsx` is the canonical template.
  */
 
 import React, { useCallback, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import Ionicons from '@expo/vector-icons/Ionicons';
 
+import { Button } from '@oxy.so/bloom/button';
 import { Dialog } from '@oxy.so/bloom/dialog';
+import { RiFocus3Line, RiEarthLine, RiMapPinLine } from '@oxy.so/bloom/icons';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 
 import type {
@@ -55,8 +57,8 @@ import { formatDistance, formatRelativeDate } from '@homiio/shared-types';
 import { WhereStep } from '@/components/search/steps/WhereStep';
 import { locationDisplayLabel } from '@/components/search/types';
 import { useFormatting } from '@/utils/format';
-import { colors } from '@/styles/colors';
-import { radius, spacing } from '@/constants/styles';
+import { useColors } from '@/hooks/useThemeColor';
+import { spacing } from '@/constants/styles';
 
 export interface LocationScopeBarProps {
   selection: LocationSelection | null;
@@ -115,9 +117,7 @@ export function LocationScopeBar({
   const formatting = useFormatting();
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerText, setPickerText] = useState('');
-  const [changePressed, setChangePressed] = useState(false);
-  const [globalPressed, setGlobalPressed] = useState(false);
-  const [locatePressed, setLocatePressed] = useState(false);
+  const colors = useColors();
 
   const commit = useCallback(
     (next: LocationSelection) => {
@@ -138,15 +138,23 @@ export function LocationScopeBar({
 
   const openPicker = useCallback(() => setPickerOpen(true), []);
 
+  const notice = (text: string) => (
+    <View style={styles.notice}>
+      <BloomText style={[styles.noticeText, { color: colors.textSecondary }]}>{text}</BloomText>
+    </View>
+  );
+
   return (
     <View style={styles.container}>
       <View style={styles.row}>
-        <Ionicons name="location-outline" size={18} color={colors.primaryDark} />
+        <RiMapPinLine width={18} height={18} fill={colors.text} />
 
         <View style={styles.labelColumn}>
-          <BloomText style={styles.eyebrow}>{t('location.scope.eyebrow')}</BloomText>
+          <BloomText style={[styles.eyebrow, { color: colors.textSecondary }]}>
+            {t('location.scope.eyebrow')}
+          </BloomText>
           <BloomText
-            style={styles.label}
+            style={[styles.label, { color: colors.text }]}
             numberOfLines={1}
             // Announced as one phrase: a screen reader reading the eyebrow and
             // the label as two unrelated strings loses the relationship between
@@ -157,83 +165,66 @@ export function LocationScopeBar({
           </BloomText>
         </View>
 
-        <Pressable
+        <Button
+          variant="outline"
+          size="small"
           onPress={openPicker}
-          onPressIn={() => setChangePressed(true)}
-          onPressOut={() => setChangePressed(false)}
-          accessibilityRole="button"
           accessibilityLabel={t('location.scope.changeAccessible')}
-          hitSlop={spacing.sm}
-          style={[styles.action, changePressed && styles.actionPressed]}
         >
-          <BloomText style={styles.actionLabel}>{t('location.scope.change')}</BloomText>
-        </Pressable>
+          {t('location.scope.change')}
+        </Button>
       </View>
 
-      {resolution.status === 'resolving' ? (
-        // A fixed-height placeholder rather than a collapsed row: the layout must
-        // not move when the answer arrives.
-        <View style={styles.notice}>
-          <BloomText style={styles.noticeText}>{t('location.scope.resolving')}</BloomText>
-        </View>
-      ) : null}
+      {/* A fixed-height placeholder rather than a collapsed row: the layout must
+          not move when the answer arrives. */}
+      {resolution.status === 'resolving' ? notice(t('location.scope.resolving')) : null}
 
-      {resolution.status === 'failed' ? (
-        <View style={styles.notice}>
-          <BloomText style={styles.noticeText}>
-            {t(`location.scope.failure.${resolution.reason}`)}
-          </BloomText>
-        </View>
-      ) : null}
+      {resolution.status === 'failed'
+        ? notice(t(`location.scope.failure.${resolution.reason}`))
+        : null}
 
-      {deviceUnavailable && resolution.status === 'resolved' ? (
-        <View style={styles.notice}>
-          <BloomText style={styles.noticeText}>{t('location.scope.deviceUnavailable')}</BloomText>
-        </View>
-      ) : null}
+      {deviceUnavailable && resolution.status === 'resolved'
+        ? notice(t('location.scope.deviceUnavailable'))
+        : null}
 
-      {staleAt ? (
-        <View style={styles.notice}>
-          <BloomText style={styles.noticeText}>
-            {t('location.scope.showingCached', {
+      {staleAt
+        ? notice(
+            t('location.scope.showingCached', {
               when: formatRelativeDate(staleAt, formatting.locale),
-            })}
-          </BloomText>
+            }),
+          )
+        : null}
+
+      {onUseCurrentLocation || onExploreGlobal ? (
+        <View style={styles.secondaryRow}>
+          {onUseCurrentLocation ? (
+            <Button
+              variant="ghost"
+              size="small"
+              leadingIcon={RiFocus3Line}
+              onPress={onUseCurrentLocation}
+              accessibilityLabel={t('location.scope.useCurrentAccessible')}
+            >
+              {t('location.scope.useCurrent')}
+            </Button>
+          ) : null}
+
+          {onExploreGlobal ? (
+            <Button
+              variant="ghost"
+              size="small"
+              leadingIcon={RiEarthLine}
+              onPress={onExploreGlobal}
+              accessibilityLabel={t('location.scope.exploreGlobalAccessible')}
+            >
+              {t('location.scope.exploreGlobal')}
+            </Button>
+          ) : null}
         </View>
       ) : null}
-
-      <View style={styles.secondaryRow}>
-        {onUseCurrentLocation ? (
-          <Pressable
-            onPress={onUseCurrentLocation}
-            onPressIn={() => setLocatePressed(true)}
-            onPressOut={() => setLocatePressed(false)}
-            accessibilityRole="button"
-            accessibilityLabel={t('location.scope.useCurrentAccessible')}
-            hitSlop={spacing.sm}
-            style={[styles.secondaryAction, locatePressed && styles.secondaryActionPressed]}
-          >
-            <BloomText style={styles.secondaryLabel}>{t('location.scope.useCurrent')}</BloomText>
-          </Pressable>
-        ) : null}
-
-        {onExploreGlobal ? (
-          <Pressable
-            onPress={onExploreGlobal}
-            onPressIn={() => setGlobalPressed(true)}
-            onPressOut={() => setGlobalPressed(false)}
-            accessibilityRole="button"
-            accessibilityLabel={t('location.scope.exploreGlobalAccessible')}
-            hitSlop={spacing.sm}
-            style={[styles.secondaryAction, globalPressed && styles.secondaryActionPressed]}
-          >
-            <BloomText style={styles.secondaryLabel}>{t('location.scope.exploreGlobal')}</BloomText>
-          </Pressable>
-        ) : null}
-      </View>
 
       <Dialog
-        placement="center"
+        placement={{ base: 'bottom', md: 'center' }}
         open={pickerOpen}
         onClose={() => setPickerOpen(false)}
         title={t('location.scope.pickerTitle')}
@@ -307,49 +298,22 @@ const styles = StyleSheet.create({
     fontSize: 11,
     textTransform: 'uppercase',
     letterSpacing: 0.6,
-    color: colors.COLOR_BLACK_LIGHT_4,
   },
   label: {
     fontSize: 16,
     fontWeight: '600',
-    color: colors.primaryDark,
-  },
-  action: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.pill,
-    borderWidth: 1,
-    borderColor: colors.COLOR_BLACK_LIGHT_6,
-  },
-  actionPressed: {
-    backgroundColor: colors.COLOR_BLACK_LIGHT_9,
-  },
-  actionLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.primaryDark,
   },
   notice: {
     paddingVertical: spacing.xs,
   },
   noticeText: {
     fontSize: 13,
-    color: colors.COLOR_BLACK_LIGHT_4,
   },
   secondaryRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacing.sm,
-  },
-  secondaryAction: {
-    paddingVertical: spacing.xs,
-  },
-  secondaryActionPressed: {
-    opacity: 0.6,
-  },
-  secondaryLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.primaryColor,
+    gap: spacing.xs,
+    // Ghost buttons carry their own inset; pull the row back to the text edge.
+    marginLeft: -spacing.sm,
   },
 });

@@ -2,14 +2,16 @@
  * PriceStep — price range selector for the search panel.
  *
  * Offers mode-aware quick-pick range chips (monthly for long-term, nightly for
- * vacation) plus explicit Min/Max numeric inputs. Either bound may be left
- * blank to mean "no limit". Reports the resolved `(min, max)` pair upward.
+ * vacation, a sale price when buying) plus a Bloom `RangeSlider` for any other
+ * range. A thumb resting on its end of the track means "no limit" on that side,
+ * so both bounds can be left open. Reports the resolved `(min, max)` pair upward.
  */
 import React, { useCallback, useMemo } from 'react';
-import { StyleSheet, TextInput, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { Chip } from '@oxy.so/bloom/chip';
+import { RangeSlider } from '@oxy.so/bloom/slider';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { OfferingType, formatMoney, formatMoneyRange } from '@homiio/shared-types';
@@ -17,8 +19,8 @@ import type { TFunction } from 'i18next';
 
 import { SEARCH_PRICE_CURRENCY } from '@/components/search/types';
 import { useFormatting } from '@/utils/format';
-import { colors } from '@/styles/colors';
-import { radius, spacing } from '@/constants/styles';
+import { useColors } from '@/hooks/useThemeColor';
+import { spacing } from '@/constants/styles';
 
 /** A quick-pick price band. `max: null` means "and up". */
 interface PriceBand {
@@ -42,6 +44,24 @@ const VACATION_BANDS: readonly PriceBand[] = [
   { min: 300, max: null },
 ] as const;
 
+/** Sale prices, for the buy mode. */
+const SALE_BANDS: readonly PriceBand[] = [
+  { min: 0, max: 150000 },
+  { min: 150000, max: 300000 },
+  { min: 300000, max: 600000 },
+  { min: 600000, max: null },
+] as const;
+
+/** A slider track: its top is "no maximum", and `step` is its granularity. */
+interface PriceTrack {
+  max: number;
+  step: number;
+}
+
+const LONG_TERM_TRACK: PriceTrack = { max: 5000, step: 50 };
+const VACATION_TRACK: PriceTrack = { max: 1000, step: 10 };
+const SALE_TRACK: PriceTrack = { max: 2000000, step: 10000 };
+
 /**
  * Format a band into a human label.
  *
@@ -57,14 +77,6 @@ function bandLabel(band: PriceBand, locale: string, t: TFunction): string {
   return formatMoneyRange(band.min, band.max, SEARCH_PRICE_CURRENCY, locale, {
     maximumFractionDigits: 0,
   });
-}
-
-/** Parse a free-text numeric input into a positive integer or undefined. */
-function parsePrice(text: string): number | undefined {
-  const digits = text.replace(/[^\d]/g, '');
-  if (!digits) return undefined;
-  const value = Number.parseInt(digits, 10);
-  return Number.isFinite(value) ? value : undefined;
 }
 
 interface PriceStepProps {
@@ -89,8 +101,17 @@ export const PriceStep: React.FC<PriceStepProps> = ({
 }) => {
   const { t } = useTranslation();
   const { locale } = useFormatting();
+  const colors = useColors();
   const isVacation = offering === OfferingType.SHORT_TERM_RENT;
-  const bands = isVacation ? VACATION_BANDS : LONG_TERM_BANDS;
+  const isSale = offering === OfferingType.SALE;
+  const bands = isVacation ? VACATION_BANDS : isSale ? SALE_BANDS : LONG_TERM_BANDS;
+  const track = isVacation ? VACATION_TRACK : isSale ? SALE_TRACK : LONG_TERM_TRACK;
+
+  const money = useCallback(
+    (amount: number): string =>
+      formatMoney(amount, SEARCH_PRICE_CURRENCY, locale, { maximumFractionDigits: 0 }),
+    [locale],
+  );
 
   const activeBandIndex = useMemo(
     () =>
@@ -107,30 +128,54 @@ export const PriceStep: React.FC<PriceStepProps> = ({
     [onChange],
   );
 
-  const handleMinChange = useCallback(
-    (text: string) => onChange(parsePrice(text), priceMax),
-    [onChange, priceMax],
+  // An unset bound sits at its end of the track; a bound beyond the track (a
+  // saved search from a wider range) is pinned to the end rather than lost.
+  const sliderValue = useMemo<[number, number]>(() => {
+    const lo = Math.min(priceMin ?? 0, track.max);
+    const hi = priceMax === undefined ? track.max : Math.min(priceMax, track.max);
+    return [lo, Math.max(lo, hi)];
+  }, [priceMin, priceMax, track.max]);
+
+  const handleSlider = useCallback(
+    ([lo, hi]: [number, number]) => {
+      onChange(lo <= 0 ? undefined : lo, hi >= track.max ? undefined : hi);
+    },
+    [onChange, track.max],
   );
 
-  const handleMaxChange = useCallback(
-    (text: string) => onChange(priceMin, parsePrice(text)),
-    [onChange, priceMin],
-  );
+  const rangeSummary =
+    priceMin !== undefined && priceMax !== undefined
+      ? formatMoneyRange(priceMin, priceMax, SEARCH_PRICE_CURRENCY, locale, {
+          maximumFractionDigits: 0,
+        })
+      : priceMin !== undefined
+        ? t('format.range.from', { value: money(priceMin) })
+        : priceMax !== undefined
+          ? t('format.range.upTo', { value: money(priceMax) })
+          : t('search.summary.anyPrice');
 
   const unitLabel = isVacation
     ? t('search.step.price.perNight')
-    : t('search.step.price.perMonth');
+    : isSale
+      ? null
+      : t('search.step.price.perMonth');
 
   return (
     <View style={compact ? styles.containerCompact : styles.container}>
       {compact ? (
         // The dialog header already says "Price range"; keep only the unit
         // hint (per month / per night), which the header does not convey.
-        <BloomText style={styles.unitStandalone}>{`(${unitLabel})`}</BloomText>
+        unitLabel ? (
+          <BloomText style={[styles.unitStandalone, { color: colors.textSecondary }]}>
+            {`(${unitLabel})`}
+          </BloomText>
+        ) : null
       ) : (
-        <BloomText style={styles.heading}>
-          {t('search.step.price.title')}{' '}
-          <BloomText style={styles.unit}>({unitLabel})</BloomText>
+        <BloomText style={[styles.heading, { color: colors.text }]}>
+          {t('search.step.price.title')}
+          {unitLabel ? (
+            <BloomText style={[styles.unit, { color: colors.textSecondary }]}> ({unitLabel})</BloomText>
+          ) : null}
         </BloomText>
       )}
 
@@ -154,36 +199,23 @@ export const PriceStep: React.FC<PriceStepProps> = ({
         })}
       </View>
 
-      <View style={styles.inputs}>
-        <View style={styles.inputGroup}>
-          <BloomText style={styles.inputLabel}>
-            {t('search.step.price.min')}
-          </BloomText>
-          <TextInput
-            style={styles.input}
-            value={priceMin !== undefined ? String(priceMin) : ''}
-            onChangeText={handleMinChange}
-            keyboardType="number-pad"
-            inputMode="numeric"
-            placeholder={formatMoney(0, SEARCH_PRICE_CURRENCY, locale, { maximumFractionDigits: 0 })}
-            placeholderTextColor={colors.COLOR_BLACK_LIGHT_5}
-            accessibilityLabel={t('search.step.price.min')}
-          />
-        </View>
-        <View style={styles.separator} />
-        <View style={styles.inputGroup}>
-          <BloomText style={styles.inputLabel}>
-            {t('search.step.price.max')}
-          </BloomText>
-          <TextInput
-            style={styles.input}
-            value={priceMax !== undefined ? String(priceMax) : ''}
-            onChangeText={handleMaxChange}
-            keyboardType="number-pad"
-            inputMode="numeric"
-            placeholder={t('search.step.price.any')}
-            placeholderTextColor={colors.COLOR_BLACK_LIGHT_5}
-            accessibilityLabel={t('search.step.price.max')}
+      <View style={styles.sliderBlock}>
+        <BloomText
+          style={[styles.summary, { color: colors.text }]}
+          accessibilityLiveRegion="polite"
+        >
+          {rangeSummary}
+        </BloomText>
+        <View style={styles.sliderTrack}>
+          <RangeSlider
+            value={sliderValue}
+            min={0}
+            max={track.max}
+            step={track.step}
+            onValueChange={handleSlider}
+            formatValue={(value) => money(value)}
+            thumbLabels={[t('search.step.price.min'), t('search.step.price.max')]}
+            accessibilityLabel={t('search.step.price.title')}
           />
         </View>
       </View>
@@ -196,59 +228,38 @@ const styles = StyleSheet.create({
     gap: spacing.lg,
   },
   // Compact drops the large heading for a slim unit hint, so the gap between
-  // that hint, the chips, and the inputs stays tight in the centered dialog.
+  // that hint, the chips and the slider stays tight in the centered dialog.
   containerCompact: {
     gap: spacing.md,
   },
   heading: {
     fontSize: 18,
     fontWeight: '700',
-    color: colors.COLOR_BLACK,
   },
   unit: {
     fontSize: 14,
     fontWeight: '400',
-    color: colors.COLOR_BLACK_LIGHT_4,
   },
   unitStandalone: {
     fontSize: 13,
     fontWeight: '600',
-    color: colors.COLOR_BLACK_LIGHT_4,
   },
   chips: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.sm,
   },
-  inputs: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: spacing.md,
+  sliderBlock: {
+    gap: spacing.sm,
   },
-  inputGroup: {
-    flex: 1,
-    gap: spacing.xs,
+  // Half of each thumb's value bubble hangs past the track's ends; the inset
+  // keeps it inside the dialog.
+  sliderTrack: {
+    paddingHorizontal: spacing.xl,
   },
-  inputLabel: {
-    fontSize: 13,
+  summary: {
+    fontSize: 15,
     fontWeight: '600',
-    color: colors.COLOR_BLACK_LIGHT_4,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    fontSize: 16,
-    color: colors.COLOR_BLACK,
-    backgroundColor: colors.surfaceElevated,
-  },
-  separator: {
-    width: spacing.lg,
-    height: 1,
-    backgroundColor: colors.border,
-    marginBottom: spacing.xl,
   },
 });
 

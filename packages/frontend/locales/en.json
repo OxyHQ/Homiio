@@ -1420,6 +1420,36 @@
     }
   },
   "roommates": {
+    "rooms": {
+        "filtersTitle": "Filter rooms",
+        "location": "Location",
+        "city": "City",
+        "state": "State / region",
+        "cityPlaceholder": "Enter a city",
+        "statePlaceholder": "Enter a state or region",
+        "anyPrice": "Any",
+        "smokingAllowed": "Smoking allowed",
+        "amenity": {
+          "privateBathroom": "Private bathroom",
+          "walkInCloset": "Walk-in closet"
+        },
+        "sort": {
+          "bestMatch": "Best match",
+          "price": "Price",
+          "newest": "Newest",
+          "name": "Name"
+        },
+        "searchPlaceholder": "Search rooms…",
+        "emptyTitle": "No rooms found",
+        "emptyDescription": "Try adjusting your filters to see more rooms",
+        "capacity_one": "Up to {{count}} guest",
+        "capacity_other": "Up to {{count}} guests",
+        "available": "Available",
+        "unavailable": "Unavailable",
+        "match": "{{score}}% match",
+        "selectedCount": "{{count}} selected",
+        "roomType": "Room"
+      },
     "title": "Roommates",
     "find": "Find Roommates",
     "myMatches": "My Matches",

@@ -1,16 +1,17 @@
 import React, { useState } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { formatMoney, formatMoneyRange } from '@homiio/shared-types';
 import { openAccountDialog } from '@oxy.so/services';
 import { Button } from '@oxy.so/bloom/button';
+import { IconCircle } from '@oxy.so/bloom/icon-circle';
+import { RiNotification3Line } from '@oxy.so/bloom/icons';
+import { Item } from '@oxy.so/bloom/item';
 import { Switch } from '@oxy.so/bloom/switch';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 import { TextFieldInput } from '@oxy.so/bloom/text-field';
-import { colors } from '@/styles/colors';
-import { spacing } from '@/constants/styles';
+import { useColors } from '@/hooks/useThemeColor';
 import { toast } from '@oxy.so/bloom/toast';
 import { BaseWidget } from './BaseWidget';
 import { useSavedSearches } from '@/hooks/useSavedSearches';
@@ -19,9 +20,6 @@ import { SEARCH_PRICE_CURRENCY } from '@/components/search/types';
 import { useFormatting } from '@/utils/format';
 
 const ALERT_ICON_SIZE = 22;
-const EMPTY_ICON_SIZE = 28;
-/** Diameter of the round empty-state icon bubble (denser than the prior 56). */
-const EMPTY_ICON_BUBBLE_SIZE = 48;
 /** Middle-dot separator between the location and the price range. */
 const LABEL_SEPARATOR = ' · ';
 
@@ -82,6 +80,7 @@ function formatPriceRange(
 export function PropertyAlertWidget() {
   const { t } = useTranslation();
   const { locale } = useFormatting();
+  const colors = useColors();
   const { saveSearch, isAuthenticated, isSaving } = useSavedSearches();
 
   const [location, setLocation] = useState('');
@@ -150,20 +149,20 @@ export function PropertyAlertWidget() {
     if (success) resetForm();
   };
 
+  const headerIcon = (
+    <RiNotification3Line width={ALERT_ICON_SIZE} height={ALERT_ICON_SIZE} fill={colors.primary} />
+  );
+
   // Logged-out: compact sign-in empty state instead of the form.
   if (!isAuthenticated) {
     return (
       <BaseWidget
         title={t('search.widgets.alerts.title')}
-        icon={
-          <Ionicons name="notifications-outline" size={ALERT_ICON_SIZE} color={colors.primaryColor} />
-        }
+        icon={headerIcon}
       >
-        <View style={styles.emptyState}>
-          <View style={styles.emptyIconBubble}>
-            <Ionicons name="notifications-outline" size={EMPTY_ICON_SIZE} color={colors.primaryColor} />
-          </View>
-          <BloomText style={styles.subtitle}>{t('search.widgets.alerts.signInPrompt')}</BloomText>
+        <View className="items-center gap-3 py-1">
+          <IconCircle icon={RiNotification3Line} size="lg" />
+          <BloomText className="text-center text-sm text-muted-foreground">{t('search.widgets.alerts.signInPrompt')}</BloomText>
           <Button variant="primary" size="medium" onPress={() => openAccountDialog()}>
             {t('search.widgets.common.signIn')}
           </Button>
@@ -175,12 +174,10 @@ export function PropertyAlertWidget() {
   return (
     <BaseWidget
       title={t('search.widgets.alerts.title')}
-      icon={
-        <Ionicons name="notifications-outline" size={ALERT_ICON_SIZE} color={colors.primaryColor} />
-      }
+      icon={headerIcon}
     >
-      <View style={styles.container}>
-        <BloomText style={styles.subtitle}>{t('search.widgets.alerts.subtitle')}</BloomText>
+      <View className="gap-3">
+        <BloomText className="text-sm text-muted-foreground">{t('search.widgets.alerts.subtitle')}</BloomText>
 
         <TextFieldInput
           label={t('search.widgets.alerts.location')}
@@ -189,8 +186,8 @@ export function PropertyAlertWidget() {
           onChangeText={setLocation}
         />
 
-        <View style={styles.priceRow}>
-          <View style={styles.priceField}>
+        <View className="flex-row gap-2">
+          <View className="flex-1">
             <TextFieldInput
               label={t('search.widgets.alerts.minPrice')}
               placeholder={t('search.widgets.alerts.minPricePlaceholder')}
@@ -203,7 +200,7 @@ export function PropertyAlertWidget() {
               isInvalid={minInvalid}
             />
           </View>
-          <View style={styles.priceField}>
+          <View className="flex-1">
             <TextFieldInput
               label={t('search.widgets.alerts.maxPrice')}
               placeholder={t('search.widgets.alerts.maxPricePlaceholder')}
@@ -218,15 +215,18 @@ export function PropertyAlertWidget() {
           </View>
         </View>
 
-        <View style={styles.notifyRow}>
-          <View style={styles.notifyCopy}>
-            <BloomText style={styles.notifyLabel}>{t('search.widgets.alerts.notify')}</BloomText>
-            <BloomText style={styles.notifyHelper}>
-              {t('search.widgets.alerts.notifyHelper')}
-            </BloomText>
-          </View>
-          <Switch value={notify} onValueChange={setNotify} />
-        </View>
+        <Item
+          density="compact"
+          title={t('search.widgets.alerts.notify')}
+          subtitle={t('search.widgets.alerts.notifyHelper')}
+          trailing={
+            <Switch
+              value={notify}
+              onValueChange={setNotify}
+              accessibilityLabel={t('search.widgets.alerts.notify')}
+            />
+          }
+        />
 
         <Button variant="primary" size="medium" onPress={handleCreateAlert} loading={isSaving}>
           {t('search.widgets.alerts.create')}
@@ -235,52 +235,3 @@ export function PropertyAlertWidget() {
     </BaseWidget>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    gap: spacing.md,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_3,
-  },
-  priceRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  priceField: {
-    flex: 1,
-  },
-  notifyRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.md,
-  },
-  notifyCopy: {
-    flex: 1,
-    gap: spacing.xs,
-  },
-  notifyLabel: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: colors.primaryDark,
-  },
-  notifyHelper: {
-    fontSize: 13,
-    color: colors.COLOR_BLACK_LIGHT_3,
-  },
-  emptyState: {
-    alignItems: 'center',
-    gap: spacing.md,
-    paddingVertical: spacing.xs,
-  },
-  emptyIconBubble: {
-    width: EMPTY_ICON_BUBBLE_SIZE,
-    height: EMPTY_ICON_BUBBLE_SIZE,
-    borderRadius: EMPTY_ICON_BUBBLE_SIZE / 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.primaryLight_1,
-  },
-});

@@ -1,8 +1,11 @@
 import React from 'react';
-import { View, StyleSheet, TouchableOpacity } from 'react-native';
-import { ThemedText } from '@/components/ThemedText';
-import { colors } from '@/styles/colors';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { ScrollView, StyleSheet } from 'react-native';
+import { useTranslation } from 'react-i18next';
+
+import { RiEqualizerLine, RiExpandUpDownLine } from '@oxy.so/bloom/icons';
+
+import { SearchActionPill } from '@/components/search/SearchActionPill';
+import { spacing } from '@/constants/styles';
 
 interface FiltersBarProps {
     activeFiltersCount: number;
@@ -11,70 +14,52 @@ interface FiltersBarProps {
     onSortPress: () => void;
 }
 
-export function FiltersBar({ activeFiltersCount, onFilterPress, sortBy, onSortPress }: FiltersBarProps) {
-    return (
-        <View style={styles.container}>
-            <TouchableOpacity
-                style={[styles.button, activeFiltersCount > 0 && styles.buttonActive]}
-                onPress={onFilterPress}
-            >
-                <Ionicons
-                    name="filter"
-                    size={20}
-                    color={activeFiltersCount > 0 ? colors.primaryForeground : colors.COLOR_BLACK}
-                />
-                <ThemedText style={[
-                    styles.buttonText,
-                    activeFiltersCount > 0 && styles.buttonTextActive
-                ]}>
-                    {activeFiltersCount > 0 ? `${activeFiltersCount} Filters` : 'Filter'}
-                </ThemedText>
-            </TouchableOpacity>
+/** i18n key for each city-page sort order. */
+const SORT_LABEL_KEYS: Record<string, string> = {
+    newest: 'properties.city.sortNewest',
+    priceAsc: 'properties.city.sortPriceAsc',
+    priceDesc: 'properties.city.sortPriceDesc',
+};
 
-            <TouchableOpacity
-                style={[styles.button, styles.sortButton]}
+/** The Filters / Sort pill row above a city's listings. */
+export function FiltersBar({ activeFiltersCount, onFilterPress, sortBy, onSortPress }: FiltersBarProps) {
+    const { t } = useTranslation();
+    const filtersLabel = t('search.actions.filters');
+    const sortLabel = t(SORT_LABEL_KEYS[sortBy] ?? SORT_LABEL_KEYS.newest);
+
+    return (
+        <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.container}
+        >
+            <SearchActionPill
+                label={filtersLabel}
+                icon={RiEqualizerLine}
+                active={activeFiltersCount > 0}
+                count={activeFiltersCount}
+                onPress={onFilterPress}
+                accessibilityLabel={
+                    activeFiltersCount > 0 ? `${filtersLabel}, ${activeFiltersCount}` : filtersLabel
+                }
+            />
+            <SearchActionPill
+                label={sortLabel}
+                icon={RiExpandUpDownLine}
+                active={sortBy !== 'newest'}
                 onPress={onSortPress}
-            >
-                <Ionicons name="swap-vertical" size={20} color={colors.COLOR_BLACK} />
-                <ThemedText style={styles.buttonText}>
-                    {sortBy === 'newest'
-                        ? 'Newest'
-                        : sortBy === 'priceAsc'
-                            ? 'Price: Low to High'
-                            : 'Price: High to Low'}
-                </ThemedText>
-            </TouchableOpacity>
-        </View>
+                accessibilityLabel={`${t('search.actions.sort')}: ${sortLabel}`}
+            />
+        </ScrollView>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
         flexDirection: 'row',
-        paddingHorizontal: 16,
-        paddingVertical: 8,
-        gap: 8,
-    },
-    button: {
-        flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        borderRadius: 20,
-        backgroundColor: colors.COLOR_BLACK_LIGHT_7,
-        gap: 6,
-    },
-    buttonActive: {
-        backgroundColor: colors.primaryColor,
-    },
-    buttonText: {
-        fontSize: 14,
-        color: colors.COLOR_BLACK,
-    },
-    buttonTextActive: {
-        color: colors.primaryForeground,
-    },
-    sortButton: {
-        flex: 1,
+        paddingHorizontal: spacing.lg,
+        paddingVertical: spacing.sm,
+        gap: spacing.sm,
     },
 });
