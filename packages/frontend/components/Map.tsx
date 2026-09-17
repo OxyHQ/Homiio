@@ -5,7 +5,7 @@ import type { StyleSpecification } from 'maplibre-gl';
 import * as Location from 'expo-location';
 import { useMapState } from '@/context/MapStateContext';
 import { api, type ApiResponse } from '@/utils/api';
-import { buildMapDocument } from './mapDocument';
+import { MAP_DOCUMENT_BASE_URL, buildMapDocument } from './mapDocument';
 import { boundsCenter } from '@homiio/shared-types';
 import { isDegenerateBounds, toCameraBounds } from './mapCamera';
 import { DEFAULT_STYLE_URL, fetchSanitizedMapStyle } from './mapStyle';
@@ -525,7 +525,7 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
         <WebView
           ref={webviewRef}
           originWhitelist={['*']}
-          source={{ html }}
+          source={{ html, baseUrl: MAP_DOCUMENT_BASE_URL }}
           onMessage={handleNativeMessage}
           javaScriptEnabled
           domStorageEnabled

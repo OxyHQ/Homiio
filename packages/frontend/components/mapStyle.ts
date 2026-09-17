@@ -10,9 +10,11 @@
  *     expression). Many classes — `office`, and others — have **no image in the
  *     liberty sprite**, so MapLibre logs
  *     `Image "office" could not be loaded …` and fires `styleimagemissing`.
- *     Fixed at runtime by {@link installMissingImageFallback}: a
- *     `styleimagemissing` listener that registers a 1×1 transparent placeholder
- *     for any missing id, so no POI class can request a non-existent image.
+ *     Fixed at runtime by {@link installMissingImageFallback}: a missing-image
+ *     RESOLVER that registers a 1×1 transparent placeholder for any missing id,
+ *     so no POI class can request a non-existent image. (Since maplibre-gl 6
+ *     `styleimagemissing` is notify-only: an `addImage` from a listener no
+ *     longer satisfies the pending request, so it must be the resolver.)
  *
  *  2. **Typed ordering comparison on a null property.** Several layers filter
  *     with `[">=", ["get","rank"], 1]`, `["<", ["get","rank"], 20]`,
@@ -225,20 +227,20 @@ const makeTransparentImage = (): RawImage => ({
 interface MissingImageMap {
   hasImage: (id: string) => boolean;
   addImage: (id: string, image: RawImage) => void;
-  on: (type: 'styleimagemissing', listener: (event: { id: string }) => void) => void;
+  setMissingStyleImageResolver: (resolver: ((id: string) => void) | null) => unknown;
 }
 
 /**
- * Register a `styleimagemissing` handler that supplies a 1×1 transparent
+ * Register a missing-image resolver that supplies a 1×1 transparent
  * placeholder for any sprite id the style requests but the sprite lacks (e.g.
  * the liberty `poi_*` layers asking for `office`). Idempotent per id. This is
  * the idiomatic MapLibre remedy for missing sprite images and silences the
  * `Image "<id>" could not be loaded …` error at the root.
  */
 export const installMissingImageFallback = (map: MissingImageMap): void => {
-  map.on('styleimagemissing', ({ id }) => {
+  map.setMissingStyleImageResolver((id) => {
     // Register the requested id directly (guarded) so MapLibre resolves it and
-    // stops re-firing `styleimagemissing` for the same sprite name.
+    // never fires `styleimagemissing` for the same sprite name.
     if (!id || map.hasImage(id)) return;
     map.addImage(id, makeTransparentImage());
   });

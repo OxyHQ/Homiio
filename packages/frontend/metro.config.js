@@ -4,6 +4,10 @@ const path = require('path');
 const projectRoot = __dirname;
 const monorepoRoot = path.resolve(projectRoot, '../..');
 
+// maplibre-gl 6 starts its worker by URL; put the worker modules where the web
+// map points `setWorkerUrl` before Metro serves or exports `public/`.
+require('./scripts/vendor-maplibre-worker').vendorMaplibreWorker();
+
 const config = getDefaultConfig(projectRoot);
 
 config.projectRoot = projectRoot;
