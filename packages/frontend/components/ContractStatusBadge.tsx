@@ -1,7 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Chip, type ChipHue } from '@oxy.so/bloom/chip';
-import type { LeasePaymentStatus, LeaseStatus } from '@homiio/shared-types';
+import type { LeaseStatus } from '@homiio/shared-types';
 
 interface StatusEntry {
   hue: ChipHue;
@@ -19,29 +19,11 @@ const LEASE_STATUS_MAP: Record<`${LeaseStatus}` | 'pending', StatusEntry> = {
   cancelled: { hue: 'neutral', i18nKey: 'statusBadge.cancelled' },
 };
 
-/** Lease payment status → hue + label (keeps the labels the old StatusBadge mapping showed). */
-const PAYMENT_STATUS_MAP: Record<LeasePaymentStatus, StatusEntry> = {
-  paid: { hue: 'lime', i18nKey: 'statusBadge.completed' },
-  overdue: { hue: 'rose', i18nKey: 'statusBadge.error' },
-  cancelled: { hue: 'neutral', i18nKey: 'statusBadge.cancelled' },
-  pending: { hue: 'yellow', i18nKey: 'statusBadge.pending' },
-};
-
 const UNKNOWN: StatusEntry = { hue: 'soft', i18nKey: 'statusBadge.unknown' };
 
 export function ContractStatusBadge({ status }: { status: LeaseStatus | `${LeaseStatus}` | string }) {
   const { t } = useTranslation();
   const entry = LEASE_STATUS_MAP[status as keyof typeof LEASE_STATUS_MAP] ?? UNKNOWN;
-  return (
-    <Chip size="small" hue={entry.hue}>
-      {t(entry.i18nKey)}
-    </Chip>
-  );
-}
-
-export function LeasePaymentStatusBadge({ status }: { status: LeasePaymentStatus }) {
-  const { t } = useTranslation();
-  const entry = PAYMENT_STATUS_MAP[status] ?? UNKNOWN;
   return (
     <Chip size="small" hue={entry.hue}>
       {t(entry.i18nKey)}

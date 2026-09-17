@@ -22,6 +22,7 @@ import {
   RiFileTextLine,
   RiGroupLine,
   RiHomeLine,
+  RiHomeHeartLine,
   RiHotelBedLine,
   RiKey2Line,
   RiLightbulbLine,
@@ -223,6 +224,9 @@ export function useHomiioSidebarProps(): HomiioSidebarProps {
               href: '/applications',
             }
           : { key: 'stays', label: t('sidebar.navigation.stays'), icon: RiHotelBedLine, href: '/stays' },
+        // The tenant's current lease, rent and documents. Any signed-in account:
+        // the screen itself says when there is no active tenancy.
+        { key: 'my-home', label: t('sidebar.navigation.myHome'), icon: RiHomeHeartLine, href: '/my-home' },
       );
     }
 

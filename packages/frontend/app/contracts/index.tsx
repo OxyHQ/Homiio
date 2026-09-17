@@ -1,12 +1,17 @@
 /**
  * Contracts inbox — leases the user signs (tenant) or holds (landlord).
  *
- * - Phones: Bloom Chip status filters over a ContractCard list.
+ * - Phones: Bloom Chip status filters over a ContractCard (`LeaseSummaryCard`)
+ *   list. The viewer's own home is `/my-home`.
  * - Wide web (1024px+): a Bloom DataTable — sortable columns, a status filter
  *   and a search over property and party names in its toolbar, and a "View"
  *   row action — so a landlord scanning many leases gets a real table.
  * - "New contract" routes to `/contracts/new`, which only creates a lease from
  *   an `?application=` id (and otherwise guides to applications).
+ * - The "no rental properties" empty state is for somebody with NEITHER a
+ *   property NOR a lease: a tenant owns nothing and still has a contract.
+ * - Party names are the Oxy accounts' display names, resolved in one batch;
+ *   an account that does not resolve shows a dash, never an id.
  */
 import React, { useMemo, useState } from 'react';
 import { Platform, ScrollView, StyleSheet, View } from 'react-native';
@@ -29,34 +34,24 @@ import {
   RiFileTextLine,
   RiHomeLine,
 } from '@oxy.so/bloom/icons';
-import * as Skeleton from '@oxy.so/bloom/skeleton';
 import { H2, Text as BloomText } from '@oxy.so/bloom/typography';
 import { formatMoney } from '@homiio/shared-types';
 import { Header } from '@/components/Header';
-import { ContractCard, ContractStatus } from '@/components/ContractCard';
+import { ContractCard } from '@/components/ContractCard';
 import { ContractStatusBadge } from '@/components/ContractStatusBadge';
+import { useLeaseFormatContext } from '@/components/tenancy/useLeaseFormatContext';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { ListSkeleton } from '@/components/ui/ListSkeleton';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
 import { useUserLeases, useHasRentalProperties } from '@/hooks/useLeaseQueries';
 import { useIsDesktop } from '@/hooks/useOptimizedMediaQuery';
 import type { Lease } from '@/services/leaseService';
-import type { Profile } from '@homiio/shared-types';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
 import { useFormatting } from '@/utils/format';
 import { formatLocalized } from '@/utils/dateLocale';
-import { radius, spacing } from '@/constants/styles';
+import { spacing } from '@/constants/styles';
 import { colors } from '@/styles/colors';
-
-/**
- * Derive a human-readable name from a Homiio Profile. Profiles do not carry a
- * raw person name; the displayable identity depends on the profile type
- * (matches the derivation used in LandlordSection).
- */
-const profileDisplayName = (profile?: Profile): string => {
-  if (!profile) return 'Unknown';
-  return profile.personalProfile?.personalInfo?.bio?.trim() || profile.oxyUserId || 'Unknown';
-};
 
 /**
  * Build a display title for the property a lease is attached to. Properties
@@ -95,33 +90,16 @@ const FILTERS: { id: FilterOption; i18nKey: string }[] = [
 
 interface ContractRow {
   id: string;
-  title: string;
-  propertyId: string;
+  lease: Lease;
   propertyName: string;
   startDate: string;
   endDate: string;
-  status: ContractStatus;
+  status: Lease['status'];
   landlordName: string;
   tenantName: string;
   monthlyRent: number;
   currency?: string;
 }
-
-const ContractsSkeleton: React.FC = () => (
-  <View style={styles.listWrap}>
-    {Array.from({ length: 3 }).map((_, idx) => (
-      <View key={idx} style={styles.skeletonCard}>
-        <View style={styles.skeletonHeader}>
-          <Skeleton.Text style={{ width: 180, lineHeight: 20 }} />
-          <Skeleton.Pill size={22} />
-        </View>
-        <Skeleton.Text style={{ width: 220, lineHeight: 14 }} />
-        <Skeleton.Box width="100%" height={56} borderRadius={radius.md} />
-        <Skeleton.Text style={{ width: 140, lineHeight: 14 }} />
-      </View>
-    ))}
-  </View>
-);
 
 export default function ContractsScreen() {
   const { t } = useTranslation();
@@ -141,25 +119,25 @@ export default function ContractsScreen() {
   const { hasRentalProperties, isLoading: hasPropertiesLoading } =
     useHasRentalProperties();
 
-  const contracts = useMemo<ContractRow[]>(() => {
-    if (!leasesData?.leases) return [];
-    return leasesData.leases.map((lease: Lease) => {
-      const propertyTitle = leasePropertyTitle(lease.property);
-      return {
+  const leases = useMemo<Lease[]>(() => leasesData?.leases ?? [], [leasesData]);
+  const format = useLeaseFormatContext(leases);
+
+  const contracts = useMemo<ContractRow[]>(
+    () =>
+      leases.map((lease) => ({
         id: lease.id,
-        title: propertyTitle,
-        propertyId: lease.propertyId,
-        propertyName: propertyTitle,
+        lease,
+        propertyName: leasePropertyTitle(lease.property),
         startDate: lease.leaseTerms?.startDate ?? '',
         endDate: lease.leaseTerms?.endDate ?? '',
-        status: lease.status as ContractStatus,
-        landlordName: profileDisplayName(lease.landlord),
-        tenantName: profileDisplayName(lease.tenant),
+        status: lease.status,
+        landlordName: format.resolveParty(lease.landlordOxyUserId)?.name ?? '—',
+        tenantName: format.resolveParty(lease.tenantOxyUserId)?.name ?? '—',
         monthlyRent: lease.rentDetails?.monthlyRent ?? 0,
         currency: lease.rentDetails?.currency,
-      };
-    });
-  }, [leasesData]);
+      })),
+    [leases, format],
+  );
 
   const filteredContracts = useMemo(() => {
     const byStatus =
@@ -269,7 +247,13 @@ export default function ContractsScreen() {
     [t, locale, router],
   );
 
-  if (!hasPropertiesLoading && !hasRentalProperties) {
+  if (
+    !hasPropertiesLoading &&
+    !hasRentalProperties &&
+    !leasesLoading &&
+    !leasesError &&
+    contracts.length === 0
+  ) {
     return (
       <View style={styles.root}>
         <Header
@@ -343,7 +327,7 @@ export default function ContractsScreen() {
             </ScrollView>
           ) : null}
 
-          {isLoading ? <ContractsSkeleton /> : null}
+          {isLoading ? <ListSkeleton rows={3} rowHeight={280} /> : null}
 
           {leasesError ? (
             <ErrorState
@@ -405,7 +389,9 @@ export default function ContractsScreen() {
               {filteredContracts.map((contract) => (
                 <ContractCard
                   key={contract.id}
-                  {...contract}
+                  lease={contract.lease}
+                  title={contract.propertyName}
+                  format={format}
                   onPress={() => handleContractPress(contract.id)}
                 />
               ))}
@@ -467,19 +453,6 @@ const styles = StyleSheet.create({
   },
   cellText: {
     fontSize: 14,
-  },
-  skeletonCard: {
-    backgroundColor: colors.surfaceElevated,
-    padding: spacing.lg,
-    borderRadius: radius.lg,
-    gap: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  skeletonHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
   },
   footer: {
     padding: spacing.lg,

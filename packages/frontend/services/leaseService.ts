@@ -2,17 +2,16 @@ import { api, ApiResponse } from '@/utils/api';
 import { imageUploadService } from '@/services/imageUploadService';
 import {
   Lease,
-  CreateLeaseData,
-  UpdateLeaseData,
   LeaseStatus,
   LeasePayment,
-  LeasePaymentType,
   LeaseDocument,
   LeaseDocumentType,
 } from '@homiio/shared-types';
 
 // Re-export the lease contract types so existing consumers keep a single import site.
-export type { Lease, CreateLeaseData, UpdateLeaseData, LeasePayment, LeaseDocument };
+// There is deliberately no create/update call here: `/contracts/new?application=<id>`
+// (`createLeaseFromApplication`) is the only way a lease is made.
+export type { Lease, LeasePayment, LeaseDocument };
 export { LeaseStatus };
 
 export interface LeaseFilters {
@@ -29,29 +28,9 @@ export interface LeaseListResponse {
   totalPages: number;
 }
 
-export interface LeasePaymentListResponse {
-  payments: LeasePayment[];
-  total: number;
-  page: number;
-  totalPages: number;
-}
-
-export interface CreateLeasePaymentData {
-  dueDate: string;
-  amount: number;
-  type: LeasePaymentType;
-  description?: string;
-}
-
 export interface TerminateLeaseData {
   reason?: string;
   effectiveDate?: string;
-}
-
-export interface RenewLeaseData {
-  newEndDate: string;
-  startDate?: string;
-  monthlyRent?: number;
 }
 
 export interface UploadLeaseDocumentInput {
@@ -87,14 +66,6 @@ class LeaseService {
     return response.data.data;
   }
 
-  async createLease(data: CreateLeaseData): Promise<Lease> {
-    const response = await api.post<ApiResponse<Lease>>(LEASE_BASE, data);
-    if (!response.data?.data) {
-      throw new Error(response.data?.message || 'Lease creation failed');
-    }
-    return response.data.data;
-  }
-
   /**
    * Landlord bridge: create a draft lease from an approved tenant application.
    * The backend resolves all owner ids and lifecycle fields server-side.
@@ -105,14 +76,6 @@ class LeaseService {
     );
     if (!response.data?.data) {
       throw new Error(response.data?.message || 'Could not create lease from application');
-    }
-    return response.data.data;
-  }
-
-  async updateLease(leaseId: string, data: UpdateLeaseData): Promise<Lease> {
-    const response = await api.put<ApiResponse<Lease>>(`${LEASE_BASE}/${leaseId}`, data);
-    if (!response.data?.data) {
-      throw new Error(response.data?.message || 'Lease update failed');
     }
     return response.data.data;
   }
@@ -141,53 +104,6 @@ class LeaseService {
       throw new Error(response.data?.message || 'Lease termination failed');
     }
     return response.data.data;
-  }
-
-  async renewLease(leaseId: string, data: RenewLeaseData): Promise<Lease> {
-    const response = await api.post<ApiResponse<Lease>>(
-      `${LEASE_BASE}/${leaseId}/renew`,
-      data,
-    );
-    if (!response.data?.data) {
-      throw new Error(response.data?.message || 'Lease renewal failed');
-    }
-    return response.data.data;
-  }
-
-  async getLeasePayments(
-    leaseId: string,
-    filters?: { status?: string; page?: number; limit?: number },
-  ): Promise<LeasePaymentListResponse> {
-    const response = await api.get<{
-      data?: LeasePayment[];
-      pagination?: { total: number; page: number; totalPages: number };
-    }>(`${LEASE_BASE}/${leaseId}/payments`, { params: filters });
-    const payments = response.data.data ?? [];
-    const pagination = response.data.pagination;
-    return {
-      payments,
-      total: pagination?.total ?? payments.length,
-      page: pagination?.page ?? 1,
-      totalPages: pagination?.totalPages ?? 1,
-    };
-  }
-
-  async createPayment(leaseId: string, data: CreateLeasePaymentData): Promise<LeasePayment> {
-    const response = await api.post<ApiResponse<LeasePayment>>(
-      `${LEASE_BASE}/${leaseId}/payments`,
-      data,
-    );
-    if (!response.data?.data) {
-      throw new Error(response.data?.message || 'Payment creation failed');
-    }
-    return response.data.data;
-  }
-
-  async getLeaseDocuments(leaseId: string): Promise<LeaseDocument[]> {
-    const response = await api.get<ApiResponse<LeaseDocument[]>>(
-      `${LEASE_BASE}/${leaseId}/documents`,
-    );
-    return response.data.data ?? [];
   }
 
   /**

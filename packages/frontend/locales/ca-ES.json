@@ -815,50 +815,20 @@
   },
   "profile": {
     "title": "Perfil",
-    "tabs": {
-      "listings": "Llistats",
-      "about": "Sobre"
-    },
-    "editProfile": "Editar Perfil",
-    "myProperties": "Les Meves Propietats",
-    "savedProperties": "Propietats Guardades",
-    "myContracts": "Els Meus Contractes",
-    "logOut": "Tancar Sessió",
-    "loading": "Carregant perfil...",
     "signInRequired": "Inici de sessió requerit",
     "signInMessage": "Si us plau inicia sessió per veure el teu perfil",
-    "createProfile": "Crear Perfil",
-    "deleteProfile": "Eliminar Perfil",
     "sections": {
-      "overview": "Resum",
-      "properties": "Les Meves Propietats",
-      "contracts": "Els Meus Contractes",
-      "settings": "Configuració",
       "account": "Account",
-      "profile": "Profile",
       "activity": "Activity"
     },
     "stats": {
-      "propertiesCount": "Propietats",
-      "contractsCount": "Contractes",
       "stays": "Stays",
       "applications": "Applications",
       "saved": "Saved",
       "applicationsApproved": "{{count}} aprovades"
     },
     "actions": {
-      "manageProperties": "Gestionar Propietats",
-      "viewContracts": "Veure Contractes",
-      "editProfile": "Editar Perfil",
-      "shareProfile": "Compartir Perfil",
-      "signOut": "Tancar Sessió"
-    },
-    "noProfilesTitle": "No s'han Trobat Perfils",
-    "noProfilesMessage": "Encara no tens perfils. Crea el teu primer perfil per començar!",
-    "errors": {
-      "loadFailed": "Error carregant perfils",
-      "updateFailed": "Error actualitzant perfil",
-      "deleteFailed": "Error eliminant perfil"
+      "editProfile": "Editar Perfil"
     },
     "exchanges": "Intercanvis",
     "exchangesDescription": "Els teus intercanvis de casa i sol·licituds d’allotjament.",
@@ -1140,15 +1110,6 @@
       "updateSuccess": "Perfil actualitzat correctament",
       "updateFailed": "No s'ha pogut actualitzar el perfil"
     },
-    "established": "Established",
-    "serviceAreas": "Service areas",
-    "specialties": "Specialties",
-    "about": "About",
-    "preferences": "Preferences",
-    "budget": "Budget",
-    "employer": "Employer",
-    "occupation": "Occupation",
-    "listings": "Listings",
     "subscriptionsDescription": "Manage Homiio Plus or buy one-time file analysis.",
     "subscriptions": "Subscriptions",
     "stays": "Stays",
@@ -1676,38 +1637,16 @@
     }
   },
   "payments": {
-    "title": "Pagaments",
-    "upcoming": "Pagaments Propers",
-    "history": "Historial de Pagaments",
-    "dueDate": "Data de Venciment",
+    "dueDate": "Venciment",
     "amount": "Import",
     "status": {
       "paid": "Pagat",
-      "pending": "Pendent",
       "overdue": "Vençut"
-    },
-    "actions": {
-      "payNow": "Pagar Ara",
-      "viewDetails": "Veure Detalls",
-      "downloadReceipt": "Descarregar Rebut"
     }
   },
   "contracts": {
-    "title": "Contractes",
-    "active": "Contractes Actius",
-    "expired": "Contractes Vençuts",
-    "draft": "Esborranys de Contractes",
-    "status": {
-      "active": "Actiu",
-      "expired": "Vençut",
-      "pending": "Pendent",
-      "draft": "Esborrany"
-    },
     "actions": {
-      "view": "Veure",
-      "download": "Descarregar",
-      "sign": "Signar",
-      "renew": "Renovar"
+      "view": "Veure"
     },
     "list": {
       "title": "Contractes de lloguer",
@@ -1737,9 +1676,6 @@
       "end": "Fi",
       "landlord": "Arrendador",
       "tenant": "Inquilí",
-      "perMonth": "/ mes",
-      "share": "Compartir",
-      "download": "Descarregar",
       "accessibility": "Contracte {{title}}"
     },
     "detail": {
@@ -1749,26 +1685,17 @@
       "unavailableTitle": "Contracte no disponible",
       "unavailableDescription": "No s'ha pogut carregar aquest contracte.",
       "term": "Termini",
-      "rent": "Lloguer",
-      "start": "Inici",
-      "end": "Fi",
       "monthlyRent": "Lloguer mensual",
       "securityDeposit": "Dipòsit de garantia",
-      "signatures": "Signatures",
       "landlord": "Arrendador",
       "tenant": "Inquilí",
       "payments": "Calendari de pagaments",
       "documents": "Documents",
-      "addDocument": "Afegir document",
       "sign": "Signar contracte",
       "terminate": "Rescindir contracte",
       "deleteDraft": "Eliminar esborrany",
       "confirmSignTitle": "Signar aquest contracte?",
-      "confirmSignBody": "La teva signatura confirma que acceptes els termes del contracte.",
-      "confirmTerminateTitle": "Rescindir aquest contracte?",
-      "confirmTerminateBody": "Això finalitza el contracte per a totes les parts.",
       "confirmDeleteTitle": "Eliminar aquest esborrany?",
-      "confirmDeleteBody": "Aquest esborrany s'eliminarà permanentment.",
       "toastSigned": "Contracte signat",
       "toastSignFailed": "No s'ha pogut signar el contracte",
       "toastTerminated": "Contracte rescindit",
@@ -1781,9 +1708,6 @@
       "permissionRequired": "Es requereix permís de la biblioteca multimèdia per adjuntar un document.",
       "propertyFallback": "Propietat",
       "goBack": "Go back",
-      "dueDay": "Day {{day}} of the month",
-      "signed": "Signed",
-      "signaturePending": "Pending",
       "emptyDocuments": "No documents attached.",
       "addShort": "Add",
       "signLease": "Sign lease",
@@ -1793,8 +1717,7 @@
       "confirmTerminateExtended": "This records a termination notice and ends the lease. This cannot be undone.",
       "confirmDeleteExtended": "This permanently removes the draft lease.",
       "confirmDeleteAction": "Delete",
-      "openDocument": "Open document {{name}}",
-      "dueDayLabel": "Due day"
+      "openDocument": "Open document {{name}}"
     },
     "new": {
       "title": "Nou contracte",
@@ -1821,6 +1744,37 @@
       "inspection_report": "Informe d'inspecció",
       "insurance": "Assegurança",
       "other": "Altre"
+    },
+    "tenancy": {
+      "coTenant": "Collogater",
+      "period": "Durada del contracte",
+      "remaining": "Queden {{duration}}",
+      "nextPayment": "Proper pagament",
+      "history": "Historial del contracte",
+      "created": "Esborrany creat",
+      "landlordSigned": "Signat per l'arrendador",
+      "landlordPending": "Pendent de la signatura de l'arrendador",
+      "tenantSigned": "Signat per l'inquilí",
+      "tenantPending": "Pendent de la signatura de l'inquilí",
+      "starts": "Inici del contracte",
+      "ends": "Fi del contracte",
+      "stateCurrent": "En curs",
+      "stateUpcoming": "Encara no",
+      "paidThisYear": "Pagat aquest any",
+      "outstanding": "Pendent de pagament",
+      "dueOn": "Venç el {{date}}",
+      "partialAmount": "{{paid}} de {{total}}",
+      "paymentType": {
+        "fee": "Comissió",
+        "utility": "Subministraments"
+      },
+      "paymentStatus": {
+        "partial": "Pagat en part"
+      },
+      "column": {
+        "payment": "Pagament",
+        "method": "Mètode"
+      }
     }
   },
   "roommates": {
@@ -2128,7 +2082,6 @@
       "aboutHomiio": "Sobre Homiio",
       "supportFeedback": "Suport i Comentaris",
       "preferences": "Preferències de l'App",
-      "quickActions": "Accions Ràpides",
       "data": "Gestió de Dades",
       "notifications": "Notifications"
     },
@@ -2138,8 +2091,7 @@
       "build": "Compilació",
       "buildVersion": "Compilació de Desenvolupament",
       "platform": "Plataforma",
-      "oxySDK": "SDK d'Oxy",
-      "expoSDK": "SDK d'Expo"
+      "oxySDK": "SDK d'Oxy"
     },
     "supportFeedback": {
       "helpSupport": "Ajuda i Suport",
@@ -2148,29 +2100,18 @@
       "sendFeedback": "Enviar Comentaris",
       "sendFeedbackDesc": "Comparteix els teus pensaments amb nosaltres",
       "sendFeedbackMessage": "Ens encantaria sentir els teus comentaris! Comparteix els teus pensaments per ajudar-nos a millorar Homiio.",
-      "sendFeedbackThankYou": "Gràcies pels teus comentaris! Apreiem la teva opinió.",
       "rateApp": "Valorar App",
       "rateAppDesc": "Valora Homiio a la botiga d'aplicacions",
-      "rateAppMessage": "T'està agradant Homiio? Si us plau, pren un moment per valorar-nos a la botiga d'aplicacions!",
-      "rateAppThankYou": "Gràcies per valorar Homiio!"
+      "rateAppMessage": "T'està agradant Homiio? Si us plau, pren un moment per valorar-nos a la botiga d'aplicacions!"
     },
     "preferences": {
       "notifications": "Notificacions",
       "notificationsDesc": "Gestionar notificacions push",
-      "darkMode": "Mode Fosc",
-      "darkModeDesc": "Canviar entre temes clar i fosc",
       "autoSync": "Sincronització Automàtica",
       "autoSyncDesc": "Sincronitzar dades automàticament en segon pla",
       "offlineMode": "Mode Sense Connexió",
       "offlineModeDesc": "Usar l'aplicació sense connexió a internet",
-      "currency": "Moneda",
-      "currencyDesc": "Selecciona la teva moneda preferida"
-    },
-    "quickActions": {
-      "createProperty": "Crear Propietat",
-      "createPropertyDesc": "Afegir una nova llista de propietat",
-      "searchProperties": "Cercar Propietats",
-      "searchPropertiesDesc": "Trobar propietats a la teva àrea"
+      "currency": "Moneda"
     },
     "data": {
       "exportData": "Exportar Dades",
@@ -2192,9 +2133,6 @@
     "language": {
       "title": "Language",
       "choose": "Tria un idioma",
-      "footer": "Canviar l'idioma actualitza les etiquetes de l'app a l'instant.",
-      "emptyTitle": "No s'han trobat idiomes",
-      "emptyDescription": "No hi ha opcions d'idioma disponibles",
       "subtitle": "Select your preferred language"
     },
     "notifications": {
@@ -2491,7 +2429,8 @@
       "landlordApplications": "Safata de sol·licituds",
       "insights": "Insights",
       "evictions": "Desnonaments",
-      "reviews": "Ressenyes"
+      "reviews": "Ressenyes",
+      "myHome": "La meva llar"
     },
     "actions": {
       "addProperty": "Afegir Propietat",
@@ -2786,10 +2725,7 @@
         "thanks": "Gràcies per la teva ressenya",
         "failed": "No s’ha pogut enviar la ressenya",
         "starLabel": "{{count}} estrelles",
-        "alreadyLeft": "Ja has ressenyat aquest intercanvi.",
-        "profileHeading": "Ressenyes d’intercanvi",
-        "summary": "{{average}} · {{count}} ressenyes",
-        "guestAuthor": "Hoste d’intercanvi"
+        "alreadyLeft": "Ja has ressenyat aquest intercanvi."
       }
     },
     "badge": {
@@ -3067,7 +3003,6 @@
       "accessibility": "Sol·licitud {{id}}"
     },
     "toast": {
-      "openDocumentFailed": "No s'ha pogut obrir el document.",
       "withdrawn": "Sol·licitud retirada",
       "withdrawFailed": "No s'ha pogut retirar la sol·licitud"
     },
@@ -3563,8 +3498,6 @@
   },
   "subscriptions": {
     "title": "Subscripcions",
-    "alertError": "Error",
-    "alertSuccess": "Èxit",
     "authRequired": "Autenticació requerida",
     "checkoutFailed": "No s'ha pogut iniciar el pagament",
     "portalFailed": "No s'ha pogut obrir la gestió de subscripcions",
@@ -3574,28 +3507,10 @@
     "cancelFailed": "No s'ha pogut cancel·lar la subscripció",
     "cancelEndOfPeriodSuccess": "La subscripció es cancel·larà al final del període actual",
     "debugFailed": "No s'ha pogut depurar la subscripció",
-    "plusActive": "Homiio Plus active",
-    "plusInactive": "Upgrade to Homiio Plus",
-    "manage": "Manage subscription",
     "sync": "Sync from Stripe",
     "cancel": "Cancel subscription",
     "cancelImmediate": "Cancel immediately",
     "cancelEndOfPeriod": "Cancel at period end",
-    "fileCredits": "{{count}} file credits",
-    "since": "Member since {{date}}",
-    "canceledOn": "Canceled on {{date}}",
-    "lastPayment": "Last payment {{date}}",
-    "products": {
-      "plus": "Homiio Plus",
-      "plusDescription": "Priority support and premium features",
-      "file": "File credits",
-      "fileDescription": "Extra document storage credits",
-      "founder": "Founder",
-      "founderDescription": "Support Homiio and unlock founder perks"
-    },
-    "subscribe": "Subscribe",
-    "buyCredits": "Buy credits",
-    "becomeFounder": "Become a founder",
     "page": {
       "headerTitle": "Homiio+",
       "headerSubtitle": "El teu aliat d'habitatge ètic",
@@ -3626,8 +3541,6 @@
         "becomeSupporter": "Become a Supporter"
       },
       "footer": "Every euro keeps Homiio ethical, independent, and community-driven.",
-      "starting": "Starting…",
-      "back": "Tornar",
       "notAvailable": "N/A",
       "cancelImmediateTitle": "Cancel Immediately",
       "cancelImmediateBody": "This will immediately cancel your subscription and you will lose access to Homiio+ features. Are you sure?",
@@ -3655,7 +3568,6 @@
       "legendConfirmed": "Confirmada",
       "legendPending": "Pendent",
       "legendBlocked": "Bloquejada",
-      "legendAvailable": "Disponible",
       "availabilityError": "No s'ha pogut carregar la disponibilitat",
       "blockTitle": "Bloquejar aquestes dates",
       "blockBodyRange": "Block from {{start}} to {{end}}.",
@@ -3683,7 +3595,6 @@
       "toastConfirmed": "Reservation confirmed",
       "toastDeclined": "Reservation declined",
       "toastUpdateFailed": "Update failed",
-      "confirm": "Confirm",
       "decline": "Decline",
       "approve": "Aprovar",
       "view": "Veure",
@@ -4122,7 +4033,6 @@
     },
     "empty": {
       "title": "Encara no hi ha desnonaments aquí",
-      "subtitle": "Quan algú avisa d'un desnonament, apareix aquí perquè el barri pugui organitzar-se.",
       "scoped": "Nothing reported in this area yet. Widen the area, or post a case so neighbours can organise."
     },
     "detail": {
@@ -4133,14 +4043,12 @@
       "where": "On",
       "timeline": "Novetats",
       "comments": "Comentaris",
-      "approximateNotice": "L'adreça exacta està amagada: aquest punt és aproximat per protegir la família.",
       "share": "Comparteix",
       "shareCopied": "Enllaç copiat al porta-retalls",
       "shareFailed": "No s'ha pogut compartir",
       "instructions": "Instruccions",
       "contactFailed": "No s'ha pogut obrir l'enllaç",
       "noContact": "No s'han compartit dades de contacte per a aquest cas.",
-      "contactLockedNotice": "Confirma la teva assistència per veure el punt de trobada i el contacte de l'organitzador.",
       "contact": {
         "phone": "Trucar",
         "whatsapp": "WhatsApp",
@@ -4229,8 +4137,6 @@
       "labelPlaceholder": "Carrer o zona (sense número de pis)",
       "cityLabel": "Ciutat",
       "cityPlaceholder": "p. ex. Barcelona",
-      "approximateLabel": "Mostra només la ubicació aproximada",
-      "approximateHint": "Arrodoneix el punt per no assenyalar l'habitatge exacte.",
       "whenSection": "Quan",
       "dateLabel": "Data",
       "timeLabel": "Hora",
@@ -4291,7 +4197,6 @@
     },
     "timeline": {
       "empty": "Nothing has changed yet.",
-      "byline": "{{actor}} · {{when}}",
       "systemActor": "Homiio",
       "organizerActor": "The organiser",
       "event": {
@@ -4336,7 +4241,8 @@
         "emergency_housing": "Emergency housing",
         "official_info": "Official information"
       }
-    }
+    },
+    "privacyNote": "Per protegir la família, un cas només mostra un carrer sense número, un barri o una zona aproximada."
   },
   "agency": {
     "title": "Agència",
@@ -4541,5 +4447,12 @@
   },
   "map": {
     "clusterLabel": "Grup al mapa: {{count}}. Apropa el mapa per veure cada marcador."
+  },
+  "myHome": {
+    "signInTitle": "Inicia la sessió per veure la teva llar",
+    "signInDescription": "El teu contracte, el lloguer i els documents apareixen aquí quan inicies la sessió.",
+    "emptyTitle": "No tens cap lloguer actiu",
+    "emptyDescription": "Aquí veuràs el contracte que llogues quan estigui actiu.",
+    "viewContract": "Mostra el contracte"
   }
 }

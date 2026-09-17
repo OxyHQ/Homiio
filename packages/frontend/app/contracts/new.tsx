@@ -18,6 +18,7 @@ import { toast } from '@oxy.so/bloom/toast';
 import { Admonition } from '@oxy.so/bloom/admonition';
 import { Button } from '@oxy.so/bloom/button';
 import { Loading } from '@oxy.so/bloom/loading';
+import { SettingsListGroup, SettingsListItem } from '@oxy.so/bloom/settings-list';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { Text as BloomText, H2 } from '@oxy.so/bloom/typography';
 import { TenantApplicationStatus } from '@homiio/shared-types';
@@ -31,23 +32,8 @@ import { useApplicationById } from '@/hooks/useApplicationQueries';
 import { useCreateLeaseFromApplication } from '@/hooks/useLeaseQueries';
 import { getPropertyImageSource, getPropertyTitle } from '@/utils/propertyUtils';
 import { formatLocalized } from '@/utils/dateLocale';
-import { radius, spacing, tracker } from '@/constants/styles';
+import { radius, spacing } from '@/constants/styles';
 import { RiFileTextLine, RiGalleryLine } from '@oxy.so/bloom/icons';
-
-interface DetailRowProps {
-  label: string;
-  value: string;
-}
-
-const DetailRow: React.FC<DetailRowProps> = ({ label, value }) => {
-  const { colors } = useTheme();
-  return (
-    <View style={[styles.detailRow, { borderBottomColor: colors.border }]}>
-      <BloomText style={[styles.detailLabel, { color: colors.textSecondary }]}>{label}</BloomText>
-      <BloomText style={styles.detailValue}>{value}</BloomText>
-    </View>
-  );
-};
 
 export default function NewContractScreen() {
   const { t } = useTranslation();
@@ -164,17 +150,16 @@ export default function NewContractScreen() {
             <BloomText style={[styles.subtitle, { color: themeColors.textSecondary }]}>{t('contracts.new.subtitle')}</BloomText>
           </Card>
 
-          <Card variant="outlined" radius="radius-16" className="p-5">
-            <BloomText style={[styles.sectionLabel, { color: themeColors.textSecondary }]}>{t('contracts.new.seededTerms')}</BloomText>
-            <DetailRow
-              label={t('contracts.new.moveIn')}
+          <SettingsListGroup title={t('contracts.new.seededTerms')}>
+            <SettingsListItem
+              title={t('contracts.new.moveIn')}
               value={formatDate(application.moveInDate)}
             />
-            <DetailRow
-              label={t('contracts.new.leaseTerm')}
+            <SettingsListItem
+              title={t('contracts.new.leaseTerm')}
               value={t('contracts.new.leaseTermMonths', { count: application.leaseTermMonths })}
             />
-          </Card>
+          </SettingsListGroup>
 
           {!isApproved ? (
             <Admonition type="warning">{t('contracts.new.notApprovedWarning')}</Admonition>
@@ -232,26 +217,6 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 13,
-  },
-  sectionLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: tracker.eyebrow,
-    marginBottom: spacing.sm,
-  },
-  detailRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: spacing.sm,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  detailLabel: {
-    fontSize: 13,
-  },
-  detailValue: {
-    fontSize: 13,
-    fontWeight: '600',
   },
   footer: {
     padding: spacing.lg,

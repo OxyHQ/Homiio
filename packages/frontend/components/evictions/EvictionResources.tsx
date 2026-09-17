@@ -15,16 +15,20 @@
  * **An empty list is a real answer, rendered as one.** "Nothing verified for
  * your area yet" is true; showing a neighbouring country's tenant union to
  * somebody about to lose their home is not.
+ *
+ * The links are a `filled` Bloom `SettingsListGroup`: the block sits inside the
+ * detail screen's card, which already paints the `card` colour.
  */
 
 import React from 'react';
 import { Linking, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Item } from '@oxy.so/bloom/item';
 import { Loading } from '@oxy.so/bloom/loading';
-import { RiExternalLinkLine, RiFileTextLine } from '@oxy.so/bloom/icons';
+import { RiFileTextLine } from '@oxy.so/bloom/icons';
+import { SettingsListGroup, SettingsListItem } from '@oxy.so/bloom/settings-list';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 import type { JurisdictionResourceWithId } from '@homiio/shared-types';
+import { SettingsRowIcon } from '@/components/profile/SettingsRowIcon';
 import { formatEvictionShortDate } from './evictionUtils';
 import { colors } from '@/styles/colors';
 import { spacing } from '@/constants/styles';
@@ -58,33 +62,28 @@ export const EvictionResources: React.FC<EvictionResourcesProps> = ({
       {resources.length === 0 ? (
         <BloomText style={styles.state}>{t('evictions.resources.empty')}</BloomText>
       ) : (
-        resources.map((resource) => (
-          <Item
-            key={resource.id}
-            role="listitem"
-            accessibilityRole="link"
-            accessibilityLabel={t('evictions.resources.openLabel', { title: resource.title })}
-            accessibilityHint={resource.source}
-            leading={<RiFileTextLine size="md" fill={colors.textSecondary} />}
-            trailing={<RiExternalLinkLine size="sm" fill={colors.textSecondary} />}
-            onPress={() => {
-              void Linking.openURL(resource.url);
-            }}
-          >
-            <View style={styles.rowBody}>
-              <BloomText style={styles.title}>{resource.title}</BloomText>
-              <BloomText style={styles.meta}>
-                {t('evictions.resources.meta', {
+        <SettingsListGroup variant="filled">
+          {resources.map((resource) => (
+            <SettingsListItem
+              key={resource.id}
+              icon={<SettingsRowIcon icon={RiFileTextLine} />}
+              title={resource.title}
+              description={[
+                t('evictions.resources.meta', {
                   source: resource.source,
                   verified: formatEvictionShortDate(resource.verifiedAt, locale),
-                })}
-              </BloomText>
-              <BloomText style={styles.kind}>
-                {t(`evictions.resources.type.${resource.resourceType}`)}
-              </BloomText>
-            </View>
-          </Item>
-        ))
+                }),
+                t(`evictions.resources.type.${resource.resourceType}`),
+              ].join('\n')}
+              accessibilityRole="link"
+              accessibilityLabel={t('evictions.resources.openLabel', { title: resource.title })}
+              accessibilityHint={resource.source}
+              onPress={() => {
+                void Linking.openURL(resource.url);
+              }}
+            />
+          ))}
+        </SettingsListGroup>
       )}
       {/* Rendered even when the list is empty: the reason there is nothing here
           is as much a part of the disclaimer as the links would be. */}
@@ -97,25 +96,7 @@ export const EvictionResources: React.FC<EvictionResourcesProps> = ({
 
 const styles = StyleSheet.create({
   root: {
-    gap: spacing.xs,
-  },
-  rowBody: {
-    flex: 1,
-    minWidth: 0,
-    gap: 2,
-  },
-  title: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.text,
-  },
-  meta: {
-    fontSize: 12,
-    color: colors.textSecondary,
-  },
-  kind: {
-    fontSize: 12,
-    color: colors.muted,
+    gap: spacing.sm,
   },
   state: {
     fontSize: 14,

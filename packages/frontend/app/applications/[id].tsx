@@ -8,44 +8,35 @@
  *
  * Documents are linked via signed S3 URLs returned by the API.
  *
- * Each block is an outlined Bloom `Card`; documents are Bloom `Item` rows with
- * Remix glyphs; status is the Chip-based `ApplicationStatusBadge`. Loading is
- * Bloom `Loading`, errors the shared ErrorState component.
+ * The property is an outlined Bloom `Card`; terms, finances, references and
+ * documents are Bloom `SettingsListGroup`s shared with the landlord's view
+ * (`components/applications/ApplicationDetailGroups`); status is the
+ * Chip-based `ApplicationStatusBadge`. Loading is Bloom `Loading`, errors the
+ * shared ErrorState component.
  */
 import React, { useCallback, useMemo } from 'react';
-import { Image, Linking, Platform, StyleSheet, View } from 'react-native';
+import { Image, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { format } from 'date-fns';
 import { useTranslation } from 'react-i18next';
-import { useFormatting } from '@/utils/format';
-import i18next from 'i18next';
 import { toast } from '@oxy.so/bloom/toast';
-import { Item } from '@oxy.so/bloom/item';
 import { useTheme } from '@oxy.so/bloom/theme';
-import {
-  RiAlertLine,
-  RiCloseLine,
-  RiEditLine,
-  RiExternalLinkLine,
-  RiFileTextLine,
-  RiMailLine,
-  RiUserLine,
-  RiWallet3Line,
-} from '@oxy.so/bloom/icons';
+import { RiAlertLine, RiCloseLine, RiEditLine } from '@oxy.so/bloom/icons';
 
 import { Button } from '@oxy.so/bloom/button';
 import { Loading } from '@oxy.so/bloom/loading';
 import { Text as BloomText, H2 } from '@oxy.so/bloom/typography';
-import {
-  TenantApplicationDocument,
-  TenantApplicationStatus,
-  formatMoney,
-} from '@homiio/shared-types';
+import { TenantApplicationStatus } from '@homiio/shared-types';
 
 import { Header } from '@/components/Header';
 import { PageScrollView } from '@/components/PageScrollView';
 import { ApplicationStatusBadge } from '@/components/ApplicationStatusBadge';
+import {
+  ApplicationDocumentsGroup,
+  ApplicationFinancesGroup,
+  ApplicationReferencesGroup,
+  ApplicationTermsGroup,
+} from '@/components/applications/ApplicationDetailGroups';
 import { confirm } from '@oxy.so/bloom/surfaces';
 import { useProperty } from '@/hooks';
 import { useProfile } from '@/context/ProfileContext';
@@ -61,64 +52,8 @@ import { Card } from '@oxy.so/bloom/card';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { radius, spacing, tracker } from '@/constants/styles';
 
-/** A tenant's declared income has no currency field; it is quoted in euros. */
-const APPLICATION_INCOME_CURRENCY = 'EUR';
-/** Income reads as a round figure — cents on a salary are noise. */
-const INCOME_FORMAT = { minimumFractionDigits: 0, maximumFractionDigits: 0 } as const;
-
-const formatDate = (raw: string): string => {
-  const date = new Date(raw);
-  if (Number.isNaN(date.getTime())) return raw;
-  return format(date, 'EEE, MMM d, yyyy');
-};
-
-const DocIcon: React.FC<{ type: string; size: number; fill: string }> = ({ type, size, fill }) => {
-  switch (type) {
-    case 'id':
-      return <RiUserLine width={size} height={size} fill={fill} />;
-    case 'income':
-      return <RiWallet3Line width={size} height={size} fill={fill} />;
-    case 'reference':
-      return <RiMailLine width={size} height={size} fill={fill} />;
-    default:
-      return <RiFileTextLine width={size} height={size} fill={fill} />;
-  }
-};
-
-const openDocument = (url: string): void => {
-  if (Platform.OS === 'web') {
-    window.open(url, '_blank', 'noopener,noreferrer');
-    return;
-  }
-  Linking.openURL(url).catch(() => {
-    toast.error(i18next.t('applications.toast.openDocumentFailed'));
-  });
-};
-
-interface DocumentRowProps {
-  document: TenantApplicationDocument;
-}
-
-const DocumentRow: React.FC<DocumentRowProps> = ({ document }) => {
-  const { t } = useTranslation();
-  const theme = useTheme();
-
-  return (
-    <Item
-      onPress={() => openDocument(document.url)}
-      accessibilityRole="link"
-      accessibilityLabel={`Open document ${document.filename}`}
-      leading={<DocIcon type={document.type} size={20} fill={theme.colors.icon} />}
-      title={document.filename}
-      subtitle={t(`applications.documentType.${document.type}`)}
-      trailing={<RiExternalLinkLine width={18} height={18} fill={theme.colors.textSecondary} />}
-    />
-  );
-};
-
 export default function ApplicationDetailScreen() {
   const { t } = useTranslation();
-  const { locale } = useFormatting();
   const router = useRouter();
   const theme = useTheme();
   const params = useLocalSearchParams<{ id: string }>();
@@ -274,71 +209,12 @@ export default function ApplicationDetailScreen() {
             ) : null}
           </Card>
 
-          <Card variant="outlined" radius="radius-16" className="p-5">
-            <BloomText style={[styles.sectionLabel, secondaryText]}>Tenancy</BloomText>
-            <DetailRow label="Move-in" value={formatDate(application.moveInDate)} />
-            <DetailRow
-              label="Lease term"
-              value={`${application.leaseTermMonths} months`}
-            />
-            <DetailRow
-              label="Submitted"
-              value={formatDate(application.submittedAt)}
-            />
-            {application.decidedAt ? (
-              <DetailRow
-                label="Decided"
-                value={formatDate(application.decidedAt)}
-              />
-            ) : null}
-          </Card>
-
-          <Card variant="outlined" radius="radius-16" className="p-5">
-            <BloomText style={[styles.sectionLabel, secondaryText]}>Finances</BloomText>
-            <DetailRow
-              label="Monthly income"
-              value={formatMoney(application.monthlyIncome, APPLICATION_INCOME_CURRENCY, locale, INCOME_FORMAT)}
-            />
-            <DetailRow
-              label="Employment"
-              value={t(`profile.edit.options.employmentStatus.${application.employmentStatus}`)}
-            />
-          </Card>
-
-          <Card variant="outlined" radius="radius-16" className="p-5">
-            <BloomText style={[styles.sectionLabel, secondaryText]}>References</BloomText>
-            {application.referenceContacts.length === 0 ? (
-              <BloomText style={[styles.emptyHint, secondaryText]}>
-                No references provided.
-              </BloomText>
-            ) : (
-              application.referenceContacts.map((reference, index) => (
-                <View key={`${reference.email}-${index}`} style={[styles.referenceCard, { borderBottomColor: theme.colors.border }]}>
-                  <BloomText style={styles.referenceName}>
-                    {reference.name}
-                  </BloomText>
-                  <BloomText style={[styles.referenceMeta, secondaryText]}>
-                    {t(`profile.edit.options.referenceRelationship.${reference.relationship}`)} ·{' '}
-                    {reference.phone}
-                  </BloomText>
-                  <BloomText style={[styles.referenceMeta, secondaryText]}>
-                    {reference.email}
-                  </BloomText>
-                </View>
-              ))
-            )}
-          </Card>
-
-          <Card variant="outlined" radius="radius-16" className="p-5">
-            <BloomText style={[styles.sectionLabel, secondaryText]}>Documents</BloomText>
-            {application.documents.length === 0 ? (
-              <BloomText style={[styles.emptyHint, secondaryText]}>No documents attached.</BloomText>
-            ) : (
-              application.documents.map((document) => (
-                <DocumentRow key={document.url} document={document} />
-              ))
-            )}
-          </Card>
+          <View style={styles.groups}>
+            <ApplicationTermsGroup application={application} />
+            <ApplicationFinancesGroup application={application} />
+            <ApplicationReferencesGroup application={application} />
+            <ApplicationDocumentsGroup application={application} />
+          </View>
 
           {application.notes ? (
             <Card variant="outlined" radius="radius-16" className="p-5">
@@ -379,21 +255,6 @@ export default function ApplicationDetailScreen() {
     </View>
   );
 }
-
-interface DetailRowProps {
-  label: string;
-  value: string;
-}
-
-const DetailRow: React.FC<DetailRowProps> = ({ label, value }) => {
-  const theme = useTheme();
-  return (
-    <View style={[styles.detailRow, { borderBottomColor: theme.colors.border }]}>
-      <BloomText style={[styles.detailLabel, { color: theme.colors.textSecondary }]}>{label}</BloomText>
-      <BloomText style={styles.detailValue}>{value}</BloomText>
-    </View>
-  );
-};
 
 const styles = StyleSheet.create({
   root: {
@@ -444,33 +305,8 @@ const styles = StyleSheet.create({
     letterSpacing: tracker.eyebrow,
     marginBottom: spacing.sm,
   },
-  detailRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: spacing.sm,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  detailLabel: {
-    fontSize: 13,
-  },
-  detailValue: {
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  emptyHint: {
-    fontSize: 13,
-    fontStyle: 'italic',
-  },
-  referenceCard: {
-    paddingVertical: spacing.sm,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  referenceName: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  referenceMeta: {
-    fontSize: 12,
+  groups: {
+    gap: spacing.lg,
   },
   notesBody: {
     fontSize: 14,

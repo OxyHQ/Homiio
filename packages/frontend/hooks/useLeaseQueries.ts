@@ -6,11 +6,10 @@ import {
   type UseQueryResult,
 } from '@tanstack/react-query';
 import { useOxy } from '@oxy.so/services';
-import { CreateLeaseData, Lease, LeaseDocument, UpdateLeaseData } from '@homiio/shared-types';
+import { Lease, LeaseDocument } from '@homiio/shared-types';
 import {
   LeaseFilters,
   LeaseListResponse,
-  RenewLeaseData,
   TerminateLeaseData,
   UploadLeaseDocumentInput,
   leaseService,
@@ -84,34 +83,11 @@ export function useHasRentalProperties(): {
   };
 }
 
-export function useCreateLease(): UseMutationResult<Lease, Error, CreateLeaseData> {
-  const queryClient = useQueryClient();
-  return useMutation<Lease, Error, CreateLeaseData>({
-    mutationFn: (payload) => leaseService.createLease(payload),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [LEASE_LIST_KEY] });
-    },
-  });
-}
-
 export function useCreateLeaseFromApplication(): UseMutationResult<Lease, Error, string> {
   const queryClient = useQueryClient();
   return useMutation<Lease, Error, string>({
     mutationFn: (applicationId) => leaseService.createLeaseFromApplication(applicationId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [LEASE_LIST_KEY] });
-    },
-  });
-}
-
-export function useUpdateLease(
-  id: string,
-): UseMutationResult<Lease, Error, UpdateLeaseData> {
-  const queryClient = useQueryClient();
-  return useMutation<Lease, Error, UpdateLeaseData>({
-    mutationFn: (payload) => leaseService.updateLease(id, payload),
-    onSuccess: (lease) => {
-      queryClient.setQueryData(leaseKeys.detail(id), lease);
       queryClient.invalidateQueries({ queryKey: [LEASE_LIST_KEY] });
     },
   });
@@ -139,18 +115,6 @@ export function useTerminateLease(
     mutationFn: (payload) => leaseService.terminateLease(id, payload),
     onSuccess: (lease) => {
       queryClient.setQueryData(leaseKeys.detail(id), lease);
-      queryClient.invalidateQueries({ queryKey: [LEASE_LIST_KEY] });
-    },
-  });
-}
-
-export function useRenewLease(
-  id: string,
-): UseMutationResult<Lease, Error, RenewLeaseData> {
-  const queryClient = useQueryClient();
-  return useMutation<Lease, Error, RenewLeaseData>({
-    mutationFn: (payload) => leaseService.renewLease(id, payload),
-    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [LEASE_LIST_KEY] });
     },
   });

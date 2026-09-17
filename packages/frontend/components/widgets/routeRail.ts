@@ -139,6 +139,7 @@ export const ROUTE_RAIL: Readonly<Record<string, RailAssignment>> = {
   '/contracts': NO_RAIL,
   '/contracts/[id]': NO_RAIL,
   '/contracts/new': NO_RAIL,
+  '/my-home': NO_RAIL,
   '/applications': NO_RAIL,
   '/applications/[id]': NO_RAIL,
   '/landlord/applications': NO_RAIL,

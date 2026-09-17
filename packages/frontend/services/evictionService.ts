@@ -294,50 +294,6 @@ class EvictionService {
     return response.data.data;
   }
 
-  /** The caller's own cases (authed). */
-  async myCases(page = 1, limit = 20): Promise<EvictionListResponse> {
-    const response = await api.get<BackendEvictionListEnvelope>(`${this.baseUrl}/me/list`, {
-      params: { page, limit },
-    });
-    const items = response.data.evictions ?? [];
-    const pagination = response.data.pagination ?? emptyPagination(page, items.length);
-    return {
-      items,
-      pagination,
-      hasMore: response.data.hasMore ?? false,
-      scope: response.data.scope ?? { kind: 'global' },
-    };
-  }
-
-  /** Cases the caller RSVP'd to (authed). */
-  async myAttending(page = 1, limit = 20): Promise<EvictionListResponse> {
-    const response = await api.get<BackendEvictionListEnvelope>(`${this.baseUrl}/me/attending`, {
-      params: { page, limit },
-    });
-    const items = response.data.evictions ?? [];
-    const pagination = response.data.pagination ?? emptyPagination(page, items.length);
-    return {
-      items,
-      pagination,
-      hasMore: response.data.hasMore ?? false,
-      scope: response.data.scope ?? { kind: 'attending' },
-    };
-  }
-
-  /** Cases the caller FOLLOWS (authed). */
-  async myFollowing(page = 1, limit = 20): Promise<EvictionListResponse> {
-    const response = await api.get<BackendEvictionListEnvelope>(`${this.baseUrl}/me/following`, {
-      params: { page, limit },
-    });
-    const items = response.data.evictions ?? [];
-    const pagination = response.data.pagination ?? emptyPagination(page, items.length);
-    return {
-      items,
-      pagination,
-      hasMore: response.data.hasMore ?? false,
-      scope: response.data.scope ?? { kind: 'following' },
-    };
-  }
 }
 
 export const evictionService = new EvictionService();

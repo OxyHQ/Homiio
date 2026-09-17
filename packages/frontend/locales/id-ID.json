@@ -818,50 +818,20 @@
   },
   "profile": {
     "title": "Profile",
-    "tabs": {
-      "listings": "Listings",
-      "about": "About"
-    },
-    "editProfile": "Edit Profile",
-    "myProperties": "My Properties",
-    "savedProperties": "Saved Properties",
-    "myContracts": "My Contracts",
-    "logOut": "Log Out",
-    "loading": "Loading profile...",
     "signInRequired": "Sign in required",
     "signInMessage": "Please sign in to view your profile",
-    "createProfile": "Create Profile",
-    "deleteProfile": "Delete Profile",
     "sections": {
-      "overview": "Overview",
-      "properties": "My Properties",
-      "contracts": "My Contracts",
-      "settings": "Settings",
       "account": "Account",
-      "profile": "Profile",
       "activity": "Activity"
     },
     "stats": {
-      "propertiesCount": "Properties",
-      "contractsCount": "Contracts",
       "stays": "Stays",
       "applications": "Applications",
       "applicationsApproved": "{{count}} approved",
       "saved": "Saved"
     },
     "actions": {
-      "manageProperties": "Manage Properties",
-      "viewContracts": "View Contracts",
-      "editProfile": "Edit Profile",
-      "shareProfile": "Share Profile",
-      "signOut": "Sign Out"
-    },
-    "noProfilesTitle": "No Profiles Found",
-    "noProfilesMessage": "You don't have any profiles yet. Create your first profile to get started!",
-    "errors": {
-      "loadFailed": "Failed to load profiles",
-      "updateFailed": "Failed to update profile",
-      "deleteFailed": "Failed to delete profile"
+      "editProfile": "Edit Profile"
     },
     "exchanges": "Exchanges",
     "exchangesDescription": "Your home swaps and hosting requests.",
@@ -1143,15 +1113,6 @@
       "updateSuccess": "Profile updated successfully",
       "updateFailed": "Failed to update profile"
     },
-    "established": "Established",
-    "serviceAreas": "Service areas",
-    "specialties": "Specialties",
-    "about": "About",
-    "preferences": "Preferences",
-    "budget": "Budget",
-    "employer": "Employer",
-    "occupation": "Occupation",
-    "listings": "Listings",
     "subscriptionsDescription": "Manage Homiio Plus or buy one-time file analysis.",
     "subscriptions": "Subscriptions",
     "stays": "Stays",
@@ -1311,38 +1272,16 @@
     }
   },
   "payments": {
-    "title": "Payments",
-    "upcoming": "Upcoming Payments",
-    "history": "Payment History",
-    "dueDate": "Due Date",
-    "amount": "Amount",
+    "dueDate": "Jatuh tempo",
+    "amount": "Jumlah",
     "status": {
-      "paid": "Paid",
-      "pending": "Pending",
-      "overdue": "Overdue"
-    },
-    "actions": {
-      "payNow": "Pay Now",
-      "viewDetails": "View Details",
-      "downloadReceipt": "Download Receipt"
+      "paid": "Lunas",
+      "overdue": "Terlambat"
     }
   },
   "contracts": {
-    "title": "Contracts",
-    "active": "Active Contracts",
-    "expired": "Expired Contracts",
-    "draft": "Draft Contracts",
-    "status": {
-      "active": "Active",
-      "expired": "Expired",
-      "pending": "Pending",
-      "draft": "Draft"
-    },
     "actions": {
-      "view": "View",
-      "download": "Download",
-      "sign": "Sign",
-      "renew": "Renew"
+      "view": "View"
     },
     "list": {
       "title": "Rental Contracts",
@@ -1372,9 +1311,6 @@
       "end": "End",
       "landlord": "Landlord",
       "tenant": "Tenant",
-      "perMonth": "/ month",
-      "share": "Share",
-      "download": "Download",
       "accessibility": "Contract {{title}}"
     },
     "detail": {
@@ -1384,26 +1320,17 @@
       "unavailableTitle": "Contract unavailable",
       "unavailableDescription": "This contract could not be loaded.",
       "term": "Term",
-      "rent": "Rent",
-      "start": "Start",
-      "end": "End",
       "monthlyRent": "Monthly rent",
       "securityDeposit": "Security deposit",
-      "signatures": "Signatures",
       "landlord": "Landlord",
       "tenant": "Tenant",
       "payments": "Payment schedule",
       "documents": "Documents",
-      "addDocument": "Add document",
       "sign": "Sign contract",
       "terminate": "Terminate lease",
       "deleteDraft": "Delete draft",
       "confirmSignTitle": "Sign this lease?",
-      "confirmSignBody": "Your signature confirms you accept the lease terms.",
-      "confirmTerminateTitle": "Terminate this lease?",
-      "confirmTerminateBody": "This ends the lease for all parties.",
       "confirmDeleteTitle": "Delete this draft?",
-      "confirmDeleteBody": "This draft will be permanently removed.",
       "toastSigned": "Lease signed",
       "toastSignFailed": "Could not sign the lease",
       "toastTerminated": "Lease terminated",
@@ -1416,10 +1343,6 @@
       "permissionRequired": "Media library permission is required to attach a document.",
       "propertyFallback": "Property",
       "goBack": "Go back",
-      "dueDay": "Day {{day}} of the month",
-      "dueDayLabel": "Due day",
-      "signed": "Signed",
-      "signaturePending": "Pending",
       "emptyDocuments": "No documents attached.",
       "addShort": "Add",
       "signLease": "Sign lease",
@@ -1456,6 +1379,37 @@
       "toastCreated": "Draft lease created",
       "toastCreateFailed": "Could not create the lease",
       "propertyFallback": "Property"
+    },
+    "tenancy": {
+      "coTenant": "Penyewa bersama",
+      "period": "Masa sewa",
+      "remaining": "Tersisa {{duration}}",
+      "nextPayment": "Pembayaran berikutnya",
+      "history": "Riwayat kontrak",
+      "created": "Draf dibuat",
+      "landlordSigned": "Ditandatangani pemilik",
+      "landlordPending": "Menunggu tanda tangan pemilik",
+      "tenantSigned": "Ditandatangani penyewa",
+      "tenantPending": "Menunggu tanda tangan penyewa",
+      "starts": "Sewa dimulai",
+      "ends": "Sewa berakhir",
+      "stateCurrent": "Berlangsung",
+      "stateUpcoming": "Belum",
+      "paidThisYear": "Dibayar tahun ini",
+      "outstanding": "Tunggakan",
+      "dueOn": "Jatuh tempo {{date}}",
+      "partialAmount": "{{paid}} dari {{total}}",
+      "paymentType": {
+        "fee": "Biaya",
+        "utility": "Utilitas"
+      },
+      "paymentStatus": {
+        "partial": "Dibayar sebagian"
+      },
+      "column": {
+        "payment": "Pembayaran",
+        "method": "Metode"
+      }
     }
   },
   "roommates": {
@@ -1763,7 +1717,6 @@
       "aboutHomiio": "About Homiio",
       "supportFeedback": "Support & Feedback",
       "preferences": "App Preferences",
-      "quickActions": "Quick Actions",
       "data": "Data Management",
       "notifications": "Notifications"
     },
@@ -1773,8 +1726,7 @@
       "build": "Build",
       "buildVersion": "Development Build",
       "platform": "Platform",
-      "oxySDK": "Oxy SDK",
-      "expoSDK": "Expo SDK"
+      "oxySDK": "Oxy SDK"
     },
     "supportFeedback": {
       "helpSupport": "Help & Support",
@@ -1783,29 +1735,18 @@
       "sendFeedback": "Send Feedback",
       "sendFeedbackDesc": "Share your thoughts with us",
       "sendFeedbackMessage": "We'd love to hear your feedback! Share your thoughts to help us improve Homiio.",
-      "sendFeedbackThankYou": "Thank you for your feedback! We appreciate your input.",
       "rateApp": "Rate App",
       "rateAppDesc": "Rate Homiio on the app store",
-      "rateAppMessage": "Enjoying Homiio? Please take a moment to rate us on the app store!",
-      "rateAppThankYou": "Thank you for rating Homiio!"
+      "rateAppMessage": "Enjoying Homiio? Please take a moment to rate us on the app store!"
     },
     "preferences": {
       "notifications": "Notifications",
       "notificationsDesc": "Manage push notifications",
-      "darkMode": "Dark Mode",
-      "darkModeDesc": "Switch between light and dark themes",
       "autoSync": "Auto Sync",
       "autoSyncDesc": "Automatically sync data in the background",
       "offlineMode": "Offline Mode",
       "offlineModeDesc": "Use app without internet connection",
-      "currency": "Currency",
-      "currencyDesc": "Select your preferred currency"
-    },
-    "quickActions": {
-      "createProperty": "Create Property",
-      "createPropertyDesc": "Add a new property listing",
-      "searchProperties": "Search Properties",
-      "searchPropertiesDesc": "Find properties in your area"
+      "currency": "Currency"
     },
     "data": {
       "exportData": "Export Data",
@@ -1827,9 +1768,6 @@
     "language": {
       "title": "Language",
       "choose": "Choose a language",
-      "footer": "Changing the language updates labels across the app immediately.",
-      "emptyTitle": "No languages found",
-      "emptyDescription": "No language options are currently available",
       "subtitle": "Select your preferred language"
     },
     "notifications": {
@@ -2126,7 +2064,8 @@
       "hostReservations": "Host reservations",
       "landlordApplications": "Applicant inbox",
       "evictions": "Eviction watch",
-      "reviews": "Reviews"
+      "reviews": "Reviews",
+      "myHome": "Rumah saya"
     },
     "actions": {
       "addProperty": "Add Property",
@@ -2836,10 +2775,7 @@
         "thanks": "Thanks for your review",
         "failed": "Could not submit review",
         "starLabel": "{{count}} stars",
-        "alreadyLeft": "You’ve already reviewed this exchange.",
-        "profileHeading": "Exchange reviews",
-        "summary": "{{average}} · {{count}} reviews",
-        "guestAuthor": "Exchange guest"
+        "alreadyLeft": "You’ve already reviewed this exchange."
       }
     },
     "badge": {
@@ -3016,7 +2952,6 @@
       "accessibility": "Application {{id}}"
     },
     "toast": {
-      "openDocumentFailed": "Could not open the document.",
       "withdrawn": "Application withdrawn",
       "withdrawFailed": "Could not withdraw application"
     },
@@ -3512,8 +3447,6 @@
   },
   "subscriptions": {
     "title": "Subscriptions",
-    "alertError": "Error",
-    "alertSuccess": "Success",
     "authRequired": "Authentication required",
     "checkoutFailed": "Failed to start checkout",
     "portalFailed": "Failed to open subscription management",
@@ -3523,28 +3456,10 @@
     "cancelFailed": "Failed to cancel subscription",
     "cancelEndOfPeriodSuccess": "Subscription will be canceled at the end of the current period",
     "debugFailed": "Failed to debug subscription",
-    "plusActive": "Homiio Plus active",
-    "plusInactive": "Upgrade to Homiio Plus",
-    "manage": "Manage subscription",
     "sync": "Sync from Stripe",
     "cancel": "Cancel subscription",
     "cancelImmediate": "Cancel immediately",
     "cancelEndOfPeriod": "Cancel at period end",
-    "fileCredits": "{{count}} file credits",
-    "since": "Member since {{date}}",
-    "canceledOn": "Canceled on {{date}}",
-    "lastPayment": "Last payment {{date}}",
-    "products": {
-      "plus": "Homiio Plus",
-      "plusDescription": "Priority support and premium features",
-      "file": "File credits",
-      "fileDescription": "Extra document storage credits",
-      "founder": "Founder",
-      "founderDescription": "Support Homiio and unlock founder perks"
-    },
-    "subscribe": "Subscribe",
-    "buyCredits": "Buy credits",
-    "becomeFounder": "Become a founder",
     "page": {
       "headerTitle": "Homiio+",
       "headerSubtitle": "Your ethical housing ally",
@@ -3575,8 +3490,6 @@
         "becomeSupporter": "Become a Supporter"
       },
       "footer": "Every euro keeps Homiio ethical, independent, and community-driven.",
-      "starting": "Starting…",
-      "back": "Back",
       "notAvailable": "N/A",
       "cancelImmediateTitle": "Cancel Immediately",
       "cancelImmediateBody": "This will immediately cancel your subscription and you will lose access to Homiio+ features. Are you sure?",
@@ -3604,7 +3517,6 @@
       "legendConfirmed": "Confirmed",
       "legendPending": "Pending",
       "legendBlocked": "Blocked",
-      "legendAvailable": "Available",
       "availabilityError": "Couldn't load availability",
       "blockTitle": "Block these dates",
       "blockBodyRange": "Block from {{start}} to {{end}}.",
@@ -3632,7 +3544,6 @@
       "toastConfirmed": "Reservation confirmed",
       "toastDeclined": "Reservation declined",
       "toastUpdateFailed": "Update failed",
-      "confirm": "Confirm",
       "decline": "Decline",
       "approve": "Approve",
       "view": "View",
@@ -4071,7 +3982,6 @@
     },
     "empty": {
       "title": "No evictions here yet",
-      "subtitle": "When neighbours report an upcoming eviction, it shows up here so the community can organise.",
       "scoped": "Nothing reported in this area yet. Widen the area, or post a case so neighbours can organise."
     },
     "detail": {
@@ -4082,14 +3992,12 @@
       "where": "Where",
       "timeline": "Updates",
       "comments": "Comments",
-      "approximateNotice": "The exact address is hidden — this pin is approximate to protect the household.",
       "share": "Share",
       "shareCopied": "Link copied to clipboard",
       "shareFailed": "Couldn't share this case",
       "instructions": "Instructions",
       "contactFailed": "Couldn't open that link",
       "noContact": "No contact details were shared for this case.",
-      "contactLockedNotice": "Confirm your attendance to see the meeting point and the organiser's contact details.",
       "contact": {
         "phone": "Call",
         "whatsapp": "WhatsApp",
@@ -4178,8 +4086,6 @@
       "labelPlaceholder": "Street or area (no unit number)",
       "cityLabel": "City",
       "cityPlaceholder": "e.g. Barcelona",
-      "approximateLabel": "Show only an approximate location",
-      "approximateHint": "Rounds the pin so the exact home is never pinpointed.",
       "whenSection": "When",
       "dateLabel": "Date",
       "timeLabel": "Time",
@@ -4240,7 +4146,6 @@
     },
     "timeline": {
       "empty": "Nothing has changed yet.",
-      "byline": "{{actor}} · {{when}}",
       "systemActor": "Homiio",
       "organizerActor": "The organiser",
       "event": {
@@ -4285,7 +4190,8 @@
         "emergency_housing": "Emergency housing",
         "official_info": "Official information"
       }
-    }
+    },
+    "privacyNote": "Untuk melindungi penghuni, kasus hanya menampilkan jalan tanpa nomor, lingkungan, atau area perkiraan."
   },
   "agency": {
     "title": "Agency",
@@ -4490,5 +4396,12 @@
   },
   "map": {
     "clusterLabel": "Kelompok di peta: {{count}}. Perbesar untuk melihat setiap penanda."
+  },
+  "myHome": {
+    "signInTitle": "Masuk untuk melihat rumah Anda",
+    "signInDescription": "Kontrak, sewa, dan dokumen Anda muncul di sini setelah masuk.",
+    "emptyTitle": "Tidak ada sewa aktif",
+    "emptyDescription": "Kontrak yang Anda sewa muncul di sini saat aktif.",
+    "viewContract": "Lihat kontrak"
   }
 }

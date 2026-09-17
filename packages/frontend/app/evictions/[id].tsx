@@ -1,7 +1,8 @@
 /**
  * Eviction case detail (detalle) — the mobilisation page for a single desahucio.
  *
- * Cover → status + date/time → title → reporter → organisation → description →
+ * Cover → title → Bloom `EvictionReportCard` (status, day and time, the
+ * published area, description, turnout) → reporter → organisation →
  * "Cómo ayudar" (structured needs + gated organiser contacts) → published disc
  * on a map with the precision explained → local legal resources → timeline →
  * public comment thread. A sticky RSVP CTA drives "Asistiré/Asistiendo" and a
@@ -51,6 +52,7 @@ import {
 import { Loading } from '@oxy.so/bloom/loading';
 import * as Skeleton from '@oxy.so/bloom/skeleton';
 import { Textarea } from '@oxy.so/bloom/textarea';
+import { EvictionReportCard, EvictionTimeline, type EvictionEvent } from '@oxy.so/bloom/eviction';
 import { H2, Text as BloomText } from '@oxy.so/bloom/typography';
 import { useOxy, openAccountDialog } from '@oxy.so/services';
 
@@ -71,17 +73,19 @@ import {
   useToggleAttend,
   useToggleFollow,
 } from '@/hooks/useEvictionQueries';
-import { EvictionStatusBadge } from '@/components/evictions/EvictionStatusBadge';
-import { EvictionDateBlock } from '@/components/evictions/EvictionDateBlock';
+import { evictionReportCardProps } from '@/components/evictions/EvictionCard';
 import { EvictionContactActions } from '@/components/evictions/EvictionContactActions';
 import { EvictionCommentRow } from '@/components/evictions/EvictionCommentRow';
 import { EvictionOwnerControls } from '@/components/evictions/EvictionOwnerControls';
 import { EvictionReportSheet } from '@/components/evictions/EvictionReportSheet';
-import { EvictionTimeline } from '@/components/evictions/EvictionTimeline';
 import { EvictionHelpNeeds } from '@/components/evictions/EvictionHelpNeeds';
 import { EvictionResources } from '@/components/evictions/EvictionResources';
 import { EvictionPrecisionNote } from '@/components/evictions/EvictionPrecisionNote';
-import { formatEvictionFullDate } from '@/components/evictions/evictionUtils';
+import {
+  EVICTION_EVENT_KIND,
+  formatEvictionDateTime,
+  formatEvictionFullDate,
+} from '@/components/evictions/evictionUtils';
 import { BottomSheetContext } from '@/context/BottomSheetContext';
 import { shareContent } from '@/utils/share';
 import { resolveBackendImageUrl } from '@/utils/imageUrl';
@@ -238,6 +242,30 @@ export default function EvictionDetailScreen() {
     [t],
   );
 
+  /**
+   * The case history, oldest first by `position` (unique per case, where two
+   * entries can share a millisecond). A `system` actor is "Homiio", never a
+   * person: a report threshold firing must not read as "these people reported
+   * this".
+   */
+  const timelineEvents = useMemo<EvictionEvent[]>(
+    () =>
+      [...(eviction?.timeline ?? [])]
+        .sort((a, b) => a.position - b.position)
+        .map((event) => ({
+          id: event.id,
+          kind: EVICTION_EVENT_KIND[event.eventType],
+          title: t(`evictions.timeline.event.${event.eventType}`),
+          date: formatEvictionDateTime(event.createdAt, i18n.language),
+          source:
+            event.actor.kind === 'system'
+              ? t('evictions.timeline.systemActor')
+              : t('evictions.timeline.organizerActor'),
+          description: event.message,
+        })),
+    [eviction?.timeline, i18n.language, t],
+  );
+
   const shareButton = (
     <IconButton
       key="share"
@@ -316,20 +344,17 @@ export default function EvictionDetailScreen() {
             </ZoomableImage>
           ) : null}
 
-          <View style={styles.heroRow}>
-            <EvictionDateBlock
-              scheduledAt={eviction.scheduledAt}
-              locale={i18n.language}
-              size="large"
-            />
-            <View style={styles.heroText}>
-              <EvictionStatusBadge status={eviction.status} />
-              <H2 style={styles.title}>{eviction.title}</H2>
-              <BloomText style={styles.when}>
-                {formatEvictionFullDate(eviction.scheduledAt, i18n.language)}
-              </BloomText>
-            </View>
-          </View>
+          <H2 style={styles.title}>{eviction.title}</H2>
+
+          {/* Status, the day, the time and how far off it is, the PUBLISHED
+              area, the description and the turnout. The attend toggle stays
+              in the sticky footer, where it carries its loading state. */}
+          <EvictionReportCard
+            {...evictionReportCardProps(eviction, i18n.language, t)}
+            description={eviction.description}
+            numberOfLines={0}
+            headingLevel={2}
+          />
 
           <View style={styles.authorRow}>
             <Avatar
@@ -346,9 +371,7 @@ export default function EvictionDetailScreen() {
             </View>
           </View>
 
-          {eviction.description ? (
-            <BloomText style={styles.description}>{eviction.description}</BloomText>
-          ) : (
+          {eviction.description ? null : (
             // Withheld ENTIRELY under a precautionary hold rather than partly
             // redacted: a partial redaction of prose reported as exposing
             // somebody's details is a guess about which sentence did it.
@@ -457,7 +480,17 @@ export default function EvictionDetailScreen() {
 
           <Card variant="outlined" radius="radius-16" style={styles.section}>
             <CardTitle>{t('evictions.detail.timeline')}</CardTitle>
-            <EvictionTimeline events={eviction.timeline} locale={i18n.language} />
+            {timelineEvents.length === 0 ? (
+              <BloomText style={styles.muted}>{t('evictions.timeline.empty')}</BloomText>
+            ) : (
+              <EvictionTimeline
+                events={timelineEvents}
+                // The actor IS the source: the organiser, or Homiio for a
+                // system entry — never the people whose reports fired it.
+                formatSource={(source) => source}
+                accessibilityLabel={t('evictions.detail.timeline')}
+              />
+            )}
           </Card>
 
           {eviction.isOwner ? (
@@ -588,22 +621,8 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-  heroRow: {
-    flexDirection: 'row',
-    gap: spacing.md,
-    alignItems: 'flex-start',
-  },
-  heroText: {
-    flex: 1,
-    minWidth: 0,
-    gap: spacing.xs,
-  },
   title: {
     letterSpacing: -0.5,
-  },
-  when: {
-    fontSize: 14,
-    color: colors.textSecondary,
   },
   authorRow: {
     flexDirection: 'row',
@@ -622,11 +641,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: colors.text,
-  },
-  description: {
-    fontSize: 15,
-    color: colors.text,
-    lineHeight: 22,
   },
   section: {
     gap: spacing.md,

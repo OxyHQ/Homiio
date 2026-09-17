@@ -794,50 +794,20 @@
   },
   "profile": {
     "title": "Perfil",
-    "tabs": {
-      "listings": "Publicaciones",
-      "about": "Acerca de"
-    },
-    "editProfile": "Editar Perfil",
-    "myProperties": "Mis Propiedades",
-    "savedProperties": "Propiedades Guardadas",
-    "myContracts": "Mis Contratos",
-    "logOut": "Cerrar Sesión",
-    "loading": "Cargando perfil...",
     "signInRequired": "Inicio de sesión requerido",
     "signInMessage": "Por favor inicia sesión para ver tu perfil",
-    "createProfile": "Crear Perfil",
-    "deleteProfile": "Eliminar Perfil",
     "sections": {
-      "overview": "Resumen",
-      "properties": "Mis Propiedades",
-      "contracts": "Mis Contratos",
-      "settings": "Configuración",
       "account": "Account",
-      "profile": "Profile",
       "activity": "Activity"
     },
     "stats": {
-      "propertiesCount": "Propiedades",
-      "contractsCount": "Contratos",
       "stays": "Stays",
       "applications": "Applications",
       "saved": "Saved",
       "applicationsApproved": "{{count}} aprobadas"
     },
     "actions": {
-      "manageProperties": "Gestionar Propiedades",
-      "viewContracts": "Ver Contratos",
-      "editProfile": "Editar Perfil",
-      "shareProfile": "Compartir Perfil",
-      "signOut": "Cerrar Sesión"
-    },
-    "noProfilesTitle": "No se Encontraron Perfiles",
-    "noProfilesMessage": "Aún no tienes perfiles. ¡Crea tu primer perfil para comenzar!",
-    "errors": {
-      "loadFailed": "Error al cargar perfiles",
-      "updateFailed": "Error al actualizar perfil",
-      "deleteFailed": "Error al eliminar perfil"
+      "editProfile": "Editar Perfil"
     },
     "exchanges": "Intercambios",
     "exchangesDescription": "Tus intercambios de casa y solicitudes de alojamiento.",
@@ -1119,15 +1089,6 @@
       "updateSuccess": "Perfil actualizado correctamente",
       "updateFailed": "No se pudo actualizar el perfil"
     },
-    "established": "Established",
-    "serviceAreas": "Service areas",
-    "specialties": "Specialties",
-    "about": "About",
-    "preferences": "Preferences",
-    "budget": "Budget",
-    "employer": "Employer",
-    "occupation": "Occupation",
-    "listings": "Listings",
     "subscriptionsDescription": "Manage Homiio Plus or buy one-time file analysis.",
     "subscriptions": "Subscriptions",
     "stays": "Stays",
@@ -1655,38 +1616,16 @@
     }
   },
   "payments": {
-    "title": "Pagos",
-    "upcoming": "Pagos Próximos",
-    "history": "Historial de Pagos",
-    "dueDate": "Fecha de Vencimiento",
-    "amount": "Cantidad",
+    "dueDate": "Vencimiento",
+    "amount": "Importe",
     "status": {
       "paid": "Pagado",
-      "pending": "Pendiente",
       "overdue": "Vencido"
-    },
-    "actions": {
-      "payNow": "Pagar Ahora",
-      "viewDetails": "Ver Detalles",
-      "downloadReceipt": "Descargar Recibo"
     }
   },
   "contracts": {
-    "title": "Contratos",
-    "active": "Contratos Activos",
-    "expired": "Contratos Vencidos",
-    "draft": "Borradores de Contratos",
-    "status": {
-      "active": "Activo",
-      "expired": "Vencido",
-      "pending": "Pendiente",
-      "draft": "Borrador"
-    },
     "actions": {
-      "view": "Ver",
-      "download": "Descargar",
-      "sign": "Firmar",
-      "renew": "Renovar"
+      "view": "Ver"
     },
     "list": {
       "title": "Contratos de alquiler",
@@ -1716,9 +1655,6 @@
       "end": "Fin",
       "landlord": "Arrendador",
       "tenant": "Inquilino",
-      "perMonth": "/ mes",
-      "share": "Compartir",
-      "download": "Descargar",
       "accessibility": "Contrato {{title}}"
     },
     "detail": {
@@ -1728,26 +1664,17 @@
       "unavailableTitle": "Contrato no disponible",
       "unavailableDescription": "No se pudo cargar este contrato.",
       "term": "Plazo",
-      "rent": "Alquiler",
-      "start": "Inicio",
-      "end": "Fin",
       "monthlyRent": "Alquiler mensual",
       "securityDeposit": "Depósito de garantía",
-      "signatures": "Firmas",
       "landlord": "Arrendador",
       "tenant": "Inquilino",
       "payments": "Calendario de pagos",
       "documents": "Documentos",
-      "addDocument": "Añadir documento",
       "sign": "Firmar contrato",
       "terminate": "Rescindir contrato",
       "deleteDraft": "Eliminar borrador",
       "confirmSignTitle": "¿Firmar este contrato?",
-      "confirmSignBody": "Tu firma confirma que aceptas los términos del contrato.",
-      "confirmTerminateTitle": "¿Rescindir este contrato?",
-      "confirmTerminateBody": "Esto finaliza el contrato para todas las partes.",
       "confirmDeleteTitle": "¿Eliminar este borrador?",
-      "confirmDeleteBody": "Este borrador se eliminará permanentemente.",
       "toastSigned": "Contrato firmado",
       "toastSignFailed": "No se pudo firmar el contrato",
       "toastTerminated": "Contrato rescindido",
@@ -1760,9 +1687,6 @@
       "permissionRequired": "Se requiere permiso de la biblioteca multimedia para adjuntar un documento.",
       "propertyFallback": "Propiedad",
       "goBack": "Volver",
-      "dueDay": "Día {{day}} del mes",
-      "signed": "Firmado",
-      "signaturePending": "Pendiente",
       "emptyDocuments": "No hay documentos adjuntos.",
       "addShort": "Añadir",
       "signLease": "Firmar contrato",
@@ -1772,8 +1696,7 @@
       "confirmTerminateExtended": "Esto registra un aviso de terminación y finaliza el contrato. No se puede deshacer.",
       "confirmDeleteExtended": "Esto elimina permanentemente el borrador del contrato.",
       "confirmDeleteAction": "Eliminar",
-      "openDocument": "Abrir documento {{name}}",
-      "dueDayLabel": "Día de pago"
+      "openDocument": "Abrir documento {{name}}"
     },
     "new": {
       "title": "Nuevo contrato",
@@ -1800,6 +1723,37 @@
       "inspection_report": "Informe de inspección",
       "insurance": "Seguro",
       "other": "Otro"
+    },
+    "tenancy": {
+      "coTenant": "Coinquilino",
+      "period": "Duración del contrato",
+      "remaining": "Quedan {{duration}}",
+      "nextPayment": "Próximo pago",
+      "history": "Historial del contrato",
+      "created": "Borrador creado",
+      "landlordSigned": "Firmado por el arrendador",
+      "landlordPending": "Pendiente de la firma del arrendador",
+      "tenantSigned": "Firmado por el inquilino",
+      "tenantPending": "Pendiente de la firma del inquilino",
+      "starts": "Inicio del contrato",
+      "ends": "Fin del contrato",
+      "stateCurrent": "En curso",
+      "stateUpcoming": "Todavía no",
+      "paidThisYear": "Pagado este año",
+      "outstanding": "Pendiente de pago",
+      "dueOn": "Vence el {{date}}",
+      "partialAmount": "{{paid}} de {{total}}",
+      "paymentType": {
+        "fee": "Comisión",
+        "utility": "Suministros"
+      },
+      "paymentStatus": {
+        "partial": "Pagado en parte"
+      },
+      "column": {
+        "payment": "Pago",
+        "method": "Método"
+      }
     }
   },
   "roommates": {
@@ -2107,7 +2061,6 @@
       "aboutHomiio": "Acerca de Homiio",
       "supportFeedback": "Soporte y Comentarios",
       "preferences": "Preferencias de la App",
-      "quickActions": "Acciones Rápidas",
       "data": "Gestión de Datos",
       "notifications": "Notifications"
     },
@@ -2117,8 +2070,7 @@
       "build": "Compilación",
       "buildVersion": "Compilación de Desarrollo",
       "platform": "Plataforma",
-      "oxySDK": "SDK de Oxy",
-      "expoSDK": "SDK de Expo"
+      "oxySDK": "SDK de Oxy"
     },
     "supportFeedback": {
       "helpSupport": "Ayuda y Soporte",
@@ -2127,29 +2079,18 @@
       "sendFeedback": "Enviar Comentarios",
       "sendFeedbackDesc": "Comparte tus pensamientos con nosotros",
       "sendFeedbackMessage": "¡Nos encantaría escuchar tus comentarios! Comparte tus pensamientos para ayudarnos a mejorar Homiio.",
-      "sendFeedbackThankYou": "¡Gracias por tus comentarios! Apreciamos tu opinión.",
       "rateApp": "Calificar App",
       "rateAppDesc": "Califica Homiio en la tienda de aplicaciones",
-      "rateAppMessage": "¿Disfrutando Homiio? ¡Por favor toma un momento para calificarnos en la tienda de aplicaciones!",
-      "rateAppThankYou": "¡Gracias por calificar Homiio!"
+      "rateAppMessage": "¿Disfrutando Homiio? ¡Por favor toma un momento para calificarnos en la tienda de aplicaciones!"
     },
     "preferences": {
       "notifications": "Notificaciones",
       "notificationsDesc": "Gestionar notificaciones push",
-      "darkMode": "Modo Oscuro",
-      "darkModeDesc": "Cambiar entre temas claro y oscuro",
       "autoSync": "Sincronización Automática",
       "autoSyncDesc": "Sincronizar datos automáticamente en segundo plano",
       "offlineMode": "Modo Sin Conexión",
       "offlineModeDesc": "Usar la aplicación sin conexión a internet",
-      "currency": "Moneda",
-      "currencyDesc": "Selecciona tu moneda preferida"
-    },
-    "quickActions": {
-      "createProperty": "Crear Propiedad",
-      "createPropertyDesc": "Agregar una nueva lista de propiedad",
-      "searchProperties": "Buscar Propiedades",
-      "searchPropertiesDesc": "Encontrar propiedades en tu área"
+      "currency": "Moneda"
     },
     "data": {
       "exportData": "Exportar Datos",
@@ -2171,9 +2112,6 @@
     "language": {
       "title": "Language",
       "choose": "Elige un idioma",
-      "footer": "Cambiar el idioma actualiza las etiquetas de la app al instante.",
-      "emptyTitle": "No se encontraron idiomas",
-      "emptyDescription": "No hay opciones de idioma disponibles",
       "subtitle": "Select your preferred language"
     },
     "notifications": {
@@ -2470,7 +2408,8 @@
       "landlordApplications": "Bandeja de solicitudes",
       "insights": "Insights",
       "evictions": "Desahucios",
-      "reviews": "Reseñas"
+      "reviews": "Reseñas",
+      "myHome": "Mi hogar"
     },
     "actions": {
       "addProperty": "Agregar Propiedad",
@@ -2841,10 +2780,7 @@
         "thanks": "Gracias por tu reseña",
         "failed": "No se pudo enviar la reseña",
         "starLabel": "{{count}} estrellas",
-        "alreadyLeft": "Ya has reseñado este intercambio.",
-        "profileHeading": "Reseñas de intercambio",
-        "summary": "{{average}} · {{count}} reseñas",
-        "guestAuthor": "Huésped de intercambio"
+        "alreadyLeft": "Ya has reseñado este intercambio."
       }
     },
     "badge": {
@@ -3046,7 +2982,6 @@
       "accessibility": "Solicitud {{id}}"
     },
     "toast": {
-      "openDocumentFailed": "No se pudo abrir el documento.",
       "withdrawn": "Solicitud retirada",
       "withdrawFailed": "No se pudo retirar la solicitud"
     },
@@ -3542,8 +3477,6 @@
   },
   "subscriptions": {
     "title": "Suscripciones",
-    "alertError": "Error",
-    "alertSuccess": "Éxito",
     "authRequired": "Autenticación requerida",
     "checkoutFailed": "No se pudo iniciar el pago",
     "portalFailed": "No se pudo abrir la gestión de suscripciones",
@@ -3553,28 +3486,10 @@
     "cancelFailed": "No se pudo cancelar la suscripción",
     "cancelEndOfPeriodSuccess": "La suscripción se cancelará al final del periodo actual",
     "debugFailed": "No se pudo depurar la suscripción",
-    "plusActive": "Homiio Plus active",
-    "plusInactive": "Upgrade to Homiio Plus",
-    "manage": "Manage subscription",
     "sync": "Sync from Stripe",
     "cancel": "Cancel subscription",
     "cancelImmediate": "Cancel immediately",
     "cancelEndOfPeriod": "Cancel at period end",
-    "fileCredits": "{{count}} file credits",
-    "since": "Member since {{date}}",
-    "canceledOn": "Canceled on {{date}}",
-    "lastPayment": "Last payment {{date}}",
-    "products": {
-      "plus": "Homiio Plus",
-      "plusDescription": "Priority support and premium features",
-      "file": "File credits",
-      "fileDescription": "Extra document storage credits",
-      "founder": "Founder",
-      "founderDescription": "Support Homiio and unlock founder perks"
-    },
-    "subscribe": "Subscribe",
-    "buyCredits": "Buy credits",
-    "becomeFounder": "Become a founder",
     "page": {
       "headerTitle": "Homiio+",
       "headerSubtitle": "Tu aliado de vivienda ética",
@@ -3605,8 +3520,6 @@
         "becomeSupporter": "Hazte patrocinador"
       },
       "footer": "Cada euro mantiene Homiio ético, independiente y orientado a la comunidad.",
-      "starting": "Iniciando…",
-      "back": "Volver",
       "notAvailable": "N/D",
       "cancelImmediateTitle": "Cancelar inmediatamente",
       "cancelImmediateBody": "Esto cancelará tu suscripción de inmediato y perderás el acceso a las funciones de Homiio+. ¿Estás seguro?",
@@ -3634,7 +3547,6 @@
       "legendConfirmed": "Confirmada",
       "legendPending": "Pendiente",
       "legendBlocked": "Bloqueada",
-      "legendAvailable": "Disponible",
       "availabilityError": "No se pudo cargar la disponibilidad",
       "blockTitle": "Bloquear estas fechas",
       "blockBodyRange": "Bloquear del {{start}} al {{end}}.",
@@ -3662,7 +3574,6 @@
       "toastConfirmed": "Reserva confirmada",
       "toastDeclined": "Reserva rechazada",
       "toastUpdateFailed": "No se pudo actualizar",
-      "confirm": "Confirmar",
       "decline": "Rechazar",
       "approve": "Aprobar",
       "view": "Ver",
@@ -4101,7 +4012,6 @@
     },
     "empty": {
       "title": "Aún no hay desahucios aquí",
-      "subtitle": "Cuando alguien avisa de un desahucio, aparece aquí para que el barrio pueda organizarse.",
       "scoped": "Nothing reported in this area yet. Widen the area, or post a case so neighbours can organise."
     },
     "detail": {
@@ -4112,14 +4022,12 @@
       "where": "Dónde",
       "timeline": "Novedades",
       "comments": "Comentarios",
-      "approximateNotice": "La dirección exacta está oculta: este punto es aproximado para proteger a la familia.",
       "share": "Compartir",
       "shareCopied": "Enlace copiado al portapapeles",
       "shareFailed": "No se pudo compartir",
       "instructions": "Instrucciones",
       "contactFailed": "No se pudo abrir el enlace",
       "noContact": "No se han compartido datos de contacto para este caso.",
-      "contactLockedNotice": "Confirma tu asistencia para ver el punto de encuentro y el contacto del organizador.",
       "contact": {
         "phone": "Llamar",
         "whatsapp": "WhatsApp",
@@ -4208,8 +4116,6 @@
       "labelPlaceholder": "Calle o zona (sin número de piso)",
       "cityLabel": "Ciudad",
       "cityPlaceholder": "p. ej. Barcelona",
-      "approximateLabel": "Mostrar solo la ubicación aproximada",
-      "approximateHint": "Redondea el punto para no señalar la vivienda exacta.",
       "whenSection": "Cuándo",
       "dateLabel": "Fecha",
       "timeLabel": "Hora",
@@ -4270,7 +4176,6 @@
     },
     "timeline": {
       "empty": "Nothing has changed yet.",
-      "byline": "{{actor}} · {{when}}",
       "systemActor": "Homiio",
       "organizerActor": "The organiser",
       "event": {
@@ -4315,7 +4220,8 @@
         "emergency_housing": "Emergency housing",
         "official_info": "Official information"
       }
-    }
+    },
+    "privacyNote": "Para proteger a la familia, un caso solo muestra una calle sin número, un barrio o una zona aproximada."
   },
   "agency": {
     "title": "Agencia",
@@ -4520,5 +4426,12 @@
   },
   "map": {
     "clusterLabel": "Grupo en el mapa: {{count}}. Acerca el mapa para ver cada marcador."
+  },
+  "myHome": {
+    "signInTitle": "Inicia sesión para ver tu hogar",
+    "signInDescription": "Tu contrato, el alquiler y los documentos aparecen aquí al iniciar sesión.",
+    "emptyTitle": "No tienes ningún alquiler activo",
+    "emptyDescription": "Aquí verás el contrato que alquilas cuando esté activo.",
+    "viewContract": "Ver contrato"
   }
 }
