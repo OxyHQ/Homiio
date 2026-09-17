@@ -505,9 +505,7 @@
     "searchQuery": "Search Query",
     "searchName": "Search Name",
     "searchNamePlaceholder": "Enter a name for this search",
-    "enableNotifications": "Enable notifications",
     "notificationsDescription": "Get notified when new properties match this search",
-    "disableNotifications": "Disable notifications",
     "withFilters": "With filters",
     "error": {
       "title": "Could not load properties"
@@ -668,17 +666,7 @@
         "createNew": "Create New Search",
         "viewAllCount": "View All ({{count}} more)",
         "notifications": "Notifications",
-        "editTitle": "Edit Search",
-        "nameLabel": "Search Name",
-        "namePlaceholder": "Enter a name for this search",
-        "queryLabel": "Search Query",
-        "queryPlaceholder": "Enter your search query",
-        "notificationsToggle": "Enable notifications",
-        "notificationsHelper": "Get notified when new properties match this search",
-        "nameRequired": "Search name is required",
-        "queryRequired": "Search query is required",
         "nameAndQueryRequired": "Search name and query are required",
-        "invalidSearch": "Invalid saved search",
         "loading": "Loading saved searches…",
         "loadFailed": "Failed to load saved searches",
         "loadError": "Could not load your saved searches",
@@ -688,10 +676,7 @@
         "updateFailed": "Failed to update search",
         "deleteSuccess": "Search deleted",
         "deleteSuccessNamed": "Search \"{{name}}\" deleted",
-        "deleteFailed": "Failed to delete search",
-        "notificationsEnabled": "Notifications enabled",
-        "notificationsDisabled": "Notifications disabled",
-        "notificationsFailed": "Failed to update notifications"
+        "deleteFailed": "Failed to delete search"
       }
     },
     "editSearch": "Edit Search",
@@ -2146,16 +2131,8 @@
     "loadFailed": "We couldn't load this folder",
     "noPropertiesDescription": "Save properties to see them here.",
     "adjustFilters": "Try a different filter or clear your search.",
-    "noProperties": "No saved properties",
-    "noResults": "No matches",
     "createFolder": "Create folder",
     "noFoldersDescription": "Create folders to organise the places you like.",
-    "noFolders": "No folders yet",
-    "tabs": {
-      "recent": "Recent",
-      "folders": "Folders",
-      "label": "Saved view"
-    },
     "searchPlaceholder": "Search saved properties",
     "header": "Saved",
     "notes": {
@@ -2194,7 +2171,39 @@
       "thisWeek": "এই সপ্তাহ",
       "withNotes": "নোটসহ"
     },
-    "openFolder": "{{name}} ফোল্ডার খুলুন"
+    "openFolder": "{{name}} ফোল্ডার খুলুন",
+    "sections": {
+      "searches": "সংরক্ষিত অনুসন্ধান",
+      "searchesDescription": "আবার চালাতে একটি অনুসন্ধান খুলুন, বা এটি কীভাবে সতর্ক করে তা বদলান।",
+      "trips": "আসন্ন থাকা ও বিনিময়",
+      "folders": "ফোল্ডার",
+      "homes": "সংরক্ষিত বাড়ি"
+    },
+    "groups": {
+      "long_term": "ভাড়ার জন্য",
+      "short_term": "ছুটির ভাড়া",
+      "sale": "বিক্রির জন্য",
+      "exchange": "বিনিময়"
+    },
+    "search": {
+      "alertsCadence": "সতর্কতা: {{cadence}}",
+      "alertsOff": "সতর্কতা বন্ধ",
+      "alertsPaused": "সতর্কতা বিরত",
+      "alertsInactive": "সতর্কতা এখনো চালু হতে পারে না",
+      "needsPlaceTitle": "আপনি কোন জায়গা বোঝাতে চেয়েছিলেন?",
+      "needsPlaceDescription": "“{{name}}” জায়গাগুলো সঠিকভাবে সংরক্ষণ শুরুর আগে সংরক্ষিত হয়েছিল, তাই এটি যেমন আছে তেমন আবার খোলা যায় না। জায়গাটি আবার বেছে নিন এবং অনুসন্ধানটি সংরক্ষণ করুন।",
+      "choosePlace": "একটি জায়গা বেছে নিন",
+      "unshareableTitle": "এই অনুসন্ধান এখানে খোলা যায় না",
+      "unshareableDescription": "“{{name}}” একটি আঁকা এলাকা জুড়ে, যা এখনো লিংক থেকে আবার খোলা যায় না।"
+    },
+    "trips": {
+      "allStays": "সব থাকা",
+      "allSwaps": "সব বিনিময়ের অনুরোধ"
+    },
+    "folders": {
+      "deleteTitle": "ফোল্ডার মুছুন",
+      "deleteMessage": "“{{name}}” মুছবেন? এর ভেতরের বাড়িগুলো সংরক্ষিতই থাকবে।"
+    }
   },
   "imageUpload": {
     "permissionTitle": "Permission Required",

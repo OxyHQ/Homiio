@@ -208,7 +208,6 @@ export interface UseSavedSearches {
       notificationsEnabled?: boolean;
     },
   ) => Promise<boolean>;
-  toggleNotifications: (searchId: string, enabled: boolean) => Promise<boolean>;
   /**
    * Change what a watch listens for, how often it may speak, and through which
    * channels (#356).
@@ -477,32 +476,6 @@ export const useSavedSearches = (): UseSavedSearches => {
     },
   });
 
-  const toggleNotificationsMutation = useMutation({
-    mutationKey: ['toggleSearchNotifications'],
-    mutationFn: async (vars: { searchId: string; enabled: boolean }): Promise<SavedSearch> => {
-      // The backend's `toggleSearchNotifications` reads `req.body.notificationsEnabled`,
-      // so the body key must match exactly (sending `{ enabled }` always persisted false).
-      const response = await api.put<SavedSearchPayload>(
-        `/api/profiles/me/saved-searches/${vars.searchId}/notifications`,
-        { notificationsEnabled: vars.enabled },
-      );
-      const payload = response.data;
-      const raw = Array.isArray(payload) ? (payload[0] ?? {}) : extractSearch(payload);
-      return normalizeSearch(raw, { id: vars.searchId });
-    },
-    onSuccess: (updated, vars) => {
-      upsertCachedSearch(updated);
-      toast.success(
-        vars.enabled
-          ? t('search.widgets.savedSearches.notificationsEnabled')
-          : t('search.widgets.savedSearches.notificationsDisabled'),
-      );
-    },
-    onError: (error: unknown) => {
-      toast.error(getErrorMessage(error, t('search.widgets.savedSearches.notificationsFailed')));
-    },
-  });
-
   const saveSearch = useCallback(
     async (
       name: string,
@@ -596,22 +569,6 @@ export const useSavedSearches = (): UseSavedSearches => {
       }
     },
     [updateSearchMutation],
-  );
-
-  const toggleNotifications = useCallback(
-    async (searchId: string, enabled: boolean): Promise<boolean> => {
-      if (!searchId) {
-        toast.error(t('search.widgets.savedSearches.invalidSearch'));
-        return false;
-      }
-      try {
-        await toggleNotificationsMutation.mutateAsync({ searchId, enabled });
-        return true;
-      } catch {
-        return false;
-      }
-    },
-    [toggleNotificationsMutation, t],
   );
 
   const alertSettingsMutation = useMutation({
@@ -710,7 +667,6 @@ export const useSavedSearches = (): UseSavedSearches => {
     saveSearch,
     deleteSavedSearch,
     updateSearch,
-    toggleNotifications,
     updateAlertSettings,
     setPrimaryArea,
     searchExists,

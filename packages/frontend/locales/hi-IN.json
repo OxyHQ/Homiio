@@ -505,9 +505,7 @@
     "searchQuery": "Search Query",
     "searchName": "Search Name",
     "searchNamePlaceholder": "Enter a name for this search",
-    "enableNotifications": "Enable notifications",
     "notificationsDescription": "Get notified when new properties match this search",
-    "disableNotifications": "Disable notifications",
     "withFilters": "With filters",
     "error": {
       "title": "Could not load properties"
@@ -668,17 +666,7 @@
         "createNew": "Create New Search",
         "viewAllCount": "View All ({{count}} more)",
         "notifications": "Notifications",
-        "editTitle": "Edit Search",
-        "nameLabel": "Search Name",
-        "namePlaceholder": "Enter a name for this search",
-        "queryLabel": "Search Query",
-        "queryPlaceholder": "Enter your search query",
-        "notificationsToggle": "Enable notifications",
-        "notificationsHelper": "Get notified when new properties match this search",
-        "nameRequired": "Search name is required",
-        "queryRequired": "Search query is required",
         "nameAndQueryRequired": "Search name and query are required",
-        "invalidSearch": "Invalid saved search",
         "loading": "Loading saved searches…",
         "loadFailed": "Failed to load saved searches",
         "loadError": "Could not load your saved searches",
@@ -688,10 +676,7 @@
         "updateFailed": "Failed to update search",
         "deleteSuccess": "Search deleted",
         "deleteSuccessNamed": "Search \"{{name}}\" deleted",
-        "deleteFailed": "Failed to delete search",
-        "notificationsEnabled": "Notifications enabled",
-        "notificationsDisabled": "Notifications disabled",
-        "notificationsFailed": "Failed to update notifications"
+        "deleteFailed": "Failed to delete search"
       }
     },
     "editSearch": "Edit Search",
@@ -2146,16 +2131,8 @@
     "loadFailed": "We couldn't load this folder",
     "noPropertiesDescription": "Save properties to see them here.",
     "adjustFilters": "Try a different filter or clear your search.",
-    "noProperties": "No saved properties",
-    "noResults": "No matches",
     "createFolder": "Create folder",
     "noFoldersDescription": "Create folders to organise the places you like.",
-    "noFolders": "No folders yet",
-    "tabs": {
-      "recent": "Recent",
-      "folders": "Folders",
-      "label": "Saved view"
-    },
     "searchPlaceholder": "Search saved properties",
     "header": "Saved",
     "notes": {
@@ -2194,7 +2171,39 @@
       "thisWeek": "इस सप्ताह",
       "withNotes": "नोट वाले"
     },
-    "openFolder": "फ़ोल्डर {{name}} खोलें"
+    "openFolder": "फ़ोल्डर {{name}} खोलें",
+    "sections": {
+      "searches": "सहेजी गई खोजें",
+      "searchesDescription": "किसी खोज को दोबारा चलाने के लिए खोलें, या उसके अलर्ट बदलें।",
+      "trips": "आगामी ठहराव और अदला-बदली",
+      "folders": "फ़ोल्डर",
+      "homes": "सहेजे गए घर"
+    },
+    "groups": {
+      "long_term": "किराये पर",
+      "short_term": "छुट्टियों का किराया",
+      "sale": "बिक्री के लिए",
+      "exchange": "अदला-बदली"
+    },
+    "search": {
+      "alertsCadence": "अलर्ट: {{cadence}}",
+      "alertsOff": "अलर्ट बंद",
+      "alertsPaused": "अलर्ट रुके हुए हैं",
+      "alertsInactive": "अलर्ट अभी नहीं चल सकते",
+      "needsPlaceTitle": "आपका मतलब कौन-सी जगह से था?",
+      "needsPlaceDescription": "“{{name}}” तब सहेजी गई थी जब जगहें सटीक रूप से संग्रहीत नहीं होती थीं, इसलिए इसे जैसे का तैसा दोबारा नहीं खोला जा सकता। जगह फिर से चुनें और खोज सहेजें।",
+      "choosePlace": "जगह चुनें",
+      "unshareableTitle": "यह खोज यहाँ नहीं खोली जा सकती",
+      "unshareableDescription": "“{{name}}” एक खींचे गए क्षेत्र को कवर करती है, जिसे अभी लिंक से दोबारा नहीं खोला जा सकता।"
+    },
+    "trips": {
+      "allStays": "सभी ठहराव",
+      "allSwaps": "सभी अदला-बदली अनुरोध"
+    },
+    "folders": {
+      "deleteTitle": "फ़ोल्डर हटाएँ",
+      "deleteMessage": "“{{name}}” हटाएँ? इसमें रखे घर सहेजे ही रहेंगे।"
+    }
   },
   "imageUpload": {
     "permissionTitle": "Permission Required",

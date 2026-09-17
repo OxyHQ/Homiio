@@ -505,9 +505,7 @@
     "searchQuery": "Search Query",
     "searchName": "Search Name",
     "searchNamePlaceholder": "Enter a name for this search",
-    "enableNotifications": "Enable notifications",
     "notificationsDescription": "Get notified when new properties match this search",
-    "disableNotifications": "Disable notifications",
     "withFilters": "With filters",
     "error": {
       "title": "Could not load properties"
@@ -668,17 +666,7 @@
         "createNew": "Create New Search",
         "viewAllCount": "View All ({{count}} more)",
         "notifications": "Notifications",
-        "editTitle": "Edit Search",
-        "nameLabel": "Search Name",
-        "namePlaceholder": "Enter a name for this search",
-        "queryLabel": "Search Query",
-        "queryPlaceholder": "Enter your search query",
-        "notificationsToggle": "Enable notifications",
-        "notificationsHelper": "Get notified when new properties match this search",
-        "nameRequired": "Search name is required",
-        "queryRequired": "Search query is required",
         "nameAndQueryRequired": "Search name and query are required",
-        "invalidSearch": "Invalid saved search",
         "loading": "Loading saved searches…",
         "loadFailed": "Failed to load saved searches",
         "loadError": "Could not load your saved searches",
@@ -688,10 +676,7 @@
         "updateFailed": "Failed to update search",
         "deleteSuccess": "Search deleted",
         "deleteSuccessNamed": "Search \"{{name}}\" deleted",
-        "deleteFailed": "Failed to delete search",
-        "notificationsEnabled": "Notifications enabled",
-        "notificationsDisabled": "Notifications disabled",
-        "notificationsFailed": "Failed to update notifications"
+        "deleteFailed": "Failed to delete search"
       }
     },
     "editSearch": "Edit Search",
@@ -2146,16 +2131,8 @@
     "loadFailed": "We couldn't load this folder",
     "noPropertiesDescription": "Save properties to see them here.",
     "adjustFilters": "Try a different filter or clear your search.",
-    "noProperties": "No saved properties",
-    "noResults": "No matches",
     "createFolder": "Create folder",
     "noFoldersDescription": "Create folders to organise the places you like.",
-    "noFolders": "No folders yet",
-    "tabs": {
-      "recent": "Recent",
-      "folders": "Folders",
-      "label": "Saved view"
-    },
     "searchPlaceholder": "Search saved properties",
     "header": "Saved",
     "notes": {
@@ -2194,7 +2171,39 @@
       "thisWeek": "Cette semaine",
       "withNotes": "Avec notes"
     },
-    "openFolder": "Ouvrir le dossier {{name}}"
+    "openFolder": "Ouvrir le dossier {{name}}",
+    "sections": {
+      "searches": "Recherches enregistrées",
+      "searchesDescription": "Ouvrez une recherche pour la relancer ou modifiez ses alertes.",
+      "trips": "Séjours et échanges à venir",
+      "folders": "Dossiers",
+      "homes": "Logements enregistrés"
+    },
+    "groups": {
+      "long_term": "À louer",
+      "short_term": "Locations de vacances",
+      "sale": "À vendre",
+      "exchange": "Échanges"
+    },
+    "search": {
+      "alertsCadence": "Alertes : {{cadence}}",
+      "alertsOff": "Alertes désactivées",
+      "alertsPaused": "Alertes en pause",
+      "alertsInactive": "Les alertes ne peuvent pas encore fonctionner",
+      "needsPlaceTitle": "De quel lieu s'agit-il ?",
+      "needsPlaceDescription": "« {{name}} » a été enregistrée avant que les lieux ne soient mémorisés précisément, elle ne peut donc pas être rouverte telle quelle. Choisissez à nouveau le lieu et enregistrez la recherche.",
+      "choosePlace": "Choisir un lieu",
+      "unshareableTitle": "Cette recherche ne peut pas être ouverte ici",
+      "unshareableDescription": "« {{name}} » couvre une zone dessinée qui ne peut pas encore être rouverte depuis un lien."
+    },
+    "trips": {
+      "allStays": "Tous les séjours",
+      "allSwaps": "Toutes les demandes d'échange"
+    },
+    "folders": {
+      "deleteTitle": "Supprimer le dossier",
+      "deleteMessage": "Supprimer « {{name}} » ? Les logements qu'il contient restent enregistrés."
+    }
   },
   "imageUpload": {
     "permissionTitle": "Permission Required",

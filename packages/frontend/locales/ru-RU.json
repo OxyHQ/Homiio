@@ -505,9 +505,7 @@
     "searchQuery": "Search Query",
     "searchName": "Search Name",
     "searchNamePlaceholder": "Enter a name for this search",
-    "enableNotifications": "Enable notifications",
     "notificationsDescription": "Get notified when new properties match this search",
-    "disableNotifications": "Disable notifications",
     "withFilters": "With filters",
     "error": {
       "title": "Could not load properties"
@@ -670,17 +668,7 @@
         "createNew": "Create New Search",
         "viewAllCount": "View All ({{count}} more)",
         "notifications": "Notifications",
-        "editTitle": "Edit Search",
-        "nameLabel": "Search Name",
-        "namePlaceholder": "Enter a name for this search",
-        "queryLabel": "Search Query",
-        "queryPlaceholder": "Enter your search query",
-        "notificationsToggle": "Enable notifications",
-        "notificationsHelper": "Get notified when new properties match this search",
-        "nameRequired": "Search name is required",
-        "queryRequired": "Search query is required",
         "nameAndQueryRequired": "Search name and query are required",
-        "invalidSearch": "Invalid saved search",
         "loading": "Loading saved searches…",
         "loadFailed": "Failed to load saved searches",
         "loadError": "Could not load your saved searches",
@@ -690,10 +678,7 @@
         "updateFailed": "Failed to update search",
         "deleteSuccess": "Search deleted",
         "deleteSuccessNamed": "Search \"{{name}}\" deleted",
-        "deleteFailed": "Failed to delete search",
-        "notificationsEnabled": "Notifications enabled",
-        "notificationsDisabled": "Notifications disabled",
-        "notificationsFailed": "Failed to update notifications"
+        "deleteFailed": "Failed to delete search"
       }
     },
     "editSearch": "Edit Search",
@@ -2150,16 +2135,8 @@
     "loadFailed": "We couldn't load this folder",
     "noPropertiesDescription": "Save properties to see them here.",
     "adjustFilters": "Try a different filter or clear your search.",
-    "noProperties": "No saved properties",
-    "noResults": "No matches",
     "createFolder": "Create folder",
     "noFoldersDescription": "Create folders to organise the places you like.",
-    "noFolders": "No folders yet",
-    "tabs": {
-      "recent": "Recent",
-      "folders": "Folders",
-      "label": "Saved view"
-    },
     "searchPlaceholder": "Search saved properties",
     "header": "Saved",
     "notes": {
@@ -2198,7 +2175,39 @@
       "thisWeek": "На этой неделе",
       "withNotes": "С заметками"
     },
-    "openFolder": "Открыть папку {{name}}"
+    "openFolder": "Открыть папку {{name}}",
+    "sections": {
+      "searches": "Сохранённые поиски",
+      "searchesDescription": "Откройте поиск, чтобы запустить его снова, или измените оповещения.",
+      "trips": "Предстоящие поездки и обмены",
+      "folders": "Папки",
+      "homes": "Сохранённое жильё"
+    },
+    "groups": {
+      "long_term": "Аренда",
+      "short_term": "Посуточная аренда",
+      "sale": "Продажа",
+      "exchange": "Обмен"
+    },
+    "search": {
+      "alertsCadence": "Оповещения: {{cadence}}",
+      "alertsOff": "Оповещения выключены",
+      "alertsPaused": "Оповещения приостановлены",
+      "alertsInactive": "Оповещения пока не могут работать",
+      "needsPlaceTitle": "Какое место вы имели в виду?",
+      "needsPlaceDescription": "«{{name}}» сохранён до того, как мы стали точно хранить места, поэтому его нельзя открыть как есть. Выберите место заново и сохраните поиск.",
+      "choosePlace": "Выбрать место",
+      "unshareableTitle": "Этот поиск нельзя открыть здесь",
+      "unshareableDescription": "«{{name}}» охватывает нарисованную область, которую пока нельзя открыть по ссылке."
+    },
+    "trips": {
+      "allStays": "Все поездки",
+      "allSwaps": "Все запросы на обмен"
+    },
+    "folders": {
+      "deleteTitle": "Удалить папку",
+      "deleteMessage": "Удалить «{{name}}»? Жильё из неё останется в сохранённом."
+    }
   },
   "imageUpload": {
     "permissionTitle": "Permission Required",

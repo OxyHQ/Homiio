@@ -20,7 +20,7 @@
  * second before flipping the first and finding out nothing happens.
  */
 
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -32,6 +32,7 @@ import { Loading } from '@oxy.so/bloom/loading';
 import { RadioGroup } from '@oxy.so/bloom/radio';
 import { SettingsListGroup, SettingsListItem } from '@oxy.so/bloom/settings-list';
 import { Switch } from '@oxy.so/bloom/switch';
+import { TextFieldInput } from '@oxy.so/bloom/text-field';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { H3, Text as BloomText } from '@oxy.so/bloom/typography';
 import {
@@ -46,6 +47,7 @@ import { Header } from '@/components/Header';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { contentClamp, spacing } from '@/constants/styles';
 import { useSavedSearches } from '@/hooks/useSavedSearches';
+import type { SavedSearch } from '@/store/savedSearchesStore';
 
 /** How long "pause" pauses for. One week — long enough to be a real break. */
 const MUTE_DURATION_MS = 7 * 24 * 60 * 60 * 1000;
@@ -145,6 +147,9 @@ export default function WatchAlertSettingsScreen() {
           <Admonition type="warning">{t(`alerts.settings.inactive.${inactiveReason}`)}</Admonition>
         ) : null}
 
+        {/* Keyed on the watch so the field seeds from the loaded row. */}
+        <RenameCard key={watch.id} watch={watch} />
+
         <Card variant="outlined" radius="radius-16" style={styles.card}>
           <H3>{t('alerts.settings.cadence')}</H3>
           <BloomText style={{ color: theme.colors.textSecondary }}>
@@ -235,6 +240,46 @@ export default function WatchAlertSettingsScreen() {
   );
 }
 
+/** The saved search's name — the one field the old rail edit dialog had that this screen lacked. */
+function RenameCard({ watch }: { watch: SavedSearch }) {
+  const { t } = useTranslation();
+  const { updateSearch } = useSavedSearches();
+  const [name, setName] = useState(watch.name);
+  const [saving, setSaving] = useState(false);
+  const trimmed = name.trim();
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      // The hook toasts success, a taken name and any other failure.
+      await updateSearch(watch.id, { name: trimmed });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Card variant="outlined" radius="radius-16" style={styles.card}>
+      <TextFieldInput
+        label={t('common.name')}
+        value={name}
+        onChangeText={setName}
+        maxLength={60}
+        disabled={saving}
+      />
+      <Button
+        variant="secondary"
+        onPress={() => void save()}
+        loading={saving}
+        disabled={saving || !trimmed || trimmed === watch.name}
+        style={styles.saveName}
+      >
+        {t('common.save')}
+      </Button>
+    </Card>
+  );
+}
+
 const styles = StyleSheet.create({
   root: { flex: 1 },
   content: {
@@ -246,5 +291,6 @@ const styles = StyleSheet.create({
     paddingBottom: spacing['6xl'],
   },
   card: { padding: spacing.lg, gap: spacing.md },
+  saveName: { alignSelf: 'flex-start' },
   loading: { paddingVertical: spacing['3xl'] },
 });

@@ -767,17 +767,7 @@
         "createNew": "Crea nuova ricerca",
         "viewAllCount": "Mostra tutto ({{count}} in più)",
         "notifications": "Notifiche",
-        "editTitle": "Modifica ricerca",
-        "nameLabel": "Nome della ricerca",
-        "namePlaceholder": "Inserisci un nome per questa ricerca",
-        "queryLabel": "Query di ricerca",
-        "queryPlaceholder": "Inserisci la tua query di ricerca",
-        "notificationsToggle": "Attiva le notifiche",
-        "notificationsHelper": "Ricevi una notifica quando nuovi immobili corrispondono a questa ricerca",
-        "nameRequired": "Il nome della ricerca è obbligatorio",
-        "queryRequired": "La query di ricerca è obbligatoria",
         "nameAndQueryRequired": "Il nome e la query di ricerca sono obbligatori",
-        "invalidSearch": "Ricerca salvata non valida",
         "loading": "Caricamento ricerche salvate…",
         "loadFailed": "Impossibile caricare le ricerche salvate",
         "loadError": "Impossibile caricare le tue ricerche salvate",
@@ -787,10 +777,7 @@
         "updateFailed": "Impossibile aggiornare la ricerca",
         "deleteSuccess": "Ricerca eliminata",
         "deleteSuccessNamed": "Ricerca «{{name}}» eliminata",
-        "deleteFailed": "Impossibile eliminare la ricerca",
-        "notificationsEnabled": "Notifiche attivate",
-        "notificationsDisabled": "Notifiche disattivate",
-        "notificationsFailed": "Impossibile aggiornare le notifiche"
+        "deleteFailed": "Impossibile eliminare la ricerca"
       }
     },
     "editSearch": "Modifica ricerca",
@@ -806,9 +793,7 @@
     "searchQuery": "Search Query",
     "searchName": "Search Name",
     "searchNamePlaceholder": "Enter a name for this search",
-    "enableNotifications": "Enable notifications",
     "notificationsDescription": "Get notified when new properties match this search",
-    "disableNotifications": "Disable notifications",
     "withFilters": "With filters",
     "error": {
       "title": "Impossibile caricare gli immobili"
@@ -2517,15 +2502,6 @@
       "alphabetical": "Alfabetico"
     },
     "header": "Saved",
-    "tabs": {
-      "all": "All",
-      "recent": "Recent",
-      "noted": "With Notes",
-      "quickSaves": "Quick Saves",
-      "folders": "Folders",
-      "searches": "Saved Searches",
-      "label": "Saved view"
-    },
     "view": {
       "list": "List",
       "grid": "Grid"
@@ -2577,11 +2553,40 @@
     "exploreCta": "Explore properties",
     "loadFailed": "We couldn't load this folder",
     "noPropertiesDescription": "Save properties to see them here.",
-    "noProperties": "No saved properties",
-    "noResults": "No matches",
     "createFolder": "Create folder",
     "noFoldersDescription": "Create folders to organise the places you like.",
-    "noFolders": "No folders yet"
+    "sections": {
+      "searches": "Ricerche salvate",
+      "searchesDescription": "Apri una ricerca per ripeterla o modifica come ti avvisa.",
+      "trips": "Prossimi soggiorni e scambi",
+      "folders": "Cartelle",
+      "homes": "Case salvate"
+    },
+    "groups": {
+      "long_term": "In affitto",
+      "short_term": "Affitti per vacanze",
+      "sale": "In vendita",
+      "exchange": "Scambi"
+    },
+    "search": {
+      "alertsCadence": "Avvisi: {{cadence}}",
+      "alertsOff": "Avvisi disattivati",
+      "alertsPaused": "Avvisi in pausa",
+      "alertsInactive": "Gli avvisi non possono ancora funzionare",
+      "needsPlaceTitle": "Quale luogo intendevi?",
+      "needsPlaceDescription": "«{{name}}» è stata salvata prima che i luoghi venissero memorizzati con precisione, quindi non può essere riaperta così com'è. Scegli di nuovo il luogo e salva la ricerca.",
+      "choosePlace": "Scegli un luogo",
+      "unshareableTitle": "Questa ricerca non può essere aperta qui",
+      "unshareableDescription": "«{{name}}» copre un'area disegnata che non può ancora essere riaperta da un link."
+    },
+    "trips": {
+      "allStays": "Tutti i soggiorni",
+      "allSwaps": "Tutte le richieste di scambio"
+    },
+    "folders": {
+      "deleteTitle": "Elimina cartella",
+      "deleteMessage": "Eliminare «{{name}}»? Le case al suo interno resteranno salvate."
+    }
   },
   "imageUpload": {
     "permissionTitle": "Permesso richiesto",

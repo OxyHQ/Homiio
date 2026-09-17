@@ -496,7 +496,6 @@
     "searchQuery": "Consulta de Cerca",
     "searchName": "Nom de Cerca",
     "searchNamePlaceholder": "Introdueix un nom per aquesta cerca",
-    "enableNotifications": "Habilitar Notificacions",
     "notificationsDescription": "Rep notificacions quan noves propietats coincideixin amb aquesta cerca",
     "withFilters": "Amb filtres",
     "error": {
@@ -655,17 +654,7 @@
         "createNew": "Crea una cerca nova",
         "viewAllCount": "Mostra-ho tot ({{count}} més)",
         "notifications": "Notificacions",
-        "editTitle": "Edita la cerca",
-        "nameLabel": "Nom de la cerca",
-        "namePlaceholder": "Introdueix un nom per a aquesta cerca",
-        "queryLabel": "Consulta de cerca",
-        "queryPlaceholder": "Introdueix la teva consulta de cerca",
-        "notificationsToggle": "Activa les notificacions",
-        "notificationsHelper": "Rep avisos quan noves propietats coincideixin amb aquesta cerca",
-        "nameRequired": "El nom de la cerca és obligatori",
-        "queryRequired": "La consulta de cerca és obligatòria",
         "nameAndQueryRequired": "El nom i la consulta de cerca són obligatoris",
-        "invalidSearch": "Cerca guardada no vàlida",
         "loading": "Carregant cerques guardades…",
         "loadFailed": "No s’han pogut carregar les cerques guardades",
         "loadError": "No s’han pogut carregar les teves cerques guardades",
@@ -675,10 +664,7 @@
         "updateFailed": "No s’ha pogut actualitzar la cerca",
         "deleteSuccess": "Cerca eliminada",
         "deleteSuccessNamed": "Cerca «{{name}}» eliminada",
-        "deleteFailed": "No s’ha pogut eliminar la cerca",
-        "notificationsEnabled": "Notificacions activades",
-        "notificationsDisabled": "Notificacions desactivades",
-        "notificationsFailed": "No s’han pogut actualitzar les notificacions"
+        "deleteFailed": "No s’ha pogut eliminar la cerca"
       }
     },
     "editSearch": "Edita la cerca",
@@ -689,7 +675,6 @@
       "suggestion3": "Discover eco-friendly properties...",
       "suggestion4": "Search for furnished studios near you..."
     },
-    "disableNotifications": "Disable notifications",
     "duplicateName": "A search with this name already exists",
     "duplicateExact": "You already saved this exact search",
     "tryDifferentName": "Please choose a different name",
@@ -2521,15 +2506,6 @@
       "oldest": "Més Antics Primer",
       "alphabetical": "Alfabètic"
     },
-    "tabs": {
-      "all": "All",
-      "recent": "Recent",
-      "noted": "With Notes",
-      "quickSaves": "Quick Saves",
-      "folders": "Folders",
-      "searches": "Saved Searches",
-      "label": "Saved view"
-    },
     "view": {
       "list": "List",
       "grid": "Grid"
@@ -2581,11 +2557,40 @@
     "exploreCta": "Explore properties",
     "loadFailed": "We couldn't load this folder",
     "noPropertiesDescription": "Save properties to see them here.",
-    "noProperties": "No saved properties",
-    "noResults": "No matches",
     "createFolder": "Create folder",
     "noFoldersDescription": "Create folders to organise the places you like.",
-    "noFolders": "No folders yet"
+    "sections": {
+      "searches": "Cerques desades",
+      "searchesDescription": "Obre una cerca per repetir-la o canvia com t'avisa.",
+      "trips": "Properes estades i intercanvis",
+      "folders": "Carpetes",
+      "homes": "Habitatges desats"
+    },
+    "groups": {
+      "long_term": "En lloguer",
+      "short_term": "Lloguer vacacional",
+      "sale": "En venda",
+      "exchange": "Intercanvis"
+    },
+    "search": {
+      "alertsCadence": "Alertes: {{cadence}}",
+      "alertsOff": "Alertes desactivades",
+      "alertsPaused": "Alertes en pausa",
+      "alertsInactive": "Les alertes encara no poden funcionar",
+      "needsPlaceTitle": "Quin lloc volies dir?",
+      "needsPlaceDescription": "«{{name}}» es va desar abans que desséssim els llocs amb exactitud, així que no es pot obrir tal com és. Torna a triar el lloc i desa la cerca.",
+      "choosePlace": "Tria un lloc",
+      "unshareableTitle": "Aquesta cerca no es pot obrir aquí",
+      "unshareableDescription": "«{{name}}» cobreix una zona dibuixada que encara no es pot obrir des d'un enllaç."
+    },
+    "trips": {
+      "allStays": "Totes les estades",
+      "allSwaps": "Totes les sol·licituds d'intercanvi"
+    },
+    "folders": {
+      "deleteTitle": "Elimina la carpeta",
+      "deleteMessage": "Vols eliminar «{{name}}»? Els habitatges que conté continuaran desats."
+    }
   },
   "imageUpload": {
     "permissionTitle": "Permís necessari",
