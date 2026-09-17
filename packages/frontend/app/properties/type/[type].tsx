@@ -3,7 +3,7 @@
  * (the `type` route param), e.g. `/properties/type/apartment`.
  *
  * Rebuilt as a sibling of the `/properties` browse screen: the shared
- * `PropertyListHeader` + `SearchActionPill` row (Filters / Sort) over a
+ * `PropertyListHeader` + Bloom `FilterTriggerButton` / `SortMenu` row over a
  * responsive `PropertyResultsGrid` of photo-carousel `PropertyCard`s, with the
  * shared skeleton / empty / error states.
  *
@@ -15,7 +15,7 @@
  * scroll, and removes the loading effect entirely (pure derived / React-Query
  * state).
  */
-import React, { useCallback, useContext, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { Platform, ScrollView, StyleSheet, View, type ViewStyle } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -26,20 +26,15 @@ import { PropertyResultsGridSkeleton } from '@/components/ui/PropertyResultsGrid
 import { LoadMoreSentinel } from '@/components/common/LoadMoreSentinel';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
-import { RiEqualizerLine, RiExpandUpDownLine, RiHomeLine } from '@oxy.so/bloom/icons';
-import { SearchActionPill } from '@/components/search/SearchActionPill';
-import { resolveSortLabel, SortControl } from '@/components/search/SortControl';
-import {
-  SearchFiltersBottomSheet,
-  type SearchFilters,
-} from '@/components/SearchFiltersBottomSheet';
-import type { FilterValue } from '@/components/FiltersBar/FiltersBottomSheet';
+import { RiEqualizerLine, RiHomeLine } from '@oxy.so/bloom/icons';
+import { FilterTriggerButton } from '@oxy.so/bloom/stay-filters';
+import { SortMenu } from '@/components/search/SortMenu';
+import { SearchFiltersDialog, countActiveFilters } from '@/components/search/SearchFiltersDialog';
 import type {
   SearchQuery,
   SearchSortBy,
   SearchSortOrder,
 } from '@/components/search/types';
-import { BottomSheetContext } from '@/context/BottomSheetContext';
 import { usePropertySearch } from '@/hooks/usePropertySearch';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import { DEFAULT_SEARCH_QUERY } from '@/store/searchQueryStore';
@@ -69,39 +64,11 @@ function useTypeName(): (typeId: string) => string {
   );
 }
 
-/** Mirror of `/properties` — flatten the active query into the sheet model. */
-function toSheetFilters(query: SearchQuery): SearchFilters {
-  return {
-    minPrice: query.priceMin ?? 0,
-    maxPrice: query.priceMax ?? 0,
-    bedrooms: query.bedrooms ?? 1,
-    bathrooms: query.bathrooms ?? 1,
-    type: query.propertyTypes[0],
-    amenities: query.amenities,
-    guests: query.guests,
-    checkIn: query.dates?.start,
-    checkOut: query.dates?.end,
-  };
-}
-
-/**
- * Count applied refinements for the Filters pill badge. The locked type is not
- * counted (it's the screen's identity, not a user refinement).
- */
-function countActiveFilters(query: SearchQuery): number {
-  let count = 0;
-  if (query.priceMin !== undefined || query.priceMax !== undefined) count += 1;
-  if (query.bedrooms !== undefined) count += 1;
-  if (query.bathrooms !== undefined) count += 1;
-  count += query.amenities.length;
-  return count;
-}
-
 export default function PropertyTypeScreen() {
   const { type } = useLocalSearchParams<{ type: string }>();
   const { t } = useTranslation();
   const router = useRouter();
-  const bottomSheet = useContext(BottomSheetContext);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const getTypeName = useTypeName();
 
   const typeId = typeof type === 'string' ? type : '';
@@ -132,10 +99,10 @@ export default function PropertyTypeScreen() {
     refetch,
   } = usePropertySearch(query);
 
-  const activeFilterCount = useMemo(() => countActiveFilters(query), [query]);
-  const sort = useMemo(
-    () => resolveSortLabel(query.sortBy, query.sortOrder, t),
-    [query.sortBy, query.sortOrder, t],
+  // The route owns the type, so it is neither offered nor counted.
+  const activeFilterCount = useMemo(
+    () => countActiveFilters(query, { includeTypes: false }),
+    [query],
   );
 
   const handlePropertyPress = useCallback(
@@ -145,85 +112,12 @@ export default function PropertyTypeScreen() {
     [router],
   );
 
-  const handleSheetFilterChange = useCallback(
-    (sectionId: string, value: FilterValue) => {
-      switch (sectionId) {
-        case 'price':
-          if (Array.isArray(value)) {
-            const [min, max] = value;
-            patchQuery({
-              priceMin: typeof min === 'number' && min > 0 ? min : undefined,
-              priceMax: typeof max === 'number' && max > 0 ? max : undefined,
-            });
-          }
-          return;
-        case 'bedrooms':
-          patchQuery({
-            bedrooms:
-              typeof value === 'string' || typeof value === 'number'
-                ? Number(value)
-                : undefined,
-          });
-          return;
-        case 'bathrooms':
-          patchQuery({
-            bathrooms:
-              typeof value === 'string' || typeof value === 'number'
-                ? Number(value)
-                : undefined,
-          });
-          return;
-        case 'amenities': {
-          if (typeof value !== 'string') return;
-          const current = query.amenities;
-          const next = current.includes(value)
-            ? current.filter((a) => a !== value)
-            : [...current, value];
-          patchQuery({ amenities: next });
-          return;
-        }
-        default:
-          return;
-      }
-    },
-    [patchQuery, query.amenities],
+  const handleFiltersPress = useCallback(() => setFiltersOpen(true), []);
+  const handleSortChange = useCallback(
+    (sortBy: SearchSortBy, sortOrder: SearchSortOrder) => patchQuery({ sortBy, sortOrder }),
+    [patchQuery],
   );
 
-  const handleFiltersPress = useCallback(() => {
-    bottomSheet.openBottomSheet(
-      <SearchFiltersBottomSheet
-        filters={toSheetFilters(query)}
-        onFilterChange={handleSheetFilterChange}
-        onApply={() => bottomSheet.closeBottomSheet()}
-        onClear={() => {
-          patchQuery({
-            priceMin: undefined,
-            priceMax: undefined,
-            bedrooms: undefined,
-            bathrooms: undefined,
-            amenities: [],
-          });
-          bottomSheet.closeBottomSheet();
-        }}
-      />,
-    );
-  }, [bottomSheet, query, handleSheetFilterChange, patchQuery]);
-
-  const handleSortPress = useCallback(() => {
-    bottomSheet.openBottomSheet(
-      <SortControl
-        sortBy={query.sortBy}
-        sortOrder={query.sortOrder}
-        onChange={(sortBy: SearchSortBy, sortOrder: SearchSortOrder) =>
-          patchQuery({ sortBy, sortOrder })
-        }
-        onClose={() => bottomSheet.closeBottomSheet()}
-      />,
-    );
-  }, [bottomSheet, query.sortBy, query.sortOrder, patchQuery]);
-
-  // Shared infinite-scroll primitive: native fires `onScroll` end-detect, web
-  // uses the `<LoadMoreSentinel>` at the grid's end (no hand-rolled distance math).
   const handleEndReached = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) {
       void fetchNextPage();
@@ -300,21 +194,12 @@ export default function PropertyTypeScreen() {
           style={styles.actionsScroll}
           contentContainerStyle={styles.actions}
         >
-          <SearchActionPill
-            label={t('search.actions.filters')}
-            icon={RiEqualizerLine}
-            active={activeFilterCount > 0}
+          <FilterTriggerButton
             count={activeFilterCount}
             onPress={handleFiltersPress}
-            accessibilityLabel={t('search.actions.filters')}
+            label={t('search.actions.filters')}
           />
-          <SearchActionPill
-            label={sort.isDefault ? t('search.actions.sort') : sort.label}
-            icon={RiExpandUpDownLine}
-            active={!sort.isDefault}
-            onPress={handleSortPress}
-            accessibilityLabel={`${t('search.actions.sort')}: ${sort.label}`}
-          />
+          <SortMenu sortBy={query.sortBy} sortOrder={query.sortOrder} onChange={handleSortChange} />
         </ScrollView>
         {body}
         {isFetchingNextPage ? (
@@ -322,6 +207,13 @@ export default function PropertyTypeScreen() {
         ) : null}
         <LoadMoreSentinel enabled={hasNextPage} onLoadMore={handleEndReached} />
       </ScrollView>
+      <SearchFiltersDialog
+        open={filtersOpen}
+        onClose={() => setFiltersOpen(false)}
+        query={query}
+        onApply={patchQuery}
+        showTypes={false}
+      />
     </View>
   );
 }

@@ -563,7 +563,18 @@
         "strict": "Strict",
         "superStrict": "Super strict"
       },
-      "fairPrice": "Fair price only"
+      "fairPrice": "Fair price only",
+      "options": "خيارات",
+      "rooms": "الغرف",
+      "show": "عرض المساكن",
+      "showMore": "عرض المزيد",
+      "showLess": "عرض أقل",
+      "showResults_zero": "عرض {{count}} مسكن",
+      "showResults_one": "عرض {{count}} مسكن",
+      "showResults_two": "عرض {{count}} مسكنين",
+      "showResults_few": "عرض {{count}} مساكن",
+      "showResults_many": "عرض {{count}} مسكنًا",
+      "showResults_other": "عرض {{count}} مسكن"
     },
     "mode": {
       "label": "Browse mode",
@@ -795,6 +806,18 @@
     },
     "area": {
       "stillShowing": "ما زلنا نعرض نتائج {{place}}"
+    },
+    "category": {
+      "previous": "الفئات السابقة",
+      "next": "الفئات التالية"
+    },
+    "guests": {
+      "adults": "البالغون",
+      "adultsDescription": "13 عامًا فأكثر",
+      "children": "الأطفال",
+      "childrenDescription": "من 2 إلى 12 عامًا",
+      "pets": "الحيوانات الأليفة",
+      "petsDescription": "المساكن التي تسمح بالحيوانات الأليفة فقط"
     }
   },
   "profile": {

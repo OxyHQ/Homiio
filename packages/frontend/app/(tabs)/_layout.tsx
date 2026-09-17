@@ -19,7 +19,7 @@
  * `NativeTabs` registers a screen ONLY for routes with a declared trigger
  * (expo-router builds the native navigator with `useOnlyUserDefinedScreens`), so
  * the explore experience lives OUTSIDE this group at `app/explore/` and stays
- * reachable at `/explore` (e.g. from `SearchSummaryBar`) without a bottom-bar tab.
+ * reachable at `/explore` (e.g. from the search composer) without a bottom-bar tab.
  * (The legacy `app/search/` route remains as a redirect to `/explore`.)
  *
  * Web has its own layout (`_layout.web.tsx`, a bare `<Slot/>`) because the web

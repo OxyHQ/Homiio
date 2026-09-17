@@ -43,9 +43,10 @@ import {
 } from '@homiio/shared-types';
 
 import { SearchResultsView } from '@/components/search/SearchResultsView';
-import { SearchPanel } from '@/components/search/SearchPanel';
+import { StaySearch } from '@/components/search/StaySearch';
 import { ErrorState } from '@/components/ui/ErrorState';
-import type { SearchQuery } from '@/components/search/types';
+import type { SearchQuery, SearchStep } from '@/components/search/types';
+import { spacing } from '@/constants/styles';
 import { useUserCoordinates } from '@/hooks/useHomeFeed';
 import {
   DEFAULT_SEARCH_QUERY,
@@ -120,7 +121,7 @@ export default function SearchScreen() {
   const { data: deviceFix } = useUserCoordinates();
 
   const query = useSearchQueryStore((s) => s.query);
-  const [panelOpen, setPanelOpen] = useState(false);
+  const [openStep, setOpenStep] = useState<SearchStep | null>(null);
   /**
    * A saved search whose place could not be read, awaiting the user's answer.
    *
@@ -333,13 +334,12 @@ export default function SearchScreen() {
     };
   }, [commitQuery]);
 
-  const handleEditSearch = useCallback(() => setPanelOpen(true), []);
-  const handleClosePanel = useCallback(() => setPanelOpen(false), []);
+  const handleEditSearch = useCallback(() => setOpenStep('where'), []);
 
   const handleSubmitSearch = useCallback(
     (next: SearchQuery) => {
+      setOpenStep(null);
       commitQuery(next);
-      setPanelOpen(false);
     },
     [commitQuery],
   );
@@ -351,15 +351,18 @@ export default function SearchScreen() {
 
   const handleRequireAuth = useCallback(() => router.push('/profile'), [router]);
 
-  // ONE panel for every state below: each of them offers "choose a place", and
-  // the results surface reopens it to edit the search.
+  // The composer heads every state below: each of them offers "choose a place",
+  // and it stays on screen so the area being asked about is always stated. The
+  // results surface draws its own inside its top bar.
   const searchPanel = (
-    <SearchPanel
-      open={panelOpen}
-      onClose={handleClosePanel}
-      initialQuery={query}
-      onSubmit={handleSubmitSearch}
-    />
+    <View style={styles.composer}>
+      <StaySearch
+        query={query}
+        openStep={openStep}
+        onOpenStepChange={setOpenStep}
+        onSubmit={handleSubmitSearch}
+      />
+    </View>
   );
 
   // A location the URL cannot carry: the commit was refused, so say so rather
@@ -368,6 +371,7 @@ export default function SearchScreen() {
   if (unshareableLocation) {
     return (
       <View style={styles.root}>
+        {searchPanel}
         <ErrorState
           title={t('search.location.unshareable.title', 'This area cannot be opened by link') ?? undefined}
           description={
@@ -377,10 +381,9 @@ export default function SearchScreen() {
           retryLabel={t('search.location.chooseAnother', 'Choose a place') ?? undefined}
           onRetry={() => {
             setUnshareableLocation(null);
-            setPanelOpen(true);
+            setOpenStep('where');
           }}
         />
-        {searchPanel}
       </View>
     );
   }
@@ -391,6 +394,7 @@ export default function SearchScreen() {
   if (pendingConfirmation) {
     return (
       <View style={styles.root}>
+        {searchPanel}
         <ErrorState
           title={
             t('search.savedSearch.confirmTitle', 'Which place did you mean?') ?? undefined
@@ -405,10 +409,9 @@ export default function SearchScreen() {
           retryLabel={t('search.location.chooseAnother', 'Choose a place') ?? undefined}
           onRetry={() => {
             setPendingConfirmation(null);
-            setPanelOpen(true);
+            setOpenStep('where');
           }}
         />
-        {searchPanel}
       </View>
     );
   }
@@ -418,6 +421,7 @@ export default function SearchScreen() {
   if (resolution.status === 'failed') {
     return (
       <View style={styles.root}>
+        {searchPanel}
         <ErrorState
           title={t('search.location.failed.title', 'We could not find that place') ?? undefined}
           description={
@@ -428,7 +432,6 @@ export default function SearchScreen() {
           retryLabel={t('search.location.chooseAnother', 'Choose a place') ?? undefined}
           onRetry={handleEditSearch}
         />
-        {searchPanel}
       </View>
     );
   }
@@ -439,12 +442,13 @@ export default function SearchScreen() {
         query={query}
         onQueryChange={patchFilters}
         onCommitLocation={commitLocation}
-        onEditSearch={handleEditSearch}
+        openStep={openStep}
+        onOpenStepChange={setOpenStep}
+        onSubmitSearch={handleSubmitSearch}
         onPropertyPress={handlePropertyPress}
         canSaveSearch={isAuthenticated}
         onRequireAuth={handleRequireAuth}
       />
-      {searchPanel}
     </View>
   );
 }
@@ -471,5 +475,13 @@ function locationRequestKey(location: ParsedLocation): string {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
+  },
+  composer: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    width: '100%',
+    maxWidth: 850,
+    alignSelf: 'center',
+    zIndex: 1,
   },
 });

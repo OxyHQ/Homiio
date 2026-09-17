@@ -6,7 +6,7 @@
  * button when the listing has more.
  *
  * Show-all: a bottom sheet (via the app's `BottomSheetContext`, the same
- * mechanism `SortControl` / `SearchFiltersBottomSheet` use) listing every
+ * mechanism `SortMenu` / `SearchFiltersDialog` use) listing every
  * amenity, grouped under category subheadings ("Kitchen & dining", "Internet
  * & office", …) in catalog order. Because the provider mounts content with
  * `scrollable={false}`, the sheet owns its own `ScrollView` so long lists

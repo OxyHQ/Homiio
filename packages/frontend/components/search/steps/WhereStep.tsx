@@ -1,14 +1,23 @@
 /**
- * WhereStep — live city/area autocomplete for the search panel.
+ * WhereStep — live city/area autocomplete, on Bloom's `DestinationSuggestions`.
  *
  * Suggestions come from Homiio's geo gateway (`/api/geo/search`, #351), never
- * from a geocoder the device contacts itself. While the input is empty it
+ * from a geocoder the device contacts itself. While the text is short it
  * surfaces the user's recent searches; once they type, debounced suggestions
  * replace the list. Selecting a row commits a whole {@link LocationSelection}
- * and hands it back to the panel — an `address_candidate` for a street address
- * and a `place` for everything else, which is the distinction that keeps a
- * geocoder proposal and a materialised Homiio place different things at every
- * layer downstream.
+ * — an `address_candidate` for a street address and a `place` for everything
+ * else, which is the distinction that keeps a geocoder proposal and a
+ * materialised Homiio place different things at every layer downstream.
+ *
+ * Three exports, because the text field does not always live here:
+ *
+ *  - {@link useWhereSearch} owns the lookup. The wide `StaySearchBar` draws its
+ *    own text field inside the Where segment, so the caller holding that text
+ *    runs the search.
+ *  - {@link WhereSuggestions} draws the answer — the rows, the state line and
+ *    the attribution — for whichever field asked.
+ *  - {@link WhereStep} is both with a Bloom `Search` field on top, for the
+ *    mobile sheet and the scope bar's picker.
  *
  * Two things here are contract rather than styling.
  *
@@ -24,16 +33,19 @@
  * was never given.
  */
 import React, { useCallback, useMemo } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
-import { IconCircle } from '@oxy.so/bloom/icon-circle';
 import { RiMapPinLine, RiTimeLine } from '@oxy.so/bloom/icons';
-import { Item } from '@oxy.so/bloom/item';
 import { Search } from '@oxy.so/bloom/search';
+import { DestinationSuggestions, type DestinationSuggestion } from '@oxy.so/bloom/stay-search';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 
-import { useDebouncedAddressSearch } from '@/hooks/useAddressSearch';
+import {
+  useDebouncedAddressSearch,
+  type AddressSearchState,
+} from '@/hooks/useAddressSearch';
+import type { GeoAttribution } from '@/services/geoService';
 import { useRecentSearchesStore, type RecentSearch } from '@/store/recentSearchesStore';
 import {
   isValidBounds,
@@ -61,6 +73,10 @@ const LOCATION_BOUNDS_DELTA_DEG = 0.05;
 const SEARCH_DEBOUNCE_MS = 300;
 const MIN_QUERY_LENGTH = 2;
 const MAX_RESULTS = 6;
+
+/** Row ids are namespaced so a recent search and a place can never collide. */
+const RECENT_PREFIX = 'recent:';
+const PLACE_PREFIX = 'place:';
 
 /**
  * Place types that describe an AREA rather than a point.
@@ -119,14 +135,10 @@ function synthesizeBounds(place: GeoPlace, center: GeoPoint): GeoBounds | undefi
  * made that call itself would key by the wrong identity for the rest of that
  * selection's life.
  *
- * **A centreless candidate is now SELECTABLE, and that is the change.** This
- * used to return `null` for one, because the panel's old `SearchLocation`
- * required a centre and had no identity field — so an `area` place carrying an
- * extent and no point could not be represented, and offering it would have
- * committed a query with nothing to scope by. `LocationSelection` addresses a
- * place by IDENTITY, so it holds one comfortably: the search scopes by the
- * place's id and only the map has nothing to frame from. Dropping such a row
- * would remove a legitimate disambiguation candidate from the list.
+ * A centreless candidate is SELECTABLE. `LocationSelection` addresses a place
+ * by IDENTITY, so the search scopes by the place's id and only the map has
+ * nothing to frame from. Dropping such a row would remove a legitimate
+ * disambiguation candidate from the list.
  *
  * The synthetic box is applied BEFORE the mapping and only where the gateway
  * supplied no bounds — see {@link synthesizeBounds}, which refuses to draw one
@@ -138,65 +150,21 @@ function toLocationSelection(place: GeoPlace): LocationSelection {
   return geoPlaceToSelection(bounds === undefined ? place : { ...place, bounds });
 }
 
-/** The two row glyphs: a place, or a search the user ran before. */
-const SUGGESTION_ICONS = { place: RiMapPinLine, recent: RiTimeLine } as const;
-
-interface SuggestionRowProps {
-  icon: keyof typeof SUGGESTION_ICONS;
-  title: string;
-  subtitle?: string;
-  accessibilityLabel: string;
-  onPress: () => void;
+export interface WhereSearch {
+  readonly state: AddressSearchState;
+  readonly attribution?: GeoAttribution;
+  /** Hand every keystroke here: it reports the text upward and runs the lookup. */
+  readonly onChangeText: (text: string) => void;
+  readonly onClear: () => void;
 }
 
-/** A single tappable suggestion / recent-search row, on Bloom `Item`. */
-const SuggestionRow: React.FC<SuggestionRowProps> = ({
-  icon,
-  title,
-  subtitle,
-  accessibilityLabel,
-  onPress,
-}) => {
-  const Icon = SUGGESTION_ICONS[icon];
-  return (
-    <Item
-      title={title}
-      subtitle={subtitle}
-      leading={<IconCircle icon={Icon} size="sm" />}
-      onPress={onPress}
-      accessibilityLabel={accessibilityLabel}
-    />
-  );
-};
-
-interface WhereStepProps {
-  /** Current free-text value of the input. */
-  value: string;
-  /** Fired on every keystroke so the panel can hold the raw text. */
-  onChangeText: (text: string) => void;
-  /** Fired when a place suggestion is chosen. */
-  onSelectLocation: (selection: LocationSelection) => void;
-  /** Fired when a recent search row is chosen. */
-  onSelectRecent: (recent: RecentSearch) => void;
-  /**
-   * Compact mode for the wide centered dialog: tightens the gap between the
-   * input and the suggestion/recent list so the dialog reads snug. The narrow
-   * sheet leaves this `false`.
-   */
-  compact?: boolean;
-}
-
-export const WhereStep: React.FC<WhereStepProps> = ({
-  value,
-  onChangeText,
-  onSelectLocation,
-  onSelectRecent,
-  compact = false,
-}) => {
-  const { t } = useTranslation();
-  const colors = useColors();
-  const recentSearches = useRecentSearchesStore((s) => s.searches);
-
+/**
+ * The lookup behind a Where field, wherever that field is drawn.
+ *
+ * The text itself stays with the caller (`onChangeText` reports it) — the
+ * lookup only follows it, so a field that is not ours can drive it.
+ */
+export function useWhereSearch(onChangeText: (text: string) => void): WhereSearch {
   const { state, attribution, debouncedSearch, clear } = useDebouncedAddressSearch({
     minQueryLength: MIN_QUERY_LENGTH,
     debounceDelay: SEARCH_DEBOUNCE_MS,
@@ -220,12 +188,36 @@ export const WhereStep: React.FC<WhereStepProps> = ({
     clear();
   }, [onChangeText, clear]);
 
-  const resolvedSuggestions = useMemo<LocationSelection[]>(
-    () =>
-      state.status === 'results'
-        ? state.places
-            .map(toLocationSelection)
-        : [],
+  return { state, attribution, onChangeText: handleChange, onClear: handleClear };
+}
+
+interface WhereSuggestionsProps {
+  /** The text the lookup ran for. Below the minimum length, recents show. */
+  value: string;
+  search: WhereSearch;
+  onSelectLocation: (selection: LocationSelection) => void;
+  onSelectRecent: (recent: RecentSearch) => void;
+  /** A line shown when there is nothing to list yet (no recents, nothing typed). */
+  emptyHint?: string;
+  style?: StyleProp<ViewStyle>;
+}
+
+/** The rows, the state line and the attribution for a Where lookup. */
+export function WhereSuggestions({
+  value,
+  search,
+  onSelectLocation,
+  onSelectRecent,
+  emptyHint,
+  style,
+}: WhereSuggestionsProps): React.ReactElement | null {
+  const { t } = useTranslation();
+  const colors = useColors();
+  const recentSearches = useRecentSearchesStore((s) => s.searches);
+  const { state, attribution } = search;
+
+  const places = useMemo<LocationSelection[]>(
+    () => (state.status === 'results' ? state.places.map(toLocationSelection) : []),
     [state],
   );
 
@@ -262,92 +254,137 @@ export const WhereStep: React.FC<WhereStepProps> = ({
 
   const showRecents = value.trim().length < MIN_QUERY_LENGTH;
 
+  // Keyed by the selection's own IDENTITY. Two candidates can share a rounded
+  // centre — and one may have no centre at all — so a coordinate key would
+  // collide and silently drop a row.
+  const items = useMemo<DestinationSuggestion[]>(
+    () =>
+      showRecents
+        ? recentSearches.map((recent) => ({
+            id: `${RECENT_PREFIX}${recent.id}`,
+            title: recent.label,
+            description: recent.sublabel,
+            icon: RiTimeLine,
+          }))
+        : places.map((selection) => ({
+            id: `${PLACE_PREFIX}${locationKey(selection)}`,
+            title: selectionLabel(selection)?.primary ?? '',
+            description: selectionLabel(selection)?.secondary,
+            icon: RiMapPinLine,
+          })),
+    [showRecents, recentSearches, places],
+  );
+
+  const handleSelect = useCallback(
+    (item: DestinationSuggestion) => {
+      if (item.id.startsWith(RECENT_PREFIX)) {
+        const recent = recentSearches.find((r) => `${RECENT_PREFIX}${r.id}` === item.id);
+        if (recent) onSelectRecent(recent);
+        return;
+      }
+      const selection = places.find((s) => `${PLACE_PREFIX}${locationKey(s)}` === item.id);
+      if (selection) onSelectLocation(selection);
+    },
+    [recentSearches, places, onSelectRecent, onSelectLocation],
+  );
+
+  const degraded = !showRecents && state.status === 'results' && state.degraded;
+  const status = showRecents ? null : statusMessage ?? (items.length === 0 ? emptyHint ?? null : null);
+  if (items.length === 0 && !status) {
+    return emptyHint ? (
+      <BloomText style={[styles.statusText, { color: colors.textSecondary }, style]}>{emptyHint}</BloomText>
+    ) : null;
+  }
+
   return (
-    <View style={compact ? styles.containerCompact : styles.container}>
+    <View style={[styles.list, style]}>
+      {status ? (
+        <BloomText style={[styles.statusText, { color: colors.textSecondary }]}>{status}</BloomText>
+      ) : null}
+      {degraded ? (
+        <BloomText style={[styles.statusText, { color: colors.textSecondary }]}>
+          {t('search.where.degraded')}
+        </BloomText>
+      ) : null}
+      {items.length > 0 ? (
+        <DestinationSuggestions
+          items={items}
+          onSelect={handleSelect}
+          heading={showRecents ? t('search.recent.title') : undefined}
+          accessibilityLabel={showRecents ? t('search.recent.title') : t('searchBar.long.where')}
+        />
+      ) : null}
+      {/* Required by the provider's data licence wherever results appear. */}
+      {!showRecents && places.length > 0 && attribution ? (
+        <BloomText style={[styles.attribution, { color: colors.textSecondary }]}>
+          {attribution.text}
+        </BloomText>
+      ) : null}
+    </View>
+  );
+}
+
+interface WhereStepProps {
+  /** Current free-text value of the input. */
+  value: string;
+  /** Fired on every keystroke so the owner can hold the raw text. */
+  onChangeText: (text: string) => void;
+  /** Fired when a place suggestion is chosen. */
+  onSelectLocation: (selection: LocationSelection) => void;
+  /** Fired when a recent search row is chosen. */
+  onSelectRecent: (recent: RecentSearch) => void;
+}
+
+/** A Bloom `Search` field over its suggestions. */
+export const WhereStep: React.FC<WhereStepProps> = ({
+  value,
+  onChangeText,
+  onSelectLocation,
+  onSelectRecent,
+}) => {
+  const { t } = useTranslation();
+  const search = useWhereSearch(onChangeText);
+
+  return (
+    <View style={styles.container}>
       <Search
         value={value}
-        onChangeText={handleChange}
-        onClearText={handleClear}
+        onChangeText={search.onChangeText}
+        onClearText={search.onClear}
         autoFocus
-        label={
-          t('search.input.placeholder')
-        }
+        label={t('search.input.placeholder')}
       />
-
-      {showRecents ? (
-        recentSearches.length > 0 ? (
-          <View style={styles.list}>
-            <BloomText style={[styles.sectionLabel, { color: colors.textSecondary }]}>
-              {t('search.recent.title')}
-            </BloomText>
-            {recentSearches.map((recent) => (
-              <SuggestionRow
-                key={recent.id}
-                icon="recent"
-                title={recent.label}
-                subtitle={recent.sublabel}
-                accessibilityLabel={recent.label}
-                onPress={() => onSelectRecent(recent)}
-              />
-            ))}
-          </View>
-        ) : null
-      ) : (
-        <View style={styles.list}>
-          {statusMessage ? (
-            <BloomText style={[styles.statusText, { color: colors.textSecondary }]}>{statusMessage}</BloomText>
-          ) : null}
-          {state.status === 'results' && state.degraded ? (
-            <BloomText style={[styles.statusText, { color: colors.textSecondary }]}>{t('search.where.degraded')}</BloomText>
-          ) : null}
-          {resolvedSuggestions.map((selection) => (
-            <SuggestionRow
-              // Keyed by the selection's own IDENTITY. Two candidates can share
-              // a rounded centre — and one may now have no centre at all — so a
-              // coordinate key would collide and silently drop a row.
-              key={locationKey(selection)}
-              icon="place"
-              title={selectionLabel(selection)?.primary ?? ''}
-              subtitle={selectionLabel(selection)?.secondary}
-              accessibilityLabel={selectionLabel(selection)?.primary ?? ''}
-              onPress={() => onSelectLocation(selection)}
-            />
-          ))}
-          {/* Required by the provider's data licence wherever results appear. */}
-          {resolvedSuggestions.length > 0 && attribution ? (
-            <BloomText style={[styles.attribution, { color: colors.textSecondary }]}>{attribution.text}</BloomText>
-          ) : null}
-        </View>
-      )}
+      <WhereSuggestions
+        value={value}
+        search={search}
+        onSelectLocation={onSelectLocation}
+        onSelectRecent={onSelectRecent}
+        // The rows carry their own 12 inset; pull them back to the field's edge.
+        style={styles.bleed}
+      />
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    gap: spacing.lg,
-  },
-  // Tighter input → list gap for the compact centered dialog.
-  containerCompact: {
     gap: spacing.md,
   },
   list: {
     gap: spacing.xs,
   },
-  sectionLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    marginBottom: spacing.xs,
+  bleed: {
+    marginHorizontal: -12,
   },
   statusText: {
     fontSize: 14,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: 12,
   },
   attribution: {
     fontSize: 11,
     paddingTop: spacing.xs,
-    paddingHorizontal: spacing.sm,
+    paddingHorizontal: 12,
   },
 });
 

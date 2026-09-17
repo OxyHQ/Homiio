@@ -265,8 +265,11 @@ export function RoomList({ filters, onFilterChange }: RoomListProps) {
             open={showFilters}
             onClose={() => setShowFilters(false)}
             placement={FILTERS_DIALOG_PLACEMENT}
-            title={t('roommates.rooms.filtersTitle')}
+            header={{ title: t('roommates.rooms.filtersTitle'), largeTitle: false }}
             label={t('roommates.rooms.filtersTitle')}
+            // The form scrolls its sections and pins its own footer.
+            scrollable={false}
+            contentPadding={0}
         >
             {showFilters ? (
                 <RoomFilters

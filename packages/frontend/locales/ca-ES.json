@@ -550,7 +550,14 @@
         "strict": "Estricta",
         "superStrict": "Molt estricta"
       },
-      "fairPrice": "Només preu just"
+      "fairPrice": "Només preu just",
+      "options": "Opcions",
+      "rooms": "Habitacions",
+      "show": "Mostra habitatges",
+      "showMore": "Mostra’n més",
+      "showLess": "Mostra’n menys",
+      "showResults_one": "Mostra {{count}} habitatge",
+      "showResults_other": "Mostra {{count}} habitatges"
     },
     "mode": {
       "label": "Mode de cerca",
@@ -792,6 +799,18 @@
     },
     "area": {
       "stillShowing": "Encara mostrem resultats de {{place}}"
+    },
+    "category": {
+      "previous": "Categories anteriors",
+      "next": "Categories següents"
+    },
+    "guests": {
+      "adults": "Adults",
+      "adultsDescription": "A partir de 13 anys",
+      "children": "Infants",
+      "childrenDescription": "De 2 a 12 anys",
+      "pets": "Mascotes",
+      "petsDescription": "Només habitatges que admeten mascotes"
     }
   },
   "profile": {

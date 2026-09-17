@@ -96,7 +96,7 @@ const [pressed, setPressed] = useState(false);
 - Hooks cannot run inside `.map()`, so extract a small component when a
   function-form `Pressable` lives in a list.
 - Canonical template:
-  `packages/frontend/components/search/SearchSummaryBar.tsx`.
+  `packages/frontend/components/ui/PropertyListHeader.tsx`.
 - **Audit: `packages/frontend/__tests__/noFunctionFormStyle.test.ts`**, which runs
   in the ordinary suite. It replaced `grep -rn "style={({" app components`,
   and the reason is worth keeping: a grep is LINE-based, so it cannot tell code

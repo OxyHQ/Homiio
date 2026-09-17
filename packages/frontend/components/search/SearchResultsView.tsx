@@ -9,11 +9,11 @@
  *  - Narrow: the list with a floating "Map" toggle → full-screen map, and a
  *    "List" toggle back.
  *
- * Top bar: an editable `SearchSummaryBar` (tap → reopens the panel) whose
- * trailing bookmark saves the search (reuses `SaveSearchBottomSheet`), plus a
- * Filters pill (reuses `SearchFiltersBottomSheet`) and a Sort pill opening a
- * Bloom dropdown menu (`SortMenu`). A "Search this area" button over the map re-queries using
- * the current map bounds.
+ * Top bar: the `StaySearch` composer (Bloom's wide bar, or the compact trigger
+ * and its sheet on a phone) with a save-search button beside it, over a
+ * `PropertyTypeCategoryBar` whose pinned end holds Bloom's `FilterTriggerButton`
+ * (opening `SearchFiltersDialog`) and the `SortMenu`. A "Search this area"
+ * button over the map re-queries using the current map bounds.
  *
  * Data comes from `usePropertySearch` keyed by the active query; this component
  * owns no fetching logic beyond reading that hook and forwarding map bounds.
@@ -25,11 +25,13 @@ import { useTranslation } from 'react-i18next';
 
 import { Button } from '@oxy.so/bloom/button';
 import {
-  RiEqualizerLine,
+  RiBookmarkFill,
+  RiBookmarkLine,
   RiHomeLine,
   RiRefreshLine,
   RiSearchLine,
 } from '@oxy.so/bloom/icons';
+import { FilterTriggerButton } from '@oxy.so/bloom/stay-filters';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { useSavedSearches } from '@/hooks/useSavedSearches';
@@ -42,29 +44,26 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { MapFab } from '@/components/ui/MapFab';
 import { MapMarkerPopover } from '@/components/ui/MapMarkerPopover';
-import {
-  SearchFiltersBottomSheet,
-  type SearchFilters,
-} from '@/components/SearchFiltersBottomSheet';
 import { SaveSearchBottomSheet } from '@/components/SaveSearchBottomSheet';
-import type { FilterValue } from '@/components/FiltersBar/FiltersBottomSheet';
 
 import { BottomSheetContext } from '@/context/BottomSheetContext';
 import { useIsScreenNotMobile } from '@/hooks/useOptimizedMediaQuery';
 import { usePropertySearch } from '@/hooks/usePropertySearch';
+import { useColors } from '@/hooks/useThemeColor';
 import { colors } from '@/styles/colors';
 import { cardShadow, hairline, radius, spacing } from '@/constants/styles';
-import { PropertyType, boundsCenter } from '@homiio/shared-types';
-import type { GeoBounds, LocationSelection, Property } from '@homiio/shared-types';
+import { boundsCenter } from '@homiio/shared-types';
+import type { GeoBounds, LocationSelection, Property, PropertyType } from '@homiio/shared-types';
 import { useFormatting } from '@/utils/format';
 import { locationDisplayLabel, savedSearchName } from './types';
 
-import { SearchActionPill } from './SearchActionPill';
-import { SearchSummaryBar } from './SearchSummaryBar';
-import { SortMenu } from './SortControl';
+import { PropertyTypeCategoryBar } from './PropertyTypeCategoryBar';
+import { SearchFiltersDialog, countActiveFilters } from './SearchFiltersDialog';
+import { SortMenu } from './SortMenu';
+import { StaySearch } from './StaySearch';
 import { committedScopeBounds, reduceMapMovement, type MapMovement } from './searchArea';
 import { toMarkers } from './searchMarkers';
-import type { SearchQuery, SearchSortBy, SearchSortOrder } from './types';
+import type { SearchQuery, SearchSortBy, SearchSortOrder, SearchStep } from './types';
 import {
   mapBoundsSelection,
   useSearchQueryStore,
@@ -94,53 +93,14 @@ function boundsCameraTarget(bounds: GeoBounds): [number, number] {
   return [longitude, latitude];
 }
 
-/**
- * Derive the {@link SearchFilters} shape (used by the reused filters sheet)
- * from the active {@link SearchQuery}. The sheet edits a flatter model, so we
- * translate both ways.
- */
-function toSheetFilters(query: SearchQuery): SearchFilters {
-  return {
-    minPrice: query.priceMin ?? 0,
-    maxPrice: query.priceMax ?? 0,
-    // No bound is no selection. Defaulting these to 1 painted a "1" chip as
-    // chosen in a sheet whose search had no bedroom filter at all.
-    bedrooms: query.bedrooms ?? '',
-    bathrooms: query.bathrooms ?? '',
-    type: query.propertyTypes[0],
-    amenities: query.amenities,
-    guests: query.guests,
-    checkIn: query.dates?.start,
-    checkOut: query.dates?.end,
-    fairPrice: query.fairPrice,
-    instantBook: query.instantBook,
-  };
-}
-
-/**
- * Count the *applied* refinements in a query for the Filters pill badge. The
- * location, sort, map bounds, and the active offering (the browse toggle) are
- * surfaced elsewhere, so they don't count here — only the controls the filters
- * sheet edits: property type(s), price, bedrooms, bathrooms, each amenity, and
- * the fair-price and instant-book flags.
- */
-function countActiveFilters(query: SearchQuery): number {
-  let count = 0;
-  count += query.propertyTypes.length;
-  if (query.priceMin !== undefined || query.priceMax !== undefined) count += 1;
-  if (query.bedrooms !== undefined) count += 1;
-  if (query.bathrooms !== undefined) count += 1;
-  count += query.amenities.length;
-  if (query.fairPrice === true) count += 1;
-  if (query.instantBook === true) count += 1;
-  return count;
-}
-
 interface SearchResultsViewProps {
   /** The active search query (source of truth for the data + map + summary). */
   query: SearchQuery;
-  /** Reopen the expanding panel (editable summary / "edit search"). */
-  onEditSearch: () => void;
+  /** The composer's open step, owned by the route so its error states can open it too. */
+  openStep: SearchStep | null;
+  onOpenStepChange: (step: SearchStep | null) => void;
+  /** Run a composed search. */
+  onSubmitSearch: (query: SearchQuery) => void;
   /** Open a property's detail screen. */
   onPropertyPress: (property: Property) => void;
   /**
@@ -159,7 +119,9 @@ interface SearchResultsViewProps {
 
 export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
   query,
-  onEditSearch,
+  openStep,
+  onOpenStepChange,
+  onSubmitSearch,
   onPropertyPress,
   onQueryChange,
   onCommitLocation,
@@ -171,6 +133,9 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
   const isWide = useIsScreenNotMobile();
   const insets = useSafeAreaInsets();
   const bottomSheet = useContext(BottomSheetContext);
+  const themeColors = useColors();
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const handleEditSearch = useCallback(() => onOpenStepChange('where'), [onOpenStepChange]);
 
   const mapRef = useRef<MapApi>(null);
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
@@ -231,7 +196,11 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
   );
 
   // --- Top-bar control state (drives the action pills' active/badge UI) ---
-  const activeFilterCount = useMemo(() => countActiveFilters(query), [query]);
+  // The category bar states the type, so the Filters badge does not count it.
+  const activeFilterCount = useMemo(
+    () => countActiveFilters(query, { includeTypes: false }),
+    [query],
+  );
 
   // A search is "saved" when one already exists for this exact selection.
   //
@@ -438,87 +407,13 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
     [onQueryChange],
   );
 
-  const handleSheetFilterChange = useCallback(
-    (sectionId: string, value: FilterValue) => {
-      switch (sectionId) {
-        case 'type':
-          onQueryChange({
-            propertyTypes:
-              typeof value === 'string' ? [value as PropertyType] : [],
-          });
-          return;
-        case 'price':
-          if (Array.isArray(value)) {
-            const [min, max] = value;
-            onQueryChange({
-              priceMin: typeof min === 'number' && min > 0 ? min : undefined,
-              priceMax: typeof max === 'number' && max > 0 ? max : undefined,
-            });
-          }
-          return;
-        case 'bedrooms':
-          onQueryChange({
-            bedrooms:
-              typeof value === 'string' || typeof value === 'number'
-                ? Number(value)
-                : undefined,
-          });
-          return;
-        case 'bathrooms':
-          onQueryChange({
-            bathrooms:
-              typeof value === 'string' || typeof value === 'number'
-                ? Number(value)
-                : undefined,
-          });
-          return;
-        case 'amenities': {
-          if (typeof value !== 'string') return;
-          const current = query.amenities;
-          const next = current.includes(value)
-            ? current.filter((a) => a !== value)
-            : [...current, value];
-          onQueryChange({ amenities: next });
-          return;
-        }
-        case 'guests':
-          onQueryChange({ guests: typeof value === 'number' ? value : undefined });
-          return;
-        case 'fairPrice':
-          onQueryChange({ fairPrice: value === true ? true : undefined });
-          return;
-        case 'instantBook':
-          onQueryChange({ instantBook: value === true ? true : undefined });
-          return;
-        default:
-          return;
-      }
-    },
-    [onQueryChange, query.amenities],
+  const handleTypesChange = useCallback(
+    (propertyTypes: PropertyType[]) => onQueryChange({ propertyTypes }),
+    [onQueryChange],
   );
 
-  const handleFiltersPress = useCallback(() => {
-    bottomSheet.openBottomSheet(
-      <SearchFiltersBottomSheet
-        filters={toSheetFilters(query)}
-        onFilterChange={handleSheetFilterChange}
-        onApply={() => bottomSheet.closeBottomSheet()}
-        onClear={() => {
-          onQueryChange({
-            propertyTypes: [],
-            priceMin: undefined,
-            priceMax: undefined,
-            bedrooms: undefined,
-            bathrooms: undefined,
-            amenities: [],
-            fairPrice: undefined,
-            instantBook: undefined,
-          });
-          bottomSheet.closeBottomSheet();
-        }}
-      />,
-    );
-  }, [bottomSheet, query, handleSheetFilterChange, onQueryChange]);
+  const handleFiltersPress = useCallback(() => setFiltersOpen(true), []);
+  const handleFiltersClose = useCallback(() => setFiltersOpen(false), []);
 
   const handleSaveSearch = useCallback(() => {
     if (!canSaveSearch) {
@@ -627,52 +522,68 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
   // The bar's surfaceElevated background fills the inset region; on web
   // `insets.top` is 0 so the `position: sticky; top: 0` placement is
   // unchanged.
+  const saveLabel = isSearchSaved ? t('search.actions.saved') : t('search.actions.save');
   const topBar = (
     <View style={[styles.topBar, { paddingTop: insets.top }]}>
       <View style={styles.topBarContent}>
-        <View style={styles.summaryWrap}>
-          <SearchSummaryBar
-            query={query}
-            onPress={onEditSearch}
-            compact
-            onSavePress={handleSaveSearch}
-            isSaved={isSearchSaved}
-            saveAccessibilityLabel={
-              isSearchSaved
-                ? t('search.actions.saved', 'Saved') || 'Saved'
-                : t('search.actions.save', 'Save') || 'Save'
-            }
-          />
-        </View>
-        {/* Horizontally-scrollable so the action pills never wrap onto a second
-            line or get clipped on a narrow phone; on wide screens the content
-            simply fits and the scroll never engages. The Save affordance now
-            lives in the summary pill itself (its trailing bookmark). */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.topBarActionsScroll}
-          contentContainerStyle={styles.topBarActions}
-        >
-          <SearchActionPill
-            label={t('search.actions.filters', 'Filters') || 'Filters'}
-            icon={RiEqualizerLine}
-            active={activeFilterCount > 0}
-            count={activeFilterCount}
-            onPress={handleFiltersPress}
-            accessibilityLabel={
-              activeFilterCount > 0
-                ? `${t('search.actions.filters', 'Filters') || 'Filters'}, ${activeFilterCount}`
-                : t('search.actions.filters', 'Filters') || 'Filters'
-            }
-          />
-          <SortMenu
-            sortBy={query.sortBy}
-            sortOrder={query.sortOrder}
-            onChange={handleSortChange}
-          />
-        </ScrollView>
+        <StaySearch
+          query={query}
+          openStep={openStep}
+          onOpenStepChange={onOpenStepChange}
+          onSubmit={onSubmitSearch}
+          style={styles.composer}
+        />
+        {/* A sibling of the composer, never inside it: its own named control. */}
+        <Button
+          variant="outline"
+          size={isWide ? 'large' : 'medium'}
+          iconOnly
+          icon={
+            isSearchSaved ? (
+              <RiBookmarkFill width={20} height={20} fill={themeColors.primary} />
+            ) : (
+              <RiBookmarkLine width={20} height={20} fill={themeColors.text} />
+            )
+          }
+          onPress={handleSaveSearch}
+          accessibilityLabel={saveLabel}
+        />
       </View>
+      <View style={styles.categoryRow}>
+        <PropertyTypeCategoryBar
+          offering={query.offering}
+          selected={query.propertyTypes}
+          onChange={handleTypesChange}
+          fadeColor={colors.surfaceElevated}
+          trailing={
+            <View style={styles.trailing}>
+              <FilterTriggerButton
+                count={activeFilterCount}
+                onPress={handleFiltersPress}
+                label={t('search.actions.filters')}
+                accessibilityLabel={
+                  activeFilterCount > 0
+                    ? `${t('search.actions.filters')}, ${activeFilterCount}`
+                    : t('search.actions.filters')
+                }
+              />
+              <SortMenu
+                sortBy={query.sortBy}
+                sortOrder={query.sortOrder}
+                onChange={handleSortChange}
+                iconOnly={!isWide}
+              />
+            </View>
+          }
+        />
+      </View>
+      <SearchFiltersDialog
+        open={filtersOpen}
+        onClose={handleFiltersClose}
+        query={query}
+        onApply={onQueryChange}
+        showTypes={false}
+      />
     </View>
   );
 
@@ -714,7 +625,7 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
           }
           actionText={t('search.empty.action', 'Edit search') || 'Edit search'}
           actionIcon={RiSearchLine}
-          onAction={onEditSearch}
+          onAction={handleEditSearch}
         />
       );
     }
@@ -923,25 +834,33 @@ const styles = StyleSheet.create({
   topBarContent: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: spacing.sm,
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.sm,
+    maxWidth: 1440,
+    width: '100%',
+    alignSelf: 'center',
+    // Above the category row: RN-Web gives every View `z-index: 0`, so the
+    // composer's open panel would otherwise paint under the later sibling.
+    zIndex: 2,
+  },
+  // The composer takes the row; on a wide screen it stops at a readable bar
+  // width and sits centred with the save button beside it.
+  composer: {
+    flex: 1,
+    minWidth: 0,
+    maxWidth: 850,
+  },
+  categoryRow: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.xs,
     maxWidth: 1440,
     width: '100%',
     alignSelf: 'center',
   },
-  summaryWrap: {
-    flex: 1,
-    minWidth: 0,
-    maxWidth: 520,
-  },
-  // The pill row is its own horizontal scroller; cap its flex so the summary
-  // pill keeps a usable width, and let the pills scroll if all three can't fit.
-  topBarActionsScroll: {
-    flexGrow: 0,
-    flexShrink: 1,
-  },
-  topBarActions: {
+  trailing: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,

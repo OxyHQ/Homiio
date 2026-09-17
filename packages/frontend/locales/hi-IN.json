@@ -563,7 +563,14 @@
         "strict": "Strict",
         "superStrict": "Super strict"
       },
-      "fairPrice": "Fair price only"
+      "fairPrice": "Fair price only",
+      "options": "विकल्प",
+      "rooms": "कमरे",
+      "show": "घर दिखाएँ",
+      "showMore": "और दिखाएँ",
+      "showLess": "कम दिखाएँ",
+      "showResults_one": "{{count}} घर दिखाएँ",
+      "showResults_other": "{{count}} घर दिखाएँ"
     },
     "mode": {
       "label": "Browse mode",
@@ -795,6 +802,18 @@
     },
     "area": {
       "stillShowing": "अब भी {{place}} के परिणाम दिखाए जा रहे हैं"
+    },
+    "category": {
+      "previous": "पिछली श्रेणियाँ",
+      "next": "अगली श्रेणियाँ"
+    },
+    "guests": {
+      "adults": "वयस्क",
+      "adultsDescription": "13 वर्ष या उससे अधिक",
+      "children": "बच्चे",
+      "childrenDescription": "2–12 वर्ष",
+      "pets": "पालतू जानवर",
+      "petsDescription": "केवल वे घर जहाँ पालतू जानवरों की अनुमति है"
     }
   },
   "profile": {

@@ -563,7 +563,16 @@
         "strict": "Strict",
         "superStrict": "Super strict"
       },
-      "fairPrice": "Fair price only"
+      "fairPrice": "Fair price only",
+      "options": "Параметры",
+      "rooms": "Комнаты",
+      "show": "Показать жильё",
+      "showMore": "Показать больше",
+      "showLess": "Показать меньше",
+      "showResults_one": "Показать {{count}} вариант",
+      "showResults_few": "Показать {{count}} варианта",
+      "showResults_many": "Показать {{count}} вариантов",
+      "showResults_other": "Показать {{count}} варианта"
     },
     "mode": {
       "label": "Browse mode",
@@ -795,6 +804,18 @@
     },
     "area": {
       "stillShowing": "Показаны результаты для {{place}}"
+    },
+    "category": {
+      "previous": "Предыдущие категории",
+      "next": "Следующие категории"
+    },
+    "guests": {
+      "adults": "Взрослые",
+      "adultsDescription": "От 13 лет",
+      "children": "Дети",
+      "childrenDescription": "От 2 до 12 лет",
+      "pets": "Питомцы",
+      "petsDescription": "Только жильё, где разрешены питомцы"
     }
   },
   "profile": {

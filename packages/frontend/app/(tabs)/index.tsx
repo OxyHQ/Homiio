@@ -59,8 +59,7 @@ import { useSearchQueryStore } from '@/store/searchQueryStore';
 
 import { PropertyCard } from '@/components/PropertyCard';
 import { HomeCarouselSection } from '@/components/HomeCarouselSection';
-import { SearchSummaryBar } from '@/components/search/SearchSummaryBar';
-import { SearchPanel } from '@/components/search/SearchPanel';
+import { StaySearch } from '@/components/search/StaySearch';
 import type { SearchQuery, SearchStep } from '@/components/search/types';
 import { HostCtaBanner } from '@/components/HostCtaBanner';
 import { AgentCtaBanner } from '@/components/agent/AgentCtaBanner';
@@ -90,8 +89,7 @@ export default function HomePage() {
   const openMobileDrawer = useUIStore((s) => s.openMobileDrawer);
 
   const activeQuery = useSearchQueryStore((s) => s.query);
-  const [searchPanelOpen, setSearchPanelOpen] = useState(false);
-  const [searchPanelStep, setSearchPanelStep] = useState<SearchStep>('where');
+  const [searchStep, setSearchStep] = useState<SearchStep | null>(null);
 
   const scope = useLocationScope();
   const home = useHomeSections(scope.selection, browseOffering, { enabled: scope.canQuery });
@@ -186,28 +184,36 @@ export default function HomePage() {
           </View>
         </View>
 
-        <View className="relative h-[260px] w-full justify-end overflow-hidden md:h-[300px] xl:h-[min(340px,38vh)]">
-          <Animated.View className="absolute inset-x-0" style={[{ top: -80, bottom: -80 }, heroParallaxStyle]}>
-            <Image
-              source={require('@/assets/images/hero.jpg')}
-              className="h-full w-full object-cover object-center"
-              contentFit="cover"
-              contentPosition="center"
-            />
-          </Animated.View>
+        {/* The hero does NOT clip: the wide search bar's panel drops below it,
+            over the sections. The photo clips in its own layer instead, and the
+            hero lifts above the sections while a panel is open (RN-Web gives
+            every View `z-index: 0`, so a later sibling would paint over it). */}
+        <View
+          className="relative h-[260px] w-full justify-end md:h-[300px] xl:h-[min(340px,38vh)]"
+          style={{ zIndex: searchStep !== null ? 10 : 0 }}
+        >
+          <View className="absolute inset-0 overflow-hidden" style={{ pointerEvents: 'none' }}>
+            <Animated.View className="absolute inset-x-0" style={[{ top: -80, bottom: -80 }, heroParallaxStyle]}>
+              <Image
+                source={require('@/assets/images/hero.jpg')}
+                className="h-full w-full object-cover object-center"
+                contentFit="cover"
+                contentPosition="center"
+              />
+            </Animated.View>
 
-          <LinearGradient
-            colors={[
-              'rgba(0,0,0,0.10)',
-              'rgba(0,0,0,0.20)',
-              'rgba(0,0,0,0.35)',
-              'rgba(0,0,0,0.55)',
-              'rgba(0,0,0,0.72)',
-            ]}
-            locations={[0, 0.35, 0.6, 0.85, 1]}
-            className="absolute inset-0"
-            style={{ pointerEvents: 'none' }}
-          />
+            <LinearGradient
+              colors={[
+                'rgba(0,0,0,0.10)',
+                'rgba(0,0,0,0.20)',
+                'rgba(0,0,0,0.35)',
+                'rgba(0,0,0,0.55)',
+                'rgba(0,0,0,0.72)',
+              ]}
+              locations={[0, 0.35, 0.6, 0.85, 1]}
+              className="absolute inset-0"
+            />
+          </View>
 
           {!isScreenNotMobile ? (
             <View className="absolute left-4 top-3 z-10">
@@ -245,32 +251,19 @@ export default function HomePage() {
                 isWide ? 'z-20 mt-1 w-full max-w-[880px] self-center' : 'z-20 mt-1 w-full max-w-[520px] self-center'
               }
             >
-              <SearchSummaryBar
-                query={activeQuery}
-                onPress={() => router.push('/explore')}
-                onPressColumn={(step) => {
-                  setSearchPanelStep(step);
-                  setSearchPanelOpen(true);
-                }}
-              />
-            </View>
-            {searchPanelOpen ? (
-              <SearchPanel
-                open={searchPanelOpen}
-                onClose={() => setSearchPanelOpen(false)}
-                initialQuery={heroSearchSeed}
-                initialStep={searchPanelStep}
+              <StaySearch
+                query={heroSearchSeed}
+                openStep={searchStep}
+                onOpenStepChange={setSearchStep}
                 onSubmit={(query) => {
-                  setSearchPanelOpen(false);
                   const href = exploreHref(query);
                   if (href) router.push(href);
                 }}
-                onApply={(query) => {
-                  useSearchQueryStore.getState().replaceSearch(query);
-                  setSearchPanelOpen(false);
-                }}
+                // Closing the bar keeps what it shows: the edited query becomes
+                // the live one without navigating.
+                onApply={(query) => useSearchQueryStore.getState().replaceSearch(query)}
               />
-            ) : null}
+            </View>
           </View>
         </View>
 

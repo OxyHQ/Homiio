@@ -529,7 +529,14 @@
         "strict": "Estricta",
         "superStrict": "Muy estricta"
       },
-      "fairPrice": "Solo precio justo"
+      "fairPrice": "Solo precio justo",
+      "options": "Opciones",
+      "rooms": "Habitaciones",
+      "show": "Mostrar viviendas",
+      "showMore": "Mostrar más",
+      "showLess": "Mostrar menos",
+      "showResults_one": "Mostrar {{count}} vivienda",
+      "showResults_other": "Mostrar {{count}} viviendas"
     },
     "mode": {
       "label": "Modo de búsqueda",
@@ -771,6 +778,18 @@
     },
     "area": {
       "stillShowing": "Seguimos mostrando resultados de {{place}}"
+    },
+    "category": {
+      "previous": "Categorías anteriores",
+      "next": "Categorías siguientes"
+    },
+    "guests": {
+      "adults": "Adultos",
+      "adultsDescription": "A partir de 13 años",
+      "children": "Niños",
+      "childrenDescription": "De 2 a 12 años",
+      "pets": "Mascotas",
+      "petsDescription": "Solo viviendas que admiten mascotas"
     }
   },
   "profile": {

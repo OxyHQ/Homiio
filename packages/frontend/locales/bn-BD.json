@@ -563,7 +563,14 @@
         "strict": "Strict",
         "superStrict": "Super strict"
       },
-      "fairPrice": "Fair price only"
+      "fairPrice": "Fair price only",
+      "options": "বিকল্প",
+      "rooms": "ঘর",
+      "show": "বাসা দেখান",
+      "showMore": "আরও দেখান",
+      "showLess": "কম দেখান",
+      "showResults_one": "{{count}}টি বাসা দেখান",
+      "showResults_other": "{{count}}টি বাসা দেখান"
     },
     "mode": {
       "label": "Browse mode",
@@ -795,6 +802,18 @@
     },
     "area": {
       "stillShowing": "এখনও {{place}}-এর ফলাফল দেখানো হচ্ছে"
+    },
+    "category": {
+      "previous": "আগের বিভাগ",
+      "next": "পরের বিভাগ"
+    },
+    "guests": {
+      "adults": "প্রাপ্তবয়স্ক",
+      "adultsDescription": "১৩ বছর বা তার বেশি",
+      "children": "শিশু",
+      "childrenDescription": "২–১২ বছর",
+      "pets": "পোষা প্রাণী",
+      "petsDescription": "শুধু পোষা প্রাণী রাখা যায় এমন বাসা"
     }
   },
   "profile": {

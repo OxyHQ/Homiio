@@ -3,7 +3,7 @@
  *
  * These describe the *active search query* (what the user is looking for) in a
  * map-friendly, store-serialisable shape, plus the small value objects the
- * expanding `SearchPanel` and the `SearchResultsView` exchange. They are pure
+ * `StaySearch` composer and the `SearchResultsView` exchange. They are pure
  * data (no React) so both the Zustand stores and the components can depend on
  * them without a cycle.
  */
@@ -106,13 +106,13 @@ export interface SearchDateRange {
   end: string;
 }
 
-/** Sort options exposed by the results `SortControl`. */
+/** Sort options exposed by the results `SortMenu`. */
 export type SearchSortBy = 'relevance' | 'price' | 'createdAt' | 'fairness';
 export type SearchSortOrder = 'asc' | 'desc';
 
 /**
  * The full, serialisable active search query. This is the single source of
- * truth the results view reads and the `SearchPanel` writes. Every field is
+ * truth the results view reads and the `StaySearch` composer writes. Every field is
  * optional except `offering` so an empty (default) query is valid.
  */
 export interface SearchQuery {
@@ -206,7 +206,7 @@ export type SearchStep = 'where' | 'type' | 'dates' | 'guests' | 'price';
  *  - `exchange`  → {@link OfferingType.EXCHANGE}
  *
  * Pure data (no React) so the search store, the `RentalModeContext`, the
- * sidebar toggle, and the `SearchPanel` can all share one mapping.
+ * sidebar toggle, and the `StaySearch` composer can all share one mapping.
  */
 export type BrowseMode = 'long_term' | 'vacation' | 'buy' | 'exchange';
 
@@ -232,7 +232,7 @@ export const OFFERING_BROWSE_MODE: Record<OfferingType, BrowseMode> = {
 
 /**
  * Pick the {@link BrowseMode} implied by an {@link OfferingType}. Used by the
- * `SearchPanel` toggle, whose draft stores the active offering rather than a
+ * `StaySearch` sheet's toggle, whose draft stores the active offering rather than a
  * browse mode.
  */
 export function browseModeFromOffering(offering: OfferingType): BrowseMode {

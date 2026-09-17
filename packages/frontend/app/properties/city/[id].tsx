@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useContext } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -32,10 +32,8 @@ import { cityCountryName, getCityImageSource } from '@/utils/cityDisplay';
 import { LinearGradient } from 'expo-linear-gradient';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
-import { FiltersBar } from '@/components/FiltersBar';
-import { FiltersBottomSheet, type FilterSection, type FilterValue } from '@/components/FiltersBar/FiltersBottomSheet';
+import { FiltersBar, type CityFilterValues } from '@/components/FiltersBar';
 
-import { BottomSheetContext } from '@/context/BottomSheetContext';
 import {
   RiArrowLeftLine,
   RiErrorWarningFill,
@@ -46,19 +44,15 @@ import {
 /** Number of skeleton cards shown during the first properties load. */
 const SKELETON_COUNT = 6;
 
-interface CityFilterState {
-  verified: boolean;
-  ecoFriendly: boolean;
-  bedrooms: string;
-  bathrooms: string;
+interface CityFilterState extends CityFilterValues {
   sortBy: CitySortBy;
 }
 
 const DEFAULT_FILTERS: CityFilterState = {
   verified: false,
   ecoFriendly: false,
-  bedrooms: '',
-  bathrooms: '',
+  bedrooms: undefined,
+  bathrooms: undefined,
   sortBy: 'newest',
 };
 
@@ -69,7 +63,6 @@ export default function CityPropertiesPage() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const cityId = typeof id === 'string' ? id : undefined;
   const [headerHeight, setHeaderHeight] = useState(0);
-  const bottomSheet = useContext(BottomSheetContext);
 
   // City detail (hero + stats) from the DB-owned relational geo layer.
   const { data: city, isLoading: cityLoading, isError: cityError } = useCity(cityId);
@@ -85,8 +78,8 @@ export default function CityPropertiesPage() {
     () => ({
       verified: filters.verified,
       eco: filters.ecoFriendly,
-      minBedrooms: filters.bedrooms ? Number(filters.bedrooms) : undefined,
-      minBathrooms: filters.bathrooms ? Number(filters.bathrooms) : undefined,
+      minBedrooms: filters.bedrooms,
+      minBathrooms: filters.bathrooms,
     }),
     [filters.verified, filters.ecoFriendly, filters.bedrooms, filters.bathrooms],
   );
@@ -114,117 +107,14 @@ export default function CityPropertiesPage() {
     enabled: hasNextPage,
   });
 
-  const filterSections: FilterSection[] = useMemo(() => [
-    {
-      id: 'verified',
-      title: t('properties.city.verifiedProperties'),
-      type: 'chips',
-      options: [
-        { id: 'true', label: t('properties.city.verifiedOnly'), value: 'true' }
-      ],
-      value: filters.verified ? 'true' : undefined
-    },
-    {
-      id: 'ecoFriendly',
-      title: t('properties.city.ecoFriendly'),
-      type: 'chips',
-      options: [
-        { id: 'true', label: t('properties.city.ecoFriendlyOnly'), value: 'true' }
-      ],
-      value: filters.ecoFriendly ? 'true' : undefined
-    },
-    {
-      id: 'bedrooms',
-      title: t('property.sections.bedrooms'),
-      type: 'chips',
-      options: [
-        { id: '1', label: '1+', value: '1' },
-        { id: '2', label: '2+', value: '2' },
-        { id: '3', label: '3+', value: '3' },
-        { id: '4', label: '4+', value: '4' },
-      ],
-      value: filters.bedrooms
-    },
-    {
-      id: 'bathrooms',
-      title: t('property.sections.bathrooms'),
-      type: 'chips',
-      options: [
-        { id: '1', label: '1+', value: '1' },
-        { id: '2', label: '2+', value: '2' },
-        { id: '3', label: '3+', value: '3' },
-      ],
-      value: filters.bathrooms
-    }
-  ], [t, filters]);
-
-  const handleFilterChange = useCallback((sectionId: string, value: FilterValue) => {
-    setFilters(prev => {
-      switch (sectionId) {
-        case 'verified':
-          return { ...prev, verified: value === 'true' };
-        case 'ecoFriendly':
-          return { ...prev, ecoFriendly: value === 'true' };
-        case 'bedrooms':
-          return { ...prev, bedrooms: String(value) };
-        case 'bathrooms':
-          return { ...prev, bathrooms: String(value) };
-        default:
-          return prev;
-      }
-    });
-  }, []);
-
-  const handleOpenFilters = useCallback(() => {
-    bottomSheet.openBottomSheet(
-      <FiltersBottomSheet
-        sections={filterSections}
-        onFilterChange={handleFilterChange}
-        onApply={bottomSheet.closeBottomSheet}
-        onClear={() => {
-          setFilters(prev => ({
-            ...DEFAULT_FILTERS,
-            sortBy: prev.sortBy,
-          }));
-          bottomSheet.closeBottomSheet();
-        }}
-      />
-    );
-  }, [bottomSheet, filterSections, handleFilterChange]);
-
-  const handleOpenSort = useCallback(() => {
-    bottomSheet.openBottomSheet(
-      <FiltersBottomSheet
-        sections={[
-          {
-            id: 'sort',
-            title: t('properties.city.sortBy'),
-            type: 'chips',
-            options: [
-              { id: 'newest', label: t('properties.city.sortNewest'), value: 'newest' },
-              { id: 'priceAsc', label: t('properties.city.sortPriceAsc'), value: 'priceAsc' },
-              { id: 'priceDesc', label: t('properties.city.sortPriceDesc'), value: 'priceDesc' },
-            ],
-            value: filters.sortBy,
-          }
-        ]}
-        onFilterChange={(_, value) =>
-          setFilters(prev => ({ ...prev, sortBy: String(value) as CitySortBy }))
-        }
-        onApply={bottomSheet.closeBottomSheet}
-        onClear={() => {
-          setFilters(prev => ({ ...prev, sortBy: 'newest' }));
-          bottomSheet.closeBottomSheet();
-        }}
-      />
-    );
-  }, [bottomSheet, filters.sortBy, t]);
-
-  const activeFiltersCount =
-    (filters.verified ? 1 : 0) +
-    (filters.ecoFriendly ? 1 : 0) +
-    (filters.bedrooms ? 1 : 0) +
-    (filters.bathrooms ? 1 : 0);
+  const handleApplyFilters = useCallback(
+    (next: CityFilterValues) => setFilters((prev) => ({ ...prev, ...next })),
+    [],
+  );
+  const handleSortChange = useCallback(
+    (sortBy: CitySortBy) => setFilters((prev) => ({ ...prev, sortBy })),
+    [],
+  );
 
   const handlePropertyPress = useCallback(
     (property: Property) => {
@@ -405,10 +295,10 @@ export default function CityPropertiesPage() {
           </View>
 
           <FiltersBar
-            activeFiltersCount={activeFiltersCount}
-            onFilterPress={handleOpenFilters}
+            filters={filters}
+            onApplyFilters={handleApplyFilters}
             sortBy={filters.sortBy}
-            onSortPress={handleOpenSort}
+            onSortChange={handleSortChange}
           />
 
           <View style={styles.propertiesList}>{propertiesBody()}</View>

@@ -35,7 +35,7 @@
  * here at all. Should one come back: static style arrays plus
  * `onPressIn`/`onPressOut`, never `style={({ pressed }) => …}` — the css-interop
  * swallows the function form and the element renders unstyled.
- * `components/search/SearchSummaryBar.tsx` is the canonical template.
+ * `docs/frontend-conventions.md` carries the canonical pattern.
  */
 
 import React, { useCallback, useState } from 'react';
@@ -232,7 +232,6 @@ export function LocationScopeBar({
         maxWidth={PICKER_MAX_WIDTH}
       >
         <WhereStep
-          compact
           value={pickerText}
           onChangeText={setPickerText}
           onSelectLocation={commit}

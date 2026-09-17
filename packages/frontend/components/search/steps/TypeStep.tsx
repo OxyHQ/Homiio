@@ -1,106 +1,90 @@
 /**
- * TypeStep — property-type multi-select for the search panel.
+ * TypeStep — property-type multi-select, on Bloom's `ToggleChipGroup`.
  *
- * Renders the four user-facing property types as Bloom Chips. The label set
- * adapts to the active offering (short-term phrases "Whole house" / "Private
- * room"). Selection is multi-select; an empty selection means "any type".
+ * The four user-facing property types, each with its glyph. The label set
+ * adapts to the active offering (short-term phrases "Whole houses" / "Private
+ * rooms"). An empty selection means "any type".
  */
-import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import React, { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { Chip } from '@oxy.so/bloom/chip';
-import { Text as BloomText } from '@oxy.so/bloom/typography';
+import {
+  RiBuilding2Line,
+  RiDoorOpenLine,
+  RiHome4Line,
+  RiHotelBedLine,
+} from '@oxy.so/bloom/icons';
+import { ToggleChipGroup, type ToggleChipOption } from '@oxy.so/bloom/stay-filters';
 
 import { OfferingType, PropertyType } from '@homiio/shared-types';
-import { colors } from '@/styles/colors';
-import { spacing } from '@/constants/styles';
 
-/** A selectable property type with its long-term and short-term labels. */
-interface TypeOption {
+/** A selectable property type with its glyph and its long-term and short-term labels. */
+export interface SearchTypeOption {
   type: PropertyType;
+  icon: typeof RiBuilding2Line;
   longTermKey: string;
   vacationKey: string;
 }
 
-const TYPE_OPTIONS: readonly TypeOption[] = [
-  { type: PropertyType.APARTMENT, longTermKey: 'search.types.apartments', vacationKey: 'search.types.apartments' },
-  { type: PropertyType.HOUSE, longTermKey: 'search.types.houses', vacationKey: 'search.filters.propertyTypeVacation.wholeHouses' },
-  { type: PropertyType.ROOM, longTermKey: 'search.types.rooms', vacationKey: 'search.filters.propertyTypeVacation.privateRooms' },
-  { type: PropertyType.STUDIO, longTermKey: 'search.types.studios', vacationKey: 'search.types.studios' },
-] as const;
+export const SEARCH_TYPE_OPTIONS: readonly SearchTypeOption[] = [
+  {
+    type: PropertyType.APARTMENT,
+    icon: RiBuilding2Line,
+    longTermKey: 'search.types.apartments',
+    vacationKey: 'search.types.apartments',
+  },
+  {
+    type: PropertyType.HOUSE,
+    icon: RiHome4Line,
+    longTermKey: 'search.types.houses',
+    vacationKey: 'search.filters.propertyTypeVacation.wholeHouses',
+  },
+  {
+    type: PropertyType.ROOM,
+    icon: RiHotelBedLine,
+    longTermKey: 'search.types.rooms',
+    vacationKey: 'search.filters.propertyTypeVacation.privateRooms',
+  },
+  {
+    type: PropertyType.STUDIO,
+    icon: RiDoorOpenLine,
+    longTermKey: 'search.types.studios',
+    vacationKey: 'search.types.studios',
+  },
+];
+
+/** The i18n key a type option reads under an offering. */
+export function typeOptionLabelKey(option: SearchTypeOption, offering: OfferingType): string {
+  return offering === OfferingType.SHORT_TERM_RENT ? option.vacationKey : option.longTermKey;
+}
 
 interface TypeStepProps {
   offering: OfferingType;
   selected: PropertyType[];
-  onToggle: (type: PropertyType) => void;
-  /**
-   * Compact mode for the wide centered dialog: the dialog's own header already
-   * names the step ("Property type"), so the step's internal heading is
-   * suppressed and the inter-element gap tightens. The narrow sheet leaves this
-   * `false` and keeps the per-step heading.
-   */
-  compact?: boolean;
+  onChange: (types: PropertyType[]) => void;
 }
 
-export const TypeStep: React.FC<TypeStepProps> = ({
-  offering,
-  selected,
-  onToggle,
-  compact = false,
-}) => {
+export const TypeStep: React.FC<TypeStepProps> = ({ offering, selected, onChange }) => {
   const { t } = useTranslation();
-  const isVacation = offering === OfferingType.SHORT_TERM_RENT;
+
+  const options = useMemo<ToggleChipOption<PropertyType>[]>(
+    () =>
+      SEARCH_TYPE_OPTIONS.map((option) => ({
+        value: option.type,
+        label: t(typeOptionLabelKey(option, offering)),
+        icon: option.icon,
+      })),
+    [offering, t],
+  );
 
   return (
-    <View style={compact ? styles.containerCompact : styles.container}>
-      {compact ? null : (
-        <BloomText style={styles.heading}>
-          {t('search.step.type.title')}
-        </BloomText>
-      )}
-      <View style={styles.chips}>
-        {TYPE_OPTIONS.map((option) => {
-          const labelKey = isVacation ? option.vacationKey : option.longTermKey;
-          const isSelected = selected.includes(option.type);
-          return (
-            <Chip
-              key={option.type}
-              variant={isSelected ? 'solid' : 'outlined'}
-              color={isSelected ? 'primary' : 'default'}
-              size="large"
-              selected={isSelected}
-              onPress={() => onToggle(option.type)}
-              accessibilityLabel={t(labelKey)}
-            >
-              {t(labelKey)}
-            </Chip>
-          );
-        })}
-      </View>
-    </View>
+    <ToggleChipGroup<PropertyType>
+      options={options}
+      value={selected}
+      onValueChange={onChange}
+      accessibilityLabel={t('search.filters.propertyType')}
+    />
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    gap: spacing.lg,
-  },
-  // Compact has no internal heading, so the only gap is between wrapped chip
-  // rows — keep it snug for the centered dialog.
-  containerCompact: {
-    gap: spacing.sm,
-  },
-  heading: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.COLOR_BLACK,
-  },
-  chips: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-  },
-});
 
 export default TypeStep;

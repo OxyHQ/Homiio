@@ -1,120 +1,106 @@
 /**
- * GuestsStep — vacation-only guest-count stepper.
+ * GuestsStep — vacation-only guest picker, on Bloom's `GuestPicker`.
  *
- * A single counter (0–MAX_GUESTS). Zero means "no guest filter" and is reported
- * upward as `undefined` so the collapsed pill shows the "Add guests"
- * placeholder. Long-term searches never mount this step (the panel omits it),
- * mirroring DatesStep — there is no guest control in long-term mode by design.
+ * Only the rows that FILTER are offered:
+ *
+ *  - adults and children add up to the `guests` a listing must sleep (the
+ *    backend compares it against `maxGuests`); infants are not offered because
+ *    nothing reads them.
+ *  - pets is a flag, not a count — the search can only ask for pet-friendly
+ *    homes — so its row stops at one and maps to `petFriendly`.
+ *
+ * The adults/children split is not part of the query (a listing's capacity is
+ * one number), so a reopened picker shows the total as adults.
  */
-import React, { useCallback } from 'react';
-import { StyleSheet, View } from 'react-native';
+import React, { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { Button } from '@oxy.so/bloom/button';
-import { Text as BloomText } from '@oxy.so/bloom/typography';
+import { GuestPicker, type GuestCounts, type GuestKind } from '@oxy.so/bloom/stay-search';
 
-import { colors } from '@/styles/colors';
-import { spacing } from '@/constants/styles';
-
-/** Guest-count bounds for the stepper. Zero clears the filter (`undefined`). */
-const MIN_GUESTS = 0;
+const GUEST_KINDS: readonly GuestKind[] = ['adults', 'children', 'pets'];
 const MAX_GUESTS = 16;
+const GUEST_MAX = { pets: 1 } as const;
 
-interface GuestsStepProps {
-  value?: number;
-  /** Reports the resolved count, or `undefined` when cleared to zero. */
-  onChange: (guests: number | undefined) => void;
-  /**
-   * Compact mode for the wide centered dialog: the dialog header already names
-   * the step ("Who"), so the step's internal heading is suppressed. The narrow
-   * sheet leaves this `false` and keeps the per-step heading.
-   */
-  compact?: boolean;
+export interface GuestsValue {
+  guests?: number;
+  petFriendly?: boolean;
 }
 
-export const GuestsStep: React.FC<GuestsStepProps> = ({ value, onChange, compact = false }) => {
+interface GuestsStepProps {
+  value: GuestsValue;
+  onChange: (value: GuestsValue) => void;
+  /** Mirrors the adults/children split while the picker stays mounted. */
+  counts?: GuestCounts;
+  onCountsChange?: (counts: GuestCounts) => void;
+}
+
+/** The picker rows a query implies. */
+export function guestCountsFor(value: GuestsValue): GuestCounts {
+  return {
+    adults: value.guests ?? 0,
+    children: 0,
+    infants: 0,
+    pets: value.petFriendly ? 1 : 0,
+  };
+}
+
+/** The query fields a picker state means. */
+export function guestsValueFor(counts: GuestCounts): GuestsValue {
+  const guests = counts.adults + counts.children;
+  return {
+    guests: guests > 0 ? guests : undefined,
+    petFriendly: counts.pets > 0 ? true : undefined,
+  };
+}
+
+export const GuestsStep: React.FC<GuestsStepProps> = ({ value, onChange, counts, onCountsChange }) => {
   const { t } = useTranslation();
-  const count = value ?? 0;
 
-  const decrement = useCallback(() => {
-    const next = Math.max(MIN_GUESTS, count - 1);
-    onChange(next === 0 ? undefined : next);
-  }, [count, onChange]);
+  // The split is kept only while the owner holds it; otherwise it is derived.
+  const shown = useMemo(() => {
+    if (counts) {
+      const mirrored = guestsValueFor(counts);
+      if (mirrored.guests === value.guests && mirrored.petFriendly === value.petFriendly) return counts;
+    }
+    return guestCountsFor(value);
+  }, [counts, value]);
 
-  const increment = useCallback(() => {
-    onChange(Math.min(MAX_GUESTS, count + 1));
-  }, [count, onChange]);
+  const handleChange = useCallback(
+    (next: GuestCounts) => {
+      onCountsChange?.(next);
+      onChange(guestsValueFor(next));
+    },
+    [onChange, onCountsChange],
+  );
+
+  const labels = useMemo(
+    () => ({
+      adults: t('search.guests.adults'),
+      children: t('search.guests.children'),
+      pets: t('search.guests.pets'),
+    }),
+    [t],
+  );
+  const descriptions = useMemo(
+    () => ({
+      adults: t('search.guests.adultsDescription'),
+      children: t('search.guests.childrenDescription'),
+      pets: t('search.guests.petsDescription'),
+    }),
+    [t],
+  );
 
   return (
-    <View style={compact ? styles.containerCompact : styles.container}>
-      {compact ? null : (
-        <BloomText style={styles.heading}>{t('search.step.guests.title')}</BloomText>
-      )}
-      <View style={styles.row}>
-        <BloomText style={styles.rowLabel}>{t('search.step.guests.label')}</BloomText>
-        <View style={styles.controls}>
-          <Button
-            variant="icon"
-            size="small"
-            onPress={decrement}
-            disabled={count <= MIN_GUESTS}
-            accessibilityLabel={t('search.actions.decreaseGuests')}
-          >
-            {'−'}
-          </Button>
-          <BloomText style={styles.count}>{count}</BloomText>
-          <Button
-            variant="icon"
-            size="small"
-            onPress={increment}
-            disabled={count >= MAX_GUESTS}
-            accessibilityLabel={t('search.actions.increaseGuests')}
-          >
-            {'+'}
-          </Button>
-        </View>
-      </View>
-    </View>
+    <GuestPicker
+      value={shown}
+      onChange={handleChange}
+      kinds={GUEST_KINDS}
+      max={GUEST_MAX}
+      maxGuests={MAX_GUESTS}
+      labels={labels}
+      descriptions={descriptions}
+    />
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    gap: spacing.lg,
-  },
-  // Compact drops the large heading (the dialog header names the step), so the
-  // single counter row stands alone without an extra leading gap.
-  containerCompact: {
-    gap: spacing.sm,
-  },
-  heading: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.COLOR_BLACK,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: spacing.sm,
-  },
-  rowLabel: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: colors.COLOR_BLACK,
-  },
-  controls: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  count: {
-    minWidth: 24,
-    textAlign: 'center',
-    fontSize: 15,
-    fontWeight: '600',
-    color: colors.COLOR_BLACK,
-  },
-});
 
 export default GuestsStep;
