@@ -2026,9 +2026,11 @@
       "attach": "ফাইল সংযুক্ত করুন",
       "send": "বার্তা পাঠান",
       "stop": "উত্তর তৈরি থামান",
-      "messageCount_one": "{{count}}টি বার্তা",
-      "messageCount_other": "{{count}}টি বার্তা",
-      "disclaimer": "Sindi advocates for tenant rights and housing justice. For legal action, consult a qualified attorney. Connect with local tenant organizations for community support."
+      "disclaimer": "Sindi advocates for tenant rights and housing justice. For legal action, consult a qualified attorney. Connect with local tenant organizations for community support.",
+      "addMenu": "চ্যাটে যোগ করুন",
+      "addGroup": "যোগ করুন",
+      "voice": "ভয়েস ইনপুট",
+      "removeAttachment": "সরান"
     },
     "errors": {
       "connection": "Connection Error",
@@ -2094,6 +2096,13 @@
       "behavior": "Behavior",
       "title": "Sindi preferences",
       "resetDone": "Sindi preferences reset."
+    },
+    "voice": {
+      "unsupportedBrowser": "এই ব্রাউজারে ভয়েস ইনপুট সমর্থিত নয়",
+      "unsupportedDevice": "এই ডিভাইসে ভয়েস ইনপুট উপলভ্য নয়",
+      "deniedTitle": "মাইক্রোফোনের অনুমতি দেওয়া হয়নি",
+      "deniedMessage": "বার্তা বলে লিখতে সেটিংসে মাইক্রোফোন ও স্পিচ রিকগনিশনের অনুমতি দিন।",
+      "failed": "ভয়েস ইনপুট অপ্রত্যাশিতভাবে বন্ধ হয়ে গেছে"
     }
   },
   "sidebar": {

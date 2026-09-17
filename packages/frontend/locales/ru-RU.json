@@ -2030,11 +2030,11 @@
       "attach": "Прикрепить файл",
       "send": "Отправить сообщение",
       "stop": "Остановить генерацию",
-      "messageCount_one": "{{count}} сообщение",
-      "messageCount_few": "{{count}} сообщения",
-      "messageCount_many": "{{count}} сообщений",
-      "messageCount_other": "{{count}} сообщения",
-      "disclaimer": "Sindi advocates for tenant rights and housing justice. For legal action, consult a qualified attorney. Connect with local tenant organizations for community support."
+      "disclaimer": "Sindi advocates for tenant rights and housing justice. For legal action, consult a qualified attorney. Connect with local tenant organizations for community support.",
+      "addMenu": "Добавить в чат",
+      "addGroup": "Добавить",
+      "voice": "Голосовой ввод",
+      "removeAttachment": "Удалить"
     },
     "errors": {
       "connection": "Connection Error",
@@ -2100,6 +2100,13 @@
       "behavior": "Behavior",
       "title": "Sindi preferences",
       "resetDone": "Sindi preferences reset."
+    },
+    "voice": {
+      "unsupportedBrowser": "Этот браузер не поддерживает голосовой ввод",
+      "unsupportedDevice": "Голосовой ввод недоступен на этом устройстве",
+      "deniedTitle": "Нет доступа к микрофону",
+      "deniedMessage": "Разрешите доступ к микрофону и распознаванию речи в настройках, чтобы диктовать сообщения.",
+      "failed": "Голосовой ввод неожиданно прервался"
     }
   },
   "sidebar": {

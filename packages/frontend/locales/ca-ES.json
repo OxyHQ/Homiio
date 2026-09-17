@@ -2391,9 +2391,11 @@
       "attach": "Adjunta un fitxer",
       "send": "Envia el missatge",
       "stop": "Atura la resposta",
-      "messageCount_one": "{{count}} missatge",
-      "messageCount_other": "{{count}} missatges",
-      "disclaimer": "Sindi advoca pels drets dels llogaters i la justícia habitacional. Per a accions legals, consulteu un advocat qualificat. Connecteu-vos amb organitzacions locals de llogaters per suport comunitari."
+      "disclaimer": "Sindi advoca pels drets dels llogaters i la justícia habitacional. Per a accions legals, consulteu un advocat qualificat. Connecteu-vos amb organitzacions locals de llogaters per suport comunitari.",
+      "addMenu": "Afegeix al xat",
+      "addGroup": "Afegeix",
+      "voice": "Entrada de veu",
+      "removeAttachment": "Treu"
     },
     "errors": {
       "connection": "Error de Connexió",
@@ -2459,6 +2461,13 @@
       "behavior": "Behavior",
       "title": "Sindi preferences",
       "resetDone": "Sindi preferences reset."
+    },
+    "voice": {
+      "unsupportedBrowser": "L'entrada de veu no és compatible amb aquest navegador",
+      "unsupportedDevice": "L'entrada de veu no està disponible en aquest dispositiu",
+      "deniedTitle": "S'ha denegat l'accés al micròfon",
+      "deniedMessage": "Permet l'accés al micròfon i al reconeixement de veu a la configuració per dictar missatges.",
+      "failed": "L'entrada de veu s'ha aturat inesperadament"
     }
   },
   "sidebar": {

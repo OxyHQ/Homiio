@@ -134,7 +134,6 @@ export function ChatContent({
         isUploading={isUploading}
         disabled={needsConsent || isRequestingConsent}
         hasStreamedText={hasStreamedText}
-        messageCount={messages.length}
       />
     </View>
   );

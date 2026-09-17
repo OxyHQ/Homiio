@@ -2026,9 +2026,11 @@
       "attach": "फ़ाइल संलग्न करें",
       "send": "संदेश भेजें",
       "stop": "जवाब बनाना रोकें",
-      "messageCount_one": "{{count}} संदेश",
-      "messageCount_other": "{{count}} संदेश",
-      "disclaimer": "Sindi advocates for tenant rights and housing justice. For legal action, consult a qualified attorney. Connect with local tenant organizations for community support."
+      "disclaimer": "Sindi advocates for tenant rights and housing justice. For legal action, consult a qualified attorney. Connect with local tenant organizations for community support.",
+      "addMenu": "चैट में जोड़ें",
+      "addGroup": "जोड़ें",
+      "voice": "वॉइस इनपुट",
+      "removeAttachment": "हटाएँ"
     },
     "errors": {
       "connection": "Connection Error",
@@ -2094,6 +2096,13 @@
       "behavior": "Behavior",
       "title": "Sindi preferences",
       "resetDone": "Sindi preferences reset."
+    },
+    "voice": {
+      "unsupportedBrowser": "यह ब्राउज़र वॉइस इनपुट का समर्थन नहीं करता",
+      "unsupportedDevice": "इस डिवाइस पर वॉइस इनपुट उपलब्ध नहीं है",
+      "deniedTitle": "माइक्रोफ़ोन की अनुमति नहीं दी गई",
+      "deniedMessage": "संदेश बोलकर लिखने के लिए सेटिंग्स में माइक्रोफ़ोन और वाक् पहचान की अनुमति दें।",
+      "failed": "वॉइस इनपुट अचानक बंद हो गया"
     }
   },
   "sidebar": {

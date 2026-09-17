@@ -2026,9 +2026,11 @@
       "attach": "Anexar um arquivo",
       "send": "Enviar mensagem",
       "stop": "Parar de gerar",
-      "messageCount_one": "{{count}} mensagem",
-      "messageCount_other": "{{count}} mensagens",
-      "disclaimer": "Sindi advocates for tenant rights and housing justice. For legal action, consult a qualified attorney. Connect with local tenant organizations for community support."
+      "disclaimer": "Sindi advocates for tenant rights and housing justice. For legal action, consult a qualified attorney. Connect with local tenant organizations for community support.",
+      "addMenu": "Adicionar ao chat",
+      "addGroup": "Adicionar",
+      "voice": "Entrada de voz",
+      "removeAttachment": "Remover"
     },
     "errors": {
       "connection": "Connection Error",
@@ -2094,6 +2096,13 @@
       "behavior": "Behavior",
       "title": "Sindi preferences",
       "resetDone": "Sindi preferences reset."
+    },
+    "voice": {
+      "unsupportedBrowser": "A entrada de voz não é compatível com este navegador",
+      "unsupportedDevice": "A entrada de voz não está disponível neste dispositivo",
+      "deniedTitle": "Acesso ao microfone negado",
+      "deniedMessage": "Permita o acesso ao microfone e ao reconhecimento de fala nas configurações para ditar mensagens.",
+      "failed": "A entrada de voz parou inesperadamente"
     }
   },
   "sidebar": {
