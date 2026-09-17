@@ -1,15 +1,23 @@
+/**
+ * A sent or received roommate request. Built from Bloom `Card`, `Avatar`,
+ * `Chip` and `Textarea`; the outcome of accept/decline is a Bloom `toast`.
+ */
 import React, { useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, Alert, TextInput } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { deviceTimeZone, formatDate } from '@homiio/shared-types';
-import { useFormatting } from '@/utils/format';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors } from '@/styles/colors';
-import type { RoommateRequest, RoommateProfile } from '@/hooks/useRoommate';
+import { Avatar } from '@oxy.so/bloom/avatar';
 import { Button } from '@oxy.so/bloom/button';
-import { RiCheckboxCircleFill, RiCloseCircleLine } from '@oxy.so/bloom/icons';
-import { ThemedText } from './ThemedText';
-
+import { Card } from '@oxy.so/bloom/card';
+import { Chip } from '@oxy.so/bloom/chip';
+import { RiCheckboxCircleFill, RiCloseCircleLine, RiEyeLine } from '@oxy.so/bloom/icons';
+import { Textarea } from '@oxy.so/bloom/textarea';
+import { useTheme } from '@oxy.so/bloom/theme';
+import { toast } from '@oxy.so/bloom/toast';
+import { Text as BloomText } from '@oxy.so/bloom/typography';
+import { useFormatting } from '@/utils/format';
+import type { RoommateRequest, RoommateProfile } from '@/hooks/useRoommate';
+import { spacing } from '@/constants/styles';
 
 interface RoommateRequestProps {
   request: RoommateRequest;
@@ -19,6 +27,8 @@ interface RoommateRequestProps {
   onViewProfile: (profileId: string) => void;
 }
 
+type StatusTone = 'success' | 'error' | 'warning' | 'default';
+
 export const RoommateRequestComponent: React.FC<RoommateRequestProps> = ({
   request,
   type,
@@ -27,14 +37,19 @@ export const RoommateRequestComponent: React.FC<RoommateRequestProps> = ({
   onViewProfile,
 }) => {
   const { t } = useTranslation();
+  const theme = useTheme();
   const { locale } = useFormatting();
   const timeZone = deviceTimeZone();
   const [isLoading, setIsLoading] = useState(false);
   const [showResponseInput, setShowResponseInput] = useState(false);
   const [responseMessage, setResponseMessage] = useState('');
 
-  const handleAccept = async () => {
-    if (!onAccept) return;
+  const respond = async (
+    handler: ((requestId: string, message?: string) => Promise<boolean>) | undefined,
+    successKey: string,
+    failureKey: string,
+  ) => {
+    if (!handler) return;
 
     if (!showResponseInput) {
       setShowResponseInput(true);
@@ -43,68 +58,50 @@ export const RoommateRequestComponent: React.FC<RoommateRequestProps> = ({
 
     setIsLoading(true);
     try {
-      const success = await onAccept(request.id, responseMessage);
+      const success = await handler(request.id, responseMessage);
       if (success) {
         setShowResponseInput(false);
         setResponseMessage('');
-        Alert.alert(t('roommates.alert.successTitle'), t('roommates.alert.accepted'));
+        toast.success(t(successKey));
       }
     } catch {
-      Alert.alert(t('roommates.alert.errorTitle'), t('roommates.alert.acceptFailed'));
+      toast.error(t(failureKey));
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleDecline = async () => {
-    if (!onDecline) return;
-
-    if (!showResponseInput) {
-      setShowResponseInput(true);
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const success = await onDecline(request.id, responseMessage);
-      if (success) {
-        setShowResponseInput(false);
-        setResponseMessage('');
-        Alert.alert(t('roommates.alert.successTitle'), t('roommates.alert.declined'));
-      }
-    } catch {
-      Alert.alert(t('roommates.alert.errorTitle'), t('roommates.alert.declineFailed'));
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const handleAccept = () =>
+    respond(onAccept, 'roommates.alert.accepted', 'roommates.alert.acceptFailed');
+  const handleDecline = () =>
+    respond(onDecline, 'roommates.alert.declined', 'roommates.alert.declineFailed');
 
   const getDisplayName = (profile: RoommateProfile) =>
     profile.displayName?.trim() || t('roommates.screen.fallbackName');
 
-  const getStatusColor = (status: string) => {
+  const statusTone = (status: string): StatusTone => {
     switch (status) {
       case 'accepted':
-        return colors.success; // Green for success
+        return 'success';
       case 'declined':
-        return colors.danger; // Red for error
+        return 'error';
       case 'expired':
-        return colors.COLOR_BLACK_LIGHT_5;
+        return 'default';
       default:
-        return colors.warning; // Yellow for warning
+        return 'warning';
     }
   };
 
-  const getStatusText = (status: string) => {
+  const statusText = (status: string) => {
     switch (status) {
       case 'accepted':
-        return 'Accepted';
+        return t('roommates.request.accepted');
       case 'declined':
-        return 'Declined';
+        return t('roommates.request.declined');
       case 'expired':
-        return 'Expired';
+        return t('roommates.request.expired');
       default:
-        return 'Pending';
+        return t('roommates.request.pending');
     }
   };
 
@@ -114,235 +111,143 @@ export const RoommateRequestComponent: React.FC<RoommateRequestProps> = ({
     formatDate(dateString, locale, timeZone);
 
   const otherProfile = type === 'sent' ? request.receiver : request.sender;
+  const otherName = getDisplayName(otherProfile);
+  const secondary = { color: theme.colors.textSecondary };
 
   return (
-    <View style={styles.container}>
-      {/* Header with profile info */}
+    <Card variant="outlined" radius="radius-16" style={styles.card}>
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.avatarContainer}
-          onPress={() => onViewProfile(otherProfile.id)}
-        >
-          {/* Avatar placeholder since avatar is not in PersonalProfile type */}
-          <View style={styles.avatarPlaceholder}>
-            <Ionicons name="person" size={24} color={colors.COLOR_BLACK_LIGHT_5} />
-          </View>
-        </TouchableOpacity>
+        <Avatar name={otherName} size={48} onPress={() => onViewProfile(otherProfile.id)} />
 
         <View style={styles.headerInfo}>
-          <ThemedText style={styles.name}>{getDisplayName(otherProfile)}</ThemedText>
-          <ThemedText style={styles.date}>{formatRequestDate(request.createdAt)}</ThemedText>
-          <View style={styles.matchScore}>
-            <ThemedText style={styles.matchScoreText}>{request.matchScore}% Match</ThemedText>
-          </View>
+          <BloomText style={styles.name} numberOfLines={1}>
+            {otherName}
+          </BloomText>
+          <BloomText style={[styles.metaSmall, secondary]}>
+            {formatRequestDate(request.createdAt)}
+          </BloomText>
+          <BloomText style={[styles.metaSmall, { color: theme.colors.primary }]}>
+            {t('roommates.relationship.percentMatch', { score: request.matchScore })}
+          </BloomText>
         </View>
 
-        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(request.status) }]}>
-          <ThemedText style={styles.statusText}>{getStatusText(request.status)}</ThemedText>
-        </View>
+        <Chip size="small" variant="subtle" color={statusTone(request.status)}>
+          {statusText(request.status)}
+        </Chip>
       </View>
 
-      {/* Message */}
-      {request.message && (
+      {request.message ? (
         <View style={styles.messageSection}>
-          <ThemedText style={styles.messageLabel}>
-            {type === 'sent' ? 'Your message:' : 'Message:'}
-          </ThemedText>
-          <ThemedText style={styles.message}>{request.message}</ThemedText>
+          <BloomText style={styles.messageLabel}>
+            {type === 'sent'
+              ? t('roommates.request.yourMessage')
+              : t('roommates.relationship.message')}
+          </BloomText>
+          <BloomText style={[styles.message, secondary]}>{request.message}</BloomText>
         </View>
-      )}
+      ) : null}
 
-      {/* Response input */}
-      {showResponseInput && type === 'received' && request.status === 'pending' && (
-        <View style={styles.responseSection}>
-          <ThemedText style={styles.responseLabel}>Add a response (optional):</ThemedText>
-          <TextInput
-            style={styles.responseInput}
-            value={responseMessage}
-            onChangeText={setResponseMessage}
-            placeholder="Thanks for the request! I'd love to connect..."
-            multiline
-            maxLength={500}
-          />
-        </View>
-      )}
+      {showResponseInput && type === 'received' && request.status === 'pending' ? (
+        <Textarea
+          label={t('roommates.request.responseLabel')}
+          value={responseMessage}
+          onChangeText={setResponseMessage}
+          placeholder={t('roommates.request.responsePlaceholder')}
+          maxLength={500}
+          showCount
+          autoResize
+          maxRows={6}
+        />
+      ) : null}
 
-      {/* Actions */}
-      {request.status === 'pending' && (
-        <View style={styles.actions}>
-          {type === 'received' ? (
-            <>
-              <Button
-                leadingIcon={RiCloseCircleLine}
-                onPress={handleDecline}
-                variant="secondary"
-                loading={isLoading}
-                style={styles.declineButton}
-              >
-                Decline
-              </Button>
-              <Button
-                leadingIcon={RiCheckboxCircleFill}
-                onPress={handleAccept}
-                variant="primary"
-                loading={isLoading}
-                style={styles.acceptButton}
-              >
-                Accept
-              </Button>
-            </>
-          ) : (
-            <View style={styles.sentActions}>
-              <ThemedText style={styles.sentStatusText}>Waiting for response...</ThemedText>
-            </View>
-          )}
-        </View>
+      {request.status === 'pending' ? (
+        type === 'received' ? (
+          <View style={styles.actions}>
+            <Button
+              leadingIcon={RiCloseCircleLine}
+              onPress={handleDecline}
+              variant="secondary"
+              loading={isLoading}
+              style={styles.actionButton}
+            >
+              {t('roommates.request.decline')}
+            </Button>
+            <Button
+              leadingIcon={RiCheckboxCircleFill}
+              onPress={handleAccept}
+              variant="primary"
+              loading={isLoading}
+              style={styles.actionButton}
+            >
+              {t('roommates.request.accept')}
+            </Button>
+          </View>
+        ) : (
+          <BloomText style={[styles.waiting, secondary]}>
+            {t('roommates.request.waiting')}
+          </BloomText>
+        )
+      ) : (
+        <Button
+          variant="ghost"
+          size="small"
+          leadingIcon={RiEyeLine}
+          onPress={() => onViewProfile(otherProfile.id)}
+          style={styles.viewProfile}
+        >
+          {t('roommates.request.viewProfile')}
+        </Button>
       )}
-
-      {request.status !== 'pending' && (
-        <View style={styles.completedActions}>
-          <TouchableOpacity
-            style={styles.viewProfileButton}
-            onPress={() => onViewProfile(otherProfile.id)}
-          >
-            <Ionicons name="eye-outline" size={16} color={colors.primaryDark} />
-            <ThemedText style={styles.viewProfileText}>View Profile</ThemedText>
-          </TouchableOpacity>
-        </View>
-      )}
-    </View>
+    </Card>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    backgroundColor: colors.primaryLight,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: colors.border,
+  card: {
+    padding: spacing.lg,
+    gap: spacing.md,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
-  },
-  avatarContainer: {
-    marginRight: 12,
-  },
-  avatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-  },
-  avatarPlaceholder: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: colors.COLOR_BLACK_LIGHT_6,
-    justifyContent: 'center',
-    alignItems: 'center',
+    gap: spacing.md,
   },
   headerInfo: {
     flex: 1,
+    gap: 2,
   },
   name: {
     fontSize: 16,
     fontWeight: '600',
-    color: colors.COLOR_BLACK_LIGHT_1,
-    marginBottom: 2,
   },
-  date: {
+  metaSmall: {
     fontSize: 12,
-    color: colors.COLOR_BLACK_LIGHT_5,
-    marginBottom: 4,
-  },
-  matchScore: {
-    alignSelf: 'flex-start',
-  },
-  matchScoreText: {
-    fontSize: 12,
-    color: colors.primaryDark,
-    fontWeight: '500',
-  },
-  statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  statusText: {
-    fontSize: 12,
-    color: colors.primaryLight,
-    fontWeight: '500',
   },
   messageSection: {
-    marginBottom: 16,
+    gap: spacing.xs,
   },
   messageLabel: {
     fontSize: 14,
     fontWeight: '500',
-    color: colors.COLOR_BLACK_LIGHT_1,
-    marginBottom: 4,
   },
   message: {
     fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_3,
     lineHeight: 20,
-  },
-  responseSection: {
-    marginBottom: 16,
-  },
-  responseLabel: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: colors.COLOR_BLACK_LIGHT_1,
-    marginBottom: 8,
-  },
-  responseInput: {
-    borderWidth: 1,
-    borderColor: colors.COLOR_BLACK_LIGHT_6,
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_1,
-    minHeight: 80,
-    textAlignVertical: 'top',
   },
   actions: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 12,
+    gap: spacing.md,
   },
-  declineButton: {
+  actionButton: {
     flex: 1,
   },
-  acceptButton: {
-    flex: 1,
-  },
-  sentActions: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: 12,
-  },
-  sentStatusText: {
+  waiting: {
     fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_5,
     fontStyle: 'italic',
+    textAlign: 'center',
+    paddingVertical: spacing.sm,
   },
-  completedActions: {
-    alignItems: 'center',
-    paddingTop: 8,
-  },
-  viewProfileButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-  },
-  viewProfileText: {
-    fontSize: 14,
-    color: colors.primaryDark,
-    marginLeft: 4,
+  viewProfile: {
+    alignSelf: 'center',
   },
 });

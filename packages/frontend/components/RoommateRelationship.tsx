@@ -1,12 +1,23 @@
+/**
+ * An accepted roommate pairing: status, duration, compatibility and the two
+ * people in it. Ending it asks through Bloom `confirm()` and reports the
+ * outcome with a `toast`.
+ */
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors } from '@/styles/colors';
-import type { RoommateRelationship, RoommateProfile } from '@/hooks/useRoommate';
+import { AvatarGroup } from '@oxy.so/bloom/avatar-group';
 import { Button } from '@oxy.so/bloom/button';
+import { Card } from '@oxy.so/bloom/card';
+import { Chip } from '@oxy.so/bloom/chip';
 import { RiCloseCircleLine } from '@oxy.so/bloom/icons';
+import { confirm } from '@oxy.so/bloom/surfaces';
+import { useTheme } from '@oxy.so/bloom/theme';
+import { toast } from '@oxy.so/bloom/toast';
+import { H3, Text as BloomText } from '@oxy.so/bloom/typography';
+import type { RoommateRelationship, RoommateProfile } from '@/hooks/useRoommate';
 import { getFormatLocale } from '@/utils/dateLocale';
+import { spacing } from '@/constants/styles';
 
 interface RoommateRelationshipProps {
   relationship: RoommateRelationship;
@@ -14,58 +25,57 @@ interface RoommateRelationshipProps {
   onViewProfile: (profileId: string) => void;
 }
 
+type StatusTone = 'success' | 'warning' | 'error' | 'default';
+
 export const RoommateRelationshipComponent: React.FC<RoommateRelationshipProps> = ({
   relationship,
   onEndRelationship,
   onViewProfile,
 }) => {
   const { t, i18n } = useTranslation();
+  const theme = useTheme();
   const [isLoading, setIsLoading] = useState(false);
 
   const handleEndRelationship = async () => {
-    Alert.alert(
-      t('roommates.relationship.confirmEndTitle'),
-      t('roommates.relationship.confirmEndBody'),
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('roommates.relationship.confirmEndAction'),
-          style: 'destructive',
-          onPress: async () => {
-            setIsLoading(true);
-            try {
-              const success = await onEndRelationship(relationship.id);
-              if (success) {
-                Alert.alert(t('roommates.alert.successTitle'), t('roommates.alert.relationshipEnded'));
-              }
-            } catch {
-              Alert.alert(t('roommates.alert.errorTitle'), t('roommates.alert.relationshipEndFailed'));
-            } finally {
-              setIsLoading(false);
-            }
-          },
-        },
-      ],
-    );
+    const confirmed = await confirm({
+      title: t('roommates.relationship.confirmEndTitle'),
+      description: t('roommates.relationship.confirmEndBody'),
+      confirmLabel: t('roommates.relationship.confirmEndAction'),
+      cancelLabel: t('common.cancel'),
+      destructive: true,
+    });
+    if (!confirmed) return;
+
+    setIsLoading(true);
+    try {
+      const success = await onEndRelationship(relationship.id);
+      if (success) {
+        toast.success(t('roommates.alert.relationshipEnded'));
+      }
+    } catch {
+      toast.error(t('roommates.alert.relationshipEndFailed'));
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const getDisplayName = (profile: RoommateProfile) =>
     profile.displayName?.trim() || t('roommates.screen.fallbackName');
 
-  const getStatusColor = (status: string) => {
+  const statusTone = (status: string): StatusTone => {
     switch (status) {
       case 'active':
-        return colors.online;
+        return 'success';
       case 'inactive':
-        return colors.away;
+        return 'warning';
       case 'ended':
-        return colors.busy;
+        return 'error';
       default:
-        return colors.COLOR_BLACK_LIGHT_4;
+        return 'default';
     }
   };
 
-  const getStatusText = (status: string) => {
+  const statusText = (status: string) => {
     switch (status) {
       case 'active':
         return t('roommates.relationship.statusActive');
@@ -78,10 +88,8 @@ export const RoommateRelationshipComponent: React.FC<RoommateRelationshipProps> 
     }
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString(getFormatLocale(i18n.language));
-  };
+  const formatDate = (dateString: string) =>
+    new Date(dateString).toLocaleDateString(getFormatLocale(i18n.language));
 
   const getDuration = () => {
     const startDate = new Date(relationship.startDate);
@@ -104,197 +112,140 @@ export const RoommateRelationshipComponent: React.FC<RoommateRelationshipProps> 
       : t('roommates.relationship.durationYear', { count: years });
   };
 
+  const people = [relationship.profile1, relationship.profile2];
+  const secondary = { color: theme.colors.textSecondary };
+
   return (
-    <View style={styles.container}>
+    <Card variant="outlined" radius="radius-16" style={styles.card}>
       <View style={styles.header}>
-        <View style={styles.relationshipInfo}>
-          <Text style={styles.relationshipTitle}>{t('roommates.relationship.title')}</Text>
-          <Text style={styles.duration}>
+        <View style={styles.headerInfo}>
+          <H3>{t('roommates.relationship.title')}</H3>
+          <BloomText style={[styles.meta, secondary]}>
             {t('roommates.relationship.duration', { duration: getDuration() })}
-          </Text>
-          <Text style={styles.startDate}>
+          </BloomText>
+          <BloomText style={[styles.metaSmall, secondary]}>
             {t('roommates.relationship.started', { date: formatDate(relationship.startDate) })}
-          </Text>
+          </BloomText>
         </View>
-
-        <View
-          style={[styles.statusBadge, { backgroundColor: getStatusColor(relationship.status) }]}
-        >
-          <Text style={styles.statusText}>{getStatusText(relationship.status)}</Text>
-        </View>
+        <Chip size="small" variant="subtle" color={statusTone(relationship.status)}>
+          {statusText(relationship.status)}
+        </Chip>
       </View>
 
-      <View style={styles.matchScoreSection}>
-        <Text style={styles.matchScoreText}>
+      <View style={[styles.matchScore, { backgroundColor: theme.colors.backgroundSecondary }]}>
+        <BloomText style={[styles.matchScoreText, { color: theme.colors.primary }]}>
           {t('roommates.relationship.percentMatch', { score: relationship.matchScore })}
-        </Text>
-        <Text style={styles.matchScoreLabel}>{t('roommates.compatibility')}</Text>
+        </BloomText>
+        <BloomText style={[styles.metaSmall, secondary]}>{t('roommates.compatibility')}</BloomText>
       </View>
 
-      <View style={styles.profilesSection}>
-        <Text style={styles.sectionTitle}>{t('roommates.relationship.roommatesSection')}</Text>
-
-        <View style={styles.profileRow}>
-          <TouchableOpacity
-            style={styles.profileContainer}
-            onPress={() => onViewProfile(relationship.profile1.id)}
-          >
-            <View style={styles.avatarPlaceholder}>
-              <Ionicons name="person" size={20} color={colors.COLOR_BLACK_LIGHT_5} />
-            </View>
-            <Text style={styles.profileName}>{getDisplayName(relationship.profile1)}</Text>
-          </TouchableOpacity>
-
-          <View style={styles.connectionLine}>
-            <Ionicons name="people" size={20} color={colors.primaryDark} />
-          </View>
-
-          <TouchableOpacity
-            style={styles.profileContainer}
-            onPress={() => onViewProfile(relationship.profile2.id)}
-          >
-            <View style={styles.avatarPlaceholder}>
-              <Ionicons name="person" size={20} color={colors.COLOR_BLACK_LIGHT_5} />
-            </View>
-            <Text style={styles.profileName}>{getDisplayName(relationship.profile2)}</Text>
-          </TouchableOpacity>
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <BloomText style={styles.sectionTitle}>
+            {t('roommates.relationship.roommatesSection')}
+          </BloomText>
+          <AvatarGroup
+            size={32}
+            showInitials
+            items={people.map((person) => ({
+              id: person.id,
+              name: getDisplayName(person),
+            }))}
+          />
+        </View>
+        <View style={styles.people}>
+          {people.map((person) => (
+            <Button
+              key={person.id}
+              variant="secondary"
+              size="small"
+              onPress={() => onViewProfile(person.id)}
+              accessibilityLabel={`${t('roommates.actions.viewProfile')}: ${getDisplayName(person)}`}
+              style={styles.personButton}
+            >
+              {getDisplayName(person)}
+            </Button>
+          ))}
         </View>
       </View>
 
-      {relationship.status === 'active' && (
-        <View style={styles.actions}>
-          <Button
-            leadingIcon={RiCloseCircleLine}
-            onPress={handleEndRelationship}
-            variant="secondary"
-            loading={isLoading}
-            style={styles.endButton}
-          >
-            {t('roommates.relationship.endRelationship')}
-          </Button>
-        </View>
-      )}
+      {relationship.status === 'active' ? (
+        <Button
+          leadingIcon={RiCloseCircleLine}
+          onPress={handleEndRelationship}
+          variant="secondary"
+          loading={isLoading}
+          style={styles.endButton}
+        >
+          {t('roommates.relationship.endRelationship')}
+        </Button>
+      ) : null}
 
-      {relationship.status === 'ended' && relationship.endDate && (
-        <View style={styles.endedInfo}>
-          <Text style={styles.endedText}>
-            {t('roommates.relationship.endedOn', { date: formatDate(relationship.endDate) })}
-          </Text>
-        </View>
-      )}
-    </View>
+      {relationship.status === 'ended' && relationship.endDate ? (
+        <BloomText style={[styles.endedText, secondary]}>
+          {t('roommates.relationship.endedOn', { date: formatDate(relationship.endDate) })}
+        </BloomText>
+      ) : null}
+    </Card>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    backgroundColor: colors.primaryLight,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: colors.border,
+  card: {
+    padding: spacing.lg,
+    gap: spacing.md,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 16,
+    gap: spacing.md,
   },
-  relationshipInfo: {
+  headerInfo: {
     flex: 1,
+    gap: 2,
   },
-  relationshipTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.COLOR_BLACK_LIGHT_1,
-    marginBottom: 4,
-  },
-  duration: {
+  meta: {
     fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_3,
-    marginBottom: 2,
   },
-  startDate: {
+  metaSmall: {
     fontSize: 12,
-    color: colors.COLOR_BLACK_LIGHT_5,
   },
-  statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  statusText: {
-    fontSize: 12,
-    color: colors.primaryLight,
-    fontWeight: '500',
-  },
-  matchScoreSection: {
+  matchScore: {
     alignItems: 'center',
-    marginBottom: 20,
-    paddingVertical: 12,
-    backgroundColor: colors.COLOR_BLACK_LIGHT_8,
-    borderRadius: 8,
+    paddingVertical: spacing.md,
+    borderRadius: 12,
   },
   matchScoreText: {
     fontSize: 24,
     fontWeight: '700',
-    color: colors.primaryDark,
   },
-  matchScoreLabel: {
-    fontSize: 12,
-    color: colors.COLOR_BLACK_LIGHT_5,
-    marginTop: 2,
+  section: {
+    gap: spacing.sm,
   },
-  profilesSection: {
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.COLOR_BLACK_LIGHT_1,
-    marginBottom: 12,
-  },
-  profileRow: {
+  sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  profileContainer: {
-    alignItems: 'center',
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  people: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  personButton: {
     flex: 1,
   },
-  avatarPlaceholder: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: colors.COLOR_BLACK_LIGHT_6,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  profileName: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: colors.COLOR_BLACK_LIGHT_1,
-    textAlign: 'center',
-  },
-  connectionLine: {
-    paddingHorizontal: 16,
-  },
-  actions: {
-    alignItems: 'center',
-  },
   endButton: {
+    alignSelf: 'center',
     minWidth: 150,
-  },
-  endedInfo: {
-    alignItems: 'center',
-    paddingTop: 8,
   },
   endedText: {
     fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_5,
     fontStyle: 'italic',
+    textAlign: 'center',
   },
 });

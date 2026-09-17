@@ -15,22 +15,19 @@
  *
  *  - **held** — somebody reported the location as too precise or as exposing
  *    personal data, so no point is published at all until the organiser answers.
+ *    Rendered as a Bloom `warning` admonition: something is being withheld.
  *  - **archived** — the case is old; what remains is the neighbourhood.
  *  - **published** — a centre and a radius.
  */
 
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { Text as BloomText } from '@oxy.so/bloom/typography';
+import { Admonition } from '@oxy.so/bloom/admonition';
 import {
   formatDistance,
   type EvictionLocationPublic,
   type EvictionModerationState,
 } from '@homiio/shared-types';
-import { colors } from '@/styles/colors';
-import { radius, spacing } from '@/constants/styles';
 
 export interface EvictionPrecisionNoteProps {
   readonly location: EvictionLocationPublic;
@@ -56,28 +53,8 @@ export const EvictionPrecisionNote: React.FC<EvictionPrecisionNoteProps> = ({
   })();
 
   return (
-    <View style={styles.root} accessibilityRole="text">
-      <Ionicons name="shield-outline" size={16} color={colors.textSecondary} />
-      <BloomText style={styles.text}>{message}</BloomText>
-    </View>
+    <Admonition type={moderation.precautionaryHold ? 'warning' : 'info'}>{message}</Admonition>
   );
 };
-
-const styles = StyleSheet.create({
-  root: {
-    flexDirection: 'row',
-    gap: spacing.xs,
-    alignItems: 'flex-start',
-    padding: spacing.md,
-    borderRadius: radius.lg,
-    backgroundColor: colors.mutedSubtle,
-  },
-  text: {
-    flex: 1,
-    fontSize: 13,
-    color: colors.textSecondary,
-    lineHeight: 18,
-  },
-});
 
 export default EvictionPrecisionNote;

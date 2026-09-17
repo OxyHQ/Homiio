@@ -1,20 +1,21 @@
 /**
  * WizardProgress — the persistent bottom bar for the write-review wizard: a
- * step-dot row + "Step X of N" counter above a Back / Next (or Submit on the
- * last step) button row. The wizard's step content scrolls above it.
+ * progress track with the "Step X of N" counter above a Back / Next (or Submit
+ * on the last step) button row. The wizard's step content scrolls above it.
  *
- * Uses Bloom `Button` for the nav actions (owns its own press state); the dots
- * are plain Views. `nextDisabled` gates a hard-required step from advancing.
+ * Bloom has no stepper family, so the stepper look is COMPOSED: Bloom `StatBar`
+ * draws the labelled track (its label is the step counter) and a Bloom `Badge`
+ * carries the percentage; the nav actions are Bloom `Button`s.
+ * `nextDisabled` gates a hard-required step from advancing.
  */
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
+import { Badge } from '@oxy.so/bloom/badge';
 import { Button } from '@oxy.so/bloom/button';
-import { Text as BloomText } from '@oxy.so/bloom/typography';
-
-import { colors } from '@/styles/colors';
-import { hairline, radius, spacing } from '@/constants/styles';
+import { RiArrowLeftLine, RiArrowRightLine, RiCheckLine } from '@oxy.so/bloom/icons';
+import { StatBar } from '@oxy.so/bloom/stat-bar';
 
 interface WizardProgressProps {
   /** Zero-based current step index. */
@@ -43,83 +44,41 @@ export const WizardProgress: React.FC<WizardProgressProps> = ({
   submitting,
 }) => {
   const { t } = useTranslation();
+  const current = Math.min(step + 1, totalSteps);
+  const percent = totalSteps > 0 ? Math.round((current / totalSteps) * 100) : 0;
 
   return (
-    <View style={styles.bar}>
-      <View style={styles.dotsRow}>
-        {Array.from({ length: totalSteps }).map((_, index) => (
-          <View
-            key={index}
-            style={[styles.dot, index <= step ? styles.dotActive : null]}
-          />
-        ))}
-      </View>
-      <View style={styles.footerRow}>
-        <BloomText style={styles.counter}>
-          {t('reviews.write.stepCounter', { current: step + 1, total: totalSteps })}
-        </BloomText>
-        <View style={styles.actions}>
-          <Button
-            variant="secondary"
-            size="medium"
-            onPress={onBack}
-            disabled={isFirst || submitting}
-          >
-            {t('common.back')}
-          </Button>
-          <Button
-            variant="primary"
-            size="medium"
-            onPress={isLast ? onSubmit : onNext}
-            disabled={nextDisabled || submitting}
-            loading={isLast && submitting}
-          >
-            {isLast ? t('reviews.write.submit') : t('common.next')}
-          </Button>
-        </View>
+    <View className="gap-3 border-t border-border bg-background px-4 py-3">
+      <StatBar
+        label={t('reviews.write.stepCounter', { current, total: totalSteps })}
+        value={current}
+        max={totalSteps}
+        height={4}
+        icon={<Badge content={`${percent}%`} size="small" variant="subtle" color="primary" />}
+      />
+      <View className="flex-row items-center justify-between gap-2">
+        <Button
+          variant="secondary"
+          size="medium"
+          leadingIcon={RiArrowLeftLine}
+          onPress={onBack}
+          disabled={isFirst || submitting}
+        >
+          {t('common.back')}
+        </Button>
+        <Button
+          variant="primary"
+          size="medium"
+          trailingIcon={isLast ? RiCheckLine : RiArrowRightLine}
+          onPress={isLast ? onSubmit : onNext}
+          disabled={nextDisabled || submitting}
+          loading={isLast && submitting}
+        >
+          {isLast ? t('reviews.write.submit') : t('common.next')}
+        </Button>
       </View>
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  bar: {
-    gap: spacing.sm,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.md,
-    borderTopWidth: hairline.width,
-    borderTopColor: hairline.color,
-    backgroundColor: colors.background,
-  },
-  dotsRow: {
-    flexDirection: 'row',
-    gap: spacing.xs,
-  },
-  dot: {
-    flex: 1,
-    height: 4,
-    borderRadius: radius.pill,
-    backgroundColor: colors.COLOR_BLACK_LIGHT_6,
-  },
-  dotActive: {
-    backgroundColor: colors.primaryColor,
-  },
-  footerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.md,
-  },
-  counter: {
-    fontSize: 13,
-    color: colors.COLOR_BLACK_LIGHT_3,
-    fontWeight: '600',
-  },
-  actions: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-});
 
 export default WizardProgress;

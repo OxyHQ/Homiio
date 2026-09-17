@@ -5,14 +5,25 @@
  * (`RoommateMatchingPreferences` from shared-types: budget, ageRange, gender,
  * lifestyle, move-in, lease length). Saving PUTs the preferences to
  * `PUT /api/roommates/preferences` via `roommateService.updateRoommatePreferences`.
+ *
+ * Built from Bloom: `Card` sections, `Field` + `TextFieldInput` numbers, a
+ * `DatePicker` move-in date (stored as `YYYY-MM-DD`, converted at the
+ * boundary), `Chip` option rows, `Switch`, and a `toast` for the save outcome.
  */
 import React, { useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@oxy.so/bloom/button';
+import { Card } from '@oxy.so/bloom/card';
+import { Chip } from '@oxy.so/bloom/chip';
+import { DatePicker } from '@oxy.so/bloom/date-picker';
+import { Field } from '@oxy.so/bloom/field';
 import { Switch } from '@oxy.so/bloom/switch';
+import { TextFieldInput } from '@oxy.so/bloom/text-field';
+import { useTheme } from '@oxy.so/bloom/theme';
+import { toast } from '@oxy.so/bloom/toast';
 import { H2, H3, Text as BloomText } from '@oxy.so/bloom/typography';
 import { useTranslation } from 'react-i18next';
 import { LeaseDuration } from '@homiio/shared-types';
@@ -22,7 +33,7 @@ import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
 import { useProfile } from '@/context/ProfileContext';
 import { roommateService, type RoommateMatchingPreferences } from '@/services/roommateService';
 import { useProfileStore } from '@/store/profileStore';
-import { radius, spacing } from '@/constants/styles';
+import { spacing } from '@/constants/styles';
 import { colors } from '@/styles/colors';
 
 type LifestyleChoice = 'yes' | 'no' | 'prefer_not';
@@ -35,6 +46,7 @@ interface FormState {
   budgetMax: string;
   ageMin: string;
   ageMax: string;
+  /** `YYYY-MM-DD`, or `''` for no preference — the shape the API stores. */
   moveInDate: string;
   leaseDuration: LeaseDuration;
   gender: GenderPref;
@@ -100,32 +112,21 @@ function toNumber(value: string): number | undefined {
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
-/** A selectable option chip. Owns its own pressed state (NativeWind-safe). */
-const Chip: React.FC<{
-  label: string;
-  selected: boolean;
-  onPress: () => void;
-}> = ({ label, selected, onPress }) => {
-  const [pressed, setPressed] = useState(false);
-  return (
-    <Pressable
-      onPress={onPress}
-      onPressIn={() => setPressed(true)}
-      onPressOut={() => setPressed(false)}
-      style={[
-        styles.chip,
-        selected && styles.chipSelected,
-        pressed && !selected && styles.chipPressed,
-      ]}
-      accessibilityRole="button"
-      accessibilityState={{ selected }}
-    >
-      <BloomText style={[styles.chipText, selected && styles.chipTextSelected]}>
-        {label}
-      </BloomText>
-    </Pressable>
-  );
-};
+const ISO_DAY = /^(\d{4})-(\d{2})-(\d{2})/;
+
+/** `YYYY-MM-DD` (or a full ISO string) → a local-midnight `Date`, or `null`. */
+function parseDay(value: string): Date | null {
+  const match = ISO_DAY.exec(value.trim());
+  if (!match) return null;
+  const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+/** A local `Date` → the `YYYY-MM-DD` string the preferences API stores. */
+function formatDay(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
 
 function ChipRow<T extends string>({
   label,
@@ -140,19 +141,63 @@ function ChipRow<T extends string>({
 }) {
   const { t } = useTranslation();
   return (
-    <View style={styles.field}>
-      <BloomText style={styles.fieldLabel}>{label}</BloomText>
-      <View style={styles.chipWrap}>
-        {options.map((option) => (
-          <Chip
-            key={option.value}
-            label={t(option.labelKey)}
-            selected={option.value === value}
-            onPress={() => onChange(option.value)}
-          />
-        ))}
+    <Field label={label}>
+      <View style={styles.chipWrap} accessibilityRole="radiogroup" accessibilityLabel={label}>
+        {options.map((option) => {
+          const selected = option.value === value;
+          return (
+            <Chip
+              key={option.value}
+              variant={selected ? 'solid' : 'outlined'}
+              color={selected ? 'primary' : 'default'}
+              selected={selected}
+              onPress={() => onChange(option.value)}
+            >
+              {t(option.labelKey)}
+            </Chip>
+          );
+        })}
       </View>
-    </View>
+    </Field>
+  );
+}
+
+/** A min/max pair of numeric Bloom inputs under one field label. */
+function RangeInputs({
+  label,
+  min,
+  max,
+  onMinChange,
+  onMaxChange,
+}: {
+  label: string;
+  min: string;
+  max: string;
+  onMinChange: (text: string) => void;
+  onMaxChange: (text: string) => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <Field label={label}>
+      <View style={styles.inlineInputs}>
+        <View style={styles.inlineInput}>
+          <TextFieldInput
+            label={t('roommates.preferencesPage.min')}
+            keyboardType="numeric"
+            value={min}
+            onChangeText={onMinChange}
+          />
+        </View>
+        <View style={styles.inlineInput}>
+          <TextFieldInput
+            label={t('roommates.preferencesPage.max')}
+            keyboardType="numeric"
+            value={max}
+            onChangeText={onMaxChange}
+          />
+        </View>
+      </View>
+    </Field>
   );
 }
 
@@ -192,7 +237,8 @@ function toPreferences(form: FormState): RoommateMatchingPreferences {
 }
 
 export default function RoommatePreferencesPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const theme = useTheme();
   const router = useRouter();
   const queryClient = useQueryClient();
   const [roommateEnabled, setRoommateEnabled] = useState(false);
@@ -234,11 +280,17 @@ export default function RoommatePreferencesPage() {
       await useProfileStore.getState().fetchProfile();
       await queryClient.invalidateQueries({ queryKey: ['roommates', 'preferences'] });
       await queryClient.invalidateQueries({ queryKey: ['roommates', 'status'] });
-      Alert.alert(t('roommates.alert.successTitle'), t('roommates.alert.preferencesSaved'));
+      toast.success(t('roommates.alert.preferencesSaved'));
     },
     onError: () => {
-      Alert.alert(t('roommates.alert.errorTitle'), t('roommates.alert.preferencesFailed'));
+      toast.error(t('roommates.alert.preferencesFailed'));
     },
+  });
+
+  // Local midnight today: a move-in date in the past is not a preference.
+  const [today] = useState(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate());
   });
 
   const handleSave = () => {
@@ -249,7 +301,9 @@ export default function RoommatePreferencesPage() {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
-  if (!hasProfile || !hasProfile) {
+  const secondary = { color: theme.colors.textSecondary };
+
+  if (!hasProfile) {
     return (
       <View style={styles.root}>
         <Header
@@ -287,65 +341,57 @@ export default function RoommatePreferencesPage() {
           <View style={styles.titleBlock}>
             <SectionEyebrow>{t('roommates.preferencesPage.eyebrow')}</SectionEyebrow>
             <H2 style={styles.title}>{t('roommates.preferences')}</H2>
-            <BloomText style={styles.subtitle}>{t('roommates.preferencesPage.subtitle')}</BloomText>
+            <BloomText style={[styles.subtitle, secondary]}>
+              {t('roommates.preferencesPage.subtitle')}
+            </BloomText>
           </View>
 
-          <View style={styles.card}>
+          <Card variant="outlined" radius="radius-16" style={styles.card}>
             <View style={styles.toggleHeader}>
               <View style={styles.toggleHeaderText}>
                 <BloomText style={styles.toggleTitle}>
                   {t('roommates.preferencesPage.enableTitle')}
                 </BloomText>
-                <BloomText style={styles.toggleDescription}>
+                <BloomText style={[styles.toggleDescription, secondary]}>
                   {t('roommates.preferencesPage.enableDescription')}
                 </BloomText>
               </View>
-              <Switch value={roommateEnabled} onValueChange={setRoommateEnabled} />
-            </View>
-          </View>
-
-          <View style={styles.card}>
-            <H3 style={styles.cardTitle}>{t('roommates.preferencesPage.budgetTimeline')}</H3>
-            <View style={styles.field}>
-              <BloomText style={styles.fieldLabel}>{t('roommates.preferencesPage.monthlyBudget')}</BloomText>
-              <View style={styles.inlineInputs}>
-                <TextInput
-                  style={styles.input}
-                  keyboardType="numeric"
-                  placeholder={t('roommates.preferencesPage.min')}
-                  placeholderTextColor={colors.muted}
-                  value={form.budgetMin}
-                  onChangeText={(text) => updateField('budgetMin', text)}
-                />
-                <TextInput
-                  style={styles.input}
-                  keyboardType="numeric"
-                  placeholder={t('roommates.preferencesPage.max')}
-                  placeholderTextColor={colors.muted}
-                  value={form.budgetMax}
-                  onChangeText={(text) => updateField('budgetMax', text)}
-                />
-              </View>
-            </View>
-            <View style={styles.field}>
-              <BloomText style={styles.fieldLabel}>{t('roommates.preferencesPage.moveInDate')}</BloomText>
-              <TextInput
-                style={styles.input}
-                placeholder="YYYY-MM-DD"
-                placeholderTextColor={colors.muted}
-                value={form.moveInDate}
-                onChangeText={(text) => updateField('moveInDate', text)}
+              <Switch
+                value={roommateEnabled}
+                onValueChange={setRoommateEnabled}
+                accessibilityLabel={t('roommates.preferencesPage.enableTitle')}
               />
             </View>
+          </Card>
+
+          <Card variant="outlined" radius="radius-16" style={styles.card}>
+            <H3 style={styles.cardTitle}>{t('roommates.preferencesPage.budgetTimeline')}</H3>
+            <RangeInputs
+              label={t('roommates.preferencesPage.monthlyBudget')}
+              min={form.budgetMin}
+              max={form.budgetMax}
+              onMinChange={(text) => updateField('budgetMin', text)}
+              onMaxChange={(text) => updateField('budgetMax', text)}
+            />
+            <Field label={t('roommates.preferencesPage.moveInDate')}>
+              <DatePicker
+                value={parseDay(form.moveInDate)}
+                onChange={(date) => updateField('moveInDate', date ? formatDay(date) : '')}
+                minDate={today}
+                locale={i18n.language}
+                placeholder={t('roommates.match.flexible')}
+                accessibilityLabel={t('roommates.preferencesPage.moveInDate')}
+              />
+            </Field>
             <ChipRow
               label={t('roommates.preferencesPage.leaseLength')}
               value={form.leaseDuration}
               options={LEASE_OPTIONS}
               onChange={(v) => updateField('leaseDuration', v)}
             />
-          </View>
+          </Card>
 
-          <View style={styles.card}>
+          <Card variant="outlined" radius="radius-16" style={styles.card}>
             <H3 style={styles.cardTitle}>{t('roommates.preferencesPage.roommateSection')}</H3>
             <ChipRow
               label={t('roommates.preferencesPage.preferredGender')}
@@ -353,30 +399,16 @@ export default function RoommatePreferencesPage() {
               options={GENDER_OPTIONS}
               onChange={(v) => updateField('gender', v)}
             />
-            <View style={styles.field}>
-              <BloomText style={styles.fieldLabel}>{t('roommates.preferencesPage.ageRange')}</BloomText>
-              <View style={styles.inlineInputs}>
-                <TextInput
-                  style={styles.input}
-                  keyboardType="numeric"
-                  placeholder={t('roommates.preferencesPage.min')}
-                  placeholderTextColor={colors.muted}
-                  value={form.ageMin}
-                  onChangeText={(text) => updateField('ageMin', text)}
-                />
-                <TextInput
-                  style={styles.input}
-                  keyboardType="numeric"
-                  placeholder={t('roommates.preferencesPage.max')}
-                  placeholderTextColor={colors.muted}
-                  value={form.ageMax}
-                  onChangeText={(text) => updateField('ageMax', text)}
-                />
-              </View>
-            </View>
-          </View>
+            <RangeInputs
+              label={t('roommates.preferencesPage.ageRange')}
+              min={form.ageMin}
+              max={form.ageMax}
+              onMinChange={(text) => updateField('ageMin', text)}
+              onMaxChange={(text) => updateField('ageMax', text)}
+            />
+          </Card>
 
-          <View style={styles.card}>
+          <Card variant="outlined" radius="radius-16" style={styles.card}>
             <H3 style={styles.cardTitle}>{t('roommates.preferencesPage.lifestyle')}</H3>
             <ChipRow
               label={t('roommates.preferencesPage.smoking')}
@@ -408,12 +440,13 @@ export default function RoommatePreferencesPage() {
               options={SCHEDULE_OPTIONS}
               onChange={(v) => updateField('schedule', v)}
             />
-          </View>
+          </Card>
 
           <Button
             variant="primary"
             size="large"
             onPress={handleSave}
+            loading={saveMutation.isPending}
             disabled={saveMutation.isPending}
             style={styles.saveButton}
           >
@@ -450,15 +483,10 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 14,
-    color: colors.muted,
   },
   card: {
-    backgroundColor: colors.surfaceElevated,
     padding: spacing.lg,
-    borderRadius: radius.lg,
     gap: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
   },
   cardTitle: {
     letterSpacing: -0.3,
@@ -476,63 +504,22 @@ const styles = StyleSheet.create({
   toggleTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: colors.COLOR_BLACK,
   },
   toggleDescription: {
     fontSize: 13,
-    color: colors.muted,
     lineHeight: 18,
-  },
-  field: {
-    gap: spacing.xs,
-  },
-  fieldLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.COLOR_BLACK_LIGHT_2,
   },
   inlineInputs: {
     flexDirection: 'row',
     gap: spacing.sm,
   },
-  input: {
+  inlineInput: {
     flex: 1,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    fontSize: 14,
-    color: colors.COLOR_BLACK,
-    backgroundColor: colors.background,
   },
   chipWrap: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.sm,
-  },
-  chip: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.pill,
-    backgroundColor: colors.mutedSubtle,
-    borderWidth: 1,
-    borderColor: 'transparent',
-  },
-  chipSelected: {
-    backgroundColor: colors.COLOR_BLACK,
-    borderColor: colors.COLOR_BLACK,
-  },
-  chipPressed: {
-    opacity: 0.7,
-  },
-  chipText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.COLOR_BLACK_LIGHT_2,
-  },
-  chipTextSelected: {
-    color: colors.white,
   },
   saveButton: {
     alignSelf: 'stretch',

@@ -15,30 +15,73 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import {
+  RiAlertLine,
+  RiCalendarLine,
+  RiChat3Line,
+  RiCloseCircleLine,
+  RiEditLine,
+  RiEyeOffLine,
+  RiFileTextLine,
+  RiHandHeartLine,
+  RiInformationLine,
+  RiMapPinLine,
+  RiMegaphoneLine,
+  RiShieldCheckLine,
+  RiTimeLine,
+} from '@oxy.so/bloom/icons';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 import { EvictionTimelineEventType, type EvictionTimelineEvent } from '@homiio/shared-types';
 import { formatEvictionDateTime } from './evictionUtils';
 import { colors } from '@/styles/colors';
 import { radius, spacing } from '@/constants/styles';
 
-/** One icon per event type. Exhaustive, so a new type fails to compile here. */
-const ICON_BY_EVENT: Readonly<
-  Record<EvictionTimelineEventType, React.ComponentProps<typeof Ionicons>['name']>
-> = {
-  [EvictionTimelineEventType.CASE_CREATED]: 'megaphone-outline',
-  [EvictionTimelineEventType.DATE_CHANGED]: 'calendar-outline',
-  [EvictionTimelineEventType.LOCATION_PRECISION_CHANGED]: 'location-outline',
-  [EvictionTimelineEventType.INSTRUCTIONS_UPDATED]: 'information-circle-outline',
-  [EvictionTimelineEventType.POSTPONED]: 'time-outline',
-  [EvictionTimelineEventType.STOPPED]: 'hand-left-outline',
-  [EvictionTimelineEventType.EXECUTED]: 'alert-circle-outline',
-  [EvictionTimelineEventType.CANCELLED]: 'close-circle-outline',
-  [EvictionTimelineEventType.LEGAL_RESOURCE_ADDED]: 'document-text-outline',
-  [EvictionTimelineEventType.ORGANIZATION_VERIFIED]: 'shield-checkmark-outline',
-  [EvictionTimelineEventType.CORRECTION_PUBLISHED]: 'create-outline',
-  [EvictionTimelineEventType.PRECAUTIONARY_HOLD_APPLIED]: 'eye-off-outline',
-  [EvictionTimelineEventType.NOTE]: 'chatbubble-ellipses-outline',
+/** One Remix glyph per event type. Exhaustive, so a new type fails to compile here. */
+const ICON_BY_EVENT: Readonly<Record<EvictionTimelineEventType, typeof RiMegaphoneLine>> = {
+  [EvictionTimelineEventType.CASE_CREATED]: RiMegaphoneLine,
+  [EvictionTimelineEventType.DATE_CHANGED]: RiCalendarLine,
+  [EvictionTimelineEventType.LOCATION_PRECISION_CHANGED]: RiMapPinLine,
+  [EvictionTimelineEventType.INSTRUCTIONS_UPDATED]: RiInformationLine,
+  [EvictionTimelineEventType.POSTPONED]: RiTimeLine,
+  [EvictionTimelineEventType.STOPPED]: RiHandHeartLine,
+  [EvictionTimelineEventType.EXECUTED]: RiAlertLine,
+  [EvictionTimelineEventType.CANCELLED]: RiCloseCircleLine,
+  [EvictionTimelineEventType.LEGAL_RESOURCE_ADDED]: RiFileTextLine,
+  [EvictionTimelineEventType.ORGANIZATION_VERIFIED]: RiShieldCheckLine,
+  [EvictionTimelineEventType.CORRECTION_PUBLISHED]: RiEditLine,
+  [EvictionTimelineEventType.PRECAUTIONARY_HOLD_APPLIED]: RiEyeOffLine,
+  [EvictionTimelineEventType.NOTE]: RiChat3Line,
+};
+
+/** One entry; its own component so the icon lookup reads as a component. */
+const TimelineEntry: React.FC<{ event: EvictionTimelineEvent; locale: string }> = ({
+  event,
+  locale,
+}) => {
+  const { t } = useTranslation();
+  const Icon = ICON_BY_EVENT[event.eventType];
+  return (
+    <View style={styles.entry} accessibilityRole="text">
+      <View style={styles.iconWrap}>
+        <Icon size="sm" fill={colors.textSecondary} />
+      </View>
+      <View style={styles.body}>
+        <BloomText style={styles.kind}>
+          {t(`evictions.timeline.event.${event.eventType}`)}
+        </BloomText>
+        <BloomText style={styles.message}>{event.message}</BloomText>
+        <BloomText style={styles.meta}>
+          {t('evictions.timeline.byline', {
+            actor:
+              event.actor.kind === 'system'
+                ? t('evictions.timeline.systemActor')
+                : t('evictions.timeline.organizerActor'),
+            when: formatEvictionDateTime(event.createdAt, locale),
+          })}
+        </BloomText>
+      </View>
+    </View>
+  );
 };
 
 export interface EvictionTimelineProps {
@@ -58,30 +101,7 @@ export const EvictionTimeline: React.FC<EvictionTimelineProps> = ({ events, loca
       {[...events]
         .sort((a, b) => a.position - b.position)
         .map((event) => (
-          <View key={event.id} style={styles.entry} accessibilityRole="text">
-            <View style={styles.iconWrap}>
-              <Ionicons
-                name={ICON_BY_EVENT[event.eventType]}
-                size={16}
-                color={colors.textSecondary}
-              />
-            </View>
-            <View style={styles.body}>
-              <BloomText style={styles.kind}>
-                {t(`evictions.timeline.event.${event.eventType}`)}
-              </BloomText>
-              <BloomText style={styles.message}>{event.message}</BloomText>
-              <BloomText style={styles.meta}>
-                {t('evictions.timeline.byline', {
-                  actor:
-                    event.actor.kind === 'system'
-                      ? t('evictions.timeline.systemActor')
-                      : t('evictions.timeline.organizerActor'),
-                  when: formatEvictionDateTime(event.createdAt, locale),
-                })}
-              </BloomText>
-            </View>
-          </View>
+          <TimelineEntry key={event.id} event={event} locale={locale} />
         ))}
     </View>
   );

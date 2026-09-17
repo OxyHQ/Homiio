@@ -17,15 +17,17 @@
  * somebody about to lose their home is not.
  */
 
-import React, { useState } from 'react';
-import { Linking, Pressable, StyleSheet, View } from 'react-native';
+import React from 'react';
+import { Linking, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Item } from '@oxy.so/bloom/item';
+import { Loading } from '@oxy.so/bloom/loading';
+import { RiExternalLinkLine, RiFileTextLine } from '@oxy.so/bloom/icons';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 import type { JurisdictionResourceWithId } from '@homiio/shared-types';
 import { formatEvictionShortDate } from './evictionUtils';
 import { colors } from '@/styles/colors';
-import { radius, spacing } from '@/constants/styles';
+import { spacing } from '@/constants/styles';
 
 export interface EvictionResourcesProps {
   readonly resources: readonly JurisdictionResourceWithId[];
@@ -34,50 +36,6 @@ export interface EvictionResourcesProps {
   readonly isLoading?: boolean;
   readonly isError?: boolean;
 }
-
-/**
- * One resource row.
- *
- * Its own component so the pressed state can live in `useState`: hooks cannot
- * run inside `.map()`, and NativeWind's css-interop swallows the function form
- * of `style` entirely, so a static array plus `onPressIn`/`onPressOut` is the
- * only shape that renders at all.
- */
-const ResourceRow: React.FC<{
-  readonly resource: JurisdictionResourceWithId;
-  readonly locale: string;
-}> = ({ resource, locale }) => {
-  const { t } = useTranslation();
-  const [pressed, setPressed] = useState(false);
-
-  return (
-    <Pressable
-      accessibilityRole="link"
-      accessibilityLabel={t('evictions.resources.openLabel', { title: resource.title })}
-      accessibilityHint={resource.source}
-      onPress={() => {
-        void Linking.openURL(resource.url);
-      }}
-      onPressIn={() => setPressed(true)}
-      onPressOut={() => setPressed(false)}
-      style={[styles.row, pressed && styles.rowPressed]}
-    >
-      <View style={styles.rowBody}>
-        <BloomText style={styles.title}>{resource.title}</BloomText>
-        <BloomText style={styles.meta}>
-          {t('evictions.resources.meta', {
-            source: resource.source,
-            verified: formatEvictionShortDate(resource.verifiedAt, locale),
-          })}
-        </BloomText>
-        <BloomText style={styles.kind}>
-          {t(`evictions.resources.type.${resource.resourceType}`)}
-        </BloomText>
-      </View>
-      <Ionicons name="open-outline" size={16} color={colors.textSecondary} />
-    </Pressable>
-  );
-};
 
 export const EvictionResources: React.FC<EvictionResourcesProps> = ({
   resources,
@@ -89,7 +47,7 @@ export const EvictionResources: React.FC<EvictionResourcesProps> = ({
   const { t } = useTranslation();
 
   if (isLoading) {
-    return <BloomText style={styles.state}>{t('evictions.resources.loading')}</BloomText>;
+    return <Loading variant="inline" size="small" text={t('evictions.resources.loading')} />;
   }
   if (isError) {
     return <BloomText style={styles.state}>{t('evictions.resources.error')}</BloomText>;
@@ -101,7 +59,31 @@ export const EvictionResources: React.FC<EvictionResourcesProps> = ({
         <BloomText style={styles.state}>{t('evictions.resources.empty')}</BloomText>
       ) : (
         resources.map((resource) => (
-          <ResourceRow key={resource.id} resource={resource} locale={locale} />
+          <Item
+            key={resource.id}
+            role="listitem"
+            accessibilityRole="link"
+            accessibilityLabel={t('evictions.resources.openLabel', { title: resource.title })}
+            accessibilityHint={resource.source}
+            leading={<RiFileTextLine size="md" fill={colors.textSecondary} />}
+            trailing={<RiExternalLinkLine size="sm" fill={colors.textSecondary} />}
+            onPress={() => {
+              void Linking.openURL(resource.url);
+            }}
+          >
+            <View style={styles.rowBody}>
+              <BloomText style={styles.title}>{resource.title}</BloomText>
+              <BloomText style={styles.meta}>
+                {t('evictions.resources.meta', {
+                  source: resource.source,
+                  verified: formatEvictionShortDate(resource.verifiedAt, locale),
+                })}
+              </BloomText>
+              <BloomText style={styles.kind}>
+                {t(`evictions.resources.type.${resource.resourceType}`)}
+              </BloomText>
+            </View>
+          </Item>
         ))
       )}
       {/* Rendered even when the list is empty: the reason there is nothing here
@@ -115,23 +97,11 @@ export const EvictionResources: React.FC<EvictionResourcesProps> = ({
 
 const styles = StyleSheet.create({
   root: {
-    gap: spacing.sm,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    padding: spacing.md,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surfaceElevated,
-  },
-  rowPressed: {
-    backgroundColor: colors.mutedSubtle,
+    gap: spacing.xs,
   },
   rowBody: {
     flex: 1,
+    minWidth: 0,
     gap: 2,
   },
   title: {
@@ -155,6 +125,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.textSecondary,
     lineHeight: 17,
+    marginTop: spacing.xs,
   },
 });
 

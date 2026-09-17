@@ -1,23 +1,23 @@
 /**
- * ReportReviewSheet — the trust & safety report modal. Pick a reason (the
- * `ReviewReportReason` values as chips); the "other" reason reveals a required
- * details field. Submit fires `onSubmit(reason, details?)` — the caller wires
- * `useReportReview`.
+ * ReportReviewSheet — the per-user community report for a review. A controlled
+ * Bloom `Dialog` (bottom sheet on phones, centred card from `md`) holding a
+ * `RadioGroup` of `ReviewReportReason`s; the "other" reason reveals a required
+ * `Textarea`. Submit fires `onSubmit(reason, details?)` — the caller wires
+ * `useReportReview`, and the backend flips a review to `under_review` at 3+
+ * reports. This is a reader's report, never a moderator action.
+ *
+ * Actions use `shouldCloseOnPress: false` so the dialog stays up (and disabled)
+ * while the mutation runs; the parent closes it on success.
  */
 import React, { useState } from 'react';
-import { Modal, Pressable, StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
-import { Button } from '@oxy.so/bloom/button';
-import { TextFieldInput } from '@oxy.so/bloom/text-field';
-import { H3, Text as BloomText } from '@oxy.so/bloom/typography';
+import { Dialog } from '@oxy.so/bloom/dialog';
+import { RadioGroup } from '@oxy.so/bloom/radio';
+import { Textarea } from '@oxy.so/bloom/textarea';
 
 import { ReviewReportReason } from '@homiio/shared-types';
-
-import { EnumChipSelector } from '@/components/reviews/EnumChipSelector';
-import { colors } from '@/styles/colors';
-import { radius, spacing } from '@/constants/styles';
 
 interface ReportReviewSheetProps {
   visible: boolean;
@@ -25,6 +25,8 @@ interface ReportReviewSheetProps {
   onSubmit: (reason: ReviewReportReason, details?: string) => void;
   submitting: boolean;
 }
+
+const REPORT_REASONS = Object.values(ReviewReportReason);
 
 export const ReportReviewSheet: React.FC<ReportReviewSheetProps> = ({
   visible,
@@ -36,6 +38,17 @@ export const ReportReviewSheet: React.FC<ReportReviewSheetProps> = ({
   const [reason, setReason] = useState<ReviewReportReason | undefined>(undefined);
   const [details, setDetails] = useState('');
 
+  // Start every report fresh, whichever way the previous one closed (reset
+  // during render on the open edge — no effect, no extra commit).
+  const [wasVisible, setWasVisible] = useState(visible);
+  if (visible !== wasVisible) {
+    setWasVisible(visible);
+    if (visible) {
+      setReason(undefined);
+      setDetails('');
+    }
+  }
+
   const needsDetails = reason === ReviewReportReason.OTHER;
   const canSubmit = Boolean(reason) && (!needsDetails || details.trim().length > 0);
 
@@ -45,88 +58,66 @@ export const ReportReviewSheet: React.FC<ReportReviewSheetProps> = ({
   };
 
   const handleClose = () => {
-    setReason(undefined);
-    setDetails('');
+    if (submitting) return;
     onClose();
   };
 
+  const title = t('reviews.card.reportTitle');
+
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
-      <Pressable
-        style={[StyleSheet.absoluteFill, styles.backdrop]}
-        onPress={handleClose}
-        accessibilityRole="button"
-      />
-      <SafeAreaView edges={['bottom']} style={styles.sheetWrap} pointerEvents="box-none">
-        <View style={styles.sheet}>
-          <H3 style={styles.title}>{t('reviews.card.reportTitle')}</H3>
-          <BloomText style={styles.subtitle}>{t('reviews.card.reportSubtitle')}</BloomText>
-
-          <EnumChipSelector
-            labelPrefix="reviews.card.reportReasons"
-            values={Object.values(ReviewReportReason)}
-            selected={reason ? [reason] : []}
-            onChange={(next) => setReason(next[0])}
+    <Dialog
+      open={visible}
+      onClose={handleClose}
+      placement={{ base: 'bottom', md: 'center' }}
+      dismissOnBackdrop={!submitting}
+      maxWidth={440}
+      title={title}
+      label={title}
+      description={t('reviews.card.reportSubtitle')}
+      actions={[
+        {
+          label: t('reviews.card.reportSubmit'),
+          color: 'destructive',
+          disabled: !canSubmit || submitting,
+          shouldCloseOnPress: false,
+          onPress: handleSubmit,
+        },
+        {
+          label: t('common.cancel'),
+          color: 'cancel',
+          disabled: submitting,
+          shouldCloseOnPress: false,
+          onPress: handleClose,
+        },
+      ]}
+    >
+      <View className="gap-4">
+        <RadioGroup<ReviewReportReason>
+          label={title}
+          value={reason}
+          onValueChange={setReason}
+          disabled={submitting}
+          options={REPORT_REASONS.map((value) => ({
+            value,
+            label: t(`reviews.card.reportReasons.${value}`),
+          }))}
+        />
+        {needsDetails ? (
+          <Textarea
+            label={t('reviews.card.reportDetails')}
+            placeholder={t('reviews.card.reportDetailsPlaceholder')}
+            value={details}
+            onChangeText={setDetails}
+            rows={3}
+            autoResize
+            maxRows={8}
+            required
+            disabled={submitting}
           />
-
-          {needsDetails ? (
-            <TextFieldInput
-              label={t('reviews.card.reportDetails')}
-              placeholder={t('reviews.card.reportDetailsPlaceholder')}
-              value={details}
-              onChangeText={setDetails}
-              multiline
-            />
-          ) : null}
-
-          <View style={styles.actions}>
-            <Button variant="secondary" size="medium" onPress={handleClose} disabled={submitting}>
-              {t('common.cancel')}
-            </Button>
-            <Button
-              variant="primary"
-              size="medium"
-              onPress={handleSubmit}
-              disabled={!canSubmit || submitting}
-              loading={submitting}
-            >
-              {t('reviews.card.reportSubmit')}
-            </Button>
-          </View>
-        </View>
-      </SafeAreaView>
-    </Modal>
+        ) : null}
+      </View>
+    </Dialog>
   );
 };
-
-const styles = StyleSheet.create({
-  backdrop: {
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
-  },
-  sheetWrap: {
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-  sheet: {
-    backgroundColor: colors.background,
-    borderTopLeftRadius: radius.xl,
-    borderTopRightRadius: radius.xl,
-    padding: spacing.xl,
-    gap: spacing.lg,
-  },
-  title: {
-    letterSpacing: -0.3,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_3,
-  },
-  actions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: spacing.sm,
-    marginTop: spacing.sm,
-  },
-});
 
 export default ReportReviewSheet;

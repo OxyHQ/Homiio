@@ -17,19 +17,40 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { getLocales } from 'expo-localization';
 import { Button } from '@oxy.so/bloom/button';
+import { Card, CardTitle } from '@oxy.so/bloom/card';
+import { DatePicker } from '@oxy.so/bloom/date-picker';
+import { Field } from '@oxy.so/bloom/field';
+import { RiImageAddLine } from '@oxy.so/bloom/icons';
+import { PhoneInput } from '@oxy.so/bloom/phone-input';
 import * as Skeleton from '@oxy.so/bloom/skeleton';
 import { Switch } from '@oxy.so/bloom/switch';
 import { TextFieldInput } from '@oxy.so/bloom/text-field';
-import { H2, H3, Text as BloomText } from '@oxy.so/bloom/typography';
+import { Textarea } from '@oxy.so/bloom/textarea';
+import { H2, Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { CreateEvictionCaseData, EvictionCase } from '@homiio/shared-types';
 import { Header } from '@/components/Header';
 import Map, { type MapApi, type GeocodedAddress, type LonLat } from '@/components/Map';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
-import { useCreateEviction, useEvictionDetail, useUpdateEviction } from '@/hooks/useEvictionQueries';
+import {
+  useCreateEviction,
+  useEvictionDetail,
+  useUpdateEviction,
+} from '@/hooks/useEvictionQueries';
+import { combineDateAndTime, splitDateAndTime } from '@/components/evictions/evictionUtils';
+import {
+  type EvictionPhoneValue,
+  countryCodeFromPlace,
+  emptyEvictionPhone,
+  joinEvictionPhone,
+  resolveDefaultPhoneCountry,
+  splitEvictionPhone,
+  withPhoneCountry,
+  withPhoneNumber,
+} from '@/components/evictions/evictionPhone';
 import { imageUploadService } from '@/services/imageUploadService';
 import { resolveBackendImageUrl } from '@/utils/imageUrl';
 import { toast } from '@oxy.so/bloom/toast';
@@ -41,45 +62,39 @@ interface EvictionFormState {
   description: string;
   label: string;
   city: string;
-  date: string;
+  /** The picked day (local midnight), from Bloom's `DatePicker`. */
+  date: Date | null;
   time: string;
-  phone: string;
+  /** Phone numbers are edited as ISO country + national number. */
+  phone: EvictionPhoneValue;
   email: string;
   telegram: string;
-  whatsapp: string;
+  whatsapp: EvictionPhoneValue;
   instructions: string;
   agencyName: string;
 }
 
-const EMPTY_STATE: EvictionFormState = {
+const emptyState = (phoneCountry: string): EvictionFormState => ({
   title: '',
   description: '',
   label: '',
   city: '',
-  date: '',
+  date: null,
   time: '',
-  phone: '',
+  phone: emptyEvictionPhone(phoneCountry),
   email: '',
   telegram: '',
-  whatsapp: '',
+  whatsapp: emptyEvictionPhone(phoneCountry),
   instructions: '',
   agencyName: '',
-};
+});
 
-/** Split an ISO date into the `YYYY-MM-DD` + `HH:mm` the form edits (local time). */
-const isoToParts = (iso: string): { date: string; time: string } => {
-  const parsed = new Date(iso);
-  if (Number.isNaN(parsed.getTime())) return { date: '', time: '' };
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return {
-    date: `${parsed.getFullYear()}-${pad(parsed.getMonth() + 1)}-${pad(parsed.getDate())}`,
-    time: `${pad(parsed.getHours())}:${pad(parsed.getMinutes())}`,
-  };
-};
-
-const buildInitialState = (existing?: EvictionCase): EvictionFormState => {
-  if (!existing) return EMPTY_STATE;
-  const { date, time } = isoToParts(existing.scheduledAt);
+const buildInitialState = (
+  existing: EvictionCase | undefined,
+  phoneCountry: string,
+): EvictionFormState => {
+  if (!existing) return emptyState(phoneCountry);
+  const { day, time } = splitDateAndTime(existing.scheduledAt);
   return {
     title: existing.title,
     // Withheld under a precautionary hold, in which case the organiser is
@@ -87,23 +102,15 @@ const buildInitialState = (existing?: EvictionCase): EvictionFormState => {
     description: existing.description ?? '',
     label: existing.location.label,
     city: existing.location.city ?? '',
-    date,
+    date: day,
     time,
-    phone: existing.contactInfo?.phone ?? '',
+    phone: splitEvictionPhone(existing.contactInfo?.phone, phoneCountry),
     email: existing.contactInfo?.email ?? '',
     telegram: existing.contactInfo?.telegram ?? '',
-    whatsapp: existing.contactInfo?.whatsapp ?? '',
+    whatsapp: splitEvictionPhone(existing.contactInfo?.whatsapp, phoneCountry),
     instructions: existing.contactInfo?.instructions ?? '',
     agencyName: '',
   };
-};
-
-/** Combine the `YYYY-MM-DD` + optional `HH:mm` fields into an ISO string. */
-const partsToIso = (date: string, time: string): string | undefined => {
-  const trimmed = date.trim();
-  if (!trimmed) return undefined;
-  const parsed = new Date(`${trimmed}T${time.trim() || '00:00'}`);
-  return Number.isNaN(parsed.getTime()) ? undefined : parsed.toISOString();
 };
 
 interface EvictionFormProps {
@@ -113,7 +120,7 @@ interface EvictionFormProps {
 }
 
 const EvictionForm: React.FC<EvictionFormProps> = ({ mode, editId, existing }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const router = useRouter();
   const mapRef = useRef<MapApi | null>(null);
 
@@ -132,7 +139,16 @@ const EvictionForm: React.FC<EvictionFormProps> = ({ mode, editId, existing }) =
     return published ? [published[0], published[1]] : null;
   }, [existing]);
 
-  const [form, setForm] = useState<EvictionFormState>(() => buildInitialState(existing));
+  const [form, setForm] = useState<EvictionFormState>(() =>
+    buildInitialState(
+      existing,
+      resolveDefaultPhoneCountry({
+        caseCountryCode: existing?.location.countryCode,
+        deviceRegion: getLocales()[0]?.regionCode,
+        localeTag: i18n.language,
+      }),
+    ),
+  );
   /**
    * Whether the affected household itself asked for the exact location to be
    * shareable.
@@ -174,11 +190,22 @@ const EvictionForm: React.FC<EvictionFormProps> = ({ mode, editId, existing }) =
       address.neighborhood ||
       address.city ||
       '';
-    setForm((prev) => ({
-      ...prev,
-      label: composed || prev.label,
-      city: address.city || prev.city,
-    }));
+    setForm((prev) => {
+      // A phone field the user has not touched follows the picked place, so a
+      // case in Lisbon starts its numbers at +351 wherever the organiser is.
+      const placeCountry = countryCodeFromPlace(address.country);
+      const follow = (field: EvictionPhoneValue) =>
+        placeCountry && !field.edited && field.original === undefined
+          ? { ...field, country: placeCountry }
+          : field;
+      return {
+        ...prev,
+        label: composed || prev.label,
+        city: address.city || prev.city,
+        phone: follow(prev.phone),
+        whatsapp: follow(prev.whatsapp),
+      };
+    });
   }, []);
 
   const handlePickCover = useCallback(async () => {
@@ -196,7 +223,10 @@ const EvictionForm: React.FC<EvictionFormProps> = ({ mode, editId, existing }) =
     if (result.canceled || result.assets.length === 0) return;
     setUploading(true);
     try {
-      const uploaded = await imageUploadService.uploadSingleImage(result.assets[0].uri, 'evictions');
+      const uploaded = await imageUploadService.uploadSingleImage(
+        result.assets[0].uri,
+        'evictions',
+      );
       setCover({ imageId: uploaded.imageId, url: uploaded.urls.medium ?? uploaded.urls.original });
     } catch {
       toast.error(t('evictions.form.photoFailed'));
@@ -222,17 +252,17 @@ const EvictionForm: React.FC<EvictionFormProps> = ({ mode, editId, existing }) =
       toast.error(t('evictions.form.labelRequired'));
       return;
     }
-    const scheduledAt = partsToIso(form.date, form.time);
+    const scheduledAt = combineDateAndTime(form.date, form.time);
     if (!scheduledAt) {
       toast.error(t('evictions.form.dateRequired'));
       return;
     }
 
     const contactInfo = {
-      phone: form.phone.trim() || undefined,
+      phone: joinEvictionPhone(form.phone),
       email: form.email.trim() || undefined,
       telegram: form.telegram.trim() || undefined,
-      whatsapp: form.whatsapp.trim() || undefined,
+      whatsapp: joinEvictionPhone(form.whatsapp),
       instructions: form.instructions.trim() || undefined,
     };
     const hasContact = Object.values(contactInfo).some((value) => value !== undefined);
@@ -316,25 +346,30 @@ const EvictionForm: React.FC<EvictionFormProps> = ({ mode, editId, existing }) =
             <BloomText style={styles.subtitle}>{t('evictions.form.subtitle')}</BloomText>
           </View>
 
-          <View style={styles.section}>
-            <H3 style={styles.sectionTitle}>{t('evictions.form.whatSection')}</H3>
-            <TextFieldInput
-              label={t('evictions.form.titleLabel')}
-              placeholder={t('evictions.form.titlePlaceholder')}
-              value={form.title}
-              onChangeText={(text) => update('title', text)}
-            />
-            <TextFieldInput
+          <Card variant="outlined" radius="radius-16" style={styles.section}>
+            <CardTitle>{t('evictions.form.whatSection')}</CardTitle>
+            <Field label={t('evictions.form.titleLabel')}>
+              <TextFieldInput
+                label={t('evictions.form.titleLabel')}
+                placeholder={t('evictions.form.titlePlaceholder')}
+                value={form.title}
+                onChangeText={(text) => update('title', text)}
+              />
+            </Field>
+            <Textarea
               label={t('evictions.form.descriptionLabel')}
               placeholder={t('evictions.form.descriptionPlaceholder')}
               value={form.description}
               onChangeText={(text) => update('description', text)}
-              multiline
+              required
+              rows={4}
+              autoResize
+              maxRows={12}
             />
-          </View>
+          </Card>
 
-          <View style={styles.section}>
-            <H3 style={styles.sectionTitle}>{t('evictions.form.whereSection')}</H3>
+          <Card variant="outlined" radius="radius-16" style={styles.section}>
+            <CardTitle>{t('evictions.form.whereSection')}</CardTitle>
             <View style={styles.mapWrap}>
               <Map
                 ref={mapRef}
@@ -348,18 +383,22 @@ const EvictionForm: React.FC<EvictionFormProps> = ({ mode, editId, existing }) =
               />
             </View>
             <BloomText style={styles.hint}>{t('evictions.form.mapHint')}</BloomText>
-            <TextFieldInput
-              label={t('evictions.form.labelLabel')}
-              placeholder={t('evictions.form.labelPlaceholder')}
-              value={form.label}
-              onChangeText={(text) => update('label', text)}
-            />
-            <TextFieldInput
-              label={t('evictions.form.cityLabel')}
-              placeholder={t('evictions.form.cityPlaceholder')}
-              value={form.city}
-              onChangeText={(text) => update('city', text)}
-            />
+            <Field label={t('evictions.form.labelLabel')}>
+              <TextFieldInput
+                label={t('evictions.form.labelLabel')}
+                placeholder={t('evictions.form.labelPlaceholder')}
+                value={form.label}
+                onChangeText={(text) => update('label', text)}
+              />
+            </Field>
+            <Field label={t('evictions.form.cityLabel')}>
+              <TextFieldInput
+                label={t('evictions.form.cityLabel')}
+                placeholder={t('evictions.form.cityPlaceholder')}
+                value={form.city}
+                onChangeText={(text) => update('city', text)}
+              />
+            </Field>
             {/* The published pin is ALWAYS a disc — there is no control for
                 that, because there is no value that publishes an exact point.
                 What this asks is whether the affected household authorised
@@ -382,81 +421,94 @@ const EvictionForm: React.FC<EvictionFormProps> = ({ mode, editId, existing }) =
             <BloomText style={styles.switchHint}>
               {t('evictions.form.approximateAlwaysNotice')}
             </BloomText>
-          </View>
+          </Card>
 
-          <View style={styles.section}>
-            <H3 style={styles.sectionTitle}>{t('evictions.form.whenSection')}</H3>
+          <Card variant="outlined" radius="radius-16" style={styles.section}>
+            <CardTitle>{t('evictions.form.whenSection')}</CardTitle>
             <View style={styles.row}>
-              <View style={styles.rowField}>
-                <TextFieldInput
-                  label={t('evictions.form.dateLabel')}
-                  placeholder="YYYY-MM-DD"
+              <Field label={t('evictions.form.dateLabel')} required style={styles.rowField}>
+                <DatePicker
                   value={form.date}
-                  onChangeText={(text) => update('date', text)}
+                  onChange={(day) => update('date', day)}
+                  locale={i18n.language}
+                  accessibilityLabel={t('evictions.form.dateLabel')}
                 />
-              </View>
+              </Field>
               <View style={styles.rowField}>
-                <TextFieldInput
-                  label={t('evictions.form.timeLabel')}
-                  placeholder="HH:MM"
-                  value={form.time}
-                  onChangeText={(text) => update('time', text)}
-                />
+                <Field label={t('evictions.form.timeLabel')}>
+                  <TextFieldInput
+                    label={t('evictions.form.timeLabel')}
+                    placeholder="HH:MM"
+                    value={form.time}
+                    onChangeText={(text) => update('time', text)}
+                  />
+                </Field>
               </View>
             </View>
-          </View>
+          </Card>
 
-          <View style={styles.section}>
-            <H3 style={styles.sectionTitle}>{t('evictions.form.helpSection')}</H3>
-            <TextFieldInput
+          <Card variant="outlined" radius="radius-16" style={styles.section}>
+            <CardTitle>{t('evictions.form.helpSection')}</CardTitle>
+            <PhoneInput
               label={t('evictions.detail.contact.phone')}
-              placeholder="+34 600 000 000"
-              value={form.phone}
-              onChangeText={(text) => update('phone', text)}
-              keyboardType="phone-pad"
+              placeholder="600 000 000"
+              country={form.phone.country}
+              onCountryChange={(iso2) => update('phone', withPhoneCountry(form.phone, iso2))}
+              value={form.phone.number}
+              onChangeText={(number) => update('phone', withPhoneNumber(form.phone, number))}
             />
-            <TextFieldInput
+            <PhoneInput
               label={t('evictions.detail.contact.whatsapp')}
-              placeholder="+34 600 000 000"
-              value={form.whatsapp}
-              onChangeText={(text) => update('whatsapp', text)}
+              placeholder="600 000 000"
+              country={form.whatsapp.country}
+              onCountryChange={(iso2) => update('whatsapp', withPhoneCountry(form.whatsapp, iso2))}
+              value={form.whatsapp.number}
+              onChangeText={(number) => update('whatsapp', withPhoneNumber(form.whatsapp, number))}
             />
-            <TextFieldInput
-              label={t('evictions.detail.contact.telegram')}
-              placeholder="@canal"
-              value={form.telegram}
-              onChangeText={(text) => update('telegram', text)}
-              autoCapitalize="none"
-            />
-            <TextFieldInput
-              label={t('evictions.detail.contact.email')}
-              placeholder="solidaridad@example.org"
-              value={form.email}
-              onChangeText={(text) => update('email', text)}
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-            <TextFieldInput
+            <Field label={t('evictions.detail.contact.telegram')}>
+              <TextFieldInput
+                label={t('evictions.detail.contact.telegram')}
+                placeholder="@canal"
+                value={form.telegram}
+                onChangeText={(text) => update('telegram', text)}
+                autoCapitalize="none"
+              />
+            </Field>
+            <Field label={t('evictions.detail.contact.email')}>
+              <TextFieldInput
+                label={t('evictions.detail.contact.email')}
+                placeholder="solidaridad@example.org"
+                value={form.email}
+                onChangeText={(text) => update('email', text)}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+            </Field>
+            <Textarea
               label={t('evictions.form.instructionsLabel')}
               placeholder={t('evictions.form.instructionsPlaceholder')}
               value={form.instructions}
               onChangeText={(text) => update('instructions', text)}
-              multiline
+              rows={3}
+              autoResize
+              maxRows={8}
             />
-          </View>
+          </Card>
 
-          <View style={styles.section}>
-            <H3 style={styles.sectionTitle}>{t('evictions.form.agencySection')}</H3>
-            <TextFieldInput
-              label={t('evictions.form.agencyLabel')}
-              placeholder={t('evictions.form.agencyPlaceholder')}
-              value={form.agencyName}
-              onChangeText={(text) => update('agencyName', text)}
-            />
-          </View>
+          <Card variant="outlined" radius="radius-16" style={styles.section}>
+            <CardTitle>{t('evictions.form.agencySection')}</CardTitle>
+            <Field label={t('evictions.form.agencyLabel')}>
+              <TextFieldInput
+                label={t('evictions.form.agencyLabel')}
+                placeholder={t('evictions.form.agencyPlaceholder')}
+                value={form.agencyName}
+                onChangeText={(text) => update('agencyName', text)}
+              />
+            </Field>
+          </Card>
 
-          <View style={styles.section}>
-            <H3 style={styles.sectionTitle}>{t('evictions.form.photoSection')}</H3>
+          <Card variant="outlined" radius="radius-16" style={styles.section}>
+            <CardTitle>{t('evictions.form.photoSection')}</CardTitle>
             {coverPreview ? (
               <Image
                 source={{ uri: coverPreview }}
@@ -471,13 +523,12 @@ const EvictionForm: React.FC<EvictionFormProps> = ({ mode, editId, existing }) =
               onPress={handlePickCover}
               loading={uploading}
               disabled={uploading}
-              icon={<Ionicons name="image-outline" size={18} color={colors.text} />}
-              iconPosition="left"
+              leadingIcon={RiImageAddLine}
               style={styles.photoButton}
             >
               {cover?.imageId ? t('evictions.form.photoChange') : t('evictions.form.photoAdd')}
             </Button>
-          </View>
+          </Card>
 
           <Button
             variant="primary"
@@ -567,13 +618,6 @@ const styles = StyleSheet.create({
   section: {
     gap: spacing.md,
     padding: spacing.lg,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surfaceElevated,
-  },
-  sectionTitle: {
-    letterSpacing: -0.3,
   },
   mapWrap: {
     borderRadius: radius.md,
@@ -590,10 +634,12 @@ const styles = StyleSheet.create({
   },
   row: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: spacing.md,
   },
   rowField: {
     flex: 1,
+    minWidth: 160,
   },
   switchRow: {
     flexDirection: 'row',

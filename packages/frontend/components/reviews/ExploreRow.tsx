@@ -1,90 +1,81 @@
 /**
- * ExploreRow — a single tappable row in the review-explore lists (city →
- * neighborhood → building). Owns its own pressed/hovered state with static style
- * arrays (AGENTS.md §NativeWind Pressable); safe inside a `.map`.
+ * ExploreRow — one tappable row in the review-explore lists (city →
+ * neighborhood → building): a Bloom `Item` (title, subtitle, a rating `Chip`
+ * and a chevron trailing). The screens stack rows inside one outlined Bloom
+ * `Card` via `ExploreList`, so the rows share a surface instead of each drawing
+ * its own border.
  */
-import React, { useState } from 'react';
-import { Platform, Pressable, StyleSheet, View } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import React from 'react';
+import { StyleSheet, View } from 'react-native';
 
-import { Text as BloomText } from '@oxy.so/bloom/typography';
+import { Card } from '@oxy.so/bloom/card';
+import { Chip } from '@oxy.so/bloom/chip';
+import { Divider } from '@oxy.so/bloom/divider';
+import { RiArrowRightSLine, RiStarFill } from '@oxy.so/bloom/icons';
+import { Item } from '@oxy.so/bloom/item';
+import { useTheme } from '@oxy.so/bloom/theme';
 
 import { colors } from '@/styles/colors';
-import { hairline, radius, spacing } from '@/constants/styles';
-
-const IS_WEB = Platform.OS === 'web';
 
 interface ExploreRowProps {
   title: string;
   subtitle?: string;
-  /** Right-aligned metric (e.g. "4.6 ★"). */
-  rightLabel?: string;
+  /** Average rating shown as a star chip on the right. */
+  rating?: number;
   onPress: () => void;
 }
 
-export const ExploreRow: React.FC<ExploreRowProps> = ({ title, subtitle, rightLabel, onPress }) => {
-  const [pressed, setPressed] = useState(false);
-  const [hovered, setHovered] = useState(false);
+export const ExploreRow: React.FC<ExploreRowProps> = ({ title, subtitle, rating, onPress }) => {
+  const theme = useTheme();
   return (
-    <Pressable
+    <Item
+      role="listitem"
+      title={title}
+      subtitle={subtitle}
       onPress={onPress}
-      onPressIn={() => setPressed(true)}
-      onPressOut={() => setPressed(false)}
-      onHoverIn={IS_WEB ? () => setHovered(true) : undefined}
-      onHoverOut={IS_WEB ? () => setHovered(false) : undefined}
-      accessibilityRole="button"
       accessibilityLabel={title}
-      style={[styles.row, (pressed || hovered) && styles.rowActive]}
-    >
-      <View style={styles.text}>
-        <BloomText style={styles.title} numberOfLines={1}>
-          {title}
-        </BloomText>
-        {subtitle ? (
-          <BloomText style={styles.subtitle} numberOfLines={1}>
-            {subtitle}
-          </BloomText>
-        ) : null}
-      </View>
-      {rightLabel ? <BloomText style={styles.rightLabel}>{rightLabel}</BloomText> : null}
-      <Ionicons name="chevron-forward" size={18} color={colors.COLOR_BLACK_LIGHT_4} />
-    </Pressable>
+      trailing={
+        <View style={styles.trailing}>
+          {typeof rating === 'number' ? (
+            <Chip
+              size="small"
+              hue="gray"
+              startIcon={<RiStarFill width={12} height={12} fill={colors.ratingStar} />}
+            >
+              {rating.toFixed(1)}
+            </Chip>
+          ) : null}
+          <RiArrowRightSLine width={20} height={20} fill={theme.colors.textTertiary} />
+        </View>
+      }
+    />
+  );
+};
+
+/** The shared outlined surface an explore list's rows sit on, with hairlines between them. */
+export const ExploreList: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const rows = React.Children.toArray(children).filter(Boolean);
+  return (
+    <Card variant="outlined" style={styles.list}>
+      {rows.map((row, index) => (
+        <React.Fragment key={(row as React.ReactElement).key ?? index}>
+          {index > 0 ? <Divider spacing={0} /> : null}
+          {row}
+        </React.Fragment>
+      ))}
+    </Card>
   );
 };
 
 const styles = StyleSheet.create({
-  row: {
+  list: {
+    overflow: 'hidden',
+    paddingVertical: 4,
+  },
+  trailing: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderRadius: radius.md,
-    borderWidth: hairline.width,
-    borderColor: colors.COLOR_BLACK_LIGHT_6,
-    backgroundColor: colors.surfaceElevated,
-  },
-  rowActive: {
-    backgroundColor: colors.COLOR_BLACK_LIGHT_7,
-  },
-  text: {
-    flex: 1,
-    minWidth: 0,
-    gap: 2,
-  },
-  title: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: colors.COLOR_BLACK,
-  },
-  subtitle: {
-    fontSize: 13,
-    color: colors.COLOR_BLACK_LIGHT_3,
-  },
-  rightLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.COLOR_BLACK,
+    gap: 8,
   },
 });
 

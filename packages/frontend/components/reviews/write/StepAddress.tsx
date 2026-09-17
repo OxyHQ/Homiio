@@ -8,6 +8,7 @@ import React, { type RefObject } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
+import { Field } from '@oxy.so/bloom/field';
 import { TextFieldInput } from '@oxy.so/bloom/text-field';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 
@@ -37,84 +38,104 @@ export const StepAddress: React.FC<StepAddressProps> = ({
         subtitle={t('reviews.write.steps.address.subtitle')}
       />
 
-      <TextFieldInput
-        label={t('reviews.write.fields.street')}
-        placeholder={t('reviews.write.placeholders.street')}
-        value={data.street}
-        onChangeText={(text) => update('street', text)}
-      />
-      <TextFieldInput
-        label={t('reviews.write.fields.number')}
-        placeholder={t('reviews.write.placeholders.number')}
-        value={data.number}
-        onChangeText={(text) => update('number', text)}
-      />
-      <TextFieldInput
-        label={t('reviews.write.fields.buildingName')}
-        placeholder={t('reviews.write.placeholders.buildingName')}
-        value={data.building_name}
-        onChangeText={(text) => update('building_name', text)}
-      />
+      <Field label={t('reviews.write.fields.street')}>
+        <TextFieldInput
+          label={t('reviews.write.fields.street')}
+          placeholder={t('reviews.write.placeholders.street')}
+          value={data.street}
+          onChangeText={(text) => update('street', text)}
+        />
+      </Field>
+      <Field label={t('reviews.write.fields.number')}>
+        <TextFieldInput
+          label={t('reviews.write.fields.number')}
+          placeholder={t('reviews.write.placeholders.number')}
+          value={data.number}
+          onChangeText={(text) => update('number', text)}
+        />
+      </Field>
+      <Field label={t('reviews.write.fields.buildingName')}>
+        <TextFieldInput
+          label={t('reviews.write.fields.buildingName')}
+          placeholder={t('reviews.write.placeholders.buildingName')}
+          value={data.building_name}
+          onChangeText={(text) => update('building_name', text)}
+        />
+      </Field>
       <View style={styles.row}>
         <View style={styles.rowField}>
-          <TextFieldInput
-            label={t('reviews.write.fields.floor')}
-            placeholder={t('reviews.write.placeholders.floor')}
-            value={data.floor}
-            onChangeText={(text) => update('floor', text)}
-          />
+          <Field label={t('reviews.write.fields.floor')}>
+            <TextFieldInput
+              label={t('reviews.write.fields.floor')}
+              placeholder={t('reviews.write.placeholders.floor')}
+              value={data.floor}
+              onChangeText={(text) => update('floor', text)}
+            />
+          </Field>
         </View>
         <View style={styles.rowField}>
-          <TextFieldInput
-            label={t('reviews.write.fields.unit')}
-            placeholder={t('reviews.write.placeholders.unit')}
-            value={data.unit}
-            onChangeText={(text) => update('unit', text)}
-          />
+          <Field label={t('reviews.write.fields.unit')}>
+            <TextFieldInput
+              label={t('reviews.write.fields.unit')}
+              placeholder={t('reviews.write.placeholders.unit')}
+              value={data.unit}
+              onChangeText={(text) => update('unit', text)}
+            />
+          </Field>
         </View>
       </View>
       <View style={styles.row}>
         <View style={styles.rowField}>
-          <TextFieldInput
-            label={t('reviews.write.fields.city')}
-            placeholder={t('reviews.write.placeholders.city')}
-            value={data.city}
-            onChangeText={(text) => update('city', text)}
-          />
+          <Field label={t('reviews.write.fields.city')}>
+            <TextFieldInput
+              label={t('reviews.write.fields.city')}
+              placeholder={t('reviews.write.placeholders.city')}
+              value={data.city}
+              onChangeText={(text) => update('city', text)}
+            />
+          </Field>
         </View>
         <View style={styles.rowField}>
-          <TextFieldInput
-            label={t('reviews.write.fields.state')}
-            placeholder={t('reviews.write.placeholders.state')}
-            value={data.state}
-            onChangeText={(text) => update('state', text)}
-          />
+          <Field label={t('reviews.write.fields.state')}>
+            <TextFieldInput
+              label={t('reviews.write.fields.state')}
+              placeholder={t('reviews.write.placeholders.state')}
+              value={data.state}
+              onChangeText={(text) => update('state', text)}
+            />
+          </Field>
         </View>
       </View>
       <View style={styles.row}>
         <View style={styles.rowField}>
-          <TextFieldInput
-            label={t('reviews.write.fields.postalCode')}
-            placeholder={t('reviews.write.placeholders.postalCode')}
-            value={data.postal_code}
-            onChangeText={(text) => update('postal_code', text)}
-          />
+          <Field label={t('reviews.write.fields.postalCode')}>
+            <TextFieldInput
+              label={t('reviews.write.fields.postalCode')}
+              placeholder={t('reviews.write.placeholders.postalCode')}
+              value={data.postal_code}
+              onChangeText={(text) => update('postal_code', text)}
+            />
+          </Field>
         </View>
         <View style={styles.rowField}>
-          <TextFieldInput
-            label={t('reviews.write.fields.country')}
-            placeholder={t('reviews.write.placeholders.country')}
-            value={data.country}
-            onChangeText={(text) => update('country', text)}
-          />
+          <Field label={t('reviews.write.fields.country')}>
+            <TextFieldInput
+              label={t('reviews.write.fields.country')}
+              placeholder={t('reviews.write.placeholders.country')}
+              value={data.country}
+              onChangeText={(text) => update('country', text)}
+            />
+          </Field>
         </View>
       </View>
-      <TextFieldInput
-        label={t('reviews.write.fields.neighborhood')}
-        placeholder={t('reviews.write.placeholders.neighborhood')}
-        value={data.neighborhood}
-        onChangeText={(text) => update('neighborhood', text)}
-      />
+      <Field label={t('reviews.write.fields.neighborhood')}>
+        <TextFieldInput
+          label={t('reviews.write.fields.neighborhood')}
+          placeholder={t('reviews.write.placeholders.neighborhood')}
+          value={data.neighborhood}
+          onChangeText={(text) => update('neighborhood', text)}
+        />
+      </Field>
 
       <View style={styles.mapWrapper}>
         <Map

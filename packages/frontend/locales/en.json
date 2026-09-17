@@ -1604,7 +1604,11 @@
       "pending": "Pending",
       "accepted": "Accepted",
       "declined": "Declined",
-      "responsePlaceholder": "Add an optional message..."
+      "responsePlaceholder": "Add an optional message...",
+      "expired": "Expired",
+      "yourMessage": "Your message",
+      "responseLabel": "Add a response (optional)",
+      "waiting": "Waiting for a response…"
     },
     "relationship": {
       "title": "Roommate Relationship",
@@ -3275,7 +3279,8 @@
         "reviewTitle": "Sum up your experience",
         "opinion": "Share your experience (10+ characters)",
         "pros": "Add something you liked",
-        "cons": "Add something to improve"
+        "cons": "Add something to improve",
+        "selectDate": "Select a date"
       },
       "currencies": {
         "EUR": "EUR (€)",

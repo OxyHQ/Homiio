@@ -2,20 +2,24 @@
  * StepManagement — who managed the tenancy and how it went: agency name (with a
  * debounced typeahead against `/api/agencies/search`), landlord treatment,
  * problem response, deposit outcome, and free-text advice to the agency /
- * landlord. All optional.
+ * landlord (Bloom `Textarea`s). All optional.
  *
  * The agency search debounces WITHOUT a `useEffect`: each keystroke resets a
- * timer ref that publishes the debounced term into a `useQuery` key. Result
- * rows own their own pressed state (extracted `AgencyResultRow`, safe in `.map`).
+ * timer ref that publishes the debounced term into a `useQuery` key. The
+ * suggestions are Bloom `Item` rows (`role="option"`) on an outlined `Card`.
  */
 import React, { useRef, useState } from 'react';
-import { Platform, Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import Ionicons from '@expo/vector-icons/Ionicons';
 
+import { Card } from '@oxy.so/bloom/card';
+import { RiBuilding2Line } from '@oxy.so/bloom/icons';
+import { Item } from '@oxy.so/bloom/item';
+import { Field } from '@oxy.so/bloom/field';
 import { TextFieldInput } from '@oxy.so/bloom/text-field';
-import { Text as BloomText } from '@oxy.so/bloom/typography';
+import { Textarea } from '@oxy.so/bloom/textarea';
+import { useTheme } from '@oxy.so/bloom/theme';
 
 import {
   LandlordTreatment,
@@ -28,41 +32,14 @@ import { EnumChipSelector } from '@/components/reviews/EnumChipSelector';
 import { StepHeader } from '@/components/reviews/write/StepHeader';
 import type { StepProps } from '@/components/reviews/write/types';
 import { reviewService } from '@/services/reviewService';
-import { colors } from '@/styles/colors';
-import { hairline, radius, spacing } from '@/constants/styles';
+import { spacing } from '@/constants/styles';
 
-const IS_WEB = Platform.OS === 'web';
 const SEARCH_DEBOUNCE_MS = 300;
 const MIN_SEARCH_LENGTH = 2;
 
-interface AgencyResultRowProps {
-  agency: AgencySummary;
-  onSelect: () => void;
-}
-
-/** One agency typeahead suggestion — owns its own pressed/hovered state. */
-const AgencyResultRow: React.FC<AgencyResultRowProps> = ({ agency, onSelect }) => {
-  const [pressed, setPressed] = useState(false);
-  const [hovered, setHovered] = useState(false);
-  return (
-    <Pressable
-      onPress={onSelect}
-      onPressIn={() => setPressed(true)}
-      onPressOut={() => setPressed(false)}
-      onHoverIn={IS_WEB ? () => setHovered(true) : undefined}
-      onHoverOut={IS_WEB ? () => setHovered(false) : undefined}
-      accessibilityRole="button"
-      accessibilityLabel={agency.name}
-      style={[styles.resultRow, (pressed || hovered) && styles.resultRowActive]}
-    >
-      <Ionicons name="business-outline" size={16} color={colors.COLOR_BLACK_LIGHT_3} />
-      <BloomText style={styles.resultLabel}>{agency.name}</BloomText>
-    </Pressable>
-  );
-};
-
 export const StepManagement: React.FC<StepProps> = ({ data, update }) => {
   const { t } = useTranslation();
+  const theme = useTheme();
   const [term, setTerm] = useState('');
   const [showResults, setShowResults] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -99,22 +76,30 @@ export const StepManagement: React.FC<StepProps> = ({ data, update }) => {
       />
 
       <View>
-        <TextFieldInput
-          label={t('reviews.write.fields.agencyName')}
-          placeholder={t('reviews.write.placeholders.agencyName')}
-          value={data.agencyName}
-          onChangeText={handleAgencyChange}
-        />
+        <Field label={t('reviews.write.fields.agencyName')}>
+          <TextFieldInput
+            label={t('reviews.write.fields.agencyName')}
+            placeholder={t('reviews.write.placeholders.agencyName')}
+            value={data.agencyName}
+            onChangeText={handleAgencyChange}
+          />
+        </Field>
         {showSuggestions ? (
-          <View style={styles.results}>
+          <Card variant="outlined" radius="radius-12" style={styles.results}>
             {results.map((agency) => (
-              <AgencyResultRow
+              <Item
                 key={agency.id}
-                agency={agency}
-                onSelect={() => handleSelectAgency(agency)}
+                role="option"
+                density="compact"
+                title={agency.name}
+                leading={
+                  <RiBuilding2Line width={16} height={16} fill={theme.colors.textSecondary} />
+                }
+                onPress={() => handleSelectAgency(agency)}
+                accessibilityLabel={agency.name}
               />
             ))}
-          </View>
+          </Card>
         ) : null}
       </View>
 
@@ -140,19 +125,23 @@ export const StepManagement: React.FC<StepProps> = ({ data, update }) => {
         onChange={(next) => update('depositReturned', next[0])}
       />
 
-      <TextFieldInput
+      <Textarea
         label={t('reviews.write.fields.adviceToAgency')}
         placeholder={t('reviews.write.placeholders.adviceToAgency')}
         value={data.adviceToAgency}
         onChangeText={(text) => update('adviceToAgency', text)}
-        multiline
+        rows={3}
+        autoResize
+        maxRows={10}
       />
-      <TextFieldInput
+      <Textarea
         label={t('reviews.write.fields.adviceToLandlord')}
         placeholder={t('reviews.write.placeholders.adviceToLandlord')}
         value={data.adviceToLandlord}
         onChangeText={(text) => update('adviceToLandlord', text)}
-        multiline
+        rows={3}
+        autoResize
+        maxRows={10}
       />
     </View>
   );
@@ -164,25 +153,7 @@ const styles = StyleSheet.create({
   },
   results: {
     marginTop: spacing.xs,
-    borderWidth: hairline.width,
-    borderColor: colors.COLOR_BLACK_LIGHT_6,
-    borderRadius: radius.md,
     overflow: 'hidden',
-    backgroundColor: colors.surfaceElevated,
-  },
-  resultRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  resultRowActive: {
-    backgroundColor: colors.COLOR_BLACK_LIGHT_7,
-  },
-  resultLabel: {
-    fontSize: 14,
-    color: colors.COLOR_BLACK,
   },
 });
 

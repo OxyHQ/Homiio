@@ -1,5 +1,9 @@
 /**
  * Tip detail — editorial article reader fed by the website Newsroom API.
+ *
+ * Category pills are Bloom `Chip`s, meta glyphs are Remix icons and related
+ * tips are Bloom `Card`s whose thumbnail zooms inside its mask
+ * (`ZoomableImage`), matching the tips index.
  */
 import React, { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
@@ -7,7 +11,15 @@ import { useTranslation } from 'react-i18next';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Card } from '@oxy.so/bloom/card';
+import { Chip } from '@oxy.so/bloom/chip';
+import {
+  RiCalendarLine,
+  RiNewspaperLine,
+  RiTimeLine,
+  RiUserLine,
+} from '@oxy.so/bloom/icons';
+import { useTheme } from '@oxy.so/bloom/theme';
 import {
   H1,
   H2,
@@ -27,6 +39,7 @@ import {
 } from '@/services/tipsService';
 import { radius, spacing } from '@/constants/styles';
 import { colors } from '@/styles/colors';
+import { ZoomableImage } from '@/components/ui/ZoomableImage';
 
 const renderMarkdown = (content: string): React.ReactNode[] => {
   if (!content) return [];
@@ -92,42 +105,59 @@ interface RelatedCardProps {
 }
 
 const RelatedCard: React.FC<RelatedCardProps> = ({ tip, onPress }) => {
+  const theme = useTheme();
   const [pressed, setPressed] = useState(false);
+  // Hover anywhere on the card zooms its thumbnail (web); press on native.
+  const [hovered, setHovered] = useState(false);
 
   return (
     <Pressable
       onPress={onPress}
       onPressIn={() => setPressed(true)}
       onPressOut={() => setPressed(false)}
-      style={[styles.relatedCard, pressed && styles.relatedCardPressed]}
+      onHoverIn={() => setHovered(true)}
+      onHoverOut={() => setHovered(false)}
       accessibilityRole="button"
       accessibilityLabel={tip.title}
     >
-      {tip.coverImageUrl ? (
-        <Image
-          source={{ uri: tip.coverImageUrl }}
-          style={styles.relatedImage}
-          contentFit="cover"
-          transition={200}
-          cachePolicy="memory-disk"
-        />
-      ) : (
-        <View style={styles.relatedImagePlaceholder}>
-          <Ionicons name="newspaper-outline" size={24} color={colors.muted} />
+      <Card variant="outlined" radius="radius-16" style={styles.relatedCard}>
+        {tip.coverImageUrl ? (
+          <ZoomableImage active={hovered || pressed} style={styles.relatedImage}>
+            <Image
+              source={{ uri: tip.coverImageUrl }}
+              style={styles.relatedImageFill}
+              contentFit="cover"
+              transition={200}
+              cachePolicy="memory-disk"
+            />
+          </ZoomableImage>
+        ) : (
+          <View
+            style={[
+              styles.relatedImage,
+              styles.imagePlaceholder,
+              { backgroundColor: theme.colors.backgroundSecondary },
+            ]}
+          >
+            <RiNewspaperLine width={24} height={24} fill={theme.colors.textSecondary} />
+          </View>
+        )}
+        <View style={styles.relatedContent}>
+          <BloomText style={styles.relatedTitle} numberOfLines={2}>
+            {tip.title}
+          </BloomText>
+          <BloomText style={[styles.relatedMeta, { color: theme.colors.textSecondary }]}>
+            {tip.readTime}
+          </BloomText>
         </View>
-      )}
-      <View style={styles.relatedContent}>
-        <BloomText style={styles.relatedTitle} numberOfLines={2}>
-          {tip.title}
-        </BloomText>
-        <BloomText style={styles.relatedMeta}>{tip.readTime}</BloomText>
-      </View>
+      </Card>
     </Pressable>
   );
 };
 
 export default function TipArticleScreen() {
   const { t, i18n } = useTranslation();
+  const theme = useTheme();
   const router = useRouter();
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const locale = toNewsroomLocale(i18n.language);
@@ -218,13 +248,19 @@ export default function TipArticleScreen() {
               cachePolicy="memory-disk"
             />
           ) : (
-            <View style={styles.heroPlaceholder}>
-              <Ionicons name="newspaper-outline" size={56} color={colors.muted} />
+            <View
+              style={[
+                styles.heroImage,
+                styles.imagePlaceholder,
+                { backgroundColor: theme.colors.backgroundSecondary },
+              ]}
+            >
+              <RiNewspaperLine width={56} height={56} fill={theme.colors.textSecondary} />
             </View>
           )}
-          <View style={styles.heroBadge}>
-            <BloomText style={styles.heroBadgeText}>{tip.category}</BloomText>
-          </View>
+          <Chip size="small" variant="solid" color="default" style={styles.heroBadge}>
+            {tip.category}
+          </Chip>
         </View>
 
         <View style={styles.articleBlock}>
@@ -232,16 +268,16 @@ export default function TipArticleScreen() {
           <H1 style={styles.articleTitle}>{tip.title}</H1>
           <View style={styles.metaRow}>
             <View style={styles.metaItem}>
-              <Ionicons name="person-outline" size={14} color={colors.muted} />
+              <RiUserLine width={14} height={14} fill={theme.colors.textSecondary} />
               <BloomText style={styles.metaText}>{tip.author}</BloomText>
             </View>
             <View style={styles.metaItem}>
-              <Ionicons name="time-outline" size={14} color={colors.muted} />
+              <RiTimeLine width={14} height={14} fill={theme.colors.textSecondary} />
               <BloomText style={styles.metaText}>{tip.readTime}</BloomText>
             </View>
             {tip.publishedAt ? (
               <View style={styles.metaItem}>
-                <Ionicons name="calendar-outline" size={14} color={colors.muted} />
+                <RiCalendarLine width={14} height={14} fill={theme.colors.textSecondary} />
                 <BloomText style={styles.metaText}>
                   {formatPublishDate(tip.publishedAt)}
                 </BloomText>
@@ -294,10 +330,7 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 280,
   },
-  heroPlaceholder: {
-    width: '100%',
-    height: 280,
-    backgroundColor: colors.infoSubtle,
+  imagePlaceholder: {
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -305,17 +338,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: spacing.lg,
     left: spacing.lg,
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderRadius: radius.pill,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-  },
-  heroBadgeText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: colors.COLOR_BLACK,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
   },
   articleBlock: {
     gap: spacing.sm,
@@ -398,25 +420,15 @@ const styles = StyleSheet.create({
   },
   relatedCard: {
     flexDirection: 'row',
-    backgroundColor: colors.surfaceElevated,
-    borderRadius: radius.lg,
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  relatedCardPressed: {
-    opacity: 0.92,
   },
   relatedImage: {
     width: 96,
     height: 96,
   },
-  relatedImagePlaceholder: {
-    width: 96,
-    height: 96,
-    backgroundColor: colors.infoSubtle,
-    justifyContent: 'center',
-    alignItems: 'center',
+  relatedImageFill: {
+    width: '100%',
+    height: '100%',
   },
   relatedContent: {
     flex: 1,
@@ -427,10 +439,8 @@ const styles = StyleSheet.create({
   relatedTitle: {
     fontSize: 15,
     fontWeight: '600',
-    color: colors.COLOR_BLACK,
   },
   relatedMeta: {
     fontSize: 12,
-    color: colors.muted,
   },
 });

@@ -32,9 +32,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { Button } from '@oxy.so/bloom/button';
+import { Card } from '@oxy.so/bloom/card';
 import { Chip } from '@oxy.so/bloom/chip';
+import { RiAddLine, RiFocus3Line, RiMapPinLine } from '@oxy.so/bloom/icons';
+import { Tabs, TabsTrigger } from '@oxy.so/bloom/tabs';
 import * as Skeleton from '@oxy.so/bloom/skeleton';
 import { H2, H3, Text as BloomText } from '@oxy.so/bloom/typography';
 import { useOxy, openAccountDialog } from '@oxy.so/services';
@@ -87,14 +89,14 @@ const SORTS: readonly EvictionBoardSort[] = ['soonest', 'distance', 'recently_up
 const BoardSkeleton: React.FC = () => (
   <View style={styles.listWrap}>
     {Array.from({ length: 4 }).map((_, idx) => (
-      <View key={idx} style={styles.skeletonCard}>
+      <Card key={idx} variant="outlined" radius="radius-16" style={styles.skeletonCard}>
         <Skeleton.Box width={60} height={60} borderRadius={radius.md} />
         <View style={styles.skeletonBody}>
           <Skeleton.Text style={{ width: 200, lineHeight: 18 }} />
           <Skeleton.Text style={{ width: 140, lineHeight: 14 }} />
           <Skeleton.Text style={{ width: 90, lineHeight: 14 }} />
         </View>
-      </View>
+      </Card>
     ))}
   </View>
 );
@@ -140,7 +142,12 @@ export default function EvictionsBoardScreen() {
         : // Never dispatched: the query below is disabled without a scope. The
           // placeholder exists only because the params object is memoised above
           // the enabled check.
-          { scope: { kind: 'global' } as EvictionBoardScope, status, helpNeed, sort: effectiveSort },
+          {
+            scope: { kind: 'global' } as EvictionBoardScope,
+            status,
+            helpNeed,
+            sort: effectiveSort,
+          },
     [boardScope, status, helpNeed, effectiveSort],
   );
 
@@ -203,8 +210,7 @@ export default function EvictionsBoardScreen() {
       variant="primary"
       size="small"
       onPress={handlePublish}
-      icon={<Ionicons name="add" size={16} color={colors.primaryForeground} />}
-      iconPosition="left"
+      leadingIcon={RiAddLine}
       accessibilityLabel={t('evictions.publishCta')}
     >
       {t('evictions.publishCta')}
@@ -213,7 +219,7 @@ export default function EvictionsBoardScreen() {
 
   const scopePrompt = (
     <View style={styles.scopePrompt}>
-      <Ionicons name="compass-outline" size={28} color={colors.textSecondary} />
+      <RiMapPinLine size="xl" fill={colors.textSecondary} />
       <H3 style={styles.emptyTitle}>{t('evictions.scope.title')}</H3>
       <BloomText style={styles.emptyMessage}>{t('evictions.scope.subtitle')}</BloomText>
       <View style={styles.scopeActions}>
@@ -221,8 +227,7 @@ export default function EvictionsBoardScreen() {
           variant="primary"
           size="medium"
           onPress={scope.useCurrentLocation}
-          icon={<Ionicons name="navigate" size={16} color={colors.primaryForeground} />}
-          iconPosition="left"
+          leadingIcon={RiFocus3Line}
         >
           {t('evictions.scope.useMyLocation')}
         </Button>
@@ -265,8 +270,7 @@ export default function EvictionsBoardScreen() {
             variant="primary"
             size="medium"
             onPress={handlePublish}
-            icon={<Ionicons name="add" size={18} color={colors.primaryForeground} />}
-            iconPosition="left"
+            leadingIcon={RiAddLine}
             style={styles.emptyCta}
           >
             {t('evictions.publishCta')}
@@ -327,7 +331,9 @@ export default function EvictionsBoardScreen() {
               isGlobal={scope.isGlobal}
               nearbyPlace={scope.nearbyPlace}
               deviceUnavailable={scope.deviceIssue !== null}
-              {...(scope.source === 'device' ? {} : { onUseCurrentLocation: scope.useCurrentLocation })}
+              {...(scope.source === 'device'
+                ? {}
+                : { onUseCurrentLocation: scope.useCurrentLocation })}
             />
 
             {boardScope ? (
@@ -336,26 +342,17 @@ export default function EvictionsBoardScreen() {
                   {t('evictions.countInScope', { count: total })}
                 </BloomText>
 
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.filterRow}
+                {/* One paginated server status at a time: a single-choice
+                    strip, not a set of toggles. */}
+                <Tabs
+                  variant="filled"
+                  value={status}
+                  onValueChange={(next) => setStatus(next as EvictionCaseStatus)}
                 >
-                  {STATUS_FILTERS.map((entry) => {
-                    const isActive = status === entry.status;
-                    return (
-                      <Chip
-                        key={entry.status}
-                        onPress={() => setStatus(entry.status)}
-                        variant={isActive ? 'solid' : 'outlined'}
-                        color={isActive ? 'primary' : 'default'}
-                        selected={isActive}
-                      >
-                        {t(entry.i18nKey)}
-                      </Chip>
-                    );
-                  })}
-                </ScrollView>
+                  {STATUS_FILTERS.map((entry) => (
+                    <TabsTrigger key={entry.status} value={entry.status} label={t(entry.i18nKey)} />
+                  ))}
+                </Tabs>
 
                 <ScrollView
                   horizontal
@@ -369,7 +366,6 @@ export default function EvictionsBoardScreen() {
                         key={need}
                         onPress={() => setHelpNeed(isActive ? undefined : need)}
                         variant={isActive ? 'solid' : 'outlined'}
-                        color={isActive ? 'primary' : 'default'}
                         selected={isActive}
                       >
                         {t(`evictions.help.need.${need}`)}
@@ -378,26 +374,15 @@ export default function EvictionsBoardScreen() {
                   })}
                 </ScrollView>
 
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.filterRow}
+                <Tabs
+                  variant="pill"
+                  value={effectiveSort}
+                  onValueChange={(next) => setSort(next as EvictionBoardSort)}
                 >
-                  {SORTS.filter((entry) => entry !== 'distance' || hasCentre).map((entry) => {
-                    const isActive = effectiveSort === entry;
-                    return (
-                      <Chip
-                        key={entry}
-                        onPress={() => setSort(entry)}
-                        variant={isActive ? 'solid' : 'outlined'}
-                        color={isActive ? 'primary' : 'default'}
-                        selected={isActive}
-                      >
-                        {t(`evictions.sort.${entry}`)}
-                      </Chip>
-                    );
-                  })}
-                </ScrollView>
+                  {SORTS.filter((entry) => entry !== 'distance' || hasCentre).map((entry) => (
+                    <TabsTrigger key={entry} value={entry} label={t(`evictions.sort.${entry}`)} />
+                  ))}
+                </Tabs>
               </>
             ) : null}
 
@@ -457,10 +442,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.md,
     padding: spacing.md,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surfaceElevated,
   },
   skeletonBody: {
     flex: 1,

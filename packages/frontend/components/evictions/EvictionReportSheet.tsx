@@ -18,13 +18,11 @@ import React, { useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@oxy.so/bloom/button';
-import { Chip } from '@oxy.so/bloom/chip';
-import { TextFieldInput } from '@oxy.so/bloom/text-field';
+import { Admonition } from '@oxy.so/bloom/admonition';
+import { RadioGroup, type RadioOption } from '@oxy.so/bloom/radio';
+import { Textarea } from '@oxy.so/bloom/textarea';
 import { H3, Text as BloomText } from '@oxy.so/bloom/typography';
-import {
-  EvictionReportReason,
-  EVICTION_PRECAUTIONARY_HOLD_REASONS,
-} from '@homiio/shared-types';
+import { EvictionReportReason, EVICTION_PRECAUTIONARY_HOLD_REASONS } from '@homiio/shared-types';
 
 import { useReportEviction } from '@/hooks/useEvictionQueries';
 import { toast } from '@oxy.so/bloom/toast';
@@ -71,6 +69,11 @@ export const EvictionReportSheet: React.FC<EvictionReportSheetProps> = ({ caseId
   const [reason, setReason] = useState<EvictionReportReason | null>(null);
   const [details, setDetails] = useState('');
 
+  const reasonOptions = useMemo<RadioOption<EvictionReportReason>[]>(
+    () => REASON_OPTIONS.map((option) => ({ value: option.value, label: t(option.labelKey) })),
+    [t],
+  );
+
   const detailsRequired = reason !== null && REASONS_REQUIRING_DETAILS.includes(reason);
   const appliesHold = reason !== null && EVICTION_PRECAUTIONARY_HOLD_REASONS.includes(reason);
   const isValid = useMemo(() => {
@@ -97,32 +100,29 @@ export const EvictionReportSheet: React.FC<EvictionReportSheetProps> = ({ caseId
     <View style={styles.wrap}>
       <H3 style={styles.title}>{t('evictions.report.title')}</H3>
       <BloomText style={styles.intro}>{t('evictions.report.intro')}</BloomText>
+
+      <RadioGroup
+        label={t('evictions.report.title')}
+        value={reason ?? undefined}
+        onValueChange={setReason}
+        options={reasonOptions}
+      />
+
       {appliesHold ? (
-        <BloomText style={styles.intro}>{t('evictions.report.holdNotice')}</BloomText>
+        <Admonition type="warning">{t('evictions.report.holdNotice')}</Admonition>
       ) : null}
 
-      <View style={styles.chipRow}>
-        {REASON_OPTIONS.map((option) => (
-          <Chip
-            key={option.value}
-            selected={reason === option.value}
-            onPress={() => setReason(option.value)}
-          >
-            {t(option.labelKey)}
-          </Chip>
-        ))}
-      </View>
-
-      <TextFieldInput
+      <Textarea
         label={
-          detailsRequired
-            ? t('evictions.report.detailsRequired')
-            : t('evictions.report.details')
+          detailsRequired ? t('evictions.report.detailsRequired') : t('evictions.report.details')
         }
+        required={detailsRequired}
         placeholder={t('evictions.report.detailsPlaceholder')}
         value={details}
         onChangeText={setDetails}
-        multiline
+        rows={3}
+        autoResize
+        maxRows={8}
       />
 
       <Button
@@ -151,11 +151,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.textSecondary,
     lineHeight: 20,
-  },
-  chipRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
   },
   submit: {
     alignSelf: 'stretch',
