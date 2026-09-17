@@ -1,11 +1,11 @@
 /**
  * Saved → Folder detail. Grid of property cards inside the folder.
  *
- * Stream P polish: Bloom Button for the header edit action (no more
- * tinted TouchableOpacity), shared EmptyState / ErrorState / ListSkeleton
- * states, and surface tokens for the page background.
+ * Bloom Button (with a Remix `leadingIcon`) for the header edit action,
+ * shared EmptyState / ErrorState / ListSkeleton states, and surface tokens
+ * for the page background.
  */
-import React, { useCallback, useContext, useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import {
   RefreshControl,
   ScrollView,
@@ -14,11 +14,11 @@ import {
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useOxy } from '@oxy.so/services';
 
 import { Button } from '@oxy.so/bloom/button';
+import { RiEditLine } from '@oxy.so/bloom/icons';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { Header } from '@/components/Header';
@@ -26,7 +26,6 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { ListSkeleton } from '@/components/ui/ListSkeleton';
 import { PropertyResultsGrid } from '@/components/ui/PropertyResultsGrid';
-import { BottomSheetContext } from '@/context/BottomSheetContext';
 import savedPropertyService from '@/services/savedPropertyService';
 import savedPropertyFolderService from '@/services/savedPropertyFolderService';
 import { colors } from '@/styles/colors';
@@ -38,7 +37,6 @@ export default function SavedFolderScreen() {
   const { folderId } = useLocalSearchParams<{ folderId: string }>();
   const { oxyServices, activeSessionId } = useOxy();
   const queryClient = useQueryClient();
-  useContext(BottomSheetContext);
 
   const isAuthed = Boolean(oxyServices && activeSessionId);
 
@@ -58,16 +56,16 @@ export default function SavedFolderScreen() {
     gcTime: 1000 * 60 * 10,
   });
 
-  const savedProperties = savedQuery.data?.properties ?? [];
-  const folders = foldersQuery.data?.folders ?? [];
+  const savedProperties = savedQuery.data?.properties;
+  const folders = foldersQuery.data?.folders;
 
   const folder = useMemo(
-    () => folders.find((f) => f.id === folderId),
+    () => (folders ?? []).find((f) => f.id === folderId),
     [folders, folderId],
   );
   const propertiesInFolder = useMemo(
     () =>
-      savedProperties.filter(
+      (savedProperties ?? []).filter(
         (property) =>
           (property as SavedProperty & { folderId?: string }).folderId === folderId,
       ),
@@ -185,13 +183,7 @@ export default function SavedFolderScreen() {
                   variant="ghost"
                   size="small"
                   onPress={() => router.push(`/saved/${folderId}/edit`)}
-                  icon={
-                    <Ionicons
-                      name="create-outline"
-                      size={18}
-                      color={colors.COLOR_BLACK}
-                    />
-                  }
+                  leadingIcon={RiEditLine}
                 >
                   {t('common.edit')}
                 </Button>,

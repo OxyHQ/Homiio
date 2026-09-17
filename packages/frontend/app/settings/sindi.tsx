@@ -1,7 +1,7 @@
 /**
  * Settings → Sindi (assistant preferences).
  *
- * Stream P polish: Bloom SettingsList primitives for rows + toggles, shared
+ * Bloom SettingsList primitives for rows + toggles, Remix row icons and
  * Bloom `confirm()` for destructive flows. The previous version imported a
  * `sindiApi` member that does not exist in `@/utils/api`; the chat-history
  * UI is removed until a real service ships. The behaviour toggles and the
@@ -10,9 +10,9 @@
 import React, { useCallback, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { toast } from '@oxy.so/bloom/toast';
 
+import { RiInformationLine, RiRefreshLine } from '@oxy.so/bloom/icons';
 import { Switch } from '@oxy.so/bloom/switch';
 import {
   SettingsListGroup,
@@ -24,19 +24,7 @@ import { confirm } from '@oxy.so/bloom/surfaces';
 import { SindiIcon } from '@/assets/icons';
 import { colors } from '@/styles/colors';
 import { spacing } from '@/constants/styles';
-
-type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
-
-const RowIcon: React.FC<{ name: IoniconName; destructive?: boolean }> = ({
-  name,
-  destructive,
-}) => (
-  <Ionicons
-    name={name}
-    size={20}
-    color={destructive ? colors.danger : colors.muted}
-  />
-);
+import { SettingsRowIcon, settingsScreenStyles } from '@/components/profile/SettingsRowIcon';
 
 export default function SindiSettingsScreen() {
   const { t } = useTranslation();
@@ -67,13 +55,13 @@ export default function SindiSettingsScreen() {
           ],
         }}
       />
-      <ScrollView contentContainerStyle={styles.scroll}>
+      <ScrollView contentContainerStyle={settingsScreenStyles.content}>
         <SettingsListGroup
           title={t('sindi.settings.behavior')}
           footer={t('sindi.settings.behaviorFooter')}
         >
           <SettingsListItem
-            icon={<RowIcon name="information-circle-outline" />}
+            icon={<SettingsRowIcon icon={RiInformationLine} />}
             title={t('sindi.settings.tips')}
             description={t('sindi.settings.tipsDescription')}
             rightElement={
@@ -84,7 +72,7 @@ export default function SindiSettingsScreen() {
 
         <SettingsListGroup title={t('sindi.settings.actions')}>
           <SettingsListItem
-            icon={<RowIcon name="refresh-outline" />}
+            icon={<SettingsRowIcon icon={RiRefreshLine} />}
             title={t('sindi.settings.reset')}
             onPress={() => void handleResetDefaults()}
           />
@@ -98,10 +86,6 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: colors.background,
-  },
-  scroll: {
-    paddingTop: spacing.lg,
-    paddingBottom: spacing['4xl'],
   },
   headerIcon: {
     marginLeft: spacing.xs,

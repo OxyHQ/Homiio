@@ -40,27 +40,30 @@ Domain events (lease signed, viewing approved, roommate request received, …) p
 
 ### Screens
 
-1. **Notifications Screen** (`app/notifications.tsx`)
-   - Main notifications list with filtering and search
-   - Support for both server and local notifications
-   - Mark as read, delete, and management functions
+1. **Inbox** (`app/(tabs)/inbox/index.tsx`, route `/inbox`)
+   - The notifications list: Bloom `Search` plus an All/Unread `SegmentedControl`
+   - Server mailbox rows plus locally scheduled reminders (a Bloom `SettingsListGroup`)
+   - A Bloom `Admonition` with an enable button while permission is missing
+   - Row press marks read and follows the deep link (`data.screen`, else a type fallback)
+   - Mark all read from the header; delete from a row's delete button or a long
+     press, always behind Bloom `confirm()`
+   - `app/notifications.tsx` is only a redirect to `/inbox`, kept for old links
+     and push payloads
+   - Bloom `NotificationCenter` is deliberately not used: it is a fixed-size
+     popover with its own tabs and local read state, and has no row press,
+     search or delete
 
 2. **Notification Settings** (`app/settings/notifications.tsx`)
-   - User preferences for notification categories
-   - Permission management
-   - Test notification functionality
+   - Bloom `SettingsListGroup` + `Switch` rows for categories and behaviour
+   - Permission state (a Bloom `Admonition` with an enable button when missing)
+   - Test notification functionality (development builds only)
 
 ### Components
 
-1. **NotificationBadge** (`components/NotificationBadge.tsx`)
-   - Reusable badge component for navigation
-   - Configurable size and appearance
-   - Automatic unread count display
-
-2. **NotificationItem** (`components/NotificationItem.tsx`)
-   - Individual notification display component
-   - Type-specific icons and styling
-   - Read/unread state management
+1. **NotificationItem** (`components/NotificationItem.tsx`)
+   - One inbox row, a Bloom `Item`
+   - Remix glyph on a per-type tinted disc (theme subtle surface + its ink)
+   - Unread rows get a bold title and a brand dot; optional delete button
 
 ## Setup
 
@@ -197,23 +200,10 @@ function PropertyComponent({ property }) {
 }
 ```
 
-### Notification Badge Component
+### Unread badge
 
-```tsx
-import { NotificationBadge } from '@/components/NotificationBadge';
-
-function NavigationBar() {
-  return (
-    <View style={styles.navBar}>
-      <NotificationBadge 
-        size="medium"
-        showCount={true}
-        iconName="notifications-outline"
-      />
-    </View>
-  );
-}
-```
+There is no local badge component. Read `unreadCount` from
+`useNotifications()` and draw it with Bloom `Badge` (`@oxy.so/bloom/badge`).
 
 ## Notification Types
 

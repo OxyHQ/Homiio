@@ -1,13 +1,33 @@
+/**
+ * The five sections of the personal profile edit form, one per tab.
+ *
+ * Every control is a Bloom family: `TextFieldInput` / `Textarea` inside
+ * `Field`, `Select` for single choices, `Checkbox` for multi-choice lists,
+ * `DatePicker` for dates, `PhoneInput` for phone numbers, `Card` for each
+ * reference / rental entry and `SettingsListGroup` + `Switch` for the boolean
+ * settings. The value adapters live in `./fields`.
+ */
 import React from 'react';
-import { View, Text, TextInput, TouchableOpacity } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { profileEditStyles as styles } from './styles';
+
+import { Button } from '@oxy.so/bloom/button';
+import { Card } from '@oxy.so/bloom/card';
+import { Checkbox } from '@oxy.so/bloom/checkbox';
+import { Field } from '@oxy.so/bloom/field';
+import { RiAddLine, RiDeleteBinLine } from '@oxy.so/bloom/icons';
+import { SettingsListGroup, SettingsListItem } from '@oxy.so/bloom/settings-list';
+import { Switch } from '@oxy.so/bloom/switch';
+import { TextFieldInput } from '@oxy.so/bloom/text-field';
+import { Textarea } from '@oxy.so/bloom/textarea';
+import { H3 } from '@oxy.so/bloom/typography';
+
+import { spacing } from '@/constants/styles';
+import { DateField, OptionSelect, PhoneField } from './fields';
 import type {
   PersonalInfoForm,
   PreferencesForm,
-  ReasonForLeavingValue,
   ReferenceForm,
-  ReferenceRelationshipValue,
   RentalHistoryForm,
   SettingsForm,
 } from './types';
@@ -51,6 +71,25 @@ const REASONS_FOR_LEAVING = [
   'other',
 ] as const;
 
+type PreferenceToggle = 'petFriendly' | 'smokingAllowed' | 'furnished' | 'parkingRequired' | 'accessibility';
+
+const PREFERENCE_TOGGLES: readonly { key: PreferenceToggle; label: string }[] = [
+  { key: 'petFriendly', label: 'profile.edit.toggles.petFriendly' },
+  { key: 'smokingAllowed', label: 'profile.edit.toggles.smokingAllowed' },
+  { key: 'furnished', label: 'profile.edit.toggles.furnished' },
+  { key: 'parkingRequired', label: 'profile.edit.toggles.parkingRequired' },
+  { key: 'accessibility', label: 'profile.edit.toggles.accessibilityFeatures' },
+];
+
+type PrivacyToggle = 'showContactInfo' | 'showIncome' | 'showRentalHistory' | 'showReferences';
+
+const PRIVACY_TOGGLES: readonly { key: PrivacyToggle; label: string }[] = [
+  { key: 'showContactInfo', label: 'profile.edit.toggles.showContactInfo' },
+  { key: 'showIncome', label: 'profile.edit.toggles.showIncome' },
+  { key: 'showRentalHistory', label: 'profile.edit.toggles.showRentalHistory' },
+  { key: 'showReferences', label: 'profile.edit.toggles.showReferences' },
+];
+
 interface PersonalProfileSectionsProps {
   activeSection: string;
   personalInfo: PersonalInfoForm;
@@ -70,6 +109,22 @@ interface PersonalProfileSectionsProps {
   updateRentalHistory: (index: number, updates: Partial<RentalHistoryForm>) => void;
   removeRentalHistory: (index: number) => void;
 }
+
+/** Two controls side by side on a wide screen, stacked when they cannot fit. */
+const Row: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <View style={styles.row}>
+    {React.Children.map(children, (child) =>
+      child ? <View style={styles.rowItem}>{child}</View> : null,
+    )}
+  </View>
+);
+
+const SectionHeader: React.FC<{ title: string; action?: React.ReactNode }> = ({ title, action }) => (
+  <View style={styles.sectionHeader}>
+    <H3 style={styles.sectionTitle}>{title}</H3>
+    {action}
+  </View>
+);
 
 export function PersonalProfileSections({
   activeSection,
@@ -96,652 +151,388 @@ export function PersonalProfileSections({
     case 'personal':
       return (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('profile.edit.sections.personalInformation')}</Text>
+          <SectionHeader title={t('profile.edit.sections.personalInformation')} />
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>{t('profile.edit.labels.bio')}</Text>
-            <TextInput
-              style={[styles.input, styles.textArea]}
-              value={personalInfo.bio}
-              onChangeText={(text) => updatePersonalInfo({ bio: text })}
-              placeholder={t('profile.edit.placeholders.bio')}
-              multiline
-              numberOfLines={4}
-            />
-          </View>
+          <Textarea
+            label={t('profile.edit.labels.bio')}
+            value={personalInfo.bio}
+            onChangeText={(text) => updatePersonalInfo({ bio: text })}
+            placeholder={t('profile.edit.placeholders.bio')}
+            rows={4}
+            autoResize
+          />
 
-          <View style={styles.row}>
-            <View style={[styles.inputGroup, styles.halfWidth]}>
-              <Text style={styles.label}>{t('profile.edit.labels.occupation')}</Text>
-              <TextInput
-                style={styles.input}
+          <Row>
+            <Field label={t('profile.edit.labels.occupation')}>
+              <TextFieldInput
+                label={t('profile.edit.labels.occupation')}
                 value={personalInfo.occupation}
                 onChangeText={(text) => updatePersonalInfo({ occupation: text })}
                 placeholder={t('profile.edit.placeholders.occupation')}
               />
-            </View>
-            <View style={[styles.inputGroup, styles.halfWidth]}>
-              <Text style={styles.label}>{t('profile.edit.labels.employer')}</Text>
-              <TextInput
-                style={styles.input}
+            </Field>
+            <Field label={t('profile.edit.labels.employer')}>
+              <TextFieldInput
+                label={t('profile.edit.labels.employer')}
                 value={personalInfo.employer}
                 onChangeText={(text) => updatePersonalInfo({ employer: text })}
                 placeholder={t('profile.edit.placeholders.employer')}
               />
-            </View>
-          </View>
+            </Field>
+          </Row>
 
-          <View style={styles.row}>
-            <View style={[styles.inputGroup, styles.halfWidth]}>
-              <Text style={styles.label}>{t('profile.edit.labels.annualIncome')}</Text>
-              <TextInput
-                style={styles.input}
+          <Row>
+            <Field label={t('profile.edit.labels.annualIncome')}>
+              <TextFieldInput
+                label={t('profile.edit.labels.annualIncome')}
                 value={personalInfo.annualIncome}
                 onChangeText={(text) => updatePersonalInfo({ annualIncome: text })}
                 placeholder={t('profile.edit.placeholders.annualIncome')}
                 keyboardType="numeric"
               />
-            </View>
-            <View style={[styles.inputGroup, styles.halfWidth]}>
-              <Text style={styles.label}>{t('profile.edit.labels.employmentStatus')}</Text>
-              <View style={styles.pickerContainer}>
-                {EMPLOYMENT_STATUSES.map((status) => (
-                  <TouchableOpacity
-                    key={status}
-                    style={[
-                      styles.pickerOption,
-                      personalInfo.employmentStatus === status && styles.pickerOptionSelected,
-                    ]}
-                    onPress={() => updatePersonalInfo({ employmentStatus: status })}
-                  >
-                    <Text
-                      style={[
-                        styles.pickerOptionText,
-                        personalInfo.employmentStatus === status &&
-                          styles.pickerOptionTextSelected,
-                      ]}
-                    >
-                      {t(`profile.edit.options.employmentStatus.${status}`)}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-          </View>
+            </Field>
+            <OptionSelect
+              label={t('profile.edit.labels.employmentStatus')}
+              value={personalInfo.employmentStatus}
+              options={EMPLOYMENT_STATUSES}
+              labelPrefix="profile.edit.options.employmentStatus"
+              onChange={(employmentStatus) => updatePersonalInfo({ employmentStatus })}
+            />
+          </Row>
 
-          <View style={styles.row}>
-            <View style={[styles.inputGroup, styles.halfWidth]}>
-              <Text style={styles.label}>{t('profile.edit.labels.moveInDate')}</Text>
-              <TextInput
-                style={styles.input}
-                value={personalInfo.moveInDate}
-                onChangeText={(text) => updatePersonalInfo({ moveInDate: text })}
-                placeholder={t('profile.edit.placeholders.moveInDate')}
-              />
-            </View>
-            <View style={[styles.inputGroup, styles.halfWidth]}>
-              <Text style={styles.label}>{t('profile.edit.labels.leaseDuration')}</Text>
-              <View style={styles.pickerContainer}>
-                {LEASE_DURATIONS.map((duration) => (
-                  <TouchableOpacity
-                    key={duration}
-                    style={[
-                      styles.pickerOption,
-                      personalInfo.leaseDuration === duration && styles.pickerOptionSelected,
-                    ]}
-                    onPress={() => updatePersonalInfo({ leaseDuration: duration })}
-                  >
-                    <Text
-                      style={[
-                        styles.pickerOptionText,
-                        personalInfo.leaseDuration === duration &&
-                          styles.pickerOptionTextSelected,
-                      ]}
-                    >
-                      {t(`profile.edit.options.leaseDuration.${duration}`)}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-          </View>
+          <Row>
+            <DateField
+              label={t('profile.edit.labels.moveInDate')}
+              value={personalInfo.moveInDate}
+              onChange={(moveInDate) => updatePersonalInfo({ moveInDate })}
+            />
+            <OptionSelect
+              label={t('profile.edit.labels.leaseDuration')}
+              value={personalInfo.leaseDuration}
+              options={LEASE_DURATIONS}
+              labelPrefix="profile.edit.options.leaseDuration"
+              onChange={(leaseDuration) => updatePersonalInfo({ leaseDuration })}
+            />
+          </Row>
         </View>
       );
 
     case 'preferences':
       return (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('profile.edit.sections.propertyPreferences')}</Text>
+          <SectionHeader title={t('profile.edit.sections.propertyPreferences')} />
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>{t('profile.edit.labels.maxRent')}</Text>
-            <TextInput
-              style={styles.input}
-              value={preferences.maxRent}
-              onChangeText={(text) => updatePreferences({ maxRent: text })}
-              placeholder={t('profile.edit.placeholders.maxRent')}
-              keyboardType="numeric"
+          <Row>
+            <Field label={t('profile.edit.labels.maxRent')}>
+              <TextFieldInput
+                label={t('profile.edit.labels.maxRent')}
+                value={preferences.maxRent}
+                onChangeText={(text) => updatePreferences({ maxRent: text })}
+                placeholder={t('profile.edit.placeholders.maxRent')}
+                keyboardType="numeric"
+              />
+            </Field>
+            <OptionSelect
+              label={t('profile.edit.labels.rentPeriod')}
+              value={preferences.priceUnit}
+              options={PRICE_UNITS}
+              labelPrefix="profile.edit.options.priceUnit"
+              onChange={(priceUnit) => updatePreferences({ priceUnit })}
             />
-          </View>
+          </Row>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>{t('profile.edit.labels.rentPeriod')}</Text>
-            <View style={styles.pickerContainer}>
-              {PRICE_UNITS.map((unit) => (
-                <TouchableOpacity
-                  key={unit}
-                  style={[
-                    styles.pickerOption,
-                    preferences.priceUnit === unit && styles.pickerOptionSelected,
-                  ]}
-                  onPress={() => updatePreferences({ priceUnit: unit })}
-                >
-                  <Text
-                    style={[
-                      styles.pickerOptionText,
-                      preferences.priceUnit === unit && styles.pickerOptionTextSelected,
-                    ]}
-                  >
-                    {t(`profile.edit.options.priceUnit.${unit}`)}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
-          <View style={styles.row}>
-            <View style={[styles.inputGroup, styles.halfWidth]}>
-              <Text style={styles.label}>{t('profile.edit.labels.minBedrooms')}</Text>
-              <TextInput
-                style={styles.input}
+          <Row>
+            <Field label={t('profile.edit.labels.minBedrooms')}>
+              <TextFieldInput
+                label={t('profile.edit.labels.minBedrooms')}
                 value={preferences.minBedrooms}
                 onChangeText={(text) => updatePreferences({ minBedrooms: text })}
                 placeholder="0"
                 keyboardType="numeric"
               />
-            </View>
-            <View style={[styles.inputGroup, styles.halfWidth]}>
-              <Text style={styles.label}>{t('profile.edit.labels.minBathrooms')}</Text>
-              <TextInput
-                style={styles.input}
+            </Field>
+            <Field label={t('profile.edit.labels.minBathrooms')}>
+              <TextFieldInput
+                label={t('profile.edit.labels.minBathrooms')}
                 value={preferences.minBathrooms}
                 onChangeText={(text) => updatePreferences({ minBathrooms: text })}
                 placeholder="0"
                 keyboardType="numeric"
               />
-            </View>
-          </View>
+            </Field>
+          </Row>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>{t('profile.edit.labels.propertyTypes')}</Text>
-            <View style={styles.checkboxGroup}>
+          <Field label={t('profile.edit.labels.propertyTypes')}>
+            <View style={styles.checkboxGrid}>
               {PROPERTY_TYPES.map((type) => (
-                <TouchableOpacity
+                <Checkbox
                   key={type}
-                  style={[
-                    styles.checkbox,
-                    preferences.propertyTypes.includes(type) && styles.checkboxSelected,
-                  ]}
-                  onPress={() => togglePropertyType(type)}
-                >
-                  <Text
-                    style={[
-                      styles.checkboxText,
-                      preferences.propertyTypes.includes(type) && styles.checkboxTextSelected,
-                    ]}
-                  >
-                    {t(`profile.edit.options.propertyType.${type}`)}
-                  </Text>
-                </TouchableOpacity>
+                  style={styles.checkboxCell}
+                  label={t(`profile.edit.options.propertyType.${type}`)}
+                  checked={preferences.propertyTypes.includes(type)}
+                  onCheckedChange={() => togglePropertyType(type)}
+                />
               ))}
             </View>
-          </View>
+          </Field>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>{t('profile.edit.labels.preferredAmenities')}</Text>
-            <View style={styles.checkboxGroup}>
+          <Field label={t('profile.edit.labels.preferredAmenities')}>
+            <View style={styles.checkboxGrid}>
               {AMENITIES.map((amenity) => (
-                <TouchableOpacity
+                <Checkbox
                   key={amenity}
-                  style={[
-                    styles.checkbox,
-                    preferences.preferredAmenities.includes(amenity) && styles.checkboxSelected,
-                  ]}
-                  onPress={() => toggleAmenity(amenity)}
-                >
-                  <Text
-                    style={[
-                      styles.checkboxText,
-                      preferences.preferredAmenities.includes(amenity) &&
-                        styles.checkboxTextSelected,
-                    ]}
-                  >
-                    {t(`profile.edit.options.amenity.${amenity}`)}
-                  </Text>
-                </TouchableOpacity>
+                  style={styles.checkboxCell}
+                  label={t(`profile.edit.options.amenity.${amenity}`)}
+                  checked={preferences.preferredAmenities.includes(amenity)}
+                  onCheckedChange={() => toggleAmenity(amenity)}
+                />
               ))}
             </View>
-          </View>
+          </Field>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>{t('profile.edit.labels.additionalPreferences')}</Text>
-            <View style={styles.switchGroup}>
-              <TouchableOpacity
-                style={[styles.switch, preferences.petFriendly && styles.switchActive]}
-                onPress={() => updatePreferences({ petFriendly: !preferences.petFriendly })}
-              >
-                <Text
-                  style={[styles.switchText, preferences.petFriendly && styles.switchTextActive]}
-                >
-                  {t('profile.edit.toggles.petFriendly')}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.switch, preferences.smokingAllowed && styles.switchActive]}
-                onPress={() => updatePreferences({ smokingAllowed: !preferences.smokingAllowed })}
-              >
-                <Text
-                  style={[styles.switchText, preferences.smokingAllowed && styles.switchTextActive]}
-                >
-                  {t('profile.edit.toggles.smokingAllowed')}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.switch, preferences.furnished && styles.switchActive]}
-                onPress={() => updatePreferences({ furnished: !preferences.furnished })}
-              >
-                <Text style={[styles.switchText, preferences.furnished && styles.switchTextActive]}>
-                  {t('profile.edit.toggles.furnished')}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.switch, preferences.parkingRequired && styles.switchActive]}
-                onPress={() => updatePreferences({ parkingRequired: !preferences.parkingRequired })}
-              >
-                <Text
-                  style={[
-                    styles.switchText,
-                    preferences.parkingRequired && styles.switchTextActive,
-                  ]}
-                >
-                  {t('profile.edit.toggles.parkingRequired')}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.switch, preferences.accessibility && styles.switchActive]}
-                onPress={() => updatePreferences({ accessibility: !preferences.accessibility })}
-              >
-                <Text
-                  style={[styles.switchText, preferences.accessibility && styles.switchTextActive]}
-                >
-                  {t('profile.edit.toggles.accessibilityFeatures')}
-                </Text>
-              </TouchableOpacity>
+          <Field label={t('profile.edit.labels.additionalPreferences')}>
+            <View style={styles.checkboxGrid}>
+              {PREFERENCE_TOGGLES.map(({ key, label }) => (
+                <Checkbox
+                  key={key}
+                  style={styles.checkboxCell}
+                  label={t(label)}
+                  checked={preferences[key]}
+                  onCheckedChange={(checked) => updatePreferences({ [key]: checked })}
+                />
+              ))}
             </View>
-          </View>
+          </Field>
         </View>
       );
 
     case 'references':
       return (
         <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>{t('profile.edit.sections.references')}</Text>
-            <TouchableOpacity style={styles.addButton} onPress={addReference}>
-              <Text style={styles.addButtonText}>{t('profile.edit.actions.addReference')}</Text>
-            </TouchableOpacity>
-          </View>
+          <SectionHeader
+            title={t('profile.edit.sections.references')}
+            action={
+              <Button variant="secondary" size="small" leadingIcon={RiAddLine} onPress={addReference}>
+                {t('profile.edit.actions.addReference')}
+              </Button>
+            }
+          />
 
-          {references.map((reference, index) => (
-            <View key={index} style={styles.referenceCard}>
-              <View style={styles.cardHeader}>
-                <Text style={styles.cardTitle}>
-                  {t('profile.edit.actions.referenceLabel', { index: index + 1 })}
-                </Text>
-                <TouchableOpacity onPress={() => removeReference(index)}>
-                  <Text style={styles.removeButton}>{t('profile.edit.actions.remove')}</Text>
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>{t('profile.edit.labels.name')}</Text>
-                <TextInput
-                  style={styles.input}
-                  value={reference.name}
-                  onChangeText={(text) => updateReference(index, { name: text })}
-                  placeholder={t('profile.edit.placeholders.fullName')}
-                />
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>{t('profile.edit.labels.relationship')}</Text>
-                <View style={styles.pickerContainer}>
-                  {REFERENCE_RELATIONSHIPS.map((rel) => (
-                    <TouchableOpacity
-                      key={rel}
-                      style={[
-                        styles.pickerOption,
-                        reference.relationship === rel && styles.pickerOptionSelected,
-                      ]}
-                      onPress={() =>
-                        updateReference(index, {
-                          relationship: rel as ReferenceRelationshipValue,
-                        })
-                      }
+          {references.map((reference, index) => {
+            const cardTitle = t('profile.edit.actions.referenceLabel', { index: index + 1 });
+            return (
+              <Card key={index} variant="outlined" radius="radius-16" style={styles.entryCard}>
+                <SectionHeader
+                  title={cardTitle}
+                  action={
+                    <Button
+                      variant="ghost"
+                      size="small"
+                      leadingIcon={RiDeleteBinLine}
+                      accessibilityLabel={`${t('profile.edit.actions.remove')} ${cardTitle}`}
+                      onPress={() => removeReference(index)}
                     >
-                      <Text
-                        style={[
-                          styles.pickerOptionText,
-                          reference.relationship === rel && styles.pickerOptionTextSelected,
-                        ]}
-                      >
-                        {t(`profile.edit.options.referenceRelationship.${rel}`)}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
+                      {t('profile.edit.actions.remove')}
+                    </Button>
+                  }
+                />
 
-              <View style={styles.row}>
-                <View style={[styles.inputGroup, styles.halfWidth]}>
-                  <Text style={styles.label}>{t('profile.edit.labels.phone')}</Text>
-                  <TextInput
-                    style={styles.input}
+                <Row>
+                  <Field label={t('profile.edit.labels.name')}>
+                    <TextFieldInput
+                      label={t('profile.edit.labels.name')}
+                      value={reference.name}
+                      onChangeText={(text) => updateReference(index, { name: text })}
+                      placeholder={t('profile.edit.placeholders.fullName')}
+                    />
+                  </Field>
+                  <OptionSelect
+                    label={t('profile.edit.labels.relationship')}
+                    value={reference.relationship}
+                    options={REFERENCE_RELATIONSHIPS}
+                    labelPrefix="profile.edit.options.referenceRelationship"
+                    onChange={(relationship) => updateReference(index, { relationship })}
+                  />
+                </Row>
+
+                <Row>
+                  <PhoneField
+                    label={t('profile.edit.labels.phone')}
                     value={reference.phone}
-                    onChangeText={(text) => updateReference(index, { phone: text })}
+                    onChange={(phone) => updateReference(index, { phone })}
                     placeholder={t('profile.edit.placeholders.phoneNumber')}
-                    keyboardType="phone-pad"
                   />
-                </View>
-                <View style={[styles.inputGroup, styles.halfWidth]}>
-                  <Text style={styles.label}>{t('profile.edit.labels.email')}</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={reference.email}
-                    onChangeText={(text) => updateReference(index, { email: text })}
-                    placeholder={t('profile.edit.placeholders.emailAddress')}
-                    keyboardType="email-address"
-                  />
-                </View>
-              </View>
-            </View>
-          ))}
+                  <Field label={t('profile.edit.labels.email')}>
+                    <TextFieldInput
+                      label={t('profile.edit.labels.email')}
+                      value={reference.email}
+                      onChangeText={(text) => updateReference(index, { email: text })}
+                      placeholder={t('profile.edit.placeholders.emailAddress')}
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                    />
+                  </Field>
+                </Row>
+              </Card>
+            );
+          })}
         </View>
       );
 
     case 'rental-history':
       return (
         <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>{t('profile.edit.sections.rentalHistory')}</Text>
-            <TouchableOpacity style={styles.addButton} onPress={addRentalHistory}>
-              <Text style={styles.addButtonText}>{t('profile.edit.actions.addHistory')}</Text>
-            </TouchableOpacity>
-          </View>
+          <SectionHeader
+            title={t('profile.edit.sections.rentalHistory')}
+            action={
+              <Button variant="secondary" size="small" leadingIcon={RiAddLine} onPress={addRentalHistory}>
+                {t('profile.edit.actions.addHistory')}
+              </Button>
+            }
+          />
 
-          {rentalHistory.map((history, index) => (
-            <View key={index} style={styles.referenceCard}>
-              <View style={styles.cardHeader}>
-                <Text style={styles.cardTitle}>
-                  {t('profile.edit.actions.rentalLabel', { index: index + 1 })}
-                </Text>
-                <TouchableOpacity onPress={() => removeRentalHistory(index)}>
-                  <Text style={styles.removeButton}>{t('profile.edit.actions.remove')}</Text>
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>{t('profile.edit.labels.address')}</Text>
-                <TextInput
-                  style={styles.input}
-                  value={history.address}
-                  onChangeText={(text) => updateRentalHistory(index, { address: text })}
-                  placeholder={t('profile.edit.placeholders.fullAddress')}
-                />
-              </View>
-
-              <View style={styles.row}>
-                <View style={[styles.inputGroup, styles.halfWidth]}>
-                  <Text style={styles.label}>{t('profile.edit.labels.startDate')}</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={history.startDate}
-                    onChangeText={(text) => updateRentalHistory(index, { startDate: text })}
-                    placeholder={t('profile.edit.placeholders.moveInDate')}
-                  />
-                </View>
-                <View style={[styles.inputGroup, styles.halfWidth]}>
-                  <Text style={styles.label}>{t('profile.edit.labels.endDate')}</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={history.endDate}
-                    onChangeText={(text) => updateRentalHistory(index, { endDate: text })}
-                    placeholder={t('profile.edit.placeholders.endDateOptional')}
-                  />
-                </View>
-              </View>
-
-              <View style={styles.row}>
-                <View style={[styles.inputGroup, styles.halfWidth]}>
-                  <Text style={styles.label}>{t('profile.edit.labels.monthlyRent')}</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={history.monthlyRent}
-                    onChangeText={(text) => updateRentalHistory(index, { monthlyRent: text })}
-                    placeholder={t('profile.edit.placeholders.monthlyRent')}
-                    keyboardType="numeric"
-                  />
-                </View>
-                <View style={[styles.inputGroup, styles.halfWidth]}>
-                  <Text style={styles.label}>{t('profile.edit.labels.reasonForLeaving')}</Text>
-                  <View style={styles.pickerContainer}>
-                    {REASONS_FOR_LEAVING.map((reason) => (
-                      <TouchableOpacity
-                        key={reason}
-                        style={[
-                          styles.pickerOption,
-                          history.reasonForLeaving === reason && styles.pickerOptionSelected,
-                        ]}
-                        onPress={() =>
-                          updateRentalHistory(index, {
-                            reasonForLeaving: reason as ReasonForLeavingValue,
-                          })
-                        }
-                      >
-                        <Text
-                          style={[
-                            styles.pickerOptionText,
-                            history.reasonForLeaving === reason &&
-                              styles.pickerOptionTextSelected,
-                          ]}
-                        >
-                          {t(`profile.edit.options.reasonForLeaving.${reason}`)}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </View>
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>{t('profile.edit.labels.landlordContact')}</Text>
-                <View style={styles.row}>
-                  <View style={[styles.inputGroup, styles.halfWidth]}>
-                    <TextInput
-                      style={styles.input}
-                      value={history.landlordContact.name}
-                      onChangeText={(text) =>
-                        updateRentalHistory(index, {
-                          landlordContact: { ...history.landlordContact, name: text },
-                        })
-                      }
-                      placeholder={t('profile.edit.placeholders.landlordName')}
-                    />
-                  </View>
-                  <View style={[styles.inputGroup, styles.halfWidth]}>
-                    <TextInput
-                      style={styles.input}
-                      value={history.landlordContact.phone}
-                      onChangeText={(text) =>
-                        updateRentalHistory(index, {
-                          landlordContact: { ...history.landlordContact, phone: text },
-                        })
-                      }
-                      placeholder={t('profile.edit.placeholders.phone')}
-                      keyboardType="phone-pad"
-                    />
-                  </View>
-                </View>
-                <TextInput
-                  style={styles.input}
-                  value={history.landlordContact.email}
-                  onChangeText={(text) =>
-                    updateRentalHistory(index, {
-                      landlordContact: { ...history.landlordContact, email: text },
-                    })
+          {rentalHistory.map((history, index) => {
+            const cardTitle = t('profile.edit.actions.rentalLabel', { index: index + 1 });
+            const updateLandlord = (updates: Partial<RentalHistoryForm['landlordContact']>) =>
+              updateRentalHistory(index, {
+                landlordContact: { ...history.landlordContact, ...updates },
+              });
+            return (
+              <Card key={index} variant="outlined" radius="radius-16" style={styles.entryCard}>
+                <SectionHeader
+                  title={cardTitle}
+                  action={
+                    <Button
+                      variant="ghost"
+                      size="small"
+                      leadingIcon={RiDeleteBinLine}
+                      accessibilityLabel={`${t('profile.edit.actions.remove')} ${cardTitle}`}
+                      onPress={() => removeRentalHistory(index)}
+                    >
+                      {t('profile.edit.actions.remove')}
+                    </Button>
                   }
-                  placeholder={t('profile.edit.placeholders.email')}
-                  keyboardType="email-address"
                 />
-              </View>
-            </View>
-          ))}
+
+                <Field label={t('profile.edit.labels.address')}>
+                  <TextFieldInput
+                    label={t('profile.edit.labels.address')}
+                    value={history.address}
+                    onChangeText={(text) => updateRentalHistory(index, { address: text })}
+                    placeholder={t('profile.edit.placeholders.fullAddress')}
+                  />
+                </Field>
+
+                <Row>
+                  <DateField
+                    label={t('profile.edit.labels.startDate')}
+                    value={history.startDate}
+                    onChange={(startDate) => updateRentalHistory(index, { startDate })}
+                  />
+                  <DateField
+                    label={t('profile.edit.labels.endDate')}
+                    value={history.endDate}
+                    onChange={(endDate) => updateRentalHistory(index, { endDate })}
+                  />
+                </Row>
+
+                <Row>
+                  <Field label={t('profile.edit.labels.monthlyRent')}>
+                    <TextFieldInput
+                      label={t('profile.edit.labels.monthlyRent')}
+                      value={history.monthlyRent}
+                      onChangeText={(text) => updateRentalHistory(index, { monthlyRent: text })}
+                      placeholder={t('profile.edit.placeholders.monthlyRent')}
+                      keyboardType="numeric"
+                    />
+                  </Field>
+                  <OptionSelect
+                    label={t('profile.edit.labels.reasonForLeaving')}
+                    value={history.reasonForLeaving}
+                    options={REASONS_FOR_LEAVING}
+                    labelPrefix="profile.edit.options.reasonForLeaving"
+                    onChange={(reasonForLeaving) => updateRentalHistory(index, { reasonForLeaving })}
+                  />
+                </Row>
+
+                <Field label={t('profile.edit.labels.landlordContact')}>
+                  <View style={styles.stack}>
+                    <Row>
+                      <TextFieldInput
+                        label={t('profile.edit.placeholders.landlordName')}
+                        value={history.landlordContact.name}
+                        onChangeText={(name) => updateLandlord({ name })}
+                      />
+                      <TextFieldInput
+                        label={t('profile.edit.placeholders.email')}
+                        value={history.landlordContact.email}
+                        onChangeText={(email) => updateLandlord({ email })}
+                        keyboardType="email-address"
+                        autoCapitalize="none"
+                      />
+                    </Row>
+                    <PhoneField
+                      label={t('profile.edit.placeholders.phone')}
+                      value={history.landlordContact.phone}
+                      onChange={(phone) => updateLandlord({ phone })}
+                    />
+                  </View>
+                </Field>
+              </Card>
+            );
+          })}
         </View>
       );
 
     case 'settings':
       return (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('profile.edit.sections.settings')}</Text>
+          <SectionHeader title={t('profile.edit.sections.settings')} />
 
-          <View style={styles.subsection}>
-            <Text style={styles.subsectionTitle}>{t('profile.edit.labels.notifications')}</Text>
-            <View style={styles.switchGroup}>
-              <TouchableOpacity
-                style={[styles.switch, settings.notifications.email && styles.switchActive]}
-                onPress={() =>
-                  updateSettings({
-                    notifications: {
-                      ...settings.notifications,
-                      email: !settings.notifications.email,
-                    },
-                  })
-                }
-              >
-                <Text
-                  style={[
-                    styles.switchText,
-                    settings.notifications.email && styles.switchTextActive,
-                  ]}
-                >
-                  {t('profile.edit.toggles.emailNotifications')}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.switch, settings.notifications.push && styles.switchActive]}
-                onPress={() =>
-                  updateSettings({
-                    notifications: {
-                      ...settings.notifications,
-                      push: !settings.notifications.push,
-                    },
-                  })
-                }
-              >
-                <Text
-                  style={[
-                    styles.switchText,
-                    settings.notifications.push && styles.switchTextActive,
-                  ]}
-                >
-                  {t('profile.edit.toggles.pushNotifications')}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+          <SettingsListGroup title={t('profile.edit.labels.notifications')}>
+            <SettingsListItem
+              title={t('profile.edit.toggles.emailNotifications')}
+              rightElement={
+                <Switch
+                  accessibilityLabel={t('profile.edit.toggles.emailNotifications')}
+                  value={settings.notifications.email}
+                  onValueChange={(email) =>
+                    updateSettings({ notifications: { ...settings.notifications, email } })
+                  }
+                />
+              }
+            />
+            <SettingsListItem
+              title={t('profile.edit.toggles.pushNotifications')}
+              rightElement={
+                <Switch
+                  accessibilityLabel={t('profile.edit.toggles.pushNotifications')}
+                  value={settings.notifications.push}
+                  onValueChange={(push) =>
+                    updateSettings({ notifications: { ...settings.notifications, push } })
+                  }
+                />
+              }
+            />
+          </SettingsListGroup>
 
-          <View style={styles.subsection}>
-            <Text style={styles.subsectionTitle}>{t('profile.edit.labels.privacy')}</Text>
-            <View style={styles.switchGroup}>
-              <TouchableOpacity
-                style={[styles.switch, settings.privacy.showContactInfo && styles.switchActive]}
-                onPress={() =>
-                  updateSettings({
-                    privacy: {
-                      ...settings.privacy,
-                      showContactInfo: !settings.privacy.showContactInfo,
-                    },
-                  })
+          <SettingsListGroup title={t('profile.edit.labels.privacy')}>
+            {PRIVACY_TOGGLES.map(({ key, label }) => (
+              <SettingsListItem
+                key={key}
+                title={t(label)}
+                rightElement={
+                  <Switch
+                    accessibilityLabel={t(label)}
+                    value={settings.privacy[key]}
+                    onValueChange={(value) =>
+                      updateSettings({ privacy: { ...settings.privacy, [key]: value } })
+                    }
+                  />
                 }
-              >
-                <Text
-                  style={[
-                    styles.switchText,
-                    settings.privacy.showContactInfo && styles.switchTextActive,
-                  ]}
-                >
-                  {t('profile.edit.toggles.showContactInfo')}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.switch, settings.privacy.showIncome && styles.switchActive]}
-                onPress={() =>
-                  updateSettings({
-                    privacy: { ...settings.privacy, showIncome: !settings.privacy.showIncome },
-                  })
-                }
-              >
-                <Text
-                  style={[
-                    styles.switchText,
-                    settings.privacy.showIncome && styles.switchTextActive,
-                  ]}
-                >
-                  {t('profile.edit.toggles.showIncome')}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.switch, settings.privacy.showRentalHistory && styles.switchActive]}
-                onPress={() =>
-                  updateSettings({
-                    privacy: {
-                      ...settings.privacy,
-                      showRentalHistory: !settings.privacy.showRentalHistory,
-                    },
-                  })
-                }
-              >
-                <Text
-                  style={[
-                    styles.switchText,
-                    settings.privacy.showRentalHistory && styles.switchTextActive,
-                  ]}
-                >
-                  {t('profile.edit.toggles.showRentalHistory')}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.switch, settings.privacy.showReferences && styles.switchActive]}
-                onPress={() =>
-                  updateSettings({
-                    privacy: {
-                      ...settings.privacy,
-                      showReferences: !settings.privacy.showReferences,
-                    },
-                  })
-                }
-              >
-                <Text
-                  style={[
-                    styles.switchText,
-                    settings.privacy.showReferences && styles.switchTextActive,
-                  ]}
-                >
-                  {t('profile.edit.toggles.showReferences')}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+              />
+            ))}
+          </SettingsListGroup>
         </View>
       );
 
@@ -749,3 +540,46 @@ export function PersonalProfileSections({
       return null;
   }
 }
+
+const styles = StyleSheet.create({
+  section: {
+    padding: spacing.lg,
+    gap: spacing.xl,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+  },
+  sectionTitle: {
+    flexShrink: 1,
+  },
+  row: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.lg,
+  },
+  rowItem: {
+    flexGrow: 1,
+    flexBasis: 240,
+    minWidth: 0,
+  },
+  stack: {
+    gap: spacing.md,
+  },
+  checkboxGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    rowGap: spacing.md,
+    columnGap: spacing.lg,
+  },
+  checkboxCell: {
+    flexBasis: 160,
+    flexGrow: 1,
+  },
+  entryCard: {
+    padding: spacing.lg,
+    gap: spacing.lg,
+  },
+});

@@ -2490,7 +2490,22 @@
       "title": "Notas de la Propiedad",
       "placeholder": "Agregar notas sobre esta propiedad...",
       "save": "Guardar Notas",
-      "cancel": "Cancelar"
+      "cancel": "Cancelar",
+      "filters": {
+        "active": "Activas",
+        "pinned": "Fijadas",
+        "archived": "Archivadas"
+      },
+      "emptyTitle": "Aún no hay notas",
+      "emptyDescription": "Las notas que añadas a tus propiedades guardadas aparecerán aquí.",
+      "deleteTitle": "¿Eliminar esta nota?",
+      "deleteMessage": "Esta acción no se puede deshacer.",
+      "saved": "Nota guardada",
+      "deleted": "Nota eliminada",
+      "pin": "Fijar nota",
+      "unpin": "Desfijar nota",
+      "archive": "Archivar nota",
+      "unarchive": "Desarchivar nota"
     },
     "actions": {
       "addNotes": "Agregar Notas",
@@ -2543,7 +2558,12 @@
     "noResults": "No matches",
     "createFolder": "Create folder",
     "noFoldersDescription": "Create folders to organise the places you like.",
-    "noFolders": "No folders yet"
+    "noFolders": "No folders yet",
+    "filters": {
+      "thisWeek": "Esta semana",
+      "withNotes": "Con notas"
+    },
+    "openFolder": "Abrir carpeta {{name}}"
   },
   "imageUpload": {
     "permissionTitle": "Permiso requerido",

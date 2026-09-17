@@ -1,28 +1,28 @@
 /**
- * Inbox — the user's notification feed (Airbnb-2026).
+ * Inbox — the user's notification feed.
  *
  * This is a notifications screen (not a chat/conversation list): it renders
  * server-backed `Notification`s from `NotificationContext`, with optional
  * locally-scheduled reminders surfaced in their own section. The screen is a
- * tab root, so it owns a left-aligned `Header` (no back button) with mark-all
- * -read + settings actions on the right.
+ * tab root, so it owns a `Header` (no back button) with mark-all-read +
+ * settings actions on the right.
  *
  * Layout, top → bottom:
- *   Header (title + actions)
+ *   Header (title + mark-all-read / settings icon buttons)
  *   Search + All/Unread SegmentedControl   (flat controls strip)
- *   [permission notice]   (only when notifications are disabled)
- *   [scheduled reminders] (only when present)
- *   Notification list  →  skeleton / error / empty / rows
+ *   [permission Admonition]   (only when notifications are disabled)
+ *   [scheduled reminders]     (a SettingsListGroup, only when present)
+ *   Notification list  →  skeleton / error / empty / `NotificationItem` rows
  *
- * Flat aesthetic: the page uses `colors.background`, rows have no card shadow,
- * and loading/empty/error all route through the shared primitives. Relative
- * timestamps come from the centralised locale-aware `formatRelativeTime`.
+ * Bloom's `NotificationCenter` was considered and not used: it is a fixed-size
+ * popover panel with its own All/Mentions/System tabs and local read state,
+ * and no row press (deep links), search or delete — all of which this screen
+ * needs. Rows are Bloom `Item`s instead (see `NotificationItem`). Deletes ask
+ * through `confirm()`; relative timestamps come from `formatRelativeTime`.
  */
 import React, { useCallback, useMemo, useState } from 'react';
 import {
-  Alert,
   FlatList,
-  Pressable,
   RefreshControl,
   StyleSheet,
   View,
@@ -32,28 +32,38 @@ import {
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import type * as Notifications from 'expo-notifications';
 
+import {
+  AdmonitionButton,
+  AdmonitionContent,
+  AdmonitionIcon,
+  AdmonitionRoot,
+  AdmonitionRow,
+  AdmonitionText,
+} from '@oxy.so/bloom/admonition';
+import { Button, CloseButton } from '@oxy.so/bloom/button';
+import { RiCheckboxCircleLine, RiSettings3Line, RiTimeLine } from '@oxy.so/bloom/icons';
 import {
   SegmentedControl,
   SegmentedControlItem,
   SegmentedControlItemText,
 } from '@oxy.so/bloom/segmented-control';
 import { Search } from '@oxy.so/bloom/search';
+import { SettingsListGroup, SettingsListItem } from '@oxy.so/bloom/settings-list';
+import { confirm } from '@oxy.so/bloom/surfaces';
+import { useTheme } from '@oxy.so/bloom/theme';
+import { toast } from '@oxy.so/bloom/toast';
 import { H3, Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { useNotifications } from '@/context/NotificationContext';
 import { NotificationItem } from '@/components/NotificationItem';
 import { Header } from '@/components/Header';
-import { IconButton } from '@/components/ui/IconButton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { ListSkeleton } from '@/components/ui/ListSkeleton';
-import { colors } from '@/styles/colors';
-import { radius, spacing } from '@/constants/styles';
+import { contentClamp, spacing } from '@/constants/styles';
 import { formatRelativeTime } from '@/utils/dateLocale';
-import { toast } from '@oxy.so/bloom/toast';
 import type { Notification } from '@/services/notificationService';
 import { logger } from '@/utils/logger';
 
@@ -81,6 +91,7 @@ const getTriggerDate = (
 export default function InboxScreen() {
   const { t } = useTranslation();
   const router = useRouter();
+  const { colors: theme } = useTheme();
   const {
     notifications,
     scheduledNotifications,
@@ -140,10 +151,7 @@ export default function InboxScreen() {
         const screen = notification.data?.screen;
         if (typeof screen === 'string') {
           router.push(screen);
-        } else if (
-          notification.type === 'property' &&
-          notification.data?.propertyId
-        ) {
+        } else if (notification.type === 'property' && notification.data?.propertyId) {
           router.push(`/properties/${notification.data.propertyId}`);
         } else if (notification.data?.evictionId) {
           router.push(`/evictions/${notification.data.evictionId}`);
@@ -160,30 +168,22 @@ export default function InboxScreen() {
   );
 
   const handleDeleteNotification = useCallback(
-    (notification: Notification) => {
-      Alert.alert(
-        t('notification.delete.title'),
-        t('notification.delete.message'),
-        [
-          { text: t('common.cancel'), style: 'cancel' },
-          {
-            text: t('common.delete'),
-            style: 'destructive',
-            onPress: async () => {
-              try {
-                await deleteNotification(notification.id);
-                toast.success(t('notification.delete.success'));
-              } catch (deleteError: unknown) {
-                logger.error(
-                  'Failed to delete notification:',
-                  deleteError,
-                );
-                toast.error(t('notification.delete.error'));
-              }
-            },
-          },
-        ],
-      );
+    async (notification: Notification) => {
+      const ok = await confirm({
+        title: t('notification.delete.title'),
+        description: t('notification.delete.message'),
+        confirmLabel: t('common.delete'),
+        cancelLabel: t('common.cancel'),
+        destructive: true,
+      });
+      if (!ok) return;
+      try {
+        await deleteNotification(notification.id);
+        toast.success(t('notification.delete.success'));
+      } catch (deleteError: unknown) {
+        logger.error('Failed to delete notification:', deleteError);
+        toast.error(t('notification.delete.error'));
+      }
     },
     [deleteNotification, t],
   );
@@ -207,10 +207,7 @@ export default function InboxScreen() {
         toast.error(t('notification.permissions.denied'));
       }
     } catch (permissionError: unknown) {
-      logger.error(
-        'Failed to request notification permissions:',
-        permissionError,
-      );
+      logger.error('Failed to request notification permissions:', permissionError);
       toast.error(t('notification.permissions.error'));
     }
   }, [requestPermissions, t]);
@@ -223,8 +220,9 @@ export default function InboxScreen() {
         description={item.message}
         time={formatRelativeTime(new Date(item.createdAt))}
         read={item.read}
-        onPress={() => handleNotificationPress(item)}
-        onLongPress={() => handleDeleteNotification(item)}
+        onPress={() => void handleNotificationPress(item)}
+        onLongPress={() => void handleDeleteNotification(item)}
+        onDelete={() => void handleDeleteNotification(item)}
       />
     ),
     [handleNotificationPress, handleDeleteNotification],
@@ -236,20 +234,20 @@ export default function InboxScreen() {
         title: t('inbox.title'),
         rightComponents: [
           unreadCount > 0 ? (
-            <IconButton
+            <Button
               key="mark-all"
-              icon="checkmark-done"
               variant="ghost"
-              color={colors.primaryColor}
+              iconOnly
+              leadingIcon={RiCheckboxCircleLine}
               accessibilityLabel={t('notification.markAllRead.action')}
-              onPress={handleMarkAllAsRead}
+              onPress={() => void handleMarkAllAsRead()}
             />
           ) : null,
-          <IconButton
+          <Button
             key="settings"
-            icon="settings-outline"
             variant="ghost"
-            color={colors.COLOR_BLACK_LIGHT_2}
+            iconOnly
+            leadingIcon={RiSettings3Line}
             accessibilityLabel={t('notification.settings.title')}
             onPress={() => router.push('/settings/notifications')}
           />,
@@ -261,65 +259,46 @@ export default function InboxScreen() {
   const listHeader = (
     <View style={styles.listHeader}>
       {!hasPermission ? (
-        <Pressable
-          onPress={handleRequestPermissions}
-          accessibilityRole="button"
-          style={styles.permissionNotice}
-        >
-          <View style={styles.permissionIcon}>
-            <Ionicons
-              name="notifications-off-outline"
-              size={20}
-              color={colors.primaryColor}
-            />
-          </View>
-          <View style={styles.permissionText}>
-            <BloomText style={styles.permissionTitle}>
-              {t('notification.permissions.title')}
-            </BloomText>
-            <BloomText style={styles.permissionMessage}>
-              {t('notification.permissions.message')}
-            </BloomText>
-          </View>
-          <Ionicons
-            name="chevron-forward"
-            size={18}
-            color={colors.textTertiary}
-          />
-        </Pressable>
+        <AdmonitionRoot type="info">
+          <AdmonitionRow>
+            <AdmonitionIcon />
+            <AdmonitionContent>
+              <AdmonitionText style={styles.permissionTitle}>
+                {t('notification.permissions.title')}
+              </AdmonitionText>
+              <AdmonitionText>{t('notification.permissions.message')}</AdmonitionText>
+              <AdmonitionButton onPress={() => void handleRequestPermissions()}>
+                {t('notification.permissions.enable')}
+              </AdmonitionButton>
+            </AdmonitionContent>
+          </AdmonitionRow>
+        </AdmonitionRoot>
       ) : null}
 
       {scheduledNotifications.length > 0 ? (
-        <View style={styles.scheduledSection}>
-          <View style={styles.sectionHeaderRow}>
-            <H3 style={styles.sectionTitle}>
-              {t('notification.scheduled.title')}
-            </H3>
-            <Pressable
-              onPress={cancelAllLocalNotifications}
-              accessibilityRole="button"
-              hitSlop={8}
-            >
-              <BloomText style={styles.clearAllText}>
-                {t('notification.scheduled.clearAll')}
-              </BloomText>
-            </Pressable>
-          </View>
+        <SettingsListGroup title={t('notification.scheduled.title')}>
           {scheduledNotifications.map((item) => (
             <ScheduledRow
               key={item.identifier}
               request={item}
               onCancel={() => cancelLocalNotification(item.identifier)}
               scheduledLabel={t('notification.scheduled.label')}
+              cancelLabel={t('common.cancel')}
             />
           ))}
-        </View>
+          <SettingsListItem
+            title={t('notification.scheduled.clearAll')}
+            destructive
+            showChevron={false}
+            onPress={() => void cancelAllLocalNotifications()}
+          />
+        </SettingsListGroup>
       ) : null}
     </View>
   );
 
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, { backgroundColor: theme.background }]}>
       {header}
 
       <View style={styles.controls}>
@@ -337,9 +316,7 @@ export default function InboxScreen() {
           onChange={setFilter}
         >
           <SegmentedControlItem value="all">
-            <SegmentedControlItemText>
-              {t('notification.filter.all')}
-            </SegmentedControlItemText>
+            <SegmentedControlItemText>{t('notification.filter.all')}</SegmentedControlItemText>
           </SegmentedControlItem>
           <SegmentedControlItem value="unread">
             <SegmentedControlItemText>
@@ -359,11 +336,7 @@ export default function InboxScreen() {
         <View style={styles.stateWrap}>
           <ErrorState
             title={t('error.loadNotifications')}
-            description={
-              typeof error === 'string'
-                ? error
-                : t('common.tryAgain')
-            }
+            description={typeof error === 'string' ? error : t('common.tryAgain')}
             retryLabel={t('common.retry')}
             onRetry={handleRefresh}
           />
@@ -374,13 +347,12 @@ export default function InboxScreen() {
           renderItem={renderNotificationItem}
           keyExtractor={(item) => item.id}
           ListHeaderComponent={listHeader}
-          ItemSeparatorComponent={ListSeparator}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
               onRefresh={handleRefresh}
-              colors={[colors.primaryColor]}
-              tintColor={colors.primaryColor}
+              colors={[theme.primary]}
+              tintColor={theme.primary}
             />
           }
           ListEmptyComponent={
@@ -400,10 +372,10 @@ export default function InboxScreen() {
                   contentFit="contain"
                   accessibilityIgnoresInvertColors
                 />
-                <H3 style={styles.illustrationTitle}>
+                <H3 style={[styles.illustrationTitle, { color: theme.text }]}>
                   {t('notification.empty.title')}
                 </H3>
-                <BloomText style={styles.illustrationMessage}>
+                <BloomText style={[styles.illustrationMessage, { color: theme.textSecondary }]}>
                   {t('notification.empty.message')}
                 </BloomText>
               </View>
@@ -421,59 +393,38 @@ interface ScheduledRowProps {
   request: Notifications.NotificationRequest;
   onCancel: () => void;
   scheduledLabel: string;
+  cancelLabel: string;
 }
 
-/**
- * A single locally-scheduled reminder. Flat surface (no shadow) with a cancel
- * affordance; surfaced above the server feed so users can manage pending
- * reminders.
- */
+/** A single locally-scheduled reminder, cancellable in place. */
 const ScheduledRow: React.FC<ScheduledRowProps> = ({
   request,
   onCancel,
   scheduledLabel,
+  cancelLabel,
 }) => {
+  const { colors: theme } = useTheme();
   const triggerDate = getTriggerDate(request.trigger);
-  const when = triggerDate
-    ? formatRelativeTime(new Date(triggerDate))
-    : scheduledLabel;
+  const when = triggerDate ? formatRelativeTime(new Date(triggerDate)) : scheduledLabel;
 
   return (
-    <View style={styles.scheduledRow}>
-      <View style={styles.scheduledIcon}>
-        <Ionicons name="time-outline" size={18} color={colors.textSecondary} />
-      </View>
-      <View style={styles.scheduledContent}>
-        <BloomText style={styles.scheduledTitle} numberOfLines={1}>
-          {request.content.title}
-        </BloomText>
-        {request.content.body ? (
-          <BloomText style={styles.scheduledBody} numberOfLines={1}>
-            {request.content.body}
-          </BloomText>
-        ) : null}
-        <BloomText style={styles.scheduledTime}>{when}</BloomText>
-      </View>
-      <Pressable
-        onPress={onCancel}
-        accessibilityRole="button"
-        hitSlop={8}
-        style={styles.scheduledCancel}
-      >
-        <Ionicons name="close" size={18} color={colors.textTertiary} />
-      </Pressable>
-    </View>
+    <SettingsListItem
+      icon={<RiTimeLine width={20} height={20} fill={theme.textSecondary} />}
+      title={request.content.title ?? scheduledLabel}
+      description={request.content.body ? `${request.content.body} · ${when}` : when}
+      rightElement={<CloseButton size="xs" accessibilityLabel={cancelLabel} onPress={onCancel} />}
+    />
   );
 };
-
-const ListSeparator: React.FC = () => <View style={styles.separator} />;
 
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: colors.background,
   },
   controls: {
+    width: '100%',
+    maxWidth: contentClamp.copy,
+    alignSelf: 'center',
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.sm,
     paddingBottom: spacing.md,
@@ -481,110 +432,20 @@ const styles = StyleSheet.create({
   },
   listContent: {
     flexGrow: 1,
+    width: '100%',
+    maxWidth: contentClamp.copy,
+    alignSelf: 'center',
+    paddingHorizontal: spacing.lg,
     paddingBottom: spacing['4xl'],
+    gap: spacing.xs,
   },
   listHeader: {
     gap: spacing.lg,
-  },
-  separator: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: colors.border,
-    marginLeft: spacing.lg + 44 + spacing.md,
-  },
-  // --- Permission notice ---
-  permissionNotice: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    marginHorizontal: spacing.lg,
-    marginTop: spacing.sm,
-    padding: spacing.lg,
-    borderRadius: radius.lg,
-    backgroundColor: colors.infoSubtle,
-  },
-  permissionIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.background,
-  },
-  permissionText: {
-    flex: 1,
-    gap: spacing.xs,
+    marginBottom: spacing.sm,
   },
   permissionTitle: {
-    fontSize: 14,
     fontWeight: '700',
-    color: colors.text,
   },
-  permissionMessage: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    lineHeight: 18,
-  },
-  // --- Scheduled section ---
-  scheduledSection: {
-    marginHorizontal: spacing.lg,
-    gap: spacing.sm,
-  },
-  sectionHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  sectionTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: colors.text,
-  },
-  clearAllText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.primaryColor,
-  },
-  scheduledRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    padding: spacing.md,
-    borderRadius: radius.lg,
-    backgroundColor: colors.surface,
-  },
-  scheduledIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.mutedSubtle,
-  },
-  scheduledContent: {
-    flex: 1,
-    gap: spacing.xs,
-  },
-  scheduledTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.text,
-  },
-  scheduledBody: {
-    fontSize: 13,
-    color: colors.textSecondary,
-  },
-  scheduledTime: {
-    fontSize: 12,
-    color: colors.textTertiary,
-  },
-  scheduledCancel: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  // --- States ---
   stateWrap: {
     flex: 1,
     padding: spacing.lg,
@@ -592,7 +453,7 @@ const styles = StyleSheet.create({
   emptyWrap: {
     paddingVertical: spacing['4xl'],
   },
-  // --- Illustration empty state (image-forward, hero) ---
+  // Illustration empty state (image-forward, hero)
   illustrationEmpty: {
     flex: 1,
     alignItems: 'center',
@@ -609,13 +470,11 @@ const styles = StyleSheet.create({
   illustrationTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: colors.text,
     textAlign: 'center',
     marginBottom: spacing.sm,
   },
   illustrationMessage: {
     fontSize: 14,
-    color: colors.textSecondary,
     textAlign: 'center',
     lineHeight: 20,
     maxWidth: 320,

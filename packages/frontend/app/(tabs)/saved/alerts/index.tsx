@@ -15,11 +15,13 @@
  * `suppression_reason` is a stored column instead of an inference.
  */
 
-import React, { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import React, { useCallback, useMemo } from 'react';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Card } from '@oxy.so/bloom/card';
+import { RiPauseLine, RiMapPinLine } from '@oxy.so/bloom/icons';
+import { Loading } from '@oxy.so/bloom/loading';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { H3, Text as BloomText } from '@oxy.so/bloom/typography';
 import { Header } from '@/components/Header';
@@ -28,6 +30,7 @@ import { AlertExplanationText } from '@/components/watches/AlertExplanationText'
 import { LoadMoreSentinel } from '@/components/common/LoadMoreSentinel';
 import { useHousingAlerts, type HousingAlert } from '@/hooks/useHousingAlerts';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
+import { contentClamp, spacing } from '@/constants/styles';
 import { useFormatting } from '@/utils/format';
 import { deviceTimeZone, formatDate } from '@homiio/shared-types';
 
@@ -95,34 +98,11 @@ export default function AlertHistoryScreen() {
     }));
   }, [data, locale, timeZone]);
 
-  const styles = useMemo(
-    () =>
-      StyleSheet.create({
-        content: { padding: 16, paddingBottom: 80, gap: 24 },
-        dayLabel: { marginBottom: 8 },
-        row: {
-          padding: 14,
-          borderRadius: 16,
-          borderWidth: 1,
-          borderColor: theme.colors.border,
-          backgroundColor: theme.colors.card,
-          gap: 8,
-        },
-        rowPressed: { backgroundColor: theme.colors.backgroundSecondary },
-        rowHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-        held: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-        loading: { paddingVertical: 24, alignItems: 'center' },
-      }),
-    [theme],
-  );
-
   if (isLoading) {
     return (
       <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
         <Header options={{ title: t('alerts.history.title') }} />
-        <View style={styles.loading}>
-          <ActivityIndicator color={theme.colors.primary} />
-        </View>
+        <Loading style={styles.loading} />
       </View>
     );
   }
@@ -143,9 +123,9 @@ export default function AlertHistoryScreen() {
               <H3 style={styles.dayLabel}>
                 {group.label}
               </H3>
-              <View style={{ gap: 12 }}>
+              <View style={styles.dayList}>
                 {group.alerts.map((alert) => (
-                  <AlertRow key={alert.id} alert={alert} styles={styles} />
+                  <AlertRow key={alert.id} alert={alert} />
                 ))}
               </View>
             </View>
@@ -157,23 +137,10 @@ export default function AlertHistoryScreen() {
   );
 }
 
-/**
- * One alert.
- *
- * Its own component because it owns a `pressed` state, and a hook cannot run
- * inside `.map()`. It uses a static style array plus `onPressIn`/`onPressOut`
- * rather than the function form of `style`, which the css-interop swallows.
- */
-function AlertRow({
-  alert,
-  styles,
-}: {
-  readonly alert: HousingAlert;
-  readonly styles: ReturnType<typeof StyleSheet.create>;
-}) {
+/** One alert: a pressable Bloom `Card` opening its "why did I get this?" screen. */
+function AlertRow({ alert }: { readonly alert: HousingAlert }) {
   const { t } = useTranslation();
   const theme = useTheme();
-  const [pressed, setPressed] = useState(false);
 
   const heldReason =
     alert.deliveryState === 'suppressed' && alert.suppressionReason
@@ -183,16 +150,16 @@ function AlertRow({
         : null;
 
   return (
-    <Pressable
-      onPressIn={() => setPressed(true)}
-      onPressOut={() => setPressed(false)}
+    <Card
+      variant="outlined"
+      radius="radius-16"
       onPress={() => router.push(`/saved/alerts/${alert.id}`)}
       accessibilityRole="button"
       accessibilityLabel={t('alerts.history.openReason')}
-      style={[styles.row, pressed && styles.rowPressed]}
+      style={styles.row}
     >
       <View style={styles.rowHeader}>
-        <Ionicons name="pricetag-outline" size={ICON_SIZE} color={theme.colors.textSecondary} />
+        <RiMapPinLine width={ICON_SIZE} height={ICON_SIZE} fill={theme.colors.textSecondary} />
         <BloomText style={{ color: theme.colors.textSecondary }}>
           {alert.explanation.watchName}
         </BloomText>
@@ -202,13 +169,27 @@ function AlertRow({
         watchName={alert.explanation.watchName}
       />
       {heldReason ? (
-        <View style={styles.held}>
-          <Ionicons name="pause-circle-outline" size={ICON_SIZE} color={theme.colors.warning} />
-          <BloomText style={{ color: theme.colors.textSecondary }}>
-            {heldReason}
-          </BloomText>
+        <View style={styles.rowHeader}>
+          <RiPauseLine width={ICON_SIZE} height={ICON_SIZE} fill={theme.colors.warning} />
+          <BloomText style={{ color: theme.colors.textSecondary }}>{heldReason}</BloomText>
         </View>
       ) : null}
-    </Pressable>
+    </Card>
   );
 }
+
+const styles = StyleSheet.create({
+  content: {
+    width: '100%',
+    maxWidth: contentClamp.copy,
+    alignSelf: 'center',
+    padding: spacing.lg,
+    paddingBottom: spacing['6xl'],
+    gap: spacing['2xl'],
+  },
+  dayLabel: { marginBottom: spacing.sm },
+  dayList: { gap: spacing.md },
+  row: { padding: spacing.md, gap: spacing.sm },
+  rowHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  loading: { paddingVertical: spacing['2xl'] },
+});

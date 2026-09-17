@@ -1,167 +1,178 @@
-import React, { useMemo, useState, useCallback } from 'react';
-import {
-  View,
-  StyleSheet,
-  FlatList,
-  TextInput,
-  TouchableOpacity,
-  Text,
-  Alert,
-  Image,
-  ScrollView,
-  type ImageSourcePropType,
-} from 'react-native';
+/**
+ * Saved → Notes: every note on every saved property, newest (and pinned)
+ * first, filterable by All / Active / Pinned / Archived.
+ *
+ * Bloom throughout: `Tabs` for the filter strip, a `Card` per note with the
+ * property as an `Item`, icon-only `Button`s for pin / archive / delete, a
+ * controlled `Dialog` holding a `Textarea` for editing, `confirm()` before a
+ * delete and `toast` for the outcome.
+ */
+import React, { useCallback, useMemo, useState } from 'react';
+import { FlatList, Image, StyleSheet, View, type ImageSourcePropType } from 'react-native';
 import { router } from 'expo-router';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTranslation } from 'react-i18next';
-import { Header } from '@/components/Header';
+
 import { Button } from '@oxy.so/bloom/button';
-import { colors } from '@/styles/colors';
-import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
+import { Card } from '@oxy.so/bloom/card';
+import { Dialog } from '@oxy.so/bloom/dialog';
 import {
+  RiArchiveLine,
+  RiArrowRightSLine,
+  RiDeleteBinLine,
+  RiPushpinFill,
+  RiPushpinLine,
+} from '@oxy.so/bloom/icons';
+import { Item } from '@oxy.so/bloom/item';
+import { confirm } from '@oxy.so/bloom/surfaces';
+import { Tabs, TabsTrigger } from '@oxy.so/bloom/tabs';
+import { Textarea } from '@oxy.so/bloom/textarea';
+import { useTheme } from '@oxy.so/bloom/theme';
+import { toast } from '@oxy.so/bloom/toast';
+import { Text as BloomText } from '@oxy.so/bloom/typography';
+
+import { Header } from '@/components/Header';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { spacing } from '@/constants/styles';
+import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
+import { useSavedNotesMutation } from '@/hooks/useSavedNotes';
+import { logger } from '@/utils/logger';
+import {
+  deleteNote,
   parseNotesString,
   serializeNotesArray,
-  upsertNote,
-  deleteNote,
   toggleArchive,
   togglePin,
-  PropertyNote,
+  upsertNote,
+  type PropertyNote,
 } from '@/utils/notes';
 import { getPropertyImageSource, getPropertyTitle } from '@/utils/propertyUtils';
 
-import { useSavedNotesMutation } from '@/hooks/useSavedNotes';
-import { logger } from '@/utils/logger';
-// removed useOxy; mutation hook reads auth internally
-
 type NotesFilter = 'all' | 'active' | 'pinned' | 'archived';
+
+interface FlatNote {
+  propertyId: string;
+  note: PropertyNote;
+  title: string;
+  image: ImageSourcePropType;
+  meta: string;
+}
 
 export default function NotesScreen() {
   const { t } = useTranslation();
   const { savedProperties, loadSavedProperties } = useSavedPropertiesContext();
   const { mutateAsync: updateNotesMutate } = useSavedNotesMutation();
 
-  // Flatten notes into a masonry-like grid with property preview
-  const flatNotes = useMemo(() => {
-    const out: {
-      propertyId: string;
-      note: PropertyNote;
-      title: string;
-      image: ImageSourcePropType;
-      price?: number;
-      currency?: string;
-      location?: string;
-      bedrooms?: number;
-      bathrooms?: number;
-    }[] = [];
+  const flatNotes = useMemo<FlatNote[]>(() => {
+    const out: FlatNote[] = [];
     savedProperties.forEach((p) => {
-      const pid = p.id as string;
-      const notesArr = parseNotesString(p.notes);
+      const propertyId = p.id as string;
       const title = getPropertyTitle(p) || p.address?.cityName || 'Property';
       const image = getPropertyImageSource(p);
-      // Headline price for the saved-note card: monthly when present, else the
+      // Headline price for the note card: monthly when present, else the
       // nightly rate for vacation-only listings.
       const price = p.longTermRent?.monthlyAmount ?? p.shortTermRent?.nightlyRate;
       const currency = p.longTermRent?.currency ?? p.shortTermRent?.currency;
       const location = [p.address?.cityName, p.address?.regionName].filter(Boolean).join(', ');
-      const bedrooms = p.bedrooms;
-      const bathrooms = p.bathrooms;
-      notesArr.forEach((n) =>
-        out.push({
-          propertyId: pid,
-          note: n,
-          title,
-          image,
-          price,
-          currency,
-          location,
-          bedrooms,
-          bathrooms,
-        }),
-      );
+      const meta = [
+        price ? `${price}${currency ? ` ${currency}` : ''}` : '',
+        p.bedrooms ? `${p.bedrooms} bd` : '',
+        p.bathrooms ? `${p.bathrooms} ba` : '',
+        location,
+      ]
+        .filter(Boolean)
+        .join(' • ');
+      parseNotesString(p.notes).forEach((note) => out.push({ propertyId, note, title, image, meta }));
     });
     return out;
   }, [savedProperties]);
 
-  const [editing, setEditing] = useState<{ propertyId: string | null; note?: PropertyNote } | null>(
-    null,
-  );
-  const [text, setText] = useState('');
-  const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
   const [filter, setFilter] = useState<NotesFilter>('all');
+  const [editing, setEditing] = useState<{ propertyId: string; note: PropertyNote } | null>(null);
+  const [text, setText] = useState('');
+  const [saving, setSaving] = useState(false);
 
-  const handleSaveNote = useCallback(async () => {
-    if (!editing) return;
-    const { propertyId, note } = editing;
-    const targetPropId =
-      propertyId ||
-      selectedPropertyId ||
-      (savedProperties[0]?.id as string | undefined);
-    if (!targetPropId) return;
-    try {
-      const prop = savedProperties.find((p) => p.id === targetPropId);
-      if (!prop) return;
-      const currentNotes = parseNotesString(prop.notes);
-      const updatedNotes = upsertNote(currentNotes, { id: note?.id, text });
-      const payload = serializeNotesArray(updatedNotes);
-      await updateNotesMutate({ propertyId: targetPropId, notes: payload });
-      await loadSavedProperties();
-      setEditing(null);
-      setText('');
-      Alert.alert(t('common.success'), t('common.update'));
-    } catch (error: unknown) {
-      logger.error('Failed to save note:', error);
-      Alert.alert(t('common.error'), t('saved.errors.updateNotesFailed'));
-    }
-  }, [editing, text, updateNotesMutate, savedProperties, selectedPropertyId, t, loadSavedProperties]);
-
-  const handleDeleteNote = useCallback(
-    async (propertyId: string, noteId: string) => {
-      try {
-        const prop = savedProperties.find((p) => p.id === propertyId);
-        if (!prop) return;
-        const updatedNotes = deleteNote(parseNotesString(prop.notes), noteId);
-        const payload = serializeNotesArray(updatedNotes);
-        await updateNotesMutate({ propertyId, notes: payload });
-        await loadSavedProperties();
-        Alert.alert(t('common.success'), t('common.update'));
-      } catch (error: unknown) {
-        logger.error('Failed to delete note:', error);
-        Alert.alert(t('common.error'), t('saved.errors.updateNotesFailed'));
-      }
-    },
-    [savedProperties, updateNotesMutate, t, loadSavedProperties],
+  const visibleNotes = useMemo(
+    () =>
+      flatNotes
+        .filter(({ note }) => {
+          if (filter === 'archived') return !!note.isArchived;
+          if (filter === 'pinned') return !!note.isPinned && !note.isArchived;
+          if (filter === 'active') return !note.isArchived;
+          return true;
+        })
+        .sort((a, b) => {
+          const pinDiff = Number(!!b.note.isPinned) - Number(!!a.note.isPinned);
+          if (pinDiff !== 0) return pinDiff;
+          const ad = Date.parse(a.note.updatedAt || a.note.createdAt);
+          const bd = Date.parse(b.note.updatedAt || b.note.createdAt);
+          return bd - ad;
+        }),
+    [flatNotes, filter],
   );
 
   const persistNotes = useCallback(
-    async (propertyId: string, mutator: (arr: PropertyNote[]) => PropertyNote[]) => {
-      const prop = savedProperties.find((p) => p.id === propertyId);
-      if (!prop) return;
-      const updated = mutator(parseNotesString(prop.notes));
+    async (propertyId: string, mutator: (notes: PropertyNote[]) => PropertyNote[]) => {
+      const property = savedProperties.find((p) => p.id === propertyId);
+      if (!property) return;
+      const updated = mutator(parseNotesString(property.notes));
       await updateNotesMutate({ propertyId, notes: serializeNotesArray(updated) });
       await loadSavedProperties();
     },
     [savedProperties, updateNotesMutate, loadSavedProperties],
   );
 
-  const handleToggleArchive = useCallback(
+  const closeEditor = useCallback(() => {
+    setEditing(null);
+    setText('');
+  }, []);
+
+  const handleSaveNote = useCallback(async () => {
+    if (!editing) return;
+    setSaving(true);
+    try {
+      await persistNotes(editing.propertyId, (notes) =>
+        upsertNote(notes, { id: editing.note.id, text }),
+      );
+      closeEditor();
+      toast.success(t('saved.notes.saved'));
+    } catch (error: unknown) {
+      logger.error('Failed to save note:', error);
+      toast.error(t('saved.errors.updateNotesFailed'));
+    } finally {
+      setSaving(false);
+    }
+  }, [editing, text, persistNotes, closeEditor, t]);
+
+  const handleDeleteNote = useCallback(
     async (propertyId: string, noteId: string) => {
+      const ok = await confirm({
+        title: t('saved.notes.deleteTitle'),
+        description: t('saved.notes.deleteMessage'),
+        confirmLabel: t('common.delete'),
+        cancelLabel: t('common.cancel'),
+        destructive: true,
+      });
+      if (!ok) return;
       try {
-        await persistNotes(propertyId, (arr) => toggleArchive(arr, noteId));
+        await persistNotes(propertyId, (notes) => deleteNote(notes, noteId));
+        toast.success(t('saved.notes.deleted'));
       } catch (error: unknown) {
-        logger.error('Failed to toggle note archive:', error);
-        Alert.alert(t('common.error'), t('saved.errors.updateNotesFailed'));
+        logger.error('Failed to delete note:', error);
+        toast.error(t('saved.errors.updateNotesFailed'));
       }
     },
     [persistNotes, t],
   );
 
-  const handleTogglePin = useCallback(
-    async (propertyId: string, noteId: string) => {
+  const handleToggle = useCallback(
+    async (propertyId: string, noteId: string, kind: 'pin' | 'archive') => {
       try {
-        await persistNotes(propertyId, (arr) => togglePin(arr, noteId));
+        await persistNotes(propertyId, (notes) =>
+          kind === 'pin' ? togglePin(notes, noteId) : toggleArchive(notes, noteId),
+        );
       } catch (error: unknown) {
-        logger.error('Failed to toggle note pin:', error);
-        Alert.alert(t('common.error'), t('saved.errors.updateNotesFailed'));
+        logger.error(`Failed to toggle note ${kind}:`, error);
+        toast.error(t('saved.errors.updateNotesFailed'));
       }
     },
     [persistNotes, t],
@@ -170,361 +181,187 @@ export default function NotesScreen() {
   return (
     <View style={styles.container}>
       <Header options={{ title: t('saved.notes.title'), showBackButton: true }} />
-      <View style={styles.tabsContainer}>
-        {([
-          { key: 'all', label: 'All' },
-          { key: 'active', label: 'Active' },
-          { key: 'pinned', label: 'Pinned' },
-          { key: 'archived', label: 'Archived' },
-        ] satisfies { key: NotesFilter; label: string }[]).map((tab) => (
-          <TouchableOpacity
-            key={tab.key}
-            style={[styles.tabItem, filter === tab.key && styles.tabItemActive]}
-            onPress={() => setFilter(tab.key)}
-          >
-            <Text style={[styles.tabText, filter === tab.key && styles.tabTextActive]}>
-              {tab.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
+      <View style={styles.tabs}>
+        <Tabs value={filter} onValueChange={(next) => setFilter(next as NotesFilter)}>
+          <TabsTrigger value="all" label={t('common.all')} />
+          <TabsTrigger value="active" label={t('saved.notes.filters.active')} />
+          <TabsTrigger value="pinned" label={t('saved.notes.filters.pinned')} />
+          <TabsTrigger value="archived" label={t('saved.notes.filters.archived')} />
+        </Tabs>
       </View>
       <FlatList
-        data={flatNotes
-          .filter((n) => {
-            if (filter === 'archived') return !!n.note.isArchived;
-            if (filter === 'pinned') return !!n.note.isPinned && !n.note.isArchived;
-            if (filter === 'active') return !n.note.isArchived;
-            return true;
-          })
-          .sort((a, b) => {
-            const pinDiff = Number(!!b.note.isPinned) - Number(!!a.note.isPinned);
-            if (pinDiff !== 0) return pinDiff;
-            const ad = Date.parse(a.note.updatedAt || a.note.createdAt);
-            const bd = Date.parse(b.note.updatedAt || b.note.createdAt);
-            return bd - ad;
-          })}
+        data={visibleNotes}
         keyExtractor={(item) => `${item.propertyId}-${item.note.id}`}
         numColumns={2}
         columnWrapperStyle={styles.gridRow}
         contentContainerStyle={styles.content}
+        ListEmptyComponent={
+          <EmptyState
+            icon="document-text-outline"
+            title={t('saved.notes.emptyTitle')}
+            description={t('saved.notes.emptyDescription')}
+          />
+        }
         renderItem={({ item }) => (
-          <TouchableOpacity
-            style={[
-              styles.noteCard,
-              item.note.isArchived && styles.archivedCard,
-              item.note.color
-                ? { backgroundColor: item.note.color, borderColor: 'transparent' }
-                : null,
-            ]}
-            onPress={() => {
+          <NoteCard
+            item={item}
+            onEdit={() => {
               setEditing({ propertyId: item.propertyId, note: item.note });
               setText(item.note.text);
             }}
-          >
-            <Text style={styles.noteText} numberOfLines={6}>
-              {item.note.text}
-            </Text>
-            <TouchableOpacity
-              style={styles.previewCard}
-              onPress={() => router.push(`/properties/${item.propertyId}`)}
-            >
-              <Image source={item.image} style={styles.previewImageL} />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.previewTitle} numberOfLines={2}>
-                  {item.title}
-                </Text>
-                <Text style={[styles.previewMeta, { flex: 1 }]} numberOfLines={1}>
-                  {item.price ? `${item.price}${item.currency ? ' ' + item.currency : ''}` : ''}
-                  {item.price && (item.bedrooms || item.bathrooms || item.location) ? ' • ' : ''}
-                  {item.bedrooms ? `${item.bedrooms} bd` : ''}
-                  {item.bedrooms && item.bathrooms ? ' • ' : ''}
-                  {item.bathrooms ? `${item.bathrooms} ba` : ''}
-                  {(item.bedrooms || item.bathrooms) && item.location ? ' • ' : ''}
-                  {item.location || ''}
-                </Text>
-              </View>
-              <Ionicons name="chevron-forward" size={16} color={colors.COLOR_BLACK_LIGHT_4} />
-            </TouchableOpacity>
-            <View style={styles.noteCardActions}>
-              <TouchableOpacity
-                style={styles.iconBtn}
-                onPress={() => handleTogglePin(item.propertyId, item.note.id)}
-                accessibilityLabel={t('common.edit')}
-              >
-                <Ionicons
-                  name={item.note.isPinned ? 'pin' : 'pin-outline'}
-                  size={16}
-                  color={item.note.isPinned ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4}
-                />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.iconBtn}
-                onPress={() => handleToggleArchive(item.propertyId, item.note.id)}
-                accessibilityLabel={t('common.update')}
-              >
-                <Ionicons
-                  name={item.note.isArchived ? 'archive' : 'archive-outline'}
-                  size={18}
-                  color={colors.COLOR_BLACK_LIGHT_4}
-                />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.iconBtn}
-                onPress={() => handleDeleteNote(item.propertyId, item.note.id)}
-                accessibilityLabel={t('common.delete')}
-              >
-                <Ionicons name="trash-outline" size={18} color={colors.COLOR_BLACK_LIGHT_4} />
-              </TouchableOpacity>
-            </View>
-          </TouchableOpacity>
+            onTogglePin={() => void handleToggle(item.propertyId, item.note.id, 'pin')}
+            onToggleArchive={() => void handleToggle(item.propertyId, item.note.id, 'archive')}
+            onDelete={() => void handleDeleteNote(item.propertyId, item.note.id)}
+          />
         )}
-        ListFooterComponent={
-          editing && (
-            <View style={styles.editor}>
-              <Text style={styles.editorTitle}>
-                {editing.note ? t('saved.actions.editNotes') : t('saved.actions.addNotes')}
-              </Text>
-              {!editing.propertyId && (
-                <View style={styles.propPicker}>
-                  <Text style={styles.pickerLabel}>{t('common.select')}</Text>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                    {savedProperties.map((p) => {
-                      const pid = p.id as string;
-                      const isSel = selectedPropertyId === pid;
-                      return (
-                        <TouchableOpacity
-                          key={pid}
-                          style={[styles.pill, isSel && styles.pillActive]}
-                          onPress={() => setSelectedPropertyId(pid)}
-                        >
-                          <Text style={[styles.pillText, isSel && styles.pillTextActive]}>
-                            {getPropertyTitle(p) || p.address?.cityName || 'Property'}
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </ScrollView>
-                </View>
-              )}
-              <TextInput
-                style={styles.input}
-                value={text}
-                onChangeText={setText}
-                placeholder={t('saved.notes.placeholder')}
-                multiline
-                numberOfLines={4}
-              />
-              <View style={styles.editorActions}>
-                <Button
-                  onPress={() => {
-                    setEditing(null);
-                    setText('');
-                  }}
-                  style={styles.cancelBtn}
-                >
-                  {t('common.cancel')}
-                </Button>
-                <Button onPress={handleSaveNote}>{t('common.save')}</Button>
-              </View>
-            </View>
-          )
-        }
       />
+
+      <Dialog
+        placement="center"
+        open={editing !== null}
+        onClose={closeEditor}
+        dismissOnBackdrop={!saving}
+        maxWidth={480}
+        title={t('saved.actions.editNotes')}
+        label={t('saved.actions.editNotes')}
+        actions={[
+          {
+            label: t('common.save'),
+            disabled: saving || !text.trim(),
+            shouldCloseOnPress: false,
+            onPress: () => void handleSaveNote(),
+          },
+          {
+            label: t('common.cancel'),
+            color: 'cancel',
+            disabled: saving,
+            shouldCloseOnPress: false,
+            onPress: closeEditor,
+          },
+        ]}
+      >
+        <Textarea
+          label={t('saved.notes.title')}
+          value={text}
+          onChangeText={setText}
+          placeholder={t('saved.notes.placeholder')}
+          rows={5}
+          autoResize
+          editable={!saving}
+        />
+      </Dialog>
     </View>
+  );
+}
+
+interface NoteCardProps {
+  item: FlatNote;
+  onEdit: () => void;
+  onTogglePin: () => void;
+  onToggleArchive: () => void;
+  onDelete: () => void;
+}
+
+function NoteCard({ item, onEdit, onTogglePin, onToggleArchive, onDelete }: NoteCardProps) {
+  const { t } = useTranslation();
+  const { colors: theme } = useTheme();
+  const { note } = item;
+
+  return (
+    <Card
+      variant="outlined"
+      radius="radius-16"
+      onPress={onEdit}
+      accessibilityRole="button"
+      accessibilityLabel={`${t('saved.actions.editNotes')}: ${item.title}`}
+      style={[
+        styles.noteCard,
+        note.isArchived && styles.archived,
+        note.color ? { backgroundColor: note.color, borderColor: 'transparent' } : null,
+      ]}
+    >
+      <BloomText style={styles.noteText} numberOfLines={6}>
+        {note.text}
+      </BloomText>
+      <Item
+        density="compact"
+        role="listitem"
+        leading={<Image source={item.image} style={styles.previewImage} />}
+        title={item.title}
+        subtitle={item.meta || undefined}
+        trailing={<RiArrowRightSLine width={16} height={16} fill={theme.textTertiary} />}
+        onPress={() => router.push(`/properties/${item.propertyId}`)}
+        accessibilityRole="link"
+        style={styles.preview}
+      />
+      <View style={styles.actions}>
+        <Button
+          variant="ghost"
+          size="small"
+          iconOnly
+          leadingIcon={note.isPinned ? RiPushpinFill : RiPushpinLine}
+          accessibilityLabel={note.isPinned ? t('saved.notes.unpin') : t('saved.notes.pin')}
+          onPress={onTogglePin}
+        />
+        <Button
+          variant="ghost"
+          size="small"
+          iconOnly
+          leadingIcon={RiArchiveLine}
+          accessibilityLabel={note.isArchived ? t('saved.notes.unarchive') : t('saved.notes.archive')}
+          onPress={onToggleArchive}
+        />
+        <Button
+          variant="ghost"
+          size="small"
+          iconOnly
+          leadingIcon={RiDeleteBinLine}
+          accessibilityLabel={t('common.delete')}
+          onPress={onDelete}
+        />
+      </View>
+    </Card>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+  },
+  tabs: {
+    paddingHorizontal: spacing.lg,
   },
   content: {
-    padding: 16,
-    paddingBottom: 100,
-  },
-  tabsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  tabItem: {
-    paddingVertical: 8,
-    paddingHorizontal: 8,
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
-  },
-  tabItemActive: {
-    borderBottomColor: colors.primaryColor,
-  },
-  tabText: {
-    fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_4,
-    fontWeight: '600',
-  },
-  tabTextActive: {
-    color: colors.COLOR_BLACK,
+    padding: spacing.lg,
+    paddingBottom: spacing['6xl'],
+    gap: spacing.md,
+    flexGrow: 1,
   },
   gridRow: {
-    justifyContent: 'space-between',
+    gap: spacing.md,
   },
   noteCard: {
-    backgroundColor: colors.white,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: 12,
-    marginBottom: 12,
     flex: 1,
-    marginHorizontal: 4,
+    padding: spacing.md,
+    gap: spacing.sm,
   },
-  archivedCard: {
+  archived: {
     opacity: 0.6,
-  },
-  noteCardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  cardTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: colors.COLOR_BLACK,
-    marginBottom: 8,
-  },
-  emptyText: {
-    fontSize: 13,
-    color: colors.COLOR_BLACK_LIGHT_4,
-    marginBottom: 8,
-  },
-  noteRow: {
-    paddingVertical: 8,
-    borderTopWidth: 1,
-    borderTopColor: colors.mutedSubtle,
   },
   noteText: {
     fontSize: 14,
-    color: colors.COLOR_BLACK,
-    marginBottom: 8,
+    lineHeight: 20,
   },
-  previewCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    borderTopWidth: 1,
-    borderTopColor: colors.mutedSubtle,
-    paddingTop: 10,
+  preview: {
+    paddingHorizontal: 0,
   },
-  previewImageL: {
+  previewImage: {
     width: 44,
     height: 44,
     borderRadius: 8,
-    backgroundColor: colors.COLOR_BLACK_LIGHT_6,
   },
-  previewTitle: {
-    fontSize: 13,
-    color: colors.COLOR_BLACK,
-    flex: 1,
-  },
-  previewMeta: {
-    fontSize: 12,
-    color: colors.COLOR_BLACK_LIGHT_4,
-    marginTop: 2,
-  },
-  previewMetaRow: {
+  actions: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginTop: 2,
-  },
-  previewPrice: {
-    fontSize: 12,
-    color: colors.COLOR_BLACK_LIGHT_4,
-  },
-  noteCardActions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-start',
-    gap: 4,
-    marginTop: 8,
-  },
-  iconBtn: {
-    padding: 6,
-    borderRadius: 8,
-  },
-  noteActions: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  action: {
-    fontSize: 13,
-    color: colors.primaryColor,
-    fontWeight: '600',
-  },
-  addBtn: {
-    marginTop: 8,
-  },
-  editor: {
-    backgroundColor: colors.white,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: 12,
-    marginTop: 8,
-  },
-  propPicker: {
-    marginBottom: 8,
-  },
-  pickerLabel: {
-    fontSize: 12,
-    color: colors.COLOR_BLACK_LIGHT_4,
-    marginBottom: 6,
-  },
-  pill: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: colors.border,
-    marginRight: 8,
-    backgroundColor: colors.white,
-  },
-  pillActive: {
-    backgroundColor: colors.primaryLight,
-    borderColor: colors.primaryColor,
-  },
-  pillText: {
-    fontSize: 12,
-    color: colors.COLOR_BLACK,
-  },
-  pillTextActive: {
-    color: colors.primaryColor,
-    fontWeight: '700',
-  },
-  editorTitle: {
-    fontWeight: '700',
-    marginBottom: 8,
-    color: colors.COLOR_BLACK,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 10,
-    padding: 10,
-    minHeight: 100,
-    textAlignVertical: 'top',
-  },
-  editorActions: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 10,
-    justifyContent: 'flex-end',
-  },
-  cancelBtn: {
-    backgroundColor: colors.COLOR_BLACK_LIGHT_6,
+    gap: spacing.xs,
   },
 });

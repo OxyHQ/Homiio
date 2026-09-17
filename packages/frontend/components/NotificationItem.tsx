@@ -1,29 +1,39 @@
 /**
- * NotificationItem — a single flat inbox row (Airbnb-2026).
+ * NotificationItem — one inbox row, a Bloom `Item`.
  *
  * Layout (left → right):
- *   [type icon circle]  title + 1-line preview        timestamp
- *                                                      unread dot
+ *   [type disc]  title + 1-line preview        timestamp  [unread dot]  [delete]
  *
- * No card shadow, no tinted card background — the row sits directly on the
- * page surface and is separated from its neighbours by the list's hairline
- * gutter, matching the rest of the app's flat list aesthetic. Unread rows are
- * signalled by a bolder title + a brand dot, not by a coloured fill.
- *
- * NativeWind v4's css-interop rewrites the `style` prop and swallows React
- * Native's render-function form, so the pressed tint is driven by
- * onPressIn/onPressOut state over a static style array.
+ * The disc pairs a subtle theme surface with its own ink per notification
+ * type (the Bloom `IconCircle` tinting rule), the glyph is Remix, and unread
+ * rows are signalled by a bolder title plus a brand dot rather than a fill.
+ * Delete is an explicit icon button (long press still works on touch), so
+ * it is reachable on web where long press is not.
  */
-import React, { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, View, type ViewStyle } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import React from 'react';
+import { StyleSheet, View, type ViewStyle } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
+import { Button } from '@oxy.so/bloom/button';
+import {
+  RiBankCardLine,
+  RiChat3Fill,
+  RiChat4Fill,
+  RiDeleteBinLine,
+  RiFilePaper2Line,
+  RiGroupFill,
+  RiHome5Fill,
+  RiMegaphoneLine,
+  RiNotification3Fill,
+  RiQuestionLine,
+} from '@oxy.so/bloom/icons';
+import { Item } from '@oxy.so/bloom/item';
+import { useTheme, type ThemeColors } from '@oxy.so/bloom/theme';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 
-import { colors } from '@/styles/colors';
-import { radius, spacing } from '@/constants/styles';
+import { spacing } from '@/constants/styles';
 
-type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
+type IconComponent = React.ComponentType<{ width?: number; height?: number; fill?: string }>;
 
 type NotificationItemProps = {
   type: string;
@@ -33,65 +43,36 @@ type NotificationItemProps = {
   read: boolean;
   onPress?: () => void;
   onLongPress?: () => void;
+  onDelete?: () => void;
   style?: ViewStyle;
 };
 
-/** Visual identity (icon + accent tint) for each known notification type. */
-type TypeVisual = { icon: IoniconName; color: string; surface: string };
+/** Theme key pair for a disc: the subtle surface and the ink drawn on it. */
+type Tone = { surface: keyof ThemeColors; ink: keyof ThemeColors };
 
-const TYPE_VISUALS: Record<string, TypeVisual> = {
-  message: {
-    icon: 'chatbubble-ellipses',
-    color: colors.primaryColor,
-    surface: colors.infoSubtle,
-  },
-  property: {
-    icon: 'home',
-    color: colors.exchangeAccent,
-    surface: colors.exchangeSubtle,
-  },
-  contract: {
-    icon: 'document-text',
-    color: colors.saleAccent,
-    surface: colors.saleSubtle,
-  },
-  payment: {
-    icon: 'card',
-    color: colors.success,
-    surface: colors.successSubtle,
-  },
-  system: {
-    icon: 'notifications',
-    color: colors.textSecondary,
-    surface: colors.mutedSubtle,
-  },
-  eviction_update: {
-    icon: 'megaphone',
-    color: colors.danger,
-    surface: colors.dangerSubtle,
-  },
-  eviction_comment: {
-    icon: 'chatbubbles',
-    color: colors.primaryColor,
-    surface: colors.infoSubtle,
-  },
-  eviction_rsvp: {
-    icon: 'people',
-    color: colors.success,
-    surface: colors.successSubtle,
-  },
-  eviction_outcome_reminder: {
-    icon: 'help-circle',
-    color: colors.warning,
-    surface: colors.warningSubtle,
-  },
+const TONES = {
+  primary: { surface: 'primarySubtle', ink: 'primary' },
+  info: { surface: 'infoSubtle', ink: 'info' },
+  success: { surface: 'successSubtle', ink: 'success' },
+  warning: { surface: 'warningSubtle', ink: 'warning' },
+  negative: { surface: 'negativeSubtle', ink: 'negative' },
+  neutral: { surface: 'backgroundSecondary', ink: 'textSecondary' },
+} satisfies Record<string, Tone>;
+
+/** Visual identity (glyph + tone) for each known notification type. */
+const TYPE_VISUALS: Record<string, { icon: IconComponent; tone: Tone }> = {
+  message: { icon: RiChat3Fill, tone: TONES.primary },
+  property: { icon: RiHome5Fill, tone: TONES.info },
+  contract: { icon: RiFilePaper2Line, tone: TONES.warning },
+  payment: { icon: RiBankCardLine, tone: TONES.success },
+  system: { icon: RiNotification3Fill, tone: TONES.neutral },
+  eviction_update: { icon: RiMegaphoneLine, tone: TONES.negative },
+  eviction_comment: { icon: RiChat4Fill, tone: TONES.primary },
+  eviction_rsvp: { icon: RiGroupFill, tone: TONES.success },
+  eviction_outcome_reminder: { icon: RiQuestionLine, tone: TONES.warning },
 };
 
-const DEFAULT_VISUAL: TypeVisual = {
-  icon: 'notifications',
-  color: colors.textSecondary,
-  surface: colors.mutedSubtle,
-};
+const DEFAULT_VISUAL = { icon: RiNotification3Fill, tone: TONES.neutral };
 
 const ICON_SIZE = 20;
 
@@ -103,105 +84,79 @@ export function NotificationItem({
   read,
   onPress,
   onLongPress,
+  onDelete,
   style,
 }: NotificationItemProps) {
-  const [pressed, setPressed] = useState(false);
-
-  const visual = useMemo<TypeVisual>(
-    () => TYPE_VISUALS[type] ?? DEFAULT_VISUAL,
-    [type],
-  );
+  const { t } = useTranslation();
+  const { colors } = useTheme();
+  const { icon: Icon, tone } = TYPE_VISUALS[type] ?? DEFAULT_VISUAL;
 
   return (
-    <Pressable
-      onPress={onPress}
-      onLongPress={onLongPress}
-      onPressIn={() => setPressed(true)}
-      onPressOut={() => setPressed(false)}
+    <Item
+      role="listitem"
       accessibilityRole="button"
       accessibilityLabel={title}
-      style={[styles.row, pressed && styles.rowPressed, style]}
-    >
-      <View style={[styles.iconCircle, { backgroundColor: visual.surface }]}>
-        <Ionicons name={visual.icon} size={ICON_SIZE} color={visual.color} />
-      </View>
-
-      <View style={styles.content}>
-        <BloomText
-          style={[styles.title, !read && styles.titleUnread]}
-          numberOfLines={1}
-          ellipsizeMode="tail"
-        >
-          {title}
-        </BloomText>
-        <BloomText
-          style={styles.description}
-          numberOfLines={1}
-          ellipsizeMode="tail"
-        >
-          {description}
-        </BloomText>
-      </View>
-
-      <View style={styles.meta}>
-        <BloomText style={styles.time} numberOfLines={1}>
-          {time}
-        </BloomText>
-        {!read ? <View style={styles.unreadDot} /> : null}
-      </View>
-    </Pressable>
+      onPress={onPress}
+      onLongPress={onLongPress}
+      style={style}
+      title={title}
+      subtitle={description}
+      titleStyle={read ? undefined : styles.titleUnread}
+      leading={
+        <View style={[styles.disc, { backgroundColor: colors[tone.surface] }]}>
+          <Icon width={ICON_SIZE} height={ICON_SIZE} fill={colors[tone.ink]} />
+        </View>
+      }
+      trailing={
+        <View style={styles.trailing}>
+          <View style={styles.meta}>
+            <BloomText style={[styles.time, { color: colors.textTertiary }]} numberOfLines={1}>
+              {time}
+            </BloomText>
+            {!read ? <View style={[styles.unreadDot, { backgroundColor: colors.primary }]} /> : null}
+          </View>
+          {onDelete ? (
+            <Button
+              variant="ghost"
+              size="small"
+              iconOnly
+              leadingIcon={RiDeleteBinLine}
+              accessibilityLabel={t('notification.delete.title')}
+              onPress={onDelete}
+            />
+          ) : null}
+        </View>
+      }
+    />
   );
 }
 
 const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
-    borderRadius: radius.lg,
-    backgroundColor: 'transparent',
-  },
-  rowPressed: {
-    backgroundColor: colors.mutedSubtle,
-  },
-  iconCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+  disc: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  content: {
-    flex: 1,
-    gap: spacing.xs,
-  },
-  title: {
-    fontSize: 15,
-    fontWeight: '500',
-    color: colors.text,
   },
   titleUnread: {
     fontWeight: '700',
   },
-  description: {
-    fontSize: 13,
-    color: colors.textSecondary,
+  trailing: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
   },
   meta: {
     alignItems: 'flex-end',
-    gap: spacing.sm,
-    paddingTop: spacing.xs,
+    gap: spacing.xs,
   },
   time: {
     fontSize: 12,
-    color: colors.textTertiary,
   },
   unreadDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: colors.primaryColor,
   },
 });

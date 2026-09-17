@@ -21,13 +21,18 @@
  */
 
 import React, { useCallback, useMemo } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { useTheme } from '@oxy.so/bloom/theme';
+import { Admonition } from '@oxy.so/bloom/admonition';
 import { Button } from '@oxy.so/bloom/button';
+import { Card } from '@oxy.so/bloom/card';
+import { RiCheckLine } from '@oxy.so/bloom/icons';
+import { Loading } from '@oxy.so/bloom/loading';
+import { RadioGroup } from '@oxy.so/bloom/radio';
+import { SettingsListGroup, SettingsListItem } from '@oxy.so/bloom/settings-list';
 import { Switch } from '@oxy.so/bloom/switch';
+import { useTheme } from '@oxy.so/bloom/theme';
 import { H3, Text as BloomText } from '@oxy.so/bloom/typography';
 import {
   HOUSING_ALERT_RULE_SPECS,
@@ -39,9 +44,9 @@ import {
 } from '@homiio/shared-types';
 import { Header } from '@/components/Header';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { contentClamp, spacing } from '@/constants/styles';
 import { useSavedSearches } from '@/hooks/useSavedSearches';
 
-const ICON_SIZE = 18;
 /** How long "pause" pauses for. One week — long enough to be a real break. */
 const MUTE_DURATION_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -100,48 +105,23 @@ export default function WatchAlertSettingsScreen() {
     });
   }, [watchId, muted, updateAlertSettings]);
 
-  const styles = useMemo(
-    () =>
-      StyleSheet.create({
-        content: { padding: 16, gap: 20, paddingBottom: 60 },
-        card: {
-          padding: 16,
-          borderRadius: 16,
-          borderWidth: 1,
-          borderColor: theme.colors.border,
-          backgroundColor: theme.colors.card,
-          gap: 12,
-        },
-        warning: {
-          padding: 14,
-          borderRadius: 16,
-          backgroundColor: theme.colors.backgroundSecondary,
-          flexDirection: 'row',
-          gap: 10,
-          alignItems: 'flex-start',
-        },
-        ruleRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-        ruleText: { flex: 1, gap: 2 },
-        cadenceRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-        loading: { paddingVertical: 40, alignItems: 'center' },
-      }),
-    [theme],
+  const cadenceOptions = useMemo(
+    () => WATCH_CADENCES.map((cadence) => ({ value: cadence, label: t(`alerts.cadence.${cadence}`) })),
+    [t],
   );
 
   if (isLoading && searches.length === 0) {
     return (
-      <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+      <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
         <Header options={{ title: t('alerts.settings.title') }} />
-        <View style={styles.loading}>
-          <ActivityIndicator color={theme.colors.primary} />
-        </View>
+        <Loading style={styles.loading} />
       </View>
     );
   }
 
   if (!watch) {
     return (
-      <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+      <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
         <Header options={{ title: t('alerts.settings.title') }} />
         <EmptyState
           icon="search-outline"
@@ -156,93 +136,93 @@ export default function WatchAlertSettingsScreen() {
     watch.alertStatus?.status === 'inactive' ? watch.alertStatus.reason : undefined;
 
   return (
-    <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+    <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
       <Header options={{ title: watch.name }} />
       <ScrollView contentContainerStyle={styles.content}>
         {/* Shown BEFORE the switches, so a watch that cannot fire says so while
             somebody is deciding rather than after they have finished. */}
         {inactiveReason && inactiveReason !== 'cadence_off' ? (
-          <View style={styles.warning}>
-            <Ionicons name="warning-outline" size={ICON_SIZE} color={theme.colors.warning} />
-            <BloomText style={{ flex: 1 }}>
-              {t(`alerts.settings.inactive.${inactiveReason}`)}
-            </BloomText>
-          </View>
+          <Admonition type="warning">{t(`alerts.settings.inactive.${inactiveReason}`)}</Admonition>
         ) : null}
 
-        <View style={styles.card}>
+        <Card variant="outlined" radius="radius-16" style={styles.card}>
           <H3>{t('alerts.settings.cadence')}</H3>
           <BloomText style={{ color: theme.colors.textSecondary }}>
             {t('alerts.settings.cadenceHint')}
           </BloomText>
-          <View style={styles.cadenceRow}>
-            {WATCH_CADENCES.map((cadence) => (
-              <Button
-                key={cadence}
-                variant={watch.cadence === cadence ? 'primary' : 'secondary'}
-                onPress={() => setCadence(cadence)}
-              >
-                {t(`alerts.cadence.${cadence}`)}
-              </Button>
-            ))}
-          </View>
-        </View>
+          <RadioGroup<WatchCadence>
+            label={t('alerts.settings.cadence')}
+            value={watch.cadence}
+            onValueChange={setCadence}
+            options={cadenceOptions}
+          />
+        </Card>
 
-        <View style={styles.card}>
-          <H3>{t('alerts.settings.rules')}</H3>
+        <SettingsListGroup title={t('alerts.settings.rules')}>
           {HOUSING_ALERT_RULE_TYPES.map((type) => {
             const usable = available.has(type);
             const rule = rulesByType.get(type);
+            const name = t(`alerts.rules.${type}.name`);
             return (
-              <View key={type} style={styles.ruleRow}>
-                <View style={styles.ruleText}>
-                  <BloomText>{t(`alerts.rules.${type}.name`)}</BloomText>
-                  <BloomText style={{ color: theme.colors.textSecondary }}>
-                    {usable
-                      ? t(`alerts.rules.${type}.description`)
-                      : // The rule's own recorded reason, not a generic "coming
-                        // soon" — the point of storing the reason is that it is
-                        // shown rather than paraphrased.
-                        HOUSING_ALERT_RULE_SPECS[type].availability.status === 'unavailable'
-                        ? t('alerts.settings.ruleUnavailableShort')
-                        : ''}
-                  </BloomText>
-                </View>
-                <Switch
-                  value={Boolean(rule?.enabled)}
-                  disabled={!usable}
-                  onValueChange={(next: boolean) => toggleRule(type, next)}
-                />
-              </View>
+              <SettingsListItem
+                key={type}
+                title={name}
+                description={
+                  usable
+                    ? t(`alerts.rules.${type}.description`)
+                    : // The rule's own recorded reason, not a generic "coming
+                      // soon" — the point of storing the reason is that it is
+                      // shown rather than paraphrased.
+                      HOUSING_ALERT_RULE_SPECS[type].availability.status === 'unavailable'
+                      ? t('alerts.settings.ruleUnavailableShort')
+                      : undefined
+                }
+                rightElement={
+                  <Switch
+                    accessibilityLabel={name}
+                    value={Boolean(rule?.enabled)}
+                    disabled={!usable}
+                    onValueChange={(next: boolean) => toggleRule(type, next)}
+                  />
+                }
+              />
             );
           })}
-        </View>
+        </SettingsListGroup>
 
-        <View style={styles.card}>
-          <H3>{t('alerts.settings.pause')}</H3>
-          <BloomText style={{ color: theme.colors.textSecondary }}>
-            {t('alerts.settings.pauseHint')}
-          </BloomText>
-          <Button variant={muted ? 'primary' : 'secondary'} onPress={toggleMute}>
-            {muted ? t('alerts.settings.resume') : t('alerts.settings.pauseAction')}
-          </Button>
-        </View>
+        <SettingsListGroup title={t('alerts.settings.pause')} footer={t('alerts.settings.pauseHint')}>
+          <SettingsListItem
+            title={t('alerts.settings.pauseAction')}
+            rightElement={
+              <Switch
+                accessibilityLabel={t('alerts.settings.pauseAction')}
+                value={muted}
+                onValueChange={toggleMute}
+              />
+            }
+          />
+        </SettingsListGroup>
 
-        <View style={styles.card}>
-          <H3>{t('alerts.settings.primaryArea')}</H3>
-          <BloomText style={{ color: theme.colors.textSecondary }}>
-            {t('alerts.settings.primaryAreaHint')}
-          </BloomText>
-          <Button
-            variant={watch.isPrimaryArea ? 'primary' : 'secondary'}
+        <SettingsListGroup
+          title={t('alerts.settings.primaryArea')}
+          footer={t('alerts.settings.primaryAreaHint')}
+        >
+          <SettingsListItem
+            title={
+              watch.isPrimaryArea
+                ? t('alerts.settings.primaryAreaCurrent')
+                : t('alerts.settings.primaryAreaAction')
+            }
             disabled={watch.isPrimaryArea}
-            onPress={() => watchId && void setPrimaryArea(watchId)}
-          >
-            {watch.isPrimaryArea
-              ? t('alerts.settings.primaryAreaCurrent')
-              : t('alerts.settings.primaryAreaAction')}
-          </Button>
-        </View>
+            showChevron={!watch.isPrimaryArea}
+            rightElement={
+              watch.isPrimaryArea ? (
+                <RiCheckLine width={20} height={20} fill={theme.colors.primary} />
+              ) : undefined
+            }
+            onPress={watch.isPrimaryArea ? undefined : () => watchId && void setPrimaryArea(watchId)}
+          />
+        </SettingsListGroup>
 
         <Button
           variant="secondary"
@@ -254,3 +234,17 @@ export default function WatchAlertSettingsScreen() {
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  root: { flex: 1 },
+  content: {
+    width: '100%',
+    maxWidth: contentClamp.copy,
+    alignSelf: 'center',
+    padding: spacing.lg,
+    gap: spacing.lg,
+    paddingBottom: spacing['6xl'],
+  },
+  card: { padding: spacing.lg, gap: spacing.md },
+  loading: { paddingVertical: spacing['3xl'] },
+});

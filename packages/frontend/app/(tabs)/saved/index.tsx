@@ -20,14 +20,15 @@ import {
   ScrollView,
   StyleSheet,
   View,
-  Pressable,
   type ListRenderItem,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
+import { Button } from '@oxy.so/bloom/button';
 import { Chip } from '@oxy.so/bloom/chip';
+import { RiNotification3Line } from '@oxy.so/bloom/icons';
 import {
   SegmentedControl,
   SegmentedControlItem,
@@ -39,7 +40,6 @@ import { useOxy, openAccountDialog } from '@oxy.so/services';
 import type { Property, SavedProperty } from '@homiio/shared-types';
 
 import { Header } from '@/components/Header';
-import { IconButton } from '@/components/ui/IconButton';
 import { Card } from '@oxy.so/bloom/card';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
@@ -58,10 +58,10 @@ import { radius, spacing, tracker } from '@/constants/styles';
 type Tab = 'folders' | 'recent';
 type RecencyFilter = 'all' | 'recent' | 'noted';
 
-const RECENCY_CHIPS: { value: RecencyFilter; label: string }[] = [
-  { value: 'all', label: 'All' },
-  { value: 'recent', label: 'This week' },
-  { value: 'noted', label: 'With notes' },
+const RECENCY_CHIPS: { value: RecencyFilter; labelKey: string }[] = [
+  { value: 'all', labelKey: 'common.all' },
+  { value: 'recent', labelKey: 'saved.filters.thisWeek' },
+  { value: 'noted', labelKey: 'saved.filters.withNotes' },
 ];
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
@@ -215,9 +215,11 @@ export default function SavedPropertiesScreen() {
         // header rather than on a tab because the history spans every saved
         // area, and the per-area view is reached from the area itself.
         rightComponents: [
-          <IconButton
+          <Button
             key="alerts"
-            icon="notifications-outline"
+            variant="ghost"
+            iconOnly
+            leadingIcon={RiNotification3Line}
             accessibilityLabel={t('alerts.history.title')}
             onPress={() => router.push('/saved/alerts')}
           />,
@@ -293,7 +295,7 @@ export default function SavedPropertiesScreen() {
                   selected={isActive}
                   onPress={() => setRecency(chip.value)}
                 >
-                  {chip.label}
+                  {t(chip.labelKey)}
                 </Chip>
               );
             })}
@@ -404,18 +406,20 @@ interface FolderTileProps {
 }
 
 const FolderTile: React.FC<FolderTileProps> = ({ folder }) => {
+  const { t } = useTranslation();
   const handlePress = useCallback(() => {
     router.push(`/saved/${folder.id}`);
   }, [folder.id]);
 
   return (
-    <Pressable
-      onPress={handlePress}
-      style={styles.folderTile}
-      accessibilityRole="button"
-      accessibilityLabel={`Open folder ${folder.name}`}
-    >
-      <Card variant="outlined" radius="radius-16">
+    <View style={styles.folderTile}>
+      <Card
+        variant="outlined"
+        radius="radius-16"
+        onPress={handlePress}
+        accessibilityRole="button"
+        accessibilityLabel={t('saved.openFolder', { name: folder.name })}
+      >
         <View style={styles.folderCover}>
           <View
             style={[
@@ -433,11 +437,11 @@ const FolderTile: React.FC<FolderTileProps> = ({ folder }) => {
             {folder.name}
           </H3>
           <BloomText style={styles.folderMeta}>
-            {`${folder.propertyCount} ${folder.propertyCount === 1 ? 'place' : 'places'}`}
+            {t('saved.folder.propertyCount', { count: folder.propertyCount })}
           </BloomText>
         </View>
       </Card>
-    </Pressable>
+    </View>
   );
 };
 
