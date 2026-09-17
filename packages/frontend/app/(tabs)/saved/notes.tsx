@@ -30,10 +30,12 @@ import { Textarea } from '@oxy.so/bloom/textarea';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { toast } from '@oxy.so/bloom/toast';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
+import { formatMoney, priceFrequencyFromPriceUnit } from '@homiio/shared-types';
 
 import { Header } from '@/components/Header';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { spacing } from '@/constants/styles';
+import { useRentalMode } from '@/context/RentalModeContext';
 import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
 import { useSavedNotesMutation } from '@/hooks/useSavedNotes';
 import { logger } from '@/utils/logger';
@@ -46,7 +48,13 @@ import {
   upsertNote,
   type PropertyNote,
 } from '@/utils/notes';
-import { getPropertyImageSource, getPropertyTitle } from '@/utils/propertyUtils';
+import { useFormatting } from '@/utils/format';
+import {
+  getPropertyImageSource,
+  getPropertyLocationLabel,
+  getPropertyTitle,
+  resolvePrimaryOffering,
+} from '@/utils/propertyUtils';
 
 type NotesFilter = 'all' | 'active' | 'pinned' | 'archived';
 
@@ -60,6 +68,8 @@ interface FlatNote {
 
 export default function NotesScreen() {
   const { t } = useTranslation();
+  const formatting = useFormatting();
+  const { browseMode } = useRentalMode();
   const { savedProperties, loadSavedProperties } = useSavedPropertiesContext();
   const { mutateAsync: updateNotesMutate } = useSavedNotesMutation();
 
@@ -67,25 +77,36 @@ export default function NotesScreen() {
     const out: FlatNote[] = [];
     savedProperties.forEach((p) => {
       const propertyId = p.id as string;
-      const title = getPropertyTitle(p) || p.address?.cityName || 'Property';
+      const title = getPropertyTitle(p) || p.address?.cityName || t('reservations.card.propertyFallback');
       const image = getPropertyImageSource(p);
-      // Headline price for the note card: monthly when present, else the
-      // nightly rate for vacation-only listings.
-      const price = p.longTermRent?.monthlyAmount ?? p.shortTermRent?.nightlyRate;
-      const currency = p.longTermRent?.currency ?? p.shortTermRent?.currency;
-      const location = [p.address?.cityName, p.address?.regionName].filter(Boolean).join(', ');
+      // The price the saved card shows: the browse mode's block, formatted in
+      // the listing's own currency, with that block's unit.
+      const offering = resolvePrimaryOffering(p, browseMode, t('listing.exchange.free'));
+      const price =
+        offering.kind === 'exchange'
+          ? offering.label
+          : offering.amount > 0 && offering.currency
+            ? [
+                formatMoney(offering.amount, offering.currency, formatting.locale),
+                offering.priceUnit
+                  ? formatting.priceUnitLabels[priceFrequencyFromPriceUnit(offering.priceUnit)].short
+                  : '',
+              ]
+                .filter(Boolean)
+                .join(' / ')
+            : '';
       const meta = [
-        price ? `${price}${currency ? ` ${currency}` : ''}` : '',
-        p.bedrooms ? `${p.bedrooms} bd` : '',
-        p.bathrooms ? `${p.bathrooms} ba` : '',
-        location,
+        price,
+        p.bedrooms ? t('listing.card.beds', { count: p.bedrooms }) : '',
+        p.bathrooms ? t('listing.card.baths', { count: p.bathrooms }) : '',
+        getPropertyLocationLabel(p),
       ]
         .filter(Boolean)
         .join(' • ');
       parseNotesString(p.notes).forEach((note) => out.push({ propertyId, note, title, image, meta }));
     });
     return out;
-  }, [savedProperties]);
+  }, [savedProperties, browseMode, formatting, t]);
 
   const [filter, setFilter] = useState<NotesFilter>('all');
   const [editing, setEditing] = useState<{ propertyId: string; note: PropertyNote } | null>(null);

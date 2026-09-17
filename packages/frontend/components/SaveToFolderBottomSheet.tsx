@@ -6,7 +6,8 @@
  * `TextFieldInput` for the new folder's name, `Chip`s for the emoji choice,
  * `Button`s for every action and `toast` for outcomes. The colour swatches are
  * the one hand-drawn control — Bloom has no colour picker — and are exported
- * as `FolderColorSwatches` so the folder edit screen draws the same one.
+ * as `FolderColorSwatches` (with `FolderEmojiChips`) so the Saved screen's
+ * "New folder" dialog and the folder edit screen draw the same ones.
  */
 import React, { useCallback, useEffect, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
@@ -57,7 +58,33 @@ export const FOLDER_COLORS = [
   '#EC4899', // Pink
 ];
 
-const FOLDER_EMOJIS = ['📁', '🏠', '❤️', '⭐', '🔖', '📍', '🏢', '🎓'];
+export const FOLDER_EMOJIS = ['📁', '🏠', '❤️', '⭐', '🔖', '📍', '🏢', '🎓'];
+
+interface FolderEmojiChipsProps {
+  value: string;
+  onChange: (emoji: string) => void;
+}
+
+/** The folder emoji choice as a row of Bloom `Chip`s. */
+export function FolderEmojiChips({ value, onChange }: FolderEmojiChipsProps) {
+  return (
+    <View style={styles.emojis}>
+      {FOLDER_EMOJIS.map((emoji) => (
+        <Chip
+          key={emoji}
+          size="large"
+          variant={value === emoji ? 'subtle' : 'outlined'}
+          color={value === emoji ? 'primary' : 'default'}
+          selected={value === emoji}
+          onPress={() => onChange(emoji)}
+          accessibilityLabel={emoji}
+        >
+          {emoji}
+        </Chip>
+      ))}
+    </View>
+  );
+}
 
 interface FolderColorSwatchesProps {
   value: string;
@@ -240,21 +267,7 @@ export function SaveToFolderBottomSheet({
             </Field>
 
             <Field label={t('saved.folder.chooseEmoji')}>
-              <View style={styles.emojis}>
-                {FOLDER_EMOJIS.map((emoji) => (
-                  <Chip
-                    key={emoji}
-                    size="large"
-                    variant={selectedEmoji === emoji ? 'subtle' : 'outlined'}
-                    color={selectedEmoji === emoji ? 'primary' : 'default'}
-                    selected={selectedEmoji === emoji}
-                    onPress={() => setSelectedEmoji(emoji)}
-                    accessibilityLabel={emoji}
-                  >
-                    {emoji}
-                  </Chip>
-                ))}
-              </View>
+              <FolderEmojiChips value={selectedEmoji} onChange={setSelectedEmoji} />
             </Field>
 
             <View style={styles.formActions}>

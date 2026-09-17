@@ -505,9 +505,7 @@
     "searchQuery": "Search Query",
     "searchName": "Search Name",
     "searchNamePlaceholder": "Enter a name for this search",
-    "enableNotifications": "Enable notifications",
     "notificationsDescription": "Get notified when new properties match this search",
-    "disableNotifications": "Disable notifications",
     "withFilters": "With filters",
     "error": {
       "title": "Could not load properties"
@@ -668,17 +666,7 @@
         "createNew": "Create New Search",
         "viewAllCount": "View All ({{count}} more)",
         "notifications": "Notifications",
-        "editTitle": "Edit Search",
-        "nameLabel": "Search Name",
-        "namePlaceholder": "Enter a name for this search",
-        "queryLabel": "Search Query",
-        "queryPlaceholder": "Enter your search query",
-        "notificationsToggle": "Enable notifications",
-        "notificationsHelper": "Get notified when new properties match this search",
-        "nameRequired": "Search name is required",
-        "queryRequired": "Search query is required",
         "nameAndQueryRequired": "Search name and query are required",
-        "invalidSearch": "Invalid saved search",
         "loading": "Loading saved searches…",
         "loadFailed": "Failed to load saved searches",
         "loadError": "Could not load your saved searches",
@@ -688,10 +676,7 @@
         "updateFailed": "Failed to update search",
         "deleteSuccess": "Search deleted",
         "deleteSuccessNamed": "Search \"{{name}}\" deleted",
-        "deleteFailed": "Failed to delete search",
-        "notificationsEnabled": "Notifications enabled",
-        "notificationsDisabled": "Notifications disabled",
-        "notificationsFailed": "Failed to update notifications"
+        "deleteFailed": "Failed to delete search"
       }
     },
     "editSearch": "Edit Search",
@@ -2207,16 +2192,8 @@
     "loadFailed": "We couldn't load this folder",
     "noPropertiesDescription": "Save properties to see them here.",
     "adjustFilters": "Try a different filter or clear your search.",
-    "noProperties": "No saved properties",
-    "noResults": "No matches",
     "createFolder": "Create folder",
     "noFoldersDescription": "Create folders to organise the places you like.",
-    "noFolders": "No folders yet",
-    "tabs": {
-      "recent": "Recent",
-      "folders": "Folders",
-      "label": "Saved view"
-    },
     "searchPlaceholder": "Search saved properties",
     "header": "Saved",
     "notes": {
@@ -2255,7 +2232,39 @@
       "thisWeek": "Minggu ini",
       "withNotes": "Dengan catatan"
     },
-    "openFolder": "Buka folder {{name}}"
+    "openFolder": "Buka folder {{name}}",
+    "sections": {
+      "searches": "Pencarian tersimpan",
+      "searchesDescription": "Buka pencarian untuk menjalankannya lagi, atau ubah cara pemberitahuannya.",
+      "trips": "Menginap dan tukar rumah mendatang",
+      "folders": "Folder",
+      "homes": "Hunian tersimpan"
+    },
+    "groups": {
+      "long_term": "Disewakan",
+      "short_term": "Sewa liburan",
+      "sale": "Dijual",
+      "exchange": "Tukar rumah"
+    },
+    "search": {
+      "alertsCadence": "Peringatan: {{cadence}}",
+      "alertsOff": "Peringatan nonaktif",
+      "alertsPaused": "Peringatan dijeda",
+      "alertsInactive": "Peringatan belum bisa berjalan",
+      "needsPlaceTitle": "Tempat mana yang Anda maksud?",
+      "needsPlaceDescription": "“{{name}}” disimpan sebelum tempat disimpan secara tepat, jadi tidak bisa dibuka ulang apa adanya. Pilih tempatnya lagi lalu simpan pencariannya.",
+      "choosePlace": "Pilih tempat",
+      "unshareableTitle": "Pencarian ini tidak bisa dibuka di sini",
+      "unshareableDescription": "“{{name}}” mencakup area gambar yang belum bisa dibuka ulang dari tautan."
+    },
+    "trips": {
+      "allStays": "Semua menginap",
+      "allSwaps": "Semua permintaan tukar rumah"
+    },
+    "folders": {
+      "deleteTitle": "Hapus folder",
+      "deleteMessage": "Hapus “{{name}}”? Hunian di dalamnya tetap tersimpan."
+    }
   },
   "imageUpload": {
     "permissionTitle": "Permission Required",

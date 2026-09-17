@@ -505,9 +505,7 @@
     "searchQuery": "Search Query",
     "searchName": "Search Name",
     "searchNamePlaceholder": "Enter a name for this search",
-    "enableNotifications": "Enable notifications",
     "notificationsDescription": "Get notified when new properties match this search",
-    "disableNotifications": "Disable notifications",
     "withFilters": "With filters",
     "error": {
       "title": "Could not load properties"
@@ -668,17 +666,7 @@
         "createNew": "Create New Search",
         "viewAllCount": "View All ({{count}} more)",
         "notifications": "Notifications",
-        "editTitle": "Edit Search",
-        "nameLabel": "Search Name",
-        "namePlaceholder": "Enter a name for this search",
-        "queryLabel": "Search Query",
-        "queryPlaceholder": "Enter your search query",
-        "notificationsToggle": "Enable notifications",
-        "notificationsHelper": "Get notified when new properties match this search",
-        "nameRequired": "Search name is required",
-        "queryRequired": "Search query is required",
         "nameAndQueryRequired": "Search name and query are required",
-        "invalidSearch": "Invalid saved search",
         "loading": "Loading saved searches…",
         "loadFailed": "Failed to load saved searches",
         "loadError": "Could not load your saved searches",
@@ -688,10 +676,7 @@
         "updateFailed": "Failed to update search",
         "deleteSuccess": "Search deleted",
         "deleteSuccessNamed": "Search \"{{name}}\" deleted",
-        "deleteFailed": "Failed to delete search",
-        "notificationsEnabled": "Notifications enabled",
-        "notificationsDisabled": "Notifications disabled",
-        "notificationsFailed": "Failed to update notifications"
+        "deleteFailed": "Failed to delete search"
       }
     },
     "editSearch": "Edit Search",
@@ -2207,16 +2192,8 @@
     "loadFailed": "We couldn't load this folder",
     "noPropertiesDescription": "Save properties to see them here.",
     "adjustFilters": "Try a different filter or clear your search.",
-    "noProperties": "No saved properties",
-    "noResults": "No matches",
     "createFolder": "Create folder",
     "noFoldersDescription": "Create folders to organise the places you like.",
-    "noFolders": "No folders yet",
-    "tabs": {
-      "recent": "Recent",
-      "folders": "Folders",
-      "label": "Saved view"
-    },
     "searchPlaceholder": "Search saved properties",
     "header": "Saved",
     "notes": {
@@ -2255,7 +2232,39 @@
       "thisWeek": "Esta semana",
       "withNotes": "Com anotações"
     },
-    "openFolder": "Abrir pasta {{name}}"
+    "openFolder": "Abrir pasta {{name}}",
+    "sections": {
+      "searches": "Buscas salvas",
+      "searchesDescription": "Abra uma busca para refazê-la ou altere como ela avisa você.",
+      "trips": "Próximas estadias e trocas",
+      "folders": "Pastas",
+      "homes": "Imóveis salvos"
+    },
+    "groups": {
+      "long_term": "Para alugar",
+      "short_term": "Aluguel por temporada",
+      "sale": "À venda",
+      "exchange": "Trocas"
+    },
+    "search": {
+      "alertsCadence": "Alertas: {{cadence}}",
+      "alertsOff": "Alertas desativados",
+      "alertsPaused": "Alertas pausados",
+      "alertsInactive": "Os alertas ainda não podem funcionar",
+      "needsPlaceTitle": "Qual lugar você quis dizer?",
+      "needsPlaceDescription": "“{{name}}” foi salva antes de guardarmos os lugares com exatidão, por isso não pode ser reaberta como está. Escolha o lugar de novo e salve a busca.",
+      "choosePlace": "Escolher um lugar",
+      "unshareableTitle": "Esta busca não pode ser aberta aqui",
+      "unshareableDescription": "“{{name}}” abrange uma área desenhada que ainda não pode ser reaberta por um link."
+    },
+    "trips": {
+      "allStays": "Todas as estadias",
+      "allSwaps": "Todas as solicitações de troca"
+    },
+    "folders": {
+      "deleteTitle": "Excluir pasta",
+      "deleteMessage": "Excluir “{{name}}”? Os imóveis dentro dela continuam salvos."
+    }
   },
   "imageUpload": {
     "permissionTitle": "Permission Required",

@@ -475,7 +475,6 @@
     "searchQuery": "Consulta de Búsqueda",
     "searchName": "Nombre de Búsqueda",
     "searchNamePlaceholder": "Ingresa un nombre para esta búsqueda",
-    "enableNotifications": "Habilitar Notificaciones",
     "notificationsDescription": "Recibe notificaciones cuando nuevas propiedades coincidan con esta búsqueda",
     "withFilters": "Con filtros",
     "error": {
@@ -634,17 +633,7 @@
         "createNew": "Crear nueva búsqueda",
         "viewAllCount": "Ver todo ({{count}} más)",
         "notifications": "Notificaciones",
-        "editTitle": "Editar búsqueda",
-        "nameLabel": "Nombre de la búsqueda",
-        "namePlaceholder": "Introduce un nombre para esta búsqueda",
-        "queryLabel": "Consulta de búsqueda",
-        "queryPlaceholder": "Introduce tu consulta de búsqueda",
-        "notificationsToggle": "Activar notificaciones",
-        "notificationsHelper": "Recibe avisos cuando nuevas propiedades coincidan con esta búsqueda",
-        "nameRequired": "El nombre de la búsqueda es obligatorio",
-        "queryRequired": "La consulta de búsqueda es obligatoria",
         "nameAndQueryRequired": "El nombre y la consulta de búsqueda son obligatorios",
-        "invalidSearch": "Búsqueda guardada no válida",
         "loading": "Cargando búsquedas guardadas…",
         "loadFailed": "No se pudieron cargar las búsquedas guardadas",
         "loadError": "No se pudieron cargar tus búsquedas guardadas",
@@ -654,10 +643,7 @@
         "updateFailed": "No se pudo actualizar la búsqueda",
         "deleteSuccess": "Búsqueda eliminada",
         "deleteSuccessNamed": "Búsqueda «{{name}}» eliminada",
-        "deleteFailed": "No se pudo eliminar la búsqueda",
-        "notificationsEnabled": "Notificaciones activadas",
-        "notificationsDisabled": "Notificaciones desactivadas",
-        "notificationsFailed": "No se pudieron actualizar las notificaciones"
+        "deleteFailed": "No se pudo eliminar la búsqueda"
       }
     },
     "editSearch": "Editar búsqueda",
@@ -668,7 +654,6 @@
       "suggestion3": "Discover eco-friendly properties...",
       "suggestion4": "Search for furnished studios near you..."
     },
-    "disableNotifications": "Disable notifications",
     "duplicateName": "A search with this name already exists",
     "duplicateExact": "You already saved this exact search",
     "tryDifferentName": "Please choose a different name",
@@ -2513,15 +2498,6 @@
   "saved": {
     "header": "Guardados",
     "title": "Propiedades Guardadas",
-    "tabs": {
-      "all": "Todo",
-      "recent": "Recientes",
-      "noted": "Con notas",
-      "quickSaves": "Guardados rápidos",
-      "folders": "Carpetas",
-      "searches": "Saved Searches",
-      "label": "Saved view"
-    },
     "view": {
       "list": "Lista",
       "grid": "Cuadrícula"
@@ -2619,16 +2595,45 @@
     "exploreCta": "Explore properties",
     "loadFailed": "We couldn't load this folder",
     "noPropertiesDescription": "Save properties to see them here.",
-    "noProperties": "No saved properties",
-    "noResults": "No matches",
     "createFolder": "Create folder",
     "noFoldersDescription": "Create folders to organise the places you like.",
-    "noFolders": "No folders yet",
     "filters": {
       "thisWeek": "Esta semana",
       "withNotes": "Con notas"
     },
-    "openFolder": "Abrir carpeta {{name}}"
+    "openFolder": "Abrir carpeta {{name}}",
+    "sections": {
+      "searches": "Búsquedas guardadas",
+      "searchesDescription": "Abre una búsqueda para repetirla o cambia cómo te avisa.",
+      "trips": "Próximas estancias e intercambios",
+      "folders": "Carpetas",
+      "homes": "Viviendas guardadas"
+    },
+    "groups": {
+      "long_term": "En alquiler",
+      "short_term": "Alquiler vacacional",
+      "sale": "En venta",
+      "exchange": "Intercambios"
+    },
+    "search": {
+      "alertsCadence": "Alertas: {{cadence}}",
+      "alertsOff": "Alertas desactivadas",
+      "alertsPaused": "Alertas en pausa",
+      "alertsInactive": "Las alertas aún no pueden funcionar",
+      "needsPlaceTitle": "¿Qué lugar querías decir?",
+      "needsPlaceDescription": "«{{name}}» se guardó antes de que guardáramos los lugares con exactitud, así que no se puede abrir tal cual. Vuelve a elegir el lugar y guarda la búsqueda.",
+      "choosePlace": "Elegir un lugar",
+      "unshareableTitle": "Esta búsqueda no se puede abrir aquí",
+      "unshareableDescription": "«{{name}}» cubre una zona dibujada que todavía no se puede abrir desde un enlace."
+    },
+    "trips": {
+      "allStays": "Todas las estancias",
+      "allSwaps": "Todas las solicitudes de intercambio"
+    },
+    "folders": {
+      "deleteTitle": "Eliminar carpeta",
+      "deleteMessage": "¿Eliminar «{{name}}»? Las viviendas que contiene seguirán guardadas."
+    }
   },
   "imageUpload": {
     "permissionTitle": "Permiso requerido",

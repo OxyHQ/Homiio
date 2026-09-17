@@ -505,9 +505,7 @@
     "searchQuery": "Search Query",
     "searchName": "Search Name",
     "searchNamePlaceholder": "Enter a name for this search",
-    "enableNotifications": "Enable notifications",
     "notificationsDescription": "Get notified when new properties match this search",
-    "disableNotifications": "Disable notifications",
     "withFilters": "With filters",
     "error": {
       "title": "Could not load properties"
@@ -668,17 +666,7 @@
         "createNew": "Create New Search",
         "viewAllCount": "View All ({{count}} more)",
         "notifications": "Notifications",
-        "editTitle": "Edit Search",
-        "nameLabel": "Search Name",
-        "namePlaceholder": "Enter a name for this search",
-        "queryLabel": "Search Query",
-        "queryPlaceholder": "Enter your search query",
-        "notificationsToggle": "Enable notifications",
-        "notificationsHelper": "Get notified when new properties match this search",
-        "nameRequired": "Search name is required",
-        "queryRequired": "Search query is required",
         "nameAndQueryRequired": "Search name and query are required",
-        "invalidSearch": "Invalid saved search",
         "loading": "Loading saved searches…",
         "loadFailed": "Failed to load saved searches",
         "loadError": "Could not load your saved searches",
@@ -688,10 +676,7 @@
         "updateFailed": "Failed to update search",
         "deleteSuccess": "Search deleted",
         "deleteSuccessNamed": "Search \"{{name}}\" deleted",
-        "deleteFailed": "Failed to delete search",
-        "notificationsEnabled": "Notifications enabled",
-        "notificationsDisabled": "Notifications disabled",
-        "notificationsFailed": "Failed to update notifications"
+        "deleteFailed": "Failed to delete search"
       }
     },
     "editSearch": "Edit Search",
@@ -2207,16 +2192,8 @@
     "loadFailed": "We couldn't load this folder",
     "noPropertiesDescription": "Save properties to see them here.",
     "adjustFilters": "Try a different filter or clear your search.",
-    "noProperties": "No saved properties",
-    "noResults": "No matches",
     "createFolder": "Create folder",
     "noFoldersDescription": "Create folders to organise the places you like.",
-    "noFolders": "No folders yet",
-    "tabs": {
-      "recent": "Recent",
-      "folders": "Folders",
-      "label": "Saved view"
-    },
     "searchPlaceholder": "Search saved properties",
     "header": "Saved",
     "notes": {
@@ -2255,7 +2232,39 @@
       "thisWeek": "This week",
       "withNotes": "With notes"
     },
-    "openFolder": "Open folder {{name}}"
+    "openFolder": "Open folder {{name}}",
+    "sections": {
+      "searches": "Saved searches",
+      "searchesDescription": "Open a search to run it again, or edit how it alerts you.",
+      "trips": "Upcoming stays and swaps",
+      "folders": "Folders",
+      "homes": "Saved homes"
+    },
+    "groups": {
+      "long_term": "For rent",
+      "short_term": "Vacation rentals",
+      "sale": "For sale",
+      "exchange": "Swaps"
+    },
+    "search": {
+      "alertsCadence": "Alerts: {{cadence}}",
+      "alertsOff": "Alerts off",
+      "alertsPaused": "Alerts paused",
+      "alertsInactive": "Alerts can't run yet",
+      "needsPlaceTitle": "Which place did you mean?",
+      "needsPlaceDescription": "“{{name}}” was saved before places were stored exactly, so it can't be reopened as it is. Choose the place again and save the search.",
+      "choosePlace": "Choose a place",
+      "unshareableTitle": "This search can't be opened here",
+      "unshareableDescription": "“{{name}}” covers a drawn area that can't be reopened from a link yet."
+    },
+    "trips": {
+      "allStays": "All stays",
+      "allSwaps": "All swap requests"
+    },
+    "folders": {
+      "deleteTitle": "Delete folder",
+      "deleteMessage": "Delete “{{name}}”? The homes in it stay saved."
+    }
   },
   "imageUpload": {
     "permissionTitle": "Permission Required",

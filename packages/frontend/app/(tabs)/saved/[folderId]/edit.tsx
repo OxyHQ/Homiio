@@ -7,6 +7,8 @@ import { useOxy } from '@oxy.so/services';
 
 import { Button } from '@oxy.so/bloom/button';
 import { Field } from '@oxy.so/bloom/field';
+import { RiDeleteBinLine, RiFolderOpenLine } from '@oxy.so/bloom/icons';
+import { confirm } from '@oxy.so/bloom/surfaces';
 import { TextFieldInput } from '@oxy.so/bloom/text-field';
 import { toast } from '@oxy.so/bloom/toast';
 
@@ -18,8 +20,8 @@ import { contentClamp, spacing } from '@/constants/styles';
 import savedPropertyFolderService, {
   type SavedPropertyFolder,
 } from '@/services/savedPropertyFolderService';
+import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
 import { logger } from '@/utils/logger';
-import { RiFolderOpenLine } from '@oxy.so/bloom/icons';
 
 export default function EditFolderScreen() {
   const { t } = useTranslation();
@@ -90,7 +92,33 @@ function EditFolderForm({ folder }: { folder: SavedPropertyFolder }) {
     },
   });
 
-  const locked = folder.isDefault || updateFolderMutation.isPending;
+  const { deleteFolder } = useSavedPropertiesContext();
+  const [deleting, setDeleting] = useState(false);
+
+  const locked = folder.isDefault || updateFolderMutation.isPending || deleting;
+
+  const handleDelete = async () => {
+    const ok = await confirm({
+      title: t('saved.folders.deleteTitle'),
+      description: t('saved.folders.deleteMessage', { name: folder.name }),
+      confirmLabel: t('common.delete'),
+      cancelLabel: t('common.cancel'),
+      destructive: true,
+    });
+    if (!ok) return;
+    setDeleting(true);
+    try {
+      // The context toasts the outcome. The homes filed here stay saved — the
+      // server clears their folder — so the saved list is refetched too.
+      await deleteFolder(folder.id);
+      void queryClient.invalidateQueries({ queryKey: ['savedProperties'] });
+      router.replace('/saved');
+    } catch (error: unknown) {
+      logger.error('Failed to delete folder:', error);
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const handleSave = () => {
     if (folder.isDefault) {
@@ -140,10 +168,23 @@ function EditFolderForm({ folder }: { folder: SavedPropertyFolder }) {
           onPress={handleSave}
           size="large"
           loading={updateFolderMutation.isPending}
-          disabled={updateFolderMutation.isPending}
+          disabled={updateFolderMutation.isPending || deleting}
         >
           {t('common.save')}
         </Button>
+
+        {folder.isDefault ? null : (
+          <Button
+            variant="destructive"
+            size="large"
+            leadingIcon={RiDeleteBinLine}
+            onPress={() => void handleDelete()}
+            loading={deleting}
+            disabled={locked}
+          >
+            {t('saved.folders.deleteTitle')}
+          </Button>
+        )}
       </View>
     </View>
   );
