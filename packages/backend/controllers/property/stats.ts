@@ -21,7 +21,7 @@
  * about. A statistic that cannot be computed is an error, not a zero.
  */
 
-import { and, eq, gt, isNull, or, sql } from 'drizzle-orm';
+import { and, eq, gt, gte, isNull, lte, or, sql } from 'drizzle-orm';
 
 import { getDb } from '../../db/postgres';
 import { leases, properties, savedItems } from '../../db/schema';
@@ -96,8 +96,12 @@ export async function getPropertyStats(
           and(
             eq(leases.propertyId, propertyId),
             eq(leases.status, 'active'),
-            sql`${leases.leaseTermsStartDate} <= ${now}`,
-            sql`${leases.leaseTermsEndDate} >= ${now}`,
+            // Column-typed comparisons, never a raw `sql` template: a `Date`
+            // interpolated there is sent as `Date#toString()`
+            // ("Thu Sep 17 2026 … GMT+0000"), which Postgres cannot parse as a
+            // timestamptz, so every call to this endpoint answered 500.
+            lte(leases.leaseTermsStartDate, now),
+            gte(leases.leaseTermsEndDate, now),
           ),
         ),
       getDb()
