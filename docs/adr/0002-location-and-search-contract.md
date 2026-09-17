@@ -183,7 +183,7 @@ arrives.
 Zustand (`packages/frontend/app/explore/index.tsx:165-210`). Nothing ever writes
 back: the only `setParams` in the app is a saved-folder tab
 (`app/(tabs)/saved/index.tsx:86`), and every entry point navigates with a bare
-`router.push('/explore')` (`components/SearchBar.tsx:181,189`,
+`router.push('/explore')` (`components/SearchBar.tsx:181,189`, since deleted in #460;
 `components/widgets/QuickFiltersWidget.tsx:143,148`, `app/(tabs)/index.tsx:414`).
 A search cannot be shared, bookmarked, reloaded or reached by Back.
 

@@ -56,7 +56,6 @@ Use NativeWind `gap-6 md:gap-8` on the section container, **not** per-section
 `marginTop: sectionGap` or `resolveSectionSpacing()`. Bottom padding is `pb-14`
 (home) or `pb-20` (agent).
 
-- Drop the `HomeCarouselSection` outer `marginBottom`.
 - Wide CTA rows use `flex-row items-stretch gap-6 md:gap-8`.
 
 ### Design-token CSS (no hand-copied radius)
@@ -162,9 +161,7 @@ and corners stay clipped. There is **one** primitive,
   `transitionProperty` and `willChange`, the sanctioned
   `as unknown as ViewStyle` web-CSS pattern). NEVER add a per-component variant;
   reuse this one.
-- Wired in: `PropertyImageCarousel` and `PropertyCard` (both paths),
-  `CityShowcaseSection`, `Host/AgentCtaBanner`, tips `TipCard`, `RoomList`. Card,
-  banner and tile surfaces are otherwise **flat**, with no
+- Card, banner and tile surfaces are otherwise **flat**, with no
   `transform:[{scale}]` card interaction anywhere (audit:
   `grep -rnE "transform.*scale" components app` shows only `ZoomableImage`'s
   image zoom plus genuinely animated worklets).
@@ -189,9 +186,8 @@ again.
   `chrome` to `IconButton`'s `variant` (`ghost` in headers and bars, `overlay` on
   cards). There is no separate cream or shadow save chrome. Every SaveButton site
   inherits the shared button.
-- Wired in: property `[id]`
-  floating host/share/viewings (checkmark via `badge`), and `SaveButton`
-  everywhere. Future icon-button sites reuse `IconButton`. `Header` and
+- New icon-button sites reuse `IconButton` (a checkmark rides on `badge`).
+  `Header` and
   `StickyPropertyHeader` draw their buttons through Bloom `PageHeader` instead.
 
 ## Bloom primitives (no local copies)
@@ -235,8 +231,8 @@ surface" rule above (web sentinel, native handler) rather than copying Mention's
   `IntersectionObserver` (600px `rootMargin`), inert on native.
 - **Native** (the surface's own scroll owner): `hooks/useInfiniteScroll.ts`
   returns an `{ onScroll }` end-detect handler (0.7 threshold, re-arms on scroll
-  up) to spread onto the screen's `ScrollView`. The home page instead gets end
-  detection from `components/PageScrollView.tsx`'s Reanimated worklet
+  up) to spread onto the screen's `ScrollView`. A screen scrolled by
+  `components/PageScrollView.tsx` gets end detection from its Reanimated worklet
   (`runOnJS`) firing `onEndReached` and `onEndReachedThreshold`, sharing the same
   `END_REACHED_THRESHOLD` constant.
 - A screen wires **both** (sentinel plus native handler), and each platform only
@@ -250,11 +246,8 @@ surface" rule above (web sentinel, native handler) rather than copying Mention's
   `components/ui/PropertyResultsGrid.tsx` and `PropertyResultsGridSkeleton`, a
   `.map` grid that intentionally does not own scroll, for embedding in the single
   page scroller.
-- Wired in: home `app/(tabs)/index.tsx`,
-  `components/search/SearchResultsView.tsx`, `app/properties/index.tsx`,
-  `app/properties/type/[type].tsx`, `app/properties/city/[id].tsx`.
-  `app/(tabs)/saved/index.tsx` does client-side incremental reveal, since there
-  is no backend pagination endpoint for it.
+- A list with no backend pagination endpoint (saved) reveals client-side a
+  page at a time through the same sentinel and native handler.
 - Backend list endpoints feeding an infinite grid should expose flat `hasMore`
   and `totalPages` aliases alongside the nested `pagination` object, which keeps
   `normalizeEnvelope` intact. See `/api/properties/search` and
