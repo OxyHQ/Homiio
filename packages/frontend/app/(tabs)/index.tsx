@@ -18,7 +18,7 @@
  *     pequeña". Putting the bar first means the area is on screen at first paint
  *     on the narrowest device, before any image has decoded.
  *  2. **A shorter hero.** It is a brand moment and a search entry point, not the
- *     page.
+ *     page: the mode tabs (rent, stays, buy, swap) over the search composer.
  *  3. **Finite sections**, each stating its rule and its data source, all
  *     computed under ONE scope by one request.
  *  4. **Your own things** — continue browsing, saved — which are yours wherever
@@ -59,7 +59,7 @@ import { useSearchQueryStore } from '@/store/searchQueryStore';
 
 import { PropertyCard } from '@/components/PropertyCard';
 import { HomeCarouselSection } from '@/components/HomeCarouselSection';
-import { StaySearch } from '@/components/search/StaySearch';
+import { HomeSearch } from '@/components/search/HomeSearch';
 import type { SearchQuery, SearchStep } from '@/components/search/types';
 import { HostCtaBanner } from '@/components/HostCtaBanner';
 import { AgentCtaBanner } from '@/components/agent/AgentCtaBanner';
@@ -81,7 +81,7 @@ const SKELETON_CARDS = 4;
 export default function HomePage() {
   const { t } = useTranslation();
   const router = useRouter();
-  const { offering: browseOffering } = useRentalMode();
+  const { offering: browseOffering, setBrowseMode } = useRentalMode();
   const [refreshing, setRefreshing] = useState(false);
   const isWide = useMediaQuery({ minWidth: 768 });
   const isXL = useMediaQuery({ minWidth: 1024 });
@@ -189,7 +189,7 @@ export default function HomePage() {
             hero lifts above the sections while a panel is open (RN-Web gives
             every View `z-index: 0`, so a later sibling would paint over it). */}
         <View
-          className="relative h-[260px] w-full justify-end md:h-[300px] xl:h-[min(340px,38vh)]"
+          className="relative h-[320px] w-full justify-end md:h-[356px] xl:h-[min(400px,44vh)]"
           style={{ zIndex: searchStep !== null ? 10 : 0 }}
         >
           <View className="absolute inset-0 overflow-hidden" style={{ pointerEvents: 'none' }}>
@@ -251,10 +251,14 @@ export default function HomePage() {
                 isWide ? 'z-20 mt-1 w-full max-w-[880px] self-center' : 'z-20 mt-1 w-full max-w-[520px] self-center'
               }
             >
-              <StaySearch
+              <HomeSearch
                 query={heroSearchSeed}
                 openStep={searchStep}
                 onOpenStepChange={setSearchStep}
+                // Explore by mode: the tabs switch the offering Home browses — the
+                // same selection as the sidebar — and the scoped sections follow.
+                modeTabs="segmented"
+                onModeChange={setBrowseMode}
                 onSubmit={(query) => {
                   const href = exploreHref(query);
                   if (href) router.push(href);

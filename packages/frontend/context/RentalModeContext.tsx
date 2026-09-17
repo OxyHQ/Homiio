@@ -25,7 +25,7 @@ export type RentalMode = 'long_term' | 'vacation';
  * The unified top-level browse selection ({@link BrowseMode}) and its 1:1
  * mapping to an {@link OfferingType} ({@link BROWSE_MODE_OFFERING}) are defined
  * once in the pure `components/search/types` module (imported above) so the
- * search store, this context, the sidebar toggle, and the `StaySearch` composer all
+ * search store, this context, the sidebar toggle, and the `HomeSearch` composer all
  * share one mapping without a React dependency.
  */
 
@@ -40,7 +40,7 @@ interface RentalModeContextValue {
   /**
    * Set the rent experience. A thin wrapper over {@link setBrowseMode} that
    * maps `long_term`/`vacation` onto the matching browse mode, so the existing
-   * call sites (SearchBar, StaySearch) keep working unchanged.
+   * call sites (SearchBar, HomeSearch) keep working unchanged.
    */
   setMode: (mode: RentalMode) => void;
   /** The unified top-level browse selection (rent sub-modes + buy + exchange). */

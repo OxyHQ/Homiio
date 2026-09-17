@@ -2356,30 +2356,41 @@
       "subtitleCity_one": "{{count}}-bed home in {{areaLabel}}",
       "subtitleCity_other": "{{count}}-bed homes in {{areaLabel}}",
       "subtitleStudioCity": "Studios in {{areaLabel}}",
-      "verdict": {
-        "good_deal": "Good deal",
-        "below_average": "Below average",
-        "average": "Typical price",
-        "above_average": "Above average"
-      },
-      "vsAvgCheaper": "{{percent}}% below average",
-      "vsAvgPricier": "{{percent}}% above average",
-      "vsAvgSame": "Right at the average",
-      "rangeMarkerLabel": "{{price}} · {{deltaLabel}}",
-      "average": "Average {{avg}}",
-      "perSqm": "{{price}}/m² vs area {{areaPrice}}/m²",
-      "samples_one": "{{count}} home",
-      "samples_other": "{{count}} homes",
-      "statLine": "{{average}} · {{samples}}",
-      "statLineWithSqm": "{{average}} · {{perSqm}} · {{samples}}",
       "neighborhoodPricier": "{{neighborhood}} is ~{{percent}}% pricier than {{city}}",
       "neighborhoodCheaper": "{{neighborhood}} is ~{{percent}}% cheaper than {{city}}",
       "neighborhoodSame": "{{neighborhood}} is priced in line with {{city}}",
       "distributionLabel": "Price distribution of nearby homes",
       "lowDataNote": "Not enough nearby listings to compare yet.",
-      "lowSampleCaveat_one": "Based on just {{count}} nearby listing — treat as a rough guide.",
-      "lowSampleCaveat_other": "Based on only {{count}} nearby listings — treat as a rough guide.",
-      "homesMetric": "住房"
+      "homesMetric": "住房",
+      "rangeTitle": "类似房源的挂牌价",
+      "thisHome": "本房源",
+      "placement": {
+        "within": "处于本地价格区间内",
+        "above": "高于本地价格区间 {{percent}}%",
+        "below": "低于本地价格区间 {{percent}}%"
+      },
+      "confidence": {
+        "low": "置信度低",
+        "medium": "置信度中",
+        "high": "置信度高"
+      },
+      "tooFewToPlace": "类似房源太少，无法定位此价格",
+      "askingPricesNote": "以上为挂牌价，而非实际成交的租金或售价。",
+      "reasonsLabel": "此区间如何得出",
+      "reason": {
+        "radiusBasis": "{{radiusKm}} 公里内、交易类型相同且卧室数相差不超过一间的房源",
+        "cityBasis": "{{radiusKm}} 公里内的类似房源太少，因此比较整个{{areaLabel}}的房源",
+        "middle": "挂牌价中位数 {{median}}，平均 {{avg}}",
+        "range": "所比较房源的价格从 {{min}} 到 {{max}}"
+      },
+      "method": "本地房源比较",
+      "perSqmTitle": "每平方米价格",
+      "perSqmValue": "{{price}}/平方米",
+      "areaAverage": "{{areaLabel}}平均",
+      "comparables_one": "基于 {{count}} 个类似房源",
+      "comparables_other": "基于 {{count}} 个类似房源",
+      "insufficient_one": "附近仅有 {{count}} 个类似房源，数量太少，无法比较此价格。",
+      "insufficient_other": "附近仅有 {{count}} 个类似房源，数量太少，无法比较此价格。"
     },
     "nearbyServices": {
       "title": "What's nearby",
@@ -2519,14 +2530,10 @@
     "reviews": {
       "writeAction": "Write a review",
       "emptyDescription": "Be the first to share what it was like to live here.",
-      "emptyTitle": "No reviews yet",
       "errorTitle": "Could not load reviews",
       "disclaimer": "Community-verified reviews about the building. Experiences may vary by unit.",
       "title": "Reviews",
       "evidence": "With evidence",
-      "verified": "Verified",
-      "recommend": "Recommend",
-      "count": "reviews",
       "countWithNumber": "({{count}} reviews)",
       "showAll": "Show all {{count}} reviews",
       "total_one": "{{count}} 条评价",
@@ -2581,16 +2588,6 @@
       "pricier": "pricier"
     },
     "fraudWarning": "Never pay or transfer funds outside the Homio platform",
-    "priceEthics": {
-      "banner": {
-        "title": "Not a fair price",
-        "exceedsEthical": "This price exceeds Homiio's ethical maximum ({{max}}/month).",
-        "exceedsEthicalGeneric": "This price exceeds Homiio's ethical maximum for similar homes.",
-        "aboveMarket": "This price is {{percent}}% above similar homes in the area.",
-        "aboveMarketGeneric": "This price is above the local average for similar homes.",
-        "generic": "This listing does not meet Homiio's fair-price criteria."
-      }
-    },
     "photos": {
       "showAll": "查看全部照片",
       "label": "房源照片",
@@ -2911,17 +2908,21 @@
     },
     "mortgage": {
       "title": "Mortgage calculator",
-      "subtitle": "An estimate — not a mortgage offer.",
-      "perMonth": "mo",
       "downPayment": "Down payment",
       "interestRate": "Interest rate",
       "term": "Term",
-      "years": "{{count}} yr",
       "principal": "Principal",
       "interest": "Interest",
       "loanAmount": "Loan amount",
       "totalInterest": "Total interest",
-      "totalPaid": "Total paid"
+      "price": "房产价格",
+      "downPaymentPercent": "首付比例",
+      "percent": "百分比",
+      "yearsUnit": "年",
+      "monthlyPayment": "月供",
+      "totalCost": "总成本",
+      "disclaimer": "仅为估算，并非贷款要约。未计入手续费、税费和保险，并假设整个期限内利率固定。",
+      "estimate": "约 {{amount}}/月"
     },
     "cta": {
       "housingAuthority": "Housing Authority",
@@ -2940,6 +2941,21 @@
       "nextPhoto": "下一张照片",
       "save": "收藏",
       "unsave": "取消收藏"
+    },
+    "actions": {
+      "bills": {
+        "included": "含水电杂费",
+        "excluded": "不含水电杂费",
+        "partial": "含部分水电杂费"
+      },
+      "status": {
+        "reserved": "已预订",
+        "rented": "已出租",
+        "sold": "已售出",
+        "reservedMessage": "该房源目前已被预订，暂不接受新的请求。",
+        "rentedMessage": "该房源已出租，不再接受请求。",
+        "soldMessage": "该房源已售出。"
+      }
     }
   },
   "goBack": "Go back",
@@ -3126,13 +3142,10 @@
     },
     "cta": {
       "apply": "Apply to rent",
-      "subtitle": "Submit a quick application with your move-in date, income and references — the landlord reviews and replies inside Homiio.",
-      "title": "Interested in this place?",
       "addMoveIn": "Add move-in date"
     },
     "detail": {
       "viewStatus": "View status",
-      "alreadySubmittedBody": "You already have an application in review for this property.",
       "alreadySubmitted": "Application submitted"
     },
     "actions": {
@@ -3508,7 +3521,16 @@
         "cleaning": "Cleaning"
       }
     },
-    "ratingA11y": "评分 {{rating}}，满分 5 分"
+    "ratingA11y": "评分 {{rating}}，满分 5 分",
+    "summary": {
+      "title": "住户评分",
+      "recommend": "{{percent}}% 的人推荐住在这里",
+      "depositReturned": "{{percent}}% 的租约全额退还了押金"
+    },
+    "prompt": {
+      "title": "你在这里住过吗？",
+      "description": "帮助 {{place}} 的下一位住户：分享真实的居住体验。"
+    }
   },
   "subscriptions": {
     "title": "Subscriptions",
@@ -3744,8 +3766,7 @@
       "tabReviews": "Reviews ({{count}})",
       "tabApartment": "Apartment",
       "tabManagement": "Management",
-      "tabBuilding": "Building",
-      "metricRecommend": "Recommend"
+      "tabBuilding": "Building"
     },
     "display": {
       "copySuccess": "Address copied to clipboard",
@@ -3848,14 +3869,6 @@
   "error": {
     "publicHousing": {
       "openFailed": "Could not open the housing website"
-    },
-    "call": {
-      "failed": "Could not open phone dialer",
-      "noPhone": "No phone number available",
-      "notAllowed": "Owner does not accept calls"
-    },
-    "profile": {
-      "notFound": "Owner profile not found"
     },
     "auth": {
       "required": "Please sign in to call the owner"
@@ -4293,8 +4306,6 @@
     "notFound": "Agency not found",
     "notFoundDescription": "We couldn't find this agency.",
     "stats": {
-      "recommend": "Recommend",
-      "depositFull": "Deposit back",
       "listings": "Listings"
     },
     "tabs": {

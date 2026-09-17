@@ -117,7 +117,6 @@ import { AmenitiesGrid } from '@/components/property/AmenitiesGrid';
 import { CommunityNotesSection } from '@/components/property/CommunityNotesSection';
 import { ReviewsSection } from '@/components/property/ReviewsSection';
 import { PriceRangeSection } from '@/components/property/PriceRangeSection';
-import { PriceEthicsBanner } from '@/components/property/PriceEthicsBanner';
 import { SimilarHomesSection } from '@/components/property/SimilarHomesSection';
 import { DemandSignal } from '@/components/property/DemandSignal';
 import { PropertyActionBar } from '@/components/property/PropertyActionBar';
@@ -135,6 +134,8 @@ interface PropertyDetailViewModel {
   title: string;
   location: string;
   price: string;
+  /** The price's spoken form ("1,200 euros per month"). */
+  priceAccessibilityLabel: string;
   /** "Also available: …" line listing the OTHER offerings (empty when none). */
   alsoAvailable: string;
   bedrooms: number;
@@ -179,12 +180,6 @@ export default function PropertyDetailPage() {
 
   const showPriceRangeSection =
     !areaInsightsError && (areaInsightsLoading || Boolean(areaInsights));
-  const showPriceEthicsBanner = apiProperty?.priceEthics?.isFairPrice === false;
-  const priceEthicsCurrency =
-    apiProperty?.longTermRent?.currency ??
-    apiProperty?.shortTermRent?.currency ??
-    apiProperty?.sale?.currency ??
-    'EUR';
   const showSimilarHomesSection =
     !areaInsightsError &&
     !areaInsightsLoading &&
@@ -251,7 +246,7 @@ export default function PropertyDetailPage() {
     // rule: the ACTIVE browse mode's priced block (long-term `/month`,
     // short-term `/night`, sale asking price, exchange "Free"). The unit is
     // fixed per block — never reinterpreted by mode.
-    const { priceLabel, priceSubtitle } = resolveHeadlinePrice(
+    const { priceLabel, priceAccessibilityLabel, priceSubtitle } = resolveHeadlinePrice(
       apiProperty,
       browseMode,
       t,
@@ -274,6 +269,7 @@ export default function PropertyDetailPage() {
       title: generatedTitle,
       location: priceSubtitle,
       price: priceLabel,
+      priceAccessibilityLabel,
       alsoAvailable,
       bedrooms: apiProperty.bedrooms || 0,
       bathrooms: apiProperty.bathrooms || 0,
@@ -390,88 +386,41 @@ export default function PropertyDetailPage() {
     }
   }, [apiProperty, oxyServices, activeSessionId, t, router, rentalMode, property?.id]);
 
+  /**
+   * Call the advertiser — only ever a contact the advertiser published on the
+   * listing itself (`externalContact`).
+   *
+   * A Homiio listing has no owner-published phone, so there is nothing to call:
+   * the number this used to dial was `personalProfile.rentalHistory[0]
+   * .landlordContact.phone` — the owner's OWN former landlord, a third party's
+   * number published on somebody else's say-so (ADR 0003 §4.5).
+   */
   const handleCall = useCallback(async () => {
-    if (apiProperty?.isExternal) {
-      const phone = apiProperty.externalContact?.phone;
-      const whatsapp = apiProperty.externalContact?.whatsapp;
-      if (phone) {
-        try {
-          await Linking.openURL(`tel:${phone}`);
-        } catch {
-          toast.error(
-            t('error.contact.openFailed', 'Could not open contact link') ||
-              'Could not open contact link',
-          );
-        }
-        return;
-      }
-      if (whatsapp) {
-        try {
-          const waUrl = /wa\.me\/|api\.whatsapp\.com/i.test(whatsapp)
-            ? whatsapp
-            : `https://wa.me/${whatsapp.replace(/\D/g, '')}`;
-          await Linking.openURL(waUrl);
-        } catch {
-          toast.error(
-            t('error.contact.openFailed', 'Could not open contact link') ||
-              'Could not open contact link',
-          );
-        }
-        return;
-      }
+    const phone = apiProperty?.isExternal ? apiProperty.externalContact?.phone : undefined;
+    const whatsapp = apiProperty?.isExternal ? apiProperty.externalContact?.whatsapp : undefined;
+    if (!phone && !whatsapp) {
       toast.error(
         t('error.contact.noPhone', 'No phone number available for this listing') ||
           'No phone number available for this listing',
       );
       return;
     }
-    if (!oxyServices || !activeSessionId) {
-      toast.error(
-        t('error.auth.required', 'Please sign in to call the owner') ||
-          'Please sign in to call the owner',
-      );
-      openAccountDialog('signin');
-      return;
-    }
-    if (!landlordProfile) {
-      toast.error(
-        t('error.profile.notFound', 'Owner profile not found') ||
-          'Owner profile not found',
-      );
-      return;
-    }
-    let phoneNumber: string | undefined;
-    let allowCalls = false;
-    if (landlordProfile.personalProfile) {
-      const latestRental = landlordProfile.personalProfile.rentalHistory?.[0];
-      phoneNumber = latestRental?.landlordContact?.phone;
-      allowCalls =
-        landlordProfile.personalProfile.settings?.privacy?.showContactInfo ??
-        false;
-    }
-    if (!allowCalls) {
-      toast.error(
-        t('error.call.notAllowed', 'Owner does not accept calls') ||
-          'Owner does not accept calls',
-      );
-      return;
-    }
-    if (!phoneNumber) {
-      toast.error(
-        t('error.call.noPhone', 'No phone number available') ||
-          'No phone number available',
-      );
-      return;
-    }
     try {
-      await Linking.openURL(`tel:${phoneNumber}`);
+      if (phone) {
+        await Linking.openURL(`tel:${phone}`);
+      } else if (whatsapp) {
+        const waUrl = /wa\.me\/|api\.whatsapp\.com/i.test(whatsapp)
+          ? whatsapp
+          : `https://wa.me/${whatsapp.replace(/\D/g, '')}`;
+        await Linking.openURL(waUrl);
+      }
     } catch {
       toast.error(
-        t('error.call.failed', 'Could not open phone dialer') ||
-          'Could not open phone dialer',
+        t('error.contact.openFailed', 'Could not open contact link') ||
+          'Could not open contact link',
       );
     }
-  }, [oxyServices, activeSessionId, landlordProfile, t, apiProperty]);
+  }, [t, apiProperty]);
 
   const handlePublicHousingApply = useCallback(async () => {
     const state = (apiProperty?.address?.regionName || '').toLowerCase();
@@ -592,7 +541,7 @@ export default function PropertyDetailPage() {
   const photosLead = (pageWidth || windowWidth) < LISTING_PHOTO_GRID_BREAKPOINT;
 
   const bookingMode = apiProperty
-    ? resolveBookingMode(apiProperty as Property, rentalMode)
+    ? resolveBookingMode(apiProperty as Property, rentalMode, browseMode)
     : 'none';
   // The phone booking bar and the inline booking card share one selection.
   const stay = useStayBooking(apiProperty, {
@@ -658,8 +607,7 @@ export default function PropertyDetailPage() {
 
   // Whether this listing can be booked as a short-stay (Airbnb-style) — it
   // carries the SHORT_TERM_RENT offering. This capability is a property of the
-  // listing itself, independent of the currently-selected rentalMode toggle, so
-  // it also decides Reviews (vacation) vs Community Notes (long-term) below.
+  // listing itself, independent of the currently-selected rentalMode toggle.
   const isVacationRentable = Boolean(
     apiProperty && hasOffering(apiProperty, OfferingType.SHORT_TERM_RENT),
   );
@@ -956,29 +904,19 @@ export default function PropertyDetailPage() {
             />
           </View>
 
-          {/* Reviews — Airbnb-style guest reviews — shown ADDITIONALLY on
-              short-stay (vacation/both) listings. Reviews and Community Notes
-              are distinct features that coexist; reviews don't replace notes. */}
-          {isVacationRentable ? (
-            <View style={[styles.section, styles.divider]}>
-              <ReviewsSection property={apiProperty as Property} />
-            </View>
-          ) : null}
+          {/* Reviews of the ADDRESS — past residents on the place itself, on
+              every offering: they outlive the advertisement (ADR 0001), so a
+              home for rent, for sale or to swap shows the same ones. Reviews
+              and Community Notes are distinct features that coexist. */}
+          <View style={[styles.section, styles.divider]}>
+            <ReviewsSection property={apiProperty as Property} />
+          </View>
 
           {/* Area context: how this listing's price compares to similar
               homes nearby, plus a carousel of those comparables. Grouped
               between Community Notes and the landlord's own listings. Each
               wrapper is gated so a fail-soft/empty section never leaves a
               bare hairline divider behind. */}
-          {showPriceEthicsBanner && apiProperty?.priceEthics ? (
-            <View style={[styles.section, styles.divider]}>
-              <PriceEthicsBanner
-                priceEthics={apiProperty.priceEthics}
-                currency={priceEthicsCurrency}
-              />
-            </View>
-          ) : null}
-
           {showPriceRangeSection ? (
             <View style={[styles.section, styles.divider]}>
               <PriceRangeSection
@@ -1037,13 +975,12 @@ export default function PropertyDetailPage() {
       ) : (
       <PropertyActionBar
         property={apiProperty}
-        landlordProfile={landlordProfile}
-        canContact={Boolean(oxyServices && activeSessionId)}
-        canCall={
-          apiProperty?.isExternal
-            ? Boolean(apiProperty.externalContact?.phone || apiProperty.externalContact?.whatsapp)
-            : Boolean(oxyServices && activeSessionId && landlordProfile)
-        }
+        price={property.price}
+        priceAccessibilityLabel={property.priceAccessibilityLabel}
+        canCall={Boolean(
+          apiProperty?.isExternal &&
+            (apiProperty.externalContact?.phone || apiProperty.externalContact?.whatsapp),
+        )}
         onContact={handleContact}
         onCall={handleCall}
         onApplyPublic={handlePublicHousingApply}

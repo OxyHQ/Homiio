@@ -1366,30 +1366,41 @@
       "subtitleCity_one": "Habitatge d'{{count}} hab. a {{areaLabel}}",
       "subtitleCity_other": "Habitatges de {{count}} hab. a {{areaLabel}}",
       "subtitleStudioCity": "Estudis a {{areaLabel}}",
-      "verdict": {
-        "good_deal": "Bon preu",
-        "below_average": "Per sota de la mitjana",
-        "average": "Preu típic",
-        "above_average": "Per sobre de la mitjana"
-      },
-      "vsAvgCheaper": "{{percent}}% per sota de la mitjana",
-      "vsAvgPricier": "{{percent}}% per sobre de la mitjana",
-      "vsAvgSame": "Just a la mitjana",
-      "rangeMarkerLabel": "{{price}} · {{deltaLabel}}",
-      "average": "Mitjana {{avg}}",
-      "perSqm": "{{price}}/m² vs zona {{areaPrice}}/m²",
-      "samples_one": "{{count}} habitatge",
-      "samples_other": "{{count}} habitatges",
-      "statLine": "{{average}} · {{samples}}",
-      "statLineWithSqm": "{{average}} · {{perSqm}} · {{samples}}",
       "neighborhoodPricier": "{{neighborhood}} és ~{{percent}}% més car que {{city}}",
       "neighborhoodCheaper": "{{neighborhood}} és ~{{percent}}% més barat que {{city}}",
       "neighborhoodSame": "{{neighborhood}} té preus semblants a {{city}}",
       "distributionLabel": "Distribució de preus d'habitatges propers",
       "lowDataNote": "Encara no hi ha prou anuncis propers per comparar.",
-      "lowSampleCaveat_one": "Basat en només {{count}} anunci proper: pren-ho com a orientació.",
-      "lowSampleCaveat_other": "Basat en només {{count}} anuncis propers: pren-ho com a orientació.",
-      "homesMetric": "Habitatges"
+      "homesMetric": "Habitatges",
+      "rangeTitle": "Preus demanats per habitatges similars",
+      "thisHome": "Aquest habitatge",
+      "placement": {
+        "within": "Dins del rang de la zona",
+        "above": "{{percent}} % per sobre del rang de la zona",
+        "below": "{{percent}} % per sota del rang de la zona"
+      },
+      "confidence": {
+        "low": "Confiança baixa",
+        "medium": "Confiança mitjana",
+        "high": "Confiança alta"
+      },
+      "tooFewToPlace": "Hi ha pocs habitatges similars per situar aquest preu",
+      "askingPricesNote": "Són preus demanats, no lloguers ni preus de venda pactats.",
+      "reasonsLabel": "Com es calcula aquest rang",
+      "reason": {
+        "radiusBasis": "Anuncis a menys de {{radiusKm}} km amb el mateix tipus d'oferta i una habitació més o menys",
+        "cityBasis": "Hi ha pocs anuncis similars a menys de {{radiusKm}} km, així que es comparen habitatges de tot {{areaLabel}}",
+        "middle": "Mediana {{median}}, mitjana {{avg}}",
+        "range": "De {{min}} a {{max}} entre els habitatges comparats"
+      },
+      "method": "Comparació local d'anuncis",
+      "perSqmTitle": "Preu per m²",
+      "perSqmValue": "{{price}}/m²",
+      "areaAverage": "Mitjana de {{areaLabel}}",
+      "comparables_one": "Segons {{count}} anunci similar",
+      "comparables_other": "Segons {{count}} anuncis similars",
+      "insufficient_one": "Només hi ha {{count}} anunci similar a prop: massa pocs per comparar aquest preu.",
+      "insufficient_other": "Només hi ha {{count}} anuncis similars a prop: massa pocs per comparar aquest preu."
     },
     "nearbyServices": {
       "title": "Què hi ha a prop",
@@ -1548,14 +1559,10 @@
     "reviews": {
       "writeAction": "Write a review",
       "emptyDescription": "Be the first to share what it was like to live here.",
-      "emptyTitle": "No reviews yet",
       "errorTitle": "Could not load reviews",
       "disclaimer": "Community-verified reviews about the building. Experiences may vary by unit.",
       "title": "Reviews",
       "evidence": "With evidence",
-      "verified": "Verified",
-      "recommend": "Recommend",
-      "count": "reviews",
       "countWithNumber": "({{count}} ressenyes)",
       "showAll": "Mostra les {{count}} ressenyes",
       "total_one": "{{count}} ressenya",
@@ -1610,16 +1617,6 @@
       "pricier": "pricier"
     },
     "fraudWarning": "Never pay or transfer funds outside the Homio platform",
-    "priceEthics": {
-      "banner": {
-        "title": "No és un preu just",
-        "exceedsEthical": "Aquest preu supera el màxim ètic d'Homiio ({{max}}/mes).",
-        "exceedsEthicalGeneric": "Aquest preu supera el màxim ètic d'Homiio per a habitatges similars.",
-        "aboveMarket": "Aquest preu està un {{percent}}% per sobre d'habitatges similars a la zona.",
-        "aboveMarketGeneric": "Aquest preu està per sobre de la mitjana local per a habitatges similars.",
-        "generic": "Aquest anunci no compleix els criteris de preu just d'Homiio."
-      }
-    },
     "photos": {
       "showAll": "Mostra totes les fotos",
       "label": "Fotos de l'anunci",
@@ -2861,17 +2858,21 @@
     },
     "mortgage": {
       "title": "Calculadora d'hipoteca",
-      "subtitle": "És una estimació, no una oferta hipotecària.",
-      "perMonth": "mes",
       "downPayment": "Entrada",
       "interestRate": "Tipus d'interès",
       "term": "Termini",
-      "years": "{{count}} anys",
       "principal": "Capital",
       "interest": "Interessos",
       "loanAmount": "Import del préstec",
       "totalInterest": "Interessos totals",
-      "totalPaid": "Total pagat"
+      "price": "Preu de l'habitatge",
+      "downPaymentPercent": "Percentatge d'entrada",
+      "percent": "Percentatge",
+      "yearsUnit": "anys",
+      "monthlyPayment": "Quota mensual",
+      "totalCost": "Cost total",
+      "disclaimer": "Una estimació, no una oferta hipotecària. No inclou comissions, impostos ni assegurances, i suposa un tipus fix durant tot el termini.",
+      "estimate": "Aprox. {{amount}}/mes"
     },
     "cta": {
       "housingAuthority": "Habitatge públic",
@@ -2890,6 +2891,21 @@
       "nextPhoto": "Foto següent",
       "save": "Desa",
       "unsave": "Treu dels desats"
+    },
+    "actions": {
+      "bills": {
+        "included": "Despeses incloses",
+        "excluded": "Despeses no incloses",
+        "partial": "Algunes despeses incloses"
+      },
+      "status": {
+        "reserved": "Reservat",
+        "rented": "Llogat",
+        "sold": "Venut",
+        "reservedMessage": "Aquest habitatge està reservat de moment i no accepta noves sol·licituds.",
+        "rentedMessage": "Aquest habitatge ja s'ha llogat i no accepta sol·licituds.",
+        "soldMessage": "Aquest habitatge s'ha venut."
+      }
     }
   },
   "goBack": "Tornar",
@@ -3157,13 +3173,10 @@
     },
     "cta": {
       "apply": "Apply to rent",
-      "subtitle": "Submit a quick application with your move-in date, income and references — the landlord reviews and replies inside Homiio.",
-      "title": "Interested in this place?",
       "addMoveIn": "Add move-in date"
     },
     "detail": {
       "viewStatus": "View status",
-      "alreadySubmittedBody": "You already have an application in review for this property.",
       "alreadySubmitted": "Application submitted"
     },
     "actions": {
@@ -3559,7 +3572,16 @@
         "cleaning": "Neteja"
       }
     },
-    "ratingA11y": "Valoració de {{rating}} sobre 5"
+    "ratingA11y": "Valoració de {{rating}} sobre 5",
+    "summary": {
+      "title": "Valorat per residents",
+      "recommend": "El {{percent}} % recomanaria viure-hi",
+      "depositReturned": "Fiança retornada íntegrament en el {{percent}} % dels lloguers"
+    },
+    "prompt": {
+      "title": "Has viscut aquí?",
+      "description": "Ajuda els pròxims residents de {{place}}: explica com era viure-hi de veritat."
+    }
   },
   "subscriptions": {
     "title": "Subscripcions",
@@ -3742,8 +3764,7 @@
       "tabReviews": "Ressenyes ({{count}})",
       "tabApartment": "Habitatge",
       "tabManagement": "Gestió",
-      "tabBuilding": "Edifici",
-      "metricRecommend": "Recomanen"
+      "tabBuilding": "Edifici"
     },
     "display": {
       "copySuccess": "Adreça copiada al porta-retalls",
@@ -3899,14 +3920,6 @@
   "error": {
     "publicHousing": {
       "openFailed": "No s'ha pogut obrir el lloc web d'habitatge"
-    },
-    "call": {
-      "failed": "No s'ha pogut obrir el marcador telefònic",
-      "noPhone": "No hi ha número de telèfon disponible",
-      "notAllowed": "El propietari no accepta trucades"
-    },
-    "profile": {
-      "notFound": "Perfil del propietari no trobat"
     },
     "auth": {
       "required": "Inicia sessió per trucar al propietari"
@@ -4344,8 +4357,6 @@
     "notFound": "Agència no trobada",
     "notFoundDescription": "No hem trobat aquesta agència.",
     "stats": {
-      "recommend": "Recomanen",
-      "depositFull": "Fiança tornada",
       "listings": "Anuncis"
     },
     "tabs": {

@@ -2356,30 +2356,41 @@
       "subtitleCity_one": "{{count}}-bed home in {{areaLabel}}",
       "subtitleCity_other": "{{count}}-bed homes in {{areaLabel}}",
       "subtitleStudioCity": "Studios in {{areaLabel}}",
-      "verdict": {
-        "good_deal": "Good deal",
-        "below_average": "Below average",
-        "average": "Typical price",
-        "above_average": "Above average"
-      },
-      "vsAvgCheaper": "{{percent}}% below average",
-      "vsAvgPricier": "{{percent}}% above average",
-      "vsAvgSame": "Right at the average",
-      "rangeMarkerLabel": "{{price}} · {{deltaLabel}}",
-      "average": "Average {{avg}}",
-      "perSqm": "{{price}}/m² vs area {{areaPrice}}/m²",
-      "samples_one": "{{count}} home",
-      "samples_other": "{{count}} homes",
-      "statLine": "{{average}} · {{samples}}",
-      "statLineWithSqm": "{{average}} · {{perSqm}} · {{samples}}",
       "neighborhoodPricier": "{{neighborhood}} is ~{{percent}}% pricier than {{city}}",
       "neighborhoodCheaper": "{{neighborhood}} is ~{{percent}}% cheaper than {{city}}",
       "neighborhoodSame": "{{neighborhood}} is priced in line with {{city}}",
       "distributionLabel": "Price distribution of nearby homes",
       "lowDataNote": "Not enough nearby listings to compare yet.",
-      "lowSampleCaveat_one": "Based on just {{count}} nearby listing — treat as a rough guide.",
-      "lowSampleCaveat_other": "Based on only {{count}} nearby listings — treat as a rough guide.",
-      "homesMetric": "Homes"
+      "homesMetric": "Homes",
+      "rangeTitle": "Asking prices of similar homes",
+      "thisHome": "This home",
+      "placement": {
+        "within": "Within the local range",
+        "above": "{{percent}}% above the local range",
+        "below": "{{percent}}% below the local range"
+      },
+      "confidence": {
+        "low": "Low confidence",
+        "medium": "Medium confidence",
+        "high": "High confidence"
+      },
+      "tooFewToPlace": "Too few similar homes to place this price",
+      "askingPricesNote": "These are asking prices, not agreed rents or sale prices.",
+      "reasonsLabel": "How this range is built",
+      "reason": {
+        "radiusBasis": "Listings within {{radiusKm}} km with the same kind of offer and one bedroom more or fewer",
+        "cityBasis": "Too few similar listings within {{radiusKm}} km, so homes across {{areaLabel}} are compared",
+        "middle": "Median asking price {{median}}, average {{avg}}",
+        "range": "From {{min}} to {{max}} across the homes compared"
+      },
+      "method": "Local comparison of listings",
+      "perSqmTitle": "Price per m²",
+      "perSqmValue": "{{price}}/m²",
+      "areaAverage": "{{areaLabel}} average",
+      "comparables_one": "Based on {{count}} similar listing",
+      "comparables_other": "Based on {{count}} similar listings",
+      "insufficient_one": "Only {{count}} similar listing nearby — too few to compare this price.",
+      "insufficient_other": "Only {{count}} similar listings nearby — too few to compare this price."
     },
     "nearbyServices": {
       "title": "What's nearby",
@@ -2519,14 +2530,10 @@
     "reviews": {
       "writeAction": "Write a review",
       "emptyDescription": "Be the first to share what it was like to live here.",
-      "emptyTitle": "No reviews yet",
       "errorTitle": "Could not load reviews",
       "disclaimer": "Community-verified reviews about the building. Experiences may vary by unit.",
       "title": "Reviews",
       "evidence": "With evidence",
-      "verified": "Verified",
-      "recommend": "Recommend",
-      "count": "reviews",
       "countWithNumber": "({{count}} reviews)",
       "showAll": "Show all {{count}} reviews",
       "total_one": "{{count}} review",
@@ -2581,16 +2588,6 @@
       "pricier": "pricier"
     },
     "fraudWarning": "Never pay or transfer funds outside the Homio platform",
-    "priceEthics": {
-      "banner": {
-        "title": "Not a fair price",
-        "exceedsEthical": "This price exceeds Homiio's ethical maximum ({{max}}/month).",
-        "exceedsEthicalGeneric": "This price exceeds Homiio's ethical maximum for similar homes.",
-        "aboveMarket": "This price is {{percent}}% above similar homes in the area.",
-        "aboveMarketGeneric": "This price is above the local average for similar homes.",
-        "generic": "This listing does not meet Homiio's fair-price criteria."
-      }
-    },
     "photos": {
       "showAll": "Show all photos",
       "label": "Listing photos",
@@ -2911,17 +2908,21 @@
     },
     "mortgage": {
       "title": "Mortgage calculator",
-      "subtitle": "An estimate — not a mortgage offer.",
-      "perMonth": "mo",
       "downPayment": "Down payment",
       "interestRate": "Interest rate",
       "term": "Term",
-      "years": "{{count}} yr",
       "principal": "Principal",
       "interest": "Interest",
       "loanAmount": "Loan amount",
       "totalInterest": "Total interest",
-      "totalPaid": "Total paid"
+      "price": "Property price",
+      "downPaymentPercent": "Down payment percent",
+      "percent": "Percent",
+      "yearsUnit": "years",
+      "monthlyPayment": "Monthly payment",
+      "totalCost": "Total cost",
+      "disclaimer": "An estimate, not a mortgage offer. It leaves out fees, taxes and insurance, and assumes a fixed rate for the whole term.",
+      "estimate": "Est. {{amount}}/month"
     },
     "cta": {
       "housingAuthority": "Housing Authority",
@@ -2940,6 +2941,21 @@
       "nextPhoto": "Next photo",
       "save": "Save",
       "unsave": "Remove from saved"
+    },
+    "actions": {
+      "bills": {
+        "included": "Bills included",
+        "excluded": "Bills not included",
+        "partial": "Some bills included"
+      },
+      "status": {
+        "reserved": "Reserved",
+        "rented": "Rented",
+        "sold": "Sold",
+        "reservedMessage": "This home is reserved for now and isn't taking new requests.",
+        "rentedMessage": "This home has been rented and no longer takes requests.",
+        "soldMessage": "This home has been sold."
+      }
     }
   },
   "goBack": "Go back",
@@ -3126,13 +3142,10 @@
     },
     "cta": {
       "apply": "Apply to rent",
-      "subtitle": "Submit a quick application with your move-in date, income and references — the landlord reviews and replies inside Homiio.",
-      "title": "Interested in this place?",
       "addMoveIn": "Add move-in date"
     },
     "detail": {
       "viewStatus": "View status",
-      "alreadySubmittedBody": "You already have an application in review for this property.",
       "alreadySubmitted": "Application submitted"
     },
     "actions": {
@@ -3508,7 +3521,16 @@
         "cleaning": "Cleaning"
       }
     },
-    "ratingA11y": "Rated {{rating}} out of 5"
+    "ratingA11y": "Rated {{rating}} out of 5",
+    "summary": {
+      "title": "Rated by residents",
+      "recommend": "{{percent}}% would recommend living here",
+      "depositReturned": "Deposit returned in full in {{percent}}% of tenancies"
+    },
+    "prompt": {
+      "title": "Did you live here?",
+      "description": "Help the next residents of {{place}}: share what living there was really like."
+    }
   },
   "subscriptions": {
     "title": "Subscriptions",
@@ -3744,8 +3766,7 @@
       "tabReviews": "Reviews ({{count}})",
       "tabApartment": "Apartment",
       "tabManagement": "Management",
-      "tabBuilding": "Building",
-      "metricRecommend": "Recommend"
+      "tabBuilding": "Building"
     },
     "display": {
       "copySuccess": "Address copied to clipboard",
@@ -3848,14 +3869,6 @@
   "error": {
     "publicHousing": {
       "openFailed": "Could not open the housing website"
-    },
-    "call": {
-      "failed": "Could not open phone dialer",
-      "noPhone": "No phone number available",
-      "notAllowed": "Owner does not accept calls"
-    },
-    "profile": {
-      "notFound": "Owner profile not found"
     },
     "auth": {
       "required": "Please sign in to call the owner"
@@ -4289,8 +4302,6 @@
     "notFound": "Agency not found",
     "notFoundDescription": "We couldn't find this agency.",
     "stats": {
-      "recommend": "Recommend",
-      "depositFull": "Deposit back",
       "listings": "Listings"
     },
     "tabs": {

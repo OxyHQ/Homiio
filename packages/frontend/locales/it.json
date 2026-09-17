@@ -1515,30 +1515,41 @@
       "subtitleCity_one": "Casa con {{count}} camera a {{areaLabel}}",
       "subtitleCity_other": "Case con {{count}} camere a {{areaLabel}}",
       "subtitleStudioCity": "Monolocali a {{areaLabel}}",
-      "verdict": {
-        "good_deal": "Buon affare",
-        "below_average": "Sotto la media",
-        "average": "Prezzo nella media",
-        "above_average": "Sopra la media"
-      },
-      "vsAvgCheaper": "{{percent}}% sotto la media",
-      "vsAvgPricier": "{{percent}}% sopra la media",
-      "vsAvgSame": "In linea con la media",
-      "rangeMarkerLabel": "{{price}} · {{deltaLabel}}",
-      "average": "Media {{avg}}",
-      "perSqm": "{{price}}/m² vs zona {{areaPrice}}/m²",
-      "samples_one": "{{count}} casa",
-      "samples_other": "{{count}} case",
-      "statLine": "{{average}} · {{samples}}",
-      "statLineWithSqm": "{{average}} · {{perSqm}} · {{samples}}",
       "neighborhoodPricier": "{{neighborhood}} è ~{{percent}}% più caro di {{city}}",
       "neighborhoodCheaper": "{{neighborhood}} è ~{{percent}}% più economico di {{city}}",
       "neighborhoodSame": "{{neighborhood}} ha prezzi in linea con {{city}}",
       "distributionLabel": "Distribuzione dei prezzi delle case vicine",
       "lowDataNote": "Non ci sono ancora abbastanza annunci vicini per confrontare.",
-      "lowSampleCaveat_one": "Basato su solo {{count}} annuncio vicino: usalo come riferimento.",
-      "lowSampleCaveat_other": "Basato su solo {{count}} annunci vicini: usalo come riferimento.",
-      "homesMetric": "Abitazioni"
+      "homesMetric": "Abitazioni",
+      "rangeTitle": "Prezzi richiesti per case simili",
+      "thisHome": "Questa casa",
+      "placement": {
+        "within": "Nella fascia della zona",
+        "above": "{{percent}}% sopra la fascia della zona",
+        "below": "{{percent}}% sotto la fascia della zona"
+      },
+      "confidence": {
+        "low": "Affidabilità bassa",
+        "medium": "Affidabilità media",
+        "high": "Affidabilità alta"
+      },
+      "tooFewToPlace": "Troppo poche case simili per collocare questo prezzo",
+      "askingPricesNote": "Sono prezzi richiesti, non canoni o prezzi di vendita concordati.",
+      "reasonsLabel": "Come è costruita questa fascia",
+      "reason": {
+        "radiusBasis": "Annunci entro {{radiusKm}} km con lo stesso tipo di offerta e una camera in più o in meno",
+        "cityBasis": "Troppo pochi annunci simili entro {{radiusKm}} km: si confrontano le case in tutto il territorio di {{areaLabel}}",
+        "middle": "Prezzo mediano {{median}}, media {{avg}}",
+        "range": "Da {{min}} a {{max}} tra le case confrontate"
+      },
+      "method": "Confronto locale degli annunci",
+      "perSqmTitle": "Prezzo al m²",
+      "perSqmValue": "{{price}}/m²",
+      "areaAverage": "Media di {{areaLabel}}",
+      "comparables_one": "In base a {{count}} annuncio simile",
+      "comparables_other": "In base a {{count}} annunci simili",
+      "insufficient_one": "Solo {{count}} annuncio simile nei dintorni: troppo pochi per confrontare questo prezzo.",
+      "insufficient_other": "Solo {{count}} annunci simili nei dintorni: troppo pochi per confrontare questo prezzo."
     },
     "nearbyServices": {
       "title": "Cosa c'è nei dintorni",
@@ -1697,14 +1708,10 @@
     "reviews": {
       "writeAction": "Write a review",
       "emptyDescription": "Be the first to share what it was like to live here.",
-      "emptyTitle": "No reviews yet",
       "errorTitle": "Could not load reviews",
       "disclaimer": "Community-verified reviews about the building. Experiences may vary by unit.",
       "title": "Reviews",
       "evidence": "With evidence",
-      "verified": "Verified",
-      "recommend": "Recommend",
-      "count": "reviews",
       "countWithNumber": "({{count}} recensioni)",
       "showAll": "Mostra tutte le {{count}} recensioni",
       "total_one": "{{count}} recensione",
@@ -1759,16 +1766,6 @@
       "pricier": "pricier"
     },
     "fraudWarning": "Never pay or transfer funds outside the Homio platform",
-    "priceEthics": {
-      "banner": {
-        "title": "Non è un prezzo giusto",
-        "exceedsEthical": "Questo prezzo supera il massimo etico di Homiio ({{max}}/mese).",
-        "exceedsEthicalGeneric": "Questo prezzo supera il massimo etico di Homiio per alloggi simili.",
-        "aboveMarket": "Questo prezzo è il {{percent}}% sopra alloggi simili nella zona.",
-        "aboveMarketGeneric": "Questo prezzo è sopra la media locale per alloggi simili.",
-        "generic": "Questo annuncio non soddisfa i criteri di prezzo giusto di Homiio."
-      }
-    },
     "photos": {
       "showAll": "Mostra tutte le foto",
       "label": "Foto dell'annuncio",
@@ -2857,17 +2854,21 @@
     },
     "mortgage": {
       "title": "Calcolatore del mutuo",
-      "subtitle": "È una stima, non un'offerta di mutuo.",
-      "perMonth": "mese",
       "downPayment": "Anticipo",
       "interestRate": "Tasso d'interesse",
       "term": "Durata",
-      "years": "{{count}} anni",
       "principal": "Capitale",
       "interest": "Interessi",
       "loanAmount": "Importo del prestito",
       "totalInterest": "Interessi totali",
-      "totalPaid": "Totale pagato"
+      "price": "Prezzo dell'immobile",
+      "downPaymentPercent": "Percentuale dell'anticipo",
+      "percent": "Percentuale",
+      "yearsUnit": "anni",
+      "monthlyPayment": "Rata mensile",
+      "totalCost": "Costo totale",
+      "disclaimer": "Una stima, non un'offerta di mutuo. Esclude commissioni, imposte e assicurazioni e presuppone un tasso fisso per tutta la durata.",
+      "estimate": "Circa {{amount}}/mese"
     },
     "cta": {
       "housingAuthority": "Ente per l'abitazione",
@@ -2886,6 +2887,21 @@
       "nextPhoto": "Foto successiva",
       "save": "Salva",
       "unsave": "Rimuovi dai salvati"
+    },
+    "actions": {
+      "bills": {
+        "included": "Utenze incluse",
+        "excluded": "Utenze escluse",
+        "partial": "Alcune utenze incluse"
+      },
+      "status": {
+        "reserved": "Riservato",
+        "rented": "Affittato",
+        "sold": "Venduto",
+        "reservedMessage": "Questa casa è al momento riservata e non accetta nuove richieste.",
+        "rentedMessage": "Questa casa è già stata affittata e non accetta più richieste.",
+        "soldMessage": "Questa casa è stata venduta."
+      }
     }
   },
   "goBack": "Indietro",
@@ -3141,13 +3157,10 @@
     },
     "cta": {
       "apply": "Apply to rent",
-      "subtitle": "Submit a quick application with your move-in date, income and references — the landlord reviews and replies inside Homiio.",
-      "title": "Interested in this place?",
       "addMoveIn": "Add move-in date"
     },
     "detail": {
       "viewStatus": "View status",
-      "alreadySubmittedBody": "You already have an application in review for this property.",
       "alreadySubmitted": "Application submitted"
     },
     "actions": {
@@ -3543,7 +3556,16 @@
         "cleaning": "Pulizia"
       }
     },
-    "ratingA11y": "Valutazione {{rating}} su 5"
+    "ratingA11y": "Valutazione {{rating}} su 5",
+    "summary": {
+      "title": "Valutato dai residenti",
+      "recommend": "Il {{percent}}% consiglierebbe di viverci",
+      "depositReturned": "Deposito restituito per intero nel {{percent}}% delle locazioni"
+    },
+    "prompt": {
+      "title": "Hai vissuto qui?",
+      "description": "Aiuta i prossimi residenti di {{place}}: racconta com'era davvero viverci."
+    }
   },
   "subscriptions": {
     "title": "Abbonamenti",
@@ -3726,8 +3748,7 @@
       "tabReviews": "Recensioni ({{count}})",
       "tabApartment": "Appartamento",
       "tabManagement": "Gestione",
-      "tabBuilding": "Edificio",
-      "metricRecommend": "Consigliano"
+      "tabBuilding": "Edificio"
     },
     "display": {
       "copySuccess": "Indirizzo copiato negli appunti",
@@ -3883,14 +3904,6 @@
   "error": {
     "publicHousing": {
       "openFailed": "Impossibile aprire il sito web abitativo"
-    },
-    "call": {
-      "failed": "Impossibile aprire il compositore telefonico",
-      "noPhone": "Nessun numero di telefono disponibile",
-      "notAllowed": "Il proprietario non accetta chiamate"
-    },
-    "profile": {
-      "notFound": "Profilo del proprietario non trovato"
     },
     "auth": {
       "required": "Accedi per chiamare il proprietario"
@@ -4328,8 +4341,6 @@
     "notFound": "Agenzia non trovata",
     "notFoundDescription": "Non abbiamo trovato questa agenzia.",
     "stats": {
-      "recommend": "Consigliano",
-      "depositFull": "Cauzione resa",
       "listings": "Annunci"
     },
     "tabs": {
