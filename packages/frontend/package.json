@@ -28,7 +28,7 @@
     "@bitdrift/react-native": "^0.12.12",
     "@expo/vector-icons": "^15.1.1",
     "@homiio/shared-types": "workspace:*",
-    "@oxy.so/bloom": "^2.7.0",
+    "@oxy.so/bloom": "^2.8.0",
     "@oxy.so/core": "^1.3.1",
     "@oxy.so/expo-splash": "^1.0.0",
     "@oxy.so/services": "^2.1.0",
