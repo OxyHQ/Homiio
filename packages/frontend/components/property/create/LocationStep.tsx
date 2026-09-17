@@ -169,11 +169,12 @@ export function LocationStep({
       <View style={styles.optionRow}>
         <Chip
           selected={Boolean(location.showFloor)}
+          variant={location.showFloor ? 'solid' : 'outlined'}
           onPress={() => onShowFloorToggle(!location.showFloor)}
           startIcon={
             <FloorVisibilityIcon
               size="sm"
-              fill={location.showFloor ? theme.colors.primary : theme.colors.textSecondary}
+              fill={location.showFloor ? theme.colors.primaryForeground : theme.colors.textSecondary}
             />
           }
           accessibilityLabel={`${t('propertyCreate.location.floor')}: ${

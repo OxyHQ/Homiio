@@ -200,6 +200,7 @@ export function ExchangeSettingsStep({ formData, setFormData }: PropertyStepProp
               key={language}
               size="large"
               selected={languages.includes(language)}
+              variant={languages.includes(language) ? 'solid' : 'outlined'}
               onPress={() => handleToggleLanguage(language)}
             >
               {language}

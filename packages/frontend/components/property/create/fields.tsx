@@ -1,18 +1,12 @@
 import React from 'react';
-import type { StyleProp, ViewStyle } from 'react-native';
+import { StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { Button } from '@oxy.so/bloom/button';
+import { Command, type CommandItem } from '@oxy.so/bloom/command';
 import { Field } from '@oxy.so/bloom/field';
 import { TextFieldInput, type TextFieldInputProps } from '@oxy.so/bloom/text-field';
 import { Textarea, type TextareaProps } from '@oxy.so/bloom/textarea';
-import {
-  Select,
-  SelectContent,
-  SelectIcon,
-  SelectItem,
-  SelectItemIndicator,
-  SelectItemText,
-  SelectTrigger,
-  SelectValue,
-} from '@oxy.so/bloom/select';
+import { RiArrowDownSLine, RiCheckLine } from '@oxy.so/bloom/icons';
 import { SettingsListItem } from '@oxy.so/bloom/settings-list';
 import { Switch } from '@oxy.so/bloom/switch';
 
@@ -74,7 +68,13 @@ interface WizardSelectProps {
   style?: StyleProp<ViewStyle>;
 }
 
-/** A labelled Bloom `Select` over a plain list of strings (value = label). */
+/**
+ * A labelled, SEARCHABLE pick from a plain list of strings (value = label).
+ *
+ * Bloom `Select` has no search, and these lists are long (the state list is
+ * about 60 entries), so the trigger opens Bloom `Command` over the page: type
+ * to filter, press to pick. The chosen value carries the check.
+ */
 export function WizardSelect({
   label,
   placeholder,
@@ -84,28 +84,55 @@ export function WizardSelect({
   error,
   style,
 }: WizardSelectProps) {
-  const items = React.useMemo(() => options.map((option) => ({ value: option, label: option })), [options]);
+  const { t } = useTranslation();
+  const [open, setOpen] = React.useState(false);
+  const close = React.useCallback(() => setOpen(false), []);
+  const items = React.useMemo<CommandItem[]>(
+    () =>
+      options.map((option) => ({
+        id: option,
+        label: option,
+        icon: option === value ? RiCheckLine : undefined,
+        onSelect: () => onValueChange(option),
+      })),
+    [options, value, onValueChange],
+  );
   return (
     <Field label={label} error={error || null} style={style}>
-      <Select value={value || undefined} onValueChange={onValueChange}>
-        <SelectTrigger label={label}>
-          <SelectValue placeholder={placeholder} />
-          <SelectIcon />
-        </SelectTrigger>
-        <SelectContent
-          label={label}
-          items={items}
-          renderItem={(item) => (
-            <SelectItem value={item.value} label={item.label}>
-              <SelectItemIndicator />
-              <SelectItemText>{item.label}</SelectItemText>
-            </SelectItem>
-          )}
-        />
-      </Select>
+      <Button
+        variant="secondary"
+        fullWidth
+        trailingIcon={RiArrowDownSLine}
+        onPress={() => setOpen(true)}
+        accessibilityLabel={value ? `${label}: ${value}` : label}
+        style={styles.trigger}
+      >
+        {value || placeholder}
+      </Button>
+      <Command
+        visible={open}
+        onClose={close}
+        items={items}
+        placeholder={`${t('common.search')}…`}
+        emptyText={t('common.noResults')}
+        filter={matchesIgnoringAccents}
+      />
     </Field>
   );
 }
+
+/** Case- and accent-insensitive, so "malaga" finds "Málaga". */
+function foldForSearch(text: string): string {
+  return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+}
+
+function matchesIgnoringAccents(item: CommandItem, query: string): boolean {
+  return foldForSearch(item.label).includes(foldForSearch(query.trim()));
+}
+
+const styles = StyleSheet.create({
+  trigger: { justifyContent: 'space-between' },
+});
 
 interface WizardSwitchItemProps {
   title: string;

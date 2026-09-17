@@ -41,6 +41,7 @@ export function BasicInfoStep({
               key={type.id}
               size="large"
               selected={basicInfo.propertyType === type.id}
+              variant={basicInfo.propertyType === type.id ? 'solid' : 'outlined'}
               onPress={() => onPropertyTypeChange(type.id)}
             >
               {type.label}
