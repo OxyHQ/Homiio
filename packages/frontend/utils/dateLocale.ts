@@ -17,7 +17,21 @@
  */
 import i18next from 'i18next';
 import { format, formatDistanceToNowStrict, type Locale } from 'date-fns';
-import { ar, bn, ca, enUS, es, fr, hi, id, it, ptBR, ru, zhCN } from 'date-fns/locale';
+// One module per locale, never the `date-fns/locale` barrel: Metro does not
+// tree-shake, so the barrel ships every locale date-fns has (~90) to the
+// browser for the twelve Homiio speaks.
+import { ar } from 'date-fns/locale/ar';
+import { bn } from 'date-fns/locale/bn';
+import { ca } from 'date-fns/locale/ca';
+import { enUS } from 'date-fns/locale/en-US';
+import { es } from 'date-fns/locale/es';
+import { fr } from 'date-fns/locale/fr';
+import { hi } from 'date-fns/locale/hi';
+import { id } from 'date-fns/locale/id';
+import { it } from 'date-fns/locale/it';
+import { ptBR } from 'date-fns/locale/pt-BR';
+import { ru } from 'date-fns/locale/ru';
+import { zhCN } from 'date-fns/locale/zh-CN';
 
 /**
  * Map an i18next language tag to a `date-fns` locale. Both the full BCP-47 tag
