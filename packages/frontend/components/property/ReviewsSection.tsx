@@ -14,7 +14,12 @@ import React, { useMemo } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { RiEditLine, RiStarFill } from '@oxy.so/bloom/icons';
+import {
+  RiDiscussLine,
+  RiEditBoxLine,
+  RiEditLine,
+  RiStarFill,
+} from '@oxy.so/bloom/icons';
 
 import { Button } from '@oxy.so/bloom/button';
 import * as Skeleton from '@oxy.so/bloom/skeleton';
@@ -146,7 +151,7 @@ export const ReviewsSection: React.FC<ReviewsSectionProps> = ({
 
         {error ? (
           <ErrorState
-            icon="chatbubbles-outline"
+            icon={RiDiscussLine}
             title={t('property.reviews.errorTitle')}
             description={error}
             retryLabel={t('common.tryAgain')}
@@ -158,11 +163,11 @@ export const ReviewsSection: React.FC<ReviewsSectionProps> = ({
 
         {!loading && !error && reviews.length === 0 ? (
           <EmptyState
-            icon="chatbubbles-outline"
+            icon={RiDiscussLine}
             title={t('property.reviews.emptyTitle')}
             description={t('property.reviews.emptyDescription')}
             actionText={t('property.reviews.writeAction')}
-            actionIcon="create-outline"
+            actionIcon={RiEditBoxLine}
             onAction={handleWriteReview}
           />
         ) : null}

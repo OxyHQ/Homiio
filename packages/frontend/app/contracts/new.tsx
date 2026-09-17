@@ -32,6 +32,7 @@ import { useCreateLeaseFromApplication } from '@/hooks/useLeaseQueries';
 import { getPropertyImageSource, getPropertyTitle } from '@/utils/propertyUtils';
 import { formatLocalized } from '@/utils/dateLocale';
 import { radius, spacing, tracker } from '@/constants/styles';
+import { RiFileTextLine, RiGalleryLine } from '@oxy.so/bloom/icons';
 
 interface DetailRowProps {
   label: string;
@@ -97,11 +98,11 @@ export default function NewContractScreen() {
         <SafeAreaView edges={['bottom']} style={styles.safeArea}>
           <View style={styles.centerWrap}>
             <EmptyState
-              icon="document-text-outline"
+              icon={RiFileTextLine}
               title={t('contracts.new.noApplicationTitle')}
               description={t('contracts.new.noApplicationDescription')}
               actionText={t('contracts.new.viewApplications')}
-              actionIcon="albums-outline"
+              actionIcon={RiGalleryLine}
               onAction={() => router.replace('/applications')}
             />
           </View>

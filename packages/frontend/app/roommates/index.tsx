@@ -22,11 +22,15 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@oxy.so/bloom/button';
 import {
+  RiAccountCircleLine,
+  RiCheckboxCircleFill,
   RiGroupLine,
   RiHotelBedLine,
   RiMailLine,
   RiSearchLine,
   RiSettings3Line,
+  RiUserCommunityLine,
+  RiUserLine,
 } from '@oxy.so/bloom/icons';
 import { Tabs, TabsTrigger, type TabsIconComponent } from '@oxy.so/bloom/tabs';
 import { toast } from '@oxy.so/bloom/toast';
@@ -170,11 +174,11 @@ export default function RoommatesPage() {
 
   const personalProfileEmpty = (
     <EmptyState
-      icon="person-outline"
+      icon={RiUserLine}
       title={t('roommates.screen.personalProfileRequired')}
       description={t('roommates.screen.personalProfileDescription')}
       actionText={t('roommates.screen.switchToPersonal')}
-      actionIcon="person-circle"
+      actionIcon={RiAccountCircleLine}
       onAction={() => router.push('/profile')}
     />
   );
@@ -279,11 +283,11 @@ export default function RoommatesPage() {
     if (!hasRoommateMatching && profiles.length === 0) {
       return (
         <EmptyState
-          icon="people-outline"
+          icon={RiGroupLine}
           title={t('roommates.screen.enableMatchingTitle')}
           description={t('roommates.screen.enableMatchingDescription')}
           actionText={isToggling ? t('roommates.screen.enabling') : t('roommates.screen.enableMatching')}
-          actionIcon="checkmark-circle"
+          actionIcon={RiCheckboxCircleFill}
           onAction={handleToggleMatching}
         />
       );
@@ -292,11 +296,11 @@ export default function RoommatesPage() {
     if (profiles.length === 0) {
       return (
         <EmptyState
-          icon="people-outline"
+          icon={RiGroupLine}
           title={t('roommates.screen.emptyDiscoverTitle')}
           description={t('roommates.screen.emptyDiscoverDescription')}
           actionText={t('roommates.screen.updatePreferences')}
-          actionIcon="settings"
+          actionIcon={RiSettings3Line}
           onAction={() => router.push('/roommates/preferences')}
         />
       );
@@ -347,11 +351,11 @@ export default function RoommatesPage() {
     if (requests.sent.length === 0 && requests.received.length === 0) {
       return (
         <EmptyState
-          icon="mail-outline"
+          icon={RiMailLine}
           title={t('roommates.screen.emptyRequestsTitle')}
           description={t('roommates.screen.emptyRequestsDescription')}
           actionText={t('roommates.screen.discoverRoommates')}
-          actionIcon="search"
+          actionIcon={RiSearchLine}
           onAction={() => setActiveTab('discover')}
         />
       );
@@ -412,11 +416,11 @@ export default function RoommatesPage() {
     if (relationships.length === 0) {
       return (
         <EmptyState
-          icon="people-circle-outline"
+          icon={RiUserCommunityLine}
           title={t('roommates.screen.emptyRelationshipsTitle')}
           description={t('roommates.screen.emptyRelationshipsDescription')}
           actionText={t('roommates.screen.discoverRoommates')}
-          actionIcon="search"
+          actionIcon={RiSearchLine}
           onAction={() => setActiveTab('discover')}
         />
       );
@@ -445,11 +449,11 @@ export default function RoommatesPage() {
     if (!hasProfile || !hasProfile) {
       return (
         <EmptyState
-          icon="person-outline"
+          icon={RiUserLine}
           title={t('roommates.screen.personalProfileRequired')}
           description={t('roommates.screen.roomSearchPersonalOnly')}
           actionText={t('roommates.screen.switchToPersonal')}
-          actionIcon="person-circle"
+          actionIcon={RiAccountCircleLine}
           onAction={() => router.push('/profile')}
         />
       );

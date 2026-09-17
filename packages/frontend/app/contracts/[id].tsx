@@ -22,7 +22,12 @@ import * as ImagePicker from 'expo-image-picker';
 import { toast } from '@oxy.so/bloom/toast';
 
 import { Button } from '@oxy.so/bloom/button';
-import { RiAddLine, RiExternalLinkLine, RiFileTextLine } from '@oxy.so/bloom/icons';
+import {
+  RiAddLine,
+  RiAlertLine,
+  RiExternalLinkLine,
+  RiFileTextLine,
+} from '@oxy.so/bloom/icons';
 import { Item } from '@oxy.so/bloom/item';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { Loading } from '@oxy.so/bloom/loading';
@@ -225,7 +230,7 @@ export default function ContractDetailScreen() {
         {header}
         <View style={styles.centerWrap}>
           <ErrorState
-            icon="warning-outline"
+            icon={RiAlertLine}
             title={t('contracts.detail.invalidIdTitle')}
             description={t('contracts.detail.invalidIdDescription')}
             retryLabel={t('contracts.detail.goBack')}

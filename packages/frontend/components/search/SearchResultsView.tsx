@@ -24,7 +24,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@oxy.so/bloom/button';
-import { RiEqualizerLine, RiRefreshLine } from '@oxy.so/bloom/icons';
+import {
+  RiEqualizerLine,
+  RiHomeLine,
+  RiRefreshLine,
+  RiSearchLine,
+} from '@oxy.so/bloom/icons';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { useSavedSearches } from '@/hooks/useSavedSearches';
@@ -698,7 +703,7 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
     if (properties.length === 0) {
       return (
         <EmptyState
-          icon="home-outline"
+          icon={RiHomeLine}
           title={
             t('search.empty.title', 'No properties match this search') ||
             'No properties match this search'
@@ -708,7 +713,7 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
             'Try widening your area or relaxing your filters.'
           }
           actionText={t('search.empty.action', 'Edit search') || 'Edit search'}
-          actionIcon="search"
+          actionIcon={RiSearchLine}
           onAction={onEditSearch}
         />
       );

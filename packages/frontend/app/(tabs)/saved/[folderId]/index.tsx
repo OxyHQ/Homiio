@@ -18,7 +18,12 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useOxy } from '@oxy.so/services';
 
 import { Button } from '@oxy.so/bloom/button';
-import { RiEditLine } from '@oxy.so/bloom/icons';
+import {
+  RiEditLine,
+  RiFolderLine,
+  RiFolderOpenLine,
+  RiSearchLine,
+} from '@oxy.so/bloom/icons';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { Header } from '@/components/Header';
@@ -160,7 +165,7 @@ export default function SavedFolderScreen() {
         />
         <View style={styles.centerWrap}>
           <EmptyState
-            icon="folder-open-outline"
+            icon={RiFolderOpenLine}
             title={t('saved.noFolder')}
             description={t('saved.noFolderDescription')}
           />
@@ -206,11 +211,11 @@ export default function SavedFolderScreen() {
         {propertiesInFolder.length === 0 ? (
           <View style={styles.emptyInner}>
             <EmptyState
-              icon="folder-outline"
+              icon={RiFolderLine}
               title={t('saved.noFolderItems')}
               description={t('saved.noFolderItemsDescription')}
               actionText={t('saved.exploreCta')}
-              actionIcon="search"
+              actionIcon={RiSearchLine}
               onAction={() => router.push('/explore')}
             />
           </View>

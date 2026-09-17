@@ -23,12 +23,15 @@ import { Card } from '@oxy.so/bloom/card';
 import { Item } from '@oxy.so/bloom/item';
 import { useTheme } from '@oxy.so/bloom/theme';
 import {
+  RiAlertLine,
   RiCheckLine,
   RiCloseLine,
   RiEditLine,
+  RiErrorWarningFill,
   RiExternalLinkLine,
   RiEyeLine,
   RiFileTextLine,
+  RiLockLine,
   RiMailLine,
   RiUserLine,
   RiWallet3Line,
@@ -301,7 +304,7 @@ export default function LandlordApplicationDetailScreen() {
           }}
         />
         <ErrorState
-          icon="alert-circle-outline"
+          icon={RiErrorWarningFill}
           title="Invalid application"
           description="We couldn't find this application id."
           onRetry={() => router.back()}
@@ -337,7 +340,7 @@ export default function LandlordApplicationDetailScreen() {
           }}
         />
         <ErrorState
-          icon="cloud-offline-outline"
+          icon={RiAlertLine}
           title="Application unavailable"
           description={
             applicationQuery.error?.message ??
@@ -359,7 +362,7 @@ export default function LandlordApplicationDetailScreen() {
           }}
         />
         <ErrorState
-          icon="lock-closed-outline"
+          icon={RiLockLine}
           title="Not authorised"
           description="Only the landlord assigned to this property can review the application."
           onRetry={() => router.back()}

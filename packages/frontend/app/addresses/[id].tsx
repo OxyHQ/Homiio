@@ -19,7 +19,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@oxy.so/bloom/button';
 import { Card } from '@oxy.so/bloom/card';
-import { RiDiscussLine, RiEditBoxLine, RiHomeLine } from '@oxy.so/bloom/icons';
+import {
+  RiChat3Line,
+  RiDiscussLine,
+  RiEditBoxLine,
+  RiHomeLine,
+  RiSearchLine,
+} from '@oxy.so/bloom/icons';
 import { Tabs, TabsTrigger } from '@oxy.so/bloom/tabs';
 import { H2, H3, Text as BloomText } from '@oxy.so/bloom/typography';
 import { useTranslation } from 'react-i18next';
@@ -191,7 +197,7 @@ export default function AddressDetailsPage() {
       <View style={styles.root}>
         <Header options={{ title: t('addresses.detail.title'), showBackButton: true }} />
         <ErrorState
-          icon="search-outline"
+          icon={RiSearchLine}
           title={t('addresses.detail.notFound')}
           description={t('addresses.detail.notFoundDescription')}
           onRetry={() => router.back()}
@@ -281,7 +287,7 @@ export default function AddressDetailsPage() {
               <H3 style={styles.cardHeading}>{t('addresses.detail.propertiesSection')}</H3>
               {properties.length === 0 ? (
                 <EmptyState
-                  icon="home-outline"
+                  icon={RiHomeLine}
                   title={t('addresses.detail.emptyPropertiesTitle')}
                   description={t('addresses.detail.emptyPropertiesDescription')}
                 />
@@ -332,7 +338,7 @@ export default function AddressDetailsPage() {
 
               {filteredReviews.length === 0 ? (
                 <EmptyState
-                  icon="chatbubble-outline"
+                  icon={RiChat3Line}
                   title={t('addresses.detail.emptyReviewsTitle')}
                   description={t('addresses.detail.emptyReviewsDescription')}
                 />

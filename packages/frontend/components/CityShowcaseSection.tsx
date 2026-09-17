@@ -26,7 +26,6 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { useMediaQuery } from 'react-responsive';
 
 import { H1, Text as BloomText } from '@oxy.so/bloom/typography';
@@ -37,6 +36,7 @@ import { textShadow } from '@/styles/shadows';
 import { cardShadow, gridGap, PAGE_GUTTER_CLASS, pagePadding, radius, spacing, tracker } from '@/constants/styles';
 import { cityRegionName, getCityImageSource } from '@/utils/cityDisplay';
 import { ZoomableImage } from '@/components/ui/ZoomableImage';
+import { RiArrowLeftSLine, RiArrowRightSLine } from '@oxy.so/bloom/icons';
 
 interface CityShowcaseSectionProps {
   title: string;
@@ -96,7 +96,7 @@ export function CityShowcaseSection({ title, items, onPressCity }: CityShowcaseS
               accessibilityRole="button"
               accessibilityLabel="Scroll left"
             >
-              <Ionicons name="chevron-back" size={16} color={colors.primaryColor} />
+              <RiArrowLeftSLine width={16} height={16} fill={colors.primaryColor} />
             </Pressable>
             <Pressable
               onPress={() => scrollByPage('right')}
@@ -106,7 +106,7 @@ export function CityShowcaseSection({ title, items, onPressCity }: CityShowcaseS
               accessibilityRole="button"
               accessibilityLabel="Scroll right"
             >
-              <Ionicons name="chevron-forward" size={16} color={colors.primaryColor} />
+              <RiArrowRightSLine width={16} height={16} fill={colors.primaryColor} />
             </Pressable>
           </View>
         ) : null}

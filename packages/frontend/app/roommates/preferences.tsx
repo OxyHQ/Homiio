@@ -35,6 +35,7 @@ import { roommateService, type RoommateMatchingPreferences } from '@/services/ro
 import { useProfileStore } from '@/store/profileStore';
 import { spacing } from '@/constants/styles';
 import { colors } from '@/styles/colors';
+import { RiAccountCircleLine, RiUserLine } from '@oxy.so/bloom/icons';
 
 type LifestyleChoice = 'yes' | 'no' | 'prefer_not';
 type Cleanliness = 'very_clean' | 'clean' | 'average' | 'relaxed';
@@ -315,11 +316,11 @@ export default function RoommatePreferencesPage() {
         <SafeAreaView edges={['bottom']} style={styles.safeArea}>
           <View style={styles.emptyWrap}>
             <EmptyState
-              icon="person-outline"
+              icon={RiUserLine}
               title={t('roommates.preferencesPage.personalProfileRequired')}
               description={t('roommates.preferencesPage.personalProfileDescription')}
               actionText={t('roommates.preferencesPage.switchToPersonal')}
-              actionIcon="person-circle"
+              actionIcon={RiAccountCircleLine}
               onAction={() => router.push('/profile')}
             />
           </View>

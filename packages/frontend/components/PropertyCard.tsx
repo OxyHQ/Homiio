@@ -31,11 +31,13 @@ import { ThemedText } from '@/components/ThemedText';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 import {
   RiBuilding2Line,
+  RiCoinsLine,
   RiEditLine,
   RiFileTextLine,
   RiHomeLine,
   RiLeafLine,
   RiShieldCheckLine,
+  RiSpeedUpLine,
   RiStarFill,
   type Props as IconProps,
 } from '@oxy.so/bloom/icons';
@@ -362,7 +364,7 @@ export const PropertyCard = React.memo(function PropertyCard({
                 {/* Fair price — Homiio ethical + market badge. */}
                 {isFairPrice ? (
                   <MediaChip
-                    icon="pricetag"
+                    icon={RiCoinsLine}
                     accent={colors.success}
                     label={t('listing.badge.fairPrice', 'Fair price')}
                   />
@@ -371,7 +373,7 @@ export const PropertyCard = React.memo(function PropertyCard({
                 {/* Instant Book (vacation mode only). */}
                 {showInstantBook ? (
                   <MediaChip
-                    icon="flash"
+                    icon={RiSpeedUpLine}
                     accent={colors.primarySubtleForeground}
                     label={t('listing.badge.instantBook', 'Instant book')}
                   />

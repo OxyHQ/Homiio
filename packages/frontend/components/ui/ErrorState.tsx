@@ -13,19 +13,18 @@
  */
 import React from 'react';
 import { StyleSheet, View, type ViewStyle } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { Button } from '@oxy.so/bloom/button';
+import type { ButtonIconComponent } from '@oxy.so/bloom/button';
+import { RiAlertLine } from '@oxy.so/bloom/icons';
 import { H3, Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { colors } from '@/styles/colors';
 import { ICON_SIZES, spacing } from '@/constants/styles';
 
-type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
-
 interface ErrorStateProps {
-  /** Override the default cloud-with-cross icon. */
-  icon?: IoniconName;
+  /** Override the default warning icon with another Remix icon component. */
+  icon?: ButtonIconComponent;
   title: string;
   /** Short, single-line explanation. Avoid stack traces. */
   description?: string;
@@ -35,7 +34,7 @@ interface ErrorStateProps {
 }
 
 export const ErrorState: React.FC<ErrorStateProps> = ({
-  icon = 'cloud-offline-outline',
+  icon: Icon = RiAlertLine,
   title,
   description,
   retryLabel = 'Try again',
@@ -45,7 +44,7 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
   return (
     <View style={[styles.container, style]}>
       <View style={styles.iconCircle}>
-        <Ionicons name={icon} size={ICON_SIZES.xl} color={colors.COLOR_BLACK_LIGHT_3} />
+        <Icon width={ICON_SIZES.xl} height={ICON_SIZES.xl} fill={colors.COLOR_BLACK_LIGHT_3} />
       </View>
       <H3 style={styles.title}>{title}</H3>
       {description ? (

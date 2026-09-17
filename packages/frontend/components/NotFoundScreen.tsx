@@ -2,8 +2,8 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors } from '@/styles/colors';
+import { RiErrorWarningFill } from '@oxy.so/bloom/icons';
 
 export default function NotFoundScreen() {
   const router = useRouter();
@@ -11,7 +11,7 @@ export default function NotFoundScreen() {
 
   return (
     <View style={styles.container}>
-      <Ionicons name="alert-circle-outline" size={80} color={colors.primaryColor} />
+      <RiErrorWarningFill width={80} height={80} fill={colors.primaryColor} />
       <Text style={styles.title}>{t('notFound.title')}</Text>
       <Text style={styles.message}>{t('notFound.message')}</Text>
       <TouchableOpacity style={styles.button} onPress={() => router.back()}>

@@ -71,8 +71,8 @@ export const radius = {
 } as const;
 
 /**
- * Icon-size scale for `Ionicons`/glyph `size={…}`. Pick the nearest token
- * instead of sprinkling raw numbers so glyphs line up across buttons, list
+ * Icon-size scale for a Remix glyph's `width`/`height`. Pick the nearest
+ * token instead of sprinkling raw numbers so glyphs line up across buttons, list
  * rows, empty/error states, and widget headers.
  *
  *   xs (12) — inline meta glyphs, chip progress markers

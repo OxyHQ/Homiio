@@ -19,6 +19,7 @@ import {
   RiArchiveLine,
   RiArrowRightSLine,
   RiDeleteBinLine,
+  RiFileTextLine,
   RiPushpinFill,
   RiPushpinLine,
 } from '@oxy.so/bloom/icons';
@@ -197,7 +198,7 @@ export default function NotesScreen() {
         contentContainerStyle={styles.content}
         ListEmptyComponent={
           <EmptyState
-            icon="document-text-outline"
+            icon={RiFileTextLine}
             title={t('saved.notes.emptyTitle')}
             description={t('saved.notes.emptyDescription')}
           />

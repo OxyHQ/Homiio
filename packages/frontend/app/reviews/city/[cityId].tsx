@@ -17,6 +17,7 @@ import { ExploreList, ExploreRow } from '@/components/reviews/ExploreRow';
 import { useExploreCity } from '@/hooks/useExploreReviews';
 import { colors } from '@/styles/colors';
 import { radius, spacing } from '@/constants/styles';
+import { RiAlertLine, RiMapPinLine } from '@oxy.so/bloom/icons';
 
 export default function ReviewExploreCityScreen() {
   const router = useRouter();
@@ -38,7 +39,7 @@ export default function ReviewExploreCityScreen() {
             </View>
           ) : cityQuery.isError ? (
             <ErrorState
-              icon="cloud-offline-outline"
+              icon={RiAlertLine}
               title={t('reviews.explore.errorTitle')}
               description={t('reviews.explore.errorDescription')}
               retryLabel={t('common.tryAgain')}
@@ -46,7 +47,7 @@ export default function ReviewExploreCityScreen() {
             />
           ) : neighborhoods.length === 0 ? (
             <EmptyState
-              icon="map-outline"
+              icon={RiMapPinLine}
               title={t('reviews.explore.emptyNeighborhoodsTitle')}
               description={t('reviews.explore.emptyNeighborhoodsDescription')}
             />

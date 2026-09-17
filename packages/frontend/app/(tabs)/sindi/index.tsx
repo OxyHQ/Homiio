@@ -27,8 +27,12 @@ import { Search } from '@oxy.so/bloom/search';
 import * as Skeleton from '@oxy.so/bloom/skeleton';
 import { Card } from '@oxy.so/bloom/card';
 import {
+  RiAddCircleLine,
   RiAddLine,
+  RiDiscussLine,
   RiFileTextLine,
+  RiLockLine,
+  RiLoginBoxLine,
   RiShieldCheckLine,
   RiTeamLine,
 } from '@oxy.so/bloom/icons';
@@ -161,11 +165,11 @@ export default function Sindi() {
           options={{ title: t('sindi.title'), showBackButton: true }}
         />
         <EmptyState
-          icon="lock-closed"
+          icon={RiLockLine}
           title={t('sindi.auth.required')}
           description={t('sindi.auth.message')}
           actionText={t('common.signIn')}
-          actionIcon="log-in"
+          actionIcon={RiLoginBoxLine}
           onAction={() => openAccountDialog()}
           iconColor={staticColors.primaryColor}
         />
@@ -246,7 +250,7 @@ export default function Sindi() {
             <SindiSkeleton />
           ) : filteredConversations.length === 0 ? (
             <EmptyState
-              icon="chatbubbles-outline"
+              icon={RiDiscussLine}
               title={searchQuery ? 'No matches' : 'No conversations yet'}
               description={
                 searchQuery
@@ -254,7 +258,7 @@ export default function Sindi() {
                   : 'Start a new conversation to get help.'
               }
               actionText={searchQuery ? undefined : 'Start first chat'}
-              actionIcon={searchQuery ? undefined : 'add-circle'}
+              actionIcon={searchQuery ? undefined : RiAddCircleLine}
               onAction={searchQuery ? undefined : createNewConversation}
             />
           ) : (

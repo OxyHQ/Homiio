@@ -5,7 +5,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import type { Message } from '@ai-sdk/react';
 import { Button } from '@oxy.so/bloom/button';
-import { RiShare2Line } from '@oxy.so/bloom/icons';
+import { RiLockLine, RiLoginBoxLine, RiShare2Line } from '@oxy.so/bloom/icons';
 import { Loading } from '@oxy.so/bloom/loading';
 import { useOxy, openAccountDialog } from '@oxy.so/services';
 import { Header } from '@/components/Header';
@@ -103,11 +103,11 @@ export default function ConversationDetail() {
       <View style={styles.container}>
         <Header options={{ title: t('sindi.conversation.title'), showBackButton: true }} />
         <EmptyState
-          icon="lock-closed"
+          icon={RiLockLine}
           title={t('sindi.auth.required')}
           description={t('sindi.auth.message')}
           actionText="Sign In"
-          actionIcon="log-in"
+          actionIcon={RiLoginBoxLine}
           onAction={() => openAccountDialog()}
           iconColor={colors.primaryColor}
         />

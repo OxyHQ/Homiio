@@ -24,6 +24,7 @@ import { toast } from '@oxy.so/bloom/toast';
 import { Item } from '@oxy.so/bloom/item';
 import { useTheme } from '@oxy.so/bloom/theme';
 import {
+  RiAlertLine,
   RiCloseLine,
   RiEditLine,
   RiExternalLinkLine,
@@ -202,7 +203,7 @@ export default function ApplicationDetailScreen() {
         {header}
         <View style={styles.centerWrap}>
           <ErrorState
-            icon="warning-outline"
+            icon={RiAlertLine}
             title="Invalid application id"
             description="The link you followed is missing the application reference."
             retryLabel="Go back"

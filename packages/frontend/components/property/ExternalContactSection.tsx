@@ -5,12 +5,12 @@
 import React, { useCallback } from 'react';
 import { Linking, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { RiExternalLinkLine, RiMailLine, RiPhoneLine } from '@oxy.so/bloom/icons';
 import { Item } from '@oxy.so/bloom/item';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 
+import { RiWhatsappLine } from '@/components/icons/RiWhatsappLine';
 import { SECTION_GUTTER } from '@/components/property/Section';
 import { colors } from '@/styles/colors';
 import { spacing } from '@/constants/styles';
@@ -51,9 +51,9 @@ function buildContactLinks(
 }
 
 /**
- * Leading glyph per channel. WhatsApp keeps the Ionicons brand logo: Bloom's
- * Remix set carries no WhatsApp mark, and a generic chat bubble would hide
- * which app the link opens.
+ * Leading glyph per channel. WhatsApp uses the app-local Remix
+ * `RiWhatsappLine`: Bloom's set carries no WhatsApp mark, and a generic chat
+ * bubble would hide which app the link opens.
  */
 function ContactIcon({ kind }: { kind: ContactLink['key'] }) {
   if (kind === 'phone') {
@@ -62,7 +62,7 @@ function ContactIcon({ kind }: { kind: ContactLink['key'] }) {
   if (kind === 'email') {
     return <RiMailLine width={LINK_ICON_SIZE} height={LINK_ICON_SIZE} fill={colors.primaryColor} />;
   }
-  return <Ionicons name="logo-whatsapp" size={LINK_ICON_SIZE} color={colors.primaryColor} />;
+  return <RiWhatsappLine width={LINK_ICON_SIZE} height={LINK_ICON_SIZE} fill={colors.primaryColor} />;
 }
 
 function ContactLinkRow({ link }: { link: ContactLink }) {

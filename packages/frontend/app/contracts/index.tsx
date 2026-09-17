@@ -22,7 +22,13 @@ import {
   DataTableSearch,
   type DataTableColumn,
 } from '@oxy.so/bloom/data-table';
-import { RiAddLine, RiEyeLine } from '@oxy.so/bloom/icons';
+import {
+  RiAddLine,
+  RiAlertLine,
+  RiEyeLine,
+  RiFileTextLine,
+  RiHomeLine,
+} from '@oxy.so/bloom/icons';
 import * as Skeleton from '@oxy.so/bloom/skeleton';
 import { H2, Text as BloomText } from '@oxy.so/bloom/typography';
 import { formatMoney } from '@homiio/shared-types';
@@ -273,11 +279,11 @@ export default function ContractsScreen() {
         />
         <SafeAreaView edges={['bottom']} style={styles.safeArea}>
           <EmptyState
-            icon="document-text-outline"
+            icon={RiFileTextLine}
             title={t('contracts.list.noRentalPropertiesTitle')}
             description={t('contracts.list.noRentalPropertiesDescription')}
             actionText={t('contracts.list.browseProperties')}
-            actionIcon="home"
+            actionIcon={RiHomeLine}
             onAction={() => router.push('/')}
           />
         </SafeAreaView>
@@ -341,7 +347,7 @@ export default function ContractsScreen() {
 
           {leasesError ? (
             <ErrorState
-              icon="cloud-offline-outline"
+              icon={RiAlertLine}
               title={t('contracts.list.loadError')}
               description={leasesError?.message || t('contracts.list.tryAgain')}
               onRetry={() => refetchLeases()}
@@ -384,11 +390,11 @@ export default function ContractsScreen() {
           {!isLoading && !leasesError && (showTable ? hasNoContracts : filteredContracts.length === 0) ? (
             <View style={styles.emptyWrap}>
               <EmptyState
-                icon="document-text-outline"
+                icon={RiFileTextLine}
                 title={t('contracts.list.emptyTitle')}
                 description={emptyDescription}
                 actionText={t('contracts.list.createNew')}
-                actionIcon="add"
+                actionIcon={RiAddLine}
                 onAction={handleAddNewContract}
               />
             </View>

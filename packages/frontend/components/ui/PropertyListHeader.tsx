@@ -25,12 +25,13 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import type { ButtonIconComponent } from '@oxy.so/bloom/button';
 
 import { H4, Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { colors } from '@/styles/colors';
 import { contentClamp, hairline, radius, spacing } from '@/constants/styles';
+import { RiArrowLeftSLine } from '@oxy.so/bloom/icons';
 
 /** Size of the circular back/icon button tap target. */
 const ICON_BUTTON_SIZE = 40;
@@ -53,11 +54,11 @@ interface PropertyListHeaderProps {
 
 /** A circular, NativeWind-safe icon button (static style + pressed state). */
 function HeaderIconButton({
-  icon,
+  icon: Icon,
   onPress,
   accessibilityLabel,
 }: {
-  icon: React.ComponentProps<typeof Ionicons>['name'];
+  icon: ButtonIconComponent;
   onPress: () => void;
   accessibilityLabel: string;
 }) {
@@ -71,7 +72,7 @@ function HeaderIconButton({
       accessibilityLabel={accessibilityLabel}
       style={[styles.iconButton, pressed && styles.iconButtonPressed]}
     >
-      <Ionicons name={icon} size={22} color={colors.COLOR_BLACK} />
+      <Icon width={22} height={22} fill={colors.COLOR_BLACK} />
     </Pressable>
   );
 }
@@ -97,7 +98,7 @@ export const PropertyListHeader: React.FC<PropertyListHeaderProps> = ({
       <View style={styles.content}>
         {showBack ? (
           <HeaderIconButton
-            icon="chevron-back"
+            icon={RiArrowLeftSLine}
             onPress={handleBack}
             accessibilityLabel="Go back"
           />

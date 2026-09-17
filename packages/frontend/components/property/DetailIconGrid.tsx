@@ -31,9 +31,8 @@
  */
 import React from 'react';
 import { Image, StyleSheet, View, type ImageSourcePropType } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
 
-import type { Props as IconProps } from '@oxy.so/bloom/icons';
+import type { ButtonIconComponent } from '@oxy.so/bloom/button';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { colors } from '@/styles/colors';
@@ -41,14 +40,14 @@ import { hairline, spacing } from '@/constants/styles';
 
 /**
  * Icon glyph size for every detail-grid row (line weight, Airbnb scale,
- * compact). Exported so callers size their `Ionicons` node to match the box
+ * compact). Exported so callers size their icon node to match the box
  * the primitive reserves for it.
  */
 export const DETAIL_ICON_SIZE = 22;
 
 /**
  * Edge length of the box every detail-grid icon sits in. An isometric PNG fills
- * the box (full-color, larger than the line glyph so it reads); the Ionicons
+ * the box (full-color, larger than the line glyph so it reads); the Remix
  * fallback is centered in the same box at `DETAIL_ICON_SIZE`. Sizing both to one
  * box keeps PNG rows and line-icon rows aligned (the row hugs the icon's width).
  */
@@ -61,29 +60,23 @@ const DETAIL_ICON_BOX_SIZE = 32;
  */
 const MUTED_ICON_OPACITY = 0.4;
 
-/**
- * A detail row's line glyph: a Bloom (Remix) icon component, or an Ionicons
- * glyph NAME for data-driven domain icons (the amenity catalog's bed / wifi /
- * pool glyphs) that Remix's set has no equivalent for.
- */
-export type DetailFallbackIcon =
-  | React.ComponentType<IconProps>
-  | React.ComponentProps<typeof Ionicons>['name'];
+/** A detail row's line glyph: a Bloom (Remix) icon component. */
+export type DetailFallbackIcon = ButtonIconComponent;
 
 /**
  * The shared "PNG-or-glyph" leading icon used by the amenity and feature
  * grids: a centered box that shows `image` when art exists, else `fallbackIcon`
- * as a tinted Ionicons glyph. Pass the result as `DetailIconRow`'s `icon`.
+ * as a tinted Remix glyph. Pass the result as `DetailIconRow`'s `icon`.
  *
  * `muted` (for "absent"/disabled rows) dims the PNG via opacity and tints the
- * Ionicons fallback with the muted glyph color; off by default so the amenity
+ * line-glyph fallback with the muted glyph color; off by default so the amenity
  * and feature callers keep their full-strength look unchanged.
  */
 export const DetailIcon: React.FC<{
   image?: ImageSourcePropType;
   fallbackIcon: DetailFallbackIcon;
   muted?: boolean;
-}> = ({ image, fallbackIcon, muted = false }) => {
+}> = ({ image, fallbackIcon: FallbackIcon, muted = false }) => {
   const tint = muted ? colors.COLOR_BLACK_LIGHT_5 : colors.COLOR_BLACK_LIGHT_1;
   return (
   <View style={styles.detailIconBox}>
@@ -94,14 +87,8 @@ export const DetailIcon: React.FC<{
         resizeMode="contain"
         accessible={false}
       />
-    ) : typeof fallbackIcon === 'string' ? (
-      <Ionicons name={fallbackIcon} size={DETAIL_ICON_SIZE} color={tint} />
     ) : (
-      React.createElement(fallbackIcon, {
-        width: DETAIL_ICON_SIZE,
-        height: DETAIL_ICON_SIZE,
-        fill: tint,
-      })
+      <FallbackIcon width={DETAIL_ICON_SIZE} height={DETAIL_ICON_SIZE} fill={tint} />
     )}
   </View>
   );
@@ -157,7 +144,7 @@ export const DetailIconCell: React.FC<DetailIconCellProps> = ({
 );
 
 interface DetailIconRowProps {
-  /** Leading glyph — a pre-sized, pre-tinted `Ionicons` (use `DETAIL_ICON_SIZE`). */
+  /** Leading glyph — a pre-sized, pre-tinted Remix icon (use `DETAIL_ICON_SIZE`). */
   icon: React.ReactNode;
   /** Primary label text. */
   label: string;

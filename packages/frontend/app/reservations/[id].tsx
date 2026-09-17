@@ -49,6 +49,7 @@ import {
 } from '@/utils/propertyUtils';
 import { colors } from '@/styles/colors';
 import { radius, spacing, tracker } from '@/constants/styles';
+import { RiAlertLine } from '@oxy.so/bloom/icons';
 
 const hoursUntil = (when: Date): number => {
   const now = Date.now();
@@ -166,7 +167,7 @@ export default function ReservationDetailScreen() {
         {header}
         <View style={styles.centerWrap}>
           <ErrorState
-            icon="warning-outline"
+            icon={RiAlertLine}
             title={t('reservations.detail.invalidId')}
             description={t('reservations.detail.invalidIdDescription')}
             retryLabel={t('reservations.detail.goBack')}

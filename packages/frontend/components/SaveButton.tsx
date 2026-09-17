@@ -16,6 +16,7 @@
 import React, { useState, useContext } from 'react';
 import { StyleSheet, ViewStyle, View, StyleProp } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { RiBookmarkFill, RiBookmarkLine, RiHeartFill, RiHeartLine } from '@oxy.so/bloom/icons';
 import { colors } from '@/styles/colors';
 import { barIconSize, spacing } from '@/constants/styles';
 import { IconButton, type IconButtonVariant } from '@/components/ui/IconButton';
@@ -111,14 +112,14 @@ export function SaveButton({
   // Extract propertyTitle from property object
   const propertyTitle = property ? getPropertyTitle(property) : '';
 
-  const iconName =
+  const icon =
     variant === 'heart'
       ? isSaved
-        ? 'heart'
-        : 'heart-outline'
+        ? RiHeartFill
+        : RiHeartLine
       : isSaved
-        ? 'bookmark'
-        : 'bookmark-outline';
+        ? RiBookmarkFill
+        : RiBookmarkLine;
 
   const isSaving = Boolean(propertyId && isPropertySaving(propertyId));
   const loading = showLoading && (isLoading || isSaving);
@@ -228,7 +229,7 @@ export function SaveButton({
 
   const button = (
     <IconButton
-      icon={iconName}
+      icon={icon}
       onPress={handlePress}
       onLongPress={handleLongPress}
       accessibilityLabel={accessibilityLabel}

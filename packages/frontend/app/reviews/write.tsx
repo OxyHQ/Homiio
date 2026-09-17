@@ -43,6 +43,7 @@ import { api } from '@/utils/api';
 import type { CreateReviewPayload, CreateReviewAddressInput } from '@homiio/shared-types';
 import { radius, spacing } from '@/constants/styles';
 import { colors } from '@/styles/colors';
+import { RiAlertLine } from '@oxy.so/bloom/icons';
 
 const TOTAL_STEPS = 8;
 const LAST_STEP = TOTAL_STEPS - 1;
@@ -304,7 +305,7 @@ export default function WriteReviewPage() {
       <View style={styles.root}>
         <Header options={{ title: t('reviews.write.title'), showBackButton: true }} />
         <ErrorState
-          icon="cloud-offline-outline"
+          icon={RiAlertLine}
           title={t('reviews.write.loadAddressFailed')}
           description={loadError}
           retryLabel={t('common.goBack')}

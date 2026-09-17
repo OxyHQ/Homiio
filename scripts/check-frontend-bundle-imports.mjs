@@ -1,14 +1,17 @@
 #!/usr/bin/env node
 /**
- * Refuse package-barrel imports that make Metro bundle a whole package.
+ * Refuse frontend imports that bloat the web bundle or bypass the icon system.
  *
- * Metro does not tree-shake, so a root barrel pulls in everything behind it:
- *
- * - `@expo/vector-icons` emits every bundled icon font on web for one glyph.
- *   Direct family subpaths keep the glyph API and leave the other fonts out.
- * - `@oxy.so/bloom` drags every Bloom family into the graph, including ones
- *   with optional peers, where an unmet peer is a build failure rather than
- *   dead weight. Import `@oxy.so/bloom/<family>`.
+ * - `@expo/vector-icons` and `lucide-react-native`, by ANY specifier (root or
+ *   subpath): app icons are Bloom's Remix components from
+ *   `@oxy.so/bloom/icons`. One Ionicons glyph ships a ~390 KB font on web, and
+ *   a glyph NAME string is not type-checked against a component set.
+ *   (`@expo/vector-icons` stays installed only as `@oxy.so/services`' required
+ *   peer; app code must not import it.)
+ * - `@oxy.so/bloom` root barrel: Metro does not tree-shake, so it drags every
+ *   Bloom family into the graph, including ones with optional peers, where an
+ *   unmet peer is a build failure rather than dead weight. Import
+ *   `@oxy.so/bloom/<family>`.
  *
  * The check is line-based on import/require/mock specifiers. Comment lines are
  * skipped, so a doc comment that quotes the forbidden form does not trip it.
@@ -20,22 +23,36 @@ const ROOT = resolve(process.argv[2] ?? new URL('../packages/frontend', import.m
 const SOURCE_EXTENSIONS = new Set(['.js', '.jsx', '.ts', '.tsx']);
 const SKIPPED_DIRECTORIES = new Set(['.expo', 'dist', 'node_modules']);
 
+const SPECIFIER_PREFIX =
+  '(?:\\bfrom\\s+|\\bimport\\s+|\\b(?:require|import|mock|requireActual)\\(\\s*)';
+
+function escapeRegExp(pkg) {
+  return pkg.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&');
+}
+
 /**
  * `from '<pkg>'`, `import '<pkg>'`, `require('<pkg>')`, `import('<pkg>')`,
  * `jest.mock('<pkg>')` — the exact root specifier, never a subpath.
  */
 function rootSpecifier(pkg) {
-  const escaped = pkg.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&');
-  return new RegExp(
-    `(?:\\bfrom\\s+|\\bimport\\s+|\\b(?:require|import|mock|requireActual)\\(\\s*)['"]${escaped}['"]`,
-  );
+  return new RegExp(`${SPECIFIER_PREFIX}['"]${escapeRegExp(pkg)}['"]`);
+}
+
+/** The same call forms, matching the package root AND every subpath. */
+function anySpecifier(pkg) {
+  return new RegExp(`${SPECIFIER_PREFIX}['"]${escapeRegExp(pkg)}(?:/[^'"]*)?['"]`);
 }
 
 const BARRELS = [
   {
-    pattern: rootSpecifier('@expo/vector-icons'),
+    pattern: anySpecifier('@expo/vector-icons'),
     message:
-      'Import icon families through @expo/vector-icons/<Family>; the root barrel bundles every font.',
+      'Do not import @expo/vector-icons in app code; use a Remix icon component from @oxy.so/bloom/icons.',
+  },
+  {
+    pattern: anySpecifier('lucide-react-native'),
+    message:
+      'Do not import lucide-react-native in app code; use a Remix icon component from @oxy.so/bloom/icons.',
   },
   {
     pattern: rootSpecifier('@oxy.so/bloom'),
@@ -86,4 +103,6 @@ BARRELS.forEach(({ message }, barrel) => {
 });
 if (failed) process.exit(1);
 
-console.log('Frontend bundle imports: no @expo/vector-icons or @oxy.so/bloom root-barrel imports.');
+console.log(
+  'Frontend bundle imports: no @expo/vector-icons, lucide-react-native or @oxy.so/bloom root-barrel imports.',
+);

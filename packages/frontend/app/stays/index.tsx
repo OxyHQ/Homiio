@@ -33,6 +33,7 @@ import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
 import { useReservationsQuery } from '@/hooks/useReservationQueries';
 import { colors } from '@/styles/colors';
 import { spacing } from '@/constants/styles';
+import { RiHotelBedLine, RiLoginBoxLine, RiSearchLine } from '@oxy.so/bloom/icons';
 
 type Filter = 'all' | 'upcoming' | 'past' | 'cancelled';
 
@@ -139,11 +140,11 @@ export default function StaysScreen() {
         <SafeAreaView edges={['bottom']} style={styles.safeArea}>
           <View style={styles.centerWrap}>
             <EmptyState
-              icon="bed-outline"
+              icon={RiHotelBedLine}
               title={t('stays.list.signInTitle')}
               description={t('stays.list.signInDescription')}
               actionText={t('stays.list.signIn')}
-              actionIcon="log-in-outline"
+              actionIcon={RiLoginBoxLine}
               onAction={() => openAccountDialog()}
             />
           </View>
@@ -194,7 +195,7 @@ export default function StaysScreen() {
           {filteredGroups.length === 0 ? (
             <View style={styles.emptyWrap}>
               <EmptyState
-                icon="bed-outline"
+                icon={RiHotelBedLine}
                 title={
                   filter === 'all'
                     ? t('stays.list.emptyAllTitle')
@@ -206,7 +207,7 @@ export default function StaysScreen() {
                     : t('stays.list.emptyFilteredDescription')
                 }
                 actionText={t('stays.list.exploreStays')}
-                actionIcon="search-outline"
+                actionIcon={RiSearchLine}
                 onAction={() => router.push('/explore?offering=short_term_rent')}
               />
             </View>

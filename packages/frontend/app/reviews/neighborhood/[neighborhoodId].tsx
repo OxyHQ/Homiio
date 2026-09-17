@@ -21,6 +21,7 @@ import { useExploreNeighborhood } from '@/hooks/useExploreReviews';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import { colors } from '@/styles/colors';
 import { radius, spacing } from '@/constants/styles';
+import { RiAlertLine, RiBuilding2Line } from '@oxy.so/bloom/icons';
 
 export default function ReviewExploreNeighborhoodScreen() {
   const router = useRouter();
@@ -60,7 +61,7 @@ export default function ReviewExploreNeighborhoodScreen() {
             </View>
           ) : query.isError ? (
             <ErrorState
-              icon="cloud-offline-outline"
+              icon={RiAlertLine}
               title={t('reviews.explore.errorTitle')}
               description={t('reviews.explore.errorDescription')}
               retryLabel={t('common.tryAgain')}
@@ -68,7 +69,7 @@ export default function ReviewExploreNeighborhoodScreen() {
             />
           ) : buildings.length === 0 ? (
             <EmptyState
-              icon="business-outline"
+              icon={RiBuilding2Line}
               title={t('reviews.explore.emptyBuildingsTitle')}
               description={t('reviews.explore.emptyBuildingsDescription')}
             />

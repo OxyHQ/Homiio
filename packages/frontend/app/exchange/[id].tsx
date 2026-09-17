@@ -18,7 +18,12 @@ import { useTranslation } from 'react-i18next';
 import { parseISO } from 'date-fns';
 
 import { Button } from '@oxy.so/bloom/button';
-import { RiCheckLine, RiCloseCircleLine, RiCloseLine } from '@oxy.so/bloom/icons';
+import {
+  RiAlertLine,
+  RiCheckLine,
+  RiCloseCircleLine,
+  RiCloseLine,
+} from '@oxy.so/bloom/icons';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { Loading } from '@oxy.so/bloom/loading';
 import { Text as BloomText, H2 } from '@oxy.so/bloom/typography';
@@ -175,7 +180,7 @@ export default function ExchangeRequestDetailScreen() {
         {header}
         <View style={styles.centerWrap}>
           <ErrorState
-            icon="warning-outline"
+            icon={RiAlertLine}
             title={t('listing.exchange.invalidId')}
             description={t('listing.exchange.invalidIdBody')}
             retryLabel={t('goBack')}

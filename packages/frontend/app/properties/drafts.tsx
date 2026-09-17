@@ -22,9 +22,11 @@ import { Button } from '@oxy.so/bloom/button';
 import { Card } from '@oxy.so/bloom/card';
 import {
   RiAddCircleLine,
+  RiAddLine,
   RiBuilding2Line,
   RiDeleteBinLine,
   RiEditLine,
+  RiFolderOpenLine,
   RiGroupLine,
   RiHomeLine,
   RiHotelBedLine,
@@ -285,11 +287,11 @@ export default function PropertyDraftsScreen() {
     if (drafts.length === 0) {
       return (
         <EmptyState
-          icon="folder-open-outline"
+          icon={RiFolderOpenLine}
           title={t('property.drafts.emptyTitle')}
           description={t('property.drafts.emptyDescription')}
           actionText={t('property.drafts.createFirst')}
-          actionIcon="add"
+          actionIcon={RiAddLine}
           onAction={() => router.push('/properties/create')}
         />
       );

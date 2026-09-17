@@ -20,7 +20,7 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Card } from '@oxy.so/bloom/card';
-import { RiPauseLine, RiMapPinLine } from '@oxy.so/bloom/icons';
+import { RiMapPinLine, RiNotification3Line, RiPauseLine } from '@oxy.so/bloom/icons';
 import { Loading } from '@oxy.so/bloom/loading';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { H3, Text as BloomText } from '@oxy.so/bloom/typography';
@@ -113,7 +113,7 @@ export default function AlertHistoryScreen() {
       <ScrollView contentContainerStyle={styles.content} onScroll={onScroll} scrollEventThrottle={16}>
         {groups.length === 0 ? (
           <EmptyState
-            icon="notifications-outline"
+            icon={RiNotification3Line}
             title={t('alerts.history.emptyTitle')}
             description={t('alerts.history.emptyDescription')}
           />

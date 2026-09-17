@@ -36,6 +36,12 @@ import { FiltersBar } from '@/components/FiltersBar';
 import { FiltersBottomSheet, type FilterSection, type FilterValue } from '@/components/FiltersBar/FiltersBottomSheet';
 
 import { BottomSheetContext } from '@/context/BottomSheetContext';
+import {
+  RiArrowLeftLine,
+  RiErrorWarningFill,
+  RiHomeLine,
+  RiRefreshLine,
+} from '@oxy.so/bloom/icons';
 
 /** Number of skeleton cards shown during the first properties load. */
 const SKELETON_COUNT = 6;
@@ -269,10 +275,10 @@ export default function CityPropertiesPage() {
         </View>
         <View style={{ paddingTop: headerHeight, flex: 1 }}>
           <EmptyState
-            icon="alert-circle"
+            icon={RiErrorWarningFill}
             title={t('properties.city.notFound')}
             actionText={t('common.goBack')}
-            actionIcon="arrow-back"
+            actionIcon={RiArrowLeftLine}
             onAction={() => router.back()}
           />
         </View>
@@ -296,11 +302,11 @@ export default function CityPropertiesPage() {
     if (properties.length === 0) {
       return (
         <EmptyState
-          icon="home-outline"
+          icon={RiHomeLine}
           title={t('properties.city.noPropertiesFound')}
           description={t('properties.city.tryAdjustFilters')}
           actionText={t('properties.city.clearFilters')}
-          actionIcon="refresh"
+          actionIcon={RiRefreshLine}
           onAction={() => setFilters(DEFAULT_FILTERS)}
         />
       );

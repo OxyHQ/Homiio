@@ -39,7 +39,14 @@ import * as Linking from 'expo-linking';
 
 import { useOxy, openAccountDialog } from '@oxy.so/services';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
-import { RiCheckLine, RiShapesLine } from '@oxy.so/bloom/icons';
+import {
+  RiAccountCircleLine,
+  RiCalendarLine,
+  RiCheckLine,
+  RiHomeLine,
+  RiShapesLine,
+  RiShare2Line,
+} from '@oxy.so/bloom/icons';
 
 import { Header } from '@/components/Header';
 import { PageScrollView } from '@/components/PageScrollView';
@@ -555,7 +562,7 @@ export default function PropertyDetailPage() {
         />
         <SafeAreaView style={styles.errorBody} edges={['bottom']}>
           <ErrorState
-            icon="home-outline"
+            icon={RiHomeLine}
             title={t('property.notFound', 'Property not found') || 'Property not found'}
             description={
               t(
@@ -633,7 +640,7 @@ export default function PropertyDetailPage() {
                   landlordOxyUserId ? (
                     <IconButton
                       key="profile"
-                      icon="person-circle-outline"
+                      icon={RiAccountCircleLine}
                       variant="overlay"
                       onPress={() => router.push(`/roommates/${landlordOxyUserId}`)}
                       accessibilityLabel="Open host profile"
@@ -641,14 +648,14 @@ export default function PropertyDetailPage() {
                   ) : null,
                   <IconButton
                     key="share"
-                    icon="share-outline"
+                    icon={RiShare2Line}
                     variant="overlay"
                     onPress={handleShare}
                     accessibilityLabel="Share property"
                   />,
                   <IconButton
                     key="viewings"
-                    icon="calendar-outline"
+                    icon={RiCalendarLine}
                     variant="overlay"
                     onPress={() => router.push('/viewings')}
                     accessibilityLabel="View bookings"

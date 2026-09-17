@@ -13,7 +13,12 @@ import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { Card } from '@oxy.so/bloom/card';
 import { Chip } from '@oxy.so/bloom/chip';
-import { RiCalendarLine, RiNewspaperLine, RiTimeLine } from '@oxy.so/bloom/icons';
+import {
+  RiAlertLine,
+  RiCalendarLine,
+  RiNewspaperLine,
+  RiTimeLine,
+} from '@oxy.so/bloom/icons';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { H2, H3, Text as BloomText } from '@oxy.so/bloom/typography';
 import { useMediaQuery } from 'react-responsive';
@@ -214,14 +219,14 @@ export default function TipsScreen() {
           <TipsSkeleton itemCount={isWide ? 4 : 3} />
         ) : tipsQuery.isError ? (
           <ErrorState
-            icon="cloud-offline-outline"
+            icon={RiAlertLine}
             title={t('tips.loadError')}
             description={tipsQuery.error?.message ?? t('tips.tryAgain')}
             onRetry={() => tipsQuery.refetch()}
           />
         ) : tips.length === 0 ? (
           <ErrorState
-            icon="newspaper-outline"
+            icon={RiNewspaperLine}
             title={t('tips.emptyTitle')}
             description={t('tips.emptyDescription')}
           />
