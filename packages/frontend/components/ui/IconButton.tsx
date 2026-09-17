@@ -23,13 +23,11 @@ import {
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import type { ButtonIconComponent } from '@oxy.so/bloom/button';
 import { Loading } from '@oxy.so/bloom/loading';
 
 import { colors } from '@/styles/colors';
 import { barIconButton, barIconButtonPressed, barIconSize, radius, spacing } from '@/constants/styles';
-
-type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
 export type IconButtonVariant = 'ghost' | 'overlay' | 'filled';
 
@@ -65,7 +63,8 @@ const VARIANT_ICON_COLOR: Record<IconButtonVariant, string> = {
 };
 
 interface IconButtonProps {
-  icon: IoniconName;
+  /** A Bloom (Remix) icon component, e.g. `RiShare2Line`. */
+  icon: ButtonIconComponent;
   onPress: () => void;
   accessibilityLabel: string;
   onLongPress?: () => void;
@@ -87,7 +86,7 @@ interface IconButtonProps {
 }
 
 export const IconButton: React.FC<IconButtonProps> = ({
-  icon,
+  icon: Icon,
   onPress,
   accessibilityLabel,
   onLongPress,
@@ -112,7 +111,7 @@ export const IconButton: React.FC<IconButtonProps> = ({
   const glyph = loading ? (
     <Loading iconSize={size} color={glyphColor} showText={false} />
   ) : (
-    <Ionicons name={icon} size={size} color={glyphColor} />
+    <Icon width={size} height={size} fill={glyphColor} />
   );
 
   return (

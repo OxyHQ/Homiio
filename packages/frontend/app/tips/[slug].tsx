@@ -15,6 +15,7 @@ import { Card } from '@oxy.so/bloom/card';
 import { Chip } from '@oxy.so/bloom/chip';
 import {
   RiCalendarLine,
+  RiFileTextLine,
   RiNewspaperLine,
   RiTimeLine,
   RiUserLine,
@@ -198,7 +199,7 @@ export default function TipArticleScreen() {
       <View style={styles.root}>
         <Header options={{ title: t('tips.article'), showBackButton: true }} />
         <ErrorState
-          icon="document-text-outline"
+          icon={RiFileTextLine}
           title={t('tips.unavailable')}
           description={t('tips.missingSlug')}
           retryLabel={t('common.goBack')}
@@ -222,7 +223,7 @@ export default function TipArticleScreen() {
       <View style={styles.root}>
         <Header options={{ title: t('tips.article'), showBackButton: true }} />
         <ErrorState
-          icon="document-text-outline"
+          icon={RiFileTextLine}
           title={t('tips.unavailable')}
           description={tipQuery.error?.message ?? t('tips.loadFailed')}
           retryLabel={t('common.goBack')}

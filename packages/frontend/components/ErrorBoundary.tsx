@@ -15,7 +15,6 @@ import {
   type AccessibilityRole,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Clipboard from 'expo-clipboard';
 import * as Device from 'expo-device';
 import Constants from 'expo-constants';
@@ -28,6 +27,14 @@ import { toast } from '@oxy.so/bloom/toast';
 
 import { colors } from '@/styles/colors';
 import { radius, spacing } from '@/constants/styles';
+import {
+  RiArrowDownSLine,
+  RiArrowUpSLine,
+  RiErrorWarningFill,
+  RiFeedbackLine,
+  RiFileCopyLine,
+  RiRefreshLine,
+} from '@oxy.so/bloom/icons';
 
 interface Props {
   children: ReactNode;
@@ -214,7 +221,7 @@ function ErrorFallback({
           accessibilityRole="button"
           accessibilityLabel={t('error.boundary.title')}
           style={[styles.iconBadge, badgePressed && styles.iconBadgePressed]}>
-          <Ionicons name="alert-circle-outline" size={56} color={colors.danger} />
+          <RiErrorWarningFill width={56} height={56} fill={colors.danger} />
         </Pressable>
 
         <H2 style={styles.title} accessibilityRole="header">
@@ -232,7 +239,7 @@ function ErrorFallback({
           style={[styles.errorIdChip, errorIdPressed && styles.errorIdChipPressed]}>
           <BloomText style={styles.errorIdLabel}>{t('error.boundary.errorId')}</BloomText>
           <BloomText style={styles.errorIdValue}>{errorId}</BloomText>
-          <Ionicons name="copy-outline" size={12} color={colors.muted} style={styles.errorIdCopyIcon} />
+          <RiFileCopyLine width={12} height={12} fill={colors.muted} style={styles.errorIdCopyIcon} />
         </Pressable>
 
         <View style={[styles.actions, isWide && styles.actionsWide]}>
@@ -241,8 +248,7 @@ function ErrorFallback({
               variant="primary"
               size="large"
               onPress={handleRetry}
-              icon={<Ionicons name="refresh" size={18} color={colors.primaryLight} style={styles.buttonIconLeading} />}
-              iconPosition="left"
+              leadingIcon={RiRefreshLine}
               accessibilityLabel={t('error.boundary.retry')}
               style={styles.button}>
               {retryCount > 0
@@ -255,10 +261,7 @@ function ErrorFallback({
               variant="ghost"
               size="large"
               onPress={handleReportIssue}
-              icon={
-                <Ionicons name="bug-outline" size={18} color={colors.primaryColor} style={styles.buttonIconLeading} />
-              }
-              iconPosition="left"
+              leadingIcon={RiFeedbackLine}
               accessibilityLabel={t('error.boundary.reportIssue')}
               style={styles.button}>
               {t('error.boundary.reportIssue')}
@@ -277,11 +280,11 @@ function ErrorFallback({
             <BloomText style={styles.detailsToggleText}>
               {showDetails ? t('error.boundary.hideDetails') : t('error.boundary.showDetails')}
             </BloomText>
-            <Ionicons
-              name={showDetails ? 'chevron-up' : 'chevron-down'}
-              size={14}
-              color={colors.muted}
-            />
+            {React.createElement(showDetails ? RiArrowUpSLine : RiArrowDownSLine, {
+              width: 14,
+              height: 14,
+              fill: colors.muted,
+            })}
           </Pressable>
         )}
 
@@ -504,9 +507,6 @@ const styles = StyleSheet.create({
   },
   button: {
     width: '100%',
-  },
-  buttonIconLeading: {
-    marginRight: spacing.sm,
   },
   detailsToggle: {
     marginTop: spacing['2xl'],

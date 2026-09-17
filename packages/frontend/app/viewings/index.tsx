@@ -32,6 +32,7 @@ import { viewingService, ViewingRequest } from '@/services/viewingService';
 import { ApiError } from '@/utils/api';
 import { spacing } from '@/constants/styles';
 import { colors } from '@/styles/colors';
+import { RiAlertLine, RiCalendarLine, RiLoginBoxLine } from '@oxy.so/bloom/icons';
 
 type ViewingStatus = 'pending' | 'approved' | 'declined' | 'cancelled';
 
@@ -242,11 +243,11 @@ export default function ViewingsPage() {
         <SafeAreaView edges={['bottom']} style={styles.safeArea}>
           <View style={styles.emptyWrap}>
             <EmptyState
-              icon="calendar-outline"
+              icon={RiCalendarLine}
               title="Sign in to see your viewings"
               description="Schedule property visits and track host responses."
               actionText={t('common.signIn')}
-              actionIcon="log-in-outline"
+              actionIcon={RiLoginBoxLine}
               onAction={() => openAccountDialog()}
             />
           </View>
@@ -297,7 +298,7 @@ export default function ViewingsPage() {
 
           {viewingsQuery.isError ? (
             <ErrorState
-              icon="cloud-offline-outline"
+              icon={RiAlertLine}
               title={t('viewings.error.generic')}
               description={viewingsQuery.error?.message ?? t('common.tryAgain')}
               onRetry={() => viewingsQuery.refetch()}
@@ -309,7 +310,7 @@ export default function ViewingsPage() {
           filteredViewings.length === 0 ? (
             <View style={styles.emptyWrap}>
               <EmptyState
-                icon="calendar-outline"
+                icon={RiCalendarLine}
                 title={t('viewings.empty.title')}
                 description={t('viewings.empty.description')}
               />

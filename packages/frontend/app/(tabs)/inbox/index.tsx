@@ -43,7 +43,12 @@ import {
   AdmonitionText,
 } from '@oxy.so/bloom/admonition';
 import { Button, CloseButton } from '@oxy.so/bloom/button';
-import { RiCheckboxCircleLine, RiSettings3Line, RiTimeLine } from '@oxy.so/bloom/icons';
+import {
+  RiCheckboxCircleLine,
+  RiFilterLine,
+  RiSettings3Line,
+  RiTimeLine,
+} from '@oxy.so/bloom/icons';
 import {
   SegmentedControl,
   SegmentedControlItem,
@@ -359,7 +364,7 @@ export default function InboxScreen() {
             isFiltered ? (
               <View style={styles.emptyWrap}>
                 <EmptyState
-                  icon="filter-outline"
+                  icon={RiFilterLine}
                   title={t('notification.empty.filteredTitle')}
                   description={t('notification.empty.filtered')}
                 />

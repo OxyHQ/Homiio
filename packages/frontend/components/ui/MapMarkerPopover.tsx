@@ -16,7 +16,6 @@ import {
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { Button } from '@oxy.so/bloom/button';
 
@@ -24,6 +23,7 @@ import { PropertyCard } from '@/components/PropertyCard';
 import { colors } from '@/styles/colors';
 import { cardShadow, radius, spacing } from '@/constants/styles';
 import type { Property } from '@homiio/shared-types';
+import { RiCloseLine } from '@oxy.so/bloom/icons';
 
 interface MapMarkerPopoverProps {
   property: Property;
@@ -58,7 +58,7 @@ export const MapMarkerPopover: React.FC<MapMarkerPopoverProps> = ({
             onPress={onDismiss}
             variant="ghost"
             size="small"
-            icon={<Ionicons name="close" size={16} color={colors.COLOR_BLACK} />}
+            icon={RiCloseLine}
             accessibilityLabel="Close preview"
           />
         </View>

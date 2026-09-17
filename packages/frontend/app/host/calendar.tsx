@@ -48,7 +48,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@oxy.so/bloom/dropdown-menu';
-import { RiArrowDownSLine } from '@oxy.so/bloom/icons';
+import {
+  RiAddLine,
+  RiAlertLine,
+  RiArrowDownSLine,
+  RiCalendarLine,
+  RiHomeLine,
+  RiLoginBoxLine,
+} from '@oxy.so/bloom/icons';
 import { Loading } from '@oxy.so/bloom/loading';
 import * as Skeleton from '@oxy.so/bloom/skeleton';
 import { TextFieldInput } from '@oxy.so/bloom/text-field';
@@ -295,11 +302,11 @@ export default function HostCalendarScreen() {
         <SafeAreaView edges={['bottom']} style={styles.safeArea}>
           <View style={styles.emptyWrap}>
             <EmptyState
-              icon="calendar-outline"
+              icon={RiCalendarLine}
               title={t('host.calendar.signInTitle')}
               description={t('host.calendar.signInDescription')}
               actionText={t('host.calendar.signIn')}
-              actionIcon="log-in-outline"
+              actionIcon={RiLoginBoxLine}
               onAction={() => openAccountDialog()}
             />
           </View>
@@ -333,7 +340,7 @@ export default function HostCalendarScreen() {
         {header}
         <SafeAreaView edges={['bottom']} style={styles.safeArea}>
           <ErrorState
-            icon="cloud-offline-outline"
+            icon={RiAlertLine}
             title={t('host.calendar.loadPropertiesError')}
             description={
               typeof propertiesQuery.error === 'string'
@@ -354,11 +361,11 @@ export default function HostCalendarScreen() {
         <SafeAreaView edges={['bottom']} style={styles.safeArea}>
           <View style={styles.emptyWrap}>
             <EmptyState
-              icon="home-outline"
+              icon={RiHomeLine}
               title={t('host.calendar.emptyTitle')}
               description={t('host.calendar.emptyDescription')}
               actionText={t('host.calendar.createListing')}
-              actionIcon="add"
+              actionIcon={RiAddLine}
               onAction={() => router.push('/properties/create')}
             />
           </View>
@@ -447,7 +454,7 @@ export default function HostCalendarScreen() {
               </View>
             ) : availabilityQuery.isError ? (
               <ErrorState
-                icon="cloud-offline-outline"
+                icon={RiAlertLine}
                 title={t('host.calendar.availabilityError')}
                 description={availabilityQuery.error?.message ?? t('host.calendar.tryAgain')}
                 onRetry={() => availabilityQuery.refetch()}

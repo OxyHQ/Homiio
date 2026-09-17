@@ -14,6 +14,7 @@ import type { EvictionComment } from '@homiio/shared-types';
 import { IconButton } from '@/components/ui/IconButton';
 import { colors } from '@/styles/colors';
 import { spacing } from '@/constants/styles';
+import { RiDeleteBinLine } from '@oxy.so/bloom/icons';
 
 interface EvictionCommentRowProps {
   comment: EvictionComment;
@@ -44,7 +45,7 @@ export const EvictionCommentRow: React.FC<EvictionCommentRowProps> = ({
         <BloomText style={styles.time}>{time}</BloomText>
         {canDelete ? (
           <IconButton
-            icon="trash-outline"
+            icon={RiDeleteBinLine}
             variant="ghost"
             size={16}
             color={colors.textTertiary}

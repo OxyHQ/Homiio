@@ -12,23 +12,23 @@
  */
 import React from 'react';
 import { StyleSheet, View, type ViewStyle } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { Button } from '@oxy.so/bloom/button';
+import type { ButtonIconComponent } from '@oxy.so/bloom/button';
+import { RiErrorWarningFill } from '@oxy.so/bloom/icons';
 import { H3, Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { colors } from '@/styles/colors';
 import { ICON_SIZES, spacing } from '@/constants/styles';
 
-type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
-
 type EmptyStateProps = {
-  icon?: IoniconName;
+  /** A Bloom (Remix) icon component, e.g. `RiHomeLine` — never a glyph name. */
+  icon?: ButtonIconComponent;
   title: string;
   description?: string;
   actionText?: string;
-  /** Optional Ionicon name shown inside the action button. */
-  actionIcon?: IoniconName;
+  /** Optional Remix icon component shown before the action label. */
+  actionIcon?: ButtonIconComponent;
   onAction?: () => void;
   style?: ViewStyle;
   iconSize?: number;
@@ -36,7 +36,7 @@ type EmptyStateProps = {
 };
 
 export function EmptyState({
-  icon = 'alert-circle-outline',
+  icon: Icon = RiErrorWarningFill,
   title,
   description,
   actionText,
@@ -49,7 +49,7 @@ export function EmptyState({
   return (
     <View style={[styles.container, style]}>
       <View style={styles.iconCircle}>
-        <Ionicons name={icon} size={iconSize} color={iconColor} />
+        <Icon width={iconSize} height={iconSize} fill={iconColor} />
       </View>
 
       <H3 style={styles.title}>{title}</H3>
@@ -64,11 +64,7 @@ export function EmptyState({
             onPress={onAction}
             variant="primary"
             size="medium"
-            icon={
-              actionIcon ? (
-                <Ionicons name={actionIcon} size={ICON_SIZES.sm} color={colors.primaryForeground} />
-              ) : undefined
-            }
+            leadingIcon={actionIcon}
           >
             {actionText}
           </Button>

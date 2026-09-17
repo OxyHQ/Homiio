@@ -27,7 +27,7 @@ import { useTranslation } from 'react-i18next';
 import { Admonition } from '@oxy.so/bloom/admonition';
 import { Button } from '@oxy.so/bloom/button';
 import { Card } from '@oxy.so/bloom/card';
-import { RiCheckLine } from '@oxy.so/bloom/icons';
+import { RiCheckLine, RiSearchLine } from '@oxy.so/bloom/icons';
 import { Loading } from '@oxy.so/bloom/loading';
 import { RadioGroup } from '@oxy.so/bloom/radio';
 import { SettingsListGroup, SettingsListItem } from '@oxy.so/bloom/settings-list';
@@ -124,7 +124,7 @@ export default function WatchAlertSettingsScreen() {
       <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
         <Header options={{ title: t('alerts.settings.title') }} />
         <EmptyState
-          icon="search-outline"
+          icon={RiSearchLine}
           title={t('alerts.settings.missingTitle')}
           description={t('alerts.settings.missingDescription')}
         />

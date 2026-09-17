@@ -22,7 +22,13 @@ import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 
 import { Fab } from '@oxy.so/bloom/fab';
-import { RiAddLine } from '@oxy.so/bloom/icons';
+import {
+  RiAddLine,
+  RiEqualizerLine,
+  RiExpandUpDownLine,
+  RiHomeLine,
+  RiTimeLine,
+} from '@oxy.so/bloom/icons';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { PropertyResultsGrid } from '@/components/ui/PropertyResultsGrid';
@@ -31,7 +37,6 @@ import { LoadMoreSentinel } from '@/components/common/LoadMoreSentinel';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { SearchSummaryBar } from '@/components/search/SearchSummaryBar';
-import { RiEqualizerLine, RiExpandUpDownLine, RiTimeLine } from '@oxy.so/bloom/icons';
 import { SearchActionPill } from '@/components/search/SearchActionPill';
 import { resolveSortLabel, SortControl } from '@/components/search/SortControl';
 import {
@@ -264,13 +269,13 @@ export default function PropertiesScreen() {
     if (properties.length === 0) {
       return (
         <EmptyState
-          icon="home-outline"
+          icon={RiHomeLine}
           title={t('properties.empty.title')}
           description={
             t('properties.empty.description')
           }
           actionText={t('properties.empty.action')}
-          actionIcon="options-outline"
+          actionIcon={RiEqualizerLine}
           onAction={handleFiltersPress}
         />
       );

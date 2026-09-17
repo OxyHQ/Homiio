@@ -4,7 +4,7 @@ import type { ImageSourcePropType } from 'react-native';
  * Central registry for isometric PNG art across Homiio — home categories,
  * amenity catalog ids, property-feature ids, and nearby-service keys share
  * one visual source per id (`pet_friendly`, `gym`, `pools`/`swimming_pool`, …).
- * Ids without art return `undefined` so consumers fall back to Ionicons.
+ * Ids without art return `undefined` so consumers fall back to a Remix line icon.
  */
 export const ICON_ART: Partial<Record<string, ImageSourcePropType>> = {
   // Home categories (long-term + vacation)

@@ -28,6 +28,7 @@ import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
 import { colors } from '@/styles/colors';
 import { contentClamp, spacing } from '@/constants/styles';
 import type { Property } from '@homiio/shared-types';
+import { RiHomeLine, RiTimeLine } from '@oxy.so/bloom/icons';
 
 /** Number of skeleton cards shown during the first load. */
 const SKELETON_COUNT = 4;
@@ -74,11 +75,11 @@ export default function RecentlyViewedScreen() {
     if (properties.length === 0) {
       return (
         <EmptyState
-          icon="time-outline"
+          icon={RiTimeLine}
           title={t('home.recentlyViewed.noProperties')}
           description={t('home.recentlyViewed.noPropertiesDescription')}
           actionText={t('home.recentlyViewed.browseProperties')}
-          actionIcon="home"
+          actionIcon={RiHomeLine}
           onAction={() => router.push('/properties')}
         />
       );

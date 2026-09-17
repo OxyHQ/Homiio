@@ -19,6 +19,8 @@ import {
   RiChat3Line,
   RiCloseLine,
   RiEditBoxLine,
+  RiLockLine,
+  RiLoginBoxLine,
 } from '@oxy.so/bloom/icons';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { Text } from '@oxy.so/bloom/typography';
@@ -357,11 +359,11 @@ export function SindiPanel() {
       {/* Body */}
       {!isAuthenticated ? (
         <EmptyState
-          icon="lock-closed"
+          icon={RiLockLine}
           title={t('sindi.auth.required')}
           description={t('sindi.auth.message')}
           actionText={t('common.signIn')}
-          actionIcon="log-in"
+          actionIcon={RiLoginBoxLine}
           onAction={() => openAccountDialog()}
           iconColor={colors.primaryColor}
         />

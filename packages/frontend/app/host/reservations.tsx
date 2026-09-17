@@ -28,7 +28,14 @@ import {
   type DataTableColumn,
   type DataTableRowActionItem,
 } from '@oxy.so/bloom/data-table';
-import { RiCheckLine, RiCloseLine, RiEyeLine } from '@oxy.so/bloom/icons';
+import {
+  RiAlertLine,
+  RiCheckLine,
+  RiCloseLine,
+  RiEyeLine,
+  RiLoginBoxLine,
+  RiMailLine,
+} from '@oxy.so/bloom/icons';
 import * as Skeleton from '@oxy.so/bloom/skeleton';
 import { H2, Text as BloomText } from '@oxy.so/bloom/typography';
 import { useOxy, openAccountDialog } from '@oxy.so/services';
@@ -427,11 +434,11 @@ export default function HostReservationsScreen() {
         <SafeAreaView edges={['bottom']} style={styles.safeArea}>
           <View style={styles.emptyWrap}>
             <EmptyState
-              icon="mail-unread-outline"
+              icon={RiMailLine}
               title={t('host.reservations.signInTitle')}
               description={t('host.reservations.signInDescription')}
               actionText={t('host.reservations.signIn')}
-              actionIcon="log-in-outline"
+              actionIcon={RiLoginBoxLine}
               onAction={() => openAccountDialog()}
             />
           </View>
@@ -481,7 +488,7 @@ export default function HostReservationsScreen() {
 
           {isError ? (
             <ErrorState
-              icon="cloud-offline-outline"
+              icon={RiAlertLine}
               title={t('host.reservations.loadError')}
               description={
                 reservationsQuery.error?.message ?? t('host.reservations.tryAgain')
@@ -503,7 +510,7 @@ export default function HostReservationsScreen() {
           {!showTable && !isLoading && !isError && items.length === 0 ? (
             <View style={styles.emptyWrap}>
               <EmptyState
-                icon="mail-outline"
+                icon={RiMailLine}
                 title={t('host.reservations.emptyTitle')}
                 description={t('host.reservations.emptyDescription')}
               />

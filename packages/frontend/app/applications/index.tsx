@@ -37,6 +37,7 @@ import { ErrorState } from '@/components/ui/ErrorState';
 import { ListSkeleton } from '@/components/ui/ListSkeleton';
 import { useMyApplications } from '@/hooks/useApplicationQueries';
 import { spacing, tracker } from '@/constants/styles';
+import { RiFileTextLine, RiLoginBoxLine, RiSearchLine } from '@oxy.so/bloom/icons';
 
 type Filter = 'all' | 'active' | 'decided' | 'withdrawn';
 
@@ -151,11 +152,11 @@ export default function MyApplicationsScreen() {
         <SafeAreaView edges={['bottom']} style={styles.safeArea}>
           <View style={styles.centerWrap}>
             <EmptyState
-              icon="document-text-outline"
+              icon={RiFileTextLine}
               title={t('applications.list.signInTitle')}
               description={t('applications.list.signInDescription')}
               actionText={t('applications.list.signIn')}
-              actionIcon="log-in-outline"
+              actionIcon={RiLoginBoxLine}
               onAction={() => openAccountDialog()}
             />
           </View>
@@ -208,7 +209,7 @@ export default function MyApplicationsScreen() {
           {filtered.length === 0 ? (
             <View style={styles.emptyWrap}>
               <EmptyState
-                icon="document-text-outline"
+                icon={RiFileTextLine}
                 title={
                   filter === 'all'
                     ? t('applications.list.emptyAllTitle')
@@ -220,7 +221,7 @@ export default function MyApplicationsScreen() {
                     : t('applications.list.emptyFilteredDescription')
                 }
                 actionText={filter === 'all' ? t('applications.list.exploreStays') : undefined}
-                actionIcon={filter === 'all' ? 'search-outline' : undefined}
+                actionIcon={filter === 'all' ? RiSearchLine : undefined}
                 onAction={
                   filter === 'all' ? () => router.push('/explore') : undefined
                 }

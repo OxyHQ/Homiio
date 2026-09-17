@@ -26,7 +26,7 @@ import { PropertyResultsGridSkeleton } from '@/components/ui/PropertyResultsGrid
 import { LoadMoreSentinel } from '@/components/common/LoadMoreSentinel';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
-import { RiEqualizerLine, RiExpandUpDownLine } from '@oxy.so/bloom/icons';
+import { RiEqualizerLine, RiExpandUpDownLine, RiHomeLine } from '@oxy.so/bloom/icons';
 import { SearchActionPill } from '@/components/search/SearchActionPill';
 import { resolveSortLabel, SortControl } from '@/components/search/SortControl';
 import {
@@ -264,10 +264,10 @@ export default function PropertyTypeScreen() {
     if (properties.length === 0) {
       return (
         <EmptyState
-          icon="home-outline"
+          icon={RiHomeLine}
           title={t('properties.type.empty', { type: typeName.toLowerCase() })}
           actionText={t('properties.type.filters.clear')}
-          actionIcon="options-outline"
+          actionIcon={RiEqualizerLine}
           onAction={handleFiltersPress}
         />
       );

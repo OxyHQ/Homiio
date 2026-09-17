@@ -61,33 +61,34 @@ import { FilterChip } from '@/components/ui/FilterChip';
 A component for displaying empty states with optional actions.
 
 ```tsx
+import { RiBookmarkLine, RiFolderOpenLine, RiSearchLine } from '@oxy.so/bloom/icons';
 import { EmptyState } from '@/components/ui/EmptyState';
 
 // Basic empty state
 <EmptyState
-  icon="folder-open"
+  icon={RiFolderOpenLine}
   title="No Properties Found"
   description="You haven't added any properties yet."
 />
 
 // With action button
 <EmptyState
-  icon="add-circle"
+  icon={RiBookmarkLine}
   title="No Saved Properties"
   description="Start saving properties to see them here."
   actionText="Browse Properties"
-  actionIcon="search"
+  actionIcon={RiSearchLine}
   onAction={() => router.push('/properties')}
 />
 ```
 
 **Props:**
 
-- `icon`: string - Icon name (Ionicons)
+- `icon`: Remix icon component (`@oxy.so/bloom/icons`)
 - `title`: string - Main title text
 - `description`: string - Description text
 - `actionText`: string - Action button text
-- `actionIcon`: string - Action button icon
+- `actionIcon`: Remix icon component - Action button icon
 - `onAction`: () => void - Action button handler
 - `style`: ViewStyle - Custom styling
 - `iconSize`: number - Icon size

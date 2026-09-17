@@ -75,11 +75,7 @@ function useAmenityLabel(): (entry: ResolvedAmenity) => string {
   );
 }
 
-/**
- * Map an amenity's catalog icon to a glyph, with a safe fallback. The catalog
- * stores Ionicons names (bed, wifi, pool…) that Remix's set cannot express, so
- * those stay Ionicons; only the generic fallback is a Bloom icon.
- */
+/** Map an amenity's catalog icon to a glyph, with a safe fallback. */
 function resolveIcon(amenity?: Amenity): DetailFallbackIcon {
   return amenity?.icon ?? FALLBACK_ICON;
 }

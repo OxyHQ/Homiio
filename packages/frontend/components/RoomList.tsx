@@ -11,6 +11,7 @@ import { Dialog } from '@oxy.so/bloom/dialog';
 import {
     RiEqualizerLine,
     RiExpandDiagonalSLine,
+    RiFilterLine,
     RiGroupLine,
     RiHotelBedLine,
     RiImageLine,
@@ -289,11 +290,11 @@ export function RoomList({ filters, onFilterChange }: RoomListProps) {
         return (
             <>
                 <EmptyState
-                    icon="bed-outline"
+                    icon={RiHotelBedLine}
                     title={t('roommates.rooms.emptyTitle')}
                     description={t('roommates.rooms.emptyDescription')}
                     actionText={filters ? t('properties.city.clearFilters') : undefined}
-                    actionIcon={filters ? 'filter-outline' : undefined}
+                    actionIcon={filters ? RiFilterLine : undefined}
                     onAction={filters ? () => onFilterChange?.({}) : undefined}
                 />
                 {filtersDialog}

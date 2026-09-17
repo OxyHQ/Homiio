@@ -19,6 +19,7 @@ import savedPropertyFolderService, {
   type SavedPropertyFolder,
 } from '@/services/savedPropertyFolderService';
 import { logger } from '@/utils/logger';
+import { RiFolderOpenLine } from '@oxy.so/bloom/icons';
 
 export default function EditFolderScreen() {
   const { t } = useTranslation();
@@ -48,7 +49,7 @@ export default function EditFolderScreen() {
           </View>
         ) : (
           <EmptyState
-            icon="folder-open-outline"
+            icon={RiFolderOpenLine}
             title={t('saved.noFolder')}
             description={t('saved.noFolderDescription')}
           />

@@ -42,6 +42,7 @@ import {
   getPropertyImageSources,
 } from '@/utils/propertyUtils';
 import type { Property, PropertyImage } from '@homiio/shared-types';
+import { RiArrowLeftSLine, RiArrowRightSLine } from '@oxy.so/bloom/icons';
 
 /**
  * Largest number of dots ever rendered. Beyond this the strip is windowed:
@@ -416,7 +417,7 @@ export const PropertyImageCarousel: React.FC<PropertyImageCarouselProps> = ({
       {showPrevArrow ? (
         <IconButton
           variant="overlay"
-          icon="chevron-back"
+          icon={RiArrowLeftSLine}
           size={NAV_ARROW_ICON_SIZE}
           onPress={goPrev}
           accessibilityLabel="Previous photo"
@@ -426,7 +427,7 @@ export const PropertyImageCarousel: React.FC<PropertyImageCarouselProps> = ({
       {showNextArrow ? (
         <IconButton
           variant="overlay"
-          icon="chevron-forward"
+          icon={RiArrowRightSLine}
           size={NAV_ARROW_ICON_SIZE}
           onPress={goNext}
           accessibilityLabel="Next photo"

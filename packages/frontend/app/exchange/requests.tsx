@@ -38,6 +38,7 @@ import {
 import { toast } from '@oxy.so/bloom/toast';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { spacing } from '@/constants/styles';
+import { RiAlertLine, RiArrowLeftRightLine, RiLoginBoxLine } from '@oxy.so/bloom/icons';
 
 type RoleView = 'guest' | 'host';
 type StatusFilter = 'all' | ExchangeRequestStatus;
@@ -157,11 +158,11 @@ export default function ExchangeRequestsScreen() {
         <SafeAreaView edges={['bottom']} style={styles.safeArea}>
           <View style={styles.centerWrap}>
             <EmptyState
-              icon="swap-horizontal"
+              icon={RiArrowLeftRightLine}
               title={t('listing.exchange.signInTitle')}
               description={t('listing.exchange.signInBody')}
               actionText={t('common.signIn')}
-              actionIcon="log-in-outline"
+              actionIcon={RiLoginBoxLine}
               onAction={() => openAccountDialog()}
             />
           </View>
@@ -215,7 +216,7 @@ export default function ExchangeRequestsScreen() {
 
           {query.isError ? (
             <ErrorState
-              icon="cloud-offline-outline"
+              icon={RiAlertLine}
               title={t('listing.exchange.loadErrorTitle')}
               description={query.error?.message ?? t('common.tryAgain')}
               retryLabel={t('common.retry')}
@@ -226,7 +227,7 @@ export default function ExchangeRequestsScreen() {
           {!query.isPending && !query.isError && items.length === 0 ? (
             <View style={styles.emptyWrap}>
               <EmptyState
-                icon="swap-horizontal"
+                icon={RiArrowLeftRightLine}
                 title={
                   role === 'guest'
                     ? t('listing.exchange.emptyGuestTitle')

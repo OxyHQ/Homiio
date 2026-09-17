@@ -17,7 +17,7 @@
  *   - Parking     shown when `parkingType` is set and not `none` (label varies
  *                 by kind: garage / assigned / street). PNG `parking`, fallback `RiCarLine`.
  *   - Pets        shown when `petPolicy` is set (allowed / not_allowed / case_by_case).
- *                 Ionicons `paw` (Remix's set has no paw glyph).
+ *                 `RiHomeHeartLine` (Bloom's Remix set has no paw glyph).
  * All labels come from the shared `parkingType.*` / `petPolicy.*` enum vocab.
  * No rows → renders nothing.
  */
@@ -28,6 +28,7 @@ import {
     RiArrowUpCircleLine,
     RiBox3Line,
     RiCarLine,
+    RiHomeHeartLine,
     RiHomeLine,
     RiLeafLine,
 } from '@oxy.so/bloom/icons';
@@ -126,7 +127,7 @@ export const PropertyFeatures: React.FC<Props> = ({ property }) => {
             });
         }
         if (petPolicy !== undefined) {
-            next.push({ key: 'petPolicy', label: t(`petPolicy.${petPolicy}`), icon: 'paw' });
+            next.push({ key: 'petPolicy', label: t(`petPolicy.${petPolicy}`), icon: RiHomeHeartLine });
         }
 
         return next;

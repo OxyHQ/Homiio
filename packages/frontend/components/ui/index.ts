@@ -10,4 +10,3 @@ export { SectionEyebrow } from './SectionEyebrow';
 export { Stars } from './Stars';
 
 // Existing UI Components
-export { IconSymbol } from './IconSymbol';

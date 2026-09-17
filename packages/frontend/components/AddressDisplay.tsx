@@ -1,12 +1,17 @@
 import React from 'react';
 import { View, StyleSheet, TouchableOpacity, Platform, Linking, StyleProp, ViewStyle } from 'react-native';
 import { ThemedText } from './ThemedText';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors } from '@/styles/colors';
 import { useTranslation } from 'react-i18next';
 import * as Clipboard from 'expo-clipboard';
 import { toast } from '@oxy.so/bloom/toast';
 import * as Haptics from 'expo-haptics';
+import {
+  RiArrowRightSLine,
+  RiFileCopyLine,
+  RiMapPinFill,
+  RiMapPinLine,
+} from '@oxy.so/bloom/icons';
 
 
 export interface Address {
@@ -87,12 +92,12 @@ export function AddressDisplay({
         onPress={handlePress}
         disabled={!onPress}
       >
-        <Ionicons name="location-outline" size={16} color={colors.COLOR_BLACK_LIGHT_5} />
+        <RiMapPinLine width={16} height={16} fill={colors.COLOR_BLACK_LIGHT_5} />
         <ThemedText style={styles.compactText} numberOfLines={1}>
           {shortAddress}
         </ThemedText>
         {onPress && (
-          <Ionicons name="chevron-forward" size={16} color={colors.COLOR_BLACK_LIGHT_5} />
+          <RiArrowRightSLine width={16} height={16} fill={colors.COLOR_BLACK_LIGHT_5} />
         )}
       </TouchableOpacity>
     );
@@ -103,7 +108,7 @@ export function AddressDisplay({
       <View style={[styles.cardContainer, style]}>
         <View style={styles.cardHeader}>
           <View style={styles.addressInfo}>
-            <Ionicons name="location" size={20} color={colors.primaryColor} />
+            <RiMapPinFill width={20} height={20} fill={colors.primaryColor} />
             <View style={styles.addressTextContainer}>
               <ThemedText style={styles.cardStreet}>{address.street}</ThemedText>
               <ThemedText style={styles.cardCityState}>
@@ -114,17 +119,17 @@ export function AddressDisplay({
           {showActions && (
             <View style={styles.cardActions}>
               <TouchableOpacity style={styles.actionButton} onPress={handleCopyAddress}>
-                <Ionicons name="copy-outline" size={16} color={colors.primaryColor} />
+                <RiFileCopyLine width={16} height={16} fill={colors.primaryColor} />
               </TouchableOpacity>
               <TouchableOpacity style={styles.actionButton} onPress={handleOpenInMaps}>
-                <Ionicons name="map-outline" size={16} color={colors.primaryColor} />
+                <RiMapPinLine width={16} height={16} fill={colors.primaryColor} />
               </TouchableOpacity>
             </View>
           )}
         </View>
         {showMap && address.coordinates && (
           <View style={styles.mapPlaceholder}>
-            <Ionicons name="map" size={24} color={colors.COLOR_BLACK_LIGHT_5} />
+            <RiMapPinLine width={24} height={24} fill={colors.COLOR_BLACK_LIGHT_5} />
             <ThemedText style={styles.mapPlaceholderText}>{t('address.display.mapPlaceholder')}</ThemedText>
           </View>
         )}
@@ -136,7 +141,7 @@ export function AddressDisplay({
   return (
     <View style={[styles.detailedContainer, style]}>
       <View style={styles.detailedHeader}>
-        <Ionicons name="location" size={24} color={colors.primaryColor} />
+        <RiMapPinFill width={24} height={24} fill={colors.primaryColor} />
         <View style={styles.detailedAddressInfo}>
           <ThemedText style={styles.detailedStreet}>{address.street}</ThemedText>
           <ThemedText style={styles.detailedCityState}>
@@ -151,12 +156,12 @@ export function AddressDisplay({
       {showActions && (
         <View style={styles.detailedActions}>
           <TouchableOpacity style={styles.detailedActionButton} onPress={handleCopyAddress}>
-            <Ionicons name="copy-outline" size={16} color={colors.primaryColor} />
+            <RiFileCopyLine width={16} height={16} fill={colors.primaryColor} />
             <ThemedText style={styles.actionButtonText}>{t('address.display.copy')}</ThemedText>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.detailedActionButton} onPress={handleOpenInMaps}>
-            <Ionicons name="map-outline" size={16} color={colors.primaryColor} />
+            <RiMapPinLine width={16} height={16} fill={colors.primaryColor} />
             <ThemedText style={styles.actionButtonText}>{t('address.display.openInMaps')}</ThemedText>
           </TouchableOpacity>
         </View>

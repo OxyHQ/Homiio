@@ -22,7 +22,7 @@ import { Button } from '@oxy.so/bloom/button';
 import { Card, CardTitle } from '@oxy.so/bloom/card';
 import { DatePicker } from '@oxy.so/bloom/date-picker';
 import { Field } from '@oxy.so/bloom/field';
-import { RiImageAddLine } from '@oxy.so/bloom/icons';
+import { RiAlertLine, RiImageAddLine } from '@oxy.so/bloom/icons';
 import { PhoneInput } from '@oxy.so/bloom/phone-input';
 import * as Skeleton from '@oxy.so/bloom/skeleton';
 import { Switch } from '@oxy.so/bloom/switch';
@@ -573,7 +573,7 @@ export default function EvictionsFormScreen() {
       <View style={styles.root}>
         <Header options={{ showBackButton: true, title: t('evictions.form.editTitle') }} />
         <ErrorState
-          icon="cloud-offline-outline"
+          icon={RiAlertLine}
           title={t('evictions.loadError')}
           description={t('common.tryAgain')}
           retryLabel={t('common.goBack')}

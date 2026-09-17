@@ -35,7 +35,12 @@ import { Image } from 'expo-image';
 import { Button } from '@oxy.so/bloom/button';
 import { Card } from '@oxy.so/bloom/card';
 import { Chip } from '@oxy.so/bloom/chip';
-import { RiAddLine, RiFocus3Line, RiMapPinLine } from '@oxy.so/bloom/icons';
+import {
+  RiAddLine,
+  RiAlertLine,
+  RiFocus3Line,
+  RiMapPinLine,
+} from '@oxy.so/bloom/icons';
 import { Tabs, TabsTrigger } from '@oxy.so/bloom/tabs';
 import * as Skeleton from '@oxy.so/bloom/skeleton';
 import { H2, H3, Text as BloomText } from '@oxy.so/bloom/typography';
@@ -244,7 +249,7 @@ export default function EvictionsBoardScreen() {
     if (isError) {
       return (
         <ErrorState
-          icon="cloud-offline-outline"
+          icon={RiAlertLine}
           title={t('evictions.loadError')}
           description={error?.message ?? t('common.tryAgain')}
           onRetry={() => void refetch()}

@@ -1,18 +1,20 @@
 /**
  * Stars — a compact, read-only star rating row (full / half / empty) drawn
- * with Ionicons. Shared by the property Community Notes blocks (the per-note
- * card and the section's rating summary), which previously each carried an
- * identical half-star copy differing only by glyph size.
+ * with Bloom's Remix stars. Shared by the property Community Notes blocks (the
+ * per-note card and the section's rating summary), which previously each
+ * carried an identical half-star copy differing only by glyph size.
  *
- * Half-star rule: a fractional part of >= 0.5 renders a `star-half`, otherwise
- * the star is empty. Always renders exactly `STAR_COUNT` glyphs.
+ * Half-star rule: a fractional part of >= 0.5 renders a half star, otherwise
+ * the star is empty. Always renders exactly `STAR_COUNT` glyphs. Bloom ships no
+ * half-star glyph, so a half star is an empty star with the left half of a
+ * filled star clipped over it.
  *
  * Note: pre-existing copies in `NeighborhoodRatingWidget` and `PropertyCard`
  * could adopt this later — left untouched here to keep the change focused.
  */
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { RiStarFill, RiStarLine } from '@oxy.so/bloom/icons';
 
 import { colors } from '@/styles/colors';
 
@@ -49,15 +51,22 @@ export const Stars: React.FC<StarsProps> = ({
   return (
     <View style={styles.row}>
       {Array.from({ length: fullStars }).map((_, i) => (
-        <Ionicons key={`f-${i}`} name="star" size={size} color={color} />
+        <RiStarFill key={`f-${i}`} width={size} height={size} fill={color} />
       ))}
-      {hasHalf ? <Ionicons name="star-half" size={size} color={color} /> : null}
+      {hasHalf ? (
+        <View style={{ width: size, height: size }}>
+          <RiStarLine width={size} height={size} fill={color} />
+          <View style={[styles.halfClip, { width: size / 2, height: size }]}>
+            <RiStarFill width={size} height={size} fill={color} />
+          </View>
+        </View>
+      ) : null}
       {Array.from({ length: emptyStars }).map((_, i) => (
-        <Ionicons
+        <RiStarLine
           key={`e-${i}`}
-          name="star-outline"
-          size={size}
-          color={colors.COLOR_BLACK_LIGHT_5}
+          width={size}
+          height={size}
+          fill={colors.COLOR_BLACK_LIGHT_5}
         />
       ))}
     </View>
@@ -69,6 +78,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 2,
+  },
+  halfClip: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    overflow: 'hidden',
   },
 });
 

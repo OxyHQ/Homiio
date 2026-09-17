@@ -40,10 +40,13 @@ import { Button } from '@oxy.so/bloom/button';
 import { Card, CardTitle } from '@oxy.so/bloom/card';
 import { Divider } from '@oxy.so/bloom/divider';
 import {
+  RiAlertLine,
   RiCheckboxCircleFill,
+  RiFlagLine,
   RiMegaphoneLine,
   RiNotification3Fill,
   RiNotification3Line,
+  RiShare2Line,
 } from '@oxy.so/bloom/icons';
 import { Loading } from '@oxy.so/bloom/loading';
 import * as Skeleton from '@oxy.so/bloom/skeleton';
@@ -238,7 +241,7 @@ export default function EvictionDetailScreen() {
   const shareButton = (
     <IconButton
       key="share"
-      icon="share-outline"
+      icon={RiShare2Line}
       variant="ghost"
       accessibilityLabel={t('evictions.detail.share')}
       onPress={handleShare}
@@ -247,7 +250,7 @@ export default function EvictionDetailScreen() {
   const reportButton = (
     <IconButton
       key="report"
-      icon="flag-outline"
+      icon={RiFlagLine}
       variant="ghost"
       accessibilityLabel={t('evictions.report.title')}
       onPress={handleReport}
@@ -268,7 +271,7 @@ export default function EvictionDetailScreen() {
       <View style={styles.root}>
         <Header options={{ showBackButton: true, title: t('evictions.detail.title') }} />
         <ErrorState
-          icon="cloud-offline-outline"
+          icon={RiAlertLine}
           title={t('evictions.loadError')}
           description={error?.message ?? t('common.tryAgain')}
           onRetry={() => void refetch()}

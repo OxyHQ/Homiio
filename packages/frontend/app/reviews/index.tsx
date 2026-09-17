@@ -11,7 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@oxy.so/bloom/button';
-import { RiEditBoxLine } from '@oxy.so/bloom/icons';
+import { RiAlertLine, RiEditBoxLine, RiMapPinLine } from '@oxy.so/bloom/icons';
 import * as Skeleton from '@oxy.so/bloom/skeleton';
 import { H1, H3, Text as BloomText } from '@oxy.so/bloom/typography';
 
@@ -58,7 +58,7 @@ export default function ReviewExploreScreen() {
             </View>
           ) : citiesQuery.isError ? (
             <ErrorState
-              icon="cloud-offline-outline"
+              icon={RiAlertLine}
               title={t('reviews.explore.errorTitle')}
               description={t('reviews.explore.errorDescription')}
               retryLabel={t('common.tryAgain')}
@@ -66,7 +66,7 @@ export default function ReviewExploreScreen() {
             />
           ) : cities.length === 0 ? (
             <EmptyState
-              icon="map-outline"
+              icon={RiMapPinLine}
               title={t('reviews.explore.emptyCitiesTitle')}
               description={t('reviews.explore.emptyCitiesDescription')}
             />

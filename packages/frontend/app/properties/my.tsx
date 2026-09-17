@@ -21,7 +21,13 @@ import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 
 import { Button } from '@oxy.so/bloom/button';
-import { RiAddLine, RiCheckboxCircleLine, RiDeleteBinLine, RiEditLine } from '@oxy.so/bloom/icons';
+import {
+  RiAddLine,
+  RiCheckboxCircleLine,
+  RiDeleteBinLine,
+  RiEditLine,
+  RiHomeLine,
+} from '@oxy.so/bloom/icons';
 import { useTheme } from '@oxy.so/bloom/theme';
 
 import { PropertyListHeader } from '@/components/ui/PropertyListHeader';
@@ -230,11 +236,11 @@ export default function MyPropertiesScreen() {
     if (properties.length === 0) {
       return (
         <EmptyState
-          icon="home-outline"
+          icon={RiHomeLine}
           title={t('properties.my.emptyTitle')}
           description={t('properties.my.emptyDescription')}
           actionText={t('properties.my.createFirst')}
-          actionIcon="add"
+          actionIcon={RiAddLine}
           onAction={handleCreateProperty}
         />
       );

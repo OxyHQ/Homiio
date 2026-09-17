@@ -16,24 +16,20 @@
  * regardless of which chips are present. Icon-only chips (no `label`) collapse
  * to a square of that height.
  *
- * `icon` takes a Bloom (Remix) icon COMPONENT. An Ionicons glyph NAME is still
- * accepted for callers whose glyph has no Remix equivalent.
+ * `icon` takes a Bloom (Remix) icon COMPONENT.
  */
 import React from 'react';
 import { StyleSheet } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { Chip } from '@oxy.so/bloom/chip';
-import type { Props as IconProps } from '@oxy.so/bloom/icons';
+import type { ButtonIconComponent } from '@oxy.so/bloom/button';
 
 import { colors } from '@/styles/colors';
 
-type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
-
 export type MediaChipSize = 'sm' | 'md';
 
-/** A Remix icon component, or (legacy) an Ionicons glyph name. */
-export type MediaChipIcon = React.ComponentType<IconProps> | IoniconName;
+/** A Bloom (Remix) icon component. */
+export type MediaChipIcon = ButtonIconComponent;
 
 /** Icon glyph sizes per chip size (a touch smaller than a dense badge). */
 const CHIP_ICON_MD = 14;
@@ -53,7 +49,7 @@ interface MediaChipProps {
 }
 
 export const MediaChip: React.FC<MediaChipProps> = ({
-  icon,
+  icon: Icon,
   accent = colors.primarySubtleForeground,
   label,
   size = 'md',
@@ -62,12 +58,7 @@ export const MediaChip: React.FC<MediaChipProps> = ({
   const iconSize = isSmall ? CHIP_ICON_SM : CHIP_ICON_MD;
   const hasLabel = typeof label === 'string' && label.length > 0;
 
-  const glyph =
-    typeof icon === 'string' ? (
-      <Ionicons name={icon} size={iconSize} color={accent} />
-    ) : (
-      React.createElement(icon, { width: iconSize, height: iconSize, fill: accent })
-    );
+  const glyph = <Icon width={iconSize} height={iconSize} fill={accent} />;
 
   return (
     <Chip

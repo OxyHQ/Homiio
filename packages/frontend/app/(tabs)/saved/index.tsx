@@ -28,7 +28,15 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { Button } from '@oxy.so/bloom/button';
 import { Chip } from '@oxy.so/bloom/chip';
-import { RiNotification3Line } from '@oxy.so/bloom/icons';
+import {
+  RiAddLine,
+  RiBookmarkLine,
+  RiFolderOpenLine,
+  RiLockLine,
+  RiLoginBoxLine,
+  RiNotification3Line,
+  RiSearchLine,
+} from '@oxy.so/bloom/icons';
 import {
   SegmentedControl,
   SegmentedControlItem,
@@ -234,11 +242,11 @@ export default function SavedPropertiesScreen() {
         {header}
         <View style={styles.centerWrap}>
           <EmptyState
-            icon="lock-closed"
+            icon={RiLockLine}
             title={t('profile.signInRequired')}
             description={t('profile.signInMessage')}
             actionText={t('common.signIn')}
-            actionIcon="log-in"
+            actionIcon={RiLoginBoxLine}
             onAction={() => openAccountDialog()}
           />
         </View>
@@ -339,11 +347,11 @@ export default function SavedPropertiesScreen() {
           ListEmptyComponent={
             <View style={styles.emptyInner}>
               <EmptyState
-                icon="folder-open-outline"
+                icon={RiFolderOpenLine}
                 title={t('saved.noFolders')}
                 description={t('saved.noFoldersDescription')}
                 actionText={t('saved.createFolder')}
-                actionIcon="add"
+                actionIcon={RiAddLine}
                 onAction={() => router.push('/saved')}
               />
             </View>
@@ -367,7 +375,7 @@ export default function SavedPropertiesScreen() {
           {filteredRecent.length === 0 ? (
             <View style={styles.emptyInner}>
               <EmptyState
-                icon="bookmark-outline"
+                icon={RiBookmarkLine}
                 title={
                   searchQuery || recency !== 'all'
                     ? t('saved.noResults')
@@ -379,7 +387,7 @@ export default function SavedPropertiesScreen() {
                     : t('saved.noPropertiesDescription')
                 }
                 actionText={t('saved.exploreCta')}
-                actionIcon="search"
+                actionIcon={RiSearchLine}
                 onAction={() => router.push('/explore')}
               />
             </View>

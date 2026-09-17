@@ -1,9 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, StyleProp, ViewStyle } from 'react-native';
 import { useTranslation } from 'react-i18next';
-// Amenity glyphs are data-driven Ionicons names from `constants/amenities`
-// (wifi, pool, paw…); Bloom's Remix set has no equivalents for most of them.
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { Chip } from '@oxy.so/bloom/chip';
 import { useTheme } from '@oxy.so/bloom/theme';
 import {
@@ -42,6 +39,7 @@ export function AmenitiesSelector({
         if (!amenity) return null;
 
         const isSelected = Boolean(selectedAmenities?.includes(amenity.id));
+        const AmenityIcon = amenity.icon;
 
         return (
           <Chip
@@ -50,10 +48,10 @@ export function AmenitiesSelector({
             selected={isSelected}
             onPress={() => onAmenityToggle(amenity.id)}
             startIcon={
-              <Ionicons
-                name={amenity.icon}
-                size={16}
-                color={isSelected ? theme.colors.primary : theme.colors.textSecondary}
+              <AmenityIcon
+                width={16}
+                height={16}
+                fill={isSelected ? theme.colors.primary : theme.colors.textSecondary}
               />
             }
           >

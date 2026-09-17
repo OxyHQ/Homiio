@@ -34,6 +34,7 @@ import { AlertExplanationText } from '@/components/watches/AlertExplanationText'
 import { useAlertReason } from '@/hooks/useHousingAlerts';
 import { contentClamp, spacing } from '@/constants/styles';
 import { useFormatting } from '@/utils/format';
+import { RiQuestionLine } from '@oxy.so/bloom/icons';
 
 export default function AlertReasonScreen() {
   const { t } = useTranslation();
@@ -59,7 +60,7 @@ export default function AlertReasonScreen() {
       <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
         <Header options={{ title: t('alerts.reason.title') }} />
         <EmptyState
-          icon="help-circle-outline"
+          icon={RiQuestionLine}
           title={t('alerts.reason.missingTitle')}
           description={t('alerts.reason.missingDescription')}
         />

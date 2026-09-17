@@ -16,7 +16,13 @@ import { useTranslation } from 'react-i18next';
 
 import { Button } from '@oxy.so/bloom/button';
 import { Card } from '@oxy.so/bloom/card';
-import { RiArrowRightSLine, RiBuilding2Line, RiMapPinLine } from '@oxy.so/bloom/icons';
+import {
+  RiArrowRightSLine,
+  RiBuilding2Line,
+  RiDiscussLine,
+  RiHomeLine,
+  RiMapPinLine,
+} from '@oxy.so/bloom/icons';
 import * as Skeleton from '@oxy.so/bloom/skeleton';
 import { Tabs, TabsTrigger } from '@oxy.so/bloom/tabs';
 import { useTheme } from '@oxy.so/bloom/theme';
@@ -136,7 +142,7 @@ export default function AgencyProfileScreen() {
       <View style={styles.root}>
         <Header options={{ title: t('agency.title'), showBackButton: true }} />
         <ErrorState
-          icon="business-outline"
+          icon={RiBuilding2Line}
           title={t('agency.notFound')}
           description={t('agency.notFoundDescription')}
           retryLabel={t('common.goBack')}
@@ -196,7 +202,7 @@ export default function AgencyProfileScreen() {
               <Skeleton.Box width="100%" height={120} borderRadius={radius.md} />
             ) : reviews.length === 0 ? (
               <EmptyState
-                icon="chatbubbles-outline"
+                icon={RiDiscussLine}
                 title={t('agency.emptyReviewsTitle')}
                 description={t('agency.emptyReviewsDescription')}
               />
@@ -222,7 +228,7 @@ export default function AgencyProfileScreen() {
             <Skeleton.Box width="100%" height={200} borderRadius={radius.md} />
           ) : properties.length === 0 ? (
             <EmptyState
-              icon="home-outline"
+              icon={RiHomeLine}
               title={t('agency.emptyListingsTitle')}
               description={t('agency.emptyListingsDescription')}
             />

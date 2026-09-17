@@ -29,7 +29,14 @@ import {
   type DataTableColumn,
   type DataTableRowActionItem,
 } from '@oxy.so/bloom/data-table';
-import { RiArrowRightUpLine, RiEditLine } from '@oxy.so/bloom/icons';
+import {
+  RiAlertLine,
+  RiArrowRightUpLine,
+  RiEditLine,
+  RiGroupLine,
+  RiLockLine,
+  RiLoginBoxLine,
+} from '@oxy.so/bloom/icons';
 import { useOxy, openAccountDialog } from '@oxy.so/services';
 import {
   Profile,
@@ -440,11 +447,11 @@ export default function LandlordApplicationsScreen() {
         <SafeAreaView edges={['bottom']} style={styles.safeArea}>
           <View style={styles.emptyWrap}>
             <EmptyState
-              icon="people-outline"
+              icon={RiGroupLine}
               title="Sign in to review applicants"
               description="See who wants to rent your places, all in one place."
               actionText="Sign in"
-              actionIcon="log-in-outline"
+              actionIcon={RiLoginBoxLine}
               onAction={() => openAccountDialog()}
             />
           </View>
@@ -471,7 +478,7 @@ export default function LandlordApplicationsScreen() {
         <SafeAreaView edges={['bottom']} style={styles.safeArea}>
           <View style={styles.emptyWrap}>
             <EmptyState
-              icon="lock-closed-outline"
+              icon={RiLockLine}
               title="Hosts only"
               description="List a property to start receiving tenant applications."
             />
@@ -524,7 +531,7 @@ export default function LandlordApplicationsScreen() {
 
           {applicationsQuery.isError ? (
             <ErrorState
-              icon="cloud-offline-outline"
+              icon={RiAlertLine}
               title="Couldn't load applicants"
               description={
                 applicationsQuery.error?.message ?? 'Please try again.'
@@ -546,7 +553,7 @@ export default function LandlordApplicationsScreen() {
           {listReady && !showTable && groups.length === 0 ? (
             <View style={styles.emptyWrap}>
               <EmptyState
-                icon="people-outline"
+                icon={RiGroupLine}
                 title="No applicants yet"
                 description="Applications from prospective tenants will show up here."
               />

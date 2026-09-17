@@ -16,7 +16,13 @@ import React, { useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { RiEditLine, RiExternalLinkLine, RiStarFill } from '@oxy.so/bloom/icons';
+import {
+  RiDiscussLine,
+  RiEditBoxLine,
+  RiEditLine,
+  RiExternalLinkLine,
+  RiStarFill,
+} from '@oxy.so/bloom/icons';
 import {
   SegmentedControl,
   SegmentedControlItem,
@@ -211,7 +217,7 @@ export const CommunityNotesSection: React.FC<CommunityNotesSectionProps> = ({
 
         {error ? (
           <ErrorState
-            icon="chatbubbles-outline"
+            icon={RiDiscussLine}
             title={t('property.communityNotes.errorTitle')}
             description={error}
             retryLabel={t('common.tryAgain')}
@@ -223,11 +229,11 @@ export const CommunityNotesSection: React.FC<CommunityNotesSectionProps> = ({
 
         {!loading && !error && notes.length === 0 ? (
           <EmptyState
-            icon="chatbubbles-outline"
+            icon={RiDiscussLine}
             title={t('property.communityNotes.emptyTitle')}
             description={t('property.communityNotes.emptyDescription')}
             actionText={t('property.communityNotes.addAction')}
-            actionIcon="create-outline"
+            actionIcon={RiEditBoxLine}
             onAction={handleAddNote}
           />
         ) : null}

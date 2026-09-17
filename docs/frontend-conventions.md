@@ -174,14 +174,16 @@ and corners stay clipped. There is **one** primitive,
 `components/ui/IconButton.tsx` is the ONE app-wide icon-button primitive: a
 circular button with pressed and hover state (static style arrays, no
 function-form `style`) and three chrome **variants**. Never hand-roll
-`<Pressable style={[barIconButton, pressed && barIconButtonPressed]}><Ionicons/></Pressable>`
+`<Pressable style={[barIconButton, pressed && barIconButtonPressed]}>` plus a glyph
 again.
 
 - Variants: `ghost` (flat transparent, `mutedSubtle` pressed tint, for headers
   and bars, reusing the shared `barIconButton` / `barIconSize` /
   `barBackIconSize` tokens), `overlay` (frosted white circle for on-photo use,
   such as the card save heart), and `filled` (brand fill plus
-  `primaryForeground` glyph). Props: `icon`, `onPress`, `accessibilityLabel`,
+  `primaryForeground` glyph). Props: `icon` (a Remix icon COMPONENT from
+  `@oxy.so/bloom/icons`, e.g. `icon={RiShare2Line}`, never a glyph name),
+  `onPress`, `accessibilityLabel`,
   plus optional `variant`, `size`, `color`, `active` and `activeColor`,
   `onLongPress`, `disabled`, `loading`, `badge` and `style`.
 - **`SaveButton` is a stateful COMPOSITION of `IconButton`.** It owns save logic
