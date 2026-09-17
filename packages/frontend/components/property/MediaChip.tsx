@@ -1,8 +1,8 @@
 /**
  * MediaChip — the single visual language for every chip that floats over a
- * property photo (offering intents, verified, eco, rating). One backdrop, one
- * height, one radius, one padding: only the accent colour, icon, and optional
- * label vary, so a row of them reads as ONE aligned family.
+ * property photo (offering intents, verified, eco, rating). A Bloom `Chip`
+ * repainted with ONE frosted backdrop: only the accent colour, icon, and
+ * optional label vary, so a row of them reads as ONE aligned family.
  *
  * Backdrop strategy: a frosted near-white surface (the same treatment as the
  * save heart and rating pill) with the accent applied to the icon + label. A
@@ -11,38 +11,39 @@
  * better than tinting the chip itself, and it visually unifies the overlay set
  * with the heart already living in the opposite corner.
  *
- * Every chip is the SAME fixed height (`CHIP_HEIGHT_MD` / `CHIP_HEIGHT_SM`) so a
- * `flexDirection: 'row'` stack aligns perfectly regardless of which chips are
- * present. Icon-only chips (no `label`) collapse to a square of that height.
+ * Every chip keeps Bloom's fixed pill height per size (`md` → Chip `large`,
+ * 28; `sm` → Chip `small`, 24) so a `flexDirection: 'row'` stack aligns
+ * regardless of which chips are present. Icon-only chips (no `label`) collapse
+ * to a square of that height.
+ *
+ * `icon` takes a Bloom (Remix) icon COMPONENT. An Ionicons glyph NAME is still
+ * accepted for callers whose glyph has no Remix equivalent.
  */
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
-import { Text as BloomText } from '@oxy.so/bloom/typography';
+import { Chip } from '@oxy.so/bloom/chip';
+import type { Props as IconProps } from '@oxy.so/bloom/icons';
 
 import { colors } from '@/styles/colors';
-import { radius, spacing } from '@/constants/styles';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
 export type MediaChipSize = 'sm' | 'md';
 
-/**
- * Fixed chip heights — the contract that lets a row of mixed chips (labelled +
- * icon-only) align on a single baseline. Tuned to sit alongside the save heart
- * without crowding the photo.
- */
-const CHIP_HEIGHT_MD = 28;
-const CHIP_HEIGHT_SM = 22;
+/** A Remix icon component, or (legacy) an Ionicons glyph name. */
+export type MediaChipIcon = React.ComponentType<IconProps> | IoniconName;
 
-/** Icon glyph sizes per chip size (kept off the shared `ICON_SIZES` scale because
- *  the chip is intentionally a touch smaller than a dense badge). */
+/** Icon glyph sizes per chip size (a touch smaller than a dense badge). */
 const CHIP_ICON_MD = 14;
 const CHIP_ICON_SM = 12;
 
+/** The frosted overlay surface every media chip shares. */
+const FROSTED_SURFACE = 'rgba(255, 255, 255, 0.92)';
+
 interface MediaChipProps {
-  icon: IoniconName;
+  icon: MediaChipIcon;
   /** Accent colour applied to the icon and label. Omit defaults to brand. */
   accent?: string;
   /** Optional label. When absent the chip renders icon-only (a square). */
@@ -61,72 +62,41 @@ export const MediaChip: React.FC<MediaChipProps> = ({
   const iconSize = isSmall ? CHIP_ICON_SM : CHIP_ICON_MD;
   const hasLabel = typeof label === 'string' && label.length > 0;
 
-  return (
-    <View
-      style={[
-        styles.chip,
-        isSmall ? styles.chipSmall : styles.chipMedium,
-        hasLabel
-          ? isSmall
-            ? styles.chipLabelledSmall
-            : styles.chipLabelledMedium
-          : styles.chipIconOnly,
-      ]}
-    >
+  const glyph =
+    typeof icon === 'string' ? (
       <Ionicons name={icon} size={iconSize} color={accent} />
-      {hasLabel ? (
-        <BloomText
-          style={[
-            styles.label,
-            isSmall ? styles.labelSmall : styles.labelMedium,
-            { color: accent },
-          ]}
-          numberOfLines={1}
-        >
-          {label}
-        </BloomText>
-      ) : null}
-    </View>
+    ) : (
+      React.createElement(icon, { width: iconSize, height: iconSize, fill: accent })
+    );
+
+  return (
+    <Chip
+      size={isSmall ? 'small' : 'large'}
+      startIcon={glyph}
+      style={[styles.chip, !hasLabel && styles.chipIconOnly]}
+      textStyle={[styles.label, isSmall && styles.labelSmall, { color: accent }]}
+    >
+      {hasLabel ? label : undefined}
+    </Chip>
   );
 };
 
 const styles = StyleSheet.create({
-  // Shared backdrop + shape. The frosted near-white surface (flat, no shadow)
-  // matches the save heart and the "new" chip so the whole overlay set reads as
-  // one flat Airbnb-style family.
+  // Flat frosted surface (no shadow) matching the save heart and the "new"
+  // chip so the whole overlay set reads as one flat Airbnb-style family.
   chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radius.pill,
-    backgroundColor: 'rgba(255, 255, 255, 0.92)',
+    backgroundColor: FROSTED_SURFACE,
   },
-  chipMedium: {
-    height: CHIP_HEIGHT_MD,
-    gap: spacing.xs,
-  },
-  chipSmall: {
-    height: CHIP_HEIGHT_SM,
-    gap: 3,
-  },
-  // Labelled chips get horizontal padding; icon-only chips become a square of
-  // the chip height so they line up with the labelled ones.
-  chipLabelledMedium: {
-    paddingHorizontal: spacing.md,
-  },
-  chipLabelledSmall: {
-    paddingHorizontal: spacing.sm,
-  },
+  // Icon-only chips become a square of the chip height so they line up with
+  // the labelled ones.
   chipIconOnly: {
     aspectRatio: 1,
     paddingHorizontal: 0,
+    justifyContent: 'center',
   },
   label: {
     fontWeight: '600',
     letterSpacing: 0.2,
-  },
-  labelMedium: {
-    fontSize: 12,
   },
   labelSmall: {
     fontSize: 10,

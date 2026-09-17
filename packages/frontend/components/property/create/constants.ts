@@ -361,7 +361,7 @@ export const CURRENCY_OPTIONS: readonly CurrencyOption[] = [
 ];
 
 /**
- * The 4-way offering picker shown as multi-select chips on the Offering step.
+ * The 4-way offering picker shown as multi-select cards on the Offering step.
  * `value` is the canonical {@link OfferingType}; label + helper copy resolve via
  * i18n (`listing.offering.*`) at render time. A listing must carry at least one
  * offering; long-term rent is the default but every option is independently
@@ -371,7 +371,6 @@ export interface OfferingOption {
   value: OfferingType;
   i18nKey: string;
   descriptionKey: string;
-  icon: string;
 }
 
 export const PRICING_OFFERING_OPTIONS: readonly OfferingOption[] = [
@@ -379,25 +378,21 @@ export const PRICING_OFFERING_OPTIONS: readonly OfferingOption[] = [
     value: OfferingType.LONG_TERM_RENT,
     i18nKey: 'listing.offering.longTerm',
     descriptionKey: 'listing.offering.longTermHelp',
-    icon: 'home-outline',
   },
   {
     value: OfferingType.SHORT_TERM_RENT,
     i18nKey: 'listing.offering.nightly',
     descriptionKey: 'listing.offering.nightlyHelp',
-    icon: 'moon-outline',
   },
   {
     value: OfferingType.SALE,
     i18nKey: 'listing.offering.sell',
     descriptionKey: 'listing.offering.sellHelp',
-    icon: 'pricetag-outline',
   },
   {
     value: OfferingType.EXCHANGE,
     i18nKey: 'listing.offering.exchange',
     descriptionKey: 'listing.offering.exchangeHelp',
-    icon: 'swap-horizontal-outline',
   },
 ];
 

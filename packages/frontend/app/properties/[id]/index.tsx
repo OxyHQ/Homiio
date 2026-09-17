@@ -36,10 +36,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { toast } from '@oxy.so/bloom/toast';
 import * as Haptics from 'expo-haptics';
 import * as Linking from 'expo-linking';
-import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { useOxy, openAccountDialog } from '@oxy.so/services';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
+import { RiCheckLine, RiShapesLine } from '@oxy.so/bloom/icons';
 
 import { Header } from '@/components/Header';
 import { PageScrollView } from '@/components/PageScrollView';
@@ -655,7 +655,7 @@ export default function PropertyDetailPage() {
                     badge={
                       hasActiveViewing ? (
                         <View style={styles.viewingBadge}>
-                          <Ionicons name="checkmark" size={12} color={colors.primaryForeground} />
+                          <RiCheckLine width={12} height={12} fill={colors.primaryForeground} />
                         </View>
                       ) : undefined
                     }
@@ -734,11 +734,7 @@ export default function PropertyDetailPage() {
             <ExternalContactSection property={apiProperty} />
             {property.alsoAvailable ? (
               <View style={styles.alsoAvailableRow}>
-                <Ionicons
-                  name="layers-outline"
-                  size={14}
-                  color={colors.COLOR_BLACK_LIGHT_3}
-                />
+                <RiShapesLine width={14} height={14} fill={colors.COLOR_BLACK_LIGHT_3} />
                 <BloomText style={styles.alsoAvailableText}>
                   {property.alsoAvailable}
                 </BloomText>
@@ -910,14 +906,7 @@ export default function PropertyDetailPage() {
             </View>
           ) : null}
           <View style={[styles.section, styles.divider]}>
-            <FraudWarning
-              text={
-                t(
-                  'Never pay or transfer funds outside the Homio platform',
-                  'Never pay or transfer funds outside the Homio platform',
-                ) || 'Never pay or transfer funds outside the Homio platform'
-              }
-            />
+            <FraudWarning text={t('property.fraudWarning')} />
           </View>
         </View>
       </PageScrollView>

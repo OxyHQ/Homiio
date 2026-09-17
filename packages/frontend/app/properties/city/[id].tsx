@@ -5,12 +5,13 @@ import {
   StyleSheet,
   Platform,
   ScrollView,
-  ActivityIndicator,
   type ViewStyle,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useTranslation } from 'react-i18next';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { Card } from '@oxy.so/bloom/card';
+import { Loading } from '@oxy.so/bloom/loading';
 import { colors } from '@/styles/colors';
 import { spacing } from '@/constants/styles';
 
@@ -245,8 +246,7 @@ export default function CityPropertiesPage() {
         </View>
         <View style={{ paddingTop: headerHeight, flex: 1 }}>
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={colors.primaryColor} />
-            <Text style={styles.loadingText}>{t('properties.city.loadingProperties')}</Text>
+            <Loading variant="spinner" size="large" text={t('properties.city.loadingProperties')} />
           </View>
         </View>
       </View>
@@ -375,15 +375,15 @@ export default function CityPropertiesPage() {
 
         {/* City Stats Cards */}
         <View style={styles.statsSection}>
-          <View style={styles.statCard}>
+          <Card variant="outlined" radius="radius-16" style={styles.statCard}>
             <Text style={styles.statNumber}>{city.propertiesCount}</Text>
             <Text style={styles.statLabel}>{t('properties.city.properties')}</Text>
-          </View>
+          </Card>
           {typeof city.population === 'number' && city.population > 0 ? (
-            <View style={styles.statCard}>
+            <Card variant="outlined" radius="radius-16" style={styles.statCard}>
               <Text style={styles.statNumber}>{formatNumber(city.population, locale)}</Text>
               <Text style={styles.statLabel}>{t('properties.city.population')}</Text>
-            </View>
+            </Card>
           ) : null}
         </View>
 
@@ -426,12 +426,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: colors.background,
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: colors.COLOR_BLACK_LIGHT_3,
-    fontWeight: '500',
   },
 
   // Hero Section
@@ -489,12 +483,8 @@ const styles = StyleSheet.create({
   },
   statCard: {
     flex: 1,
-    backgroundColor: colors.white,
-    borderRadius: 16,
     padding: 20,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
   },
   statNumber: {
     fontSize: 24,

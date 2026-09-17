@@ -1,7 +1,7 @@
 /**
  * "Where you'll sleep" section for vacation listings — Airbnb pattern.
  *
- * Renders one card per bedroom with a bed icon and a label. The
+ * Renders one Bloom `Card` per bedroom with a bed icon and a label. The
  * Property schema only carries an integer `bedrooms` count today
  * (no per-room breakdown), so we synthesize the placeholder card
  * copy ("1 bed") for each bedroom. When the schema later adds a
@@ -20,13 +20,14 @@
 import React, { useMemo } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import Ionicons from '@expo/vector-icons/Ionicons';
 
+import { Card } from '@oxy.so/bloom/card';
+import { RiHotelBedLine } from '@oxy.so/bloom/icons';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { SectionHeader, SECTION_GUTTER } from '@/components/property/Section';
 import { colors } from '@/styles/colors';
-import { hairline, radius, spacing } from '@/constants/styles';
+import { spacing } from '@/constants/styles';
 import type { Property } from '@homiio/shared-types';
 
 interface SleepArrangementProps {
@@ -68,13 +69,22 @@ export const SleepArrangement: React.FC<SleepArrangementProps> = ({ property }) 
         contentContainerStyle={styles.scrollContent}
       >
         {bedrooms.map((bedroom) => (
-          <View key={bedroom.id} style={styles.bedroomCard}>
-            <Ionicons name="bed-outline" size={26} color={colors.COLOR_BLACK} />
-            <BloomText style={styles.bedroomTitle}>{bedroom.title}</BloomText>
-            <BloomText style={styles.bedroomDescription}>
-              {bedroom.description}
-            </BloomText>
-          </View>
+          <Card
+            key={bedroom.id}
+            variant="outlined"
+            radius="radius-16"
+            style={styles.bedroomCard}
+          >
+            <RiHotelBedLine width={26} height={26} fill={colors.COLOR_BLACK} />
+            <View>
+              <BloomText variant="headline-semibold" style={styles.bedroomTitle}>
+                {bedroom.title}
+              </BloomText>
+              <BloomText variant="body-2-regular" style={styles.bedroomDescription}>
+                {bedroom.description}
+              </BloomText>
+            </View>
+          </Card>
         ))}
       </ScrollView>
     </View>
@@ -90,19 +100,13 @@ const styles = StyleSheet.create({
   bedroomCard: {
     width: 200,
     height: 140,
-    borderWidth: hairline.width,
-    borderColor: hairline.color,
-    borderRadius: radius.lg,
     padding: spacing.xl,
     justifyContent: 'space-between',
   },
   bedroomTitle: {
-    fontSize: 16,
-    fontWeight: '600',
     color: colors.COLOR_BLACK,
   },
   bedroomDescription: {
-    fontSize: 13,
     color: colors.COLOR_BLACK_LIGHT_3,
   },
 });

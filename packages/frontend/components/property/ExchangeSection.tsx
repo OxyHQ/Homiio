@@ -17,7 +17,15 @@ import { format, parseISO } from 'date-fns';
 import { Button } from '@oxy.so/bloom/button';
 import { Divider } from '@oxy.so/bloom/divider';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import {
+  RiArrowLeftRightLine,
+  RiCalendarLine,
+  RiChat3Line,
+  RiGiftLine,
+  RiMoonLine,
+  RiRepeatLine,
+  RiRestaurantLine,
+} from '@oxy.so/bloom/icons';
 
 import { ExchangeMode, type PropertyExchange } from '@homiio/shared-types';
 import { Section } from '@/components/property/Section';
@@ -58,14 +66,16 @@ const formatWindow = (start: string, end: string): string => {
   return `${format(startDate, 'MMM d, yyyy')} → ${format(endDate, 'MMM d, yyyy')}`;
 };
 
+type FactIcon = React.ComponentType<{ width?: number; height?: number; fill?: string }>;
+
 interface FactRowProps {
-  icon: React.ComponentProps<typeof Ionicons>['name'];
+  icon: FactIcon;
   label: string;
 }
 
-const FactRow: React.FC<FactRowProps> = ({ icon, label }) => (
+const FactRow: React.FC<FactRowProps> = ({ icon: Icon, label }) => (
   <View style={styles.factRow}>
-    <Ionicons name={icon} size={16} color={colors.exchangeAccent} />
+    <Icon width={16} height={16} fill={colors.exchangeAccent} />
     <BloomText style={styles.factText}>{label}</BloomText>
   </View>
 );
@@ -106,7 +116,7 @@ export const ExchangeSection: React.FC<Props> = ({ exchange, onRequestExchange }
       {/* Mode */}
       <View style={styles.modeRow}>
         <View style={styles.modeBadge}>
-          <Ionicons name="swap-horizontal" size={ICON_SIZE} color={colors.exchangeAccent} />
+          <RiArrowLeftRightLine width={ICON_SIZE} height={ICON_SIZE} fill={colors.exchangeAccent} />
         </View>
         <View style={styles.modeText}>
           <BloomText style={styles.modeTitle}>
@@ -136,11 +146,7 @@ export const ExchangeSection: React.FC<Props> = ({ exchange, onRequestExchange }
             </BloomText>
             {windows.map((window) => (
               <View key={`${window.start}_${window.end}`} style={styles.windowRow}>
-                <Ionicons
-                  name="calendar-outline"
-                  size={15}
-                  color={colors.COLOR_BLACK_LIGHT_3}
-                />
+                <RiCalendarLine width={15} height={15} fill={colors.COLOR_BLACK_LIGHT_3} />
                 <BloomText style={styles.windowText}>
                   {formatWindow(window.start, window.end)}
                 </BloomText>
@@ -160,10 +166,10 @@ export const ExchangeSection: React.FC<Props> = ({ exchange, onRequestExchange }
       {/* Facts: stay length, languages, meals, reciprocity */}
       <Divider />
       <View style={styles.factGrid}>
-        {stayLabel ? <FactRow icon="moon-outline" label={stayLabel} /> : null}
+        {stayLabel ? <FactRow icon={RiMoonLine} label={stayLabel} /> : null}
         {languages.length > 0 ? (
           <FactRow
-            icon="chatbubbles-outline"
+            icon={RiChat3Line}
             label={t('listing.exchange.languagesValue', {
               languages: languages.join(', '),
             })}
@@ -171,12 +177,12 @@ export const ExchangeSection: React.FC<Props> = ({ exchange, onRequestExchange }
         ) : null}
         {exchange.mealsIncluded ? (
           <FactRow
-            icon="restaurant-outline"
+            icon={RiRestaurantLine}
             label={t('listing.exchange.mealsIncludedFact')}
           />
         ) : null}
         <FactRow
-          icon={exchange.requiresReciprocity ? 'repeat-outline' : 'gift-outline'}
+          icon={exchange.requiresReciprocity ? RiRepeatLine : RiGiftLine}
           label={
             exchange.requiresReciprocity
               ? t('listing.exchange.reciprocityRequired')

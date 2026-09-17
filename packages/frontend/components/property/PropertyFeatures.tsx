@@ -3,27 +3,34 @@
  *
  * Mirrors the "What this place offers" (AmenitiesGrid) look exactly: a flat,
  * hairline-free `DetailIconGrid` of "icon + label" rows, each rendering an
- * isometric PNG (via `getIconArt`) when art exists, else its Ionicons line
+ * isometric PNG (via `getIconArt`) when art exists, else its Remix line
  * glyph — both via the shared `DetailIcon`, so PNG rows and line-icon rows
  * align identically. No pills.
  *
  * Rows list what the place HAS (like amenities), not present/absent toggles:
  *   - Furnished   always shown when `furnishedStatus` is defined (label varies
- *                 by status). PNG `furnished`, fallback `cube`.
- *   - Balcony     shown only when `hasBalcony`. PNG `balcony`, fallback `home`.
- *   - Garden      shown only when `hasGarden`. Ionicons `leaf` (no PNG yet).
+ *                 by status). PNG `furnished`, fallback `RiBox3Line`.
+ *   - Balcony     shown only when `hasBalcony`. PNG `balcony`, fallback `RiHomeLine`.
+ *   - Garden      shown only when `hasGarden`. `RiLeafLine` (no PNG yet).
  *   - Elevator    shown only when `hasElevator`. PNG `elevator`, fallback
- *                 `arrow-up-circle`.
+ *                 `RiArrowUpCircleLine`.
  *   - Parking     shown when `parkingType` is set and not `none` (label varies
- *                 by kind: garage / assigned / street). PNG `parking`, fallback `car`.
+ *                 by kind: garage / assigned / street). PNG `parking`, fallback `RiCarLine`.
  *   - Pets        shown when `petPolicy` is set (allowed / not_allowed / case_by_case).
- *                 Ionicons `paw`.
+ *                 Ionicons `paw` (Remix's set has no paw glyph).
  * All labels come from the shared `parkingType.*` / `petPolicy.*` enum vocab.
  * No rows → renders nothing.
  */
 import React, { useMemo } from 'react';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTranslation } from 'react-i18next';
+
+import {
+    RiArrowUpCircleLine,
+    RiBox3Line,
+    RiCarLine,
+    RiHomeLine,
+    RiLeafLine,
+} from '@oxy.so/bloom/icons';
 
 import { Section } from '@/components/property/Section';
 import {
@@ -31,6 +38,7 @@ import {
     DetailIconCell,
     DetailIconGrid,
     DetailIconRow,
+    type DetailFallbackIcon,
 } from '@/components/property/DetailIconGrid';
 import { getIconArt } from '@/constants/iconArt';
 
@@ -49,14 +57,12 @@ interface Props {
     } | null;
 }
 
-type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
-
 interface FeatureRowData {
     label: string;
     /** Amenity catalog id to resolve a PNG; `undefined` ⇒ always use the glyph. */
     imageId?: string;
-    /** Fallback (or sole) Ionicons glyph when no PNG resolves. */
-    icon: IoniconName;
+    /** Fallback (or sole) line glyph when no PNG resolves. */
+    icon: DetailFallbackIcon;
 }
 
 /** Keyed variant used only for the list; `key` is consumed by the cell, never the row. */
@@ -65,7 +71,7 @@ interface FeatureRow extends FeatureRowData {
 }
 
 /**
- * One feature line: PNG-or-Ionicons + label. Mirrors AmenitiesGrid's
+ * One feature line: PNG-or-glyph + label. Mirrors AmenitiesGrid's
  * `AmenityRow` (same icon box + fallback) and delegates layout to the shared
  * `DetailIconRow` so it can't drift from the amenities grid.
  */
@@ -95,20 +101,20 @@ export const PropertyFeatures: React.FC<Props> = ({ property }) => {
                     : furnishedStatus === 'partially_furnished'
                         ? t('property.sections.partiallyFurnished')
                         : t('property.sections.unfurnished');
-            next.push({ key: 'furnished', label, imageId: 'furnished', icon: 'cube' });
+            next.push({ key: 'furnished', label, imageId: 'furnished', icon: RiBox3Line });
         }
         if (hasBalcony === true) {
-            next.push({ key: 'balcony', label: t('property.sections.balcony'), imageId: 'balcony', icon: 'home' });
+            next.push({ key: 'balcony', label: t('property.sections.balcony'), imageId: 'balcony', icon: RiHomeLine });
         }
         if (hasGarden === true) {
-            next.push({ key: 'garden', label: t('property.sections.garden'), icon: 'leaf' });
+            next.push({ key: 'garden', label: t('property.sections.garden'), icon: RiLeafLine });
         }
         if (hasElevator === true) {
             next.push({
                 key: 'elevator',
                 label: t('property.sections.elevator'),
                 imageId: 'elevator',
-                icon: 'arrow-up-circle',
+                icon: RiArrowUpCircleLine,
             });
         }
         if (parkingType !== undefined && parkingType !== 'none') {
@@ -116,7 +122,7 @@ export const PropertyFeatures: React.FC<Props> = ({ property }) => {
                 key: 'parking',
                 label: t(`parkingType.${parkingType}`),
                 imageId: 'parking',
-                icon: 'car',
+                icon: RiCarLine,
             });
         }
         if (petPolicy !== undefined) {

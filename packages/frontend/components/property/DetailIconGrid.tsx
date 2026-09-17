@@ -25,14 +25,15 @@
  *     to opt the wider floor (the nearby grid does; the amenity grid doesn't).
  *   - No card, no shadow, no background: these grids sit flat on the page
  *     surface (per the design system, greys are for cards/badges only).
- *   - The icon is rendered by the caller (an `Ionicons` node) so each section
- *     keeps its own glyph map and per-state tint; the primitive only owns the
- *     icon BOX size (width + centering) so columns align.
+ *   - The icon is rendered by the caller (usually a `DetailIcon`) so each
+ *     section keeps its own glyph map and per-state tint; the primitive only
+ *     owns the icon BOX size (width + centering) so columns align.
  */
 import React from 'react';
 import { Image, StyleSheet, View, type ImageSourcePropType } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
+import type { Props as IconProps } from '@oxy.so/bloom/icons';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { colors } from '@/styles/colors';
@@ -61,7 +62,16 @@ const DETAIL_ICON_BOX_SIZE = 32;
 const MUTED_ICON_OPACITY = 0.4;
 
 /**
- * The shared "PNG-or-Ionicons" leading icon used by the amenity and feature
+ * A detail row's line glyph: a Bloom (Remix) icon component, or an Ionicons
+ * glyph NAME for data-driven domain icons (the amenity catalog's bed / wifi /
+ * pool glyphs) that Remix's set has no equivalent for.
+ */
+export type DetailFallbackIcon =
+  | React.ComponentType<IconProps>
+  | React.ComponentProps<typeof Ionicons>['name'];
+
+/**
+ * The shared "PNG-or-glyph" leading icon used by the amenity and feature
  * grids: a centered box that shows `image` when art exists, else `fallbackIcon`
  * as a tinted Ionicons glyph. Pass the result as `DetailIconRow`'s `icon`.
  *
@@ -71,9 +81,11 @@ const MUTED_ICON_OPACITY = 0.4;
  */
 export const DetailIcon: React.FC<{
   image?: ImageSourcePropType;
-  fallbackIcon: React.ComponentProps<typeof Ionicons>['name'];
+  fallbackIcon: DetailFallbackIcon;
   muted?: boolean;
-}> = ({ image, fallbackIcon, muted = false }) => (
+}> = ({ image, fallbackIcon, muted = false }) => {
+  const tint = muted ? colors.COLOR_BLACK_LIGHT_5 : colors.COLOR_BLACK_LIGHT_1;
+  return (
   <View style={styles.detailIconBox}>
     {image ? (
       <Image
@@ -82,15 +94,18 @@ export const DetailIcon: React.FC<{
         resizeMode="contain"
         accessible={false}
       />
+    ) : typeof fallbackIcon === 'string' ? (
+      <Ionicons name={fallbackIcon} size={DETAIL_ICON_SIZE} color={tint} />
     ) : (
-      <Ionicons
-        name={fallbackIcon}
-        size={DETAIL_ICON_SIZE}
-        color={muted ? colors.COLOR_BLACK_LIGHT_5 : colors.COLOR_BLACK_LIGHT_1}
-      />
+      React.createElement(fallbackIcon, {
+        width: DETAIL_ICON_SIZE,
+        height: DETAIL_ICON_SIZE,
+        fill: tint,
+      })
     )}
   </View>
-);
+  );
+};
 
 interface DetailIconGridProps {
   children: React.ReactNode;
@@ -177,15 +192,24 @@ export const DetailIconRow: React.FC<DetailIconRowProps> = ({
     <View style={styles.rowIcon}>{icon}</View>
     {trailing !== undefined ? (
       <View style={styles.rowText}>
-        <BloomText style={[styles.label, styles.labelShrink, muted && styles.labelMuted]}>
+        <BloomText
+          variant="body-regular"
+          style={[styles.label, styles.labelShrink, muted && styles.labelMuted]}
+        >
           {label}
         </BloomText>
-        <BloomText style={[styles.trailing, muted && styles.trailingMuted]}>
+        <BloomText
+          variant="body-2-semibold"
+          style={[styles.trailing, muted && styles.trailingMuted]}
+        >
           {trailing}
         </BloomText>
       </View>
     ) : (
-      <BloomText style={[styles.label, styles.labelFill, muted && styles.labelMuted]}>
+      <BloomText
+        variant="body-regular"
+        style={[styles.label, styles.labelFill, muted && styles.labelMuted]}
+      >
         {label}
       </BloomText>
     )}
@@ -249,7 +273,6 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 15,
-    lineHeight: 20,
     color: colors.COLOR_BLACK,
   },
   // The label fills the row when there's no trailing text...
@@ -264,8 +287,6 @@ const styles = StyleSheet.create({
     color: colors.COLOR_BLACK_LIGHT_5,
   },
   trailing: {
-    fontSize: 13,
-    fontWeight: '600',
     color: colors.COLOR_BLACK_LIGHT_3,
   },
   trailingMuted: {

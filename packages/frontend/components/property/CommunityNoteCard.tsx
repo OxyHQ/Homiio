@@ -10,14 +10,22 @@
  */
 import React, { useState } from 'react';
 import {
-  Pressable,
   StyleSheet,
   View,
   type TextLayoutEventData,
   type NativeSyntheticEvent,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Avatar } from '@oxy.so/bloom/avatar';
+import { Button } from '@oxy.so/bloom/button';
+import { Chip } from '@oxy.so/bloom/chip';
+import {
+  RiAlertLine,
+  RiThumbDownLine,
+  RiThumbUpLine,
+  RiUserLine,
+  RiVerifiedBadgeFill,
+} from '@oxy.so/bloom/icons';
 
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 
@@ -68,17 +76,21 @@ export const CommunityNoteCard: React.FC<CommunityNoteCardProps> = ({ note }) =>
   return (
     <View style={styles.card}>
       <View style={styles.header}>
-        <View style={styles.avatar}>
-          <Ionicons name="person" size={20} color={colors.COLOR_BLACK_LIGHT_3} />
-        </View>
+        <Avatar
+          size={AVATAR_SIZE}
+          color="neutral"
+          placeholderIcon={
+            <RiUserLine width={20} height={20} fill={colors.COLOR_BLACK_LIGHT_3} />
+          }
+        />
         <View style={styles.headerText}>
           <View style={styles.nameRow}>
             <BloomText style={styles.authorName}>{authorName}</BloomText>
             {note.verified ? (
-              <Ionicons
-                name="checkmark-circle"
-                size={15}
-                color={colors.primaryColor}
+              <RiVerifiedBadgeFill
+                width={15}
+                height={15}
+                fill={colors.primaryColor}
                 accessibilityLabel={t('property.communityNotes.verifiedBadge')}
               />
             ) : null}
@@ -117,17 +129,16 @@ export const CommunityNoteCard: React.FC<CommunityNoteCardProps> = ({ note }) =>
       </BloomText>
 
       {isTruncatable ? (
-        <Pressable
+        <Button
+          variant="text"
+          size="small"
           onPress={() => setExpanded((prev) => !prev)}
-          accessibilityRole="button"
           style={styles.readMore}
         >
-          <BloomText style={styles.readMoreLabel}>
-            {expanded
-              ? t('property.communityNotes.readLess')
-              : t('property.communityNotes.readMore')}
-          </BloomText>
-        </Pressable>
+          {expanded
+            ? t('property.communityNotes.readLess')
+            : t('property.communityNotes.readMore')}
+        </Button>
       ) : null}
 
       {pros.length > 0 ? (
@@ -154,11 +165,11 @@ export const CommunityNoteCard: React.FC<CommunityNoteCardProps> = ({ note }) =>
 
       <View style={styles.footer}>
         <View style={styles.recommendRow}>
-          <Ionicons
-            name={note.recommendation ? 'thumbs-up' : 'thumbs-down'}
-            size={13}
-            color={note.recommendation ? colors.success : colors.COLOR_BLACK_LIGHT_3}
-          />
+          {note.recommendation ? (
+            <RiThumbUpLine width={13} height={13} fill={colors.success} />
+          ) : (
+            <RiThumbDownLine width={13} height={13} fill={colors.COLOR_BLACK_LIGHT_3} />
+          )}
           <BloomText
             style={[
               styles.recommendText,
@@ -178,12 +189,15 @@ export const CommunityNoteCard: React.FC<CommunityNoteCardProps> = ({ note }) =>
         ) : null}
 
         {note.moderationStatus === ReviewModerationStatus.UNDER_REVIEW ? (
-          <View style={styles.underReview}>
-            <Ionicons name="warning-outline" size={12} color={colors.warning} />
-            <BloomText style={styles.underReviewText}>
-              {t('property.communityNotes.underReview')}
-            </BloomText>
-          </View>
+          <Chip
+            variant="subtle"
+            color="warning"
+            size="small"
+            startIcon={<RiAlertLine width={12} height={12} fill={colors.warning} />}
+            style={styles.underReview}
+          >
+            {t('property.communityNotes.underReview')}
+          </Chip>
         ) : null}
       </View>
     </View>
@@ -198,14 +212,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: spacing.md,
-  },
-  avatar: {
-    width: AVATAR_SIZE,
-    height: AVATAR_SIZE,
-    borderRadius: AVATAR_SIZE / 2,
-    backgroundColor: colors.COLOR_BLACK_LIGHT_7,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   headerText: {
     flex: 1,
@@ -249,12 +255,6 @@ const styles = StyleSheet.create({
   readMore: {
     alignSelf: 'flex-start',
   },
-  readMoreLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.COLOR_BLACK,
-    textDecorationLine: 'underline',
-  },
   commentBlock: {
     gap: 2,
     paddingLeft: spacing.md,
@@ -294,19 +294,7 @@ const styles = StyleSheet.create({
     color: colors.COLOR_BLACK_LIGHT_3,
   },
   underReview: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-    borderRadius: 8,
-    backgroundColor: colors.warningSubtle,
     marginLeft: 'auto',
-  },
-  underReviewText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: colors.warning,
   },
 });
 

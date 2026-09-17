@@ -1,8 +1,9 @@
 import React from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { ThemedText } from '@/components/ThemedText';
+import { Admonition } from '@oxy.so/bloom/admonition';
 import { Button } from '@oxy.so/bloom/button';
+import { ThemedText } from '@/components/ThemedText';
 import { PropertyPreviewWidget } from '@/components/widgets/PropertyPreviewWidget';
 import { createPropertyStyles as styles } from './styles';
 
@@ -27,7 +28,7 @@ export function PreviewStep({
   const { t } = useTranslation();
 
   return (
-    <View>
+    <View style={styles.step}>
       <ThemedText type="subtitle">Preview</ThemedText>
       <PropertyPreviewWidget />
 
@@ -37,7 +38,11 @@ export function PreviewStep({
           complete.
         </ThemedText>
 
-        <Button onPress={onSubmit} disabled={isLoading || (isEditMode && isPropertyLoading)}>
+        <Button
+          onPress={onSubmit}
+          loading={isLoading}
+          disabled={isLoading || (isEditMode && isPropertyLoading)}
+        >
           {isLoading
             ? isEditMode
               ? t('property.updating')
@@ -48,9 +53,7 @@ export function PreviewStep({
         </Button>
 
         {submitError && (
-          <ThemedText style={styles.errorText}>
-            {t('property.error', { error: submitError })}
-          </ThemedText>
+          <Admonition type="error">{t('property.error', { error: submitError })}</Admonition>
         )}
       </View>
     </View>

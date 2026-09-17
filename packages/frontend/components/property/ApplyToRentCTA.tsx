@@ -4,37 +4,38 @@
  * Flat content (no card chrome): the surface — `BaseWidget` in the desktop
  * right column, a `Section` on mobile — owns the border/background/radius, and
  * `BookingCard` owns the price header above this. This component renders the
- * Idealista-style application entry: a compact price/requirements line, an
- * inline move-in date field (reusing the same `AvailabilityCalendar` the
- * vacation path uses), and the primary "Apply to rent" button. The full
+ * Idealista-style application entry: a compact price/requirements line, a
+ * move-in date picked with Bloom's `DatePicker` (a popover on web, a bottom
+ * sheet on native), and the primary "Apply to rent" button. The full
  * application (income, references, documents) is still collected on
  * `/properties/[id]/apply`; the chosen move-in date is passed through as a
  * param so the user doesn't re-enter it.
+ *
+ * External listings (`isExternal`) never enter the in-app apply flow: the CTA
+ * opens the source website instead, and says so when there is no `sourceUrl`.
  *
  * When the user already has an active application on this property, the CTA
  * swaps for a "View status" deep link so the apply form isn't offered twice.
  */
 import React, { useCallback, useMemo, useState } from 'react';
-import { Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Linking, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { format } from 'date-fns';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { addMonths, format, startOfDay } from 'date-fns';
 
 import { Button } from '@oxy.so/bloom/button';
-import { Text as BloomText, H3 } from '@oxy.so/bloom/typography';
+import { DatePicker } from '@oxy.so/bloom/date-picker';
+import { Field } from '@oxy.so/bloom/field';
+import { RiExternalLinkLine, RiWallet3Line } from '@oxy.so/bloom/icons';
+import { toast } from '@oxy.so/bloom/toast';
+import { Text as BloomText } from '@oxy.so/bloom/typography';
 import { openAccountDialog, useOxy } from '@oxy.so/services';
 
-import {
-  AvailabilityCalendar,
-  type AvailabilityCalendarRange,
-} from '@/components/AvailabilityCalendar';
 import { useActiveApplicationForProperty } from '@/hooks/useApplicationQueries';
 import { resolveHeadlinePrice } from '@/utils/propertyPricing';
 import { useFormatting } from '@/utils/format';
 import { colors } from '@/styles/colors';
-import { radius, spacing } from '@/constants/styles';
+import { spacing } from '@/constants/styles';
 import { type Property } from '@homiio/shared-types';
 
 interface ApplyToRentCTAProps {
@@ -44,11 +45,15 @@ interface ApplyToRentCTAProps {
 /** Format a `Date` as the `YYYY-MM-DD` string the apply form expects. */
 const toIsoDay = (date: Date): string => format(date, 'yyyy-MM-dd');
 
+/** How far ahead a move-in can be picked (matches the stay calendar). */
+const MOVE_IN_HORIZON_MONTHS = 18;
+/** Monday-first grid, like every other Homiio calendar. */
+const WEEK_START = 1;
+
 export const ApplyToRentCTA: React.FC<ApplyToRentCTAProps> = ({ property }) => {
   const router = useRouter();
   const { t } = useTranslation();
   const formatting = useFormatting();
-  const insets = useSafeAreaInsets();
   const { isAuthenticated } = useOxy();
 
   const propertyId = String(property.id ?? '');
@@ -58,29 +63,15 @@ export const ApplyToRentCTA: React.FC<ApplyToRentCTAProps> = ({ property }) => {
   );
   const activeApplication = activeApplicationQuery.data ?? null;
 
-  const [calendarOpen, setCalendarOpen] = useState(false);
   const [moveInDate, setMoveInDate] = useState<Date | null>(null);
+  const [today] = useState(() => startOfDay(new Date()));
+  const maxMoveIn = useMemo(() => addMonths(today, MOVE_IN_HORIZON_MONTHS), [today]);
 
   // Compact price/requirements line — same headline rule as the rest of the
   // detail surfaces (the active mode's priced block; long-term here).
   const { priceLabel } = useMemo(
     () => resolveHeadlinePrice(property, 'long_term', t, formatting),
     [property, t, formatting],
-  );
-
-  const openCalendar = useCallback(() => setCalendarOpen(true), []);
-  const closeCalendar = useCallback(() => setCalendarOpen(false), []);
-
-  // Long-term needs a single move-in date, not a stay range, so we read the
-  // first tapped day off the calendar's selection and close immediately.
-  const handleSelectMoveIn = useCallback(
-    (range: AvailabilityCalendarRange | null) => {
-      if (range) {
-        setMoveInDate(range.checkIn);
-        setCalendarOpen(false);
-      }
-    },
-    [],
   );
 
   const handleApply = useCallback(() => {
@@ -105,6 +96,40 @@ export const ApplyToRentCTA: React.FC<ApplyToRentCTAProps> = ({ property }) => {
     });
   }, [activeApplication, router]);
 
+  const handleOpenSource = useCallback(async () => {
+    if (!property.sourceUrl) {
+      toast.error(t('error.source.noUrl'));
+      return;
+    }
+    try {
+      await Linking.openURL(property.sourceUrl);
+    } catch {
+      toast.error(t('error.source.openFailed'));
+    }
+  }, [property.sourceUrl, t]);
+
+  if (property.isExternal) {
+    return (
+      <View style={styles.content}>
+        {priceLabel ? (
+          <View style={styles.metaRow}>
+            <RiWallet3Line width={14} height={14} fill={colors.COLOR_BLACK_LIGHT_3} />
+            <BloomText style={styles.metaText}>{priceLabel}</BloomText>
+          </View>
+        ) : null}
+        <Button
+          variant="primary"
+          size="medium"
+          leadingIcon={RiExternalLinkLine}
+          onPress={handleOpenSource}
+          style={styles.button}
+        >
+          {t('listing.cta.viewOnSourceWebsite')}
+        </Button>
+      </View>
+    );
+  }
+
   if (activeApplication) {
     return (
       <View style={styles.content}>
@@ -126,10 +151,6 @@ export const ApplyToRentCTA: React.FC<ApplyToRentCTAProps> = ({ property }) => {
     );
   }
 
-  const moveInLabel = moveInDate
-    ? format(moveInDate, 'MMM d, yyyy')
-    : t('applications.cta.addMoveIn');
-
   return (
     <View style={styles.content}>
       <BloomText style={styles.title}>
@@ -141,40 +162,23 @@ export const ApplyToRentCTA: React.FC<ApplyToRentCTAProps> = ({ property }) => {
 
       {priceLabel ? (
         <View style={styles.metaRow}>
-          <View style={styles.metaItem}>
-            <Ionicons
-              name="pricetag-outline"
-              size={14}
-              color={colors.COLOR_BLACK_LIGHT_3}
-            />
-            <BloomText style={styles.metaText}>{priceLabel}</BloomText>
-          </View>
+          <RiWallet3Line width={14} height={14} fill={colors.COLOR_BLACK_LIGHT_3} />
+          <BloomText style={styles.metaText}>{priceLabel}</BloomText>
         </View>
       ) : null}
 
-      <Pressable
-        onPress={openCalendar}
-        accessibilityRole="button"
-        accessibilityLabel={t('applications.field.moveInDate')}
-        style={styles.moveInField}
-      >
-        <BloomText style={styles.moveInLabel}>
-          {t('applications.field.moveInDate')}
-        </BloomText>
-        <View style={styles.moveInValueRow}>
-          <BloomText
-            style={[styles.moveInValue, !moveInDate && styles.moveInPlaceholder]}
-            numberOfLines={1}
-          >
-            {moveInLabel}
-          </BloomText>
-          <Ionicons
-            name="calendar-outline"
-            size={18}
-            color={colors.COLOR_BLACK_LIGHT_3}
-          />
-        </View>
-      </Pressable>
+      <Field label={t('applications.field.moveInDate')} style={styles.moveInField}>
+        <DatePicker
+          value={moveInDate}
+          onChange={setMoveInDate}
+          minDate={today}
+          maxDate={maxMoveIn}
+          weekStartsOn={WEEK_START}
+          locale={formatting.locale}
+          placeholder={t('applications.cta.addMoveIn')}
+          accessibilityLabel={t('applications.field.moveInDate')}
+        />
+      </Field>
 
       <Button
         variant="primary"
@@ -184,43 +188,6 @@ export const ApplyToRentCTA: React.FC<ApplyToRentCTAProps> = ({ property }) => {
       >
         {t('applications.cta.apply')}
       </Button>
-
-      <Modal
-        visible={calendarOpen}
-        animationType={Platform.OS === 'web' ? 'fade' : 'slide'}
-        transparent={Platform.OS === 'web'}
-        onRequestClose={closeCalendar}
-      >
-        <View style={styles.modalBackdrop}>
-          <View
-            style={[
-              styles.modalSurface,
-              Platform.OS === 'web' ? null : { paddingBottom: spacing.lg + insets.bottom },
-            ]}
-          >
-            <View style={styles.modalHeader}>
-              <H3 style={styles.modalTitle}>
-                {t('applications.field.moveInDate')}
-              </H3>
-              <Button
-                variant="icon"
-                size="small"
-                onPress={closeCalendar}
-                accessibilityLabel={t('common.close')}
-              >
-                {'×'}
-              </Button>
-            </View>
-            <AvailabilityCalendar
-              mode="modal"
-              selectionMode="single"
-              initialRange={moveInDate ? { checkIn: moveInDate, checkOut: moveInDate } : null}
-              onChange={handleSelectMoveIn}
-              hideActions
-            />
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 };
@@ -241,14 +208,9 @@ const styles = StyleSheet.create({
   },
   metaRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.lg,
-    marginTop: spacing.xs,
-  },
-  metaItem: {
-    flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
+    marginTop: spacing.xs,
   },
   metaText: {
     fontSize: 13,
@@ -256,64 +218,11 @@ const styles = StyleSheet.create({
     color: colors.COLOR_BLACK,
   },
   moveInField: {
-    borderWidth: 1,
-    borderColor: colors.COLOR_BLACK_LIGHT_6,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    gap: 2,
     marginTop: spacing.xs,
-  },
-  moveInLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: colors.COLOR_BLACK_LIGHT_3,
-    textTransform: 'uppercase',
-  },
-  moveInValueRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.sm,
-  },
-  moveInValue: {
-    flex: 1,
-    fontSize: 14,
-    color: colors.COLOR_BLACK,
-  },
-  moveInPlaceholder: {
-    color: colors.COLOR_BLACK_LIGHT_3,
   },
   button: {
     alignSelf: 'flex-start',
     marginTop: spacing.xs,
-  },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: colors.overlay,
-    justifyContent: Platform.OS === 'web' ? 'center' : 'flex-end',
-    alignItems: 'center',
-  },
-  modalSurface: {
-    backgroundColor: colors.white,
-    width: '100%',
-    maxWidth: 720,
-    maxHeight: '92%',
-    borderTopLeftRadius: radius.xl,
-    borderTopRightRadius: radius.xl,
-    borderBottomLeftRadius: Platform.OS === 'web' ? radius.xl : 0,
-    borderBottomRightRadius: Platform.OS === 'web' ? radius.xl : 0,
-    padding: spacing.lg,
-    gap: spacing.md,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '700',
   },
 });
 

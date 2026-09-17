@@ -3,6 +3,7 @@ import { View } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ImageUpload } from '@/components/ImageUpload';
 import { MAX_PROPERTY_IMAGES, PROPERTY_IMAGE_FOLDER } from './constants';
+import { createPropertyStyles as styles } from './styles';
 import type { PropertyStepProps } from './types';
 
 interface MediaStepProps extends Pick<PropertyStepProps, 'formData' | 'updateFormField'> {
@@ -14,7 +15,7 @@ interface MediaStepProps extends Pick<PropertyStepProps, 'formData' | 'updateFor
  */
 export function MediaStep({ formData, updateFormField, isLoading }: MediaStepProps) {
   return (
-    <View>
+    <View style={styles.step}>
       <ThemedText type="subtitle">Media</ThemedText>
 
       <ImageUpload

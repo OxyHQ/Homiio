@@ -19,9 +19,8 @@
 import React, { useCallback, useContext, useMemo } from 'react';
 import { ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import Ionicons from '@expo/vector-icons/Ionicons';
-
 import { Button } from '@oxy.so/bloom/button';
+import { RiCheckboxCircleLine } from '@oxy.so/bloom/icons';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { BottomSheetContext } from '@/context/BottomSheetContext';
@@ -31,6 +30,7 @@ import {
   DetailIconCell,
   DetailIconGrid,
   DetailIconRow,
+  type DetailFallbackIcon,
 } from '@/components/property/DetailIconGrid';
 import { colors } from '@/styles/colors';
 import { spacing } from '@/constants/styles';
@@ -46,8 +46,7 @@ import {
 /** Fraction of the viewport the sheet's scroll body may occupy at most. */
 const SHEET_MAX_HEIGHT_RATIO = 0.62;
 /** Fallback glyph when an amenity id has no catalog icon. */
-const FALLBACK_ICON: React.ComponentProps<typeof Ionicons>['name'] =
-  'checkmark-circle-outline';
+const FALLBACK_ICON: DetailFallbackIcon = RiCheckboxCircleLine;
 
 interface AmenitiesGridProps {
   property: { amenities?: string[] | null };
@@ -76,8 +75,12 @@ function useAmenityLabel(): (entry: ResolvedAmenity) => string {
   );
 }
 
-/** Map an amenity's catalog icon to an Ionicons glyph, with a safe fallback. */
-function resolveIcon(amenity?: Amenity): React.ComponentProps<typeof Ionicons>['name'] {
+/**
+ * Map an amenity's catalog icon to a glyph, with a safe fallback. The catalog
+ * stores Ionicons names (bed, wifi, pool…) that Remix's set cannot express, so
+ * those stay Ionicons; only the generic fallback is a Bloom icon.
+ */
+function resolveIcon(amenity?: Amenity): DetailFallbackIcon {
   return amenity?.icon ?? FALLBACK_ICON;
 }
 
@@ -139,7 +142,7 @@ const AmenitiesSheet: React.FC<AmenitiesSheetProps> = ({ ids, maxScrollHeight })
       >
         {groups.map((group) => (
           <View key={group.categoryId} style={styles.group}>
-            <BloomText style={styles.groupTitle}>{resolveGroupTitle(group)}</BloomText>
+            <BloomText variant="title-3-semibold" style={styles.groupTitle}>{resolveGroupTitle(group)}</BloomText>
             <View>
               {group.amenities.map((entry, idx) => (
                 <AmenityRow
@@ -239,8 +242,6 @@ const styles = StyleSheet.create({
     marginBottom: spacing['2xl'],
   },
   groupTitle: {
-    fontSize: 18,
-    fontWeight: '600',
     color: colors.COLOR_BLACK,
     marginBottom: spacing.xs,
     letterSpacing: -0.2,

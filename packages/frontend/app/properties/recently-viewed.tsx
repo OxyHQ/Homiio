@@ -107,7 +107,7 @@ export default function RecentlyViewedScreen() {
               variant="ghost"
               size="small"
               onPress={handleClear}
-              accessibilityLabel={t('home.recentlyViewed.retry')}
+              accessibilityLabel={t('common.clear')}
             >
               {t('common.clear')}
             </Button>

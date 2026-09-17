@@ -14,9 +14,10 @@
  * term is a Bloom `SegmentedControl` seeded from `termOptions`.
  */
 import React, { useCallback, useMemo, useState } from 'react';
-import { StyleSheet, TextInput, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
+import { TextField, TextFieldInput, TextFieldSuffix } from '@oxy.so/bloom/text-field';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 import {
   SegmentedControl,
@@ -182,17 +183,16 @@ export const MortgageCalculatorSection: React.FC<Props> = ({ salePrice, currency
             {t('listing.mortgage.interestRate')}
           </BloomText>
         </View>
-        <View style={styles.rateInputRow}>
-          <TextInput
-            style={styles.rateInput}
+        <TextField>
+          <TextFieldInput
+            label={t('listing.mortgage.interestRate')}
             value={annualRateText}
             onChangeText={setAnnualRateText}
             keyboardType="decimal-pad"
             placeholder="0"
-            accessibilityLabel={t('listing.mortgage.interestRate')}
           />
-          <BloomText style={styles.ratePercent}>%</BloomText>
-        </View>
+          <TextFieldSuffix label={t('listing.mortgage.interestRate')}>%</TextFieldSuffix>
+        </TextField>
       </View>
 
       {/* Term */}
@@ -315,25 +315,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: colors.COLOR_BLACK_LIGHT_3,
-  },
-  rateInputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: hairline.width,
-    borderColor: colors.COLOR_BLACK_LIGHT_6,
-    borderRadius: radius.md,
-    backgroundColor: colors.surfaceElevated,
-    paddingHorizontal: spacing.md,
-  },
-  rateInput: {
-    flex: 1,
-    paddingVertical: spacing.md,
-    fontSize: 16,
-    color: colors.COLOR_BLACK,
-  },
-  ratePercent: {
-    fontSize: 16,
-    color: colors.COLOR_BLACK_LIGHT_4,
   },
   splitBlock: {
     marginTop: spacing.xl,

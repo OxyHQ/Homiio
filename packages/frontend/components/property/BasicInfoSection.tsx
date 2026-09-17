@@ -8,22 +8,29 @@
  *  3. Truncated "About this property" body (via shared TruncatedDescription).
  *  4. Active-viewing banner.
  *
- * Migrated to Bloom Typography + Badge + Button — no raw `<Text>`,
- * no inline font sizes, no hand-rolled chips.
+ * Bloom Typography + Chip (source) + Admonition (viewing banner) + Button —
+ * no raw `<Text>`, no hand-rolled chips or banners.
  */
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import Ionicons from '@expo/vector-icons/Ionicons';
 
-import { Button } from '@oxy.so/bloom/button';
+import {
+  AdmonitionButton,
+  AdmonitionContent,
+  AdmonitionRoot,
+  AdmonitionRow,
+  AdmonitionText,
+} from '@oxy.so/bloom/admonition';
+import { Chip } from '@oxy.so/bloom/chip';
+import { RiCalendarLine, RiGlobalLine } from '@oxy.so/bloom/icons';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { MoneyText } from '@/components/MoneyText';
 import { TruncatedDescription } from '@/components/ui/TruncatedDescription';
 import { SECTION_GUTTER } from '@/components/property/Section';
 import { colors } from '@/styles/colors';
-import { radius, spacing } from '@/constants/styles';
+import { spacing } from '@/constants/styles';
 import { type Property } from '@homiio/shared-types';
 import type { RentalMode } from '@/utils/propertyUtils';
 
@@ -58,7 +65,9 @@ export const BasicInfoSection: React.FC<Props> = ({
   return (
     <View style={styles.container}>
       <View style={styles.priceRow}>
-        <BloomText style={styles.priceLabel}>{rentLabel}</BloomText>
+        <BloomText variant="headline-regular" style={styles.priceLabel}>
+          {rentLabel}
+        </BloomText>
         <MoneyText
           amount={rentAmount}
           currency={rentCurrency}
@@ -66,23 +75,17 @@ export const BasicInfoSection: React.FC<Props> = ({
       </View>
 
       {property?.isExternal && property?.source && property.source !== 'internal' ? (
-        <View style={styles.badgeRow}>
-          <View style={styles.sourceBadge}>
-            <Ionicons
-              name="globe-outline"
-              size={14}
-              color={colors.COLOR_BLACK_LIGHT_3}
-            />
-            <BloomText style={styles.sourceBadgeText}>
-              {`${t('property.sections.sourcedFrom')} ${property.source.charAt(0).toUpperCase()}${property.source.slice(1)}`}
-            </BloomText>
-          </View>
-        </View>
+        <Chip
+          size="large"
+          startIcon={<RiGlobalLine width={14} height={14} fill={colors.COLOR_BLACK_LIGHT_3} />}
+        >
+          {`${t('property.sections.sourcedFrom')} ${property.source.charAt(0).toUpperCase()}${property.source.slice(1)}`}
+        </Chip>
       ) : null}
 
       {description && description.trim() !== '' ? (
         <View style={styles.descriptionBlock}>
-          <BloomText style={styles.aboutTitle}>
+          <BloomText variant="title-2-bold" style={styles.aboutTitle}>
             {t('property.about.title')}
           </BloomText>
           <TruncatedDescription text={description} />
@@ -90,24 +93,20 @@ export const BasicInfoSection: React.FC<Props> = ({
       ) : null}
 
       {hasActiveViewing ? (
-        <View style={styles.viewingBanner}>
-          <View style={styles.viewingBannerIcon}>
-            <Ionicons name="calendar" size={20} color={colors.primaryColor} />
-          </View>
-          <BloomText style={styles.viewingBannerText}>
-            {t('viewings.banner.hasViewing')}
-          </BloomText>
-          <Button
-            onPress={onViewingsPress}
-            variant="primary"
-            size="small"
-            accessibilityLabel={
-              t('viewings.banner.viewDetails')
-            }
-          >
-            {t('viewings.banner.viewDetails')}
-          </Button>
-        </View>
+        <AdmonitionRoot type="tip">
+          <AdmonitionRow style={styles.viewingRow}>
+            <RiCalendarLine width={20} height={20} fill={colors.primaryColor} />
+            <AdmonitionContent>
+              <AdmonitionText>{t('viewings.banner.hasViewing')}</AdmonitionText>
+            </AdmonitionContent>
+            <AdmonitionButton
+              onPress={onViewingsPress}
+              accessibilityLabel={t('viewings.banner.viewDetails')}
+            >
+              {t('viewings.banner.viewDetails')}
+            </AdmonitionButton>
+          </AdmonitionRow>
+        </AdmonitionRoot>
       ) : null}
     </View>
   );
@@ -125,56 +124,17 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   priceLabel: {
-    fontSize: 16,
     color: colors.COLOR_BLACK_LIGHT_3,
-  },
-  badgeRow: {
-    flexDirection: 'row',
-  },
-  sourceBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.mutedSubtle,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: 9999,
-    gap: 6,
-  },
-  sourceBadgeText: {
-    fontSize: 12,
-    color: colors.COLOR_BLACK_LIGHT_3,
-    fontWeight: '500',
   },
   descriptionBlock: {
     gap: spacing.md,
   },
   aboutTitle: {
-    fontSize: 20,
-    fontWeight: '700',
     color: colors.COLOR_BLACK,
     letterSpacing: -0.2,
   },
-  viewingBanner: {
-    flexDirection: 'row',
+  viewingRow: {
     alignItems: 'center',
-    gap: spacing.md,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
-    borderRadius: radius.lg,
-    backgroundColor: colors.primaryLight_2,
-  },
-  viewingBannerIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: colors.white,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  viewingBannerText: {
-    flex: 1,
-    fontSize: 14,
-    color: colors.COLOR_BLACK,
   },
 });
 

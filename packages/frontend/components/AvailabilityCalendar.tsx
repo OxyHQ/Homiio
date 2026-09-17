@@ -16,7 +16,6 @@ import {
   addMonths,
   differenceInCalendarDays,
   eachDayOfInterval,
-  format,
   isSameDay,
   parseISO,
   startOfDay,
@@ -29,8 +28,8 @@ import {
   AvailabilityWindow,
   AvailabilityWindowStatus,
 } from '@homiio/shared-types';
-import { colors } from '@/styles/colors';
-import { getFormatLocale } from '@/utils/dateLocale';
+import { useTheme } from '@oxy.so/bloom/theme';
+import { formatLocalized, getFormatLocale } from '@/utils/dateLocale';
 import { useIsScreenNotMobile } from '@/hooks/useOptimizedMediaQuery';
 
 export type AvailabilityCalendarMode = 'inline' | 'modal';
@@ -105,7 +104,8 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
   onChange,
   hideActions = false,
 }) => {
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const theme = useTheme();
   const locale = getFormatLocale(i18n.language);
   const isLarge = useIsScreenNotMobile();
   const [selection, setSelection] = useState<AvailabilityCalendarRange | null>(initialRange);
@@ -178,11 +178,13 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
   }, [isIncomplete, onApply, selection]);
 
   const nightsLabel = useMemo(() => {
-    if (!selection || isIncomplete) return 'Select check-in and check-out';
+    if (!selection || isIncomplete) {
+      return t('booking.calendar.selectRange', 'Select check-in and check-out');
+    }
     const nights = differenceInCalendarDays(selection.checkOut, selection.checkIn);
-    const nightWord = nights === 1 ? 'night' : 'nights';
-    return `${format(selection.checkIn, 'MMM d')} → ${format(selection.checkOut, 'MMM d')} · ${nights} ${nightWord}`;
-  }, [isIncomplete, selection]);
+    const nightWord = t(nights === 1 ? 'booking.toast.night' : 'booking.toast.nights');
+    return `${formatLocalized(selection.checkIn, 'MMM d')} → ${formatLocalized(selection.checkOut, 'MMM d')} · ${nights} ${nightWord}`;
+  }, [isIncomplete, selection, t]);
 
   const constraints = {
     minDate: effectiveMin,
@@ -216,12 +218,12 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
         )}
       </View>
       {!hideActions ? (
-        <View style={styles.footerRow}>
+        <View style={[styles.footerRow, { borderTopColor: theme.colors.border }]}>
           <Button variant="ghost" size="medium" onPress={handleClear}>
-            Clear
+            {t('common.clear')}
           </Button>
           <Button variant="primary" size="medium" onPress={handleApply} disabled={isIncomplete}>
-            Apply
+            {t('booking.calendar.apply', 'Apply')}
           </Button>
         </View>
       ) : null}
@@ -248,7 +250,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: 12,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.COLOR_BLACK_LIGHT_6,
     gap: 12,
   },
 });

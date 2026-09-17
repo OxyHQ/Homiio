@@ -1,30 +1,36 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { format } from 'date-fns';
 import { useTranslation } from 'react-i18next';
 import { toast } from '@oxy.so/bloom/toast';
 import { Button } from '@oxy.so/bloom/button';
-import { Text as BloomText, H3 } from '@oxy.so/bloom/typography';
+import { Chip } from '@oxy.so/bloom/chip';
+import { Dialog } from '@oxy.so/bloom/dialog';
+import { RiFlashlightLine } from '@oxy.so/bloom/icons';
+import { Item } from '@oxy.so/bloom/item';
+import { useTheme } from '@oxy.so/bloom/theme';
+import { Text as BloomText } from '@oxy.so/bloom/typography';
 import { useOxy, openAccountDialog } from '@oxy.so/services';
 import {
   Property,
   CancellationPolicy,
 } from '@homiio/shared-types';
 import { isShortTermRentable } from '@/utils/propertyUtils';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import {
   AvailabilityCalendar,
   AvailabilityCalendarRange,
 } from '@/components/AvailabilityCalendar';
-import { GuestSelector, GuestCounts } from '@/components/GuestSelector';
+import {
+  GuestSelector,
+  GuestCounts,
+  formatGuestSummary,
+} from '@/components/GuestSelector';
 import { PriceBreakdown } from '@/components/PriceBreakdown';
 import {
   useCreateReservation,
   usePropertyAvailabilityQuery,
 } from '@/hooks/useReservationQueries';
-import { colors } from '@/styles/colors';
+import { formatLocalized } from '@/utils/dateLocale';
 
 export interface BookingWidgetProps {
   property: Property;
@@ -32,20 +38,7 @@ export interface BookingWidgetProps {
 
 const DEFAULT_GUESTS: GuestCounts = { adults: 1, children: 0, infants: 0 };
 
-type SheetVariant = 'calendar' | 'guests' | null;
-
-const formatDateRange = (range: AvailabilityCalendarRange | null): string => {
-  if (!range) return 'Add dates';
-  return `${format(range.checkIn, 'MMM d')} → ${format(range.checkOut, 'MMM d')}`;
-};
-
-const formatGuestsLabel = (counts: GuestCounts): string => {
-  const billable = counts.adults + counts.children;
-  const guestWord = billable === 1 ? 'guest' : 'guests';
-  if (counts.infants === 0) return `${billable} ${guestWord}`;
-  const infantWord = counts.infants === 1 ? 'infant' : 'infants';
-  return `${billable} ${guestWord}, ${counts.infants} ${infantWord}`;
-};
+type SheetVariant = 'calendar' | 'guests';
 
 const computeNights = (
   range: AvailabilityCalendarRange | null,
@@ -64,11 +57,14 @@ const isVacationCapable = (property: Property): boolean => {
 
 export const BookingWidget: React.FC<BookingWidgetProps> = ({ property }) => {
   const { t } = useTranslation();
+  const theme = useTheme();
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const { oxyServices, activeSessionId } = useOxy();
   const propertyId = property.id || '';
-  const [sheet, setSheet] = useState<SheetVariant>(null);
+  // `sheet` keeps the last variant while the dialog animates closed, so its
+  // body does not blank mid-exit; `sheetOpen` is what drives the Dialog.
+  const [sheet, setSheet] = useState<SheetVariant>('calendar');
+  const [sheetOpen, setSheetOpen] = useState(false);
   const [range, setRange] = useState<AvailabilityCalendarRange | null>(null);
   const [guests, setGuests] = useState<GuestCounts>(DEFAULT_GUESTS);
 
@@ -93,15 +89,21 @@ export const BookingWidget: React.FC<BookingWidgetProps> = ({ property }) => {
 
   const nights = useMemo(() => computeNights(range), [range]);
 
-  const closeSheet = useCallback(() => setSheet(null), []);
+  const closeSheet = useCallback(() => setSheetOpen(false), []);
 
-  const handleOpenCalendar = useCallback(() => setSheet('calendar'), []);
-  const handleOpenGuests = useCallback(() => setSheet('guests'), []);
+  const handleOpenCalendar = useCallback(() => {
+    setSheet('calendar');
+    setSheetOpen(true);
+  }, []);
+  const handleOpenGuests = useCallback(() => {
+    setSheet('guests');
+    setSheetOpen(true);
+  }, []);
 
   const handleApplyDates = useCallback(
     (next: AvailabilityCalendarRange | null) => {
       setRange(next);
-      setSheet(null);
+      setSheetOpen(false);
     },
     [],
   );
@@ -163,47 +165,59 @@ export const BookingWidget: React.FC<BookingWidgetProps> = ({ property }) => {
   if (!isVacationCapable(property)) return null;
   if (nightlyRate <= 0) return null;
 
-  const buttonLabel = instantBook ? 'Reserve' : 'Request to book';
+  const buttonLabel = instantBook
+    ? t('property.cta.reserve')
+    : t('booking.widget.requestToBook', 'Request to book');
+  const datesLabel = range
+    ? `${formatLocalized(range.checkIn, 'MMM d')} → ${formatLocalized(range.checkOut, 'MMM d')}`
+    : t('search.summary.addDates');
+  const sheetTitle =
+    sheet === 'calendar' ? t('booking.accessibility.selectDates') : t('search.filters.guests');
 
   return (
     <View style={styles.card}>
       <View style={styles.headerRow}>
         <BloomText style={styles.priceValue}>
           {currency} {nightlyRate}
-          <BloomText style={styles.pricePer}> / night</BloomText>
+          <BloomText style={[styles.pricePer, { color: theme.colors.textSecondary }]}>
+            {' / '}
+            {t('booking.widget.perNight', 'night')}
+          </BloomText>
         </BloomText>
         {instantBook ? (
-          <View style={styles.instantBookPill}>
-            <Ionicons name="flash" size={12} color={colors.primaryColor} />
-            <BloomText style={styles.instantBookLabel}>Instant book</BloomText>
-          </View>
+          <Chip
+            size="small"
+            color="primary"
+            variant="subtle"
+            startIcon={<RiFlashlightLine width={12} height={12} fill={theme.colors.primary} />}
+          >
+            {t('listing.badge.instantBook')}
+          </Chip>
         ) : null}
       </View>
 
-      <View style={styles.triggerGrid}>
-        <Pressable
+      <View style={[styles.triggerGrid, { borderColor: theme.colors.border }]}>
+        <Item
           style={styles.triggerCell}
+          density="compact"
           onPress={handleOpenCalendar}
-          accessibilityRole="button"
           accessibilityLabel={t('booking.accessibility.selectDates')}
-        >
-          <BloomText style={styles.triggerLabel}>Dates</BloomText>
-          <BloomText style={styles.triggerValue} numberOfLines={1}>
-            {formatDateRange(range)}
-          </BloomText>
-        </Pressable>
-        <View style={styles.triggerDivider} />
-        <Pressable
+          title={t('booking.widget.dates', 'Dates')}
+          titleStyle={[styles.triggerLabel, { color: theme.colors.textSecondary }]}
+          subtitle={datesLabel}
+          subtitleStyle={styles.triggerValue}
+        />
+        <View style={[styles.triggerDivider, { backgroundColor: theme.colors.border }]} />
+        <Item
           style={styles.triggerCell}
+          density="compact"
           onPress={handleOpenGuests}
-          accessibilityRole="button"
           accessibilityLabel={t('booking.accessibility.selectGuests')}
-        >
-          <BloomText style={styles.triggerLabel}>Guests</BloomText>
-          <BloomText style={styles.triggerValue} numberOfLines={1}>
-            {formatGuestsLabel(guests)}
-          </BloomText>
-        </Pressable>
+          title={t('search.filters.guests')}
+          titleStyle={[styles.triggerLabel, { color: theme.colors.textSecondary }]}
+          subtitle={formatGuestSummary(t, guests)}
+          subtitleStyle={styles.triggerValue}
+        />
       </View>
 
       <PriceBreakdown
@@ -227,91 +241,79 @@ export const BookingWidget: React.FC<BookingWidgetProps> = ({ property }) => {
         {buttonLabel}
       </Button>
       {!instantBook ? (
-        <BloomText style={styles.subnote}>
-          You won&apos;t be charged yet. The host has 24 hours to respond.
+        <BloomText style={[styles.subnote, { color: theme.colors.textSecondary }]}>
+          {t(
+            'booking.widget.requestNote',
+            "You won't be charged yet. The host has 24 hours to respond.",
+          )}
         </BloomText>
       ) : null}
       {property.cancellationPolicy ? (
-        <BloomText style={styles.subnote}>
-          {policyLabel(property.cancellationPolicy)}
+        <BloomText style={[styles.subnote, { color: theme.colors.textSecondary }]}>
+          {policyLabel(t, property.cancellationPolicy)}
         </BloomText>
       ) : null}
 
-      <Modal
-        visible={sheet !== null}
-        animationType={Platform.OS === 'web' ? 'fade' : 'slide'}
-        transparent={Platform.OS === 'web'}
-        onRequestClose={closeSheet}
+      <Dialog
+        open={sheetOpen}
+        onClose={closeSheet}
+        placement={{ base: 'bottom', md: 'center' }}
+        maxWidth={sheet === 'calendar' ? 720 : 480}
+        title={sheetTitle}
+        label={sheetTitle}
       >
-        <View style={styles.modalBackdrop}>
-          <View
-            style={[
-              styles.modalSurface,
-              // Native presents this surface as a bottom sheet pinned to the
-              // bottom edge, so its content must clear the home indicator. On
-              // web it is a centered card and needs no inset.
-              Platform.OS === 'web' ? null : { paddingBottom: 16 + insets.bottom },
-            ]}
-          >
-            <View style={styles.modalHeader}>
-              <H3 style={styles.modalTitle}>
-                {sheet === 'calendar' ? 'Select dates' : 'Guests'}
-              </H3>
-              <Button
-                variant="icon"
-                size="small"
-                onPress={closeSheet}
-                accessibilityLabel={t('booking.accessibility.close')}
-              >
-                {'×'}
-              </Button>
-            </View>
-            {sheet === 'calendar' ? (
-              <AvailabilityCalendar
-                mode="modal"
-                windows={availabilityQuery.data?.windows}
-                booked={availabilityQuery.data?.booked}
-                minStay={minStay}
-                maxStay={maxStay}
-                initialRange={range}
-                onApply={handleApplyDates}
-              />
-            ) : null}
-            {sheet === 'guests' ? (
-              <View style={styles.guestSheetBody}>
-                <GuestSelector
-                  value={guests}
-                  maxGuests={maxGuests}
-                  onChange={setGuests}
-                  showHeader={false}
-                />
-                <Button
-                  variant="primary"
-                  size="medium"
-                  onPress={closeSheet}
-                  style={styles.guestDoneButton}
-                >
-                  Done
-                </Button>
-              </View>
-            ) : null}
+        {sheet === 'calendar' ? (
+          <AvailabilityCalendar
+            mode="modal"
+            windows={availabilityQuery.data?.windows}
+            booked={availabilityQuery.data?.booked}
+            minStay={minStay}
+            maxStay={maxStay}
+            initialRange={range}
+            onApply={handleApplyDates}
+          />
+        ) : (
+          <View style={styles.guestSheetBody}>
+            <GuestSelector
+              value={guests}
+              maxGuests={maxGuests}
+              onChange={setGuests}
+              showHeader={false}
+            />
+            <Button variant="primary" size="medium" onPress={closeSheet}>
+              {t('common.done')}
+            </Button>
           </View>
-        </View>
-      </Modal>
+        )}
+      </Dialog>
     </View>
   );
 };
 
-const policyLabel = (policy: CancellationPolicy): string => {
+type TFn = ReturnType<typeof useTranslation>['t'];
+
+const policyLabel = (t: TFn, policy: CancellationPolicy): string => {
   switch (policy) {
     case CancellationPolicy.FLEXIBLE:
-      return 'Flexible cancellation — full refund any time before check-in.';
+      return t(
+        'booking.policy.flexible',
+        'Flexible cancellation — full refund any time before check-in.',
+      );
     case CancellationPolicy.MODERATE:
-      return 'Moderate cancellation — full refund up to 5 days before check-in.';
+      return t(
+        'booking.policy.moderate',
+        'Moderate cancellation — full refund up to 5 days before check-in.',
+      );
     case CancellationPolicy.STRICT:
-      return 'Strict cancellation — full refund up to 7 days before check-in.';
+      return t(
+        'booking.policy.strict',
+        'Strict cancellation — full refund up to 7 days before check-in.',
+      );
     case CancellationPolicy.SUPER_STRICT:
-      return 'Super strict cancellation — full refund up to 30 days before check-in.';
+      return t(
+        'booking.policy.superStrict',
+        'Super strict cancellation — full refund up to 30 days before check-in.',
+      );
     default:
       return '';
   }
@@ -332,94 +334,40 @@ const styles = StyleSheet.create({
   priceValue: {
     fontSize: 20,
     fontWeight: '700',
-    color: colors.COLOR_BLACK,
   },
   pricePer: {
     fontSize: 14,
     fontWeight: '500',
-    color: colors.COLOR_BLACK_LIGHT_3,
-  },
-  instantBookPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.primaryLight_2,
-    borderRadius: 999,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    gap: 4,
-  },
-  instantBookLabel: {
-    fontSize: 11,
-    color: colors.primaryColor,
-    fontWeight: '600',
   },
   triggerGrid: {
     borderWidth: 1,
-    borderColor: colors.COLOR_BLACK_LIGHT_6,
     borderRadius: 12,
     flexDirection: 'row',
     overflow: 'hidden',
   },
   triggerCell: {
     flex: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    gap: 2,
   },
   triggerDivider: {
     width: 1,
-    backgroundColor: colors.COLOR_BLACK_LIGHT_6,
   },
   triggerLabel: {
     fontSize: 10,
     fontWeight: '700',
-    color: colors.COLOR_BLACK_LIGHT_3,
     textTransform: 'uppercase',
   },
   triggerValue: {
     fontSize: 14,
-    color: colors.COLOR_BLACK,
   },
   cta: {
     marginTop: 4,
   },
   subnote: {
     fontSize: 11,
-    color: colors.COLOR_BLACK_LIGHT_4,
     textAlign: 'center',
-  },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    justifyContent: Platform.OS === 'web' ? 'center' : 'flex-end',
-    alignItems: 'center',
-  },
-  modalSurface: {
-    backgroundColor: colors.white,
-    width: '100%',
-    maxWidth: 720,
-    maxHeight: '92%',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    borderBottomLeftRadius: Platform.OS === 'web' ? 24 : 0,
-    borderBottomRightRadius: Platform.OS === 'web' ? 24 : 0,
-    padding: 16,
-    gap: 12,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '700',
   },
   guestSheetBody: {
     gap: 12,
-  },
-  guestDoneButton: {
-    alignSelf: 'stretch',
   },
 });
 

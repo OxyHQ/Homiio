@@ -1,13 +1,19 @@
 import React from 'react';
-import { View, TouchableOpacity, StyleSheet } from 'react-native';
-import { ThemedText } from '@/components/ThemedText';
+import { View, StyleSheet } from 'react-native';
 import { Section, SECTION_GUTTER } from '@/components/property/Section';
 import { Avatar } from '@oxy.so/bloom/avatar';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Badge } from '@oxy.so/bloom/badge';
 import { colors } from '@/styles/colors';
 import { hairline, spacing } from '@/constants/styles';
 import { Button } from '@oxy.so/bloom/button';
-import { RiGlobalLine } from '@oxy.so/bloom/icons';
+import { IconCircle } from '@oxy.so/bloom/icon-circle';
+import {
+    RiArrowRightSLine,
+    RiBankLine,
+    RiGlobalLine,
+    RiUserLine,
+} from '@oxy.so/bloom/icons';
+import { Item } from '@oxy.so/bloom/item';
 import { FollowButton, useOxy } from '@oxy.so/services';
 import type { Profile, Property } from '@homiio/shared-types';
 import { HomeCarouselSection } from '@/components/HomeCarouselSection';
@@ -22,6 +28,8 @@ interface LandlordSectionProps {
     onApplyPublic: () => void;
     t: (k: string) => string;
 }
+
+const AVATAR_SIZE = 52;
 
 export const LandlordSection: React.FC<LandlordSectionProps> = ({
     property,
@@ -56,34 +64,35 @@ export const LandlordSection: React.FC<LandlordSectionProps> = ({
         return 'Property Owner';
     };
 
-    const renderPersonalProfileAvatar = (profile: Profile) => {
+    const renderAvatar = (profile: Profile | null) => {
+        if (!profile) {
+            return (
+                <Avatar
+                    size={AVATAR_SIZE}
+                    color="neutral"
+                    placeholderIcon={
+                        <RiUserLine width={26} height={26} fill={colors.COLOR_BLACK_LIGHT_3} />
+                    }
+                />
+            );
+        }
         // Prefer the Oxy avatar (a file id resolved to a URL by the registered
         // ImageResolver via getFileDownloadUrl); fall back to a profile-local
         // custom avatar for non-Oxy / unresolved cases.
         const avatarFileId = getAvatarFileId(profile.oxyUserId);
         const customAvatar = profile.personalProfile?.personalInfo?.avatar || profile.avatar;
-
         return (
             <Avatar
                 source={avatarFileId ?? customAvatar}
                 variant="thumb"
-                size={52}
-                style={styles.landlordAvatar}
+                name={getLandlordDisplayName(profile)}
+                size={AVATAR_SIZE}
             />
         );
     };
 
-    const renderAvatar = (profile: Profile | null) => {
-        if (!profile) {
-            return (
-                <View style={[styles.landlordAvatar, styles.defaultAvatar]}>
-                    <Ionicons name="person" size={26} color={colors.COLOR_BLACK_LIGHT_3} />
-                </View>
-            );
-        }
+    const isVerified = Boolean(landlordProfile?.personalProfile?.verification?.identity);
 
-        return renderPersonalProfileAvatar(profile);
-    };
     return (
         <Section
             fullBleed
@@ -91,22 +100,20 @@ export const LandlordSection: React.FC<LandlordSectionProps> = ({
         >
             {isPublicHousing ? (
                 <View style={[styles.contentContainer, styles.gutter]}>
-                    <View style={styles.landlordHeader}>
-                        <View style={[styles.landlordAvatar, styles.governmentAvatar]}>
-                            <Ionicons name="library" size={26} color={colors.white} />
-                        </View>
-                        <View style={styles.landlordInfo}>
-                            <View style={styles.landlordNameRow}>
-                                <ThemedText style={styles.landlordName}>
-                                    {publicHousingState ? `${publicHousingState} Housing Authority` : 'Public Housing Authority'}
-                                </ThemedText>
-                                <View style={[styles.verifiedBadge, styles.governmentBadge]}>
-                                    <ThemedText style={styles.verifiedText}>GOV</ThemedText>
-                                </View>
-                            </View>
-                            <ThemedText style={styles.landlordSubtitle}>Government-managed affordable housing</ThemedText>
-                        </View>
-                    </View>
+                    <Item
+                        leading={
+                            <IconCircle
+                                icon={RiBankLine}
+                                size="lg"
+                                style={styles.governmentAvatar}
+                                iconStyle={styles.governmentIcon}
+                            />
+                        }
+                        title={publicHousingState ? `${publicHousingState} Housing Authority` : 'Public Housing Authority'}
+                        subtitle="Government-managed affordable housing"
+                        trailing={<Badge content="GOV" variant="solid" color="info" size="small" />}
+                        style={styles.flushRow}
+                    />
                     <Button
                         leadingIcon={RiGlobalLine}
                         onPress={onApplyPublic}
@@ -119,31 +126,33 @@ export const LandlordSection: React.FC<LandlordSectionProps> = ({
                 </View>
             ) : (
                 <View style={styles.contentContainer}>
-                    <TouchableOpacity
-                        style={[styles.landlordHeader, styles.gutter]}
-                        onPress={() => {
-                            if (landlordProfile?.oxyUserId) {
-                                router.push(`/roommates/${landlordProfile.oxyUserId}`);
+                    <View style={styles.gutter}>
+                        <Item
+                            leading={renderAvatar(landlordProfile)}
+                            title={getLandlordDisplayName(landlordProfile)}
+                            subtitle={getLandlordSubtitle(landlordProfile)}
+                            trailing={
+                                <View style={styles.trailing}>
+                                    {isVerified ? (
+                                        <Badge
+                                            content={t('property.host.verified')}
+                                            variant="solid"
+                                            color="success"
+                                            size="small"
+                                        />
+                                    ) : null}
+                                    <RiArrowRightSLine width={20} height={20} fill={colors.COLOR_BLACK_LIGHT_3} />
+                                </View>
                             }
-                        }}
-                        activeOpacity={0.7}
-                    >
-                        {renderAvatar(landlordProfile)}
-                        <View style={styles.landlordInfo}>
-                            <View style={styles.landlordNameRow}>
-                                <ThemedText style={styles.landlordName}>{getLandlordDisplayName(landlordProfile)}</ThemedText>
-                                {landlordProfile?.personalProfile?.verification?.identity && (
-                                    <View style={styles.verifiedBadge}>
-                                        <Ionicons name="checkmark" size={12} color={colors.white} />
-                                    </View>
-                                )}
-                            </View>
-                            <ThemedText style={styles.landlordSubtitle}>{getLandlordSubtitle(landlordProfile)}</ThemedText>
-                        </View>
-                        <View style={styles.chevronContainer}>
-                            <Ionicons name="chevron-forward" size={20} color={colors.COLOR_BLACK_LIGHT_3} />
-                        </View>
-                    </TouchableOpacity>
+                            onPress={() => {
+                                if (landlordProfile?.oxyUserId) {
+                                    router.push(`/roommates/${landlordProfile.oxyUserId}`);
+                                }
+                            }}
+                            accessibilityLabel={getLandlordDisplayName(landlordProfile)}
+                            style={styles.flushRow}
+                        />
+                    </View>
 
                     {showFollowButton && landlordOxyUserId ? (
                         <View style={[styles.gutter, styles.followRow]}>
@@ -183,76 +192,22 @@ const styles = StyleSheet.create({
     gutter: {
         paddingHorizontal: SECTION_GUTTER,
     },
-    landlordHeader: {
+    // The section gutter already insets the row; drop Item's own side padding
+    // so the avatar lines up with the section title.
+    flushRow: {
+        paddingLeft: 0,
+        paddingRight: 0,
+    },
+    trailing: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: 2,
-    },
-    landlordAvatar: {
-        marginRight: spacing.md,
-    },
-    defaultAvatar: {
-        backgroundColor: colors.COLOR_BLACK_LIGHT_6,
-        borderRadius: 26,
-        width: 52,
-        height: 52,
-        justifyContent: 'center',
-        alignItems: 'center',
+        gap: spacing.xs,
     },
     governmentAvatar: {
         backgroundColor: colors.governmentBadge,
-        borderRadius: 26,
-        width: 52,
-        height: 52,
-        justifyContent: 'center',
-        alignItems: 'center',
     },
-    landlordInfo: {
-        flex: 1,
-        justifyContent: 'center',
-    },
-    landlordNameRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: 4,
-        flexWrap: 'wrap',
-    },
-    landlordName: {
-        fontSize: 16,
-        fontWeight: '700',
-        color: colors.COLOR_BLACK_LIGHT_2,
-        marginRight: 6,
-        lineHeight: 20,
-    },
-    landlordSubtitle: {
-        fontSize: 13,
-        color: colors.muted,
-        fontWeight: '500',
-        lineHeight: 16,
-    },
-    verifiedBadge: {
-        backgroundColor: colors.success,
-        paddingHorizontal: 6,
-        paddingVertical: 2,
-        borderRadius: 10,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    governmentBadge: {
-        backgroundColor: colors.governmentBadge,
-        paddingHorizontal: 8,
-        paddingVertical: 2,
-        borderRadius: 10,
-    },
-    verifiedText: {
+    governmentIcon: {
         color: colors.white,
-        fontSize: 11,
-        fontWeight: '700',
-    },
-    chevronContainer: {
-        padding: 4,
-        marginRight: -4,
     },
     followRow: {
         alignItems: 'flex-start',

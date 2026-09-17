@@ -29,12 +29,20 @@ import { PropertyImageCarousel } from './property/PropertyImageCarousel';
 import { ZoomableImage } from '@/components/ui/ZoomableImage';
 import { ThemedText } from '@/components/ThemedText';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import {
+  RiBuilding2Line,
+  RiEditLine,
+  RiFileTextLine,
+  RiHomeLine,
+  RiLeafLine,
+  RiShieldCheckLine,
+  RiStarFill,
+  type Props as IconProps,
+} from '@oxy.so/bloom/icons';
 import { useQueryClient } from '@tanstack/react-query';
 import { prefetchProperty, prefetchPropertyStats } from '@/utils/queryPrefetch';
 import { PropertyCardSkeleton } from './ui/skeletons/PropertyCardSkeleton';
 
-type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
 /** A listing counts as "new" (badge) while its `createdAt` is within this window. */
 const NEW_LISTING_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
@@ -339,7 +347,7 @@ export const PropertyCard = React.memo(function PropertyCard({
               <>
                 {finalShowRating && propertyData.rating ? (
                   <MediaChip
-                    icon="star"
+                    icon={RiStarFill}
                     accent={colors.ratingStar}
                     label={propertyData.rating.toFixed(1)}
                   />
@@ -371,11 +379,11 @@ export const PropertyCard = React.memo(function PropertyCard({
 
                 {/* Verified — icon-only shield, brand accent. */}
                 {showVerifiedBadge && propertyData.isVerified ? (
-                  <MediaChip icon="shield-checkmark" accent={colors.primarySubtleForeground} />
+                  <MediaChip icon={RiShieldCheckLine} accent={colors.primarySubtleForeground} />
                 ) : null}
 
                 {/* Eco — icon-only leaf, green accent. */}
-                {isEco ? <MediaChip icon="leaf" accent={colors.success} /> : null}
+                {isEco ? <MediaChip icon={RiLeafLine} accent={colors.success} /> : null}
               </>
             ) : null}
           </View>
@@ -423,9 +431,9 @@ export const PropertyCard = React.memo(function PropertyCard({
     // former on-photo logic (house → home glyph, else building); the label reuses
     // the `properties.titles.types.*` vocabulary, falling back to the capitalised
     // raw type for kinds without a dedicated key.
-    const typeMeta: { icon: IoniconName; label: string } | null = propertyData.type
+    const typeMeta: { icon: React.ComponentType<IconProps>; label: string } | null = propertyData.type
       ? {
-          icon: propertyData.type === 'house' ? 'home-outline' : 'business-outline',
+          icon: propertyData.type === 'house' ? RiHomeLine : RiBuilding2Line,
           label: t(
             `properties.titles.types.${propertyData.type}`,
             propertyData.type.charAt(0).toUpperCase() + propertyData.type.slice(1),
@@ -476,7 +484,7 @@ export const PropertyCard = React.memo(function PropertyCard({
             {finalShowTypeIcon && typeMeta && variant !== 'compact' && (
               <>
                 <View style={styles.typeMeta}>
-                  <Ionicons name={typeMeta.icon} size={13} color={colors.COLOR_BLACK_LIGHT_4} />
+                  <typeMeta.icon width={13} height={13} fill={colors.COLOR_BLACK_LIGHT_4} />
                   <ThemedText style={styles.featureText}>{typeMeta.label}</ThemedText>
                 </View>
                 <ThemedText style={styles.featureSeparator}>•</ThemedText>
@@ -757,7 +765,7 @@ export const PropertyCard = React.memo(function PropertyCard({
         >
           <View style={styles.noteRow}>
             <View style={styles.noteIconWrap}>
-              <Ionicons name="document-text-outline" size={14} color={colors.primaryColor} />
+              <RiFileTextLine width={14} height={14} fill={colors.primaryColor} />
             </View>
             <ThemedText
               numberOfLines={variant === 'compact' ? 1 : 2}
@@ -769,7 +777,7 @@ export const PropertyCard = React.memo(function PropertyCard({
             >
               {noteText && noteText.trim().length > 0 ? noteText : 'Add a note'}
             </ThemedText>
-            <Ionicons name="create-outline" size={16} color={colors.primaryColor} />
+            <RiEditLine width={16} height={16} fill={colors.primaryColor} />
           </View>
         </TouchableOpacity>
       )}

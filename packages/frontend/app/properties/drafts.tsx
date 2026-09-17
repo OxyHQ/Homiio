@@ -11,22 +11,30 @@
  * (query + mutation) instead of a `useEffect` + manual `useState(loading)`,
  * which also gives us a clean optimistic delete.
  */
-import React, { useCallback, useState } from 'react';
-import {
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  View,
-  type ViewStyle,
-} from 'react-native';
+import React, { useCallback } from 'react';
+import { Platform, ScrollView, StyleSheet, View, type ViewStyle } from 'react-native';
 import { useRouter } from 'expo-router';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { Button } from '@oxy.so/bloom/button';
+import { Card } from '@oxy.so/bloom/card';
+import {
+  RiAddCircleLine,
+  RiBuilding2Line,
+  RiDeleteBinLine,
+  RiEditLine,
+  RiGroupLine,
+  RiHomeLine,
+  RiHotelBedLine,
+  RiLeafLine,
+  RiMoreFill,
+  RiSaveLine,
+  RiTeamLine,
+  RiTimeLine,
+} from '@oxy.so/bloom/icons';
+import { useTheme } from '@oxy.so/bloom/theme';
 import { H4, Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { PropertyListHeader } from '@/components/ui/PropertyListHeader';
@@ -35,12 +43,12 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { confirm } from '@oxy.so/bloom/surfaces';
 import { toast } from '@oxy.so/bloom/toast';
 import { colors } from '@/styles/colors';
-import { contentClamp, radius, spacing } from '@/constants/styles';
+import { contentClamp, spacing } from '@/constants/styles';
 import { logger } from '@/utils/logger';
 import { formatPrice } from '@homiio/shared-types';
 import { useFormatting } from '@/utils/format';
 
-type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
+type RemixIcon = typeof RiHomeLine;
 
 const SKELETON_COUNT = 4;
 /** AsyncStorage keys owned by the draft flow. */
@@ -82,21 +90,21 @@ async function readDrafts(): Promise<PropertyDraft[]> {
   return parsed.map((draft) => ({ ...draft, lastSaved: new Date(draft.lastSaved) }));
 }
 
-const PROPERTY_TYPE_ICONS: Record<string, IoniconName> = {
-  apartment: 'business-outline',
-  house: 'home-outline',
-  room: 'bed-outline',
-  studio: 'home-outline',
-  couchsurfing: 'people-outline',
-  roommates: 'people-circle-outline',
-  coliving: 'home-outline',
-  hostel: 'bed-outline',
-  guesthouse: 'home-outline',
-  campsite: 'leaf-outline',
-  boat: 'boat-outline',
-  treehouse: 'leaf-outline',
-  yurt: 'home-outline',
-  other: 'ellipsis-horizontal-outline',
+const PROPERTY_TYPE_ICONS: Record<string, RemixIcon> = {
+  apartment: RiBuilding2Line,
+  house: RiHomeLine,
+  room: RiHotelBedLine,
+  studio: RiHomeLine,
+  couchsurfing: RiGroupLine,
+  roommates: RiTeamLine,
+  coliving: RiHomeLine,
+  hostel: RiHotelBedLine,
+  guesthouse: RiHomeLine,
+  campsite: RiLeafLine,
+  boat: RiHomeLine,
+  treehouse: RiLeafLine,
+  yurt: RiHomeLine,
+  other: RiMoreFill,
 };
 
 const PROPERTY_TYPE_LABELS: Record<string, string> = {
@@ -116,8 +124,8 @@ const PROPERTY_TYPE_LABELS: Record<string, string> = {
   other: 'Other',
 };
 
-function getPropertyTypeIcon(type: string): IoniconName {
-  return PROPERTY_TYPE_ICONS[type] ?? 'home-outline';
+function getPropertyTypeIcon(type: string): RemixIcon {
+  return PROPERTY_TYPE_ICONS[type] ?? RiHomeLine;
 }
 
 function getPropertyTypeLabel(type: string): string {
@@ -134,7 +142,7 @@ function formatRelativeDate(date: Date): string {
   return `${diffInDays} day${diffInDays > 1 ? 's' : ''} ago`;
 }
 
-/** A single draft card — its own component so the delete tap state is local. */
+/** A single draft card on Bloom `Card`, with Bloom icon buttons for edit/delete. */
 function DraftCard({
   draft,
   onContinue,
@@ -144,17 +152,34 @@ function DraftCard({
   onContinue: () => void;
   onDelete: () => void;
 }) {
+  const { t } = useTranslation();
+  const theme = useTheme();
   const { locale, priceUnitLabels } = useFormatting();
   return (
-    <View style={styles.draftCard}>
+    <Card style={styles.draftCard}>
       <View style={styles.draftHeader}>
         <View style={styles.draftTypeContainer}>
-          <Ionicons name={getPropertyTypeIcon(draft.type)} size={20} color={colors.primaryColor} />
+          {React.createElement(getPropertyTypeIcon(draft.type), {
+            size: 'md',
+            fill: theme.colors.primary,
+          })}
           <BloomText style={styles.draftType}>{getPropertyTypeLabel(draft.type)}</BloomText>
         </View>
         <View style={styles.draftActions}>
-          <DraftIconButton icon="create-outline" tint={colors.primaryColor} onPress={onContinue} />
-          <DraftIconButton icon="trash-outline" tint={colors.danger} onPress={onDelete} />
+          <Button
+            variant="ghost"
+            iconOnly
+            leadingIcon={RiEditLine}
+            onPress={onContinue}
+            accessibilityLabel={t('common.edit')}
+          />
+          <Button
+            variant="ghost"
+            iconOnly
+            leadingIcon={RiDeleteBinLine}
+            onPress={onDelete}
+            accessibilityLabel={t('common.delete')}
+          />
         </View>
       </View>
 
@@ -177,39 +202,16 @@ function DraftCard({
         ) : null}
         <View style={styles.draftMeta}>
           <View style={styles.draftMetaItem}>
-            <Ionicons name="time-outline" size={14} color={colors.COLOR_BLACK_LIGHT_3} />
+            <RiTimeLine size="xs" fill={theme.colors.textSecondary} />
             <BloomText style={styles.draftMetaText}>{formatRelativeDate(draft.lastSaved)}</BloomText>
           </View>
           <View style={styles.draftMetaItem}>
-            <Ionicons name="save-outline" size={14} color={colors.COLOR_BLACK_LIGHT_3} />
+            <RiSaveLine size="xs" fill={theme.colors.textSecondary} />
             <BloomText style={styles.draftMetaText}>Draft</BloomText>
           </View>
         </View>
       </View>
-    </View>
-  );
-}
-
-/** NativeWind-safe circular icon button (static style + pressed state). */
-function DraftIconButton({
-  icon,
-  tint,
-  onPress,
-}: {
-  icon: IoniconName;
-  tint: string;
-  onPress: () => void;
-}) {
-  const [pressed, setPressed] = useState(false);
-  return (
-    <Pressable
-      onPress={onPress}
-      onPressIn={() => setPressed(true)}
-      onPressOut={() => setPressed(false)}
-      style={[styles.draftIconButton, pressed && styles.draftIconButtonPressed]}
-    >
-      <Ionicons name={icon} size={20} color={tint} />
-    </Pressable>
+    </Card>
   );
 }
 
@@ -254,7 +256,7 @@ export default function PropertyDraftsScreen() {
         toast.error(t('property.drafts.toastLoadFailed'));
       }
     },
-    [router],
+    [router, t],
   );
 
   const handleDelete = useCallback(
@@ -307,7 +309,7 @@ export default function PropertyDraftsScreen() {
         <Button
           variant="secondary"
           onPress={() => router.push('/properties/create')}
-          icon={<Ionicons name="add-circle" size={20} color={colors.primaryColor} />}
+          leadingIcon={RiAddCircleLine}
           style={styles.createNewButton}
         >
           {t('property.drafts.createFirst')}
@@ -328,7 +330,8 @@ export default function PropertyDraftsScreen() {
         showsVerticalScrollIndicator={false}
       >
         {body}
-      </ScrollView>    </View>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -359,11 +362,7 @@ const styles = StyleSheet.create({
     gap: spacing.lg,
   },
   draftCard: {
-    backgroundColor: colors.white,
-    borderRadius: radius.lg,
     padding: spacing.xl,
-    borderWidth: 1,
-    borderColor: colors.border,
   },
   draftHeader: {
     flexDirection: 'row',
@@ -384,17 +383,6 @@ const styles = StyleSheet.create({
   draftActions: {
     flexDirection: 'row',
     gap: spacing.sm,
-  },
-  draftIconButton: {
-    width: 36,
-    height: 36,
-    borderRadius: radius.md,
-    backgroundColor: colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  draftIconButtonPressed: {
-    backgroundColor: colors.COLOR_BLACK_LIGHT_7,
   },
   draftContent: {
     gap: spacing.sm,

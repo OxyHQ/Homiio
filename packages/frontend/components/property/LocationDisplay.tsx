@@ -61,7 +61,7 @@ export const LocationDisplay: React.FC<LocationDisplayProps> = ({ property }) =>
       <SectionHeader title={t('property.location.title')} />
       <View style={styles.body}>
         {neighborhoodSummary ? (
-          <BloomText style={styles.summary}>{neighborhoodSummary}</BloomText>
+          <BloomText variant="headline-regular" style={styles.summary}>{neighborhoodSummary}</BloomText>
         ) : null}
         {coordinates ? (
           <View style={styles.mapWrapper}>
@@ -86,8 +86,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: SECTION_GUTTER,
   },
   summary: {
-    fontSize: 15,
-    lineHeight: 22,
     color: colors.COLOR_BLACK_LIGHT_3,
   },
   mapWrapper: {

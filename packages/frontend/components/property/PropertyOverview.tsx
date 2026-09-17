@@ -2,23 +2,18 @@
  * PropertyOverview — small key/value summary of bedrooms, bathrooms,
  * size, and (when present) floor.
  *
- * Uses Bloom Typography and Bloom Divider. The original implementation
- * concatenated `label: value` inside a single <Text>, which read like a
- * data dump; this version mirrors the Pricing section's row pattern so
- * the visual rhythm matches the rest of the detail page.
+ * Each fact is a `SectionRow` (a Bloom `Item`) separated by a Bloom
+ * `Divider`, the same row pattern as the availability and house-rules
+ * sections so the detail page keeps one visual rhythm.
  */
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { formatArea } from '@homiio/shared-types';
 import { useFormatting } from '@/utils/format';
 
 import { Divider } from '@oxy.so/bloom/divider';
-import { Text as BloomText } from '@oxy.so/bloom/typography';
 
-import { Section } from '@/components/property/Section';
-import { colors } from '@/styles/colors';
-import { spacing } from '@/constants/styles';
+import { Section, SectionRow } from '@/components/property/Section';
 
 interface OverviewProperty {
   bedrooms?: number;
@@ -72,34 +67,12 @@ export const PropertyOverview: React.FC<Props> = ({ property }) => {
     <Section title={t('property.sections.overview')}>
       {rows.map((row, idx) => (
         <React.Fragment key={row.label}>
-          <View style={styles.row}>
-            <BloomText style={styles.label}>{row.label}</BloomText>
-            <BloomText style={styles.value}>{row.value}</BloomText>
-          </View>
+          <SectionRow label={row.label} value={row.value} />
           {idx !== rows.length - 1 ? <Divider /> : null}
         </React.Fragment>
       ))}
     </Section>
   );
 };
-
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: spacing.sm,
-    gap: spacing.lg,
-  },
-  label: {
-    fontSize: 15,
-    color: colors.COLOR_BLACK_LIGHT_3,
-  },
-  value: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: colors.COLOR_BLACK,
-  },
-});
 
 export default PropertyOverview;

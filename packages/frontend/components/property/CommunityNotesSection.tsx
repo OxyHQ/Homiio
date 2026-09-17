@@ -13,10 +13,15 @@
  * "View all" link to the address page.
  */
 import React, { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { RiEditLine, RiExternalLinkLine, RiStarFill } from '@oxy.so/bloom/icons';
+import {
+  SegmentedControl,
+  SegmentedControlItem,
+  SegmentedControlItemText,
+} from '@oxy.so/bloom/segmented-control';
 
 import { Button } from '@oxy.so/bloom/button';
 import * as Skeleton from '@oxy.so/bloom/skeleton';
@@ -108,7 +113,7 @@ const RatingSummary: React.FC<RatingSummaryProps> = ({ stats }) => {
           return (
             <View key={star} style={styles.distributionRow}>
               <BloomText style={styles.distributionStar}>{star}</BloomText>
-              <Ionicons name="star" size={11} color={colors.COLOR_BLACK_LIGHT_5} />
+              <RiStarFill width={11} height={11} fill={colors.COLOR_BLACK_LIGHT_5} />
               <View style={styles.distributionTrack}>
                 <View
                   style={[styles.distributionFill, { width: `${Math.round(ratio * 100)}%` }]}
@@ -123,38 +128,8 @@ const RatingSummary: React.FC<RatingSummaryProps> = ({ stats }) => {
   );
 };
 
-interface SortChipProps {
-  label: string;
-  active: boolean;
-  onPress: () => void;
-}
-
-/** Sort pill — owns its own pressed/hovered state (lives in a `.map()`). */
-const SortChip: React.FC<SortChipProps> = ({ label, active, onPress }) => {
-  const [pressed, setPressed] = useState(false);
-  const [hovered, setHovered] = useState(false);
-  return (
-    <Pressable
-      onPress={onPress}
-      onPressIn={() => setPressed(true)}
-      onPressOut={() => setPressed(false)}
-      onHoverIn={() => setHovered(true)}
-      onHoverOut={() => setHovered(false)}
-      accessibilityRole="button"
-      accessibilityState={{ selected: active }}
-      accessibilityLabel={label}
-      style={[
-        styles.sortChip,
-        active && styles.sortChipActive,
-        !active && (pressed || hovered) && styles.sortChipHovered,
-      ]}
-    >
-      <BloomText style={[styles.sortChipLabel, active && styles.sortChipLabelActive]}>
-        {label}
-      </BloomText>
-    </Pressable>
-  );
-};
+const isSortKey = (value: string): value is SortKey =>
+  value === 'recent' || value === 'highest' || value === 'helpful';
 
 export const CommunityNotesSection: React.FC<CommunityNotesSectionProps> = ({
   property,
@@ -263,14 +238,20 @@ export const CommunityNotesSection: React.FC<CommunityNotesSectionProps> = ({
 
             {showSort ? (
               <View style={styles.sortRow}>
-                {sortOptions.map((option) => (
-                  <SortChip
-                    key={option.key}
-                    label={option.label}
-                    active={sort === option.key}
-                    onPress={() => setSort(option.key)}
-                  />
-                ))}
+                <SegmentedControl
+                  label={t('property.communityNotes.sort.label')}
+                  type="radio"
+                  value={sort}
+                  onChange={(value: string) => {
+                    if (isSortKey(value)) setSort(value);
+                  }}
+                >
+                  {sortOptions.map((option) => (
+                    <SegmentedControlItem key={option.key} value={option.key}>
+                      <SegmentedControlItemText>{option.label}</SegmentedControlItemText>
+                    </SegmentedControlItem>
+                  ))}
+                </SegmentedControl>
               </View>
             ) : null}
 
@@ -302,8 +283,7 @@ export const CommunityNotesSection: React.FC<CommunityNotesSectionProps> = ({
                   onPress={handleViewAll}
                   variant="ghost"
                   size="medium"
-                  icon={<Ionicons name="open-outline" size={16} color={colors.COLOR_BLACK} />}
-                  iconPosition="left"
+                  leadingIcon={RiExternalLinkLine}
                   accessibilityLabel={t('property.communityNotes.showMore')}
                 >
                   {t('property.communityNotes.showMore')}
@@ -314,8 +294,7 @@ export const CommunityNotesSection: React.FC<CommunityNotesSectionProps> = ({
                 onPress={handleAddNote}
                 variant="ghost"
                 size="medium"
-                icon={<Ionicons name="create-outline" size={16} color={colors.COLOR_BLACK} />}
-                iconPosition="left"
+                leadingIcon={RiEditLine}
                 accessibilityLabel={t('property.communityNotes.addAction')}
               >
                 {t('property.communityNotes.addAction')}
@@ -396,34 +375,8 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
   sortRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
+    alignItems: 'flex-start',
     marginBottom: spacing.lg,
-  },
-  sortChip: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.pill,
-    borderWidth: hairline.width,
-    borderColor: colors.COLOR_BLACK_LIGHT_6,
-    backgroundColor: colors.surfaceElevated,
-  },
-  sortChipHovered: {
-    backgroundColor: colors.COLOR_BLACK_LIGHT_7,
-  },
-  sortChipActive: {
-    backgroundColor: colors.COLOR_BLACK,
-    borderColor: colors.COLOR_BLACK,
-  },
-  sortChipLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.COLOR_BLACK,
-  },
-  sortChipLabelActive: {
-    color: colors.white,
   },
   notesList: {
     gap: 0,

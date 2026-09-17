@@ -2187,7 +2187,8 @@
     "primary": "Primary",
     "addMore": "Add More",
     "helperText": "Upload high-quality images of your property. Include photos of all rooms, exterior, and any special features.",
-    "helperPrimaryNote": " The first image will be set as the primary image."
+    "helperPrimaryNote": " The first image will be set as the primary image.",
+    "setPrimary": "Set as primary image"
   },
   "property": {
     "loading": "Loading property details...",
@@ -2289,7 +2290,8 @@
       "distributionLabel": "Price distribution of nearby homes",
       "lowDataNote": "Not enough nearby listings to compare yet.",
       "lowSampleCaveat_one": "Based on just {{count}} nearby listing — treat as a rough guide.",
-      "lowSampleCaveat_other": "Based on only {{count}} nearby listings — treat as a rough guide."
+      "lowSampleCaveat_other": "Based on only {{count}} nearby listings — treat as a rough guide.",
+      "homesMetric": "Homes"
     },
     "nearbyServices": {
       "title": "What's nearby",
@@ -3533,6 +3535,37 @@
       "selectDates": "Select dates",
       "selectGuests": "Select guests",
       "close": "Close"
+    },
+    "guests": {
+      "adults": "Adults",
+      "adultsHint": "Ages 13 or above",
+      "children": "Children",
+      "childrenHint": "Ages 2-12",
+      "infants": "Infants",
+      "infantsHint": "Under 2",
+      "decrease": "Decrease {{title}}",
+      "increase": "Increase {{title}}",
+      "maxNote": "This place has a maximum of {{count}} guests, not including infants.",
+      "count_one": "{{count}} guest",
+      "count_other": "{{count}} guests",
+      "infantCount_one": "{{count}} infant",
+      "infantCount_other": "{{count}} infants"
+    },
+    "widget": {
+      "requestToBook": "Request to book",
+      "perNight": "night",
+      "dates": "Dates",
+      "requestNote": "You won't be charged yet. The host has 24 hours to respond."
+    },
+    "policy": {
+      "flexible": "Flexible cancellation — full refund any time before check-in.",
+      "moderate": "Moderate cancellation — full refund up to 5 days before check-in.",
+      "strict": "Strict cancellation — full refund up to 7 days before check-in.",
+      "superStrict": "Super strict cancellation — full refund up to 30 days before check-in."
+    },
+    "calendar": {
+      "selectRange": "Select check-in and check-out",
+      "apply": "Apply"
     }
   },
   "addresses": {
@@ -3621,7 +3654,9 @@
       "availableFrom": "Available From",
       "availableFromPlaceholder": "Available from date",
       "leaseTerm": "Lease Term",
-      "leaseTermPlaceholder": "Lease term"
+      "leaseTermPlaceholder": "Lease term",
+      "openFullscreenMap": "Open full-screen map",
+      "mapPickerTitle": "Select Location"
     },
     "amenities": {
       "title": "Amenities",

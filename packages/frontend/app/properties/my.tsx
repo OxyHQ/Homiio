@@ -19,9 +19,10 @@ import React, { useCallback, useMemo } from 'react';
 import { Platform, ScrollView, StyleSheet, View, type ViewStyle } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
-import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { Button } from '@oxy.so/bloom/button';
+import { RiAddLine, RiCheckboxCircleLine, RiDeleteBinLine, RiEditLine } from '@oxy.so/bloom/icons';
+import { useTheme } from '@oxy.so/bloom/theme';
 
 import { PropertyListHeader } from '@/components/ui/PropertyListHeader';
 import { PropertyResultsGrid } from '@/components/ui/PropertyResultsGrid';
@@ -78,6 +79,7 @@ function terminalStatusFor(offerings: readonly string[] | undefined): PropertySt
 
 export default function MyPropertiesScreen() {
   const { t } = useTranslation();
+  const theme = useTheme();
   const router = useRouter();
   const { data, isLoading, error, refetch } = useUserProperties();
   const { deleteProperty } = useDeleteProperty();
@@ -171,13 +173,7 @@ export default function MyPropertiesScreen() {
               onPress={() =>
                 void handleTransact({ id: propertyId, title, status: closeStatus })
               }
-              icon={
-                <Ionicons
-                  name="checkmark-done-outline"
-                  size={16}
-                  color={colors.primaryForeground}
-                />
-              }
+              leadingIcon={RiCheckboxCircleLine}
               style={styles.ownerActionButton}
             >
               {closeStatus === PropertyStatus.SOLD
@@ -190,9 +186,7 @@ export default function MyPropertiesScreen() {
               variant="secondary"
               size="small"
               onPress={() => handleEditProperty(propertyId)}
-              icon={
-                <Ionicons name="create-outline" size={16} color={colors.primaryColor} />
-              }
+              leadingIcon={RiEditLine}
               style={styles.ownerActionButton}
             >
               {t('properties.my.edit')}
@@ -201,8 +195,8 @@ export default function MyPropertiesScreen() {
               variant="secondary"
               size="small"
               onPress={() => void handleDelete({ id: propertyId, title })}
-              icon={<Ionicons name="trash-outline" size={16} color={colors.danger} />}
-              textStyle={styles.deleteText}
+              icon={<RiDeleteBinLine width={16} height={16} fill={theme.colors.negative} />}
+              textStyle={{ color: theme.colors.negative }}
               style={styles.ownerActionButton}
             >
               {t('properties.my.delete')}
@@ -211,7 +205,7 @@ export default function MyPropertiesScreen() {
         </View>
       );
     },
-    [t, handleEditProperty, handleDelete, handleTransact],
+    [t, theme.colors.negative, handleEditProperty, handleDelete, handleTransact],
   );
 
   const body = (() => {
@@ -264,7 +258,7 @@ export default function MyPropertiesScreen() {
             variant="primary"
             size="small"
             onPress={handleCreateProperty}
-            icon={<Ionicons name="add" size={18} color={colors.primaryForeground} />}
+            leadingIcon={RiAddLine}
             accessibilityLabel={t('properties.my.createFirst')}
           >
             {t('common.add')}
@@ -277,7 +271,8 @@ export default function MyPropertiesScreen() {
         showsVerticalScrollIndicator={false}
       >
         {body}
-      </ScrollView>    </View>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -311,8 +306,5 @@ const styles = StyleSheet.create({
   },
   ownerActionButton: {
     flex: 1,
-  },
-  deleteText: {
-    color: colors.danger,
   },
 });

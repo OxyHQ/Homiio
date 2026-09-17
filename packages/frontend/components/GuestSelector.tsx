@@ -1,8 +1,19 @@
+/**
+ * GuestSelector — adults / children / infants steppers for a short-stay booking.
+ *
+ * Each counter is a Bloom `Item` row (title + age band) with icon-only Bloom
+ * `Button` steppers in its trailing slot. Adults and children share the host's
+ * `maxGuests` capacity; infants never count toward it.
+ */
 import React, { useCallback, useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@oxy.so/bloom/button';
+import { Divider } from '@oxy.so/bloom/divider';
+import { RiAddLine } from '@oxy.so/bloom/icons';
+import { Item } from '@oxy.so/bloom/item';
+import { useTheme } from '@oxy.so/bloom/theme';
 import { Text as BloomText, H3 } from '@oxy.so/bloom/typography';
-import { colors } from '@/styles/colors';
 
 export interface GuestCounts {
   adults: number;
@@ -21,7 +32,6 @@ export interface GuestSelectorProps {
   maxInfants?: number;
   /** Show the "X guests · Y infants" summary header. */
   showHeader?: boolean;
-  /** Show as a list of counter rows (compact card). */
   onChange: (next: GuestCounts) => void;
 }
 
@@ -34,6 +44,16 @@ interface CounterRowProps {
   onChange: (next: number) => void;
 }
 
+/** Remix ships no plain "subtract" line glyph; this draws one at the icon box. */
+const MinusIcon: React.FC<{ width?: number; height?: number; fill?: string }> = ({
+  width = 16,
+  fill,
+}) => (
+  <View style={[styles.minusBox, { width, height: width }]}>
+    <View style={[styles.minusBar, { width: width * 0.7, backgroundColor: fill }]} />
+  </View>
+);
+
 const CounterRow: React.FC<CounterRowProps> = ({
   title,
   subtitle,
@@ -42,6 +62,7 @@ const CounterRow: React.FC<CounterRowProps> = ({
   max,
   onChange,
 }) => {
+  const { t } = useTranslation();
   const decrement = useCallback(() => {
     if (value > min) onChange(value - 1);
   }, [value, min, onChange]);
@@ -50,35 +71,35 @@ const CounterRow: React.FC<CounterRowProps> = ({
   }, [value, max, onChange]);
 
   return (
-    <View style={styles.row}>
-      <View style={styles.rowText}>
-        <BloomText style={styles.rowTitle}>{title}</BloomText>
-        {subtitle ? (
-          <BloomText style={styles.rowSubtitle}>{subtitle}</BloomText>
-        ) : null}
-      </View>
-      <View style={styles.rowControls}>
-        <Button
-          variant="icon"
-          size="small"
-          onPress={decrement}
-          disabled={value <= min}
-          accessibilityLabel={`Decrease ${title}`}
-        >
-          {'−'}
-        </Button>
-        <BloomText style={styles.rowValue}>{value}</BloomText>
-        <Button
-          variant="icon"
-          size="small"
-          onPress={increment}
-          disabled={value >= max}
-          accessibilityLabel={`Increase ${title}`}
-        >
-          {'+'}
-        </Button>
-      </View>
-    </View>
+    <Item
+      title={title}
+      subtitle={subtitle}
+      trailing={
+        <View style={styles.rowControls}>
+          <Button
+            variant="secondary"
+            size="small"
+            iconOnly
+            leadingIcon={MinusIcon}
+            onPress={decrement}
+            disabled={value <= min}
+            accessibilityLabel={t('booking.guests.decrease', 'Decrease {{title}}', { title })}
+          />
+          <BloomText style={styles.rowValue} accessibilityLiveRegion="polite">
+            {value}
+          </BloomText>
+          <Button
+            variant="secondary"
+            size="small"
+            iconOnly
+            leadingIcon={RiAddLine}
+            onPress={increment}
+            disabled={value >= max}
+            accessibilityLabel={t('booking.guests.increase', 'Increase {{title}}', { title })}
+          />
+        </View>
+      }
+    />
   );
 };
 
@@ -90,6 +111,8 @@ export const GuestSelector: React.FC<GuestSelectorProps> = ({
   showHeader = false,
   onChange,
 }) => {
+  const { t } = useTranslation();
+  const theme = useTheme();
   const billableTotal = value.adults + value.children;
   const cap = maxGuests ?? 16;
   // Capacity left for adults + children combined
@@ -97,14 +120,7 @@ export const GuestSelector: React.FC<GuestSelectorProps> = ({
   const adultMax = value.adults + Math.max(remainingCapacity, 0);
   const childMax = value.children + Math.max(remainingCapacity, 0);
 
-  const summary = useMemo(() => {
-    const guestWord = billableTotal === 1 ? 'guest' : 'guests';
-    const infantPart =
-      value.infants > 0
-        ? ` · ${value.infants} ${value.infants === 1 ? 'infant' : 'infants'}`
-        : '';
-    return `${billableTotal} ${guestWord}${infantPart}`;
-  }, [billableTotal, value.infants]);
+  const summary = useMemo(() => formatGuestSummary(t, value, ' · '), [t, value]);
 
   const update = useCallback(
     (patch: Partial<GuestCounts>) => {
@@ -117,50 +133,72 @@ export const GuestSelector: React.FC<GuestSelectorProps> = ({
     <View style={styles.container}>
       {showHeader ? (
         <View style={styles.headerBlock}>
-          <H3 style={styles.headerTitle}>Guests</H3>
-          <BloomText style={styles.headerSubtitle}>{summary}</BloomText>
+          <H3 style={styles.headerTitle}>{t('search.filters.guests')}</H3>
+          <BloomText style={[styles.headerSubtitle, { color: theme.colors.textSecondary }]}>
+            {summary}
+          </BloomText>
         </View>
       ) : null}
       <CounterRow
-        title="Adults"
-        subtitle="Ages 13 or above"
+        title={t('booking.guests.adults', 'Adults')}
+        subtitle={t('booking.guests.adultsHint', 'Ages 13 or above')}
         value={value.adults}
         min={minAdults}
         max={Math.max(adultMax, value.adults)}
         onChange={(next) => update({ adults: next })}
       />
-      <View style={styles.divider} />
+      <Divider />
       <CounterRow
-        title="Children"
-        subtitle="Ages 2-12"
+        title={t('booking.guests.children', 'Children')}
+        subtitle={t('booking.guests.childrenHint', 'Ages 2-12')}
         value={value.children}
         min={0}
         max={Math.max(childMax, value.children)}
         onChange={(next) => update({ children: next })}
       />
-      <View style={styles.divider} />
+      <Divider />
       <CounterRow
-        title="Infants"
-        subtitle="Under 2"
+        title={t('booking.guests.infants', 'Infants')}
+        subtitle={t('booking.guests.infantsHint', 'Under 2')}
         value={value.infants}
         min={0}
         max={maxInfants}
         onChange={(next) => update({ infants: next })}
       />
       {maxGuests ? (
-        <BloomText style={styles.footnote}>
-          This place has a maximum of {maxGuests} guests, not including infants.
+        <BloomText style={[styles.footnote, { color: theme.colors.textSecondary }]}>
+          {t(
+            'booking.guests.maxNote',
+            'This place has a maximum of {{count}} guests, not including infants.',
+            { count: maxGuests },
+          )}
         </BloomText>
       ) : null}
     </View>
   );
 };
 
+type TFn = ReturnType<typeof useTranslation>['t'];
+
+/** "2 guests, 1 infant" — shared by the selector header and the booking trigger. */
+export function formatGuestSummary(t: TFn, counts: GuestCounts, separator = ', '): string {
+  const billable = counts.adults + counts.children;
+  const guests = t('booking.guests.count', {
+    count: billable,
+    defaultValue_one: '{{count}} guest',
+    defaultValue_other: '{{count}} guests',
+  });
+  if (counts.infants === 0) return guests;
+  const infants = t('booking.guests.infantCount', {
+    count: counts.infants,
+    defaultValue_one: '{{count}} infant',
+    defaultValue_other: '{{count}} infants',
+  });
+  return `${guests}${separator}${infants}`;
+}
+
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: colors.white,
-    borderRadius: 16,
-    padding: 16,
     gap: 4,
   },
   headerBlock: {
@@ -172,26 +210,6 @@ const styles = StyleSheet.create({
   },
   headerSubtitle: {
     fontSize: 13,
-    color: colors.COLOR_BLACK_LIGHT_3,
-    marginTop: 2,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
-  },
-  rowText: {
-    flex: 1,
-    paddingRight: 12,
-  },
-  rowTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  rowSubtitle: {
-    fontSize: 12,
-    color: colors.COLOR_BLACK_LIGHT_4,
     marginTop: 2,
   },
   rowControls: {
@@ -205,13 +223,16 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
   },
-  divider: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: colors.COLOR_BLACK_LIGHT_6,
+  minusBox: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  minusBar: {
+    height: 2,
+    borderRadius: 1,
   },
   footnote: {
     fontSize: 12,
-    color: colors.COLOR_BLACK_LIGHT_4,
     marginTop: 12,
   },
 });

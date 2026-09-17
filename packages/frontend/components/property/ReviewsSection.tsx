@@ -14,7 +14,7 @@ import React, { useMemo } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { RiEditLine, RiStarFill } from '@oxy.so/bloom/icons';
 
 import { Button } from '@oxy.so/bloom/button';
 import * as Skeleton from '@oxy.so/bloom/skeleton';
@@ -63,7 +63,7 @@ const RatingHeader: React.FC<RatingHeaderProps> = ({ stats }) => {
   return (
     <View style={styles.ratingHeader}>
       <View style={styles.ratingNumberWrap}>
-        <Ionicons name="star" size={28} color={colors.COLOR_BLACK} />
+        <RiStarFill width={28} height={28} fill={colors.COLOR_BLACK} />
         <H1 style={styles.ratingNumber}>{stats.averageRating.toFixed(1)}</H1>
         <BloomText style={styles.ratingMeta}>
           · {stats.totalReviews} {t('property.reviews.count')}
@@ -196,8 +196,7 @@ export const ReviewsSection: React.FC<ReviewsSectionProps> = ({
                 onPress={handleWriteReview}
                 variant="ghost"
                 size="medium"
-                icon={<Ionicons name="create-outline" size={16} color={colors.COLOR_BLACK} />}
-                iconPosition="left"
+                leadingIcon={RiEditLine}
                 accessibilityLabel={t('property.reviews.writeAction')}
               >
                 {t('property.reviews.writeAction')}

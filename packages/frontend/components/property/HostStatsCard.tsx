@@ -12,7 +12,7 @@ import React, { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { RiArrowRightSLine, RiBankLine, RiTimeLine } from '@oxy.so/bloom/icons';
 
 import { Avatar } from '@oxy.so/bloom/avatar';
 import { Badge } from '@oxy.so/bloom/badge';
@@ -89,7 +89,7 @@ export const HostStatsCard: React.FC<HostStatsCardProps> = ({
     return (
       <View style={styles.card}>
         <View style={styles.governmentAvatar}>
-          <Ionicons name="library" size={28} color={colors.white} />
+          <RiBankLine width={28} height={28} fill={colors.white} />
         </View>
         <View style={styles.body}>
           <H3 style={styles.name}>
@@ -134,7 +134,7 @@ export const HostStatsCard: React.FC<HostStatsCardProps> = ({
           </BloomText>
         ) : null}
         <BloomText style={styles.responseRate}>
-          <Ionicons name="time-outline" size={13} color={colors.COLOR_BLACK_LIGHT_3} />{' '}
+          <RiTimeLine width={13} height={13} fill={colors.COLOR_BLACK_LIGHT_3} />{' '}
           {t('property.host.responseRate')}
         </BloomText>
         {isVerified ? (
@@ -148,10 +148,10 @@ export const HostStatsCard: React.FC<HostStatsCardProps> = ({
           </View>
         ) : null}
       </View>
-      <Ionicons
-        name="chevron-forward"
-        size={20}
-        color={colors.COLOR_BLACK_LIGHT_3}
+      <RiArrowRightSLine
+        width={20}
+        height={20}
+        fill={colors.COLOR_BLACK_LIGHT_3}
         style={styles.chevron}
       />
     </Pressable>

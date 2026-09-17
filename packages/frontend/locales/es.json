@@ -1328,7 +1328,8 @@
       "distributionLabel": "Distribución de precios de viviendas cercanas",
       "lowDataNote": "Aún no hay suficientes anuncios cercanos para comparar.",
       "lowSampleCaveat_one": "Basado en solo {{count}} anuncio cercano: tómalo como orientación.",
-      "lowSampleCaveat_other": "Basado en solo {{count}} anuncios cercanos: tómalo como orientación."
+      "lowSampleCaveat_other": "Basado en solo {{count}} anuncios cercanos: tómalo como orientación.",
+      "homesMetric": "Viviendas"
     },
     "nearbyServices": {
       "title": "Qué hay cerca",
@@ -1375,8 +1376,8 @@
     "loading": "Loading property details...",
     "error": "Error",
     "notFound": "Property not found",
-    "bed": "Bed",
-    "bath": "Bath",
+    "bed": "Cama",
+    "bath": "Baño",
     "pricingReviewNeeded": "Pricing Review Needed",
     "bedrooms": "Number of Bedrooms",
     "bathrooms": "Number of Bathrooms",
@@ -2562,7 +2563,8 @@
     "primary": "Primary",
     "addMore": "Add More",
     "helperText": "Upload high-quality images of your property. Include photos of all rooms, exterior, and any special features.",
-    "helperPrimaryNote": " The first image will be set as the primary image."
+    "helperPrimaryNote": " The first image will be set as the primary image.",
+    "setPrimary": "Establecer como imagen principal"
   },
   "donations": {
     "widget": {
@@ -3650,7 +3652,9 @@
       "availableFrom": "Disponible desde",
       "availableFromPlaceholder": "Fecha de disponibilidad",
       "leaseTerm": "Duración del contrato",
-      "leaseTermPlaceholder": "Duración del contrato"
+      "leaseTermPlaceholder": "Duración del contrato",
+      "openFullscreenMap": "Abrir mapa a pantalla completa",
+      "mapPickerTitle": "Seleccionar ubicación"
     },
     "amenities": {
       "title": "Amenities",
@@ -3680,6 +3684,37 @@
       "selectDates": "Select dates",
       "selectGuests": "Select guests",
       "close": "Close"
+    },
+    "guests": {
+      "adults": "Adultos",
+      "adultsHint": "13 años o más",
+      "children": "Niños",
+      "childrenHint": "De 2 a 12 años",
+      "infants": "Bebés",
+      "infantsHint": "Menores de 2 años",
+      "decrease": "Reducir {{title}}",
+      "increase": "Aumentar {{title}}",
+      "maxNote": "Este alojamiento admite un máximo de {{count}} huéspedes, sin contar bebés.",
+      "count_one": "{{count}} huésped",
+      "count_other": "{{count}} huéspedes",
+      "infantCount_one": "{{count}} bebé",
+      "infantCount_other": "{{count}} bebés"
+    },
+    "widget": {
+      "requestToBook": "Solicitar reserva",
+      "perNight": "noche",
+      "dates": "Fechas",
+      "requestNote": "Aún no se te cobrará. El anfitrión tiene 24 horas para responder."
+    },
+    "policy": {
+      "flexible": "Cancelación flexible: reembolso completo en cualquier momento antes de la llegada.",
+      "moderate": "Cancelación moderada: reembolso completo hasta 5 días antes de la llegada.",
+      "strict": "Cancelación estricta: reembolso completo hasta 7 días antes de la llegada.",
+      "superStrict": "Cancelación muy estricta: reembolso completo hasta 30 días antes de la llegada."
+    },
+    "calendar": {
+      "selectRange": "Selecciona la llegada y la salida",
+      "apply": "Aplicar"
     }
   },
   "searchBar": {
