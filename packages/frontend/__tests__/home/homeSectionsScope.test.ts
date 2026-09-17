@@ -27,7 +27,7 @@ import {
   UnscopableLocationError,
 } from '@/services/homeSectionsService';
 import { readHomeSnapshot, type HomeSnapshot } from '@/store/homeSectionsCacheStore';
-import { describeScope } from '@/components/location/LocationScopeBar';
+import { describeScope } from '@/components/location/scopeWhere';
 import { OfferingType, locationKey, type LocationSelection } from '@homiio/shared-types';
 
 function city(id: string, name: string): LocationSelection {
@@ -213,12 +213,12 @@ describe('the scope LABEL tells "nothing chosen" from "everywhere"', () => {
   const t = (key: string): string => key;
   const formatDistanceValue = (metres: number): string => `${metres / 1000} km`;
 
-  it('says NOT CHOSEN when no scope has been picked', () => {
+  it('asks to CHOOSE AN AREA when no scope has been picked', () => {
     // The state a cold start lands in. Labelling it "Everywhere" would tell a
     // reader the app is showing them the world when it is showing them nothing —
     // this issue's failure arriving through a string instead of through a query.
     expect(describeScope({ selection: null, isGlobal: false, t, formatDistanceValue })).toBe(
-      'location.scope.notChosen',
+      'location.scope.chooseArea',
     );
   });
 

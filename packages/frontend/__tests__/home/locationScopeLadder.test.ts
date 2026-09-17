@@ -213,6 +213,74 @@ describe('a late answer cannot overwrite a newer choice', () => {
   });
 });
 
+describe('"use my location" pressed while an area is in use', () => {
+  // The store clears the session choice on that press, so these inputs are the
+  // ones the ladder actually sees. Before this rung, the fix arrived and the
+  // ladder kept reading the saved or last area — the row did nothing at all.
+  it('the device fix outranks the saved and last-chosen areas', () => {
+    const state = resolveLocationScope({
+      ...EMPTY,
+      savedAreaSelection: BARCELONA,
+      lastChosenSelection: MADRID,
+      device: { status: 'resolved', selection: DEVICE_FIX },
+      deviceRequested: true,
+    });
+
+    expect(state.selection).toEqual(DEVICE_FIX);
+    expect(state.source).toBe('device');
+  });
+
+  it('while the fix is taken, it states progress — not the area it is about to replace', () => {
+    const state = resolveLocationScope({
+      ...EMPTY,
+      lastChosenSelection: MADRID,
+      device: { status: 'resolving' },
+      deviceRequested: true,
+    });
+
+    expect(state.resolution).toEqual({ status: 'resolving' });
+    expect(state.selection).toBeNull();
+    expect(state.canQuery).toBe(false);
+    expect(state.isGlobal).toBe(false);
+  });
+
+  it('a failed fix falls back to the last area, reporting why — never to everywhere', () => {
+    const state = resolveLocationScope({
+      ...EMPTY,
+      lastChosenSelection: MADRID,
+      device: { status: 'failed', reason: 'permission_denied' },
+      deviceRequested: true,
+    });
+
+    expect(state.selection).toEqual(MADRID);
+    expect(state.deviceIssue).toBe('permission_denied');
+    expect(state.isGlobal).toBe(false);
+  });
+
+  it('a failed fix with no area to fall back to is the picker', () => {
+    const state = resolveLocationScope({
+      ...EMPTY,
+      device: { status: 'failed', reason: 'position_unavailable' },
+      deviceRequested: true,
+    });
+
+    expect(state.needsPlace).toBe(true);
+    expect(state.canQuery).toBe(false);
+  });
+
+  it('a session choice made AFTER the press still wins', () => {
+    const state = resolveLocationScope({
+      ...EMPTY,
+      sessionSelection: BARCELONA,
+      device: { status: 'resolved', selection: DEVICE_FIX },
+      deviceRequested: true,
+    });
+
+    expect(state.selection).toEqual(BARCELONA);
+    expect(state.source).toBe('session');
+  });
+});
+
 describe('global is reachable ONLY by the explicit flag', () => {
   it('the explicit flag yields a global scope that may be queried', () => {
     const state = resolveLocationScope({ ...EMPTY, explicitGlobal: true });
@@ -243,23 +311,26 @@ describe('global is reachable ONLY by the explicit flag', () => {
     ];
 
     let checked = 0;
-    for (const sessionSelection of selections) {
-      for (const savedAreaSelection of selections) {
-        for (const lastChosenSelection of selections) {
-          for (const device of devices) {
-            const state = resolveLocationScope({
-              explicitGlobal: false,
-              sessionSelection,
-              savedAreaSelection,
-              lastChosenSelection,
-              device,
-            });
-            expect(state.isGlobal).toBe(false);
-            expect(state.source).not.toBe('global');
-            // A scope-less state must never be queryable: that combination IS
-            // the silent global feed, wearing a different flag.
-            if (state.selection === null) expect(state.canQuery).toBe(false);
-            checked += 1;
+    for (const deviceRequested of [false, true]) {
+      for (const sessionSelection of selections) {
+        for (const savedAreaSelection of selections) {
+          for (const lastChosenSelection of selections) {
+            for (const device of devices) {
+              const state = resolveLocationScope({
+                explicitGlobal: false,
+                sessionSelection,
+                savedAreaSelection,
+                lastChosenSelection,
+                device,
+                deviceRequested,
+              });
+              expect(state.isGlobal).toBe(false);
+              expect(state.source).not.toBe('global');
+              // A scope-less state must never be queryable: that combination IS
+              // the silent global feed, wearing a different flag.
+              if (state.selection === null) expect(state.canQuery).toBe(false);
+              checked += 1;
+            }
           }
         }
       }
@@ -267,7 +338,7 @@ describe('global is reachable ONLY by the explicit flag', () => {
 
     // A vacuity floor. `expect` inside a loop that never runs passes silently,
     // and a broken generator is indistinguishable from a clean sweep without it.
-    expect(checked).toBe(selections.length ** 3 * devices.length);
-    expect(checked).toBe(270);
+    expect(checked).toBe(2 * selections.length ** 3 * devices.length);
+    expect(checked).toBe(540);
   });
 });

@@ -4232,7 +4232,6 @@
     "scope": {
       "title": "Where are you looking?",
       "subtitle": "This board is local. Pick an area so you see the evictions you can actually get to — or browse everywhere on purpose.",
-      "useMyLocation": "Use my location",
       "browseGlobal": "Browse everywhere"
     },
     "sort": {
@@ -4353,20 +4352,16 @@
   },
   "location": {
     "scope": {
-      "eyebrow": "Поиск в",
       "announce": "Поиск в {{scope}}",
-      "change": "Изменить",
       "changeAccessible": "Изменить район, в котором вы ищете",
       "everywhere": "Везде",
       "nearYou": "Рядом с вами · {{distance}}",
       "nearPlace": "Рядом с {{place}} · {{distance}}",
       "resolving": "Определяем, где вы…",
       "useCurrent": "Использовать моё местоположение",
-      "useCurrentAccessible": "Использовать текущее местоположение для поиска поблизости",
       "exploreGlobal": "Смотреть везде",
       "exploreGlobalAccessible": "Смотреть жильё везде, без фильтра по району",
       "pickerTitle": "Где вы ищете жильё?",
-      "deviceUnavailable": "Ваше текущее местоположение больше недоступно. Показан последний выбранный район.",
       "showingCached": "Сохранённая копия от {{when}}. Данные не актуальны.",
       "failure": {
         "permission_denied": "Геолокация выключена, поэтому мы не можем искать рядом с вами. Выберите место — геолокация не обязательна.",
@@ -4377,7 +4372,12 @@
         "no_results": "Мы не нашли это место. Попробуйте другое название.",
         "unsupported": "Homiio пока не умеет искать по такому типу места. Выберите город."
       },
-      "notChosen": "Ещё не выбран"
+      "chooseArea": "Выберите район",
+      "useCurrentHint": "В радиусе {{distance}} от вас",
+      "locationOff": "Геолокация отключена в настройках",
+      "positionRetry": "Не удалось определить местоположение. Повторите",
+      "everywhereHint": "Все районы, без фильтра по месту",
+      "lastArea": "Последний выбранный вами район"
     }
   },
   "alerts": {

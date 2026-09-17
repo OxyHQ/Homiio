@@ -4208,7 +4208,6 @@
     "scope": {
       "title": "Where are you looking?",
       "subtitle": "This board is local. Pick an area so you see the evictions you can actually get to — or browse everywhere on purpose.",
-      "useMyLocation": "Use my location",
       "browseGlobal": "Browse everywhere"
     },
     "sort": {
@@ -4329,20 +4328,16 @@
   },
   "location": {
     "scope": {
-      "eyebrow": "Searching in",
       "announce": "Searching in {{scope}}",
-      "change": "Change",
       "changeAccessible": "Change the area you are searching in",
       "everywhere": "Everywhere",
       "nearYou": "Near you · {{distance}}",
       "nearPlace": "Near {{place}} · {{distance}}",
       "resolving": "Finding where you are…",
       "useCurrent": "Use my location",
-      "useCurrentAccessible": "Use my current location to search nearby",
       "exploreGlobal": "Explore everywhere",
       "exploreGlobalAccessible": "Explore homes everywhere, with no area filter",
       "pickerTitle": "Where are you looking for a home?",
-      "deviceUnavailable": "Your current location is no longer available. Showing the last area you chose.",
       "showingCached": "Saved copy from {{when}}. Not up to date.",
       "failure": {
         "permission_denied": "Location is off, so we cannot search near you. Pick a place instead — location is optional.",
@@ -4353,7 +4348,12 @@
         "no_results": "We could not find that place. Try another name.",
         "unsupported": "Homiio cannot search that kind of place yet. Pick a city instead."
       },
-      "notChosen": "Not chosen yet"
+      "chooseArea": "Choose an area",
+      "useCurrentHint": "Within {{distance}} of where you are",
+      "locationOff": "Location is off in your settings",
+      "positionRetry": "Couldn't get your position. Try again",
+      "everywhereHint": "Every area, with no location filter",
+      "lastArea": "The last area you chose"
     }
   },
   "alerts": {

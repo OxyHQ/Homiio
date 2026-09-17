@@ -96,14 +96,19 @@ export const useLocationScopeStore = create<LocationScopeState>()(
         set((state) => ({
           sessionSelection: selection,
           explicitGlobal: false,
+          // A place chosen after "use my location" replaces it.
+          deviceRequested: false,
           // The persisted rung only ever remembers an AREA. A device fix stays
           // in the session slot above and dies with the process.
           lastChosenArea: isPersistableArea(selection) ? selection : state.lastChosenArea,
         })),
 
-      exploreGlobal: () => set({ explicitGlobal: true, sessionSelection: null }),
+      exploreGlobal: () => set({ explicitGlobal: true, sessionSelection: null, deviceRequested: false }),
 
-      requestDevice: () => set({ deviceRequested: true, explicitGlobal: false }),
+      // Clears the session choice: pressing "use my location" is a newer choice
+      // than the place picked before it, and the ladder ranks a session choice
+      // above the device.
+      requestDevice: () => set({ deviceRequested: true, explicitGlobal: false, sessionSelection: null }),
 
       markPermissionPromptShown: () => set({ permissionPromptShown: true }),
 

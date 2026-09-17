@@ -4252,7 +4252,6 @@
     "scope": {
       "title": "Where are you looking?",
       "subtitle": "This board is local. Pick an area so you see the evictions you can actually get to — or browse everywhere on purpose.",
-      "useMyLocation": "Use my location",
       "browseGlobal": "Browse everywhere"
     },
     "sort": {
@@ -4373,20 +4372,16 @@
   },
   "location": {
     "scope": {
-      "eyebrow": "البحث في",
       "announce": "البحث في {{scope}}",
-      "change": "تغيير",
       "changeAccessible": "تغيير المنطقة التي تبحث فيها",
       "everywhere": "كل الأماكن",
       "nearYou": "بالقرب منك · {{distance}}",
       "nearPlace": "بالقرب من {{place}} · {{distance}}",
       "resolving": "جارٍ تحديد مكانك…",
       "useCurrent": "استخدام موقعي",
-      "useCurrentAccessible": "استخدام موقعي الحالي للبحث في الجوار",
       "exploreGlobal": "استكشاف كل الأماكن",
       "exploreGlobalAccessible": "استكشاف المساكن في كل الأماكن، بدون تحديد منطقة",
       "pickerTitle": "أين تبحث عن سكن؟",
-      "deviceUnavailable": "لم يعد موقعك الحالي متاحًا. نعرض آخر منطقة اخترتها.",
       "showingCached": "نسخة محفوظة من {{when}}. غير محدَّثة.",
       "failure": {
         "permission_denied": "تحديد الموقع مُعطَّل، لذا لا يمكننا البحث بالقرب منك. اختر مكانًا بدلًا من ذلك — تحديد الموقع اختياري.",
@@ -4397,7 +4392,12 @@
         "no_results": "لم نعثر على هذا المكان. جرّب اسمًا آخر.",
         "unsupported": "لا يستطيع Homiio البحث في هذا النوع من الأماكن بعد. اختر مدينة."
       },
-      "notChosen": "لم تُحدَّد بعد"
+      "chooseArea": "اختر منطقة",
+      "useCurrentHint": "ضمن {{distance}} من موقعك",
+      "locationOff": "خدمة الموقع متوقفة في الإعدادات",
+      "positionRetry": "تعذّر تحديد موقعك. حاول مجددًا",
+      "everywhereHint": "كل المناطق، بلا تصفية حسب الموقع",
+      "lastArea": "آخر منطقة اخترتها"
     }
   },
   "alerts": {

@@ -4243,7 +4243,6 @@
     "scope": {
       "title": "Where are you looking?",
       "subtitle": "This board is local. Pick an area so you see the evictions you can actually get to — or browse everywhere on purpose.",
-      "useMyLocation": "Use my location",
       "browseGlobal": "Browse everywhere"
     },
     "sort": {
@@ -4364,20 +4363,16 @@
   },
   "location": {
     "scope": {
-      "eyebrow": "Stai cercando a",
       "announce": "Stai cercando a {{scope}}",
-      "change": "Cambia",
       "changeAccessible": "Cambia la zona in cui stai cercando",
       "everywhere": "Ovunque",
       "nearYou": "Vicino a te · {{distance}}",
       "nearPlace": "Vicino a {{place}} · {{distance}}",
       "resolving": "Sto cercando dove ti trovi…",
       "useCurrent": "Usa la mia posizione",
-      "useCurrentAccessible": "Usa la mia posizione attuale per cercare nei dintorni",
       "exploreGlobal": "Esplora ovunque",
       "exploreGlobalAccessible": "Esplora case ovunque, senza filtro di zona",
       "pickerTitle": "Dove stai cercando casa?",
-      "deviceUnavailable": "La tua posizione attuale non è più disponibile. Mostriamo l'ultima zona che hai scelto.",
       "showingCached": "Copia salvata di {{when}}. Non è aggiornata.",
       "failure": {
         "permission_denied": "La posizione è disattivata, quindi non possiamo cercare vicino a te. Scegli un luogo: la posizione è facoltativa.",
@@ -4388,7 +4383,12 @@
         "no_results": "Non abbiamo trovato quel luogo. Prova con un altro nome.",
         "unsupported": "Homiio non può ancora cercare in questo tipo di luogo. Scegli una città."
       },
-      "notChosen": "Non ancora scelta"
+      "chooseArea": "Scegli una zona",
+      "useCurrentHint": "Entro {{distance}} da dove ti trovi",
+      "locationOff": "La posizione è disattivata nelle impostazioni",
+      "positionRetry": "Impossibile ottenere la tua posizione. Riprova",
+      "everywhereHint": "Tutte le zone, senza filtro di posizione",
+      "lastArea": "L'ultima zona che hai scelto"
     }
   },
   "alerts": {

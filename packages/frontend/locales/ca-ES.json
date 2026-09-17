@@ -4259,7 +4259,6 @@
     "scope": {
       "title": "Where are you looking?",
       "subtitle": "This board is local. Pick an area so you see the evictions you can actually get to — or browse everywhere on purpose.",
-      "useMyLocation": "Use my location",
       "browseGlobal": "Browse everywhere"
     },
     "sort": {
@@ -4380,20 +4379,16 @@
   },
   "location": {
     "scope": {
-      "eyebrow": "Cercant a",
       "announce": "Cercant a {{scope}}",
-      "change": "Canvia",
       "changeAccessible": "Canvia la zona on estàs cercant",
       "everywhere": "Arreu",
       "nearYou": "A prop teu · {{distance}}",
       "nearPlace": "A prop de {{place}} · {{distance}}",
       "resolving": "Cercant on ets…",
       "useCurrent": "Usa la meva ubicació",
-      "useCurrentAccessible": "Usa la meva ubicació actual per cercar a prop",
       "exploreGlobal": "Explora arreu",
       "exploreGlobalAccessible": "Explora habitatges d'arreu, sense filtre de zona",
       "pickerTitle": "On busques habitatge?",
-      "deviceUnavailable": "La teva ubicació actual ja no està disponible. Es mostra l'última zona que vas triar.",
       "showingCached": "Còpia desada de {{when}}. No està actualitzada.",
       "failure": {
         "permission_denied": "La ubicació està desactivada, així que no podem cercar a prop teu. Tria un lloc: la ubicació és opcional.",
@@ -4404,7 +4399,12 @@
         "no_results": "No hem trobat aquest lloc. Prova amb un altre nom.",
         "unsupported": "Homiio encara no pot cercar en aquest tipus de lloc. Tria una ciutat."
       },
-      "notChosen": "Sense triar"
+      "chooseArea": "Tria una zona",
+      "useCurrentHint": "En un radi de {{distance}} d'on ets",
+      "locationOff": "La ubicació està desactivada a la configuració",
+      "positionRetry": "No hem pogut obtenir la teva posició. Torna-ho a provar",
+      "everywhereHint": "Totes les zones, sense filtre d'ubicació",
+      "lastArea": "L'última zona que vas triar"
     }
   },
   "alerts": {

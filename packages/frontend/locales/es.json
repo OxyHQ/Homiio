@@ -4238,7 +4238,6 @@
     "scope": {
       "title": "Where are you looking?",
       "subtitle": "This board is local. Pick an area so you see the evictions you can actually get to — or browse everywhere on purpose.",
-      "useMyLocation": "Use my location",
       "browseGlobal": "Browse everywhere"
     },
     "sort": {
@@ -4359,20 +4358,16 @@
   },
   "location": {
     "scope": {
-      "eyebrow": "Buscando en",
       "announce": "Buscando en {{scope}}",
-      "change": "Cambiar",
       "changeAccessible": "Cambiar la zona en la que buscas",
       "everywhere": "Todas partes",
       "nearYou": "Cerca de ti · {{distance}}",
       "nearPlace": "Cerca de {{place}} · {{distance}}",
       "resolving": "Buscando dónde estás…",
       "useCurrent": "Usar mi ubicación",
-      "useCurrentAccessible": "Usar mi ubicación actual para buscar cerca",
       "exploreGlobal": "Explorar todas partes",
       "exploreGlobalAccessible": "Explorar viviendas de todas partes, sin filtro de zona",
       "pickerTitle": "¿Dónde buscas vivienda?",
-      "deviceUnavailable": "Tu ubicación actual ya no está disponible. Se muestra la última zona que elegiste.",
       "showingCached": "Copia guardada de {{when}}. No está actualizada.",
       "failure": {
         "permission_denied": "La ubicación está desactivada, así que no podemos buscar cerca de ti. Elige un lugar: la ubicación es opcional.",
@@ -4383,7 +4378,12 @@
         "no_results": "No hemos encontrado ese lugar. Prueba con otro nombre.",
         "unsupported": "Homiio todavía no puede buscar en ese tipo de lugar. Elige una ciudad."
       },
-      "notChosen": "Sin elegir"
+      "chooseArea": "Elige una zona",
+      "useCurrentHint": "En un radio de {{distance}} de donde estás",
+      "locationOff": "La ubicación está desactivada en los ajustes",
+      "positionRetry": "No pudimos obtener tu posición. Reintenta",
+      "everywhereHint": "Todas las zonas, sin filtro de ubicación",
+      "lastArea": "La última zona que elegiste"
     }
   },
   "alerts": {

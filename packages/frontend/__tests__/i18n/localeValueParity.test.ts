@@ -8,7 +8,7 @@
  * `scripts/check-locale-parity.ts` compares KEY SETS. A key present in all
  * twelve files carrying the English string passes it — which is how the whole
  * of `home.*` and `location.scope.*` shipped as English in eleven locales
- * across #353 and #354. The scope bar is the first thing a user sees at cold
+ * across #353 and #354. The area statement is the first thing a user sees at cold
  * start, and it was in English for every non-English reader, with a green gate.
  *
  * ## Why "identical to English" is a fair test here, measured rather than assumed
@@ -255,7 +255,7 @@ describe('the surfaces #413 named are translated', () => {
     'has no key under %s left in English everywhere',
     (prefix) => {
       // Pinned separately from the register so these three cannot quietly be
-      // added back to it. The scope bar is the first thing a user sees.
+      // added back to it. The area statement is the first thing a user sees.
       const stillEnglish = identicalEverywhere.filter((key) => key.startsWith(prefix));
       expect(stillEnglish).toEqual([]);
     },

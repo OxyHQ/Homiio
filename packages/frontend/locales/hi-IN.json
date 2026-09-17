@@ -4212,7 +4212,6 @@
     "scope": {
       "title": "Where are you looking?",
       "subtitle": "This board is local. Pick an area so you see the evictions you can actually get to — or browse everywhere on purpose.",
-      "useMyLocation": "Use my location",
       "browseGlobal": "Browse everywhere"
     },
     "sort": {
@@ -4333,20 +4332,16 @@
   },
   "location": {
     "scope": {
-      "eyebrow": "यहाँ खोज रहे हैं",
       "announce": "{{scope}} में खोज रहे हैं",
-      "change": "बदलें",
       "changeAccessible": "जिस इलाक़े में आप खोज रहे हैं, उसे बदलें",
       "everywhere": "हर जगह",
       "nearYou": "आपके पास · {{distance}}",
       "nearPlace": "{{place}} के पास · {{distance}}",
       "resolving": "आपकी जगह पता की जा रही है…",
       "useCurrent": "मेरी लोकेशन इस्तेमाल करें",
-      "useCurrentAccessible": "आस-पास खोजने के लिए मेरी मौजूदा लोकेशन इस्तेमाल करें",
       "exploreGlobal": "हर जगह देखें",
       "exploreGlobalAccessible": "बिना इलाक़े के फ़िल्टर के, हर जगह के घर देखें",
       "pickerTitle": "आप कहाँ घर खोज रहे हैं?",
-      "deviceUnavailable": "आपकी मौजूदा लोकेशन अब उपलब्ध नहीं है। आपका चुना हुआ पिछला इलाक़ा दिखाया जा रहा है।",
       "showingCached": "{{when}} की सहेजी गई प्रति। यह अद्यतन नहीं है।",
       "failure": {
         "permission_denied": "लोकेशन बंद है, इसलिए हम आपके पास खोज नहीं सकते। इसकी जगह कोई स्थान चुनें — लोकेशन ज़रूरी नहीं है।",
@@ -4357,7 +4352,12 @@
         "no_results": "यह स्थान नहीं मिला। कोई और नाम आज़माएँ।",
         "unsupported": "Homiio अभी इस तरह के स्थान में खोज नहीं कर सकता। कोई शहर चुनें।"
       },
-      "notChosen": "अभी चुना नहीं"
+      "chooseArea": "इलाक़ा चुनें",
+      "useCurrentHint": "आप जहाँ हैं, वहाँ से {{distance}} के भीतर",
+      "locationOff": "सेटिंग्स में लोकेशन बंद है",
+      "positionRetry": "आपकी लोकेशन नहीं मिल सकी। फिर कोशिश करें",
+      "everywhereHint": "सभी इलाक़े, बिना लोकेशन फ़िल्टर",
+      "lastArea": "आपका पिछला चुना हुआ इलाक़ा"
     }
   },
   "alerts": {

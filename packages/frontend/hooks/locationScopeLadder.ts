@@ -82,6 +82,20 @@ export interface LocationScopeInputs {
   /** The last area the user chose on this device, restored from storage. */
   readonly lastChosenSelection: LocationSelection | null;
   readonly device: DevicePositionState;
+  /**
+   * The user pressed "use my current location" and has not chosen anything
+   * since.
+   *
+   * That press is an explicit choice, so it outranks the saved and last-chosen
+   * areas below it — otherwise the button is a no-op for anybody who has ever
+   * picked a place: the fix arrives and the ladder keeps reading Barcelona. It
+   * never outranks a NEWER session choice (the store clears the flag on
+   * `choose`), and a failed fix falls back to those areas rather than to
+   * nothing, carrying `deviceIssue` so the surface can say why.
+   *
+   * Optional, `false` when absent.
+   */
+  readonly deviceRequested?: boolean;
 }
 
 /**
@@ -149,6 +163,37 @@ export function resolveLocationScope(inputs: LocationScopeInputs): LocationScope
       isGlobal: true,
       canQuery: true,
     };
+  }
+
+  // 0b. "Use my current location", pressed after an area was already in use.
+  //     Only a resolved or resolving device answer takes over; a failure falls
+  //     through to the committed rungs (with `deviceIssue` set), never to global.
+  if (inputs.deviceRequested && !inputs.sessionSelection) {
+    if (inputs.device.status === 'resolved') {
+      return {
+        selection: inputs.device.selection,
+        resolution: { status: 'resolved', selection: inputs.device.selection },
+        source: 'device',
+        deviceIssue,
+        needsPlace: false,
+        isGlobal: false,
+        canQuery: true,
+      };
+    }
+    if (inputs.device.status === 'resolving') {
+      // Not the previous area: the user just asked for a different one, and
+      // showing Barcelona's homes under "finding where you are" would state an
+      // area the next render is about to replace.
+      return {
+        selection: null,
+        resolution: { status: 'resolving' },
+        source: null,
+        deviceIssue,
+        needsPlace: false,
+        isGlobal: false,
+        canQuery: false,
+      };
+    }
   }
 
   // 1–3. The three rungs that are already RESOLVED when present. A device answer

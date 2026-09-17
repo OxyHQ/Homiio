@@ -4212,7 +4212,6 @@
     "scope": {
       "title": "Where are you looking?",
       "subtitle": "This board is local. Pick an area so you see the evictions you can actually get to — or browse everywhere on purpose.",
-      "useMyLocation": "Use my location",
       "browseGlobal": "Browse everywhere"
     },
     "sort": {
@@ -4333,20 +4332,16 @@
   },
   "location": {
     "scope": {
-      "eyebrow": "Mencari di",
       "announce": "Mencari di {{scope}}",
-      "change": "Ubah",
       "changeAccessible": "Ubah area tempat kamu mencari",
       "everywhere": "Di mana saja",
       "nearYou": "Dekat kamu · {{distance}}",
       "nearPlace": "Dekat {{place}} · {{distance}}",
       "resolving": "Mencari lokasimu…",
       "useCurrent": "Gunakan lokasiku",
-      "useCurrentAccessible": "Gunakan lokasi saya saat ini untuk mencari di sekitar",
       "exploreGlobal": "Jelajahi di mana saja",
       "exploreGlobalAccessible": "Jelajahi hunian di mana saja, tanpa filter area",
       "pickerTitle": "Kamu sedang mencari hunian di mana?",
-      "deviceUnavailable": "Lokasimu saat ini sudah tidak tersedia. Menampilkan area terakhir yang kamu pilih.",
       "showingCached": "Salinan tersimpan dari {{when}}. Belum diperbarui.",
       "failure": {
         "permission_denied": "Lokasi sedang nonaktif, jadi kami tidak bisa mencari di dekatmu. Pilih tempat saja — lokasi bersifat opsional.",
@@ -4357,7 +4352,12 @@
         "no_results": "Kami tidak menemukan tempat itu. Coba nama lain.",
         "unsupported": "Homiio belum bisa mencari di jenis tempat itu. Pilih sebuah kota."
       },
-      "notChosen": "Belum dipilih"
+      "chooseArea": "Pilih area",
+      "useCurrentHint": "Dalam radius {{distance}} dari lokasimu",
+      "locationOff": "Lokasi dimatikan di pengaturan",
+      "positionRetry": "Tidak bisa mendapatkan posisimu. Coba lagi",
+      "everywhereHint": "Semua area, tanpa filter lokasi",
+      "lastArea": "Area terakhir yang kamu pilih"
     }
   },
   "alerts": {
