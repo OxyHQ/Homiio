@@ -1,4 +1,3 @@
-import { Asset } from 'expo-asset';
 import { generatePropertyTitle, TitleFormat } from './propertyTitleGenerator';
 import {
   OfferingType,
@@ -10,7 +9,6 @@ import {
   type ImageVariantName,
   type PriceDescriptor,
 } from '@homiio/shared-types';
-import type { GalleryImage } from '@oxy.so/bloom/zoomable-media-gallery';
 import type { BrowseMode } from '@/components/search/types';
 import propertyPlaceholder from '@/assets/images/property_placeholder.jpg';
 import { resolveBackendImageUrl } from '@/utils/imageUrl';
@@ -497,34 +495,47 @@ export function getPropertyImageSources(
   return sources.length > 0 ? sources : [propertyPlaceholder];
 }
 
-/** The bundled placeholder resolved once to a plain URI, so a photo whose URL is
- * missing still yields a valid, index-aligned gallery page. `Asset.fromModule`
- * (not RN core's `Image.resolveAssetSource`, which react-native-web doesn't
- * implement) resolves synchronously and works on both native and web. A
- * `require()`'d image is always the opaque numeric asset id `Asset.fromModule`
- * expects (see `global.d.ts`) — `ImageSourcePropType` is only declared that
- * broadly so it also satisfies `<Image source>` props elsewhere. */
-const PLACEHOLDER_GALLERY_URI =
-  typeof propertyPlaceholder === 'number' ? Asset.fromModule(propertyPlaceholder).uri : '';
+/**
+ * The property's photo URLs, cover first, for Bloom surfaces that take plain
+ * URLs (`ListingCard`, `ListingPhotoGrid`). Unlike
+ * {@link getPropertyImageSources} there is no placeholder entry: an empty list
+ * lets the Bloom part draw its own neutral tile.
+ */
+export function getPropertyPhotoUrls(
+  images: Property['images'] | (string | PropertyImage)[] | undefined,
+  coverIndex?: number,
+  variant?: ImageVariantName,
+): string[] {
+  return getPropertyPhotos(images, coverIndex, variant).map((photo) => photo.source);
+}
+
+/** One usable photo: its URL and the host's caption, when there is one. */
+export interface PropertyPhoto {
+  source: string;
+  alt?: string;
+}
 
 /**
- * Build the `GalleryImage[]` for the fullscreen lightbox
- * (`@oxy.so/bloom/zoomable-media-gallery`) from a property's photo list.
- *
- * Unlike {@link getPropertyImageSources}, this maps entries ONE-TO-ONE (no
- * reorder, no drop): the tapped thumbnail's index must line up with the gallery
- * page it opens. Each entry resolves to its `large` rendition; an unusable URL
- * falls back to the bundled placeholder so alignment is preserved. A photo's
- * `caption` becomes the viewer's accessibility/bottom-caption `alt`.
+ * The property's usable photos, cover first, each with its caption. The
+ * detail screen feeds the SAME list to the photo grid and the fullscreen
+ * gallery, so a tapped tile's index opens that photo.
  */
-export function getPropertyGalleryImages(
-  images: (string | PropertyImage)[] | undefined,
-): GalleryImage[] {
-  if (!images?.length) return [];
-  return images.map((entry) => {
-    const uri = imageEntryToUrl(entry, 'large') ?? PLACEHOLDER_GALLERY_URI;
+export function getPropertyPhotos(
+  images: Property['images'] | (string | PropertyImage)[] | undefined,
+  coverIndex?: number,
+  variant?: ImageVariantName,
+): PropertyPhoto[] {
+  if (!images || images.length === 0) return [];
+  const photos: PropertyPhoto[] = [];
+  for (const entry of moveCoverToFront(images, coverIndex)) {
+    const source = imageEntryToUrl(entry as string | PropertyImageEntry, variant);
+    if (typeof source !== 'string') continue;
     const caption =
-      typeof entry === 'object' && entry.caption?.trim() ? entry.caption.trim() : undefined;
-    return caption ? { uri, alt: caption } : { uri };
-  });
+      typeof entry === 'object' && entry && 'caption' in entry && typeof entry.caption === 'string'
+        ? entry.caption.trim()
+        : '';
+    photos.push(caption ? { source, alt: caption } : { source });
+  }
+  return photos;
 }
+

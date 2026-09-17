@@ -2439,7 +2439,8 @@
       "openProfile": "Open host profile",
       "publicSubtitle": "Government-managed affordable housing",
       "publicAuthority": "Public Housing Authority",
-      "superHost": "Super host"
+      "superHost": "Super host",
+      "regionAuthority": "Otoritas Perumahan {{region}}"
     },
     "report": {
       "reason": {
@@ -2498,7 +2499,9 @@
       "recommend": "Recommend",
       "count": "reviews",
       "countWithNumber": "({{count}} reviews)",
-      "showAll": "Show all {{count}} reviews"
+      "showAll": "Show all {{count}} reviews",
+      "total_one": "{{count}} ulasan",
+      "total_other": "{{count}} ulasan"
     },
     "notFoundHelp": "It may have been removed or the link is broken.",
     "sections": {
@@ -2557,6 +2560,12 @@
         "aboveMarketGeneric": "This price is above the local average for similar homes.",
         "generic": "This listing does not meet Homiio's fair-price criteria."
       }
+    },
+    "photos": {
+      "showAll": "Tampilkan semua foto",
+      "label": "Foto iklan",
+      "photoOf": "Foto {{position}} dari {{total}}",
+      "namedPhotoOf": "{{name}}, foto {{position}} dari {{total}}"
     }
   },
   "viewings": {
@@ -2891,6 +2900,16 @@
       "viewOnSourceWebsite": "View on Source Website",
       "callNow": "Call Now",
       "moreByOwner": "More properties by this owner"
+    },
+    "card": {
+      "beds_one": "{{count}} kamar tidur",
+      "beds_other": "{{count}} kamar tidur",
+      "baths_one": "{{count}} kamar mandi",
+      "baths_other": "{{count}} kamar mandi",
+      "previousPhoto": "Foto sebelumnya",
+      "nextPhoto": "Foto berikutnya",
+      "save": "Simpan",
+      "unsave": "Hapus dari tersimpan"
     }
   },
   "goBack": "Go back",
@@ -3649,7 +3668,8 @@
       "requestToBook": "Ajukan pemesanan",
       "perNight": "malam",
       "dates": "Tanggal",
-      "requestNote": "Anda belum akan dikenai biaya. Tuan rumah memiliki waktu 24 jam untuk merespons."
+      "requestNote": "Anda belum akan dikenai biaya. Tuan rumah memiliki waktu 24 jam untuk merespons.",
+      "checkAvailability": "Cek ketersediaan"
     },
     "policy": {
       "flexible": "Pembatalan fleksibel — pengembalian dana penuh kapan saja sebelum check-in.",
@@ -3660,6 +3680,12 @@
     "calendar": {
       "selectRange": "Pilih check-in dan check-out",
       "apply": "Terapkan"
+    },
+    "breakdown": {
+      "nights_one": "{{price}} × {{count}} malam",
+      "nights_other": "{{price}} × {{count}} malam",
+      "total": "Total",
+      "selectDates": "Pilih tanggal untuk melihat harga total."
     }
   },
   "addresses": {

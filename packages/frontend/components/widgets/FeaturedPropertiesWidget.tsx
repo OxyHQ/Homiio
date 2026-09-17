@@ -206,13 +206,6 @@ export function FeaturedPropertiesWidget() {
                 orientation="horizontal"
                 showSaveButton={true}
                 showVerifiedBadge={true}
-                showTypeIcon={false}
-                showFeatures={true}
-                showPrice={true}
-                showLocation={true}
-                showRating={false}
-                showSaveCount={true}
-                saveCountDisplayMode="inline"
                 onPress={() => router.push(`/properties/${property.id}`)}
               />
             ))}

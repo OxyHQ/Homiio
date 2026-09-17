@@ -1,1088 +1,232 @@
-import React, { useCallback, useMemo, useState } from 'react';
-import { View, Image, StyleSheet, Pressable, TouchableOpacity, ViewStyle, Platform } from 'react-native';
+/**
+ * PropertyCard — Homiio's adapter from a `Property` to Bloom's `ListingCard`.
+ *
+ * Bloom owns the card: the paged photo track (swipe, trackpad, hover arrows on
+ * web), the dots, lazy photo mounting, the heart, the skeleton and the real
+ * `<a href>` link. This file only decides WHAT the card says, from Homiio data:
+ *
+ *  - price: the ACTIVE browse mode's priced block (`resolvePrimaryOffering`),
+ *    formatted in the listing's own currency for the reader's locale, with the
+ *    block's fixed unit (month / night; none for sale; "Free" for exchange);
+ *  - subtitle: the published location label (never more precise than the API
+ *    gives), then beds · baths · area;
+ *  - badge: ONE pill, the most useful true fact (fair price, instant book, new,
+ *    verified) — never a rating: listings carry no review aggregate, so the
+ *    card shows none rather than an invented one;
+ *  - heart: the saved-properties context, the same mutation `SaveButton` uses.
+ */
+import React, { useCallback, useMemo } from 'react';
+import { Platform, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { colors } from '@/styles/colors';
-import { radius, spacing } from '@/constants/styles';
+import { useQueryClient } from '@tanstack/react-query';
+import { ListingCard } from '@oxy.so/bloom/listing-card';
 import {
-  Property,
   formatArea,
-  formatAreaLabel,
+  formatMoney,
   priceFrequencyFromPriceUnit,
+  type Property,
 } from '@homiio/shared-types';
-import { useFormatting } from '@/utils/format';
-import {
-  getPropertyTitle,
-  getPropertyImageSource,
-  getPropertyLocationLabel,
-  resolveOfferingSummaries,
-  resolvePrimaryOffering,
-} from '@/utils/propertyUtils';
 
 import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
 import { useRentalMode } from '@/context/RentalModeContext';
-
-import { SaveButton } from './SaveButton';
-import { MoneyText } from './MoneyText';
-import { OfferingBadge } from './property/OfferingBadge';
-import { MediaChip } from './property/MediaChip';
-import { PropertyImageCarousel } from './property/PropertyImageCarousel';
-import { ZoomableImage } from '@/components/ui/ZoomableImage';
-import { ThemedText } from '@/components/ThemedText';
-import { Text as BloomText } from '@oxy.so/bloom/typography';
+import { useFormatting } from '@/utils/format';
 import {
-  RiBuilding2Line,
-  RiCoinsLine,
-  RiEditLine,
-  RiFileTextLine,
-  RiHomeLine,
-  RiLeafLine,
-  RiShieldCheckLine,
-  RiSpeedUpLine,
-  RiStarFill,
-  type Props as IconProps,
-} from '@oxy.so/bloom/icons';
-import { useQueryClient } from '@tanstack/react-query';
+  getPropertyLocationLabel,
+  getPropertyPhotoUrls,
+  getPropertyTitle,
+  resolvePrimaryOffering,
+} from '@/utils/propertyUtils';
 import { prefetchProperty, prefetchPropertyStats } from '@/utils/queryPrefetch';
-import { PropertyCardSkeleton } from './ui/skeletons/PropertyCardSkeleton';
-
 
 /** A listing counts as "new" (badge) while its `createdAt` is within this window. */
 const NEW_LISTING_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 
-function shouldShowInstantBook(
-  property: Property,
-  mode: 'long_term' | 'vacation',
-): boolean {
-  if (mode !== 'vacation') return false;
-  // Instant book is a short-term-offering property — read it off that block.
-  return Boolean(property.shortTermRent?.instantBook);
-}
+const IS_WEB = Platform.OS === 'web';
 
-export type PropertyCardVariant = 'default' | 'compact' | 'featured' | 'saved' | 'grid';
+export type PropertyCardVariant = 'default' | 'compact';
 export type PropertyCardOrientation = 'vertical' | 'horizontal';
 
 /**
  * Property objects can be momentarily flagged as `isSaved` by the server
- * response while the saved-properties context is still bootstrapping. We
- * type that optional flag here instead of casting through `any`.
+ * response while the saved-properties context is still bootstrapping.
  */
 type PropertyWithSavedHint = Property & { readonly isSaved?: boolean };
 
-type PropertyCardProps = {
-  // Core data - now primarily uses property object
+export interface PropertyCardProps {
   property: Property;
-
-  // Display options
+  /** `compact` loads the small photo rendition and never pages photos. */
   variant?: PropertyCardVariant;
+  /** `horizontal` is the list / map-sheet layout: a square photo 40% wide. */
   orientation?: PropertyCardOrientation;
   showSaveButton?: boolean;
+  /** Whether "Verified" may be the card's badge. Default `true`. */
   showVerifiedBadge?: boolean;
-  showTypeIcon?: boolean;
-  showFeatures?: boolean;
-  showPrice?: boolean;
-  showLocation?: boolean;
-  showRating?: boolean;
-  showSaveCount?: boolean;
-  saveCountDisplayMode?: 'badge' | 'inline';
   /**
-   * Render the photo box as a swipeable image carousel (Airbnb-style) when the
-   * listing has more than one photo. Only applies to vertical orientation — the
-   * horizontal thumbnail variant always shows the single cover image. Defaults
-   * to `true`; pass `false` for surfaces where an in-card horizontal pager would
-   * fight an enclosing horizontal scroller.
+   * Page through every photo. Pass `false` inside a horizontal scroller, where
+   * an in-card pager would fight the row swipe: the card shows the cover only.
    */
   enableImageCarousel?: boolean;
-
-  // State
-  isSelected?: boolean;
-  isProcessing?: boolean;
   isLoading?: boolean;
-
-  // Actions
   onPress?: () => void;
-  onLongPress?: () => void;
-
-  // Styling
-  style?: ViewStyle;
-  imageHeight?: number;
-  titleLines?: number;
-  locationLines?: number;
-
-  // Custom content
+  /** Rendered under the card (owner actions, a saved note). */
   footerContent?: React.ReactNode;
-  badgeContent?: React.ReactNode;
-  overlayContent?: React.ReactNode;
-
-  // Saved-specific
-  noteText?: string;
-  onPressNote?: () => void;
-};
-
-// const { width: screenWidth } = Dimensions.get('window');
-
-const getVariantStyles = (variant: PropertyCardVariant) => {
-  const variants = {
-    compact: {
-      imageHeight: 60,
-      showFeatures: true,
-      showTypeIcon: false,
-      showRating: false,
-      titleLines: 2,
-      locationLines: 1,
-      showPrice: false,
-    },
-    featured: {
-      imageHeight: 140,
-      showFeatures: true,
-      showTypeIcon: true,
-      showRating: true,
-      titleLines: 2,
-      locationLines: 2,
-      showPrice: true,
-    },
-    saved: {
-      imageHeight: 120,
-      showFeatures: true,
-      showTypeIcon: false,
-      showRating: true,
-      titleLines: 2,
-      locationLines: 1,
-      showPrice: true,
-    },
-    /**
-     * Airbnb-2026 grid variant — photo-first card used in dense, multi-
-     * column merchandising grids (no overlays, no rating, single heart
-     * top-right, minimal text below).
-     */
-    grid: {
-      imageHeight: 0,
-      showFeatures: false,
-      showTypeIcon: false,
-      showRating: false,
-      titleLines: 1,
-      locationLines: 1,
-      showPrice: true,
-    },
-    default: {
-      imageHeight: 120,
-      showFeatures: true,
-      showTypeIcon: false,
-      showRating: true,
-      titleLines: 2,
-      locationLines: 1,
-      showPrice: true,
-    },
-  };
-
-  return variants[variant] || variants.default;
-};
+  style?: StyleProp<ViewStyle>;
+}
 
 export const PropertyCard = React.memo(function PropertyCard({
-  // Core data
   property,
-
-  // Display options
   variant = 'default',
   orientation = 'vertical',
   showSaveButton = true,
   showVerifiedBadge = true,
-  showTypeIcon = true,
-  showFeatures = true,
-  showPrice = true,
-  showLocation = true,
-  showRating = true,
-  showSaveCount = false,
-  saveCountDisplayMode = 'badge',
   enableImageCarousel = true,
-
-  // State
-  isSelected = false,
-  isProcessing = false,
   isLoading = false,
-
-  // Actions
   onPress,
-  onLongPress,
-
-  // Styling
-  style,
-  imageHeight,
-  titleLines,
-  locationLines,
-
-  // Custom content
   footerContent,
-  badgeContent,
-  overlayContent,
-  noteText,
-  onPressNote,
+  style,
 }: PropertyCardProps) {
-  // Use saved properties context to check if property is saved
-  const { isPropertySaved, isInitialized } = useSavedPropertiesContext();
-  const { mode, browseMode } = useRentalMode();
-  const queryClient = useQueryClient();
   const { t } = useTranslation();
   const formatting = useFormatting();
+  const queryClient = useQueryClient();
+  const { browseMode } = useRentalMode();
+  const { isPropertySaved, isInitialized, savePropertyToFolder, unsaveProperty } =
+    useSavedPropertiesContext();
 
-  // Define the callback function (using property parameter directly)
-  const handlePressIn = useCallback(() => {
-    if (!property) return;
-    const idToPrefetch = property.id;
-    if (idToPrefetch) {
-      prefetchProperty(queryClient, idToPrefetch as string);
-      prefetchPropertyStats(queryClient, idToPrefetch as string);
-    }
-  }, [queryClient, property]);
+  const propertyId = property?.id ? String(property.id) : '';
 
-  const showInstantBook = useMemo(
-    () => (property ? shouldShowInstantBook(property, mode) : false),
-    [property, mode],
-  );
+  const prefetch = useCallback(() => {
+    if (!propertyId) return;
+    void prefetchProperty(queryClient, propertyId);
+    void prefetchPropertyStats(queryClient, propertyId);
+  }, [queryClient, propertyId]);
 
-  // Native press-zoom for the static-image path: the photo zooms inside its
-  // rounded mask via `ZoomableImage` (the card itself never scales). Web hover is
-  // owned by `ZoomableImage` internally; this only tracks the touch press so the
-  // image eases back out on release. Static-array styles driven by state, never
-  // the NativeWind-incompatible function-form `style` (AGENTS.md §NativeWind
-  // Pressable). The prefetch still fires on press-in.
-  const [pressed, setPressed] = useState(false);
-  const handleImagePressIn = useCallback(() => {
-    setPressed(true);
-    handlePressIn();
-  }, [handlePressIn]);
-
-  // Web hover on the WHOLE card drives the image zoom (Airbnb-style): one
-  // `onPointerEnter/Leave` on the outer container below (they fire on the card's
-  // own boundary and don't bubble between children on RN-Web), so hovering the
-  // text/body zooms the photo too. This ONLY feeds `ZoomableImage`'s `active` —
-  // the card itself never scales/lifts (that "cutrada" was removed). OR-ed with
-  // the touch press so native still gets a press-zoom.
-  const [hovered, setHovered] = useState(false);
-  const imageActive = hovered || pressed;
-
-  // "New" freshness badge — pure frontend, no pagination risk. Memoized on
-  // `createdAt` so `Date.now()` is captured once per listing (the 7-day boundary
-  // rarely flips mid-session) rather than read impurely on every render.
-  const isNew = useMemo(() => {
-    const createdAt = property?.createdAt;
-    if (!createdAt) return false;
-    const created = new Date(createdAt).getTime();
-    return Number.isFinite(created) && Date.now() - created <= NEW_LISTING_WINDOW_MS;
-  }, [property?.createdAt]);
-
-  // Heavy per-listing derivations, memoized so they don't recompute on every
-  // hover/press re-render (`hovered`/`pressed` flip but these don't depend on
-  // them) or when the infinite feed appends a page and re-renders the row. The
-  // memo guards on `property` so the hook order stays stable across the early
-  // returns below (rules of hooks). Resolves the active browse mode's priced
-  // block, the other offerings, and the flattened display fields.
-  const derived = useMemo(() => {
+  const content = useMemo(() => {
     if (!property) return null;
-    // The single primary price/offering this card displays — the ACTIVE browse
-    // mode's priced block (unit fixed per block): a multi-offering listing shows
-    // €1,700/month in Long-term and €110/night in Vacation. Sale shows the asking
-    // price (no per-unit suffix); exchange shows "Free". When the listing doesn't
-    // carry the active offering, it falls back to the first present block.
-    const primaryOffering = resolvePrimaryOffering(
-      property,
-      browseMode,
-      t('listing.exchange.free', 'Free'),
+
+    const photos = getPropertyPhotoUrls(
+      property.images,
+      property.coverImageIndex,
+      variant === 'compact' ? 'small' : 'medium',
     );
-    // The OTHER offerings this listing carries (excluding the one shown above)
-    // drive both the floating badges and the subtle "Also available" line.
-    const otherOfferings = resolveOfferingSummaries(property, browseMode);
-    const propertyData = {
-      id: property.id,
-      title: getPropertyTitle(property),
-      location: getPropertyLocationLabel(property),
-      price: primaryOffering.amount,
-      currency: primaryOffering.currency,
-      priceUnit: primaryOffering.priceUnit,
-      offeringKind: primaryOffering.kind,
-      offeringLabel: primaryOffering.label,
-      type: property.type === 'room' ? 'apartment' : property.type === 'studio' ? 'apartment' : property.type,
-      imageSource: getPropertyImageSource(property, variant === 'compact' ? 'small' : 'medium'),
-      bedrooms: property.bedrooms || 0,
-      bathrooms: property.bathrooms || 0,
-      size: property.squareFootage || 0,
-      isVerified: property.isVerified || false,
-      rating: undefined as number | undefined,
-      reviewCount: undefined as number | undefined,
+    const pagesPhotos = enableImageCarousel && variant !== 'compact';
+
+    const offering = resolvePrimaryOffering(property, browseMode, t('listing.exchange.free'));
+    let price: string | undefined;
+    let priceUnit: string | undefined;
+    if (offering.kind === 'exchange') {
+      price = offering.label || undefined;
+    } else if (offering.amount > 0 && offering.currency) {
+      price = formatMoney(offering.amount, offering.currency, formatting.locale);
+      priceUnit = offering.priceUnit
+        ? formatting.priceUnitLabels[priceFrequencyFromPriceUnit(offering.priceUnit)].short
+        : undefined;
+    }
+
+    const facts: string[] = [];
+    if (property.bedrooms) facts.push(t('listing.card.beds', { count: property.bedrooms }));
+    if (property.bathrooms) facts.push(t('listing.card.baths', { count: property.bathrooms }));
+    if (property.squareFootage && property.squareFootage > 0) {
+      facts.push(
+        formatArea(property.squareFootage, 'sqm', formatting.locale, {
+          labels: formatting.areaUnitLabels,
+        }),
+      );
+    }
+
+    const createdAt = property.createdAt ? new Date(property.createdAt).getTime() : NaN;
+    const isNew = Number.isFinite(createdAt) && Date.now() - createdAt <= NEW_LISTING_WINDOW_MS;
+    const badge = property.priceEthics?.isFairPrice
+      ? t('listing.badge.fairPrice')
+      : browseMode === 'vacation' && property.shortTermRent?.instantBook
+        ? t('listing.badge.instantBook')
+        : isNew
+          ? t('listing.badge.new')
+          : showVerifiedBadge && property.isVerified
+            ? t('listing.badge.verified')
+            : undefined;
+
+    const title = getPropertyTitle(property);
+    const subtitle = getPropertyLocationLabel(property) || undefined;
+    const dates = facts.length > 0 ? facts.join(' · ') : undefined;
+    const accessibilityLabel = [
+      title,
+      badge,
+      subtitle,
+      dates,
+      price ? [price, priceUnit].filter(Boolean).join(' / ') : undefined,
+    ]
+      .filter(Boolean)
+      .join(', ');
+
+    return {
+      photos: pagesPhotos ? photos : photos.slice(0, 1),
+      title,
+      subtitle,
+      dates,
+      price,
+      priceUnit,
+      badge,
+      accessibilityLabel,
     };
-    return { primaryOffering, otherOfferings, propertyData };
-  }, [property, browseMode, variant, t]);
+  }, [property, variant, enableImageCarousel, browseMode, showVerifiedBadge, t, formatting]);
 
-  /**
-   * Badge chrome that floats over the photo (rating, eco/verified, instant book,
-   * plus any caller-supplied badge/overlay). Memoized JSX so it isn't rebuilt on
-   * every hover re-render. Shared verbatim by the carousel media (as `children`)
-   * and the static-image media so the overlays read identically. Every node here
-   * is a non-interactive `View`, so it never introduces a nested `<button>`.
-   */
-  const mediaBadges = useMemo(() => {
-    if (!property || !derived) return null;
-    const { otherOfferings, propertyData } = derived;
-    const isGrid = variant === 'grid';
-    const isCompact = variant === 'compact';
-    const isEco = Boolean(property.isEcoFriendly);
-    const isFairPrice = Boolean(property.priceEthics?.isFairPrice);
-    const finalShowRating = showRating && getVariantStyles(variant).showRating;
-    return (
-      <>
-        {/* Photo-overlay chip stack — ONE absolutely-positioned, flex-driven
-            container in the top-left. Every child is a `MediaChip` (or the
-            rating chip), so they share the same height, radius, padding and
-            frosted backdrop and align on a single row regardless of which are
-            present. Suppressed in the grid variant (photo-first); the grid
-            renders ONLY the freshness chip (rich chips gated on `!isGrid`). */}
-        {!isCompact && (isNew || !isGrid) && (
-          <View style={styles.mediaChipStack}>
-            {isNew ? (
-              <View style={styles.newChip}>
-                <BloomText style={styles.newChipText}>
-                  {t('listing.badge.new', 'New')}
-                </BloomText>
-              </View>
-            ) : null}
-
-            {!isGrid ? (
-              <>
-                {finalShowRating && propertyData.rating ? (
-                  <MediaChip
-                    icon={RiStarFill}
-                    accent={colors.ratingStar}
-                    label={propertyData.rating.toFixed(1)}
-                  />
-                ) : null}
-
-                {/* Offering chips — "By night" / "For sale" / "Exchange" for each
-                    OTHER offering (the active one is the price). */}
-                {otherOfferings.map((summary) => (
-                  <OfferingBadge key={summary.offering} offering={summary.offering} size="md" />
-                ))}
-
-                {/* Fair price — Homiio ethical + market badge. */}
-                {isFairPrice ? (
-                  <MediaChip
-                    icon={RiCoinsLine}
-                    accent={colors.success}
-                    label={t('listing.badge.fairPrice', 'Fair price')}
-                  />
-                ) : null}
-
-                {/* Instant Book (vacation mode only). */}
-                {showInstantBook ? (
-                  <MediaChip
-                    icon={RiSpeedUpLine}
-                    accent={colors.primarySubtleForeground}
-                    label={t('listing.badge.instantBook', 'Instant book')}
-                  />
-                ) : null}
-
-                {/* Verified — icon-only shield, brand accent. */}
-                {showVerifiedBadge && propertyData.isVerified ? (
-                  <MediaChip icon={RiShieldCheckLine} accent={colors.primarySubtleForeground} />
-                ) : null}
-
-                {/* Eco — icon-only leaf, green accent. */}
-                {isEco ? <MediaChip icon={RiLeafLine} accent={colors.success} /> : null}
-              </>
-            ) : null}
-          </View>
-        )}
-
-        {/* Custom Badge Content */}
-        {badgeContent && <View style={styles.customBadge}>{badgeContent as React.ReactNode}</View>}
-
-        {/* Overlay Content */}
-        {overlayContent && <View style={styles.overlay}>{overlayContent as React.ReactNode}</View>}
-      </>
-    );
-  }, [property, derived, variant, showRating, showVerifiedBadge, showInstantBook, isNew, badgeContent, overlayContent, t]);
-
-  /**
-   * The text block below the photo (title, location, features, price, "also
-   * available"). Memoized JSX so it isn't rebuilt on every hover re-render — it
-   * depends only on the listing data + display props, never the hover/press
-   * state.
-   */
-  const textContent = useMemo(() => {
-    if (!derived) return null;
-    const { otherOfferings, propertyData } = derived;
-    const variantStyles = getVariantStyles(variant);
-    const isGrid = variant === 'grid';
-    const isFeatured = variant === 'featured';
-    const finalShowFeatures = showFeatures && variantStyles.showFeatures;
-    const finalShowTypeIcon = showTypeIcon && variantStyles.showTypeIcon;
-    const finalShowPrice = showPrice && (variantStyles.showPrice !== false);
-    const finalTitleLines = titleLines !== undefined ? titleLines : variantStyles.titleLines;
-    const finalLocationLines = locationLines !== undefined ? locationLines : variantStyles.locationLines;
-    // Localized per-unit suffix for the headline (fixed per priced block):
-    // long-term → "month", short-term → "night"; sale/exchange have none.
-    const priceUnitSuffix = propertyData.priceUnit
-      ? formatting.priceUnitLabels[priceFrequencyFromPriceUnit(propertyData.priceUnit)].short
-      : '';
-    // "Also available: By night · For sale" — joins the other offerings' labels.
-    const alsoAvailableLabel =
-      otherOfferings.length > 0
-        ? `${t('listing.offering.alsoAvailable', 'Also available')}: ${otherOfferings
-            .map((summary) => t(summary.i18nKey, summary.fallback))
-            .join(' · ')}`
-        : '';
-    // Property type surfaced in the META line below the photo. Icon follows the
-    // former on-photo logic (house → home glyph, else building); the label reuses
-    // the `properties.titles.types.*` vocabulary, falling back to the capitalised
-    // raw type for kinds without a dedicated key.
-    const typeMeta: { icon: React.ComponentType<IconProps>; label: string } | null = propertyData.type
-      ? {
-          icon: propertyData.type === 'house' ? RiHomeLine : RiBuilding2Line,
-          label: t(
-            `properties.titles.types.${propertyData.type}`,
-            propertyData.type.charAt(0).toUpperCase() + propertyData.type.slice(1),
-          ),
-        }
-      : null;
-    return (
-      <View
-        style={[
-          styles.content,
-          orientation === 'horizontal' ? styles.horizontalContent : null,
-          isGrid ? styles.gridContent : null,
-        ]}
-      >
-        {/* Title */}
-        <ThemedText
-          style={[
-            styles.title,
-            isFeatured ? styles.featuredTitle : null,
-            isGrid ? styles.gridTitle : null,
-          ]}
-          numberOfLines={orientation === 'horizontal' ? undefined : finalTitleLines}
-        >
-          {propertyData.title}
-        </ThemedText>
-
-        {/* Location */}
-        {showLocation && propertyData.location && (
-          <ThemedText
-            style={[
-              styles.location,
-              isFeatured ? styles.featuredLocation : null,
-              orientation === 'horizontal' ? styles.horizontalLocation : null,
-              isGrid ? styles.gridLocation : null,
-            ]}
-            numberOfLines={finalLocationLines}
-          >
-            {propertyData.location}
-          </ThemedText>
-        )}
-
-        {/* Features — suppressed in grid variant to keep cards photo-first */}
-        {finalShowFeatures && !isGrid && (
-          <View style={styles.features}>
-            {/* Property type leads the meta line (moved off the photo). Shown for
-                the variants that previously surfaced the on-photo type icon; the
-                compact variant keeps its own trailing type text below. */}
-            {finalShowTypeIcon && typeMeta && variant !== 'compact' && (
-              <>
-                <View style={styles.typeMeta}>
-                  <typeMeta.icon width={13} height={13} fill={colors.COLOR_BLACK_LIGHT_4} />
-                  <ThemedText style={styles.featureText}>{typeMeta.label}</ThemedText>
-                </View>
-                <ThemedText style={styles.featureSeparator}>•</ThemedText>
-              </>
-            )}
-            <View style={styles.feature}>
-              <ThemedText style={styles.featureText}>
-                {`${propertyData.bedrooms} bed${propertyData.bedrooms !== 1 ? 's' : ''}`}
-              </ThemedText>
-            </View>
-            <ThemedText style={styles.featureSeparator}>•</ThemedText>
-            <View style={styles.feature}>
-              <ThemedText style={styles.featureText}>
-                {`${propertyData.bathrooms} bath${propertyData.bathrooms !== 1 ? 's' : ''}`}
-              </ThemedText>
-            </View>
-            {propertyData.size && propertyData.size > 0 && (
-              <>
-                <ThemedText style={styles.featureSeparator}>•</ThemedText>
-                <View style={styles.feature}>
-                  <ThemedText
-                    style={styles.featureText}
-                    accessibilityLabel={formatAreaLabel(propertyData.size, 'sqm', formatting.locale, {
-                      labels: formatting.areaUnitLabels,
-                    })}
-                  >
-                    {formatArea(propertyData.size, 'sqm', formatting.locale, {
-                      labels: formatting.areaUnitLabels,
-                    })}
-                  </ThemedText>
-                </View>
-              </>
-            )}
-            {variant === 'compact' && typeMeta && (
-              <>
-                <ThemedText style={styles.featureSeparator}>•</ThemedText>
-                <ThemedText style={styles.featureText}>{typeMeta.label}</ThemedText>
-              </>
-            )}
-          </View>
-        )}
-
-        {/* Price — the ACTIVE browse mode's priced block. Exchange listings have
-            no money price, so they render the "Free" label instead of
-            MoneyText; sale shows the sale price with NO per-unit suffix;
-            long-term shows `/month` and short-term `/night` (fixed per block). */}
-        {finalShowPrice &&
-          (propertyData.offeringKind === 'exchange'
-            ? propertyData.offeringLabel.length > 0
-            : propertyData.price > 0) && (
-          <View style={[styles.priceContainer, isGrid ? styles.gridPriceContainer : null]}>
-            <BloomText
-              style={[
-                styles.price,
-                isFeatured ? styles.featuredPrice : null,
-                isGrid ? styles.gridPrice : null,
-              ]}
-            >
-              {propertyData.offeringKind === 'exchange' ? (
-                propertyData.offeringLabel
-              ) : (
-                <>
-                  <MoneyText
-                    amount={propertyData.price}
-                    currency={propertyData.currency}
-                  />
-                  {priceUnitSuffix ? (
-                    <BloomText style={[styles.priceUnit, isGrid ? styles.gridPriceUnit : null]}>
-                      {' / '}{priceUnitSuffix}
-                    </BloomText>
-                  ) : null}
-                </>
-              )}
-            </BloomText>
-          </View>
-        )}
-
-        {/* "Also available: By night · For sale" — the OTHER offerings this
-            multi-offering listing carries. Hidden in the dense grid + compact
-            tiles to keep them photo-first. */}
-        {finalShowPrice && !isGrid && variant !== 'compact' && alsoAvailableLabel ? (
-          <BloomText style={styles.alsoAvailable} numberOfLines={1}>
-            {alsoAvailableLabel}
-          </BloomText>
-        ) : null}
-      </View>
-    );
-  }, [derived, orientation, variant, showLocation, showFeatures, showTypeIcon, showPrice, titleLines, locationLines, t, formatting]);
-
-  // The horizontal (small single-cover thumbnail) variant is too tight for the
-  // save heart — suppress it there by either path (skeleton + real render).
-  // Vertical/grid/etc. keep it. Computed before the skeleton early-return so both
-  // branches share it.
-  const finalShowSaveButton = showSaveButton && orientation !== 'horizontal';
-
-  // Show skeleton loading state
-  if (isLoading) {
-    return (
-      <PropertyCardSkeleton
-        variant={variant}
-        orientation={orientation}
-        showSaveButton={finalShowSaveButton}
-        showRating={showRating}
-        showPrice={showPrice}
-        showFeatures={showFeatures}
-        showLocation={showLocation}
-        imageHeight={imageHeight}
-      />
-    );
-  }
-
-  // Early return if property is null/undefined. `derived` is null on exactly the
-  // same condition (it guards on `property`); checking it here narrows it to
-  // non-null for the render below without a non-null assertion.
-  if (!property || !derived) {
-    return null;
-  }
-
-  const { propertyData } = derived;
-
-  const isGrid = variant === 'grid';
-  const isPropertySavedState = propertyData.id
+  const isSaved = propertyId
     ? isInitialized
-      ? isPropertySaved(propertyData.id)
+      ? isPropertySaved(propertyId)
       : (property as PropertyWithSavedHint).isSaved ?? false
     : false;
 
-  /**
-   * Grid cards present a photo-first layout. Long-term flats look better square
-   * (more wall surface visible), vacation rentals breathe in 4:3 so the
-   * landscape framing reads. Featured/default carousels keep their existing
-   * square aspect.
-   */
-  const gridAspectRatio = mode === 'vacation' ? 4 / 3 : 1;
+  const handleFavoriteChange = useCallback(
+    (next: boolean) => {
+      if (!propertyId) return;
+      // The context toasts success and failure and rolls back its optimistic
+      // update; the rejection it rethrows has nothing left to tell the user.
+      const action = next
+        ? savePropertyToFolder(propertyId, null, property)
+        : unsaveProperty(propertyId);
+      action.catch(() => undefined);
+    },
+    [propertyId, property, savePropertyToFolder, unsaveProperty],
+  );
 
-  /**
-   * The swipeable in-card carousel only makes sense for the full-bleed, vertical
-   * photo box. Horizontal rows show a small square thumbnail and the tiny
-   * `compact` tile is too small to page through, so both keep the single cover
-   * image. The carousel renders a static photo for 0–1 images, so this gate is
-   * purely about *where* a pager belongs.
-   */
-  const useCarousel =
-    enableImageCarousel && orientation === 'vertical' && variant !== 'compact';
-  const mediaAspectRatio = isGrid ? gridAspectRatio : 1;
-  const finalImageHeight = imageHeight || getVariantStyles(variant).imageHeight;
+  if (!isLoading && !content) return null;
+
+  const layout = orientation === 'horizontal' ? 'horizontal' : 'vertical';
 
   return (
     <View
-      // Web hover on the WHOLE card boundary feeds the image zoom (no card
-      // transform). `onPointerEnter/Leave` fire on this container's edge and
-      // don't re-fire moving between children on RN-Web, so hovering anywhere —
-      // photo OR text — zooms the photo. Native has no hover; press drives it.
-      onPointerEnter={Platform.OS === 'web' ? () => setHovered(true) : undefined}
-      onPointerLeave={Platform.OS === 'web' ? () => setHovered(false) : undefined}
-      style={[
-        styles.container,
-        style as ViewStyle,
-        isProcessing ? { opacity: 0.7 } : null,
-      ]}
+      style={style}
+      // Warm the detail query before the press lands: hover on web, touch on native.
+      onPointerEnter={IS_WEB ? prefetch : undefined}
+      onTouchStart={IS_WEB ? undefined : prefetch}
     >
-      {useCarousel ? (
-        // Carousel path: the swipeable media is its OWN tap target (its pages
-        // forward `onPress`), and the text block below is a SIBLING tap target.
-        // Keeping them as siblings (rather than nesting the carousel inside an
-        // outer body button) avoids nested <button> elements on web while still
-        // making the whole card open the detail screen on tap.
-        <View style={styles.body}>
-          <PropertyImageCarousel
-            images={property.images}
-            coverIndex={property.coverImageIndex}
-            aspectRatio={mediaAspectRatio}
-            borderRadius={isGrid ? radius.photo : radius.lg}
-            imageActive={imageActive}
-            onPress={onPress}
-            onPressIn={handlePressIn}
-            onLongPress={onLongPress}
-            accessibilityLabel={propertyData.title}
-          >
-            {mediaBadges}
-          </PropertyImageCarousel>
-          <Pressable
-            style={styles.contentPressable}
-            onPress={onPress}
-            onPressIn={handlePressIn}
-            onLongPress={onLongPress}
-            accessibilityRole="button"
-            accessibilityLabel={propertyData.title}
-          >
-            {textContent}
-          </Pressable>
-        </View>
-      ) : (
-        <Pressable
-          style={[
-            styles.body,
-            orientation === 'horizontal' ? styles.horizontalBody : null,
-          ]}
-          onPress={onPress}
-          onPressIn={handleImagePressIn}
-          onPressOut={() => setPressed(false)}
-          onLongPress={onLongPress}
-          accessibilityRole="button"
-          accessibilityLabel={propertyData.title}
-        >
-          <View
-            style={[
-              styles.imageContainer,
-              isGrid ? styles.gridImageContainer : null,
-              orientation === 'horizontal' ? styles.horizontalImageContainer : null,
-              isSelected ? styles.selectedImage : null,
-              orientation === 'horizontal'
-                ? { height: finalImageHeight, width: finalImageHeight }
-                : isGrid
-                  ? { width: '100%', aspectRatio: gridAspectRatio }
-                  : { width: '100%', aspectRatio: 1 },
-            ]}
-          >
-            {/* The photo zooms inside the rounded mask on hover (anywhere on the
-                card) / press; the card never moves. Badges are siblings of the
-                zoom so they stay put. */}
-            <ZoomableImage active={imageActive} style={StyleSheet.absoluteFill}>
-              <Image source={propertyData.imageSource} style={styles.image} resizeMode="cover" />
-            </ZoomableImage>
-            {mediaBadges}
-          </View>
-
-          {textContent}
-        </Pressable>
-      )}
-
-      {/* Save Button — lives in an absolutely-positioned overlay that mirrors
-          the photo box, as a SIBLING of the body Pressable. This keeps the
-          heart its own tap target without nesting a <button> inside the card
-          button (invalid HTML + hydration error on web). The overlay matches
-          the image geometry per orientation so the heart stays pinned to the
-          photo's top-right corner. */}
-      {finalShowSaveButton && (
-        // Only the vertical / grid geometry — `finalShowSaveButton` is false for
-        // the horizontal thumbnail, so the heart never renders there.
-        <View
-          // `pointerEvents:'none'` (NOT the RN-only `'box-none'`, which is an
-          // INVALID CSS `pointer-events` value that RN-Web silently drops → the
-          // full-photo overlay stays `auto` and swallows every hover/tap on the
-          // carousel, hiding the nav arrows). The save heart re-enables itself
-          // with `pointerEvents:'auto'` (valid CSS) so only it stays interactive.
-          style={[
-            styles.mediaOverlay,
-            { pointerEvents: 'none' },
-            { left: 0, right: 0, aspectRatio: isGrid ? gridAspectRatio : 1 },
-          ]}
-        >
-          <SaveButton
-            isSaved={isPropertySavedState}
-            size={variant === 'compact' ? 5 : 24}
-            variant="heart"
-            chrome="overlay"
-            color={colors.COLOR_BLACK}
-            activeColor={colors.busy}
-            style={styles.saveButton}
-            property={property}
-            showCount={showSaveCount}
-            countDisplayMode={saveCountDisplayMode}
-          />
-        </View>
-      )}
-
-      {/* Inline Note — sibling of the body Pressable, its own tap target. */}
-      {(onPressNote || (noteText && noteText.trim().length > 0)) && (
-        <TouchableOpacity
-          activeOpacity={0.7}
-          onPress={onPressNote}
-          style={StyleSheet.flatten([
-            styles.noteContainer,
-            (!noteText || noteText.trim().length === 0) && styles.noteEmpty,
-            variant === 'compact' && styles.compactNoteContainer,
-          ])}
-        >
-          <View style={styles.noteRow}>
-            <View style={styles.noteIconWrap}>
-              <RiFileTextLine width={14} height={14} fill={colors.primaryColor} />
-            </View>
-            <ThemedText
-              numberOfLines={variant === 'compact' ? 1 : 2}
-              style={StyleSheet.flatten([
-                styles.noteText,
-                (!noteText || noteText.trim().length === 0) && styles.notePlaceholder,
-                variant === 'compact' && styles.compactNoteText,
-              ])}
-            >
-              {noteText && noteText.trim().length > 0 ? noteText : 'Add a note'}
-            </ThemedText>
-            <RiEditLine width={16} height={16} fill={colors.primaryColor} />
-          </View>
-        </TouchableOpacity>
-      )}
-
-      {/* Footer Content */}
-      {footerContent && <View style={styles.footer}>{footerContent as React.ReactNode}</View>}
+      <ListingCard
+        loading={isLoading}
+        layout={layout}
+        photos={content?.photos ?? []}
+        title={content?.title ?? ''}
+        subtitle={content?.subtitle}
+        dates={content?.dates}
+        price={content?.price}
+        priceUnit={content?.priceUnit}
+        badge={content?.badge}
+        href={propertyId ? `/properties/${propertyId}` : undefined}
+        onPress={onPress}
+        favorite={isSaved}
+        onFavoriteChange={showSaveButton && propertyId ? handleFavoriteChange : undefined}
+        accessibilityLabel={content?.accessibilityLabel}
+        previousPhotoLabel={t('listing.card.previousPhoto')}
+        nextPhotoLabel={t('listing.card.nextPhoto')}
+        saveLabel={t('listing.card.save')}
+        removeLabel={t('listing.card.unsave')}
+      />
+      {footerContent ? <View style={styles.footer}>{footerContent}</View> : null}
     </View>
   );
 });
 
 const styles = StyleSheet.create({
-  // ===== BASE STYLES (shared across all variants) =====
-  container: {
-    width: '100%',
-    height: 'auto',
-    position: 'relative',
-    gap: spacing.sm,
-  },
-  body: {
-    width: '100%',
-    gap: spacing.sm,
-  },
-  // The text block under the carousel media. Its own tap target (a sibling of
-  // the carousel, not nested inside it) so the whole card opens the detail
-  // without nesting a <button> in a <button> on web.
-  contentPressable: {
-    width: '100%',
-  },
-  horizontalBody: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.sm,
-  },
-  imageContainer: {
-    position: 'relative',
-    backgroundColor: colors.COLOR_BLACK_LIGHT_8,
-    borderRadius: radius.lg,
-    overflow: 'hidden',
-  },
-  /**
-   * Grid variant — photos read as proper Airbnb tiles: rounder corners
-   * (24px) and no shadow on the photo itself (the cell handles spacing).
-   */
-  gridImageContainer: {
-    borderRadius: radius.photo,
-  },
-  horizontalImageContainer: {
-    flexShrink: 0,
-  },
-  image: {
-    width: '100%',
-    height: '100%',
-  },
-  content: {
-    flex: 1,
-    justifyContent: 'space-between',
-    gap: 2,
-  },
-  horizontalContent: {
-    flex: 1,
-    justifyContent: 'space-between',
-  },
-  title: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: colors.COLOR_BLACK,
-    lineHeight: 20,
-  },
-  location: {
-    fontSize: 12,
-    color: colors.COLOR_BLACK_LIGHT_4,
-    lineHeight: 18,
-  },
-  horizontalLocation: {
-    fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_4,
-    lineHeight: 18,
-  },
-  features: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: spacing.xs,
-  },
-  feature: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  featureText: {
-    fontSize: 12,
-    color: colors.COLOR_BLACK_LIGHT_4,
-  },
-  featureSeparator: {
-    fontSize: 12,
-    color: colors.COLOR_BLACK_LIGHT_4,
-    marginHorizontal: spacing.xs,
-  },
-  priceContainer: {
-    marginTop: 'auto',
-  },
-  price: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: colors.COLOR_BLACK,
-  },
-  priceUnit: {
-    fontSize: 12,
-    fontWeight: '400',
-    color: colors.COLOR_BLACK_LIGHT_4,
-  },
-  // Subtle secondary line under the price listing the listing's OTHER offerings.
-  alsoAvailable: {
-    fontSize: 12,
-    color: colors.COLOR_BLACK_LIGHT_4,
-    marginTop: 2,
-  },
-
-  // Badge and overlay styles (shared)
-  // Absolute layer pinned to the top-left of the card that mirrors the photo
-  // box; hosts the SaveButton as a sibling of the body Pressable so the heart
-  // never nests inside the card's button element.
-  mediaOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    zIndex: 2,
-  },
-  // Positioning only — the frosted-white chrome comes from `SaveButton`'s
-  // `chrome="overlay"` variant. `pointerEvents:'auto'` re-enables just the heart
-  // inside the `pointerEvents:'none'` media overlay (valid-CSS box-none).
-  saveButton: {
-    position: 'absolute',
-    top: spacing.sm,
-    right: spacing.sm,
-    zIndex: 2,
-    pointerEvents: 'auto',
-  },
-  /**
-   * The single photo-overlay chip stack. Absolutely pinned to the top-left at a
-   * uniform `spacing.sm` inset (the same inset the save heart uses on the
-   * top-right), it lays its `MediaChip` children out with `flexDirection: 'row'`
-   * + `flexWrap` + `gap`, so the chips flow and align automatically — no
-   * per-badge `position`/`top`/`left` magic numbers. `maxWidth` keeps a busy
-   * stack from running under the top-right heart; overflow wraps to a new row.
-   */
-  mediaChipStack: {
-    position: 'absolute',
-    top: spacing.sm,
-    left: spacing.sm,
-    maxWidth: '78%',
-    zIndex: 2,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'flex-start',
-    gap: spacing.xs,
-  },
-  /**
-   * Freshness "New" chip — a compact frosted-white pill that matches the on-card
-   * Save heart (`rgba(255,255,255,0.95)`, black glyph) sitting in the opposite
-   * corner, so the overlay set reads as one flat Airbnb-style family. Shorter and
-   * tighter than a `MediaChip`; no shadow (Airbnb-flat).
-   */
-  newChip: {
-    height: 20,
-    paddingHorizontal: spacing.sm,
-    borderRadius: radius.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-  },
-  newChipText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: colors.COLOR_BLACK,
-  },
-  // Property type in the meta line below the photo (icon + label), replacing the
-  // former on-photo type chip.
-  typeMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
-
-  // Note styles (shared)
-  noteContainer: {
-    marginTop: spacing.sm,
-    backgroundColor: colors.white,
-    borderRadius: 12,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 10,
-    borderWidth: 1,
-    borderColor: colors.COLOR_BLACK_LIGHT_6,
-  },
-  noteEmpty: {
-    backgroundColor: colors.COLOR_BLACK_LIGHT_8,
-    borderStyle: 'dashed',
-  },
-  noteRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.sm,
-  },
-  noteIconWrap: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.primaryLight,
-  },
-  noteText: {
-    fontSize: 13,
-    color: colors.COLOR_BLACK_LIGHT_3,
-    lineHeight: 18,
-  },
-  notePlaceholder: {
-    color: colors.COLOR_BLACK_LIGHT_5,
-    fontStyle: 'italic',
-  },
-
-  // Footer and overlay styles (shared)
-  footer: {
-    marginTop: spacing.sm,
-    paddingTop: spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: colors.COLOR_BLACK_LIGHT_6,
-  },
-  selectedImage: {
-    borderWidth: 2,
-    borderColor: colors.primaryColor,
-    borderRadius: 25,
-  },
-  customBadge: {
-    position: 'absolute',
-    top: 6,
-    right: 6,
-    zIndex: 1,
-  },
-  overlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.05)',
-  },
-
-  // ===== COMPACT VARIANT STYLES =====
-  compactNoteContainer: {
-    paddingVertical: 6,
-    paddingHorizontal: 8,
-  },
-  compactNoteText: {
-    fontSize: 12,
-    lineHeight: 16,
-  },
-
-  // ===== FEATURED VARIANT STYLES =====
-  featuredTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  featuredLocation: {
-    fontSize: 13,
-  },
-  featuredPrice: {
-    fontSize: 15,
-  },
-
-  // ===== GRID VARIANT STYLES =====
-  /**
-   * Tighter content block under the photo. The grid lives at a wider
-   * cadence than carousels — copy stays small so the photo dominates.
-   */
-  gridContent: {
-    gap: 2,
-    paddingTop: spacing.sm,
-    paddingHorizontal: 2,
-  },
-  gridTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: colors.COLOR_BLACK,
-    lineHeight: 20,
-  },
-  gridLocation: {
-    fontSize: 13,
-    fontWeight: '400',
-    color: colors.COLOR_BLACK_LIGHT_4,
-    lineHeight: 18,
-  },
-  gridPriceContainer: {
-    marginTop: 4,
-  },
-  gridPrice: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: colors.COLOR_BLACK,
-  },
-  gridPriceUnit: {
-    fontSize: 13,
-    fontWeight: '400',
-    color: colors.COLOR_BLACK_LIGHT_4,
-  },
+  footer: { marginTop: 12 },
 });
+
+export default PropertyCard;

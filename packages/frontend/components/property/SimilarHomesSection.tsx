@@ -46,10 +46,8 @@ export const SimilarHomesSection: React.FC<SimilarHomesSectionProps> = ({
       renderItem={(item) => (
         <PropertyCard
           property={item}
-          variant="default"
           enableImageCarousel={false}
           showSaveButton={false}
-          showRating={false}
           onPress={() => router.push(`/properties/${item.id}`)}
         />
       )}

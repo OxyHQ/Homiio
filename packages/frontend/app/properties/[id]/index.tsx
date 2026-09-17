@@ -2,16 +2,19 @@
  * Property detail screen — Airbnb-2026 inspired layout.
  *
  * Architecture:
- *  - Hero PhotoGrid (1+4 on web/tablet, carousel on phone).
- *  - Two-column layout on desktop: left = sections, right = sticky
- *    booking/apply card.
+ *  - Bloom `ListingHeader` (title, facts, real review rating, location, share
+ *    and save) and `ListingPhotoGrid` (1 + 4 grid from 744 wide, a full-bleed
+ *    carousel below, where the photos lead) opening `ZoomableMediaGallery`.
+ *  - The booking/apply card lives in the app shell's right column on wide
+ *    screens and inline on narrow ones; a short stay then gets Bloom's
+ *    `BookingBar` pinned under the page, sharing the card's selection.
  *  - On scroll past the photo grid, a slim sticky breadcrumb header
  *    (StickyPropertyHeader) appears with title + price + CTA.
  *  - Sections are flat (no cards/shadows): shared Bloom Typography, a
  *    consistent vertical rhythm (`styles.section`), and a single
  *    hairline divider between blocks. Content sits directly on the page
  *    background and aligns to one gutter.
- *  - Action bar (footer): existing PropertyActionBar reused.
+ *  - Action bar (footer): PropertyActionBar for every other listing.
  */
 import React, {
   useCallback,
@@ -24,6 +27,9 @@ import {
   Platform,
   StyleSheet,
   View,
+  useWindowDimensions,
+  type LayoutChangeEvent,
+  type ViewStyle,
 } from 'react-native';
 import {
   runOnJS,
@@ -43,34 +49,51 @@ import {
   RiAccountCircleLine,
   RiCalendarLine,
   RiCheckLine,
+  RiHeartFill,
+  RiHeartLine,
   RiHomeLine,
   RiShapesLine,
   RiShare2Line,
 } from '@oxy.so/bloom/icons';
+import { BookingBar } from '@oxy.so/bloom/booking';
+import {
+  LISTING_PHOTO_GRID_BREAKPOINT,
+  ListingHeader,
+  ListingHeaderAction,
+  ListingPhotoGrid,
+} from '@oxy.so/bloom/listing-details';
+import {
+  ZoomableMediaGallery,
+  type ZoomableMediaGalleryHandle,
+} from '@oxy.so/bloom/zoomable-media-gallery';
 
 import { Header } from '@/components/Header';
 import { PageScrollView } from '@/components/PageScrollView';
-import { SaveButton } from '@/components/SaveButton';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { useAreaInsights, useNearbyServices, useProperty } from '@/hooks';
+import { useAddressReviews } from '@/hooks/useAddressReviews';
+import { useStayBooking } from '@/hooks/useStayBooking';
+import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
 import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
 import { useRentalMode } from '@/context/RentalModeContext';
 import { useIsRightBarVisible } from '@/hooks/useOptimizedMediaQuery';
-import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
 import { resolveHeadlinePrice } from '@/utils/propertyPricing';
 import { useFormatting } from '@/utils/format';
-import { hasOffering, resolveOfferingSummaries } from '@/utils/propertyUtils';
+import {
+  getPropertyLocationLabel,
+  getPropertyPhotos,
+  getPropertyTitle,
+  hasOffering,
+  resolveOfferingSummaries,
+} from '@/utils/propertyUtils';
 import { shareContent } from '@/utils/share';
 import { propertyService } from '@/services/propertyService';
 import profileService, { type Profile } from '@/services/profileService';
 import ViewingService from '@/services/viewingService';
-import { OfferingType, PropertyType, type Property, type PropertyImage } from '@homiio/shared-types';
+import { formatArea, OfferingType, type Property } from '@homiio/shared-types';
 
 import { PropertyDetailSkeleton } from '@/components/ui/skeletons/PropertyDetailSkeleton';
 
-import { PhotoGrid } from '@/components/property/PhotoGrid';
-import { HeaderSection } from '@/components/property/HeaderSection';
-import { HostStatsCard } from '@/components/property/HostStatsCard';
 import { SleepArrangement } from '@/components/property/SleepArrangement';
 import { LandlordSection } from '@/components/property/LandlordSection';
 import { SindiSection } from '@/components/property/SindiSection';
@@ -90,7 +113,7 @@ import { PropertyOverview } from '@/components/property/PropertyOverview';
 import { NeighborhoodInfo } from '@/components/property/NeighborhoodInfo';
 import { NearbyServicesSection } from '@/components/property/NearbyServicesSection';
 import { AvailabilitySection } from '@/components/property/AvailabilitySection';
-import { AmenitiesSection } from '@/components/property/AmenitiesSection';
+import { AmenitiesGrid } from '@/components/property/AmenitiesGrid';
 import { CommunityNotesSection } from '@/components/property/CommunityNotesSection';
 import { ReviewsSection } from '@/components/property/ReviewsSection';
 import { PriceRangeSection } from '@/components/property/PriceRangeSection';
@@ -117,7 +140,6 @@ interface PropertyDetailViewModel {
   bedrooms: number;
   bathrooms: number;
   size: number;
-  images: string[] | PropertyImage[];
 }
 
 const STICKY_HEADER_THRESHOLD = 480;
@@ -245,14 +267,8 @@ export default function PropertyDetailPage() {
             .join(' · ')}`
         : '';
 
-    const generatedTitle = generatePropertyTitle({
-      type: Object.values(PropertyType).includes(apiProperty.type as PropertyType)
-        ? (apiProperty.type as PropertyType)
-        : PropertyType.APARTMENT,
-      address: apiProperty.address,
-      bedrooms: apiProperty.bedrooms,
-      bathrooms: apiProperty.bathrooms,
-    });
+    // The same title the listing's card shows, from the address's display names.
+    const generatedTitle = getPropertyTitle(apiProperty);
     return {
       id: propertyId,
       title: generatedTitle,
@@ -262,7 +278,6 @@ export default function PropertyDetailPage() {
       bedrooms: apiProperty.bedrooms || 0,
       bathrooms: apiProperty.bathrooms || 0,
       size: apiProperty.squareFootage || 0,
-      images: apiProperty.images || [],
     };
   }, [apiProperty, browseMode, t, formatting]);
 
@@ -547,6 +562,57 @@ export default function PropertyDetailPage() {
     [scrollY],
   );
 
+  // Photos cover-first with captions; the grid and the fullscreen gallery read
+  // the SAME list, so a tapped tile opens that photo.
+  const photos = useMemo(
+    () => getPropertyPhotos(apiProperty?.images, apiProperty?.coverImageIndex, 'large'),
+    [apiProperty?.images, apiProperty?.coverImageIndex],
+  );
+  const galleryRef = useRef<ZoomableMediaGalleryHandle>(null);
+  const openGallery = useCallback(
+    (index: number) => {
+      galleryRef.current?.open(
+        photos.map((photo) => ({ uri: photo.source, alt: photo.alt })),
+        index,
+      );
+    },
+    [photos],
+  );
+
+  // The header's rating is the address's real review aggregate — the same
+  // source the reviews section reads — and absent without reviews.
+  const { ratingSummary } = useAddressReviews(apiProperty);
+
+  const { isPropertySaved, savePropertyToFolder, unsaveProperty } = useSavedPropertiesContext();
+  const isSaved = apiProperty?.id ? isPropertySaved(String(apiProperty.id)) : false;
+  const handleToggleSaved = useCallback(() => {
+    const targetId = apiProperty?.id ? String(apiProperty.id) : '';
+    if (!targetId) return;
+    // The context toasts the outcome and rolls back on failure.
+    const action = isSaved
+      ? unsaveProperty(targetId)
+      : savePropertyToFolder(targetId, null, apiProperty ?? undefined);
+    action.catch(() => undefined);
+  }, [apiProperty, isSaved, savePropertyToFolder, unsaveProperty]);
+
+  // Photos lead on a narrow page (a full-bleed carousel, like a phone listing);
+  // the title leads once the grid has room for its 1 + 4 layout.
+  const { width: windowWidth } = useWindowDimensions();
+  const [pageWidth, setPageWidth] = useState(0);
+  const handlePageLayout = useCallback((event: LayoutChangeEvent) => {
+    setPageWidth(event.nativeEvent.layout.width);
+  }, []);
+  const photosLead = (pageWidth || windowWidth) < LISTING_PHOTO_GRID_BREAKPOINT;
+
+  const bookingMode = apiProperty
+    ? resolveBookingMode(apiProperty as Property, rentalMode)
+    : 'none';
+  // The phone booking bar and the inline booking card share one selection.
+  const stay = useStayBooking(apiProperty, {
+    enabled: !isRightBarVisible && bookingMode === 'vacation',
+  });
+  const showBookingBar = !isRightBarVisible && bookingMode === 'vacation' && stay.bookable;
+
   if (isLoading) {
     return <PropertyDetailSkeleton />;
   }
@@ -608,10 +674,67 @@ export default function PropertyDetailPage() {
   // shows when the RightBar is hidden (mobile/narrow). The screen stays
   // single-column either way. `resolveBookingMode` is the ONE branching source
   // shared with BookingCard — the mobile inline path renders the SAME card.
-  const bookingMode = apiProperty
-    ? resolveBookingMode(apiProperty as Property, rentalMode)
-    : 'none';
-  const showInlineBookingCard = bookingMode !== 'none' && !isRightBarVisible;
+  const showInlineBookingCard =
+    (bookingMode !== 'none' || Boolean(apiProperty?.isExternal)) && !isRightBarVisible;
+
+  const headerFacts = [
+    apiProperty?.type
+      ? t(`properties.titles.types.${apiProperty.type}`, { defaultValue: '' })
+      : '',
+    property.bedrooms ? t('listing.card.beds', { count: property.bedrooms }) : '',
+    property.bathrooms ? t('listing.card.baths', { count: property.bathrooms }) : '',
+    property.size > 0
+      ? formatArea(property.size, 'sqm', formatting.locale, { labels: formatting.areaUnitLabels })
+      : '',
+  ].filter(Boolean);
+  const hasRating = ratingSummary.totalReviews > 0;
+
+  const listingHeader = (
+    <View style={styles.listingHeader}>
+      <ListingHeader
+        title={property.title}
+        subtitle={headerFacts}
+        rating={hasRating ? ratingSummary.averageRating : undefined}
+        reviewsLabel={
+          hasRating ? t('property.reviews.total', { count: ratingSummary.totalReviews }) : undefined
+        }
+        location={getPropertyLocationLabel(apiProperty ?? undefined) || undefined}
+        actions={
+          <>
+            <ListingHeaderAction
+              icon={RiShare2Line}
+              label={t('common.share')}
+              onPress={handleShare}
+            />
+            <ListingHeaderAction
+              icon={isSaved ? RiHeartFill : RiHeartLine}
+              label={t('common.save')}
+              pressed={isSaved}
+              onPress={handleToggleSaved}
+            />
+          </>
+        }
+      />
+    </View>
+  );
+  const photoGrid =
+    photos.length > 0 ? (
+      <View style={photosLead ? null : styles.photoGridWide}>
+        <ListingPhotoGrid
+          photos={photos}
+          layout={photosLead ? 'carousel' : 'grid'}
+          onPressPhoto={openGallery}
+          onShowAll={() => openGallery(0)}
+          showAllLabel={t('property.photos.showAll')}
+          accessibilityLabel={t('property.photos.label')}
+          photoLabel={(photo, position, total) =>
+            photo.alt
+              ? t('property.photos.namedPhotoOf', { name: photo.alt, position, total })
+              : t('property.photos.photoOf', { position, total })
+          }
+        />
+      </View>
+    ) : null;
 
   const showSleepArrangement =
     rentalMode === 'vacation' && isVacationRentable;
@@ -643,16 +766,9 @@ export default function PropertyDetailPage() {
                       icon={RiAccountCircleLine}
                       variant="overlay"
                       onPress={() => router.push(`/roommates/${landlordOxyUserId}`)}
-                      accessibilityLabel="Open host profile"
+                      accessibilityLabel={t('property.host.openProfile')}
                     />
                   ) : null,
-                  <IconButton
-                    key="share"
-                    icon={RiShare2Line}
-                    variant="overlay"
-                    onPress={handleShare}
-                    accessibilityLabel="Share property"
-                  />,
                   <IconButton
                     key="viewings"
                     icon={RiCalendarLine}
@@ -667,17 +783,6 @@ export default function PropertyDetailPage() {
                       ) : undefined
                     }
                   />,
-                  <View key="save" style={styles.headerSaveWrap}>
-                    <SaveButton
-                      property={apiProperty as Property}
-                      variant="heart"
-                      chrome="overlay"
-                      color={colors.COLOR_BLACK}
-                      activeColor={colors.error}
-                      showCount
-                      countDisplayMode="inline"
-                    />
-                  </View>,
                 ],
           }}
         />
@@ -702,32 +807,15 @@ export default function PropertyDetailPage() {
           { paddingBottom: spacing['7xl'] },
         ]}
       >
-        <HeaderSection
-          title={property.title}
-          location={property.location}
-          bedrooms={property.bedrooms}
-          bathrooms={property.bathrooms}
-          size={property.size}
-          images={property.images as PropertyImage[]}
-        />
-        <PhotoGrid
-          images={property.images as PropertyImage[]}
-          t={(key) => t(key) || key}
-        />
+        <View onLayout={handlePageLayout}>
+          {photosLead ? photoGrid : listingHeader}
+          {photosLead ? listingHeader : photoGrid}
+        </View>
 
         <View style={styles.infoContainer}>
           {apiProperty ? (
-            <View style={styles.section}>
-              <HostStatsCard
-                property={apiProperty}
-                landlordProfile={landlordProfile}
-              />
-              <View style={styles.demandRow}>
-                <DemandSignal
-                  propertyId={property.id}
-                  createdAt={apiProperty.createdAt}
-                />
-              </View>
+            <View style={styles.demandRow}>
+              <DemandSignal propertyId={property.id} createdAt={apiProperty.createdAt} />
             </View>
           ) : null}
 
@@ -754,9 +842,7 @@ export default function PropertyDetailPage() {
               <Section>
                 <BookingCard
                   property={apiProperty as Property}
-                  priceLabel={property.price}
-                  priceSubtitle={property.location}
-                  landlordProfile={landlordProfile}
+                  stay={showBookingBar ? stay : undefined}
                 />
               </Section>
             </View>
@@ -840,9 +926,7 @@ export default function PropertyDetailPage() {
           </View>
 
           <View style={[styles.section, styles.divider]}>
-            <AmenitiesSection
-              property={apiProperty as { amenities?: string[] | null }}
-            />
+            <AmenitiesGrid property={apiProperty as { amenities?: string[] | null }} />
           </View>
 
           {/* Community Notes — community-verified notes about the building —
@@ -899,10 +983,6 @@ export default function PropertyDetailPage() {
                 landlordProfile={landlordProfile}
                 ownerProperties={ownerProperties}
                 onApplyPublic={handlePublicHousingApply}
-                // LandlordSection only ever calls `t(key)`, so the second
-                // parameter was dead — with `d` always undefined this is the
-                // same expression it evaluated to.
-                t={(k: string) => t(k, '') || k}
               />
             </View>
           ) : null}
@@ -918,6 +998,25 @@ export default function PropertyDetailPage() {
         </View>
       </PageScrollView>
 
+      {showBookingBar ? (
+        <BookingBar
+          price={stay.price}
+          priceUnit={stay.priceUnit}
+          priceAccessibilityLabel={stay.priceAccessibilityLabel}
+          dates={stay.datesSummary ?? t('search.summary.addDates')}
+          onPressDates={() => stay.openDates('checkIn')}
+          reserveLabel={
+            !stay.range
+              ? t('booking.widget.checkAvailability')
+              : stay.instantBook
+                ? t('property.cta.reserve')
+                : t('booking.widget.requestToBook')
+          }
+          onReserve={stay.reserve}
+          loading={stay.reserving}
+          style={styles.bookingBar}
+        />
+      ) : (
       <PropertyActionBar
         property={apiProperty}
         landlordProfile={landlordProfile}
@@ -935,6 +1034,10 @@ export default function PropertyDetailPage() {
         isExchangeListing={isExchangeListing}
         onRequestExchange={handleRequestExchange}
       />
+      )}
+      {stay.dialog}
+
+      <ZoomableMediaGallery ref={galleryRef} indicatorVariant="thumbnails" />
 
       {/* Mounted on-demand: the request flow (and its own-properties query) only
           spins up once the authed user opens the sheet, never on idle views. */}
@@ -955,11 +1058,21 @@ const styles = StyleSheet.create({
   scrollContent: { paddingBottom: spacing['6xl'] },
   errorRoot: { flex: 1 },
   errorBody: { flex: 1 },
-  headerSaveWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
+  listingHeader: {
+    paddingHorizontal: SECTION_GUTTER,
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.xl,
   },
+  // The 1 + 4 grid sits inside the page gutter; the narrow carousel is full-bleed.
+  photoGridWide: {
+    paddingHorizontal: SECTION_GUTTER,
+    paddingBottom: spacing.xl,
+  },
+  // RN-Web supports `position: 'sticky'`, absent from RN's ViewStyle.
+  bookingBar: Platform.select({
+    web: { position: 'sticky', bottom: 0, zIndex: 1000 } as unknown as ViewStyle,
+    default: {},
+  }),
   // Single-column content. The page columns (content + widgets) are owned
   // by the app shell (app/_layout.tsx: mainContentWrapper + RightBar), so
   // this screen only fills the content column. It's full-bleed (no
@@ -976,10 +1089,10 @@ const styles = StyleSheet.create({
   section: {
     paddingVertical: spacing.xl,
   },
-  // Demand signal sits just under the host card, sharing its gutter.
+  // Demand signal sits just under the photos, sharing the section gutter.
   demandRow: {
     paddingHorizontal: SECTION_GUTTER,
-    marginTop: spacing.md,
+    paddingBottom: spacing.xl,
   },
   // "Also available" line under the headline price, sharing the section gutter.
   alsoAvailableRow: {

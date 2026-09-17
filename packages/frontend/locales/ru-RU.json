@@ -2443,7 +2443,8 @@
       "openProfile": "Open host profile",
       "publicSubtitle": "Government-managed affordable housing",
       "publicAuthority": "Public Housing Authority",
-      "superHost": "Super host"
+      "superHost": "Super host",
+      "regionAuthority": "Жилищное управление: {{region}}"
     },
     "report": {
       "reason": {
@@ -2502,7 +2503,11 @@
       "recommend": "Recommend",
       "count": "reviews",
       "countWithNumber": "({{count}} reviews)",
-      "showAll": "Show all {{count}} reviews"
+      "showAll": "Show all {{count}} reviews",
+      "total_one": "{{count}} отзыв",
+      "total_few": "{{count}} отзыва",
+      "total_many": "{{count}} отзывов",
+      "total_other": "{{count}} отзыва"
     },
     "notFoundHelp": "It may have been removed or the link is broken.",
     "sections": {
@@ -2561,6 +2566,12 @@
         "aboveMarketGeneric": "This price is above the local average for similar homes.",
         "generic": "This listing does not meet Homiio's fair-price criteria."
       }
+    },
+    "photos": {
+      "showAll": "Показать все фото",
+      "label": "Фото объявления",
+      "photoOf": "Фото {{position}} из {{total}}",
+      "namedPhotoOf": "{{name}}, фото {{position}} из {{total}}"
     }
   },
   "viewings": {
@@ -2895,6 +2906,20 @@
       "viewOnSourceWebsite": "View on Source Website",
       "callNow": "Call Now",
       "moreByOwner": "More properties by this owner"
+    },
+    "card": {
+      "beds_one": "{{count}} спальня",
+      "beds_few": "{{count}} спальни",
+      "beds_many": "{{count}} спален",
+      "beds_other": "{{count}} спальни",
+      "baths_one": "{{count}} санузел",
+      "baths_few": "{{count}} санузла",
+      "baths_many": "{{count}} санузлов",
+      "baths_other": "{{count}} санузла",
+      "previousPhoto": "Предыдущее фото",
+      "nextPhoto": "Следующее фото",
+      "save": "Сохранить",
+      "unsave": "Удалить из сохранённого"
     }
   },
   "goBack": "Go back",
@@ -3657,7 +3682,8 @@
       "requestToBook": "Запросить бронирование",
       "perNight": "ночь",
       "dates": "Даты",
-      "requestNote": "Оплата пока не списывается. Хозяин ответит в течение 24 часов."
+      "requestNote": "Оплата пока не списывается. Хозяин ответит в течение 24 часов.",
+      "checkAvailability": "Проверить наличие"
     },
     "policy": {
       "flexible": "Гибкие условия отмены — полный возврат в любое время до заезда.",
@@ -3668,6 +3694,14 @@
     "calendar": {
       "selectRange": "Выберите даты заезда и выезда",
       "apply": "Применить"
+    },
+    "breakdown": {
+      "nights_one": "{{price}} × {{count}} ночь",
+      "nights_few": "{{price}} × {{count}} ночи",
+      "nights_many": "{{price}} × {{count}} ночей",
+      "nights_other": "{{price}} × {{count}} ночи",
+      "total": "Итого",
+      "selectDates": "Выберите даты, чтобы увидеть итоговую цену."
     }
   },
   "addresses": {

@@ -1,213 +1,226 @@
 /**
- * BookingCard — the price / booking / apply card on the property detail
- * screen.
+ * BookingCard — the booking / apply card of a listing, beside it in the app
+ * shell's right column (`PropertyBookingWidget`) or inline on a narrow screen.
  *
- * Renders FLAT content (no border / background of its own): the surrounding
- * chrome is owned by the host —
- *  - desktop right column: `PropertyBookingWidget` wraps this in `BaseWidget`
- *    (the shared `primaryLight` + radius-15 surface, sticky on web);
- *  - mobile inline: the detail screen wraps this in a flat `Section`.
+ * Which card is decided by `resolveBookingMode` (the one branching source,
+ * shared with the screen) and by whether the listing is external:
  *
- * Layout (Airbnb-style):
- *  - Header: headline price + subtitle, a `SaveButton` wishlist control, the
- *    review rating (stars + count, from the SAME `addressReviews` source the
- *    Reviews block uses), and a host line (name + a "Super host" badge when
- *    applicable).
- *  - Body: vacation → `BookingWidget`, long-term → `ApplyToRentCTA`, chosen by
- *    `resolveBookingMode` (the one branching source, shared with the screen).
- *  - Footer: a "Report this listing" link.
+ *  - short stay, bookable in Homiio → Bloom `BookingCard`: nightly price, the
+ *    check-in / checkout / guests box (dates in the availability calendar,
+ *    guests in Bloom's `GuestPicker`), Reserve for instant book or Request to
+ *    book, and the itemised quote once dates are picked;
+ *  - long-term rent → the same card frame holding the price and
+ *    `ApplyToRentCTA` (move-in date + apply);
+ *  - external listing (any mode) → the price and "View on source website";
+ *    Homiio never books or applies for it.
+ *
+ * A rating is drawn only from the real review aggregate of the listing's
+ * address (the same source the reviews section reads) and omitted without one.
  */
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
-import { RiFlagLine, RiUserLine } from '@oxy.so/bloom/icons';
 
-import { Badge } from '@oxy.so/bloom/badge';
+import { BookingCard as BloomBookingCard } from '@oxy.so/bloom/booking';
 import { Button } from '@oxy.so/bloom/button';
-import { H3, Text as BloomText } from '@oxy.so/bloom/typography';
+import { Card } from '@oxy.so/bloom/card';
+import { RiFlagLine } from '@oxy.so/bloom/icons';
+import { Rating } from '@oxy.so/bloom/rating';
+import { GuestPicker } from '@oxy.so/bloom/stay-search';
+import { Text as BloomText } from '@oxy.so/bloom/typography';
+import { CancellationPolicy, type Property } from '@homiio/shared-types';
 
-import { BookingWidget } from '@/components/BookingWidget';
 import { ApplyToRentCTA } from '@/components/property/ApplyToRentCTA';
-import { SaveButton } from '@/components/SaveButton';
-import { Stars } from '@/components/ui/Stars';
+import { ExternalSourceButton } from '@/components/property/ExternalSourceButton';
 import { useAddressReviews } from '@/hooks/useAddressReviews';
+import { useStayBooking, type StayBooking } from '@/hooks/useStayBooking';
 import { useRentalMode } from '@/context/RentalModeContext';
 import { resolveBookingMode } from '@/utils/bookingMode';
-import { isSuperHost, resolveHostName } from '@/utils/host';
-import { colors } from '@/styles/colors';
-import { hairline, spacing } from '@/constants/styles';
-import { type Profile, type Property } from '@homiio/shared-types';
+import { resolveHeadlinePrice } from '@/utils/propertyPricing';
+import { useFormatting } from '@/utils/format';
+
+const GUEST_KINDS = ['adults', 'children', 'infants'] as const;
 
 interface BookingCardProps {
   property: Property;
-  /** Pre-formatted price string from the detail page view model. */
-  priceLabel: string;
-  /** Optional short copy under the price ("City, Country"). */
-  priceSubtitle?: string;
-  /** Host profile (already loaded by the screen) for the host line + badge. */
-  landlordProfile?: Profile | null;
+  /**
+   * A stay selection owned by the screen, when the phone booking bar shares it.
+   * Without one the card owns its selection and renders its own dates dialog.
+   */
+  stay?: StayBooking;
 }
 
-const RATING_STAR_SIZE = 14;
-const SAVE_ICON_SIZE = 22;
+type TFn = ReturnType<typeof useTranslation>['t'];
 
-export const BookingCard: React.FC<BookingCardProps> = ({
-  property,
-  priceLabel,
-  priceSubtitle,
-  landlordProfile = null,
-}) => {
+const policyLabel = (t: TFn, policy: CancellationPolicy | undefined): string => {
+  switch (policy) {
+    case CancellationPolicy.FLEXIBLE:
+      return t('booking.policy.flexible');
+    case CancellationPolicy.MODERATE:
+      return t('booking.policy.moderate');
+    case CancellationPolicy.STRICT:
+      return t('booking.policy.strict');
+    case CancellationPolicy.SUPER_STRICT:
+      return t('booking.policy.superStrict');
+    default:
+      return '';
+  }
+};
+
+export const BookingCard: React.FC<BookingCardProps> = ({ property, stay }) => {
   const { t } = useTranslation();
   const router = useRouter();
+  const formatting = useFormatting();
   const { mode: rentalMode } = useRentalMode();
 
   const bookingMode = resolveBookingMode(property, rentalMode);
-  const propertyId = String(property.id ?? '');
+  const ownStay = useStayBooking(property, { enabled: !stay && bookingMode === 'vacation' });
+  const booking = stay ?? ownStay;
 
-  // Rating from the same source the Reviews block reads (shared cache key).
   const { ratingSummary } = useAddressReviews(property);
   const hasRating = ratingSummary.totalReviews > 0;
 
-  const hostName = landlordProfile ? resolveHostName(landlordProfile) : '';
-  const hostIsSuper = isSuperHost(landlordProfile);
-
+  const propertyId = String(property.id ?? '');
   const handleReport = () => {
     if (!propertyId) return;
     router.push({ pathname: '/properties/[id]/report', params: { id: propertyId } });
   };
 
-  return (
-    <View style={styles.card}>
-      <View style={styles.header}>
-        <View style={styles.priceColumn}>
-          <H3 style={styles.price}>{priceLabel}</H3>
-          {priceSubtitle ? (
-            <BloomText style={styles.priceSubtitle}>{priceSubtitle}</BloomText>
-          ) : null}
-        </View>
-        <SaveButton
-          property={property}
-          variant="heart"
-          size={SAVE_ICON_SIZE}
-          color={colors.COLOR_BLACK}
-          activeColor={colors.error}
-        />
-      </View>
+  const reportLink = (
+    <Button
+      variant="link"
+      linkTone="secondary"
+      size="small"
+      leadingIcon={RiFlagLine}
+      onPress={handleReport}
+    >
+      {t('property.report.title')}
+    </Button>
+  );
 
-      {hasRating || hostName ? (
-        <View style={styles.trustRow}>
-          {hasRating ? (
-            <View style={styles.ratingGroup}>
-              <Stars rating={ratingSummary.averageRating} size={RATING_STAR_SIZE} />
-              <BloomText style={styles.ratingText}>
-                {ratingSummary.averageRating.toFixed(1)}
-              </BloomText>
-              <BloomText style={styles.ratingCount}>
-                {t('property.reviews.countWithNumber', {
-                  count: ratingSummary.totalReviews,
-                })}
-              </BloomText>
-            </View>
-          ) : null}
-          {hostName ? (
-            <View style={styles.hostGroup}>
-              <RiUserLine width={16} height={16} fill={colors.COLOR_BLACK_LIGHT_3} />
-              <BloomText style={styles.hostName} numberOfLines={1}>
-                {t('property.host.hostedBy')} {hostName}
-              </BloomText>
-              {hostIsSuper ? (
-                <Badge
-                  content={t('property.host.superHost')}
-                  variant="solid"
-                  color="success"
-                  size="small"
-                />
+  if (bookingMode === 'vacation' && booking.bookable) {
+    const policy = policyLabel(t, property.cancellationPolicy);
+    const datesChosen = Boolean(booking.range);
+    return (
+      <>
+        <BloomBookingCard
+          price={booking.price}
+          priceUnit={booking.priceUnit}
+          priceAccessibilityLabel={booking.priceAccessibilityLabel}
+          rating={hasRating ? ratingSummary.averageRating : undefined}
+          reviewCount={hasRating ? ratingSummary.totalReviews : undefined}
+          checkIn={booking.checkIn}
+          checkOut={booking.checkOut}
+          guests={booking.guestsSummary}
+          onPressDates={booking.openDates}
+          activeField={booking.activeField}
+          guestPicker={
+            <GuestPicker
+              size="small"
+              kinds={GUEST_KINDS}
+              value={booking.guests}
+              onChange={booking.setGuests}
+              maxGuests={booking.maxGuests}
+              labels={{
+                adults: t('booking.guests.adults'),
+                children: t('booking.guests.children'),
+                infants: t('booking.guests.infants'),
+              }}
+              descriptions={{
+                adults: t('booking.guests.adultsHint'),
+                children: t('booking.guests.childrenHint'),
+                infants: t('booking.guests.infantsHint'),
+              }}
+              note={
+                booking.maxGuests
+                  ? t('booking.guests.maxNote', { count: booking.maxGuests })
+                  : undefined
+              }
+              closeLabel={t('common.close')}
+            />
+          }
+          checkInLabel={t('search.filters.checkIn')}
+          checkOutLabel={t('search.filters.checkOut')}
+          guestsLabel={t('search.filters.guests')}
+          datePlaceholder={t('search.filters.addDate')}
+          reserveLabel={
+            !datesChosen
+              ? t('booking.widget.checkAvailability')
+              : booking.instantBook
+                ? t('property.cta.reserve')
+                : t('booking.widget.requestToBook')
+          }
+          onReserve={booking.reserve}
+          loading={booking.reserving}
+          note={datesChosen && !booking.instantBook ? t('booking.widget.requestNote') : null}
+          breakdown={booking.breakdown ?? undefined}
+          footer={
+            <View style={styles.footer}>
+              {policy ? (
+                <BloomText variant="body-2-regular" className="text-center text-muted-foreground">
+                  {policy}
+                </BloomText>
               ) : null}
+              {reportLink}
             </View>
-          ) : null}
-        </View>
-      ) : null}
+          }
+        />
+        {stay ? null : ownStay.dialog}
+      </>
+    );
+  }
 
-      {bookingMode === 'vacation' ? <BookingWidget property={property} /> : null}
-      {bookingMode === 'long_term' ? <ApplyToRentCTA property={property} /> : null}
+  // Nothing else to offer: a short stay with no nightly rate, or a mode the
+  // listing does not carry.
+  if (!property.isExternal && bookingMode !== 'long_term') return null;
 
-      <View style={styles.divider} />
+  const { priceLabel } = resolveHeadlinePrice(property, rentalMode, t, formatting);
 
-      <Button
-        variant="link"
-        linkTone="secondary"
-        size="small"
-        leadingIcon={RiFlagLine}
-        onPress={handleReport}
-        accessibilityLabel={t('property.report.title')}
-        style={styles.reportRow}
-      >
-        {t('property.report.title')}
-      </Button>
-    </View>
+  return (
+    <Card variant="outlined" radius="radius-16" className="p-6" style={styles.card}>
+      <View style={styles.header}>
+        {priceLabel ? (
+          <BloomText variant="title-3-semibold" style={styles.price}>
+            {priceLabel}
+          </BloomText>
+        ) : null}
+        {hasRating ? (
+          <Rating
+            size="small"
+            value={ratingSummary.averageRating}
+            count={ratingSummary.totalReviews}
+          />
+        ) : null}
+      </View>
+      {property.isExternal ? (
+        <ExternalSourceButton property={property} />
+      ) : (
+        <ApplyToRentCTA property={property} />
+      )}
+      <View style={styles.footer}>{reportLink}</View>
+    </Card>
   );
 };
 
 const styles = StyleSheet.create({
-  // Flat: no border / background — the host (BaseWidget / Section) owns chrome.
   card: {
-    maxWidth: 380,
     width: '100%',
-    gap: spacing.lg,
+    maxWidth: 372,
+    gap: 20,
   },
   header: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    gap: spacing.sm,
-  },
-  priceColumn: {
-    flex: 1,
-    gap: spacing.xs,
+    gap: 12,
   },
   price: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: colors.COLOR_BLACK,
-  },
-  priceSubtitle: {
-    fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_3,
-  },
-  trustRow: {
-    gap: spacing.sm,
-  },
-  ratingGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
-  ratingText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: colors.COLOR_BLACK,
-  },
-  ratingCount: {
-    fontSize: 13,
-    color: colors.COLOR_BLACK_LIGHT_3,
-  },
-  hostGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
-  hostName: {
     flexShrink: 1,
-    fontSize: 13,
-    color: colors.COLOR_BLACK_LIGHT_3,
   },
-  divider: {
-    height: hairline.width,
-    backgroundColor: hairline.color,
-  },
-  reportRow: {
-    alignSelf: 'flex-start',
+  footer: {
+    alignItems: 'center',
+    gap: 8,
   },
 });
 

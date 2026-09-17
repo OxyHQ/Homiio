@@ -1477,7 +1477,8 @@
       "openProfile": "Open host profile",
       "publicSubtitle": "Government-managed affordable housing",
       "publicAuthority": "Public Housing Authority",
-      "superHost": "Super host"
+      "superHost": "Super host",
+      "regionAuthority": "Autoritat d'Habitatge de {{region}}"
     },
     "report": {
       "actions": {
@@ -1536,7 +1537,9 @@
       "recommend": "Recommend",
       "count": "reviews",
       "countWithNumber": "({{count}} ressenyes)",
-      "showAll": "Mostra les {{count}} ressenyes"
+      "showAll": "Mostra les {{count}} ressenyes",
+      "total_one": "{{count}} ressenya",
+      "total_other": "{{count}} ressenyes"
     },
     "notFoundHelp": "It may have been removed or the link is broken.",
     "sections": {
@@ -1595,6 +1598,12 @@
         "aboveMarketGeneric": "Aquest preu està per sobre de la mitjana local per a habitatges similars.",
         "generic": "Aquest anunci no compleix els criteris de preu just d'Homiio."
       }
+    },
+    "photos": {
+      "showAll": "Mostra totes les fotos",
+      "label": "Fotos de l'anunci",
+      "photoOf": "Foto {{position}} de {{total}}",
+      "namedPhotoOf": "{{name}}, foto {{position}} de {{total}}"
     }
   },
   "viewings": {
@@ -2841,6 +2850,16 @@
       "viewOnSourceWebsite": "Veure al portal d'origen",
       "callNow": "Trucar ara",
       "moreByOwner": "Més propietats d'aquest propietari"
+    },
+    "card": {
+      "beds_one": "{{count}} dormitori",
+      "beds_other": "{{count}} dormitoris",
+      "baths_one": "{{count}} bany",
+      "baths_other": "{{count}} banys",
+      "previousPhoto": "Foto anterior",
+      "nextPhoto": "Foto següent",
+      "save": "Desa",
+      "unsave": "Treu dels desats"
     }
   },
   "goBack": "Tornar",
@@ -3802,7 +3821,8 @@
       "requestToBook": "Sol·licita la reserva",
       "perNight": "nit",
       "dates": "Dates",
-      "requestNote": "Encara no se't cobrarà res. L'amfitrió té 24 hores per respondre."
+      "requestNote": "Encara no se't cobrarà res. L'amfitrió té 24 hores per respondre.",
+      "checkAvailability": "Consulta la disponibilitat"
     },
     "policy": {
       "flexible": "Cancel·lació flexible: reemborsament complet en qualsevol moment abans de l'arribada.",
@@ -3813,6 +3833,12 @@
     "calendar": {
       "selectRange": "Selecciona l'arribada i la sortida",
       "apply": "Aplica"
+    },
+    "breakdown": {
+      "nights_one": "{{price}} × {{count}} nit",
+      "nights_other": "{{price}} × {{count}} nits",
+      "total": "Total",
+      "selectDates": "Tria les dates per veure el preu total."
     }
   },
   "searchBar": {

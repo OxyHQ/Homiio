@@ -94,13 +94,10 @@ export function RecentlyViewedWidget() {
           <CarouselItem key={property.id} width={CARD_WIDTH}>
             <PropertyCard
               property={property}
-              variant="featured"
               // Horizontal scroller — an in-card photo pager would fight the
               // row swipe, so keep the single cover image here.
               enableImageCarousel={false}
               onPress={() => navigateToProperty(property)}
-              showFeatures={false}
-              showTypeIcon={false}
             />
           </CarouselItem>
         ))}

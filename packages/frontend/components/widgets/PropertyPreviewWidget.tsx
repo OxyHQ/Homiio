@@ -344,17 +344,8 @@ export function PropertyPreviewWidget() {
         {previewProperty && (
           <PropertyCard
             property={previewProperty}
-            variant="default"
             showSaveButton={false}
             showVerifiedBadge={false}
-            showTypeIcon={true}
-            showFeatures={true}
-            showPrice={true}
-            showLocation={true}
-            showRating={false}
-            imageHeight={160}
-            titleLines={2}
-            locationLines={1}
             onPress={() => { }} // No action needed for preview
           />
         )}

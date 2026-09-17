@@ -56,7 +56,6 @@ export function HomeSectionBand({ section, onSeeAll }: HomeSectionBandProps): Re
         renderItem={(property) => (
           <PropertyCard
             property={property}
-            variant="featured"
             enableImageCarousel={false}
             onPress={() => router.push(`/properties/${property.id}`)}
           />

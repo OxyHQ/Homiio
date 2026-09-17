@@ -17,6 +17,9 @@ These primitives were removed in favour of Bloom; do not re-add local copies.
 | Screen header | `Header` (on Bloom `PageHeader`) |
 | Status badge | `Chip` with a data `hue` from `@oxy.so/bloom/chip` (see `ApplicationStatusBadge`, `ContractStatusBadge`) |
 | Date / date-range picking | `@oxy.so/bloom/date-picker`; listing availability through `AvailabilityCalendar` |
+| Listing card, results grid | `ListingCard` / `ListingCardGrid` from `@oxy.so/bloom/listing-card`, through `PropertyCard` / `PropertyResultsGrid` |
+| Listing page parts (header, photo grid, amenities, host) | `@oxy.so/bloom/listing-details` |
+| Stay booking card, phone booking bar, quote rows, guest picker | `@oxy.so/bloom/booking` and `GuestPicker` from `@oxy.so/bloom/stay-search`, through `BookingCard` / `useStayBooking` |
 
 Import Bloom only through `@oxy.so/bloom/<family>` — `bun run check:bundle-imports`
 fails on the root `'@oxy.so/bloom'` specifier.
@@ -29,8 +32,8 @@ Homiio-specific pieces Bloom does not have. Reuse them; do not fork a variant.
   grid, in place of inline "Nothing here yet" text. Loading is a skeleton.
 - `IconButton`: the one circular icon button (see `docs/frontend-conventions.md`).
 - `ZoomableImage`: the one hover/press zoom; the image zooms, never the card.
-- `PropertyResultsGrid` / `PropertyResultsGridSkeleton`: a property grid that
-  does not own scroll, for the page's single scroller.
+- `PropertyResultsGrid` / `PropertyResultsGridSkeleton`: a property grid (Bloom
+  `ListingCardGrid`) that does not own scroll, for the page's single scroller.
 
 ### EmptyState
 

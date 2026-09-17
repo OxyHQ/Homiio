@@ -1,12 +1,10 @@
 /**
  * Long-term mode apply surface on the property detail screen.
  *
- * Flat content (no card chrome): the surface — `BaseWidget` in the desktop
- * right column, a `Section` on mobile — owns the border/background/radius, and
- * `BookingCard` owns the price header above this. This component renders the
- * Idealista-style application entry: a compact price/requirements line, a
- * move-in date picked with Bloom's `DatePicker` (a popover on web, a bottom
- * sheet on native), and the primary "Apply to rent" button. The full
+ * Flat content (no card chrome): `BookingCard` owns the card and the price
+ * header above this. This component renders the application entry: a move-in
+ * date picked with Bloom's `DatePicker` (a popover on web, a bottom sheet on
+ * native), and the primary "Apply to rent" button. The full
  * application (income, references, documents) is still collected on
  * `/properties/[id]/apply`; the chosen move-in date is passed through as a
  * param so the user doesn't re-enter it.
@@ -18,7 +16,7 @@
  * swaps for a "View status" deep link so the apply form isn't offered twice.
  */
 import React, { useCallback, useMemo, useState } from 'react';
-import { Linking, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { addMonths, format, startOfDay } from 'date-fns';
@@ -26,13 +24,11 @@ import { addMonths, format, startOfDay } from 'date-fns';
 import { Button } from '@oxy.so/bloom/button';
 import { DatePicker } from '@oxy.so/bloom/date-picker';
 import { Field } from '@oxy.so/bloom/field';
-import { RiExternalLinkLine, RiWallet3Line } from '@oxy.so/bloom/icons';
-import { toast } from '@oxy.so/bloom/toast';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 import { openAccountDialog, useOxy } from '@oxy.so/services';
 
 import { useActiveApplicationForProperty } from '@/hooks/useApplicationQueries';
-import { resolveHeadlinePrice } from '@/utils/propertyPricing';
+import { ExternalSourceButton } from '@/components/property/ExternalSourceButton';
 import { useFormatting } from '@/utils/format';
 import { colors } from '@/styles/colors';
 import { spacing } from '@/constants/styles';
@@ -67,13 +63,6 @@ export const ApplyToRentCTA: React.FC<ApplyToRentCTAProps> = ({ property }) => {
   const [today] = useState(() => startOfDay(new Date()));
   const maxMoveIn = useMemo(() => addMonths(today, MOVE_IN_HORIZON_MONTHS), [today]);
 
-  // Compact price/requirements line — same headline rule as the rest of the
-  // detail surfaces (the active mode's priced block; long-term here).
-  const { priceLabel } = useMemo(
-    () => resolveHeadlinePrice(property, 'long_term', t, formatting),
-    [property, t, formatting],
-  );
-
   const handleApply = useCallback(() => {
     if (!isAuthenticated) {
       openAccountDialog();
@@ -96,38 +85,8 @@ export const ApplyToRentCTA: React.FC<ApplyToRentCTAProps> = ({ property }) => {
     });
   }, [activeApplication, router]);
 
-  const handleOpenSource = useCallback(async () => {
-    if (!property.sourceUrl) {
-      toast.error(t('error.source.noUrl'));
-      return;
-    }
-    try {
-      await Linking.openURL(property.sourceUrl);
-    } catch {
-      toast.error(t('error.source.openFailed'));
-    }
-  }, [property.sourceUrl, t]);
-
   if (property.isExternal) {
-    return (
-      <View style={styles.content}>
-        {priceLabel ? (
-          <View style={styles.metaRow}>
-            <RiWallet3Line width={14} height={14} fill={colors.COLOR_BLACK_LIGHT_3} />
-            <BloomText style={styles.metaText}>{priceLabel}</BloomText>
-          </View>
-        ) : null}
-        <Button
-          variant="primary"
-          size="medium"
-          leadingIcon={RiExternalLinkLine}
-          onPress={handleOpenSource}
-          style={styles.button}
-        >
-          {t('listing.cta.viewOnSourceWebsite')}
-        </Button>
-      </View>
-    );
+    return <ExternalSourceButton property={property} />;
   }
 
   if (activeApplication) {
@@ -139,12 +98,7 @@ export const ApplyToRentCTA: React.FC<ApplyToRentCTAProps> = ({ property }) => {
         <BloomText style={styles.subtitle}>
           {t('applications.detail.alreadySubmittedBody')}
         </BloomText>
-        <Button
-          variant="primary"
-          size="medium"
-          onPress={handleViewStatus}
-          style={styles.button}
-        >
+        <Button variant="primary" size="large" onPress={handleViewStatus}>
           {t('applications.detail.viewStatus')}
         </Button>
       </View>
@@ -160,13 +114,6 @@ export const ApplyToRentCTA: React.FC<ApplyToRentCTAProps> = ({ property }) => {
         {t('applications.cta.subtitle')}
       </BloomText>
 
-      {priceLabel ? (
-        <View style={styles.metaRow}>
-          <RiWallet3Line width={14} height={14} fill={colors.COLOR_BLACK_LIGHT_3} />
-          <BloomText style={styles.metaText}>{priceLabel}</BloomText>
-        </View>
-      ) : null}
-
       <Field label={t('applications.field.moveInDate')} style={styles.moveInField}>
         <DatePicker
           value={moveInDate}
@@ -180,12 +127,7 @@ export const ApplyToRentCTA: React.FC<ApplyToRentCTAProps> = ({ property }) => {
         />
       </Field>
 
-      <Button
-        variant="primary"
-        size="medium"
-        onPress={handleApply}
-        style={styles.button}
-      >
+      <Button variant="primary" size="large" onPress={handleApply}>
         {t('applications.cta.apply')}
       </Button>
     </View>
@@ -206,22 +148,7 @@ const styles = StyleSheet.create({
     color: colors.COLOR_BLACK_LIGHT_3,
     lineHeight: 18,
   },
-  metaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    marginTop: spacing.xs,
-  },
-  metaText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.COLOR_BLACK,
-  },
   moveInField: {
-    marginTop: spacing.xs,
-  },
-  button: {
-    alignSelf: 'flex-start',
     marginTop: spacing.xs,
   },
 });
