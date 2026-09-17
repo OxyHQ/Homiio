@@ -13,7 +13,8 @@ import { useTranslation } from 'react-i18next';
 
 import { Divider } from '@oxy.so/bloom/divider';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { RiArrowDownLine } from '@oxy.so/bloom/icons';
+import { Chip } from '@oxy.so/bloom/chip';
 
 import { Section } from '@/components/property/Section';
 import { MoneyText } from '@/components/MoneyText';
@@ -53,12 +54,14 @@ export const SaleDetailsSection: React.FC<Props> = ({ sale }) => {
           style={styles.price}
         />
         {sale.isPriceReduced ? (
-          <View style={styles.reducedChip}>
-            <Ionicons name="trending-down" size={14} color={colors.success} />
-            <BloomText style={styles.reducedText}>
-              {t('listing.sale.priceReduced')}
-            </BloomText>
-          </View>
+          <Chip
+            variant="subtle"
+            color="success"
+            size="small"
+            startIcon={<RiArrowDownLine width={14} height={14} fill={colors.success} />}
+          >
+            {t('listing.sale.priceReduced')}
+          </Chip>
         ) : null}
       </View>
 
@@ -125,20 +128,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.COLOR_BLACK,
     letterSpacing: -0.4,
-  },
-  reducedChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: 999,
-    backgroundColor: colors.successSubtle,
-  },
-  reducedText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.success,
   },
   row: {
     flexDirection: 'row',

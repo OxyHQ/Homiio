@@ -1,15 +1,17 @@
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
-import { Text as BloomText } from '@oxy.so/bloom/typography';
-import { Section } from '@/components/property/Section';
-import { colors } from '@/styles/colors';
-import { spacing } from '@/constants/styles';
 import { useTranslation } from 'react-i18next';
+
+import { RiCalendarLine, RiTimeLine } from '@oxy.so/bloom/icons';
+
+import { Section, SectionRow } from '@/components/property/Section';
+import { colors } from '@/styles/colors';
 import { formatDate } from '@homiio/shared-types';
 import { useFormatting } from '@/utils/format';
 import type { Property } from '@homiio/shared-types';
 
 interface Props { property: Property | null }
+
+const ICON_SIZE = 20;
 
 export const AvailabilitySection: React.FC<Props> = ({ property }) => {
     const { t } = useTranslation();
@@ -23,33 +25,23 @@ export const AvailabilitySection: React.FC<Props> = ({ property }) => {
     // shows the day before to every reader west of Greenwich.
     const dateStr = availableFrom ? formatDate(availableFrom, locale, 'UTC') : undefined;
     return (
-        <Section title={t('property.sections.availability')} bodyStyle={styles.body}>
-            {dateStr && (
-                <View style={styles.row}>
-                    <BloomText style={styles.label}>{t('property.sections.availableFrom')}</BloomText>
-                    <BloomText style={styles.value}>{dateStr}</BloomText>
-                </View>
-            )}
-            {leaseTerm && (
-                <View style={styles.row}>
-                    <BloomText style={styles.label}>{t('property.sections.leaseTerm')}</BloomText>
-                    <BloomText style={styles.value}>{leaseTerm}</BloomText>
-                </View>
-            )}
+        <Section title={t('property.sections.availability')}>
+            {dateStr ? (
+                <SectionRow
+                    leading={<RiCalendarLine width={ICON_SIZE} height={ICON_SIZE} fill={colors.COLOR_BLACK_LIGHT_3} />}
+                    label={t('property.sections.availableFrom')}
+                    value={dateStr}
+                />
+            ) : null}
+            {leaseTerm ? (
+                <SectionRow
+                    leading={<RiTimeLine width={ICON_SIZE} height={ICON_SIZE} fill={colors.COLOR_BLACK_LIGHT_3} />}
+                    label={t('property.sections.leaseTerm')}
+                    value={leaseTerm}
+                />
+            ) : null}
         </Section>
     );
 };
-
-const styles = StyleSheet.create({
-    body: { gap: spacing.sm },
-    row: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: spacing.lg,
-    },
-    label: { fontSize: 15, color: colors.COLOR_BLACK_LIGHT_3 },
-    value: { fontSize: 15, fontWeight: '600', color: colors.COLOR_BLACK },
-});
 
 export default AvailabilitySection;

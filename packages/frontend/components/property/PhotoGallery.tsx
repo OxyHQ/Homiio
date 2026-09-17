@@ -1,9 +1,11 @@
-import React, { useCallback } from 'react';
-import { View, ScrollView, TouchableOpacity, Image, StyleSheet } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import { View, ScrollView, Pressable, Image, StyleSheet } from 'react-native';
+import { Button } from '@oxy.so/bloom/button';
+import { RiArrowRightSLine } from '@oxy.so/bloom/icons';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 import { ZoomableMediaGallery } from '@oxy.so/bloom/zoomable-media-gallery';
+import { ZoomableImage } from '@/components/ui/ZoomableImage';
 import { colors } from '@/styles/colors';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { getPropertyImageSource } from '@/utils/propertyUtils';
 import { usePropertyPhotoGallery } from '@/hooks/usePropertyPhotoGallery';
 import { radius, spacing } from '@/constants/styles';
@@ -18,6 +20,45 @@ interface PhotoGalleryProps {
 
 const THUMB_SIZE = 100;
 const MAX_THUMBS = 5;
+
+interface GalleryThumbProps {
+    image: string | PropertyImage;
+    hostRef: ReturnType<ReturnType<typeof usePropertyPhotoGallery>['registerThumbHost']>;
+    onPress: () => void;
+    /** Photos beyond the strip, shown as "+N" over the last thumb (0 = none). */
+    overflowCount: number;
+}
+
+/**
+ * One thumbnail: the photo zooms inside its rounded mask on hover/press (the
+ * shared `ZoomableImage`), the tile itself never scales.
+ */
+const GalleryThumb: React.FC<GalleryThumbProps> = ({ image, hostRef, onPress, overflowCount }) => {
+    const [active, setActive] = useState(false);
+    return (
+        <Pressable
+            ref={hostRef}
+            style={styles.galleryImageContainer}
+            onPress={onPress}
+            onPressIn={() => setActive(true)}
+            onPressOut={() => setActive(false)}
+            onHoverIn={() => setActive(true)}
+            onHoverOut={() => setActive(false)}
+            accessibilityRole="imagebutton"
+        >
+            <ZoomableImage active={active} borderRadius={radius.md} style={StyleSheet.absoluteFill}>
+                <Image source={getPropertyImageSource(image, 'medium')} style={styles.galleryImage} resizeMode="cover" />
+            </ZoomableImage>
+            {overflowCount > 0 ? (
+                <View style={styles.moreImagesOverlay}>
+                    <BloomText variant="headline-semibold" style={styles.moreImagesText}>
+                        +{overflowCount}
+                    </BloomText>
+                </View>
+            ) : null}
+        </Pressable>
+    );
+};
 
 export const PhotoGallery: React.FC<PhotoGalleryProps> = ({ images, onOpen, t }) => {
     const { galleryRef, measureThumb, registerThumbHost, open } = usePropertyPhotoGallery(images);
@@ -35,11 +76,17 @@ export const PhotoGallery: React.FC<PhotoGalleryProps> = ({ images, onOpen, t })
         <>
             <View style={styles.photoGalleryContainer}>
                 <View style={styles.galleryHeader}>
-                    <BloomText style={styles.sectionTitle}>{t('property.sections.photoGallery')}</BloomText>
-                    <TouchableOpacity style={styles.viewAllButton} onPress={() => handleImagePress(0)}>
-                        <BloomText style={styles.viewAllButtonText}>{t('property.sections.viewAll')}</BloomText>
-                        <Ionicons name="chevron-forward" size={16} color={colors.primaryColor} />
-                    </TouchableOpacity>
+                    <BloomText variant="title-2-bold" style={styles.sectionTitle}>
+                        {t('property.sections.photoGallery')}
+                    </BloomText>
+                    <Button
+                        variant="link"
+                        size="small"
+                        trailingIcon={RiArrowRightSLine}
+                        onPress={() => handleImagePress(0)}
+                    >
+                        {t('property.sections.viewAll')}
+                    </Button>
                 </View>
                 <ScrollView
                     horizontal
@@ -48,20 +95,17 @@ export const PhotoGallery: React.FC<PhotoGalleryProps> = ({ images, onOpen, t })
                     contentContainerStyle={styles.galleryScrollContent}
                 >
                     {images.slice(0, MAX_THUMBS).map((image, index) => (
-                        <TouchableOpacity
+                        <GalleryThumb
                             key={index}
-                            ref={registerThumbHost(index)}
-                            style={styles.galleryImageContainer}
+                            image={image}
+                            hostRef={registerThumbHost(index)}
                             onPress={() => handleImagePress(index)}
-                            activeOpacity={0.8}
-                        >
-                            <Image source={getPropertyImageSource(image, 'medium')} style={styles.galleryImage} resizeMode="cover" />
-                            {index === MAX_THUMBS - 1 && images.length > MAX_THUMBS && (
-                                <View style={styles.moreImagesOverlay}>
-                                    <BloomText style={styles.moreImagesText}>+{images.length - MAX_THUMBS}</BloomText>
-                                </View>
-                            )}
-                        </TouchableOpacity>
+                            overflowCount={
+                                index === MAX_THUMBS - 1 && images.length > MAX_THUMBS
+                                    ? images.length - MAX_THUMBS
+                                    : 0
+                            }
+                        />
                     ))}
                 </ScrollView>
             </View>
@@ -91,13 +135,9 @@ const styles = StyleSheet.create({
         paddingHorizontal: SECTION_GUTTER,
     },
     sectionTitle: {
-        fontSize: 20,
-        fontWeight: '700',
         color: colors.COLOR_BLACK,
         letterSpacing: -0.2,
     },
-    viewAllButton: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-    viewAllButtonText: { fontSize: 14, color: colors.primaryColor },
     galleryScroll: { height: THUMB_SIZE },
     galleryScrollContent: { paddingHorizontal: SECTION_GUTTER, gap: spacing.md },
     galleryImageContainer: {
@@ -119,5 +159,5 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
     },
-    moreImagesText: { color: colors.white, fontSize: 16, fontWeight: '600' },
+    moreImagesText: { color: colors.white },
 });

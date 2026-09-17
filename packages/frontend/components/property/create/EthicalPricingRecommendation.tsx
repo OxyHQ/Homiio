@@ -1,25 +1,26 @@
 import React from 'react';
-import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { ThemedText } from '@/components/ThemedText';
+import {
+  AdmonitionContent,
+  AdmonitionIcon,
+  AdmonitionRoot,
+  AdmonitionRow,
+  AdmonitionText,
+} from '@oxy.so/bloom/admonition';
+import { StatBar } from '@oxy.so/bloom/stat-bar';
+import { useTheme } from '@oxy.so/bloom/theme';
 import { PropertyType } from '@homiio/shared-types';
 import {
   validateEthicalPricing,
   type EthicalPricingCharacteristics,
 } from '@/utils/ethicalPricing';
 import type { CreatePropertyFormData } from '@/store/createPropertyFormStore';
-import { createPropertyStyles as styles } from './styles';
 import { useFormatting } from '@/utils/format';
-import { colors } from '@/styles/colors';
 
 interface EthicalPricingRecommendationProps {
   proposedRent: number;
   propertyData: CreatePropertyFormData;
 }
-
-const COLOR_WITHIN_RANGE = colors.success;
-const COLOR_WARNING = colors.warning;
 
 const toFurnishedStatus = (
   isFurnished: boolean | undefined,
@@ -29,14 +30,17 @@ const toFurnishedStatus = (
  * Shows the ethical-pricing recommendation for the proposed monthly rent based
  * on the property characteristics derived from the current form data.
  *
- * Behaviour is identical to the previous inline implementation: same derived
- * characteristics, same warning thresholds, same copy.
+ * A Bloom `Admonition` (`tip` within range, `warning` above it) carrying the
+ * suggested and maximum rent, a `StatBar` placing the proposed rent against the
+ * ethical maximum, and every warning the recommendation produced — the
+ * reasoning stays on screen (ADR 0004).
  */
 export function EthicalPricingRecommendation({
   proposedRent,
   propertyData,
 }: EthicalPricingRecommendationProps) {
   const { t } = useTranslation();
+  const theme = useTheme();
   const { locale } = useFormatting();
 
   const amenities = propertyData.amenities.selectedAmenities ?? [];
@@ -71,56 +75,38 @@ export function EthicalPricingRecommendation({
     currency: propertyData.pricing?.currency || 'EUR',
     locale,
   });
+  const withinRange = recommendation.isWithinEthicalRange;
+  const maxRent = Math.max(recommendation.maxRent, 1);
 
   return (
-    <View style={styles.ethicalPricingContainer}>
-      <View
-        style={[
-          styles.ethicalPricingCard,
-          !recommendation.isWithinEthicalRange && styles.ethicalPricingWarning,
-        ]}
-      >
-        <View style={styles.ethicalPricingHeader}>
-          <Ionicons
-            name={recommendation.isWithinEthicalRange ? 'checkmark-circle' : 'warning'}
-            size={16}
-            color={recommendation.isWithinEthicalRange ? COLOR_WITHIN_RANGE : COLOR_WARNING}
+    <AdmonitionRoot type={withinRange ? 'tip' : 'warning'}>
+      <AdmonitionRow>
+        <AdmonitionIcon />
+        <AdmonitionContent>
+          <AdmonitionText style={{ fontWeight: '600' }}>
+            {withinRange ? t('property.ethicalPricing') : t('property.pricingReviewNeeded')}
+          </AdmonitionText>
+
+          <StatBar
+            label={t('property.suggestedRent', { amount: recommendation.suggestedRent })}
+            value={Math.min(proposedRent, maxRent)}
+            max={maxRent}
+            maxLabel={t('property.maxEthicalRent', { amount: recommendation.maxRent })}
+            fillColor={withinRange ? theme.colors.success : theme.colors.warning}
           />
-          <ThemedText style={styles.ethicalPricingTitle}>
-            {recommendation.isWithinEthicalRange
-              ? t('property.ethicalPricing')
-              : t('property.pricingReviewNeeded')}
-          </ThemedText>
-        </View>
 
-        <ThemedText style={styles.ethicalPricingText}>
-          {t('property.suggestedRent', { amount: recommendation.suggestedRent })}
-        </ThemedText>
-        <ThemedText style={styles.ethicalPricingText}>
-          {t('property.maxEthicalRent', { amount: recommendation.maxRent })}
-        </ThemedText>
+          {!withinRange && (
+            <>
+              <AdmonitionText>{t('property.ethicalPricingWarning')}</AdmonitionText>
+              <AdmonitionText>{t('property.ethicalPricingPublishWarning')}</AdmonitionText>
+            </>
+          )}
 
-        {!recommendation.isWithinEthicalRange && (
-          <View style={styles.ethicalPricingWarning}>
-            <ThemedText style={styles.ethicalPricingWarningText}>
-              {t('property.ethicalPricingWarning')}
-            </ThemedText>
-            <ThemedText style={styles.ethicalPricingWarningText}>
-              {t('property.ethicalPricingPublishWarning')}
-            </ThemedText>
-          </View>
-        )}
-
-        {recommendation.warnings.length > 0 && (
-          <View style={styles.ethicalPricingWarnings}>
-            {recommendation.warnings.map((warning, index) => (
-              <ThemedText key={index} style={styles.ethicalPricingWarningText}>
-                {t('property.warningBullet', { warning })}
-              </ThemedText>
-            ))}
-          </View>
-        )}
-      </View>
-    </View>
+          {recommendation.warnings.map((warning, index) => (
+            <AdmonitionText key={index}>{t('property.warningBullet', { warning })}</AdmonitionText>
+          ))}
+        </AdmonitionContent>
+      </AdmonitionRow>
+    </AdmonitionRoot>
   );
 }

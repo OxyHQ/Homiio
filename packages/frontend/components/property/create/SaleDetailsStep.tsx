@@ -1,11 +1,13 @@
 import React, { useCallback } from 'react';
-import { View, TextInput, TouchableOpacity } from 'react-native';
+import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import type { PropertySale } from '@homiio/shared-types';
-import { colors } from '@/styles/colors';
+import { Chip } from '@oxy.so/bloom/chip';
+import { Field } from '@oxy.so/bloom/field';
+import { SettingsListGroup } from '@oxy.so/bloom/settings-list';
 import { ThemedText } from '@/components/ThemedText';
 import { CHAIN_STATUS_OPTIONS, CURRENCY_OPTIONS } from './constants';
+import { WizardSwitchItem, WizardTextField } from './fields';
 import { createPropertyStyles as styles } from './styles';
 import type { PropertyStepProps } from './types';
 import { parseLocaleNumber } from '@/utils/number';
@@ -51,108 +53,57 @@ export function SaleDetailsStep({
   );
 
   return (
-    <View>
+    <View style={styles.step}>
       <ThemedText type="subtitle">
         {t('listing.sale.stepTitle')}
       </ThemedText>
 
-      <View style={styles.formRow}>
-        <View style={[styles.formGroup, styles.formGroupLeft]}>
-          <ThemedText style={styles.label}>
-            {t('listing.sale.askingPrice')}
-          </ThemedText>
-          <TextInput
-            style={[styles.input, validationErrors.salePrice && styles.inputError]}
-            value={offering.salePrice?.toString() ?? ''}
-            onChangeText={handlePriceChange}
-            keyboardType="numeric"
-            placeholder="0"
-          />
-          {validationErrors.salePrice ? (
-            <ThemedText style={styles.errorText}>{validationErrors.salePrice}</ThemedText>
-          ) : null}
-        </View>
+      <WizardTextField
+        label={t('listing.sale.askingPrice')}
+        value={offering.salePrice?.toString() ?? ''}
+        onChangeText={handlePriceChange}
+        keyboardType="numeric"
+        placeholder="0"
+        error={validationErrors.salePrice}
+      />
 
-        <View style={[styles.formGroup, styles.formGroupRight]}>
-          <ThemedText style={styles.label}>{t('listing.sale.currency')}</ThemedText>
-          <View style={styles.optionRow}>
-            {CURRENCY_OPTIONS.map((option) => (
-              <TouchableOpacity
-                key={option.value}
-                style={[
-                  styles.propertyTypeButton,
-                  offering.saleCurrency === option.value && styles.propertyTypeButtonSelected,
-                ]}
-                onPress={() => updateFormField('offering', 'saleCurrency', option.value)}
-              >
-                <ThemedText
-                  style={[
-                    styles.propertyTypeText,
-                    offering.saleCurrency === option.value && styles.propertyTypeTextSelected,
-                  ]}
-                >
-                  {option.label}
-                </ThemedText>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-      </View>
-
-      <View style={styles.formGroup}>
-        <ThemedText style={styles.label}>
-          {t('listing.sale.chainStatus.label')}
-        </ThemedText>
+      <Field label={t('listing.sale.currency')}>
         <View style={styles.optionRow}>
-          {CHAIN_STATUS_OPTIONS.map((option) => (
-            <TouchableOpacity
+          {CURRENCY_OPTIONS.map((option) => (
+            <Chip
               key={option.value}
-              style={[
-                styles.propertyTypeButton,
-                offering.chainStatus === option.value && styles.propertyTypeButtonSelected,
-              ]}
-              onPress={() => handleChainStatus(option.value)}
+              size="large"
+              selected={offering.saleCurrency === option.value}
+              onPress={() => updateFormField('offering', 'saleCurrency', option.value)}
             >
-              <ThemedText
-                style={[
-                  styles.propertyTypeText,
-                  offering.chainStatus === option.value && styles.propertyTypeTextSelected,
-                ]}
-              >
-                {t(option.i18nKey)}
-              </ThemedText>
-            </TouchableOpacity>
+              {option.label}
+            </Chip>
           ))}
         </View>
-      </View>
+      </Field>
 
-      <View style={styles.toggleContainer}>
-        <ThemedText style={styles.label}>
-          {t('listing.sale.priceReduced')}
-        </ThemedText>
-        <TouchableOpacity
-          style={[
-            styles.toggleButton,
-            offering.isPriceReduced ? styles.toggleButtonActive : null,
-          ]}
-          onPress={() =>
-            updateFormField('offering', 'isPriceReduced', !offering.isPriceReduced)
-          }
-          accessibilityRole="switch"
-          accessibilityState={{ checked: Boolean(offering.isPriceReduced) }}
-        >
-          <Ionicons
-            name={offering.isPriceReduced ? 'checkmark-circle' : 'close-circle'}
-            size={24}
-            color={offering.isPriceReduced ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4}
-          />
-          <ThemedText style={styles.toggleText}>
-            {offering.isPriceReduced
-              ? t('common.yes')
-              : t('common.no')}
-          </ThemedText>
-        </TouchableOpacity>
-      </View>
+      <Field label={t('listing.sale.chainStatus.label')}>
+        <View style={styles.optionRow}>
+          {CHAIN_STATUS_OPTIONS.map((option) => (
+            <Chip
+              key={option.value}
+              size="large"
+              selected={offering.chainStatus === option.value}
+              onPress={() => handleChainStatus(option.value)}
+            >
+              {t(option.i18nKey)}
+            </Chip>
+          ))}
+        </View>
+      </Field>
+
+      <SettingsListGroup>
+        <WizardSwitchItem
+          title={t('listing.sale.priceReduced')}
+          value={offering.isPriceReduced}
+          onValueChange={(value) => updateFormField('offering', 'isPriceReduced', value)}
+        />
+      </SettingsListGroup>
     </View>
   );
 }

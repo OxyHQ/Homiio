@@ -20,9 +20,9 @@ import { Platform, ScrollView, StyleSheet, View, type ViewStyle } from 'react-na
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
-import Ionicons from '@expo/vector-icons/Ionicons';
 
-import { Button } from '@oxy.so/bloom/button';
+import { Fab } from '@oxy.so/bloom/fab';
+import { RiAddLine } from '@oxy.so/bloom/icons';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { PropertyResultsGrid } from '@/components/ui/PropertyResultsGrid';
@@ -49,13 +49,11 @@ import { usePropertySearch } from '@/hooks/usePropertySearch';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import { DEFAULT_SEARCH_QUERY } from '@/store/searchQueryStore';
 import { colors } from '@/styles/colors';
-import { cardShadow, hairline, radius, spacing } from '@/constants/styles';
+import { hairline, spacing } from '@/constants/styles';
 import { PropertyType, type Property } from '@homiio/shared-types';
 
 /** Number of skeleton cards shown during the first load. */
 const SKELETON_COUNT = 6;
-/** Diameter of the circular create FAB. */
-const FAB_SIZE = 56;
 
 /**
  * Derive the {@link SearchFilters} shape (consumed by the reused filters sheet)
@@ -356,15 +354,15 @@ export default function PropertiesScreen() {
         ) : null}
         <LoadMoreSentinel enabled={hasNextPage} onLoadMore={handleEndReached} />
       </ScrollView>
-      <View style={[styles.fab, cardShadow.md, { bottom: insets.bottom + spacing['3xl'] }]}>
-        <Button
-          onPress={() => router.push('/properties/create')}
-          variant="primary"
-          style={styles.fabButton}
-          icon={<Ionicons name="add" size={24} color={colors.primaryForeground} />}
-          accessibilityLabel={t('properties.actions.create')}
-        />
-      </View>
+      <Fab
+        placement="bottom-right"
+        variant="primary"
+        offset={spacing['2xl']}
+        icon={<RiAddLine size="lg" />}
+        onPress={() => router.push('/properties/create')}
+        accessibilityLabel={t('properties.actions.create')}
+        style={{ bottom: insets.bottom + spacing['3xl'] }}
+      />
     </View>
   );
 }
@@ -435,19 +433,5 @@ const styles = StyleSheet.create({
   gridPadding: {
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.lg,
-  },
-  fab: {
-    position: 'absolute',
-    right: spacing['2xl'],
-    borderRadius: radius.pill,
-    zIndex: 100,
-  },
-  // Force the Bloom primary Button into a fixed circular FAB. The primary
-  // variant fills with the brand color but doesn't set its own width/height,
-  // so we pin a square size + pill radius; the icon-only content centers.
-  fabButton: {
-    width: FAB_SIZE,
-    height: FAB_SIZE,
-    borderRadius: radius.pill,
   },
 });

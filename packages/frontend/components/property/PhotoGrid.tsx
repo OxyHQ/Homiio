@@ -25,9 +25,8 @@ import {
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Image as ExpoImage } from 'expo-image';
-import Ionicons from '@expo/vector-icons/Ionicons';
-
 import { Button } from '@oxy.so/bloom/button';
+import { RiLayoutGridLine } from '@oxy.so/bloom/icons';
 import { ZoomableMediaGallery } from '@oxy.so/bloom/zoomable-media-gallery';
 
 import { PhotoGallery } from './PhotoGallery';
@@ -123,8 +122,7 @@ export const PhotoGrid: React.FC<PhotoGridProps> = ({ images, t }) => {
             variant="secondary"
             size="small"
             onPress={() => open(0)}
-            icon={<Ionicons name="grid-outline" size={14} color={colors.COLOR_BLACK} />}
-            iconPosition="left"
+            leadingIcon={RiLayoutGridLine}
             accessibilityLabel={tLocal('property.photos.showAll', 'Show all photos')}
           >
             {tLocal('property.photos.showAll', 'Show all photos')}

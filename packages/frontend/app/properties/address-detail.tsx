@@ -2,8 +2,8 @@ import { AddressDisplay } from '@/components/AddressDisplay';
 import { ThemedText } from '@/components/ThemedText';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
-import { colors } from '@/styles/colors';
+import { StyleSheet, View } from 'react-native';
+import { Button } from '@oxy.so/bloom/button';
 
 // Example component showing how to navigate to Address Detail Screen
 export default function AddressDetailExample() {
@@ -50,9 +50,9 @@ export default function AddressDetailExample() {
         style={styles.addressCard}
       />
 
-      <TouchableOpacity style={styles.button} onPress={handleNavigateToAddressDetail}>
-        <ThemedText style={styles.buttonText}>View Address Details</ThemedText>
-      </TouchableOpacity>
+      <Button variant="primary" size="large" onPress={handleNavigateToAddressDetail}>
+        View Address Details
+      </Button>
     </View>
   );
 }
@@ -71,16 +71,5 @@ const styles = StyleSheet.create({
   addressCard: {
     marginBottom: 30,
     width: '100%',
-  },
-  button: {
-    backgroundColor: colors.primaryColor,
-    paddingHorizontal: 30,
-    paddingVertical: 15,
-    borderRadius: 8,
-  },
-  buttonText: {
-    color: colors.primaryForeground,
-    fontSize: 16,
-    fontWeight: '600',
   },
 });

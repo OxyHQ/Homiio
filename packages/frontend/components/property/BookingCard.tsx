@@ -17,13 +17,14 @@
  *    `resolveBookingMode` (the one branching source, shared with the screen).
  *  - Footer: a "Report this listing" link.
  */
-import React, { useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import React from 'react';
+import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { RiFlagLine, RiUserLine } from '@oxy.so/bloom/icons';
 
 import { Badge } from '@oxy.so/bloom/badge';
+import { Button } from '@oxy.so/bloom/button';
 import { H3, Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { BookingWidget } from '@/components/BookingWidget';
@@ -60,7 +61,6 @@ export const BookingCard: React.FC<BookingCardProps> = ({
   const { t } = useTranslation();
   const router = useRouter();
   const { mode: rentalMode } = useRentalMode();
-  const [reportPressed, setReportPressed] = useState(false);
 
   const bookingMode = resolveBookingMode(property, rentalMode);
   const propertyId = String(property.id ?? '');
@@ -112,11 +112,7 @@ export const BookingCard: React.FC<BookingCardProps> = ({
           ) : null}
           {hostName ? (
             <View style={styles.hostGroup}>
-              <Ionicons
-                name="person-circle-outline"
-                size={16}
-                color={colors.COLOR_BLACK_LIGHT_3}
-              />
+              <RiUserLine width={16} height={16} fill={colors.COLOR_BLACK_LIGHT_3} />
               <BloomText style={styles.hostName} numberOfLines={1}>
                 {t('property.host.hostedBy')} {hostName}
               </BloomText>
@@ -138,18 +134,17 @@ export const BookingCard: React.FC<BookingCardProps> = ({
 
       <View style={styles.divider} />
 
-      <Pressable
+      <Button
+        variant="link"
+        linkTone="secondary"
+        size="small"
+        leadingIcon={RiFlagLine}
         onPress={handleReport}
-        onPressIn={() => setReportPressed(true)}
-        onPressOut={() => setReportPressed(false)}
-        accessibilityRole="link"
-        style={[styles.reportRow, reportPressed && styles.reportRowPressed]}
+        accessibilityLabel={t('property.report.title')}
+        style={styles.reportRow}
       >
-        <Ionicons name="flag-outline" size={16} color={colors.COLOR_BLACK_LIGHT_3} />
-        <BloomText style={styles.reportLabel}>
-          {t('property.report.title')}
-        </BloomText>
-      </Pressable>
+        {t('property.report.title')}
+      </Button>
     </View>
   );
 };
@@ -212,17 +207,7 @@ const styles = StyleSheet.create({
     backgroundColor: hairline.color,
   },
   reportRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  reportRowPressed: {
-    opacity: 0.6,
-  },
-  reportLabel: {
-    fontSize: 13,
-    color: colors.COLOR_BLACK_LIGHT_3,
-    textDecorationLine: 'underline',
+    alignSelf: 'flex-start',
   },
 });
 

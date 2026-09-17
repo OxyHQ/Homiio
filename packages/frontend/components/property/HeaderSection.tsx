@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Image, Platform, StyleSheet } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 import { colors } from '@/styles/colors';
 import { barContent, spacing } from '@/constants/styles';
@@ -24,6 +25,7 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({
     size,
     images,
 }) => {
+    const { t } = useTranslation();
     const { locale, areaUnitLabels } = useFormatting();
     return (
         <>
@@ -38,8 +40,8 @@ export const HeaderSection: React.FC<HeaderSectionProps> = ({
                 </BloomText>
                 <BloomText className="text-base text-muted-foreground">{location}</BloomText>
                 <View style={styles.headerStats}>
-                    <BloomText className="text-sm text-foreground">{bedrooms} Bed</BloomText>
-                    <BloomText className="text-sm text-foreground">{bathrooms} Bath</BloomText>
+                    <BloomText className="text-sm text-foreground">{bedrooms} {t('property.bed')}</BloomText>
+                    <BloomText className="text-sm text-foreground">{bathrooms} {t('property.bath')}</BloomText>
                     <BloomText
                         className="text-sm text-foreground"
                         accessibilityLabel={formatAreaLabel(size, 'sqm', locale, {

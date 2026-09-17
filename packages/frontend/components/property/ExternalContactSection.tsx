@@ -2,28 +2,31 @@
  * Direct contact row for external aggregator listings when portal AJAX
  * captured phone / email / WhatsApp on ingest.
  */
-import React, { useCallback, useState } from 'react';
-import { Linking, Pressable, StyleSheet, View } from 'react-native';
+import React, { useCallback } from 'react';
+import { Linking, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
+import { RiExternalLinkLine, RiMailLine, RiPhoneLine } from '@oxy.so/bloom/icons';
+import { Item } from '@oxy.so/bloom/item';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { SECTION_GUTTER } from '@/components/property/Section';
 import { colors } from '@/styles/colors';
-import { radius, spacing } from '@/constants/styles';
+import { spacing } from '@/constants/styles';
 import type { Property } from '@homiio/shared-types';
 
 interface Props {
   property: Property | null | undefined;
 }
 
+const LINK_ICON_SIZE = 18;
+const TRAILING_ICON_SIZE = 16;
+
 type ContactLink = {
   key: 'phone' | 'email' | 'whatsapp';
   label: string;
-  value: string;
   href: string;
-  icon: keyof typeof Ionicons.glyphMap;
 };
 
 function buildContactLinks(
@@ -31,38 +34,38 @@ function buildContactLinks(
 ): ContactLink[] {
   const links: ContactLink[] = [];
   if (contact.phone) {
-    links.push({
-      key: 'phone',
-      label: contact.phone,
-      value: contact.phone,
-      href: `tel:${contact.phone}`,
-      icon: 'call-outline',
-    });
+    links.push({ key: 'phone', label: contact.phone, href: `tel:${contact.phone}` });
   }
   if (contact.email) {
-    links.push({
-      key: 'email',
-      label: contact.email,
-      value: contact.email,
-      href: `mailto:${contact.email}`,
-      icon: 'mail-outline',
-    });
+    links.push({ key: 'email', label: contact.email, href: `mailto:${contact.email}` });
   }
   if (contact.whatsapp) {
     const digits = contact.whatsapp.replace(/\D/g, '');
     links.push({
       key: 'whatsapp',
       label: contact.whatsapp,
-      value: contact.whatsapp,
       href: `https://wa.me/${digits}`,
-      icon: 'logo-whatsapp',
     });
   }
   return links;
 }
 
+/**
+ * Leading glyph per channel. WhatsApp keeps the Ionicons brand logo: Bloom's
+ * Remix set carries no WhatsApp mark, and a generic chat bubble would hide
+ * which app the link opens.
+ */
+function ContactIcon({ kind }: { kind: ContactLink['key'] }) {
+  if (kind === 'phone') {
+    return <RiPhoneLine width={LINK_ICON_SIZE} height={LINK_ICON_SIZE} fill={colors.primaryColor} />;
+  }
+  if (kind === 'email') {
+    return <RiMailLine width={LINK_ICON_SIZE} height={LINK_ICON_SIZE} fill={colors.primaryColor} />;
+  }
+  return <Ionicons name="logo-whatsapp" size={LINK_ICON_SIZE} color={colors.primaryColor} />;
+}
+
 function ContactLinkRow({ link }: { link: ContactLink }) {
-  const [pressed, setPressed] = useState(false);
   const open = useCallback(async () => {
     try {
       await Linking.openURL(link.href);
@@ -72,22 +75,22 @@ function ContactLinkRow({ link }: { link: ContactLink }) {
   }, [link.href]);
 
   return (
-    <Pressable
+    <Item
+      title={link.label}
+      titleStyle={styles.linkText}
+      leading={<ContactIcon kind={link.key} />}
+      trailing={
+        <RiExternalLinkLine
+          width={TRAILING_ICON_SIZE}
+          height={TRAILING_ICON_SIZE}
+          fill={colors.COLOR_BLACK_LIGHT_3}
+        />
+      }
       onPress={open}
-      onPressIn={() => setPressed(true)}
-      onPressOut={() => setPressed(false)}
-      onHoverIn={() => setPressed(true)}
-      onHoverOut={() => setPressed(false)}
       accessibilityRole="link"
       accessibilityLabel={link.label}
-      style={[styles.linkRow, pressed && styles.linkRowPressed]}
-    >
-      <Ionicons name={link.icon} size={18} color={colors.primaryColor} />
-      <BloomText style={styles.linkText} numberOfLines={1}>
-        {link.label}
-      </BloomText>
-      <Ionicons name="open-outline" size={14} color={colors.COLOR_BLACK_LIGHT_3} />
-    </Pressable>
+      style={styles.linkRow}
+    />
   );
 }
 
@@ -134,23 +137,12 @@ const styles = StyleSheet.create({
     color: colors.COLOR_BLACK_LIGHT_3,
   },
   links: {
-    gap: spacing.sm,
+    gap: spacing.xs,
   },
   linkRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.lg,
     backgroundColor: colors.mutedSubtle,
   },
-  linkRowPressed: {
-    opacity: 0.85,
-  },
   linkText: {
-    flex: 1,
-    fontSize: 14,
     color: colors.primaryColor,
     fontWeight: '500',
   },

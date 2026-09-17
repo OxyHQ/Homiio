@@ -1,23 +1,21 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  TextInput,
-  ActivityIndicator,
-} from 'react-native';
+import { View, StyleSheet, ScrollView } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { colors } from '@/styles/colors';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Header } from '@/components/Header';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
 import { useProperty } from '@/hooks';
 import { Button } from '@oxy.so/bloom/button';
-import { RiCalendarLine } from '@oxy.so/bloom/icons';
+import { Admonition } from '@oxy.so/bloom/admonition';
+import { Card, CardDescription, CardHeader, CardTitle } from '@oxy.so/bloom/card';
+import { Chip } from '@oxy.so/bloom/chip';
+import { Calendar } from '@oxy.so/bloom/date-picker';
+import { RiCalendarLine, RiMapPinLine } from '@oxy.so/bloom/icons';
+import { Loading } from '@oxy.so/bloom/loading';
+import { Textarea } from '@oxy.so/bloom/textarea';
+import { useTheme } from '@oxy.so/bloom/theme';
+import { Text } from '@oxy.so/bloom/typography';
 import { PropertyType, formatDate } from '@homiio/shared-types';
 import { useFormatting } from '@/utils/format';
 import { useOxy } from '@oxy.so/services';
@@ -31,9 +29,41 @@ type PropertyData = {
   id: string;
   title: string;
   location: string;
-  landlordName: string;
-  landlordRating: number;
 };
+
+/** Viewings can be booked from tomorrow up to a week out. */
+const BOOKABLE_DAYS = 7;
+
+const TIME_SLOTS = [
+  '09:00',
+  '09:30',
+  '10:00',
+  '10:30',
+  '11:00',
+  '11:30',
+  '14:00',
+  '14:30',
+  '15:00',
+  '15:30',
+  '16:00',
+  '16:30',
+  '17:00',
+];
+
+/** A civil `YYYY-MM-DD` key as a local-midnight `Date` for the calendar. */
+function civilToLocalDate(value: string): Date | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return null;
+  return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+}
+
+/** A calendar day (local midnight) as the civil `YYYY-MM-DD` key the API takes. */
+function localDateToCivil(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
 
 /** Loosely-typed shape of an API error payload as surfaced on `ApiError.response`. */
 interface ApiErrorResponse {
@@ -46,6 +76,7 @@ interface ApiErrorResponse {
 
 export default function BookViewingPage() {
   const { t } = useTranslation();
+  const theme = useTheme();
   const { locale } = useFormatting();
   const router = useRouter();
   const { id, modifyViewingId } = useLocalSearchParams();
@@ -145,9 +176,9 @@ export default function BookViewingPage() {
     return {
       id: apiProperty.id || '',
       title: generatedTitle,
-      location: `${apiProperty.address?.cityName || ''}, ${apiProperty.address?.regionName || ''}`,
-      landlordName: 'Property Owner',
-      landlordRating: 4.8,
+      location: [apiProperty.address?.cityName, apiProperty.address?.regionName]
+        .filter(Boolean)
+        .join(', '),
     };
   }, [apiProperty]);
 
@@ -193,27 +224,16 @@ export default function BookViewingPage() {
     loadExistingViewing();
   }, [isModifyMode, modifyViewingIdString, oxyServices, activeSessionId, t]);
 
-  const timeSlots = [
-    '09:00',
-    '09:30',
-    '10:00',
-    '10:30',
-    '11:00',
-    '11:30',
-    '14:00',
-    '14:30',
-    '15:00',
-    '15:30',
-    '16:00',
-    '16:30',
-    '17:00',
-  ];
+  const bookableRange = useMemo(() => {
+    const min = new Date();
+    min.setHours(0, 0, 0, 0);
+    min.setDate(min.getDate() + 1);
+    const max = new Date(min);
+    max.setDate(max.getDate() + BOOKABLE_DAYS - 1);
+    return { min, max };
+  }, []);
 
-  const availableDates = Array.from({ length: 7 }, (_, i) => {
-    const date = new Date();
-    date.setDate(date.getDate() + i + 1);
-    return date.toISOString().split('T')[0];
-  });
+  const selectedDateValue = useMemo(() => civilToLocalDate(selectedDate), [selectedDate]);
 
   const handleSubmit = async () => {
     if (!selectedDate || !selectedTime) {
@@ -272,8 +292,7 @@ export default function BookViewingPage() {
           }}
         />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primaryColor} />
-          <Text style={styles.loadingText}>{t('property.loading')}</Text>
+          <Loading variant="spinner" size="large" text={t('property.loading')} />
         </View>
       </SafeAreaView>
     );
@@ -288,107 +307,71 @@ export default function BookViewingPage() {
         }}
       />
 
-      <ScrollView style={styles.container}>
-        <View style={styles.propertyCard}>
-          <Text style={styles.propertyTitle}>{property.title}</Text>
-          <Text style={styles.propertyLocation}>
-            <Ionicons name="location-outline" size={14} color={colors.COLOR_BLACK_LIGHT_3} />{' '}
-            {property.location}
-          </Text>
-
-          <View style={styles.landlordInfo}>
-            <View style={styles.landlordAvatar}>
-              <Text style={styles.landlordAvatarText}>{property.landlordName.charAt(0)}</Text>
-            </View>
-            <View style={styles.landlordDetails}>
-              <Text style={styles.landlordName}>{property.landlordName}</Text>
-              <View style={styles.ratingContainer}>
-                <Ionicons name="star" size={14} color={colors.ratingStar} />
-                <Text style={styles.ratingText}>{property.landlordRating}</Text>
+      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+        <Card variant="outlined" radius="radius-16">
+          <CardHeader>
+            <CardTitle>{property.title}</CardTitle>
+            {property.location ? (
+              <View style={styles.locationRow}>
+                <RiMapPinLine width={14} height={14} fill={theme.colors.textSecondary} />
+                <CardDescription>{property.location}</CardDescription>
               </View>
+            ) : null}
+          </CardHeader>
+        </Card>
+
+        <View style={styles.schedule}>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>{t('viewings.selectDate')}</Text>
+            <Calendar
+              value={selectedDateValue}
+              onChange={(date) => setSelectedDate(localDateToCivil(date))}
+              minDate={bookableRange.min}
+              maxDate={bookableRange.max}
+              defaultMonth={selectedDateValue ?? bookableRange.min}
+              weekStartsOn={1}
+              locale={locale}
+              accessibilityLabel={t('viewings.selectDate')}
+            />
+          </View>
+
+          <View style={[styles.section, styles.slotsSection]}>
+            <Text style={styles.sectionTitle}>
+              {t('viewings.availableTimeSlots')}
+              {selectedDate ? ` - ${formatDate(selectedDate, locale, 'UTC')}` : ''}
+            </Text>
+
+            <View style={styles.timeSlotsContainer} accessibilityRole="radiogroup">
+              {TIME_SLOTS.map((time) => {
+                const isSelected = selectedTime === time;
+                return (
+                  <Chip
+                    key={time}
+                    size="large"
+                    selected={isSelected}
+                    onPress={() => setSelectedTime(time)}
+                    style={styles.timeSlot}
+                    accessibilityLabel={time}
+                  >
+                    {time}
+                  </Chip>
+                );
+              })}
             </View>
           </View>
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('viewings.selectDate')}</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.datesContainer}
-          >
-            {availableDates.map((date, index) => {
-              const isActive = selectedDate === date;
-              return (
-                <TouchableOpacity
-                  key={index}
-                  style={[styles.dateCard, isActive && styles.activeDateCard]}
-                  onPress={() => setSelectedDate(date)}
-                >
-                  <Text style={[styles.dateDay, isActive && styles.activeDateText]}>
-                    {formatDate(date, locale, 'UTC', { weekday: 'short' })}
-                  </Text>
-                  <Text style={[styles.dateNumber, isActive && styles.activeDateText]}>
-                    {/* Read out of the CIVIL date, not `new Date(...).getDate()`,
-                        which parses `YYYY-MM-DD` as UTC midnight and therefore shows
-                        the previous day's number to every reader west of Greenwich. */}
-                    {formatDate(date, locale, 'UTC', { day: 'numeric' })}
-                  </Text>
-                  <Text style={[styles.dateMonth, isActive && styles.activeDateText]}>
-                    {formatDate(date, locale, 'UTC', { month: 'short' })}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-        </View>
+        <Textarea
+          label={t('viewings.additionalNotes')}
+          rows={4}
+          autoResize
+          maxRows={10}
+          placeholder={t('viewings.notesPlaceholder')}
+          value={message}
+          onChangeText={setMessage}
+        />
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>
-            {t('viewings.availableTimeSlots')} -{' '}
-            {selectedDate && formatDate(selectedDate, locale, 'UTC')}
-          </Text>
-
-          <View style={styles.timeSlotsContainer}>
-            {timeSlots.map((time, index) => (
-              <TouchableOpacity
-                key={index}
-                style={[styles.timeSlot, selectedTime === time && styles.selectedSlot]}
-                onPress={() => setSelectedTime(time)}
-              >
-                <Text
-                  style={[styles.timeSlotText, selectedTime === time && styles.selectedSlotText]}
-                >
-                  {time}
-                </Text>
-
-                {selectedTime === time && (
-                  <Ionicons name="checkmark-circle" size={18} color={colors.primaryForeground} />
-                )}
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('viewings.additionalNotes')}</Text>
-          <TextInput
-            style={styles.notesInput}
-            multiline
-            numberOfLines={4}
-            placeholder={t('viewings.notesPlaceholder')}
-            placeholderTextColor={colors.COLOR_BLACK_LIGHT_3}
-            value={message}
-            onChangeText={setMessage}
-          />
-        </View>
-
-        <View style={styles.policyContainer}>
-          <Ionicons name="information-circle" size={20} color={colors.COLOR_BLACK_LIGHT_3} />
-          <Text style={styles.policyText}>
-            {t('viewings.policy')}
-          </Text>
-        </View>
+        <Admonition type="info">{t('viewings.policy')}</Admonition>
 
         <Button
           leadingIcon={RiCalendarLine}
@@ -397,7 +380,6 @@ export default function BookViewingPage() {
           size="large"
           disabled={!selectedDate || !selectedTime || submitting}
           loading={submitting}
-          style={{ marginBottom: 30 }}
         >
           {isModifyMode ? t('viewings.actions.modify') : t('properties.bookViewing')}
         </Button>
@@ -409,177 +391,51 @@ export default function BookViewingPage() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.COLOR_BACKGROUND,
   },
   container: {
     flex: 1,
-    padding: 15,
+  },
+  content: {
+    width: '100%',
+    maxWidth: 880,
+    alignSelf: 'center',
+    padding: 16,
+    paddingBottom: 32,
+    gap: 20,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  loadingText: {
-    marginTop: 10,
-    fontSize: 16,
-    color: colors.COLOR_BLACK_LIGHT_3,
-  },
-  propertyCard: {
-    backgroundColor: colors.white,
-    borderRadius: 15,
-    padding: 15,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  propertyTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: colors.COLOR_BLACK,
-    marginBottom: 5,
-  },
-  propertyLocation: {
-    fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_3,
-    marginBottom: 15,
-  },
-  landlordInfo: {
+  locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderTopWidth: 1,
-    borderTopColor: colors.COLOR_BLACK_LIGHT_6,
-    paddingTop: 15,
+    gap: 4,
   },
-  landlordAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.primaryLight,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 10,
-  },
-  landlordAvatarText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: colors.primaryColor,
-  },
-  landlordDetails: {
-    flex: 1,
-  },
-  landlordName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.COLOR_BLACK,
-    marginBottom: 3,
-  },
-  ratingContainer: {
+  schedule: {
     flexDirection: 'row',
-    alignItems: 'center',
-  },
-  ratingText: {
-    marginLeft: 5,
-    fontSize: 14,
-    color: colors.COLOR_BLACK,
+    flexWrap: 'wrap',
+    gap: 20,
   },
   section: {
-    marginBottom: 20,
+    gap: 12,
+  },
+  slotsSection: {
+    flex: 1,
+    minWidth: 280,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: colors.COLOR_BLACK,
-    marginBottom: 15,
-  },
-  datesContainer: {
-    flexDirection: 'row',
-  },
-  dateCard: {
-    width: 70,
-    height: 90,
-    backgroundColor: colors.white,
-    borderRadius: 12,
-    marginRight: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  activeDateCard: {
-    backgroundColor: colors.primaryColor,
-  },
-  dateDay: {
-    fontSize: 12,
-    color: colors.COLOR_BLACK,
-    marginBottom: 5,
-  },
-  dateNumber: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: colors.COLOR_BLACK,
-    marginBottom: 5,
-  },
-  dateMonth: {
-    fontSize: 12,
-    color: colors.COLOR_BLACK_LIGHT_3,
-  },
-  activeDateText: {
-    color: colors.primaryForeground,
+    fontWeight: '700',
   },
   timeSlotsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
+    gap: 8,
   },
   timeSlot: {
-    minWidth: 100,
-    backgroundColor: colors.white,
-    borderRadius: 10,
-    padding: 15,
-    alignItems: 'center',
+    minWidth: 88,
     justifyContent: 'center',
-    flexDirection: 'row',
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  selectedSlot: {
-    backgroundColor: colors.primaryColor,
-  },
-  timeSlotText: {
-    fontSize: 14,
-    color: colors.COLOR_BLACK,
-    marginRight: 5,
-  },
-  selectedSlotText: {
-    color: colors.primaryForeground,
-    fontWeight: '600',
-  },
-  notesInput: {
-    backgroundColor: colors.white,
-    borderRadius: 10,
-    padding: 15,
-    marginBottom: 10,
-    height: 100,
-    textAlignVertical: 'top',
-    fontSize: 14,
-    color: colors.COLOR_BLACK,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  policyContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    backgroundColor: colors.primaryLight,
-    borderRadius: 10,
-    padding: 15,
-    marginBottom: 20,
-  },
-  policyText: {
-    flex: 1,
-    marginLeft: 10,
-    fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_3,
-    lineHeight: 20,
   },
 });

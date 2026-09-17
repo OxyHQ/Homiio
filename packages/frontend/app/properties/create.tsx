@@ -1,11 +1,13 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, ScrollView, TouchableOpacity, Platform, KeyboardAvoidingView } from 'react-native';
+import { View, ScrollView, Platform, KeyboardAvoidingView } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Header } from '@/components/Header';
 import { useReferralStore } from '@/store/referralStore';
-import { ThemedText } from '@/components/ThemedText';
+import { Admonition } from '@oxy.so/bloom/admonition';
 import { Button } from '@oxy.so/bloom/button';
+import { RiArrowLeftLine, RiArrowRightLine } from '@oxy.so/bloom/icons';
+import { Loading } from '@oxy.so/bloom/loading';
 import { StepsContainer } from '@/components/StepsContainer';
 import type { GeocodedAddress } from '@/components/Map';
 import { usePropertyCreateForm } from '@/hooks/usePropertyCreateForm';
@@ -93,8 +95,8 @@ export default function CreatePropertyScreen() {
     return (
       <View style={styles.container}>
         <Header options={{ title: 'Edit Property', showBackButton: true }} />
-        <View style={styles.loadingContainer}>
-          <ThemedText>Loading property...</ThemedText>
+        <View style={styles.centeredState}>
+          <Loading size="large" text="Loading property..." />
         </View>
       </View>
     );
@@ -105,13 +107,13 @@ export default function CreatePropertyScreen() {
     return (
       <View style={styles.container}>
         <Header options={{ title: 'Edit Property', showBackButton: true }} />
-        <View style={styles.errorContainer}>
-          <ThemedText style={styles.errorText}>
+        <View style={styles.centeredState}>
+          <Admonition type="error">
             {t('property.loadError', { error: propertyError || t('property.notFound') })}
-          </ThemedText>
-          <TouchableOpacity style={styles.errorButton} onPress={() => router.back()}>
-            <ThemedText style={styles.errorButtonText}>{t('common.goBack')}</ThemedText>
-          </TouchableOpacity>
+          </Admonition>
+          <Button leadingIcon={RiArrowLeftLine} onPress={() => router.back()}>
+            {t('common.goBack')}
+          </Button>
         </View>
       </View>
     );
@@ -132,7 +134,7 @@ export default function CreatePropertyScreen() {
         <StepsContainer steps={steps} currentStep={currentStep} />
 
         {/* Form content */}
-        <View style={styles.formContainer}>
+        <View>
           <CreatePropertyStepContent
             stepName={stepName}
             formData={formData}
@@ -157,10 +159,18 @@ export default function CreatePropertyScreen() {
 
         {/* Navigation buttons */}
         <View style={styles.navigationContainer}>
-          {currentStep > 0 && <Button onPress={prevStep}>{t('common.previous')}</Button>}
+          {currentStep > 0 ? (
+            <Button variant="secondary" leadingIcon={RiArrowLeftLine} onPress={prevStep}>
+              {t('common.previous')}
+            </Button>
+          ) : (
+            <View style={styles.navigationSpacer} />
+          )}
 
           {currentStep < steps.length - 1 && (
-            <Button onPress={handleNextStep}>{t('common.next')}</Button>
+            <Button trailingIcon={RiArrowRightLine} onPress={handleNextStep}>
+              {t('common.next')}
+            </Button>
           )}
         </View>
       </ScrollView>

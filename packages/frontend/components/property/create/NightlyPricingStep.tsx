@@ -1,10 +1,11 @@
 import React, { useCallback } from 'react';
-import { StyleSheet, View, TextInput, TouchableOpacity } from 'react-native';
+import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Field } from '@oxy.so/bloom/field';
+import { SettingsListGroup } from '@oxy.so/bloom/settings-list';
 import { ThemedText } from '@/components/ThemedText';
 import { PriceBreakdown } from '@/components/PriceBreakdown';
-import { colors } from '@/styles/colors';
+import { WizardSwitchItem, WizardTextField } from './fields';
 import { createPropertyStyles as styles } from './styles';
 import type { PropertyStepProps } from './types';
 import { parseLocaleNumber } from '@/utils/number';
@@ -51,130 +52,81 @@ export function NightlyPricingStep({
   const currency = (pricing.currency || 'EUR').toUpperCase();
 
   return (
-    <View>
+    <View style={styles.step}>
       <ThemedText type="subtitle">
         {t('listing.offering.nightlyStepTitle')}
       </ThemedText>
 
-      <View style={styles.formGroup}>
-        <ThemedText style={styles.label}>
-          {t('listing.nightly.nightlyRate')}
-        </ThemedText>
-        <TextInput
-          style={[styles.input, validationErrors.nightlyRate && styles.inputError]}
-          value={pricing.nightlyRate ? pricing.nightlyRate.toString() : ''}
-          onChangeText={handleNumber('nightlyRate')}
+      <WizardTextField
+        label={t('listing.nightly.nightlyRate')}
+        value={pricing.nightlyRate ? pricing.nightlyRate.toString() : ''}
+        onChangeText={handleNumber('nightlyRate')}
+        keyboardType="numeric"
+        placeholder="0"
+        error={validationErrors.nightlyRate}
+      />
+
+      <View style={styles.formRow}>
+        <WizardTextField
+          style={styles.formRowItem}
+          label={t('listing.nightly.cleaningFee')}
+          value={pricing.cleaningFee ? pricing.cleaningFee.toString() : ''}
+          onChangeText={handleNumber('cleaningFee')}
           keyboardType="numeric"
           placeholder="0"
         />
-        {validationErrors.nightlyRate ? (
-          <ThemedText style={styles.errorText}>{validationErrors.nightlyRate}</ThemedText>
-        ) : null}
-      </View>
-
-      <View style={styles.formRow}>
-        <View style={[styles.formGroup, styles.formGroupLeft]}>
-          <ThemedText style={styles.label}>
-            {t('listing.nightly.cleaningFee')}
-          </ThemedText>
-          <TextInput
-            style={styles.input}
-            value={pricing.cleaningFee ? pricing.cleaningFee.toString() : ''}
-            onChangeText={handleNumber('cleaningFee')}
-            keyboardType="numeric"
-            placeholder="0"
-          />
-        </View>
-        <View style={[styles.formGroup, styles.formGroupRight]}>
-          <ThemedText style={styles.label}>
-            {t('listing.nightly.serviceFee')}
-          </ThemedText>
-          <TextInput
-            style={styles.input}
-            value={pricing.serviceFee ? pricing.serviceFee.toString() : ''}
-            onChangeText={handleNumber('serviceFee')}
-            keyboardType="numeric"
-            placeholder="0"
-          />
-        </View>
-      </View>
-
-      <View style={styles.formGroup}>
-        <ThemedText style={styles.label}>
-          {t('listing.nightly.taxesPercent')}
-        </ThemedText>
-        <TextInput
-          style={[styles.input, validationErrors.taxesPercent && styles.inputError]}
-          value={pricing.taxesPercent ? pricing.taxesPercent.toString() : ''}
-          onChangeText={handleNumber('taxesPercent')}
+        <WizardTextField
+          style={styles.formRowItem}
+          label={t('listing.nightly.serviceFee')}
+          value={pricing.serviceFee ? pricing.serviceFee.toString() : ''}
+          onChangeText={handleNumber('serviceFee')}
           keyboardType="numeric"
           placeholder="0"
         />
-        {validationErrors.taxesPercent ? (
-          <ThemedText style={styles.errorText}>{validationErrors.taxesPercent}</ThemedText>
-        ) : null}
       </View>
 
-      <View style={styles.formRow}>
-        <View style={[styles.formGroup, styles.formGroupLeft]}>
-          <ThemedText style={styles.label}>
-            {t('listing.nightly.minNights')}
-          </ThemedText>
-          <TextInput
-            style={[styles.input, validationErrors.minNights && styles.inputError]}
+      <WizardTextField
+        label={t('listing.nightly.taxesPercent')}
+        value={pricing.taxesPercent ? pricing.taxesPercent.toString() : ''}
+        onChangeText={handleNumber('taxesPercent')}
+        keyboardType="numeric"
+        placeholder="0"
+        error={validationErrors.taxesPercent}
+      />
+
+      <Field error={validationErrors.minNights}>
+        <View style={styles.formRow}>
+          <WizardTextField
+            style={styles.formRowItem}
+            label={t('listing.nightly.minNights')}
             value={pricing.minNights !== undefined ? pricing.minNights.toString() : ''}
             onChangeText={handleNights('minNights')}
             keyboardType="number-pad"
             placeholder="1"
           />
-        </View>
-        <View style={[styles.formGroup, styles.formGroupRight]}>
-          <ThemedText style={styles.label}>
-            {t('listing.nightly.maxNights')}
-          </ThemedText>
-          <TextInput
-            style={styles.input}
+          <WizardTextField
+            style={styles.formRowItem}
+            label={t('listing.nightly.maxNights')}
             value={pricing.maxNights !== undefined ? pricing.maxNights.toString() : ''}
             onChangeText={handleNights('maxNights')}
             keyboardType="number-pad"
             placeholder={t('listing.nightly.noMax')}
           />
         </View>
-      </View>
-      {validationErrors.minNights ? (
-        <ThemedText style={styles.errorText}>{validationErrors.minNights}</ThemedText>
-      ) : null}
+      </Field>
 
-      <View style={styles.toggleContainer}>
-        <ThemedText style={styles.label}>
-          {t('listing.nightly.instantBook')}
-        </ThemedText>
-        <TouchableOpacity
-          style={[styles.toggleButton, pricing.instantBook ? styles.toggleButtonActive : null]}
-          onPress={() => updateFormField('pricing', 'instantBook', !pricing.instantBook)}
-          accessibilityRole="switch"
-          accessibilityState={{ checked: pricing.instantBook }}
-        >
-          <Ionicons
-            name={pricing.instantBook ? 'flash' : 'flash-outline'}
-            size={20}
-            color={pricing.instantBook ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4}
-          />
-          <ThemedText style={styles.toggleText}>
-            {pricing.instantBook ? t('common.yes') : t('common.no')}
-          </ThemedText>
-        </TouchableOpacity>
-      </View>
+      <SettingsListGroup>
+        <WizardSwitchItem
+          title={t('listing.nightly.instantBook')}
+          value={pricing.instantBook}
+          onValueChange={(value) => updateFormField('pricing', 'instantBook', value)}
+        />
+      </SettingsListGroup>
 
       {/* Live booking-quote preview for a representative short stay so the host
           sees how the nightly rate, fees and taxes compound into a total. */}
       {pricing.nightlyRate > 0 ? (
-        <View style={nightlyPricingStyles.previewWrap}>
-          <ThemedText style={styles.label}>
-            {t('listing.nightly.previewTitle', {
-              count: PREVIEW_NIGHTS,
-            })}
-          </ThemedText>
+        <Field label={t('listing.nightly.previewTitle', { count: PREVIEW_NIGHTS })}>
           <PriceBreakdown
             nights={PREVIEW_NIGHTS}
             nightlyRate={pricing.nightlyRate}
@@ -184,14 +136,8 @@ export function NightlyPricingStep({
             currency={currency}
             compact
           />
-        </View>
+        </Field>
       ) : null}
     </View>
   );
 }
-
-const nightlyPricingStyles = StyleSheet.create({
-  previewWrap: {
-    marginTop: 8,
-  },
-});

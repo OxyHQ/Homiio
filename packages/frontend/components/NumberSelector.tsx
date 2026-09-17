@@ -1,127 +1,104 @@
 import React, { useState } from 'react';
-import { View, TouchableOpacity, StyleSheet, TextInput } from 'react-native';
-import { useTranslation } from 'react-i18next';
-import { ThemedText } from '@/components/ThemedText';
-import { colors } from '@/styles/colors';
+import { StyleSheet, View } from 'react-native';
+import {
+  SegmentedControl,
+  SegmentedControlItem,
+  SegmentedControlItemText,
+} from '@oxy.so/bloom/segmented-control';
+import { TextFieldInput } from '@oxy.so/bloom/text-field';
 
 interface NumberSelectorProps {
-    value: number;
-    onChange: (value: number) => void;
-    maxValue?: number;
-    minValue?: number;
+  value: number;
+  onChange: (value: number) => void;
+  maxValue?: number;
+  minValue?: number;
+  /** Names the choice for assistive tech (e.g. "Bedrooms"). */
+  label?: string;
 }
 
-export function NumberSelector({ value, onChange, maxValue = 5, minValue = 0 }: NumberSelectorProps) {
-    const { t } = useTranslation();
-    // The custom input is shown whenever the value already exceeds maxValue
-    // (derived from props) or the user has explicitly tapped the "+max" button
-    // (tracked locally). Deriving `showInput` instead of syncing it in an effect
-    // avoids cascading renders.
-    const [userOpenedInput, setUserOpenedInput] = useState(false);
-    const showInput = value > maxValue || userOpenedInput;
-    const [inputText, setInputText] = useState<string | null>(null);
-    // The field shows the user's in-progress text when present, otherwise the
-    // current value (when it overflows maxValue).
-    const inputValue = inputText ?? (value > maxValue ? value.toString() : '');
-    const numbers = Array.from({ length: maxValue + 1 }, (_, i) => i);
+/**
+ * A small count picker: Bloom `SegmentedControl` over `minValue…maxValue`, where
+ * the last segment reads `+max` and opens a numeric field for larger counts.
+ */
+export function NumberSelector({
+  value,
+  onChange,
+  maxValue = 5,
+  minValue = 0,
+  label = 'Number',
+}: NumberSelectorProps) {
+  // The custom input is shown whenever the value already exceeds maxValue
+  // (derived from props) or the user has explicitly picked the "+max" segment
+  // (tracked locally). Deriving `showInput` instead of syncing it in an effect
+  // avoids cascading renders.
+  const [userOpenedInput, setUserOpenedInput] = useState(false);
+  const showInput = value > maxValue || userOpenedInput;
+  const [inputText, setInputText] = useState<string | null>(null);
+  // The field shows the user's in-progress text when present, otherwise the
+  // current value (when it overflows maxValue).
+  const inputValue = inputText ?? (value > maxValue ? value.toString() : '');
+  const numbers = Array.from({ length: maxValue - minValue + 1 }, (_, i) => minValue + i);
+  const selected = showInput ? String(maxValue) : String(value);
 
-    const handleInputChange = (text: string) => {
-        // Only allow numbers
-        const numericValue = text.replace(/[^0-9]/g, '');
-        setInputText(numericValue);
+  const handleInputChange = (text: string) => {
+    // Only allow numbers
+    const numericValue = text.replace(/[^0-9]/g, '');
+    setInputText(numericValue);
 
-        const parsedValue = parseInt(numericValue);
-        if (!isNaN(parsedValue) && parsedValue >= maxValue) {
-            onChange(parsedValue);
-        }
-    };
+    const parsedValue = parseInt(numericValue, 10);
+    if (!isNaN(parsedValue) && parsedValue >= maxValue) {
+      onChange(parsedValue);
+    }
+  };
 
-    const handleNumberPress = (num: number) => {
-        if (num === maxValue) {
-            setUserOpenedInput(true);
-            setInputText(value > maxValue ? value.toString() : '');
-        } else {
-            setUserOpenedInput(false);
-            setInputText(null);
-            onChange(num);
-        }
-    };
+  const handleSelect = (raw: string) => {
+    const num = Number(raw);
+    if (num === maxValue) {
+      setUserOpenedInput(true);
+      setInputText(value > maxValue ? value.toString() : '');
+    } else {
+      setUserOpenedInput(false);
+      setInputText(null);
+      onChange(num);
+    }
+  };
 
-    return (
-        <View style={styles.container}>
-            {numbers.map((num) => (
-                num === maxValue && showInput ? (
-                    <TextInput
-                        key={num}
-                        style={[styles.numberInput, styles.lastButton]}
-                        keyboardType="numeric"
-                        value={inputValue}
-                        onChangeText={handleInputChange}
-                        placeholder={maxValue.toString()}
-                        maxLength={2}
-                    />
-                ) : (
-                    <TouchableOpacity
-                        key={num}
-                        style={[
-                            styles.numberButton,
-                            value === num && styles.selectedButton,
-                            num === maxValue && styles.lastButton,
-                            value > maxValue && num === maxValue && styles.selectedButton,
-                        ]}
-                        onPress={() => handleNumberPress(num)}
-                    >
-                        <ThemedText
-                            style={[
-                                styles.numberText,
-                                (value === num || (value > maxValue && num === maxValue)) && styles.selectedText,
-                            ]}
-                        >
-                            {num === maxValue ? (value > maxValue ? `${value}` : `+${num}`) : num.toString()}
-                        </ThemedText>
-                    </TouchableOpacity>
-                )
-            ))}
+  return (
+    <View style={styles.container}>
+      <SegmentedControl label={label} type="radio" value={selected} onChange={handleSelect}>
+        {numbers.map((num) => (
+          <SegmentedControlItem key={num} value={String(num)}>
+            <SegmentedControlItemText>
+              {num === maxValue ? (value > maxValue ? `${value}` : `+${num}`) : num.toString()}
+            </SegmentedControlItemText>
+          </SegmentedControlItem>
+        ))}
+      </SegmentedControl>
+      {showInput ? (
+        <View style={styles.input}>
+          <TextFieldInput
+            label={label}
+            value={inputValue}
+            onChangeText={handleInputChange}
+            placeholder={maxValue.toString()}
+            keyboardType="numeric"
+            maxLength={2}
+            autoFocus={userOpenedInput}
+          />
         </View>
-    );
+      ) : null}
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: colors.COLOR_BLACK_LIGHT_9,
-        borderRadius: 25,
-        padding: 4,
-    },
-    numberButton: {
-        paddingVertical: 8,
-        paddingHorizontal: 16,
-        borderRadius: 20,
-        marginHorizontal: 2,
-    },
-    selectedButton: {
-        backgroundColor: colors.primaryColor,
-    },
-    lastButton: {
-        paddingHorizontal: 12,
-    },
-    numberText: {
-        fontSize: 16,
-        color: colors.COLOR_BLACK_LIGHT_3,
-    },
-    selectedText: {
-        color: colors.primaryLight,
-        fontWeight: 'bold',
-    },
-    numberInput: {
-        fontSize: 16,
-        color: colors.primaryLight,
-        backgroundColor: colors.primaryColor,
-        textAlign: 'center',
-        minWidth: 50,
-        height: 36,
-        borderRadius: 20,
-        marginHorizontal: 2,
-    },
+  container: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  input: {
+    width: 64,
+  },
 });

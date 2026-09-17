@@ -10,7 +10,7 @@
 import React, { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { RiTimeLine } from '@oxy.so/bloom/icons';
 import { differenceInCalendarDays } from 'date-fns';
 
 import { Text as BloomText } from '@oxy.so/bloom/typography';
@@ -71,11 +71,7 @@ export const DemandSignal: React.FC<DemandSignalProps> = ({
 
   return (
     <View style={styles.row}>
-      <Ionicons
-        name="time-outline"
-        size={13}
-        color={colors.COLOR_BLACK_LIGHT_4}
-      />
+      <RiTimeLine width={13} height={13} fill={colors.COLOR_BLACK_LIGHT_4} />
       <BloomText style={styles.text}>
         {listedLabel}
         {savedLabel ? (

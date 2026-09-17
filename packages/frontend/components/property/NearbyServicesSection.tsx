@@ -25,8 +25,20 @@
 import React, { useMemo } from 'react';
 import { StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import Ionicons from '@expo/vector-icons/Ionicons';
-
+import {
+  RiBankLine,
+  RiCapsuleFill,
+  RiFireLine,
+  RiFlowerLine,
+  RiHeartPulseLine,
+  RiRestaurantLine,
+  RiRouteLine,
+  RiSchoolLine,
+  RiSeedlingLine,
+  RiShieldLine,
+  RiShoppingBasketLine,
+  RiStethoscopeLine,
+} from '@oxy.so/bloom/icons';
 import * as Skeleton from '@oxy.so/bloom/skeleton';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 
@@ -36,6 +48,7 @@ import {
   DetailIconCell,
   DetailIconGrid,
   DetailIconRow,
+  type DetailFallbackIcon,
 } from '@/components/property/DetailIconGrid';
 import { getIconArt } from '@/constants/iconArt';
 import { useNearbyServices } from '@/hooks';
@@ -52,64 +65,64 @@ interface NearbyServicesSectionProps {
   propertyId: string;
 }
 
-/** Isometric PNG art + Ionicons fallback + i18n label for each service
+/** Isometric PNG art + Remix line-glyph fallback + i18n label for each service
  *  category. Keyed by `NearbyServiceKey` so every key is covered exhaustively
  *  (a missing entry is a type error). The PNG renders via the shared
- *  `DetailIcon` (full-color when present, dimmed when absent); the Ionicons
+ *  `DetailIcon` (full-color when present, dimmed when absent); the Remix
  *  glyph is the fallback when art fails to load. */
 const SERVICE_META: Record<
   NearbyServiceKey,
   {
-    icon: React.ComponentProps<typeof Ionicons>['name'];
+    icon: DetailFallbackIcon;
     labelKey: string;
   }
 > = {
   pharmacy: {
-    icon: 'medkit-outline',
+    icon: RiCapsuleFill,
     labelKey: 'property.nearbyServices.labels.pharmacy',
   },
   school: {
-    icon: 'school-outline',
+    icon: RiSchoolLine,
     labelKey: 'property.nearbyServices.labels.school',
   },
   hospital: {
-    icon: 'medical-outline',
+    icon: RiStethoscopeLine,
     labelKey: 'property.nearbyServices.labels.hospital',
   },
   police: {
-    icon: 'shield-outline',
+    icon: RiShieldLine,
     labelKey: 'property.nearbyServices.labels.police',
   },
   fire_station: {
-    icon: 'flame-outline',
+    icon: RiFireLine,
     labelKey: 'property.nearbyServices.labels.fire_station',
   },
   supermarket: {
-    icon: 'cart-outline',
+    icon: RiShoppingBasketLine,
     labelKey: 'property.nearbyServices.labels.supermarket',
   },
   transit: {
-    icon: 'bus-outline',
+    icon: RiRouteLine,
     labelKey: 'property.nearbyServices.labels.transit',
   },
   park: {
-    icon: 'leaf-outline',
+    icon: RiSeedlingLine,
     labelKey: 'property.nearbyServices.labels.park',
   },
   bank: {
-    icon: 'card-outline',
+    icon: RiBankLine,
     labelKey: 'property.nearbyServices.labels.bank',
   },
   restaurant: {
-    icon: 'restaurant-outline',
+    icon: RiRestaurantLine,
     labelKey: 'property.nearbyServices.labels.restaurant',
   },
   gym: {
-    icon: 'barbell-outline',
+    icon: RiHeartPulseLine,
     labelKey: 'property.nearbyServices.labels.gym',
   },
   spa: {
-    icon: 'flower-outline',
+    icon: RiFlowerLine,
     labelKey: 'property.nearbyServices.labels.spa',
   },
 };
@@ -237,7 +250,7 @@ const NearbyServicesContent: React.FC<NearbyServicesContentProps> = ({ t, data }
         ))}
       </DetailIconGrid>
       {partial ? (
-        <BloomText style={styles.partialNote}>
+        <BloomText variant="caption-1-regular" style={styles.partialNote}>
           {t('property.nearbyServices.partialNote')}
         </BloomText>
       ) : null}
@@ -251,10 +264,8 @@ const SKELETON_ROWS = ['s1', 's2', 's3', 's4', 's5', 's6', 's7', 's8'] as const;
 const styles = StyleSheet.create({
   partialNote: {
     marginTop: spacing.lg,
-    fontSize: 12,
     color: colors.COLOR_BLACK_LIGHT_4,
     fontStyle: 'italic',
-    lineHeight: 16,
   },
 });
 

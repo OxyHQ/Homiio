@@ -15,13 +15,15 @@
  * Beyond the gutter these primitives add NO card, NO shadow, and NO
  * outer vertical margin — content sits directly on the page background.
  *
- * Use `SectionHeader` for the canonical section title (≈20px, 700
- * weight, tight to its body). Use `Section` to wrap a title + body with
- * a consistent title→content gap.
+ * Use `SectionHeader` for the canonical section title (Bloom
+ * `title-2-bold`, tight to its body). Use `Section` to wrap a title + body
+ * with a consistent title→content gap, and `SectionRow` for a label/value
+ * fact line (a Bloom `Item`) inside a section body.
  */
 import React from 'react';
 import { StyleSheet, View, type ViewStyle } from 'react-native';
 
+import { Item } from '@oxy.so/bloom/item';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { colors } from '@/styles/colors';
@@ -49,8 +51,14 @@ interface SectionHeaderProps {
  */
 export const SectionHeader: React.FC<SectionHeaderProps> = ({ title, subtitle }) => (
   <View style={styles.header}>
-    <BloomText style={styles.title}>{title}</BloomText>
-    {subtitle ? <BloomText style={styles.subtitle}>{subtitle}</BloomText> : null}
+    <BloomText variant="title-2-bold" style={styles.title}>
+      {title}
+    </BloomText>
+    {subtitle ? (
+      <BloomText variant="body-2-regular" style={styles.subtitle}>
+        {subtitle}
+      </BloomText>
+    ) : null}
   </View>
 );
 
@@ -96,21 +104,50 @@ export const Section: React.FC<SectionProps> = ({
   </View>
 );
 
+interface SectionRowProps {
+  /** The fact's name, muted on the leading edge. */
+  label: string;
+  /** The fact's value — a string (semibold) or a custom node (a `Chip`). */
+  value: React.ReactNode;
+  /** Leading glyph (a sized, tinted Remix icon). */
+  leading?: React.ReactNode;
+}
+
+/**
+ * One label/value fact line (availability, house rules, overview). A static
+ * Bloom `Item` flush with the section gutter: the label leads, the value
+ * trails.
+ */
+export const SectionRow: React.FC<SectionRowProps> = ({ label, value, leading }) => (
+  <Item
+    density="compact"
+    leading={leading}
+    title={label}
+    titleStyle={styles.rowLabel}
+    trailing={
+      typeof value === 'string' || typeof value === 'number' ? (
+        <BloomText variant="body-semibold" style={styles.rowValue}>
+          {value}
+        </BloomText>
+      ) : (
+        value
+      )
+    }
+    style={styles.row}
+  />
+);
+
 const styles = StyleSheet.create({
   header: {
     paddingHorizontal: SECTION_GUTTER,
     gap: spacing.xs,
   },
   title: {
-    fontSize: 20,
-    fontWeight: '700',
     color: colors.COLOR_BLACK,
     letterSpacing: -0.2,
   },
   subtitle: {
-    fontSize: 14,
     color: colors.COLOR_BLACK_LIGHT_3,
-    lineHeight: 20,
   },
   body: {
     paddingHorizontal: SECTION_GUTTER,
@@ -120,6 +157,16 @@ const styles = StyleSheet.create({
   },
   bodyWithHeader: {
     marginTop: spacing.md,
+  },
+  row: {
+    paddingLeft: 0,
+    paddingRight: 0,
+  },
+  rowLabel: {
+    color: colors.COLOR_BLACK_LIGHT_3,
+  },
+  rowValue: {
+    color: colors.COLOR_BLACK,
   },
 });
 

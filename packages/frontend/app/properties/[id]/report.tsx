@@ -9,32 +9,36 @@
  * `/api/properties/:propertyId/report`; the report lands in the internal
  * review queue.
  *
- * Mirrors the long-term apply form (`apply.tsx`): `Header` + `Section`s, Bloom
- * `Button`/`Chip`, the same auth gate (`openAccountDialog`), `useMutation`, and
+ * Mirrors the long-term apply form (`apply.tsx`): `Header`, Bloom `RadioGroup`
+ * cards for the reason, `Textarea`/`TextFieldInput` fields, the same auth gate (`openAccountDialog`), `useMutation`, and
  * the shared toast + `ApiError` handling. No `useEffect` — form state is local,
  * the email prefill is derived from `useOxy`, and validity is `useMemo`.
  */
 import React, { useMemo, useState } from 'react';
-import { Platform, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { z } from 'zod';
 
 import { Button } from '@oxy.so/bloom/button';
-import { Chip } from '@oxy.so/bloom/chip';
+import { Card, CardDescription, CardHeader, CardTitle } from '@oxy.so/bloom/card';
+import { Field } from '@oxy.so/bloom/field';
+import { RiMailLine, RiShieldCheckLine } from '@oxy.so/bloom/icons';
+import { RadioGroup, type RadioOption } from '@oxy.so/bloom/radio';
+import { TextField, TextFieldIcon, TextFieldInput } from '@oxy.so/bloom/text-field';
+import { Textarea } from '@oxy.so/bloom/textarea';
+import { useTheme } from '@oxy.so/bloom/theme';
+import { Text } from '@oxy.so/bloom/typography';
 import { openAccountDialog, useOxy } from '@oxy.so/services';
 
 import { ListingReportReason, PropertyType } from '@homiio/shared-types';
 import { Header } from '@/components/Header';
-import { ThemedText } from '@/components/ThemedText';
 import { useProperty } from '@/hooks';
 import { useReportListingMutation } from '@/hooks/useReportMutation';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
 import { ApiError } from '@/utils/api';
 import { toast } from '@oxy.so/bloom/toast';
-import { colors } from '@/styles/colors';
 import { spacing } from '@/constants/styles';
 
 const MAX_DETAILS_LENGTH = 4000;
@@ -74,6 +78,7 @@ const reportFormSchema = z
 
 export default function ReportListingScreen() {
   const { t } = useTranslation();
+  const theme = useTheme();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { isAuthenticated, user } = useOxy();
@@ -103,6 +108,13 @@ export default function ReportListingScreen() {
   }, [property]);
 
   const detailsRequired = reason === ListingReportReason.OTHER;
+  const emailInvalid =
+    contactEmail.trim().length > 0 && !EMAIL_REGEX.test(contactEmail.trim());
+
+  const reasonOptions = useMemo<RadioOption<ListingReportReason>[]>(
+    () => REASON_OPTIONS.map((option) => ({ value: option.value, label: t(option.labelKey) })),
+    [t],
+  );
 
   const formIsValid = useMemo(() => {
     if (!propertyId || !reason) return false;
@@ -168,82 +180,72 @@ export default function ReportListingScreen() {
       />
       <SafeAreaView style={styles.scrollWrapper} edges={['bottom']}>
         <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-          <ThemedText style={styles.intro}>
+          <Text style={[styles.intro, { color: theme.colors.textSecondary }]}>
             {t('property.report.intro')}
-          </ThemedText>
+          </Text>
 
           {property ? (
-            <View style={styles.propertyCard}>
-              <ThemedText style={styles.propertyTitle}>{propertyTitle}</ThemedText>
-              <ThemedText style={styles.propertyLocation}>
-                {property.address?.cityName}
-                {property.address?.countryName ? `, ${property.address.countryName}` : ''}
-              </ThemedText>
-            </View>
+            <Card variant="outlined" radius="radius-16">
+              <CardHeader>
+                <CardTitle>{propertyTitle}</CardTitle>
+                <CardDescription>
+                  {property.address?.cityName}
+                  {property.address?.countryName ? `, ${property.address.countryName}` : ''}
+                </CardDescription>
+              </CardHeader>
+            </Card>
           ) : null}
 
-          <Section title={t('property.report.section.reason')}>
-            <View style={styles.chipRow}>
-              {REASON_OPTIONS.map((option) => (
-                <Chip
-                  key={option.value}
-                  selected={reason === option.value}
-                  onPress={() => setReason(option.value)}
-                  style={styles.chip}
-                >
-                  {t(option.labelKey)}
-                </Chip>
-              ))}
-            </View>
-          </Section>
+          <Field label={t('property.report.section.reason')} required>
+            <RadioGroup
+              variant="card"
+              label={t('property.report.section.reason')}
+              value={reason ?? undefined}
+              onValueChange={setReason}
+              options={reasonOptions}
+            />
+          </Field>
 
-          <Section
-            title={
+          <Textarea
+            label={
               detailsRequired
                 ? t('property.report.section.detailsRequired')
                 : t('property.report.section.details')
             }
-            description={t('property.report.section.detailsHelp')}
-          >
-            <TextInput
-              style={[styles.input, styles.detailsInput]}
-              value={details}
-              onChangeText={setDetails}
-              placeholder={t('property.report.field.detailsPlaceholder')}
-              placeholderTextColor={colors.COLOR_BLACK_LIGHT_3}
-              multiline
-              numberOfLines={5}
-              maxLength={MAX_DETAILS_LENGTH}
-              textAlignVertical="top"
-            />
-          </Section>
+            required={detailsRequired}
+            hint={t('property.report.section.detailsHelp')}
+            value={details}
+            onChangeText={setDetails}
+            placeholder={t('property.report.field.detailsPlaceholder')}
+            rows={5}
+            maxLength={MAX_DETAILS_LENGTH}
+            showCount
+          />
 
-          <Section
-            title={t('property.report.section.contact')}
+          <Field
+            label={t('property.report.section.contact')}
             description={t('property.report.section.contactHelp')}
           >
-            <TextInput
-              style={styles.input}
-              value={contactEmail}
-              onChangeText={setContactEmail}
-              placeholder="you@example.com"
-              placeholderTextColor={colors.COLOR_BLACK_LIGHT_3}
-              inputMode="email"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-          </Section>
+            <TextField isInvalid={emailInvalid}>
+              <TextFieldIcon icon={RiMailLine} />
+              <TextFieldInput
+                label={t('property.report.section.contact')}
+                value={contactEmail}
+                onChangeText={setContactEmail}
+                placeholder="you@example.com"
+                inputMode="email"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+            </TextField>
+          </Field>
 
           <View style={styles.noticeRow}>
-            <Ionicons
-              name="shield-checkmark-outline"
-              size={18}
-              color={colors.COLOR_BLACK_LIGHT_3}
-            />
-            <ThemedText style={styles.noticeText}>
+            <RiShieldCheckLine width={18} height={18} fill={theme.colors.textSecondary} />
+            <Text style={[styles.noticeText, { color: theme.colors.textSecondary }]}>
               {t('property.report.notice')}
-            </ThemedText>
+            </Text>
           </View>
 
           <Button
@@ -252,7 +254,6 @@ export default function ReportListingScreen() {
             loading={isSubmitting}
             variant="primary"
             size="large"
-            style={styles.submitButton}
           >
             {t('property.report.actions.submit')}
           </Button>
@@ -262,29 +263,17 @@ export default function ReportListingScreen() {
   );
 }
 
-function Section({
-  title,
-  description,
-  children,
-}: React.PropsWithChildren<{ title: string; description?: string }>) {
-  return (
-    <View style={styles.section}>
-      <ThemedText style={styles.sectionTitle}>{title}</ThemedText>
-      {description ? <ThemedText style={styles.sectionDescription}>{description}</ThemedText> : null}
-      {children}
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: colors.COLOR_BACKGROUND,
   },
   scrollWrapper: {
     flex: 1,
   },
   scrollContent: {
+    width: '100%',
+    maxWidth: 720,
+    alignSelf: 'center',
     padding: spacing.lg,
     paddingBottom: spacing['4xl'],
     gap: spacing.lg,
@@ -292,62 +281,6 @@ const styles = StyleSheet.create({
   intro: {
     fontSize: 14,
     lineHeight: 20,
-    color: colors.COLOR_BLACK_LIGHT_3,
-  },
-  propertyCard: {
-    backgroundColor: colors.white,
-    borderRadius: 16,
-    padding: spacing.lg,
-    gap: spacing.xs,
-    borderWidth: 1,
-    borderColor: colors.COLOR_BLACK_LIGHT_6,
-  },
-  propertyTitle: {
-    fontWeight: '700',
-    fontSize: 18,
-    color: colors.COLOR_BLACK,
-  },
-  propertyLocation: {
-    fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_3,
-  },
-  section: {
-    backgroundColor: colors.white,
-    borderRadius: 16,
-    padding: spacing.lg,
-    gap: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.COLOR_BLACK_LIGHT_6,
-  },
-  sectionTitle: {
-    fontWeight: '700',
-    fontSize: 16,
-    color: colors.COLOR_BLACK,
-  },
-  sectionDescription: {
-    fontSize: 13,
-    color: colors.COLOR_BLACK_LIGHT_3,
-  },
-  chipRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-  },
-  chip: {
-    marginRight: 0,
-  },
-  input: {
-    backgroundColor: colors.COLOR_BACKGROUND,
-    borderRadius: 10,
-    paddingHorizontal: spacing.md,
-    paddingVertical: Platform.OS === 'web' ? spacing.md : spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.COLOR_BLACK_LIGHT_6,
-    fontSize: 15,
-    color: colors.COLOR_BLACK,
-  },
-  detailsInput: {
-    minHeight: 120,
   },
   noticeRow: {
     flexDirection: 'row',
@@ -359,9 +292,5 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 13,
     lineHeight: 18,
-    color: colors.COLOR_BLACK_LIGHT_3,
-  },
-  submitButton: {
-    marginTop: spacing.xs,
   },
 });

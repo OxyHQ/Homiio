@@ -1,138 +1,63 @@
 import React from 'react';
-import { View, ScrollView, StyleSheet } from 'react-native';
-import { ThemedText } from '@/components/ThemedText';
-import { colors } from '@/styles/colors';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { ScrollView, StyleSheet, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { Chip } from '@oxy.so/bloom/chip';
+import { RiCheckLine } from '@oxy.so/bloom/icons';
+import { StatBar } from '@oxy.so/bloom/stat-bar';
+import { useTheme } from '@oxy.so/bloom/theme';
 
 interface StepsContainerProps {
-    steps: string[];
-    currentStep: number;
+  steps: string[];
+  currentStep: number;
 }
 
+/**
+ * Wizard progress: a Bloom `StatBar` naming the current step and counting
+ * through the flow, over a scrollable row of step `Chip`s (done steps carry a
+ * check, the current one is selected).
+ */
 export function StepsContainer({ steps, currentStep }: StepsContainerProps) {
-    return (
-        <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.stepsContainer}
-            contentContainerStyle={styles.stepsContent}
-        >
-            <View style={styles.stepsRow}>
-                {steps.map((stepName, index) => (
-                    <View key={index} style={[styles.stepItem, index === 0 && styles.firstStepItem]}>
-                        <View style={styles.stepLine}>
-                            <View style={[
-                                styles.line,
-                                index <= currentStep && styles.lineActive,
-                                index === 0 && styles.firstLine,
-                                index === steps.length - 1 && styles.lastLine
-                            ]} />
-                        </View>
-                        <View style={styles.stepContent}>
-                            <View
-                                style={[
-                                    styles.stepIndicator,
-                                    index === currentStep && styles.stepIndicatorActive,
-                                    index < currentStep && styles.stepIndicatorCompleted,
-                                ]}
-                            >
-                                {index < currentStep ? (
-                                    <Ionicons name="checkmark" size={14} color={colors.primaryForeground} />
-                                ) : (
-                                    <ThemedText style={[styles.stepNumber, index === currentStep && styles.stepNumberActive]}>
-                                        {index + 1}
-                                    </ThemedText>
-                                )}
-                            </View>
-                            <ThemedText style={[styles.stepLabel, index === currentStep && styles.stepLabelActive]}>
-                                {stepName}
-                            </ThemedText>
-                        </View>
-                    </View>
-                ))}
-            </View>
-        </ScrollView>
-    );
+  const { t } = useTranslation();
+  const theme = useTheme();
+  const total = Math.max(steps.length, 1);
+
+  return (
+    <View style={styles.container}>
+      <StatBar
+        label={steps[currentStep] ?? ''}
+        value={Math.min(currentStep + 1, total)}
+        max={total}
+        maxLabel={t('reviews.write.stepCounter', { current: currentStep + 1, total: steps.length })}
+      />
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.chipsRow}
+      >
+        {steps.map((stepName, index) => (
+          <Chip
+            key={`${index}-${stepName}`}
+            size="small"
+            variant={index === currentStep ? 'solid' : 'subtle'}
+            color={index <= currentStep ? 'primary' : 'default'}
+            startIcon={
+              index < currentStep ? <RiCheckLine size="xs" fill={theme.colors.primary} /> : undefined
+            }
+          >
+            {stepName}
+          </Chip>
+        ))}
+      </ScrollView>
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
-    stepsContainer: {
-        marginBottom: 24,
-    },
-    stepsContent: {
-        flex: 1,
-    },
-    stepsRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginHorizontal: 'auto',
-    },
-    stepItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingRight: 15,
-    },
-    firstStepItem: {},
-    stepLine: {
-        position: 'absolute',
-        left: 0,
-        right: 0,
-        top: 12,
-        height: 2,
-        zIndex: 1,
-    },
-    line: {
-        height: 2,
-        backgroundColor: colors.COLOR_BLACK_LIGHT_6,
-        width: '100%',
-    },
-    firstLine: {
-        left: '50%',
-    },
-    lastLine: {
-        width: '50%',
-    },
-    lineActive: {
-        backgroundColor: colors.primaryColor,
-    },
-    stepContent: {
-        flexDirection: 'column',
-        alignItems: 'center',
-        zIndex: 2,
-        backgroundColor: colors.primaryLight,
-        paddingHorizontal: 8,
-    },
-    stepIndicator: {
-        width: 24,
-        height: 24,
-        borderRadius: 12,
-        backgroundColor: colors.COLOR_BLACK_LIGHT_6,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginBottom: 8,
-    },
-    stepIndicatorActive: {
-        backgroundColor: colors.primaryColor,
-    },
-    stepIndicatorCompleted: {
-        backgroundColor: colors.primaryColor,
-    },
-    stepNumber: {
-        fontSize: 12,
-        fontWeight: 'bold',
-        color: colors.COLOR_BLACK_LIGHT_4,
-    },
-    stepNumberActive: {
-        color: colors.primaryForeground,
-    },
-    stepLabel: {
-        fontSize: 12,
-        color: colors.COLOR_BLACK_LIGHT_4,
-        textAlign: 'center',
-        marginTop: 4,
-    },
-    stepLabelActive: {
-        color: colors.primaryColor,
-        fontWeight: 'bold',
-    },
+  container: {
+    gap: 12,
+    marginBottom: 24,
+  },
+  chipsRow: {
+    gap: 6,
+  },
 });

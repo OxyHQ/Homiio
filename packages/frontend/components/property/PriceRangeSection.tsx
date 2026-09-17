@@ -4,24 +4,27 @@
  *
  * Powered by `GET /api/properties/:id/area-insights` (via `useAreaInsights`).
  * It compares the listing's price to similar homes nearby and renders:
- *  - a localized verdict badge (good deal / below average / typical / above),
- *  - a compact distribution histogram (pure Views — no charting dep) with the
- *    target's bucket highlighted,
- *  - a min→max range bar with markers for the average and this home,
+ *  - a localized verdict chip (good deal / below average / typical / above),
+ *  - a min→max Bloom `StatBar` placing this home inside the local range,
  *  - a stat line (average · €/m² vs area · sample size),
+ *  - the price distribution as a Bloom `BarListCard`: one row per price
+ *    bucket, labelled with its bounds and its home count, in price order, with
+ *    this home's bucket painted in the brand colour,
  *  - an inline neighborhood-vs-city contrast line (companion 3).
  *
  * Fails soft: hides itself entirely on error, renders a graceful
  * "not enough data" note when `sampleSize === 0`, and caveats a low sample.
- *
- * Flat Airbnb-2026 aesthetic via the shared `Section` primitive — no cards,
- * no shadows, content sits on the page inset by `SECTION_GUTTER`.
  */
 import React, { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
+import { BarListCard, type BarListItem } from '@oxy.so/bloom/chart-cards';
+import { Chip } from '@oxy.so/bloom/chip';
+import { RiHome5Fill } from '@oxy.so/bloom/icons';
 import * as Skeleton from '@oxy.so/bloom/skeleton';
+import { StatBar } from '@oxy.so/bloom/stat-bar';
+import { useTheme } from '@oxy.so/bloom/theme';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { Section } from '@/components/property/Section';
@@ -43,21 +46,15 @@ interface PriceRangeSectionProps {
 
 /** Below this many comparables we still render but caveat the count. */
 const LOW_SAMPLE_THRESHOLD = 3;
-/** Histogram bar geometry. */
-const HISTOGRAM_HEIGHT = 64;
-const HISTOGRAM_MIN_BAR = 4;
-/** Range-bar marker sizing. */
-const RANGE_DOT_SIZE = 14;
+/** Skeleton height standing in for the distribution list while loading. */
+const DISTRIBUTION_SKELETON_HEIGHT = 160;
 
-/** Visual treatment per verdict — tint + label colour. */
-const VERDICT_TINT: Record<
-  AreaPriceVerdict,
-  { background: string; foreground: string }
-> = {
-  good_deal: { background: colors.successSubtle, foreground: colors.success },
-  below_average: { background: colors.successSubtle, foreground: colors.success },
-  average: { background: colors.mutedSubtle, foreground: colors.COLOR_BLACK_LIGHT_3 },
-  above_average: { background: colors.warningSubtle, foreground: colors.warning },
+/** Chip tone per verdict. */
+const VERDICT_TONE: Record<AreaPriceVerdict, 'success' | 'default' | 'warning'> = {
+  good_deal: 'success',
+  below_average: 'success',
+  average: 'default',
+  above_average: 'warning',
 };
 
 const clamp01 = (value: number): number => Math.max(0, Math.min(1, value));
@@ -99,12 +96,6 @@ export const PriceRangeSection: React.FC<PriceRangeSectionProps> = ({
           <Skeleton.Box width={120} height={28} borderRadius={radius.pill} />
           <Skeleton.Box
             width="100%"
-            height={HISTOGRAM_HEIGHT}
-            borderRadius={radius.md}
-            style={styles.skeletonGap}
-          />
-          <Skeleton.Box
-            width="100%"
             height={10}
             borderRadius={radius.pill}
             style={styles.skeletonGap}
@@ -113,6 +104,12 @@ export const PriceRangeSection: React.FC<PriceRangeSectionProps> = ({
             width="70%"
             height={14}
             borderRadius={4}
+            style={styles.skeletonGap}
+          />
+          <Skeleton.Box
+            width="100%"
+            height={DISTRIBUTION_SKELETON_HEIGHT}
+            borderRadius={radius.lg}
             style={styles.skeletonGap}
           />
         </View>
@@ -139,6 +136,7 @@ const PriceRangeContent: React.FC<PriceRangeContentProps> = ({
   bedrooms,
 }) => {
   const { locale } = useFormatting();
+  const theme = useTheme();
   const { currency } = insights;
 
   // All prices in the payload share `currency` and are quoted IN it — the same
@@ -183,7 +181,6 @@ const PriceRangeContent: React.FC<PriceRangeContentProps> = ({
 
   const { comparison, distribution, pricePerSqm, neighborhoodVsCity } = insights;
 
-  const verdictTint = VERDICT_TINT[comparison.verdict];
   const verdictLabel = t(`property.areaInsights.verdict.${comparison.verdict}`);
 
   // vs-average delta label (handles +/- and equality).
@@ -195,18 +192,23 @@ const PriceRangeContent: React.FC<PriceRangeContentProps> = ({
     'property.areaInsights.vsAvgSame',
   );
 
-  // Range-bar marker positions (clamped to the track).
+  // Range bar: this home's position between the cheapest and priciest
+  // comparable (clamped to the track; centred when the range is degenerate).
   const span = comparison.max - comparison.min;
   const thisRatio =
     span > 0 ? clamp01((comparison.thisPrice - comparison.min) / span) : 0.5;
-  const avgRatio =
-    span > 0 ? clamp01((comparison.avg - comparison.min) / span) : 0.5;
 
-  // Histogram: heights proportional to the tallest bucket.
-  const maxBucketCount = distribution.buckets.reduce(
-    (max, bucket) => Math.max(max, bucket.count),
-    0,
-  );
+  // Distribution: one labelled row per price bucket, kept in price order, with
+  // the bucket this home falls in painted in the brand colour.
+  const distributionItems: BarListItem[] = distribution.buckets.map((bucket, index) => {
+    const isThis = index === distribution.thisBucketIndex;
+    return {
+      label: `${money(bucket.min)} – ${money(bucket.max)}`,
+      value: bucket.count,
+      color: isThis ? theme.colors.primary : theme.colors.border,
+      icon: isThis ? RiHome5Fill : undefined,
+    };
+  });
 
   // Stat line: average · (€/m² vs area) · sample size.
   const samples = t('property.areaInsights.samples', {
@@ -246,72 +248,42 @@ const PriceRangeContent: React.FC<PriceRangeContentProps> = ({
   return (
     <Section title={t('property.areaInsights.title')} subtitle={subtitle}>
       <View style={styles.body}>
-        {/* Verdict badge + this-home price */}
+        {/* Verdict chip + this-home price */}
         <View style={styles.verdictRow}>
-          <View style={[styles.verdictBadge, { backgroundColor: verdictTint.background }]}>
-            <BloomText style={[styles.verdictLabel, { color: verdictTint.foreground }]}>
-              {verdictLabel}
-            </BloomText>
-          </View>
+          <Chip variant="subtle" color={VERDICT_TONE[comparison.verdict]} size="medium">
+            {verdictLabel}
+          </Chip>
           <BloomText style={styles.thisPriceText}>
             {money(comparison.thisPrice)}
           </BloomText>
         </View>
 
-        {/* Distribution histogram (pure Views) */}
-        <View
-          style={styles.histogram}
-          accessibilityLabel={t('property.areaInsights.distributionLabel')}
-        >
-          {distribution.buckets.map((bucket, index) => {
-            const ratio = maxBucketCount > 0 ? bucket.count / maxBucketCount : 0;
-            const isThis = index === distribution.thisBucketIndex;
-            const barHeight = Math.max(
-              HISTOGRAM_MIN_BAR,
-              Math.round(ratio * HISTOGRAM_HEIGHT),
-            );
-            return (
-              <View key={`${bucket.min}-${bucket.max}-${index}`} style={styles.histogramSlot}>
-                <View
-                  style={[
-                    styles.histogramBar,
-                    { height: barHeight },
-                    isThis ? styles.histogramBarThis : styles.histogramBarMuted,
-                  ]}
-                />
-              </View>
-            );
+        {/* Range bar: min → max with this home placed on it */}
+        <StatBar
+          label={t('property.areaInsights.rangeMarkerLabel', {
+            price: money(comparison.thisPrice),
+            deltaLabel,
           })}
-        </View>
-
-        {/* Range bar: min → max with avg + this-home markers */}
-        <View style={styles.rangeBlock}>
-          <View style={styles.rangeTrack}>
-            <View style={[styles.rangeAvgTick, { left: `${avgRatio * 100}%` }]} />
-            <View
-              style={[
-                styles.rangeThisDot,
-                {
-                  left: `${thisRatio * 100}%`,
-                  marginLeft: -(RANGE_DOT_SIZE / 2),
-                },
-              ]}
-            />
-          </View>
-          <View style={styles.rangeLabels}>
-            <BloomText style={styles.rangeBound}>{money(comparison.min)}</BloomText>
-            <BloomText style={styles.rangeThisLabel}>
-              {t('property.areaInsights.rangeMarkerLabel', {
-                price: money(comparison.thisPrice),
-                deltaLabel,
-              })}
-            </BloomText>
-            <BloomText style={styles.rangeBound}>{money(comparison.max)}</BloomText>
-          </View>
-        </View>
+          value={thisRatio}
+          max={1}
+          minLabel={money(comparison.min)}
+          maxLabel={money(comparison.max)}
+          height={8}
+        />
 
         {/* Stat line */}
         <BloomText style={styles.statLine}>{statLine}</BloomText>
+
+        {/* Distribution of comparable prices */}
+        {distributionItems.length > 0 ? (
+          <BarListCard
+            title={t('property.areaInsights.distributionLabel')}
+            metricLabel={t('property.areaInsights.homesMetric', 'Homes')}
+            metric="value"
+            items={distributionItems}
+            limit={distributionItems.length}
+          />
+        ) : null}
 
         {/* Neighborhood vs city (companion 3) */}
         {neighborhoodLine ? (
@@ -349,86 +321,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: spacing.md,
   },
-  verdictBadge: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: 6,
-    borderRadius: radius.pill,
-  },
-  verdictLabel: {
-    fontSize: 13,
-    fontWeight: '700',
-    letterSpacing: 0.2,
-  },
   thisPriceText: {
     fontSize: 20,
     fontWeight: '700',
     color: colors.COLOR_BLACK,
     letterSpacing: -0.2,
-  },
-  histogram: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    height: HISTOGRAM_HEIGHT,
-    gap: spacing.xs,
-  },
-  histogramSlot: {
-    flex: 1,
-    height: '100%',
-    justifyContent: 'flex-end',
-  },
-  histogramBar: {
-    width: '100%',
-    borderRadius: radius.md,
-  },
-  histogramBarMuted: {
-    backgroundColor: colors.COLOR_BLACK_LIGHT_7,
-  },
-  histogramBarThis: {
-    backgroundColor: colors.primaryColor,
-  },
-  rangeBlock: {
-    gap: spacing.sm,
-  },
-  rangeTrack: {
-    height: 6,
-    borderRadius: radius.pill,
-    backgroundColor: colors.COLOR_BLACK_LIGHT_7,
-    justifyContent: 'center',
-  },
-  rangeAvgTick: {
-    position: 'absolute',
-    width: 2,
-    height: 14,
-    marginLeft: -1,
-    top: -4,
-    borderRadius: 1,
-    backgroundColor: colors.COLOR_BLACK_LIGHT_4,
-  },
-  rangeThisDot: {
-    position: 'absolute',
-    width: RANGE_DOT_SIZE,
-    height: RANGE_DOT_SIZE,
-    borderRadius: RANGE_DOT_SIZE / 2,
-    backgroundColor: colors.primaryColor,
-    borderWidth: 2,
-    borderColor: colors.white,
-  },
-  rangeLabels: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.sm,
-  },
-  rangeBound: {
-    fontSize: 12,
-    color: colors.COLOR_BLACK_LIGHT_4,
-  },
-  rangeThisLabel: {
-    flex: 1,
-    textAlign: 'center',
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.COLOR_BLACK,
   },
   statLine: {
     fontSize: 13,

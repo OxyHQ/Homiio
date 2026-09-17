@@ -4,16 +4,19 @@
  * explains why the Fair Price badge is absent.
  */
 import React, { useMemo } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import Ionicons from '@expo/vector-icons/Ionicons';
 
-import { Text as BloomText } from '@oxy.so/bloom/typography';
+import {
+  AdmonitionContent,
+  AdmonitionIcon,
+  AdmonitionRoot,
+  AdmonitionRow,
+  AdmonitionText,
+} from '@oxy.so/bloom/admonition';
 
 import { SECTION_GUTTER } from '@/components/property/Section';
 import { useFormatting } from '@/utils/format';
-import { colors } from '@/styles/colors';
-import { radius, spacing } from '@/constants/styles';
 import { formatMoney, type PropertyPriceEthics } from '@homiio/shared-types';
 
 interface PriceEthicsBannerProps {
@@ -61,51 +64,31 @@ export const PriceEthicsBanner: React.FC<PriceEthicsBannerProps> = ({
   }, [locale, currency, priceEthics, t]);
 
   return (
-    <View style={styles.container}>
-      <View style={styles.iconWrap}>
-        <Ionicons name="alert-circle" size={20} color={colors.warning} />
-      </View>
-      <View style={styles.copy}>
-        <BloomText style={styles.title}>
-          {t('property.priceEthics.banner.title')}
-        </BloomText>
-        {reasonLines.map((line) => (
-          <BloomText key={line} style={styles.body}>
-            {line}
-          </BloomText>
-        ))}
-      </View>
-    </View>
+    <AdmonitionRoot type="warning" style={styles.container}>
+      <AdmonitionRow>
+        <AdmonitionIcon />
+        <AdmonitionContent style={styles.copy}>
+          <AdmonitionText style={styles.title}>
+            {t('property.priceEthics.banner.title')}
+          </AdmonitionText>
+          {reasonLines.map((line) => (
+            <AdmonitionText key={line}>{line}</AdmonitionText>
+          ))}
+        </AdmonitionContent>
+      </AdmonitionRow>
+    </AdmonitionRoot>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.md,
     marginHorizontal: SECTION_GUTTER,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
-    borderRadius: radius.lg,
-    backgroundColor: colors.warningSubtle,
-  },
-  iconWrap: {
-    marginTop: 2,
   },
   copy: {
-    flex: 1,
-    gap: spacing.xs,
+    gap: 4,
   },
   title: {
-    fontSize: 15,
     fontWeight: '700',
-    color: colors.COLOR_BLACK,
-  },
-  body: {
-    fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_3,
-    lineHeight: 20,
   },
 });
 

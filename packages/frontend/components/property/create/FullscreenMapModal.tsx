@@ -1,9 +1,10 @@
 import React, { type MutableRefObject } from 'react';
-import { Modal, View, TouchableOpacity } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Modal, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors } from '@/styles/colors';
-import { ThemedText } from '@/components/ThemedText';
+import { Button } from '@oxy.so/bloom/button';
+import { RiCloseLine } from '@oxy.so/bloom/icons';
+import { H4 } from '@oxy.so/bloom/typography';
 import Map, { type MapApi, type GeocodedAddress } from '@/components/Map';
 import { createPropertyStyles as styles } from './styles';
 
@@ -19,6 +20,10 @@ interface FullscreenMapModalProps {
 /**
  * Fullscreen map modal used to pick a precise location. Selecting an address
  * applies it to the form and closes the modal (handled by the parent).
+ *
+ * Deliberately an RN full-screen `Modal`, not a Bloom `Dialog`: the map needs
+ * the whole viewport, and Dialog's placements are a card, a side sheet or a
+ * height-capped bottom sheet. The chrome inside is Bloom.
  */
 export function FullscreenMapModal({
   visible,
@@ -26,6 +31,7 @@ export function FullscreenMapModal({
   onClose,
   onAddressSelect,
 }: FullscreenMapModalProps) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   return (
     <Modal
@@ -36,13 +42,19 @@ export function FullscreenMapModal({
     >
       <View style={styles.fullscreenMapContainer}>
         <View style={[styles.fullscreenMapHeader, { paddingTop: insets.top + 12 }]}>
-          <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-            <Ionicons name="close" size={24} color={colors.primaryDark} />
-          </TouchableOpacity>
-          <ThemedText style={styles.fullscreenMapTitle}>Select Location</ThemedText>
-          <TouchableOpacity style={styles.confirmButton} onPress={onClose}>
-            <ThemedText style={styles.confirmButtonText}>Confirm</ThemedText>
-          </TouchableOpacity>
+          <Button
+            variant="ghost"
+            iconOnly
+            leadingIcon={RiCloseLine}
+            onPress={onClose}
+            accessibilityLabel={t('common.close')}
+          />
+          <H4 style={styles.fullscreenMapTitle}>
+            {t('propertyCreate.location.mapPickerTitle', 'Select Location')}
+          </H4>
+          <Button size="small" onPress={onClose}>
+            {t('common.confirm')}
+          </Button>
         </View>
         <Map
           ref={mapRef}

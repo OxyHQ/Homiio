@@ -1,17 +1,23 @@
-import React, { useContext } from 'react';
-import { View, TextInput, TouchableOpacity } from 'react-native';
+import React, { useCallback, useMemo } from 'react';
+import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors } from '@/styles/colors';
+import { format, isValid, parse } from 'date-fns';
+import { Button } from '@oxy.so/bloom/button';
+import { Chip } from '@oxy.so/bloom/chip';
+import { DatePicker } from '@oxy.so/bloom/date-picker';
+import { Field } from '@oxy.so/bloom/field';
+import { RiExpandDiagonalSLine, RiEyeLine, RiEyeOffLine } from '@oxy.so/bloom/icons';
+import { useTheme } from '@oxy.so/bloom/theme';
 import { ThemedText } from '@/components/ThemedText';
 import Map from '@/components/Map';
-import { SearchablePickerBottomSheet } from '@/components/SearchablePickerBottomSheet';
-import { BottomSheetContext } from '@/context/BottomSheetContext';
 import { COUNTRY_OPTIONS, STATE_OPTIONS, MAP_HEIGHT } from './constants';
+import { WizardSelect, WizardTextField } from './fields';
 import { createPropertyStyles as styles } from './styles';
 import type { LocationStepProps } from './types';
 
 const mapStyle = { height: MAP_HEIGHT };
+/** `availableFrom` is stored as a calendar day. */
+const DAY_FORMAT = 'yyyy-MM-dd';
 
 /**
  * "Location" wizard step: interactive map with address lookup, country/state
@@ -28,327 +34,237 @@ export function LocationStep({
   onShowFloorToggle,
 }: LocationStepProps) {
   const { t } = useTranslation();
-  const bottomSheet = useContext(BottomSheetContext);
+  const theme = useTheme();
   const { location } = formData;
 
+  const availableFromDate = useMemo(() => {
+    if (!location.availableFrom) return null;
+    const parsed = parse(location.availableFrom, DAY_FORMAT, new Date());
+    return isValid(parsed) ? parsed : null;
+  }, [location.availableFrom]);
+
+  const handleAvailableFrom = useCallback(
+    (date: Date | null) =>
+      updateFormField('location', 'availableFrom', date ? format(date, DAY_FORMAT) : ''),
+    [updateFormField],
+  );
+
+  const FloorVisibilityIcon = location.showFloor ? RiEyeLine : RiEyeOffLine;
+
   return (
-    <View>
+    <View style={styles.step}>
       <ThemedText type="subtitle">{t('propertyCreate.location.title')}</ThemedText>
 
-      <View style={styles.formGroup}>
-        <ThemedText style={styles.addressInstructions}>
-          {t('propertyCreate.location.instructions')}
-        </ThemedText>
-      </View>
+      <ThemedText style={styles.instructions}>
+        {t('propertyCreate.location.instructions')}
+      </ThemedText>
 
-      <View style={styles.mapContainer}>
-        <View style={styles.mapWrapper}>
-          <Map
-            ref={mapRef}
-            style={mapStyle}
-            enableAddressLookup={true}
-            showAddressInstructions={true}
-            onAddressSelect={onAddressSelect}
-            screenId="create-property"
-          />
-          <TouchableOpacity style={styles.fullscreenButton} onPress={onOpenFullscreenMap}>
-            <Ionicons name="expand" size={20} color={colors.primaryDark} />
-          </TouchableOpacity>
+      <Field error={validationErrors.coordinates}>
+        <View style={styles.mapContainer}>
+          <View style={styles.mapWrapper}>
+            <Map
+              ref={mapRef}
+              style={mapStyle}
+              enableAddressLookup={true}
+              showAddressInstructions={true}
+              onAddressSelect={onAddressSelect}
+              screenId="create-property"
+            />
+            <Button
+              variant="secondary"
+              iconOnly
+              leadingIcon={RiExpandDiagonalSLine}
+              onPress={onOpenFullscreenMap}
+              accessibilityLabel={t('propertyCreate.location.openFullscreenMap', 'Open full-screen map')}
+              style={styles.mapOverlayButton}
+            />
+          </View>
         </View>
-        {validationErrors.coordinates && (
-          <ThemedText style={styles.errorText}>{validationErrors.coordinates}</ThemedText>
-        )}
-      </View>
+      </Field>
 
-      <View style={styles.formGroup}>
-        <ThemedText style={styles.label}>{t('propertyCreate.location.country')}</ThemedText>
-        <TouchableOpacity
-          style={[styles.input, styles.inputCentered]}
-          onPress={() =>
-            bottomSheet.openBottomSheet(
-              <SearchablePickerBottomSheet
-                options={[...COUNTRY_OPTIONS]}
-                selected={location.country || ''}
-                onSelect={(value) => updateFormField('location', 'country', value)}
-                title={t('propertyCreate.location.countryPickerTitle')}
-                onClose={() => {}}
-              />,
-            )
-          }
-        >
-          <ThemedText
-            style={location.country ? styles.pickerValueSelected : styles.pickerValuePlaceholder}
-          >
-            {location.country || t('propertyCreate.location.selectCountry')}
-          </ThemedText>
-        </TouchableOpacity>
-      </View>
+      <WizardSelect
+        label={t('propertyCreate.location.country')}
+        placeholder={t('propertyCreate.location.selectCountry')}
+        options={COUNTRY_OPTIONS}
+        value={location.country}
+        onValueChange={(value) => updateFormField('location', 'country', value)}
+      />
 
-      <View style={styles.formGroup}>
-        <ThemedText style={styles.label}>{t('propertyCreate.location.street')}</ThemedText>
-        <TextInput
-          style={[styles.input, validationErrors.address && styles.inputError]}
-          value={location.address}
-          onChangeText={(text) => updateFormField('location', 'address', text)}
-          placeholder={t('propertyCreate.location.streetPlaceholder')}
-        />
-        {validationErrors.address && (
-          <ThemedText style={styles.errorText}>{validationErrors.address}</ThemedText>
-        )}
-      </View>
+      <WizardTextField
+        label={t('propertyCreate.location.street')}
+        value={location.address}
+        onChangeText={(text) => updateFormField('location', 'address', text)}
+        placeholder={t('propertyCreate.location.streetPlaceholder')}
+        error={validationErrors.address}
+      />
 
-      <View style={styles.formGroup}>
-        <ThemedText style={styles.label}>{t('propertyCreate.location.unitOptional')}</ThemedText>
-        <TextInput
-          style={styles.input}
-          value={location.unit || ''}
-          onChangeText={(text) => updateFormField('location', 'unit', text)}
-          placeholder={t('propertyCreate.location.unitPlaceholder')}
-        />
-      </View>
+      <WizardTextField
+        label={t('propertyCreate.location.unitOptional')}
+        value={location.unit || ''}
+        onChangeText={(text) => updateFormField('location', 'unit', text)}
+        placeholder={t('propertyCreate.location.unitPlaceholder')}
+      />
 
       {/* Additional Canonical Address Fields */}
       <View style={styles.formRow}>
-        <View style={[styles.formGroup, styles.formGroupLeft]}>
-          <ThemedText style={styles.label}>{t('propertyCreate.location.buildingNameOptional')}</ThemedText>
-          <TextInput
-            style={styles.input}
-            value={location.building_name || ''}
-            onChangeText={(text) => updateFormField('location', 'building_name', text)}
-            placeholder={t('propertyCreate.location.buildingNamePlaceholder')}
-          />
-        </View>
-
-        <View style={[styles.formGroup, styles.formGroupRight]}>
-          <ThemedText style={styles.label}>{t('propertyCreate.location.blockOptional')}</ThemedText>
-          <TextInput
-            style={styles.input}
-            value={location.block || ''}
-            onChangeText={(text) => updateFormField('location', 'block', text)}
-            placeholder={t('propertyCreate.location.blockPlaceholder')}
-          />
-        </View>
-      </View>
-
-      <View style={styles.formRow}>
-        <View style={[styles.formGroup, styles.formGroupLeft]}>
-          <ThemedText style={styles.label}>{t('propertyCreate.location.entranceOptional')}</ThemedText>
-          <TextInput
-            style={styles.input}
-            value={location.entrance || ''}
-            onChangeText={(text) => updateFormField('location', 'entrance', text)}
-            placeholder={t('propertyCreate.location.entrancePlaceholder')}
-          />
-        </View>
-
-        <View style={[styles.formGroup, styles.formGroupRight]}>
-          <ThemedText style={styles.label}>{t('propertyCreate.location.subunitOptional')}</ThemedText>
-          <TextInput
-            style={styles.input}
-            value={location.subunit || ''}
-            onChangeText={(text) => updateFormField('location', 'subunit', text)}
-            placeholder={t('propertyCreate.location.subunitPlaceholder')}
-          />
-        </View>
-      </View>
-
-      <View style={styles.formRow}>
-        <View style={[styles.formGroup, styles.formGroupLeft]}>
-          <View style={styles.labelContainer}>
-            <ThemedText style={styles.label}>{t('propertyCreate.location.number')}</ThemedText>
-            <Ionicons
-              name="information-circle-outline"
-              size={16}
-              color={colors.COLOR_BLACK_LIGHT_4}
-            />
-          </View>
-          <View style={styles.addressDetailWrapper}>
-            <View style={styles.addressDetailContainer}>
-              <TextInput
-                style={[styles.detailInput, validationErrors.number && styles.inputError]}
-                value={location.number || ''}
-                onChangeText={(text) => updateFormField('location', 'number', text)}
-                placeholder={t('propertyCreate.location.numberPlaceholder')}
-                keyboardType="numeric"
-              />
-            </View>
-            <View style={styles.messageContainer}>
-              {validationErrors.number && (
-                <ThemedText style={styles.fieldError}>{validationErrors.number}</ThemedText>
-              )}
-            </View>
-          </View>
-        </View>
-
-        <View style={[styles.formGroup, styles.formGroupRight]}>
-          <View style={styles.labelContainer}>
-            <ThemedText style={styles.label}>{t('propertyCreate.location.floor')}</ThemedText>
-            <Ionicons
-              name="information-circle-outline"
-              size={16}
-              color={colors.COLOR_BLACK_LIGHT_4}
-            />
-          </View>
-          <View style={styles.addressDetailWrapper}>
-            <View style={styles.addressDetailContainer}>
-              <TextInput
-                style={[styles.detailInput, validationErrors.floor && styles.inputError]}
-                value={location.floor?.toString() || ''}
-                onChangeText={onFloorChange}
-                placeholder={t('propertyCreate.location.floorPlaceholder')}
-                keyboardType="numeric"
-              />
-              <TouchableOpacity
-                style={[styles.privacyToggle, location.showFloor && styles.privacyToggleActive]}
-                onPress={() => onShowFloorToggle(!location.showFloor)}
-              >
-                <Ionicons
-                  name={location.showFloor ? 'eye-outline' : 'eye-off-outline'}
-                  size={20}
-                  color={location.showFloor ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_4}
-                />
-                <ThemedText
-                  style={[
-                    styles.privacyToggleText,
-                    location.showFloor && styles.privacyToggleTextActive,
-                  ]}
-                >
-                  {location.showFloor ? t('propertyCreate.location.floorPublic') : t('propertyCreate.location.floorPrivate')}
-                </ThemedText>
-              </TouchableOpacity>
-            </View>
-            <View style={styles.messageContainer}>
-              {validationErrors.floor && (
-                <ThemedText style={styles.fieldError}>{validationErrors.floor}</ThemedText>
-              )}
-              {location.floor && !location.showFloor && (
-                <ThemedText style={styles.privacyMessage}>
-                  {t('propertyCreate.location.floorPrivacyHint')}
-                </ThemedText>
-              )}
-            </View>
-          </View>
-        </View>
-      </View>
-
-      <View style={styles.formGroup}>
-        <ThemedText style={styles.label}>{t('propertyCreate.location.neighborhoodOptional')}</ThemedText>
-        <TextInput
-          style={styles.input}
-          value={location.neighborhood || ''}
-          onChangeText={(text) => updateFormField('location', 'neighborhood', text)}
-          placeholder={t('propertyCreate.location.neighborhoodPlaceholder')}
+        <WizardTextField
+          style={styles.formRowItem}
+          label={t('propertyCreate.location.buildingNameOptional')}
+          value={location.building_name || ''}
+          onChangeText={(text) => updateFormField('location', 'building_name', text)}
+          placeholder={t('propertyCreate.location.buildingNamePlaceholder')}
         />
-      </View>
-
-      <View style={styles.formGroup}>
-        <ThemedText style={styles.label}>{t('propertyCreate.location.districtOptional')}</ThemedText>
-        <TextInput
-          style={styles.input}
-          value={location.district || ''}
-          onChangeText={(text) => updateFormField('location', 'district', text)}
-          placeholder={t('propertyCreate.location.districtPlaceholder')}
+        <WizardTextField
+          style={styles.formRowItem}
+          label={t('propertyCreate.location.blockOptional')}
+          value={location.block || ''}
+          onChangeText={(text) => updateFormField('location', 'block', text)}
+          placeholder={t('propertyCreate.location.blockPlaceholder')}
         />
       </View>
 
       <View style={styles.formRow}>
-        <View style={[styles.formGroup, styles.formGroupLeft]}>
-          <ThemedText style={styles.label}>{t('propertyCreate.location.poBoxOptional')}</ThemedText>
-          <TextInput
-            style={styles.input}
-            value={location.po_box || ''}
-            onChangeText={(text) => updateFormField('location', 'po_box', text)}
-            placeholder={t('propertyCreate.location.poBoxPlaceholder')}
-          />
-        </View>
-
-        <View style={[styles.formGroup, styles.formGroupRight]}>
-          <ThemedText style={styles.label}>{t('propertyCreate.location.referenceOptional')}</ThemedText>
-          <TextInput
-            style={styles.input}
-            value={location.reference || ''}
-            onChangeText={(text) => updateFormField('location', 'reference', text)}
-            placeholder={t('propertyCreate.location.referencePlaceholder')}
-          />
-        </View>
+        <WizardTextField
+          style={styles.formRowItem}
+          label={t('propertyCreate.location.entranceOptional')}
+          value={location.entrance || ''}
+          onChangeText={(text) => updateFormField('location', 'entrance', text)}
+          placeholder={t('propertyCreate.location.entrancePlaceholder')}
+        />
+        <WizardTextField
+          style={styles.formRowItem}
+          label={t('propertyCreate.location.subunitOptional')}
+          value={location.subunit || ''}
+          onChangeText={(text) => updateFormField('location', 'subunit', text)}
+          placeholder={t('propertyCreate.location.subunitPlaceholder')}
+        />
       </View>
 
       <View style={styles.formRow}>
-        <View style={[styles.formGroup, styles.formGroupLeft]}>
-          <ThemedText style={styles.label}>{t('propertyCreate.location.cityDistrict')}</ThemedText>
-          <TextInput
-            style={[styles.input, validationErrors.city && styles.inputError]}
-            value={location.city}
-            onChangeText={(text) => updateFormField('location', 'city', text)}
-            placeholder={t('propertyCreate.location.cityDistrictPlaceholder')}
-          />
-          {validationErrors.city && (
-            <ThemedText style={styles.errorText}>{validationErrors.city}</ThemedText>
-          )}
-        </View>
-
-        <View style={[styles.formGroup, styles.formGroupRight]}>
-          <ThemedText style={styles.label}>{t('propertyCreate.location.state')}</ThemedText>
-          <TouchableOpacity
-            style={[styles.input, styles.inputCentered]}
-            onPress={() =>
-              bottomSheet.openBottomSheet(
-                <SearchablePickerBottomSheet
-                  options={[...STATE_OPTIONS]}
-                  selected={location.state || ''}
-                  onSelect={(value) => updateFormField('location', 'state', value)}
-                  title={t('propertyCreate.location.statePickerTitle')}
-                  onClose={() => {}}
-                />,
-              )
-            }
-          >
-            <ThemedText
-              style={location.state ? styles.pickerValueSelected : styles.pickerValuePlaceholder}
-            >
-              {location.state || t('propertyCreate.location.selectState')}
-            </ThemedText>
-          </TouchableOpacity>
-          {validationErrors.state && (
-            <ThemedText style={styles.errorText}>{validationErrors.state}</ThemedText>
-          )}
-        </View>
-      </View>
-
-      <View style={styles.formGroup}>
-        <ThemedText style={styles.label}>{t('propertyCreate.location.zipPostalCode')}</ThemedText>
-        <TextInput
-          style={[styles.input, validationErrors.postal_code && styles.inputError]}
-          value={location.postal_code}
-          onChangeText={(text) => updateFormField('location', 'postal_code', text)}
-          placeholder={t('propertyCreate.location.zipPlaceholder')}
+        <WizardTextField
+          style={styles.formRowItem}
+          label={t('propertyCreate.location.number')}
+          value={location.number || ''}
+          onChangeText={(text) => updateFormField('location', 'number', text)}
+          placeholder={t('propertyCreate.location.numberPlaceholder')}
           keyboardType="numeric"
+          error={validationErrors.number}
         />
-        {validationErrors.postal_code && (
-          <ThemedText style={styles.errorText}>{validationErrors.postal_code}</ThemedText>
-        )}
+        <WizardTextField
+          style={styles.formRowItem}
+          label={t('propertyCreate.location.floor')}
+          value={location.floor?.toString() || ''}
+          onChangeText={onFloorChange}
+          placeholder={t('propertyCreate.location.floorPlaceholder')}
+          keyboardType="numeric"
+          error={validationErrors.floor}
+          description={
+            location.floor && !location.showFloor
+              ? t('propertyCreate.location.floorPrivacyHint')
+              : undefined
+          }
+        />
+      </View>
+
+      <View style={styles.optionRow}>
+        <Chip
+          selected={Boolean(location.showFloor)}
+          onPress={() => onShowFloorToggle(!location.showFloor)}
+          startIcon={
+            <FloorVisibilityIcon
+              size="sm"
+              fill={location.showFloor ? theme.colors.primary : theme.colors.textSecondary}
+            />
+          }
+          accessibilityLabel={`${t('propertyCreate.location.floor')}: ${
+            location.showFloor
+              ? t('propertyCreate.location.floorPublic')
+              : t('propertyCreate.location.floorPrivate')
+          }`}
+        >
+          {location.showFloor
+            ? t('propertyCreate.location.floorPublic')
+            : t('propertyCreate.location.floorPrivate')}
+        </Chip>
+      </View>
+
+      <WizardTextField
+        label={t('propertyCreate.location.neighborhoodOptional')}
+        value={location.neighborhood || ''}
+        onChangeText={(text) => updateFormField('location', 'neighborhood', text)}
+        placeholder={t('propertyCreate.location.neighborhoodPlaceholder')}
+      />
+
+      <WizardTextField
+        label={t('propertyCreate.location.districtOptional')}
+        value={location.district || ''}
+        onChangeText={(text) => updateFormField('location', 'district', text)}
+        placeholder={t('propertyCreate.location.districtPlaceholder')}
+      />
+
+      <View style={styles.formRow}>
+        <WizardTextField
+          style={styles.formRowItem}
+          label={t('propertyCreate.location.poBoxOptional')}
+          value={location.po_box || ''}
+          onChangeText={(text) => updateFormField('location', 'po_box', text)}
+          placeholder={t('propertyCreate.location.poBoxPlaceholder')}
+        />
+        <WizardTextField
+          style={styles.formRowItem}
+          label={t('propertyCreate.location.referenceOptional')}
+          value={location.reference || ''}
+          onChangeText={(text) => updateFormField('location', 'reference', text)}
+          placeholder={t('propertyCreate.location.referencePlaceholder')}
+        />
       </View>
 
       <View style={styles.formRow}>
-        <View style={[styles.formGroup, styles.formGroupLeft]}>
-          <ThemedText style={styles.label}>{t('propertyCreate.location.availableFrom')}</ThemedText>
-          <TextInput
-            style={styles.input}
-            value={location.availableFrom}
-            onChangeText={(text) => updateFormField('location', 'availableFrom', text)}
-            placeholder={t('propertyCreate.location.availableFromPlaceholder')}
-          />
-        </View>
+        <WizardTextField
+          style={styles.formRowItem}
+          label={t('propertyCreate.location.cityDistrict')}
+          value={location.city}
+          onChangeText={(text) => updateFormField('location', 'city', text)}
+          placeholder={t('propertyCreate.location.cityDistrictPlaceholder')}
+          error={validationErrors.city}
+        />
+        <WizardSelect
+          style={styles.formRowItem}
+          label={t('propertyCreate.location.state')}
+          placeholder={t('propertyCreate.location.selectState')}
+          options={STATE_OPTIONS}
+          value={location.state}
+          onValueChange={(value) => updateFormField('location', 'state', value)}
+          error={validationErrors.state}
+        />
+      </View>
 
-        <View style={[styles.formGroup, styles.formGroupRight]}>
-          <ThemedText style={styles.label}>{t('propertyCreate.location.leaseTerm')}</ThemedText>
-          <TextInput
-            style={styles.input}
-            value={location.leaseTerm}
-            onChangeText={(text) => updateFormField('location', 'leaseTerm', text)}
-            placeholder={t('propertyCreate.location.leaseTermPlaceholder')}
+      <WizardTextField
+        label={t('propertyCreate.location.zipPostalCode')}
+        value={location.postal_code}
+        onChangeText={(text) => updateFormField('location', 'postal_code', text)}
+        placeholder={t('propertyCreate.location.zipPlaceholder')}
+        keyboardType="numeric"
+        error={validationErrors.postal_code}
+      />
+
+      <View style={styles.formRow}>
+        <Field label={t('propertyCreate.location.availableFrom')} style={styles.formRowItem}>
+          <DatePicker
+            value={availableFromDate}
+            onChange={handleAvailableFrom}
+            weekStartsOn={1}
+            placeholder={t('propertyCreate.location.availableFromPlaceholder')}
+            accessibilityLabel={t('propertyCreate.location.availableFrom')}
           />
-        </View>
+        </Field>
+        <WizardTextField
+          style={styles.formRowItem}
+          label={t('propertyCreate.location.leaseTerm')}
+          value={location.leaseTerm}
+          onChangeText={(text) => updateFormField('location', 'leaseTerm', text)}
+          placeholder={t('propertyCreate.location.leaseTermPlaceholder')}
+        />
       </View>
     </View>
   );

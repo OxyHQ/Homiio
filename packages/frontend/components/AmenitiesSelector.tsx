@@ -1,15 +1,16 @@
 import React from 'react';
-import { View, TouchableOpacity, StyleSheet, StyleProp, ViewStyle } from 'react-native';
+import { View, StyleSheet, StyleProp, ViewStyle } from 'react-native';
 import { useTranslation } from 'react-i18next';
+// Amenity glyphs are data-driven Ionicons names from `constants/amenities`
+// (wifi, pool, paw…); Bloom's Remix set has no equivalents for most of them.
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { ThemedText } from '@/components/ThemedText';
-import { colors } from '@/styles/colors';
+import { Chip } from '@oxy.so/bloom/chip';
+import { useTheme } from '@oxy.so/bloom/theme';
 import {
   POPULAR_AMENITIES,
   getAmenityById,
   getAmenitiesByPropertyType,
 } from '@/constants/amenities';
-
 
 type AmenitiesSelectorProps = {
   selectedAmenities: string[];
@@ -19,14 +20,15 @@ type AmenitiesSelectorProps = {
   propertyType?: string;
 };
 
+/** Toggleable Bloom `Chip`s, one per amenity available for the property type. */
 export function AmenitiesSelector({
   selectedAmenities,
   onAmenityToggle,
-  showPremiumBadge = true,
   style,
   propertyType,
 }: AmenitiesSelectorProps) {
   const { t } = useTranslation();
+  const theme = useTheme();
 
   // Get amenities based on property type, fallback to all amenities if no type specified
   const availableAmenities = propertyType
@@ -35,71 +37,38 @@ export function AmenitiesSelector({
 
   return (
     <View style={[styles.container, style]}>
-      <View style={styles.pickerContainer}>
-        {availableAmenities.map((amenityId) => {
-          const amenity = getAmenityById(amenityId);
-          if (!amenity) return null;
+      {availableAmenities.map((amenityId) => {
+        const amenity = getAmenityById(amenityId);
+        if (!amenity) return null;
 
-          const isSelected = selectedAmenities?.includes(amenity.id);
+        const isSelected = Boolean(selectedAmenities?.includes(amenity.id));
 
-          return (
-            <TouchableOpacity
-              key={amenity.id}
-              style={[styles.pickerOption, isSelected && styles.pickerOptionSelected]}
-              onPress={() => onAmenityToggle(amenity.id)}
-            >
-              <View style={styles.amenityOptionContent}>
-                <Ionicons
-                  name={amenity.icon}
-                  size={16}
-                  color={isSelected ? colors.primaryForeground : colors.primaryColor}
-                />
-                <ThemedText
-                  style={[styles.pickerOptionText, isSelected && styles.pickerOptionTextSelected]}
-                >
-                  {amenity.nameKey ? t(amenity.nameKey) : amenity.name}
-                </ThemedText>
-              </View>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
+        return (
+          <Chip
+            key={amenity.id}
+            size="large"
+            selected={isSelected}
+            onPress={() => onAmenityToggle(amenity.id)}
+            startIcon={
+              <Ionicons
+                name={amenity.icon}
+                size={16}
+                color={isSelected ? theme.colors.primary : theme.colors.textSecondary}
+              />
+            }
+          >
+            {amenity.nameKey ? t(amenity.nameKey) : amenity.name}
+          </Chip>
+        );
+      })}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 16,
-  },
-  pickerContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
-  },
-  pickerOption: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: colors.primaryLight_1,
-    backgroundColor: colors.primaryLight,
-  },
-  pickerOptionSelected: {
-    backgroundColor: colors.primaryColor,
-    borderColor: colors.primaryColor,
-  },
-  pickerOptionText: {
-    fontSize: 14,
-    color: colors.primaryDark,
-  },
-  pickerOptionTextSelected: {
-    color: colors.primaryForeground,
-    fontWeight: '600',
-  },
-  amenityOptionContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
   },
 });
