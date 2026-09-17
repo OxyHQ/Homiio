@@ -35,7 +35,6 @@ import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 
 import {
-  OfferingType,
   type LocationResolution,
   type LocationSelection,
   type LocationTokenFailure,
@@ -49,7 +48,6 @@ import type { SearchQuery, SearchStep } from '@/components/search/types';
 import { spacing } from '@/constants/styles';
 import { useUserCoordinates } from '@/hooks/useHomeFeed';
 import {
-  DEFAULT_SEARCH_QUERY,
   useSearchQueryStore,
   type SearchFilterPatch,
 } from '@/store/searchQueryStore';
@@ -61,57 +59,8 @@ import {
   type ParsedLocation,
 } from '@/utils/searchUrl';
 import { resolveLegacyCityParam, resolveLocationRef } from '@/utils/resolveLocationRef';
-import { onApplySavedSearch, type SavedSearchPayload } from '@/utils/searchEvents';
-
-/** Reconstruct the non-geographic half of a query from a saved-search payload. */
-function payloadToQuery(payload: SavedSearchPayload): SearchQuery {
-  const filters = payload.filters ?? {};
-  const readNumber = (value: unknown): number | undefined =>
-    typeof value === 'number' && Number.isFinite(value) ? value : undefined;
-  const readString = (value: unknown): string | undefined =>
-    typeof value === 'string' && value.length > 0 ? value : undefined;
-
-  const offeringRaw = readString(filters.offering);
-  const offering =
-    offeringRaw !== undefined && (Object.values(OfferingType) as string[]).includes(offeringRaw)
-      ? (offeringRaw as OfferingType)
-      : OfferingType.LONG_TERM_RENT;
-
-  const propertyTypesRaw = filters.propertyTypes ?? filters.type;
-  const propertyTypes = Array.isArray(propertyTypesRaw)
-    ? propertyTypesRaw.filter((v): v is SearchQuery['propertyTypes'][number] => typeof v === 'string')
-    : [];
-
-  const dates = filters.dates;
-  const dateRange =
-    dates && typeof dates === 'object'
-      ? (dates as { start?: unknown; end?: unknown })
-      : { start: filters.checkIn, end: filters.checkOut };
-
-  return {
-    ...DEFAULT_SEARCH_QUERY,
-    offering,
-    propertyTypes,
-    priceMin: readNumber(filters.priceMin) ?? readNumber(filters.minPrice),
-    priceMax: readNumber(filters.priceMax) ?? readNumber(filters.maxPrice),
-    bedrooms: readNumber(filters.bedrooms),
-    bathrooms: readNumber(filters.bathrooms),
-    amenities: Array.isArray(filters.amenities)
-      ? filters.amenities.filter((a): a is string => typeof a === 'string')
-      : [],
-    guests: readNumber(filters.guests),
-    dates:
-      offering === OfferingType.SHORT_TERM_RENT &&
-      typeof dateRange.start === 'string' &&
-      typeof dateRange.end === 'string'
-        ? { start: dateRange.start, end: dateRange.end }
-        : undefined,
-    // The free-text dimension, which is what `query` now means on a saved row.
-    // A LEGACY row holds the place LABEL here, which is why a legacy row is
-    // resolved through the confirmation path rather than dropped in as text.
-    queryText: readString(payload.query) ?? null,
-  };
-}
+import { onApplySavedSearch } from '@/utils/searchEvents';
+import { savedSearchFiltersToQuery } from '@/utils/savedSearchQuery';
 
 export default function SearchScreen() {
   const router = useRouter();
@@ -327,7 +276,7 @@ export default function SearchScreen() {
         setPendingConfirmation({ name: payload.name ?? payload.query, label: payload.query });
         return;
       }
-      commitQuery({ ...payloadToQuery(payload), location: payload.location });
+      commitQuery({ ...savedSearchFiltersToQuery(payload), location: payload.location });
     });
     return () => {
       unsubscribe();
