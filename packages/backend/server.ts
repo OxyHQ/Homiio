@@ -12,7 +12,7 @@ import { version } from './package.json';
 
 import config from './config';
 import routes from './routes';
-import { logger, requestLogger, errorLogger } from './middlewares/logging';
+import { logger, requestLogger } from './middlewares/logging';
 import { notFound, errorHandler } from './middlewares/errorHandler';
 import { rateLimitKeyFor } from './middlewares/rateLimitKey';
 import { connectPostgres } from './db/postgres';
@@ -305,7 +305,6 @@ app.use('/api', publicRoutes());
 app.use('/api', createOxyAuthMiddleware(oxy), routes());
 
 // Error handling middleware
-app.use(errorLogger);
 app.use(notFound);
 app.use(errorHandler);
 

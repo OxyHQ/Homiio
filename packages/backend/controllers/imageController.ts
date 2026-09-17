@@ -6,6 +6,7 @@ import imageUploadService, {
 } from '../services/imageUploadService';
 import { validateImageStoreKey } from '../utils/imageStoreKey';
 import { isLiveEntityId } from '../db/ids';
+import { logUnexpectedError } from '../middlewares/errorHandler';
 
 // Minimal shape for an uploaded file to avoid relying on Express.Multer types
 type UploadedFile = {
@@ -154,10 +155,11 @@ export class ImageController {
         },
       });
     } catch (error) {
+      logUnexpectedError(error, req, 'Failed to upload image');
       res.status(500).json({
         success: false,
         message: 'Failed to upload image',
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: 'Internal server error',
       });
     }
   }
@@ -244,10 +246,11 @@ export class ImageController {
         data: { uploadedCount: uploadedImages.length, images: uploadedImages },
       });
     } catch (error) {
+      logUnexpectedError(error, req, 'Failed to upload images');
       res.status(500).json({
         success: false,
         message: 'Failed to upload images',
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: 'Internal server error',
       });
     }
   }
@@ -264,10 +267,11 @@ export class ImageController {
 
       res.status(200).json({ success: true, message: 'Image deleted successfully' });
     } catch (error) {
+      logUnexpectedError(error, req, 'Failed to delete image');
       res.status(500).json({
         success: false,
         message: 'Failed to delete image',
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: 'Internal server error',
       });
     }
   }
@@ -284,10 +288,11 @@ export class ImageController {
 
       res.status(200).json({ success: true, message: 'Image variants deleted successfully' });
     } catch (error) {
+      logUnexpectedError(error, req, 'Failed to delete image variants');
       res.status(500).json({
         success: false,
         message: 'Failed to delete image variants',
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: 'Internal server error',
       });
     }
   }
@@ -339,10 +344,11 @@ export class ImageController {
       res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
       res.status(200).end(file.buffer);
     } catch (error) {
+      logUnexpectedError(error, req, 'Failed to serve image');
       res.status(500).json({
         success: false,
         message: 'Failed to serve image',
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: 'Internal server error',
       });
     }
   }
@@ -359,10 +365,11 @@ export class ImageController {
 
       res.status(200).json({ success: true, data: { key: imageKey, url: imageUrl } });
     } catch (error) {
+      logUnexpectedError(error, req, 'Failed to get image info');
       res.status(500).json({
         success: false,
         message: 'Failed to get image info',
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: 'Internal server error',
       });
     }
   }
