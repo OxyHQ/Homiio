@@ -563,7 +563,14 @@
         "strict": "Strict",
         "superStrict": "Super strict"
       },
-      "fairPrice": "Fair price only"
+      "fairPrice": "Fair price only",
+      "options": "Options",
+      "rooms": "Pièces",
+      "show": "Afficher les logements",
+      "showMore": "Afficher plus",
+      "showLess": "Afficher moins",
+      "showResults_one": "Afficher {{count}} logement",
+      "showResults_other": "Afficher {{count}} logements"
     },
     "mode": {
       "label": "Browse mode",
@@ -795,6 +802,18 @@
     },
     "area": {
       "stillShowing": "Résultats toujours affichés pour {{place}}"
+    },
+    "category": {
+      "previous": "Catégories précédentes",
+      "next": "Catégories suivantes"
+    },
+    "guests": {
+      "adults": "Adultes",
+      "adultsDescription": "13 ans et plus",
+      "children": "Enfants",
+      "childrenDescription": "De 2 à 12 ans",
+      "pets": "Animaux",
+      "petsDescription": "Uniquement les logements acceptant les animaux"
     }
   },
   "profile": {

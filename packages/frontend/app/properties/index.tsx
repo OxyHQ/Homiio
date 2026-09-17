@@ -3,9 +3,9 @@
  *
  * Structurally and visually a sibling of the search results screen
  * (`components/search/SearchResultsView`), minus the map: a sticky top bar with
- * an editable `SearchSummaryBar` (tap → opens the real `/search` experience)
- * plus the shared `SearchActionPill` language for Filters / Sort / Recently
- * viewed, over a responsive `PropertyResultsGrid` of `PropertyCard`s.
+ * Bloom's `StaySearchCompact` trigger (tap → opens `/explore`) plus Bloom's
+ * `FilterTriggerButton`, the `SortMenu` and a Recently viewed button, over a
+ * responsive `PropertyResultsGrid` of `PropertyCard`s.
  *
  * Data comes from `usePropertySearch` keyed by a *local* browse query (seeded
  * from `DEFAULT_SEARCH_QUERY`). This is the SAME endpoint + infinite-scroll +
@@ -15,20 +15,17 @@
  * truth, so the browse refinements never clobber an in-flight search. No
  * `useEffect` — the grid is pure derived/React-Query state.
  */
-import React, { useCallback, useContext, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { Platform, ScrollView, StyleSheet, View, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 
+import { Button } from '@oxy.so/bloom/button';
 import { Fab } from '@oxy.so/bloom/fab';
-import {
-  RiAddLine,
-  RiEqualizerLine,
-  RiExpandUpDownLine,
-  RiHomeLine,
-  RiTimeLine,
-} from '@oxy.so/bloom/icons';
+import { RiAddLine, RiEqualizerLine, RiHomeLine, RiTimeLine } from '@oxy.so/bloom/icons';
+import { FilterTriggerButton } from '@oxy.so/bloom/stay-filters';
+import { StaySearchCompact } from '@oxy.so/bloom/stay-search';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { PropertyResultsGrid } from '@/components/ui/PropertyResultsGrid';
@@ -36,70 +33,35 @@ import { PropertyResultsGridSkeleton } from '@/components/ui/PropertyResultsGrid
 import { LoadMoreSentinel } from '@/components/common/LoadMoreSentinel';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
-import { SearchSummaryBar } from '@/components/search/SearchSummaryBar';
-import { SearchActionPill } from '@/components/search/SearchActionPill';
-import { resolveSortLabel, SortControl } from '@/components/search/SortControl';
+import { SortMenu } from '@/components/search/SortMenu';
+import { SearchFiltersDialog, countActiveFilters } from '@/components/search/SearchFiltersDialog';
+import { summaryLine } from '@/components/search/searchLabels';
 import {
-  SearchFiltersBottomSheet,
-  type SearchFilters,
-} from '@/components/SearchFiltersBottomSheet';
-import type { FilterValue } from '@/components/FiltersBar/FiltersBottomSheet';
-import type {
-  SearchQuery,
-  SearchSortBy,
-  SearchSortOrder,
+  locationDisplayLabel,
+  type SearchQuery,
+  type SearchSortBy,
+  type SearchSortOrder,
 } from '@/components/search/types';
 
-import { BottomSheetContext } from '@/context/BottomSheetContext';
 import { usePropertySearch } from '@/hooks/usePropertySearch';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
+import { useIsScreenNotMobile } from '@/hooks/useOptimizedMediaQuery';
 import { DEFAULT_SEARCH_QUERY } from '@/store/searchQueryStore';
 import { colors } from '@/styles/colors';
 import { hairline, spacing } from '@/constants/styles';
-import { PropertyType, type Property } from '@homiio/shared-types';
+import { useFormatting } from '@/utils/format';
+import type { Property } from '@homiio/shared-types';
 
 /** Number of skeleton cards shown during the first load. */
 const SKELETON_COUNT = 6;
 
-/**
- * Derive the {@link SearchFilters} shape (consumed by the reused filters sheet)
- * from the active browse {@link SearchQuery}. The sheet edits a flatter model.
- * Mirrors `SearchResultsView.toSheetFilters`.
- */
-function toSheetFilters(query: SearchQuery): SearchFilters {
-  return {
-    minPrice: query.priceMin ?? 0,
-    maxPrice: query.priceMax ?? 0,
-    bedrooms: query.bedrooms ?? 1,
-    bathrooms: query.bathrooms ?? 1,
-    type: query.propertyTypes[0],
-    amenities: query.amenities,
-    guests: query.guests,
-    checkIn: query.dates?.start,
-    checkOut: query.dates?.end,
-  };
-}
-
-/**
- * Count the *applied* refinements for the Filters pill badge — property
- * type(s), price, bedrooms, bathrooms, and each amenity. Sort lives on its own
- * pill. Mirrors `SearchResultsView.countActiveFilters`.
- */
-function countActiveFilters(query: SearchQuery): number {
-  let count = 0;
-  count += query.propertyTypes.length;
-  if (query.priceMin !== undefined || query.priceMax !== undefined) count += 1;
-  if (query.bedrooms !== undefined) count += 1;
-  if (query.bathrooms !== undefined) count += 1;
-  count += query.amenities.length;
-  return count;
-}
-
 export default function PropertiesScreen() {
   const { t } = useTranslation();
+  const { locale } = useFormatting();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const bottomSheet = useContext(BottomSheetContext);
+  const isWide = useIsScreenNotMobile();
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   // Local browse query (NOT the shared search store — see file header). Filters
   // and sort patch this in place; the grid re-keys off it via usePropertySearch.
@@ -122,10 +84,6 @@ export default function PropertiesScreen() {
   } = usePropertySearch(query);
 
   const activeFilterCount = useMemo(() => countActiveFilters(query), [query]);
-  const sort = useMemo(
-    () => resolveSortLabel(query.sortBy, query.sortOrder, t),
-    [query.sortBy, query.sortOrder, t],
-  );
 
   const handleEditSearch = useCallback(() => {
     router.push('/explore');
@@ -138,91 +96,11 @@ export default function PropertiesScreen() {
     [router],
   );
 
-  const handleSortPress = useCallback(() => {
-    bottomSheet.openBottomSheet(
-      <SortControl
-        sortBy={query.sortBy}
-        sortOrder={query.sortOrder}
-        onChange={(sortBy: SearchSortBy, sortOrder: SearchSortOrder) =>
-          patchQuery({ sortBy, sortOrder })
-        }
-        onClose={() => bottomSheet.closeBottomSheet()}
-      />,
-    );
-  }, [bottomSheet, query.sortBy, query.sortOrder, patchQuery]);
-
-  const handleSheetFilterChange = useCallback(
-    (sectionId: string, value: FilterValue) => {
-      switch (sectionId) {
-        case 'type':
-          patchQuery({
-            propertyTypes: typeof value === 'string' ? [value as PropertyType] : [],
-          });
-          return;
-        case 'price':
-          if (Array.isArray(value)) {
-            const [min, max] = value;
-            patchQuery({
-              priceMin: typeof min === 'number' && min > 0 ? min : undefined,
-              priceMax: typeof max === 'number' && max > 0 ? max : undefined,
-            });
-          }
-          return;
-        case 'bedrooms':
-          patchQuery({
-            bedrooms:
-              typeof value === 'string' || typeof value === 'number'
-                ? Number(value)
-                : undefined,
-          });
-          return;
-        case 'bathrooms':
-          patchQuery({
-            bathrooms:
-              typeof value === 'string' || typeof value === 'number'
-                ? Number(value)
-                : undefined,
-          });
-          return;
-        case 'amenities': {
-          if (typeof value !== 'string') return;
-          const current = query.amenities;
-          const next = current.includes(value)
-            ? current.filter((a) => a !== value)
-            : [...current, value];
-          patchQuery({ amenities: next });
-          return;
-        }
-        case 'guests':
-          patchQuery({ guests: typeof value === 'number' ? value : undefined });
-          return;
-        default:
-          return;
-      }
-    },
-    [patchQuery, query.amenities],
+  const handleSortChange = useCallback(
+    (sortBy: SearchSortBy, sortOrder: SearchSortOrder) => patchQuery({ sortBy, sortOrder }),
+    [patchQuery],
   );
-
-  const handleFiltersPress = useCallback(() => {
-    bottomSheet.openBottomSheet(
-      <SearchFiltersBottomSheet
-        filters={toSheetFilters(query)}
-        onFilterChange={handleSheetFilterChange}
-        onApply={() => bottomSheet.closeBottomSheet()}
-        onClear={() => {
-          patchQuery({
-            propertyTypes: [],
-            priceMin: undefined,
-            priceMax: undefined,
-            bedrooms: undefined,
-            bathrooms: undefined,
-            amenities: [],
-          });
-          bottomSheet.closeBottomSheet();
-        }}
-      />,
-    );
-  }, [bottomSheet, query, handleSheetFilterChange, patchQuery]);
+  const handleFiltersPress = useCallback(() => setFiltersOpen(true), []);
 
   // Shared infinite-scroll primitive: native fires `onScroll` end-detect, web
   // uses the `<LoadMoreSentinel>` at the grid's end. Both funnel through the same
@@ -295,10 +173,14 @@ export default function PropertiesScreen() {
   const topBar = (
     <View style={[styles.topBar, { paddingTop: insets.top }]}>
       <View style={styles.topBarContent}>
-        <View style={styles.summaryWrap}>
-          <SearchSummaryBar query={query} onPress={handleEditSearch} compact />
-        </View>
-        {/* Horizontally-scrollable so the pills never wrap or clip on a narrow
+        <StaySearchCompact
+          onPress={handleEditSearch}
+          title={locationDisplayLabel(query.location, t)}
+          summary={summaryLine(query, t, locale)}
+          accessibilityLabel={t('search.summary.edit')}
+          style={styles.summaryWrap}
+        />
+        {/* Horizontally-scrollable so the controls never wrap or clip on a narrow
             phone; on wide screens the content fits and the scroll never engages. */}
         <ScrollView
           horizontal
@@ -306,33 +188,32 @@ export default function PropertiesScreen() {
           style={styles.topBarActionsScroll}
           contentContainerStyle={styles.topBarActions}
         >
-          <SearchActionPill
-            label={t('search.actions.filters')}
-            icon={RiEqualizerLine}
-            active={activeFilterCount > 0}
+          <FilterTriggerButton
             count={activeFilterCount}
             onPress={handleFiltersPress}
+            label={t('search.actions.filters')}
             accessibilityLabel={
               activeFilterCount > 0
                 ? `${t('search.actions.filters')}, ${activeFilterCount}`
                 : t('search.actions.filters')
             }
           />
-          <SearchActionPill
-            label={sort.isDefault ? t('search.actions.sort') : sort.label}
-            icon={RiExpandUpDownLine}
-            active={!sort.isDefault}
-            onPress={handleSortPress}
-            accessibilityLabel={`${t('search.actions.sort')}: ${sort.label}`}
+          <SortMenu
+            sortBy={query.sortBy}
+            sortOrder={query.sortOrder}
+            onChange={handleSortChange}
+            iconOnly={!isWide}
           />
-          <SearchActionPill
-            label={t('properties.actions.recent')}
+          <Button
+            variant="outline"
+            size="medium"
             icon={RiTimeLine}
+            iconOnly={!isWide}
             onPress={() => router.push('/properties/recently-viewed')}
-            accessibilityLabel={
-              t('properties.actions.recent')
-            }
-          />
+            accessibilityLabel={t('properties.actions.recent')}
+          >
+            {isWide ? t('properties.actions.recent') : undefined}
+          </Button>
         </ScrollView>
       </View>
     </View>
@@ -341,6 +222,12 @@ export default function PropertiesScreen() {
   return (
     <View style={styles.container}>
       {topBar}
+      <SearchFiltersDialog
+        open={filtersOpen}
+        onClose={() => setFiltersOpen(false)}
+        query={query}
+        onApply={patchQuery}
+      />
       <ScrollView
         style={styles.listScroll}
         contentContainerStyle={styles.listScrollContent}

@@ -10,7 +10,7 @@
  * silently, with children still rendering their own styles, which is what makes
  * it look like a spacing bug rather than a dropped prop. `AGENTS.md` carries the
  * rule and the replacement (a static style array plus `onPressIn`/`onPressOut`
- * state); `components/search/SearchSummaryBar.tsx` is the canonical template.
+ * state); `components/ui/PropertyListHeader.tsx` is the canonical template.
  *
  * ## Why this file exists rather than the documented grep
  *

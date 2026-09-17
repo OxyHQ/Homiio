@@ -563,7 +563,14 @@
         "strict": "Strict",
         "superStrict": "Super strict"
       },
-      "fairPrice": "Fair price only"
+      "fairPrice": "Fair price only",
+      "options": "Options",
+      "rooms": "Rooms",
+      "show": "Show homes",
+      "showMore": "Show more",
+      "showLess": "Show less",
+      "showResults_one": "Show {{count}} home",
+      "showResults_other": "Show {{count}} homes"
     },
     "mode": {
       "label": "Browse mode",
@@ -795,6 +802,18 @@
     },
     "area": {
       "stillShowing": "Still showing results for {{place}}"
+    },
+    "category": {
+      "previous": "Previous categories",
+      "next": "Next categories"
+    },
+    "guests": {
+      "adults": "Adults",
+      "adultsDescription": "Ages 13 or above",
+      "children": "Children",
+      "childrenDescription": "Ages 2–12",
+      "pets": "Pets",
+      "petsDescription": "Only homes that allow pets"
     }
   },
   "profile": {

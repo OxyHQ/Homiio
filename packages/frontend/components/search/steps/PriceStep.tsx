@@ -1,59 +1,36 @@
 /**
- * PriceStep — price range selector for the search panel.
+ * PriceStep — the price range for a search, on Bloom's `PriceRangeFilter`.
  *
- * Offers mode-aware quick-pick range chips (monthly for long-term, nightly for
- * vacation, a sale price when buying) plus a Bloom `RangeSlider` for any other
- * range. A thumb resting on its end of the track means "no limit" on that side,
- * so both bounds can be left open. Reports the resolved `(min, max)` pair upward.
+ * The unit is fixed per offering (monthly rent, nightly rate, sale price) and
+ * is stated under the control, never reinterpreted. A thumb resting on its end
+ * of the track means "no limit" on that side, so both bounds can be left open.
+ *
+ * ## No histogram, on purpose
+ *
+ * `PriceRangeFilter` draws a histogram of listing counts per price bucket when
+ * it is given one. Homiio has no endpoint that returns that distribution for a
+ * SEARCH — scoped to the chosen area, the active offering and its unit. The only
+ * buckets that exist are app-wide monthly rent (`/analytics/stats`), and drawing
+ * those under a Barcelona nightly search would be a worldwide picture presented
+ * as a local one. So the range renders without bars until the search API can
+ * answer for the scope it is asked about.
  */
 import React, { useCallback, useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
-import { Chip } from '@oxy.so/bloom/chip';
-import { RangeSlider } from '@oxy.so/bloom/slider';
+import { PriceRangeFilter } from '@oxy.so/bloom/stay-filters';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 
-import { OfferingType, formatMoney, formatMoneyRange } from '@homiio/shared-types';
-import type { TFunction } from 'i18next';
+import { OfferingType, formatMoney } from '@homiio/shared-types';
 
 import { SEARCH_PRICE_CURRENCY } from '@/components/search/types';
 import { useFormatting } from '@/utils/format';
 import { useColors } from '@/hooks/useThemeColor';
 import { spacing } from '@/constants/styles';
 
-/** A quick-pick price band. `max: null` means "and up". */
-interface PriceBand {
-  min: number;
-  max: number | null;
-}
-
-/** Monthly bands for long-term browsing. */
-const LONG_TERM_BANDS: readonly PriceBand[] = [
-  { min: 0, max: 800 },
-  { min: 800, max: 1200 },
-  { min: 1200, max: 2000 },
-  { min: 2000, max: null },
-] as const;
-
-/** Nightly bands for vacation browsing. */
-const VACATION_BANDS: readonly PriceBand[] = [
-  { min: 0, max: 80 },
-  { min: 80, max: 150 },
-  { min: 150, max: 300 },
-  { min: 300, max: null },
-] as const;
-
-/** Sale prices, for the buy mode. */
-const SALE_BANDS: readonly PriceBand[] = [
-  { min: 0, max: 150000 },
-  { min: 150000, max: 300000 },
-  { min: 300000, max: 600000 },
-  { min: 600000, max: null },
-] as const;
-
 /** A slider track: its top is "no maximum", and `step` is its granularity. */
-interface PriceTrack {
+export interface PriceTrack {
   max: number;
   step: number;
 }
@@ -62,21 +39,54 @@ const LONG_TERM_TRACK: PriceTrack = { max: 5000, step: 50 };
 const VACATION_TRACK: PriceTrack = { max: 1000, step: 10 };
 const SALE_TRACK: PriceTrack = { max: 2000000, step: 10000 };
 
-/**
- * Format a band into a human label.
- *
- * Both bounds go through the shared formatter in {@link SEARCH_PRICE_CURRENCY},
- * so the chips read `0 €–800 €` for a Spanish reader instead of `€0–€800`. The
- * open-ended band takes its `+` from the locale file rather than from a literal
- * here — several languages phrase "and up" as a word, not a sign.
- */
-function bandLabel(band: PriceBand, locale: string, t: TFunction): string {
-  const money = (amount: number): string =>
-    formatMoney(amount, SEARCH_PRICE_CURRENCY, locale, { maximumFractionDigits: 0 });
-  if (band.max === null) return t('format.range.from', { value: money(band.min) });
-  return formatMoneyRange(band.min, band.max, SEARCH_PRICE_CURRENCY, locale, {
-    maximumFractionDigits: 0,
-  });
+/** The track for an offering's price unit. */
+export function priceTrackFor(offering: OfferingType): PriceTrack {
+  if (offering === OfferingType.SHORT_TERM_RENT) return VACATION_TRACK;
+  if (offering === OfferingType.SALE) return SALE_TRACK;
+  return LONG_TERM_TRACK;
+}
+
+/** The i18n key naming the unit a price is in, or `null` for a sale price. */
+export function priceUnitKey(offering: OfferingType): string | null {
+  if (offering === OfferingType.SHORT_TERM_RENT) return 'search.step.price.perNight';
+  if (offering === OfferingType.SALE) return null;
+  return 'search.step.price.perMonth';
+}
+
+/** The slider position for a pair of optional bounds. */
+export function priceRangeValue(
+  priceMin: number | undefined,
+  priceMax: number | undefined,
+  track: PriceTrack,
+): [number, number] {
+  // A bound beyond the track (a saved search from a wider range) is pinned to
+  // the end rather than lost.
+  const lo = Math.min(priceMin ?? 0, track.max);
+  const hi = priceMax === undefined ? track.max : Math.min(priceMax, track.max);
+  return [lo, Math.max(lo, hi)];
+}
+
+/** The optional bounds a slider position means: an end of the track is no bound. */
+export function priceBounds(
+  [lo, hi]: [number, number],
+  track: PriceTrack,
+): { priceMin: number | undefined; priceMax: number | undefined } {
+  return {
+    priceMin: lo <= 0 ? undefined : lo,
+    priceMax: hi >= track.max ? undefined : hi,
+  };
+}
+
+/** How the range fields show a price: the top of the track is open-ended ("€5,000+"). */
+export function usePriceFormatter(track: PriceTrack): (price: number) => string {
+  const { locale } = useFormatting();
+  return useCallback(
+    (price: number) => {
+      const text = formatMoney(price, SEARCH_PRICE_CURRENCY, locale, { maximumFractionDigits: 0 });
+      return price >= track.max ? `${text}+` : text;
+    },
+    [locale, track.max],
+  );
 }
 
 interface PriceStepProps {
@@ -84,182 +94,51 @@ interface PriceStepProps {
   priceMin?: number;
   priceMax?: number;
   onChange: (min: number | undefined, max: number | undefined) => void;
-  /**
-   * Compact mode for the wide centered dialog: the dialog header already names
-   * the step ("Price range"), so the step's internal heading is suppressed and
-   * the inter-element gap tightens. The narrow sheet leaves this `false`.
-   */
-  compact?: boolean;
 }
 
-export const PriceStep: React.FC<PriceStepProps> = ({
-  offering,
-  priceMin,
-  priceMax,
-  onChange,
-  compact = false,
-}) => {
+export const PriceStep: React.FC<PriceStepProps> = ({ offering, priceMin, priceMax, onChange }) => {
   const { t } = useTranslation();
-  const { locale } = useFormatting();
   const colors = useColors();
-  const isVacation = offering === OfferingType.SHORT_TERM_RENT;
-  const isSale = offering === OfferingType.SALE;
-  const bands = isVacation ? VACATION_BANDS : isSale ? SALE_BANDS : LONG_TERM_BANDS;
-  const track = isVacation ? VACATION_TRACK : isSale ? SALE_TRACK : LONG_TERM_TRACK;
+  const track = priceTrackFor(offering);
+  const formatPrice = usePriceFormatter(track);
+  const unitKey = priceUnitKey(offering);
 
-  const money = useCallback(
-    (amount: number): string =>
-      formatMoney(amount, SEARCH_PRICE_CURRENCY, locale, { maximumFractionDigits: 0 }),
-    [locale],
-  );
+  const value = useMemo(() => priceRangeValue(priceMin, priceMax, track), [priceMin, priceMax, track]);
 
-  const activeBandIndex = useMemo(
-    () =>
-      bands.findIndex(
-        (b) => b.min === (priceMin ?? 0) && (b.max ?? undefined) === priceMax,
-      ),
-    [bands, priceMin, priceMax],
-  );
-
-  const handleBand = useCallback(
-    (band: PriceBand) => {
-      onChange(band.min === 0 ? undefined : band.min, band.max ?? undefined);
+  const handleChange = useCallback(
+    (next: [number, number]) => {
+      const bounds = priceBounds(next, track);
+      onChange(bounds.priceMin, bounds.priceMax);
     },
-    [onChange],
+    [onChange, track],
   );
-
-  // An unset bound sits at its end of the track; a bound beyond the track (a
-  // saved search from a wider range) is pinned to the end rather than lost.
-  const sliderValue = useMemo<[number, number]>(() => {
-    const lo = Math.min(priceMin ?? 0, track.max);
-    const hi = priceMax === undefined ? track.max : Math.min(priceMax, track.max);
-    return [lo, Math.max(lo, hi)];
-  }, [priceMin, priceMax, track.max]);
-
-  const handleSlider = useCallback(
-    ([lo, hi]: [number, number]) => {
-      onChange(lo <= 0 ? undefined : lo, hi >= track.max ? undefined : hi);
-    },
-    [onChange, track.max],
-  );
-
-  const rangeSummary =
-    priceMin !== undefined && priceMax !== undefined
-      ? formatMoneyRange(priceMin, priceMax, SEARCH_PRICE_CURRENCY, locale, {
-          maximumFractionDigits: 0,
-        })
-      : priceMin !== undefined
-        ? t('format.range.from', { value: money(priceMin) })
-        : priceMax !== undefined
-          ? t('format.range.upTo', { value: money(priceMax) })
-          : t('search.summary.anyPrice');
-
-  const unitLabel = isVacation
-    ? t('search.step.price.perNight')
-    : isSale
-      ? null
-      : t('search.step.price.perMonth');
 
   return (
-    <View style={compact ? styles.containerCompact : styles.container}>
-      {compact ? (
-        // The dialog header already says "Price range"; keep only the unit
-        // hint (per month / per night), which the header does not convey.
-        unitLabel ? (
-          <BloomText style={[styles.unitStandalone, { color: colors.textSecondary }]}>
-            {`(${unitLabel})`}
-          </BloomText>
-        ) : null
-      ) : (
-        <BloomText style={[styles.heading, { color: colors.text }]}>
-          {t('search.step.price.title')}
-          {unitLabel ? (
-            <BloomText style={[styles.unit, { color: colors.textSecondary }]}> ({unitLabel})</BloomText>
-          ) : null}
-        </BloomText>
-      )}
-
-      <View style={styles.chips}>
-        {bands.map((band, index) => {
-          const label = bandLabel(band, locale, t);
-          const isSelected = index === activeBandIndex;
-          return (
-            <Chip
-              key={label}
-              variant={isSelected ? 'solid' : 'outlined'}
-              color={isSelected ? 'primary' : 'default'}
-              size="large"
-              selected={isSelected}
-              onPress={() => handleBand(band)}
-              accessibilityLabel={label}
-            >
-              {label}
-            </Chip>
-          );
-        })}
-      </View>
-
-      <View style={styles.sliderBlock}>
-        <BloomText
-          style={[styles.summary, { color: colors.text }]}
-          accessibilityLiveRegion="polite"
-        >
-          {rangeSummary}
-        </BloomText>
-        <View style={styles.sliderTrack}>
-          <RangeSlider
-            value={sliderValue}
-            min={0}
-            max={track.max}
-            step={track.step}
-            onValueChange={handleSlider}
-            formatValue={(value) => money(value)}
-            thumbLabels={[t('search.step.price.min'), t('search.step.price.max')]}
-            accessibilityLabel={t('search.step.price.title')}
-          />
-        </View>
-      </View>
+    <View style={styles.container}>
+      {unitKey ? (
+        <BloomText style={[styles.unit, { color: colors.textSecondary }]}>{t(unitKey)}</BloomText>
+      ) : null}
+      <PriceRangeFilter
+        min={0}
+        max={track.max}
+        step={track.step}
+        value={value}
+        onValueChange={handleChange}
+        formatPrice={formatPrice}
+        minLabel={t('search.step.price.min')}
+        maxLabel={t('search.step.price.max')}
+        accessibilityLabel={t('search.step.price.title')}
+      />
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    gap: spacing.lg,
-  },
-  // Compact drops the large heading for a slim unit hint, so the gap between
-  // that hint, the chips and the slider stays tight in the centered dialog.
-  containerCompact: {
     gap: spacing.md,
-  },
-  heading: {
-    fontSize: 18,
-    fontWeight: '700',
   },
   unit: {
     fontSize: 14,
-    fontWeight: '400',
-  },
-  unitStandalone: {
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  chips: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-  },
-  sliderBlock: {
-    gap: spacing.sm,
-  },
-  // Half of each thumb's value bubble hangs past the track's ends; the inset
-  // keeps it inside the dialog.
-  sliderTrack: {
-    paddingHorizontal: spacing.xl,
-  },
-  summary: {
-    fontSize: 15,
-    fontWeight: '600',
   },
 });
 

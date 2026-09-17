@@ -16,7 +16,7 @@ import type {
 /**
  * Active-search store.
  *
- * Holds the single, in-flight {@link SearchQuery} the expanding `SearchPanel`
+ * Holds the single, in-flight {@link SearchQuery} the `StaySearch` composer
  * writes and the `SearchResultsView` reads. Intentionally NOT persisted — it is
  * "what the user is looking at right now". The persisted history lives in
  * `recentSearchesStore`, and the authoritative copy of a committed query lives
