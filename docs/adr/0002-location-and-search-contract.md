@@ -1243,6 +1243,7 @@ frontend's belief about it.
 |---|---|---|
 | `q` / `query` / `search` (three aliases, first wins) | `searchQueryBuilder.ts:475` | `q` only; carries `LocationQuery.text` |
 | `city`, `state` (id **or** name) | `:476-477`, resolved `search.ts:93-102` | `cityId`, `regionId`, `neighborhoodId` (ids); names kept one release |
+| `country` (ISO 3166-1 alpha-2; a malformed value answers `location.status: 'unresolved'`, never an unscoped search) | `searchQueryBuilder.ts` `inCountry`, `search.ts` | added by #470: a country place is scoped by identity (`addresses.country_code`), never by a radius |
 | `swLat`, `swLng`, `neLat`, `neLng` | `parseBoundingBox`, `:223-259` | unchanged; `swLng > neLng` documented as antimeridian-crossing |
 | `bounds=west,south,east,north` | `:231-243` | unchanged (legacy) |
 | `lat`, `lng`, `radius` (metres, default 25 000, max 200 000) | `parseCenterRadius`, `:265-282` | unchanged; **units documented as metres at every call site** |
