@@ -14,19 +14,18 @@
 import React from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { useMediaQuery } from 'react-responsive';
 
+import { Card } from '@oxy.so/bloom/card';
+import {
+  RiCheckboxBlankCircleLine,
+  RiCheckboxCircleFill,
+  RiVipCrownLine,
+} from '@oxy.so/bloom/icons';
+import { useTheme } from '@oxy.so/bloom/theme';
 import { H1, Text as BloomText } from '@oxy.so/bloom/typography';
 
-import { colors } from '@/styles/colors';
-import {
-  ICON_SIZES,
-  radius,
-  resolvePagePadding,
-  spacing,
-  tracker,
-} from '@/constants/styles';
+import { resolvePagePadding, spacing, tracker } from '@/constants/styles';
 import {
   REWARD_TIERS,
   tierForPoints,
@@ -66,35 +65,47 @@ const TierCard: React.FC<TierCardProps> = ({
   isCurrent,
   width,
 }) => {
+  const theme = useTheme();
   const tint = TIER_TINTS[tier.key];
   return (
-    <View
-      style={[
-        styles.card,
-        { width },
-        isCurrent && { borderColor: colors.primaryColor, borderWidth: 2 },
-      ]}
+    <Card
+      variant="outlined"
+      radius="radius-16"
+      className="gap-3 p-5"
+      style={[{ width }, isCurrent && { borderColor: theme.colors.primary, borderWidth: 2 }]}
     >
       <View style={[styles.medal, { backgroundColor: `${tint}22` }]}>
-        <Ionicons name="medal" size={ICON_SIZES.lg} color={tint} />
+        <RiVipCrownLine width={24} height={24} fill={tint} />
       </View>
       <View style={styles.cardHead}>
-        <BloomText style={styles.tierName}>{name}</BloomText>
-        <BloomText style={styles.tierPoints}>{pointsLabel}</BloomText>
+        <BloomText variant="headline-bold" style={{ color: theme.colors.text }}>
+          {name}
+        </BloomText>
+        <BloomText variant="body-2-semibold" style={{ color: theme.colors.textSecondary }}>
+          {pointsLabel}
+        </BloomText>
       </View>
       <View style={styles.perks}>
-        {perks.map((perk) => (
-          <View key={perk} style={styles.perkRow}>
-            <Ionicons
-              name={reached ? 'checkmark-circle' : 'ellipse-outline'}
-              size={ICON_SIZES.sm}
-              color={reached ? colors.success : colors.COLOR_BLACK_LIGHT_5}
-            />
-            <BloomText style={styles.perkLabel}>{perk}</BloomText>
-          </View>
-        ))}
+        {perks.map((perk) => {
+          const PerkIcon = reached ? RiCheckboxCircleFill : RiCheckboxBlankCircleLine;
+          return (
+            <View key={perk} style={styles.perkRow}>
+              <PerkIcon
+                width={16}
+                height={16}
+                fill={reached ? theme.colors.success : theme.colors.textTertiary}
+              />
+              <BloomText
+                variant="body-regular"
+                style={{ flex: 1, color: theme.colors.textSecondary }}
+              >
+                {perk}
+              </BloomText>
+            </View>
+          );
+        })}
       </View>
-    </View>
+    </Card>
   );
 };
 
@@ -108,11 +119,11 @@ interface RewardsTeaserProps {
 
 export const RewardsTeaser: React.FC<RewardsTeaserProps> = ({ points }) => {
   const { t } = useTranslation();
+  const theme = useTheme();
   const isWide = useMediaQuery({ minWidth: 768 });
   const horizontalPadding = resolvePagePadding(isWide);
 
-  const currentTierKey =
-    points !== undefined ? tierForPoints(points).key : undefined;
+  const currentTierKey = points !== undefined ? tierForPoints(points).key : undefined;
 
   const cardWidth = isWide ? 260 : 220;
 
@@ -121,10 +132,8 @@ export const RewardsTeaser: React.FC<RewardsTeaserProps> = ({ points }) => {
   return (
     <View>
       <View style={[styles.header, { paddingHorizontal: horizontalPadding }]}>
-        <H1 style={styles.title}>
-          {t('agent.rewards.title')}
-        </H1>
-        <BloomText style={styles.subtitle}>
+        <H1 style={[styles.title, { color: theme.colors.text }]}>{t('agent.rewards.title')}</H1>
+        <BloomText style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
           {t('agent.rewards.subtitle')}
         </BloomText>
       </View>
@@ -162,27 +171,17 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: colors.COLOR_BLACK,
     letterSpacing: tracker.tight,
     lineHeight: 34,
   },
   subtitle: {
     fontSize: 15,
-    color: colors.COLOR_BLACK_LIGHT_3,
     lineHeight: 22,
     maxWidth: 520,
   },
   rail: {
     gap: spacing.lg,
     paddingVertical: spacing.xs,
-  },
-  card: {
-    backgroundColor: colors.surfaceElevated,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.xl,
-    gap: spacing.md,
   },
   medal: {
     width: 48,
@@ -194,17 +193,6 @@ const styles = StyleSheet.create({
   cardHead: {
     gap: 2,
   },
-  tierName: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.COLOR_BLACK,
-    letterSpacing: tracker.tight,
-  },
-  tierPoints: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.COLOR_BLACK_LIGHT_4,
-  },
   perks: {
     gap: spacing.sm,
   },
@@ -212,12 +200,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-  },
-  perkLabel: {
-    flex: 1,
-    fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_2,
-    lineHeight: 19,
   },
 });
 

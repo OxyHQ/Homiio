@@ -1,6 +1,4 @@
 // Reusable UI Components
-export { StatusBadge, type StatusType } from './StatusBadge';
-export { createStatusBadge, type StatusBadgeEntry, type StatusBadgeProps } from './createStatusBadge';
 export { ThumbnailImage, type ThumbnailImageProps } from './ThumbnailImage';
 export { EmptyState } from './EmptyState';
 export { ErrorState } from './ErrorState';

@@ -2,7 +2,7 @@
  * Stays — applicant-side list of vacation/short-term bookings.
  *
  * Polished to the Stream P personal-surface language:
- * - Bloom Chip filter (All / Upcoming / Past / Cancelled)
+ * - Bloom SegmentedControl filter (All / Upcoming / Past / Cancelled)
  * - Bloom Skeleton.Box list while loading (no spinner)
  * - Shared EmptyState / ErrorState components
  * - Bloom typography for every label
@@ -13,8 +13,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
-import { Chip } from '@oxy.so/bloom/chip';
-import { Text as BloomText } from '@oxy.so/bloom/typography';
+import {
+  SegmentedControl,
+  SegmentedControlItem,
+  SegmentedControlItemText,
+} from '@oxy.so/bloom/segmented-control';
 import { useOxy, openAccountDialog } from '@oxy.so/services';
 import {
   Reservation,
@@ -26,9 +29,10 @@ import { ReservationCard } from '@/components/ReservationCard';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { ListSkeleton } from '@/components/ui/ListSkeleton';
+import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
 import { useReservationsQuery } from '@/hooks/useReservationQueries';
 import { colors } from '@/styles/colors';
-import { spacing, tracker } from '@/constants/styles';
+import { spacing } from '@/constants/styles';
 
 type Filter = 'all' | 'upcoming' | 'past' | 'cancelled';
 
@@ -209,7 +213,7 @@ export default function StaysScreen() {
           ) : (
             filteredGroups.map((group) => (
               <View key={group.label} style={styles.section}>
-                <BloomText style={styles.sectionEyebrow}>{group.label}</BloomText>
+                <SectionEyebrow>{group.label}</SectionEyebrow>
                 <View style={styles.cards}>
                   {group.items.map((reservation) => (
                     <ReservationCard
@@ -234,24 +238,19 @@ interface FilterRowProps {
 }
 
 const FilterRow: React.FC<FilterRowProps> = ({ value, onChange, t }) => (
-  <ScrollView
-    horizontal
-    showsHorizontalScrollIndicator={false}
-    contentContainerStyle={styles.filterRow}
+  <SegmentedControl<Filter>
+    label={t('stays.list.title')}
+    type="tabs"
+    value={value}
+    onChange={onChange}
+    style={styles.filterRow}
   >
     {FILTERS.map((option) => (
-      <Chip
-        key={option.value}
-        variant={value === option.value ? 'solid' : 'outlined'}
-        color={value === option.value ? 'primary' : 'default'}
-        size="medium"
-        selected={value === option.value}
-        onPress={() => onChange(option.value)}
-      >
-        {t(option.i18nKey)}
-      </Chip>
+      <SegmentedControlItem key={option.value} value={option.value}>
+        <SegmentedControlItemText>{t(option.i18nKey)}</SegmentedControlItemText>
+      </SegmentedControlItem>
     ))}
-  </ScrollView>
+  </SegmentedControl>
 );
 
 const styles = StyleSheet.create({
@@ -274,20 +273,10 @@ const styles = StyleSheet.create({
     paddingVertical: spacing['3xl'],
   },
   filterRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.xs,
+    alignSelf: 'flex-start',
   },
   section: {
     gap: spacing.md,
-  },
-  sectionEyebrow: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: colors.muted,
-    textTransform: 'uppercase',
-    letterSpacing: tracker.eyebrow,
   },
   cards: {
     gap: spacing.md,

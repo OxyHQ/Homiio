@@ -1,14 +1,25 @@
+import React from 'react';
+import { useTranslation } from 'react-i18next';
+import { Chip, type ChipHue } from '@oxy.so/bloom/chip';
 import { ReservationStatus } from '@homiio/shared-types';
-import { createStatusBadge, type StatusBadgeEntry } from '@/components/ui/createStatusBadge';
 
-const STATUS_MAP: Record<ReservationStatus, StatusBadgeEntry> = {
-  [ReservationStatus.PENDING]: { i18nKey: 'statusBadge.reservation.pending', label: 'Pending', color: 'warning' },
-  [ReservationStatus.CONFIRMED]: { i18nKey: 'statusBadge.reservation.confirmed', label: 'Confirmed', color: 'success' },
-  [ReservationStatus.DECLINED]: { i18nKey: 'statusBadge.reservation.declined', label: 'Declined', color: 'error' },
-  [ReservationStatus.CANCELLED]: { i18nKey: 'statusBadge.reservation.cancelled', label: 'Cancelled', color: 'default' },
-  [ReservationStatus.COMPLETED]: { i18nKey: 'statusBadge.reservation.completed', label: 'Completed', color: 'info' },
+/** Reservation status → Bloom Chip data hue + i18n label key. */
+const STATUS_MAP: Record<ReservationStatus, { hue: ChipHue; i18nKey: string }> = {
+  [ReservationStatus.PENDING]: { hue: 'yellow', i18nKey: 'statusBadge.reservation.pending' },
+  [ReservationStatus.CONFIRMED]: { hue: 'lime', i18nKey: 'statusBadge.reservation.confirmed' },
+  [ReservationStatus.DECLINED]: { hue: 'rose', i18nKey: 'statusBadge.reservation.declined' },
+  [ReservationStatus.CANCELLED]: { hue: 'neutral', i18nKey: 'statusBadge.reservation.cancelled' },
+  [ReservationStatus.COMPLETED]: { hue: 'cyan', i18nKey: 'statusBadge.reservation.completed' },
 };
 
-export const ReservationStatusBadge = createStatusBadge(STATUS_MAP);
+export function ReservationStatusBadge({ status }: { status: ReservationStatus }) {
+  const { t } = useTranslation();
+  const entry = STATUS_MAP[status];
+  return (
+    <Chip size="small" hue={entry.hue}>
+      {t(entry.i18nKey)}
+    </Chip>
+  );
+}
 
 export default ReservationStatusBadge;

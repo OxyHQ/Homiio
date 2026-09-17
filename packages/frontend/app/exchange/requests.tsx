@@ -1,7 +1,7 @@
 /**
  * My exchange requests — guest + host views in one screen.
  *
- * A segmented toggle switches between the guest view (requests I made) and the
+ * A Bloom SegmentedControl switches between the guest view (requests I made) and the
  * host inbox (requests against my listings). A status chip row filters within
  * the active view. Host rows expose inline approve/decline for pending requests.
  * Mirrors the reservations list patterns (Bloom Chip + Skeleton + Empty/Error
@@ -14,6 +14,12 @@ import { useTranslation } from 'react-i18next';
 
 import { Button } from '@oxy.so/bloom/button';
 import { Chip } from '@oxy.so/bloom/chip';
+import {
+  SegmentedControl,
+  SegmentedControlItem,
+  SegmentedControlItemText,
+} from '@oxy.so/bloom/segmented-control';
+import { confirm } from '@oxy.so/bloom/surfaces';
 import { useOxy, openAccountDialog } from '@oxy.so/services';
 import {
   ExchangeRequest,
@@ -30,8 +36,8 @@ import {
   useUpdateExchangeStatus,
 } from '@/hooks/useExchangeQueries';
 import { toast } from '@oxy.so/bloom/toast';
-import { colors } from '@/styles/colors';
-import { radius, spacing } from '@/constants/styles';
+import { useTheme } from '@oxy.so/bloom/theme';
+import { spacing } from '@/constants/styles';
 
 type RoleView = 'guest' | 'host';
 type StatusFilter = 'all' | ExchangeRequestStatus;
@@ -54,6 +60,21 @@ const HostPendingActions: React.FC<{ request: ExchangeRequest }> = ({ request })
   if (request.status !== ExchangeRequestStatus.PENDING) return null;
 
   const handle = async (status: ExchangeRequestStatus) => {
+    const approving = status === ExchangeRequestStatus.CONFIRMED;
+    const accepted = await confirm({
+      title: approving
+        ? t('listing.exchange.confirm.approveTitle')
+        : t('listing.exchange.confirm.declineTitle'),
+      description: approving
+        ? t('listing.exchange.confirm.approveBody')
+        : t('listing.exchange.confirm.declineBody'),
+      confirmLabel: approving
+        ? t('listing.exchange.actions.approve')
+        : t('listing.exchange.actions.decline'),
+      cancelLabel: t('common.cancel'),
+      destructive: !approving,
+    });
+    if (!accepted) return;
     setBusy(status === ExchangeRequestStatus.CONFIRMED ? 'confirm' : 'decline');
     try {
       await mutation.mutateAsync({ status });
@@ -99,6 +120,7 @@ const HostPendingActions: React.FC<{ request: ExchangeRequest }> = ({ request })
 
 export default function ExchangeRequestsScreen() {
   const { t } = useTranslation();
+  const theme = useTheme();
   const { oxyServices, activeSessionId } = useOxy();
   const isAuthed = Boolean(oxyServices && activeSessionId);
 
@@ -130,7 +152,7 @@ export default function ExchangeRequestsScreen() {
 
   if (!isAuthed) {
     return (
-      <View style={styles.root}>
+      <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
         {header}
         <SafeAreaView edges={['bottom']} style={styles.safeArea}>
           <View style={styles.centerWrap}>
@@ -149,23 +171,24 @@ export default function ExchangeRequestsScreen() {
   }
 
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
       {header}
       <SafeAreaView edges={['bottom']} style={styles.safeArea}>
         <ScrollView contentContainerStyle={styles.content}>
           {/* Role segmented toggle */}
-          <View style={styles.segmented}>
-            <SegmentButton
-              label={t('listing.exchange.asGuest')}
-              active={role === 'guest'}
-              onPress={() => setRole('guest')}
-            />
-            <SegmentButton
-              label={t('listing.exchange.asHost')}
-              active={role === 'host'}
-              onPress={() => setRole('host')}
-            />
-          </View>
+          <SegmentedControl<RoleView>
+            label={t('listing.exchange.requestsTitle')}
+            type="tabs"
+            value={role}
+            onChange={setRole}
+          >
+            <SegmentedControlItem value="guest">
+              <SegmentedControlItemText>{t('listing.exchange.asGuest')}</SegmentedControlItemText>
+            </SegmentedControlItem>
+            <SegmentedControlItem value="host">
+              <SegmentedControlItemText>{t('listing.exchange.asHost')}</SegmentedControlItemText>
+            </SegmentedControlItem>
+          </SegmentedControl>
 
           {/* Status chips */}
           <ScrollView
@@ -178,8 +201,7 @@ export default function ExchangeRequestsScreen() {
               return (
                 <Chip
                   key={entry.id}
-                  variant={active ? 'solid' : 'outlined'}
-                  color={active ? 'primary' : 'default'}
+                  variant="subtle"
                   selected={active}
                   onPress={() => setStatusFilter(entry.id)}
                 >
@@ -240,27 +262,9 @@ export default function ExchangeRequestsScreen() {
   );
 }
 
-interface SegmentButtonProps {
-  label: string;
-  active: boolean;
-  onPress: () => void;
-}
-
-const SegmentButton: React.FC<SegmentButtonProps> = ({ label, active, onPress }) => (
-  <Button
-    variant={active ? 'primary' : 'ghost'}
-    size="medium"
-    onPress={onPress}
-    style={styles.segmentButton}
-  >
-    {label}
-  </Button>
-);
-
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: colors.background,
   },
   safeArea: {
     flex: 1,
@@ -275,16 +279,6 @@ const styles = StyleSheet.create({
   },
   emptyWrap: {
     paddingVertical: spacing['3xl'],
-  },
-  segmented: {
-    flexDirection: 'row',
-    gap: spacing.xs,
-    backgroundColor: colors.surfaceElevated,
-    borderRadius: radius.lg,
-    padding: spacing.xs,
-  },
-  segmentButton: {
-    flex: 1,
   },
   filterRow: {
     flexDirection: 'row',

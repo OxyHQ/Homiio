@@ -18,6 +18,8 @@ import { useTranslation } from 'react-i18next';
 import { parseISO } from 'date-fns';
 
 import { Button } from '@oxy.so/bloom/button';
+import { RiCheckLine, RiCloseCircleLine, RiCloseLine } from '@oxy.so/bloom/icons';
+import { useTheme } from '@oxy.so/bloom/theme';
 import { Loading } from '@oxy.so/bloom/loading';
 import { Text as BloomText, H2 } from '@oxy.so/bloom/typography';
 import {
@@ -42,7 +44,6 @@ import { ErrorState } from '@/components/ui/ErrorState';
 import { getPropertyImageSource, getPropertyTitle } from '@/utils/propertyUtils';
 import { formatLocalized } from '@/utils/dateLocale';
 import { toast } from '@oxy.so/bloom/toast';
-import { colors } from '@/styles/colors';
 import { radius, spacing, tracker } from '@/constants/styles';
 
 type PendingAction = 'confirm' | 'decline' | 'cancel' | 'complete';
@@ -56,6 +57,7 @@ const formatWindow = (window: ExchangeWindow): string => {
 
 export default function ExchangeRequestDetailScreen() {
   const { t } = useTranslation();
+  const theme = useTheme();
   const params = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const id = typeof params.id === 'string' ? params.id : params.id?.[0];
@@ -169,7 +171,7 @@ export default function ExchangeRequestDetailScreen() {
 
   if (!id) {
     return (
-      <View style={styles.root}>
+      <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
         {header}
         <View style={styles.centerWrap}>
           <ErrorState
@@ -186,7 +188,7 @@ export default function ExchangeRequestDetailScreen() {
 
   if (requestQuery.isPending) {
     return (
-      <View style={styles.root}>
+      <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
         {header}
         <View style={styles.centerWrap}>
           <Loading variant="spinner" size="medium" />
@@ -197,7 +199,7 @@ export default function ExchangeRequestDetailScreen() {
 
   if (requestQuery.isError || !request) {
     return (
-      <View style={styles.root}>
+      <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
         {header}
         <View style={styles.centerWrap}>
           <ErrorState
@@ -238,15 +240,15 @@ export default function ExchangeRequestDetailScreen() {
     !alreadyReviewed;
 
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
       {header}
       <SafeAreaView edges={['bottom']} style={styles.safeArea}>
         <ScrollView contentContainerStyle={styles.content}>
-          <View style={styles.thumbWrap}>
+          <View style={[styles.thumbWrap, { backgroundColor: theme.colors.backgroundTertiary }]}>
             {imageSource ? (
               <Image source={imageSource} style={styles.thumb} resizeMode="cover" />
             ) : (
-              <View style={[styles.thumb, styles.thumbPlaceholder]} />
+              <View style={styles.thumb} />
             )}
           </View>
 
@@ -256,14 +258,14 @@ export default function ExchangeRequestDetailScreen() {
               <ExchangeStatusBadge status={request.status} />
             </View>
             {property?.address ? (
-              <BloomText style={styles.subtitle}>
+              <BloomText style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
                 {[property.address.cityName, property.address.countryName].filter(Boolean).join(', ')}
               </BloomText>
             ) : null}
           </Card>
 
           <Card variant="outlined" radius="radius-16" className="p-5">
-            <BloomText style={styles.sectionLabel}>
+            <BloomText style={[styles.sectionLabel, { color: theme.colors.textSecondary }]}>
               {t('listing.exchange.detailsLabel')}
             </BloomText>
             <DetailRow label={t('listing.exchange.modeLabelShort')} value={modeLabel} />
@@ -287,10 +289,10 @@ export default function ExchangeRequestDetailScreen() {
 
           {request.message ? (
             <Card variant="outlined" radius="radius-16" className="p-5">
-              <BloomText style={styles.sectionLabel}>
+              <BloomText style={[styles.sectionLabel, { color: theme.colors.textSecondary }]}>
                 {t('listing.exchange.messageHeading')}
               </BloomText>
-              <BloomText style={styles.messageText}>{request.message}</BloomText>
+              <BloomText style={[styles.messageText, { color: theme.colors.text }]}>{request.message}</BloomText>
             </Card>
           ) : null}
 
@@ -301,6 +303,7 @@ export default function ExchangeRequestDetailScreen() {
                   <Button
                     variant="primary"
                     size="medium"
+                    leadingIcon={RiCheckLine}
                     onPress={() => void confirmAction('confirm')}
                     disabled={updateMutation.isPending}
                     style={styles.actionButton}
@@ -310,6 +313,7 @@ export default function ExchangeRequestDetailScreen() {
                   <Button
                     variant="secondary"
                     size="medium"
+                    leadingIcon={RiCloseLine}
                     onPress={() => void confirmAction('decline')}
                     disabled={updateMutation.isPending}
                     style={styles.actionButton}
@@ -322,6 +326,7 @@ export default function ExchangeRequestDetailScreen() {
                 <Button
                   variant="primary"
                   size="medium"
+                  leadingIcon={RiCheckLine}
                   onPress={() => void confirmAction('complete')}
                   disabled={updateMutation.isPending}
                   style={styles.actionButton}
@@ -333,6 +338,7 @@ export default function ExchangeRequestDetailScreen() {
                 <Button
                   variant="ghost"
                   size="medium"
+                  leadingIcon={RiCloseCircleLine}
                   onPress={() => void confirmAction('cancel')}
                   disabled={updateMutation.isPending}
                   style={styles.actionButton}
@@ -353,7 +359,7 @@ export default function ExchangeRequestDetailScreen() {
           ) : null}
 
           {request.status === ExchangeRequestStatus.COMPLETED && alreadyReviewed ? (
-            <BloomText style={styles.note}>
+            <BloomText style={[styles.note, { color: theme.colors.textSecondary }]}>
               {t('listing.exchange.review.alreadyLeft')}
             </BloomText>
           ) : null}
@@ -368,17 +374,19 @@ interface DetailRowProps {
   value: string;
 }
 
-const DetailRow: React.FC<DetailRowProps> = ({ label, value }) => (
-  <View style={styles.detailRow}>
-    <BloomText style={styles.detailLabel}>{label}</BloomText>
-    <BloomText style={styles.detailValue}>{value}</BloomText>
-  </View>
-);
+const DetailRow: React.FC<DetailRowProps> = ({ label, value }) => {
+  const theme = useTheme();
+  return (
+    <View style={[styles.detailRow, { borderBottomColor: theme.colors.border }]}>
+      <BloomText style={[styles.detailLabel, { color: theme.colors.textSecondary }]}>{label}</BloomText>
+      <BloomText style={[styles.detailValue, { color: theme.colors.text }]}>{value}</BloomText>
+    </View>
+  );
+};
 
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: colors.background,
   },
   safeArea: {
     flex: 1,
@@ -398,14 +406,10 @@ const styles = StyleSheet.create({
     aspectRatio: 16 / 9,
     borderRadius: radius.photo,
     overflow: 'hidden',
-    backgroundColor: colors.mutedSubtle,
   },
   thumb: {
     width: '100%',
     height: '100%',
-  },
-  thumbPlaceholder: {
-    backgroundColor: colors.mutedSubtle,
   },
   headerRow: {
     flexDirection: 'row',
@@ -421,13 +425,11 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 13,
-    color: colors.muted,
   },
   sectionLabel: {
     fontSize: 11,
     fontWeight: '700',
     textTransform: 'uppercase',
-    color: colors.muted,
     letterSpacing: tracker.eyebrow,
     marginBottom: spacing.sm,
   },
@@ -437,23 +439,19 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     gap: spacing.lg,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.COLOR_BLACK_LIGHT_6,
   },
   detailLabel: {
     fontSize: 13,
-    color: colors.muted,
   },
   detailValue: {
     fontSize: 13,
     fontWeight: '600',
-    color: colors.COLOR_BLACK,
     flexShrink: 1,
     textAlign: 'right',
   },
   messageText: {
     fontSize: 14,
     lineHeight: 20,
-    color: colors.COLOR_BLACK_LIGHT_2,
   },
   actionRow: {
     flexDirection: 'row',
@@ -466,7 +464,6 @@ const styles = StyleSheet.create({
   },
   note: {
     fontSize: 12,
-    color: colors.muted,
     fontStyle: 'italic',
   },
 });

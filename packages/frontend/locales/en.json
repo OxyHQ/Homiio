@@ -1323,7 +1323,10 @@
       "emptyAllDescription": "You don't have any rental contracts yet",
       "emptyFilteredDescription": "No {{filter}} contracts to show",
       "newContract": "New contract",
-      "createNew": "Create new contract"
+      "createNew": "Create new contract",
+      "columnStatus": "Status",
+      "filterLabel": "Filter by status",
+      "searchLabel": "Search contracts"
     },
     "card": {
       "start": "Start",
@@ -3431,7 +3434,8 @@
       "toastBlocked": "Dates blocked",
       "toastBlockFailed": "Block failed",
       "propertyNotFound": "Property not found",
-      "property": "Property"
+      "property": "Property",
+      "blockDates": "Block dates"
     },
     "reservations": {
       "title": "Reservations",

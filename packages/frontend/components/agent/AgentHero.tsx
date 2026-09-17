@@ -3,22 +3,23 @@
  *
  * Mirrors the home hero language (a Barcelona-flavored full-bleed photo, a
  * bottom-up gradient scrim for legibility, a large H1 + supporting line) and
- * ends in a single gold pill CTA. The CTA copy/handler is state-driven by the
+ * ends in a single Bloom primary Button CTA. The CTA copy/handler is state-driven by the
  * screen (sign-in / start earning / share link), so this component is purely
  * presentational: it owns no partner state and just renders the title, subtitle,
  * an optional trust line, and the primary action.
  */
-import React, { useState } from 'react';
-import { Platform, Pressable, StyleSheet, View } from 'react-native';
+import React from 'react';
+import { StyleSheet, View } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMediaQuery } from 'react-responsive';
 
+import { Button } from '@oxy.so/bloom/button';
 import { H1, Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { colors } from '@/styles/colors';
-import { radius, resolvePagePadding, spacing, tracker } from '@/constants/styles';
+import { resolvePagePadding, spacing, tracker } from '@/constants/styles';
 
 /**
  * Aspirational hero photo. Reuses the Unsplash open library (no API key, cached
@@ -51,9 +52,6 @@ export const AgentHero: React.FC<AgentHeroProps> = ({
   const isXL = useMediaQuery({ minWidth: 1280 });
   const insets = useSafeAreaInsets();
   const horizontalPadding = resolvePagePadding(isWide);
-  const [pressed, setPressed] = useState(false);
-  const [hovered, setHovered] = useState(false);
-  const isWeb = Platform.OS === 'web';
 
   return (
     <View style={[styles.hero, { minHeight: isXL ? 560 : isWide ? 480 : 520 }]}>
@@ -93,35 +91,23 @@ export const AgentHero: React.FC<AgentHeroProps> = ({
         >
           {title}
         </H1>
-        <BloomText
-          style={[styles.subtitle, { textAlign: isWide ? 'center' : 'left' }]}
-        >
+        <BloomText style={[styles.subtitle, { textAlign: isWide ? 'center' : 'left' }]}>
           {subtitle}
         </BloomText>
 
-        <Pressable
+        <Button
+          variant="primary"
+          size="large"
           onPress={onPressCta}
+          loading={ctaLoading}
           disabled={ctaLoading}
-          onPressIn={() => setPressed(true)}
-          onPressOut={() => setPressed(false)}
-          onHoverIn={() => setHovered(true)}
-          onHoverOut={() => setHovered(false)}
-          accessibilityRole="button"
           accessibilityLabel={ctaLabel}
-          accessibilityState={{ disabled: ctaLoading }}
-          style={[
-            styles.cta,
-            (pressed || (hovered && isWeb)) && styles.ctaActive,
-            ctaLoading && styles.ctaDisabled,
-          ]}
         >
-          <BloomText style={styles.ctaLabel}>{ctaLabel}</BloomText>
-        </Pressable>
+          {ctaLabel}
+        </Button>
 
         {trustLine ? (
-          <BloomText
-            style={[styles.trustLine, { textAlign: isWide ? 'center' : 'left' }]}
-          >
+          <BloomText style={[styles.trustLine, { textAlign: isWide ? 'center' : 'left' }]}>
             {trustLine}
           </BloomText>
         ) : null}
@@ -170,26 +156,6 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.92)',
     maxWidth: 520,
     marginBottom: spacing['2xl'],
-  },
-  cta: {
-    backgroundColor: colors.primaryColor,
-    borderRadius: radius.pill,
-    paddingHorizontal: spacing['3xl'],
-    paddingVertical: spacing.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  ctaActive: {
-    opacity: 0.9,
-  },
-  ctaDisabled: {
-    opacity: 0.6,
-  },
-  ctaLabel: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: colors.primaryForeground,
-    letterSpacing: tracker.wide,
   },
   trustLine: {
     fontSize: 13,

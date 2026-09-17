@@ -1655,7 +1655,10 @@
       "emptyAllDescription": "Aún no tienes contratos de alquiler",
       "emptyFilteredDescription": "No hay contratos {{filter}} que mostrar",
       "newContract": "Nuevo contrato",
-      "createNew": "Crear nuevo contrato"
+      "createNew": "Crear nuevo contrato",
+      "columnStatus": "Estado",
+      "filterLabel": "Filtrar por estado",
+      "searchLabel": "Buscar contratos"
     },
     "card": {
       "start": "Inicio",
@@ -3475,7 +3478,8 @@
       "toastBlocked": "Fechas bloqueadas",
       "toastBlockFailed": "No se pudo bloquear",
       "propertyNotFound": "Propiedad no encontrada",
-      "property": "Propiedad"
+      "property": "Propiedad",
+      "blockDates": "Bloquear fechas"
     },
     "reservations": {
       "title": "Reservas",

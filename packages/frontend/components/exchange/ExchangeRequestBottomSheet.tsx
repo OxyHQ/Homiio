@@ -1,20 +1,21 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import {
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  TextInput,
-  View,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { Button } from '@oxy.so/bloom/button';
-import { H3, Text as BloomText } from '@oxy.so/bloom/typography';
+import { Dialog } from '@oxy.so/bloom/dialog';
+import { RiArrowLeftRightLine, RiCalendarLine, RiHotelBedLine } from '@oxy.so/bloom/icons';
+import { RadioGroup } from '@oxy.so/bloom/radio';
+import {
+  SegmentedControl,
+  SegmentedControlItem,
+  SegmentedControlItemText,
+} from '@oxy.so/bloom/segmented-control';
+import { Textarea } from '@oxy.so/bloom/textarea';
+import { useTheme } from '@oxy.so/bloom/theme';
+import { toast } from '@oxy.so/bloom/toast';
+import { Text as BloomText } from '@oxy.so/bloom/typography';
 import { useOxy, openAccountDialog } from '@oxy.so/services';
 import {
   ExchangeMode,
@@ -22,7 +23,6 @@ import {
   type CreateExchangeRequestData,
   type Property,
 } from '@homiio/shared-types';
-import { toast } from '@oxy.so/bloom/toast';
 import {
   AvailabilityCalendar,
   type AvailabilityCalendarRange,
@@ -31,7 +31,6 @@ import { useCreateExchangeRequest } from '@/hooks/useExchangeQueries';
 import { useUserProperties } from '@/hooks/usePropertyQueries';
 import { getPropertyTitle, hasOffering } from '@/utils/propertyUtils';
 import { formatLocalized } from '@/utils/dateLocale';
-import { colors } from '@/styles/colors';
 import { spacing } from '@/constants/styles';
 
 export interface ExchangeRequestBottomSheetProps {
@@ -44,7 +43,7 @@ export interface ExchangeRequestBottomSheetProps {
 type RequestMode = ExchangeMode.SWAP | ExchangeMode.HOST;
 type CalendarTarget = 'requested' | 'offered' | null;
 
-const MODAL_INSET_PADDING = 16;
+const MAX_MESSAGE = 2000;
 
 const formatRange = (range: AvailabilityCalendarRange | null): string =>
   range
@@ -59,9 +58,10 @@ const isExchangeEnabled = (property: Property): boolean =>
 /**
  * ExchangeRequestBottomSheet — propose a home swap or free-hosting stay.
  *
- * A self-contained modal (owns its own backdrop + safe-area like BookingWidget)
- * the detail screen toggles via `visible`. It collects:
- *  - the requested stay window (reuses the vacation {@link AvailabilityCalendar}),
+ * A Bloom `Dialog` (a bottom sheet on phones, a centred card from `md`) the
+ * detail screen toggles via `visible`. It collects:
+ *  - the requested stay window (reuses the vacation {@link AvailabilityCalendar},
+ *    swapped in place inside the same dialog rather than stacking a second one),
  *  - a mode selector, shown only when the listing's `exchange.mode === 'both'`
  *    (otherwise the single supported mode is implied),
  *  - for a SWAP: a picker of the requester's OWN exchange-enabled properties
@@ -79,7 +79,7 @@ export const ExchangeRequestBottomSheet: React.FC<ExchangeRequestBottomSheetProp
 }) => {
   const { t } = useTranslation();
   const router = useRouter();
-  const insets = useSafeAreaInsets();
+  const theme = useTheme();
   const { oxyServices, activeSessionId } = useOxy();
   const listingMode = property.exchange?.mode ?? ExchangeMode.BOTH;
   const allowsBoth = listingMode === ExchangeMode.BOTH;
@@ -103,6 +103,15 @@ export const ExchangeRequestBottomSheet: React.FC<ExchangeRequestBottomSheetProp
       (item) => isExchangeEnabled(item) && propertyId(item) !== target,
     );
   }, [myPropertiesQuery.data?.properties, property]);
+
+  const propertyOptions = useMemo(
+    () =>
+      myExchangeProperties.map((item) => ({
+        value: propertyId(item),
+        label: getPropertyTitle(item),
+      })),
+    [myExchangeProperties],
+  );
 
   const createMutation = useCreateExchangeRequest();
 
@@ -135,21 +144,15 @@ export const ExchangeRequestBottomSheet: React.FC<ExchangeRequestBottomSheetProp
       return;
     }
     if (!requestedWindow) {
-      toast.error(
-        t('listing.exchange.errors.pickDates'),
-      );
+      toast.error(t('listing.exchange.errors.pickDates'));
       return;
     }
     if (isSwap && !offeredPropertyId) {
-      toast.error(
-        t('listing.exchange.errors.pickProperty'),
-      );
+      toast.error(t('listing.exchange.errors.pickProperty'));
       return;
     }
     if (isSwap && !offeredWindow) {
-      toast.error(
-        t('listing.exchange.errors.pickOfferedDates'),
-      );
+      toast.error(t('listing.exchange.errors.pickOfferedDates'));
       return;
     }
 
@@ -198,310 +201,155 @@ export const ExchangeRequestBottomSheet: React.FC<ExchangeRequestBottomSheetProp
     t,
   ]);
 
+  const title =
+    calendarTarget === 'offered'
+      ? t('listing.exchange.offeredWindow')
+      : calendarTarget === 'requested'
+        ? t('listing.exchange.requestedWindow')
+        : t('listing.exchange.requestTitle');
+
   return (
-    <Modal
-      visible={visible}
-      animationType={Platform.OS === 'web' ? 'fade' : 'slide'}
-      transparent={Platform.OS === 'web'}
-      onRequestClose={onClose}
+    <Dialog
+      open={visible}
+      onClose={onClose}
+      placement={{ base: 'bottom', md: 'center' }}
+      maxWidth={560}
+      label={title}
+      header={{
+        title,
+        largeTitle: false,
+        onBack: calendarTarget ? () => setCalendarTarget(null) : undefined,
+        primaryAction: calendarTarget
+          ? undefined
+          : {
+              label: t('listing.exchange.sendRequest'),
+              onPress: () => void handleSubmit(),
+              disabled: createMutation.isPending,
+              loading: createMutation.isPending,
+            },
+      }}
     >
-      <View style={styles.backdrop}>
-        <View
-          style={[
-            styles.surface,
-            Platform.OS === 'web'
-              ? null
-              : { paddingBottom: MODAL_INSET_PADDING + insets.bottom },
-          ]}
-        >
-          <View style={styles.header}>
-            <H3 style={styles.title}>
-              {t('listing.exchange.requestTitle')}
-            </H3>
-            <Button
-              variant="icon"
-              size="small"
-              onPress={onClose}
-              accessibilityLabel={t('common.close')}
-            >
-              {'×'}
-            </Button>
-          </View>
+      {calendarTarget ? (
+        <AvailabilityCalendar
+          mode="modal"
+          initialRange={calendarTarget === 'offered' ? offeredWindow : requestedWindow}
+          onApply={calendarTarget === 'offered' ? handleApplyOffered : handleApplyRequested}
+        />
+      ) : (
+        <View style={styles.form}>
+          {/* Mode (only when the listing accepts both) */}
+          {allowsBoth ? (
+            <View style={styles.field}>
+              <BloomText style={[styles.label, { color: theme.colors.text }]}>
+                {t('listing.exchange.requestModeLabel')}
+              </BloomText>
+              <SegmentedControl<RequestMode>
+                label={t('listing.exchange.requestModeLabel')}
+                type="radio"
+                value={mode}
+                onChange={setMode}
+              >
+                <SegmentedControlItem value={ExchangeMode.SWAP}>
+                  <RiArrowLeftRightLine size="sm" fill={theme.colors.text} />
+                  <SegmentedControlItemText>
+                    {t('listing.exchange.mode.swap')}
+                  </SegmentedControlItemText>
+                </SegmentedControlItem>
+                <SegmentedControlItem value={ExchangeMode.HOST}>
+                  <RiHotelBedLine size="sm" fill={theme.colors.text} />
+                  <SegmentedControlItemText>
+                    {t('listing.exchange.mode.host')}
+                  </SegmentedControlItemText>
+                </SegmentedControlItem>
+              </SegmentedControl>
+            </View>
+          ) : null}
 
-          <ScrollView
-            style={styles.scroll}
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
-          >
-            {/* Mode (only when the listing accepts both) */}
-            {allowsBoth ? (
+          {/* Requested window */}
+          <DateField
+            label={t('listing.exchange.requestedWindow')}
+            value={requestedWindow ? formatRange(requestedWindow) : ''}
+            placeholder={t('listing.exchange.addDates')}
+            onPress={() => setCalendarTarget('requested')}
+          />
+
+          {/* Swap-only: offered property + window */}
+          {isSwap ? (
+            <>
               <View style={styles.field}>
-                <BloomText style={styles.label}>
-                  {t('listing.exchange.requestModeLabel')}
+                <BloomText style={[styles.label, { color: theme.colors.text }]}>
+                  {t('listing.exchange.offeredProperty')}
                 </BloomText>
-                <View style={styles.modeRow}>
-                  <ModeChip
-                    active={mode === ExchangeMode.SWAP}
-                    icon="swap-horizontal"
-                    label={t('listing.exchange.mode.swap')}
-                    onPress={() => setMode(ExchangeMode.SWAP)}
+                {propertyOptions.length > 0 ? (
+                  <RadioGroup
+                    label={t('listing.exchange.offeredProperty')}
+                    variant="card"
+                    value={offeredPropertyId || undefined}
+                    onValueChange={setOfferedPropertyId}
+                    options={propertyOptions}
                   />
-                  <ModeChip
-                    active={mode === ExchangeMode.HOST}
-                    icon="bed-outline"
-                    label={t('listing.exchange.mode.host')}
-                    onPress={() => setMode(ExchangeMode.HOST)}
-                  />
-                </View>
+                ) : (
+                  <BloomText style={[styles.helperText, { color: theme.colors.textSecondary }]}>
+                    {t('listing.exchange.noExchangeProperties')}
+                  </BloomText>
+                )}
               </View>
-            ) : null}
 
-            {/* Requested window */}
-            <View style={styles.field}>
-              <BloomText style={styles.label}>
-                {t('listing.exchange.requestedWindow')}
-              </BloomText>
-              <Pressable
-                style={styles.dateTrigger}
-                onPress={() => setCalendarTarget('requested')}
-                accessibilityRole="button"
-                accessibilityLabel={t('listing.exchange.requestedWindow')}
-              >
-                <Ionicons
-                  name="calendar-outline"
-                  size={18}
-                  color={colors.COLOR_BLACK_LIGHT_3}
-                />
-                <BloomText
-                  style={[
-                    styles.dateValue,
-                    !requestedWindow && styles.datePlaceholder,
-                  ]}
-                  numberOfLines={1}
-                >
-                  {requestedWindow
-                    ? formatRange(requestedWindow)
-                    : t('listing.exchange.addDates')}
-                </BloomText>
-              </Pressable>
-            </View>
-
-            {/* Swap-only: offered property + window */}
-            {isSwap ? (
-              <>
-                <View style={styles.field}>
-                  <BloomText style={styles.label}>
-                    {t('listing.exchange.offeredProperty')}
-                  </BloomText>
-                  {myExchangeProperties.length > 0 ? (
-                    <View style={styles.propertyList}>
-                      {myExchangeProperties.map((item) => {
-                        const id = propertyId(item);
-                        const selected = offeredPropertyId === id;
-                        return (
-                          <Pressable
-                            key={id}
-                            style={[
-                              styles.propertyOption,
-                              selected && styles.propertyOptionSelected,
-                            ]}
-                            onPress={() => setOfferedPropertyId(id)}
-                            accessibilityRole="radio"
-                            accessibilityState={{ selected }}
-                          >
-                            <Ionicons
-                              name={selected ? 'radio-button-on' : 'radio-button-off'}
-                              size={18}
-                              color={
-                                selected
-                                  ? colors.primaryColor
-                                  : colors.COLOR_BLACK_LIGHT_4
-                              }
-                            />
-                            <BloomText style={styles.propertyOptionText} numberOfLines={1}>
-                              {getPropertyTitle(item)}
-                            </BloomText>
-                          </Pressable>
-                        );
-                      })}
-                    </View>
-                  ) : (
-                    <BloomText style={styles.helperText}>
-                      {t('listing.exchange.noExchangeProperties')}
-                    </BloomText>
-                  )}
-                </View>
-
-                <View style={styles.field}>
-                  <BloomText style={styles.label}>
-                    {t('listing.exchange.offeredWindow')}
-                  </BloomText>
-                  <Pressable
-                    style={styles.dateTrigger}
-                    onPress={() => setCalendarTarget('offered')}
-                    accessibilityRole="button"
-                    accessibilityLabel={t('listing.exchange.offeredWindow')}
-                  >
-                    <Ionicons
-                      name="calendar-outline"
-                      size={18}
-                      color={colors.COLOR_BLACK_LIGHT_3}
-                    />
-                    <BloomText
-                      style={[
-                        styles.dateValue,
-                        !offeredWindow && styles.datePlaceholder,
-                      ]}
-                      numberOfLines={1}
-                    >
-                      {offeredWindow
-                        ? formatRange(offeredWindow)
-                        : t('listing.exchange.addDates')}
-                    </BloomText>
-                  </Pressable>
-                </View>
-              </>
-            ) : null}
-
-            {/* Message */}
-            <View style={styles.field}>
-              <BloomText style={styles.label}>
-                {t('listing.exchange.messageLabel')}
-              </BloomText>
-              <TextInput
-                style={styles.messageInput}
-                value={message}
-                onChangeText={setMessage}
-                placeholder={t('listing.exchange.messagePlaceholder')}
-                placeholderTextColor={colors.COLOR_BLACK_LIGHT_4}
-                multiline
-                textAlignVertical="top"
-                maxLength={2000}
+              <DateField
+                label={t('listing.exchange.offeredWindow')}
+                value={offeredWindow ? formatRange(offeredWindow) : ''}
+                placeholder={t('listing.exchange.addDates')}
+                onPress={() => setCalendarTarget('offered')}
               />
-            </View>
-          </ScrollView>
+            </>
+          ) : null}
 
-          <Button
-            variant="primary"
-            size="large"
-            onPress={handleSubmit}
-            loading={createMutation.isPending}
-            disabled={createMutation.isPending}
-            style={styles.submit}
-          >
-            {t('listing.exchange.sendRequest')}
-          </Button>
+          {/* Message */}
+          <Textarea
+            label={t('listing.exchange.messageLabel')}
+            value={message}
+            onChangeText={setMessage}
+            placeholder={t('listing.exchange.messagePlaceholder')}
+            rows={4}
+            autoResize
+            maxLength={MAX_MESSAGE}
+          />
         </View>
-      </View>
-
-      {/* Nested calendar modal — reuses the vacation range picker. */}
-      <Modal
-        visible={calendarTarget !== null}
-        animationType={Platform.OS === 'web' ? 'fade' : 'slide'}
-        transparent={Platform.OS === 'web'}
-        onRequestClose={() => setCalendarTarget(null)}
-      >
-        <View style={styles.backdrop}>
-          <View
-            style={[
-              styles.surface,
-              Platform.OS === 'web'
-                ? null
-                : { paddingBottom: MODAL_INSET_PADDING + insets.bottom },
-            ]}
-          >
-            <View style={styles.header}>
-              <H3 style={styles.title}>
-                {calendarTarget === 'offered'
-                  ? t('listing.exchange.offeredWindow')
-                  : t('listing.exchange.requestedWindow')}
-              </H3>
-              <Button
-                variant="icon"
-                size="small"
-                onPress={() => setCalendarTarget(null)}
-                accessibilityLabel={t('common.close')}
-              >
-                {'×'}
-              </Button>
-            </View>
-            <AvailabilityCalendar
-              mode="modal"
-              initialRange={
-                calendarTarget === 'offered' ? offeredWindow : requestedWindow
-              }
-              onApply={
-                calendarTarget === 'offered'
-                  ? handleApplyOffered
-                  : handleApplyRequested
-              }
-            />
-          </View>
-        </View>
-      </Modal>
-    </Modal>
+      )}
+    </Dialog>
   );
 };
 
-interface ModeChipProps {
-  active: boolean;
-  icon: React.ComponentProps<typeof Ionicons>['name'];
+interface DateFieldProps {
   label: string;
+  value: string;
+  placeholder: string;
   onPress: () => void;
 }
 
-const ModeChip: React.FC<ModeChipProps> = ({ active, icon, label, onPress }) => (
-  <Pressable
-    style={[styles.modeChip, active && styles.modeChipActive]}
-    onPress={onPress}
-    accessibilityRole="radio"
-    accessibilityState={{ selected: active }}
-  >
-    <Ionicons
-      name={icon}
-      size={16}
-      color={active ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_3}
-    />
-    <BloomText style={[styles.modeChipLabel, active && styles.modeChipLabelActive]}>
-      {label}
-    </BloomText>
-  </Pressable>
-);
+/** A labelled date-range trigger: opens the calendar step inside the dialog. */
+const DateField: React.FC<DateFieldProps> = ({ label, value, placeholder, onPress }) => {
+  const theme = useTheme();
+  return (
+    <View style={styles.field}>
+      <BloomText style={[styles.label, { color: theme.colors.text }]}>{label}</BloomText>
+      <Button
+        variant="outline"
+        size="large"
+        leadingIcon={RiCalendarLine}
+        onPress={onPress}
+        accessibilityLabel={label}
+        style={styles.dateTrigger}
+      >
+        {value || placeholder}
+      </Button>
+    </View>
+  );
+};
 
 const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: colors.overlay,
-    justifyContent: Platform.OS === 'web' ? 'center' : 'flex-end',
-    alignItems: 'center',
-  },
-  surface: {
-    backgroundColor: colors.white,
-    width: '100%',
-    maxWidth: 560,
-    maxHeight: '92%',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    borderBottomLeftRadius: Platform.OS === 'web' ? 24 : 0,
-    borderBottomRightRadius: Platform.OS === 'web' ? 24 : 0,
-    padding: 16,
-    gap: 12,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  scroll: {
-    flexGrow: 0,
-  },
-  scrollContent: {
+  form: {
     gap: spacing.lg,
-    paddingBottom: spacing.sm,
   },
   field: {
     gap: spacing.sm,
@@ -509,95 +357,14 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: colors.COLOR_BLACK,
-  },
-  modeRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  modeChip: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.xs,
-    paddingVertical: spacing.md,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.COLOR_BLACK_LIGHT_6,
-    backgroundColor: colors.COLOR_BLACK_LIGHT_9,
-  },
-  modeChipActive: {
-    borderColor: colors.primaryColor,
-    backgroundColor: colors.primaryLight,
-  },
-  modeChipLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.COLOR_BLACK_LIGHT_3,
-  },
-  modeChipLabelActive: {
-    color: colors.primaryColor,
   },
   dateTrigger: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.COLOR_BLACK_LIGHT_6,
-    backgroundColor: colors.COLOR_BLACK_LIGHT_9,
-  },
-  dateValue: {
-    flex: 1,
-    fontSize: 15,
-    color: colors.COLOR_BLACK,
-  },
-  datePlaceholder: {
-    color: colors.COLOR_BLACK_LIGHT_4,
-  },
-  propertyList: {
-    gap: spacing.sm,
-  },
-  propertyOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.COLOR_BLACK_LIGHT_6,
-    backgroundColor: colors.COLOR_BLACK_LIGHT_9,
-  },
-  propertyOptionSelected: {
-    borderColor: colors.primaryColor,
-    backgroundColor: colors.primaryLight,
-  },
-  propertyOptionText: {
-    flex: 1,
-    fontSize: 14,
-    color: colors.COLOR_BLACK,
+    alignSelf: 'stretch',
+    justifyContent: 'flex-start',
   },
   helperText: {
     fontSize: 13,
-    color: colors.COLOR_BLACK_LIGHT_4,
     lineHeight: 19,
-  },
-  messageInput: {
-    backgroundColor: colors.COLOR_BLACK_LIGHT_9,
-    borderWidth: 1,
-    borderColor: colors.COLOR_BLACK_LIGHT_6,
-    borderRadius: 12,
-    padding: spacing.md,
-    fontSize: 15,
-    color: colors.COLOR_BLACK,
-    minHeight: 96,
-  },
-  submit: {
-    alignSelf: 'stretch',
   },
 });
 

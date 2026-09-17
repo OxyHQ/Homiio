@@ -14,6 +14,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
 import { useMediaQuery } from 'react-responsive';
 
+import { Badge } from '@oxy.so/bloom/badge';
+import { useTheme } from '@oxy.so/bloom/theme';
 import { H1, Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { colors } from '@/styles/colors';
@@ -55,32 +57,40 @@ interface StepCardProps {
   height: number;
 }
 
-const StepCard: React.FC<StepCardProps> = ({ index, title, body, imageUrl, height }) => (
-  <View style={styles.step}>
-    <View style={[styles.photoWrap, { height }]}>
-      <Image
-        source={{ uri: imageUrl }}
-        style={styles.photo}
-        contentFit="cover"
-        transition={200}
-        cachePolicy="memory-disk"
-      />
-      <LinearGradient
-        colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.25)']}
-        locations={[0.5, 1]}
-        style={[styles.photoScrim, { pointerEvents: 'none' }]}
-      />
-      <View style={styles.badge}>
-        <BloomText style={styles.badgeText}>{index}</BloomText>
+const StepCard: React.FC<StepCardProps> = ({ index, title, body, imageUrl, height }) => {
+  const theme = useTheme();
+  return (
+    <View style={styles.step}>
+      <View style={[styles.photoWrap, { height }]}>
+        <Image
+          source={{ uri: imageUrl }}
+          style={styles.photo}
+          contentFit="cover"
+          transition={200}
+          cachePolicy="memory-disk"
+        />
+        <LinearGradient
+          colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.25)']}
+          locations={[0.5, 1]}
+          style={[styles.photoScrim, { pointerEvents: 'none' }]}
+        />
+        <View style={styles.badge}>
+          <Badge content={index} size="large" color="primary" variant="solid" />
+        </View>
       </View>
+      <BloomText variant="headline-bold" style={{ color: theme.colors.text }}>
+        {title}
+      </BloomText>
+      <BloomText variant="body-regular" style={{ color: theme.colors.textSecondary }}>
+        {body}
+      </BloomText>
     </View>
-    <BloomText style={styles.stepTitle}>{title}</BloomText>
-    <BloomText style={styles.stepBody}>{body}</BloomText>
-  </View>
-);
+  );
+};
 
 export const AgentHowItWorks: React.FC = () => {
   const { t } = useTranslation();
+  const theme = useTheme();
   const isWide = useMediaQuery({ minWidth: 768 });
   const { width } = useWindowDimensions();
   const horizontalPadding = resolvePagePadding(isWide);
@@ -96,7 +106,12 @@ export const AgentHowItWorks: React.FC = () => {
   return (
     <View style={{ paddingHorizontal: horizontalPadding }}>
       <View style={styles.header}>
-        <H1 style={[styles.title, { textAlign: isWide ? 'center' : 'left' }]}>
+        <H1
+          style={[
+            styles.title,
+            { color: theme.colors.text, textAlign: isWide ? 'center' : 'left' },
+          ]}
+        >
           {t('agent.how.title')}
         </H1>
       </View>
@@ -129,7 +144,6 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: colors.COLOR_BLACK,
     letterSpacing: tracker.tight,
     lineHeight: 34,
   },
@@ -179,28 +193,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: spacing.md,
     left: spacing.md,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.primaryColor,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  badgeText: {
-    fontSize: 17,
-    fontWeight: '800',
-    color: colors.primaryForeground,
-  },
-  stepTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.COLOR_BLACK,
-    letterSpacing: tracker.tight,
-  },
-  stepBody: {
-    fontSize: 14,
-    lineHeight: 20,
-    color: colors.COLOR_BLACK_LIGHT_3,
   },
 });
 

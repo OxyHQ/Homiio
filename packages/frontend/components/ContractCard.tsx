@@ -1,29 +1,21 @@
 /**
- * ContractCard — lease summary used by `/contracts` and shared list views.
+ * ContractCard — lease summary for the `/contracts` phone layout (wide web
+ * shows the same rows in a Bloom DataTable).
  *
- * Stream Q polish:
- *   - Bloom `Card` (outlined, radius-16) container.
- *   - Bloom Typography for every label / value, no raw <Text>.
- *   - Inline Bloom Button actions for share / download (when provided), laid
- *     out in a Bloom `CardFooter`.
- *
- * The property / parties rows stay bespoke (a 16px icon + small label, and a
- * fixed-width-label + value row): the shared `DetailIconRow` renders a 32px
- * icon box + 15px label with its own vertical padding and a single shrinking
- * label, which can't express either of these without changing the visual.
+ * A pressable Bloom `Card` (outlined, radius-16) with Bloom Typography, Remix
+ * icons in theme colours and a `ContractStatusBadge` Chip.
  */
-import React, { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import React, { useMemo } from 'react';
+import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { formatMoney } from '@homiio/shared-types';
-import { useFormatting } from '@/utils/format';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { Button } from '@oxy.so/bloom/button';
+import { Card } from '@oxy.so/bloom/card';
+import { RiBuilding2Line, RiHome4Line, RiUserLine } from '@oxy.so/bloom/icons';
+import { useTheme } from '@oxy.so/bloom/theme';
 import { Text as BloomText, H3 } from '@oxy.so/bloom/typography';
-import { colors } from '@/styles/colors';
+import { useFormatting } from '@/utils/format';
 import { radius, spacing } from '@/constants/styles';
-import { Card, CardFooter } from '@oxy.so/bloom/card';
-import { StatusBadge, type StatusType } from './ui/StatusBadge';
+import { ContractStatusBadge } from './ContractStatusBadge';
 import { formatLocalized } from '@/utils/dateLocale';
 
 export type ContractStatus =
@@ -48,8 +40,6 @@ interface ContractCardProps {
   monthlyRent: number;
   currency?: string;
   onPress?: () => void;
-  onSharePress?: () => void;
-  onDownloadPress?: () => void;
 }
 
 const formatDate = (raw: string): string => {
@@ -69,135 +59,74 @@ export const ContractCard: React.FC<ContractCardProps> = ({
   monthlyRent,
   currency = 'EUR',
   onPress,
-  onSharePress,
-  onDownloadPress,
 }) => {
   const { t } = useTranslation();
   const { locale } = useFormatting();
-  const [pressed, setPressed] = useState(false);
+  const { colors } = useTheme();
 
   const formattedRent = useMemo(
     () => formatMoney(monthlyRent, currency, locale),
     [currency, monthlyRent, locale],
   );
 
-  const body = (
-    <>
+  const secondary = { color: colors.textSecondary };
+
+  return (
+    <Card
+      variant="outlined"
+      radius="radius-16"
+      style={styles.surface}
+      onPress={onPress}
+      accessibilityRole={onPress ? 'button' : undefined}
+      accessibilityLabel={onPress ? t('contracts.card.accessibility', { title }) : undefined}
+    >
       <View style={styles.header}>
         <View style={styles.titleContainer}>
           <H3 style={styles.title} numberOfLines={1}>
             {title}
           </H3>
-          <StatusBadge status={status as StatusType} size="small" />
+          <ContractStatusBadge status={status} />
         </View>
         <View style={styles.rentBlock}>
-          <BloomText style={styles.rentAmount}>{formattedRent}</BloomText>
-          <BloomText style={styles.rentPeriod}>{t('contracts.card.perMonth')}</BloomText>
+          <BloomText style={[styles.rentAmount, { color: colors.primary }]}>{formattedRent}</BloomText>
+          <BloomText style={[styles.rentPeriod, secondary]}>{t('contracts.card.perMonth')}</BloomText>
         </View>
       </View>
 
-      <View style={styles.propertyRow}>
-        <Ionicons
-          name="home-outline"
-          size={16}
-          color={colors.COLOR_BLACK_LIGHT_2}
-        />
-        <BloomText style={styles.propertyName} numberOfLines={1}>
+      <View style={styles.iconRow}>
+        <RiHome4Line width={16} height={16} fill={colors.icon} />
+        <BloomText style={[styles.propertyName, secondary]} numberOfLines={1}>
           {propertyName}
         </BloomText>
       </View>
 
-      <View style={styles.datesContainer}>
+      <View style={[styles.datesContainer, { backgroundColor: colors.backgroundSecondary }]}>
         <View style={styles.dateRow}>
-          <BloomText style={styles.dateLabel}>{t('contracts.card.start')}</BloomText>
+          <BloomText style={[styles.dateLabel, secondary]}>{t('contracts.card.start')}</BloomText>
           <BloomText style={styles.dateValue}>{formatDate(startDate)}</BloomText>
         </View>
         <View style={styles.dateRow}>
-          <BloomText style={styles.dateLabel}>{t('contracts.card.end')}</BloomText>
+          <BloomText style={[styles.dateLabel, secondary]}>{t('contracts.card.end')}</BloomText>
           <BloomText style={styles.dateValue}>{formatDate(endDate)}</BloomText>
         </View>
       </View>
 
       <View style={styles.partiesContainer}>
-        <View style={styles.partyRow}>
-          <Ionicons
-            name="business-outline"
-            size={16}
-            color={colors.COLOR_BLACK_LIGHT_2}
-          />
-          <BloomText style={styles.partyLabel}>{t('contracts.card.landlord')}</BloomText>
+        <View style={styles.iconRow}>
+          <RiBuilding2Line width={16} height={16} fill={colors.icon} />
+          <BloomText style={[styles.partyLabel, secondary]}>{t('contracts.card.landlord')}</BloomText>
           <BloomText style={styles.partyName} numberOfLines={1}>
             {landlordName}
           </BloomText>
         </View>
-        <View style={styles.partyRow}>
-          <Ionicons
-            name="person-outline"
-            size={16}
-            color={colors.COLOR_BLACK_LIGHT_2}
-          />
-          <BloomText style={styles.partyLabel}>{t('contracts.card.tenant')}</BloomText>
+        <View style={styles.iconRow}>
+          <RiUserLine width={16} height={16} fill={colors.icon} />
+          <BloomText style={[styles.partyLabel, secondary]}>{t('contracts.card.tenant')}</BloomText>
           <BloomText style={styles.partyName} numberOfLines={1}>
             {tenantName}
           </BloomText>
         </View>
       </View>
-    </>
-  );
-
-  return (
-    <Card variant="outlined" radius="radius-16" style={styles.surface}>
-      {onPress ? (
-        <Pressable
-          onPress={onPress}
-          onPressIn={() => setPressed(true)}
-          onPressOut={() => setPressed(false)}
-          style={[styles.bodyPressable, pressed && styles.containerPressed]}
-          accessibilityRole="button"
-          accessibilityLabel={t('contracts.card.accessibility', { title })}
-        >
-          {body}
-        </Pressable>
-      ) : (
-        <View style={styles.bodyPressable}>{body}</View>
-      )}
-
-      {onSharePress || onDownloadPress ? (
-        <CardFooter style={styles.actions}>
-          {onSharePress ? (
-            <Button
-              variant="secondary"
-              size="small"
-              onPress={onSharePress}
-              icon={
-                <Ionicons
-                  name="share-outline"
-                  size={16}
-                  color={colors.COLOR_BLACK}
-                />
-              }
-            >
-              {t('contracts.card.share')}
-            </Button>
-          ) : null}
-          {onDownloadPress ? (
-            <Button
-              variant="secondary"
-              size="small"
-              onPress={onDownloadPress}
-              icon={
-                <Ionicons
-                  name="download-outline"
-                  size={16}
-                  color={colors.COLOR_BLACK}
-                />
-              }
-            >
-              {t('contracts.card.download')}
-            </Button>
-          ) : null}
-        </CardFooter>
-      ) : null}
     </Card>
   );
 };
@@ -209,19 +138,6 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     gap: spacing.sm,
   },
-  actions: {
-    justifyContent: 'flex-start',
-    paddingHorizontal: 0,
-    paddingTop: 0,
-    paddingBottom: 0,
-    marginTop: spacing.xs,
-  },
-  bodyPressable: {
-    gap: spacing.sm,
-  },
-  containerPressed: {
-    opacity: 0.8,
-  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -231,6 +147,7 @@ const styles = StyleSheet.create({
   titleContainer: {
     flex: 1,
     gap: spacing.xs,
+    alignItems: 'flex-start',
   },
   title: {
     fontSize: 17,
@@ -243,13 +160,11 @@ const styles = StyleSheet.create({
   rentAmount: {
     fontSize: 17,
     fontWeight: '700',
-    color: colors.primaryColor,
   },
   rentPeriod: {
     fontSize: 13,
-    color: colors.muted,
   },
-  propertyRow: {
+  iconRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
@@ -257,10 +172,8 @@ const styles = StyleSheet.create({
   propertyName: {
     flex: 1,
     fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_2,
   },
   datesContainer: {
-    backgroundColor: colors.mutedSubtle,
     padding: spacing.md,
     borderRadius: radius.md,
     gap: spacing.xs,
@@ -271,30 +184,21 @@ const styles = StyleSheet.create({
   },
   dateLabel: {
     fontSize: 12,
-    color: colors.muted,
   },
   dateValue: {
     fontSize: 12,
     fontWeight: '600',
-    color: colors.COLOR_BLACK,
   },
   partiesContainer: {
     gap: spacing.xs,
   },
-  partyRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
   partyLabel: {
     fontSize: 13,
-    color: colors.muted,
     minWidth: 64,
   },
   partyName: {
     flex: 1,
     fontSize: 13,
     fontWeight: '600',
-    color: colors.COLOR_BLACK,
   },
 });

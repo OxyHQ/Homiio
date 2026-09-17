@@ -8,21 +8,12 @@
  *
  * Documents are linked via signed S3 URLs returned by the API.
  *
- * Stream P polish: each block is an outlined Bloom `Card`. Status is
- * rendered with the existing Bloom Badge wrapper.
- * Spinner and ad-hoc error text were replaced with Bloom Loading +
- * the shared ErrorState component.
+ * Each block is an outlined Bloom `Card`; documents are Bloom `Item` rows with
+ * Remix glyphs; status is the Chip-based `ApplicationStatusBadge`. Loading is
+ * Bloom `Loading`, errors the shared ErrorState component.
  */
 import React, { useCallback, useMemo } from 'react';
-import {
-  Image,
-  Linking,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  View,
-} from 'react-native';
+import { Image, Linking, Platform, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { format } from 'date-fns';
@@ -30,7 +21,17 @@ import { useTranslation } from 'react-i18next';
 import { useFormatting } from '@/utils/format';
 import i18next from 'i18next';
 import { toast } from '@oxy.so/bloom/toast';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Item } from '@oxy.so/bloom/item';
+import { useTheme } from '@oxy.so/bloom/theme';
+import {
+  RiCloseLine,
+  RiEditLine,
+  RiExternalLinkLine,
+  RiFileTextLine,
+  RiMailLine,
+  RiUserLine,
+  RiWallet3Line,
+} from '@oxy.so/bloom/icons';
 
 import { Button } from '@oxy.so/bloom/button';
 import { Loading } from '@oxy.so/bloom/loading';
@@ -42,6 +43,7 @@ import {
 } from '@homiio/shared-types';
 
 import { Header } from '@/components/Header';
+import { PageScrollView } from '@/components/PageScrollView';
 import { ApplicationStatusBadge } from '@/components/ApplicationStatusBadge';
 import { confirm } from '@oxy.so/bloom/surfaces';
 import { useProperty } from '@/hooks';
@@ -54,12 +56,9 @@ import {
   getPropertyImageSource,
   getPropertyTitle,
 } from '@/utils/propertyUtils';
-import { colors } from '@/styles/colors';
 import { Card } from '@oxy.so/bloom/card';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { radius, spacing, tracker } from '@/constants/styles';
-
-type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
 /** A tenant's declared income has no currency field; it is quoted in euros. */
 const APPLICATION_INCOME_CURRENCY = 'EUR';
@@ -72,16 +71,16 @@ const formatDate = (raw: string): string => {
   return format(date, 'EEE, MMM d, yyyy');
 };
 
-const docIcon = (type: string): IoniconName => {
+const DocIcon: React.FC<{ type: string; size: number; fill: string }> = ({ type, size, fill }) => {
   switch (type) {
     case 'id':
-      return 'card-outline';
+      return <RiUserLine width={size} height={size} fill={fill} />;
     case 'income':
-      return 'cash-outline';
+      return <RiWallet3Line width={size} height={size} fill={fill} />;
     case 'reference':
-      return 'mail-outline';
+      return <RiMailLine width={size} height={size} fill={fill} />;
     default:
-      return 'document-text-outline';
+      return <RiFileTextLine width={size} height={size} fill={fill} />;
   }
 };
 
@@ -101,33 +100,18 @@ interface DocumentRowProps {
 
 const DocumentRow: React.FC<DocumentRowProps> = ({ document }) => {
   const { t } = useTranslation();
+  const theme = useTheme();
 
   return (
-  <Pressable
-    onPress={() => openDocument(document.url)}
-    style={styles.documentRow}
-    accessibilityRole="link"
-    accessibilityLabel={`Open document ${document.filename}`}
-  >
-    <Ionicons
-      name={docIcon(document.type)}
-      size={20}
-      color={colors.primaryDark}
+    <Item
+      onPress={() => openDocument(document.url)}
+      accessibilityRole="link"
+      accessibilityLabel={`Open document ${document.filename}`}
+      leading={<DocIcon type={document.type} size={20} fill={theme.colors.icon} />}
+      title={document.filename}
+      subtitle={t(`applications.documentType.${document.type}`)}
+      trailing={<RiExternalLinkLine width={18} height={18} fill={theme.colors.textSecondary} />}
     />
-    <View style={styles.documentMeta}>
-      <BloomText style={styles.documentName} numberOfLines={1}>
-        {document.filename}
-      </BloomText>
-      <BloomText style={styles.documentType}>
-        {t(`applications.documentType.${document.type}`)}
-      </BloomText>
-    </View>
-    <Ionicons
-      name="open-outline"
-      size={18}
-      color={colors.muted}
-    />
-  </Pressable>
   );
 };
 
@@ -135,6 +119,7 @@ export default function ApplicationDetailScreen() {
   const { t } = useTranslation();
   const { locale } = useFormatting();
   const router = useRouter();
+  const theme = useTheme();
   const params = useLocalSearchParams<{ id: string }>();
   const id = typeof params.id === 'string' ? params.id : params.id?.[0];
   const applicationQuery = useApplicationById(id);
@@ -213,7 +198,7 @@ export default function ApplicationDetailScreen() {
 
   if (!id) {
     return (
-      <View style={styles.root}>
+      <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
         {header}
         <View style={styles.centerWrap}>
           <ErrorState
@@ -230,7 +215,7 @@ export default function ApplicationDetailScreen() {
 
   if (applicationQuery.isPending) {
     return (
-      <View style={styles.root}>
+      <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
         {header}
         <View style={styles.centerWrap}>
           <Loading variant="spinner" size="medium" />
@@ -241,7 +226,7 @@ export default function ApplicationDetailScreen() {
 
   if (applicationQuery.isError || !application) {
     return (
-      <View style={styles.root}>
+      <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
         {header}
         <View style={styles.centerWrap}>
           <ErrorState
@@ -258,18 +243,19 @@ export default function ApplicationDetailScreen() {
   }
 
   const propertyTitle = property ? getPropertyTitle(property) : 'Property';
+  const secondaryText = { color: theme.colors.textSecondary };
   const imageSource = property ? getPropertyImageSource(property) : null;
 
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
       {header}
       <SafeAreaView edges={['bottom']} style={styles.safeArea}>
-        <ScrollView contentContainerStyle={styles.content}>
-          <View style={styles.thumbWrap}>
+        <PageScrollView contentContainerStyle={styles.content}>
+          <View style={[styles.thumbWrap, { backgroundColor: theme.colors.backgroundSecondary }]}>
             {imageSource ? (
               <Image source={imageSource} style={styles.thumb} resizeMode="cover" />
             ) : (
-              <View style={[styles.thumb, styles.thumbPlaceholder]} />
+              <View style={styles.thumb} />
             )}
           </View>
 
@@ -279,7 +265,7 @@ export default function ApplicationDetailScreen() {
               <ApplicationStatusBadge status={application.status} />
             </View>
             {property?.address ? (
-              <BloomText style={styles.subtitle}>
+              <BloomText style={[styles.subtitle, secondaryText]}>
                 {[property.address.cityName, property.address.countryName]
                   .filter(Boolean)
                   .join(', ')}
@@ -288,7 +274,7 @@ export default function ApplicationDetailScreen() {
           </Card>
 
           <Card variant="outlined" radius="radius-16" className="p-5">
-            <BloomText style={styles.sectionLabel}>Tenancy</BloomText>
+            <BloomText style={[styles.sectionLabel, secondaryText]}>Tenancy</BloomText>
             <DetailRow label="Move-in" value={formatDate(application.moveInDate)} />
             <DetailRow
               label="Lease term"
@@ -307,7 +293,7 @@ export default function ApplicationDetailScreen() {
           </Card>
 
           <Card variant="outlined" radius="radius-16" className="p-5">
-            <BloomText style={styles.sectionLabel}>Finances</BloomText>
+            <BloomText style={[styles.sectionLabel, secondaryText]}>Finances</BloomText>
             <DetailRow
               label="Monthly income"
               value={formatMoney(application.monthlyIncome, APPLICATION_INCOME_CURRENCY, locale, INCOME_FORMAT)}
@@ -319,22 +305,22 @@ export default function ApplicationDetailScreen() {
           </Card>
 
           <Card variant="outlined" radius="radius-16" className="p-5">
-            <BloomText style={styles.sectionLabel}>References</BloomText>
+            <BloomText style={[styles.sectionLabel, secondaryText]}>References</BloomText>
             {application.referenceContacts.length === 0 ? (
-              <BloomText style={styles.emptyHint}>
+              <BloomText style={[styles.emptyHint, secondaryText]}>
                 No references provided.
               </BloomText>
             ) : (
               application.referenceContacts.map((reference, index) => (
-                <View key={`${reference.email}-${index}`} style={styles.referenceCard}>
+                <View key={`${reference.email}-${index}`} style={[styles.referenceCard, { borderBottomColor: theme.colors.border }]}>
                   <BloomText style={styles.referenceName}>
                     {reference.name}
                   </BloomText>
-                  <BloomText style={styles.referenceMeta}>
+                  <BloomText style={[styles.referenceMeta, secondaryText]}>
                     {t(`profile.edit.options.referenceRelationship.${reference.relationship}`)} ·{' '}
                     {reference.phone}
                   </BloomText>
-                  <BloomText style={styles.referenceMeta}>
+                  <BloomText style={[styles.referenceMeta, secondaryText]}>
                     {reference.email}
                   </BloomText>
                 </View>
@@ -343,9 +329,9 @@ export default function ApplicationDetailScreen() {
           </Card>
 
           <Card variant="outlined" radius="radius-16" className="p-5">
-            <BloomText style={styles.sectionLabel}>Documents</BloomText>
+            <BloomText style={[styles.sectionLabel, secondaryText]}>Documents</BloomText>
             {application.documents.length === 0 ? (
-              <BloomText style={styles.emptyHint}>No documents attached.</BloomText>
+              <BloomText style={[styles.emptyHint, secondaryText]}>No documents attached.</BloomText>
             ) : (
               application.documents.map((document) => (
                 <DocumentRow key={document.url} document={document} />
@@ -355,7 +341,7 @@ export default function ApplicationDetailScreen() {
 
           {application.notes ? (
             <Card variant="outlined" radius="radius-16" className="p-5">
-              <BloomText style={styles.sectionLabel}>Notes</BloomText>
+              <BloomText style={[styles.sectionLabel, secondaryText]}>Notes</BloomText>
               <BloomText style={styles.notesBody}>{application.notes}</BloomText>
             </Card>
           ) : null}
@@ -366,6 +352,7 @@ export default function ApplicationDetailScreen() {
                 <Button
                   variant="primary"
                   size="medium"
+                  leadingIcon={RiEditLine}
                   onPress={handleCreateLease}
                   style={styles.actionButton}
                 >
@@ -376,6 +363,7 @@ export default function ApplicationDetailScreen() {
                 <Button
                   variant="ghost"
                   size="medium"
+                  leadingIcon={RiCloseLine}
                   onPress={() => void handleWithdraw()}
                   disabled={updateMutation.isPending}
                   style={styles.actionButton}
@@ -385,7 +373,7 @@ export default function ApplicationDetailScreen() {
               ) : null}
             </View>
           ) : null}
-        </ScrollView>
+        </PageScrollView>
       </SafeAreaView>
     </View>
   );
@@ -396,17 +384,19 @@ interface DetailRowProps {
   value: string;
 }
 
-const DetailRow: React.FC<DetailRowProps> = ({ label, value }) => (
-  <View style={styles.detailRow}>
-    <BloomText style={styles.detailLabel}>{label}</BloomText>
-    <BloomText style={styles.detailValue}>{value}</BloomText>
-  </View>
-);
+const DetailRow: React.FC<DetailRowProps> = ({ label, value }) => {
+  const theme = useTheme();
+  return (
+    <View style={[styles.detailRow, { borderBottomColor: theme.colors.border }]}>
+      <BloomText style={[styles.detailLabel, { color: theme.colors.textSecondary }]}>{label}</BloomText>
+      <BloomText style={styles.detailValue}>{value}</BloomText>
+    </View>
+  );
+};
 
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: colors.background,
   },
   safeArea: {
     flex: 1,
@@ -426,14 +416,10 @@ const styles = StyleSheet.create({
     aspectRatio: 16 / 9,
     borderRadius: radius.photo,
     overflow: 'hidden',
-    backgroundColor: colors.mutedSubtle,
   },
   thumb: {
     width: '100%',
     height: '100%',
-  },
-  thumbPlaceholder: {
-    backgroundColor: colors.mutedSubtle,
   },
   headerRow: {
     flexDirection: 'row',
@@ -449,13 +435,11 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 13,
-    color: colors.muted,
   },
   sectionLabel: {
     fontSize: 11,
     fontWeight: '700',
     textTransform: 'uppercase',
-    color: colors.muted,
     letterSpacing: tracker.eyebrow,
     marginBottom: spacing.sm,
   },
@@ -464,60 +448,31 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: spacing.sm,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.COLOR_BLACK_LIGHT_6,
   },
   detailLabel: {
     fontSize: 13,
-    color: colors.muted,
   },
   detailValue: {
     fontSize: 13,
     fontWeight: '600',
-    color: colors.COLOR_BLACK,
   },
   emptyHint: {
     fontSize: 13,
-    color: colors.muted,
     fontStyle: 'italic',
   },
   referenceCard: {
     paddingVertical: spacing.sm,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.COLOR_BLACK_LIGHT_6,
   },
   referenceName: {
     fontSize: 14,
     fontWeight: '600',
-    color: colors.COLOR_BLACK,
   },
   referenceMeta: {
     fontSize: 12,
-    color: colors.muted,
-  },
-  documentRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    paddingVertical: spacing.md - 2,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.COLOR_BLACK_LIGHT_6,
-  },
-  documentMeta: {
-    flex: 1,
-    gap: 2,
-  },
-  documentName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.COLOR_BLACK,
-  },
-  documentType: {
-    fontSize: 12,
-    color: colors.muted,
   },
   notesBody: {
     fontSize: 14,
-    color: colors.COLOR_BLACK,
     lineHeight: 20,
   },
   actionRow: {
