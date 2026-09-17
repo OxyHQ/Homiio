@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { Alert } from 'react-native';
+import { toast } from '@oxy.so/bloom/toast';
 import i18next from 'i18next';
 import type { Profile, UpdateProfileData } from '@/services/profileService';
 import { useProfileQuery, useUpdateProfileMutation } from '@/hooks/query/useProfiles';
@@ -264,7 +264,7 @@ export function useProfileEditForm() {
 
   const handleSave = useCallback(async () => {
     if (!activeProfile) {
-      Alert.alert(i18next.t('common.error'), i18next.t('profile.edit.noProfile'));
+      toast.error(i18next.t('profile.edit.noProfile'));
       return;
     }
 
@@ -278,7 +278,7 @@ export function useProfileEditForm() {
 
     if (!validation.success) {
       const message = validation.error.issues[0]?.message || 'Please review the form and try again.';
-      Alert.alert(i18next.t('common.error'), message);
+      toast.error(message);
       return;
     }
 
@@ -295,11 +295,11 @@ export function useProfileEditForm() {
 
       await updateProfile(updateData);
       setHasUnsavedChanges(false);
-      Alert.alert(i18next.t('common.success'), i18next.t('profile.edit.updateSuccess'));
+      toast.success(i18next.t('profile.edit.updateSuccess'));
     } catch (error) {
       logger.error('Error saving profile', error);
       const message = error instanceof Error ? error.message : 'Failed to update profile.';
-      Alert.alert(i18next.t('common.error'), message);
+      toast.error(message);
     } finally {
       setIsSaving(false);
     }

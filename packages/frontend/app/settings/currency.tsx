@@ -7,9 +7,10 @@ import React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { toast } from '@oxy.so/bloom/toast';
 
+import { RiCheckLine } from '@oxy.so/bloom/icons';
+import { useTheme } from '@oxy.so/bloom/theme';
 import {
   SettingsListGroup,
   SettingsListItem,
@@ -19,14 +20,14 @@ import { Header } from '@/components/Header';
 import { useCurrency } from '@/hooks/useCurrency';
 import { CURRENCIES, getExchangeRateDisplay } from '@/utils/currency';
 import { useFormatting } from '@/utils/format';
-import { colors } from '@/styles/colors';
-import { spacing } from '@/constants/styles';
+import { settingsScreenStyles } from '@/components/profile/SettingsRowIcon';
 
 export default function CurrencySettingsScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const { currentCurrency, changeCurrency } = useCurrency();
   const { locale } = useFormatting();
+  const { colors: theme } = useTheme();
 
   const handleCurrencySelect = async (currencyCode: string): Promise<void> => {
     try {
@@ -43,14 +44,14 @@ export default function CurrencySettingsScreen() {
   };
 
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, { backgroundColor: theme.background }]}>
       <Header
         options={{
           title: t('settings.currency.title'),
           showBackButton: true,
         }}
       />
-      <ScrollView contentContainerStyle={styles.scroll}>
+      <ScrollView contentContainerStyle={settingsScreenStyles.content}>
         <SettingsListGroup
           title={t('settings.currency.selectCurrency')}
           footer={t('settings.currency.description')}
@@ -73,11 +74,7 @@ export default function CurrencySettingsScreen() {
                 value={currency.symbol}
                 rightElement={
                   isActive ? (
-                    <Ionicons
-                      name="checkmark"
-                      size={20}
-                      color={colors.primaryColor}
-                    />
+                    <RiCheckLine width={20} height={20} fill={theme.primary} />
                   ) : undefined
                 }
                 showChevron={!isActive}
@@ -94,11 +91,6 @@ export default function CurrencySettingsScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: colors.background,
-  },
-  scroll: {
-    paddingTop: spacing.lg,
-    paddingBottom: spacing['4xl'],
   },
   flag: {
     fontSize: 18,

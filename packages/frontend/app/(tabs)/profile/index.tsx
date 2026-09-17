@@ -1,9 +1,20 @@
-import React, { useCallback, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import React, { useCallback, useMemo } from 'react';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { toast } from '@oxy.so/bloom/toast';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import {
+  RiArrowLeftRightLine,
+  RiArrowRightSLine,
+  RiBookmarkLine,
+  RiCoinsLine,
+  RiFileTextLine,
+  RiHotelBedLine,
+  RiLogoutBoxRLine,
+  RiSettings3Line,
+  RiStarLine,
+} from '@oxy.so/bloom/icons';
+import { useTheme } from '@oxy.so/bloom/theme';
 
 import { Avatar } from '@oxy.so/bloom/avatar';
 import { Badge } from '@oxy.so/bloom/badge';
@@ -21,6 +32,7 @@ import { useOxy } from '@oxy.so/services';
 import { TenantApplicationStatus } from '@homiio/shared-types';
 
 import { Header } from '@/components/Header';
+import { SettingsRowIcon } from '@/components/profile/SettingsRowIcon';
 import { Card } from '@oxy.so/bloom/card';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { ListSkeleton } from '@/components/ui/ListSkeleton';
@@ -33,18 +45,6 @@ import { colors } from '@/styles/colors';
 import { contentClamp, spacing } from '@/constants/styles';
 import { logger } from '@/utils/logger';
 
-type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
-
-const RowIcon: React.FC<{ name: IoniconName; destructive?: boolean }> = ({
-  name,
-  destructive,
-}) => (
-  <Ionicons
-    name={name}
-    size={20}
-    color={destructive ? colors.danger : colors.muted}
-  />
-);
 
 export default function ProfileScreen() {
   const { t } = useTranslation();
@@ -107,7 +107,9 @@ export default function ProfileScreen() {
           <View style={styles.heroSkeleton}>
             <ListSkeleton rows={2} rowHeight={120} />
           </View>
-          <ListSkeleton rows={3} rowHeight={72} />
+          <View style={styles.groups}>
+            <ListSkeleton rows={3} rowHeight={72} />
+          </View>
         </ScrollView>
       </View>
     );
@@ -211,27 +213,28 @@ export default function ProfileScreen() {
           />
         </View>
 
+        <View style={styles.groups}>
         <SettingsListGroup title={t('profile.sections.activity')}>
           <SettingsListItem
-            icon={<RowIcon name="bookmark-outline" />}
+            icon={<SettingsRowIcon icon={RiBookmarkLine} />}
             title={t('saved.header')}
             value={String(totalSaved)}
             onPress={() => router.push('/saved')}
           />
           <SettingsListItem
-            icon={<RowIcon name="document-text-outline" />}
+            icon={<SettingsRowIcon icon={RiFileTextLine} />}
             title={t('profile.applications')}
             value={String(totalApplications)}
             onPress={() => router.push('/applications')}
           />
           <SettingsListItem
-            icon={<RowIcon name="bed-outline" />}
+            icon={<SettingsRowIcon icon={RiHotelBedLine} />}
             title={t('profile.stays')}
             value={String(totalReservations)}
             onPress={() => router.push('/stays')}
           />
           <SettingsListItem
-            icon={<RowIcon name="swap-horizontal" />}
+            icon={<SettingsRowIcon icon={RiArrowLeftRightLine} />}
             title={t('profile.exchanges')}
             description={t('profile.exchangesDescription')}
             onPress={() => router.push('/exchange/requests')}
@@ -240,7 +243,7 @@ export default function ProfileScreen() {
 
         <SettingsListGroup title={t('agent.menu.section')}>
           <SettingsListItem
-            icon={<RowIcon name="cash-outline" />}
+            icon={<SettingsRowIcon icon={RiCoinsLine} />}
             title={t('agent.menu.title')}
             description={t('agent.menu.description')}
             onPress={() => router.push('/agent')}
@@ -249,13 +252,13 @@ export default function ProfileScreen() {
 
         <SettingsListGroup title={t('profile.sections.account')}>
           <SettingsListItem
-            icon={<RowIcon name="star-outline" />}
+            icon={<SettingsRowIcon icon={RiStarLine} />}
             title={t('profile.subscriptions')}
             description={t('profile.subscriptionsDescription')}
             onPress={() => router.push('/profile/subscriptions')}
           />
           <SettingsListItem
-            icon={<RowIcon name="settings-outline" />}
+            icon={<SettingsRowIcon icon={RiSettings3Line} />}
             title={t('settings.title')}
             onPress={() => router.push('/settings')}
           />
@@ -263,14 +266,13 @@ export default function ProfileScreen() {
 
         <SettingsListGroup>
           <SettingsListItem
-            icon={<RowIcon name="log-out" destructive />}
+            icon={<SettingsRowIcon icon={RiLogoutBoxRLine} destructive />}
             title={t('settings.signOut')}
             destructive
             onPress={() => void handleLogout()}
           />
         </SettingsListGroup>
-
-        <View style={styles.bottomPadding} />
+        </View>
       </ScrollView>
     </View>
   );
@@ -284,37 +286,27 @@ interface StatTileProps {
 }
 
 const StatTile: React.FC<StatTileProps> = ({ label, value, description, onPress }) => {
-  const [pressed, setPressed] = useState(false);
-  const body = (
-    <>
-      <H2 style={styles.statValue}>{value}</H2>
-      <BloomText style={styles.statLabel}>{label}</BloomText>
-      {description ? <BloomText style={styles.statDescription}>{description}</BloomText> : null}
-      {onPress ? (
-        <View style={styles.statLink}>
-          <BloomText style={styles.statLinkText}>{`View ${label.toLowerCase()}`}</BloomText>
-          <Ionicons name="chevron-forward" size={14} color={colors.muted} />
-        </View>
-      ) : null}
-    </>
-  );
-
+  const { colors: theme } = useTheme();
   return (
     <View style={styles.statTile}>
-      {onPress ? (
-        <Pressable
-          onPress={onPress}
-          onPressIn={() => setPressed(true)}
-          onPressOut={() => setPressed(false)}
-          accessibilityRole="button"
-          accessibilityLabel={`${label}: ${value}. Open ${label.toLowerCase()}`}
-          style={pressed ? styles.statTilePressed : null}
-        >
-          <Card variant="outlined" radius="radius-16" className="p-4">{body}</Card>
-        </Pressable>
-      ) : (
-        <Card variant="outlined" radius="radius-16" className="p-4">{body}</Card>
-      )}
+      <Card
+        variant="outlined"
+        radius="radius-16"
+        className="p-4"
+        onPress={onPress}
+        accessibilityRole={onPress ? 'button' : undefined}
+        accessibilityLabel={onPress ? `${label}: ${value}. Open ${label.toLowerCase()}` : undefined}
+      >
+        <H2 style={styles.statValue}>{value}</H2>
+        <BloomText style={styles.statLabel}>{label}</BloomText>
+        {description ? <BloomText style={styles.statDescription}>{description}</BloomText> : null}
+        {onPress ? (
+          <View style={styles.statLink}>
+            <BloomText style={styles.statLinkText}>{`View ${label.toLowerCase()}`}</BloomText>
+            <RiArrowRightSLine width={14} height={14} fill={theme.textSecondary} />
+          </View>
+        ) : null}
+      </Card>
     </View>
   );
 };
@@ -372,6 +364,9 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   statsWrap: {
+    width: '100%',
+    maxWidth: contentClamp.page,
+    alignSelf: 'center',
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.md,
@@ -381,9 +376,6 @@ const styles = StyleSheet.create({
   statTile: {
     flex: 1,
     minWidth: 100,
-  },
-  statTilePressed: {
-    opacity: 0.92,
   },
   statValue: {
     fontSize: 28,
@@ -411,7 +403,13 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontWeight: '600',
   },
-  bottomPadding: {
-    height: spacing['2xl'],
+  // Bloom 2's SettingsListGroup draws no horizontal inset of its own, so the
+  // screen supplies the gutter (and the same width clamp as the hero).
+  groups: {
+    width: '100%',
+    maxWidth: contentClamp.page,
+    alignSelf: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing['2xl'],
   },
 });

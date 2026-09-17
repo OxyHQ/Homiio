@@ -1,25 +1,46 @@
 /**
- * Settings → Notifications. Uses Bloom SettingsList primitives for category
- * toggles, Bloom Switch for booleans, Bloom Button for the request-permission
- * CTA and Bloom `confirm()` for the destructive clear-all flow.
+ * Settings → Notifications. Bloom SettingsList primitives for category
+ * toggles, Bloom Switch for booleans, a Bloom `Admonition` (with its enable
+ * button) while permission is missing, and `confirm()` for clear-all.
  */
 import React, { useCallback, useState } from 'react';
 import { Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { toast } from '@oxy.so/bloom/toast';
 
-import { Button } from '@oxy.so/bloom/button';
+import {
+  AdmonitionButton,
+  AdmonitionContent,
+  AdmonitionIcon,
+  AdmonitionRoot,
+  AdmonitionRow,
+  AdmonitionText,
+} from '@oxy.so/bloom/admonition';
+import {
+  RiBankCardLine,
+  RiChat3Line,
+  RiCheckboxCircleFill,
+  RiDeleteBinLine,
+  RiFileTextLine,
+  RiHomeLine,
+  RiInformationLine,
+  RiMegaphoneLine,
+  RiNotification3Line,
+  RiRepeatLine,
+  RiSettings3Line,
+  RiSmartphoneLine,
+  RiTimeLine,
+  RiVolumeUpLine,
+} from '@oxy.so/bloom/icons';
 import { Switch } from '@oxy.so/bloom/switch';
 import {
   SettingsListGroup,
   SettingsListItem,
 } from '@oxy.so/bloom/settings-list';
-import { Text as BloomText, H3 } from '@oxy.so/bloom/typography';
+import { useTheme } from '@oxy.so/bloom/theme';
 
 import { Header } from '@/components/Header';
 import { confirm } from '@oxy.so/bloom/surfaces';
-import { Card } from '@oxy.so/bloom/card';
 import {
   useNotifications,
   type NotificationPreferences,
@@ -30,27 +51,18 @@ import {
   createReminderNotification,
   createRepeatingNotification,
 } from '@/utils/notifications';
-import { colors } from '@/styles/colors';
+import {
+  SettingsRowIcon,
+  settingsScreenStyles,
+  type SettingsIconComponent,
+} from '@/components/profile/SettingsRowIcon';
 import { spacing } from '@/constants/styles';
-
-type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
-
-const RowIcon: React.FC<{ name: IoniconName; destructive?: boolean }> = ({
-  name,
-  destructive,
-}) => (
-  <Ionicons
-    name={name}
-    size={20}
-    color={destructive ? colors.danger : colors.muted}
-  />
-);
 
 interface PreferenceRow {
   key: keyof NotificationPreferences;
   title: string;
   description: string;
-  icon: IoniconName;
+  icon: SettingsIconComponent;
 }
 
 export default function NotificationSettingsScreen() {
@@ -64,6 +76,7 @@ export default function NotificationSettingsScreen() {
   } = useNotifications();
 
   const [isUpdating, setIsUpdating] = useState(false);
+  const { colors: theme } = useTheme();
 
   const handlePreferenceChange = useCallback(
     async (key: keyof NotificationPreferences, value: boolean): Promise<void> => {
@@ -125,43 +138,43 @@ export default function NotificationSettingsScreen() {
       key: 'property',
       title: t('notification.settings.property.title'),
       description: t('notification.settings.property.description'),
-      icon: 'home-outline',
+      icon: RiHomeLine,
     },
     {
       key: 'message',
       title: t('notification.settings.message.title'),
       description: t('notification.settings.message.description'),
-      icon: 'chatbubble-outline',
+      icon: RiChat3Line,
     },
     {
       key: 'contract',
       title: t('notification.settings.contract.title'),
       description: t('notification.settings.contract.description'),
-      icon: 'document-text-outline',
+      icon: RiFileTextLine,
     },
     {
       key: 'payment',
       title: t('notification.settings.payment.title'),
       description: t('notification.settings.payment.description'),
-      icon: 'card-outline',
+      icon: RiBankCardLine,
     },
     {
       key: 'reminder',
       title: t('notification.settings.reminder.title'),
       description: t('notification.settings.reminder.description'),
-      icon: 'alarm-outline',
+      icon: RiTimeLine,
     },
     {
       key: 'system',
       title: t('notification.settings.system.title'),
       description: t('notification.settings.system.description'),
-      icon: 'settings-outline',
+      icon: RiSettings3Line,
     },
     {
       key: 'marketing',
       title: t('notification.settings.marketing.title'),
       description: t('notification.settings.marketing.description'),
-      icon: 'megaphone-outline',
+      icon: RiMegaphoneLine,
     },
   ];
 
@@ -170,26 +183,26 @@ export default function NotificationSettingsScreen() {
       key: 'sound',
       title: t('notification.settings.sound.title'),
       description: t('notification.settings.sound.description'),
-      icon: 'volume-high-outline',
+      icon: RiVolumeUpLine,
     },
     {
       key: 'badge',
       title: t('notification.settings.badge.title'),
       description: t('notification.settings.badge.description'),
-      icon: 'notifications-outline',
+      icon: RiNotification3Line,
     },
     {
       key: 'push',
       title: t('notification.settings.push.title'),
       description: t('notification.settings.push.description'),
-      icon: 'phone-portrait-outline',
+      icon: RiSmartphoneLine,
     },
   ];
 
-  const testActions: { label: string; icon: IoniconName; run: () => Promise<unknown> }[] = [
+  const testActions: { label: string; icon: SettingsIconComponent; run: () => Promise<unknown> }[] = [
     {
       label: t('notification.test.property'),
-      icon: 'home-outline',
+      icon: RiHomeLine,
       run: () =>
         createPropertyNotification(
           'test-property-id',
@@ -200,7 +213,7 @@ export default function NotificationSettingsScreen() {
     },
     {
       label: t('notification.test.message'),
-      icon: 'chatbubble-outline',
+      icon: RiChat3Line,
       run: () =>
         createMessageNotification(
           'test-message-id',
@@ -211,7 +224,7 @@ export default function NotificationSettingsScreen() {
     },
     {
       label: t('notification.test.reminder'),
-      icon: 'alarm-outline',
+      icon: RiTimeLine,
       run: () => {
         const tomorrow = new Date();
         tomorrow.setDate(tomorrow.getDate() + 1);
@@ -226,7 +239,7 @@ export default function NotificationSettingsScreen() {
     },
     {
       label: t('notification.test.repeating'),
-      icon: 'repeat-outline',
+      icon: RiRepeatLine,
       run: () =>
         createRepeatingNotification(
           'Daily property update',
@@ -254,48 +267,38 @@ export default function NotificationSettingsScreen() {
   );
 
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, { backgroundColor: theme.background }]}>
       <Header
         options={{
           title: t('notification.settings.title'),
           showBackButton: true,
         }}
       />
-      <ScrollView contentContainerStyle={styles.scroll}>
-        <View style={styles.permissionWrap}>
-          <Card variant="outlined" radius="radius-16" className="p-5">
-            <View style={styles.permissionHeader}>
-              <Ionicons
-                name={hasPermission ? 'checkmark-circle' : 'close-circle'}
-                size={24}
-                color={hasPermission ? colors.online : colors.danger}
-              />
-              <View style={styles.permissionTextWrap}>
-                <H3 style={styles.permissionTitle}>
-                  {hasPermission
-                    ? t('notification.permissions.enabled.title')
-                    : t('notification.permissions.disabled.title')}
-                </H3>
-                <BloomText style={styles.permissionBody}>
-                  {hasPermission
-                    ? t('notification.permissions.enabled.description')
-                    : t('notification.permissions.disabled.description')}
-                </BloomText>
-              </View>
-            </View>
-            {!hasPermission ? (
-              <View style={styles.permissionAction}>
-                <Button
-                  variant="primary"
-                  size="medium"
-                  onPress={handleRequestPermissions}
-                >
+      <ScrollView contentContainerStyle={settingsScreenStyles.content}>
+        {hasPermission ? (
+          <SettingsListGroup>
+            <SettingsListItem
+              icon={<RiCheckboxCircleFill width={20} height={20} fill={theme.success} />}
+              title={t('notification.permissions.enabled.title')}
+              description={t('notification.permissions.enabled.description')}
+            />
+          </SettingsListGroup>
+        ) : (
+          <AdmonitionRoot type="warning" style={styles.permission}>
+            <AdmonitionRow>
+              <AdmonitionIcon />
+              <AdmonitionContent>
+                <AdmonitionText style={styles.permissionTitle}>
+                  {t('notification.permissions.disabled.title')}
+                </AdmonitionText>
+                <AdmonitionText>{t('notification.permissions.disabled.description')}</AdmonitionText>
+                <AdmonitionButton onPress={() => void handleRequestPermissions()}>
                   {t('notification.permissions.enable')}
-                </Button>
-              </View>
-            ) : null}
-          </Card>
-        </View>
+                </AdmonitionButton>
+              </AdmonitionContent>
+            </AdmonitionRow>
+          </AdmonitionRoot>
+        )}
 
         <SettingsListGroup
           title={t('notification.settings.categories')}
@@ -303,7 +306,7 @@ export default function NotificationSettingsScreen() {
           {categoryRows.map((row) => (
             <SettingsListItem
               key={row.key}
-              icon={<RowIcon name={row.icon} />}
+              icon={<SettingsRowIcon icon={row.icon} />}
               title={row.title}
               description={row.description}
               rightElement={
@@ -325,7 +328,7 @@ export default function NotificationSettingsScreen() {
           {behaviorRows.map((row) => (
             <SettingsListItem
               key={row.key}
-              icon={<RowIcon name={row.icon} />}
+              icon={<SettingsRowIcon icon={row.icon} />}
               title={row.title}
               description={row.description}
               rightElement={
@@ -349,7 +352,7 @@ export default function NotificationSettingsScreen() {
             {testActions.map((action) => (
               <SettingsListItem
                 key={action.label}
-                icon={<RowIcon name={action.icon} />}
+                icon={<SettingsRowIcon icon={action.icon} />}
                 title={action.label}
                 onPress={() => runTest(action.run)}
               />
@@ -361,7 +364,7 @@ export default function NotificationSettingsScreen() {
           title={t('notification.settings.manage')}
         >
           <SettingsListItem
-            icon={<RowIcon name="trash-outline" destructive />}
+            icon={<SettingsRowIcon icon={RiDeleteBinLine} destructive />}
             title={t('notification.settings.clearAll')}
             destructive
             onPress={() => void handleClearAll()}
@@ -374,7 +377,7 @@ export default function NotificationSettingsScreen() {
             footer={t('notification.settings.ios.description')}
           >
             <SettingsListItem
-              icon={<RowIcon name="information-circle-outline" />}
+              icon={<SettingsRowIcon icon={RiInformationLine} />}
               title={t('notification.settings.ios.openSettings')}
               onPress={() => {
                 /* surfaced as guidance only */
@@ -390,7 +393,7 @@ export default function NotificationSettingsScreen() {
             footer={t('notification.settings.android.description')}
           >
             <SettingsListItem
-              icon={<RowIcon name="information-circle-outline" />}
+              icon={<SettingsRowIcon icon={RiInformationLine} />}
               title={t('notification.settings.android.openSettings')}
               onPress={() => {
                 /* surfaced as guidance only */
@@ -407,36 +410,11 @@ export default function NotificationSettingsScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: colors.background,
   },
-  scroll: {
-    paddingTop: spacing.lg,
-    paddingBottom: spacing['4xl'],
-  },
-  permissionWrap: {
-    paddingHorizontal: spacing.lg,
+  permission: {
     marginBottom: spacing.lg,
   },
-  permissionHeader: {
-    flexDirection: 'row',
-    gap: spacing.md,
-    alignItems: 'flex-start',
-  },
-  permissionTextWrap: {
-    flex: 1,
-    gap: spacing.xs,
-  },
   permissionTitle: {
-    fontSize: 16,
     fontWeight: '700',
-  },
-  permissionBody: {
-    fontSize: 13,
-    color: colors.muted,
-    lineHeight: 18,
-  },
-  permissionAction: {
-    marginTop: spacing.md,
-    alignSelf: 'flex-start',
   },
 });

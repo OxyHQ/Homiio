@@ -1,38 +1,31 @@
 import React, { useMemo, useState } from 'react';
-import { View, StyleSheet, Text, TextInput, TouchableOpacity, Alert } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useOxy } from '@oxy.so/services';
 
-import { Header } from '@/components/Header';
 import { Button } from '@oxy.so/bloom/button';
-import { colors } from '@/styles/colors';
-import savedPropertyFolderService from '@/services/savedPropertyFolderService';
+import { Field } from '@oxy.so/bloom/field';
+import { TextFieldInput } from '@oxy.so/bloom/text-field';
 import { toast } from '@oxy.so/bloom/toast';
-import { logger } from '@/utils/logger';
 
-// Reuse the curated folder-color picker palette from SaveToFolderBottomSheet.
-// These are user-selectable swatches, not theme tokens, so they stay literal.
-const FOLDER_COLORS = [
-  '#3B82F6',
-  '#EF4444',
-  '#10B981',
-  '#F59E0B',
-  '#8B5CF6',
-  '#F97316',
-  '#06B6D4',
-  '#EC4899',
-];
+import { Header } from '@/components/Header';
+import { FolderColorSwatches, FOLDER_COLORS } from '@/components/SaveToFolderBottomSheet';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { ListSkeleton } from '@/components/ui/ListSkeleton';
+import { contentClamp, spacing } from '@/constants/styles';
+import savedPropertyFolderService, {
+  type SavedPropertyFolder,
+} from '@/services/savedPropertyFolderService';
+import { logger } from '@/utils/logger';
 
 export default function EditFolderScreen() {
   const { t } = useTranslation();
   const { folderId } = useLocalSearchParams<{ folderId: string }>();
   const { oxyServices, activeSessionId } = useOxy();
-  const queryClient = useQueryClient();
 
-  // Use React Query for folders data
-  const { data: foldersData, isLoading: foldersLoading } = useQuery({
+  const { data: foldersData, isLoading } = useQuery({
     queryKey: ['savedFolders'],
     queryFn: () => savedPropertyFolderService.getSavedPropertyFolders(),
     enabled: !!oxyServices && !!activeSessionId,
@@ -40,20 +33,50 @@ export default function EditFolderScreen() {
     gcTime: 1000 * 60 * 10,
   });
 
-  const folders = foldersData?.folders || [];
+  const folder = useMemo(
+    () => (foldersData?.folders ?? []).find((f) => f.id === folderId),
+    [foldersData?.folders, folderId],
+  );
 
-  const folder = useMemo(() => folders.find((f) => f.id === folderId), [folders, folderId]);
-  const [name, setName] = useState(folder?.name || '');
-  const [emoji, setEmoji] = useState(folder?.icon || '📁');
-  const [color, setColor] = useState(folder?.color || colors.primaryColor);
+  if (!folder) {
+    return (
+      <View style={styles.container}>
+        <Header options={{ title: t('saved.title'), showBackButton: true }} />
+        {isLoading ? (
+          <View style={styles.form}>
+            <ListSkeleton rows={3} rowHeight={56} />
+          </View>
+        ) : (
+          <EmptyState
+            icon="folder-open-outline"
+            title={t('saved.noFolder')}
+            description={t('saved.noFolderDescription')}
+          />
+        )}
+      </View>
+    );
+  }
 
-  // React Query mutation for updating folder
+  // Keyed on the folder so the form state seeds from the loaded folder rather
+  // than from the empty first render before the query resolved.
+  return <EditFolderForm key={folder.id} folder={folder} />;
+}
+
+function EditFolderForm({ folder }: { folder: SavedPropertyFolder }) {
+  const { t } = useTranslation();
+  const { oxyServices, activeSessionId } = useOxy();
+  const queryClient = useQueryClient();
+
+  const [name, setName] = useState(folder.name || '');
+  const [emoji, setEmoji] = useState(folder.icon || '📁');
+  const [color, setColor] = useState(folder.color || FOLDER_COLORS[0]);
+
   const updateFolderMutation = useMutation({
     mutationFn: async (folderData: { name: string; icon: string; color: string }) => {
       if (!oxyServices || !activeSessionId) {
         throw new Error('Authentication required');
       }
-      return savedPropertyFolderService.updateSavedPropertyFolder(folderId, folderData);
+      return savedPropertyFolderService.updateSavedPropertyFolder(folder.id, folderData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['savedFolders'] });
@@ -66,32 +89,19 @@ export default function EditFolderScreen() {
     },
   });
 
-  const handleSave = async () => {
-    if (!folder) return;
+  const locked = folder.isDefault || updateFolderMutation.isPending;
+
+  const handleSave = () => {
     if (folder.isDefault) {
-      Alert.alert(t('common.error'), t('saved.folder.alertDefaultFolderRename'));
+      toast.error(t('saved.folder.alertDefaultFolderRename'));
       return;
     }
     if (!name.trim()) {
-      Alert.alert(t('common.error'), t('saved.folder.alertFolderNameRequired'));
+      toast.error(t('saved.folder.alertFolderNameRequired'));
       return;
     }
-
-    updateFolderMutation.mutate({
-      name: name.trim(),
-      icon: emoji,
-      color,
-    });
+    updateFolderMutation.mutate({ name: name.trim(), icon: emoji, color });
   };
-
-  if (!folder) {
-    return (
-      <View style={styles.container}>
-        <Header options={{ title: t('saved.title'), showBackButton: true }} />
-        <Text style={styles.infoText}>Folder not found</Text>
-      </View>
-    );
-  }
 
   return (
     <View style={styles.container}>
@@ -102,46 +112,36 @@ export default function EditFolderScreen() {
         }}
       />
       <View style={styles.form}>
-        <Text style={styles.label}>{t('common.emoji')}</Text>
-        <TextInput value={emoji} onChangeText={setEmoji} style={styles.input} maxLength={2} />
+        <Field label={t('common.emoji')}>
+          <TextFieldInput
+            label={t('common.emoji')}
+            value={emoji}
+            onChangeText={setEmoji}
+            maxLength={2}
+          />
+        </Field>
 
-        <Text style={styles.label}>{t('common.name')}</Text>
-        <TextInput
-          value={name}
-          onChangeText={setName}
-          style={[styles.input, folder.isDefault && { opacity: 0.6 }]}
-          placeholder={t('saved.folderNamePlaceholder')}
-          editable={!folder.isDefault}
-        />
+        <Field label={t('common.name')} disabled={folder.isDefault}>
+          <TextFieldInput
+            label={t('common.name')}
+            value={name}
+            onChangeText={setName}
+            placeholder={t('saved.folderNamePlaceholder')}
+            disabled={folder.isDefault}
+          />
+        </Field>
 
-        <Text style={styles.label}>{t('common.color')}</Text>
-        <View style={styles.colorGrid}>
-          {FOLDER_COLORS.map((c) => {
-            const isSelected = c === color;
-            return (
-              <TouchableOpacity
-                key={c}
-                style={StyleSheet.flatten([
-                  styles.colorSwatch,
-                  { backgroundColor: c },
-                  isSelected && styles.colorSwatchSelected,
-                  folder.isDefault && { opacity: 0.6 },
-                ])}
-                onPress={() => {
-                  if (updateFolderMutation.isPending || folder.isDefault) return;
-                  setColor(c);
-                }}
-              />
-            );
-          })}
-        </View>
+        <Field label={t('common.color')} disabled={folder.isDefault}>
+          <FolderColorSwatches value={color} onChange={setColor} disabled={locked} />
+        </Field>
 
         <Button
           onPress={handleSave}
-          style={updateFolderMutation.isPending ? { opacity: 0.6 } : undefined}
+          size="large"
+          loading={updateFolderMutation.isPending}
           disabled={updateFolderMutation.isPending}
         >
-          {updateFolderMutation.isPending ? t('common.saving') : t('common.save')}
+          {t('common.save')}
         </Button>
       </View>
     </View>
@@ -151,44 +151,13 @@ export default function EditFolderScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
-    paddingBottom: 40,
+    paddingBottom: spacing['3xl'],
   },
   form: {
-    padding: 16,
-    gap: 12,
-  },
-  label: {
-    fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_3,
-  },
-  input: {
-    backgroundColor: colors.white,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 16,
-  },
-  colorGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    marginTop: 6,
-  },
-  colorSwatch: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: 'transparent',
-  },
-  colorSwatchSelected: {
-    borderColor: colors.primaryColor,
-  },
-  infoText: {
-    padding: 16,
-    color: colors.COLOR_BLACK_LIGHT_3,
+    width: '100%',
+    maxWidth: contentClamp.copy,
+    alignSelf: 'center',
+    padding: spacing.lg,
+    gap: spacing.lg,
   },
 });

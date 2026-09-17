@@ -19,17 +19,20 @@
  */
 
 import React, { useMemo } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { Button } from '@oxy.so/bloom/button';
+import { Card } from '@oxy.so/bloom/card';
+import { Loading } from '@oxy.so/bloom/loading';
 import { H3, Text as BloomText } from '@oxy.so/bloom/typography';
 import { deviceTimeZone, formatDate } from '@homiio/shared-types';
 import { Header } from '@/components/Header';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { AlertExplanationText } from '@/components/watches/AlertExplanationText';
 import { useAlertReason } from '@/hooks/useHousingAlerts';
+import { contentClamp, spacing } from '@/constants/styles';
 import { useFormatting } from '@/utils/format';
 
 export default function AlertReasonScreen() {
@@ -42,31 +45,11 @@ export default function AlertReasonScreen() {
 
   const { data, isLoading, isError } = useAlertReason(alertId);
 
-  const styles = useMemo(
-    () =>
-      StyleSheet.create({
-        content: { padding: 16, gap: 20, paddingBottom: 60 },
-        card: {
-          padding: 16,
-          borderRadius: 16,
-          borderWidth: 1,
-          borderColor: theme.colors.border,
-          backgroundColor: theme.colors.card,
-          gap: 10,
-        },
-        meta: { gap: 4 },
-        loading: { paddingVertical: 40, alignItems: 'center' },
-      }),
-    [theme],
-  );
-
   if (isLoading) {
     return (
       <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
         <Header options={{ title: t('alerts.reason.title') }} />
-        <View style={styles.loading}>
-          <ActivityIndicator color={theme.colors.primary} />
-        </View>
+        <Loading style={styles.loading} />
       </View>
     );
   }
@@ -90,15 +73,15 @@ export default function AlertReasonScreen() {
     <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
       <Header options={{ title: t('alerts.reason.title') }} />
       <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.card}>
+        <Card variant="outlined" radius="radius-16" style={styles.card}>
           <H3>{t('alerts.reason.whatChanged')}</H3>
           <AlertExplanationText
             detail={alert.explanation.detail}
             watchName={alert.explanation.watchName}
           />
-        </View>
+        </Card>
 
-        <View style={styles.card}>
+        <Card variant="outlined" radius="radius-16" style={styles.card}>
           <H3>{t('alerts.reason.whyYou')}</H3>
           <BloomText>
             {t('alerts.reason.matchedWatch', { name: alert.explanation.watchName })}
@@ -128,7 +111,7 @@ export default function AlertReasonScreen() {
               </BloomText>
             ) : null}
           </View>
-        </View>
+        </Card>
 
         {watch?.locToken ? (
           <Button
@@ -146,3 +129,17 @@ export default function AlertReasonScreen() {
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  content: {
+    width: '100%',
+    maxWidth: contentClamp.copy,
+    alignSelf: 'center',
+    padding: spacing.lg,
+    gap: spacing.xl,
+    paddingBottom: spacing['6xl'],
+  },
+  card: { padding: spacing.lg, gap: spacing.md },
+  meta: { gap: spacing.xs },
+  loading: { paddingVertical: spacing['3xl'] },
+});

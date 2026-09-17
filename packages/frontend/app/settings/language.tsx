@@ -14,26 +14,20 @@ import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useOxy } from '@oxy.so/services';
 import { getNativeLanguageName } from '@oxy.so/core';
-import Ionicons from '@expo/vector-icons/Ionicons';
-
+import { RiGlobalLine } from '@oxy.so/bloom/icons';
+import { useTheme } from '@oxy.so/bloom/theme';
 import {
   SettingsListGroup,
   SettingsListItem,
 } from '@oxy.so/bloom/settings-list';
 
 import { Header } from '@/components/Header';
-import { colors } from '@/styles/colors';
-import { spacing } from '@/constants/styles';
-
-type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
-
-const RowIcon: React.FC<{ name: IoniconName }> = ({ name }) => (
-  <Ionicons name={name} size={20} color={colors.muted} />
-);
+import { SettingsRowIcon, settingsScreenStyles } from '@/components/profile/SettingsRowIcon';
 
 export default function LanguageSettingsScreen() {
   const { t } = useTranslation();
   const { showBottomSheet, currentLanguage, currentLanguages } = useOxy();
+  const { colors: theme } = useTheme();
 
   const openLanguageSelector = useCallback(() => {
     showBottomSheet?.('LanguageSelector');
@@ -46,17 +40,17 @@ export default function LanguageSettingsScreen() {
   const languageDescription = selectedLanguages.map((code) => getNativeLanguageName(code)).join(', ');
 
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, { backgroundColor: theme.background }]}>
       <Header
         options={{
           title: t('settings.language.title'),
           showBackButton: true,
         }}
       />
-      <View style={styles.content}>
+      <View style={settingsScreenStyles.content}>
         <SettingsListGroup title={t('settings.language.choose')}>
           <SettingsListItem
-            icon={<RowIcon name="language" />}
+            icon={<SettingsRowIcon icon={RiGlobalLine} />}
             title={t('settings.language.title')}
             description={languageDescription}
             onPress={openLanguageSelector}
@@ -70,10 +64,5 @@ export default function LanguageSettingsScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: colors.background,
-  },
-  content: {
-    paddingTop: spacing.lg,
-    paddingBottom: spacing['4xl'],
   },
 });

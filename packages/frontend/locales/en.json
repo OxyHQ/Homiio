@@ -2136,8 +2136,42 @@
     "searchPlaceholder": "Search saved properties",
     "header": "Saved",
     "notes": {
-      "title": "Notes"
-    }
+      "title": "Notes",
+      "placeholder": "Add notes about this property...",
+      "save": "Save Notes",
+      "cancel": "Cancel",
+      "filters": {
+        "active": "Active",
+        "pinned": "Pinned",
+        "archived": "Archived"
+      },
+      "emptyTitle": "No notes yet",
+      "emptyDescription": "Notes you add to saved properties will appear here.",
+      "deleteTitle": "Delete this note?",
+      "deleteMessage": "This can't be undone.",
+      "saved": "Note saved",
+      "deleted": "Note deleted",
+      "pin": "Pin note",
+      "unpin": "Unpin note",
+      "archive": "Archive note",
+      "unarchive": "Unarchive note"
+    },
+    "actions": {
+      "addNotes": "Add Notes",
+      "editNotes": "Edit Notes",
+      "unsave": "Remove from Saved",
+      "viewProperty": "View Property"
+    },
+    "errors": {
+      "unsaveFailed": "Failed to remove from saved",
+      "updateNotesFailed": "Failed to update notes",
+      "loadFailed": "Failed to load saved properties"
+    },
+    "filters": {
+      "thisWeek": "This week",
+      "withNotes": "With notes"
+    },
+    "openFolder": "Open folder {{name}}"
   },
   "imageUpload": {
     "permissionTitle": "Permission Required",

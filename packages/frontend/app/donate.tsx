@@ -6,7 +6,7 @@
  * the app `colors.background` (no cardy shadows / borders):
  *
  *  - Contribution picker: a frequency `SegmentedControl` (one-time / monthly)
- *    + a flat selectable tier list (radio rows, not 3 bordered cards), driving
+ *    + a Bloom `RadioCard` per tier (title · price, subtitle), driving
  *    a SINGLE primary Bloom `Button` CTA whose label tracks the selection.
  *  - "What your support enables": a flat `DetailIconGrid` icon list (reused
  *    from the property-detail design system) — no grey card.
@@ -19,13 +19,24 @@
  * never mounted, so the old flow 404'd.
  */
 import React, { useMemo, useState } from 'react';
-import { Alert, Linking, ScrollView, StyleSheet, View } from 'react-native';
+import { Linking, ScrollView, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { Button } from '@oxy.so/bloom/button';
+import {
+  RiCheckboxCircleFill,
+  RiFileTextLine,
+  RiGroupLine,
+  RiHeartFill,
+  RiLightbulbLine,
+  RiShieldCheckLine,
+  RiWrenchLine,
+} from '@oxy.so/bloom/icons';
+import { RadioCard } from '@oxy.so/bloom/radio';
+import { useTheme } from '@oxy.so/bloom/theme';
+import { toast } from '@oxy.so/bloom/toast';
 import {
   SegmentedControl,
   SegmentedControlItem,
@@ -41,16 +52,17 @@ import {
   DetailIconRow,
   DETAIL_ICON_SIZE,
 } from '@/components/property/DetailIconGrid';
-import { TierRow } from '@/components/donate/TierRow';
 import { colors } from '@/styles/colors';
-import { hairline, radius, spacing, tracker } from '@/constants/styles';
+import { hairline, spacing, tracker } from '@/constants/styles';
+import { formatMoney } from '@homiio/shared-types';
 import { api } from '@/utils/api';
+import { useFormatting } from '@/utils/format';
 import { logger } from '@/utils/logger';
 
 /** Homiio's donation tiers are priced in euros; the code, never the glyph. */
 const DONATION_CURRENCY = 'EUR';
 
-type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
+type IconComponent = React.ComponentType<{ width?: number; height?: number; fill?: string }>;
 
 /** Donation frequency — drives which tiers are offered. */
 type DonationFrequency = 'one-time' | 'monthly';
@@ -70,7 +82,7 @@ type DonationTier = {
 };
 
 type ImpactArea = {
-  icon: IoniconName;
+  icon: IconComponent;
   title: string;
 };
 
@@ -78,6 +90,8 @@ export default function DonatePage() {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [frequency, setFrequency] = useState<DonationFrequency>('monthly');
+  const { colors: theme } = useTheme();
+  const { locale } = useFormatting();
 
   const tiers = useMemo<DonationTier[]>(
     () => [
@@ -117,11 +131,11 @@ export default function DonatePage() {
 
   const impactAreas = useMemo<ImpactArea[]>(
     () => [
-      { icon: 'construct-outline', title: t('donations.page.impact.areas.development.title') },
-      { icon: 'shield-checkmark-outline', title: t('donations.page.impact.areas.safety.title') },
-      { icon: 'document-text-outline', title: t('donations.page.impact.areas.legal.title') },
-      { icon: 'bulb-outline', title: t('donations.page.impact.areas.innovation.title') },
-      { icon: 'people-outline', title: t('donations.page.impact.areas.community.title') },
+      { icon: RiWrenchLine, title: t('donations.page.impact.areas.development.title') },
+      { icon: RiShieldCheckLine, title: t('donations.page.impact.areas.safety.title') },
+      { icon: RiFileTextLine, title: t('donations.page.impact.areas.legal.title') },
+      { icon: RiLightbulbLine, title: t('donations.page.impact.areas.innovation.title') },
+      { icon: RiGroupLine, title: t('donations.page.impact.areas.community.title') },
     ],
     [t],
   );
@@ -165,7 +179,7 @@ export default function DonatePage() {
     } catch (error: unknown) {
       logger.error('Donation error:', error);
       const message = error instanceof Error ? error.message : t('donations.page.error.generic');
-      Alert.alert(t('donations.page.error.title'), message);
+      toast.error(t('donations.page.error.title'), { description: message });
     } finally {
       setLoading(false);
     }
@@ -188,7 +202,7 @@ export default function DonatePage() {
         >
           {/* Hero — preserved. */}
           <LinearGradient colors={[colors.info, colors.info + '90']} style={styles.heroSection}>
-            <Ionicons name="heart" size={48} color={colors.white} />
+            <RiHeartFill width={48} height={48} fill={colors.white} />
             <BloomText style={styles.heroTitle}>{t('donations.page.subtitle')}</BloomText>
             <BloomText style={styles.heroDescription}>{t('donations.page.description')}</BloomText>
           </LinearGradient>
@@ -218,20 +232,30 @@ export default function DonatePage() {
               </SegmentedControl>
 
               <View style={styles.tierList}>
-                {visibleTiers.map((tier) => (
-                  <TierRow
-                    key={tier.id}
-                    title={tier.title}
-                    subtitle={tier.subtitle}
-                    amount={tier.amount}
-                    currency={tier.currency}
-                    periodLabel={
-                      tier.frequency === 'monthly' ? t('donations.page.frequency.perMonth') : undefined
-                    }
-                    selected={selectedTier?.id === tier.id}
-                    onSelect={() => setSelectedTierId(tier.id)}
-                  />
-                ))}
+                {visibleTiers.map((tier) => {
+                  const period =
+                    tier.frequency === 'monthly' ? t('donations.page.frequency.perMonth') : '';
+                  const price = formatMoney(tier.amount, tier.currency, locale, {
+                    maximumFractionDigits: 0,
+                  });
+                  // Spoken form for the radio's label: "5 euros" beats "€5",
+                  // which a screen reader may read as "E five".
+                  const spokenPrice = formatMoney(tier.amount, tier.currency, locale, {
+                    currencyDisplay: 'name',
+                    maximumFractionDigits: 0,
+                  });
+                  return (
+                    <RadioCard
+                      key={tier.id}
+                      value={tier.id}
+                      title={`${tier.title} · ${price}${period}`}
+                      description={tier.subtitle}
+                      selected={selectedTier?.id === tier.id}
+                      onSelect={setSelectedTierId}
+                      accessibilityLabel={`${tier.title}, ${spokenPrice}${period}`}
+                    />
+                  );
+                })}
               </View>
 
               <Button
@@ -240,8 +264,8 @@ export default function DonatePage() {
                 onPress={handleDonate}
                 loading={loading}
                 disabled={!selectedTier}
-                style={styles.cta}
-                icon={<Ionicons name="heart" size={18} color={colors.primaryForeground} />}
+                fullWidth
+                leadingIcon={RiHeartFill}
               >
                 {selectedTier?.ctaLabel ?? t('donations.page.tiers.monthly.button')}
               </Button>
@@ -256,10 +280,10 @@ export default function DonatePage() {
                   <DetailIconCell key={area.title}>
                     <DetailIconRow
                       icon={
-                        <Ionicons
-                          name={area.icon}
-                          size={DETAIL_ICON_SIZE}
-                          color={colors.COLOR_BLACK_LIGHT_1}
+                        <area.icon
+                          width={DETAIL_ICON_SIZE}
+                          height={DETAIL_ICON_SIZE}
+                          fill={theme.text}
                         />
                       }
                       label={area.title}
@@ -279,7 +303,7 @@ export default function DonatePage() {
               <View style={styles.goalList}>
                 {missionGoals.map((goal) => (
                   <View key={goal} style={styles.goalRow}>
-                    <Ionicons name="checkmark-circle" size={20} color={colors.primaryColor} />
+                    <RiCheckboxCircleFill width={20} height={20} fill={theme.primary} />
                     <BloomText style={styles.goalText}>{goal}</BloomText>
                   </View>
                 ))}
@@ -344,10 +368,6 @@ const styles = StyleSheet.create({
   },
   tierList: {
     gap: spacing.sm,
-  },
-  cta: {
-    width: '100%',
-    borderRadius: radius.pill,
   },
   goalList: {
     gap: spacing.md,

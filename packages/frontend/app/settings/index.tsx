@@ -1,22 +1,40 @@
 /**
  * Settings — top-level personal preferences screen.
  *
- * Stream P polish: switched the hand-rolled grouped TouchableOpacity rows
- * to Bloom `SettingsListGroup` + `SettingsListItem`. Sections follow the
- * Clarity sidebar pattern: Account → Preferences → Notifications → Data
- * → Support → About → Sign out. Switches now use Bloom Switch; sign-out
- * uses Bloom Button via the destructive variant on SettingsListItem.
+ * Bloom `SettingsListGroup` + `SettingsListItem` rows with Remix leading
+ * icons (`SettingsRowIcon`), Bloom `Switch` toggles and `confirm()` before
+ * destructive actions. Sections: Account → Preferences → Notifications →
+ * Data → Support → About → Sign out.
  */
 import React, { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useOxy } from '@oxy.so/services';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import Constants from 'expo-constants';
 import { toast } from '@oxy.so/bloom/toast';
 
+import {
+  RiChat3Line,
+  RiCodeSSlashLine,
+  RiDeleteBinLine,
+  RiDownloadLine,
+  RiEyeOffLine,
+  RiFolderLine,
+  RiGlobalLine,
+  RiCoinsLine,
+  RiLogoutBoxRLine,
+  RiNotification3Line,
+  RiEqualizerLine,
+  RiQuestionLine,
+  RiRefreshLine,
+  RiSmartphoneLine,
+  RiStarLine,
+  RiUserLine,
+  RiWrenchLine,
+} from '@oxy.so/bloom/icons';
 import { Switch } from '@oxy.so/bloom/switch';
+import { useTheme } from '@oxy.so/bloom/theme';
 import {
   SettingsListGroup,
   SettingsListItem,
@@ -25,34 +43,15 @@ import {
 import { Header } from '@/components/Header';
 import { confirm } from '@oxy.so/bloom/surfaces';
 import { useCurrency } from '@/hooks/useCurrency';
-import { colors } from '@/styles/colors';
-import { spacing } from '@/constants/styles';
+import { SettingsRowIcon, settingsScreenStyles } from '@/components/profile/SettingsRowIcon';
 import { LogoIcon } from '@/assets/logo';
-
-type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
-
-interface RowIconProps {
-  name: IoniconName;
-  destructive?: boolean;
-}
-
-/**
- * Small icon wrapper that matches Bloom SettingsListItem's leading slot
- * (20×20). Keeps icon color in sync with `destructive` semantics.
- */
-const RowIcon: React.FC<RowIconProps> = ({ name, destructive }) => (
-  <Ionicons
-    name={name}
-    size={20}
-    color={destructive ? colors.danger : colors.muted}
-  />
-);
 
 export default function SettingsScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const { user, showBottomSheet, logout } = useOxy();
   const { getCurrentCurrency } = useCurrency();
+  const { colors: theme } = useTheme();
 
   const [notifications, setNotifications] = useState(true);
   const [autoSync, setAutoSync] = useState(true);
@@ -108,23 +107,23 @@ export default function SettingsScreen() {
   };
 
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, { backgroundColor: theme.background }]}>
       <Header
         options={{
           title: t('settings.title'),
           showBackButton: true,
         }}
       />
-      <ScrollView contentContainerStyle={styles.scroll}>
+      <ScrollView contentContainerStyle={settingsScreenStyles.content}>
         <SettingsListGroup title={t('settings.sections.account')}>
           <SettingsListItem
-            icon={<RowIcon name="person" />}
+            icon={<SettingsRowIcon icon={RiUserLine} />}
             title={userDisplayName}
             description={user?.username ?? ''}
             onPress={() => showBottomSheet?.('ManageAccount')}
           />
           <SettingsListItem
-            icon={<RowIcon name="folder" />}
+            icon={<SettingsRowIcon icon={RiFolderLine} />}
             title={t('settings.account.files')}
             description={t('settings.account.filesDescription')}
             onPress={() => showBottomSheet?.('FileManagement')}
@@ -133,13 +132,13 @@ export default function SettingsScreen() {
 
         <SettingsListGroup title={t('settings.sections.preferences')}>
           <SettingsListItem
-            icon={<RowIcon name="language" />}
+            icon={<SettingsRowIcon icon={RiGlobalLine} />}
             title={t('settings.language.title')}
             value={t('settings.language.subtitle')}
             onPress={() => router.push('/settings/language')}
           />
           <SettingsListItem
-            icon={<RowIcon name="cash" />}
+            icon={<SettingsRowIcon icon={RiCoinsLine} />}
             title={t('settings.preferences.currency')}
             value={`${currentCurrencyInfo.symbol} ${currentCurrencyInfo.code}`}
             onPress={() => router.push('/settings/currency')}
@@ -155,7 +154,7 @@ export default function SettingsScreen() {
 
         <SettingsListGroup title={t('settings.sections.notifications')}>
           <SettingsListItem
-            icon={<RowIcon name="notifications" />}
+            icon={<SettingsRowIcon icon={RiNotification3Line} />}
             title={t('settings.preferences.notifications')}
             description={t('settings.preferences.notificationsDesc')}
             rightElement={
@@ -163,7 +162,7 @@ export default function SettingsScreen() {
             }
           />
           <SettingsListItem
-            icon={<RowIcon name="options-outline" />}
+            icon={<SettingsRowIcon icon={RiEqualizerLine} />}
             title={t('settings.notifications.detail')}
             description={t('settings.notifications.detailDesc')}
             onPress={() => router.push('/settings/notifications')}
@@ -172,7 +171,7 @@ export default function SettingsScreen() {
 
         <SettingsListGroup title={t('settings.sections.data')}>
           <SettingsListItem
-            icon={<RowIcon name="sync" />}
+            icon={<SettingsRowIcon icon={RiRefreshLine} />}
             title={t('settings.preferences.autoSync')}
             description={t('settings.preferences.autoSyncDesc')}
             rightElement={
@@ -180,7 +179,7 @@ export default function SettingsScreen() {
             }
           />
           <SettingsListItem
-            icon={<RowIcon name="cloud-offline" />}
+            icon={<SettingsRowIcon icon={RiEyeOffLine} />}
             title={t('settings.preferences.offlineMode')}
             description={t('settings.preferences.offlineModeDesc')}
             rightElement={
@@ -188,13 +187,13 @@ export default function SettingsScreen() {
             }
           />
           <SettingsListItem
-            icon={<RowIcon name="download" />}
+            icon={<SettingsRowIcon icon={RiDownloadLine} />}
             title={t('settings.data.exportData')}
             description={t('settings.data.exportDataDesc')}
             onPress={() => void handleExportData()}
           />
           <SettingsListItem
-            icon={<RowIcon name="trash" destructive />}
+            icon={<SettingsRowIcon icon={RiDeleteBinLine} destructive />}
             title={t('settings.data.clearCache')}
             description={t('settings.data.clearCacheDesc')}
             destructive
@@ -204,19 +203,19 @@ export default function SettingsScreen() {
 
         <SettingsListGroup title={t('settings.sections.supportFeedback')}>
           <SettingsListItem
-            icon={<RowIcon name="help-circle" />}
+            icon={<SettingsRowIcon icon={RiQuestionLine} />}
             title={t('settings.supportFeedback.helpSupport')}
             description={t('settings.supportFeedback.helpSupportDesc')}
             onPress={() => toast(t('settings.supportFeedback.helpSupportMessage'))}
           />
           <SettingsListItem
-            icon={<RowIcon name="chatbubble" />}
+            icon={<SettingsRowIcon icon={RiChat3Line} />}
             title={t('settings.supportFeedback.sendFeedback')}
             description={t('settings.supportFeedback.sendFeedbackDesc')}
             onPress={() => toast(t('settings.supportFeedback.sendFeedbackMessage'))}
           />
           <SettingsListItem
-            icon={<RowIcon name="star" />}
+            icon={<SettingsRowIcon icon={RiStarLine} />}
             title={t('settings.supportFeedback.rateApp')}
             description={t('settings.supportFeedback.rateAppDesc')}
             onPress={() => toast(t('settings.supportFeedback.rateAppMessage'))}
@@ -225,14 +224,14 @@ export default function SettingsScreen() {
 
         <SettingsListGroup title={t('settings.sections.aboutHomiio')}>
           <SettingsListItem
-            icon={<LogoIcon size={20} color={colors.primaryColor} />}
+            icon={<LogoIcon size={20} color={theme.primary} />}
             title={t('settings.aboutHomiio.appName')}
             value={t('settings.aboutHomiio.version', {
               version: Constants.expoConfig?.version || '1.0.0',
             })}
           />
           <SettingsListItem
-            icon={<RowIcon name="hammer" />}
+            icon={<SettingsRowIcon icon={RiWrenchLine} />}
             title={t('settings.aboutHomiio.build')}
             value={
               typeof Constants.expoConfig?.runtimeVersion === 'string'
@@ -241,7 +240,7 @@ export default function SettingsScreen() {
             }
           />
           <SettingsListItem
-            icon={<RowIcon name="phone-portrait" />}
+            icon={<SettingsRowIcon icon={RiSmartphoneLine} />}
             title={t('settings.aboutHomiio.platform')}
             value={
               Constants.platform?.ios
@@ -252,7 +251,7 @@ export default function SettingsScreen() {
             }
           />
           <SettingsListItem
-            icon={<RowIcon name="code-slash" />}
+            icon={<SettingsRowIcon icon={RiCodeSSlashLine} />}
             title={t('settings.aboutHomiio.oxySDK')}
             value={(Constants as unknown as { oxyVersion?: string }).oxyVersion || 'Unknown'}
             onPress={() => showBottomSheet?.('AppInfo')}
@@ -261,7 +260,7 @@ export default function SettingsScreen() {
 
         <SettingsListGroup>
           <SettingsListItem
-            icon={<RowIcon name="log-out" destructive />}
+            icon={<SettingsRowIcon icon={RiLogoutBoxRLine} destructive />}
             title={t('settings.signOut')}
             description={t('settings.signOutDesc')}
             destructive
@@ -269,7 +268,6 @@ export default function SettingsScreen() {
           />
         </SettingsListGroup>
 
-        <View style={styles.bottomPadding} />
       </ScrollView>
     </View>
   );
@@ -278,13 +276,5 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: colors.background,
-  },
-  scroll: {
-    paddingTop: spacing.lg,
-    paddingBottom: spacing['4xl'],
-  },
-  bottomPadding: {
-    height: spacing['4xl'],
   },
 });
