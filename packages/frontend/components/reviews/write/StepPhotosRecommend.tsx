@@ -1,7 +1,7 @@
 /**
  * StepPhotosRecommend — the final step: optional photos (uploaded to the
  * 'reviews' folder), the required overall star rating, and the required
- * recommendation. Submit is the wizard's `WizardProgress` "Submit" action.
+ * recommendation. Submit is the wizard footer's last-step action.
  *
  * The rating is a row of Remix star glyphs; Bloom has no rating input, so the
  * five press targets stay local (static styles, no function-form `style`).
@@ -16,7 +16,6 @@ import { useTheme } from '@oxy.so/bloom/theme';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { ImageUpload } from '@/components/ImageUpload';
-import { StepHeader } from '@/components/reviews/write/StepHeader';
 import { YesNoSelector } from '@/components/reviews/write/YesNoSelector';
 import type { StepProps } from '@/components/reviews/write/types';
 import { colors } from '@/styles/colors';
@@ -31,11 +30,6 @@ export const StepPhotosRecommend: React.FC<StepProps> = ({ data, update }) => {
 
   return (
     <View style={styles.container}>
-      <StepHeader
-        title={t('reviews.write.steps.photos.title')}
-        subtitle={t('reviews.write.steps.photos.subtitle')}
-      />
-
       <View style={styles.block}>
         <Label>{t('reviews.write.fields.photos')}</Label>
         <ImageUpload

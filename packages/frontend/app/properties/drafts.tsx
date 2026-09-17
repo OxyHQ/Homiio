@@ -1,8 +1,9 @@
 /**
  * Property drafts — locally-saved, in-progress listings the user hasn't
- * published yet. The data source is unchanged: AsyncStorage under the
- * `property_drafts` key (drafts are partial form state, NOT server `Property`
- * objects, so they don't flow through `PropertyResultsGrid`).
+ * published yet, stored in AsyncStorage by `utils/propertyDrafts` (drafts are
+ * the publish flow's form state, NOT server `Property` objects, so they don't
+ * flow through `PropertyResultsGrid`). The publish flow writes them; "Continue"
+ * hands one back to it.
  *
  * Modernized to match the rest of the property surfaces: the shared
  * `PropertyListHeader` over Bloom-typed draft cards, `PropertyResultsGridSkeleton`
@@ -16,7 +17,6 @@ import { Platform, ScrollView, StyleSheet, View, type ViewStyle } from 'react-na
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { Button } from '@oxy.so/bloom/button';
 import { Card } from '@oxy.so/bloom/card';
@@ -49,48 +49,21 @@ import { contentClamp, spacing } from '@/constants/styles';
 import { logger } from '@/utils/logger';
 import { formatPrice } from '@homiio/shared-types';
 import { useFormatting } from '@/utils/format';
+import {
+  deleteDraft,
+  markDraftForResume,
+  readDrafts,
+  type PropertyDraft,
+} from '@/utils/propertyDrafts';
 
 type RemixIcon = typeof RiHomeLine;
 
 const SKELETON_COUNT = 4;
-/** AsyncStorage keys owned by the draft flow. */
-const DRAFTS_KEY = 'property_drafts';
-const CURRENT_DRAFT_KEY = 'current_draft';
 /** Hours/day boundaries for the relative "last saved" label. */
 const HOURS_PER_DAY = 24;
 const MS_PER_HOUR = 1000 * 60 * 60;
 
-interface PropertyDraft {
-  id: string;
-  title: string;
-  address: {
-    street: string;
-    city: string;
-    state: string;
-    zipCode: string;
-  };
-  type: string;
-  description: string;
-  rent: {
-    amount: number;
-    currency: string;
-  };
-  images: unknown[];
-  lastSaved: Date;
-  formData: unknown;
-}
-
-/** Shape persisted to AsyncStorage, where `lastSaved` is serialized as an ISO string. */
-type StoredPropertyDraft = Omit<PropertyDraft, 'lastSaved'> & { lastSaved: string };
-
 const DRAFTS_QUERY_KEY = ['propertyDrafts'] as const;
-
-async function readDrafts(): Promise<PropertyDraft[]> {
-  const raw = await AsyncStorage.getItem(DRAFTS_KEY);
-  if (!raw) return [];
-  const parsed: StoredPropertyDraft[] = JSON.parse(raw);
-  return parsed.map((draft) => ({ ...draft, lastSaved: new Date(draft.lastSaved) }));
-}
 
 const PROPERTY_TYPE_ICONS: Record<string, RemixIcon> = {
   apartment: RiBuilding2Line,
@@ -228,16 +201,7 @@ export default function PropertyDraftsScreen() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async (draftId: string) => {
-      const current = await readDrafts();
-      const next = current.filter((draft) => draft.id !== draftId);
-      const stored: StoredPropertyDraft[] = next.map((draft) => ({
-        ...draft,
-        lastSaved: draft.lastSaved.toISOString(),
-      }));
-      await AsyncStorage.setItem(DRAFTS_KEY, JSON.stringify(stored));
-      return next;
-    },
+    mutationFn: deleteDraft,
     onSuccess: (next) => {
       queryClient.setQueryData(DRAFTS_QUERY_KEY, next);
       toast.success(t('property.drafts.toastDeleted'));
@@ -251,7 +215,7 @@ export default function PropertyDraftsScreen() {
   const continueEditing = useCallback(
     async (draft: PropertyDraft) => {
       try {
-        await AsyncStorage.setItem(CURRENT_DRAFT_KEY, JSON.stringify(draft.formData));
+        await markDraftForResume(draft);
         router.push('/properties/create');
       } catch (error: unknown) {
         logger.error('Error setting current draft:', error);

@@ -242,6 +242,18 @@ interface CreatePropertyFormState {
   formData: CreatePropertyFormData;
   currentStep: number;
   isDirty: boolean;
+  /**
+   * The listing the form was hydrated from in edit mode, or `null` for a new
+   * listing. The create screen resets a form that still holds an edited
+   * listing, so "Create" never starts from somebody's existing home.
+   */
+  editingPropertyId: string | null;
+  /**
+   * The local draft this form saves to (`utils/propertyDrafts`), or `null`
+   * until it is first saved. Kept with the form, so leaving the screen and
+   * coming back keeps saving over the same draft.
+   */
+  draftId: string | null;
 
   // Loading states
   isLoading: boolean;
@@ -264,9 +276,12 @@ interface CreatePropertyFormState {
    * instead of a hardcoded literal.
    */
   nextStep: (maxStep: number) => void;
-  prevStep: () => void;
   setCurrentStep: (step: number) => void;
   setIsDirty: (dirty: boolean) => void;
+  setEditingPropertyId: (id: string | null) => void;
+  setDraftId: (id: string | null) => void;
+  /** Replaces the whole form with a resumed draft and returns to the first step. */
+  loadForm: (formData: CreatePropertyFormData, draftId: string) => void;
   resetForm: () => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
@@ -278,6 +293,8 @@ export const useCreatePropertyFormStore = create<CreatePropertyFormState>()((set
   formData: createDefaultFormData(),
   currentStep: 0,
   isDirty: false,
+  editingPropertyId: null,
+  draftId: null,
   isLoading: false,
   error: null,
 
@@ -308,12 +325,21 @@ export const useCreatePropertyFormStore = create<CreatePropertyFormState>()((set
       // grows when the host adds an offering (long-term/nightly/sale/exchange).
       currentStep: Math.min(state.currentStep + 1, maxStep),
     })),
-  prevStep: () =>
-    set((state) => ({
-      currentStep: Math.max(state.currentStep - 1, 0), // 0 is the min step
-    })),
   setCurrentStep: (step) => set({ currentStep: step }),
   setIsDirty: (dirty) => set({ isDirty: dirty }),
+  setEditingPropertyId: (id) => set({ editingPropertyId: id }),
+  setDraftId: (id) => set({ draftId: id }),
+  loadForm: (formData, draftId) =>
+    set({
+      // Defaults first, so a draft saved before a section existed still loads
+      // with every section present.
+      formData: { ...createDefaultFormData(), ...formData },
+      currentStep: 0,
+      isDirty: false,
+      editingPropertyId: null,
+      draftId,
+      error: null,
+    }),
   resetForm: () =>
     set(() => ({
       // Reuse the same factory as the initial state so reset re-seeds fresh
@@ -322,6 +348,8 @@ export const useCreatePropertyFormStore = create<CreatePropertyFormState>()((set
       formData: createDefaultFormData(),
       currentStep: 0,
       isDirty: false,
+      editingPropertyId: null,
+      draftId: null,
       error: null,
     })),
   setLoading: (loading) => set({ isLoading: loading }),

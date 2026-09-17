@@ -4,13 +4,12 @@ import { useTranslation } from 'react-i18next';
 import { format, parseISO } from 'date-fns';
 
 import { Button } from '@oxy.so/bloom/button';
-import { Chip } from '@oxy.so/bloom/chip';
 import { Dialog } from '@oxy.so/bloom/dialog';
 import { Field } from '@oxy.so/bloom/field';
 import { RiAddLine, RiCalendarLine, RiCloseLine } from '@oxy.so/bloom/icons';
 import { Item } from '@oxy.so/bloom/item';
 import { RadioGroup } from '@oxy.so/bloom/radio';
-import { SettingsListDivider, SettingsListGroup } from '@oxy.so/bloom/settings-list';
+import { SwitchFilterRow, ToggleChipGroup } from '@oxy.so/bloom/stay-filters';
 import { Textarea } from '@oxy.so/bloom/textarea';
 import {
   AvailabilityWindow,
@@ -29,7 +28,6 @@ import {
   EXCHANGE_LANGUAGE_OPTIONS,
   EXCHANGE_MODE_OPTIONS,
 } from './constants';
-import { WizardSwitchItem } from './fields';
 import { createPropertyStyles as styles } from './styles';
 import type { PropertyStepProps } from './types';
 
@@ -103,13 +101,15 @@ export function ExchangeSettingsStep({ formData, setFormData }: PropertyStepProp
     [setFormData, windows],
   );
 
-  const handleToggleLanguage = useCallback(
-    (language: string) => {
-      const selected = languages.includes(language);
+  // The group reports its selection in option order; the listing keeps the
+  // order the host picked in, so apply only the one language that changed.
+  const handleLanguages = useCallback(
+    (next: string[]) => {
+      const added = next.find((language) => !languages.includes(language));
       setFormData('offering', {
-        exchangeLanguages: selected
-          ? languages.filter((value) => value !== language)
-          : [...languages, language],
+        exchangeLanguages: added
+          ? [...languages, added]
+          : languages.filter((language) => next.includes(language)),
       });
     },
     [setFormData, languages],
@@ -117,13 +117,6 @@ export function ExchangeSettingsStep({ formData, setFormData }: PropertyStepProp
 
   return (
     <View style={styles.step}>
-      <ThemedText type="subtitle">
-        {t('listing.exchange.stepTitle')}
-      </ThemedText>
-      <ThemedText style={styles.instructions}>
-        {t('listing.exchange.stepHelp')}
-      </ThemedText>
-
       {/* Mode */}
       <Field label={t('listing.exchange.modeLabel')}>
         <RadioGroup<ExchangeMode>
@@ -194,29 +187,22 @@ export function ExchangeSettingsStep({ formData, setFormData }: PropertyStepProp
 
       {/* Languages */}
       <Field label={t('listing.exchange.languages')}>
-        <View style={styles.optionRow}>
-          {EXCHANGE_LANGUAGE_OPTIONS.map((language) => (
-            <Chip
-              key={language}
-              size="large"
-              selected={languages.includes(language)}
-              variant={languages.includes(language) ? 'solid' : 'outlined'}
-              onPress={() => handleToggleLanguage(language)}
-            >
-              {language}
-            </Chip>
-          ))}
-        </View>
+        <ToggleChipGroup
+          options={EXCHANGE_LANGUAGE_OPTIONS.map((language) => ({ value: language, label: language }))}
+          value={languages}
+          onValueChange={handleLanguages}
+          accessibilityLabel={t('listing.exchange.languages')}
+          testID="create-exchange-languages"
+        />
       </Field>
 
-      <SettingsListGroup>
-        <WizardSwitchItem
+      <View style={styles.switches}>
+        <SwitchFilterRow
           title={t('listing.exchange.mealsIncluded')}
           value={offering.exchangeMealsIncluded}
           onValueChange={(value) => setFormData('offering', { exchangeMealsIncluded: value })}
         />
-        <SettingsListDivider />
-        <WizardSwitchItem
+        <SwitchFilterRow
           title={t('listing.exchange.requiresReciprocity')}
           description={t('listing.exchange.requiresReciprocityHelp')}
           value={offering.exchangeRequiresReciprocity}
@@ -224,7 +210,7 @@ export function ExchangeSettingsStep({ formData, setFormData }: PropertyStepProp
             setFormData('offering', { exchangeRequiresReciprocity: value })
           }
         />
-      </SettingsListGroup>
+      </View>
 
       <Dialog
         open={calendarOpen}

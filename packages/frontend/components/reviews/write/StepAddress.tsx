@@ -13,7 +13,6 @@ import { TextFieldInput } from '@oxy.so/bloom/text-field';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 
 import Map, { type MapApi, type GeocodedAddress } from '@/components/Map';
-import { StepHeader } from '@/components/reviews/write/StepHeader';
 import type { StepProps } from '@/components/reviews/write/types';
 import { colors } from '@/styles/colors';
 import { radius, spacing } from '@/constants/styles';
@@ -33,11 +32,6 @@ export const StepAddress: React.FC<StepAddressProps> = ({
 
   return (
     <View style={styles.container}>
-      <StepHeader
-        title={t('reviews.write.steps.address.title')}
-        subtitle={t('reviews.write.steps.address.subtitle')}
-      />
-
       <Field label={t('reviews.write.fields.street')}>
         <TextFieldInput
           label={t('reviews.write.fields.street')}

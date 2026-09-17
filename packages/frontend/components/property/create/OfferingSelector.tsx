@@ -1,12 +1,10 @@
 import React, { useCallback } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { CheckboxCard } from '@oxy.so/bloom/checkbox';
-import { Chip } from '@oxy.so/bloom/chip';
 import { Field } from '@oxy.so/bloom/field';
+import { SegmentedFilter } from '@oxy.so/bloom/stay-filters';
 import { OfferingType } from '@homiio/shared-types';
-import { ThemedText } from '@/components/ThemedText';
-import { spacing } from '@/constants/styles';
 import { PRICING_OFFERING_OPTIONS, CURRENCY_OPTIONS } from './constants';
 import { createPropertyStyles as styles } from './styles';
 import type { PropertyStepProps } from './types';
@@ -21,6 +19,11 @@ import type { PropertyStepProps } from './types';
  * to long-term rent. Each selected offering reveals its own pricing/details step
  * (the flow resolver inserts them). The shared currency selector applies to the
  * rent offerings (sale carries its own currency on the Sale Details step).
+ *
+ * Not Bloom's `OfferingEditor`: its cards open fields Homiio's listing cannot
+ * store (a deposit in months, a minimum stay in months, an available-from date
+ * on the rent block) and have no way to hide them, so a host would fill in
+ * values that are silently dropped. Homiio's own pricing steps follow instead.
  */
 export function OfferingSelector({ formData, setFormData }: PropertyStepProps) {
   const { t } = useTranslation();
@@ -42,14 +45,7 @@ export function OfferingSelector({ formData, setFormData }: PropertyStepProps) {
 
   return (
     <View style={styles.step}>
-      <ThemedText type="subtitle">
-        {t('listing.offering.stepTitle')}
-      </ThemedText>
-      <ThemedText style={styles.instructions}>
-        {t('listing.offering.stepHelp')}
-      </ThemedText>
-
-      <View style={offeringSelectorStyles.list}>
+      <View style={styles.cards}>
         {PRICING_OFFERING_OPTIONS.map((option) => (
           <CheckboxCard
             key={option.value}
@@ -57,31 +53,20 @@ export function OfferingSelector({ formData, setFormData }: PropertyStepProps) {
             onCheckedChange={() => toggleOffering(option.value)}
             title={t(option.i18nKey)}
             description={t(option.descriptionKey)}
+            testID={`create-offering-${option.value}`}
           />
         ))}
       </View>
 
       <Field label={t('listing.offering.currency')}>
-        <View style={styles.optionRow}>
-          {CURRENCY_OPTIONS.map((option) => (
-            <Chip
-              key={option.value}
-              size="large"
-              selected={currency === option.value}
-              variant={currency === option.value ? 'solid' : 'outlined'}
-              onPress={() => setFormData('pricing', { currency: option.value })}
-            >
-              {option.label}
-            </Chip>
-          ))}
-        </View>
+        <SegmentedFilter<string>
+          options={CURRENCY_OPTIONS.map((code) => ({ value: code, label: code }))}
+          value={currency}
+          onValueChange={(value) => setFormData('pricing', { currency: value })}
+          accessibilityLabel={t('listing.offering.currency')}
+          testID="create-currency"
+        />
       </Field>
     </View>
   );
 }
-
-const offeringSelectorStyles = StyleSheet.create({
-  list: {
-    gap: spacing.md,
-  },
-});

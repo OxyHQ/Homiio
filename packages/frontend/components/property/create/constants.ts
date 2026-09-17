@@ -8,19 +8,11 @@
  */
 import { ExchangeMode, OfferingType } from '@homiio/shared-types';
 
-export interface PropertyTypeOption {
-  id: string;
-  label: string;
-}
-
-export const PROPERTY_TYPES: readonly PropertyTypeOption[] = [
-  { id: 'apartment', label: 'Apartment' },
-  { id: 'house', label: 'House' },
-  { id: 'room', label: 'Room' },
-  { id: 'studio', label: 'Studio' },
-  { id: 'coliving', label: 'Co-living' },
-  { id: 'other', label: 'Other' },
-];
+/**
+ * The property types a host can publish, in tile order. Labels are
+ * `properties.titles.types.<id>`; icons are Bloom's (`DEFAULT_PROPERTY_TYPES`).
+ */
+export const PROPERTY_TYPE_IDS = ['apartment', 'house', 'room', 'studio', 'coliving', 'other'] as const;
 
 export const DEFAULT_PROPERTY_TYPE = 'apartment';
 export const FALLBACK_PROPERTY_TYPE = 'other';
@@ -33,29 +25,71 @@ export const STEP_LONG_TERM_PRICING = 'Long-term Pricing';
 export const STEP_NIGHTLY_PRICING = 'Nightly Pricing';
 export const STEP_SALE_DETAILS = 'Sale Details';
 export const STEP_EXCHANGE_SETTINGS = 'Exchange Settings';
+export const STEP_PROPERTY_TYPE = 'Property Type';
+export const STEP_LOCATION = 'Location';
+export const STEP_BASIC_INFO = 'Basic Info';
+export const STEP_AMENITIES = 'Amenities';
+export const STEP_COLIVING = 'Coliving Features';
+export const STEP_MEDIA = 'Media';
+export const STEP_DESCRIPTION = 'Description';
+export const STEP_PREVIEW = 'Preview';
 
 /**
- * Base step flow per property type. After `Location` comes the `Offering`
- * selector (the 4-way multi-select); the conditional per-offering pricing steps
+ * Each step's copy for Bloom's `WizardProgress`, as i18n keys. The step NAMES
+ * stay the stable internal ids the flow resolver and `FIELD_CONFIG` key on;
+ * only this map turns them into words.
+ */
+export const STEP_COPY: Readonly<Record<string, { title: string; description?: string }>> = {
+  [STEP_PROPERTY_TYPE]: { title: 'propertyCreate.steps.propertyType.title' },
+  [STEP_LOCATION]: {
+    title: 'propertyCreate.steps.location.title',
+    description: 'propertyCreate.steps.location.description',
+  },
+  [STEP_BASIC_INFO]: { title: 'propertyCreate.steps.basicInfo.title' },
+  [STEP_OFFERING]: { title: 'listing.offering.stepTitle', description: 'listing.offering.stepHelp' },
+  [STEP_LONG_TERM_PRICING]: { title: 'listing.offering.longTermStepTitle' },
+  [STEP_NIGHTLY_PRICING]: { title: 'listing.offering.nightlyStepTitle' },
+  [STEP_SALE_DETAILS]: { title: 'listing.sale.stepTitle' },
+  [STEP_EXCHANGE_SETTINGS]: { title: 'listing.exchange.stepTitle', description: 'listing.exchange.stepHelp' },
+  [STEP_AMENITIES]: { title: 'propertyCreate.amenities.rulesTitle' },
+  [STEP_COLIVING]: { title: 'propertyCreate.steps.coliving.title' },
+  [STEP_MEDIA]: {
+    title: 'propertyCreate.steps.media.title',
+    description: 'propertyCreate.steps.media.description',
+  },
+  [STEP_DESCRIPTION]: { title: 'propertyCreate.steps.description.title' },
+  [STEP_PREVIEW]: {
+    title: 'propertyCreate.steps.preview.title',
+    description: 'propertyCreate.steps.preview.description',
+  },
+};
+
+/**
+ * Base step flow per property type, in the order of Bloom's housing publish
+ * template: type → where → the basics → how it is offered → (amenities) →
+ * photos → description → preview. The conditional per-offering pricing steps
  * (`Long-term Pricing`, `Nightly Pricing`, `Sale Details`, `Exchange Settings`)
  * are inserted by {@link resolveStepFlow} based on the selection, NOT stored
  * here, so the base flow stays declarative.
  */
+const flow = (...middle: string[]): string[] => [
+  STEP_PROPERTY_TYPE,
+  STEP_LOCATION,
+  STEP_BASIC_INFO,
+  STEP_OFFERING,
+  ...middle,
+  STEP_MEDIA,
+  STEP_DESCRIPTION,
+  STEP_PREVIEW,
+];
+
 export const STEP_FLOWS: Record<string, string[]> = {
-  apartment: ['Basic Info', 'Location', STEP_OFFERING, 'Amenities', 'Media', 'Preview'],
-  house: ['Basic Info', 'Location', STEP_OFFERING, 'Amenities', 'Media', 'Preview'],
-  room: ['Basic Info', 'Location', STEP_OFFERING, 'Amenities', 'Media', 'Preview'],
-  studio: ['Basic Info', 'Location', STEP_OFFERING, 'Amenities', 'Media', 'Preview'],
-  coliving: [
-    'Basic Info',
-    'Location',
-    STEP_OFFERING,
-    'Amenities',
-    'Coliving Features',
-    'Media',
-    'Preview',
-  ],
-  other: ['Basic Info', 'Location', STEP_OFFERING, 'Media', 'Preview'],
+  apartment: flow(STEP_AMENITIES),
+  house: flow(STEP_AMENITIES),
+  room: flow(STEP_AMENITIES),
+  studio: flow(STEP_AMENITIES),
+  coliving: flow(STEP_AMENITIES, STEP_COLIVING),
+  other: flow(),
 };
 
 /**
@@ -76,180 +110,68 @@ export function resolveStepFlow(
   if (offerings.includes(OfferingType.SHORT_TERM_RENT)) inserts.push(STEP_NIGHTLY_PRICING);
   if (offerings.includes(OfferingType.SALE)) inserts.push(STEP_SALE_DETAILS);
   if (offerings.includes(OfferingType.EXCHANGE)) inserts.push(STEP_EXCHANGE_SETTINGS);
-  if (inserts.length === 0) {
-    return [...base];
-  }
-  const offeringIndex = base.indexOf(STEP_OFFERING);
-  // Defensive: every base flow contains the Offering selector, but if it ever
-  // didn't we append the conditional steps rather than dropping them.
-  const insertAt = offeringIndex >= 0 ? offeringIndex + 1 : base.length;
+  const insertAt = base.indexOf(STEP_OFFERING) + 1;
   return [...base.slice(0, insertAt), ...inserts, ...base.slice(insertAt)];
 }
 
-// Field configuration for each property type and step
-// Carefully tailored to real-world property listing needs
+const FULL_ADDRESS = [
+  'address',
+  'unit',
+  'number',
+  'building_name',
+  'block',
+  'entrance',
+  'district',
+  'po_box',
+  'reference',
+  'city',
+  'state',
+  'postal_code',
+  'country',
+  'latitude',
+  'longitude',
+];
+const HOUSE_RULES = ['petsAllowed', 'smokingAllowed', 'partiesAllowed', 'guestsAllowed', 'maxGuests'];
+const COMMON_STEPS = {
+  [STEP_PROPERTY_TYPE]: ['propertyType'],
+  [STEP_MEDIA]: ['images'],
+  [STEP_DESCRIPTION]: ['description'],
+  [STEP_PREVIEW]: [],
+};
+/** A whole home: every room count and the tenancy fields. */
+const WHOLE_HOME = {
+  ...COMMON_STEPS,
+  [STEP_BASIC_INFO]: ['bedrooms', 'bathrooms', 'squareFootage', 'floor', 'yearBuilt'],
+  [STEP_LOCATION]: [...FULL_ADDRESS, 'availableFrom', 'leaseTerm'],
+  [STEP_AMENITIES]: ['amenities', ...HOUSE_RULES],
+};
+/** A room or studio: no bedroom count, amenities only. */
+const SINGLE_SPACE = {
+  ...COMMON_STEPS,
+  [STEP_BASIC_INFO]: ['bathrooms', 'squareFootage', 'floor', 'yearBuilt'],
+  [STEP_LOCATION]: FULL_ADDRESS,
+  [STEP_AMENITIES]: ['amenities'],
+};
+
+/**
+ * The fields each step shows (and validates) per property type. Carefully
+ * tailored to real-world listing needs: a studio or room has no bedroom count,
+ * coliving no floor, and "other" the minimal address.
+ */
 export const FIELD_CONFIG: Record<string, Record<string, string[]>> = {
-  apartment: {
-    // Apartment: all main fields
-    'Basic Info': [
-      'propertyType',
-      'bedrooms',
-      'bathrooms',
-      'squareFootage',
-      'floor',
-      'yearBuilt',
-      'description',
-    ],
-    Location: [
-      'address',
-      'unit',
-      'number',
-      'building_name',
-      'block',
-      'entrance',
-      'district',
-      'po_box',
-      'reference',
-      'city',
-      'state',
-      'postal_code',
-      'country',
-      'latitude',
-      'longitude',
-      'availableFrom',
-      'leaseTerm',
-    ],
-    Amenities: [
-      'amenities',
-      'petsAllowed',
-      'smokingAllowed',
-      'partiesAllowed',
-      'guestsAllowed',
-      'maxGuests',
-    ],
-    Media: ['images'],
-    Preview: [],
-  },
-  house: {
-    // House: same as apartment
-    'Basic Info': [
-      'propertyType',
-      'bedrooms',
-      'bathrooms',
-      'squareFootage',
-      'floor',
-      'yearBuilt',
-      'description',
-    ],
-    Location: [
-      'address',
-      'unit',
-      'number',
-      'building_name',
-      'block',
-      'entrance',
-      'district',
-      'po_box',
-      'reference',
-      'city',
-      'state',
-      'postal_code',
-      'country',
-      'latitude',
-      'longitude',
-      'availableFrom',
-      'leaseTerm',
-    ],
-    Amenities: [
-      'amenities',
-      'petsAllowed',
-      'smokingAllowed',
-      'partiesAllowed',
-      'guestsAllowed',
-      'maxGuests',
-    ],
-    Media: ['images'],
-    Preview: [],
-  },
-  studio: {
-    // Studio: no bedrooms
-    'Basic Info': ['propertyType', 'bathrooms', 'squareFootage', 'floor', 'yearBuilt', 'description'],
-    Location: [
-      'address',
-      'unit',
-      'number',
-      'building_name',
-      'block',
-      'entrance',
-      'district',
-      'po_box',
-      'reference',
-      'city',
-      'state',
-      'postal_code',
-      'country',
-      'latitude',
-      'longitude',
-    ],
-    Amenities: ['amenities'],
-    Media: ['images'],
-    Preview: [],
-  },
-  room: {
-    // Room: no bedrooms, but has bathrooms, squareFootage, floor, yearBuilt
-    'Basic Info': ['propertyType', 'bathrooms', 'squareFootage', 'floor', 'yearBuilt', 'description'],
-    Location: [
-      'address',
-      'unit',
-      'number',
-      'building_name',
-      'block',
-      'entrance',
-      'district',
-      'po_box',
-      'reference',
-      'city',
-      'state',
-      'postal_code',
-      'country',
-      'latitude',
-      'longitude',
-    ],
-    Amenities: ['amenities'],
-    Media: ['images'],
-    Preview: [],
-  },
+  apartment: WHOLE_HOME,
+  house: WHOLE_HOME,
+  studio: SINGLE_SPACE,
+  room: SINGLE_SPACE,
   coliving: {
-    // Coliving: no bedrooms, optional bathrooms, coliving features
-    'Basic Info': ['propertyType', 'bathrooms', 'squareFootage', 'yearBuilt', 'description'],
-    Location: [
-      'address',
-      'unit',
-      'number',
-      'building_name',
-      'block',
-      'entrance',
-      'district',
-      'po_box',
-      'reference',
-      'city',
-      'state',
-      'postal_code',
-      'country',
-      'latitude',
-      'longitude',
-    ],
-    Amenities: ['amenities'],
-    'Coliving Features': ['sharedSpaces', 'communityEvents'],
-    Media: ['images'],
-    Preview: [],
+    ...SINGLE_SPACE,
+    [STEP_BASIC_INFO]: ['bathrooms', 'squareFootage', 'yearBuilt'],
+    [STEP_COLIVING]: ['sharedSpaces', 'communityEvents'],
   },
   other: {
-    // Other: minimal fields
-    'Basic Info': ['propertyType', 'bathrooms', 'squareFootage', 'floor', 'yearBuilt', 'description'],
-    Location: ['address', 'city', 'state', 'postal_code', 'country', 'latitude', 'longitude'],
-    Media: ['images'],
-    Preview: [],
+    ...COMMON_STEPS,
+    [STEP_BASIC_INFO]: ['bathrooms', 'squareFootage', 'floor', 'yearBuilt'],
+    [STEP_LOCATION]: ['address', 'city', 'state', 'postal_code', 'country', 'latitude', 'longitude'],
   },
 };
 
@@ -336,29 +258,12 @@ export const STATE_OPTIONS: readonly string[] = [
 ];
 
 /**
- * A selectable currency: `value` is the canonical code persisted to the listing
- * (`rent.currency` / `sale.currency`), `label` is the friendly display text.
+ * Currencies offered in the wizard: the canonical 3–4 letter codes stored
+ * VERBATIM on the listing and validated by the backend (its rent/sale currency
+ * contract: USD, EUR, GBP, CAD, FAIR). Codes like "MXN" are intentionally
+ * excluded because the schema would reject them.
  */
-export interface CurrencyOption {
-  value: string;
-  label: string;
-}
-
-/**
- * Currencies offered in the wizard. `value` is the canonical 3–4 letter code
- * stored VERBATIM on the listing and validated by the backend — the friendly
- * `label` is display-only and is never persisted. The set matches the backend
- * rent/sale currency contract (USD, EUR, GBP, CAD, FAIR); display strings such
- * as "Other" or non-set codes like "MXN" are intentionally excluded because the
- * schema would reject them.
- */
-export const CURRENCY_OPTIONS: readonly CurrencyOption[] = [
-  { value: 'USD', label: 'USD — US Dollar' },
-  { value: 'EUR', label: 'EUR — Euro' },
-  { value: 'GBP', label: 'GBP — British Pound' },
-  { value: 'CAD', label: 'CAD — Canadian Dollar' },
-  { value: 'FAIR', label: 'FAIR — FairCoin' },
-];
+export const CURRENCY_OPTIONS: readonly string[] = ['USD', 'EUR', 'GBP', 'CAD', 'FAIR'];
 
 /**
  * The 4-way offering picker shown as multi-select cards on the Offering step.

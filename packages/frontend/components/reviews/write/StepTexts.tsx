@@ -11,7 +11,6 @@ import { TextFieldInput } from '@oxy.so/bloom/text-field';
 import { Textarea } from '@oxy.so/bloom/textarea';
 
 import { EditableList } from '@/components/reviews/write/EditableList';
-import { StepHeader } from '@/components/reviews/write/StepHeader';
 import type { StepProps } from '@/components/reviews/write/types';
 import { spacing } from '@/constants/styles';
 
@@ -22,11 +21,6 @@ export const StepTexts: React.FC<StepProps> = ({ data, update }) => {
 
   return (
     <View style={styles.container}>
-      <StepHeader
-        title={t('reviews.write.steps.texts.title')}
-        subtitle={t('reviews.write.steps.texts.subtitle')}
-      />
-
       <Field label={t('reviews.write.fields.reviewTitle')}>
         <TextFieldInput
           label={t('reviews.write.fields.reviewTitle')}

@@ -1,7 +1,6 @@
 import React, { useCallback } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { ThemedText } from '@/components/ThemedText';
 import { EthicalPricingRecommendation } from './EthicalPricingRecommendation';
 import { WizardTextField } from './fields';
 import { createPropertyStyles as styles } from './styles';
@@ -36,10 +35,6 @@ export function LongTermPricingStep({
 
   return (
     <View style={styles.step}>
-      <ThemedText type="subtitle">
-        {t('listing.offering.longTermStepTitle')}
-      </ThemedText>
-
       <WizardTextField
         label={t('listing.pricing.monthlyRent')}
         value={pricing.monthlyRent ? pricing.monthlyRent.toString() : ''}

@@ -45,12 +45,3 @@ export interface LocationStepProps extends PropertyStepProps {
 export interface AmenitiesStepProps extends PropertyStepProps {
   onAmenityToggle: (amenityId: string) => void;
 }
-
-export interface PreviewStepProps {
-  isLoading: boolean;
-  isEditMode: boolean;
-  isPropertyLoading: boolean;
-  createError: string | null;
-  updateError: string | null;
-  onSubmit: () => void;
-}

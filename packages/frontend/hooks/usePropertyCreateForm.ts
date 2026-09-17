@@ -20,6 +20,10 @@ import {
   resolveStepFlow,
   FIELD_CONFIG,
   DEFAULT_PROPERTY_TYPE,
+  STEP_AMENITIES,
+  STEP_BASIC_INFO,
+  STEP_LOCATION,
+  STEP_PROPERTY_TYPE,
   STEP_OFFERING,
   STEP_LONG_TERM_PRICING,
   STEP_NIGHTLY_PRICING,
@@ -37,8 +41,6 @@ import {
   PROPERTY_FORM_DEFAULTS,
   type StepValidationErrors,
 } from '@/utils/propertyFormSchema';
-
-const LOCATION_STEP_INDEX = 1;
 
 interface GeoCoordinates {
   latitude: number;
@@ -95,8 +97,8 @@ export function usePropertyCreateForm(id: string | undefined) {
     setFormData,
     updateFormField,
     nextStep,
-    prevStep,
     setCurrentStep,
+    setEditingPropertyId,
   } = useCreatePropertyFormStore();
 
   const { formData, currentStep, isLoading, error: submitError } = useCreatePropertyFormSelectors();
@@ -139,6 +141,7 @@ export function usePropertyCreateForm(id: string | undefined) {
     if (!isEditMode || !property) return;
     if (hydratedPropertyIdRef.current === property.id) return;
     hydratedPropertyIdRef.current = property.id;
+    setEditingPropertyId(property.id);
 
     setFormData('basicInfo', {
       propertyType: property.type || 'apartment',
@@ -240,7 +243,7 @@ export function usePropertyCreateForm(id: string | undefined) {
       exchangeMealsIncluded: exchange?.mealsIncluded ?? false,
       exchangeRequiresReciprocity: exchange?.requiresReciprocity ?? false,
     });
-  }, [isEditMode, property, setFormData]);
+  }, [isEditMode, property, setFormData, setEditingPropertyId]);
 
   // --- User geolocation on the Location step --------------------------------
   const locationMutation = useMutation<GeoCoordinates | null>({
@@ -280,11 +283,11 @@ export function usePropertyCreateForm(id: string | undefined) {
   // prevents re-triggering as coordinates update mid-resolution.
   const hasRequestedLocationRef = useRef(false);
   useEffect(() => {
-    if (currentStep !== LOCATION_STEP_INDEX) return;
+    if (stepName !== STEP_LOCATION) return;
     if (!needsLocationResolve || hasRequestedLocationRef.current || isResolvingLocation) return;
     hasRequestedLocationRef.current = true;
     resolveUserLocation();
-  }, [currentStep, needsLocationResolve, isResolvingLocation, resolveUserLocation]);
+  }, [stepName, needsLocationResolve, isResolvingLocation, resolveUserLocation]);
 
   // --- Address autofill from the map ----------------------------------------
   const applyAddressSelection = useCallback(
@@ -359,9 +362,9 @@ export function usePropertyCreateForm(id: string | undefined) {
   // --- Validation + navigation ----------------------------------------------
   const validateCurrentStep = useCallback((): boolean => {
     let errors: StepValidationErrors = {};
-    if (stepName === 'Basic Info') {
+    if (stepName === STEP_PROPERTY_TYPE || stepName === STEP_BASIC_INFO) {
       errors = validateBasicInfoStep(formData.basicInfo, fieldsToShow);
-    } else if (stepName === 'Location') {
+    } else if (stepName === STEP_LOCATION) {
       errors = validateLocationStep(formData.location);
     } else if (stepName === STEP_OFFERING) {
       errors = validateOfferingStep(formData.pricing);
@@ -369,7 +372,7 @@ export function usePropertyCreateForm(id: string | undefined) {
       errors = validateLongTermPricingStep(formData.pricing);
     } else if (stepName === STEP_NIGHTLY_PRICING) {
       errors = validateNightlyPricingStep(formData.pricing);
-    } else if (stepName === 'Amenities') {
+    } else if (stepName === STEP_AMENITIES) {
       errors = validateAmenitiesStep(formData.rules, fieldsToShow);
     } else if (stepName === STEP_SALE_DETAILS) {
       errors = validateSaleDetailsStep(formData.offering);
@@ -382,16 +385,25 @@ export function usePropertyCreateForm(id: string | undefined) {
   // hardcoded literal — so adding the Sale Details step extends the reachable
   // range automatically.
   const maxStep = steps.length - 1;
-  const handleNextStep = useCallback(() => {
-    if (validateCurrentStep()) {
-      nextStep(maxStep);
-    }
+  /** Validates the step and advances; returns whether it advanced. */
+  const handleNextStep = useCallback((): boolean => {
+    if (!validateCurrentStep()) return false;
+    nextStep(maxStep);
+    return true;
   }, [validateCurrentStep, nextStep, maxStep]);
+
+  const handlePrevStep = useCallback(() => {
+    setValidationErrors({});
+    // Step back from where the host SEES they are: the clamped index, not a
+    // stored one past the end of a flow that shrank.
+    setCurrentStep(Math.max(safeStepIndex - 1, 0));
+  }, [safeStepIndex, setCurrentStep]);
 
   return {
     // state
     formData,
     currentStep,
+    stepIndex: safeStepIndex,
     isLoading,
     submitError,
     steps,
@@ -407,8 +419,8 @@ export function usePropertyCreateForm(id: string | undefined) {
     // store actions used directly by steps/orchestrator
     setFormData,
     updateFormField,
-    prevStep,
     // handlers
+    handlePrevStep,
     applyAddressSelection,
     handleAddressSelect,
     handleShowFloorToggle,

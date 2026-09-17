@@ -20,7 +20,6 @@ import {
 } from '@oxy.so/bloom/segmented-control';
 import { TextFieldInput } from '@oxy.so/bloom/text-field';
 
-import { StepHeader } from '@/components/reviews/write/StepHeader';
 import type { StepProps } from '@/components/reviews/write/types';
 import { spacing } from '@/constants/styles';
 
@@ -44,11 +43,6 @@ export const StepPriceDates: React.FC<StepProps> = ({ data, update }) => {
 
   return (
     <View style={styles.container}>
-      <StepHeader
-        title={t('reviews.write.steps.priceDates.title')}
-        subtitle={t('reviews.write.steps.priceDates.subtitle')}
-      />
-
       <Field label={t('reviews.write.fields.price')}>
         <TextFieldInput
           label={t('reviews.write.fields.price')}

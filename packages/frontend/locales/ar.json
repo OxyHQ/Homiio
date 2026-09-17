@@ -2224,15 +2224,23 @@
     "deleteTitle": "Delete Image",
     "deleteMessage": "Are you sure you want to delete this image?",
     "deleteFailed": "Failed to delete image. Please try again.",
-    "choosePhotos": "Choose Photos",
     "takePhoto": "Take Photo",
-    "uploading": "Uploading images...",
     "imageCount": "{{current}} of {{max}} images uploaded",
-    "primary": "Primary",
-    "addMore": "Add More",
     "helperText": "Upload high-quality images of your property. Include photos of all rooms, exterior, and any special features.",
-    "helperPrimaryNote": " The first image will be set as the primary image.",
-    "setPrimary": "تعيين كصورة رئيسية"
+    "grid": {
+      "label": "الصور",
+      "photo": "الصورة {{position}} من {{total}}",
+      "cover": "الغلاف",
+      "moveEarlier": "نقل الصورة {{position}} إلى الأمام",
+      "moveLater": "نقل الصورة {{position}} إلى الخلف",
+      "remove": "إزالة الصورة {{position}}",
+      "retry": "إعادة محاولة رفع الصورة {{position}}",
+      "retryAction": "إعادة المحاولة",
+      "uploading": "جارٍ رفع الصورة {{position}}",
+      "failed": "فشل الرفع",
+      "add": "إضافة صور",
+      "moved": "نُقلت إلى الموضع {{position}} من {{total}}"
+    }
   },
   "property": {
     "loading": "Loading property details...",
@@ -2240,7 +2248,7 @@
     "notFound": "Property not found",
     "bed": "Bed",
     "bath": "Bath",
-    "pricingReviewNeeded": "Pricing Review Needed",
+    "pricingReviewNeeded": "راجع هذا السعر",
     "bedrooms": "Number of Bedrooms",
     "bathrooms": "Number of Bathrooms",
     "customNumber": {
@@ -2249,11 +2257,11 @@
       "confirm": "Confirm",
       "cancel": "Cancel"
     },
-    "suggestedRent": "Suggested: ${{amount}}/month",
-    "maxEthicalRent": "Max Ethical: ${{amount}}/month",
-    "ethicalPricingWarning": "Your price exceeds the ethical maximum. Consider lowering it to make housing more accessible.",
+    "suggestedRent": "المقترح: {{amount}} شهريًا",
+    "maxEthicalRent": "الحد الأقصى العادل: {{amount}} شهريًا",
+    "ethicalPricingWarning": "سعرك أعلى من الحد الأقصى العادل لمسكن كهذا. فكّر في خفضه ليبقى السكن في المتناول.",
     "warningBullet": "• {{warning}}",
-    "ethicalPricing": "Ethical Pricing",
+    "ethicalPricing": "تسعير عادل",
     "amenities": {
       "title": "What this place offers",
       "showAll": "Show all {{count}} amenities"
@@ -2561,7 +2569,8 @@
       "label": "صور الإعلان",
       "photoOf": "الصورة {{position}} من {{total}}",
       "namedPhotoOf": "{{name}}، الصورة {{position}} من {{total}}"
-    }
+    },
+    "ethicalPricingPublishWarning": "لا يزال بإمكانك النشر بهذا السعر، لكن الإعلان لن يُوسم بأنه سعر عادل."
   },
   "viewings": {
     "title": "Viewings",
@@ -3246,20 +3255,7 @@
       }
     },
     "write": {
-      "validationTitle": "Validation Error",
-      "streetRequired": "Please provide a street address.",
-      "cityRequired": "Please provide a city.",
-      "postalCodeRequired": "Please provide a postal code.",
-      "countryRequired": "Please provide a country.",
-      "opinionRequired": "Please provide your opinion about this address.",
-      "opinionMinLength": "Your opinion must be at least 10 characters long.",
-      "priceRequired": "Please provide a valid price.",
-      "datesRequired": "Please provide both start and end dates.",
-      "recommendationRequired": "Please indicate whether you would recommend this address.",
-      "ratingRequired": "Please provide a rating from 1 to 5.",
-      "submitSuccess": "Your review has been submitted successfully!",
       "submitFailed": "Failed to submit review",
-      "submitFailedRetry": "Failed to submit review. Please try again.",
       "loadAddressFailed": "Couldn't load address",
       "title": "Write review",
       "stepCounter": "Step {{current}} of {{total}}",
@@ -3363,7 +3359,6 @@
         "adviceToAgency": "What should the agency improve?",
         "adviceToLandlord": "What should the landlord know?",
         "price": "0.00",
-        "date": "YYYY-MM-DD",
         "reviewTitle": "Sum up your experience",
         "opinion": "Share your experience (10+ characters)",
         "pros": "Add something you liked",
@@ -3736,20 +3731,11 @@
   },
   "propertyCreate": {
     "location": {
-      "title": "Location",
-      "instructions": "📍 Address Details: Fill in the complete address information. Our system uses a hierarchical structure:\n• STREET level: Street name only\n• BUILDING level: Street + number + building details\n• UNIT level: Building + floor + unit/apartment details\nReviews and listings are organized by these levels for better organization.",
       "country": "Country or Region",
-      "countryPickerTitle": "Country or Region",
       "state": "State / Province / Region",
-      "statePickerTitle": "State / Province / Region",
-      "city": "City",
       "street": "Street",
       "number": "Number",
-      "postalCode": "Postal code",
       "floor": "Floor",
-      "unit": "Unit / Apartment",
-      "showFloor": "Show floor field",
-      "hideFloor": "Hide floor field",
       "selectCountry": "Select country or region",
       "streetPlaceholder": "Street name",
       "unitOptional": "Unit/Apartment Number (optional)",
@@ -3789,7 +3775,6 @@
     },
     "amenities": {
       "title": "Amenities",
-      "subtitle": "Select the amenities available at this property.",
       "rulesTitle": "Amenities & Rules",
       "houseRules": "House Rules",
       "petsAllowed": "Pets Allowed",
@@ -3799,6 +3784,81 @@
       "maxGuests": "Maximum Number of Guests",
       "yes": "Yes",
       "no": "No"
+    },
+    "title": {
+      "create": "إنشاء إعلان",
+      "edit": "تعديل الإعلان"
+    },
+    "loading": "جارٍ تحميل الإعلان…",
+    "loadError": "تعذّر تحميل هذا الإعلان: {{error}}",
+    "submitError": "تعذّر حفظ الإعلان: {{error}}",
+    "saveDraft": "حفظ المسودة",
+    "draftSaved": "تم حفظ المسودة",
+    "draftSaveFailed": "تعذّر حفظ المسودة",
+    "publish": "نشر",
+    "saveChanges": "حفظ التغييرات",
+    "steps": {
+      "propertyType": {
+        "title": "ما نوع هذا المسكن؟"
+      },
+      "location": {
+        "title": "أين يقع؟",
+        "description": "حدّده على الخريطة، ثم راجع حقول العنوان."
+      },
+      "basicInfo": {
+        "title": "الأساسيات"
+      },
+      "coliving": {
+        "title": "ميزات السكن المشترك"
+      },
+      "media": {
+        "title": "أضف صورًا",
+        "description": "أضف خمس صور على الأقل. الأولى هي صورة الغلاف؛ اسحب أو استخدم الأسهم لإعادة الترتيب."
+      },
+      "description": {
+        "title": "صِف مسكنك"
+      },
+      "preview": {
+        "title": "جاهز للنشر",
+        "description": "راجع المعاينة. يمكنك تعديل الإعلان في أي وقت بعد نشره."
+      }
+    },
+    "basicInfo": {
+      "propertyType": "نوع العقار",
+      "propertyTypeRequired": "اختر نوع العقار",
+      "area": "المساحة (م²)",
+      "yearBuilt": "سنة البناء (اختياري)",
+      "description": "الوصف",
+      "descriptionPlaceholder": "ما الذي يجعل المسكن والحي يستحقان؟"
+    },
+    "preview": {
+      "title": "معاينة",
+      "description": "هكذا سيرى الآخرون إعلانك.",
+      "card": "بطاقة",
+      "page": "صفحة",
+      "toggle": "معاينة بصيغة"
+    },
+    "quality": {
+      "title": "جودة الإعلان",
+      "needsWork": "يحتاج إلى تحسين",
+      "good": "جيد",
+      "excellent": "ممتاز",
+      "done": "تم",
+      "todo": "مطلوب",
+      "type": "اختر نوع العقار",
+      "location": "حدّد الموقع على الخريطة",
+      "pricing": "حدّد سعرًا لكل طريقة عرض",
+      "photos": "أضف {{count}} صور على الأقل",
+      "description": "اكتب {{count}} حرفًا على الأقل عن المسكن",
+      "area": "أضف المساحة",
+      "amenities": "اذكر المرافق"
+    },
+    "coliving": {
+      "sharedSpaces": "مساحات مشتركة",
+      "communityEvents": "فعاليات مجتمعية",
+      "whichSharedSpaces": "ما المساحات المشتركة؟",
+      "otherFeatures": "مساحات مشتركة أو ميزات أخرى",
+      "otherFeaturesPlaceholder": "مثل: السطح، غرفة السينما، المسبح"
     }
   },
   "searchBar": {
