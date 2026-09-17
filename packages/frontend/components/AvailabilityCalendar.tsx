@@ -1,33 +1,36 @@
+/**
+ * AvailabilityCalendar — Homiio's stay/move-in picker, composed on Bloom's
+ * `Calendar` / `RangeCalendar` (`@oxy.so/bloom/date-picker`).
+ *
+ * Bloom owns the month grid, paging, range band and keyboard navigation. This
+ * file keeps only what Bloom cannot know about a listing:
+ *  - host `windows` and reservation `booked` spans become `isDateUnavailable`
+ *    (half-open `[start, end)`, matching the backend);
+ *  - a completed range is rejected when it crosses an unavailable day or breaks
+ *    `minStay` / `maxStay` (Bloom accepts any two presses);
+ *  - the nights summary and the Clear / Apply footer.
+ */
 import React, { useCallback, useMemo, useState } from 'react';
-import {
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  View,
-} from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 import {
   addMonths,
   differenceInCalendarDays,
   eachDayOfInterval,
-  endOfMonth,
   format,
-  isAfter,
-  isBefore,
   isSameDay,
-  isSameMonth,
   parseISO,
   startOfDay,
-  startOfMonth,
-  subMonths,
 } from 'date-fns';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@oxy.so/bloom/button';
-import { Text as BloomText, H3 } from '@oxy.so/bloom/typography';
+import { Calendar, RangeCalendar, type DateRange } from '@oxy.so/bloom/date-picker';
+import { Text as BloomText } from '@oxy.so/bloom/typography';
 import {
   AvailabilityWindow,
   AvailabilityWindowStatus,
 } from '@homiio/shared-types';
 import { colors } from '@/styles/colors';
+import { getFormatLocale } from '@/utils/dateLocale';
 import { useIsScreenNotMobile } from '@/hooks/useOptimizedMediaQuery';
 
 export type AvailabilityCalendarMode = 'inline' | 'modal';
@@ -36,7 +39,7 @@ export type AvailabilityCalendarMode = 'inline' | 'modal';
  * Selection behavior:
  * - `'range'` (default): two taps pick a check-in → check-out stay (vacation flow).
  * - `'single'`: every tap picks a single day (long-term move-in flow); the range
- *   is collapsed onto `checkIn === checkOut` and the extend branches never run.
+ *   is collapsed onto `checkIn === checkOut`.
  */
 export type AvailabilityCalendarSelectionMode = 'range' | 'single';
 
@@ -48,7 +51,7 @@ export interface AvailabilityCalendarRange {
 }
 
 export interface AvailabilityCalendarProps {
-  /** Inline shows confirm buttons; modal also exposes them but the consumer typically wraps it. */
+  /** `modal` + `hideActions` auto-applies on web once a selection completes. */
   mode?: AvailabilityCalendarMode;
   /** Range (two-tap stay) vs. single (one day per tap). Defaults to `'range'`. */
   selectionMode?: AvailabilityCalendarSelectionMode;
@@ -56,13 +59,13 @@ export interface AvailabilityCalendarProps {
   windows?: AvailabilityWindow[];
   /** Booked windows derived from confirmed reservations. */
   booked?: AvailabilityWindow[];
-  /** Minimum stay nights enforced for the second tap. */
+  /** Minimum stay nights enforced on the completed range. */
   minStay?: number;
-  /** Maximum stay nights enforced for the second tap. */
+  /** Maximum stay nights enforced on the completed range. */
   maxStay?: number;
   /** Starting range passed in by the parent. */
   initialRange?: AvailabilityCalendarRange | null;
-  /** Earliest selectable date (default = today). */
+  /** Earliest selectable date (default = today; never earlier than today). */
   minDate?: Date;
   /** Latest selectable date (default = +18 months). */
   maxDate?: Date;
@@ -74,236 +77,19 @@ export interface AvailabilityCalendarProps {
   hideActions?: boolean;
 }
 
-const WEEK_START = 1; // Monday
+/** Monday-first grid. */
+const WEEK_START = 1;
 
-const DAY_CELL_HEIGHT = 40;
-const HORIZONTAL_GUTTER = 4;
+type BlockedSpan = { start: Date; end: Date };
 
-interface CalendarDayState {
-  date: Date;
-  inMonth: boolean;
-  disabled: boolean;
-  reason?: 'past' | 'blocked' | 'booked' | 'out-of-range';
-  isStart: boolean;
-  isEnd: boolean;
-  inRange: boolean;
-}
-
-interface DisabledLookup {
-  ranges: { start: Date; end: Date; reason: 'blocked' | 'booked' }[];
-}
-
-const toRangeArray = (entries: AvailabilityWindow[] | undefined): DisabledLookup => {
-  if (!entries || entries.length === 0) return { ranges: [] };
-  const ranges = entries
-    .map((entry) => {
-      const start =
-        typeof entry.start === 'string'
-          ? parseISO(entry.start)
-          : new Date(entry.start);
-      const end =
-        typeof entry.end === 'string'
-          ? parseISO(entry.end)
-          : new Date(entry.end);
-      if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
-        return null;
-      }
-      const reason: 'blocked' | 'booked' =
-        entry.status === AvailabilityWindowStatus.BOOKED ? 'booked' : 'blocked';
-      if (entry.status === AvailabilityWindowStatus.AVAILABLE) {
-        return null;
-      }
-      return { start: startOfDay(start), end: startOfDay(end), reason };
-    })
-    .filter((value): value is { start: Date; end: Date; reason: 'blocked' | 'booked' } => value !== null);
-  return { ranges };
-};
-
-const isDateInDisabledRanges = (
-  date: Date,
-  lookup: DisabledLookup,
-): 'blocked' | 'booked' | null => {
-  for (const range of lookup.ranges) {
-    // Half-open interval [start, end) — end is exclusive (matches backend).
-    const onOrAfterStart =
-      isSameDay(date, range.start) || isAfter(date, range.start);
-    const beforeEnd = isBefore(date, range.end);
-    if (onOrAfterStart && beforeEnd) {
-      return range.reason;
-    }
-  }
-  return null;
-};
-
-const buildMonthGrid = (
-  monthDate: Date,
-  weekStartsOn: 0 | 1,
-): Date[] => {
-  const monthStart = startOfMonth(monthDate);
-  const monthEnd = endOfMonth(monthDate);
-  const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
-  // Pad leading days
-  const lead = (monthStart.getDay() - weekStartsOn + 7) % 7;
-  const padBefore: Date[] = [];
-  for (let i = lead; i > 0; i -= 1) {
-    padBefore.push(new Date(monthStart.getTime() - i * 24 * 60 * 60 * 1000));
-  }
-  // Pad trailing days to multiple of 7
-  const total = padBefore.length + days.length;
-  const trail = (7 - (total % 7)) % 7;
-  const padAfter: Date[] = [];
-  for (let i = 1; i <= trail; i += 1) {
-    padAfter.push(new Date(monthEnd.getTime() + i * 24 * 60 * 60 * 1000));
-  }
-  return [...padBefore, ...days, ...padAfter];
-};
-
-interface DayCellProps {
-  state: CalendarDayState;
-  onPress: (date: Date) => void;
-}
-
-const DayCell: React.FC<DayCellProps> = ({ state, onPress }) => {
-  const { date, inMonth, disabled, isStart, isEnd, inRange } = state;
-  const handlePress = useCallback(() => {
-    if (!disabled && inMonth) onPress(date);
-  }, [date, disabled, inMonth, onPress]);
-
-  const showRange = inRange && inMonth;
-  const showEndpoint = (isStart || isEnd) && inMonth;
-  const dayNumber = date.getDate();
-
-  return (
-    <Pressable
-      onPress={handlePress}
-      disabled={disabled || !inMonth}
-      style={styles.dayWrapper}
-      accessibilityRole="button"
-      accessibilityLabel={format(date, 'PPPP')}
-      accessibilityState={{ disabled: disabled || !inMonth, selected: showEndpoint }}
-    >
-      {showRange && !showEndpoint ? (
-        <View style={styles.dayRangeFill} />
-      ) : null}
-      {showEndpoint ? (
-        <>
-          {(isStart && !isEnd) || (isEnd && !isStart) ? (
-            <View
-              style={[
-                styles.dayRangeFillHalf,
-                isStart ? styles.dayRangeFillHalfRight : styles.dayRangeFillHalfLeft,
-              ]}
-            />
-          ) : null}
-          <View style={styles.daySelectedCircle}>
-            <BloomText style={styles.daySelectedText}>{dayNumber}</BloomText>
-          </View>
-        </>
-      ) : (
-        <BloomText
-          style={[
-            styles.dayText,
-            !inMonth && styles.dayTextOutMonth,
-            disabled && styles.dayTextDisabled,
-            showRange && styles.dayTextInRange,
-          ]}
-        >
-          {dayNumber}
-        </BloomText>
-      )}
-      {disabled && inMonth && !showEndpoint ? (
-        <View style={styles.dayStrikethrough} />
-      ) : null}
-    </Pressable>
-  );
-};
-
-interface MonthGridProps {
-  monthDate: Date;
-  selection: AvailabilityCalendarRange | null;
-  minDate: Date;
-  maxDate: Date;
-  disabledLookup: DisabledLookup;
-  weekStartsOn: 0 | 1;
-  onDayPress: (date: Date) => void;
-  weekdayLabels: string[];
-}
-
-const MonthGrid: React.FC<MonthGridProps> = ({
-  monthDate,
-  selection,
-  minDate,
-  maxDate,
-  disabledLookup,
-  weekStartsOn,
-  onDayPress,
-  weekdayLabels,
-}) => {
-  const grid = useMemo(() => buildMonthGrid(monthDate, weekStartsOn), [monthDate, weekStartsOn]);
-
-  const dayStates = useMemo<CalendarDayState[]>(() => {
-    const today = startOfDay(new Date());
-    return grid.map((rawDate) => {
-      const date = startOfDay(rawDate);
-      const inMonth = isSameMonth(date, monthDate);
-      const isBeforeMin = isBefore(date, startOfDay(minDate)) || isBefore(date, today);
-      const isAfterMax = isAfter(date, startOfDay(maxDate));
-      const blockedReason = isDateInDisabledRanges(date, disabledLookup);
-      let disabled = false;
-      let reason: CalendarDayState['reason'];
-      if (isBeforeMin) {
-        disabled = true;
-        reason = 'past';
-      } else if (isAfterMax) {
-        disabled = true;
-        reason = 'out-of-range';
-      } else if (blockedReason) {
-        disabled = true;
-        reason = blockedReason;
-      }
-      const isStart = selection ? isSameDay(date, selection.checkIn) : false;
-      const isEnd = selection ? isSameDay(date, selection.checkOut) : false;
-      const inRange = selection
-        ? isAfter(date, selection.checkIn) && isBefore(date, selection.checkOut)
-        : false;
-      return { date, inMonth, disabled, reason, isStart, isEnd, inRange };
-    });
-  }, [grid, monthDate, minDate, maxDate, disabledLookup, selection]);
-
-  const rows = useMemo(() => {
-    const out: CalendarDayState[][] = [];
-    for (let i = 0; i < dayStates.length; i += 7) {
-      out.push(dayStates.slice(i, i + 7));
-    }
-    return out;
-  }, [dayStates]);
-
-  return (
-    <View style={styles.month}>
-      <H3 style={styles.monthTitle}>{format(monthDate, 'MMMM yyyy')}</H3>
-      <View style={styles.weekdayRow}>
-        {weekdayLabels.map((label) => (
-          <View key={label} style={styles.weekdayCell}>
-            <BloomText style={styles.weekdayLabel}>{label}</BloomText>
-          </View>
-        ))}
-      </View>
-      {rows.map((row, idx) => (
-        <View key={`row-${idx}-${format(row[0].date, 'yyyyMMdd')}`} style={styles.weekRow}>
-          {row.map((state) => (
-            <DayCell
-              key={format(state.date, 'yyyyMMdd')}
-              state={state}
-              onPress={onDayPress}
-            />
-          ))}
-        </View>
-      ))}
-    </View>
-  );
-};
-
-const WEEKDAY_LABELS = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
+const toBlockedSpans = (entries: AvailabilityWindow[]): BlockedSpan[] =>
+  entries.flatMap((entry) => {
+    if (entry.status === AvailabilityWindowStatus.AVAILABLE) return [];
+    const start = typeof entry.start === 'string' ? parseISO(entry.start) : new Date(entry.start);
+    const end = typeof entry.end === 'string' ? parseISO(entry.end) : new Date(entry.end);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return [];
+    return [{ start: startOfDay(start), end: startOfDay(end) }];
+  });
 
 export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
   mode = 'inline',
@@ -319,207 +105,122 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
   onChange,
   hideActions = false,
 }) => {
+  const { i18n } = useTranslation();
+  const locale = getFormatLocale(i18n.language);
   const isLarge = useIsScreenNotMobile();
-  const [anchorMonth, setAnchorMonth] = useState<Date>(() => {
-    if (initialRange) return startOfMonth(initialRange.checkIn);
-    return startOfMonth(new Date());
-  });
-  const [selection, setSelection] = useState<AvailabilityCalendarRange | null>(
-    initialRange,
+  const [selection, setSelection] = useState<AvailabilityCalendarRange | null>(initialRange);
+
+  const [today] = useState(() => startOfDay(new Date()));
+  // Past days are never selectable, whatever `minDate` says.
+  const effectiveMin = useMemo(
+    () => (minDate && startOfDay(minDate) > today ? startOfDay(minDate) : today),
+    [minDate, today],
   );
+  const effectiveMax = useMemo(() => maxDate ?? addMonths(today, 18), [maxDate, today]);
 
-  const today = startOfDay(new Date());
-  const effectiveMin = useMemo(() => minDate ?? today, [minDate, today]);
-  const effectiveMax = useMemo(
-    () => maxDate ?? addMonths(today, 18),
-    [maxDate, today],
+  const blocked = useMemo(
+    () => toBlockedSpans([...(windows ?? []), ...(booked ?? [])]),
+    [windows, booked],
   );
-
-  const disabledLookup = useMemo<DisabledLookup>(() => {
-    const merged: AvailabilityWindow[] = [...(windows ?? []), ...(booked ?? [])];
-    return toRangeArray(merged);
-  }, [windows, booked]);
-
-  const handleDayPress = useCallback(
+  const isDateUnavailable = useCallback(
     (date: Date) => {
-      const start = startOfDay(date);
-      setSelection((current) => {
-        // Single mode: one day per tap. Re-pick on each tap; tapping the
-        // already-selected day clears it. The range/extend branches never run,
-        // and the collapsed range (checkIn === checkOut) carries the chosen day.
-        if (selectionMode === 'single') {
-          const single: AvailabilityCalendarRange | null =
-            current && isSameDay(current.checkIn, start)
-              ? null
-              : { checkIn: start, checkOut: start };
-          if (onChange) onChange(single);
-          if (
-            Platform.OS === 'web' &&
-            mode === 'modal' &&
-            hideActions &&
-            single &&
-            onApply
-          ) {
-            onApply(single);
-          }
-          return single;
-        }
-        let next: AvailabilityCalendarRange | null = null;
-        // Start a fresh single-day pick only when there is no selection or a
-        // COMPLETE range already exists (checkIn !== checkOut). An in-progress
-        // pick (checkIn === checkOut) falls through to the extend branches.
-        if (!current || !isSameDay(current.checkIn, current.checkOut)) {
-          // Start a new range
-          next = { checkIn: start, checkOut: start };
-        } else if (isBefore(start, current.checkIn)) {
-          next = { checkIn: start, checkOut: current.checkIn };
-        } else if (isSameDay(start, current.checkIn)) {
-          // Tap again on start = reset
-          next = null;
-        } else {
-          // Second tap — validate stay constraints
-          const nights = differenceInCalendarDays(start, current.checkIn);
-          if (minStay && nights < minStay) {
-            return current;
-          }
-          if (maxStay && nights > maxStay) {
-            return current;
-          }
-          // Reject if any disabled day sits inside the range
-          const interim = eachDayOfInterval({ start: current.checkIn, end: start });
-          const containsDisabled = interim.some((day) =>
-            Boolean(isDateInDisabledRanges(startOfDay(day), disabledLookup)),
-          );
-          if (containsDisabled) {
-            return { checkIn: start, checkOut: start };
-          }
-          next = { checkIn: current.checkIn, checkOut: start };
-        }
-        if (onChange) onChange(next);
-        // Auto-apply on web second tap when in modal mode w/ actions hidden
-        if (
-          Platform.OS === 'web' &&
-          mode === 'modal' &&
-          hideActions &&
-          next &&
-          !isSameDay(next.checkIn, next.checkOut) &&
-          onApply
-        ) {
-          onApply(next);
-        }
-        return next;
-      });
+      const time = startOfDay(date).getTime();
+      return blocked.some((span) => time >= span.start.getTime() && time < span.end.getTime());
     },
-    [disabledLookup, hideActions, minStay, maxStay, mode, onApply, onChange, selectionMode],
+    [blocked],
   );
 
-  const handlePrev = useCallback(() => {
-    setAnchorMonth((current) => subMonths(current, 1));
-  }, []);
-  const handleNext = useCallback(() => {
-    setAnchorMonth((current) => addMonths(current, 1));
-  }, []);
+  const commit = useCallback(
+    (next: AvailabilityCalendarRange | null, complete: boolean) => {
+      setSelection(next);
+      onChange?.(next);
+      if (Platform.OS === 'web' && mode === 'modal' && hideActions && next && complete) {
+        onApply?.(next);
+      }
+    },
+    [hideActions, mode, onApply, onChange],
+  );
 
-  const handleClear = useCallback(() => {
-    setSelection(null);
-    if (onChange) onChange(null);
-  }, [onChange]);
+  const handleSingle = useCallback(
+    (date: Date) => {
+      // Tapping the already-selected day clears it.
+      const next =
+        selection && isSameDay(selection.checkIn, date) ? null : { checkIn: date, checkOut: date };
+      commit(next, true);
+    },
+    [commit, selection],
+  );
+
+  const handleRange = useCallback(
+    ({ start, end }: DateRange) => {
+      if (isSameDay(start, end)) {
+        commit({ checkIn: start, checkOut: start }, false);
+        return;
+      }
+      const nights = differenceInCalendarDays(end, start);
+      if ((minStay && nights < minStay) || (maxStay && nights > maxStay)) return;
+      if (eachDayOfInterval({ start, end }).some(isDateUnavailable)) {
+        // A stay cannot straddle a blocked/booked day: restart from the later tap.
+        commit({ checkIn: end, checkOut: end }, false);
+        return;
+      }
+      commit({ checkIn: start, checkOut: end }, true);
+    },
+    [commit, isDateUnavailable, maxStay, minStay],
+  );
+
+  const handleClear = useCallback(() => commit(null, false), [commit]);
+
+  const isIncomplete = !selection || isSameDay(selection.checkIn, selection.checkOut);
 
   const handleApply = useCallback(() => {
-    if (!onApply) return;
-    if (!selection || isSameDay(selection.checkIn, selection.checkOut)) {
-      onApply(null);
-      return;
-    }
-    onApply(selection);
-  }, [onApply, selection]);
-
-  const showTwoMonths = isLarge;
-  const secondMonthDate = useMemo(() => addMonths(anchorMonth, 1), [anchorMonth]);
-
-  const isApplyDisabled =
-    !selection || isSameDay(selection.checkIn, selection.checkOut);
+    onApply?.(isIncomplete ? null : selection);
+  }, [isIncomplete, onApply, selection]);
 
   const nightsLabel = useMemo(() => {
-    if (!selection || isSameDay(selection.checkIn, selection.checkOut)) {
-      return 'Select check-in and check-out';
-    }
-    const nights = differenceInCalendarDays(
-      selection.checkOut,
-      selection.checkIn,
-    );
-    const checkInLabel = format(selection.checkIn, 'MMM d');
-    const checkOutLabel = format(selection.checkOut, 'MMM d');
+    if (!selection || isIncomplete) return 'Select check-in and check-out';
+    const nights = differenceInCalendarDays(selection.checkOut, selection.checkIn);
     const nightWord = nights === 1 ? 'night' : 'nights';
-    return `${checkInLabel} → ${checkOutLabel} · ${nights} ${nightWord}`;
-  }, [selection]);
+    return `${format(selection.checkIn, 'MMM d')} → ${format(selection.checkOut, 'MMM d')} · ${nights} ${nightWord}`;
+  }, [isIncomplete, selection]);
+
+  const constraints = {
+    minDate: effectiveMin,
+    maxDate: effectiveMax,
+    isDateUnavailable,
+    weekStartsOn: WEEK_START,
+    locale,
+  } as const;
 
   return (
-    <View style={[styles.container, { pointerEvents: 'auto' }]}>
-      <View style={styles.headerRow}>
-        <Button
-          variant="icon"
-          size="small"
-          onPress={handlePrev}
-          accessibilityLabel="Previous month"
-        >
-          {'‹'}
-        </Button>
+    <View style={styles.container}>
+      {selectionMode === 'range' ? (
         <BloomText style={styles.summary} numberOfLines={1}>
           {nightsLabel}
         </BloomText>
-        <Button
-          variant="icon"
-          size="small"
-          onPress={handleNext}
-          accessibilityLabel="Next month"
-        >
-          {'›'}
-        </Button>
-      </View>
-      <ScrollView
-        horizontal={showTwoMonths}
-        contentContainerStyle={[
-          styles.monthsContainer,
-          showTwoMonths ? styles.monthsContainerTwo : styles.monthsContainerOne,
-        ]}
-        showsHorizontalScrollIndicator={false}
-        showsVerticalScrollIndicator={false}
-      >
-        <MonthGrid
-          monthDate={anchorMonth}
-          selection={selection}
-          minDate={effectiveMin}
-          maxDate={effectiveMax}
-          disabledLookup={disabledLookup}
-          weekStartsOn={WEEK_START}
-          onDayPress={handleDayPress}
-          weekdayLabels={WEEKDAY_LABELS}
-        />
-        {showTwoMonths ? (
-          <MonthGrid
-            monthDate={secondMonthDate}
-            selection={selection}
-            minDate={effectiveMin}
-            maxDate={effectiveMax}
-            disabledLookup={disabledLookup}
-            weekStartsOn={WEEK_START}
-            onDayPress={handleDayPress}
-            weekdayLabels={WEEKDAY_LABELS}
+      ) : null}
+      <View style={styles.calendarRow}>
+        {selectionMode === 'single' ? (
+          <Calendar {...constraints} value={selection?.checkIn ?? null} onChange={handleSingle} />
+        ) : (
+          <RangeCalendar
+            {...constraints}
+            visibleMonths={isLarge ? 2 : 1}
+            value={
+              selection && !isIncomplete
+                ? { start: selection.checkIn, end: selection.checkOut }
+                : null
+            }
+            onChange={handleRange}
           />
-        ) : null}
-      </ScrollView>
+        )}
+      </View>
       {!hideActions ? (
         <View style={styles.footerRow}>
           <Button variant="ghost" size="medium" onPress={handleClear}>
             Clear
           </Button>
-          <Button
-            variant="primary"
-            size="medium"
-            onPress={handleApply}
-            disabled={isApplyDisabled}
-          >
+          <Button variant="primary" size="medium" onPress={handleApply} disabled={isIncomplete}>
             Apply
           </Button>
         </View>
@@ -530,130 +231,21 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: colors.white,
-    borderRadius: 16,
-    padding: 16,
     width: '100%',
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 12,
+    gap: 12,
   },
   summary: {
-    flex: 1,
     textAlign: 'center',
     fontSize: 14,
     fontWeight: '600',
   },
-  monthsContainer: {
-    flexDirection: 'row',
-    gap: 16,
-  },
-  monthsContainerTwo: {
-    flexDirection: 'row',
-  },
-  monthsContainerOne: {
-    flexDirection: 'column',
-  },
-  month: {
-    width: 280,
-    paddingHorizontal: HORIZONTAL_GUTTER,
-    flexGrow: 1,
-    minWidth: 280,
-  },
-  monthTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  weekdayRow: {
-    flexDirection: 'row',
-    marginBottom: 4,
-  },
-  weekdayCell: {
-    flex: 1,
+  calendarRow: {
     alignItems: 'center',
-    paddingVertical: 4,
-  },
-  weekdayLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: colors.COLOR_BLACK_LIGHT_4,
-    textTransform: 'uppercase',
-  },
-  weekRow: {
-    flexDirection: 'row',
-  },
-  dayWrapper: {
-    flex: 1,
-    height: DAY_CELL_HEIGHT,
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-  },
-  dayText: {
-    fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_2,
-  },
-  dayTextOutMonth: {
-    color: 'transparent',
-  },
-  dayTextDisabled: {
-    color: colors.COLOR_BLACK_LIGHT_5,
-  },
-  dayTextInRange: {
-    color: colors.primaryColor,
-    fontWeight: '600',
-  },
-  dayRangeFill: {
-    position: 'absolute',
-    top: 4,
-    bottom: 4,
-    left: 0,
-    right: 0,
-    backgroundColor: colors.primaryLight_2,
-  },
-  dayRangeFillHalf: {
-    position: 'absolute',
-    top: 4,
-    bottom: 4,
-    width: '50%',
-    backgroundColor: colors.primaryLight_2,
-  },
-  dayRangeFillHalfLeft: {
-    left: 0,
-  },
-  dayRangeFillHalfRight: {
-    right: 0,
-  },
-  daySelectedCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: colors.primaryColor,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  daySelectedText: {
-    color: colors.primaryForeground,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  dayStrikethrough: {
-    position: 'absolute',
-    height: 1,
-    width: 20,
-    backgroundColor: colors.COLOR_BLACK_LIGHT_5,
-    transform: [{ rotate: '-20deg' }],
   },
   footerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 12,
     paddingTop: 12,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.COLOR_BLACK_LIGHT_6,

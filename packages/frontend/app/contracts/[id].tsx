@@ -12,7 +12,7 @@
  * Backend remains the source of truth for every transition; the UI only
  * surfaces actions the backend would accept.
  */
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { Image, Linking, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -28,10 +28,10 @@ import { Text as BloomText, H2 } from '@oxy.so/bloom/typography';
 import { LeaseStatus } from '@homiio/shared-types';
 
 import { Header } from '@/components/Header';
-import { CardSurface } from '@/components/ui/CardSurface';
+import { Card } from '@oxy.so/bloom/card';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { StatusBadge, type StatusType } from '@/components/ui/StatusBadge';
-import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { confirm } from '@oxy.so/bloom/surfaces';
 import { useProperty } from '@/hooks';
 import { useProfile } from '@/context/ProfileContext';
 import {
@@ -104,10 +104,6 @@ export default function ContractDetailScreen() {
   const deleteMutation = useDeleteLease();
   const uploadMutation = useUploadLeaseDocument(id ?? '');
 
-  const [pendingAction, setPendingAction] = useState<'sign' | 'terminate' | 'delete' | null>(
-    null,
-  );
-
   const role = useMemo<Role | null>(() => {
     if (!lease || !profile) return null;
     const sessionOxyUserId = profile?.oxyUserId;
@@ -123,10 +119,8 @@ export default function ContractDetailScreen() {
     try {
       await signMutation.mutateAsync({ signature: 'accepted-in-app', acceptTerms: true });
       toast.success(t('contracts.detail.toastSigned'));
-      setPendingAction(null);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : t('contracts.detail.toastSignFailed'));
-      setPendingAction(null);
     }
   }, [id, signMutation, t]);
 
@@ -135,10 +129,8 @@ export default function ContractDetailScreen() {
     try {
       await terminateMutation.mutateAsync({});
       toast.success(t('contracts.detail.toastTerminated'));
-      setPendingAction(null);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : t('contracts.detail.toastTerminateFailed'));
-      setPendingAction(null);
     }
   }, [id, terminateMutation, t]);
 
@@ -147,13 +139,44 @@ export default function ContractDetailScreen() {
     try {
       await deleteMutation.mutateAsync(id);
       toast.success(t('contracts.detail.toastDeleted'));
-      setPendingAction(null);
       router.back();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : t('contracts.detail.toastDeleteFailed'));
-      setPendingAction(null);
     }
   }, [id, deleteMutation, router, t]);
+
+  const confirmAction = useCallback(
+    async (action: 'sign' | 'terminate' | 'delete') => {
+      const options = {
+        sign: {
+          title: t('contracts.detail.confirmSignTitle'),
+          description: t('contracts.detail.confirmSignExtended'),
+          confirmLabel: t('contracts.detail.confirmSignAction'),
+          destructive: false,
+          run: handleSign,
+        },
+        terminate: {
+          title: t('contracts.detail.confirmTerminateShortTitle'),
+          description: t('contracts.detail.confirmTerminateExtended'),
+          confirmLabel: t('contracts.detail.terminate'),
+          destructive: true,
+          run: handleTerminate,
+        },
+        delete: {
+          title: t('contracts.detail.confirmDeleteTitle'),
+          description: t('contracts.detail.confirmDeleteExtended'),
+          confirmLabel: t('contracts.detail.confirmDeleteAction'),
+          destructive: true,
+          run: handleDelete,
+        },
+      }[action];
+      const { run, ...prompt } = options;
+      if (await confirm({ ...prompt, cancelLabel: t('common.cancel') })) {
+        await run();
+      }
+    },
+    [handleSign, handleTerminate, handleDelete, t],
+  );
 
   const handleAddDocument = useCallback(async () => {
     if (!id) return;
@@ -278,7 +301,7 @@ export default function ContractDetailScreen() {
             )}
           </View>
 
-          <CardSurface>
+          <Card variant="outlined" radius="radius-16" className="p-5">
             <View style={styles.headerRow}>
               <H2 style={styles.title}>{propertyTitle}</H2>
               <StatusBadge status={lease.status as StatusType} />
@@ -290,15 +313,15 @@ export default function ContractDetailScreen() {
                   .join(', ')}
               </BloomText>
             ) : null}
-          </CardSurface>
+          </Card>
 
-          <CardSurface>
+          <Card variant="outlined" radius="radius-16" className="p-5">
             <BloomText style={styles.sectionLabel}>{t('contracts.detail.term')}</BloomText>
             <DetailRow label={t('contracts.detail.start')} value={formatDate(lease.leaseTerms?.startDate)} />
             <DetailRow label={t('contracts.detail.end')} value={formatDate(lease.leaseTerms?.endDate)} />
-          </CardSurface>
+          </Card>
 
-          <CardSurface>
+          <Card variant="outlined" radius="radius-16" className="p-5">
             <BloomText style={styles.sectionLabel}>{t('contracts.detail.rent')}</BloomText>
             <DetailRow
               label={t('contracts.detail.monthlyRent')}
@@ -316,9 +339,9 @@ export default function ContractDetailScreen() {
                 value={t('contracts.detail.dueDay', { day: lease.rentDetails.dueDate })}
               />
             ) : null}
-          </CardSurface>
+          </Card>
 
-          <CardSurface>
+          <Card variant="outlined" radius="radius-16" className="p-5">
             <BloomText style={styles.sectionLabel}>{t('contracts.detail.signatures')}</BloomText>
             <DetailRow
               label={t('contracts.detail.landlord')}
@@ -336,10 +359,10 @@ export default function ContractDetailScreen() {
                   : t('contracts.detail.signaturePending')
               }
             />
-          </CardSurface>
+          </Card>
 
           {payments.length > 0 ? (
-            <CardSurface>
+            <Card variant="outlined" radius="radius-16" className="p-5">
               <BloomText style={styles.sectionLabel}>{t('contracts.detail.payments')}</BloomText>
               {payments.map((payment) => (
                 <View key={payment.id} style={styles.paymentRow}>
@@ -370,10 +393,10 @@ export default function ContractDetailScreen() {
                   </View>
                 </View>
               ))}
-            </CardSurface>
+            </Card>
           ) : null}
 
-          <CardSurface>
+          <Card variant="outlined" radius="radius-16" className="p-5">
             <View style={styles.docHeader}>
               <BloomText style={styles.sectionLabel}>{t('contracts.detail.documents')}</BloomText>
               {isParty ? (
@@ -413,7 +436,7 @@ export default function ContractDetailScreen() {
                 </Pressable>
               ))
             )}
-          </CardSurface>
+          </Card>
 
           {(canSign || canTerminate || canDelete) ? (
             <View style={styles.actionRow}>
@@ -421,7 +444,7 @@ export default function ContractDetailScreen() {
                 <Button
                   variant="primary"
                   size="medium"
-                  onPress={() => setPendingAction('sign')}
+                  onPress={() => void confirmAction('sign')}
                   disabled={busy}
                   style={styles.actionButton}
                 >
@@ -432,7 +455,7 @@ export default function ContractDetailScreen() {
                 <Button
                   variant="secondary"
                   size="medium"
-                  onPress={() => setPendingAction('terminate')}
+                  onPress={() => void confirmAction('terminate')}
                   disabled={busy}
                   style={styles.actionButton}
                 >
@@ -443,7 +466,7 @@ export default function ContractDetailScreen() {
                 <Button
                   variant="ghost"
                   size="medium"
-                  onPress={() => setPendingAction('delete')}
+                  onPress={() => void confirmAction('delete')}
                   disabled={busy}
                   style={styles.actionButton}
                 >
@@ -453,36 +476,6 @@ export default function ContractDetailScreen() {
             </View>
           ) : null}
         </ScrollView>
-
-        <ConfirmDialog
-          visible={pendingAction === 'sign'}
-          title={t('contracts.detail.confirmSignTitle')}
-          message={t('contracts.detail.confirmSignExtended')}
-          confirmLabel={t('contracts.detail.confirmSignAction')}
-          loading={signMutation.isPending}
-          onConfirm={handleSign}
-          onCancel={() => setPendingAction(null)}
-        />
-        <ConfirmDialog
-          visible={pendingAction === 'terminate'}
-          title={t('contracts.detail.confirmTerminateShortTitle')}
-          message={t('contracts.detail.confirmTerminateExtended')}
-          confirmLabel={t('contracts.detail.terminate')}
-          confirmDestructive
-          loading={terminateMutation.isPending}
-          onConfirm={handleTerminate}
-          onCancel={() => setPendingAction(null)}
-        />
-        <ConfirmDialog
-          visible={pendingAction === 'delete'}
-          title={t('contracts.detail.confirmDeleteTitle')}
-          message={t('contracts.detail.confirmDeleteExtended')}
-          confirmLabel={t('contracts.detail.confirmDeleteAction')}
-          confirmDestructive
-          loading={deleteMutation.isPending}
-          onConfirm={handleDelete}
-          onCancel={() => setPendingAction(null)}
-        />
       </SafeAreaView>
     </View>
   );

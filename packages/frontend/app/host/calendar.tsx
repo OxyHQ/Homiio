@@ -6,7 +6,7 @@
  *   - Property picker uses Bloom DropdownMenu instead of a horizontal chip row.
  *   - Flat cards on white surfaces with hairline borders, `radius.lg`.
  *   - All copy lives in Bloom Typography, no raw RN <Text>.
- *   - Block-dates flow now reuses ConfirmDialog + Bloom TextField.
+ *   - Block-dates flow now uses a Bloom `Dialog` (title/description/actions) + Bloom TextField.
  */
 import React, { useCallback, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
@@ -37,7 +37,7 @@ import {
   Reservation,
   ReservationStatus,
 } from '@homiio/shared-types';
-import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { Dialog } from '@oxy.so/bloom/dialog';
 import { Header } from '@/components/Header';
 import { HostCalendarGrid, HostCalendarSelection } from '@/components/HostCalendarGrid';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -378,10 +378,15 @@ export default function HostCalendarScreen() {
           ) : null}
         </ScrollView>
 
-        <ConfirmDialog
-          visible={blockState.visible}
+        <Dialog
+          placement="center"
+          open={blockState.visible}
+          onClose={closeDialog}
+          dismissOnBackdrop={!submitting}
+          maxWidth={420}
           title={t('host.calendar.blockTitle')}
-          message={
+          label={t('host.calendar.blockTitle')}
+          description={
             blockState.start && blockState.end
               ? t('host.calendar.blockBodyRange', {
                   start: format(blockState.start, 'EEE, MMM d'),
@@ -392,10 +397,21 @@ export default function HostCalendarScreen() {
                 })
               : t('host.calendar.blockBodySingle')
           }
-          confirmLabel={t('host.calendar.blockConfirm')}
-          loading={submitting}
-          onConfirm={handleConfirmBlock}
-          onCancel={closeDialog}
+          actions={[
+            {
+              label: t('host.calendar.blockConfirm'),
+              disabled: submitting,
+              shouldCloseOnPress: false,
+              onPress: () => void handleConfirmBlock(),
+            },
+            {
+              label: t('common.cancel'),
+              color: 'cancel',
+              disabled: submitting,
+              shouldCloseOnPress: false,
+              onPress: closeDialog,
+            },
+          ]}
         >
           <TextFieldInput
             label={t('host.calendar.blockReasonLabel')}
@@ -406,7 +422,7 @@ export default function HostCalendarScreen() {
             editable={!submitting}
             placeholder={t('host.calendar.blockReasonPlaceholder')}
           />
-        </ConfirmDialog>
+        </Dialog>
       </SafeAreaView>
     </View>
   );

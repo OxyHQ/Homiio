@@ -16,7 +16,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Header } from '@/components/Header';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
 import { useProperty } from '@/hooks';
-import { ActionButton } from '@/components/ui/ActionButton';
+import { Button } from '@oxy.so/bloom/button';
+import { RiCalendarLine } from '@oxy.so/bloom/icons';
 import { PropertyType, formatDate } from '@homiio/shared-types';
 import { useFormatting } from '@/utils/format';
 import { useOxy } from '@oxy.so/services';
@@ -389,16 +390,17 @@ export default function BookViewingPage() {
           </Text>
         </View>
 
-        <ActionButton
-          icon="calendar-outline"
-          text={isModifyMode ? t('viewings.actions.modify') : t('properties.bookViewing')}
+        <Button
+          leadingIcon={RiCalendarLine}
           onPress={handleSubmit}
           variant="primary"
           size="large"
           disabled={!selectedDate || !selectedTime || submitting}
           loading={submitting}
           style={{ marginBottom: 30 }}
-        />
+        >
+          {isModifyMode ? t('viewings.actions.modify') : t('properties.bookViewing')}
+        </Button>
       </ScrollView>
     </SafeAreaView>
   );

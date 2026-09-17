@@ -6,7 +6,7 @@
  *     while loading, Bloom Typography throughout.
  *   - Flat cards with radius.lg + hairline borders.
  *   - Shared EmptyState / ErrorState components.
- *   - Confirm cancel via ConfirmDialog (Bloom Modal-based).
+ *   - Confirm cancel via Bloom `confirm()`.
  */
 import React, { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
@@ -24,7 +24,7 @@ import * as Skeleton from '@oxy.so/bloom/skeleton';
 import { Text as BloomText, H2, H3 } from '@oxy.so/bloom/typography';
 import { useOxy, openAccountDialog } from '@oxy.so/services';
 import { Header } from '@/components/Header';
-import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { confirm } from '@oxy.so/bloom/surfaces';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
@@ -235,6 +235,19 @@ export default function ViewingsPage() {
     },
   });
 
+  const handleCancel = async (viewing: ViewingRequest) => {
+    const ok = await confirm({
+      title: t('viewings.actions.cancel'),
+      description: t('viewings.cancel.confirmMessage'),
+      confirmLabel: t('viewings.actions.cancel'),
+      cancelLabel: t('common.cancel'),
+      destructive: true,
+    });
+    if (!ok) return;
+    setCancelTarget(viewing);
+    cancelMutation.mutate(viewing.id);
+  };
+
   const handleModify = (viewing: ViewingRequest) => {
     router.push({
       pathname: `/properties/${viewing.propertyId}/book-viewing`,
@@ -346,27 +359,13 @@ export default function ViewingsPage() {
                     cancelMutation.isPending &&
                     cancelTarget?.id === viewing.id
                   }
-                  onCancel={() => setCancelTarget(viewing)}
+                  onCancel={() => void handleCancel(viewing)}
                   onModify={() => handleModify(viewing)}
                 />
               ))}
             </View>
           ) : null}
         </ScrollView>
-
-        <ConfirmDialog
-          visible={cancelTarget !== null}
-          title={t('viewings.actions.cancel')}
-          message={t('viewings.cancel.confirmMessage')}
-          confirmLabel={t('viewings.actions.cancel')}
-          cancelLabel={t('common.cancel')}
-          confirmDestructive
-          loading={cancelMutation.isPending}
-          onCancel={() => setCancelTarget(null)}
-          onConfirm={() => {
-            if (cancelTarget) cancelMutation.mutate(cancelTarget.id);
-          }}
-        />
       </SafeAreaView>
     </View>
   );

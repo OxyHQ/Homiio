@@ -36,8 +36,8 @@ import {
 } from '@/hooks/useExchangeQueries';
 import { ExchangeStatusBadge } from '@/components/exchange/ExchangeStatusBadge';
 import { ExchangeReviewForm } from '@/components/exchange/ExchangeReviewForm';
-import { ConfirmDialog } from '@/components/ConfirmDialog';
-import { CardSurface } from '@/components/ui/CardSurface';
+import { confirm } from '@oxy.so/bloom/surfaces';
+import { Card } from '@oxy.so/bloom/card';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { getPropertyImageSource, getPropertyTitle } from '@/utils/propertyUtils';
 import { formatLocalized } from '@/utils/dateLocale';
@@ -45,7 +45,7 @@ import { toast } from '@oxy.so/bloom/toast';
 import { colors } from '@/styles/colors';
 import { radius, spacing, tracker } from '@/constants/styles';
 
-type PendingAction = 'confirm' | 'decline' | 'cancel' | 'complete' | null;
+type PendingAction = 'confirm' | 'decline' | 'cancel' | 'complete';
 
 const formatWindow = (window: ExchangeWindow): string => {
   const start = parseISO(window.start);
@@ -68,7 +68,6 @@ export default function ExchangeRequestDetailScreen() {
   const { property } = useProperty(request?.propertyId ?? '');
   const { property: offeredProperty } = useProperty(request?.offeredPropertyId ?? '');
 
-  const [pendingAction, setPendingAction] = useState<PendingAction>(null);
   // Capture "now" once per screen instance (lazy initializer keeps render pure —
   // reading `Date.now()` directly in render is flagged as impure). The
   // complete-after-end gate compares the stay window against this snapshot.
@@ -108,17 +107,55 @@ export default function ExchangeRequestDetailScreen() {
           [ExchangeRequestStatus.COMPLETED]: t('listing.exchange.toasts.completed'),
         };
         toast.success(toastKey[status] ?? t('listing.exchange.toasts.updated'));
-        setPendingAction(null);
       } catch (error) {
         const message =
           error instanceof Error
             ? error.message
             : t('listing.exchange.errors.failed');
         toast.error(message);
-        setPendingAction(null);
       }
     },
     [id, updateMutation, t],
+  );
+
+  const confirmAction = useCallback(
+    async (action: PendingAction) => {
+      const options = {
+        confirm: {
+          title: t('listing.exchange.confirm.approveTitle'),
+          description: t('listing.exchange.confirm.approveBody'),
+          confirmLabel: t('listing.exchange.actions.approve'),
+          destructive: false,
+          status: ExchangeRequestStatus.CONFIRMED,
+        },
+        decline: {
+          title: t('listing.exchange.confirm.declineTitle'),
+          description: t('listing.exchange.confirm.declineBody'),
+          confirmLabel: t('listing.exchange.actions.decline'),
+          destructive: true,
+          status: ExchangeRequestStatus.DECLINED,
+        },
+        cancel: {
+          title: t('listing.exchange.confirm.cancelTitle'),
+          description: t('listing.exchange.confirm.cancelBody'),
+          confirmLabel: t('listing.exchange.confirm.cancelConfirm'),
+          destructive: true,
+          status: ExchangeRequestStatus.CANCELLED,
+        },
+        complete: {
+          title: t('listing.exchange.confirm.completeTitle'),
+          description: t('listing.exchange.confirm.completeBody'),
+          confirmLabel: t('listing.exchange.actions.complete'),
+          destructive: false,
+          status: ExchangeRequestStatus.COMPLETED,
+        },
+      }[action];
+      const { status, ...prompt } = options;
+      if (await confirm({ ...prompt, cancelLabel: t('common.cancel') })) {
+        await handleAction(status);
+      }
+    },
+    [handleAction, t],
   );
 
   const header = (
@@ -213,7 +250,7 @@ export default function ExchangeRequestDetailScreen() {
             )}
           </View>
 
-          <CardSurface>
+          <Card variant="outlined" radius="radius-16" className="p-5">
             <View style={styles.headerRow}>
               <H2 style={styles.title}>{propertyTitle}</H2>
               <ExchangeStatusBadge status={request.status} />
@@ -223,9 +260,9 @@ export default function ExchangeRequestDetailScreen() {
                 {[property.address.cityName, property.address.countryName].filter(Boolean).join(', ')}
               </BloomText>
             ) : null}
-          </CardSurface>
+          </Card>
 
-          <CardSurface>
+          <Card variant="outlined" radius="radius-16" className="p-5">
             <BloomText style={styles.sectionLabel}>
               {t('listing.exchange.detailsLabel')}
             </BloomText>
@@ -246,15 +283,15 @@ export default function ExchangeRequestDetailScreen() {
                 value={getPropertyTitle(offeredProperty)}
               />
             ) : null}
-          </CardSurface>
+          </Card>
 
           {request.message ? (
-            <CardSurface>
+            <Card variant="outlined" radius="radius-16" className="p-5">
               <BloomText style={styles.sectionLabel}>
                 {t('listing.exchange.messageHeading')}
               </BloomText>
               <BloomText style={styles.messageText}>{request.message}</BloomText>
-            </CardSurface>
+            </Card>
           ) : null}
 
           {(showHostConfirmDecline || showRequesterCancel || showComplete) ? (
@@ -264,7 +301,7 @@ export default function ExchangeRequestDetailScreen() {
                   <Button
                     variant="primary"
                     size="medium"
-                    onPress={() => setPendingAction('confirm')}
+                    onPress={() => void confirmAction('confirm')}
                     disabled={updateMutation.isPending}
                     style={styles.actionButton}
                   >
@@ -273,7 +310,7 @@ export default function ExchangeRequestDetailScreen() {
                   <Button
                     variant="secondary"
                     size="medium"
-                    onPress={() => setPendingAction('decline')}
+                    onPress={() => void confirmAction('decline')}
                     disabled={updateMutation.isPending}
                     style={styles.actionButton}
                   >
@@ -285,7 +322,7 @@ export default function ExchangeRequestDetailScreen() {
                 <Button
                   variant="primary"
                   size="medium"
-                  onPress={() => setPendingAction('complete')}
+                  onPress={() => void confirmAction('complete')}
                   disabled={updateMutation.isPending}
                   style={styles.actionButton}
                 >
@@ -296,7 +333,7 @@ export default function ExchangeRequestDetailScreen() {
                 <Button
                   variant="ghost"
                   size="medium"
-                  onPress={() => setPendingAction('cancel')}
+                  onPress={() => void confirmAction('cancel')}
                   disabled={updateMutation.isPending}
                   style={styles.actionButton}
                 >
@@ -307,12 +344,12 @@ export default function ExchangeRequestDetailScreen() {
           ) : null}
 
           {showReviewForm ? (
-            <CardSurface>
+            <Card variant="outlined" radius="radius-16" className="p-5">
               <ExchangeReviewForm
                 exchangeRequestId={request.id}
                 onSubmitted={() => reviewsQuery.refetch()}
               />
-            </CardSurface>
+            </Card>
           ) : null}
 
           {request.status === ExchangeRequestStatus.COMPLETED && alreadyReviewed ? (
@@ -321,45 +358,6 @@ export default function ExchangeRequestDetailScreen() {
             </BloomText>
           ) : null}
         </ScrollView>
-
-        <ConfirmDialog
-          visible={pendingAction === 'confirm'}
-          title={t('listing.exchange.confirm.approveTitle')}
-          message={t('listing.exchange.confirm.approveBody')}
-          confirmLabel={t('listing.exchange.actions.approve')}
-          loading={updateMutation.isPending}
-          onConfirm={() => handleAction(ExchangeRequestStatus.CONFIRMED)}
-          onCancel={() => setPendingAction(null)}
-        />
-        <ConfirmDialog
-          visible={pendingAction === 'decline'}
-          title={t('listing.exchange.confirm.declineTitle')}
-          message={t('listing.exchange.confirm.declineBody')}
-          confirmLabel={t('listing.exchange.actions.decline')}
-          confirmDestructive
-          loading={updateMutation.isPending}
-          onConfirm={() => handleAction(ExchangeRequestStatus.DECLINED)}
-          onCancel={() => setPendingAction(null)}
-        />
-        <ConfirmDialog
-          visible={pendingAction === 'cancel'}
-          title={t('listing.exchange.confirm.cancelTitle')}
-          message={t('listing.exchange.confirm.cancelBody')}
-          confirmLabel={t('listing.exchange.confirm.cancelConfirm')}
-          confirmDestructive
-          loading={updateMutation.isPending}
-          onConfirm={() => handleAction(ExchangeRequestStatus.CANCELLED)}
-          onCancel={() => setPendingAction(null)}
-        />
-        <ConfirmDialog
-          visible={pendingAction === 'complete'}
-          title={t('listing.exchange.confirm.completeTitle')}
-          message={t('listing.exchange.confirm.completeBody')}
-          confirmLabel={t('listing.exchange.actions.complete')}
-          loading={updateMutation.isPending}
-          onConfirm={() => handleAction(ExchangeRequestStatus.COMPLETED)}
-          onCancel={() => setPendingAction(null)}
-        />
       </SafeAreaView>
     </View>
   );

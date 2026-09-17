@@ -1,11 +1,11 @@
 import React, { useMemo } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 import { Reservation, formatMoney } from '@homiio/shared-types';
 import { ReservationStatusBadge } from '@/components/ReservationStatusBadge';
-import { ThumbnailCard } from '@/components/ui/ThumbnailCard';
+import { Card, CardFooter } from '@oxy.so/bloom/card';
 import { ThumbnailImage } from '@/components/ui/ThumbnailImage';
 import { useProperty } from '@/hooks';
 import { getPropertyImageSource, getPropertyTitle } from '@/utils/propertyUtils';
@@ -56,31 +56,61 @@ export const ReservationCard: React.FC<ReservationCardProps> = ({
       : t('reservations.card.nights');
 
   return (
-    <ThumbnailCard
-      thumbnail={<ThumbnailImage source={imageSource} />}
-      onPress={handlePress}
-      accessibilityLabel={t('reservations.card.accessibility', { id: reservation.id })}
-      actions={actions}
-    >
-      <View style={styles.headerRow}>
-        <BloomText style={styles.title} numberOfLines={1}>
-          {title}
-        </BloomText>
-        <ReservationStatusBadge status={reservation.status} />
-      </View>
-      <BloomText style={styles.dates} numberOfLines={1}>
-        {formatDateRange(reservation.checkIn, reservation.checkOut)}
-      </BloomText>
-      <BloomText style={styles.meta} numberOfLines={1}>
-        {reservation.nights} {nightLabel} · {reservation.guestCount} {guestLabel}
-        {variant === 'host' ? ` ${t('reservations.card.hostGuestSuffix')}` : ''} ·{' '}
-        {formatMoney(reservation.total, reservation.currency, locale)}
-      </BloomText>
-    </ThumbnailCard>
+    <Card variant="outlined" radius="radius-16" style={styles.card}>
+      <Pressable
+        style={styles.row}
+        onPress={handlePress}
+        accessibilityRole="button"
+        accessibilityLabel={t('reservations.card.accessibility', { id: reservation.id })}
+      >
+        <View style={styles.thumb}><ThumbnailImage source={imageSource} /></View>
+        <View style={styles.body}>
+          <View style={styles.headerRow}>
+            <BloomText style={styles.title} numberOfLines={1}>
+              {title}
+            </BloomText>
+            <ReservationStatusBadge status={reservation.status} />
+          </View>
+          <BloomText style={styles.dates} numberOfLines={1}>
+            {formatDateRange(reservation.checkIn, reservation.checkOut)}
+          </BloomText>
+          <BloomText style={styles.meta} numberOfLines={1}>
+            {reservation.nights} {nightLabel} · {reservation.guestCount} {guestLabel}
+            {variant === 'host' ? ` ${t('reservations.card.hostGuestSuffix')}` : ''} ·{' '}
+            {formatMoney(reservation.total, reservation.currency, locale)}
+          </BloomText>
+        </View>
+      </Pressable>
+      {actions ? <CardFooter style={styles.actions}>{actions}</CardFooter> : null}
+    </Card>
   );
 };
 
+/** Edge length of the square thumbnail slot. */
+const THUMBNAIL_SIZE = 96;
+
 const styles = StyleSheet.create({
+  card: {
+    marginBottom: spacing.md,
+  },
+  row: {
+    flexDirection: 'row',
+  },
+  thumb: {
+    width: THUMBNAIL_SIZE,
+    height: THUMBNAIL_SIZE,
+  },
+  body: {
+    flex: 1,
+    padding: spacing.md,
+    justifyContent: 'space-between',
+  },
+  actions: {
+    justifyContent: 'flex-start',
+    paddingHorizontal: spacing.md,
+    paddingTop: 0,
+    paddingBottom: spacing.md,
+  },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -6,7 +6,8 @@ import { useFormatting } from '@/utils/format';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors } from '@/styles/colors';
 import type { RoommateRequest, RoommateProfile } from '@/hooks/useRoommate';
-import { ActionButton } from '@/components/ui/ActionButton';
+import { Button } from '@oxy.so/bloom/button';
+import { RiCheckboxCircleFill, RiCloseCircleLine } from '@oxy.so/bloom/icons';
 import { ThemedText } from './ThemedText';
 
 
@@ -171,22 +172,24 @@ export const RoommateRequestComponent: React.FC<RoommateRequestProps> = ({
         <View style={styles.actions}>
           {type === 'received' ? (
             <>
-              <ActionButton
-                icon="close-circle"
-                text="Decline"
+              <Button
+                leadingIcon={RiCloseCircleLine}
                 onPress={handleDecline}
                 variant="secondary"
                 loading={isLoading}
                 style={styles.declineButton}
-              />
-              <ActionButton
-                icon="checkmark-circle"
-                text="Accept"
+              >
+                Decline
+              </Button>
+              <Button
+                leadingIcon={RiCheckboxCircleFill}
                 onPress={handleAccept}
                 variant="primary"
                 loading={isLoading}
                 style={styles.acceptButton}
-              />
+              >
+                Accept
+              </Button>
             </>
           ) : (
             <View style={styles.sentActions}>

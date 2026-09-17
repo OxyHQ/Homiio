@@ -5,7 +5,7 @@
  * SegmentedControl. Search is the Bloom primitive. Category and
  * recency filters use Bloom Chip. The hand-rolled "sort dropdown" plus
  * bulk-selection mode were retired in favour of a cleaner, single-purpose
- * grid view. Folder grid cards use CardSurface with a cover-photo tile
+ * grid view. Folder grid cards use a Bloom `Card` with a cover-photo tile
  * + name + count. Empty / error / loading states all go through the
  * shared components.
  */
@@ -40,7 +40,7 @@ import type { Property, SavedProperty } from '@homiio/shared-types';
 
 import { Header } from '@/components/Header';
 import { IconButton } from '@/components/ui/IconButton';
-import { CardSurface } from '@/components/ui/CardSurface';
+import { Card } from '@oxy.so/bloom/card';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { ListSkeleton } from '@/components/ui/ListSkeleton';
@@ -415,7 +415,7 @@ const FolderTile: React.FC<FolderTileProps> = ({ folder }) => {
       accessibilityRole="button"
       accessibilityLabel={`Open folder ${folder.name}`}
     >
-      <CardSurface padding={0}>
+      <Card variant="outlined" radius="radius-16">
         <View style={styles.folderCover}>
           <View
             style={[
@@ -436,7 +436,7 @@ const FolderTile: React.FC<FolderTileProps> = ({ folder }) => {
             {`${folder.propertyCount} ${folder.propertyCount === 1 ? 'place' : 'places'}`}
           </BloomText>
         </View>
-      </CardSurface>
+      </Card>
     </Pressable>
   );
 };

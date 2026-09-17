@@ -21,7 +21,7 @@ import { Text as BloomText, H2 } from '@oxy.so/bloom/typography';
 import { TenantApplicationStatus } from '@homiio/shared-types';
 
 import { Header } from '@/components/Header';
-import { CardSurface } from '@/components/ui/CardSurface';
+import { Card } from '@oxy.so/bloom/card';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { useProperty } from '@/hooks';
@@ -153,12 +153,12 @@ export default function NewContractScreen() {
             )}
           </View>
 
-          <CardSurface>
+          <Card variant="outlined" radius="radius-16" className="p-5">
             <H2 style={styles.title}>{propertyTitle}</H2>
             <BloomText style={styles.subtitle}>{t('contracts.new.subtitle')}</BloomText>
-          </CardSurface>
+          </Card>
 
-          <CardSurface>
+          <Card variant="outlined" radius="radius-16" className="p-5">
             <BloomText style={styles.sectionLabel}>{t('contracts.new.seededTerms')}</BloomText>
             <DetailRow
               label={t('contracts.new.moveIn')}
@@ -168,7 +168,7 @@ export default function NewContractScreen() {
               label={t('contracts.new.leaseTerm')}
               value={t('contracts.new.leaseTermMonths', { count: application.leaseTermMonths })}
             />
-          </CardSurface>
+          </Card>
 
           {!isApproved ? (
             <BloomText style={styles.warning}>{t('contracts.new.notApprovedWarning')}</BloomText>

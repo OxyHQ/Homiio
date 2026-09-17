@@ -2,10 +2,10 @@
  * ContractCard — lease summary used by `/contracts` and shared list views.
  *
  * Stream Q polish:
- *   - CardSurface (surfaceElevated, flat, radius.lg) container.
+ *   - Bloom `Card` (outlined, radius-16) container.
  *   - Bloom Typography for every label / value, no raw <Text>.
  *   - Inline Bloom Button actions for share / download (when provided), laid
- *     out by the shared CardActionsFooter.
+ *     out in a Bloom `CardFooter`.
  *
  * The property / parties rows stay bespoke (a 16px icon + small label, and a
  * fixed-width-label + value row): the shared `DetailIconRow` renders a 32px
@@ -22,8 +22,7 @@ import { Button } from '@oxy.so/bloom/button';
 import { Text as BloomText, H3 } from '@oxy.so/bloom/typography';
 import { colors } from '@/styles/colors';
 import { radius, spacing } from '@/constants/styles';
-import { CardSurface } from './ui/CardSurface';
-import { CardActionsFooter } from './ui/CardActionsFooter';
+import { Card, CardFooter } from '@oxy.so/bloom/card';
 import { StatusBadge, type StatusType } from './ui/StatusBadge';
 import { formatLocalized } from '@/utils/dateLocale';
 
@@ -147,7 +146,7 @@ export const ContractCard: React.FC<ContractCardProps> = ({
   );
 
   return (
-    <CardSurface padding={spacing.lg} style={styles.surface}>
+    <Card variant="outlined" radius="radius-16" style={styles.surface}>
       {onPress ? (
         <Pressable
           onPress={onPress}
@@ -164,7 +163,7 @@ export const ContractCard: React.FC<ContractCardProps> = ({
       )}
 
       {onSharePress || onDownloadPress ? (
-        <CardActionsFooter inset="inline">
+        <CardFooter style={styles.actions}>
           {onSharePress ? (
             <Button
               variant="secondary"
@@ -197,9 +196,9 @@ export const ContractCard: React.FC<ContractCardProps> = ({
               {t('contracts.card.download')}
             </Button>
           ) : null}
-        </CardActionsFooter>
+        </CardFooter>
       ) : null}
-    </CardSurface>
+    </Card>
   );
 };
 
@@ -207,7 +206,15 @@ export default ContractCard;
 
 const styles = StyleSheet.create({
   surface: {
+    padding: spacing.lg,
     gap: spacing.sm,
+  },
+  actions: {
+    justifyContent: 'flex-start',
+    paddingHorizontal: 0,
+    paddingTop: 0,
+    paddingBottom: 0,
+    marginTop: spacing.xs,
   },
   bodyPressable: {
     gap: spacing.sm,

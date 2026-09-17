@@ -13,10 +13,9 @@
  *
  * Owner actions (edit / delete) are preserved as clean Bloom buttons attached
  * to each card via the grid's `renderFooter` slot. Delete confirmation uses the
- * shared `ConfirmDialog` (the app's modern pattern; the RN `Alert` it replaced
- * is a no-op on web).
+ * Bloom `confirm()` surface (the RN `Alert` it replaced is a no-op on web).
  */
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { Platform, ScrollView, StyleSheet, View, type ViewStyle } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
@@ -29,7 +28,7 @@ import { PropertyResultsGrid } from '@/components/ui/PropertyResultsGrid';
 import { PropertyResultsGridSkeleton } from '@/components/ui/PropertyResultsGridSkeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
-import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { confirm } from '@oxy.so/bloom/surfaces';
 import { useUserProperties, useDeleteProperty } from '@/hooks/usePropertyQueries';
 import { useMarkPropertyTransacted } from '@/hooks/usePartner';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
@@ -81,11 +80,9 @@ export default function MyPropertiesScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const { data, isLoading, error, refetch } = useUserProperties();
-  const { deleteProperty, loading: isDeleting } = useDeleteProperty();
+  const { deleteProperty } = useDeleteProperty();
   const markTransacted = useMarkPropertyTransacted();
 
-  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
-  const [transactTarget, setTransactTarget] = useState<TransactTarget | null>(null);
 
   const properties = useMemo<Property[]>(
     () => data?.properties ?? [],
@@ -110,20 +107,32 @@ export default function MyPropertiesScreen() {
     [router],
   );
 
-  const handleConfirmDelete = useCallback(async () => {
-    if (!deleteTarget) return;
+  const handleDelete = useCallback(async (deleteTarget: DeleteTarget) => {
+    const ok = await confirm({
+      title: t('properties.my.deleteTitle'),
+      description: t('properties.my.deleteMessage', { title: deleteTarget.title }),
+      confirmLabel: t('common.delete'),
+      cancelLabel: t('common.cancel'),
+      destructive: true,
+    });
+    if (!ok) return;
     try {
       await deleteProperty(deleteTarget.id);
       await refetch();
     } catch (deleteError: unknown) {
       logger.error('Failed to delete property:', deleteError);
-    } finally {
-      setDeleteTarget(null);
     }
-  }, [deleteTarget, deleteProperty, refetch]);
+  }, [deleteProperty, refetch, t]);
 
-  const handleConfirmTransact = useCallback(async () => {
-    if (!transactTarget) return;
+  const handleTransact = useCallback(async (transactTarget: TransactTarget) => {
+    const sold = transactTarget.status === PropertyStatus.SOLD;
+    const ok = await confirm({
+      title: sold ? t('properties.my.markSoldTitle') : t('properties.my.markRentedTitle'),
+      description: t('properties.my.transactMessage', { title: transactTarget.title }),
+      confirmLabel: sold ? t('properties.my.markSold') : t('properties.my.markRented'),
+      cancelLabel: t('common.cancel'),
+    });
+    if (!ok) return;
     try {
       const result = await markTransacted.mutateAsync({
         propertyId: transactTarget.id,
@@ -140,10 +149,8 @@ export default function MyPropertiesScreen() {
     } catch (transactError: unknown) {
       logger.error('Failed to mark property transacted:', transactError);
       toast.error(t('properties.my.transactError'));
-    } finally {
-      setTransactTarget(null);
     }
-  }, [transactTarget, markTransacted, refetch, t]);
+  }, [markTransacted, refetch, t]);
 
   const renderFooter = useCallback(
     (property: Property) => {
@@ -162,7 +169,7 @@ export default function MyPropertiesScreen() {
               variant="primary"
               size="small"
               onPress={() =>
-                setTransactTarget({ id: propertyId, title, status: closeStatus })
+                void handleTransact({ id: propertyId, title, status: closeStatus })
               }
               icon={
                 <Ionicons
@@ -193,7 +200,7 @@ export default function MyPropertiesScreen() {
             <Button
               variant="secondary"
               size="small"
-              onPress={() => setDeleteTarget({ id: propertyId, title })}
+              onPress={() => void handleDelete({ id: propertyId, title })}
               icon={<Ionicons name="trash-outline" size={16} color={colors.danger} />}
               textStyle={styles.deleteText}
               style={styles.ownerActionButton}
@@ -204,7 +211,7 @@ export default function MyPropertiesScreen() {
         </View>
       );
     },
-    [t, handleEditProperty],
+    [t, handleEditProperty, handleDelete, handleTransact],
   );
 
   const body = (() => {
@@ -270,38 +277,7 @@ export default function MyPropertiesScreen() {
         showsVerticalScrollIndicator={false}
       >
         {body}
-      </ScrollView>
-      <ConfirmDialog
-        visible={deleteTarget !== null}
-        title={t('properties.my.deleteTitle')}
-        message={t('properties.my.deleteMessage', { title: deleteTarget?.title ?? '' })}
-        confirmLabel={t('common.delete')}
-        cancelLabel={t('common.cancel')}
-        confirmDestructive
-        loading={isDeleting}
-        onConfirm={() => void handleConfirmDelete()}
-        onCancel={() => setDeleteTarget(null)}
-      />
-      <ConfirmDialog
-        visible={transactTarget !== null}
-        title={
-          transactTarget?.status === PropertyStatus.SOLD
-            ? t('properties.my.markSoldTitle')
-            : t('properties.my.markRentedTitle')
-        }
-        message={t('properties.my.transactMessage',
-          { title: transactTarget?.title ?? '' },)}
-        confirmLabel={
-          transactTarget?.status === PropertyStatus.SOLD
-            ? t('properties.my.markSold')
-            : t('properties.my.markRented')
-        }
-        cancelLabel={t('common.cancel')}
-        loading={markTransacted.isPending}
-        onConfirm={() => void handleConfirmTransact()}
-        onCancel={() => setTransactTarget(null)}
-      />
-    </View>
+      </ScrollView>    </View>
   );
 }
 

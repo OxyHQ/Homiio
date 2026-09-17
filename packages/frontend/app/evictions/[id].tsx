@@ -68,7 +68,7 @@ import { BottomSheetContext } from '@/context/BottomSheetContext';
 import { shareContent } from '@/utils/share';
 import { resolveBackendImageUrl } from '@/utils/imageUrl';
 import { formatRelativeTime } from '@/utils/dateLocale';
-import { webAlert } from '@/utils/api';
+import { alert } from '@oxy.so/bloom/surfaces';
 import { toast } from '@oxy.so/bloom/toast';
 import { colors } from '@/styles/colors';
 import { radius, spacing } from '@/constants/styles';
@@ -202,7 +202,7 @@ export default function EvictionDetailScreen() {
 
   const handleDeleteComment = useCallback(
     (commentId: string) => {
-      webAlert(t('evictions.comments.deleteTitle'), t('evictions.comments.deleteMessage'), [
+      alert(t('evictions.comments.deleteTitle'), t('evictions.comments.deleteMessage'), [
         { text: t('common.cancel'), style: 'cancel' },
         {
           text: t('common.delete'),

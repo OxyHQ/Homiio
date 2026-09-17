@@ -1,4 +1,3 @@
-import { Alert, Platform } from 'react-native';
 import { oxyClient } from '@oxy.so/core';
 import type { LinkedHttpClient } from '@oxy.so/core';
 import { API_URL } from '@/config';
@@ -220,46 +219,6 @@ export const api = {
   },
 };
  
-
-// Web-compatible alert function
-export function webAlert(
-  title: string,
-  message: string,
-  buttons?: {
-    text: string;
-    style?: 'default' | 'cancel' | 'destructive';
-    onPress?: () => void;
-  }[],
-) {
-  if (Platform.OS === 'web') {
-    if (buttons && buttons.length > 1) {
-      // For confirmation dialogs, use browser confirm
-      const result = window.confirm(`${title}\n\n${message}`);
-      if (result) {
-        // Find the non-cancel button and call its onPress
-        const confirmButton = buttons.find((btn) => btn.style !== 'cancel');
-        if (confirmButton?.onPress) {
-          confirmButton.onPress();
-        }
-      } else {
-        // Find the cancel button and call its onPress
-        const cancelButton = buttons.find((btn) => btn.style === 'cancel');
-        if (cancelButton?.onPress) {
-          cancelButton.onPress();
-        }
-      }
-    } else {
-      // For simple alerts, use browser alert
-      window.alert(`${title}\n\n${message}`);
-      if (buttons?.[0]?.onPress) {
-        buttons[0].onPress();
-      }
-    }
-  } else {
-    // On mobile, use React Native Alert
-    Alert.alert(title, message, buttons);
-  }
-}
 
 // Export the API configuration for external use
 export { API_CONFIG };

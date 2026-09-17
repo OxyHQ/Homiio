@@ -12,26 +12,45 @@ function run() {
   return spawnSync(process.execPath, [CHECK, fixture], { encoding: 'utf8' });
 }
 
+function fail(message, result) {
+  console.error(`FAIL: ${message}\n${result.stdout}${result.stderr}`);
+  process.exit(1);
+}
+
 mkdirSync(join(fixture, 'components'));
 writeFileSync(
   join(fixture, 'components', 'Good.tsx'),
-  "import Ionicons from '@expo/vector-icons/Ionicons';\n",
+  [
+    "import Ionicons from '@expo/vector-icons/Ionicons';",
+    "import { Button } from '@oxy.so/bloom/button';",
+    "jest.mock('@oxy.so/bloom/toast', () => ({}));",
+    // Negative control: a doc comment QUOTING the forbidden form is not an import.
+    "// never write: import { Button } from '@oxy.so/bloom';",
+    " * e.g. `import { alert } from '@oxy.so/bloom';` — use the subpath.",
+    '',
+  ].join('\n'),
 );
 
 const clean = run();
-if (clean.status !== 0) {
-  console.error(`FAIL: direct family import was rejected\n${clean.stdout}${clean.stderr}`);
-  process.exit(1);
+if (clean.status !== 0) fail('subpath imports or a comment were rejected', clean);
+
+const mutations = [
+  ['VectorIcons.tsx', "import { Ionicons } from '@expo/vector-icons';\n"],
+  ['BloomFrom.tsx', "import { Button } from '@oxy.so/bloom';\n"],
+  ['BloomMultiline.tsx', "import {\n  Button,\n  alert,\n} from \"@oxy.so/bloom\";\n"],
+  ['BloomExport.ts', "export { Button } from '@oxy.so/bloom';\n"],
+  ['BloomRequire.js', "const bloom = require('@oxy.so/bloom');\n"],
+  ['BloomMock.tsx', "jest.mock('@oxy.so/bloom', () => ({}));\n"],
+];
+
+for (const [name, source] of mutations) {
+  const path = join(fixture, 'components', name);
+  writeFileSync(path, source);
+  const broken = run();
+  rmSync(path);
+  if (broken.status !== 1 || !broken.stderr.includes(`components/${name}:`)) {
+    fail(`root-barrel import in ${name} escaped the gate`, broken);
+  }
 }
 
-writeFileSync(
-  join(fixture, 'components', 'Bad.tsx'),
-  "import { Ionicons } from '@expo/vector-icons';\n",
-);
-const broken = run();
-if (broken.status !== 1 || !broken.stderr.includes('components/Bad.tsx:1')) {
-  console.error(`FAIL: root-barrel import escaped the gate\n${broken.stdout}${broken.stderr}`);
-  process.exit(1);
-}
-
-console.log('Bundle-import gate mutations detected.');
+console.log(`Bundle-import gate: ${mutations.length} mutations detected, controls pass.`);

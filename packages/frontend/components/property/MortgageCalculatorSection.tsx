@@ -9,8 +9,8 @@
  * single shared `DEFAULT_MORTGAGE_CONFIG` in `@homiio/shared-types` so the
  * frontend and backend never disagree on the baseline assumptions.
  *
- * The down-payment control is the shared `RangeSlider` (no extra dependency,
- * works on native + RN-Web) constrained to 5%–50%, driven in fraction units. The
+ * The down-payment control is Bloom's `Slider`, constrained to 5%–50% and
+ * driven in whole percent (the state stays a fraction). The
  * term is a Bloom `SegmentedControl` seeded from `termOptions`.
  */
 import React, { useCallback, useMemo, useState } from 'react';
@@ -26,7 +26,7 @@ import {
 
 import { Section } from '@/components/property/Section';
 import { MoneyText } from '@/components/MoneyText';
-import { RangeSlider } from '@/components/ui/RangeSlider';
+import { Slider } from '@oxy.so/bloom/slider';
 import { parseLocaleNumber } from '@/utils/number';
 import { colors } from '@/styles/colors';
 import { hairline, radius, spacing } from '@/constants/styles';
@@ -40,10 +40,8 @@ interface Props {
 
 const MIN_DOWN_PAYMENT_FRACTION = 0.05;
 const MAX_DOWN_PAYMENT_FRACTION = 0.5;
-/** Drag snaps to whole percentage points (1pp) for a tidy, predictable value. */
-const DOWN_PAYMENT_DRAG_STEP = 0.01;
-/** Screen-reader / keyboard increment & decrement step (5 percentage points). */
-const DOWN_PAYMENT_KEYBOARD_STEP = 0.05;
+/** The slider snaps to whole percentage points (1pp). */
+const DOWN_PAYMENT_STEP_PERCENT = 1;
 const MONTHS_PER_YEAR = 12;
 const PERCENT = 100;
 /** Decimal places kept when seeding the rate field (avoids float-noise like 3.5000000000000004). */
@@ -66,7 +64,7 @@ function monthlyPayment(principal: number, monthlyRate: number, months: number):
   return (principal * monthlyRate * growth) / (growth - 1);
 }
 
-/** Map a down-payment fraction (0.2) to its announced percent integer (20). */
+/** Map a down-payment fraction (0.2) to the slider's percent integer (20). */
 function fractionToPercent(fraction: number): number {
   return Math.round(fraction * PERCENT);
 }
@@ -110,6 +108,10 @@ export const MortgageCalculatorSection: React.FC<Props> = ({ salePrice, currency
   const handleSetTerm = useCallback((value: string) => {
     const parsed = parseInt(value, 10);
     if (!Number.isNaN(parsed)) setTermYears(parsed);
+  }, []);
+
+  const handleDownPaymentPercent = useCallback((percent: number) => {
+    setDownPaymentFraction(percent / PERCENT);
   }, []);
 
   // `downPaymentFraction` and `principalShare` are FRACTIONS, which is what
@@ -162,17 +164,14 @@ export const MortgageCalculatorSection: React.FC<Props> = ({ salePrice, currency
             />
           </BloomText>
         </View>
-        <RangeSlider
-          value={downPaymentFraction}
-          min={MIN_DOWN_PAYMENT_FRACTION}
-          max={MAX_DOWN_PAYMENT_FRACTION}
-          step={DOWN_PAYMENT_DRAG_STEP}
-          keyboardStep={DOWN_PAYMENT_KEYBOARD_STEP}
-          onChange={setDownPaymentFraction}
+        <Slider
+          value={fractionToPercent(downPaymentFraction)}
+          min={fractionToPercent(MIN_DOWN_PAYMENT_FRACTION)}
+          max={fractionToPercent(MAX_DOWN_PAYMENT_FRACTION)}
+          step={DOWN_PAYMENT_STEP_PERCENT}
+          onValueChange={handleDownPaymentPercent}
+          showTooltip={false}
           accessibilityLabel={t('listing.mortgage.downPayment')}
-          accessibilityNow={fractionToPercent}
-          accessibilityMin={fractionToPercent(MIN_DOWN_PAYMENT_FRACTION)}
-          accessibilityMax={fractionToPercent(MAX_DOWN_PAYMENT_FRACTION)}
         />
       </View>
 

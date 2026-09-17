@@ -17,7 +17,7 @@ import { H3, Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { EvictionCaseStatus } from '@homiio/shared-types';
 import { useCreateEvictionUpdate, useUpdateEviction } from '@/hooks/useEvictionQueries';
-import { webAlert } from '@/utils/api';
+import { alert } from '@oxy.so/bloom/surfaces';
 import { toast } from '@oxy.so/bloom/toast';
 import { colors } from '@/styles/colors';
 import { radius, spacing } from '@/constants/styles';
@@ -79,7 +79,7 @@ export const EvictionOwnerControls: React.FC<EvictionOwnerControlsProps> = ({
   };
 
   const handleCancelCase = () => {
-    webAlert(t('evictions.cancel.confirmTitle'), t('evictions.cancel.confirmMessage'), [
+    alert(t('evictions.cancel.confirmTitle'), t('evictions.cancel.confirmMessage'), [
       { text: t('common.cancel'), style: 'cancel' },
       {
         text: t('evictions.cancel.confirm'),

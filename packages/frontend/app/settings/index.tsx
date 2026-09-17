@@ -23,7 +23,7 @@ import {
 } from '@oxy.so/bloom/settings-list';
 
 import { Header } from '@/components/Header';
-import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { confirm } from '@oxy.so/bloom/surfaces';
 import { useCurrency } from '@/hooks/useCurrency';
 import { colors } from '@/styles/colors';
 import { spacing } from '@/constants/styles';
@@ -58,10 +58,6 @@ export default function SettingsScreen() {
   const [autoSync, setAutoSync] = useState(true);
   const [offlineMode, setOfflineMode] = useState(false);
 
-  const [pendingDialog, setPendingDialog] = useState<
-    'signOut' | 'clearCache' | 'export' | null
-  >(null);
-  const [dialogLoading, setDialogLoading] = useState(false);
 
   const userDisplayName =
     typeof user?.name === 'string'
@@ -70,42 +66,45 @@ export default function SettingsScreen() {
   const currentCurrencyInfo = getCurrentCurrency();
 
   const handleSignOut = async () => {
+    const ok = await confirm({
+      title: t('settings.signOut'),
+      description: t('settings.signOutMessage'),
+      confirmLabel: t('settings.signOut'),
+      cancelLabel: t('common.cancel'),
+      destructive: true,
+    });
+    if (!ok) return;
     try {
-      setDialogLoading(true);
       await logout();
       router.replace('/');
       toast.success(t('settings.signOutSuccess'));
     } catch {
       toast.error(t('settings.signOutFailed'));
-    } finally {
-      setDialogLoading(false);
-      setPendingDialog(null);
     }
   };
 
   const handleClearCache = async () => {
-    try {
-      setDialogLoading(true);
-      // Implementation would clear app cache here.
-      toast.success(t('settings.data.clearCacheSuccess'));
-    } catch {
-      toast.error(t('common.error'));
-    } finally {
-      setDialogLoading(false);
-      setPendingDialog(null);
-    }
+    const ok = await confirm({
+      title: t('settings.data.clearCache'),
+      description: t('settings.data.clearCacheMessage'),
+      confirmLabel: t('common.clear'),
+      cancelLabel: t('common.cancel'),
+      destructive: true,
+    });
+    if (!ok) return;
+    // Implementation would clear app cache here.
+    toast.success(t('settings.data.clearCacheSuccess'));
   };
 
   const handleExportData = async () => {
-    try {
-      setDialogLoading(true);
-      toast.success(t('settings.data.exportDataSuccess'));
-    } catch {
-      toast.error(t('common.error'));
-    } finally {
-      setDialogLoading(false);
-      setPendingDialog(null);
-    }
+    const ok = await confirm({
+      title: t('settings.data.exportData'),
+      description: t('settings.data.exportDataMessage'),
+      confirmLabel: t('common.export'),
+      cancelLabel: t('common.cancel'),
+    });
+    if (!ok) return;
+    toast.success(t('settings.data.exportDataSuccess'));
   };
 
   return (
@@ -192,14 +191,14 @@ export default function SettingsScreen() {
             icon={<RowIcon name="download" />}
             title={t('settings.data.exportData')}
             description={t('settings.data.exportDataDesc')}
-            onPress={() => setPendingDialog('export')}
+            onPress={() => void handleExportData()}
           />
           <SettingsListItem
             icon={<RowIcon name="trash" destructive />}
             title={t('settings.data.clearCache')}
             description={t('settings.data.clearCacheDesc')}
             destructive
-            onPress={() => setPendingDialog('clearCache')}
+            onPress={() => void handleClearCache()}
           />
         </SettingsListGroup>
 
@@ -266,42 +265,12 @@ export default function SettingsScreen() {
             title={t('settings.signOut')}
             description={t('settings.signOutDesc')}
             destructive
-            onPress={() => setPendingDialog('signOut')}
+            onPress={() => void handleSignOut()}
           />
         </SettingsListGroup>
 
         <View style={styles.bottomPadding} />
       </ScrollView>
-
-      <ConfirmDialog
-        visible={pendingDialog === 'signOut'}
-        title={t('settings.signOut')}
-        message={t('settings.signOutMessage')}
-        confirmLabel={t('settings.signOut')}
-        confirmDestructive
-        loading={dialogLoading}
-        onConfirm={handleSignOut}
-        onCancel={() => setPendingDialog(null)}
-      />
-      <ConfirmDialog
-        visible={pendingDialog === 'clearCache'}
-        title={t('settings.data.clearCache')}
-        message={t('settings.data.clearCacheMessage')}
-        confirmLabel={t('common.clear')}
-        confirmDestructive
-        loading={dialogLoading}
-        onConfirm={handleClearCache}
-        onCancel={() => setPendingDialog(null)}
-      />
-      <ConfirmDialog
-        visible={pendingDialog === 'export'}
-        title={t('settings.data.exportData')}
-        message={t('settings.data.exportDataMessage')}
-        confirmLabel={t('common.export')}
-        loading={dialogLoading}
-        onConfirm={handleExportData}
-        onCancel={() => setPendingDialog(null)}
-      />
     </View>
   );
 }

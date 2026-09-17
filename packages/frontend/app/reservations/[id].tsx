@@ -2,14 +2,14 @@
  * Reservation detail (guest + host view).
  *
  * Stream P polish:
- * - Each section becomes a `CardSurface` (flat surface, no border).
+ * - Each section is an outlined Bloom `Card`.
  * - Bloom Loading + ErrorState replace the ad-hoc spinner/error views.
  * - Bloom Button for every CTA; the inline modal was replaced by the
- *   shared `ConfirmDialog` (Modal + Bloom Button).
+ *   Bloom `confirm()` surface.
  * - Bloom typography across the board, semantic color tokens (`colors.surface`,
  *   `colors.muted`) — no more raw hex literals.
  */
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import {
   Image,
   ScrollView,
@@ -40,8 +40,8 @@ import {
 } from '@/hooks/useReservationQueries';
 import { PriceBreakdown } from '@/components/PriceBreakdown';
 import { ReservationStatusBadge } from '@/components/ReservationStatusBadge';
-import { ConfirmDialog } from '@/components/ConfirmDialog';
-import { CardSurface } from '@/components/ui/CardSurface';
+import { confirm } from '@oxy.so/bloom/surfaces';
+import { Card } from '@oxy.so/bloom/card';
 import { ErrorState } from '@/components/ui/ErrorState';
 import {
   getPropertyImageSource,
@@ -89,10 +89,6 @@ export default function ReservationDetailScreen() {
   const reservation = reservationQuery.data;
   const { property } = useProperty(reservation?.propertyId ?? '');
 
-  const [pendingAction, setPendingAction] = useState<
-    'cancel' | 'confirm' | 'decline' | null
-  >(null);
-
   const role = useMemo<'guest' | 'host' | null>(() => {
     if (!reservation || !profile) return null;
     const sessionOxyUserId = profile?.oxyUserId;
@@ -114,14 +110,45 @@ export default function ReservationDetailScreen() {
               ? 'reservations.detail.toastDeclined'
               : 'reservations.detail.toastCancelled';
         toast.success(t(toastKey));
-        setPendingAction(null);
       } catch (error) {
         const message = error instanceof Error ? error.message : t('reservations.detail.toastUpdateFailed');
         toast.error(message);
-        setPendingAction(null);
       }
     },
     [id, updateMutation, t],
+  );
+
+  const confirmAction = useCallback(
+    async (action: 'cancel' | 'confirm' | 'decline') => {
+      const options = {
+        cancel: {
+          title: t('reservations.detail.confirmCancelTitle'),
+          description: t('reservations.detail.confirmCancelBody'),
+          confirmLabel: t('reservations.detail.confirmCancelAction'),
+          destructive: true,
+          status: ReservationStatus.CANCELLED,
+        },
+        confirm: {
+          title: t('reservations.detail.confirmApproveTitle'),
+          description: t('reservations.detail.confirmApproveBody'),
+          confirmLabel: t('reservations.detail.approve'),
+          destructive: false,
+          status: ReservationStatus.CONFIRMED,
+        },
+        decline: {
+          title: t('reservations.detail.confirmDeclineTitle'),
+          description: t('reservations.detail.confirmDeclineBody'),
+          confirmLabel: t('reservations.detail.decline'),
+          destructive: true,
+          status: ReservationStatus.DECLINED,
+        },
+      }[action];
+      const { status, ...prompt } = options;
+      if (await confirm({ ...prompt, cancelLabel: t('common.cancel') })) {
+        await handleAction(status);
+      }
+    },
+    [handleAction, t],
   );
 
   const header = (
@@ -206,7 +233,7 @@ export default function ReservationDetailScreen() {
             )}
           </View>
 
-          <CardSurface>
+          <Card variant="outlined" radius="radius-16" className="p-5">
             <View style={styles.headerRow}>
               <H2 style={styles.title}>{propertyTitle}</H2>
               <ReservationStatusBadge status={reservation.status} />
@@ -218,9 +245,9 @@ export default function ReservationDetailScreen() {
                   .join(', ')}
               </BloomText>
             ) : null}
-          </CardSurface>
+          </Card>
 
-          <CardSurface>
+          <Card variant="outlined" radius="radius-16" className="p-5">
             <BloomText style={styles.sectionLabel}>{t('reservations.detail.tripDetails')}</BloomText>
             <DetailRow
               label={t('reservations.detail.checkIn')}
@@ -239,9 +266,9 @@ export default function ReservationDetailScreen() {
               }`}
             />
             <DetailRow label={t('reservations.detail.nights')} value={String(reservation.nights)} />
-          </CardSurface>
+          </Card>
 
-          <CardSurface>
+          <Card variant="outlined" radius="radius-16" className="p-5">
             <BloomText style={styles.sectionLabel}>{t('reservations.detail.price')}</BloomText>
             <PriceBreakdown
               nights={reservation.nights}
@@ -261,7 +288,7 @@ export default function ReservationDetailScreen() {
               }
               currency={reservation.currency}
             />
-          </CardSurface>
+          </Card>
 
           {(showHostApproveDecline || showGuestCancel || showHostCancel) ? (
             <View style={styles.actionRow}>
@@ -270,7 +297,7 @@ export default function ReservationDetailScreen() {
                   <Button
                     variant="primary"
                     size="medium"
-                    onPress={() => setPendingAction('confirm')}
+                    onPress={() => void confirmAction('confirm')}
                     disabled={updateMutation.isPending}
                     style={styles.actionButton}
                   >
@@ -279,7 +306,7 @@ export default function ReservationDetailScreen() {
                   <Button
                     variant="secondary"
                     size="medium"
-                    onPress={() => setPendingAction('decline')}
+                    onPress={() => void confirmAction('decline')}
                     disabled={updateMutation.isPending}
                     style={styles.actionButton}
                   >
@@ -291,7 +318,7 @@ export default function ReservationDetailScreen() {
                 <Button
                   variant="ghost"
                   size="medium"
-                  onPress={() => setPendingAction('cancel')}
+                  onPress={() => void confirmAction('cancel')}
                   disabled={updateMutation.isPending}
                   style={styles.actionButton}
                 >
@@ -311,36 +338,6 @@ export default function ReservationDetailScreen() {
             </BloomText>
           ) : null}
         </ScrollView>
-
-        <ConfirmDialog
-          visible={pendingAction === 'cancel'}
-          title={t('reservations.detail.confirmCancelTitle')}
-          message={t('reservations.detail.confirmCancelBody')}
-          confirmLabel={t('reservations.detail.confirmCancelAction')}
-          confirmDestructive
-          loading={updateMutation.isPending}
-          onConfirm={() => handleAction(ReservationStatus.CANCELLED)}
-          onCancel={() => setPendingAction(null)}
-        />
-        <ConfirmDialog
-          visible={pendingAction === 'confirm'}
-          title={t('reservations.detail.confirmApproveTitle')}
-          message={t('reservations.detail.confirmApproveBody')}
-          confirmLabel={t('reservations.detail.approve')}
-          loading={updateMutation.isPending}
-          onConfirm={() => handleAction(ReservationStatus.CONFIRMED)}
-          onCancel={() => setPendingAction(null)}
-        />
-        <ConfirmDialog
-          visible={pendingAction === 'decline'}
-          title={t('reservations.detail.confirmDeclineTitle')}
-          message={t('reservations.detail.confirmDeclineBody')}
-          confirmLabel={t('reservations.detail.decline')}
-          confirmDestructive
-          loading={updateMutation.isPending}
-          onConfirm={() => handleAction(ReservationStatus.DECLINED)}
-          onCancel={() => setPendingAction(null)}
-        />
       </SafeAreaView>
     </View>
   );

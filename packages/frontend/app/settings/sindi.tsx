@@ -2,7 +2,7 @@
  * Settings → Sindi (assistant preferences).
  *
  * Stream P polish: Bloom SettingsList primitives for rows + toggles, shared
- * ConfirmDialog for destructive flows. The previous version imported a
+ * Bloom `confirm()` for destructive flows. The previous version imported a
  * `sindiApi` member that does not exist in `@/utils/api`; the chat-history
  * UI is removed until a real service ships. The behaviour toggles and the
  * "reset" affordance remain available.
@@ -20,7 +20,7 @@ import {
 } from '@oxy.so/bloom/settings-list';
 
 import { Header } from '@/components/Header';
-import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { confirm } from '@oxy.so/bloom/surfaces';
 import { SindiIcon } from '@/assets/icons';
 import { colors } from '@/styles/colors';
 import { spacing } from '@/constants/styles';
@@ -41,12 +41,17 @@ const RowIcon: React.FC<{ name: IoniconName; destructive?: boolean }> = ({
 export default function SindiSettingsScreen() {
   const { t } = useTranslation();
   const [showTips, setShowTips] = useState(true);
-  const [pendingDialog, setPendingDialog] = useState<'reset' | null>(null);
-
-  const handleResetDefaults = useCallback((): void => {
+  const handleResetDefaults = useCallback(async (): Promise<void> => {
+    const ok = await confirm({
+      title: t('sindi.settings.resetTitle'),
+      description: t('sindi.settings.resetMessage'),
+      confirmLabel: t('common.reset'),
+      cancelLabel: t('common.cancel'),
+      destructive: true,
+    });
+    if (!ok) return;
     setShowTips(true);
     toast.success(t('sindi.settings.resetDone'));
-    setPendingDialog(null);
   }, [t]);
 
   return (
@@ -81,20 +86,10 @@ export default function SindiSettingsScreen() {
           <SettingsListItem
             icon={<RowIcon name="refresh-outline" />}
             title={t('sindi.settings.reset')}
-            onPress={() => setPendingDialog('reset')}
+            onPress={() => void handleResetDefaults()}
           />
         </SettingsListGroup>
       </ScrollView>
-
-      <ConfirmDialog
-        visible={pendingDialog === 'reset'}
-        title={t('sindi.settings.resetTitle')}
-        message={t('sindi.settings.resetMessage')}
-        confirmLabel={t('common.reset')}
-        confirmDestructive
-        onConfirm={handleResetDefaults}
-        onCancel={() => setPendingDialog(null)}
-      />
     </View>
   );
 }

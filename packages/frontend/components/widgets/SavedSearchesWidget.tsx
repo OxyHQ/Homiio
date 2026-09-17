@@ -14,7 +14,7 @@ import { colors } from '@/styles/colors';
 import { ICON_SIZES, radius, spacing } from '@/constants/styles';
 import { BaseWidget } from './BaseWidget';
 import { useSavedSearches } from '@/hooks/useSavedSearches';
-import { webAlert } from '@/utils/api';
+import { alert } from '@oxy.so/bloom/surfaces';
 import { BottomSheetContext } from '@/context/BottomSheetContext';
 import { SavedSearchActionsBottomSheet } from '@/components/SavedSearchActionsBottomSheet';
 import type { SavedSearch } from '@/store/savedSearchesStore';
@@ -123,7 +123,7 @@ export function SavedSearchesWidget() {
   };
 
   const handleDeleteSavedSearch = (search: SavedSearch) => {
-    webAlert(t('search.deleteSearch'), t('search.deleteSearchConfirm', { name: search.name }), [
+    alert(t('search.deleteSearch'), t('search.deleteSearchConfirm', { name: search.name }), [
       { text: t('common.cancel'), style: 'cancel' },
       {
         text: t('common.delete'),
