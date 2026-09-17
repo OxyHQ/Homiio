@@ -33,15 +33,16 @@
  * through `exploreGlobal`, which is a button somebody has to press.
  */
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, RefreshControl, Pressable } from 'react-native';
+import { View, RefreshControl } from 'react-native';
 import { Image } from 'expo-image';
-import { Menu } from 'lucide-react-native';
 import Animated, { FadeInDown, interpolate, useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { Button } from '@oxy.so/bloom/button';
+import { FrostedIconButton } from '@oxy.so/bloom/frosted-icon-button';
+import { RiMenuLine } from '@oxy.so/bloom/icons';
 import { H1, P } from '@oxy.so/bloom/typography';
 
 import { serializeLocationToken, type LocationSelection, type Property } from '@homiio/shared-types';
@@ -69,7 +70,6 @@ import { exploreHref } from '@/utils/searchUrl';
 import { useMediaQuery } from 'react-responsive';
 import { useIsScreenNotMobile } from '@/hooks/useOptimizedMediaQuery';
 import { useUIStore } from '@/store/uiStore';
-import { colors } from '@/styles/colors';
 import { spacing, tracker, PAGE_GUTTER_CLASS } from '@/constants/styles';
 
 /** Hero photo for the Host CTA at the foot of the page. */
@@ -210,15 +210,14 @@ export default function HomePage() {
           />
 
           {!isScreenNotMobile ? (
-            <Pressable
-              onPress={openMobileDrawer}
-              accessibilityRole="button"
-              accessibilityLabel={t('sidebar.open')}
-              hitSlop={spacing.sm}
-              className="absolute left-4 top-3 z-10 h-10 w-10 items-center justify-center rounded-full bg-black/35"
-            >
-              <Menu size={22} color={colors.primaryLight} />
-            </Pressable>
+            <View className="absolute left-4 top-3 z-10">
+              <FrostedIconButton
+                onPress={openMobileDrawer}
+                icon={<RiMenuLine width={22} height={22} />}
+                accessibilityLabel={t('sidebar.open')}
+                hitSlop={{ top: spacing.sm, bottom: spacing.sm, left: spacing.sm, right: spacing.sm }}
+              />
+            </View>
           ) : null}
 
           <View

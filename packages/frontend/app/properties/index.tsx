@@ -31,6 +31,7 @@ import { LoadMoreSentinel } from '@/components/common/LoadMoreSentinel';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { SearchSummaryBar } from '@/components/search/SearchSummaryBar';
+import { RiEqualizerLine, RiExpandUpDownLine, RiTimeLine } from '@oxy.so/bloom/icons';
 import { SearchActionPill } from '@/components/search/SearchActionPill';
 import { resolveSortLabel, SortControl } from '@/components/search/SortControl';
 import {
@@ -304,7 +305,7 @@ export default function PropertiesScreen() {
         >
           <SearchActionPill
             label={t('search.actions.filters')}
-            icon="options-outline"
+            icon={RiEqualizerLine}
             active={activeFilterCount > 0}
             count={activeFilterCount}
             onPress={handleFiltersPress}
@@ -316,14 +317,14 @@ export default function PropertiesScreen() {
           />
           <SearchActionPill
             label={sort.isDefault ? t('search.actions.sort') : sort.label}
-            icon="swap-vertical"
+            icon={RiExpandUpDownLine}
             active={!sort.isDefault}
             onPress={handleSortPress}
             accessibilityLabel={`${t('search.actions.sort')}: ${sort.label}`}
           />
           <SearchActionPill
             label={t('properties.actions.recent')}
-            icon="time-outline"
+            icon={RiTimeLine}
             onPress={() => router.push('/properties/recently-viewed')}
             accessibilityLabel={
               t('properties.actions.recent')

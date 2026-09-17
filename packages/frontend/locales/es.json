@@ -1752,6 +1752,36 @@
     }
   },
   "roommates": {
+    "rooms": {
+        "filtersTitle": "Filtrar habitaciones",
+        "location": "Ubicación",
+        "city": "Ciudad",
+        "state": "Provincia / región",
+        "cityPlaceholder": "Escribe una ciudad",
+        "statePlaceholder": "Escribe una provincia o región",
+        "anyPrice": "Cualquiera",
+        "smokingAllowed": "Se permite fumar",
+        "amenity": {
+          "privateBathroom": "Baño privado",
+          "walkInCloset": "Vestidor"
+        },
+        "sort": {
+          "bestMatch": "Mejor coincidencia",
+          "price": "Precio",
+          "newest": "Más recientes",
+          "name": "Nombre"
+        },
+        "searchPlaceholder": "Buscar habitaciones…",
+        "emptyTitle": "No se encontraron habitaciones",
+        "emptyDescription": "Ajusta los filtros para ver más habitaciones",
+        "capacity_one": "Hasta {{count}} huésped",
+        "capacity_other": "Hasta {{count}} huéspedes",
+        "available": "Disponible",
+        "unavailable": "No disponible",
+        "match": "{{score}} % de coincidencia",
+        "selectedCount": "{{count}} seleccionados",
+        "roomType": "Habitación"
+      },
     "title": "Compañeros de Cuarto",
     "find": "Encontrar Compañeros de Cuarto",
     "myMatches": "Mis Coincidencias",

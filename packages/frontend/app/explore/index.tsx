@@ -46,7 +46,6 @@ import { SearchResultsView } from '@/components/search/SearchResultsView';
 import { SearchPanel } from '@/components/search/SearchPanel';
 import { ErrorState } from '@/components/ui/ErrorState';
 import type { SearchQuery } from '@/components/search/types';
-import { useSearchMode } from '@/context/SearchModeContext';
 import { useUserCoordinates } from '@/hooks/useHomeFeed';
 import {
   DEFAULT_SEARCH_QUERY,
@@ -118,7 +117,6 @@ export default function SearchScreen() {
   const { t } = useTranslation();
   const params = useLocalSearchParams();
   const { isAuthenticated } = useOxy();
-  const { setIsMapMode } = useSearchMode();
   const { data: deviceFix } = useUserCoordinates();
 
   const query = useSearchQueryStore((s) => s.query);
@@ -353,6 +351,17 @@ export default function SearchScreen() {
 
   const handleRequireAuth = useCallback(() => router.push('/profile'), [router]);
 
+  // ONE panel for every state below: each of them offers "choose a place", and
+  // the results surface reopens it to edit the search.
+  const searchPanel = (
+    <SearchPanel
+      open={panelOpen}
+      onClose={handleClosePanel}
+      initialQuery={query}
+      onSubmit={handleSubmitSearch}
+    />
+  );
+
   // A location the URL cannot carry: the commit was refused, so say so rather
   // than leave the user looking at the previous search wondering why nothing
   // happened.
@@ -371,12 +380,7 @@ export default function SearchScreen() {
             setPanelOpen(true);
           }}
         />
-        <SearchPanel
-          open={panelOpen}
-          onClose={handleClosePanel}
-          initialQuery={query}
-          onSubmit={handleSubmitSearch}
-        />
+        {searchPanel}
       </View>
     );
   }
@@ -404,12 +408,7 @@ export default function SearchScreen() {
             setPanelOpen(true);
           }}
         />
-        <SearchPanel
-          open={panelOpen}
-          onClose={handleClosePanel}
-          initialQuery={query}
-          onSubmit={handleSubmitSearch}
-        />
+        {searchPanel}
       </View>
     );
   }
@@ -429,12 +428,7 @@ export default function SearchScreen() {
           retryLabel={t('search.location.chooseAnother', 'Choose a place') ?? undefined}
           onRetry={handleEditSearch}
         />
-        <SearchPanel
-          open={panelOpen}
-          onClose={handleClosePanel}
-          initialQuery={query}
-          onSubmit={handleSubmitSearch}
-        />
+        {searchPanel}
       </View>
     );
   }
@@ -450,12 +444,7 @@ export default function SearchScreen() {
         canSaveSearch={isAuthenticated}
         onRequireAuth={handleRequireAuth}
       />
-      <SearchPanel
-        open={panelOpen}
-        onClose={handleClosePanel}
-        initialQuery={query}
-        onSubmit={handleSubmitSearch}
-      />
+      {searchPanel}
     </View>
   );
 }

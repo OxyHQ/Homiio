@@ -1,71 +1,45 @@
-import React, { useRef, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
-import { Loading } from '@oxy.so/bloom/loading';
-import Ionicons from '@expo/vector-icons/Ionicons';
+/**
+ * Right-rail "Recently viewed" strip.
+ *
+ * Scrolling, snapping and the prev/next arrows are Bloom's `Carousel`; this
+ * widget only owns the card width and its states. The hand-rolled
+ * `ScrollView.onScroll` offset math and the absolutely positioned arrow buttons
+ * it used to carry are gone.
+ */
+import React from 'react';
+import { Platform, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { router } from 'expo-router';
+import { useOxy } from '@oxy.so/services';
+
+import { Button } from '@oxy.so/bloom/button';
+import { Carousel, CarouselItem } from '@oxy.so/bloom/carousel';
+import { RiArrowRightSLine, RiTimeLine } from '@oxy.so/bloom/icons';
+import { Loading } from '@oxy.so/bloom/loading';
+import { Text as BloomText } from '@oxy.so/bloom/typography';
+
 import type { Property } from '@homiio/shared-types';
 import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
-import { useOxy } from '@oxy.so/services';
-import { BaseWidget } from './BaseWidget';
+import { useColors } from '@/hooks/useThemeColor';
 import { PropertyCard } from '@/components/PropertyCard';
-import { colors } from '@/styles/colors';
+import { BaseWidget } from './BaseWidget';
 
+const HEADER_ICON_SIZE = 22;
+const EMPTY_ICON_SIZE = 32;
+/** Card width inside the 318px rail: two cards and a peek of the third. */
+const CARD_WIDTH = 140;
+const CARD_GAP = 12;
 
 export function RecentlyViewedWidget() {
   const { t } = useTranslation();
+  const colors = useColors();
   const { oxyServices, activeSessionId } = useOxy();
   const { properties: recentProperties, isLoading, error } = useRecentlyViewed();
-  const scrollViewRef = useRef<ScrollView>(null);
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(false);
-
-  const [currentScrollX, setCurrentScrollX] = useState(0);
 
   const isAuthenticated = !!(oxyServices && activeSessionId);
-  const isNative = Platform.OS === 'ios' || Platform.OS === 'android';
-  const showArrows = !isNative && recentProperties.length > 2; // Only show if more than 2 items
-
-  // Reset the scroll affordances to the start position whenever the visible
-  // content changes. Done via React's "adjust state during render when a tracked
-  // value changes" pattern instead of an effect, which avoids cascading renders.
-  // Scroll interactions then update these states from `handleScroll`.
-  const scrollResetKey = `${showArrows}:${recentProperties.length}`;
-  const [prevScrollResetKey, setPrevScrollResetKey] = useState(scrollResetKey);
-  if (scrollResetKey !== prevScrollResetKey) {
-    setPrevScrollResetKey(scrollResetKey);
-    setCanScrollRight(showArrows && recentProperties.length > 2);
-    setCanScrollLeft(false);
-    setCurrentScrollX(0);
-  }
-
-  const scrollLeft = () => {
-    if (scrollViewRef.current) {
-      const cardWidth = 152; // 140 + 12 margin
-      const newX = Math.max(0, currentScrollX - cardWidth * 2);
-      scrollViewRef.current.scrollTo({ x: newX, animated: true });
-    }
-  };
-
-  const scrollRight = () => {
-    if (scrollViewRef.current) {
-      const cardWidth = 152; // 140 + 12 margin
-      const newX = currentScrollX + cardWidth * 2;
-      scrollViewRef.current.scrollTo({ x: newX, animated: true });
-    }
-  };
-
-  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
-    const scrollPosition = contentOffset.x;
-    const maxScroll = contentSize.width - layoutMeasurement.width;
-
-    setCurrentScrollX(scrollPosition);
-    setCanScrollLeft(scrollPosition > 5);
-    setCanScrollRight(scrollPosition < maxScroll - 5);
-  };
-
-
+  // Arrows are a pointer affordance; touch swipes. Only when there is more
+  // than fits.
+  const showArrows = Platform.OS === 'web' && recentProperties.length > 2;
 
   const navigateToProperty = (property: Property) => {
     router.push(`/properties/${property.id}`);
@@ -76,181 +50,78 @@ export function RecentlyViewedWidget() {
     return null;
   }
 
+  const headerIcon = <RiTimeLine width={HEADER_ICON_SIZE} height={HEADER_ICON_SIZE} fill={colors.primary} />;
+
   if (error) {
     return (
-      <BaseWidget
-        title={t('home.recentlyViewed.title')}
-        icon={<Ionicons name="time-outline" size={22} color={colors.primaryColor} />}
-      >
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>{error || 'Failed to load properties'}</Text>
+      <BaseWidget title={t('home.recentlyViewed.title')} icon={headerIcon}>
+        <View className="items-center p-4">
+          <BloomText className="text-xs text-muted-foreground">{error}</BloomText>
         </View>
       </BaseWidget>
     );
   }
 
-
+  const renderBody = () => {
+    if (isLoading) {
+      return (
+        <View className="h-[140px] items-center justify-center">
+          <Loading iconSize={16} showText={false} />
+        </View>
+      );
+    }
+    if (recentProperties.length === 0) {
+      return (
+        <View className="items-center gap-1 px-4 py-6">
+          <RiTimeLine width={EMPTY_ICON_SIZE} height={EMPTY_ICON_SIZE} fill={colors.textTertiary} />
+          <BloomText className="mt-1 text-center text-sm font-semibold text-muted-foreground">
+            {t('home.recentlyViewed.noProperties')}
+          </BloomText>
+          <BloomText className="text-center text-xs text-muted-foreground">
+            {t('home.recentlyViewed.noPropertiesDescription')}
+          </BloomText>
+        </View>
+      );
+    }
+    return (
+      <Carousel
+        accessibilityLabel={t('home.recentlyViewed.title')}
+        showArrows={showArrows}
+        showDots={false}
+        gap={CARD_GAP}
+      >
+        {recentProperties.map((property) => (
+          <CarouselItem key={property.id} width={CARD_WIDTH}>
+            <PropertyCard
+              property={property}
+              variant="featured"
+              // Horizontal scroller — an in-card photo pager would fight the
+              // row swipe, so keep the single cover image here.
+              enableImageCarousel={false}
+              onPress={() => navigateToProperty(property)}
+              showFeatures={false}
+              showTypeIcon={false}
+            />
+          </CarouselItem>
+        ))}
+      </Carousel>
+    );
+  };
 
   return (
-    <BaseWidget
-      title={t('home.recentlyViewed.title')}
-      icon={<Ionicons name="time-outline" size={22} color={colors.primaryColor} />}
-    >
-      <View style={styles.widgetContent}>
-        {showArrows && (
-          <>
-            {canScrollLeft && (
-              <TouchableOpacity style={[styles.arrowButton, styles.leftArrow]} onPress={scrollLeft}>
-                <Ionicons name="chevron-back" size={20} color={colors.primaryColor} />
-              </TouchableOpacity>
-            )}
-            {canScrollRight && (
-              <TouchableOpacity
-                style={[styles.arrowButton, styles.rightArrow]}
-                onPress={scrollRight}
-              >
-                <Ionicons name="chevron-forward" size={20} color={colors.primaryColor} />
-              </TouchableOpacity>
-            )}
-          </>
-        )}
-        <ScrollView
-          ref={scrollViewRef}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.container}
-          contentContainerStyle={styles.scrollContent}
-          onScroll={handleScroll}
-          scrollEventThrottle={16}
+    <BaseWidget title={t('home.recentlyViewed.title')} icon={headerIcon}>
+      {renderBody()}
+      <View className="flex-row">
+        <Button
+          variant="text"
+          size="small"
+          trailingIcon={RiArrowRightSLine}
+          onPress={() => router.push('/properties/recently-viewed')}
+          accessibilityLabel={t('home.viewAll')}
         >
-          {isLoading ? (
-            <View style={styles.loadingContainer}>
-              <Loading iconSize={16} showText={false} />
-            </View>
-          ) : recentProperties.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <Ionicons name="time-outline" size={32} color={colors.COLOR_BLACK_LIGHT_4} />
-              <Text style={styles.emptyText}>{t('home.recentlyViewed.noProperties')}</Text>
-              <Text style={styles.emptySubtext}>
-                {t('home.recentlyViewed.noPropertiesDescription')}
-              </Text>
-            </View>
-          ) : (
-            recentProperties.map((property) => (
-              <View key={property.id} style={styles.propertyCard}>
-                <PropertyCard
-                  property={property}
-                  variant="featured"
-                  // Horizontal widget scroller — an in-card photo pager would
-                  // fight the row swipe, so keep the single cover image here.
-                  enableImageCarousel={false}
-                  onPress={() => navigateToProperty(property)}
-                  showFeatures={false}
-                  showTypeIcon={false}
-                />
-              </View>
-            ))
-          )}
-
-          <TouchableOpacity
-            style={styles.viewAllButton}
-            onPress={() => router.push('/properties/recently-viewed')}
-          >
-            <Text style={styles.viewAllText}>{t('home.viewAll')}</Text>
-            <Ionicons name="chevron-forward" size={16} color={colors.primaryColor} />
-          </TouchableOpacity>
-        </ScrollView>
+          {t('home.viewAll')}
+        </Button>
       </View>
     </BaseWidget>
   );
 }
-
-const styles = StyleSheet.create({
-  widgetContent: {
-    position: 'relative',
-  },
-  container: {
-    marginVertical: 5,
-  },
-  scrollContent: {
-    paddingHorizontal: 15,
-    paddingRight: 35,
-  },
-  propertyCard: {
-    width: 140,
-    marginRight: 12,
-  },
-  arrowButton: {
-    position: 'absolute',
-    top: '50%',
-    zIndex: 10,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    transform: [{ translateY: -18 }],
-    borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.1)',
-  },
-  leftArrow: {
-    left: 10,
-  },
-  rightArrow: {
-    right: 10,
-  },
-  viewAllButton: {
-    width: 80,
-    height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: colors.primaryLight,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.COLOR_BLACK_LIGHT_6,
-    borderStyle: 'dashed',
-    flexDirection: 'column',
-  },
-  viewAllText: {
-    color: colors.primaryColor,
-    fontSize: 12,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  loadingContainer: {
-    width: '100%',
-    height: 140,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 15,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 30,
-    paddingHorizontal: 35,
-  },
-  emptyText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.COLOR_BLACK_LIGHT_4,
-    marginTop: 8,
-    textAlign: 'center',
-  },
-  emptySubtext: {
-    fontSize: 12,
-    color: colors.COLOR_BLACK_LIGHT_4,
-    marginTop: 4,
-    textAlign: 'center',
-  },
-  errorContainer: {
-    padding: 15,
-    alignItems: 'center',
-  },
-  errorText: {
-    color: colors.COLOR_BLACK_LIGHT_4,
-    fontSize: 12,
-  },
-});

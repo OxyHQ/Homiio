@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { View, ActivityIndicator } from 'react-native';
+import { View } from 'react-native';
+import { Loading } from '@oxy.so/bloom/loading';
 
 export default function SearchQueryScreen() {
     const router = useRouter();
@@ -19,7 +20,7 @@ export default function SearchQueryScreen() {
 
     return (
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-            <ActivityIndicator size="large" />
+            <Loading size="large" />
         </View>
     );
 }

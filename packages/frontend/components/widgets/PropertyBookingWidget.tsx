@@ -8,10 +8,10 @@
  * same headline price + booking mode, loads the host profile (for the card's
  * host line + Super-host badge), and renders the flat `BookingCard`.
  *
- * The card itself is FLAT (no border): the chrome here is `BaseWidget` — the
- * shared `primaryLight` + radius-15 surface every other right-column widget
- * uses — and, on web, a `position: sticky` wrapper so the card hovers as the
- * user scrolls the long detail page. Returns null while loading, when there is
+ * The card itself is FLAT (no border), and so is its shell: `BaseWidget` adds
+ * no card chrome, because the rail reads as one continuous panel. On web a
+ * `position: sticky` wrapper keeps the card in view as the user scrolls the
+ * long detail page. Returns null while loading, when there is
  * no property, or when the listing has no booking/apply surface for the
  * current mode, so the column never shows a broken card.
  */

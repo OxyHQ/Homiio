@@ -1,8 +1,18 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors } from '@/styles/colors';
+import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+
+import {
+  RiDeleteBinLine,
+  RiEditLine,
+  RiNotification3Line,
+  RiNotificationOffLine,
+} from '@oxy.so/bloom/icons';
+import { Item } from '@oxy.so/bloom/item';
+import { H3 } from '@oxy.so/bloom/typography';
+
+import { spacing } from '@/constants/styles';
+import { useColors } from '@/hooks/useThemeColor';
 
 interface SavedSearch {
   id: string;
@@ -19,6 +29,9 @@ interface Props {
   onDelete: (search: SavedSearch) => void;
 }
 
+const ICON_SIZE = 20;
+
+/** The actions for one saved search, as Bloom rows in the app's sheet. */
 export const SavedSearchActionsBottomSheet: React.FC<Props> = ({
   search,
   onClose,
@@ -27,64 +40,59 @@ export const SavedSearchActionsBottomSheet: React.FC<Props> = ({
   onDelete,
 }) => {
   const { t } = useTranslation();
+  const colors = useColors();
+  const NotificationIcon = search.notificationsEnabled ? RiNotificationOffLine : RiNotification3Line;
+  const notificationLabel = search.notificationsEnabled
+    ? t('search.disableNotifications')
+    : t('search.enableNotifications');
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>{search.name}</Text>
+      <H3 style={styles.title} numberOfLines={1}>
+        {search.name}
+      </H3>
 
-      <TouchableOpacity style={styles.actionItem} onPress={() => { onEdit(search); onClose(); }}>
-        <Ionicons name="create-outline" size={20} color={colors.primaryColor} />
-        <Text style={styles.actionText}>{t('common.edit')}</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={styles.actionItem}
-        onPress={() => { onToggleNotifications(search); onClose(); }}
-      >
-        <Ionicons
-          name={search.notificationsEnabled ? 'notifications-off-outline' : 'notifications-outline'}
-          size={20}
-          color={colors.primaryColor}
-        />
-        <Text style={styles.actionText}>
-          {search.notificationsEnabled ? t('search.disableNotifications') : t('search.enableNotifications')}
-        </Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity style={styles.actionItem} onPress={() => { onDelete(search); onClose(); }}>
-        <Ionicons name="trash-outline" size={20} color={colors.danger} />
-        <Text style={[styles.actionText, styles.deleteText]}>{t('common.delete')}</Text>
-      </TouchableOpacity>
+      <Item
+        title={t('common.edit')}
+        leading={<RiEditLine width={ICON_SIZE} height={ICON_SIZE} fill={colors.text} />}
+        onPress={() => {
+          onEdit(search);
+          onClose();
+        }}
+        accessibilityLabel={t('common.edit')}
+      />
+      <Item
+        title={notificationLabel}
+        leading={<NotificationIcon width={ICON_SIZE} height={ICON_SIZE} fill={colors.text} />}
+        onPress={() => {
+          onToggleNotifications(search);
+          onClose();
+        }}
+        accessibilityLabel={notificationLabel}
+      />
+      <Item
+        title={t('common.delete')}
+        destructive
+        leading={<RiDeleteBinLine width={ICON_SIZE} height={ICON_SIZE} fill={colors.negative} />}
+        onPress={() => {
+          onDelete(search);
+          onClose();
+        }}
+        accessibilityLabel={t('common.delete')}
+      />
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    padding: 12,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xl,
+    gap: spacing.xs,
   },
   title: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.COLOR_BLACK_LIGHT_4,
-    marginBottom: 8,
-  },
-  actionItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 4,
-    borderRadius: 8,
-  },
-  actionText: {
-    marginLeft: 12,
-    fontSize: 16,
-    color: colors.COLOR_BLACK_LIGHT_4,
-    fontWeight: '500',
-  },
-  deleteText: {
-    color: colors.danger,
+    paddingHorizontal: spacing.sm,
+    marginBottom: spacing.sm,
   },
 });
-
-

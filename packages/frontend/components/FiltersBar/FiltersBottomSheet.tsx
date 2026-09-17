@@ -1,9 +1,33 @@
-import React from 'react';
-import { View, StyleSheet, TouchableOpacity } from 'react-native';
-import { ThemedText } from '@/components/ThemedText';
-import { colors } from '@/styles/colors';
-import { LinearGradient } from 'expo-linear-gradient';
+/**
+ * FiltersBottomSheet — the ONE filter sheet body every listing surface renders
+ * (explore results, the property grids, a city page).
+ *
+ * Each section is a Bloom control: `Chip` for single / multiple choice,
+ * `RangeSlider` for a bounded range, `Switch` for a flag and a stepper built on
+ * `Button` for a count. Callers describe sections as data and receive each
+ * change through `onFilterChange`; this component owns no filter semantics.
+ *
+ * ## Why it mirrors the values locally
+ *
+ * The sheet is presented through `BottomSheetContext.openBottomSheet(<… />)`,
+ * which stores the ELEMENT it was given. The caller's state changes on every
+ * press but the element in the sheet is the snapshot from the moment it opened,
+ * so a chip the user just pressed never looked pressed until the sheet was
+ * reopened. Each change is therefore applied to a local overlay as well as
+ * reported upward, and the overlay is what renders.
+ */
+import React, { useCallback, useState } from 'react';
+import { ScrollView, StyleSheet, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
+
+import { Button } from '@oxy.so/bloom/button';
+import { Chip } from '@oxy.so/bloom/chip';
+import { RangeSlider } from '@oxy.so/bloom/slider';
 import { Switch } from '@oxy.so/bloom/switch';
+import { H3, Text as BloomText } from '@oxy.so/bloom/typography';
+
+import { spacing } from '@/constants/styles';
+import { useColors } from '@/hooks/useThemeColor';
 
 export type FilterValue = string | number | boolean | (string | number)[];
 
@@ -16,13 +40,28 @@ export interface FilterOption {
 export interface FilterSection {
     id: string;
     title: string;
-    type: 'range' | 'chips' | 'toggle' | 'date' | 'counter';
+    type: 'range' | 'chips' | 'toggle' | 'counter';
     options?: FilterOption[];
+    /**
+     * Chips only: several options may be on at once. Each press still reports
+     * the ONE option pressed — the caller toggles membership — and the sheet
+     * mirrors that toggle locally.
+     */
+    multiple?: boolean;
+    /** Range only: lower bound. The bound itself reports as `0` ("no minimum"). */
     min?: number;
+    /**
+     * Range: upper bound, which itself reports as `0` ("no maximum").
+     * Counter: the highest count offered.
+     */
     max?: number;
+    /** Range only: slider granularity. Defaults to a hundredth of the span. */
+    step?: number;
+    /** Counter only: accessible names for the decrease / increase buttons. */
+    stepLabels?: [string, string];
+    /** Range only: formats a thumb's value (e.g. as money). */
+    formatValue?: (value: number) => string;
     value?: FilterValue;
-    /** Placeholder shown for date / counter sections when empty. */
-    placeholder?: string;
 }
 
 interface FiltersBottomSheetProps {
@@ -30,6 +69,20 @@ interface FiltersBottomSheetProps {
     onFilterChange: (sectionId: string, value: FilterValue) => void;
     onApply: () => void;
     onClear: () => void;
+    /** Sheet heading. Defaults to "Filters". */
+    title?: string;
+}
+
+type Overrides = Record<string, FilterValue | undefined>;
+
+/** The range a slider shows for a section, with an unset bound at its edge. */
+function rangeOf(section: FilterSection): [number, number] {
+    const min = section.min ?? 0;
+    const max = section.max ?? 0;
+    const [low, high] = Array.isArray(section.value) ? section.value : [];
+    const lo = typeof low === 'number' && low > min ? Math.min(low, max) : min;
+    const hi = typeof high === 'number' && high > 0 ? Math.min(high, max) : max;
+    return [lo, Math.max(lo, hi)];
 }
 
 export function FiltersBottomSheet({
@@ -37,130 +90,174 @@ export function FiltersBottomSheet({
     onFilterChange,
     onApply,
     onClear,
+    title,
 }: FiltersBottomSheetProps) {
+    const { t } = useTranslation();
+    const colors = useColors();
+    const [overrides, setOverrides] = useState<Overrides>({});
+
+    const valueOf = useCallback(
+        (section: FilterSection): FilterValue | undefined =>
+            section.id in overrides ? overrides[section.id] : section.value,
+        [overrides],
+    );
+
+    const report = useCallback(
+        (section: FilterSection, reported: FilterValue, shown: FilterValue | undefined) => {
+            setOverrides((prev) => ({ ...prev, [section.id]: shown }));
+            onFilterChange(section.id, reported);
+        },
+        [onFilterChange],
+    );
+
+    const handleClear = useCallback(() => {
+        setOverrides({});
+        onClear();
+    }, [onClear]);
+
+    const renderChips = (section: FilterSection) => {
+        const current = valueOf(section);
+        const multiple = section.multiple ?? Array.isArray(current);
+        const selectedValues = Array.isArray(current) ? current : [];
+        return (
+            <View style={styles.chips}>
+                {(section.options ?? []).map((option) => {
+                    const isSelected = multiple
+                        ? selectedValues.includes(option.value)
+                        : current === option.value;
+                    const onPress = () => {
+                        if (!multiple) {
+                            report(section, option.value, option.value);
+                            return;
+                        }
+                        const next = isSelected
+                            ? selectedValues.filter((v) => v !== option.value)
+                            : [...selectedValues, option.value];
+                        report(section, option.value, next);
+                    };
+                    return (
+                        <Chip
+                            key={option.id}
+                            variant={isSelected ? 'solid' : 'outlined'}
+                            size="large"
+                            selected={isSelected}
+                            onPress={onPress}
+                            accessibilityLabel={option.label}
+                        >
+                            {option.label}
+                        </Chip>
+                    );
+                })}
+            </View>
+        );
+    };
+
+    const renderRange = (section: FilterSection) => {
+        if (section.min === undefined || section.max === undefined) return null;
+        const min = section.min;
+        const max = section.max;
+        const current = valueOf(section);
+        const shownSection = { ...section, value: current };
+        const [lo, hi] = rangeOf(shownSection);
+        const step = section.step ?? Math.max(1, Math.round((max - min) / 100));
+        const format = section.formatValue ?? ((value: number) => String(value));
+        return (
+            <View style={styles.rangeTrack}>
+                <RangeSlider
+                    value={[lo, hi]}
+                    min={min}
+                    max={max}
+                    step={step}
+                    // The thumbs move locally while dragging; the caller hears about it
+                    // once, when the gesture ends, so a drag is not twenty queries.
+                    onValueChange={(next) =>
+                        setOverrides((prev) => ({ ...prev, [section.id]: next }))
+                    }
+                    onSlidingComplete={([nextLo, nextHi]) =>
+                        report(
+                            section,
+                            [nextLo <= min ? 0 : nextLo, nextHi >= max ? 0 : nextHi],
+                            [nextLo, nextHi],
+                        )
+                    }
+                    formatValue={(value) => format(value)}
+                    thumbLabels={[t('search.step.price.min'), t('search.step.price.max')]}
+                    accessibilityLabel={section.title}
+                />
+            </View>
+        );
+    };
+
+    const renderCounter = (section: FilterSection) => {
+        const current = valueOf(section);
+        const count = typeof current === 'number' ? current : 0;
+        return (
+            <View style={styles.counterRow}>
+                <Button
+                    variant="icon"
+                    size="small"
+                    disabled={count <= 0}
+                    onPress={() => report(section, Math.max(0, count - 1), Math.max(0, count - 1))}
+                    accessibilityLabel={section.stepLabels?.[0] ?? section.title}
+                >
+                    {'−'}
+                </Button>
+                <BloomText style={[styles.counterValue, { color: colors.text }]}>{count}</BloomText>
+                <Button
+                    variant="icon"
+                    size="small"
+                    disabled={section.max !== undefined && count >= section.max}
+                    onPress={() => report(section, count + 1, count + 1)}
+                    accessibilityLabel={section.stepLabels?.[1] ?? section.title}
+                >
+                    {'+'}
+                </Button>
+            </View>
+        );
+    };
+
     return (
         <View style={styles.container}>
-            <View style={styles.header}>
-                <ThemedText style={styles.title}>Filters</ThemedText>
-            </View>
+            <H3 style={styles.title}>{title ?? t('search.actions.filters')}</H3>
 
-            {sections.map((section) => (
-                <View key={section.id} style={styles.section}>
-                    <ThemedText style={styles.sectionTitle}>{section.title}</ThemedText>
-
-                    {section.type === 'chips' && section.options && (
-                        <View style={styles.chipContainer}>
-                            {section.options.map((option) => (
-                                <TouchableOpacity
-                                    key={option.id}
-                                    style={[
-                                        styles.chip,
-                                        section.value === option.value && styles.chipSelected,
-                                    ]}
-                                    onPress={() => onFilterChange(section.id, option.value)}
-                                >
-                                    <ThemedText
-                                        style={[
-                                            styles.chipText,
-                                            section.value === option.value && styles.chipTextSelected,
-                                        ]}
-                                    >
-                                        {option.label}
-                                    </ThemedText>
-                                </TouchableOpacity>
-                            ))}
-                        </View>
-                    )}
-
-                    {section.type === 'range' && section.min !== undefined && section.max !== undefined && (
-                        <View style={styles.rangeContainer}>
-                            <TouchableOpacity
-                                style={styles.rangeInput}
-                            >
-                                <ThemedText>
-                                    {Array.isArray(section.value) && section.value[0] !== undefined
-                                        ? section.value[0]
-                                        : 'Min'}
-                                </ThemedText>
-                            </TouchableOpacity>
-                            <ThemedText style={styles.rangeSeparator}>-</ThemedText>
-                            <TouchableOpacity
-                                style={styles.rangeInput}
-                            >
-                                <ThemedText>
-                                    {Array.isArray(section.value) && section.value[1] !== undefined
-                                        ? section.value[1]
-                                        : 'Max'}
-                                </ThemedText>
-                            </TouchableOpacity>
-                        </View>
-                    )}
-
-                    {section.type === 'toggle' && (
-                        <View style={styles.toggleRow}>
+            <ScrollView
+                style={styles.scroll}
+                contentContainerStyle={styles.scrollContent}
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+            >
+                {sections.map((section) =>
+                    section.type === 'toggle' ? (
+                        <View key={section.id} style={styles.toggleRow}>
+                            <BloomText style={[styles.sectionTitle, styles.toggleLabel, { color: colors.text }]}>
+                                {section.title}
+                            </BloomText>
                             <Switch
-                                value={Boolean(section.value)}
-                                onValueChange={(next) => onFilterChange(section.id, next)}
+                                value={Boolean(valueOf(section))}
+                                onValueChange={(next) => report(section, next, next)}
+                                accessibilityLabel={section.title}
                             />
                         </View>
-                    )}
-
-                    {section.type === 'date' && (
-                        <TouchableOpacity
-                            style={styles.dateInput}
-                            onPress={() => onFilterChange(section.id, '')}
-                        >
-                            <ThemedText style={styles.dateInputText}>
-                                {typeof section.value === 'string' && section.value.length > 0
-                                    ? section.value
-                                    : section.placeholder || 'Select date'}
-                            </ThemedText>
-                        </TouchableOpacity>
-                    )}
-
-                    {section.type === 'counter' && (
-                        <View style={styles.counterRow}>
-                            <TouchableOpacity
-                                style={styles.counterButton}
-                                onPress={() => {
-                                    const current = typeof section.value === 'number' ? section.value : 0;
-                                    onFilterChange(section.id, Math.max(0, current - 1));
-                                }}
-                            >
-                                <ThemedText style={styles.counterButtonText}>-</ThemedText>
-                            </TouchableOpacity>
-                            <ThemedText style={styles.counterValue}>
-                                {typeof section.value === 'number' ? section.value : 0}
-                            </ThemedText>
-                            <TouchableOpacity
-                                style={styles.counterButton}
-                                onPress={() => {
-                                    const current = typeof section.value === 'number' ? section.value : 0;
-                                    onFilterChange(section.id, current + 1);
-                                }}
-                            >
-                                <ThemedText style={styles.counterButtonText}>+</ThemedText>
-                            </TouchableOpacity>
+                    ) : (
+                        <View key={section.id} style={styles.section}>
+                            <BloomText style={[styles.sectionTitle, { color: colors.text }]}>
+                                {section.title}
+                            </BloomText>
+                            {section.type === 'chips' ? renderChips(section) : null}
+                            {section.type === 'range' ? renderRange(section) : null}
+                            {section.type === 'counter' ? renderCounter(section) : null}
                         </View>
-                    )}
-                </View>
-            ))}
+                    ),
+                )}
+            </ScrollView>
 
-            <View style={styles.footer}>
-                <TouchableOpacity style={styles.clearButton} onPress={onClear}>
-                    <ThemedText style={styles.clearButtonText}>Clear All</ThemedText>
-                </TouchableOpacity>
-
-                <TouchableOpacity style={styles.applyButton} onPress={onApply}>
-                    <LinearGradient
-                        colors={[colors.primaryColor, colors.secondaryColor]}
-                        style={styles.applyButtonGradient}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                    >
-                        <ThemedText style={styles.applyButtonText}>Apply</ThemedText>
-                    </LinearGradient>
-                </TouchableOpacity>
+            <View style={[styles.footer, { borderTopColor: colors.border }]}>
+                <Button variant="secondary" size="medium" onPress={handleClear} style={styles.footerButton}>
+                    {t('search.actions.clearAll')}
+                </Button>
+                <Button variant="primary" size="medium" onPress={onApply} style={styles.footerButton}>
+                    {t('common.done')}
+                </Button>
             </View>
         </View>
     );
@@ -169,141 +266,65 @@ export function FiltersBottomSheet({
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: colors.white,
-        padding: 16,
-    },
-    header: {
-        marginBottom: 24,
+        paddingTop: spacing.sm,
     },
     title: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: colors.COLOR_BLACK,
+        paddingHorizontal: spacing.lg,
+        marginBottom: spacing.md,
+    },
+    scroll: {
+        flex: 1,
+    },
+    scrollContent: {
+        paddingHorizontal: spacing.lg,
+        paddingBottom: spacing.lg,
+        gap: spacing.xl,
     },
     section: {
-        marginBottom: 24,
+        gap: spacing.md,
     },
     sectionTitle: {
         fontSize: 16,
         fontWeight: '600',
-        color: colors.COLOR_BLACK,
-        marginBottom: 12,
     },
-    chipContainer: {
+    chips: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        gap: 8,
+        gap: spacing.sm,
     },
-    chip: {
-        paddingHorizontal: 16,
-        paddingVertical: 8,
-        borderRadius: 20,
-        backgroundColor: colors.COLOR_BLACK_LIGHT_7,
-    },
-    chipSelected: {
-        backgroundColor: colors.primaryColor,
-    },
-    chipText: {
-        fontSize: 14,
-        color: colors.COLOR_BLACK,
-    },
-    chipTextSelected: {
-        color: colors.primaryForeground,
-    },
-    rangeContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    rangeInput: {
-        flex: 1,
-        height: 40,
-        borderWidth: 1,
-        borderColor: colors.COLOR_BLACK_LIGHT_6,
-        borderRadius: 8,
-        paddingHorizontal: 12,
-        justifyContent: 'center',
-    },
-    rangeSeparator: {
-        marginHorizontal: 12,
-        color: colors.COLOR_BLACK_LIGHT_4,
+    // The thumbs' value bubbles are centred on the thumbs, so at either end of
+    // the track half a bubble hangs past it; the inset keeps them on screen.
+    rangeTrack: {
+        paddingHorizontal: spacing.xl,
     },
     toggleRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 8,
+        justifyContent: 'space-between',
+        gap: spacing.md,
     },
-    dateInput: {
-        height: 44,
-        borderWidth: 1,
-        borderColor: colors.COLOR_BLACK_LIGHT_6,
-        borderRadius: 10,
-        paddingHorizontal: 12,
-        justifyContent: 'center',
-    },
-    dateInputText: {
-        fontSize: 14,
-        color: colors.COLOR_BLACK_LIGHT_3,
+    toggleLabel: {
+        flex: 1,
     },
     counterRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 16,
-    },
-    counterButton: {
-        width: 36,
-        height: 36,
-        borderRadius: 18,
-        borderWidth: 1,
-        borderColor: colors.COLOR_BLACK_LIGHT_6,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    counterButtonText: {
-        fontSize: 18,
-        fontWeight: '600',
-        color: colors.COLOR_BLACK,
+        gap: spacing.lg,
     },
     counterValue: {
         fontSize: 16,
         fontWeight: '600',
-        color: colors.COLOR_BLACK,
         minWidth: 24,
         textAlign: 'center',
     },
     footer: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginTop: 'auto',
-        gap: 12,
+        gap: spacing.md,
+        paddingHorizontal: spacing.lg,
+        paddingVertical: spacing.md,
+        borderTopWidth: StyleSheet.hairlineWidth,
     },
-    clearButton: {
+    footerButton: {
         flex: 1,
-        height: 44,
-        borderWidth: 1,
-        borderColor: colors.COLOR_BLACK_LIGHT_6,
-        borderRadius: 22,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    clearButtonText: {
-        color: colors.COLOR_BLACK,
-        fontSize: 14,
-        fontWeight: '600',
-    },
-    applyButton: {
-        flex: 1,
-        height: 44,
-        borderRadius: 22,
-        overflow: 'hidden',
-    },
-    applyButtonGradient: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    applyButtonText: {
-        color: colors.primaryForeground,
-        fontSize: 14,
-        fontWeight: '600',
     },
 });

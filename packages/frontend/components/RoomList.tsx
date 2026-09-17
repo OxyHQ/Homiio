@@ -1,20 +1,24 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import {
-    View,
-    Text,
-    StyleSheet,
-    Image,
-    TouchableOpacity,
-    ActivityIndicator,
-    FlatList,
-    RefreshControl,
-    ScrollView,
-    TextInput,
-    Platform,
-} from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { View, StyleSheet, Image, FlatList, RefreshControl, ScrollView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
-import { colors } from '@/styles/colors';
+import { useTranslation } from 'react-i18next';
+
+import { Badge } from '@oxy.so/bloom/badge';
+import { Button } from '@oxy.so/bloom/button';
+import { Card } from '@oxy.so/bloom/card';
+import { Chip } from '@oxy.so/bloom/chip';
+import { Dialog } from '@oxy.so/bloom/dialog';
+import {
+    RiEqualizerLine,
+    RiExpandDiagonalSLine,
+    RiGroupLine,
+    RiHotelBedLine,
+    RiImageLine,
+} from '@oxy.so/bloom/icons';
+import { Loading } from '@oxy.so/bloom/loading';
+import { Search } from '@oxy.so/bloom/search';
+import { Text as BloomText } from '@oxy.so/bloom/typography';
+
 import { ZoomableImage } from '@/components/ui/ZoomableImage';
 import { propertyService, type Property } from '@/services/propertyService';
 import { getPropertyTitle } from '@/utils/propertyUtils';
@@ -22,9 +26,15 @@ import { logger } from '@/utils/logger';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { RoomFilters, type RoomFilterOptions } from '@/components/RoomFilters';
 import { PropertyType, formatArea, formatMoney } from '@homiio/shared-types';
-import { useTranslation } from 'react-i18next';
 import { SEARCH_PRICE_CURRENCY } from '@/components/search/types';
 import { useFormatting } from '@/utils/format';
+import { useColors } from '@/hooks/useThemeColor';
+import { spacing } from '@/constants/styles';
+
+const FEATURE_ICON_SIZE = 16;
+
+/** The rooms filter dialog is a bottom sheet on phones and a centred card on wide screens. */
+const FILTERS_DIALOG_PLACEMENT = { base: 'bottom', md: 'center' } as const;
 
 interface RoomListProps {
     filters?: RoomFilterOptions;
@@ -38,6 +48,8 @@ interface RoomCardProps {
 
 const RoomCard = React.memo(({ property, matchScore }: RoomCardProps) => {
     const router = useRouter();
+    const { t } = useTranslation();
+    const palette = useColors();
     const formatting = useFormatting();
     const { locale, areaUnitLabels } = formatting;
     // Hover anywhere on the card zooms its photo (web). No card transform.
@@ -56,97 +68,89 @@ const RoomCard = React.memo(({ property, matchScore }: RoomCardProps) => {
     // The property contract does not expose live occupancy, so surface the
     // maximum capacity the listing supports instead of an occupied/total count.
     const maxOccupants = property.rules?.maxGuests ?? property.maxGuests ?? 1;
-    const capacityText = `Up to ${maxOccupants} ${maxOccupants === 1 ? 'guest' : 'guests'}`;
 
     return (
-        // Plain View hosts the web hover (TouchableOpacity doesn't type pointer
-        // events); hovering anywhere on the card zooms the photo. No card scale.
+        // Plain View hosts the web hover; hovering anywhere on the card zooms
+        // the photo. The card itself never scales.
         <View
             onPointerEnter={Platform.OS === 'web' ? () => setHovered(true) : undefined}
             onPointerLeave={Platform.OS === 'web' ? () => setHovered(false) : undefined}
+            style={styles.cardWrap}
         >
-        <TouchableOpacity
-            style={styles.roomCard}
-            onPress={handlePress}
-            activeOpacity={0.7}
-        >
-            {/* Room Image */}
-            <View style={styles.imageContainer}>
-                {primaryImage ? (
-                    // The photo zooms inside its mask on hover anywhere on the
-                    // card; the card never moves. The match-score badge is a
-                    // sibling above the zoom.
-                    <ZoomableImage active={hovered} style={styles.roomImageFill}>
-                        <Image
-                            source={{ uri: primaryImage }}
-                            style={styles.roomImage}
-                            resizeMode="cover"
-                        />
-                    </ZoomableImage>
-                ) : (
-                    <View style={[styles.roomImage, styles.placeholderImage]}>
-                        <Ionicons name="image-outline" size={32} color={colors.COLOR_BLACK_LIGHT_5} />
-                    </View>
-                )}
-                {/* Match Score Badge */}
-                {score > 0 && (
-                    <View style={styles.matchScoreBadge}>
-                        <Text style={styles.matchScoreText}>{score}% Match</Text>
-                    </View>
-                )}
-            </View>
-
-            {/* Room Details */}
-            <View style={styles.detailsContainer}>
-                <View style={styles.headerRow}>
-                    <Text style={styles.roomName} numberOfLines={1}>
-                        {title}
-                    </Text>
-                    <Text style={styles.price}>{formattedPrice}</Text>
-                </View>
-
-                <Text style={styles.location} numberOfLines={1}>
-                    {[property.address?.cityName, property.address?.regionName].filter(Boolean).join(', ')}
-                </Text>
-
-                {/* Room Features */}
-                <View style={styles.featuresRow}>
-                    <View style={styles.feature}>
-                        <Ionicons name="bed-outline" size={16} color={colors.primaryDark_1} />
-                        <Text style={styles.featureText}>
-                            {property.type === PropertyType.ROOM ? 'Room' : propertyService.getPropertyTypeDisplay(property.type)}
-                        </Text>
-                    </View>
-                    {property.squareFootage && (
-                        <View style={styles.feature}>
-                            <Ionicons name="resize-outline" size={16} color={colors.primaryDark_1} />
-                            <Text style={styles.featureText}>
-                                {formatArea(property.squareFootage, 'sqm', locale, {
-                                    labels: areaUnitLabels,
-                                })}
-                            </Text>
+            <Card
+                variant="outlined"
+                onPress={handlePress}
+                accessibilityRole="link"
+                accessibilityLabel={title}
+                style={styles.roomCard}
+            >
+                <View style={styles.imageContainer}>
+                    {primaryImage ? (
+                        <ZoomableImage active={hovered} style={styles.roomImageFill}>
+                            <Image source={{ uri: primaryImage }} style={styles.roomImage} resizeMode="cover" />
+                        </ZoomableImage>
+                    ) : (
+                        <View style={[styles.roomImage, styles.placeholderImage, { backgroundColor: palette.backgroundSecondary }]}>
+                            <RiImageLine size="2xl" fill={palette.textTertiary} />
                         </View>
                     )}
-                    <View style={styles.feature}>
-                        <Ionicons name="people-outline" size={16} color={colors.primaryDark_1} />
-                        <Text style={styles.featureText}>{capacityText}</Text>
-                    </View>
+                    {score > 0 ? (
+                        <View style={styles.matchScoreBadge}>
+                            <Badge
+                                variant="solid"
+                                color="primary"
+                                content={t('roommates.rooms.match', { score })}
+                            />
+                        </View>
+                    ) : null}
                 </View>
 
-                {/* Availability Badge */}
-                <View style={[
-                    styles.availabilityBadge,
-                    { backgroundColor: isAvailable ? colors.successSubtle : colors.dangerSubtle }
-                ]}>
-                    <Text style={[
-                        styles.availabilityText,
-                        { color: isAvailable ? colors.success : colors.danger }
-                    ]}>
-                        {isAvailable ? 'Available' : 'Unavailable'}
-                    </Text>
+                <View style={styles.detailsContainer}>
+                    <View style={styles.headerRow}>
+                        <BloomText style={styles.roomName} numberOfLines={1}>
+                            {title}
+                        </BloomText>
+                        <BloomText style={[styles.price, { color: palette.primary }]}>{formattedPrice}</BloomText>
+                    </View>
+
+                    <BloomText style={[styles.location, { color: palette.textSecondary }]} numberOfLines={1}>
+                        {[property.address?.cityName, property.address?.regionName].filter(Boolean).join(', ')}
+                    </BloomText>
+
+                    <View style={styles.featuresRow}>
+                        <View style={styles.feature}>
+                            <RiHotelBedLine width={FEATURE_ICON_SIZE} height={FEATURE_ICON_SIZE} fill={palette.textSecondary} />
+                            <BloomText style={[styles.featureText, { color: palette.textSecondary }]}>
+                                {property.type === PropertyType.ROOM
+                                    ? t('roommates.rooms.roomType')
+                                    : propertyService.getPropertyTypeDisplay(property.type)}
+                            </BloomText>
+                        </View>
+                        {property.squareFootage ? (
+                            <View style={styles.feature}>
+                                <RiExpandDiagonalSLine width={FEATURE_ICON_SIZE} height={FEATURE_ICON_SIZE} fill={palette.textSecondary} />
+                                <BloomText style={[styles.featureText, { color: palette.textSecondary }]}>
+                                    {formatArea(property.squareFootage, 'sqm', locale, { labels: areaUnitLabels })}
+                                </BloomText>
+                            </View>
+                        ) : null}
+                        <View style={styles.feature}>
+                            <RiGroupLine width={FEATURE_ICON_SIZE} height={FEATURE_ICON_SIZE} fill={palette.textSecondary} />
+                            <BloomText style={[styles.featureText, { color: palette.textSecondary }]}>
+                                {t('roommates.rooms.capacity', { count: maxOccupants })}
+                            </BloomText>
+                        </View>
+                    </View>
+
+                    <View style={styles.availability}>
+                        <Badge
+                            variant="subtle"
+                            color={isAvailable ? 'success' : 'error'}
+                            content={isAvailable ? t('roommates.rooms.available') : t('roommates.rooms.unavailable')}
+                        />
+                    </View>
                 </View>
-            </View>
-        </TouchableOpacity>
+            </Card>
         </View>
     );
 });
@@ -155,6 +159,7 @@ RoomCard.displayName = 'RoomCard';
 export function RoomList({ filters, onFilterChange }: RoomListProps) {
     const { t } = useTranslation();
     const { locale } = useFormatting();
+    const palette = useColors();
     // A rent filter bound carries the search-filter currency, like every other
     // numeric price filter in the app.
     const rentBound = (value: unknown): string =>
@@ -249,87 +254,119 @@ export function RoomList({ filters, onFilterChange }: RoomListProps) {
         if (!loading || !hasMore) return null;
         return (
             <View style={styles.footerLoader}>
-                <ActivityIndicator size="small" color={colors.primaryColor} />
+                <Loading size="small" showText={false} />
             </View>
         );
     };
 
+    const filtersDialog = (
+        <Dialog
+            open={showFilters}
+            onClose={() => setShowFilters(false)}
+            placement={FILTERS_DIALOG_PLACEMENT}
+            title={t('roommates.rooms.filtersTitle')}
+            label={t('roommates.rooms.filtersTitle')}
+        >
+            {showFilters ? (
+                <RoomFilters
+                    filters={filters || {}}
+                    onApplyFilters={onFilterChange || (() => { })}
+                    onClose={() => setShowFilters(false)}
+                />
+            ) : null}
+        </Dialog>
+    );
+
     if (loading && rooms.length === 0) {
         return (
             <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color={colors.primaryColor} />
+                <Loading size="large" showText={false} />
             </View>
         );
     }
 
     if (!loading && rooms.length === 0) {
         return (
-            <EmptyState
-                icon="bed-outline"
-                title="No Rooms Found"
-                description="Try adjusting your filters to see more rooms"
-                actionText={filters ? "Clear Filters" : undefined}
-                actionIcon={filters ? "filter-outline" : undefined}
-                onAction={filters ? () => onFilterChange?.({}) : undefined}
-            />
+            <>
+                <EmptyState
+                    icon="bed-outline"
+                    title={t('roommates.rooms.emptyTitle')}
+                    description={t('roommates.rooms.emptyDescription')}
+                    actionText={filters ? t('properties.city.clearFilters') : undefined}
+                    actionIcon={filters ? 'filter-outline' : undefined}
+                    onAction={filters ? () => onFilterChange?.({}) : undefined}
+                />
+                {filtersDialog}
+            </>
         );
     }
 
+    const activeFilterChips = filters
+        ? Object.entries(filters).filter(
+              ([key, value]) =>
+                  Boolean(value) && key !== 'search' && key !== 'sortBy' && key !== 'sortOrder' && key !== 'type',
+          )
+        : [];
+
     return (
         <View style={styles.container}>
-            {/* Header with filter button */}
-            <View style={styles.header}>
+            <View style={[styles.header, { borderBottomColor: palette.border }]}>
                 <View style={styles.searchBar}>
-                    <Ionicons name="search-outline" size={20} color={colors.COLOR_BLACK_LIGHT_5} />
-                    <TextInput
-                        style={styles.searchInput}
-                        placeholder="Search rooms..."
-                        placeholderTextColor={colors.COLOR_BLACK_LIGHT_5}
-                        onChangeText={text => onFilterChange?.({ ...filters, search: text })}
-                        value={filters?.search}
+                    <Search
+                        label={t('roommates.rooms.searchPlaceholder')}
+                        placeholder={t('roommates.rooms.searchPlaceholder')}
+                        value={filters?.search ?? ''}
+                        onChangeText={(text) => onFilterChange?.({ ...filters, search: text })}
+                        onClearText={() => onFilterChange?.({ ...filters, search: undefined })}
                     />
                 </View>
-                <TouchableOpacity
-                    style={styles.filterButton}
+                <Button
+                    variant="secondary"
+                    iconOnly
+                    icon={RiEqualizerLine}
                     onPress={() => setShowFilters(true)}
-                >
-                    <Ionicons name="filter" size={20} color={colors.primaryColor} />
-                </TouchableOpacity>
+                    accessibilityLabel={t('common.filter')}
+                />
             </View>
 
-            {/* Active filters */}
-            {filters && Object.keys(filters).length > 0 && (
+            {activeFilterChips.length > 0 ? (
                 <ScrollView
                     horizontal
                     showsHorizontalScrollIndicator={false}
-                    style={styles.filtersRow}
+                    style={[styles.filtersRow, { borderBottomColor: palette.border }]}
                     contentContainerStyle={styles.filtersContent}
                 >
-                    {Object.entries(filters).map(([key, value]) => {
-                        if (!value || key === 'search' || key === 'sortBy' || key === 'sortOrder' || key === 'type') return null;
+                    {activeFilterChips.map(([key, value]) => {
+                        const label =
+                            key === 'minRent'
+                                ? t('format.range.from', { value: rentBound(value) })
+                                : key === 'maxRent'
+                                    ? t('format.range.upTo', { value: rentBound(value) })
+                                    : Array.isArray(value)
+                                        ? t('roommates.rooms.selectedCount', { count: value.length })
+                                        : String(value);
+                        const remove = () => {
+                            const newFilters = { ...filters };
+                            delete newFilters[key as keyof RoomFilterOptions];
+                            onFilterChange?.(newFilters);
+                        };
                         return (
-                            <TouchableOpacity
+                            <Chip
                                 key={key}
-                                style={styles.filterChip}
-                                onPress={() => {
-                                    const newFilters = { ...filters };
-                                    delete newFilters[key as keyof RoomFilterOptions];
-                                    onFilterChange?.(newFilters);
-                                }}
+                                size="small"
+                                variant="subtle"
+                                color="primary"
+                                onPress={remove}
+                                onClose={remove}
+                                accessibilityLabel={`${t('common.remove')}: ${label}`}
                             >
-                                <Text style={styles.filterChipText}>
-                                    {key === 'minRent' ? t('format.range.from', { value: rentBound(value) }) :
-                                        key === 'maxRent' ? t('format.range.upTo', { value: rentBound(value) }) :
-                                            Array.isArray(value) ? `${value.length} selected` : String(value)}
-                                </Text>
-                                <Ionicons name="close-circle" size={16} color={colors.primaryColor} />
-                            </TouchableOpacity>
+                                {label}
+                            </Chip>
                         );
                     })}
                 </ScrollView>
-            )}
+            ) : null}
 
-            {/* Room list */}
             <FlatList
                 data={rooms}
                 renderItem={({ item }) => <RoomCard property={item} />}
@@ -343,22 +380,13 @@ export function RoomList({ filters, onFilterChange }: RoomListProps) {
                     <RefreshControl
                         refreshing={refreshing}
                         onRefresh={handleRefresh}
-                        colors={[colors.primaryColor]}
-                        tintColor={colors.primaryColor}
+                        colors={[palette.primary]}
+                        tintColor={palette.primary}
                     />
                 }
             />
 
-            {/* Filters modal */}
-            {showFilters && (
-                <View style={StyleSheet.absoluteFill}>
-                    <RoomFilters
-                        filters={filters || {}}
-                        onApplyFilters={onFilterChange || (() => { })}
-                        onClose={() => setShowFilters(false)}
-                    />
-                </View>
-            )}
+            {filtersDialog}
         </View>
     );
 }
@@ -366,69 +394,30 @@ export function RoomList({ filters, onFilterChange }: RoomListProps) {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: colors.primaryLight,
     },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 16,
-        gap: 12,
-        borderBottomWidth: 1,
-        borderBottomColor: colors.COLOR_BLACK_LIGHT_6,
+        padding: spacing.lg,
+        gap: spacing.md,
+        borderBottomWidth: StyleSheet.hairlineWidth,
     },
     searchBar: {
         flex: 1,
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: colors.primaryLight,
-        borderWidth: 1,
-        borderColor: colors.COLOR_BLACK_LIGHT_6,
-        borderRadius: 8,
-        paddingHorizontal: 12,
-        height: 40,
-    },
-    searchInput: {
-        flex: 1,
-        marginLeft: 8,
-        fontSize: 14,
-        color: colors.primaryDark,
-    },
-    filterButton: {
-        width: 40,
-        height: 40,
-        borderRadius: 8,
-        borderWidth: 1,
-        borderColor: colors.COLOR_BLACK_LIGHT_6,
-        justifyContent: 'center',
-        alignItems: 'center',
     },
     filtersRow: {
         maxHeight: 48,
-        borderBottomWidth: 1,
-        borderBottomColor: colors.COLOR_BLACK_LIGHT_6,
+        borderBottomWidth: StyleSheet.hairlineWidth,
     },
     filtersContent: {
-        paddingHorizontal: 16,
-        paddingVertical: 8,
-        gap: 8,
-        flexDirection: 'row',
-    },
-    filterChip: {
+        paddingHorizontal: spacing.lg,
+        paddingVertical: spacing.sm,
+        gap: spacing.sm,
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: `${colors.primaryColor}12`,
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 16,
-        gap: 4,
-    },
-    filterChipText: {
-        fontSize: 12,
-        color: colors.primaryColor,
-        fontWeight: '500',
     },
     listContainer: {
-        padding: 16,
+        padding: spacing.lg,
     },
     loadingContainer: {
         flex: 1,
@@ -436,16 +425,15 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     footerLoader: {
-        paddingVertical: 16,
+        paddingVertical: spacing.lg,
         alignItems: 'center',
     },
+    cardWrap: {
+        marginBottom: spacing.lg,
+    },
     roomCard: {
-        backgroundColor: colors.white,
-        borderRadius: 12,
-        marginBottom: 16,
-        borderWidth: 1,
-        borderColor: colors.border,
         overflow: 'hidden',
+        padding: 0,
     },
     imageContainer: {
         position: 'relative',
@@ -464,77 +452,52 @@ const styles = StyleSheet.create({
         bottom: 0,
     },
     placeholderImage: {
-        backgroundColor: colors.mutedSubtle,
         justifyContent: 'center',
         alignItems: 'center',
     },
     matchScoreBadge: {
         position: 'absolute',
-        top: 12,
-        right: 12,
-        backgroundColor: colors.primaryColor,
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 12,
-    },
-    matchScoreText: {
-        color: colors.primaryForeground,
-        fontSize: 12,
-        fontWeight: '600',
+        top: spacing.md,
+        right: spacing.md,
     },
     detailsContainer: {
-        padding: 16,
+        padding: spacing.lg,
     },
     headerRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 4,
+        marginBottom: spacing.xs,
     },
     roomName: {
         fontSize: 18,
         fontWeight: '600',
-        color: colors.primaryDark,
         flex: 1,
-        marginRight: 8,
+        marginRight: spacing.sm,
     },
     price: {
         fontSize: 16,
         fontWeight: '700',
-        color: colors.primaryColor,
-    },
-    propertyName: {
-        fontSize: 14,
-        color: colors.primaryDark_1,
-        marginBottom: 2,
     },
     location: {
         fontSize: 14,
-        color: colors.COLOR_BLACK_LIGHT_5,
-        marginBottom: 12,
+        marginBottom: spacing.md,
     },
     featuresRow: {
         flexDirection: 'row',
-        marginBottom: 12,
-        gap: 16,
+        flexWrap: 'wrap',
+        marginBottom: spacing.md,
+        gap: spacing.lg,
     },
     feature: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 4,
+        gap: spacing.xs,
     },
     featureText: {
         fontSize: 13,
-        color: colors.primaryDark_1,
     },
-    availabilityBadge: {
+    availability: {
         alignSelf: 'flex-start',
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 4,
-    },
-    availabilityText: {
-        fontSize: 12,
-        fontWeight: '500',
     },
 });

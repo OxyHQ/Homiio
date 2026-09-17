@@ -1,8 +1,29 @@
-import React, { useMemo, useCallback, useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
-import { colors } from '@/styles/colors';
-import { ThemedText } from '../ThemedText';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import React, { useMemo, useState } from 'react';
+import { View } from 'react-native';
+
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@oxy.so/bloom/accordion';
+import { Admonition } from '@oxy.so/bloom/admonition';
+import { Badge } from '@oxy.so/bloom/badge';
+import { Chip } from '@oxy.so/bloom/chip';
+import {
+  RiBankCardLine,
+  RiCameraLine,
+  RiCheckboxCircleFill,
+  RiEyeLine,
+  RiFileTextLine,
+  RiInformationLine,
+  RiListUnordered,
+  RiMapPinLine,
+} from '@oxy.so/bloom/icons';
+import { StatBar } from '@oxy.so/bloom/stat-bar';
+import { Text as BloomText } from '@oxy.so/bloom/typography';
+
+import { useColors } from '@/hooks/useThemeColor';
 import { BaseWidget } from './BaseWidget';
 import { useCreatePropertyFormStore } from '@/store/createPropertyFormStore';
 import {
@@ -20,10 +41,19 @@ import { useFormatting } from '@/utils/format';
 import { PropertyCard } from '../PropertyCard';
 
 
+type SectionIcon = React.ComponentType<{ width?: number; height?: number; fill?: string }>;
+
+const SECTION_ICON_SIZE = 16;
+const EMPTY_ICON_SIZE = 48;
+/** Completion at or above which the listing reads as ready to publish. */
+const READY_THRESHOLD = 80;
+/** Amenity chips shown before the "+N more" overflow. */
+const AMENITY_PREVIEW_COUNT = 6;
+
 interface PreviewSection {
   id: string;
   title: string;
-  icon: keyof typeof Ionicons.glyphMap;
+  icon: SectionIcon;
   isComplete: boolean;
   hasData: boolean;
 }
@@ -41,10 +71,8 @@ const STEP_TO_SECTION: Record<number, string> = {
 export function PropertyPreviewWidget() {
   const { locale, areaUnitLabels } = useFormatting();
   const { formData, currentStep } = useCreatePropertyFormStore();
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(
-    new Set(['basic', 'pricing']),
-  );
-  const [_isCollapsed, _setIsCollapsed] = useState(false);
+  const colors = useColors();
+  const [expandedSections, setExpandedSections] = useState<string[]>(['basic', 'pricing']);
 
   // Helper function for amenity lookup - defined before useMemo hooks
   const getAmenityById = (id: string) => {
@@ -71,7 +99,7 @@ export function PropertyPreviewWidget() {
       {
         id: 'basic',
         title: 'Basic Info',
-        icon: 'information-circle-outline',
+        icon: RiInformationLine,
         isComplete: !!(
           formData?.basicInfo?.propertyType && formData?.basicInfo?.bedrooms !== undefined
         ),
@@ -82,21 +110,21 @@ export function PropertyPreviewWidget() {
       {
         id: 'location',
         title: 'Location',
-        icon: 'location-outline',
+        icon: RiMapPinLine,
         isComplete: !!(formData?.location?.city && formData?.location?.state),
         hasData: !!(formData?.location?.city || formData?.location?.state),
       },
       {
         id: 'pricing',
         title: 'Pricing',
-        icon: 'card-outline',
+        icon: RiBankCardLine,
         isComplete: !!(formData?.pricing?.monthlyRent && formData?.pricing?.monthlyRent > 0),
         hasData: !!(formData?.pricing?.monthlyRent || formData?.pricing?.securityDeposit),
       },
       {
         id: 'amenities',
         title: 'Amenities',
-        icon: 'list-outline',
+        icon: RiListUnordered,
         isComplete: !!(
           formData?.amenities?.selectedAmenities &&
           formData?.amenities?.selectedAmenities.length > 0
@@ -106,14 +134,14 @@ export function PropertyPreviewWidget() {
       {
         id: 'media',
         title: 'Photos',
-        icon: 'camera-outline',
+        icon: RiCameraLine,
         isComplete: !!(formData?.media?.images && formData?.media?.images.length > 0),
         hasData: !!formData?.media?.images?.length,
       },
       {
         id: 'description',
         title: 'Description',
-        icon: 'document-text-outline',
+        icon: RiFileTextLine,
         isComplete: !!(
           formData?.basicInfo?.description && formData?.basicInfo?.description.length > 10
         ),
@@ -128,22 +156,6 @@ export function PropertyPreviewWidget() {
     return Math.round((completedSections / sections.length) * 100);
   }, [sections]);
 
-  const toggleSection = useCallback((sectionId: string) => {
-    setExpandedSections((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(sectionId)) {
-        newSet.delete(sectionId);
-      } else {
-        newSet.add(sectionId);
-      }
-      return newSet;
-    });
-  }, []);
-
-  const _toggleCollapse = useCallback(() => {
-    _setIsCollapsed((prev: boolean) => !prev);
-  }, []);
-
   // Auto-expand only the section for the current wizard step. This resets the
   // user's manual toggles whenever the step changes, so it is implemented with
   // React's "adjust state during render when a tracked value changes" pattern
@@ -154,32 +166,9 @@ export function PropertyPreviewWidget() {
     const sectionToToggle = STEP_TO_SECTION[currentStep];
     if (sectionToToggle) {
       // Only keep the current step's section expanded, collapse all others.
-      setExpandedSections(new Set<string>([sectionToToggle]));
+      setExpandedSections([sectionToToggle]);
     }
   }
-
-  // Memoized property title generation
-  const propertyTitle = useMemo(() => {
-    if (!formData?.basicInfo?.propertyType || !formData?.location?.city) {
-      return 'Property Preview';
-    }
-
-    const { propertyType, bedrooms } = formData.basicInfo;
-    const { city } = formData.location;
-    const typeLabel = propertyType.charAt(0).toUpperCase() + propertyType.slice(1);
-
-    if (propertyType === 'room') {
-      return `${bedrooms} Bedroom Room in ${city}`;
-    } else if (propertyType === 'studio') {
-      return `Studio in ${city}`;
-    } else if (propertyType === 'apartment') {
-      return `${bedrooms} Bedroom Apartment in ${city}`;
-    } else if (propertyType === 'house') {
-      return `${bedrooms} Bedroom House in ${city}`;
-    } else {
-      return `${typeLabel} in ${city}`;
-    }
-  }, [formData?.basicInfo?.propertyType, formData?.basicInfo?.bedrooms, formData?.location?.city]);
 
   // Memoized accommodation type label
   const accommodationType = useMemo(() => {
@@ -209,7 +198,7 @@ export function PropertyPreviewWidget() {
       formData.amenities.selectedAmenities.length === 0
     )
       return [];
-    return formData.amenities.selectedAmenities.slice(0, 6).map((amenity: string) => {
+    return formData.amenities.selectedAmenities.slice(0, AMENITY_PREVIEW_COUNT).map((amenity: string) => {
       const amenityData = getAmenityById(amenity);
       return amenityData?.name || amenity;
     });
@@ -321,569 +310,235 @@ export function PropertyPreviewWidget() {
 
   if (!formData) {
     return (
-      <BaseWidget
-        title="Live Preview"
-        icon={
-          <View style={styles.typeBadge}>
-            <ThemedText style={styles.typeBadgeText}>Preview</ThemedText>
-          </View>
-        }
-      >
-        <View style={styles.emptyContainer}>
-          <View style={styles.emptyIconContainer}>
-            <Ionicons name="eye-outline" size={48} color={colors.COLOR_BLACK_LIGHT_3} />
-          </View>
-          <ThemedText style={styles.emptyTitle}>Start Building Your Listing</ThemedText>
-          <ThemedText style={styles.emptySubtitle}>
+      <BaseWidget title="Live Preview" icon={<Badge content="Preview" color="primary" variant="solid" />}>
+        <View className="items-center gap-2 px-5 py-10">
+          <RiEyeLine width={EMPTY_ICON_SIZE} height={EMPTY_ICON_SIZE} fill={colors.textTertiary} />
+          <BloomText className="text-center text-lg font-semibold text-foreground">
+            Start Building Your Listing
+          </BloomText>
+          <BloomText className="text-center text-sm leading-5 text-muted-foreground">
             Fill out the form to see a live preview of how your property will appear to potential
             tenants
-          </ThemedText>
+          </BloomText>
         </View>
       </BaseWidget>
     );
   }
 
+  const isReady = completionPercentage >= READY_THRESHOLD;
+  const selectedAmenityCount = formData.amenities?.selectedAmenities?.length ?? 0;
+
   return (
     <BaseWidget
       title="Live Preview"
-      icon={
-        <View style={styles.typeBadge}>
-          <ThemedText style={styles.typeBadgeText}>{accommodationType}</ThemedText>
-        </View>
-      }
+      icon={<Badge content={accommodationType} color="primary" variant="solid" />}
     >
-      <ScrollView
-        style={styles.container}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-      >
-        {/* Progress Bar */}
-        <View style={styles.progressContainer}>
-          <View style={styles.progressHeader}>
-            <ThemedText style={styles.progressTitle}>Completion Progress</ThemedText>
-            <ThemedText style={styles.progressPercentage}>{completionPercentage}%</ThemedText>
-          </View>
-          <View style={styles.progressBar}>
-            <View style={[styles.progressFill, { width: `${completionPercentage}%` }]} />
-          </View>
-        </View>
+      <View className="gap-5 pb-5">
+        <StatBar
+          label="Completion Progress"
+          value={completionPercentage}
+          max={100}
+          maxLabel={`${completionPercentage}%`}
+        />
 
-        {/* Property Card Preview */}
         {previewProperty && (
-          <View style={styles.propertyCardContainer}>
-            <PropertyCard
-              property={previewProperty}
-              variant="default"
-              showSaveButton={false}
-              showVerifiedBadge={false}
-              showTypeIcon={true}
-              showFeatures={true}
-              showPrice={true}
-              showLocation={true}
-              showRating={false}
-              imageHeight={160}
-              titleLines={2}
-              locationLines={1}
-              onPress={() => { }} // No action needed for preview
-            />
-          </View>
+          <PropertyCard
+            property={previewProperty}
+            variant="default"
+            showSaveButton={false}
+            showVerifiedBadge={false}
+            showTypeIcon={true}
+            showFeatures={true}
+            showPrice={true}
+            showLocation={true}
+            showRating={false}
+            imageHeight={160}
+            titleLines={2}
+            locationLines={1}
+            onPress={() => { }} // No action needed for preview
+          />
         )}
 
-        {/* Sections */}
-        {sections.map((section) => (
-          <View key={section.id} style={styles.sectionContainer}>
-            <TouchableOpacity
-              style={styles.sectionHeader}
-              onPress={() => toggleSection(section.id)}
-              activeOpacity={0.7}
-            >
-              <View style={styles.sectionHeaderLeft}>
-                <View
-                  style={[styles.sectionIcon, section.isComplete && styles.sectionIconComplete]}
-                >
-                  <Ionicons
-                    name={section.icon}
-                    size={16}
-                    color={section.isComplete ? colors.primaryLight : colors.COLOR_BLACK_LIGHT_3}
-                  />
-                </View>
-                <ThemedText style={styles.sectionTitle}>{section.title}</ThemedText>
-              </View>
-              <View style={styles.sectionHeaderRight}>
-                {section.hasData && (
-                  <View
-                    style={[
-                      styles.completionIndicator,
-                      section.isComplete && styles.completionIndicatorComplete,
-                    ]}
-                  >
-                    <Ionicons
-                      name={section.isComplete ? 'checkmark' : 'ellipse-outline'}
-                      size={12}
-                      color={section.isComplete ? colors.primaryLight : colors.COLOR_BLACK_LIGHT_3}
+        <Accordion
+          type="multiple"
+          value={expandedSections}
+          onValueChange={(next) =>
+            setExpandedSections(Array.isArray(next) ? next : next ? [next] : [])
+          }
+        >
+          {sections.map((section) => {
+            const Icon = section.icon;
+            return (
+              <AccordionItem key={section.id} value={section.id}>
+                <AccordionTrigger
+                  icon={
+                    <Icon
+                      width={SECTION_ICON_SIZE}
+                      height={SECTION_ICON_SIZE}
+                      fill={section.isComplete ? colors.primary : colors.textSecondary}
                     />
+                  }
+                >
+                  <View className="flex-1 flex-row items-center gap-2">
+                    <BloomText className="shrink text-sm font-semibold text-foreground">
+                      {section.title}
+                    </BloomText>
+                    {section.isComplete ? (
+                      <RiCheckboxCircleFill width={14} height={14} fill={colors.success} />
+                    ) : null}
                   </View>
-                )}
-                <Ionicons
-                  name={expandedSections.has(section.id) ? 'chevron-up' : 'chevron-down'}
-                  size={16}
-                  color={colors.COLOR_BLACK_LIGHT_3}
-                />
-              </View>
-            </TouchableOpacity>
-
-            {expandedSections.has(section.id) && (
-              <View style={styles.sectionContent}>
-                {section.id === 'basic' && (
-                  <View style={styles.sectionData}>
-                    {formData.basicInfo?.propertyType && (
-                      <View style={styles.dataItem}>
-                        <ThemedText style={styles.dataLabel}>Type:</ThemedText>
-                        <ThemedText style={styles.dataValue}>{accommodationType}</ThemedText>
-                      </View>
-                    )}
-                    {formData.basicInfo?.bedrooms !== undefined && (
-                      <View style={styles.dataItem}>
-                        <ThemedText style={styles.dataLabel}>Bedrooms:</ThemedText>
-                        <ThemedText style={styles.dataValue}>
-                          {formData.basicInfo.bedrooms}
-                        </ThemedText>
-                      </View>
-                    )}
-                    {formData.basicInfo?.bathrooms !== undefined && (
-                      <View style={styles.dataItem}>
-                        <ThemedText style={styles.dataLabel}>Bathrooms:</ThemedText>
-                        <ThemedText style={styles.dataValue}>
-                          {formData.basicInfo.bathrooms}
-                        </ThemedText>
-                      </View>
-                    )}
-                    {formData.basicInfo?.squareFootage && (
-                      <View style={styles.dataItem}>
-                        <ThemedText style={styles.dataLabel}>Square Footage:</ThemedText>
-                        <ThemedText style={styles.dataValue}>
-                          {formatArea(formData.basicInfo.squareFootage, 'sqm', locale, {
+                </AccordionTrigger>
+                <AccordionContent>
+                  {section.id === 'basic' && (
+                    <View>
+                      {formData.basicInfo?.propertyType && (
+                        <DataRow label="Type:" value={accommodationType} />
+                      )}
+                      {formData.basicInfo?.bedrooms !== undefined && (
+                        <DataRow label="Bedrooms:" value={formData.basicInfo.bedrooms} />
+                      )}
+                      {formData.basicInfo?.bathrooms !== undefined && (
+                        <DataRow label="Bathrooms:" value={formData.basicInfo.bathrooms} />
+                      )}
+                      {(formData.basicInfo?.squareFootage ?? 0) > 0 && (
+                        <DataRow
+                          label="Square Footage:"
+                          value={formatArea(formData.basicInfo.squareFootage, 'sqm', locale, {
                             labels: areaUnitLabels,
                           })}
-                        </ThemedText>
-                      </View>
-                    )}
-                  </View>
-                )}
-
-                {section.id === 'location' && (
-                  <View style={styles.sectionData}>
-                    {formData.location?.city && (
-                      <View style={styles.dataItem}>
-                        <ThemedText style={styles.dataLabel}>City:</ThemedText>
-                        <ThemedText style={styles.dataValue}>{formData.location.city}</ThemedText>
-                      </View>
-                    )}
-                    {formData.location?.state && (
-                      <View style={styles.dataItem}>
-                        <ThemedText style={styles.dataLabel}>State:</ThemedText>
-                        <ThemedText style={styles.dataValue}>{formData.location.state}</ThemedText>
-                      </View>
-                    )}
-                    {formData.location?.postal_code && (
-                      <View style={styles.dataItem}>
-                        <ThemedText style={styles.dataLabel}>ZIP Code:</ThemedText>
-                        <ThemedText style={styles.dataValue}>
-                          {formData.location.postal_code}
-                        </ThemedText>
-                      </View>
-                    )}
-                  </View>
-                )}
-
-                {section.id === 'pricing' && (
-                  <View style={styles.sectionData}>
-                    {formData.pricing?.monthlyRent && formData.pricing.monthlyRent > 0 && (
-                      <View style={styles.dataItem}>
-                        <ThemedText style={styles.dataLabel}>Monthly Rent:</ThemedText>
-                        <ThemedText style={styles.dataValue}>
-                          {formatMoney(formData.pricing.monthlyRent, formData.pricing.currency, locale)}
-                        </ThemedText>
-                      </View>
-                    )}
-                    {formData.pricing?.nightlyRate && formData.pricing.nightlyRate > 0 && (
-                      <View style={styles.dataItem}>
-                        <ThemedText style={styles.dataLabel}>Nightly Rate:</ThemedText>
-                        <ThemedText style={styles.dataValue}>
-                          {formatMoney(formData.pricing.nightlyRate, formData.pricing.currency, locale)}
-                        </ThemedText>
-                      </View>
-                    )}
-                    {formData.pricing?.securityDeposit && formData.pricing.securityDeposit > 0 && (
-                      <View style={styles.dataItem}>
-                        <ThemedText style={styles.dataLabel}>Security Deposit:</ThemedText>
-                        <ThemedText style={styles.dataValue}>
-                          {formatMoney(formData.pricing.securityDeposit, formData.pricing.currency, locale)}
-                        </ThemedText>
-                      </View>
-                    )}
-                    {formData.pricing?.currency && (
-                      <View style={styles.dataItem}>
-                        <ThemedText style={styles.dataLabel}>Currency:</ThemedText>
-                        <ThemedText style={styles.dataValue}>
-                          {formData.pricing.currency}
-                        </ThemedText>
-                      </View>
-                    )}
-                    {formData.pricing?.applicationFee && formData.pricing.applicationFee > 0 && (
-                      <View style={styles.dataItem}>
-                        <ThemedText style={styles.dataLabel}>Application Fee:</ThemedText>
-                        <ThemedText style={styles.dataValue}>
-                          {formatMoney(formData.pricing.applicationFee, formData.pricing.currency, locale)}
-                        </ThemedText>
-                      </View>
-                    )}
-                    {formData.pricing?.lateFee && formData.pricing.lateFee > 0 && (
-                      <View style={styles.dataItem}>
-                        <ThemedText style={styles.dataLabel}>Late Fee:</ThemedText>
-                        <ThemedText style={styles.dataValue}>
-                          {formatMoney(formData.pricing.lateFee, formData.pricing.currency, locale)}
-                        </ThemedText>
-                      </View>
-                    )}
-                  </View>
-                )}
-
-                {section.id === 'amenities' && (
-                  <View style={styles.sectionData}>
-                    {amenitiesDisplay.length > 0 && (
-                      <View style={styles.amenitiesGrid}>
-                        {amenitiesDisplay.map((amenity: string, index: number) => (
-                          <View key={index} style={styles.amenityTag}>
-                            <Ionicons
-                              name="checkmark-circle"
-                              size={12}
-                              color={colors.primaryColor}
-                            />
-                            <ThemedText style={styles.amenityText}>{amenity}</ThemedText>
-                          </View>
-                        ))}
-                        {formData.amenities?.selectedAmenities &&
-                          formData.amenities.selectedAmenities.length > 6 && (
-                            <ThemedText style={styles.moreAmenitiesText}>
-                              +{formData.amenities.selectedAmenities.length - 6} more
-                            </ThemedText>
-                          )}
-                      </View>
-                    )}
-                    {formData.rules?.petsAllowed !== undefined && (
-                      <View style={styles.dataItem}>
-                        <ThemedText style={styles.dataLabel}>Pet Friendly:</ThemedText>
-                        <ThemedText style={styles.dataValue}>
-                          {yesNo(formData.rules.petsAllowed)}
-                        </ThemedText>
-                      </View>
-                    )}
-                    {formData.rules?.smokingAllowed !== undefined && (
-                      <View style={styles.dataItem}>
-                        <ThemedText style={styles.dataLabel}>Smoking Allowed:</ThemedText>
-                        <ThemedText style={styles.dataValue}>
-                          {yesNo(formData.rules.smokingAllowed)}
-                        </ThemedText>
-                      </View>
-                    )}
-                    {formData.rules?.partiesAllowed !== undefined && (
-                      <View style={styles.dataItem}>
-                        <ThemedText style={styles.dataLabel}>Parties Allowed:</ThemedText>
-                        <ThemedText style={styles.dataValue}>
-                          {yesNo(formData.rules.partiesAllowed)}
-                        </ThemedText>
-                      </View>
-                    )}
-                    {formData.rules?.guestsAllowed !== undefined && (
-                      <View style={styles.dataItem}>
-                        <ThemedText style={styles.dataLabel}>Guests Allowed:</ThemedText>
-                        <ThemedText style={styles.dataValue}>
-                          {yesNo(formData.rules.guestsAllowed)}
-                        </ThemedText>
-                      </View>
-                    )}
-                  </View>
-                )}
-
-                {section.id === 'media' && (
-                  <View style={styles.sectionData}>
-                    <View style={styles.dataItem}>
-                      <ThemedText style={styles.dataLabel}>Photos:</ThemedText>
-                      <ThemedText style={styles.dataValue}>
-                        {formData.media?.images ? formData.media.images.length : 0} uploaded
-                      </ThemedText>
+                        />
+                      )}
                     </View>
-                  </View>
-                )}
+                  )}
 
-                {section.id === 'description' && (
-                  <View style={styles.sectionData}>
-                    {formData.basicInfo?.description ? (
-                      <ThemedText style={styles.descriptionText} numberOfLines={4}>
+                  {section.id === 'location' && (
+                    <View>
+                      {formData.location?.city && (
+                        <DataRow label="City:" value={formData.location.city} />
+                      )}
+                      {formData.location?.state && (
+                        <DataRow label="State:" value={formData.location.state} />
+                      )}
+                      {formData.location?.postal_code && (
+                        <DataRow label="ZIP Code:" value={formData.location.postal_code} />
+                      )}
+                    </View>
+                  )}
+
+                  {section.id === 'pricing' && (
+                    <View>
+                      {(formData.pricing?.monthlyRent ?? 0) > 0 && (
+                        <DataRow
+                          label="Monthly Rent:"
+                          value={formatMoney(formData.pricing.monthlyRent, formData.pricing.currency, locale)}
+                        />
+                      )}
+                      {(formData.pricing?.nightlyRate ?? 0) > 0 && (
+                        <DataRow
+                          label="Nightly Rate:"
+                          value={formatMoney(formData.pricing.nightlyRate, formData.pricing.currency, locale)}
+                        />
+                      )}
+                      {(formData.pricing?.securityDeposit ?? 0) > 0 && (
+                        <DataRow
+                          label="Security Deposit:"
+                          value={formatMoney(formData.pricing.securityDeposit, formData.pricing.currency, locale)}
+                        />
+                      )}
+                      {formData.pricing?.currency && (
+                        <DataRow label="Currency:" value={formData.pricing.currency} />
+                      )}
+                      {(formData.pricing?.applicationFee ?? 0) > 0 && (
+                        <DataRow
+                          label="Application Fee:"
+                          value={formatMoney(formData.pricing.applicationFee ?? 0, formData.pricing.currency, locale)}
+                        />
+                      )}
+                      {(formData.pricing?.lateFee ?? 0) > 0 && (
+                        <DataRow
+                          label="Late Fee:"
+                          value={formatMoney(formData.pricing.lateFee ?? 0, formData.pricing.currency, locale)}
+                        />
+                      )}
+                    </View>
+                  )}
+
+                  {section.id === 'amenities' && (
+                    <View className="gap-2">
+                      {amenitiesDisplay.length > 0 && (
+                        <View className="flex-row flex-wrap items-center gap-1.5">
+                          {amenitiesDisplay.map((amenity: string) => (
+                            <Chip key={amenity} size="small" variant="subtle">
+                              {amenity}
+                            </Chip>
+                          ))}
+                          {selectedAmenityCount > AMENITY_PREVIEW_COUNT && (
+                            <BloomText className="text-xs text-muted-foreground">
+                              +{selectedAmenityCount - AMENITY_PREVIEW_COUNT} more
+                            </BloomText>
+                          )}
+                        </View>
+                      )}
+                      <View>
+                        {formData.rules?.petsAllowed !== undefined && (
+                          <DataRow label="Pet Friendly:" value={yesNo(formData.rules.petsAllowed)} />
+                        )}
+                        {formData.rules?.smokingAllowed !== undefined && (
+                          <DataRow label="Smoking Allowed:" value={yesNo(formData.rules.smokingAllowed)} />
+                        )}
+                        {formData.rules?.partiesAllowed !== undefined && (
+                          <DataRow label="Parties Allowed:" value={yesNo(formData.rules.partiesAllowed)} />
+                        )}
+                        {formData.rules?.guestsAllowed !== undefined && (
+                          <DataRow label="Guests Allowed:" value={yesNo(formData.rules.guestsAllowed)} />
+                        )}
+                      </View>
+                    </View>
+                  )}
+
+                  {section.id === 'media' && (
+                    <DataRow
+                      label="Photos:"
+                      value={`${formData.media?.images ? formData.media.images.length : 0} uploaded`}
+                    />
+                  )}
+
+                  {section.id === 'description' &&
+                    (formData.basicInfo?.description ? (
+                      <BloomText
+                        className="text-[13px] leading-[18px] text-muted-foreground"
+                        numberOfLines={4}
+                      >
                         {formData.basicInfo.description}
-                      </ThemedText>
+                      </BloomText>
                     ) : (
-                      <ThemedText style={styles.emptyDescriptionText}>
+                      <BloomText className="text-[13px] italic text-muted-foreground">
                         No description added yet
-                      </ThemedText>
-                    )}
-                  </View>
-                )}
-              </View>
-            )}
-          </View>
-        ))}
+                      </BloomText>
+                    ))}
+                </AccordionContent>
+              </AccordionItem>
+            );
+          })}
+        </Accordion>
 
-        {/* Publish Status */}
-        <View style={styles.publishStatusContainer}>
-          <View
-            style={[
-              styles.publishStatus,
-              completionPercentage >= 80
-                ? styles.publishStatusReady
-                : styles.publishStatusIncomplete,
-            ]}
-          >
-            <Ionicons
-              name={completionPercentage >= 80 ? 'checkmark-circle' : 'alert-circle'}
-              size={20}
-              color={completionPercentage >= 80 ? colors.primaryColor : colors.COLOR_BLACK_LIGHT_3}
-            />
-            <ThemedText
-              style={[
-                styles.publishStatusText,
-                completionPercentage >= 80 && styles.publishStatusTextReady,
-              ]}
-            >
-              {completionPercentage >= 80
-                ? 'Ready to Publish'
-                : `${100 - completionPercentage}% more to complete`}
-            </ThemedText>
-          </View>
-        </View>
-      </ScrollView>
+        <Admonition type={isReady ? 'tip' : 'info'}>
+          {isReady ? 'Ready to Publish' : `${100 - completionPercentage}% more to complete`}
+        </Admonition>
+      </View>
     </BaseWidget>
   );
 }
 
-const styles = StyleSheet.create({
-  typeBadge: {
-    backgroundColor: colors.primaryColor,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  typeBadgeText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.primaryLight,
-  },
-  container: {
-    // No max height constraint - allow full expansion
-  },
-  scrollContent: {
-    paddingBottom: 20,
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    paddingVertical: 40,
-    paddingHorizontal: 20,
-  },
-  emptyIconContainer: {
-    marginBottom: 16,
-    opacity: 0.6,
-  },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.COLOR_BLACK,
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  emptySubtitle: {
-    fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_3,
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-  progressContainer: {
-    marginBottom: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: colors.primaryLight,
-    borderRadius: 12,
-  },
-  progressHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  progressTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.COLOR_BLACK,
-  },
-  progressPercentage: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: colors.primaryColor,
-  },
-  progressBar: {
-    height: 6,
-    backgroundColor: colors.COLOR_BLACK_LIGHT_4,
-    borderRadius: 3,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: colors.primaryColor,
-    borderRadius: 3,
-  },
-  propertyCardContainer: {
-    marginBottom: 20,
-  },
-  sectionContainer: {
-    marginBottom: 12,
-    backgroundColor: colors.primaryLight,
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: colors.COLOR_BLACK_LIGHT_6,
-  },
-  sectionHeaderLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  sectionHeaderRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  sectionIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: colors.COLOR_BLACK_LIGHT_4,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  sectionIconComplete: {
-    backgroundColor: colors.primaryColor,
-  },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.COLOR_BLACK,
-    flex: 1,
-  },
-  completionIndicator: {
-    marginRight: 8,
-  },
-  completionIndicatorComplete: {
-    // Already styled by the icon color
-  },
-  sectionContent: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  sectionData: {
-    // Container for section data
-  },
-  dataItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 6,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.COLOR_BLACK_LIGHT_6,
-  },
-  dataLabel: {
-    fontSize: 13,
-    color: colors.COLOR_BLACK_LIGHT_3,
-    fontWeight: '500',
-  },
-  dataValue: {
-    fontSize: 13,
-    color: colors.COLOR_BLACK,
-    fontWeight: '600',
-    textAlign: 'right',
-    flex: 1,
-    marginLeft: 8,
-  },
-  amenitiesGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginTop: 4,
-  },
-  amenityTag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.COLOR_BLACK_LIGHT_6,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    marginRight: 8,
-    marginBottom: 6,
-  },
-  amenityText: {
-    fontSize: 12,
-    color: colors.COLOR_BLACK,
-    marginLeft: 4,
-    fontWeight: '500',
-  },
-  moreAmenitiesText: {
-    fontSize: 12,
-    color: colors.primaryColor,
-    fontStyle: 'italic',
-    marginTop: 4,
-  },
-  descriptionText: {
-    fontSize: 13,
-    color: colors.COLOR_BLACK_LIGHT_3,
-    lineHeight: 18,
-  },
-  emptyDescriptionText: {
-    fontSize: 13,
-    color: colors.COLOR_BLACK_LIGHT_3,
-    fontStyle: 'italic',
-  },
-  publishStatusContainer: {
-    marginTop: 16,
-    paddingHorizontal: 16,
-  },
-  publishStatus: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    backgroundColor: colors.COLOR_BLACK_LIGHT_6,
-  },
-  publishStatusReady: {
-    backgroundColor: colors.primaryLight,
-    borderWidth: 1,
-    borderColor: colors.primaryColor,
-  },
-  publishStatusIncomplete: {
-    backgroundColor: colors.COLOR_BLACK_LIGHT_6,
-  },
-  publishStatusText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.COLOR_BLACK_LIGHT_3,
-    marginLeft: 8,
-  },
-  publishStatusTextReady: {
-    color: colors.primaryColor,
-  },
-});
+/** One label/value line inside an expanded section. */
+function DataRow({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <View className="flex-row items-center justify-between gap-2 border-b border-border py-1.5">
+      <BloomText className="text-[13px] font-medium text-muted-foreground">{label}</BloomText>
+      <BloomText className="flex-1 text-right text-[13px] font-semibold text-foreground">
+        {value}
+      </BloomText>
+    </View>
+  );
+}
+

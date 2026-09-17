@@ -1,91 +1,55 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { BaseWidget } from './BaseWidget';
-import { ThemedText } from '@/components/ThemedText';
-import { Button } from '@oxy.so/bloom/button';
-import { RiHeartFill } from '@oxy.so/bloom/icons';
-import { colors } from '@/styles/colors';
 
+import { Button } from '@oxy.so/bloom/button';
+import { RiGroupLine, RiHeartFill, RiHomeLine, RiShieldCheckLine } from '@oxy.so/bloom/icons';
+import { Text as BloomText } from '@oxy.so/bloom/typography';
+
+import { useColors } from '@/hooks/useThemeColor';
+import { BaseWidget } from './BaseWidget';
+
+const HEADER_ICON_SIZE = 20;
+const IMPACT_ICON_SIZE = 16;
+
+/** The three impact areas, in display order: icon + i18n title key. */
+const IMPACT_AREAS = [
+  { key: 'development', Icon: RiHomeLine },
+  { key: 'safety', Icon: RiShieldCheckLine },
+  { key: 'community', Icon: RiGroupLine },
+] as const;
 
 export function DonationWidget() {
-    const { t } = useTranslation();
-    const router = useRouter();
+  const { t } = useTranslation();
+  const router = useRouter();
+  const colors = useColors();
 
-    const handleDonatePress = () => {
-        router.push('/donate');
-    };
+  return (
+    <BaseWidget
+      title={t('donations.widget.title')}
+      icon={<RiHeartFill width={HEADER_ICON_SIZE} height={HEADER_ICON_SIZE} fill={colors.primary} />}
+    >
+      <View className="gap-4">
+        <BloomText className="text-sm leading-5 text-muted-foreground">
+          {t('donations.widget.description')}
+        </BloomText>
 
-    return (
-        <BaseWidget
-            title={t('donations.widget.title')}
-            icon={<Ionicons name="heart" size={20} color={colors.primaryColor} />}
-        >
-            <View style={styles.content}>
-                <ThemedText style={styles.description}>
-                    {t('donations.widget.description')}
-                </ThemedText>
-
-                <View style={styles.impactSection}>
-                    <View style={styles.impactItem}>
-                        <Ionicons name="home" size={16} color={colors.primaryColor} />
-                        <ThemedText style={styles.impactText}>
-                            {t('donations.page.impact.areas.development.title')}
-                        </ThemedText>
-                    </View>
-
-                    <View style={styles.impactItem}>
-                        <Ionicons name="shield-checkmark" size={16} color={colors.primaryColor} />
-                        <ThemedText style={styles.impactText}>
-                            {t('donations.page.impact.areas.safety.title')}
-                        </ThemedText>
-                    </View>
-
-                    <View style={styles.impactItem}>
-                        <Ionicons name="people" size={16} color={colors.primaryColor} />
-                        <ThemedText style={styles.impactText}>
-                            {t('donations.page.impact.areas.community.title')}
-                        </ThemedText>
-                    </View>
-                </View>
-
-                <Button
-                    leadingIcon={RiHeartFill}
-                    onPress={handleDonatePress}
-                    variant="primary"
-                    style={styles.donateButton}
-                >
-                    {t('donations.widget.button')}
-                </Button>
+        <View className="gap-2">
+          {IMPACT_AREAS.map(({ key, Icon }) => (
+            <View key={key} className="flex-row items-center gap-2">
+              <Icon width={IMPACT_ICON_SIZE} height={IMPACT_ICON_SIZE} fill={colors.primary} />
+              <BloomText className="flex-1 text-[13px] text-muted-foreground">
+                {t(`donations.page.impact.areas.${key}.title`)}
+              </BloomText>
             </View>
-        </BaseWidget>
-    );
-}
+          ))}
+        </View>
 
-const styles = StyleSheet.create({
-    content: {
-        gap: 16,
-    },
-    description: {
-        fontSize: 14,
-        lineHeight: 20,
-        color: colors.COLOR_BLACK_LIGHT_4,
-    },
-    impactSection: {
-        gap: 8,
-    },
-    impactItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-    },
-    impactText: {
-        fontSize: 13,
-        color: colors.COLOR_BLACK_LIGHT_4,
-        flex: 1,
-    },
-    donateButton: {
-    },
-});
+        <Button leadingIcon={RiHeartFill} onPress={() => router.push('/donate')} variant="primary">
+          {t('donations.widget.button')}
+        </Button>
+      </View>
+    </BaseWidget>
+  );
+}

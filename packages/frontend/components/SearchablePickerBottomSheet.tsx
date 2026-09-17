@@ -1,7 +1,14 @@
 import React, { useState, useMemo } from 'react';
-import { View, TextInput, FlatList, TouchableOpacity, Text, StyleSheet } from 'react-native';
-import { ThemedText } from './ThemedText';
-import { colors } from '@/styles/colors';
+import { View, FlatList, StyleSheet } from 'react-native';
+import { useTranslation } from 'react-i18next';
+
+import { RiCheckLine } from '@oxy.so/bloom/icons';
+import { Item } from '@oxy.so/bloom/item';
+import { Search } from '@oxy.so/bloom/search';
+import { Text as BloomText } from '@oxy.so/bloom/typography';
+
+import { useColors } from '@/hooks/useThemeColor';
+import { spacing } from '@/constants/styles';
 
 interface SearchablePickerBottomSheetProps {
   options: string[];
@@ -11,6 +18,10 @@ interface SearchablePickerBottomSheetProps {
   onClose: () => void;
 }
 
+/**
+ * A filterable single-choice list, presented as bottom-sheet content: a Bloom
+ * `Search` over Bloom `Item` rows, with a check on the selected option.
+ */
 export const SearchablePickerBottomSheet: React.FC<SearchablePickerBottomSheetProps> = ({
   options,
   selected,
@@ -18,6 +29,8 @@ export const SearchablePickerBottomSheet: React.FC<SearchablePickerBottomSheetPr
   title,
   onClose,
 }) => {
+  const { t } = useTranslation();
+  const palette = useColors();
   const [search, setSearch] = useState('');
   const filteredOptions = useMemo(
     () => options.filter((opt) => opt.toLowerCase().includes(search.trim().toLowerCase())),
@@ -26,34 +39,42 @@ export const SearchablePickerBottomSheet: React.FC<SearchablePickerBottomSheetPr
 
   return (
     <View style={styles.container}>
-      <ThemedText type="subtitle" style={styles.title}>
+      <BloomText style={[styles.title, { color: palette.text }]} accessibilityRole="header">
         {title}
-      </ThemedText>
-      <TextInput
-        style={styles.input}
-        placeholder={`Search ${title.toLowerCase()}...`}
+      </BloomText>
+      <Search
+        label={title}
+        placeholder={`${t('common.search')}…`}
         value={search}
         onChangeText={setSearch}
+        onClearText={() => setSearch('')}
         autoFocus
       />
       <FlatList
         data={filteredOptions}
         keyExtractor={(item) => item}
         keyboardShouldPersistTaps="handled"
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={[styles.option, item === selected && styles.optionSelected]}
-            onPress={() => {
-              onSelect(item);
-              onClose();
-            }}
-          >
-            <Text style={[styles.optionText, item === selected && styles.optionTextSelected]}>
-              {item}
-            </Text>
-          </TouchableOpacity>
-        )}
-        ListEmptyComponent={<Text style={styles.emptyText}>No results</Text>}
+        renderItem={({ item }) => {
+          const isSelected = item === selected;
+          return (
+            <Item
+              title={item}
+              role="option"
+              selected={isSelected}
+              trailing={isSelected ? <RiCheckLine size="md" fill={palette.primary} /> : undefined}
+              accessibilityLabel={item}
+              onPress={() => {
+                onSelect(item);
+                onClose();
+              }}
+            />
+          );
+        }}
+        ListEmptyComponent={
+          <BloomText style={[styles.emptyText, { color: palette.textSecondary }]}>
+            {t('common.noResults')}
+          </BloomText>
+        }
         style={styles.list}
       />
     </View>
@@ -62,50 +83,19 @@ export const SearchablePickerBottomSheet: React.FC<SearchablePickerBottomSheetPr
 
 const styles = StyleSheet.create({
   container: {
-    padding: 20,
-    backgroundColor: colors.COLOR_BACKGROUND,
+    padding: spacing.xl,
+    gap: spacing.md,
     flex: 1,
   },
   title: {
-    marginBottom: 12,
-    fontWeight: 'bold',
+    fontWeight: '700',
     fontSize: 18,
-    color: colors.primaryDark,
-  },
-  input: {
-    backgroundColor: colors.COLOR_BLACK_LIGHT_9,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: colors.COLOR_BLACK_LIGHT_6,
-    padding: 12,
-    fontSize: 16,
-    marginBottom: 16,
-    color: colors.primaryDark,
   },
   list: {
     flex: 1,
   },
-  option: {
-    paddingVertical: 14,
-    paddingHorizontal: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.COLOR_BLACK_LIGHT_8,
-  },
-  optionSelected: {
-    backgroundColor: colors.primaryLight_2,
-  },
-  optionText: {
-    fontSize: 16,
-    color: colors.primaryDark,
-  },
-  optionTextSelected: {
-    color: colors.primaryColor,
-    fontWeight: 'bold',
-  },
   emptyText: {
     textAlign: 'center',
-    color: colors.COLOR_BLACK_LIGHT_4,
-    marginTop: 24,
-    fontStyle: 'italic',
+    marginTop: spacing['2xl'],
   },
 });

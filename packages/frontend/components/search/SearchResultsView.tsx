@@ -11,8 +11,8 @@
  *
  * Top bar: an editable `SearchSummaryBar` (tap → reopens the panel) whose
  * trailing bookmark saves the search (reuses `SaveSearchBottomSheet`), plus a
- * Filters button (reuses `SearchFiltersBottomSheet`) and a Sort control
- * (`SortControl`). A "Search this area" button over the map re-queries using
+ * Filters pill (reuses `SearchFiltersBottomSheet`) and a Sort pill opening a
+ * Bloom dropdown menu (`SortMenu`). A "Search this area" button over the map re-queries using
  * the current map bounds.
  *
  * Data comes from `usePropertySearch` keyed by the active query; this component
@@ -22,9 +22,9 @@ import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } 
 import { Platform, ScrollView, StyleSheet, View, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { Button } from '@oxy.so/bloom/button';
+import { RiEqualizerLine, RiRefreshLine } from '@oxy.so/bloom/icons';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { useSavedSearches } from '@/hooks/useSavedSearches';
@@ -56,7 +56,7 @@ import { locationDisplayLabel, savedSearchName } from './types';
 
 import { SearchActionPill } from './SearchActionPill';
 import { SearchSummaryBar } from './SearchSummaryBar';
-import { resolveSortLabel, SortControl } from './SortControl';
+import { SortMenu } from './SortControl';
 import { committedScopeBounds, reduceMapMovement, type MapMovement } from './searchArea';
 import { toMarkers } from './searchMarkers';
 import type { SearchQuery, SearchSortBy, SearchSortOrder } from './types';
@@ -98,14 +98,17 @@ function toSheetFilters(query: SearchQuery): SearchFilters {
   return {
     minPrice: query.priceMin ?? 0,
     maxPrice: query.priceMax ?? 0,
-    bedrooms: query.bedrooms ?? 1,
-    bathrooms: query.bathrooms ?? 1,
+    // No bound is no selection. Defaulting these to 1 painted a "1" chip as
+    // chosen in a sheet whose search had no bedroom filter at all.
+    bedrooms: query.bedrooms ?? '',
+    bathrooms: query.bathrooms ?? '',
     type: query.propertyTypes[0],
     amenities: query.amenities,
     guests: query.guests,
     checkIn: query.dates?.start,
     checkOut: query.dates?.end,
     fairPrice: query.fairPrice,
+    instantBook: query.instantBook,
   };
 }
 
@@ -113,7 +116,8 @@ function toSheetFilters(query: SearchQuery): SearchFilters {
  * Count the *applied* refinements in a query for the Filters pill badge. The
  * location, sort, map bounds, and the active offering (the browse toggle) are
  * surfaced elsewhere, so they don't count here — only the controls the filters
- * sheet edits: property type(s), price, bedrooms, bathrooms, and each amenity.
+ * sheet edits: property type(s), price, bedrooms, bathrooms, each amenity, and
+ * the fair-price and instant-book flags.
  */
 function countActiveFilters(query: SearchQuery): number {
   let count = 0;
@@ -123,6 +127,7 @@ function countActiveFilters(query: SearchQuery): number {
   if (query.bathrooms !== undefined) count += 1;
   count += query.amenities.length;
   if (query.fairPrice === true) count += 1;
+  if (query.instantBook === true) count += 1;
   return count;
 }
 
@@ -222,11 +227,6 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
 
   // --- Top-bar control state (drives the action pills' active/badge UI) ---
   const activeFilterCount = useMemo(() => countActiveFilters(query), [query]);
-
-  const sort = useMemo(
-    () => resolveSortLabel(query.sortBy, query.sortOrder, t),
-    [query.sortBy, query.sortOrder, t],
-  );
 
   // A search is "saved" when one already exists for this exact selection.
   //
@@ -428,18 +428,10 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
     onCommitLocation(mapBoundsSelection(pendingViewport));
   }, [pendingViewport, onCommitLocation]);
 
-  const handleSortPress = useCallback(() => {
-    bottomSheet.openBottomSheet(
-      <SortControl
-        sortBy={query.sortBy}
-        sortOrder={query.sortOrder}
-        onChange={(sortBy: SearchSortBy, sortOrder: SearchSortOrder) =>
-          onQueryChange({ sortBy, sortOrder })
-        }
-        onClose={() => bottomSheet.closeBottomSheet()}
-      />,
-    );
-  }, [bottomSheet, query.sortBy, query.sortOrder, onQueryChange]);
+  const handleSortChange = useCallback(
+    (sortBy: SearchSortBy, sortOrder: SearchSortOrder) => onQueryChange({ sortBy, sortOrder }),
+    [onQueryChange],
+  );
 
   const handleSheetFilterChange = useCallback(
     (sectionId: string, value: FilterValue) => {
@@ -490,6 +482,9 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
         case 'fairPrice':
           onQueryChange({ fairPrice: value === true ? true : undefined });
           return;
+        case 'instantBook':
+          onQueryChange({ instantBook: value === true ? true : undefined });
+          return;
         default:
           return;
       }
@@ -512,6 +507,7 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
             bathrooms: undefined,
             amenities: [],
             fairPrice: undefined,
+            instantBook: undefined,
           });
           bottomSheet.closeBottomSheet();
         }}
@@ -655,7 +651,7 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
         >
           <SearchActionPill
             label={t('search.actions.filters', 'Filters') || 'Filters'}
-            icon="options-outline"
+            icon={RiEqualizerLine}
             active={activeFilterCount > 0}
             count={activeFilterCount}
             onPress={handleFiltersPress}
@@ -665,16 +661,10 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
                 : t('search.actions.filters', 'Filters') || 'Filters'
             }
           />
-          <SearchActionPill
-            label={
-              sort.isDefault
-                ? t('search.actions.sort', 'Sort') || 'Sort'
-                : sort.label
-            }
-            icon="swap-vertical"
-            active={!sort.isDefault}
-            onPress={handleSortPress}
-            accessibilityLabel={`${t('search.actions.sort', 'Sort') || 'Sort'}: ${sort.label}`}
+          <SortMenu
+            sortBy={query.sortBy}
+            sortOrder={query.sortOrder}
+            onChange={handleSortChange}
           />
         </ScrollView>
       </View>
@@ -800,8 +790,7 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
               onPress={handleSearchThisArea}
               variant="primary"
               size="small"
-              icon={<Ionicons name="refresh" size={16} color={colors.primaryForeground} />}
-              iconPosition="left"
+              leadingIcon={RiRefreshLine}
               accessibilityLabel={
                 t('search.actions.searchArea', 'Search this area') || 'Search this area'
               }

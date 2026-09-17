@@ -30,8 +30,9 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
-import Ionicons from '@expo/vector-icons/Ionicons';
 
+import { Button } from '@oxy.so/bloom/button';
+import { RiBookmarkFill, RiBookmarkLine, RiSearchLine } from '@oxy.so/bloom/icons';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 
 import {
@@ -43,7 +44,7 @@ import {
   formatMoneyRange,
 } from '@homiio/shared-types';
 import { useIsScreenNotMobile } from '@/hooks/useOptimizedMediaQuery';
-import { IconButton } from '@/components/ui/IconButton';
+import { useColors } from '@/hooks/useThemeColor';
 import { colors } from '@/styles/colors';
 import { cardShadow, hairline, radius, spacing, tracker } from '@/constants/styles';
 import {
@@ -139,6 +140,9 @@ const COLUMN_PAD_X_NARROW = spacing.md;
 
 /** Single-line (compact) pill leading search-icon size. */
 const COMPACT_ICON_SIZE = 16;
+
+/** Trailing bookmark glyph size. */
+const SAVE_ICON_SIZE = 20;
 
 /** Height of the hairline divider that separates the summary from the bookmark. */
 const SAVE_DIVIDER_HEIGHT = 24;
@@ -253,6 +257,7 @@ export const SearchSummaryBar: React.FC<SearchSummaryBarProps> = ({
   const { t } = useTranslation();
   const { locale } = useFormatting();
   const isWide = useIsScreenNotMobile();
+  const themeColors = useColors();
   const [searchPressed, setSearchPressed] = useState(false);
   const [summaryPressed, setSummaryPressed] = useState(false);
 
@@ -400,7 +405,11 @@ export const SearchSummaryBar: React.FC<SearchSummaryBarProps> = ({
           className="bg-primary"
           style={[styles.searchButton, searchPressed && styles.searchButtonPressed]}
         >
-          <Ionicons name="search" size={SEARCH_ICON_SIZE} className="text-primary-foreground" />
+          <RiSearchLine
+            width={SEARCH_ICON_SIZE}
+            height={SEARCH_ICON_SIZE}
+            fill={themeColors.primaryForeground}
+          />
         </Pressable>
       </View>
     );
@@ -426,7 +435,7 @@ export const SearchSummaryBar: React.FC<SearchSummaryBarProps> = ({
         style={[styles.summaryTap, summaryPressed && styles.summaryTapPressed]}
       >
         <View style={styles.searchIcon}>
-          <Ionicons name="search" size={COMPACT_ICON_SIZE} color={colors.COLOR_BLACK} />
+          <RiSearchLine width={COMPACT_ICON_SIZE} height={COMPACT_ICON_SIZE} fill={themeColors.text} />
         </View>
         <View style={styles.segments}>
           <BloomText style={styles.primary} numberOfLines={1}>
@@ -446,11 +455,17 @@ export const SearchSummaryBar: React.FC<SearchSummaryBarProps> = ({
       {showSave ? (
         <>
           <View style={styles.saveDivider} />
-          <IconButton
-            variant="ghost"
-            icon={isSaved ? 'bookmark' : 'bookmark-outline'}
-            active={isSaved}
-            activeColor={colors.primaryColor}
+          <Button
+            variant="icon"
+            size="icon"
+            iconOnly
+            icon={
+              isSaved ? (
+                <RiBookmarkFill width={SAVE_ICON_SIZE} height={SAVE_ICON_SIZE} fill={themeColors.primary} />
+              ) : (
+                <RiBookmarkLine width={SAVE_ICON_SIZE} height={SAVE_ICON_SIZE} fill={themeColors.text} />
+              )
+            }
             onPress={handleSavePress}
             accessibilityLabel={saveAccessibilityLabel || t('search.actions.save')}
           />

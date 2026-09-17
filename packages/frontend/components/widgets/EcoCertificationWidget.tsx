@@ -1,33 +1,24 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import Ionicons from '@expo/vector-icons/Ionicons';
+
+import { RiLeafLine } from '@oxy.so/bloom/icons';
+import { Text as BloomText } from '@oxy.so/bloom/typography';
+
+import { useColors } from '@/hooks/useThemeColor';
 import { BaseWidget } from './BaseWidget';
+
+const HEADER_ICON_SIZE = 22;
 
 export function EcoCertificationWidget() {
   const { t } = useTranslation();
+  const colors = useColors();
 
   return (
     <BaseWidget
       title={t('home.eco.title')}
-      icon={<Ionicons name="leaf" size={22} color="green" />}
+      icon={<RiLeafLine width={HEADER_ICON_SIZE} height={HEADER_ICON_SIZE} fill={colors.success} />}
     >
-      <View style={styles.ecoCertContent}>
-        <Text style={styles.ecoText}>
-          {t('home.eco.description')}
-        </Text>
-      </View>
+      <BloomText className="text-sm leading-5 text-muted-foreground">{t('home.eco.description')}</BloomText>
     </BaseWidget>
   );
 }
-
-const styles = StyleSheet.create({
-  ecoCertContent: {
-    padding: 10,
-    alignItems: 'center',
-  },
-  ecoText: {
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-});

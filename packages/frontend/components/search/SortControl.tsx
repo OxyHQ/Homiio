@@ -1,21 +1,34 @@
 /**
- * SortControl — compact sort selector for the search results bar.
+ * Sort for listing results, in two presentations sharing one option list.
  *
- * Presents the three backend-supported orders (relevance / price / newest) as
- * a list of Bloom radio rows. Designed to live inside the app's
- * `BottomSheetContext` on narrow screens or an inline popover on wide screens;
- * it owns no presentation chrome of its own beyond the rows + title so the
- * caller controls how it's surfaced.
+ *  - {@link SortMenu} — the explore toolbar: a Bloom `DropdownMenu` anchored to
+ *    the Sort pill (an anchored panel on web, a sheet on native) with a radio
+ *    group of orders.
+ *  - {@link SortControl} — the same options as Bloom `Item` rows with a
+ *    `RadioIndicator`, for callers that present it inside their own sheet.
+ *
+ * Both resolve the active option from the (sortBy, sortOrder) pair, so the pill
+ * label, the menu and the sheet can never disagree.
  */
-import React, { useCallback, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import React, { useCallback } from 'react';
+import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from '@oxy.so/bloom/dropdown-menu';
+import { RiExpandUpDownLine } from '@oxy.so/bloom/icons';
+import { Item } from '@oxy.so/bloom/item';
 import { RadioIndicator } from '@oxy.so/bloom/radio-indicator';
-import { H3, Text as BloomText } from '@oxy.so/bloom/typography';
+import { H3 } from '@oxy.so/bloom/typography';
 
-import { colors } from '@/styles/colors';
 import { spacing } from '@/constants/styles';
+import { SearchActionPill } from './SearchActionPill';
 import type { SearchSortBy, SearchSortOrder } from './types';
 
 /** A selectable sort option mapping the UI label to the backend field+order. */
@@ -92,37 +105,6 @@ export function resolveSortLabel(
   };
 }
 
-interface SortRowProps {
-  label: string;
-  isSelected: boolean;
-  onPress: () => void;
-}
-
-/**
- * A single sort option row. NativeWind's css-interop swallows the function form
- * of `style`, so the pressed tint is driven by onPressIn/onPressOut state over a
- * static style array instead.
- */
-const SortRow: React.FC<SortRowProps> = ({ label, isSelected, onPress }) => {
-  const [pressed, setPressed] = useState(false);
-  return (
-    <Pressable
-      onPress={onPress}
-      onPressIn={() => setPressed(true)}
-      onPressOut={() => setPressed(false)}
-      accessibilityRole="radio"
-      accessibilityState={{ selected: isSelected }}
-      accessibilityLabel={label}
-      style={[styles.row, pressed ? styles.rowPressed : null]}
-    >
-      <BloomText style={[styles.label, isSelected ? styles.labelSelected : null]}>
-        {label}
-      </BloomText>
-      <RadioIndicator selected={isSelected} />
-    </Pressable>
-  );
-};
-
 interface SortControlProps {
   sortBy: SearchSortBy;
   sortOrder: SearchSortOrder;
@@ -131,6 +113,7 @@ interface SortControlProps {
   onClose?: () => void;
 }
 
+/** The sort options as radio rows, for a caller-owned sheet. */
 export const SortControl: React.FC<SortControlProps> = ({
   sortBy,
   sortOrder,
@@ -149,21 +132,69 @@ export const SortControl: React.FC<SortControlProps> = ({
   );
 
   return (
-    <View style={styles.container}>
-      <H3 style={styles.title}>{t('search.sort.title', 'Sort by')}</H3>
+    <View style={styles.container} accessibilityRole="radiogroup">
+      <H3 style={styles.title}>{t('search.sort.title')}</H3>
       {SORT_OPTIONS.map((option) => {
         const isSelected = option.key === activeKey;
         const label = t(option.labelKey, option.fallback) || option.fallback;
         return (
-          <SortRow
+          <Item
             key={option.key}
-            label={label}
-            isSelected={isSelected}
+            title={label}
+            role="radio"
+            selected={isSelected}
+            trailing={<RadioIndicator selected={isSelected} />}
             onPress={() => handleSelect(option)}
+            accessibilityLabel={label}
           />
         );
       })}
     </View>
+  );
+};
+
+interface SortMenuProps {
+  sortBy: SearchSortBy;
+  sortOrder: SearchSortOrder;
+  onChange: (sortBy: SearchSortBy, sortOrder: SearchSortOrder) => void;
+}
+
+/** The toolbar Sort pill, opening the orders as a Bloom dropdown menu. */
+export const SortMenu: React.FC<SortMenuProps> = ({ sortBy, sortOrder, onChange }) => {
+  const { t } = useTranslation();
+  const active = matchOption(sortBy, sortOrder);
+  const sort = resolveSortLabel(sortBy, sortOrder, t);
+  const sortWord = t('search.actions.sort', 'Sort') || 'Sort';
+
+  const handleValueChange = useCallback(
+    (key: string) => {
+      const option = SORT_OPTIONS.find((o) => o.key === key);
+      if (option) onChange(option.sortBy, option.sortOrder);
+    },
+    [onChange],
+  );
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild label={`${sortWord}: ${sort.label}`}>
+        <SearchActionPill
+          label={sort.isDefault ? sortWord : sort.label}
+          icon={RiExpandUpDownLine}
+          active={!sort.isDefault}
+          accessibilityLabel={`${sortWord}: ${sort.label}`}
+        />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" label={t('search.sort.title')}>
+        <DropdownMenuLabel>{t('search.sort.title')}</DropdownMenuLabel>
+        <DropdownMenuRadioGroup value={active.key} onValueChange={handleValueChange}>
+          {SORT_OPTIONS.map((option) => (
+            <DropdownMenuRadioItem key={option.key} value={option.key}>
+              {t(option.labelKey, option.fallback) || option.fallback}
+            </DropdownMenuRadioItem>
+          ))}
+        </DropdownMenuRadioGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 };
 
@@ -174,28 +205,7 @@ const styles = StyleSheet.create({
     paddingBottom: spacing['2xl'],
   },
   title: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: colors.COLOR_BLACK,
-    marginBottom: spacing.lg,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: spacing.md,
-  },
-  rowPressed: {
-    opacity: 0.7,
-  },
-  label: {
-    fontSize: 16,
-    color: colors.COLOR_BLACK,
-    flex: 1,
-    paddingRight: spacing.md,
-  },
-  labelSelected: {
-    fontWeight: '600',
+    marginBottom: spacing.md,
   },
 });
 

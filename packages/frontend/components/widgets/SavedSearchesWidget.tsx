@@ -1,20 +1,30 @@
 import React, { useContext, useState } from 'react';
-import { Modal, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { useQueryClient } from '@tanstack/react-query';
 import { useOxy } from '@oxy.so/services';
 import { Button } from '@oxy.so/bloom/button';
+import { Dialog } from '@oxy.so/bloom/dialog';
+import { Field } from '@oxy.so/bloom/field';
+import {
+  RiArrowRightSLine,
+  RiBookmarkFill,
+  RiBookmarkLine,
+  RiErrorWarningFill,
+  RiNotification3Fill,
+} from '@oxy.so/bloom/icons';
+import { Item } from '@oxy.so/bloom/item';
 import { Switch } from '@oxy.so/bloom/switch';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 import { TextFieldInput } from '@oxy.so/bloom/text-field';
+import { Textarea } from '@oxy.so/bloom/textarea';
 import * as Skeleton from '@oxy.so/bloom/skeleton';
-import { colors } from '@/styles/colors';
-import { ICON_SIZES, radius, spacing } from '@/constants/styles';
+import { alert } from '@oxy.so/bloom/surfaces';
+import { ICON_SIZES, radius } from '@/constants/styles';
+import { useColors } from '@/hooks/useThemeColor';
 import { BaseWidget } from './BaseWidget';
 import { useSavedSearches } from '@/hooks/useSavedSearches';
-import { alert } from '@oxy.so/bloom/surfaces';
 import { BottomSheetContext } from '@/context/BottomSheetContext';
 import { SavedSearchActionsBottomSheet } from '@/components/SavedSearchActionsBottomSheet';
 import type { SavedSearch } from '@/store/savedSearchesStore';
@@ -22,20 +32,13 @@ import type { SavedSearch } from '@/store/savedSearchesStore';
 const HEADER_ICON_SIZE = 22;
 /** Saved-search rows shown inline before the "View All" overflow. */
 const PREVIEW_COUNT = 3;
-/** Alpha suffix turning the brand color into a soft badge fill. */
-const BADGE_ALPHA = '20';
 /** Skeleton row placeholders rendered during the initial fetch. */
 const SKELETON_ROWS = [0, 1, 2];
 
-/** Header chrome shared by every state of the widget. */
-const headerIcon = (
-  <Ionicons name="bookmark" size={HEADER_ICON_SIZE} color={colors.primaryColor} />
-);
-
 /**
- * A single saved-search row. The whole row opens the actions bottom sheet; a
- * bell marks rows with notifications enabled and a chevron hints the tap
- * affordance. Stateless, so it is safe to render from `FlatList`/`.map()`.
+ * A single saved-search row: a Bloom `Item` whose press opens the actions
+ * bottom sheet. A bell marks rows with notifications enabled and a chevron
+ * hints the tap affordance. Stateless, so it is safe to render from `.map()`.
  */
 function SavedSearchRow({
   search,
@@ -44,37 +47,37 @@ function SavedSearchRow({
   search: SavedSearch;
   onPress: (search: SavedSearch) => void;
 }) {
+  const colors = useColors();
   return (
-    <TouchableOpacity
-      style={styles.row}
+    <Item
+      density="compact"
+      title={search.name}
+      subtitle={search.query ? search.query : undefined}
       onPress={() => onPress(search)}
       accessibilityRole="button"
       accessibilityLabel={search.name}
-    >
-      <View style={styles.rowText}>
-        <BloomText style={styles.rowName} numberOfLines={1}>
-          {search.name}
-        </BloomText>
-        {!!search.query && (
-          <BloomText style={styles.rowCriteria} numberOfLines={1}>
-            {search.query}
-          </BloomText>
-        )}
-      </View>
-      {search.notificationsEnabled && (
-        <View style={styles.bellBadge}>
-          <Ionicons name="notifications" size={ICON_SIZES.xs} color={colors.primaryColor} />
+      trailing={
+        <View className="flex-row items-center gap-2">
+          {search.notificationsEnabled ? (
+            <RiNotification3Fill width={ICON_SIZES.xs} height={ICON_SIZES.xs} fill={colors.primary} />
+          ) : null}
+          <RiArrowRightSLine width={ICON_SIZES.md} height={ICON_SIZES.md} fill={colors.textTertiary} />
         </View>
-      )}
-      <Ionicons name="chevron-forward" size={ICON_SIZES.md} color={colors.COLOR_BLACK_LIGHT_5} />
-    </TouchableOpacity>
+      }
+    />
   );
+}
+
+/** Centred icon + message block shared by the sign-in, error and empty states. */
+function StateBlock({ children }: { children: React.ReactNode }) {
+  return <View className="items-center gap-3 py-3">{children}</View>;
 }
 
 export function SavedSearchesWidget() {
   const { t } = useTranslation();
   const router = useRouter();
   const queryClient = useQueryClient();
+  const colors = useColors();
   const { openAccountDialog } = useOxy();
   const {
     searches,
@@ -93,6 +96,7 @@ export function SavedSearchesWidget() {
   const [editNotificationsEnabled, setEditNotificationsEnabled] = useState(false);
   const [nameError, setNameError] = useState('');
   const [queryError, setQueryError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   // The bottom sheet emits a lightweight `{ id, ... }` shape, so resolve the
   // full, typed SavedSearch from `searches` by id before handing it to the
@@ -161,14 +165,19 @@ export function SavedSearchesWidget() {
     if (nextNameError || nextQueryError) return;
 
     // `updateSearch` resolves to a boolean and fires its own toast; only close
-    // the modal once the persist actually succeeded.
-    const success = await updateSearch(editingSearch.id, {
-      name,
-      query,
-      filters: editingSearch.filters,
-      notificationsEnabled: editNotificationsEnabled,
-    });
-    if (success) handleEditClose();
+    // the dialog once the persist actually succeeded.
+    setSubmitting(true);
+    try {
+      const success = await updateSearch(editingSearch.id, {
+        name,
+        query,
+        filters: editingSearch.filters,
+        notificationsEnabled: editNotificationsEnabled,
+      });
+      if (success) handleEditClose();
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleEditClose = () => {
@@ -180,24 +189,24 @@ export function SavedSearchesWidget() {
   const renderState = () => {
     if (!isAuthenticated) {
       return (
-        <View style={styles.stateBlock}>
-          <Ionicons name="bookmark-outline" size={ICON_SIZES.xl} color={colors.COLOR_BLACK_LIGHT_5} />
-          <BloomText style={styles.stateText}>
+        <StateBlock>
+          <RiBookmarkLine width={ICON_SIZES.xl} height={ICON_SIZES.xl} fill={colors.textTertiary} />
+          <BloomText className="text-center text-[15px] font-semibold text-foreground">
             {t('search.widgets.savedSearches.signInPrompt')}
           </BloomText>
           <Button variant="primary" size="medium" onPress={() => openAccountDialog('signin')}>
             {t('search.widgets.common.signIn')}
           </Button>
-        </View>
+        </StateBlock>
       );
     }
 
     if (isLoading && searches.length === 0) {
       return (
-        <View style={styles.skeletonList}>
+        <View className="gap-3 py-1">
           {SKELETON_ROWS.map((key) => (
-            <View key={key} style={styles.skeletonRow}>
-              <View style={styles.skeletonTextCol}>
+            <View key={key} className="flex-row items-center gap-3">
+              <View className="flex-1 gap-2">
                 <Skeleton.Box width="60%" height={14} borderRadius={radius.md} />
                 <Skeleton.Box width="85%" height={12} borderRadius={radius.md} />
               </View>
@@ -210,9 +219,9 @@ export function SavedSearchesWidget() {
 
     if (error) {
       return (
-        <View style={styles.stateBlock}>
-          <Ionicons name="cloud-offline-outline" size={ICON_SIZES.xl} color={colors.danger} />
-          <BloomText style={styles.stateText}>
+        <StateBlock>
+          <RiErrorWarningFill width={ICON_SIZES.xl} height={ICON_SIZES.xl} fill={colors.error} />
+          <BloomText className="text-center text-[15px] font-semibold text-foreground">
             {t('search.widgets.savedSearches.loadError')}
           </BloomText>
           <Button
@@ -222,28 +231,32 @@ export function SavedSearchesWidget() {
           >
             {t('search.widgets.common.error')}
           </Button>
-        </View>
+        </StateBlock>
       );
     }
 
     if (searches.length === 0) {
       return (
-        <View style={styles.stateBlock}>
-          <Ionicons name="bookmark-outline" size={ICON_SIZES.xl} color={colors.COLOR_BLACK_LIGHT_5} />
-          <BloomText style={styles.stateText}>{t('search.widgets.savedSearches.empty')}</BloomText>
-          <BloomText style={styles.stateHelper}>
-            {t('search.widgets.savedSearches.emptyHelper')}
-          </BloomText>
+        <StateBlock>
+          <RiBookmarkLine width={ICON_SIZES.xl} height={ICON_SIZES.xl} fill={colors.textTertiary} />
+          <View className="items-center gap-1">
+            <BloomText className="text-center text-[15px] font-semibold text-foreground">
+              {t('search.widgets.savedSearches.empty')}
+            </BloomText>
+            <BloomText className="text-center text-[13px] text-muted-foreground">
+              {t('search.widgets.savedSearches.emptyHelper')}
+            </BloomText>
+          </View>
           <Button variant="primary" size="medium" onPress={() => router.push('/explore')}>
             {t('search.widgets.savedSearches.createNew')}
           </Button>
-        </View>
+        </StateBlock>
       );
     }
 
     const remaining = searches.length - PREVIEW_COUNT;
     return (
-      <View style={styles.listBlock}>
+      <View className="gap-3">
         <View>
           {searches.slice(0, PREVIEW_COUNT).map((item, index) => (
             <SavedSearchRow
@@ -254,7 +267,7 @@ export function SavedSearchesWidget() {
           ))}
         </View>
 
-        <View style={styles.footer}>
+        <View className="gap-2">
           <Button variant="primary" size="medium" onPress={() => router.push('/explore')}>
             {t('search.widgets.savedSearches.createNew')}
           </Button>
@@ -272,216 +285,84 @@ export function SavedSearchesWidget() {
     );
   };
 
+  const headerIcon = (
+    <RiBookmarkFill width={HEADER_ICON_SIZE} height={HEADER_ICON_SIZE} fill={colors.primary} />
+  );
+
   return (
     <>
       <BaseWidget title={t('search.widgets.savedSearches.title')} icon={headerIcon}>
         {renderState()}
       </BaseWidget>
 
-      <Modal
-        visible={!!editingSearch}
-        transparent
-        animationType="slide"
-        onRequestClose={handleEditClose}
+      <Dialog
+        open={!!editingSearch}
+        onClose={handleEditClose}
+        placement={{ base: 'bottom', md: 'center' }}
+        maxWidth={400}
+        title={t('search.widgets.savedSearches.editTitle')}
+        label={t('search.widgets.savedSearches.editTitle')}
+        actions={[
+          {
+            label: t('common.cancel'),
+            color: 'cancel',
+            onPress: handleEditClose,
+            shouldCloseOnPress: false,
+          },
+          {
+            label: t('common.save'),
+            onPress: () => {
+              void handleEditSave();
+            },
+            disabled: submitting,
+            shouldCloseOnPress: false,
+          },
+        ]}
       >
-        <View style={styles.editOverlay}>
-          <View style={styles.editCard}>
-            <View style={styles.editHeader}>
-              <BloomText style={styles.editTitle}>
-                {t('search.widgets.savedSearches.editTitle')}
-              </BloomText>
-              <TouchableOpacity
-                onPress={handleEditClose}
-                style={styles.closeButton}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                accessibilityRole="button"
-                accessibilityLabel={t('common.cancel')}
-              >
-                <Ionicons name="close" size={ICON_SIZES.lg} color={colors.COLOR_BLACK_LIGHT_3} />
-              </TouchableOpacity>
-            </View>
+        <View className="gap-4">
+          <Field error={nameError || null}>
+            <TextFieldInput
+              label={t('search.widgets.savedSearches.nameLabel')}
+              placeholder={t('search.widgets.savedSearches.namePlaceholder')}
+              value={editName}
+              onChangeText={(text) => {
+                setEditName(text);
+                if (nameError) setNameError('');
+              }}
+              isInvalid={!!nameError}
+              maxLength={50}
+              autoFocus
+            />
+          </Field>
 
-            <View style={styles.field}>
-              <TextFieldInput
-                label={t('search.widgets.savedSearches.nameLabel')}
-                placeholder={t('search.widgets.savedSearches.namePlaceholder')}
-                value={editName}
-                onChangeText={(text) => {
-                  setEditName(text);
-                  if (nameError) setNameError('');
-                }}
-                isInvalid={!!nameError}
-                maxLength={50}
-                autoFocus
+          <Field error={queryError || null}>
+            <Textarea
+              label={t('search.widgets.savedSearches.queryLabel')}
+              placeholder={t('search.widgets.savedSearches.queryPlaceholder')}
+              value={editQuery}
+              onChangeText={(text) => {
+                setEditQuery(text);
+                if (queryError) setQueryError('');
+              }}
+              isInvalid={!!queryError}
+              rows={2}
+            />
+          </Field>
+
+          <Item
+            density="compact"
+            title={t('search.widgets.savedSearches.notificationsToggle')}
+            subtitle={t('search.widgets.savedSearches.notificationsHelper')}
+            trailing={
+              <Switch
+                value={editNotificationsEnabled}
+                onValueChange={setEditNotificationsEnabled}
+                accessibilityLabel={t('search.widgets.savedSearches.notificationsToggle')}
               />
-              {!!nameError && <BloomText style={styles.fieldError}>{nameError}</BloomText>}
-            </View>
-
-            <View style={styles.field}>
-              <TextFieldInput
-                label={t('search.widgets.savedSearches.queryLabel')}
-                placeholder={t('search.widgets.savedSearches.queryPlaceholder')}
-                value={editQuery}
-                onChangeText={(text) => {
-                  setEditQuery(text);
-                  if (queryError) setQueryError('');
-                }}
-                isInvalid={!!queryError}
-                multiline
-                numberOfLines={2}
-              />
-              {!!queryError && <BloomText style={styles.fieldError}>{queryError}</BloomText>}
-            </View>
-
-            <View style={styles.toggleRow}>
-              <View style={styles.toggleText}>
-                <BloomText style={styles.toggleTitle}>
-                  {t('search.widgets.savedSearches.notificationsToggle')}
-                </BloomText>
-                <BloomText style={styles.toggleHelper}>
-                  {t('search.widgets.savedSearches.notificationsHelper')}
-                </BloomText>
-              </View>
-              <Switch value={editNotificationsEnabled} onValueChange={setEditNotificationsEnabled} />
-            </View>
-
-            <View style={styles.editActions}>
-              <Button variant="secondary" size="medium" onPress={handleEditClose}>
-                {t('common.cancel')}
-              </Button>
-              <Button variant="primary" size="medium" onPress={handleEditSave}>
-                {t('common.save')}
-              </Button>
-            </View>
-          </View>
+            }
+          />
         </View>
-      </Modal>
+      </Dialog>
     </>
   );
 }
-
-const styles = StyleSheet.create({
-  // List
-  listBlock: {
-    gap: spacing.md,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    paddingVertical: spacing.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.COLOR_BLACK_LIGHT_6,
-  },
-  rowText: {
-    flex: 1,
-    gap: spacing.xs / 2,
-  },
-  rowName: {
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  rowCriteria: {
-    fontSize: 13,
-    color: colors.COLOR_BLACK_LIGHT_3,
-  },
-  bellBadge: {
-    backgroundColor: colors.primaryColor + BADGE_ALPHA,
-    borderRadius: radius.pill,
-    width: spacing.xl,
-    height: spacing.xl,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  footer: {
-    gap: spacing.sm,
-  },
-  // Skeleton
-  skeletonList: {
-    gap: spacing.md,
-    paddingVertical: spacing.xs,
-  },
-  skeletonRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  skeletonTextCol: {
-    flex: 1,
-    gap: spacing.sm,
-  },
-  // Shared empty / sign-in / error state
-  stateBlock: {
-    alignItems: 'center',
-    gap: spacing.md,
-    paddingVertical: spacing.md,
-  },
-  stateText: {
-    fontSize: 15,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  stateHelper: {
-    fontSize: 13,
-    color: colors.COLOR_BLACK_LIGHT_3,
-    textAlign: 'center',
-    marginTop: -spacing.sm,
-  },
-  // Edit modal
-  editOverlay: {
-    flex: 1,
-    backgroundColor: colors.overlay,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: spacing.xl,
-  },
-  editCard: {
-    backgroundColor: colors.background,
-    borderRadius: radius.lg,
-    padding: spacing['2xl'],
-    width: '100%',
-    maxWidth: 400,
-    gap: spacing.lg,
-  },
-  editHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  editTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-  },
-  closeButton: {
-    padding: spacing.xs,
-  },
-  field: {
-    gap: spacing.sm,
-  },
-  fieldError: {
-    color: colors.danger,
-    fontSize: 13,
-  },
-  toggleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.lg,
-  },
-  toggleText: {
-    flex: 1,
-    gap: spacing.xs,
-  },
-  toggleTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  toggleHelper: {
-    fontSize: 13,
-    color: colors.COLOR_BLACK_LIGHT_3,
-  },
-  editActions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: spacing.md,
-  },
-});
