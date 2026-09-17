@@ -5,7 +5,14 @@ import type { StyleSpecification } from 'maplibre-gl';
 import * as Location from 'expo-location';
 import { useMapState } from '@/context/MapStateContext';
 import { api, type ApiResponse } from '@/utils/api';
-import { MAP_DOCUMENT_BASE_URL, buildMapDocument } from './mapDocument';
+import { useTranslation } from 'react-i18next';
+import { useTheme } from '@oxy.so/bloom/theme';
+import {
+  CLUSTER_COUNT_TOKEN,
+  MAP_DOCUMENT_BASE_URL,
+  buildMapDocument,
+  resolveMapMarkerPaint,
+} from './mapDocument';
 import { boundsCenter } from '@homiio/shared-types';
 import { isDegenerateBounds, toCameraBounds } from './mapCamera';
 import { DEFAULT_STYLE_URL, fetchSanitizedMapStyle } from './mapStyle';
@@ -19,7 +26,6 @@ import type {
   MapEvent,
   MapMoveSource,
   MarkerInput,
-  MarkerStyle,
   OutboundMapMessage,
 } from './mapTypes';
 
@@ -31,7 +37,6 @@ export type {
   LonLat,
   MapApi,
   MarkerInput,
-  MarkerStyle,
 } from './mapTypes';
 
 /** Convert [latitude, longitude] to GeoJSON [longitude, latitude]. */
@@ -50,7 +55,6 @@ export interface MapProps {
   startFromCurrentLocation?: boolean;
   markers?: MarkerInput[];
   cluster?: ClusterOptions;
-  markerStyle?: MarkerStyle;
   screenId?: string;
   enableAddressLookup?: boolean;
   showAddressInstructions?: boolean;
@@ -109,7 +113,6 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
     startFromCurrentLocation = true,
     markers = [],
     cluster,
-    markerStyle,
     screenId,
     enableAddressLookup = false,
     showAddressInstructions = false,
@@ -148,21 +151,22 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
   const initialCenterRef = useRef<LonLat>(savedState?.center || initialCoordinates);
   const initialZoomRef = useRef<number>(savedState?.zoom || initialZoom);
 
-  // Memoize marker style configuration
-  const markerStyleFinal = useMemo<Required<MarkerStyle>>(() => ({
-    chipBg: markerStyle?.chipBg ?? colors.COLOR_BLACK_LIGHT_1,
-    chipText: markerStyle?.chipText ?? colors.white,
-    onMarkerZoom: markerStyle?.onMarkerZoom ?? 15.5,
-  }), [markerStyle]);
-
   // Memoize cluster configuration
   const clusterFinal = useMemo<Required<ClusterOptions>>(() => ({
     enabled: cluster?.enabled ?? true,
     radius: cluster?.radius ?? 40,
     maxZoom: cluster?.maxZoom ?? 17,
-    color: cluster?.color ?? colors.info,
-    textColor: cluster?.textColor ?? colors.white
   }), [cluster]);
+
+  // The document draws Bloom's marker geometry in CSS; its colours come from the
+  // Bloom theme. The document opens with the paint of its first render and a
+  // theme change is sent as `setPaint`, so switching theme does not reload the
+  // map.
+  const theme = useTheme();
+  const paint = useMemo(() => resolveMapMarkerPaint(theme), [theme]);
+  const initialPaintRef = useRef(paint);
+  const { t } = useTranslation();
+  const clusterLabel = t('map.clusterLabel', { count: CLUSTER_COUNT_TOKEN });
 
   // Fetch + sanitize the style once per URL, then mount the WebView with it.
   // Settling to the raw URL on failure guarantees the map still renders.
@@ -222,11 +226,12 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
       center: initialCenterRef.current,
       zoom: initialZoomRef.current,
       style: resolvedStyle,
-      markerStyle: markerStyleFinal,
       cluster: clusterFinal,
+      paint: initialPaintRef.current,
+      clusterLabel,
       enableAddressLookup,
     }),
-    [resolvedStyle, markerStyleFinal, clusterFinal, enableAddressLookup]
+    [resolvedStyle, clusterFinal, enableAddressLookup, clusterLabel]
   );
 
   const webviewRef = useRef<WebView | null>(null);
@@ -250,6 +255,11 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
       pending.current.push(str);
     }
   }, [childReady, reallyPost]);
+
+  useEffect(() => {
+    if (paint === initialPaintRef.current) return;
+    post({ type: 'setPaint', paint });
+  }, [paint, post]);
 
   const flushPending = useCallback(() => {
     while (pending.current.length) {
@@ -552,7 +562,6 @@ const Map = React.memo(MapComponent, (prevProps, nextProps) => {
       prevProps.startFromCurrentLocation === nextProps.startFromCurrentLocation &&
       JSON.stringify(prevProps.markers) === JSON.stringify(nextProps.markers) &&
       JSON.stringify(prevProps.cluster) === JSON.stringify(nextProps.cluster) &&
-      JSON.stringify(prevProps.markerStyle) === JSON.stringify(nextProps.markerStyle) &&
       JSON.stringify(prevProps.style) === JSON.stringify(nextProps.style)
     );
   }
@@ -565,7 +574,6 @@ const Map = React.memo(MapComponent, (prevProps, nextProps) => {
       prevProps.initialZoom === nextProps.initialZoom &&
       prevProps.startFromCurrentLocation === nextProps.startFromCurrentLocation &&
       JSON.stringify(prevProps.cluster) === JSON.stringify(nextProps.cluster) &&
-      JSON.stringify(prevProps.markerStyle) === JSON.stringify(nextProps.markerStyle) &&
       JSON.stringify(prevProps.style) === JSON.stringify(nextProps.style) &&
       prevProps.onMapPress === nextProps.onMapPress &&
       prevProps.onMarkerPress === nextProps.onMarkerPress &&

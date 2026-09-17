@@ -4478,5 +4478,8 @@
       "evictionNearby": "{{area}} से लगभग {{radius}} मीटर के भीतर एक बेदखली तय है।",
       "sourceConflict": "{{title}} अब {{count}} स्रोतों पर दिखता है।"
     }
+  },
+  "map": {
+    "clusterLabel": "मानचित्र समूह: {{count}}। हर पिन देखने के लिए ज़ूम इन करें।"
   }
 }

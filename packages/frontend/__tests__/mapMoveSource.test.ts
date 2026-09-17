@@ -107,8 +107,18 @@ describe('the native document', () => {
     center: [2.1686, 41.3874],
     zoom: 12,
     style: 'https://tiles.example/style.json',
-    markerStyle: { chipBg: '#000', chipText: '#fff', onMarkerZoom: 14 },
-    cluster: { enabled: true, radius: 50, maxZoom: 14, color: '#000', textColor: '#fff' },
+    cluster: { enabled: true, radius: 50, maxZoom: 14 },
+    paint: {
+      surface: '#fff',
+      border: '#e5e5e5',
+      label: '#111',
+      activeFill: '#111',
+      activeLabel: '#fff',
+      visitedFill: '#f5f5f5',
+      visitedLabel: '#737373',
+      ring: '#2563eb',
+    },
+    clusterLabel: 'Map cluster: %COUNT%',
     enableAddressLookup: false,
   });
 

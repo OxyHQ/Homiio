@@ -4508,5 +4508,8 @@
       "evictionNearby": "Hay un desahucio previsto a unos {{radius}} m de {{area}}.",
       "sourceConflict": "{{title}} aparece ahora en {{count}} fuentes."
     }
+  },
+  "map": {
+    "clusterLabel": "Grupo en el mapa: {{count}}. Acerca el mapa para ver cada marcador."
   }
 }

@@ -1,6 +1,7 @@
 import type { GeoBounds, GeocodedAddress } from '@homiio/shared-types';
 
 import type { CameraBounds } from './mapCamera';
+import type { MapMarkerPaint } from './mapDocument';
 
 /**
  * Shared map types used by `Map.tsx` (the React host) and `mapDocument.ts`
@@ -103,30 +104,14 @@ export type OutboundMapMessage =
    */
   | { type: 'fitBounds'; bounds: CameraBounds; padding?: number; duration?: number }
   | { type: 'setUserLocation'; coordinates: LonLat }
-  | { type: 'highlightMarker'; id: string | null };
+  | { type: 'highlightMarker'; id: string | null }
+  /** Replace the marker colours, e.g. after a theme change, without a reload. */
+  | { type: 'setPaint'; paint: MapMarkerPaint };
 
 export interface ClusterOptions {
   enabled?: boolean;
   radius?: number;
   maxZoom?: number;
-  color?: string;
-  textColor?: string;
-}
-
-export interface MarkerStyle {
-  /**
-   * @deprecated The Airbnb-style price pill uses a fixed light-on-dark
-   * palette baked into the marker stylesheet. Kept on the interface so
-   * existing callers don't fail typecheck, but the values are no longer
-   * applied. Restyle the pill in `mapDocument.ts` directly instead.
-   */
-  chipBg?: string;
-  /**
-   * @deprecated See `chipBg`.
-   */
-  chipText?: string;
-  /** Zoom level the camera eases to when a marker is selected. */
-  onMarkerZoom?: number;
 }
 
 export interface MapApi {

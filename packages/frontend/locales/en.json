@@ -4474,5 +4474,8 @@
       "evictionNearby": "An eviction is scheduled within about {{radius}} m of {{area}}.",
       "sourceConflict": "{{title}} now appears on {{count}} sources."
     }
+  },
+  "map": {
+    "clusterLabel": "Map cluster: {{count}}. Zoom in to see each pin."
   }
 }
