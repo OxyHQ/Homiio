@@ -1,8 +1,9 @@
 /**
  * Agency profile — an agency's aggregate reputation, reviews, and listings.
  *
- * Header: name + stat tiles on Bloom `Card`s (avg rating, total reviews,
- * recommend %, deposit-full %, listings count). Bloom `Tabs`: Reviews
+ * Header: name over a Bloom `Rating` (the real average + review count; "no
+ * rating yet" when the agency has no reviews) + stat tiles on Bloom `Card`s
+ * (recommend % and deposit-full % only when there are reviews, listings count). Bloom `Tabs`: Reviews
  * (paginated `useAgencyReviews`, each review linking to its address page) and
  * Listings (paginated `useAgencyProperties` rendered with the shared
  * `PropertyResultsGrid`). Infinite scroll wires BOTH primitives —
@@ -24,6 +25,7 @@ import {
   RiMapPinLine,
 } from '@oxy.so/bloom/icons';
 import * as Skeleton from '@oxy.so/bloom/skeleton';
+import { Rating } from '@oxy.so/bloom/rating';
 import { Tabs, TabsTrigger } from '@oxy.so/bloom/tabs';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { H1, Text as BloomText } from '@oxy.so/bloom/typography';
@@ -152,6 +154,8 @@ export default function AgencyProfileScreen() {
     );
   }
 
+  const hasReviews = stats.totalReviews > 0;
+
   return (
     <View style={styles.root}>
       <Header options={{ title, showBackButton: true }} />
@@ -165,20 +169,35 @@ export default function AgencyProfileScreen() {
             <View style={[styles.agencyIcon, { backgroundColor: theme.colors.primarySubtle }]}>
               <RiBuilding2Line width={28} height={28} fill={theme.colors.primary} />
             </View>
-            <H1 style={styles.agencyName}>{agency.name}</H1>
+            <View style={styles.agencyTitle}>
+              <H1 style={styles.agencyName}>{agency.name}</H1>
+              <Rating
+                value={hasReviews ? stats.averageRating : null}
+                count={stats.totalReviews}
+                newLabel={t('reviews.write.ratingNone')}
+                accessibilityLabel={
+                  hasReviews
+                    ? `${t('reviews.ratingA11y', {
+                        rating: Number(stats.averageRating.toFixed(2)),
+                      })}, ${t('reviews.explore.reviewCount', { count: stats.totalReviews })}`
+                    : t('reviews.write.ratingNone')
+                }
+              />
+            </View>
           </View>
 
           <View style={styles.statsRow}>
-            <StatTile value={stats.averageRating.toFixed(1)} label={t('agency.stats.rating')} />
-            <StatTile value={String(stats.totalReviews)} label={t('agency.stats.reviews')} />
-            <StatTile
-              value={formatPercentage(stats.recommendationPercentage, locale, {
-                input: 'percent',
-                maximumFractionDigits: 0,
-              })}
-              label={t('agency.stats.recommend')}
-            />
-            {typeof stats.depositFullPct === 'number' ? (
+            {/* Review-derived shares are 0 when there are no reviews — not a real 0%. */}
+            {hasReviews ? (
+              <StatTile
+                value={formatPercentage(stats.recommendationPercentage, locale, {
+                  input: 'percent',
+                  maximumFractionDigits: 0,
+                })}
+                label={t('agency.stats.recommend')}
+              />
+            ) : null}
+            {hasReviews && typeof stats.depositFullPct === 'number' ? (
               <StatTile
                 value={formatPercentage(stats.depositFullPct, locale, {
                   input: 'percent',
@@ -275,8 +294,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  agencyName: {
+  agencyTitle: {
     flex: 1,
+    gap: spacing.xs,
+  },
+  agencyName: {
+    textAlign: 'left',
     letterSpacing: -0.5,
   },
   statsRow: {

@@ -2,13 +2,14 @@
  * DimensionBreakdown — the client-side aggregate distribution for one review
  * section (apartment / management / building / area), computed from the loaded
  * reviews. For each dimension present in the set it shows the count of each
- * enum value as a proportional Bloom `StatBar`. Renders nothing when the section has no data.
+ * enum value as a Bloom `RatingBar` (a category list: the label flexes, the
+ * bar is proportional to the block's most common value, the count on the right). Renders nothing when the section has no data.
  */
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
-import { StatBar } from '@oxy.so/bloom/stat-bar';
+import { RatingBar } from '@oxy.so/bloom/rating';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 
 import type { ReviewDTO } from '@homiio/shared-types';
@@ -36,14 +37,9 @@ interface DimensionBreakdownProps {
   section: ReviewSection;
 }
 
-/** One enum value's share of its dimension, as a Bloom `StatBar` (count top-right). */
+/** One enum value's share of its dimension, as a Bloom `RatingBar` (count on the right). */
 const DistributionRow: React.FC<{ entry: DistributionEntry; max: number }> = ({ entry, max }) => (
-  <StatBar
-    label={entry.label}
-    value={entry.count}
-    max={max}
-    icon={<BloomText style={styles.rowCount}>{entry.count}</BloomText>}
-  />
+  <RatingBar label={entry.label} value={entry.count} max={max} display={String(entry.count)} />
 );
 
 export const DimensionBreakdown: React.FC<DimensionBreakdownProps> = ({ reviews, section }) => {
@@ -127,11 +123,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     color: colors.COLOR_BLACK,
-  },
-  rowCount: {
-    fontSize: 12,
-    fontVariant: ['tabular-nums'],
-    color: colors.COLOR_BLACK_LIGHT_3,
   },
 });
 

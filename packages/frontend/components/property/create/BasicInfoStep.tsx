@@ -3,8 +3,8 @@ import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Chip } from '@oxy.so/bloom/chip';
 import { Field } from '@oxy.so/bloom/field';
+import { StepperRow } from '@oxy.so/bloom/stepper';
 import { ThemedText } from '@/components/ThemedText';
-import { NumberSelector } from '@/components/NumberSelector';
 import { PROPERTY_TYPES } from './constants';
 import { WizardTextField, WizardTextarea } from './fields';
 import { createPropertyStyles as styles } from './styles';
@@ -14,9 +14,14 @@ interface BasicInfoStepProps extends PropertyStepProps {
   onPropertyTypeChange: (typeId: string) => void;
 }
 
+/** Upper bound for the bedroom/bathroom counters (the old picker's 2-digit field). */
+const MAX_ROOM_COUNT = 99;
+
 /**
  * "Basic Info" wizard step: property type selector plus the conditionally
- * visible bedrooms/bathrooms/square footage/year/description fields.
+ * visible bedrooms/bathrooms (Bloom `StepperRow` counters — each shown on its
+ * own, so a studio or room still gets its bathroom count), square footage,
+ * year and description fields.
  */
 export function BasicInfoStep({
   formData,
@@ -50,27 +55,39 @@ export function BasicInfoStep({
         </View>
       </Field>
 
-      {fieldsToShow.includes('bedrooms') && (
-        <View style={styles.optionRow}>
-          <Field label={t('property.bedrooms')} error={validationErrors.bedrooms}>
-            <NumberSelector
-              label={t('property.bedrooms')}
-              value={basicInfo.bedrooms || 0}
-              onChange={(value) => updateFormField('basicInfo', 'bedrooms', value)}
-            />
-          </Field>
-
-          {fieldsToShow.includes('bathrooms') && (
-            <Field label={t('property.bathrooms')} error={validationErrors.bathrooms}>
-              <NumberSelector
-                label={t('property.bathrooms')}
-                value={basicInfo.bathrooms || 0}
-                onChange={(value) => updateFormField('basicInfo', 'bathrooms', value)}
+      {fieldsToShow.includes('bedrooms') || fieldsToShow.includes('bathrooms') ? (
+        <View>
+          {fieldsToShow.includes('bedrooms') ? (
+            <Field error={validationErrors.bedrooms}>
+              <StepperRow
+                title={t('property.bedrooms')}
+                value={basicInfo.bedrooms || 0}
+                onValueChange={(value) => updateFormField('basicInfo', 'bedrooms', value)}
+                min={0}
+                max={MAX_ROOM_COUNT}
+                decrementLabel={t('common.decreaseItem', { title: t('property.bedrooms') })}
+                incrementLabel={t('common.increaseItem', { title: t('property.bedrooms') })}
+                divider={fieldsToShow.includes('bathrooms')}
+                testID="create-bedrooms"
               />
             </Field>
-          )}
+          ) : null}
+          {fieldsToShow.includes('bathrooms') ? (
+            <Field error={validationErrors.bathrooms}>
+              <StepperRow
+                title={t('property.bathrooms')}
+                value={basicInfo.bathrooms || 0}
+                onValueChange={(value) => updateFormField('basicInfo', 'bathrooms', value)}
+                min={0}
+                max={MAX_ROOM_COUNT}
+                decrementLabel={t('common.decreaseItem', { title: t('property.bathrooms') })}
+                incrementLabel={t('common.increaseItem', { title: t('property.bathrooms') })}
+                testID="create-bathrooms"
+              />
+            </Field>
+          ) : null}
         </View>
-      )}
+      ) : null}
 
       {fieldsToShow.includes('squareFootage') && (
         <WizardTextField

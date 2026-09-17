@@ -1,12 +1,17 @@
 import React from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { Field } from '@oxy.so/bloom/field';
 import { SettingsListDivider, SettingsListGroup } from '@oxy.so/bloom/settings-list';
+import { StepperRow } from '@oxy.so/bloom/stepper';
 import { ThemedText } from '@/components/ThemedText';
 import { AmenitiesSelector } from '@/components/AmenitiesSelector';
-import { WizardSwitchItem, WizardTextField } from './fields';
+import { WizardSwitchItem } from './fields';
 import { createPropertyStyles as styles } from './styles';
 import type { AmenitiesStepProps } from './types';
+
+/** Upper bound for the guest-limit counter (the old field's 2-digit range). */
+const MAX_GUESTS = 99;
 
 export function AmenitiesStep({
   formData,
@@ -56,16 +61,24 @@ export function AmenitiesStep({
       </SettingsListGroup>
 
       {rules?.guestsAllowed && (
-        <WizardTextField
-          label={t('propertyCreate.amenities.maxGuests')}
-          value={rules.maxGuests?.toString() || ''}
-          onChangeText={(text) =>
-            updateFormField('rules', 'maxGuests', parseInt(text, 10) || undefined)
-          }
-          placeholder={t('propertyCreate.amenities.maxGuestsPlaceholder')}
-          keyboardType="numeric"
-          error={validationErrors.maxGuests}
-        />
+        <Field error={validationErrors.maxGuests}>
+          {/* 0 draws "—" and stores `undefined`: an unset limit stays unset. */}
+          <StepperRow
+            title={t('propertyCreate.amenities.maxGuests')}
+            value={rules.maxGuests ?? 0}
+            onValueChange={(value) => updateFormField('rules', 'maxGuests', value || undefined)}
+            min={0}
+            max={MAX_GUESTS}
+            formatValue={(value) => (value === 0 ? '—' : String(value))}
+            decrementLabel={t('common.decreaseItem', {
+              title: t('propertyCreate.amenities.maxGuests'),
+            })}
+            incrementLabel={t('common.increaseItem', {
+              title: t('propertyCreate.amenities.maxGuests'),
+            })}
+            testID="create-max-guests"
+          />
+        </Field>
       )}
     </View>
   );
