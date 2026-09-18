@@ -2,12 +2,21 @@
  * Folders as Bloom `WishlistCard`s, with "New folder".
  *
  * A folder's cover is the photos of up to four homes actually saved in it, and
- * its line is its real count; an empty folder shows the card's neutral tile.
- * The folder's emoji leads its name, the one piece of identity `WishlistCard`
- * has room for (it takes no icon or tint).
+ * its line is its real count.
+ *
+ * Its emoji and colour are its identity, and since 2.12 the card has somewhere
+ * to put them: `icon` draws the glyph BESIDE the name and `color` paints it and
+ * tints the cover of a folder with nothing in it yet, where `empty` repeats the
+ * glyph large. The emoji used to be prefixed onto `name` — which a screen
+ * reader read out as its character, which could not be sized or coloured, and
+ * which ate the one line the name gets.
+ *
+ * `icon` is a component, so {@link folderGlyph} wraps the stored emoji STRING
+ * in one. The glyph is decorative there (the card marks it `aria-hidden`), so
+ * nothing is lost by it not being a real icon.
  */
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, type LayoutChangeEvent } from 'react-native';
+import { Text as RNText, View, type LayoutChangeEvent } from 'react-native';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
@@ -36,6 +45,23 @@ import { getPropertyPhotoUrls } from '@/utils/propertyUtils';
 import { SavedSection } from './SavedSection';
 
 const COVER_PHOTOS = 4;
+
+/**
+ * The stored folder emoji as the component shape `WishlistCard.icon` takes
+ * (`{ width?, height?, fill? }`). Cached per emoji so a re-render does not hand
+ * the card a new component type and remount the glyph.
+ */
+const glyphCache = new Map<string, React.FC<{ width?: number; height?: number }>>();
+function folderGlyph(emoji: string): React.FC<{ width?: number; height?: number }> {
+  const cached = glyphCache.get(emoji);
+  if (cached) return cached;
+  const Glyph: React.FC<{ width?: number; height?: number }> = ({ height = 16 }) => (
+    <RNText style={{ fontSize: height, lineHeight: height * 1.2 }}>{emoji}</RNText>
+  );
+  Glyph.displayName = `FolderGlyph(${emoji})`;
+  glyphCache.set(emoji, Glyph);
+  return Glyph;
+}
 
 /** Two tiles a row on a phone, three on a tablet, four from a desktop column. */
 const folderColumns = (width: number): number => (width < 640 ? 2 : width < 950 ? 3 : 4);
@@ -86,18 +112,24 @@ export function SavedFoldersSection({ folders, savedProperties, loading }: Saved
   } else {
     body = (
       <ListingCardGrid columns={columns} columnGap={16} rowGap={24}>
-        {folders.map((folder) => (
-          <WishlistCard
-            key={folder.id}
-            name={folder.icon ? `${folder.icon} ${folder.name}` : folder.name}
-            description={t('saved.folder.propertyCount', { count: folder.propertyCount })}
-            photos={coversByFolder.get(folder.id) ?? []}
-            href={`/saved/${folder.id}`}
-            onPress={() => router.push(`/saved/${folder.id}`)}
-            accessibilityLabel={t('saved.openFolder', { name: folder.name })}
-            testID={`saved-folder-${folder.id}`}
-          />
-        ))}
+        {folders.map((folder) => {
+          const Glyph = folder.icon ? folderGlyph(folder.icon) : undefined;
+          return (
+            <WishlistCard
+              key={folder.id}
+              name={folder.name}
+              description={t('saved.folder.propertyCount', { count: folder.propertyCount })}
+              photos={coversByFolder.get(folder.id) ?? []}
+              icon={Glyph}
+              color={folder.color || undefined}
+              empty={Glyph ? <Glyph height={40} /> : undefined}
+              href={`/saved/${folder.id}`}
+              onPress={() => router.push(`/saved/${folder.id}`)}
+              accessibilityLabel={t('saved.openFolder', { name: folder.name })}
+              testID={`saved-folder-${folder.id}`}
+            />
+          );
+        })}
       </ListingCardGrid>
     );
   }

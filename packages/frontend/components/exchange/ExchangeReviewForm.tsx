@@ -1,16 +1,15 @@
 import React, { useCallback, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@oxy.so/bloom/button';
-import { RiStarFill, RiStarLine } from '@oxy.so/bloom/icons';
+import { RatingInput } from '@oxy.so/bloom/rating';
 import { Textarea } from '@oxy.so/bloom/textarea';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { useCreateExchangeReview } from '@/hooks/useExchangeQueries';
 import { toast } from '@oxy.so/bloom/toast';
-import { colors } from '@/styles/colors';
 import { spacing } from '@/constants/styles';
 
 export interface ExchangeReviewFormProps {
@@ -19,48 +18,18 @@ export interface ExchangeReviewFormProps {
   onSubmitted: () => void;
 }
 
-const STAR_COUNT = 5;
 const MAX_COMMENT = 2000;
-
-/** A tappable 1–5 star picker (the read-only `Stars` component is display-only). */
-const StarPicker: React.FC<{ value: number; onChange: (next: number) => void }> = ({
-  value,
-  onChange,
-}) => {
-  const { t } = useTranslation();
-  const theme = useTheme();
-  return (
-    <View style={styles.starRow} accessibilityRole="radiogroup">
-      {Array.from({ length: STAR_COUNT }).map((_, index) => {
-        const rating = index + 1;
-        const filled = rating <= value;
-        return (
-          <Pressable
-            key={rating}
-            onPress={() => onChange(rating)}
-            accessibilityRole="radio"
-            accessibilityState={{ checked: rating === value }}
-            accessibilityLabel={t('listing.exchange.review.starLabel', {
-              count: rating,
-            })}
-            hitSlop={6}
-          >
-            {filled ? (
-              <RiStarFill size="2xl" fill={colors.ratingStar} />
-            ) : (
-              <RiStarLine size="2xl" fill={theme.colors.textTertiary} />
-            )}
-          </Pressable>
-        );
-      })}
-    </View>
-  );
-};
 
 /**
  * Leave-a-review form for a COMPLETED exchange. Captures an overall 1–5 rating
  * (required) and an optional comment, then submits via
  * `useCreateExchangeReview`. The backend automatically targets the OTHER party.
+ *
+ * The rating is Bloom's `RatingInput` (2.12). The hand-rolled picker it
+ * replaces already announced a `radiogroup`, but the group had no NAME and the
+ * arrow keys did nothing — the stars were five separate `Pressable`s. Payload
+ * is unchanged: a whole 1–5, with 0 meaning "not chosen yet", which the
+ * submit guard still rejects.
  */
 export const ExchangeReviewForm: React.FC<ExchangeReviewFormProps> = ({
   exchangeRequestId,
@@ -101,7 +70,14 @@ export const ExchangeReviewForm: React.FC<ExchangeReviewFormProps> = ({
       <BloomText style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
         {t('listing.exchange.review.subtitle')}
       </BloomText>
-      <StarPicker value={rating} onChange={setRating} />
+      <RatingInput
+        value={rating > 0 ? rating : null}
+        onChange={setRating}
+        size="large"
+        accessibilityLabel={t('listing.exchange.review.ratingLabel')}
+        formatStarLabel={(star) => t('listing.exchange.review.starLabel', { count: star })}
+        testID="exchange-review-rating"
+      />
       <Textarea
         value={comment}
         onChangeText={setComment}
@@ -135,10 +111,6 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 13,
-  },
-  starRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
   },
   submit: {
     alignSelf: 'flex-start',

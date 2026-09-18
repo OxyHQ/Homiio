@@ -21,7 +21,8 @@
  *
  * **The scope rows.** Before anything is typed, the panel leads with the
  * choices that are not a place name ({@link WhereOptions}): "Use my location"
- * (disabled, with the reason, when location is off), "Explore everywhere" — a
+ * (a `disabled` row carrying its `disabledReason` when location is off, so it
+ * stays an `option` the arrow keys account for), "Explore everywhere" — a
  * deliberate row, never a fallback — and the last area chosen on this device.
  * They replace the strip that used to sit above Home.
  *
@@ -89,9 +90,6 @@ const OPTION_EVERYWHERE = 'option:everywhere';
 const OPTION_LAST_AREA = 'option:last-area';
 
 const NO_RECENTS: readonly RecentSearch[] = [];
-
-/** Unused by a disabled row, which is never selectable. */
-const noop = (): void => undefined;
 
 /**
  * The rows a "where?" panel offers before anything is typed.
@@ -328,33 +326,38 @@ export function WhereSuggestions({
   );
 
   /**
-   * The scope rows, split by whether they can be pressed.
+   * The scope rows.
    *
-   * Bloom's `DestinationSuggestion` has no `disabled` (its props are `id`,
-   * `title`, `description`, `icon`), so a device row that cannot help — location
-   * off, or a fix already in flight — is drawn as its own dimmed, inert list
-   * rather than as a row that silently does nothing when pressed.
+   * A device row that cannot help — location off, or a fix already in flight —
+   * stays IN the list and carries Bloom's `disabled` / `disabledReason`
+   * (2.12). It used to be drawn beside the list as its own dimmed, inert
+   * `DestinationSuggestions`, which is the thing that cannot work: a row
+   * outside the `listbox` is not an `option`, so the arrow keys skipped it and
+   * a screen reader counted "2 of 2" over three visible rows. Inside, Bloom
+   * dims it, sets `aria-disabled`, answers neither press nor Enter, and steps
+   * the arrow keys OVER it in both directions. The reason takes the
+   * description's place and is read after the title, so the row still says
+   * what is wrong rather than only looking wrong.
    */
   const device = options?.device && options.device.state !== 'hidden' ? options.device : null;
   const deviceDisabled = device !== null && (device.state === 'denied' || device.state === 'locating');
-  const deviceItem = useMemo<DestinationSuggestion | null>(
-    () =>
-      device
-        ? {
-            id: OPTION_DEVICE,
-            title: t('location.scope.useCurrent'),
-            description: device.description,
-            icon: RiFocus3Line,
-          }
-        : null,
-    [device, t],
-  );
   const lastArea = options?.lastArea ?? null;
   const onEverywhere = options?.onEverywhere;
   const optionItems = useMemo<DestinationSuggestion[]>(() => {
     if (!showRecents) return [];
     const rows: DestinationSuggestion[] = [];
-    if (deviceItem && !deviceDisabled) rows.push(deviceItem);
+    if (device) {
+      rows.push({
+        id: OPTION_DEVICE,
+        title: t('location.scope.useCurrent'),
+        description: device.description,
+        icon: RiFocus3Line,
+        disabled: deviceDisabled,
+        // The same line either way: `WhereOptions.device.description` IS the
+        // radius, the progress or the reason, whichever applies.
+        disabledReason: deviceDisabled ? device.description : undefined,
+      });
+    }
     if (lastArea) {
       const label = selectionLabel(lastArea);
       rows.push({
@@ -373,7 +376,7 @@ export function WhereSuggestions({
       });
     }
     return rows;
-  }, [showRecents, deviceItem, deviceDisabled, lastArea, onEverywhere, t]);
+  }, [showRecents, device, deviceDisabled, lastArea, onEverywhere, t]);
 
   const handleSelectOption = useCallback(
     (item: DestinationSuggestion) => {
@@ -384,32 +387,13 @@ export function WhereSuggestions({
     [device, onEverywhere, lastArea, onSelectLocation],
   );
 
-  const disabledDeviceRow =
-    showRecents && deviceItem && deviceDisabled ? (
-      <View
-        style={styles.disabledRow}
-        accessibilityState={{ disabled: true }}
-        aria-disabled
-      >
-        <DestinationSuggestions
-          items={[deviceItem]}
-          onSelect={noop}
-          accessibilityLabel={`${deviceItem.title}, ${deviceItem.description ?? ''}`}
-        />
-      </View>
-    ) : null;
-  const hasOptions = disabledDeviceRow !== null || optionItems.length > 0;
+  const hasOptions = optionItems.length > 0;
   const optionRows = hasOptions ? (
-    <>
-      {disabledDeviceRow}
-      {optionItems.length > 0 ? (
-        <DestinationSuggestions
-          items={optionItems}
-          onSelect={handleSelectOption}
-          accessibilityLabel={t('location.scope.pickerTitle')}
-        />
-      ) : null}
-    </>
+    <DestinationSuggestions
+      items={optionItems}
+      onSelect={handleSelectOption}
+      accessibilityLabel={t('location.scope.pickerTitle')}
+    />
   ) : null;
 
   const degraded = !showRecents && state.status === 'results' && state.degraded;
@@ -508,12 +492,6 @@ const styles = StyleSheet.create({
   },
   bleed: {
     marginHorizontal: -12,
-  },
-  // Inert and dimmed: see `disabledDeviceRow`. `none` is valid CSS, unlike the
-  // RN-only `box-none` (docs/frontend-conventions.md).
-  disabledRow: {
-    opacity: 0.5,
-    pointerEvents: 'none',
   },
   statusText: {
     fontSize: 14,

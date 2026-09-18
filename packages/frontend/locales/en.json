@@ -2156,6 +2156,7 @@
         "pickRating": "Pick a star rating first",
         "thanks": "Thanks for your review",
         "failed": "Could not submit review",
+        "ratingLabel": "Overall rating",
         "starLabel": "{{count}} stars",
         "alreadyLeft": "You’ve already reviewed this exchange."
       }

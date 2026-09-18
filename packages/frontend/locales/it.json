@@ -2102,6 +2102,7 @@
         "pickRating": "Scegli prima una valutazione",
         "thanks": "Grazie per la recensione",
         "failed": "Impossibile inviare la recensione",
+        "ratingLabel": "Valutazione complessiva",
         "starLabel": "{{count}} stelle",
         "alreadyLeft": "Hai già recensito questo scambio."
       }

@@ -5,8 +5,9 @@
  *
  * Owns its own form state + mutations (`useCreateEvictionUpdate`,
  * `useUpdateEviction`) so the detail screen stays lean. Bloom controls only:
- * a `Card` surface, `Textarea` for the message, `DatePicker` for the new day,
- * `Chip`s for the (deselectable) status, `confirm()` for the cancellation.
+ * a `Card` surface, `Textarea` for the message, `DatePicker` and `TimeField`
+ * for the new day and hour, `Chip`s for the (deselectable) status, `confirm()`
+ * for the cancellation.
  */
 import React, { useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -14,10 +15,9 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@oxy.so/bloom/button';
 import { Card } from '@oxy.so/bloom/card';
 import { Chip } from '@oxy.so/bloom/chip';
-import { DatePicker } from '@oxy.so/bloom/date-picker';
+import { DatePicker, TimeField } from '@oxy.so/bloom/date-picker';
 import { Field } from '@oxy.so/bloom/field';
 import { RiCloseCircleLine, RiEditLine } from '@oxy.so/bloom/icons';
-import { TextFieldInput } from '@oxy.so/bloom/text-field';
 import { Textarea } from '@oxy.so/bloom/textarea';
 import { H3 } from '@oxy.so/bloom/typography';
 
@@ -121,11 +121,10 @@ export const EvictionOwnerControls: React.FC<EvictionOwnerControlsProps> = ({
         </Field>
         <View style={styles.rowField}>
           <Field label={t('evictions.update.newTimeLabel')}>
-            <TextFieldInput
-              label={t('evictions.update.newTimeLabel')}
-              placeholder="HH:MM"
-              value={newTime}
-              onChangeText={setNewTime}
+            <TimeField
+              value={newTime || null}
+              onChange={(time) => setNewTime(time ?? '')}
+              accessibilityLabel={t('evictions.update.newTimeLabel')}
             />
           </Field>
         </View>
