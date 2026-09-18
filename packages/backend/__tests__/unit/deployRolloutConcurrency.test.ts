@@ -100,7 +100,9 @@ describe('a production rollout is never cancelled', () => {
     // assertions below pass for the wrong reason.
     expect(ciConcurrency).not.toBe('');
     expect(deployConcurrency).not.toBe('');
-    expect(concurrencyValue(ciConcurrency, 'group')).toBe('ci-${{ github.ref }}');
+    expect(concurrencyValue(ciConcurrency, 'group')).toBe(
+      "ci-${{ github.ref }}${{ github.ref == 'refs/heads/main' && format('-{0}', github.sha) || '' }}",
+    );
     expect(concurrencyValue(deployConcurrency, 'group')).toBe('deploy-homiio-backend');
   });
 
@@ -114,6 +116,43 @@ describe('a production rollout is never cancelled', () => {
     expect(concurrencyValue(ciConcurrency, 'cancel-in-progress')).toBe(
       "${{ github.ref != 'refs/heads/main' }}",
     );
+  });
+
+  it('gives each main commit its own group, so a queued run is never superseded', () => {
+    /**
+     * `cancel-in-progress: false` only protects a RUNNING run. GitHub keeps one
+     * QUEUED run per group, so a second merge while the first still waits
+     * cancels the first — zero jobs started, no red anywhere, and neither the
+     * backend rollout nor `deploy-frontends.yml` (which needs
+     * `conclusion == 'success'`) ever happens. Measured on 2026-09-18:
+     * `426947d9` and `4e9b5dae`, both cancelled at the instant the next merge
+     * created its run.
+     *
+     * The group therefore has to vary per COMMIT on main. Asserted exactly, for
+     * the same reason the expression below is: an equivalent-looking rewrite
+     * still has to be read by a person before this file agrees to it.
+     */
+    const group = concurrencyValue(ciConcurrency, 'group');
+    expect(group).toContain('github.sha');
+    expect(group).toContain("github.ref == 'refs/heads/main'");
+  });
+
+  it('refuses to roll out a commit the branch has moved past', () => {
+    /**
+     * The cost of the group above: two main runs can now reach the deploy, and
+     * `deploy-homiio-backend` serialises them in whatever order they start — so
+     * the older one could `update-service` an older image over the newer one,
+     * which is a silent rollback. The `tip` job answers that, and `deploy` is
+     * gated on it; a superseded run SKIPS rather than fails, because a red main
+     * nobody can act on is not a signal.
+     */
+    expect(deployBackend).toMatch(/^ {2}tip:$/m);
+    expect(deployBackend).toContain('needs: [scope, tip]');
+    expect(deployBackend).toContain("needs.tip.outputs.is_tip == 'true'");
+    // The comparison is against the REMOTE tip, not the checked-out ref: the
+    // checkout is this commit by definition, so comparing it with itself would
+    // pass the gate while proving nothing.
+    expect(deployBackend).toContain('commits/${GITHUB_REF_NAME}');
   });
 
   it('still cancels superseded pull-request runs', () => {

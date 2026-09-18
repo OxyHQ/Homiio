@@ -120,9 +120,50 @@ jobs:
             bash .github/scripts/deployment-scope.sh backend
           fi
 
-  deploy:
+  # Deploy only the tip of the branch.
+  #
+  # ci.yml gives each main commit its own concurrency group, so two merges in
+  # quick succession now BOTH reach this workflow instead of the queued one being
+  # cancelled (that cancellation is how 426947d9 and 4e9b5dae went undeployed on
+  # 2026-09-18). `deploy-homiio-backend` serialises them, which means the second
+  # to RUN may be the older commit — and `update-service` with an older image is
+  # a silent rollback of what the newer run just shipped.
+  #
+  # So an older run stops here instead of racing backwards: the newer one either
+  # has deployed its commit or is about to. Skipping rather than failing, because
+  # a superseded run is a correct outcome and a red main is a false alarm nobody
+  # can act on. A manual dispatch is exempt — it names its own ref on purpose.
+  tip:
     needs: scope
     if: needs.scope.outputs.deploy == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      is_tip: ${{ steps.check.outputs.is_tip }}
+    steps:
+      - name: Compare this commit with the branch tip
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "is_tip=true" >>"$GITHUB_OUTPUT"
+            echo "manual dispatch: deploying ${DEPLOY_SHA} regardless of the branch tip"
+            exit 0
+          fi
+          tip=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_REF_NAME}" --jq .sha)
+          if [ "$tip" = "$DEPLOY_SHA" ]; then
+            echo "is_tip=true" >>"$GITHUB_OUTPUT"
+            echo "rolling out the tip of ${GITHUB_REF_NAME} (${DEPLOY_SHA})"
+          else
+            echo "is_tip=false" >>"$GITHUB_OUTPUT"
+            echo "::notice::${GITHUB_REF_NAME} has moved to ${tip}; skipping the superseded rollout of ${DEPLOY_SHA}"
+          fi
+
+  deploy:
+    needs: [scope, tip]
+    if: needs.scope.outputs.deploy == 'true' && needs.tip.outputs.is_tip == 'true'
     runs-on: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@v4
