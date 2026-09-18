@@ -27,6 +27,7 @@
     "backfill:price-ethics": "ts-node --transpile-only scripts/backfillPriceEthics.ts"
   },
   "dependencies": {
+    "@alia.onl/server": "^1.0.1",
     "@aws-sdk/client-s3": "^3.1087.0",
     "@aws-sdk/s3-request-presigner": "^3.1087.0",
     "@homiio/listing-providers": "workspace:*",

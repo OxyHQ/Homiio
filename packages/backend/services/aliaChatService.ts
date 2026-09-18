@@ -1,3 +1,9 @@
+import {
+  AliaRequestError,
+  AliaServerClient,
+  AliaStreamError,
+  type AliaStreamEvent,
+} from '@alia.onl/server';
 import config from '../config';
 import { logger } from '../middlewares/logging';
 import {
@@ -57,6 +63,11 @@ export interface AliaChatHttpFailure {
  * 0025 (OxyHQServices) admits them through a requester assertion rather than
  * an `acting-as:offline` grant. The frontend's consent banner remains for
  * future absent-user features and is unreachable from this route.
+ *
+ * The allowlist is the whole point. Upstream codes — `SERVICE_ACTING_AS_UNAUTHORIZED`
+ * and every agent-side failure code Alia now hands back by name — are LOGGED,
+ * never mapped through to the person: exactly two answers leave this module,
+ * and both are Homiio's own words.
  */
 export function aliaChatHttpFailure(error: AliaChatError): AliaChatHttpFailure {
   const isAuthenticationFailure = error.status === 401 || error.status === 403;
@@ -87,6 +98,28 @@ export type RequesterAssertionMinter = (input: {
 }) => Promise<string>;
 
 /**
+ * Report a turn Alia could not finish, without quoting anybody.
+ *
+ * A 502 from here used to be indistinguishable from every other 502 in the log,
+ * which is the hole that left "Sindi could not finish this response"
+ * unexplained: Alia logged no error, Kaana served the completion, and the bytes
+ * that broke the read were dropped. There are now two distinct reports, because
+ * they have two distinct causes and two different people fix them.
+ *
+ * Neither carries content. The assistant's text and the person's prompt never
+ * appear in either — `AliaStreamError.shape` is keys, types and markers by
+ * construction (`@alia.onl/server`), and an in-stream error is reported by its
+ * CODE, never by its message, which is Alia's prose and not Homiio's to log.
+ */
+function reportUnreadableStream(error: AliaStreamError): void {
+  logger.error('Alia stream could not be read', { reason: error.failure, ...error.shape });
+}
+
+function reportStreamError(code: string | null): void {
+  logger.error('Alia ended the stream with an error', { code: code ?? 'unspecified' });
+}
+
+/**
  * Product chat goes through Alia, which owns chat, tools and memory.
  *
  * Alia receives exactly two credentials: Homiio's verified Sindi service token
@@ -94,11 +127,17 @@ export type RequesterAssertionMinter = (input: {
  * requester assertion Oxy minted for the signed-in person (ADR 0025). The
  * person's own bearer and `X-Oxy-User-Id` are never sent. The assertion is
  * minted per turn and not cached, because Oxy consumes it on first use.
+ *
+ * The SSE parsing this file used to do by hand is `@alia.onl/server`'s, published
+ * from Alia's own repository against Alia's own writers. That is not a tidying:
+ * the hand-rolled reader had no branch for the error Alia writes INTO the
+ * stream, so `{"error":{"code":"agent_unavailable"}}` arrived as an unreadable
+ * chunk and a bare 502, and the code Alia had already named was dropped on the
+ * floor for hours. What the client cannot do is silently skip a frame.
  */
 export class AliaChatService {
-  readonly #apiUrl: string;
   readonly #agentId: AliaAgentId | undefined;
-  readonly #fetch: FetchClient;
+  readonly #client: AliaServerClient;
   readonly #serviceToken: () => Promise<string>;
   readonly #requesterAssertion: RequesterAssertionMinter;
 
@@ -109,11 +148,13 @@ export class AliaChatService {
     requesterAssertion: RequesterAssertionMinter;
     fetch?: FetchClient;
   }) {
-    this.#apiUrl = input.apiUrl.replace(/\/+$/, '');
     this.#agentId = parseAliaAgentId(input.agentId);
-    this.#fetch = input.fetch ?? fetch;
     this.#serviceToken = input.serviceToken;
     this.#requesterAssertion = input.requesterAssertion;
+    this.#client = new AliaServerClient({
+      baseUrl: input.apiUrl,
+      ...(input.fetch === undefined ? {} : { fetch: input.fetch }),
+    });
   }
 
   async streamText(input: {
@@ -141,172 +182,78 @@ export class AliaChatService {
       }),
     ]);
 
-    const response = await this.#fetch(`${this.#apiUrl}/v1/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${serviceToken}`,
-        'X-Oxy-Requester-Assertion': assertion,
-      },
-      body: JSON.stringify({
-        agentId,
-        messages: input.messages,
-        stream: true,
-      }),
-      ...(input.signal === undefined ? {} : { signal: input.signal }),
-    });
+    const stream = await this.#client
+      .stream(
+        { agentId, messages: input.messages },
+        {
+          token: serviceToken,
+          headers: { 'X-Oxy-Requester-Assertion': assertion },
+          ...(input.signal === undefined ? {} : { signal: input.signal }),
+        },
+      )
+      .catch((error: unknown) => {
+        throw toAliaChatError(error);
+      });
 
-    if (!response.ok) {
-      // The body is not read: nothing upstream decides what Homiio tells the
-      // person beyond the status class.
-      await response.body?.cancel().catch(() => undefined);
-      throw new AliaChatError(response.status);
-    }
-    if (!response.headers.get('content-type')?.toLowerCase().startsWith('text/event-stream')) {
-      throw new AliaChatError(502);
-    }
-    if (!response.body) throw new AliaChatError(502);
-
-    return readAliaTextStream(response.body);
+    return textOf(stream);
   }
 }
 
-type JsonRecord = Record<string, unknown>;
-
-function isRecord(value: unknown): value is JsonRecord {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
+/**
+ * Nothing upstream decides what Homiio tells the person beyond the status
+ * class. `AliaRequestError.code` is read only to be LOGGED — mapping it through
+ * would put an upstream vocabulary in a Homiio response, which is the thing
+ * `aliaChatHttpFailure`'s allowlist exists to prevent.
+ */
+function toAliaChatError(error: unknown): unknown {
+  if (error instanceof AliaRequestError) {
+    if (error.code !== null) logger.error('Alia refused the turn', { status: error.status, code: error.code });
+    return new AliaChatError(error.status);
+  }
+  if (error instanceof AliaStreamError) {
+    reportUnreadableStream(error);
+    return new AliaChatError(502);
+  }
+  return error;
 }
 
 /**
- * Names the SHAPE of a stream chunk this parser cannot read, never its content.
+ * The assistant's text, and only that.
  *
- * A 502 from here is indistinguishable from every other 502 in the log, which is
- * exactly the hole that left "Sindi could not finish this response" unexplained:
- * Alia logged no error, Kaana served the completion, and the bytes that broke the
- * read were dropped. Keys, types and the `error`/`alia_meta` markers describe the
- * protocol mismatch; the assistant's text and the person's prompt never appear.
+ * Every delta is yielded VERBATIM: property entity ids inside
+ * `<PROPERTIES_JSON>` must survive arbitrary network and model chunk boundaries
+ * unchanged, so nothing here reassembles, trims or re-chunks. Reasoning deltas,
+ * named `alia.*` events and the finish frame are Alia's product surface and
+ * Sindi renders none of them today; they are dropped deliberately, by a branch
+ * that exists, rather than by a parser that never saw them.
  */
-function reportUnreadableChunk(reason: string, value: unknown): void {
-  const shape = isRecord(value)
-    ? {
-        keys: Object.keys(value).slice(0, 12),
-        errorCode: isRecord(value.error) ? String(value.error.code ?? value.error.type ?? '') : undefined,
-        choices: Array.isArray(value.choices) ? value.choices.length : typeof value.choices,
-      }
-    : { type: typeof value };
-  logger.error('Alia stream chunk could not be read', { reason, ...shape });
-}
-
-function textDeltaFromChunk(data: string): string | undefined {
-  let value: unknown;
+async function* textOf(stream: AsyncIterable<AliaStreamEvent>): AsyncGenerator<string> {
   try {
-    value = JSON.parse(data) as unknown;
-  } catch {
-    reportUnreadableChunk('not_json', data.slice(0, 0));
-    throw new AliaChatError(502);
-  }
-
-  if (!isRecord(value) || isRecord(value.error) || !Array.isArray(value.choices)) {
-    reportUnreadableChunk(
-      !isRecord(value) ? 'not_object' : isRecord(value.error) ? 'error_chunk' : 'no_choices',
-      value,
-    );
-    throw new AliaChatError(502);
-  }
-  if (value.choices.length === 0) return undefined;
-
-  const firstChoice = value.choices[0];
-  if (!isRecord(firstChoice) || !isRecord(firstChoice.delta)) {
-    reportUnreadableChunk('choice_without_delta', value);
-    throw new AliaChatError(502);
-  }
-  const content = firstChoice.delta.content;
-  if (content === undefined || content === null) return undefined;
-  if (typeof content !== 'string') {
-    reportUnreadableChunk('content_not_string', value);
-    throw new AliaChatError(502);
-  }
-  return content;
-}
-
-/**
- * Parse Alia's OpenAI-compatible SSE without reassembling or interpreting the
- * assistant text. Yielding every content delta verbatim is load-bearing for
- * Sindi: property entity ids inside `<PROPERTIES_JSON>` must survive arbitrary
- * network and model chunk boundaries unchanged.
- */
-async function* readAliaTextStream(body: ReadableStream<Uint8Array>): AsyncGenerator<string> {
-  const reader = body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = '';
-  let eventName = '';
-  let dataLines: string[] = [];
-  let sawDone = false;
-
-  const dispatch = (): string | undefined => {
-    if (dataLines.length === 0) {
-      eventName = '';
-      return undefined;
-    }
-
-    const data = dataLines.join('\n');
-    const namedEvent = eventName;
-    eventName = '';
-    dataLines = [];
-
-    if (namedEvent !== '' && namedEvent !== 'message') return undefined;
-    if (data === '[DONE]') {
-      sawDone = true;
-      return undefined;
-    }
-    if (sawDone) return undefined;
-    return textDeltaFromChunk(data);
-  };
-
-  const processLine = (line: string): string | undefined => {
-    if (line === '') return dispatch();
-    if (line.startsWith(':')) return undefined;
-
-    const separator = line.indexOf(':');
-    const field = separator === -1 ? line : line.slice(0, separator);
-    let value = separator === -1 ? '' : line.slice(separator + 1);
-    if (value.startsWith(' ')) value = value.slice(1);
-
-    if (field === 'event') eventName = value;
-    if (field === 'data') dataLines.push(value);
-    return undefined;
-  };
-
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-      buffer += decoder.decode(value, { stream: !done });
-
-      let newline = buffer.indexOf('\n');
-      while (newline !== -1) {
-        let line = buffer.slice(0, newline);
-        buffer = buffer.slice(newline + 1);
-        if (line.endsWith('\r')) line = line.slice(0, -1);
-        const text = processLine(line);
-        if (text !== undefined) yield text;
-        newline = buffer.indexOf('\n');
+    for await (const event of stream) {
+      switch (event.type) {
+        case 'text':
+          yield event.text;
+          break;
+        case 'error':
+          // Alia said why. This is the case that was invisible: the turn failed
+          // with a named cause and the person was told nothing had happened.
+          reportStreamError(event.code);
+          throw new AliaChatError(503);
+        case 'reasoning':
+        case 'event':
+        case 'finish':
+        case 'done':
+          break;
+        default: {
+          // `AliaStreamEvent` is a closed union, so a kind Alia adds later is a
+          // COMPILE error here rather than a frame this loop quietly drops.
+          const unreachable: never = event;
+          void unreachable;
+        }
       }
-
-      if (done) break;
     }
-
-    if (buffer !== '') {
-      const text = processLine(buffer.endsWith('\r') ? buffer.slice(0, -1) : buffer);
-      if (text !== undefined) yield text;
-    }
-    const finalText = dispatch();
-    if (finalText !== undefined) yield finalText;
-    if (!sawDone) {
-      logger.error('Alia stream ended without [DONE]', { });
-      throw new AliaChatError(502);
-    }
-  } finally {
-    reader.releaseLock();
+  } catch (error: unknown) {
+    throw toAliaChatError(error);
   }
 }
 
