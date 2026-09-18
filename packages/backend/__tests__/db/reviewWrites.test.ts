@@ -500,7 +500,7 @@ describe('the serializer', () => {
 
     const hydrated = await findReviewById(created.id, oxyUserId);
     expect(hydrated).not.toBeNull();
-    const dto = hydrated ? serializeReview(hydrated) : {};
+    const dto = hydrated ? serializeReview(hydrated, 'author') : {};
 
     expect(dto.helpfulVoters).toBeUndefined();
     expect(dto.reports).toBeUndefined();
@@ -518,7 +518,7 @@ describe('the serializer', () => {
       reviewValues({ addressId: otherAddressId, oxyUserId: unique('oxy-absent') }),
     );
     const hydrated = await findReviewById(created.id, null);
-    const dto = hydrated ? serializeReview(hydrated) : {};
+    const dto = hydrated ? serializeReview(hydrated, 'author') : {};
 
     expect('unitLevelId' in dto).toBe(false);
     expect('agency' in dto).toBe(false);

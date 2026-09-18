@@ -12,10 +12,23 @@
  * stores named `longitude` / `latitude` columns, and the Mongo field spellings
  * (`postal_code`, `building_name`, `address_lines`, `po_box`, `land_plot`) are
  * preserved because those are the names the frontend reads.
+ *
+ * ## What each caller is served (ADR 0003 §3, F1)
+ *
+ * These endpoints publish `building` — street, number, the geo chain, a
+ * coordinate rounded to the ladder's building decimals — and withhold the
+ * dwelling inside it: `floor`, `unit`, `subunit`, the free-form
+ * `address_lines` / `po_box` / `reference` / `extras`, the unit-keyed
+ * `normalizedKey`, and a UNIT row's own id, which is replaced by its building's
+ * or absent. The detail read escalates to `exact` for a caller with a RECORDED
+ * relation to the place; `db/addresses/addressAudience.ts` decides which
+ * relations those are and why the list reads never escalate at all.
  */
 
 import { Request, Response } from 'express';
 import { count, desc, eq, ilike, or, type SQL } from 'drizzle-orm';
+import { getOxyUserId } from '@oxy.so/core/server';
+import type { ListingAddressPrecision } from '@homiio/shared-types';
 
 import { getDb } from '../db/postgres';
 import { escapeLikePattern } from '../db/likePattern';
@@ -31,6 +44,7 @@ import {
   type AddressRow,
   type AddressWithGeoNames,
 } from '../db/addresses/addressSerializer';
+import { addressAudienceFor, addressPrecisionFor } from '../db/addresses/addressAudience';
 import { getErrorName, getValidationMessages } from '../utils/errors';
 import { logger as appLogger } from '../middlewares/logging';
 import { resolveCityId, resolveNeighborhoodId, resolveRegionId } from '../services/geoQueryService';
@@ -58,20 +72,26 @@ const logger = {
 };
 
 /**
- * Serialize one address row onto the wire.
+ * Serialize one address row onto the wire, at a stated precision.
  *
  * The shape itself lives in `db/addresses/addressSerializer`, shared with the
  * property read path — both endpoints show the same address and there is no
  * second place for that shape to drift. This adapter only supplies the null
  * geo names for the one caller that has an `AddressRow` with no join
- * (`createAddress`, which returns the row it just inserted).
+ * (`createAddress`, which returns the row it just resolved).
+ *
+ * Every caller states its precision. There is no default here either: these
+ * endpoints are mounted behind the auth middleware, and "behind auth" was
+ * exactly the reasoning that let `exact` be published to every signed-in caller
+ * in the world (ADR 0003 F1). Who a caller IS decides it —
+ * {@link addressAudienceFor}.
  */
-function serializeAddress(row: AddressRow | AddressWithGeoNames): Record<string, unknown> {
+function serializeAddress(
+  row: AddressRow | AddressWithGeoNames,
+  precision: ListingAddressPrecision,
+  placeIdOverride?: string,
+): Record<string, unknown> {
   const geo = row as Partial<AddressWithGeoNames>;
-  // `exact`, unchanged. These endpoints serve an address by its own id, with no
-  // listing and no listing's publication choice in the request — which is why a
-  // listing below `exact` does not publish a UNIT row's id at all (see
-  // `serializeAddressRow`). Their own precision rule is ADR 0003 F1.
   return serializeAddressRow(
     {
       ...row,
@@ -81,8 +101,20 @@ function serializeAddress(row: AddressRow | AddressWithGeoNames): Record<string,
       countryCodeName: geo.countryCodeName ?? null,
       neighborhoodName: geo.neighborhoodName ?? null,
     },
-    'exact',
+    precision,
+    placeIdOverride,
   );
+}
+
+/**
+ * The precision ONE caller is served for ONE address.
+ *
+ * `getOxyUserId` rather than `requireSessionOxyUserId`: the session is an input
+ * to the precision, not a requirement of the handler, and these handlers must
+ * keep answering when the router they are mounted on changes.
+ */
+async function precisionForViewer(req: Request, addressId: string): Promise<ListingAddressPrecision> {
+  return addressPrecisionFor(await addressAudienceFor(addressId, getOxyUserId(req)));
 }
 
 /**
@@ -102,7 +134,7 @@ export const getAddressById = async (req: Request, res: Response) => {
       return notFound(res, { message: 'Address not found' });
     }
 
-    return ok(res, { address: serializeAddress(rows[0]) });
+    return ok(res, { address: serializeAddress(rows[0], await precisionForViewer(req, rows[0].id)) });
   } catch (error) {
     logger.error('Error fetching address:', error);
     return serverError(res, { message: 'Failed to fetch address' });
@@ -166,7 +198,10 @@ export const searchAddresses = async (req: Request, res: Response) => {
     const totalCount = totals[0]?.total ?? 0;
 
     return ok(res, {
-      addresses: rows.map(serializeAddress),
+      // `building` for everybody, related or not: a list is the bulk read ADR
+      // 0003 §2 forbids tier-C fields from leaving in, and §12's T4 names an
+      // enumerable endpoint serving unit precision as the thing to prevent.
+      addresses: rows.map((row) => serializeAddress(row, 'building')),
       pagination: {
         currentPage: Number(page),
         totalPages: Math.ceil(totalCount / Number(limit)),
@@ -206,7 +241,12 @@ export const createAddress = async (req: Request, res: Response) => {
     const address = await findOrCreateCanonicalAddress(addressData);
 
     logger.info(`Address resolved: ${address.id}`);
-    return created(res, { address: serializeAddress(address) });
+    // The submitter's own echo: reduced fields, the row's own id. The resolver
+    // DEDUPES, so the row it answers with may be one an ingest wrote and may
+    // carry a door label, a po box or a free-form reference this caller never
+    // typed — but the id is what they need to attach a listing or a review to
+    // the place they just described.
+    return created(res, { address: serializeAddress(address, 'building', address.id) });
   } catch (error) {
     logger.error('Error creating address:', error);
     if (getErrorName(error) === 'ValidationError') {
@@ -279,7 +319,10 @@ export const updateAddress = async (req: Request, res: Response) => {
     if (Object.keys(patch).length === 0) {
       const unchanged = await selectAddressWithGeoNames({ where: eq(addresses.id, id), limit: 1 });
       if (!unchanged[0]) return notFound(res, { message: 'Address not found' });
-      return ok(res, { address: serializeAddress(unchanged[0]) });
+      // An empty patch is a READ wearing a PUT's clothes, and is served as one.
+      return ok(res, {
+        address: serializeAddress(unchanged[0], await precisionForViewer(req, unchanged[0].id)),
+      });
     }
 
     // `street` is NOT NULL — clearing it would fail the constraint rather than
@@ -300,7 +343,10 @@ export const updateAddress = async (req: Request, res: Response) => {
 
     const rows = await selectAddressWithGeoNames({ where: eq(addresses.id, id), limit: 1 });
     logger.info(`Address ${id} updated`);
-    return ok(res, { address: serializeAddress(rows[0]) });
+    // Writing a field is not a relationship to the dwelling: this endpoint takes
+    // no ownership of the row, so the answer is built for the same audience a
+    // GET would be. Patching one field must not read back the others.
+    return ok(res, { address: serializeAddress(rows[0], await precisionForViewer(req, id)) });
   } catch (error) {
     logger.error('Error updating address:', error);
     if (getErrorName(error) === 'ValidationError') {
@@ -364,7 +410,8 @@ export const getNearbyAddresses = async (req: Request, res: Response) => {
       limit: Number(limit),
     });
 
-    return ok(res, { addresses: rows.map(serializeAddress) });
+    // A radius read is the bulk shape of all — `building` for everybody.
+    return ok(res, { addresses: rows.map((row) => serializeAddress(row, 'building')) });
   } catch (error) {
     logger.error('Error finding nearby addresses:', error);
     return serverError(res, { message: 'Failed to find nearby addresses' });

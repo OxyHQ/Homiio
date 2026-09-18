@@ -180,15 +180,29 @@ export interface AgencyStats {
 
 export interface Review {
   // Address hierarchy
-  /** Reference to the specific address level the review is attached to. */
+  //
+  // A review is FILED at the finest address its author identified and
+  // PUBLISHED at the building (ADR 0003 §5.1). To anybody but the author, the
+  // three fields below therefore describe the place the review is published
+  // against, not the row it is stored against.
+  /**
+   * The place this review is published against — the building, unless the
+   * reader is the author, for whom it is the row the review is filed at.
+   */
   addressId: string;
-  /** Level at which the review is attached. */
+  /** Level of the place {@link Review.addressId} names. */
   addressLevel: 'BUILDING' | 'UNIT';
   /** Reference to the street-level address (for aggregation). */
   streetLevelId: string;
   /** Reference to the building-level address (for aggregation). */
   buildingLevelId: string;
-  /** Reference to the unit-level address (only for UNIT level reviews). */
+  /**
+   * The UNIT the review is filed against.
+   *
+   * Served to the AUTHOR only: the unit binding is tier R (ADR 0003 §2.1,
+   * §9), so it is absent from every other reader's copy — including a reader
+   * with a relation to the place.
+   */
   unitLevelId?: string;
   /** Denormalized city reference for explore aggregation. */
   cityId?: string;

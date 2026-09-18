@@ -102,7 +102,7 @@ import {
   ofAgency,
   visibleModeration,
 } from '../db/reviews/reviewReads';
-import { serializeReview, type HydratedReview } from '../db/reviews/reviewSerializer';
+import { reviewAudienceFor, serializeReview, type HydratedReview } from '../db/reviews/reviewSerializer';
 import {
   countBuildingsOnStreet,
   getAgencyStats,
@@ -176,9 +176,19 @@ function isPossibleId(value: unknown): value is string {
   return typeof value === 'string' && value.length > 0;
 }
 
-/** Serialize a page of reviews. */
-function serializeReviews(hydrated: readonly HydratedReview[]): Record<string, unknown>[] {
-  return hydrated.map(serializeReview);
+/**
+ * Serialize a page of reviews, each for the audience THIS viewer is.
+ *
+ * Per review rather than per page: one list mixes a viewer's own reviews with
+ * other people's (their agency's page, a building they reviewed), and a page
+ * built at one audience would either publish everybody's unit or withhold the
+ * author's own.
+ */
+function serializeReviews(
+  hydrated: readonly HydratedReview[],
+  viewer: string | null | undefined,
+): Record<string, unknown>[] {
+  return hydrated.map((review) => serializeReview(review, reviewAudienceFor(review, viewer)));
 }
 
 // ---------------------------------------------------------------------------
@@ -328,7 +338,7 @@ export const getReviewsByAddress = async (req: Request, res: Response) => {
       const total = data.unitReviews.length;
       return ok(res, {
         level: 'UNIT',
-        unitReviews: serializeReviews(pageOf(data.unitReviews, page, limit)),
+        unitReviews: serializeReviews(pageOf(data.unitReviews, page, limit), viewer),
         buildingSummary: data.buildingSummary,
         totalReviews: total,
         pagination: { currentPage: page, totalPages: Math.ceil(total / limit), limit },
@@ -342,8 +352,8 @@ export const getReviewsByAddress = async (req: Request, res: Response) => {
       const total = data.buildingReviews.length + data.unitReviews.length;
       return ok(res, {
         level: 'BUILDING',
-        buildingReviews: serializeReviews(data.buildingReviews),
-        unitReviews: serializeReviews(pageOf(data.unitReviews, page, limit)),
+        buildingReviews: serializeReviews(data.buildingReviews, viewer),
+        unitReviews: serializeReviews(pageOf(data.unitReviews, page, limit), viewer),
         aggregatedStats: data.aggregatedStats,
         totalReviews: total,
         pagination: { currentPage: page, totalPages: Math.ceil(total / limit), limit },
@@ -583,7 +593,7 @@ export const createReview = async (req: Request, res: Response) => {
     if (!hydrated) {
       return serverError(res, { message: 'Failed to create review' });
     }
-    return created(res, { review: serializeReview(hydrated) });
+    return created(res, { review: serializeReview(hydrated, 'author') });
   } catch (error) {
     logger.error('Error creating review', { error: describeErrorForLog(error) });
     return serverError(res, { message: 'Failed to create review' });
@@ -616,7 +626,7 @@ export const getReviewById = async (req: Request, res: Response) => {
       return notFound(res, { message: 'Review not found' });
     }
 
-    return ok(res, { review: serializeReview(hydrated) });
+    return ok(res, { review: serializeReview(hydrated, reviewAudienceFor(hydrated, viewer)) });
   } catch (error) {
     logger.error('Error fetching review', { error: describeErrorForLog(error) });
     return serverError(res, { message: 'Failed to fetch review' });
@@ -664,7 +674,7 @@ export const updateReview = async (req: Request, res: Response) => {
     if (!hydrated) {
       return notFound(res, { message: 'Review not found' });
     }
-    return ok(res, { review: serializeReview(hydrated) });
+    return ok(res, { review: serializeReview(hydrated, 'author') });
   } catch (error) {
     logger.error('Error updating review', { error: describeErrorForLog(error) });
     return serverError(res, { message: 'Failed to update review' });
@@ -729,7 +739,7 @@ export const getUserReviews = async (req: Request, res: Response) => {
 
     const totalPages = Math.ceil(totalReviews / limit);
     return ok(res, {
-      reviews: serializeReviews(hydrated),
+      reviews: serializeReviews(hydrated, viewer),
       pagination: { currentPage: page, totalPages, totalReviews, limit },
       hasMore: page < totalPages,
       totalPages,
@@ -971,7 +981,7 @@ export const getAgencyReviews = async (req: Request, res: Response) => {
     const totalPages = Math.ceil(totalReviews / limit);
     return ok(res, {
       agency: toAgencySummary(agency),
-      reviews: serializeReviews(hydrated),
+      reviews: serializeReviews(hydrated, viewer),
       pagination: { currentPage: page, totalPages, totalReviews, limit },
       hasMore: page < totalPages,
       totalPages,

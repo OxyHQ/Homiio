@@ -112,11 +112,11 @@ function roundCoordinate(value: number, decimals: number): number {
 /**
  * The place id a reduced address may carry.
  *
- * `id` is not a neutral field: `GET /api/addresses/:id` serves the row at full
- * precision to any signed-in caller, so publishing a UNIT row's id beside a
- * withheld unit hands the unit back one request later. ADR 0001 §6.2 decides
- * the shape — at building precision the place id is the BUILDING's — and where
- * no parent is recorded there is no building id to give, so the key is absent.
+ * `id` is not a neutral field: a UNIT row's id is the handle that names one
+ * household, so publishing it beside a withheld unit hands the reader a key to
+ * everything else filed against that flat. ADR 0001 §6.2 decides the shape — at
+ * building precision the place id is the BUILDING's — and where no parent is
+ * recorded there is no building id to give, so the key is absent.
  */
 function publishedPlaceId(row: AddressWithGeoNames, precision: ListingAddressPrecision): string | undefined {
   if (precision === 'exact') return row.id;
@@ -126,6 +126,25 @@ function publishedPlaceId(row: AddressWithGeoNames, precision: ListingAddressPre
   }
   return row.addressLevel === 'STREET' ? row.id : undefined;
 }
+
+/**
+ * A place id the CALLER already holds, published in place of the derived one.
+ *
+ * Two readers need it, and neither is a widening:
+ *
+ *  - `POST /api/addresses` answers the person who just submitted the address
+ *    with the row it resolved to. The fields are still reduced — the resolver
+ *    DEDUPES, so a matching row can carry a door label and a free-form
+ *    reference the submitter never typed — but the id has to be the row's own
+ *    or the caller cannot attach the listing or review they are in the middle
+ *    of writing.
+ *  - A review publishes at its own recorded `building_level_id` (ADR 0003
+ *    §5.1), which is the authority for where that review is filed and is set
+ *    even where `parent_address_id` is not.
+ *
+ * Anything else passes `undefined` and takes the ladder's answer.
+ */
+export type PublishedPlaceIdOverride = string | undefined;
 
 /**
  * Serialize one address onto the wire, at a stated precision.
@@ -161,6 +180,7 @@ function publishedPlaceId(row: AddressWithGeoNames, precision: ListingAddressPre
 export function serializeAddressRow(
   row: AddressWithGeoNames,
   precision: ListingAddressPrecision,
+  placeIdOverride: PublishedPlaceIdOverride = undefined,
 ): Record<string, unknown> {
   const landPlot = withoutAbsent({
     block: row.landPlotBlock,
@@ -179,7 +199,11 @@ export function serializeAddressRow(
   const decimals = PUBLIC_PRECISION_MAX_DECIMALS[precision === 'street' ? 'street' : 'building'];
   const longitude = exact ? row.longitude : roundCoordinate(row.longitude, decimals);
   const latitude = exact ? row.latitude : roundCoordinate(row.latitude, decimals);
-  const placeId = publishedPlaceId(row, precision);
+  // Kept apart: the LADDER's answer is what decides whether the row may
+  // announce its own level, and an override says "the caller already holds this
+  // id", never "this row is publishable at its own level".
+  const derivedPlaceId = publishedPlaceId(row, precision);
+  const placeId = placeIdOverride ?? derivedPlaceId;
 
   return withoutAbsent({
     id: placeId,
@@ -206,7 +230,7 @@ export function serializeAddressRow(
     coordinates: { type: 'Point', coordinates: [longitude, latitude] },
     // The level of the place `id` names. When the id was swapped for the
     // building's, or withheld, the row's own level would announce the unit.
-    addressLevel: placeId === row.id ? row.addressLevel : undefined,
+    addressLevel: derivedPlaceId === row.id ? row.addressLevel : undefined,
     normalizedKey: exact ? row.normalizedKey : undefined,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
