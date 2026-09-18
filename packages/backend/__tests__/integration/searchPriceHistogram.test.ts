@@ -180,6 +180,55 @@ describe('search price histogram', () => {
     expect(sum(res.body.priceHistogram.buckets)).toBe(7);
   });
 
+  describe('the currency is the SCOPE’s, not the caller’s default', () => {
+    /** A city whose whole inventory is priced in something other than euros. */
+    async function seedLondon(): Promise<GeoChain> {
+      const london = await seedGeoChain({ cityName: 'London', regionName: 'Greater London', countryCode: 'GB-H' });
+      for (const price of [1400, 1800, 2600]) {
+        await seedRent(london, price, { longTermRentCurrency: 'GBP' }, 'GB');
+      }
+      return london;
+    }
+
+    it('answers in the scope’s own dominant currency when the caller names none', async () => {
+      const london = await seedLondon();
+
+      const res = await request(buildApp()).get(
+        `/properties/search/price-histogram?offering=long_term_rent&city=${london.cityId}`,
+      );
+
+      expect(res.body.priceHistogram).toMatchObject({ currency: 'GBP', count: 3, otherCurrencyCount: 0 });
+      expect(sum(res.body.priceHistogram.buckets)).toBe(3);
+    });
+
+    it('picks the MOST COMMON one and reports the rest, rather than the first it meets', async () => {
+      // Barcelona is 7 euro listings; one pound listing must not win the vote.
+      await seedRent(barcelona, 1200, { longTermRentCurrency: 'GBP' });
+
+      const res = await request(buildApp()).get(
+        `/properties/search/price-histogram?offering=long_term_rent&city=${barcelona.cityId}`,
+      );
+
+      expect(res.body.priceHistogram).toMatchObject({ currency: 'EUR', count: 7, otherCurrencyCount: 1 });
+    });
+
+    it('answers NO histogram for a currency the scope does not price in', async () => {
+      // This is the shape the frontend used to force on every request, and the
+      // reason a London price filter drew no bars at all: refusing to mix is
+      // right (ADR 0004 §6.5), so the fix is to stop naming a currency — not to
+      // convert. Pinned here so a future "helpful" fallback to the dominant
+      // currency is a deliberate change rather than a silent one.
+      const london = await seedLondon();
+
+      const res = await request(buildApp()).get(
+        `/properties/search/price-histogram?offering=long_term_rent&city=${london.cityId}&currency=EUR`,
+      );
+
+      expect(res.status).toBe(200);
+      expect(res.body.priceHistogram).toBeNull();
+    });
+  });
+
   it('defaults its span to the scope and keeps the bucket count bounded', async () => {
     const res = await request(buildApp()).get(
       `/properties/search/price-histogram?offering=long_term_rent&city=${barcelona.cityId}&histogramBuckets=500`,

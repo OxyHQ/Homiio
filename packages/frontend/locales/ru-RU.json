@@ -529,7 +529,10 @@
         "min": "Minimum",
         "title": "Price range",
         "perMonth": "per month",
-        "perNight": "per night"
+        "perNight": "per night",
+        "inCurrency": "Цены в {{currency}}",
+        "otherCurrency_one": "{{count}} объект в этом районе указан в другой валюте и не показан выше",
+        "otherCurrency_other": "{{count}} объектов в этом районе указаны в другой валюте и не показаны выше"
       }
     },
     "header": {

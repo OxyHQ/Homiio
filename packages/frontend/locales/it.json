@@ -634,7 +634,10 @@
         "min": "Minimum",
         "title": "Price range",
         "perMonth": "per month",
-        "perNight": "per night"
+        "perNight": "per night",
+        "inCurrency": "Prezzi in {{currency}}",
+        "otherCurrency_one": "{{count}} casa in questa zona ha il prezzo in un’altra valuta e non compare qui sopra",
+        "otherCurrency_other": "{{count}} case in questa zona hanno il prezzo in un’altra valuta e non compaiono qui sopra"
       }
     },
     "header": {

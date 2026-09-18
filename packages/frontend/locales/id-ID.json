@@ -527,7 +527,10 @@
         "min": "Minimum",
         "title": "Price range",
         "perMonth": "per month",
-        "perNight": "per night"
+        "perNight": "per night",
+        "inCurrency": "Harga dalam {{currency}}",
+        "otherCurrency_one": "{{count}} hunian di area ini dihargai dalam mata uang lain dan tidak ditampilkan di atas",
+        "otherCurrency_other": "{{count}} hunian di area ini dihargai dalam mata uang lain dan tidak ditampilkan di atas"
       }
     },
     "header": {
