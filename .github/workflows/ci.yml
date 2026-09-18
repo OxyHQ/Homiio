@@ -109,7 +109,24 @@ on:
 # the same mechanism, and if a wire contract ever splits across it, this is the
 # paragraph to come back to.
 concurrency:
-  group: ci-${{ github.ref }}
+  # PER COMMIT on main, per ref everywhere else.
+  #
+  # `cancel-in-progress: false` stops GitHub cancelling a RUNNING main run; it
+  # does NOT stop it superseding a QUEUED one. Only one run per group may wait,
+  # so a second merge while the first is still queued cancels the first — and a
+  # cancelled run never reaches `deploy-backend`, while `deploy-frontends.yml`
+  # (workflow_run + `conclusion == 'success'`) skips it too. Measured on
+  # 2026-09-18: `426947d9` and `4e9b5dae` were both cancelled at the instant the
+  # next merge created its run, 50s in, with zero jobs started, so two merged
+  # changes went undeployed with nothing red anywhere.
+  #
+  # Giving each main commit its own group means main runs never supersede each
+  # other. They still cannot deploy concurrently: `deploy-aws.yml` serialises on
+  # its own `deploy-homiio-backend` group with `cancel-in-progress: false`, and
+  # the deploy job refuses to roll out a commit that main has already moved past
+  # (see "Refuse a superseded rollout" there), so a queued older run cannot land
+  # an older image on top of a newer one.
+  group: ci-${{ github.ref }}${{ github.ref == 'refs/heads/main' && format('-{0}', github.sha) || '' }}
   # An EXPRESSION, and a mistyped one degrades silently to falsy — which would
   # stop pull-request CI cancelling and queue it instead, slower but green, so
   # nothing would report it. Verified on real runs, not by reading this line:
