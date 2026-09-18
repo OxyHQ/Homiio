@@ -19,6 +19,7 @@ import { useTheme } from '@oxy.so/bloom/theme';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { ImageUpload } from '@/components/ImageUpload';
+import { AuthorIdentityPicker } from '@/components/reviews/write/AuthorIdentityPicker';
 import { YesNoSelector } from '@/components/reviews/write/YesNoSelector';
 import type { StepProps } from '@/components/reviews/write/types';
 import { spacing } from '@/constants/styles';
@@ -61,6 +62,15 @@ export const StepPhotosRecommend: React.FC<StepProps> = ({ data, update }) => {
         label={t('reviews.write.fields.recommendation')}
         value={data.recommendation}
         onChange={(value) => update('recommendation', value)}
+      />
+
+      {/*
+        Last, deliberately: a person decides how exposed they want to be once
+        they can see what they have written, not on a form's first screen.
+      */}
+      <AuthorIdentityPicker
+        value={data.authorIdentity}
+        onChange={(value) => update('authorIdentity', value)}
       />
     </View>
   );

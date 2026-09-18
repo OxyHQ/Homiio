@@ -2570,7 +2570,12 @@
         "personal_data": "Contains personal data",
         "spam": "Spam",
         "other": "Other"
-      }
+      },
+      "pseudonymousAuthor": "住户 {{reference}}",
+      "anonymousResident": "一位住户",
+      "perMonthBand": "{{range}}/月",
+      "perMonthFrom": "{{price}} 及以上/月",
+      "tenancyRange": "{{from}} – {{to}}"
     },
     "write": {
       "submitFailed": "Failed to submit review",
@@ -2660,7 +2665,8 @@
         "cons": "What could be better",
         "photos": "Photos",
         "rating": "Overall rating",
-        "recommendation": "Would you recommend this address?"
+        "recommendation": "Would you recommend this address?",
+        "authorIdentity": "你的显示方式"
       },
       "placeholders": {
         "street": "e.g. 123 Main Street",
@@ -2688,6 +2694,21 @@
         "USD": "USD ($)",
         "GBP": "GBP (£)",
         "CAD": "CAD ($)"
+      },
+      "authorIdentity": {
+        "hint": "Homiio 始终知道点评由谁撰写，以便更正或申诉。此设置只改变其他人看到的内容。",
+        "verified_anonymous_resident": {
+          "title": "一位住户",
+          "description": "不显示任何关于你的信息。这栋楼的两条匿名点评看起来完全相同。"
+        },
+        "pseudonymous": {
+          "title": "本栋楼的专用代号",
+          "description": "一个简短代号，在你对这栋楼的所有点评中保持一致，在其他地址则完全不同。"
+        },
+        "identified": {
+          "title": "我的 Oxy 名称",
+          "description": "点评旁会显示你的昵称和头像。"
+        }
       }
     },
     "explore": {

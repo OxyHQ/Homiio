@@ -254,6 +254,12 @@ describe('the agency profile', () => {
       totalReviews: 0,
       recommendationPercentage: 0,
       depositFullPct: 0,
+      // ADR 0003 §4.4's second floor. `0` rather than absent on the empty
+      // branch, because the agency page publishes a share only at or above it
+      // and an ABSENT count would read as "unknown" — which the screen has to
+      // treat as "do not publish" anyway, but stating the zero keeps the two
+      // branches of this function answering the same shape.
+      distinctAuthors: 0,
     });
   });
 });

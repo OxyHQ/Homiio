@@ -2570,7 +2570,12 @@
         "personal_data": "Contains personal data",
         "spam": "Spam",
         "other": "Other"
-      }
+      },
+      "pseudonymousAuthor": "Penghuni {{reference}}",
+      "anonymousResident": "Seorang penghuni",
+      "perMonthBand": "{{range}}/bulan",
+      "perMonthFrom": "{{price}} atau lebih/bulan",
+      "tenancyRange": "{{from}} – {{to}}"
     },
     "write": {
       "submitFailed": "Failed to submit review",
@@ -2660,7 +2665,8 @@
         "cons": "What could be better",
         "photos": "Photos",
         "rating": "Overall rating",
-        "recommendation": "Would you recommend this address?"
+        "recommendation": "Would you recommend this address?",
+        "authorIdentity": "Bagaimana Anda ditampilkan"
       },
       "placeholders": {
         "street": "e.g. 123 Main Street",
@@ -2688,6 +2694,21 @@
         "USD": "USD ($)",
         "GBP": "GBP (£)",
         "CAD": "CAD ($)"
+      },
+      "authorIdentity": {
+        "hint": "Homiio selalu tahu siapa yang menulis ulasan, agar ulasan itu bisa dikoreksi atau dibanding. Ini hanya mengubah apa yang dilihat orang lain.",
+        "verified_anonymous_resident": {
+          "title": "Seorang penghuni",
+          "description": "Tidak ada apa pun tentang Anda yang ditampilkan. Dua ulasan anonim untuk gedung ini terlihat sama."
+        },
+        "pseudonymous": {
+          "title": "Kode khusus gedung ini",
+          "description": "Kode pendek yang sama di semua ulasan Anda tentang gedung ini dan berbeda di alamat lain."
+        },
+        "identified": {
+          "title": "Nama Oxy saya",
+          "description": "Nama dan foto Anda muncul di samping ulasan."
+        }
       }
     },
     "explore": {

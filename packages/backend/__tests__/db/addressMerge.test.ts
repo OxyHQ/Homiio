@@ -137,6 +137,10 @@ async function makeReview(addressId: string, author: string): Promise<string> {
     opinion: 'Fixture opinion, long enough to be a sentence somebody wrote.',
     rating: 4,
     oxyUserId: author,
+    // `authorPseudonym` has no DEFAULT on purpose (ADR 0003 §5.2): only the
+    // application can keep it stable per author per building, so a raw insert
+    // that forgets it fails rather than minting a second handle silently.
+    authorPseudonym: `pseudo-${id}`,
   });
   return id;
 }

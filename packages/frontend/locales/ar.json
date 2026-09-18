@@ -2598,7 +2598,12 @@
         "personal_data": "Contains personal data",
         "spam": "Spam",
         "other": "Other"
-      }
+      },
+      "pseudonymousAuthor": "ساكن {{reference}}",
+      "anonymousResident": "أحد السكان",
+      "perMonthBand": "{{range}}/شهر",
+      "perMonthFrom": "{{price}} أو أكثر/شهر",
+      "tenancyRange": "{{from}} – {{to}}"
     },
     "write": {
       "submitFailed": "Failed to submit review",
@@ -2688,7 +2693,8 @@
         "cons": "What could be better",
         "photos": "Photos",
         "rating": "Overall rating",
-        "recommendation": "Would you recommend this address?"
+        "recommendation": "Would you recommend this address?",
+        "authorIdentity": "كيف تظهر"
       },
       "placeholders": {
         "street": "e.g. 123 Main Street",
@@ -2716,6 +2722,21 @@
         "USD": "USD ($)",
         "GBP": "GBP (£)",
         "CAD": "CAD ($)"
+      },
+      "authorIdentity": {
+        "hint": "يعرف Homiio دائمًا من كتب المراجعة حتى يمكن تصحيحها أو الاعتراض عليها. هذا يغيّر فقط ما يراه الآخرون.",
+        "verified_anonymous_resident": {
+          "title": "أحد السكان",
+          "description": "لا يُعرض أي شيء عنك. تبدو مراجعتان مجهولتان لهذا المبنى متطابقتين."
+        },
+        "pseudonymous": {
+          "title": "رمز خاص بهذا المبنى",
+          "description": "رمز قصير يبقى نفسه في كل مراجعاتك عن هذا المبنى ويختلف في أي عنوان آخر."
+        },
+        "identified": {
+          "title": "اسمي في Oxy",
+          "description": "يظهر اسمك وصورتك بجانب المراجعة."
+        }
       }
     },
     "explore": {

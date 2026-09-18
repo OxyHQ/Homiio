@@ -134,6 +134,30 @@ export enum ReviewModerationStatus {
   REMOVED = 'removed'
 }
 
+/**
+ * How a review's author is PUBLISHED — the three forms of
+ * `docs/adr/0003-privacy-verification-publication.md` §5.2, chosen by the
+ * author.
+ *
+ * Homiio always knows who wrote a review: `reviews.oxy_user_id` is `NOT NULL`
+ * and stays that way, because the link is what makes correction, appeal and
+ * abuse handling possible. What the author chooses is what a READER is told.
+ */
+export enum ReviewAuthorIdentity {
+  /** The author's Oxy handle and display name. */
+  IDENTIFIED = 'identified',
+  /**
+   * A pseudonym that is stable per author PER BUILDING.
+   *
+   * A reader can tell that the same person wrote two reviews about one
+   * building; nobody can correlate an author across buildings, which would be
+   * de-anonymisation with extra steps.
+   */
+  PSEUDONYMOUS = 'pseudonymous',
+  /** Nothing at all beyond "a resident" — not even a per-building handle. */
+  VERIFIED_ANONYMOUS_RESIDENT = 'verified_anonymous_resident',
+}
+
 export enum ReviewReportReason {
   FAKE = 'fake',
   OFFENSIVE = 'offensive',
@@ -172,6 +196,31 @@ export interface AgencyStats {
   depositFullPct?: number;
   /** Number of active Homiio listings currently attributed to the agency. */
   listingsCount?: number;
+  /**
+   * How many DISTINCT people wrote them — the second half of ADR 0003 §4.4's
+   * publication floor.
+   *
+   * Counted server-side over `reviews.oxy_user_id`, because that is the only
+   * place the real author is known: a client counting published handles would
+   * see one bucket per pseudonym, and a pseudonym is stable per BUILDING, so an
+   * author who reviewed three of an agency's buildings would read as three
+   * people and lift the set over a floor it does not clear.
+   */
+  distinctAuthors?: number;
+}
+
+/**
+ * A rent published as a band rather than a figure — ADR 0003 §5.6.
+ *
+ * Half-open: `min` inclusive, `max` exclusive. `max` is ABSENT on the open top
+ * band, which is the honest shape — "3000 or more" is what is known, and a
+ * fabricated ceiling would read as a measurement.
+ */
+export interface ReviewPriceBand {
+  min: number;
+  max?: number;
+  /** The review's own currency — a band is meaningless without it. */
+  currency: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -210,14 +259,51 @@ export interface Review {
   neighborhoodId?: string;
 
   // Author
-  oxyUserId: string;
+  /**
+   * Which of the three forms the author chose (ADR 0003 §5.2).
+   *
+   * Always published, because a reader has to know what they are looking at:
+   * "a name" and "a per-building pseudonym" carry very different weight.
+   */
+  authorIdentity: ReviewAuthorIdentity;
+  /**
+   * The author's Oxy account.
+   *
+   * ABSENT for anybody but the author unless {@link Review.authorIdentity} is
+   * `identified` — undisclosed is absent, never `null` (ADR 0003 §4.1.3).
+   */
+  oxyUserId?: string;
+  /**
+   * An opaque handle, stable for one author within one BUILDING.
+   *
+   * Present only under `pseudonymous`. `verified_anonymous_resident` publishes
+   * nothing at all, so two such reviews of one building are indistinguishable —
+   * which is what that form is for.
+   */
+  authorKey?: string;
 
   // Basic information
   title: string;
-  price: number;
+  /**
+   * The exact monthly rent.
+   *
+   * Served to the AUTHOR only. A public reader gets {@link Review.priceBand}:
+   * unit, tenancy dates and rent together narrow a household to one, and ADR
+   * 0003 §5.6 bands the rent on any review published at building precision or
+   * finer. The exact figure still feeds §4.4-compliant aggregates server-side.
+   */
+  price?: number;
+  /** The band the rent falls in — what a public reader is served instead. */
+  priceBand?: ReviewPriceBand;
   currency: string;
-  livedFrom: Date;
-  livedTo: Date;
+  /** Exact tenancy start. Author only — see {@link Review.livedFromMonth}. */
+  livedFrom?: Date;
+  /** Exact tenancy end. Author only. */
+  livedTo?: Date;
+  /** Tenancy start as `YYYY-MM`. ADR 0003 §5.6: never a day. */
+  livedFromMonth: string;
+  /** Tenancy end as `YYYY-MM`. */
+  livedToMonth: string;
   livedForMonths: number;
 
   // Overall opinion
@@ -338,6 +424,13 @@ export type CreatableReviewFields = Omit<
   | 'cityId'
   | 'neighborhoodId'
   | 'oxyUserId'
+  // Derived on the way OUT, never supplied: the pseudonym is minted server-side
+  // and kept stable per building, and the band and the month-grained dates are
+  // reductions of columns the author sends exactly (ADR 0003 §3.3, §5.6).
+  | 'authorKey'
+  | 'priceBand'
+  | 'livedFromMonth'
+  | 'livedToMonth'
   | 'livedForMonths'
   | 'agencyId'
   | 'verified'
@@ -350,9 +443,15 @@ export type CreatableReviewFields = Omit<
  * `agencyName` the backend resolves/creates into an {@link Agency}.
  */
 export type CreateReviewPayload = Partial<CreatableReviewFields> &
-  Pick<
-    CreatableReviewFields,
-    'price' | 'currency' | 'livedFrom' | 'livedTo' | 'rating' | 'recommendation' | 'opinion'
+  // `Required<…>`: `price`, `livedFrom` and `livedTo` are OPTIONAL on the read
+  // model — they are the author's own copy of values a public reader is served
+  // reduced — but every one of them is mandatory on the way IN, because the
+  // reduction is computed from them.
+  Required<
+    Pick<
+      CreatableReviewFields,
+      'price' | 'currency' | 'livedFrom' | 'livedTo' | 'rating' | 'recommendation' | 'opinion'
+    >
   > & {
     address: CreateReviewAddressInput;
     agencyName?: string;

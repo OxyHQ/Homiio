@@ -2570,7 +2570,12 @@
         "personal_data": "Contains personal data",
         "spam": "Spam",
         "other": "Other"
-      }
+      },
+      "pseudonymousAuthor": "निवासी {{reference}}",
+      "anonymousResident": "एक निवासी",
+      "perMonthBand": "{{range}}/माह",
+      "perMonthFrom": "{{price}} या अधिक/माह",
+      "tenancyRange": "{{from}} – {{to}}"
     },
     "write": {
       "submitFailed": "Failed to submit review",
@@ -2660,7 +2665,8 @@
         "cons": "What could be better",
         "photos": "Photos",
         "rating": "Overall rating",
-        "recommendation": "Would you recommend this address?"
+        "recommendation": "Would you recommend this address?",
+        "authorIdentity": "आप कैसे दिखेंगे"
       },
       "placeholders": {
         "street": "e.g. 123 Main Street",
@@ -2688,6 +2694,21 @@
         "USD": "USD ($)",
         "GBP": "GBP (£)",
         "CAD": "CAD ($)"
+      },
+      "authorIdentity": {
+        "hint": "Homiio हमेशा जानता है कि समीक्षा किसने लिखी, ताकि उसे सुधारा या चुनौती दी जा सके। इससे केवल यह बदलता है कि दूसरे लोग क्या देखते हैं।",
+        "verified_anonymous_resident": {
+          "title": "एक निवासी",
+          "description": "आपके बारे में कुछ नहीं दिखाया जाता। इस इमारत की दो गुमनाम समीक्षाएँ एक जैसी दिखती हैं।"
+        },
+        "pseudonymous": {
+          "title": "इस इमारत के लिए एक संदर्भ",
+          "description": "एक छोटा कोड, जो इस इमारत की आपकी हर समीक्षा में एक ही रहता है और किसी भी दूसरे पते पर अलग होता है।"
+        },
+        "identified": {
+          "title": "मेरा Oxy नाम",
+          "description": "समीक्षा के साथ आपका नाम और फ़ोटो दिखाई देते हैं।"
+        }
       }
     },
     "explore": {

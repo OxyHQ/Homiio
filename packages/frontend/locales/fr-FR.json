@@ -2570,7 +2570,12 @@
         "personal_data": "Contains personal data",
         "spam": "Spam",
         "other": "Other"
-      }
+      },
+      "pseudonymousAuthor": "Résident {{reference}}",
+      "anonymousResident": "Une personne résidente",
+      "perMonthBand": "{{range}}/mois",
+      "perMonthFrom": "{{price}} ou plus/mois",
+      "tenancyRange": "{{from}} – {{to}}"
     },
     "write": {
       "submitFailed": "Failed to submit review",
@@ -2660,7 +2665,8 @@
         "cons": "What could be better",
         "photos": "Photos",
         "rating": "Overall rating",
-        "recommendation": "Would you recommend this address?"
+        "recommendation": "Would you recommend this address?",
+        "authorIdentity": "Comment vous apparaissez"
       },
       "placeholders": {
         "street": "e.g. 123 Main Street",
@@ -2688,6 +2694,21 @@
         "USD": "USD ($)",
         "GBP": "GBP (£)",
         "CAD": "CAD ($)"
+      },
+      "authorIdentity": {
+        "hint": "Homiio sait toujours qui a écrit un avis, afin de pouvoir le corriger ou le contester. Cela ne change que ce que voient les autres.",
+        "verified_anonymous_resident": {
+          "title": "Une personne résidente",
+          "description": "Rien n'est affiché à votre sujet. Deux avis anonymes sur cet immeuble sont identiques."
+        },
+        "pseudonymous": {
+          "title": "Une référence pour cet immeuble",
+          "description": "Un code court, le même sur tous vos avis concernant cet immeuble et différent à toute autre adresse."
+        },
+        "identified": {
+          "title": "Mon nom Oxy",
+          "description": "Votre nom et votre photo apparaissent à côté de l'avis."
+        }
       }
     },
     "explore": {

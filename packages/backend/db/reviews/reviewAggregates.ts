@@ -198,12 +198,31 @@ export async function getAgencyStats(
       recommendCount: sql<number>`count(*) filter (where ${reviews.recommendation})::int`,
       depositFullCount: sql<number>`count(*) filter (where ${reviews.depositReturned} = 'full')::int`,
       depositKnownCount: sql<number>`count(*) filter (where ${reviews.depositReturned} is not null)::int`,
+      /**
+       * The second half of ADR 0003 §4.4's publication floor: at least 5
+       * records from at least 3 distinct authors.
+       *
+       * Counted HERE because this is the only place the real author is known.
+       * A client counting published handles would see one bucket per pseudonym,
+       * and a pseudonym is stable per BUILDING (§5.2) — so one person who
+       * reviewed three of an agency's buildings would read as three people and
+       * lift the set over a floor it does not clear. Counting the published
+       * identity would break the floor in the UNSAFE direction, which is why it
+       * is not a client-side sum over the page.
+       */
+      distinctAuthors: countDistinct(reviews.oxyUserId),
     })
     .from(reviews)
     .where(allOfReviews([eq(reviews.agencyId, agencyId), visibleModeration()]));
 
   if (!row || row.totalReviews === 0) {
-    return { averageRating: 0, totalReviews: 0, recommendationPercentage: 0, depositFullPct: 0 };
+    return {
+      averageRating: 0,
+      totalReviews: 0,
+      recommendationPercentage: 0,
+      depositFullPct: 0,
+      distinctAuthors: 0,
+    };
   }
   return {
     averageRating: round1(row.averageRating ?? 0),
@@ -211,6 +230,7 @@ export async function getAgencyStats(
     recommendationPercentage: roundPct((row.recommendCount / row.totalReviews) * 100),
     depositFullPct:
       row.depositKnownCount > 0 ? roundPct((row.depositFullCount / row.depositKnownCount) * 100) : 0,
+    distinctAuthors: row.distinctAuthors,
   };
 }
 

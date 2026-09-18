@@ -321,7 +321,7 @@ export default function AddressDetailsPage() {
                     <ReviewCard
                       key={review.id}
                       review={review}
-                      author={usersById.get(review.oxyUserId)}
+                      author={review.oxyUserId ? usersById.get(review.oxyUserId) : undefined}
                       onPressAgency={(slug) => router.push(`/agency/${slug}`)}
                     />
                   ))}

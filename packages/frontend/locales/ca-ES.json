@@ -2617,7 +2617,12 @@
         "personal_data": "Conté dades personals",
         "spam": "Correu brossa",
         "other": "Altres"
-      }
+      },
+      "pseudonymousAuthor": "Resident {{reference}}",
+      "anonymousResident": "Una persona resident",
+      "perMonthBand": "{{range}}/mes",
+      "perMonthFrom": "{{price}} o més/mes",
+      "tenancyRange": "{{from}} – {{to}}"
     },
     "write": {
       "submitFailed": "No s'ha pogut enviar la ressenya",
@@ -2707,7 +2712,8 @@
         "cons": "El que es pot millorar",
         "photos": "Fotos",
         "rating": "Valoració global",
-        "recommendation": "Recomanaries aquesta adreça?"
+        "recommendation": "Recomanaries aquesta adreça?",
+        "authorIdentity": "Com apareixes"
       },
       "placeholders": {
         "street": "p. ex. Carrer Major 123",
@@ -2735,6 +2741,21 @@
         "USD": "USD ($)",
         "GBP": "GBP (£)",
         "CAD": "CAD ($)"
+      },
+      "authorIdentity": {
+        "hint": "Homiio sempre sap qui ha escrit una ressenya, per poder corregir-la o recórrer-hi. Això només canvia el que veuen les altres persones.",
+        "verified_anonymous_resident": {
+          "title": "Una persona resident",
+          "description": "No es mostra res sobre tu. Dues ressenyes anònimes d'aquest edifici són idèntiques."
+        },
+        "pseudonymous": {
+          "title": "Una referència per a aquest edifici",
+          "description": "Un codi curt, el mateix a totes les teves ressenyes sobre aquest edifici i diferent a qualsevol altra adreça."
+        },
+        "identified": {
+          "title": "El meu nom d'Oxy",
+          "description": "El teu nom i la teva foto es mostren al costat de la ressenya."
+        }
       }
     },
     "explore": {

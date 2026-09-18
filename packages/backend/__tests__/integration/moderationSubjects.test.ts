@@ -147,6 +147,8 @@ async function seedReview(
       cityId: chain.cityId,
       neighborhoodId,
       oxyUserId: 'oxy-reviewer',
+      // No DEFAULT on purpose — see `db/schema/reviews.ts`.
+      authorPseudonym: 'pseudo-subjects',
       title: 'Two difficult years',
       greenHouse: 'n/a',
       price: 1200,

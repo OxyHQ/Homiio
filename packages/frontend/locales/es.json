@@ -2596,7 +2596,12 @@
         "personal_data": "Contiene datos personales",
         "spam": "Spam",
         "other": "Otro"
-      }
+      },
+      "pseudonymousAuthor": "Residente {{reference}}",
+      "anonymousResident": "Una persona residente",
+      "perMonthBand": "{{range}}/mes",
+      "perMonthFrom": "{{price}} o más/mes",
+      "tenancyRange": "{{from}} – {{to}}"
     },
     "write": {
       "submitFailed": "No se pudo enviar la reseña",
@@ -2686,7 +2691,8 @@
         "cons": "Lo mejorable",
         "photos": "Fotos",
         "rating": "Valoración global",
-        "recommendation": "¿Recomendarías esta dirección?"
+        "recommendation": "¿Recomendarías esta dirección?",
+        "authorIdentity": "Cómo apareces"
       },
       "placeholders": {
         "street": "p. ej. Calle Mayor 123",
@@ -2714,6 +2720,21 @@
         "USD": "USD ($)",
         "GBP": "GBP (£)",
         "CAD": "CAD ($)"
+      },
+      "authorIdentity": {
+        "hint": "Homiio siempre sabe quién escribió una reseña, para poder corregirla o recurrirla. Esto solo cambia lo que ven las demás personas.",
+        "verified_anonymous_resident": {
+          "title": "Una persona residente",
+          "description": "No se muestra nada sobre ti. Dos reseñas anónimas de este edificio son idénticas."
+        },
+        "pseudonymous": {
+          "title": "Una referencia para este edificio",
+          "description": "Un código corto, el mismo en todas tus reseñas sobre este edificio y distinto en cualquier otra dirección."
+        },
+        "identified": {
+          "title": "Mi nombre de Oxy",
+          "description": "Tu nombre y tu foto se muestran junto a la reseña."
+        }
       }
     },
     "explore": {

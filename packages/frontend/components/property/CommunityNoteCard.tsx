@@ -31,6 +31,7 @@ import { Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { ReviewModerationStatus, type ReviewDTO } from '@homiio/shared-types';
 import { Stars } from '@/components/ui/Stars';
+import { reviewRentLabel } from '@/components/reviews/publishedFacts';
 import { formatLocalized } from '@/utils/dateLocale';
 import { colors } from '@/styles/colors';
 import { spacing } from '@/constants/styles';
@@ -44,7 +45,7 @@ interface CommunityNoteCardProps {
 }
 
 export const CommunityNoteCard: React.FC<CommunityNoteCardProps> = ({ note }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [expanded, setExpanded] = useState(false);
   const [isTruncatable, setIsTruncatable] = useState(false);
 
@@ -53,6 +54,10 @@ export const CommunityNoteCard: React.FC<CommunityNoteCardProps> = ({ note }) =>
     : t('property.communityNotes.anonymous');
 
   const formattedDate = formatLocalized(new Date(note.createdAt), 'MMMM yyyy');
+  // The rent this note PUBLISHES — a band for anybody but its author (ADR 0003
+  // §5.6). This card used to print `note.price` raw, which is the exact figure
+  // the API no longer serves to a third party.
+  const rentLabel = reviewRentLabel(note, i18n.language, t);
 
   const pros = (note.prosItems?.length
     ? note.prosItems
@@ -105,12 +110,10 @@ export const CommunityNoteCard: React.FC<CommunityNoteCardProps> = ({ note }) =>
                 </BloomText>
               </>
             ) : null}
-            {note.price > 0 ? (
+            {rentLabel ? (
               <>
                 <BloomText style={styles.metaDot}>·</BloomText>
-                <BloomText style={styles.metaText}>
-                  {note.price} {note.currency}
-                </BloomText>
+                <BloomText style={styles.metaText}>{rentLabel}</BloomText>
               </>
             ) : null}
           </View>

@@ -675,6 +675,8 @@ describe('the remaining single-table coherence rules', () => {
       opinion: 'Piso luminoso y bien comunicado.',
       rating: 4,
       oxyUserId: oxy(),
+      // No DEFAULT on purpose — see `db/schema/reviews.ts`.
+      authorPseudonym: 'pseudo-coherence',
     };
 
     const unitWithoutUnit = await violation(() =>

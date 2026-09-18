@@ -5,6 +5,7 @@
  * dimension step is skippable); only the hard-required fields are validated per
  * step in `write.tsx` before advancing.
  */
+import { ReviewAuthorIdentity } from '@homiio/shared-types';
 import type {
   TemperatureRating,
   NoiseLevel,
@@ -81,6 +82,15 @@ export interface ReviewWizardData {
   images: UploadedImage[];
   rating: number;
   recommendation: boolean | null;
+
+  /**
+   * How the author wants to be published (ADR 0003 §5.2).
+   *
+   * Required rather than optional: the column has a default, but a form that
+   * left this `undefined` would be one that never asked, and the whole point of
+   * §5.2 is that the AUTHOR chooses.
+   */
+  authorIdentity: ReviewAuthorIdentity;
 }
 
 export const INITIAL_WIZARD_DATA: ReviewWizardData = {
@@ -127,6 +137,12 @@ export const INITIAL_WIZARD_DATA: ReviewWizardData = {
   images: [],
   rating: 0,
   recommendation: null,
+  // `pseudonymous`, which is the column's default and the same departure from
+  // ADR 0003 §5.2's own wording that `db/schema/reviews.ts` records: the ADR
+  // offers `verified_anonymous_resident` by default, and its published text is
+  // *"Verified resident"* while nothing in Homiio writes `reviews.verified`
+  // (§6.1, F7). Offering it by default would ship a claim nobody checked.
+  authorIdentity: ReviewAuthorIdentity.PSEUDONYMOUS,
 };
 
 /** Every step receives the current data + a typed field updater. */

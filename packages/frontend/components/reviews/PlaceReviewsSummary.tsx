@@ -38,13 +38,44 @@ export interface PlaceReviewStats {
   depositReturnedRate?: number;
 }
 
+/**
+ * How many DISTINCT people wrote a set of reviews, counted from what is
+ * PUBLISHED about their authors.
+ *
+ * Author identity is now the author's own choice (ADR 0003 §5.2), so a public
+ * review carries an `oxyUserId` only under `identified` and an `authorKey` only
+ * under `pseudonymous` — and `verified_anonymous_resident` carries neither,
+ * deliberately, so two such reviews of one building are indistinguishable.
+ *
+ * Every handle-less review therefore collapses into ONE bucket. That
+ * UNDER-counts, and the direction is the point: under-counting keeps a set below
+ * the floor and withholds a share, while treating each anonymous review as its
+ * own author would lift a set over a floor it does not clear and publish one.
+ * When in doubt, publish less.
+ *
+ * This counts within ONE building's reviews, which is what every caller here
+ * passes. The agency page has a set spanning several buildings, where a
+ * per-building pseudonym would OVER-count — it reads `stats.distinctAuthors` off
+ * the server instead, counted over the real author id.
+ */
+export function distinctPublishedAuthors(reviews: readonly ReviewDTO[]): number {
+  const handles = new Set<string>();
+  let anonymous = 0;
+  for (const review of reviews) {
+    const handle = review.authorKey ?? review.oxyUserId;
+    if (handle) handles.add(handle);
+    else anonymous = 1;
+  }
+  return handles.size + anonymous;
+}
+
 /** The summary figures for one place's reviews. */
 export function placeReviewStats(reviews: readonly ReviewDTO[]): PlaceReviewStats {
   const totalReviews = reviews.length;
   if (totalReviews === 0) return { averageRating: 0, totalReviews: 0 };
   const averageRating = reviews.reduce((sum, review) => sum + (review.rating || 0), 0) / totalReviews;
 
-  const authors = new Set(reviews.map((review) => review.oxyUserId)).size;
+  const authors = distinctPublishedAuthors(reviews);
   if (totalReviews < AGGREGATE_MIN_RECORDS || authors < AGGREGATE_MIN_AUTHORS) {
     return { averageRating, totalReviews };
   }

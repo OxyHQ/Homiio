@@ -2570,7 +2570,12 @@
         "personal_data": "Contains personal data",
         "spam": "Spam",
         "other": "Other"
-      }
+      },
+      "pseudonymousAuthor": "Residente {{reference}}",
+      "anonymousResident": "Uma pessoa residente",
+      "perMonthBand": "{{range}}/mês",
+      "perMonthFrom": "{{price}} ou mais/mês",
+      "tenancyRange": "{{from}} – {{to}}"
     },
     "write": {
       "submitFailed": "Failed to submit review",
@@ -2660,7 +2665,8 @@
         "cons": "What could be better",
         "photos": "Photos",
         "rating": "Overall rating",
-        "recommendation": "Would you recommend this address?"
+        "recommendation": "Would you recommend this address?",
+        "authorIdentity": "Como você aparece"
       },
       "placeholders": {
         "street": "e.g. 123 Main Street",
@@ -2688,6 +2694,21 @@
         "USD": "USD ($)",
         "GBP": "GBP (£)",
         "CAD": "CAD ($)"
+      },
+      "authorIdentity": {
+        "hint": "O Homiio sempre sabe quem escreveu uma avaliação, para que ela possa ser corrigida ou contestada. Isso muda apenas o que as outras pessoas veem.",
+        "verified_anonymous_resident": {
+          "title": "Uma pessoa residente",
+          "description": "Nada sobre você é mostrado. Duas avaliações anônimas deste prédio ficam idênticas."
+        },
+        "pseudonymous": {
+          "title": "Uma referência para este prédio",
+          "description": "Um código curto, o mesmo em todas as suas avaliações sobre este prédio e diferente em qualquer outro endereço."
+        },
+        "identified": {
+          "title": "Meu nome no Oxy",
+          "description": "Seu nome e sua foto aparecem ao lado da avaliação."
+        }
       }
     },
     "explore": {
