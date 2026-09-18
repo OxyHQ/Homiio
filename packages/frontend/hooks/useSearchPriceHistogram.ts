@@ -12,12 +12,22 @@
  * scope cannot be searched, when the place did not resolve, or when nothing in
  * scope is priced — the slider then renders with no bars rather than with a
  * distribution that describes somewhere else (ADR 0002 §4.3).
+ *
+ * ## The scope names the currency; this hook does not
+ *
+ * ADR 0004 §6.5 forbids mixing currencies inside one statistic, so the endpoint
+ * answers in exactly one — the one it is ASKED for, or, when it is asked for
+ * none, the scope's own most common. This hook deliberately asks for none.
+ * Sending `EUR` (which it used to) is what made the bars vanish entirely in
+ * every area that prices in something else: the server answered `null` rather
+ * than mixing, and a filter with no bars looked like an area with no listings.
+ * The currency comes BACK instead, and the caller labels the bars with it.
  */
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 
 import { OfferingType } from '@homiio/shared-types';
-import { SEARCH_PRICE_CURRENCY, type SearchQuery } from '@/components/search/types';
+import type { SearchQuery } from '@/components/search/types';
 import type { PriceTrack } from '@/components/search/steps/PriceStep';
 import { api } from '@/utils/api';
 
@@ -41,8 +51,35 @@ interface PriceHistogramResponse {
     min: number;
     max: number;
     count: number;
+    otherCurrencyCount?: number;
     buckets: Array<{ from: number; to: number; count: number }>;
   } | null;
+}
+
+/** The distribution a price control can draw, and what it has to say about it. */
+export interface SearchPriceHistogram {
+  /** One count per bar, over `0`..`track.max`. */
+  counts: number[];
+  /** The ISO 4217 code these counts are in — the scope's own, not the app's. */
+  currency: string;
+  /**
+   * Priced listings in the same scope carrying a DIFFERENT currency. They are
+   * not in `counts` and must not be converted into it; the control says so
+   * rather than quietly under-reporting the area.
+   */
+  otherCurrencyCount: number;
+}
+
+/**
+ * The span the buckets cover, and the whole of what the request says about
+ * price. Exported so a test can assert what is NOT in it.
+ */
+export function priceHistogramSpan(track: PriceTrack): Record<string, number> {
+  return {
+    histogramMin: 0,
+    histogramMax: track.max,
+    histogramBuckets: PRICE_HISTOGRAM_BUCKETS,
+  };
 }
 
 export interface UseSearchPriceHistogramOptions {
@@ -54,16 +91,10 @@ export function useSearchPriceHistogram(
   query: SearchQuery,
   track: PriceTrack,
   { enabled = true }: UseSearchPriceHistogramOptions = {},
-): number[] | undefined {
-  const span = useMemo(
-    () => ({
-      histogramMin: 0,
-      histogramMax: track.max,
-      histogramBuckets: PRICE_HISTOGRAM_BUCKETS,
-      currency: SEARCH_PRICE_CURRENCY,
-    }),
-    [track.max],
-  );
+): SearchPriceHistogram | undefined {
+  // `priceTrackFor` hands back one of three module-level constants, so the
+  // track's identity is stable and this memo really is per-offering.
+  const span = useMemo(() => priceHistogramSpan(track), [track]);
   const params = useMemo(() => ({ ...buildPriceHistogramParams(query), ...span }), [query, span]);
   const queryKey = useMemo(() => priceHistogramQueryKey(query, span), [query, span]);
 
@@ -86,6 +117,11 @@ export function useSearchPriceHistogram(
     // Only a histogram over exactly the slider's span can be drawn under it.
     if (!histogram || histogram.min !== 0 || histogram.max !== track.max) return undefined;
     const counts = histogram.buckets.map((bucket) => bucket.count);
-    return counts.some((count) => count > 0) ? counts : undefined;
+    if (!counts.some((count) => count > 0)) return undefined;
+    return {
+      counts,
+      currency: histogram.currency,
+      otherCurrencyCount: histogram.otherCurrencyCount ?? 0,
+    };
   }, [runnable, data, track.max]);
 }

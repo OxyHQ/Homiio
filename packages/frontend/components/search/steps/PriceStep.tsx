@@ -8,12 +8,21 @@
  * ## The histogram
  *
  * `PriceRangeFilter` draws listing counts per price bucket when given them. The
- * caller passes `buckets` from `useSearchPriceHistogram` — the distribution of
+ * caller passes `histogram` from `useSearchPriceHistogram` — the distribution of
  * the SEARCH's own scope, offering and filters, bucketed over this track — and
- * omits them while loading or when nothing in scope is priced. There is no
+ * omits it while loading or when nothing in scope is priced. There is no
  * app-wide fallback: `/analytics/stats` buckets are worldwide monthly rent, and
  * drawing them under a Barcelona nightly search would present a worldwide
  * picture as a local one.
+ *
+ * ## The currency is the SCOPE's, and it is stated
+ *
+ * One distribution holds one currency (ADR 0004 §6.5), and which one is a fact
+ * about the area rather than about the app — a London search is in GBP. So the
+ * bars and the thumb labels are formatted in the currency the histogram came
+ * back in, and {@link PriceHistogramNote} names it under the control. Until the
+ * answer arrives there is nothing local to state, so the labels fall back to
+ * {@link SEARCH_PRICE_CURRENCY}.
  */
 import React, { useCallback, useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -25,6 +34,7 @@ import { Text as BloomText } from '@oxy.so/bloom/typography';
 import { OfferingType, formatMoney } from '@homiio/shared-types';
 
 import { SEARCH_PRICE_CURRENCY } from '@/components/search/types';
+import type { SearchPriceHistogram } from '@/hooks/useSearchPriceHistogram';
 import { useFormatting } from '@/utils/format';
 import { useColors } from '@/hooks/useThemeColor';
 import { spacing } from '@/constants/styles';
@@ -77,32 +87,70 @@ export function priceBounds(
   };
 }
 
-/** How the range fields show a price: the top of the track is open-ended ("€5,000+"). */
-export function usePriceFormatter(track: PriceTrack): (price: number) => string {
+/**
+ * How the range fields show a price: the top of the track is open-ended
+ * ("€5,000+").
+ *
+ * `currency` is the scope's, from the histogram, and defaults to
+ * {@link SEARCH_PRICE_CURRENCY} for the callers that have no scope answer to go
+ * on (a saved-search row, the room filters) and for the moments before one
+ * arrives.
+ */
+export function usePriceFormatter(
+  track: PriceTrack,
+  currency: string = SEARCH_PRICE_CURRENCY,
+): (price: number) => string {
   const { locale } = useFormatting();
   return useCallback(
     (price: number) => {
-      const text = formatMoney(price, SEARCH_PRICE_CURRENCY, locale, { maximumFractionDigits: 0 });
+      const text = formatMoney(price, currency, locale, { maximumFractionDigits: 0 });
       return price >= track.max ? `${text}+` : text;
     },
-    [locale, track.max],
+    [currency, locale, track.max],
   );
 }
+
+/**
+ * What the bars are in, and what they leave out.
+ *
+ * Both lines are load-bearing rather than decorative: the first is the only
+ * place the reader learns that a track labelled `1,200` is 1,200 zł, and the
+ * second is the honest remainder — listings the area really holds that this
+ * distribution cannot count without mixing currencies. Converting them at a
+ * rate we do not have and cannot version is exactly what ADR 0004 §6.5 forbids.
+ */
+export const PriceHistogramNote: React.FC<{ histogram?: SearchPriceHistogram }> = ({ histogram }) => {
+  const { t } = useTranslation();
+  const colors = useColors();
+  if (!histogram) return null;
+  return (
+    <View style={styles.note}>
+      <BloomText style={[styles.noteText, { color: colors.textSecondary }]}>
+        {t('search.step.price.inCurrency', { currency: histogram.currency })}
+      </BloomText>
+      {histogram.otherCurrencyCount > 0 ? (
+        <BloomText style={[styles.noteText, { color: colors.textSecondary }]}>
+          {t('search.step.price.otherCurrency', { count: histogram.otherCurrencyCount })}
+        </BloomText>
+      ) : null}
+    </View>
+  );
+};
 
 interface PriceStepProps {
   offering: OfferingType;
   priceMin?: number;
   priceMax?: number;
-  /** Listing counts per bucket over `0`..`track.max`; omit to draw no bars. */
-  buckets?: number[];
+  /** The scope's distribution over `0`..`track.max`; omit to draw no bars. */
+  histogram?: SearchPriceHistogram;
   onChange: (min: number | undefined, max: number | undefined) => void;
 }
 
-export const PriceStep: React.FC<PriceStepProps> = ({ offering, priceMin, priceMax, buckets, onChange }) => {
+export const PriceStep: React.FC<PriceStepProps> = ({ offering, priceMin, priceMax, histogram, onChange }) => {
   const { t } = useTranslation();
   const colors = useColors();
   const track = priceTrackFor(offering);
-  const formatPrice = usePriceFormatter(track);
+  const formatPrice = usePriceFormatter(track, histogram?.currency);
   const unitKey = priceUnitKey(offering);
 
   const value = useMemo(() => priceRangeValue(priceMin, priceMax, track), [priceMin, priceMax, track]);
@@ -121,7 +169,7 @@ export const PriceStep: React.FC<PriceStepProps> = ({ offering, priceMin, priceM
         <BloomText style={[styles.unit, { color: colors.textSecondary }]}>{t(unitKey)}</BloomText>
       ) : null}
       <PriceRangeFilter
-        buckets={buckets}
+        buckets={histogram?.counts}
         min={0}
         max={track.max}
         step={track.step}
@@ -132,6 +180,7 @@ export const PriceStep: React.FC<PriceStepProps> = ({ offering, priceMin, priceM
         maxLabel={t('search.step.price.max')}
         accessibilityLabel={t('search.step.price.title')}
       />
+      <PriceHistogramNote histogram={histogram} />
     </View>
   );
 };
@@ -142,6 +191,12 @@ const styles = StyleSheet.create({
   },
   unit: {
     fontSize: 14,
+  },
+  note: {
+    gap: spacing.xs,
+  },
+  noteText: {
+    fontSize: 12,
   },
 });
 

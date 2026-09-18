@@ -2,6 +2,12 @@
  * `buildPriceHistogramParams` / `priceHistogramQueryKey` — the histogram asks
  * about the search's scope and filters, never its price bounds, and its cache
  * key carries no coordinate.
+ *
+ * It also asks for no CURRENCY, which is the regression in the third block:
+ * the request used to pin `currency=EUR`, and because the endpoint refuses to
+ * mix currencies inside one statistic (ADR 0004 §6.5) it answered `null` for
+ * every area priced in anything else — a price filter with no bars at all,
+ * which reads as "no listings here" rather than "not in euros".
  */
 import { OfferingType, PropertyType, type LocationSelection } from '@homiio/shared-types';
 import {
@@ -9,6 +15,8 @@ import {
   buildSearchParams,
   priceHistogramQueryKey,
 } from '@/hooks/usePropertySearch';
+import { PRICE_HISTOGRAM_BUCKETS, priceHistogramSpan } from '@/hooks/useSearchPriceHistogram';
+import { priceTrackFor } from '@/components/search/steps/PriceStep';
 import type { SearchQuery } from '@/components/search/types';
 
 function baseQuery(overrides: Partial<SearchQuery> = {}): SearchQuery {
@@ -30,7 +38,7 @@ const nearMe: LocationSelection = {
   radiusMeters: 5000,
 } as LocationSelection;
 
-const SPAN = { histogramMin: 0, histogramMax: 5000, histogramBuckets: 32, currency: 'EUR' };
+const SPAN = { histogramMin: 0, histogramMax: 5000, histogramBuckets: 32 };
 
 describe('buildPriceHistogramParams', () => {
   it('keeps the scope and every non-price filter the search sends', () => {
@@ -67,6 +75,24 @@ describe('buildPriceHistogramParams', () => {
     // The search DOES carry them — without this the drop below proves nothing.
     for (const key of keys) expect(buildSearchParams(query)).toHaveProperty(key);
     for (const key of keys) expect(buildPriceHistogramParams(query)).not.toHaveProperty(key);
+  });
+});
+
+describe('priceHistogramSpan', () => {
+  it('names no currency, so the answer is the SCOPE’s own', () => {
+    const span = priceHistogramSpan(priceTrackFor(OfferingType.LONG_TERM_RENT));
+
+    expect(span).not.toHaveProperty('currency');
+    // Every value it does send, so "no currency" cannot be satisfied by an
+    // empty object from a builder that stopped working.
+    expect(span).toEqual({ histogramMin: 0, histogramMax: 5000, histogramBuckets: PRICE_HISTOGRAM_BUCKETS });
+  });
+
+  it('covers each offering’s own track, top included', () => {
+    for (const offering of [OfferingType.LONG_TERM_RENT, OfferingType.SHORT_TERM_RENT, OfferingType.SALE]) {
+      const track = priceTrackFor(offering);
+      expect(priceHistogramSpan(track)).toMatchObject({ histogramMin: 0, histogramMax: track.max });
+    }
   });
 });
 

@@ -534,7 +534,10 @@
         "min": "Minimum",
         "title": "Price range",
         "perMonth": "per month",
-        "perNight": "per night"
+        "perNight": "per night",
+        "inCurrency": "Preus en {{currency}}",
+        "otherCurrency_one": "{{count}} habitatge d'aquesta zona té el preu en una altra moneda i no apareix a dalt",
+        "otherCurrency_other": "{{count}} habitatges d'aquesta zona tenen el preu en una altra moneda i no apareixen a dalt"
       }
     },
     "header": {

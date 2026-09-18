@@ -527,7 +527,10 @@
         "min": "Minimum",
         "title": "Price range",
         "perMonth": "per month",
-        "perNight": "per night"
+        "perNight": "per night",
+        "inCurrency": "{{currency}} में कीमतें",
+        "otherCurrency_one": "इस क्षेत्र का {{count}} घर किसी अन्य मुद्रा में है और ऊपर नहीं दिखाया गया है",
+        "otherCurrency_other": "इस क्षेत्र के {{count}} घर किसी अन्य मुद्रा में हैं और ऊपर नहीं दिखाए गए हैं"
       }
     },
     "header": {

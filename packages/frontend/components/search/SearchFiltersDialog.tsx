@@ -52,6 +52,7 @@ import type { SearchFilterPatch } from '@/store/searchQueryStore';
 import { spacing } from '@/constants/styles';
 
 import {
+  PriceHistogramNote,
   priceBounds,
   priceRangeValue,
   priceTrackFor,
@@ -205,7 +206,6 @@ function FiltersBody({ query, onApply, onClose, showTypes }: FiltersBodyProps): 
   const isStay = query.offering === OfferingType.SHORT_TERM_RENT;
 
   const track = priceTrackFor(query.offering);
-  const formatPrice = usePriceFormatter(track);
   const unitKey = priceUnitKey(query.offering);
   // The thumbs follow the drag; the draft (and the count) follow the release.
   const [priceUi, setPriceUi] = useState<[number, number]>(() =>
@@ -235,7 +235,10 @@ function FiltersBody({ query, onApply, onClose, showTypes }: FiltersBodyProps): 
   const draftQuery = useMemo<SearchQuery>(() => ({ ...query, ...draft }), [query, draft]);
   const preview = usePropertySearch(draftQuery);
   const previewTotal = preview.data?.pages[0]?.total;
-  const priceBuckets = useSearchPriceHistogram(draftQuery, track);
+  const priceHistogram = useSearchPriceHistogram(draftQuery, track);
+  // The thumbs and the bars are read together, so they are labelled in the same
+  // currency — the scope's, once its distribution has come back.
+  const formatPrice = usePriceFormatter(track, priceHistogram?.currency);
   const resultsLabel =
     typeof previewTotal === 'number'
       ? t('search.filters.showResults', { count: previewTotal })
@@ -283,7 +286,7 @@ function FiltersBody({ query, onApply, onClose, showTypes }: FiltersBodyProps): 
           description={unitKey ? t(unitKey) : undefined}
         >
           <PriceRangeFilter
-            buckets={priceBuckets}
+            buckets={priceHistogram?.counts}
             min={0}
             max={track.max}
             step={track.step}
@@ -295,6 +298,7 @@ function FiltersBody({ query, onApply, onClose, showTypes }: FiltersBodyProps): 
             maxLabel={t('search.step.price.max')}
             accessibilityLabel={t('search.step.price.title')}
           />
+          <PriceHistogramNote histogram={priceHistogram} />
         </FilterSection>
 
         <FilterSection title={t('search.filters.rooms')}>

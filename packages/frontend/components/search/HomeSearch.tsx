@@ -291,7 +291,7 @@ export function HomeSearch({
   const [guestCounts, setGuestCounts] = useState<GuestCounts | undefined>(undefined);
   // Fetched only while the price step is on screen; keyed without the bounds,
   // so moving the thumbs never refetches the bars.
-  const priceBuckets = useSearchPriceHistogram(draft, priceTrackFor(draft.offering), {
+  const priceHistogram = useSearchPriceHistogram(draft, priceTrackFor(draft.offering), {
     enabled: openStep === 'price',
   });
   if (seedKey !== queryKey) {
@@ -633,7 +633,7 @@ export function HomeSearch({
             offering={draft.offering}
             priceMin={draft.priceMin}
             priceMax={draft.priceMax}
-            buckets={priceBuckets}
+            histogram={priceHistogram}
             onChange={handlePrice}
           />
         );

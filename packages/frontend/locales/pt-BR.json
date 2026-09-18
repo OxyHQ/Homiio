@@ -527,7 +527,10 @@
         "min": "Minimum",
         "title": "Price range",
         "perMonth": "per month",
-        "perNight": "per night"
+        "perNight": "per night",
+        "inCurrency": "Preços em {{currency}}",
+        "otherCurrency_one": "{{count}} imóvel desta área tem preço em outra moeda e não aparece acima",
+        "otherCurrency_other": "{{count}} imóveis desta área têm preço em outra moeda e não aparecem acima"
       }
     },
     "header": {
