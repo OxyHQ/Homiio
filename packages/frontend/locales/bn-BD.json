@@ -1,16 +1,6 @@
 {
   "app": {
-    "welcome": {
-      "title": "Welcome to Homiio! 👋",
-      "subtitle": "Thanks for trying out our app. Start exploring now!"
-    },
-    "errors": {
-      "screenNotExist": "This screen doesn't exist.",
-      "goHome": "Go to home screen!",
-      "noResults": "No results found for"
-    },
-    "loading": "Loading...",
-    "battery": "Battery"
+    "loading": "Loading..."
   },
   "amenities": {
     "categories": {
@@ -71,7 +61,6 @@
     "insulation": "Proper Insulation",
     "intercom": "Intercom System",
     "jettedTub": "Jetted Tub",
-    "kitchen": "Kitchen",
     "laundryRoom": "Shared Laundry Facility",
     "ledLighting": "LED Lighting",
     "linenCloset": "Linen Closet",
@@ -122,7 +111,6 @@
   },
   "home": {
     "insights": {
-      "title": "প্ল্যাটফর্মের তথ্য",
       "screenTitle": "পরিসংখ্যান",
       "subtitle": "ভাড়া বাজারের সংক্ষিপ্ত চিত্র",
       "loadError": "পরিসংখ্যান লোড করা যায়নি",
@@ -145,63 +133,21 @@
       "topProperties": "শীর্ষ প্রপার্টি"
     },
     "hero": {
-      "title": "আপনার ন্যায্য বাসা খুঁজুন",
-      "subtitle": "স্বচ্ছ ভাড়া, ন্যায্য চুক্তি আর যাচাই করা সম্পত্তি",
-      "searchPlaceholder": "আপনি কোথায় থাকতে চান?",
-      "searchButton": "খুঁজুন"
-    },
-    "cities": {
-      "title": "নির্বাচিত শহর",
-      "properties": "সম্পত্তি"
-    },
-    "categories": {
-      "title": "শ্রেণি অনুযায়ী দেখুন",
-      "view": "দেখুন",
-      "types": {
-        "apartments": "অ্যাপার্টমেন্ট",
-        "houses": "বাড়ি",
-        "coLiving": "কো-লিভিং",
-        "ecoFriendly": "পরিবেশবান্ধব"
-      }
+      "title": "আপনার ন্যায্য বাসা খুঁজুন"
     },
     "category": {
-      "studios": "স্টুডিও",
-      "apartments": "অ্যাপার্টমেন্ট",
-      "houses": "বাড়ি",
-      "rooms": "রুম",
-      "coliving": "কো-লিভিং",
-      "luxury": "বিলাসবহুল",
-      "newListings": "নতুন বিজ্ঞাপন",
-      "nearYou": "আপনার কাছে",
-      "nearYouUnavailable": "আশপাশের বাসা দেখতে লোকেশন চালু করুন",
-      "beachfront": "সমুদ্রের ধারে",
-      "cabins": "কেবিন",
-      "pools": "পুলসহ",
-      "mountain": "পাহাড়ে",
-      "cityBreaks": "শহরে অল্প দিনের ছুটি",
-      "countryside": "গ্রামাঞ্চল",
-      "instantBook": "তাৎক্ষণিক বুকিং",
-      "petFriendly": "পোষা প্রাণী চলবে",
-      "homeSwap": "বাসা বিনিময়",
-      "hosting": "হোস্টিং"
+      "petFriendly": "পোষা প্রাণী চলবে"
     },
     "horizon": {
-      "title": "Horizon-এ যোগ দিন",
-      "description": "Horizon একটি বৈশ্বিক উদ্যোগ, যা ন্যায্য আবাসন, স্বাস্থ্যসেবা ও ভ্রমণ সহায়তা দেয়। এখন এটি Homiio-র সঙ্গে যুক্ত।",
       "learnMore": "আরও জানুন"
     },
     "eco": {
       "title": "পরিবেশ-সনদপ্রাপ্ত সম্পত্তি",
-      "description": "এমন টেকসই সম্পত্তি খুঁজুন যেগুলো আমাদের জ্বালানি-দক্ষতা ও পরিবেশবান্ধব মান পূরণ করে",
-      "viewEcoProperties": "পরিবেশবান্ধব সম্পত্তি দেখুন"
+      "description": "এমন টেকসই সম্পত্তি খুঁজুন যেগুলো আমাদের জ্বালানি-দক্ষতা ও পরিবেশবান্ধব মান পূরণ করে"
     },
     "featured": {
       "title": "নির্বাচিত সম্পত্তি",
       "empty": "এই মুহূর্তে কোনো নির্বাচিত সম্পত্তি নেই",
-      "gridLongTerm": "{{place}}-এ স্টুডিও",
-      "gridVacation": "{{place}}-এ সমুদ্রের ধারের অ্যাপার্টমেন্ট",
-      "gridBuy": "{{place}}-এ বিক্রির বাসা",
-      "gridExchange": "{{place}}-এ বাসা বিনিময়",
       "titleIn": "{{area}}-এ নির্বাচিত",
       "chooseArea": "নির্বাচিত বাসা দেখতে একটি এলাকা বেছে নিন।",
       "loadFailed": "এই এলাকার নির্বাচিত বাসা লোড করা যায়নি।"
@@ -213,74 +159,17 @@
       "noPropertiesDescription": "দেখা শুরু করুন, আপনার সাম্প্রতিক কার্যকলাপ এখানে দেখা যাবে",
       "browseProperties": "সম্পত্তি দেখুন",
       "errorTitle": "সম্প্রতি দেখা তালিকা লোড করতে সমস্যা",
-      "errorDescription": "আবার চেষ্টা করুন।",
       "retry": "আবার চেষ্টা করুন",
       "results": "ফলাফল",
-      "filtered": "ফিল্টার করা",
       "continue": "দেখা চালিয়ে যান"
     },
     "saved": {
-      "title": "সংরক্ষিত সম্পত্তি",
-      "editFolder": "ফোল্ডার সম্পাদনা",
-      "defaultFolder": "ডিফল্ট ফোল্ডার",
-      "folderNamePlaceholder": "ফোল্ডারের নাম",
-      "noFolder": "ফোল্ডার পাওয়া যায়নি",
-      "noFolderDescription": "সম্ভবত এই ফোল্ডারটি মুছে ফেলা হয়েছে",
-      "noFolderItems": "এই ফোল্ডারে কোনো সম্পত্তি নেই",
-      "noFolderItemsDescription": "এখানে দেখতে এই ফোল্ডারে সম্পত্তি সংরক্ষণ করুন"
+      "title": "সংরক্ষিত সম্পত্তি"
     },
     "tips": {
       "title": "ভাড়ার পরামর্শ ও নির্দেশিকা",
-      "categories": {
-        "search": "খোঁজা",
-        "safety": "নিরাপত্তা",
-        "legal": "আইনি",
-        "inspection": "পরিদর্শন"
-      },
-      "firstTimeRenting": {
-        "title": "প্রথমবার ভাড়া নিচ্ছেন? এই নিন পূর্ণ নির্দেশিকা",
-        "description": "প্রথম ভাড়ার বাসা খুঁজে বের করা, দেখা আর চূড়ান্ত করার জন্য যা যা জানা দরকার।"
-      },
-      "avoidScams": {
-        "title": "ভাড়ার প্রতারণা এড়াবেন কীভাবে: যেসব লক্ষণে সতর্ক হবেন",
-        "description": "সাধারণ প্রতারণার ধরন চিনতে শিখুন এবং বাসা খোঁজার সময় নিজেকে সুরক্ষিত রাখুন।"
-      },
-      "rentalAgreement": {
-        "title": "আপনার ভাড়া চুক্তি বোঝা: গুরুত্বপূর্ণ শর্তগুলোর ব্যাখ্যা",
-        "description": "জটিল আইনি ভাষা সহজ করে দিচ্ছি, যাতে সই করার আগেই বুঝতে পারেন কী মানছেন।"
-      },
-      "propertyInspection": {
-        "title": "সম্পত্তি পরিদর্শনের তালিকা: কী কী দেখবেন",
-        "description": "ভাড়ার সম্পত্তি পরিদর্শন করে সম্ভাব্য সমস্যা খুঁজে বের করার পূর্ণাঙ্গ নির্দেশিকা।"
-      },
       "subtitle": "স্থানীয় ভাড়াটিয়া, আইনি বিশেষজ্ঞ ও Homiio সম্পাদকীয় দলের ব্যবহারিক নির্দেশিকা।",
       "eyebrow": "বুদ্ধি করে ভাড়া নিন"
-    },
-    "faq": {
-      "title": "সাধারণ জিজ্ঞাসা",
-      "scheduleViewing": {
-        "question": "সম্পত্তি দেখার সময় কীভাবে ঠিক করব?",
-        "answer": "যেকোনো বিজ্ঞাপনে «পরিদর্শনের সময় ঠিক করুন» বোতামে চাপ দিয়ে সময় ঠিক করতে পারেন। আমাদের সিস্টেম আপনাকে বাড়িওয়ালা বা ব্যবস্থাপকের সঙ্গে যুক্ত করবে, যাতে সুবিধাজনক সময় ঠিক করা যায়।"
-      },
-      "verifiedProperty": {
-        "question": "«যাচাই করা সম্পত্তি» মানে কী?",
-        "answer": "যাচাই করা সম্পত্তি আমাদের দল নিজে গিয়ে দেখেছে, যাতে সেগুলো আমাদের মান পূরণ করে। এর মধ্যে আছে সম্পত্তির অবস্থা, সুবিধাসমূহ এবং বাড়িওয়ালার তথ্য যাচাই।"
-      },
-      "reportSuspicious": {
-        "question": "সন্দেহজনক বিজ্ঞাপনের অভিযোগ কীভাবে করব?",
-        "answer": "কোনো বিজ্ঞাপন সন্দেহজনক মনে হলে সম্পত্তির পাতায় «অভিযোগ করুন» বোতামে চাপ দিন। আমাদের নিরাপত্তা দল বিষয়টি খতিয়ে দেখবে এবং কমিউনিটিকে রক্ষা করতে প্রয়োজনীয় ব্যবস্থা নেবে।"
-      },
-      "applicationRequirements": {
-        "question": "ভাড়ার আবেদনের জন্য কী কী লাগে?",
-        "answer": "শর্ত সম্পত্তিভেদে আলাদা হয়, তবে সাধারণত আয়ের প্রমাণ, ভাড়ার ইতিহাস, ক্রেডিট যাচাই ও রেফারেন্স লাগে। প্রতিটি বিজ্ঞাপনে ঠিক কী লাগবে তা লেখা থাকে।"
-      }
-    },
-    "cityShowcase": {
-      "title": "{{place}} ঘুরে দেখুন",
-      "defaultPlace": "স্পেন"
-    },
-    "nearby": {
-      "title": "{{city}}-এ বাসা"
     },
     "recommended": {
       "title": "সুপারিশ করা বাসা",
@@ -400,7 +289,6 @@
     "calculator": {
       "title": "See what you could earn",
       "monthlyRent": "Monthly rent",
-      "salePrice": "Sale price",
       "perMonth": "mo",
       "result": "You earn",
       "caption": "Paid when the deal closes — no license needed.",
@@ -486,80 +374,25 @@
     "related": "Related tips"
   },
   "search": {
-    "title": "Search",
-    "searchPlaceholder": "Search by location, property type...",
-    "placeholder": {
-      "suggestion1": "Find your dream apartment in Barcelona...",
-      "suggestion2": "Looking for a pet-friendly home?",
-      "suggestion3": "Discover eco-friendly properties...",
-      "suggestion4": "Search for furnished studios near you..."
-    },
-    "searchButton": "Search",
-    "recentSearches": "Recent Searches",
-    "popularSearches": "Popular Searches",
-    "propertyTypes": "Property Types",
-    "popularCities": "Popular Cities",
-    "properties": "properties",
-    "savedSearches": "Saved Searches",
-    "saveSearch": "Save Search",
-    "searchQuery": "Search Query",
-    "searchName": "Search Name",
-    "searchNamePlaceholder": "Enter a name for this search",
-    "notificationsDescription": "Get notified when new properties match this search",
-    "withFilters": "With filters",
     "error": {
       "title": "Could not load properties"
     },
-    "enterSearchQuery": "Please enter a search query first",
     "deleteSearch": "Delete Search",
     "deleteSearchConfirm": "Are you sure you want to delete the search \"{{name}}\"?",
-    "viewAllSaved": "View All Saved",
     "duplicateName": "A search with this name already exists",
     "duplicateExact": "You already saved this exact search",
     "tryDifferentName": "Please choose a different name",
-    "more": "more",
     "filters": {
-      "listingType": "Listing type",
       "propertyType": "Property Type",
-      "nightlyPrice": "Nightly price",
-      "monthlyPrice": "Monthly price",
       "checkIn": "Check-in",
       "checkOut": "Check-out",
       "addDate": "Add date",
       "guests": "Guests",
       "instantBook": "Instant book",
-      "cancellationPolicy": "Cancellation policy",
-      "moveInDate": "Move-in date",
-      "leaseDuration": {
-        "3Months": "3 months",
-        "6Months": "6 months",
-        "12Months": "12 months",
-        "flexible": "Flexible"
-      },
-      "maxDeposit": "Max deposit",
       "amenities": "Amenities",
-      "amenity": {
-        "wifi": "Wi-Fi",
-        "parking": "Parking",
-        "gym": "Gym",
-        "pool": "Pool",
-        "balcony": "Balcony",
-        "garden": "Garden",
-        "elevator": "Elevator",
-        "airConditioning": "Air conditioning",
-        "heating": "Heating",
-        "dishwasher": "Dishwasher",
-        "washingMachine": "Washing machine"
-      },
       "propertyTypeVacation": {
         "wholeHouses": "Whole houses",
         "privateRooms": "Private rooms"
-      },
-      "cancellation": {
-        "flexible": "Flexible",
-        "moderate": "Moderate",
-        "strict": "Strict",
-        "superStrict": "Super strict"
       },
       "fairPrice": "Fair price only",
       "options": "বিকল্প",
@@ -583,15 +416,6 @@
       "rooms": "Rooms",
       "studios": "Studios"
     },
-    "errorLoadingData": "Failed to load data",
-    "noPropertyTypesAvailable": "No property types available",
-    "noCitiesAvailable": "No cities available",
-    "noPropertyTypes": "No property types available",
-    "searching": "Searching...",
-    "addressSuggestions": "Address Suggestions",
-    "popularAreas": "Popular Areas",
-    "quickFilters": "Quick Filters",
-    "searchingAddresses": "Searching addresses...",
     "propertyType": {
       "apartments": "Apartments",
       "houses": "Houses",
@@ -609,18 +433,9 @@
       "yurt": "Yurt",
       "other": "Other"
     },
-    "areas": {
-      "downtown": "Downtown",
-      "universityDistrict": "University District",
-      "businessDistrict": "Business District",
-      "residentialArea": "Residential Area"
-    },
     "widgets": {
       "common": {
-        "signIn": "Sign in",
-        "loading": "Loading…",
-        "error": "Something went wrong",
-        "viewAll": "View All"
+        "signIn": "Sign in"
       },
       "quickFilters": {
         "title": "Quick Filters",
@@ -648,26 +463,18 @@
         "notify": "Notify me about new matches",
         "notifyHelper": "We will alert you when new listings match this alert",
         "create": "Create Alert",
-        "creating": "Creating…",
-        "goToSearch": "Go to Search",
-        "signInRequired": "Please sign in to create alerts",
         "locationOrPriceRequired": "Please specify at least a location or price range",
         "minOverMax": "Min price cannot be greater than max price",
-        "invalidNumber": "Please enter a valid price",
-        "createFailed": "Failed to create alert. Please try again.",
-        "createSuccess": "Alert created"
+        "invalidNumber": "Please enter a valid price"
       },
       "savedSearches": {
         "title": "Saved Searches",
         "empty": "No saved searches yet",
         "emptyHelper": "Save a search to get quick access and alerts here",
         "signInPrompt": "Sign in to save searches",
-        "goToSearch": "Go to Search",
         "createNew": "Create New Search",
         "viewAllCount": "View All ({{count}} more)",
-        "notifications": "Notifications",
         "nameAndQueryRequired": "Search name and query are required",
-        "loading": "Loading saved searches…",
         "loadFailed": "Failed to load saved searches",
         "loadError": "Could not load your saved searches",
         "saveSuccess": "Search \"{{name}}\" saved",
@@ -679,8 +486,6 @@
         "deleteFailed": "Failed to delete search"
       }
     },
-    "editSearch": "Edit Search",
-    "searchQueryPlaceholder": "Enter your search query",
     "actions": {
       "save": "Save",
       "search": "Search",
@@ -697,7 +502,6 @@
       "edit": "Edit search",
       "anyPrice": "Any price",
       "addDates": "Add dates",
-      "anyTime": "Any time",
       "anyType": "Any type",
       "anywhere": "Anywhere",
       "mapArea": "Map area",
@@ -709,20 +513,10 @@
     },
     "step": {
       "dates": {
-        "title": "When?",
-        "weekday": {
-          "Mo": "Mo",
-          "Tu": "Tu",
-          "We": "We",
-          "Th": "Th",
-          "Fr": "Fr",
-          "Sa": "Sa",
-          "Su": "Su"
-        }
+        "title": "When?"
       },
       "guests": {
-        "title": "How many guests?",
-        "label": "Guests"
+        "title": "How many guests?"
       },
       "type": {
         "title": "What type of place?"
@@ -823,16 +617,7 @@
     "edit": {
       "noProfile": "No profile found to update.",
       "updateSuccess": "Profile updated successfully!",
-      "updateFailed": "Failed to update profile",
       "sections": {
-        "agencyInformation": "Agency Information",
-        "agencyVerification": "Agency Verification",
-        "teamManagement": "Team Management",
-        "businessSettings": "Business Settings",
-        "businessInformation": "Business Information",
-        "businessVerification": "Business Verification",
-        "cooperativeInformation": "Cooperative Information",
-        "cooperativeSettings": "Cooperative Settings",
         "personalInformation": "Personal Information",
         "propertyPreferences": "Property Preferences",
         "references": "References",
@@ -840,21 +625,7 @@
         "settings": "Settings"
       },
       "labels": {
-        "businessType": "Business Type *",
-        "legalCompanyName": "Legal Company Name *",
-        "description": "Description",
-        "licenseNumber": "License Number",
-        "taxId": "Tax ID",
-        "yearEstablished": "Year Established",
-        "employeeCount": "Number of Employees",
-        "specialties": "Specialties",
-        "verificationStatus": "Verification Status",
-        "profileVisibility": "Profile Visibility",
         "notifications": "Notifications",
-        "emailNotifications": "Email Notifications",
-        "pushNotifications": "Push Notifications",
-        "legalName": "Legal Name *",
-        "industry": "Industry",
         "bio": "Bio",
         "occupation": "Occupation",
         "employer": "Employer",
@@ -881,26 +652,11 @@
         "landlordContact": "Landlord Contact",
         "privacy": "Privacy"
       },
-      "subtitles": {
-        "agencyVerification": "Complete these verifications to build trust with clients",
-        "businessVerification": "Complete these verifications to build trust with clients",
-        "businessSettings": "Configure your business profile settings",
-        "cooperativeSettings": "Configure your cooperative profile settings"
-      },
       "placeholders": {
-        "legalCompanyName": "Enter your legal company name",
-        "description": "Describe your business...",
-        "licenseNumber": "Enter license number",
-        "taxId": "Enter tax ID",
-        "yearEstablished": "e.g., 2020",
-        "industry": "Enter industry",
-        "cooperativeLegalName": "Enter cooperative legal name",
-        "cooperativeDescription": "Describe your cooperative...",
         "bio": "Tell us about yourself...",
         "occupation": "e.g., Software Engineer",
         "employer": "e.g., Tech Corp",
         "annualIncome": "e.g., 75000",
-        "moveInDate": "YYYY-MM-DD",
         "maxRent": "Enter maximum rent",
         "fullName": "Full name",
         "phoneNumber": "Phone number",
@@ -909,32 +665,9 @@
         "landlordName": "Landlord name",
         "phone": "Phone",
         "email": "Email",
-        "endDateOptional": "YYYY-MM-DD (optional)",
         "monthlyRent": "e.g., 1500"
       },
       "options": {
-        "agencyBusinessType": {
-          "real_estate_agency": "Real Estate Agency",
-          "property_management": "Property Management",
-          "brokerage": "Brokerage",
-          "developer": "Developer",
-          "other": "Other"
-        },
-        "agencySpecialty": {
-          "residential": "Residential",
-          "commercial": "Commercial",
-          "luxury": "Luxury",
-          "student_housing": "Student Housing",
-          "senior_housing": "Senior Housing",
-          "vacation_rentals": "Vacation Rentals"
-        },
-        "businessType": {
-          "small_business": "Small Business",
-          "startup": "Startup",
-          "freelancer": "Freelancer",
-          "consultant": "Consultant",
-          "other": "Other"
-        },
         "employmentStatus": {
           "employed": "Employed",
           "self_employed": "Self Employed",
@@ -988,22 +721,7 @@
           "family_reasons": "Family Reasons",
           "upgrade": "Upgrade",
           "other": "Other"
-        },
-        "profileVisibility": {
-          "public": "Public",
-          "private": "Private",
-          "contacts_only": "Contacts Only"
         }
-      },
-      "verification": {
-        "businessLicenseTitle": "Business License",
-        "businessLicenseDescription": "Upload your business license for verification",
-        "insuranceTitle": "Insurance",
-        "insuranceDescription": "Provide proof of business insurance",
-        "bondingTitle": "Bonding",
-        "bondingDescription": "Provide surety bond information",
-        "backgroundCheckTitle": "Background Check",
-        "backgroundCheckDescription": "Complete background check for all team members"
       },
       "toggles": {
         "emailNotifications": "Email Notifications",
@@ -1018,79 +736,12 @@
         "showRentalHistory": "Show Rental History",
         "showReferences": "Show References"
       },
-      "team": {
-        "subtitle": "Manage your team members and their roles",
-        "memberLabel": "Member {{index}}",
-        "addedLabel": "Added: {{date}}",
-        "emptyText": "No team members added yet.",
-        "addMember": "+ Add Team Member"
-      },
       "actions": {
         "addReference": "+ Add Reference",
         "addHistory": "+ Add History",
         "remove": "Remove",
         "referenceLabel": "Reference {{index}}",
         "rentalLabel": "Rental {{index}}"
-      }
-    },
-    "create": {
-      "selectType": "Please select a profile type.",
-      "selectBusinessType": "Please select a business type.",
-      "cooperativeLegalNameRequired": "Please enter a legal name for the cooperative.",
-      "createdSuccess": "{{type}} created successfully!",
-      "headerTitle": "Create Profile",
-      "createButton": "Create",
-      "chooseType": "Choose Business Profile Type",
-      "types": {
-        "agency": {
-          "title": "Agency Profile",
-          "description": "For real estate agencies and property management"
-        },
-        "business": {
-          "title": "Business Profile",
-          "description": "For small businesses and freelancers"
-        },
-        "cooperative": {
-          "title": "Cooperative Profile",
-          "description": "For housing or member-owned cooperatives"
-        }
-      },
-      "sections": {
-        "agencyInfo": "Agency Information",
-        "businessInfo": "Business Information",
-        "cooperativeInfo": "Cooperative Information",
-        "whatsNext": "What's Next?",
-        "profileSetup": "Profile Setup"
-      },
-      "whatsNext": {
-        "description": "After creating your {{type}} profile, you can customize preferences, add verification documents, and build your trust score."
-      },
-      "placeholders": {
-        "agencyDescription": "Describe your agency...",
-        "businessDescription": "Describe your business...",
-        "licenseOptional": "Enter license number (if applicable)",
-        "cooperativeLegalName": "Cooperative Legal Name",
-        "cooperativeDescription": "Describe the cooperative"
-      },
-      "options": {
-        "agencySpecialty": {
-          "residential": "Residential",
-          "commercial": "Commercial",
-          "investment": "Investment",
-          "rental": "Rental",
-          "new_construction": "New Construction"
-        },
-        "businessSpecialty": {
-          "consulting": "Consulting",
-          "technology": "Technology",
-          "design": "Design",
-          "marketing": "Marketing",
-          "finance": "Finance",
-          "healthcare": "Healthcare",
-          "education": "Education",
-          "retail": "Retail",
-          "services": "Services"
-        }
       }
     },
     "toast": {
@@ -1105,63 +756,23 @@
     "loadFailedHint": "Please try again later.",
     "loadFailed": "Failed to load profile"
   },
-  "notifications": {
-    "title": "Notifications",
-    "types": {
-      "message": {
-        "title": "New Message",
-        "description": "You have a new message from your landlord"
-      },
-      "contract": {
-        "title": "Contract Update",
-        "description": "Your rental agreement has been updated"
-      },
-      "payment": {
-        "title": "Payment Reminder",
-        "description": "Your rent payment is due in 3 days"
-      }
-    },
-    "timeAgo": {
-      "hours": "hours ago",
-      "days": "days ago"
-    }
-  },
   "properties": {
     "type": {
       "title": "{{type}}",
       "subtitle": "{{count}} {{type}} available",
       "empty": "No {{type}} available at the moment",
       "filters": {
-        "title": "Filters",
-        "price": "Price Range",
-        "bedrooms": "Bedrooms",
-        "bathrooms": "Bathrooms",
-        "amenities": "Amenities",
-        "sort": {
-          "title": "Sort By",
-          "newest": "Newest First",
-          "priceAsc": "Price: Low to High",
-          "priceDesc": "Price: High to Low"
-        },
-        "apply": "Apply Filters",
         "clear": "Clear All"
       }
     },
     "title": "Properties",
     "filters": {
       "priceRange": "Price Range",
-      "propertyType": "Property Type",
       "bedrooms": "Bedrooms",
       "bathrooms": "Bathrooms",
       "amenities": "Amenities",
-      "availability": "Availability",
-      "apply": "Apply Filters",
-      "clear": "Clear All"
+      "apply": "Apply Filters"
     },
-    "sort": "Sort",
-    "view": "View",
-    "save": "Save",
-    "share": "Share",
     "contact": "Contact",
     "bookViewing": "Book Viewing",
     "my": {
@@ -1170,7 +781,6 @@
       "delete": "Delete",
       "deleteTitle": "Delete Property",
       "deleteMessage": "Are you sure you want to delete \"{{title}}\"? This action cannot be undone.",
-      "deleteSuccess": "Property deleted successfully",
       "emptyTitle": "No Properties Yet",
       "emptyDescription": "You haven't created any properties yet. Start by adding your first property listing.",
       "createFirst": "Create Your First Property",
@@ -1186,17 +796,8 @@
       "transactCommission": "Deal closed — commission recorded"
     },
     "details": {
-      "price": "Price",
-      "location": "Location",
       "bedrooms": "Bedrooms",
-      "bathrooms": "Bathrooms",
-      "size": "Size",
-      "available": "Available",
-      "description": "Description",
-      "amenities": "Amenities",
-      "photos": "Photos",
-      "map": "Map",
-      "contactInfo": "Contact Information"
+      "bathrooms": "Bathrooms"
     },
     "titles": {
       "forRent": "for rent in",
@@ -1237,9 +838,7 @@
       "loading": "Loading homes…"
     },
     "city": {
-      "verifiedProperties": "Verified Properties",
       "verifiedOnly": "Verified Only",
-      "ecoFriendly": "Eco-Friendly",
       "ecoFriendlyOnly": "Eco-Friendly Only",
       "loadingProperties": "Loading properties...",
       "notFound": "City not found",
@@ -1304,14 +903,12 @@
       "invalidIdDescription": "The link is missing the contract reference.",
       "unavailableTitle": "Contract unavailable",
       "unavailableDescription": "This contract could not be loaded.",
-      "term": "Term",
       "monthlyRent": "Monthly rent",
       "securityDeposit": "Security deposit",
       "landlord": "Landlord",
       "tenant": "Tenant",
       "payments": "Payment schedule",
       "documents": "Documents",
-      "sign": "Sign contract",
       "terminate": "Terminate lease",
       "deleteDraft": "Delete draft",
       "confirmSignTitle": "Sign this lease?",
@@ -1405,17 +1002,9 @@
       "state": "বিভাগ / অঞ্চল",
       "cityPlaceholder": "একটি শহর লিখুন",
       "statePlaceholder": "একটি বিভাগ বা অঞ্চল লিখুন",
-      "anyPrice": "যেকোনো",
-      "smokingAllowed": "ধূমপানের অনুমতি আছে",
-      "amenity": {
-        "privateBathroom": "ব্যক্তিগত বাথরুম",
-        "walkInCloset": "ওয়াক-ইন ক্লোজেট"
-      },
       "sort": {
-        "bestMatch": "সেরা মিল",
         "price": "মূল্য",
-        "newest": "সবচেয়ে নতুন",
-        "name": "নাম"
+        "newest": "সবচেয়ে নতুন"
       },
       "searchPlaceholder": "রুম খুঁজুন…",
       "emptyTitle": "কোনো রুম পাওয়া যায়নি",
@@ -1428,15 +1017,9 @@
       "selectedCount": "{{count}}টি নির্বাচিত",
       "roomType": "রুম"
     },
-    "title": "Roommates",
-    "find": "Find Roommates",
-    "myMatches": "My Matches",
     "preferences": "Preferences",
-    "profile": "Roommate Profile",
     "compatibility": "Compatibility Score",
     "actions": {
-      "message": "Message",
-      "connect": "Connect",
       "viewProfile": "View Profile"
     },
     "tabs": {
@@ -1456,20 +1039,14 @@
       "relationshipEndFailed": "Failed to end roommate relationship",
       "toggleFailed": "Failed to toggle roommate matching",
       "preferencesSaved": "Your roommate preferences were updated.",
-      "preferencesFailed": "Failed to save roommate preferences. Please try again.",
-      "successTitle": "Success",
-      "errorTitle": "Error"
+      "preferencesFailed": "Failed to save roommate preferences. Please try again."
     },
     "screen": {
       "title": "Roommates",
       "eyebrow": "Together",
-      "signInTitle": "Sign in to find roommates",
-      "signInDescription": "Discover compatible roommates and manage your requests.",
-      "signIn": "Sign in",
       "loadError": "Couldn't load roommates",
       "loadRequestsError": "Couldn't load requests",
       "loadRelationshipsError": "Couldn't load relationships",
-      "tryAgain": "Please try again.",
       "personalProfileRequired": "Personal profile required",
       "personalProfileDescription": "Roommate matching is only available for personal profiles. Switch to your personal profile to use this feature.",
       "roomSearchPersonalOnly": "Room search is only available for personal profiles. Switch to your personal profile to use this feature.",
@@ -1484,11 +1061,8 @@
       "discoverRoommates": "Discover roommates",
       "emptyRelationshipsTitle": "No active relationships",
       "emptyRelationshipsDescription": "When you accept roommate requests, your relationships will appear here.",
-      "emptyRoomsTitle": "No rooms listed",
-      "emptyRoomsDescription": "Room listings from your network will appear here.",
       "enableMatching": "Enable matching",
       "updatePreferences": "Update preferences",
-      "editPreferences": "Edit preferences",
       "matchingEnabled": "Roommate matching enabled",
       "matchingDisabled": "Roommate matching disabled",
       "fallbackName": "Roommate"
@@ -1577,8 +1151,6 @@
       "accept": "Accept",
       "decline": "Decline",
       "viewProfile": "View profile",
-      "sent": "Sent",
-      "received": "Received",
       "pending": "Pending",
       "accepted": "Accepted",
       "declined": "Declined",
@@ -1621,30 +1193,12 @@
       "messagePlaceholder": "Hi! I think we'd be great roommates...",
       "viewProfile": "View Profile",
       "sendRequest": "Send Request",
-      "connect": "Connect",
       "fallbackName": "Roommate"
-    }
-  },
-  "safety": {
-    "title": "Safety",
-    "fraudReports": "Fraud Reports",
-    "reportIssue": "Report Issue",
-    "safetyTips": "Safety Tips",
-    "emergencyContacts": "Emergency Contacts",
-    "reportTypes": {
-      "fraud": "Fraud",
-      "scam": "Scam",
-      "fakeListing": "Fake Listing",
-      "harassment": "Harassment",
-      "other": "Other"
     }
   },
   "horizon": {
     "title": "Horizon Initiative",
     "description": "Global initiative for fair housing, healthcare, and travel support",
-    "benefits": "Benefits",
-    "join": "Join Horizon",
-    "learnMore": "Learn More",
     "page": {
       "benefits": {
         "fairHousing": {
@@ -1768,13 +1322,8 @@
   },
   "common": {
     "cancel": "Cancel",
-    "ok": "OK",
     "clear": "Clear",
     "export": "Export",
-    "sendFeedback": "Send Feedback",
-    "maybeLater": "Maybe Later",
-    "rateNow": "Rate Now",
-    "success": "Success",
     "error": "Error",
     "loading": "Loading...",
     "retry": "Retry",
@@ -1788,41 +1337,19 @@
     "close": "Close",
     "back": "Back",
     "next": "Next",
-    "previous": "Previous",
-    "done": "Done",
-    "continue": "Continue",
-    "skip": "Skip",
     "yes": "Yes",
     "no": "No",
     "confirm": "Confirm",
-    "select": "Select",
-    "choose": "Choose",
-    "upload": "Upload",
-    "download": "Download",
     "share": "Share",
-    "copy": "Copy",
-    "paste": "Paste",
     "search": "Search",
     "filter": "Filter",
-    "sort": "Sort",
-    "refresh": "Refresh",
-    "update": "Update",
     "create": "Create",
     "add": "Add",
     "remove": "Remove",
-    "view": "View",
-    "details": "Details",
-    "more": "More",
-    "Creating...": "Creating...",
-    "less": "Less",
     "all": "All",
-    "none": "None",
-    "empty": "Empty",
-    "noData": "No data available",
     "noResults": "No results found",
     "tryAgain": "Try again",
     "goBack": "Go Back",
-    "goHome": "Go home",
     "signIn": "Sign in",
     "month": "month",
     "reset": "Reset",
@@ -1844,103 +1371,11 @@
       "empty": "Start a new conversation to get help."
     },
     "status": {
-      "thinking": "Thinking...",
-      "online": "Online"
+      "thinking": "Thinking..."
     },
     "auth": {
       "required": "Authentication Required",
       "message": "Please sign in to access Sindi, your AI-powered housing justice advocate"
-    },
-    "welcome": {
-      "title": "Welcome to Sindi",
-      "subtitle": "Your AI-powered housing justice advocate with real-time information access. I'm here to fight for your tenant rights, challenge unfair practices, and provide current legal updates. Together, we can build a more equitable housing system."
-    },
-    "actions": {
-      "title": "Fight for Your Rights",
-      "rentGouging": {
-        "title": "Rent Gouging Check",
-        "prompt": "My rent increased by [amount]%. Is this legal rent gouging? What can I do to fight unfair increases?"
-      },
-      "evictionDefense": {
-        "title": "Illegal Eviction Defense",
-        "prompt": "I received an eviction notice that seems illegal. Help me understand my rights and how to fight back."
-      },
-      "securityDeposit": {
-        "title": "Security Deposit Theft",
-        "prompt": "My landlord is keeping my security deposit without valid reasons. How do I recover my money?"
-      },
-      "unsafeLiving": {
-        "title": "Unsafe Living Conditions",
-        "prompt": "My apartment has serious safety issues. What are my rights and how do I force repairs?"
-      },
-      "discrimination": {
-        "title": "Discrimination Help",
-        "prompt": "I think I'm being discriminated against by my landlord. What are my rights and how do I report this?"
-      },
-      "retaliation": {
-        "title": "Retaliation Protection",
-        "prompt": "My landlord is retaliating because I complained. What protections do I have?"
-      },
-      "leaseReview": {
-        "title": "Lease Review",
-        "prompt": "Can you review my lease for unfair clauses and illegal terms I should challenge?"
-      },
-      "tenantOrganizing": {
-        "title": "Tenant Organizing",
-        "prompt": "How can I organize with other tenants to fight for better conditions and fair treatment?"
-      },
-      "currentLaws": {
-        "title": "Current Laws & Updates",
-        "prompt": "What are the current tenant rights laws and recent legal developments I should know about?"
-      },
-      "catalunya": {
-        "title": "Catalunya Tenant Rights",
-        "prompt": "I'm in Catalunya/Barcelona. What are my tenant rights and how can I connect with local tenant organizations like Sindicat de Llogateres?"
-      }
-    },
-    "housing": {
-      "title": "Find Ethical Housing",
-      "subtitle": "I can search for properties with advanced filters. Try these examples:",
-      "examples": {
-        "cheap": {
-          "title": "Cheap Apartments",
-          "prompt": "Find me cheap apartments under $1000 in Barcelona"
-        },
-        "petFriendly": {
-          "title": "Pet-Friendly Homes",
-          "prompt": "Show me pet-friendly apartments with parking under $1500"
-        },
-        "furnished": {
-          "title": "Furnished Studios",
-          "prompt": "I need furnished studios with wifi under $1200"
-        },
-        "family": {
-          "title": "Family Homes",
-          "prompt": "Find 3-bedroom houses with garden under $2000"
-        },
-        "luxury": {
-          "title": "Luxury Properties",
-          "prompt": "Show me luxury apartments with gym and pool over $3000"
-        },
-        "shared": {
-          "title": "Shared Housing",
-          "prompt": "Find shared rooms or coliving spaces under $800"
-        }
-      },
-      "naturalLanguage": "💡 I understand natural language! Try: \"cheap 2-bedroom apartments in Barcelona with parking\" or \"luxury studios with gym under $2000\""
-    },
-    "features": {
-      "title": "How I fight for housing justice:",
-      "rentIncreases": "• Challenge illegal rent increases and gouging",
-      "evictions": "• Defend against wrongful evictions",
-      "deposits": "• Fight security deposit theft and fraud",
-      "conditions": "• Demand safe, habitable living conditions",
-      "discrimination": "• Combat housing discrimination",
-      "retaliation": "• Protect against landlord retaliation",
-      "leases": "• Expose unfair lease clauses",
-      "organizing": "• Support tenant organizing and solidarity",
-      "updates": "• Provide current legal updates and recent developments",
-      "organizations": "• Connect you with local tenant organizations"
     },
     "chat": {
       "placeholder": "Ask Sindi about your tenant rights...",
@@ -1949,7 +1384,6 @@
       "attach": "ফাইল সংযুক্ত করুন",
       "send": "বার্তা পাঠান",
       "stop": "উত্তর তৈরি থামান",
-      "disclaimer": "Sindi advocates for tenant rights and housing justice. For legal action, consult a qualified attorney. Connect with local tenant organizations for community support.",
       "addMenu": "চ্যাটে যোগ করুন",
       "addGroup": "যোগ করুন",
       "voice": "ভয়েস ইনপুট",
@@ -2001,12 +1435,7 @@
       "title": "Conversation",
       "subtitle": "AI Housing Justice Advocate",
       "loading": "Loading Conversation",
-      "loadingMessage": "Loading conversation...",
-      "error": "Conversation Error",
-      "empty": {
-        "title": "Start Your Conversation",
-        "subtitle": "Ask Sindi about tenant rights, housing search, or any housing-related questions. I'm here to help you fight for housing justice."
-      }
+      "loadingMessage": "Loading conversation..."
     },
     "settings": {
       "resetMessage": "This will reset all Sindi preferences to their defaults.",
@@ -2032,33 +1461,22 @@
     "navigation": {
       "home": "Home",
       "explore": "Explore",
-      "search": "Search",
       "saved": "Saved",
       "inbox": "Inbox",
-      "insights": "Insights",
       "sindi": "Sindi",
-      "contracts": "Contracts",
       "profile": "Profile",
-      "payments": "Payments",
       "roommates": "Roommates",
       "settings": "Settings",
       "applications": "My applications",
       "stays": "Stays",
       "tips": "Tips",
       "hostCalendar": "Host calendar",
-      "hostReservations": "Host reservations",
-      "landlordApplications": "Applicant inbox",
       "evictions": "Eviction watch",
       "reviews": "Reviews",
       "myHome": "আমার বাড়ি"
     },
     "actions": {
-      "addProperty": "Add Property",
-      "signUp": "Sign Up",
       "signIn": "Sign In"
-    },
-    "hero": {
-      "tagline": "Find your ethical home"
     },
     "mode": {
       "longTerm": "Long-term",
@@ -2067,28 +1485,20 @@
       "exchange": "Exchange"
     },
     "savedProperties": {
-      "title": "Saved folders",
-      "empty": "No saved folders yet",
-      "viewAll": "View all"
+      "title": "Saved folders"
     },
     "recent": {
       "title": "Recently viewed",
       "today": "Today",
       "yesterday": "Yesterday",
-      "earlier": "Earlier",
-      "empty": "Properties you view will appear here",
-      "remove": "Remove from recent"
+      "earlier": "Earlier"
     },
     "menu": {
       "account": "Account",
-      "inbox": "Inbox",
       "terms": "Terms of service",
       "privacy": "Privacy policy"
     },
-    "collapse": "Collapse sidebar",
-    "expand": "Expand sidebar",
-    "open": "Open menu",
-    "close": "Close menu"
+    "open": "Open menu"
   },
   "saved": {
     "toast": {
@@ -2112,7 +1522,6 @@
       "folderNamePlaceholder": "Folder name",
       "chooseColor": "Choose Color",
       "chooseEmoji": "Choose Emoji",
-      "creating": "Creating...",
       "createAndSave": "Create & Save",
       "propertyCount_one": "{{count}} property",
       "propertyCount_other": "{{count}} properties",
@@ -2138,8 +1547,6 @@
     "notes": {
       "title": "Notes",
       "placeholder": "এই প্রপার্টি সম্পর্কে নোট যোগ করুন...",
-      "save": "নোট সংরক্ষণ করুন",
-      "cancel": "বাতিল",
       "filters": {
         "active": "সক্রিয়",
         "pinned": "পিন করা",
@@ -2157,15 +1564,10 @@
       "unarchive": "নোট আর্কাইভ থেকে সরান"
     },
     "actions": {
-      "addNotes": "নোট যোগ করুন",
-      "editNotes": "নোট সম্পাদনা করুন",
-      "unsave": "সংরক্ষিত থেকে সরান",
-      "viewProperty": "প্রপার্টি দেখুন"
+      "editNotes": "নোট সম্পাদনা করুন"
     },
     "errors": {
-      "unsaveFailed": "সংরক্ষিত থেকে সরানো যায়নি",
-      "updateNotesFailed": "নোট হালনাগাদ করা যায়নি",
-      "loadFailed": "সংরক্ষিত প্রপার্টি লোড করা যায়নি"
+      "updateNotesFailed": "নোট হালনাগাদ করা যায়নি"
     },
     "filters": {
       "thisWeek": "এই সপ্তাহ",
@@ -2238,17 +1640,9 @@
     "loading": "Loading property details...",
     "error": "Error",
     "notFound": "Property not found",
-    "bed": "Bed",
-    "bath": "Bath",
     "pricingReviewNeeded": "এই দামটি পর্যালোচনা করুন",
     "bedrooms": "Number of Bedrooms",
     "bathrooms": "Number of Bathrooms",
-    "customNumber": {
-      "title": "Enter Custom Number",
-      "placeholder": "Enter number",
-      "confirm": "Confirm",
-      "cancel": "Cancel"
-    },
     "suggestedRent": "প্রস্তাবিত: মাসে {{amount}}",
     "maxEthicalRent": "নৈতিক সর্বোচ্চ: মাসে {{amount}}",
     "ethicalPricingWarning": "আপনার দাম এমন বাড়ির নৈতিক সর্বোচ্চ সীমার চেয়ে বেশি। আবাসন সাশ্রয়ী রাখতে দাম কমানোর কথা ভাবুন।",
@@ -2263,9 +1657,6 @@
       "subtitle": "Community-verified notes about the building. Experiences may vary by unit.",
       "count_one": "{{count}} note",
       "count_other": "{{count}} notes",
-      "summaryRecommend": "Recommend",
-      "summaryVerified": "Verified",
-      "summaryEvidence": "With evidence",
       "distributionLabel": "Rating breakdown",
       "sort": {
         "label": "Sort",
@@ -2276,17 +1667,6 @@
       "readMore": "Read more",
       "readLess": "Read less",
       "helpful": "Helpful ({{count}})",
-      "helpfulThanksTitle": "Thank you",
-      "helpfulThanksBody": "Your feedback has been recorded.",
-      "report": "Report",
-      "reportTitle": "Report note",
-      "reportBody": "Are you sure you want to report this community note for inappropriate content?",
-      "reportConfirm": "Report",
-      "reportedTitle": "Reported",
-      "reportedBody": "This community note has been reported to our moderation team.",
-      "reply": "Reply",
-      "replyTitle": "Reply to note",
-      "replyBody": "Replies let landlords and property managers respond to community notes.",
       "recommends": "Recommends",
       "doesNotRecommend": "Does not recommend",
       "anonymous": "Anonymous",
@@ -2396,10 +1776,7 @@
       "deleteSuccess": "Property deleted successfully",
       "createFailed": "Failed to create property",
       "updateFailed": "Failed to update property",
-      "deleteFailed": "Failed to delete property",
-      "shareCopied": "Property details copied to clipboard",
-      "shareFailed": "Failed to share property",
-      "shareTitle": "Share Property"
+      "deleteFailed": "Failed to delete property"
     },
     "drafts": {
       "title": "Drafts",
@@ -2428,9 +1805,7 @@
     },
     "host": {
       "verified": "Verified",
-      "responseRate": "Typically responds within an hour",
       "hostingSince": "Hosting since",
-      "hostedBy": "Hosted by",
       "openProfile": "Open host profile",
       "publicSubtitle": "Government-managed affordable housing",
       "publicAuthority": "Public Housing Authority",
@@ -2489,16 +1864,12 @@
       "errorTitle": "Could not load reviews",
       "disclaimer": "Community-verified reviews about the building. Experiences may vary by unit.",
       "title": "Reviews",
-      "evidence": "With evidence",
-      "countWithNumber": "({{count}} reviews)",
       "showAll": "Show all {{count}} reviews",
       "total_one": "{{count}}টি রিভিউ",
       "total_other": "{{count}}টি রিভিউ"
     },
     "notFoundHelp": "It may have been removed or the link is broken.",
     "sections": {
-      "photoGallery": "Photo Gallery",
-      "viewAll": "View All",
       "features": "Property Features",
       "furnished": "Furnished",
       "partiallyFurnished": "Partially Furnished",
@@ -2525,11 +1896,6 @@
       "availability": "Availability",
       "availableFrom": "Available From",
       "leaseTerm": "Lease Term",
-      "location": "Location",
-      "nearbyAmenities": "Nearby Amenities",
-      "publicTransport": "Public Transport",
-      "schools": "Schools",
-      "shopping": "Shopping",
       "propertyType": "সম্পত্তির ধরন"
     },
     "neighborhood": {
@@ -2537,8 +1903,6 @@
       "listings": "Listings",
       "avgRentPerMonth": "Avg. rent / mo",
       "onParWithCity": "On par with the city average",
-      "listingCount": "{{count}} listings",
-      "avgAmountPerMonth": "Avg. {{amount}}/mo",
       "pctVsCity": "{{pct}}% {{dir}} than the city average",
       "cheaper": "cheaper",
       "pricier": "pricier"
@@ -2794,11 +2158,7 @@
       }
     },
     "badge": {
-      "byNight": "By night",
-      "forSale": "For sale",
-      "exchange": "Exchange",
       "verified": "Verified",
-      "eco": "Eco",
       "instantBook": "Instant book",
       "fairPrice": "Fair price",
       "new": "New"
@@ -3176,32 +2536,14 @@
   "reviews": {
     "card": {
       "anonymous": "Anonymous",
-      "verifiedResident": "Verified Resident",
       "verified": "Verified",
-      "confident": "{{score}}% confident",
-      "proof": "proof",
-      "proofs": "proofs",
-      "karma": "{{score}} karma",
       "livedMonths": "Lived {{count}} months",
       "perMonth": "{{price}} {{currency}}/month",
-      "moreIssues": "+{{count}} more",
-      "positive": "Positive:",
-      "negative": "Negative:",
       "helpful": "Helpful ({{count}})",
       "report": "Report",
-      "reply": "Reply",
       "recommends": "✓ Recommends",
       "doesNotRecommend": "✗ Does not recommend",
       "underReview": "Under Review",
-      "alertThankYouTitle": "Thank you",
-      "alertThankYouBody": "Your feedback has been recorded.",
-      "alertReportTitle": "Report Review",
-      "alertReportBody": "Are you sure you want to report this review for inappropriate content?",
-      "alertReportConfirm": "Report",
-      "alertReportedTitle": "Reported",
-      "alertReportedBody": "This review has been reported to our moderation team.",
-      "alertReplyTitle": "Reply to Review",
-      "alertReplyBody": "Reply functionality will allow landlords and property managers to respond to reviews.",
       "pros": "What went well",
       "cons": "What could be better",
       "adviceToLandlord": "Advice to the landlord",
@@ -3482,10 +2824,6 @@
     "cancelFailed": "Failed to cancel subscription",
     "cancelEndOfPeriodSuccess": "Subscription will be canceled at the end of the current period",
     "debugFailed": "Failed to debug subscription",
-    "sync": "Sync from Stripe",
-    "cancel": "Cancel subscription",
-    "cancelImmediate": "Cancel immediately",
-    "cancelEndOfPeriod": "Cancel at period end",
     "page": {
       "headerTitle": "Homiio+",
       "headerSubtitle": "Your ethical housing ally",
@@ -3604,7 +2942,6 @@
   },
   "booking": {
     "toast": {
-      "pickDates": "Pick check-in and check-out dates first",
       "minStay": "Minimum stay is {{count}} {{unit}}",
       "maxStay": "Maximum stay is {{count}} {{unit}}",
       "night": "night",
@@ -3612,9 +2949,7 @@
       "failed": "Booking failed"
     },
     "accessibility": {
-      "selectDates": "Select dates",
-      "selectGuests": "Select guests",
-      "close": "Close"
+      "selectDates": "Select dates"
     },
     "guests": {
       "adults": "প্রাপ্তবয়স্ক",
@@ -3623,8 +2958,6 @@
       "childrenHint": "২–১২ বছর",
       "infants": "নবজাতক",
       "infantsHint": "২ বছরের কম",
-      "decrease": "{{title}} কমান",
-      "increase": "{{title}} বাড়ান",
       "maxNote": "এই জায়গায় সর্বোচ্চ {{count}} জন অতিথি থাকতে পারবেন, নবজাতক বাদে।",
       "count_one": "{{count}} জন অতিথি",
       "count_other": "{{count}} জন অতিথি",
@@ -3633,8 +2966,6 @@
     },
     "widget": {
       "requestToBook": "বুকিংয়ের অনুরোধ করুন",
-      "perNight": "রাত",
-      "dates": "তারিখ",
       "requestNote": "এখনই আপনার কাছ থেকে কোনো অর্থ কাটা হবে না। হোস্টের উত্তর দেওয়ার জন্য ২৪ ঘণ্টা সময় আছে।",
       "checkAvailability": "প্রাপ্যতা দেখুন"
     },
@@ -3658,8 +2989,6 @@
   "addresses": {
     "detail": {
       "title": "Address",
-      "loadError": "Couldn't load this address",
-      "tryAgain": "Please try again.",
       "propertiesSection": "Properties",
       "reviewsSection": "Reviews",
       "emptyPropertiesTitle": "No properties here yet",
@@ -3667,15 +2996,10 @@
       "emptyReviewsTitle": "No reviews yet",
       "emptyReviewsDescription": "Be the first to share your experience at this address.",
       "writeReview": "Write a review",
-      "switchLevel": "Switch level",
-      "buildingLevel": "Building",
-      "unitLevel": "Unit",
       "notFound": "Address not found",
       "notFoundDescription": "We couldn't find any details for this address.",
       "storiesTitle": "Stories from residents",
       "tabOverall": "Overall",
-      "tabApartments": "Apartments",
-      "tabCommunity": "Community",
       "tabArea": "Area",
       "tabProperties": "Properties ({{count}})",
       "tabReviews": "Reviews ({{count}})",
@@ -3822,28 +3146,13 @@
     }
   },
   "searchBar": {
-    "search": "Search",
     "long": {
       "propertyType": "Property type",
-      "moveIn": "Move-in",
-      "where": "Where",
-      "where.value": "Any city",
-      "moveIn.value": "Add date",
-      "propertyType.value": "Any type"
+      "where": "Where"
     },
     "vacation": {
-      "where": "Where",
       "when": "When",
-      "who": "Who",
-      "where.value": "Any destination",
-      "when.value": "Add dates",
-      "who.value": "Add guests"
-    },
-    "mode": {
-      "vacation": "Vacation",
-      "longTerm": "Long-term",
-      "hint": "Switch between long-term rentals and vacation stays",
-      "label": "Rental mode"
+      "who": "Who"
     }
   },
   "error": {
@@ -4396,7 +3705,6 @@
       "pause": "বিরতি",
       "pauseHint": "বিরতিতে সতর্কতা রেকর্ড হয়, কিন্তু পাঠানো হয় না।",
       "pauseAction": "এক সপ্তাহের বিরতি",
-      "resume": "সতর্কতা আবার চালু",
       "primaryArea": "প্রধান এলাকা",
       "primaryAreaHint": "হোম আপনার প্রধান এলাকায় খোলে। একসঙ্গে একটিই রাখা যায়।",
       "primaryAreaAction": "এটিকে আমার প্রধান এলাকা করুন",
