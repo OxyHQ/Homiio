@@ -18,7 +18,7 @@ import { rateLimitKeyFor } from './middlewares/rateLimitKey';
 import { connectPostgres } from './db/postgres';
 import publicRoutes from './routes/public';
 import { OxyServices } from '@oxy.so/core';
-import { createOptionalOxyAuth, createOxyAuthMiddleware } from '@oxy.so/core/server';
+import { createOptionalOxyAuth, createOxyAuthMiddleware, type OxyAuthRefusal } from '@oxy.so/core/server';
 import { stripeWebhook, confirmCheckoutSession } from './controllers/billingController';
 import { initCronJobs } from './services/cron';
 import { HealthService } from './services/healthService';
@@ -58,7 +58,26 @@ const UNAUTHENTICATED_RATE_LIMIT_MAX = 600; // ~0.66 req/sec per anonymous IP
  * Runs BEFORE the global rate limiter so the limiter can key/scale per user
  * instead of per shared egress IP behind the ALB.
  */
-const optionalAuth = createOptionalOxyAuth(oxy);
+const oxyAuthOptions = {
+  auth: {
+    /**
+     * Why a credential was refused, in Homiio's own log.
+     *
+     * The middleware answers a fixed body and tells the client nothing, which
+     * is right; the cost is that a refusal on the OPTIONAL path leaves no trace
+     * at all — the request simply arrives unauthenticated and whatever answers
+     * next (usually a generic 401) is all anyone sees. Oxy served an empty JWKS
+     * (`{"keys":[]}`, no Ed25519 signing key bound) and that was the whole
+     * symptom on this side: 401, no reason, hours to find. `code` is stable and
+     * greppable; nothing from here reaches a response.
+     */
+    onRefusal: ({ code, stage, reason, status, optional }: OxyAuthRefusal) => {
+      logger.warn('Oxy refused a credential', { code, stage, reason, status, optional });
+    },
+  },
+} as const;
+
+const optionalAuth = createOptionalOxyAuth(oxy, oxyAuthOptions);
 
 /**
  * Paths exempt from the global API rate limiter.
@@ -302,7 +321,7 @@ app.get('/health', async (req, res) => {
 app.use('/api', publicRoutes());
 
 // Mount authenticated API routes
-app.use('/api', createOxyAuthMiddleware(oxy), routes());
+app.use('/api', createOxyAuthMiddleware(oxy, oxyAuthOptions), routes());
 
 // Error handling middleware
 app.use(notFound);

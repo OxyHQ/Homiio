@@ -33,7 +33,7 @@
     "@homiio/listing-providers": "workspace:*",
     "@homiio/shared-types": "workspace:*",
     "@oxy.so/contracts": "^1.2.0",
-    "@oxy.so/core": "^1.4.0",
+    "@oxy.so/core": "^1.5.1",
     "@oxy.so/crowdsource": "1.1.0",
     "@oxy.so/crowdsource-contracts": "1.1.0",
     "@oxy.so/crowdsource-express": "1.1.0",
