@@ -238,6 +238,8 @@ export default function WriteReviewPage() {
       opinion: data.opinion.trim(),
       rating: data.rating,
       recommendation: data.recommendation === true,
+      // The author's own publication choice (ADR 0003 §5.2).
+      authorIdentity: data.authorIdentity,
       price: Number(data.price),
       currency: data.currency,
       livedFrom: new Date(data.livedFrom),

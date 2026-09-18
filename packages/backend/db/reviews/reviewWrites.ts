@@ -30,6 +30,8 @@
  * bypassed.
  */
 
+import { randomBytes } from 'node:crypto';
+
 import { and, count, eq, type SQL } from 'drizzle-orm';
 
 import { getDb, inSavepoint, type DatabaseOrTransaction } from '../postgres';
@@ -72,8 +74,42 @@ export class DuplicateReviewError extends Error {
   }
 }
 
-/** Everything a create supplies except the derived duration. */
-export type ReviewCreateValues = Omit<ReviewInsert, 'livedForMonths'>;
+/** Everything a create supplies except the two values this module derives. */
+export type ReviewCreateValues = Omit<ReviewInsert, 'livedForMonths' | 'authorPseudonym'>;
+
+/**
+ * The handle this author is published under at this BUILDING — ADR 0003 §5.2.
+ *
+ * Reused when they already have one there, minted otherwise. That reuse is the
+ * whole of "stable per author per building": a reader can tell that the same
+ * person wrote two reviews about one block, and cannot correlate an author
+ * across blocks, which would be de-anonymisation with extra steps.
+ *
+ * Minted rather than derived, because a derived pseudonym is only as private as
+ * its key: `sha256(building || author)` is recomputable by anybody who can guess
+ * the author, and an owner holding a lease knows exactly one candidate. 16 bytes
+ * of randomness has no such preimage.
+ *
+ * The read is deliberately NOT filtered on `moderation_status`: a removed review
+ * still occupies its author's identity at that building, and skipping it would
+ * mint a second handle and tell a reader a second person appeared.
+ */
+export async function resolveAuthorPseudonym(
+  db: DatabaseOrTransaction,
+  input: { oxyUserId: string; buildingLevelId: string },
+): Promise<string> {
+  const [existing] = await db
+    .select({ pseudonym: reviews.authorPseudonym })
+    .from(reviews)
+    .where(
+      and(
+        eq(reviews.oxyUserId, input.oxyUserId),
+        eq(reviews.buildingLevelId, input.buildingLevelId),
+      ),
+    )
+    .limit(1);
+  return existing?.pseudonym ?? randomBytes(16).toString('hex');
+}
 
 /**
  * Insert a review, deriving `livedForMonths` from the tenancy dates.
@@ -101,11 +137,21 @@ export async function insertReview(
   values: ReviewCreateValues,
 ): Promise<ReviewRow> {
   try {
+    // Resolved HERE rather than by the controller, so no write path can forget
+    // it and mint a second handle for an author who already has one at this
+    // building. It is read inside the caller's transaction, which is what makes
+    // the reuse see a review written moments earlier in the same request.
+    const authorPseudonym = await resolveAuthorPseudonym(db, {
+      oxyUserId: values.oxyUserId,
+      buildingLevelId: values.buildingLevelId,
+    });
+
     const [row] = await inSavepoint(db, (tx) =>
       tx
         .insert(reviews)
         .values({
           ...values,
+          authorPseudonym,
           livedForMonths: deriveLivedForMonths(values.livedFrom, values.livedTo),
         })
         .returning(),
@@ -117,8 +163,15 @@ export async function insertReview(
   }
 }
 
-/** The fields an author may change, already narrowed by `EDITABLE_REVIEW_FIELDS`. */
-export type ReviewPatch = Partial<Omit<ReviewInsert, 'livedForMonths'>>;
+/**
+ * The fields an author may change, already narrowed by `EDITABLE_REVIEW_FIELDS`.
+ *
+ * `authorPseudonym` is excluded at the TYPE level rather than trusted to the
+ * allowlist: an author who switches from `identified` to `pseudonymous` must get
+ * the handle they would have had all along, and a patch that could reset it
+ * would tell a reader a new person had appeared at the building.
+ */
+export type ReviewPatch = Partial<Omit<ReviewInsert, 'livedForMonths' | 'authorPseudonym'>>;
 
 /**
  * Apply an author's edit, recomputing the tenancy duration.

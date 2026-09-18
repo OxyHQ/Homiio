@@ -2570,7 +2570,12 @@
         "personal_data": "Contains personal data",
         "spam": "Spam",
         "other": "Other"
-      }
+      },
+      "pseudonymousAuthor": "বাসিন্দা {{reference}}",
+      "anonymousResident": "একজন বাসিন্দা",
+      "perMonthBand": "{{range}}/মাস",
+      "perMonthFrom": "{{price}} বা তার বেশি/মাস",
+      "tenancyRange": "{{from}} – {{to}}"
     },
     "write": {
       "submitFailed": "Failed to submit review",
@@ -2660,7 +2665,8 @@
         "cons": "What could be better",
         "photos": "Photos",
         "rating": "Overall rating",
-        "recommendation": "Would you recommend this address?"
+        "recommendation": "Would you recommend this address?",
+        "authorIdentity": "আপনি কীভাবে দেখাবেন"
       },
       "placeholders": {
         "street": "e.g. 123 Main Street",
@@ -2688,6 +2694,21 @@
         "USD": "USD ($)",
         "GBP": "GBP (£)",
         "CAD": "CAD ($)"
+      },
+      "authorIdentity": {
+        "hint": "Homiio সবসময় জানে কে রিভিউ লিখেছে, যাতে সেটি সংশোধন বা আপিল করা যায়। এটি শুধু অন্যরা কী দেখবে তা বদলায়।",
+        "verified_anonymous_resident": {
+          "title": "একজন বাসিন্দা",
+          "description": "আপনার সম্পর্কে কিছুই দেখানো হয় না। এই ভবনের দুটি বেনামি রিভিউ একইরকম দেখায়।"
+        },
+        "pseudonymous": {
+          "title": "এই ভবনের জন্য একটি রেফারেন্স",
+          "description": "একটি ছোট কোড, এই ভবনের আপনার সব রিভিউতে একই থাকে এবং অন্য যেকোনো ঠিকানায় আলাদা হয়।"
+        },
+        "identified": {
+          "title": "আমার Oxy নাম",
+          "description": "রিভিউয়ের পাশে আপনার নাম ও ছবি দেখানো হয়।"
+        }
       }
     },
     "explore": {

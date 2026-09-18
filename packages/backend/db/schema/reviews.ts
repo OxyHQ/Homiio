@@ -54,6 +54,7 @@ import type {
   NeighborRelations,
   NoiseLevel,
   ResponseRating,
+  ReviewAuthorIdentity,
   ReviewModerationStatus,
   ReviewReportReason,
   SecurityLevel,
@@ -188,6 +189,16 @@ export const REVIEW_MODERATION_STATUSES = [
   'removed',
 ] as const satisfies readonly `${ReviewModerationStatus}`[];
 
+/**
+ * The three author-identity forms of ADR 0003 §5.2, in the order they disclose
+ * least to most about the person who wrote the review.
+ */
+export const REVIEW_AUTHOR_IDENTITIES = [
+  'identified',
+  'pseudonymous',
+  'verified_anonymous_resident',
+] as const satisfies readonly `${ReviewAuthorIdentity}`[];
+
 export const REVIEW_REPORT_REASONS = [
   'fake',
   'offensive',
@@ -305,6 +316,42 @@ export const reviews = pgTable(
     moderationStatus: text({ enum: REVIEW_MODERATION_STATUSES }).notNull().default('active'),
 
     oxyUserId: text().notNull(),
+    /**
+     * How this author chose to be PUBLISHED — ADR 0003 §5.2.
+     *
+     * {@link reviews.oxyUserId} above is `NOT NULL` and stays that way whatever
+     * this says: the ADR is explicit that the LINK must exist for correction,
+     * appeal and abuse handling. This column decides only what a reader is told,
+     * and the reduction happens in the serializer, on the way out.
+     *
+     * The default is `pseudonymous`, and it is a deliberate departure from the
+     * ADR's own sentence. §5.2 offers `verified_anonymous_resident` by default
+     * for a review that criticises a landlord — but §6.1 and F7 record that
+     * `reviews.verified` is never written by anything, so a form whose published
+     * text is *"Verified resident"* would be, today, exactly the lie §6.1 names:
+     * a claim nobody checked, rendered as a checkmark. `pseudonymous` discloses
+     * no more about the author and asserts nothing Homiio has not done. Revisit
+     * with #364, which builds the verification pipeline.
+     */
+    authorIdentity: text({ enum: REVIEW_AUTHOR_IDENTITIES }).notNull().default('pseudonymous'),
+    /**
+     * The opaque handle published under `pseudonymous`, stable per author per
+     * BUILDING.
+     *
+     * Stored rather than derived, and that is the decision. A derived pseudonym
+     * has to be keyed, or an owner who knows the building and a candidate
+     * account can simply recompute the digest and confirm a guess — and a key
+     * means a secret to deploy, rotate and lose, where a rotation silently
+     * re-pseudonymises every review at once. Storing it makes the value
+     * arbitrary, unguessable and permanent.
+     *
+     * `NOT NULL` on every row regardless of the form chosen, because the form is
+     * editable: an author who switches from `identified` to `pseudonymous` must
+     * get the handle they would have had, not a fresh one that tells a reader a
+     * new person appeared. `db/reviews/reviewWrites.ts` is what keeps it stable —
+     * it reuses the author's existing handle at the same building.
+     */
+    authorPseudonym: text().notNull(),
     verified: boolean().notNull().default(false),
 
     createdAt: createdAt(),
@@ -401,6 +448,18 @@ export const reviews = pgTable(
       'reviews_moderation_status_check',
       sql`${table.moderationStatus} in (${sql.raw(inList(REVIEW_MODERATION_STATUSES))})`,
     ),
+    check(
+      'reviews_author_identity_check',
+      sql`${table.authorIdentity} in (${sql.raw(inList(REVIEW_AUTHOR_IDENTITIES))})`,
+    ),
+    /**
+     * A pseudonym is a VALUE, so `''` is one too — and an empty pseudonym would
+     * make every anonymous author at a building look like the same person while
+     * satisfying `NOT NULL`. Same rule `CONVENTIONS.md` states for a
+     * sparse-unique column, applied to a column whose emptiness is a disclosure
+     * rather than a collision.
+     */
+    check('reviews_author_pseudonym_check', sql`length(${table.authorPseudonym}) > 0`),
     check(
       'reviews_currency_check',
       sql`${table.currency} in (${sql.raw(inList(PAYMENT_CURRENCIES))})`,

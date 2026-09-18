@@ -37,6 +37,7 @@
  */
 
 import { serializeAddressRow, type AddressWithGeoNames } from '../addresses/addressSerializer';
+import { reviewPriceBand, reviewTenancyMonth } from './reviewPublication';
 import type { reviews } from '../schema/reviews';
 
 export type ReviewRow = typeof reviews.$inferSelect;
@@ -154,10 +155,31 @@ export function reviewAudienceFor(
  * The author reads their own review exactly as stored, which is what makes
  * "reviews of this exact flat" theirs to correct and to appeal.
  *
- * **What this does NOT yet do**, stated rather than implied: §5.2's three author
- * identity forms, §5.6's month-grained tenancy dates and banded rent, and the
- * author's opt-in to publishing the unit are all still open (#365). `oxyUserId`,
- * `livedFrom`, `livedTo` and `price` are published here as they always were.
+ * ## The author, the dates and the rent (ADR 0003 §5.2, §5.6)
+ *
+ * §5.6 names the combination that re-identifies a household — unit + tenancy
+ * dates + rent — and F2 recorded all three shipping in one unauthenticated
+ * object. The unit went with #506; the other two are reduced here, and the
+ * author is published in whichever of §5.2's three forms they chose:
+ *
+ *  - `oxyUserId` reaches a public reader only under `identified`. It is ABSENT
+ *    otherwise, never `null` (§4.1.3) — and it is never absent for the author,
+ *    who needs it to recognise their own review.
+ *  - `authorKey` is the per-BUILDING pseudonym, published only under
+ *    `pseudonymous`. `verified_anonymous_resident` publishes nothing at all, so
+ *    two such reviews of one building are indistinguishable, which is what that
+ *    form is for.
+ *  - `livedFrom` / `livedTo` are replaced by `livedFromMonth` / `livedToMonth`.
+ *  - `price` is replaced by `priceBand`.
+ *
+ * The month and the band are emitted to EVERY audience, author included. A card
+ * that renders one shape for a stranger and another for the author is two
+ * renderers, and the second one is the one nobody looks at.
+ *
+ * **What this still does NOT do**, stated rather than implied: the author's
+ * opt-in to publishing the unit (§5.1's second half) is not built, so a unit
+ * review is published at the building unconditionally — which is the safe end of
+ * that rule rather than the whole of it.
  */
 export function serializeReview(
   hydrated: HydratedReview,
@@ -183,14 +205,25 @@ export function serializeReview(
     neighborhoodId: review.neighborhoodId,
     agencyId: review.agencyId,
 
-    // The review.
-    oxyUserId: review.oxyUserId,
+    // The author, in the form they chose (§5.2).
+    authorIdentity: review.authorIdentity,
+    oxyUserId:
+      !published || review.authorIdentity === 'identified' ? review.oxyUserId : undefined,
+    // Published to a public reader under `pseudonymous` only — and to the author
+    // always, so their own card renders the handle other people see.
+    authorKey:
+      !published || review.authorIdentity === 'pseudonymous' ? review.authorPseudonym : undefined,
+
     title: review.title,
     greenHouse: review.greenHouse,
-    price: review.price,
+    // The exact rent is the author's own; everybody reads the band (§5.6).
+    price: published ? undefined : review.price,
+    priceBand: reviewPriceBand(review.price, review.currency),
     currency: review.currency,
-    livedFrom: review.livedFrom,
-    livedTo: review.livedTo,
+    livedFrom: published ? undefined : review.livedFrom,
+    livedTo: published ? undefined : review.livedTo,
+    livedFromMonth: reviewTenancyMonth(review.livedFrom),
+    livedToMonth: reviewTenancyMonth(review.livedTo),
     livedForMonths: review.livedForMonths,
     livedDurationText: livedDurationText(review.livedForMonths),
     rating: review.rating,

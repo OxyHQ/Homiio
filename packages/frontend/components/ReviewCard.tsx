@@ -43,6 +43,11 @@ import {
 
 import { ReportReviewSheet } from '@/components/reviews/ReportReviewSheet';
 import {
+  reviewAuthorDisplay,
+  reviewRentLabel,
+  tenancyMonthDate,
+} from '@/components/reviews/publishedFacts';
+import {
   APARTMENT_DIMENSIONS,
   MANAGEMENT_DIMENSIONS,
   BUILDING_DIMENSIONS,
@@ -109,7 +114,7 @@ export interface ReviewCardProps {
 }
 
 export const ReviewCard: React.FC<ReviewCardProps> = ({ review, author, onPressAgency }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const theme = useTheme();
   const { user } = useOxy();
   const toggleHelpful = useToggleHelpful();
@@ -117,8 +122,27 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ review, author, onPressA
   const [reportVisible, setReportVisible] = useState(false);
 
   const isOwnReview = Boolean(user?.id && user.id === review.oxyUserId);
-  const displayName =
-    author?.name?.displayName?.trim() || author?.username || t('reviews.card.anonymous');
+  // ADR 0003 §5.2: the author chose how to be published, and the card shows
+  // exactly that — a name, a per-building reference, or a shared label. The
+  // avatar comes back `undefined` for both anonymous forms even though the
+  // parent hydrated a user, because a face is an identity.
+  const { name: displayName, avatarUser } = reviewAuthorDisplay(review, author, t);
+  const rentLabel = reviewRentLabel(review, i18n.language, t);
+  // The tenancy, at the grain the API publishes it: month and year, never a day
+  // (ADR 0003 §5.6). The duration is the fallback rather than the headline —
+  // "Mar 2023 – Feb 2024" says everything "12 months" does and is the published
+  // fact, where the duration alone leaves a reader guessing when.
+  const livedFrom = tenancyMonthDate(review.livedFromMonth);
+  const livedTo = tenancyMonthDate(review.livedToMonth);
+  const tenancyLabel =
+    livedFrom && livedTo
+      ? t('reviews.card.tenancyRange', {
+          from: formatLocalized(livedFrom, 'MMM yyyy'),
+          to: formatLocalized(livedTo, 'MMM yyyy'),
+        })
+      : review.livedForMonths > 0
+        ? t('reviews.card.livedMonths', { count: review.livedForMonths })
+        : null;
   const isUnderReview = review.moderationStatus === ReviewModerationStatus.UNDER_REVIEW;
 
   const pros = review.prosItems?.length
@@ -166,7 +190,7 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ review, author, onPressA
   return (
     <View style={styles.card}>
       <View style={styles.header}>
-        <Avatar source={author?.avatar ?? undefined} variant="thumb" size={44} name={displayName} />
+        <Avatar source={avatarUser?.avatar ?? undefined} variant="thumb" size={44} name={displayName} />
         <View style={styles.headerText}>
           <View style={styles.nameRow}>
             <BloomText style={[styles.authorName, { color: theme.colors.text }]}>
@@ -199,20 +223,16 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ review, author, onPressA
             <BloomText style={styles.metaText}>
               {formatLocalized(new Date(review.createdAt), 'PP')}
             </BloomText>
-            {review.livedForMonths > 0 ? (
+            {tenancyLabel ? (
               <>
                 <BloomText style={styles.metaDot}>·</BloomText>
-                <BloomText style={styles.metaText}>
-                  {t('reviews.card.livedMonths', { count: review.livedForMonths })}
-                </BloomText>
+                <BloomText style={styles.metaText}>{tenancyLabel}</BloomText>
               </>
             ) : null}
-            {review.price ? (
+            {rentLabel ? (
               <>
                 <BloomText style={styles.metaDot}>·</BloomText>
-                <BloomText style={styles.metaText}>
-                  {t('reviews.card.perMonth', { price: review.price, currency: review.currency })}
-                </BloomText>
+                <BloomText style={styles.metaText}>{rentLabel}</BloomText>
               </>
             ) : null}
           </View>

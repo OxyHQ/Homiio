@@ -139,7 +139,7 @@ export const ReviewsSection: React.FC<ReviewsSectionProps> = ({
                 <View key={review.id} style={styles.gridCell}>
                   <ReviewCard
                     review={review}
-                    author={usersById.get(review.oxyUserId)}
+                    author={review.oxyUserId ? usersById.get(review.oxyUserId) : undefined}
                     onPressAgency={(slug) => router.push(`/agency/${slug}`)}
                   />
                 </View>

@@ -33,7 +33,11 @@ import { H1, Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { Header } from '@/components/Header';
 import { ReviewCard } from '@/components/ReviewCard';
-import { AGGREGATE_MIN_RECORDS, PlaceReviewsSummary } from '@/components/reviews/PlaceReviewsSummary';
+import {
+  AGGREGATE_MIN_AUTHORS,
+  AGGREGATE_MIN_RECORDS,
+  PlaceReviewsSummary,
+} from '@/components/reviews/PlaceReviewsSummary';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { PropertyResultsGrid } from '@/components/ui/PropertyResultsGrid';
@@ -154,7 +158,16 @@ export default function AgencyProfileScreen() {
   }
 
   const hasReviews = stats.totalReviews > 0;
-  const publishShares = stats.totalReviews >= AGGREGATE_MIN_RECORDS;
+  // ADR 0003 §4.4 wants BOTH halves: enough records AND enough distinct
+  // authors. The author count is the server's (`AgencyStats.distinctAuthors`),
+  // counted over the real `oxy_user_id`, because this set spans several
+  // buildings and a published pseudonym is stable per BUILDING — one person who
+  // reviewed three of an agency's blocks would read as three people here and
+  // lift the set over a floor it does not clear. `?? 0` withholds rather than
+  // publishes when an older API answers without the field.
+  const publishShares =
+    stats.totalReviews >= AGGREGATE_MIN_RECORDS &&
+    (stats.distinctAuthors ?? 0) >= AGGREGATE_MIN_AUTHORS;
 
   return (
     <View style={styles.root}>
@@ -187,9 +200,9 @@ export default function AgencyProfileScreen() {
               stats={{
                 averageRating: stats.averageRating,
                 totalReviews: stats.totalReviews,
-                // Shares publish only above the aggregate floor. The server's
-                // stats carry no author count, so the record floor is the one
-                // this screen can check.
+                // Shares publish only above the aggregate floor — see
+                // `publishShares` above for which halves it checks and why the
+                // author count has to be the server's.
                 ...(publishShares
                   ? {
                       recommendRate: stats.recommendationPercentage / 100,
@@ -228,7 +241,7 @@ export default function AgencyProfileScreen() {
                   <AgencyReviewItem
                     key={review.id}
                     review={review}
-                    author={usersById.get(review.oxyUserId)}
+                    author={review.oxyUserId ? usersById.get(review.oxyUserId) : undefined}
                     onPressAddress={() =>
                       router.push(`/addresses/${review.addressId}?tab=reviews`)
                     }

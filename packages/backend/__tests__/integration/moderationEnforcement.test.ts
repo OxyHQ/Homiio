@@ -121,6 +121,8 @@ async function review(
       buildingLevelId: addressId,
       cityId: geo.cityId,
       oxyUserId: 'oxy-reviewer',
+      // No DEFAULT on purpose — see `db/schema/reviews.ts`.
+      authorPseudonym: 'pseudo-enforcement',
       greenHouse: 'n/a',
       price: 1000,
       currency: 'EUR',

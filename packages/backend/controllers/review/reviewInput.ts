@@ -44,6 +44,7 @@ import {
   NEIGHBOR_RELATIONS,
   NOISE_LEVELS,
   RESPONSE_RATINGS,
+  REVIEW_AUTHOR_IDENTITIES,
   SECURITY_LEVELS,
   SERVICE_TYPES,
   TEMPERATURE_RATINGS,
@@ -373,6 +374,20 @@ function normalize(picked: Record<string, unknown>): ReviewInputResult<ReviewPat
 
   const touristApartments = optionalBoolean(errors, 'touristApartments', picked.touristApartments);
   if (touristApartments !== undefined) values.touristApartments = touristApartments;
+
+  // The author's own choice of how to be published (ADR 0003 §5.2). `NOT NULL
+  // DEFAULT 'pseudonymous'`, so a cleared value is an omission and the default
+  // applies — the same treatment `currency` gets above, and the reason is the
+  // same: a NULL here would be a fourth state nothing renders.
+  const authorIdentity = optionalEnum(
+    errors,
+    'authorIdentity',
+    picked.authorIdentity,
+    REVIEW_AUTHOR_IDENTITIES,
+  );
+  if (authorIdentity !== undefined && authorIdentity !== null) {
+    values.authorIdentity = authorIdentity;
+  }
 
   if (errors.list.length > 0) return { ok: false, errors: errors.list };
   return { ok: true, values };

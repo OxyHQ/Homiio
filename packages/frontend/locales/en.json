@@ -2570,7 +2570,12 @@
         "personal_data": "Contains personal data",
         "spam": "Spam",
         "other": "Other"
-      }
+      },
+      "pseudonymousAuthor": "Resident {{reference}}",
+      "anonymousResident": "A resident",
+      "perMonthBand": "{{range}}/month",
+      "perMonthFrom": "{{price}} or more/month",
+      "tenancyRange": "{{from}} – {{to}}"
     },
     "write": {
       "submitFailed": "Failed to submit review",
@@ -2660,7 +2665,8 @@
         "cons": "What could be better",
         "photos": "Photos",
         "rating": "Overall rating",
-        "recommendation": "Would you recommend this address?"
+        "recommendation": "Would you recommend this address?",
+        "authorIdentity": "How you appear"
       },
       "placeholders": {
         "street": "e.g. 123 Main Street",
@@ -2688,6 +2694,21 @@
         "USD": "USD ($)",
         "GBP": "GBP (£)",
         "CAD": "CAD ($)"
+      },
+      "authorIdentity": {
+        "hint": "Homiio always knows who wrote a review, so it can be corrected or appealed. This only changes what other people see.",
+        "verified_anonymous_resident": {
+          "title": "A resident",
+          "description": "Nothing about you is shown. Two anonymous reviews of this building look identical."
+        },
+        "pseudonymous": {
+          "title": "A reference for this building",
+          "description": "A short code, the same on every review you write about this building — and different at every other address."
+        },
+        "identified": {
+          "title": "My Oxy name",
+          "description": "Your display name and photo are shown with the review."
+        }
       }
     },
     "explore": {

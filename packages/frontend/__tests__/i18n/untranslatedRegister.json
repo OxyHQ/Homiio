@@ -281,6 +281,7 @@
   "reservations.detail.confirmCancelTitle",
   "reservations.detail.confirmDeclineBody",
   "reservations.detail.confirmDeclineTitle",
+  "reviews.card.tenancyRange",
   "reviews.enums.services.internet",
   "reviews.write.currencies.CAD",
   "reviews.write.currencies.EUR",

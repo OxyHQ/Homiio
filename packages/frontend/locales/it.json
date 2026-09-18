@@ -2595,7 +2595,12 @@
         "personal_data": "Contiene dati personali",
         "spam": "Spam",
         "other": "Altro"
-      }
+      },
+      "pseudonymousAuthor": "Residente {{reference}}",
+      "anonymousResident": "Una persona residente",
+      "perMonthBand": "{{range}}/mese",
+      "perMonthFrom": "{{price}} o più/mese",
+      "tenancyRange": "{{from}} – {{to}}"
     },
     "write": {
       "submitFailed": "Impossibile inviare la recensione",
@@ -2685,7 +2690,8 @@
         "cons": "Cosa si può migliorare",
         "photos": "Foto",
         "rating": "Voto complessivo",
-        "recommendation": "Consiglieresti questo indirizzo?"
+        "recommendation": "Consiglieresti questo indirizzo?",
+        "authorIdentity": "Come appari"
       },
       "placeholders": {
         "street": "es. Via Roma 123",
@@ -2713,6 +2719,21 @@
         "USD": "USD ($)",
         "GBP": "GBP (£)",
         "CAD": "CAD ($)"
+      },
+      "authorIdentity": {
+        "hint": "Homiio sa sempre chi ha scritto una recensione, così può essere corretta o contestata. Questo cambia solo ciò che vedono gli altri.",
+        "verified_anonymous_resident": {
+          "title": "Una persona residente",
+          "description": "Non viene mostrato nulla su di te. Due recensioni anonime di questo edificio sono identiche."
+        },
+        "pseudonymous": {
+          "title": "Un riferimento per questo edificio",
+          "description": "Un codice breve, lo stesso in tutte le tue recensioni su questo edificio e diverso a ogni altro indirizzo."
+        },
+        "identified": {
+          "title": "Il mio nome Oxy",
+          "description": "Il tuo nome e la tua foto compaiono accanto alla recensione."
+        }
       }
     },
     "explore": {

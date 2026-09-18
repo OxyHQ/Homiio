@@ -2584,7 +2584,12 @@
         "personal_data": "Contains personal data",
         "spam": "Spam",
         "other": "Other"
-      }
+      },
+      "pseudonymousAuthor": "Житель {{reference}}",
+      "anonymousResident": "Один из жильцов",
+      "perMonthBand": "{{range}}/мес.",
+      "perMonthFrom": "{{price}} и больше/мес.",
+      "tenancyRange": "{{from}} – {{to}}"
     },
     "write": {
       "submitFailed": "Failed to submit review",
@@ -2674,7 +2679,8 @@
         "cons": "What could be better",
         "photos": "Photos",
         "rating": "Overall rating",
-        "recommendation": "Would you recommend this address?"
+        "recommendation": "Would you recommend this address?",
+        "authorIdentity": "Как вы отображаетесь"
       },
       "placeholders": {
         "street": "e.g. 123 Main Street",
@@ -2702,6 +2708,21 @@
         "USD": "USD ($)",
         "GBP": "GBP (£)",
         "CAD": "CAD ($)"
+      },
+      "authorIdentity": {
+        "hint": "Homiio всегда знает, кто написал отзыв, чтобы его можно было исправить или оспорить. Это меняет только то, что видят другие.",
+        "verified_anonymous_resident": {
+          "title": "Один из жильцов",
+          "description": "О вас ничего не показывается. Два анонимных отзыва об этом доме выглядят одинаково."
+        },
+        "pseudonymous": {
+          "title": "Код для этого дома",
+          "description": "Короткий код, одинаковый во всех ваших отзывах об этом доме и другой по любому иному адресу."
+        },
+        "identified": {
+          "title": "Моё имя в Oxy",
+          "description": "Рядом с отзывом показываются ваше имя и фото."
+        }
       }
     },
     "explore": {

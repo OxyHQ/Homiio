@@ -21,7 +21,7 @@
  *
  * Keep this list in sync with the user-facing columns of `db/schema/reviews.ts`.
  * Server/system fields are intentionally absent:
- *   oxyUserId, verified, moderationStatus, addressId, addressLevel,
+ *   oxyUserId, authorPseudonym, verified, moderationStatus, addressId, addressLevel,
  *   streetLevelId, buildingLevelId, unitLevelId, cityId, neighborhoodId,
  *   agencyId, livedForMonths, greenHouse, positiveComment, negativeComment.
  *
@@ -53,6 +53,10 @@ export const CREATABLE_REVIEW_FIELDS: readonly string[] = [
   // Write-only: resolved into agencyId server-side.
   'agencyName',
   'images',
+  // How the author is PUBLISHED (ADR 0003 §5.2). A user field, not a server
+  // one: the whole point is that the author chooses, and they may change their
+  // mind later, so it is editable too.
+  'authorIdentity',
   // Deposit outcome (enum).
   'depositReturned',
   // Dimension ratings.
