@@ -20,7 +20,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { getLocales } from 'expo-localization';
 import { Button } from '@oxy.so/bloom/button';
 import { Card, CardTitle } from '@oxy.so/bloom/card';
-import { DatePicker } from '@oxy.so/bloom/date-picker';
+import { DatePicker, TimeField } from '@oxy.so/bloom/date-picker';
 import { Field } from '@oxy.so/bloom/field';
 import { RiAlertLine, RiImageAddLine } from '@oxy.so/bloom/icons';
 import { PhoneInput } from '@oxy.so/bloom/phone-input';
@@ -436,11 +436,16 @@ const EvictionForm: React.FC<EvictionFormProps> = ({ mode, editId, existing }) =
               </Field>
               <View style={styles.rowField}>
                 <Field label={t('evictions.form.timeLabel')}>
-                  <TextFieldInput
-                    label={t('evictions.form.timeLabel')}
-                    placeholder="HH:MM"
-                    value={form.time}
-                    onChangeText={(text) => update('time', text)}
+                  {/* `TimeField` commits on blur/submit and reverts a draft it
+                      cannot parse, so `form.time` only ever holds a real 24h
+                      `HH:mm` — the shape `combineDateAndTime` already required
+                      and the free-text box could not promise. Empty is `null`
+                      there and `''` here, which is the string the rest of the
+                      form and `splitDateAndTime` speak. */}
+                  <TimeField
+                    value={form.time || null}
+                    onChange={(time) => update('time', time ?? '')}
+                    accessibilityLabel={t('evictions.form.timeLabel')}
                   />
                 </Field>
               </View>

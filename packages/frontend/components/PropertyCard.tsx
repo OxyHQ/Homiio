@@ -14,6 +14,19 @@
  *    verified) — never a rating: listings carry no review aggregate, so the
  *    card shows none rather than an invented one;
  *  - heart: the saved-properties context, the same mutation `SaveButton` uses.
+ *
+ * Two of the card's own affordances are turned on here rather than in Bloom,
+ * because both are an app's decision (2.12):
+ *
+ *  - `hoverZoom` brings the photo forward under a pointer. Web only, behind
+ *    `@media (any-hover: hover)` and off under `prefers-reduced-motion`, and
+ *    the transform is inside the tile that already clips — the card does not
+ *    move and the grid does not reflow.
+ *  - `onLongPress` / `onContextMenu` reach the save-to-folder sheet, the same
+ *    one `SaveButton`'s long press opens (`useOpenSaveToFolderSheet`). Neither
+ *    event has a keyboard spelling, which is why the sheet is ALSO reachable
+ *    from the property's own screen: the card's shortcut is a shortcut, never
+ *    the only way in.
  */
 import React, { useCallback, useMemo } from 'react';
 import { Platform, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
@@ -27,6 +40,7 @@ import {
   type Property,
 } from '@homiio/shared-types';
 
+import { useOpenSaveToFolderSheet } from '@/components/SaveToFolderBottomSheet';
 import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
 import { useRentalMode } from '@/context/RentalModeContext';
 import { useFormatting } from '@/utils/format';
@@ -91,6 +105,7 @@ export const PropertyCard = React.memo(function PropertyCard({
   const { browseMode } = useRentalMode();
   const { isPropertySaved, isInitialized, savePropertyToFolder, unsaveProperty } =
     useSavedPropertiesContext();
+  const openSaveToFolderSheet = useOpenSaveToFolderSheet();
 
   const propertyId = property?.id ? String(property.id) : '';
 
@@ -176,6 +191,13 @@ export const PropertyCard = React.memo(function PropertyCard({
       : (property as PropertyWithSavedHint).isSaved ?? false
     : false;
 
+  // Only offered where the heart is: the sheet's whole subject is which folder
+  // this is saved to, which is meaningless on a card that cannot save at all.
+  const handleSaveShortcut = useCallback(() => {
+    if (!propertyId || !property) return;
+    void openSaveToFolderSheet(property, propertyId);
+  }, [propertyId, property, openSaveToFolderSheet]);
+
   const handleFavoriteChange = useCallback(
     (next: boolean) => {
       if (!propertyId) return;
@@ -214,6 +236,9 @@ export const PropertyCard = React.memo(function PropertyCard({
         onPress={onPress}
         favorite={isSaved}
         onFavoriteChange={showSaveButton && propertyId ? handleFavoriteChange : undefined}
+        onLongPress={showSaveButton && propertyId ? handleSaveShortcut : undefined}
+        onContextMenu={showSaveButton && propertyId ? handleSaveShortcut : undefined}
+        hoverZoom
         accessibilityLabel={content?.accessibilityLabel}
         previousPhotoLabel={t('listing.card.previousPhoto')}
         nextPhotoLabel={t('listing.card.nextPhoto')}

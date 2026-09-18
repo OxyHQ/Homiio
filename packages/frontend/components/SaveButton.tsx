@@ -2,8 +2,9 @@
  * SaveButton — save/unsave a property, with optimistic React Query updates.
  *
  * This is a STATEFUL COMPOSITION of the shared `IconButton` primitive: it owns
- * all save logic (mutation, optimistic toggle, saved count, long-press → folder
- * sheet) and renders an `IconButton` heart/bookmark for the chrome. The `chrome`
+ * the save logic (mutation, optimistic toggle, saved count) and renders an
+ * `IconButton` heart/bookmark for the chrome. The long press hands off to
+ * `useOpenSaveToFolderSheet`, shared with `PropertyCard`'s own long press. The `chrome`
  * prop is a passthrough to `IconButton`'s `variant`, so every Save site inherits
  * the one shared button look:
  *  - `'ghost'`   (default) — flat transparent circle for headers/bars.
@@ -13,17 +14,15 @@
  * The saved count still renders (binary 0/1): a corner badge (`countDisplayMode:
  * 'badge'`, default) or inline beside the heart (`'inline'`).
  */
-import React, { useState, useContext } from 'react';
+import React, { useState } from 'react';
 import { StyleSheet, ViewStyle, View, StyleProp } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { RiBookmarkFill, RiBookmarkLine, RiHeartFill, RiHeartLine } from '@oxy.so/bloom/icons';
 import { colors } from '@/styles/colors';
 import { barIconSize, spacing } from '@/constants/styles';
 import { IconButton, type IconButtonVariant } from '@/components/ui/IconButton';
-import { SaveToFolderBottomSheet } from './SaveToFolderBottomSheet';
-import { BottomSheetContext } from '@/context/BottomSheetContext';
+import { useOpenSaveToFolderSheet } from './SaveToFolderBottomSheet';
 import { Property } from '@homiio/shared-types';
-import { getPropertyTitle } from '@/utils/propertyUtils';
 import { ThemedText } from '@/components/ThemedText';
 import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
 
@@ -75,7 +74,7 @@ export function SaveButton({
 }: SaveButtonProps) {
   const { t } = useTranslation();
   const [isPressed, setIsPressed] = useState(false);
-  const bottomSheetContext = useContext(BottomSheetContext);
+  const openSaveToFolderSheet = useOpenSaveToFolderSheet();
   // Ghost (header/bar) hearts match the shared bar glyph size; other chromes
   // scale with the caller's `size` (default 24 for the roomier card heart).
   const effectiveSize = size ?? (chrome === 'ghost' ? barIconSize : 24);
@@ -108,9 +107,6 @@ export function SaveButton({
 
   // Binary status: saved (1) or not saved (0). Kept for the optional count.
   const savedCount = isSaved ? 1 : 0;
-
-  // Extract propertyTitle from property object
-  const propertyTitle = property ? getPropertyTitle(property) : '';
 
   const icon =
     variant === 'heart'
@@ -168,48 +164,11 @@ export function SaveButton({
       return;
     }
 
-    // If we have property info, show folder selection
-    if (propertyId && propertyTitle && bottomSheetContext) {
-      // If property is not saved, save it first, then open folder selection
-      if (!isSaved) {
-        handleInternalSave()
-          .then(() => {
-            setIsPressed(false);
-            bottomSheetContext.openBottomSheet(
-              <SaveToFolderBottomSheet
-                propertyId={propertyId}
-                propertyTitle={propertyTitle}
-                property={property}
-                onClose={() => {
-                  bottomSheetContext?.closeBottomSheet();
-                }}
-                onSave={(_folderId: string | null) => {
-                  // The bottom sheet will auto-close after saving
-                }}
-              />,
-            );
-          })
-          .catch(() => {
-            setIsPressed(false);
-          });
-      } else {
-        // Property is already saved, just open folder selection
-        setIsPressed(false);
-        bottomSheetContext.openBottomSheet(
-          <SaveToFolderBottomSheet
-            propertyId={propertyId}
-            propertyTitle={propertyTitle}
-            property={property}
-            onClose={() => {
-              bottomSheetContext?.closeBottomSheet();
-            }}
-            onSave={(_folderId: string | null) => {
-              // The bottom sheet will auto-close after saving
-            }}
-          />,
-        );
-      }
-    }
+    // `useOpenSaveToFolderSheet` owns the save-then-open sequence, so a long
+    // press here and a long press on a `PropertyCard` reach the same sheet in
+    // the same state.
+    if (!propertyId || !property) return;
+    void openSaveToFolderSheet(property, String(propertyId)).finally(() => setIsPressed(false));
   };
 
   const accessibilityLabel = isSaved

@@ -2112,6 +2112,7 @@
         "pickRating": "Tria primer una valoració",
         "thanks": "Gràcies per la teva ressenya",
         "failed": "No s’ha pogut enviar la ressenya",
+        "ratingLabel": "Valoració general",
         "starLabel": "{{count}} estrelles",
         "alreadyLeft": "Ja has ressenyat aquest intercanvi."
       }

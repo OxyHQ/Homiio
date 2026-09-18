@@ -9,7 +9,7 @@
  * as `FolderColorSwatches` (with `FolderEmojiChips`) so the Saved screen's
  * "New folder" dialog and the folder edit screen draw the same ones.
  */
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useContext, useEffect, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -26,6 +26,7 @@ import { H3, Text as BloomText } from '@oxy.so/bloom/typography';
 import type { Property } from '@homiio/shared-types';
 
 import { spacing } from '@/constants/styles';
+import { BottomSheetContext } from '@/context/BottomSheetContext';
 import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
 import savedPropertyFolderService, {
   type SavedPropertyFolder,
@@ -374,3 +375,41 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 });
+
+/**
+ * Open this sheet for one property — the behaviour every "save somewhere
+ * specific" entry point shares: `SaveButton`'s long press on a detail screen,
+ * and a long press or right-click on a `PropertyCard` in a grid.
+ *
+ * An unsaved property is SAVED FIRST and the sheet opens after, so the heart
+ * fills the moment the press lands rather than only once a folder is picked;
+ * picking one then moves it. A save that fails is already reported by the
+ * context's own toast, and the sheet still opens — the folder list is the
+ * thing the press asked for.
+ */
+export function useOpenSaveToFolderSheet(): (
+  property: Property,
+  propertyId: string,
+) => Promise<void> {
+  const { openBottomSheet, closeBottomSheet } = useContext(BottomSheetContext);
+  const { savePropertyToFolder, isPropertySaved } = useSavedPropertiesContext();
+
+  return useCallback(
+    async (property: Property, propertyId: string) => {
+      if (!isPropertySaved(propertyId)) {
+        await savePropertyToFolder(propertyId, null, property).catch(() => undefined);
+      }
+      openBottomSheet(
+        <SaveToFolderBottomSheet
+          propertyId={propertyId}
+          propertyTitle={getPropertyTitle(property)}
+          property={property}
+          onClose={closeBottomSheet}
+          // The sheet closes itself once a folder is chosen.
+          onSave={() => undefined}
+        />,
+      );
+    },
+    [openBottomSheet, closeBottomSheet, savePropertyToFolder, isPropertySaved],
+  );
+}
