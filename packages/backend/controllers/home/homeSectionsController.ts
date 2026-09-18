@@ -58,6 +58,7 @@ import {
   HOME_SECTION_ITEM_LIMIT,
   type HomeScope,
 } from '../../db/home/homeSectionsRepository';
+import { describeErrorForLog } from '../../middlewares/errorHandler';
 
 /** A query value as Express hands it over. */
 type RawQueryValue = string | string[] | undefined;
@@ -224,7 +225,7 @@ async function resolvePlaceScope(
     // provider was rate-limited, and would make a retryable failure look final.
     logger.warn('home.sections.geocoder_unavailable', {
       locationKey: key,
-      error: error instanceof Error ? error.message : 'unknown',
+      error: describeErrorForLog(error),
     });
     throw new HomeScopeError(
       'GEOCODER_UNAVAILABLE',

@@ -11,7 +11,6 @@ import {
   updateBilling,
 } from '../db/billing/billingRepository';
 import type { billing } from '../db/schema';
-import { getErrorMessage } from '../utils/errors';
 import { logUnexpectedError } from '../middlewares/errorHandler';
 import Stripe from 'stripe';
 
@@ -172,8 +171,16 @@ export async function stripeWebhook(req: Request, res: Response) {
   let event;
   try {
     event = stripe.webhooks.constructEvent(rawBody, sig, webhookSecret);
-  } catch (err: any) {
-    return res.status(400).send(`Webhook Error: ${err.message}`);
+  } catch (err: unknown) {
+    // The 400 is load-bearing — it is how Stripe learns the delivery was
+    // refused and retries — but the library's own text is not ours to publish:
+    // it names the signature scheme, the tolerance window and our clock skew to
+    // whoever sent the unsigned body. The status stays, the text goes to the log.
+    logUnexpectedError(err, req, 'Stripe webhook signature verification failed');
+    return res.status(400).json({
+      success: false,
+      error: { message: 'Webhook signature verification failed', code: 'INVALID_WEBHOOK_SIGNATURE' }
+    });
   }
 
   try {
@@ -437,7 +444,10 @@ export async function debugSubscriptionStatus(req: Request, res: Response) {
           syncAction: stripeCanceled ? 'mark_canceled' : stripeActive ? 'mark_active' : 'no_action'
         };
       } catch (stripeError) {
-        debugInfo.stripe = { error: getErrorMessage(stripeError) };
+        // Same rule as the two above: a fixed string in the body, the real one
+        // in the log. A debug endpoint is still a response.
+        logUnexpectedError(stripeError, req, 'Stripe subscription lookup failed');
+        debugInfo.stripe = { error: 'Stripe lookup failed' };
         debugInfo.comparison = { error: 'Cannot compare - Stripe error' };
       }
     }
@@ -627,11 +637,15 @@ export async function syncSubscriptionStatus(req: Request, res: Response) {
     let subscription;
     try {
       subscription = await stripe.subscriptions.retrieve(billing.plusStripeSubscriptionId);
-    } catch (stripeError: any) {
+    } catch (stripeError: unknown) {
+      // Stripe's message carries its own request id, the account and sometimes
+      // the id it could not find — the caller only needs to know the lookup
+      // failed. Which subscription, and why, is in the log.
+      logUnexpectedError(stripeError, req, 'Stripe subscription lookup failed');
       return res.status(404).json({
         success: false,
         error: {
-          message: `Subscription not found in Stripe: ${stripeError.message}`,
+          message: 'Subscription not found in Stripe',
           code: 'SUBSCRIPTION_NOT_FOUND'
         }
       });

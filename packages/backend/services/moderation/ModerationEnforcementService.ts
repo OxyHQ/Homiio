@@ -44,6 +44,7 @@ import {
 import config from '../../config';
 import { logger } from '../../middlewares/logging';
 import { planEnforcement, type PlannedEnforcementAction } from './enforcementPlan';
+import { describeErrorForLog } from '../../middlewares/errorHandler';
 
 export interface EnforcementSubject {
   /** Homiio's own noun (`property`, `review`, …). */
@@ -404,7 +405,7 @@ async function applyOne(
       decisionId: decision.id,
       revision: decision.revision,
       action: planned.action,
-      error: error instanceof Error ? error.message : String(error),
+      error: describeErrorForLog(error),
     });
     throw error;
   }

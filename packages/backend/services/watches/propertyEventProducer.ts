@@ -28,6 +28,7 @@ import { getDb, type Database, type DatabaseOrTransaction } from '../../db/postg
 import { addresses, properties } from '../../db/schema';
 import { recordHousingDomainEvent } from '../../db/watches/domainEventRepository';
 import { logger } from '../../middlewares/logging';
+import { describeErrorForLog } from '../../middlewares/errorHandler';
 
 /**
  * Whether this process is doing a BULK import rather than serving real changes.
@@ -174,7 +175,7 @@ export async function recordPropertyCreatedEvent(
   } catch (error) {
     logger.error('Failed to record new-listing event', {
       propertyId,
-      error: error instanceof Error ? error.message : String(error),
+      error: describeErrorForLog(error),
     });
   }
 }
@@ -237,7 +238,7 @@ export async function recordPropertyChangeEvents(
   } catch (error) {
     logger.error('Failed to record listing-change events', {
       propertyId: after.id,
-      error: error instanceof Error ? error.message : String(error),
+      error: describeErrorForLog(error),
     });
   }
 }
@@ -267,7 +268,7 @@ export async function recordPropertyRemovedEvent(
   } catch (error) {
     logger.error('Failed to record listing-removed event', {
       propertyId: snapshot.id,
-      error: error instanceof Error ? error.message : String(error),
+      error: describeErrorForLog(error),
     });
   }
 }

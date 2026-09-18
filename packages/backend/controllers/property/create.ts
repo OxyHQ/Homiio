@@ -12,8 +12,8 @@ import { findOrCreateCanonicalAddress } from '../../services/addressService';
 import { telegramService } from '../../services';
 import { schedulePriceEthicsScore } from '../../services/priceEthicsService';
 import { logger, businessLogger } from '../../middlewares/logging';
-import { AppError, successResponse } from '../../middlewares/errorHandler';
-import { getErrorMessage, getErrorName, getValidationMessages } from '../../utils/errors';
+import { AppError, describeErrorForLog, successResponse } from '../../middlewares/errorHandler';
+import { getErrorName, getValidationMessages } from '../../utils/errors';
 import { requireSessionOxyUserId } from '../../utils/sessionUser';
 import type { ControllerNext, ControllerRequest, ControllerResponse } from '../controllerTypes';
 
@@ -192,7 +192,7 @@ export async function createProperty(req: ControllerRequest, res: ControllerResp
     telegramService.sendPropertyNotification(publishedProperty).catch(error => {
       logger.error('Failed to send Telegram notification for new property', {
         propertyId,
-        error: getErrorMessage(error),
+        error: describeErrorForLog(error),
       });
     });
     schedulePriceEthicsScore(propertyId);

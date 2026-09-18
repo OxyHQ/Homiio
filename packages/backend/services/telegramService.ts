@@ -11,6 +11,7 @@ import { logger } from '../middlewares/logging';
 import { generateLargePropertyTitle } from '../utils/propertyTitleGenerator';
 import { formatArea, formatDate, formatMoney } from '@homiio/shared-types';
 import { resolveAddressDisplay, type GeoDisplay, type AddressGeoLike } from './geoDisplayService';
+import { describeErrorForLog } from '../middlewares/errorHandler';
 
 /**
  * BCP-47 tag per Telegram group language.
@@ -33,11 +34,6 @@ const TELEGRAM_LOCALES: Record<string, string> = {
   ca: 'ca-ES',
   it: 'it-IT',
 };
-
-function errorMessage(error: unknown): string {
-  if (error instanceof Error) return error.message;
-  return String(error);
-}
 
 interface PropertyImageLike {
   url?: string | null;
@@ -142,7 +138,7 @@ class TelegramService {
       
       logger.info('Telegram bot initialized successfully');
     } catch (error) {
-      logger.error('Failed to initialize Telegram bot:', { error: errorMessage(error) });
+      logger.error('Failed to initialize Telegram bot:', { error: describeErrorForLog(error) });
       this.isInitialized = false;
     }
   }
@@ -460,7 +456,7 @@ ${t.__('telegram.hashtags.newProperty')}${cityHashtag} #${this.escapeMarkdown(pr
         logger.warn('Failed to send image, falling back to text message', {
           propertyId: property._id,
           imageUrl: imageUrl,
-          error: errorMessage(imageError)
+          error: describeErrorForLog(imageError)
         });
 
         const textMessageOptions: TelegramBot.SendMessageOptions = {
@@ -489,7 +485,7 @@ ${t.__('telegram.hashtags.newProperty')}${cityHashtag} #${this.escapeMarkdown(pr
       return true;
     } catch (error) {
       logger.error('Failed to send Telegram notification:', {
-        error: errorMessage(error),
+        error: describeErrorForLog(error),
         propertyId: property._id,
         city: property.address?.city,
         country: property.address?.country
@@ -554,7 +550,7 @@ ${t.__('telegram.hashtags.newProperty')}${cityHashtag} #${this.escapeMarkdown(pr
       return true;
     } catch (error) {
       logger.error('Failed to send test message:', {
-        error: errorMessage(error),
+        error: describeErrorForLog(error),
         groupId,
         topicId
       });
@@ -575,7 +571,7 @@ ${t.__('telegram.hashtags.newProperty')}${cityHashtag} #${this.escapeMarkdown(pr
       const botInfo = await this.bot.getMe();
       return botInfo;
     } catch (error) {
-      logger.error('Failed to get bot info:', { error: errorMessage(error) });
+      logger.error('Failed to get bot info:', { error: describeErrorForLog(error) });
       throw error;
     }
   }
@@ -622,9 +618,15 @@ ${t.__('telegram.hashtags.newProperty')}${cityHashtag} #${this.escapeMarkdown(pr
         await new Promise(resolve => setTimeout(resolve, 1000));
       } catch (error) {
         results.failed++;
+        // The summary is returned to an HTTP caller, so it names WHICH listing
+        // failed and nothing else; Telegram's own text goes to the log.
+        logger.warn('Bulk Telegram notification failed for one property', {
+          propertyId: property._id,
+          error: describeErrorForLog(error)
+        });
         results.errors.push({
           propertyId: property._id,
-          error: errorMessage(error)
+          error: 'Notification failed'
         });
       }
     }

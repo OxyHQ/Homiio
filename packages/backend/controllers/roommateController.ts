@@ -79,12 +79,7 @@ import {
 } from './roommate/editableFields';
 import { calculateMatchPercentage, toMatchInputs } from './roommate/matching';
 import { hydrateDisplayNames, serializeRoommateProfile } from './roommate/serialize';
-
-function errorMessage(error: unknown): string {
-  if (error instanceof Error) return error.message;
-  if (typeof error === 'string') return error;
-  return 'Unknown error';
-}
+import { describeErrorForLog } from '../middlewares/errorHandler';
 
 /** Resolve the Oxy user id from the request in the shape the auth layer sets. */
 function resolveOxyUserId(req: Request): string | undefined {
@@ -252,7 +247,7 @@ const getRoommateProfiles = async (req: Request, res: Response): Promise<Respons
       totalPages: Math.ceil(total / limit),
     });
   } catch (error) {
-    logger.error('Failed to fetch roommate profiles', { error: errorMessage(error) });
+    logger.error('Failed to fetch roommate profiles', { error: describeErrorForLog(error) });
     res.status(500).json({ error: 'Failed to fetch roommate profiles' });
   }
 };
@@ -276,7 +271,7 @@ const getMyRoommatePreferences = async (req: Request, res: Response): Promise<Re
       data: hasStatedRoommatePreferences(profile) ? toRoommatePreferencesDTO(profile) : null,
     });
   } catch (error) {
-    logger.error('Failed to fetch roommate preferences', { error: errorMessage(error) });
+    logger.error('Failed to fetch roommate preferences', { error: describeErrorForLog(error) });
     res.status(500).json({ error: 'Failed to fetch roommate preferences' });
   }
 };
@@ -330,7 +325,7 @@ const updateRoommatePreferences = async (req: Request, res: Response): Promise<R
       enabled: updated.profile.settingsRoommateEnabled ?? false,
     });
   } catch (error) {
-    logger.error('Failed to update roommate preferences', { error: errorMessage(error) });
+    logger.error('Failed to update roommate preferences', { error: describeErrorForLog(error) });
     res.status(500).json({ error: 'Failed to update roommate preferences' });
   }
 };
@@ -372,7 +367,7 @@ const toggleRoommateMatching = async (req: Request, res: Response): Promise<Resp
       enabled: updatedEnabled,
     });
   } catch (error) {
-    logger.error('Failed to toggle roommate matching', { error: errorMessage(error) });
+    logger.error('Failed to toggle roommate matching', { error: describeErrorForLog(error) });
     res.status(500).json({ error: 'Failed to toggle roommate matching' });
   }
 };
@@ -448,7 +443,7 @@ const getRoommateRequests = async (req: Request, res: Response): Promise<Respons
       },
     });
   } catch (error) {
-    logger.error('Failed to fetch roommate requests', { error: errorMessage(error) });
+    logger.error('Failed to fetch roommate requests', { error: describeErrorForLog(error) });
     res.status(500).json({ error: 'Failed to fetch roommate requests' });
   }
 };
@@ -519,7 +514,7 @@ const sendRoommateRequest = async (req: Request, res: Response): Promise<Respons
       data: toRoommateRequestDTO(request),
     });
   } catch (error) {
-    logger.error('Failed to send roommate request', { error: errorMessage(error) });
+    logger.error('Failed to send roommate request', { error: describeErrorForLog(error) });
     res.status(500).json({ error: 'Failed to send roommate request' });
   }
 };
@@ -593,7 +588,7 @@ const respondToRoommateRequest = async (req: Request, res: Response, status: 'ac
       data: toRoommateRequestDTO(request),
     });
   } catch (error) {
-    logger.error(`Failed to ${action} roommate request`, { error: errorMessage(error) });
+    logger.error(`Failed to ${action} roommate request`, { error: describeErrorForLog(error) });
     res.status(500).json({ error: `Failed to ${action} roommate request` });
   }
 };
@@ -653,7 +648,7 @@ const getRoommateRelationships = async (req: Request, res: Response): Promise<Re
       ),
     });
   } catch (error) {
-    logger.error('Failed to fetch roommate relationships', { error: errorMessage(error) });
+    logger.error('Failed to fetch roommate relationships', { error: describeErrorForLog(error) });
     res.status(500).json({ error: 'Failed to fetch roommate relationships' });
   }
 };
@@ -700,7 +695,7 @@ const endRoommateRelationship = async (req: Request, res: Response): Promise<Res
       data: { id: relationship.id, status: relationship.status },
     });
   } catch (error) {
-    logger.error('Failed to end roommate relationship', { error: errorMessage(error) });
+    logger.error('Failed to end roommate relationship', { error: describeErrorForLog(error) });
     res.status(500).json({ error: 'Failed to end roommate relationship' });
   }
 };
@@ -735,7 +730,7 @@ const getCurrentUserRoommateStatus = async (req: Request, res: Response): Promis
       },
     });
   } catch (error) {
-    logger.error('Failed to fetch roommate status', { error: errorMessage(error) });
+    logger.error('Failed to fetch roommate status', { error: describeErrorForLog(error) });
     res.status(500).json({ error: 'Failed to fetch roommate status' });
   }
 };

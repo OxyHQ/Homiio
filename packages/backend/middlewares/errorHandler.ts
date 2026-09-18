@@ -58,6 +58,11 @@ const stripQueryParams = (text: string): string => {
  * (`invalid input syntax for type uuid: "abc"`). The code and the type are what
  * a diagnosis needs, so the value is dropped. Constraint messages quote a
  * constraint NAME with no preceding colon and are left intact.
+ *
+ * Applied to the top-level message as well as the cause's: a postgres error
+ * raised without a drizzle wrapper around it — every `db.execute`, and anything
+ * a repository rethrows — arrives with that value in `err.message` and nowhere
+ * else.
  */
 const redactTrailingValue = (text: string): string => {
   const start = text.indexOf(': "');
@@ -73,9 +78,10 @@ const describeErrorForLog = (err: any): Record<string, unknown> => {
   const isDrizzleQueryError =
     err != null && typeof err === 'object' && typeof err.query === 'string' && 'params' in err;
   const rawMessage = typeof err?.message === 'string' ? err.message : String(err);
+  const safeMessage = redactTrailingValue(stripQueryParams(rawMessage));
   const description: Record<string, unknown> = {
     name: isDrizzleQueryError ? 'DrizzleQueryError' : err?.name,
-    message: stripQueryParams(rawMessage),
+    message: safeMessage,
   };
   if (isDrizzleQueryError) description.query = err.query;
   if (err?.code !== undefined) description.code = err.code;
@@ -94,7 +100,12 @@ const describeErrorForLog = (err: any): Record<string, unknown> => {
       column: cause.column_name ?? cause.column,
     };
   }
-  if (typeof err?.stack === 'string') description.stack = stripQueryParams(err.stack);
+  // A stack STARTS with the message, so redacting one and not the other leaves
+  // the value in the log anyway. Replaced as a function so a `$` in the message
+  // is not read as a replacement pattern.
+  if (typeof err?.stack === 'string') {
+    description.stack = stripQueryParams(err.stack).replace(rawMessage, () => safeMessage);
+  }
   return description;
 };
 

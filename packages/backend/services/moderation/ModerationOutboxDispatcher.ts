@@ -24,6 +24,7 @@ import { applyDecisionOutboxEvent } from './ModerationDecisionWorker';
 import { deliverReportOutboxEvent } from './ModerationDeliveryWorker';
 import { dispatchModerationOutbox } from './ModerationOutboxService';
 import type { ModerationOutboxEvent } from '../../db/moderation/moderationOutboxRepository';
+import { describeErrorForLog } from '../../middlewares/errorHandler';
 
 /** Route an event to the worker that owns its kind. */
 export async function handleModerationOutboxEvent(
@@ -102,7 +103,7 @@ export class ModerationOutboxDispatcher {
         // Claim/database failures happen outside the per-event retry block. Keep
         // the interval alive and avoid an unhandled rejection.
         logger.error('[CrowdSource] outbox tick failed', {
-          error: error instanceof Error ? error.message : String(error),
+          error: describeErrorForLog(error),
         });
       })
       .finally(() => {

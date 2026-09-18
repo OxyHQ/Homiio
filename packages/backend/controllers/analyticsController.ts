@@ -6,7 +6,7 @@
 
 import type { Request, Response, NextFunction } from 'express';
 
-import { AppError, successResponse } from '../middlewares/errorHandler';
+import { AppError, describeErrorForLog, successResponse } from '../middlewares/errorHandler';
 import { logger } from '../middlewares/logging';
 import { getDb } from '../db/postgres';
 import {
@@ -21,11 +21,6 @@ import {
 } from '../db/analytics/ownerAnalytics';
 import { findProfileByOxyUserId } from '../db/profiles/profileRepository';
 import { countViewingsByStatusForOwner } from '../db/bookings/viewingReads';
-
-function errorMessage(error: unknown): string {
-  if (error instanceof Error) return error.message;
-  return String(error);
-}
 
 
 const PERIOD_DAYS: Record<string, number> = { '7d': 7, '30d': 30, '90d': 90 };
@@ -175,7 +170,7 @@ class AnalyticsController {
 
       res.json(successResponse(data, 'Analytics retrieved successfully'));
     } catch (error) {
-      logger.error('Failed to retrieve analytics', { error: errorMessage(error) });
+      logger.error('Failed to retrieve analytics', { error: describeErrorForLog(error) });
       next(error);
     }
   }
@@ -229,7 +224,7 @@ class AnalyticsController {
         ),
       );
     } catch (error) {
-      logger.error('Failed to retrieve app stats', { error: errorMessage(error) });
+      logger.error('Failed to retrieve app stats', { error: describeErrorForLog(error) });
       return next(error);
     }
   }

@@ -26,6 +26,7 @@ import imageUploadService, {
 } from '../imageUploadService';
 import { toPropertyImages } from '../imageSerializer';
 import { Logger } from '../../utils/logger';
+import { describeErrorForLog } from '../../middlewares/errorHandler';
 
 /** Abort budget (ms) for fetching one remote source image. */
 const FETCH_TIMEOUT_MS = 20_000;
@@ -156,7 +157,7 @@ export class ExternalMediaIngest {
         this.logger.warn('Skipping a remote image that failed to ingest', {
           propertyId: String(propertyId),
           url: remote.url,
-          error: error instanceof Error ? error.message : String(error),
+          error: describeErrorForLog(error),
         });
       }
     }

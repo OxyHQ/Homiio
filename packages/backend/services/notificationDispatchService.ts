@@ -28,6 +28,7 @@ import {
   type NotificationRow,
 } from '../db/notifications/notificationRepository';
 import { logger } from '../middlewares/logging';
+import { describeErrorForLog } from '../middlewares/errorHandler';
 
 export type NotificationPriority = 'low' | 'medium' | 'high' | 'urgent';
 
@@ -74,7 +75,7 @@ class NotificationDispatchService {
       logger.error('Notification dispatch failed', {
         recipientOxyUserId: String(recipientOxyUserId),
         type: payload.type,
-        error: error instanceof Error ? error.message : String(error),
+        error: describeErrorForLog(error),
       });
       return null;
     }

@@ -1,5 +1,6 @@
 import { Logger } from './logger';
 import { ScrapeMetrics, HealthMetrics, CleanupMetrics } from '../types/cron';
+import { describeErrorForLog } from '../middlewares/errorHandler';
 
 /**
  * Metrics service for tracking cron job performance and health
@@ -57,7 +58,7 @@ export class MetricsService {
     };
     
     this.metrics.scrapes.push(metric);
-    this.logger.debug(`Recorded scrape error for ${source}`, { duration, error: error.message });
+    this.logger.debug(`Recorded scrape error for ${source}`, { duration, error: describeErrorForLog(error) });
   }
 
   /**
@@ -87,7 +88,7 @@ export class MetricsService {
       timestamp: new Date()
     });
     
-    this.logger.debug(`Recorded cycle error`, { cycleId, duration, error: error.message });
+    this.logger.debug(`Recorded cycle error`, { cycleId, duration, error: describeErrorForLog(error) });
   }
 
   /**

@@ -15,13 +15,13 @@ import { findPropertyById } from '../db/properties/propertyReads';
 import { serializeProperty } from '../db/properties/propertySerializer';
 import { setPropertyPriceEthics } from '../db/properties/propertyWrites';
 import { logger } from '../middlewares/logging';
-import { getErrorMessage } from '../utils/errors';
 import {
   computeMarketVerdictForProperty,
   resolvePriceBasis,
   type ComparableProperty,
   type PopulatedGeoAddress,
 } from './areaPriceComparison';
+import { describeErrorForLog } from '../middlewares/errorHandler';
 
 const FAIRNESS_BASE = 50;
 const FAIRNESS_GOOD_DEAL = 30;
@@ -217,7 +217,7 @@ export function schedulePriceEthicsScore(propertyId: string): void {
   void scoreAndPersistProperty(propertyId).catch((error: unknown) => {
     logger.error('Price ethics scoring failed', {
       propertyId,
-      error: getErrorMessage(error),
+      error: describeErrorForLog(error),
     });
   });
 }

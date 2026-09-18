@@ -17,7 +17,7 @@ import type { Request, Response, NextFunction } from 'express';
 
 import { PropertyType, PropertyStatus } from '@homiio/shared-types';
 import { logger } from '../middlewares/logging';
-import { AppError, successResponse, paginationResponse } from '../middlewares/errorHandler';
+import { AppError, describeErrorForLog, paginationResponse, successResponse } from '../middlewares/errorHandler';
 import { requireSessionOxyUserId } from '../utils/sessionUser';
 import {
   CREATABLE_PROPERTY_FIELDS,
@@ -294,7 +294,7 @@ class RoomController {
         } catch (commissionError) {
           logger.error('Failed to process commission on room close', {
             roomId: id,
-            error: commissionError instanceof Error ? commissionError.message : String(commissionError),
+            error: describeErrorForLog(commissionError),
           });
         }
       }

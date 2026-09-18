@@ -34,6 +34,7 @@ import {
   type ModerationOutboxEvent,
 } from '../../db/moderation/moderationOutboxRepository';
 import { logger } from '../../middlewares/logging';
+import { describeErrorForLog } from '../../middlewares/errorHandler';
 
 const DEFAULT_LEASE_MS = 60_000;
 const DEFAULT_BATCH_SIZE = 50;
@@ -234,12 +235,9 @@ export async function dispatchModerationOutbox(options: {
         eventId: event.id,
         kind: event.kind,
         attempts: event.attempts,
-        error:
-          heartbeatResult.error instanceof Error
-            ? heartbeatResult.error.message
-            : heartbeatResult.error
-              ? String(heartbeatResult.error)
-              : 'owner or lease expiry changed',
+        error: heartbeatResult.error
+          ? describeErrorForLog(heartbeatResult.error)
+          : 'owner or lease expiry changed',
       });
       continue;
     }

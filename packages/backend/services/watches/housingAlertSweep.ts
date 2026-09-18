@@ -49,6 +49,7 @@ import {
   HOUSING_ALERT_NOTIFICATION_TYPE,
 } from './alertNarrative';
 import { matchDomainEvent } from './housingAlertMatcher';
+import { describeErrorForLog } from '../../middlewares/errorHandler';
 
 /** Events claimed per sweep. Bounded so one pass cannot run for an hour. */
 const EVENT_BATCH_SIZE = 200;
@@ -98,7 +99,7 @@ export async function runHousingAlertSweep(db: Database = getDb()): Promise<Aler
     } catch (error) {
       logger.error('Housing alert sweep failed on one event', {
         eventId: event.id,
-        error: error instanceof Error ? error.message : String(error),
+        error: describeErrorForLog(error),
       });
     }
   }
@@ -257,7 +258,7 @@ export async function deliverDueDigests(
     } catch (error) {
       logger.error('Housing alert digest failed for one watch', {
         watchId: bundle.watchId,
-        error: error instanceof Error ? error.message : String(error),
+        error: describeErrorForLog(error),
       });
     }
   }
