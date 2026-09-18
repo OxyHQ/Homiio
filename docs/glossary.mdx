@@ -145,10 +145,18 @@ no admin panel and no moderator queue, by explicit product decision.
 Agency reviews are a separate surface with the same shape, attached to an
 `agencies` row.
 
-**Target ([ADR 0003](./adr/0003-privacy-verification-publication) §5):** author
-identity in three chosen forms, right of reply, corrections distinguished from
-edits, immutable version history, and the rule that a review bound to a unit
-internally may be published at the building. Also **target
+What a review PUBLISHES about the person who wrote it is now the author's own
+choice, and three of the facts it used to publish exactly are reduced on the way
+out ([ADR 0003](./adr/0003-privacy-verification-publication) §5.2, §5.6): the
+author appears as their Oxy name, as a pseudonym stable per author per building,
+or as a resident and nothing more; tenancy dates publish as month and year; rent
+publishes as a band. A review bound to a unit is published at the building
+(§5.1). Homiio still always knows who wrote a review — the link is what makes
+correction, appeal and abuse handling possible.
+
+**Target ([ADR 0003](./adr/0003-privacy-verification-publication) §5):** right of
+reply, corrections distinguished from edits, immutable version history, and the
+author's opt-in to publishing the unit. Also **target
 ([ADR 0001](./adr/0001-canonical-housing-graph) §4.2):** the write / read /
 aggregate hierarchy across street, building and unit.
 
@@ -176,9 +184,12 @@ deciding for itself.
 `ADDRESS_PRECISION_LEVELS` in the observability schema already names the ladder:
 `unit`, `building`, `street`, `locality`, `area`.
 
-Two current instances: eviction cases publish deliberately approximate
-coordinates, and observability events carry bucketed bands (radius, area, zoom,
-result count, text length) rather than values. Widening a published precision
+Four current instances: eviction cases publish deliberately approximate
+coordinates; observability events carry bucketed bands (radius, area, zoom,
+result count, text length) rather than values; an address publishes at the
+building unless the caller has a recorded relation to the place; and a review
+publishes its tenancy dates at month grain and its rent as a band. Widening a
+published precision
 anywhere is an ADR 0003 decision, not a code review one.
 
 ### source
