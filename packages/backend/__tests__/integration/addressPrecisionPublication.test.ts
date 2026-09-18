@@ -424,12 +424,22 @@ describe('the address surfaces publish the building and withhold the dwelling', 
     expectPublishedAtBuilding(res.body, seeded.unitId, 'PUT, empty patch');
   });
 
-  it('PUT of one field does not read back the others', async () => {
-    const res = await request(addressApp(STRANGER))
+  it('PUT of one field answers at the precision the relation that authorised it buys', async () => {
+    // Only a caller with a recorded relation may write at all now (ADR 0001
+    // §8.1; `addressWriteAuthorization.test.ts` owns that half), and that is the
+    // SAME relation `addressAudienceFor` reads — so a successful PUT is
+    // necessarily answered at `exact`. The stranger's PUT is a 404, asserted
+    // beside it so "everybody gets `exact` now" cannot pass.
+    await request(addressApp(STRANGER))
+      .put(`/api/addresses/${seeded.unitId}`)
+      .send({ district: 'Gràcia' })
+      .expect(404);
+
+    const res = await request(addressApp(OWNER))
       .put(`/api/addresses/${seeded.unitId}`)
       .send({ district: 'Gràcia' })
       .expect(200);
-    expectPublishedAtBuilding(res.body, seeded.unitId, 'PUT, one field');
+    expectExact(res.body, seeded.unitId, 'PUT, one field, listing owner');
     expect(res.body.address.district).toBe('Gràcia');
   });
 

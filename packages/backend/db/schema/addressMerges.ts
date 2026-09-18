@@ -36,8 +36,8 @@
 
 import { check, index, integer, pgTable, text, uniqueIndex } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
-import { createdAt, generatedId, inList, timestamptz } from '@oxy.so/db';
-import { addresses } from './addresses';
+import { createdAt, generatedId, inList, timestamptz, updatedAt } from '@oxy.so/db';
+import { ADDRESS_LEVELS, addresses } from './addresses';
 
 /**
  * Why two rows were declared the same place.
@@ -287,6 +287,188 @@ export const addressMergeRelationMoves = pgTable(
     check(
       'address_merge_relation_moves_outcome_check',
       sql`${table.outcome} in (${sql.raw(inList(ADDRESS_MERGE_MOVE_OUTCOMES))})`,
+    ),
+  ],
+);
+
+/**
+ * Where a correction proposal is in its life. TWO members, and the shortness is
+ * the decision rather than an omission.
+ *
+ * ADR 0001 §15's open decision 5 — *who may propose a merge, and what resolves
+ * it* — is explicitly UNDECIDED: the community resolves it, and the quorum is
+ * somebody else's to pick. So this table ships the half that is decided (a
+ * proposal is RECORDED instead of being applied as a silent edit) and refuses to
+ * invent the half that is not. There is no `applied` and no `rejected`, because
+ * nothing may set them; a status value nothing can reach reads as a workflow
+ * that exists and does not.
+ *
+ * Adding one later is `DROP CONSTRAINT` / `ADD CONSTRAINT` on a CHECK, which is
+ * exactly why `CONVENTIONS.md` chose `text` + CHECK over a pg enum.
+ */
+export const ADDRESS_MERGE_PROPOSAL_STATUSES = ['open', 'withdrawn'] as const;
+
+export type AddressMergeProposalStatus = (typeof ADDRESS_MERGE_PROPOSAL_STATUSES)[number];
+
+/**
+ * A proposal to correct a KEY field of a canonical address — ADR 0001 §8.1.
+ *
+ * ## Why a correction is a row here rather than an UPDATE on `addresses`
+ *
+ * §8.1 draws the line and this table is the far side of it: *correction of
+ * attributes is an ordinary edit and does not change identity — unless it
+ * changes a key field, in which case it is a merge proposal.* A key field is one
+ * §3.1 hashes (`street`, `number`, `building_name`, `block`, `entrance`,
+ * `floor`, `unit`, `subunit`), so writing one re-keys the row: the place a
+ * listing, a lease, a review and an eviction all point at silently becomes a
+ * different place, and — because the corrected key may ALREADY belong to another
+ * row — the correction is not even expressible as an edit. It is a statement
+ * that two identities are one, which is what {@link addressMerges} applies and
+ * what this table proposes.
+ *
+ * ## The proposal carries the whole proposed identity, not a patch
+ *
+ * A patch would have to distinguish "leave `entrance` alone" from "clear
+ * `entrance`", and one nullable column cannot say both. So every one of the
+ * eight key fields is stored at its PROPOSED value — the row's current value
+ * where the proposer did not touch it — which makes NULL mean exactly one thing
+ * (the proposed place has no such field) and makes
+ * {@link addressMergeProposals.proposedIdentityKey} computable from the row
+ * alone. The diff against the address is what a reader renders; it is derived,
+ * not stored.
+ *
+ * ## Visibility
+ *
+ * Tier **C**, and it inherits the PRECISION LADDER rather than the protected-
+ * column registry: `proposed_floor` / `_unit` / `_subunit` name the dwelling
+ * inside a building exactly as `addresses.floor` does (ADR 0003 §2.1), so a
+ * reader below `exact` is served the proposal with those three absent. A
+ * proposal published in full would be a second route to the unit label the
+ * address serializer withholds.
+ */
+export const addressMergeProposals = pgTable(
+  'address_merge_proposals',
+  {
+    id: generatedId(),
+
+    /** The row being corrected. RESTRICT: a proposal names a place that exists. */
+    fromAddressId: text()
+      .notNull()
+      .references(() => addresses.id, { onDelete: 'restrict' }),
+    /**
+     * The row that already carries `proposed_identity_key`, when one does.
+     *
+     * Resolved SERVER-SIDE at write time and never supplied by a caller: a
+     * proposer names a correction, not a target row, and letting them name one
+     * would be letting them point one household's history at another's address.
+     * NULL means no existing row carries the corrected identity — so the
+     * correction would MINT a place rather than merge into one, which is a
+     * materially different act and the reason the column is nullable rather than
+     * defaulted to the `from` row.
+     */
+    toAddressId: text().references(() => addresses.id, { onDelete: 'restrict' }),
+
+    // ── The proposed identity, in full. See the docblock. ──
+    /** `addresses.street` is NOT NULL, so its proposed value is too. */
+    proposedStreet: text().notNull(),
+    proposedNumber: text(),
+    proposedBuildingName: text(),
+    proposedBlock: text(),
+    proposedEntrance: text(),
+    proposedFloor: text(),
+    proposedUnit: text(),
+    proposedSubunit: text(),
+
+    /**
+     * `deriveAddressLevel` over the proposed fields — the level the corrected
+     * place would BE.
+     *
+     * Stored rather than re-derived on read because it is the level
+     * `proposed_identity_key` was hashed AT, and a key without its level is a
+     * digest nobody can reproduce.
+     */
+    proposedAddressLevel: text({ enum: ADDRESS_LEVELS }).notNull(),
+    /** `computeAddressIdentityKey` over the proposed fields, at that level. */
+    proposedIdentityKey: text().notNull(),
+    /**
+     * `ADDRESS_NORMALIZATION_VERSION` at the instant the key above was computed.
+     *
+     * The same column `address_candidates` carries, for the same reason: it is
+     * what lets a later reader tell a genuine disagreement between two
+     * observations from a change in the normalization rules between them.
+     */
+    normalizationVersion: integer().notNull(),
+
+    /** The human sentence. NOT NULL — see {@link addressMerges}'s `reason`. */
+    reason: text().notNull(),
+    /** Where the evidence can be seen: a cadastral record, a photo of the door. */
+    evidenceUrl: text(),
+
+    /**
+     * The Oxy account that proposed it — the SESSION's, never a body's.
+     *
+     * No foreign key, and none is possible: Oxy owns identity and this schema
+     * has no `users` table (`CONVENTIONS.md`).
+     */
+    proposedByOxyUserId: text().notNull(),
+
+    status: text({ enum: ADDRESS_MERGE_PROPOSAL_STATUSES }).notNull().default('open'),
+    /** Set when the proposer withdraws it. NULL means it is still open. */
+    withdrawnAt: timestamptz(),
+
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (table) => [
+    /** Every open proposal about one place, newest first — the visible list. */
+    index('address_merge_proposals_from_idx')
+      .on(table.fromAddressId, sql`${table.createdAt} desc`)
+      .where(sql`${table.status} = 'open'`),
+
+    /**
+     * One person may not file the SAME correction about one place twice.
+     *
+     * PARTIAL on `status = 'open'`, and that predicate is what the index exists
+     * for rather than a detail of it: a proposer who withdraws a correction and
+     * later files it again is an ordinary sequence, and a total index would
+     * refuse the second one forever. It is also scoped by PROPOSER on purpose —
+     * two different people proposing the same correction is corroboration, and
+     * corroboration is the raw material of whatever quorum §15.5 eventually
+     * picks, so deduping it away would destroy the signal.
+     */
+    uniqueIndex('address_merge_proposals_open_key')
+      .on(table.fromAddressId, table.proposedByOxyUserId, table.proposedIdentityKey)
+      .where(sql`${table.status} = 'open'`),
+
+    check(
+      'address_merge_proposals_status_check',
+      sql`${table.status} in (${sql.raw(inList(ADDRESS_MERGE_PROPOSAL_STATUSES))})`,
+    ),
+    check(
+      'address_merge_proposals_level_check',
+      sql`${table.proposedAddressLevel} in (${sql.raw(inList(ADDRESS_LEVELS))})`,
+    ),
+    /**
+     * A proposal may not name its own row as the merge target.
+     *
+     * `to_address_id = from_address_id` would say "this place should become
+     * itself", which is what a caller-supplied target could produce and what the
+     * server-side resolver never does.
+     */
+    check(
+      'address_merge_proposals_not_self_check',
+      sql`${table.toAddressId} is null or ${table.toAddressId} <> ${table.fromAddressId}`,
+    ),
+    /**
+     * `withdrawn` names the instant and `open` does not — with `is not null`
+     * spelled out on the positive branch, because a CHECK rejects only an
+     * explicit FALSE and the tidier spelling evaluates to NULL, admitting
+     * exactly the half-state it exists to refuse (`CONVENTIONS.md`).
+     */
+    check(
+      'address_merge_proposals_withdrawn_coherence_check',
+      sql`(${table.status} = 'open' and ${table.withdrawnAt} is null)
+          or (${table.status} = 'withdrawn' and ${table.withdrawnAt} is not null)`,
     ),
   ],
 );

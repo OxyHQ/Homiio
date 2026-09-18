@@ -246,7 +246,7 @@ handshake.
 | `/api/rooms` | `GET /`, `GET|PUT|DELETE /:id`, `POST /` |
 | `/api/notifications` | `GET /`, `GET|PUT|DELETE /:id`, `PATCH /:id/read`, `PATCH /read-all`, `DELETE /clear-all`, `POST /` |
 | `/api/reviews` | `POST /`, `GET|PUT|DELETE /:reviewId`, `POST /:reviewId/helpful`, `POST /:reviewId/report`, `GET /user/:oxyUserId` |
-| `/api/addresses` | `GET /search`, `GET /nearby`, `GET|PUT|DELETE /:id`, `POST /` |
+| `/api/addresses` | `GET /search`, `GET /nearby`, `GET|PUT /:id`, `POST /`, `GET|POST /:id/corrections`, `DELETE /:id/corrections/:proposalId`. **No `DELETE /:id`** — a place is merged, never deleted ([ADR 0001](./adr/0001-canonical-housing-graph) §2.1.7), and `PUT` corrects only non-identity attributes for a caller with a recorded relation to the place (§8.1) |
 | `/api/evictions` | `POST /`, `PUT|DELETE /:id`, `POST /:id/attend|follow|comments|updates|report`, `POST /:id/hold/clear`, `POST /:id/vouch/:oxyUserId`, `POST /:id/supporters/:oxyUserId/revoke`, `GET|POST /:id/location/grants`, `POST /:id/location/grants/:oxyUserId/revoke`, `GET /:id/location/exact`, `GET /:id/location/audit`, `DELETE /:id/comments/:commentId`, `GET /me/list`, `GET /me/attending`, `GET /me/following` |
 | `/api/partners` | `POST /join`, `GET /me`, `GET /me/earnings`, `GET /me/referrals` |
 | `/api/analytics` | `GET /`, `GET /stats` |

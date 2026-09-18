@@ -25,6 +25,7 @@ import { eq, sql } from 'drizzle-orm';
 import { UNIQUE_VIOLATION, sqlStateOf, uuidv7 } from '@oxy.so/db';
 import { closePostgres, connectPostgres, type Database } from '../../db/postgres';
 import {
+  addressMergeProposals,
   billing,
   conversations,
   listingReports,
@@ -362,6 +363,78 @@ describe('saved_searches — ONE primary area per person (#356)', () => {
   });
 });
 
+describe('address_merge_proposals — one OPEN correction per proposer per place', () => {
+  const proposal = (proposedBy: string, identityKey: string) => ({
+    fromAddressId: scaffold.addressId,
+    proposedStreet: 'Carrer de la Proposta',
+    proposedNumber: '42',
+    proposedAddressLevel: 'BUILDING' as const,
+    proposedIdentityKey: identityKey,
+    normalizationVersion: 2,
+    reason: 'The plaque on the door says 42',
+    proposedByOxyUserId: proposedBy,
+  });
+
+  afterEach(async () => {
+    await db
+      .delete(addressMergeProposals)
+      .where(eq(addressMergeProposals.fromAddressId, scaffold.addressId));
+  });
+
+  it('refuses a second open proposal of the same correction from the same person', async () => {
+    const proposer = oxy();
+    const key = `identity-${uuidv7()}`;
+    await db.insert(addressMergeProposals).values(proposal(proposer, key));
+
+    const second = await db
+      .insert(addressMergeProposals)
+      .values(proposal(proposer, key))
+      .then(() => null)
+      .catch((error: unknown) => error);
+    expect(sqlStateOf(second)).toBe(UNIQUE_VIOLATION);
+  });
+
+  it('ACCEPTS the same correction re-filed once the first was withdrawn', async () => {
+    // The permit case, and the only one that can tell this index from a total
+    // one: a proposer who withdrew a correction and later found the evidence for
+    // it must be able to file it again. A total unique index passes the refusal
+    // above and forbids this forever.
+    const proposer = oxy();
+    const key = `identity-${uuidv7()}`;
+    const [first] = await db
+      .insert(addressMergeProposals)
+      .values(proposal(proposer, key))
+      .returning({ id: addressMergeProposals.id });
+    await db
+      .update(addressMergeProposals)
+      .set({ status: 'withdrawn', withdrawnAt: new Date() })
+      .where(eq(addressMergeProposals.id, first.id));
+
+    await db.insert(addressMergeProposals).values(proposal(proposer, key));
+
+    const rows = await db
+      .select({ status: addressMergeProposals.status })
+      .from(addressMergeProposals)
+      .where(eq(addressMergeProposals.fromAddressId, scaffold.addressId));
+    expect(rows.map((row) => row.status).sort()).toEqual(['open', 'withdrawn']);
+  });
+
+  it('ACCEPTS the same correction from a DIFFERENT person — corroboration is the signal', async () => {
+    // Scoped by proposer on purpose (ADR 0001 §8.1): two people independently
+    // proposing one correction is the raw material of whatever quorum §15.5
+    // eventually picks, so deduping it away would destroy the signal.
+    const key = `identity-${uuidv7()}`;
+    await db.insert(addressMergeProposals).values(proposal(oxy(), key));
+    await db.insert(addressMergeProposals).values(proposal(oxy(), key));
+
+    const rows = await db
+      .select({ id: addressMergeProposals.id })
+      .from(addressMergeProposals)
+      .where(eq(addressMergeProposals.fromAddressId, scaffold.addressId));
+    expect(rows).toHaveLength(2);
+  });
+});
+
 describe('the partial indexes really are partial', () => {
   it('carries a WHERE clause on every one of them, in the CATALOGUE', async () => {
     // The declaration-level backstop for every "ACCEPTS …" assertion above: those
@@ -389,6 +462,11 @@ describe('the partial indexes really are partial', () => {
       // path, and an `ON CONFLICT` naming either has to repeat the predicate or
       // fail at RUNTIME with `42P10` while `tsc` stays clean.
       'address_materializations_idempotency_key',
+      // One person may not have the SAME correction open against one place
+      // twice. Partial on `status = 'open'`, because withdrawing a correction
+      // and filing it again later is an ordinary sequence and a total index
+      // would refuse the second one forever (ADR 0001 §8.1).
+      'address_merge_proposals_open_key',
       // A row may lose at most ONE merge that is still in force (#360). Partial
       // on `status = 'applied'`, because merged → reverted → merged again is an
       // ordinary history and a total unique index would forbid the second one.

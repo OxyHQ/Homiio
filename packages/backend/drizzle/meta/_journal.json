@@ -127,6 +127,13 @@
       "when": 1789642763154,
       "tag": "0017_listing_address_published_precision",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1789701189844,
+      "tag": "0018_address_correction_proposals",
+      "breakpoints": true
     }
   ]
 }

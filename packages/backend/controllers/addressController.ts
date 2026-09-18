@@ -23,6 +23,23 @@
  * or absent. The detail read escalates to `exact` for a caller with a RECORDED
  * relation to the place; `db/addresses/addressAudience.ts` decides which
  * relations those are and why the list reads never escalate at all.
+ *
+ * ## What a caller may CHANGE, and what they may only propose (ADR 0001 §8.1)
+ *
+ * An address is not the caller's content: it is the permanent identity of a
+ * dwelling that listings, leases, reviews and eviction cases all point at. So
+ * the write surface is split three ways and none of the three is "any signed-in
+ * caller may edit this row", which is what it used to be.
+ *
+ *  - **`PUT`** corrects the non-identity attributes (`district`, `po_box`,
+ *    `reference`) and needs a RECORDED relation to the place — the same two
+ *    `addressAudience` recognises for reading it. Enforced inside the UPDATE
+ *    (`db/addresses/addressWrites.ts`); a non-owner gets 404.
+ *  - **`POST /:id/corrections`** is where the eight identity fields go. A
+ *    correction that re-keys a place is a MERGE PROPOSAL, open to any signed-in
+ *    caller because it changes nothing, and resolved by the community — never by
+ *    an admin queue, which `AGENTS.md` vetoes outright.
+ *  - **There is no `DELETE`.** See the note where the handler used to be.
  */
 
 import { Request, Response } from 'express';
@@ -45,6 +62,15 @@ import {
   type AddressWithGeoNames,
 } from '../db/addresses/addressSerializer';
 import { addressAudienceFor, addressPrecisionFor } from '../db/addresses/addressAudience';
+import { updateAddressAttributes } from '../db/addresses/addressWrites';
+import {
+  findOpenCorrectionProposals,
+  proposeAddressCorrection,
+  PROPOSABLE_IDENTITY_FIELDS,
+  serializeAddressCorrectionProposal,
+  withdrawCorrectionProposal,
+  type IdentityPatch,
+} from '../db/addresses/addressCorrections';
 import { getErrorName, getValidationMessages } from '../utils/errors';
 import { logger as appLogger } from '../middlewares/logging';
 import { resolveCityId, resolveNeighborhoodId, resolveRegionId } from '../services/geoQueryService';
@@ -57,6 +83,22 @@ const created = (res: Response, data: Record<string, unknown>) => res.status(201
 const badRequest = (res: Response, data: Record<string, unknown>) => res.status(400).json({ success: false, ...data });
 const notFound = (res: Response, data: Record<string, unknown>) => res.status(404).json({ success: false, ...data });
 const serverError = (res: Response, data: Record<string, unknown>) => res.status(500).json({ success: false, ...data });
+const unauthorized = (res: Response) =>
+  res.status(401).json({ success: false, message: 'Authentication required' });
+
+/**
+ * The session id a write needs, or `null`.
+ *
+ * `getOxyUserId` plus an explicit 401 rather than `requireSessionOxyUserId`,
+ * which throws: these handlers are mounted WITHOUT `asyncHandler`, so a throw
+ * from an async handler never reaches `errorHandler` on Express 4 — it becomes
+ * an unhandled rejection and the caller sees a 500. Returning the id keeps the
+ * refusal a status code the router cannot lose.
+ */
+function sessionWriterOf(req: Request): string | null {
+  const oxyUserId = getOxyUserId(req);
+  return typeof oxyUserId === 'string' && oxyUserId.length > 0 ? oxyUserId : null;
+}
 
 // Thin adapter onto the shared application logger so this controller logs
 // through the same structured pipeline (stdout + file) as the rest of the
@@ -260,50 +302,55 @@ export const createAddress = async (req: Request, res: Response) => {
 };
 
 /**
- * The BUILDING-level columns this endpoint may write.
+ * The columns this endpoint may write DIRECTLY — ADR 0001 §3.1's "correctable
+ * attributes", and not one field the identity key hashes.
  *
- * An explicit allowlist rather than a delete-list: geo is resolved at creation
- * time and must not be mutated here, and `req.body` is never spread into an
- * update (`AGENTS.md` §Ownership). `normalized_key` is deliberately absent —
- * it is derived from these fields and rewritten below.
+ * The eight key fields (`street`, `number`, `building_name`, `block`,
+ * `entrance`, `floor`, `unit`, `subunit`) used to be here, and writing one of
+ * them re-keyed a canonical place: §8.1 says a correction that changes a key
+ * field is a MERGE PROPOSAL, not an edit, because the corrected key may already
+ * belong to another row and because the place a listing, a lease, a review and
+ * an eviction all point at would silently become a different dwelling. They are
+ * served by {@link proposeCorrection} now, and a body naming one is refused
+ * rather than ignored — see {@link updateAddress}.
+ *
+ * An explicit allowlist rather than a delete-list, and `req.body` is never
+ * spread into an update (`AGENTS.md` §Ownership).
  */
-const EDITABLE_ADDRESS_FIELDS = [
-  'street',
-  'number',
-  'building_name',
-  'block',
-  'entrance',
-  'floor',
-  'unit',
-  'subunit',
-  'district',
-  'po_box',
-  'reference',
-] as const;
+const EDITABLE_ADDRESS_FIELDS = ['district', 'po_box', 'reference'] as const;
 
 /** Wire field name → the drizzle column it writes. */
 const EDITABLE_ADDRESS_COLUMNS = {
-  street: 'street',
-  number: 'number',
-  building_name: 'buildingName',
-  block: 'block',
-  entrance: 'entrance',
-  floor: 'floor',
-  unit: 'unit',
-  subunit: 'subunit',
   district: 'district',
   po_box: 'poBox',
   reference: 'reference',
 } as const satisfies Record<(typeof EDITABLE_ADDRESS_FIELDS)[number], keyof AddressRow>;
 
 /**
- * Update an address
+ * Correct the non-identity attributes of an address
  * PUT /api/addresses/:id
+ *
+ * Authorised in `db/addresses/addressWrites.ts` — inside the UPDATE's own
+ * `where`, against the session id, so a caller with no recorded relation to the
+ * place updates zero rows and is answered 404 rather than 403.
  */
 export const updateAddress = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const body = req.body as Record<string, unknown>;
+
+    // A key field in the body is REFUSED, not dropped. Silently ignoring it
+    // would answer 200 with the address unchanged, and a client that believed
+    // the 200 would show a correction that never happened.
+    const identityFields = PROPOSABLE_IDENTITY_FIELDS.filter((field) => field in body);
+    if (identityFields.length > 0) {
+      return badRequest(res, {
+        message:
+          'These fields are the identity of a place, not attributes of it. ' +
+          'Propose a correction at POST /api/addresses/:id/corrections.',
+        errors: identityFields.map((field) => `${field} is an identity field`),
+      });
+    }
 
     const patch: Record<string, string | null> = {};
     for (const field of EDITABLE_ADDRESS_FIELDS) {
@@ -319,33 +366,30 @@ export const updateAddress = async (req: Request, res: Response) => {
     if (Object.keys(patch).length === 0) {
       const unchanged = await selectAddressWithGeoNames({ where: eq(addresses.id, id), limit: 1 });
       if (!unchanged[0]) return notFound(res, { message: 'Address not found' });
-      // An empty patch is a READ wearing a PUT's clothes, and is served as one.
+      // An empty patch is a READ wearing a PUT's clothes, and is served as one —
+      // including for a caller with no relation to the place, because it writes
+      // nothing and a GET of the same row answers the same body.
       return ok(res, {
         address: serializeAddress(unchanged[0], await precisionForViewer(req, unchanged[0].id)),
       });
     }
 
-    // `street` is NOT NULL — clearing it would fail the constraint rather than
-    // quietly storing an unusable address, so refuse it up front with the same
-    // 400 the Mongoose validator produced.
-    if (patch.street === null) {
-      return badRequest(res, { message: 'Validation error', errors: ['Street address is required'] });
-    }
+    const sessionOxyUserId = sessionWriterOf(req);
+    if (sessionOxyUserId === null) return unauthorized(res);
 
-    const updated = await getDb()
-      .update(addresses)
-      .set(patch)
-      .where(eq(addresses.id, id))
-      .returning({ id: addresses.id });
-    if (!updated[0]) {
+    const updatedId = await updateAddressAttributes({ addressId: id, sessionOxyUserId, patch });
+    if (updatedId === undefined) {
+      // Two cases, deliberately indistinguishable: no such address, and no
+      // relation to it. A 403 here would confirm to an enumerator that the id
+      // they guessed names a real dwelling (`AGENTS.md` §Ownership).
       return notFound(res, { message: 'Address not found' });
     }
 
     const rows = await selectAddressWithGeoNames({ where: eq(addresses.id, id), limit: 1 });
     logger.info(`Address ${id} updated`);
-    // Writing a field is not a relationship to the dwelling: this endpoint takes
-    // no ownership of the row, so the answer is built for the same audience a
-    // GET would be. Patching one field must not read back the others.
+    // The answer is built for the audience a GET would be built for. Writing a
+    // field is not a relationship to the dwelling — the relation that authorised
+    // the write is, and `precisionForViewer` reads the same one.
     return ok(res, { address: serializeAddress(rows[0], await precisionForViewer(req, id)) });
   } catch (error) {
     logger.error('Error updating address:', error);
@@ -360,26 +404,169 @@ export const updateAddress = async (req: Request, res: Response) => {
 };
 
 /**
- * Delete an address
- * DELETE /api/addresses/:id
+ * There is no `DELETE /api/addresses/:id`, and its absence is a decision.
+ *
+ * ADR 0001 §2.1.7: *a duplicate is recorded, never discarded. Merging is
+ * reversible; deleting is not.* An `addresses` row is the permanent identity of
+ * a dwelling rather than a user's own content — eleven of the twelve columns
+ * that can reference one REFUSE a delete — so the endpoint could only ever
+ * either raise on a place with history or destroy the one row that lets the next
+ * ingest recognise a place without. Withdrawing a place is a merge
+ * (`services/addressMerge.ts`), which is reversible and is an operational act.
+ *
+ * Stated here rather than only by the route's absence, because "somebody removed
+ * the handler" and "nobody may delete a place" look identical in a diff.
  */
-export const deleteAddress = async (req: Request, res: Response) => {
+
+// ---------------------------------------------------------------------------
+// Correction proposals — ADR 0001 §8.1.
+// ---------------------------------------------------------------------------
+
+/** Cap on the free-text sentence a proposal must carry. */
+const MAX_PROPOSAL_REASON_LENGTH = 500;
+
+/**
+ * Propose a correction to a place's identity
+ * POST /api/addresses/:id/corrections
+ *
+ * Open to any signed-in caller, and that is the point: a proposal changes
+ * nothing, it is visible and appealable, and the community resolves it (ADR 0001
+ * §8.1, and the standing no-admin-queue veto in `AGENTS.md`). Gating it on a
+ * recorded relation to the place would mean only the landlord advertising a flat
+ * could report that its number is wrong.
+ */
+export const proposeCorrection = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const body = req.body as Record<string, unknown>;
+    const proposedByOxyUserId = sessionWriterOf(req);
+    if (proposedByOxyUserId === null) return unauthorized(res);
 
-    const deleted = await getDb()
-      .delete(addresses)
-      .where(eq(addresses.id, id))
-      .returning({ id: addresses.id });
-    if (!deleted[0]) {
-      return notFound(res, { message: 'Address not found' });
+    const reason = typeof body.reason === 'string' ? body.reason.trim() : '';
+    if (reason === '') {
+      return badRequest(res, {
+        message: 'Validation error',
+        errors: ['A correction must say why'],
+      });
+    }
+    if (reason.length > MAX_PROPOSAL_REASON_LENGTH) {
+      return badRequest(res, {
+        message: 'Validation error',
+        errors: [`reason must be at most ${MAX_PROPOSAL_REASON_LENGTH} characters`],
+      });
     }
 
-    logger.info(`Address ${id} deleted`);
-    return ok(res, { message: 'Address deleted successfully' });
+    const patch: IdentityPatch = {};
+    for (const field of PROPOSABLE_IDENTITY_FIELDS) {
+      if (!(field in body)) continue;
+      const value = body[field];
+      if (value === null || value === undefined) patch[field] = null;
+      else if (typeof value === 'string') patch[field] = value;
+    }
+    if (Object.keys(patch).length === 0) {
+      return badRequest(res, {
+        message: 'Validation error',
+        errors: ['A correction must propose at least one identity field'],
+      });
+    }
+
+    const [address] = await selectAddressWithGeoNames({ where: eq(addresses.id, id), limit: 1 });
+    if (!address) return notFound(res, { message: 'Address not found' });
+
+    const result = await proposeAddressCorrection({
+      address,
+      patch,
+      reason,
+      evidenceUrl: typeof body.evidenceUrl === 'string' ? body.evidenceUrl : null,
+      proposedByOxyUserId,
+    });
+
+    if ('kind' in result) {
+      return badRequest(res, {
+        message: 'Validation error',
+        errors: [PROPOSAL_REFUSAL_MESSAGES[result.kind]],
+      });
+    }
+
+    logger.info(`Address correction proposed for ${id}`);
+    return created(res, {
+      proposal: serializeAddressCorrectionProposal(
+        result,
+        await precisionForViewer(req, id),
+        proposedByOxyUserId,
+      ),
+    });
   } catch (error) {
-    logger.error('Error deleting address:', error);
-    return serverError(res, { message: 'Failed to delete address' });
+    logger.error('Error proposing address correction:', error);
+    return serverError(res, { message: 'Failed to propose a correction' });
+  }
+};
+
+/** One sentence per refusal, so the caller learns which rule fired (ADR 0003 §5.8). */
+const PROPOSAL_REFUSAL_MESSAGES = {
+  no_change: 'That is already this place’s identity',
+  street_required: 'Street address is required',
+  empty_unit: 'A dwelling must carry a floor, unit or subunit',
+  duplicate: 'You already have this correction open for this place',
+} as const;
+
+/**
+ * The open corrections proposed against a place
+ * GET /api/addresses/:id/corrections
+ *
+ * Visible, per ADR 0001 §8.1 — at the viewer's own precision, because a proposal
+ * naming a floor or a door is the same disclosure the address serializer
+ * withholds.
+ */
+export const listCorrections = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const [address] = await selectAddressWithGeoNames({ where: eq(addresses.id, id), limit: 1 });
+    if (!address) return notFound(res, { message: 'Address not found' });
+
+    const [proposals, precision] = await Promise.all([
+      findOpenCorrectionProposals(id),
+      precisionForViewer(req, id),
+    ]);
+    const viewer = getOxyUserId(req);
+
+    return ok(res, {
+      proposals: proposals.map((proposal) =>
+        serializeAddressCorrectionProposal(proposal, precision, viewer),
+      ),
+    });
+  } catch (error) {
+    logger.error('Error listing address corrections:', error);
+    return serverError(res, { message: 'Failed to list corrections' });
+  }
+};
+
+/**
+ * Withdraw your own correction
+ * DELETE /api/addresses/:id/corrections/:proposalId
+ *
+ * The proposer id is a conjunct of the UPDATE, so somebody else's proposal is a
+ * 404 and never a 403.
+ */
+export const withdrawCorrection = async (req: Request, res: Response) => {
+  try {
+    const { id, proposalId } = req.params;
+    const proposedByOxyUserId = sessionWriterOf(req);
+    if (proposedByOxyUserId === null) return unauthorized(res);
+
+    const withdrawn = await withdrawCorrectionProposal({ proposalId, addressId: id, proposedByOxyUserId });
+    if (!withdrawn) return notFound(res, { message: 'Correction not found' });
+
+    return ok(res, {
+      proposal: serializeAddressCorrectionProposal(
+        withdrawn,
+        await precisionForViewer(req, id),
+        withdrawn.proposedByOxyUserId,
+      ),
+    });
+  } catch (error) {
+    logger.error('Error withdrawing address correction:', error);
+    return serverError(res, { message: 'Failed to withdraw the correction' });
   }
 };
 
