@@ -1,4 +1,5 @@
 import config from '../config';
+import { logger } from '../middlewares/logging';
 import {
   getCanonicalSindiServiceToken,
   mintSindiRequesterAssertion,
@@ -176,24 +177,55 @@ function isRecord(value: unknown): value is JsonRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+/**
+ * Names the SHAPE of a stream chunk this parser cannot read, never its content.
+ *
+ * A 502 from here is indistinguishable from every other 502 in the log, which is
+ * exactly the hole that left "Sindi could not finish this response" unexplained:
+ * Alia logged no error, Kaana served the completion, and the bytes that broke the
+ * read were dropped. Keys, types and the `error`/`alia_meta` markers describe the
+ * protocol mismatch; the assistant's text and the person's prompt never appear.
+ */
+function reportUnreadableChunk(reason: string, value: unknown): void {
+  const shape = isRecord(value)
+    ? {
+        keys: Object.keys(value).slice(0, 12),
+        errorCode: isRecord(value.error) ? String(value.error.code ?? value.error.type ?? '') : undefined,
+        choices: Array.isArray(value.choices) ? value.choices.length : typeof value.choices,
+      }
+    : { type: typeof value };
+  logger.error('Alia stream chunk could not be read', { reason, ...shape });
+}
+
 function textDeltaFromChunk(data: string): string | undefined {
   let value: unknown;
   try {
     value = JSON.parse(data) as unknown;
   } catch {
+    reportUnreadableChunk('not_json', data.slice(0, 0));
     throw new AliaChatError(502);
   }
 
   if (!isRecord(value) || isRecord(value.error) || !Array.isArray(value.choices)) {
+    reportUnreadableChunk(
+      !isRecord(value) ? 'not_object' : isRecord(value.error) ? 'error_chunk' : 'no_choices',
+      value,
+    );
     throw new AliaChatError(502);
   }
   if (value.choices.length === 0) return undefined;
 
   const firstChoice = value.choices[0];
-  if (!isRecord(firstChoice) || !isRecord(firstChoice.delta)) throw new AliaChatError(502);
+  if (!isRecord(firstChoice) || !isRecord(firstChoice.delta)) {
+    reportUnreadableChunk('choice_without_delta', value);
+    throw new AliaChatError(502);
+  }
   const content = firstChoice.delta.content;
   if (content === undefined || content === null) return undefined;
-  if (typeof content !== 'string') throw new AliaChatError(502);
+  if (typeof content !== 'string') {
+    reportUnreadableChunk('content_not_string', value);
+    throw new AliaChatError(502);
+  }
   return content;
 }
 
@@ -269,7 +301,10 @@ async function* readAliaTextStream(body: ReadableStream<Uint8Array>): AsyncGener
     }
     const finalText = dispatch();
     if (finalText !== undefined) yield finalText;
-    if (!sawDone) throw new AliaChatError(502);
+    if (!sawDone) {
+      logger.error('Alia stream ended without [DONE]', { });
+      throw new AliaChatError(502);
+    }
   } finally {
     reader.releaseLock();
   }
