@@ -73,7 +73,6 @@ const REGISTER_PATH = join(__dirname, 'untranslatedRegister.json');
  */
 const LEGITIMATELY_IDENTICAL: ReadonlyMap<string, string> = new Map([
   ['properties.type.title', 'the value is nothing but the interpolation `{{type}}`'],
-  ['search.filters.amenity.wifi', 'Wi-Fi is the same token everywhere'],
   ['settings.aboutHomiio.appName', 'the product name'],
   ['subscriptions.page.headerTitle', 'the product name, Homiio+'],
   ['evictions.timeline.systemActor', 'the product name, used as the actor'],

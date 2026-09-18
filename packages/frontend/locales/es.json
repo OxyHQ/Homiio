@@ -58,7 +58,6 @@
     "insulation": "Aislamiento adecuado",
     "intercom": "Portero automático",
     "jettedTub": "Bañera de hidromasaje",
-    "kitchen": "Cocina",
     "laundryRoom": "Lavandería compartida",
     "ledLighting": "Iluminación LED",
     "linenCloset": "Armario de ropa blanca",
@@ -109,7 +108,6 @@
   },
   "home": {
     "insights": {
-      "title": "Información de la Plataforma",
       "screenTitle": "Estadísticas",
       "subtitle": "Panorama del mercado de alquiler",
       "loadError": "No se pudieron cargar las estadísticas",
@@ -132,42 +130,18 @@
       "topProperties": "Propiedades destacadas"
     },
     "hero": {
-      "title": "Encuentra tu hogar ético",
-      "subtitle": "Alquileres transparentes con acuerdos justos y propiedades verificadas",
-      "searchPlaceholder": "¿Dónde quieres vivir?",
-      "searchButton": "Buscar"
-    },
-    "cities": {
-      "title": "Ciudades Destacadas",
-      "properties": "propiedades"
-    },
-    "categories": {
-      "title": "Navegar por Categoría",
-      "view": "Ver",
-      "types": {
-        "apartments": "Apartamentos",
-        "houses": "Casas",
-        "coLiving": "Convivencia",
-        "ecoFriendly": "Ecológico"
-      }
+      "title": "Encuentra tu hogar ético"
     },
     "horizon": {
-      "title": "Únete a Horizon",
-      "description": "Horizon es una iniciativa global que ofrece vivienda justa, atención médica y apoyo de viaje. Ahora integrado con Homiio.",
       "learnMore": "Saber Más"
     },
     "eco": {
       "title": "Propiedades Eco-Certificadas",
-      "description": "Encuentra propiedades sostenibles que cumplen nuestros estándares de eficiencia energética y ecológicos",
-      "viewEcoProperties": "Ver Propiedades Ecológicas"
+      "description": "Encuentra propiedades sostenibles que cumplen nuestros estándares de eficiencia energética y ecológicos"
     },
     "featured": {
       "title": "Propiedades Destacadas",
       "empty": "No hay propiedades destacadas disponibles en este momento",
-      "gridLongTerm": "Estudios en {{place}}",
-      "gridVacation": "Apartamentos de playa en {{place}}",
-      "gridBuy": "Viviendas en venta en {{place}}",
-      "gridExchange": "Intercambios de casa en {{place}}",
       "titleIn": "Destacadas en {{area}}",
       "chooseArea": "Elige una zona para ver viviendas destacadas.",
       "loadFailed": "No se han podido cargar las viviendas destacadas de esta zona."
@@ -179,72 +153,18 @@
       "noPropertiesDescription": "Comienza a navegar para ver tu actividad reciente aquí",
       "browseProperties": "Navegar Propiedades",
       "errorTitle": "Error al Cargar Vistas Recientes",
-      "errorDescription": "Por favor, inténtalo de nuevo.",
       "retry": "Reintentar",
       "results": "Resultados",
-      "filtered": "filtrados",
       "continue": "Seguir explorando"
     },
     "saved": {
-      "title": "Propiedades Guardadas",
-      "editFolder": "Editar carpeta",
-      "defaultFolder": "Carpeta predeterminada",
-      "folderNamePlaceholder": "Nombre de la carpeta",
-      "noFolder": "Carpeta no encontrada",
-      "noFolderDescription": "Es posible que esta carpeta haya sido eliminada",
-      "noFolderItems": "No hay propiedades en esta carpeta",
-      "noFolderItemsDescription": "Guarda propiedades en esta carpeta para verlas aquí"
+      "title": "Propiedades Guardadas"
     },
     "tips": {
       "article": "Artículo",
       "title": "Consejos y guías de alquiler",
-      "categories": {
-        "search": "Búsqueda",
-        "safety": "Seguridad",
-        "legal": "Legal",
-        "inspection": "Inspección"
-      },
-      "firstTimeRenting": {
-        "title": "¿Alquilas por primera vez? Esta es tu guía completa",
-        "description": "Todo lo que necesitas saber para encontrar, visitar y conseguir tu primer alquiler."
-      },
-      "avoidScams": {
-        "title": "Cómo evitar estafas de alquiler: señales de alerta",
-        "description": "Aprende a identificar las estafas de alquiler más habituales y protégete del fraude mientras buscas casa."
-      },
-      "rentalAgreement": {
-        "title": "Entender tu contrato de alquiler: las cláusulas clave",
-        "description": "Desglosamos los términos legales complejos para que sepas qué firmas antes de comprometerte."
-      },
-      "propertyInspection": {
-        "title": "Lista para inspeccionar una vivienda: qué mirar",
-        "description": "Una guía completa para inspeccionar viviendas de alquiler y detectar posibles problemas."
-      },
       "subtitle": "Guías prácticas de inquilinos locales, expertos legales y el equipo editorial de Homiio.",
       "eyebrow": "Alquilar mejor"
-    },
-    "faq": {
-      "title": "Preguntas Frecuentes",
-      "scheduleViewing": {
-        "question": "¿Cómo programo una visita a la propiedad?",
-        "answer": "Puedes programar una visita haciendo clic en el botón \"Programar Visita\" en cualquier listado de propiedad. Nuestro sistema te conectará con el propietario o administrador de la propiedad para acordar un horario conveniente."
-      },
-      "verifiedProperty": {
-        "question": "¿Qué significa \"Propiedad Verificada\"?",
-        "answer": "Las propiedades verificadas han sido inspeccionadas personalmente por nuestro equipo para asegurar que cumplan con nuestros estándares de calidad. Esto incluye verificar el estado de la propiedad, las comodidades y verificar las credenciales del propietario."
-      },
-      "reportSuspicious": {
-        "question": "¿Cómo reporto un listado sospechoso?",
-        "answer": "Si encuentras un listado sospechoso, haz clic en el botón \"Reportar\" en la página de la propiedad. Nuestro equipo de seguridad investigará y tomará las medidas apropiadas para proteger a nuestra comunidad."
-      },
-      "applicationRequirements": {
-        "question": "¿Cuáles son los requisitos de la aplicación de alquiler?",
-        "answer": "Los requisitos varían según la propiedad, pero típicamente incluyen comprobante de ingresos, historial de alquiler, verificación de crédito y referencias. Cada listado especificará los requisitos exactos necesarios."
-      }
-    },
-    "cityShowcase": {
-      "title": "Explora {{place}}",
-      "defaultPlace": "España"
     },
     "recommended": {
       "title": "Viviendas recomendadas",
@@ -261,29 +181,8 @@
       "subtitle": "Llega a inquilinos verificados de toda España: publicar es gratis, las comisiones son justas y detrás hay personas de verdad.",
       "title": "Publica tu espacio y encuentra buenos inquilinos"
     },
-    "nearby": {
-      "title": "Viviendas en {{city}}"
-    },
     "category": {
-      "studios": "Estudios",
-      "apartments": "Apartamentos",
-      "houses": "Casas",
-      "rooms": "Habitaciones",
-      "coliving": "Coliving",
-      "luxury": "Lujo",
-      "newListings": "Nuevos anuncios",
-      "nearYou": "Cerca de ti",
-      "nearYouUnavailable": "Activa la ubicación para ver viviendas cerca de ti",
-      "beachfront": "Frente al mar",
-      "cabins": "Cabañas",
-      "pools": "Piscinas",
-      "mountain": "Montaña",
-      "cityBreaks": "Escapadas urbanas",
-      "countryside": "Campo",
-      "instantBook": "Reserva instantánea",
-      "petFriendly": "Admite mascotas",
-      "homeSwap": "Intercambio de casas",
-      "hosting": "Alojamiento"
+      "petFriendly": "Admite mascotas"
     },
     "sections": {
       "explain": "{{reason}} · Fuente: {{source}}",
@@ -388,7 +287,6 @@
     "calculator": {
       "title": "Mira cuánto podrías ganar",
       "monthlyRent": "Alquiler mensual",
-      "salePrice": "Precio de venta",
       "perMonth": "mes",
       "result": "Ganas",
       "caption": "Se paga cuando se cierra el trato, sin licencia.",
@@ -462,71 +360,22 @@
     }
   },
   "search": {
-    "title": "Buscar",
-    "searchPlaceholder": "Buscar por ubicación, tipo de propiedad...",
-    "searchButton": "Buscar",
-    "recentSearches": "Búsquedas Recientes",
-    "popularSearches": "Búsquedas Populares",
-    "propertyTypes": "Tipos de Propiedad",
-    "popularCities": "Ciudades Populares",
-    "properties": "propiedades",
-    "savedSearches": "Búsquedas Guardadas",
-    "saveSearch": "Guardar Búsqueda",
-    "searchQuery": "Consulta de Búsqueda",
-    "searchName": "Nombre de Búsqueda",
-    "searchNamePlaceholder": "Ingresa un nombre para esta búsqueda",
-    "notificationsDescription": "Recibe notificaciones cuando nuevas propiedades coincidan con esta búsqueda",
-    "withFilters": "Con filtros",
     "error": {
       "title": "No se pudieron cargar las propiedades"
     },
-    "enterSearchQuery": "Por favor ingresa una consulta de búsqueda primero",
     "deleteSearch": "Eliminar Búsqueda",
     "deleteSearchConfirm": "¿Estás seguro de que quieres eliminar la búsqueda \"{{name}}\"?",
-    "viewAllSaved": "Ver Todas Guardadas",
-    "more": "más",
     "filters": {
-      "listingType": "Tipo de anuncio",
       "propertyType": "Tipo de propiedad",
-      "nightlyPrice": "Precio por noche",
-      "monthlyPrice": "Precio mensual",
       "checkIn": "Entrada",
       "checkOut": "Salida",
       "addDate": "Añadir fecha",
       "guests": "Huéspedes",
       "instantBook": "Reserva instantánea",
-      "cancellationPolicy": "Política de cancelación",
-      "moveInDate": "Fecha de mudanza",
-      "leaseDuration": {
-        "3Months": "3 meses",
-        "6Months": "6 meses",
-        "12Months": "12 meses",
-        "flexible": "Flexible"
-      },
-      "maxDeposit": "Depósito máximo",
       "amenities": "Comodidades",
-      "amenity": {
-        "wifi": "Wi-Fi",
-        "parking": "Aparcamiento",
-        "gym": "Gimnasio",
-        "pool": "Piscina",
-        "balcony": "Balcón",
-        "garden": "Jardín",
-        "elevator": "Ascensor",
-        "airConditioning": "Aire acondicionado",
-        "heating": "Calefacción",
-        "dishwasher": "Lavavajillas",
-        "washingMachine": "Lavadora"
-      },
       "propertyTypeVacation": {
         "wholeHouses": "Casas enteras",
         "privateRooms": "Habitaciones privadas"
-      },
-      "cancellation": {
-        "flexible": "Flexible",
-        "moderate": "Moderada",
-        "strict": "Estricta",
-        "superStrict": "Muy estricta"
       },
       "fairPrice": "Solo precio justo",
       "options": "Opciones",
@@ -550,15 +399,6 @@
       "rooms": "Habitaciones",
       "studios": "Estudios"
     },
-    "errorLoadingData": "Error al cargar datos",
-    "noPropertyTypesAvailable": "No hay tipos de propiedad disponibles",
-    "noCitiesAvailable": "No hay ciudades disponibles",
-    "noPropertyTypes": "No hay tipos de propiedad disponibles",
-    "searching": "Buscando...",
-    "addressSuggestions": "Sugerencias de Dirección",
-    "popularAreas": "Áreas Populares",
-    "quickFilters": "Filtros Rápidos",
-    "searchingAddresses": "Buscando direcciones...",
     "propertyType": {
       "apartments": "Apartamentos",
       "houses": "Casas",
@@ -576,18 +416,9 @@
       "yurt": "Yurt",
       "other": "Other"
     },
-    "areas": {
-      "downtown": "Centro",
-      "universityDistrict": "Distrito Universitario",
-      "businessDistrict": "Distrito Comercial",
-      "residentialArea": "Área Residencial"
-    },
     "widgets": {
       "common": {
-        "signIn": "Iniciar sesión",
-        "loading": "Cargando…",
-        "error": "Algo salió mal",
-        "viewAll": "Ver todo"
+        "signIn": "Iniciar sesión"
       },
       "quickFilters": {
         "title": "Filtros Rápidos",
@@ -615,26 +446,18 @@
         "notify": "Avísame sobre nuevas coincidencias",
         "notifyHelper": "Te avisaremos cuando nuevos anuncios coincidan con esta alerta",
         "create": "Crear alerta",
-        "creating": "Creando…",
-        "goToSearch": "Ir a la búsqueda",
-        "signInRequired": "Inicia sesión para crear alertas",
         "locationOrPriceRequired": "Especifica al menos una ubicación o un rango de precios",
         "minOverMax": "El precio mínimo no puede ser mayor que el máximo",
-        "invalidNumber": "Introduce un precio válido",
-        "createFailed": "No se pudo crear la alerta. Inténtalo de nuevo.",
-        "createSuccess": "Alerta creada"
+        "invalidNumber": "Introduce un precio válido"
       },
       "savedSearches": {
         "title": "Búsquedas Guardadas",
         "empty": "Aún no hay búsquedas guardadas",
         "emptyHelper": "Guarda una búsqueda para acceder rápido y recibir alertas aquí",
         "signInPrompt": "Inicia sesión para guardar búsquedas",
-        "goToSearch": "Ir a la búsqueda",
         "createNew": "Crear nueva búsqueda",
         "viewAllCount": "Ver todo ({{count}} más)",
-        "notifications": "Notificaciones",
         "nameAndQueryRequired": "El nombre y la consulta de búsqueda son obligatorios",
-        "loading": "Cargando búsquedas guardadas…",
         "loadFailed": "No se pudieron cargar las búsquedas guardadas",
         "loadError": "No se pudieron cargar tus búsquedas guardadas",
         "saveSuccess": "Búsqueda «{{name}}» guardada",
@@ -645,14 +468,6 @@
         "deleteSuccessNamed": "Búsqueda «{{name}}» eliminada",
         "deleteFailed": "No se pudo eliminar la búsqueda"
       }
-    },
-    "editSearch": "Editar búsqueda",
-    "searchQueryPlaceholder": "Introduce tu consulta de búsqueda",
-    "placeholder": {
-      "suggestion1": "Find your dream apartment in Barcelona...",
-      "suggestion2": "Looking for a pet-friendly home?",
-      "suggestion3": "Discover eco-friendly properties...",
-      "suggestion4": "Search for furnished studios near you..."
     },
     "duplicateName": "A search with this name already exists",
     "duplicateExact": "You already saved this exact search",
@@ -673,7 +488,6 @@
       "edit": "Editar búsqueda",
       "anyPrice": "Cualquier precio",
       "addDates": "Añadir fechas",
-      "anyTime": "Cualquier fecha",
       "anyType": "Cualquier tipo",
       "anywhere": "Cualquier lugar",
       "mapArea": "Área del mapa",
@@ -685,20 +499,10 @@
     },
     "step": {
       "dates": {
-        "title": "When?",
-        "weekday": {
-          "Mo": "Lu",
-          "Tu": "Ma",
-          "We": "Mi",
-          "Th": "Ju",
-          "Fr": "Vi",
-          "Sa": "Sá",
-          "Su": "Do"
-        }
+        "title": "When?"
       },
       "guests": {
-        "title": "¿Cuántos huéspedes?",
-        "label": "Huéspedes"
+        "title": "¿Cuántos huéspedes?"
       },
       "type": {
         "title": "What type of place?"
@@ -799,16 +603,7 @@
     "edit": {
       "noProfile": "No se encontró un perfil para actualizar.",
       "updateSuccess": "¡Perfil actualizado correctamente!",
-      "updateFailed": "No se pudo actualizar el perfil",
       "sections": {
-        "agencyInformation": "Información de la agencia",
-        "agencyVerification": "Agency Verification",
-        "teamManagement": "Team Management",
-        "businessSettings": "Business Settings",
-        "businessInformation": "Información del negocio",
-        "businessVerification": "Business Verification",
-        "cooperativeInformation": "Información de la cooperativa",
-        "cooperativeSettings": "Cooperative Settings",
         "personalInformation": "Información personal",
         "propertyPreferences": "Preferencias de propiedad",
         "references": "References",
@@ -816,21 +611,7 @@
         "settings": "Settings"
       },
       "labels": {
-        "businessType": "Tipo de negocio *",
-        "legalCompanyName": "Nombre legal de la empresa *",
-        "description": "Descripción",
-        "licenseNumber": "License Number",
-        "taxId": "Tax ID",
-        "yearEstablished": "Year Established",
-        "employeeCount": "Number of Employees",
-        "specialties": "Specialties",
-        "verificationStatus": "Verification Status",
-        "profileVisibility": "Profile Visibility",
         "notifications": "Notifications",
-        "emailNotifications": "Email Notifications",
-        "pushNotifications": "Push Notifications",
-        "legalName": "Legal Name *",
-        "industry": "Industry",
         "bio": "Biografía",
         "occupation": "Occupation",
         "employer": "Employer",
@@ -857,26 +638,11 @@
         "landlordContact": "Landlord Contact",
         "privacy": "Privacy"
       },
-      "subtitles": {
-        "agencyVerification": "Complete these verifications to build trust with clients",
-        "businessVerification": "Complete these verifications to build trust with clients",
-        "businessSettings": "Configure your business profile settings",
-        "cooperativeSettings": "Configure your cooperative profile settings"
-      },
       "placeholders": {
-        "legalCompanyName": "Enter your legal company name",
-        "description": "Describe your business...",
-        "licenseNumber": "Enter license number",
-        "taxId": "Enter tax ID",
-        "yearEstablished": "e.g., 2020",
-        "industry": "Enter industry",
-        "cooperativeLegalName": "Enter cooperative legal name",
-        "cooperativeDescription": "Describe your cooperative...",
         "bio": "Cuéntanos sobre ti...",
         "occupation": "p. ej., Ingeniero de software",
         "employer": "p. ej., Tech Corp",
         "annualIncome": "p. ej., 75000",
-        "moveInDate": "AAAA-MM-DD",
         "maxRent": "Introduce el alquiler máximo",
         "fullName": "Nombre completo",
         "phoneNumber": "Número de teléfono",
@@ -885,32 +651,9 @@
         "landlordName": "Nombre del arrendador",
         "phone": "Teléfono",
         "email": "Correo",
-        "endDateOptional": "AAAA-MM-DD (opcional)",
         "monthlyRent": "p. ej., 1500"
       },
       "options": {
-        "agencyBusinessType": {
-          "real_estate_agency": "Agencia inmobiliaria",
-          "property_management": "Gestión de propiedades",
-          "brokerage": "Corretaje",
-          "developer": "Promotora",
-          "other": "Otro"
-        },
-        "agencySpecialty": {
-          "residential": "Residencial",
-          "commercial": "Comercial",
-          "luxury": "Lujo",
-          "student_housing": "Vivienda estudiantil",
-          "senior_housing": "Vivienda senior",
-          "vacation_rentals": "Alquiler vacacional"
-        },
-        "businessType": {
-          "small_business": "Pequeña empresa",
-          "startup": "Startup",
-          "freelancer": "Autónomo",
-          "consultant": "Consultor",
-          "other": "Otro"
-        },
         "employmentStatus": {
           "employed": "Empleado",
           "self_employed": "Autónomo",
@@ -964,22 +707,7 @@
           "family_reasons": "Motivos familiares",
           "upgrade": "Mejora",
           "other": "Otro"
-        },
-        "profileVisibility": {
-          "public": "Público",
-          "private": "Privado",
-          "contacts_only": "Solo contactos"
         }
-      },
-      "verification": {
-        "businessLicenseTitle": "Licencia comercial",
-        "businessLicenseDescription": "Sube tu licencia comercial para verificación",
-        "insuranceTitle": "Seguro",
-        "insuranceDescription": "Aporta prueba del seguro comercial",
-        "bondingTitle": "Fianza",
-        "bondingDescription": "Aporta información de la fianza",
-        "backgroundCheckTitle": "Verificación de antecedentes",
-        "backgroundCheckDescription": "Completa la verificación de antecedentes de todo el equipo"
       },
       "toggles": {
         "emailNotifications": "Notificaciones por correo",
@@ -994,79 +722,12 @@
         "showRentalHistory": "Mostrar historial de alquiler",
         "showReferences": "Mostrar referencias"
       },
-      "team": {
-        "subtitle": "Gestiona los miembros del equipo y sus roles",
-        "memberLabel": "Miembro {{index}}",
-        "addedLabel": "Añadido: {{date}}",
-        "emptyText": "Aún no hay miembros en el equipo.",
-        "addMember": "+ Añadir miembro del equipo"
-      },
       "actions": {
         "addReference": "+ Añadir referencia",
         "addHistory": "+ Añadir historial",
         "remove": "Eliminar",
         "referenceLabel": "Referencia {{index}}",
         "rentalLabel": "Alquiler {{index}}"
-      }
-    },
-    "create": {
-      "selectType": "Selecciona un tipo de perfil.",
-      "selectBusinessType": "Selecciona un tipo de negocio.",
-      "cooperativeLegalNameRequired": "Introduce el nombre legal de la cooperativa.",
-      "createdSuccess": "¡{{type}} creado correctamente!",
-      "headerTitle": "Create Profile",
-      "createButton": "Create",
-      "chooseType": "Choose Business Profile Type",
-      "types": {
-        "agency": {
-          "title": "Agency Profile",
-          "description": "For real estate agencies and property management"
-        },
-        "business": {
-          "title": "Business Profile",
-          "description": "For small businesses and freelancers"
-        },
-        "cooperative": {
-          "title": "Cooperative Profile",
-          "description": "For housing or member-owned cooperatives"
-        }
-      },
-      "sections": {
-        "agencyInfo": "Agency Information",
-        "businessInfo": "Business Information",
-        "cooperativeInfo": "Cooperative Information",
-        "whatsNext": "What's Next?",
-        "profileSetup": "Profile Setup"
-      },
-      "whatsNext": {
-        "description": "After creating your {{type}} profile, you can customize preferences, add verification documents, and build your trust score."
-      },
-      "placeholders": {
-        "agencyDescription": "Describe your agency...",
-        "businessDescription": "Describe your business...",
-        "licenseOptional": "Enter license number (if applicable)",
-        "cooperativeLegalName": "Cooperative Legal Name",
-        "cooperativeDescription": "Describe the cooperative"
-      },
-      "options": {
-        "agencySpecialty": {
-          "residential": "Residential",
-          "commercial": "Commercial",
-          "investment": "Investment",
-          "rental": "Rental",
-          "new_construction": "New Construction"
-        },
-        "businessSpecialty": {
-          "consulting": "Consulting",
-          "technology": "Technology",
-          "design": "Design",
-          "marketing": "Marketing",
-          "finance": "Finance",
-          "healthcare": "Healthcare",
-          "education": "Education",
-          "retail": "Retail",
-          "services": "Services"
-        }
       }
     },
     "toast": {
@@ -1081,43 +742,15 @@
     "loadFailedHint": "Please try again later.",
     "loadFailed": "Failed to load profile"
   },
-  "notifications": {
-    "title": "Notificaciones",
-    "types": {
-      "message": {
-        "title": "Nuevo Mensaje",
-        "description": "Tienes un nuevo mensaje de tu propietario"
-      },
-      "contract": {
-        "title": "Actualización de Contrato",
-        "description": "Tu acuerdo de alquiler ha sido actualizado"
-      },
-      "payment": {
-        "title": "Recordatorio de Pago",
-        "description": "Tu pago de alquiler vence en 3 días"
-      }
-    },
-    "timeAgo": {
-      "hours": "horas atrás",
-      "days": "días atrás"
-    }
-  },
   "properties": {
     "title": "Propiedades",
     "filters": {
       "priceRange": "Rango de Precio",
-      "propertyType": "Tipo de Propiedad",
       "bedrooms": "Habitaciones",
       "bathrooms": "Baños",
       "amenities": "Comodidades",
-      "availability": "Disponibilidad",
-      "apply": "Aplicar Filtros",
-      "clear": "Limpiar Todo"
+      "apply": "Aplicar Filtros"
     },
-    "sort": "Ordenar",
-    "view": "Ver",
-    "save": "Guardar",
-    "share": "Compartir",
     "contact": "Contactar",
     "bookViewing": "Reservar Visita",
     "my": {
@@ -1126,7 +759,6 @@
       "delete": "Eliminar",
       "deleteTitle": "Eliminar Propiedad",
       "deleteMessage": "¿Estás seguro de que quieres eliminar \"{{title}}\"? Esta acción no se puede deshacer.",
-      "deleteSuccess": "Propiedad eliminada exitosamente",
       "emptyTitle": "Aún No Hay Propiedades",
       "emptyDescription": "Aún no has creado ninguna propiedad. Comienza agregando tu primera lista de propiedad.",
       "createFirst": "Crear Tu Primera Propiedad",
@@ -1142,17 +774,8 @@
       "transactCommission": "Deal closed — commission recorded"
     },
     "details": {
-      "price": "Precio",
-      "location": "Ubicación",
       "bedrooms": "Habitaciones",
-      "bathrooms": "Baños",
-      "size": "Tamaño",
-      "available": "Disponible",
-      "description": "Descripción",
-      "amenities": "Comodidades",
-      "photos": "Fotos",
-      "map": "Mapa",
-      "contactInfo": "Información de Contacto"
+      "bathrooms": "Baños"
     },
     "titles": {
       "forRent": "en alquiler en",
@@ -1181,18 +804,6 @@
       "subtitle": "{{count}} {{type}} available",
       "empty": "No {{type}} available at the moment",
       "filters": {
-        "title": "Filters",
-        "price": "Price Range",
-        "bedrooms": "Bedrooms",
-        "bathrooms": "Bathrooms",
-        "amenities": "Amenities",
-        "sort": {
-          "title": "Sort By",
-          "newest": "Newest First",
-          "priceAsc": "Price: Low to High",
-          "priceDesc": "Price: High to Low"
-        },
-        "apply": "Apply Filters",
         "clear": "Clear All"
       }
     },
@@ -1213,9 +824,7 @@
       "loading": "Loading homes…"
     },
     "city": {
-      "verifiedProperties": "Verified Properties",
       "verifiedOnly": "Verified Only",
-      "ecoFriendly": "Eco-Friendly",
       "ecoFriendlyOnly": "Eco-Friendly Only",
       "loadingProperties": "Loading properties...",
       "notFound": "City not found",
@@ -1242,9 +851,6 @@
       "subtitle": "Notas verificadas por la comunidad sobre el edificio. La experiencia puede variar según la vivienda.",
       "count_one": "{{count}} nota",
       "count_other": "{{count}} notas",
-      "summaryRecommend": "Recomiendan",
-      "summaryVerified": "Verificadas",
-      "summaryEvidence": "Con pruebas",
       "distributionLabel": "Desglose de valoraciones",
       "sort": {
         "label": "Ordenar",
@@ -1255,17 +861,6 @@
       "readMore": "Leer más",
       "readLess": "Leer menos",
       "helpful": "Útil ({{count}})",
-      "helpfulThanksTitle": "Gracias",
-      "helpfulThanksBody": "Hemos registrado tu valoración.",
-      "report": "Denunciar",
-      "reportTitle": "Denunciar nota",
-      "reportBody": "¿Seguro que quieres denunciar esta nota de la comunidad por contenido inapropiado?",
-      "reportConfirm": "Denunciar",
-      "reportedTitle": "Denunciada",
-      "reportedBody": "Esta nota de la comunidad se ha enviado a nuestro equipo de moderación.",
-      "reply": "Responder",
-      "replyTitle": "Responder a la nota",
-      "replyBody": "Las respuestas permiten a propietarios y gestores responder a las notas de la comunidad.",
       "recommends": "Recomienda",
       "doesNotRecommend": "No recomienda",
       "anonymous": "Anónimo",
@@ -1372,17 +967,9 @@
     "loading": "Loading property details...",
     "error": "Error",
     "notFound": "Property not found",
-    "bed": "Cama",
-    "bath": "Baño",
     "pricingReviewNeeded": "Revisa este precio",
     "bedrooms": "Number of Bedrooms",
     "bathrooms": "Number of Bathrooms",
-    "customNumber": {
-      "title": "Enter Custom Number",
-      "placeholder": "Enter number",
-      "confirm": "Confirm",
-      "cancel": "Cancel"
-    },
     "suggestedRent": "Sugerido: {{amount}} al mes",
     "maxEthicalRent": "Máximo ético: {{amount}} al mes",
     "ethicalPricingWarning": "Tu precio supera el máximo ético para una vivienda como esta. Considera bajarlo para que la vivienda siga siendo accesible.",
@@ -1394,10 +981,7 @@
       "deleteSuccess": "Propiedad eliminada correctamente",
       "createFailed": "No se pudo crear la propiedad",
       "updateFailed": "No se pudo actualizar la propiedad",
-      "deleteFailed": "No se pudo eliminar la propiedad",
-      "shareCopied": "Detalles de la propiedad copiados al portapapeles",
-      "shareFailed": "No se pudo compartir la propiedad",
-      "shareTitle": "Compartir propiedad"
+      "deleteFailed": "No se pudo eliminar la propiedad"
     },
     "drafts": {
       "title": "Borradores",
@@ -1426,9 +1010,7 @@
     },
     "host": {
       "verified": "Verified",
-      "responseRate": "Typically responds within an hour",
       "hostingSince": "Hosting since",
-      "hostedBy": "Hosted by",
       "openProfile": "Open host profile",
       "publicSubtitle": "Government-managed affordable housing",
       "publicAuthority": "Public Housing Authority",
@@ -1487,16 +1069,12 @@
       "errorTitle": "Could not load reviews",
       "disclaimer": "Community-verified reviews about the building. Experiences may vary by unit.",
       "title": "Reviews",
-      "evidence": "With evidence",
-      "countWithNumber": "({{count}} reseñas)",
       "showAll": "Ver las {{count}} reseñas",
       "total_one": "{{count}} reseña",
       "total_other": "{{count}} reseñas"
     },
     "notFoundHelp": "It may have been removed or the link is broken.",
     "sections": {
-      "photoGallery": "Galería de fotos",
-      "viewAll": "Ver todo",
       "features": "Características",
       "furnished": "Amueblado",
       "partiallyFurnished": "Parcialmente amueblado",
@@ -1523,11 +1101,6 @@
       "availability": "Disponibilidad",
       "availableFrom": "Disponible desde",
       "leaseTerm": "Duración del contrato",
-      "location": "Ubicación",
-      "nearbyAmenities": "Servicios cercanos",
-      "publicTransport": "Transporte público",
-      "schools": "Colegios",
-      "shopping": "Comercios",
       "propertyType": "Tipo de propiedad"
     },
     "neighborhood": {
@@ -1535,8 +1108,6 @@
       "listings": "Listings",
       "avgRentPerMonth": "Avg. rent / mo",
       "onParWithCity": "On par with the city average",
-      "listingCount": "{{count}} listings",
-      "avgAmountPerMonth": "Avg. {{amount}}/mo",
       "pctVsCity": "{{pct}}% {{dir}} than the city average",
       "cheaper": "cheaper",
       "pricier": "pricier"
@@ -1646,14 +1217,12 @@
       "invalidIdDescription": "El enlace no incluye la referencia del contrato.",
       "unavailableTitle": "Contrato no disponible",
       "unavailableDescription": "No se pudo cargar este contrato.",
-      "term": "Plazo",
       "monthlyRent": "Alquiler mensual",
       "securityDeposit": "Depósito de garantía",
       "landlord": "Arrendador",
       "tenant": "Inquilino",
       "payments": "Calendario de pagos",
       "documents": "Documentos",
-      "sign": "Firmar contrato",
       "terminate": "Rescindir contrato",
       "deleteDraft": "Eliminar borrador",
       "confirmSignTitle": "¿Firmar este contrato?",
@@ -1747,17 +1316,9 @@
       "state": "Provincia / región",
       "cityPlaceholder": "Escribe una ciudad",
       "statePlaceholder": "Escribe una provincia o región",
-      "anyPrice": "Cualquiera",
-      "smokingAllowed": "Se permite fumar",
-      "amenity": {
-        "privateBathroom": "Baño privado",
-        "walkInCloset": "Vestidor"
-      },
       "sort": {
-        "bestMatch": "Mejor coincidencia",
         "price": "Precio",
-        "newest": "Más recientes",
-        "name": "Nombre"
+        "newest": "Más recientes"
       },
       "searchPlaceholder": "Buscar habitaciones…",
       "emptyTitle": "No se encontraron habitaciones",
@@ -1770,15 +1331,9 @@
       "selectedCount": "{{count}} seleccionados",
       "roomType": "Habitación"
     },
-    "title": "Compañeros de Cuarto",
-    "find": "Encontrar Compañeros de Cuarto",
-    "myMatches": "Mis Coincidencias",
     "preferences": "Preferencias",
-    "profile": "Perfil de Compañero de Cuarto",
     "compatibility": "Puntuación de Compatibilidad",
     "actions": {
-      "message": "Mensaje",
-      "connect": "Conectar",
       "viewProfile": "Ver Perfil"
     },
     "tabs": {
@@ -1798,27 +1353,18 @@
       "relationshipEndFailed": "No se pudo finalizar la relación de compañeros de piso",
       "toggleFailed": "No se pudo cambiar la búsqueda de compañeros de piso",
       "preferencesSaved": "Tus preferencias de compañero de piso se actualizaron.",
-      "preferencesFailed": "No se pudieron guardar las preferencias de compañero de piso. Inténtalo de nuevo.",
-      "successTitle": "Éxito",
-      "errorTitle": "Error"
+      "preferencesFailed": "No se pudieron guardar las preferencias de compañero de piso. Inténtalo de nuevo."
     },
     "screen": {
       "title": "Compañeros de piso",
-      "signInTitle": "Inicia sesión para encontrar compañeros",
-      "signInDescription": "Descubre compañeros compatibles y gestiona tus solicitudes.",
-      "signIn": "Iniciar sesión",
       "loadError": "No se pudieron cargar los compañeros",
-      "tryAgain": "Inténtalo de nuevo.",
       "emptyDiscoverTitle": "Aún no hay coincidencias",
       "emptyDiscoverDescription": "Completa tu perfil de compañero para empezar a descubrir coincidencias.",
       "emptyRequestsTitle": "No hay solicitudes",
       "emptyRequestsDescription": "Las solicitudes entrantes y salientes aparecerán aquí.",
       "emptyRelationshipsTitle": "Aún no hay coincidencias",
       "emptyRelationshipsDescription": "Las solicitudes aceptadas se convierten en coincidencias aquí.",
-      "emptyRoomsTitle": "No hay habitaciones listadas",
-      "emptyRoomsDescription": "Los anuncios de habitaciones de tu red aparecerán aquí.",
       "enableMatching": "Activar búsqueda de compañeros",
-      "editPreferences": "Editar preferencias",
       "fallbackName": "Compañero",
       "eyebrow": "Juntos",
       "loadRequestsError": "No se pudieron cargar las solicitudes",
@@ -1839,8 +1385,6 @@
       "accept": "Accept",
       "decline": "Decline",
       "viewProfile": "View profile",
-      "sent": "Sent",
-      "received": "Received",
       "pending": "Pending",
       "accepted": "Accepted",
       "declined": "Declined",
@@ -1875,7 +1419,6 @@
     "match": {
       "compatibility": "{{score}}% match",
       "viewProfile": "View profile",
-      "connect": "Connect",
       "excellent": "Excelente coincidencia",
       "good": "Buena coincidencia",
       "fair": "Coincidencia aceptable",
@@ -1967,26 +1510,9 @@
       }
     }
   },
-  "safety": {
-    "title": "Seguridad",
-    "fraudReports": "Informes de Fraude",
-    "reportIssue": "Reportar Problema",
-    "safetyTips": "Consejos de Seguridad",
-    "emergencyContacts": "Contactos de Emergencia",
-    "reportTypes": {
-      "fraud": "Fraude",
-      "scam": "Estafa",
-      "fakeListing": "Listado Falso",
-      "harassment": "Acoso",
-      "other": "Otro"
-    }
-  },
   "horizon": {
     "title": "Horizon Initiative",
     "description": "Iniciativa global para vivienda justa, atención médica y apoyo de viaje",
-    "benefits": "Beneficios",
-    "join": "Únete a Horizon",
-    "learnMore": "Saber Más",
     "page": {
       "benefits": {
         "fairHousing": {
@@ -2110,13 +1636,8 @@
   },
   "common": {
     "cancel": "Cancelar",
-    "ok": "OK",
     "clear": "Limpiar",
     "export": "Exportar",
-    "sendFeedback": "Enviar Comentarios",
-    "maybeLater": "Quizás Después",
-    "rateNow": "Calificar Ahora",
-    "success": "Éxito",
     "error": "Error",
     "loading": "Cargando...",
     "retry": "Reintentar",
@@ -2130,41 +1651,19 @@
     "close": "Cerrar",
     "back": "Atrás",
     "next": "Siguiente",
-    "previous": "Anterior",
-    "done": "Hecho",
-    "continue": "Continuar",
-    "skip": "Saltar",
     "yes": "Sí",
     "no": "No",
     "confirm": "Confirmar",
-    "select": "Seleccionar",
-    "choose": "Elegir",
-    "upload": "Subir",
-    "download": "Descargar",
     "share": "Compartir",
-    "copy": "Copiar",
-    "paste": "Pegar",
     "search": "Buscar",
     "filter": "Filtro",
-    "sort": "Ordenar",
-    "refresh": "Actualizar",
-    "update": "Actualizar",
     "create": "Crear",
     "add": "Agregar",
     "remove": "Eliminar",
-    "view": "Ver",
-    "details": "Detalles",
-    "more": "Más",
-    "Creating...": "Creando...",
-    "less": "Menos",
     "all": "Todo",
-    "none": "Ninguno",
-    "empty": "Vacío",
-    "noData": "No hay datos disponibles",
     "noResults": "No se encontraron resultados",
     "tryAgain": "Intentar de nuevo",
     "goBack": "Go Back",
-    "goHome": "Ir al inicio",
     "signIn": "Iniciar sesión",
     "month": "month",
     "reset": "Reset",
@@ -2186,103 +1685,11 @@
       "empty": "Inicia una nueva conversación para recibir ayuda."
     },
     "status": {
-      "thinking": "Pensando...",
-      "online": "En línea"
+      "thinking": "Pensando..."
     },
     "auth": {
       "required": "Autenticación Requerida",
       "message": "Por favor, inicia sesión para acceder a Sindi, tu defensor de justicia habitacional impulsado por IA"
-    },
-    "welcome": {
-      "title": "Bienvenido a Sindi",
-      "subtitle": "Tu defensor de justicia habitacional impulsado por IA con acceso a información en tiempo real. Estoy aquí para luchar por tus derechos como inquilino, desafiar prácticas injustas y proporcionar actualizaciones legales actuales. Juntos, podemos construir un sistema de vivienda más equitativo."
-    },
-    "actions": {
-      "title": "Lucha por Tus Derechos",
-      "rentGouging": {
-        "title": "Verificación de Especulación de Alquiler",
-        "prompt": "Mi alquiler aumentó un [cantidad]%. ¿Es especulación legal? ¿Qué puedo hacer para combatir aumentos injustos?"
-      },
-      "evictionDefense": {
-        "title": "Defensa contra Desalojo Ilegal",
-        "prompt": "Recibí un aviso de desalojo que parece ilegal. Ayúdame a entender mis derechos y cómo luchar."
-      },
-      "securityDeposit": {
-        "title": "Robo de Depósito de Garantía",
-        "prompt": "Mi propietario se queda con mi depósito de garantía sin razones válidas. ¿Cómo recupero mi dinero?"
-      },
-      "unsafeLiving": {
-        "title": "Condiciones de Vida Inseguras",
-        "prompt": "Mi apartamento tiene problemas graves de seguridad. ¿Cuáles son mis derechos y cómo fuerzo las reparaciones?"
-      },
-      "discrimination": {
-        "title": "Ayuda contra Discriminación",
-        "prompt": "Creo que estoy siendo discriminado por mi propietario. ¿Cuáles son mis derechos y cómo lo denuncio?"
-      },
-      "retaliation": {
-        "title": "Protección contra Represalias",
-        "prompt": "Mi propietario está tomando represalias porque me quejé. ¿Qué protecciones tengo?"
-      },
-      "leaseReview": {
-        "title": "Revisión de Contrato",
-        "prompt": "¿Puedes revisar mi contrato en busca de cláusulas injustas y términos ilegales que debería impugnar?"
-      },
-      "tenantOrganizing": {
-        "title": "Organización de Inquilinos",
-        "prompt": "¿Cómo puedo organizarme con otros inquilinos para luchar por mejores condiciones y trato justo?"
-      },
-      "currentLaws": {
-        "title": "Leyes Actuales y Actualizaciones",
-        "prompt": "¿Cuáles son las leyes actuales de derechos de inquilinos y desarrollos legales recientes que debería conocer?"
-      },
-      "catalunya": {
-        "title": "Derechos de Inquilinos en Catalunya",
-        "prompt": "Estoy en Catalunya/Barcelona. ¿Cuáles son mis derechos como inquilino y cómo puedo conectarme con organizaciones locales de inquilinos como el Sindicat de Llogateres?"
-      }
-    },
-    "housing": {
-      "title": "Encuentra Vivienda Ética",
-      "subtitle": "Puedo buscar propiedades con filtros avanzados. Prueba estos ejemplos:",
-      "examples": {
-        "cheap": {
-          "title": "Apartamentos Baratos",
-          "prompt": "Encuéntrame apartamentos baratos por debajo de $1000 en Barcelona"
-        },
-        "petFriendly": {
-          "title": "Casas que Admiten Mascotas",
-          "prompt": "Muéstrame apartamentos que admiten mascotas con estacionamiento por debajo de $1500"
-        },
-        "furnished": {
-          "title": "Estudios Amueblados",
-          "prompt": "Necesito estudios amueblados con wifi por debajo de $1200"
-        },
-        "family": {
-          "title": "Casas Familiares",
-          "prompt": "Encuentra casas de 3 habitaciones con jardín por debajo de $2000"
-        },
-        "luxury": {
-          "title": "Propiedades de Lujo",
-          "prompt": "Muéstrame apartamentos de lujo con gimnasio y piscina por encima de $3000"
-        },
-        "shared": {
-          "title": "Vivienda Compartida",
-          "prompt": "Encuentra habitaciones compartidas o espacios de coliving por debajo de $800"
-        }
-      },
-      "naturalLanguage": "💡 ¡Entiendo lenguaje natural! Prueba: \"apartamentos baratos de 2 habitaciones en Barcelona con estacionamiento\" o \"estudios de lujo con gimnasio por debajo de $2000\""
-    },
-    "features": {
-      "title": "Cómo lucho por la justicia habitacional:",
-      "rentIncreases": "• Desafío aumentos ilegales de alquiler y especulación",
-      "evictions": "• Defiendo contra desalojos injustos",
-      "deposits": "• Combato el robo de depósitos de garantía y fraude",
-      "conditions": "• Exijo condiciones de vida seguras y habitables",
-      "discrimination": "• Combato la discriminación habitacional",
-      "retaliation": "• Protejo contra represalias del propietario",
-      "leases": "• Expongo cláusulas injustas en contratos",
-      "organizing": "• Apoyo la organización y solidaridad de inquilinos",
-      "updates": "• Proporciono actualizaciones legales actuales y desarrollos recientes",
-      "organizations": "• Te conecto con organizaciones locales de inquilinos"
     },
     "chat": {
       "placeholder": "Pregúntale a Sindi sobre tus derechos como inquilino...",
@@ -2291,7 +1698,6 @@
       "attach": "Adjuntar un archivo",
       "send": "Enviar mensaje",
       "stop": "Detener respuesta",
-      "disclaimer": "Sindi aboga por los derechos de los inquilinos y la justicia habitacional. Para acciones legales, consulta a un abogado calificado. Conéctate con organizaciones locales de inquilinos para apoyo comunitario.",
       "addMenu": "Añadir al chat",
       "addGroup": "Añadir",
       "voice": "Entrada de voz",
@@ -2343,12 +1749,7 @@
       "title": "Conversación",
       "subtitle": "Defensor de Justicia Habitacional IA",
       "loading": "Cargando Conversación",
-      "loadingMessage": "Cargando conversación...",
-      "error": "Error de Conversación",
-      "empty": {
-        "title": "Inicia Tu Conversación",
-        "subtitle": "Pregúntale a Sindi sobre derechos de inquilinos, búsqueda de vivienda, o cualquier pregunta relacionada con vivienda. Estoy aquí para ayudarte a luchar por la justicia habitacional."
-      }
+      "loadingMessage": "Cargando conversación..."
     },
     "settings": {
       "resetMessage": "This will reset all Sindi preferences to their defaults.",
@@ -2374,33 +1775,22 @@
     "navigation": {
       "home": "Inicio",
       "explore": "Explorar",
-      "search": "Buscar",
       "saved": "Guardados",
       "inbox": "Buzón",
       "sindi": "Sindi",
-      "contracts": "Contratos",
       "profile": "Perfil",
-      "payments": "Pagos",
       "roommates": "Compañeros de Cuarto",
       "settings": "Configuración",
       "applications": "Mis solicitudes",
       "stays": "Estancias",
       "tips": "Consejos",
       "hostCalendar": "Calendario de anfitrión",
-      "hostReservations": "Reservas de anfitrión",
-      "landlordApplications": "Bandeja de solicitudes",
-      "insights": "Insights",
       "evictions": "Desahucios",
       "reviews": "Reseñas",
       "myHome": "Mi hogar"
     },
     "actions": {
-      "addProperty": "Agregar Propiedad",
-      "signUp": "Registrarse",
       "signIn": "Iniciar Sesión"
-    },
-    "hero": {
-      "tagline": "Encuentra tu hogar ético"
     },
     "mode": {
       "longTerm": "Larga estancia",
@@ -2409,28 +1799,20 @@
       "exchange": "Intercambio"
     },
     "savedProperties": {
-      "title": "Carpetas guardadas",
-      "empty": "Aún no hay carpetas guardadas",
-      "viewAll": "Ver todo"
+      "title": "Carpetas guardadas"
     },
     "recent": {
       "title": "Vistas recientemente",
       "today": "Hoy",
       "yesterday": "Ayer",
-      "earlier": "Antes",
-      "empty": "Las propiedades que veas aparecerán aquí",
-      "remove": "Quitar de recientes"
+      "earlier": "Antes"
     },
     "menu": {
       "account": "Cuenta",
-      "inbox": "Buzón",
       "terms": "Términos del servicio",
       "privacy": "Política de privacidad"
     },
-    "collapse": "Contraer barra lateral",
-    "expand": "Expandir barra lateral",
-    "open": "Abrir menú",
-    "close": "Cerrar menú"
+    "open": "Abrir menú"
   },
   "saved": {
     "header": "Guardados",
@@ -2467,8 +1849,6 @@
     "notes": {
       "title": "Notas de la Propiedad",
       "placeholder": "Agregar notas sobre esta propiedad...",
-      "save": "Guardar Notas",
-      "cancel": "Cancelar",
       "filters": {
         "active": "Activas",
         "pinned": "Fijadas",
@@ -2486,15 +1866,10 @@
       "unarchive": "Desarchivar nota"
     },
     "actions": {
-      "addNotes": "Agregar Notas",
-      "editNotes": "Editar Notas",
-      "unsave": "Quitar de Guardados",
-      "viewProperty": "Ver Propiedad"
+      "editNotes": "Editar Notas"
     },
     "errors": {
-      "unsaveFailed": "Error al quitar de guardados",
-      "updateNotesFailed": "Error al actualizar notas",
-      "loadFailed": "Error al cargar propiedades guardadas"
+      "updateNotesFailed": "Error al actualizar notas"
     },
     "sorting": {
       "newest": "Más Recientes Primero",
@@ -2522,7 +1897,6 @@
       "folderNamePlaceholder": "Nombre de la carpeta",
       "chooseColor": "Elegir color",
       "chooseEmoji": "Elegir emoji",
-      "creating": "Creando...",
       "createAndSave": "Crear y guardar",
       "propertyCount_one": "{{count}} propiedad",
       "propertyCount_other": "{{count}} propiedades",
@@ -2795,11 +2169,7 @@
       }
     },
     "badge": {
-      "byNight": "Por noche",
-      "forSale": "En venta",
-      "exchange": "Intercambio",
       "verified": "Verificado",
-      "eco": "Ecológico",
       "instantBook": "Reserva inmediata",
       "fairPrice": "Precio justo",
       "new": "Nuevo"
@@ -2915,17 +2285,7 @@
   },
   "goBack": "Volver",
   "app": {
-    "welcome": {
-      "title": "Welcome to Homiio! 👋",
-      "subtitle": "Thanks for trying out our app. Start exploring now!"
-    },
-    "errors": {
-      "screenNotExist": "This screen doesn't exist.",
-      "goHome": "Go to home screen!",
-      "noResults": "No results found for"
-    },
-    "loading": "Loading...",
-    "battery": "Battery"
+    "loading": "Loading..."
   },
   "tips": {
     "article": "Article",
@@ -3202,32 +2562,14 @@
   "reviews": {
     "card": {
       "anonymous": "Anónimo",
-      "verifiedResident": "Residente verificado",
       "verified": "Verificado",
-      "confident": "{{score}}% de confianza",
-      "proof": "prueba",
-      "proofs": "pruebas",
-      "karma": "{{score}} karma",
       "livedMonths": "Vivió {{count}} meses",
       "perMonth": "{{price}} {{currency}}/mes",
-      "moreIssues": "+{{count}} más",
-      "positive": "Positivo:",
-      "negative": "Negativo:",
       "helpful": "Útil ({{count}})",
       "report": "Reportar",
-      "reply": "Responder",
       "recommends": "✓ Recomienda",
       "doesNotRecommend": "✗ No recomienda",
       "underReview": "En revisión",
-      "alertThankYouTitle": "Gracias",
-      "alertThankYouBody": "Tu comentario ha sido registrado.",
-      "alertReportTitle": "Reportar reseña",
-      "alertReportBody": "¿Seguro que quieres reportar esta reseña por contenido inapropiado?",
-      "alertReportConfirm": "Reportar",
-      "alertReportedTitle": "Reportada",
-      "alertReportedBody": "Esta reseña ha sido reportada a nuestro equipo de moderación.",
-      "alertReplyTitle": "Responder a la reseña",
-      "alertReplyBody": "La función de respuesta permitirá a arrendadores y administradores de propiedades responder a las reseñas.",
       "pros": "Lo mejor",
       "cons": "Lo mejorable",
       "adviceToLandlord": "Consejo para el propietario",
@@ -3508,10 +2850,6 @@
     "cancelFailed": "No se pudo cancelar la suscripción",
     "cancelEndOfPeriodSuccess": "La suscripción se cancelará al final del periodo actual",
     "debugFailed": "No se pudo depurar la suscripción",
-    "sync": "Sync from Stripe",
-    "cancel": "Cancel subscription",
-    "cancelImmediate": "Cancel immediately",
-    "cancelEndOfPeriod": "Cancel at period end",
     "page": {
       "headerTitle": "Homiio+",
       "headerSubtitle": "Tu aliado de vivienda ética",
@@ -3631,8 +2969,6 @@
   "addresses": {
     "detail": {
       "title": "Address",
-      "loadError": "No se pudo cargar esta dirección",
-      "tryAgain": "Inténtalo de nuevo.",
       "propertiesSection": "Propiedades",
       "reviewsSection": "Reseñas",
       "emptyPropertiesTitle": "Aún no hay propiedades aquí",
@@ -3640,15 +2976,10 @@
       "emptyReviewsTitle": "Aún no hay reseñas",
       "emptyReviewsDescription": "Sé el primero en compartir tu experiencia en esta dirección.",
       "writeReview": "Escribir una reseña",
-      "switchLevel": "Cambiar nivel",
-      "buildingLevel": "Edificio",
-      "unitLevel": "Unidad",
       "notFound": "Dirección no encontrada",
       "notFoundDescription": "No encontramos detalles para esta dirección.",
       "storiesTitle": "Historias de residentes",
       "tabOverall": "General",
-      "tabApartments": "Apartamentos",
-      "tabCommunity": "Comunidad",
       "tabArea": "Zona",
       "tabProperties": "Propiedades ({{count}})",
       "tabReviews": "Reseñas ({{count}})",
@@ -3796,7 +3127,6 @@
   },
   "booking": {
     "toast": {
-      "pickDates": "Selecciona primero las fechas de entrada y salida",
       "minStay": "Estancia mínima de {{count}} {{unit}}",
       "maxStay": "Estancia máxima de {{count}} {{unit}}",
       "night": "noche",
@@ -3804,9 +3134,7 @@
       "failed": "Error en la reserva"
     },
     "accessibility": {
-      "selectDates": "Select dates",
-      "selectGuests": "Select guests",
-      "close": "Close"
+      "selectDates": "Select dates"
     },
     "guests": {
       "adults": "Adultos",
@@ -3815,8 +3143,6 @@
       "childrenHint": "De 2 a 12 años",
       "infants": "Bebés",
       "infantsHint": "Menores de 2 años",
-      "decrease": "Reducir {{title}}",
-      "increase": "Aumentar {{title}}",
       "maxNote": "Este alojamiento admite un máximo de {{count}} huéspedes, sin contar bebés.",
       "count_one": "{{count}} huésped",
       "count_other": "{{count}} huéspedes",
@@ -3825,8 +3151,6 @@
     },
     "widget": {
       "requestToBook": "Solicitar reserva",
-      "perNight": "noche",
-      "dates": "Fechas",
       "requestNote": "Aún no se te cobrará. El anfitrión tiene 24 horas para responder.",
       "checkAvailability": "Consultar disponibilidad"
     },
@@ -3848,28 +3172,13 @@
     }
   },
   "searchBar": {
-    "search": "Buscar",
     "long": {
       "propertyType": "Tipo de propiedad",
-      "moveIn": "Fecha de entrada",
-      "where": "Dónde",
-      "where.value": "Cualquier ciudad",
-      "moveIn.value": "Añadir fecha",
-      "propertyType.value": "Cualquier tipo"
+      "where": "Dónde"
     },
     "vacation": {
-      "where": "Dónde",
       "when": "Cuándo",
-      "who": "Quién",
-      "where.value": "Cualquier destino",
-      "when.value": "Añadir fechas",
-      "who.value": "Añadir huéspedes"
-    },
-    "mode": {
-      "vacation": "Vacaciones",
-      "longTerm": "Largo plazo",
-      "hint": "Cambia entre alquileres a largo plazo y estancias vacacionales",
-      "label": "Modo de alquiler"
+      "who": "Quién"
     }
   },
   "error": {
@@ -4422,7 +3731,6 @@
       "pause": "Pausar",
       "pauseHint": "Mientras está en pausa las alertas se registran, pero no se entregan.",
       "pauseAction": "Pausar una semana",
-      "resume": "Reanudar alertas",
       "primaryArea": "Zona principal",
       "primaryAreaHint": "Inicio se abre en tu zona principal. Solo puedes tener una.",
       "primaryAreaAction": "Hacer que sea mi zona principal",
