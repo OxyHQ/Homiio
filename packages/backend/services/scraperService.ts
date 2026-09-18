@@ -13,10 +13,20 @@ import {
 } from '../db/properties/propertyWrites';
 import { findOrCreateCanonicalAddress, type AddressCanonicalInput } from './addressService';
 import { logger as appLogger } from '../middlewares/logging';
+import { describeErrorForLog } from '../middlewares/errorHandler';
 
+/**
+ * A scrape failure's message, with drizzle's bound parameters cut off.
+ *
+ * `upsertExternalListing` calls the property writes directly, so a failure here
+ * is a `DrizzleQueryError` whose message is `Failed query: <sql>\nparams: <the
+ * whole listing>` — and this string is not only logged, it is returned in the
+ * scrape result's `errorDetails`. `describeErrorForLog` is the one place that
+ * knows where that tail starts.
+ */
 function errorMessageOf(error: unknown): string {
-  if (error instanceof Error) return error.message;
-  return String(error);
+  const described = describeErrorForLog(error);
+  return typeof described.message === 'string' ? described.message : String(error);
 }
 
 function errorCodeOf(error: unknown): string | undefined {

@@ -5,6 +5,7 @@
 import config from '../../config';
 import { type HydratedProfile, toProfileDTO } from '../../db/profiles/profileSerializer';
 import { logger } from '../../middlewares/logging';
+import { describeErrorForLog } from '../../middlewares/errorHandler';
 
 /**
  * A user as the OXY API returns it from `POST /users/by-ids`.
@@ -68,7 +69,7 @@ export async function hydrateDisplayNames(
     }
   } catch (error) {
     logger.warn('Roommate display-name hydration errored', {
-      error: error instanceof Error ? error.message : String(error),
+      error: describeErrorForLog(error),
       count: unique.length,
     });
   }

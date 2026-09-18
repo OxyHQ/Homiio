@@ -32,6 +32,7 @@ import type {
 import config from '../config';
 import { Logger } from '../utils/logger';
 import { findCachedCell, upsertCachedCell } from '../db/placePois/placePoiRepository';
+import { describeErrorForLog } from '../middlewares/errorHandler';
 
 const logger = new Logger('NearbyServicesService');
 
@@ -395,7 +396,7 @@ export async function getNearbyServices(
     // Overpass is rate-limited and occasionally slow; a failure here is
     // expected operationally, so log it and degrade instead of surfacing a 5xx.
     logger.warn('Overpass lookup failed; returning degraded nearby-services result', {
-      message: error instanceof Error ? error.message : String(error),
+      error: describeErrorForLog(error),
       longitude,
       latitude,
       radiusM,

@@ -45,7 +45,7 @@ import {
   GeoParamError,
   type ParsedSearchParams,
 } from './searchQueryBuilder';
-import { paginationResponse } from '../../middlewares/errorHandler';
+import { describeErrorForLog, paginationResponse } from '../../middlewares/errorHandler';
 import { logger } from '../../middlewares/logging';
 import {
   resolveCityId,
@@ -438,7 +438,7 @@ export async function searchProperties(req: Request, res: Response, next: NextFu
     // something else entirely (ADR 0002 §8.2). The names are what a diagnosis
     // actually needs: they say which shape of request broke.
     logger.error('Property search failed', {
-      message: error instanceof Error ? error.message : String(error),
+      error: describeErrorForLog(error),
       queryParams: Object.keys(req.query).sort(),
     });
     next(error);

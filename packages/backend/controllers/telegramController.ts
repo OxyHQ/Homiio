@@ -7,7 +7,8 @@ import type { Request, Response, NextFunction } from 'express';
 import { PropertyStatus } from '@homiio/shared-types';
 
 import { telegramService } from '../services';
-import { AppError, successResponse } from '../middlewares/errorHandler';
+import { AppError, describeErrorForLog, successResponse } from '../middlewares/errorHandler';
+import { logger } from '../middlewares/logging';
 import type { SQL } from 'drizzle-orm';
 
 import config from '../config';
@@ -39,10 +40,6 @@ import { resolveCityId } from '../services/geoQueryService';
  */
 const BULK_NOTIFICATION_LIMIT = 50;
 
-function errorMessage(error: unknown): string {
-  if (error instanceof Error) return error.message;
-  return String(error);
-}
 function errorName(error: unknown): string | undefined {
   if (error && typeof error === 'object' && 'name' in error) {
     const name = (error as { name: unknown }).name;
@@ -73,7 +70,10 @@ interface TelegramBotStatus {
     canReadAllGroupMessages?: boolean;
     supportsInlineQueries?: boolean;
   };
-  botInfoError?: string;
+  // Deliberately no `botInfoError`. Telegram's client message is a third
+  // party's text — it has carried the API host, the bot token's tail and the
+  // description of a 401 — and `initialized: false` is the whole of what the
+  // caller can act on. Why it is false goes to the log.
 }
 
 class TelegramController {
@@ -104,7 +104,7 @@ class TelegramController {
         };
       } catch (error) {
         status.initialized = false;
-        status.botInfoError = errorMessage(error);
+        logger.warn('Telegram bot info unavailable', { error: describeErrorForLog(error) });
       }
 
       res.json(successResponse(status, 'Telegram bot status retrieved successfully'));

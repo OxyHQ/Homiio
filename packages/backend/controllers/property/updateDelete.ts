@@ -14,7 +14,7 @@ import {
   recordPropertyChangeEvents,
   recordPropertyRemovedEvent,
 } from '../../services/watches/propertyEventProducer';
-import { AppError, successResponse } from '../../middlewares/errorHandler';
+import { AppError, describeErrorForLog, successResponse } from '../../middlewares/errorHandler';
 import { logger } from '../../middlewares/logging';
 import { requireSessionOxyUserId } from '../../utils/sessionUser';
 import type { ControllerNext, ControllerRequest, ControllerResponse } from '../controllerTypes';
@@ -93,7 +93,7 @@ export async function updateProperty(req: ControllerRequest, res: ControllerResp
       } catch (commissionError) {
         logger.error('Failed to process commission on property close', {
           propertyId: String(propertyId),
-          error: commissionError instanceof Error ? commissionError.message : String(commissionError),
+          error: describeErrorForLog(commissionError),
         });
       }
     }

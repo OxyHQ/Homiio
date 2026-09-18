@@ -33,7 +33,7 @@
 
 import { Request, Response, NextFunction } from 'express';
 import type { SQL } from 'drizzle-orm';
-import { paginationResponse } from '../../middlewares/errorHandler';
+import { describeErrorForLog, paginationResponse } from '../../middlewares/errorHandler';
 import { logger } from '../../middlewares/logging';
 import {
   buildSort,
@@ -457,7 +457,7 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
         // Personalization is a best-effort enhancement: if it fails we fall back
         // to the default ordering instead of failing the request, but we log it.
         logger.warn('Failed to personalize property ordering; using default order', {
-          error: error instanceof Error ? error.message : String(error),
+          error: describeErrorForLog(error),
         });
       }
     }

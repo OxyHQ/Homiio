@@ -130,6 +130,20 @@ describe('errorHandler', () => {
       expect(serialized).not.toContain('token');
     });
 
+    it('drops the offending value from a postgres error raised with no drizzle wrapper', () => {
+      // Every `db.execute` throws the postgres error itself, so the value is in
+      // `err.message` and there is no `cause` to redact it out of.
+      const err = Object.assign(new Error('invalid input syntax for type uuid: "0b5a6f1e-secret-property-id"'), {
+        name: 'PostgresError',
+        code: '22P02',
+      });
+      run(err);
+
+      const [, meta] = mockLogger.error.mock.calls[0];
+      expect(meta.error.message).toBe('invalid input syntax for type uuid: [redacted]');
+      expect(JSON.stringify(meta)).not.toContain('secret-property-id');
+    });
+
     it('does not trust a statusCode on an error our code did not build', () => {
       const err = Object.assign(new Error('connect ECONNREFUSED 10.0.3.7:5432'), { statusCode: 503 });
       const res = run(err);

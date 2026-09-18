@@ -76,6 +76,7 @@ import {
   alertNotificationData,
   HOUSING_ALERT_NOTIFICATION_TYPE,
 } from './alertNarrative';
+import { describeErrorForLog } from '../../middlewares/errorHandler';
 
 /**
  * How many watches one event may fan out to inside a single pass.
@@ -369,7 +370,7 @@ export async function matchDomainEvent(
       logger.error('Housing alert matching failed for one watch', {
         eventId: event.id,
         watchId: watch.watchId,
-        error: error instanceof Error ? error.message : String(error),
+        error: describeErrorForLog(error),
       });
     }
   }

@@ -46,6 +46,7 @@ import { priceHistogramForScope } from '../../db/properties/priceHistogram';
 import { logger } from '../../middlewares/logging';
 import { resolveSearchScope, sendGeoParamError } from './search';
 import { DEFAULT_PRICE_COLUMN, parseFloatParam, parseIntParam, priceColumnForOffering } from './searchQueryBuilder';
+import { describeErrorForLog } from '../../middlewares/errorHandler';
 
 export const DEFAULT_HISTOGRAM_BUCKETS = 24;
 export const MIN_HISTOGRAM_BUCKETS = 8;
@@ -134,7 +135,7 @@ export async function getSearchPriceHistogram(req: Request, res: Response, next:
     // Parameter NAMES only, never values — the same rule as the search endpoint
     // (a `lat`/`lng` here can be a device fix; ADR 0002 §8.2).
     logger.error('Property search price histogram failed', {
-      message: error instanceof Error ? error.message : String(error),
+      error: describeErrorForLog(error),
       queryParams: Object.keys(req.query).sort(),
     });
     next(error);

@@ -60,6 +60,7 @@ import {
 } from './dedupeFingerprint';
 import { schedulePriceEthicsScore } from '../priceEthicsService';
 import { Logger } from '../../utils/logger';
+import { describeErrorForLog } from '../../middlewares/errorHandler';
 
 /** Default TTL (days) for an ingested external listing when none is specified. */
 const DEFAULT_TTL_DAYS = 30;
@@ -261,7 +262,7 @@ export class IngestionService {
       () => undefined,
       (error: unknown) => {
         this.logger.warn(`Background task failed: ${label}`, {
-          error: error instanceof Error ? error.message : String(error),
+          error: describeErrorForLog(error),
         });
       },
     );
@@ -420,7 +421,7 @@ export class IngestionService {
       this.logger.warn('Duplicate check failed; proceeding with ingest', {
         source: listing.source,
         sourceId: listing.sourceId,
-        error: error instanceof Error ? error.message : String(error),
+        error: describeErrorForLog(error),
       });
       return null;
     }

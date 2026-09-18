@@ -71,8 +71,12 @@ describe('stripeWebhook signature verification', () => {
       .set('content-type', 'application/json')
       .send(Buffer.from(JSON.stringify({ id: 'evt_1' })));
 
+    // The refusal is the status code — that is what Stripe reads. The body is
+    // ours and says nothing the library told us; see
+    // `__tests__/unit/responseInternalLeaks.test.ts`.
     expect(res.status).toBe(400);
-    expect(res.text).toContain('Webhook Error');
+    expect(res.body.error.code).toBe('INVALID_WEBHOOK_SIGNATURE');
+    expect(res.text).not.toContain('No signatures found');
     expect(constructEvent).toHaveBeenCalledTimes(1);
   });
 

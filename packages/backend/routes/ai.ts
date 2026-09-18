@@ -29,7 +29,6 @@ import { formatDataStreamPart, pipeDataStreamToResponse } from 'ai';
 import { OxyInferenceError } from '@oxy.so/core';
 import { getOxyUserId } from '@oxy.so/core/server';
 import type { InferenceContentPart, InferenceMessage } from '@oxy.so/contracts';
-import { getErrorMessage } from '../utils/errors';
 import { logger } from '../middlewares/logging';
 import { getDb } from '../db/postgres';
 import {
@@ -71,6 +70,7 @@ import {
   aliaChat,
 } from '../services/aliaChatService';
 import pdfParse from 'pdf-parse';
+import { describeErrorForLog } from '../middlewares/errorHandler';
 
 // -------------------------------
 // Types
@@ -350,7 +350,7 @@ const onGracefulClose = (req: Request, res: Response) => {
     try {
       res.end();
     } catch (error: unknown) {
-      logger.warn('Failed to end AI response on client disconnect', { error: getErrorMessage(error) });
+      logger.warn('Failed to end AI response on client disconnect', { error: describeErrorForLog(error) });
     }
   };
   req.on('aborted', onClose);
@@ -428,7 +428,7 @@ const extractLastPropertyIdsFromMessages = (msgs: ChatMessage[]): string[] => {
       if (Array.isArray(arr)) return arr.map(String).filter(Boolean);
     } catch (error: unknown) {
       logger.warn('Failed to parse <PROPERTIES_JSON> block from assistant message', {
-        error: getErrorMessage(error),
+        error: describeErrorForLog(error),
       });
     }
   }
@@ -646,7 +646,7 @@ async function analyzeHousingFile(input: {
       parsedText = await pdfParse(input.buffer).then((result) => String(result.text || ''));
     } catch (error: unknown) {
       logger.info('PDF text extraction unavailable; sending the file through Oxy inference', {
-        error: getErrorMessage(error),
+        error: describeErrorForLog(error),
       });
     }
     const prompt = input.userText || 'Please review this lease/contract and advise.';
@@ -886,7 +886,7 @@ Return only the JSON array, no other text.`;
       });
 
     } catch (error: unknown) {
-      logger.error('AI suggestions failed', { error: getErrorMessage(error) });
+      logger.error('AI suggestions failed', { error: describeErrorForLog(error) });
       return inferenceFailure(res, error, 'Failed to generate suggestions');
     }
   });
@@ -1046,7 +1046,7 @@ Return only the JSON array, no other text.`;
             parsedText = await pdfParse(parsed.buffer).then((result) => String(result.text || ''));
           } catch (error: unknown) {
             logger.info('PDF text extraction unavailable; sending the file through Oxy inference', {
-              error: getErrorMessage(error),
+              error: describeErrorForLog(error),
             });
           }
           const content: InferenceContentPart[] = [
@@ -1135,7 +1135,7 @@ Return only the JSON array, no other text.`;
         try {
           await appendMessages(db, conversation.id, [{ role: 'user', content: savedUserContent }]);
         } catch (error: unknown) {
-          logger.warn('Failed to persist user message to conversation', { error: getErrorMessage(error) });
+          logger.warn('Failed to persist user message to conversation', { error: describeErrorForLog(error) });
         }
       }
 
@@ -1168,7 +1168,7 @@ Return only the JSON array, no other text.`;
               }
             }
           } catch (error: unknown) {
-            logger.warn('Failed to persist assistant reply to conversation', { error: getErrorMessage(error) });
+            logger.warn('Failed to persist assistant reply to conversation', { error: describeErrorForLog(error) });
           }
         })();
       };
@@ -1180,7 +1180,7 @@ Return only the JSON array, no other text.`;
         pipeStreamingTextDataStream(res, aliaResponseStream, {
           onComplete: persistAssistantResponse,
           onError(error) {
-            logger.error('Alia SSE stream failed', { error: getErrorMessage(error) });
+            logger.error('Alia SSE stream failed', { error: describeErrorForLog(error) });
           },
         });
         return;
@@ -1190,13 +1190,12 @@ Return only the JSON array, no other text.`;
       persistAssistantResponse(bufferedResponse);
       pipeTextDataStream(res, bufferedResponse);
     } catch (error: unknown) {
-      const message = getErrorMessage(error);
-      logger.error('AI stream failed', { error: message });
+      logger.error('AI stream failed', { error: describeErrorForLog(error) });
       if (res.headersSent) {
         try {
           res.end();
         } catch (endError) {
-          logger.warn('Failed to end aborted AI stream response', { error: getErrorMessage(endError) });
+          logger.warn('Failed to end aborted AI stream response', { error: describeErrorForLog(endError) });
         }
         return;
       }
@@ -1243,7 +1242,7 @@ Return only the JSON array, no other text.`;
         mediaType,
       });
     } catch (error: unknown) {
-      logger.error('AI analyze-file failed', { error: getErrorMessage(error) });
+      logger.error('AI analyze-file failed', { error: describeErrorForLog(error) });
       return inferenceFailure(res, error, 'File analysis is unavailable');
     }
   });
@@ -1286,12 +1285,12 @@ Return only the JSON array, no other text.`;
       onGracefulClose(req, res);
       pipeTextDataStream(res, output);
     } catch (error: unknown) {
-      logger.error('AI analyze-file stream failed', { error: getErrorMessage(error) });
+      logger.error('AI analyze-file stream failed', { error: describeErrorForLog(error) });
       if (res.headersSent) {
         try {
           res.end();
         } catch (endError) {
-          logger.warn('Failed to end aborted AI analyze-file stream response', { error: getErrorMessage(endError) });
+          logger.warn('Failed to end aborted AI analyze-file stream response', { error: describeErrorForLog(endError) });
         }
         return;
       }

@@ -124,6 +124,7 @@ import {
   updateOwnReview,
   type ReviewPatch,
 } from '../db/reviews/reviewWrites';
+import { describeErrorForLog } from '../middlewares/errorHandler';
 
 const ok = (res: Response, data: Record<string, unknown>) => res.status(200).json({ success: true, ...data });
 const created = (res: Response, data: Record<string, unknown>) => res.status(201).json({ success: true, ...data });
@@ -356,7 +357,7 @@ export const getReviewsByAddress = async (req: Request, res: Response) => {
       totalReviews: data.aggregatedStats.totalReviews,
     });
   } catch (error) {
-    logger.error('Error fetching hierarchical reviews', { error: error instanceof Error ? error.message : String(error) });
+    logger.error('Error fetching hierarchical reviews', { error: describeErrorForLog(error) });
     return serverError(res, { message: 'Failed to fetch reviews' });
   }
 };
@@ -408,7 +409,7 @@ export const getAddressReviewStats = async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    logger.error('Error fetching hierarchical review stats', { error: error instanceof Error ? error.message : String(error) });
+    logger.error('Error fetching hierarchical review stats', { error: describeErrorForLog(error) });
     return serverError(res, { message: 'Failed to fetch review statistics' });
   }
 };
@@ -453,7 +454,7 @@ async function notifyAddressOwners(params: {
     );
   } catch (error) {
     logger.error('Failed to dispatch address_review_created notifications', {
-      error: error instanceof Error ? error.message : String(error),
+      error: describeErrorForLog(error),
     });
   }
 }
@@ -584,7 +585,7 @@ export const createReview = async (req: Request, res: Response) => {
     }
     return created(res, { review: serializeReview(hydrated) });
   } catch (error) {
-    logger.error('Error creating review', { error: error instanceof Error ? error.message : String(error) });
+    logger.error('Error creating review', { error: describeErrorForLog(error) });
     return serverError(res, { message: 'Failed to create review' });
   }
 };
@@ -617,7 +618,7 @@ export const getReviewById = async (req: Request, res: Response) => {
 
     return ok(res, { review: serializeReview(hydrated) });
   } catch (error) {
-    logger.error('Error fetching review', { error: error instanceof Error ? error.message : String(error) });
+    logger.error('Error fetching review', { error: describeErrorForLog(error) });
     return serverError(res, { message: 'Failed to fetch review' });
   }
 };
@@ -665,7 +666,7 @@ export const updateReview = async (req: Request, res: Response) => {
     }
     return ok(res, { review: serializeReview(hydrated) });
   } catch (error) {
-    logger.error('Error updating review', { error: error instanceof Error ? error.message : String(error) });
+    logger.error('Error updating review', { error: describeErrorForLog(error) });
     return serverError(res, { message: 'Failed to update review' });
   }
 };
@@ -685,7 +686,7 @@ export const deleteReview = async (req: Request, res: Response) => {
 
     return ok(res, { message: 'Review deleted successfully' });
   } catch (error) {
-    logger.error('Error deleting review', { error: error instanceof Error ? error.message : String(error) });
+    logger.error('Error deleting review', { error: describeErrorForLog(error) });
     return serverError(res, { message: 'Failed to delete review' });
   }
 };
@@ -734,7 +735,7 @@ export const getUserReviews = async (req: Request, res: Response) => {
       totalPages,
     });
   } catch (error) {
-    logger.error('Error fetching user reviews', { error: error instanceof Error ? error.message : String(error) });
+    logger.error('Error fetching user reviews', { error: describeErrorForLog(error) });
     return serverError(res, { message: 'Failed to fetch user reviews' });
   }
 };
@@ -777,7 +778,7 @@ export const toggleHelpful = async (req: Request, res: Response) => {
 
     return ok(res, { helpfulCount, viewerHasVotedHelpful });
   } catch (error) {
-    logger.error('Error toggling helpful vote', { error: error instanceof Error ? error.message : String(error) });
+    logger.error('Error toggling helpful vote', { error: describeErrorForLog(error) });
     return serverError(res, { message: 'Failed to toggle helpful vote' });
   }
 };
@@ -876,7 +877,7 @@ export const reportReview = async (req: Request, res: Response) => {
 
     return created(res, { message: 'Report submitted', moderationStatus: outcome.moderationStatus });
   } catch (error) {
-    logger.error('Error reporting review', { error: error instanceof Error ? error.message : String(error) });
+    logger.error('Error reporting review', { error: describeErrorForLog(error) });
     return serverError(res, { message: 'Failed to report review' });
   }
 };
@@ -922,7 +923,7 @@ export const searchAgencies = async (req: Request, res: Response) => {
     const agencies = await findAgenciesByNamePrefix(normalized);
     return ok(res, { agencies: agencies.map(toAgencySummary) });
   } catch (error) {
-    logger.error('Error searching agencies', { error: error instanceof Error ? error.message : String(error) });
+    logger.error('Error searching agencies', { error: describeErrorForLog(error) });
     return serverError(res, { message: 'Failed to search agencies' });
   }
 };
@@ -944,7 +945,7 @@ export const getAgencyBySlug = async (req: Request, res: Response) => {
       stats: { ...stats, listingsCount },
     });
   } catch (error) {
-    logger.error('Error fetching agency', { error: error instanceof Error ? error.message : String(error) });
+    logger.error('Error fetching agency', { error: describeErrorForLog(error) });
     return serverError(res, { message: 'Failed to fetch agency' });
   }
 };
@@ -976,7 +977,7 @@ export const getAgencyReviews = async (req: Request, res: Response) => {
       totalPages,
     });
   } catch (error) {
-    logger.error('Error fetching agency reviews', { error: error instanceof Error ? error.message : String(error) });
+    logger.error('Error fetching agency reviews', { error: describeErrorForLog(error) });
     return serverError(res, { message: 'Failed to fetch agency reviews' });
   }
 };
@@ -1011,7 +1012,7 @@ export const getAgencyProperties = async (req: Request, res: Response) => {
       hasMore: (page - 1) * limit + hydrated.length < total,
     });
   } catch (error) {
-    logger.error('Error fetching agency properties', { error: error instanceof Error ? error.message : String(error) });
+    logger.error('Error fetching agency properties', { error: describeErrorForLog(error) });
     return serverError(res, { message: 'Failed to fetch agency properties' });
   }
 };
@@ -1025,7 +1026,7 @@ export const getExploreCities = async (_req: Request, res: Response) => {
     const cities = await getCitiesWithReviews();
     return ok(res, { cities });
   } catch (error) {
-    logger.error('Error fetching explore cities', { error: error instanceof Error ? error.message : String(error) });
+    logger.error('Error fetching explore cities', { error: describeErrorForLog(error) });
     return serverError(res, { message: 'Failed to fetch explore cities' });
   }
 };
@@ -1039,7 +1040,7 @@ export const getExploreCity = async (req: Request, res: Response) => {
     const neighborhoods = await getNeighborhoodSummaries(cityId);
     return ok(res, { neighborhoods });
   } catch (error) {
-    logger.error('Error fetching explore city', { error: error instanceof Error ? error.message : String(error) });
+    logger.error('Error fetching explore city', { error: describeErrorForLog(error) });
     return serverError(res, { message: 'Failed to fetch explore city' });
   }
 };
@@ -1063,7 +1064,7 @@ export const getExploreNeighborhood = async (req: Request, res: Response) => {
       totalPages,
     });
   } catch (error) {
-    logger.error('Error fetching explore neighborhood', { error: error instanceof Error ? error.message : String(error) });
+    logger.error('Error fetching explore neighborhood', { error: describeErrorForLog(error) });
     return serverError(res, { message: 'Failed to fetch explore neighborhood' });
   }
 };
