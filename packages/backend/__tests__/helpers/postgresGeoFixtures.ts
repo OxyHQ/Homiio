@@ -57,6 +57,7 @@ import { syncHasImages } from '../../db/hasImages';
 import {
   addressCandidates,
   addressMaterializations,
+  addressMergeProposals,
   addressMerges,
   addresses,
   agencies,
@@ -172,6 +173,13 @@ export async function resetGeoTables(): Promise<void> {
   // `resetGeoTables` next — measured, 337 failures across 27 suites, every one
   // of them a foreign-key error on a table that file never touched.
   await db.delete(addressMerges);
+  // Correction proposals point at BOTH addresses with ON DELETE RESTRICT for the
+  // same reason the merge audit does: a proposal is the record of somebody
+  // asking for a place to change, and a place may not vanish out from under one.
+  // Same failure mode as the line above if it is omitted — it fails in whichever
+  // OTHER file shares the worker database and resets next, on a table that file
+  // never touched.
+  await db.delete(addressMergeProposals);
   await db.delete(addresses);
   await db.delete(neighborhoods);
   // `cities.cover_image_id` / `regions.cover_image_id` are ON DELETE SET NULL,

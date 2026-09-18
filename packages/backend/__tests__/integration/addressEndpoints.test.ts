@@ -226,68 +226,72 @@ describe('POST /api/addresses', () => {
 });
 
 describe('PUT /api/addresses/:id', () => {
-  it('writes only the allowlisted building fields', async () => {
+  // WHO may write is `addressWriteAuthorization.test.ts`'s subject. What is left
+  // here is the SHAPE of the request: which keys the handler reads at all, and
+  // that geo is never among them.
+  it('refuses the identity fields and never spreads the body', async () => {
     const chain = await seedGeoChain({ cityName: 'Barcelona' });
     const other = await seedGeoChain({ countryCode: 'PT', countryName: 'Portugal', regionName: 'Lisbon', cityName: 'Lisbon' });
     const addressId = await seedAddress({ chain, street: 'Carrer de Mallorca' });
 
+    // `street` and `floor` re-key the place, so this is a merge PROPOSAL and not
+    // an edit (ADR 0001 §8.1) — refused here, and taken by
+    // `POST /api/addresses/:id/corrections`.
     await request(app)
       .put(`/api/addresses/${addressId}`)
       .send({
         street: 'Carrer del Consell de Cent',
         floor: '3',
-        // None of these may land: geo is resolved at creation time, and
-        // `req.body` is never spread into an update.
         cityId: other.cityId,
         countryCode: 'PT',
         normalizedKey: 'forged',
         id: 'forged',
       })
-      .expect(200);
+      .expect(400);
 
     const [row] = await getDb().select().from(addresses).where(eq(addresses.id, addressId));
-    expect(row.street).toBe('Carrer del Consell de Cent');
-    expect(row.floor).toBe('3');
+    expect(row.street).toBe('Carrer de Mallorca');
+    expect(row.floor).toBeNull();
+    // Geo is resolved at creation time and `req.body` is never spread into an
+    // update, so none of the three forged keys lands either.
     expect(row.cityId).toBe(chain.cityId);
     expect(row.countryCode).toBe('ES');
     expect(row.id).toBe(addressId);
   });
 
-  it('re-derives address_level from the written fields', async () => {
+  it('serves an empty patch as the read it is, without a session', async () => {
     const chain = await seedGeoChain({});
-    const addressId = await seedAddress({ chain });
+    const addressId = await seedAddress({ chain, street: 'Carrer de Mallorca' });
 
-    const res = await request(app).put(`/api/addresses/${addressId}`).send({ unit: '2B' }).expect(200);
-
-    // `address_level` is GENERATED, so it cannot be written and cannot disagree
-    // with the fields — an update that adds a unit promotes the row by itself.
-    // Read off the COLUMN, because the response no longer carries it: writing a
-    // field is not a relationship to the dwelling, so the answer is built for
-    // the audience a GET would be (ADR 0003 §3.2).
-    const [row] = await getDb().select().from(addresses).where(eq(addresses.id, addressId));
-    expect(row.addressLevel).toBe('UNIT');
-    expect(res.body.address).not.toHaveProperty('unit');
-    expect(res.body.address).not.toHaveProperty('addressLevel');
+    // A PUT that writes nothing needs no authority, because a GET of the same
+    // row answers the same body — and the response is built for the audience a
+    // GET would be, so it carries neither the level nor the dwelling.
+    const res = await request(app).put(`/api/addresses/${addressId}`).send({}).expect(200);
+    expect(res.body.address.street).toBe('Carrer de Mallorca');
+    // A STREET row publishes its own id and level — the reduction is not
+    // unconditional, it withholds what is INSIDE a building.
+    expect(res.body.address.addressLevel).toBe('STREET');
+    expect(res.body.address).not.toHaveProperty('floor');
   });
 
   it('404s for an unknown address', async () => {
-    await request(app).put(`/api/addresses/${'0'.repeat(24)}`).send({ floor: '1' }).expect(404);
-  });
-
-  it('refuses to clear the NOT NULL street', async () => {
-    const chain = await seedGeoChain({});
-    const addressId = await seedAddress({ chain });
-    await request(app).put(`/api/addresses/${addressId}`).send({ street: null }).expect(400);
+    await request(app).put(`/api/addresses/${'0'.repeat(24)}`).send({}).expect(404);
   });
 });
 
 describe('DELETE /api/addresses/:id', () => {
-  it('deletes an address and 404s the second time', async () => {
+  it('does not exist — a place is never deleted, only merged', async () => {
+    // ADR 0001 §2.1.7. The route is gone rather than guarded, because a
+    // canonical address is the permanent identity of a dwelling and eleven of
+    // the twelve columns that can point at one REFUSE a delete. The
+    // never-orphaned half is in `addressWriteAuthorization.test.ts`.
     const chain = await seedGeoChain({});
     const addressId = await seedAddress({ chain });
 
-    await request(app).delete(`/api/addresses/${addressId}`).expect(200);
     await request(app).delete(`/api/addresses/${addressId}`).expect(404);
+
+    const rows = await getDb().select().from(addresses).where(eq(addresses.id, addressId));
+    expect(rows).toHaveLength(1);
   });
 });
 

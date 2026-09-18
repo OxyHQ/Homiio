@@ -183,6 +183,22 @@ export function classifyAddressRelation(
     case 'address_external_refs.address_id':
       return 'move';
 
+    // An OPEN correction proposal (ADR 0001 §8.1) is a claim about the present —
+    // "the number on this building is wrong" — so it follows the place, on both
+    // ends. `keep` would be the `left_in_place` mistake `services/addressMerge.ts`
+    // records in its own header: a proposal listed by
+    // `where from_address_id = <the place>` and left on the loser is invisible on
+    // the survivor, which is content surviving in the table and nowhere else.
+    //
+    // Both moves can collide, and both collisions are the merge planner's to
+    // refuse rather than this module's to prevent:
+    // `address_merge_proposals_open_key` if one person had the same correction
+    // open against both rows, and `address_merge_proposals_not_self_check` if the
+    // survivor is the row a proposal already pointed AT.
+    case 'address_merge_proposals.from_address_id':
+    case 'address_merge_proposals.to_address_id':
+      return 'move';
+
     // The hierarchy. A unit whose building lost a merge must re-parent, or its
     // parent is a retired row — and `parent_address_id` is what every other
     // domain is meant to read instead of recomputing the chain.

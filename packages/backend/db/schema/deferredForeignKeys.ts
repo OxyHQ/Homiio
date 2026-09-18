@@ -182,6 +182,12 @@ export const OXY_ACCOUNT_COLUMN_NAMES: ReadonlySet<string> = new Set([
   // routinely not the person who made it, and collapsing the two would erase
   // exactly the fact an audit of a disputed merge is looking for.
   'reverted_by_oxy_user_id',
+  // Whoever PROPOSED a correction to a place's identity (ADR 0001 §8.1). A third
+  // role beside the two above and deliberately not merged with `actor`: a
+  // proposal is a claim anybody signed in may make, while an actor is somebody
+  // who applied one, and the whole point of the split is that the two are never
+  // the same act.
+  'proposed_by_oxy_user_id',
 ]);
 
 /**
