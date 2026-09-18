@@ -1,3 +1,6 @@
+const mockLogger = { error: jest.fn(), warn: jest.fn(), info: jest.fn(), debug: jest.fn() };
+jest.mock('../../middlewares/logging', () => ({ logger: mockLogger }));
+
 import {
   CANONICAL_SINDI_ALIA_AGENT_ID,
   AliaChatConfigurationError,
@@ -55,6 +58,10 @@ function createService(
 describe('AliaChatService', () => {
   const sindiAgentId = CANONICAL_SINDI_ALIA_AGENT_ID;
 
+  beforeEach(() => {
+    mockLogger.error.mockClear();
+  });
+
   it('never answers a chat failure with a consent request', () => {
     for (const status of [401, 403]) {
       expect(aliaChatHttpFailure(new AliaChatError(status))).toEqual({
@@ -98,6 +105,7 @@ describe('AliaChatService', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          Accept: 'text/event-stream',
           Authorization: 'Bearer oxy-homiio-service-token',
           'X-Oxy-Requester-Assertion': ASSERTION,
         },
@@ -134,7 +142,7 @@ describe('AliaChatService', () => {
     expect(text).toBe(`Aquí tienes. <PROPERTIES_JSON>["${propertyId}"]</PROPERTIES_JSON>`);
   });
 
-  it('ignores Alia named events and consumes the response through EOF after DONE', async () => {
+  it('ignores Alia named events and stops reading at DONE', async () => {
     const fetchClient = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>().mockResolvedValue(
       sseResponse([
         'event: alia.reasoning\ndata: {"eventVersion":1,"content":"private"}\n\n',
@@ -330,5 +338,79 @@ describe('AliaChatService', () => {
       requester: REQUESTER,
       messages: [{ role: 'user', content: 'Hola' }],
     })).rejects.toMatchObject({ name: 'AliaChatError', status: 502 });
+  });
+
+  /**
+   * The failure that was invisible for hours.
+   *
+   * Alia writes an error INTO the stream and then ends it. The hand-rolled
+   * parser this service used to carry had no branch for that frame: it saw a
+   * chunk with no `choices`, threw a bare 502, and dropped the code Alia had
+   * already named. `@alia.onl/server` makes it an `error` EVENT, so the branch
+   * below is the one that cannot be forgotten.
+   */
+  it('reports the server error code when Alia ends the stream with an error', async () => {
+    const fetchClient = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>().mockResolvedValue(
+      sseResponse([
+        `data: ${chatChunk('Un mom')}\n\n`,
+        'data: {"error":{"message":"The agent is unavailable.","type":"server_error","code":"agent_unavailable","param":null}}\n\n',
+        'data: [DONE]\n\n',
+      ]),
+    );
+    const service = createService({ apiUrl: 'https://api.alia.onl', agentId: sindiAgentId, fetch: fetchClient });
+
+    const stream = await service.streamText({ requester: REQUESTER, messages: [{ role: 'user', content: 'Hola' }] });
+    const seen: string[] = [];
+    const error = await (async () => {
+      try {
+        for await (const text of stream) seen.push(text);
+        return null;
+      } catch (reason: unknown) {
+        return reason;
+      }
+    })();
+
+    // What arrived before the failure is still the person's answer.
+    expect(seen).toEqual(['Un mom']);
+    expect(error).toMatchObject({ name: 'AliaChatError', status: 503 });
+    expect(aliaChatHttpFailure(error as AliaChatError).body.code).toBe('chat_unavailable');
+    expect(mockLogger.error).toHaveBeenCalledWith('Alia ended the stream with an error', {
+      code: 'agent_unavailable',
+    });
+    // Alia's prose is Alia's. Homiio logs the code and answers in its own words.
+    expect(JSON.stringify(mockLogger.error.mock.calls)).not.toContain('The agent is unavailable.');
+  });
+
+  it('names the SHAPE of a chunk it cannot read, and never its content', async () => {
+    const prompt = 'the person asked about 12 Privet Drive';
+    const fetchClient = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>().mockResolvedValue(
+      sseResponse([`data: ${JSON.stringify({ id: 'x', prompt, choices: 'nope' })}\n\ndata: [DONE]\n\n`]),
+    );
+    const service = createService({ apiUrl: 'https://api.alia.onl', agentId: sindiAgentId, fetch: fetchClient });
+
+    await expect(collect(await service.streamText({
+      requester: REQUESTER,
+      messages: [{ role: 'user', content: 'Hola' }],
+    }))).rejects.toMatchObject({ name: 'AliaChatError', status: 502 });
+
+    expect(mockLogger.error).toHaveBeenCalledWith('Alia stream could not be read', {
+      reason: 'unexpected_chunk',
+      keys: ['id', 'prompt', 'choices'],
+      choices: 'string',
+    });
+    expect(JSON.stringify(mockLogger.error.mock.calls)).not.toContain('Privet');
+  });
+
+  it('reports a truncated stream as a truncated stream, not as an unreadable chunk', async () => {
+    const fetchClient = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>().mockResolvedValue(
+      sseResponse([`data: ${chatChunk('partial')}\n\n`]),
+    );
+    const service = createService({ apiUrl: 'https://api.alia.onl', agentId: sindiAgentId, fetch: fetchClient });
+
+    await expect(collect(await service.streamText({
+      requester: REQUESTER,
+      messages: [{ role: 'user', content: 'Hola' }],
+    }))).rejects.toMatchObject({ name: 'AliaChatError', status: 502 });
+    expect(mockLogger.error).toHaveBeenCalledWith('Alia stream could not be read', { reason: 'truncated' });
   });
 });

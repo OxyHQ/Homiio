@@ -92,14 +92,20 @@ describe('Homiio never reaches an inference provider directly', () => {
     expect(route).toContain('signal: upstreamAbort.signal');
     expect(route).toContain("req.once('aborted', abortUpstream)");
     expect(route).not.toMatch(/feature:\s*['"]sindi-chat['"]/);
-    expect(source).toContain('/v1/chat/completions');
-    expect(source).toMatch(/body: JSON\.stringify\(\{\s*agentId,/);
-    expect(source).toContain('stream: true');
-    expect(source).toContain('Authorization: `Bearer ${serviceToken}`');
+    // The path, the body and the bearer header are `@alia.onl/server`'s now —
+    // Alia's own client, published from the repository that writes the stream.
+    // This gate stops naming bytes this file no longer assembles and names the
+    // ONE hop that still has to be right here: which client, and what it is
+    // handed. `aliaChatService.test.ts` asserts the resulting wire.
+    expect(source).toContain("from '@alia.onl/server'");
+    expect(source).toContain('new AliaServerClient(');
+    expect(source).toContain('baseUrl: input.apiUrl');
+    expect(source).toContain('token: serviceToken');
     // ADR 0025: Alia gets the service token and a requester assertion. The
     // person's bearer is traded with Oxy and never becomes an Alia header.
-    expect(source).toContain("'X-Oxy-Requester-Assertion': assertion");
+    expect(source).toContain("headers: { 'X-Oxy-Requester-Assertion': assertion }");
     expect(source).not.toMatch(/['"]X-Oxy-User-Id['"]\s*:/i);
+    expect(source).not.toMatch(/token:\s*input\.requester/);
     expect(source).not.toMatch(/Authorization:\s*`Bearer \$\{input\.requester/);
     expect(route).not.toContain('getUserAccessToken');
     // The bearer handed to the service is the one the auth middleware verified
