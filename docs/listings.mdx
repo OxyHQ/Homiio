@@ -147,6 +147,23 @@ deliberate.
   building's or withheld. The rules themselves are
   [ADR 0003](./adr/0003-privacy-verification-publication) §3; this is only where
   they are applied.
+- **The ADDRESS endpoints apply the same ladder, with their own audience.**
+  `/api/addresses/:id`, `/search` and `/nearby` publish `building` — no `floor`,
+  `unit`, `subunit`, `address_lines`, `po_box`, `reference`, `extras` or
+  `normalizedKey`, a coordinate rounded to the building rung, and a UNIT row's
+  `id` replaced by its building's or absent. There is no listing in those
+  requests to carry a publication choice, so the audience is the CALLER's
+  relation to the dwelling: `exact` on the detail read for the owner of a
+  listing at that address or a party to an active lease there, matched on the
+  session in the query (`db/addresses/addressAudience.ts`). The list surfaces
+  never escalate, for anybody. Writing a review at an address is deliberately
+  not one of those relations — it is an unlock a caller can grant themselves.
+- **A review is filed at a unit and published at the building** (ADR 0003 §5.1).
+  For anybody but its author, a review's `addressId`, its `populatedAddress.id`
+  and its `addressLevel` name the BUILDING it rolls up to, `unitLevelId` is
+  absent, and the address body is the reduced one above. The author reads their
+  own review exactly as they filed it. Still open in #365, and not done here:
+  the §5.2 author identity forms, and §5.6's month-grained dates and banded rent.
 
 Because the address is a row rather than a blob, several listings and several
 reviews can point at the same physical place, which is what makes rent history

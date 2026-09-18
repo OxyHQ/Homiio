@@ -111,6 +111,13 @@ export default function WriteReviewPage() {
   );
 
   // Prefill the address step when arriving from an existing Homiio address.
+  //
+  // `floor` and `unit` arrive only when the endpoint serves them — the person
+  // owns a listing at that address, or holds an active lease there (ADR 0003
+  // §3.2; `db/addresses/addressAudience.ts`). For everybody else they are
+  // ABSENT by design and the two steps below start empty, which is correct:
+  // the author names the flat THEY lived in, and nobody else's door should be
+  // typed into their review for them.
   useEffect(() => {
     if (!addressId || !oxyServices || !activeSessionId) return;
     let cancelled = false;

@@ -85,13 +85,21 @@ describe('GET /api/addresses/:id', () => {
     expect(address.coordinates).toEqual({ type: 'Point', coordinates: [2.1734, 41.3851] });
   });
 
-  it('exposes the generated address level', async () => {
+  it('exposes the generated address level of a place it publishes, and not a unit’s', async () => {
     const chain = await seedGeoChain({});
     const streetId = await seedAddress({ chain });
     const unitId = await seedAddress({ chain, street: 'Other', floor: '3' });
 
     expect((await request(app).get(`/api/addresses/${streetId}`).expect(200)).body.address.addressLevel).toBe('STREET');
-    expect((await request(app).get(`/api/addresses/${unitId}`).expect(200)).body.address.addressLevel).toBe('UNIT');
+
+    // A UNIT row published at building precision names neither its own id nor
+    // its level — announcing `UNIT` is announcing that the id names one
+    // household. The whole rule, per audience, is in
+    // `addressPrecisionPublication.test.ts`.
+    const unit = (await request(app).get(`/api/addresses/${unitId}`).expect(200)).body.address;
+    expect(unit).not.toHaveProperty('addressLevel');
+    expect(unit).not.toHaveProperty('floor');
+    expect(unit).not.toHaveProperty('id');
   });
 
   it('404s for an unknown id of any shape, rather than 400ing on its spelling', async () => {
@@ -253,7 +261,13 @@ describe('PUT /api/addresses/:id', () => {
 
     // `address_level` is GENERATED, so it cannot be written and cannot disagree
     // with the fields — an update that adds a unit promotes the row by itself.
-    expect(res.body.address.addressLevel).toBe('UNIT');
+    // Read off the COLUMN, because the response no longer carries it: writing a
+    // field is not a relationship to the dwelling, so the answer is built for
+    // the audience a GET would be (ADR 0003 §3.2).
+    const [row] = await getDb().select().from(addresses).where(eq(addresses.id, addressId));
+    expect(row.addressLevel).toBe('UNIT');
+    expect(res.body.address).not.toHaveProperty('unit');
+    expect(res.body.address).not.toHaveProperty('addressLevel');
   });
 
   it('404s for an unknown address', async () => {

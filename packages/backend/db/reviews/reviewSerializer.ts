@@ -97,25 +97,88 @@ function withoutAbsent(record: Record<string, unknown>): Record<string, unknown>
 }
 
 /**
- * Serialize one review onto the wire.
+ * WHO a review body is being built for — ADR 0003 §4.1's `audience`, which a
+ * serializer takes explicitly and never infers.
+ *
+ *  - `public` — anybody who did not write this review, signed in or not.
+ *  - `author` — the session user the row's `oxy_user_id` names.
+ *  - `system` — a body that never leaves the process.
+ */
+export type ReviewAudience = 'public' | 'author' | 'system';
+
+/**
+ * `author` when the session user wrote this review, otherwise `public`.
+ *
+ * The id must be the SESSION's, never one from a path or a body: `GET
+ * /api/reviews/user/:oxyUserId` takes an author id in its URL, and comparing
+ * that against the row would let anybody read any author's reviews at full
+ * precision by naming them.
+ */
+export function reviewAudienceFor(
+  hydrated: HydratedReview,
+  sessionOxyUserId: string | null | undefined,
+): ReviewAudience {
+  return typeof sessionOxyUserId === 'string' &&
+    sessionOxyUserId.length > 0 &&
+    hydrated.review.oxyUserId === sessionOxyUserId
+    ? 'author'
+    : 'public';
+}
+
+/**
+ * Serialize one review onto the wire, for a stated audience.
  *
  * Column names are listed EXPLICITLY rather than spread from the row, which is
  * the same discipline `propertySerializer` and `addressSerializer` follow: a
  * spread publishes whatever the table gains next, and this table's neighbours
  * are a voter list and a report queue.
+ *
+ * ## A review is FILED at a unit and PUBLISHED at the building
+ *
+ * ADR 0003 §5.1. The binding and the publication are two different facts, and
+ * the schema already separates them (`reviews.address_level` plus the three
+ * level ids). For anybody but the author:
+ *
+ *  - `populatedAddress` is built at `building`, so the floor, the door, the
+ *    subunit and the free-form address fields are ABSENT and the coordinate is
+ *    rounded.
+ *  - `addressId` and the address's own `id` name the **building** the review
+ *    rolls up to — its recorded `building_level_id`, which is the authority for
+ *    where this review is filed — and `addressLevel` names that place's level.
+ *    Publishing the unit row's id instead would hand back the one handle that
+ *    names a single household, which is the whole of §3.4.
+ *  - `unitLevelId` is absent: §9's matrix gives the review's unit binding to the
+ *    record's owner and to nobody else, including a caller with a named
+ *    relationship to the place.
+ *
+ * The author reads their own review exactly as stored, which is what makes
+ * "reviews of this exact flat" theirs to correct and to appeal.
+ *
+ * **What this does NOT yet do**, stated rather than implied: §5.2's three author
+ * identity forms, §5.6's month-grained tenancy dates and banded rent, and the
+ * author's opt-in to publishing the unit are all still open (#365). `oxyUserId`,
+ * `livedFrom`, `livedTo` and `price` are published here as they always were.
  */
-export function serializeReview(hydrated: HydratedReview): Record<string, unknown> {
+export function serializeReview(
+  hydrated: HydratedReview,
+  audience: ReviewAudience,
+): Record<string, unknown> {
   const { review } = hydrated;
+  const published = audience === 'public';
+  // The place this review is PUBLISHED against. `building_level_id` is NOT NULL
+  // and, for a BUILDING-level review, is the review's own address — so this is
+  // the row's id in every case but the one it exists for.
+  const placeId = published ? review.buildingLevelId : review.addressId;
 
   return withoutAbsent({
     id: review.id,
 
     // The address hierarchy.
-    addressId: review.addressId,
-    addressLevel: review.addressLevel,
+    addressId: placeId,
+    addressLevel: published && placeId !== review.addressId ? 'BUILDING' : review.addressLevel,
     streetLevelId: review.streetLevelId,
     buildingLevelId: review.buildingLevelId,
-    unitLevelId: review.unitLevelId,
+    unitLevelId: published ? undefined : review.unitLevelId,
     cityId: review.cityId,
     neighborhoodId: review.neighborhoodId,
     agencyId: review.agencyId,
@@ -174,8 +237,11 @@ export function serializeReview(hydrated: HydratedReview): Record<string, unknow
     helpfulCount: hydrated.helpfulCount,
     viewerHasVotedHelpful: hydrated.viewerHasVotedHelpful,
     agency: hydrated.agency ?? undefined,
-    // `exact`, unchanged: a review's own publication rule (building by default,
-    // ADR 0003 §5.1) is F2/#365's work and is not decided by a listing's ceiling.
-    populatedAddress: serializeAddressRow(hydrated.address, 'exact'),
+    // The review's OWN publication rule, not a listing's ceiling: a listing at
+    // this address may publish its floor, and that is the advertiser's choice
+    // about their advertisement — it is not a resident's consent to be named.
+    populatedAddress: published
+      ? serializeAddressRow(hydrated.address, 'building', placeId)
+      : serializeAddressRow(hydrated.address, 'exact'),
   });
 }
