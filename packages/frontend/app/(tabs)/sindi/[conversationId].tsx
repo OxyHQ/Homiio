@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo } from 'react';
 import { KeyboardAvoidingView, Platform, StyleSheet, View, type ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import type { Message } from '@ai-sdk/react';
 import { Button } from '@oxy.so/bloom/button';
@@ -51,6 +51,7 @@ const webContainer: ViewStyle | undefined =
 export default function ConversationDetail() {
   const { oxyServices, activeSessionId } = useOxy();
   const { t } = useTranslation();
+  const router = useRouter();
   const { conversationId, message } = useLocalSearchParams<{
     conversationId: string;
     message?: string;
@@ -160,6 +161,10 @@ export default function ConversationDetail() {
           authenticatedFetch={authenticatedFetch}
           initialMessages={initialMessages}
           messageFromUrl={message}
+          // THIS host owns `/sindi/:id`, so promoting a new conversation's id
+          // is a correction of its own address. The side panel passes a
+          // different callback and the main pane is never touched (#519 §8.7).
+          onConversationPersisted={(id) => router.replace(`/sindi/${id}`)}
         />
       </KeyboardAvoidingView>
     </SafeAreaView>

@@ -1772,6 +1772,25 @@
       "deniedTitle": "Acceso al micrófono denegado",
       "deniedMessage": "Permite el acceso al micrófono y al reconocimiento de voz en los ajustes para dictar mensajes.",
       "failed": "La entrada de voz se detuvo inesperadamente"
+    },
+    "actions": {
+      "take": "Hazlo",
+      "takeAccessible": "Realizar lo que Sindi propone",
+      "applySearch": "Abrir Explorar con estos filtros",
+      "showSaved": "Abrir tus guardados",
+      "openListing": "Abrir esta vivienda",
+      "showMap": "Ver los resultados en el mapa",
+      "showList": "Ver los resultados en lista",
+      "navigate": {
+        "explore": "Abrir Explorar",
+        "saved": "Abrir Guardados",
+        "home": "Abrir la pantalla de inicio",
+        "my_home": "Abrir Mi hogar",
+        "evictions": "Abrir el tablón de desahucios"
+      },
+      "applied": "Hecho: {{what}}.",
+      "stale": "Has cambiado la búsqueda tú, así que esto se ha dejado como estaba.",
+      "failed": "No se ha podido: {{what}}."
     }
   },
   "sidebar": {

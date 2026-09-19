@@ -10,6 +10,7 @@
 import { Coordinates, Pagination } from './common';
 import type {
   AdminHierarchy,
+  LocationSelection,
   PlaceGeometry,
   PlaceLabel,
   PlaceSource,
@@ -171,4 +172,44 @@ export interface NeighborhoodMetrics {
   currency?: ListingCurrency;
   /** Neighborhood-vs-city rent contrast, or `null` when it can't be computed. */
   vsCity: NeighborhoodVsCity | null;
+}
+
+/**
+ * Build a `place` selection from a resolved city candidate.
+ *
+ * ## Why this lives in shared-types
+ *
+ * It was `packages/frontend/utils/resolveLocationRef.ts#citySelection`, and it
+ * had to move when the backend gained a second caller: #519's Sindi actions
+ * resolve a city server-side and must hand the client a selection identical to
+ * one the user could have picked by hand. Two copies of this function would
+ * agree until somebody edited one, and the failure would be a scope that keys
+ * differently — a cache miss and a URL that reopens somewhere else.
+ *
+ * The candidate already carries everything a selection needs — a pre-split
+ * `label`, an explicit `admin` hierarchy, a declared `precision` and its
+ * geometry — so nothing is re-derived here. In particular nothing joins or
+ * splits a label on commas, which is the assumption that mangles every script
+ * that does not order a place name that way.
+ *
+ * The geometry is assembled as a UNIT rather than field by field, because
+ * `PlaceGeometry` is a two-member union: a real point carries `center` with a
+ * point-class precision, an extent carries `precision: 'area'` and
+ * `center?: never`. Copying `center` and `precision` across independently would
+ * let this function reassemble the contradiction the union exists to forbid —
+ * and that contradiction is not hypothetical, it is what made the gateway emit
+ * `(0, 0)` for every country and put "Spain" over the Gulf of Guinea.
+ */
+export function citySelection(city: CityPlaceCandidate): LocationSelection {
+  const identity = {
+    kind: 'place',
+    source: { kind: 'homiio', entity: 'city', id: city.id },
+    placeType: 'city',
+    label: city.label,
+    admin: city.admin,
+  } as const;
+
+  return city.precision === 'area' || city.center === undefined
+    ? { ...identity, precision: 'area', bounds: city.bounds }
+    : { ...identity, precision: city.precision, center: city.center, bounds: city.bounds };
 }

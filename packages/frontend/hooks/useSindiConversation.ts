@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, type ScrollView } from 'react-native';
 import { toast } from '@oxy.so/bloom/toast';
-import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { useChat, type Message, type UseChatOptions } from '@ai-sdk/react';
 import { useOxy } from '@oxy.so/services';
@@ -16,8 +15,15 @@ import { getData, storeData } from '@/utils/storage';
 import { logger } from '@/utils/logger';
 import { API_URL } from '@/config';
 import i18next from 'i18next';
+import {
+  parseSindiActionEnvelope,
+  type SindiAction,
+  type SindiActionEnvelope,
+  type SindiAppContext,
+} from '@homiio/shared-types';
 import { requestSindiConsentAndRetry, SindiConsentRequiredError } from './sindiConsent';
 import { shouldPersistSindiTranscript } from './sindiTurnPersistence';
+import { useSindiActions, type SindiActionExecution } from './useSindiActions';
 
 /** Key under which we record that the file-upsell sheet has been shown once. */
 const FILE_UPSELL_KEY = 'sindi:fileUpsellShown';
@@ -66,6 +72,27 @@ export interface UseSindiConversationArgs {
   initialMessages: Message[];
   messageFromUrl?: string;
   onOpenUpsell: () => void;
+  /**
+   * What the app looks like right now, sent WITH the turn (#519 §8.3).
+   *
+   * Deliberately tiny and typed — there is nowhere in {@link SindiAppContext}
+   * to put a DOM snapshot, a coordinate, a token or somebody's saved list.
+   * Absent for a host that has no main pane to describe (the property
+   * bottom sheet), in which case no action is ever emitted for that turn.
+   */
+  appContext?: SindiAppContext;
+  /**
+   * A new conversation just acquired its real, server-side id.
+   *
+   * A CALLBACK, not a `router.replace`, and that is the fix for #519 §8.7: the
+   * hook used to redirect to `/sindi/:id` unconditionally, so consolidating a
+   * chat started in the SIDE PANEL replaced whatever the user was reading in
+   * the main pane with the full-screen chat — the panel navigating the page out
+   * from under itself. The full-screen host still replaces its own route; the
+   * panel updates its selected conversation and the main pane is untouched; a
+   * host that passes nothing simply keeps its local id.
+   */
+  onConversationPersisted?: (conversationId: string) => void;
 }
 
 export interface UseSindiConversationResult {
@@ -86,6 +113,16 @@ export interface UseSindiConversationResult {
   onRemoveFile: () => void;
   onSuggestionPress: (prompt: string) => void;
   onRequestConsent: () => void;
+  /**
+   * What the executor did with each action of this turn, in arrival order.
+   *
+   * Rendered by the surface so an `inline` result becomes an explicit offer the
+   * user can take, and a `stale` one says so instead of pretending. Empty for a
+   * turn that produced no action, which is most of them.
+   */
+  actions: readonly SindiActionExecution[];
+  /** Take an offered action because the person pressed it. See `useSindiActions.take`. */
+  takeAction: (action: SindiAction) => void;
 }
 
 /** Whether a conversation ID refers to a persisted (server-side) conversation. */
@@ -122,8 +159,9 @@ export function useSindiConversation({
   initialMessages,
   messageFromUrl,
   onOpenUpsell,
+  appContext,
+  onConversationPersisted,
 }: UseSindiConversationArgs): UseSindiConversationResult {
-  const router = useRouter();
   const oxyContext = useOxy();
 
   const [attachedFile, setAttachedFile] = useState<AttachedAsset | null>(null);
@@ -134,6 +172,18 @@ export function useSindiConversation({
   const lastSyncedHash = useRef<string>('');
   const lastMsgKeyRef = useRef<string>('');
   const messageSentRef = useRef<string>('');
+
+  /**
+   * The turn currently in flight, minted HERE and echoed by the server.
+   *
+   * The client mints it rather than the server, and that is what makes
+   * cancellation work: `onStop` clears it, so every envelope that arrives
+   * afterwards names a turn that is no longer active and the executor refuses
+   * it. A server-minted id would have to be learned from the stream, which is
+   * exactly the window in which a cancelled turn's late action would land.
+   */
+  const [activeTurnId, setActiveTurnId] = useState<string | null>(null);
+  const [actions, setActions] = useState<readonly SindiActionExecution[]>([]);
 
   const { updateConversationMessages, saveConversation } = useConversationStore();
 
@@ -172,9 +222,55 @@ export function useSindiConversation({
     [authenticatedFetch, initialMessages, conversationId],
   );
 
-  const { messages, error, handleInputChange, input, handleSubmit, isLoading, append, reload, stop } =
-    useChat(chatOptions);
+  const {
+    messages,
+    error,
+    handleInputChange,
+    input,
+    handleSubmit,
+    isLoading,
+    append,
+    reload,
+    stop,
+    data,
+    setData,
+  } = useChat(chatOptions);
   const needsConsent = error instanceof SindiConsentRequiredError;
+
+  const onActionExecuted = useCallback((execution: SindiActionExecution) => {
+    setActions((previous) => [...previous, execution]);
+  }, []);
+
+  const { execute, take } = useSindiActions({
+    activeTurnId,
+    // The revision the SERVER was told about. A manual filter change since then
+    // bumps the context's revision, so the action no longer matches and is
+    // reported `stale` rather than overwriting what the user just did.
+    contextRevision: appContext?.revision ?? 0,
+    onExecuted: onActionExecuted,
+  });
+
+  /**
+   * Offer every action frame of this turn to the executor.
+   *
+   * `data` is an ACCUMULATING array rather than an event, so this effect re-runs
+   * with the whole list on every frame. That is safe because the executor is
+   * idempotent per `actionId` — which is the property the dedupe exists for, and
+   * the reason this can be a plain effect rather than a subscription with its
+   * own bookkeeping.
+   *
+   * A frame that is not an envelope of this contract's version parses to `null`
+   * and is skipped: the data channel is shared, and an unrelated frame must not
+   * break the chat.
+   */
+  useEffect(() => {
+    if (!data || data.length === 0) return;
+    for (const frame of data) {
+      const envelope: SindiActionEnvelope | null = parseSindiActionEnvelope(frame);
+      if (!envelope) continue;
+      execute(envelope);
+    }
+  }, [data, execute]);
 
   const onRequestConsent = useCallback(async () => {
     if (!needsConsent || isRequestingConsent) return;
@@ -262,8 +358,12 @@ export function useSindiConversation({
 
           saveConversation(updatedConversation, authenticatedFetch)
             .then((saved) => {
+              // The HOST decides what a new id means. See
+              // `onConversationPersisted`: this used to be an unconditional
+              // `router.replace('/sindi/' + id)`, which let a chat started in
+              // the side panel navigate the main pane to the full-screen chat.
               if (saved && saved.id !== conversationId) {
-                router.replace(`/sindi/${saved.id}`);
+                onConversationPersisted?.(saved.id);
               }
             })
             .catch((e) => logger.error('Failed to save conversation:', e));
@@ -283,9 +383,21 @@ export function useSindiConversation({
     updateConversationMessages,
     saveConversation,
     authenticatedFetch,
-    router,
+    onConversationPersisted,
     scrollToEnd,
   ]);
+
+  /**
+   * Close the turn when the stream settles.
+   *
+   * A turn that has finished is no longer active, so a frame arriving after it
+   * — a duplicate, a reconnection replay — is refused by the executor for the
+   * same reason a cancelled turn's frames are. The window in which an action
+   * may be applied is exactly the window in which its turn is streaming.
+   */
+  useEffect(() => {
+    if (!isLoading && activeTurnId !== null) setActiveTurnId(null);
+  }, [isLoading, activeTurnId]);
 
   // Auto-scroll when a new last message arrives.
   useEffect(() => {
@@ -325,6 +437,34 @@ export function useSindiConversation({
 
   const onRemoveFile = useCallback(() => setAttachedFile(null), []);
 
+  /**
+   * Begin a turn: mint its id, clear the previous turn's frames and results.
+   *
+   * Clearing `data` matters as much as minting the id. The AI SDK accumulates
+   * frames across turns, so without it the previous turn's envelopes would be
+   * re-offered on every render of the next one — harmless thanks to the dedupe,
+   * and needless work that would also keep a stale action visible in `actions`.
+   */
+  const beginTurn = useCallback((): string => {
+    const turnId = `t${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+    setActiveTurnId(turnId);
+    setActions([]);
+    setData([]);
+    return turnId;
+  }, [setData]);
+
+  /**
+   * Stop the stream AND close the turn.
+   *
+   * Both, in that order. Aborting the request without closing the turn leaves
+   * anything already in flight applicable — "Cancelar un turno impide aplicar
+   * lo que llegue después" (#519 §8.8) — and the turn id is the mechanism.
+   */
+  const onStop = useCallback(() => {
+    stop();
+    setActiveTurnId(null);
+  }, [stop]);
+
   const onAttachFile = useCallback(async () => {
     try {
       // Gate behind Homiio+ or per-file credits.
@@ -361,7 +501,17 @@ export function useSindiConversation({
       const trimmed = (input || '').trim();
 
       if (!attachedFile) {
-        handleSubmit();
+        const turnId = beginTurn();
+        // Per-REQUEST body, not the hook's static one: `turnId` changes every
+        // turn and `appContext` changes whenever the user moves or filters, and
+        // a memoised `body` would send whichever values happened to be captured
+        // when the options object was last rebuilt.
+        handleSubmit(undefined, {
+          body: {
+            turnId,
+            ...(appContext ? { appContext } : {}),
+          },
+        });
         return;
       }
 
@@ -456,11 +606,13 @@ export function useSindiConversation({
     scrollViewRef,
     onChangeInput,
     onSubmit,
-    onStop: stop,
+    onStop,
     onAttachFile,
     onRemoveFile,
     onSuggestionPress,
     onRequestConsent,
+    actions,
+    takeAction: take,
   };
 }
 

@@ -1,0 +1,229 @@
+---
+title: Sindi acting on the app
+---
+
+# Sindi actions
+
+How the assistant changes what the main pane is showing — and every rule that
+stops it from doing anything else.
+
+Delivered for #519 §8. The product ask is one sentence: *"Sindi debe actuar
+sobre la app cuando permanece al lado de ella."* Asking for flats under €1,200
+with the panel docked opens Explore with those filters, in the main pane,
+without closing the chat. With the chat full-screen, the same request answers in
+the conversation and does not navigate.
+
+## The two channels
+
+A turn produces **text** and, sometimes, **one action**. They travel separately
+and neither is derived from the other.
+
+```
+POST /api/ai/stream   { messages, conversationId, turnId, appContext }
+   │
+   ├─ extractFiltersWithAI(user's message)  →  { filters, wantsListings }
+   │        │
+   │        └─ services/sindiActions.ts  →  SindiActionEnvelope | null
+   │                                          (city resolved, never guessed)
+   │
+   └─ aliaChat.streamText(...)  →  text deltas
+                                          │
+ data frame (2:)  ─────── action ─────────┤
+ text frames (0:) ─────── prose ──────────┘
+                                          │
+                              useChat → { messages, data }
+                                          │
+                  hooks/useSindiActions.ts → applied | inline | rejected | stale | failed
+```
+
+**The action never comes from the assistant's prose.** #519 §8.5 forbids two
+things by name — inferring executable actions with a regex over the reply, and
+turning `<PROPERTIES_JSON>` into a command language — and the shape above is
+what makes both unreachable: the emitter runs before the model answers and never
+sees what it said.
+
+## Why the server derives it, and what would change if Alia gained tools
+
+The textbook design gives the model a tool. Homiio cannot today: Alia owns
+Sindi's tools and memory, and while `@alia.onl/server@1.0.1` carries an
+`alia.tool_result` event, **there is no evidence that Sindi's Alia agent has
+Homiio tools provisioned** — #519 §8.5 is explicit that a prompt mentioning a
+capability is not evidence of one, and this change did not assume otherwise.
+
+What Homiio does already own is the intent extraction: `/ai/stream` has run
+`extractFiltersWithAI` over the user's own message, and performed the search
+itself, since long before this. So the action is derived from a structured
+extraction of what the **person** asked.
+
+If the upstream grant lands, `services/sindiActions.ts` is the only file that
+changes: the intent stops coming from Homiio's extraction and starts coming from
+an `alia.tool_result` frame. The contract, the validation, the executor, the
+capability rule and every test below are unaffected.
+
+## What Sindi may do
+
+Five intents, in `shared-types/sindiAction.ts`. The union is **closed**, and
+adding to it is a reviewed edit to that file.
+
+| Intent | Payload | Executed as |
+|---|---|---|
+| `apply_search` | a **patch** over the live query | the canonical pipeline → `/explore` |
+| `show_saved` | an optional folder id | `/saved`, under the reader's own session |
+| `open_listing` | one validated property id | the listing route |
+| `set_results_view` | `list` \| `map` | `store/exploreViewStore.ts`; filters untouched |
+| `navigate` | one **enumerated** destination | the router's own path table |
+
+**Nothing here writes.** Paying, signing, applying, messaging a third party,
+publishing and deleting are not in the union and may not be added to it: each
+needs its own explicit action and its own domain controls. Controlling the app
+is not a session with unlimited permissions.
+
+There is no `eval`, no generated JavaScript, no DOM click, no arbitrary URL, no
+API method chosen by a model and no SQL. `navigate` takes a destination from a
+five-member enum rather than a path, because a path is a string and a string is
+an open door.
+
+## `apply_search` is a patch, not a query
+
+Absent keys leave the live query alone. That is what makes *"ahora con dos
+habitaciones y que admitan mascotas"* keep the area and the budget the previous
+turn established; a full query would silently reset every field the model did
+not restate.
+
+`location` is the one field that **replaces** rather than merges, because a
+geographic selection is atomic (ADR 0002 §3) — "the old city with the new
+bounds" is unrepresentable by construction.
+
+The offering is applied **first**, because switching it clears the price range
+on purpose (a monthly rent is not a nightly rate), so a patch carrying both must
+set the offering before the price or the price is dropped.
+
+### Ambiguity is refused
+
+A city name that resolves to several places produces **no area at all**. Taking
+the first candidate is the homonym bug (ADR 0002 §12.2) arriving through a new
+door. The rest of the turn still applies — "under 900" against whatever area is
+in force — and Sindi's prose asks which Barcelona was meant.
+
+### The currency gap, stated
+
+`SindiSearchPatch` has **no currency field**, deliberately. Homiio's price filter
+has exactly one implicit currency (`SEARCH_PRICE_CURRENCY`, euros) through the
+URL, the store and the SQL. Adding a currency here would be a field the server
+ignores — which #519 §6.1 forbids in the same breath as it asks for the currency
+work. **That row is open and is not closed by this change.**
+
+## When Sindi may act: the layout, never the platform
+
+`canControlApp = panelVisible && panelDocked`.
+
+| Viewport | Panel | Capability |
+|---|---|---|
+| < 500 | none; the chat is its own screen | `chat_only` |
+| 500–1023 | overlay, with a scrim | `chat_only` |
+| ≥ 1024 | docked as the shell's `aside` | `side_by_side` |
+
+**An overlay is not side-by-side**, and this is the load-bearing line. It is
+narrower than the viewport, so it looks like a side panel to a width check;
+#519 §8.2 answers directly — while it blocks the page it behaves as chat-only.
+Navigating a page the user cannot see through is worse than not navigating.
+
+A narrow browser tab and the full-screen `/sindi` route on a large monitor are
+both chat-only. A wide native tablet is not. `Platform.OS` appears nowhere in
+the decision.
+
+The capability is **re-read at execution time**, not at stream start, because a
+window can be resized mid-answer.
+
+## When an action may still be applied
+
+Four refusals, in `hooks/sindiActionRules.ts#envelopeRefusal`:
+
+| Check | Refusal | Closes |
+|---|---|---|
+| `actionId` already run | `rejected` | a replayed or duplicated frame navigating twice |
+| `turnId` is not the active turn | `stale` | a cancelled turn's late action — this is what makes **Stop** stop |
+| `contextRevision` ≠ the current one | `stale` | the user changed a filter by hand; **their change wins** |
+| no main pane right now | `inline` | navigating behind a scrim |
+
+**History executes nothing, structurally.** Actions arrive on the AI SDK's data
+channel, which belongs to a live stream. A conversation restored from the store,
+a shared transcript opened by link and a Markdown re-render all carry text and
+nothing else — there is no code path from a stored message to the executor.
+
+**A search is one navigation.** The executor builds the whole next query and
+navigates to its `exploreHref` in a single operation; #519 §8.6 forbids a bare
+`router.push('/explore')` followed by a patch, because `/explore` hydrates from
+the URL and the patch would race it.
+
+## Chat-only is an offer, not a silent drop
+
+With no main pane the outcome is `inline`, and `SindiActionCard` renders the
+action as a button. Pressing it is the intervention #519 §8.1 asks for — *"una
+representación/acción explícita dentro del chat; no sustituir la pantalla sin
+intervención"* — and it is the one legitimate route past the capability check,
+because a press **is** the intervention.
+
+The homes themselves already appear as cards in the conversation (the existing
+`<PROPERTIES_JSON>` rendering), so the offer adds the navigation, not the
+results.
+
+The card also reports what actually happened. `applied` names the change;
+`stale` says the user's own later change won, and is deliberately not styled as
+an error; `failed` says so plainly. Sindi never claims to have changed filters
+the executor left alone.
+
+## What travels with a turn
+
+`SindiAppContext` — and the interface **is** the policy, because there is
+nowhere in it to put anything else:
+
+```ts
+{ revision, presentation, destination, offering?, locationToken?, scopeLabel?, priceMin?, priceMax? }
+```
+
+`locationToken` is the `loc` token, which by ADR 0002 §8.2 carries no coordinate
+at any precision (the device case serialises to `here.<radiusMeters>`).
+`scopeLabel` is the area's display name, already on screen. Never sent: a DOM
+snapshot, the store, an IP, a GPS fix, a token, a document, a contact, or the
+contents of somebody's saved list.
+
+The **revision** is a hash of the live query. It rides with the turn and comes
+back in the envelope, which is how a manual filter change mid-turn is detected.
+
+The in-property bottom sheet sends **no context at all** (`canSendAppContext =
+false`): it floats over the listing the reader is on, so it has no main pane to
+drive.
+
+## The conversation-id fix
+
+`useSindiConversation` used to promote a new conversation's id with an
+unconditional `router.replace('/sindi/:id')`. Correct for the full-screen route,
+which owns that address; a disaster from the docked panel, which would replace
+whatever the user was reading with the full-screen chat.
+
+The hook now holds no router at all and calls `onConversationPersisted`. The
+full-screen route replaces its own address; the panel updates its selected
+conversation; the bottom sheet does neither.
+`__tests__/sindi/conversationHostPromotion.test.ts` is the gate.
+
+## Tests
+
+| File | What it pins |
+|---|---|
+| `frontend __tests__/sindi/actionContract.test.ts` | the closed union, every refusal, patch semantics |
+| `frontend __tests__/sindi/controlCapability.test.ts` | the capability at every breakpoint |
+| `frontend __tests__/sindi/conversationHostPromotion.test.ts` | the panel navigates nothing |
+| `backend __tests__/integration/sindiActions.test.ts` | derivation, homonyms, context validation (real Postgres) |
+
+## Still open in #519 §8
+
+Named here so the gap is visible rather than implied:
+
+- **Alia tool results.** The bridge consumes Homiio's own extraction; an
+  `alia.tool_result` frame is not read yet, and the upstream grant is unverified.
+- **`show_saved` inline results.** Chat-only offers the navigation; it does not
+  yet render the person's saved homes as cards inside the conversation.
+- **Currency.** See above — §6.1's row, untouched.
+- **Undo.** #519 §8.7 permits an undo control and does not require one; there
+  is none.

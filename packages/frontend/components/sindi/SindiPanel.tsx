@@ -303,6 +303,11 @@ export function SindiPanel({ placement }: { placement: 'aside' | 'overlay' }) {
           isAuthenticated={isAuthenticated}
           authenticatedFetch={conversationFetch}
           initialMessages={initialMessages}
+          // The panel updates its OWN selection and leaves the main pane alone.
+          // This replaced an unconditional `router.replace('/sindi/:id')` inside
+          // the hook, which navigated the page the panel was sitting beside —
+          // the exact failure #519 §8.7 describes.
+          onConversationPersisted={setActiveConversationId}
         />
       ) : (
         <ScrollView contentContainerStyle={styles.landing} showsVerticalScrollIndicator={false}>

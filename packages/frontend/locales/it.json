@@ -1783,6 +1783,25 @@
       "deniedTitle": "Accesso al microfono negato",
       "deniedMessage": "Consenti l'accesso al microfono e al riconoscimento vocale nelle impostazioni per dettare i messaggi.",
       "failed": "L'input vocale si è interrotto inaspettatamente"
+    },
+    "actions": {
+      "take": "Fallo",
+      "takeAccessible": "Esegui ciò che Sindi propone",
+      "applySearch": "Apri Esplora con questi filtri",
+      "showSaved": "Apri i tuoi salvati",
+      "openListing": "Apri questa casa",
+      "showMap": "Mostra i risultati sulla mappa",
+      "showList": "Mostra i risultati come elenco",
+      "navigate": {
+        "explore": "Apri Esplora",
+        "saved": "Apri Salvati",
+        "home": "Apri la schermata iniziale",
+        "my_home": "Apri Casa mia",
+        "evictions": "Apri la bacheca degli sfratti"
+      },
+      "applied": "Fatto: {{what}}.",
+      "stale": "Hai modificato tu la ricerca, quindi questo è stato lasciato com’era.",
+      "failed": "Non è stato possibile: {{what}}."
     }
   },
   "sidebar": {
