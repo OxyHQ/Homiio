@@ -14,7 +14,7 @@
  *
  * Whether a late mount fails LOUDLY or SILENTLY is decided by middleware this
  * integration does not own, and all three arrangements exist across the Oxy
- * apps. `readRawBody` in `@oxy.so/crowdsource-express` prefers a Buffer on
+ * apps. `readRawBody` in `@crowdsource.you/core/express` prefers a Buffer on
  * `req.rawBody`: an app using `express.json({ verify })` leaves one, so a late
  * mount VERIFIES the parser's bytes, answers 200 and looks perfect — the guard
  * could be deleted and nothing would break.
@@ -62,7 +62,7 @@ import {
   caseDecidedEventFixture,
   decisionFixture,
   signWebhookDelivery,
-} from '@oxy.so/crowdsource-testing';
+} from '@crowdsource.you/core/testing';
 
 import { createCrowdSourceWebhookRoutes } from '../../routes/crowdSourceWebhook';
 import { findModerationEvent } from '../../db/moderation/moderationEventRepository';
@@ -125,7 +125,7 @@ function buildApp(observed: { body: unknown }): Express {
 /**
  * A delivery signed the way CrowdSource signs one.
  *
- * Signed by `@oxy.so/crowdsource-testing`, never by a local HMAC written to match
+ * Signed by `@crowdsource.you/core/testing`, never by a local HMAC written to match
  * the verifier. A hand-rolled signer is a second definition of what gets signed,
  * and the two get "corrected" until they agree with each other and both disagree
  * with the service — at which point the test proves the receiver accepts what
@@ -416,7 +416,7 @@ describe('crowdsource webhook mount', () => {
    * Does HOMIIO pass its secret through, or do these tests only prove the SDK
    * can verify a signature?
    *
-   * `configuredSecrets` in `@oxy.so/crowdsource-express` is
+   * `configuredSecrets` in `@crowdsource.you/core/express` is
    * `options.secret ?? process.env.CROWDSOURCE_WEBHOOK_SECRET`, and
    * `jest.setup.ts` sets that variable — so deleting `secret:` from the route
    * leaves the SDK falling back to the identical value and **every other test in

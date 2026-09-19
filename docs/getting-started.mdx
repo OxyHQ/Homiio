@@ -51,6 +51,9 @@ STRIPE_CANCEL_URL=http://localhost:8130/profile/subscriptions
 
 # Oxy service identity + Oxy-owned routing profile — required for point inference
 # These are product-to-Oxy credentials, never an upstream provider key.
+# The pair is LOCAL ONLY: a deployed Homiio attests its ECS task role instead
+# (oxy ADR 0026) and carries neither variable. Set both here, or leave both
+# unset and inference refuses rather than failing at the edge.
 OXY_SERVICE_API_KEY=oxy_dk_...
 OXY_SERVICE_API_SECRET=...
 OXY_INFERENCE_ROUTING_PROFILE_ID=01a06477-94f5-74f0-bc25-4c5c13b93ccd

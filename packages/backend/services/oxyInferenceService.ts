@@ -6,7 +6,7 @@ import {
 } from '@oxy.so/core';
 import type { InferenceMessage, ResponseFormat } from '@oxy.so/contracts';
 import config from '../config';
-import { oxyService } from './oxy';
+import { canAuthenticateAsOxyService, oxyService } from './oxy';
 
 type InferenceClient = Pick<OxyInferenceClient, 'respond'>;
 
@@ -89,10 +89,23 @@ export function textFromInferenceResponse(response: OxyInferenceResponse): strin
     .join('');
 }
 
-const missingConfiguration = [
-  config.oxy.serviceApiKey ? null : 'OXY_SERVICE_API_KEY',
-  config.oxy.serviceApiSecret ? null : 'OXY_SERVICE_API_SECRET',
-].filter((name): name is string => name !== null);
+/**
+ * What inference needs is an IDENTITY, not two environment variables.
+ *
+ * This used to name the missing variable, which was true while a secret was the
+ * only way to be Homiio and became a lie the moment the deployment stopped
+ * carrying one: under oxy ADR 0026 the SDK attests the ECS task role and mints
+ * the same token. A key check would have failed every point-inference call —
+ * titles, filters, suggestions, file analysis — with "OXY_SERVICE_API_KEY is not
+ * configured" on a deployment that could mint perfectly well: features that
+ * answer nothing, blamed on a variable nobody was ever going to put back.
+ *
+ * A local checkout that can neither attest nor present a pair still gets an
+ * accurate refusal, and the two names are still the thing to set THERE.
+ */
+const missingConfiguration = canAuthenticateAsOxyService()
+  ? []
+  : ['OXY_SERVICE_API_KEY', 'OXY_SERVICE_API_SECRET'];
 
 export const homiioInference = new HomiioInferenceService({
   client: new OxyInferenceClient({

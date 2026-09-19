@@ -3,7 +3,7 @@
  *
  * CrowdSource's side of the "don't design moderation around your own nouns"
  * problem is already solved: the Case Envelope knows nothing about a listing, a
- * review or a post, and `@oxy.so/crowdsource` composes one from a description of
+ * review or a post, and `@crowdsource.you/core` composes one from a description of
  * the material. What is left for an application is a translation problem, and
  * this file is the whole of it:
  *
@@ -30,7 +30,7 @@
  *    or what happens to the report; those belong to callers that are shared.
  */
 
-import type { ContextInput, ReportSubjectInput, ResourceInput } from '@oxy.so/crowdsource';
+import type { ContextInput, ReportSubjectInput, ResourceInput } from '@crowdsource.you/core';
 
 /**
  * The SDK's resource description, unchanged.

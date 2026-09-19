@@ -18,8 +18,8 @@
  * the sweep.
  */
 
-import { decisionFixture } from '@oxy.so/crowdsource-testing';
-import type { Decision } from '@oxy.so/crowdsource-contracts';
+import { decisionFixture } from '@crowdsource.you/core/testing';
+import type { Decision } from '@crowdsource.you/contracts';
 import { count, eq, inArray } from 'drizzle-orm';
 import { uuidv7 } from '@oxy.so/db';
 import {

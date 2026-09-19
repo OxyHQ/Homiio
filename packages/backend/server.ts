@@ -225,7 +225,7 @@ app.use('/api', apiLimiter);
  * the Stripe webhook below is.
  *
  * The HMAC covers the bytes that arrived, and a JSON parser destroys them.
- * `@oxy.so/crowdsource-express` reads the raw body itself and refuses outright
+ * `@crowdsource.you/core/express` reads the raw body itself and refuses outright
  * rather than verifying a signature over a re-serialisation, so a late mount
  * fails every delivery loudly instead of silently trusting the wrong bytes.
  * `__tests__/integration/crowdSourceWebhookMount.test.ts` asserts that nothing

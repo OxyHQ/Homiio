@@ -90,8 +90,6 @@ STRIPE_PRICE_PLUS=price_...
 STRIPE_PRICE_FILE=price_...
 STRIPE_SUCCESS_URL=https://homiio.com/profile/subscriptions?session_id={CHECKOUT_SESSION_ID}
 STRIPE_CANCEL_URL=https://homiio.com/profile/subscriptions
-OXY_SERVICE_API_KEY=oxy_dk_...
-OXY_SERVICE_API_SECRET=...
 OXY_INFERENCE_ROUTING_PROFILE_ID=01a06477-94f5-74f0-bc25-4c5c13b93ccd
 ALIA_API_URL=https://api.alia.onl
 SINDI_OXY_SERVICE_API_KEY=oxy_dk_...
@@ -105,10 +103,18 @@ AWS_S3_BUCKET=oxy-homiio-media-usw2-237343248947
 
 Production uses native AWS S3 — omit `AWS_ENDPOINT_URL`. The bucket name and region are set in `~/Oxy/oxy-infra/terraform-uswest2/app-services.tf`.
 
-The point-inference `OXY_SERVICE_API_*` pair and Sindi's separate
-`SINDI_OXY_SERVICE_API_*` pair are written directly to the exact
+**The API carries no Oxy service credential of its own.** It proves what it is
+by attesting its ECS task role and gets a short-lived Oxy service token back
+(oxy ADR 0026); `@oxy.so/core` >= 1.6.1 takes that path whenever
+`OXY_SERVICE_API_KEY` and `OXY_SERVICE_API_SECRET` are absent. Because a release
+renders from the task definition the service is already RUNNING, removing the
+pair took an explicit entry in the API lane's `TASK_CONFIGURATION_REMOVALS_JSON`
+— deleting the lines that supplied it would have left it inherited forever.
+
+Sindi's separate `SINDI_OXY_SERVICE_API_*` pair is a different identity that
+Alia verifies, so it is still injected: written directly to the exact
 `/oxy/homiio/` SSM SecureStrings by Oxy's exact-application-ID credential
-provisioner. They are not Homiio GitHub secrets; deploy only verifies those
+provisioner. It is not a Homiio GitHub secret; deploy only verifies those
 parameters without decryption before using their exact ARNs.
 `SINDI_ALIA_AGENT_ID` and `OXY_INFERENCE_ROUTING_PROFILE_ID` are non-secret GitHub
 repository **variables** copied byte-for-byte into only the API task definition.
@@ -117,7 +123,7 @@ profile by slug/display name, list position or fallback. The routing value is
 the exact opaque primary key returned by the catalogue bootstrap. The deploy
 also pins `ALIA_API_URL=https://api.alia.onl` instead of inheriting an arbitrary
 value from an older task revision. The listing worker receives none of these
-eight inference settings, including either API origin.
+inference settings, including either API origin.
 
 These are Oxy identity/routing values, not upstream provider credentials. All
 provider keys remain encrypted in Kaana PostgreSQL/KMS and must never be added

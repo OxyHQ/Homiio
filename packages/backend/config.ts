@@ -253,20 +253,20 @@ export interface Config {
    * drawn jury, and signed decisions come back.
    *
    * The variable names come from the PACKAGES, not from any plan document:
-   * `@oxy.so/crowdsource` reads `CROWDSOURCE_SERVICE_KEY` and
-   * `CROWDSOURCE_BASE_URL`, `@oxy.so/crowdsource-express` reads
-   * `CROWDSOURCE_WEBHOOK_SECRET` and `CROWDSOURCE_WEBHOOK_SECRET_PREVIOUS`.
+   * `@crowdsource.you/core` reads `CROWDSOURCE_BASE_URL`, and
+   * `@crowdsource.you/core/express` reads `CROWDSOURCE_WEBHOOK_SECRET` and
+   * `CROWDSOURCE_WEBHOOK_SECRET_PREVIOUS`.
    *
-   * There is deliberately NO `CROWDSOURCE_APP_ID`. The `applicationId` is read
-   * off the service credential and no surface in the SDK can carry one, so a
-   * variable holding it could only ever disagree with the credential — and a
-   * request able to name its own tenant is the cross-tenant hole the whole
-   * credential model exists to close.
+   * There is deliberately NO `CROWDSOURCE_SERVICE_KEY` and no
+   * `CROWDSOURCE_APP_ID`. Homiio is a first-party Oxy application, so
+   * `crowdSourceForOxyService()` presents the Oxy service token this process
+   * already mints and CrowdSource resolves the tenant from the Oxy application
+   * that token names. A variable holding a tenant could only ever disagree with
+   * the token — and a request able to name its own tenant is the cross-tenant
+   * hole the whole credential model exists to close.
    */
   crowdSource: {
     enabled: boolean;
-    /** `applicationId:credentialId:secret` as ONE opaque value. */
-    serviceKey?: string;
     /** Optional; the SDK defaults to the single deployment. */
     baseUrl?: string;
     webhookSecret?: string;
@@ -498,7 +498,6 @@ const config: Config = {
   // switching this on delivers the backlog rather than stranding it.
   crowdSource: {
     enabled: process.env.CROWDSOURCE_ENABLED === 'true',
-    serviceKey: process.env.CROWDSOURCE_SERVICE_KEY,
     baseUrl: process.env.CROWDSOURCE_BASE_URL,
     webhookSecret: process.env.CROWDSOURCE_WEBHOOK_SECRET,
     webhookPreviousSecret: process.env.CROWDSOURCE_WEBHOOK_SECRET_PREVIOUS,
@@ -516,27 +515,27 @@ const config: Config = {
 /**
  * A half-configured integration is worse than a disabled one.
  *
- * With a service key and no webhook secret, reports leave Homiio and no decision
- * can ever be verified coming back; with a webhook secret and no service key,
- * nothing ever leaves. Either way the gap is invisible until somebody wonders
- * months later why a case never returned, so both directions are required
- * together and the process refuses to boot without them.
+ * Switching the delivery loop on with no webhook secret means reports leave
+ * Homiio and no decision can ever be verified coming back. The gap is invisible
+ * until somebody wonders months later why a case never returned, so the loop and
+ * the return path are required together and the process refuses to boot without
+ * both.
+ *
+ * Only the webhook secret is checked. The outbound half is no longer
+ * configuration: `crowdSourceForOxyService()` presents the Oxy service token
+ * this process can already mint, and whether it can is something the process IS
+ * rather than something somebody typed — so it is answered there, at the client,
+ * and not by a variable this file could compare against.
  *
  * Thrown at module load rather than checked at the first delivery: a
  * misconfiguration that surfaces on deploy is a rollback, and one that surfaces
  * on the first report is lost moderation work.
  */
-if (config.crowdSource.enabled) {
-  const missing = [
-    config.crowdSource.serviceKey ? null : 'CROWDSOURCE_SERVICE_KEY',
-    config.crowdSource.webhookSecret ? null : 'CROWDSOURCE_WEBHOOK_SECRET',
-  ].filter((name): name is string => name !== null);
-  if (missing.length > 0) {
-    throw new Error(
-      `CROWDSOURCE_ENABLED=true requires ${missing.join(' and ')}. Reports would leave ` +
-        'Homiio with no way for a decision to come back, or never leave at all.',
-    );
-  }
+if (config.crowdSource.enabled && !config.crowdSource.webhookSecret) {
+  throw new Error(
+    'CROWDSOURCE_ENABLED=true requires CROWDSOURCE_WEBHOOK_SECRET. Reports would ' +
+      'leave Homiio with no way for a decision to come back.',
+  );
 }
 
 export default config;
