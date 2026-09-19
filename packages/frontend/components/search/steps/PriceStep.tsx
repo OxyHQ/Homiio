@@ -31,7 +31,7 @@ import { useTranslation } from 'react-i18next';
 import { PriceRangeFilter } from '@oxy.so/bloom/stay-filters';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 
-import { OfferingType, formatMoney } from '@homiio/shared-types';
+import { OfferingType, formatMoney, type ListingCurrency } from '@homiio/shared-types';
 
 import { SEARCH_PRICE_CURRENCY } from '@/components/search/types';
 import type { SearchPriceHistogram } from '@/hooks/useSearchPriceHistogram';
@@ -76,14 +76,34 @@ export function priceRangeValue(
   return [lo, Math.max(lo, hi)];
 }
 
-/** The optional bounds a slider position means: an end of the track is no bound. */
+/**
+ * The optional bounds a slider position means: an end of the track is no bound.
+ *
+ * The CURRENCY comes back with them, because a bound and its unit are one
+ * answer and splitting them across two calls is how they came to disagree. The
+ * caller passes the currency the bars were counted in — the scope's own, from
+ * the histogram — so the range the user set is filtered in the currency they
+ * were looking at while they set it.
+ *
+ * A slider pushed to both ends is no filter, so it carries no unit either:
+ * shipping a lone `priceCurrency` would narrow a search to one market on behalf
+ * of somebody who had just cleared the price.
+ */
 export function priceBounds(
   [lo, hi]: [number, number],
   track: PriceTrack,
-): { priceMin: number | undefined; priceMax: number | undefined } {
+  currency: ListingCurrency | undefined,
+): {
+  priceMin: number | undefined;
+  priceMax: number | undefined;
+  priceCurrency: ListingCurrency | undefined;
+} {
+  const priceMin = lo <= 0 ? undefined : lo;
+  const priceMax = hi >= track.max ? undefined : hi;
   return {
-    priceMin: lo <= 0 ? undefined : lo,
-    priceMax: hi >= track.max ? undefined : hi,
+    priceMin,
+    priceMax,
+    priceCurrency: priceMin === undefined && priceMax === undefined ? undefined : currency,
   };
 }
 
@@ -143,7 +163,11 @@ interface PriceStepProps {
   priceMax?: number;
   /** The scope's distribution over `0`..`track.max`; omit to draw no bars. */
   histogram?: SearchPriceHistogram;
-  onChange: (min: number | undefined, max: number | undefined) => void;
+  onChange: (
+    min: number | undefined,
+    max: number | undefined,
+    currency: ListingCurrency | undefined,
+  ) => void;
 }
 
 export const PriceStep: React.FC<PriceStepProps> = ({ offering, priceMin, priceMax, histogram, onChange }) => {
@@ -157,10 +181,14 @@ export const PriceStep: React.FC<PriceStepProps> = ({ offering, priceMin, priceM
 
   const handleChange = useCallback(
     (next: [number, number]) => {
-      const bounds = priceBounds(next, track);
-      onChange(bounds.priceMin, bounds.priceMax);
+      // The unit the bars in front of the user are counted in. Until the
+      // histogram answers there is none, and `undefined` is sent as itself —
+      // the server then resolves it from the scope rather than the client
+      // guessing euros and filtering a złoty market away.
+      const bounds = priceBounds(next, track, histogram?.currency);
+      onChange(bounds.priceMin, bounds.priceMax, bounds.priceCurrency);
     },
-    [onChange, track],
+    [histogram?.currency, onChange, track],
   );
 
   return (

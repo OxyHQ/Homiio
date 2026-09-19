@@ -347,6 +347,12 @@ export function buildSearchParams(query: SearchQuery): Record<string, string | n
   if (typeof query.priceMax === 'number') {
     params[isSale ? 'maxSalePrice' : 'priceMax'] = query.priceMax;
   }
+  // The unit the bounds are in, sent ONLY beside a bound. A currency with no
+  // range is not a filter, and the server treats it as one it may ignore — but
+  // sending it anyway would put a param in the cache key that changes no result.
+  if (query.priceCurrency && (query.priceMin !== undefined || query.priceMax !== undefined)) {
+    params.priceCurrency = query.priceCurrency;
+  }
   if (typeof query.bedrooms === 'number' && query.bedrooms > 0) {
     params.bedrooms = query.bedrooms;
   }
@@ -594,7 +600,16 @@ function identifyingParams(
   return rest;
 }
 
-/** Every param a price BOUND travels in — none of them narrows a price histogram. */
+/**
+ * Every param a price BOUND travels in — none of them narrows a price histogram.
+ *
+ * `priceCurrency` is deliberately NOT here. It is not a bound: it is the unit
+ * the bars are counted in, and the histogram endpoint reads it as `currency`
+ * (see {@link buildPriceHistogramParams}). Stripping it would draw the
+ * distribution in the scope's dominant currency while the thumbs filtered in
+ * the one the user chose — the bars and the filter describing different homes,
+ * which is the split this whole contract exists to close.
+ */
 const PRICE_BOUND_PARAMS = ['priceMin', 'priceMax', 'minSalePrice', 'maxSalePrice'] as const;
 
 /**
@@ -608,9 +623,21 @@ const PRICE_BOUND_PARAMS = ['priceMin', 'priceMax', 'minSalePrice', 'maxSalePric
  * narrowing them to the selected range would erase every bar outside the thumbs.
  */
 export function buildPriceHistogramParams(query: SearchQuery): Record<string, string | number> {
-  const { page: _page, limit: _limit, sortBy: _sortBy, sortOrder: _sortOrder, ...params } =
-    buildSearchParams(query);
+  const {
+    page: _page,
+    limit: _limit,
+    sortBy: _sortBy,
+    sortOrder: _sortOrder,
+    priceCurrency: _priceCurrency,
+    ...params
+  } = buildSearchParams(query);
   for (const key of PRICE_BOUND_PARAMS) delete params[key];
+  // The histogram spells the unit `currency`. Renamed rather than dropped: a
+  // user who switched the slider to złoty must see złoty BARS, or the
+  // distribution under the thumbs is a different question from the one they
+  // filtered. `buildSearchParams` only emits it beside a bound, and the bounds
+  // are gone by here, so it is re-read from the query instead.
+  if (query.priceCurrency) params.currency = query.priceCurrency;
   return params;
 }
 

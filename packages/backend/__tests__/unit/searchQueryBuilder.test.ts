@@ -219,28 +219,68 @@ describe('priceColumnForOffering', () => {
 });
 
 describe('buildSearchPlan price ranges', () => {
-  it('applies a bare range to the requested offering, never to sale', () => {
-    const shortTerm = render(
-      buildSearchPlan({ offering: 'short_term_rent', priceMin: '50' }).conditions,
-    );
-    expect(shortTerm.sql).toContain('"properties"."short_term_rent_nightly_rate" >=');
-    expect(shortTerm.params).toContain(50);
+  /**
+   * The bound is HANDED BACK, not pushed.
+   *
+   * It used to be a condition in `conditions` like any other, and that is
+   * precisely how it came to be applied in no currency at all: this function is
+   * synchronous and pure, so the only currency available to it was none. The
+   * plan it returns now is applied by `resolveSearchScope`, which is the first
+   * caller that knows what the scope's listings are priced in.
+   *
+   * So these assert the PLAN, and assert that the conditions do NOT carry a
+   * price — a range that reappeared in `conditions` would be applied twice, the
+   * second time without a currency, which is the original bug wearing the new
+   * shape.
+   */
+  it('plans a bare range against the requested offering, and never against sale', () => {
+    const shortTerm = buildSearchPlan({ offering: 'short_term_rent', priceMin: '50' });
+    expect(shortTerm.price).toMatchObject({
+      priceColumn: properties.shortTermRentNightlyRate,
+      currencyColumn: properties.shortTermRentCurrency,
+      min: 50,
+      max: undefined,
+    });
+    expect(render(shortTerm.conditions).sql).not.toContain('short_term_rent_nightly_rate');
 
     // A sale query ignores the bare range — it has its own params.
-    const sale = render(buildSearchPlan({ offering: 'sale', priceMin: '50' }).conditions);
-    expect(sale.sql).not.toContain('"properties"."long_term_rent_monthly_amount"');
-    expect(sale.params).not.toContain(50);
+    const sale = buildSearchPlan({ offering: 'sale', priceMin: '50' });
+    expect(sale.price).toBeNull();
+    expect(render(sale.conditions).params).not.toContain(50);
   });
 
-  it('applies minSalePrice ONLY for an explicit sale query', () => {
-    const sale = render(buildSearchPlan({ offering: 'sale', minSalePrice: '250000' }).conditions);
-    expect(sale.sql).toContain('"properties"."sale_price" >=');
-    expect(sale.params).toContain(250000);
+  it('plans minSalePrice ONLY for an explicit sale query', () => {
+    const sale = buildSearchPlan({ offering: 'sale', minSalePrice: '250000' });
+    expect(sale.price).toMatchObject({
+      priceColumn: properties.salePrice,
+      currencyColumn: properties.saleCurrency,
+      min: 250000,
+    });
+    expect(render(sale.conditions).sql).not.toContain('"properties"."sale_price"');
 
-    const notSale = render(buildSearchPlan({ minSalePrice: '250000' }).conditions);
-    expect(notSale.sql).not.toContain('"properties"."sale_price"');
+    const notSale = buildSearchPlan({ minSalePrice: '250000' });
+    expect(notSale.price).toBeNull();
+    expect(render(notSale.conditions).sql).not.toContain('"properties"."sale_price"');
     // …but the value is still echoed for downstream visibility.
-    expect(buildSearchPlan({ minSalePrice: '250000' }).params.minSalePrice).toBe(250000);
+    expect(notSale.params.minSalePrice).toBe(250000);
+  });
+
+  it('carries the currency the caller named, and nothing when they named none', () => {
+    expect(buildSearchPlan({ priceMax: '1200', priceCurrency: 'pln' }).price?.requestedCurrency)
+      .toBe('PLN');
+    // Absent is "they did not say", which is what lets the scope answer it.
+    expect(buildSearchPlan({ priceMax: '1200' }).price?.requestedCurrency).toBeUndefined();
+    // A code the column cannot hold is dropped rather than passed through: a
+    // filter applied in `XYZ` matches nothing and would read as an empty area.
+    expect(buildSearchPlan({ priceMax: '1200', priceCurrency: 'XYZ' }).price?.requestedCurrency)
+      .toBeUndefined();
+  });
+
+  it('plans nothing at all when no bound was sent', () => {
+    expect(buildSearchPlan({ offering: 'long_term_rent' }).price).toBeNull();
+    // A currency on its own is not a filter. Narrowing a feed to one currency
+    // because a stale param rode along would drop every other market silently.
+    expect(buildSearchPlan({ priceCurrency: 'GBP' }).price).toBeNull();
   });
 });
 

@@ -41,6 +41,8 @@ import {
   OfferingType,
   ExchangeMode,
   isOpaqueId,
+  parseListingCurrency,
+  type ListingCurrency,
 } from '@homiio/shared-types';
 
 import { properties } from '../../db/schema';
@@ -91,6 +93,45 @@ export function priceColumnForOffering(offering: OfferingType | undefined): AnyP
  * filters monthly rent (preserving the historical `minRent/maxRent` behaviour).
  */
 export const DEFAULT_PRICE_COLUMN: AnyPgColumn = properties.longTermRentMonthlyAmount;
+
+/**
+ * The currency column that sits beside an offering's price column.
+ *
+ * Resolved here, next to the price column, because the two are one fact: a
+ * number in `long_term_rent_monthly_amount` means nothing without
+ * `long_term_rent_currency`, and a filter that read one from this module and
+ * the other from somewhere else is how a monthly amount comes to be compared
+ * against a nightly currency.
+ */
+export function currencyColumnForOffering(offering: OfferingType | undefined): AnyPgColumn {
+  switch (offering) {
+    case OfferingType.SHORT_TERM_RENT:
+      return properties.shortTermRentCurrency;
+    case OfferingType.SALE:
+      return properties.saleCurrency;
+    default:
+      return properties.longTermRentCurrency;
+  }
+}
+
+/**
+ * A price bound, with everything needed to apply it — EXCEPT the currency.
+ *
+ * Handed back by {@link buildSearchPlan} instead of being folded into its
+ * conditions, because the currency a bare `priceMax=1200` means is a fact about
+ * the scope's listings rather than about the request, and the scope is not
+ * resolved until the controller has done its async place lookups. Applying the
+ * range here would mean applying it in no currency at all, which is the bug
+ * this split exists to close: see `db/properties/priceInRange`.
+ */
+export interface PriceBoundPlan {
+  readonly priceColumn: AnyPgColumn;
+  readonly currencyColumn: AnyPgColumn;
+  readonly min: number | undefined;
+  readonly max: number | undefined;
+  /** The currency the CALLER named, when they named one we know. */
+  readonly requestedCurrency: ListingCurrency | undefined;
+}
 
 // ---- Pagination / limit constants ----
 export const DEFAULT_PAGE = 1;
@@ -396,6 +437,12 @@ export interface ParsedSearchParams {
   minSalePrice?: number;
   /** Maximum sale price applied to `sale_price`, when present. */
   maxSalePrice?: number;
+  /**
+   * The currency the caller asked the price bound to be read in, when they named
+   * a known one. Absent means "they did not say", NOT "euros" — the scope's own
+   * listings answer it instead (`resolveSearchScope`).
+   */
+  priceCurrency?: ListingCurrency;
   /** Exchange mode the query was scoped to, when valid. */
   exchangeMode?: ExchangeMode;
   /** When true, only listings with `price_ethics_is_fair_price`. */
@@ -412,7 +459,7 @@ export interface ParsedSearchParams {
  */
 export function buildSearchPlan(
   query: Record<string, RawQueryValue>
-): { conditions: SQL[]; params: ParsedSearchParams } {
+): { conditions: SQL[]; price: PriceBoundPlan | null; params: ParsedSearchParams } {
   const conditions: SQL[] = [];
 
   // Public search: never surface soft-deleted (archived) listings, nor ones a
@@ -443,12 +490,12 @@ export function buildSearchPlan(
   // requested it defaults to the long-term column. SALE uses its dedicated
   // minSalePrice/maxSalePrice params below, so a bare price range is not
   // applied to a sale query here.
+  //
+  // The range is NOT pushed here. It is returned as a {@link PriceBoundPlan} and
+  // applied by `resolveSearchScope`, which is the first place that knows what
+  // currency this scope's prices are in — see `db/properties/priceCurrency.ts`.
   const priceMin = parseFloatParam(query.priceMin) ?? parseFloatParam(query.minRent);
   const priceMax = parseFloatParam(query.priceMax) ?? parseFloatParam(query.maxRent);
-  if (offering !== OfferingType.SALE) {
-    const priceRange = inRange(priceColumnForOffering(offering) ?? DEFAULT_PRICE_COLUMN, priceMin, priceMax);
-    if (priceRange) conditions.push(priceRange);
-  }
 
   // --- Bedrooms (minimum) / bathrooms (minimum) ---
   const bedrooms = parseIntParam(query.bedrooms) ?? parseIntParam(query.minBedrooms);
@@ -515,10 +562,6 @@ export function buildSearchPlan(
   // a non-sale query. The values are still echoed in `params` regardless.
   const minSalePrice = parseFloatParam(query.minSalePrice);
   const maxSalePrice = parseFloatParam(query.maxSalePrice);
-  if (offering === OfferingType.SALE) {
-    const saleRange = inRange(properties.salePrice, minSalePrice, maxSalePrice);
-    if (saleRange) conditions.push(saleRange);
-  }
 
   // --- Exchange mode (ONLY applied for an explicit EXCHANGE query) ---
   // The offering condition already constrains the query to exchange listings;
@@ -610,8 +653,32 @@ export function buildSearchPlan(
   const queryIdRaw = asString(query.queryId);
   const queryId = queryIdRaw !== undefined && isOpaqueId(queryIdRaw) ? queryIdRaw : undefined;
 
+  // --- The price bound, gathered (see PriceBoundPlan) ---
+  //
+  // SALE reads its dedicated `minSalePrice`/`maxSalePrice` and every other
+  // offering reads `priceMin`/`priceMax`, so the two never stack: that gating
+  // is the same one the pushed conditions used to carry, moved up here where
+  // the single plan is chosen.
+  const requestedCurrency = parseListingCurrency(asString(query.priceCurrency));
+  const saleQuery = offering === OfferingType.SALE;
+  const boundMin = saleQuery ? minSalePrice : priceMin;
+  const boundMax = saleQuery ? maxSalePrice : priceMax;
+  const price: PriceBoundPlan | null =
+    boundMin === undefined && boundMax === undefined
+      ? null
+      : {
+          priceColumn: saleQuery
+            ? properties.salePrice
+            : priceColumnForOffering(offering) ?? DEFAULT_PRICE_COLUMN,
+          currencyColumn: currencyColumnForOffering(offering),
+          min: boundMin,
+          max: boundMax,
+          requestedCurrency,
+        };
+
   return {
     conditions,
+    price,
     params: {
       page,
       limit,
@@ -628,6 +695,7 @@ export function buildSearchPlan(
       offering,
       minSalePrice,
       maxSalePrice,
+      priceCurrency: requestedCurrency,
       exchangeMode: exchangeModeParam,
       fairPrice: fairPrice === true ? true : undefined,
     },

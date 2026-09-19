@@ -150,7 +150,7 @@ describe('the filter patch cannot reach the geographic dimension', () => {
     // Barcelona. Only the per-offering dimensions (price, dates, guests) reset.
     useSearchQueryStore.getState().commitLocation(barcelona);
     useSearchQueryStore.getState().setQueryText('loft');
-    useSearchQueryStore.getState().setPriceRange(500, 1400);
+    useSearchQueryStore.getState().setPriceRange(500, 1400, 'EUR');
 
     useSearchQueryStore.getState().setOffering(OfferingType.SHORT_TERM_RENT);
 

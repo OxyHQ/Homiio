@@ -126,6 +126,7 @@ type FilterDraft = Pick<
   | 'propertyTypes'
   | 'priceMin'
   | 'priceMax'
+  | 'priceCurrency'
   | 'bedrooms'
   | 'bathrooms'
   | 'sizeMin'
@@ -144,6 +145,7 @@ function draftOf(query: SearchQuery): FilterDraft {
     propertyTypes: query.propertyTypes,
     priceMin: query.priceMin,
     priceMax: query.priceMax,
+    priceCurrency: query.priceCurrency,
     bedrooms: query.bedrooms,
     bathrooms: query.bathrooms,
     sizeMin: query.sizeMin,
@@ -162,6 +164,7 @@ const EMPTY_DRAFT: FilterDraft = {
   propertyTypes: [],
   priceMin: undefined,
   priceMax: undefined,
+  priceCurrency: undefined,
   bedrooms: undefined,
   bathrooms: undefined,
   sizeMin: undefined,
@@ -279,11 +282,6 @@ function FiltersBody({ query, onApply, onClose, showTypes }: FiltersBodyProps): 
     setDraft((prev) => ({ ...prev, ...next }));
   }, []);
 
-  const commitPrice = (range: [number, number]) => {
-    setPriceUi(range);
-    patch(priceBounds(range, track));
-  };
-
   const handleClear = () => {
     setDraft(showTypes ? EMPTY_DRAFT : { ...EMPTY_DRAFT, propertyTypes: draft.propertyTypes });
     setPriceUi(priceRangeValue(undefined, undefined, track));
@@ -303,6 +301,13 @@ function FiltersBody({ query, onApply, onClose, showTypes }: FiltersBodyProps): 
   // currency — the scope's, once its distribution has come back.
   const formatting = useFormatting();
   const formatPrice = usePriceFormatter(track, priceHistogram?.currency);
+
+  // Declared after the histogram because it READS it: the range the user sets
+  // is committed in the currency the bars they set it against were counted in.
+  const commitPrice = (range: [number, number]) => {
+    setPriceUi(range);
+    patch(priceBounds(range, track, priceHistogram?.currency));
+  };
   /**
    * The area, formatted the way every other surface formats one.
    *

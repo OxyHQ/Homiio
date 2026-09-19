@@ -10,22 +10,26 @@
 import { OfferingType } from '@homiio/shared-types';
 import type {
   ExchangeMode,
+  ListingCurrency,
   LocationSelection,
   PlaceLabel,
   PropertyType,
 } from '@homiio/shared-types';
 
 /**
- * The currency a search's `priceMin`/`priceMax` are expressed in.
+ * The currency to FORMAT a price in when nothing has said which one applies.
  *
- * A numeric price filter has no listing to take a currency from, and the backend
- * compares the number against listing amounts WITHOUT converting — so the filter
- * has always had exactly one implicit currency, and it was euros: the price
- * chips are euro bands and `resolvePrimaryOffering` falls back to `EUR` for a
- * block that names none. This constant only makes that assumption say its own
- * name, so the filter labels can be formatted properly instead of being built
- * from a hardcoded `€`. Comparing a filter against listings priced in several
- * currencies is a modelling gap this does not close.
+ * It used to be the whole answer: a price filter carried no currency at all and
+ * the backend compared the number against every listing's own amount without
+ * converting, so `priceMax=1200` matched 1,200 zł and £1,100 beside €1,200.
+ * That gap is closed — {@link SearchQuery.priceCurrency} carries the unit, the
+ * server resolves one from the scope's own listings when the client has not,
+ * and the response says which one it used.
+ *
+ * What is left here is a FALLBACK FOR RENDERING, nothing more: a saved-search
+ * row, the room filters, and the moments before a scope has answered. It is not
+ * a default the filter applies — a bound is never sent in this currency because
+ * this constant said so.
  */
 export const SEARCH_PRICE_CURRENCY = 'EUR';
 
@@ -156,6 +160,26 @@ export interface SearchQuery {
   priceMin?: number;
   /** Maximum price (same per-offering interpretation as {@link priceMin}). */
   priceMax?: number;
+  /**
+   * The currency {@link priceMin} and {@link priceMax} are expressed in.
+   *
+   * A bound is an amount, and an amount without a unit is not a filter. The
+   * backend narrows the range to listings priced in THIS currency and does not
+   * convert — there is no rate Homiio can cite or version, and an invented one
+   * is an invented price (ADR 0004). The price histogram has refused to mix
+   * currencies since it shipped; this is the same rule reaching the thumbs.
+   *
+   * `undefined` means "nobody has said", NOT euros. The server then resolves it
+   * from the scope's own listings — a Kraków search in złoty, a London one in
+   * pounds — and echoes the answer as `priceCurrency` on the response, which is
+   * what the UI states under the slider.
+   *
+   * It is CLEARED when the location changes, on purpose: a bound of 1,200 set
+   * over a euro city means nothing over a złoty one, and carrying it across
+   * would empty the new area with nothing on screen to explain it. Clearing it
+   * hands the question back to the server, which answers it for the new scope.
+   */
+  priceCurrency?: ListingCurrency;
   /** Minimum bedrooms. */
   bedrooms?: number;
   /** Minimum bathrooms. */

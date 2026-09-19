@@ -40,8 +40,8 @@ export const PROPERTY_TYPE_LABEL_KEYS: Record<PropertyType, string> = {
   [PropertyType.OTHER]: 'search.propertyType.other',
 };
 
-const money = (amount: number, locale: string): string =>
-  formatMoney(amount, SEARCH_PRICE_CURRENCY, locale, { maximumFractionDigits: 0 });
+const money = (amount: number, locale: string, currency: string): string =>
+  formatMoney(amount, currency, locale, { maximumFractionDigits: 0 });
 
 /** Whether the query carries a price bound. */
 export function hasPrice(query: SearchQuery): boolean {
@@ -52,20 +52,28 @@ export function hasPrice(query: SearchQuery): boolean {
  * The price range: an explicit min–max, a one-sided bound, or `null` when there
  * is none (the caller picks its own placeholder).
  *
- * The bounds go through the shared formatter in {@link SEARCH_PRICE_CURRENCY}
- * rather than being pasted after a `€`, so a Spanish reader gets `1.200 €`.
+ * The bounds go through the shared formatter rather than being pasted after a
+ * `€`, so a Spanish reader gets `1.200 €`.
+ *
+ * The currency is the QUERY's, because that is the one the filter is applied in
+ * — a chip reading `1.200 €` over a search filtering złoty would be a label
+ * describing a different search from the one that ran. It falls back to
+ * {@link SEARCH_PRICE_CURRENCY} only where the query carries none, which means
+ * no scope has answered yet; the chip is then formatted in the app's default
+ * and the results screen states the real one once it arrives.
  */
 export function priceLabel(query: SearchQuery, t: TFunction, locale: string): string | null {
+  const currency = query.priceCurrency ?? SEARCH_PRICE_CURRENCY;
   if (query.priceMin !== undefined && query.priceMax !== undefined) {
-    return formatMoneyRange(query.priceMin, query.priceMax, SEARCH_PRICE_CURRENCY, locale, {
+    return formatMoneyRange(query.priceMin, query.priceMax, currency, locale, {
       maximumFractionDigits: 0,
     });
   }
   if (query.priceMax !== undefined) {
-    return t('format.range.upTo', { value: money(query.priceMax, locale) });
+    return t('format.range.upTo', { value: money(query.priceMax, locale, currency) });
   }
   if (query.priceMin !== undefined) {
-    return t('format.range.from', { value: money(query.priceMin, locale) });
+    return t('format.range.from', { value: money(query.priceMin, locale, currency) });
   }
   return null;
 }

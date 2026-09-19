@@ -81,7 +81,12 @@ import {
 } from '@oxy.so/bloom/stay-search';
 import { H3 } from '@oxy.so/bloom/typography';
 
-import { OfferingType, type LocationSelection, type PropertyType } from '@homiio/shared-types';
+import {
+  OfferingType,
+  type ListingCurrency,
+  type LocationSelection,
+  type PropertyType,
+} from '@homiio/shared-types';
 import { useScopeWhere } from '@/components/location/useScopeWhere';
 import {
   deviceOptionDescription,
@@ -463,9 +468,20 @@ export function HomeSearch({
     setDraft((prev) => ({ ...prev, propertyTypes }));
   }, []);
 
-  const handlePrice = useCallback((priceMin: number | undefined, priceMax: number | undefined) => {
-    setDraft((prev) => ({ ...prev, priceMin, priceMax }));
-  }, []);
+  const handlePrice = useCallback(
+    (
+      priceMin: number | undefined,
+      priceMax: number | undefined,
+      priceCurrency: ListingCurrency | undefined,
+    ) => {
+      // The unit travels with the bounds. Dropping it here would commit a range
+      // with no currency, which the server then resolves from the scope — right
+      // most of the time, and silently different from the bars the user set it
+      // against whenever the area is priced in more than one.
+      setDraft((prev) => ({ ...prev, priceMin, priceMax, priceCurrency }));
+    },
+    [],
+  );
 
   const handleDates = useCallback((dates: SearchDateRange | undefined) => {
     setDraft((prev) => ({ ...prev, dates }));

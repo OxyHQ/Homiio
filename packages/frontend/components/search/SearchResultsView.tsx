@@ -451,6 +451,9 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
         offering,
         priceMin: undefined,
         priceMax: undefined,
+        // The unit was resolved against the OLD offering's price column, so it
+        // goes with the range it described.
+        priceCurrency: undefined,
         ...(offering === OfferingType.SHORT_TERM_RENT ? {} : { dates: undefined, guests: undefined }),
       });
     },
@@ -477,6 +480,10 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
           offering: query.offering,
           propertyTypes: query.propertyTypes,
           priceMin: query.priceMin,
+          // Saved WITH its unit. An alert that re-ran a bound of 1,200 with no
+          // currency would take whatever the area happened to be priced in
+          // mostly at the time it fired, which is not the search anybody saved.
+          priceCurrency: query.priceCurrency,
           priceMax: query.priceMax,
           bedrooms: query.bedrooms,
           bathrooms: query.bathrooms,

@@ -105,13 +105,24 @@ the first candidate is the homonym bug (ADR 0002 §12.2) arriving through a new
 door. The rest of the turn still applies — "under 900" against whatever area is
 in force — and Sindi's prose asks which Barcelona was meant.
 
-### The currency gap, stated
+### Why a price patch still carries no currency
 
-`SindiSearchPatch` has **no currency field**, deliberately. Homiio's price filter
-has exactly one implicit currency (`SEARCH_PRICE_CURRENCY`, euros) through the
-URL, the store and the SQL. Adding a currency here would be a field the server
-ignores — which #519 §6.1 forbids in the same breath as it asks for the currency
-work. **That row is open and is not closed by this change.**
+`SindiSearchPatch` has **no currency field**. The reason has changed rather than
+gone away: the price filter now takes one (ADR 0002 §14.2), so this is no longer
+a field the server would ignore — it is a field nothing can honestly fill.
+
+Somebody who says *"under 1,200"* has named an amount and not a unit. Filling it
+from the conversation's last scope would apply their number in a currency they
+never mentioned, which is how *"under 1,200"* said after a Kraków search becomes
+1,200 złoty.
+
+So a price patch carries the bound alone and `applySearchPatch` **clears the
+currency in play** when it lands — as it does when the patch moves the scope.
+The unit then goes back to the server, which answers it from the listings in the
+area the patch is about and reports which one it used. The live query's unit
+does travel in the app CONTEXT (`SindiAppContext.priceCurrency`), so the model
+can say "under 1,200 zł" instead of guessing euros; that is a read, never a
+write.
 
 ## When Sindi may act: the layout, never the platform
 

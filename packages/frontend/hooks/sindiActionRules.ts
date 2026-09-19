@@ -32,6 +32,13 @@ import type { SearchQuery } from '@/components/search/types';
  *    the price range on purpose — a monthly rent is not a nightly rate — so a
  *    patch carrying both must set the offering before the price or the price is
  *    silently dropped. The same ordering is reproduced here.
+ *  - **A price from Sindi carries no currency, so it clears the one in play.**
+ *    Somebody saying "under 1,200" has named an amount and not a unit, and the
+ *    patch has no field for one. Leaving the previous `priceCurrency` in place
+ *    would apply their new number in whatever currency the LAST search
+ *    resolved — so "under 1,200" said after a Kraków search would be read as
+ *    1,200 złoty. Clearing it hands the unit back to the server, which resolves
+ *    it from the scope the patch is about and says which one it used.
  */
 export function applySearchPatch(query: SearchQuery, patch: SindiSearchPatch): SearchQuery {
   // The offering first, with the same per-offering clearing the store does, so
@@ -44,6 +51,7 @@ export function applySearchPatch(query: SearchQuery, patch: SindiSearchPatch): S
           offering: patch.offering,
           priceMin: undefined,
           priceMax: undefined,
+          priceCurrency: undefined,
           ...(patch.offering === 'short_term_rent'
             ? {}
             : { dates: undefined, guests: undefined }),
@@ -58,6 +66,15 @@ export function applySearchPatch(query: SearchQuery, patch: SindiSearchPatch): S
     ...(patch.propertyTypes !== undefined ? { propertyTypes: [...patch.propertyTypes] } : {}),
     ...(patch.priceMin !== undefined ? { priceMin: patch.priceMin } : {}),
     ...(patch.priceMax !== undefined ? { priceMax: patch.priceMax } : {}),
+    // A new bound arrives with no unit, so the old unit goes with the old
+    // bound. Untouched when the patch names no price at all — a patch that only
+    // adds a bedroom must not re-open a currency question nobody asked.
+    ...(patch.priceMin !== undefined || patch.priceMax !== undefined
+      ? { priceCurrency: undefined }
+      : {}),
+    // A patch that moves the SCOPE moves the question of what it is priced in
+    // with it, exactly as `commitLocation` does in the store.
+    ...(patch.location !== undefined ? { priceCurrency: undefined } : {}),
     ...(patch.bedrooms !== undefined ? { bedrooms: patch.bedrooms } : {}),
     ...(patch.bathrooms !== undefined ? { bathrooms: patch.bathrooms } : {}),
     ...(patch.amenities !== undefined ? { amenities: [...patch.amenities] } : {}),

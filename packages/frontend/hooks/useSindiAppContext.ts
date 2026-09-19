@@ -107,6 +107,12 @@ export function useSindiAppContext(): SindiAppContext {
       ...(scopeLabel ? { scopeLabel } : {}),
       ...(query.priceMin !== undefined ? { priceMin: query.priceMin } : {}),
       ...(query.priceMax !== undefined ? { priceMax: query.priceMax } : {}),
+      // The unit, so the model does not narrate a złoty bound in euros. Sent
+      // only alongside a bound, for the same reason the URL only writes it
+      // then: on its own it describes nothing.
+      ...(query.priceCurrency && (query.priceMin !== undefined || query.priceMax !== undefined)
+        ? { priceCurrency: query.priceCurrency }
+        : {}),
     };
     return context;
   }, [query, presentation, pathname, t]);

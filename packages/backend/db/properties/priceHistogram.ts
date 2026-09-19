@@ -36,6 +36,7 @@ import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 
 import { getDb } from '../postgres';
 import { addresses, properties } from '../schema';
+import { dominantCurrency, priceCurrencyCensus } from './priceCurrency';
 
 /** The share of the scope the upper bound covers when the caller names none. */
 const DEFAULT_UPPER_PERCENTILE = 0.98;
@@ -95,20 +96,15 @@ export async function priceHistogramForScope(options: PriceHistogramOptions): Pr
   `;
 
   // Census first: which currencies the scope's prices are in, so the buckets
-  // can count one of them and say how many they left out.
-  const census = await db.execute<{ currency: string | null; total: number }>(sql`
-    select ${currencyColumn} as currency, count(*)::int as total
-    ${scoped}
-    group by 1
-    order by total desc, currency asc
-  `);
-  const rows = [...census].map((row) => ({ currency: row.currency, total: Number(row.total) }));
-  const priced = rows.reduce((sum, row) => sum + row.total, 0);
+  // can count one of them and say how many they left out. Shared with the price
+  // FILTER (`db/properties/priceCurrency.ts`) so the bars and the thumbs cannot
+  // disagree about what currency this area is priced in.
+  const rows = await priceCurrencyCensus({ where: options.where, priceColumn, currencyColumn });
+  const priced = rows.reduce((sum, row) => sum + row.count, 0);
 
-  const currency =
-    options.currency ?? rows.find((row) => row.currency !== null)?.currency ?? undefined;
+  const currency = options.currency ?? dominantCurrency(rows);
   if (!currency) return null;
-  const inCurrency = rows.find((row) => row.currency === currency)?.total ?? 0;
+  const inCurrency = rows.find((row) => row.currency === currency)?.count ?? 0;
   if (inCurrency === 0) return null;
 
   // Both are AGGREGATES even when the edge is named (`min(<constant>)`): a bare

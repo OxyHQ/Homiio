@@ -26,7 +26,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 
-import { OfferingType } from '@homiio/shared-types';
+import { OfferingType, parseListingCurrency, type ListingCurrency } from '@homiio/shared-types';
 import type { SearchQuery } from '@/components/search/types';
 import type { PriceTrack } from '@/components/search/steps/PriceStep';
 import { api } from '@/utils/api';
@@ -60,8 +60,17 @@ interface PriceHistogramResponse {
 export interface SearchPriceHistogram {
   /** One count per bar, over `0`..`track.max`. */
   counts: number[];
-  /** The ISO 4217 code these counts are in — the scope's own, not the app's. */
-  currency: string;
+  /**
+   * The currency these counts are in — the scope's own, not the app's.
+   *
+   * Narrowed to {@link ListingCurrency} rather than a bare string because the
+   * price FILTER now takes it (see `components/search/types.ts`), and a code
+   * the price columns cannot hold would narrow a search to nothing. A response
+   * carrying one is treated as no histogram at all: that is a server
+   * disagreeing with the client about the vocabulary, and drawing bars labelled
+   * in a currency no listing is priced in is worse than drawing none.
+   */
+  currency: ListingCurrency;
   /**
    * Priced listings in the same scope carrying a DIFFERENT currency. They are
    * not in `counts` and must not be converted into it; the control says so
@@ -116,11 +125,13 @@ export function useSearchPriceHistogram(
     const histogram = data.priceHistogram;
     // Only a histogram over exactly the slider's span can be drawn under it.
     if (!histogram || histogram.min !== 0 || histogram.max !== track.max) return undefined;
+    const currency = parseListingCurrency(histogram.currency);
+    if (!currency) return undefined;
     const counts = histogram.buckets.map((bucket) => bucket.count);
     if (!counts.some((count) => count > 0)) return undefined;
     return {
       counts,
-      currency: histogram.currency,
+      currency,
       otherCurrencyCount: histogram.otherCurrencyCount ?? 0,
     };
   }, [runnable, data, track.max]);

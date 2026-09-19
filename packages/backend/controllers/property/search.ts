@@ -36,8 +36,8 @@
  */
 
 import type { Request, Response, NextFunction } from 'express';
-import type { SQL } from 'drizzle-orm';
-import type { LocationKind } from '@homiio/shared-types';
+import { sql, type SQL } from 'drizzle-orm';
+import type { ListingCurrency, LocationKind } from '@homiio/shared-types';
 
 import {
   buildSearchPlan,
@@ -65,7 +65,9 @@ import {
   inNeighborhood,
   inRegion,
   matchesText,
+  priceInRange,
 } from '../../db/properties/propertyFilters';
+import { dominantCurrency, priceCurrencyCensus } from '../../db/properties/priceCurrency';
 import { serializeProperty } from '../../db/properties/propertySerializer';
 
 /**
@@ -289,6 +291,7 @@ function buildSearchResponse(
   message: string,
   location: LocationEcho,
   queryId: string | undefined,
+  priceCurrency?: ListingCurrency,
 ): Record<string, unknown> {
   const totalPages = Math.max(1, Math.ceil(total / limit));
   const hasMore = (page - 1) * limit + data.length < total;
@@ -300,6 +303,11 @@ function buildSearchResponse(
     totalPages,
     hasMore,
     location,
+    // What unit the price bound was read in, when there was one. The server may
+    // have chosen it (the caller sent a bare `priceMax`), so leaving it out
+    // would make "under 1,200" a number with no unit on the one surface that
+    // has to render it — the same implicitness ADR 0002 refuses for location.
+    ...(priceCurrency === undefined ? {} : { priceCurrency }),
     // Absent rather than null when the caller sent none, so "this server does
     // not stamp answers" and "this answer belongs to another query" stay
     // distinguishable — a client that treated them alike would black out its
@@ -315,7 +323,23 @@ function buildSearchResponse(
  */
 export type SearchScope =
   | { status: 'unresolved'; params: ParsedSearchParams; location: LocationEcho }
-  | { status: 'scoped'; params: ParsedSearchParams; location: LocationEcho; where: SQL | undefined };
+  | {
+      status: 'scoped';
+      params: ParsedSearchParams;
+      location: LocationEcho;
+      where: SQL | undefined;
+      /**
+       * The currency the price bound was actually applied in.
+       *
+       * Absent when the request carried no price bound, and absent when it
+       * carried one over a scope holding no priced listing that names a
+       * currency. Echoed to the caller because a bound the server chose the
+       * unit for is exactly the kind of decision ADR 0002 refuses to leave
+       * implicit — a screen showing "up to 1,200" has to be able to say 1,200
+       * of what.
+       */
+      priceCurrency?: ListingCurrency;
+    };
 
 /** Answer a {@link GeoParamError} with a clean 400; `false` when `error` is anything else. */
 export function sendGeoParamError(res: Response, error: unknown): boolean {
@@ -338,7 +362,7 @@ export function sendGeoParamError(res: Response, error: unknown): boolean {
 export async function resolveSearchScope(
   query: Record<string, string | string[] | undefined>,
 ): Promise<SearchScope> {
-  const { conditions, params } = buildSearchPlan(query);
+  const { conditions, price, params } = buildSearchPlan(query);
 
   const place = await resolvePlaceConditions(params);
   if (place.unresolved) {
@@ -370,11 +394,50 @@ export async function resolveSearchScope(
     conditions.push(matchesText(params.text, { cityId: textCityId, regionId: textRegionId }));
   }
 
+  // --- The price bound, applied in the currency this scope is priced in ---
+  //
+  // Last, and deliberately: the bound narrows to ONE currency (see
+  // `db/properties/propertyFilters.ts#priceInRange`), and which one is a fact
+  // about the homes in scope rather than about the request. So the census runs
+  // over the scope as assembled ABOVE — every other filter, no price — exactly
+  // the population the histogram's bars describe. Resolving it any earlier
+  // would census the catalogue and answer with some other area's currency.
+  //
+  // A caller who named a currency is taken at their word and no census runs, so
+  // the extra query is paid only by requests that left the unit unsaid. Our own
+  // client names one whenever the histogram has told it what the area is priced
+  // in.
+  let priceCurrency: ListingCurrency | undefined;
+  if (price) {
+    priceCurrency =
+      price.requestedCurrency ??
+      dominantCurrency(
+        await priceCurrencyCensus({
+          where: allOf(conditions),
+          priceColumn: price.priceColumn,
+          currencyColumn: price.currencyColumn,
+        }),
+      );
+
+    // No currency at all means every priced listing in scope either records no
+    // currency or records one this platform does not list prices in. Either way
+    // the question "under 1,200 WHAT" has no answer here, so the bound matches
+    // nothing — the same rule `areaInRange` gives an area stored as `0`, and
+    // emphatically not the same as dropping the bound and showing the feed
+    // unfiltered. The response says `priceCurrency` is absent, so a screen can
+    // explain the empty page instead of reading it as "no homes here".
+    const condition = priceCurrency
+      ? priceInRange(price.priceColumn, price.currencyColumn, price.min, price.max, priceCurrency)
+      : sql`false`;
+    if (condition) conditions.push(condition);
+  }
+
   return {
     status: 'scoped',
     params,
     location: buildLocationEcho(params, place),
     where: allOf(conditions),
+    ...(priceCurrency === undefined ? {} : { priceCurrency }),
   };
 }
 
@@ -429,6 +492,7 @@ export async function searchProperties(req: Request, res: Response, next: NextFu
       'Search completed successfully',
       scope.location,
       params.queryId,
+      scope.priceCurrency,
     ));
   } catch (error) {
     // The parameter NAMES, never their values. This used to log `req.query`

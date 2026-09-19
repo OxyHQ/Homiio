@@ -39,13 +39,18 @@
  */
 
 import type { NextFunction, Request, Response } from 'express';
-import { OfferingType } from '@homiio/shared-types';
+import { OfferingType, parseListingCurrency } from '@homiio/shared-types';
 
-import { properties } from '../../db/schema';
 import { priceHistogramForScope } from '../../db/properties/priceHistogram';
 import { logger } from '../../middlewares/logging';
 import { resolveSearchScope, sendGeoParamError } from './search';
-import { DEFAULT_PRICE_COLUMN, parseFloatParam, parseIntParam, priceColumnForOffering } from './searchQueryBuilder';
+import {
+  currencyColumnForOffering,
+  DEFAULT_PRICE_COLUMN,
+  parseFloatParam,
+  parseIntParam,
+  priceColumnForOffering,
+} from './searchQueryBuilder';
 import { describeErrorForLog } from '../../middlewares/errorHandler';
 
 export const DEFAULT_HISTOGRAM_BUCKETS = 24;
@@ -56,13 +61,6 @@ export const MAX_HISTOGRAM_BUCKETS = 40;
 const PRICE_BOUND_PARAMS = ['priceMin', 'priceMax', 'minRent', 'maxRent', 'minSalePrice', 'maxSalePrice'] as const;
 
 type RawQuery = Record<string, string | string[] | undefined>;
-
-/** The offering's currency column, beside the price column the search resolves. */
-function currencyColumnFor(offering: OfferingType | undefined) {
-  if (offering === OfferingType.SHORT_TERM_RENT) return properties.shortTermRentCurrency;
-  if (offering === OfferingType.SALE) return properties.saleCurrency;
-  return properties.longTermRentCurrency;
-}
 
 function badRequest(res: Response, message: string): void {
   res.status(400).json({ success: false, message, error: 'INVALID_HISTOGRAM' });
@@ -84,12 +82,17 @@ export async function getSearchPriceHistogram(req: Request, res: Response, next:
     }
     const requestedBuckets = parseIntParam(raw.histogramBuckets) ?? DEFAULT_HISTOGRAM_BUCKETS;
     const bucketCount = Math.min(MAX_HISTOGRAM_BUCKETS, Math.max(MIN_HISTOGRAM_BUCKETS, requestedBuckets));
-    const currencyRaw = typeof raw.currency === 'string' ? raw.currency.trim().toUpperCase() : undefined;
-    if (currencyRaw !== undefined && currencyRaw !== '' && !/^[A-Z]{3}$/.test(currencyRaw)) {
-      badRequest(res, 'currency must be an ISO 4217 code');
+    // Checked against the vocabulary the COLUMN holds, not against a shape.
+    // The old `^[A-Z]{3}$` accepted any three letters — so `currency=XYZ` was
+    // answered with a silent `null` histogram that reads as "nothing here" —
+    // and rejected `FAIR`, which is a real four-character code on the exchange
+    // listings. `parseListingCurrency` is the same reader the price filter uses.
+    const currencyRaw = typeof raw.currency === 'string' ? raw.currency.trim() : undefined;
+    const currency = parseListingCurrency(currencyRaw);
+    if (currencyRaw !== undefined && currencyRaw !== '' && currency === undefined) {
+      badRequest(res, 'currency must be a currency Homiio lists prices in');
       return;
     }
-    const currency = currencyRaw || undefined;
 
     const scopeQuery: RawQuery = { ...raw };
     for (const param of PRICE_BOUND_PARAMS) delete scopeQuery[param];
@@ -117,7 +120,7 @@ export async function getSearchPriceHistogram(req: Request, res: Response, next:
     const priceHistogram = await priceHistogramForScope({
       where: scope.where,
       priceColumn: priceColumnForOffering(offering) ?? DEFAULT_PRICE_COLUMN,
-      currencyColumn: currencyColumnFor(offering),
+      currencyColumn: currencyColumnForOffering(offering),
       bucketCount,
       currency,
       min: histogramMin,
