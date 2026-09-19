@@ -168,6 +168,27 @@ export interface MaintenanceComment {
 }
 
 /**
+ * A photo attached to a request.
+ *
+ * There is no URL here, and that is the design rather than an omission. The
+ * bytes live under a private key and are delivered by a handler that proves the
+ * viewer first, so there is no address for a screen to render or a person to
+ * paste — `downloadPath` is a request to make, not a link to follow. The
+ * equivalent on a tenant application is the same shape for the same reason.
+ */
+export interface MaintenanceAttachment {
+  readonly id: string;
+  readonly role: MaintenanceRole;
+  /** The re-encoded type. Always the one Homiio produced, never the upload's. */
+  readonly contentType: string;
+  /** Size after re-encoding, so a screen can warn before fetching a large one. */
+  readonly bytes: number;
+  /** Where to ASK for the bytes. Requires the session; not openable as a link. */
+  readonly downloadPath: string;
+  readonly createdAt: string;
+}
+
+/**
  * One entry in the request's history.
  *
  * Recorded for every status change, so "who said it was fixed, and when" is a
@@ -202,6 +223,7 @@ export interface MaintenanceRequest {
   /** Present on a single-request read; absent from a list. */
   readonly comments?: readonly MaintenanceComment[];
   readonly events?: readonly MaintenanceEvent[];
+  readonly attachments?: readonly MaintenanceAttachment[];
   /**
    * What the CALLER may do next, resolved from their own role and the current
    * status.

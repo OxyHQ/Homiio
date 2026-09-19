@@ -68,6 +68,7 @@ export { exchangeRequests, exchangeReviews } from './exchanges';
 export { cities, countries, neighborhoods, regions } from './geo';
 export { images } from './images';
 export {
+  maintenanceRequestAttachments,
   maintenanceRequestComments,
   maintenanceRequestEvents,
   maintenanceRequests,

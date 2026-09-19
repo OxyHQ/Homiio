@@ -21,9 +21,10 @@
  * `docs/housing-parity.md`.
  */
 import React, { useCallback, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@oxy.so/bloom/button';
@@ -42,11 +43,13 @@ import {
   maintenanceStatusKey,
 } from '@/components/tenancy/maintenanceTenancy';
 import {
+  useAttachRepairPhoto,
   useCommentOnRepair,
   useMaintenanceRequest,
   useTransitionRepair,
 } from '@/hooks/useMaintenanceQueries';
 import { isTransitionConflict } from '@/services/maintenanceService';
+import { openPrivateDocument } from '@/utils/privateDocument';
 import { formatLocalized } from '@/utils/dateLocale';
 import { spacing } from '@/constants/styles';
 
@@ -70,6 +73,17 @@ const ACTION_KEY: Record<MaintenanceStatus, string> = {
  */
 const DEFAULT_SCHEDULE_DAYS = 7;
 
+/**
+ * How many photos one request may hold — the server's ceiling, restated.
+ *
+ * Restated rather than fetched, because the only thing it drives here is
+ * whether the "add" button is drawn, and the SERVER refuses past it either way
+ * (409). A screen out of step with it offers a button that fails, which is the
+ * lesser of the two ways to be wrong; a screen that hid the ceiling would make
+ * a refusal arrive with nothing on the page to explain it.
+ */
+const MAINTENANCE_PHOTOS_MAX = 6;
+
 export default function MaintenanceRequestScreen(): React.ReactElement {
   const { t } = useTranslation();
   const router = useRouter();
@@ -77,7 +91,10 @@ export default function MaintenanceRequestScreen(): React.ReactElement {
   const { data: request, isLoading, error, refetch } = useMaintenanceRequest(id);
   const transition = useTransitionRepair();
   const comment = useCommentOnRepair();
+  const attach = useAttachRepairPhoto();
   const [draft, setDraft] = useState('');
+  const [openingId, setOpeningId] = useState<string | null>(null);
+  const attachments = request?.attachments ?? [];
 
   const act = useCallback(
     (status: MaintenanceStatus) => {
@@ -100,6 +117,60 @@ export default function MaintenanceRequestScreen(): React.ReactElement {
       );
     },
     [id, transition, t],
+  );
+
+  /**
+   * Pick one photo and send it.
+   *
+   * The permission is requested at the moment somebody presses the button, not
+   * on mount — the same rule the location surfaces follow, and for the same
+   * reason: a prompt nobody asked for is a barrier, and this screen is useful
+   * without ever touching the library.
+   */
+  const addPhoto = useCallback(async () => {
+    if (!id) return;
+    if (Platform.OS !== 'web') {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (permission.status !== 'granted') {
+        toast.error(t('maintenance.photos.permission'));
+        return;
+      }
+    }
+    const picked = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.9,
+    });
+    if (picked.canceled || picked.assets.length === 0) return;
+    const asset = picked.assets[0];
+
+    attach.mutate(
+      {
+        id,
+        photo: {
+          uri: asset.uri,
+          filename: asset.fileName ?? 'photo.jpg',
+          ...(asset.mimeType ? { mimeType: asset.mimeType } : {}),
+        },
+      },
+      { onError: () => toast.error(t('maintenance.photos.uploadFailed')) },
+    );
+  }, [attach, id, t]);
+
+  /**
+   * Open one photo.
+   *
+   * Through {@link openPrivateDocument}, because there is no link: the bytes
+   * come from a handler that checks who is asking, so neither `window.open` nor
+   * `Linking.openURL` can reach them.
+   */
+  const view = useCallback(
+    (attachmentId: string, downloadPath: string) => {
+      setOpeningId(attachmentId);
+      openPrivateDocument(downloadPath)
+        .catch(() => toast.error(t('maintenance.photos.openFailed')))
+        .finally(() => setOpeningId(null));
+    },
+    [t],
   );
 
   const send = useCallback(() => {
@@ -159,6 +230,55 @@ export default function MaintenanceRequestScreen(): React.ReactElement {
             </View>
           }
         />
+
+        {/* Photos, before the thread: what is broken is the first thing
+            somebody opening a repair wants to see. */}
+        <View style={styles.photos}>
+          <P style={styles.muted}>
+            {t('maintenance.photos.title', { count: attachments.length })}
+          </P>
+          {attachments.length === 0 ? (
+            <P style={styles.muted}>{t('maintenance.photos.empty')}</P>
+          ) : (
+            attachments.map((attachment) => (
+              <Button
+                key={attachment.id}
+                variant="secondary"
+                size="small"
+                disabled={openingId !== null}
+                loading={openingId === attachment.id}
+                onPress={() => view(attachment.id, attachment.downloadPath)}
+                accessibilityLabel={t('maintenance.photos.openAccessible', {
+                  role: t(`maintenance.role.${attachment.role}`),
+                  date: formatLocalized(new Date(attachment.createdAt), 'd MMM, HH:mm'),
+                })}
+              >
+                {t('maintenance.photos.row', {
+                  role: t(`maintenance.role.${attachment.role}`),
+                  date: formatLocalized(new Date(attachment.createdAt), 'd MMM, HH:mm'),
+                })}
+              </Button>
+            ))
+          )}
+          {attachments.length < MAINTENANCE_PHOTOS_MAX ? (
+            <Button
+              variant="secondary"
+              size="small"
+              disabled={attach.isPending}
+              loading={attach.isPending}
+              onPress={addPhoto}
+              accessibilityLabel={t('maintenance.photos.addAccessible')}
+            >
+              {t('maintenance.photos.add')}
+            </Button>
+          ) : (
+            // Said rather than silently hidden: a button that vanishes reads as
+            // a bug, and the ceiling is a real rule the server enforces.
+            <P style={styles.muted}>
+              {t('maintenance.photos.full', { count: MAINTENANCE_PHOTOS_MAX })}
+            </P>
+          )}
+        </View>
 
         <View style={styles.thread}>
           {(request.comments ?? []).length === 0 ? (
@@ -230,5 +350,9 @@ const styles = StyleSheet.create({
   comment: { gap: spacing.xs },
   commentMeta: { fontSize: 12, opacity: 0.7 },
   muted: { fontSize: 13, opacity: 0.7 },
+  photos: {
+    gap: spacing.xs,
+    paddingHorizontal: spacing.md,
+  },
   history: { gap: spacing.xs },
 });

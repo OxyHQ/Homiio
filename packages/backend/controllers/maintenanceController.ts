@@ -45,22 +45,36 @@ import { eq } from 'drizzle-orm';
 import { getDb } from '../db/postgres';
 import { leases } from '../db/schema';
 import {
+  addMaintenanceAttachment,
   addMaintenanceComment,
   applyMaintenanceTransition,
   createMaintenanceRequest,
+  findMaintenanceAttachment,
   findMaintenanceRequest,
   listMaintenanceRequests,
   maintenanceRoleOnLease,
 } from '../db/maintenance/maintenanceRepository';
 import {
   toHydratedMaintenanceDTO,
+  toMaintenanceAttachmentDTO,
   toMaintenanceCommentDTO,
   toMaintenanceRequestDTO,
 } from '../db/maintenance/maintenanceSerializer';
+import imageUploadService from '../services/imageUploadService';
 import { AppError, paginationResponse, successResponse } from '../middlewares/errorHandler';
 import { parsePagination } from './eviction/shared';
 import notificationDispatchService from '../services/notificationDispatchService';
 import { requireSessionOxyUserId } from '../utils/sessionUser';
+
+/**
+ * How many photos one request may hold.
+ *
+ * A ceiling rather than a guess: each is fetched whole, base64, through a JSON
+ * envelope, so a request with fifty of them is a screen that takes a minute to
+ * open. Six is enough to show a room from several angles, which is what the
+ * cases these support actually look like.
+ */
+export const MAINTENANCE_ATTACHMENTS_MAX = 6;
 
 const CATEGORIES = new Set<string>(MAINTENANCE_CATEGORIES);
 const URGENCIES = new Set<string>(MAINTENANCE_URGENCIES);
@@ -144,6 +158,131 @@ export async function getRequest(req: Request, res: Response, next: NextFunction
       throw new AppError('Maintenance request not found', 404, 'NOT_FOUND');
     }
     res.json(successResponse(toHydratedMaintenanceDTO(hydrated), 'Maintenance request retrieved'));
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * `POST /api/maintenance/:id/attachments` — a photo of what is broken.
+ *
+ * ## The bytes are re-encoded, and that is a privacy measure
+ *
+ * A phone writes GPS into the EXIF of a photo taken indoors. Storing the
+ * upload verbatim would publish the home's exact coordinates to everyone who
+ * can read the request — the precision leak ADR 0003 exists to stop, arriving
+ * through a door nobody was watching. `uploadPrivateImage` decodes and
+ * re-encodes, which drops it.
+ *
+ * ## Order: authorize, then store, then record
+ *
+ * The participation check runs against the request BEFORE any object is
+ * written, so a stranger's upload never reaches the bucket. The row is written
+ * last, and it is the row that can fail — which leaves an unreferenced object
+ * rather than a row pointing at bytes that were never stored. That is the safe
+ * side: an orphan costs storage, a dangling row is a photo that silently never
+ * opens.
+ */
+export async function attachToRequest(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const oxyUserId = requireSessionOxyUserId(req);
+    const requestId = String(req.params.id);
+
+    const file = (req as unknown as { file?: { buffer: Buffer; mimetype: string } }).file;
+    if (!file) {
+      throw new AppError('A photo is required', 400, 'VALIDATION_ERROR');
+    }
+
+    // Authorize FIRST: nothing belonging to a stranger reaches the bucket.
+    const hydrated = await findMaintenanceRequest(getDb(), requestId, oxyUserId);
+    if (!hydrated) {
+      throw new AppError('Maintenance request not found', 404, 'NOT_FOUND');
+    }
+    if (hydrated.attachments.length >= MAINTENANCE_ATTACHMENTS_MAX) {
+      throw new AppError(
+        `A request may hold at most ${MAINTENANCE_ATTACHMENTS_MAX} photos`,
+        409,
+        'ATTACHMENT_LIMIT',
+      );
+    }
+
+    const stored = await imageUploadService.uploadPrivateImage(
+      file.buffer,
+      file.mimetype,
+      `maintenance/${requestId}`,
+    );
+
+    const outcome = await addMaintenanceAttachment(getDb(), {
+      requestId,
+      oxyUserId,
+      storageKey: stored.key,
+      contentType: stored.contentType,
+      bytes: stored.bytes,
+    });
+    if (!outcome.ok) {
+      throw new AppError('Maintenance request not found', 404, 'NOT_FOUND');
+    }
+
+    res
+      .status(201)
+      .json(successResponse(toMaintenanceAttachmentDTO(outcome.attachment), 'Photo attached'));
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * `GET /api/maintenance/:id/attachments/:attachmentId` — one photo's bytes.
+ *
+ * Base64 in the ordinary envelope, for the reason
+ * `applicationController.getApplicationDocument` gives at length: the Oxy
+ * linked client owns auth and is JSON-only, and `AGENTS.md` forbids a second
+ * manual token path, so there is no authenticated binary fetch to use. The
+ * upload is capped, so the response is bounded.
+ *
+ * The repository resolves the attachment by BOTH its id and its request, under
+ * the caller's participation — so an id from somebody else's repair resolves to
+ * nothing and knowing one grants nothing.
+ */
+export async function getRequestAttachment(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const oxyUserId = requireSessionOxyUserId(req);
+    const attachment = await findMaintenanceAttachment(getDb(), {
+      requestId: String(req.params.id),
+      attachmentId: String(req.params.attachmentId),
+      oxyUserId,
+    });
+    if (!attachment) {
+      throw new AppError('Attachment not found', 404, 'NOT_FOUND');
+    }
+
+    const file = await imageUploadService.readPrivateDocument(attachment.storageKey);
+    if (!file) {
+      // The row survives its object only if something deleted the bytes behind
+      // it. "There is nothing to give you" is the honest answer, and it does
+      // not say which of the two happened.
+      throw new AppError('Attachment not found', 404, 'NOT_FOUND');
+    }
+
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.json(
+      successResponse(
+        {
+          id: attachment.id,
+          contentType: file.contentType,
+          base64: file.buffer.toString('base64'),
+        },
+        'Attachment retrieved',
+      ),
+    );
   } catch (error) {
     next(error);
   }

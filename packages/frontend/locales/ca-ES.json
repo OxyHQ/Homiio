@@ -3985,6 +3985,18 @@
       "transitionFailed": "No hem pogut canviar-ho. Torna-ho a provar.",
       "commentFailed": "No hem pogut enviar el teu missatge. Torna-ho a provar.",
       "conflict": "Aquesta sol·licitud ha canviat des que la vas veure. Aquest és el seu estat actual."
+    },
+    "photos": {
+      "title": "Fotos ({{count}})",
+      "empty": "Encara no hi ha fotos.",
+      "add": "Afegeix una foto",
+      "addAccessible": "Adjuntar una foto a aquesta incidència",
+      "row": "{{role}} · {{date}}",
+      "openAccessible": "Obre la foto afegida per {{role}} el {{date}}",
+      "full": "Una incidència pot tenir {{count}} fotos.",
+      "permission": "Homiio necessita accés a les teves fotos per adjuntar-ne una.",
+      "uploadFailed": "No s’ha pogut adjuntar aquesta foto. Torna-ho a provar.",
+      "openFailed": "No s’ha pogut obrir aquesta foto."
     }
   },
   "ledger": {

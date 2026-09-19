@@ -52,6 +52,15 @@ export const LOCAL_IMAGE_ROUTE = '/api/images/file';
  */
 const SHARP_DECODE_OPTIONS = { failOn: 'none' } as const;
 
+/**
+ * The longest edge a private image is stored at.
+ *
+ * Large enough that a crack in a wall is still legible in a photo somebody may
+ * need months later, small enough that a request with six attachments is not
+ * tens of megabytes travelling base64 through a JSON envelope.
+ */
+const PRIVATE_IMAGE_MAX_EDGE = 1600;
+
 export interface ImageVariant {
   name: ImageVariantName;
   width: number;
@@ -473,6 +482,82 @@ export class ImageUploadService {
    */
   async readStoredImage(key: string): Promise<{ buffer: Buffer; contentType: string } | null> {
     return this.readStoredObject(key, validateImageStoreKey);
+  }
+
+  /**
+   * Process one image and store it under a PRIVATE key.
+   *
+   * ## Re-encoding is the privacy measure, not the size one
+   *
+   * Sharp decodes and re-encodes, and does not carry metadata across unless
+   * asked — so the EXIF goes, and with it the GPS tag a phone writes into a
+   * photo taken inside somebody's home. That matters more here than the bytes
+   * saved: a tenant photographing a damp wall would otherwise publish their
+   * own address to everyone who can read the request, which is the precision
+   * leak ADR 0003 exists to stop, arriving through a door nobody was watching.
+   *
+   * ONE object, not four variants. A repair photo is evidence looked at once,
+   * not a gallery thumbnail, so three extra sizes would be three extra objects
+   * nobody reads and three more things to delete later.
+   *
+   * The key is built here from the caller's folder and a fresh uuid — never
+   * from a filename, which is attacker-controlled. It always starts with
+   * `private/`, which the delivery route requires and the attachment table's
+   * CHECK also demands.
+   */
+  async uploadPrivateImage(
+    buffer: Buffer,
+    mimetype: string,
+    folder: string,
+  ): Promise<{ key: string; contentType: string; bytes: number; width?: number; height?: number }> {
+    const source = sharp(buffer, SHARP_DECODE_OPTIONS);
+    const metadata = await source.metadata();
+    // WebP for everything: one output type means the delivery route's
+    // extension allowlist has one entry to be right about, and the re-encode
+    // is what drops the metadata either way.
+    const processed = await sharp(buffer, SHARP_DECODE_OPTIONS)
+      .resize(PRIVATE_IMAGE_MAX_EDGE, PRIVATE_IMAGE_MAX_EDGE, {
+        fit: 'inside',
+        withoutEnlargement: true,
+      })
+      .webp({ quality: 82 })
+      .toBuffer();
+
+    const key = `private/${folder}/${uuidv4()}.webp`;
+    if (this.isStorageConfigured()) {
+      await this.uploadPrivateToS3(processed, key);
+    } else {
+      await this.writeToLocalStore(processed, key);
+    }
+
+    return {
+      key,
+      contentType: 'image/webp',
+      bytes: processed.length,
+      ...(metadata.width === undefined ? {} : { width: metadata.width }),
+      ...(metadata.height === undefined ? {} : { height: metadata.height }),
+    };
+  }
+
+  /**
+   * Put a private object.
+   *
+   * Separate from {@link uploadToS3} for one header: that one writes
+   * `Cache-Control: public, max-age=31536000`, which is right for a listing
+   * photo and wrong for a tenancy's evidence. Sharing the method and passing a
+   * flag would make the default the public one, and the default is what gets
+   * used by the next caller who does not read this.
+   */
+  private async uploadPrivateToS3(buffer: Buffer, key: string): Promise<void> {
+    await this.s3Client.send(
+      new PutObjectCommand({
+        Bucket: config.s3.bucketName,
+        Key: key,
+        Body: buffer,
+        ContentType: 'image/webp',
+        CacheControl: 'private, no-store',
+      }),
+    );
   }
 
   /**

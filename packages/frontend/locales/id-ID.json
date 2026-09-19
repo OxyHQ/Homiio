@@ -3938,6 +3938,18 @@
       "transitionFailed": "Kami tidak dapat mengubahnya. Coba lagi.",
       "commentFailed": "Pesan Anda tidak terkirim. Coba lagi.",
       "conflict": "Permintaan ini sudah berubah sejak terakhir Anda lihat. Ini keadaannya sekarang."
+    },
+    "photos": {
+      "title": "Foto ({{count}})",
+      "empty": "Belum ada foto.",
+      "add": "Tambahkan foto",
+      "addAccessible": "Lampirkan foto ke permintaan perbaikan ini",
+      "row": "{{role}} · {{date}}",
+      "openAccessible": "Buka foto yang ditambahkan {{role}} pada {{date}}",
+      "full": "Satu permintaan dapat memuat {{count}} foto.",
+      "permission": "Homiio memerlukan akses ke foto Anda untuk melampirkan satu.",
+      "uploadFailed": "Foto itu tidak dapat dilampirkan. Coba lagi.",
+      "openFailed": "Foto itu tidak dapat dibuka."
     }
   },
   "ledger": {

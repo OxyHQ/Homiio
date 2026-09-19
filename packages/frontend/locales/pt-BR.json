@@ -3938,6 +3938,18 @@
       "transitionFailed": "Não conseguimos alterar. Tente de novo.",
       "commentFailed": "Não conseguimos enviar sua mensagem. Tente de novo.",
       "conflict": "Esta solicitação mudou desde que você olhou. Este é o estado atual."
+    },
+    "photos": {
+      "title": "Fotos ({{count}})",
+      "empty": "Ainda não há fotos.",
+      "add": "Adicionar uma foto",
+      "addAccessible": "Anexar uma foto a este chamado de reparo",
+      "row": "{{role}} · {{date}}",
+      "openAccessible": "Abrir a foto adicionada por {{role}} em {{date}}",
+      "full": "Um chamado pode ter {{count}} fotos.",
+      "permission": "O Homiio precisa de acesso às suas fotos para anexar uma.",
+      "uploadFailed": "Não foi possível anexar essa foto. Tente novamente.",
+      "openFailed": "Não foi possível abrir essa foto."
     }
   },
   "ledger": {
