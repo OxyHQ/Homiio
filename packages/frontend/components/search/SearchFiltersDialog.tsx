@@ -34,6 +34,8 @@ import { useTranslation } from 'react-i18next';
 import { Dialog } from '@oxy.so/bloom/dialog';
 import {
   AmenityFilter,
+  AreaRangeFilter,
+  AvailabilityFilter,
   CountFilter,
   FilterFooter,
   FilterSection,
@@ -44,9 +46,10 @@ import {
 } from '@oxy.so/bloom/stay-filters';
 import { StepperRow } from '@oxy.so/bloom/stepper';
 
-import { OfferingType, type PropertyType } from '@homiio/shared-types';
+import { formatArea, OfferingType, type PropertyType } from '@homiio/shared-types';
 import { getAmenityById } from '@/constants/amenities';
 import { usePropertySearch } from '@/hooks/usePropertySearch';
+import { useFormatting } from '@/utils/format';
 import { useSearchPriceHistogram } from '@/hooks/useSearchPriceHistogram';
 import type { SearchFilterPatch } from '@/store/searchQueryStore';
 import { spacing } from '@/constants/styles';
@@ -87,6 +90,36 @@ const MAX_BEDROOMS = 5;
 const MAX_BATHROOMS = 4;
 const MAX_GUESTS = 16;
 
+/**
+ * The area track, in SQUARE METRES.
+ *
+ * 500 m² is the ceiling Bloom's own buy template uses and comfortably past the
+ * top of a residential distribution; the step is 5 because a metre of
+ * granularity on a slider is noise nobody can aim at.
+ */
+const AREA_MAX_SQM = 500;
+const AREA_STEP_SQM = 5;
+
+/**
+ * A `Date` as the civil day the URL and the API carry.
+ *
+ * `toISOString().slice(0, 10)` reads the date in UTC, and that is the point
+ * rather than a bug to work around: the value is a DAY somebody picked in a
+ * calendar, not an instant, and anchoring it to UTC is what makes the same
+ * shared link answer the same way from any timezone. The backend parses it the
+ * same way — see `searchQueryBuilder.ts#parseDateParam`.
+ */
+function toCivilDate(date: Date): string {
+  return date.toISOString().slice(0, 10);
+}
+
+/** A civil day back into a `Date` for the picker, or null. */
+function fromCivilDate(value: string | undefined): Date | null {
+  if (!value) return null;
+  const parsed = new Date(value);
+  return Number.isFinite(parsed.getTime()) ? parsed : null;
+}
+
 /** The fields this dialog edits, and nothing else. */
 type FilterDraft = Pick<
   SearchQuery,
@@ -95,6 +128,10 @@ type FilterDraft = Pick<
   | 'priceMax'
   | 'bedrooms'
   | 'bathrooms'
+  | 'sizeMin'
+  | 'sizeMax'
+  | 'availableNow'
+  | 'availableBy'
   | 'guests'
   | 'amenities'
   | 'fairPrice'
@@ -109,6 +146,10 @@ function draftOf(query: SearchQuery): FilterDraft {
     priceMax: query.priceMax,
     bedrooms: query.bedrooms,
     bathrooms: query.bathrooms,
+    sizeMin: query.sizeMin,
+    sizeMax: query.sizeMax,
+    availableNow: query.availableNow,
+    availableBy: query.availableBy,
     guests: query.guests,
     amenities: query.amenities,
     fairPrice: query.fairPrice,
@@ -123,6 +164,10 @@ const EMPTY_DRAFT: FilterDraft = {
   priceMax: undefined,
   bedrooms: undefined,
   bathrooms: undefined,
+  sizeMin: undefined,
+  sizeMax: undefined,
+  availableNow: undefined,
+  availableBy: undefined,
   guests: undefined,
   amenities: [],
   fairPrice: undefined,
@@ -148,6 +193,13 @@ export function countActiveFilters(
   if (query.priceMin !== undefined || query.priceMax !== undefined) count += 1;
   if (query.bedrooms !== undefined) count += 1;
   if (query.bathrooms !== undefined) count += 1;
+  // ONE refinement, like the price range: a person who set both ends of the
+  // area did not apply two filters, and a badge reading "2" for one control is
+  // a number nobody can reconcile with the screen.
+  if (query.sizeMin !== undefined || query.sizeMax !== undefined) count += 1;
+  // Likewise one: the switch and the date are two spellings of the same
+  // question, and only one of them is ever in force.
+  if (query.availableNow === true || query.availableBy !== undefined) count += 1;
   count += query.amenities.length;
   if (query.fairPrice === true) count += 1;
   if (query.instantBook === true) count += 1;
@@ -204,6 +256,17 @@ function FiltersBody({ query, onApply, onClose, showTypes }: FiltersBodyProps): 
   const insets = useSafeAreaInsets();
   const [draft, setDraft] = useState<FilterDraft>(() => draftOf(query));
   const isStay = query.offering === OfferingType.SHORT_TERM_RENT;
+  /**
+   * Whether "when can I move in?" is a question this offering answers.
+   *
+   * A stay is booked for a RANGE, which the dates step owns; a sale completes
+   * rather than becoming available. Offering the row for either would be a
+   * control whose answer means something else — which is worse than not having
+   * it, because it looks like it worked.
+   */
+  const showAvailability =
+    query.offering === OfferingType.LONG_TERM_RENT || query.offering === OfferingType.EXCHANGE;
+  const availableByDate = useMemo(() => fromCivilDate(draft.availableBy), [draft.availableBy]);
 
   const track = priceTrackFor(query.offering);
   const unitKey = priceUnitKey(query.offering);
@@ -238,7 +301,21 @@ function FiltersBody({ query, onApply, onClose, showTypes }: FiltersBodyProps): 
   const priceHistogram = useSearchPriceHistogram(draftQuery, track);
   // The thumbs and the bars are read together, so they are labelled in the same
   // currency — the scope's, once its distribution has come back.
+  const formatting = useFormatting();
   const formatPrice = usePriceFormatter(track, priceHistogram?.currency);
+  /**
+   * The area, formatted the way every other surface formats one.
+   *
+   * `formatArea(..., 'sqm', ...)` with the locale's own unit labels — the same
+   * call `PropertyCard` and `RoomList` make, so a filter and a card never
+   * disagree about what "78 m²" looks like, and a locale that prefers square
+   * feet converts here rather than in a slider.
+   */
+  const formatAreaValue = useCallback(
+    (value: number): string =>
+      formatArea(value, 'sqm', formatting.locale, { labels: formatting.areaUnitLabels }),
+    [formatting.locale, formatting.areaUnitLabels],
+  );
   const resultsLabel =
     typeof previewTotal === 'number'
       ? t('search.filters.showResults', { count: previewTotal })
@@ -330,6 +407,56 @@ function FiltersBody({ query, onApply, onClose, showTypes }: FiltersBodyProps): 
             />
           ) : null}
         </FilterSection>
+
+        {/* Floor area, in SQUARE METRES.
+
+            The column behind it is named `square_footage` and holds metres — a
+            legacy misnomer — and a listing nobody measured is stored as `0`.
+            The SERVER excludes those from a maximum rather than matching them,
+            so "up to 120 m²" does not quietly return the whole catalogue; see
+            `db/properties/propertyFilters.ts#areaInRange`. */}
+        <FilterSection title={t('search.filters.area')}>
+          <AreaRangeFilter
+            min={0}
+            max={AREA_MAX_SQM}
+            step={AREA_STEP_SQM}
+            value={[draft.sizeMin ?? null, draft.sizeMax ?? null]}
+            onValueCommit={([sizeMin, sizeMax]) =>
+              patch({ sizeMin: sizeMin ?? undefined, sizeMax: sizeMax ?? undefined })
+            }
+            onValueChange={([sizeMin, sizeMax]) =>
+              patch({ sizeMin: sizeMin ?? undefined, sizeMax: sizeMax ?? undefined })
+            }
+            formatArea={formatAreaValue}
+            minLabel={t('search.step.price.min')}
+            maxLabel={t('search.step.price.max')}
+            accessibilityLabel={t('search.filters.area')}
+          />
+        </FilterSection>
+
+        {/* Availability. Only for offerings where "move in" is the question a
+            date answers: a stay is booked for a RANGE (the dates step owns
+            that) and a sale completes rather than becoming available, so
+            offering the row there would be a control whose answer means
+            something else. */}
+        {showAvailability ? (
+          <FilterSection title={t('search.filters.availability')}>
+            <AvailabilityFilter
+              availableNow={draft.availableNow === true}
+              onAvailableNowChange={(on) => patch({ availableNow: on ? true : undefined })}
+              date={availableByDate}
+              onDateChange={(date) =>
+                patch({ availableBy: date ? toCivilDate(date) : undefined })
+              }
+              availableNowLabel={t('search.filters.availableNow')}
+              availableNowDescription={t('search.filters.availableNowHint')}
+              dateLabel={t('search.filters.availableFrom')}
+              datePlaceholder={t('search.step.price.any')}
+              minDate={new Date()}
+              locale={formatting.locale}
+            />
+          </FilterSection>
+        ) : null}
 
         <FilterSection title={t('search.filters.amenities')}>
           <AmenityFilter

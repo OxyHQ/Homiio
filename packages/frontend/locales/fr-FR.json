@@ -401,7 +401,12 @@
       "showMore": "Afficher plus",
       "showLess": "Afficher moins",
       "showResults_one": "Afficher {{count}} logement",
-      "showResults_other": "Afficher {{count}} logements"
+      "showResults_other": "Afficher {{count}} logements",
+      "area": "Surface",
+      "availability": "Disponibilité",
+      "availableNow": "Disponible maintenant",
+      "availableNowHint": "Prêt à emménager aujourd’hui",
+      "availableFrom": "Disponible à partir du"
     },
     "mode": {
       "label": "Browse mode",

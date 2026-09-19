@@ -160,6 +160,35 @@ export interface SearchQuery {
   bedrooms?: number;
   /** Minimum bathrooms. */
   bathrooms?: number;
+  /**
+   * Minimum floor area, in SQUARE METRES.
+   *
+   * Metres, and the unit is worth saying because the column behind it is named
+   * `square_footage` — a legacy misnomer carried through the Mongo port, which
+   * every reader confirms holds metres (`formatArea(..., 'sqm', ...)`,
+   * `pricePerSqm`). A filter that assumed feet would return homes three times
+   * the size somebody asked for and nothing would throw.
+   */
+  sizeMin?: number;
+  /**
+   * Maximum floor area, in square metres.
+   *
+   * A listing whose area nobody filled in is stored as `0` and is EXCLUDED by
+   * this bound rather than matching it — see `db/properties/propertyFilters.ts`
+   * for why. "Unknown" is not an answer to a question about size.
+   */
+  sizeMax?: number;
+  /**
+   * Only homes that are free to move into today.
+   *
+   * Wins over {@link availableBy} when both are set — "today" already is the
+   * earliest date. The two are kept separately (rather than collapsing the date
+   * when the switch goes on) so turning the switch back off restores the day
+   * the user picked, which is what Bloom's `AvailabilityFilter` expects.
+   */
+  availableNow?: boolean;
+  /** Free to move into by this civil date (`YYYY-MM-DD`) at the latest. */
+  availableBy?: string;
   /** Amenity slugs the listing must include. */
   amenities: string[];
   /** Short-term-only date range. */

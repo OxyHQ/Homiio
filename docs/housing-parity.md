@@ -69,10 +69,10 @@ count.
 | Price histogram | ✓ real | — | `GET /properties/search/price-histogram` | **live** — not the demo's fake timer |
 | Property type | ✓ | `propertyType` | `typeIn` | **live** |
 | Bedrooms / bathrooms | ✓ | `bedrooms`/`bathrooms` | minimum, `inRange` | **live** |
-| Floor area | ✗ | ✗ | ✗ | **open** — `properties.square_footage` exists and nothing filters on it |
-| Availability (now / from date) | ✗ | ✗ | ✗ | **open** — `properties.available_from` exists; only `/properties` list takes `checkIn`/`checkOut` |
+| Floor area | ✓ | `sizeMin`/`sizeMax` | `areaInRange` | **live** — m², and an unmeasured listing is excluded from a maximum rather than matching it |
+| Availability (now / from date) | ✓ | `availableNow`/`availableBy` | `availableBy` | **live** — long-term and exchange only; a stay is booked for a range and a sale completes |
 | Features | partial | `amenities` | `hasAllAmenities` | **partial** — Bloom's `features` and Homiio's amenities are not the same vocabulary; unmapped |
-| Floor | ✗ | ✗ | ✗ | **open** — `properties.floor` exists, unfiltered |
+| Floor | ✗ | ✗ | ✗ | **blocked** — `properties.floor` is `NOT NULL DEFAULT 0`, so "ground floor" and "not stated" are the same value; see below |
 
 ### Buy
 
@@ -80,7 +80,7 @@ count.
 |---|---|---|
 | Price (log scale, "asking price") | **partial** | The range works; the scale and the per-mode bounds are Bloom's, not adopted |
 | Property type, rooms | **live** | Shared with rent |
-| Floor area (slider) | **open** | As above |
+| Floor area (slider) | **partial** | The filter is live and shared with rent; Bloom's slider variant is not adopted |
 | Energy rating | **open** | **No column at all.** Needs schema, ingest and a source before a filter means anything |
 | Features, floor | **open** | As above |
 
@@ -95,13 +95,30 @@ count.
 | Instant booking | **live** | `properties.short_term_rent_instant_book` |
 | Dates / guests | **partial** | In `SearchQuery` and the URL; availability is filtered on `/properties`, not on `/properties/search` |
 
+### Why the floor filter is blocked rather than open
+
+`properties.floor` is `doublePrecision NOT NULL DEFAULT 0`. Ground floor is a
+real, common answer and it is stored as `0` — the same value a listing nobody
+filled in gets. The two are **indistinguishable in the data**.
+
+So a floor filter cannot be written honestly. "Floor 2 or above" would exclude
+every unstated listing, which is defensible; "up to floor 1" would include every
+one of them, which is the same silent widening the area filter's `> 0` guard
+exists to prevent — and here there is no guard to write, because zero is a
+legitimate answer.
+
+Making the column nullable is the fix, and it needs a decision nobody has made:
+the existing `0` rows cannot be backfilled to `NULL` without erasing real
+ground-floor data, and cannot be left as `0` without keeping the ambiguity. That
+is a product call about historical rows, not a migration.
+
 ### Swap
 
 | Control | Status | Note |
 |---|---|---|
 | Kind of exchange | **divergent** | Bloom offers swap / **guest points**; Homiio has `swap \| host \| both`. Not equivalent — see §7 |
 | Rooms, features | **live** / **partial** | As rent |
-| Verified members only | **open** | Extraction accepts `verified`; the query builder has no such condition |
+| Verified members only | **partial** | `verified` filters `properties.is_verified` — a LISTING check, not the identity check Bloom's copy describes. Corrected on re-reading: the first draft of this matrix said "open", which was wrong |
 
 ---
 
@@ -210,8 +227,9 @@ and most of #519 §8 (Sindi).
 
 Open, in rough order of how much they unblock:
 
-1. **Filters end to end** — area, availability, floor, energy, beds, verified —
-   plus the currency contract. Everything in §2 marked `open`.
+1. **Filters end to end** — floor (blocked), energy, beds, and the room-vs-whole-home
+   segment — plus the currency contract. Area and availability are now live in all
+   four columns, including the histogram.
 2. **Maintenance** — a new domain, the largest single gap in My home.
 3. **Payments** — blocked on a processor decision; the model split (obligation /
    attempt / confirmed / manual / refund) can start without one.

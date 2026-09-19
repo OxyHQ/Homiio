@@ -361,3 +361,54 @@ describe('navigation vs refinement', () => {
     expect(isNavigationChange(query(), query({ location: barcelona }))).toBe(true);
   });
 });
+
+describe('floor area and availability survive the URL', () => {
+  it('round-trips an area range', () => {
+    const { params } = buildSearchParamsForUrl(query({ sizeMin: 45, sizeMax: 120 }));
+    expect(params.sizeMin).toBe('45');
+    expect(params.sizeMax).toBe('120');
+
+    const parsed = parseSearchParams(params);
+    expect(parsed.query.sizeMin).toBe(45);
+    expect(parsed.query.sizeMax).toBe(120);
+  });
+
+  it('round-trips one open end', () => {
+    const { params } = buildSearchParamsForUrl(query({ sizeMin: 80 }));
+    expect(params.sizeMax).toBeUndefined();
+    expect(parseSearchParams(params).query.sizeMin).toBe(80);
+    expect(parseSearchParams(params).query.sizeMax).toBeUndefined();
+  });
+
+  it('round-trips "available now"', () => {
+    const { params } = buildSearchParamsForUrl(query({ availableNow: true }));
+    expect(params.availableNow).toBe('true');
+    expect(parseSearchParams(params).query.availableNow).toBe(true);
+  });
+
+  it('round-trips a civil date', () => {
+    const { params } = buildSearchParamsForUrl(query({ availableBy: '2026-11-01' }));
+    expect(params.availableBy).toBe('2026-11-01');
+    expect(parseSearchParams(params).query.availableBy).toBe('2026-11-01');
+  });
+
+  it('never WRITES both, because they would be a link arguing with itself', () => {
+    // Bloom's `AvailabilityFilter` keeps the picked day while the switch is on,
+    // so the draft legitimately holds both. The URL is where that stops: a
+    // shared link carrying "now, but also by March" is a search nobody can
+    // reason about, and the server would resolve it in the switch's favour
+    // anyway.
+    const { params } = buildSearchParamsForUrl(
+      query({ availableNow: true, availableBy: '2027-03-01' }),
+    );
+    expect(params.availableNow).toBe('true');
+    expect(params.availableBy).toBeUndefined();
+  });
+
+  it('carries neither when neither is set', () => {
+    const { params } = buildSearchParamsForUrl(query());
+    expect(params.sizeMin).toBeUndefined();
+    expect(params.availableNow).toBeUndefined();
+    expect(params.availableBy).toBeUndefined();
+  });
+});

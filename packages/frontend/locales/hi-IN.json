@@ -401,7 +401,12 @@
       "showMore": "और दिखाएँ",
       "showLess": "कम दिखाएँ",
       "showResults_one": "{{count}} घर दिखाएँ",
-      "showResults_other": "{{count}} घर दिखाएँ"
+      "showResults_other": "{{count}} घर दिखाएँ",
+      "area": "क्षेत्रफल",
+      "availability": "उपलब्धता",
+      "availableNow": "अभी उपलब्ध",
+      "availableNowHint": "आज ही रहने के लिए तैयार",
+      "availableFrom": "इस तारीख़ से उपलब्ध"
     },
     "mode": {
       "label": "Browse mode",

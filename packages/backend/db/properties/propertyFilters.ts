@@ -29,7 +29,7 @@
  *    too broad to be useful, not an accident of the port.
  */
 
-import { and, eq, gte, inArray, isNull, lte, notInArray, or, sql, type SQL } from 'drizzle-orm';
+import { and, eq, gt, gte, inArray, isNull, lte, notInArray, or, sql, type SQL } from 'drizzle-orm';
 import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 
 import { qualified } from '../casing';
@@ -365,4 +365,64 @@ export function calendarIsFree(checkIn: Date, checkOut: Date): SQL {
       and tstzrange(${propertyAvailabilityWindows.startsAt}, ${propertyAvailabilityWindows.endsAt})
           && tstzrange(${checkIn.toISOString()}::timestamptz, ${checkOut.toISOString()}::timestamptz)
   )`;
+}
+
+/**
+ * A floor-area range in SQUARE METRES, where "unknown" never matches.
+ *
+ * ## The column's name lies, and the unit is worth stating twice
+ *
+ * `properties.square_footage` holds SQUARE METRES. The name is a legacy
+ * misnomer carried through the Mongo port; every reader confirms the unit —
+ * `PropertyCard` and `RoomList` render it with `formatArea(..., 'sqm', ...)`,
+ * and `pricePerSqm` is derived from it. A filter that assumed square feet would
+ * return homes three times the size somebody asked for, and nothing would throw.
+ *
+ * ## Why a maximum has to exclude zero
+ *
+ * The column is `NOT NULL DEFAULT 0`, so a listing whose area nobody filled in
+ * is stored as `0` — indistinguishable from a genuine zero, which does not
+ * exist. A bare `square_footage <= 120` therefore matches EVERY listing with no
+ * area at all, and "homes up to 120 m²" silently becomes "homes up to 120 m²,
+ * plus everything we do not know the size of", which is most of an ingested
+ * feed. That is the plausible-looking failure: the results look like results.
+ *
+ * So a maximum also requires `> 0`. A MINIMUM needs no such guard — `0 >= 40`
+ * is already false — but the guard is applied to both ends anyway, because
+ * "unknown is not an answer to a question about size" is one rule and a reader
+ * should not have to work out that one end enforces it accidentally.
+ */
+export function areaInRange(
+  min: number | undefined,
+  max: number | undefined,
+): SQL | undefined {
+  if (min === undefined && max === undefined) return undefined;
+  const bounds: SQL[] = [gt(properties.squareFootage, 0)];
+  if (min !== undefined) bounds.push(gte(properties.squareFootage, min));
+  if (max !== undefined) bounds.push(lte(properties.squareFootage, max));
+  return and(...bounds);
+}
+
+/**
+ * Free to move into by a given day.
+ *
+ * ## Which of the two availability columns this reads, and why it is a decision
+ *
+ * `properties` carries BOTH `available_from` and `availability_available_from`,
+ * and the schema records that they disagree on 1,630 rows (9.2%) and that which
+ * one wins "is a code reading, not a schema decision, and it has not been made
+ * yet".
+ *
+ * This makes it, for the search path, by reading `available_from` — the column
+ * `controllers/property/commonFilters.ts` already filters on for `/properties`.
+ * The choice is consistency rather than a claim that this column is the better
+ * fact: two filter paths reading different columns would answer the same
+ * question differently depending on which endpoint a screen happened to call,
+ * and 1,630 listings would move between them for no reason a user could see.
+ *
+ * Collapsing the two columns remains open. When it is decided, this function
+ * and `commonFilters` change together, which is the point of them agreeing now.
+ */
+export function availableBy(date: Date): SQL {
+  return lte(properties.availableFrom, date);
 }

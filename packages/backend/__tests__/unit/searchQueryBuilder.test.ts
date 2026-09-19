@@ -278,3 +278,85 @@ describe('the rendering helpers themselves', () => {
     expect(constrains(sql, { name: 'deletedAt' })).toBe(true);
   });
 });
+
+describe('buildSearchPlan floor-area filter', () => {
+  it('constrains the area column for a minimum', () => {
+    const { sql, params } = render(buildSearchPlan({ sizeMin: '40' }).conditions);
+    expect(constrains(sql, properties.squareFootage)).toBe(true);
+    expect(params).toContain(40);
+  });
+
+  it('EXCLUDES unknown areas when only a maximum is asked for', () => {
+    // The column is `NOT NULL DEFAULT 0`, so "nobody filled this in" is stored
+    // as zero — and a bare `<= 120` matches every one of them. "Homes up to
+    // 120 m²" would silently become "…plus everything whose size we do not
+    // know", which is most of an ingested feed and reads exactly like results.
+    const { sql, params } = render(buildSearchPlan({ sizeMax: '120' }).conditions);
+    expect(sql).toMatch(/"square_footage" > \$\d+/);
+    expect(params).toContain(0);
+    expect(params).toContain(120);
+  });
+
+  it('applies the guard on a minimum too, so one rule covers both ends', () => {
+    const { sql } = render(buildSearchPlan({ sizeMin: '40' }).conditions);
+    expect(sql).toMatch(/"square_footage" > \$\d+/);
+  });
+
+  it('does not constrain the area column when neither bound is given', () => {
+    const { sql } = render(buildSearchPlan({}).conditions);
+    expect(constrains(sql, properties.squareFootage)).toBe(false);
+  });
+
+  it('ignores a non-numeric bound rather than rejecting the search', () => {
+    const { sql } = render(buildSearchPlan({ sizeMin: 'wide' }).conditions);
+    expect(constrains(sql, properties.squareFootage)).toBe(false);
+  });
+});
+
+describe('buildSearchPlan availability filter', () => {
+  /**
+   * The bound timestamp, as an ISO string.
+   *
+   * Drizzle renders a `timestamptz` parameter as an ISO STRING, not as a
+   * `Date` — worth pinning here rather than in a comment, because a test
+   * looking for a `Date` instance finds none and reads as "the filter is not
+   * applied" when it is applied perfectly.
+   */
+  const boundTimestamp = (params: unknown[]): string | undefined =>
+    params.find(
+      (value): value is string => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(value),
+    );
+
+  it('constrains available_from for an explicit date', () => {
+    const { sql, params } = render(buildSearchPlan({ availableBy: '2026-11-01' }).conditions);
+    expect(constrains(sql, properties.availableFrom)).toBe(true);
+    expect(boundTimestamp(params)).toBeDefined();
+  });
+
+  it('reads the civil date as UTC, so a shared URL answers the same anywhere', () => {
+    const { params } = render(buildSearchPlan({ availableBy: '2026-11-01' }).conditions);
+    expect(boundTimestamp(params)).toBe('2026-11-01T00:00:00.000Z');
+  });
+
+  it('availableNow wins over a later date, rather than contradicting itself', () => {
+    // Bloom's `AvailabilityFilter` disables the picker while the switch is on
+    // and KEEPS the chosen day, so a client legitimately sends both. Honouring
+    // the later date as well would be a filter arguing with itself.
+    const { params } = render(
+      buildSearchPlan({ availableNow: 'true', availableBy: '2027-01-01' }).conditions,
+    );
+    const bound = boundTimestamp(params);
+    expect(bound).toBeDefined();
+    expect(Number(bound!.slice(0, 4))).toBeLessThan(2027);
+  });
+
+  it('does not constrain availability when neither is given', () => {
+    const { sql } = render(buildSearchPlan({}).conditions);
+    expect(constrains(sql, properties.availableFrom)).toBe(false);
+  });
+
+  it('ignores an unparseable date rather than 400ing a shared link', () => {
+    const { sql } = render(buildSearchPlan({ availableBy: 'soon' }).conditions);
+    expect(constrains(sql, properties.availableFrom)).toBe(false);
+  });
+});

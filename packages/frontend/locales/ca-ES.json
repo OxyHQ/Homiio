@@ -405,7 +405,12 @@
       "showMore": "Mostra’n més",
       "showLess": "Mostra’n menys",
       "showResults_one": "Mostra {{count}} habitatge",
-      "showResults_other": "Mostra {{count}} habitatges"
+      "showResults_other": "Mostra {{count}} habitatges",
+      "area": "Superfície",
+      "availability": "Disponibilitat",
+      "availableNow": "Disponible ara",
+      "availableNowHint": "A punt per entrar-hi avui",
+      "availableFrom": "Disponible des de"
     },
     "mode": {
       "label": "Mode de cerca",

@@ -401,7 +401,12 @@
       "showMore": "Show more",
       "showLess": "Show less",
       "showResults_one": "Show {{count}} home",
-      "showResults_other": "Show {{count}} homes"
+      "showResults_other": "Show {{count}} homes",
+      "area": "Floor area",
+      "availability": "Availability",
+      "availableNow": "Available now",
+      "availableNowHint": "Ready to move into today",
+      "availableFrom": "Available from"
     },
     "mode": {
       "label": "Browse mode",

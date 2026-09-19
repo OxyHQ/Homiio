@@ -523,7 +523,12 @@
       "showMore": "Mostra altro",
       "showLess": "Mostra meno",
       "showResults_one": "Mostra {{count}} alloggio",
-      "showResults_other": "Mostra {{count}} alloggi"
+      "showResults_other": "Mostra {{count}} alloggi",
+      "area": "Superficie",
+      "availability": "Disponibilità",
+      "availableNow": "Disponibile ora",
+      "availableNowHint": "Pronto per entrare oggi",
+      "availableFrom": "Disponibile dal"
     },
     "mode": {
       "label": "Modalità di ricerca",
