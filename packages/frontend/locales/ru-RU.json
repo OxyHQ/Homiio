@@ -403,7 +403,12 @@
       "showResults_one": "Показать {{count}} вариант",
       "showResults_few": "Показать {{count}} варианта",
       "showResults_many": "Показать {{count}} вариантов",
-      "showResults_other": "Показать {{count}} варианта"
+      "showResults_other": "Показать {{count}} варианта",
+      "area": "Площадь",
+      "availability": "Доступность",
+      "availableNow": "Доступно сейчас",
+      "availableNowHint": "Можно заехать уже сегодня",
+      "availableFrom": "Доступно с"
     },
     "mode": {
       "label": "Browse mode",

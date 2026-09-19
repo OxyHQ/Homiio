@@ -45,6 +45,8 @@ import {
 
 import { properties } from '../../db/schema';
 import {
+  areaInRange,
+  availableBy,
   booleanIs,
   exchangeModeIn,
   hasAllAmenities,
@@ -167,6 +169,27 @@ export function parseIntParam(value: RawQueryValue): number | undefined {
   if (str === undefined) return undefined;
   const parsed = Number.parseInt(str, 10);
   return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+/**
+ * Parse a civil date (`YYYY-MM-DD`) or an ISO timestamp, or undefined.
+ *
+ * An UNPARSEABLE value answers `undefined`, which drops the filter — the same
+ * thing every other parser here does, and deliberately not a 400. A search
+ * endpoint that rejects the whole request over one malformed optional
+ * parameter turns a typo in a shared link into an error page; dropping it
+ * returns a wider result set, which is visible and recoverable.
+ *
+ * `Date.parse` of `YYYY-MM-DD` is UTC midnight. That is the right reading for
+ * "available by this day": it is a civil date the user picked in a calendar,
+ * not an instant, and anchoring it to UTC keeps the same query answering the
+ * same way from any timezone — which is what a shared URL has to do.
+ */
+function parseDateParam(value: RawQueryValue): Date | undefined {
+  const str = asString(value);
+  if (str === undefined) return undefined;
+  const parsed = new Date(str);
+  return Number.isFinite(parsed.getTime()) ? parsed : undefined;
 }
 
 /** Parse a boolean from a raw query value; only the literal `'true'`/`'false'` count. */
@@ -438,6 +461,30 @@ export function buildSearchPlan(
     const condition = inRange(properties.bathrooms, bathrooms, undefined);
     if (condition) conditions.push(condition);
   }
+
+  // --- Floor area, in SQUARE METRES ---
+  //
+  // `sizeMin`/`sizeMax`. The column is `square_footage` and holds metres — a
+  // legacy misnomer — and "unknown" is stored as `0`, so a maximum has to
+  // exclude it or "up to 120 m²" matches every listing whose area nobody
+  // filled in. Both rules live in `areaInRange`; see its header.
+  const areaRange = areaInRange(
+    parseFloatParam(query.sizeMin),
+    parseFloatParam(query.sizeMax),
+  );
+  if (areaRange) conditions.push(areaRange);
+
+  // --- Availability: free to move into now, or by a given day ---
+  //
+  // `availableNow` wins over `availableBy` when both arrive, because "today"
+  // IS the earliest date and honouring a later one as well would be a filter
+  // contradicting itself. Bloom's `AvailabilityFilter` disables the picker
+  // while the switch is on for the same reason, and keeps the chosen day so
+  // turning the switch off brings it back — so the client legitimately sends
+  // both, and the server must not treat that as an error.
+  const availableNow = parseBoolParam(query.availableNow) === true;
+  const availableByDate = availableNow ? new Date() : parseDateParam(query.availableBy);
+  if (availableByDate) conditions.push(availableBy(availableByDate));
 
   // --- Amenities (must include all requested) ---
   const amenities = hasAllAmenities(getAmenitiesParam(query.amenities));

@@ -405,7 +405,12 @@
       "showResults_two": "عرض {{count}} مسكنين",
       "showResults_few": "عرض {{count}} مساكن",
       "showResults_many": "عرض {{count}} مسكنًا",
-      "showResults_other": "عرض {{count}} مسكن"
+      "showResults_other": "عرض {{count}} مسكن",
+      "area": "المساحة",
+      "availability": "التوفّر",
+      "availableNow": "متاح الآن",
+      "availableNowHint": "جاهز للسكن اليوم",
+      "availableFrom": "متاح اعتبارًا من"
     },
     "mode": {
       "label": "Browse mode",

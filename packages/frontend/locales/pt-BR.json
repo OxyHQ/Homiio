@@ -401,7 +401,12 @@
       "showMore": "Mostrar mais",
       "showLess": "Mostrar menos",
       "showResults_one": "Mostrar {{count}} imóvel",
-      "showResults_other": "Mostrar {{count}} imóveis"
+      "showResults_other": "Mostrar {{count}} imóveis",
+      "area": "Área",
+      "availability": "Disponibilidade",
+      "availableNow": "Disponível agora",
+      "availableNowHint": "Pronto para entrar hoje",
+      "availableFrom": "Disponível a partir de"
     },
     "mode": {
       "label": "Browse mode",

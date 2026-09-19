@@ -384,7 +384,12 @@
       "showMore": "Mostrar más",
       "showLess": "Mostrar menos",
       "showResults_one": "Mostrar {{count}} vivienda",
-      "showResults_other": "Mostrar {{count}} viviendas"
+      "showResults_other": "Mostrar {{count}} viviendas",
+      "area": "Superficie",
+      "availability": "Disponibilidad",
+      "availableNow": "Disponible ahora",
+      "availableNowHint": "Listo para entrar hoy",
+      "availableFrom": "Disponible desde"
     },
     "mode": {
       "label": "Modo de búsqueda",

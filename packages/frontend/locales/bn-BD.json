@@ -401,7 +401,12 @@
       "showMore": "আরও দেখান",
       "showLess": "কম দেখান",
       "showResults_one": "{{count}}টি বাসা দেখান",
-      "showResults_other": "{{count}}টি বাসা দেখান"
+      "showResults_other": "{{count}}টি বাসা দেখান",
+      "area": "আয়তন",
+      "availability": "প্রাপ্যতা",
+      "availableNow": "এখনই উপলব্ধ",
+      "availableNowHint": "আজই বসবাসের জন্য প্রস্তুত",
+      "availableFrom": "এই তারিখ থেকে উপলব্ধ"
     },
     "mode": {
       "label": "Browse mode",

@@ -353,6 +353,21 @@ export function buildSearchParams(query: SearchQuery): Record<string, string | n
   if (typeof query.bathrooms === 'number' && query.bathrooms > 0) {
     params.bathrooms = query.bathrooms;
   }
+  if (typeof query.sizeMin === 'number' && query.sizeMin > 0) {
+    params.sizeMin = query.sizeMin;
+  }
+  if (typeof query.sizeMax === 'number' && query.sizeMax > 0) {
+    params.sizeMax = query.sizeMax;
+  }
+  if (query.availableNow === true) {
+    params.availableNow = 'true';
+  } else if (query.availableBy) {
+    // Only when the switch is off. "Available now" already means the earliest
+    // possible day, so sending a later date beside it is a request arguing
+    // with itself — the server resolves it in the switch's favour, and not
+    // sending it keeps the two from ever disagreeing in the first place.
+    params.availableBy = query.availableBy;
+  }
   if (query.amenities.length > 0) {
     params.amenities = query.amenities.join(',');
   }

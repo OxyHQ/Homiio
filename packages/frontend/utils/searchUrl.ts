@@ -166,6 +166,14 @@ export function parseSearchParams(params: RouteParams): ParsedSearchUrl {
     priceMax: parseNumber(readParam(params.priceMax)),
     bedrooms: parseNumber(readParam(params.bedrooms)),
     bathrooms: parseNumber(readParam(params.bathrooms)),
+    sizeMin: parseNumber(readParam(params.sizeMin)),
+    sizeMax: parseNumber(readParam(params.sizeMax)),
+    availableNow: readParam(params.availableNow) === 'true' ? true : undefined,
+    // Kept even when `availableNow` is on, so a link that somehow carries both
+    // restores the day rather than losing it; the serializer is what refuses to
+    // WRITE the pair, and the server resolves the conflict in the switch's
+    // favour either way.
+    availableBy: readParam(params.availableBy),
     // Amenity slugs are open-ended (the catalogue grows), so there is no
     // allowlist to check them against — an unknown slug simply matches nothing
     // server-side, which is the correct outcome for a link written against a
@@ -254,6 +262,13 @@ export function buildSearchParamsForUrl(query: SearchQuery): SerializedSearchUrl
   if (typeof query.priceMax === 'number') params.priceMax = String(query.priceMax);
   if (typeof query.bedrooms === 'number') params.bedrooms = String(query.bedrooms);
   if (typeof query.bathrooms === 'number') params.bathrooms = String(query.bathrooms);
+  if (typeof query.sizeMin === 'number') params.sizeMin = String(query.sizeMin);
+  if (typeof query.sizeMax === 'number') params.sizeMax = String(query.sizeMax);
+  if (query.availableNow === true) params.availableNow = 'true';
+  // Only when the switch is OFF: `availableNow` already means "the earliest
+  // possible day", and carrying a later one beside it would put a filter
+  // arguing with itself into a shareable URL.
+  if (query.availableBy && query.availableNow !== true) params.availableBy = query.availableBy;
   if (typeof query.guests === 'number') params.guests = String(query.guests);
   if (query.dates) {
     params.checkIn = query.dates.start;

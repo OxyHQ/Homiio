@@ -401,7 +401,12 @@
       "showMore": "显示更多",
       "showLess": "收起",
       "showResults_one": "显示 {{count}} 套房源",
-      "showResults_other": "显示 {{count}} 套房源"
+      "showResults_other": "显示 {{count}} 套房源",
+      "area": "面积",
+      "availability": "可入住时间",
+      "availableNow": "现在可入住",
+      "availableNowHint": "今天即可入住",
+      "availableFrom": "可入住日期"
     },
     "mode": {
       "label": "Browse mode",
