@@ -59,6 +59,21 @@ export default function () {
     asyncHandler(applicationController.listMyApplications)
   );
 
+  // GET /api/applications/:id/documents/:documentId — the bytes of ONE attached
+  // document, to the applicant or the landlord and nobody else.
+  //
+  // Declared BEFORE `/:id` so the static `documents` segment is never swallowed
+  // by the parameter, the same ordering `routes/leases.ts` and
+  // `routes/maintenance.ts` use.
+  //
+  // On THIS router, which is the authenticated one. That placement is the
+  // authorization decision (`AGENTS.md`), and it is the whole point: these
+  // documents used to be delivered by `routes/public.ts`.
+  router.get(
+    '/:id/documents/:documentId',
+    asyncHandler(applicationController.getApplicationDocument)
+  );
+
   // GET /api/applications/:id
   router.get(
     '/:id',

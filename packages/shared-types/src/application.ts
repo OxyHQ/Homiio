@@ -34,8 +34,25 @@ export interface TenantApplicationReference {
 }
 
 export interface TenantApplicationDocument {
+  /** The row's own id, which the download path names. */
+  id: string;
   type: TenantApplicationDocumentType;
-  url: string;
+  /**
+   * Where to ASK for the bytes — a Homiio API path, not a link to an object.
+   *
+   * `url` is gone from this shape on purpose. It held
+   * `<publicUrl>/api/images/file/<key>`: the unauthenticated route that also
+   * serves listing photos, delivered with a year of `public` cache. Every
+   * reader of an application therefore received a permanent, shareable link to
+   * somebody's identity document or payslip, and the objects — which live in a
+   * private bucket — were reachable for exactly that reason.
+   *
+   * Fetching this path requires the session, and the handler behind it proves
+   * the viewer is the applicant or the landlord before a byte moves. It is not
+   * something `Linking.openURL` can open: see
+   * `utils/privateDocument.ts` on the client.
+   */
+  downloadPath: string;
   filename: string;
 }
 

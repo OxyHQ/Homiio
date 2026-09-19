@@ -10,7 +10,7 @@ import type {
   ImageVariantUrls,
 } from '@homiio/shared-types';
 import config from '../config';
-import { validateImageStoreKey } from '../utils/imageStoreKey';
+import { validateImageStoreKey, validatePrivateDocumentKey } from '../utils/imageStoreKey';
 import { insertImage, type ImageRow } from '../db/images/imageWrites';
 
 /**
@@ -472,7 +472,39 @@ export class ImageUploadService {
    * self-hosted local store. Returns `null` when the object is absent.
    */
   async readStoredImage(key: string): Promise<{ buffer: Buffer; contentType: string } | null> {
-    const validation = validateImageStoreKey(key);
+    return this.readStoredObject(key, validateImageStoreKey);
+  }
+
+  /**
+   * Read a PRIVATE document's bytes — a tenant's payslip, an identity document,
+   * a tenancy agreement.
+   *
+   * Same store, same bytes, different door. `validatePrivateDocumentKey` is the
+   * mirror of the image validator: it serves only what the public route refuses,
+   * and it allows `.pdf`, which the public route must never hand out.
+   *
+   * **This method does not authorize anything.** It takes a key and returns
+   * bytes. Every caller must have resolved the document from a row the viewer is
+   * entitled to and must say so at its own call site; a caller that reaches here
+   * with a key straight off a request has reproduced the defect this exists to
+   * fix.
+   */
+  async readPrivateDocument(key: string): Promise<{ buffer: Buffer; contentType: string } | null> {
+    return this.readStoredObject(key, validatePrivateDocumentKey);
+  }
+
+  /**
+   * The shared read: validate under the caller's POLICY, then fetch from S3 or
+   * the local store. The policy is a parameter rather than a branch so the two
+   * doors cannot come to differ in their path safety — both get the same
+   * traversal, NUL, backslash and containment checks because both run the same
+   * code.
+   */
+  private async readStoredObject(
+    key: string,
+    validate: (raw: string) => ReturnType<typeof validateImageStoreKey>,
+  ): Promise<{ buffer: Buffer; contentType: string } | null> {
+    const validation = validate(key);
     if (!validation.ok) return null;
 
     if (this.isStorageConfigured()) {
@@ -494,7 +526,7 @@ export class ImageUploadService {
       }
     }
 
-    return this.readLocalImage(validation.key);
+    return this.readFromLocalStore(validation.key, validation.contentType);
   }
 
   /**
@@ -531,9 +563,22 @@ export class ImageUploadService {
     if (!validation.ok) {
       return null;
     }
+    return this.readFromLocalStore(validation.key, validation.contentType);
+  }
 
+  /**
+   * The containment gate itself, over an ALREADY-validated key.
+   *
+   * Split out so the private document door gets exactly this containment and
+   * not a second implementation of it: symlink containment is the kind of check
+   * that is written once correctly and paraphrased wrongly.
+   */
+  private async readFromLocalStore(
+    key: string,
+    contentType: string,
+  ): Promise<{ buffer: Buffer; contentType: string } | null> {
     const root = path.resolve(LOCAL_IMAGE_STORE_DIR);
-    const resolved = path.resolve(root, validation.key);
+    const resolved = path.resolve(root, key);
 
     // String-level containment on the resolved (lexical) path.
     if (resolved !== root && !resolved.startsWith(root + path.sep)) {
@@ -566,7 +611,7 @@ export class ImageUploadService {
 
     try {
       const buffer = await fs.readFile(realTarget);
-      return { buffer, contentType: validation.contentType };
+      return { buffer, contentType };
     } catch (error) {
       if (this.isFileMissingError(error)) {
         return null;

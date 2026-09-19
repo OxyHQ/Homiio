@@ -164,7 +164,7 @@ is a product call about historical rows, not a migration.
 | "Pay rent" (a checkout) | — | **blocked** | Needs a processor decision. `kind: 'processor'` is in the model so adding one later does not migrate a live ledger, but no route creates one and no card or bank detail is stored anywhere. #518 §7.2 is explicit that its absence is a documented delivery block, not licence to drop the row |
 | `MaintenanceRequestCard` / repairs | `MaintenanceSection`, `/maintenance/*` | **partial** | The domain exists: `maintenance_requests` + comments + events, a declared state machine under a row lock, authorization in the repository query, notifications through the dispatcher. **Photos are open** — see below |
 | "Message landlord" | — | **blocked** | The ecosystem audit §7.3 asks for is done: [`docs/messaging-audit.md`](./messaging-audit). Allo IS the platform and is explicitly multi-product, but its SDK is unpublished, its server cannot open a conversation, and enrolling Homiio enrols a device on the person's whole Allo account. Three decisions named there, none of them an implementer's. No button is drawn meanwhile — the Inbox tab is a notification list |
-| `DocumentList`, signatures | `LeaseDocumentsSection`, `/contracts/[id]` | **partial** | Upload/list/view exist; "uploaded" is not "verified" and the checklist is not yet server state |
+| `DocumentList`, signatures | `LeaseDocumentsSection`, `/contracts/[id]` | **partial** | Upload/list/view exist; "uploaded" is not "verified" and the checklist is not yet server state. An application's documents are no longer delivered by the public image route — see below |
 | `TenancyTimeline` | `LeaseHistorySection` | **live** | Real lease events |
 | `ApplicationChecklist` | `useApplicationQueries` | **partial** | Applications persist; the checklist's per-requirement state does not |
 | `SavedSearchCard` + alerts | `useSavedSearches`, `useHousingAlerts` | **live** | `housing_watch_rules` / `housing_alerts`, with a connected job — not a local toggle |
@@ -176,17 +176,45 @@ is a product call about historical rows, not a migration.
 
 ---
 
-### Repair photos, and why they are not shipped
+### The private document path — and the correction this row needed
 
-Both epics ask for attachments on a repair, and both also say a tenancy's
-evidence may not go through the **public** image endpoint. Homiio's image
-pipeline is public delivery by construction — `imageUploadService` writes
-`Cache-Control: public, max-age=31536000` and serves through the CDN — so there
-is no private object path to attach to.
+This section previously said repair photos were blocked because "there is no
+private object path to attach to". **That was wrong, and it was wrong in the
+direction that mattered.**
 
-Shipping "attach a photo" onto that bucket would put a picture of somebody's
-bathroom on a guessable URL. A private store is its own change with its own
-access model, and no affordance is drawn for something that cannot work yet.
+The bucket has never been public. `oxy-infra/terraform-uswest2/s3-apps.tf`
+creates every app's media bucket with `block_public_acls`,
+`block_public_policy`, `ignore_public_acls` and `restrict_public_buckets` all
+on, and only oxy-api's bucket sits behind the CDN. What made objects reachable
+was Homiio's own `GET /api/images/file/*`, mounted on `routes/public.ts`: it
+takes a key and returns bytes, with no session and no viewer. Correct for a
+listing photo, which is published on purpose.
+
+It was also how a **tenant's application documents** were delivered — identity,
+payslips, employment letters — because `imageUploadService.getImageUrl()` points
+at that route and the URL went straight into the application's wire shape, with
+a year of `public` cache on the response. Anyone who ever saw one held a
+permanent, shareable link.
+
+**That is fixed.** `utils/imageStoreKey.ts` refuses a private key prefix on the
+public route — which closes the door for the objects already stored, with no
+data migration, because the bytes never move — and
+`GET /api/applications/:id/documents/:documentId` serves them to the applicant
+and the landlord after proving the viewer, a stranger getting 404 rather than
+403. The two validators are deliberate mirror images and a test asserts that
+exactly one of them accepts any given key.
+
+**So repair photos are no longer blocked on infrastructure.** They are ordinary
+work on a path that now exists: a `private/maintenance/…` prefix, a row that
+carries which request it belongs to, and the same authorizing delivery. Still
+open, but open as work rather than as a dependency.
+
+**The client cost, stated:** the bytes come back base64 inside the ordinary
+envelope, because the Oxy linked client is JSON-only and `AGENTS.md` forbids a
+second manual token path. A signed short-lived URL is the usual answer and needs
+a signing secret and a decision about where it comes from; that is a separate
+change, and it was not a reason to leave a payslip on the public route in the
+meantime.
 
 ### Payments: what landed, and what is still blocked
 
@@ -206,9 +234,9 @@ simulated success both epics forbid. The model carries `kind: 'processor'` and a
 replayed webhook will find the row it already created — so adding a provider is
 wiring rather than a migration of live money.
 
-**Open: receipts.** A downloadable receipt needs the same private object store
-repair photos need, for the same reason: it is a tenancy document and may not go
-through the public image endpoint.
+**Open: receipts.** A receipt is a tenancy document and may not go through the
+public image endpoint — but the authorizing path it needs now exists (see the
+private document path above), so this is work rather than a dependency.
 
 ## 6. The currency gap, closed
 
@@ -298,10 +326,11 @@ Open, in rough order of how much they unblock:
    segment. Area and availability are live in all four columns, including the
    histogram, and the currency contract is closed (§6) bar the control for
    choosing a non-dominant currency.
-2. **Repair photos** — the one open half of maintenance, blocked behind a
-   private object store that does not exist.
-3. **Payment receipts and the processor** — the ledger is live; receipts need a
-   private object store and the checkout needs a provider decision.
+2. **Repair photos** — the one open half of maintenance. No longer blocked:
+   the authorizing document path exists, so this is a prefix, a row and a route.
+3. **Payment receipts and the processor** — the ledger is live; receipts are now
+   ordinary work on that same path, and only the checkout is blocked, on a
+   provider decision.
 4. **Messaging** — the audit is done ([`docs/messaging-audit.md`](./messaging-audit)); now blocked on
    three decisions it names, not on work.
 5. **Listing facts** — floor plans, energy, price history: each needs a source

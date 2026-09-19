@@ -40,6 +40,8 @@ import { logger } from '../middlewares/logging';
 import { AppError, successResponse, paginationResponse } from '../middlewares/errorHandler';
 import imageUploadService from '../services/imageUploadService';
 import { requireSessionOxyUserId } from '../utils/sessionUser';
+import { storedDocumentKey } from '../utils/storedDocumentKey';
+import config from '../config';
 import {
   TenantApplicationStatus,
   OfferingType,
@@ -55,6 +57,21 @@ const ACTIVE_LEASE_STATUSES: readonly LeaseStatusValue[] = [
 ];
 
 const APPLICATION_DOCUMENTS_FOLDER = 'applications/documents';
+
+/**
+ * A filename safe to write to a device and to show on a row.
+ *
+ * `filename` comes from the uploader's own device and is stored verbatim, so it
+ * can hold a path separator, a NUL or a leading dot — and the client writes it
+ * into a cache directory before opening it. Keeping a conservative set and
+ * capping the length is enough: this is a label on a file, not data anybody
+ * parses, and the server is the last place that can make it safe for every
+ * client that will ever read the row.
+ */
+function safeFilename(filename: string): string {
+  const cleaned = filename.replace(/[^A-Za-z0-9._ -]/g, '_').slice(0, 120);
+  return cleaned.length > 0 ? cleaned : 'document';
+}
 
 interface ParsedReferenceContact {
   name: string;
@@ -354,6 +371,108 @@ class ApplicationController {
       );
 
       res.json(paginationResponse(result.applications.map(serializeApplication), pageNumber, limitNumber, result.total, 'Applications retrieved'));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * `GET /api/applications/:id/documents/:documentId` — the bytes of ONE
+   * attached document, to the two people entitled to them.
+   *
+   * ## Why this route exists
+   *
+   * Because the alternative was what shipped: the upload wrote the object
+   * through `imageUploadService`, whose `getImageUrl` points at
+   * `/api/images/file/<key>` on `routes/public.ts` — no session, no viewer, no
+   * check — and the resulting URL went into the application's wire shape with
+   * `Cache-Control: public, max-age=31536000, immutable` on the response. A
+   * tenant's payslip was a link anyone could keep and anyone could open. The
+   * bucket itself is private (`block_public_acls`); that route was the door.
+   *
+   * It is now shut for this prefix (`utils/imageStoreKey.ts`), which closes it
+   * for the objects already stored — no bytes move, only the door changes — and
+   * this handler is the one that opens.
+   *
+   * ## What it checks, in order
+   *
+   *  1. The session, by the router it is mounted on.
+   *  2. The viewer is the applicant or the landlord ON THAT application. A
+   *     stranger gets **404**, not 403: "there is an application here and you
+   *     may not see it" is itself something a stranger should not learn.
+   *  3. The document belongs to THAT application. A document id from somebody
+   *     else's application resolves to nothing, so knowing an id grants no
+   *     access — §7.3's rule, applied to §7.4's documents.
+   *  4. Only then are the bytes read, and the key is taken from the row rather
+   *     than from the request.
+   *
+   * ## Why the bytes come back as base64 in JSON
+   *
+   * Because the client cannot fetch them any other way. `AGENTS.md` is explicit
+   * that the Oxy linked client owns auth and that no second manual token path
+   * may be added — and that client is JSON-only, so a binary response would need
+   * a raw `fetch` carrying a bearer this module is not allowed to mint. A
+   * signed short-lived URL would be the usual answer and needs a signing secret
+   * and a decision about where it comes from; that is a separate change, and it
+   * is not a reason to leave a payslip on the public route in the meantime.
+   *
+   * The trade is memory, and it is bounded: `routes/applications.ts` caps an
+   * upload at 10 MB, so a response is at most about 13.3 MB of base64, for an
+   * action somebody takes occasionally. Nothing is rendered from Homiio's own
+   * origin, which also removes the stored-XSS surface a served file would have.
+   *
+   * `Cache-Control: private, no-store`: it is somebody's identity document, and
+   * moving it off the public route buys nothing if a proxy keeps a copy.
+   */
+  async getApplicationDocument(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { id, documentId } = req.params as { id: string; documentId: string };
+      const oxyUserId = requireSessionOxyUserId(req);
+
+      const hydrated = await findApplicationById(getDb(), id);
+      // One 404 for "no such application" and for "not yours", written once so
+      // the two cannot drift into distinguishable answers.
+      const mayRead =
+        hydrated !== undefined &&
+        (hydrated.application.applicantOxyUserId === oxyUserId ||
+          hydrated.application.landlordOxyUserId === oxyUserId);
+      if (!hydrated || !mayRead) {
+        next(new AppError('Document not found', 404, 'NOT_FOUND'));
+        return;
+      }
+
+      const document = hydrated.documents.find((row) => row.id === documentId);
+      if (!document) {
+        next(new AppError('Document not found', 404, 'NOT_FOUND'));
+        return;
+      }
+
+      const key = storedDocumentKey(document.url, {
+        bucketName: config.s3.bucketName,
+        endpoint: config.s3.endpoint,
+      });
+      const file = key ? await imageUploadService.readPrivateDocument(key) : null;
+      if (!file) {
+        // A row whose URL names nothing we store, or an object that is gone.
+        // Both are "there is nothing to give you" and neither says which.
+        next(new AppError('Document not found', 404, 'NOT_FOUND'));
+        return;
+      }
+
+      res.setHeader('Cache-Control', 'private, no-store');
+      res.json(
+        successResponse(
+          {
+            id: document.id,
+            type: document.type,
+            filename: safeFilename(document.filename),
+            contentType: file.contentType,
+            /** The document's bytes. The client writes or opens them itself. */
+            base64: file.buffer.toString('base64'),
+          },
+          'Document retrieved',
+        ),
+      );
     } catch (error) {
       next(error);
     }
