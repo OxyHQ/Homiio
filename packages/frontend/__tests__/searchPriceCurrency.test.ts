@@ -32,6 +32,16 @@ function baseQuery(overrides: Partial<SearchQuery> = {}): SearchQuery {
   return { ...DEFAULT_SEARCH_QUERY, ...overrides };
 }
 
+const MADRID: LocationSelection = {
+  kind: 'place',
+  source: { kind: 'homiio', entity: 'city', id: '01H8XQ7C2R9V6WQ2N4M0KJ3ZTB' },
+  placeType: 'city',
+  label: { primary: 'Madrid', secondary: 'Community of Madrid, Spain', kind: 'place' },
+  admin: { countryCode: 'ES', regionName: 'Community of Madrid', cityName: 'Madrid' },
+  center: { longitude: -3.7038, latitude: 40.4168 },
+  precision: 'centroid',
+};
+
 const KRAKOW: LocationSelection = {
   kind: 'place',
   source: { kind: 'homiio', entity: 'city', id: '01H8XQ7C2R9V6WQ2N4M0KJ3ZTA' },
@@ -202,7 +212,9 @@ describe('a Sindi patch hands the unit back to the server', () => {
   });
 
   it('clears the unit when it moves the scope', () => {
-    const next = applySearchPatch(inKrakow, { queryText: 'loft', location: null });
+    const next = applySearchPatch(inKrakow, { queryText: 'loft', location: MADRID });
+    // The bound follows the person to the new city; the unit it was resolved
+    // against does not.
     expect(next.priceMax).toBe(1200);
     expect(next.priceCurrency).toBeUndefined();
   });
