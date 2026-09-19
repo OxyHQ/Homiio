@@ -19,6 +19,9 @@
  * and writes anyway satisfies any assertion made on its response alone.
  */
 
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import express, { type Express } from 'express';
 import request from 'supertest';
 import { eq } from 'drizzle-orm';
@@ -533,11 +536,8 @@ describe('nothing can mark an obligation paid behind the ledger', () => {
     // gate rather than a behavioural one, because "no second writer" is a
     // claim about the whole package and a request cannot observe it.
     //
-    // Read from disk rather than imported: a dynamic `import()` in this
-    // package's TS config needs a file extension, and a static import of a name
-    // that must NOT exist does not compile — which is the wrong kind of red.
-    const { readFileSync } = require('node:fs') as typeof import('node:fs');
-    const { join } = require('node:path') as typeof import('node:path');
+    // Read from disk rather than imported: a static import of a name that must
+    // NOT exist does not compile, which is the wrong kind of red.
     const source = readFileSync(join(__dirname, '../../db/leases/leaseReads.ts'), 'utf8');
     expect(source).not.toMatch(/export async function recordPayment\b/);
     // The floor: a scan that stopped matching anything would pass the line
