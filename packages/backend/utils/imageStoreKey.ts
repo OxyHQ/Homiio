@@ -31,6 +31,44 @@ export const SERVABLE_IMAGE_CONTENT_TYPES: Readonly<Record<string, string>> = {
   '.png': 'image/png',
 };
 
+/**
+ * Extensions a PRIVATE document may be delivered as.
+ *
+ * The image types, plus `.pdf` — a payslip or a tenancy agreement is as often a
+ * PDF as a photo, and `routes/applications.ts` has accepted `application/pdf` on
+ * upload since it shipped. Kept as its own allowlist rather than widened into
+ * the one above, because the public route must never gain the ability to hand
+ * out a PDF: that is the difference between the two doors.
+ */
+export const SERVABLE_DOCUMENT_CONTENT_TYPES: Readonly<Record<string, string>> = {
+  ...SERVABLE_IMAGE_CONTENT_TYPES,
+  '.pdf': 'application/pdf',
+  '.gif': 'image/gif',
+};
+
+/**
+ * Key prefixes this route must NEVER serve, whatever the extension.
+ *
+ * `GET /api/images/file/*` is mounted on `routes/public.ts` and does no
+ * authorization: it takes a bucket key and returns the bytes. That is correct
+ * for a listing photo, which is published on purpose. It was also, until this
+ * gate, how a tenant's uploaded payslip or identity document was delivered —
+ * `applications/documents/<uuid>-original.jpeg`, `Cache-Control: public,
+ * max-age=31536000, immutable`, readable by anyone holding the URL and by every
+ * proxy between them. The objects are in a private bucket
+ * (`block_public_acls`), so the ONLY thing making them public was this route.
+ *
+ * Refusing the prefix closes it for the objects already stored, with no data
+ * migration: the bytes stay where they are and only the door changes. Tenancy
+ * evidence is delivered by an authorizing route instead — see
+ * `controllers/applicationController.ts#getApplicationDocument`, whose
+ * authorization is the thing that decides, not the unguessability of a uuid.
+ *
+ * A prefix added here must have such a route, or the documents behind it become
+ * unreachable rather than private.
+ */
+export const PRIVATE_KEY_PREFIXES: readonly string[] = ['applications/documents/', 'private/'];
+
 /** Why a candidate key was rejected (stable codes for logging/tests). */
 export type ImageStoreKeyRejection =
   | 'empty'
@@ -39,6 +77,8 @@ export type ImageStoreKeyRejection =
   | 'absolute'
   | 'drive-or-unc'
   | 'traversal'
+  | 'private-prefix'
+  | 'not-private'
   | 'disallowed-extension';
 
 /** A validated key plus the `Content-Type` its extension maps to. */
@@ -75,12 +115,67 @@ const UNC_PREFIX = /^[\\/]{2}/;
  *  - reject absolute paths;
  *  - normalize with POSIX semantics and reject if any `..` segment survives
  *    (i.e. the key tries to climb out of the store root);
+ *  - reject a {@link PRIVATE_KEY_PREFIXES} key — this route has no viewer and
+ *    cannot decide who may read tenancy evidence;
  *  - require an allowlisted image extension.
  *
  * The returned `key` is the POSIX-normalized form, which is still store-relative
  * and contains no `..`, so resolving it under the store root cannot escape.
  */
 export function validateImageStoreKey(rawKey: string): ImageStoreKeyResult {
+  const safe = normalizeStoreKeyPath(rawKey);
+  if (!safe.ok) return safe;
+
+  // AFTER normalization, so `applications/./documents/x.jpeg` and
+  // `a/../applications/documents/x.jpeg` are the same key to this check as they
+  // are to the store. Checking the raw string would leave both as doors.
+  if (PRIVATE_KEY_PREFIXES.some((prefix) => safe.key.startsWith(prefix))) {
+    return { ok: false, reason: 'private-prefix' };
+  }
+
+  const contentType = SERVABLE_IMAGE_CONTENT_TYPES[extensionOf(safe.key)];
+  if (!contentType) return { ok: false, reason: 'disallowed-extension' };
+  return { ok: true, key: safe.key, contentType };
+}
+
+/**
+ * Validate a key the PRIVATE document route may read.
+ *
+ * The same path safety, the opposite prefix rule: this one refuses anything NOT
+ * under a private prefix. The two validators are deliberately mirror images —
+ * a key is servable by exactly one of the two routes, never by both and never
+ * by neither, and the test that asserts that is what stops a new prefix being
+ * added to one list and forgotten in the other.
+ *
+ * Authorization is NOT here and cannot be: this module sees a string, not a
+ * viewer. The caller resolves the document, proves the viewer may read it, and
+ * only then asks for the bytes.
+ */
+export function validatePrivateDocumentKey(rawKey: string): ImageStoreKeyResult {
+  const safe = normalizeStoreKeyPath(rawKey);
+  if (!safe.ok) return safe;
+
+  if (!PRIVATE_KEY_PREFIXES.some((prefix) => safe.key.startsWith(prefix))) {
+    return { ok: false, reason: 'not-private' };
+  }
+
+  const contentType = SERVABLE_DOCUMENT_CONTENT_TYPES[extensionOf(safe.key)];
+  if (!contentType) return { ok: false, reason: 'disallowed-extension' };
+  return { ok: true, key: safe.key, contentType };
+}
+
+function extensionOf(key: string): string {
+  return path.posix.extname(key).toLowerCase();
+}
+
+/**
+ * The path-safety half, shared by both policies: everything that makes a key
+ * safe to RESOLVE, and nothing about who may read it.
+ *
+ * `contentType` on the success value is a placeholder the callers replace; it
+ * exists so this can reuse the result union rather than inventing a third.
+ */
+function normalizeStoreKeyPath(rawKey: string): ImageStoreKeyResult {
   if (rawKey.length === 0 || rawKey.trim().length === 0) {
     return { ok: false, reason: 'empty' };
   }
@@ -112,11 +207,5 @@ export function validateImageStoreKey(rawKey: string): ImageStoreKeyResult {
     return { ok: false, reason: 'absolute' };
   }
 
-  const ext = path.posix.extname(normalized).toLowerCase();
-  const contentType = SERVABLE_IMAGE_CONTENT_TYPES[ext];
-  if (!contentType) {
-    return { ok: false, reason: 'disallowed-extension' };
-  }
-
-  return { ok: true, key: normalized, contentType };
+  return { ok: true, key: normalized, contentType: '' };
 }

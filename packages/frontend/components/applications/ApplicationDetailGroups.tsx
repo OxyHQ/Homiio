@@ -5,7 +5,6 @@
  * the hand-rolled label/value rows each screen used to carry.
  */
 import React from 'react';
-import { Linking, Platform } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import {
   RiFileTextLine,
@@ -22,6 +21,7 @@ import {
 } from '@homiio/shared-types';
 
 import { SettingsRowIcon, type SettingsIconComponent } from '@/components/profile/SettingsRowIcon';
+import { openPrivateDocument } from '@/utils/privateDocument';
 import { formatLocalized } from '@/utils/dateLocale';
 import { useFormatting } from '@/utils/format';
 
@@ -45,12 +45,21 @@ export const formatApplicationDate = (raw: string): string => {
 export const formatApplicationIncome = (application: TenantApplication, locale: string): string =>
   formatMoney(application.monthlyIncome, APPLICATION_INCOME_CURRENCY, locale, INCOME_FORMAT);
 
-const openDocument = (url: string, failedLabel: string): void => {
-  if (Platform.OS === 'web') {
-    window.open(url, '_blank', 'noopener,noreferrer');
-    return;
-  }
-  Linking.openURL(url).catch(() => toast.error(failedLabel));
+/**
+ * Open one attached document.
+ *
+ * This used to be `window.open(document.url)` / `Linking.openURL(document.url)`
+ * over an absolute link to `/api/images/file/<key>` — the unauthenticated route
+ * that also serves listing photos — so opening a tenant's payslip took no
+ * session and the link, once seen, worked forever. The bytes now come from a
+ * handler that checks who is asking, which is why neither of those functions
+ * can be what opens it.
+ *
+ * The failure is SHOWN. A silent catch here is indistinguishable from a row
+ * that does nothing when pressed.
+ */
+const openDocument = (downloadPath: string, failedLabel: string): void => {
+  void openPrivateDocument(downloadPath).catch(() => toast.error(failedLabel));
 };
 
 interface GroupProps {
@@ -132,7 +141,10 @@ export const ApplicationReferencesGroup: React.FC<GroupProps> = ({ application }
   );
 };
 
-/** The attached documents; each row opens its signed URL. */
+/**
+ * The attached documents; each row fetches its bytes through the authenticated
+ * API and hands them to the platform. There is no link to hand out.
+ */
 export const ApplicationDocumentsGroup: React.FC<GroupProps> = ({ application }) => {
   const { t } = useTranslation();
   return (
@@ -142,7 +154,7 @@ export const ApplicationDocumentsGroup: React.FC<GroupProps> = ({ application })
       ) : (
         application.documents.map((document) => (
           <SettingsListItem
-            key={document.url}
+            key={document.id}
             icon={<SettingsRowIcon icon={DOCUMENT_ICON[document.type] ?? RiFileTextLine} />}
             title={document.filename}
             description={t(`applications.documentType.${document.type}`)}
@@ -151,7 +163,10 @@ export const ApplicationDocumentsGroup: React.FC<GroupProps> = ({ application })
               filename: document.filename,
             })}
             onPress={() =>
-              openDocument(document.url, t('applications.landlord.toastOpenDocumentFailed'))
+              openDocument(
+                document.downloadPath,
+                t('applications.landlord.toastOpenDocumentFailed'),
+              )
             }
           />
         ))

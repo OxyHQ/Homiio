@@ -302,10 +302,21 @@ export function serializeApplication(hydrated: HydratedApplication): Record<stri
       phone: reference.phone,
       email: reference.email,
     })),
+    // The STORAGE URL is deliberately not here any more.
+    //
+    // It was `<publicUrl>/api/images/file/<key>` — the unauthenticated route
+    // that also serves listing photos — so every reader of an application
+    // received a permanent, cacheable, shareable link to a tenant's payslip or
+    // identity document, and anybody who ever saw one kept it. The objects sit
+    // in a private bucket; that route was the whole of what made them public.
+    //
+    // What replaces it is a path, not a link: fetching it requires the session
+    // and the handler proves the viewer is the applicant or the landlord before
+    // a byte moves. See `applicationController.getApplicationDocument`.
     documents: hydrated.documents.map((document) => ({
       id: document.id,
       type: document.type,
-      url: document.url,
+      downloadPath: `/api/applications/${row.id}/documents/${document.id}`,
       filename: document.filename,
     })),
     createdAt: row.createdAt,
