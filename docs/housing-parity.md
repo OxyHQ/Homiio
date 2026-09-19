@@ -162,7 +162,7 @@ is a product call about historical rows, not a migration.
 | `LeaseSummaryCard` | `app/my-home.tsx` | **live** | |
 | `RentPaymentList` | `LeasePaymentsSection`, `LeaseLedgerSection` | **partial** | The **ledger** exists (`lease_payment_movements`): obligation, attempt, confirmed payment, manual declaration, partial, refund and a DERIVED balance, with idempotency on every write. A tenant declares a transfer and a landlord confirms it. **Receipts are open**; the processor is blocked — see below |
 | "Pay rent" (a checkout) | — | **blocked** | Needs a processor decision. `kind: 'processor'` is in the model so adding one later does not migrate a live ledger, but no route creates one and no card or bank detail is stored anywhere. #518 §7.2 is explicit that its absence is a documented delivery block, not licence to drop the row |
-| `MaintenanceRequestCard` / repairs | `MaintenanceSection`, `/maintenance/*` | **partial** | The domain exists: `maintenance_requests` + comments + events, a declared state machine under a row lock, authorization in the repository query, notifications through the dispatcher. **Photos are open** — see below |
+| `MaintenanceRequestCard` / repairs | `MaintenanceSection`, `/maintenance/*` | **live** | `maintenance_requests` + comments + events + attachments, a declared state machine under a row lock, authorization in the repository query, notifications through the dispatcher. Photos go through the private path — stored under `private/`, re-encoded so the phone's GPS does not travel with them, delivered only to the two sides of the lease |
 | "Message landlord" | — | **blocked** | The ecosystem audit §7.3 asks for is done: [`docs/messaging-audit.md`](./messaging-audit). Allo IS the platform and is explicitly multi-product, but its SDK is unpublished, its server cannot open a conversation, and enrolling Homiio enrols a device on the person's whole Allo account. Three decisions named there, none of them an implementer's. No button is drawn meanwhile — the Inbox tab is a notification list |
 | `DocumentList`, signatures | `LeaseDocumentsSection`, `/contracts/[id]` | **partial** | Upload/list/view exist; "uploaded" is not "verified" and the checklist is not yet server state. An application's documents are no longer delivered by the public image route — see below |
 | `TenancyTimeline` | `LeaseHistorySection` | **live** | Real lease events |
@@ -204,10 +204,18 @@ and the landlord after proving the viewer, a stranger getting 404 rather than
 403. The two validators are deliberate mirror images and a test asserts that
 exactly one of them accepts any given key.
 
-**So repair photos are no longer blocked on infrastructure.** They are ordinary
-work on a path that now exists: a `private/maintenance/…` prefix, a row that
-carries which request it belongs to, and the same authorizing delivery. Still
-open, but open as work rather than as a dependency.
+**And repair photos are shipped on it.**
+`maintenance_request_attachments` stores under `private/maintenance/<request>/`,
+with a `like 'private/%'` CHECK so a row written with a public key is refused at
+the INSERT rather than 404ing when a tenant taps a thumbnail.
+
+The bytes are **re-encoded on the way in**, and that is a privacy measure rather
+than a size one. A phone writes GPS into the EXIF of a photo taken indoors, so
+storing the upload verbatim would publish the home's exact coordinates to
+everyone who can read the request — the precision leak ADR 0003 exists to stop,
+arriving through a door nobody was watching. A test uploads a photo carrying a
+GPS tag and asserts the stored object has none, with a floor that asserts the
+fixture really had one.
 
 **The client cost, stated:** the bytes come back base64 inside the ordinary
 envelope, because the Oxy linked client is JSON-only and `AGENTS.md` forbids a
@@ -326,17 +334,15 @@ Open, in rough order of how much they unblock:
    segment. Area and availability are live in all four columns, including the
    histogram, and the currency contract is closed (§6) bar the control for
    choosing a non-dominant currency.
-2. **Repair photos** — the one open half of maintenance. No longer blocked:
-   the authorizing document path exists, so this is a prefix, a row and a route.
-3. **Payment receipts and the processor** — the ledger is live; receipts are now
-   ordinary work on that same path, and only the checkout is blocked, on a
-   provider decision.
-4. **Messaging** — the audit is done ([`docs/messaging-audit.md`](./messaging-audit)); now blocked on
+2. **Payment receipts and the processor** — the ledger is live; receipts are
+   ordinary work on the private document path repair photos now use, and only
+   the checkout is blocked, on a provider decision.
+3. **Messaging** — the audit is done ([`docs/messaging-audit.md`](./messaging-audit)); now blocked on
    three decisions it names, not on work.
-5. **Listing facts** — floor plans, energy, price history: each needs a source
+4. **Listing facts** — floor plans, energy, price history: each needs a source
    before it needs a component.
-6. **Guest points** — blocked on a product decision.
-7. **Visual and multiplatform QA** — not started, and not implied by any row.
+5. **Guest points** — blocked on a product decision.
+6. **Visual and multiplatform QA** — not started, and not implied by any row.
 
 Keep this file current in the same change that moves a row. A matrix that lags
 the code is worse than none: it is a claim somebody will trust.

@@ -24,13 +24,18 @@ import {
   type UseQueryResult,
 } from '@tanstack/react-query';
 import { useOxy } from '@oxy.so/services';
-import type { MaintenanceRequest, MaintenanceStatus } from '@homiio/shared-types';
+import type {
+  MaintenanceAttachment,
+  MaintenanceRequest,
+  MaintenanceStatus,
+} from '@homiio/shared-types';
 
 import {
   maintenanceService,
   type CreateMaintenanceInput,
   type MaintenanceListFilters,
   type MaintenanceListResponse,
+  type MaintenancePhotoUpload,
 } from '@/services/maintenanceService';
 
 const LIST_KEY = 'maintenanceRequests';
@@ -124,5 +129,31 @@ export function useCommentOnRepair(): UseMutationResult<void, Error, CommentVari
     mutationFn: (variables: CommentVariables) =>
       maintenanceService.comment(variables.id, variables.body),
     onSuccess: (_result, variables) => invalidate(variables.id),
+  });
+}
+
+export interface AttachVariables {
+  readonly id: string;
+  readonly photo: MaintenancePhotoUpload;
+}
+
+/**
+ * Attach one photo and refetch the request.
+ *
+ * No optimistic entry. The server re-encodes the image, so the row it writes
+ * carries a content type and a byte count this side cannot predict — an
+ * optimistic attachment would show a size that changes when the real one
+ * arrives, which reads as the upload having gone wrong.
+ */
+export function useAttachRepairPhoto(): UseMutationResult<
+  MaintenanceAttachment,
+  Error,
+  AttachVariables
+> {
+  const invalidate = useInvalidateMaintenance();
+  return useMutation({
+    mutationFn: (variables: AttachVariables) =>
+      maintenanceService.attach(variables.id, variables.photo),
+    onSuccess: (_attachment, variables) => invalidate(variables.id),
   });
 }

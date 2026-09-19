@@ -11,7 +11,10 @@
  * request is broken", because those two produce different sentences.
  */
 
+import { Platform } from 'react-native';
+
 import type {
+  MaintenanceAttachment,
   MaintenanceCategory,
   MaintenanceRequest,
   MaintenanceStatus,
@@ -34,6 +37,13 @@ export interface MaintenanceListFilters {
 export interface MaintenanceListResponse {
   readonly requests: readonly MaintenanceRequest[];
   readonly total: number;
+}
+
+/** A photo chosen on the device, in the shape both platforms can send. */
+export interface MaintenancePhotoUpload {
+  readonly uri: string;
+  readonly filename: string;
+  readonly mimeType?: string;
 }
 
 export interface CreateMaintenanceInput {
@@ -111,6 +121,41 @@ class MaintenanceService {
 
   async comment(id: string, body: string): Promise<void> {
     await api.post<ApiResponse<unknown>>(`${BASE}/${id}/comments`, { body });
+  }
+
+  /**
+   * Attach one photo.
+   *
+   * One per request, not a batch: a partial failure then loses a single photo
+   * rather than everything somebody selected, and the per-request ceiling is
+   * enforced server-side against the rows that already exist rather than
+   * against the size of a form.
+   *
+   * The file goes up as multipart — the same two shapes
+   * `applicationService` handles, because React Native has no `File` and web
+   * has no `{uri, name, type}`.
+   */
+  async attach(id: string, photo: MaintenancePhotoUpload): Promise<MaintenanceAttachment> {
+    const formData = new FormData();
+    if (Platform.OS === 'web') {
+      const response = await fetch(photo.uri);
+      if (!response.ok) throw new ApiError('Could not read the selected photo.', response.status);
+      const blob = await response.blob();
+      formData.append('photo', blob, photo.filename);
+    } else {
+      formData.append('photo', {
+        uri: photo.uri,
+        name: photo.filename,
+        type: photo.mimeType || 'image/jpeg',
+      } as unknown as Blob);
+    }
+
+    const { data } = await api.post<ApiResponse<MaintenanceAttachment>>(
+      `${BASE}/${id}/attachments`,
+      formData,
+    );
+    if (!data.data) throw new Error('The attachment response carried no attachment.');
+    return data.data;
   }
 }
 

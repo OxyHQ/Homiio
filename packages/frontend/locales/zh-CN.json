@@ -3938,6 +3938,18 @@
       "transitionFailed": "修改失败，请重试。",
       "commentFailed": "消息发送失败，请重试。",
       "conflict": "这条请求在你查看后已有变化，这是它现在的状态。"
+    },
+    "photos": {
+      "title": "照片（{{count}}）",
+      "empty": "暂无照片。",
+      "add": "添加照片",
+      "addAccessible": "为这条维修请求添加照片",
+      "row": "{{role}} · {{date}}",
+      "openAccessible": "打开 {{role}} 于 {{date}} 添加的照片",
+      "full": "一条请求最多可保存 {{count}} 张照片。",
+      "permission": "Homiio 需要访问你的照片才能添加。",
+      "uploadFailed": "这张照片未能添加，请重试。",
+      "openFailed": "这张照片未能打开。"
     }
   },
   "ledger": {

@@ -3964,6 +3964,18 @@
       "transitionFailed": "No hemos podido cambiarlo. Inténtalo otra vez.",
       "commentFailed": "No hemos podido enviar tu mensaje. Inténtalo otra vez.",
       "conflict": "Esta solicitud ha cambiado desde que la viste. Este es su estado actual."
+    },
+    "photos": {
+      "title": "Fotos ({{count}})",
+      "empty": "Todavía no hay fotos.",
+      "add": "Añadir una foto",
+      "addAccessible": "Adjuntar una foto a esta incidencia",
+      "row": "{{role}} · {{date}}",
+      "openAccessible": "Abrir la foto añadida por {{role}} el {{date}}",
+      "full": "Una incidencia puede tener {{count}} fotos.",
+      "permission": "Homiio necesita acceso a tus fotos para adjuntar una.",
+      "uploadFailed": "No se pudo adjuntar esa foto. Inténtalo de nuevo.",
+      "openFailed": "No se pudo abrir esa foto."
     }
   },
   "ledger": {

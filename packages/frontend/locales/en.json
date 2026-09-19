@@ -3934,6 +3934,18 @@
       "transitionFailed": "We could not change that. Try again.",
       "commentFailed": "We could not send your message. Try again.",
       "conflict": "This request has moved on since you looked. Here is where it is now."
+    },
+    "photos": {
+      "title": "Photos ({{count}})",
+      "empty": "No photos yet.",
+      "add": "Add a photo",
+      "addAccessible": "Attach a photo to this repair request",
+      "row": "{{role}} · {{date}}",
+      "openAccessible": "Open the photo added by {{role}} on {{date}}",
+      "full": "A request can hold {{count}} photos.",
+      "permission": "Homiio needs access to your photos to attach one.",
+      "uploadFailed": "That photo could not be attached. Try again.",
+      "openFailed": "That photo could not be opened."
     }
   },
   "ledger": {

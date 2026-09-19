@@ -3963,6 +3963,18 @@
       "transitionFailed": "Non siamo riusciti a modificarla. Riprova.",
       "commentFailed": "Non siamo riusciti a inviare il messaggio. Riprova.",
       "conflict": "Questa richiesta è cambiata da quando l’hai vista. Ecco il suo stato attuale."
+    },
+    "photos": {
+      "title": "Foto ({{count}})",
+      "empty": "Ancora nessuna foto.",
+      "add": "Aggiungi una foto",
+      "addAccessible": "Allega una foto a questa segnalazione",
+      "row": "{{role}} · {{date}}",
+      "openAccessible": "Apri la foto aggiunta da {{role}} il {{date}}",
+      "full": "Una segnalazione può contenere {{count}} foto.",
+      "permission": "Homiio ha bisogno di accedere alle tue foto per allegarne una.",
+      "uploadFailed": "Non è stato possibile allegare quella foto. Riprova.",
+      "openFailed": "Non è stato possibile aprire quella foto."
     }
   },
   "ledger": {

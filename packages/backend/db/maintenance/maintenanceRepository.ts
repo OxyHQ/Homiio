@@ -36,7 +36,14 @@ import {
 } from '@homiio/shared-types';
 
 import type { DatabaseOrTransaction } from '../postgres';
-import { leaseCoTenants, leases, maintenanceRequestComments, maintenanceRequestEvents, maintenanceRequests } from '../schema';
+import {
+  leaseCoTenants,
+  leases,
+  maintenanceRequestAttachments,
+  maintenanceRequestComments,
+  maintenanceRequestEvents,
+  maintenanceRequests,
+} from '../schema';
 
 /**
  * Whether this account is on the lease at all, and on which side.
@@ -154,6 +161,7 @@ export interface HydratedMaintenanceRequest {
   readonly request: MaintenanceRequestRow;
   readonly comments: readonly MaintenanceCommentRow[];
   readonly events: readonly MaintenanceEventRow[];
+  readonly attachments: readonly MaintenanceAttachmentRow[];
   /** The caller's own side of the lease, for the transitions they may take. */
   readonly role: MaintenanceRole;
 }
@@ -182,7 +190,7 @@ export async function findMaintenanceRequest(
   // guessing `tenant` and handing somebody a confirm button.
   if (!access) return undefined;
 
-  const [comments, events] = await Promise.all([
+  const [comments, events, attachments] = await Promise.all([
     db
       .select()
       .from(maintenanceRequestComments)
@@ -193,9 +201,104 @@ export async function findMaintenanceRequest(
       .from(maintenanceRequestEvents)
       .where(eq(maintenanceRequestEvents.requestId, id))
       .orderBy(asc(maintenanceRequestEvents.createdAt)),
+    db
+      .select()
+      .from(maintenanceRequestAttachments)
+      .where(eq(maintenanceRequestAttachments.requestId, id))
+      .orderBy(asc(maintenanceRequestAttachments.createdAt)),
   ]);
 
-  return { request, comments, events, role: access.role };
+  return { request, comments, events, attachments, role: access.role };
+}
+
+export type MaintenanceAttachmentRow = typeof maintenanceRequestAttachments.$inferSelect;
+
+export interface AddAttachmentInput {
+  readonly requestId: string;
+  readonly oxyUserId: string;
+  readonly storageKey: string;
+  readonly contentType: string;
+  readonly bytes: number;
+}
+
+export type AddAttachmentOutcome =
+  | { readonly ok: true; readonly attachment: MaintenanceAttachmentRow }
+  | { readonly ok: false; readonly reason: 'not_found' };
+
+/**
+ * Record a photo against a request.
+ *
+ * The same `visibleToCaller` predicate every other write here runs under, so a
+ * non-participant gets `not_found` rather than a 403 — and it is checked in the
+ * QUERY rather than after the read, which is what makes "not yours" and "no
+ * such request" the same answer by construction.
+ *
+ * The role is stored, like a comment's, so a later change of tenancy does not
+ * relabel who photographed what.
+ *
+ * The object is written BEFORE this runs, which means a refused row leaves an
+ * unreferenced object in the bucket. That is the safe side of the trade: the
+ * alternative is a row pointing at bytes that were never stored, which is a
+ * photo that silently never opens. The caller checks authorization first, so
+ * this is the narrow race and not the common path.
+ */
+export async function addMaintenanceAttachment(
+  db: DatabaseOrTransaction,
+  input: AddAttachmentInput,
+): Promise<AddAttachmentOutcome> {
+  const [request] = await db
+    .select()
+    .from(maintenanceRequests)
+    .where(and(eq(maintenanceRequests.id, input.requestId), visibleToCaller(input.oxyUserId)))
+    .limit(1);
+  if (!request) return { ok: false, reason: 'not_found' };
+
+  const access = await maintenanceRoleOnLease(db, request.leaseId, input.oxyUserId);
+  if (!access) return { ok: false, reason: 'not_found' };
+
+  const [attachment] = await db
+    .insert(maintenanceRequestAttachments)
+    .values({
+      requestId: input.requestId,
+      uploadedByOxyUserId: input.oxyUserId,
+      role: access.role,
+      storageKey: input.storageKey,
+      contentType: input.contentType,
+      bytes: input.bytes,
+    })
+    .returning();
+
+  return { ok: true, attachment };
+}
+
+/**
+ * One attachment's row, for the caller entitled to it.
+ *
+ * Scoped to BOTH the attachment id and its request, and to the caller's
+ * participation, so an id from somebody else's repair resolves to nothing:
+ * knowing an id grants no access, which is the rule §7.3 states and §7.4's
+ * documents already follow.
+ */
+export async function findMaintenanceAttachment(
+  db: DatabaseOrTransaction,
+  input: { requestId: string; attachmentId: string; oxyUserId: string },
+): Promise<MaintenanceAttachmentRow | undefined> {
+  const [row] = await db
+    .select({ attachment: maintenanceRequestAttachments })
+    .from(maintenanceRequestAttachments)
+    .innerJoin(
+      maintenanceRequests,
+      eq(maintenanceRequests.id, maintenanceRequestAttachments.requestId),
+    )
+    .where(
+      and(
+        eq(maintenanceRequestAttachments.id, input.attachmentId),
+        eq(maintenanceRequestAttachments.requestId, input.requestId),
+        visibleToCaller(input.oxyUserId),
+      ),
+    )
+    .limit(1);
+  return row?.attachment;
 }
 
 export interface CreateMaintenanceInput {

@@ -39,20 +39,27 @@
  * against a listing: a repair request is a record of something that happened to
  * somebody, not a copy of an advertisement.
  *
- * ## No attachments yet, and the reason is not oversight
+ * ## Attachments, and the door they go through
  *
  * Both epics ask for photos on a request, and both also say the evidence for a
- * tenancy may not go through the PUBLIC image endpoint. Homiio's image pipeline
- * is public delivery by construction — `imageUploadService` writes
- * `Cache-Control: public, max-age=31536000` and serves through the CDN — so
- * there is no private object path to attach to. Adding one is its own change
- * with its own access model; shipping "attach a photo" onto the public bucket
- * would put a picture of somebody's bathroom on a guessable URL.
+ * tenancy may not go through the PUBLIC image endpoint. That used to be the end
+ * of it — this header said there was "no private object path to attach to" —
+ * and the claim was wrong in the direction that mattered: the bucket has always
+ * been private (`block_public_acls`), and what made objects reachable was
+ * Homiio's own unauthenticated `GET /api/images/file/*`.
  *
- * Recorded in `docs/housing-parity.md` as the open half of this row.
+ * That route now refuses a private key prefix and an authorizing one serves
+ * them, so {@link maintenanceRequestAttachments} stores under `private/` and is
+ * delivered by a handler that proves the viewer first.
+ *
+ * The bytes are RE-ENCODED on the way in, and that is a privacy measure rather
+ * than a size one: a photo of a damp wall taken inside somebody's home carries
+ * EXIF, and EXIF carries GPS. Publishing a home's exact coordinates because
+ * somebody photographed their bathroom is precisely what ADR 0003 exists to
+ * prevent, and it would arrive through a door nobody was watching.
  */
 
-import { check, index, pgTable, text } from 'drizzle-orm/pg-core';
+import { check, index, integer, pgTable, text, uniqueIndex } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import { createdAt, generatedId, inList, timestamptz, updatedAt } from '@oxy.so/db';
 import {
@@ -249,5 +256,82 @@ export const maintenanceRequestEvents = pgTable(
       'maintenance_request_events_to_check',
       sql`${table.toStatus} in (${sql.raw(inList(MAINTENANCE_STATUS_VALUES))})`,
     ),
+  ],
+);
+
+/**
+ * A photo attached to a repair request.
+ *
+ * ## The row points at a private object, and cannot point anywhere else
+ *
+ * `storage_key` is a bucket key under `private/maintenance/…`, written by the
+ * server from the request id and a fresh uuid — never a URL, and never anything
+ * a client supplied. The difference from `tenant_application_documents`, which
+ * stores a URL, is deliberate: that column is a Mongo-era shape being read
+ * defensively, and this one starts from what the delivery route actually needs.
+ *
+ * There is no `url`. A row that carried one would invite somebody to render it,
+ * and the whole point is that these bytes have no address anybody can open.
+ *
+ * ## What is NOT here
+ *
+ * No caption, no ordering, no primary flag. A repair photo is evidence, and the
+ * three questions those columns answer ("which is the cover image?") belong to
+ * a listing gallery. Adding them because the image table has them would be the
+ * speculative column `CONVENTIONS.md` forbids.
+ *
+ * `CASCADE` from the request: the photo has no meaning without it. The OBJECT
+ * is not deleted with the row — no sweep owns it — and that is stated rather
+ * than hidden: nothing deletes a maintenance request from a route today, so an
+ * orphan is not reachable, and a sweep that deletes bytes needs to be written
+ * with the deletion that makes it necessary.
+ */
+export const maintenanceRequestAttachments = pgTable(
+  'maintenance_request_attachments',
+  {
+    id: generatedId(),
+    requestId: text()
+      .notNull()
+      .references(() => maintenanceRequests.id, { onDelete: 'cascade' }),
+    /** The Oxy account that attached it. Either side of the lease may. */
+    uploadedByOxyUserId: text().notNull(),
+    /** Which side they were on when they did, resolved from the lease then. */
+    role: text({ enum: MAINTENANCE_ROLES }).notNull(),
+    /** A bucket key under a private prefix. Server-generated, never a URL. */
+    storageKey: text().notNull(),
+    /** The re-encoded type, which is what the delivery route answers with. */
+    contentType: text().notNull(),
+    /** Bytes AFTER re-encoding, so a list can add up what it is holding. */
+    bytes: integer().notNull(),
+    createdAt: createdAt(),
+  },
+  (table) => [
+    index('maintenance_request_attachments_request_created_idx').on(
+      table.requestId,
+      table.createdAt,
+    ),
+    /**
+     * One row per object. A retried upload that wrote the same key twice would
+     * otherwise leave two rows pointing at one file, and deleting one of them
+     * would break the other.
+     */
+    uniqueIndex('maintenance_request_attachments_storage_key').on(table.storageKey),
+    check(
+      'maintenance_request_attachments_role_check',
+      sql`${table.role} in (${sql.raw(inList(MAINTENANCE_ROLES))})`,
+    ),
+    /**
+     * The prefix, in the DATABASE.
+     *
+     * The delivery route refuses a key that is not private, so a row with a
+     * public key would simply 404 — a photo that silently never opens. Refusing
+     * the INSERT says so at the moment somebody writes the wrong prefix instead
+     * of at the moment a tenant taps a thumbnail.
+     */
+    check(
+      'maintenance_request_attachments_private_key_check',
+      sql`${table.storageKey} like 'private/%'`,
+    ),
+    check('maintenance_request_attachments_bytes_check', sql`${table.bytes} > 0`),
   ],
 );

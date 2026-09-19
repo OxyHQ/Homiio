@@ -3938,6 +3938,18 @@
       "transitionFailed": "Nous n’avons pas pu effectuer ce changement. Réessayez.",
       "commentFailed": "Nous n’avons pas pu envoyer votre message. Réessayez.",
       "conflict": "Cette demande a évolué depuis votre dernière consultation. Voici son état actuel."
+    },
+    "photos": {
+      "title": "Photos ({{count}})",
+      "empty": "Aucune photo pour le moment.",
+      "add": "Ajouter une photo",
+      "addAccessible": "Joindre une photo à cette demande de réparation",
+      "row": "{{role}} · {{date}}",
+      "openAccessible": "Ouvrir la photo ajoutée par {{role}} le {{date}}",
+      "full": "Une demande peut contenir {{count}} photos.",
+      "permission": "Homiio a besoin d’accéder à vos photos pour en joindre une.",
+      "uploadFailed": "Cette photo n’a pas pu être jointe. Réessayez.",
+      "openFailed": "Cette photo n’a pas pu être ouverte."
     }
   },
   "ledger": {
