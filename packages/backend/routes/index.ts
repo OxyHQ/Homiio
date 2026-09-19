@@ -7,6 +7,7 @@ import express from 'express';
 import properties from './properties';
 import rooms from './rooms';
 import leases from './leases';
+import maintenance from './maintenance';
 import notifications from './notifications';
 import analytics from './analytics';
 import profiles from './profiles';
@@ -33,6 +34,7 @@ export default function() {
   const propertyRoutes = properties();
   const roomRoutes = rooms();
   const leaseRoutes = leases();
+  const maintenanceRoutes = maintenance();
   const notificationRoutes = notifications();
   const analyticsRoutes = analytics();
   const profileRoutes = profiles();
@@ -75,6 +77,7 @@ export default function() {
   router.use('/evictions', evictionRoutes);
   router.use('/rooms', roomRoutes);
   router.use('/leases', leaseRoutes);
+  router.use('/maintenance', maintenanceRoutes);
   router.use('/notifications', notificationRoutes);
   router.use('/analytics', analyticsRoutes);
   router.use('/profiles', profileRoutes);

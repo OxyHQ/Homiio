@@ -68,6 +68,11 @@ export { exchangeRequests, exchangeReviews } from './exchanges';
 export { cities, countries, neighborhoods, regions } from './geo';
 export { images } from './images';
 export {
+  maintenanceRequestComments,
+  maintenanceRequestEvents,
+  maintenanceRequests,
+} from './maintenance';
+export {
   leaseCoTenants,
   leaseDocuments,
   leaseInspectionFindings,

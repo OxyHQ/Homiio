@@ -187,6 +187,34 @@ All under `/api`, behind `createOxyAuthMiddleware(oxy)`. Source:
 
 Static sub-routes are declared before `/:id`.
 
+### `/api/maintenance`
+
+Repair requests. Every route needs a session and there is **no public read** — a
+request names a household's problems in a building somebody can find.
+
+| Method | Path |
+|---|---|
+| `GET` | `/api/maintenance` — `?leaseId=`, `?propertyId=`, `?openOnly=true` |
+| `POST` | `/api/maintenance` — a tenant or co-tenant, on a lease they are on |
+| `GET` | `/api/maintenance/:id` — with its thread and history |
+| `POST` | `/api/maintenance/:id/status` |
+| `POST` | `/api/maintenance/:id/comments` |
+
+The parent is the **lease**, not the property: a repair reported under a
+previous tenancy is not the business of whoever lives there now, and the lease
+is where the participants already are. `propertyId` on a create is taken from
+the lease and never from the body.
+
+`POST /:id/status` moves along a declared state machine
+(`shared-types/maintenance.ts`), under a row lock. An illegal move answers
+**409**, not 400 — "the request has moved on" is true and actionable, where 400
+would read as "you sent nonsense" to somebody whose screen was a few seconds
+stale.
+
+Attachments are **not** implemented: both epics ask for photos and both forbid
+putting a tenancy's evidence through the public image endpoint, which is the
+only upload path Homiio has. See `docs/housing-parity.md`.
+
 ### `/api/applications`
 
 | Method | Path |
@@ -300,6 +328,7 @@ Expo Router, `packages/frontend/app/`.
 | `reviews` | `index`, `write`, `city/[cityId]`, `neighborhood/[neighborhoodId]` |
 | `evictions` | `index`, `new`, `[id]` |
 | `contracts` | `index`, `new`, `[id]` |
+| `maintenance` | `new` (report a repair, `?lease=<id>`), `[id]` (the thread and history) |
 | `applications` | `index`, `[id]` |
 | `landlord` | `applications/index`, `applications/[id]` |
 | `viewings` | `index` |

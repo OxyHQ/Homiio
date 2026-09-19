@@ -3853,5 +3853,91 @@
     "emptyTitle": "Nenhuma locação ativa",
     "emptyDescription": "O contrato que você aluga aparece aqui quando estiver ativo.",
     "viewContract": "Ver contrato"
+  },
+  "maintenance": {
+    "section": {
+      "title": "Reparos"
+    },
+    "action": {
+      "report": "Relatar um reparo",
+      "reportAccessible": "Relatar um reparo nesta casa",
+      "acknowledge": "Vou verificar",
+      "schedule": "Agendar uma visita",
+      "markResolved": "Marcar como resolvido",
+      "close": "Encerrar",
+      "reopen": "Ainda não resolvido",
+      "decline": "Recusar",
+      "open": "Abrir",
+      "openAccessible": "Abrir esta solicitação de reparo"
+    },
+    "category": {
+      "plumbing": "Encanamento",
+      "electrical": "Elétrica",
+      "heating": "Aquecimento",
+      "appliance": "Eletrodoméstico",
+      "structural": "Estrutural",
+      "pest": "Pragas",
+      "security": "Segurança",
+      "other": "Outra coisa"
+    },
+    "urgency": {
+      "low": "Não urgente",
+      "normal": "Normal",
+      "high": "Urgente",
+      "emergency": "Emergência",
+      "emergencyHint": "A casa está insegura ou inabitável agora."
+    },
+    "status": {
+      "open": "Relatado",
+      "acknowledged": "Em análise",
+      "scheduled": "Visita agendada",
+      "resolved": "Declarado resolvido",
+      "closed": "Encerrado",
+      "declined": "Recusado"
+    },
+    "role": {
+      "tenant": "Inquilino",
+      "landlord": "Proprietário"
+    },
+    "field": {
+      "title": "O que está errado?",
+      "titlePlaceholder": "A torneira da cozinha não fecha",
+      "description": "Conte mais",
+      "descriptionHint": "Quando começou, o que você já tentou e se está piorando.",
+      "descriptionPlaceholder": "Está vazando desde terça…",
+      "category": "Que tipo de problema?",
+      "urgency": "Qual a urgência?"
+    },
+    "report": {
+      "title": "Relatar um reparo",
+      "submit": "Enviar",
+      "submitAccessible": "Enviar esta solicitação de reparo ao proprietário",
+      "sent": "Enviado. O proprietário foi avisado.",
+      "noLeaseTitle": "Nenhum contrato para associar",
+      "noLeaseBody": "Um reparo é relatado sobre um contrato ativo. Abra Minha casa e escolha um.",
+      "goToMyHome": "Ir para Minha casa"
+    },
+    "comments": {
+      "add": "Adicionar uma mensagem",
+      "placeholder": "Escreva uma mensagem…",
+      "send": "Enviar",
+      "sendAccessible": "Enviar esta mensagem na conversa do reparo",
+      "empty": "Ainda não há mensagens.",
+      "count": "{{count}} mensagem"
+    },
+    "empty": {
+      "title": "Nada para consertar",
+      "body": "Quando algo quebrar, relate aqui e o proprietário será avisado."
+    },
+    "history": {
+      "title": "Histórico"
+    },
+    "errors": {
+      "loadFailed": "Não foi possível carregar os reparos. Nada está oculto — a requisição falhou.",
+      "reportFailed": "Não conseguimos enviar. Tente de novo.",
+      "transitionFailed": "Não conseguimos alterar. Tente de novo.",
+      "commentFailed": "Não conseguimos enviar sua mensagem. Tente de novo.",
+      "conflict": "Esta solicitação mudou desde que você olhou. Este é o estado atual."
+    }
   }
 }

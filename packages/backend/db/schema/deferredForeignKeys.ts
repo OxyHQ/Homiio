@@ -159,6 +159,10 @@ export const OXY_ACCOUNT_COLUMN_NAMES: ReadonlySet<string> = new Set([
   // `Lease.documents[].uploadedBy` and `Lease.terminationNotice.givenBy`.
   'uploaded_by_oxy_user_id',
   'termination_notice_given_by_oxy_user_id',
+  // Who raised a repair request. A ROLE, not a synonym for the tenancy's
+  // tenant: a co-tenant can report, so folding it into `tenant_oxy_user_id`
+  // would attribute their report to somebody else on the lease.
+  'reported_by_oxy_user_id',
   // The eviction board's four named roles (#358). Each one is a role and not a
   // synonym for the case owner, which is why none of them can be folded into
   // `oxy_user_id`:

@@ -3853,5 +3853,91 @@
     "emptyTitle": "没有生效中的租约",
     "emptyDescription": "你租住的租约生效后会显示在这里。",
     "viewContract": "查看合同"
+  },
+  "maintenance": {
+    "section": {
+      "title": "维修"
+    },
+    "action": {
+      "report": "报修",
+      "reportAccessible": "为这处住所报修",
+      "acknowledge": "我来处理",
+      "schedule": "安排上门",
+      "markResolved": "标记为已修复",
+      "close": "关闭",
+      "reopen": "仍未修好",
+      "decline": "拒绝",
+      "open": "打开",
+      "openAccessible": "打开这条报修"
+    },
+    "category": {
+      "plumbing": "水管",
+      "electrical": "电路",
+      "heating": "供暖",
+      "appliance": "家电",
+      "structural": "结构",
+      "pest": "虫害",
+      "security": "安全",
+      "other": "其他"
+    },
+    "urgency": {
+      "low": "不急",
+      "normal": "一般",
+      "high": "紧急",
+      "emergency": "紧急情况",
+      "emergencyHint": "住所目前不安全或无法使用。"
+    },
+    "status": {
+      "open": "已报修",
+      "acknowledged": "正在查看",
+      "scheduled": "已安排上门",
+      "resolved": "已报修复",
+      "closed": "已关闭",
+      "declined": "已拒绝"
+    },
+    "role": {
+      "tenant": "租客",
+      "landlord": "房东"
+    },
+    "field": {
+      "title": "出了什么问题？",
+      "titlePlaceholder": "厨房水龙头关不上",
+      "description": "补充说明",
+      "descriptionHint": "什么时候开始的、你已经试过什么、有没有变严重。",
+      "descriptionPlaceholder": "从周二起就一直在漏…",
+      "category": "属于哪类问题？",
+      "urgency": "有多急？"
+    },
+    "report": {
+      "title": "报修",
+      "submit": "提交",
+      "submitAccessible": "把这条报修发给房东",
+      "sent": "已发送，房东已收到通知。",
+      "noLeaseTitle": "没有可关联的租约",
+      "noLeaseBody": "报修需要关联一份生效中的租约。打开「我的住所」并选择一份。",
+      "goToMyHome": "前往「我的住所」"
+    },
+    "comments": {
+      "add": "添加留言",
+      "placeholder": "写点什么…",
+      "send": "发送",
+      "sendAccessible": "在报修对话中发送这条消息",
+      "empty": "还没有留言。",
+      "count": "{{count}} 条留言"
+    },
+    "empty": {
+      "title": "没有待修项",
+      "body": "东西坏了就在这里报修，房东会收到通知。"
+    },
+    "history": {
+      "title": "历史"
+    },
+    "errors": {
+      "loadFailed": "无法加载维修记录。没有内容被隐藏，是请求失败了。",
+      "reportFailed": "发送失败，请重试。",
+      "transitionFailed": "修改失败，请重试。",
+      "commentFailed": "消息发送失败，请重试。",
+      "conflict": "这条请求在你查看后已有变化，这是它现在的状态。"
+    }
   }
 }

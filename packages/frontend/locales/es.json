@@ -3879,5 +3879,91 @@
     "emptyTitle": "No tienes ningún alquiler activo",
     "emptyDescription": "Aquí verás el contrato que alquilas cuando esté activo.",
     "viewContract": "Ver contrato"
+  },
+  "maintenance": {
+    "section": {
+      "title": "Reparaciones"
+    },
+    "action": {
+      "report": "Reportar una reparación",
+      "reportAccessible": "Reportar una reparación en esta vivienda",
+      "acknowledge": "Me ocupo",
+      "schedule": "Programar una visita",
+      "markResolved": "Marcar como arreglado",
+      "close": "Cerrar",
+      "reopen": "Sigue sin arreglar",
+      "decline": "Rechazar",
+      "open": "Abrir",
+      "openAccessible": "Abrir esta solicitud de reparación"
+    },
+    "category": {
+      "plumbing": "Fontanería",
+      "electrical": "Electricidad",
+      "heating": "Calefacción",
+      "appliance": "Electrodoméstico",
+      "structural": "Estructura",
+      "pest": "Plagas",
+      "security": "Seguridad",
+      "other": "Otra cosa"
+    },
+    "urgency": {
+      "low": "No urgente",
+      "normal": "Normal",
+      "high": "Urgente",
+      "emergency": "Emergencia",
+      "emergencyHint": "La vivienda es insegura o inhabitable ahora mismo."
+    },
+    "status": {
+      "open": "Reportado",
+      "acknowledged": "En revisión",
+      "scheduled": "Visita programada",
+      "resolved": "Dado por arreglado",
+      "closed": "Cerrado",
+      "declined": "Rechazado"
+    },
+    "role": {
+      "tenant": "Inquilino",
+      "landlord": "Propietario"
+    },
+    "field": {
+      "title": "¿Qué pasa?",
+      "titlePlaceholder": "El grifo de la cocina no para",
+      "description": "Cuéntales más",
+      "descriptionHint": "Cuándo empezó, qué has probado ya y si va a peor.",
+      "descriptionPlaceholder": "Lleva goteando desde el martes…",
+      "category": "¿Qué tipo de problema?",
+      "urgency": "¿Cuánto corre prisa?"
+    },
+    "report": {
+      "title": "Reportar una reparación",
+      "submit": "Enviar",
+      "submitAccessible": "Enviar esta solicitud de reparación al propietario",
+      "sent": "Enviado. Se ha avisado al propietario.",
+      "noLeaseTitle": "No hay contrato al que asociarlo",
+      "noLeaseBody": "Una reparación se reporta sobre un contrato activo. Abre Mi hogar y elige uno.",
+      "goToMyHome": "Ir a Mi hogar"
+    },
+    "comments": {
+      "add": "Añadir un mensaje",
+      "placeholder": "Escribe un mensaje…",
+      "send": "Enviar",
+      "sendAccessible": "Enviar este mensaje en el hilo de la reparación",
+      "empty": "Aún no se ha dicho nada.",
+      "count": "{{count}} mensaje"
+    },
+    "empty": {
+      "title": "Nada que arreglar",
+      "body": "Cuando algo se rompa, repórtalo aquí y se avisará al propietario."
+    },
+    "history": {
+      "title": "Historial"
+    },
+    "errors": {
+      "loadFailed": "No hemos podido cargar las reparaciones. No se oculta nada: la petición ha fallado.",
+      "reportFailed": "No hemos podido enviarlo. Inténtalo otra vez.",
+      "transitionFailed": "No hemos podido cambiarlo. Inténtalo otra vez.",
+      "commentFailed": "No hemos podido enviar tu mensaje. Inténtalo otra vez.",
+      "conflict": "Esta solicitud ha cambiado desde que la viste. Este es su estado actual."
+    }
   }
 }
