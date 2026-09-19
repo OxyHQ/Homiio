@@ -37,6 +37,7 @@ import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 import { getDb } from '../postgres';
 import { addresses, properties } from '../schema';
 import { dominantCurrency, priceCurrencyCensus } from './priceCurrency';
+import { parseListingCurrency } from '@homiio/shared-types';
 
 /** The share of the scope the upper bound covers when the caller names none. */
 const DEFAULT_UPPER_PERCENTILE = 0.98;
@@ -59,6 +60,19 @@ export interface PriceHistogram {
   count: number;
   /** Priced listings in the scope carrying a different (or no) currency, left out. */
   otherCurrencyCount: number;
+  /**
+   * Every currency the scope's prices ARE in, most common first.
+   *
+   * `otherCurrencyCount` says how many listings were left out; this says what
+   * they were left out FOR. Without it a slider can be honest about the
+   * remainder and can still only offer one currency — which in a market priced
+   * in two is a filter somebody cannot reach half of.
+   *
+   * A currency the price columns cannot hold is not listed: the column can
+   * carry a portal's stray string (see the `properties` schema header), and
+   * offering one as a choice would narrow a search to nothing.
+   */
+  currencies: Array<{ currency: string; count: number }>;
   buckets: PriceHistogramBucket[];
 }
 
@@ -158,6 +172,10 @@ export async function priceHistogramForScope(options: PriceHistogramOptions): Pr
     max,
     count: inCurrency,
     otherCurrencyCount: priced - inCurrency,
+    currencies: rows.flatMap((row) => {
+      const parsed = parseListingCurrency(row.currency);
+      return parsed ? [{ currency: parsed, count: row.count }] : [];
+    }),
     buckets: counts.map((count, index) => ({
       from: min + index * width,
       // The last edge is `max` exactly rather than an accumulated float.

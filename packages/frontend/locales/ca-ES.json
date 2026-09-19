@@ -542,7 +542,8 @@
         "perNight": "per night",
         "inCurrency": "Preus en {{currency}}",
         "otherCurrency_one": "{{count}} habitatge d'aquesta zona té el preu en una altra moneda i no apareix a dalt",
-        "otherCurrency_other": "{{count}} habitatges d'aquesta zona tenen el preu en una altra moneda i no apareixen a dalt"
+        "otherCurrency_other": "{{count}} habitatges d'aquesta zona tenen el preu en una altra moneda i no apareixen a dalt",
+        "currencyChoice": "En quina moneda és aquest preu"
       }
     },
     "header": {

@@ -65,7 +65,7 @@ count.
 
 | Control | UI | URL | SQL | Status |
 |---|---|---|---|---|
-| Price range | ✓ | `priceMin`/`priceMax`, `priceCurrency` | per-offering price column, narrowed to one currency | **live** — the unit travels with the bound and the response names it; §6 |
+| Price range | ✓ | `priceMin`/`priceMax`, `priceCurrency` | per-offering price column, narrowed to one currency | **live** — the unit travels with the bound, the response names it, and a mixed-currency area offers the choice; §6 |
 | Price histogram | ✓ real | — | `GET /properties/search/price-histogram` | **live** — not the demo's fake timer |
 | Property type | ✓ | `propertyType` | `typeIn` | **live** |
 | Bedrooms / bathrooms | ✓ | `bedrooms`/`bathrooms` | minimum, `inRange` | **live** |
@@ -285,11 +285,14 @@ because the server may have chosen it.
 surfaces with no scope to ask (a saved-search row, the room filters, the moments
 before an answer arrives). It is never the unit a bound is sent in.
 
-**Still partial: choosing a non-dominant currency.** In a mixed-currency area a
-searcher gets the dominant one and is told what was left out; there is no
-control to switch to the other. That is a UI gap over a contract that already
-supports it — `priceCurrency` is honoured from the URL, the store and the saved
-search today.
+**Choosing a non-dominant currency works too.** The histogram reports every
+currency the scope's prices are in, and the slider draws a switch when there is
+more than one — which is the whole of what a mixed market needed, because the
+filter narrows rather than converting and a searcher offered only the dominant
+currency could not reach the other half at all. The switch is drawn ONLY when
+there is a choice: one with a single option in it would appear on every search
+and mean nothing on almost all of them. Switching re-reads the same bound in the
+new unit; it never converts it.
 
 ---
 
@@ -332,8 +335,7 @@ Open, in rough order of how much they unblock:
 
 1. **Filters end to end** — floor (blocked), energy, beds, and the room-vs-whole-home
    segment. Area and availability are live in all four columns, including the
-   histogram, and the currency contract is closed (§6) bar the control for
-   choosing a non-dominant currency.
+   histogram, and the currency contract is closed end to end (§6).
 2. **Payment receipts and the processor** — the ledger is live; receipts are
    ordinary work on the private document path repair photos now use, and only
    the checkout is blocked, on a provider decision.

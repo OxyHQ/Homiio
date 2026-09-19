@@ -55,6 +55,7 @@ import type { SearchFilterPatch } from '@/store/searchQueryStore';
 import { spacing } from '@/constants/styles';
 
 import {
+  PriceCurrencyChoice,
   PriceHistogramNote,
   priceBounds,
   priceRangeValue,
@@ -379,6 +380,12 @@ function FiltersBody({ query, onApply, onClose, showTypes }: FiltersBodyProps): 
             minLabel={t('search.step.price.min')}
             maxLabel={t('search.step.price.max')}
             accessibilityLabel={t('search.step.price.title')}
+          />
+          <PriceCurrencyChoice
+            histogram={priceHistogram}
+            // The bound is re-read in the chosen unit, never converted. The
+            // slider does not move: "up to 1,200" becomes "up to 1,200 złoty".
+            onChange={(priceCurrency) => patch({ priceCurrency })}
           />
           <PriceHistogramNote histogram={priceHistogram} />
         </FilterSection>

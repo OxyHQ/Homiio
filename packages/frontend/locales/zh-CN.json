@@ -535,7 +535,8 @@
         "perNight": "per night",
         "inCurrency": "价格以 {{currency}} 显示",
         "otherCurrency_one": "该区域有 {{count}} 套房源以其他货币计价，未显示在上方",
-        "otherCurrency_other": "该区域有 {{count}} 套房源以其他货币计价，未显示在上方"
+        "otherCurrency_other": "该区域有 {{count}} 套房源以其他货币计价，未显示在上方",
+        "currencyChoice": "此价格使用的币种"
       }
     },
     "header": {

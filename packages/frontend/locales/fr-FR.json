@@ -535,7 +535,8 @@
         "perNight": "per night",
         "inCurrency": "Prix en {{currency}}",
         "otherCurrency_one": "{{count}} logement de cette zone est affiché dans une autre devise et n’apparaît pas ci-dessus",
-        "otherCurrency_other": "{{count}} logements de cette zone sont affichés dans une autre devise et n’apparaissent pas ci-dessus"
+        "otherCurrency_other": "{{count}} logements de cette zone sont affichés dans une autre devise et n’apparaissent pas ci-dessus",
+        "currencyChoice": "Dans quelle devise ce prix est exprimé"
       }
     },
     "header": {

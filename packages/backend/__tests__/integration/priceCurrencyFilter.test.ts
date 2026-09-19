@@ -300,6 +300,20 @@ describe('the bars and the thumbs describe the same homes', () => {
     await seedRent(700, 'EUR');
   });
 
+  it('offers every currency the area IS priced in, so half of it is reachable', async () => {
+    const res = await request(buildApp())
+      .get('/properties/search/price-histogram')
+      .query({ city, offering: OfferingType.LONG_TERM_RENT });
+
+    // Without this list a slider can be honest about the remainder and still
+    // only offer one currency, which in a two-currency market is a filter
+    // somebody cannot reach half of.
+    expect(res.body.priceHistogram.currencies).toEqual([
+      { currency: 'RON', count: 3 },
+      { currency: 'EUR', count: 1 },
+    ]);
+  });
+
   it('the histogram and the filter pick the same currency for one scope', async () => {
     const app = buildApp();
     const histogram = await request(app)

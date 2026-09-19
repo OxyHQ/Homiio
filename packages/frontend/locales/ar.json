@@ -539,7 +539,8 @@
         "perNight": "per night",
         "inCurrency": "الأسعار بعملة {{currency}}",
         "otherCurrency_one": "يوجد {{count}} مسكن في هذه المنطقة بسعر بعملة أخرى ولا يظهر أعلاه",
-        "otherCurrency_other": "توجد {{count}} مساكن في هذه المنطقة بأسعار بعملة أخرى ولا تظهر أعلاه"
+        "otherCurrency_other": "توجد {{count}} مساكن في هذه المنطقة بأسعار بعملة أخرى ولا تظهر أعلاه",
+        "currencyChoice": "بأي عملة هذا السعر"
       }
     },
     "header": {
