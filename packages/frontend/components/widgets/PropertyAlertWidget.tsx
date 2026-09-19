@@ -44,10 +44,15 @@ function parsePrice(raw: string): ParsedPrice {
 /**
  * Build the human-readable price portion of the alert label.
  *
- * A saved alert's price bound is a search filter, so it carries
- * {@link SEARCH_PRICE_CURRENCY} like every other filter bound, and it is
- * formatted rather than glued after a hardcoded `€`. The one-sided cases take
- * their preposition from the locale file.
+ * Formatted in {@link SEARCH_PRICE_CURRENCY} rather than glued after a
+ * hardcoded `€` — and that is a DISPLAY default here, not the unit the alert
+ * filters in. This widget takes a number and a typed place name, so nothing has
+ * resolved a scope yet and no currency is stored with the bound; the server
+ * resolves one from the area's own listings when the search runs and reports it
+ * back. Writing a currency into the filter from here would be this component
+ * deciding a Kraków alert is in euros because the app's default label is.
+ *
+ * The one-sided cases take their preposition from the locale file.
  */
 function formatPriceRange(
   min: number | undefined,

@@ -60,3 +60,23 @@ export const PAYMENT_CURRENCIES = ['USD', 'EUR', 'GBP', 'CAD'] as const;
 
 /** A currency accepted for in-app payment records (lease / review). */
 export type PaymentCurrency = (typeof PAYMENT_CURRENCIES)[number];
+
+/**
+ * Read a listing currency from anything a request, a URL or a stored filter can
+ * carry.
+ *
+ * Total, and case-insensitive on a trimmed string, because the code arrives
+ * from a query string as often as from our own client. Anything that is not one
+ * of {@link LISTING_CURRENCIES} answers `undefined` — never a default, because
+ * the callers that matter (a price filter, a histogram) have to be able to tell
+ * "the caller named a currency we do not know" apart from "the caller named
+ * euros". Substituting a default there would apply a bound in a currency nobody
+ * asked for, which is the exact failure the filter's currency exists to stop.
+ */
+export function parseListingCurrency(value: unknown): ListingCurrency | undefined {
+  if (typeof value !== 'string') return undefined;
+  const code = value.trim().toUpperCase();
+  return (LISTING_CURRENCIES as readonly string[]).includes(code)
+    ? (code as ListingCurrency)
+    : undefined;
+}

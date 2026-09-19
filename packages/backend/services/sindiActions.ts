@@ -40,6 +40,7 @@ import { randomUUID } from 'node:crypto';
 import {
   citySelection,
   OfferingType,
+  parseListingCurrency,
   PropertyType,
   SINDI_ACTION_VERSION,
   type SindiActionEnvelope,
@@ -274,6 +275,9 @@ export function parseAppContext(value: unknown): SindiAppContext | null {
   const scopeLabel = text(raw.scopeLabel, 120);
   const priceMin = number(raw.priceMin);
   const priceMax = number(raw.priceMax);
+  // Validated against the listing vocabulary, like every other closed set here:
+  // an unknown code reaches the model as prose it would repeat back.
+  const priceCurrency = parseListingCurrency(raw.priceCurrency);
 
   return {
     revision,
@@ -284,6 +288,7 @@ export function parseAppContext(value: unknown): SindiAppContext | null {
     ...(scopeLabel ? { scopeLabel } : {}),
     ...(priceMin !== undefined ? { priceMin } : {}),
     ...(priceMax !== undefined ? { priceMax } : {}),
+    ...(priceCurrency ? { priceCurrency } : {}),
   };
 }
 

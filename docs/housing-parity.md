@@ -65,7 +65,7 @@ count.
 
 | Control | UI | URL | SQL | Status |
 |---|---|---|---|---|
-| Price range | ✓ | `priceMin`/`priceMax` | per-offering price column | **partial** — one implicit currency, see §6 |
+| Price range | ✓ | `priceMin`/`priceMax`, `priceCurrency` | per-offering price column, narrowed to one currency | **live** — the unit travels with the bound and the response names it; §6 |
 | Price histogram | ✓ real | — | `GET /properties/search/price-histogram` | **live** — not the demo's fake timer |
 | Property type | ✓ | `propertyType` | `typeIn` | **live** |
 | Bedrooms / bathrooms | ✓ | `bedrooms`/`bathrooms` | minimum, `inRange` | **live** |
@@ -78,7 +78,7 @@ count.
 
 | Control | Status | Note |
 |---|---|---|
-| Price (log scale, "asking price") | **partial** | The range works; the scale and the per-mode bounds are Bloom's, not adopted |
+| Price (log scale, "asking price") | **partial** | The range works and carries its currency (§6); the scale and the per-mode bounds are Bloom's, not adopted |
 | Property type, rooms | **live** | Shared with rent |
 | Floor area (slider) | **partial** | The filter is live and shared with rent; Bloom's slider variant is not adopted |
 | Energy rating | **open** | **No column at all.** Needs schema, ingest and a source before a filter means anything |
@@ -210,17 +210,50 @@ wiring rather than a migration of live money.
 repair photos need, for the same reason: it is a tenancy document and may not go
 through the public image endpoint.
 
-## 6. The currency gap
+## 6. The currency gap, closed
 
-`SEARCH_PRICE_CURRENCY = 'EUR'` is the whole of it: a price filter has no
-listing to take a currency from, and the backend compares the number against
-listing amounts **without converting**. So a 1,000 filter is compared to 1,000
-RON and 1,000 USD as if they were the same amount.
+`SEARCH_PRICE_CURRENCY = 'EUR'` used to be the whole of it: a price filter had
+no listing to take a currency from, so the backend compared the number against
+every listing's own amount **without converting**. `priceMax=1200` returned a
+£1,100 home — about €1,290 — on a page whose maximum was 1,200. Nothing threw;
+the page answered a different question from the one asked.
 
-Closing it is an end-to-end change — contract, URL token, saved search, the
-Sindi action patch, validation, SQL and the histogram — and **it is open**.
-#523 deliberately left `SindiSearchPatch` with no currency field rather than
-adding one the server ignores.
+**A bound now carries its unit end to end.** `priceCurrency` travels through the
+contract, the URL, the saved search and the SQL; the range is narrowed to
+listings priced in that currency; and the **response says which unit was used**,
+because the server may have chosen it.
+
+- **Nothing is converted, and nothing will be.** There is no rate Homiio can
+  cite or version, and an invented one is an invented price (ADR 0004). The
+  histogram has refused to mix currencies since it shipped — this is the same
+  rule reaching the thumbs, from the same census
+  (`db/properties/priceCurrency.ts`), so the bars and the filter can no longer
+  describe different homes.
+- **A caller who names no currency still gets a correct answer.** The server
+  censuses the resolved scope and applies the bound in the currency that scope
+  is mostly priced in. There is no country → currency table and there must not
+  be: Romania carries both `RON` and `EUR` on real listings, so any such table
+  would filter half that market away with confidence.
+- **The honest cost is stated, not hidden.** A 1,000 zł home genuinely cheaper
+  than a €1,200 bound is left out, and the slider's note counts it
+  (`otherCurrencyCount`).
+- **Where nothing names a currency, the bound matches nothing** rather than
+  everything — "unknown" is not an answer to "under 1,200", the same rule
+  `areaInRange` gives an area stored as `0`.
+- **Stale units are cleared, not carried.** Changing the location, the offering
+  or the price through Sindi drops the unit and hands the question back to the
+  server. A bound of 1,200 set over a euro city would otherwise narrow Kraków to
+  euro listings — an empty page with nothing on screen to explain it.
+
+`SEARCH_PRICE_CURRENCY` survives as a **rendering fallback only**, for the
+surfaces with no scope to ask (a saved-search row, the room filters, the moments
+before an answer arrives). It is never the unit a bound is sent in.
+
+**Still partial: choosing a non-dominant currency.** In a mixed-currency area a
+searcher gets the dominant one and is told what was left out; there is no
+control to switch to the other. That is a UI gap over a contract that already
+supports it — `priceCurrency` is honoured from the URL, the store and the saved
+search today.
 
 ---
 
@@ -262,8 +295,9 @@ and most of #519 §8 (Sindi).
 Open, in rough order of how much they unblock:
 
 1. **Filters end to end** — floor (blocked), energy, beds, and the room-vs-whole-home
-   segment — plus the currency contract. Area and availability are now live in all
-   four columns, including the histogram.
+   segment. Area and availability are live in all four columns, including the
+   histogram, and the currency contract is closed (§6) bar the control for
+   choosing a non-dominant currency.
 2. **Repair photos** — the one open half of maintenance, blocked behind a
    private object store that does not exist.
 3. **Payment receipts and the processor** — the ledger is live; receipts need a

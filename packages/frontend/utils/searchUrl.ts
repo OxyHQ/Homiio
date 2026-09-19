@@ -33,6 +33,7 @@ import {
   OfferingType,
   ExchangeMode,
   PropertyType,
+  parseListingCurrency,
   parseLocationToken,
   serializeLocationToken,
   type LocationRef,
@@ -164,6 +165,11 @@ export function parseSearchParams(params: RouteParams): ParsedSearchUrl {
     propertyTypes: parseList<PropertyType>(readParam(params.propertyType), PROPERTY_TYPE_VALUES),
     priceMin: parseNumber(readParam(params.priceMin)),
     priceMax: parseNumber(readParam(params.priceMax)),
+    // The unit the bounds are in. A link that carries `priceMax=1200` and no
+    // currency is not broken — it means "nobody said", and the server resolves
+    // it from the scope. An unknown code is dropped for the same reason: a
+    // bound applied in a currency nothing is priced in empties the page.
+    priceCurrency: parseListingCurrency(readParam(params.priceCurrency)),
     bedrooms: parseNumber(readParam(params.bedrooms)),
     bathrooms: parseNumber(readParam(params.bathrooms)),
     sizeMin: parseNumber(readParam(params.sizeMin)),
@@ -260,6 +266,11 @@ export function buildSearchParamsForUrl(query: SearchQuery): SerializedSearchUrl
   if (query.amenities.length > 0) params.amenities = query.amenities.join(',');
   if (typeof query.priceMin === 'number') params.priceMin = String(query.priceMin);
   if (typeof query.priceMax === 'number') params.priceMax = String(query.priceMax);
+  // Only alongside a bound: a currency on its own is not a filter, and writing
+  // one into a shareable link would put a param in it that changes nothing.
+  if (query.priceCurrency && (query.priceMin !== undefined || query.priceMax !== undefined)) {
+    params.priceCurrency = query.priceCurrency;
+  }
   if (typeof query.bedrooms === 'number') params.bedrooms = String(query.bedrooms);
   if (typeof query.bathrooms === 'number') params.bathrooms = String(query.bathrooms);
   if (typeof query.sizeMin === 'number') params.sizeMin = String(query.sizeMin);

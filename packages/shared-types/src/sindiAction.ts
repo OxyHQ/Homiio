@@ -40,16 +40,21 @@
  * which is the "un cambio incremental conserva los filtros no mencionados"
  * rule expressed in the type rather than in an executor's discipline.
  *
- * ## The currency gap, stated rather than papered over
+ * ## Why there is still no currency field
  *
- * {@link SindiSearchPatch} has no currency field, and that is deliberate.
- * Homiio's price filter today has exactly one implicit currency
- * (`SEARCH_PRICE_CURRENCY`, euros) all the way through the URL, the store and
- * the SQL. Adding a currency here would be a field the server ignores — which
- * #519 §6.1 forbids in the same breath as it asks for the currency work. The
- * gap is that row's, not this one's, and it is named in `docs/sindi-actions.md`.
+ * {@link SindiSearchPatch} has no currency, and now that the price filter DOES
+ * take one the reason has changed rather than gone away. Somebody who says
+ * "under 1,200" has named an amount and not a unit; there is nothing in the
+ * utterance to put in the field, and filling it from the conversation's last
+ * scope would apply their number in a currency they never mentioned.
+ *
+ * So a price patch carries the bound alone, and `applySearchPatch` CLEARS the
+ * currency in play when it lands — which hands the unit to the server, whose
+ * answer comes from the listings in the scope the patch is about. That is the
+ * one place in the system that can answer it from evidence.
  */
 
+import type { ListingCurrency } from './currency';
 import type { LocationSelection } from './location';
 import type { OfferingType, PropertyType } from './common';
 
@@ -200,6 +205,16 @@ export interface SindiAppContext {
   readonly scopeLabel?: string;
   readonly priceMin?: number;
   readonly priceMax?: number;
+  /**
+   * The unit those bounds are in, when a scope has answered.
+   *
+   * Sent so the model can SAY it. A price filter is narrowed to one currency
+   * server-side and the area decides which, so a model told only "priceMax:
+   * 1200" would write "under €1,200" over a złoty search — a sentence the app
+   * itself is careful never to produce. Absent means no scope has answered yet,
+   * and the model has nothing to name rather than a default to assume.
+   */
+  readonly priceCurrency?: ListingCurrency;
 }
 
 /** Every destination, for validation and for an exhaustive switch in the executor. */

@@ -32,18 +32,19 @@
  */
 
 import { Request, Response, NextFunction } from 'express';
-import type { SQL } from 'drizzle-orm';
+import { sql, type SQL } from 'drizzle-orm';
 import { describeErrorForLog, paginationResponse } from '../../middlewares/errorHandler';
 import { logger } from '../../middlewares/logging';
 import {
   buildSort,
+  currencyColumnForOffering,
   priceColumnForOffering,
   DEFAULT_PRICE_COLUMN,
   type ParsedSearchParams,
   type SortField,
 } from './searchQueryBuilder';
 import { buildCommonPropertyFilters } from './commonFilters';
-import { OfferingType } from '@homiio/shared-types';
+import { OfferingType, parseListingCurrency, type ListingCurrency } from '@homiio/shared-types';
 import { properties } from '../../db/schema';
 import {
   allOf,
@@ -51,6 +52,7 @@ import {
   findProperties,
   propertyOrderBy,
 } from '../../db/properties/propertyReads';
+import { dominantCurrency, priceCurrencyCensus } from '../../db/properties/priceCurrency';
 import {
   addressIs,
   booleanIs,
@@ -59,6 +61,7 @@ import {
   hasOffering,
   inCity,
   inRange,
+  priceInRange,
   inRegion,
   isAvailable,
   ownedBy,
@@ -242,27 +245,6 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
       }
     }
 
-    // ---- Price range (priceMin/priceMax aliased as minRent/maxRent) ----
-    // Applies to the requested offering's price column. SALE uses
-    // minSalePrice/maxSalePrice below, so a bare range is not applied to a sale
-    // query.
-    if ((minRent !== undefined || maxRent !== undefined) && resolvedOffering !== OfferingType.SALE) {
-      conditions.push(inRange(
-        priceColumnForOffering(resolvedOffering) ?? DEFAULT_PRICE_COLUMN,
-        minRent === undefined ? undefined : parseFloat(String(minRent)),
-        maxRent === undefined ? undefined : parseFloat(String(maxRent)),
-      ));
-    }
-
-    // ---- Sale price range (ONLY for an explicit sale query) ----
-    if ((minSalePrice !== undefined || maxSalePrice !== undefined) && resolvedOffering === OfferingType.SALE) {
-      conditions.push(inRange(
-        properties.salePrice,
-        minSalePrice === undefined ? undefined : parseFloat(String(minSalePrice)),
-        maxSalePrice === undefined ? undefined : parseFloat(String(maxSalePrice)),
-      ));
-    }
-
     if (instantBook !== undefined) {
       conditions.push(booleanIs(properties.shortTermRentInstantBook, String(instantBook) === 'true'));
     }
@@ -292,6 +274,47 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
     if (hasStay && checkInDate && checkOutDate) {
       conditions.push(calendarIsFree(checkInDate, checkOutDate));
       conditions.push(noConfirmedReservationOverlaps(checkInDate, checkOutDate));
+    }
+
+    // ---- The price range, LAST, and in one currency ----
+    //
+    // `priceMin`/`priceMax` (aliased `minRent`/`maxRent`) apply to the requested
+    // offering's price column; an explicit SALE query uses its own
+    // `minSalePrice`/`maxSalePrice` instead, so the two never stack.
+    //
+    // The currency is the point of the ordering. A bare `maxRent=1200` used to
+    // be compared against every listing's own price whatever it was advertised
+    // in, so 1,200 zł and 1,200 RON came back as homes under 1,200 euros. It is
+    // now narrowed to ONE currency: the one the caller named, or — for a caller
+    // who named none — the one the rest of this feed's listings are mostly
+    // priced in, censused over the conditions assembled above. Building the
+    // range earlier would mean censusing the catalogue instead of the feed.
+    const saleQuery = resolvedOffering === OfferingType.SALE;
+    const boundMin = saleQuery ? minSalePrice : minRent;
+    const boundMax = saleQuery ? maxSalePrice : maxRent;
+    let effectivePriceCurrency: ListingCurrency | undefined;
+    if (boundMin !== undefined || boundMax !== undefined) {
+      const priceColumn = saleQuery
+        ? properties.salePrice
+        : priceColumnForOffering(resolvedOffering) ?? DEFAULT_PRICE_COLUMN;
+      const currencyColumn = currencyColumnForOffering(resolvedOffering);
+      const min = boundMin === undefined ? undefined : parseFloat(String(boundMin));
+      const max = boundMax === undefined ? undefined : parseFloat(String(boundMax));
+
+      effectivePriceCurrency =
+        parseListingCurrency(req.query.priceCurrency) ??
+        dominantCurrency(
+          await priceCurrencyCensus({ where: allOf(conditions), priceColumn, currencyColumn }),
+        );
+
+      // No currency at all means nothing priced in this feed records one, so
+      // "under 1,200 WHAT" has no answer and the bound matches nothing — not
+      // the unfiltered feed, which is what dropping it would show.
+      conditions.push(
+        effectivePriceCurrency
+          ? priceInRange(priceColumn, currencyColumn, min, max, effectivePriceCurrency)
+          : sql`false`,
+      );
     }
 
     const where = allOf(conditions);
@@ -462,13 +485,19 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
       }
     }
 
-    res.json(paginationResponse(
-      ordered,
-      pageNumber,
-      limitNumber,
-      total,
-      'Properties retrieved successfully'
-    ));
+    res.json({
+      ...paginationResponse(
+        ordered,
+        pageNumber,
+        limitNumber,
+        total,
+        'Properties retrieved successfully'
+      ),
+      // The unit the price bound was read in, when there was one. The server
+      // may have chosen it, so a feed labelled "under 1,200" can say 1,200 of
+      // what instead of leaving the reader to assume.
+      ...(effectivePriceCurrency === undefined ? {} : { priceCurrency: effectivePriceCurrency }),
+    });
   } catch (error) {
     next(error);
   }

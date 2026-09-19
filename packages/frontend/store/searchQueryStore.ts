@@ -4,6 +4,7 @@ import {
   PropertyType,
   boundsCenter,
   type GeoBounds,
+  type ListingCurrency,
   type LocationSelection,
 } from '@homiio/shared-types';
 import type {
@@ -58,6 +59,7 @@ export const DEFAULT_SEARCH_QUERY: SearchQuery = {
   propertyTypes: [],
   priceMin: undefined,
   priceMax: undefined,
+  priceCurrency: undefined,
   bedrooms: undefined,
   bathrooms: undefined,
   amenities: [],
@@ -147,7 +149,20 @@ interface SearchQueryState {
   /** Toggle a property type in/out of the selection. */
   togglePropertyType: (type: PropertyType) => void;
   /** Set the inclusive price range (either bound may be undefined to clear). */
-  setPriceRange: (min: number | undefined, max: number | undefined) => void;
+  /**
+   * Set the price bounds and the currency they are in.
+   *
+   * The currency is not optional at this seam even though the field is: the
+   * caller is a slider that was drawn over a distribution, so it knows what the
+   * bars were counted in. Passing `undefined` is a positive statement — "no
+   * scope has answered yet" — which hands the unit to the server rather than
+   * assuming one.
+   */
+  setPriceRange: (
+    min: number | undefined,
+    max: number | undefined,
+    currency: ListingCurrency | undefined,
+  ) => void;
   /** Set the date range (or clear it). */
   setDates: (dates: SearchDateRange | undefined) => void;
   /** Set the guest count. */
@@ -169,15 +184,22 @@ export const useSearchQueryStore = create<SearchQueryState>()((set) => ({
 
   patchFilters: (patch) => set((state) => ({ query: { ...state.query, ...patch } })),
 
+  // The BOUNDS survive a move and the CURRENCY does not. "Up to 1,200" is a
+  // sentence somebody meant and it should follow them to the next city; "up to
+  // 1,200 euros" is only true of the city they set it in, and carrying it to a
+  // złoty market narrows the new area to a currency nothing there is priced in
+  // — an empty page with nothing on screen to explain it. Dropping the unit
+  // hands the question back to the server, which answers it for the new scope
+  // and says so in `priceCurrency` on the response.
   commitLocation: (selection) =>
     set((state) => ({
-      query: { ...state.query, location: selection },
+      query: { ...state.query, location: selection, priceCurrency: undefined },
       pendingViewport: null,
     })),
 
   clearLocation: () =>
     set((state) => ({
-      query: { ...state.query, location: null },
+      query: { ...state.query, location: null, priceCurrency: undefined },
       pendingViewport: null,
     })),
 
@@ -194,7 +216,7 @@ export const useSearchQueryStore = create<SearchQueryState>()((set) => ({
       const bounds = state.pendingViewport;
       if (!bounds) return state;
       return {
-        query: { ...state.query, location: mapBoundsSelection(bounds) },
+        query: { ...state.query, location: mapBoundsSelection(bounds), priceCurrency: undefined },
         pendingViewport: null,
       };
     }),
@@ -205,9 +227,12 @@ export const useSearchQueryStore = create<SearchQueryState>()((set) => ({
         ...state.query,
         offering,
         // The price range is per-offering (monthly vs nightly vs sale), so a
-        // range carried over from another offering would be nonsensical.
+        // range carried over from another offering would be nonsensical — and
+        // so would its unit, which was resolved against that offering's own
+        // price column.
         priceMin: undefined,
         priceMax: undefined,
+        priceCurrency: undefined,
         // Short-term-only fields are meaningless for the other offerings.
         ...(offering === OfferingType.SHORT_TERM_RENT
           ? {}
@@ -224,9 +249,9 @@ export const useSearchQueryStore = create<SearchQueryState>()((set) => ({
       return { query: { ...state.query, propertyTypes: next } };
     }),
 
-  setPriceRange: (min, max) =>
+  setPriceRange: (min, max, currency) =>
     set((state) => ({
-      query: { ...state.query, priceMin: min, priceMax: max },
+      query: { ...state.query, priceMin: min, priceMax: max, priceCurrency: currency },
     })),
 
   setDates: (dates) => set((state) => ({ query: { ...state.query, dates } })),

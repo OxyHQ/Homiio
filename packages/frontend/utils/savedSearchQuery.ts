@@ -22,7 +22,7 @@
  */
 import type { TFunction } from 'i18next';
 
-import { OfferingType, type PropertyType } from '@homiio/shared-types';
+import { OfferingType, parseListingCurrency, type PropertyType } from '@homiio/shared-types';
 
 import { locationDisplayLabel, type SearchQuery } from '@/components/search/types';
 import {
@@ -75,6 +75,11 @@ export function savedSearchFiltersToQuery(search: Pick<SavedSearch, 'filters' | 
     propertyTypes,
     priceMin: readNumber(filters.priceMin) ?? readNumber(filters.minPrice),
     priceMax: readNumber(filters.priceMax) ?? readNumber(filters.maxPrice),
+    // The unit those bounds were set in. A saved search from before the field
+    // existed has none, which is the honest state: nobody recorded it, so the
+    // server resolves it from the scope when the search is re-run rather than
+    // this reader inventing euros for a Kraków alert.
+    priceCurrency: parseListingCurrency(filters.priceCurrency),
     bedrooms: readNumber(filters.bedrooms),
     bathrooms: readNumber(filters.bathrooms),
     amenities: Array.isArray(filters.amenities)

@@ -169,6 +169,43 @@ export function inRange(
   return bounds.length === 1 ? bounds[0] : and(...bounds);
 }
 
+/**
+ * An inclusive price range, IN ONE CURRENCY.
+ *
+ * ## Why the currency is not optional
+ *
+ * `inRange` compares a bare number against a price column, and the column holds
+ * whatever the listing was advertised in. Homiio ingests from portals across
+ * several markets and production carries six different codes in
+ * `long_term_rent_currency` alone, so `priceMax=1200` was matching 1,200 zł and
+ * 1,200 RON beside 1,200 euros as though they were one amount. Nothing threw;
+ * the results just quietly answered a different question from the one asked.
+ *
+ * There is no conversion here and there must not be: a rate Homiio cannot cite
+ * or version turns a filter into an invented price, which is what ADR 0004
+ * forbids (the histogram has refused to mix currencies since it shipped, for
+ * the same reason). A bound applies to the listings priced in the currency it
+ * was expressed in, and the caller is told which one that was.
+ *
+ * ## A missing currency is not a match
+ *
+ * `currency is null` means the listing has a price and nobody recorded its
+ * unit. That is EXCLUDED rather than assumed, the same rule `areaInRange` uses
+ * for an area stored as `0`: "unknown" is not an answer to a question about an
+ * amount, and guessing turns one unfilled column into a wrong result.
+ */
+export function priceInRange(
+  priceColumn: AnyPgColumn,
+  currencyColumn: AnyPgColumn,
+  min: number | undefined,
+  max: number | undefined,
+  currency: string,
+): SQL | undefined {
+  const range = inRange(priceColumn, min, max);
+  if (!range) return undefined;
+  return and(eq(currencyColumn, currency), range);
+}
+
 /** An inclusive range on a timestamp column. */
 export function inDateRange(
   column: AnyPgColumn,
