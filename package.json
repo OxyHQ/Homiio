@@ -43,8 +43,8 @@
     "node": "22.x"
   },
   "overrides": {
-    "@oxy.so/core": "^1.5.1",
-    "@oxy.so/bloom": "^3.0.0",
+    "@oxy.so/core": "^1.7.0",
+    "@oxy.so/bloom": "^3.0.1",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "@react-native-async-storage/async-storage": "2.2.0",
@@ -55,10 +55,10 @@
     "@oxy.so/contracts": "^1.2.0"
   },
   "resolutions": {
-    "@oxy.so/core": "^1.5.1"
+    "@oxy.so/core": "^1.7.0"
   },
   "cacheDirectories": [],
   "dependencies": {
-    "@oxy.so/core": "^1.5.1"
+    "@oxy.so/core": "^1.7.0"
   }
 }
