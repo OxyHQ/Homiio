@@ -261,16 +261,16 @@
       },
       "loadFailedToast": "No hem pogut carregar els habitatges d'aquesta zona. No s'amaga res: la petició ha fallat."
     },
-    "scopePrompt": {
-      "eyebrow": "Primer, un pas",
-      "title": "On busques habitatge?",
-      "body": "Tria una ciutat o un barri, o activa la ubicació. La ubicació és opcional: sempre pots triar el lloc a mà."
-    },
     "empty": {
       "title": "Encara no hi ha res per mostrar en aquesta zona",
       "body": "Cap anunci d'aquí encaixa amb el que Homiio pot explicar. Amplia la zona, tria un altre lloc o obre Explora i canvia els filtres.",
       "changeFilters": "Obre Explora",
       "changeFiltersAccessible": "Obre Explora per canviar els filtres d'aquesta zona"
+    },
+    "discovery": {
+      "eyebrow": "Explora destinacions",
+      "title": "On t’agradaria viure?",
+      "body": "No hem pogut determinar la teva zona, així que aquestes són ciutats amb habitatges a Homiio, no llocs a prop teu."
     }
   },
   "agent": {
@@ -3738,7 +3738,20 @@
       "locationOff": "La ubicació està desactivada a la configuració",
       "positionRetry": "No hem pogut obtenir la teva posició. Torna-ho a provar",
       "everywhereHint": "Totes les zones, sense filtre d'ubicació",
-      "lastArea": "L'última zona que vas triar"
+      "lastArea": "L'última zona que vas triar",
+      "approximateArea": "{{place}} · zona aproximada",
+      "approximateLead": "Aquesta zona és una estimació, no una tria teva.",
+      "provenance": {
+        "toggle": "Per què aquesta zona?",
+        "toggleAccessible": "Mostra d’on prové aquesta zona",
+        "device": "Obtinguda de la posició del teu dispositiu, amb el permís que ja vas concedir.",
+        "ipCity": "Estimada a partir de la teva connexió a internet. No és la teva adreça.",
+        "ipRegion": "La teva connexió només ha permès acotar una regió, així que aquesta és la zona que es mostra.",
+        "ipCountry": "La teva connexió només ha permès acotar un país, així que aquesta és la zona que es mostra.",
+        "attribution": "Dades d’ubicació per IP de DB-IP, amb llicència CC BY 4.0."
+      },
+      "upgrade": "Fes servir la meva ubicació exacta",
+      "upgradeAccessible": "Substitueix la zona estimada per la posició del teu dispositiu"
     }
   },
   "alerts": {

@@ -19,6 +19,14 @@
  *  - **Nothing invented.** A device scope says "Near {place}" only when a reverse
  *    geocode supplied the place, and "Near you" otherwise — the radius is real
  *    either way.
+ *  - **A guess says it is a guess.** An area inferred from the visitor's network
+ *    reads "Bucharest · approximate area", never "Bucharest". #518 §3.2 and
+ *    #519 §3.1 both require the disclosure, and it belongs HERE rather than in
+ *    each screen, because a screen that forgets states a guess as a fact.
+ *
+ *    A DEVICE scope is deliberately not marked this way: "Near Madrid · 25 km"
+ *    already describes a radius around a real fix, and adding "approximate" to
+ *    it would describe the wrong uncertainty.
  */
 
 import { Platform } from 'react-native';
@@ -47,10 +55,23 @@ export function describeScope(input: {
   /** The user chose "everywhere". Without it, "nothing chosen" reads as a choice. */
   isGlobal?: boolean;
   nearbyPlace?: GeoPlace | null;
+  /**
+   * The area was inferred from the visitor's NETWORK rather than chosen.
+   *
+   * Only the network case. See the header for why a device fix is excluded.
+   */
+  inferredFromNetwork?: boolean;
   t: Translate;
   formatDistanceValue: (metres: number) => string;
 }): string {
-  const { selection, isGlobal = false, nearbyPlace, t, formatDistanceValue } = input;
+  const {
+    selection,
+    isGlobal = false,
+    nearbyPlace,
+    inferredFromNetwork = false,
+    t,
+    formatDistanceValue,
+  } = input;
   if (!selection) return t(isGlobal ? 'location.scope.everywhere' : 'location.scope.chooseArea');
 
   if (selection.kind === 'current_location') {
@@ -62,7 +83,8 @@ export function describeScope(input: {
       : t('location.scope.nearYou', { distance });
   }
 
-  return locationDisplayLabel(selection, t);
+  const label = locationDisplayLabel(selection, t);
+  return inferredFromNetwork ? t('location.scope.approximateArea', { place: label }) : label;
 }
 
 /**
@@ -81,6 +103,7 @@ export function scopeStatement(input: {
   isGlobal: boolean;
   resolution: LocationResolution;
   nearbyPlace?: GeoPlace | null;
+  inferredFromNetwork?: boolean;
   t: Translate;
   formatDistanceValue: (metres: number) => string;
 }): ScopeStatement {

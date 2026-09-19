@@ -1,41 +1,59 @@
 /**
- * The app-wide answer to "where am I looking?" (#353).
+ * The app-wide answer to "where am I looking?".
  *
- * Shared on purpose: Home, the eviction board and anything else that has to
- * state its area read the SAME scope, so two surfaces cannot disagree about
- * where the user is. This hook gathers the ladder's inputs; the decision itself
- * lives in `locationScopeLadder.ts` as a pure function, which is what makes the
- * ordering rules testable without rendering anything.
+ * Shared on purpose: Home, Explore, the eviction board and anything else that
+ * has to state its area read the SAME scope, so two surfaces cannot disagree
+ * about where the user is. This hook gathers the ladder's inputs; the decision
+ * itself lives in `locationScopeLadder.ts` as a pure function, which is what
+ * makes the ordering rules testable without rendering anything.
  *
- * ## The permission prompt is shown ONCE, on request
+ * ## Nothing here asks for permission, and nothing here blocks
  *
- * On mount this READS the permission (`getForegroundPermissionsAsync`) and never
- * requests it. `requestForegroundPermissionsAsync` runs only when the user
- * presses "use my location", which is the issue's "no repetir el prompt del
- * sistema en cada render/apertura". The previous behaviour requested on every
- * cold start of the home feed.
+ * On mount this READS the permission (`getForegroundPermissionsAsync`) and
+ * never requests it. `requestForegroundPermissionsAsync` runs only when the
+ * user presses "use my location".
+ *
+ * When the permission has not been granted, the ladder's device rung simply
+ * does not participate and the NETWORK rung answers instead — on the server,
+ * from the visitor's own connection, with no prompt of any kind. The mandatory
+ * picker that used to terminate this ladder is gone (#518, #519).
+ *
+ * ## One startup budget, not two waits in a row
+ *
+ * Both rungs are started together and share a single 1.5-second deadline
+ * ({@link APPROXIMATE_BUDGET_MS}). #518 §3.3 forbids the alternative in those
+ * words — "No encadenar primero los 10 segundos actuales de GPS y después una
+ * llamada IP" — and chaining is exactly what a per-rung timeout produces.
+ *
+ * The deadline stops the app WAITING; it does not cancel anything. A fix or an
+ * inference landing after it is still applied, provided nothing has been
+ * committed in the meantime.
  *
  * ## A late answer cannot overwrite a newer choice, structurally
  *
- * Nothing here commits a selection from inside a promise. The device rung is
- * REACT QUERY DATA keyed by the gridded fix; the ladder reads it as an input and
- * ranks it below every explicit choice. So the two shapes of the "respuesta
- * tardía" failure are both unreachable rather than defended against:
+ * Nothing here commits a selection from inside a promise. Both inference rungs
+ * are REACT QUERY DATA, read by the ladder as inputs and ranked below every
+ * explicit choice. So the shapes of the "respuesta tardía" failure are
+ * unreachable rather than defended against:
  *
- *  - a device answer arriving after the user picked a city loses to
+ *  - an answer arriving after the user picked a city loses to
  *    `sessionSelection`, because the ladder reads that rung first;
- *  - a stale response for a PREVIOUS position lands in a different cache entry
- *    (its key holds the old grid square) and is never read.
+ *  - a stale device response for a PREVIOUS position lands in a different cache
+ *    entry (its key holds the old grid square) and is never read;
+ *  - a SECOND automatic answer loses to the first one, because committing an
+ *    inferred scope records it (`autoScope`) and the ladder reads that above
+ *    both inference rungs. It becomes `upgrade` — an offer — instead.
  *
  * ## A geocoding failure never clears the scope
  *
- * The reverse geocode that turns a fix into "near Bucharest" is a SEPARATE query
- * from the fix itself, and its failure produces a selection with no nearby label
- * rather than no selection. The scope is the coordinates and the radius; the
- * label is decoration, and decoration failing must not un-scope a search.
+ * The reverse geocode that turns a fix into "near Bucharest" is a SEPARATE
+ * query from the fix itself, and its failure produces a selection with no
+ * nearby label rather than no selection. The scope is the coordinates and the
+ * radius; the label is decoration, and decoration failing must not un-scope a
+ * search.
  */
 
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Platform } from 'react-native';
 import * as Location from 'expo-location';
@@ -53,6 +71,7 @@ import {
   type DevicePositionState,
   type LocationScopeState,
 } from './locationScopeLadder';
+import { APPROXIMATE_BUDGET_MS, useApproximateLocation } from './useApproximateLocation';
 
 /**
  * The radius a device-scoped search covers, in METRES.
@@ -189,8 +208,36 @@ export interface LocationScope extends LocationScopeState {
   readonly exploreGlobal: () => void;
   /** Ask for the device position; prompts at most once per user request. */
   readonly useCurrentLocation: () => void;
+  /**
+   * Apply the precision upgrade on offer, if there is one.
+   *
+   * The one route from an inferred network area to the device's own position
+   * WITHOUT the app having moved anybody: `upgrade` is computed by the ladder
+   * and applied only here, by a press. A version that applied it automatically
+   * is the city-jump #518 §3.3 forbids.
+   */
+  readonly applyUpgrade: () => void;
   /** Whether the OS prompt has already been shown on this device. */
   readonly permissionPromptShown: boolean;
+}
+
+/**
+ * A one-shot deadline, as a boolean.
+ *
+ * `true` once `ms` have passed since the hook mounted. The timer is cleared on
+ * unmount, so nothing keeps a jest worker — or a backgrounded app — awake.
+ *
+ * It is a STATE and not a ref because the ladder has to re-run when it trips:
+ * the whole point is that the surface moves from a skeleton to the destinations
+ * board at the deadline, and a ref changes nothing on screen.
+ */
+function useDeadline(ms: number): boolean {
+  const [elapsed, setElapsed] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setElapsed(true), ms);
+    return () => clearTimeout(timer);
+  }, [ms]);
+  return elapsed;
 }
 
 /**
@@ -221,6 +268,7 @@ export function useLocationScope(): LocationScope {
   const lastChosenArea = useLocationScopeStore((s) => s.lastChosenArea);
   const deviceRequested = useLocationScopeStore((s) => s.deviceRequested);
   const permissionPromptShown = useLocationScopeStore((s) => s.permissionPromptShown);
+  const committedAuto = useLocationScopeStore((s) => s.autoScope);
   const primaryArea = usePrimarySavedArea();
   const savedAreaSelection = primaryArea.selection;
   /**
@@ -281,6 +329,32 @@ export function useLocationScope(): LocationScope {
     retry: false,
   });
 
+  /**
+   * Whether an INFERENCE could still be used at all.
+   *
+   * False the moment any explicit rung supplies an area, which is what keeps
+   * the network lookup from running for somebody who has already said where
+   * they are looking — a request whose answer the ladder would discard.
+   *
+   * `savedAreaPending` is included for the same reason the device rung gates on
+   * it: starting an inference for a scope that is about to be outranked is work
+   * nobody benefits from.
+   */
+  const inferenceUsable =
+    !explicitGlobal && !sessionSelection && !savedAreaPending && !savedAreaSelection && !lastChosenArea;
+
+  // ONE clock for both rungs. See the header: chaining two timeouts is the
+  // failure mode, not a slow first one.
+  const budgetElapsed = useDeadline(APPROXIMATE_BUDGET_MS);
+
+  const approximateQuery = useApproximateLocation({
+    // Still enabled once an inferred scope is committed: it IS the committed
+    // scope's source, and disabling it would drop the cache entry the ladder is
+    // reading from.
+    enabled: inferenceUsable || committedAuto?.source === 'ip',
+    budgetElapsed,
+  });
+
   const device = useMemo((): DevicePositionState => {
     // `resolving` while the rung ABOVE is still loading, so the ladder reports
     // `resolving` rather than falling through to the mandatory picker. Reporting
@@ -314,6 +388,25 @@ export function useLocationScope(): LocationScope {
     };
   }, [savedAreaPending, deviceNeeded, fixQuery.isPending, fixQuery.isFetching, fixQuery.data]);
 
+  /**
+   * The device rung, with the startup budget applied.
+   *
+   * After the deadline a still-unanswered device stops reporting `resolving`,
+   * so the ladder moves on to the network answer or to discovery instead of
+   * holding a skeleton for the ten seconds `getCurrentPositionAsync` may take
+   * indoors. Reported as `idle` — "this rung has nothing to say" — rather than
+   * as a failure, because it has not failed and may yet answer.
+   *
+   * NOT applied when the user PRESSED the button: they asked, they are watching
+   * a spinner they started, and a deadline that quietly gave up on them would
+   * be the button doing nothing.
+   */
+  const budgetedDevice = useMemo((): DevicePositionState => {
+    if (deviceRequested) return device;
+    if (budgetElapsed && device.status === 'resolving') return { status: 'idle' };
+    return device;
+  }, [device, deviceRequested, budgetElapsed]);
+
   const state = useMemo(
     () =>
       resolveLocationScope({
@@ -321,11 +414,45 @@ export function useLocationScope(): LocationScope {
         sessionSelection,
         savedAreaSelection,
         lastChosenSelection: lastChosenArea,
-        device,
+        device: budgetedDevice,
+        approximate: approximateQuery.state,
+        committedAuto,
         deviceRequested,
       }),
-    [explicitGlobal, sessionSelection, savedAreaSelection, lastChosenArea, device, deviceRequested],
+    [
+      explicitGlobal,
+      sessionSelection,
+      savedAreaSelection,
+      lastChosenArea,
+      budgetedDevice,
+      approximateQuery.state,
+      committedAuto,
+      deviceRequested,
+    ],
   );
+
+  /**
+   * Record the FIRST inferred scope of the session.
+   *
+   * An effect, because it writes to an external store — the one thing effects
+   * are actually for. It is idempotent at the store (`commitAutoScope` ignores
+   * a second call), so the fact that this runs on every render where an
+   * inference is in force is harmless rather than load-bearing.
+   *
+   * `deviceRequested` is excluded: a scope the user ASKED for is not an
+   * inference the app needs to protect them from, and recording it would make
+   * the next press of the button a no-op.
+   */
+  const inferredSource = state.source;
+  const inferredSelection = state.selection;
+  useEffect(() => {
+    if (deviceRequested) return;
+    if (inferredSource !== 'device' && inferredSource !== 'ip') return;
+    if (!inferredSelection) return;
+    useLocationScopeStore
+      .getState()
+      .commitAutoScope({ source: inferredSource, selection: inferredSelection });
+  }, [deviceRequested, inferredSource, inferredSelection]);
 
   const choose = useCallback((selection: LocationSelection) => {
     useLocationScopeStore.getState().choose(selection);
@@ -347,12 +474,27 @@ export function useLocationScope(): LocationScope {
     }
   }, [queryClient]);
 
+  /**
+   * Take the precision upgrade the ladder is offering.
+   *
+   * Expressed as `choose`, not as a second commit path: applying it makes the
+   * device position an EXPLICIT selection, which is what it now is — the user
+   * pressed a button naming it. That also clears `autoScope`, so the offer
+   * disappears rather than lingering beside the area it produced.
+   */
+  const upgrade = state.upgrade;
+  const applyUpgrade = useCallback(() => {
+    if (!upgrade) return;
+    useLocationScopeStore.getState().choose(upgrade.selection);
+  }, [upgrade]);
+
   return {
     ...state,
     nearbyPlace: state.source === 'device' ? (areaQuery.data ?? null) : null,
     choose,
     exploreGlobal,
     useCurrentLocation,
+    applyUpgrade,
     permissionPromptShown,
   };
 }

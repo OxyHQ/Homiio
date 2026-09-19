@@ -192,13 +192,27 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
     };
   }, [styleURL]);
 
-  // Get user location
+  /**
+   * The user's own position, ONLY when permission has already been granted.
+   *
+   * This used to call `requestForegroundPermissionsAsync` in an effect, which
+   * meant opening Explore without initial coordinates showed the OS location
+   * prompt — a prompt nobody asked for, on a screen whose job is to show homes.
+   * Both #518 and #519 name this exact call site ("Suprimir los permisos
+   * solicitados por montaje"; "No hay permisos solicitados automáticamente
+   * desde Home, mapa u otros montajes de descubrimiento").
+   *
+   * It now READS the permission and stops when it is not granted. Asking is a
+   * separate, explicit action the user takes ("use my location" in the search
+   * bar's panel), routed through `useLocationScope` — the one place in the app
+   * allowed to prompt.
+   */
   useEffect(() => {
     if (!startFromCurrentLocation) return;
 
     const getUserLocation = async () => {
       try {
-        const { status } = await Location.requestForegroundPermissionsAsync();
+        const { status } = await Location.getForegroundPermissionsAsync();
         if (status !== 'granted') {
           return;
         }

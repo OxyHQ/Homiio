@@ -31,6 +31,7 @@ import {
   type GatewayMeta,
 } from '../services/geocoding/gateway';
 import { observeGeoRequest, type GeoOperation, type GeoOutcome } from '../services/geocoding/telemetry';
+import { resolveApproximateLocation } from '../services/geoip/resolve';
 import { GeocodingProviderError } from '../services/geocoding/types';
 import {
   GeoValidationError,
@@ -298,4 +299,53 @@ export async function reverse(req: Request, res: Response, next: NextFunction): 
     applyRetryAfter(res, error);
     next(toAppError(error));
   }
+}
+
+/**
+ * `GET /api/geo/approximate-location` — roughly where this visitor is, with no
+ * permission prompt and no third-party call (#518 §4, #519 §4).
+ *
+ * ## It answers 200 even when it knows nothing
+ *
+ * Every other handler in this file maps a failure onto a status code, and this
+ * one deliberately does not. The reason is what the caller does with the
+ * answer: this endpoint is read on the first paint of Home, and "we could not
+ * guess your area" is a NORMAL outcome that must produce neutral discovery, not
+ * an error state. A 404 or a 503 here would be rendered by every generic error
+ * handler in the client as a broken screen, which is precisely the blocking
+ * first impression both epics exist to remove.
+ *
+ * So the discrimination lives in the payload (`status: 'resolved' |
+ * 'unavailable'` with a reason) rather than in the status line. A genuinely
+ * broken request — one this process could not even attempt — still reaches
+ * `errorHandler` by throwing, because `asyncHandler` wraps it.
+ *
+ * ## The response is never shared between callers
+ *
+ * `Cache-Control: private, no-store`. The answer is derived from the requester's
+ * own network, so a shared cache anywhere on the path — a CDN, a service
+ * worker, a reverse proxy — would hand one person's city to the next visitor.
+ * `no-store` rather than `private, max-age=0` because the app keeps its own
+ * short-lived copy in memory (see the contract's TTL) and a disk copy of
+ * somebody's inferred city is exactly the artefact the privacy section forbids.
+ */
+export async function approximateLocation(req: Request, res: Response): Promise<void> {
+  const startedAt = Date.now();
+  const operation: GeoOperation = 'approximate_location';
+  const language = parseLanguage(req.query.language, acceptLanguageOf(req));
+
+  const result = await resolveApproximateLocation(req, language);
+
+  observeGeoRequest({
+    operation,
+    outcome: result.status === 'resolved' ? 'ok' : 'empty',
+    durationMs: Date.now() - startedAt,
+    ...(result.status === 'resolved' ? { granularity: result.granularity } : {}),
+  });
+
+  // Set on BOTH branches: an `unavailable` body still discloses that this
+  // network could not be placed, which is about the requester too.
+  res.setHeader('Cache-Control', 'private, no-store');
+  res.setHeader('Vary', 'Accept-Language');
+  res.json(successResponse(result, 'Approximate location'));
 }

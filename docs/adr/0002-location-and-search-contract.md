@@ -1527,3 +1527,79 @@ place; `GET /api/geo/search` may list one. §3 gains `isFramablePlace` so both
 sides read one predicate instead of each spelling the condition out, and it is
 mutation-tested: making it answer `true` unconditionally — the shape that lets an
 unframable place reach a map — turns its test red.
+
+### D. The mandatory place picker is WITHDRAWN, and an approximate rung replaces it (2026-09-19)
+
+**Issues:** [#518](https://github.com/OxyHQ/Homiio/issues/518),
+[#519](https://github.com/OxyHQ/Homiio/issues/519). Both supersede the part of
+#353 that ended the resolution ladder at a mandatory picker.
+
+#### What changes
+
+§7's state machine terminated at `failed(*)` with no query permitted, and
+`hooks/locationScopeLadder.ts` implemented that as `needsPlace: true` — read by
+every surface as "render nothing until the user picks a place". Opening Homiio
+with no saved area and no granted permission therefore showed:
+
+> One step first
+> Where are you looking for a home?
+
+That step is removed. Two things take its place:
+
+1. **An approximate rung.** `GET /api/geo/approximate-location` resolves the
+   visitor's rough area on the SERVER from their own connection, with no
+   permission prompt and no third-party request. It ranks BELOW every explicit
+   choice and below a device fix, and above nothing but discovery. The contract
+   is `shared-types/approximateLocation.ts`; the operational detail, the dataset
+   and its licence are in `docs/geoip.md`.
+2. **A discovery state.** `needsPlace` becomes `discovery`, and the rename is
+   the decision: it is a CONTENT state — a board of real destinations with
+   inventory, each declaring its own scope — and not a gate. `canQuery` is still
+   false, because there is no area to query; every other part of the app renders.
+
+#### What does NOT change, and why this is an amendment rather than a reversal
+
+Every guarantee §4.3 and §2 state survives intact, and three of them constrain
+the new rung directly:
+
+- **A failure still never degrades into a global search.** `isGlobal` remains
+  reachable from exactly one input. `discovery` is not `global`: it offers named
+  destinations the user picks, and there is no path from that board to an
+  unscoped query. The ladder's own test sweeps every combination of inputs and
+  asserts it.
+- **The area shown is still the area queried.** An inferred selection is a
+  `place` with a real identity in Homiio's own tables, so its `loc` token
+  resolves, its `locationKey` is the same one a hand-typed pick produces, and a
+  search opened from Home carries exactly the scope Home used.
+- **Precision is still declared, never inferred.** §8.1's `exact` and
+  `approximate` remain reserved for a point a device produced. An IP-derived
+  city is a `centroid`, which §8.1 already defines as the representative point
+  of an area and explicitly not anybody's location. `current_location` is
+  unreachable from this rung, and a test asserts it.
+
+#### The new invariant this amendment adds
+
+**An inferred area must announce that it is inferred, and a SECOND automatic
+answer must never replace the first.**
+
+The first half is `LocationScopeState.isApproximate`, derived in the ladder so a
+surface cannot forget it, and rendered by `scopeWhere.ts` ("Bucharest ·
+approximate area") plus a provenance line with a one-tap way to change it.
+
+The second half is the commit rule. The first inferred scope of a session is
+recorded (`locationScopeStore.autoScope`) and read by the ladder ABOVE both
+inference rungs, so a GPS fix landing four seconds after the network already
+placed somebody becomes an OFFER (`upgrade`) rather than a jump. §6.3's
+"a late answer must not displace a newer choice" said this for explicit choices;
+this extends it to automatic ones, which the old ladder did not need because it
+had only one.
+
+#### Consequences for §7
+
+The device branch's `failed(*)` transitions no longer terminate. They now fall
+to `ip`, and `ip`'s own failure falls to `discovery`, which is a rendering state
+rather than a state of this machine — nothing queries from it, and it needs no
+user action to leave. `permission_ask` is still reached only by a press: the
+prompt is owned by `useLocationScope` alone, and a repository-wide gate
+(`__tests__/location/noPermissionOnMount.test.ts`) fails if any other module
+requests the location permission.

@@ -116,6 +116,19 @@ export default function () {
   // session — a surface that 401s on cold start is a surface that shows nothing.
   router.get('/home/sections', asyncHandler(getHomeSections));
 
+  // The permissionless "roughly where are you?" answer, resolved on the SERVER
+  // from the requester's own connection (#518 §4, #519 §4). Public because it
+  // is read on the first paint of Home, before anybody has signed in — and
+  // authenticating it would achieve nothing anyway, since the address it reads
+  // is the transport's, not the session's.
+  //
+  // It accepts no `ip` parameter, by construction: the address comes from
+  // `req.ip` and a caller cannot name one. See `services/geoip/clientIp.ts`.
+  //
+  // Declared BEFORE `/geo/search` only for readability; the paths are distinct
+  // literals and cannot shadow one another.
+  router.get('/geo/approximate-location', asyncHandler(geoController.approximateLocation));
+
   router.get('/geo/search', asyncHandler(geoController.search));
   router.get('/geo/resolve', asyncHandler(geoController.resolve));
   router.get('/geo/reverse', asyncHandler(geoController.reverse));

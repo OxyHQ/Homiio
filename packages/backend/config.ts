@@ -231,6 +231,28 @@ export interface Config {
      */
     providerOrder: readonly string[];
   };
+  /**
+   * The permissionless approximate-location lookup (#518 §4, #519 §4).
+   *
+   * Deliberately a LOCAL database rather than a per-request call to a third
+   * party. Both issues ask for it in those words, and the reason is that the
+   * alternative sends every visitor's IP address to somebody else's server on
+   * every cold start. A file on disk answers in microseconds and tells nobody.
+   *
+   * Absent configuration is a SUPPORTED state, not a broken one: the endpoint
+   * answers `unavailable: 'not_configured'` and the app falls back to neutral
+   * discovery. Nothing crashes and no deployment is blocked on provisioning it.
+   */
+  geoip: {
+    /**
+     * Filesystem path of a MaxMind-format (`.mmdb`) city database.
+     *
+     * Empty means "not configured". The path is read at first use and the
+     * reader is held open for the process lifetime — the file is memory-mapped
+     * and a lookup performs no I/O and no network call.
+     */
+    databasePath: string;
+  };
   overpass: {
     /**
      * Endpoint URL of the Overpass API instance used to look up nearby
@@ -484,6 +506,13 @@ const config: Config = {
       .split(',')
       .map((id) => id.trim().toLowerCase())
       .filter(Boolean),
+  },
+
+  // Approximate location from the visitor's own network, resolved on the
+  // server against a LOCAL database. Unset in a dev checkout, which is why the
+  // endpoint's `not_configured` answer is a normal path with its own test.
+  geoip: {
+    databasePath: (process.env.GEOIP_DATABASE_PATH || '').trim(),
   },
 
   // Overpass Configuration (OpenStreetMap POI lookup — free, no API key)

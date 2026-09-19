@@ -242,16 +242,16 @@
       },
       "loadFailedToast": "Could not load homes for this area. Nothing is hidden — the request failed."
     },
-    "scopePrompt": {
-      "eyebrow": "One step first",
-      "title": "Where are you looking for a home?",
-      "body": "Pick a city or neighbourhood, or turn on location. Location is optional — you can always choose a place by hand."
-    },
     "empty": {
       "title": "Nothing to show for this area yet",
       "body": "No listing here matches what Homiio can explain. Widen the area, choose somewhere else, or open Explore and change the filters.",
       "changeFilters": "Open Explore",
       "changeFiltersAccessible": "Open Explore to change the filters for this area"
+    },
+    "discovery": {
+      "eyebrow": "Explore destinations",
+      "title": "Where would you like to live?",
+      "body": "We could not work out your area, so these are cities with homes on Homiio — not places near you."
     }
   },
   "agent": {
@@ -3687,7 +3687,20 @@
       "locationOff": "Location is off in your settings",
       "positionRetry": "Couldn't get your position. Try again",
       "everywhereHint": "Every area, with no location filter",
-      "lastArea": "The last area you chose"
+      "lastArea": "The last area you chose",
+      "approximateArea": "{{place}} · approximate area",
+      "approximateLead": "This area is an estimate, not a choice you made.",
+      "provenance": {
+        "toggle": "Why this area?",
+        "toggleAccessible": "Show where this area came from",
+        "device": "Taken from your device’s position, using permission you already granted.",
+        "ipCity": "Estimated from your internet connection. It is not your address.",
+        "ipRegion": "Your connection only narrowed this down to a region, so that is the area shown.",
+        "ipCountry": "Your connection only narrowed this down to a country, so that is the area shown.",
+        "attribution": "IP location data by DB-IP, licensed CC BY 4.0."
+      },
+      "upgrade": "Use my exact location instead",
+      "upgradeAccessible": "Replace the estimated area with your device’s position"
     }
   },
   "alerts": {

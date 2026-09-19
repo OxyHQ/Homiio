@@ -52,7 +52,16 @@ export function useScopeWhere(scope: LocationScope, current: LocationSelection |
         ? lastChosenArea
         : null;
     return {
-      statement: scopeStatement({ selection, isGlobal, resolution, nearbyPlace, t, formatDistanceValue }),
+      statement: scopeStatement({
+        selection,
+        isGlobal,
+        resolution,
+        nearbyPlace,
+        // The NETWORK case only — a device fix already describes its own radius.
+        inferredFromNetwork: source === 'ip',
+        t,
+        formatDistanceValue,
+      }),
       device: { state, description: deviceOptionDescription(state, t, radius) },
       lastArea,
       geolocationSupported: supported,

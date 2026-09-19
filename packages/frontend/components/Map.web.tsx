@@ -589,8 +589,16 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
     setShowInstructions(showAddressInstructions && enableAddressLookup);
   }, [showAddressInstructions, enableAddressLookup]);
 
-  // Center on the device location once, only when no explicit initial center
-  // and no restored state were provided (mirrors the native behaviour).
+  /**
+   * Centre on the device location once, only when no explicit initial centre
+   * and no restored state were provided — and ONLY when permission is already
+   * granted (mirrors the native behaviour).
+   *
+   * The `requestForegroundPermissionsAsync` this replaced fired the browser's
+   * location prompt on mount, for anybody opening Explore without coordinates.
+   * See the note on the native map: asking is an explicit action, and
+   * `useLocationScope` owns it.
+   */
   const hasCenteredOnce = useRef(false);
   useEffect(() => {
     if (!startFromCurrentLocation || hasCenteredOnce.current || savedState) return;
@@ -603,7 +611,7 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
     let cancelled = false;
     (async () => {
       try {
-        const { status } = await Location.requestForegroundPermissionsAsync();
+        const { status } = await Location.getForegroundPermissionsAsync();
         if (status !== 'granted' || cancelled) return;
         const loc = await Location.getCurrentPositionAsync({
           accuracy: Location.Accuracy.High,

@@ -89,6 +89,11 @@ export * from './location';
 // coordinate encoding ADR §1.2 counts three of inside this package.
 export type { GeoPoint, GeoBounds } from './location';
 
+// The permissionless, first-party "roughly where are you?" answer (#518 §4,
+// #519 §4). Depends on `./location` for the selection it carries, so it is
+// exported after it.
+export * from './approximateLocation';
+
 // The Home surface's finite, explainable sections (#353). Depends on
 // `./location` for the scope summary, so it is exported after it.
 export * from './home';

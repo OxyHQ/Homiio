@@ -242,16 +242,16 @@
       },
       "loadFailedToast": "Não foi possível carregar os imóveis desta área. Nada está escondido: a requisição falhou."
     },
-    "scopePrompt": {
-      "eyebrow": "Primeiro, um passo",
-      "title": "Onde você está procurando moradia?",
-      "body": "Escolha uma cidade ou bairro, ou ative a localização. A localização é opcional: você sempre pode escolher um lugar manualmente."
-    },
     "empty": {
       "title": "Ainda não há nada para mostrar nesta área",
       "body": "Nenhum anúncio daqui corresponde ao que o Homiio consegue explicar. Amplie a área, escolha outro lugar, ou abra o Explorar e mude os filtros.",
       "changeFilters": "Abrir Explorar",
       "changeFiltersAccessible": "Abrir Explorar para mudar os filtros desta área"
+    },
+    "discovery": {
+      "eyebrow": "Explore destinos",
+      "title": "Onde você gostaria de morar?",
+      "body": "Não conseguimos identificar sua área, então estas são cidades com imóveis no Homiio, não lugares perto de você."
     }
   },
   "agent": {
@@ -3691,7 +3691,20 @@
       "locationOff": "A localização está desativada nas configurações",
       "positionRetry": "Não conseguimos obter sua posição. Tente de novo",
       "everywhereHint": "Todas as áreas, sem filtro de localização",
-      "lastArea": "A última área que você escolheu"
+      "lastArea": "A última área que você escolheu",
+      "approximateArea": "{{place}} · área aproximada",
+      "approximateLead": "Esta área é uma estimativa, não uma escolha sua.",
+      "provenance": {
+        "toggle": "Por que esta área?",
+        "toggleAccessible": "Mostrar de onde veio esta área",
+        "device": "Obtida da posição do seu dispositivo, com a permissão que você já concedeu.",
+        "ipCity": "Estimada pela sua conexão de internet. Não é o seu endereço.",
+        "ipRegion": "Sua conexão só permitiu chegar até uma região, então é essa a área exibida.",
+        "ipCountry": "Sua conexão só permitiu chegar até um país, então é essa a área exibida.",
+        "attribution": "Dados de localização por IP da DB-IP, licenciados sob CC BY 4.0."
+      },
+      "upgrade": "Usar minha localização exata",
+      "upgradeAccessible": "Substituir a área estimada pela posição do seu dispositivo"
     }
   },
   "alerts": {

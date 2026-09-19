@@ -265,18 +265,30 @@ export function useHomeSections(
  * being lost and cannot be tested without mounting the screen. Expressed here,
  * it is an ordinary assertion, and `failed` is ordered ABOVE `empty` so the
  * misleading claim is unreachable rather than merely discouraged.
+ *
+ * A THIRD claim joined them when the mandatory picker was removed: "we do not
+ * know where you are" is not "there is nothing here" either, and `discovery`
+ * keeps it apart from both.
  */
-export type HomeSurfaceState = 'needs_place' | 'loading' | 'failed' | 'empty' | 'sections';
+export type HomeSurfaceState = 'discovery' | 'loading' | 'failed' | 'empty' | 'sections';
 
 export function homeSurfaceState(input: {
-  readonly needsPlace: boolean;
+  /**
+   * No area is in force and the app shows destinations.
+   *
+   * Renamed from `needsPlace`, and the rename is the change: that name meant
+   * "the user must pick before anything may render", and both #518 and #519
+   * remove that step. `discovery` is a CONTENT state — a board of real
+   * destinations — not a gate, and Home renders the rest of itself around it.
+   */
+  readonly discovery: boolean;
   readonly canQuery: boolean;
   readonly isLoading: boolean;
   readonly hasError: boolean;
   readonly sectionCount: number;
 }): HomeSurfaceState {
-  // The picker comes first: with no scope there is nothing to have failed at.
-  if (input.needsPlace || !input.canQuery) return 'needs_place';
+  // Discovery comes first: with no area there is nothing to have failed at.
+  if (input.discovery || !input.canQuery) return 'discovery';
   // Then anything already fetched, so a failed BACKGROUND refresh over data we
   // still hold does not blank the page — the data is real, and the toast plus
   // the stale banner carry the failure.
