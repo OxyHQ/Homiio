@@ -35,6 +35,11 @@ export * from './lease';
 // Review types
 export * from './review';
 
+// Repair requests: the tenant's side of a tenancy going wrong (#518 §7.1,
+// #519 §7.1). The transition table is shared so the server refuses and the
+// client offers from ONE definition of what is legal.
+export * from './maintenance';
+
 // Reservation types (vacation/short-term bookings)
 export * from './reservation';
 

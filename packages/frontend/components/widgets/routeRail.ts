@@ -140,6 +140,11 @@ export const ROUTE_RAIL: Readonly<Record<string, RailAssignment>> = {
   '/contracts/[id]': NO_RAIL,
   '/contracts/new': NO_RAIL,
   '/my-home': NO_RAIL,
+  // Repairs, for the same reason as the rest of the tenancy group: these are
+  // focused screens about ONE thing the reader came to do, and a column of
+  // unrelated widgets beside a broken boiler is noise.
+  '/maintenance/new': NO_RAIL,
+  '/maintenance/[id]': NO_RAIL,
   '/applications': NO_RAIL,
   '/applications/[id]': NO_RAIL,
   '/landlord/applications': NO_RAIL,

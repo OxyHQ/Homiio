@@ -3,15 +3,27 @@
  * rent schedule, the documents and the lease's history. Bloom's housing
  * template (`templates/housing/MyHomePage.tsx`) inside Homiio's own frame.
  *
- * ## Only what the API has
+ * ## What the API has, and what it still does not
  *
- * Everything here is `GET /api/leases?status=active` — the same leases the
- * contracts inbox reads — filtered to the ones the viewer RENTS (tenant or
- * co-tenant; a landlord's active lease is somebody else's home). The template
- * also draws repair requests, "Pay rent" and "Message landlord"; Homiio has no
- * maintenance, rent-payment or tenant–landlord messaging endpoint, so those are
- * absent rather than buttons that do nothing. Signing, terminating and adding
- * documents stay on `/contracts/[id]`, which "View contract" opens.
+ * The leases come from `GET /api/leases?status=active` — the same ones the
+ * contracts inbox reads — filtered to the tenancies the viewer RENTS (tenant or
+ * co-tenant; a landlord's active lease is somebody else's home). Signing,
+ * terminating and adding documents stay on `/contracts/[id]`, which "View
+ * contract" opens.
+ *
+ * **Repairs are now real.** This header used to say Homiio had no maintenance
+ * endpoint, so the template's repair section was "absent rather than buttons
+ * that do nothing" — honest, and rejected as an ending by #518 §7.1 and
+ * #519 §7.1. `/api/maintenance` exists, and `MaintenanceSection` is the
+ * surface: report, comment, and every transition the server says the viewer may
+ * take. Photos are still absent, and for a reason that has not gone away —
+ * Homiio's only upload path is the PUBLIC image endpoint, and a tenancy's
+ * evidence may not go through it.
+ *
+ * **"Pay rent" and "Message landlord" are still absent.** Rent payments are a
+ * schedule of obligations rather than a ledger, and the Inbox tab is a
+ * notification list rather than a conversation. Both are named in
+ * `docs/housing-parity.md`; neither is drawn as a button that cannot work.
  *
  * Several active tenancies (a room and a parking space, a move between two
  * flats) are chosen between with chips; one is the common case and draws none.
@@ -41,6 +53,7 @@ import {
   LeaseHistorySection,
   LeasePaymentsSection,
 } from '@/components/tenancy/LeaseSections';
+import { MaintenanceSection } from '@/components/tenancy/MaintenanceSection';
 import { useLeaseFormatContext } from '@/components/tenancy/useLeaseFormatContext';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
@@ -181,6 +194,14 @@ export default function MyHomeScreen() {
       />
       {isDesktop ? null : history}
       <LeasePaymentsSection lease={lease} format={format} />
+      {/* Above documents: a repair is something happening now, and a lease's
+          paperwork is reference. The order follows what somebody opening this
+          screen is most likely to have come for. */}
+      <MaintenanceSection
+        leaseId={lease.id}
+        onReport={() => router.push(`/maintenance/new?lease=${lease.id}`)}
+        onOpenRequest={(requestId) => router.push(`/maintenance/${requestId}`)}
+      />
       <LeaseDocumentsSection lease={lease} format={format} />
     </View>
   );

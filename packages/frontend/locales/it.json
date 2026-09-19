@@ -3878,5 +3878,91 @@
     "emptyTitle": "Nessuna locazione attiva",
     "emptyDescription": "Qui vedrai il contratto in affitto quando è attivo.",
     "viewContract": "Vedi contratto"
+  },
+  "maintenance": {
+    "section": {
+      "title": "Riparazioni"
+    },
+    "action": {
+      "report": "Segnala una riparazione",
+      "reportAccessible": "Segnala una riparazione per questa casa",
+      "acknowledge": "Me ne occupo",
+      "schedule": "Programma una visita",
+      "markResolved": "Segna come risolto",
+      "close": "Chiudi",
+      "reopen": "Non è ancora risolto",
+      "decline": "Rifiuta",
+      "open": "Apri",
+      "openAccessible": "Apri questa richiesta di riparazione"
+    },
+    "category": {
+      "plumbing": "Idraulica",
+      "electrical": "Impianto elettrico",
+      "heating": "Riscaldamento",
+      "appliance": "Elettrodomestico",
+      "structural": "Struttura",
+      "pest": "Infestazioni",
+      "security": "Sicurezza",
+      "other": "Altro"
+    },
+    "urgency": {
+      "low": "Non urgente",
+      "normal": "Normale",
+      "high": "Urgente",
+      "emergency": "Emergenza",
+      "emergencyHint": "La casa è insicura o inabitabile in questo momento."
+    },
+    "status": {
+      "open": "Segnalato",
+      "acknowledged": "In esame",
+      "scheduled": "Visita programmata",
+      "resolved": "Dichiarato risolto",
+      "closed": "Chiuso",
+      "declined": "Rifiutato"
+    },
+    "role": {
+      "tenant": "Inquilino",
+      "landlord": "Proprietario"
+    },
+    "field": {
+      "title": "Che cosa c’è che non va?",
+      "titlePlaceholder": "Il rubinetto della cucina non si chiude",
+      "description": "Racconta di più",
+      "descriptionHint": "Quando è iniziato, che cosa hai già provato e se sta peggiorando.",
+      "descriptionPlaceholder": "Perde da martedì…",
+      "category": "Che tipo di problema?",
+      "urgency": "Quanto è urgente?"
+    },
+    "report": {
+      "title": "Segnala una riparazione",
+      "submit": "Invia",
+      "submitAccessible": "Invia questa richiesta di riparazione al proprietario",
+      "sent": "Inviato. Il proprietario è stato avvisato.",
+      "noLeaseTitle": "Nessun contratto a cui associarla",
+      "noLeaseBody": "Una riparazione si segnala su un contratto attivo. Apri Casa mia e scegline uno.",
+      "goToMyHome": "Vai a Casa mia"
+    },
+    "comments": {
+      "add": "Aggiungi un messaggio",
+      "placeholder": "Scrivi un messaggio…",
+      "send": "Invia",
+      "sendAccessible": "Invia questo messaggio nella conversazione",
+      "empty": "Ancora nessun messaggio.",
+      "count": "{{count}} messaggio"
+    },
+    "empty": {
+      "title": "Niente da riparare",
+      "body": "Quando qualcosa si rompe, segnalalo qui e il proprietario viene avvisato."
+    },
+    "history": {
+      "title": "Cronologia"
+    },
+    "errors": {
+      "loadFailed": "Non siamo riusciti a caricare le riparazioni. Niente è nascosto: la richiesta è fallita.",
+      "reportFailed": "Non siamo riusciti a inviarla. Riprova.",
+      "transitionFailed": "Non siamo riusciti a modificarla. Riprova.",
+      "commentFailed": "Non siamo riusciti a inviare il messaggio. Riprova.",
+      "conflict": "Questa richiesta è cambiata da quando l’hai vista. Ecco il suo stato attuale."
+    }
   }
 }

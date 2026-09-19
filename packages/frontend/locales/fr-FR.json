@@ -3853,5 +3853,91 @@
     "emptyTitle": "Aucune location en cours",
     "emptyDescription": "Le bail que vous louez apparaît ici dès qu'il est actif.",
     "viewContract": "Voir le bail"
+  },
+  "maintenance": {
+    "section": {
+      "title": "Réparations"
+    },
+    "action": {
+      "report": "Signaler une réparation",
+      "reportAccessible": "Signaler une réparation pour ce logement",
+      "acknowledge": "Je m’en occupe",
+      "schedule": "Planifier une visite",
+      "markResolved": "Marquer comme réparé",
+      "close": "Clôturer",
+      "reopen": "Toujours pas réparé",
+      "decline": "Refuser",
+      "open": "Ouvrir",
+      "openAccessible": "Ouvrir cette demande de réparation"
+    },
+    "category": {
+      "plumbing": "Plomberie",
+      "electrical": "Électricité",
+      "heating": "Chauffage",
+      "appliance": "Électroménager",
+      "structural": "Structure",
+      "pest": "Nuisibles",
+      "security": "Sécurité",
+      "other": "Autre chose"
+    },
+    "urgency": {
+      "low": "Pas urgent",
+      "normal": "Normal",
+      "high": "Urgent",
+      "emergency": "Urgence",
+      "emergencyHint": "Le logement est actuellement dangereux ou inhabitable."
+    },
+    "status": {
+      "open": "Signalé",
+      "acknowledged": "En cours d’examen",
+      "scheduled": "Visite planifiée",
+      "resolved": "Déclaré réparé",
+      "closed": "Clôturé",
+      "declined": "Refusé"
+    },
+    "role": {
+      "tenant": "Locataire",
+      "landlord": "Propriétaire"
+    },
+    "field": {
+      "title": "Quel est le problème ?",
+      "titlePlaceholder": "Le robinet de la cuisine ne s’arrête pas",
+      "description": "Donnez plus de détails",
+      "descriptionHint": "Quand cela a commencé, ce que vous avez déjà essayé, et si cela empire.",
+      "descriptionPlaceholder": "Il coule depuis mardi…",
+      "category": "De quel type de problème s’agit-il ?",
+      "urgency": "À quel point est-ce urgent ?"
+    },
+    "report": {
+      "title": "Signaler une réparation",
+      "submit": "Envoyer",
+      "submitAccessible": "Envoyer cette demande de réparation au propriétaire",
+      "sent": "Envoyé. Le propriétaire a été prévenu.",
+      "noLeaseTitle": "Aucun bail auquel rattacher la demande",
+      "noLeaseBody": "Une réparation se signale sur un bail actif. Ouvrez Mon logement et choisissez-en un.",
+      "goToMyHome": "Aller à Mon logement"
+    },
+    "comments": {
+      "add": "Ajouter un message",
+      "placeholder": "Écrivez un message…",
+      "send": "Envoyer",
+      "sendAccessible": "Envoyer ce message dans le fil de la réparation",
+      "empty": "Rien n’a encore été dit.",
+      "count": "{{count}} message"
+    },
+    "empty": {
+      "title": "Rien à réparer",
+      "body": "Quand quelque chose casse, signalez-le ici : le propriétaire est prévenu."
+    },
+    "history": {
+      "title": "Historique"
+    },
+    "errors": {
+      "loadFailed": "Impossible de charger les réparations. Rien n’est masqué : la requête a échoué.",
+      "reportFailed": "Nous n’avons pas pu l’envoyer. Réessayez.",
+      "transitionFailed": "Nous n’avons pas pu effectuer ce changement. Réessayez.",
+      "commentFailed": "Nous n’avons pas pu envoyer votre message. Réessayez.",
+      "conflict": "Cette demande a évolué depuis votre dernière consultation. Voici son état actuel."
+    }
   }
 }

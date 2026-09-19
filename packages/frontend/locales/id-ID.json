@@ -3853,5 +3853,91 @@
     "emptyTitle": "Tidak ada sewa aktif",
     "emptyDescription": "Kontrak yang Anda sewa muncul di sini saat aktif.",
     "viewContract": "Lihat kontrak"
+  },
+  "maintenance": {
+    "section": {
+      "title": "Perbaikan"
+    },
+    "action": {
+      "report": "Laporkan perbaikan",
+      "reportAccessible": "Laporkan perbaikan untuk hunian ini",
+      "acknowledge": "Saya akan tangani",
+      "schedule": "Jadwalkan kunjungan",
+      "markResolved": "Tandai sudah diperbaiki",
+      "close": "Tutup",
+      "reopen": "Masih belum diperbaiki",
+      "decline": "Tolak",
+      "open": "Buka",
+      "openAccessible": "Buka permintaan perbaikan ini"
+    },
+    "category": {
+      "plumbing": "Pipa air",
+      "electrical": "Kelistrikan",
+      "heating": "Pemanas",
+      "appliance": "Peralatan rumah",
+      "structural": "Struktur",
+      "pest": "Hama",
+      "security": "Keamanan",
+      "other": "Lainnya"
+    },
+    "urgency": {
+      "low": "Tidak mendesak",
+      "normal": "Normal",
+      "high": "Mendesak",
+      "emergency": "Darurat",
+      "emergencyHint": "Hunian saat ini tidak aman atau tidak bisa ditempati."
+    },
+    "status": {
+      "open": "Dilaporkan",
+      "acknowledged": "Sedang ditinjau",
+      "scheduled": "Kunjungan dijadwalkan",
+      "resolved": "Dinyatakan diperbaiki",
+      "closed": "Ditutup",
+      "declined": "Ditolak"
+    },
+    "role": {
+      "tenant": "Penyewa",
+      "landlord": "Pemilik"
+    },
+    "field": {
+      "title": "Apa masalahnya?",
+      "titlePlaceholder": "Keran dapur tidak bisa ditutup",
+      "description": "Ceritakan lebih lanjut",
+      "descriptionHint": "Kapan mulai, apa yang sudah Anda coba, dan apakah makin parah.",
+      "descriptionPlaceholder": "Sudah bocor sejak Selasa…",
+      "category": "Jenis masalahnya apa?",
+      "urgency": "Seberapa mendesak?"
+    },
+    "report": {
+      "title": "Laporkan perbaikan",
+      "submit": "Kirim",
+      "submitAccessible": "Kirim permintaan perbaikan ini ke pemilik",
+      "sent": "Terkirim. Pemilik sudah diberi tahu.",
+      "noLeaseTitle": "Tidak ada sewa untuk dikaitkan",
+      "noLeaseBody": "Perbaikan dilaporkan pada sewa yang aktif. Buka Rumah Saya dan pilih satu.",
+      "goToMyHome": "Ke Rumah Saya"
+    },
+    "comments": {
+      "add": "Tambahkan pesan",
+      "placeholder": "Tulis pesan…",
+      "send": "Kirim",
+      "sendAccessible": "Kirim pesan ini di utas perbaikan",
+      "empty": "Belum ada pesan.",
+      "count": "{{count}} pesan"
+    },
+    "empty": {
+      "title": "Tidak ada yang perlu diperbaiki",
+      "body": "Kalau ada yang rusak, laporkan di sini dan pemilik akan diberi tahu."
+    },
+    "history": {
+      "title": "Riwayat"
+    },
+    "errors": {
+      "loadFailed": "Kami tidak dapat memuat daftar perbaikan. Tidak ada yang disembunyikan — permintaannya gagal.",
+      "reportFailed": "Kami tidak dapat mengirimnya. Coba lagi.",
+      "transitionFailed": "Kami tidak dapat mengubahnya. Coba lagi.",
+      "commentFailed": "Pesan Anda tidak terkirim. Coba lagi.",
+      "conflict": "Permintaan ini sudah berubah sejak terakhir Anda lihat. Ini keadaannya sekarang."
+    }
   }
 }

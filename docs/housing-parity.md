@@ -162,7 +162,7 @@ is a product call about historical rows, not a migration.
 | `LeaseSummaryCard` | `app/my-home.tsx` | **live** | |
 | `RentPaymentList` | `LeasePaymentsSection` | **partial** | A **schedule of obligations** (`lease_payment_schedule`), not a ledger. `createPayment` adds a due date for the landlord; there is no attempt, confirmation, refund, receipt or reconciliation |
 | "Pay rent" | — | **blocked** | Needs a processor decision. #518 §7.2 is explicit that its absence is a documented delivery block, not licence to drop the row |
-| `MaintenanceRequestCard` / repairs | — | **open** | **No domain at all**: `leases.inspections` is a walkthrough, not a tenant request. Needs table, transitions, private attachments, comments, notifications |
+| `MaintenanceRequestCard` / repairs | `MaintenanceSection`, `/maintenance/*` | **partial** | The domain exists: `maintenance_requests` + comments + events, a declared state machine under a row lock, authorization in the repository query, notifications through the dispatcher. **Photos are open** — see below |
 | "Message landlord" | — | **open** | The Inbox tab is a notification list. #518 §7.3: do not wire this to a screen that cannot send a message |
 | `DocumentList`, signatures | `LeaseDocumentsSection`, `/contracts/[id]` | **partial** | Upload/list/view exist; "uploaded" is not "verified" and the checklist is not yet server state |
 | `TenancyTimeline` | `LeaseHistorySection` | **live** | Real lease events |
@@ -175,6 +175,18 @@ is a product call about historical rows, not a migration.
 | `HousingWidgets` | `components/widgets/*` | **partial** | Saved searches and featured are real; the area-price and neighbourhood widgets are gated off by default and show nothing invented |
 
 ---
+
+### Repair photos, and why they are not shipped
+
+Both epics ask for attachments on a repair, and both also say a tenancy's
+evidence may not go through the **public** image endpoint. Homiio's image
+pipeline is public delivery by construction — `imageUploadService` writes
+`Cache-Control: public, max-age=31536000` and serves through the CDN — so there
+is no private object path to attach to.
+
+Shipping "attach a photo" onto that bucket would put a picture of somebody's
+bathroom on a guessable URL. A private store is its own change with its own
+access model, and no affordance is drawn for something that cannot work yet.
 
 ## 6. The currency gap
 
@@ -230,7 +242,8 @@ Open, in rough order of how much they unblock:
 1. **Filters end to end** — floor (blocked), energy, beds, and the room-vs-whole-home
    segment — plus the currency contract. Area and availability are now live in all
    four columns, including the histogram.
-2. **Maintenance** — a new domain, the largest single gap in My home.
+2. **Repair photos** — the one open half of maintenance, blocked behind a
+   private object store that does not exist.
 3. **Payments** — blocked on a processor decision; the model split (obligation /
    attempt / confirmed / manual / refund) can start without one.
 4. **Messaging** — needs the ecosystem audit #518 §7.3 asks for before any code.

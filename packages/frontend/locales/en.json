@@ -3849,5 +3849,91 @@
     "emptyTitle": "No active tenancy",
     "emptyDescription": "A lease you rent shows up here once it is active.",
     "viewContract": "View contract"
+  },
+  "maintenance": {
+    "section": {
+      "title": "Repairs"
+    },
+    "action": {
+      "report": "Report a repair",
+      "reportAccessible": "Report a repair on this home",
+      "acknowledge": "I’ll look into it",
+      "schedule": "Schedule a visit",
+      "markResolved": "Mark as fixed",
+      "close": "Close it",
+      "reopen": "Still not fixed",
+      "decline": "Decline",
+      "open": "Open",
+      "openAccessible": "Open this repair request"
+    },
+    "category": {
+      "plumbing": "Plumbing",
+      "electrical": "Electrical",
+      "heating": "Heating",
+      "appliance": "Appliance",
+      "structural": "Structural",
+      "pest": "Pests",
+      "security": "Security",
+      "other": "Something else"
+    },
+    "urgency": {
+      "low": "Not urgent",
+      "normal": "Normal",
+      "high": "Urgent",
+      "emergency": "Emergency",
+      "emergencyHint": "The home is unsafe or unusable right now."
+    },
+    "status": {
+      "open": "Reported",
+      "acknowledged": "Being looked at",
+      "scheduled": "Visit scheduled",
+      "resolved": "Reported fixed",
+      "closed": "Closed",
+      "declined": "Declined"
+    },
+    "role": {
+      "tenant": "Tenant",
+      "landlord": "Landlord"
+    },
+    "field": {
+      "title": "What is wrong?",
+      "titlePlaceholder": "Kitchen tap will not stop running",
+      "description": "Tell them more",
+      "descriptionHint": "When it started, what you have already tried, and whether it is getting worse.",
+      "descriptionPlaceholder": "It has run since Tuesday…",
+      "category": "What kind of problem?",
+      "urgency": "How urgent is it?"
+    },
+    "report": {
+      "title": "Report a repair",
+      "submit": "Send it",
+      "submitAccessible": "Send this repair request to the landlord",
+      "sent": "Sent. The landlord has been notified.",
+      "noLeaseTitle": "No tenancy to report against",
+      "noLeaseBody": "A repair is reported against an active tenancy. Open My home and pick one.",
+      "goToMyHome": "Go to My home"
+    },
+    "comments": {
+      "add": "Add a message",
+      "placeholder": "Write a message…",
+      "send": "Send",
+      "sendAccessible": "Send this message on the repair thread",
+      "empty": "Nothing said yet.",
+      "count": "{{count}} message"
+    },
+    "empty": {
+      "title": "Nothing needs fixing",
+      "body": "When something breaks, report it here and the landlord is notified."
+    },
+    "history": {
+      "title": "History"
+    },
+    "errors": {
+      "loadFailed": "We could not load the repairs. Nothing is hidden — the request failed.",
+      "reportFailed": "We could not send that. Try again.",
+      "transitionFailed": "We could not change that. Try again.",
+      "commentFailed": "We could not send your message. Try again.",
+      "conflict": "This request has moved on since you looked. Here is where it is now."
+    }
   }
 }

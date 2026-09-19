@@ -3900,5 +3900,91 @@
     "emptyTitle": "No tens cap lloguer actiu",
     "emptyDescription": "Aquí veuràs el contracte que llogues quan estigui actiu.",
     "viewContract": "Mostra el contracte"
+  },
+  "maintenance": {
+    "section": {
+      "title": "Reparacions"
+    },
+    "action": {
+      "report": "Informa d’una reparació",
+      "reportAccessible": "Informa d’una reparació en aquest habitatge",
+      "acknowledge": "Me’n faig càrrec",
+      "schedule": "Programa una visita",
+      "markResolved": "Marca com a arreglat",
+      "close": "Tanca",
+      "reopen": "Encara no està arreglat",
+      "decline": "Rebutja",
+      "open": "Obre",
+      "openAccessible": "Obre aquesta sol·licitud de reparació"
+    },
+    "category": {
+      "plumbing": "Lampisteria",
+      "electrical": "Electricitat",
+      "heating": "Calefacció",
+      "appliance": "Electrodomèstic",
+      "structural": "Estructura",
+      "pest": "Plagues",
+      "security": "Seguretat",
+      "other": "Una altra cosa"
+    },
+    "urgency": {
+      "low": "No urgent",
+      "normal": "Normal",
+      "high": "Urgent",
+      "emergency": "Emergència",
+      "emergencyHint": "L’habitatge és insegur o inhabitable ara mateix."
+    },
+    "status": {
+      "open": "Reportat",
+      "acknowledged": "En revisió",
+      "scheduled": "Visita programada",
+      "resolved": "Donat per arreglat",
+      "closed": "Tancat",
+      "declined": "Rebutjat"
+    },
+    "role": {
+      "tenant": "Llogater",
+      "landlord": "Propietari"
+    },
+    "field": {
+      "title": "Què passa?",
+      "titlePlaceholder": "L’aixeta de la cuina no para",
+      "description": "Explica’ls-ho més",
+      "descriptionHint": "Quan va començar, què has provat ja i si va a pitjor.",
+      "descriptionPlaceholder": "Fa degotalls des de dimarts…",
+      "category": "Quin tipus de problema?",
+      "urgency": "Quina pressa corre?"
+    },
+    "report": {
+      "title": "Informa d’una reparació",
+      "submit": "Envia",
+      "submitAccessible": "Envia aquesta sol·licitud de reparació al propietari",
+      "sent": "Enviat. S’ha avisat el propietari.",
+      "noLeaseTitle": "No hi ha contracte al qual associar-ho",
+      "noLeaseBody": "Una reparació es reporta sobre un contracte actiu. Obre La meva llar i tria’n un.",
+      "goToMyHome": "Ves a La meva llar"
+    },
+    "comments": {
+      "add": "Afegeix un missatge",
+      "placeholder": "Escriu un missatge…",
+      "send": "Envia",
+      "sendAccessible": "Envia aquest missatge al fil de la reparació",
+      "empty": "Encara no s’ha dit res.",
+      "count": "{{count}} missatge"
+    },
+    "empty": {
+      "title": "Res per arreglar",
+      "body": "Quan alguna cosa es trenqui, informa-ho aquí i s’avisarà el propietari."
+    },
+    "history": {
+      "title": "Historial"
+    },
+    "errors": {
+      "loadFailed": "No hem pogut carregar les reparacions. No s’amaga res: la petició ha fallat.",
+      "reportFailed": "No hem pogut enviar-ho. Torna-ho a provar.",
+      "transitionFailed": "No hem pogut canviar-ho. Torna-ho a provar.",
+      "commentFailed": "No hem pogut enviar el teu missatge. Torna-ho a provar.",
+      "conflict": "Aquesta sol·licitud ha canviat des que la vas veure. Aquest és el seu estat actual."
+    }
   }
 }
