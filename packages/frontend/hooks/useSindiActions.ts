@@ -190,13 +190,17 @@ function applyToMainPane(action: SindiAction, router: Router): SindiActionOutcom
       return 'applied';
     }
     case 'show_saved': {
-      // The folder id is NOT trusted as an authorisation: `/saved` loads the
-      // person's own folders under their own session, and an id naming
-      // somebody else's simply matches nothing there. A responsive capability
-      // grants no permissions (#519 §8.3).
+      // `/saved/[folderId]` is a real route — a query parameter on `/saved`
+      // would be read by nothing and the person would land on the whole list
+      // having asked for one folder, which is a CTA ending on the wrong screen.
+      //
+      // The id is NOT trusted as an authorisation: the screen loads the
+      // person's own folders under their own session, and an id naming somebody
+      // else's simply matches nothing there. A responsive capability grants no
+      // permissions (#519 §8.3).
       router.push(
         action.folderId
-          ? { pathname: '/saved', params: { folder: action.folderId } }
+          ? { pathname: '/saved/[folderId]', params: { folderId: action.folderId } }
           : '/saved',
       );
       return 'applied';
