@@ -163,7 +163,7 @@ is a product call about historical rows, not a migration.
 | `RentPaymentList` | `LeasePaymentsSection`, `LeaseLedgerSection` | **partial** | The **ledger** exists (`lease_payment_movements`): obligation, attempt, confirmed payment, manual declaration, partial, refund and a DERIVED balance, with idempotency on every write. A tenant declares a transfer and a landlord confirms it. **Receipts are open**; the processor is blocked — see below |
 | "Pay rent" (a checkout) | — | **blocked** | Needs a processor decision. `kind: 'processor'` is in the model so adding one later does not migrate a live ledger, but no route creates one and no card or bank detail is stored anywhere. #518 §7.2 is explicit that its absence is a documented delivery block, not licence to drop the row |
 | `MaintenanceRequestCard` / repairs | `MaintenanceSection`, `/maintenance/*` | **partial** | The domain exists: `maintenance_requests` + comments + events, a declared state machine under a row lock, authorization in the repository query, notifications through the dispatcher. **Photos are open** — see below |
-| "Message landlord" | — | **open** | The Inbox tab is a notification list. #518 §7.3: do not wire this to a screen that cannot send a message |
+| "Message landlord" | — | **blocked** | The ecosystem audit §7.3 asks for is done: [`docs/messaging-audit.md`](./messaging-audit). Allo IS the platform and is explicitly multi-product, but its SDK is unpublished, its server cannot open a conversation, and enrolling Homiio enrols a device on the person's whole Allo account. Three decisions named there, none of them an implementer's. No button is drawn meanwhile — the Inbox tab is a notification list |
 | `DocumentList`, signatures | `LeaseDocumentsSection`, `/contracts/[id]` | **partial** | Upload/list/view exist; "uploaded" is not "verified" and the checklist is not yet server state |
 | `TenancyTimeline` | `LeaseHistorySection` | **live** | Real lease events |
 | `ApplicationChecklist` | `useApplicationQueries` | **partial** | Applications persist; the checklist's per-requirement state does not |
@@ -302,7 +302,8 @@ Open, in rough order of how much they unblock:
    private object store that does not exist.
 3. **Payment receipts and the processor** — the ledger is live; receipts need a
    private object store and the checkout needs a provider decision.
-4. **Messaging** — needs the ecosystem audit #518 §7.3 asks for before any code.
+4. **Messaging** — the audit is done ([`docs/messaging-audit.md`](./messaging-audit)); now blocked on
+   three decisions it names, not on work.
 5. **Listing facts** — floor plans, energy, price history: each needs a source
    before it needs a component.
 6. **Guest points** — blocked on a product decision.
