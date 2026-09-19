@@ -60,8 +60,16 @@ async function seedProperty(db: Database, expiresAt: Date): Promise<string> {
   // One statement per `execute`: a parameterised query cannot carry multiple
   // commands, and batching them reads as a schema fault rather than as the
   // protocol limit it is.
+  // `countries.code` carries `countries_code_key`, so the code has to be as
+  // unique as the ids are. Truncating the suffix to two characters threw that
+  // away — 1296 possible codes against a table that outlives a single seed, so
+  // two seeds collided and failed the sweep test for a reason the sweep has
+  // nothing to do with. The column is `text()` with no length and no format
+  // CHECK (schema/geo.ts, and CONVENTIONS.md §"Format validators are
+  // deferred"), so the whole suffix goes in and the fixture stops being a
+  // birthday problem.
   await db.execute(sql`insert into countries (id, code, name)
-    values (${countryId}, ${suffix.slice(0, 2).toUpperCase()}, ${`Country ${suffix}`})`);
+    values (${countryId}, ${suffix.toUpperCase()}, ${`Country ${suffix}`})`);
   await db.execute(sql`insert into regions (id, country_id, name)
     values (${regionId}, ${countryId}, ${`Region ${suffix}`})`);
   await db.execute(sql`insert into cities (id, name, country_id, region_id)
