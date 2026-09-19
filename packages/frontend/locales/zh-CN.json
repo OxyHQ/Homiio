@@ -242,16 +242,16 @@
       },
       "loadFailedToast": "无法加载该区域的房源。我们没有隐藏任何内容——是请求失败了。"
     },
-    "scopePrompt": {
-      "eyebrow": "先做一件事",
-      "title": "你想在哪里找房？",
-      "body": "选择一个城市或街区，或者开启定位。定位不是必需的——你随时可以手动选择地点。"
-    },
     "empty": {
       "title": "这个区域暂时没有可展示的内容",
       "body": "这里没有房源符合 Homiio 能够解释的条件。扩大范围、换个地方，或者打开“探索”修改筛选条件。",
       "changeFilters": "打开“探索”",
       "changeFiltersAccessible": "打开“探索”以修改该区域的筛选条件"
+    },
+    "discovery": {
+      "eyebrow": "探索目的地",
+      "title": "你想住在哪里？",
+      "body": "我们无法确定你所在的区域，因此这些是 Homiio 上有房源的城市，而不是你附近的地点。"
     }
   },
   "agent": {
@@ -3691,7 +3691,20 @@
       "locationOff": "设置中已关闭定位",
       "positionRetry": "无法获取你的位置，请重试",
       "everywhereHint": "所有区域，不按位置筛选",
-      "lastArea": "你上次选择的区域"
+      "lastArea": "你上次选择的区域",
+      "approximateArea": "{{place}} · 大致区域",
+      "approximateLead": "该区域是估算结果，并非你所选择的。",
+      "provenance": {
+        "toggle": "为什么是这个区域？",
+        "toggleAccessible": "显示该区域的来源",
+        "device": "来自你设备的位置，使用你此前已授予的权限。",
+        "ipCity": "根据你的网络连接估算，并非你的地址。",
+        "ipRegion": "你的网络连接只能定位到大区，因此显示的是该区域。",
+        "ipCountry": "你的网络连接只能定位到国家，因此显示的是该区域。",
+        "attribution": "IP 位置数据由 DB-IP 提供，采用 CC BY 4.0 许可。"
+      },
+      "upgrade": "改用我的精确位置",
+      "upgradeAccessible": "用你设备的位置替换估算区域"
     }
   },
   "alerts": {

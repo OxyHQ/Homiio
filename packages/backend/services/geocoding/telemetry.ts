@@ -24,7 +24,7 @@
 
 import { logger } from '../../middlewares/logging';
 
-export type GeoOperation = 'search' | 'resolve' | 'reverse';
+export type GeoOperation = 'search' | 'resolve' | 'reverse' | 'approximate_location';
 
 export type GeoOutcome =
   | 'ok'
@@ -71,6 +71,17 @@ export interface GeoRequestObservation {
   readonly resultCount?: number;
   /** The `loc` token's KIND only (`city`, `bbox`, …), never its id. */
   readonly locKind?: string;
+  /**
+   * How precise an approximate-location answer turned out to be.
+   *
+   * `city | region | country`, and nothing narrower — this is the one metric
+   * both epics ask for ("origen geográfico, fallos GeoIP") and it is safe to
+   * keep because it says how well the lookup WORKED, not where anybody is. The
+   * visitor's own country is deliberately NOT recorded beside it: a country
+   * code plus a timestamp is a weak locator for a single request, and the
+   * aggregate question ("is the database matching?") is answered without it.
+   */
+  readonly granularity?: string;
 }
 
 /**
@@ -100,6 +111,7 @@ export function buildGeoObservation(
   if (observation.degraded !== undefined) payload.degraded = observation.degraded;
   if (observation.resultCount !== undefined) payload.resultCount = observation.resultCount;
   if (observation.locKind) payload.locKind = observation.locKind;
+  if (observation.granularity) payload.granularity = observation.granularity;
   return payload;
 }
 

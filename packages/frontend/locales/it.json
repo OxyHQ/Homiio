@@ -349,16 +349,16 @@
       },
       "loadFailedToast": "Non è stato possibile caricare le case di questa zona. Non stiamo nascondendo nulla: la richiesta non è riuscita."
     },
-    "scopePrompt": {
-      "eyebrow": "Prima una cosa",
-      "title": "Dove stai cercando casa?",
-      "body": "Scegli una città o un quartiere, oppure attiva la posizione. La posizione è facoltativa: puoi sempre scegliere il luogo a mano."
-    },
     "empty": {
       "title": "Ancora niente da mostrare per questa zona",
       "body": "Nessun annuncio qui corrisponde a ciò che Homiio è in grado di spiegare. Allarga la zona, scegli un altro posto oppure apri Esplora e cambia i filtri.",
       "changeFilters": "Apri Esplora",
       "changeFiltersAccessible": "Apri Esplora per cambiare i filtri di questa zona"
+    },
+    "discovery": {
+      "eyebrow": "Esplora le destinazioni",
+      "title": "Dove ti piacerebbe vivere?",
+      "body": "Non siamo riusciti a capire la tua zona, quindi queste sono città con case su Homiio, non luoghi vicino a te."
     }
   },
   "agent": {
@@ -3716,7 +3716,20 @@
       "locationOff": "La posizione è disattivata nelle impostazioni",
       "positionRetry": "Impossibile ottenere la tua posizione. Riprova",
       "everywhereHint": "Tutte le zone, senza filtro di posizione",
-      "lastArea": "L'ultima zona che hai scelto"
+      "lastArea": "L'ultima zona che hai scelto",
+      "approximateArea": "{{place}} · zona approssimativa",
+      "approximateLead": "Questa zona è una stima, non una tua scelta.",
+      "provenance": {
+        "toggle": "Perché questa zona?",
+        "toggleAccessible": "Mostra da dove proviene questa zona",
+        "device": "Ricavata dalla posizione del tuo dispositivo, con l’autorizzazione che hai già concesso.",
+        "ipCity": "Stimata dalla tua connessione a internet. Non è il tuo indirizzo.",
+        "ipRegion": "La tua connessione ha permesso di individuare soltanto una regione, quindi è quella l’area mostrata.",
+        "ipCountry": "La tua connessione ha permesso di individuare soltanto un paese, quindi è quella l’area mostrata.",
+        "attribution": "Dati di localizzazione IP di DB-IP, con licenza CC BY 4.0."
+      },
+      "upgrade": "Usa invece la mia posizione esatta",
+      "upgradeAccessible": "Sostituisci la zona stimata con la posizione del tuo dispositivo"
     }
   },
   "alerts": {

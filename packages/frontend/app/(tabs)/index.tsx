@@ -1,5 +1,6 @@
 /**
- * Homiio home — an explicitly LOCAL, finite, explainable surface (#353).
+ * Homiio home — an explicitly LOCAL, finite, explainable surface, with NO step
+ * in front of it (#353, amended by #518 and #519).
  *
  * ## What it was, and why none of that survived
  *
@@ -22,8 +23,10 @@
  *     explore everywhere, typed places. It is drawn in the hero's first paint,
  *     not behind its photo, so the area is readable before any image decodes
  *     ("el hero no debe ocultar la ubicación").
- *  2. **The prompt when there is no area** — an explanation and a button that
- *     opens the Where step, never a global list.
+ *  2. **Destinations when there is no area** — a board of real cities with
+ *     inventory, each stating its own scope, never a global list and never a
+ *     step the user has to complete first. The "One step first / Where are you
+ *     looking for a home?" block this replaced is GONE: see the note below.
  *  3. **Finite sections**, each stating its rule and its data source, all
  *     computed under ONE scope by one request.
  *  4. **Your own things** — continue browsing, saved — which are yours wherever
@@ -31,11 +34,22 @@
  *  5. **"Explore more" as a CTA to `/explore`**, which is where an unbounded list
  *     belongs. Home no longer paginates.
  *
- * ## Nothing renders until the scope resolves
+ * ## Nothing is GATED on the scope; only the local sections depend on it
  *
- * `scope.canQuery` gates the sections query. There is no arm of this component
- * that fetches listings without a scope — the global feed is reachable only
- * through `exploreGlobal`, which is a button somebody has to press.
+ * `scope.canQuery` gates the sections QUERY, and nothing else. There is still
+ * no arm of this component that fetches listings without a scope — the global
+ * feed is reachable only through `exploreGlobal`, which is a button somebody
+ * has to press — but an unresolved area no longer blanks the page. The hero,
+ * the search bar, the mode tabs, the saved and recently-viewed rows, the
+ * destinations board and every CTA render regardless.
+ *
+ * ## The area, when we guessed it, says so
+ *
+ * `scope.isApproximate` is true when the area came from the device or from the
+ * visitor's network rather than from a choice. The search bar's own statement
+ * carries the disclosure (`components/location/scopeWhere.ts`), and Home adds
+ * a line naming the provenance with a one-tap way to change it. Neither ever
+ * claims "your home" or "you are here": an inferred city is a framing device.
  */
 import React, { useCallback, useMemo, useState } from 'react';
 import { View, RefreshControl } from 'react-native';
@@ -47,7 +61,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 import { Button } from '@oxy.so/bloom/button';
 import { FrostedIconButton } from '@oxy.so/bloom/frosted-icon-button';
-import { RiMapPinLine, RiMenuLine } from '@oxy.so/bloom/icons';
+import { RiMenuLine } from '@oxy.so/bloom/icons';
 import { H1, P } from '@oxy.so/bloom/typography';
 
 import { formatRelativeDate, serializeLocationToken, type Property } from '@homiio/shared-types';
@@ -55,6 +69,8 @@ import { formatRelativeDate, serializeLocationToken, type Property } from '@homi
 import { useLocationScope } from '@/hooks/useLocationScope';
 import { homeSurfaceState, useHomeSections } from '@/hooks/useHomeSections';
 import { HomeSectionBand } from '@/components/home/HomeSectionBand';
+import { HomeDiscoveryBoard } from '@/components/home/HomeDiscoveryBoard';
+import { ApproximateAreaNotice } from '@/components/home/ApproximateAreaNotice';
 import { PropertyResultsGridSkeleton } from '@/components/ui/PropertyResultsGridSkeleton';
 import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
 import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
@@ -103,7 +119,7 @@ export default function HomePage() {
   // ONE exclusive answer, so "we could not load this" can never be rendered as
   // "there is nothing here" — see `homeSurfaceState`.
   const surface = homeSurfaceState({
-    needsPlace: scope.needsPlace,
+    discovery: scope.discovery,
     canQuery: scope.canQuery,
     isLoading: home.isLoading,
     hasError: home.error !== null,
@@ -257,28 +273,16 @@ export default function HomePage() {
         </View>
 
         <View className="gap-6 md:gap-8 pb-14 pt-6">
-          {/* The mandatory picker. NOT a global list: when nothing has been
-              chosen and the device cannot answer, Home asks rather than guesses. */}
-          {surface === 'needs_place' ? (
-            <View className={`gap-2 ${PAGE_GUTTER_CLASS}`}>
-              <SectionEyebrow>{t('home.scopePrompt.eyebrow')}</SectionEyebrow>
-              <H1 className="text-[24px] font-bold leading-7 tracking-tight text-foreground">
-                {t('home.scopePrompt.title')}
-              </H1>
-              <P className="text-sm text-muted-foreground">{t('home.scopePrompt.body')}</P>
-              <View className="flex-row pt-1">
-                <Button
-                  variant="primary"
-                  size="medium"
-                  leadingIcon={RiMapPinLine}
-                  onPress={chooseArea}
-                  accessibilityLabel={t('location.scope.changeAccessible')}
-                >
-                  {t('location.scope.chooseArea')}
-                </Button>
-              </View>
-            </View>
-          ) : null}
+          {/* Where an area came from, when Homiio inferred it rather than being
+              told. Above the sections it describes, said once, with the one-tap
+              way to change it. */}
+          <ApproximateAreaNotice scope={scope} onChangeArea={chooseArea} />
+
+          {/* NO mandatory picker. When nothing has been chosen and neither the
+              device nor the network can place the visitor, Home offers real
+              destinations — never a worldwide list, and never a step that has
+              to be completed before the rest of the page works. */}
+          {surface === 'discovery' ? <HomeDiscoveryBoard onChoose={scope.choose} /> : null}
 
           {/* Served from the offline snapshot: said once, above what it describes. */}
           {home.staleAt && surface === 'sections' ? (

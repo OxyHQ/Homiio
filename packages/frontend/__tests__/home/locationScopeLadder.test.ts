@@ -1,20 +1,32 @@
 /**
- * The initial-scope ladder (#353), rung by rung.
+ * The initial-scope ladder, rung by rung (#353, superseded in part by #518/#519).
  *
- * Every mandatory test case the issue lists for the resolution rules is here,
+ * Every mandatory test case the issues list for the resolution rules is here,
  * and each is an ordinary assertion over a pure function rather than a timing
  * simulation — see `hooks/locationScopeLadder.ts` for why that was the shape
- * chosen. Two of these could not be written honestly any other way:
+ * chosen. Four of these could not be written honestly any other way:
  *
  *  - "respuesta tardía de la ubicación anterior que no sobrescribe la nueva"
  *    becomes "a device answer supplied alongside an explicit choice loses",
  *    which is true regardless of when either arrived;
+ *  - "una respuesta automática tardía no debe mover el mapa y sustituir los
+ *    resultados" becomes "a device answer supplied alongside a COMMITTED
+ *    network scope loses, and becomes an offer";
  *  - "nunca ejecutar silenciosamente el feed global" becomes an exhaustive
  *    sweep asserting that NO combination of inputs reaches `isGlobal` except the
- *    one flag a button sets.
+ *    one flag a button sets;
+ *  - "no aparece el bloque «One step first» ni una barrera equivalente" becomes
+ *    a sweep asserting the ladder has no state that both withholds an area AND
+ *    reports itself as anything other than `discovery` — the regression gate
+ *    the issues ask for by name.
  */
 
-import { resolveLocationScope, type DevicePositionState } from '@/hooks/locationScopeLadder';
+import {
+  resolveLocationScope,
+  type ApproximatePositionState,
+  type CommittedAutoScope,
+  type DevicePositionState,
+} from '@/hooks/locationScopeLadder';
 import type { LocationSelection } from '@homiio/shared-types';
 
 function place(id: string, name: string): LocationSelection {
@@ -41,6 +53,17 @@ const DEVICE_FIX: LocationSelection = {
 
 const NOTHING: DevicePositionState = { status: 'idle' };
 
+/** A network inference resolved to a city. Never a `current_location`. */
+const BUCHAREST = place('city-bucharest', 'Bucharest');
+
+const IP_RESOLVED: ApproximatePositionState = {
+  status: 'resolved',
+  selection: BUCHAREST,
+  granularity: 'city',
+};
+
+const NO_IP: ApproximatePositionState = { status: 'unavailable' };
+
 /** The ladder's inputs with everything absent, for a test to fill in one rung. */
 const EMPTY = {
   explicitGlobal: false,
@@ -48,6 +71,8 @@ const EMPTY = {
   savedAreaSelection: null,
   lastChosenSelection: null,
   device: NOTHING,
+  approximate: NO_IP,
+  committedAuto: null,
 } as const;
 
 describe('permission states', () => {
@@ -63,20 +88,39 @@ describe('permission states', () => {
     expect(state.isGlobal).toBe(false);
   });
 
-  it('denied: the picker is mandatory and NOTHING may be queried', () => {
+  it('denied, with a network answer: the network answers and nothing is blocked', () => {
+    // The case the whole change exists for. A denied permission used to end at
+    // the mandatory picker; now it simply means the device rung does not
+    // participate, and the connection places the visitor instead.
+    const state = resolveLocationScope({
+      ...EMPTY,
+      device: { status: 'failed', reason: 'permission_denied' },
+      approximate: IP_RESOLVED,
+    });
+
+    expect(state.selection).toEqual(BUCHAREST);
+    expect(state.source).toBe('ip');
+    expect(state.canQuery).toBe(true);
+    expect(state.discovery).toBe(false);
+    // Inferred, and the surface must say so.
+    expect(state.isApproximate).toBe(true);
+    expect(state.granularity).toBe('city');
+    // The REASON survives, so the surface can still say "location is off" if it
+    // has somewhere to say it.
+    expect(state.deviceIssue).toBe('permission_denied');
+  });
+
+  it('denied, with no network answer either: DISCOVERY, not a barrier', () => {
     const state = resolveLocationScope({
       ...EMPTY,
       device: { status: 'failed', reason: 'permission_denied' },
     });
 
-    expect(state.needsPlace).toBe(true);
+    expect(state.discovery).toBe(true);
     expect(state.canQuery).toBe(false);
     // The whole point: a denial must not become a worldwide list.
     expect(state.isGlobal).toBe(false);
     expect(state.selection).toBeNull();
-    // The REASON survives, so the surface can say "location is off" rather than
-    // a generic error — "turn on location" is useless advice to somebody whose
-    // connection dropped, and the two arrive here as different reasons.
     expect(state.resolution).toEqual({ status: 'failed', reason: 'permission_denied' });
   });
 
@@ -96,32 +140,56 @@ describe('permission states', () => {
     expect(state.resolution).toEqual({ status: 'resolved', selection: BARCELONA });
   });
 
-  it('GPS timeout: the picker, not a global feed', () => {
+  it('GPS timeout with the network available: the network answers', () => {
+    const state = resolveLocationScope({
+      ...EMPTY,
+      device: { status: 'failed', reason: 'position_unavailable' },
+      approximate: IP_RESOLVED,
+    });
+
+    expect(state.source).toBe('ip');
+    expect(state.canQuery).toBe(true);
+    expect(state.isGlobal).toBe(false);
+  });
+
+  it('GPS timeout with nothing else: discovery, not a global feed', () => {
     const state = resolveLocationScope({
       ...EMPTY,
       device: { status: 'failed', reason: 'position_unavailable' },
     });
 
-    expect(state.needsPlace).toBe(true);
+    expect(state.discovery).toBe(true);
     expect(state.canQuery).toBe(false);
     expect(state.isGlobal).toBe(false);
   });
 
-  it('resolving: neither a query nor a picker, so nothing flashes', () => {
+  it('resolving: neither a query nor a board, so nothing flashes', () => {
     const state = resolveLocationScope({ ...EMPTY, device: { status: 'resolving' } });
 
     expect(state.canQuery).toBe(false);
-    // A picker that opened for the half-second a fix takes would be dismissed on
-    // every launch with permission granted.
-    expect(state.needsPlace).toBe(false);
+    // The destinations board flashing open for the half-second a fix takes and
+    // then being replaced is the same jump the commit rule exists to prevent,
+    // arriving at the top of the sequence instead of the end.
+    expect(state.discovery).toBe(false);
     expect(state.resolution).toEqual({ status: 'resolving' });
+  });
+
+  it('waits for the network rung too, not only the device one', () => {
+    const state = resolveLocationScope({
+      ...EMPTY,
+      device: { status: 'idle' },
+      approximate: { status: 'resolving' },
+    });
+
+    expect(state.resolution).toEqual({ status: 'resolving' });
+    expect(state.discovery).toBe(false);
   });
 });
 
 describe('rung order', () => {
   it('an explicit session choice outranks a saved area, the last area and the device', () => {
     const state = resolveLocationScope({
-      explicitGlobal: false,
+      ...EMPTY,
       sessionSelection: MADRID,
       savedAreaSelection: BARCELONA,
       lastChosenSelection: BARCELONA,
@@ -152,13 +220,61 @@ describe('rung order', () => {
     expect(state.canQuery).toBe(true);
   });
 
-  it('a new user with no saved searches and no permission gets the picker', () => {
+  it('a new user with no saved searches, no permission and no network answer gets DISCOVERY', () => {
     const state = resolveLocationScope(EMPTY);
 
     expect(state.selection).toBeNull();
-    expect(state.needsPlace).toBe(true);
+    expect(state.discovery).toBe(true);
     expect(state.canQuery).toBe(false);
     expect(state.isGlobal).toBe(false);
+    // Never presented as a guess, because there is nothing to guess.
+    expect(state.isApproximate).toBe(false);
+  });
+
+  it('a new user with a network answer is placed, with no prompt anywhere', () => {
+    const state = resolveLocationScope({ ...EMPTY, approximate: IP_RESOLVED });
+
+    expect(state.selection).toEqual(BUCHAREST);
+    expect(state.source).toBe('ip');
+    expect(state.canQuery).toBe(true);
+    expect(state.discovery).toBe(false);
+    expect(state.isApproximate).toBe(true);
+  });
+
+  it('every explicit rung outranks the network', () => {
+    for (const [key, source] of [
+      ['sessionSelection', 'session'],
+      ['savedAreaSelection', 'saved_area'],
+      ['lastChosenSelection', 'last_chosen'],
+    ] as const) {
+      const state = resolveLocationScope({ ...EMPTY, [key]: MADRID, approximate: IP_RESOLVED });
+      expect(state.selection).toEqual(MADRID);
+      expect(state.source).toBe(source);
+      // A chosen area is never disclosed as approximate.
+      expect(state.isApproximate).toBe(false);
+    }
+  });
+
+  it('a device fix outranks the network when both are the first answer', () => {
+    const state = resolveLocationScope({
+      ...EMPTY,
+      device: { status: 'resolved', selection: DEVICE_FIX },
+      approximate: IP_RESOLVED,
+    });
+
+    expect(state.source).toBe('device');
+    expect(state.selection).toEqual(DEVICE_FIX);
+  });
+
+  it('a region-level inference reports its granularity rather than claiming a city', () => {
+    const region: ApproximatePositionState = {
+      status: 'resolved',
+      selection: BUCHAREST,
+      granularity: 'region',
+    };
+    const state = resolveLocationScope({ ...EMPTY, approximate: region });
+
+    expect(state.granularity).toBe('region');
   });
 
   it('an absent saved-area rung is a SKIP, not a failure', () => {
@@ -257,14 +373,14 @@ describe('"use my location" pressed while an area is in use', () => {
     expect(state.isGlobal).toBe(false);
   });
 
-  it('a failed fix with no area to fall back to is the picker', () => {
+  it('a failed fix with no area to fall back to is discovery, not a barrier', () => {
     const state = resolveLocationScope({
       ...EMPTY,
       device: { status: 'failed', reason: 'position_unavailable' },
       deviceRequested: true,
     });
 
-    expect(state.needsPlace).toBe(true);
+    expect(state.discovery).toBe(true);
     expect(state.canQuery).toBe(false);
   });
 
@@ -310,26 +426,37 @@ describe('global is reachable ONLY by the explicit flag', () => {
       { status: 'failed', reason: 'unsupported' },
     ];
 
+    const approximates: ApproximatePositionState[] = [
+      { status: 'idle' },
+      { status: 'resolving' },
+      { status: 'unavailable' },
+      IP_RESOLVED,
+    ];
+
     let checked = 0;
     for (const deviceRequested of [false, true]) {
       for (const sessionSelection of selections) {
         for (const savedAreaSelection of selections) {
           for (const lastChosenSelection of selections) {
             for (const device of devices) {
-              const state = resolveLocationScope({
-                explicitGlobal: false,
-                sessionSelection,
-                savedAreaSelection,
-                lastChosenSelection,
-                device,
-                deviceRequested,
-              });
-              expect(state.isGlobal).toBe(false);
-              expect(state.source).not.toBe('global');
-              // A scope-less state must never be queryable: that combination IS
-              // the silent global feed, wearing a different flag.
-              if (state.selection === null) expect(state.canQuery).toBe(false);
-              checked += 1;
+              for (const approximate of approximates) {
+                const state = resolveLocationScope({
+                  explicitGlobal: false,
+                  sessionSelection,
+                  savedAreaSelection,
+                  lastChosenSelection,
+                  device,
+                  approximate,
+                  committedAuto: null,
+                  deviceRequested,
+                });
+                expect(state.isGlobal).toBe(false);
+                expect(state.source).not.toBe('global');
+                // A scope-less state must never be queryable: that combination
+                // IS the silent global feed, wearing a different flag.
+                if (state.selection === null) expect(state.canQuery).toBe(false);
+                checked += 1;
+              }
             }
           }
         }
@@ -338,7 +465,137 @@ describe('global is reachable ONLY by the explicit flag', () => {
 
     // A vacuity floor. `expect` inside a loop that never runs passes silently,
     // and a broken generator is indistinguishable from a clean sweep without it.
-    expect(checked).toBe(2 * selections.length ** 3 * devices.length);
-    expect(checked).toBe(540);
+    expect(checked).toBe(2 * selections.length ** 3 * devices.length * approximates.length);
+    expect(checked).toBe(2160);
+  });
+});
+
+describe('the mandatory picker is unreachable', () => {
+  // The regression gate #518/#519 ask for: "Añadir pruebas de regresión que
+  // fallen si se reintroduce el selector obligatorio."
+  //
+  // The ladder has no `needsPlace` field to reintroduce, so the gate is
+  // expressed over what a barrier would MEAN: a state with no area that also
+  // denies being discovery. Every such state is a screen that shows neither
+  // homes nor destinations, which is the barrier by another name.
+  it('every area-less state is either resolving or discovery', () => {
+    const selections: (LocationSelection | null)[] = [null, BARCELONA];
+    const devices: DevicePositionState[] = [
+      { status: 'idle' },
+      { status: 'resolving' },
+      { status: 'resolved', selection: DEVICE_FIX },
+      { status: 'failed', reason: 'permission_denied' },
+      { status: 'failed', reason: 'position_unavailable' },
+      { status: 'failed', reason: 'network' },
+      { status: 'failed', reason: 'unsupported' },
+    ];
+    const approximates: ApproximatePositionState[] = [
+      { status: 'idle' },
+      { status: 'resolving' },
+      { status: 'unavailable' },
+      IP_RESOLVED,
+    ];
+    const commits: (CommittedAutoScope | null)[] = [
+      null,
+      { source: 'ip', selection: BUCHAREST },
+      { source: 'device', selection: DEVICE_FIX },
+    ];
+
+    let checked = 0;
+    for (const explicitGlobal of [false, true]) {
+      for (const deviceRequested of [false, true]) {
+        for (const sessionSelection of selections) {
+          for (const device of devices) {
+            for (const approximate of approximates) {
+              for (const committedAuto of commits) {
+                const state = resolveLocationScope({
+                  explicitGlobal,
+                  sessionSelection,
+                  savedAreaSelection: null,
+                  lastChosenSelection: null,
+                  device,
+                  approximate,
+                  committedAuto,
+                  deviceRequested,
+                });
+                if (state.selection === null && !state.isGlobal) {
+                  expect({
+                    discovery: state.discovery,
+                    resolving: state.resolution.status === 'resolving',
+                  }).toEqual(
+                    expect.objectContaining({}),
+                  );
+                  expect(state.discovery || state.resolution.status === 'resolving').toBe(true);
+                }
+                checked += 1;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    expect(checked).toBe(
+      2 * 2 * selections.length * devices.length * approximates.length * commits.length,
+    );
+  });
+});
+
+describe('a second automatic answer never moves the user', () => {
+  it('a device fix arriving over a COMMITTED network scope becomes an offer', () => {
+    // #518 §3.3 in one assertion: "Una vez mostrados resultados de una zona,
+    // una respuesta automática tardía no debe mover el mapa y sustituirlos
+    // inesperadamente."
+    const state = resolveLocationScope({
+      ...EMPTY,
+      approximate: IP_RESOLVED,
+      committedAuto: { source: 'ip', selection: BUCHAREST },
+      device: { status: 'resolved', selection: DEVICE_FIX },
+    });
+
+    expect(state.selection).toEqual(BUCHAREST);
+    expect(state.source).toBe('ip');
+    // Not discarded — offered.
+    expect(state.upgrade).toEqual({ source: 'device', selection: DEVICE_FIX });
+  });
+
+  it('a network answer arriving over a COMMITTED device scope changes nothing', () => {
+    const state = resolveLocationScope({
+      ...EMPTY,
+      committedAuto: { source: 'device', selection: DEVICE_FIX },
+      approximate: IP_RESOLVED,
+    });
+
+    expect(state.selection).toEqual(DEVICE_FIX);
+    expect(state.source).toBe('device');
+    // A network guess is not an improvement on a real fix, so nothing is
+    // offered either — an offer nobody should accept is noise.
+    expect(state.upgrade).toBeNull();
+  });
+
+  it('an explicit choice outranks a committed inference outright', () => {
+    const state = resolveLocationScope({
+      ...EMPTY,
+      sessionSelection: MADRID,
+      committedAuto: { source: 'ip', selection: BUCHAREST },
+      device: { status: 'resolved', selection: DEVICE_FIX },
+    });
+
+    expect(state.selection).toEqual(MADRID);
+    expect(state.source).toBe('session');
+    // No offer beside a chosen city: the device position is not an
+    // "improvement" on a place somebody named, it is a different place.
+    expect(state.upgrade).toBeNull();
+  });
+
+  it('no upgrade is offered while the device has not answered', () => {
+    const state = resolveLocationScope({
+      ...EMPTY,
+      approximate: IP_RESOLVED,
+      committedAuto: { source: 'ip', selection: BUCHAREST },
+      device: { status: 'idle' },
+    });
+
+    expect(state.upgrade).toBeNull();
   });
 });

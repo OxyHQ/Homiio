@@ -39,6 +39,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { LocationSelection } from '@homiio/shared-types';
+import type { CommittedAutoScope } from '@/hooks/locationScopeLadder';
 
 const PERSIST_KEY = '@homiio/location-scope-v1';
 
@@ -53,6 +54,16 @@ interface LocationScopeState {
   permissionPromptShown: boolean;
   /** True while the user has asked to use their position in this session. */
   deviceRequested: boolean;
+  /**
+   * The first INFERRED scope of this session, once one has been applied.
+   *
+   * Session-only and never persisted — a new launch re-resolves, which is what
+   * makes moving between networks noticeable. Its whole job is to stop a SECOND
+   * automatic answer from replacing the first: the ladder reads it above both
+   * inference rungs, so a GPS fix arriving after the network already placed
+   * somebody becomes an offer rather than a jump (#518 §3.3).
+   */
+  autoScope: CommittedAutoScope | null;
 
   /**
    * Commit an explicit choice.
@@ -66,6 +77,15 @@ interface LocationScopeState {
   exploreGlobal: () => void;
   /** Ask to use the device position. Also records that the prompt is coming. */
   requestDevice: () => void;
+  /**
+   * Apply an inferred scope, ONCE per session.
+   *
+   * Idempotent by construction: a second call is ignored while one is in force.
+   * That is not an optimisation — it is the invariant. The hook calls this from
+   * an effect that runs on every render where an inference is in force, so a
+   * version that overwrote would reintroduce exactly the jump it prevents.
+   */
+  commitAutoScope: (scope: CommittedAutoScope) => void;
   /** Record that the OS prompt has been shown, so it is not shown again. */
   markPermissionPromptShown: () => void;
   /** Drop the session choice, returning to whatever the ladder resolves next. */
@@ -91,6 +111,7 @@ export const useLocationScopeStore = create<LocationScopeState>()(
       lastChosenArea: null,
       permissionPromptShown: false,
       deviceRequested: false,
+      autoScope: null,
 
       choose: (selection) =>
         set((state) => ({
@@ -98,21 +119,29 @@ export const useLocationScopeStore = create<LocationScopeState>()(
           explicitGlobal: false,
           // A place chosen after "use my location" replaces it.
           deviceRequested: false,
+          // An explicit choice ends the session's inferred scope outright. Kept
+          // around, it would reappear the moment the choice was cleared — the
+          // user would return not to discovery but to a city they had replaced.
+          autoScope: null,
           // The persisted rung only ever remembers an AREA. A device fix stays
           // in the session slot above and dies with the process.
           lastChosenArea: isPersistableArea(selection) ? selection : state.lastChosenArea,
         })),
 
-      exploreGlobal: () => set({ explicitGlobal: true, sessionSelection: null, deviceRequested: false }),
+      exploreGlobal: () =>
+        set({ explicitGlobal: true, sessionSelection: null, deviceRequested: false, autoScope: null }),
 
       // Clears the session choice: pressing "use my location" is a newer choice
       // than the place picked before it, and the ladder ranks a session choice
       // above the device.
-      requestDevice: () => set({ deviceRequested: true, explicitGlobal: false, sessionSelection: null }),
+      requestDevice: () =>
+        set({ deviceRequested: true, explicitGlobal: false, sessionSelection: null, autoScope: null }),
+
+      commitAutoScope: (scope) => set((state) => (state.autoScope ? {} : { autoScope: scope })),
 
       markPermissionPromptShown: () => set({ permissionPromptShown: true }),
 
-      clearSession: () => set({ sessionSelection: null, explicitGlobal: false }),
+      clearSession: () => set({ sessionSelection: null, explicitGlobal: false, autoScope: null }),
     }),
     {
       name: PERSIST_KEY,

@@ -63,7 +63,7 @@ describe('what may be retried', () => {
 
 describe('the surface never renders a failure as an absence', () => {
   const base = {
-    needsPlace: false,
+    discovery: false,
     canQuery: true,
     isLoading: false,
     hasError: false,
@@ -87,11 +87,32 @@ describe('the surface never renders a failure as an absence', () => {
     expect(homeSurfaceState({ ...base, hasError: true, sectionCount: 3 })).toBe('sections');
   });
 
-  it('asks for a place before it reports anything else', () => {
-    // With no scope there is nothing to have failed at, so the picker outranks
-    // even an error left over from a previous scope.
-    expect(homeSurfaceState({ ...base, needsPlace: true, hasError: true })).toBe('needs_place');
-    expect(homeSurfaceState({ ...base, canQuery: false, hasError: true })).toBe('needs_place');
+  it('shows destinations before it reports anything else — and never a barrier', () => {
+    // With no area there is nothing to have failed at, so discovery outranks
+    // even an error left over from a previous area.
+    expect(homeSurfaceState({ ...base, discovery: true, hasError: true })).toBe('discovery');
+    expect(homeSurfaceState({ ...base, canQuery: false, hasError: true })).toBe('discovery');
+  });
+
+  it('has no state that asks the user to pick before anything may render', () => {
+    // The regression gate #518/#519 ask for, at the surface layer: the old
+    // `needs_place` state is gone, and nothing may reintroduce a name for it.
+    const states = new Set<string>();
+    for (const discovery of [false, true]) {
+      for (const canQuery of [false, true]) {
+        for (const isLoading of [false, true]) {
+          for (const hasError of [false, true]) {
+            for (const sectionCount of [0, 3]) {
+              states.add(
+                homeSurfaceState({ discovery, canQuery, isLoading, hasError, sectionCount }),
+              );
+            }
+          }
+        }
+      }
+    }
+    expect(states.has('needs_place' as never)).toBe(false);
+    expect(states.has('discovery')).toBe(true);
   });
 
   it('reports LOADING only while there is nothing to show and nothing has failed', () => {
@@ -106,16 +127,16 @@ describe('the surface never renders a failure as an absence', () => {
     // construction and a sweep is what proves it, with a vacuity floor so a
     // broken generator cannot pass by never looping.
     const flags = [false, true];
-    const allowed = new Set(['needs_place', 'loading', 'failed', 'empty', 'sections']);
+    const allowed = new Set(['discovery', 'loading', 'failed', 'empty', 'sections']);
     let checked = 0;
 
-    for (const needsPlace of flags) {
+    for (const discovery of flags) {
       for (const canQuery of flags) {
         for (const isLoading of flags) {
           for (const hasError of flags) {
             for (const sectionCount of [0, 3]) {
               const state = homeSurfaceState({
-                needsPlace,
+                discovery,
                 canQuery,
                 isLoading,
                 hasError,
@@ -124,7 +145,7 @@ describe('the surface never renders a failure as an absence', () => {
               expect(allowed.has(state)).toBe(true);
               // The rule that matters, asserted over every combination: a
               // failure with nothing to show is NEVER reported as empty.
-              if (hasError && sectionCount === 0 && canQuery && !needsPlace && !isLoading) {
+              if (hasError && sectionCount === 0 && canQuery && !discovery && !isLoading) {
                 expect(state).toBe('failed');
               }
               checked += 1;

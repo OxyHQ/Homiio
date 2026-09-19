@@ -48,9 +48,20 @@ const DEVICE_FIX_MAX_AGE_MS = 1000 * 60 * 5;
  * than lingering as a stale-but-served value.
  *
  * Note what this is NOT: it is not how Home decides where to look. That is
- * `useLocationScope`, which reads the permission without prompting and ranks the
- * device below every explicit choice. This hook still requests permission,
- * because a suggestion bias is something the caller asks for on purpose.
+ * `useLocationScope`, which ranks the device below every explicit choice.
+ *
+ * It does NOT prompt, and that changed: this hook used to call
+ * `requestForegroundPermissionsAsync`, and `/explore` mounts it unconditionally
+ * — so opening Explore showed the OS location prompt to somebody who had asked
+ * only to see homes. #518 and #519 both forbid it ("No hay permisos solicitados
+ * automáticamente desde Home, mapa u otros montajes de descubrimiento"), and
+ * the justification it carried ("a suggestion bias is something the caller asks
+ * for on purpose") was simply false about this call site: nobody asks for a
+ * suggestion bias, it is a refinement applied to a list they were already
+ * shown.
+ *
+ * With permission already granted it still biases suggestions, which is the
+ * whole of its value and costs the user nothing.
  */
 export function useUserCoordinates() {
   return useQuery({
@@ -60,11 +71,7 @@ export function useUserCoordinates() {
         // Re-read on every refetch, not once per process: this is the only
         // thing that notices a permission the user has since revoked.
         const { status } = await Location.getForegroundPermissionsAsync();
-        const granted =
-          status === 'granted'
-            ? true
-            : (await Location.requestForegroundPermissionsAsync()).status === 'granted';
-        if (!granted) return null;
+        if (status !== 'granted') return null;
         const location = await Location.getCurrentPositionAsync({});
         return {
           latitude: location.coords.latitude,

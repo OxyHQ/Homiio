@@ -242,16 +242,16 @@
       },
       "loadFailedToast": "Impossible de charger les logements de cette zone. Rien n'est masqué : la requête a échoué."
     },
-    "scopePrompt": {
-      "eyebrow": "Une étape d'abord",
-      "title": "Où cherchez-vous un logement ?",
-      "body": "Choisissez une ville ou un quartier, ou activez la localisation. La localisation est facultative : vous pouvez toujours choisir un lieu à la main."
-    },
     "empty": {
       "title": "Rien à afficher pour cette zone pour l'instant",
       "body": "Aucune annonce d'ici ne correspond à ce que Homiio sait expliquer. Élargissez la zone, choisissez un autre lieu, ou ouvrez Explorer et modifiez les filtres.",
       "changeFilters": "Ouvrir Explorer",
       "changeFiltersAccessible": "Ouvrir Explorer pour modifier les filtres de cette zone"
+    },
+    "discovery": {
+      "eyebrow": "Explorer des destinations",
+      "title": "Où aimeriez-vous vivre ?",
+      "body": "Nous n’avons pas pu déterminer votre zone : voici des villes où Homiio a des logements, et non des lieux proches de vous."
     }
   },
   "agent": {
@@ -3691,7 +3691,20 @@
       "locationOff": "La localisation est désactivée dans vos réglages",
       "positionRetry": "Position introuvable. Réessayez",
       "everywhereHint": "Toutes les zones, sans filtre de lieu",
-      "lastArea": "La dernière zone choisie"
+      "lastArea": "La dernière zone choisie",
+      "approximateArea": "{{place}} · zone approximative",
+      "approximateLead": "Cette zone est une estimation, pas un choix que vous avez fait.",
+      "provenance": {
+        "toggle": "Pourquoi cette zone ?",
+        "toggleAccessible": "Afficher l’origine de cette zone",
+        "device": "Issue de la position de votre appareil, avec l’autorisation que vous avez déjà accordée.",
+        "ipCity": "Estimée à partir de votre connexion internet. Ce n’est pas votre adresse.",
+        "ipRegion": "Votre connexion n’a permis de cibler qu’une région : c’est donc la zone affichée.",
+        "ipCountry": "Votre connexion n’a permis de cibler qu’un pays : c’est donc la zone affichée.",
+        "attribution": "Données de localisation IP fournies par DB-IP, sous licence CC BY 4.0."
+      },
+      "upgrade": "Utiliser plutôt ma position exacte",
+      "upgradeAccessible": "Remplacer la zone estimée par la position de votre appareil"
     }
   },
   "alerts": {

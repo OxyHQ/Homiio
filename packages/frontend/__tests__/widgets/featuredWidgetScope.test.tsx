@@ -102,13 +102,17 @@ function scope(overrides: Partial<LocationScope>): LocationScope {
     resolution: { status: 'idle' },
     source: null,
     deviceIssue: null,
-    needsPlace: true,
+    discovery: true,
     isGlobal: false,
+    isApproximate: false,
+    granularity: null,
+    upgrade: null,
     canQuery: false,
     nearbyPlace: null,
     choose: jest.fn(),
     exploreGlobal: jest.fn(),
     useCurrentLocation: jest.fn(),
+    applyUpgrade: jest.fn(),
     permissionPromptShown: false,
     ...overrides,
   };
@@ -181,7 +185,7 @@ afterEach(() => {
 
 describe('with no area chosen', () => {
   it('issues NO request at all', async () => {
-    mockScope.mockReturnValue(scope({ resolution: { status: 'idle' }, needsPlace: true }));
+    mockScope.mockReturnValue(scope({ resolution: { status: 'idle' }, discovery: true }));
 
     render(<FeaturedPropertiesWidget />, { wrapper });
     await flush();
@@ -193,7 +197,7 @@ describe('with no area chosen', () => {
   it('says the area is missing rather than rendering an empty list', async () => {
     // "There are no featured homes" and "you have not told us where" are
     // different facts, and only one of them is true here.
-    mockScope.mockReturnValue(scope({ resolution: { status: 'idle' }, needsPlace: true }));
+    mockScope.mockReturnValue(scope({ resolution: { status: 'idle' }, discovery: true }));
 
     const view = render(<FeaturedPropertiesWidget />, { wrapper });
     await flush();
@@ -205,7 +209,7 @@ describe('with no area chosen', () => {
 
 describe('while the scope is still resolving', () => {
   it('issues NO request, and does not claim the area is unset', async () => {
-    mockScope.mockReturnValue(scope({ resolution: { status: 'resolving' }, needsPlace: false }));
+    mockScope.mockReturnValue(scope({ resolution: { status: 'resolving' }, discovery: false }));
 
     const view = render(<FeaturedPropertiesWidget />, { wrapper });
     await flush();
@@ -223,7 +227,7 @@ describe('when the device rung failed', () => {
       scope({
         resolution: { status: 'failed', reason: 'permission_denied' },
         deviceIssue: 'permission_denied',
-        needsPlace: true,
+        discovery: true,
       }),
     );
 
@@ -244,7 +248,7 @@ describe('with a committed city', () => {
         selection: BARCELONA,
         resolution: { status: 'resolved', selection: BARCELONA },
         source: 'session',
-        needsPlace: false,
+        discovery: false,
         canQuery: true,
       }),
     );
@@ -261,7 +265,7 @@ describe('with a committed city', () => {
       scope({
         selection: BARCELONA,
         resolution: { status: 'resolved', selection: BARCELONA },
-        needsPlace: false,
+        discovery: false,
         canQuery: true,
       }),
     );
@@ -282,7 +286,7 @@ describe('with the device position', () => {
         selection: DEVICE,
         resolution: { status: 'resolved', selection: DEVICE },
         source: 'device',
-        needsPlace: false,
+        discovery: false,
         canQuery: true,
       }),
     );
@@ -309,7 +313,7 @@ describe('with an explicit "explore everywhere"', () => {
         selection: null,
         resolution: { status: 'idle' },
         source: 'global',
-        needsPlace: false,
+        discovery: false,
         isGlobal: true,
         canQuery: true,
       }),

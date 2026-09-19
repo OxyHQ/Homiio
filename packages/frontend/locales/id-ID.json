@@ -242,16 +242,16 @@
       },
       "loadFailedToast": "Kami tidak bisa memuat hunian di area ini. Tidak ada yang disembunyikan — permintaannya gagal."
     },
-    "scopePrompt": {
-      "eyebrow": "Satu langkah dulu",
-      "title": "Kamu sedang mencari hunian di mana?",
-      "body": "Pilih kota atau lingkungan, atau aktifkan lokasi. Lokasi bersifat opsional — kamu selalu bisa memilih tempatnya sendiri."
-    },
     "empty": {
       "title": "Belum ada yang bisa ditampilkan untuk area ini",
       "body": "Tidak ada iklan di sini yang cocok dengan apa yang bisa dijelaskan Homiio. Perluas areanya, pilih tempat lain, atau buka Jelajahi dan ubah filternya.",
       "changeFilters": "Buka Jelajahi",
       "changeFiltersAccessible": "Buka Jelajahi untuk mengubah filter area ini"
+    },
+    "discovery": {
+      "eyebrow": "Jelajahi destinasi",
+      "title": "Di mana Anda ingin tinggal?",
+      "body": "Kami tidak dapat menentukan wilayah Anda, jadi ini adalah kota-kota dengan hunian di Homiio, bukan tempat di dekat Anda."
     }
   },
   "agent": {
@@ -3691,7 +3691,20 @@
       "locationOff": "Lokasi dimatikan di pengaturan",
       "positionRetry": "Tidak bisa mendapatkan posisimu. Coba lagi",
       "everywhereHint": "Semua area, tanpa filter lokasi",
-      "lastArea": "Area terakhir yang kamu pilih"
+      "lastArea": "Area terakhir yang kamu pilih",
+      "approximateArea": "{{place}} · wilayah perkiraan",
+      "approximateLead": "Wilayah ini adalah perkiraan, bukan pilihan Anda.",
+      "provenance": {
+        "toggle": "Mengapa wilayah ini?",
+        "toggleAccessible": "Tampilkan asal wilayah ini",
+        "device": "Diambil dari posisi perangkat Anda, dengan izin yang sudah Anda berikan.",
+        "ipCity": "Diperkirakan dari koneksi internet Anda. Ini bukan alamat Anda.",
+        "ipRegion": "Koneksi Anda hanya dapat mempersempit ke tingkat wilayah, jadi itulah area yang ditampilkan.",
+        "ipCountry": "Koneksi Anda hanya dapat mempersempit ke tingkat negara, jadi itulah area yang ditampilkan.",
+        "attribution": "Data lokasi IP dari DB-IP, berlisensi CC BY 4.0."
+      },
+      "upgrade": "Gunakan lokasi persis saya",
+      "upgradeAccessible": "Ganti wilayah perkiraan dengan posisi perangkat Anda"
     }
   },
   "alerts": {
