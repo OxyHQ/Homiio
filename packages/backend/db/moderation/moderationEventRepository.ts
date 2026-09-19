@@ -6,7 +6,7 @@
  *
  * ## Why the dedupe has to live in Postgres and not in the process
  *
- * `@oxy.so/crowdsource-express` defaults to an in-process store and says exactly
+ * `@crowdsource.you/core/express` defaults to an in-process store and says exactly
  * when that is not enough: two instances behind a load balancer each keep their
  * own, so a redelivery landing on the OTHER instance is not deduplicated at all.
  * Homiio runs an API task and a worker task behind the shared ALB against one

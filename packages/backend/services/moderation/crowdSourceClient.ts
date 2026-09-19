@@ -1,70 +1,55 @@
 /**
- * The CrowdSource client, built once and only when configured.
+ * Homiio's CrowdSource client, which is now one library call.
  *
- * There is deliberately almost nothing here. The SDK already owns the base URL,
- * the timeouts, the bounded per-attempt retries, the idempotency key and the
- * error classification, and a wrapper that re-implemented any of them would be a
- * second answer to a question that has one. Homiio adds exactly two things: the
- * client is absent until the integration is switched on, and it is built once
- * rather than per delivery.
+ * Everything this file used to hold — build the client once, present the
+ * credential, decide whether this process can authenticate at all, resolve the
+ * tenant and log it — moved into `@crowdsource.you/core`. It had to: Mention and
+ * Allo each carried their own copy of the same file, Homiio's being Mention's
+ * with the name swapped, and none of those were ever Homiio's decisions to make.
  *
- * `applicationId` appears nowhere — the client reads it off the service key, and
- * there is no option, field or parameter through which one could be passed.
+ * ## Homiio holds no CrowdSource key
+ *
+ * `CROWDSOURCE_SERVICE_KEY` is gone with the wrapper. The client presents the
+ * Oxy service token this process already mints — by attesting its ECS task role
+ * in a deployment, or from a credential pair in a checkout that has one (oxy ADR
+ * 0026) — and CrowdSource resolves the tenant from the Oxy application that
+ * token names. Nothing is issued by hand, stored in a parameter store or rotated
+ * by a person, and `applicationId` still appears nowhere: the client asks
+ * CrowdSource which tenant the token names, once, and remembers the answer.
+ *
+ * ## `CROWDSOURCE_ENABLED` is not here either
+ *
+ * The flag gates the delivery LOOP, in `ModerationOutboxDispatcher` and
+ * `services/cron.ts`, which is the place that acts on it. Repeating it here
+ * would be a second answer to one question — and the wrong one for the state it
+ * describes, because `undefined` from this factory means "this process cannot
+ * authenticate", which is what a local checkout genuinely is. A report filed
+ * against either state must still be STORED; the durable outbox row is never
+ * gated, and the delivery worker is what notices there is nowhere to send it.
  */
 
-import { CrowdSource } from '@oxy.so/crowdsource';
+import {
+  crowdSourceForOxyService,
+  resetCrowdSourceForOxyService,
+  type CrowdSource,
+} from '@crowdsource.you/core';
 import config from '../../config';
 import { logger } from '../../middlewares/logging';
 
-let client: CrowdSource | null = null;
-let configurationError: string | null = null;
-
-/**
- * The client, or `undefined` when the integration is not configured.
- *
- * `undefined` rather than a throw: `CROWDSOURCE_ENABLED=false` is the normal
- * state of a local checkout and of every deployment before rollout, and a report
- * filed there must still be stored. The delivery worker is what notices there is
- * nowhere to send it, and it treats that as a delay rather than a loss.
- *
- * A MISCONFIGURED client — a malformed service key — is a different thing and is
- * logged once at error level. Once, because the alternative is one line per
- * delivery attempt per report, which buries the cause it is meant to reveal.
- */
+/** The client, or `undefined` where this deployment cannot authenticate. */
 export function getCrowdSourceClient(): CrowdSource | undefined {
-  if (!config.crowdSource.enabled) return undefined;
-  if (client) return client;
-  if (configurationError !== null) return undefined;
-
-  const serviceKey = config.crowdSource.serviceKey;
-  if (!serviceKey) {
-    configurationError = 'CROWDSOURCE_SERVICE_KEY is not set';
-    logger.error('[CrowdSource] enabled but not configured', {
-      reason: configurationError,
-    });
-    return undefined;
-  }
-
-  try {
-    client = new CrowdSource({
-      serviceKey,
-      ...(config.crowdSource.baseUrl === undefined
-        ? {}
-        : { baseUrl: config.crowdSource.baseUrl }),
-    });
-    logger.info('[CrowdSource] client ready', { applicationId: client.applicationId });
-    return client;
-  } catch (error: unknown) {
-    // The SDK's configuration errors name which part of the key is wrong and
-    // never echo the secret, so the message is safe to log.
-    configurationError = error instanceof Error ? error.message : String(error);
-    logger.error('[CrowdSource] service key rejected', { reason: configurationError });
-    return undefined;
-  }
+  return crowdSourceForOxyService({
+    ...(config.crowdSource.baseUrl === undefined
+      ? {}
+      : { baseUrl: config.crowdSource.baseUrl }),
+    logger: {
+      info: (message, context) => logger.info(message, context),
+      error: (message, context) => logger.error(message, context),
+    },
+  });
 }
 
 /** Test hook. Production builds the client once and keeps it for the process. */
 export function resetCrowdSourceClient(): void {
-  client = null;
-  configurationError = null;
+  resetCrowdSourceForOxyService();
 }

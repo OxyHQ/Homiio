@@ -24,13 +24,12 @@
         "@alia.onl/server": "^1.0.1",
         "@aws-sdk/client-s3": "^3.1087.0",
         "@aws-sdk/s3-request-presigner": "^3.1087.0",
+        "@crowdsource.you/contracts": "1.1.0",
+        "@crowdsource.you/core": "1.3.0",
         "@homiio/listing-providers": "workspace:*",
         "@homiio/shared-types": "workspace:*",
         "@oxy.so/contracts": "^1.3.0",
         "@oxy.so/core": "^1.7.0",
-        "@oxy.so/crowdsource": "1.2.0",
-        "@oxy.so/crowdsource-contracts": "1.1.0",
-        "@oxy.so/crowdsource-express": "1.1.0",
         "@oxy.so/db": "^1.0.0",
         "ai": "^4.3.19",
         "axios": "^1.18.1",
@@ -60,7 +59,6 @@
       },
       "devDependencies": {
         "@eslint/js": "^9.39.5",
-        "@oxy.so/crowdsource-testing": "1.0.0",
         "@types/bcryptjs": "^3.0.0",
         "@types/body-parser": "^1.19.6",
         "@types/cors": "^2.8.19",
@@ -473,6 +471,10 @@
 
     "@bitdrift/react-native": ["@bitdrift/react-native@0.12.16", "", { "dependencies": { "fast-json-stringify": "^6.0.0" }, "peerDependencies": { "expo": ">=47.0.0", "react": "*", "react-native": "*" }, "optionalPeers": ["expo"] }, "sha512-kEKru+gcBEPC4TRcmvdvmfESjnefFPDG3RoXj3mGHLN1RYevfM9CVlGZMYvIRmJAO6BeukRo5cgqJ/qQdl/GjA=="],
 
+    "@crowdsource.you/contracts": ["@crowdsource.you/contracts@1.1.0", "", { "dependencies": { "zod": "^4.6.5" } }, "sha512-MKCsX8i3rBQuq6MnA+e4jxvPKh9E5fnJnXMpjyvKEEt+isygzdJg7h2fcWOvnFrhrFN4o+SQCBuilRDRfemgOQ=="],
+
+    "@crowdsource.you/core": ["@crowdsource.you/core@1.3.0", "", { "dependencies": { "zod": "^4.6.5" }, "peerDependencies": { "@crowdsource.you/contracts": "^1.1.0", "@oxy.so/core": "^1.6.0", "@oxy.so/db": "^1.0.0", "drizzle-orm": "^0.45.2", "express": ">=4.18.0 <6", "postgres": "^3.4.9" }, "optionalPeers": ["@oxy.so/core", "@oxy.so/db", "drizzle-orm", "express", "postgres"] }, "sha512-hTrFBIqlcP6K/9tEGhkITHdCqKFqANmZ282wYiwzA72kqxFfYVVSsOOkbmweMFjNF3RBym8nDLe3keaNfWL/Ig=="],
+
     "@cspotcode/source-map-support": ["@cspotcode/source-map-support@0.8.1", "", { "dependencies": { "@jridgewell/trace-mapping": "0.3.9" } }, "sha512-IchNf6dN4tHoMFIn/7OE8LWZ19Y6q/67Bmf6vnGREv8RSbBVb9LPJxEcnwrcwX6ixSvaiGoomAUvu4YSxXrVgw=="],
 
     "@cypress/request": ["@cypress/request@3.0.10", "", { "dependencies": { "aws-sign2": "~0.7.0", "aws4": "^1.8.0", "caseless": "~0.12.0", "combined-stream": "~1.0.6", "extend": "~3.0.2", "forever-agent": "~0.6.1", "form-data": "~4.0.4", "http-signature": "~1.4.0", "is-typedarray": "~1.0.0", "isstream": "~0.1.2", "json-stringify-safe": "~5.0.1", "mime-types": "~2.1.19", "performance-now": "^2.1.0", "qs": "~6.14.1", "safe-buffer": "^5.1.2", "tough-cookie": "^5.0.0", "tunnel-agent": "^0.6.0", "uuid": "^8.3.2" } }, "sha512-hauBrOdvu08vOsagkZ/Aju5XuiZx6ldsLfByg1htFeldhex+PeMrYauANzFsMJeAA0+dyPLbDoX2OYuvVoLDkQ=="],
@@ -824,14 +826,6 @@
     "@oxy.so/contracts": ["@oxy.so/contracts@1.3.0", "", { "dependencies": { "zod": "^3.25.64" } }, "sha512-Y8R0dljHDC9fj7cRiur7BMI2+P5DSVg8J1I03Y0XsvdNNAfwbxfMZh8zltgD60Sxy3KD06FmW8wXzFjBElGnIA=="],
 
     "@oxy.so/core": ["@oxy.so/core@1.7.0", "", { "dependencies": { "@noble/ciphers": "^1.3.0", "@noble/hashes": "^1.8.0", "@oxy.so/contracts": "^1.3.0", "@oxy.so/protocol": "^1.0.1", "@oxy.so/telemetry": "^1.1.1", "@scure/bip39": "^1.6.0", "buffer": "^6.0.3", "express-rate-limit": "^8.6.0", "helmet": "^8.0.0", "invariant": "^2.2.4", "jwt-decode": "^4.0.0", "socket.io-client": "^4.8.1", "tldts": "^7.4.10", "zod": "^3.25.64" }, "peerDependencies": { "@react-native-async-storage/async-storage": "*", "expo-crypto": "*", "expo-secure-store": "*", "express": "^4.0.0" }, "optionalPeers": ["@react-native-async-storage/async-storage", "expo-crypto", "expo-secure-store", "express"] }, "sha512-k02rU6cNcSHWplcvicF2StJyyv+hfxjXNJq89Z0wBm9U646qFv+nhh+COYRiEFcAxBu+P4XFXdzLCjXeZlEm1Q=="],
-
-    "@oxy.so/crowdsource": ["@oxy.so/crowdsource@1.2.0", "", { "dependencies": { "zod": "^4.6.5" }, "peerDependencies": { "@oxy.so/crowdsource-contracts": "^1.1.0" } }, "sha512-R6FbIAXBHuN70YggnSAKEzKHC4M7Kc9K7SChfQFFkiIH0tHWXZR4O2rg9PwlQiIGkCGLMDjPchtU571aQIO8xw=="],
-
-    "@oxy.so/crowdsource-contracts": ["@oxy.so/crowdsource-contracts@1.1.0", "", { "dependencies": { "zod": "^4.4.3" } }, "sha512-BoH0O78CI125gr1f3tC+3hnzCaO1HmJKwbrz8UHvPWXYdvm4EPmMAxzEIXtvdFpxDhgqQa6wzHuQ0EKPoH3ySw=="],
-
-    "@oxy.so/crowdsource-express": ["@oxy.so/crowdsource-express@1.1.0", "", { "peerDependencies": { "@oxy.so/crowdsource-contracts": "^1.1.0", "express": ">=4" } }, "sha512-j36JutvSU/5ZMfX8GVdAGsMGttCQ5PWo4sTlObPrST0vTaJim54YT3JhpF53Zy3FJPzihpPJL6o65ABFmt9owQ=="],
-
-    "@oxy.so/crowdsource-testing": ["@oxy.so/crowdsource-testing@1.0.0", "", { "peerDependencies": { "@oxy.so/crowdsource-contracts": "^1.0.0" } }, "sha512-IzSNCAgn9ug7x0/v/2aBU1IGCmprp3mt5rGXP/J1H7apq5VM194GC7WwAaUzN2lCiKm0j5U795DnV2iggVPkAg=="],
 
     "@oxy.so/db": ["@oxy.so/db@1.0.0", "", { "peerDependencies": { "drizzle-orm": "^0.45.2", "postgres": "^3.4.9" } }, "sha512-5tnH+84QR7cnTRYF7FWIN1rGF7YoE0M+sfUBC2Bdclzp1Hfb7+Msr7cEvFklluZxXMP2Mv8HzPB6/gz3Kndk4Q=="],
 
@@ -3225,6 +3219,10 @@
 
     "@babel/plugin-transform-runtime/semver": ["semver@6.3.1", "", { "bin": { "semver": "bin/semver.js" } }, "sha512-BR7VvDCVHO+q2xBEWskxS6DJE1qRnb7DxzUrogb71CWoSficBxYsiAGd+Kl0mmq/MprG9yArRkyrQxTO6XjMzA=="],
 
+    "@crowdsource.you/contracts/zod": ["zod@4.6.5", "", {}, "sha512-v5l/aFXZQeai4awLbOpSoHecE9UiMrnfx75tEXLjNonXVARxQ5mOeipTjROUchszUNCqnE+hqAMujRsRHsut2Q=="],
+
+    "@crowdsource.you/core/zod": ["zod@4.6.5", "", {}, "sha512-v5l/aFXZQeai4awLbOpSoHecE9UiMrnfx75tEXLjNonXVARxQ5mOeipTjROUchszUNCqnE+hqAMujRsRHsut2Q=="],
+
     "@cspotcode/source-map-support/@jridgewell/trace-mapping": ["@jridgewell/trace-mapping@0.3.9", "", { "dependencies": { "@jridgewell/resolve-uri": "^3.0.3", "@jridgewell/sourcemap-codec": "^1.4.10" } }, "sha512-3Belt6tdc8bPgAtbcmdtNJlirVoTmEb5e2gC94PnkwEW9jI6CAHUeoG85tjWP5WquqfavoMtMwiG4P926ZKKuQ=="],
 
     "@cypress/request/qs": ["qs@6.14.2", "", { "dependencies": { "side-channel": "^1.1.0" } }, "sha512-V/yCWTTF7VJ9hIh18Ugr2zhJMP01MY7c5kh4J870L7imm6/DIzBsNLTXzMwUA3yZ5b/KBqLx8Kp3uRvd7xSe3Q=="],
@@ -3328,10 +3326,6 @@
     "@jest/reporters/glob": ["glob@7.2.3", "", { "dependencies": { "fs.realpath": "^1.0.0", "inflight": "^1.0.4", "inherits": "2", "minimatch": "^3.1.1", "once": "^1.3.0", "path-is-absolute": "^1.0.0" } }, "sha512-nFR0zLpU2YCaRxwoCJvL6UvCH2JFyFVIvwTLsIf21AuHlMskA1hhTdk+LlYJtOlYt9v6dvszD2BGRqBL+iQK9Q=="],
 
     "@jest/reporters/string-length": ["string-length@4.0.2", "", { "dependencies": { "char-regex": "^1.0.2", "strip-ansi": "^6.0.0" } }, "sha512-+l6rNN5fYHNhZZy41RXsYptCjA2Igmq4EG7kZAYFQI1E1VTXarr6ZPXBg6eq7Y6eK4FEhY6AJlyuFIb/v/S0VQ=="],
-
-    "@oxy.so/crowdsource/zod": ["zod@4.6.5", "", {}, "sha512-v5l/aFXZQeai4awLbOpSoHecE9UiMrnfx75tEXLjNonXVARxQ5mOeipTjROUchszUNCqnE+hqAMujRsRHsut2Q=="],
-
-    "@oxy.so/crowdsource-contracts/zod": ["zod@4.6.1", "", {}, "sha512-341aRWQsve0rvronKNTqZpjmzdbUDlFuzHaI/XLg/Ej82qffDJRRfBTCuv7+9q/rMjB6LSLyEBnW4InJeMtt/Q=="],
 
     "@react-native/babel-preset/@react-native/babel-plugin-codegen": ["@react-native/babel-plugin-codegen@0.87.1", "", { "dependencies": { "@babel/traverse": "^7.29.0", "@react-native/codegen": "0.87.1" } }, "sha512-DfnyLAHG7jH4pqeID7ib6AeD6gG8T+KvM3c/w/yEa5ONkfRcHvTC8JMIRdhUqs4ruA+8xbYcNVQzewYRCPm1Xw=="],
 

@@ -80,21 +80,44 @@ describe('Homiio deployment preserves the exact inference runtime boundary', () 
     expect(apiStep).toContain('SINDI_ALIA_AGENT_ID: $sindiAgentId');
     expect(apiStep).toContain('OXY_INFERENCE_ROUTING_PROFILE_ID: $routingProfileId');
     expect(apiStep).toContain(
-      'TASK_CONFIGURATION_REMOVALS_JSON: \'["OXY_INFERENCE_ROUTING_PROFILE"]\'',
+      'TASK_CONFIGURATION_REMOVALS_JSON: \'["OXY_INFERENCE_ROUTING_PROFILE","OXY_SERVICE_API_KEY","OXY_SERVICE_API_SECRET"]\'',
     );
   });
 
-  it('injects point-inference and isolated Sindi credentials from exact SSM ARNs', () => {
-    expect(apiStep).toContain(SERVICE_KEY_ARN);
-    expect(apiStep).toContain(SERVICE_SECRET_ARN);
+  it('injects the isolated Sindi credential from exact SSM ARNs', () => {
     expect(apiStep).toContain(SINDI_SERVICE_KEY_ARN);
     expect(apiStep).toContain(SINDI_SERVICE_SECRET_ARN);
     expect(apiStep).toContain('export TASK_ENV_OVERRIDES_JSON TASK_SECRET_OVERRIDES_JSON');
-    expect(syncStep).toContain('require_secure_string "/oxy/$APP/OXY_SERVICE_API_KEY"');
-    expect(syncStep).toContain('require_secure_string "/oxy/$APP/OXY_SERVICE_API_SECRET"');
     expect(syncStep).toContain('require_secure_string "/oxy/$APP/SINDI_OXY_SERVICE_API_KEY"');
     expect(syncStep).toContain('require_secure_string "/oxy/$APP/SINDI_OXY_SERVICE_API_SECRET"');
     expect(syncStep).not.toContain('--with-decryption');
+  });
+
+  /**
+   * The API attests its ECS task role, so the credential must LEAVE the running
+   * revision — and only the removal list can make that happen.
+   *
+   * Every release renders from the task definition the service is running, so
+   * dropping the two ARNs from `TASK_SECRET_OVERRIDES_JSON` would keep them on
+   * the container forever: inherited, never re-declared, never taken away. The
+   * two assertions are therefore a pair. Stop supplying them AND remove them, or
+   * the migration silently does not happen.
+   *
+   * The SSM parameters themselves are out of scope here and untouched; this is
+   * about the task definition's reference to them.
+   */
+  it('actively removes Homiio own Oxy service credential from the API revision', () => {
+    const apiWithoutRemovalList = apiStep.replace(
+      /^\s*TASK_CONFIGURATION_REMOVALS_JSON:.*$/m,
+      '',
+    );
+    expect(apiWithoutRemovalList).not.toContain(SERVICE_KEY_ARN);
+    expect(apiWithoutRemovalList).not.toContain(SERVICE_SECRET_ARN);
+    // Anchored so `SINDI_OXY_SERVICE_API_KEY` — a different identity, still
+    // injected — does not satisfy a bare substring search and hide a relapse.
+    expect(apiWithoutRemovalList).not.toMatch(
+      /(?<![A-Z_])OXY_SERVICE_API_(?:KEY|SECRET)/,
+    );
   });
 
   it('actively removes inference configuration from the listing worker', () => {

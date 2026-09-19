@@ -1,4 +1,5 @@
 import { OxyServices } from '@oxy.so/core';
+import { canAttestWorkloadIdentity } from '@oxy.so/core/server';
 import config from '../config';
 
 /**
@@ -22,6 +23,19 @@ export const SINDI_OXY_SERVICE_CREDENTIAL_ID = '01a0648e-ad3f-7608-aa8b-c07bfef6
 // OxyHQServices `packages/api/src/config/nativeProductAgents.ts` (homiio.project.id).
 export const SINDI_OXY_OWNER_ACCOUNT_ID = '6a50444ce8026582b949089d';
 
+/**
+ * The credential pair is now OPTIONAL, and a deployment no longer carries one.
+ *
+ * Under oxy ADR 0026 a first-party service proves what it IS: `getServiceToken()`
+ * attests the ECS task role and gets the same short-lived token back whenever no
+ * credential is configured. Installing a pair is therefore the fallback rather
+ * than the requirement — a checkout that still has `OXY_SERVICE_API_KEY` and
+ * `OXY_SERVICE_API_SECRET` keeps using them, and dropping the two variables IS
+ * the migration.
+ *
+ * Both or neither. One alone authenticates nothing, and configuring half a pair
+ * would REPLACE the attestation path with a credential that cannot mint.
+ */
 if (config.oxy.serviceApiKey && config.oxy.serviceApiSecret) {
   oxyService.configureServiceAuth(config.oxy.serviceApiKey, config.oxy.serviceApiSecret);
 }
@@ -30,6 +44,26 @@ if (config.alia.sindiServiceApiKey && config.alia.sindiServiceApiSecret) {
   sindiOxyService.configureServiceAuth(
     config.alia.sindiServiceApiKey,
     config.alia.sindiServiceApiSecret,
+  );
+}
+
+/**
+ * Whether this process can obtain an Oxy service token AT ALL.
+ *
+ * The question every caller that used to check for a key pair actually meant.
+ * There are two ways to answer yes and a deployment has one of them without
+ * anybody configuring it: in ECS the task role attests, and elsewhere a
+ * credential pair does. A local checkout has neither, which is the honest
+ * "Homiio cannot act as itself here".
+ *
+ * Read this rather than `config.oxy.serviceApiKey`: a key check reads a
+ * perfectly healthy attesting deployment as unconfigured, and what that looks
+ * like from outside is a feature that has quietly stopped working.
+ */
+export function canAuthenticateAsOxyService(): boolean {
+  return (
+    canAttestWorkloadIdentity() ||
+    Boolean(config.oxy.serviceApiKey && config.oxy.serviceApiSecret)
   );
 }
 

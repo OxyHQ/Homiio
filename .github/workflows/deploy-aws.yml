@@ -271,11 +271,19 @@ jobs:
             sync_secret REDIS_URL "$SHARED_REDIS_URL" "/oxy/_shared/REDIS_URL"
           fi
 
-          # Oxy's exact-application-ID credential provisioner owns these two
+          # Oxy's exact-application-ID credential provisioner owns the Sindi
           # SecureStrings. Homiio does not copy them from GitHub secrets: this
           # deploy verifies their type without reading their values. The deploy
-          # role has GetParameter on these two exact ARNs only; no provider-key
+          # role has GetParameter on these exact ARNs only; no provider-key
           # path is readable, and --with-decryption is deliberately absent.
+          #
+          # `/oxy/$APP/OXY_SERVICE_API_KEY` and `..._SECRET` are NOT checked any
+          # more, and the omission is the point rather than an oversight: the
+          # rendered task definition no longer references either (see the removal
+          # list in the API lane below), so a gate on them would be a gate whose
+          # output nothing reads — and the first thing it would do is fail a
+          # healthy deploy on the day those parameters are finally retired.
+          # Homiio's API attests its task role instead (oxy ADR 0026).
           require_secure_string() {
             path="$1"
             type=$(aws ssm get-parameter --name "$path" --query 'Parameter.Type' --output text)
@@ -284,8 +292,6 @@ jobs:
               exit 1
             fi
           }
-          require_secure_string "/oxy/$APP/OXY_SERVICE_API_KEY"
-          require_secure_string "/oxy/$APP/OXY_SERVICE_API_SECRET"
           require_secure_string "/oxy/$APP/SINDI_OXY_SERVICE_API_KEY"
           require_secure_string "/oxy/$APP/SINDI_OXY_SERVICE_API_SECRET"
 
@@ -365,8 +371,21 @@ jobs:
           # There is no display-name query, list ordering or fallback id.
           HOMIIO_SINDI_ALIA_AGENT_ID: ${{ vars.SINDI_ALIA_AGENT_ID }}
           HOMIIO_OXY_INFERENCE_ROUTING_PROFILE_ID: ${{ vars.OXY_INFERENCE_ROUTING_PROFILE_ID }}
-          # Remove the superseded slug selector from inherited live revisions.
-          TASK_CONFIGURATION_REMOVALS_JSON: '["OXY_INFERENCE_ROUTING_PROFILE"]'
+          # Taken away from inherited live revisions: the superseded slug
+          # selector, and the Oxy service credential Homiio no longer holds.
+          #
+          # DELETING A LINE FROM THIS WORKFLOW REMOVES NOTHING. Every release
+          # renders from the task definition the service is RUNNING, so a secret
+          # that once appeared here stays on every future revision until a deploy
+          # is told to take it out. That is what this list is for, and it is the
+          # only thing that actually retires `OXY_SERVICE_API_KEY` and
+          # `OXY_SERVICE_API_SECRET` from the API container — Homiio attests its
+          # ECS task role for an Oxy service token now (oxy ADR 0026), and
+          # `@oxy.so/core` >= 1.6.1 takes that path whenever no pair is present.
+          #
+          # The SSM parameters are untouched and still exist. This removes the
+          # task definition's REFERENCE to them, which is the half a deploy owns.
+          TASK_CONFIGURATION_REMOVALS_JSON: '["OXY_INFERENCE_ROUTING_PROFILE","OXY_SERVICE_API_KEY","OXY_SERVICE_API_SECRET"]'
           # Cleared deliberately. The script treats a non-empty DEPLOY_SHA as a
           # request to re-verify that the candidate is still the exact head of
           # origin/main before mutating production, via require-current-main.sh,
@@ -394,9 +413,10 @@ jobs:
               SINDI_ALIA_AGENT_ID: $sindiAgentId,
               OXY_INFERENCE_ROUTING_PROFILE_ID: $routingProfileId
             }')
+          # Sindi only. Its credential is a DIFFERENT identity — a dedicated
+          # agent service credential that Alia verifies, never Homiio's own — so
+          # attestation does not replace it and it is still injected by ARN.
           TASK_SECRET_OVERRIDES_JSON='{
-            "OXY_SERVICE_API_KEY": "arn:aws:ssm:us-west-2:237343248947:parameter/oxy/homiio/OXY_SERVICE_API_KEY",
-            "OXY_SERVICE_API_SECRET": "arn:aws:ssm:us-west-2:237343248947:parameter/oxy/homiio/OXY_SERVICE_API_SECRET",
             "SINDI_OXY_SERVICE_API_KEY": "arn:aws:ssm:us-west-2:237343248947:parameter/oxy/homiio/SINDI_OXY_SERVICE_API_KEY",
             "SINDI_OXY_SERVICE_API_SECRET": "arn:aws:ssm:us-west-2:237343248947:parameter/oxy/homiio/SINDI_OXY_SERVICE_API_SECRET"
           }'

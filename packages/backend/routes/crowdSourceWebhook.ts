@@ -5,7 +5,7 @@
  *
  * This router MUST be mounted before every body parser in `server.ts`. The
  * signature covers the bytes that arrived, and once a JSON parser has consumed
- * the stream those bytes are gone. `@oxy.so/crowdsource-express` reads the raw
+ * the stream those bytes are gone. `@crowdsource.you/core/express` reads the raw
  * body itself and REFUSES rather than verifying a signature over a
  * re-serialisation, so mounting it late does not silently verify the wrong bytes
  * — it fails every delivery, loudly. That refusal is the correct behaviour and
@@ -31,7 +31,7 @@
  */
 
 import { Router } from 'express';
-import { crowdsourceWebhooks } from '@oxy.so/crowdsource-express';
+import { crowdsourceWebhooks } from '@crowdsource.you/core/express';
 import config from '../config';
 import {
   recordDecisionEvent,

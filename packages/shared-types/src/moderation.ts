@@ -6,7 +6,7 @@
  * else. Homiio never computes reputation and never calls Oxy Trust — it reports
  * and it enforces.
  *
- * Nothing here duplicates `@oxy.so/crowdsource-contracts`. A `Decision`, a
+ * Nothing here duplicates `@crowdsource.you/contracts`. A `Decision`, a
  * `TaxonomyCode` or a `RecommendedAction` has exactly one definition and it
  * lives in that package; what a decision produced *in Homiio* lives below. The
  * single field that crosses over is

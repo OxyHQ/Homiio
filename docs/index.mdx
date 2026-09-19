@@ -89,7 +89,10 @@ STRIPE_PRICE_FILE=price_...
 STRIPE_SUCCESS_URL=https://homiio.com/success
 STRIPE_CANCEL_URL=https://homiio.com/profile/subscriptions
 
-# Point inference: Homiio service identity + Oxy routing profile
+# Point inference: Homiio service identity + Oxy routing profile.
+# The pair is LOCAL ONLY — a deployed Homiio attests its ECS task role instead
+# (oxy ADR 0026) and carries neither variable. Set both here, or leave both
+# unset and inference refuses rather than failing at the edge.
 OXY_SERVICE_API_KEY=oxy_dk_...
 OXY_SERVICE_API_SECRET=...
 OXY_INFERENCE_ROUTING_PROFILE_ID=01a06477-94f5-74f0-bc25-4c5c13b93ccd

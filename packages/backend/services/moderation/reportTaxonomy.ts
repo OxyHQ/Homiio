@@ -63,7 +63,7 @@
  * product decision rather than a mapping one.
  */
 
-import type { TaxonomyCode } from '@oxy.so/crowdsource-contracts';
+import type { TaxonomyCode } from '@crowdsource.you/contracts';
 import {
   ListingReportReason,
   ModerationReportedType,

@@ -51,9 +51,12 @@ const workflow = readFileSync(WORKFLOW_PATH, 'utf8');
 /**
  * Every parameter the two task definitions read as a `secret` after the Sindi
  * inference rollout. The seven pre-existing entries were re-derived from
- * `oxy-homiio:48` and `oxy-homiio-worker:55` on 2026-08-09; the two Oxy service
- * credential parameters are intentionally absent: Oxy's exact-ID provisioner
- * owns them and this deploy only verifies their SecureString type.
+ * `oxy-homiio:48` and `oxy-homiio-worker:55` on 2026-08-09; the two Sindi
+ * service credential parameters are intentionally absent: Oxy's exact-ID
+ * provisioner owns them and this deploy only verifies their SecureString type.
+ * Homiio's OWN service credential is absent for a stronger reason — no task
+ * definition reads it any more, because the API attests its ECS task role
+ * instead (oxy ADR 0026).
  *
  * `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` / `REDIS_URL` live under
  * `/oxy/_shared/`; the rest under `/oxy/homiio/`. The split is what the
@@ -190,10 +193,37 @@ describe('the deploy workflow syncs an explicit allowlist', () => {
       .split('\n')
       .filter((line) => !line.trimStart().startsWith('#'))
       .join('\n');
-    expect(syncStep).not.toMatch(/secrets\.OXY_SERVICE_API_(?:KEY|SECRET)/);
-    expect(syncStep).not.toMatch(/sync_secret OXY_SERVICE_API_(?:KEY|SECRET)/);
-    expect(syncStep).toContain('require_secure_string "/oxy/$APP/OXY_SERVICE_API_KEY"');
-    expect(syncStep).toContain('require_secure_string "/oxy/$APP/OXY_SERVICE_API_SECRET"');
+    expect(syncStep).not.toMatch(/secrets\.(?:SINDI_)?OXY_SERVICE_API_(?:KEY|SECRET)/);
+    expect(syncStep).not.toMatch(/sync_secret (?:SINDI_)?OXY_SERVICE_API_(?:KEY|SECRET)/);
+    expect(syncStep).toContain(
+      'require_secure_string "/oxy/$APP/SINDI_OXY_SERVICE_API_KEY"',
+    );
+    expect(syncStep).toContain(
+      'require_secure_string "/oxy/$APP/SINDI_OXY_SERVICE_API_SECRET"',
+    );
     expect(executableSync).not.toContain('--with-decryption');
+  });
+
+  /**
+   * Homiio's own service credential is not merely unsynced — nothing in this
+   * step may depend on it existing.
+   *
+   * A `require_secure_string` on a parameter the task definition no longer
+   * references is a gate with no consumer, and the day those two SSM parameters
+   * are retired it would fail a deploy that is working correctly. Asserted on
+   * the EXECUTABLE lines only, because the step's comment explains the omission
+   * by naming both variables.
+   */
+  it('no longer requires Homiio own service credential parameters to exist', () => {
+    const executableSync = syncStep
+      .split('\n')
+      .filter((line) => !line.trimStart().startsWith('#'))
+      .join('\n');
+    expect(executableSync).not.toContain(
+      'require_secure_string "/oxy/$APP/OXY_SERVICE_API_KEY"',
+    );
+    expect(executableSync).not.toContain(
+      'require_secure_string "/oxy/$APP/OXY_SERVICE_API_SECRET"',
+    );
   });
 });
