@@ -36,6 +36,13 @@ import {
   parseAppContext,
   parseTurnId,
 } from '../services/sindiActions';
+import {
+  extractLastPropertyIdsFromMessages,
+  taggedContent,
+  withoutTag,
+  FILE_DATA_URL_TAG,
+  IMAGE_DATA_URL_TAG,
+} from '../services/chatTags';
 import type { SindiActionEnvelope } from '@homiio/shared-types';
 import {
   PLACEHOLDER_CONVERSATION_TITLE,
@@ -447,25 +454,6 @@ const parseDataUrl = (dataUrl: string): { mediaType: string; buffer: Buffer } | 
   }
 };
 
-const IMAGE_TAG_RE = /<IMAGE_DATA_URL>([\s\S]*?)<\/IMAGE_DATA_URL>/i;
-const FILE_TAG_RE = /<FILE_DATA_URL>([\s\S]*?)<\/FILE_DATA_URL>/i;
-
-const extractLastPropertyIdsFromMessages = (msgs: ChatMessage[]): string[] => {
-  for (const m of [...msgs].reverse()) {
-    if (m.role !== 'assistant' || !m.content) continue;
-    const match = m.content.match(/<PROPERTIES_JSON>([\s\S]*?)<\/PROPERTIES_JSON>/i);
-    if (!match) continue;
-    try {
-      const arr = JSON.parse(match[1].trim());
-      if (Array.isArray(arr)) return arr.map(String).filter(Boolean);
-    } catch (error: unknown) {
-      logger.warn('Failed to parse <PROPERTIES_JSON> block from assistant message', {
-        error: describeErrorForLog(error),
-      });
-    }
-  }
-  return [];
-};
 
 const getPropertyById = async (id: string) => {
   try {
@@ -1027,9 +1015,13 @@ Return only the JSON array, no other text.`;
       const lastContent = String(last?.content || '');
       const isLastTurnUser = last?.role === 'user';
 
-      const tagMatch = lastContent.match(FILE_TAG_RE) || lastContent.match(IMAGE_TAG_RE);
-      const hasInlineFile = !!tagMatch && typeof tagMatch[1] === 'string' && tagMatch[1].startsWith('data:');
-      const cleanedLastContent = hasInlineFile ? lastContent.replace(FILE_TAG_RE, '').replace(IMAGE_TAG_RE, '').trim() : lastContent;
+      const taggedPayload =
+        taggedContent(lastContent, FILE_DATA_URL_TAG) ??
+        taggedContent(lastContent, IMAGE_DATA_URL_TAG);
+      const hasInlineFile = taggedPayload !== null && taggedPayload.startsWith('data:');
+      const cleanedLastContent = hasInlineFile
+        ? withoutTag(withoutTag(lastContent, FILE_DATA_URL_TAG), IMAGE_DATA_URL_TAG).trim()
+        : lastContent;
       const isAttachmentStub = hasInlineFile || /^(sent a file:|attached (image|file):)/i.test(lastContent);
 
       // If last message is not user, return empty stream for clean client resolution
@@ -1116,7 +1108,7 @@ Return only the JSON array, no other text.`;
 
       if (hasInlineFile) {
         // Multimodal: image or PDF
-        const parsed = tagMatch ? parseDataUrl(tagMatch[1]) : null;
+        const parsed = taggedPayload !== null ? parseDataUrl(taggedPayload) : null;
         const mediaType = parsed?.mediaType || '';
         const bytes = parsed?.buffer?.byteLength || 0;
 
