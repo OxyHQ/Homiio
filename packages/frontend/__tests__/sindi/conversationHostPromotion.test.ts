@@ -64,3 +64,44 @@ describe('conversation-id promotion belongs to the host', () => {
     expect(sheet).toContain('canSendAppContext={false}');
   });
 });
+
+describe('every destination the executor can reach is a real route', () => {
+  // A CTA that ends on the wrong screen is one of the things both epics forbid
+  // outright ("ni CTAs que terminan en una pantalla incorrecta"), and it is the
+  // failure a types-only check cannot see: `router.push('/sved')` compiles.
+  //
+  // Expo Router derives routes from the filesystem, so the check is that each
+  // path the executor can produce has a file behind it.
+  const { existsSync } = require('node:fs') as typeof import('node:fs');
+  const appDir = join(FRONTEND, 'app');
+
+  const ROUTE_FILES: ReadonlyArray<[string, readonly string[]]> = [
+    ['/explore', ['explore/index.tsx']],
+    ['/saved', ['(tabs)/saved/index.tsx']],
+    ['/saved/[folderId]', ['(tabs)/saved/[folderId]/index.tsx', '(tabs)/saved/[folderId].tsx']],
+    ['/', ['(tabs)/index.tsx']],
+    ['/my-home', ['my-home.tsx']],
+    ['/evictions', ['evictions/index.tsx']],
+    ['/properties/[id]', ['properties/[id]/index.tsx', 'properties/[id].tsx']],
+  ];
+
+  it.each(ROUTE_FILES)('%s exists', (route, candidates) => {
+    const found = candidates.some((candidate) => existsSync(join(appDir, candidate)));
+    expect({ route, found }).toEqual({ route, found: true });
+  });
+
+  it('the executor names no path outside that table', () => {
+    // Every absolute-path STRING LITERAL in the executor, wherever it sits —
+    // the destination table, a `pathname:` field or a bare `router.push`. A
+    // narrower pattern matched the two inline pushes and missed the five in the
+    // lookup table, which is the shape of scan that reports clean while the
+    // thing it was written for walks past.
+    const executor = codeOf('hooks/useSindiActions.ts');
+    const paths = [...executor.matchAll(/'(\/[^']*)'/g)].map((match) => match[1]);
+    const known = new Set(ROUTE_FILES.map(([route]) => route));
+
+    expect(paths.filter((path) => !known.has(path))).toEqual([]);
+    // A vacuity floor: a regex that stopped matching would pass the line above.
+    expect(paths.length).toBeGreaterThanOrEqual(ROUTE_FILES.length - 1);
+  });
+});

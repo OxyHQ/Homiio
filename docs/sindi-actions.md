@@ -68,7 +68,7 @@ adding to it is a reviewed edit to that file.
 | Intent | Payload | Executed as |
 |---|---|---|
 | `apply_search` | a **patch** over the live query | the canonical pipeline → `/explore` |
-| `show_saved` | an optional folder id | `/saved`, under the reader's own session |
+| `show_saved` | an optional folder id | `/saved`, or `/saved/[folderId]`, under the reader's own session |
 | `open_listing` | one validated property id | the listing route |
 | `set_results_view` | `list` \| `map` | `store/exploreViewStore.ts`; filters untouched |
 | `navigate` | one **enumerated** destination | the router's own path table |
@@ -213,7 +213,7 @@ conversation; the bottom sheet does neither.
 |---|---|
 | `frontend __tests__/sindi/actionContract.test.ts` | the closed union, every refusal, patch semantics |
 | `frontend __tests__/sindi/controlCapability.test.ts` | the capability at every breakpoint |
-| `frontend __tests__/sindi/conversationHostPromotion.test.ts` | the panel navigates nothing |
+| `frontend __tests__/sindi/conversationHostPromotion.test.ts` | the panel navigates nothing; every destination is a real route |
 | `backend __tests__/integration/sindiActions.test.ts` | derivation, homonyms, context validation (real Postgres) |
 
 ## Still open in #519 §8
