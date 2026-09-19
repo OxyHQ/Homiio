@@ -51,7 +51,7 @@ import {
   selectAddressWithGeoNames,
 } from '../../services/addressService';
 import { lookupCityPlaces } from '../../db/geo/placeLookup';
-import { escapeLikePattern } from '../../db/likePattern';
+import { escapeLikePattern } from '@oxy.so/utils/sql';
 import { materializeHousingCandidate } from '../../services/housingMaterialization';
 
 let db: Database;

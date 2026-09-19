@@ -26,7 +26,7 @@ import { asc, eq, like } from 'drizzle-orm';
 
 import { getDb, type DatabaseOrTransaction } from '../postgres';
 import { agencies } from '../schema';
-import { escapeLikePattern } from '../likePattern';
+import { escapeLikePattern } from '@oxy.so/utils/sql';
 import type { AgencyRow } from './agencyWrites';
 
 /** How many agencies the create-review typeahead offers. Verbatim from the Mongo read. */

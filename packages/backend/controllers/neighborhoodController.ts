@@ -44,7 +44,7 @@ import type {
 } from '@homiio/shared-types';
 
 import { getDb } from '../db/postgres';
-import { escapeLikePattern } from '../db/likePattern';
+import { escapeLikePattern } from '@oxy.so/utils/sql';
 import { addresses, cities, neighborhoods, properties } from '../db/schema';
 import { nearestAddressesQuery } from '../services/addressService';
 import { AppError, successResponse } from '../middlewares/errorHandler';
