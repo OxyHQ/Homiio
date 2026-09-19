@@ -93,6 +93,12 @@ export type { GeoPoint, GeoBounds } from './location';
 // `./location` for the scope summary, so it is exported after it.
 export * from './home';
 
+// What Sindi may do to the app (#519 §8.4): a closed, versioned action union,
+// the app context a turn carries, and their validators. Shared so the executor
+// and the emitter cannot hold different ideas of what is permitted. Depends on
+// `./location` and `./property`, so it is exported after them.
+export * from './sindiAction';
+
 // Saved housing watches and their alerts (#356): the rule vocabulary with its
 // per-rule availability, channels, cadence, and the CLOSED explanation union an
 // alert may be built from. Shared so "which rules exist" and "which of them can

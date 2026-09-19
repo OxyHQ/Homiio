@@ -79,6 +79,7 @@ import {
   useSearchQueryStore,
   type SearchFilterPatch,
 } from '@/store/searchQueryStore';
+import { useExploreViewStore } from '@/store/exploreViewStore';
 
 /** Default zoom applied when no location bbox is known. */
 const DEFAULT_MAP_ZOOM = 12;
@@ -150,7 +151,17 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
 
   const mapRef = useRef<MapApi>(null);
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
-  const [showMobileMap, setShowMobileMap] = useState(false);
+  /**
+   * The narrow layout's list/map switch, in a STORE rather than in this
+   * component.
+   *
+   * It moved out so Sindi's `set_results_view` action can reach it from the
+   * chat panel ("enséñamelo en el mapa", #519 §8.1) without a prop threaded
+   * through five layers or a ref exposed upward. It is presentation only and
+   * deliberately not part of the query — see `store/exploreViewStore.ts`.
+   */
+  const showMobileMap = useExploreViewStore((s) => s.resultsView === 'map');
+  const toggleResultsView = useExploreViewStore((s) => s.toggleResultsView);
 
   /**
    * The pending viewport lives in the STORE, not in this component.
@@ -820,7 +831,7 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
         <View style={styles.fullColumn}>{listScroll}</View>
       )}
       <MapFab
-        onPress={() => setShowMobileMap((prev) => !prev)}
+        onPress={toggleResultsView}
         label={
           showMobileMap
             ? t('search.fab.list', 'List') || 'List'

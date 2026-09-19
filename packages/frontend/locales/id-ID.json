@@ -1458,6 +1458,25 @@
       "deniedTitle": "Akses mikrofon ditolak",
       "deniedMessage": "Izinkan akses mikrofon dan pengenalan ucapan di pengaturan untuk mendikte pesan.",
       "failed": "Input suara berhenti secara tidak terduga"
+    },
+    "actions": {
+      "take": "Lakukan",
+      "takeAccessible": "Jalankan yang disarankan Sindi",
+      "applySearch": "Buka Jelajahi dengan filter ini",
+      "showSaved": "Buka simpanan Anda",
+      "openListing": "Buka hunian ini",
+      "showMap": "Tampilkan hasil di peta",
+      "showList": "Tampilkan hasil sebagai daftar",
+      "navigate": {
+        "explore": "Buka Jelajahi",
+        "saved": "Buka Tersimpan",
+        "home": "Buka layar beranda",
+        "my_home": "Buka Rumah Saya",
+        "evictions": "Buka papan penggusuran"
+      },
+      "applied": "Selesai: {{what}}.",
+      "stale": "Anda sendiri mengubah pencarian, jadi ini dibiarkan apa adanya.",
+      "failed": "Tidak bisa dilakukan: {{what}}."
     }
   },
   "sidebar": {

@@ -1458,6 +1458,25 @@
       "deniedTitle": "Acesso ao microfone negado",
       "deniedMessage": "Permita o acesso ao microfone e ao reconhecimento de fala nas configurações para ditar mensagens.",
       "failed": "A entrada de voz parou inesperadamente"
+    },
+    "actions": {
+      "take": "Fazer",
+      "takeAccessible": "Executar o que a Sindi sugeriu",
+      "applySearch": "Abrir Explorar com estes filtros",
+      "showSaved": "Abrir seus salvos",
+      "openListing": "Abrir este imóvel",
+      "showMap": "Ver os resultados no mapa",
+      "showList": "Ver os resultados em lista",
+      "navigate": {
+        "explore": "Abrir Explorar",
+        "saved": "Abrir Salvos",
+        "home": "Abrir a tela inicial",
+        "my_home": "Abrir Minha casa",
+        "evictions": "Abrir o mural de despejos"
+      },
+      "applied": "Feito: {{what}}.",
+      "stale": "Você mesmo alterou a busca, então isto ficou como estava.",
+      "failed": "Não foi possível: {{what}}."
     }
   },
   "sidebar": {

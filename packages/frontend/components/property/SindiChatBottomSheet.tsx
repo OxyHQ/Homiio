@@ -130,6 +130,11 @@ export function SindiChatBottomSheet({ property, initialMessage }: SindiChatBott
             ]}
         >
             <ChatContent
+              // A sheet floating over the listing the user is reading has no
+              // main pane to drive: navigating the page beneath it is the same
+              // failure as navigating behind the panel's scrim. No context is
+              // sent, so no action is emitted for these turns.
+              canSendAppContext={false}
                 conversationId={conversationId}
                 currentConversation={currentConversation}
                 isAuthenticated={isAuthenticated}

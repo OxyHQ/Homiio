@@ -1458,6 +1458,25 @@
       "deniedTitle": "Accès au micro refusé",
       "deniedMessage": "Autorisez l'accès au micro et à la reconnaissance vocale dans les réglages pour dicter vos messages.",
       "failed": "La saisie vocale s'est arrêtée de manière inattendue"
+    },
+    "actions": {
+      "take": "Le faire",
+      "takeAccessible": "Effectuer ce que Sindi propose",
+      "applySearch": "Ouvrir Explorer avec ces filtres",
+      "showSaved": "Ouvrir vos favoris",
+      "openListing": "Ouvrir ce logement",
+      "showMap": "Afficher les résultats sur la carte",
+      "showList": "Afficher les résultats en liste",
+      "navigate": {
+        "explore": "Ouvrir Explorer",
+        "saved": "Ouvrir Favoris",
+        "home": "Ouvrir l’écran d’accueil",
+        "my_home": "Ouvrir Mon logement",
+        "evictions": "Ouvrir le tableau des expulsions"
+      },
+      "applied": "Fait : {{what}}.",
+      "stale": "Vous avez modifié la recherche vous-même : rien n’a été changé.",
+      "failed": "Impossible : {{what}}."
     }
   },
   "sidebar": {

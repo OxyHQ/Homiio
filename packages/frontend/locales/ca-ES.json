@@ -1793,6 +1793,25 @@
       "deniedTitle": "S'ha denegat l'accés al micròfon",
       "deniedMessage": "Permet l'accés al micròfon i al reconeixement de veu a la configuració per dictar missatges.",
       "failed": "L'entrada de veu s'ha aturat inesperadament"
+    },
+    "actions": {
+      "take": "Fes-ho",
+      "takeAccessible": "Fer el que proposa la Sindi",
+      "applySearch": "Obrir Explora amb aquests filtres",
+      "showSaved": "Obrir els teus desats",
+      "openListing": "Obrir aquest habitatge",
+      "showMap": "Veure els resultats al mapa",
+      "showList": "Veure els resultats en llista",
+      "navigate": {
+        "explore": "Obrir Explora",
+        "saved": "Obrir Desats",
+        "home": "Obrir la pantalla d’inici",
+        "my_home": "Obrir La meva llar",
+        "evictions": "Obrir el tauler de desnonaments"
+      },
+      "applied": "Fet: {{what}}.",
+      "stale": "Has canviat la cerca tu, així que això s’ha deixat com estava.",
+      "failed": "No s’ha pogut: {{what}}."
     }
   },
   "sidebar": {

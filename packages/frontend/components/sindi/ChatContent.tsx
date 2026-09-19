@@ -10,11 +10,13 @@ import {
   AdmonitionRow,
   AdmonitionText,
 } from '@oxy.so/bloom/admonition';
+import { useSindiAppContext } from '@/hooks/useSindiAppContext';
 import { useSindiConversation } from '@/hooks/useSindiConversation';
 import { useSindiUpsell } from '@/hooks/useSindiUpsell';
 import type { Conversation } from '@/store/conversationStore';
 import { ChatComposer } from './ChatComposer';
 import { ChatMessageList } from './ChatMessageList';
+import { SindiActionCard } from './SindiActionCard';
 import { extractPropertiesJson } from './propertyParsing';
 
 type ConversationFetch = typeof globalThis.fetch;
@@ -28,6 +30,23 @@ export interface ChatContentProps {
   messageFromUrl?: string;
   /** Optional style applied to the chat column (bottom-sheet host). */
   style?: StyleProp<ViewStyle>;
+  /**
+   * A new conversation just got its real id. The HOST decides what that means.
+   *
+   * Absent for a host with no route of its own (the property bottom sheet),
+   * which then simply keeps its local id. See #519 §8.7 and
+   * `useSindiConversation`'s `onConversationPersisted`.
+   */
+  onConversationPersisted?: (conversationId: string) => void;
+  /**
+   * Whether this host can drive the app at all.
+   *
+   * `false` for the in-property bottom sheet: it floats over a listing the user
+   * is reading, so navigating the page beneath it is the same failure as
+   * navigating behind the overlay panel's scrim. With no context, no action is
+   * emitted for the turn and the chat answers in prose and cards.
+   */
+  canSendAppContext?: boolean;
 }
 
 /**
@@ -47,9 +66,12 @@ export function ChatContent({
   initialMessages,
   messageFromUrl,
   style,
+  onConversationPersisted,
+  canSendAppContext = true,
 }: ChatContentProps) {
   const { t } = useTranslation();
   const { openUpsell } = useSindiUpsell();
+  const appContext = useSindiAppContext();
 
   const {
     messages,
@@ -68,6 +90,8 @@ export function ChatContent({
     onRemoveFile,
     onSuggestionPress,
     onRequestConsent,
+    actions,
+    takeAction,
   } = useSindiConversation({
     conversationId,
     currentConversation,
@@ -76,6 +100,8 @@ export function ChatContent({
     initialMessages,
     messageFromUrl,
     onOpenUpsell: openUpsell,
+    ...(canSendAppContext ? { appContext } : {}),
+    ...(onConversationPersisted ? { onConversationPersisted } : {}),
   });
 
   const last = messages[messages.length - 1];
@@ -121,6 +147,16 @@ export function ChatContent({
         isLoading={isLoading}
         onSuggestionPress={onSuggestionPress}
       />
+
+      {/* What Sindi did, or is offering to do. Above the composer so it reads as
+          the tail of the answer rather than as part of the input. */}
+      {actions.map((execution) => (
+        <SindiActionCard
+          key={execution.envelope.actionId}
+          execution={execution}
+          onTake={takeAction}
+        />
+      ))}
 
       <ChatComposer
         input={input}

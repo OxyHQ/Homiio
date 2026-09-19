@@ -1458,6 +1458,25 @@
       "deniedTitle": "Microphone access denied",
       "deniedMessage": "Allow microphone and speech recognition access in your settings to dictate messages.",
       "failed": "Voice input stopped unexpectedly"
+    },
+    "actions": {
+      "take": "Do it",
+      "takeAccessible": "Carry out what Sindi suggested",
+      "applySearch": "Open Explore with these filters",
+      "showSaved": "Open your saved homes",
+      "openListing": "Open this home",
+      "showMap": "Show the results on the map",
+      "showList": "Show the results as a list",
+      "navigate": {
+        "explore": "Open Explore",
+        "saved": "Open Saved",
+        "home": "Open the home screen",
+        "my_home": "Open My home",
+        "evictions": "Open the eviction board"
+      },
+      "applied": "Done: {{what}}.",
+      "stale": "You changed the search yourself, so this was left alone.",
+      "failed": "Could not do this: {{what}}."
     }
   },
   "sidebar": {

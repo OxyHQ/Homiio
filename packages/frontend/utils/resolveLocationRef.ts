@@ -35,7 +35,7 @@
  */
 import {
   boundsCenter,
-  type CityPlaceCandidate,
+  citySelection,
   type LocationRef,
   type LocationResolution,
   type LocationSelection,
@@ -50,35 +50,15 @@ export interface DeviceFix {
 }
 
 /**
- * Build a `place` selection from a resolved city candidate.
+ * `citySelection` MOVED to `@homiio/shared-types` (#519 §8.6).
  *
- * The candidate already carries everything a selection needs — a pre-split
- * `label`, an explicit `admin` hierarchy, a declared `precision` and its
- * geometry — so nothing is re-derived here. In particular nothing joins or
- * splits a label on commas, which is the assumption that mangles every script
- * that does not order a place name that way.
- *
- * The geometry is assembled as a UNIT rather than field by field, because
- * `PlaceGeometry` is a two-member union: a real point carries `center` with a
- * point-class precision, an extent carries `precision: 'area'` and
- * `center?: never`. Copying `center` and `precision` across independently would
- * let this function reassemble the contradiction the union exists to forbid —
- * and that contradiction is not hypothetical, it is what made the gateway emit
- * `(0, 0)` for every country and put "Spain" over the Gulf of Guinea.
+ * The backend gained a second caller — Sindi resolves a city server-side and
+ * hands the client a selection that must be identical to one the user could
+ * have picked by hand — and two copies of that assembly would agree only until
+ * somebody edited one. It is re-exported here so the existing call sites and
+ * their tests keep their import path.
  */
-export function citySelection(city: CityPlaceCandidate): LocationSelection {
-  const identity = {
-    kind: 'place',
-    source: { kind: 'homiio', entity: 'city', id: city.id },
-    placeType: 'city',
-    label: city.label,
-    admin: city.admin,
-  } as const;
-
-  return city.precision === 'area' || city.center === undefined
-    ? { ...identity, precision: 'area', bounds: city.bounds }
-    : { ...identity, precision: city.precision, center: city.center, bounds: city.bounds };
-}
+export { citySelection };
 
 /** Map a lookup outcome onto a resolution, without ever choosing a candidate. */
 async function resolveCityToken(token: string): Promise<LocationResolution> {

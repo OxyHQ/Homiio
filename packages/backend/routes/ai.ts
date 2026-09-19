@@ -25,12 +25,18 @@
 
 import express, { Request, Response } from 'express';
 import multer from 'multer';
-import { formatDataStreamPart, pipeDataStreamToResponse } from 'ai';
+import { formatDataStreamPart, pipeDataStreamToResponse, type JSONValue } from 'ai';
 import { OxyInferenceError } from '@oxy.so/core';
 import { getOxyUserId } from '@oxy.so/core/server';
 import type { InferenceContentPart, InferenceMessage } from '@oxy.so/contracts';
 import { logger } from '../middlewares/logging';
 import { getDb } from '../db/postgres';
+import {
+  actionEnvelopeForTurn,
+  parseAppContext,
+  parseTurnId,
+} from '../services/sindiActions';
+import type { SindiActionEnvelope } from '@homiio/shared-types';
 import {
   PLACEHOLDER_CONVERSATION_TITLE,
   appendMessages,
@@ -318,11 +324,37 @@ const pipeStreamingTextDataStream = (
   input: {
     onComplete: (text: string) => void;
     onError: (error: unknown) => void;
+    /**
+     * A typed Sindi action to write on the DATA channel (#519 §8.4).
+     *
+     * A separate channel, not a marker inside the prose — "Mantener texto y
+     * resultados/acciones como canales diferenciados". `formatDataStreamPart`'s
+     * `data` part is the AI SDK's own `2:` frame, which `useChat` surfaces as
+     * `data`, so no protocol is invented here.
+     *
+     * Written BEFORE the first text delta on purpose: the client applies the
+     * action and streams the sentence describing it, rather than the sentence
+     * arriving first and the screen catching up afterwards.
+     *
+     * A promise, because deriving it needs a database round trip for the city
+     * lookup. It is awaited before the text starts, so a slow lookup delays the
+     * first token — bounded by the same request the user is already waiting on,
+     * and the alternative (racing it against the stream) would let the action
+     * land after the model had already described the result.
+     */
+    action?: Promise<SindiActionEnvelope | null>;
   },
 ): void => {
   let completeText = '';
   pipeDataStreamToResponse(res, {
     async execute(writer) {
+      if (input.action) {
+        const envelope = await input.action;
+        // `formatDataStreamPart('data', …)` takes an ARRAY: the frame is a list
+        // of JSON values, and `useChat` concatenates every frame's items into
+        // one `data` array.
+        if (envelope) writer.write(formatDataStreamPart('data', [envelope as unknown as JSONValue]));
+      }
       for await (const text of stream) {
         completeText += text;
         if (text !== '') writer.write(formatDataStreamPart('text', text));
@@ -533,14 +565,34 @@ async function generateAITitle(userMessage: string, oxyUserId: string) {
   }
 }
 
+/**
+ * The extraction's answer: the filters, plus whether the person actually asked
+ * to SEE listings in this message.
+ *
+ * `wantsListings` is the gate on Sindi's `apply_search` action (#519 §8.5). It
+ * is a field of the same structured extraction — a question about the USER's
+ * own words — and deliberately not a regex over the assistant's reply, which
+ * the issue forbids, nor a keyword list, which cannot survive twelve locales.
+ *
+ * It exists because the filters alone are not an intent: "cuéntame cómo es
+ * Granollers" and "enséñame pisos en Granollers" both extract `{city}`, and
+ * navigating on the first would move the app under somebody who asked a
+ * question.
+ */
+interface ExtractedFilters {
+  readonly filters: PropertyFilters;
+  readonly wantsListings: boolean;
+}
+
 async function extractFiltersWithAI(
   userText: string,
   oxyUserId: string,
-): Promise<PropertyFilters> {
+): Promise<ExtractedFilters> {
   const instruction = `You extract structured search filters for rental properties from the user's message.
 Return ONLY a compact JSON object with the allowed keys; omit unknown/empty fields.
 
 Available keys and their types:
+- wantsListings (boolean): true ONLY when the user is asking to see, find, search, show or browse property listings in THIS message. False for questions about rights, contracts, a city in general, or a property already being discussed.
 - type (string): property type like "apartment", "house", "room", etc.
 - minRent, maxRent (number): price range
 - city, state (string): location filters - IMPORTANT: extract city and state from location mentions
@@ -550,12 +602,15 @@ Available keys and their types:
 - petFriendly, utilitiesIncluded, verified, eco, available (boolean): boolean filters
 
 Examples:
-"Find apartments in Barcelona" → {"city": "Barcelona"}
-"What properties are in Granollers?" → {"city": "Granollers"}
-"Que pisos hay en Granollers?" → {"city": "Granollers"}
-"2 bedroom places in Madrid under 1500" → {"city": "Madrid", "bedrooms": 2, "maxRent": 1500}
-"Pet friendly houses in California" → {"state": "California", "type": "house", "petFriendly": true}
-"Properties in Barcelona with parking" → {"city": "Barcelona", "amenities": ["parking"]}
+"Find apartments in Barcelona" → {"wantsListings": true, "city": "Barcelona"}
+"What properties are in Granollers?" → {"wantsListings": true, "city": "Granollers"}
+"Que pisos hay en Granollers?" → {"wantsListings": true, "city": "Granollers"}
+"2 bedroom places in Madrid under 1500" → {"wantsListings": true, "city": "Madrid", "bedrooms": 2, "maxRent": 1500}
+"Pet friendly houses in California" → {"wantsListings": true, "state": "California", "type": "house", "petFriendly": true}
+"Properties in Barcelona with parking" → {"wantsListings": true, "city": "Barcelona", "amenities": ["parking"]}
+"Tell me about Granollers" → {"wantsListings": false, "city": "Granollers"}
+"Can my landlord raise the rent?" → {"wantsListings": false}
+"Now with two bedrooms and pet friendly" → {"wantsListings": true, "bedrooms": 2, "petFriendly": true}
 
 Important: For simple location questions like "What's in [city]?" or "Properties in [city]", 
 just extract the city name. Don't add extra filters unless explicitly mentioned.
@@ -574,7 +629,7 @@ just extract the city name. Don't add extra filters unless explicitly mentioned.
     const trimmed = text.trim();
     const start = trimmed.indexOf('{');
     const end = trimmed.lastIndexOf('}');
-    if (start === -1 || end === -1 || end <= start) return {};
+    if (start === -1 || end === -1 || end <= start) return { filters: {}, wantsListings: false };
 
     const raw = JSON.parse(trimmed.slice(start, end + 1));
     const out: PropertyFilters = {};
@@ -625,9 +680,12 @@ just extract the city name. Don't add extra filters unless explicitly mentioned.
     put('availableFromBefore', typeof raw.availableFromBefore === 'string' ? raw.availableFromBefore : undefined);
     put('availableFromAfter', typeof raw.availableFromAfter === 'string' ? raw.availableFromAfter : undefined);
 
-    return out;
+    // Absent or non-boolean reads as FALSE, which is the safe direction: the
+    // cost of a missed action is an app that did not move, and the cost of a
+    // spurious one is an app that moved under somebody who asked a question.
+    return { filters: out, wantsListings: raw.wantsListings === true };
   } catch {
-    return {};
+    return { filters: {}, wantsListings: false };
   }
 }
 
@@ -700,7 +758,8 @@ async function performAppPropertySearch(
 ) {
   try {
     const prevIds = extractLastPropertyIdsFromMessages(priorMessages);
-    const filters = await extractFiltersWithAI(query, oxyUserId);
+    const extracted = await extractFiltersWithAI(query, oxyUserId);
+    const filters = extracted.filters;
 
     // Determine if this is a location-based search or text search
     const isLocationSearch = filters.city || filters.state;
@@ -745,9 +804,15 @@ async function performAppPropertySearch(
     
     const search = Array.isArray(searchData?.data) ? searchData.data : Array.isArray(searchData) ? searchData : [];
 
-    return { nearby: nearby.slice(0, RESULTS_RETURN_MAX), search: search.slice(0, RESULTS_RETURN_MAX) };
+    return {
+      nearby: nearby.slice(0, RESULTS_RETURN_MAX),
+      search: search.slice(0, RESULTS_RETURN_MAX),
+      // Carried out so the stream handler can derive an ACTION from the same
+      // extraction, rather than running the model twice over one message.
+      intent: { ...filters, wantsListings: extracted.wantsListings },
+    };
   } catch {
-    return { nearby: [], search: [] };
+    return { nearby: [], search: [], intent: { wantsListings: false } };
   }
 }
 
@@ -895,7 +960,24 @@ Return only the JSON array, no other text.`;
   router.post('/stream', async (req: Request, res: Response) => {
     try {
       setStreamingHeaders(res);
-      const { messages = [], conversationId } = (req.body ?? {}) as { messages?: ChatMessage[]; conversationId?: string };
+      const {
+        messages = [],
+        conversationId,
+        turnId: rawTurnId,
+        appContext: rawAppContext,
+      } = (req.body ?? {}) as {
+        messages?: ChatMessage[];
+        conversationId?: string;
+        turnId?: unknown;
+        appContext?: unknown;
+      };
+
+      // Both optional. A client that sends neither — an older binary, the
+      // in-property bottom sheet, a curl — gets exactly the behaviour it had
+      // before: text, and no action. Nothing downstream branches on their
+      // absence beyond skipping the emission.
+      const turnId = parseTurnId(rawTurnId);
+      const appContext = parseAppContext(rawAppContext);
 
       const userId = getUserId(req);
       if (!userId) return err(res, 401, 'Unauthorized');
@@ -957,8 +1039,12 @@ Return only the JSON array, no other text.`;
         return;
       }
 
+      // An attachment turn is about the FILE, not about finding homes, so the
+      // search is skipped and the intent is explicitly "not asking for
+      // listings" rather than absent — the action emitter reads one field and
+      // a missing one would be a type error waiting for a refactor.
       const propertyResults = isAttachmentStub
-        ? { nearby: [], search: [] }
+        ? { nearby: [], search: [], intent: { wantsListings: false as const } }
         : await performAppPropertySearch(lastContent, messages, userId);
 
       // Sindi's fixed prompt lives in the provisioned Alia agent. Homiio sends
@@ -1026,6 +1112,7 @@ Return only the JSON array, no other text.`;
 
       let aiResponse: string | undefined;
       let aliaResponseStream: AsyncIterable<string> | undefined;
+      let actionEnvelope: Promise<SindiActionEnvelope | null> | undefined;
 
       if (hasInlineFile) {
         // Multimodal: image or PDF
@@ -1109,6 +1196,25 @@ Return only the JSON array, no other text.`;
         const abortUpstream = () => upstreamAbort.abort();
         req.once('aborted', abortUpstream);
         res.once('close', abortUpstream);
+        /**
+         * The action this turn implies, derived from the SAME extraction the
+         * search already ran (#519 §8.5).
+         *
+         * Started here and awaited by the writer, so the city lookup it needs
+         * overlaps with Alia's own first-token latency instead of adding to it.
+         * A failure inside resolves to `null`: an action is an enhancement and
+         * must never cost somebody their answer.
+         */
+        actionEnvelope =
+          turnId && appContext && !isAttachmentStub
+            ? actionEnvelopeForTurn({
+                turnId,
+                appContext,
+                ...(conversation ? { conversationId: conversation.id } : {}),
+                intent: propertyResults.intent,
+              })
+            : undefined;
+
         aliaResponseStream = await aliaChat.streamText({
           // The request's own verified bearer, for Oxy's requester assertion
           // only; `aliaChatService` never sends it to Alia.
@@ -1182,6 +1288,7 @@ Return only the JSON array, no other text.`;
           onError(error) {
             logger.error('Alia SSE stream failed', { error: describeErrorForLog(error) });
           },
+          ...(actionEnvelope ? { action: actionEnvelope } : {}),
         });
         return;
       }
