@@ -108,6 +108,7 @@ export const Header: React.FC<Props> = ({ options, scrollY }) => {
 
   return (
     <PageHeader
+      presentation="bar"
       title={options?.title || undefined}
       subtitle={options?.subtitle || undefined}
       titleAlign="center"
@@ -122,6 +123,11 @@ export const Header: React.FC<Props> = ({ options, scrollY }) => {
           : undefined
       }
       transparent={options?.transparent ?? false}
+      // Bloom 3.0 split `transparent` in two: it still fades the bar in with
+      // scroll, but holding the title back is now `titleReveal`. A transparent
+      // header sits over a hero image that already names the screen, which is
+      // exactly the case the old coupled behaviour was for — so restate it.
+      titleReveal={options?.transparent ? 'onScroll' : 'always'}
       scrollThreshold={options?.scrollThreshold || undefined}
       scrollY={scrollY}
       style={containerStyle}

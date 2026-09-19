@@ -72,6 +72,7 @@ export const StickyPropertyHeader: React.FC<StickyPropertyHeaderProps> = ({
 
   return (
     <PageHeader
+      presentation="bar"
       title={title}
       subtitle={priceLabel}
       headingLevel={2}
