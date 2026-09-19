@@ -535,7 +535,8 @@
         "perNight": "per night",
         "inCurrency": "{{currency}}-এ দাম",
         "otherCurrency_one": "এই এলাকার {{count}} বাসার দাম অন্য মুদ্রায় দেওয়া আছে এবং উপরে দেখানো হয়নি",
-        "otherCurrency_other": "এই এলাকার {{count}} বাসার দাম অন্য মুদ্রায় দেওয়া আছে এবং উপরে দেখানো হয়নি"
+        "otherCurrency_other": "এই এলাকার {{count}} বাসার দাম অন্য মুদ্রায় দেওয়া আছে এবং উপরে দেখানো হয়নি",
+        "currencyChoice": "এই দাম কোন মুদ্রায়"
       }
     },
     "header": {

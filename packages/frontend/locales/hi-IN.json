@@ -535,7 +535,8 @@
         "perNight": "per night",
         "inCurrency": "{{currency}} में कीमतें",
         "otherCurrency_one": "इस क्षेत्र का {{count}} घर किसी अन्य मुद्रा में है और ऊपर नहीं दिखाया गया है",
-        "otherCurrency_other": "इस क्षेत्र के {{count}} घर किसी अन्य मुद्रा में हैं और ऊपर नहीं दिखाए गए हैं"
+        "otherCurrency_other": "इस क्षेत्र के {{count}} घर किसी अन्य मुद्रा में हैं और ऊपर नहीं दिखाए गए हैं",
+        "currencyChoice": "यह कीमत किस मुद्रा में है"
       }
     },
     "header": {

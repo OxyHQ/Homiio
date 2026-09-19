@@ -52,6 +52,7 @@ interface PriceHistogramResponse {
     max: number;
     count: number;
     otherCurrencyCount?: number;
+    currencies?: Array<{ currency: string; count: number }>;
     buckets: Array<{ from: number; to: number; count: number }>;
   } | null;
 }
@@ -77,6 +78,14 @@ export interface SearchPriceHistogram {
    * rather than quietly under-reporting the area.
    */
   otherCurrencyCount: number;
+  /**
+   * Every currency this scope's prices are in, most common first.
+   *
+   * What the control offers as a choice. One entry means there is nothing to
+   * choose and no switch is drawn — which is the common case, and a switch that
+   * appeared everywhere with one option in it would be noise on every search.
+   */
+  currencies: readonly ListingCurrency[];
 }
 
 /**
@@ -129,10 +138,19 @@ export function useSearchPriceHistogram(
     if (!currency) return undefined;
     const counts = histogram.buckets.map((bucket) => bucket.count);
     if (!counts.some((count) => count > 0)) return undefined;
+    // Filtered through the same parser as the chosen one: a code the price
+    // columns cannot hold would be a choice that narrows the search to nothing.
+    const currencies = (histogram.currencies ?? [])
+      .map((entry) => parseListingCurrency(entry.currency))
+      .filter((entry): entry is ListingCurrency => entry !== undefined);
     return {
       counts,
       currency,
       otherCurrencyCount: histogram.otherCurrencyCount ?? 0,
+      // The chosen one is always offerable, even against a server that does not
+      // send the list yet — a switch that could not switch back would be worse
+      // than no switch.
+      currencies: currencies.includes(currency) ? currencies : [currency, ...currencies],
     };
   }, [runnable, data, track.max]);
 }

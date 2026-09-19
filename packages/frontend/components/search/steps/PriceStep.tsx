@@ -28,7 +28,7 @@ import React, { useCallback, useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
-import { PriceRangeFilter } from '@oxy.so/bloom/stay-filters';
+import { PriceRangeFilter, SegmentedFilter } from '@oxy.so/bloom/stay-filters';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { OfferingType, formatMoney, type ListingCurrency } from '@homiio/shared-types';
@@ -157,6 +157,34 @@ export const PriceHistogramNote: React.FC<{ histogram?: SearchPriceHistogram }> 
   );
 };
 
+/**
+ * Which currency the bound is read in, when the area is priced in more than one.
+ *
+ * The filter narrows to ONE currency and never converts — there is no rate
+ * Homiio can cite or version, and an invented one is an invented price (ADR
+ * 0004). So in a market priced in two, a searcher offered only the dominant one
+ * cannot reach the other half at all. The note above already says how many were
+ * left out; this is what lets them do something about it.
+ *
+ * Drawn ONLY when there is a choice. A switch with one option in it would
+ * appear on every search and mean nothing on almost all of them.
+ */
+export const PriceCurrencyChoice: React.FC<{
+  histogram?: SearchPriceHistogram;
+  onChange: (currency: ListingCurrency) => void;
+}> = ({ histogram, onChange }) => {
+  const { t } = useTranslation();
+  if (!histogram || histogram.currencies.length < 2) return null;
+  return (
+    <SegmentedFilter
+      options={histogram.currencies.map((currency) => ({ value: currency, label: currency }))}
+      value={histogram.currency}
+      onValueChange={(value) => onChange(value as ListingCurrency)}
+      accessibilityLabel={t('search.step.price.currencyChoice')}
+    />
+  );
+};
+
 interface PriceStepProps {
   offering: OfferingType;
   priceMin?: number;
@@ -207,6 +235,13 @@ export const PriceStep: React.FC<PriceStepProps> = ({ offering, priceMin, priceM
         minLabel={t('search.step.price.min')}
         maxLabel={t('search.step.price.max')}
         accessibilityLabel={t('search.step.price.title')}
+      />
+      <PriceCurrencyChoice
+        histogram={histogram}
+        // Switching the currency re-reads the same bound in a different unit —
+        // "up to 1,200" becomes "up to 1,200 złoty" — rather than converting
+        // it, which is the one thing this contract will not do.
+        onChange={(currency) => onChange(priceMin, priceMax, currency)}
       />
       <PriceHistogramNote histogram={histogram} />
     </View>
