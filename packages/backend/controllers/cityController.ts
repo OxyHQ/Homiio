@@ -35,7 +35,7 @@ import { and, asc, count, desc, eq, ilike, or, sql, type SQL } from 'drizzle-orm
 import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 
 import { getDb } from '../db/postgres';
-import { escapeLikePattern } from '../db/likePattern';
+import { escapeLikePattern } from '@oxy.so/utils/sql';
 import { cities, countries, images, properties as propertiesTable, regions } from '../db/schema';
 import { MAX_LOOKUP_LIMIT, lookupCityPlaces, type PlaceLookupInput } from '../db/geo/placeLookup';
 import { isPlausibleCityName } from '../utils/plausibleCityName';

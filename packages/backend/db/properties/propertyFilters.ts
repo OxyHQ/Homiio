@@ -33,7 +33,7 @@ import { and, eq, gte, inArray, isNull, lte, notInArray, or, sql, type SQL } fro
 import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 
 import { qualified } from '../casing';
-import { escapeLikePattern } from '../likePattern';
+import { escapeLikePattern } from '@oxy.so/utils/sql';
 import { TEXT_SEARCH_CONFIGURATION } from '../extensions';
 import { addresses, properties, propertyAvailabilityWindows, reservations } from '../schema';
 
