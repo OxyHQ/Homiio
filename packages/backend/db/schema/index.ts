@@ -78,6 +78,7 @@ export {
   leaseInspectionFindings,
   leaseInspections,
   leasePaymentSchedule,
+  leasePaymentMovements,
   leases,
   leaseSharedUtilityCosts,
 } from './leases';

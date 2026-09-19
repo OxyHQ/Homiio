@@ -53,6 +53,7 @@ import {
   LeaseHistorySection,
   LeasePaymentsSection,
 } from '@/components/tenancy/LeaseSections';
+import { LeaseLedgerSection } from '@/components/tenancy/LeaseLedgerSection';
 import { MaintenanceSection } from '@/components/tenancy/MaintenanceSection';
 import { useLeaseFormatContext } from '@/components/tenancy/useLeaseFormatContext';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -193,6 +194,18 @@ export default function MyHomeScreen() {
         }
       />
       {isDesktop ? null : history}
+      {/* The LEDGER: what is owed, what settled, and what the tenant has merely
+          claimed. Above the schedule, because "how much do I still owe?" is the
+          question somebody opens this screen with — and because the schedule
+          below it lists obligations, which is a different fact. */}
+      <LeaseLedgerSection
+        lease={lease}
+        // This screen only ever shows tenancies the viewer RENTS (see the
+        // filter above), so the viewer is never the landlord here. Passed
+        // explicitly rather than assumed inside the component, because the
+        // contract screen will mount the same section for the other side.
+        viewerIsLandlord={false}
+      />
       <LeasePaymentsSection lease={lease} format={format} />
       {/* Above documents: a repair is something happening now, and a lease's
           paperwork is reference. The order follows what somebody opening this

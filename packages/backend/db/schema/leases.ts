@@ -38,10 +38,27 @@
  * `toLeaseDTO`'s field list; a bare drizzle `select()` returns them.
  */
 
-import { bigint, boolean, check, doublePrecision, index, pgTable, text } from 'drizzle-orm/pg-core';
+import {
+  bigint,
+  boolean,
+  check,
+  doublePrecision,
+  index,
+  pgTable,
+  text,
+  uniqueIndex,
+  type AnyPgColumn,
+} from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import { createdAt, generatedId, inList, textArrayLiteral, timestamptz, updatedAt } from '@oxy.so/db';
-import { PAYMENT_CURRENCIES, type LeaseDocumentType, type LeaseStatus } from '@homiio/shared-types';
+import {
+  LEASE_MOVEMENT_DIRECTIONS,
+  LEASE_MOVEMENT_STATES,
+  LEASE_PAYMENT_KINDS,
+  PAYMENT_CURRENCIES,
+  type LeaseDocumentType,
+  type LeaseStatus,
+} from '@homiio/shared-types';
 import { properties } from './properties';
 
 export const LEASE_STATUSES = [
@@ -486,6 +503,183 @@ export const leaseInspectionFindings = pgTable(
     check(
       'lease_inspection_findings_condition_check',
       sql`${table.condition} in (${sql.raw(inList(LEASE_INSPECTION_CONDITIONS))})`,
+    ),
+  ],
+);
+
+/**
+ * `lease_payment_movements` — the rent LEDGER (#518 §7.2, #519 §7.2).
+ *
+ * ## Why this table and not four more columns on the obligation
+ *
+ * `lease_payment_schedule` is a list of things OWED. It could be marked `paid`
+ * with a date, an amount and a method, and the one function that did that —
+ * `recordPayment` — had no caller anywhere in the package. So the obligation's
+ * `paid_*` columns describe a payment Homiio has never recorded.
+ *
+ * Both epics require the split: obligation, attempt, confirmed payment, manual
+ * record, partial, failure, refund, outstanding balance. None of those fit on
+ * the obligation, because several of them are MANY per obligation — two
+ * partials, a failed attempt then a successful one, a payment and its refund —
+ * and a row that can only hold one is a row that loses the rest.
+ *
+ * ## A refund is a ROW, never an edit
+ *
+ * `direction: 'refund'` with `reverses_movement_id` set. The original stays
+ * `succeeded` forever. A ledger that rewrites a settled payment to say it was
+ * reversed has destroyed the record of the original, and reconciling against a
+ * processor then has nothing to reconcile against.
+ *
+ * ## The obligation's own `status` is NOT the answer to "is it paid"
+ *
+ * The balance is derived from this table
+ * (`shared-types/leasePayment.ts#leaseObligationSettlement`), and the
+ * obligation's `status` column keeps only what the ledger cannot express —
+ * `cancelled`, and the `overdue` marking. `recordPayment` is DELETED in the
+ * same change, so nothing can write `paid` behind the ledger's back; the
+ * `paid_*` columns stay null and the CHECK that ties them together now guards
+ * a path with no writer, which is the strongest state it has ever been in.
+ *
+ * ## No card or bank detail exists in this schema
+ *
+ * `processor_reference` is a foreign system's opaque id. #518 §7.2 forbids
+ * storing credentials outright, and there is nowhere here to put one.
+ */
+export const leasePaymentMovements = pgTable(
+  'lease_payment_movements',
+  {
+    id: generatedId(),
+    leaseId: text()
+      .notNull()
+      .references(() => leases.id, { onDelete: 'cascade' }),
+    /** The obligation this pays or refunds. */
+    obligationId: text()
+      .notNull()
+      .references(() => leasePaymentSchedule.id, { onDelete: 'cascade' }),
+
+    direction: text({ enum: LEASE_MOVEMENT_DIRECTIONS }).notNull().default('payment'),
+    kind: text({ enum: LEASE_PAYMENT_KINDS }).notNull(),
+    state: text({ enum: LEASE_MOVEMENT_STATES }).notNull().default('pending'),
+
+    /** Always positive; the DIRECTION is what makes a refund subtract. */
+    amount: doublePrecision().notNull(),
+    /**
+     * Resolved from `leases.rent_details_currency` by the repository, never
+     * taken from a request body.
+     *
+     * Stored on the movement rather than read through the lease because a
+     * lease's currency could in principle be corrected, and a payment that
+     * silently changed currency afterwards would be a different amount of
+     * money. What settled, settled in what it settled in.
+     */
+    currency: text({ enum: PAYMENT_CURRENCIES }).notNull(),
+
+    createdByOxyUserId: text().notNull(),
+    confirmedByOxyUserId: text(),
+    confirmedAt: timestamptz(),
+
+    /** The processor's own opaque reference. NEVER a credential. */
+    processorReference: text(),
+    failureReason: text(),
+    /**
+     * Present on a refund: the movement it reverses.
+     *
+     * A REAL self-referencing foreign key, `CASCADE`: a refund of a payment
+     * that no longer exists is a movement with no subject, and the lease's own
+     * cascade removes both together anyway. The `AnyPgColumn` annotation is
+     * what drizzle needs to type a self-reference.
+     */
+    reversesMovementId: text().references((): AnyPgColumn => leasePaymentMovements.id, {
+      onDelete: 'cascade',
+    }),
+    note: text(),
+
+    /**
+     * The caller's own key, unique per lease.
+     *
+     * The dedupe for all four cases #518 §7.2 lists — creation, a double tap,
+     * a checkout return and a duplicate or out-of-order webhook — because each
+     * of them resolves to the row that already exists rather than to a second
+     * one. A generated id could not do this: the point is that the SECOND
+     * request carries the same key as the first.
+     */
+    idempotencyKey: text().notNull(),
+
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (table) => [
+    index('lease_payment_movements_obligation_idx').on(table.obligationId, table.createdAt),
+    index('lease_payment_movements_lease_idx').on(table.leaseId, table.createdAt),
+    /** One movement per key per lease. The whole of the idempotency guarantee. */
+    uniqueIndex('lease_payment_movements_idempotency_key').on(
+      table.leaseId,
+      table.idempotencyKey,
+    ),
+    /**
+     * A processor reference identifies ONE movement.
+     *
+     * Partial, because it is null for every declaration — a total unique index
+     * would let exactly one declaration exist across the whole table. The
+     * reference is what makes a replayed webhook land on the row it already
+     * created even when the caller lost its idempotency key.
+     */
+    uniqueIndex('lease_payment_movements_processor_reference_key')
+      .on(table.processorReference)
+      .where(sql`${table.processorReference} is not null`),
+    check(
+      'lease_payment_movements_direction_check',
+      sql`${table.direction} in (${sql.raw(inList(LEASE_MOVEMENT_DIRECTIONS))})`,
+    ),
+    check(
+      'lease_payment_movements_kind_check',
+      sql`${table.kind} in (${sql.raw(inList(LEASE_PAYMENT_KINDS))})`,
+    ),
+    check(
+      'lease_payment_movements_state_check',
+      sql`${table.state} in (${sql.raw(inList(LEASE_MOVEMENT_STATES))})`,
+    ),
+    /** Money does not move by zero, and a negative amount is a refund's job. */
+    check('lease_payment_movements_amount_check', sql`${table.amount} > 0`),
+    /**
+     * A refund reverses something; a payment reverses nothing.
+     *
+     * Both directions, because both are wrong and both would render: a refund
+     * with nothing to reverse is money leaving against no record, and a
+     * payment carrying a reversal pointer is a movement that would be counted
+     * twice by anything walking the chain.
+     */
+    check(
+      'lease_payment_movements_refund_target_check',
+      sql`(${table.direction} = 'refund') = (${table.reversesMovementId} is not null)`,
+    ),
+    /**
+     * A settled movement says WHEN it settled.
+     *
+     * One-way: a `pending` movement legitimately has no confirmation, and a
+     * `failed` one never will. The reverse — a confirmation on something not
+     * succeeded — is the shape that lets a screen show a date beside a payment
+     * that did not happen, so it is refused too.
+     */
+    check(
+      'lease_payment_movements_confirmed_check',
+      sql`(${table.state} = 'succeeded') = (${table.confirmedAt} is not null)`,
+    ),
+    /** A failure says why. An unexplained failure is a support ticket. */
+    check(
+      'lease_payment_movements_failure_check',
+      sql`${table.state} <> 'failed' or ${table.failureReason} is not null`,
+    ),
+    /**
+     * A declaration has no processor reference.
+     *
+     * The one that stops "the tenant says they sent a transfer" from being
+     * stored in a shape indistinguishable from "the processor settled it",
+     * which is the confusion #518 §7.2 spends a paragraph on.
+     */
+    check(
+      'lease_payment_movements_declaration_check',
+      sql`${table.kind} <> 'manual_declaration' or ${table.processorReference} is null`,
     ),
   ],
 );

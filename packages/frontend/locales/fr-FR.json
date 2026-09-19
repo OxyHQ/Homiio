@@ -3939,5 +3939,32 @@
       "commentFailed": "Nous n’avons pas pu envoyer votre message. Réessayez.",
       "conflict": "Cette demande a évolué depuis votre dernière consultation. Voici son état actuel."
     }
+  },
+  "ledger": {
+    "section": {
+      "title": "Loyer et paiements",
+      "outstanding": "Il reste {{amount}} à payer",
+      "noProcessor": "Homiio ne peut pas encore encaisser directement. Payez votre propriétaire comme convenu, puis signalez-le ici."
+    },
+    "state": {
+      "settled": "Intégralement payé — {{amount}}",
+      "outstanding": "{{outstanding}} sur {{total}} restants",
+      "declared": "Vous avez indiqué avoir envoyé {{amount}}. Votre propriétaire ne l’a pas encore confirmé."
+    },
+    "action": {
+      "declare": "Je l’ai payé",
+      "declareAccessible": "Informer votre propriétaire que vous avez payé",
+      "confirm": "Confirmer la réception",
+      "confirmAccessible": "Confirmer ce paiement et mettre à jour le solde",
+      "reject": "Rien n’est arrivé",
+      "rejectAccessible": "Indiquer au locataire que ce paiement n’est pas arrivé",
+      "rejectReason": "Rien n’est arrivé sur le compte"
+    },
+    "errors": {
+      "loadFailed": "Impossible de charger le solde. Rien n’est masqué : la requête a échoué.",
+      "declareFailed": "Nous n’avons pas pu l’enregistrer. Réessayez.",
+      "confirmFailed": "Nous n’avons pas pu le confirmer. Réessayez.",
+      "rejectFailed": "Nous n’avons pas pu l’enregistrer. Réessayez."
+    }
   }
 }

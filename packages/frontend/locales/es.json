@@ -3965,5 +3965,32 @@
       "commentFailed": "No hemos podido enviar tu mensaje. Inténtalo otra vez.",
       "conflict": "Esta solicitud ha cambiado desde que la viste. Este es su estado actual."
     }
+  },
+  "ledger": {
+    "section": {
+      "title": "Alquiler y pagos",
+      "outstanding": "Quedan {{amount}} por pagar",
+      "noProcessor": "Homiio todavía no puede cobrar directamente. Paga a tu propietario como acordasteis y avísale aquí."
+    },
+    "state": {
+      "settled": "Pagado por completo: {{amount}}",
+      "outstanding": "Quedan {{outstanding}} de {{total}}",
+      "declared": "Has dicho que enviaste {{amount}}. Tu propietario aún no lo ha confirmado."
+    },
+    "action": {
+      "declare": "Ya lo he pagado",
+      "declareAccessible": "Avisar al propietario de que ya lo has pagado",
+      "confirm": "Confirmar que ha llegado",
+      "confirmAccessible": "Confirmar este pago y actualizar el saldo",
+      "reject": "No ha llegado",
+      "rejectAccessible": "Decir al inquilino que este pago no ha llegado",
+      "rejectReason": "No ha llegado nada a la cuenta"
+    },
+    "errors": {
+      "loadFailed": "No hemos podido cargar el saldo. No se oculta nada: la petición ha fallado.",
+      "declareFailed": "No hemos podido registrarlo. Inténtalo otra vez.",
+      "confirmFailed": "No hemos podido confirmarlo. Inténtalo otra vez.",
+      "rejectFailed": "No hemos podido registrarlo. Inténtalo otra vez."
+    }
   }
 }
