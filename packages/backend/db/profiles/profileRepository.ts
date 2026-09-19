@@ -60,7 +60,7 @@
 import { and, asc, desc, eq, gte, ilike, inArray, isNull, lte, ne, or, sql } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
 import type { DatabaseOrTransaction } from '../postgres';
-import { escapeLikePattern } from '../likePattern';
+import { escapeLikePattern } from '@oxy.so/utils/sql';
 import {
   profileChatMessages,
   profilePreferredLocations,

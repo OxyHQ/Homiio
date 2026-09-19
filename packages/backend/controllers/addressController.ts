@@ -48,7 +48,7 @@ import { getOxyUserId } from '@oxy.so/core/server';
 import type { ListingAddressPrecision } from '@homiio/shared-types';
 
 import { getDb } from '../db/postgres';
-import { escapeLikePattern } from '../db/likePattern';
+import { escapeLikePattern } from '@oxy.so/utils/sql';
 import { addresses } from '../db/schema';
 import {
   findOrCreateCanonicalAddress,

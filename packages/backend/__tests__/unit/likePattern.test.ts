@@ -10,7 +10,7 @@
 
 import { ilike, sql } from 'drizzle-orm';
 
-import { escapeLikePattern } from '../../db/likePattern';
+import { escapeLikePattern } from '@oxy.so/utils/sql';
 import { getDb } from '../../db/postgres';
 import { cities } from '../../db/schema';
 import { resetGeoTables, seedGeoChain } from '../helpers/postgresGeoFixtures';
