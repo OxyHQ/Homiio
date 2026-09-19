@@ -32,6 +32,12 @@ export * from './city';
 // Lease types
 export * from './lease';
 
+// Rent payments as a LEDGER (#518 §7.2, #519 §7.2): obligation, attempt,
+// confirmed payment, manual declaration, partial, refund and the derived
+// balance — kept apart so "I sent the transfer" and "it cleared" cannot be
+// rendered the same way. Depends on `./currency`, exported above.
+export * from './leasePayment';
+
 // Review types
 export * from './review';
 

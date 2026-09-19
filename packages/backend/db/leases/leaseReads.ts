@@ -18,7 +18,13 @@
  *    has never contained `status`.
  *  - **`signAsLandlord` / `signAsTenant`** collapse into {@link signLease},
  *    which takes the side. They differed only in which columns they wrote.
- *  - **`recordPayment`** is {@link recordPayment}, and now has a CHECK behind it.
+ *  - **`recordPayment`** is DELETED, not ported. It had no caller anywhere in
+ *    the package, so nothing in Homiio had ever recorded a payment. The rent
+ *    LEDGER (`./paymentLedger.ts`) is now the one way one is recorded, and
+ *    keeping this would have left a second writer able to mark an obligation
+ *    `paid` with no evidence of who confirmed it. Same reasoning as
+ *    `scheduleInspection` below — a method with no caller is a write path to
+ *    invent, not one to preserve — with the ledger as the replacement.
  *  - **`generatePaymentSchedule`** is `./paymentSchedule.ts`, a pure function.
  *  - **`scheduleInspection`** is NOT ported: nothing in this package calls it,
  *    and `lease_inspections.inspector` is declared free text on exactly that
@@ -668,44 +674,25 @@ export async function addLeasePayment(
 }
 
 /**
- * Mark an instalment paid.
+ * `recordPayment` is DELETED (#518 §7.2, #519 §7.2).
  *
- * The port of `recordPayment`, and the CHECK is now behind it:
- * `lease_payment_schedule_paid_evidence_check` requires a `paid` row to carry
- * BOTH `paid_date` and `paid_amount`, so a caller that wrote only the status
- * would be refused rather than storing a payment nobody can evidence. All four
- * columns are written together here, exactly as the method wrote them.
+ * It set `status`, `paid_date`, `paid_amount`, `payment_method` and
+ * `transaction_id` on an obligation — and it had **no caller anywhere in the
+ * package**. So nothing in Homiio had ever recorded a payment; the only live
+ * write was a landlord adding another due date.
  *
- * @returns The row, or `undefined` when the instalment is not on that lease —
- *   where the method threw `Error('Payment not found')`. A missing row is a 404
- *   the caller shapes, not an exception.
+ * The ledger (`db/leases/paymentLedger.ts`) is now the one way a payment is
+ * recorded, and the balance is DERIVED from it. Keeping this function would
+ * have left a second writer able to mark an obligation `paid` behind the
+ * ledger's back — two answers to "has this been paid", and the one that skipped
+ * the ledger would carry no evidence of who confirmed it or when.
+ *
+ * The obligation's `paid_*` columns therefore stay null. Their coherence CHECK
+ * (`lease_payment_schedule_paid_evidence_check`) now guards a path with no
+ * writer, which is the strongest state it has ever been in, and it stays
+ * because a future import path would need it.
  */
-export async function recordPayment(
-  db: DatabaseOrTransaction,
-  leaseId: string,
-  paymentId: string,
-  input: {
-    readonly amount: number;
-    readonly paymentMethod?: LeasePaymentMethodValue;
-    readonly transactionId?: string;
-    readonly paidStatus: LeasePaymentStatusValue;
-  },
-): Promise<typeof leasePaymentSchedule.$inferSelect | undefined> {
-  const [row] = await db
-    .update(leasePaymentSchedule)
-    .set({
-      status: input.paidStatus,
-      paidDate: new Date(),
-      paidAmount: input.amount,
-      paymentMethod: input.paymentMethod,
-      transactionId: input.transactionId,
-    })
-    .where(
-      and(eq(leasePaymentSchedule.id, paymentId), eq(leasePaymentSchedule.leaseId, leaseId)),
-    )
-    .returning();
-  return row;
-}
+
 
 /** A lease's documents. */
 export async function listLeaseDocuments(

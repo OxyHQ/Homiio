@@ -3939,5 +3939,32 @@
       "commentFailed": "消息发送失败，请重试。",
       "conflict": "这条请求在你查看后已有变化，这是它现在的状态。"
     }
+  },
+  "ledger": {
+    "section": {
+      "title": "租金与付款",
+      "outstanding": "仍欠 {{amount}}",
+      "noProcessor": "Homiio 暂时无法直接收款。请按你们约定的方式付给房东，然后在这里告知。"
+    },
+    "state": {
+      "settled": "已全额支付 — {{amount}}",
+      "outstanding": "{{total}} 中仍欠 {{outstanding}}",
+      "declared": "你表示已支付 {{amount}}，房东尚未确认。"
+    },
+    "action": {
+      "declare": "我已支付",
+      "declareAccessible": "告知房东你已支付",
+      "confirm": "确认已收到",
+      "confirmAccessible": "确认这笔付款并更新余额",
+      "reject": "未收到",
+      "rejectAccessible": "告知租客这笔付款未到账",
+      "rejectReason": "账户未收到任何款项"
+    },
+    "errors": {
+      "loadFailed": "无法加载余额。没有内容被隐藏，是请求失败了。",
+      "declareFailed": "记录失败，请重试。",
+      "confirmFailed": "确认失败，请重试。",
+      "rejectFailed": "记录失败，请重试。"
+    }
   }
 }

@@ -481,6 +481,13 @@ describe('the partial indexes really are partial', () => {
       // carry the arbiter predicate (`42P10` at runtime otherwise).
       'eviction_location_grants_live_key',
       'eviction_reports_open_reporter_key',
+      // A processor's own reference identifies ONE movement (#518 §7.2). Partial
+      // on `processor_reference is not null`, because it is null for every
+      // manual declaration — a TOTAL unique index would permit exactly one
+      // declaration in the whole table. It is what makes a replayed or
+      // out-of-order webhook land on the row it already created, even when the
+      // caller has lost the idempotency key Homiio minted.
+      'lease_payment_movements_processor_reference_key',
       'listing_reports_open_reporter_key',
       'properties_source_source_id_key',
       'property_images_one_primary_key',

@@ -160,8 +160,8 @@ is a product call about historical rows, not a migration.
 | Bloom | Homiio | Status | Gap |
 |---|---|---|---|
 | `LeaseSummaryCard` | `app/my-home.tsx` | **live** | |
-| `RentPaymentList` | `LeasePaymentsSection` | **partial** | A **schedule of obligations** (`lease_payment_schedule`), not a ledger. `createPayment` adds a due date for the landlord; there is no attempt, confirmation, refund, receipt or reconciliation |
-| "Pay rent" | — | **blocked** | Needs a processor decision. #518 §7.2 is explicit that its absence is a documented delivery block, not licence to drop the row |
+| `RentPaymentList` | `LeasePaymentsSection`, `LeaseLedgerSection` | **partial** | The **ledger** exists (`lease_payment_movements`): obligation, attempt, confirmed payment, manual declaration, partial, refund and a DERIVED balance, with idempotency on every write. A tenant declares a transfer and a landlord confirms it. **Receipts are open**; the processor is blocked — see below |
+| "Pay rent" (a checkout) | — | **blocked** | Needs a processor decision. `kind: 'processor'` is in the model so adding one later does not migrate a live ledger, but no route creates one and no card or bank detail is stored anywhere. #518 §7.2 is explicit that its absence is a documented delivery block, not licence to drop the row |
 | `MaintenanceRequestCard` / repairs | `MaintenanceSection`, `/maintenance/*` | **partial** | The domain exists: `maintenance_requests` + comments + events, a declared state machine under a row lock, authorization in the repository query, notifications through the dispatcher. **Photos are open** — see below |
 | "Message landlord" | — | **open** | The Inbox tab is a notification list. #518 §7.3: do not wire this to a screen that cannot send a message |
 | `DocumentList`, signatures | `LeaseDocumentsSection`, `/contracts/[id]` | **partial** | Upload/list/view exist; "uploaded" is not "verified" and the checklist is not yet server state |
@@ -187,6 +187,28 @@ is no private object path to attach to.
 Shipping "attach a photo" onto that bucket would put a picture of somebody's
 bathroom on a guessable URL. A private store is its own change with its own
 access model, and no affordance is drawn for something that cannot work yet.
+
+### Payments: what landed, and what is still blocked
+
+**Landed.** `lease_payment_movements` is the ledger both epics ask for. A
+declaration is stored `pending` and moves nothing; only a landlord's
+confirmation settles. Partials, refunds and failures are each their own row, the
+balance is derived rather than stored, and every write carries an idempotency
+key unique per lease — so a double tap, a retry and a checkout return all
+resolve to the row that already exists. `recordPayment`, the dead writer that
+could mark an obligation paid with no evidence of who confirmed it, is deleted,
+so the balance has exactly one source.
+
+**Blocked: the processor.** There is no "Pay rent" checkout, because Homiio
+cannot settle one. A button that opened a checkout it could not confirm is the
+simulated success both epics forbid. The model carries `kind: 'processor'` and a
+`processor_reference` with its own partial unique index — which is how a
+replayed webhook will find the row it already created — so adding a provider is
+wiring rather than a migration of live money.
+
+**Open: receipts.** A downloadable receipt needs the same private object store
+repair photos need, for the same reason: it is a tenancy document and may not go
+through the public image endpoint.
 
 ## 6. The currency gap
 
@@ -244,8 +266,8 @@ Open, in rough order of how much they unblock:
    four columns, including the histogram.
 2. **Repair photos** — the one open half of maintenance, blocked behind a
    private object store that does not exist.
-3. **Payments** — blocked on a processor decision; the model split (obligation /
-   attempt / confirmed / manual / refund) can start without one.
+3. **Payment receipts and the processor** — the ledger is live; receipts need a
+   private object store and the checkout needs a provider decision.
 4. **Messaging** — needs the ecosystem audit #518 §7.3 asks for before any code.
 5. **Listing facts** — floor plans, energy, price history: each needs a source
    before it needs a component.

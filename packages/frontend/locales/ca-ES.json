@@ -3986,5 +3986,32 @@
       "commentFailed": "No hem pogut enviar el teu missatge. Torna-ho a provar.",
       "conflict": "Aquesta sol·licitud ha canviat des que la vas veure. Aquest és el seu estat actual."
     }
+  },
+  "ledger": {
+    "section": {
+      "title": "Lloguer i pagaments",
+      "outstanding": "Queden {{amount}} per pagar",
+      "noProcessor": "Homiio encara no pot cobrar directament. Paga al teu propietari com vau acordar i avisa’l aquí."
+    },
+    "state": {
+      "settled": "Pagat del tot: {{amount}}",
+      "outstanding": "Queden {{outstanding}} de {{total}}",
+      "declared": "Has dit que vas enviar {{amount}}. El teu propietari encara no ho ha confirmat."
+    },
+    "action": {
+      "declare": "Ja ho he pagat",
+      "declareAccessible": "Avisa el propietari que ja ho has pagat",
+      "confirm": "Confirma que ha arribat",
+      "confirmAccessible": "Confirma aquest pagament i actualitza el saldo",
+      "reject": "No ha arribat",
+      "rejectAccessible": "Digues a l’llogater que aquest pagament no ha arribat",
+      "rejectReason": "No ha arribat res al compte"
+    },
+    "errors": {
+      "loadFailed": "No hem pogut carregar el saldo. No s’amaga res: la petició ha fallat.",
+      "declareFailed": "No hem pogut registrar-ho. Torna-ho a provar.",
+      "confirmFailed": "No hem pogut confirmar-ho. Torna-ho a provar.",
+      "rejectFailed": "No hem pogut registrar-ho. Torna-ho a provar."
+    }
   }
 }

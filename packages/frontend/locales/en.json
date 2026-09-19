@@ -3935,5 +3935,32 @@
       "commentFailed": "We could not send your message. Try again.",
       "conflict": "This request has moved on since you looked. Here is where it is now."
     }
+  },
+  "ledger": {
+    "section": {
+      "title": "Rent and payments",
+      "outstanding": "{{amount}} still owed",
+      "noProcessor": "Homiio cannot take the money itself yet. Pay your landlord the way you agreed, then tell them here."
+    },
+    "state": {
+      "settled": "Paid in full — {{amount}}",
+      "outstanding": "{{outstanding}} of {{total}} still owed",
+      "declared": "You said you sent {{amount}}. Your landlord has not confirmed it yet."
+    },
+    "action": {
+      "declare": "I’ve paid this",
+      "declareAccessible": "Tell your landlord you have paid this",
+      "confirm": "Confirm it arrived",
+      "confirmAccessible": "Confirm this payment and update the balance",
+      "reject": "It never arrived",
+      "rejectAccessible": "Tell the tenant this payment did not arrive",
+      "rejectReason": "Nothing has arrived in the account"
+    },
+    "errors": {
+      "loadFailed": "We could not load the balance. Nothing is hidden — the request failed.",
+      "declareFailed": "We could not record that. Try again.",
+      "confirmFailed": "We could not confirm that. Try again.",
+      "rejectFailed": "We could not record that. Try again."
+    }
   }
 }

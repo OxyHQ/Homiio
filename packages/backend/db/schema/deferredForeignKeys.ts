@@ -163,6 +163,12 @@ export const OXY_ACCOUNT_COLUMN_NAMES: ReadonlySet<string> = new Set([
   // tenant: a co-tenant can report, so folding it into `tenant_oxy_user_id`
   // would attribute their report to somebody else on the lease.
   'reported_by_oxy_user_id',
+  // The rent ledger's two sides (#518 §7.2). Neither is a synonym for a party
+  // on the lease: a co-tenant can declare a payment, and the confirmer is
+  // whichever account actually pressed the button — which is the fact a
+  // dispute turns on.
+  'created_by_oxy_user_id',
+  'confirmed_by_oxy_user_id',
   // The eviction board's four named roles (#358). Each one is a role and not a
   // synonym for the case owner, which is why none of them can be folded into
   // `oxy_user_id`:

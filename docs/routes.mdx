@@ -181,11 +181,29 @@ All under `/api`, behind `createOxyAuthMiddleware(oxy)`. Source:
 | `GET` | `/api/leases` — `?status=`, `?propertyId=` |
 | `POST` | `/api/leases` |
 | `GET` `PUT` `DELETE` | `/api/leases/:id` |
-| `GET` `POST` | `/api/leases/:id/payments` |
+| `GET` `POST` | `/api/leases/:id/payments` — the OBLIGATIONS: what is owed |
+| `GET` | `/api/leases/:id/ledger` — the MOVEMENTS, and each obligation's derived balance |
+| `POST` | `/api/leases/:id/obligations/:obligationId/declarations` — a tenant says they paid |
+| `POST` | `/api/leases/:id/movements/:movementId/confirm` \| `/reject` \| `/refunds` |
 | `GET` `POST` | `/api/leases/:id/documents` |
 | `POST` | `/api/leases/:id/sign`, `/terminate`, `/renew` |
 
 Static sub-routes are declared before `/:id`.
+
+**An obligation is not a payment.** `/payments` lists what is owed; the ledger
+lists what actually moved. A tenant's declaration is stored `pending` and moves
+no balance — only a landlord's confirmation does, and the outstanding figure is
+**derived** from the ledger rather than stored, so the two cannot disagree.
+`recordPayment`, the dead writer that could mark an obligation paid with no
+evidence, is deleted.
+
+Every write takes an `idempotencyKey`, unique per lease: a double tap, a retry
+and a checkout return all resolve to the row that already exists. A refund is a
+new movement pointing at what it reverses; the original stays `succeeded`.
+
+**There is no processor route.** `kind: 'processor'` exists in the model because
+the split is what the epics require, but nothing creates one and no card or
+bank detail is modelled anywhere. See `docs/housing-parity.md`.
 
 ### `/api/maintenance`
 

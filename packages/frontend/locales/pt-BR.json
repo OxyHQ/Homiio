@@ -3939,5 +3939,32 @@
       "commentFailed": "Não conseguimos enviar sua mensagem. Tente de novo.",
       "conflict": "Esta solicitação mudou desde que você olhou. Este é o estado atual."
     }
+  },
+  "ledger": {
+    "section": {
+      "title": "Aluguel e pagamentos",
+      "outstanding": "Ainda faltam {{amount}}",
+      "noProcessor": "O Homiio ainda não recebe o dinheiro diretamente. Pague ao proprietário como combinado e avise aqui."
+    },
+    "state": {
+      "settled": "Pago integralmente — {{amount}}",
+      "outstanding": "Faltam {{outstanding}} de {{total}}",
+      "declared": "Você disse que enviou {{amount}}. O proprietário ainda não confirmou."
+    },
+    "action": {
+      "declare": "Já paguei",
+      "declareAccessible": "Avisar o proprietário de que você pagou",
+      "confirm": "Confirmar o recebimento",
+      "confirmAccessible": "Confirmar este pagamento e atualizar o saldo",
+      "reject": "Não chegou",
+      "rejectAccessible": "Informar ao inquilino que este pagamento não chegou",
+      "rejectReason": "Nada chegou na conta"
+    },
+    "errors": {
+      "loadFailed": "Não foi possível carregar o saldo. Nada está oculto — a requisição falhou.",
+      "declareFailed": "Não conseguimos registrar. Tente de novo.",
+      "confirmFailed": "Não conseguimos confirmar. Tente de novo.",
+      "rejectFailed": "Não conseguimos registrar. Tente de novo."
+    }
   }
 }

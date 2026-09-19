@@ -3939,5 +3939,32 @@
       "commentFailed": "Pesan Anda tidak terkirim. Coba lagi.",
       "conflict": "Permintaan ini sudah berubah sejak terakhir Anda lihat. Ini keadaannya sekarang."
     }
+  },
+  "ledger": {
+    "section": {
+      "title": "Sewa dan pembayaran",
+      "outstanding": "Masih terutang {{amount}}",
+      "noProcessor": "Homiio belum bisa menerima uang secara langsung. Bayar pemilik sesuai kesepakatan, lalu beri tahu di sini."
+    },
+    "state": {
+      "settled": "Lunas — {{amount}}",
+      "outstanding": "Sisa {{outstanding}} dari {{total}}",
+      "declared": "Anda menyatakan sudah mengirim {{amount}}. Pemilik belum mengonfirmasi."
+    },
+    "action": {
+      "declare": "Saya sudah bayar",
+      "declareAccessible": "Beri tahu pemilik bahwa Anda sudah bayar",
+      "confirm": "Konfirmasi sudah diterima",
+      "confirmAccessible": "Konfirmasi pembayaran ini dan perbarui saldo",
+      "reject": "Tidak pernah masuk",
+      "rejectAccessible": "Beri tahu penyewa bahwa pembayaran ini tidak masuk",
+      "rejectReason": "Tidak ada yang masuk ke rekening"
+    },
+    "errors": {
+      "loadFailed": "Kami tidak dapat memuat saldo. Tidak ada yang disembunyikan — permintaannya gagal.",
+      "declareFailed": "Kami tidak dapat mencatatnya. Coba lagi.",
+      "confirmFailed": "Kami tidak dapat mengonfirmasi. Coba lagi.",
+      "rejectFailed": "Kami tidak dapat mencatatnya. Coba lagi."
+    }
   }
 }
