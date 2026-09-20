@@ -23,6 +23,7 @@ import { useRouter } from 'expo-router';
 import { Button } from '@oxy.so/bloom/button';
 import {
   RiAddLine,
+  RiCalendarLine,
   RiCheckboxCircleLine,
   RiDeleteBinLine,
   RiEditLine,
@@ -115,6 +116,13 @@ export default function MyPropertiesScreen() {
     [router],
   );
 
+  const handleViewingSchedule = useCallback(
+    (propertyId: string) => {
+      router.push(`/properties/${propertyId}/viewing-availability`);
+    },
+    [router],
+  );
+
   const handleDelete = useCallback(async (deleteTarget: DeleteTarget) => {
     const ok = await confirm({
       title: t('properties.my.deleteTitle'),
@@ -188,6 +196,21 @@ export default function MyPropertiesScreen() {
             </Button>
           ) : null}
           <View style={styles.ownerActions}>
+            {/*
+              The only way into the viewing schedule (#518 §7.5). Without an
+              entry point here an owner has no way to say when they can show
+              the place, which is the silence the booking screen used to fill
+              with thirteen invented time slots.
+            */}
+            <Button
+              variant="secondary"
+              size="small"
+              onPress={() => handleViewingSchedule(propertyId)}
+              leadingIcon={RiCalendarLine}
+              style={styles.ownerActionButton}
+            >
+              {t('properties.my.viewingTimes')}
+            </Button>
             <Button
               variant="secondary"
               size="small"
@@ -211,7 +234,7 @@ export default function MyPropertiesScreen() {
         </View>
       );
     },
-    [t, theme.colors.negative, handleEditProperty, handleDelete, handleTransact],
+    [t, theme.colors.negative, handleEditProperty, handleViewingSchedule, handleDelete, handleTransact],
   );
 
   const body = (() => {

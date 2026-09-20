@@ -810,7 +810,8 @@
       "markSoldTitle": "Mark as sold?",
       "transactError": "Could not close this listing",
       "transactDone": "Listing marked as closed",
-      "transactCommission": "Deal closed — commission recorded"
+      "transactCommission": "Deal closed — commission recorded",
+      "viewingTimes": "Horaires de visite"
     },
     "details": {
       "bedrooms": "Bedrooms",
@@ -1968,7 +1969,8 @@
     },
     "validation": {
       "selectDateTime": "Please select a date and time",
-      "invalidProperty": "Invalid property"
+      "invalidProperty": "Invalid property",
+      "timeFormat": "Saisissez l'heure sous la forme HH:mm, par exemple 17:30."
     },
     "error": {
       "generic": "Failed to submit viewing request. Please try again.",
@@ -1978,7 +1980,9 @@
       "authRequired": "Please sign in to request a viewing.",
       "notFound": "Viewing request not found.",
       "cannotCancel": "Cannot cancel this viewing request.",
-      "externalProperty": "Cannot book viewings for external properties"
+      "externalProperty": "Cannot book viewings for external properties",
+      "slotNotOffered": "Cet horaire n'est pas proposé. Choisissez-en un parmi ceux disponibles.",
+      "invalidDateTime": "Cette date et cette heure n'ont pas pu être lues. Vérifiez le format (HH:mm)."
     },
     "selectDate": "Select Date",
     "availableTimeSlots": "Available Time Slots",
@@ -2005,6 +2009,54 @@
     "banner": {
       "viewDetails": "View details",
       "hasViewing": "You have a viewing scheduled"
+    },
+    "loadingSlots": "Chargement des horaires disponibles…",
+    "timezoneNotice": "Les horaires sont affichés en {{zone}}, le fuseau horaire du logement.",
+    "timezoneUnknown": "Personne n'a indiqué le fuseau horaire de ce logement, les horaires sont donc affichés en {{zone}}.",
+    "noPublishedSlots": "Le propriétaire n'a pas encore publié d'horaires de visite. Proposez-en un : il pourra l'accepter ou en suggérer un autre.",
+    "proposeTime": "Proposer un horaire",
+    "noSlotsThatDay": "Aucun horaire proposé ce jour-là.",
+    "pickADay": "Choisissez un jour pour voir les horaires proposés.",
+    "slotLabel": "{{time}}, {{minutes}} minutes",
+    "durationMinutes": "{{minutes}} min",
+    "ownerResponse": "Le propriétaire a répondu",
+    "modality": {
+      "title": "Comment souhaitez-vous visiter ?",
+      "in_person": "En personne",
+      "video": "Appel vidéo"
+    },
+    "schedule": {
+      "title": "Horaires de visite",
+      "explainer": "Indiquez quand vous pouvez faire visiter ce logement. On ne pourra demander que les horaires que vous publiez ici, et le même rythme hebdomadaire se répète jusqu'à ce que vous le changiez.",
+      "timezone": "Fuseau horaire",
+      "timezoneUnset": "Aucun fuseau horaire n'est défini pour ce logement, les horaires sont donc lus en UTC. Définissez-en un pour que « 17:00 » veuille dire ce que vous voulez dire.",
+      "saved": "Horaires de visite enregistrés.",
+      "invalidTimezone": "Ce n'est pas un nom de fuseau horaire. Essayez Europe/Madrid.",
+      "tooManyWindows": "Au maximum {{max}} plages horaires.",
+      "rowTimeFormat": "Plage {{row}} : saisissez les heures sous la forme HH:mm.",
+      "rowOrder": "Plage {{row}} : la fin doit venir après le début.",
+      "rowLength": "Plage {{row}} : une visite dure entre {{min}} et {{max}} minutes.",
+      "rowTooShort": "Plage {{row}} : la plage est plus courte qu'une visite.",
+      "rowTitle": "Plage {{row}}",
+      "from": "De",
+      "to": "À",
+      "slotMinutes": "Minutes par visite",
+      "addWindow": "Ajouter une plage horaire",
+      "removeWindow": "Retirer",
+      "save": "Enregistrer les horaires de visite",
+      "emptyTitle": "Pas encore d'horaires de visite",
+      "emptyDescription": "Ajoutez une plage et les gens pourront demander une visite à l'intérieur.",
+      "notYours": "Annonce introuvable",
+      "notYoursDescription": "Vous ne pouvez définir des horaires de visite que sur vos propres annonces.",
+      "weekday": {
+        "sun": "Dim",
+        "mon": "Lun",
+        "tue": "Mar",
+        "wed": "Mer",
+        "thu": "Jeu",
+        "fri": "Ven",
+        "sat": "Sam"
+      }
     }
   },
   "donations": {

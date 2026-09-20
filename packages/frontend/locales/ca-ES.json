@@ -809,7 +809,8 @@
       "markSoldTitle": "Mark as sold?",
       "transactError": "Could not close this listing",
       "transactDone": "Listing marked as closed",
-      "transactCommission": "Deal closed — commission recorded"
+      "transactCommission": "Deal closed — commission recorded",
+      "viewingTimes": "Hores de visita"
     },
     "details": {
       "bedrooms": "Habitacions",
@@ -1168,7 +1169,8 @@
     },
     "validation": {
       "selectDateTime": "Si us plau, seleccioneu una data i hora",
-      "invalidProperty": "Propietat no vàlida"
+      "invalidProperty": "Propietat no vàlida",
+      "timeFormat": "Escriu l'hora com a HH:mm, per exemple 17:30."
     },
     "error": {
       "generic": "No s'ha pogut enviar la sol·licitud de visita. Torneu-ho a provar.",
@@ -1178,7 +1180,9 @@
       "authRequired": "Si us plau, inicieu sessió per sol·licitar una visita.",
       "notFound": "Sol·licitud de visita no trobada.",
       "cannotCancel": "No es pot cancel·lar aquesta sol·licitud de visita.",
-      "externalProperty": "Cannot book viewings for external properties"
+      "externalProperty": "Cannot book viewings for external properties",
+      "slotNotOffered": "Aquesta hora no està oferta. Tria una de les disponibles.",
+      "invalidDateTime": "No s'ha pogut llegir aquesta data i hora. Comprova el format (HH:mm)."
     },
     "selectDate": "Selecciona data",
     "availableTimeSlots": "Franges horàries disponibles",
@@ -1205,6 +1209,54 @@
     "banner": {
       "viewDetails": "View details",
       "hasViewing": "You have a viewing scheduled"
+    },
+    "loadingSlots": "Carregant hores disponibles…",
+    "timezoneNotice": "Les hores es mostren en {{zone}}, la zona horària de l'habitatge.",
+    "timezoneUnknown": "Ningú no ha indicat la zona horària d'aquest habitatge, així que les hores es mostren en {{zone}}.",
+    "noPublishedSlots": "El propietari encara no ha publicat hores de visita. Proposa'n una i podrà acceptar-la o suggerir-ne una altra.",
+    "proposeTime": "Proposar una hora",
+    "noSlotsThatDay": "No hi ha hores ofertes aquell dia.",
+    "pickADay": "Tria un dia per veure les hores disponibles.",
+    "slotLabel": "{{time}}, {{minutes}} minuts",
+    "durationMinutes": "{{minutes}} min",
+    "ownerResponse": "El propietari va respondre",
+    "modality": {
+      "title": "Com vols visitar-la?",
+      "in_person": "En persona",
+      "video": "Videotrucada"
+    },
+    "schedule": {
+      "title": "Hores de visita",
+      "explainer": "Indica quan pots ensenyar aquest habitatge. Només es podran demanar les hores que publiquis aquí, i el mateix patró setmanal es repeteix fins que el canviïs.",
+      "timezone": "Zona horària",
+      "timezoneUnset": "Aquest habitatge no té zona horària, així que les hores es llegeixen com a UTC. Indica'n una perquè «17:00» signifiqui el que vols dir.",
+      "saved": "Hores de visita desades.",
+      "invalidTimezone": "Això no és un nom de zona horària. Prova Europe/Madrid.",
+      "tooManyWindows": "Com a màxim {{max}} franges horàries.",
+      "rowTimeFormat": "Franja {{row}}: escriu les hores com a HH:mm.",
+      "rowOrder": "Franja {{row}}: el final ha d'anar després de l'inici.",
+      "rowLength": "Franja {{row}}: una visita dura entre {{min}} i {{max}} minuts.",
+      "rowTooShort": "Franja {{row}}: la franja és més curta que una visita.",
+      "rowTitle": "Franja {{row}}",
+      "from": "Des de",
+      "to": "Fins a",
+      "slotMinutes": "Minuts per visita",
+      "addWindow": "Afegir una franja",
+      "removeWindow": "Treure",
+      "save": "Desar hores de visita",
+      "emptyTitle": "Encara no hi ha hores de visita",
+      "emptyDescription": "Afegeix una franja i la gent podrà demanar una visita a dins.",
+      "notYours": "Anunci no trobat",
+      "notYoursDescription": "Només pots fixar hores de visita als teus propis anuncis.",
+      "weekday": {
+        "sun": "Dg",
+        "mon": "Dl",
+        "tue": "Dt",
+        "wed": "Dc",
+        "thu": "Dj",
+        "fri": "Dv",
+        "sat": "Ds"
+      }
     }
   },
   "payments": {

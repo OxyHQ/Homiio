@@ -60,6 +60,12 @@ export * from './exchange';
 // Guest points — earned by hosting, spent by staying, one point per night
 export * from './guestPoints';
 
+// Viewings: the recurring weekly windows an owner offers, the modality and
+// duration of a visit, and the timezone every clock time on the wire is
+// expressed in. Shared so the screen that offers a slot and the server that
+// accepts one cannot disagree about what was offered.
+export * from './viewing';
+
 // Listing report types (trust & safety flagging)
 export * from './report';
 

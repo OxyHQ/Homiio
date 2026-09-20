@@ -212,3 +212,141 @@ export function formatRelativeDate(
     }
   }
 }
+
+/**
+ * Whether `timeZone` is an IANA zone this engine knows.
+ *
+ * `Intl.supportedValuesOf('timeZone')` would be the direct answer and is
+ * deliberately not used: it is absent from several Hermes builds, so a check
+ * written on it would be `undefined is not a function` on a device and a pass
+ * everywhere it was tested. Constructing a formatter throws `RangeError` for an
+ * unknown zone on every engine that implements `Intl` at all, which asks the
+ * same question in a way that cannot degrade into a vacuous yes.
+ */
+export function isSupportedTimeZone(timeZone: unknown): timeZone is string {
+  if (typeof timeZone !== 'string' || timeZone.length === 0) return false;
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** A `HH:mm` clock time, 24-hour. */
+const CLOCK_TIME_PATTERN = /^(\d{2}):(\d{2})$/;
+
+/** The civil fields `timeZone` shows at `instant`, read back as a UTC epoch. */
+function civilFieldsAsUtc(instant: Date, timeZone: string): number | null {
+  let parts: Intl.DateTimeFormatPart[];
+  try {
+    parts = new Intl.DateTimeFormat('en-US', {
+      timeZone,
+      hour12: false,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    }).formatToParts(instant);
+  } catch {
+    return null;
+  }
+  const field: Record<string, number> = {};
+  for (const part of parts) {
+    if (part.type !== 'literal') field[part.type] = Number(part.value);
+  }
+  if (!Number.isFinite(field.year)) return null;
+  // `hour12: false` renders midnight as 24 on some ICU versions, and 24:00 of a
+  // day is 00:00 of that same day.
+  return Date.UTC(
+    field.year,
+    field.month - 1,
+    field.day,
+    field.hour % 24,
+    field.minute,
+    field.second,
+  );
+}
+
+/**
+ * The instant at which `timeZone`'s wall clock reads `civilDate` `clockTime`.
+ *
+ * This is the conversion a viewing appointment needs, and the one
+ * `new Date('2026-01-01T10:00')` silently gets wrong: with no zone suffix that
+ * expression is parsed in whatever zone the PROCESS happens to run in, so one
+ * string means a different moment on a developer's laptop and on an ECS task,
+ * and a third moment again on the phone that renders it back.
+ *
+ * A zone's offset depends on the instant, and the instant is what is being
+ * solved for, so it is found by iteration: guess with the offset in force at the
+ * naive reading, correct with the offset in force at that guess, then VERIFY by
+ * converting back.
+ *
+ * **A civil time that does not exist returns `null`.** On the spring-forward day
+ * 02:30 is skipped entirely in `Europe/Madrid` — no instant reads 02:30 there —
+ * and the verification is what detects it, rather than a table of transitions
+ * this package would have to carry. Returning a nearby instant instead would
+ * book an appointment for a time nobody chose. An AMBIGUOUS civil time, the hour
+ * that repeats in autumn, resolves to the LATER of its two instants: that is
+ * what the iteration converges on, measured rather than decreed, and either
+ * answer is a real moment reading that clock.
+ *
+ * @param civilDate `YYYY-MM-DD`.
+ * @param clockTime `HH:mm`, 24-hour.
+ */
+export function zonedCivilToInstant(
+  civilDate: string,
+  clockTime: string,
+  timeZone: string,
+): Date | null {
+  const day = CIVIL_DATE_PATTERN.exec(civilDate);
+  const clock = CLOCK_TIME_PATTERN.exec(clockTime);
+  if (!day || !clock) return null;
+
+  const hour = Number(clock[1]);
+  const minute = Number(clock[2]);
+  if (hour > 23 || minute > 59) return null;
+
+  const wanted = Date.UTC(Number(day[1]), Number(day[2]) - 1, Number(day[3]), hour, minute);
+  if (!Number.isFinite(wanted)) return null;
+
+  let guess = wanted;
+  for (let pass = 0; pass < 2; pass += 1) {
+    const reading = civilFieldsAsUtc(new Date(guess), timeZone);
+    if (reading === null) return null;
+    guess = wanted - (reading - guess);
+  }
+
+  const verify = civilFieldsAsUtc(new Date(guess), timeZone);
+  if (verify === null || verify !== wanted) return null;
+  return new Date(guess);
+}
+
+/** What a zone's wall clock reads at some instant. */
+export interface ZonedCivilReading {
+  /** `YYYY-MM-DD`. */
+  readonly date: string;
+  /** `HH:mm`, 24-hour. */
+  readonly time: string;
+  /** Minutes since local midnight. */
+  readonly minuteOfDay: number;
+  /** `0` = Sunday, matching Postgres `extract(dow)` and `Date#getUTCDay`. */
+  readonly weekday: number;
+}
+
+/** The wall-clock reading of `instant` in `timeZone`, or `null`. */
+export function instantToZonedCivil(instant: Date, timeZone: string): ZonedCivilReading | null {
+  if (Number.isNaN(instant.getTime())) return null;
+  const reading = civilFieldsAsUtc(instant, timeZone);
+  if (reading === null) return null;
+  const asDate = new Date(reading);
+  const pad = (value: number): string => String(value).padStart(2, '0');
+  return {
+    date: `${asDate.getUTCFullYear()}-${pad(asDate.getUTCMonth() + 1)}-${pad(asDate.getUTCDate())}`,
+    time: `${pad(asDate.getUTCHours())}:${pad(asDate.getUTCMinutes())}`,
+    minuteOfDay: asDate.getUTCHours() * 60 + asDate.getUTCMinutes(),
+    weekday: asDate.getUTCDay(),
+  };
+}

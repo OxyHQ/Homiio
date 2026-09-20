@@ -810,7 +810,8 @@
       "markSoldTitle": "Mark as sold?",
       "transactError": "Could not close this listing",
       "transactDone": "Listing marked as closed",
-      "transactCommission": "Deal closed — commission recorded"
+      "transactCommission": "Deal closed — commission recorded",
+      "viewingTimes": "Viewing times"
     },
     "details": {
       "bedrooms": "Bedrooms",
@@ -1968,7 +1969,8 @@
     },
     "validation": {
       "selectDateTime": "Please select a date and time",
-      "invalidProperty": "Invalid property"
+      "invalidProperty": "Invalid property",
+      "timeFormat": "Enter a time as HH:mm, for example 17:30."
     },
     "error": {
       "generic": "Failed to submit viewing request. Please try again.",
@@ -1978,7 +1980,9 @@
       "authRequired": "Please sign in to request a viewing.",
       "notFound": "Viewing request not found.",
       "cannotCancel": "Cannot cancel this viewing request.",
-      "externalProperty": "Cannot book viewings for external properties"
+      "externalProperty": "Cannot book viewings for external properties",
+      "slotNotOffered": "That time is not on offer. Pick one of the available slots.",
+      "invalidDateTime": "That date and time could not be read. Check the format (HH:mm)."
     },
     "selectDate": "Select Date",
     "availableTimeSlots": "Available Time Slots",
@@ -2005,6 +2009,54 @@
     "banner": {
       "viewDetails": "View details",
       "hasViewing": "You have a viewing scheduled"
+    },
+    "loadingSlots": "Loading available times…",
+    "timezoneNotice": "Times are shown in {{zone}}, the home's own timezone.",
+    "timezoneUnknown": "Nobody has said which timezone this home is in, so times are shown in {{zone}}.",
+    "noPublishedSlots": "The owner has not published viewing times yet. Propose one below and they can accept or suggest another.",
+    "proposeTime": "Propose a time",
+    "noSlotsThatDay": "No times offered on that day.",
+    "pickADay": "Pick a day to see the times on offer.",
+    "slotLabel": "{{time}}, {{minutes}} minutes",
+    "durationMinutes": "{{minutes}} min",
+    "ownerResponse": "The owner said",
+    "modality": {
+      "title": "How would you like to visit?",
+      "in_person": "In person",
+      "video": "Video call"
+    },
+    "schedule": {
+      "title": "Viewing times",
+      "explainer": "Say when you can show this home. People can only ask for the times you publish here, and the same weekly pattern repeats until you change it.",
+      "timezone": "Timezone",
+      "timezoneUnset": "No timezone is set for this home, so times are read as UTC. Set one so \"17:00\" means what you mean.",
+      "saved": "Viewing times saved.",
+      "invalidTimezone": "That is not a timezone name. Try Europe/Madrid.",
+      "tooManyWindows": "At most {{max}} time windows.",
+      "rowTimeFormat": "Window {{row}}: enter times as HH:mm.",
+      "rowOrder": "Window {{row}}: the end must come after the start.",
+      "rowLength": "Window {{row}}: a visit lasts between {{min}} and {{max}} minutes.",
+      "rowTooShort": "Window {{row}}: the window is shorter than one visit.",
+      "rowTitle": "Window {{row}}",
+      "from": "From",
+      "to": "To",
+      "slotMinutes": "Minutes per visit",
+      "addWindow": "Add a time window",
+      "removeWindow": "Remove",
+      "save": "Save viewing times",
+      "emptyTitle": "No viewing times yet",
+      "emptyDescription": "Add a window and people will be able to ask for a visit inside it.",
+      "notYours": "Listing not found",
+      "notYoursDescription": "You can only set viewing times on your own listings.",
+      "weekday": {
+        "sun": "Sun",
+        "mon": "Mon",
+        "tue": "Tue",
+        "wed": "Wed",
+        "thu": "Thu",
+        "fri": "Fri",
+        "sat": "Sat"
+      }
     }
   },
   "donations": {

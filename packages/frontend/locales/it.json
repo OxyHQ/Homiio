@@ -909,7 +909,8 @@
       "markSoldTitle": "Mark as sold?",
       "transactError": "Could not close this listing",
       "transactDone": "Listing marked as closed",
-      "transactCommission": "Deal closed — commission recorded"
+      "transactCommission": "Deal closed — commission recorded",
+      "viewingTimes": "Orari di visita"
     },
     "details": {
       "bedrooms": "Camere da letto",
@@ -1268,7 +1269,8 @@
     },
     "validation": {
       "selectDateTime": "Seleziona una data e un orario",
-      "invalidProperty": "Proprietà non valida"
+      "invalidProperty": "Proprietà non valida",
+      "timeFormat": "Inserisci l'ora come HH:mm, per esempio 17:30."
     },
     "error": {
       "generic": "Invio della richiesta di visita non riuscito. Riprova.",
@@ -1278,7 +1280,9 @@
       "authRequired": "Accedi per richiedere una visita.",
       "notFound": "Richiesta di visita non trovata.",
       "cannotCancel": "Impossibile cancellare questa richiesta di visita.",
-      "externalProperty": "Cannot book viewings for external properties"
+      "externalProperty": "Cannot book viewings for external properties",
+      "slotNotOffered": "Quell'orario non è offerto. Scegline uno tra quelli disponibili.",
+      "invalidDateTime": "Non è stato possibile leggere quella data e ora. Controlla il formato (HH:mm)."
     },
     "selectDate": "Seleziona data",
     "availableTimeSlots": "Fasce orarie disponibili",
@@ -1305,6 +1309,54 @@
     "banner": {
       "viewDetails": "View details",
       "hasViewing": "You have a viewing scheduled"
+    },
+    "loadingSlots": "Caricamento degli orari disponibili…",
+    "timezoneNotice": "Gli orari sono mostrati in {{zone}}, il fuso orario dell'immobile.",
+    "timezoneUnknown": "Nessuno ha indicato il fuso orario di questo immobile, quindi gli orari sono mostrati in {{zone}}.",
+    "noPublishedSlots": "Il proprietario non ha ancora pubblicato orari di visita. Proponine uno e potrà accettarlo o suggerirne un altro.",
+    "proposeTime": "Proponi un orario",
+    "noSlotsThatDay": "Nessun orario offerto in quel giorno.",
+    "pickADay": "Scegli un giorno per vedere gli orari disponibili.",
+    "slotLabel": "{{time}}, {{minutes}} minuti",
+    "durationMinutes": "{{minutes}} min",
+    "ownerResponse": "Il proprietario ha risposto",
+    "modality": {
+      "title": "Come vuoi visitarlo?",
+      "in_person": "Di persona",
+      "video": "Videochiamata"
+    },
+    "schedule": {
+      "title": "Orari di visita",
+      "explainer": "Indica quando puoi mostrare questo immobile. Si potranno richiedere solo gli orari che pubblichi qui, e lo stesso schema settimanale si ripete finché non lo cambi.",
+      "timezone": "Fuso orario",
+      "timezoneUnset": "Questo immobile non ha un fuso orario, quindi gli orari sono letti come UTC. Impostane uno perché «17:00» significhi ciò che intendi.",
+      "saved": "Orari di visita salvati.",
+      "invalidTimezone": "Questo non è il nome di un fuso orario. Prova Europe/Madrid.",
+      "tooManyWindows": "Al massimo {{max}} fasce orarie.",
+      "rowTimeFormat": "Fascia {{row}}: inserisci gli orari come HH:mm.",
+      "rowOrder": "Fascia {{row}}: la fine deve venire dopo l'inizio.",
+      "rowLength": "Fascia {{row}}: una visita dura tra {{min}} e {{max}} minuti.",
+      "rowTooShort": "Fascia {{row}}: la fascia è più corta di una visita.",
+      "rowTitle": "Fascia {{row}}",
+      "from": "Dalle",
+      "to": "Alle",
+      "slotMinutes": "Minuti per visita",
+      "addWindow": "Aggiungi una fascia",
+      "removeWindow": "Rimuovi",
+      "save": "Salva gli orari di visita",
+      "emptyTitle": "Ancora nessun orario di visita",
+      "emptyDescription": "Aggiungi una fascia e le persone potranno chiedere una visita al suo interno.",
+      "notYours": "Annuncio non trovato",
+      "notYoursDescription": "Puoi impostare gli orari di visita solo sui tuoi annunci.",
+      "weekday": {
+        "sun": "Dom",
+        "mon": "Lun",
+        "tue": "Mar",
+        "wed": "Mer",
+        "thu": "Gio",
+        "fri": "Ven",
+        "sat": "Sab"
+      }
     }
   },
   "payments": {

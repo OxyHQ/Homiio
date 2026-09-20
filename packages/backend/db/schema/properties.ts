@@ -686,6 +686,38 @@ export const properties = pgTable(
     guestsAllowed: boolean().notNull().default(true),
     maxGuests: doublePrecision().notNull().default(1),
 
+    /**
+     * The IANA zone this home's clock runs on, as the OWNER states it.
+     *
+     * Every "10:00" in the viewing domain — an offered slot, a requested time,
+     * a rescheduled one — is a civil time that has to be anchored in some zone
+     * to become an instant, and until this column existed the anchor was
+     * whichever zone the API container happened to boot in. A viewing booked at
+     * "10:00" passed through the server's zone on the way in and the device's
+     * on the way out, with nothing reconciling them.
+     *
+     * **NULL means nobody has said, and nothing here invents one.** The two
+     * candidate sources in the repository were both checked rather than
+     * assumed:
+     *
+     *  - `cities.timezone` exists and is real where it is set — but the path
+     *    that CREATES a city during normal address resolution
+     *    (`services/addressService.ts#upsertCity`) does not write it. Only
+     *    `scripts/seedGeo.ts`'s six hand-written Spanish cities and an explicit
+     *    admin create ever do. So it is a usable FALLBACK and never a basis.
+     *  - deriving a zone from the coordinates would need a tz-boundary
+     *    shapefile this repository does not have, and guessing one from a
+     *    longitude is the class of invention ADR 0002 exists to refuse.
+     *
+     * `db/availability/viewingTimeZone.ts` therefore resolves owner → city →
+     * UTC and REPORTS which of the three it used, so a screen can say "times
+     * are shown in Europe/Madrid" or admit that it does not know. No CHECK: an
+     * IANA name is a FORMAT, and `db/schema/CONVENTIONS.md` keeps format
+     * validators out of the schema. It is validated at the call site against
+     * `Intl` itself, which is the only authority that matters.
+     */
+    viewingTimezone: text(),
+
     // ── Priced block: long-term rent (offering `long_term_rent`) ──
     longTermRentMonthlyAmount: doublePrecision(),
     longTermRentCurrency: text({ enum: LISTING_CURRENCIES }),
