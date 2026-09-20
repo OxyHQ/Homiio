@@ -5,6 +5,7 @@ const router = express.Router();
 // typed `unknown`, so every route below was registering an untyped value.
 import * as propertyController from '../controllers/property';
 import * as profileController from '../controllers/profile';
+import viewingController from '../controllers/viewingController';
 import { createListingReport } from '../controllers/reportController';
 import * as validation from '../middlewares/validation';
 import { asyncHandler } from '../middlewares/errorHandler';
@@ -23,6 +24,23 @@ router.post("/:propertyId/mark-transacted", asyncHandler(propertyController.mark
 
 // Property tracking (requires authentication)
 router.post("/:propertyId/track-view", asyncHandler(profileController.trackPropertyView));
+
+/**
+ * Viewing requests ON a listing — the two handlers the app has always called.
+ *
+ * `viewingService` has posted to `/api/properties/:propertyId/viewings` since
+ * the screen was written, and `viewingController` has had both handlers all
+ * along; nothing mounted them. Only the integration suite's own express app
+ * did, so every test passed while production answered 404 to every attempt to
+ * arrange a viewing. `__tests__/integration/viewingRoutes.test.ts` now asserts
+ * the MOUNT through the real router, which is the half no handler test can see.
+ *
+ * Authenticated, because this file is mounted behind
+ * `createOxyAuthMiddleware` in `routes/index.ts` — the router is what decides
+ * that (see `AGENTS.md`), and both handlers read the session.
+ */
+router.post("/:propertyId/viewings", asyncHandler(viewingController.createViewingRequest));
+router.get("/:propertyId/viewings", asyncHandler(viewingController.listPropertyViewingRequests));
 
 // Trust & safety: file a report against a listing (requires authentication)
 router.post("/:propertyId/report", asyncHandler(createListingReport));

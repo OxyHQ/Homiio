@@ -17,6 +17,7 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Dialog } from '@oxy.so/bloom/dialog';
+import { Text as BloomText } from '@oxy.so/bloom/typography';
 import { toast } from '@oxy.so/bloom/toast';
 import type { GuestCounts } from '@oxy.so/bloom/stay-search';
 import { openAccountDialog, useOxy } from '@oxy.so/services';
@@ -194,6 +195,18 @@ export function useStayBooking(
       title={t('booking.accessibility.selectDates')}
       label={t('booking.accessibility.selectDates')}
     >
+      {/* The calendar is only as good as the answer behind it. The service used
+          to turn a failed availability read into an empty calendar — every
+          night free — so a failure looked exactly like an empty diary. It
+          throws now, and the person is told what they are looking at. */}
+      {availabilityQuery.isError ? (
+        <BloomText
+          variant="body-2-regular"
+          className="px-4 pb-2 text-center text-muted-foreground"
+        >
+          {t('booking.calendar.unavailable')}
+        </BloomText>
+      ) : null}
       <AvailabilityCalendar
         mode="modal"
         windows={availabilityQuery.data?.windows}

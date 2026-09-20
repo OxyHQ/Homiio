@@ -106,6 +106,18 @@ export const reservationService = {
     return response.data.data;
   },
 
+  /**
+   * The stay calendar for a listing — blocked windows and committed dates.
+   *
+   * **A failure is thrown, never flattened into an empty calendar.** This used
+   * to answer `{ windows: [], booked: [] }` whenever the response carried no
+   * `data`, which is indistinguishable from "this home is free every night" —
+   * and the endpoint was behind the session, so every signed-out visitor took
+   * that branch and was shown a full home as entirely available. The endpoint is
+   * public now (`routes/public.ts`); if it still fails, the caller's query goes
+   * to `isError` and the screen can say so, rather than quietly inventing
+   * availability.
+   */
   async getPropertyAvailability(
     propertyId: string,
   ): Promise<PropertyAvailabilityResponse> {
@@ -113,11 +125,7 @@ export const reservationService = {
       `/api/properties/${propertyId}/availability`,
     );
     if (!response.data?.data) {
-      return {
-        propertyId,
-        windows: [],
-        booked: [],
-      };
+      throw new Error(response.data?.message || 'Availability is unavailable');
     }
     const data = response.data.data;
     return {

@@ -35,7 +35,7 @@ import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 import { qualified } from '../casing';
 import { escapeLikePattern } from '@oxy.so/utils/sql';
 import { TEXT_SEARCH_CONFIGURATION } from '../extensions';
-import { addresses, properties, propertyAvailabilityWindows, reservations } from '../schema';
+import { addresses, exchangeRequests, properties, propertyAvailabilityWindows, reservations } from '../schema';
 
 /** Never surface a soft-deleted (archived) listing. */
 export function notDeleted(): SQL {
@@ -383,7 +383,10 @@ export function textRank(term: string): SQL<number> {
 // ── Calendar availability ──
 
 /**
- * Exclude listings whose host calendar blocks the requested stay.
+ * Exclude listings whose host calendar blocks the requested stay, in EITHER
+ * scope — a fortnight the host closed on their exchange calendar is a fortnight
+ * nobody sleeps there, and `db/availability/occupancy.ts` refuses a booking in
+ * it, so a feed that still offered it would be advertising a 409.
  *
  * The port of `$nor: [{ availabilityWindows: { $elemMatch: { status != available,
  * start < checkOut, end > checkIn } } }]`. `tstzrange(a, b)` defaults to `[)`
@@ -450,10 +453,45 @@ export function calendarIsFree(checkIn: Date, checkOut: Date): SQL {
   return sql`not exists (
     select 1 from ${propertyAvailabilityWindows}
     where ${propertyAvailabilityWindows.propertyId} = ${qualified(properties.id)}
-      and ${propertyAvailabilityWindows.scope} = 'listing'
       and ${propertyAvailabilityWindows.status} <> 'available'
       and tstzrange(${propertyAvailabilityWindows.startsAt}, ${propertyAvailabilityWindows.endsAt})
           && tstzrange(${checkIn.toISOString()}::timestamptz, ${checkOut.toISOString()}::timestamptz)
+  )`;
+}
+
+/**
+ * Listings with no CONFIRMED home exchange over the stay, in EITHER role.
+ *
+ * The third thing that occupies a home, and until now the one the feed could
+ * not see: a dated search excluded booked homes and blocked calendars and
+ * happily offered a home already committed to a swap — which the booking path
+ * then refuses with a 409, after somebody has chosen it.
+ *
+ * BOTH roles, for the reason `db/exchanges/exchangeReads.ts` records: a swap
+ * commits the home being visited AND the home offered in return, and a scan
+ * that checked only `property_id` would show the second as free.
+ *
+ * `qualified` on the correlated reference is not optional, for the reason
+ * {@link calendarIsFree} records.
+ */
+export function noConfirmedExchangeOverlaps(checkIn: Date, checkOut: Date): SQL {
+  const start = checkIn.toISOString();
+  const end = checkOut.toISOString();
+  return sql`not exists (
+    select 1 from ${exchangeRequests}
+    where ${exchangeRequests.status} = 'confirmed'
+      and (
+        (
+          ${exchangeRequests.propertyId} = ${qualified(properties.id)}
+          and tstzrange(${exchangeRequests.requestedWindowStart}, ${exchangeRequests.requestedWindowEnd})
+              && tstzrange(${start}::timestamptz, ${end}::timestamptz)
+        )
+        or (
+          ${exchangeRequests.offeredPropertyId} = ${qualified(properties.id)}
+          and tstzrange(${exchangeRequests.offeredWindowStart}, ${exchangeRequests.offeredWindowEnd})
+              && tstzrange(${start}::timestamptz, ${end}::timestamptz)
+        )
+      )
   )`;
 }
 

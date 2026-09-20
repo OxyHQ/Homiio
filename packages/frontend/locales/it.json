@@ -3219,7 +3219,8 @@
     },
     "calendar": {
       "selectRange": "Seleziona check-in e check-out",
-      "apply": "Applica"
+      "apply": "Applica",
+      "unavailable": "Non siamo riusciti a caricare il calendario di questa casa, quindi queste date potrebbero non essere libere."
     },
     "breakdown": {
       "nights_one": "{{price}} × {{count}} notte",

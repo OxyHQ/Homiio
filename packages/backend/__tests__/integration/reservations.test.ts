@@ -24,7 +24,7 @@ import { eq } from 'drizzle-orm';
 
 import reservationController from '../../controllers/reservationController';
 import { getDb } from '../../db/postgres';
-import { propertyAvailabilityWindows, reservations } from '../../db/schema';
+import { exchangeRequests, propertyAvailabilityWindows, reservations } from '../../db/schema';
 import { errorHandler } from '../../middlewares/errorHandler';
 import { resetGeoTables, seedListingWithGeo } from '../helpers/postgresGeoFixtures';
 
@@ -122,6 +122,7 @@ async function book(
 }
 
 beforeEach(async () => {
+  await getDb().delete(exchangeRequests);
   await getDb().delete(reservations);
   await resetGeoTables();
 });
@@ -129,6 +130,7 @@ beforeEach(async () => {
 afterAll(async () => {
   // Leave the shared tables as this file found them — see the reproduced
   // geoBackfill collision documented in `leaseOwnership.test.ts`.
+  await getDb().delete(exchangeRequests);
   await getDb().delete(reservations);
   await resetGeoTables();
 });
@@ -172,6 +174,22 @@ describe('createReservation — pricing', () => {
   it('refuses an unpublished, external, non-bookable or own listing', async () => {
     const draft = await seedBookableProperty({ status: 'draft' });
     expect((await request(buildApp('oxy-guest')).post('/reservations').send({ propertyId: draft, ...stay(10, 15), guestCount: 1 })).status).toBe(400);
+
+    // EXTERNAL. This case was named in the title and never seeded: every
+    // listing in it carried `isExternal: false`, so the guard the name claims
+    // to cover was untested and deleting it would have kept the suite green.
+    // An external listing is an advertisement copied from somewhere else — the
+    // booking would be with a host Homiio has no relationship with.
+    const external = await seedBookableProperty({
+      isExternal: true,
+      source: 'idealista',
+      sourceUrl: 'https://x.test/stay-1',
+    });
+    const externalAttempt = await request(buildApp('oxy-guest'))
+      .post('/reservations')
+      .send({ propertyId: external, ...stay(10, 15), guestCount: 1 });
+    expect(externalAttempt.status).toBe(400);
+    expect(externalAttempt.body.error.code).toBe('EXTERNAL_PROPERTY');
 
     const notBookable = (await seedListingWithGeo({
       countryCode: nextCountryCode(),
@@ -280,10 +298,14 @@ describe('the two calendar conflicts — half-open, at the boundary', () => {
     expect(allowed.status).toBe(201);
   });
 
-  it('ignores an EXCHANGE-scope window — the two calendars share a table', async () => {
-    // `property_availability_windows` holds both calendars under a `scope`
-    // discriminator. A query that forgot the scope would let an exchange
-    // window block a paid booking.
+  it('is BLOCKED by an exchange-scope window too — a home is one dwelling', async () => {
+    // This case asserted the OPPOSITE until #518 §7.5, and the expectation was
+    // the defect rather than the contract: `property_availability_windows`
+    // holds both calendars under a `scope` discriminator, and the stay path
+    // filtered `scope = 'listing'`, so a host who closed their exchange
+    // calendar for a month could still be sold a paid stay inside it. The
+    // scope records which calendar the host was editing; it does not say which
+    // nights the home has beds free. See `db/availability/occupancy.ts`.
     const base = Date.now();
     const propertyId = await seedBookableProperty();
     await getDb().insert(propertyAvailabilityWindows).values({
@@ -297,7 +319,83 @@ describe('the two calendar conflicts — half-open, at the boundary', () => {
     const res = await request(buildApp('oxy-guest'))
       .post('/reservations')
       .send({ propertyId, ...stay(10, 15, base), guestCount: 1 });
-    expect(res.status).toBe(201);
+    expect(res.status).toBe(409);
+    expect(res.body.error.code).toBe('BLOCKED_BY_HOST');
+    expect(await getDb().select().from(reservations)).toHaveLength(0);
+  });
+
+  it('blocks a stay a confirmed EXCHANGE already occupies, in either role', async () => {
+    // The cross-domain half. `findOverlappingReservation` reads `reservations`
+    // and `hasPropertyConflict` reads `exchange_requests`, and until now
+    // neither domain asked the other — so a confirmed swap left the home
+    // bookable as a paid stay, with no error anywhere on the way to two people
+    // arriving at one front door.
+    const base = Date.now();
+    const asTarget = await seedBookableProperty({
+      offerings: ['short_term_rent', 'exchange'],
+      exchangeMode: 'both',
+    });
+    await getDb().insert(exchangeRequests).values({
+      propertyId: asTarget,
+      requesterOxyUserId: 'oxy-swapper',
+      hostOxyUserId: 'oxy-host',
+      mode: 'host',
+      requestedWindowStart: new Date(base + 12 * DAY),
+      requestedWindowEnd: new Date(base + 18 * DAY),
+      status: 'confirmed',
+    });
+    const onTarget = await request(buildApp('oxy-guest'))
+      .post('/reservations')
+      .send({ propertyId: asTarget, ...stay(10, 15, base), guestCount: 1 });
+    expect(onTarget.status).toBe(409);
+
+    // And as the home OFFERED in a swap, which is the role a scan over
+    // `property_id` alone would miss.
+    const asOffered = await seedBookableProperty({
+      offerings: ['short_term_rent', 'exchange'],
+      exchangeMode: 'both',
+    });
+    const elsewhere = await seedBookableProperty({
+      offerings: ['short_term_rent', 'exchange'],
+      exchangeMode: 'both',
+    });
+    await getDb().insert(exchangeRequests).values({
+      propertyId: elsewhere,
+      offeredPropertyId: asOffered,
+      requesterOxyUserId: 'oxy-host',
+      hostOxyUserId: 'oxy-other-host',
+      mode: 'swap',
+      requestedWindowStart: new Date(base + 60 * DAY),
+      requestedWindowEnd: new Date(base + 65 * DAY),
+      offeredWindowStart: new Date(base + 12 * DAY),
+      offeredWindowEnd: new Date(base + 18 * DAY),
+      status: 'confirmed',
+    });
+    const onOffered = await request(buildApp('oxy-guest'))
+      .post('/reservations')
+      .send({ propertyId: asOffered, ...stay(10, 15, base), guestCount: 1 });
+    expect(onOffered.status).toBe(409);
+
+    // A PENDING exchange is a proposal and must not block anything — the
+    // permit half, without which "refuse everything" would pass the two cases
+    // above.
+    const proposedOnly = await seedBookableProperty({
+      offerings: ['short_term_rent', 'exchange'],
+      exchangeMode: 'both',
+    });
+    await getDb().insert(exchangeRequests).values({
+      propertyId: proposedOnly,
+      requesterOxyUserId: 'oxy-swapper',
+      hostOxyUserId: 'oxy-host',
+      mode: 'host',
+      requestedWindowStart: new Date(base + 12 * DAY),
+      requestedWindowEnd: new Date(base + 18 * DAY),
+      status: 'pending',
+    });
+    const despitePending = await request(buildApp('oxy-guest'))
+      .post('/reservations')
+      .send({ propertyId: proposedOnly, ...stay(10, 15, base), guestCount: 1 });
+    expect(despitePending.status).toBe(201);
   });
 });
 

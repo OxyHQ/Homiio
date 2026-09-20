@@ -15,13 +15,18 @@
  * worse than a stored one that cannot. `db/schema/bookings.ts` records the same
  * decision from the schema's side; {@link computeNights} is the one writer.
  *
- * ## Both conflict checks are range overlaps now
+ * ## The conflict check is a range overlap, and it is no longer the whole rule
  *
  * The reservation clash was `checkIn < $checkOut AND checkOut > $checkIn` — a
- * hand-written half-open overlap that works and states the rule twice. The
- * calendar clash loaded EVERY window and overlapped in JavaScript.
+ * hand-written half-open overlap that works and states the rule twice.
  *
- * Both are `tstzrange(...) && tstzrange(...)`, **HALF-OPEN `[)`** — the default,
+ * {@link findOverlappingReservation} answers only the `reservations` half. What
+ * a booking path actually needs to know — reservations, confirmed exchanges AND
+ * the host calendar, because a home is one dwelling — is
+ * `db/availability/occupancy.ts#findOccupancyConflict`, which composes this. The
+ * calendar query moved there with it.
+ *
+ * It is `tstzrange(...) && tstzrange(...)`, **HALF-OPEN `[)`** — the default,
  * matching `reservations_stay_range_gist` and `property_availability_windows_
  * range_gist`, and meaning a stay that ends the morning another begins is not a
  * conflict. `leases_term_range_gist` uses CLOSED `[]` and copying that spelling
@@ -112,38 +117,15 @@ export async function findOverlappingReservation(
 }
 
 /**
- * Does a host-defined calendar window BLOCK this stay?
+ * The host's calendar for a property, BOTH scopes, in order.
  *
- * Only `blocked` and `booked` windows block; `available` ones never do, which
- * is the same exclusion the JavaScript version made before calling
- * `hasConflict`. Scoped to the `listing` calendar — the table also holds the
- * `exchange` one under the same `scope` discriminator.
+ * Both, because the dwelling is one dwelling: a fortnight the host closed on
+ * their exchange calendar is a fortnight nobody sleeps there, and a calendar
+ * that showed it free would invite a booking
+ * `db/availability/occupancy.ts#findOccupancyConflict` then refuses. The wire
+ * shape carries `status`, and an `available` window is a no-op for every
+ * reader, so widening the scope adds blocks and never removes one.
  */
-export async function findBlockingWindow(
-  db: DatabaseOrTransaction,
-  propertyId: string,
-  stay: StayWindow,
-): Promise<{ id: string } | undefined> {
-  const start = stay.checkIn.toISOString();
-  const end = stay.checkOut.toISOString();
-
-  const [row] = await db
-    .select({ id: propertyAvailabilityWindows.id })
-    .from(propertyAvailabilityWindows)
-    .where(
-      and(
-        eq(propertyAvailabilityWindows.propertyId, propertyId),
-        eq(propertyAvailabilityWindows.scope, 'listing'),
-        ne(propertyAvailabilityWindows.status, 'available'),
-        sql`tstzrange(${propertyAvailabilityWindows.startsAt}, ${propertyAvailabilityWindows.endsAt})
-            && tstzrange(${start}::timestamptz, ${end}::timestamptz)`,
-      ),
-    )
-    .limit(1);
-  return row;
-}
-
-/** The `listing` calendar for a property, in order. */
 export async function listAvailabilityWindows(
   db: DatabaseOrTransaction,
   propertyId: string,
@@ -151,12 +133,7 @@ export async function listAvailabilityWindows(
   return db
     .select()
     .from(propertyAvailabilityWindows)
-    .where(
-      and(
-        eq(propertyAvailabilityWindows.propertyId, propertyId),
-        eq(propertyAvailabilityWindows.scope, 'listing'),
-      ),
-    )
+    .where(eq(propertyAvailabilityWindows.propertyId, propertyId))
     .orderBy(asc(propertyAvailabilityWindows.startsAt));
 }
 
@@ -187,6 +164,27 @@ export async function findReservationById(
   id: string,
 ): Promise<ReservationRow | undefined> {
   const [row] = await db.select().from(reservations).where(eq(reservations.id, id)).limit(1);
+  return row;
+}
+
+/**
+ * One reservation by id, `FOR UPDATE` — the row a confirm decides against.
+ *
+ * The status the caller read before the transaction is a fact about the past.
+ * Re-reading it under a lock is what makes the four re-verifications a confirm
+ * performs (dates, capacity, price, availability) apply to the booking as it is
+ * when the write happens, rather than as it was when the request arrived.
+ */
+export async function lockReservationById(
+  tx: DatabaseOrTransaction,
+  id: string,
+): Promise<ReservationRow | undefined> {
+  const [row] = await tx
+    .select()
+    .from(reservations)
+    .where(eq(reservations.id, id))
+    .limit(1)
+    .for('update');
   return row;
 }
 

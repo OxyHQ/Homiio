@@ -93,7 +93,7 @@ count.
 | Beds | **open** | No `beds` column; `max_guests` is a different fact |
 | Amenities | **live** | |
 | Instant booking | **live** | `properties.short_term_rent_instant_book` |
-| Dates / guests | **partial** | In `SearchQuery` and the URL; availability is filtered on `/properties`, not on `/properties/search` |
+| Dates / guests | **partial** | In `SearchQuery` and the URL; availability is filtered on `/properties`, not on `/properties/search`. A dated feed now excludes confirmed exchanges too, so it stops advertising homes the booking path would refuse |
 
 ### The floor filter: what it took, and what it still will not claim
 
@@ -160,15 +160,15 @@ a lift is not part of the address.
 |---|---|---|---|
 | Gallery, facts, amenities | `PropertyOverview`, `AmenitiesGrid`, `DetailIconGrid` | **live** | |
 | Save / share / report | `PropertyActionBar`, `app/properties/[id]/report.tsx` | **live** | |
-| Contact / visit | `LandlordSection`, `book-viewing.tsx` | **live** | External listings keep their source CTA |
+| Contact / visit | `LandlordSection`, `book-viewing.tsx` | **partial** | Requesting a viewing reaches the server at last — `POST /api/properties/:id/viewings` was mounted nowhere and answered 404 in production. The slots on the form are still a hardcoded list: real ones need an owner availability model, #518 §7.5. External listings keep their source CTA |
 | Apply | `app/properties/[id]/apply.tsx` | **live** | |
 | Place reviews | `ReviewsSection`, `CommunityNotesSection` | **live** | Building/unit reviews, kept distinct from stay reviews |
 | Floor plans | — | **open** | No column, no upload, no render |
 | Energy label | — | **open** | No column |
 | Price history chart | — | **open** | `areaPriceComparison` is an AREA fact, not this listing's history |
 | **Sale:** price per m², mortgage calculator | `SaleDetailsSection`, `MortgageCalculatorSection` | **live** | Explicitly a simulation, not an offer |
-| **Stays:** calendar, guests, price breakdown, booking | `AvailabilitySection`, `BookingCard`, `useStayBooking` | **partial** | Reservations exist; the public availability projection #518 §7.5 asks for does not |
-| **Swap:** propose, accept, track | `ExchangeSection`, `useExchangeQueries` | **partial** | Proposals persist; points do not exist — §7 |
+| **Stays:** calendar, guests, price breakdown, booking | `AvailabilitySection`, `BookingCard`, `useStayBooking` | **live** | The calendar is public (#518 §7.5): `{ start, end, status }` per span, no guest, no price, no reservation id — so a signed-out visitor sees the blocked nights instead of an empty diary. Creating and confirming a stay run in one transaction with the listing locked, re-verifying dates, capacity, price and availability |
+| **Swap:** propose, accept, track | `ExchangeSection`, `useExchangeQueries` | **partial** | Proposals persist and now conflict with paid stays and blocked calendars in both directions, on BOTH homes of a swap. An external listing keeps its terms on show and loses the request CTA. Points do not exist — §7 |
 
 ---
 
@@ -186,7 +186,7 @@ a lift is not part of the address.
 | `ApplicationChecklist` | `useApplicationQueries` | **partial** | Applications persist; the checklist's per-requirement state does not |
 | `SavedSearchCard` + alerts | `useSavedSearches`, `useHousingAlerts` | **live** | `housing_watch_rules` / `housing_alerts`, with a connected job — not a local toggle |
 | Wishlists / collections | `savedPropertyFolders` | **live** | Owner-scoped |
-| Trips and swaps | `useReservationQueries`, `useExchangeQueries` | **partial** | Real rows; not surfaced as the template's trip cards |
+| Trips and swaps | `useReservationQueries`, `useExchangeQueries` | **partial** | Real rows, and one occupancy rule behind them (`db/availability/occupancy.ts`): a reservation, a confirmed exchange and a blocked window each block the other two. Still not surfaced as the template's trip cards |
 | `PublishPage` wizard | `useCreatePropertyWizard`, `properties/create.tsx` | **partial** | Real uploads, `status: 'draft'`, server validation. Photo **order** and full draft resumption unverified; no `setTimeout` success anywhere |
 | `EvictionsPage` | `app/evictions/*` | **live** | Board, detail, timeline, resources, RSVP — a Homiio domain the template only sketches |
 | `HousingWidgets` | `components/widgets/*` | **partial** | Saved searches and featured are real; the area-price and neighbourhood widgets are gated off by default and show nothing invented |
@@ -360,6 +360,27 @@ Implementing points means a product decision first — how they are earned, held
 reserved, spent, refunded and expired, and whether they are convertible — then a
 ledger with idempotency and double-spend prevention. **The decision is not
 made**, so the row is `blocked` and stays visible rather than disappearing.
+
+### What §7.5 still leaves open, and why each one needs a column
+
+The viewings/stays/exchange work landed everything that could be built without a
+schema change. These could not, and none of them is an oversight:
+
+ - **Owner-defined viewing slots**, and with them a real replacement for
+   `book-viewing.tsx`'s hardcoded `TIME_SLOTS`. Needs a table of the windows an
+   owner offers; inventing slots on the client is worse than admitting there are
+   none.
+ - **Viewing modality** (in person / video) and **duration** — two columns on
+   `viewing_requests`, plus the owner's **response text**, which today has
+   nowhere to go: a decline carries a status and no words.
+ - **A property-local timezone.** A viewing instant is built in the SERVER's
+   zone from `YYYY-MM-DD` + `HH:mm`, so an owner in Madrid and a server in
+   another zone disagree about what 10:00 means. The fix is a column on the
+   listing, not arithmetic at the boundary.
+ - **`EXCLUDE USING gist` on `reservations`.** The double-booking rule is
+   enforced by a row lock plus a re-read, which is correct and is enforced by
+   the application. A constraint would make it the DATABASE's rule and hold for
+   any writer, including a future importer or a manual fix.
 
 ---
 

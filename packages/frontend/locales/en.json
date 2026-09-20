@@ -3035,7 +3035,8 @@
     },
     "calendar": {
       "selectRange": "Select check-in and check-out",
-      "apply": "Apply"
+      "apply": "Apply",
+      "unavailable": "We couldn't load this home's calendar, so these dates may not be free."
     },
     "breakdown": {
       "nights_one": "{{price}} × {{count}} night",

@@ -3035,7 +3035,8 @@
     },
     "calendar": {
       "selectRange": "选择入住和退房日期",
-      "apply": "应用"
+      "apply": "应用",
+      "unavailable": "我们无法加载该房源的日历，因此这些日期可能已被占用。"
     },
     "breakdown": {
       "nights_one": "{{price}} × {{count}} 晚",
