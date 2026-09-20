@@ -4005,13 +4005,16 @@
       "confirmAccessible": "Confirmar este pago y actualizar el saldo",
       "reject": "No ha llegado",
       "rejectAccessible": "Decir al inquilino que este pago no ha llegado",
-      "rejectReason": "No ha llegado nada a la cuenta"
+      "rejectReason": "No ha llegado nada a la cuenta",
+      "receipt": "Descargar recibo",
+      "receiptAccessible": "Descargar el recibo de este pago confirmado"
     },
     "errors": {
       "loadFailed": "No hemos podido cargar el saldo. No se oculta nada: la petición ha fallado.",
       "declareFailed": "No hemos podido registrarlo. Inténtalo otra vez.",
       "confirmFailed": "No hemos podido confirmarlo. Inténtalo otra vez.",
-      "rejectFailed": "No hemos podido registrarlo. Inténtalo otra vez."
+      "rejectFailed": "No hemos podido registrarlo. Inténtalo otra vez.",
+      "receiptFailed": "No se pudo abrir ese recibo."
     }
   }
 }

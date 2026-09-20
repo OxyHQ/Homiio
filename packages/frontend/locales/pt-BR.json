@@ -3979,13 +3979,16 @@
       "confirmAccessible": "Confirmar este pagamento e atualizar o saldo",
       "reject": "Não chegou",
       "rejectAccessible": "Informar ao inquilino que este pagamento não chegou",
-      "rejectReason": "Nada chegou na conta"
+      "rejectReason": "Nada chegou na conta",
+      "receipt": "Baixar recibo",
+      "receiptAccessible": "Baixar o recibo deste pagamento confirmado"
     },
     "errors": {
       "loadFailed": "Não foi possível carregar o saldo. Nada está oculto — a requisição falhou.",
       "declareFailed": "Não conseguimos registrar. Tente de novo.",
       "confirmFailed": "Não conseguimos confirmar. Tente de novo.",
-      "rejectFailed": "Não conseguimos registrar. Tente de novo."
+      "rejectFailed": "Não conseguimos registrar. Tente de novo.",
+      "receiptFailed": "Não foi possível abrir esse recibo."
     }
   }
 }

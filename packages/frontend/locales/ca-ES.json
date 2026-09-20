@@ -4026,13 +4026,16 @@
       "confirmAccessible": "Confirma aquest pagament i actualitza el saldo",
       "reject": "No ha arribat",
       "rejectAccessible": "Digues a l’llogater que aquest pagament no ha arribat",
-      "rejectReason": "No ha arribat res al compte"
+      "rejectReason": "No ha arribat res al compte",
+      "receipt": "Baixar rebut",
+      "receiptAccessible": "Baixar el rebut d’aquest pagament confirmat"
     },
     "errors": {
       "loadFailed": "No hem pogut carregar el saldo. No s’amaga res: la petició ha fallat.",
       "declareFailed": "No hem pogut registrar-ho. Torna-ho a provar.",
       "confirmFailed": "No hem pogut confirmar-ho. Torna-ho a provar.",
-      "rejectFailed": "No hem pogut registrar-ho. Torna-ho a provar."
+      "rejectFailed": "No hem pogut registrar-ho. Torna-ho a provar.",
+      "receiptFailed": "No s’ha pogut obrir aquest rebut."
     }
   }
 }

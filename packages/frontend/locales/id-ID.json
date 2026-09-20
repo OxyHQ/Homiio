@@ -3979,13 +3979,16 @@
       "confirmAccessible": "Konfirmasi pembayaran ini dan perbarui saldo",
       "reject": "Tidak pernah masuk",
       "rejectAccessible": "Beri tahu penyewa bahwa pembayaran ini tidak masuk",
-      "rejectReason": "Tidak ada yang masuk ke rekening"
+      "rejectReason": "Tidak ada yang masuk ke rekening",
+      "receipt": "Unduh kuitansi",
+      "receiptAccessible": "Unduh kuitansi untuk pembayaran yang sudah dikonfirmasi ini"
     },
     "errors": {
       "loadFailed": "Kami tidak dapat memuat saldo. Tidak ada yang disembunyikan — permintaannya gagal.",
       "declareFailed": "Kami tidak dapat mencatatnya. Coba lagi.",
       "confirmFailed": "Kami tidak dapat mengonfirmasi. Coba lagi.",
-      "rejectFailed": "Kami tidak dapat mencatatnya. Coba lagi."
+      "rejectFailed": "Kami tidak dapat mencatatnya. Coba lagi.",
+      "receiptFailed": "Kuitansi itu tidak dapat dibuka."
     }
   }
 }

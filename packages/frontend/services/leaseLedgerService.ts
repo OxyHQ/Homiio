@@ -97,6 +97,17 @@ class LeaseLedgerService {
     return data.data;
   }
 
+  /**
+   * Where to ASK for a settled payment's receipt.
+   *
+   * A path, not a link: the bytes come from a handler that checks the viewer is
+   * a party to the lease, so neither `window.open` nor `Linking.openURL` can
+   * reach it. `openPrivateDocument` fetches and hands off.
+   */
+  receiptPath(leaseId: string, movementId: string): string {
+    return `/api/leases/${leaseId}/movements/${movementId}/receipt`;
+  }
+
   /** Money going back. A new movement; the original payment survives. */
   async refund(input: {
     readonly leaseId: string;

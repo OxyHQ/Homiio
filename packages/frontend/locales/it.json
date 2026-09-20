@@ -4004,13 +4004,16 @@
       "confirmAccessible": "Conferma questo pagamento e aggiorna il saldo",
       "reject": "Non è mai arrivato",
       "rejectAccessible": "Comunica all’inquilino che il pagamento non è arrivato",
-      "rejectReason": "Non è arrivato nulla sul conto"
+      "rejectReason": "Non è arrivato nulla sul conto",
+      "receipt": "Scarica la ricevuta",
+      "receiptAccessible": "Scarica la ricevuta di questo pagamento confermato"
     },
     "errors": {
       "loadFailed": "Non siamo riusciti a caricare il saldo. Niente è nascosto: la richiesta è fallita.",
       "declareFailed": "Non siamo riusciti a registrarlo. Riprova.",
       "confirmFailed": "Non siamo riusciti a confermarlo. Riprova.",
-      "rejectFailed": "Non siamo riusciti a registrarlo. Riprova."
+      "rejectFailed": "Non siamo riusciti a registrarlo. Riprova.",
+      "receiptFailed": "Non è stato possibile aprire quella ricevuta."
     }
   }
 }

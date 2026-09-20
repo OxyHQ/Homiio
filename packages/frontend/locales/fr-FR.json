@@ -3979,13 +3979,16 @@
       "confirmAccessible": "Confirmer ce paiement et mettre à jour le solde",
       "reject": "Rien n’est arrivé",
       "rejectAccessible": "Indiquer au locataire que ce paiement n’est pas arrivé",
-      "rejectReason": "Rien n’est arrivé sur le compte"
+      "rejectReason": "Rien n’est arrivé sur le compte",
+      "receipt": "Télécharger le reçu",
+      "receiptAccessible": "Télécharger le reçu de ce paiement confirmé"
     },
     "errors": {
       "loadFailed": "Impossible de charger le solde. Rien n’est masqué : la requête a échoué.",
       "declareFailed": "Nous n’avons pas pu l’enregistrer. Réessayez.",
       "confirmFailed": "Nous n’avons pas pu le confirmer. Réessayez.",
-      "rejectFailed": "Nous n’avons pas pu l’enregistrer. Réessayez."
+      "rejectFailed": "Nous n’avons pas pu l’enregistrer. Réessayez.",
+      "receiptFailed": "Ce reçu n’a pas pu être ouvert."
     }
   }
 }

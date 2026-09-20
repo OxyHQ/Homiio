@@ -3975,13 +3975,16 @@
       "confirmAccessible": "Confirm this payment and update the balance",
       "reject": "It never arrived",
       "rejectAccessible": "Tell the tenant this payment did not arrive",
-      "rejectReason": "Nothing has arrived in the account"
+      "rejectReason": "Nothing has arrived in the account",
+      "receipt": "Download receipt",
+      "receiptAccessible": "Download the receipt for this confirmed payment"
     },
     "errors": {
       "loadFailed": "We could not load the balance. Nothing is hidden — the request failed.",
       "declareFailed": "We could not record that. Try again.",
       "confirmFailed": "We could not confirm that. Try again.",
-      "rejectFailed": "We could not record that. Try again."
+      "rejectFailed": "We could not record that. Try again.",
+      "receiptFailed": "That receipt could not be opened."
     }
   }
 }
