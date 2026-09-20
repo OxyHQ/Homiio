@@ -3991,5 +3991,25 @@
       "rejectFailed": "Kami tidak dapat mencatatnya. Coba lagi.",
       "receiptFailed": "Kuitansi itu tidak dapat dibuka."
     }
+  },
+  "guestPoints": {
+    "title": "Poin tamu",
+    "available": "{{count}} poin bisa dipakai",
+    "reserved": "{{count}} dipesan untuk menginap yang masih menunggu jawaban",
+    "breakdown": "{{earned}} didapat dari menjadi tuan rumah · {{spent}} dipakai untuk menginap",
+    "needToHost": "Kamu harus menjadi tuan rumah dulu sebelum bisa menginap.",
+    "rule": "Satu malam menjadi tuan rumah menghasilkan satu poin; satu malam menginap menghabiskan satu poin. Poin tidak bisa dibeli, diberikan, atau ditukar menjadi uang.",
+    "empty": {
+      "body": "Kamu belum punya poin tamu. Terima seseorang menginap semalam dan kamu akan punya satu."
+    },
+    "errors": {
+      "loadFailed": "Kami tidak bisa memuat poin tamumu. Tidak ada yang disembunyikan — permintaannya gagal."
+    },
+    "payWith": {
+      "label": "Bayar dengan poin tamu",
+      "needDates": "Pilih tanggal untuk melihat biaya menginap ini.",
+      "cost": "{{count}} poin untuk malam-malam ini. Kamu punya {{available}}.",
+      "short": "Menginap ini butuh {{count}} poin dan kamu punya {{available}}."
+    }
   }
 }

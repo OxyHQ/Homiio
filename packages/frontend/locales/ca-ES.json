@@ -4038,5 +4038,25 @@
       "rejectFailed": "No hem pogut registrar-ho. Torna-ho a provar.",
       "receiptFailed": "No s’ha pogut obrir aquest rebut."
     }
+  },
+  "guestPoints": {
+    "title": "Punts d'hoste",
+    "available": "{{count}} punts disponibles",
+    "reserved": "{{count}} reservats per a estades pendents de resposta",
+    "breakdown": "{{earned}} guanyats allotjant · {{spent}} gastats allotjant-te",
+    "needToHost": "Has d'allotjar algú abans de poder allotjar-te.",
+    "rule": "Una nit allotjant guanya un punt; una nit allotjat en costa un. Els punts no es compren, ni es regalen, ni es converteixen en diners.",
+    "empty": {
+      "body": "Encara no tens punts d'hoste. Allotja algú una nit i en tindràs un."
+    },
+    "errors": {
+      "loadFailed": "No hem pogut carregar els teus punts. No s'amaga res: la petició ha fallat."
+    },
+    "payWith": {
+      "label": "Paga amb punts d'hoste",
+      "needDates": "Tria les dates per veure què costa aquesta estada.",
+      "cost": "{{count}} punts per aquestes nits. En tens {{available}}.",
+      "short": "Aquesta estada costa {{count}} punts i en tens {{available}}."
+    }
   }
 }

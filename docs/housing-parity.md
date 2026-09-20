@@ -133,7 +133,7 @@ a lift is not part of the address.
 
 | Control | Status | Note |
 |---|---|---|
-| Kind of exchange | **divergent** | Bloom offers swap / **guest points**; Homiio has `swap \| host \| both`. Not equivalent — see §7 |
+| Kind of exchange | **live** | Both: Homiio has `swap \| host \| both` AND guest points, as an explicit opt-in on the REQUEST rather than a fourth mode. `__tests__/integration/guestPoints.test.ts`; §7 |
 | Rooms, features | **live** / **partial** | As rent |
 | Verified members only | **partial** | `verified` filters `properties.is_verified` — a LISTING check, not the identity check Bloom's copy describes. Corrected on re-reading: the first draft of this matrix said "open", which was wrong |
 
@@ -365,17 +365,57 @@ new unit; it never converts it.
 
 ---
 
-## 7. Guest points: a domain divergence, not a missing feature
+## 7. Guest points: a ledger of nights, not a currency
 
-Bloom's swap filter offers **guest points**. Homiio models
-`swap | host | both`. These are not the same thing, and #518 §7.5 and #519 §7.5
-both forbid the two shortcuts: renaming `host` as points, and showing a
-fabricated balance.
+Bloom's swap filter offers **guest points**. Homiio now has them, and they are
+not Bloom's: the decision the row was blocked on has been made, and it is the
+smallest one that could be made honestly.
 
-Implementing points means a product decision first — how they are earned, held,
-reserved, spent, refunded and expired, and whether they are convertible — then a
-ledger with idempotency and double-spend prevention. **The decision is not
-made**, so the row is `blocked` and stays visible rather than disappearing.
+**One point per night, in both directions.** Hosting a guest for one night earns
+1 point; staying one night costs 1. Guests do not multiply it — a night is a
+night. The symmetry is the whole design: the system can neither inflate nor
+deflate, because every point in existence is a night somebody hosted, and it
+needs no per-home valuation, because one night is worth one night everywhere.
+Bloom's "120 per night" is exactly the number #518 §7.5 forbids copying, and the
+reason is that a price per night implies a price per home that nothing in Homiio
+could justify — ADR 0004 forbids the universal score it would take.
+
+**A new member starts at zero.** No welcome grant: #518 §7.5 calls that the
+*saldo ficticio*, and the surface is built to say the honest sentence instead —
+"you need to host before you can stay".
+
+**Reserve, then settle or release.** Asking for a points stay RESERVES its cost;
+the host accepting SETTLES it and credits them the same number; declining,
+cancelling or letting the dates pass RELEASES it. A reserved point is not
+spendable, so the balance a screen offers is `earned − spent − reserved` and
+never the raw total.
+
+**Nothing else moves a point.** `guest_point_movements.exchange_request_id` is
+`NOT NULL`, so a purchase, a gift, a transfer, a promotional grant, a conversion
+from money and a marketplace trade are all unrepresentable rather than merely
+unimplemented — none of them has a stay behind it. There is no write endpoint on
+`/api/guest-points` at all; the whole write path is the exchange lifecycle.
+
+The balance is DERIVED from the movements (`guestPointStanding`, shared by both
+sides) and double-spend is prevented in the transaction: `reserveStayPoints`
+locks the account's rows `FOR UPDATE` and then recounts in a SEPARATE statement,
+because a blocked `SELECT … FOR UPDATE` re-checks the rows it waited on and
+never sees one the winner INSERTED. Mutation-tested — removing the lock turns
+the interleaved case in `__tests__/integration/guestPoints.test.ts` red.
+
+### What was deliberately NOT decided
+
+**Cancelling a stay the host already accepted does not return the points.** By
+then the guest's points have settled and the host has been credited for holding
+the dates; releasing would refund one side while the other kept the credit, and
+reversing the host's credit would take back something they earned. Any other
+answer is a refund policy — a window, a proportion, a penalty — and that is a
+product decision nobody has made. It is the one open question this domain leaves
+behind, and it is an **open** row rather than a silent behaviour.
+
+Points also do not expire, do not appear in a filter on `/explore`, and have no
+relationship to reputation, reviews or product credits. Each of those is a
+separate decision, and none of them is implied by this one.
 
 ### What §7.5 still leaves open, and why each one needs a column
 
@@ -433,7 +473,8 @@ Open, in rough order of how much they unblock:
    three decisions it names, not on work.
 4. **Listing facts** — floor plans, energy, price history: each needs a source
    before it needs a component.
-5. **Guest points** — blocked on a product decision.
+5. **Guest points** — the ledger is live (§7). What remains is one product
+   decision: what a cancellation after acceptance should do.
 6. **Visual and multiplatform QA** — not started, and not implied by any row.
 
 Keep this file current in the same change that moves a row. A matrix that lags

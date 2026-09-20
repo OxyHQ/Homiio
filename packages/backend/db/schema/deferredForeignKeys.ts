@@ -156,6 +156,14 @@ export const OXY_ACCOUNT_COLUMN_NAMES: ReadonlySet<string> = new Set([
   // `ExchangeReview`'s two sides.
   'reviewer_oxy_user_id',
   'subject_oxy_user_id',
+  // The guest-points ledger's two sides (#518 §7.5). `account` is whose ledger
+  // the row belongs to and `counterparty` is the other person — and they are
+  // not synonyms for `requester`/`host` on the exchange request, because the
+  // SAME stay produces one row on each side with the two names swapped. Folding
+  // either into an existing role name would make one of the two rows lie about
+  // whose balance it moves.
+  'account_oxy_user_id',
+  'counterparty_oxy_user_id',
   // `Lease.documents[].uploadedBy` and `Lease.terminationNotice.givenBy`.
   'uploaded_by_oxy_user_id',
   'termination_notice_given_by_oxy_user_id',

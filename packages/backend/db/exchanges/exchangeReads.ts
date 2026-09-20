@@ -189,6 +189,15 @@ export interface CreateExchangeRequestInput {
   readonly offeredPropertyId?: string;
   readonly offeredWindow?: ExchangeWindowInput;
   readonly message?: string;
+  /**
+   * The stay is paid for in guest points (#518 §7.5).
+   *
+   * Defaults to false in {@link createExchangeRequest} rather than being made
+   * required, because free hosting is what an exchange request is unless
+   * somebody says otherwise — and a flag that had to be passed everywhere would
+   * eventually be passed wrong.
+   */
+  readonly usesGuestPoints?: boolean;
 }
 
 /**
@@ -215,6 +224,7 @@ export async function createExchangeRequest(
       offeredWindowStart: input.offeredWindow?.start,
       offeredWindowEnd: input.offeredWindow?.end,
       message: input.message,
+      usesGuestPoints: input.usesGuestPoints ?? false,
       status: 'pending',
     })
     .returning();
@@ -348,6 +358,7 @@ export function serializeExchangeRequest(row: ExchangeRequestRow): Record<string
         ? undefined
         : { start: row.offeredWindowStart, end: row.offeredWindowEnd },
     message: row.message,
+    usesGuestPoints: row.usesGuestPoints,
     status: row.status,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,

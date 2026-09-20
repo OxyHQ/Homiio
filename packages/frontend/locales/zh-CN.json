@@ -3991,5 +3991,25 @@
       "rejectFailed": "记录失败，请重试。",
       "receiptFailed": "这张收据未能打开。"
     }
+  },
+  "guestPoints": {
+    "title": "住宿积分",
+    "available": "可用 {{count}} 分",
+    "reserved": "{{count}} 分已为等待答复的行程预留",
+    "breakdown": "接待获得 {{earned}} 分 · 入住花费 {{spent}} 分",
+    "needToHost": "先接待他人，才能用积分入住。",
+    "rule": "接待一晚得一分，入住一晚扣一分。积分不能购买、赠送，也不能兑换成钱。",
+    "empty": {
+      "body": "你还没有住宿积分。接待他人住一晚，就能获得一分。"
+    },
+    "errors": {
+      "loadFailed": "无法加载你的住宿积分。没有隐藏任何内容——请求失败了。"
+    },
+    "payWith": {
+      "label": "用住宿积分支付",
+      "needDates": "先选择日期，才能看到这次入住的花费。",
+      "cost": "这几晚需要 {{count}} 分，你有 {{available}} 分。",
+      "short": "这次入住需要 {{count}} 分，你只有 {{available}} 分。"
+    }
   }
 }

@@ -32,6 +32,15 @@ export interface ExchangeRequest {
   /** For a SWAP: dates the host could stay in the requester's property. */
   offeredWindow?: ExchangeWindow;
   message?: string;
+  /**
+   * The stay is paid for in GUEST POINTS (#518 §7.5).
+   *
+   * An explicit opt-in on the REQUEST, never a property of the mode. `host`
+   * with this flag `false` is free hosting and stays free hosting — #518 §7.5
+   * forbids renaming one as the other, and a flag that defaulted to `true`
+   * would do exactly that to every existing request.
+   */
+  usesGuestPoints: boolean;
   status: ExchangeRequestStatus;
   createdAt: ISODate;
   updatedAt: ISODate;
@@ -44,11 +53,36 @@ export interface CreateExchangeRequestData {
   requestedWindow: ExchangeWindow;
   offeredWindow?: ExchangeWindow;
   message?: string;
+  /**
+   * Pay for this stay in guest points. Absent means no — free hosting.
+   *
+   * Only a `host` request may set it: a swap is already reciprocal, so charging
+   * points for one would take payment for a night the host is also receiving.
+   */
+  usesGuestPoints?: boolean;
+  /**
+   * The caller's own idempotency key for the point RESERVATION, required when
+   * `usesGuestPoints` is set.
+   *
+   * On the request rather than minted by the server, for the reason the rent
+   * ledger states: the point of a key is that the SECOND attempt carries the
+   * first one's, and only the caller knows the two attempts are the same
+   * intent.
+   */
+  guestPointsIdempotencyKey?: string;
 }
 
 export interface UpdateExchangeRequestData {
   status?: ExchangeRequestStatus;
   message?: string;
+  /**
+   * The host's own key for the CREDIT an accepted points stay produces.
+   *
+   * Optional, unlike the guest's key on the request: a host's credit is one per
+   * stay by definition, so the server derives a deterministic key when none is
+   * sent. See `hostCreditKey` in `exchangeController`.
+   */
+  guestPointsIdempotencyKey?: string;
 }
 
 /** Per-category 1-5 ratings captured alongside an exchange review. */

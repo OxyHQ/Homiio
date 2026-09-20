@@ -28,6 +28,7 @@ import {
 
 import { Header } from '@/components/Header';
 import { ExchangeRequestCard } from '@/components/exchange/ExchangeRequestCard';
+import { GuestPointsSummary } from '@/components/exchange/GuestPointsSummary';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { ListSkeleton } from '@/components/ui/ListSkeleton';
@@ -211,6 +212,13 @@ export default function ExchangeRequestsScreen() {
               );
             })}
           </ScrollView>
+
+          {/* The points balance, on the surface where points are spent and
+              earned. Drawn in BOTH views on purpose: a host needs to see what
+              hosting has earned them as much as a guest needs to see what they
+              can book with, and a balance visible only to one side reads as a
+              reward scheme rather than a ledger. */}
+          <GuestPointsSummary compact={role === 'host'} />
 
           {query.isPending ? <ListSkeleton rows={4} rowHeight={120} /> : null}
 

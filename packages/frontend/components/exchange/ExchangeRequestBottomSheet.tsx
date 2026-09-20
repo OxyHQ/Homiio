@@ -12,6 +12,7 @@ import {
   SegmentedControlItem,
   SegmentedControlItemText,
 } from '@oxy.so/bloom/segmented-control';
+import { Switch } from '@oxy.so/bloom/switch';
 import { Textarea } from '@oxy.so/bloom/textarea';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { toast } from '@oxy.so/bloom/toast';
@@ -19,6 +20,7 @@ import { Text as BloomText } from '@oxy.so/bloom/typography';
 import { useOxy, openAccountDialog } from '@oxy.so/services';
 import {
   ExchangeMode,
+  guestPointsForWindow,
   OfferingType,
   type CreateExchangeRequestData,
   type Property,
@@ -28,6 +30,8 @@ import {
   type AvailabilityCalendarRange,
 } from '@/components/AvailabilityCalendar';
 import { useCreateExchangeRequest } from '@/hooks/useExchangeQueries';
+import { useGuestPoints } from '@/hooks/useGuestPointsQueries';
+import { guestPointsIdempotencyKeyFor } from '@/services/guestPointsService';
 import { useUserProperties } from '@/hooks/usePropertyQueries';
 import { getPropertyTitle, hasOffering } from '@/utils/propertyUtils';
 import { formatLocalized } from '@/utils/dateLocale';
@@ -93,7 +97,10 @@ export const ExchangeRequestBottomSheet: React.FC<ExchangeRequestBottomSheetProp
     useState<AvailabilityCalendarRange | null>(null);
   const [offeredPropertyId, setOfferedPropertyId] = useState<string>('');
   const [message, setMessage] = useState('');
+  const [usePoints, setUsePoints] = useState(false);
   const [calendarTarget, setCalendarTarget] = useState<CalendarTarget>(null);
+
+  const guestPoints = useGuestPoints();
 
   const myPropertiesQuery = useUserProperties();
 
@@ -121,6 +128,28 @@ export const ExchangeRequestBottomSheet: React.FC<ExchangeRequestBottomSheetProp
       ? ExchangeMode.HOST
       : ExchangeMode.SWAP;
   const isSwap = effectiveMode === ExchangeMode.SWAP;
+
+  /**
+   * What this stay would cost in points, and whether it can be paid for.
+   *
+   * The cost comes from the SHARED function the server charges with, so the
+   * number on screen and the number reserved are the same number by
+   * construction rather than by two implementations agreeing.
+   *
+   * The affordability check here is a courtesy, not the guard: the server
+   * recomputes the available balance under a row lock and refuses there. A
+   * client-side check that was trusted would be a double spend waiting for two
+   * phones.
+   */
+  const pointsCost = requestedWindow
+    ? guestPointsForWindow(requestedWindow.checkIn, requestedWindow.checkOut)
+    : 0;
+  const pointsAvailable = guestPoints.data?.balance.available ?? 0;
+  const canAffordPoints = pointsCost > 0 && pointsAvailable >= pointsCost;
+  // Points pay for a one-way stay; a swap is already reciprocal. Offering the
+  // control on a swap would be offering to charge somebody for a night they are
+  // also hosting, and the server refuses it.
+  const pointsOffered = !isSwap;
 
   const handleApplyRequested = useCallback(
     (range: AvailabilityCalendarRange | null) => {
@@ -165,6 +194,17 @@ export const ExchangeRequestBottomSheet: React.FC<ExchangeRequestBottomSheetProp
       },
       message: message.trim() || undefined,
     };
+    if (pointsOffered && usePoints) {
+      payload.usesGuestPoints = true;
+      // Derived from the listing and the dates, so a retry or a double tap
+      // carries the key the first attempt carried and resolves to the SAME
+      // reservation rather than a second one.
+      payload.guestPointsIdempotencyKey = guestPointsIdempotencyKeyFor(
+        payload.propertyId,
+        payload.requestedWindow.start,
+        payload.requestedWindow.end,
+      );
+    }
     if (isSwap && offeredWindow) {
       payload.offeredPropertyId = offeredPropertyId;
       payload.offeredWindow = {
@@ -195,6 +235,8 @@ export const ExchangeRequestBottomSheet: React.FC<ExchangeRequestBottomSheetProp
     property,
     effectiveMode,
     message,
+    pointsOffered,
+    usePoints,
     createMutation,
     onClose,
     router,
@@ -272,6 +314,48 @@ export const ExchangeRequestBottomSheet: React.FC<ExchangeRequestBottomSheetProp
             placeholder={t('listing.exchange.addDates')}
             onPress={() => setCalendarTarget('requested')}
           />
+
+          {/* Guest points — an explicit opt-in, never the default.
+              #518 §7.5 forbids renaming free hosting as points, so this control
+              names what the stay costs and what the person actually has, and a
+              stay stays free unless they say otherwise. */}
+          {pointsOffered ? (
+            <View style={styles.field}>
+              <View style={styles.pointsRow}>
+                <View style={styles.pointsCopy}>
+                  <BloomText style={[styles.label, { color: theme.colors.text }]}>
+                    {t('guestPoints.payWith.label')}
+                  </BloomText>
+                  <BloomText
+                    style={[styles.helperText, { color: theme.colors.textSecondary }]}
+                  >
+                    {pointsCost === 0
+                      ? t('guestPoints.payWith.needDates')
+                      : canAffordPoints
+                        ? t('guestPoints.payWith.cost', {
+                            count: pointsCost,
+                            available: pointsAvailable,
+                          })
+                        : t('guestPoints.payWith.short', {
+                            count: pointsCost,
+                            available: pointsAvailable,
+                          })}
+                  </BloomText>
+                </View>
+                <Switch
+                  accessibilityLabel={t('guestPoints.payWith.label')}
+                  value={usePoints}
+                  onValueChange={setUsePoints}
+                  disabled={!canAffordPoints}
+                />
+              </View>
+              {!canAffordPoints && pointsCost > 0 ? (
+                <BloomText style={[styles.helperText, { color: theme.colors.textSecondary }]}>
+                  {t('guestPoints.needToHost')}
+                </BloomText>
+              ) : null}
+            </View>
+          ) : null}
 
           {/* Swap-only: offered property + window */}
           {isSwap ? (
@@ -365,6 +449,15 @@ const styles = StyleSheet.create({
   helperText: {
     fontSize: 13,
     lineHeight: 19,
+  },
+  pointsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  pointsCopy: {
+    flex: 1,
+    gap: 2,
   },
 });
 

@@ -13,6 +13,7 @@ import { getDb } from '../db/postgres';
 import config from '../config';
 import { syncAllHasImages } from '../db/hasImages';
 import { EXPIRY_SWEEP_TARGETS, sweepAllExpiredRows } from '../db/expiry';
+import { releaseExpiredReservations } from '../db/guestPoints/guestPointsLedger';
 import { deliverDueDigests, runHousingAlertSweep } from './watches/housingAlertSweep';
 
 // Initialize services
@@ -51,6 +52,7 @@ class CronJobManager {
     this.setupEvictionArchivalJob();
     this.setupModerationReconciliationJob();
     this.setupExpirySweepJob();
+    this.setupGuestPointReleaseJob();
     this.setupHousingAlertJobs();
     // Boot sweeps: repair mangled coords + start Wikimedia cover backfill
     // without waiting for the top of the hour.
@@ -249,6 +251,66 @@ class CronJobManager {
       this.logger.error('Eviction archival sweep failed', error);
     } finally {
       this.jobStatus.set('evictionArchival', { isRunning: false, lastRun: new Date() });
+    }
+  }
+
+
+  /**
+   * Setup the guest-point reservation release — hourly.
+   *
+   * **This is the wiring without which the points lifecycle has three outcomes
+   * instead of four.** A reservation settles when the host accepts and is
+   * released when they decline or the guest cancels; the fourth case is the
+   * host who never answers at all, and nothing in Postgres notices that the
+   * dates went by. `db/expiry.ts` makes the point for deletions and it is just
+   * as true for a state change: without a sweep, a guest's points stay
+   * committed to a trip that can no longer happen, forever, with no error and
+   * no failing test.
+   *
+   * Hourly rather than every five minutes: the deadline is the end of a stay
+   * window measured in days, so a few minutes either side is not observable,
+   * and the query is a join over a table with one row per points stay.
+   *
+   * Every task runs it, which is safe for the reason the expiry sweep gives:
+   * the update names `state = 'reserved'` in its own predicate, so a row a
+   * concurrent sweep already released simply does not match.
+   */
+  private setupGuestPointReleaseJob(): void {
+    const job = cron.schedule('35 * * * *', async () => {
+      await this.runGuestPointRelease();
+    }, {
+      timezone: 'UTC',
+      scheduled: false,
+    });
+
+    this.jobs.set('guestPointRelease', job);
+    this.jobStatus.set('guestPointRelease', { isRunning: true, lastRun: undefined, nextRun: undefined });
+    job.start();
+  }
+
+  /**
+   * One release pass.
+   *
+   * A pass that released nothing is DISTINGUISHABLE from one that never ran —
+   * the same property the expiry sweep insists on, and for the same reason: an
+   * unwired job and a quiet one look identical in a log that only speaks when
+   * it acts.
+   */
+  async runGuestPointRelease(): Promise<void> {
+    this.jobStatus.set('guestPointRelease', { isRunning: true, lastRun: new Date() });
+    try {
+      const { released } = await releaseExpiredReservations(getDb());
+      if (released > 0) {
+        this.logger.info('Released guest points reserved for stays nobody answered', { released });
+      } else {
+        this.logger.debug('Guest-point release found nothing expired', { released });
+      }
+    } catch (error) {
+      // Logged, never rethrown: an unhandled rejection inside a cron tick takes
+      // the process down, and a missed pass is recovered by the next one.
+      this.logger.error('Guest-point release sweep failed', error);
+    } finally {
+      this.jobStatus.set('guestPointRelease', { isRunning: false, lastRun: new Date() });
     }
   }
 
@@ -666,6 +728,18 @@ export function stopCronJobs(): void {
  */
 export async function runEvictionArchivalNow(): Promise<void> {
   await cronManager.runEvictionArchivalNow();
+}
+
+/**
+ * Run the guest-point release once, now.
+ *
+ * The same seam {@link runExpirySweepNow} exists for. Without it a test can
+ * only prove "a job named `guestPointRelease` is scheduled" and "the sweep
+ * works when called directly", and neither distinguishes a job wired to the
+ * real sweep from one wired to nothing.
+ */
+export async function runGuestPointReleaseNow(): Promise<void> {
+  await cronManager.runGuestPointRelease();
 }
 
 export async function runExpirySweepNow(): Promise<void> {

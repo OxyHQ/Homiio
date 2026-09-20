@@ -3991,5 +3991,25 @@
       "rejectFailed": "Nous n’avons pas pu l’enregistrer. Réessayez.",
       "receiptFailed": "Ce reçu n’a pas pu être ouvert."
     }
+  },
+  "guestPoints": {
+    "title": "Points d'hôte",
+    "available": "{{count}} points à dépenser",
+    "reserved": "{{count}} réservés pour des séjours en attente de réponse",
+    "breakdown": "{{earned}} gagnés en accueillant · {{spent}} dépensés en séjournant",
+    "needToHost": "Vous devez accueillir quelqu'un avant de pouvoir séjourner.",
+    "rule": "Une nuit d'accueil rapporte un point ; une nuit de séjour en coûte un. Les points ne s'achètent pas, ne se donnent pas et ne se convertissent pas en argent.",
+    "empty": {
+      "body": "Vous n'avez pas encore de points d'hôte. Accueillez quelqu'un une nuit et vous en aurez un."
+    },
+    "errors": {
+      "loadFailed": "Nous n'avons pas pu charger vos points. Rien n'est caché : la requête a échoué."
+    },
+    "payWith": {
+      "label": "Payer avec des points d'hôte",
+      "needDates": "Choisissez vos dates pour voir le coût de ce séjour.",
+      "cost": "{{count}} points pour ces nuits. Vous en avez {{available}}.",
+      "short": "Ce séjour coûte {{count}} points et vous en avez {{available}}."
+    }
   }
 }
