@@ -10,6 +10,7 @@
 import { OfferingType } from '@homiio/shared-types';
 import type {
   ExchangeMode,
+  HousingFeature,
   ListingCurrency,
   LocationSelection,
   PlaceLabel,
@@ -235,6 +236,17 @@ export interface SearchQuery {
    * precision gate.
    */
   hasElevator?: boolean;
+  /**
+   * Bloom's housing features.
+   *
+   * A separate field from {@link amenities} even though six of the eleven
+   * resolve to amenity slugs, because five resolve to COLUMNS instead — a
+   * garden is `has_garden`, not the slug `garden_space`, and filtering on the
+   * slug would drop a home whose ingest never emitted one. The mapping is in
+   * `shared-types/housingFeature.ts`; the server folds the slug half into
+   * `amenities` itself, so a caller never has to know which is which.
+   */
+  features?: HousingFeature[];
   /** Amenity slugs the listing must include. */
   amenities: string[];
   /** Short-term-only date range. */

@@ -22,6 +22,7 @@ export * from './address';
 
 // Property types
 export * from './placeKind';
+export * from './housingFeature';
 export * from './property';
 
 // Profile types

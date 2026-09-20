@@ -418,7 +418,8 @@
       "placeKind": "نوع السكن",
       "placeKindAny": "أي نوع",
       "placeKindWholeHome": "سكن كامل",
-      "placeKindRoom": "غرفة"
+      "placeKindRoom": "غرفة",
+      "features": "المزايا"
     },
     "mode": {
       "label": "Browse mode",
@@ -614,6 +615,19 @@
       "childrenDescription": "من 2 إلى 12 عامًا",
       "pets": "الحيوانات الأليفة",
       "petsDescription": "المساكن التي تسمح بالحيوانات الأليفة فقط"
+    },
+    "features": {
+      "elevator": "مصعد",
+      "parking": "موقف سيارات",
+      "terrace": "تراس",
+      "garden": "حديقة",
+      "pool": "مسبح",
+      "furnished": "مفروش",
+      "pets": "الحيوانات الأليفة مسموحة",
+      "airConditioning": "تكييف",
+      "heating": "تدفئة",
+      "accessible": "دخول بلا درجات",
+      "storage": "غرفة تخزين"
     }
   },
   "profile": {

@@ -414,7 +414,8 @@
       "placeKind": "房源类型",
       "placeKindAny": "不限",
       "placeKindWholeHome": "整套房源",
-      "placeKindRoom": "一个房间"
+      "placeKindRoom": "一个房间",
+      "features": "配套"
     },
     "mode": {
       "label": "Browse mode",
@@ -610,6 +611,19 @@
       "childrenDescription": "2–12 岁",
       "pets": "宠物",
       "petsDescription": "仅显示允许携带宠物的房源"
+    },
+    "features": {
+      "elevator": "电梯",
+      "parking": "停车位",
+      "terrace": "露台",
+      "garden": "花园",
+      "pool": "泳池",
+      "furnished": "带家具",
+      "pets": "可养宠物",
+      "airConditioning": "空调",
+      "heating": "暖气",
+      "accessible": "无台阶通行",
+      "storage": "储藏室"
     }
   },
   "profile": {

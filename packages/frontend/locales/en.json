@@ -414,7 +414,8 @@
       "placeKind": "Type of place",
       "placeKindAny": "Any",
       "placeKindWholeHome": "Whole place",
-      "placeKindRoom": "A room"
+      "placeKindRoom": "A room",
+      "features": "Features"
     },
     "mode": {
       "label": "Browse mode",
@@ -610,6 +611,19 @@
       "childrenDescription": "Ages 2–12",
       "pets": "Pets",
       "petsDescription": "Only homes that allow pets"
+    },
+    "features": {
+      "elevator": "Lift",
+      "parking": "Parking",
+      "terrace": "Terrace",
+      "garden": "Garden",
+      "pool": "Pool",
+      "furnished": "Furnished",
+      "pets": "Pets allowed",
+      "airConditioning": "Air conditioning",
+      "heating": "Heating",
+      "accessible": "Step-free access",
+      "storage": "Storage room"
     }
   },
   "profile": {

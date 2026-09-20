@@ -33,12 +33,16 @@ import {
   OfferingType,
   ExchangeMode,
   PropertyType,
+  HOUSING_FEATURES,
   parseListingCurrency,
+  type HousingFeature,
   parseLocationToken,
   serializeLocationToken,
   type LocationRef,
   type LocationTokenFailure,
 } from '@homiio/shared-types';
+
+const HOUSING_FEATURE_VALUES = new Set<string>(HOUSING_FEATURES);
 
 import {
   DEFAULT_SEARCH_QUERY,
@@ -174,6 +178,9 @@ export function parseSearchParams(params: RouteParams): ParsedSearchUrl {
     bathrooms: parseNumber(readParam(params.bathrooms)),
     sizeMin: parseNumber(readParam(params.sizeMin)),
     sizeMax: parseNumber(readParam(params.sizeMax)),
+    // An unknown value is dropped rather than carried: a chip from a newer
+    // build must not empty an older one's results.
+    features: parseList<HousingFeature>(readParam(params.features), HOUSING_FEATURE_VALUES),
     groundFloor: readParam(params.groundFloor) === 'true' ? true : undefined,
     hasElevator: readParam(params.hasElevator) === 'true' ? true : undefined,
     availableNow: readParam(params.availableNow) === 'true' ? true : undefined,
@@ -279,6 +286,7 @@ export function buildSearchParamsForUrl(query: SearchQuery): SerializedSearchUrl
   if (typeof query.sizeMax === 'number') params.sizeMax = String(query.sizeMax);
   // Only the `true` case is written: these are chips that are on or off, and a
   // `groundFloor=false` in a shared link would be a param that narrows nothing.
+  if (query.features && query.features.length > 0) params.features = query.features.join(',');
   if (query.groundFloor === true) params.groundFloor = 'true';
   if (query.hasElevator === true) params.hasElevator = 'true';
   if (query.availableNow === true) params.availableNow = 'true';

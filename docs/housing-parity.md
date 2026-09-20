@@ -71,7 +71,7 @@ count.
 | Bedrooms / bathrooms | ✓ | `bedrooms`/`bathrooms` | minimum, `inRange` | **live** |
 | Floor area | ✓ | `sizeMin`/`sizeMax` | `areaInRange` | **live** — m², and an unmeasured listing is excluded from a maximum rather than matching it |
 | Availability (now / from date) | ✓ | `availableNow`/`availableBy` | `availableBy` | **live** — long-term and exchange only; a stay is booked for a range and a sale completes |
-| Features | partial | `amenities` | `hasAllAmenities` | **partial** — Bloom's `features` and Homiio's amenities are not the same vocabulary; unmapped |
+| Features | ✓ | `features` | five COLUMNS + six amenity slugs | **live** — all eleven of Bloom's chips are answered. The mapping is in `shared-types/housingFeature.ts` and the column wins wherever there is one, because several features are recorded in BOTH places and they disagree |
 | Floor | ✓ | `groundFloor`, `hasElevator` | `floor = 0` over listings that PUBLISH a floor; `has_elevator` | **partial** — ground floor and lift are live; "top" and "middle" are not offered, see below |
 
 ### Buy
@@ -135,7 +135,7 @@ a lift is not part of the address.
 |---|---|---|
 | Kind of exchange | **live** | Both: Homiio has `swap \| host \| both` AND guest points, as an explicit opt-in on the REQUEST rather than a fourth mode. `__tests__/integration/guestPoints.test.ts`; §7 |
 | Rooms, features | **live** / **partial** | As rent |
-| Verified members only | **partial** | `verified` filters `properties.is_verified` — a LISTING check, not the identity check Bloom's copy describes. Corrected on re-reading: the first draft of this matrix said "open", which was wrong |
+| Verified members only | **blocked** | `verified` filters `properties.is_verified` — a LISTING check, not the identity check Bloom's copy describes. The ecosystem does carry an identity signal (`OxyServices.civic`'s signed public card, whose `verified` verdict means the attestation's signature is internally consistent), but wiring a filter to it needs two answers nobody has: what "verified member" should MEAN for Homiio, and how many accounts carry a card. A filter over a signal almost nobody has returns nothing, which is the failure this matrix keeps recording |
 
 ---
 
