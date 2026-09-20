@@ -55,9 +55,12 @@ import {
   hasOffering,
   hasPhotos,
   idNotIn,
+  calendarIsFree,
   floorInRange,
   inRange,
   isAvailable,
+  noConfirmedExchangeOverlaps,
+  noConfirmedReservationOverlaps,
   notDeleted,
   notModerationRestricted,
   statusIs,
@@ -521,6 +524,29 @@ export function buildSearchPlan(
     parseFloatParam(query.sizeMax),
   );
   if (areaRange) conditions.push(areaRange);
+
+  // --- Date-range availability ---
+  //
+  // The SEARCH endpoint did not have this at all. `GET /api/properties` has
+  // filtered a dated feed since the Postgres port, and `/properties/search` —
+  // the one the stays UI actually calls, with `checkIn`/`checkOut` in its own
+  // params — returned homes that were already booked. Search and the booking
+  // path disagreed: a person picked a home the reservation flow then refused,
+  // and the refusal arrived after they had chosen.
+  //
+  // The same three predicates, because there are three ways a home is taken:
+  // the host's own calendar, a confirmed reservation, and a confirmed exchange.
+  // Leaving any one out advertises a home the transaction would decline.
+  const checkIn = parseDateParam(query.checkIn);
+  const checkOut = parseDateParam(query.checkOut);
+  // Both bounds, and in order. A half-open range is somebody mid-edit, and a
+  // reversed one is a typo — neither is a question about availability, and
+  // narrowing on either would drop listings for a reason nobody could see.
+  if (checkIn !== undefined && checkOut !== undefined && checkOut.getTime() > checkIn.getTime()) {
+    conditions.push(calendarIsFree(checkIn, checkOut));
+    conditions.push(noConfirmedReservationOverlaps(checkIn, checkOut));
+    conditions.push(noConfirmedExchangeOverlaps(checkIn, checkOut));
+  }
 
   // --- Floor ---
   //
