@@ -51,6 +51,24 @@
 -- in `docs/postgres.md`; neither is a rename away.
 
 --> statement-breakpoint
+-- FIRST, because the survivor is RENAMED while the rows it is replacing are
+-- still there.
+--
+-- The rename below takes the group's mixed-case spelling, which usually belongs
+-- to a row this migration is about to delete — so `SALFORD` becomes `Salford`
+-- while the other `Salford` is still present, and the old case-sensitive index
+-- refuses it. That is not a hypothetical: it is `23505` on
+-- `(region_id, name)=(…, Salford)`, which is how the first attempt at this
+-- migration failed in production.
+--
+-- Deleting the losers before the rename would work too, but it would mean
+-- reading every field this migration carries forward into a temp table first,
+-- purely to survive the delete. Dropping the index that is being replaced
+-- anyway is the smaller change, and it is safe because the whole file runs in
+-- one transaction: no other session can insert a duplicate name in the gap
+-- before `cities_region_slug_key` exists.
+DROP INDEX "cities_region_name_key";
+--> statement-breakpoint
 -- The survivor of each group, and the name it will carry.
 --
 -- Survivor: the row holding the most listings, then the oldest, then the lowest
@@ -201,5 +219,4 @@ DROP TABLE _neighborhood_slug_merge;
 --> statement-breakpoint
 DROP TABLE _city_slug_merge;
 --> statement-breakpoint
-DROP INDEX "cities_region_name_key";--> statement-breakpoint
 CREATE UNIQUE INDEX "cities_region_slug_key" ON "cities" USING btree ("region_id","slug");

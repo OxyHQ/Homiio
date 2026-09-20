@@ -19,18 +19,34 @@
  *    losing city, so the three repointing statements are measured separately
  *    rather than by one that happens to cover them all.
  *
- * ## Why it drops and recreates the unique index
+ * ## It restores the PRE-migration schema first, and that is the whole test
  *
- * The state this migration repairs cannot exist once `cities_region_slug_key`
- * does — that is the whole point of the index — so the fixture has to be built
- * without it. Everything therefore runs inside ONE transaction that is ALWAYS
- * rolled back: the index comes back and the fixture rows never commit.
+ * The harness hands every worker a database with all migrations applied, so at
+ * test time 0029 has already run: `cities_region_slug_key` exists and
+ * `cities_region_name_key` does not. Running the file against THAT is running
+ * it against a schema strictly weaker than the one it meets in production, and
+ * the first version of this suite did exactly that — it dropped the slug index,
+ * never recreated the name index, and went green on a migration that failed in
+ * production with `23505` on `(region_id, name)=(…, Salford)`.
  *
- * The obvious objection is the `DROP INDEX`'s ACCESS EXCLUSIVE lock on
- * `cities`, held until that rollback. It costs nothing here, and the reason is
- * worth stating rather than assumed: `jest.setup.ts` gives every worker its own
- * throwaway database, so the only session that can want this table is this one.
- * A suite that shared a database with its neighbours could not do this.
+ * The rename is what collides: the survivor takes the group's mixed-case
+ * spelling, which belongs to a row that has not been deleted yet, so `SALFORD`
+ * becomes `Salford` while the other `Salford` is still there. Only the old
+ * case-sensitive index can see that, and only a test that has that index can
+ * catch it.
+ *
+ * So the transaction puts the schema back the way the migration expects to find
+ * it — slug index out, name index in — and then runs EVERY statement of the
+ * file, including its own `DROP INDEX`. Nothing is skipped and nothing is
+ * simulated.
+ *
+ * Everything runs inside ONE transaction that is ALWAYS rolled back: the schema
+ * comes back and the fixture rows never commit. The obvious objection is the
+ * `DROP INDEX`'s ACCESS EXCLUSIVE lock on `cities`, held until that rollback.
+ * It costs nothing here, and the reason is worth stating rather than assumed:
+ * `jest.setup.ts` gives every worker its own throwaway database, so the only
+ * session that can want this table is this one. A suite that shared a database
+ * with its neighbours could not do this.
  *
  * Facts are collected inside the transaction and asserted OUTSIDE it, so a
  * failed `expect` cannot be mistaken for the sentinel that triggers the
@@ -70,19 +86,10 @@ afterAll(async () => {
   await closePostgres();
 });
 
-/**
- * The migration's statements, in file order, with the one `DROP INDEX` removed.
- *
- * That statement drops `cities_region_name_key`, which this database has not
- * had since the migration was applied to it by the harness — the fixture below
- * drops the index the migration CREATES instead, which is the one that stands
- * in the way. The count is asserted rather than assumed: if the file ever grows
- * a second `DROP INDEX`, the skip stops being a one-line exception and this
- * test says so instead of silently omitting a step.
- */
-function migrationStatements(): { statements: string[]; skipped: string[] } {
+/** Every statement of the migration, in file order, with its comments stripped. */
+function migrationStatements(): string[] {
   const raw = fs.readFileSync(MIGRATION, 'utf8');
-  const all = raw
+  return raw
     .split('--> statement-breakpoint')
     .map((chunk) =>
       chunk
@@ -92,8 +99,6 @@ function migrationStatements(): { statements: string[]; skipped: string[] } {
         .trim(),
     )
     .filter((chunk) => chunk.length > 0);
-  const skipped = all.filter((chunk) => /^drop\s+index/i.test(chunk));
-  return { statements: all.filter((chunk) => !skipped.includes(chunk)), skipped };
 }
 
 interface MergeOutcome {
@@ -113,19 +118,22 @@ interface MergeOutcome {
   readonly reviewCityId: string | null;
   readonly reviewNeighborhoodId: string | null;
   readonly uniqueIndexRestored: boolean;
-  readonly skippedStatements: number;
+  readonly nameIndexDropped: boolean;
 }
 
 /** A sentinel: thrown to roll the fixture back, never a failure. */
 class Rollback extends Error {}
 
 async function runMerge(): Promise<MergeOutcome> {
-  const { statements, skipped } = migrationStatements();
+  const statements = migrationStatements();
   let captured: MergeOutcome | undefined;
 
   try {
     await db.transaction(async (tx) => {
+      // The schema as the migration expects to FIND it: the index it creates
+      // does not exist yet, and the case-sensitive one it replaces still does.
       await tx.execute(sql`drop index cities_region_slug_key`);
+      await tx.execute(sql`create unique index cities_region_name_key on cities (region_id, name)`);
 
       // The survivor is the row holding the listings, and it is SHOUTED. The
       // mixed-case spelling belongs to a row that is about to be deleted, so
@@ -240,6 +248,10 @@ async function runMerge(): Promise<MergeOutcome> {
         select 1 from pg_indexes
         where tablename = 'cities' and indexname = 'cities_region_slug_key'
       `);
+      const nameIndex = await tx.execute(sql`
+        select 1 from pg_indexes
+        where tablename = 'cities' and indexname = 'cities_region_name_key'
+      `);
 
       captured = {
         survivorId,
@@ -258,7 +270,7 @@ async function runMerge(): Promise<MergeOutcome> {
         reviewCityId: reviewRow[0]?.cityId ?? null,
         reviewNeighborhoodId: reviewRow[0]?.neighborhoodId ?? null,
         uniqueIndexRestored: restored.length > 0,
-        skippedStatements: skipped.length,
+        nameIndexDropped: nameIndex.length === 0,
       };
 
       throw new Rollback();
@@ -278,8 +290,8 @@ describe('migration 0029 folds duplicate cities onto one row per region and slug
     outcome = await runMerge();
   }, 60_000);
 
-  it('skips exactly one statement of the file, the DROP of the OLD index', () => {
-    expect(outcome.skippedStatements).toBe(1);
+  it('drops the case-sensitive index it replaces', () => {
+    expect(outcome.nameIndexDropped).toBe(true);
   });
 
   it('leaves one city, and it is the one that held the listings', () => {
