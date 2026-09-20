@@ -93,7 +93,7 @@ count.
 | Beds | **open** | No `beds` column; `max_guests` is a different fact |
 | Amenities | **live** | |
 | Instant booking | **live** | `properties.short_term_rent_instant_book` |
-| Dates / guests | **partial** | In `SearchQuery` and the URL; availability is filtered on `/properties`, not on `/properties/search`. A dated feed now excludes confirmed exchanges too, so it stops advertising homes the booking path would refuse |
+| Dates / guests | **live** | A dated SEARCH now filters availability too — it did not at all, so `/properties/search` (the one the stays UI calls) advertised homes the booking path would then refuse. All three occupants are asked about: the host's calendar, a confirmed reservation and a confirmed exchange. A half-open or reversed range narrows nothing, because neither is a question about availability |
 
 ### The floor filter: what it took, and what it still will not claim
 
