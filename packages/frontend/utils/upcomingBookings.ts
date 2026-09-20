@@ -17,10 +17,13 @@
  *   is still packing on. They stay upcoming until the END OF THE CHECKOUT DAY —
  *   {@link CHECKOUT_GRACE_MS}, the one grace in here, and it is a day rather
  *   than a hedged number because it is exactly the day the row describes.
- * - A **viewing** (`ViewingRequest`) is an INSTANT, not a window. There is no
- *   checkout day to survive, and no honest duration to invent — a flat has no
- *   declared visit length — so a viewing is upcoming until its scheduled moment
- *   passes and not one minute longer.
+ * - A **viewing** (`ViewingRequest`) is a SHORT window. This file used to say
+ *   it was an instant, because there was no honest duration to end it with — a
+ *   flat had no declared visit length. #518 §7.5 gave it one: the length is
+ *   agreed when the request is made and stored on the row, so a viewing is
+ *   upcoming until it has finished rather than until it has started, and the
+ *   half hour somebody is in the middle of stays on their own list. There is
+ *   still no checkout grace: a visit that ended is over.
  *
  * ## Statuses
  *
@@ -90,10 +93,28 @@ export function windowIsUpcoming(end: string, nowMs: number): boolean {
   return Number.isFinite(time) && time + CHECKOUT_GRACE_MS > nowMs;
 }
 
-/** A viewing is a moment: once it has started it is no longer ahead. */
-export function viewingIsUpcoming(scheduledAt: string, nowMs: number): boolean {
+/**
+ * A viewing is upcoming until it has finished.
+ *
+ * It used to be upcoming only until it STARTED, because there was no honest
+ * duration to end it with — a flat had no declared visit length. #518 §7.5 gave
+ * it one: `durationMinutes` is agreed when the request is made and stored on
+ * the row, so a half hour that began ten minutes ago is still the thing the
+ * person is doing and disappearing it from their own list is wrong.
+ *
+ * The duration is defaulted rather than required so a cached row written by an
+ * older build still places on the calendar — as a moment, exactly as before —
+ * instead of vanishing.
+ */
+export function viewingIsUpcoming(
+  scheduledAt: string,
+  nowMs: number,
+  durationMinutes = 0,
+): boolean {
   const time = parse(scheduledAt);
-  return Number.isFinite(time) && time >= nowMs;
+  if (!Number.isFinite(time)) return false;
+  const length = Number.isFinite(durationMinutes) ? Math.max(0, durationMinutes) : 0;
+  return time + length * 60_000 >= nowMs;
 }
 
 /** `ReservationStatus` narrowed to the two a surface draws. */
@@ -184,14 +205,21 @@ export function upcomingBookings(
 
   for (const row of sources.viewings ?? []) {
     const status = viewingStatus(row.status);
-    if (!wanted(status, statuses) || !viewingIsUpcoming(row.scheduledAt, nowMs)) continue;
+    if (!wanted(status, statuses) || !viewingIsUpcoming(row.scheduledAt, nowMs, row.durationMinutes))
+      continue;
+    const startMs = parse(row.scheduledAt);
+    const length = Number.isFinite(row.durationMinutes) ? Math.max(0, row.durationMinutes) : 0;
     out.push({
       key: `viewing-${row.id}`,
       kind: 'viewing',
       id: row.id,
       propertyId: row.propertyId,
       start: row.scheduledAt,
-      end: row.scheduledAt,
+      // A viewing has a declared length now (#518 §7.5), so `end` is a real
+      // end rather than a copy of the start.
+      end: Number.isFinite(startMs)
+        ? new Date(startMs + length * 60_000).toISOString()
+        : row.scheduledAt,
       status,
     });
   }

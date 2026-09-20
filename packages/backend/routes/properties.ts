@@ -6,6 +6,7 @@ const router = express.Router();
 import * as propertyController from '../controllers/property';
 import * as profileController from '../controllers/profile';
 import viewingController from '../controllers/viewingController';
+import viewingAvailabilityController from '../controllers/viewingAvailabilityController';
 import { createListingReport } from '../controllers/reportController';
 import * as validation from '../middlewares/validation';
 import { asyncHandler } from '../middlewares/errorHandler';
@@ -41,6 +42,17 @@ router.post("/:propertyId/track-view", asyncHandler(profileController.trackPrope
  */
 router.post("/:propertyId/viewings", asyncHandler(viewingController.createViewingRequest));
 router.get("/:propertyId/viewings", asyncHandler(viewingController.listPropertyViewingRequests));
+
+/**
+ * The owner's own viewing schedule (#518 §7.5).
+ *
+ * Authenticated for the same reason as the two above — the router decides —
+ * and owner-scoped in the REPOSITORY QUERY, so somebody else's listing answers
+ * 404 rather than 403. The PUBLIC half, the slots a visitor picks from, is
+ * `GET /api/properties/:propertyId/viewing-availability` on `routes/public.ts`.
+ */
+router.get("/:propertyId/viewing-windows", asyncHandler(viewingAvailabilityController.getViewingWindows));
+router.put("/:propertyId/viewing-windows", asyncHandler(viewingAvailabilityController.putViewingWindows));
 
 // Trust & safety: file a report against a listing (requires authentication)
 router.post("/:propertyId/report", asyncHandler(createListingReport));

@@ -160,7 +160,7 @@ a lift is not part of the address.
 |---|---|---|---|
 | Gallery, facts, amenities | `PropertyOverview`, `AmenitiesGrid`, `DetailIconGrid` | **live** | |
 | Save / share / report | `PropertyActionBar`, `app/properties/[id]/report.tsx` | **live** | |
-| Contact / visit | `LandlordSection`, `book-viewing.tsx` | **partial** | Requesting a viewing reaches the server at last — `POST /api/properties/:id/viewings` was mounted nowhere and answered 404 in production. The slots on the form are still a hardcoded list: real ones need an owner availability model, #518 §7.5. External listings keep their source CTA |
+| Contact / visit | `LandlordSection`, `book-viewing.tsx`, `viewing-availability.tsx` | **live** | **The slots are real.** An owner publishes recurring weekly windows (`property_viewing_windows`) in the home's own timezone, and `GET /api/properties/:id/viewing-availability` — public, like the stay calendar — is where the booking screen gets its times. The thirteen hardcoded `TIME_SLOTS` are gone; a listing with no published schedule says so and lets a visitor PROPOSE a time instead of picking an invented one. A viewing now carries a duration, a modality (in person / video) and the owner's own words on the decision, so a conflict is an OVERLAP rather than an identical instant. External listings keep their source CTA |
 | Apply | `app/properties/[id]/apply.tsx` | **live** | |
 | Place reviews | `ReviewsSection`, `CommunityNotesSection` | **live** | Building/unit reviews, kept distinct from stay reviews |
 | Floor plans | — | **open** | No column, no upload, no render |
@@ -417,26 +417,68 @@ Points also do not expire, do not appear in a filter on `/explore`, and have no
 relationship to reputation, reviews or product credits. Each of those is a
 separate decision, and none of them is implied by this one.
 
-### What §7.5 still leaves open, and why each one needs a column
+### What §7.5 asked for, and what the columns it needed turned out to say
 
-The viewings/stays/exchange work landed everything that could be built without a
-schema change. These could not, and none of them is an oversight:
+Four of the five items this section used to list were blocked on a schema
+change. Migration 0027 made it, and each one landed with a decision attached
+rather than a column:
 
- - **Owner-defined viewing slots**, and with them a real replacement for
-   `book-viewing.tsx`'s hardcoded `TIME_SLOTS`. Needs a table of the windows an
-   owner offers; inventing slots on the client is worse than admitting there are
-   none.
- - **Viewing modality** (in person / video) and **duration** — two columns on
-   `viewing_requests`, plus the owner's **response text**, which today has
-   nowhere to go: a decline carries a status and no words.
- - **A property-local timezone.** A viewing instant is built in the SERVER's
-   zone from `YYYY-MM-DD` + `HH:mm`, so an owner in Madrid and a server in
-   another zone disagree about what 10:00 means. The fix is a column on the
-   listing, not arithmetic at the boundary.
+ - **Owner-defined viewing slots** are `property_viewing_windows`: a RECURRING
+   WEEKLY window, `[startMinute, endMinute)` in the home's zone, carved into
+   `slotMinutes` appointments. Recurrence was chosen over one-off exceptions and
+   the two are deliberately NOT combined — with both, a slot exists if a
+   recurrence offers it and no exception withdraws it, which is a second source
+   of truth for one question and produces a bug (an exception nobody can see on
+   the weekly grid) that is invisible until somebody turns up at a locked door.
+   What a recurrence cannot say is "not this Thursday, I'm away"; that is left
+   OPEN, and the honest workaround is that the owner declines in words.
+ - **Modality** is one `text` + CHECK tuple shared by the window and the
+   request, so a third value cannot mean different things on the two tables. An
+   owner who can do both on a Tuesday evening declares two windows.
+ - **Duration** turned the conflict rule from `scheduled_at = scheduled_at` into
+   a real overlap. Two visits five minutes apart were never a conflict before,
+   so an owner could be double-booked all afternoon with every check passing.
+   There is no GiST index behind it and that is a refusal from the server rather
+   than a preference: `timestamptz + interval` is STABLE
+   (`pg_proc.provolatile` = `s`, measured, and asserted in
+   `__tests__/db/viewingOverlap.test.ts`) and an expression index requires
+   IMMUTABLE. What makes the plain btree sufficient is the duration CHECK — the
+   conflict query bounds its scan by `MAX_VIEWING_DURATION_MINUTES`, so the
+   constraint is load-bearing rather than hygiene.
+ - **The owner's response** is `viewing_requests.owner_response`, written in the
+   same statement as the decision. Its CHECK is one-way, unlike `cancelled_by`'s
+   equivalence: a decline with no words is ordinary, while words on an
+   unanswered request are a message the requester would be shown and the owner
+   never sent.
+ - **The timezone** is `properties.viewing_timezone`, set by the OWNER, and the
+   reason it is not derived is worth recording. `cities.timezone` exists and was
+   checked rather than assumed: the path that creates a city during ordinary
+   address resolution (`addressService#upsertCity`) does not write it, and only
+   `scripts/seedGeo.ts`'s six hand-written Spanish cities and an explicit admin
+   create ever do. So it earns a FALLBACK and could not be the basis. Deriving a
+   zone from coordinates was refused outright — it needs a boundary shapefile
+   this repo does not carry, and anything cheaper is a plausible wrong answer of
+   exactly the kind ADR 0002 forbids. `resolveViewingTimeZone` answers owner →
+   city → a stated UTC convention and REPORTS which of the three it used, all
+   the way to the wire, so a surface can say "times are shown in Europe/Madrid"
+   or admit that nobody has said.
+
+Still open, and unchanged:
+
  - **`EXCLUDE USING gist` on `reservations`.** The double-booking rule is
    enforced by a row lock plus a re-read, which is correct and is enforced by
    the application. A constraint would make it the DATABASE's rule and hold for
    any writer, including a future importer or a manual fix.
+ - **A one-off exception to a weekly viewing schedule** — see above. The model
+   is deliberately singular, and adding the second one is a decision, not a
+   gap-filling exercise.
+ - **A listing with no published schedule keeps the free-form path.** A visitor
+   proposes a time and the server checks only that it is in the future and does
+   not overlap. That is deliberate rather than transitional: refusing every
+   request on every listing nobody had configured yet would take a working
+   feature away from the whole catalogue on the day it deployed, to enforce a
+   rule nobody had had the chance to state. What it must never do is invent
+   slots, and it does not.
 
 ---
 

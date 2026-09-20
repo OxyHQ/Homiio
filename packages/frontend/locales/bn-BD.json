@@ -810,7 +810,8 @@
       "markSoldTitle": "Mark as sold?",
       "transactError": "Could not close this listing",
       "transactDone": "Listing marked as closed",
-      "transactCommission": "Deal closed — commission recorded"
+      "transactCommission": "Deal closed — commission recorded",
+      "viewingTimes": "পরিদর্শনের সময়"
     },
     "details": {
       "bedrooms": "Bedrooms",
@@ -1968,7 +1969,8 @@
     },
     "validation": {
       "selectDateTime": "Please select a date and time",
-      "invalidProperty": "Invalid property"
+      "invalidProperty": "Invalid property",
+      "timeFormat": "সময় HH:mm আকারে লিখুন, যেমন 17:30।"
     },
     "error": {
       "generic": "Failed to submit viewing request. Please try again.",
@@ -1978,7 +1980,9 @@
       "authRequired": "Please sign in to request a viewing.",
       "notFound": "Viewing request not found.",
       "cannotCancel": "Cannot cancel this viewing request.",
-      "externalProperty": "Cannot book viewings for external properties"
+      "externalProperty": "Cannot book viewings for external properties",
+      "slotNotOffered": "ওই সময়টি দেওয়া হয়নি। উপলব্ধ সময়গুলির একটি বেছে নিন।",
+      "invalidDateTime": "ওই তারিখ ও সময় পড়া যায়নি। ফরম্যাট (HH:mm) দেখে নিন।"
     },
     "selectDate": "Select Date",
     "availableTimeSlots": "Available Time Slots",
@@ -2005,6 +2009,54 @@
     "banner": {
       "viewDetails": "View details",
       "hasViewing": "You have a viewing scheduled"
+    },
+    "loadingSlots": "উপলব্ধ সময় লোড হচ্ছে…",
+    "timezoneNotice": "সময়গুলি {{zone}} অনুযায়ী দেখানো হচ্ছে, অর্থাৎ বাড়িটির নিজস্ব সময় অঞ্চল।",
+    "timezoneUnknown": "এই বাড়ির সময় অঞ্চল কেউ জানায়নি, তাই সময়গুলি {{zone}} অনুযায়ী দেখানো হচ্ছে।",
+    "noPublishedSlots": "মালিক এখনও পরিদর্শনের সময় প্রকাশ করেননি। নিচে একটি সময় প্রস্তাব করুন, তিনি সেটি গ্রহণ করতে বা অন্য সময় প্রস্তাব করতে পারবেন।",
+    "proposeTime": "একটি সময় প্রস্তাব করুন",
+    "noSlotsThatDay": "ওই দিনে কোনো সময় দেওয়া হয়নি।",
+    "pickADay": "উপলব্ধ সময় দেখতে একটি দিন বেছে নিন।",
+    "slotLabel": "{{time}}, {{minutes}} মিনিট",
+    "durationMinutes": "{{minutes}} মিনিট",
+    "ownerResponse": "মালিক বলেছেন",
+    "modality": {
+      "title": "আপনি কীভাবে দেখতে চান?",
+      "in_person": "সশরীরে",
+      "video": "ভিডিও কল"
+    },
+    "schedule": {
+      "title": "পরিদর্শনের সময়",
+      "explainer": "কখন আপনি এই বাড়িটি দেখাতে পারবেন তা জানান। এখানে প্রকাশ করা সময়গুলিই কেবল চাওয়া যাবে, এবং একই সাপ্তাহিক ছক আপনি না বদলানো পর্যন্ত চলতে থাকবে।",
+      "timezone": "সময় অঞ্চল",
+      "timezoneUnset": "এই বাড়ির কোনো সময় অঞ্চল নেই, তাই সময়গুলি UTC হিসেবে পড়া হচ্ছে। একটি নির্ধারণ করুন যাতে \"17:00\" আপনার বোঝানো সময়ই বোঝায়।",
+      "saved": "পরিদর্শনের সময় সংরক্ষিত হয়েছে।",
+      "invalidTimezone": "এটি সময় অঞ্চলের নাম নয়। Europe/Madrid চেষ্টা করুন।",
+      "tooManyWindows": "সর্বোচ্চ {{max}}টি সময়সীমা।",
+      "rowTimeFormat": "সময়সীমা {{row}}: সময় HH:mm আকারে লিখুন।",
+      "rowOrder": "সময়সীমা {{row}}: শেষ সময় শুরুর পরে হতে হবে।",
+      "rowLength": "সময়সীমা {{row}}: একটি পরিদর্শন {{min}} থেকে {{max}} মিনিট স্থায়ী হয়।",
+      "rowTooShort": "সময়সীমা {{row}}: সময়সীমাটি একটি পরিদর্শনের চেয়েও ছোট।",
+      "rowTitle": "সময়সীমা {{row}}",
+      "from": "থেকে",
+      "to": "পর্যন্ত",
+      "slotMinutes": "প্রতি পরিদর্শনে মিনিট",
+      "addWindow": "একটি সময়সীমা যোগ করুন",
+      "removeWindow": "সরান",
+      "save": "পরিদর্শনের সময় সংরক্ষণ করুন",
+      "emptyTitle": "এখনও কোনো পরিদর্শনের সময় নেই",
+      "emptyDescription": "একটি সময়সীমা যোগ করুন, তাহলে মানুষ তার ভিতরে পরিদর্শনের অনুরোধ করতে পারবে।",
+      "notYours": "বিজ্ঞাপন পাওয়া যায়নি",
+      "notYoursDescription": "আপনি কেবল নিজের বিজ্ঞাপনে পরিদর্শনের সময় নির্ধারণ করতে পারেন।",
+      "weekday": {
+        "sun": "রবি",
+        "mon": "সোম",
+        "tue": "মঙ্গল",
+        "wed": "বুধ",
+        "thu": "বৃহঃ",
+        "fri": "শুক্র",
+        "sat": "শনি"
+      }
     }
   },
   "donations": {

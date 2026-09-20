@@ -232,13 +232,20 @@ describe('approve / decline — owner only, pending only', () => {
     // A second request at the same instant can only exist if it was created
     // before the first was approved — seeded directly, since the create path
     // refuses it.
+    //
+    // The `Z` is not decoration. The create path anchors a civil time in the
+    // PROPERTY's zone (#518 §7.5), and this fixture's listing has neither an
+    // owner-stated zone nor a city with one, so that resolves to the stated UTC
+    // fallback. Written without the suffix this row lands in whatever zone the
+    // TEST RUNNER happens to be in, which is a different instant on every
+    // machine but one — and the case would pass on that one and mean nothing.
     const [second] = await getDb()
       .insert(viewingRequests)
       .values({
         propertyId,
         requesterOxyUserId: 'oxy-b',
         ownerOxyUserId: 'oxy-owner',
-        scheduledAt: new Date(`${slot.date}T${slot.time}`),
+        scheduledAt: new Date(`${slot.date}T${slot.time}:00Z`),
         status: 'pending',
       })
       .returning();

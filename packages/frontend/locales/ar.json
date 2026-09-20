@@ -814,7 +814,8 @@
       "markSoldTitle": "Mark as sold?",
       "transactError": "Could not close this listing",
       "transactDone": "Listing marked as closed",
-      "transactCommission": "Deal closed — commission recorded"
+      "transactCommission": "Deal closed — commission recorded",
+      "viewingTimes": "أوقات المعاينة"
     },
     "details": {
       "bedrooms": "Bedrooms",
@@ -1988,7 +1989,8 @@
     },
     "validation": {
       "selectDateTime": "Please select a date and time",
-      "invalidProperty": "Invalid property"
+      "invalidProperty": "Invalid property",
+      "timeFormat": "أدخل الوقت بصيغة HH:mm، مثل 17:30."
     },
     "error": {
       "generic": "Failed to submit viewing request. Please try again.",
@@ -1998,7 +2000,9 @@
       "authRequired": "Please sign in to request a viewing.",
       "notFound": "Viewing request not found.",
       "cannotCancel": "Cannot cancel this viewing request.",
-      "externalProperty": "Cannot book viewings for external properties"
+      "externalProperty": "Cannot book viewings for external properties",
+      "slotNotOffered": "هذا الوقت غير متاح. اختر أحد الأوقات المعروضة.",
+      "invalidDateTime": "تعذّرت قراءة هذا التاريخ والوقت. تحقق من الصيغة (HH:mm)."
     },
     "selectDate": "Select Date",
     "availableTimeSlots": "Available Time Slots",
@@ -2025,6 +2029,54 @@
     "banner": {
       "viewDetails": "View details",
       "hasViewing": "You have a viewing scheduled"
+    },
+    "loadingSlots": "جارٍ تحميل الأوقات المتاحة…",
+    "timezoneNotice": "تُعرض الأوقات بتوقيت {{zone}}، وهو التوقيت المحلي للمسكن.",
+    "timezoneUnknown": "لم يحدد أحد المنطقة الزمنية لهذا المسكن، لذا تُعرض الأوقات بتوقيت {{zone}}.",
+    "noPublishedSlots": "لم ينشر المالك بعد أوقاتًا للمعاينة. اقترح وقتًا ويمكنه قبوله أو اقتراح وقت آخر.",
+    "proposeTime": "اقترح وقتًا",
+    "noSlotsThatDay": "لا توجد أوقات متاحة في ذلك اليوم.",
+    "pickADay": "اختر يومًا لعرض الأوقات المتاحة.",
+    "slotLabel": "{{time}}، {{minutes}} دقيقة",
+    "durationMinutes": "{{minutes}} دقيقة",
+    "ownerResponse": "رد المالك",
+    "modality": {
+      "title": "كيف تود المعاينة؟",
+      "in_person": "حضوريًا",
+      "video": "مكالمة فيديو"
+    },
+    "schedule": {
+      "title": "أوقات المعاينة",
+      "explainer": "حدّد متى يمكنك عرض هذا المسكن. لن يتمكن الناس من طلب سوى الأوقات التي تنشرها هنا، ويتكرر النمط الأسبوعي نفسه حتى تغيّره.",
+      "timezone": "المنطقة الزمنية",
+      "timezoneUnset": "لا توجد منطقة زمنية لهذا المسكن، لذا تُقرأ الأوقات بتوقيت UTC. حدّد واحدة كي تعني «17:00» ما تقصده.",
+      "saved": "تم حفظ أوقات المعاينة.",
+      "invalidTimezone": "هذا ليس اسم منطقة زمنية. جرّب Europe/Madrid.",
+      "tooManyWindows": "{{max}} فترة زمنية كحد أقصى.",
+      "rowTimeFormat": "الفترة {{row}}: أدخل الأوقات بصيغة HH:mm.",
+      "rowOrder": "الفترة {{row}}: يجب أن تأتي النهاية بعد البداية.",
+      "rowLength": "الفترة {{row}}: تستغرق المعاينة بين {{min}} و{{max}} دقيقة.",
+      "rowTooShort": "الفترة {{row}}: الفترة أقصر من معاينة واحدة.",
+      "rowTitle": "الفترة {{row}}",
+      "from": "من",
+      "to": "إلى",
+      "slotMinutes": "دقائق لكل معاينة",
+      "addWindow": "إضافة فترة زمنية",
+      "removeWindow": "إزالة",
+      "save": "حفظ أوقات المعاينة",
+      "emptyTitle": "لا توجد أوقات معاينة بعد",
+      "emptyDescription": "أضف فترة زمنية ليتمكن الناس من طلب معاينة ضمنها.",
+      "notYours": "الإعلان غير موجود",
+      "notYoursDescription": "يمكنك تحديد أوقات المعاينة لإعلاناتك فقط.",
+      "weekday": {
+        "sun": "الأحد",
+        "mon": "الاثنين",
+        "tue": "الثلاثاء",
+        "wed": "الأربعاء",
+        "thu": "الخميس",
+        "fri": "الجمعة",
+        "sat": "السبت"
+      }
     }
   },
   "donations": {

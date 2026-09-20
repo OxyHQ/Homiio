@@ -78,6 +78,9 @@ function viewing(overrides: Partial<ViewingRequest> = {}): ViewingRequest {
     scheduledAt: iso(1),
     date: '2026-06-11',
     time: '09:00',
+    timeZone: 'Europe/Madrid',
+    durationMinutes: 30,
+    modality: 'in_person',
     status: 'approved',
     createdAt: iso(-1),
     updatedAt: iso(-1),
@@ -111,13 +114,28 @@ describe('windowIsUpcoming — a stay survives its own checkout day', () => {
   });
 });
 
-describe('viewingIsUpcoming — a moment, not a window', () => {
+describe('viewingIsUpcoming — a short window, not a moment', () => {
   it('has no checkout day to survive', () => {
-    expect(viewingIsUpcoming(new Date(NOW + 60_000).toISOString(), NOW)).toBe(true);
-    expect(viewingIsUpcoming(new Date(NOW).toISOString(), NOW)).toBe(true);
-    // One minute past its start it is not something to not miss any more, and
-    // there is no honest visit length to invent.
+    expect(viewingIsUpcoming(new Date(NOW + 60_000).toISOString(), NOW, 30)).toBe(true);
+    expect(viewingIsUpcoming(new Date(NOW).toISOString(), NOW, 30)).toBe(true);
+  });
+
+  it('keeps a viewing that is HAPPENING right now', () => {
+    // #518 §7.5 gave a viewing a declared length, so the half hour somebody is
+    // in the middle of is still the thing they are doing. Dropping it off their
+    // list ten minutes in was the behaviour before that column existed.
+    expect(viewingIsUpcoming(new Date(NOW - 10 * 60_000).toISOString(), NOW, 30)).toBe(true);
+  });
+
+  it('drops it once it has finished, with no grace', () => {
+    expect(viewingIsUpcoming(new Date(NOW - 31 * 60_000).toISOString(), NOW, 30)).toBe(false);
+  });
+
+  it('falls back to a moment when a cached row carries no length', () => {
+    // A row written by an older build must still place on the calendar rather
+    // than vanish from it.
     expect(viewingIsUpcoming(new Date(NOW - 60_000).toISOString(), NOW)).toBe(false);
+    expect(viewingIsUpcoming(new Date(NOW + 60_000).toISOString(), NOW)).toBe(true);
   });
 });
 

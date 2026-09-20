@@ -810,7 +810,8 @@
       "markSoldTitle": "Mark as sold?",
       "transactError": "Could not close this listing",
       "transactDone": "Listing marked as closed",
-      "transactCommission": "Deal closed — commission recorded"
+      "transactCommission": "Deal closed — commission recorded",
+      "viewingTimes": "देखने का समय"
     },
     "details": {
       "bedrooms": "Bedrooms",
@@ -1968,7 +1969,8 @@
     },
     "validation": {
       "selectDateTime": "Please select a date and time",
-      "invalidProperty": "Invalid property"
+      "invalidProperty": "Invalid property",
+      "timeFormat": "समय HH:mm के रूप में लिखें, जैसे 17:30।"
     },
     "error": {
       "generic": "Failed to submit viewing request. Please try again.",
@@ -1978,7 +1980,9 @@
       "authRequired": "Please sign in to request a viewing.",
       "notFound": "Viewing request not found.",
       "cannotCancel": "Cannot cancel this viewing request.",
-      "externalProperty": "Cannot book viewings for external properties"
+      "externalProperty": "Cannot book viewings for external properties",
+      "slotNotOffered": "वह समय उपलब्ध नहीं है। दिए गए समयों में से एक चुनें।",
+      "invalidDateTime": "वह तारीख और समय पढ़ा नहीं जा सका। प्रारूप (HH:mm) जाँचें।"
     },
     "selectDate": "Select Date",
     "availableTimeSlots": "Available Time Slots",
@@ -2005,6 +2009,54 @@
     "banner": {
       "viewDetails": "View details",
       "hasViewing": "You have a viewing scheduled"
+    },
+    "loadingSlots": "उपलब्ध समय लोड हो रहे हैं…",
+    "timezoneNotice": "समय {{zone}} में दिखाए गए हैं, यानी मकान के अपने समय क्षेत्र में।",
+    "timezoneUnknown": "किसी ने इस मकान का समय क्षेत्र नहीं बताया, इसलिए समय {{zone}} में दिखाए जा रहे हैं।",
+    "noPublishedSlots": "मालिक ने अभी तक देखने का समय प्रकाशित नहीं किया है। नीचे एक समय प्रस्तावित करें, वे उसे स्वीकार कर सकते हैं या दूसरा सुझा सकते हैं।",
+    "proposeTime": "समय प्रस्तावित करें",
+    "noSlotsThatDay": "उस दिन कोई समय उपलब्ध नहीं है।",
+    "pickADay": "उपलब्ध समय देखने के लिए एक दिन चुनें।",
+    "slotLabel": "{{time}}, {{minutes}} मिनट",
+    "durationMinutes": "{{minutes}} मिनट",
+    "ownerResponse": "मालिक ने कहा",
+    "modality": {
+      "title": "आप कैसे देखना चाहेंगे?",
+      "in_person": "व्यक्तिगत रूप से",
+      "video": "वीडियो कॉल"
+    },
+    "schedule": {
+      "title": "देखने का समय",
+      "explainer": "बताइए कि आप यह मकान कब दिखा सकते हैं। लोग केवल वही समय माँग सकेंगे जो आप यहाँ प्रकाशित करेंगे, और वही साप्ताहिक क्रम तब तक चलता रहेगा जब तक आप उसे बदलें नहीं।",
+      "timezone": "समय क्षेत्र",
+      "timezoneUnset": "इस मकान का कोई समय क्षेत्र तय नहीं है, इसलिए समय UTC में पढ़े जाते हैं। एक तय करें ताकि \"17:00\" वही अर्थ दे जो आप चाहते हैं।",
+      "saved": "देखने का समय सहेजा गया।",
+      "invalidTimezone": "यह समय क्षेत्र का नाम नहीं है। Europe/Madrid आज़माएँ।",
+      "tooManyWindows": "अधिकतम {{max}} समय-खंड।",
+      "rowTimeFormat": "खंड {{row}}: समय HH:mm के रूप में लिखें।",
+      "rowOrder": "खंड {{row}}: समाप्ति शुरुआत के बाद होनी चाहिए।",
+      "rowLength": "खंड {{row}}: एक मुलाक़ात {{min}} से {{max}} मिनट तक चलती है।",
+      "rowTooShort": "खंड {{row}}: यह खंड एक मुलाक़ात से भी छोटा है।",
+      "rowTitle": "खंड {{row}}",
+      "from": "से",
+      "to": "तक",
+      "slotMinutes": "प्रति मुलाक़ात मिनट",
+      "addWindow": "समय-खंड जोड़ें",
+      "removeWindow": "हटाएँ",
+      "save": "देखने का समय सहेजें",
+      "emptyTitle": "अभी कोई समय तय नहीं है",
+      "emptyDescription": "एक समय-खंड जोड़ें, फिर लोग उसके भीतर मुलाक़ात माँग सकेंगे।",
+      "notYours": "लिस्टिंग नहीं मिली",
+      "notYoursDescription": "आप केवल अपनी लिस्टिंग पर देखने का समय तय कर सकते हैं।",
+      "weekday": {
+        "sun": "रवि",
+        "mon": "सोम",
+        "tue": "मंगल",
+        "wed": "बुध",
+        "thu": "गुरु",
+        "fri": "शुक्र",
+        "sat": "शनि"
+      }
     }
   },
   "donations": {

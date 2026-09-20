@@ -788,7 +788,8 @@
       "markSoldTitle": "Mark as sold?",
       "transactError": "Could not close this listing",
       "transactDone": "Listing marked as closed",
-      "transactCommission": "Deal closed — commission recorded"
+      "transactCommission": "Deal closed — commission recorded",
+      "viewingTimes": "Horas de visita"
     },
     "details": {
       "bedrooms": "Habitaciones",
@@ -1147,7 +1148,8 @@
     },
     "validation": {
       "selectDateTime": "Por favor selecciona una fecha y hora",
-      "invalidProperty": "Propiedad inválida"
+      "invalidProperty": "Propiedad inválida",
+      "timeFormat": "Escribe la hora como HH:mm, por ejemplo 17:30."
     },
     "error": {
       "generic": "No se pudo enviar la solicitud de visita. Por favor, inténtalo de nuevo.",
@@ -1157,7 +1159,9 @@
       "authRequired": "Por favor inicia sesión para solicitar una visita.",
       "notFound": "Solicitud de visita no encontrada.",
       "cannotCancel": "No se puede cancelar esta solicitud de visita.",
-      "externalProperty": "Cannot book viewings for external properties"
+      "externalProperty": "Cannot book viewings for external properties",
+      "slotNotOffered": "Esa hora no está ofrecida. Elige una de las disponibles.",
+      "invalidDateTime": "No se ha podido leer esa fecha y hora. Comprueba el formato (HH:mm)."
     },
     "selectDate": "Seleccionar fecha",
     "availableTimeSlots": "Horarios disponibles",
@@ -1184,6 +1188,54 @@
     "banner": {
       "viewDetails": "View details",
       "hasViewing": "You have a viewing scheduled"
+    },
+    "loadingSlots": "Cargando horas disponibles…",
+    "timezoneNotice": "Las horas se muestran en {{zone}}, la zona horaria de la vivienda.",
+    "timezoneUnknown": "Nadie ha indicado la zona horaria de esta vivienda, así que las horas se muestran en {{zone}}.",
+    "noPublishedSlots": "El propietario todavía no ha publicado horas de visita. Propón una y podrá aceptarla o sugerir otra.",
+    "proposeTime": "Proponer una hora",
+    "noSlotsThatDay": "No hay horas ofrecidas ese día.",
+    "pickADay": "Elige un día para ver las horas disponibles.",
+    "slotLabel": "{{time}}, {{minutes}} minutos",
+    "durationMinutes": "{{minutes}} min",
+    "ownerResponse": "El propietario respondió",
+    "modality": {
+      "title": "¿Cómo quieres visitarla?",
+      "in_person": "En persona",
+      "video": "Videollamada"
+    },
+    "schedule": {
+      "title": "Horas de visita",
+      "explainer": "Indica cuándo puedes enseñar esta vivienda. Solo se podrán pedir las horas que publiques aquí, y el mismo patrón semanal se repite hasta que lo cambies.",
+      "timezone": "Zona horaria",
+      "timezoneUnset": "Esta vivienda no tiene zona horaria, así que las horas se leen como UTC. Indica una para que «17:00» signifique lo que quieres decir.",
+      "saved": "Horas de visita guardadas.",
+      "invalidTimezone": "Ese no es un nombre de zona horaria. Prueba con Europe/Madrid.",
+      "tooManyWindows": "Como máximo {{max}} franjas horarias.",
+      "rowTimeFormat": "Franja {{row}}: escribe las horas como HH:mm.",
+      "rowOrder": "Franja {{row}}: el final debe ir después del inicio.",
+      "rowLength": "Franja {{row}}: una visita dura entre {{min}} y {{max}} minutos.",
+      "rowTooShort": "Franja {{row}}: la franja es más corta que una visita.",
+      "rowTitle": "Franja {{row}}",
+      "from": "Desde",
+      "to": "Hasta",
+      "slotMinutes": "Minutos por visita",
+      "addWindow": "Añadir una franja",
+      "removeWindow": "Quitar",
+      "save": "Guardar horas de visita",
+      "emptyTitle": "Todavía no hay horas de visita",
+      "emptyDescription": "Añade una franja y la gente podrá pedir una visita dentro de ella.",
+      "notYours": "Anuncio no encontrado",
+      "notYoursDescription": "Solo puedes fijar horas de visita en tus propios anuncios.",
+      "weekday": {
+        "sun": "Dom",
+        "mon": "Lun",
+        "tue": "Mar",
+        "wed": "Mié",
+        "thu": "Jue",
+        "fri": "Vie",
+        "sat": "Sáb"
+      }
     }
   },
   "payments": {

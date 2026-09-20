@@ -105,6 +105,13 @@ export const ROUTE_RAIL: Readonly<Record<string, RailAssignment>> = {
   '/properties/[id]/apply': { rail: 'property-details', propertyIdParam: 'id' },
   '/properties/[id]/book-viewing': { rail: 'property-details', propertyIdParam: 'id' },
   '/properties/[id]/report': { rail: 'property-details', propertyIdParam: 'id' },
+  // The owner's viewing schedule (#518 §7.5). Same rail as its siblings: it is
+  // a page ABOUT one listing, and the rail is what keeps that listing on
+  // screen while the owner edits when they can show it.
+  '/properties/[id]/viewing-availability': {
+    rail: 'property-details',
+    propertyIdParam: 'id',
+  },
 
   // ---- Creating a listing ------------------------------------------------
   '/properties/create': { rail: 'create-property' },

@@ -110,16 +110,46 @@ const ViewingCard: React.FC<ViewingCardProps> = ({
   return (
     <Card variant="outlined" radius="radius-16" className="gap-2 p-4">
       <View style={styles.headerRow}>
-        <H3 style={styles.cardTitle}>{formatDateTime(viewing.scheduledAt, locale, deviceTimeZone())}</H3>
+        {/*
+          Rendered in the PROPERTY's zone when the server told us which one
+          (#518 §7.5), and in the device's otherwise. Both carry the zone
+          abbreviation, so a viewing that falls on a different day for a
+          traveller says so rather than quietly moving.
+        */}
+        <H3 style={styles.cardTitle}>
+          {formatDateTime(viewing.scheduledAt, locale, viewing.timeZone ?? deviceTimeZone())}
+        </H3>
         <Chip size="small" hue={token.hue}>
           {t(token.i18nKey)}
         </Chip>
+      </View>
+      <View style={styles.metaRow}>
+        <Chip size="small">{t(`viewings.modality.${viewing.modality ?? 'in_person'}`)}</Chip>
+        {viewing.durationMinutes ? (
+          <BloomText className="text-sm text-muted-foreground">
+            {t('viewings.durationMinutes', { minutes: viewing.durationMinutes })}
+          </BloomText>
+        ) : null}
       </View>
       {viewing.propertyTitle ? (
         <BloomText className="text-sm text-foreground">{viewing.propertyTitle}</BloomText>
       ) : null}
       {viewing.message ? (
         <BloomText className="text-sm italic text-muted-foreground">{viewing.message}</BloomText>
+      ) : null}
+      {/*
+        What the owner actually said. Before `owner_response` existed, a decline
+        was a status and a fixed English sentence nobody wrote — so "sorry, it
+        went yesterday" and "I can do Thursday instead" reached the requester as
+        the same words.
+      */}
+      {viewing.ownerResponse ? (
+        <View style={styles.ownerResponse}>
+          <BloomText className="text-xs uppercase text-muted-foreground">
+            {t('viewings.ownerResponse')}
+          </BloomText>
+          <BloomText className="text-sm text-foreground">{viewing.ownerResponse}</BloomText>
+        </View>
       ) : null}
 
       {isActionable ? (
@@ -378,6 +408,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: spacing.md,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  ownerResponse: {
+    gap: spacing.xs,
   },
   cardTitle: {
     flex: 1,

@@ -16,6 +16,7 @@ import observabilityController from '../controllers/observabilityController';
 import * as propertyController from '../controllers/property';
 import reservationController from '../controllers/reservationController';
 import telegramController from '../controllers/telegramController';
+import viewingAvailabilityController from '../controllers/viewingAvailabilityController';
 import analyticsController from '../controllers/analyticsController';
 import * as reviewController from '../controllers/reviewController';
 import { asyncHandler } from '../middlewares';
@@ -113,6 +114,26 @@ export default function () {
   // Declared with a distinct third segment, so it cannot shadow
   // `/properties/:propertyId` above.
   router.get('/properties/:id/availability', asyncHandler(reservationController.getPropertyAvailability));
+
+  // The viewing slots an owner publishes (#518 §7.5). PUBLIC for the same
+  // reason as the stay calendar above: picking a time to visit is something a
+  // visitor does before they have an account, and behind the session it would
+  // answer 401 into a screen that has no way to tell "no slots" from "not
+  // signed in".
+  //
+  // Safe here because of what it RETURNS: the owner's weekly windows, the free
+  // slots they produce, and the IANA zone those clock times are in. No
+  // requester, no owner, no viewing id, no message — a taken slot is simply
+  // absent, which says a time is unavailable without saying who holds it.
+  // `__tests__/integration/viewingAvailability.test.ts` asserts the absences
+  // rather than trusting this comment, and the handler reads nothing from
+  // `req.user`, which is the condition `AGENTS.md` sets for this router.
+  //
+  // A distinct third segment, so it cannot shadow `/properties/:propertyId`.
+  router.get(
+    '/properties/:propertyId/viewing-availability',
+    asyncHandler(viewingAvailabilityController.getViewingAvailability),
+  );
 
   // ── Geo gateway (#351, ADR 0002 §14.1) ──────────────────────────────────
   //

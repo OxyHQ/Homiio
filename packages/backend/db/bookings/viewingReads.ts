@@ -25,10 +25,25 @@
  * That is a genuine difference from `roommate_requests`, where the active set is
  * the single value `pending` and the rule IS an index. The distinction is the
  * cardinality of the predicate, not a preference.
+ *
+ * ## "Per instant" is now "per OVERLAP", and that changed the answer
+ *
+ * A viewing occupies half an hour, not a point. The second rule above was
+ * literally `scheduled_at = scheduled_at`, so two visits five minutes apart
+ * were not a conflict — an owner could be double-booked all afternoon and every
+ * check would pass. {@link findOverlappingViewing} replaces the equality; the
+ * `duration_minutes` column is what makes the question askable, and the CHECK
+ * bounding it is what keeps the query's index scan exhaustive. See that
+ * function for why there is still no GiST index.
  */
 
-import { and, asc, eq, inArray, lt, ne, sql } from 'drizzle-orm';
+import { and, asc, eq, gte, inArray, lt, ne, sql } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
+import {
+  MAX_VIEWING_DURATION_MINUTES,
+  instantToZonedCivil,
+  type ViewingModality,
+} from '@homiio/shared-types';
 import type { DatabaseOrTransaction } from '../postgres';
 import { viewingRequests } from '../schema';
 import {
@@ -41,6 +56,9 @@ export type ViewingStatusValue = (typeof VIEWING_REQUEST_STATUSES)[number];
 
 /** Which side cancelled. */
 export type ViewingCancellerValue = (typeof VIEWING_REQUEST_CANCELLERS)[number];
+
+/** In person, or over video. The tuple lives in `shared-types/viewing.ts`. */
+export type ViewingModalityValue = ViewingModality;
 
 export type ViewingRow = typeof viewingRequests.$inferSelect;
 
@@ -94,21 +112,58 @@ export async function findActiveViewingForRequester(
 }
 
 /**
- * Is this instant already taken on this property?
+ * Does anything on this property OVERLAP `[scheduledAt, +durationMinutes)`?
+ *
+ * ## This was an equality, and the equality was the bug
+ *
+ * The rule used to be `scheduled_at = scheduled_at`: a viewing was an instant,
+ * so two requests five minutes apart were not a conflict and an owner could be
+ * booked solid all afternoon with every check passing. A viewing takes TIME —
+ * the half hour is the whole point of it — so the question is an overlap, in
+ * the half-open convention `db/availability/occupancy.ts` uses everywhere: an
+ * appointment ending exactly as another begins is not a conflict.
+ *
+ * ## Why this is not a GiST index, when every other range in the schema is
+ *
+ * `tstzrange(scheduled_at, scheduled_at + make_interval(mins => duration))`
+ * cannot be indexed: `timestamptz + interval` is STABLE, not IMMUTABLE
+ * (`pg_proc.provolatile` reports `s` for `timestamptz_pl_interval`, measured on
+ * this repository's image and asserted in `__tests__/db/viewingOverlap.test.ts`)
+ * and an expression index requires IMMUTABLE. That is a refusal from the
+ * server, not a preference.
+ *
+ * What replaces it is a BOUNDED scan on the existing
+ * `(property_id, scheduled_at, status)` btree. An appointment can only still be
+ * running at `scheduledAt` if it began within `MAX_VIEWING_DURATION_MINUTES` of
+ * it — which is true because `viewing_requests_duration_check` says so — so the
+ * lower bound is a constant the index can seek to, and the overlap predicate
+ * filters the handful of rows between the bounds. The CHECK is load-bearing
+ * here: widen it and this query silently stops being exhaustive.
  *
  * @param excludeId A request to ignore — the one being rescheduled, or the one
  *   being approved. Without it a request would conflict with itself.
  */
-export async function findViewingAtInstant(
+export async function findOverlappingViewing(
   db: DatabaseOrTransaction,
   propertyId: string,
   scheduledAt: Date,
+  durationMinutes: number,
   options: { readonly excludeId?: string; readonly statuses?: readonly ViewingStatusValue[] } = {},
 ): Promise<ViewingRow | undefined> {
+  const endsAt = new Date(scheduledAt.getTime() + durationMinutes * 60_000);
+  const earliestStart = new Date(
+    scheduledAt.getTime() - MAX_VIEWING_DURATION_MINUTES * 60_000,
+  );
+
   const clauses: SQL[] = [
     eq(viewingRequests.propertyId, propertyId),
-    eq(viewingRequests.scheduledAt, scheduledAt),
     inArray(viewingRequests.status, [...(options.statuses ?? ACTIVE_VIEWING_STATUSES)]),
+    // The index bounds. Exhaustive because of the duration CHECK — see above.
+    gte(viewingRequests.scheduledAt, earliestStart),
+    lt(viewingRequests.scheduledAt, endsAt),
+    // The overlap itself. `[)` on both sides: back-to-back is not a conflict.
+    sql`${viewingRequests.scheduledAt}
+        + make_interval(mins => ${viewingRequests.durationMinutes}) > ${scheduledAt.toISOString()}::timestamptz`,
   ];
   if (options.excludeId !== undefined) clauses.push(ne(viewingRequests.id, options.excludeId));
 
@@ -125,6 +180,8 @@ export interface CreateViewingInput {
   readonly requesterOxyUserId: string;
   readonly ownerOxyUserId: string;
   readonly scheduledAt: Date;
+  readonly durationMinutes: number;
+  readonly modality: ViewingModalityValue;
   readonly message?: string;
 }
 
@@ -140,6 +197,8 @@ export async function createViewing(
       requesterOxyUserId: input.requesterOxyUserId,
       ownerOxyUserId: input.ownerOxyUserId,
       scheduledAt: input.scheduledAt,
+      durationMinutes: input.durationMinutes,
+      modality: input.modality,
       message: input.message,
       status: 'pending',
     })
@@ -205,16 +264,24 @@ export async function listViewings(
  *
  * `cancelled_by` is deliberately not written: it is NULL already, and the CHECK
  * requires it to stay that way for any status but `cancelled`.
+ *
+ * `ownerResponse` moves in the SAME statement as the status, for the same
+ * reason `cancelled_by` does: `viewing_requests_owner_response_status_check`
+ * forbids words on a `pending` request, so writing them in a second update
+ * would be a `23514` on a row the first statement had already decided. One
+ * writer, one statement, and the transition carries what the owner said with
+ * it.
  */
 export async function decideViewing(
   db: DatabaseOrTransaction,
   id: string,
   ownerOxyUserId: string,
   status: Extract<ViewingStatusValue, 'approved' | 'declined'>,
+  ownerResponse?: string,
 ): Promise<ViewingRow | undefined> {
   const [row] = await db
     .update(viewingRequests)
-    .set({ status })
+    .set(ownerResponse === undefined ? { status } : { status, ownerResponse })
     .where(
       and(
         eq(viewingRequests.id, id),
@@ -236,10 +303,19 @@ export async function cancelViewing(
   db: DatabaseOrTransaction,
   id: string,
   cancelledBy: ViewingCancellerValue,
+  ownerResponse?: string,
 ): Promise<ViewingRow | undefined> {
+  const values: Partial<typeof viewingRequests.$inferInsert> = {
+    status: 'cancelled',
+    cancelledBy,
+  };
+  // Only the owner has an `owner_response` to write; a requester cancelling
+  // says whatever they say in their own `message`.
+  if (cancelledBy === 'owner' && ownerResponse !== undefined) values.ownerResponse = ownerResponse;
+
   const [row] = await db
     .update(viewingRequests)
-    .set({ status: 'cancelled', cancelledBy })
+    .set(values)
     .where(and(eq(viewingRequests.id, id), ne(viewingRequests.status, 'cancelled')))
     .returning();
   return row;
@@ -250,9 +326,18 @@ export async function rescheduleViewing(
   db: DatabaseOrTransaction,
   id: string,
   requesterOxyUserId: string,
-  input: { readonly scheduledAt: Date; readonly message?: string },
+  input: {
+    readonly scheduledAt: Date;
+    readonly durationMinutes: number;
+    readonly modality: ViewingModalityValue;
+    readonly message?: string;
+  },
 ): Promise<ViewingRow | undefined> {
-  const values: Partial<typeof viewingRequests.$inferInsert> = { scheduledAt: input.scheduledAt };
+  const values: Partial<typeof viewingRequests.$inferInsert> = {
+    scheduledAt: input.scheduledAt,
+    durationMinutes: input.durationMinutes,
+    modality: input.modality,
+  };
   if (input.message !== undefined) values.message = input.message;
 
   const [row] = await db
@@ -338,15 +423,41 @@ export async function countViewingsByStatusForOwner(
  * `id`, never `_id` — the wire contract is PR #287's clean cut. The Mongoose
  * handlers returned `viewing.toJSON()`, i.e. every field, so this carries every
  * column; there is nothing on this table that is not the requester's to see.
+ *
+ * ## `timeZone`, `date` and `time` are derived here rather than on the client
+ *
+ * `scheduledAt` is an instant, so the day and clock time it lands on depend on
+ * the zone it is read in — and the client's zone is not the home's. The screen
+ * used to derive "10:00" with `toLocaleTimeString` in the DEVICE's zone, which
+ * is how a viewing agreed for Tuesday morning in Madrid was shown as Monday
+ * night to somebody in Los Angeles with nothing saying so. The property's zone
+ * is resolved once, server side (`db/availability/viewingTimeZone.ts`), and the
+ * civil reading travels WITH it so a surface can render "10:00 (Europe/Madrid)"
+ * and mean it. The instant is still there: a client that wants the device's
+ * clock has everything it needs to compute it, deliberately.
+ *
+ * @param timeZone The listing's viewing zone. Omitted only where the caller
+ *   genuinely has no listing in hand, in which case no civil reading is sent
+ *   rather than one in some convenient zone.
  */
-export function serializeViewing(row: ViewingRow): Record<string, unknown> {
+export function serializeViewing(
+  row: ViewingRow,
+  timeZone?: string,
+): Record<string, unknown> {
+  const civil = timeZone ? instantToZonedCivil(row.scheduledAt, timeZone) : null;
   return {
     id: row.id,
     propertyId: row.propertyId,
     requesterOxyUserId: row.requesterOxyUserId,
     ownerOxyUserId: row.ownerOxyUserId,
     scheduledAt: row.scheduledAt,
+    durationMinutes: row.durationMinutes,
+    modality: row.modality,
+    timeZone: timeZone ?? null,
+    date: civil?.date ?? null,
+    time: civil?.time ?? null,
     message: row.message,
+    ownerResponse: row.ownerResponse,
     status: row.status,
     cancelledBy: row.cancelledBy,
     createdAt: row.createdAt,

@@ -810,7 +810,8 @@
       "markSoldTitle": "Mark as sold?",
       "transactError": "Could not close this listing",
       "transactDone": "Listing marked as closed",
-      "transactCommission": "Deal closed — commission recorded"
+      "transactCommission": "Deal closed — commission recorded",
+      "viewingTimes": "Horários de visita"
     },
     "details": {
       "bedrooms": "Bedrooms",
@@ -1968,7 +1969,8 @@
     },
     "validation": {
       "selectDateTime": "Please select a date and time",
-      "invalidProperty": "Invalid property"
+      "invalidProperty": "Invalid property",
+      "timeFormat": "Digite a hora como HH:mm, por exemplo 17:30."
     },
     "error": {
       "generic": "Failed to submit viewing request. Please try again.",
@@ -1978,7 +1980,9 @@
       "authRequired": "Please sign in to request a viewing.",
       "notFound": "Viewing request not found.",
       "cannotCancel": "Cannot cancel this viewing request.",
-      "externalProperty": "Cannot book viewings for external properties"
+      "externalProperty": "Cannot book viewings for external properties",
+      "slotNotOffered": "Esse horário não está sendo oferecido. Escolha um dos disponíveis.",
+      "invalidDateTime": "Não foi possível ler essa data e hora. Verifique o formato (HH:mm)."
     },
     "selectDate": "Select Date",
     "availableTimeSlots": "Available Time Slots",
@@ -2005,6 +2009,54 @@
     "banner": {
       "viewDetails": "View details",
       "hasViewing": "You have a viewing scheduled"
+    },
+    "loadingSlots": "Carregando horários disponíveis…",
+    "timezoneNotice": "Os horários são mostrados em {{zone}}, o fuso horário do imóvel.",
+    "timezoneUnknown": "Ninguém informou o fuso horário deste imóvel, então os horários são mostrados em {{zone}}.",
+    "noPublishedSlots": "O proprietário ainda não publicou horários de visita. Proponha um e ele poderá aceitar ou sugerir outro.",
+    "proposeTime": "Propor um horário",
+    "noSlotsThatDay": "Nenhum horário oferecido nesse dia.",
+    "pickADay": "Escolha um dia para ver os horários oferecidos.",
+    "slotLabel": "{{time}}, {{minutes}} minutos",
+    "durationMinutes": "{{minutes}} min",
+    "ownerResponse": "O proprietário respondeu",
+    "modality": {
+      "title": "Como você quer visitar?",
+      "in_person": "Presencial",
+      "video": "Videochamada"
+    },
+    "schedule": {
+      "title": "Horários de visita",
+      "explainer": "Diga quando você pode mostrar este imóvel. Só será possível pedir os horários que você publicar aqui, e o mesmo padrão semanal se repete até você mudá-lo.",
+      "timezone": "Fuso horário",
+      "timezoneUnset": "Este imóvel não tem fuso horário definido, então os horários são lidos como UTC. Defina um para que \"17:00\" signifique o que você quer dizer.",
+      "saved": "Horários de visita salvos.",
+      "invalidTimezone": "Esse não é um nome de fuso horário. Tente Europe/Madrid.",
+      "tooManyWindows": "No máximo {{max}} faixas de horário.",
+      "rowTimeFormat": "Faixa {{row}}: digite os horários como HH:mm.",
+      "rowOrder": "Faixa {{row}}: o fim deve vir depois do início.",
+      "rowLength": "Faixa {{row}}: uma visita dura entre {{min}} e {{max}} minutos.",
+      "rowTooShort": "Faixa {{row}}: a faixa é mais curta que uma visita.",
+      "rowTitle": "Faixa {{row}}",
+      "from": "De",
+      "to": "Até",
+      "slotMinutes": "Minutos por visita",
+      "addWindow": "Adicionar uma faixa",
+      "removeWindow": "Remover",
+      "save": "Salvar horários de visita",
+      "emptyTitle": "Ainda não há horários de visita",
+      "emptyDescription": "Adicione uma faixa e as pessoas poderão pedir uma visita dentro dela.",
+      "notYours": "Anúncio não encontrado",
+      "notYoursDescription": "Você só pode definir horários de visita nos seus próprios anúncios.",
+      "weekday": {
+        "sun": "Dom",
+        "mon": "Seg",
+        "tue": "Ter",
+        "wed": "Qua",
+        "thu": "Qui",
+        "fri": "Sex",
+        "sat": "Sáb"
+      }
     }
   },
   "donations": {

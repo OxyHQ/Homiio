@@ -269,10 +269,13 @@ describe('a viewing slot cannot be given away twice', () => {
   it('refuses a request whose conflict was committed AFTER it looked', async () => {
     const propertyId = await seedLongTermProperty();
     // The controller builds the instant from `YYYY-MM-DD` + `HH:mm` in the
-    // SERVER's zone, so the fixture is built the same way rather than from UTC.
+    // PROPERTY's zone (#518 §7.5) — it used to use the SERVER's, which meant
+    // the same request was a different moment on every host. This fixture's
+    // listing has no owner-stated zone and no city carrying one, so it resolves
+    // to the stated UTC fallback, and the seeded row says `Z` to match.
     const day = new Date(Date.now() + 10 * DAY);
-    const date = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`;
-    const scheduledAt = new Date(`${date}T10:00`);
+    const date = day.toISOString().slice(0, 10);
+    const scheduledAt = new Date(`${date}T10:00:00Z`);
 
     const holder = holdListingLocked(propertyId, async (tx) => {
       await tx.insert(viewingRequests).values({

@@ -810,7 +810,8 @@
       "markSoldTitle": "Mark as sold?",
       "transactError": "Could not close this listing",
       "transactDone": "Listing marked as closed",
-      "transactCommission": "Deal closed — commission recorded"
+      "transactCommission": "Deal closed — commission recorded",
+      "viewingTimes": "看房时间"
     },
     "details": {
       "bedrooms": "Bedrooms",
@@ -1968,7 +1969,8 @@
     },
     "validation": {
       "selectDateTime": "Please select a date and time",
-      "invalidProperty": "Invalid property"
+      "invalidProperty": "Invalid property",
+      "timeFormat": "请按 HH:mm 填写时间，例如 17:30。"
     },
     "error": {
       "generic": "Failed to submit viewing request. Please try again.",
@@ -1978,7 +1980,9 @@
       "authRequired": "Please sign in to request a viewing.",
       "notFound": "Viewing request not found.",
       "cannotCancel": "Cannot cancel this viewing request.",
-      "externalProperty": "Cannot book viewings for external properties"
+      "externalProperty": "Cannot book viewings for external properties",
+      "slotNotOffered": "该时间未开放。请从可预约的时间中选择。",
+      "invalidDateTime": "无法读取该日期和时间。请检查格式（HH:mm）。"
     },
     "selectDate": "Select Date",
     "availableTimeSlots": "Available Time Slots",
@@ -2005,6 +2009,54 @@
     "banner": {
       "viewDetails": "View details",
       "hasViewing": "You have a viewing scheduled"
+    },
+    "loadingSlots": "正在加载可预约时间…",
+    "timezoneNotice": "时间以 {{zone}} 显示，即该房源所在的时区。",
+    "timezoneUnknown": "没有人说明该房源所在的时区，因此时间以 {{zone}} 显示。",
+    "noPublishedSlots": "房东尚未公布看房时间。你可以在下方提议一个时间，房东可以接受或另行建议。",
+    "proposeTime": "提议时间",
+    "noSlotsThatDay": "当天没有提供时间。",
+    "pickADay": "选择一天以查看可预约的时间。",
+    "slotLabel": "{{time}}，{{minutes}} 分钟",
+    "durationMinutes": "{{minutes}} 分钟",
+    "ownerResponse": "房东回复",
+    "modality": {
+      "title": "你想怎样看房？",
+      "in_person": "现场看房",
+      "video": "视频通话"
+    },
+    "schedule": {
+      "title": "看房时间",
+      "explainer": "说明你什么时候可以带看这套房源。别人只能预约你在这里公布的时间，同样的每周安排会一直重复，直到你更改为止。",
+      "timezone": "时区",
+      "timezoneUnset": "该房源尚未设置时区，时间将按 UTC 读取。请设置一个，让「17:00」表示你真正的意思。",
+      "saved": "看房时间已保存。",
+      "invalidTimezone": "这不是时区名称。可以试试 Europe/Madrid。",
+      "tooManyWindows": "最多 {{max}} 个时间段。",
+      "rowTimeFormat": "第 {{row}} 段：请按 HH:mm 填写时间。",
+      "rowOrder": "第 {{row}} 段：结束时间必须晚于开始时间。",
+      "rowLength": "第 {{row}} 段：一次看房为 {{min}} 到 {{max}} 分钟。",
+      "rowTooShort": "第 {{row}} 段：该时间段比一次看房还短。",
+      "rowTitle": "第 {{row}} 段",
+      "from": "从",
+      "to": "到",
+      "slotMinutes": "每次看房分钟数",
+      "addWindow": "添加时间段",
+      "removeWindow": "移除",
+      "save": "保存看房时间",
+      "emptyTitle": "还没有看房时间",
+      "emptyDescription": "添加一个时间段，别人就可以在其中预约看房。",
+      "notYours": "未找到该房源",
+      "notYoursDescription": "你只能为自己的房源设置看房时间。",
+      "weekday": {
+        "sun": "周日",
+        "mon": "周一",
+        "tue": "周二",
+        "wed": "周三",
+        "thu": "周四",
+        "fri": "周五",
+        "sat": "周六"
+      }
     }
   },
   "donations": {

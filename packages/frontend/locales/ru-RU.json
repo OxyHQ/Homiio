@@ -812,7 +812,8 @@
       "markSoldTitle": "Mark as sold?",
       "transactError": "Could not close this listing",
       "transactDone": "Listing marked as closed",
-      "transactCommission": "Deal closed — commission recorded"
+      "transactCommission": "Deal closed — commission recorded",
+      "viewingTimes": "Время просмотров"
     },
     "details": {
       "bedrooms": "Bedrooms",
@@ -1978,7 +1979,8 @@
     },
     "validation": {
       "selectDateTime": "Please select a date and time",
-      "invalidProperty": "Invalid property"
+      "invalidProperty": "Invalid property",
+      "timeFormat": "Введите время как HH:mm, например 17:30."
     },
     "error": {
       "generic": "Failed to submit viewing request. Please try again.",
@@ -1988,7 +1990,9 @@
       "authRequired": "Please sign in to request a viewing.",
       "notFound": "Viewing request not found.",
       "cannotCancel": "Cannot cancel this viewing request.",
-      "externalProperty": "Cannot book viewings for external properties"
+      "externalProperty": "Cannot book viewings for external properties",
+      "slotNotOffered": "Это время не предлагается. Выберите одно из доступных.",
+      "invalidDateTime": "Не удалось прочитать эту дату и время. Проверьте формат (HH:mm)."
     },
     "selectDate": "Select Date",
     "availableTimeSlots": "Available Time Slots",
@@ -2015,6 +2019,54 @@
     "banner": {
       "viewDetails": "View details",
       "hasViewing": "You have a viewing scheduled"
+    },
+    "loadingSlots": "Загрузка доступного времени…",
+    "timezoneNotice": "Время показано в {{zone}} — это часовой пояс жилья.",
+    "timezoneUnknown": "Никто не указал часовой пояс этого жилья, поэтому время показано в {{zone}}.",
+    "noPublishedSlots": "Владелец ещё не опубликовал время просмотра. Предложите своё — он сможет согласиться или предложить другое.",
+    "proposeTime": "Предложить время",
+    "noSlotsThatDay": "В этот день время не предлагается.",
+    "pickADay": "Выберите день, чтобы увидеть предлагаемое время.",
+    "slotLabel": "{{time}}, {{minutes}} минут",
+    "durationMinutes": "{{minutes}} мин",
+    "ownerResponse": "Владелец ответил",
+    "modality": {
+      "title": "Как вы хотите посмотреть жильё?",
+      "in_person": "Лично",
+      "video": "Видеозвонок"
+    },
+    "schedule": {
+      "title": "Время просмотров",
+      "explainer": "Укажите, когда вы можете показать это жильё. Запросить можно будет только то время, которое вы здесь опубликуете, и один и тот же недельный график повторяется, пока вы его не измените.",
+      "timezone": "Часовой пояс",
+      "timezoneUnset": "Для этого жилья не задан часовой пояс, поэтому время читается как UTC. Задайте его, чтобы «17:00» означало именно то, что вы имеете в виду.",
+      "saved": "Время просмотров сохранено.",
+      "invalidTimezone": "Это не название часового пояса. Попробуйте Europe/Madrid.",
+      "tooManyWindows": "Не более {{max}} временных интервалов.",
+      "rowTimeFormat": "Интервал {{row}}: введите время как HH:mm.",
+      "rowOrder": "Интервал {{row}}: конец должен быть позже начала.",
+      "rowLength": "Интервал {{row}}: просмотр длится от {{min}} до {{max}} минут.",
+      "rowTooShort": "Интервал {{row}}: интервал короче одного просмотра.",
+      "rowTitle": "Интервал {{row}}",
+      "from": "С",
+      "to": "До",
+      "slotMinutes": "Минут на просмотр",
+      "addWindow": "Добавить интервал",
+      "removeWindow": "Удалить",
+      "save": "Сохранить время просмотров",
+      "emptyTitle": "Времени для просмотров пока нет",
+      "emptyDescription": "Добавьте интервал, и люди смогут запросить просмотр внутри него.",
+      "notYours": "Объявление не найдено",
+      "notYoursDescription": "Задавать время просмотров можно только в своих объявлениях.",
+      "weekday": {
+        "sun": "Вс",
+        "mon": "Пн",
+        "tue": "Вт",
+        "wed": "Ср",
+        "thu": "Чт",
+        "fri": "Пт",
+        "sat": "Сб"
+      }
     }
   },
   "donations": {

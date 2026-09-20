@@ -810,7 +810,8 @@
       "markSoldTitle": "Mark as sold?",
       "transactError": "Could not close this listing",
       "transactDone": "Listing marked as closed",
-      "transactCommission": "Deal closed — commission recorded"
+      "transactCommission": "Deal closed — commission recorded",
+      "viewingTimes": "Waktu kunjungan"
     },
     "details": {
       "bedrooms": "Bedrooms",
@@ -1968,7 +1969,8 @@
     },
     "validation": {
       "selectDateTime": "Please select a date and time",
-      "invalidProperty": "Invalid property"
+      "invalidProperty": "Invalid property",
+      "timeFormat": "Tulis waktu sebagai HH:mm, misalnya 17:30."
     },
     "error": {
       "generic": "Failed to submit viewing request. Please try again.",
@@ -1978,7 +1980,9 @@
       "authRequired": "Please sign in to request a viewing.",
       "notFound": "Viewing request not found.",
       "cannotCancel": "Cannot cancel this viewing request.",
-      "externalProperty": "Cannot book viewings for external properties"
+      "externalProperty": "Cannot book viewings for external properties",
+      "slotNotOffered": "Waktu itu tidak ditawarkan. Pilih salah satu waktu yang tersedia.",
+      "invalidDateTime": "Tanggal dan waktu itu tidak terbaca. Periksa formatnya (HH:mm)."
     },
     "selectDate": "Select Date",
     "availableTimeSlots": "Available Time Slots",
@@ -2005,6 +2009,54 @@
     "banner": {
       "viewDetails": "View details",
       "hasViewing": "You have a viewing scheduled"
+    },
+    "loadingSlots": "Memuat waktu yang tersedia…",
+    "timezoneNotice": "Waktu ditampilkan dalam {{zone}}, zona waktu hunian ini.",
+    "timezoneUnknown": "Belum ada yang menyebutkan zona waktu hunian ini, jadi waktu ditampilkan dalam {{zone}}.",
+    "noPublishedSlots": "Pemilik belum memublikasikan waktu kunjungan. Ajukan satu di bawah ini dan mereka bisa menerimanya atau menyarankan waktu lain.",
+    "proposeTime": "Ajukan waktu",
+    "noSlotsThatDay": "Tidak ada waktu yang ditawarkan pada hari itu.",
+    "pickADay": "Pilih hari untuk melihat waktu yang ditawarkan.",
+    "slotLabel": "{{time}}, {{minutes}} menit",
+    "durationMinutes": "{{minutes}} mnt",
+    "ownerResponse": "Pemilik menjawab",
+    "modality": {
+      "title": "Bagaimana Anda ingin berkunjung?",
+      "in_person": "Secara langsung",
+      "video": "Panggilan video"
+    },
+    "schedule": {
+      "title": "Waktu kunjungan",
+      "explainer": "Sebutkan kapan Anda bisa menunjukkan hunian ini. Orang hanya dapat meminta waktu yang Anda publikasikan di sini, dan pola mingguan yang sama berulang sampai Anda mengubahnya.",
+      "timezone": "Zona waktu",
+      "timezoneUnset": "Hunian ini belum punya zona waktu, jadi waktu dibaca sebagai UTC. Tetapkan satu agar \"17:00\" berarti seperti yang Anda maksud.",
+      "saved": "Waktu kunjungan tersimpan.",
+      "invalidTimezone": "Itu bukan nama zona waktu. Coba Europe/Madrid.",
+      "tooManyWindows": "Maksimal {{max}} rentang waktu.",
+      "rowTimeFormat": "Rentang {{row}}: tulis waktu sebagai HH:mm.",
+      "rowOrder": "Rentang {{row}}: akhir harus setelah awal.",
+      "rowLength": "Rentang {{row}}: satu kunjungan berlangsung antara {{min}} dan {{max}} menit.",
+      "rowTooShort": "Rentang {{row}}: rentangnya lebih pendek dari satu kunjungan.",
+      "rowTitle": "Rentang {{row}}",
+      "from": "Dari",
+      "to": "Sampai",
+      "slotMinutes": "Menit per kunjungan",
+      "addWindow": "Tambah rentang waktu",
+      "removeWindow": "Hapus",
+      "save": "Simpan waktu kunjungan",
+      "emptyTitle": "Belum ada waktu kunjungan",
+      "emptyDescription": "Tambahkan rentang waktu agar orang dapat meminta kunjungan di dalamnya.",
+      "notYours": "Iklan tidak ditemukan",
+      "notYoursDescription": "Anda hanya dapat menetapkan waktu kunjungan pada iklan Anda sendiri.",
+      "weekday": {
+        "sun": "Min",
+        "mon": "Sen",
+        "tue": "Sel",
+        "wed": "Rab",
+        "thu": "Kam",
+        "fri": "Jum",
+        "sat": "Sab"
+      }
     }
   },
   "donations": {
