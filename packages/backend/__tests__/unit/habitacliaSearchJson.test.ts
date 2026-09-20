@@ -39,6 +39,28 @@ describe('extractAdevintaInitialProps', () => {
     expect(extractAdevintaInitialProps(HABITACLIA_SEARCH_TRUNCATED_HTML)).toBeUndefined();
   });
 
+  it('stays linear on a document stuffed with <script tags (ReDoS guard)', () => {
+    // CodeQL flagged the first version of this extractor as a polynomial ReDoS:
+    // `/<script[^>]*\bid="__initial_props__"[^>]*>/` backtracks across every
+    // non-matching `<script` in the page. The input is a megabyte of HTML from
+    // a third party, so the pattern was replaced with literal `indexOf` scans.
+    //
+    // 50k decoy tags would take the old pattern into quadratic time; the budget
+    // here is loose enough not to flake on a slow CI box and tight enough that
+    // a reintroduced backtracking pattern cannot pass it.
+    const pathological = '<script'.repeat(50_000);
+
+    const started = Date.now();
+    expect(extractAdevintaInitialProps(pathological)).toBeUndefined();
+    expect(Date.now() - started).toBeLessThan(1_000);
+  });
+
+  it('ignores the marker when it is not inside a script tag', () => {
+    expect(
+      extractAdevintaInitialProps('<div id="__initial_props__">{"a":1}</div>'),
+    ).toBeUndefined();
+  });
+
   it('returns undefined for a page carrying no payload at all', () => {
     expect(extractAdevintaInitialProps(HABITACLIA_SEARCH_UNREADABLE_HTML)).toBeUndefined();
     expect(extractAdevintaInitialProps('')).toBeUndefined();

@@ -31,8 +31,8 @@
 
 import { asRecord } from '../../parse/guards';
 
-/**
- * Both portals expose the same global under two different spellings, and both
+/*
+ * Both portals expose the same payload under two different spellings, and both
  * are load-bearing:
  *
  *   Fotocasa:   <script id="__initial_props__" type="application/json">{…}</script>
@@ -41,8 +41,25 @@ import { asRecord } from '../../parse/guards';
  * The inline form is a JS *string literal* containing JSON — two levels of
  * escaping — so it cannot be read with a JSON parser alone.
  */
-const SCRIPT_TAG_RE =
-  /<script[^>]*\bid=["']__initial_props__["'][^>]*>([\s\S]*?)<\/script>/i;
+
+/**
+ * The script tag's id, searched for as a LITERAL rather than matched with a
+ * regex.
+ *
+ * The obvious pattern — `/<script[^>]*\bid="__initial_props__"[^>]*>([\s\S]*?)<\/script>/`
+ * — is a polynomial ReDoS, and CodeQL says so: on a document with many
+ * `<script` occurrences that do not match, `[^>]*` backtracks across each one.
+ * The input here is a megabyte of attacker-influenceable HTML from a third
+ * party, which is the worst possible place to put a regex that degrades with
+ * repetition. This repository has already paid for one of these once.
+ *
+ * `indexOf` plus bounded scans is linear, has no backtracking at all, and is
+ * easier to reason about than the pattern it replaces.
+ */
+const SCRIPT_TAG_ID = 'id="__initial_props__"';
+
+/** The same attribute with single quotes, which is equally valid HTML. */
+const SCRIPT_TAG_ID_SINGLE_QUOTED = "id='__initial_props__'";
 
 const INLINE_ASSIGNMENT_RE = /window\.__INITIAL_PROPS__\s*=\s*JSON\.parse\(\s*"/;
 
@@ -66,10 +83,30 @@ export function extractAdevintaInitialProps(html: string): Record<string, unknow
   return readScriptTagPayload(html) ?? readInlinePayload(html);
 }
 
-/** Fotocasa's form: a JSON-typed script tag whose body is already JSON. */
+/**
+ * Fotocasa's form: a JSON-typed script tag whose body is already JSON.
+ *
+ * Walks the document with `indexOf` rather than a regex — see
+ * {@link SCRIPT_TAG_ID}. Each step is a literal search, so the whole function
+ * is linear in the length of the page.
+ */
 function readScriptTagPayload(html: string): Record<string, unknown> | undefined {
-  const match = SCRIPT_TAG_RE.exec(html);
-  const raw = match?.[1]?.trim();
+  let idAt = html.indexOf(SCRIPT_TAG_ID);
+  if (idAt < 0) idAt = html.indexOf(SCRIPT_TAG_ID_SINGLE_QUOTED);
+  if (idAt < 0) return undefined;
+
+  // The attribute must belong to a <script> tag, not to some other element or
+  // a stray occurrence inside text.
+  const tagAt = html.lastIndexOf('<script', idAt);
+  if (tagAt < 0) return undefined;
+
+  const openEnd = html.indexOf('>', idAt);
+  if (openEnd < 0) return undefined;
+
+  const closeAt = html.indexOf('</script', openEnd);
+  if (closeAt < 0) return undefined;
+
+  const raw = html.slice(openEnd + 1, closeAt).trim();
   if (!raw || raw.length > MAX_PAYLOAD_CHARS) return undefined;
   try {
     return asRecord(JSON.parse(raw));
