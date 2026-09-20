@@ -45,6 +45,7 @@ import {
   parseFotocasaSearchads,
   parseFotocasaSsrSearch,
   extractFotocasaSearchCards,
+  fotocasaRefsFromSearchCards,
   type FotocasaLocationSegments,
   type FotocasaTransactionType,
 } from './searchads';
@@ -436,9 +437,27 @@ export class FotocasaProvider implements ListingProvider {
           metrics: this.metrics,
           init: { signal },
         });
-        const refs = parseFotocasaSearch(html);
-        if (refs.length === 0) return;
+        // CARDS FIRST, MARKUP SECOND. `parseFotocasaSearch` reads anchors out
+        // of the rendered page; on the live site it finds ONE ref per page
+        // while the same bytes carry thirty in the SSR payload (measured on a
+        // Barcelona rental search through the production proxy). Discover was
+        // paginating correctly and taking 1/30th of each page, which is the
+        // whole reason this provider yielded tens of refs where a market-wide
+        // provider yields 1,500.
+        //
+        // Markup parsing stays as the fallback for a page whose payload we
+        // cannot read, and the two are unioned rather than chosen between: a
+        // card the anchors missed and an anchor the payload missed are both
+        // listings.
         const ssrCards = extractFotocasaSearchCards(html);
+        const cardRefs = fotocasaRefsFromSearchCards(ssrCards);
+        const markupRefs = parseFotocasaSearch(html);
+        const byId = new Map<string, { sourceId: string; url: string }>();
+        for (const ref of [...cardRefs, ...markupRefs]) {
+          if (!byId.has(ref.sourceId)) byId.set(ref.sourceId, ref);
+        }
+        const refs = [...byId.values()];
+        if (refs.length === 0) return;
         for (const ref of yieldRefs(refs, seen, limit, yielded, city, undefined, ssrCards)) {
           yield ref;
         }

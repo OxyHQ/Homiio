@@ -197,6 +197,7 @@ export {
   FOTOCASA_FIXTURE_SEARCH_CARD,
   FOTOCASA_FIXTURE_PROPERTY_JSON,
   FOTOCASA_FIXTURE_SSR_SEARCH_HTML,
+  FOTOCASA_FIXTURE_SSR_SEARCH_HTML_LIVE,
   fotocasaSearchadsPageFixture,
 } from './providers/fotocasa/fixtures';
 
@@ -1309,3 +1310,6 @@ export {
   HABITACLIA_SEARCH_TRUNCATED_HTML,
   HABITACLIA_SEARCH_UNREADABLE_HTML,
 } from './providers/habitaclia/searchFixtures';
+
+// Fotocasa SSR search cards — see providers/fotocasa/searchads.
+export { fotocasaRefsFromSearchCards } from './providers/fotocasa/searchads';

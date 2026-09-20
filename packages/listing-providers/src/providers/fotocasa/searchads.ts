@@ -365,3 +365,63 @@ export function fotocasaDefaultLocationSegments(city: string): FotocasaLocationS
 }
 
 export { fotocasaSourceIdFromUrl };
+
+/**
+ * Build listing refs from SSR search cards.
+ *
+ * **WHY THIS EXISTS: `parseFotocasaSearch` returned ONE ref for a page holding
+ * thirty.** Measured on a live Barcelona rental search through the production
+ * proxy — `extractFotocasaSearchCards` read 30 cards out of the same bytes that
+ * the markup parser reduced to a single anchor. Discover was paginating
+ * correctly and collecting ~1/30th of every page, which is why Fotocasa yielded
+ * tens of refs where a market-wide German provider yields 1,500.
+ *
+ * The card map is keyed by `sourceId` and is already carried into `hints` by
+ * `yieldRefs`, so refs derived here arrive with their whole listing attached and
+ * need no detail fetch — the same shape Habitaclia now uses.
+ *
+ * Prefers `detail` over `detailWithParams`: the `?from=list` tracking query is
+ * not part of the listing's identity and `sourceUrl` is a link real people
+ * click.
+ */
+export function fotocasaRefsFromSearchCards(
+  cards: ReadonlyMap<string, Record<string, unknown>>,
+): { sourceId: string; url: string }[] {
+  const refs: { sourceId: string; url: string }[] = [];
+  for (const [sourceId, card] of cards) {
+    // Three spellings, because two card shapes reach this function: the live
+    // SSR payload uses `detail` (a locale map), the gateway API used a flat
+    // `detailUrl`, and `detailWithParams` is the same path carrying tracking.
+    // Preferring `detail` keeps the tracking query out of `sourceUrl`.
+    const path =
+      localisedPath(card['detail']) ??
+      localisedPath(card['detailUrl']) ??
+      localisedPath(card['detailWithParams']);
+    if (!path) continue;
+    const url = absoluteFotocasaUrl(path);
+    if (url) refs.push({ sourceId, url });
+  }
+  return refs;
+}
+
+/**
+ * Detail paths arrive as `{ "es-ES": "/es/alquiler/…" }`. The locale key is not
+ * fixed — Fotocasa serves several — so take the first usable path rather than
+ * hard-coding `es-ES` and silently dropping every other market.
+ */
+function localisedPath(value: unknown): string | undefined {
+  if (typeof value === 'string') return value.split('?')[0] || undefined;
+  if (!value || typeof value !== 'object') return undefined;
+  for (const candidate of Object.values(value as Record<string, unknown>)) {
+    if (typeof candidate === 'string' && candidate.startsWith('/')) {
+      return candidate.split('?')[0];
+    }
+  }
+  return undefined;
+}
+
+/** Absolute URL from a site-relative path, rejecting anything else. */
+function absoluteFotocasaUrl(path: string): string | undefined {
+  if (!path.startsWith('/')) return undefined;
+  return `${FOTOCASA_BASE_URL}${path}`;
+}
