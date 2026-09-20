@@ -49,22 +49,37 @@ describe('fetchPriorityFor', () => {
     }
   });
 
-  it('places high-volume ES portals in a strictly later tier than normal providers', () => {
-    // Even the FIRST high-volume job must sort after the LAST normal-tier job so
-    // the small providers drain before the big ES portals begin.
-    const worstNormal = fetchPriorityFor('immobilienscout24', FETCH_RANK_CAP);
-    const bestHighVolume = fetchPriorityFor('habitaclia', 0);
-    expect(bestHighVolume).toBeGreaterThan(worstNormal);
+  it('NO LONGER sinks the ES portals behind every other provider', () => {
+    // This assertion is inverted from what it used to be, deliberately.
+    //
+    // The old policy gave the ES portals a tier base of 1,000,000, so the FIRST
+    // fotocasa fetch sorted after the LAST job of every other provider — not
+    // "later" but "not until the others are empty". Measured consequence on
+    // 2026-09-20: one discover pass enqueued 2,521 refs from two German
+    // providers, and the database ended up holding 481 German listings against
+    // 31 Spanish ones (Barcelona: 3). Spain was still being DISCOVERED the
+    // whole time; its fetches never reached the head of the queue.
+    //
+    // A rank-0 ES job must now sort no later than a rank-0 job anywhere else.
+    for (const portal of HIGH_VOLUME_PROVIDERS) {
+      expect(fetchPriorityFor(portal, 0)).toBe(fetchPriorityFor('immobilienscout24', 0));
+    }
+
+    // And the specific shape of the old bug is gone: a deep normal-tier backlog
+    // no longer outranks a fresh ES job.
+    const deepBacklog = fetchPriorityFor('immobilienscout24', FETCH_RANK_CAP);
+    expect(fetchPriorityFor('fotocasa', 0)).toBeLessThan(deepBacklog);
   });
 
-  it('round-robins within the high-volume tier too', () => {
-    const highVolume = [...HIGH_VOLUME_PROVIDERS];
+  it('round-robins the ES portals with everyone else, in one band', () => {
+    const everyone = [...HIGH_VOLUME_PROVIDERS, 'immobilienscout24', 'immoweb', 'otodom'];
     for (const rank of [0, 3, 200]) {
-      const priorities = highVolume.map((provider) => fetchPriorityFor(provider, rank));
+      const priorities = everyone.map((provider) => fetchPriorityFor(provider, rank));
       expect(new Set(priorities).size).toBe(1);
     }
-    // Each of fotocasa/habitaclia/pisos/idealista rides the high-volume tier.
-    expect(highVolume).toEqual(expect.arrayContaining(['fotocasa', 'habitaclia', 'pisos', 'idealista']));
+    expect([...HIGH_VOLUME_PROVIDERS]).toEqual(
+      expect.arrayContaining(['fotocasa', 'habitaclia', 'pisos', 'idealista']),
+    );
   });
 
   it('clamps pathological ranks so priority never approaches PRIORITY_LIMIT', () => {
