@@ -539,3 +539,71 @@ page 2, and Valencia, 30-31 listings each, no Playwright involved), while the
 current code only reaches `realEstates` through a warmed browser session. Moving
 it to the HTTP path would recover the yield and drop the browser tier for ES
 discovery entirely. Not done here; this change is already large.
+
+## Fotocasa was collecting one listing in thirty
+
+`parseFotocasaSearch` reads anchors out of the rendered page. On the live site
+that yields **one ref for a page whose SSR payload holds thirty** — measured on
+a Barcelona rental search through the production proxy. Discover was paginating
+correctly the whole time and taking a thirtieth of every page, which is why this
+provider produced tens of refs where a market-wide provider produces 1,500.
+
+Two things hid it:
+
+- **The gateway is gone.** `web.gw.fotocasa.es/v2/propertysearch/searchads` now
+  returns **404**, so the JSON-first path the provider was designed around fails
+  and every city falls through to markup parsing. The fallback was never meant
+  to carry the provider.
+- **The fixture had drifted.** `FOTOCASA_FIXTURE_SSR_SEARCH_HTML` carries
+  `window.__STATE__={"realEstates":[{propertyId, detailUrl}]}`; the live page
+  carries `<script id="__initial_props__">` with `initialSearch.result.realEstates`
+  and `id` / `detail`. Both parse, so the suite stayed green while production
+  collected a thirtieth. **A fixture that has drifted from reality cannot fail
+  for the right reason** — `*_LIVE` is captured from the real page and both are
+  kept, the old one for the legacy shape that still reaches the parser.
+
+`fotocasaRefsFromSearchCards` builds refs from the cards `extractFotocasaSearchCards`
+already reads, and the two sources are **unioned** rather than chosen between: a
+card the anchors missed and an anchor the payload missed are both listings. The
+cards were already carried into `hints`, so refs derived this way arrive with
+their whole listing attached and need no detail fetch — the same shape
+Habitaclia now uses. Measured end to end on the live page: **30 refs, 30 with a
+card hint, 30 normalized with zero network calls.**
+
+## The scraper endpoint was an SSRF (CRITICAL, open since 2025-08-23)
+
+`POST /api/scraper/run` takes `endpoint` straight from the request body and
+hands it to `axios.get`. `requireAdmin` guards the route — but **it bounds who,
+not what**, and this process runs inside the VPC. An admin-supplied endpoint
+makes the API issue a GET from a position nothing on the internet has:
+`169.254.170.2/v2/credentials/…` (the task role's IAM credentials), IMDS,
+`postgres.internal.oxy.so`, every internal service. App-admin becomes AWS-role.
+
+To be precise about impact, because it is easy to overstate: the response body
+is parsed into listings and returned as counts, not echoed to the caller, so
+this is not a clean credential read-back. It is arbitrary GET from inside the
+VPC, which is enough.
+
+`utils/outboundGuard.ts` puts two layers in front of it, and **both are
+required**:
+
+| defeat | what stops it |
+| --- | --- |
+| an allow-listed host answering `302 Location: http://169.254.170.2/…` | `maxRedirects: 0` — follow none, not fewer |
+| a name that resolves to public at validation and link-local at connect | a `dns.lookup` on the socket that refuses internal addresses **at connect time** |
+
+The allowlist alone is defeated by rebinding; the address check alone would
+permit any public host and turn the API into an open proxy.
+
+**`SCRAPER_ALLOWED_ORIGINS` is empty by default, and empty means nothing is
+allowed.** The legacy scrape loop this route drove is retired; what remains is
+manual admin tooling nothing runs on a schedule. A default of "any host" is what
+made the finding critical, and a default of "none" fails as a 400 rather than as
+a leaked IAM role.
+
+The endpoint is validated **outside** `runExternalScrape`'s try block on
+purpose: that catch folds every failure into `errorDetails` and still returns a
+200-shaped result, so a refusal raised inside it would read as "the scrape ran
+and found nothing" — the same silent-zero shape as everything else on this page.
+A 3xx from the destination is likewise treated as a failure rather than as an
+empty feed.

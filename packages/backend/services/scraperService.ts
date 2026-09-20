@@ -1,4 +1,8 @@
 import axios from 'axios';
+import {
+  assertAllowedScraperEndpoint,
+  guardedRequestConfig,
+} from '../utils/outboundGuard';
 import { OfferingType } from '@homiio/shared-types';
 import { forwardGeocode } from './geocodingService';
 import { schedulePriceEthicsScore } from './priceEthicsService';
@@ -339,11 +343,25 @@ async function makeRequest(
     try {
       logger.debug(`Making request to ${url} (attempt ${attempt})`);
       
+      // The destination comes from the request body, so every request goes out
+      // under the outbound guard: no redirects, and every socket resolves
+      // through a lookup that refuses internal addresses. See utils/outboundGuard.
       const response = await axios.get(url, {
         headers: options.apiKey ? { 'Authorization': `Bearer ${options.apiKey}` } : {},
         timeout,
         validateStatus: (status) => status < 500, // Don't throw for 4xx errors
+        ...guardedRequestConfig(),
       });
+
+      // A 3xx here means the destination tried to send us somewhere else, and
+      // the guard refused to go. Treat it as a failure rather than letting an
+      // empty redirect body read as "the feed returned no listings" — that is
+      // the silent-zero shape this codebase keeps paying for.
+      if (response.status >= 300 && response.status < 400) {
+        throw new Error(
+          `HTTP ${response.status}: endpoint redirected; redirects are not followed for caller-supplied endpoints`,
+        );
+      }
 
       if (response.status >= 400) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -425,6 +443,20 @@ async function processBatch(
 }
 
 export async function runExternalScrape(options: ScraperOptions): Promise<ScrapeResult> {
+  // THE ADMIN GUARD ON THIS ROUTE BOUNDS *WHO*, NOT *WHAT*. `endpoint` is
+  // caller-supplied and this process runs inside the VPC, where a GET can reach
+  // the ECS task-metadata endpoint (the task role's IAM credentials), IMDS, and
+  // every internal service. CodeQL has called this `js/request-forgery` at
+  // CRITICAL since 2025-08-23.
+  //
+  // VALIDATED OUTSIDE THE TRY, DELIBERATELY. The catch below folds every
+  // failure into `errorDetails` and still returns a 200-shaped result, so a
+  // refusal raised inside it would read as "the scrape ran and found nothing" —
+  // the same silent-zero shape that hid a dead proxy for two months and a
+  // rebuilt portal for weeks. A blocked destination is a bad request and must
+  // reach the caller as one.
+  const endpoint = assertAllowedScraperEndpoint(options.endpoint);
+
   const startTime = Date.now();
   const logger = new ScraperLogger(options.source);
   const batchSize = options.batchSize || SCRAPER_CONFIG.BATCH_SIZE;
@@ -441,10 +473,10 @@ export async function runExternalScrape(options: ScraperOptions): Promise<Scrape
   };
 
   try {
-    logger.info(`Starting scrape from ${options.endpoint}`);
-    
+    logger.info(`Starting scrape from ${endpoint.origin}`);
+
     // Make API request with retry logic
-    const data = await makeRequest(options.endpoint, {
+    const data = await makeRequest(endpoint.toString(), {
       apiKey: options.apiKey,
       timeout: options.timeout,
       maxRetries: options.maxRetries
