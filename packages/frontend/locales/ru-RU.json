@@ -412,7 +412,11 @@
       "floor": "Этаж",
       "floorGround": "Первый этаж",
       "floorElevator": "С лифтом",
-      "floorPublishedOnly": "Найти можно только объявления, владельцы которых публикуют этаж."
+      "floorPublishedOnly": "Найти можно только объявления, владельцы которых публикуют этаж.",
+      "placeKind": "Тип жилья",
+      "placeKindAny": "Любой",
+      "placeKindWholeHome": "Жильё целиком",
+      "placeKindRoom": "Комната"
     },
     "mode": {
       "label": "Browse mode",

@@ -532,7 +532,11 @@
       "floor": "Piano",
       "floorGround": "Piano terra",
       "floorElevator": "Con ascensore",
-      "floorPublishedOnly": "Si possono trovare solo gli annunci il cui proprietario pubblica il piano."
+      "floorPublishedOnly": "Si possono trovare solo gli annunci il cui proprietario pubblica il piano.",
+      "placeKind": "Tipo di alloggio",
+      "placeKindAny": "Qualsiasi",
+      "placeKindWholeHome": "Alloggio intero",
+      "placeKindRoom": "Una stanza"
     },
     "mode": {
       "label": "Modalità di ricerca",

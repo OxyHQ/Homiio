@@ -410,7 +410,11 @@
       "floor": "Lantai",
       "floorGround": "Lantai dasar",
       "floorElevator": "Dengan lift",
-      "floorPublishedOnly": "Hanya iklan yang pemiliknya mencantumkan lantai yang dapat ditemukan."
+      "floorPublishedOnly": "Hanya iklan yang pemiliknya mencantumkan lantai yang dapat ditemukan.",
+      "placeKind": "Jenis tempat",
+      "placeKindAny": "Semua",
+      "placeKindWholeHome": "Seluruh tempat",
+      "placeKindRoom": "Satu kamar"
     },
     "mode": {
       "label": "Browse mode",

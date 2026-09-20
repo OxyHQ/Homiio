@@ -39,6 +39,7 @@ import {
   CountFilter,
   FilterFooter,
   FloorFilter,
+  SegmentedFilter,
   FilterSection,
   PriceRangeFilter,
   SwitchFilterRow,
@@ -48,7 +49,15 @@ import {
 import { StepperRow } from '@oxy.so/bloom/stepper';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 
-import { formatArea, OfferingType, type PropertyType } from '@homiio/shared-types';
+import {
+  formatArea,
+  OfferingType,
+  PLACE_KINDS,
+  placeKindOf,
+  propertyTypesForPlaceKind,
+  type PlaceKind,
+  type PropertyType,
+} from '@homiio/shared-types';
 import { getAmenityById } from '@/constants/amenities';
 import { usePropertySearch } from '@/hooks/usePropertySearch';
 import { useFormatting } from '@/utils/format';
@@ -131,6 +140,13 @@ function fromCivilDate(value: string | undefined): Date | null {
  * `top`, which need the building's floor count — a column that does not exist,
  * so those two are not offered rather than drawn over nothing.
  */
+/** The i18n key naming each side of the segment. */
+const PLACE_KIND_LABEL: Record<PlaceKind, string> = {
+  any: 'search.filters.placeKindAny',
+  whole_home: 'search.filters.placeKindWholeHome',
+  room: 'search.filters.placeKindRoom',
+};
+
 type FloorChip = 'ground' | 'elevator';
 // The `label` here is never rendered — `FloorFilter`'s `labels` prop overrides
 // every one of them with a translated string. It is present because Bloom's
@@ -319,6 +335,14 @@ function FiltersBody({ query, onApply, onClose, showTypes }: FiltersBodyProps): 
     [draft.groundFloor, draft.hasElevator],
   );
 
+  // Built here rather than at module scope because the labels are translated,
+  // and a module-level constant would freeze them at the language the app
+  // started in.
+  const placeKindOptions = useMemo(
+    () => PLACE_KINDS.map((value) => ({ value, label: t(PLACE_KIND_LABEL[value]) })),
+    [t],
+  );
+
   const patch = useCallback((next: Partial<FilterDraft>) => {
     setDraft((prev) => ({ ...prev, ...next }));
   }, []);
@@ -396,6 +420,20 @@ function FiltersBody({ query, onApply, onClose, showTypes }: FiltersBodyProps): 
       >
         {showTypes ? (
           <FilterSection title={t('search.filters.propertyType')}>
+            {/* The segment is a PROJECTION of the tiles below it, not a second
+                field. Picking "a room" ticks the room types, so the two
+                controls cannot come to disagree — and `placeKindOf` returns
+                `any` for any selection that is not exactly one side, so a
+                mixed selection does not light up a side it did not choose. */}
+            <SegmentedFilter<PlaceKind>
+              options={placeKindOptions}
+              value={placeKindOf(draft.propertyTypes)}
+              onValueChange={(kind) =>
+                patch({ propertyTypes: [...propertyTypesForPlaceKind(kind)] })
+              }
+              accessibilityLabel={t('search.filters.placeKind')}
+              style={styles.placeKind}
+            />
             <TypeStep
               offering={query.offering}
               selected={draft.propertyTypes}
@@ -593,6 +631,9 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: spacing.xl,
+  },
+  placeKind: {
+    marginBottom: spacing.sm,
   },
   floorNote: {
     fontSize: 12,

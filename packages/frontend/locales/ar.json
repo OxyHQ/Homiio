@@ -414,7 +414,11 @@
       "floor": "الطابق",
       "floorGround": "الطابق الأرضي",
       "floorElevator": "مع مصعد",
-      "floorPublishedOnly": "لا يمكن العثور إلا على الإعلانات التي ينشر أصحابها الطابق."
+      "floorPublishedOnly": "لا يمكن العثور إلا على الإعلانات التي ينشر أصحابها الطابق.",
+      "placeKind": "نوع السكن",
+      "placeKindAny": "أي نوع",
+      "placeKindWholeHome": "سكن كامل",
+      "placeKindRoom": "غرفة"
     },
     "mode": {
       "label": "Browse mode",

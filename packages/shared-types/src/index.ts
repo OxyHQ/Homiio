@@ -21,6 +21,7 @@ export * from './media';
 export * from './address';
 
 // Property types
+export * from './placeKind';
 export * from './property';
 
 // Profile types

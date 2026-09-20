@@ -410,7 +410,11 @@
       "floor": "Andar",
       "floorGround": "Térreo",
       "floorElevator": "Com elevador",
-      "floorPublishedOnly": "Só é possível encontrar anúncios cujo proprietário publica o andar."
+      "floorPublishedOnly": "Só é possível encontrar anúncios cujo proprietário publica o andar.",
+      "placeKind": "Tipo de acomodação",
+      "placeKindAny": "Qualquer",
+      "placeKindWholeHome": "Imóvel inteiro",
+      "placeKindRoom": "Um quarto"
     },
     "mode": {
       "label": "Browse mode",

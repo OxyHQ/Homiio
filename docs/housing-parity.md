@@ -88,7 +88,7 @@ count.
 
 | Control | Status | Note |
 |---|---|---|
-| Type of place (room / entire home) | **partial** | `PropertyType.ROOM` exists; the segmented room-vs-whole-home control does not |
+| Type of place (room / entire home) | **live** | A segment above the type tiles, and a PROJECTION of the same field rather than a second one — `placeKindOf` / `propertyTypesForPlaceKind` in `shared-types/placeKind.ts`. A mixed selection reads as "Any" rather than lighting up a side nobody chose. The seven stay types (hostel, couch, campsite, boat, treehouse, yurt, other) are on neither side on purpose and stay reachable through the tiles |
 | Nightly price | **live** | `priceColumnForOffering` selects the nightly rate |
 | Beds | **open** | No `beds` column; `max_guests` is a different fact |
 | Amenities | **live** | |
@@ -386,9 +386,9 @@ and most of #519 §8 (Sindi).
 
 Open, in rough order of how much they unblock:
 
-1. **Filters end to end** — energy, beds, and the room-vs-whole-home segment
-   remain; each of the first two needs a column and a source before a filter
-   means anything. Area, availability, currency and floor are live.
+1. **Filters end to end** — energy rating and beds remain, and each needs a
+   column AND an ingest source before a filter over it means anything. Area,
+   availability, currency, floor and the room-vs-whole-home segment are live.
 2. **Payment receipts and the processor** — the ledger is live; receipts are
    ordinary work on the private document path repair photos now use. The
    checkout is blocked on Peable's card rail going live, not on a decision
