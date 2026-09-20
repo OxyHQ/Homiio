@@ -98,12 +98,46 @@ The offering is applied **first**, because switching it clears the price range
 on purpose (a monthly rent is not a nightly rate), so a patch carrying both must
 set the offering before the price or the price is dropped.
 
-### Ambiguity is refused
+### Ambiguity is refused — but duplication is not ambiguity
 
-A city name that resolves to several places produces **no area at all**. Taking
-the first candidate is the homonym bug (ADR 0002 §12.2) arriving through a new
-door. The rest of the turn still applies — "under 900" against whatever area is
-in force — and Sindi's prose asks which Barcelona was meant.
+A city name that resolves to several REAL places produces **no area at all**.
+Taking the first candidate is the homonym bug (ADR 0002 §12.2) arriving through
+a new door. The rest of the turn still applies — "under 900" against whatever
+area is in force.
+
+**This refusal was firing on "Barcelona", and it made the most ordinary request
+Sindi can receive do nothing at all.** Production carries three `cities` rows
+named Barcelona in Spain, all with the slug `barcelona`, and two of them hold
+zero listings. `cities_region_name_key` is unique on `(region_id, name)` and is
+case-SENSITIVE, so a lower-cased name slips past it, and a second region inside
+the same country takes the rest. With no location and no other constraint in the
+sentence, `searchPatchForTurn` returned `null` and no action was emitted: the
+person saw nothing happen and nothing said.
+
+`resolveCity` now discounts a candidate holding **no listings** before judging.
+That is not a popularity tiebreak — `placeLookup`'s header forbids
+`properties_count` deciding between candidates and this does not ask it to. It
+is narrower and true: a row holding nothing cannot answer "what is in it", so it
+is not a candidate to be ambiguous with. Two genuine Barcelonas that both hold
+listings are still refused, which is the case the rule exists to protect.
+
+The rule lives in `sindiActions.ts` rather than in `lookupCityPlaces`, because it
+is a property of the QUESTION: a place picker offering somewhere to browse
+should still show an empty city.
+
+**Two corrections to what this page used to say.** It claimed "Sindi's prose
+asks which Barcelona was meant" — nothing tells the model the name was
+ambiguous, so it does not. And the prose and the action resolve the city through
+DIFFERENT code: the prose path calls `/api/properties/search?city=…`, whose
+`resolveCityId` picks a row, while the action path calls `lookupCityPlaces`,
+which refuses. One turn, two resolvers, and until now two different answers.
+Narrowing that is what the rule above does; collapsing them into one resolver is
+still open.
+
+**The root cause is the data**, and it is not fixed here: three rows for one
+city, and a case-sensitive uniqueness constraint that permits a fourth. Merging
+them means repointing every address that references the duplicates, which is a
+migration with a real blast radius and its own audit.
 
 ### Why a price patch still carries no currency
 

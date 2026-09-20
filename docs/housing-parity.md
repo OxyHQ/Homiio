@@ -494,6 +494,14 @@ Still open, and unchanged:
 | Conversation-id promotion | **live** | #523; the hook holds no router |
 | Alia tool results | **blocked** | `alia.tool_result` exists in `@alia.onl/server@1.0.1`; Homiio's tools are not known to be provisioned on Sindi's agent |
 
+**A defect worth recording:** Sindi answered "show me flats in Barcelona" by
+doing nothing. Production has three `cities` rows named Barcelona in Spain, two
+of them empty, so the homonym rule refused the area — correctly by its own
+terms, and wrongly in effect, because duplicates are not homonyms. A candidate
+holding no listings is now discounted before ambiguity is judged. The underlying
+data defect (duplicate rows, and a case-sensitive `(region_id, name)` unique
+that permits them) is open. `docs/sindi-actions.md`.
+
 Detail: `docs/sindi-actions.md`.
 
 ---

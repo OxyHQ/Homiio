@@ -335,50 +335,83 @@ describe('the partial indexes are REACHABLE from the visibility predicate', () =
    *  - Under a CUSTOM plan (what Postgres builds for the first executions of a
    *    prepared statement, and what a plain parameterized `EXPLAIN` gets) the
    *    parameter's VALUE is known, `predicate_implied_by` succeeds, and BOTH
-   *    forms use the partial index. A test written against that comparison
-   *    passes for the literal and passes for the parameter, i.e. it measures
-   *    nothing — which is exactly what the first version of this test did.
+   *    forms use a partial index. A test written against that comparison passes
+   *    for the literal and passes for the parameter, i.e. it measures nothing —
+   *    which is exactly what the first version of this test did.
    *  - Under a GENERIC plan the value is a `Param`, the implication cannot be
-   *    proven, and the parameter form falls off the index. Measured below: it
-   *    switches to `reviews_author_address_key` plus an explicit `Sort`, with
+   *    proven, and the parameter form falls off every partial index, with
    *    `moderation_status <> $1` demoted to a Filter.
    *
    * So the literal is not a micro-optimisation, it is what keeps the seven
    * scoped indexes reachable once a statement has been executed enough times for
    * the plan cache to generalise it.
+   *
+   * ## Why this asserts a SET of indexes and not one name
+   *
+   * WHICH partial index the planner picks is a cost decision over live
+   * statistics, and every other suite in this run is inserting and deleting
+   * `reviews` rows. An earlier version demanded `reviews_address_created_idx` by
+   * name and went red in CI when the planner served the same proof from
+   * `reviews_neighborhood_created_idx` instead — a different index, the same
+   * fact. The claim being measured is "the implication is provable, so SOME
+   * partial index is reachable", so that is what is asserted, against the set
+   * read back from `pg_indexes` rather than a list copied from the schema.
    */
-  it('keeps the partial index under a GENERIC plan, where a bound parameter loses it', async () => {
+  it('keeps a partial index under a GENERIC plan, where a bound parameter loses it', async () => {
     // The raw postgres.js handle, because `PREPARE`/`EXECUTE` and `SET` have no
     // query-builder form. `db/postgres.ts` names the legitimate callers of this
     // accessor; a plan probe is exactly the kind of one-shot it means.
-    const client = getPostgresClient();
-    await client`set enable_seqscan = off`;
-    await client`prepare visibility_literal as
-      select id from reviews
-      where address_id = 'probe' and moderation_status <> 'removed'
-      order by created_at desc`;
-    await client`prepare visibility_param (text) as
-      select id from reviews
-      where address_id = 'probe' and moderation_status <> $1
-      order by created_at desc`;
-    await client`set plan_cache_mode = force_generic_plan`;
+    //
+    // RESERVED, because every statement below depends on the one before it
+    // landing on the same backend: `set` and `prepare` are connection state, and
+    // a pooled handle is free to answer the next query from a different
+    // connection, where the GUCs are default and the prepared statement does not
+    // exist.
+    const reserved = await getPostgresClient().reserve();
+    try {
+      const partialIndexes = (
+        await reserved<{ indexname: string }[]>`
+          select indexname from pg_indexes
+          where tablename = 'reviews'
+            and indexdef like ${'%moderation_status <> \'removed\'%'}`
+      ).map((row) => row.indexname);
+      // If the schema ever stops making these partial, the probe below would
+      // pass by having nothing to look for.
+      expect(partialIndexes.length).toBeGreaterThan(0);
 
-    const literal = await client`explain (costs off) execute visibility_literal`;
-    const parameterized = await client`explain (costs off) execute visibility_param('removed')`;
+      await reserved`set enable_seqscan = off`;
+      await reserved`prepare visibility_literal as
+        select id from reviews
+        where address_id = 'probe' and moderation_status <> 'removed'
+        order by created_at desc`;
+      await reserved`prepare visibility_param (text) as
+        select id from reviews
+        where address_id = 'probe' and moderation_status <> $1
+        order by created_at desc`;
+      await reserved`set plan_cache_mode = force_generic_plan`;
 
-    await client`set plan_cache_mode = auto`;
-    await client`deallocate visibility_literal`;
-    await client`deallocate visibility_param`;
-    await client`set enable_seqscan = on`;
+      const literal = await reserved`explain (costs off) execute visibility_literal`;
+      const parameterized = await reserved`explain (costs off) execute visibility_param('removed')`;
 
-    const plan = (rows: readonly Record<string, unknown>[]) =>
-      rows.map((row) => String(row['QUERY PLAN'])).join('\n');
+      await reserved`deallocate visibility_literal`;
+      await reserved`deallocate visibility_param`;
+      await reserved`reset plan_cache_mode`;
+      await reserved`reset enable_seqscan`;
 
-    expect(plan(literal)).toContain('reviews_address_created_idx');
-    // The anti-vacuity half: if the parameter form ALSO kept the partial index,
-    // this test would be asserting nothing about the literal.
-    expect(plan(parameterized)).not.toContain('reviews_address_created_idx');
-    expect(plan(parameterized)).toContain('Filter');
+      const plan = (rows: readonly Record<string, unknown>[]) =>
+        rows.map((row) => String(row['QUERY PLAN'])).join('\n');
+
+      const usesPartialIndex = (rows: readonly Record<string, unknown>[]) =>
+        partialIndexes.filter((name) => plan(rows).includes(name));
+
+      expect(usesPartialIndex(literal)).not.toHaveLength(0);
+      // The anti-vacuity half: if the parameter form ALSO reached a partial
+      // index, this test would be asserting nothing about the literal.
+      expect(usesPartialIndex(parameterized)).toHaveLength(0);
+      expect(plan(parameterized)).toContain('Filter: (moderation_status <> $1)');
+    } finally {
+      await reserved.release();
+    }
   });
 });
 
