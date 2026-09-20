@@ -1,7 +1,11 @@
+import crypto from 'node:crypto';
+
 import {
   SINDI_OXY_APPLICATION_ID,
   SINDI_OXY_OWNER_ACCOUNT_ID,
   SINDI_OXY_SERVICE_CREDENTIAL_ID,
+  SINDI_OXY_TASK_ROLE_ARN,
+  SINDI_OXY_WORKLOAD_ATTESTATION_ID,
   assertCanonicalSindiRequesterAssertion,
   assertCanonicalSindiServiceToken,
 } from '../../services/oxy';
@@ -52,6 +56,65 @@ describe('Sindi service identity canary', () => {
       'unexpected Sindi service identity',
     );
   });
+
+  /**
+   * The attestation path (oxy ADR 0026). The pair is gone from the task
+   * definition and the same token arrives attributed to the task ROLE instead
+   * of to a credential. Everything else about the token is unchanged.
+   */
+  describe('the same identity arriving by workload attestation', () => {
+    const attested = { ...canonical, credentialId: SINDI_OXY_WORKLOAD_ATTESTATION_ID };
+
+    /**
+     * The handle is pinned by DERIVATION, from the same canonical subject and
+     * the same formula Oxy mints it with — so this fails if either the role or
+     * the formula moves, rather than the canary silently pinning a value the
+     * mint no longer produces.
+     */
+    it('is the handle Oxy derives from the canonical task role, not one observed once', () => {
+      const derived = `wl_${crypto
+        .createHash('sha256')
+        .update(SINDI_OXY_TASK_ROLE_ARN)
+        .digest('hex')
+        .slice(0, 24)}`;
+      expect(SINDI_OXY_WORKLOAD_ATTESTATION_ID).toBe(derived);
+      expect(SINDI_OXY_WORKLOAD_ATTESTATION_ID).toBe('wl_f28159178c5e993eb03b8cc1');
+      expect(SINDI_OXY_TASK_ROLE_ARN).toBe('arn:aws:iam::237343248947:role/oxy-homiio-task');
+    });
+
+    it('accepts a token attributed to the Homiio task role', () => {
+      const value = token(attested);
+      expect(assertCanonicalSindiServiceToken(value)).toBe(value);
+    });
+
+    /**
+     * The point of the canary, under the new path. A `wl_` prefix is not a
+     * passphrase: only THIS role's handle is Sindi.
+     */
+    it.each([
+      ['another service\'s task role', 'wl_d61be5cd068abb658ed4d193'],
+      ['a handle one character off', 'wl_f28159178c5e993eb03b8cc2'],
+      ['an unprefixed digest', 'f28159178c5e993eb03b8cc1'],
+      ['the prefix alone', 'wl_'],
+      ['an empty credential', ''],
+    ])('refuses a token attested to %s', (_label, credentialId) => {
+      expect(() => assertCanonicalSindiServiceToken(token({ ...canonical, credentialId }))).toThrow(
+        'unexpected Sindi service identity',
+      );
+    });
+
+    it.each([
+      ['another application', { ...attested, appId: '6a2f851751b784a86fd0e923' }],
+      ['another owner account', { ...attested, ownerAccountId: '69b2d3df5d12f58c9800d651' }],
+      ['a dropped privileged scope', { ...attested, scopes: ['inference:invoke'] }],
+      ['a widened scope set', { ...attested, scopes: ['inference:invoke', 'acting-as:offline', 'user:read'] }],
+      ['an expired token', { ...attested, exp: Math.floor(Date.now() / 1000) - 1 }],
+    ])('still enforces every other claim on an attested token: %s', (_label, payload) => {
+      expect(() => assertCanonicalSindiServiceToken(token(payload))).toThrow(
+        'unexpected Sindi service identity',
+      );
+    });
+  });
 });
 
 describe('Sindi requester assertion canary (ADR 0025)', () => {
@@ -81,7 +144,14 @@ describe('Sindi requester assertion canary (ADR 0025)', () => {
     expect(assertCanonicalSindiRequesterAssertion(value, { requesterAccountId, agentId })).toBe(value.assertion);
   });
 
+  it('passes an assertion whose cid is the Homiio task role handle', () => {
+    const value = grant({ ...claims, cid: SINDI_OXY_WORKLOAD_ATTESTATION_ID });
+    expect(assertCanonicalSindiRequesterAssertion(value, { requesterAccountId, agentId })).toBe(value.assertion);
+  });
+
   it.each([
+    ['another service\'s task role handle', grant({ ...claims, cid: 'wl_d61be5cd068abb658ed4d193' })],
+    ['a handle one character off', grant({ ...claims, cid: 'wl_f28159178c5e993eb03b8cc2' })],
     ['another requester', grant({ ...claims, sub: '69b2d3df5d12f58c9800d651' })],
     ['a response naming another requester', grant(claims, { requesterAccountId: '69b2d3df5d12f58c9800d651' })],
     ['another agent', grant({ ...claims, agentId: '01a0646a-078f-7642-95ef-439952f4f3f9' })],
