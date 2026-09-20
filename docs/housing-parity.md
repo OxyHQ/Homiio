@@ -161,7 +161,7 @@ is a product call about historical rows, not a migration.
 |---|---|---|---|
 | `LeaseSummaryCard` | `app/my-home.tsx` | **live** | |
 | `RentPaymentList` | `LeasePaymentsSection`, `LeaseLedgerSection` | **partial** | The **ledger** exists (`lease_payment_movements`): obligation, attempt, confirmed payment, manual declaration, partial, refund and a DERIVED balance, with idempotency on every write. A tenant declares a transfer and a landlord confirms it. **Receipts are open**; the processor is blocked — see below |
-| "Pay rent" (a checkout) | — | **blocked** | Needs a processor decision. `kind: 'processor'` is in the model so adding one later does not migrate a live ledger, but no route creates one and no card or bank detail is stored anywhere. #518 §7.2 is explicit that its absence is a documented delivery block, not licence to drop the row |
+| "Pay rent" (a checkout) | — | **blocked** | The processor is chosen — **Peable** — and the seam is built: status mapping and webhook signature verification are live and tested (`services/payments/peableContract.ts`). It is not connected because rent in euros needs Peable's card rail, which its own roadmap marks as never exercised against Stripe's sandbox and not deployed, and Peable performs no FX, so a euro amount cannot settle over its working FairCoin rail. [`docs/peable-rent-payments.md`](./peable-rent-payments) has the four blockers and the exact wiring |
 | `MaintenanceRequestCard` / repairs | `MaintenanceSection`, `/maintenance/*` | **live** | `maintenance_requests` + comments + events + attachments, a declared state machine under a row lock, authorization in the repository query, notifications through the dispatcher. Photos go through the private path — stored under `private/`, re-encoded so the phone's GPS does not travel with them, delivered only to the two sides of the lease |
 | "Message landlord" | — | **blocked** | The ecosystem audit §7.3 asks for is done: [`docs/messaging-audit.md`](./messaging-audit). Allo IS the platform and is explicitly multi-product, but its SDK is unpublished, its server cannot open a conversation, and enrolling Homiio enrols a device on the person's whole Allo account. Three decisions named there, none of them an implementer's. No button is drawn meanwhile — the Inbox tab is a notification list |
 | `DocumentList`, signatures | `LeaseDocumentsSection`, `/contracts/[id]` | **partial** | Upload/list/view exist; "uploaded" is not "verified" and the checklist is not yet server state. An application's documents are no longer delivered by the public image route — see below |
@@ -235,8 +235,15 @@ resolve to the row that already exists. `recordPayment`, the dead writer that
 could mark an obligation paid with no evidence of who confirmed it, is deleted,
 so the balance has exactly one source.
 
-**Blocked: the processor.** There is no "Pay rent" checkout, because Homiio
-cannot settle one. A button that opened a checkout it could not confirm is the
+**Blocked: the processor — now by name.** Peable is the choice, and
+[`docs/peable-rent-payments.md`](./peable-rent-payments) records what is
+already in place (the ledger needs no migration; the status mapping and the
+webhook signature verifier are written and tested) and the four things that
+stop it being connected: the card rail is not live, there is no FX so a euro
+amount cannot settle over the FairCoin rail, the published SDK cannot be
+installed, and nothing in Peable is a subscription engine.
+
+There is still no "Pay rent" checkout, because Homiio cannot settle one. A button that opened a checkout it could not confirm is the
 simulated success both epics forbid. The model carries `kind: 'processor'` and a
 `processor_reference` with its own partial unique index — which is how a
 replayed webhook will find the row it already created — so adding a provider is
@@ -337,8 +344,9 @@ Open, in rough order of how much they unblock:
    segment. Area and availability are live in all four columns, including the
    histogram, and the currency contract is closed end to end (§6).
 2. **Payment receipts and the processor** — the ledger is live; receipts are
-   ordinary work on the private document path repair photos now use, and only
-   the checkout is blocked, on a provider decision.
+   ordinary work on the private document path repair photos now use. The
+   checkout is blocked on Peable's card rail going live, not on a decision
+   (§ [`docs/peable-rent-payments.md`](./peable-rent-payments)).
 3. **Messaging** — the audit is done ([`docs/messaging-audit.md`](./messaging-audit)); now blocked on
    three decisions it names, not on work.
 4. **Listing facts** — floor plans, energy, price history: each needs a source
