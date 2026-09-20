@@ -177,7 +177,7 @@ a lift is not part of the address.
 | Bloom | Homiio | Status | Gap |
 |---|---|---|---|
 | `LeaseSummaryCard` | `app/my-home.tsx` | **live** | |
-| `RentPaymentList` | `LeasePaymentsSection`, `LeaseLedgerSection` | **partial** | The **ledger** exists (`lease_payment_movements`): obligation, attempt, confirmed payment, manual declaration, partial, refund and a DERIVED balance, with idempotency on every write. A tenant declares a transfer and a landlord confirms it. **Receipts are open**; the processor is blocked — see below |
+| `RentPaymentList` | `LeasePaymentsSection`, `LeaseLedgerSection` | **live** | The **ledger** exists (`lease_payment_movements`): obligation, attempt, confirmed payment, manual declaration, partial, refund and a DERIVED balance, with idempotency on every write. A tenant declares a transfer and a landlord confirms it. Receipts are derived from the ledger and downloadable by both parties; the processor is blocked — see below |
 | "Pay rent" (a checkout) | — | **blocked** | The processor is chosen — **Peable** — and the seam is built: status mapping and webhook signature verification are live and tested (`services/payments/peableContract.ts`). It is not connected because rent in euros needs Peable's card rail, which its own roadmap marks as never exercised against Stripe's sandbox and not deployed, and Peable performs no FX, so a euro amount cannot settle over its working FairCoin rail. [`docs/peable-rent-payments.md`](./peable-rent-payments) has the four blockers and the exact wiring |
 | `MaintenanceRequestCard` / repairs | `MaintenanceSection`, `/maintenance/*` | **live** | `maintenance_requests` + comments + events + attachments, a declared state machine under a row lock, authorization in the repository query, notifications through the dispatcher. Photos go through the private path — stored under `private/`, re-encoded so the phone's GPS does not travel with them, delivered only to the two sides of the lease |
 | "Message landlord" | — | **blocked** | The ecosystem audit §7.3 asks for is done: [`docs/messaging-audit.md`](./messaging-audit). Allo IS the platform and is explicitly multi-product, but its SDK is unpublished, its server cannot open a conversation, and enrolling Homiio enrols a device on the person's whole Allo account. Three decisions named there, none of them an implementer's. No button is drawn meanwhile — the Inbox tab is a notification list |
@@ -294,10 +294,26 @@ simulated success both epics forbid. The model carries `kind: 'processor'` and a
 replayed webhook will find the row it already created — so adding a provider is
 wiring rather than a migration of live money.
 
-**Open: receipts.** A receipt is a tenancy document and may not go through the
-public image endpoint — but the authorizing path it needs now exists and carries
-lease documents already (see the private document path above), so this is work
-rather than a dependency.
+**Receipts are live, and they are DERIVED rather than stored.** A receipt is not
+a file anybody uploads and not a row anybody writes: it is a rendering of the
+ledger at the moment it is asked for, built from the movement, its obligation
+and the lease. So there is no receipt table, no object in a bucket and no
+migration — and no second answer to "what was paid" that could go on saying
+something the ledger no longer does. A test refunds a settled payment and
+asserts the balance moves while the original receipt keeps describing the
+movement it describes, which is what a refund-as-its-own-row model means.
+
+One exists only for a `succeeded` movement. Issuing one for a tenant's
+unconfirmed declaration would be a document asserting that money arrived because
+somebody said it had, and the endpoint answers `409` rather than `404` so the
+difference between "no such payment" and "not settled yet" survives.
+
+It is **HTML**, and that is a deliberate follow-up rather than an oversight:
+nothing in the API image can render a PDF. The repository carries `pdf-parse`
+(reading) and no writer, and Playwright lives only in the WORKER image. The
+document is self-contained — no stylesheet, no font, no image, nothing that
+reaches the network — so it renders offline six months later, and every desktop
+and phone prints it to PDF.
 
 ## 6. The currency gap, closed
 
@@ -410,9 +426,8 @@ Open, in rough order of how much they unblock:
 1. **Filters end to end** — energy rating and beds remain, and each needs a
    column AND an ingest source before a filter over it means anything. Area,
    availability, currency, floor and the room-vs-whole-home segment are live.
-2. **Payment receipts and the processor** — the ledger is live; receipts are
-   ordinary work on the private document path repair photos now use. The
-   checkout is blocked on Peable's card rail going live, not on a decision
+2. **The rent checkout** — the ledger and receipts are live; only the checkout
+   is left, blocked on Peable's card rail going live rather than on a decision
    (§ [`docs/peable-rent-payments.md`](./peable-rent-payments)).
 3. **Messaging** — the audit is done ([`docs/messaging-audit.md`](./messaging-audit)); now blocked on
    three decisions it names, not on work.

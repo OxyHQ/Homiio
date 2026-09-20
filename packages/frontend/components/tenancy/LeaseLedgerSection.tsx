@@ -44,6 +44,8 @@ import {
   useLeaseLedger,
   useRejectPayment,
 } from '@/hooks/useLeaseLedgerQueries';
+import { openPrivateDocument } from '@/utils/privateDocument';
+import { leaseLedgerService } from '@/services/leaseLedgerService';
 import { useFormatting } from '@/utils/format';
 import { formatLocalized } from '@/utils/dateLocale';
 import { spacing } from '@/constants/styles';
@@ -89,6 +91,17 @@ export function LeaseLedgerSection({
     const map = new Map<string, LeasePaymentMovement>();
     for (const movement of data?.movements ?? []) {
       if (movement.state === 'pending' && movement.direction === 'payment') {
+        map.set(movement.obligationId, movement);
+      }
+    }
+    return map;
+  }, [data]);
+
+  /** The settled payment on each obligation — the one a receipt describes. */
+  const settledMovements = useMemo(() => {
+    const map = new Map<string, LeasePaymentMovement>();
+    for (const movement of data?.movements ?? []) {
+      if (movement.state === 'succeeded' && movement.direction === 'payment') {
         map.set(movement.obligationId, movement);
       }
     }
@@ -164,6 +177,33 @@ export function LeaseLedgerSection({
             ) : null}
 
             <View style={styles.actions}>
+              {/* A receipt exists only for money the landlord confirmed, so the
+                  button appears only then. Offering one for a pending
+                  declaration would promise a document the server refuses — and
+                  the refusal is right: a receipt for an unconfirmed claim
+                  asserts that money arrived because somebody said it had. */}
+              {settledMovements.get(summary.obligationId) ? (
+                <Button
+                  variant="secondary"
+                  size="small"
+                  disabled={busy}
+                  onPress={() =>
+                    run(
+                      summary.obligationId,
+                      openPrivateDocument(
+                        leaseLedgerService.receiptPath(
+                          lease.id,
+                          settledMovements.get(summary.obligationId)!.id,
+                        ),
+                      ),
+                      'ledger.errors.receiptFailed',
+                    )
+                  }
+                  accessibilityLabel={t('ledger.action.receiptAccessible')}
+                >
+                  {t('ledger.action.receipt')}
+                </Button>
+              ) : null}
               {/* The tenant's only action: say they sent it. */}
               {!viewerIsLandlord && !summary.settled && !pending ? (
                 <Button

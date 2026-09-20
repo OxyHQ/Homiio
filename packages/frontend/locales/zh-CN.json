@@ -3980,13 +3980,16 @@
       "confirmAccessible": "确认这笔付款并更新余额",
       "reject": "未收到",
       "rejectAccessible": "告知租客这笔付款未到账",
-      "rejectReason": "账户未收到任何款项"
+      "rejectReason": "账户未收到任何款项",
+      "receipt": "下载收据",
+      "receiptAccessible": "下载这笔已确认付款的收据"
     },
     "errors": {
       "loadFailed": "无法加载余额。没有内容被隐藏，是请求失败了。",
       "declareFailed": "记录失败，请重试。",
       "confirmFailed": "确认失败，请重试。",
-      "rejectFailed": "记录失败，请重试。"
+      "rejectFailed": "记录失败，请重试。",
+      "receiptFailed": "这张收据未能打开。"
     }
   }
 }

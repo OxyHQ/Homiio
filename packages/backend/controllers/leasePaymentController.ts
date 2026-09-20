@@ -37,6 +37,8 @@
  */
 
 import type { NextFunction, Request, Response } from 'express';
+
+import { ReceiptNotAvailableError, rentReceiptFor } from '../services/payments/rentReceipt';
 import {
   LEASE_IDEMPOTENCY_KEY_PATTERN,
   LEASE_PAYMENT_NOTE_MAX,
@@ -44,10 +46,10 @@ import {
   type PaymentCurrency,
 } from '@homiio/shared-types';
 
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 
 import { getDb } from '../db/postgres';
-import { leasePaymentSchedule } from '../db/schema';
+import { leasePaymentMovements, leasePaymentSchedule } from '../db/schema';
 import { findLeaseAccess } from '../db/leases/leaseReads';
 import {
   confirmMovement,
@@ -164,6 +166,124 @@ export async function getLedger(req: Request, res: Response, next: NextFunction)
   } catch (error) {
     next(error);
   }
+}
+
+/**
+ * `GET /api/leases/:id/movements/:movementId/receipt` — a receipt for rent that
+ * actually settled.
+ *
+ * §7.2: "Recibos reales con permisos de descarga. Totales y estados derivados
+ * de datos persistidos, no de una página parcial ni de las cifras del
+ * template." Both halves are here:
+ *
+ *  - **Permissions.** Mounted on the authenticated router and scoped to the
+ *    lease's parties through the same `requireLeaseAccess` every other handler
+ *    here uses, so a stranger gets 404 and a movement id from another lease
+ *    resolves to nothing. Knowing an id grants nothing.
+ *  - **Derived from persisted data.** Built from the movement, its obligation
+ *    and the lease at the moment it is asked for. Nothing is stored, so there
+ *    is no second answer to "what was paid" and no stored copy to go on saying
+ *    something the ledger no longer does — after a refund, most obviously.
+ *
+ * A receipt exists only for a `succeeded` movement. Issuing one for a tenant's
+ * unconfirmed declaration would be a document asserting that money arrived
+ * because somebody said it had, which is the confusion this whole ledger exists
+ * to prevent, printed onto a page.
+ */
+export async function getReceipt(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const oxyUserId = requireSessionOxyUserId(req);
+    const access = await requireLeaseAccess(req, oxyUserId);
+
+    const db = getDb();
+    const leaseId = String(req.params.id);
+    const movementId = String(req.params.movementId);
+
+    // Scoped to the lease as well as the movement, in the query: an id from
+    // somebody else's tenancy must resolve to nothing rather than to a 403.
+    const [movement] = await db
+      .select()
+      .from(leasePaymentMovements)
+      .where(
+        and(
+          eq(leasePaymentMovements.id, movementId),
+          eq(leasePaymentMovements.leaseId, leaseId),
+        ),
+      )
+      .limit(1);
+    if (!movement) throw new AppError('Receipt not found', 404, 'NOT_FOUND');
+
+    const [obligation] = await db
+      .select()
+      .from(leasePaymentSchedule)
+      .where(eq(leasePaymentSchedule.id, movement.obligationId))
+      .limit(1);
+
+    let receipt;
+    try {
+      receipt = rentReceiptFor({
+        movementId: movement.id,
+        state: movement.state,
+        amount: movement.amount,
+        currency: movement.currency,
+        confirmedAt: movement.confirmedAt?.toISOString(),
+        createdAt: movement.createdAt.toISOString(),
+        obligationDueDate: obligation?.dueDate?.toISOString(),
+        obligationType: obligation?.type,
+        tenantOxyUserId: access.tenantOxyUserId,
+        landlordOxyUserId: access.landlordOxyUserId,
+        propertyLabel: undefined,
+        kind: movement.kind,
+        locale: receiptLocale(req),
+      });
+    } catch (error) {
+      if (error instanceof ReceiptNotAvailableError) {
+        // 409, not 404: the payment is there and the person may see it. What
+        // does not exist is a receipt, because it has not settled — and saying
+        // so is more use than pretending the movement is missing.
+        throw new AppError(
+          'A receipt exists only once the payment has been confirmed',
+          409,
+          'RECEIPT_NOT_SETTLED',
+        );
+      }
+      throw error;
+    }
+
+    // Base64 in the ordinary envelope, like every other private document this
+    // app serves. The Oxy linked client owns auth and is JSON-only, and
+    // `AGENTS.md` forbids a second manual token path, so there is no
+    // authenticated way for the client to fetch a raw `text/html` body. The
+    // client writes the file and opens it (`utils/privateDocument.ts`).
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.json(
+      successResponse(
+        {
+          id: movement.id,
+          filename: receipt.filename,
+          contentType: receipt.contentType,
+          base64: Buffer.from(receipt.html, 'utf8').toString('base64'),
+        },
+        'Receipt retrieved',
+      ),
+    );
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * The language to render a receipt in.
+ *
+ * `Accept-Language`'s first tag, validated as a BCP-47-ish shape before it
+ * reaches `Intl` — an arbitrary header value throws a `RangeError` there, which
+ * would turn a malformed request into a 500. English when there is nothing
+ * usable, because a receipt must render for every caller.
+ */
+function receiptLocale(req: Request): string {
+  const header = req.headers['accept-language'];
+  const first = (typeof header === 'string' ? header : '').split(',')[0]?.trim() ?? '';
+  return /^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$/.test(first) ? first : 'en';
 }
 
 /**

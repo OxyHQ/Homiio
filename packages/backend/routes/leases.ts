@@ -77,6 +77,14 @@ export default function() {
   // There is no processor route. See `controllers/leasePaymentController.ts`
   // and `docs/housing-parity.md`.
   router.get('/:id/ledger', validation.validateLeaseId, asyncHandler(leasePaymentController.getLedger));
+  // A receipt for a settled payment. Declared before the `/:id` matcher for the
+  // same reason the rest of this file is: a static segment must never be
+  // swallowed by a parameter.
+  router.get(
+    '/:id/movements/:movementId/receipt',
+    validation.validateLeaseId,
+    asyncHandler(leasePaymentController.getReceipt),
+  );
   router.post(
     '/:id/obligations/:obligationId/declarations',
     validation.validateLeaseId,
