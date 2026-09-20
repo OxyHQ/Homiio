@@ -63,6 +63,10 @@ export const CREATABLE_PROPERTY_FIELDS: readonly string[] = [
   'exchange',
   'isEcoFriendly',
   'addressPublishedPrecision',
+  // Which documents an applicant must supply for this listing — the requirement
+  // half of the application checklist (#518 §7.4). The landlord's own field,
+  // like every other one on this list; the DATABASE bounds the vocabulary.
+  'applicationRequiredDocuments',
 ];
 
 /**

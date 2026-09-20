@@ -2554,6 +2554,22 @@
       "income": "Income proof",
       "reference": "Reference letter",
       "other": "Other"
+    },
+    "checklist": {
+      "required": "Obligatorio",
+      "verify": "Verificar",
+      "verifyAccessible": "Marcar este documento como verificado",
+      "reject": "Rechazar",
+      "rejectAccessible": "Rechazar este documento",
+      "defaultReason": "Este no es el documento que se pedía.",
+      "decisionFailed": "No se pudo guardar esa decisión.",
+      "rejectedBecause": "Rechazado: {{reason}}",
+      "status": {
+        "missing": "Todavía sin subir",
+        "awaiting_review": "Esperando a que el propietario lo revise",
+        "verified": "Verificado por el propietario",
+        "rejected": "Rechazado por el propietario"
+      }
     }
   },
   "reservations": {

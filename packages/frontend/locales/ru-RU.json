@@ -2542,6 +2542,22 @@
       "pickFailed": "Could not pick documents",
       "tooLarge": "{{name}} is over 10 MB and was skipped.",
       "limit": "You can upload up to {{max}} documents per application."
+    },
+    "checklist": {
+      "required": "Обязательно",
+      "verify": "Подтвердить",
+      "verifyAccessible": "Отметить документ как подтверждённый",
+      "reject": "Отклонить",
+      "rejectAccessible": "Отклонить этот документ",
+      "defaultReason": "Это не тот документ, который запрашивался.",
+      "decisionFailed": "Не удалось сохранить это решение.",
+      "rejectedBecause": "Отклонено: {{reason}}",
+      "status": {
+        "missing": "Ещё не загружено",
+        "awaiting_review": "Ожидает проверки владельцем",
+        "verified": "Подтверждено владельцем",
+        "rejected": "Отклонено владельцем"
+      }
     }
   },
   "reservations": {

@@ -30,6 +30,7 @@ import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
 import type { DatabaseOrTransaction } from '../postgres';
 import {
+  properties,
   tenantApplicationDocuments,
   tenantApplicationReferences,
   tenantApplications,
@@ -38,6 +39,10 @@ import {
   TENANT_APPLICATION_STATUSES,
   TENANT_APPLICATION_TERMINAL_STATUSES,
 } from '../schema/applications';
+import type {
+  DocumentVerificationStatus,
+  TenantApplicationDocumentType,
+} from '@homiio/shared-types';
 
 /** An application status the CHECK accepts. */
 export type TenantApplicationStatusValue = (typeof TENANT_APPLICATION_STATUSES)[number];
@@ -75,6 +80,8 @@ export interface HydratedApplication {
   application: ApplicationRow;
   references: readonly ApplicationReferenceRow[];
   documents: readonly ApplicationDocumentRow[];
+  /** What the LISTING asks an applicant for. The checklist's other half. */
+  requiredDocuments: readonly TenantApplicationDocumentType[];
 }
 
 /** Attach the children of `rows`, preserving the query's ordering. */
@@ -85,7 +92,8 @@ async function hydrate(
   const ids = rows.map((row) => row.id);
   if (ids.length === 0) return [];
 
-  const [references, documents] = await Promise.all([
+  const propertyIds = [...new Set(rows.map((row) => row.propertyId))];
+  const [references, documents, requirements] = await Promise.all([
     db
       .select()
       .from(tenantApplicationReferences)
@@ -94,7 +102,19 @@ async function hydrate(
       .select()
       .from(tenantApplicationDocuments)
       .where(inArray(tenantApplicationDocuments.applicationId, ids)),
+    // The REQUIREMENT half of the checklist (#518 §7.4). Read here rather than
+    // by the caller because an application without it can only report what
+    // happened to arrive, which is a list and not a checklist: nothing is ever
+    // missing, because nothing was ever asked for.
+    db
+      .select({
+        id: properties.id,
+        required: properties.applicationRequiredDocuments,
+      })
+      .from(properties)
+      .where(inArray(properties.id, propertyIds)),
   ]);
+  const requiredByProperty = new Map(requirements.map((row) => [row.id, row.required]));
 
   const group = <T extends { applicationId: string }>(child: readonly T[]): Map<string, T[]> => {
     const grouped = new Map<string, T[]>();
@@ -113,7 +133,74 @@ async function hydrate(
     application,
     references: referencesByApplication.get(application.id) ?? [],
     documents: documentsByApplication.get(application.id) ?? [],
+    // Empty when the listing asks for nothing, which is the honest default for
+    // every property written before the column existed: silence is not a demand.
+    requiredDocuments: (requiredByProperty.get(application.propertyId) ??
+      []) as TenantApplicationDocumentType[],
   }));
+}
+
+export type DocumentVerificationOutcome =
+  | { readonly ok: true; readonly document: typeof tenantApplicationDocuments.$inferSelect }
+  | { readonly ok: false; readonly reason: 'not_found' };
+
+/**
+ * Record the landlord's judgement of one document.
+ *
+ * ## Why the landlord id is in the WHERE
+ *
+ * The ownership predicate is in the QUERY, not checked after the read, which is
+ * what makes "not your application" and "no such document" the same answer by
+ * construction rather than by two branches that have to agree. §7.4's rule that
+ * a button may not verify a document locally is enforced HERE: the only way a
+ * row reaches `verified` is this statement, run by the landlord named on the
+ * application.
+ *
+ * Scoped to the document AND its application AND the landlord, so a document id
+ * from somebody else's application resolves to nothing.
+ *
+ * `verifiedAt` is set on every decision, including a re-decision: a landlord who
+ * rejects and later verifies has made a new judgement, and the timestamp is
+ * when they made it rather than when they first looked.
+ */
+export async function setDocumentVerification(
+  db: DatabaseOrTransaction,
+  input: {
+    readonly applicationId: string;
+    readonly documentId: string;
+    readonly landlordOxyUserId: string;
+    readonly status: DocumentVerificationStatus;
+    readonly rejectionReason?: string;
+  },
+): Promise<DocumentVerificationOutcome> {
+  const decided = input.status !== 'pending';
+  const [row] = await db
+    .update(tenantApplicationDocuments)
+    .set({
+      verificationStatus: input.status,
+      // A decision carries its author and time; clearing the status clears them
+      // with it, or the CHECK refuses the row — which is the constraint doing
+      // exactly its job.
+      verifiedByOxyUserId: decided ? input.landlordOxyUserId : null,
+      verifiedAt: decided ? new Date() : null,
+      rejectionReason: input.status === 'rejected' ? input.rejectionReason ?? null : null,
+    })
+    .where(
+      and(
+        eq(tenantApplicationDocuments.id, input.documentId),
+        eq(tenantApplicationDocuments.applicationId, input.applicationId),
+        // The landlord, proven by the parent row rather than trusted from the
+        // request. A subquery so the whole thing stays one statement.
+        sql`exists (
+          select 1 from ${tenantApplications}
+          where ${tenantApplications.id} = ${tenantApplicationDocuments.applicationId}
+            and ${tenantApplications.landlordOxyUserId} = ${input.landlordOxyUserId}
+        )`,
+      ),
+    )
+    .returning();
+
+  return row ? { ok: true, document: row } : { ok: false, reason: 'not_found' };
 }
 
 /** One application, hydrated. No ownership predicate — the caller decides. */
@@ -313,9 +400,17 @@ export function serializeApplication(hydrated: HydratedApplication): Record<stri
     // What replaces it is a path, not a link: fetching it requires the session
     // and the handler proves the viewer is the applicant or the landlord before
     // a byte moves. See `applicationController.getApplicationDocument`.
+    // Both halves of the checklist go out, and the checklist itself is built
+    // from them by `applicationChecklist` in `shared-types` — the same function
+    // on both sides, so a screen and a decision cannot come to disagree about
+    // what is outstanding.
+    requiredDocuments: hydrated.requiredDocuments,
     documents: hydrated.documents.map((document) => ({
       id: document.id,
       type: document.type,
+      verification: document.verificationStatus,
+      ...(document.rejectionReason ? { rejectionReason: document.rejectionReason } : {}),
+      ...(document.verifiedAt ? { verifiedAt: document.verifiedAt.toISOString() } : {}),
       downloadPath: `/api/applications/${row.id}/documents/${document.id}`,
       filename: document.filename,
     })),

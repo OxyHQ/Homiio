@@ -2528,6 +2528,22 @@
       "pickFailed": "Could not pick documents",
       "tooLarge": "{{name}} is over 10 MB and was skipped.",
       "limit": "You can upload up to {{max}} documents per application."
+    },
+    "checklist": {
+      "required": "Obrigatório",
+      "verify": "Verificar",
+      "verifyAccessible": "Marcar este documento como verificado",
+      "reject": "Recusar",
+      "rejectAccessible": "Recusar este documento",
+      "defaultReason": "Este não é o documento solicitado.",
+      "decisionFailed": "Não foi possível salvar essa decisão.",
+      "rejectedBecause": "Recusado: {{reason}}",
+      "status": {
+        "missing": "Ainda não enviado",
+        "awaiting_review": "Aguardando a conferência do proprietário",
+        "verified": "Verificado pelo proprietário",
+        "rejected": "Recusado pelo proprietário"
+      }
     }
   },
   "reservations": {

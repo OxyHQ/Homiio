@@ -253,6 +253,8 @@ only upload path Homiio has. See `docs/housing-parity.md`.
 | `POST` | `/api/applications` |
 | `PATCH` | `/api/applications/:id` |
 | `POST` | `/api/applications/:id/create-lease` |
+| `GET` | `/api/applications/:id/documents/:documentId` — the bytes, to the applicant and the landlord only |
+| `POST` | `/api/applications/:id/documents/:documentId/verification` — the landlord's judgement; the only way a document reaches `verified` |
 
 `create-lease` is landlord-only and is **the only way a lease is created**. It
 resolves property, tenant and rent server-side from an **approved** application.

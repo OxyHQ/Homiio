@@ -181,9 +181,9 @@ a lift is not part of the address.
 | "Pay rent" (a checkout) | — | **blocked** | The processor is chosen — **Peable** — and the seam is built: status mapping and webhook signature verification are live and tested (`services/payments/peableContract.ts`). It is not connected because rent in euros needs Peable's card rail, which its own roadmap marks as never exercised against Stripe's sandbox and not deployed, and Peable performs no FX, so a euro amount cannot settle over its working FairCoin rail. [`docs/peable-rent-payments.md`](./peable-rent-payments) has the four blockers and the exact wiring |
 | `MaintenanceRequestCard` / repairs | `MaintenanceSection`, `/maintenance/*` | **live** | `maintenance_requests` + comments + events + attachments, a declared state machine under a row lock, authorization in the repository query, notifications through the dispatcher. Photos go through the private path — stored under `private/`, re-encoded so the phone's GPS does not travel with them, delivered only to the two sides of the lease |
 | "Message landlord" | — | **blocked** | The ecosystem audit §7.3 asks for is done: [`docs/messaging-audit.md`](./messaging-audit). Allo IS the platform and is explicitly multi-product, but its SDK is unpublished, its server cannot open a conversation, and enrolling Homiio enrols a device on the person's whole Allo account. Three decisions named there, none of them an implementer's. No button is drawn meanwhile — the Inbox tab is a notification list |
-| `DocumentList`, signatures | `LeaseDocumentsSection`, `/contracts/[id]` | **partial** | Upload/list/view exist, and **a lease document can now be a PDF** — it goes to the lease's own multipart endpoint, is stored under `private/leases/<lease>/`, and is delivered only to the landlord, the tenant and the co-tenants. Neither an application's nor a lease's documents come off the public image route any more — see below. Still partial: "uploaded" is not "verified" and the checklist is not yet server state |
+| `DocumentList`, signatures | `LeaseDocumentsSection`, `/contracts/[id]` | **partial** | Upload/list/view exist, and **a lease document can now be a PDF** — it goes to the lease's own multipart endpoint, is stored under `private/leases/<lease>/`, and is delivered only to the landlord, the tenant and the co-tenants. Neither an application's nor a lease's documents come off the public image route any more — see below. Still partial: a LEASE document's signature is not bound to a document or a version, and the lease timeline is derived from lease scalars rather than from event rows. An APPLICATION's documents now carry a real verification — see the `ApplicationChecklist` row |
 | `TenancyTimeline` | `LeaseHistorySection` | **live** | Real lease events |
-| `ApplicationChecklist` | `useApplicationQueries` | **partial** | Applications persist; the checklist's per-requirement state does not |
+| `ApplicationChecklist` | `ApplicationDocumentsGroup`, `applicationChecklist` | **live** | Three facts, kept apart: what the listing REQUIRES (`properties.application_required_documents`), what arrived, and what the landlord has VERIFIED (`tenant_application_documents.verification_status`, with who and when). The landlord is the only writer and the predicate is in the repository query, so a stranger and the applicant both get 404. Two-way CHECKs refuse a tick nobody stands behind and a rejection with no reason |
 | `SavedSearchCard` + alerts | `useSavedSearches`, `useHousingAlerts` | **live** | `housing_watch_rules` / `housing_alerts`, with a connected job — not a local toggle |
 | Wishlists / collections | `savedPropertyFolders` | **live** | Owner-scoped |
 | Trips and swaps | `useReservationQueries`, `useExchangeQueries` | **partial** | Real rows, and one occupancy rule behind them (`db/availability/occupancy.ts`): a reservation, a confirmed exchange and a blocked window each block the other two. Still not surfaced as the template's trip cards |
@@ -469,13 +469,17 @@ Open, in rough order of how much they unblock:
 2. **The rent checkout** — the ledger and receipts are live; only the checkout
    is left, blocked on Peable's card rail going live rather than on a decision
    (§ [`docs/peable-rent-payments.md`](./peable-rent-payments)).
-3. **Messaging** — the audit is done ([`docs/messaging-audit.md`](./messaging-audit)); now blocked on
+3. **Lease signatures and the tenancy timeline** — a signature is six columns
+   on `leases` and binds to no document or version; the timeline is recomputed
+   from `createdAt`, the signature flags and the term dates on every render,
+   because no lease-event table exists. §7.4 asks for both.
+4. **Messaging** — the audit is done ([`docs/messaging-audit.md`](./messaging-audit)); now blocked on
    three decisions it names, not on work.
-4. **Listing facts** — floor plans, energy, price history: each needs a source
+5. **Listing facts** — floor plans, energy, price history: each needs a source
    before it needs a component.
-5. **Guest points** — the ledger is live (§7). What remains is one product
+6. **Guest points** — the ledger is live (§7). What remains is one product
    decision: what a cancellation after acceptance should do.
-6. **Visual and multiplatform QA** — not started, and not implied by any row.
+7. **Visual and multiplatform QA** — not started, and not implied by any row.
 
 Keep this file current in the same change that moves a row. A matrix that lags
 the code is worse than none: it is a claim somebody will trust.

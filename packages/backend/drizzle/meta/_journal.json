@@ -183,6 +183,13 @@
       "when": 1789876718479,
       "tag": "0025_guest_points",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1789878070879,
+      "tag": "0026_application_checklist",
+      "breakpoints": true
     }
   ]
 }

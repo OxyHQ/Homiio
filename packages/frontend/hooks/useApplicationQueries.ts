@@ -2,10 +2,16 @@
  * Tenant application React Query hooks. Drives both the applicant flow
  * (submit, view own applications) and the landlord inbox.
  */
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type UseMutationResult,
+} from '@tanstack/react-query';
 import {
   TenantApplication,
   TenantApplicationStatus,
+  type DocumentVerificationStatus,
 } from '@homiio/shared-types';
 
 import {
@@ -124,6 +130,34 @@ export function useUpdateApplicationMutation() {
         applicationQueryKeys.detail(String(application.id)),
         application,
       );
+    },
+  });
+}
+
+export interface VerifyDocumentVariables {
+  readonly documentId: string;
+  readonly status: DocumentVerificationStatus;
+  readonly reason?: string;
+}
+
+/**
+ * The landlord's judgement of one document (#518 §7.4).
+ *
+ * No optimistic update, deliberately. §7.4's rule is that pressing a button
+ * does not verify a document — so the tick must arrive from the server or not
+ * at all, and an optimistic one would be exactly the local state the rule
+ * forbids, right up until the request failed.
+ */
+export function useVerifyApplicationDocument(
+  applicationId: string,
+): UseMutationResult<TenantApplication, Error, VerifyDocumentVariables> {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (variables: VerifyDocumentVariables) =>
+      applicationService.verifyDocument(applicationId, variables),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['application', applicationId] });
+      void queryClient.invalidateQueries({ queryKey: ['applications'] });
     },
   });
 }

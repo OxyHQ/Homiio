@@ -2528,6 +2528,22 @@
       "pickFailed": "Could not pick documents",
       "tooLarge": "{{name}} is over 10 MB and was skipped.",
       "limit": "You can upload up to {{max}} documents per application."
+    },
+    "checklist": {
+      "required": "अनिवार्य",
+      "verify": "सत्यापित करें",
+      "verifyAccessible": "इस दस्तावेज़ को सत्यापित चिह्नित करें",
+      "reject": "अस्वीकार करें",
+      "rejectAccessible": "इस दस्तावेज़ को अस्वीकार करें",
+      "defaultReason": "यह वह दस्तावेज़ नहीं है जो माँगा गया था।",
+      "decisionFailed": "वह निर्णय सहेजा नहीं जा सका।",
+      "rejectedBecause": "अस्वीकृत: {{reason}}",
+      "status": {
+        "missing": "अभी अपलोड नहीं हुआ",
+        "awaiting_review": "मकान मालिक की जाँच का इंतज़ार",
+        "verified": "मकान मालिक ने सत्यापित किया",
+        "rejected": "मकान मालिक ने अस्वीकार किया"
+      }
     }
   },
   "reservations": {

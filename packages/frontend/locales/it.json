@@ -2553,6 +2553,22 @@
       "income": "Income proof",
       "reference": "Reference letter",
       "other": "Other"
+    },
+    "checklist": {
+      "required": "Obbligatorio",
+      "verify": "Verifica",
+      "verifyAccessible": "Segna questo documento come verificato",
+      "reject": "Rifiuta",
+      "rejectAccessible": "Rifiuta questo documento",
+      "defaultReason": "Non è il documento richiesto.",
+      "decisionFailed": "Non è stato possibile salvare la decisione.",
+      "rejectedBecause": "Rifiutato: {{reason}}",
+      "status": {
+        "missing": "Non ancora caricato",
+        "awaiting_review": "In attesa del controllo del proprietario",
+        "verified": "Verificato dal proprietario",
+        "rejected": "Rifiutato dal proprietario"
+      }
     }
   },
   "reservations": {

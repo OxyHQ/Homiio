@@ -2575,6 +2575,22 @@
       "income": "Income proof",
       "reference": "Reference letter",
       "other": "Other"
+    },
+    "checklist": {
+      "required": "Obligatori",
+      "verify": "Verificar",
+      "verifyAccessible": "Marcar aquest document com a verificat",
+      "reject": "Rebutjar",
+      "rejectAccessible": "Rebutjar aquest document",
+      "defaultReason": "Aquest no és el document que es demanava.",
+      "decisionFailed": "No s’ha pogut desar aquesta decisió.",
+      "rejectedBecause": "Rebutjat: {{reason}}",
+      "status": {
+        "missing": "Encara sense pujar",
+        "awaiting_review": "Esperant que el propietari el revisi",
+        "verified": "Verificat pel propietari",
+        "rejected": "Rebutjat pel propietari"
+      }
     }
   },
   "reservations": {

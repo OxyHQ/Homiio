@@ -18,6 +18,7 @@ import {
   TenantApplication,
   TenantApplicationDocumentType,
   TenantApplicationStatus,
+  type DocumentVerificationStatus,
 } from '@homiio/shared-types';
 
 import { api, ApiError, ApiResponse } from '@/utils/api';
@@ -98,6 +99,25 @@ async function appendFileToFormData(
 }
 
 export const applicationService = {
+  /**
+   * The landlord's judgement of one attached document (#518 §7.4).
+   *
+   * The only route that can move a document to `verified`. The server refuses
+   * anybody but the application's landlord, and refuses a rejection with no
+   * reason — both are checked there rather than trusted from here.
+   */
+  async verifyDocument(
+    applicationId: string,
+    input: { documentId: string; status: DocumentVerificationStatus; reason?: string },
+  ): Promise<TenantApplication> {
+    const response = await api.post<ApiResponse<TenantApplication>>(
+      `${API_BASE_PATH}/${applicationId}/documents/${input.documentId}/verification`,
+      { status: input.status, ...(input.reason ? { reason: input.reason } : {}) },
+    );
+    if (!response.data.data) throw new ApiError('The verification response carried no application');
+    return response.data.data;
+  },
+
   /**
    * Submit a long-term tenant application. Documents are uploaded inline as
    * a single multipart request — the backend persists each file to S3 and

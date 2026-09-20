@@ -12,9 +12,11 @@
 import { bigint, check, doublePrecision, index, pgTable, text } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import { createdAt, generatedId, inList, timestamptz, updatedAt } from '@oxy.so/db';
-import type {
-  TenantApplicationDocumentType,
-  TenantApplicationStatus,
+import {
+  DOCUMENT_VERIFICATION_STATUSES,
+  TENANT_APPLICATION_DOCUMENT_TYPE_VALUES,
+  type DocumentVerificationStatus,
+  type TenantApplicationStatus,
 } from '@homiio/shared-types';
 import { EMPLOYMENT_STATUSES, REFERENCE_RELATIONSHIPS } from './profiles';
 import { properties } from './properties';
@@ -27,12 +29,21 @@ export const TENANT_APPLICATION_STATUSES = [
   'withdrawn',
 ] as const satisfies readonly `${TenantApplicationStatus}`[];
 
-export const TENANT_APPLICATION_DOCUMENT_TYPES = [
-  'id',
-  'income',
-  'reference',
-  'other',
-] as const satisfies readonly `${TenantApplicationDocumentType}`[];
+/**
+ * The verification vocabulary, re-declared as `satisfies` the shared union so
+ * adding a value to the contract without adding it here is a compile error
+ * rather than a row the database refuses at runtime.
+ */
+export const DOCUMENT_VERIFICATION_STATUS_VALUES = DOCUMENT_VERIFICATION_STATUSES satisfies readonly DocumentVerificationStatus[];
+
+/**
+ * Re-exported from the shared contract rather than re-declared.
+ *
+ * `properties.application_required_documents` needs the same tuple for its
+ * CHECK, and `properties.ts` cannot import this file — it is the one this file
+ * imports. One tuple, in `shared-types`, read by both.
+ */
+export const TENANT_APPLICATION_DOCUMENT_TYPES = TENANT_APPLICATION_DOCUMENT_TYPE_VALUES;
 
 /**
  * The three statuses `pre('save')` stamps `decidedAt` on.
@@ -162,6 +173,33 @@ export const tenantApplicationDocuments = pgTable(
       .references(() => tenantApplications.id, { onDelete: 'cascade' }),
     type: text({ enum: TENANT_APPLICATION_DOCUMENT_TYPES }).notNull(),
     url: text().notNull(),
+    /**
+     * Where this document stands with the landlord.
+     *
+     * §7.4: "Pulsar un botón no convierte localmente un documento en
+     * verificado." So verification is a stored decision with a name and a time
+     * against it, written by the landlord through a route that checks who is
+     * asking — not a flag a screen can set for itself.
+     *
+     * `pending` is every document's starting state and is a real answer, not an
+     * absence: "nobody has opened this yet" is what an applicant most needs to
+     * be able to see, and it is the difference between a slow landlord and a
+     * lost upload.
+     */
+    verificationStatus: text({ enum: DOCUMENT_VERIFICATION_STATUS_VALUES })
+      .notNull()
+      .default('pending'),
+    /** Who decided. An Oxy account, and always the application's landlord. */
+    verifiedByOxyUserId: text(),
+    verifiedAt: timestamptz(),
+    /**
+     * Why it was refused, in words the applicant reads.
+     *
+     * A rejection with no reason is a dead end: the applicant learns that
+     * something is wrong and not what to send instead, which turns a five-minute
+     * fix into an abandoned application. Required by a CHECK for that reason.
+     */
+    rejectionReason: text(),
     filename: text().notNull(),
   },
   (table) => [
@@ -169,6 +207,31 @@ export const tenantApplicationDocuments = pgTable(
     check(
       'tenant_application_documents_type_check',
       sql`${table.type} in (${sql.raw(inList(TENANT_APPLICATION_DOCUMENT_TYPES))})`,
+    ),
+    check(
+      'tenant_application_documents_verification_status_check',
+      sql`${table.verificationStatus} in (${sql.raw(inList(DOCUMENT_VERIFICATION_STATUS_VALUES))})`,
+    ),
+    /**
+     * A decision carries who made it and when; `pending` carries neither.
+     *
+     * Two-way, because both halves are wrong in a way a screen renders
+     * confidently: a `verified` row with no verifier is a tick nobody stands
+     * behind, and a verifier on a `pending` row is a decision the status denies.
+     */
+    check(
+      'tenant_application_documents_decided_check',
+      sql`(${table.verificationStatus} <> 'pending') = (${table.verifiedByOxyUserId} is not null and ${table.verifiedAt} is not null)`,
+    ),
+    /**
+     * A rejection has a reason, and nothing else does.
+     *
+     * Also two-way. A reason on a verified document is a contradiction somebody
+     * would read as a caveat on an approval.
+     */
+    check(
+      'tenant_application_documents_rejection_reason_check',
+      sql`(${table.verificationStatus} = 'rejected') = (${table.rejectionReason} is not null)`,
     ),
   ],
 );

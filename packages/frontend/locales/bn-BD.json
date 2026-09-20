@@ -2528,6 +2528,22 @@
       "pickFailed": "Could not pick documents",
       "tooLarge": "{{name}} is over 10 MB and was skipped.",
       "limit": "You can upload up to {{max}} documents per application."
+    },
+    "checklist": {
+      "required": "আবশ্যক",
+      "verify": "যাচাই করুন",
+      "verifyAccessible": "এই নথিটি যাচাইকৃত হিসেবে চিহ্নিত করুন",
+      "reject": "প্রত্যাখ্যান",
+      "rejectAccessible": "এই নথিটি প্রত্যাখ্যান করুন",
+      "defaultReason": "এটি চাওয়া নথি নয়।",
+      "decisionFailed": "সিদ্ধান্তটি সংরক্ষণ করা যায়নি।",
+      "rejectedBecause": "প্রত্যাখ্যাত: {{reason}}",
+      "status": {
+        "missing": "এখনও আপলোড হয়নি",
+        "awaiting_review": "বাড়িওয়ালার যাচাইয়ের অপেক্ষায়",
+        "verified": "বাড়িওয়ালা যাচাই করেছেন",
+        "rejected": "বাড়িওয়ালা প্রত্যাখ্যান করেছেন"
+      }
     }
   },
   "reservations": {
