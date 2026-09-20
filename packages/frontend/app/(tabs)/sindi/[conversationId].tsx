@@ -155,6 +155,14 @@ export default function ConversationDetail() {
       >
         <ChatContent
           key={`${conversationId || 'new'}|${initialMessages.length}`}
+          // The chat IS the screen here, so acting means going to the
+          // destination: "muéstrame pisos" has nowhere else to land. The
+          // executor holds the navigation until the turn stops streaming,
+          // because this screen is inside `<Slot/>` and navigating unmounts the
+          // chat mid-answer. It no longer matters whether the person happens to
+          // have left the side panel open on a wide window — that flag used to
+          // decide whether this surface acted at all.
+          host="screen"
           conversationId={conversationId}
           currentConversation={currentConversation}
           isAuthenticated={isAuthenticated}

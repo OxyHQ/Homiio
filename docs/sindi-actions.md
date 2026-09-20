@@ -7,11 +7,17 @@ title: Sindi acting on the app
 How the assistant changes what the main pane is showing — and every rule that
 stops it from doing anything else.
 
-Delivered for #519 §8. The product ask is one sentence: *"Sindi debe actuar
-sobre la app cuando permanece al lado de ella."* Asking for flats under €1,200
-with the panel docked opens Explore with those filters, in the main pane,
-without closing the chat. With the chat full-screen, the same request answers in
-the conversation and does not navigate.
+Delivered for #519 §8, and revised once after somebody used it. The product ask
+was one sentence: *"Sindi debe actuar sobre la app cuando permanece al lado de
+ella."* Asking for flats under €1,200 with the panel docked opens Explore with
+those filters, in the main pane, without closing the chat.
+
+The revision is the other half of that sentence. Read literally, "al lado de
+ella" left the full-screen chat and the overlay panel doing nothing at all: a
+person typed *"muéstrame pisos en hamburg"*, twice, and the app did not move.
+Their instruction was *"debería interactuar como hablamos"*. So **every host
+acts now**, in the way that host can make visible — see
+[Which host, and what acting means there](#which-host-and-what-acting-means-there).
 
 ## The two channels
 
@@ -180,27 +186,56 @@ does travel in the app CONTEXT (`SindiAppContext.priceCurrency`), so the model
 can say "under 1,200 zł" instead of guessing euros; that is a read, never a
 write.
 
-## When Sindi may act: the layout, never the platform
+## Which host, and what acting means there
 
-`canControlApp = panelVisible && panelDocked`.
+`canControlApp` used to be `panelVisible && panelDocked` — both facts about the
+**panel**, used to answer for three different surfaces. Three render
+`ChatContent`, and only one of them is the panel:
 
-| Viewport | Panel | Capability |
-|---|---|---|
-| < 500 | none; the chat is its own screen | `chat_only` |
-| 500–1023 | overlay, with a scrim | `chat_only` |
-| ≥ 1024 | docked as the shell's `aside` | `side_by_side` |
+| Host | Where it is mounted | Mode | What acting means |
+|---|---|---|---|
+| `panel`, docked (≥ 1024) | `AppShell`'s `aside`, beside `<Slot/>` | `beside` | navigate the page column; the chat stays put |
+| `panel`, overlay (500–1023) | `AppShell`'s `overlay`, beside `<Slot/>` | `reveal` | navigate, then close the panel once the answer is written |
+| `screen` (`/sindi/:id`) | inside `<Slot/>` — it IS the route | `leave` | go to the destination, once the answer is written |
+| `sheet` (in-property) | a sheet over the listing being read | `offer` | nothing: it sends no app context, so no action arrives |
 
-**An overlay is not side-by-side**, and this is the load-bearing line. It is
-narrower than the viewport, so it looks like a side panel to a width check;
-#519 §8.2 answers directly — while it blocks the page it behaves as chat-only.
-Navigating a page the user cannot see through is worse than not navigating.
+The measured failure behind the revision: `uiStore.sindiPanelOpen` is
+**persisted**, so somebody who once opened the side panel on a wide window got
+`docked: true` inside the full-screen chat for ever after — the same chat acted
+or refused depending on an unrelated surface's flag. `components/sindi/sindiHost.ts`
+takes the host as an input for exactly that reason, and the `screen` host's
+answer does not read the layout at all.
 
-A narrow browser tab and the full-screen `/sindi` route on a large monitor are
-both chat-only. A wide native tablet is not. `Platform.OS` appears nowhere in
-the decision.
+**An overlay is still not side-by-side.** #519 §8.2's argument holds — while it
+covers the page, announcing a change nobody can see is worse than not changing
+anything — but the conclusion moved: the panel gets out of the way instead of
+the action being refused. `presentation` stays `side_by_side` for the docked
+panel alone, because that field answers "is there a main pane beside the chat?"
+and the model would write "I've opened it beside you" from it.
 
-The capability is **re-read at execution time**, not at stream start, because a
-window can be resized mid-answer.
+`Platform.OS` still appears nowhere. A narrow web tab, a wide native tablet and
+the Sindi route on a large monitor are each answered by their host and their
+tier, never by their platform. The capability is **re-read at execution time**,
+not at stream start, because a window can be resized mid-answer.
+
+### Why two of the three modes wait for the turn to end
+
+The action frame is written to the data channel **before the first text delta**
+(`pipeStreamingTextDataStream`, on purpose: apply the action while the sentence
+describing it arrives). So at execution time Sindi has said nothing yet.
+
+`reveal` and `leave` both end with the chat's own surface gone — closing the
+overlay panel unmounts `SindiPanel`; navigating off `/sindi/:id` unmounts the
+routed screen. Run on that first frame, either one replaces a streaming answer
+with an empty screen. So the executor applies the STATE half immediately (the
+search query, the results view) and hands the half that removes the chat to
+`useSindiActions.settleTurn`, which `useSindiConversation` calls when the stream
+stops. `beside` defers nothing: the panel is mounted beside `<Slot/>` and
+survives any navigation.
+
+Settling also runs after **Stop**. Stop cancels the answer, and the only reason
+the navigation was waiting was so as not to cut that answer off; what arrives
+*after* a stop still names a turn that is no longer active and is refused.
 
 ## When an action may still be applied
 
@@ -211,7 +246,7 @@ Four refusals, in `hooks/sindiActionRules.ts#envelopeRefusal`:
 | `actionId` already run | `rejected` | a replayed or duplicated frame navigating twice |
 | `turnId` is not the active turn | `stale` | a cancelled turn's late action — this is what makes **Stop** stop |
 | `contextRevision` ≠ the current one | `stale` | the user changed a filter by hand; **their change wins** |
-| no main pane right now | `inline` | navigating behind a scrim |
+| the host cannot show a result (`sheet`) | `inline` | moving the page under a sheet somebody is reading |
 
 **History executes nothing, structurally.** Actions arrive on the AI SDK's data
 channel, which belongs to a live stream. A conversation restored from the store,
@@ -223,13 +258,20 @@ navigates to its `exploreHref` in a single operation; #519 §8.6 forbids a bare
 `router.push('/explore')` followed by a patch, because `/explore` hydrates from
 the URL and the patch would race it.
 
-## Chat-only is an offer, not a silent drop
+## The offer is the fallback now, not the common case
 
-With no main pane the outcome is `inline`, and `SindiActionCard` renders the
-action as a button. Pressing it is the intervention #519 §8.1 asks for — *"una
-representación/acción explícita dentro del chat; no sustituir la pantalla sin
-intervención"* — and it is the one legitimate route past the capability check,
-because a press **is** the intervention.
+With no surface that could show a result the outcome is `inline`, and
+`SindiActionCard` renders the action as a button. This used to be the answer for
+two hosts out of three; it is now reserved for the in-property sheet, which
+sends no context and therefore receives no action — so in practice the card
+renders outcomes rather than offers.
+
+It is kept rather than deleted because `inline` remains the honest outcome for a
+host that cannot present a result, and because pressing it is the intervention
+#519 §8.1 asks for — *"una representación/acción explícita dentro del chat; no
+sustituir la pantalla sin intervención"* — the one legitimate route past the
+capability check. Nothing is deferred for a press: the person read first, so
+there is no answer left to interrupt.
 
 The homes themselves already appear as cards in the conversation (the existing
 `<PROPERTIES_JSON>` rendering), so the offer adds the navigation, not the
@@ -258,9 +300,10 @@ contents of somebody's saved list.
 The **revision** is a hash of the live query. It rides with the turn and comes
 back in the envelope, which is how a manual filter change mid-turn is detected.
 
-The in-property bottom sheet sends **no context at all** (`canSendAppContext =
-false`): it floats over the listing the reader is on, so it has no main pane to
-drive.
+The in-property bottom sheet sends **no context at all**: it declares
+`host="sheet"`, a host that cannot act, and whether a context is sent follows
+from the capability rather than from a second switch somebody could set the
+other way.
 
 ## The conversation-id fix
 
@@ -279,7 +322,8 @@ conversation; the bottom sheet does neither.
 | File | What it pins |
 |---|---|
 | `frontend __tests__/sindi/actionContract.test.ts` | the closed union, every refusal, patch semantics |
-| `frontend __tests__/sindi/controlCapability.test.ts` | the capability at every breakpoint |
+| `frontend __tests__/sindi/controlCapability.test.ts` | the capability for every host at every breakpoint |
+| `frontend __tests__/sindi/actionExecution.test.ts` | WHEN each half of an action runs, per host |
 | `frontend __tests__/sindi/conversationHostPromotion.test.ts` | the panel navigates nothing; every destination is a real route |
 | `backend __tests__/integration/sindiActions.test.ts` | derivation, homonyms, context validation (real Postgres) |
 

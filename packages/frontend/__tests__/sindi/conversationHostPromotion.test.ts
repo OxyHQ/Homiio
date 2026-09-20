@@ -58,10 +58,42 @@ describe('conversation-id promotion belongs to the host', () => {
   });
 
   it('the in-property sheet drives nothing, and sends no app context', () => {
-    // A sheet floating over a listing has no main pane of its own: navigating
-    // the page beneath it is the same failure as navigating behind a scrim.
+    // A sheet floating over a listing has no main pane of its own: moving the
+    // page beneath it would take away the listing somebody chose to read, to
+    // show a result the sheet is sitting on top of. Declaring the host is what
+    // says so now — the app context follows from the capability, so there is no
+    // second switch to set the other way.
     const sheet = codeOf('components/property/SindiChatBottomSheet.tsx');
-    expect(sheet).toContain('canSendAppContext={false}');
+    expect(sheet).toContain('host="sheet"');
+  });
+});
+
+describe('every host declares which surface it is', () => {
+  // The capability used to be derived from the panel's layout for all three,
+  // which meant the full-screen chat's behaviour was decided by whether an
+  // unrelated, PERSISTED flag had left the side panel open. A host that forgets
+  // to declare itself is a TypeScript error (`ChatContent`'s `host` prop is
+  // required), so what these pin is that each one declares the RIGHT thing —
+  // which types cannot check and a mistake in which is silent.
+  it.each([
+    ['components/sindi/SindiPanel.tsx', 'host="panel"'],
+    ['app/(tabs)/sindi/[conversationId].tsx', 'host="screen"'],
+    ['components/property/SindiChatBottomSheet.tsx', 'host="sheet"'],
+  ])('%s declares %s', (file, declaration) => {
+    expect(codeOf(file)).toContain(declaration);
+  });
+
+  it('no host smuggles the old boolean back in', () => {
+    // `canSendAppContext` meant "I am the bottom sheet" in everything but name.
+    // Re-adding it beside the host would give one surface two answers.
+    for (const file of [
+      'components/sindi/ChatContent.tsx',
+      'components/sindi/SindiPanel.tsx',
+      'app/(tabs)/sindi/[conversationId].tsx',
+      'components/property/SindiChatBottomSheet.tsx',
+    ]) {
+      expect(codeOf(file)).not.toContain('canSendAppContext');
+    }
   });
 });
 

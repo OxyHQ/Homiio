@@ -130,11 +130,13 @@ export function SindiChatBottomSheet({ property, initialMessage }: SindiChatBott
             ]}
         >
             <ChatContent
-              // A sheet floating over the listing the user is reading has no
-              // main pane to drive: navigating the page beneath it is the same
-              // failure as navigating behind the panel's scrim. No context is
-              // sent, so no action is emitted for these turns.
-              canSendAppContext={false}
+              // The one host that still does not act. It floats over the
+              // listing somebody chose to read, so moving the page beneath it
+              // would take that listing away to show a result they cannot see
+              // anyway — the sheet is on top of it. A host that cannot act
+              // sends no app context, so no action is ever emitted for these
+              // turns and the chat answers in prose and cards.
+              host="sheet"
                 conversationId={conversationId}
                 currentConversation={currentConversation}
                 isAuthenticated={isAuthenticated}

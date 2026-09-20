@@ -21,9 +21,37 @@
  *    meantime, THEIR change wins and the action is `stale` — "Si el usuario
  *    cambia un filtro manualmente después del contexto enviado, ese cambio
  *    gana."
- *  - **No main pane.** The capability is re-read at execution time, not at
- *    stream start, because a window can be resized mid-answer. Without a main
- *    pane the result is presented INLINE; nothing navigates behind a scrim.
+ *  - **No surface that could show it.** The capability is re-read at execution
+ *    time, not at stream start, because a window can be resized mid-answer.
+ *    This used to be the common case and is now the rare one — see below.
+ *
+ * ## Every host acts; the HOST decides what acting looks like
+ *
+ * The fourth refusal was `canControlApp = panelVisible && panelDocked`, so the
+ * full-screen chat and the overlay panel both answered `inline` and rendered a
+ * button. The person who reported this had typed "muéstrame pisos en hamburg"
+ * and watched the app do nothing; their instruction was "debería interactuar
+ * como hablamos". So the capability now takes the host
+ * (`components/sindi/sindiHost.ts`) and only a surface with nowhere to show a
+ * result — the in-property sheet — still offers instead of acting.
+ *
+ * ## Two things happen at different times, and that is the whole shape below
+ *
+ * The action frame is written BEFORE the first text delta (`routes/ai.ts`,
+ * `pipeStreamingTextDataStream`), so when `execute` runs the answer has not
+ * been written yet. Two of the three acting modes end with the chat's own
+ * surface gone — the overlay panel closes, the full-screen route navigates away
+ * — and doing that on the frame that precedes the text unmounts a chat that is
+ * still streaming: the screen changes and the reply the person asked for never
+ * appears in front of them.
+ *
+ * So an action is split. The part that changes app STATE (the search query, the
+ * results view) runs immediately, because it costs nothing and keeps the
+ * reported outcome honest. The part that takes the chat's surface away —
+ * `router.push`, closing the panel — is handed to {@link UseSindiActions.settleTurn},
+ * which `useSindiConversation` calls when the stream settles. In `beside` mode
+ * nothing is deferred: the docked panel is mounted beside `<Slot/>` and survives
+ * any navigation.
  *
  * ## History executes nothing, structurally
  *
@@ -51,11 +79,12 @@ import {
   type SindiActionOutcome,
 } from '@homiio/shared-types';
 
-import { controlCapabilityOf } from '@/components/sindi/sindiPanelLayout';
+import { controlCapabilityOf, type SindiActMode, type SindiChatHost } from '@/components/sindi/sindiHost';
 import { useSindiPanelLayout } from '@/components/sindi/sindiPanelLayout';
 import { applySearchPatch, envelopeRefusal } from './sindiActionRules';
 import { useExploreViewStore } from '@/store/exploreViewStore';
 import { useSearchQueryStore } from '@/store/searchQueryStore';
+import { useUIStore } from '@/store/uiStore';
 import { exploreHref } from '@/utils/searchUrl';
 
 // Re-exported so the hook stays the single import for a consumer that wants
@@ -77,6 +106,8 @@ export interface SindiActionExecution {
 }
 
 export interface UseSindiActionsArgs {
+  /** Which surface is rendering this conversation. See {@link SindiChatHost}. */
+  readonly host: SindiChatHost;
   /** The turn currently streaming. `null` when nothing is. */
   readonly activeTurnId: string | null;
   /** The revision of the app context sent with that turn. */
@@ -99,14 +130,31 @@ export interface UseSindiActions {
    *
    * The one legitimate route past the capability check, and it is legitimate
    * precisely because the check exists to stop the app moving without
-   * intervention — a press IS the intervention. Used by the chat-only offer
-   * card; there is no other caller, and adding one would need the same
-   * justification.
+   * intervention — a press IS the intervention. Used by the offer card; there
+   * is no other caller, and adding one would need the same justification.
+   *
+   * Nothing is deferred here: the person is waiting, and they pressed after
+   * reading, so there is no answer left to interrupt.
    */
   readonly take: (action: SindiAction) => SindiActionOutcome;
+  /**
+   * The turn has stopped streaming: run what was held back until it had.
+   *
+   * Idempotent and cheap — it drains a queue that is empty for every turn that
+   * produced no action, which is most of them. Called by
+   * `useSindiConversation` from the same effect that closes the turn, which
+   * means it also runs after **Stop**: stopping cancels the ANSWER, and the
+   * reason the navigation was waiting (not cutting that answer off) is gone the
+   * moment the answer is. The action itself was accepted before the stop, so
+   * "Cancelar un turno impide aplicar lo que llegue después" is untouched —
+   * what arrives after a stop still names a turn that is no longer active and
+   * is refused by `envelopeRefusal`.
+   */
+  readonly settleTurn: () => void;
 }
 
 export function useSindiActions({
+  host,
   activeTurnId,
   contextRevision,
   onExecuted,
@@ -122,6 +170,25 @@ export function useSindiActions({
    * both pass the check.
    */
   const applied = useRef<Set<string>>(new Set());
+
+  /**
+   * What runs when the turn stops streaming.
+   *
+   * A ref for the same reason `applied` is one: it is written from inside
+   * `execute` and read from an effect, and neither may cause a render — a
+   * re-render here would re-run the effect that offers every accumulated frame
+   * to the executor.
+   */
+  const deferred = useRef<(() => void)[]>([]);
+
+  const settleTurn = useCallback(() => {
+    if (deferred.current.length === 0) return;
+    // Taken and cleared BEFORE running, so a callback that somehow enqueued
+    // another cannot be re-run by the next settle.
+    const pending = deferred.current;
+    deferred.current = [];
+    for (const run of pending) run();
+  }, []);
 
   const execute = useCallback(
     (envelope: SindiActionEnvelope): SindiActionOutcome => {
@@ -140,37 +207,57 @@ export function useSindiActions({
       applied.current.add(envelope.actionId);
 
       // Re-read at EXECUTION time: the window may have been resized while the
-      // answer streamed, and navigating a pane that is now behind a scrim is
-      // worse than not navigating.
-      const { canControlApp } = controlCapabilityOf(layout);
-      const outcome = canControlApp
-        ? applyToMainPane(envelope.action, router)
-        : ('inline' as const);
+      // answer streamed, so the host's mode is derived now rather than when the
+      // stream opened.
+      const { actMode } = controlCapabilityOf(host, layout);
+      const outcome =
+        actMode === 'offer'
+          ? ('inline' as const)
+          : applyAction(envelope.action, router, actMode, (run) => deferred.current.push(run));
 
       onExecuted({ envelope, outcome });
       return outcome;
     },
-    [activeTurnId, contextRevision, layout, onExecuted, router],
+    [activeTurnId, contextRevision, host, layout, onExecuted, router],
   );
 
   const take = useCallback(
-    (action: SindiAction): SindiActionOutcome => applyToMainPane(action, router),
-    [router],
+    (action: SindiAction): SindiActionOutcome => {
+      const { actMode } = controlCapabilityOf(host, layout);
+      // `immediately` in place of the deferring sink: a press is not a frame
+      // that arrived before the answer, so there is nothing to wait for.
+      return applyAction(action, router, actMode, immediately);
+    },
+    [host, layout, router],
   );
 
-  return useMemo(() => ({ execute, take }), [execute, take]);
+  return useMemo(() => ({ execute, take, settleTurn }), [execute, take, settleTurn]);
 }
 
 type Router = ReturnType<typeof useRouter>;
 
+/** Run a deferred step now. See `take`. */
+const immediately = (run: () => void): void => run();
+
 /**
- * Do the thing, in the main pane.
+ * Do the thing.
  *
- * Reached only with `canControlApp` true. Every branch either performs a
- * navigation the app already supports or answers `failed`; none of them
- * constructs a URL from model-supplied text.
+ * Reached for every acting mode from `execute`, and for `offer` too from an
+ * explicit press — which is the one legitimate route past the capability check.
+ * Every branch either performs a navigation the app already supports or answers
+ * `failed`; none of them constructs a URL from model-supplied text.
+ *
+ * `defer` receives the step that removes the chat from the screen. The caller
+ * decides whether that is "now" (`beside`, and an explicit press) or "when the
+ * turn settles" (`reveal`, `leave`) — see this module's header for why the
+ * distinction is load-bearing rather than cosmetic.
  */
-function applyToMainPane(action: SindiAction, router: Router): SindiActionOutcome {
+function applyAction(
+  action: SindiAction,
+  router: Router,
+  mode: SindiActMode,
+  defer: (run: () => void) => void,
+): SindiActionOutcome {
   switch (action.kind) {
     case 'apply_search': {
       const current = useSearchQueryStore.getState().query;
@@ -186,8 +273,7 @@ function applyToMainPane(action: SindiAction, router: Router): SindiActionOutcom
       // from the URL on arrival and the two agree because both came from
       // `next`.
       useSearchQueryStore.getState().replaceSearch(next);
-      router.push(href);
-      return 'applied';
+      return navigateThen(() => router.push(href), mode, defer);
     }
     case 'show_saved': {
       // `/saved/[folderId]` is a real route — a query parameter on `/saved`
@@ -198,24 +284,38 @@ function applyToMainPane(action: SindiAction, router: Router): SindiActionOutcom
       // person's own folders under their own session, and an id naming somebody
       // else's simply matches nothing there. A responsive capability grants no
       // permissions (#519 §8.3).
-      router.push(
-        action.folderId
-          ? { pathname: '/saved/[folderId]', params: { folderId: action.folderId } }
-          : '/saved',
+      return navigateThen(
+        () =>
+          router.push(
+            action.folderId
+              ? { pathname: '/saved/[folderId]', params: { folderId: action.folderId } }
+              : '/saved',
+          ),
+        mode,
+        defer,
       );
-      return 'applied';
     }
     case 'open_listing': {
-      router.push({ pathname: '/properties/[id]', params: { id: action.propertyId } });
-      return 'applied';
+      return navigateThen(
+        () => router.push({ pathname: '/properties/[id]', params: { id: action.propertyId } }),
+        mode,
+        defer,
+      );
     }
     case 'set_results_view': {
       useExploreViewStore.getState().setResultsView(action.view);
-      return 'applied';
+      // The only member that changes state without moving anywhere, and the
+      // only one whose visibility depends on where the person already is: the
+      // list/map switch belongs to Explore. From the docked panel the main pane
+      // is on screen and switching it is the whole request. From any other host
+      // the chat is covering or replacing the app, so a store write nobody can
+      // see is the invisible action this change exists to stop — Explore comes
+      // with it.
+      if (mode === 'beside') return 'applied';
+      return navigateThen(() => router.push('/explore'), mode, defer);
     }
     case 'navigate': {
-      router.push(DESTINATION_ROUTES[action.destination]);
-      return 'applied';
+      return navigateThen(() => router.push(DESTINATION_ROUTES[action.destination]), mode, defer);
     }
     default: {
       // The union is closed, so a member added later is a COMPILE error here
@@ -225,4 +325,34 @@ function applyToMainPane(action: SindiAction, router: Router): SindiActionOutcom
       return 'rejected';
     }
   }
+}
+
+/**
+ * Perform the navigation, and whatever else this mode owes the person.
+ *
+ * `beside` navigates the page column beside the chat and is done. `leave`
+ * navigates away from the chat itself, so the navigation IS the thing that must
+ * wait. `reveal` navigates under the overlay panel now — harmless, the panel is
+ * mounted beside `<Slot/>` — and closes that panel afterwards, which is the
+ * step that must wait.
+ *
+ * `offer` reaches here only from an explicit press, where `defer` runs
+ * everything immediately.
+ */
+function navigateThen(
+  navigate: () => void,
+  mode: SindiActMode,
+  defer: (run: () => void) => void,
+): SindiActionOutcome {
+  if (mode === 'leave') {
+    defer(navigate);
+    return 'applied';
+  }
+  navigate();
+  if (mode === 'reveal') {
+    // Closing the panel unmounts the chat inside it, which is why this is the
+    // deferred half rather than part of the navigation above.
+    defer(() => useUIStore.getState().closeSindiPanel());
+  }
+  return 'applied';
 }

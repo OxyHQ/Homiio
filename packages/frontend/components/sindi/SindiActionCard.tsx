@@ -1,18 +1,25 @@
 /**
  * What an action looks like when the app cannot be driven — and when it was.
  *
- * ## The chat-only column of #519 §8.1
+ * ## The offer is now the RARE case, and that is the change
  *
- * With the chat full-screen, "muéstrame pisos por menos de 1.200 €" must NOT
- * navigate. The homes themselves already appear as cards in the conversation
- * (the assistant's `<PROPERTIES_JSON>` block, rendered by `ChatMessage`), so
- * what is missing is the OFFER: a way to take the action deliberately, "una
- * representación/acción explícita dentro del chat; no sustituir la pantalla sin
- * intervención".
+ * This row used to be the answer for two of the three hosts: with the chat
+ * full-screen, or behind the overlay panel's scrim, "muéstrame pisos por menos
+ * de 1.200 €" rendered a button instead of doing anything, per #519 §8.1 —
+ * "una representación/acción explícita dentro del chat; no sustituir la
+ * pantalla sin intervención". The person who asked for that in the abstract
+ * rejected it in practice ("debería interactuar como hablamos"), so both hosts
+ * act now and the offer is left for a surface with nowhere to show a result:
+ * the in-property sheet, which sends no app context and therefore receives no
+ * action at all.
  *
- * That is this row. Pressing it is the intervention — an explicit press by the
- * person reading — so it applies the action regardless of the layout, which is
- * the one legitimate route past the capability check.
+ * It is kept — rather than deleted as unreachable — because `inline` remains
+ * the honest outcome for any host that cannot present a result, and because a
+ * press IS the intervention: it applies the action regardless of the layout,
+ * which is the one legitimate route past the capability check. The homes
+ * themselves already appear as cards in the conversation (the assistant's
+ * `<PROPERTIES_JSON>` block, rendered by `ChatMessage`), so the offer adds the
+ * navigation, not the results.
  *
  * ## It also reports what DID happen, and never overstates it
  *

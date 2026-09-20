@@ -21,6 +21,7 @@ import {
   type SindiActionEnvelope,
   type SindiAppContext,
 } from '@homiio/shared-types';
+import type { SindiChatHost } from '@/components/sindi/sindiHost';
 import { requestSindiConsentAndRetry, SindiConsentRequiredError } from './sindiConsent';
 import { shouldPersistSindiTranscript } from './sindiTurnPersistence';
 import { useSindiActions, type SindiActionExecution } from './useSindiActions';
@@ -65,6 +66,15 @@ interface AttachedAsset {
 type ConversationFetch = typeof globalThis.fetch;
 
 export interface UseSindiConversationArgs {
+  /**
+   * Which surface is rendering this conversation.
+   *
+   * Not inferable from here, and deliberately not guessed: the panel and the
+   * in-property sheet both render over whatever route is loaded, so a pathname
+   * describes the page underneath the chat rather than the chat. The host
+   * decides what "act on the app" means (`components/sindi/sindiHost.ts`).
+   */
+  host: SindiChatHost;
   conversationId?: string;
   currentConversation?: Conversation | null;
   isAuthenticated: boolean;
@@ -152,6 +162,7 @@ function deriveTitle(current: Conversation, messages: Message[]): string {
  * source of truth) — this hook only mirrors the live streamed messages into it.
  */
 export function useSindiConversation({
+  host,
   conversationId,
   currentConversation,
   isAuthenticated,
@@ -241,7 +252,8 @@ export function useSindiConversation({
     setActions((previous) => [...previous, execution]);
   }, []);
 
-  const { execute, take } = useSindiActions({
+  const { execute, take, settleTurn } = useSindiActions({
+    host,
     activeTurnId,
     // The revision the SERVER was told about. A manual filter change since then
     // bumps the context's revision, so the action no longer matches and is
@@ -388,16 +400,27 @@ export function useSindiConversation({
   ]);
 
   /**
-   * Close the turn when the stream settles.
+   * Close the turn when the stream settles, and release what was waiting for it.
    *
    * A turn that has finished is no longer active, so a frame arriving after it
    * — a duplicate, a reconnection replay — is refused by the executor for the
    * same reason a cancelled turn's frames are. The window in which an action
    * may be applied is exactly the window in which its turn is streaming.
+   *
+   * `settleTurn` is the other half, and it is here rather than in a host
+   * because this is the one place that knows a turn ENDED. The executor holds
+   * back the step that takes the chat's own surface away — closing the overlay
+   * panel, navigating off `/sindi/:id` — because the action frame arrives
+   * before the first text delta, so running it on arrival would unmount a chat
+   * that is still streaming and the person would never see the answer they
+   * asked for. It is a drain of an empty queue for every turn that produced no
+   * action.
    */
   useEffect(() => {
-    if (!isLoading && activeTurnId !== null) setActiveTurnId(null);
-  }, [isLoading, activeTurnId]);
+    if (isLoading) return;
+    if (activeTurnId !== null) setActiveTurnId(null);
+    settleTurn();
+  }, [isLoading, activeTurnId, settleTurn]);
 
   // Auto-scroll when a new last message arrives.
   useEffect(() => {
