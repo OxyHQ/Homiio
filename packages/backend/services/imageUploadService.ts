@@ -10,6 +10,8 @@ import type {
   ImageVariantUrls,
 } from '@homiio/shared-types';
 import config from '../config';
+import { logger } from '../middlewares/logging';
+import { describeErrorForLog } from '../middlewares/errorHandler';
 import { validateImageStoreKey, validatePrivateDocumentKey } from '../utils/imageStoreKey';
 import { insertImage, type ImageRow } from '../db/images/imageWrites';
 
@@ -661,7 +663,18 @@ export class ImageUploadService {
         const contentType = response.ContentType ?? validation.contentType;
         return { buffer, contentType };
       } catch (error) {
-        if (this.isFileMissingError(error)) return null;
+        if (this.isFileMissingError(error)) {
+          // Logged because a 403 from S3 is ambiguous: an absent object when the
+          // role cannot list the bucket, or a bucket policy that has genuinely
+          // broken. The wire answer is the same 404 either way — deliberately,
+          // so the route cannot be used to probe which keys exist — so the log
+          // is the only place the difference survives.
+          logger.warn('Stored object could not be read; answering as missing', {
+            store: 's3',
+            reason: describeErrorForLog(error),
+          });
+          return null;
+        }
         throw error;
       }
     }
@@ -760,13 +773,47 @@ export class ImageUploadService {
     }
   }
 
-  /** Whether a filesystem error means the path simply does not exist. */
+  /**
+   * Whether an error means "there is no such object", from EITHER store.
+   *
+   * ## It only understood the filesystem, and production is S3
+   *
+   * This used to test `ENOENT`/`ENOTDIR` alone. Those are what the local store
+   * raises; S3 raises nothing of the kind, so every request for a key that does
+   * not exist escaped as an exception and `GET /api/images/file/*` answered
+   * **500**. Measured against production: an absent `property/...` key returned
+   * 500 where the route's own contract says a missing image is "a flat 404 so
+   * the route leaks neither paths nor existence of out-of-store files".
+   *
+   * ## Why 403 counts as missing
+   *
+   * S3 answers `NoSuchKey` for an absent object only when the caller may list
+   * the bucket. Without `s3:ListBucket` — which Homiio's task role does not
+   * need and should not have — it answers **`AccessDenied`** instead, precisely
+   * so that a stranger cannot probe which keys exist. That is the common case
+   * here, and treating it as anything but "no such object" puts a 500 on the
+   * ordinary path of a deleted image.
+   *
+   * The cost is real and is not hidden: a genuinely broken bucket policy now
+   * reads as "image not found" rather than as an outage. The caller logs it, so
+   * the difference is visible in the logs even though it is deliberately
+   * invisible on the wire.
+   */
   private isFileMissingError(error: unknown): boolean {
     if (typeof error !== 'object' || error === null) {
       return false;
     }
     const code = (error as { code?: string }).code;
-    return code === 'ENOENT' || code === 'ENOTDIR';
+    if (code === 'ENOENT' || code === 'ENOTDIR') return true;
+
+    // The AWS SDK v3 names the error rather than coding it, and the same
+    // condition arrives under three names depending on the operation.
+    const name = (error as { name?: string }).name;
+    if (name === 'NoSuchKey' || name === 'NotFound' || name === 'AccessDenied') return true;
+
+    const status = (error as { $metadata?: { httpStatusCode?: number } }).$metadata
+      ?.httpStatusCode;
+    return status === 404 || status === 403;
   }
 
   getAllImageUrls(uploadedImage: UploadedImage): Record<string, string> {
