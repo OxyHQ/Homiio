@@ -79,11 +79,14 @@ afterEach(() => {
 
 describe('describeProxyFailure', () => {
   it('lifts the CONNECT status out of a nested cause chain', () => {
+    // Built by assigning `cause` rather than via `new Error(msg, { cause })`:
+    // the constructor option needs lib ES2022 and this package does not target
+    // it. The shape under test is identical either way.
     const inner = Object.assign(new Error('Proxy response (402) !== 200 when HTTP Tunneling'), {
       name: 'AbortError',
     });
-    const middle = new Error('Request was cancelled.', { cause: inner });
-    const outer = new TypeError('fetch failed', { cause: middle });
+    const middle = Object.assign(new Error('Request was cancelled.'), { cause: inner });
+    const outer = Object.assign(new TypeError('fetch failed'), { cause: middle });
 
     const described = describeProxyFailure(outer);
 
