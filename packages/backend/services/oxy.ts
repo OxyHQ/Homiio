@@ -1,3 +1,5 @@
+import crypto from 'node:crypto';
+
 import { OxyServices } from '@oxy.so/core';
 import { canAttestWorkloadIdentity } from '@oxy.so/core/server';
 import config from '../config';
@@ -22,6 +24,59 @@ export const SINDI_OXY_SERVICE_CREDENTIAL_ID = '01a0648e-ad3f-7608-aa8b-c07bfef6
 // every Sindi token fail this canary in production. Source of truth:
 // OxyHQServices `packages/api/src/config/nativeProductAgents.ts` (homiio.project.id).
 export const SINDI_OXY_OWNER_ACCOUNT_ID = '6a50444ce8026582b949089d';
+
+/**
+ * The ECS task role Homiio runs as, canonicalised the way Oxy canonicalises it.
+ *
+ * STS answers a task's `GetCallerIdentity` with
+ * `arn:aws:sts::<account>:assumed-role/oxy-homiio-task/<session>`, and the
+ * session differs for every task. Oxy reduces that to the ROLE before anything
+ * sees it (`canonicalAwsSubject`), so this — not the per-task ARN — is the
+ * subject the handle below is a function of.
+ */
+export const SINDI_OXY_TASK_ROLE_ARN = 'arn:aws:iam::237343248947:role/oxy-homiio-task';
+
+/**
+ * The SECOND identifier the ONE Sindi identity can arrive under.
+ *
+ * Under oxy ADR 0026 the same token is minted two ways, and the two paths
+ * attribute it differently. A credential mint sets `credentialId` to the
+ * credential's UUID; an attestation mint has no credential to name and sets it
+ * to the binding's ATTESTATION HANDLE instead — `wl_` plus 96 bits of SHA-256
+ * over the canonical role ARN, computed by `workloadAttestationHandle()` in
+ * OxyHQServices `packages/api/src/services/workloadAttestation.service.ts`.
+ * Every other claim is identical, because both paths mint for the same
+ * application (`6a2f851751b784a86fd0e922`) owned by the same project account.
+ *
+ * It is DERIVED here rather than copied, because a value observed once is a
+ * value that can silently stop being the one the mint produces. The handle is a
+ * function of the canonical subject and of nothing else, so every task of every
+ * deploy yields the same twenty-seven characters — which is exactly what makes
+ * it pinnable, and why accepting it costs the canary nothing. It names one IAM
+ * role in one account; no other workload can produce it, and a token from any
+ * other identity still fails.
+ */
+export const SINDI_OXY_WORKLOAD_ATTESTATION_ID = `wl_${crypto
+  .createHash('sha256')
+  .update(SINDI_OXY_TASK_ROLE_ARN)
+  .digest('hex')
+  .slice(0, 24)}`;
+
+/**
+ * Whether a `credentialId`/`cid` claim names the Sindi service identity.
+ *
+ * Both accepted values name the same identity by construction: the UUID is
+ * Sindi's own credential, and the handle is Homiio's own task role, which is
+ * bound to Sindi's own application. Accepting either is what lets the pair be
+ * dropped without the canary losing its job — it still refuses a token minted
+ * for anything else, under either path.
+ */
+function namesSindiServiceIdentity(value: unknown): boolean {
+  return (
+    value === SINDI_OXY_SERVICE_CREDENTIAL_ID ||
+    value === SINDI_OXY_WORKLOAD_ATTESTATION_ID
+  );
+}
 
 /**
  * The credential pair is now OPTIONAL, and a deployment no longer carries one.
@@ -87,7 +142,7 @@ export function assertCanonicalSindiServiceToken(token: string): string {
     const requiredScopes = ['inference:invoke', 'acting-as:offline'];
     if (
       payload.appId !== SINDI_OXY_APPLICATION_ID ||
-      payload.credentialId !== SINDI_OXY_SERVICE_CREDENTIAL_ID ||
+      !namesSindiServiceIdentity(payload.credentialId) ||
       payload.ownerAccountId !== SINDI_OXY_OWNER_ACCOUNT_ID ||
       scopes.length !== requiredScopes.length ||
       requiredScopes.some((scope) => !scopes.includes(scope)) ||
@@ -147,7 +202,7 @@ export function assertCanonicalSindiRequesterAssertion(
       claims.aud !== 'alia' ||
       claims.sub !== expected.requesterAccountId ||
       claims.azp !== SINDI_OXY_APPLICATION_ID ||
-      claims.cid !== SINDI_OXY_SERVICE_CREDENTIAL_ID ||
+      !namesSindiServiceIdentity(claims.cid) ||
       claims.agentId !== expected.agentId ||
       typeof claims.exp !== 'number' ||
       claims.exp * 1000 <= Date.now()
