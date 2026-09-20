@@ -198,7 +198,12 @@ Three further measurements from the same real database
   non-null key is refused with `addresses_normalized_key_key` (both directions
   confirmed, so the partial unique index does what its comment says).
 - `cities_region_name_key` is **case-sensitive**: `Barcelona` and `barcelona`
-  both stored, 2 rows.
+  both stored, 2 rows. **Closed 2026-09-20.** A production census then found 51
+  such groups (102 rows) and 94 slugs shared by more than one city, including
+  three Barcelonas in Spain — which is what made "show me flats in Barcelona"
+  resolve to nothing. Migration 0029 folds them together and replaces the index
+  with `cities_region_slug_key` on `(region_id, slug)`; `docs/postgres.md`
+  carries the census and the two tables that still have this shape.
 - Two cities named `Valencia` under two different regions coexist correctly; two
   under the *same* region are refused. But `addressService.ts:81` falls back to a
   literal region named `Unknown` when a geocode yields no state — measured: two

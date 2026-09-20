@@ -106,3 +106,38 @@ HISTORY plus durable rules; this section is the current state.**
   exists because one deadline (`conversations.sharing_expires_at`) belongs to a
   share LINK and must clear four columns rather than delete the row.
 
+- **A place's identity inside its region is its SLUG, not its name** (migration
+  0029, 2026-09-20). `cities_region_name_key` was unique on `(region_id, name)`,
+  and `name` is raw text, so the comparison is case-sensitive: two ingests that
+  disagreed about capitalisation each got a row. A census of production that day
+  — 1,660 cities, read through `/api/cities` — found **51 groups (102 rows)**
+  differing only in case (`AARTSELAAR` beside `Aartselaar`) and **94 slugs used
+  by more than one city**, including three rows named Barcelona in Spain, two of
+  them holding no listings.
+
+  That was not untidiness, it was the reported bug. `placeLookup` resolves an
+  inbound token to a slug and answers an ordered candidate LIST; three
+  candidates for `barcelona` is ambiguity, and ambiguity is refused, because
+  from the outside a duplicate and a homonym look identical (ADR 0002 §12.2). So
+  "show me flats in Barcelona" resolved no location and Sindi did nothing.
+
+  `cities.slug` is `GENERATED ALWAYS` from the name and cannot be written by
+  hand, so two rows in ONE region whose names normalise to the same slug are the
+  same place. The index is now `cities_region_slug_key` on `(region_id, slug)`,
+  and `addressService.upsertCity` — which produced every one of those duplicates
+  — matches and conflicts on it. Duplicate slugs remain legal ACROSS regions,
+  which is the condition ADR 0002 exists to answer and is untouched.
+
+  **Two tables still have the old shape, deliberately.**
+  `regions_country_name_key` is `(country_id, name)`, but its duplicates are
+  `Madrid` beside `Comunidad de Madrid` — different names, which no slug would
+  merge, so the fix there is an alias table and not a rename.
+  `neighborhoods_city_name_key` is `(city_id, name)` and has no slug column to
+  be unique on; migration 0029 folds case-colliding neighbourhoods when it
+  merges their cities, but nothing stops a new pair.
+
+  What 0029 does NOT do: `addresses.normalized_key` hashes `city_id` and is a
+  plain column nothing recomputes (re-keying would break the dedup
+  `findOrCreateCanonical` depends on — see the column's header). A moved address
+  keeps a key computed under the city it came from. That is the state those rows
+  were already in.

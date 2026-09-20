@@ -589,9 +589,14 @@ describe('the slug rule agrees in TypeScript and in Postgres', () => {
    *    without the SQL-side strip it falls through to `[^a-z0-9]+ → -` and the
    *    column holds `ma-laga` while TypeScript says `malaga`.
    *
-   * The decomposed and precomposed spellings are seeded TOGETHER and must
-   * produce the SAME slug — which is also why they can coexist under
-   * `cities_region_name_key`: they are different byte strings.
+   * The decomposed and precomposed spellings must produce the SAME slug, which
+   * is the point of stripping the mark on both sides — and it is also why every
+   * fixture here gets its OWN region. They used to share one, because the unique
+   * index was `(region_id, name)` and two different byte strings never collided
+   * there. Migration 0029 made it `(region_id, slug)`, so a region now holds one
+   * `malaga` and these two spellings are exactly the pair it refuses. That
+   * refusal is the new rule working; the fixture just has to stop asking for
+   * something the schema is now right to deny.
    *
    * `SLUG_EXPANSIONS` gets one fixture per entry for the same reason. An
    * expansion is one-to-many and `translate` cannot express that; given a
@@ -601,7 +606,6 @@ describe('the slug rule agrees in TypeScript and in Postgres', () => {
    */
   it('produces the same slug for names that exercise every branch of it', async () => {
     const spain = await seedCountry('t-ctry-es', 'ES', 'Spain');
-    const region = await seedRegion('t-rg-any', spain, 'Anywhere');
     /**
      * `Málaga` in NFD, written with an explicit escape rather than as a literal
      * accented character. A decomposed literal is indistinguishable from a
@@ -641,9 +645,10 @@ describe('the slug rule agrees in TypeScript and in Postgres', () => {
     expect(MALAGA_NFD.normalize('NFC')).toBe('Málaga');
 
     await Promise.all(
-      names.map((name, index) =>
-        seedCity({ id: `t-city-slug-${index}`, countryId: spain, regionId: region, name }),
-      ),
+      names.map(async (name, index) => {
+        const region = await seedRegion(`t-rg-slug-${index}`, spain, `Anywhere ${index}`);
+        return seedCity({ id: `t-city-slug-${index}`, countryId: spain, regionId: region, name });
+      }),
     );
 
     const rows = await getDb().select({ name: cities.name, slug: cities.slug }).from(cities);

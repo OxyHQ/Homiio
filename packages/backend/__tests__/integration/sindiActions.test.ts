@@ -103,16 +103,20 @@ describe('the area is resolved, never guessed', () => {
   });
 
   it('resolves past DUPLICATE rows for one city, which is what production has', async () => {
-    // Production carries three `cities` rows named Barcelona in Spain — with
-    // the slug `barcelona` on all three — and two of them hold zero listings.
-    // `cities_region_name_key` is unique on `(region_id, name)` and is
-    // case-SENSITIVE, so a lower-cased name slips past it, and a second region
-    // inside the same country takes the rest.
+    // Production carried three `cities` rows named Barcelona in Spain — with
+    // the slug `barcelona` on all three — and two of them held zero listings.
+    // Refusing them made the most ordinary request Sindi can receive — "show me
+    // flats in Barcelona" — produce no location, and with no other constraint
+    // in the sentence, no action at all: the person saw nothing happen and
+    // nothing said.
     //
-    // They are duplicates, not homonyms. Refusing them made the most ordinary
-    // request Sindi can receive — "show me flats in Barcelona" — produce no
-    // location, and with no other constraint in the sentence, no action at all:
-    // the person saw nothing happen and nothing said.
+    // The fixture is three separate CHAINS, and after migration 0029 that is
+    // the only shape it could have: `cities_region_slug_key` forbids two rows
+    // slugging to `barcelona` inside one region, so the surviving way for a
+    // slug to have several candidates is across regions, which ADR 0002 §12.2
+    // says is legal and must stay legal. That is what makes this case still
+    // worth a test — the empty-row rule was never about the duplicates alone,
+    // and an empty homonym is just as unable to answer "what is in it".
     const real = await seedGeoChain({
       countryCode: 'ES',
       countryName: 'Spain',

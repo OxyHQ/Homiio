@@ -13,7 +13,7 @@
  *
  * Idempotent, and now by CONSTRUCTION rather than by convention: each upsert is
  * an `INSERT ... ON CONFLICT DO UPDATE` on the table's own unique index
- * (`countries_code_key`, `regions_country_name_key`, `cities_region_name_key`,
+ * (`countries_code_key`, `regions_country_name_key`, `cities_region_slug_key`,
  * `neighborhoods_city_name_key`). Where Mongo's `findOneAndUpdate({upsert:true})`
  * could interleave two racers into a duplicate, the index cannot.
  *
@@ -188,7 +188,7 @@ async function upsertCities(countryId: string, regionIds: Map<string, string>): 
         isActive: true,
       })
       .onConflictDoUpdate({
-        target: [cities.regionId, cities.name],
+        target: [cities.regionId, cities.slug],
         set: {
           countryId,
           longitude: city.coordinates[0],

@@ -108,11 +108,18 @@ area is in force.
 **This refusal was firing on "Barcelona", and it made the most ordinary request
 Sindi can receive do nothing at all.** Production carries three `cities` rows
 named Barcelona in Spain, all with the slug `barcelona`, and two of them hold
-zero listings. `cities_region_name_key` is unique on `(region_id, name)` and is
-case-SENSITIVE, so a lower-cased name slips past it, and a second region inside
-the same country takes the rest. With no location and no other constraint in the
-sentence, `searchPatchForTurn` returned `null` and no action was emitted: the
-person saw nothing happen and nothing said.
+zero listings. The unique index was `cities_region_name_key`, on
+`(region_id, name)`, and raw text compares case-SENSITIVELY — so a lower-cased
+name slipped past it, and a second region inside the same country took the rest.
+With no location and no other constraint in the sentence, `searchPatchForTurn`
+returned `null` and no action was emitted: the person saw nothing happen and
+nothing said.
+
+Migration 0029 is the other half: it folds the duplicate rows together and makes
+the index `(region_id, slug)`, so a region holds one `barcelona` and that
+particular trio cannot re-form. The rule below is still load-bearing without
+them, because **cross-region** homonyms are legal by design (ADR 0002 §12.2) and
+an empty one is exactly as unhelpful as an empty duplicate was.
 
 `resolveCity` now discounts a candidate holding **no listings** before judging.
 That is not a popularity tiebreak — `placeLookup`'s header forbids

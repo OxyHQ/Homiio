@@ -239,8 +239,37 @@ export const cities = pgTable(
     updatedAt: updatedAt(),
   },
   (table) => [
-    // A city name is unique within its region.
-    uniqueIndex('cities_region_name_key').on(table.regionId, table.name),
+    /**
+     * A city is unique within its region BY SLUG, not by name.
+     *
+     * It was `(region_id, name)` — and `name` is raw text, so the index is
+     * case-SENSITIVE and `AARTSELAAR` sat beside `Aartselaar` for as long as two
+     * ingests disagreed about capitalisation. Production carried 51 such groups
+     * (102 rows) and 94 slugs used by more than one city, including THREE rows
+     * named Barcelona in Spain, two of them holding no listings. That is what
+     * made "show me flats in Barcelona" answer nothing: `placeLookup` sees three
+     * candidates for one slug and correctly refuses to choose, because from the
+     * outside duplicates and homonyms look identical.
+     *
+     * {@link cities.slug} is the normalised form and is `GENERATED ALWAYS`, so
+     * it cannot drift from the name and cannot be written by hand. Two rows in
+     * ONE region whose names normalise to the same slug are the same place; that
+     * is not an opinion about data quality, it is what the lookup contract
+     * already assumes when it resolves a token to a slug. So the slug is the
+     * identity inside a region, and the name is a label on top of it.
+     *
+     * This does NOT forbid duplicate slugs globally, which is the condition ADR
+     * 0002 §12.2 exists to answer: Barcelona in Catalonia and Barcelona in
+     * Anzoátegui are different regions and both keep their row. See the header
+     * on {@link cities_slug_idx} below — a unique index on `slug` ALONE would
+     * still be wrong.
+     *
+     * The old `(region_id, name)` index is dropped rather than kept beside this
+     * one: a name equality implies a slug equality, so it forbade nothing this
+     * does not, and `addressService.upsertCity` — the writer that produced every
+     * one of those duplicates — now infers its `ON CONFLICT` from this index.
+     */
+    uniqueIndex('cities_region_slug_key').on(table.regionId, table.slug),
     // `{ countryId: 1 }` IS ported (a country's cities are listed directly);
     // Mongo's standalone `{ regionId: 1 }` is not, being the leading prefix of
     // the unique index above.

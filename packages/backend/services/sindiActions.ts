@@ -113,15 +113,19 @@ const CITY_CANDIDATE_LIMIT = 8;
  * refusal is right: choosing between two real places on a popularity tiebreak
  * is the homonym bug (ADR 0002 §12.2).
  *
- * But it was also refusing "Barcelona". Production carries THREE `cities` rows
+ * But it was also refusing "Barcelona". Production carried THREE `cities` rows
  * named Barcelona in Spain — `Barcelona`, `barcelona` and another `Barcelona` —
- * all with the slug `barcelona`, and two of them holding **zero** listings.
- * They are duplicates, not homonyms: `cities_region_name_key` is unique on
- * `(region_id, name)` and is case-SENSITIVE, so a lower-cased name slips past
- * it, and a second region inside the same country takes the rest. So the most
- * ordinary request Sindi can receive — "show me flats in Barcelona" — produced
- * no location, and with no other constraint in the sentence, no action at all.
- * The person saw nothing happen and nothing said.
+ * all with the slug `barcelona`, and two of them holding **zero** listings. So
+ * the most ordinary request Sindi can receive — "show me flats in Barcelona" —
+ * produced no location, and with no other constraint in the sentence, no action
+ * at all. The person saw nothing happen and nothing said.
+ *
+ * Two of those three were duplicates rather than homonyms, and migration 0029
+ * removed them: the unique index is now `(region_id, slug)` instead of the
+ * case-sensitive `(region_id, name)` that let `barcelona` sit beside
+ * `Barcelona`. This rule is NOT made redundant by that. Homonyms across regions
+ * are legal by design — ADR 0002 §12.2 — and an empty homonym is exactly as
+ * unable to answer "what is in it" as an empty duplicate was.
  *
  * ## The rule, and why it is not "pick the popular one"
  *

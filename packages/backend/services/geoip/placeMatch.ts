@@ -137,9 +137,10 @@ async function findRegionId(
  * ## Name first, coordinate second — and the order matters
  *
  * A name match inside one country is an identity claim: Homiio has exactly one
- * active row called "Sabadell" in Spain (`cities_region_name_key` makes the
- * name unique per region, so several regions could each hold one — hence the
- * proximity tie-break below rather than a bare `limit 1`).
+ * active row called "Sabadell" in Spain (`cities_region_slug_key` makes the
+ * name unique per region — a name equality implies a slug equality — so several
+ * regions could each hold one, hence the proximity tie-break below rather than
+ * a bare `limit 1`).
  *
  * A proximity match is a weaker claim and is only allowed to run when the
  * provider NAMED a city. Without that name, the nearest row within fifty
@@ -170,7 +171,7 @@ async function findCityId(countryId: string, record: GeoIpRecord): Promise<strin
   );
 
   if (!hasPoint) {
-    // No point to break a tie with. `cities_region_name_key` makes the name
+    // No point to break a tie with. `cities_region_slug_key` makes the name
     // unique per REGION, so a country can hold several — but the country
     // constraint has already excluded the dangerous homonym (the Barcelona in
     // Venezuela), and choosing between two same-named towns in one country with
