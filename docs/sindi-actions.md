@@ -108,18 +108,30 @@ area is in force.
 **This refusal was firing on "Barcelona", and it made the most ordinary request
 Sindi can receive do nothing at all.** Production carries three `cities` rows
 named Barcelona in Spain, all with the slug `barcelona`, and two of them hold
-zero listings. The unique index was `cities_region_name_key`, on
-`(region_id, name)`, and raw text compares case-SENSITIVELY — so a lower-cased
-name slipped past it, and a second region inside the same country took the rest.
-With no location and no other constraint in the sentence, `searchPatchForTurn`
-returned `null` and no action was emitted: the person saw nothing happen and
-nothing said.
+zero listings — so `placeLookup` answered three candidates and declined to
+choose. With no location and no other constraint in the sentence,
+`searchPatchForTurn` returned `null` and no action was emitted: the person saw
+nothing happen and nothing said.
 
-Migration 0029 is the other half: it folds the duplicate rows together and makes
-the index `(region_id, slug)`, so a region holds one `barcelona` and that
-particular trio cannot re-form. The rule below is still load-bearing without
-them, because **cross-region** homonyms are legal by design (ADR 0002 §12.2) and
-an empty one is exactly as unhelpful as an empty duplicate was.
+**Correction, 2026-09-20.** This page said the trio came from
+`cities_region_name_key` comparing raw text case-sensitively, and that migration
+0029 folded it away. Neither is true, and the difference decides whether the
+rule below is still needed. The three rows are in three different REGIONS —
+`Barcelona`/`Catalonia` with 3 listings, `Barcelona`/`Barcelona` with none,
+`barcelona`/`barcelona` with none — so no two of them ever competed for a
+`(region_id, name)` key, and `(region_id, slug)` does not forbid them either.
+0029 is real and its 51 same-region case groups are real; this was never one of
+them, and all three rows are still there. The duplication is one level up:
+`regions_country_name_key` is `(country_id, name)` and carries the identical
+case-sensitivity (measured the same day: 3 such groups, ES
+`Barcelona`/`barcelona` among them), sitting on top of a
+province-versus-autonomous-community naming split that no slug would merge.
+`docs/postgres.md` carries both censuses.
+
+So the rule below is not a stopgap that 0029 retired. It is what makes
+"Barcelona" resolve today, and it would remain load-bearing even if the region
+rows were merged tomorrow, because **cross-region** homonyms are legal by design
+(ADR 0002 §12.2) and an empty one is exactly as unhelpful as an empty duplicate.
 
 `resolveCity` now discounts a candidate holding **no listings** before judging.
 That is not a popularity tiebreak — `placeLookup`'s header forbids
@@ -141,10 +153,13 @@ which refuses. One turn, two resolvers, and until now two different answers.
 Narrowing that is what the rule above does; collapsing them into one resolver is
 still open.
 
-**The root cause is the data**, and it is not fixed here: three rows for one
-city, and a case-sensitive uniqueness constraint that permits a fourth. Merging
-them means repointing every address that references the duplicates, which is a
-migration with a real blast radius and its own audit.
+**The root cause is the data**, and it is still not fixed: three rows for one
+city, under three regions that are themselves duplicates of each other, and a
+case-sensitive `regions_country_name_key` that permits a fourth. Migration 0029
+fixed the CITY-level version of that constraint and migration 0030 the
+placeholder-region version; neither touches this one. Merging them means
+repointing every address that references the duplicates, which is a migration
+with a real blast radius and its own audit.
 
 ### Why a price patch still carries no currency
 

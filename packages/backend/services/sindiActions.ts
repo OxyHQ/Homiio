@@ -113,19 +113,25 @@ const CITY_CANDIDATE_LIMIT = 8;
  * refusal is right: choosing between two real places on a popularity tiebreak
  * is the homonym bug (ADR 0002 §12.2).
  *
- * But it was also refusing "Barcelona". Production carried THREE `cities` rows
- * named Barcelona in Spain — `Barcelona`, `barcelona` and another `Barcelona` —
- * all with the slug `barcelona`, and two of them holding **zero** listings. So
- * the most ordinary request Sindi can receive — "show me flats in Barcelona" —
- * produced no location, and with no other constraint in the sentence, no action
- * at all. The person saw nothing happen and nothing said.
+ * But it was also refusing "Barcelona". Production carries THREE `cities` rows
+ * named Barcelona in Spain, all with the slug `barcelona` and two of them
+ * holding **zero** listings. So the most ordinary request Sindi can receive —
+ * "show me flats in Barcelona" — produced no location, and with no other
+ * constraint in the sentence, no action at all. The person saw nothing happen
+ * and nothing said.
  *
- * Two of those three were duplicates rather than homonyms, and migration 0029
- * removed them: the unique index is now `(region_id, slug)` instead of the
- * case-sensitive `(region_id, name)` that let `barcelona` sit beside
- * `Barcelona`. This rule is NOT made redundant by that. Homonyms across regions
- * are legal by design — ADR 0002 §12.2 — and an empty homonym is exactly as
- * unable to answer "what is in it" as an empty duplicate was.
+ * This comment used to go on to say that two of those three were duplicates
+ * that migration 0029 removed by replacing the case-sensitive `(region_id,
+ * name)` index with `(region_id, slug)`. **That was wrong, and it is wrong in
+ * the direction that matters here, because it reads as though this rule were a
+ * stopgap for a migration that has since landed.** The three rows are in three
+ * different REGIONS — `Catalonia` (3 listings), `Barcelona` (0) and `barcelona`
+ * (0) — so 0029 never saw them as duplicates, and all three are still in the
+ * table. Several candidates for one slug ACROSS regions is precisely the case
+ * ADR 0002 §12.2 says is legal and must stay legal, so no unique index can ever
+ * remove it. This rule is what makes "Barcelona" resolve, today and after any
+ * future region merge. `docs/postgres.md` carries the census and the
+ * correction.
  *
  * ## The rule, and why it is not "pick the popular one"
  *

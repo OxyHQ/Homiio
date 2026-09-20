@@ -66,11 +66,16 @@ describe('resolveGeo', () => {
    * `upsertCity` matched `cities.name` exactly and conflicted on
    * `(region_id, name)`, and both are case-SENSITIVE — so a provider that
    * shouted the city name got a SECOND row beside the one already there.
-   * Production ended up with 51 such groups and three rows named Barcelona in
-   * Spain, which is what made `placeLookup` refuse to resolve "Barcelona" at
-   * all: three candidates for one slug is indistinguishable from three
-   * homonyms. Migration 0029 folds the existing rows together; this is the half
-   * that stops them coming back.
+   * Production ended up with 51 such groups (102 rows) — `AARTSELAAR` beside
+   * `Aartselaar`. Migration 0029 folds the existing rows together; this is the
+   * half that stops them coming back.
+   *
+   * NOT among those 51, although an earlier version of this comment said so:
+   * the three rows named Barcelona in Spain. They really did make `placeLookup`
+   * refuse to resolve "Barcelona", but they are in three different REGIONS, so
+   * neither the old index nor the new one has any opinion about them — see
+   * `docs/postgres.md`. This test is about the same-region case and nothing
+   * else.
    *
    * The three spellings are the three that actually occur in the data: the one
    * already stored, an all-caps one and an all-lower one.

@@ -111,15 +111,44 @@ HISTORY plus durable rules; this section is the current state.**
   and `name` is raw text, so the comparison is case-sensitive: two ingests that
   disagreed about capitalisation each got a row. A census of production that day
   — 1,660 cities, read through `/api/cities` — found **51 groups (102 rows)**
-  differing only in case (`AARTSELAAR` beside `Aartselaar`) and **94 slugs used
-  by more than one city**, including three rows named Barcelona in Spain, two of
-  them holding no listings.
+  differing only in case **within one region** (`AARTSELAAR` beside
+  `Aartselaar`, `ANDERLECHT` beside `Anderlecht`) and **94 slugs used by more
+  than one city**. After the migration ran, production held **1,606 cities and
+  no same-region slug duplicate left at all**, down from 1,662 rows at apply
+  time — the census earlier that day read 1,660, and the two counts are two
+  moments rather than a contradiction, because ingest keeps adding cities.
 
-  That was not untidiness, it was the reported bug. `placeLookup` resolves an
-  inbound token to a slug and answers an ordered candidate LIST; three
-  candidates for `barcelona` is ambiguity, and ambiguity is refused, because
-  from the outside a duplicate and a homonym look identical (ADR 0002 §12.2). So
-  "show me flats in Barcelona" resolved no location and Sindi did nothing.
+  **Correction, 2026-09-20: Barcelona was the wrong example.** This bullet, the
+  header of `drizzle/0029_city_slug_identity.sql`, PR #554 and the commit message
+  of `de1e9b18` all led with "three rows named Barcelona in Spain" as the case
+  those 51 groups were about. It is not one of them. The three rows sit in three
+  DIFFERENT regions:
+
+  | city row | region | listings |
+  |---|---|---|
+  | `Barcelona` | `Catalonia` | 3 |
+  | `Barcelona` | `Barcelona` | 0 |
+  | `barcelona` | `barcelona` | 0 |
+
+  `cities_region_name_key` always permitted that trio and `cities_region_slug_key`
+  still does, so 0029 neither merged those rows nor could have. What they broke
+  was real and is one level up: all three carry the slug `barcelona`, so
+  `placeLookup` — which resolves an inbound token to a slug and answers an
+  ordered candidate LIST — saw three candidates, and ambiguity is refused
+  because from the outside a duplicate and a homonym look identical (ADR 0002
+  §12.2). "Show me flats in Barcelona" therefore resolved no location and Sindi
+  did nothing. What made it answer again is #553's rule in
+  `services/sindiActions.ts`, which discounts a candidate holding zero listings
+  — not this migration. 0029's own finding stands on the 51 groups; only the
+  Barcelona illustration was misattributed.
+
+  The migration file's own header still carries the wrong bullet, deliberately:
+  `@oxy.so/db/migrate`'s `verify.ts` hashes each `.sql` byte-for-byte and
+  compares it with the `__drizzle_migrations` ledger, so rewording an applied
+  migration would make production report a permanent hash mismatch over a
+  comment. Read `drizzle/0029_city_slug_identity.sql` with this bullet beside
+  it. The commit message of `de1e9b18` is merged history and cannot be changed
+  at all.
 
   `cities.slug` is `GENERATED ALWAYS` from the name and cannot be written by
   hand, so two rows in ONE region whose names normalise to the same slug are the
@@ -128,13 +157,20 @@ HISTORY plus durable rules; this section is the current state.**
   — matches and conflicts on it. Duplicate slugs remain legal ACROSS regions,
   which is the condition ADR 0002 exists to answer and is untouched.
 
-  **Two tables still have the old shape, deliberately.**
-  `regions_country_name_key` is `(country_id, name)`, but its duplicates are
-  `Madrid` beside `Comunidad de Madrid` — different names, which no slug would
-  merge, so the fix there is an alias table and not a rename.
-  `neighborhoods_city_name_key` is `(city_id, name)` and has no slug column to
-  be unique on; migration 0029 folds case-colliding neighbourhoods when it
-  merges their cities, but nothing stops a new pair.
+  **Two tables still have the old shape, deliberately — and `regions` has BOTH
+  failure modes.** `regions_country_name_key` is `(country_id, name)`, which is
+  the same case-sensitive shape one level up, and it has the same consequence:
+  measured 2026-09-20, **3 region groups differ only in case** — ES
+  `Barcelona`/`barcelona`, ES `Madrid`/`madrid`, MX `Estado De México`/`Estado
+  de México`. On top of that sits a naming split no slug would merge —
+  `Barcelona` the province beside `Catalonia` the autonomous community, `Madrid`
+  beside `Comunidad de Madrid` — which is why the fix there is an alias table
+  and not only a unique index on the slug. Between them those two defects are
+  the whole reason Barcelona has three city rows, so the correction above is not
+  a detail: the Barcelona trio is an OPEN region-level bug, not a closed
+  city-level one. `neighborhoods_city_name_key` is `(city_id, name)` and has no
+  slug column to be unique on; migration 0029 folds case-colliding
+  neighbourhoods when it merges their cities, but nothing stops a new pair.
 
   What 0029 does NOT do: `addresses.normalized_key` hashes `city_id` and is a
   plain column nothing recomputes (re-keying would break the dedup

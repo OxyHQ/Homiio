@@ -103,20 +103,22 @@ describe('the area is resolved, never guessed', () => {
   });
 
   it('resolves past DUPLICATE rows for one city, which is what production has', async () => {
-    // Production carried three `cities` rows named Barcelona in Spain — with
-    // the slug `barcelona` on all three — and two of them held zero listings.
+    // Production carries three `cities` rows named Barcelona in Spain — with
+    // the slug `barcelona` on all three — and two of them hold zero listings.
     // Refusing them made the most ordinary request Sindi can receive — "show me
     // flats in Barcelona" — produce no location, and with no other constraint
     // in the sentence, no action at all: the person saw nothing happen and
     // nothing said.
     //
-    // The fixture is three separate CHAINS, and after migration 0029 that is
-    // the only shape it could have: `cities_region_slug_key` forbids two rows
-    // slugging to `barcelona` inside one region, so the surviving way for a
-    // slug to have several candidates is across regions, which ADR 0002 §12.2
-    // says is legal and must stay legal. That is what makes this case still
-    // worth a test — the empty-row rule was never about the duplicates alone,
-    // and an empty homonym is just as unable to answer "what is in it".
+    // The fixture is three separate CHAINS because production's three rows are
+    // in three separate REGIONS — `Catalonia`, `Barcelona` and `barcelona`. It
+    // reproduces the live shape rather than approximating it. An earlier
+    // version of this comment said the three chains were merely what survived
+    // migration 0029; that was wrong. 0029 folds duplicates INSIDE one region
+    // and never saw these, so `cities_region_slug_key` cannot remove this case
+    // — several candidates for one slug across regions is what ADR 0002 §12.2
+    // says is legal and must stay legal. Which is exactly why the empty-row
+    // rule, and not the index, is what this test guards.
     const real = await seedGeoChain({
       countryCode: 'ES',
       countryName: 'Spain',
