@@ -66,3 +66,36 @@ export function providerMaxSearchPages(
   }
   return fallback;
 }
+
+/**
+ * Images kept per external listing (`LISTING_MAX_IMAGES_PER_LISTING`).
+ *
+ * **THE SINGLE MOST EXPENSIVE NUMBER IN THE INGEST, AND IT HAD NO KNOB.** Every
+ * image is re-hosted, not hotlinked: downloaded through the network, resized by
+ * Sharp, and written to S3 where it is stored and served forever. So this one
+ * integer multiplies bandwidth, worker CPU and storage together, once per
+ * listing, on every market.
+ *
+ * The scale is not hypothetical. Four Spanish cities alone advertise ~14,000
+ * rentals (Madrid 8,121, Barcelona 3,269, Valencia 2,605, Zaragoza 130);
+ * at 30 images each that is 420,000 downloads for four cities out of 68.
+ *
+ * The default is 30 — unchanged, because lowering it is a product decision
+ * about how a gallery looks, not a refactor. What changes is that it can now be
+ * lowered from the task definition without a deploy, and that the providers
+ * which carry images through the queue honour the same number instead of
+ * guessing their own.
+ */
+export const DEFAULT_MAX_IMAGES_PER_LISTING = 30;
+
+/** Hard ceiling, so a typo in the task definition cannot uncap the ingest. */
+export const MAX_IMAGES_CEILING = 60;
+
+/** Read `LISTING_MAX_IMAGES_PER_LISTING`, clamped to {@link MAX_IMAGES_CEILING}. */
+export function maxImagesPerListingFromEnv(): number {
+  const raw = process.env.LISTING_MAX_IMAGES_PER_LISTING?.trim();
+  if (!raw) return DEFAULT_MAX_IMAGES_PER_LISTING;
+  const parsed = Number(raw);
+  if (!Number.isSafeInteger(parsed) || parsed < 1) return DEFAULT_MAX_IMAGES_PER_LISTING;
+  return Math.min(parsed, MAX_IMAGES_CEILING);
+}

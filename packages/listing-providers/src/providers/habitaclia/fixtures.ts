@@ -54,6 +54,16 @@ export interface HabitacliaRawListing {
   furnished?: boolean;
   amenities?: string[];
   images: HabitacliaRawImage[];
+  /**
+   * Advertiser contact, when the source exposed it.
+   *
+   * The search payload carries an email and phone per listing, which the old
+   * detail-page path never saw. `AGENTS.md` asks for these to be captured so
+   * the app can offer direct contact instead of only `sourceUrl` — and it is
+   * emphatic that they are never invented, so this stays optional and is only
+   * ever populated from a field the portal actually returned.
+   */
+  contact?: { phone?: string; email?: string };
 }
 
 /**

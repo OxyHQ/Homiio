@@ -440,3 +440,102 @@ aws ecs update-service --region us-west-2 --cluster oxy-cluster \
 
 Repopulation is not instant and is not supposed to be: 224 scopes on a 6h cycle,
 with the browser-tier ES portals serialising behind the Playwright pool.
+
+## The Adevinta portals, and the second silent zero (2026-09-20)
+
+Habitaclia rebuilt its site. `/alquiler-<city>.htm` now 302s to
+`/alquiler/viviendas/<province>/<city>/s`, the card markup changed, and the old
+`data-href*="-i"` selectors match nothing. **A search that parses to zero cards
+is indistinguishable from a city with no homes**, so discover reported success,
+yielded nothing, and logged nothing — twelve consecutive jobs at 0 refs with no
+error, while Spain sat at 31 listings against Germany's 481.
+
+Exactly the shape of the 402 above: a zero wearing the costume of a normal
+result. The fix is the same in spirit — make the failure say so.
+
+### What the portals serve now
+
+Both Spanish portals run the same front end (Habitaclia's photos are served from
+`static.fotocasa.es`) and ship the whole result set as JSON inside the page,
+under two different spellings:
+
+| portal | wrapper |
+| --- | --- |
+| Fotocasa | `<script id="__initial_props__" type="application/json">` |
+| Habitaclia | `window.__INITIAL_PROPS__ = JSON.parse("…")` — a JS string literal holding JSON, two layers of escaping |
+
+`providers/adevinta/initialProps.ts` reads both. Measured on live pages through
+the production proxy:
+
+| city | listings | pages |
+| --- | --- | --- |
+| Madrid | 8,121 | 271 |
+| Barcelona | 3,269 | 109 |
+| Valencia | 2,605 | 87 |
+| Zaragoza | 130 | 5 |
+
+Each item carries title, full description, street name and number, coordinates,
+district and neighbourhood layers, rooms, bathrooms, built surface, floor,
+feature flags, the energy certificate, every image URL, and **the advertiser's
+email and phone** — which the old detail-page path never saw and which the
+classifieds contact rule asks for.
+
+### Why the detail fetch is gone
+
+Not as an optimisation. **The detail page is now client-rendered**: a live
+listing returns 200 and 577 KB containing no JSON-LD, no embedded props and
+nothing else a server-side parser can read. The search payload is the only place
+the data exists, so `discover` carries the mapped listing on the ref's `hints`
+and `fetch` returns it without touching the network. The ladder remains for refs
+with no carried listing, and fails loudly rather than quietly if it is ever hit.
+
+The cost follows for free: **one request per 30 listings instead of 31.**
+Barcelona's 3,269 rentals cost 109 requests instead of 3,378.
+
+### Reading the payload: three outcomes, never two
+
+```
+payload read, listings present  -> yield them
+payload read, zero listings     -> the city really is exhausted, stop
+NO PAYLOAD AT ALL               -> we could not read this page; escalate
+```
+
+The third is the one that was missing. It is scoped to **a city that has
+produced nothing at all**, not to "this page was empty" — running off the end of
+pagination is also an empty page, and on the legacy markup that is the normal
+way a city finishes. Escalating there would open a browser session at the end of
+every successful city. Both halves are pinned by tests in
+`__tests__/unit/habitacliaProvider.test.ts`.
+
+The payload also states its own `totalPages`, so discover stops at the end of the
+result set instead of spending `maxSearchPages` requests finding it — for a small
+city that is 5 requests instead of 100.
+
+### `LISTING_MAX_IMAGES_PER_LISTING`
+
+The single most expensive number in the ingest, and until now it had no knob:
+30, hardcoded in two places. Every image is **re-hosted**, not hotlinked —
+downloaded, resized through Sharp, written to S3 and served from it — so this
+one integer multiplies bandwidth, worker CPU and storage together, once per
+listing, on every market. Four Spanish cities alone advertise ~14,000 rentals;
+at 30 images each that is 420,000 downloads for four cities out of 68.
+
+The default is unchanged at 30, because lowering it is a product decision about
+how a gallery looks, not a refactor. What changed is that it can be lowered from
+the task definition without a deploy, and that providers carrying image URLs
+through the queue read the SAME value — measured on live pages, images are the
+largest part of a carried listing (2,340 bytes against ~1,500 for the
+description and ~660 for everything else), so carrying more than the ingest
+keeps is waste twice over.
+
+### Still open: Fotocasa's browser tier
+
+Fotocasa's JSON gateway (`web.gw.fotocasa.es/v2/propertysearch/searchads`) now
+returns **404**, so its primary discover path is dead and it falls back to
+markup — which is why it yields tens of refs where a German provider yields
+1,500. Its search page carries the same embedded payload as Habitaclia's and
+**plain HTTP through the proxy reaches it** (measured: 200 on Barcelona, Madrid
+page 2, and Valencia, 30-31 listings each, no Playwright involved), while the
+current code only reaches `realEstates` through a warmed browser session. Moving
+it to the HTTP path would recover the yield and drop the browser tier for ES
+discovery entirely. Not done here; this change is already large.

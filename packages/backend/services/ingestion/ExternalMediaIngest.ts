@@ -14,6 +14,7 @@
  */
 
 import type { NormalizedRemoteImage, PropertyImageRef } from '@homiio/shared-types';
+import { maxImagesPerListingFromEnv } from '@homiio/listing-providers';
 import {
   createProxiedFetch,
   residentialProxyFromEnv,
@@ -37,8 +38,17 @@ const DEFAULT_IMAGE_MIME = 'image/jpeg';
 /** Descriptive User-Agent so source CDNs can identify Homiio's ingest fetches. */
 const FETCH_USER_AGENT = 'Homiio-Listings/1.0 (+https://homiio.com)';
 
-/** Safety cap on how many images are ingested per listing. */
-const DEFAULT_MAX_IMAGES = 30;
+/**
+ * Safety cap on how many images are ingested per listing.
+ *
+ * Read from `LISTING_MAX_IMAGES_PER_LISTING` (default 30, unchanged) so the
+ * single most expensive number in the ingest can be turned down from the task
+ * definition instead of requiring a deploy. Every image here is re-hosted —
+ * downloaded, resized through Sharp, stored in S3 and served from it — so this
+ * multiplies bandwidth, CPU and storage together. The providers that carry
+ * image URLs through the queue read the SAME function, so nothing rides through
+ * Redis only to be dropped on arrival.
+ */
 
 /** Fetches a remote image URL into a processable buffer + MIME type. */
 export type RemoteImageFetcher = (url: string) => Promise<ImageBufferInput>;
@@ -120,7 +130,7 @@ export class ExternalMediaIngest {
   constructor(options: ExternalMediaIngestOptions = {}) {
     this.imageService = options.imageService ?? imageUploadService;
     this.fetchImage = options.fetchImage ?? createRemoteImageFetcherFromEnv();
-    this.maxImages = options.maxImages ?? DEFAULT_MAX_IMAGES;
+    this.maxImages = options.maxImages ?? maxImagesPerListingFromEnv();
     this.logger = options.logger ?? new Logger('ExternalMediaIngest');
   }
 
