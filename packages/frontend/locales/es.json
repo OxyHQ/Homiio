@@ -389,7 +389,11 @@
       "availability": "Disponibilidad",
       "availableNow": "Disponible ahora",
       "availableNowHint": "Listo para entrar hoy",
-      "availableFrom": "Disponible desde"
+      "availableFrom": "Disponible desde",
+      "floor": "Planta",
+      "floorGround": "Planta baja",
+      "floorElevator": "Con ascensor",
+      "floorPublishedOnly": "Solo se pueden encontrar los anuncios cuyo propietario publica la planta."
     },
     "mode": {
       "label": "Modo de búsqueda",

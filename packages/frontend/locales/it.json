@@ -528,7 +528,11 @@
       "availability": "Disponibilità",
       "availableNow": "Disponibile ora",
       "availableNowHint": "Pronto per entrare oggi",
-      "availableFrom": "Disponibile dal"
+      "availableFrom": "Disponibile dal",
+      "floor": "Piano",
+      "floorGround": "Piano terra",
+      "floorElevator": "Con ascensore",
+      "floorPublishedOnly": "Si possono trovare solo gli annunci il cui proprietario pubblica il piano."
     },
     "mode": {
       "label": "Modalità di ricerca",

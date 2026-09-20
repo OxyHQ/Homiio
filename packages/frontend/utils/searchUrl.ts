@@ -174,6 +174,8 @@ export function parseSearchParams(params: RouteParams): ParsedSearchUrl {
     bathrooms: parseNumber(readParam(params.bathrooms)),
     sizeMin: parseNumber(readParam(params.sizeMin)),
     sizeMax: parseNumber(readParam(params.sizeMax)),
+    groundFloor: readParam(params.groundFloor) === 'true' ? true : undefined,
+    hasElevator: readParam(params.hasElevator) === 'true' ? true : undefined,
     availableNow: readParam(params.availableNow) === 'true' ? true : undefined,
     // Kept even when `availableNow` is on, so a link that somehow carries both
     // restores the day rather than losing it; the serializer is what refuses to
@@ -275,6 +277,10 @@ export function buildSearchParamsForUrl(query: SearchQuery): SerializedSearchUrl
   if (typeof query.bathrooms === 'number') params.bathrooms = String(query.bathrooms);
   if (typeof query.sizeMin === 'number') params.sizeMin = String(query.sizeMin);
   if (typeof query.sizeMax === 'number') params.sizeMax = String(query.sizeMax);
+  // Only the `true` case is written: these are chips that are on or off, and a
+  // `groundFloor=false` in a shared link would be a param that narrows nothing.
+  if (query.groundFloor === true) params.groundFloor = 'true';
+  if (query.hasElevator === true) params.hasElevator = 'true';
   if (query.availableNow === true) params.availableNow = 'true';
   // Only when the switch is OFF: `availableNow` already means "the earliest
   // possible day", and carrying a later one beside it would put a filter

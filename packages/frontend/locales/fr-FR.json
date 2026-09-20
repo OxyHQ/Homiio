@@ -406,7 +406,11 @@
       "availability": "Disponibilité",
       "availableNow": "Disponible maintenant",
       "availableNowHint": "Prêt à emménager aujourd’hui",
-      "availableFrom": "Disponible à partir du"
+      "availableFrom": "Disponible à partir du",
+      "floor": "Étage",
+      "floorGround": "Rez-de-chaussée",
+      "floorElevator": "Avec ascenseur",
+      "floorPublishedOnly": "Seules les annonces dont le propriétaire publie l’étage peuvent correspondre."
     },
     "mode": {
       "label": "Browse mode",

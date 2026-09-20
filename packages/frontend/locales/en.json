@@ -406,7 +406,11 @@
       "availability": "Availability",
       "availableNow": "Available now",
       "availableNowHint": "Ready to move into today",
-      "availableFrom": "Available from"
+      "availableFrom": "Available from",
+      "floor": "Floor",
+      "floorGround": "Ground floor",
+      "floorElevator": "With a lift",
+      "floorPublishedOnly": "Only listings whose owner publishes the floor can be matched."
     },
     "mode": {
       "label": "Browse mode",

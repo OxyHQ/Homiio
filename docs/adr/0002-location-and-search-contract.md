@@ -1253,6 +1253,7 @@ frontend's belief about it.
 | — | — | **new** `priceCurrency` in the response: the unit the bound was ACTUALLY applied in, including one the server chose. Absent when no bound was sent. Also echoed by `GET /api/properties` |
 | `bedrooms`/`minBedrooms`, `bathrooms`/`minBathrooms`, `amenities`, `guests`/`minGuests` | `:393,398,405,422` | unchanged; `amenities` requires ALL, as a comma list or a repeated key — the same reading on `GET /api/properties` and `/rooms` |
 | `verified`, `eco`, `instantBook`, `petFriendly`, `hasPhotos`, `fairPrice` | `:409-419` | unchanged |
+| `groundFloor` (`true`), `floorMin`/`floorMax`, `hasElevator` | `searchQueryBuilder.ts`, `propertyFilters.ts#floorInRange` | **new**: a floor bound matches only listings whose PUBLIC precision is `exact` — the floor is part of the address (§3), so filtering on one a listing withholds would return it through the result set. Both columns that decide the ceiling are read (`show_address_number = false` caps it at `street`). A floor nobody stated is NULL and matches nothing. Sent alone, none of them narrows anything. `hasElevator` is not part of the address and carries no precision gate |
 | `status` (`available` alias) | `statusConditions`, `:305-317` | unchanged |
 | `excludeIds`, `page`, `limit` (≤50), `sortBy`, `sortOrder` | `:452-464` | unchanged |
 | — | — | **new** `location` echo in the response (§6.3) |

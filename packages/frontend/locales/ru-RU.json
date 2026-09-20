@@ -408,7 +408,11 @@
       "availability": "Доступность",
       "availableNow": "Доступно сейчас",
       "availableNowHint": "Можно заехать уже сегодня",
-      "availableFrom": "Доступно с"
+      "availableFrom": "Доступно с",
+      "floor": "Этаж",
+      "floorGround": "Первый этаж",
+      "floorElevator": "С лифтом",
+      "floorPublishedOnly": "Найти можно только объявления, владельцы которых публикуют этаж."
     },
     "mode": {
       "label": "Browse mode",

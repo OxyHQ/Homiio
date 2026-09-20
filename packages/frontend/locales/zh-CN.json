@@ -406,7 +406,11 @@
       "availability": "可入住时间",
       "availableNow": "现在可入住",
       "availableNowHint": "今天即可入住",
-      "availableFrom": "可入住日期"
+      "availableFrom": "可入住日期",
+      "floor": "楼层",
+      "floorGround": "一楼",
+      "floorElevator": "有电梯",
+      "floorPublishedOnly": "只能匹配到房东公开了楼层的房源。"
     },
     "mode": {
       "label": "Browse mode",

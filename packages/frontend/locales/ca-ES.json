@@ -410,7 +410,11 @@
       "availability": "Disponibilitat",
       "availableNow": "Disponible ara",
       "availableNowHint": "A punt per entrar-hi avui",
-      "availableFrom": "Disponible des de"
+      "availableFrom": "Disponible des de",
+      "floor": "Planta",
+      "floorGround": "Planta baixa",
+      "floorElevator": "Amb ascensor",
+      "floorPublishedOnly": "Només es poden trobar els anuncis el propietari dels quals publica la planta."
     },
     "mode": {
       "label": "Mode de cerca",

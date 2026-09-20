@@ -406,7 +406,11 @@
       "availability": "Ketersediaan",
       "availableNow": "Tersedia sekarang",
       "availableNowHint": "Siap dihuni hari ini",
-      "availableFrom": "Tersedia mulai"
+      "availableFrom": "Tersedia mulai",
+      "floor": "Lantai",
+      "floorGround": "Lantai dasar",
+      "floorElevator": "Dengan lift",
+      "floorPublishedOnly": "Hanya iklan yang pemiliknya mencantumkan lantai yang dapat ditemukan."
     },
     "mode": {
       "label": "Browse mode",

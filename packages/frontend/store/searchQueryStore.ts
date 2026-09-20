@@ -62,6 +62,8 @@ export const DEFAULT_SEARCH_QUERY: SearchQuery = {
   priceCurrency: undefined,
   bedrooms: undefined,
   bathrooms: undefined,
+  groundFloor: undefined,
+  hasElevator: undefined,
   amenities: [],
   dates: undefined,
   guests: undefined,

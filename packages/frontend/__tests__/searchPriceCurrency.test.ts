@@ -244,3 +244,30 @@ describe('the chip says what the filter means', () => {
     expect(label).toContain('€');
   });
 });
+
+describe('the floor chips', () => {
+  it('round-trips through a shareable link', () => {
+    const { params } = buildSearchParamsForUrl(
+      baseQuery({ groundFloor: true, hasElevator: true }),
+    );
+    expect(params.groundFloor).toBe('true');
+    expect(params.hasElevator).toBe('true');
+
+    const parsed = parseSearchParams(params).query;
+    expect(parsed.groundFloor).toBe(true);
+    expect(parsed.hasElevator).toBe(true);
+  });
+
+  it('writes nothing when the chips are off', () => {
+    // A `groundFloor=false` in a link is a param that narrows nothing, and the
+    // reader would have to decide whether it meant "not ground floor".
+    const { params } = buildSearchParamsForUrl(baseQuery({}));
+    expect(params.groundFloor).toBeUndefined();
+    expect(params.hasElevator).toBeUndefined();
+  });
+
+  it('sends them to the search endpoint only when on', () => {
+    expect(buildSearchParams(baseQuery({ groundFloor: true })).groundFloor).toBe('true');
+    expect(buildSearchParams(baseQuery({})).groundFloor).toBeUndefined();
+  });
+});

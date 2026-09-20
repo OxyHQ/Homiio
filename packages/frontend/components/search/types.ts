@@ -213,6 +213,28 @@ export interface SearchQuery {
   availableNow?: boolean;
   /** Free to move into by this civil date (`YYYY-MM-DD`) at the latest. */
   availableBy?: string;
+  /**
+   * Only homes on the ground floor.
+   *
+   * A boolean rather than a `floorMin`/`floorMax` pair because that is the
+   * question people actually ask — and because the pair would imply Homiio can
+   * answer "top floor" and "middle floor", which it cannot: there is no column
+   * for how many floors a building has, so those two chips would be drawn over
+   * nothing. The API accepts a range as well; this is the part the UI offers.
+   *
+   * It matches only listings that PUBLISH their floor. The floor is part of the
+   * address (ADR 0003), so filtering on one a listing withholds would hand the
+   * fact back through the result set — see `db/properties/propertyFilters.ts`.
+   */
+  groundFloor?: boolean;
+  /**
+   * Only homes with a lift.
+   *
+   * Grouped with the floor because it is the other half of the same question,
+   * and unlike the floor it is not part of the address, so it needs no
+   * precision gate.
+   */
+  hasElevator?: boolean;
   /** Amenity slugs the listing must include. */
   amenities: string[];
   /** Short-term-only date range. */
