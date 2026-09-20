@@ -68,11 +68,18 @@ describe('the area is resolved, never guessed', () => {
     // There is a Barcelona in Catalonia and one in Anzoátegui. Taking the first
     // is the bug ADR 0002 §12.2 exists for; the right answer is to let Sindi's
     // prose ask which one, and leave the app where it is.
+    //
+    // BOTH carry listings, and that is load-bearing. `resolveCity` discounts a
+    // candidate holding nothing — a place with no listings cannot answer a
+    // question about listings there — so a fixture where both were empty would
+    // pass this case for the wrong reason: refused as empty rather than refused
+    // as ambiguous.
     const spain = await seedGeoChain({
       countryCode: 'ES',
       countryName: 'Spain',
       regionName: 'Catalonia',
       cityName: 'Barcelona',
+      propertiesCount: 12,
       latitude: 41.3874,
       longitude: 2.1686,
     });
@@ -81,6 +88,7 @@ describe('the area is resolved, never guessed', () => {
       countryName: 'Venezuela',
       regionName: 'Anzoátegui',
       cityName: 'Barcelona',
+      propertiesCount: 4,
       latitude: 10.1339,
       longitude: -64.6836,
     });
@@ -92,6 +100,84 @@ describe('the area is resolved, never guessed', () => {
     // in force is the incremental behaviour the patch shape is for.
     expect(patch?.priceMax).toBe(900);
     expect(spain.cityId).toBeTruthy();
+  });
+
+  it('resolves past DUPLICATE rows for one city, which is what production has', async () => {
+    // Production carries three `cities` rows named Barcelona in Spain — with
+    // the slug `barcelona` on all three — and two of them hold zero listings.
+    // `cities_region_name_key` is unique on `(region_id, name)` and is
+    // case-SENSITIVE, so a lower-cased name slips past it, and a second region
+    // inside the same country takes the rest.
+    //
+    // They are duplicates, not homonyms. Refusing them made the most ordinary
+    // request Sindi can receive — "show me flats in Barcelona" — produce no
+    // location, and with no other constraint in the sentence, no action at all:
+    // the person saw nothing happen and nothing said.
+    const real = await seedGeoChain({
+      countryCode: 'ES',
+      countryName: 'Spain',
+      regionName: 'Catalonia',
+      cityName: 'Barcelona',
+      propertiesCount: 9,
+      latitude: 41.3874,
+      longitude: 2.1686,
+    });
+    // The lower-cased twin, in a second region of the same country.
+    await seedGeoChain({
+      countryCode: 'E2',
+      countryName: 'Spain (second chain)',
+      regionName: 'Catalonia',
+      cityName: 'barcelona',
+      propertiesCount: 0,
+    });
+    await seedGeoChain({
+      countryCode: 'E3',
+      countryName: 'Spain (third chain)',
+      regionName: 'Barcelona Province',
+      cityName: 'Barcelona',
+      propertiesCount: 0,
+    });
+
+    const patch = await searchPatchForTurn({ wantsListings: true, city: 'Barcelona' });
+
+    expect(patch?.location?.kind).toBe('place');
+    if (patch?.location?.kind !== 'place') return;
+    // The one that actually holds homes, and not by a popularity tiebreak —
+    // the other two were never candidates, because a row holding nothing is not
+    // a possible answer to "what is in it".
+    expect(patch.location.source).toEqual({ kind: 'homiio', entity: 'city', id: real.cityId });
+  });
+
+  it('still refuses when TWO candidates hold listings', async () => {
+    // The rule discounts empty rows; it does not choose between full ones. Two
+    // real places that both have homes stay ambiguous, which is the case the
+    // homonym rule exists to protect and a popularity tiebreak would get wrong.
+    await seedGeoChain({
+      countryCode: 'ES',
+      countryName: 'Spain',
+      regionName: 'Catalonia',
+      cityName: 'Barcelona',
+      propertiesCount: 9,
+    });
+    await seedGeoChain({
+      countryCode: 'VE',
+      countryName: 'Venezuela',
+      regionName: 'Anzoátegui',
+      cityName: 'Barcelona',
+      propertiesCount: 1,
+    });
+    await seedGeoChain({
+      countryCode: 'E4',
+      countryName: 'Spain (empty twin)',
+      regionName: 'Catalonia',
+      cityName: 'Barcelona',
+      propertiesCount: 0,
+    });
+
+    const patch = await searchPatchForTurn({ wantsListings: true, city: 'Barcelona', maxRent: 900 });
+
+    expect(patch?.location).toBeUndefined();
+    expect(patch?.priceMax).toBe(900);
   });
 
   it('uses the region to disambiguate when the person supplied one', async () => {

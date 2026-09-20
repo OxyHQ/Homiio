@@ -95,6 +95,50 @@ const rooms = (...candidates: (number | undefined)[]): number | undefined => {
  * belongs in the conversation, where Sindi's own text asks which Barcelona the
  * person meant.
  */
+/**
+ * How many candidates to look at before judging.
+ *
+ * More than two, because the duplicate rule below has to SEE the candidates to
+ * tell duplicates from homonyms — asking for two is enough to learn that a name
+ * is ambiguous and not enough to learn why.
+ */
+const CITY_CANDIDATE_LIMIT = 8;
+
+/**
+ * The city a turn names, or `null` when Homiio cannot say which one.
+ *
+ * ## Ambiguity is refused, and that is not what was breaking
+ *
+ * `lookupCityPlaces` answers `ambiguous` rather than picking a row, and the
+ * refusal is right: choosing between two real places on a popularity tiebreak
+ * is the homonym bug (ADR 0002 §12.2).
+ *
+ * But it was also refusing "Barcelona". Production carries THREE `cities` rows
+ * named Barcelona in Spain — `Barcelona`, `barcelona` and another `Barcelona` —
+ * all with the slug `barcelona`, and two of them holding **zero** listings.
+ * They are duplicates, not homonyms: `cities_region_name_key` is unique on
+ * `(region_id, name)` and is case-SENSITIVE, so a lower-cased name slips past
+ * it, and a second region inside the same country takes the rest. So the most
+ * ordinary request Sindi can receive — "show me flats in Barcelona" — produced
+ * no location, and with no other constraint in the sentence, no action at all.
+ * The person saw nothing happen and nothing said.
+ *
+ * ## The rule, and why it is not "pick the popular one"
+ *
+ * **A place with no listings cannot answer a question about listings there.**
+ * That is not a tiebreak on relevance — `placeLookup`'s own header forbids
+ * `properties_count` deciding between candidates, and this does not ask it to.
+ * It asks something narrower and true: a row holding nothing is not a possible
+ * answer to "what is in it", so it is not a candidate to be ambiguous WITH.
+ *
+ * Two genuine Barcelonas that both hold listings are still ambiguous and still
+ * refused — which is the case the rule exists to protect, and the case a
+ * popularity tiebreak would have got wrong.
+ *
+ * It lives HERE and not in `lookupCityPlaces`, because the rule is a property
+ * of the QUESTION. A place picker offering somewhere to browse should still
+ * show an empty city; only a search for listings may discount one.
+ */
 async function resolveCity(
   city: string,
   state: string | undefined,
@@ -102,9 +146,13 @@ async function resolveCity(
   const outcome = await lookupCityPlaces({
     token: city,
     ...(state ? { region: state } : {}),
-    limit: 2,
+    limit: CITY_CANDIDATE_LIMIT,
   });
-  return outcome.status === 'resolved' ? citySelection(outcome.place) : null;
+  if (outcome.status === 'resolved') return citySelection(outcome.place);
+  if (outcome.status !== 'ambiguous') return null;
+
+  const withListings = outcome.candidates.filter((candidate) => candidate.propertiesCount > 0);
+  return withListings.length === 1 ? citySelection(withListings[0]) : null;
 }
 
 /**
