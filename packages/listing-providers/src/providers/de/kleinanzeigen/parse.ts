@@ -254,8 +254,15 @@ export function parseKleinanzeigenDetail(html: string, url: string): Kleinanzeig
 
   const meta = extractMetaProperties(html);
   const priceText =
-    html.match(/id=["']viewad-price["'][^>]*>\s*([^<]+)/i)?.[1]?.trim() ??
-    html.match(/class=["'][^"']*boxedarticle--price[^"']*["'][^>]*>\s*([^<]+)/i)?.[1]?.trim();
+    // BOUNDED ATTRIBUTE RUNS. `[^>]*` after a literal the page can repeat lets
+    // the engine re-scan from every repetition. Measured on the old patterns
+    // with the literal repeated 36,000 times: 5,466 ms for the id form and
+    // 9,289 ms for the class form — on a detail page, from a portal. 200
+    // characters spans any real tag and caps the worst case.
+    html.match(/id=["']viewad-price["'][^>]{0,200}>[ \t\r\n]{0,40}([^<]+)/i)?.[1]?.trim() ??
+    html
+      .match(/class=["'][^"']{0,200}boxedarticle--price[^"']{0,200}["'][^>]{0,200}>[ \t\r\n]{0,40}([^<]+)/i)?.[1]
+      ?.trim();
 
   const neighborhood = meta.get('og:locality');
   const region = meta.get('og:region');

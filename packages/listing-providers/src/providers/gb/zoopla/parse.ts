@@ -7,6 +7,7 @@
  */
 
 import type { NormalizedListingContact } from '@homiio/shared-types';
+import { citySlug } from '../../../slug';
 import { buildContact, contactFromUnknown } from '../../../parse/contact';
 import { asNumberUs as asNumber, asString, isRecord } from '../../../parse/guards';
 import { parseNextData } from '../../../parse/nextData';
@@ -45,11 +46,11 @@ export function zooplaDetailUrl(sourceId: string, kind: 'rent' | 'sale' = 'rent'
 }
 
 export function zooplaSearchUrl(city: string, page = 1): string {
-  const slug = city
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
+  // `citySlug` exists so this snippet is written once; three providers had
+  // copied it, and all three copies carried the same `/^-+|-+$/g` ReDoS. The
+  // shared one also strips diacritics, which is a no-op for the GB city list
+  // and correct everywhere else.
+  const slug = citySlug(city);
   const base = `${ZOOPLA_BASE_URL}/to-rent/property/${slug}/`;
   return page <= 1 ? base : `${base}?pn=${page}`;
 }
