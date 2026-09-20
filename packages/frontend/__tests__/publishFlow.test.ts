@@ -18,7 +18,11 @@ import {
   draftPreviewData,
   draftQualityItems,
 } from '@/components/property/create/listingDraft';
-import { createDefaultFormData } from '@/store/createPropertyFormStore';
+import {
+  CREATE_PROPERTY_FORM_PERSIST_KEY,
+  createDefaultFormData,
+  useCreatePropertyFormStore,
+} from '@/store/createPropertyFormStore';
 import {
   deleteDraft,
   markDraftForResume,
@@ -166,5 +170,111 @@ describe('property drafts', () => {
     expect(await takeDraftToResume()).toBeNull();
 
     expect(await deleteDraft('draft-a')).toEqual([]);
+  });
+
+  it('resumes at the step the draft was left on, not at step one', async () => {
+    await saveDraft('draft-b', createDefaultFormData(), 5);
+    const [draft] = await readDrafts();
+    expect(draft.step).toBe(5);
+
+    await markDraftForResume(draft);
+    expect((await takeDraftToResume())?.step).toBe(5);
+  });
+
+  it('resumes a draft saved before steps were recorded at the first step', async () => {
+    // Written the way `saveDraft` used to write it: no `step` at all.
+    await AsyncStorage.setItem(
+      'property_drafts',
+      JSON.stringify([
+        {
+          id: 'draft-old',
+          title: '',
+          address: { street: '', city: '', state: '', zipCode: '' },
+          type: '',
+          description: '',
+          rent: { amount: 0, currency: 'USD' },
+          images: [],
+          lastSaved: new Date('2026-01-01').toISOString(),
+          formData: createDefaultFormData(),
+        },
+      ]),
+    );
+    const [draft] = await readDrafts();
+    await markDraftForResume(draft);
+    expect((await takeDraftToResume())?.step).toBe(0);
+  });
+});
+
+/**
+ * The live form, which is what an INTERRUPTION loses.
+ *
+ * The drafts above are written on step transitions — the one moment the current
+ * step's work is already behind you. What somebody is typing right now is only
+ * protected by the store persisting itself, so these assert against the storage
+ * the store actually writes and the restore it actually performs.
+ */
+describe('the live publish form across a restart', () => {
+  beforeEach(async () => {
+    await AsyncStorage.clear();
+    useCreatePropertyFormStore.getState().resetForm();
+  });
+
+  /** Let zustand's persist middleware flush its write. */
+  const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+  async function typeSomething() {
+    const store = useCreatePropertyFormStore.getState();
+    store.setFormData('basicInfo', { description: 'A quiet flat over the square,' });
+    store.setCurrentStep(4);
+    store.setDraftId('draft-live');
+    await settle();
+  }
+
+  it('writes the form, the step and the draft it belongs to — and nothing transient', async () => {
+    await typeSomething();
+
+    const raw = await AsyncStorage.getItem(CREATE_PROPERTY_FORM_PERSIST_KEY);
+    expect(raw).not.toBeNull();
+    const { state } = JSON.parse(raw as string);
+    expect(state.formData.basicInfo.description).toBe('A quiet flat over the square,');
+    expect(state.currentStep).toBe(4);
+    expect(state.draftId).toBe('draft-live');
+    // A spinner and an error belong to a request that is long over by the time
+    // the app starts again; restoring either would show something unstoppable.
+    expect(state).not.toHaveProperty('isLoading');
+    expect(state).not.toHaveProperty('error');
+  });
+
+  it('restores what was typed AND where the host was', async () => {
+    await typeSomething();
+    const stored = (await AsyncStorage.getItem(CREATE_PROPERTY_FORM_PERSIST_KEY)) as string;
+
+    // The process dies: memory is back to defaults, storage is untouched. (The
+    // reset itself persists, so the saved blob is put back before the restore —
+    // a relaunch does not overwrite storage on its way up.)
+    useCreatePropertyFormStore.getState().resetForm();
+    useCreatePropertyFormStore.setState({ hasHydrated: false });
+    await settle();
+    await AsyncStorage.setItem(CREATE_PROPERTY_FORM_PERSIST_KEY, stored);
+
+    await useCreatePropertyFormStore.persist.rehydrate();
+
+    const restored = useCreatePropertyFormStore.getState();
+    expect(restored.formData.basicInfo.description).toBe('A quiet flat over the square,');
+    expect(restored.currentStep).toBe(4);
+    // Same draft, so finishing later replaces it instead of leaving a twin.
+    expect(restored.draftId).toBe('draft-live');
+    expect(restored.hasHydrated).toBe(true);
+  });
+
+  it('loads a resumed draft at its own step', () => {
+    const form = createDefaultFormData();
+    form.basicInfo.description = 'From the drafts screen';
+    useCreatePropertyFormStore.getState().loadForm(form, 'draft-c', 3);
+
+    const state = useCreatePropertyFormStore.getState();
+    expect(state.currentStep).toBe(3);
+    expect(state.draftId).toBe('draft-c');
+    expect(state.formData.basicInfo.description).toBe('From the drafts screen');
   });
 });

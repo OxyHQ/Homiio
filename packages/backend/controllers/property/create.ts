@@ -2,6 +2,7 @@ import { and, eq } from 'drizzle-orm';
 
 import { applyOfferingRulesForCreate, OfferingValidationError, type OfferingBearingPayload } from './offeringRules';
 import { CREATABLE_PROPERTY_FIELDS, invalidAddressPublishedPrecision } from './editableFields';
+import { normalizePropertyPhotos } from './photoIntake';
 import { pickFields } from '../../utils/pickFields';
 import { getDb } from '../../db/postgres';
 import { partners } from '../../db/schema';
@@ -121,6 +122,12 @@ export async function createProperty(req: ControllerRequest, res: ControllerResp
     // equal the set of present priced blocks, each with a positive price /
     // valid exchange mode. Also derives `sale.pricePerSqm`.
     applyOfferingRulesForCreate(propertyData);
+
+    // Validate the photos and carry their storage keys forward, so the write
+    // transaction can mint each one's canonical `images` row once the listing
+    // has an id. Without this the insert hits `property_images.image_id`'s NOT
+    // NULL and every publish with a photo is a 500 — see `photoIntake`.
+    await normalizePropertyPhotos(propertyData);
 
     // Handle address creation or reference
     let addressId;

@@ -1,6 +1,7 @@
 import { PropertyStatus } from '@homiio/shared-types';
 import { applyOfferingRulesForUpdate, OfferingValidationError, type OfferingBearingPayload } from './offeringRules';
 import { EDITABLE_PROPERTY_FIELDS, invalidAddressPublishedPrecision } from './editableFields';
+import { normalizePropertyPhotos } from './photoIntake';
 import { pickFields } from '../../utils/pickFields';
 import { onPropertyTransacted } from '../../services/commissionService';
 import { schedulePriceEthicsScore } from '../../services/priceEthicsService';
@@ -48,6 +49,11 @@ export async function updateProperty(req: ControllerRequest, res: ControllerResp
       sale: current.sale as { price?: unknown } | undefined,
       exchange: current.exchange as { mode?: unknown } | undefined,
     });
+
+    // Same intake as create: a photo added during an edit has no `images` row
+    // either, and the reordered list's positions are its stored order. A body
+    // that does not mention `images` leaves the listing's photos untouched.
+    await normalizePropertyPhotos(updateData);
 
     if (req.body.address) {
       // Address writes go through the canonical resolver, which whitelists the

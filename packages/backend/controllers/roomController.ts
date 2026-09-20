@@ -25,6 +25,7 @@ import {
   invalidAddressPublishedPrecision,
 } from './property/editableFields';
 import { pickFields } from '../utils/pickFields';
+import { normalizePropertyPhotos } from './property/photoIntake';
 import { getAmenitiesParam } from './queryParams';
 import { onPropertyTransacted } from '../services/commissionService';
 import { resolveCityId, resolveRegionId } from '../services/geoQueryService';
@@ -212,6 +213,9 @@ class RoomController {
       const roomData = pickFields<PropertyWriteInput>(req.body, CREATABLE_PROPERTY_FIELDS);
       const precisionError = invalidAddressPublishedPrecision(roomData);
       if (precisionError) return next(precisionError);
+      // `images` is on the same whitelist the listing paths use, so a room
+      // carrying a photo hit the same NOT NULL. Same intake, same reason.
+      await normalizePropertyPhotos(roomData);
       const created = await insertProperty({
         ...roomData,
         oxyUserId,
@@ -276,6 +280,7 @@ class RoomController {
       const updateData = pickFields<PropertyWriteInput>(req.body, EDITABLE_PROPERTY_FIELDS);
       const precisionError = invalidAddressPublishedPrecision(updateData);
       if (precisionError) return next(precisionError);
+      await normalizePropertyPhotos(updateData);
       const previousStatus = existing.property.status;
       const updated = await updateProperty(id, updateData, { ownedBy: oxyUserId });
       if (!updated) return next(new AppError('Room not found', 404, 'NOT_FOUND'));

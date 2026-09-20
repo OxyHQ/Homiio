@@ -10,7 +10,7 @@ import {
   type CreatePropertyData,
   type PropertyType,
   type Property,
-  type PropertyImage,
+  type PropertyImageWrite,
   type PropertySale,
   type PropertyExchange,
   type LongTermRent,
@@ -23,6 +23,7 @@ import {
 import { useReferralStore } from '@/store/referralStore';
 import { propertyService } from '@/services/propertyService';
 import { logger } from '@/utils/logger';
+import { toPublishImages } from '@/utils/propertyPhotos';
 
 const DEFAULT_COUNTRY = 'US';
 const DEFAULT_CURRENCY = 'USD';
@@ -43,12 +44,15 @@ function toChainStatus(value: string | undefined): PropertySale['chainStatus'] |
 /**
  * Payload sent to the property API. Extends `CreatePropertyData` with the
  * coliving features block that the wizard has always submitted for `coliving`
- * listings, and narrows `images` to the `{ url, caption, isPrimary }` object
- * form the wizard has always sent (both preserved verbatim from the previous
- * implementation; the backend accepts `PropertyImage[]` for `Property.images`).
+ * listings, and narrows `images` to the WRITE shape
+ * (`{ imageId | keys, caption, isPrimary, order }`).
+ *
+ * It used to be `{ url, caption, isPrimary }`, which the server could not store
+ * at all — `property_images.image_id` is NOT NULL — so every publish carrying a
+ * photo was a 500. See `utils/propertyPhotos`.
  */
 export type PropertySubmitPayload = Omit<CreatePropertyData, 'images'> & {
-  images: PropertyImage[];
+  images: PropertyImageWrite[];
   status: PropertyStatus;
   colivingFeatures?: CreatePropertyFormData['colivingFeatures'];
   /**
@@ -120,12 +124,11 @@ export function buildPropertyPayload(formData: CreatePropertyFormData): Property
     floor: toNumber(location.floor, (v) => parseInt(v, 10)),
     yearBuilt: toNumber(basicInfo.yearBuilt, (v) => parseInt(v, 10)),
     amenities: amenities.selectedAmenities || [],
-    images:
-      media.images?.map((img) => ({
-        url: img.urls.original,
-        caption: img.caption || '',
-        isPrimary: img.isPrimary || false,
-      })) ?? [],
+    // Identity + position, not a URL. The server stores a photo as a row
+    // referencing a canonical `images` row and orders the list by `order`;
+    // `utils/propertyPhotos` explains why the keys go over the wire and the
+    // row is minted at publish.
+    images: toPublishImages(media.images),
     status: PropertyStatus.PUBLISHED,
     // The single offering axis — authoritative on the property. The server
     // validates it equals the set of present priced blocks below.

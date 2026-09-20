@@ -76,6 +76,17 @@ export interface UploadedImage {
     originalSize: number;
     originalFormat: string;
     uploadedAt: Date;
+    /**
+     * Source pixel dimensions, when Sharp could read them.
+     *
+     * Carried on the response because a photo uploaded by the publish wizard
+     * has no `images` row yet — the row is minted at publish from what the
+     * client echoes back (`controllers/property/photoIntake`), and dropping
+     * these here would store every wizard photo with unknown dimensions while
+     * the pipeline had them in hand.
+     */
+    width?: number;
+    height?: number;
   };
 }
 
@@ -227,6 +238,8 @@ export class ImageUploadService {
           originalSize: processed.bytes,
           originalFormat: processed.format,
           uploadedAt: new Date(),
+          width: processed.width,
+          height: processed.height,
         },
       };
     } catch (error) {

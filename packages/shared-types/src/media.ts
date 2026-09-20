@@ -83,3 +83,33 @@ export interface PropertyImageRef {
   /** All processed variant URLs, for callers that want a specific rendition. */
   urls?: ImageVariantUrls;
 }
+
+/**
+ * One photo as a WRITE to `POST`/`PUT /api/properties` states it.
+ *
+ * This is not {@link PropertyImageRef}: a read always has an `imageId`, but a
+ * photo the publish wizard just uploaded does not yet — `images.entity_id` is
+ * NOT NULL and names the listing, and while the wizard is uploading there is no
+ * listing to name. Such a photo states its processed storage {@link keys}
+ * instead and the server mints the canonical row at publish
+ * (`controllers/property/photoIntake`).
+ *
+ * Exactly one of `imageId` / `keys` is set. Nothing else here is trusted: every
+ * key is re-validated and every URL is derived server-side from the keys, so
+ * this type carries no URL at all.
+ */
+export interface PropertyImageWrite {
+  /** The canonical {@link Image} this photo already is — an edit's photos. */
+  imageId?: string;
+  /** The four processed variant keys, for a photo with no row yet. */
+  keys?: ImageVariantKeys;
+  caption?: string;
+  /** At most one photo per listing may claim this; the first that does wins. */
+  isPrimary?: boolean;
+  /** Position in the listing's photo list. Sent explicitly, never inferred. */
+  order?: number;
+  /** Advisory source metadata echoed from the upload response. */
+  bytes?: number;
+  width?: number;
+  height?: number;
+}

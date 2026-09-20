@@ -108,6 +108,44 @@ export async function findImageById(
   return rows[0] ?? null;
 }
 
+/** Several images by id, in no particular order. Missing ids simply do not appear. */
+export async function findImagesByIds(
+  ids: readonly string[],
+  db: DatabaseOrTransaction = getDb(),
+): Promise<ImageRow[]> {
+  if (ids.length === 0) return [];
+  return db.select().from(images).where(inArray(images.id, [...ids]));
+}
+
+/**
+ * An entity's images indexed by their ORIGINAL variant key.
+ *
+ * The original key is a server-minted `<folder>/<uuid>-original.<ext>`, so it
+ * identifies one processed upload exactly. That is what makes re-saving a
+ * listing idempotent: a photo uploaded during an edit session and saved twice
+ * matches the row the first save minted instead of minting a second one for the
+ * same bytes.
+ */
+export async function findEntityImagesByOriginalKey(
+  entityType: ImageEntityType,
+  entityId: string,
+  originalKeys: readonly string[],
+  db: DatabaseOrTransaction = getDb(),
+): Promise<Map<string, ImageRow>> {
+  if (originalKeys.length === 0) return new Map();
+  const rows = await db
+    .select()
+    .from(images)
+    .where(
+      and(
+        eq(images.entityType, entityType),
+        eq(images.entityId, entityId),
+        inArray(images.keysOriginal, [...originalKeys]),
+      ),
+    );
+  return new Map(rows.map((row) => [row.keysOriginal, row]));
+}
+
 /** Every image belonging to one entity, in the order the entity lists them. */
 export async function findImagesForEntity(
   entityType: ImageEntityType,

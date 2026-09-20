@@ -24,6 +24,7 @@ import { Text as BloomText } from '@oxy.so/bloom/typography';
 import { colors } from '@/styles/colors';
 import { spacing } from '@/constants/styles';
 import { logger } from '@/utils/logger';
+import { coverFirst } from '@/utils/propertyPhotos';
 import { imageUploadService, UploadedImage } from '@/services/imageUploadService';
 
 interface ImageUploadProps {
@@ -43,13 +44,6 @@ interface PendingPhoto {
 
 const IS_NATIVE = Platform.OS !== 'web';
 let pendingCounter = 0;
-
-/** The primary image first, the rest in their stored order. */
-function coverFirst(images: UploadedImage[]): UploadedImage[] {
-  const primary = images.findIndex((image) => image.isPrimary);
-  if (primary <= 0) return images;
-  return [images[primary], ...images.filter((_, index) => index !== primary)];
-}
 
 export function ImageUpload({
   images = [],

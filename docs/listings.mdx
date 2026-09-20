@@ -356,6 +356,40 @@ Write safety is not per-controller improvisation:
 - Deleting is a **soft delete**: status moves to `archived` and `deleted_at` is
   set.
 
+### Photos on a write
+
+A photo is two rows: the canonical `images` row (the processed bytes — four
+variant keys, four URLs, format, size), and the `property_images` row that puts
+it on a listing at a position. `property_images.image_id` is `NOT NULL` and
+RESTRICT-references the first, so **a listing photo cannot exist without a
+canonical row**.
+
+That is a constraint the publish flow could not satisfy for its first six weeks
+on Postgres. `POST /api/images/upload` persists nothing when it is given no
+`entityType`/`entityId` — and the wizard cannot give it one, because the photo
+is uploaded before the listing exists and `images.entity_id` names the listing.
+The body then sent `{ url, caption, isPrimary }`, which identifies no row, so
+every publish carrying a photo raised `23502` and answered 500.
+
+The contract now:
+
+- A photo states **either** `imageId` (the canonical row it already is — what
+  the edit screen loads back and saves) **or** `keys` (the four storage keys the
+  upload returned, for a photo with no row yet). `PropertyImageWrite` in
+  `shared-types` is that shape.
+- `controllers/property/photoIntake.ts` re-validates every key with
+  `validateImageStoreKey` — the same gate the delivery route uses, so traversal,
+  absolute paths and the private `applications/documents/` prefix are refused —
+  and **derives** the four URLs from the validated keys. No client-supplied URL
+  ever reaches a column.
+- The canonical row is minted inside the write transaction, once the listing has
+  an id (`db/properties/propertyWrites.ts#resolveImageRows`). A publish that
+  fails for any other reason leaves no `images` rows behind, and a re-save of the
+  same upload reuses the row its original key already matched.
+- **Position is stated, never inferred.** `order` comes from the array position,
+  index 0 is the cover, and exactly one photo may be primary
+  (`property_images_one_primary_key`). Reads come back ordered by `order`.
+
 Closing a listing is `POST /api/properties/:propertyId/mark-transacted`
 (owner-only). It sets a terminal status — `rented` or `sold`, inferred from the
 offerings when omitted — and runs the idempotent commission trigger. Re-marking
@@ -363,8 +397,22 @@ never creates a second commission.
 
 ## Saved, drafts and recently viewed
 
-- **Drafts** are listings with `status: 'draft'`, listed at
-  `/properties/drafts`.
+- **Drafts are LOCAL, not listings.** `/properties/drafts` reads AsyncStorage
+  through `packages/frontend/utils/propertyDrafts.ts`; nothing about an unfinished
+  listing reaches the server, and there is no draft resource to fetch from another
+  device. (`PropertyStatus.draft` exists on the server and is a different thing:
+  a listing that was created and is not published.)
+
+  A draft is the wizard's form plus the **step** it was left on, written on step
+  transitions and on "Save draft". What an interruption between two steps would
+  otherwise take — a description somebody is part-way through — is covered
+  separately: `store/createPropertyFormStore.ts` persists the live form on every
+  change and restores it, at its step, on the next launch, for edits as well as
+  new listings. The two layers share `draftId`, so a restored session keeps
+  working on the same draft instead of leaving a near-duplicate beside it.
+
+  A server-side draft resource would need its own table and is deliberately not
+  built here.
 - **Recently viewed** is written by `POST /api/properties/:propertyId/track-view`
   into `recently_viewed`.
 - **Saved** listings live in `saved_items`, organised into `saved_property_folders`

@@ -40,6 +40,12 @@
  *    is a pure module that already does, and it produces the 400 with the code
  *    the API contract names. Postgres's four coherence CHECKs are the backstop
  *    underneath, not a replacement for the message.
+ *  - **It does not validate a photo's storage keys.**
+ *    `controllers/property/photoIntake.ts` does, and it is the only thing that
+ *    turns a key into a URL. This module DOES mint the canonical `images` row
+ *    for a photo that has none — see {@link resolveImageRows} for why that
+ *    happens at publish and not at upload — but only from a block that module
+ *    already checked.
  *  - **It does not decide what a caller may set.** `editableFields.ts` does,
  *    before the payload reaches here. This module maps whatever it is given,
  *    which is why every caller must pick fields first.
@@ -55,6 +61,7 @@ import {
   propertyImages,
 } from '../schema';
 import { syncHasImages } from '../hasImages';
+import { findEntityImagesByOriginalKey, insertImage } from '../images/imageWrites';
 import { findPropertyById } from './propertyReads';
 import type { HydratedProperty } from './propertySerializer';
 import type { DatabaseOrTransaction } from '../postgres';
@@ -69,9 +76,33 @@ export interface AvailabilityWindowInput {
   status?: string;
 }
 
+/**
+ * A processed upload that has no canonical `images` row yet — everything
+ * {@link insertImage} needs to mint one, already validated and derived
+ * server-side by `controllers/property/photoIntake`.
+ */
+export interface NewPropertyImageUpload {
+  keys: { original: string; small: string; medium: string; large: string };
+  urls: { original: string; small: string; medium: string; large: string };
+  format: string;
+  bytes: number;
+  width?: number;
+  height?: number;
+}
+
 /** One photo, in the shape `services/imageSerializer.toPropertyImages` produces. */
 export interface PropertyImageInput {
-  imageId: string;
+  /**
+   * The canonical `images` row this photo IS.
+   *
+   * Optional since the publish wizard exists: a photo it uploaded has no row
+   * yet and arrives as {@link upload} instead. Exactly one of the two is set —
+   * `imageId` wins when both are, and neither is a programming error this
+   * module refuses rather than turns into a `23502`.
+   */
+  imageId?: string;
+  /** A photo whose `images` row this write mints. See {@link resolveImageRows}. */
+  upload?: NewPropertyImageUpload;
   url?: string | null;
   caption?: string | null;
   isPrimary?: boolean;
@@ -348,25 +379,116 @@ function windowRows(
   }));
 }
 
-function imageRows(
+/**
+ * Turn the payload's photos into `property_images` rows, MINTING the canonical
+ * `images` row for any photo that does not have one yet.
+ *
+ * ## Why the row is minted here, at publish, and not at upload
+ *
+ * `images.entity_id` is `NOT NULL` and names the listing the photo belongs to.
+ * The publish wizard uploads photos while the listing does not exist yet —
+ * there is no id to name — so `POST /api/images/upload` cannot persist anything
+ * for it and does not (`controllers/imageController`'s `{ kind: 'none' }`
+ * branch). The first moment the pair (bytes, owner) is both known and real is
+ * inside THIS transaction, after the `properties` row has an id. Minting here
+ * also means a publish that fails for any other reason leaves no `images` rows
+ * behind: the transaction takes them with it.
+ *
+ * The alternative — persisting at upload against a placeholder entity and
+ * re-pointing it at publish — would need a nullable `entity_id` (or a draft
+ * entity kind), which is a schema change, and would leave a row per abandoned
+ * upload with nothing that ever deletes it. The keys the upload returned are
+ * enough to mint the row later, so there is nothing to gain by minting it early.
+ *
+ * What arrives here is already validated: `photoIntake` checked every key with
+ * `validateImageStoreKey` and derived the URLs server-side, so no
+ * client-supplied URL or path reaches a column.
+ */
+async function resolveImageRows(
   propertyId: string,
   input: readonly PropertyImageInput[],
-): (typeof propertyImages.$inferInsert)[] {
-  return input.map((image, index) => ({
+  db: DatabaseOrTransaction,
+): Promise<(typeof propertyImages.$inferInsert)[]> {
+  // One query for the whole batch: a photo uploaded during an edit session and
+  // saved twice must reuse the row the first save minted, not mint a second.
+  const reusable = await findEntityImagesByOriginalKey(
+    'property',
     propertyId,
-    imageId: image.imageId,
-    url: image.url ?? null,
-    caption: image.caption ?? null,
+    input.flatMap((image) => (!image.imageId && image.upload ? [image.upload.keys.original] : [])),
+    db,
+  );
+
+  // Rows minted by THIS call, so a payload naming the same upload twice does
+  // not mint it twice — the batch query above cannot see them.
+  const minted = new Map<string, string>();
+
+  const rows: (typeof propertyImages.$inferInsert)[] = [];
+  for (const [index, image] of input.entries()) {
+    const caption = image.caption ?? null;
     // `property_images_one_primary_key` is a PARTIAL unique on
     // `(property_id) WHERE is_primary`, so at most one row here may claim it.
     // The index is what enforces that; the caller's own ordering decides which.
-    isPrimary: image.isPrimary ?? false,
-    order: image.order ?? index,
-    urlsOriginal: image.urls?.original ?? null,
-    urlsSmall: image.urls?.small ?? null,
-    urlsMedium: image.urls?.medium ?? null,
-    urlsLarge: image.urls?.large ?? null,
-  }));
+    const isPrimary = image.isPrimary ?? false;
+    const order = image.order ?? index;
+
+    let imageId = image.imageId;
+    let urls = image.urls ?? null;
+    let url = image.url ?? null;
+
+    if (imageId === undefined) {
+      const upload = image.upload;
+      if (!upload) {
+        // Refused rather than inserted: `image_id` is NOT NULL, so this would
+        // otherwise be a 23502 from three frames deeper with nothing naming the
+        // photo that caused it.
+        throw new Error(
+          `Property ${propertyId} photo #${index} carries neither an imageId nor an upload`,
+        );
+      }
+      const key = upload.keys.original;
+      const existing = reusable.get(key)?.id ?? minted.get(key);
+      if (existing !== undefined) {
+        imageId = existing;
+      } else {
+        const created = await insertImage(
+          {
+            entityType: 'property',
+            entityId: propertyId,
+            keys: upload.keys,
+            urls: upload.urls,
+            width: upload.width,
+            height: upload.height,
+            format: upload.format,
+            bytes: upload.bytes,
+            caption: caption ?? undefined,
+            isPrimary,
+            order,
+          },
+          db,
+        );
+        minted.set(key, created.id);
+        imageId = created.id;
+      }
+      urls = upload.urls;
+      // The MEDIUM variant, matching `services/imageSerializer`'s contract for
+      // the denormalized `url` every card and list already reads.
+      url = upload.urls.medium;
+    }
+
+    rows.push({
+      propertyId,
+      imageId,
+      url,
+      caption,
+      isPrimary,
+      order,
+      urlsOriginal: urls?.original ?? null,
+      urlsSmall: urls?.small ?? null,
+      urlsMedium: urls?.medium ?? null,
+      urlsLarge: urls?.large ?? null,
+    });
+  }
+  return rows;
 }
 
 /**
@@ -385,7 +507,7 @@ export async function replacePropertyImages(
 ): Promise<void> {
   await db.delete(propertyImages).where(eq(propertyImages.propertyId, propertyId));
   if (input.length > 0) {
-    await db.insert(propertyImages).values(imageRows(propertyId, input));
+    await db.insert(propertyImages).values(await resolveImageRows(propertyId, input, db));
   }
   await syncHasImages(db, propertyId);
 }

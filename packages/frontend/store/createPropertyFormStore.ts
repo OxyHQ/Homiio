@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { createJSONStorage, persist } from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ExchangeMode, OfferingType } from '@homiio/shared-types';
 import type { AvailabilityWindow } from '@homiio/shared-types';
 import type { UploadedImage } from '@/services/imageUploadService';
@@ -250,10 +252,21 @@ interface CreatePropertyFormState {
   editingPropertyId: string | null;
   /**
    * The local draft this form saves to (`utils/propertyDrafts`), or `null`
-   * until it is first saved. Kept with the form, so leaving the screen and
-   * coming back keeps saving over the same draft.
+   * until it is first saved. Kept with the form — and across a restart — so
+   * leaving the screen, or losing the process, keeps saving over the same
+   * draft instead of leaving a trail of half-listings behind.
    */
   draftId: string | null;
+  /**
+   * Whether the persisted form has been read back yet.
+   *
+   * AsyncStorage is asynchronous, so for the first renders after launch this
+   * store holds DEFAULTS that look exactly like "nothing in progress". Anything
+   * that would overwrite the form — resetting it, hydrating it from the server
+   * in edit mode — has to wait for this, or it discards the work it was
+   * supposed to restore.
+   */
+  hasHydrated: boolean;
 
   // Loading states
   isLoading: boolean;
@@ -280,82 +293,147 @@ interface CreatePropertyFormState {
   setIsDirty: (dirty: boolean) => void;
   setEditingPropertyId: (id: string | null) => void;
   setDraftId: (id: string | null) => void;
-  /** Replaces the whole form with a resumed draft and returns to the first step. */
-  loadForm: (formData: CreatePropertyFormData, draftId: string) => void;
+  /**
+   * Replaces the whole form with a resumed draft, at the step it was left on.
+   *
+   * `step` used to be hardcoded to 0, so resuming a nearly-finished listing put
+   * the host back on "what kind of place is it?" — the work was there, the
+   * place in the work was not.
+   */
+  loadForm: (formData: CreatePropertyFormData, draftId: string, step?: number) => void;
   resetForm: () => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   clearError: () => void;
 }
 
-export const useCreatePropertyFormStore = create<CreatePropertyFormState>()((set) => ({
-  // Initial state
-  formData: createDefaultFormData(),
-  currentStep: 0,
-  isDirty: false,
-  editingPropertyId: null,
-  draftId: null,
-  isLoading: false,
-  error: null,
+/**
+ * AsyncStorage key for the live form. Versioned in the name as well as through
+ * `persist`'s own `version`, so a shape change can never be read by the wrong
+ * reader.
+ */
+export const CREATE_PROPERTY_FORM_PERSIST_KEY = 'homiio.create-property-form.v1';
 
-  // Actions
-  setFormData: (section, data) =>
-    set((state) => ({
-      formData: {
-        ...state.formData,
-        [section]: { ...state.formData[section], ...data },
-      },
-      isDirty: true,
-    })),
-  updateFormField: (section, field, value) =>
-    set((state) => ({
-      formData: {
-        ...state.formData,
-        [section]: {
-          ...state.formData[section],
-          [field]: value,
-        },
-      },
-      isDirty: true,
-    })),
-  nextStep: (maxStep) =>
-    set((state) => ({
-      // Clamp to the last index of the active flow (derived by the caller from
-      // the resolved step list length), never a hardcoded literal — the flow
-      // grows when the host adds an offering (long-term/nightly/sale/exchange).
-      currentStep: Math.min(state.currentStep + 1, maxStep),
-    })),
-  setCurrentStep: (step) => set({ currentStep: step }),
-  setIsDirty: (dirty) => set({ isDirty: dirty }),
-  setEditingPropertyId: (id) => set({ editingPropertyId: id }),
-  setDraftId: (id) => set({ draftId: id }),
-  loadForm: (formData, draftId) =>
-    set({
-      // Defaults first, so a draft saved before a section existed still loads
-      // with every section present.
-      formData: { ...createDefaultFormData(), ...formData },
-      currentStep: 0,
-      isDirty: false,
-      editingPropertyId: null,
-      draftId,
-      error: null,
-    }),
-  resetForm: () =>
-    set(() => ({
-      // Reuse the same factory as the initial state so reset re-seeds fresh
-      // nested arrays — the next listing never inherits the previous one's
-      // offerings / exchange windows (no shared array refs across resets).
+/**
+ * The publish wizard's form.
+ *
+ * ## Why this store is persisted and the others here are not
+ *
+ * It used to be a bare `create()`. Everything typed between two step
+ * transitions — a description somebody spent ten minutes on — lived only in
+ * memory, so backgrounding the app on a phone, or a reload on web, took it. The
+ * drafts layer looked like it covered that and did not: it was written on step
+ * ADVANCE, which is the one moment the current step's work is already behind
+ * you.
+ *
+ * So the live form is written on every change, and `utils/propertyDrafts` keeps
+ * its separate job — the named, listable draft the host can come back to. The
+ * two are reconciled through `draftId`, which is persisted here: a session
+ * restored after a crash is still working on the SAME draft, so finishing it
+ * replaces that draft rather than adding a near-duplicate beside it.
+ *
+ * ## What crosses a restart, and what must not
+ *
+ * The allow-list below is deliberately short: the form, where the host was in
+ * it, whether it has unsaved changes, and which listing (draft or edit) it
+ * belongs to. `isLoading` and `error` are about a request that is long over by
+ * the time the app starts again — restoring either would show a spinner nothing
+ * will ever stop, or an error about a submit that no longer exists.
+ */
+export const useCreatePropertyFormStore = create<CreatePropertyFormState>()(
+  persist(
+    (set) => ({
+      // Initial state
       formData: createDefaultFormData(),
       currentStep: 0,
       isDirty: false,
       editingPropertyId: null,
       draftId: null,
+      hasHydrated: false,
+      isLoading: false,
       error: null,
-    })),
-  setLoading: (loading) => set({ isLoading: loading }),
-  setError: (error) => set({ error }),
-  clearError: () => set({ error: null }),
-}));
+
+      // Actions
+      setFormData: (section, data) =>
+        set((state) => ({
+          formData: {
+            ...state.formData,
+            [section]: { ...state.formData[section], ...data },
+          },
+          isDirty: true,
+        })),
+      updateFormField: (section, field, value) =>
+        set((state) => ({
+          formData: {
+            ...state.formData,
+            [section]: {
+              ...state.formData[section],
+              [field]: value,
+            },
+          },
+          isDirty: true,
+        })),
+      nextStep: (maxStep) =>
+        set((state) => ({
+          // Clamp to the last index of the active flow (derived by the caller from
+          // the resolved step list length), never a hardcoded literal — the flow
+          // grows when the host adds an offering (long-term/nightly/sale/exchange).
+          currentStep: Math.min(state.currentStep + 1, maxStep),
+        })),
+      setCurrentStep: (step) => set({ currentStep: step }),
+      setIsDirty: (dirty) => set({ isDirty: dirty }),
+      setEditingPropertyId: (id) => set({ editingPropertyId: id }),
+      setDraftId: (id) => set({ draftId: id }),
+      loadForm: (formData, draftId, step = 0) =>
+        set({
+          // Defaults first, so a draft saved before a section existed still loads
+          // with every section present.
+          formData: { ...createDefaultFormData(), ...formData },
+          // The wizard clamps this to its own active step list, which varies with
+          // the offerings the draft selected — so a step out of that list lands on
+          // the last one rather than crashing.
+          currentStep: step,
+          isDirty: false,
+          editingPropertyId: null,
+          draftId,
+          error: null,
+        }),
+      resetForm: () =>
+        set(() => ({
+          // Reuse the same factory as the initial state so reset re-seeds fresh
+          // nested arrays — the next listing never inherits the previous one's
+          // offerings / exchange windows (no shared array refs across resets).
+          formData: createDefaultFormData(),
+          currentStep: 0,
+          isDirty: false,
+          editingPropertyId: null,
+          draftId: null,
+          error: null,
+        })),
+      setLoading: (loading) => set({ isLoading: loading }),
+      setError: (error) => set({ error }),
+      clearError: () => set({ error: null }),
+    }),
+    {
+      name: CREATE_PROPERTY_FORM_PERSIST_KEY,
+      version: 1,
+      storage: createJSONStorage(() => AsyncStorage),
+      partialize: (state) => ({
+        formData: state.formData,
+        currentStep: state.currentStep,
+        isDirty: state.isDirty,
+        editingPropertyId: state.editingPropertyId,
+        draftId: state.draftId,
+      }),
+      // Runs whether the read succeeded, failed or found nothing: the flag says
+      // "the restore has been attempted", and a screen waiting on it must not
+      // wait forever because storage was unavailable.
+      onRehydrateStorage: () => () => {
+        useCreatePropertyFormStore.setState({ hasHydrated: true });
+      },
+    },
+  ),
+);
 
 // Selector hooks for easier access
 export const useCreatePropertyFormSelectors = () => {
