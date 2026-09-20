@@ -15,6 +15,8 @@ import {
   HABITACLIA_FIXTURE_DETAIL_HTML_GALLERY,
   HABITACLIA_FIXTURE_DETAIL_HTML_PLACEHOLDER_SURFACE,
   HABITACLIA_FIXTURE_SEARCH_HTML,
+  HABITACLIA_SEARCH_JSON_HTML,
+  HABITACLIA_SEARCH_UNREADABLE_HTML,
   buildHabitacliaListainmueblesBody,
   extractHabitacliaListadoFormFields,
   isHabitacliaListainmueblesChallenge,
@@ -323,6 +325,102 @@ describe('HabitacliaProvider.discover listainmuebles path', () => {
     ]);
     expect(fetchedUrls).toContain('https://www.habitaclia.com/alquiler-barcelona.htm');
     expect(fetchedUrls).toContain('https://www.habitaclia.com/alquiler-barcelona-2.htm');
+  });
+
+  it('serves a modern search page from its JSON payload, with no browser and no detail fetch', async () => {
+    // The live portal ships every listing as embedded JSON. Reading it is what
+    // took Habitaclia from 0 refs back to thousands, and it also removes the
+    // per-listing detail fetch: after the 2026-09 redesign the detail page is
+    // client-rendered and carries nothing a parser can read, so the search
+    // payload is not merely cheaper, it is the only source.
+    let sessionsOpened = 0;
+    const runtime: FetchRuntime = {
+      fetchHttp: async () => ({ status: 200, body: HABITACLIA_SEARCH_JSON_HTML }),
+      fetchJson: async () => {
+        throw new Error('unused');
+      },
+      fetchText: async () => {
+        throw new Error('unused');
+      },
+      loadFixture: async () => {
+        throw new Error('unused');
+      },
+      openBrowserSession: async () => {
+        sessionsOpened += 1;
+        throw new Error('a readable JSON page must never need a browser');
+      },
+    };
+
+    const local = new HabitacliaProvider({ runtime });
+    const refs: ExternalListingRef[] = [];
+    for await (const ref of local.discover({
+      provider: 'habitaclia',
+      market: 'ES',
+      city: 'barcelona',
+      limit: 3,
+      runtime,
+    })) {
+      refs.push(ref);
+    }
+
+    expect(sessionsOpened).toBe(0);
+    expect(refs).toHaveLength(3);
+
+    // fetch() must answer from the carried listing. The runtime below throws on
+    // any network use, so a passing assertion is proof no request was made.
+    const offlineRuntime = {
+      ...runtime,
+      fetchHttp: async () => {
+        throw new Error('fetch() must not touch the network for a carried listing');
+      },
+    } as FetchRuntime;
+    const raw = await local.fetch(refs[0], { runtime: offlineRuntime });
+    const normalized = local.normalize(raw);
+
+    expect(normalized.sourceId).toBe(refs[0].sourceId);
+    expect(normalized.address.coordinates).toBeDefined();
+    expect(normalized.longTermRent?.currency).toBe('EUR');
+  });
+
+  it('treats an unreadable FIRST page as a block, not as a city with no homes', async () => {
+    // The narrow condition, asserted directly. A page we cannot read yields
+    // nothing — exactly like an exhausted city — and for weeks that silence was
+    // reported as success. It must escalate instead. Note the companion case in
+    // the pagination test above: running off the END of pagination is also an
+    // empty page and must NOT escalate, which is why the rule keys on the city
+    // having produced nothing at all rather than on this page being empty.
+    let sessionsOpened = 0;
+    const runtime: FetchRuntime = {
+      fetchHttp: async () => ({ status: 200, body: HABITACLIA_SEARCH_UNREADABLE_HTML }),
+      fetchJson: async () => {
+        throw new Error('unused');
+      },
+      fetchText: async () => {
+        throw new Error('unused');
+      },
+      loadFixture: async () => {
+        throw new Error('unused');
+      },
+      openBrowserSession: async () => {
+        sessionsOpened += 1;
+        throw new Error('escalated, as intended');
+      },
+    };
+
+    const local = new HabitacliaProvider({ runtime });
+    const refs: ExternalListingRef[] = [];
+    for await (const ref of local.discover({
+      provider: 'habitaclia',
+      market: 'ES',
+      city: 'barcelona',
+      limit: 10,
+      runtime,
+    })) {
+      refs.push(ref);
+    }
+
+    expect(refs).toHaveLength(0);
+    expect(sessionsOpened).toBeGreaterThan(0);
   });
 
   it('opens the warmed session only for a city cold HTTP challenges', async () => {

@@ -35,6 +35,8 @@ import { BrowserSessionChallengeError, type BrowserSession, type BrowserStorageS
 import { createProxySessionId, envBool } from '../../proxy';
 import { HABITACLIA_BASE_URL, type HabitacliaRawListing } from './fixtures';
 import { habitacliaSourceIdFromUrl, parseHabitacliaDetail, parseHabitacliaSearch } from './parse';
+import { parseHabitacliaSearchJson } from './searchJson';
+import { asRecord } from '../../parse/guards';
 import {
   HABITACLIA_LISTAINMUEBLES_URL,
   HABITACLIA_LISTING_CARD_SELECTOR,
@@ -89,7 +91,7 @@ function toRemoteImages(raw: HabitacliaRawListing): NormalizedRemoteImage[] {
 }
 
 function yieldRefs(
-  refs: readonly { sourceId: string; url: string }[],
+  refs: readonly { sourceId: string; url: string; listing?: HabitacliaRawListing }[],
   seen: Set<string>,
   limit: number,
   yielded: { count: number },
@@ -99,7 +101,14 @@ function yieldRefs(
     if (yielded.count >= limit) break;
     if (seen.has(ref.sourceId)) continue;
     seen.add(ref.sourceId);
-    out.push({ provider: PROVIDER_ID, sourceId: ref.sourceId, url: ref.url });
+    out.push({
+      provider: PROVIDER_ID,
+      sourceId: ref.sourceId,
+      url: ref.url,
+      // Carried from discover to fetch through the documented `hints` channel.
+      // See `fetch()` for why this is not merely an optimisation.
+      hints: ref.listing ? { listing: ref.listing } : undefined,
+    });
     yielded.count += 1;
   }
   return out;
@@ -233,9 +242,40 @@ export class HabitacliaProvider implements ListingProvider {
         break;
       }
 
-      const pageRefs = parseHabitacliaSearch(body);
-      // A clean page with no cards means the city is exhausted, NOT blocked — do
-      // not escalate to a browser session.
+      // JSON FIRST, MARKUP SECOND. The portal ships its whole result set as
+      // embedded JSON; the card markup the regex parser reads was rebuilt in
+      // 2026-09 and now matches nothing. See ../adevinta/initialProps.ts.
+      const jsonPage = parseHabitacliaSearchJson(body);
+      const pageRefs = jsonPage ? jsonPage.refs : parseHabitacliaSearch(body);
+
+      // THREE OUTCOMES, AND COLLAPSING ANY TWO OF THEM IS THE BUG THIS FIXES.
+      //   * payload read, listings present  -> yield them
+      //   * payload read, zero listings     -> city genuinely exhausted, stop
+      //   * NO PAYLOAD AT ALL               -> we could not read the page
+      // The third used to be indistinguishable from the second: a 200 whose
+      // markup we no longer understand parsed to zero refs and was reported as
+      // an exhausted city, silently, for every city, for weeks.
+      //
+      // THE CONDITION IS "WE LEARNED NOTHING ABOUT THIS CITY", not "this page
+      // was empty". Running off the end of pagination also yields an empty page
+      // with no payload — on the legacy markup that is the NORMAL way a city
+      // finishes, and escalating there would open a browser session at the end
+      // of every successful city. So this only fires while the city has still
+      // produced nothing at all.
+      if (!jsonPage && pageRefs.length === 0 && yielded.count === 0) {
+        http.challenged = true;
+        this.metrics.record({
+          provider: this.id,
+          strategy: 'http',
+          outcome: 'error',
+          status,
+          latencyMs: Date.now() - start,
+          url,
+          detail: 'search page carried no readable listing payload',
+        });
+        break;
+      }
+
       if (pageRefs.length === 0) break;
       const newRefs = yieldRefs(pageRefs, seen, limit, yielded);
       this.metrics.record({
@@ -249,6 +289,10 @@ export class HabitacliaProvider implements ListingProvider {
       for (const ref of newRefs) {
         yield ref;
       }
+      // The payload states its own page count, so stop at the end of the result
+      // set instead of spending `maxSearchPages` requests discovering it. For a
+      // small city that is the difference between 2 requests and 100.
+      if (jsonPage?.totalPages !== undefined && page >= jsonPage.totalPages) break;
       if (page > 1 && newRefs.length === 0) break;
     }
   }
@@ -395,7 +439,29 @@ export class HabitacliaProvider implements ListingProvider {
     }
   }
 
+  /**
+   * Return the listing, fetching the detail page only when we have to.
+   *
+   * **THE DETAIL PAGE IS NO LONGER A SOURCE OF DATA.** After the 2026-09
+   * redesign it renders client-side: no JSON-LD, no embedded props, nothing a
+   * server-side parser can read — verified against a live listing, which
+   * returned 200 and 577 KB containing zero structured blocks. Everything the
+   * ingest needs now lives in the SEARCH payload, which `discover` already
+   * parsed, so it is carried here on the ref.
+   *
+   * That makes skipping the fetch a correctness requirement that happens to be
+   * the cheap path too: one request per 30 listings instead of 31. Barcelona's
+   * 3,269 rentals cost 109 requests instead of 3,378.
+   *
+   * The ladder remains for refs with no carried listing — anything queued
+   * before this shipped, and any future path that yields bare refs. It will
+   * fail on today's markup; that is honest, and it fails loudly as a job error
+   * rather than quietly as an empty result.
+   */
   async fetch(ref: ExternalListingRef, ctx: FetchContext): Promise<RawListing> {
+    const carried = asRecord(ref.hints)?.['listing'];
+    if (carried) return { ref, payload: asHabitaclia(carried) };
+
     const { html } = await fetchListingViaLadder(ctx.runtime, ref.url, {
       provider: this.id,
       isChallenge: isHabitacliaChallenge,
@@ -447,6 +513,10 @@ export class HabitacliaProvider implements ListingProvider {
       amenities: listing.amenities,
       furnishedStatus: resolveFurnished(listing.furnished),
       remoteImages: toRemoteImages(listing),
+      // Only ever what the portal actually returned — AGENTS.md is explicit
+      // that a contact is never invented. Omitted entirely when absent, so the
+      // app falls back to opening `sourceUrl` exactly as before.
+      contact: listing.contact,
       status: 'published',
     };
   }

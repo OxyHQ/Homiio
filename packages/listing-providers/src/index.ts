@@ -753,6 +753,9 @@ export {
   MAX_PAGES_CEILING,
   maxSearchPagesFromEnv,
   providerMaxSearchPages,
+  maxImagesPerListingFromEnv,
+  DEFAULT_MAX_IMAGES_PER_LISTING,
+  MAX_IMAGES_CEILING,
 } from './discoverLimits';
 
 
@@ -1291,3 +1294,18 @@ export function createDefaultRegistry(): ProviderRegistry {
   }
   return registry;
 }
+
+// Adevinta (Fotocasa / Habitaclia) search payloads — see providers/adevinta.
+export { extractAdevintaInitialProps } from './providers/adevinta/initialProps';
+export {
+  habitacliaListingFromSearchItem,
+  parseHabitacliaSearchJson,
+  type HabitacliaSearchPage,
+  type HabitacliaSearchRef,
+} from './providers/habitaclia/searchJson';
+export {
+  ADEVINTA_SEARCH_JSON_SCRIPT_TAG_HTML,
+  HABITACLIA_SEARCH_JSON_HTML,
+  HABITACLIA_SEARCH_TRUNCATED_HTML,
+  HABITACLIA_SEARCH_UNREADABLE_HTML,
+} from './providers/habitaclia/searchFixtures';
