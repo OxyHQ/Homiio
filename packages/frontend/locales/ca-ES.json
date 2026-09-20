@@ -1907,6 +1907,10 @@
         "my_home": "Obrir La meva llar",
         "evictions": "Obrir el tauler de desnonaments"
       },
+      "clarifyLocation": {
+        "ambiguous": "No he sabut a quin “{{place}}” et refereixes: n'hi ha més d'un. A quina regió és?",
+        "notFound": "No tinc cap lloc anomenat “{{place}}”, així que he deixat la cerca tal com estava."
+      },
       "applied": "Fet: {{what}}.",
       "stale": "Has canviat la cerca tu, així que això s’ha deixat com estava.",
       "failed": "No s’ha pogut: {{what}}."

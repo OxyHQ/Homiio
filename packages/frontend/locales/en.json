@@ -1521,6 +1521,10 @@
         "my_home": "Open My home",
         "evictions": "Open the eviction board"
       },
+      "clarifyLocation": {
+        "ambiguous": "I could not tell which “{{place}}” you meant — there is more than one. Which region is it in?",
+        "notFound": "I do not have a place called “{{place}}”, so the search was left as it was."
+      },
       "applied": "Done: {{what}}.",
       "stale": "You changed the search yourself, so this was left alone.",
       "failed": "Could not do this: {{what}}."

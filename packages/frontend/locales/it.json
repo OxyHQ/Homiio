@@ -1897,6 +1897,10 @@
         "my_home": "Apri Casa mia",
         "evictions": "Apri la bacheca degli sfratti"
       },
+      "clarifyLocation": {
+        "ambiguous": "Non ho capito a quale “{{place}}” ti riferisci: ce n’è più di uno. In quale regione si trova?",
+        "notFound": "Non ho nessun luogo chiamato “{{place}}”, quindi la ricerca è rimasta com’era."
+      },
       "applied": "Fatto: {{what}}.",
       "stale": "Hai modificato tu la ricerca, quindi questo è stato lasciato com’era.",
       "failed": "Non è stato possibile: {{what}}."

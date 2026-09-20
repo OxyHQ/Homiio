@@ -1521,6 +1521,10 @@
         "my_home": "Ouvrir Mon logement",
         "evictions": "Ouvrir le tableau des expulsions"
       },
+      "clarifyLocation": {
+        "ambiguous": "Je n’ai pas su de quel « {{place}} » vous parliez : il y en a plusieurs. Dans quelle région ?",
+        "notFound": "Je n’ai aucun lieu nommé « {{place}} », la recherche est restée telle quelle."
+      },
       "applied": "Fait : {{what}}.",
       "stale": "Vous avez modifié la recherche vous-même : rien n’a été changé.",
       "failed": "Impossible : {{what}}."

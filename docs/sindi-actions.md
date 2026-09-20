@@ -68,7 +68,7 @@ capability rule and every test below are unaffected.
 
 ## What Sindi may do
 
-Five intents, in `shared-types/sindiAction.ts`. The union is **closed**, and
+Six intents, in `shared-types/sindiAction.ts`. The union is **closed**, and
 adding to it is a reviewed edit to that file.
 
 | Intent | Payload | Executed as |
@@ -78,6 +78,13 @@ adding to it is a reviewed edit to that file.
 | `open_listing` | one validated property id | the listing route |
 | `set_results_view` | `list` \| `map` | `store/exploreViewStore.ts`; filters untouched |
 | `navigate` | one **enumerated** destination | the router's own path table |
+| `clarify_location` | the place NAME the turn used, and why it did not resolve | nothing — a sentence in the conversation |
+
+`clarify_location` is the one member the executor performs nothing for, and it
+is in the union rather than beside it because every rule the envelope already
+carries — one action per turn, deduped by `actionId`, bound to a `turnId`,
+rendered by one card — applies to it unchanged. See *A refusal is said out loud*
+below for what it repairs.
 
 **Nothing here writes.** Paying, signing, applying, messaging a third party,
 publishing and deleting are not in the union and may not be added to it: each
@@ -108,8 +115,7 @@ set the offering before the price or the price is dropped.
 
 A city name that resolves to several REAL places produces **no area at all**.
 Taking the first candidate is the homonym bug (ADR 0002 §12.2) arriving through
-a new door. The rest of the turn still applies — "under 900" against whatever
-area is in force.
+a new door.
 
 **This refusal was firing on "Barcelona", and it made the most ordinary request
 Sindi can receive do nothing at all.** Production carries three `cities` rows
@@ -166,6 +172,65 @@ fixed the CITY-level version of that constraint and migration 0030 the
 placeholder-region version; neither touches this one. Merging them means
 repointing every address that references the duplicates, which is a migration
 with a real blast radius and its own audit.
+
+### A refusal is said out loud
+
+Refusing to choose is right. Refusing **silently** was the defect, and it was a
+class of failure rather than one city's.
+
+The reported turn — *"muéstrame pisos en hamburg"*, twice, with nothing
+happening — had **two** causes, and the other one is the host change above: only
+the docked panel could act, so even a turn that produced a perfectly good action
+refused it from the full-screen chat. Fixing that alone would have left this
+one intact and invisible, because a turn that emits no envelope looks identical
+from every host.
+
+A turn that named a place `resolveCity` could not commit to used to drop the
+`location` key and carry on. Three things followed, and none of them told the
+person anything:
+
+1. With nothing else in the sentence the patch was empty, so no `apply_search`
+   was emitted.
+2. The empty patch fell through to `navigate: explore` — which, from the home
+   screen or the chat, opens an **unrestricted** feed under a request for one
+   place. That is ADR 0002 §1.3(c) exactly: "a resolution failure falls through
+   to a global feed… no signal anywhere in the UI that the location was
+   dropped".
+3. Standing on `/explore` already, that navigation was suppressed too, and the
+   turn emitted **nothing at all** — in front of a list of homes, which is the
+   most common place to ask.
+
+So an unresolvable named place now emits `clarify_location`, carrying the name
+as the person used it and one of two reasons. `ambiguous` asks which one, which
+they can settle by naming a region — #519 §8.6's *"pedir únicamente esa
+precisión dentro del chat"*. `not_found` says Homiio has no such place, because
+asking somebody to refine a place that does not exist sends them hunting for a
+spelling mistake they did not make. **No candidate list rides along**: offering
+the two Barcelonas to choose between is the `disambiguating` picker of ADR 0002
+§7, and a second chat-shaped one would be a second opinion about what a place
+is.
+
+**It replaces the search rather than accompanying it.** This page used to say
+"the rest of the turn still applies — 'under 900' against whatever area is in
+force". That is right for a turn that named no place and wrong for one that
+named a place and lost it: *"pisos en Hamburg por menos de 900"* would narrow
+whatever city was already on screen to 900, navigate, and report that it was
+done. ADR 0002 decision 5 forbids a failed resolution running a query at all,
+and one that silently inherits a DIFFERENT city is worse than the location-less
+one §4.3 names — it answers confidently about the wrong place. One action per
+turn makes this a choice, and the named place is the load-bearing half of the
+sentence.
+
+**Hamburg itself already resolves.** Migrations 0029 and 0030 folded the
+duplicate rows and `/api/cities/lookup?city=hamburg` answers `resolved`; the
+reported turn works at the data layer. What is fixed here is every name that is
+genuinely a homonym across regions — legal by design, and permanently
+unresolvable without a word from the person.
+
+The prose channel is still NOT told. Sindi's own words for this turn come from a
+search that returned nothing, so it can still say "no listings in Hamburg" when
+the truth is "which Hamburg?". Telling the model what the resolver decided is
+the obvious next step and is not in this change.
 
 ### Why a price patch still carries no currency
 
@@ -325,7 +390,8 @@ conversation; the bottom sheet does neither.
 | `frontend __tests__/sindi/controlCapability.test.ts` | the capability for every host at every breakpoint |
 | `frontend __tests__/sindi/actionExecution.test.ts` | WHEN each half of an action runs, per host |
 | `frontend __tests__/sindi/conversationHostPromotion.test.ts` | the panel navigates nothing; every destination is a real route |
-| `backend __tests__/integration/sindiActions.test.ts` | derivation, homonyms, context validation (real Postgres) |
+| `frontend __tests__/sindi/clarifyLocation.test.tsx` | the executor performs nothing for a clarification; the card says which place and why, from the shipped strings |
+| `backend __tests__/integration/sindiActions.test.ts` | derivation, homonyms, an unresolvable place being said out loud, context validation (real Postgres) |
 
 ## Still open in #519 §8
 

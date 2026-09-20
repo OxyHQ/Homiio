@@ -317,6 +317,20 @@ function applyAction(
     case 'navigate': {
       return navigateThen(() => router.push(DESTINATION_ROUTES[action.destination]), mode, defer);
     }
+    case 'clarify_location': {
+      // The one member with nothing to do to the app: it is a sentence for the
+      // conversation, so it reports `inline` in every act mode — nothing is
+      // navigated, nothing is deferred to `settleTurn`, and the chat's own
+      // surface is exactly where the answer belongs. `SindiActionCard` renders
+      // it as text with no button to press.
+      //
+      // `applied` would be a lie of the kind #519 §8.4 names — "Sindi no debe
+      // afirmar que cambió filtros si el executor no lo hizo" — and `failed`
+      // would read as a malfunction when the refusal is the correct answer:
+      // ADR 0002 §12.2 requires that two real Barcelonas are NOT chosen
+      // between. What was broken was saying nothing, not refusing.
+      return 'inline';
+    }
     default: {
       // The union is closed, so a member added later is a COMPILE error here
       // rather than an action this switch silently drops.

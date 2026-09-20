@@ -13,13 +13,14 @@
  * something the client executes. Three rules in this file exist to make that
  * unreachable rather than discouraged.
  *
- * **1. The union is CLOSED and narrow.** Five intents, each with a payload the
+ * **1. The union is CLOSED and narrow.** Six intents, each with a payload the
  * client re-validates. There is no `eval`, no generated JavaScript, no DOM
- * click, no arbitrary URL, no API method chosen by a model, no SQL. A sixth
+ * click, no arbitrary URL, no API method chosen by a model, no SQL. A seventh
  * intent is a deliberate edit to this file, reviewed, not a string that happens
  * to arrive.
  *
- * **2. Nothing here writes.** Navigating and querying are the whole scope.
+ * **2. Nothing here writes.** Navigating, querying and saying what could not be
+ * resolved are the whole scope.
  * Paying, signing, applying, messaging a third party, publishing and deleting
  * are NOT in the union and may not be added to it: each needs its own explicit
  * action and its own domain controls. "Controlling the app" is not a session
@@ -52,14 +53,54 @@
  * currency in play when it lands — which hands the unit to the server, whose
  * answer comes from the listings in the scope the patch is about. That is the
  * one place in the system that can answer it from evidence.
+ *
+ * ## Why a member that does nothing to the app is still a member
+ *
+ * {@link SindiAction} is otherwise a list of things the app DOES, and
+ * `clarify_location` does none of them: it moves no route, changes no filter
+ * and touches no store. It is here because the alternative was measured and it
+ * is worse. A turn that named a place Homiio could not commit to used to emit
+ * no envelope at all, so "muéstrame pisos en Hamburg" ended with the app
+ * exactly as it was and nothing said — the failure ADR 0002 §1.3(c) describes
+ * as "no signal anywhere in the UI that the location was dropped", with the
+ * signal turned down one notch further. Refusing to choose between two real
+ * Barcelonas is correct (§12.2); refusing silently is the defect.
+ *
+ * It could have been a field beside `action` instead. It is a member because
+ * every rule the envelope already carries — one per turn, deduped by
+ * `actionId`, bound to a `turnId`, rendered by one card — applies to it
+ * unchanged, and a parallel channel would need all of them written a second
+ * time. The safety argument is unaffected: the least powerful member possible
+ * cannot be a command language.
  */
 
 import type { ListingCurrency } from './currency';
 import type { LocationSelection } from './location';
 import type { OfferingType, PropertyType } from './common';
 
-/** The contract version. Bumped when a payload's MEANING changes, never for an addition. */
+/**
+ * The contract version. Bumped when a payload's MEANING changes, never for an
+ * addition.
+ *
+ * `clarify_location` is an addition and does NOT bump it. The degradation is
+ * the one this rule assumes: a client holding the older union answers `null`
+ * from `parseSindiAction`, so `parseSindiActionEnvelope` answers `null`, so the
+ * frame is ignored — which lands that client on precisely the behaviour it has
+ * today. A version bump would instead make every action from a newer server
+ * unusable by it, turning a strict improvement into a breaking change.
+ */
 export const SINDI_ACTION_VERSION = 1;
+
+/**
+ * The longest place name a `clarify_location` may echo back.
+ *
+ * Exported so the SERVER can clamp to the same bound its client validates
+ * against. A refusal the client silently drops for being too long is the
+ * silence this member exists to end, arriving one layer further down — and the
+ * name comes from a model's extraction of free text, which is exactly the input
+ * that can be arbitrarily long.
+ */
+export const SINDI_REQUESTED_PLACE_MAX_LENGTH = 120;
 
 /**
  * A patch over the live search query.
@@ -122,7 +163,41 @@ export type SindiAction =
   /** Switch Explore between list and map. Filters untouched. */
   | { readonly kind: 'set_results_view'; readonly view: SindiResultsView }
   /** Go to an enumerated destination. Never a URL. */
-  | { readonly kind: 'navigate'; readonly destination: SindiDestination };
+  | { readonly kind: 'navigate'; readonly destination: SindiDestination }
+  /**
+   * Say that a place the turn NAMED could not be committed to, and ask.
+   *
+   * The one member the executor performs nothing for. ADR 0002 decision 5 and
+   * §4.3 forbid a failed resolution degrading into a query — not a global feed,
+   * and not the rest of the sentence applied to whatever area happened to be in
+   * force, which is a query whose location was requested and lost. With one
+   * action per turn, a named place that did not resolve therefore replaces the
+   * search rather than accompanying it.
+   *
+   * `reason` is two different sentences and not a log level. `ambiguous` means
+   * the name matches several real places and the person can settle it by
+   * naming a region — which is #519 §8.6's "pedir únicamente esa precisión
+   * dentro del chat". `not_found` means Homiio has no such place, and asking
+   * for a region would be asking them to refine something that does not exist.
+   *
+   * No candidate list rides along, deliberately. Offering the two Barcelonas to
+   * pick between is the `disambiguating` state of ADR 0002 §7 — a picker, with
+   * an admin hierarchy per row and a selection to commit — and inventing a
+   * second, chat-shaped one here is how the two would come to disagree about
+   * what a place is.
+   */
+  | {
+      readonly kind: 'clarify_location';
+      /**
+       * The place NAME the person used, echoed verbatim.
+       *
+       * A name, never a coordinate and never a `loc` token: it exists to be
+       * read back in a sentence, and ADR 0002 §8.2 keeps coordinates out of
+       * everything this channel touches.
+       */
+      readonly requested: string;
+      readonly reason: 'ambiguous' | 'not_found';
+    };
 
 /**
  * One action, addressed to one turn.
@@ -336,6 +411,16 @@ export function parseSindiAction(value: unknown): SindiAction | null {
     case 'navigate': {
       const destination = SINDI_DESTINATIONS.find((candidate) => candidate === value.destination);
       return destination ? { kind: 'navigate', destination } : null;
+    }
+    case 'clarify_location': {
+      // Both fields are required, and a missing one is a REJECTION rather than
+      // a default. There is no honest fallback: without a name the sentence
+      // has nothing to quote, and a defaulted `reason` would tell somebody
+      // their place does not exist when it exists twice.
+      const requested = shortString(value.requested, SINDI_REQUESTED_PLACE_MAX_LENGTH);
+      if (!requested) return null;
+      if (value.reason !== 'ambiguous' && value.reason !== 'not_found') return null;
+      return { kind: 'clarify_location', requested, reason: value.reason };
     }
     default:
       return null;
