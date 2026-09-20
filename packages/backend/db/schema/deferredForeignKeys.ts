@@ -167,6 +167,12 @@ export const OXY_ACCOUNT_COLUMN_NAMES: ReadonlySet<string> = new Set([
   // `Lease.documents[].uploadedBy` and `Lease.terminationNotice.givenBy`.
   'uploaded_by_oxy_user_id',
   'termination_notice_given_by_oxy_user_id',
+  // Who SIGNED a lease (#518 §7.4). A role, and deliberately not folded into
+  // `tenant_oxy_user_id` or `landlord_oxy_user_id`: a co-tenant signs too, and
+  // the lease's co-tenant set is replaced wholesale by an amendment — so the
+  // signer is the one party reference that has to survive somebody being
+  // removed from the contract they already signed.
+  'signer_oxy_user_id',
   // Who raised a repair request. A ROLE, not a synonym for the tenancy's
   // tenant: a co-tenant can report, so folding it into `tenant_oxy_user_id`
   // would attribute their report to somebody else on the lease.

@@ -93,13 +93,19 @@ export function useCreateLeaseFromApplication(): UseMutationResult<Lease, Error,
   });
 }
 
+/**
+ * Sign a lease.
+ *
+ * `termsSha256` is the version the screen rendered; see `leaseService.signLease`
+ * for why it travels and what the server does when it no longer matches.
+ */
 export function useSignLease(
   id: string,
-): UseMutationResult<Lease, Error, { signature: string; acceptTerms: boolean }> {
+): UseMutationResult<Lease, Error, { acceptTerms: boolean; termsSha256?: string }> {
   const queryClient = useQueryClient();
-  return useMutation<Lease, Error, { signature: string; acceptTerms: boolean }>({
-    mutationFn: ({ signature, acceptTerms }) =>
-      leaseService.signLease(id, signature, acceptTerms),
+  return useMutation<Lease, Error, { acceptTerms: boolean; termsSha256?: string }>({
+    mutationFn: ({ acceptTerms, termsSha256 }) =>
+      leaseService.signLease(id, acceptTerms, termsSha256),
     onSuccess: (lease) => {
       queryClient.setQueryData(leaseKeys.detail(id), lease);
       queryClient.invalidateQueries({ queryKey: [LEASE_LIST_KEY] });

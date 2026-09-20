@@ -26,7 +26,13 @@ import { and, asc, eq } from 'drizzle-orm';
 
 import leaseController from '../../controllers/leaseController';
 import { getDb } from '../../db/postgres';
-import { leaseCoTenants, leaseDocuments, leasePaymentSchedule, leases } from '../../db/schema';
+import {
+  leaseCoTenants,
+  leaseDocuments,
+  leasePaymentSchedule,
+  leaseSignatures,
+  leases,
+} from '../../db/schema';
 import { errorHandler } from '../../middlewares/errorHandler';
 import { serializeWireIds } from '../../middlewares/wireIds';
 import { resetGeoTables, seedListingWithGeo } from '../helpers/postgresGeoFixtures';
@@ -342,10 +348,17 @@ describe('leaseController.signLease — signatures, status and the schedule', ()
     expect(await scheduleOf(id)).toHaveLength(0);
   });
 
-  it('NEVER returns the digital signature, but does store it', async () => {
-    // The pair is what distinguishes "excluded from the response" from "never
-    // written" — a serializer that simply dropped the field would pass the
-    // first assertion alone.
+  it('IGNORES a client-supplied signature string entirely (#518 §7.4)', async () => {
+    // This used to assert the pair "absent from the response, present in the
+    // column" — which pinned a real leak-prevention property AND, underneath
+    // it, a value that meant nothing: the client chose the string
+    // (`'accepted-in-app'`, a literal in `app/contracts/[id].tsx`), the server
+    // stored whatever arrived, and no read path could ever return it. A field
+    // no reader can see and no writer is accountable for is not evidence.
+    //
+    // What happened is now `lease_signatures.method`, written by the server.
+    // The column is dead; its DROP is a `post`-phase migration, because a `pre`
+    // one runs while the old image is still writing to it.
     const id = await createDraftLease(await seedOwnedProperty());
     const res = await request(buildApp('oxy-tenant'))
       .post(`/leases/${id}/sign`)
@@ -355,7 +368,14 @@ describe('leaseController.signLease — signatures, status and the schedule', ()
     expect(JSON.stringify(res.body)).not.toContain('tenant-mark');
     expect(res.body.data.signatures.tenant.digitalSignature).toBeUndefined();
 
-    expect((await leaseRow(id)).signaturesTenantDigitalSignature).toBe('tenant-mark');
+    // Not stored anywhere. The string reaching the column again is the
+    // regression this now guards.
+    expect((await leaseRow(id)).signaturesTenantDigitalSignature).toBeNull();
+    const [signature] = await getDb()
+      .select()
+      .from(leaseSignatures)
+      .where(eq(leaseSignatures.leaseId, id));
+    expect(signature.method).toBe('in_app_acceptance');
   });
 
   it('activates the lease and generates the payment schedule when both sign', async () => {
@@ -391,12 +411,17 @@ describe('leaseController.signLease — signatures, status and the schedule', ()
     expect(await scheduleOf(id)).toHaveLength(13);
   });
 
-  it('reports isFullySigned FALSE while a co-tenant has not signed, even when active', async () => {
-    // The source's two rules disagree, deliberately: `signAsLandlord` consults
-    // only the other principal, `isFullySigned` consults the co-tenants too. It
-    // is NOT expressed as a CHECK because the application states two rules, not
-    // one — this test is what pins the disagreement so a later reader does not
-    // "fix" one of them in isolation.
+  it('does NOT activate while a co-tenant has not signed (#518 §7.4)', async () => {
+    // Mongo's two rules disagreed on purpose: `signAsLandlord` consulted only
+    // the other principal while `isFullySigned` consulted the co-tenants too,
+    // so a lease read `status: 'active'` and `isFullySigned: false` at the same
+    // time. This test used to pin that disagreement.
+    //
+    // It was faithful and it was a lease calling itself active while a person
+    // named on it had not signed — in a schema where that person had no way to
+    // sign at all. Co-tenants sign now, activation waits for every party, and
+    // the two answers agree. Both are asserted, so a future change that moved
+    // one without the other goes red here.
     const id = await createDraftLease(await seedOwnedProperty(), {
       coTenants: [{ oxyUserId: 'oxy-co' }],
     });
@@ -405,8 +430,18 @@ describe('leaseController.signLease — signatures, status and the schedule', ()
       .post(`/leases/${id}/sign`)
       .send({ acceptTerms: true });
 
-    expect(res.body.data.status).toBe('active');
+    expect(res.body.data.status).toBe('pending_signatures');
     expect(res.body.data.isFullySigned).toBe(false);
+    // The re-read: a handler that answered `pending_signatures` and wrote
+    // `active` satisfies every assertion made on its response.
+    expect((await leaseRow(id)).status).toBe('pending_signatures');
+
+    // And the co-tenant's own signature is what completes it.
+    const completed = await request(buildApp('oxy-co'))
+      .post(`/leases/${id}/sign`)
+      .send({ acceptTerms: true });
+    expect(completed.body.data.status).toBe('active');
+    expect(completed.body.data.isFullySigned).toBe(true);
   });
 
   it('refuses a non-party signature and a missing acceptTerms', async () => {
@@ -425,14 +460,32 @@ describe('leaseController.signLease — signatures, status and the schedule', ()
     expect(persisted.status).toBe('draft');
   });
 
-  it('refuses a CO-TENANT as a signatory — they are a party for reads only', async () => {
+  it('ACCEPTS a co-tenant as a signatory, and records the seat (#518 §7.4)', async () => {
+    // The inversion of what this used to assert. A co-tenant was a party for
+    // reads, had `signed_date` and `status` columns nothing could write, and
+    // was refused outright here — so `isFullySigned` read a value that could
+    // never become true. Either they sign or the columns go; they sign.
     const id = await createDraftLease(await seedOwnedProperty(), {
       coTenants: [{ oxyUserId: 'oxy-co' }],
     });
     const res = await request(buildApp('oxy-co'))
       .post(`/leases/${id}/sign`)
       .send({ acceptTerms: true });
-    expect(res.status).toBe(403);
+
+    expect(res.status).toBe(200);
+    const [signature] = await getDb()
+      .select()
+      .from(leaseSignatures)
+      .where(eq(leaseSignatures.leaseId, id));
+    expect(signature.party).toBe('co_tenant');
+    expect(signature.signerOxyUserId).toBe('oxy-co');
+
+    // The cache follows in the same statement.
+    const [coTenant] = await getDb()
+      .select()
+      .from(leaseCoTenants)
+      .where(eq(leaseCoTenants.leaseId, id));
+    expect(coTenant.status).toBe('signed');
   });
 });
 

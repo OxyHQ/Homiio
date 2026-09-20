@@ -1495,6 +1495,24 @@
       "column": {
         "payment": "Pagamento",
         "method": "Metodo"
+      },
+      "coTenantPending": "Manca la firma di un co-inquilino",
+      "signedDocument": "Ha firmato «{{name}}» e le condizioni mostrate",
+      "signedDocumentUnhashed": "Ha firmato «{{name}}»: il contenuto non è stato registrato",
+      "signedTermsOnly": "Ha firmato le condizioni; non era allegato alcun documento",
+      "signatureStale": "Firmato prima dell'ultima modifica",
+      "amendedInvalidates": "Le firme precedenti non corrispondono più alle condizioni",
+      "documentSigned": "Firmato",
+      "signingDocument": "Stai per firmare «{{name}}» insieme alle condizioni qui sopra.",
+      "signingTermsOnly": "Non è allegato alcun documento, quindi firmerai le condizioni qui sopra.",
+      "event": {
+        "created": "Bozza creata",
+        "amended": "Condizioni modificate",
+        "signed": "Firmato",
+        "activated": "Contratto attivo",
+        "document_added": "Documento aggiunto",
+        "terminated": "Disdetta notificata",
+        "renewed": "Rinnovato"
       }
     }
   },

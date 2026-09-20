@@ -15,6 +15,14 @@
  * no counterpart, so they are derived here. `db/MIGRATION-CONTRACT.md` lists
  * them under "Virtuals a DTO has to compute".
  *
+ * ## Two fields a screen cannot compute for itself (#518 §7.4)
+ *
+ * `termsSha256` and each signature's `bindsCurrentTerms` are derived here
+ * because they are derived from the ROWS, and the rows are what this module
+ * holds. A client given only the raw digests would have to re-implement
+ * `leaseTerms.ts`'s canonicalization to use them — and a client that got that
+ * subtly wrong would draw "signed" over a version nobody signed.
+ *
  * ## Signature material is excluded at the TYPE level, not by omission here
  *
  * `signatures_landlord_digital_signature` and its tenant counterpart are in
@@ -29,13 +37,16 @@ import { publicColumns } from '../schema/protectedColumns';
 import type {
   leaseCoTenants,
   leaseDocuments,
+  leaseEvents,
   leaseInspectionFindings,
   leaseInspections,
   leasePaymentSchedule,
   leaseSharedUtilityCosts,
+  leaseSignatures,
   leases,
 } from '../schema';
 import { leases as leasesTable } from '../schema';
+import { leaseTermsFingerprint } from './leaseTerms';
 
 /** The sanctioned selection — every column except the two signatures. */
 export function leaseSelection() {
@@ -54,6 +65,8 @@ export type LeaseDocumentRow = InferSelectModel<typeof leaseDocuments>;
 export type LeaseInspectionRow = InferSelectModel<typeof leaseInspections>;
 export type LeaseInspectionFindingRow = InferSelectModel<typeof leaseInspectionFindings>;
 export type LeaseSharedUtilityCostRow = InferSelectModel<typeof leaseSharedUtilityCosts>;
+export type LeaseSignatureRow = InferSelectModel<typeof leaseSignatures>;
+export type LeaseEventRow = InferSelectModel<typeof leaseEvents>;
 
 /** One lease plus everything a response carries with it. */
 export interface HydratedLease {
@@ -64,6 +77,17 @@ export interface HydratedLease {
   inspections: readonly LeaseInspectionRow[];
   inspectionFindings: readonly LeaseInspectionFindingRow[];
   sharedUtilityCosts: readonly LeaseSharedUtilityCostRow[];
+  /**
+   * The signature records, when the caller asked for them (#518 §7.4).
+   *
+   * `undefined` means NOT LOADED and is a different fact from `[]`, which means
+   * nobody has signed. The DTO keeps that distinction — it omits the field
+   * entirely rather than publishing an empty list a screen would render as "no
+   * signatures" on a lease that has several.
+   */
+  signatures?: readonly LeaseSignatureRow[];
+  /** The timeline, when the caller asked for it. Same `undefined` vs `[]` rule. */
+  events?: readonly LeaseEventRow[];
   /** The listing, when the caller asked for it hydrated. */
   property?: Record<string, unknown>;
 }
@@ -107,13 +131,18 @@ function formattedRent(row: LeaseRow): string {
 /**
  * `isFullySigned` — both parties AND every co-tenant.
  *
- * **This deliberately disagrees with `status`, exactly as the source did.**
- * `signAsLandlord`/`signAsTenant` set `status = 'active'` as soon as the OTHER
- * principal has signed, consulting no co-tenant; this virtual consults all of
- * them. So a lease with an unsigned co-tenant reads `status: 'active'` and
- * `isFullySigned: false`, and it did in Mongo too. It is NOT expressed as a
- * CHECK for that reason: a coherence constraint can only be written where the
- * application states ONE rule, and here it states two.
+ * **It used to disagree with `status` on purpose, and no longer does** (#518
+ * §7.4). Mongo's `signAsLandlord`/`signAsTenant` set `status = 'active'` as soon
+ * as the OTHER principal had signed, consulting no co-tenant, while this virtual
+ * consulted all of them — so a lease with an unsigned co-tenant read
+ * `status: 'active'` and `isFullySigned: false`. That was faithful to the source
+ * and it was a lease calling itself active while a person named on it had not
+ * signed, in a schema where that person had no way to sign at all. `signLease`
+ * now waits for every party, so the two answers agree.
+ *
+ * It is still NOT a CHECK, and the reason has changed: the rule spans
+ * `leases`, `lease_co_tenants` and `lease_signatures`, and a CHECK sees one row
+ * of one table. What guards it instead is that ONE function computes both.
  */
 function isFullySigned(row: LeaseRow, coTenants: readonly LeaseCoTenantRow[]): boolean {
   return (
@@ -163,6 +192,16 @@ export function serializeLeaseDocument(row: LeaseDocumentRow): Record<string, un
     name: row.name,
     downloadPath: `/api/leases/${row.leaseId}/documents/${row.id}`,
     type: row.type,
+    /**
+     * The digest of the stored bytes (#518 §7.4), or absent on a document
+     * uploaded before migration 0028.
+     *
+     * Published rather than kept server-side because it is what lets a party
+     * see that the document they are looking at is the one somebody signed —
+     * the comparison is against `signatures[].documentSha256`, and a client
+     * that could not see both could only be told the answer.
+     */
+    contentSha256: row.contentSha256 ?? undefined,
     // The column was RENAMED from Mongo's `uploadedBy` so `isOxyAccountColumn`
     // could classify it (`db/MIGRATION-CONTRACT.md`); the wire keeps the old
     // name, because renaming a response field is a frontend change and this
@@ -195,9 +234,64 @@ function serializeInspection(
   };
 }
 
+/**
+ * One signature, as the contract screen reads it (#518 §7.4).
+ *
+ * `bindsCurrentTerms` is computed here rather than published as two digests for
+ * the client to compare, because the comparison is the answer and a client that
+ * got it wrong would render "signed" over a version nobody signed. The raw
+ * `termsSha256` travels anyway: a party is entitled to see the value itself,
+ * and it is the only thing that makes the claim checkable.
+ *
+ * `documentName` is denormalized onto the signature so a screen can say WHICH
+ * document was signed without looking one up in a list that may not carry it —
+ * the reader of a signature is asking about the past, and the document list is
+ * about the present.
+ */
+function serializeLeaseSignature(
+  row: LeaseSignatureRow,
+  currentTermsSha256: string,
+  documentNames: ReadonlyMap<string, string>,
+): Record<string, unknown> {
+  return {
+    id: row.id,
+    party: row.party,
+    signerOxyUserId: row.signerOxyUserId,
+    method: row.method,
+    signedAt: row.signedAt,
+    termsSha256: row.termsSha256,
+    bindsCurrentTerms: row.termsSha256 === currentTermsSha256,
+    documentId: row.documentId ?? undefined,
+    documentName: row.documentId ? documentNames.get(row.documentId) : undefined,
+    /**
+     * Absent in two DIFFERENT cases, and the pair `documentId`/`documentSha256`
+     * is what tells them apart: no document at all (both absent), and a
+     * document whose bytes were never hashed (an id with no digest). The
+     * schema's header calls the second one the weakest binding it can express;
+     * the wire keeps it distinguishable rather than flattening both to "not
+     * bound".
+     */
+    documentSha256: row.documentSha256 ?? undefined,
+  };
+}
+
+/** One timeline entry. `detail` is never a translated phrase — see the schema. */
+function serializeLeaseEvent(row: LeaseEventRow): Record<string, unknown> {
+  return {
+    id: row.id,
+    position: row.position,
+    type: row.eventType,
+    actorOxyUserId: row.actorOxyUserId ?? undefined,
+    detail: row.detail ?? undefined,
+    occurredAt: row.occurredAt,
+  };
+}
+
 /** The full lease DTO. */
 export function serializeLease(hydrated: HydratedLease): Record<string, unknown> {
   const row = hydrated.lease;
+  const termsSha256 = leaseTermsFingerprint(hydrated);
+  const documentNames = new Map(hydrated.documents.map((document) => [document.id, document.name]));
   const findingsByInspection = new Map<string, LeaseInspectionFindingRow[]>();
   for (const finding of hydrated.inspectionFindings) {
     const existing = findingsByInspection.get(finding.inspectionId);
@@ -260,7 +354,9 @@ export function serializeLease(hydrated: HydratedLease): Record<string, unknown>
     },
 
     // The two `digitalSignature` fields are absent from `LeaseRow` itself, so
-    // this block cannot leak them — see the header.
+    // this block cannot leak them — see the header. It is the CACHE of
+    // `lease_signatures` (see `db/schema/leases.ts`), kept on the wire because
+    // every existing screen reads it; `signatureRecords` below is the truth.
     signatures: {
       landlord: {
         signed: row.signaturesLandlordSigned,
@@ -271,6 +367,15 @@ export function serializeLease(hydrated: HydratedLease): Record<string, unknown>
         signedDate: row.signaturesTenantSignedDate,
       },
     },
+
+    /**
+     * The version a signature can name (#518 §7.4).
+     *
+     * Recomputed from the rows in this very response, so it is the digest of
+     * exactly what the client is about to render — which is what makes it
+     * meaningful for the client to send back on `POST /:id/sign`.
+     */
+    termsSha256,
 
     status: row.status,
     notes: row.notes,
@@ -291,6 +396,17 @@ export function serializeLease(hydrated: HydratedLease): Record<string, unknown>
       signedDate: coTenant.signedDate,
       status: coTenant.status,
     })),
+    // Omitted rather than emptied when the read did not ask for them: `[]`
+    // would be a claim that nobody has signed and that nothing has happened.
+    ...(hydrated.signatures
+      ? {
+          signatureRecords: hydrated.signatures.map((signature) =>
+            serializeLeaseSignature(signature, termsSha256, documentNames),
+          ),
+        }
+      : {}),
+    ...(hydrated.events ? { events: hydrated.events.map(serializeLeaseEvent) } : {}),
+
     paymentSchedule: hydrated.paymentSchedule.map(serializeLeasePayment),
     documents: hydrated.documents.map(serializeLeaseDocument),
     inspections: hydrated.inspections.map((inspection) =>

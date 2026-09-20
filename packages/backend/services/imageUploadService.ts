@@ -1,6 +1,7 @@
 import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import sharp from 'sharp';
 import { v4 as uuidv4 } from 'uuid';
+import { createHash } from 'crypto';
 import path from 'path';
 import { promises as fs, realpathSync } from 'fs';
 import type {
@@ -14,6 +15,24 @@ import { logger } from '../middlewares/logging';
 import { describeErrorForLog } from '../middlewares/errorHandler';
 import { validateImageStoreKey, validatePrivateDocumentKey } from '../utils/imageStoreKey';
 import { insertImage, type ImageRow } from '../db/images/imageWrites';
+
+/**
+ * SHA-256 of the bytes a private object holds, lowercase hex.
+ *
+ * Returned by both private upload paths so a caller can record WHAT it stored
+ * rather than only where. `lease_documents.content_sha256` is the one consumer
+ * today, and it exists so a lease signature can bind to a document's contents
+ * (#518 §7.4) — a row names a bucket key, and a key is a location, not a fact
+ * about what is at it.
+ *
+ * Computed HERE rather than at the call site for one reason: only this module
+ * knows which bytes were actually written. `uploadPrivateImage` re-encodes to
+ * WebP, so a caller hashing the buffer it handed in would record a digest of
+ * bytes that were never stored and can never be served.
+ */
+function privateObjectDigest(bytes: Buffer): string {
+  return createHash('sha256').update(bytes).digest('hex');
+}
 
 /**
  * Filesystem root of the self-hosted LOCAL image store. Used only when object
@@ -524,7 +543,14 @@ export class ImageUploadService {
     buffer: Buffer,
     mimetype: string,
     folder: string,
-  ): Promise<{ key: string; contentType: string; bytes: number; width?: number; height?: number }> {
+  ): Promise<{
+    key: string;
+    contentType: string;
+    bytes: number;
+    sha256: string;
+    width?: number;
+    height?: number;
+  }> {
     const source = sharp(buffer, SHARP_DECODE_OPTIONS);
     const metadata = await source.metadata();
     // WebP for everything: one output type means the delivery route's
@@ -545,6 +571,9 @@ export class ImageUploadService {
       key,
       contentType: 'image/webp',
       bytes: processed.length,
+      // Of the PROCESSED bytes, which are the only ones anybody can ever be
+      // shown. See {@link privateObjectDigest}.
+      sha256: privateObjectDigest(processed),
       ...(metadata.width === undefined ? {} : { width: metadata.width }),
       ...(metadata.height === undefined ? {} : { height: metadata.height }),
     };
@@ -582,10 +611,12 @@ export class ImageUploadService {
     contentType: string,
     folder: string,
     extension: string,
-  ): Promise<{ key: string; contentType: string; bytes: number }> {
+  ): Promise<{ key: string; contentType: string; bytes: number; sha256: string }> {
     const key = `private/${folder}/${uuidv4()}${extension}`;
     await this.putPrivateObject(buffer, key, contentType);
-    return { key, contentType, bytes: buffer.length };
+    // Verbatim storage, so the digest of what arrived IS the digest of what is
+    // stored — unlike the image path, where it deliberately is not.
+    return { key, contentType, bytes: buffer.length, sha256: privateObjectDigest(buffer) };
   }
 
   /**

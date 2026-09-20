@@ -1013,6 +1013,24 @@
       "column": {
         "payment": "الدفعة",
         "method": "الطريقة"
+      },
+      "coTenantPending": "في انتظار توقيع أحد المستأجرين المشاركين",
+      "signedDocument": "وقّع «{{name}}» والشروط المعروضة",
+      "signedDocumentUnhashed": "وقّع «{{name}}»: لم يُسجَّل محتواه",
+      "signedTermsOnly": "وقّع الشروط؛ لم يكن هناك مستند مرفق",
+      "signatureStale": "تم التوقيع قبل آخر تعديل",
+      "amendedInvalidates": "التوقيعات السابقة لم تعد مطابقة للشروط",
+      "documentSigned": "موقَّع",
+      "signingDocument": "أنت توقّع «{{name}}» مع الشروط المعروضة أعلاه.",
+      "signingTermsOnly": "لا يوجد مستند مرفق، لذا فأنت توقّع الشروط المعروضة أعلاه.",
+      "event": {
+        "created": "تم إنشاء المسودة",
+        "amended": "تم تعديل الشروط",
+        "signed": "تم التوقيع",
+        "activated": "العقد ساري",
+        "document_added": "تمت إضافة مستند",
+        "terminated": "تم تسليم إشعار الإنهاء",
+        "renewed": "تم التجديد"
       }
     }
   },

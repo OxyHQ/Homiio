@@ -1009,6 +1009,24 @@
       "column": {
         "payment": "Paiement",
         "method": "Moyen"
+      },
+      "coTenantPending": "Signature d'un colocataire en attente",
+      "signedDocument": "A signé « {{name}} » et les conditions affichées",
+      "signedDocumentUnhashed": "A signé « {{name}} » : son contenu n'a pas été enregistré",
+      "signedTermsOnly": "A signé les conditions ; aucun document n'était joint",
+      "signatureStale": "Signé avant la dernière modification",
+      "amendedInvalidates": "Les signatures antérieures ne correspondent plus aux conditions",
+      "documentSigned": "Signé",
+      "signingDocument": "Vous allez signer « {{name}} » ainsi que les conditions ci-dessus.",
+      "signingTermsOnly": "Aucun document n'est joint : vous signez donc les conditions ci-dessus.",
+      "event": {
+        "created": "Brouillon créé",
+        "amended": "Conditions modifiées",
+        "signed": "Signé",
+        "activated": "Bail actif",
+        "document_added": "Document ajouté",
+        "terminated": "Préavis de résiliation remis",
+        "renewed": "Renouvelé"
       }
     }
   },

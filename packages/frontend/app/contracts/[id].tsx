@@ -3,14 +3,15 @@
  *
  * Bloom's tenancy family (`@oxy.so/bloom/tenancy`) end to end: the
  * `LeaseSummaryCard` (parties, term and how much of it has run, rent, deposit,
- * the next payment owed), the lease's `TenancyTimeline` (draft, each signature,
- * start, end or outcome), the auto-generated read-only schedule as a
+ * the next payment owed), the lease's `TenancyTimeline` — REAL events now
+ * (#518 §7.4), one row per thing that happened — the read-only schedule as a
  * `RentPaymentList` (populated once the lease is active) and the documents as a
  * `DocumentList`. `components/tenancy/leaseTenancy.ts` maps the lease onto them.
  * From 1024 the history sits in a side column. Actions are role- and
  * status-aware, under the lease card:
- *   - Sign: a party whose signature is still missing (draft / pending_signatures)
- *   - Terminate: a party while the lease is pending_signatures or active
+ *   - Sign: any party whose signature is still missing, CO-TENANTS INCLUDED
+ *     (draft / pending_signatures) — see `canSign` below
+ *   - Terminate: a principal while the lease is pending_signatures or active
  *   - Delete: the landlord while the lease is still a draft
  *   - Add document: any party (the file itself goes to the lease's own
  *     authenticated endpoint, and a PDF is the ordinary case)
@@ -36,7 +37,7 @@ import { LeaseStatus } from '@homiio/shared-types';
 import { Header } from '@/components/Header';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { ContractStatusBadge } from '@/components/ContractStatusBadge';
-import { leaseSummaryProps } from '@/components/tenancy/leaseTenancy';
+import { leaseSummaryProps, signingSubject } from '@/components/tenancy/leaseTenancy';
 import {
   LeaseDocumentsSection,
   LeaseHistorySection,
@@ -97,15 +98,36 @@ export default function ContractDetailScreen() {
     return null;
   }, [lease, profile]);
 
+  /**
+   * The digest of the terms THIS render is showing (#518 §7.4).
+   *
+   * Read out of the query before the callback closes over it: an inline
+   * `lease?.termsSha256` is an optional chain the React Compiler cannot
+   * preserve as a dependency, which is a lint ERROR here rather than a warning.
+   */
+  const shownTermsSha256 = lease?.termsSha256;
+
+  /**
+   * Sign, bound to the version on screen.
+   *
+   * The server refuses the signature if the landlord amended the lease in
+   * between, and the message it sends back is what the toast shows — a failure
+   * a person can act on ("review the new terms"), rather than a signature
+   * quietly attached to something they never read.
+   *
+   * Nothing is sent as the "signature" any more. It used to be the literal
+   * `'accepted-in-app'`, which this file chose and the server stored verbatim
+   * in a column no read could return.
+   */
   const handleSign = useCallback(async () => {
     if (!id) return;
     try {
-      await signMutation.mutateAsync({ signature: 'accepted-in-app', acceptTerms: true });
+      await signMutation.mutateAsync({ acceptTerms: true, termsSha256: shownTermsSha256 });
       toast.success(t('contracts.detail.toastSigned'));
     } catch (error) {
       toast.error(error instanceof Error ? error.message : t('contracts.detail.toastSignFailed'));
     }
-  }, [id, signMutation, t]);
+  }, [id, shownTermsSha256, signMutation, t]);
 
   const handleTerminate = useCallback(async () => {
     if (!id) return;
@@ -133,7 +155,14 @@ export default function ContractDetailScreen() {
       const options = {
         sign: {
           title: t('contracts.detail.confirmSignTitle'),
-          description: t('contracts.detail.confirmSignExtended'),
+          // The dialog NAMES what is about to be signed — the contract document
+          // if the lease has one, the terms alone if it does not (#518 §7.4).
+          // `signingSubject` reproduces the server's own choice rather than
+          // making a second one; naming a different document from the one the
+          // signature records would be worse than naming none.
+          description: lease
+            ? `${t('contracts.detail.confirmSignExtended')}\n\n${signingSubject(lease, format)}`
+            : t('contracts.detail.confirmSignExtended'),
           confirmLabel: t('contracts.detail.confirmSignAction'),
           destructive: false,
           run: handleSign,
@@ -158,7 +187,7 @@ export default function ContractDetailScreen() {
         await run();
       }
     },
-    [handleSign, handleTerminate, handleDelete, t],
+    [format, handleSign, handleTerminate, handleDelete, lease, t],
   );
 
   /**
@@ -264,17 +293,31 @@ export default function ContractDetailScreen() {
   const imageSource = property ? getPropertyImageSource(property) : null;
 
   const isParty = role === 'landlord' || role === 'tenant';
-  const mySignature =
-    role === 'landlord'
-      ? lease.signatures?.landlord
-      : role === 'tenant'
-        ? lease.signatures?.tenant
-        : undefined;
+  /**
+   * Have I already signed? (#518 §7.4)
+   *
+   * Read from `signatureRecords`, which covers all three seats, with the
+   * `signatures` cache as the fallback for a response that predates them. A
+   * CO-TENANT can sign now — they could not before, while the lease listed them
+   * as a party and `isFullySigned` read a status they had no way to reach — so
+   * the old landlord/tenant-only lookup would leave the one person whose
+   * signature the lease is waiting for with no button.
+   */
+  const mySignature = (lease.signatureRecords ?? []).some(
+    (record) => record.signerOxyUserId === profile?.oxyUserId,
+  )
+    ? true
+    : lease.signatureRecords
+      ? false
+      : role === 'landlord'
+        ? Boolean(lease.signatures?.landlord?.signed)
+        : role === 'tenant'
+          ? Boolean(lease.signatures?.tenant?.signed)
+          : false;
   const canSign =
-    isParty &&
+    role !== null &&
     (lease.status === LeaseStatus.DRAFT || lease.status === LeaseStatus.PENDING_SIGNATURES) &&
-    Boolean(mySignature) &&
-    !mySignature?.signed;
+    !mySignature;
   const canTerminate =
     isParty &&
     (lease.status === LeaseStatus.ACTIVE || lease.status === LeaseStatus.PENDING_SIGNATURES);
@@ -352,7 +395,10 @@ export default function ContractDetailScreen() {
         lease={lease}
         format={format}
         action={
-          isParty ? (
+          // Any party, co-tenants included — which is what the endpoint has
+          // always accepted. `isParty` here would hide the button from exactly
+          // the people this change lets sign.
+          role !== null ? (
             <Button
               variant="secondary"
               size="small"

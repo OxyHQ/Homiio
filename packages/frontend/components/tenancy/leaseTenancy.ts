@@ -19,7 +19,10 @@ import {
   LeaseStatus,
   type Lease,
   type LeaseDocument,
+  type LeaseEvent,
+  type LeaseEventType,
   type LeasePayment,
+  type LeaseSignatureRecord,
 } from '@homiio/shared-types';
 import type {
   LeaseNextPayment,
@@ -237,12 +240,26 @@ function documentType(document: LeaseDocument): TenancyDocumentType {
   return 'other';
 }
 
-/** The lease's documents as `DocumentList` rows: the kind of document and when it was added. */
+/**
+ * The lease's documents as `DocumentList` rows: the kind of document, when it
+ * was added, and whether anybody has SIGNED it (#518 §7.4).
+ *
+ * The signed marker is drawn from `signatureRecords[].documentId` and from
+ * nothing else. A screen that inferred it — "this is the lease agreement, and
+ * the lease is signed, so this is the signed one" — would tick a document
+ * uploaded after the signatures were made, which is exactly the claim the
+ * content digest exists to stop anybody making.
+ */
 export function leaseDocuments(
   lease: Lease,
   { t }: LeaseFormatContext,
   onView: (document: LeaseDocument) => void,
 ): TenancyDocument[] {
+  const signedDocumentIds = new Set(
+    (lease.signatureRecords ?? [])
+      .map((signature) => signature.documentId)
+      .filter((id): id is string => Boolean(id)),
+  );
   return (lease.documents ?? []).map((document) => ({
     id: document.id,
     name: document.name,
@@ -250,17 +267,177 @@ export function leaseDocuments(
     date: [t(`contracts.documentType.${document.type}`), formatLeaseDate(document.uploadedDate)]
       .filter((part) => part && part !== '—')
       .join(' · '),
+    ...(signedDocumentIds.has(document.id)
+      ? {
+          status: 'signed' as const,
+          statusLabel: t('contracts.tenancy.documentSigned'),
+        }
+      : {}),
     onView: () => onView(document),
   }));
 }
 
+/** The tone each recorded event is drawn in. Absent means Bloom's default. */
+const EVENT_TONE: Partial<Record<LeaseEventType, TenancyTimelineEvent['tone']>> = {
+  signed: 'success',
+  activated: 'success',
+  amended: 'warning',
+  terminated: 'error',
+};
+
 /**
- * The lease's history, oldest first: the draft, each party's signature, the
- * start and the end. A signature still missing is the CURRENT step while the
- * lease awaits it; dates not yet reached are upcoming. A terminated or cancelled
- * lease ends on that outcome instead of on an end date it never reached.
+ * The line under a `signed` entry: WHAT that person signed (#518 §7.4).
+ *
+ * Every branch describes a real state of the signature row, and the one that
+ * matters most is the third: a document that predates content hashing is bound
+ * by id and not by contents, so the screen says so instead of implying the
+ * bytes were checked. Saying nothing at all would be the same claim, made
+ * silently.
  */
-export function leaseTimeline(lease: Lease, { t, now = new Date() }: LeaseFormatContext): TenancyTimelineEvent[] {
+function signatureDescription(
+  signature: LeaseSignatureRecord,
+  t: TFunction,
+): string {
+  const bound = signature.documentName
+    ? signature.documentSha256
+      ? t('contracts.tenancy.signedDocument', { name: signature.documentName })
+      : t('contracts.tenancy.signedDocumentUnhashed', { name: signature.documentName })
+    : t('contracts.tenancy.signedTermsOnly');
+  return signature.bindsCurrentTerms
+    ? bound
+    : `${bound} · ${t('contracts.tenancy.signatureStale')}`;
+}
+
+/** One recorded event as a timeline entry. Everything here happened. */
+function recordedEvent(
+  event: LeaseEvent,
+  lease: Lease,
+  { t, resolveParty }: LeaseFormatContext,
+): TenancyTimelineEvent {
+  const signature = (lease.signatureRecords ?? []).find(
+    (record) => event.type === 'signed' && record.signerOxyUserId === event.actorOxyUserId,
+  );
+  const actor = event.actorOxyUserId ? resolveParty(event.actorOxyUserId) : null;
+  const description =
+    event.type === 'signed' && signature
+      ? signatureDescription(signature, t)
+      : event.type === 'amended'
+        ? t('contracts.tenancy.amendedInvalidates')
+        : // `detail` is the document's name or the termination's reason — the
+          // server's verbatim datum, never a phrase to translate. A `renewed`
+          // entry's detail is the new lease's id, which is not something to
+          // show a person, so it is left off.
+          event.type === 'document_added' || event.type === 'terminated'
+          ? event.detail
+          : undefined;
+  return {
+    id: `event-${event.id}`,
+    title: t(`contracts.tenancy.event.${event.type}`),
+    date: formatLeaseDate(event.occurredAt),
+    ...(actor ? { actor: actor.name } : {}),
+    ...(description ? { description } : {}),
+    state: 'complete',
+    ...(EVENT_TONE[event.type] ? { tone: EVENT_TONE[event.type] } : {}),
+  };
+}
+
+/** Whose signature the lease is still waiting for, in party order. */
+function pendingSignatories(lease: Lease, { t, resolveParty }: LeaseFormatContext): TenancyTimelineEvent[] {
+  const signed = new Set((lease.signatureRecords ?? []).map((record) => record.signerOxyUserId));
+  const seats: { id: string; oxyUserId: string; label: string }[] = [
+    { id: 'landlord', oxyUserId: lease.landlordOxyUserId, label: t('contracts.tenancy.landlordPending') },
+    { id: 'tenant', oxyUserId: lease.tenantOxyUserId, label: t('contracts.tenancy.tenantPending') },
+    ...(lease.coTenants ?? []).map((coTenant, index) => ({
+      id: `cotenant-${index}`,
+      oxyUserId: coTenant.oxyUserId,
+      label: t('contracts.tenancy.coTenantPending'),
+    })),
+  ];
+  return seats
+    .filter((seat) => seat.oxyUserId && !signed.has(seat.oxyUserId))
+    .map((seat) => {
+      const identity = resolveParty(seat.oxyUserId);
+      return {
+        id: `pending-${seat.id}`,
+        title: seat.label,
+        ...(identity ? { actor: identity.name } : {}),
+        state: 'current' as const,
+        tone: 'warning' as const,
+      };
+    });
+}
+
+/**
+ * The lease's history, oldest first — from EVENT ROWS (#518 §7.4, #519 §7.4).
+ *
+ * This used to invent the whole thing on every render out of `createdAt`, the
+ * two signature booleans and the two term dates, so a document arriving or a
+ * notice being served could not appear at all and "the landlord signed" was a
+ * boolean redrawn as history. Each entry is now a row the server wrote when the
+ * thing happened.
+ *
+ * Three kinds of entry, and the difference between them is what they claim:
+ *
+ *  - **Recorded events** — `state: 'complete'`, because each one is a fact.
+ *  - **Pending signatures** — `state: 'current'`. Not events and never drawn as
+ *    such: nobody signing is not something that happened, it is something that
+ *    has not. They are here because "whose signature are we waiting for" is the
+ *    question the screen exists to answer while a lease is unsigned.
+ *  - **The term's dates** — scheduled facts about the lease rather than history,
+ *    marked `complete` only once they are in the past. A terminated or
+ *    cancelled lease gets no end date at all, because it did not reach one; its
+ *    `terminated` event is already in the list above.
+ *
+ * ## The fallback, and why it is not a fallback for very long
+ *
+ * A lease created before migration 0028 has no event rows, and the list read
+ * does not load them at all. `events === undefined` and `events: []` are
+ * therefore both possible and neither means "nothing happened", so the old
+ * derivation is kept for exactly that case — a legacy lease with an empty
+ * history renders what it always did instead of an empty column.
+ */
+export function leaseTimeline(lease: Lease, context: LeaseFormatContext): TenancyTimelineEvent[] {
+  const { t, now = new Date() } = context;
+  const recorded = lease.events ?? [];
+  if (recorded.length === 0) return legacyLeaseTimeline(lease, context);
+
+  const closed =
+    lease.status === LeaseStatus.TERMINATED || lease.status === LeaseStatus.CANCELLED;
+  const events: TenancyTimelineEvent[] = [
+    ...recorded.map((event) => recordedEvent(event, lease, context)),
+    ...pendingSignatories(lease, context),
+  ];
+
+  const startDate = toDate(lease.leaseTerms?.startDate);
+  events.push({
+    id: 'start',
+    title: t('contracts.tenancy.starts'),
+    date: formatLeaseDate(lease.leaseTerms?.startDate),
+    state: startDate && startDate <= now ? 'complete' : 'upcoming',
+  });
+  if (!closed) {
+    const endDate = toDate(lease.leaseTerms?.endDate);
+    events.push({
+      id: 'end',
+      title: t('contracts.tenancy.ends'),
+      date: formatLeaseDate(lease.leaseTerms?.endDate),
+      state: endDate && endDate <= now ? 'complete' : 'upcoming',
+    });
+  }
+  return events;
+}
+
+/**
+ * The pre-0028 derivation, for a lease that carries no event rows.
+ *
+ * Unchanged from what every lease used to get. It is kept whole rather than
+ * blended into the function above, so there is no shape in which half a
+ * timeline is real and half is inferred with nothing to tell them apart.
+ */
+function legacyLeaseTimeline(
+  lease: Lease,
+  { t, now = new Date() }: LeaseFormatContext,
+): TenancyTimelineEvent[] {
   const awaitingSignatures =
     lease.status === LeaseStatus.DRAFT || lease.status === LeaseStatus.PENDING_SIGNATURES;
   const signature = (
@@ -301,4 +478,21 @@ export function leaseTimeline(lease: Lease, { t, now = new Date() }: LeaseFormat
     events.push(dated('end', t('contracts.tenancy.ends'), lease.leaseTerms?.endDate));
   }
   return events;
+}
+
+/**
+ * What a party is about to sign, for the confirmation dialog (#518 §7.4).
+ *
+ * The SERVER decides the binding — the most recent `lease_agreement` document,
+ * or the terms alone — so this reproduces that choice rather than making one:
+ * a dialog naming a different document from the one the signature records would
+ * be worse than a dialog naming none.
+ */
+export function signingSubject(lease: Lease, { t }: LeaseFormatContext): string {
+  const contract = [...(lease.documents ?? [])]
+    .filter((document) => document.type === 'lease_agreement')
+    .sort((a, b) => (toDate(b.uploadedDate)?.getTime() ?? 0) - (toDate(a.uploadedDate)?.getTime() ?? 0))[0];
+  return contract
+    ? t('contracts.tenancy.signingDocument', { name: contract.name })
+    : t('contracts.tenancy.signingTermsOnly');
 }
