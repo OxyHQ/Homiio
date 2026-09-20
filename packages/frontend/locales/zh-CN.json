@@ -2950,7 +2950,10 @@
       "toastBlockFailed": "Block failed",
       "propertyNotFound": "Property not found",
       "property": "Property",
-      "blockDates": "封锁日期"
+      "blockDates": "封锁日期",
+      "legendExchange": "换房已确认",
+      "legendExchangePending": "已申请换房",
+      "bookingsError": "无法加载预订"
     },
     "reservations": {
       "title": "Reservations",
@@ -4010,6 +4013,23 @@
       "needDates": "先选择日期，才能看到这次入住的花费。",
       "cost": "这几晚需要 {{count}} 分，你有 {{available}} 分。",
       "short": "这次入住需要 {{count}} 分，你只有 {{available}} 分。"
+    }
+  },
+  "bookings": {
+    "kind": {
+      "stay": "住宿",
+      "swap": "换房",
+      "viewing": "看房"
+    },
+    "upcoming": {
+      "title": "即将到来",
+      "emptyTitle": "还没有预订",
+      "emptyDescription": "已确认的住宿、换房和看房会连同日期显示在这里。",
+      "loadError": "无法加载你的预订",
+      "loadErrorPartial": "部分预订无法加载",
+      "allStays": "所有住宿",
+      "allSwaps": "所有换房请求",
+      "allViewings": "所有看房"
     }
   }
 }

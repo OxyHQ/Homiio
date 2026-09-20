@@ -1,107 +1,49 @@
 /**
- * Upcoming stays and swaps as Bloom `TripCard`s — the booking summaries the
- * housing template puts beside saved searches.
+ * Upcoming stays and swaps on Saved, as Bloom `TripCard`s.
  *
- * Built only from what Homiio records: the reservations the person booked as a
- * guest and the exchange requests they sent, each still pending or confirmed
- * and not yet over. The card shows the listing's cover, title and PUBLISHED
- * location label (ADR 0003 — never the street address), the dates and the
- * status. There are no "Message host" or "Directions" actions: a reservation
- * carries no conversation, and directions would need a precise address the
- * listing does not publish.
+ * ## Does a trip card belong on a collection surface at all?
  *
- * With nothing upcoming the section renders nothing at all.
+ * Yes, and the reason is the status it shows rather than the card. Saved is
+ * where somebody keeps what they are CONSIDERING — searches they have not run
+ * again, homes they have not decided about — so a swap request awaiting an
+ * answer is the same kind of object as the rest of the page, and this is the
+ * one surface that shows PENDING rows. What is already committed is a different
+ * question, answered on My home, which asks for confirmed rows only. The split
+ * is `statuses`, one argument, not two components.
+ *
+ * Viewings are deliberately NOT here. A viewing is a tour of a rental somebody
+ * is applying for, not a trip, and it has its own screen; adding it to a
+ * section headed "Upcoming stays and swaps" would make the heading a lie.
+ *
+ * ## A failed fetch is not an empty diary
+ *
+ * This section used to `return null` whenever the list came back empty — which
+ * a failed request also does. A person whose reservations endpoint 500s was
+ * shown a page with no trips section, indistinguishable from having no trips.
+ * It now says so, and keeps whichever rows DID arrive.
+ *
+ * The classification (what counts as upcoming, and until when) lives in
+ * `utils/upcomingBookings.ts` and is shared with My home.
  */
-import React, { useMemo } from 'react';
+import React from 'react';
 import { View, type StyleProp, type ViewStyle } from 'react-native';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { useQuery } from '@tanstack/react-query';
 
-import { TripCard, type TripStatus } from '@oxy.so/bloom/booking';
+import { Announcement } from '@oxy.so/bloom/announcement';
 import { Button } from '@oxy.so/bloom/button';
-import { RiArrowRightSLine } from '@oxy.so/bloom/icons';
-import {
-  ExchangeRequestStatus,
-  ReservationStatus,
-  formatDateRange,
-  type ExchangeMode,
-} from '@homiio/shared-types';
+import { RiAlertLine, RiArrowRightSLine } from '@oxy.so/bloom/icons';
 
-import { useMyExchangeRequests } from '@/hooks/useExchangeQueries';
-import { useReservationsQuery } from '@/hooks/useReservationQueries';
-import { propertyService } from '@/services/propertyService';
-import { useFormatting } from '@/utils/format';
-import {
-  getPropertyLocationLabel,
-  getPropertyPhotoUrls,
-  getPropertyTitle,
-} from '@/utils/propertyUtils';
+import { BookingTripCard } from '@/components/bookings/BookingTripCard';
+import { ErrorState } from '@/components/ui/ErrorState';
+import { ListSkeleton } from '@/components/ui/ListSkeleton';
+import { useUpcomingBookings } from '@/hooks/useUpcomingBookings';
+import { OPEN_STATUSES } from '@/utils/upcomingBookings';
 
 import { SavedSection } from './SavedSection';
 
 /** How many upcoming trips the section lists before "All stays" / "All swaps". */
 const MAX_TRIPS = 4;
-
-interface UpcomingTrip {
-  readonly key: string;
-  readonly kind: 'stay' | 'swap';
-  readonly id: string;
-  readonly propertyId: string;
-  readonly start: string;
-  readonly end: string;
-  readonly status: TripStatus;
-  readonly mode?: ExchangeMode;
-}
-
-const isOpen = (status: string): status is 'pending' | 'confirmed' =>
-  status === ReservationStatus.PENDING ||
-  status === ReservationStatus.CONFIRMED ||
-  status === ExchangeRequestStatus.PENDING ||
-  status === ExchangeRequestStatus.CONFIRMED;
-
-/** Not over yet: the last day is today or later. */
-const notOver = (end: string, now: Date): boolean => {
-  const time = new Date(end).getTime();
-  return Number.isFinite(time) && time >= now.getTime() - 24 * 60 * 60 * 1000;
-};
-
-function TripItem({ trip }: { trip: UpcomingTrip }) {
-  const { t } = useTranslation();
-  const { locale } = useFormatting();
-  // The same key and fetcher as `useProperty`, so the detail screen opens warm.
-  const { data: property } = useQuery({
-    queryKey: ['property', trip.propertyId],
-    queryFn: () => propertyService.getPropertyById(trip.propertyId),
-    staleTime: 1000 * 30,
-    gcTime: 1000 * 60 * 10,
-  });
-
-  const title = property ? getPropertyTitle(property) : t('reservations.card.propertyFallback');
-  const place = property ? getPropertyLocationLabel(property) : '';
-  const subtitle =
-    trip.kind === 'swap' && trip.mode
-      ? [t(`listing.exchange.mode.${trip.mode}`), place].filter(Boolean).join(' · ')
-      : place || undefined;
-  const image = property
-    ? getPropertyPhotoUrls(property.images, property.coverImageIndex, 'medium')[0]
-    : undefined;
-
-  return (
-    <TripCard
-      image={image}
-      title={title}
-      subtitle={subtitle}
-      // Stay dates are civil dates stored at midnight UTC; formatting them in
-      // UTC keeps a check-in from sliding to the previous day west of Greenwich.
-      dates={formatDateRange(trip.start, trip.end, locale, 'UTC', { dateStyle: 'medium' }) || undefined}
-      status={trip.status}
-      statusLabel={t(`statusBadge.reservation.${trip.status}`)}
-      onPress={() => router.push(trip.kind === 'stay' ? `/reservations/${trip.id}` : `/exchange/${trip.id}`)}
-      testID={`saved-trip-${trip.key}`}
-    />
-  );
-}
 
 export function UpcomingTripsSection({
   enabled,
@@ -111,74 +53,72 @@ export function UpcomingTripsSection({
   style?: StyleProp<ViewStyle>;
 }) {
   const { t } = useTranslation();
-  const reservations = useReservationsQuery({ limit: 50 }, { enabled });
-  const exchanges = useMyExchangeRequests({ limit: 50 }, { enabled });
+  const bookings = useUpcomingBookings({ enabled, statuses: OPEN_STATUSES });
+  const { items, isPending, isError, isPartial } = bookings;
 
-  const reservationItems = reservations.data?.items;
-  const exchangeItems = exchanges.data?.items;
+  // Nothing upcoming, nothing failing: the section stays out of the page
+  // entirely, as it always has. An empty state here would push the saved homes
+  // down the screen to say nothing.
+  if (!enabled || (!isPending && !isError && items.length === 0)) return null;
 
-  // `dataUpdatedAt` as "now" keeps the render pure; it advances on every refetch.
-  const now = Math.max(reservations.dataUpdatedAt, exchanges.dataUpdatedAt);
-
-  const trips = useMemo<UpcomingTrip[]>(() => {
-    const at = new Date(now);
-    const stays: UpcomingTrip[] = (reservationItems ?? [])
-      .filter((r) => isOpen(r.status) && notOver(r.checkOut, at))
-      .map((r) => ({
-        key: `stay-${r.id}`,
-        kind: 'stay',
-        id: r.id,
-        propertyId: r.propertyId,
-        start: r.checkIn,
-        end: r.checkOut,
-        status: r.status as TripStatus,
-      }));
-    const swaps: UpcomingTrip[] = (exchangeItems ?? [])
-      .filter((x) => isOpen(x.status) && notOver(x.requestedWindow.end, at))
-      .map((x) => ({
-        key: `swap-${x.id}`,
-        kind: 'swap',
-        id: x.id,
-        propertyId: x.propertyId,
-        start: x.requestedWindow.start,
-        end: x.requestedWindow.end,
-        status: x.status as TripStatus,
-        mode: x.mode,
-      }));
-    return [...stays, ...swaps].sort(
-      (a, b) => new Date(a.start).getTime() - new Date(b.start).getTime(),
-    );
-  }, [reservationItems, exchangeItems, now]);
-
-  if (!enabled || trips.length === 0) return null;
-
-  const hasStays = trips.some((trip) => trip.kind === 'stay');
-  const hasSwaps = trips.some((trip) => trip.kind === 'swap');
+  const hasStays = items.some((booking) => booking.kind === 'stay');
+  const hasSwaps = items.some((booking) => booking.kind === 'swap');
 
   return (
     <SavedSection title={t('saved.sections.trips')} style={style} testID="saved-trips">
-      <View style={{ gap: 12 }}>
-        {trips.slice(0, MAX_TRIPS).map((trip) => (
-          <TripItem key={trip.key} trip={trip} />
-        ))}
-      </View>
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-        {hasStays ? (
-          <Button variant="ghost" size="small" trailingIcon={RiArrowRightSLine} onPress={() => router.push('/stays')}>
-            {t('saved.trips.allStays')}
-          </Button>
-        ) : null}
-        {hasSwaps ? (
-          <Button
-            variant="ghost"
-            size="small"
-            trailingIcon={RiArrowRightSLine}
-            onPress={() => router.push('/exchange/requests')}
-          >
-            {t('saved.trips.allSwaps')}
-          </Button>
-        ) : null}
-      </View>
+      {isPending ? <ListSkeleton rows={2} rowHeight={140} /> : null}
+
+      {isError && items.length === 0 ? (
+        <ErrorState
+          icon={RiAlertLine}
+          title={t('bookings.upcoming.loadError')}
+          description={bookings.error?.message}
+          retryLabel={t('common.retry')}
+          onRetry={bookings.refetch}
+        />
+      ) : null}
+
+      {items.length > 0 ? (
+        <View style={{ gap: 12 }}>
+          {isPartial ? (
+            <Announcement
+              icon={RiAlertLine}
+              title={t('bookings.upcoming.loadErrorPartial')}
+              description={bookings.error?.message}
+              actionLabel={t('common.retry')}
+              onAction={bookings.refetch}
+            />
+          ) : null}
+          {items.slice(0, MAX_TRIPS).map((booking) => (
+            <BookingTripCard key={booking.key} booking={booking} testIDPrefix="saved-trip" />
+          ))}
+        </View>
+      ) : null}
+
+      {hasStays || hasSwaps ? (
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+          {hasStays ? (
+            <Button
+              variant="ghost"
+              size="small"
+              trailingIcon={RiArrowRightSLine}
+              onPress={() => router.push('/stays')}
+            >
+              {t('saved.trips.allStays')}
+            </Button>
+          ) : null}
+          {hasSwaps ? (
+            <Button
+              variant="ghost"
+              size="small"
+              trailingIcon={RiArrowRightSLine}
+              onPress={() => router.push('/exchange/requests')}
+            >
+              {t('saved.trips.allSwaps')}
+            </Button>
+          ) : null}
+        </View>
+      ) : null}
     </SavedSection>
   );
 }

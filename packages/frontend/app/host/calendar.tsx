@@ -11,6 +11,30 @@
  * `Dialog` holding a `RangeCalendar`, with booked, blocked and past days
  * unavailable. Availability windows are half-open `[start, end)`, matching the
  * backend, so the chosen last day is extended by one.
+ *
+ * ## Exchanges are on it now (#518 §7.5)
+ *
+ * This screen drew blocked windows plus reservations and nothing else, so a
+ * host with an ACCEPTED SWAP saw those nights free on the one surface they plan
+ * from — the same defect PR #539 fixed on the server, still standing here. A
+ * confirmed swap takes the home exactly as a paid stay does.
+ *
+ * They are not read from the availability projection, deliberately. That
+ * endpoint is public and says only `{ start, end, status }` with no exchange
+ * id and no hint that a night is a swap rather than a booking — which is what
+ * makes it safe to publish, and useless for a host who needs to tell the two
+ * apart and open the row. The host's own exchange lists carry both, and BOTH
+ * sides of them are read: a swap the host proposed, offering this home in
+ * return, commits it as much as one they accepted, and only appears in the
+ * guest-side list (`exchangeSpansForProperty` states the rule).
+ *
+ * ## A failed booking fetch replaces the grid
+ *
+ * Reservations and exchanges are merged client-side, so a failed fetch used to
+ * subtract spans silently: the grid stayed up, showing taken nights as free,
+ * and the host could block or accept over them. Any of the three failing now
+ * puts an error in place of the grid, because a calendar that is quietly
+ * incomplete is worse than one that admits it.
  */
 import React, { useCallback, useMemo, useState } from 'react';
 import { Platform, ScrollView, StyleSheet, View } from 'react-native';
@@ -67,6 +91,7 @@ import { useTranslation } from 'react-i18next';
 import {
   AvailabilityWindow,
   AvailabilityWindowStatus,
+  ExchangeRequest,
   Property,
   Reservation,
   ReservationStatus,
@@ -80,7 +105,9 @@ import {
   usePropertyAvailabilityQuery,
   useReservationsQuery,
 } from '@/hooks/useReservationQueries';
+import { useMyExchangeRequests } from '@/hooks/useExchangeQueries';
 import { useUserProperties } from '@/hooks/usePropertyQueries';
+import { exchangeSpansForProperty } from '@/utils/upcomingBookings';
 import { propertyService } from '@/services/propertyService';
 import { getPropertyTitle } from '@/utils/propertyUtils';
 import { getFormatLocale } from '@/utils/dateLocale';
@@ -89,18 +116,27 @@ import { radius, spacing } from '@/constants/styles';
 /** Web scrolls the document; native screens own their ScrollView. */
 const IS_WEB = Platform.OS === 'web';
 
-type SpanKind = 'confirmed' | 'pending' | 'blocked';
+type SpanKind = 'confirmed' | 'pending' | 'blocked' | 'exchangeConfirmed' | 'exchangePending';
 
 interface Span {
   kind: SpanKind;
+  /** Unique per span; also the prefix of every event chip id it produces. */
+  key: string;
   /** Inclusive start day. */
   start: Date;
   /** Exclusive end day (half-open, as stored). */
   end: Date;
-  reservationId?: string;
+  /** Where pressing a chip goes. A blocked window opens nothing. */
+  route?: string;
 }
 
-/** Event chip colour per span kind, and the legend Chip hue closest to it. */
+/**
+ * Event chip colour per span kind, and the legend Chip hue closest to it.
+ *
+ * A swap gets its own colour rather than sharing the reservation's: the host is
+ * deciding whether they can accept something else, and "taken by a swap" and
+ * "taken by a paying guest" are different answers to that.
+ */
 const SPAN_STYLE: Record<
   SpanKind,
   { event: CalendarViewEventColor; hue: ChipHue; i18nKey: string }
@@ -108,34 +144,65 @@ const SPAN_STYLE: Record<
   confirmed: { event: 'lime', hue: 'lime', i18nKey: 'host.calendar.legendConfirmed' },
   pending: { event: 'blue', hue: 'blue', i18nKey: 'host.calendar.legendPending' },
   blocked: { event: 'pink', hue: 'rose', i18nKey: 'host.calendar.legendBlocked' },
+  exchangeConfirmed: {
+    event: 'emerald',
+    hue: 'cyan',
+    i18nKey: 'host.calendar.legendExchange',
+  },
+  exchangePending: {
+    event: 'purple',
+    hue: 'purple',
+    i18nKey: 'host.calendar.legendExchangePending',
+  },
 };
 
 const toSpan = (
   kind: SpanKind,
+  key: string,
   start: string,
   end: string,
-  reservationId?: string,
+  route?: string,
 ): Span | null => {
   const s = startOfDay(new Date(start));
   const e = startOfDay(new Date(end));
   if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime()) || !isBefore(s, e)) return null;
-  return { kind, start: s, end: e, reservationId };
+  return { kind, key, start: s, end: e, route };
 };
 
 const buildSpans = (
   windows: AvailabilityWindow[] | undefined,
   reservations: Reservation[],
+  exchanges: readonly (readonly ExchangeRequest[] | undefined)[],
+  propertyId: string | null,
 ): Span[] => {
   const spans: Span[] = [];
-  for (const window of windows ?? []) {
-    if (window.status !== AvailabilityWindowStatus.BLOCKED) continue;
-    const span = toSpan('blocked', window.start, window.end);
+  (windows ?? []).forEach((window, index) => {
+    if (window.status !== AvailabilityWindowStatus.BLOCKED) return;
+    const span = toSpan('blocked', `blocked-${index}`, window.start, window.end);
     if (span) spans.push(span);
-  }
+  });
   for (const reservation of reservations) {
     const kind = reservation.status === ReservationStatus.CONFIRMED ? 'confirmed' : 'pending';
-    const span = toSpan(kind, reservation.checkIn, reservation.checkOut, reservation.id);
+    const span = toSpan(
+      kind,
+      `stay-${reservation.id}`,
+      reservation.checkIn,
+      reservation.checkOut,
+      `/reservations/${reservation.id}`,
+    );
     if (span) spans.push(span);
+  }
+  if (propertyId) {
+    for (const exchange of exchangeSpansForProperty(exchanges, propertyId)) {
+      const span = toSpan(
+        exchange.status === 'confirmed' ? 'exchangeConfirmed' : 'exchangePending',
+        `swap-${exchange.key}`,
+        exchange.start,
+        exchange.end,
+        `/exchange/${exchange.exchangeId}`,
+      );
+      if (span) spans.push(span);
+    }
   }
   return spans;
 };
@@ -179,6 +246,13 @@ export default function HostCalendarScreen() {
     { asHost: true, limit: 100 },
     { enabled: isAuthed },
   );
+  // Both sides: the host inbox holds swaps INTO this home, and the guest-side
+  // list holds swaps the viewer proposed OFFERING it. Either commits it.
+  const hostExchangesQuery = useMyExchangeRequests(
+    { asHost: true, limit: 100 },
+    { enabled: isAuthed },
+  );
+  const guestExchangesQuery = useMyExchangeRequests({ limit: 100 }, { enabled: isAuthed });
 
   const reservationsForProperty = useMemo<Reservation[]>(() => {
     if (!effectivePropertyId) return [];
@@ -193,23 +267,48 @@ export default function HostCalendarScreen() {
   }, [effectivePropertyId, hostReservationsQuery.data?.items]);
 
   const spans = useMemo(
-    () => buildSpans(availabilityQuery.data?.windows, reservationsForProperty),
-    [availabilityQuery.data?.windows, reservationsForProperty],
+    () =>
+      buildSpans(
+        availabilityQuery.data?.windows,
+        reservationsForProperty,
+        [hostExchangesQuery.data?.items, guestExchangesQuery.data?.items],
+        effectivePropertyId,
+      ),
+    [
+      availabilityQuery.data?.windows,
+      reservationsForProperty,
+      hostExchangesQuery.data?.items,
+      guestExchangesQuery.data?.items,
+      effectivePropertyId,
+    ],
   );
+
+  /**
+   * Any list missing makes the grid WRONG rather than sparse, so the three are
+   * one condition. The availability query keeps its own branch below because
+   * its failure means there is no calendar at all.
+   */
+  const bookingsQueries = [hostReservationsQuery, hostExchangesQuery, guestExchangesQuery];
+  const bookingsError = bookingsQueries.find((query) => query.isError)?.error;
+  const refetchBookings = useCallback(() => {
+    void hostReservationsQuery.refetch();
+    void hostExchangesQuery.refetch();
+    void guestExchangesQuery.refetch();
+  }, [hostReservationsQuery, hostExchangesQuery, guestExchangesQuery]);
 
   /** One event chip per day of each span, limited to the six weeks the grid shows. */
   const events = useMemo<CalendarViewEvent[]>(() => {
     const gridStart = subDays(startOfMonth(month), 7);
     const gridEnd = addDays(endOfMonth(month), 14);
     const out: CalendarViewEvent[] = [];
-    spans.forEach((span, index) => {
+    spans.forEach((span) => {
       const first = maxDate([span.start, gridStart]);
       const last = minDate([subDays(span.end, 1), gridEnd]);
       if (isBefore(last, first)) return;
       const style = SPAN_STYLE[span.kind];
       for (const date of eachDayOfInterval({ start: first, end: last })) {
         out.push({
-          id: `${span.reservationId ?? `blocked-${index}`}:${format(date, 'yyyyMMdd')}`,
+          id: `${span.key}@${format(date, 'yyyyMMdd')}`,
           date,
           title: t(style.i18nKey),
           color: style.event,
@@ -219,12 +318,14 @@ export default function HostCalendarScreen() {
     return out;
   }, [month, spans, t]);
 
+  /** Chip ids are `<span key>@<day>`; the span carries where it opens. */
   const handleSelectEvent = useCallback(
     (event: CalendarViewEvent) => {
-      const [key] = event.id.split(':');
-      if (key && !key.startsWith('blocked-')) router.push(`/reservations/${key}`);
+      const key = event.id.split('@')[0];
+      const route = spans.find((span) => span.key === key)?.route;
+      if (route) router.push(route);
     },
-    [router],
+    [router, spans],
   );
 
   const queryClient = useQueryClient();
@@ -434,7 +535,11 @@ export default function HostCalendarScreen() {
                   setMonth((current) => startOfMonth(addDays(endOfMonth(current), 1)))
                 }
                 onSelectDate={(date) => setMonth(startOfMonth(date))}
-                onNewEvent={availabilityQuery.isSuccess ? openDialog : undefined}
+                // No blocking over an incomplete calendar: a block chosen
+                // against missing spans is how a booked night gets double-sold.
+                onNewEvent={
+                  availabilityQuery.isSuccess && !bookingsError ? openDialog : undefined
+                }
                 newEventLabel={t('host.calendar.blockDates')}
                 actions={
                   <View style={styles.legendRow}>
@@ -448,7 +553,8 @@ export default function HostCalendarScreen() {
               />
             </View>
 
-            {availabilityQuery.isLoading ? (
+            {availabilityQuery.isLoading ||
+            bookingsQueries.some((query) => query.isPending && !query.isError) ? (
               <View style={styles.loadingWrap}>
                 <Loading variant="spinner" />
               </View>
@@ -458,6 +564,13 @@ export default function HostCalendarScreen() {
                 title={t('host.calendar.availabilityError')}
                 description={availabilityQuery.error?.message ?? t('host.calendar.tryAgain')}
                 onRetry={() => availabilityQuery.refetch()}
+              />
+            ) : bookingsError ? (
+              <ErrorState
+                icon={RiAlertLine}
+                title={t('host.calendar.bookingsError')}
+                description={bookingsError.message ?? t('host.calendar.tryAgain')}
+                onRetry={refetchBookings}
               />
             ) : (
               <View

@@ -2950,7 +2950,10 @@
       "toastBlockFailed": "Block failed",
       "propertyNotFound": "Property not found",
       "property": "Property",
-      "blockDates": "Block dates"
+      "blockDates": "Block dates",
+      "legendExchange": "Swap confirmed",
+      "legendExchangePending": "Swap requested",
+      "bookingsError": "Bookings could not be loaded"
     },
     "reservations": {
       "title": "Reservations",
@@ -4006,6 +4009,23 @@
       "needDates": "Choose your dates to see what this stay costs.",
       "cost": "{{count}} points for these nights. You have {{available}}.",
       "short": "This stay costs {{count}} points and you have {{available}}."
+    }
+  },
+  "bookings": {
+    "kind": {
+      "stay": "Stay",
+      "swap": "Swap",
+      "viewing": "Viewing"
+    },
+    "upcoming": {
+      "title": "Coming up",
+      "emptyTitle": "Nothing booked yet",
+      "emptyDescription": "Confirmed stays, swaps and viewings appear here with their dates.",
+      "loadError": "Your bookings could not be loaded",
+      "loadErrorPartial": "Some of your bookings could not be loaded",
+      "allStays": "All stays",
+      "allSwaps": "All swap requests",
+      "allViewings": "All viewings"
     }
   }
 }
