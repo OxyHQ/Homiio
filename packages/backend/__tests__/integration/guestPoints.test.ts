@@ -36,6 +36,7 @@ import { getMyGuestPoints } from '../../controllers/guestPointsController';
 import { getDb } from '../../db/postgres';
 import {
   availablePointsOf,
+  findReservation,
   listMovements,
   releaseExpiredReservations,
   reserveStayPoints,
@@ -43,6 +44,12 @@ import {
 } from '../../db/guestPoints/guestPointsLedger';
 import { exchangeRequests, guestPointMovements } from '../../db/schema';
 import { errorHandler } from '../../middlewares/errorHandler';
+import {
+  getCronStatus,
+  initCronJobs,
+  runGuestPointReleaseNow,
+  stopCronJobs,
+} from '../../services/cron';
 import { resetGeoTables, seedListingWithGeo } from '../helpers/postgresGeoFixtures';
 
 const GUEST = 'oxy-points-guest';
@@ -219,6 +226,45 @@ async function seedDetachedExchange(requester: string): Promise<string> {
       status: 'completed',
     })
     .returning({ id: exchangeRequests.id });
+  return row.id;
+}
+
+/**
+ * A PENDING points stay whose dates have already gone by.
+ *
+ * Written through the repository rather than the endpoint, because the endpoint
+ * refuses a window starting in the past — correctly, and that is precisely why
+ * a stay reaches this state by TIME passing rather than by anybody asking for
+ * it. Reproducing it any other way would mean waiting.
+ */
+async function seedExpiredPendingStay(
+  guest: string,
+  host: string,
+  points: number,
+): Promise<string> {
+  await earnByHosting(guest, points);
+  const propertyId = await seedHostListing(host);
+  const [row] = await getDb()
+    .insert(exchangeRequests)
+    .values({
+      propertyId,
+      requesterOxyUserId: guest,
+      hostOxyUserId: host,
+      mode: 'host',
+      requestedWindowStart: new Date(BASE - 10 * DAY),
+      requestedWindowEnd: new Date(BASE - 3 * DAY),
+      usesGuestPoints: true,
+      status: 'pending',
+    })
+    .returning({ id: exchangeRequests.id });
+  const reserved = await reserveStayPoints(getDb(), {
+    exchangeRequestId: row.id,
+    guestOxyUserId: guest,
+    hostOxyUserId: host,
+    points,
+    idempotencyKey: `sweep-${row.id}`.slice(0, 64),
+  });
+  expect(reserved.ok).toBe(true);
   return row.id;
 }
 
@@ -416,6 +462,37 @@ describe('reserve, then settle or release', () => {
     expect(await standingOf(GUEST)).toMatchObject({ spent: 2 });
     expect(await standingOf(HOST)).toMatchObject({ earned: 2 });
     expect(await systemTotal()).toBe(0);
+  });
+});
+
+describe('the release sweep is actually WIRED', () => {
+  /**
+   * Two claims, and only the second was ever in doubt.
+   *
+   * "The sweep works when called directly" is covered above. It says nothing
+   * about whether anything ever calls it — and an unscheduled job and a quiet
+   * one look identical in a log that only speaks when it acts. Postgres does
+   * not watch a deadline, so without this wiring a guest's points stay
+   * committed to a trip that cannot happen, forever, with no error and no
+   * failing test.
+   */
+  it('schedules a job, and that job releases a real reservation', async () => {
+    const stay = await seedExpiredPendingStay(GUEST, `${GUEST}-sweep-host`, 2);
+
+    initCronJobs();
+    try {
+      expect(Object.keys(getCronStatus())).toContain('guestPointRelease');
+      // Through the CRON's own seam, not `releaseExpiredReservations` directly:
+      // a job wired to nothing satisfies the assertion above perfectly.
+      await runGuestPointReleaseNow();
+    } finally {
+      stopCronJobs();
+    }
+
+    const released = await findReservation(getDb(), stay);
+    expect(released?.state).toBe('released');
+    expect(released?.releaseReason).toBe('expired');
+    expect(await standingOf(GUEST)).toMatchObject({ reserved: 0, available: 2 });
   });
 });
 
