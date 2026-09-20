@@ -25,12 +25,18 @@ import {
   BluegroundPartnerListingError,
   ListingValidationError,
   NonHousingListingError,
+  checkResidentialProxy,
+  describeProxyFailure,
+  httpUseProxyFromEnv,
   fotocasaCitiesFromEnv,
   habitacliaCitiesFromEnv,
+  proxyCheckIntervalMinutesFromEnv,
+  residentialProxyFromEnv,
   idealistaCitiesFromEnv,
   pisosCitiesFromEnv,
   type ExternalListingRef,
   type FetchRuntime,
+  type ProxyCheckFailure,
   type ListingFetchRuntimeHandle,
   type ProviderRegistry,
 } from '@homiio/listing-providers';
@@ -40,6 +46,11 @@ import { connectPostgres, closePostgres } from './db/postgres';
 import { Logger } from './utils/logger';
 import { expireExternalProperty } from './db/properties/propertyWrites';
 import { IngestionService, IngestionValidationError } from './services/ingestion/IngestionService';
+import {
+  countsAsLiveIngest,
+  LISTING_INGEST_OK_MARKER,
+  LISTING_PROXY_UNUSABLE_MARKER,
+} from './services/ingestion/ingestHealthMarkers';
 import {
   QUEUE_NAMES,
   discoverJobId,
@@ -112,6 +123,118 @@ async function expireExternalListing(source: string, sourceId: string, reason: s
   }
 }
 
+/**
+ * Record that the LIVE pipeline produced a home, for the CloudWatch metric
+ * filter behind the `homiio-no-listings-ingested` alarm.
+ *
+ * Seeded providers are skipped on purpose — see {@link LISTING_INGEST_OK_MARKER}.
+ * The message must stay on ONE line: the log group is shared, every line is its
+ * own CloudWatch event, and a filter can only match within a single event.
+ */
+function emitIngestHeartbeat(provider: string): void {
+  if (!countsAsLiveIngest(provider)) return;
+  logger.info(`${LISTING_INGEST_OK_MARKER} provider=${provider}`);
+}
+
+/**
+ * Whether any live fetch tier actually routes listing traffic through the proxy.
+ *
+ * **A CONFIGURED PROXY URL IS NOT THE SAME AS A PROXY IN USE**, and conflating
+ * the two would page a responder about a credential nothing depends on. The
+ * HTTP tier uses it only under `LISTING_HTTP_USE_PROXY`; the browser tier only
+ * when it is enabled AND Playwright actually loaded — which is why this asks
+ * the CONSTRUCTED runtime rather than re-reading the env var that requests it.
+ * `LISTING_MEDIA_PROXY_FALLBACK` keeps the URL around for an optional media
+ * path that is not on the ingest critical path at all.
+ *
+ * Production has both tiers on, so this changes nothing there. It matters for
+ * every environment that does not, and for the general rule that an alert
+ * nobody can act on is how a channel stops being read.
+ */
+function listingTrafficUsesProxy(): boolean {
+  return httpUseProxyFromEnv() || Boolean(runtime?.fetchViaBrowser);
+}
+
+/**
+ * Ask the residential proxy whether it will carry traffic, and say so loudly
+ * when it will not.
+ *
+ * Deliberately does NOT exit the process. A hard exit on a failed check turns a
+ * transient network blip at boot into a self-inflicted crashloop, and it would
+ * also stop the worker from recovering by itself the moment the balance is
+ * topped up — which is exactly how this incident ended, with no redeploy needed
+ * beyond forcing the queues to re-run. Being loud is the alarm's job; the
+ * marker below is what makes it loud.
+ *
+ * `network` failures are logged as warnings and never alarm: the proxy being
+ * briefly unreachable is ordinary, and paging on it would train everyone to
+ * ignore the channel that has to work on the day the balance runs out.
+ */
+async function checkProxyAndReport(): Promise<void> {
+  const proxy = residentialProxyFromEnv();
+  if (!proxy) return;
+  if (!listingTrafficUsesProxy()) return;
+
+  const result = await checkResidentialProxy(proxy);
+  if (result.ok) {
+    logger.info('Residential proxy check passed');
+    return;
+  }
+
+  if (result.reason === 'network') {
+    logger.warn('Residential proxy check failed (transient)', {
+      reason: result.reason,
+      detail: result.detail,
+    });
+    return;
+  }
+
+  logger.error(
+    `${LISTING_PROXY_UNUSABLE_MARKER} reason=${result.reason} status=${result.proxyStatus ?? 'none'}`,
+    {
+      reason: result.reason,
+      proxyStatus: result.proxyStatus,
+      detail: result.detail,
+      remedy: remedyFor(result),
+    },
+  );
+}
+
+/**
+ * What the responder should actually do, per failure kind.
+ *
+ * Each branch names ONE action. An alert that prescribes the wrong one is worse
+ * than an alert that prescribes none: `refused` covers every status that is
+ * neither 402 nor 407, and telling someone to rotate a perfectly good credential
+ * because the provider returned 403 costs a rotation and buys nothing.
+ */
+function remedyFor(result: { reason: ProxyCheckFailure; proxyStatus?: number }): string {
+  switch (result.reason) {
+    case 'billing':
+      return 'The residential proxy account is out of balance. Top it up; the worker recovers on its own.';
+    case 'auth':
+      return 'The residential proxy rejected our credentials. Rotate /oxy/homiio/LISTING_RESIDENTIAL_PROXY_URL.';
+    default:
+      return `The residential proxy refused the tunnel with status ${result.proxyStatus ?? 'unknown'}. Check the proxy account and the provider's status page before rotating anything.`;
+  }
+}
+
+/**
+ * Run {@link checkProxyAndReport} now and on a timer, returning a stopper.
+ *
+ * The timer is `unref`ed so it never holds the process open during shutdown.
+ */
+function startProxyChecks(): () => void {
+  void checkProxyAndReport();
+
+  const minutes = proxyCheckIntervalMinutesFromEnv();
+  if (minutes <= 0) return () => {};
+
+  const timer = setInterval(() => void checkProxyAndReport(), minutes * 60_000);
+  timer.unref();
+  return () => clearInterval(timer);
+}
+
 /** Fetch + normalize a single listing ref and ingest the result. */
 async function processFetchRef(ref: ExternalListingRef, jobMarket?: ListingMarket): Promise<void> {
   if (!registry.has(ref.provider)) {
@@ -129,6 +252,7 @@ async function processFetchRef(ref: ExternalListingRef, jobMarket?: ListingMarke
     const raw = await provider.fetch(ref, { runtime: runtimeForMarket(market) });
     const listing = provider.normalize(raw);
     await ingestionService.ingest(listing);
+    emitIngestHeartbeat(ref.provider);
   } catch (error) {
     if (error instanceof BluegroundPartnerListingError) {
       logger.info('Skipped Blueground partner listing', {
@@ -436,7 +560,20 @@ async function startBullMq(): Promise<() => Promise<void>> {
 
   for (const worker of [discoverWorker, fetchWorker]) {
     worker.on('failed', (job, error) => {
-      logger.error('Listing job failed', { queue: worker.name, jobId: job?.id, error: error.message });
+      // `error.message` ALONE IS NOT ENOUGH, and that is the whole reason the
+      // 2026-09-20 outage took two months to notice. Node reports a refused
+      // proxy CONNECT as a bare `TypeError: fetch failed` and buries the real
+      // status three `cause` levels down, so 19,497 failed jobs all logged the
+      // same four words — indistinguishable from a portal being down.
+      // `describeProxyFailure` flattens the chain and lifts the status out.
+      const { proxyStatus, chain } = describeProxyFailure(error);
+      logger.error('Listing job failed', {
+        queue: worker.name,
+        jobId: job?.id,
+        error: error.message,
+        proxyStatus,
+        cause: chain.length > 1 ? chain.slice(1).join(' <- ') : undefined,
+      });
     });
   }
 
@@ -529,6 +666,10 @@ async function main(): Promise<void> {
     perMarketProxyGeo: proxyPerMarketGeo,
   });
 
+  // Before any job runs: is the thing every job depends on actually alive?
+  // Nothing asked this question for two months. See `checkProxyAndReport`.
+  const stopProxyChecks = startProxyChecks();
+
   let closer: (() => Promise<void>) | undefined;
 
   if (config.listingWorker.redisConfigured) {
@@ -537,6 +678,7 @@ async function main(): Promise<void> {
   } else if (config.listingWorker.discoverOnBoot) {
     await runInlinePass();
     logger.info('Inline pass complete; no Redis configured, exiting');
+    stopProxyChecks();
     activityReady = false;
     await activity?.stop();
     await runtimeHandle.shutdown();
@@ -548,6 +690,7 @@ async function main(): Promise<void> {
 
   const shutdown = async (signal: string): Promise<void> => {
     logger.info(`Received ${signal}, shutting down listing worker`);
+    stopProxyChecks();
     activityReady = false;
     if (closer) await closer();
     await activity?.stop();

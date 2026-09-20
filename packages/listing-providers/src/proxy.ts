@@ -377,3 +377,211 @@ export async function createProxiedFetch(
   proxiedFetchCache.set(embedded, created);
   return created;
 }
+
+// ---------------------------------------------------------------------------
+// Proxy reachability — the signal that was missing for two months
+// ---------------------------------------------------------------------------
+//
+// On 2026-09-20 the residential proxy account ran out of balance and Evomi began
+// answering every CONNECT with `402 Payment Required`. Every fetch and every
+// browser navigation failed from that moment, no listing was ingested again, and
+// the 30-day `EXTERNAL_PROPERTY_TTL_DAYS` sweep then emptied the properties
+// table one row at a time until two seeded fixtures were left. It took a user
+// noticing that the app had no homes.
+//
+// Two separate things made it silent for that long, and both are fixed here:
+//
+//  1. NOTHING EVER ASKED THE PROXY IF IT WORKED. The worker only discovered the
+//     failure by failing a real job, one job at a time, forever.
+//     {@link checkResidentialProxy} asks directly, in one request.
+//
+//  2. THE REASON WAS UNREACHABLE IN THE LOGS. undici buries a refused CONNECT
+//     three `cause` levels down, and the worker logged `error.message` only:
+//
+//       TypeError: fetch failed                       <- what CloudWatch showed
+//         Error: Request was cancelled.
+//           AbortError: Proxy response (402) !== 200 when HTTP Tunneling
+//                                       ^^^ the entire diagnosis, never logged
+//
+//     `fetch failed` is indistinguishable from a portal being down, which is
+//     exactly how 19,497 failed jobs read as ordinary scraping noise.
+//     {@link describeProxyFailure} flattens the chain and lifts the status out.
+
+/** The tunnelling error undici raises when a proxy refuses CONNECT. */
+const PROXY_TUNNEL_STATUS_RE = /Proxy response \((\d{3})\) !== 200 when HTTP Tunneling/;
+
+/** How deep to walk an error's `cause` chain. undici's is three; allow slack. */
+const MAX_CAUSE_DEPTH = 8;
+
+/** A proxy failure, flattened into something a log line can carry. */
+export interface ProxyFailureDescription {
+  /** HTTP status the proxy answered CONNECT with, when it answered at all. */
+  proxyStatus?: number;
+  /** Every `name: message` in the `cause` chain, outermost first. */
+  chain: string[];
+}
+
+/**
+ * Flatten an error's `cause` chain and lift out the proxy's CONNECT status.
+ *
+ * Node's `fetch` reports a refused tunnel as a bare `TypeError: fetch failed`
+ * and hides the status in nested causes, so this is the only way to tell "the
+ * proxy refused us" apart from "the portal is down" without guessing.
+ */
+export function describeProxyFailure(error: unknown): ProxyFailureDescription {
+  const chain: string[] = [];
+  let proxyStatus: number | undefined;
+  let current: unknown = error;
+
+  for (let depth = 0; current != null && depth < MAX_CAUSE_DEPTH; depth += 1) {
+    if (typeof current !== 'object') {
+      chain.push(String(current));
+      break;
+    }
+    const err = current as { name?: unknown; message?: unknown; cause?: unknown };
+    const name = typeof err.name === 'string' ? err.name : 'Error';
+    const message = typeof err.message === 'string' ? err.message : String(err.message ?? '');
+    chain.push(`${name}: ${message}`);
+
+    const matched = PROXY_TUNNEL_STATUS_RE.exec(message);
+    if (matched && proxyStatus === undefined) proxyStatus = Number(matched[1]);
+
+    current = err.cause;
+  }
+
+  return { proxyStatus, chain };
+}
+
+/** Why a proxy check failed. `billing` and `auth` are never transient. */
+export type ProxyCheckFailure = 'billing' | 'auth' | 'refused' | 'network';
+
+/** Outcome of {@link checkResidentialProxy}. */
+export type ProxyCheckResult =
+  | { ok: true; proxyStatus?: undefined; reason?: undefined; detail?: undefined }
+  | { ok: false; reason: ProxyCheckFailure; proxyStatus?: number; detail: string };
+
+/**
+ * Default CONNECT target. Google's `generate_204` is built for exactly this —
+ * no body, no rate limit worth the name, and up whenever the internet is.
+ *
+ * What it proves is deliberately narrow: that the proxy OPENED THE TUNNEL. The
+ * response itself is not inspected, so a captcha, a redirect or a 500 from the
+ * far end all still count as success, because all of them mean the proxy did
+ * its job. Widening this into a content check would make the health of an
+ * unrelated third party able to declare Homiio's proxy dead.
+ */
+const DEFAULT_PROXY_HEALTHCHECK_URL = 'https://www.google.com/generate_204';
+
+/** Options for {@link checkResidentialProxy}. */
+export interface ProxyCheckOptions {
+  /** Absolute URL to CONNECT to. Defaults to {@link DEFAULT_PROXY_HEALTHCHECK_URL}. */
+  url?: string;
+  /** Abort after this many milliseconds (default 15s). */
+  timeoutMs?: number;
+  /** Injection seam for tests; defaults to {@link createProxiedFetch}. */
+  fetchImpl?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+}
+
+/**
+ * Ask the residential proxy whether it will carry traffic right now.
+ *
+ * ANY HTTP RESPONSE IS A PASS — see {@link DEFAULT_PROXY_HEALTHCHECK_URL}. Only
+ * a failure to establish the tunnel is a fail, classified so the caller can tell
+ * a dead account (`billing`/`auth` — a human must act, retrying is pointless)
+ * from a blip (`network` — retrying is the correct response).
+ */
+export async function checkResidentialProxy(
+  config: ResidentialProxyConfig,
+  options: ProxyCheckOptions = {},
+): Promise<ProxyCheckResult> {
+  const url = options.url ?? proxyHealthcheckUrlFromEnv();
+  const timeoutMs = options.timeoutMs ?? 15_000;
+  const proxiedFetch = options.fetchImpl ?? (await createProxiedFetch(config));
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    await proxiedFetch(url, { signal: controller.signal, redirect: 'manual' });
+    return { ok: true };
+  } catch (error) {
+    const { proxyStatus, chain } = describeProxyFailure(error);
+    return {
+      ok: false,
+      reason: classifyProxyFailure(proxyStatus),
+      proxyStatus,
+      detail: chain.join(' <- ') || String(error),
+    };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
+ * Map a CONNECT status onto whether a human has to do something.
+ *
+ * 402 is the one this file exists for: it is what an exhausted prepaid balance
+ * looks like, it never clears on its own, and no amount of retrying or
+ * redeploying touches it. 407 is the same shape with a different cause —
+ * credentials the provider no longer accepts.
+ */
+function classifyProxyFailure(proxyStatus: number | undefined): ProxyCheckFailure {
+  if (proxyStatus === 402) return 'billing';
+  if (proxyStatus === 407) return 'auth';
+  if (proxyStatus !== undefined) return 'refused';
+  return 'network';
+}
+
+/** Read `LISTING_PROXY_HEALTHCHECK_URL`, falling back to the default target. */
+export function proxyHealthcheckUrlFromEnv(): string {
+  const raw = process.env.LISTING_PROXY_HEALTHCHECK_URL?.trim();
+  return raw || DEFAULT_PROXY_HEALTHCHECK_URL;
+}
+
+/** Re-check cadence when the env var is unset or unusable. */
+const DEFAULT_PROXY_CHECK_INTERVAL_MINUTES = 30;
+
+/**
+ * Largest interval that survives `setInterval`.
+ *
+ * A JS timer delay is a signed 32-bit millisecond count. Hand `setInterval`
+ * more than that and Node does NOT wait longer — it warns and fires on the next
+ * tick, turning "check every 27 days" into a check every millisecond.
+ *
+ * Worth naming precisely because of what this module is for: that flood would
+ * run through the residential proxy, and the resource it would burn is the
+ * metered balance whose exhaustion caused the outage this file exists to
+ * detect. A typo in an env var would fund the next incident.
+ *
+ * Over-ceiling values fall back to the default rather than clamping to it —
+ * somebody who wrote 40000 did not mean 35791, and a sane 30 beats an arbitrary
+ * maximum nobody chose. `Number` rather than `parseInt` so `30min` and `30.5`
+ * are refused outright instead of silently becoming 30.
+ */
+const MAX_PROXY_CHECK_INTERVAL_MINUTES = Math.floor(2_147_483_647 / 60_000);
+
+/**
+ * How often the worker re-checks the proxy, in minutes
+ * (`LISTING_PROXY_CHECK_INTERVAL_MINUTES`, default 30, `0` disables).
+ *
+ * A boot-only check would not have caught the incident this module documents:
+ * the balance ran out while the worker was running, and it kept running for two
+ * months afterwards. The check has to repeat or it does not cover the failure
+ * that actually happened.
+ *
+ * **THIS CADENCE IS COUPLED TO AN ALARM IN ANOTHER REPO.** While the proxy stays
+ * broken the marker is re-emitted on this interval, and the alarm only returns
+ * to OK once its whole evaluation window is marker-free — which is what makes a
+ * recovery notice mean "a check actually passed" rather than "we happened not to
+ * emit just then". oxy-infra's `homiio-listing-proxy-unusable` allows a 60
+ * minute silence, so raising this past 30 minutes requires widening that window
+ * in the same change or the alarm will flap between ALARM and a false OK.
+ */
+export function proxyCheckIntervalMinutesFromEnv(): number {
+  const raw = process.env.LISTING_PROXY_CHECK_INTERVAL_MINUTES?.trim();
+  if (!raw) return DEFAULT_PROXY_CHECK_INTERVAL_MINUTES;
+  const parsed = Number(raw);
+  if (!Number.isSafeInteger(parsed) || parsed < 0 || parsed > MAX_PROXY_CHECK_INTERVAL_MINUTES) {
+    return DEFAULT_PROXY_CHECK_INTERVAL_MINUTES;
+  }
+  return parsed;
+}

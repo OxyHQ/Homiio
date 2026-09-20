@@ -306,3 +306,137 @@ ID/TH/TR; OLX PT/PL; Immowelt AT; Blueground PT/GR/AE/HK; ImmobiliareScout24 AT.
 `packages/backend/worker.ts` is the worker entrypoint: the same Docker image as
 the API, a different start command. Run it with a separate ECS task definition.
 Use a separate container only if Playwright memory becomes a concern.
+
+## Is the pipeline alive? (the 2026-09-20 outage and what now watches it)
+
+### What happened
+
+The Evomi residential-proxy account ran out of balance. From that moment every
+CONNECT was answered `402 Payment Required`, so every HTTP fetch and every
+Playwright navigation failed — `LISTING_HTTP_USE_PROXY=true` and
+`LISTING_BROWSER_ENABLED=true` route both tiers through the proxy and there is
+no direct fallback. No external listing was ingested again.
+
+Ingestion stopping was not what the user saw. External properties carry
+`expiresAt = now + EXTERNAL_PROPERTY_TTL_DAYS` (30), refreshed on every
+re-ingest, and `db/expiry.ts` sweeps the expired ones. So the table drained
+itself, a row at a time, over the following month until **two seeded fixtures
+were the entire database**. Measured span: at least 60 days, the full depth of
+the retained worker logs.
+
+### Why nobody noticed
+
+Three failures stacked, and each one alone would have been survivable.
+
+1. **Nothing ever asked the proxy whether it worked.** The worker found out by
+   failing a real job, then another, 19,497 times.
+2. **The reason was unreachable.** Node reports a refused CONNECT as a bare
+   `TypeError: fetch failed` and buries the status three `cause` levels down.
+   The worker logged `error.message` only, so every one of those failures read
+   as four generic words — indistinguishable from a portal being down.
+3. **The one metric that looked like a heartbeat was masked by test data.** The
+   `fixture` provider needs no network, so it kept ingesting 2 listings on every
+   worker boot, 8 a day, for the entire outage. Any "did anything ingest?" check
+   would have been green throughout.
+
+That third point is the one worth carrying to other subsystems. It is
+`AGENTS.md`'s "ask what reads its output" in a new shape: the output existed and
+was even plausible, but the signal was diluted by rows that prove nothing.
+
+### What watches it now
+
+Two log markers, defined in
+`services/ingestion/ingestHealthMarkers.ts`, matched by
+`aws_cloudwatch_log_metric_filter` resources in
+`oxy-infra/terraform-uswest2/alerts.tf`, alarmed onto the `oxy-alerts` SNS topic
+and relayed to Telegram (oxy-infra runbook 23).
+
+| Marker | Emitted when | Alarm |
+| --- | --- | --- |
+| `listing-ingest-ok` | a **non-fixture** listing is ingested | fires when the 6h sum is 0 twice running |
+| `listing-proxy-unusable` | the proxy refuses CONNECT with 402/407 | fires on one occurrence; clears only after 60 min silent |
+
+`listing-ingest-ok` is the catch-all and does not care why: dead proxy, a portal
+changing its markup, Redis gone, the worker crashed, queues silently drained —
+all of them end in no homes arriving, which is the thing actually worth paging
+about. `listing-proxy-unusable` exists to make the most likely cause legible in
+the first line of the alert instead of after a log dig.
+
+**The catch-all alarm is fail-safe in both directions, on purpose.** Delete the
+heartbeat call, rename the marker, or break the filter, and the metric sits at
+its `default_value` of 0 — which fires the alarm. A broken watchdog here is
+loud, never quiet. That is the opposite of the arrangement it replaces, and it
+is the property to preserve if this is ever refactored.
+
+`listing-proxy-unusable` does NOT have that property: rename it and it simply
+never fires again. It is a diagnostic shortcut layered on top of the catch-all,
+never the thing relied on. The marker literals are pinned by
+`__tests__/unit/ingestHealthMarkers.test.ts` so a rename fails a test that names
+the terraform file to change.
+
+### The proxy check
+
+`checkResidentialProxy` (in `@homiio/listing-providers`) opens one tunnel and
+classifies the outcome. **Any HTTP response is a pass** — the probe target's own
+health is irrelevant, only whether the proxy carried the bytes. A captcha, a
+redirect or a 500 from the far end all mean the proxy did its job; treating them
+as failures would let an unrelated third party's bad day declare Homiio's proxy
+dead.
+
+Failures split into what a human must act on and what will clear by itself:
+
+- `billing` (402) and `auth` (407) — **never transient.** Retrying is pointless;
+  the balance or the credentials need a person. These alarm.
+- `refused` (any other status) — the proxy answered and said no. Alarms.
+- `network` (no status at all) — a blip. Logged as a warning and deliberately
+  never alarms, because paging on ordinary packet loss trains everyone to ignore
+  the channel that must work on the day the balance runs out.
+
+It runs at boot **and every `LISTING_PROXY_CHECK_INTERVAL_MINUTES` (default 30,
+`0` disables)**. Boot-only would not have caught this outage: the balance ran
+out mid-run and the worker then ran for two months.
+
+**That cadence is coupled to the alarm's recovery window**, which is the one
+thing to remember before changing it. The marker repeats on this interval while
+the fault persists, and the alarm returns to OK only once its entire window is
+marker-free — an hour, against a 30-minute cadence. Shrink the window below the
+cadence and every other window is empty by construction: the alarm flaps
+ALARM → OK → ALARM and announces recoveries that never happened. Raising the
+interval past 30 minutes therefore requires widening
+`homiio-listing-proxy-unusable` in the same change; both sides say so and
+oxy-infra's `test_homiio_listing_pipeline_alarms_iac.py` pins the ratio.
+
+The check also only runs **when a live tier actually routes listing traffic
+through the proxy** (`LISTING_HTTP_USE_PROXY`, or a browser tier that really
+loaded Playwright — asked of the constructed runtime, not of the env var that
+requests it). A proxy URL can be present purely for the optional media fallback
+while every listing fetch goes direct, and paging about a credential nothing
+depends on is the same mistake as paging on a transient blip.
+
+The check deliberately **does not exit the process.** A hard exit turns a
+transient blip at boot into a self-inflicted crashloop, and it would stop the
+worker recovering on its own when the balance is topped up — which is how the
+incident actually ended, with nothing needed beyond forcing the queues to re-run.
+Being loud is the alarm's job.
+
+### Recovery, when the alert fires
+
+```bash
+# Is it really the proxy?
+curl -x "$(aws ssm get-parameter --region us-west-2 \
+  --name /oxy/homiio/LISTING_RESIDENTIAL_PROXY_URL --with-decryption \
+  --query Parameter.Value --output text)" https://api.ipify.org
+```
+
+An IP means the proxy is fine and the cause is elsewhere. `402` means top up the
+account; `407` means rotate the credential in that SSM parameter. Once it
+answers, re-run discovery immediately rather than waiting up to 6h for the next
+cycle:
+
+```bash
+aws ecs update-service --region us-west-2 --cluster oxy-cluster \
+  --service homiio-worker --force-new-deployment
+```
+
+Repopulation is not instant and is not supposed to be: 224 scopes on a 6h cycle,
+with the browser-tier ES portals serialising behind the Playwright pool.
