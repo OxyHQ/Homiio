@@ -497,10 +497,14 @@ Still open, and unchanged:
 **A defect worth recording:** Sindi answered "show me flats in Barcelona" by
 doing nothing. Production has three `cities` rows named Barcelona in Spain, two
 of them empty, so the homonym rule refused the area — correctly by its own
-terms, and wrongly in effect, because duplicates are not homonyms. A candidate
-holding no listings is now discounted before ambiguity is judged. The underlying
-data defect (duplicate rows, and a case-sensitive `(region_id, name)` unique
-that permits them) is open. `docs/sindi-actions.md`.
+terms, and wrongly in effect, because a row holding nothing cannot be an answer
+to "what is there". A candidate holding no listings is now discounted before
+ambiguity is judged. The underlying data defect is open, and — **correcting what
+this paragraph first said** — it is a REGION-level one, not the case-sensitive
+`cities` unique key: the three rows sit under three regions (`Catalonia`,
+`Barcelona`, `barcelona`), so migration 0029's `(region_id, slug)` key neither
+merged them nor could. It is `regions_country_name_key` that still permits a
+fourth. `docs/sindi-actions.md`, `docs/postgres.md`.
 
 Detail: `docs/sindi-actions.md`.
 

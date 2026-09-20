@@ -199,11 +199,25 @@ Three further measurements from the same real database
   confirmed, so the partial unique index does what its comment says).
 - `cities_region_name_key` is **case-sensitive**: `Barcelona` and `barcelona`
   both stored, 2 rows. **Closed 2026-09-20.** A production census then found 51
-  such groups (102 rows) and 94 slugs shared by more than one city, including
-  three Barcelonas in Spain — which is what made "show me flats in Barcelona"
-  resolve to nothing. Migration 0029 folds them together and replaces the index
-  with `cities_region_slug_key` on `(region_id, slug)`; `docs/postgres.md`
-  carries the census and the two tables that still have this shape.
+  such groups (102 rows) differing only in case inside ONE region — `AARTSELAAR`
+  beside `Aartselaar` — and 94 slugs shared by more than one city. Migration
+  0029 folds those together and replaces the index with `cities_region_slug_key`
+  on `(region_id, slug)`; `docs/postgres.md` carries the census and the two
+  tables that still have this shape.
+
+  **Correction, same day.** This bullet was first written citing "three
+  Barcelonas in Spain" as the example and as what made "show me flats in
+  Barcelona" resolve to nothing. The refusal was real; the attribution was not.
+  Those three rows are in three different regions — `Barcelona`/`Catalonia` with
+  3 listings, `Barcelona`/`Barcelona` with none, `barcelona`/`barcelona` with
+  none — so `(region_id, name)` never forbade them and `(region_id, slug)` does
+  not either, and the same is true of the `Barcelona`/`barcelona` pair this
+  bullet opens with. The case-sensitivity of `(region_id, name)` is what the 51
+  same-region groups measure; the Barcelona rows measure something else, which
+  is that `regions_country_name_key` has the identical `(country_id, name)`
+  shape one level up (3 case groups measured the same day) on top of a
+  province-versus-autonomous-community naming split. That one is OPEN. See §5.2
+  change 4 and §10.9, which cite the same example.
 - Two cities named `Valencia` under two different regions coexist correctly; two
   under the *same* region are refused. But `addressService.ts:81` falls back to a
   literal region named `Unknown` when a geocode yields no state — measured: two
@@ -585,7 +599,7 @@ and the key change is a row that #366 will have to audit.
 | 1 | `addresses.parent_address_id` self-FK, RESTRICT | The hierarchy is recomputed per review today and invisible to every other domain |
 | 2 | CHECK: a `UNIT` row has a non-empty `floor`/`unit`/`subunit`; a `BUILDING` row has a non-empty `number`/`building_name`/`block`/`entrance` | Keeps the level and the key reading the same fields — the root cause in §1.3 |
 | 3 | CHECK: `reviews.building_level_id` names a `BUILDING`-level row (deferred/trigger; a CHECK cannot subquery) | ROW-A is a `UNIT` row acting as a building today |
-| 4 | `cities`/`neighborhoods` unique key on `lower(name)` | Measured: `Barcelona` and `barcelona` both stored |
+| 4 | `cities`/`neighborhoods` unique key on `lower(name)` | Measured: `Barcelona` and `barcelona` both stored — but in two different regions, so the same-region evidence is `AARTSELAAR` beside `Aartselaar`, 51 groups (§1.3's correction). Shipped for `cities` as `(region_id, slug)` in migration 0029 |
 | 5 | Retire the `'Unknown'` region fallback: an unresolved region makes the address a **candidate** (§5.3), not a row under a bucket | Measured: two different `Santiago`s collapse into one city |
 | 6 | Missing postcode is `NULL`, not `''` and not `'00000'` | Both are values and both enter the key |
 
@@ -928,7 +942,10 @@ one country, two `Santiago`s in two regions.
 - Measured: two `Valencia`s under two regions coexist correctly.
 - Measured: two `Santiago`s both fall into the literal `'Unknown'` region when
   the geocoder returns no state, and collapse to one city row.
-- Measured: `Barcelona` and `barcelona` are two rows.
+- Measured: `Barcelona` and `barcelona` are two rows — under two different
+  regions (§1.3's correction), so this pair is the homonym case and not the case
+  variant it was cited as. A same-region case pair is `AARTSELAAR` beside
+  `Aartselaar`; migration 0029 collapses that one.
 
 **Wrong implementation:** resolving a city by name alone. The fixture is three
 cities — two homonyms in different regions, one case variant — asserting 2 rows,

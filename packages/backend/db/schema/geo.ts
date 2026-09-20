@@ -245,11 +245,20 @@ export const cities = pgTable(
      * It was `(region_id, name)` — and `name` is raw text, so the index is
      * case-SENSITIVE and `AARTSELAAR` sat beside `Aartselaar` for as long as two
      * ingests disagreed about capitalisation. Production carried 51 such groups
-     * (102 rows) and 94 slugs used by more than one city, including THREE rows
-     * named Barcelona in Spain, two of them holding no listings. That is what
-     * made "show me flats in Barcelona" answer nothing: `placeLookup` sees three
-     * candidates for one slug and correctly refuses to choose, because from the
-     * outside duplicates and homonyms look identical.
+     * (102 rows) and 94 slugs used by more than one city; after this index
+     * replaced the old one the table held 1,606 cities and no same-region slug
+     * duplicate at all.
+     *
+     * This header used to name the THREE rows called Barcelona in Spain as the
+     * example. **They are not an example of this bug.** They sit in three
+     * DIFFERENT regions (`Catalonia`, `Barcelona`, `barcelona`), which
+     * `(region_id, name)` always allowed and `(region_id, slug)` still allows.
+     * They are a REGION-level duplicate that `regions_country_name_key` — the
+     * same `(country_id, name)` shape, 3 measured case groups — still permits,
+     * and the refusal they caused (`placeLookup` sees three candidates for one
+     * slug and correctly declines to choose) is answered by
+     * `services/sindiActions.ts`'s empty-candidate rule, not by this index.
+     * `docs/postgres.md` carries both censuses and the correction.
      *
      * {@link cities.slug} is the normalised form and is `GENERATED ALWAYS`, so
      * it cannot drift from the name and cannot be written by hand. Two rows in
