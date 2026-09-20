@@ -141,11 +141,31 @@ async function rangeExpressionOf(indexName: string): Promise<string> {
 }
 
 /** Rows whose INDEXED range contains `instant`, by table. */
-async function containing(table: string, indexName: string, instant: Date): Promise<number> {
+/**
+ * Whether THIS suite's own row is inside the index's range at `instant`.
+ *
+ * Scoped to the id on purpose. It used to count every row in the table, which
+ * made the assertion "exactly one lease in this whole database spans the
+ * boundary" — a claim about the worker's other suites, not about the bound
+ * convention this file exists to pin. One lease left behind by a neighbour read
+ * as 2, and the failure landed here, in a file that had nothing to do with it.
+ *
+ * The question is "does this index's range contain the boundary instant for the
+ * row I seeded", and the predicate still runs through the index expression, so
+ * scoping costs the test nothing and removes a dependency on what else happens
+ * to be scheduled beside it.
+ */
+async function containing(
+  table: string,
+  indexName: string,
+  instant: Date,
+  id: string,
+): Promise<number> {
   const expression = await rangeExpressionOf(indexName);
   const rows = await db.execute<{ hits: string }>(sql`
     select count(*)::text as hits from ${sql.raw(table)}
     where ${sql.raw(expression)} @> ${instant.toISOString()}::timestamptz
+      and id = ${id}
   `);
   return Number(rows[0].hits);
 }
@@ -154,19 +174,19 @@ describe('the bound conventions differ, and the boundary instant proves it', () 
   it('keeps a lease ACTIVE at its end instant', async () => {
     // `findActive` uses `$gte`, so the last day of a tenancy is still a tenancy.
     // With `'[)'` this reads 0 and every lease would silently end early.
-    expect(await containing('leases', 'leases_term_range_gist', BOUNDARY)).toBe(1);
+    expect(await containing('leases', 'leases_term_range_gist', BOUNDARY, leaseId)).toBe(1);
   });
 
   it('frees a reservation at its checkout instant', async () => {
     // The opposite answer on the SAME instant. A stay that ends on the morning
     // another begins is not a double booking — with `'[]'` this reads 1 and
     // every back-to-back booking would be refused.
-    expect(await containing('reservations', 'reservations_stay_range_gist', BOUNDARY)).toBe(0);
+    expect(await containing('reservations', 'reservations_stay_range_gist', BOUNDARY, reservationId)).toBe(0);
   });
 
   it('frees an exchange window at its end instant', async () => {
     expect(
-      await containing('exchange_requests', 'exchange_requests_requested_window_gist', BOUNDARY),
+      await containing('exchange_requests', 'exchange_requests_requested_window_gist', BOUNDARY, exchangeId),
     ).toBe(0);
   });
 
@@ -175,10 +195,10 @@ describe('the bound conventions differ, and the boundary instant proves it', () 
     // the row were missing, the column names were wrong, or the range were empty
     // — none of which is what the assertion claims to measure.
     const inside = new Date(Date.UTC(2026, 5, 1));
-    expect(await containing('leases', 'leases_term_range_gist', inside)).toBe(1);
-    expect(await containing('reservations', 'reservations_stay_range_gist', inside)).toBe(1);
+    expect(await containing('leases', 'leases_term_range_gist', inside, leaseId)).toBe(1);
+    expect(await containing('reservations', 'reservations_stay_range_gist', inside, reservationId)).toBe(1);
     expect(
-      await containing('exchange_requests', 'exchange_requests_requested_window_gist', inside),
+      await containing('exchange_requests', 'exchange_requests_requested_window_gist', inside, exchangeId),
     ).toBe(1);
   });
 });
