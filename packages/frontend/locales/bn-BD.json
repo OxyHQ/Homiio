@@ -935,7 +935,7 @@
       "toastDocumentAdded": "Document added",
       "toastDocumentFailed": "Could not add the document",
       "toastOpenDocumentFailed": "Could not open the document.",
-      "permissionRequired": "Media library permission is required to attach a document.",
+      "documentTooLarge": "{{name}} ১০ MB-এর বেশি, তাই সংযুক্ত করা যাবে না।",
       "propertyFallback": "Property",
       "goBack": "Go back",
       "emptyDocuments": "No documents attached.",

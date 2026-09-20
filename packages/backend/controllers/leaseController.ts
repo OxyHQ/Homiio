@@ -31,6 +31,8 @@
  * it already has the id for.
  */
 
+import path from 'path';
+
 import type { Request, Response, NextFunction } from 'express';
 import { LeaseStatus } from '@homiio/shared-types';
 
@@ -45,6 +47,7 @@ import {
   deleteLease,
   findLeaseAccess,
   findLeaseById,
+  findLeaseDocument,
   findPropertyLeaseBasis,
   listLeaseDocuments,
   listLeasePayments,
@@ -74,6 +77,10 @@ import {
   toSharedUtilityCostRows,
 } from './lease/leaseWriteColumns';
 import { notificationDispatchService } from '../services/notificationDispatchService';
+import imageUploadService from '../services/imageUploadService';
+import { storedDocumentKey } from '../utils/storedDocumentKey';
+import { SERVABLE_DOCUMENT_CONTENT_TYPES } from '../utils/imageStoreKey';
+import config from '../config';
 
 const MAX_PAGE_SIZE = 100;
 const DEFAULT_PAGE_SIZE = 10;
@@ -86,6 +93,80 @@ const DELETABLE_STATUSES: readonly LeaseStatusValue[] = [
   LeaseStatus.DRAFT,
   LeaseStatus.PENDING_SIGNATURES,
 ];
+
+/**
+ * The document types a lease may carry, mapped to the extension their bytes are
+ * stored under.
+ *
+ * `routes/leases.ts` refuses everything else at the multer `fileFilter`; this
+ * map is the second half of the same decision, and the handler consults it so a
+ * type accepted there can never reach storage with no extension to serve it
+ * back under. PDF is the one that matters: a tenancy agreement is a PDF more
+ * often than it is a photograph of one.
+ */
+const LEASE_DOCUMENT_EXTENSIONS: Readonly<Record<string, string>> = {
+  'application/pdf': '.pdf',
+  'image/jpeg': '.jpeg',
+  'image/jpg': '.jpeg',
+  'image/png': '.png',
+  'image/webp': '.webp',
+  'image/heic': '.heic',
+  'image/heif': '.heif',
+};
+
+/** The multer file shape this controller reads, without pulling multer's types in. */
+interface UploadedDocumentFile {
+  buffer: Buffer;
+  mimetype: string;
+  originalname: string;
+}
+
+/**
+ * A stored document NAME, stripped of anything that is not a name.
+ *
+ * It is displayed in a list and, via {@link downloadFilename}, written to a file
+ * on a phone — so path separators, control characters and a 300-character title
+ * are all things it must not carry.
+ */
+function safeDocumentName(raw: string): string {
+  const cleaned = raw.replace(/[^A-Za-z0-9._ -]/g, '_').replace(/\s+/g, ' ').trim().slice(0, 120);
+  return cleaned.length > 0 ? cleaned : 'document';
+}
+
+/**
+ * The extension a given content type is written out under.
+ *
+ * `SERVABLE_DOCUMENT_CONTENT_TYPES` maps the other way and is not invertible:
+ * `.jpg` and `.jpeg` both mean `image/jpeg`, so deriving this by searching it
+ * would make the answer depend on key order. Stated explicitly instead.
+ */
+const DOWNLOAD_EXTENSIONS: Readonly<Record<string, string>> = {
+  'application/pdf': '.pdf',
+  'image/jpeg': '.jpeg',
+  'image/png': '.png',
+  'image/webp': '.webp',
+  'image/gif': '.gif',
+};
+
+/**
+ * The filename the client saves the bytes under.
+ *
+ * The stored name is a label a person typed and need not end in anything, while
+ * the platform decides how to open a file largely by its extension — so one
+ * matching the content type the store actually returned is appended when the
+ * name does not already carry an equivalent. Taken from the CONTENT TYPE rather
+ * than from the name, because the name is the part a person can get wrong.
+ */
+function downloadFilename(name: string, contentType: string): string {
+  const safe = safeDocumentName(name);
+  const extension = DOWNLOAD_EXTENSIONS[contentType];
+  if (!extension) return safe;
+  const current = path.posix.extname(safe).toLowerCase();
+  // `.jpg` on an `image/jpeg` is already right; only a missing or mismatched
+  // extension is worth correcting.
+  if (SERVABLE_DOCUMENT_CONTENT_TYPES[current] === contentType) return safe;
+  return `${safe}${extension}`;
+}
 
 function parsePagination(query: Request['query']): { page: number; limit: number; skip: number } {
   const rawPage = parseInt(String(query.page ?? ''), 10);
@@ -676,16 +757,47 @@ class LeaseController {
   }
 
   /**
-   * Attach a document to a lease. Stores document metadata (name, url, type).
-   * The caller supplies the already-uploaded file URL; no inline file storage
-   * is wired for lease documents. Only a party may attach a document.
+   * `POST /api/leases/:id/documents` — attach a tenancy document (#518 §7.4).
+   *
+   * ## The file arrives HERE now, and no URL does
+   *
+   * This used to take `{name, url, type}` as JSON and store whatever string
+   * `url` held, having checked only that it was truthy. The client uploaded the
+   * file to the ordinary image endpoint first and posted the resulting
+   * `/api/images/file/<key>` link back — so a lease document was delivered by
+   * the PUBLIC route, and, on top of that, any party could point a lease row at
+   * any URL they liked, including somebody else's object or an attacker's host.
+   * Both halves close by the file coming through this handler: the bytes are
+   * stored under a server-built private key, and nothing in the body names a
+   * location any more.
+   *
+   * ## A tenancy contract is usually a PDF
+   *
+   * So a PDF is stored verbatim (`uploadPrivateDocument`) and an image is
+   * re-encoded (`uploadPrivateImage`, which drops the EXIF a phone writes into
+   * a photographed inspection). Forcing the PDF through Sharp would either
+   * throw or quietly turn a twelve-page contract into a picture of page one.
+   *
+   * ## Order: authorize, then store, then record
+   *
+   * The party check runs before any object is written, so a stranger's upload
+   * never reaches the bucket. The row is written last — an orphaned object
+   * costs storage, while a row pointing at bytes that were never stored is a
+   * document that silently never opens.
    */
   async uploadLeaseDocument(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const oxyUserId = requireSessionOxyUserId(req);
-      const { name, url, type } = req.body;
-      if (!name || !url) {
-        throw new AppError('Document name and url are required', 400, 'VALIDATION_ERROR');
+      const file = (req as unknown as { file?: UploadedDocumentFile }).file;
+      if (!file) {
+        throw new AppError('A document file is required', 400, 'VALIDATION_ERROR');
+      }
+      const extension = LEASE_DOCUMENT_EXTENSIONS[file.mimetype];
+      if (!extension) {
+        // The router's `fileFilter` refuses these first; this is the second
+        // gate, so the mime map and the allowlist cannot drift into a type that
+        // reaches storage with no extension to serve it back under.
+        throw new AppError('Unsupported document type', 400, 'VALIDATION_ERROR');
       }
 
       const db = getDb();
@@ -698,14 +810,38 @@ class LeaseController {
       }
 
       const documentTypes: readonly string[] = LEASE_DOCUMENT_TYPES;
+      const rawType = req.body?.type;
       const documentType =
-        typeof type === 'string' && documentTypes.includes(type)
-          ? (type as (typeof LEASE_DOCUMENT_TYPES)[number])
+        typeof rawType === 'string' && documentTypes.includes(rawType)
+          ? (rawType as (typeof LEASE_DOCUMENT_TYPES)[number])
           : 'other';
 
+      const rawName = typeof req.body?.name === 'string' ? req.body.name.trim() : '';
+      const name = safeDocumentName(rawName.length > 0 ? rawName : file.originalname);
+
+      const stored =
+        file.mimetype === 'application/pdf'
+          ? await imageUploadService.uploadPrivateDocument(
+              file.buffer,
+              file.mimetype,
+              `leases/${req.params.id}`,
+              extension,
+            )
+          : await imageUploadService.uploadPrivateImage(
+              file.buffer,
+              file.mimetype,
+              `leases/${req.params.id}`,
+            );
+
       const created = await addLeaseDocument(db, req.params.id, {
-        name: String(name),
-        url: String(url),
+        name,
+        // The column holds a URL and this change carries no migration, so the
+        // key travels inside the delivery-route shape `storedDocumentKey`
+        // already reads — the same shape every application document carries.
+        // Nothing SERVES that URL: it starts `private/`, which the public route
+        // refuses. A `storage_key` column would be the better model and is
+        // recorded as follow-up work rather than smuggled in here.
+        url: imageUploadService.getImageUrl(stored.key),
         type: documentType,
         // Server-resolved, never from the body: `uploadedBy` is the one field on
         // a document that says who is accountable for it.
@@ -716,10 +852,87 @@ class LeaseController {
       logger.info('Lease document added', {
         leaseId: req.params.id,
         documentId: created.id,
+        contentType: stored.contentType,
+        bytes: stored.bytes,
         uploadedBy: oxyUserId,
       });
 
-      res.status(201).json(successResponse(serializeLeaseDocument(created), 'Document added successfully'));
+      res
+        .status(201)
+        .json(successResponse(serializeLeaseDocument(created), 'Document added successfully'));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * `GET /api/leases/:id/documents/:documentId` — one document's bytes, to a
+   * party to the lease and to nobody else (#518 §7.4).
+   *
+   * Four things in order, the order `getApplicationDocument` uses:
+   *
+   *  1. The session says who is asking.
+   *  2. That person is the landlord, the tenant or a co-tenant. Anybody else
+   *     gets **404**, not 403 — "there is a tenancy here and you may not read
+   *     it" tells a stranger the lease exists, which is itself a fact about two
+   *     named people and an address. The sibling endpoints on this controller
+   *     answer 403, and they are about a lease the caller already holds an id
+   *     for from a list that was itself authorized; this one is reached by
+   *     guessing a URL.
+   *  3. The document belongs to THAT lease — enforced in the repository query,
+   *     so an id from another tenancy resolves to nothing.
+   *  4. Only then are the bytes read, with the key taken from the row rather
+   *     than from the request.
+   *
+   * Base64 in the ordinary envelope, for the reason `applicationController`
+   * gives at length: the Oxy linked client owns auth and is JSON-only, and
+   * `AGENTS.md` forbids a second manual token path. The upload is capped, so
+   * the response is bounded. `Cache-Control: private, no-store`, because moving
+   * a tenancy agreement off the public route buys nothing if a proxy keeps a
+   * copy of it.
+   */
+  async getLeaseDocument(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const oxyUserId = requireSessionOxyUserId(req);
+      const db = getDb();
+
+      const access = await findLeaseAccess(db, req.params.id);
+      // One 404 for "no such lease" and for "not yours", written once so the
+      // two cannot drift into distinguishable answers.
+      if (!access || !isParty(access, oxyUserId)) {
+        throw new AppError('Document not found', 404, 'NOT_FOUND');
+      }
+
+      const document = await findLeaseDocument(db, req.params.id, String(req.params.documentId));
+      if (!document) {
+        throw new AppError('Document not found', 404, 'NOT_FOUND');
+      }
+
+      const key = storedDocumentKey(document.url, {
+        bucketName: config.s3.bucketName,
+        endpoint: config.s3.endpoint,
+      });
+      const file = key ? await imageUploadService.readPrivateDocument(key) : null;
+      if (!file) {
+        // A row whose URL names nothing we store, or an object that is gone.
+        // Both are "there is nothing to give you" and neither says which.
+        throw new AppError('Document not found', 404, 'NOT_FOUND');
+      }
+
+      res.setHeader('Cache-Control', 'private, no-store');
+      res.json(
+        successResponse(
+          {
+            id: document.id,
+            type: document.type,
+            filename: downloadFilename(document.name, file.contentType),
+            contentType: file.contentType,
+            /** The document's bytes. The client writes or opens them itself. */
+            base64: file.buffer.toString('base64'),
+          },
+          'Document retrieved',
+        ),
+      );
     } catch (error) {
       next(error);
     }

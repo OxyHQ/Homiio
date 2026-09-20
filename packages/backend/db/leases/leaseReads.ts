@@ -706,6 +706,28 @@ export async function listLeaseDocuments(
     .orderBy(asc(leaseDocuments.uploadedDate));
 }
 
+/**
+ * One document, resolved by BOTH its id and its lease.
+ *
+ * The lease is part of the WHERE rather than something the caller checks after
+ * loading the row: a document id from somebody else's tenancy then resolves to
+ * nothing at all, so holding an id grants nothing even to a person who is a
+ * party to some other lease. The viewer check stays in the controller, which is
+ * where the session lives.
+ */
+export async function findLeaseDocument(
+  db: DatabaseOrTransaction,
+  leaseId: string,
+  documentId: string,
+): Promise<typeof leaseDocuments.$inferSelect | undefined> {
+  const [row] = await db
+    .select()
+    .from(leaseDocuments)
+    .where(and(eq(leaseDocuments.leaseId, leaseId), eq(leaseDocuments.id, documentId)))
+    .limit(1);
+  return row;
+}
+
 /** Attach a document to a lease. */
 export async function addLeaseDocument(
   db: DatabaseOrTransaction,

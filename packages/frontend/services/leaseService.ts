@@ -1,5 +1,6 @@
-import { api, ApiResponse } from '@/utils/api';
-import { imageUploadService } from '@/services/imageUploadService';
+import { Platform } from 'react-native';
+
+import { api, ApiError, ApiResponse } from '@/utils/api';
 import {
   Lease,
   LeaseStatus,
@@ -36,7 +37,14 @@ export interface TerminateLeaseData {
 export interface UploadLeaseDocumentInput {
   /** Local file URI (native path or web blob/object URL). */
   uri: string;
+  /** The label the document is filed under. */
   name: string;
+  /** The picked file's own name, which carries the extension. */
+  filename?: string;
+  /** From the picker; `application/pdf` for the ordinary tenancy contract. */
+  mimeType?: string;
+  /** Web only: the `File` the picker already handed us. */
+  file?: File;
   type?: LeaseDocumentType;
 }
 
@@ -107,23 +115,58 @@ class LeaseService {
   }
 
   /**
-   * Attach a document to a lease. The file is first uploaded to the images API,
-   * then only its metadata (`name`, `url`, `type`) is persisted on the lease —
-   * the lease endpoint stores metadata, not raw file bytes.
+   * Attach a document to a lease.
+   *
+   * ## The file goes to the LEASE endpoint now
+   *
+   * It used to go to the images API first, and only the resulting
+   * `/api/images/file/<key>` URL was posted here. That route is
+   * unauthenticated — it is the one that serves listing photos — so a tenancy
+   * agreement, an inspection report and an insurance certificate each became a
+   * permanent, shareable link. The bytes travel to `POST /api/leases/:id/
+   * documents` instead, which stores them under a private key and hands back a
+   * `downloadPath` that needs the session.
+   *
+   * ## Which also means a PDF works
+   *
+   * The old path ran every upload through the image pipeline, so a contract had
+   * to be a photograph of one. The lease endpoint accepts `application/pdf` and
+   * stores it byte for byte.
+   *
+   * Multipart in the two shapes `applicationService` handles, because React
+   * Native has no `File` and web has no `{uri, name, type}`.
    */
   async uploadLeaseDocument(
     leaseId: string,
     input: UploadLeaseDocumentInput,
   ): Promise<LeaseDocument> {
-    const uploaded = await imageUploadService.uploadSingleImage(input.uri, 'leases/documents');
-    const url = uploaded.urls.original;
+    const filename = input.filename ?? input.name;
+    const formData = new FormData();
+    formData.append('name', input.name);
+    formData.append('type', input.type ?? 'other');
+
+    if (Platform.OS === 'web') {
+      if (input.file) {
+        formData.append('document', input.file, filename);
+      } else {
+        const read = await fetch(input.uri);
+        if (!read.ok) {
+          throw new ApiError(`Failed to read file: ${filename}`, read.status);
+        }
+        const blob = await read.blob();
+        formData.append('document', blob, filename);
+      }
+    } else {
+      formData.append('document', {
+        uri: input.uri,
+        name: filename,
+        type: input.mimeType || 'application/octet-stream',
+      } as unknown as Blob);
+    }
+
     const response = await api.post<ApiResponse<LeaseDocument>>(
       `${LEASE_BASE}/${leaseId}/documents`,
-      {
-        name: input.name,
-        url,
-        type: input.type ?? 'other',
-      },
+      formData,
     );
     if (!response.data?.data) {
       throw new Error(response.data?.message || 'Document upload failed');

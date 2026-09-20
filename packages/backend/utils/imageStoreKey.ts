@@ -66,8 +66,23 @@ export const SERVABLE_DOCUMENT_CONTENT_TYPES: Readonly<Record<string, string>> =
  *
  * A prefix added here must have such a route, or the documents behind it become
  * unreachable rather than private.
+ *
+ * `leases/documents/` is the same defect one table over, and a worse one: a
+ * tenancy agreement names both parties, the address, the rent and the deposit,
+ * and an inspection report photographs the inside of somebody's home. The
+ * frontend uploaded them through the ORDINARY image pipeline and posted the
+ * resulting `/api/images/file/<key>` URL back, so every lease document ever
+ * attached is a permanent, cacheable, shareable link held by anyone who has
+ * seen the lease. Refusing the prefix closes it for those objects where they
+ * already lie; `GET /api/leases/:id/documents/:documentId` is the door that
+ * replaces it. New uploads land under `private/leases/...` instead, so this
+ * entry is the one that covers the history rather than the future.
  */
-export const PRIVATE_KEY_PREFIXES: readonly string[] = ['applications/documents/', 'private/'];
+export const PRIVATE_KEY_PREFIXES: readonly string[] = [
+  'applications/documents/',
+  'leases/documents/',
+  'private/',
+];
 
 /** Why a candidate key was rejected (stable codes for logging/tests). */
 export type ImageStoreKeyRejection =

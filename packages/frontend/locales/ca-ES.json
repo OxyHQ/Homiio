@@ -1270,7 +1270,7 @@
       "toastDocumentAdded": "Document afegit",
       "toastDocumentFailed": "No s'ha pogut afegir el document",
       "toastOpenDocumentFailed": "No s'ha pogut obrir el document.",
-      "permissionRequired": "Es requereix permís de la biblioteca multimèdia per adjuntar un document.",
+      "documentTooLarge": "{{name}} supera els 10 MB i no es pot adjuntar.",
       "propertyFallback": "Propietat",
       "goBack": "Go back",
       "emptyDocuments": "No documents attached.",

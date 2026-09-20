@@ -10,10 +10,52 @@
 
 import * as controllers from '../controllers';
 import express from 'express';
+import multer from 'multer';
 import * as leasePaymentController from '../controllers/leasePaymentController';
 import { asyncHandler } from '../middlewares';
+import handleUploadError from '../middlewares/uploadMiddleware';
 import * as validation from '../middlewares/validation';
 const { leaseController } = controllers;
+
+/**
+ * A tenancy document arrives as a FILE, and a PDF is the ordinary case.
+ *
+ * It used to arrive as a URL string the client had already uploaded to the
+ * public image endpoint — which both published the document and let a party
+ * point a lease row at any address at all. The bytes come here instead.
+ *
+ * The allowlist admits PDFs deliberately: a tenancy agreement, an addendum and
+ * an insurance certificate are PDFs far more often than photographs, and the
+ * old path could not accept one because the image picker and the Sharp
+ * re-encode both refused it. `controllers/leaseController.ts` splits on the
+ * type — PDFs stored verbatim, images re-encoded — and holds the matching
+ * extension map, so a type added here must be added there too.
+ *
+ * 10 MB, one file per request: the same cap `routes/applications.ts` uses, and
+ * the bound that keeps a base64 response about 13 MB. One file at a time means
+ * a partial failure loses one document rather than a batch.
+ */
+const LEASE_DOCUMENT_MIME_TYPES = new Set([
+  'application/pdf',
+  'image/jpeg',
+  'image/jpg',
+  'image/png',
+  'image/webp',
+  'image/heic',
+  'image/heif',
+]);
+
+const documentUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024, files: 1 },
+  fileFilter: (_req, file, cb) => {
+    if (LEASE_DOCUMENT_MIME_TYPES.has(file.mimetype)) {
+      cb(null, true);
+      return;
+    }
+    cb(new Error('Invalid file type. Only PDF and common image formats are allowed.'));
+  },
+});
 
 export default function() {
   const router = express.Router();
@@ -57,7 +99,23 @@ export default function() {
   );
 
   router.get('/:id/documents', validation.validateLeaseId, asyncHandler(leaseController.getLeaseDocuments));
-  router.post('/:id/documents', validation.validateLeaseId, asyncHandler(leaseController.uploadLeaseDocument));
+  // The bytes of ONE document, to a party to the lease and to nobody else
+  // (#518 §7.4). Declared before `/:id/documents` POST only for readability —
+  // what matters is that it is on THIS router, the authenticated one, which is
+  // where `AGENTS.md` says the authorization decision is made. These documents
+  // used to be delivered by `routes/public.ts`.
+  router.get(
+    '/:id/documents/:documentId',
+    validation.validateLeaseId,
+    asyncHandler(leaseController.getLeaseDocument),
+  );
+  router.post(
+    '/:id/documents',
+    documentUpload.single('document'),
+    handleUploadError,
+    validation.validateLeaseId,
+    asyncHandler(leaseController.uploadLeaseDocument),
+  );
   router.post('/:id/sign', validation.validateLeaseId, asyncHandler(leaseController.signLease));
   router.post('/:id/terminate', validation.validateLeaseId, asyncHandler(leaseController.terminateLease));
   router.post('/:id/renew', validation.validateLeaseId, asyncHandler(leaseController.renewLease));

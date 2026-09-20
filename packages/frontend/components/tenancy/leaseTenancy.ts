@@ -221,11 +221,19 @@ export function rentTotals(
 
 const IMAGE_EXTENSION = /\.(?:jpe?g|png|webp|gif|heic|heif|avif)(?:$|\?)/i;
 
+/**
+ * Which icon a document row draws, from its NAME.
+ *
+ * It used to sniff the storage URL's extension too. That URL is gone from the
+ * wire shape — it was an unauthenticated link to the document (#518 §7.4) — and
+ * the name is what remains. New uploads are filed under the picked filename, so
+ * the extension is there; an older row filed under a typed label falls through
+ * to the generic icon, which is a worse icon and not a worse document.
+ */
 function documentType(document: LeaseDocument): TenancyDocumentType {
-  const source = `${document.name} ${document.url}`;
-  if (/\.pdf(?:$|\?|\s)/i.test(source)) return 'pdf';
-  if (IMAGE_EXTENSION.test(document.name) || IMAGE_EXTENSION.test(document.url)) return 'image';
-  if (/\.(?:docx?|odt|rtf)(?:$|\?|\s)/i.test(source)) return 'document';
+  if (/\.pdf(?:$|\?|\s)/i.test(document.name)) return 'pdf';
+  if (IMAGE_EXTENSION.test(document.name)) return 'image';
+  if (/\.(?:docx?|odt|rtf)(?:$|\?|\s)/i.test(document.name)) return 'document';
   return 'other';
 }
 
