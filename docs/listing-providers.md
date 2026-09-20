@@ -660,3 +660,44 @@ a listing to one dead photo is the work, so all three are asserted:
 The timing test is sized so it **can fail**: 24 images at 40 ms is 960 ms
 serially against a 600 ms budget. Verified by mutation — forcing concurrency
 back to 1 turns it red at 969 ms.
+
+## `LISTING_HTTP_DIRECT_FIRST`: stop paying for bandwidth you don't need
+
+The residential proxy is **metered**, and search pages are enormous: a
+Habitaclia results page is ~1.9 MB and a Fotocasa one ~1.0 MB. Discovery walks
+up to `LISTING_ES_MAX_PAGES` (100) of them per city, across 68 Spanish cities,
+four times a day. Routing all of that through residential bandwidth is tens of
+gigabytes daily — and is the most plausible reason the account emptied itself
+and took the pipeline down with it.
+
+Most of those requests do not need a residential IP at all. Every search page
+tested here — Habitaclia, Fotocasa, Pisos — was served in full to an ordinary
+connection.
+
+So `fetchHttp` now tries **direct first** and falls back to the proxy when the
+attempt is refused: a non-2xx, a body the caller recognises as a challenge
+(`FetchRuntimeInit.isChallenge`), or a throw.
+
+**The worst case is one free request.** A refused attempt is retried through the
+proxy immediately, so the outcome is what it is today plus one unbilled try.
+That is what makes the default ON defensible rather than a gamble. Set it to
+`false` if a portal starts treating the datacentre IP as hostile in a way the
+fallback cannot see.
+
+`isChallenge` matters more than it looks: a portal that soft-blocks with a
+**200** is invisible to a status check, and without the predicate the cheap
+attempt would be accepted, the page would parse to nothing, and the provider
+would escalate to the browser tier — the most expensive path of all — instead of
+simply retrying through the proxy.
+
+### Measured effect of the throughput work
+
+After parallelising image ingest (`LISTING_IMAGE_INGEST_CONCURRENCY`), taken
+from the worker's own log timestamps:
+
+| | before | after |
+| --- | --- | --- |
+| listings/minute | 4.6 | **36.5** |
+| median gap between ingests | 9,520 ms | **518 ms** |
+
+Madrid's 8,121 rentals go from a thirty-hour import to under four.
