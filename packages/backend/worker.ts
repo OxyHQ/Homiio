@@ -27,6 +27,7 @@ import {
   NonHousingListingError,
   checkResidentialProxy,
   describeProxyFailure,
+  httpUseProxyFromEnv,
   fotocasaCitiesFromEnv,
   habitacliaCitiesFromEnv,
   proxyCheckIntervalMinutesFromEnv,
@@ -35,6 +36,7 @@ import {
   pisosCitiesFromEnv,
   type ExternalListingRef,
   type FetchRuntime,
+  type ProxyCheckFailure,
   type ListingFetchRuntimeHandle,
   type ProviderRegistry,
 } from '@homiio/listing-providers';
@@ -135,6 +137,25 @@ function emitIngestHeartbeat(provider: string): void {
 }
 
 /**
+ * Whether any live fetch tier actually routes listing traffic through the proxy.
+ *
+ * **A CONFIGURED PROXY URL IS NOT THE SAME AS A PROXY IN USE**, and conflating
+ * the two would page a responder about a credential nothing depends on. The
+ * HTTP tier uses it only under `LISTING_HTTP_USE_PROXY`; the browser tier only
+ * when it is enabled AND Playwright actually loaded — which is why this asks
+ * the CONSTRUCTED runtime rather than re-reading the env var that requests it.
+ * `LISTING_MEDIA_PROXY_FALLBACK` keeps the URL around for an optional media
+ * path that is not on the ingest critical path at all.
+ *
+ * Production has both tiers on, so this changes nothing there. It matters for
+ * every environment that does not, and for the general rule that an alert
+ * nobody can act on is how a channel stops being read.
+ */
+function listingTrafficUsesProxy(): boolean {
+  return httpUseProxyFromEnv() || Boolean(runtime?.fetchViaBrowser);
+}
+
+/**
  * Ask the residential proxy whether it will carry traffic, and say so loudly
  * when it will not.
  *
@@ -152,6 +173,7 @@ function emitIngestHeartbeat(provider: string): void {
 async function checkProxyAndReport(): Promise<void> {
   const proxy = residentialProxyFromEnv();
   if (!proxy) return;
+  if (!listingTrafficUsesProxy()) return;
 
   const result = await checkResidentialProxy(proxy);
   if (result.ok) {
@@ -173,12 +195,28 @@ async function checkProxyAndReport(): Promise<void> {
       reason: result.reason,
       proxyStatus: result.proxyStatus,
       detail: result.detail,
-      remedy:
-        result.reason === 'billing'
-          ? 'The residential proxy account is out of balance. Top it up; the worker recovers on its own.'
-          : 'The residential proxy rejected our credentials. Rotate /oxy/homiio/LISTING_RESIDENTIAL_PROXY_URL.',
+      remedy: remedyFor(result),
     },
   );
+}
+
+/**
+ * What the responder should actually do, per failure kind.
+ *
+ * Each branch names ONE action. An alert that prescribes the wrong one is worse
+ * than an alert that prescribes none: `refused` covers every status that is
+ * neither 402 nor 407, and telling someone to rotate a perfectly good credential
+ * because the provider returned 403 costs a rotation and buys nothing.
+ */
+function remedyFor(result: { reason: ProxyCheckFailure; proxyStatus?: number }): string {
+  switch (result.reason) {
+    case 'billing':
+      return 'The residential proxy account is out of balance. Top it up; the worker recovers on its own.';
+    case 'auth':
+      return 'The residential proxy rejected our credentials. Rotate /oxy/homiio/LISTING_RESIDENTIAL_PROXY_URL.';
+    default:
+      return `The residential proxy refused the tunnel with status ${result.proxyStatus ?? 'unknown'}. Check the proxy account and the provider's status page before rotating anything.`;
+  }
 }
 
 /**

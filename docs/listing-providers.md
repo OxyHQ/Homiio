@@ -354,7 +354,7 @@ and relayed to Telegram (oxy-infra runbook 23).
 | Marker | Emitted when | Alarm |
 | --- | --- | --- |
 | `listing-ingest-ok` | a **non-fixture** listing is ingested | fires when the 6h sum is 0 twice running |
-| `listing-proxy-unusable` | the proxy refuses CONNECT with 402/407 | fires on a single occurrence in 15 min |
+| `listing-proxy-unusable` | the proxy refuses CONNECT with 402/407 | fires on one occurrence; clears only after 60 min silent |
 
 `listing-ingest-ok` is the catch-all and does not care why: dead proxy, a portal
 changing its markup, Redis gone, the worker crashed, queues silently drained —
@@ -395,6 +395,23 @@ Failures split into what a human must act on and what will clear by itself:
 It runs at boot **and every `LISTING_PROXY_CHECK_INTERVAL_MINUTES` (default 30,
 `0` disables)**. Boot-only would not have caught this outage: the balance ran
 out mid-run and the worker then ran for two months.
+
+**That cadence is coupled to the alarm's recovery window**, which is the one
+thing to remember before changing it. The marker repeats on this interval while
+the fault persists, and the alarm returns to OK only once its entire window is
+marker-free — an hour, against a 30-minute cadence. Shrink the window below the
+cadence and every other window is empty by construction: the alarm flaps
+ALARM → OK → ALARM and announces recoveries that never happened. Raising the
+interval past 30 minutes therefore requires widening
+`homiio-listing-proxy-unusable` in the same change; both sides say so and
+oxy-infra's `test_homiio_listing_pipeline_alarms_iac.py` pins the ratio.
+
+The check also only runs **when a live tier actually routes listing traffic
+through the proxy** (`LISTING_HTTP_USE_PROXY`, or a browser tier that really
+loaded Playwright — asked of the constructed runtime, not of the env var that
+requests it). A proxy URL can be present purely for the optional media fallback
+while every listing fetch goes direct, and paging about a credential nothing
+depends on is the same mistake as paging on a transient blip.
 
 The check deliberately **does not exit the process.** A hard exit turns a
 transient blip at boot into a self-inflicted crashloop, and it would stop the

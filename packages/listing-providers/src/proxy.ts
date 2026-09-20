@@ -537,6 +537,28 @@ export function proxyHealthcheckUrlFromEnv(): string {
   return raw || DEFAULT_PROXY_HEALTHCHECK_URL;
 }
 
+/** Re-check cadence when the env var is unset or unusable. */
+const DEFAULT_PROXY_CHECK_INTERVAL_MINUTES = 30;
+
+/**
+ * Largest interval that survives `setInterval`.
+ *
+ * A JS timer delay is a signed 32-bit millisecond count. Hand `setInterval`
+ * more than that and Node does NOT wait longer — it warns and fires on the next
+ * tick, turning "check every 27 days" into a check every millisecond.
+ *
+ * Worth naming precisely because of what this module is for: that flood would
+ * run through the residential proxy, and the resource it would burn is the
+ * metered balance whose exhaustion caused the outage this file exists to
+ * detect. A typo in an env var would fund the next incident.
+ *
+ * Over-ceiling values fall back to the default rather than clamping to it —
+ * somebody who wrote 40000 did not mean 35791, and a sane 30 beats an arbitrary
+ * maximum nobody chose. `Number` rather than `parseInt` so `30min` and `30.5`
+ * are refused outright instead of silently becoming 30.
+ */
+const MAX_PROXY_CHECK_INTERVAL_MINUTES = Math.floor(2_147_483_647 / 60_000);
+
 /**
  * How often the worker re-checks the proxy, in minutes
  * (`LISTING_PROXY_CHECK_INTERVAL_MINUTES`, default 30, `0` disables).
@@ -545,11 +567,21 @@ export function proxyHealthcheckUrlFromEnv(): string {
  * the balance ran out while the worker was running, and it kept running for two
  * months afterwards. The check has to repeat or it does not cover the failure
  * that actually happened.
+ *
+ * **THIS CADENCE IS COUPLED TO AN ALARM IN ANOTHER REPO.** While the proxy stays
+ * broken the marker is re-emitted on this interval, and the alarm only returns
+ * to OK once its whole evaluation window is marker-free — which is what makes a
+ * recovery notice mean "a check actually passed" rather than "we happened not to
+ * emit just then". oxy-infra's `homiio-listing-proxy-unusable` allows a 60
+ * minute silence, so raising this past 30 minutes requires widening that window
+ * in the same change or the alarm will flap between ALARM and a false OK.
  */
 export function proxyCheckIntervalMinutesFromEnv(): number {
   const raw = process.env.LISTING_PROXY_CHECK_INTERVAL_MINUTES?.trim();
-  if (!raw) return 30;
-  const parsed = Number.parseInt(raw, 10);
-  if (!Number.isFinite(parsed) || parsed < 0) return 30;
+  if (!raw) return DEFAULT_PROXY_CHECK_INTERVAL_MINUTES;
+  const parsed = Number(raw);
+  if (!Number.isSafeInteger(parsed) || parsed < 0 || parsed > MAX_PROXY_CHECK_INTERVAL_MINUTES) {
+    return DEFAULT_PROXY_CHECK_INTERVAL_MINUTES;
+  }
   return parsed;
 }

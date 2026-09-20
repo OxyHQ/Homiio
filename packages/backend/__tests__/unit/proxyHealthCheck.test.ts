@@ -16,6 +16,7 @@ import { ProxyAgent, fetch as undiciFetch } from 'undici';
 import {
   checkResidentialProxy,
   describeProxyFailure,
+  httpUseProxyFromEnv,
   parseResidentialProxyUrl,
   proxyCheckIntervalMinutesFromEnv,
   proxyHealthcheckUrlFromEnv,
@@ -246,5 +247,66 @@ describe('proxy check configuration', () => {
 
     process.env.LISTING_PROXY_CHECK_INTERVAL_MINUTES = '-5';
     expect(proxyCheckIntervalMinutesFromEnv()).toBe(30);
+  });
+
+  it('refuses an interval that setInterval would turn into a probe flood', () => {
+    // A JS timer delay is a signed 32-bit millisecond count. 40000 minutes is
+    // 2.4e9 ms, which Node does not wait for — it fires on the next tick, so
+    // "check every 27 days" becomes a check every millisecond, hammering the
+    // proxy and burning the metered balance whose exhaustion started all this.
+    process.env.LISTING_PROXY_CHECK_INTERVAL_MINUTES = '40000';
+    expect(proxyCheckIntervalMinutesFromEnv()).toBe(30);
+
+    const maxSafe = Math.floor(2_147_483_647 / 60_000);
+    process.env.LISTING_PROXY_CHECK_INTERVAL_MINUTES = String(maxSafe);
+    expect(proxyCheckIntervalMinutesFromEnv()).toBe(maxSafe);
+    expect(maxSafe * 60_000).toBeLessThanOrEqual(2_147_483_647);
+
+    process.env.LISTING_PROXY_CHECK_INTERVAL_MINUTES = String(maxSafe + 1);
+    expect(proxyCheckIntervalMinutesFromEnv()).toBe(30);
+  });
+
+  it('refuses values that parseInt would silently truncate', () => {
+    // `parseInt` reads '30min' as 30 and '30.9' as 30, quietly accepting input
+    // whose author meant something else.
+    for (const raw of ['30min', '30.9', ' ', 'NaN', 'Infinity']) {
+      process.env.LISTING_PROXY_CHECK_INTERVAL_MINUTES = raw;
+      expect(proxyCheckIntervalMinutesFromEnv()).toBe(30);
+    }
+
+    // Anything `Number` reads as a whole number in range IS accepted, however
+    // it was spelled — 1e3 is 1000 minutes and 0x10 is 16. Asserted so the
+    // boundary is a decision on the record rather than an accident of `Number`,
+    // and so a future switch to a stricter parser has to face these two cases.
+    process.env.LISTING_PROXY_CHECK_INTERVAL_MINUTES = '1e3';
+    expect(proxyCheckIntervalMinutesFromEnv()).toBe(1000);
+
+    process.env.LISTING_PROXY_CHECK_INTERVAL_MINUTES = '0x10';
+    expect(proxyCheckIntervalMinutesFromEnv()).toBe(16);
+  });
+});
+
+describe('when the proxy is configured but nothing routes through it', () => {
+  /**
+   * The worker gates its checks on `httpUseProxyFromEnv() || runtime.fetchViaBrowser`.
+   * This pins the half that is a pure env read; the other half is a property of
+   * the constructed runtime, which `residentialProxy.test.ts` already covers.
+   *
+   * Why it matters: a proxy URL can be present for the optional media fallback
+   * while every listing fetch goes direct. Alarming on a credential nothing
+   * depends on is how an alert channel stops being read — the same reasoning
+   * that keeps transient network failures silent.
+   */
+  it('does not treat a mere credential as proof the proxy is in use', () => {
+    process.env.LISTING_RESIDENTIAL_PROXY_URL = 'http://user:pass@gw.example:823';
+
+    delete process.env.LISTING_HTTP_USE_PROXY;
+    expect(httpUseProxyFromEnv()).toBe(false);
+
+    process.env.LISTING_HTTP_USE_PROXY = 'false';
+    expect(httpUseProxyFromEnv()).toBe(false);
+
+    process.env.LISTING_HTTP_USE_PROXY = 'true';
+    expect(httpUseProxyFromEnv()).toBe(true);
   });
 });
