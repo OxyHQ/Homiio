@@ -410,7 +410,11 @@
       "floor": "मंज़िल",
       "floorGround": "भूतल",
       "floorElevator": "लिफ़्ट के साथ",
-      "floorPublishedOnly": "केवल वे विज्ञापन मिल सकते हैं जिनके मालिक मंज़िल सार्वजनिक करते हैं।"
+      "floorPublishedOnly": "केवल वे विज्ञापन मिल सकते हैं जिनके मालिक मंज़िल सार्वजनिक करते हैं।",
+      "placeKind": "आवास का प्रकार",
+      "placeKindAny": "कोई भी",
+      "placeKindWholeHome": "पूरा घर",
+      "placeKindRoom": "एक कमरा"
     },
     "mode": {
       "label": "Browse mode",

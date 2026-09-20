@@ -414,7 +414,11 @@
       "floor": "Planta",
       "floorGround": "Planta baixa",
       "floorElevator": "Amb ascensor",
-      "floorPublishedOnly": "Només es poden trobar els anuncis el propietari dels quals publica la planta."
+      "floorPublishedOnly": "Només es poden trobar els anuncis el propietari dels quals publica la planta.",
+      "placeKind": "Tipus d’allotjament",
+      "placeKindAny": "Qualsevol",
+      "placeKindWholeHome": "Habitatge sencer",
+      "placeKindRoom": "Una habitació"
     },
     "mode": {
       "label": "Mode de cerca",

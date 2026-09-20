@@ -410,7 +410,11 @@
       "floor": "楼层",
       "floorGround": "一楼",
       "floorElevator": "有电梯",
-      "floorPublishedOnly": "只能匹配到房东公开了楼层的房源。"
+      "floorPublishedOnly": "只能匹配到房东公开了楼层的房源。",
+      "placeKind": "房源类型",
+      "placeKindAny": "不限",
+      "placeKindWholeHome": "整套房源",
+      "placeKindRoom": "一个房间"
     },
     "mode": {
       "label": "Browse mode",

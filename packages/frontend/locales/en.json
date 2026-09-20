@@ -410,7 +410,11 @@
       "floor": "Floor",
       "floorGround": "Ground floor",
       "floorElevator": "With a lift",
-      "floorPublishedOnly": "Only listings whose owner publishes the floor can be matched."
+      "floorPublishedOnly": "Only listings whose owner publishes the floor can be matched.",
+      "placeKind": "Type of place",
+      "placeKindAny": "Any",
+      "placeKindWholeHome": "Whole place",
+      "placeKindRoom": "A room"
     },
     "mode": {
       "label": "Browse mode",

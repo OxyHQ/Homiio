@@ -393,7 +393,11 @@
       "floor": "Planta",
       "floorGround": "Planta baja",
       "floorElevator": "Con ascensor",
-      "floorPublishedOnly": "Solo se pueden encontrar los anuncios cuyo propietario publica la planta."
+      "floorPublishedOnly": "Solo se pueden encontrar los anuncios cuyo propietario publica la planta.",
+      "placeKind": "Tipo de alojamiento",
+      "placeKindAny": "Cualquiera",
+      "placeKindWholeHome": "Vivienda completa",
+      "placeKindRoom": "Una habitación"
     },
     "mode": {
       "label": "Modo de búsqueda",

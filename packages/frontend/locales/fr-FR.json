@@ -410,7 +410,11 @@
       "floor": "Étage",
       "floorGround": "Rez-de-chaussée",
       "floorElevator": "Avec ascenseur",
-      "floorPublishedOnly": "Seules les annonces dont le propriétaire publie l’étage peuvent correspondre."
+      "floorPublishedOnly": "Seules les annonces dont le propriétaire publie l’étage peuvent correspondre.",
+      "placeKind": "Type de logement",
+      "placeKindAny": "Peu importe",
+      "placeKindWholeHome": "Logement entier",
+      "placeKindRoom": "Une chambre"
     },
     "mode": {
       "label": "Browse mode",
