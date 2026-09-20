@@ -296,23 +296,30 @@ export class ImageUploadService {
     // doc — seed or request-time — resolves to real bytes from our own host.
     void skipUpload;
 
-    for (const variant of this.variants) {
-      const processedBuffer = await this.processImage(buffer, variant);
-      const fileName = this.generateFileName(imageId, variant.name, variant.format);
-      const key = `${folder}/${fileName}`;
+    // The four variants are independent renders of the same buffer, and there
+    // are exactly four, so they run together rather than one after another.
+    // Serially this was four fetch-free but CPU- and network-bound round trips
+    // per image, multiplied by every image on every listing.
+    const rendered = await Promise.all(
+      this.variants.map(async (variant) => {
+        const processedBuffer = await this.processImage(buffer, variant);
+        const fileName = this.generateFileName(imageId, variant.name, variant.format);
+        const key = `${folder}/${fileName}`;
 
-      // Always process (so dimensions/bytes are real). Persist the bytes to S3
-      // when configured; otherwise to the self-hosted local store.
-      if (this.isStorageConfigured()) {
-        await this.uploadToS3(processedBuffer, key, mimetype);
-      } else {
-        await this.writeToLocalStore(processedBuffer, key);
-      }
+        // Always process (so dimensions/bytes are real). Persist the bytes to S3
+        // when configured; otherwise to the self-hosted local store.
+        if (this.isStorageConfigured()) {
+          await this.uploadToS3(processedBuffer, key, mimetype);
+        } else {
+          await this.writeToLocalStore(processedBuffer, key);
+        }
+        return { variant, key, bytes: processedBuffer.length };
+      }),
+    );
+
+    for (const { variant, key, bytes } of rendered) {
       keys[variant.name] = key;
-
-      if (variant.name === 'original') {
-        originalBytes = processedBuffer.length;
-      }
+      if (variant.name === 'original') originalBytes = bytes;
     }
 
     const completeKeys = this.assertCompleteVariants(keys);
