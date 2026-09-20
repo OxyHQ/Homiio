@@ -1313,3 +1313,6 @@ export {
 
 // Fotocasa SSR search cards — see providers/fotocasa/searchads.
 export { fotocasaRefsFromSearchCards } from './providers/fotocasa/searchads';
+
+// Shared HTML helpers — see src/html.ts.
+export { extractMetaProperties } from './html';

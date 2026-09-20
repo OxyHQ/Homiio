@@ -3,8 +3,17 @@
  * ONE chokepoint — providers pass through portal HTML; ingest strips it here.
  */
 
+/**
+ * Block-ish tags that become a newline.
+ *
+ * Whitespace runs are BOUNDED (`{0,8}`) rather than `\s*`. Unbounded runs make
+ * this a polynomial ReDoS: on `'<' + ' '.repeat(n)` the engine re-tries the
+ * whitespace from every position and fails at the tag name each time. Real
+ * markup never puts eight spaces inside a `<br>`, and a bound turns the worst
+ * case from quadratic into linear.
+ */
 const LINE_BREAK_TAG =
-  /<\s*br\s*\/?\s*>|<\s*\/\s*(?:p|div|li|h[1-6]|tr|blockquote|section|article)\s*>/gi;
+  /<[ \t\r\n]{0,8}br[ \t\r\n]{0,8}\/?[ \t\r\n]{0,8}>|<[ \t\r\n]{0,8}\/[ \t\r\n]{0,8}(?:p|div|li|h[1-6]|tr|blockquote|section|article)[ \t\r\n]{0,8}>/gi;
 
 const NAMED_ENTITIES: Readonly<Record<string, string>> = {
   amp: '&',
