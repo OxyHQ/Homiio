@@ -14,6 +14,7 @@ import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
+import { GOWAY_ANCHOR_LAYER_ID } from '@/components/gowayMap';
 import { MAPLIBRE_INTEGRITY, MAPLIBRE_VERSION, buildMapDocument } from '@/components/mapDocument';
 
 const packageJsonPath = require.resolve('maplibre-gl/package.json');
@@ -26,7 +27,8 @@ const sha384 = (bytes: Buffer): string =>
 const document = buildMapDocument({
   center: [2.1686, 41.3874],
   zoom: 12,
-  style: 'https://tiles.example/style.json',
+  style: 'https://goway.example/map/goway-light.json',
+  anchorLayerId: GOWAY_ANCHOR_LAYER_ID,
   cluster: { enabled: true, radius: 50, maxZoom: 14 },
   paint: {
     surface: '#fff',
@@ -72,9 +74,33 @@ describe('the native map document', () => {
     expect(importMap).toBeLessThan(moduleScript);
   });
 
-  it('resolves missing sprite images with a resolver, not a notify-only event', () => {
-    expect(document).toContain('map.setMissingStyleImageResolver(');
-    expect(document).not.toContain("map.on('styleimagemissing'");
+  it('inserts Homiio\u2019s layer at GoWay\u2019s anchor, not on top of the style', () => {
+    // The anchor is a NAME GoWay publishes. The alternative an app without one
+    // has to write is a scan for the first `symbol` layer, which silently picks
+    // a different layer the next time the cartography moves.
+    expect(document).toContain(JSON.stringify(GOWAY_ANCHOR_LAYER_ID));
+    expect(document).toContain("map.addLayer({id:'markers-anchor'");
+    expect(document).toContain('}, before);');
+  });
+
+  it('puts the marker source back when the style is swapped', () => {
+    // `setStyle` replaces the whole style and takes every source and layer this
+    // document added with it. Without a re-install bound to `styledata`, a
+    // theme change leaves the map with no marker source, `querySourceFeatures`
+    // returns nothing and every property pin disappears \u2014 no error anywhere.
+    expect(document).toContain("map.on('styledata', ensureMarkers)");
+    expect(document).toContain("map.on('idle', ensureMarkers)");
+    expect(document).toContain("m.type==='setStyle'");
+  });
+
+  it('names no basemap vendor of its own', () => {
+    // Everything a basemap needs \u2014 tiles, sprite, glyphs, attribution \u2014 is a
+    // property of GoWay's style document now. A host named here would be a
+    // second copy of a decision GoWay already made, and the one that rots.
+    for (const host of ['tiles.openfreemap.org', 'openmaptiles.org', 'openstreetmap.org']) {
+      expect(document).not.toContain(host);
+    }
+    expect(document).not.toContain('customAttribution');
   });
 });
 

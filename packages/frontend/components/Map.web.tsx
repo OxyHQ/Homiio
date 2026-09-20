@@ -5,8 +5,9 @@
  * driven by the self-contained HTML document in `mapDocument.ts`. On the web we
  * skip the iframe/WebView + external-CDN + postMessage bridge entirely and drive
  * `maplibre-gl` **directly** against a real DOM `<div>`: it's the same GL engine,
- * but loaded from the bundle (keyless OpenFreeMap tiles, no unpkg, no sandbox).
- * Its worker is the one file the bundle cannot carry — see {@link WORKER_URL}.
+ * but loaded from the bundle (no unpkg, no sandbox). Its worker is the one file
+ * the bundle cannot carry — see {@link WORKER_URL}. The cartography is GoWay's
+ * served style document, the same one the native document renders.
  *
  * This file is resolved by Metro/Expo only for `Platform.OS === 'web'`, so the
  * `maplibre-gl` import never reaches the native bundle. The component preserves
@@ -36,12 +37,12 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import type { Feature, FeatureCollection, Point } from 'geojson';
 import * as Location from 'expo-location';
 import { MapClusterMarker, MapPriceMarker } from '@oxy.so/bloom/map-marker';
+import { useTheme } from '@oxy.so/bloom/theme';
 
 import { useMapState } from '@/context/MapStateContext';
 import { boundsCenter } from '@homiio/shared-types';
 import { isDegenerateBounds, toCameraBounds } from './mapCamera';
 import { api, type ApiResponse } from '@/utils/api';
-import { ATTRIBUTION } from './mapDocument';
 import {
   clusterOverlayState,
   collectOverlays,
@@ -50,10 +51,11 @@ import {
   type OverlayItem,
 } from './mapOverlays';
 import {
-  DEFAULT_STYLE_URL,
-  fetchSanitizedMapStyle,
-  installMissingImageFallback,
-} from './mapStyle';
+  resolveAnchorLayerId,
+  useGowayStyle,
+  type MapAppearance,
+  type ResolvedMapStyle,
+} from './gowayMap';
 import { colors } from '@/styles/colors';
 import { PROGRAMMATIC_MOVE, moveSourceOf } from './mapTypes';
 import type {
@@ -103,7 +105,6 @@ export interface MapProps {
    */
   initialCoordinates?: LonLat;
   initialZoom?: number;
-  styleURL?: string;
   startFromCurrentLocation?: boolean;
   markers?: MarkerInput[];
   cluster?: ClusterOptions;
@@ -206,7 +207,6 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
     style,
     initialCoordinates = DEFAULT_CENTER,
     initialZoom = DEFAULT_ZOOM,
-    styleURL = DEFAULT_STYLE_URL,
     startFromCurrentLocation = true,
     markers = [],
     cluster,
@@ -254,6 +254,23 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
   const addressMarkerRef = useRef<Marker | null>(null);
   const lastRegionEmitRef = useRef<number>(0);
   const loadedRef = useRef(false);
+  const resizeObserverRef = useRef<ResizeObserver | null>(null);
+
+  /**
+   * GoWay's style document for the theme in force.
+   *
+   * Homiio no longer configures a basemap: `useGowayStyle` fetches the document
+   * GoWay serves and hardens it, and the appearance follows Bloom rather than
+   * being pinned light — which is what it was, because nothing ever supplied a
+   * second style URL.
+   */
+  const theme = useTheme();
+  const appearance: MapAppearance = theme.isDark ? 'dark' : 'light';
+  const resolved: ResolvedMapStyle | null = useGowayStyle(appearance);
+  /** The appearance the live map is currently rendering. */
+  const builtAppearanceRef = useRef<MapAppearance | null>(null);
+  /** Flips once, when the map instance exists, so the style-swap effect can run. */
+  const [mapBuilt, setMapBuilt] = useState(false);
 
   // Keep the latest callbacks/markers in refs so the map's event listeners
   // (bound once at construction) always see current values without rebinding.
@@ -426,27 +443,63 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
     });
   }, []);
 
-  // Construct the maplibre map once, against the real DOM container. The empty
-  // dep array is the point: the instance is created a single time and lives for
-  // the component's lifetime — live props are read through the refs above.
+  /**
+   * Install Homiio's marker source and its invisible layer into whatever style
+   * is currently loaded, at GoWay's published anchor.
+   *
+   * Idempotent, and called from `styledata`/`idle` as well as `load`, because
+   * `setStyle` replaces the whole style and takes every source and layer this
+   * component added with it. Without the re-install a theme change leaves the
+   * map with no marker source, `querySourceFeatures` returns nothing and every
+   * property pin silently disappears — no error, no failing test, no map.
+   */
+  const ensureMarkerLayer = useCallback((map: maplibregl.Map, clusterOptions: Required<ClusterOptions>) => {
+    if (!map.isStyleLoaded() || map.getSource(SOURCE_ID)) return;
+
+    map.addSource(SOURCE_ID, {
+      type: 'geojson',
+      data: toFeatureCollection([]),
+      cluster: clusterOptions.enabled,
+      clusterRadius: clusterOptions.radius,
+      clusterMaxZoom: clusterOptions.maxZoom,
+      promoteId: 'id',
+    });
+
+    // `beforeId` is GoWay's documented anchor, read off the LIVE style so a
+    // renamed anchor (or a style that publishes none) is handled by the
+    // contract rather than by a scan for "the first symbol layer" — which is
+    // what an app without an anchor has to write, and what silently picks a
+    // different layer the next time the cartography moves.
+    map.addLayer(
+      {
+        id: SOURCE_ANCHOR_LAYER_ID,
+        type: 'circle',
+        source: SOURCE_ID,
+        paint: { 'circle-radius': 0, 'circle-opacity': 0, 'circle-stroke-width': 0 },
+      },
+      resolveAnchorLayerId(map.getStyle()),
+    );
+
+    loadedRef.current = true;
+    // Cluster ids belonged to the old source; the new one mints its own.
+    clusterLeavesRef.current = createClusterLeafCache();
+    const restored = Array.from(markerInputsRef.current.values());
+    if (restored.length > 0) {
+      map.getSource<GeoJSONSource>(SOURCE_ID)?.setData(toFeatureCollection(restored));
+    }
+  }, []);
+  const ensureMarkerLayerRef = useRef(ensureMarkerLayer);
+  ensureMarkerLayerRef.current = ensureMarkerLayer;
+
+  // Construct the maplibre map once GoWay's first style document has settled.
+  // The effect body is a no-op after that: the instance is created a single
+  // time and lives for the component's lifetime, and live props flow in
+  // through the refs above.
   useEffect(() => {
     const container = containerRef.current;
-    if (!container || mapRef.current) return;
-
-    // The overlay-marker store is created once and never reassigned; capture it
-    // for the cleanup so it doesn't read a possibly-changed ref at teardown time.
-    const overlayMarkers = overlayMarkersRef.current;
-
-    // The OpenFreeMap liberty style ships layer filters that throw on
-    // null-numeric tile properties. Construct against the HARDENED style object
-    // (sanitizeMapStyle) so no tile parse can throw; if the fetch fails, fall
-    // back to the bare URL — the map must always render.
-    let map: maplibregl.Map | null = null;
-    let resizeObserver: ResizeObserver | null = null;
-    let disposed = false;
+    if (!container || mapRef.current || !resolved) return;
 
     const buildMap = (style: string | StyleSpecification) => {
-      if (disposed || !containerRef.current || mapRef.current) return;
       const mapOptions: MapOptions = {
         container,
         style,
@@ -454,42 +507,25 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
         zoom: initialZoomRef.current,
         attributionControl: false,
       };
-      map = new maplibregl.Map(mapOptions);
+      const map = new maplibregl.Map(mapOptions);
       mapRef.current = map;
 
-      // Supply a transparent placeholder for any sprite the style references but
-      // doesn't ship (the liberty 'poi_*' layers request class names like
-      // 'office' that aren't in the sprite) — silences the missing-image error.
-      installMissingImageFallback(map);
-
-      map.addControl(
-        new maplibregl.AttributionControl({ compact: true, customAttribution: ATTRIBUTION }),
-      );
+      // No customAttribution: GoWay's style document declares the attribution
+      // of its own sources and MapLibre renders it. A basemap credit restated
+      // in Homiio is a second copy of somebody else's licence obligation.
+      map.addControl(new maplibregl.AttributionControl({ compact: true }));
 
       wireMap(map);
+      builtAppearanceRef.current = resolved.appearance;
+      setMapBuilt(true);
     };
 
     const wireMap = (map: maplibregl.Map) => {
-      const clusterEnabled = clusterFinal.enabled;
+      const clusterOptions = clusterFinal;
+      const install = () => ensureMarkerLayerRef.current(map, clusterOptions);
 
       map.on('load', () => {
-        loadedRef.current = true;
-
-        map.addSource(SOURCE_ID, {
-          type: 'geojson',
-          data: toFeatureCollection([]),
-          cluster: clusterEnabled,
-          clusterRadius: clusterFinal.radius,
-          clusterMaxZoom: clusterFinal.maxZoom,
-          promoteId: 'id',
-        });
-
-        map.addLayer({
-          id: SOURCE_ANCHOR_LAYER_ID,
-          type: 'circle',
-          source: SOURCE_ID,
-          paint: { 'circle-radius': 0, 'circle-opacity': 0, 'circle-stroke-width': 0 },
-        });
+        install();
 
         // Render any markers/state that arrived before `load` completed.
         const initialFeatures = savedState?.markers && savedState.markers.length > 0
@@ -497,6 +533,12 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
           : markersRef.current;
         setData(initialFeatures);
       });
+
+      // `styledata` is the first tick at which a SWAPPED style can take the
+      // layer; `idle` is the backstop, because the one condition whose absence
+      // here costs every pin on the map is "the style finished loading".
+      map.on('styledata', install);
+      map.on('idle', install);
 
       map.on('render', () => syncOverlaysRef.current());
 
@@ -535,32 +577,59 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
       // any other camera command: the first one lands as the split layout
       // settles, which is exactly the "a programmatic initial move must not show
       // the button" case.
-      resizeObserver = new ResizeObserver(() => map.resize(PROGRAMMATIC_MOVE));
+      const resizeObserver = new ResizeObserver(() => map.resize(PROGRAMMATIC_MOVE));
       resizeObserver.observe(container);
+      resizeObserverRef.current = resizeObserver;
     };
 
-    // Fetch + harden the style, then build. On failure, build against the raw
-    // URL so the map still renders (worst case: the original noisy log returns).
-    fetchSanitizedMapStyle(styleURL)
-      .then((style) => buildMap(style))
-      .catch(() => buildMap(styleURL));
+    buildMap(resolved.style);
+    // The map is built once, from the first settled style; live values flow
+    // through refs. Teardown is the separate unmount-only effect below, because
+    // this one must be allowed to re-run without destroying the instance.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resolved]);
 
+  /**
+   * Teardown, on UNMOUNT only.
+   *
+   * It is a separate effect from construction on purpose. Construction has to
+   * wait for GoWay's first style document, so it cannot have an empty
+   * dependency list — and a cleanup attached to it would then destroy the live
+   * map every time that dependency settled. Everything here is read from a ref,
+   * so the empty list is honest.
+   */
+  useEffect(() => {
+    const overlayMarkers = overlayMarkersRef.current;
     return () => {
-      disposed = true;
-      resizeObserver?.disconnect();
-      resizeObserver = null;
+      resizeObserverRef.current?.disconnect();
+      resizeObserverRef.current = null;
       overlayMarkers.forEach((entry) => entry.marker.remove());
       overlayMarkers.clear();
       addressMarkerRef.current?.remove();
       addressMarkerRef.current = null;
       loadedRef.current = false;
+      const map = mapRef.current;
       mapRef.current = null;
       map?.remove();
-      map = null;
     };
-    // The map is intentionally created once; live values flow through refs.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  /**
+   * A theme change swaps GoWay's document inside the live map.
+   *
+   * `resolved` carries the appearance it is FOR, so this cannot install the
+   * light document under a dark theme while the dark one is still in flight —
+   * the two arrive at different times and only the pair says which is which.
+   * `mapBuilt` is in the dependencies so a flip that happened WHILE the first
+   * document was loading is still applied once the map exists.
+   */
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !resolved || builtAppearanceRef.current === resolved.appearance) return;
+    builtAppearanceRef.current = resolved.appearance;
+    loadedRef.current = false;
+    map.setStyle(resolved.style);
+  }, [resolved, mapBuilt]);
 
   // Stream marker updates to the live map.
   useEffect(() => {
@@ -775,7 +844,6 @@ const MemoizedMap = React.memo(MapComponent, (prevProps, nextProps) => {
       prevProps.screenId === nextProps.screenId &&
       prevProps.enableAddressLookup === nextProps.enableAddressLookup &&
       prevProps.showAddressInstructions === nextProps.showAddressInstructions &&
-      prevProps.styleURL === nextProps.styleURL &&
       prevProps.initialZoom === nextProps.initialZoom &&
       prevProps.startFromCurrentLocation === nextProps.startFromCurrentLocation &&
       JSON.stringify(prevProps.markers) === JSON.stringify(nextProps.markers) &&
@@ -787,7 +855,6 @@ const MemoizedMap = React.memo(MapComponent, (prevProps, nextProps) => {
   if (nextProps.screenId === 'search' || nextProps.screenId === 'search-screen') {
     return (
       prevProps.screenId === nextProps.screenId &&
-      prevProps.styleURL === nextProps.styleURL &&
       prevProps.initialZoom === nextProps.initialZoom &&
       prevProps.startFromCurrentLocation === nextProps.startFromCurrentLocation &&
       JSON.stringify(prevProps.cluster) === JSON.stringify(nextProps.cluster) &&

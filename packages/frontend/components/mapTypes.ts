@@ -1,3 +1,5 @@
+import type { StyleSpecification } from 'maplibre-gl';
+
 import type { GeoBounds, GeocodedAddress } from '@homiio/shared-types';
 
 import type { CameraBounds } from './mapCamera';
@@ -106,7 +108,25 @@ export type OutboundMapMessage =
   | { type: 'setUserLocation'; coordinates: LonLat }
   | { type: 'highlightMarker'; id: string | null }
   /** Replace the marker colours, e.g. after a theme change, without a reload. */
-  | { type: 'setPaint'; paint: MapMarkerPaint };
+  | { type: 'setPaint'; paint: MapMarkerPaint }
+  /**
+   * Swap GoWay's style document, e.g. light → dark, without a reload.
+   *
+   * A reload is what a `srcDoc`/`source` change costs on this path, and it is
+   * not a cheap one: the WebView re-fetches MapLibre, rebuilds the map and
+   * loses every marker until the host notices and re-sends them. The same
+   * reasoning already produced `setPaint`; a theme change must move the map,
+   * not restart it.
+   *
+   * `anchorLayerId` travels with the document because it is a property OF that
+   * document — the host resolves it once (`gowayMap.resolveAnchorLayerId`)
+   * rather than having the template literal re-derive a rule.
+   */
+  | {
+      type: 'setStyle';
+      style: string | StyleSpecification;
+      anchorLayerId?: string;
+    };
 
 export interface ClusterOptions {
   enabled?: boolean;

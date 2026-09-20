@@ -1,7 +1,6 @@
 import React, { useMemo, useRef, useEffect, useState, useCallback } from 'react';
 import { Platform, View, ViewStyle, Text } from 'react-native';
 import { WebView, type WebViewMessageEvent } from 'react-native-webview';
-import type { StyleSpecification } from 'maplibre-gl';
 import * as Location from 'expo-location';
 import { useMapState } from '@/context/MapStateContext';
 import { api, type ApiResponse } from '@/utils/api';
@@ -15,7 +14,12 @@ import {
 } from './mapDocument';
 import { boundsCenter } from '@homiio/shared-types';
 import { isDegenerateBounds, toCameraBounds } from './mapCamera';
-import { DEFAULT_STYLE_URL, fetchSanitizedMapStyle } from './mapStyle';
+import {
+  anchorLayerIdFor,
+  useGowayStyle,
+  type MapAppearance,
+  type ResolvedMapStyle,
+} from './gowayMap';
 import { colors } from '@/styles/colors';
 import type {
   GeocodedAddress,
@@ -51,7 +55,6 @@ export interface MapProps {
    */
   initialCoordinates?: LonLat;
   initialZoom?: number;
-  styleURL?: string;
   startFromCurrentLocation?: boolean;
   markers?: MarkerInput[];
   cluster?: ClusterOptions;
@@ -109,7 +112,6 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
     style,
     initialCoordinates = DEFAULT_CENTER,
     initialZoom = DEFAULT_ZOOM,
-    styleURL = DEFAULT_STYLE_URL,
     startFromCurrentLocation = true,
     markers = [],
     cluster,
@@ -133,16 +135,6 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
   const [showInstructions, setShowInstructions] = useState(enableAddressLookup && showAddressInstructions);
   const pending = useRef<string[]>([]);
   const mapInitialized = useRef(false);
-
-  // The OpenFreeMap liberty style ships layer filters that throw on null-numeric
-  // tile properties (`Expected value to be of type number, but found null`). We
-  // fetch + harden it (sanitizeMapStyle) once and feed the WebView document the
-  // patched style OBJECT, so the WebView builds the map ONCE against the hardened
-  // style (no reload). `styleSettled` gates the WebView mount until the fetch
-  // resolves; on failure it settles to the raw URL so the map always renders
-  // (worst case: the original noisy log returns, but it's the same map).
-  const [resolvedStyle, setResolvedStyle] = useState<string | StyleSpecification>(styleURL);
-  const [styleSettled, setStyleSettled] = useState(false);
 
   // Get saved map state if screenId is provided
   const savedState = screenId ? getMapState(screenId) : null;
@@ -168,29 +160,29 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
   const { t } = useTranslation();
   const clusterLabel = t('map.clusterLabel', { count: CLUSTER_COUNT_TOKEN });
 
-  // Fetch + sanitize the style once per URL, then mount the WebView with it.
-  // Settling to the raw URL on failure guarantees the map still renders.
+  /**
+   * GoWay's style document for the theme in force.
+   *
+   * Homiio no longer configures a basemap: `useGowayStyle` fetches the document
+   * GoWay serves and hardens it, and the appearance follows Bloom rather than
+   * being pinned light — which is what it was, because nothing ever supplied a
+   * second style URL.
+   */
+  const appearance: MapAppearance = theme.isDark ? 'dark' : 'light';
+  const resolved = useGowayStyle(appearance);
+
+  /**
+   * The document the WebView OPENED with, frozen.
+   *
+   * The HTML is `source`, so letting it change reloads the WebView: MapLibre is
+   * re-fetched, the map is rebuilt and every pin is gone until the host notices.
+   * A theme change therefore travels as a `setStyle` MESSAGE, exactly as
+   * `setPaint` already does, and this state only ever goes null → one value.
+   */
+  const [initialStyle, setInitialStyle] = useState<ResolvedMapStyle | null>(null);
   useEffect(() => {
-    let cancelled = false;
-    setStyleSettled(false);
-    fetchSanitizedMapStyle(styleURL)
-      .then((style) => {
-        if (cancelled) return;
-        setResolvedStyle(style);
-      })
-      .catch(() => {
-        if (cancelled) return;
-        // Network/parse failure: fall back to the raw URL so the document still
-        // builds. No throw — the map must not fail to mount.
-        setResolvedStyle(styleURL);
-      })
-      .finally(() => {
-        if (!cancelled) setStyleSettled(true);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [styleURL]);
+    setInitialStyle((current) => current ?? resolved);
+  }, [resolved]);
 
   /**
    * The user's own position, ONLY when permission has already been granted.
@@ -236,16 +228,19 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
 
   // Generate HTML once with frozen initial coordinates to prevent iframe reloads
   const html = useMemo(
-    () => buildMapDocument({
-      center: initialCenterRef.current,
-      zoom: initialZoomRef.current,
-      style: resolvedStyle,
-      cluster: clusterFinal,
-      paint: initialPaintRef.current,
-      clusterLabel,
-      enableAddressLookup,
-    }),
-    [resolvedStyle, clusterFinal, enableAddressLookup, clusterLabel]
+    () => initialStyle === null
+      ? null
+      : buildMapDocument({
+        center: initialCenterRef.current,
+        zoom: initialZoomRef.current,
+        style: initialStyle.style,
+        anchorLayerId: anchorLayerIdFor(initialStyle),
+        cluster: clusterFinal,
+        paint: initialPaintRef.current,
+        clusterLabel,
+        enableAddressLookup,
+      }),
+    [initialStyle, clusterFinal, enableAddressLookup, clusterLabel]
   );
 
   const webviewRef = useRef<WebView | null>(null);
@@ -274,6 +269,30 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
     if (paint === initialPaintRef.current) return;
     post({ type: 'setPaint', paint });
   }, [paint, post]);
+
+  /**
+   * A theme change swaps GoWay's document inside the live map.
+   *
+   * `resolved` carries the appearance it is FOR, so this cannot send the light
+   * document under a dark theme while the dark one is still in flight — the two
+   * arrive at different times and only the pair says which is which.
+   */
+  const sentAppearanceRef = useRef<MapAppearance | null>(null);
+  useEffect(() => {
+    if (!initialStyle || !resolved) return;
+    // The document opened with `initialStyle`, so that is the appearance it is
+    // already showing. Comparing against the LAST SENT one rather than against
+    // the initial one is what makes a flip back to the opening theme swap the
+    // style again instead of being read as "nothing to do".
+    if (sentAppearanceRef.current === null) sentAppearanceRef.current = initialStyle.appearance;
+    if (sentAppearanceRef.current === resolved.appearance) return;
+    sentAppearanceRef.current = resolved.appearance;
+    post({
+      type: 'setStyle',
+      style: resolved.style,
+      anchorLayerId: anchorLayerIdFor(resolved),
+    });
+  }, [resolved, initialStyle, post]);
 
   const flushPending = useCallback(() => {
     while (pending.current.length) {
@@ -516,9 +535,9 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
             </Text>
           </View>
         )}
-        {/* Mount once the hardened style has settled so the document builds a
-            single time against the sanitized style (no reload). */}
-        {styleSettled ? (
+        {/* Mount once GoWay's document has settled, so the map builds a single
+            time against the hardened style (no reload). */}
+        {html !== null ? (
           <iframe
             ref={iframeRef}
             title="map"
@@ -543,9 +562,9 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
           </Text>
         </View>
       )}
-      {/* Mount once the hardened style has settled so the WebView builds a
-          single document against the sanitized style (no reload). */}
-      {styleSettled ? (
+      {/* Mount once GoWay's document has settled, so the WebView builds a
+          single document against the hardened style (no reload). */}
+      {html !== null ? (
         <WebView
           ref={webviewRef}
           originWhitelist={['*']}
@@ -571,7 +590,6 @@ const Map = React.memo(MapComponent, (prevProps, nextProps) => {
       prevProps.screenId === nextProps.screenId &&
       prevProps.enableAddressLookup === nextProps.enableAddressLookup &&
       prevProps.showAddressInstructions === nextProps.showAddressInstructions &&
-      prevProps.styleURL === nextProps.styleURL &&
       prevProps.initialZoom === nextProps.initialZoom &&
       prevProps.startFromCurrentLocation === nextProps.startFromCurrentLocation &&
       JSON.stringify(prevProps.markers) === JSON.stringify(nextProps.markers) &&
@@ -584,7 +602,6 @@ const Map = React.memo(MapComponent, (prevProps, nextProps) => {
   if (nextProps.screenId === 'search' || nextProps.screenId === 'search-screen') {
     return (
       prevProps.screenId === nextProps.screenId &&
-      prevProps.styleURL === nextProps.styleURL &&
       prevProps.initialZoom === nextProps.initialZoom &&
       prevProps.startFromCurrentLocation === nextProps.startFromCurrentLocation &&
       JSON.stringify(prevProps.cluster) === JSON.stringify(nextProps.cluster) &&

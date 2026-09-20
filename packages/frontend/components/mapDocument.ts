@@ -1,9 +1,12 @@
 /**
  * Self-contained HTML document for the embedded map.
  *
- * Rendered inside a `react-native-webview` on native and an `<iframe>` on
- * web, it boots a MapLibre GL JS map against OpenFreeMap tiles (both free,
- * no API key) and talks to the React host over `postMessage`.
+ * Rendered inside a `react-native-webview` on native and an `<iframe>` on web,
+ * it boots a MapLibre GL JS map against the style document the HOST hands it —
+ * GoWay's, fetched and hardened by `gowayMap.ts` — and talks to the React host
+ * over `postMessage`. It names no tile, sprite, glyph or attribution endpoint
+ * of its own: every one of those is a property of GoWay's style document now,
+ * which is most of the reason for adopting it.
  *
  * The host → document command protocol mirrors `OutboundMapMessage` in
  * `Map.tsx`; the document → host events mirror `MapEvent`. Keep the two in
@@ -76,24 +79,21 @@ const IMPORT_MAP = JSON.stringify({
  */
 export const MAP_DOCUMENT_BASE_URL = 'https://map.homiio.invalid/';
 
-/**
- * Attribution markup for the compact `AttributionControl`. Exported so the web
- * map (`Map.web.tsx`, which drives maplibre-gl directly without this HTML
- * document) renders the exact same OSM/OpenFreeMap credit.
- */
-export const ATTRIBUTION =
-  '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors · <a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a>';
-
 export interface MapDocumentOptions {
   center: LonLat;
   zoom: number;
   /**
-   * MapLibre style for the document. Normally a sanitized {@link
-   * StyleSpecification} object (hardened by `sanitizeMapStyle` so the OpenFreeMap
-   * liberty layers can't throw on null-numeric tile properties); falls back to
-   * the bare style URL string when the host couldn't fetch/sanitize it.
+   * GoWay's style document. Normally a hardened {@link StyleSpecification}
+   * object (`gowayMap.loadGowayStyle`); falls back to the bare style URL string
+   * when the host could not fetch it, in which case MapLibre loads it itself.
    */
   style: string | StyleSpecification;
+  /**
+   * The layer Homiio's own layers are inserted BEFORE — GoWay's published
+   * anchor, resolved by the host from the style document it fetched. Absent
+   * means "this style offers no anchor", and Homiio's layer is appended.
+   */
+  anchorLayerId?: string;
   cluster: Required<ClusterOptions>;
   enableAddressLookup: boolean;
   /** The marker colours the document opens with; `setPaint` replaces them live. */
@@ -218,24 +218,19 @@ ${MARKER_CSS}`;
  * and each cluster becomes a count bubble.
  */
 const buildScript = (options: MapDocumentOptions): string => {
-  const { center, zoom, style, cluster, enableAddressLookup, clusterLabel } = options;
+  const { center, zoom, style, anchorLayerId, cluster, enableAddressLookup, clusterLabel } = options;
   return `(function(){
   const isRN = !!window.ReactNativeWebView;
   const post = (msg)=>{const d=JSON.stringify(msg); if(isRN) window.ReactNativeWebView.postMessage(d); else window.parent&&window.parent.postMessage(d,'*');};
   const map=new maplibregl.Map({container:'map',style:${JSON.stringify(style)},center:${JSON.stringify(center)},zoom:${JSON.stringify(zoom)},attributionControl:false,hash:false});
-  map.addControl(new maplibregl.AttributionControl({compact:true,customAttribution:${JSON.stringify(ATTRIBUTION)}}));
+  // Attribution is not restated here. GoWay's style document declares the
+  // credit its own sources require and MapLibre renders it; a basemap credit
+  // written into Homiio is a second copy of somebody else's licence obligation.
+  map.addControl(new maplibregl.AttributionControl({compact:true}));
 
-  // The OpenFreeMap liberty poi layers set icon-image to the OSM feature
-  // class/subclass (e.g. office); many such names have no image in the sprite,
-  // so MapLibre logs a missing-image error and fires styleimagemissing. Supply a
-  // 1x1 transparent placeholder for any missing id (idempotent) so no POI class
-  // can request a non-existent sprite image. Mirrors installMissingImageFallback
-  // in mapStyle.ts for the native WebView document. A resolver, not a
-  // styleimagemissing listener: since maplibre-gl 6 that event is notify-only.
-  map.setMissingStyleImageResolver((missingId) => {
-    if (!missingId || map.hasImage(missingId)) return;
-    map.addImage(missingId, { width: 1, height: 1, data: new Uint8Array([0, 0, 0, 0]) });
-  });
+  // Where Homiio's layer goes inside GoWay's style: the anchor the host
+  // resolved from the style document, or nothing (append) when it offers none.
+  let anchorLayerId = ${JSON.stringify(anchorLayerId ?? null)};
 
   const toGeoJSON=(list)=>({type:'FeatureCollection',features:(Array.isArray(list)?list:[]).map(p=>({
     type:'Feature', id: p.id, geometry:{type:'Point',coordinates:p.coordinates},
@@ -367,15 +362,40 @@ const buildScript = (options: MapDocumentOptions): string => {
     paintStates();
   };
 
-  map.on('load', () => {
+  // Install Homiio's marker source and its layer into whatever style is loaded.
+  //
+  // Idempotent, and bound to styledata as well as load, because setStyle
+  // replaces the whole style and takes every source and layer this document
+  // added with it. Without the re-install a theme change leaves the map with no
+  // marker source, querySourceFeatures returns nothing, and every property pin
+  // silently disappears - a failure with no error anywhere.
+  const ensureMarkers = () => {
+    if (!map.isStyleLoaded() || map.getSource(srcId)) return;
     map.addSource(srcId, {
         type:'geojson', data:toGeoJSON([]), cluster:cluster, clusterRadius:cRad, clusterMaxZoom:cMax, promoteId: 'id'
     });
     // Draws nothing: MapLibre loads a source's tiles only when a layer uses it,
-    // and the markers are read from those tiles.
-    map.addLayer({id:'markers-anchor',type:'circle',source:srcId,paint:{'circle-radius':0,'circle-opacity':0,'circle-stroke-width':0}});
+    // and the markers are read from those tiles. It is inserted at GoWay's
+    // published anchor rather than appended, so the position is a name in
+    // GoWay's style and not a side effect of when this ran.
+    const before = (anchorLayerId && map.getLayer(anchorLayerId)) ? anchorLayerId : undefined;
+    map.addLayer({id:'markers-anchor',type:'circle',source:srcId,paint:{'circle-radius':0,'circle-opacity':0,'circle-stroke-width':0}}, before);
     loaded = true;
+    // Cluster ids are the old source's; the new source will mint its own.
+    leafCache = new Map();
+    const restored = [];
+    inputs.forEach((value) => { restored.push(value); });
+    if (restored.length) map.getSource(srcId).setData(toGeoJSON(restored));
+    map.triggerRepaint();
+  };
 
+  // styledata is the first tick at which a swapped style can take the layer;
+  // idle is the backstop, because "the style finished loading" is the one
+  // condition whose absence here costs every pin on the map.
+  map.on('styledata', ensureMarkers);
+  map.on('idle', ensureMarkers);
+  map.on('load', () => {
+    ensureMarkers();
     post({ type:'ready' });
   });
 
@@ -454,6 +474,14 @@ const buildScript = (options: MapDocumentOptions): string => {
     if(m.type==='highlightMarker'){
       highlightedId = m.id ? String(m.id) : null;
       paintStates();
+    }
+    if(m.type==='setStyle' && m.style){
+      // A theme change swaps GoWay's document in place. ensureMarkers, bound to
+      // styledata above, puts the marker source and layer back into the new
+      // style and re-sets the data from inputs, so no pin is lost.
+      anchorLayerId = m.anchorLayerId || null;
+      loaded = false;
+      map.setStyle(m.style);
     }
     if(m.type==='setPaint' && m.paint && typeof m.paint === 'object'){
       Object.keys(PAINT_VARS).forEach((role) => {

@@ -109,3 +109,28 @@ export const OXY_CLIENT_ID =
  */
 export const WEBSITE_API_URL =
   process.env.EXPO_PUBLIC_WEBSITE_API_URL || 'https://website-api.oxy.so';
+
+/**
+ * GoWay's served map style documents — Homiio's basemap cartography.
+ *
+ * Homiio used to configure its own basemap: a third-party style URL plus the
+ * tile, sprite and glyph endpoints that came with it. It now renders the style
+ * GoWay authors and serves, which is why there is no tile endpoint here — the
+ * style document names its own sources, and that is the point of adopting it.
+ *
+ * Two documents rather than one: GoWay publishes light/dark at layer-id parity,
+ * so the map follows Bloom's theme instead of staying light in a dark app (it
+ * did, because nothing ever passed a second style URL).
+ *
+ * Overridable so a GoWay staging deployment can be pointed at without a code
+ * change; the `EXPO_PUBLIC_` prefix is what carries an override into the client
+ * bundle. Never read these in a component — go through `components/gowayMap.ts`.
+ */
+export const GOWAY_MAP_STYLE_URLS = {
+  light:
+    process.env.EXPO_PUBLIC_GOWAY_MAP_STYLE_LIGHT_URL ||
+    'https://goway.to/map/goway-light.json',
+  dark:
+    process.env.EXPO_PUBLIC_GOWAY_MAP_STYLE_DARK_URL ||
+    'https://goway.to/map/goway-dark.json',
+} as const;
