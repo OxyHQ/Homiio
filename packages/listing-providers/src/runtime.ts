@@ -26,6 +26,7 @@ import {
   proxyGeoCountryFromEnv,
   residentialProxyFromEnv,
   type ResidentialProxyConfig,
+  httpDirectFirstFromEnv,
 } from './proxy';
 
 /** Default per-request abort budget (ms). */
@@ -79,6 +80,23 @@ async function withTimeout<T>(
  * providers and image-source probing; HTML providers layer parsing on top of
  * {@link fetchText}.
  */
+/**
+ * Whether a response means "come back with a residential IP".
+ *
+ * Deliberately conservative: only a non-2xx, or a body the CALLER recognises as
+ * a challenge, counts. A portal that soft-blocks with a 200 is invisible to a
+ * status check, which is why `isChallenge` is part of the contract — without it
+ * the cheap attempt would be accepted and the provider would escalate straight
+ * to the browser tier, the most expensive one of all.
+ */
+function isRefusedResponse(
+  response: { status: number; body: string },
+  isChallenge?: (body: string) => boolean,
+): boolean {
+  if (response.status < 200 || response.status >= 300) return true;
+  return isChallenge?.(response.body) === true;
+}
+
 export class HttpFetchRuntime implements FetchRuntime {
   private readonly defaultTimeoutMs: number;
   private readonly userAgent: string;
@@ -105,12 +123,36 @@ export class HttpFetchRuntime implements FetchRuntime {
   }
 
   async fetchHttp(url: string, init?: FetchRuntimeInit): Promise<{ status: number; body: string }> {
-    const timeoutMs = init?.timeoutMs ?? this.defaultTimeoutMs;
     const proxyCountry = init?.proxyCountry ?? proxyGeoCountryFromEnv();
-    const requestFetch =
+    const proxiedFetch = async () =>
       proxyCountry && this.proxy
         ? await createProxiedFetch(this.proxy, undefined, proxyCountry)
         : await this.resolveFetch();
+
+    // DIRECT FIRST, PROXY ONLY IF REFUSED. The residential proxy is metered and
+    // a search page is 1-2 MB; discovery walks up to 100 of them per city
+    // across dozens of cities, several times a day. Most of those pages do not
+    // need a residential IP, and the ones that do announce it — by status, by a
+    // challenge body the caller recognises, or by failing outright.
+    //
+    // The fallback is what makes this safe: a refused direct attempt is retried
+    // through the proxy immediately, so the outcome is unchanged and the only
+    // cost is one unbilled request. See `httpDirectFirstFromEnv`.
+    if (this.proxy && httpDirectFirstFromEnv()) {
+      const direct = await this.attemptHttp(url, init, fetch).catch(() => undefined);
+      if (direct && !isRefusedResponse(direct, init?.isChallenge)) return direct;
+    }
+
+    return this.attemptHttp(url, init, await proxiedFetch());
+  }
+
+  /** One HTTP attempt through a given fetch implementation. */
+  private async attemptHttp(
+    url: string,
+    init: FetchRuntimeInit | undefined,
+    requestFetch: typeof fetch,
+  ): Promise<{ status: number; body: string }> {
+    const timeoutMs = init?.timeoutMs ?? this.defaultTimeoutMs;
     return withTimeout(timeoutMs, init?.signal, async (signal) => {
       const response = await requestFetch(url, {
         signal,

@@ -207,6 +207,12 @@ export class HabitacliaProvider implements ListingProvider {
           signal,
           proxyCountry: ES_PROXY_COUNTRY,
           timeoutMs: HABITACLIA_HTTP_SEARCH_TIMEOUT_MS,
+          // Lets the direct-first ladder judge a cheap attempt by the same rule
+          // this provider uses for its own escalation. Without it a 200 block
+          // page would be accepted as a good result and the provider would jump
+          // to the browser tier — the most expensive one — instead of simply
+          // retrying through the proxy.
+          isChallenge: isHabitacliaChallenge,
           headers: {
             Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
             'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',

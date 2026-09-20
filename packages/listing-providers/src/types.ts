@@ -143,6 +143,16 @@ export interface FetchRuntimeInit {
   proxyCountry?: string;
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'HEAD';
   body?: string;
+  /**
+   * Whether a 200 body is actually a block page.
+   *
+   * Used by the direct-first ladder: a portal that soft-blocks with a 200 is
+   * indistinguishable from a good page by status alone, and retrying it through
+   * the residential proxy is exactly what should happen. Providers already own
+   * this predicate for their own escalation; passing it here lets the cheap
+   * attempt be judged by the same rule.
+   */
+  isChallenge?: (body: string) => boolean;
 }
 
 /**

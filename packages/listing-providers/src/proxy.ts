@@ -124,6 +124,32 @@ export function httpUseProxyFromEnv(): boolean {
 }
 
 /**
+ * Try a plain, unproxied request BEFORE paying for the residential proxy
+ * (`LISTING_HTTP_DIRECT_FIRST`, default ON).
+ *
+ * **THE PROXY IS METERED AND SEARCH PAGES ARE ENORMOUS.** A Habitaclia results
+ * page is ~1.9 MB and a Fotocasa one ~1.0 MB, and discovery walks up to 100
+ * pages per city across 68 Spanish cities, four times a day. Routing all of
+ * that through residential bandwidth is tens of gigabytes a day — which is the
+ * most likely reason the account emptied itself in the first place, with the
+ * outage that followed.
+ *
+ * The saving is only available because most of those requests do not need a
+ * residential IP at all: the portals served every page tested here to an
+ * ordinary connection with the full payload intact.
+ *
+ * **WORST CASE IS ONE FREE REQUEST.** When the direct attempt is refused — by
+ * status, by a challenge body the caller recognises, or by throwing — the same
+ * request is immediately retried through the proxy, so behaviour is today's
+ * behaviour plus one unbilled attempt. That is what makes defaulting this ON
+ * defensible rather than a gamble; turn it off with `false` if a portal starts
+ * treating the datacentre IP as hostile in a way the fallback cannot see.
+ */
+export function httpDirectFirstFromEnv(): boolean {
+  return envBool('LISTING_HTTP_DIRECT_FIRST', true);
+}
+
+/**
  * Optional ISO-3166-1 alpha-2 country for DataImpulse geo targeting
  * (`LISTING_PROXY_GEO=es` → `login__cr.es;sessid.<id>`).
  */
