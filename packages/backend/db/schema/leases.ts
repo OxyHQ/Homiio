@@ -43,6 +43,7 @@ import {
   boolean,
   check,
   doublePrecision,
+  foreignKey,
   index,
   pgTable,
   text,
@@ -188,13 +189,38 @@ export const leases = pgTable(
     rulesAlterations: boolean().notNull().default(false),
 
     // ── signatures ──
+    //
+    // **A CACHE of `lease_signatures`, not the truth** (#518 §7.4). The truth is
+    // one row per signature, naming what was signed; these four columns are the
+    // two principals' entries denormalized onto the lease, and `signLease`
+    // writes them in the SAME statement as the row they summarize. They are kept
+    // rather than derived because the status transition, `leases_term_range_gist`
+    // and the wire shape all read them, and an aggregate over a child table on
+    // every lease read buys nothing.
+    //
+    // Two sources of truth that can drift is the outcome to avoid, so the drift
+    // is asserted rather than hoped for: `__tests__/integration/
+    // leaseSignatureBinding.test.ts` re-reads both after every signing path.
     signaturesLandlordSigned: boolean().notNull().default(false),
     signaturesLandlordSignedDate: timestamptz(),
-    /** PROTECTED — see `protectedColumns.ts`. */
+    /**
+     * PROTECTED (`protectedColumns.ts`), and DEAD since #518 §7.4.
+     *
+     * It held whatever string the client posted — `'accepted-in-app'`, a
+     * literal in `app/contracts/[id].tsx` — and was excluded from every read,
+     * so nothing could ever display what was supposedly signed. What actually
+     * happened is now recorded as `lease_signatures.method`, and nothing writes
+     * this column any more.
+     *
+     * Not dropped HERE because dropping it is a `post`-phase change: a `pre`
+     * migration runs while the previous image is still serving, and that image's
+     * `signLease` still writes this column. The drop is a follow-up migration,
+     * not a silent leftover.
+     */
     signaturesLandlordDigitalSignature: text(),
     signaturesTenantSigned: boolean().notNull().default(false),
     signaturesTenantSignedDate: timestamptz(),
-    /** PROTECTED — see `protectedColumns.ts`. */
+    /** PROTECTED and DEAD — see the landlord counterpart above. */
     signaturesTenantDigitalSignature: text(),
 
     status: text({ enum: LEASE_STATUSES }).notNull().default('draft'),
@@ -292,6 +318,29 @@ export const leases = pgTable(
  *
  * Every child table below CASCADEs from `leases`: mongoose deleted these with
  * the parent document by construction, and none of them has meaning without it.
+ *
+ * ## A co-tenant SIGNS (#518 §7.4)
+ *
+ * `signed_date` and `status` were ported from Mongo and had no writer at all:
+ * `signLease` never touched them and `leaseController` refused a co-tenant's
+ * signature outright, while `partyFilter` treated them as a party for reads and
+ * `isFullySigned` read the status they could never reach. Two columns that
+ * looked like an oversight, and the honest fix is the one the columns already
+ * describe — a person named on a tenancy contract signs it.
+ *
+ * So the lease now becomes `active` only once the landlord, the tenant AND
+ * every co-tenant has signed. That ends the disagreement `leaseSerializer.ts`
+ * documented between `status` and `isFullySigned` — faithful to Mongo, and a
+ * lease reading `active` while a named tenant has not signed is the same
+ * confident lie the rent ledger removed from the payment side.
+ *
+ * These two columns are a CACHE of `lease_signatures`, exactly as the lease's
+ * own booleans are. The set is REPLACED wholesale by an amendment
+ * (`updateLease`), which would otherwise reset a co-tenant's signature to
+ * `pending` and quietly deactivate the lease — so the replacement re-derives
+ * both columns from `lease_signatures` in the same transaction. The signature
+ * row deliberately carries no foreign key to this table for the same reason:
+ * it has to outlive a co-tenant being removed.
  */
 export const leaseCoTenants = pgTable(
   'lease_co_tenants',
@@ -419,7 +468,26 @@ export const leasePaymentSchedule = pgTable(
   ],
 );
 
-/** `documents[]` — the signed PDF and its addenda. */
+/**
+ * `documents[]` — the signed PDF and its addenda.
+ *
+ * ## `content_sha256` is what a signature can point at (#518 §7.4, #519 §7.4)
+ *
+ * A row names an object in a private bucket, and an object is a location rather
+ * than a fact: "the tenant signed document `abc`" says nothing about what `abc`
+ * held at the time. The digest of the bytes that were actually STORED says it —
+ * which is why it is written by the upload path, from the processed buffer,
+ * rather than from whatever arrived: an image is re-encoded to WebP on the way
+ * in, so hashing the upload would record a digest of bytes nobody can ever be
+ * shown.
+ *
+ * **Nullable, and that nullability is a fact rather than a gap.** Every row
+ * written before this column existed has no digest and cannot be given one
+ * without reading every object back out of S3. `lease_signatures` therefore has
+ * three representable bindings and the constraints there — not the callers —
+ * decide which is which: no document at all, a document whose bytes are
+ * recorded, and a document that predates content hashing.
+ */
 export const leaseDocuments = pgTable(
   'lease_documents',
   {
@@ -433,12 +501,39 @@ export const leaseDocuments = pgTable(
     /** Mongo's `uploadedBy`, renamed: `leaseController` writes the session Oxy id. */
     uploadedByOxyUserId: text().notNull(),
     uploadedDate: timestamptz().notNull(),
+    /** SHA-256 of the STORED bytes, lowercase hex. NULL before this column existed. */
+    contentSha256: text(),
   },
   (table) => [
     index('lease_documents_lease_id_idx').on(table.leaseId),
+    /**
+     * The composite key `lease_signatures` points at.
+     *
+     * `id` is already unique on its own, so this index constrains nothing new —
+     * it exists because Postgres requires a unique constraint over exactly the
+     * referenced columns before `(document_id, document_sha256)` can be a
+     * foreign key, and that foreign key is what stops a signature from naming
+     * a digest its document never had.
+     */
+    uniqueIndex('lease_documents_id_content_key').on(table.id, table.contentSha256),
     check(
       'lease_documents_type_check',
       sql`${table.type} in (${sql.raw(inList(LEASE_DOCUMENT_TYPES))})`,
+    ),
+    /**
+     * A digest is 64 lowercase hex characters or it is absent.
+     *
+     * `CONVENTIONS.md` defers FORMAT validators on a ported column because a
+     * CHECK would reject production rows the census has not measured. This
+     * column is not ported: it is new, it is written by exactly one function in
+     * this package, and every existing row is NULL, which the constraint
+     * permits. What it refuses is the half-value — a truncated digest, or the
+     * uppercase spelling `crypto` does not produce — which would compare
+     * unequal to the real one and read as a tampered document.
+     */
+    check(
+      'lease_documents_content_sha256_check',
+      sql`${table.contentSha256} is null or ${table.contentSha256} ~ '^[0-9a-f]{64}$'`,
     ),
   ],
 );
@@ -681,5 +776,248 @@ export const leasePaymentMovements = pgTable(
       'lease_payment_movements_declaration_check',
       sql`${table.kind} <> 'manual_declaration' or ${table.processorReference} is null`,
     ),
+  ],
+);
+
+/** Which party's seat on the lease a signature was made from. */
+export const LEASE_SIGNATURE_PARTIES = ['landlord', 'tenant', 'co_tenant'] as const;
+
+/**
+ * HOW somebody signed.
+ *
+ * One value today, and it is the honest one: a person pressed "I accept" in the
+ * app after being shown the terms. The column exists because the thing it
+ * replaces did not say that — it said `'accepted-in-app'`, a string the CLIENT
+ * chose and the server stored verbatim, which a different client could have set
+ * to anything at all. A closed set means adding a hand-drawn mark or an
+ * eIDAS-qualified signature later is a value plus a CHECK, not a re-reading of
+ * free text.
+ */
+export const LEASE_SIGNATURE_METHODS = ['in_app_acceptance'] as const;
+
+/**
+ * `lease_signatures` — a signature bound to WHAT WAS SIGNED (#518 §7.4, #519 §7.4).
+ *
+ * §7.4 asks that "las firmas se vinculan a la versión/documento mostrados y a
+ * los participantes". A signature used to be six columns on `leases`: two
+ * booleans, two dates and two strings the client supplied. It named no
+ * document, no version and no content, and a co-tenant had no way to make one
+ * at all. Whether a lease was signed was recorded; WHAT was signed was not.
+ *
+ * ## The binding is OPTIONAL on the document and MANDATORY on the terms
+ *
+ * A lease may legitimately have no document. Homiio generates no contract PDF,
+ * and the ordinary path — an approved application becomes a lease through
+ * `/contracts/new?application=<id>` — produces a lease whose terms live in the
+ * `leases` columns and nowhere else. Requiring a document before signing would
+ * therefore not be "you cannot sign a contract that does not exist"; it would
+ * make signing impossible for every lease Homiio can currently create, until
+ * somebody uploaded a file by hand. That is why the document binding is
+ * optional.
+ *
+ * What is never optional is the VERSION. `terms_sha256` is the digest of the
+ * lease's own terms, canonicalized by `db/leases/leaseTerms.ts`, and it is
+ * `NOT NULL`: every signature names the version it was made against, document
+ * or no document. A landlord may still amend a lease that is awaiting
+ * signatures, so this is the column that makes a stale signature VISIBLE rather
+ * than letting an amendment silently inherit one.
+ *
+ * ## Three bindings, and the CONSTRAINTS decide which — not the caller
+ *
+ *  1. **No document.** `document_id` and `document_sha256` both NULL. The
+ *     signature stands on the terms alone.
+ *  2. **Bound to bytes.** Both set, and the composite foreign key
+ *     `(document_id, document_sha256) → lease_documents(id, content_sha256)`
+ *     means the digest is THAT document's, checked by Postgres. A caller cannot
+ *     invent one, copy another document's, or record a stale one.
+ *  3. **A document that predates content hashing.** `document_id` set,
+ *     `document_sha256` NULL. `MATCH SIMPLE` — Postgres's default — satisfies a
+ *     composite foreign key whenever any of its columns is NULL, so this shape
+ *     is admitted deliberately rather than by omission, and the single-column
+ *     foreign key beside it still proves the document exists. It is the weakest
+ *     binding the schema can express and it says so out loud: that document's
+ *     bytes were never recorded, so a later substitution of them is
+ *     undetectable. Refusing it instead would have stranded every document
+ *     uploaded before migration 0028.
+ *
+ * The one shape with no meaning — a digest naming no document — is refused by
+ * `lease_signatures_document_hash_check`.
+ *
+ * ## Append-only, by trigger
+ *
+ * A signature that can be UPDATEd binds to nothing, because the binding itself
+ * is editable. Migration 0028 installs a `BEFORE UPDATE` trigger that refuses
+ * one, the same mechanism `eviction_case_updates` uses. `DELETE` is left alone:
+ * the lease's own `ON DELETE CASCADE` needs it.
+ */
+export const leaseSignatures = pgTable(
+  'lease_signatures',
+  {
+    id: generatedId(),
+    leaseId: text()
+      .notNull()
+      .references(() => leases.id, { onDelete: 'cascade' }),
+    /**
+     * WHO signed — the participant half of §7.4's requirement.
+     *
+     * Resolved from the session by `requireSessionOxyUserId` and matched
+     * against the lease's own party columns inside the signing transaction,
+     * never taken from a request body.
+     */
+    signerOxyUserId: text().notNull(),
+    /**
+     * Which seat they signed from.
+     *
+     * Stored rather than re-derived from the lease on read: the co-tenant set
+     * is replaced wholesale by an amendment, so a signature whose role had to
+     * be looked up in `lease_co_tenants` would become unattributable the moment
+     * somebody was removed from the lease.
+     */
+    party: text({ enum: LEASE_SIGNATURE_PARTIES }).notNull(),
+    method: text({ enum: LEASE_SIGNATURE_METHODS }).notNull().default('in_app_acceptance'),
+    signedAt: createdAt(),
+    /** The version. See the header — `NOT NULL`, always. */
+    termsSha256: text().notNull(),
+    /**
+     * The contract document, when the lease has one.
+     *
+     * `RESTRICT`, because deleting a document somebody signed destroys the
+     * evidence rather than the file. Nothing deletes one today; the constraint
+     * is a property of the table rather than of this week's routes. Deleting
+     * the LEASE still works — both this table and `lease_documents` cascade from
+     * it, and Postgres queues the cascades ahead of the referential check, which
+     * `leaseSignatureBinding.test.ts` pins against a real server rather than
+     * assuming.
+     */
+    documentId: text().references(() => leaseDocuments.id, { onDelete: 'restrict' }),
+    /** The digest of that document's bytes. See the header's three bindings. */
+    documentSha256: text(),
+  },
+  (table) => [
+    /**
+     * One signature per person per lease.
+     *
+     * TOTAL, not partial: both columns are `NOT NULL`, so there is no set of
+     * rows for a predicate to carve out. It is what makes a double tap and two
+     * concurrent requests land on one row instead of two signatures from the
+     * same person.
+     */
+    uniqueIndex('lease_signatures_lease_signer_key').on(table.leaseId, table.signerOxyUserId),
+    index('lease_signatures_lease_signed_idx').on(table.leaseId, table.signedAt),
+    /**
+     * The digest belongs to the document. `MATCH SIMPLE`, deliberately — see
+     * the header's third binding.
+     */
+    foreignKey({
+      name: 'lease_signatures_document_content_fk',
+      columns: [table.documentId, table.documentSha256],
+      foreignColumns: [leaseDocuments.id, leaseDocuments.contentSha256],
+    }).onDelete('restrict'),
+    check(
+      'lease_signatures_party_check',
+      sql`${table.party} in (${sql.raw(inList(LEASE_SIGNATURE_PARTIES))})`,
+    ),
+    check(
+      'lease_signatures_method_check',
+      sql`${table.method} in (${sql.raw(inList(LEASE_SIGNATURE_METHODS))})`,
+    ),
+    check('lease_signatures_terms_sha256_check', sql`${table.termsSha256} ~ '^[0-9a-f]{64}$'`),
+    /**
+     * A digest that names no document is a claim about nothing.
+     *
+     * Written one-way on purpose: the reverse — a document with no digest — is
+     * the third binding above and is legitimate.
+     */
+    check(
+      'lease_signatures_document_hash_check',
+      sql`${table.documentSha256} is null or ${table.documentId} is not null`,
+    ),
+  ],
+);
+
+/**
+ * What a tenancy timeline is made of (#518 §7.4, #519 §7.4).
+ *
+ * Only what this package actually WRITES. A value nothing can produce would
+ * read as coverage on a screen that can never show it — the same reason
+ * `eviction_case_attendees.confirmation_basis` omits `account_verified`.
+ */
+export const LEASE_EVENT_TYPES = [
+  'created',
+  'amended',
+  'signed',
+  'activated',
+  'document_added',
+  'terminated',
+  'renewed',
+] as const;
+
+/**
+ * `lease_events` — the tenancy timeline, as things that HAPPENED (#518 §7.4).
+ *
+ * §7.4 asks that "el timeline muestra eventos reales". It did not: the client
+ * rebuilt roughly five entries on every render out of `created_at`, the two
+ * signature booleans and the two term dates. Uploading a document, serving a
+ * termination notice or amending a lease somebody had already signed left no
+ * trace anybody could see, because there was nowhere for one to go.
+ *
+ * ## An audit, not a log
+ *
+ * `position` is computed in SQL as `coalesce(max(position), 0) + 1` inside the
+ * INSERT, and a unique index on `(lease_id, position)` turns a concurrent
+ * append into a `23505` rather than a duplicate — the same shape and the same
+ * reason as `eviction_case_updates`, including the trap that computing it in
+ * JavaScript reads `int8` back as a STRING and appends `'1' + 1 = '11'`. An
+ * `UPDATE` is refused by a trigger installed in migration 0028.
+ *
+ * **`maintenance_request_events` orders by `created_at` and this one cannot.**
+ * `signed` and `activated` are written in ONE transaction, and
+ * `date_trunc('milliseconds', now())` is the TRANSACTION's clock — so both rows
+ * carry the identical instant and a timestamp ordering renders "the lease
+ * became active" above "the last party signed" on roughly half of all reads.
+ * The position is the only thing that can order them.
+ *
+ * ## Why `detail` is text and not a foreign key
+ *
+ * An event is a statement about the past. A pointer into a table whose rows can
+ * be removed is not: a `document_added` row whose `document_id` had gone would
+ * either vanish with it (CASCADE, destroying the history) or become an event
+ * about nothing (SET NULL). `detail` holds the datum that made the event
+ * legible AT THE TIME — the document's name, the reason given for a
+ * termination — and never a translated phrase, because the reader's language is
+ * not a property of what happened. The frontend renders `event_type` through
+ * i18n and `detail` verbatim.
+ */
+export const leaseEvents = pgTable(
+  'lease_events',
+  {
+    id: generatedId(),
+    leaseId: text()
+      .notNull()
+      .references(() => leases.id, { onDelete: 'cascade' }),
+    /** Monotonic within a lease. Computed in SQL, never in JS — see the header. */
+    position: bigint({ mode: 'number' }).notNull(),
+    eventType: text({ enum: LEASE_EVENT_TYPES }).notNull(),
+    /**
+     * Who did it, or NULL for an event the system produced.
+     *
+     * `activated` is the one that has no actor and must not borrow one: the
+     * lease became active because the LAST signature arrived, and attributing
+     * that to whoever happened to sign last would credit them with a transition
+     * every party caused together.
+     */
+    actorOxyUserId: text(),
+    /** The document's name, the termination's reason. Never a translated phrase. */
+    detail: text(),
+    occurredAt: createdAt(),
+  },
+  (table) => [
+    index('lease_events_lease_position_idx').on(table.leaseId, sql`${table.position} desc`),
+    uniqueIndex('lease_events_lease_position_key').on(table.leaseId, table.position),
+    check(
+      'lease_events_type_check',
+      sql`${table.eventType} in (${sql.raw(inList(LEASE_EVENT_TYPES))})`,
+    ),
+    check('lease_events_position_check', sql`${table.position} >= 1`),
   ],
 );

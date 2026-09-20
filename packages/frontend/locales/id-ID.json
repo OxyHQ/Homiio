@@ -1009,6 +1009,24 @@
       "column": {
         "payment": "Pembayaran",
         "method": "Metode"
+      },
+      "coTenantPending": "Menunggu tanda tangan penyewa pendamping",
+      "signedDocument": "Menandatangani “{{name}}” dan ketentuan yang ditampilkan",
+      "signedDocumentUnhashed": "Menandatangani “{{name}}”: isinya tidak tercatat",
+      "signedTermsOnly": "Menandatangani ketentuan; tidak ada dokumen kontrak yang dilampirkan",
+      "signatureStale": "Ditandatangani sebelum perubahan terakhir",
+      "amendedInvalidates": "Tanda tangan sebelumnya tidak lagi cocok dengan ketentuan",
+      "documentSigned": "Ditandatangani",
+      "signingDocument": "Anda akan menandatangani “{{name}}” beserta ketentuan di atas.",
+      "signingTermsOnly": "Tidak ada dokumen kontrak yang dilampirkan, jadi Anda menandatangani ketentuan di atas.",
+      "event": {
+        "created": "Draf dibuat",
+        "amended": "Ketentuan diubah",
+        "signed": "Ditandatangani",
+        "activated": "Kontrak aktif",
+        "document_added": "Dokumen ditambahkan",
+        "terminated": "Pemberitahuan pengakhiran disampaikan",
+        "renewed": "Diperpanjang"
       }
     }
   },

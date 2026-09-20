@@ -1009,6 +1009,24 @@
       "column": {
         "payment": "Payment",
         "method": "Method"
+      },
+      "coTenantPending": "Awaiting a co-tenant's signature",
+      "signedDocument": "Signed “{{name}}” and the terms shown",
+      "signedDocumentUnhashed": "Signed “{{name}}” — its contents were not recorded",
+      "signedTermsOnly": "Signed the terms; no contract document was attached",
+      "signatureStale": "Signed before the latest change",
+      "amendedInvalidates": "Signatures made before this point no longer match the terms",
+      "documentSigned": "Signed",
+      "signingDocument": "You are signing “{{name}}” together with the terms above.",
+      "signingTermsOnly": "No contract document is attached, so you are signing the terms above.",
+      "event": {
+        "created": "Draft created",
+        "amended": "Terms amended",
+        "signed": "Signed",
+        "activated": "Lease active",
+        "document_added": "Document added",
+        "terminated": "Termination notice served",
+        "renewed": "Renewed"
       }
     }
   },

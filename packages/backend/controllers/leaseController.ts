@@ -56,8 +56,10 @@ import {
   terminateLease,
   updateLease,
   type LeasePaymentStatusValue,
+  type LeaseSignatory,
   type LeaseStatusValue,
 } from '../db/leases/leaseReads';
+import { appendLeaseEvent } from '../db/leases/leaseEvents';
 import {
   serializeLease,
   serializeLeaseDocument,
@@ -90,6 +92,18 @@ const EDITABLE_STATUSES: readonly LeaseStatusValue[] = [
   LeaseStatus.PENDING_SIGNATURES,
 ];
 const DELETABLE_STATUSES: readonly LeaseStatusValue[] = [
+  LeaseStatus.DRAFT,
+  LeaseStatus.PENDING_SIGNATURES,
+];
+/**
+ * The statuses in which a signature can still MOVE the lease.
+ *
+ * A signature is recorded whatever the status — a co-tenant signing an already
+ * active lease is a real thing to record — but only a lease still awaiting
+ * signatures transitions. Written here rather than inside the repository so the
+ * product rule sits beside the other two lists it is a sibling of.
+ */
+const SIGNABLE_STATUSES: readonly LeaseStatusValue[] = [
   LeaseStatus.DRAFT,
   LeaseStatus.PENDING_SIGNATURES,
 ];
@@ -324,7 +338,10 @@ class LeaseController {
         throw new AppError('Access denied - you are not a party to this lease', 403, 'FORBIDDEN');
       }
 
-      const hydrated = await findLeaseById(db, req.params.id);
+      // The detail read is the one that asks for the timeline and the signature
+      // records: it is the only screen that draws them, and a page of leases
+      // would pay two more queries for rows nothing renders.
+      const hydrated = await findLeaseById(db, req.params.id, { events: true, signatures: true });
       if (!hydrated) {
         throw new AppError('Lease not found', 404, 'LEASE_NOT_FOUND');
       }
@@ -413,14 +430,31 @@ class LeaseController {
   }
 
   /**
-   * Sign a lease. The requester must be the landlord or tenant. Records the
-   * signature; the lease becomes active once both principals have signed, and
-   * its payment schedule is generated at that moment.
+   * `POST /api/leases/:id/sign` — sign a lease (#518 §7.4, #519 §7.4).
+   *
+   * ## Three things this handler stopped doing
+   *
+   * **It stopped storing a string the client chose.** The body carried
+   * `signature`, `app/contracts/[id].tsx` sent the literal `'accepted-in-app'`,
+   * and the column it landed in was excluded from every read — so no screen
+   * could ever display what was supposedly signed, and a different client could
+   * have put anything there. What actually happened is recorded as
+   * `lease_signatures.method`, by the server.
+   *
+   * **It stopped refusing a co-tenant.** A co-tenant was a party for reads and
+   * had `signed_date`/`status` columns nothing could write. They sign now, and
+   * the lease waits for them — see {@link signLease}.
+   *
+   * **It stopped letting a signature drift from what was on screen.** A client
+   * may send `termsSha256`, the digest the lease DTO gave it. If the landlord
+   * amended the lease in between, this answers `409` with the new digest rather
+   * than binding a signature to terms nobody was shown. An older client sends
+   * nothing and signs the current version, exactly as before.
    */
   async signLease(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const oxyUserId = requireSessionOxyUserId(req);
-      const { acceptTerms, signature } = req.body;
+      const { acceptTerms, termsSha256 } = req.body;
       if (!acceptTerms) {
         throw new AppError('Must accept terms to sign lease', 400, 'TERMS_NOT_ACCEPTED');
       }
@@ -431,58 +465,84 @@ class LeaseController {
         throw new AppError('Lease not found', 404, 'LEASE_NOT_FOUND');
       }
 
-      // A co-tenant is a party for READS and is not a signatory: only the two
-      // principals have signature columns. `isTenant` includes co-tenants, so
-      // the check here is deliberately the narrower one.
-      let signatory: 'landlord' | 'tenant';
+      // Which seat the caller signs from. Resolved from the LEASE against the
+      // session id — never from the body — so a party cannot sign as somebody
+      // else, and a stranger matches no seat at all.
+      let party: LeaseSignatory;
       let counterpartyOxyUserId: string;
       if (isLandlord(access, oxyUserId)) {
-        signatory = 'landlord';
+        party = 'landlord';
         counterpartyOxyUserId = access.tenantOxyUserId;
       } else if (access.tenantOxyUserId === oxyUserId) {
-        signatory = 'tenant';
+        party = 'tenant';
+        counterpartyOxyUserId = access.landlordOxyUserId;
+      } else if (access.coTenantOxyUserIds.includes(oxyUserId)) {
+        party = 'co_tenant';
+        // A co-tenant's counterparty is the landlord: they are the person whose
+        // contract is still waiting, and the one who can amend it.
         counterpartyOxyUserId = access.landlordOxyUserId;
       } else {
         throw new AppError('Access denied - you are not a party to this lease', 403, 'FORBIDDEN');
       }
 
-      // The signature, the status move and the payment schedule are one fact —
-      // a lease that commits `active` with no schedule is the state
-      // `generatePaymentSchedule` exists to prevent.
-      const hydrated = await db.transaction((tx) =>
-        signLease(
-          tx,
-          req.params.id,
-          signatory,
-          typeof signature === 'string' ? signature : undefined,
-          LeaseStatus.ACTIVE,
-          LeaseStatus.PENDING_SIGNATURES,
-        ),
+      // The signature, the status move, the cache, the timeline entries and the
+      // payment schedule are one fact — a lease that commits `active` with no
+      // schedule is the state `generatePaymentSchedule` exists to prevent, and a
+      // `signed` event that could commit without its signature would be a
+      // history of something that did not happen.
+      const outcome = await db.transaction((tx) =>
+        signLease(tx, {
+          leaseId: req.params.id,
+          signerOxyUserId: oxyUserId,
+          party,
+          expectedTermsSha256: typeof termsSha256 === 'string' ? termsSha256 : undefined,
+          activeStatus: LeaseStatus.ACTIVE,
+          pendingStatus: LeaseStatus.PENDING_SIGNATURES,
+          signableStatuses: SIGNABLE_STATUSES,
+        }),
       );
-      if (!hydrated) {
+      if (outcome.kind === 'not_found') {
         throw new AppError('Lease not found', 404, 'LEASE_NOT_FOUND');
       }
+      if (outcome.kind === 'terms_changed') {
+        throw new AppError(
+          'The lease changed since you opened it. Review the new terms and sign again.',
+          409,
+          'LEASE_TERMS_CHANGED',
+        );
+      }
 
-      logger.info('Lease signed', { leaseId: hydrated.lease.id, signedBy: oxyUserId });
-
-      // Notify the counterparty: either the lease is now fully signed/active,
-      // or it awaits their signature. Best-effort — never blocks the response.
-      const isActive = hydrated.lease.status === LeaseStatus.ACTIVE;
-      await notificationDispatchService.createForUser(counterpartyOxyUserId, {
-        type: 'contract',
-        title: isActive ? 'Lease is now active' : 'Lease awaiting your signature',
-        message: isActive
-          ? 'Both parties have signed. Your lease is now active.'
-          : 'The other party signed the lease. Review and sign to activate it.',
-        priority: isActive ? 'medium' : 'high',
-        data: {
-          leaseId: hydrated.lease.id,
-          screen: '/contracts',
-          propertyId: hydrated.lease.propertyId,
-        },
+      logger.info('Lease signed', {
+        leaseId: outcome.lease.lease.id,
+        signedBy: oxyUserId,
+        party,
+        recorded: outcome.recorded,
+        activated: outcome.activated,
+        boundDocumentId: outcome.signature.documentId ?? undefined,
+        boundDocumentHashed: outcome.signature.documentSha256 !== null,
       });
 
-      res.json(successResponse(serializeLease(hydrated), 'Lease signed successfully'));
+      // Notify the counterparty: either the lease is now fully signed/active,
+      // or it awaits somebody's signature. Best-effort — never blocks the
+      // response. Skipped on a double tap, which recorded nothing to tell them
+      // about.
+      if (outcome.recorded) {
+        await notificationDispatchService.createForUser(counterpartyOxyUserId, {
+          type: 'contract',
+          title: outcome.activated ? 'Lease is now active' : 'Lease awaiting signatures',
+          message: outcome.activated
+            ? 'Every party has signed. Your lease is now active.'
+            : 'A party signed the lease. It becomes active once everyone has.',
+          priority: outcome.activated ? 'medium' : 'high',
+          data: {
+            leaseId: outcome.lease.lease.id,
+            screen: '/contracts',
+            propertyId: outcome.lease.lease.propertyId,
+          },
+        });
+      }
+
+      res.json(successResponse(serializeLease(outcome.lease), 'Lease signed successfully'));
     } catch (error) {
       next(error);
     }
@@ -513,12 +573,18 @@ class LeaseController {
         throw new AppError('effectiveDate must be a valid date', 400, 'VALIDATION_ERROR');
       }
 
-      const hydrated = await terminateLease(db, req.params.id, {
-        givenByOxyUserId: oxyUserId,
-        effectiveDate: parsedEffectiveDate,
-        reason: typeof reason === 'string' ? reason : undefined,
-        terminatedStatus: LeaseStatus.TERMINATED,
-      });
+      // One transaction: the notice and the timeline entry that records it. A
+      // termination that committed without its event would leave the status
+      // moved and no trace of who served the notice or why — which is the gap
+      // §7.4 names.
+      const hydrated = await db.transaction((tx) =>
+        terminateLease(tx, req.params.id, {
+          givenByOxyUserId: oxyUserId,
+          effectiveDate: parsedEffectiveDate,
+          reason: typeof reason === 'string' ? reason : undefined,
+          terminatedStatus: LeaseStatus.TERMINATED,
+        }),
+      );
       if (!hydrated) {
         throw new AppError('Lease not found', 404, 'LEASE_NOT_FOUND');
       }
@@ -570,8 +636,8 @@ class LeaseController {
       // `delete`s carried every future field into the renewal by default, which
       // is how a signature, a termination notice or a payment schedule ends up
       // on a draft nobody signed.
-      const hydrated = await db.transaction((tx) =>
-        createLease(tx, {
+      const hydrated = await db.transaction(async (tx) => {
+        const renewal = await createLease(tx, {
           columns: {
             propertyId: source.propertyId,
             roomId: source.roomId,
@@ -616,8 +682,20 @@ class LeaseController {
             utility: cost.utility,
             splitPercentage: cost.splitPercentage,
           })),
-        }),
-      );
+        });
+
+        // On the ORIGINAL, not on the renewal: the renewal already opens with
+        // its own `created` entry, and the fact worth recording on the lease
+        // that is ending is that it was renewed rather than allowed to lapse.
+        // `detail` names the new lease so a reader can follow the tenancy.
+        await appendLeaseEvent(tx, {
+          leaseId: source.id,
+          eventType: 'renewed',
+          actorOxyUserId: oxyUserId,
+          detail: renewal.lease.id,
+        });
+        return renewal;
+      });
 
       logger.info('Lease renewal created', {
         originalLeaseId: source.id,
@@ -833,20 +911,42 @@ class LeaseController {
               `leases/${req.params.id}`,
             );
 
-      const created = await addLeaseDocument(db, req.params.id, {
-        name,
-        // The column holds a URL and this change carries no migration, so the
-        // key travels inside the delivery-route shape `storedDocumentKey`
-        // already reads — the same shape every application document carries.
-        // Nothing SERVES that URL: it starts `private/`, which the public route
-        // refuses. A `storage_key` column would be the better model and is
-        // recorded as follow-up work rather than smuggled in here.
-        url: imageUploadService.getImageUrl(stored.key),
-        type: documentType,
-        // Server-resolved, never from the body: `uploadedBy` is the one field on
-        // a document that says who is accountable for it.
-        uploadedByOxyUserId: oxyUserId,
-        uploadedDate: new Date(),
+      const created = await db.transaction(async (tx) => {
+        const document = await addLeaseDocument(tx, req.params.id, {
+          name,
+          // The column holds a URL and this change carries no migration, so the
+          // key travels inside the delivery-route shape `storedDocumentKey`
+          // already reads — the same shape every application document carries.
+          // Nothing SERVES that URL: it starts `private/`, which the public
+          // route refuses. A `storage_key` column would be the better model and
+          // is recorded as follow-up work rather than smuggled in here.
+          url: imageUploadService.getImageUrl(stored.key),
+          type: documentType,
+          // Server-resolved, never from the body: `uploadedBy` is the one field
+          // on a document that says who is accountable for it.
+          uploadedByOxyUserId: oxyUserId,
+          uploadedDate: new Date(),
+          /**
+           * The digest of the bytes that were STORED (#518 §7.4).
+           *
+           * From `stored`, never from `file.buffer`: an image is re-encoded to
+           * WebP on the way in, so hashing the upload would record a digest of
+           * bytes nobody can ever be shown — and a signature bound to it would
+           * read as "the document changed" against the document itself.
+           */
+          contentSha256: stored.sha256,
+        });
+
+        // The timeline entry, in the transaction that records the document.
+        // `detail` is the document's NAME rather than its id: a timeline is
+        // read by a person, and what they remember is what the file was called.
+        await appendLeaseEvent(tx, {
+          leaseId: req.params.id,
+          eventType: 'document_added',
+          actorOxyUserId: oxyUserId,
+          detail: document.name,
+        });
+        return document;
       });
 
       logger.info('Lease document added', {

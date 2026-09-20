@@ -18,6 +18,9 @@
  *    has never contained `status`.
  *  - **`signAsLandlord` / `signAsTenant`** collapse into {@link signLease},
  *    which takes the side. They differed only in which columns they wrote.
+ *    Since #518 §7.4 it takes a THIRD side (`co_tenant`), writes a row in
+ *    `lease_signatures` bound to the terms and the contract document, and waits
+ *    for every party before activating — see that function's own header.
  *  - **`recordPayment`** is DELETED, not ported. It had no caller anywhere in
  *    the package, so nothing in Homiio had ever recorded a payment. The rent
  *    LEDGER (`./paymentLedger.ts`) is now the one way one is recorded, and
@@ -55,16 +58,25 @@ import {
   leaseInspections,
   leasePaymentSchedule,
   leaseSharedUtilityCosts,
+  leaseSignatures,
   leases,
   properties,
 } from '../schema';
 import {
   LEASE_PAYMENT_METHODS,
   LEASE_PAYMENT_STATUSES,
+  LEASE_SIGNATURE_PARTIES,
   LEASE_STATUSES,
 } from '../schema/leases';
 import { generatePaymentSchedule } from './paymentSchedule';
-import { leaseSelection, type HydratedLease, type LeaseRow } from './leaseSerializer';
+import { appendLeaseEvent, listLeaseEventsByLease } from './leaseEvents';
+import { leaseTermsFingerprint } from './leaseTerms';
+import {
+  leaseSelection,
+  type HydratedLease,
+  type LeaseRow,
+  type LeaseSignatureRow,
+} from './leaseSerializer';
 
 /**
  * A lease status the CHECK accepts.
@@ -235,12 +247,38 @@ async function loadChildren(
   };
 }
 
+/**
+ * What a hydration loads BEYOND the six always-present child tables.
+ *
+ * The timeline and the signature records are asked for rather than loaded
+ * always, and the reason is which screens read them: the contracts INBOX draws
+ * a card per lease and never a history, so loading both for a page of leases
+ * would be two queries and a growing payload in service of nothing rendered.
+ * The detail read asks for them; the list does not.
+ */
+export interface HydrateOptions {
+  readonly events?: boolean;
+  readonly signatures?: boolean;
+}
+
 /** Attach the children of `rows` to them, preserving the query's ordering. */
 async function hydrate(
   db: DatabaseOrTransaction,
   rows: readonly LeaseRow[],
+  options: HydrateOptions = {},
 ): Promise<HydratedLease[]> {
-  const children = await loadChildren(db, rows.map((row) => row.id));
+  const ids = rows.map((row) => row.id);
+  const [children, events, signatures] = await Promise.all([
+    loadChildren(db, ids),
+    options.events ? listLeaseEventsByLease(db, ids) : Promise.resolve(undefined),
+    options.signatures && ids.length > 0
+      ? db
+          .select()
+          .from(leaseSignatures)
+          .where(inArray(leaseSignatures.leaseId, ids))
+          .orderBy(asc(leaseSignatures.leaseId), asc(leaseSignatures.signedAt), asc(leaseSignatures.id))
+      : Promise.resolve(undefined),
+  ]);
   const inspectionIdsByLease = new Map<string, Set<string>>();
   for (const [leaseId, inspections] of children.inspections) {
     inspectionIdsByLease.set(leaseId, new Set(inspections.map((row) => row.id)));
@@ -258,6 +296,10 @@ async function hydrate(
         ownInspectionIds.has(finding.inspectionId),
       ),
       sharedUtilityCosts: children.sharedCosts.get(lease.id) ?? [],
+      ...(events ? { events: events.get(lease.id) ?? [] } : {}),
+      ...(signatures
+        ? { signatures: signatures.filter((row) => row.leaseId === lease.id) }
+        : {}),
     };
   });
 }
@@ -327,10 +369,11 @@ export async function listLeases(
 export async function findLeaseById(
   db: DatabaseOrTransaction,
   id: string,
+  options: HydrateOptions = {},
 ): Promise<HydratedLease | undefined> {
   const [row] = await db.select(leaseSelection()).from(leases).where(eq(leases.id, id)).limit(1);
   if (!row) return undefined;
-  const [hydrated] = await hydrate(db, [row]);
+  const [hydrated] = await hydrate(db, [row], options);
   return hydrated;
 }
 
@@ -414,7 +457,16 @@ export async function createLease(
       .values(input.sharedUtilityCosts.map((cost) => ({ ...cost, leaseId: row.id })));
   }
 
-  const [hydrated] = await hydrate(db, [row]);
+  // The timeline's first entry, in the transaction that creates the lease. It
+  // replaces the one the client used to synthesize from `createdAt` — the same
+  // fact, except that this one is a row and the next six are too.
+  await appendLeaseEvent(db, {
+    leaseId: row.id,
+    eventType: 'created',
+    actorOxyUserId: row.landlordOxyUserId,
+  });
+
+  const [hydrated] = await hydrate(db, [row], { events: true, signatures: true });
   return hydrated;
 }
 
@@ -477,8 +529,69 @@ export async function updateLease(
     }
   }
 
-  const [hydrated] = await hydrate(db, [row]);
+  if (input.coTenants) {
+    // The set was just replaced with fresh rows carrying the default `pending`,
+    // which would silently un-sign anybody still on the lease — and, because
+    // activation now waits for every co-tenant, deactivate the lease as well.
+    // The cache is re-derived from `lease_signatures`, which is why the
+    // signature row deliberately holds no foreign key into this table.
+    await restoreCoTenantSignatureCache(db, id);
+  }
+
+  // A lease nobody has signed yet is still being drafted, and a timeline that
+  // recorded every keystroke of that would bury the events that matter. An
+  // amendment is only an EVENT once there is a signature it could invalidate —
+  // which is exactly the case a reader needs to see, because
+  // `lease_signatures.terms_sha256` now names a version that no longer exists.
+  const signed = await db
+    .select({ id: leaseSignatures.id })
+    .from(leaseSignatures)
+    .where(eq(leaseSignatures.leaseId, id))
+    .limit(1);
+  if (signed.length > 0) {
+    await appendLeaseEvent(db, {
+      leaseId: id,
+      eventType: 'amended',
+      actorOxyUserId: landlordOxyUserId,
+    });
+  }
+
+  const [hydrated] = await hydrate(db, [row], { events: true, signatures: true });
   return hydrated;
+}
+
+/**
+ * Re-derive `lease_co_tenants.status` / `.signed_date` from `lease_signatures`.
+ *
+ * The cache's repair after the co-tenant set is replaced wholesale. Shared with
+ * {@link signLease}, which writes it from the same source for the same reason:
+ * two writers deriving one value from one table cannot disagree, while two
+ * writers each maintaining their own copy eventually do.
+ */
+async function restoreCoTenantSignatureCache(
+  db: DatabaseOrTransaction,
+  leaseId: string,
+): Promise<void> {
+  await db
+    .update(leaseCoTenants)
+    .set({
+      status: 'signed',
+      signedDate: sql`(
+        select ${leaseSignatures.signedAt} from ${leaseSignatures}
+        where ${leaseSignatures.leaseId} = ${leaseCoTenants.leaseId}
+          and ${leaseSignatures.signerOxyUserId} = ${leaseCoTenants.oxyUserId}
+      )`,
+    })
+    .where(
+      and(
+        eq(leaseCoTenants.leaseId, leaseId),
+        sql`exists (
+          select 1 from ${leaseSignatures}
+          where ${leaseSignatures.leaseId} = ${leaseCoTenants.leaseId}
+            and ${leaseSignatures.signerOxyUserId} = ${leaseCoTenants.oxyUserId}
+        )`,
+      ),
+    );
 }
 
 /**
@@ -507,102 +620,283 @@ export async function deleteLease(
   return rows.length > 0;
 }
 
-/** Which principal signed. */
-export type LeaseSignatory = 'landlord' | 'tenant';
+/** Which seat on the lease somebody signed from. */
+export type LeaseSignatory = (typeof LEASE_SIGNATURE_PARTIES)[number];
+
+/** A lease's signatures, oldest first. */
+export async function listLeaseSignatures(
+  db: DatabaseOrTransaction,
+  leaseId: string,
+): Promise<readonly LeaseSignatureRow[]> {
+  return db
+    .select()
+    .from(leaseSignatures)
+    .where(eq(leaseSignatures.leaseId, leaseId))
+    .orderBy(asc(leaseSignatures.signedAt), asc(leaseSignatures.id));
+}
 
 /**
- * Record a signature, move the status, and generate the schedule if this made
- * the lease active — all in ONE transaction.
+ * The document a signature binds to, or `undefined` when the lease has none.
  *
- * This is `signAsLandlord`/`signAsTenant` PLUS the `pre('save')` hook, together,
- * because that is what they were: the methods set the status and `save()` ran
- * the hook. Splitting them would let a lease commit as `active` with no payment
- * schedule, which is the state `generatePaymentSchedule` exists to prevent.
+ * **The SERVER picks it, and it is always the most recent `lease_agreement`.**
+ * The client does not name it, for the reason `AGENTS.md` gives about owner ids:
+ * a party who could choose what they were signing could choose the addendum
+ * they liked and leave the contract unsigned. `lease_agreement` rather than "the
+ * newest document of any kind" because an inspection report and an insurance
+ * certificate are evidence ABOUT a tenancy, not the agreement being entered
+ * into — binding a signature to whichever was uploaded last would make the
+ * binding depend on housekeeping.
  *
- * **The status rule is the source's, co-tenants and all.** It goes `active` when
- * the OTHER principal has signed, consulting no co-tenant — while
- * `isFullySigned` does consult them. The two disagreeing is faithful; see
- * `./leaseSerializer.ts`.
+ * Returns the digest as well as the id, so the caller writes a pair Postgres can
+ * check against `lease_documents` rather than a digest it computed itself.
+ */
+export async function findContractDocument(
+  db: DatabaseOrTransaction,
+  leaseId: string,
+): Promise<{ id: string; name: string; contentSha256: string | null } | undefined> {
+  const [row] = await db
+    .select({
+      id: leaseDocuments.id,
+      name: leaseDocuments.name,
+      contentSha256: leaseDocuments.contentSha256,
+    })
+    .from(leaseDocuments)
+    .where(
+      and(eq(leaseDocuments.leaseId, leaseId), eq(leaseDocuments.type, 'lease_agreement')),
+    )
+    // `id` breaks the tie: two documents uploaded in the same millisecond must
+    // not make "the contract" depend on Postgres's row order.
+    .orderBy(desc(leaseDocuments.uploadedDate), desc(leaseDocuments.id))
+    .limit(1);
+  return row;
+}
+
+export interface SignLeaseInput {
+  readonly leaseId: string;
+  readonly signerOxyUserId: string;
+  readonly party: LeaseSignatory;
+  /**
+   * The digest the CLIENT displayed, when it sent one.
+   *
+   * Optional, and the optionality is a compatibility decision rather than a
+   * weakening: an older client sends nothing and signs whatever the lease says
+   * now, which is exactly what it did before this change. A client that sends
+   * one gets the guarantee §7.4 asks for — it signed the version it was shown,
+   * or it did not sign at all.
+   */
+  readonly expectedTermsSha256?: string;
+  readonly activeStatus: LeaseStatusValue;
+  readonly pendingStatus: LeaseStatusValue;
+  readonly signableStatuses: readonly LeaseStatusValue[];
+}
+
+export type SignLeaseOutcome =
+  | { readonly kind: 'not_found' }
+  | { readonly kind: 'terms_changed'; readonly currentTermsSha256: string }
+  | {
+      readonly kind: 'signed';
+      readonly lease: HydratedLease;
+      readonly signature: LeaseSignatureRow;
+      /** False when this request found a signature already there (a double tap). */
+      readonly recorded: boolean;
+      /** True when THIS signature was the one that completed the lease. */
+      readonly activated: boolean;
+    };
+
+/**
+ * Record a signature — bound to the terms and to the contract document — move
+ * the status, and generate the schedule if this completed the lease. ONE
+ * transaction.
  *
- * @returns The hydrated lease, or `undefined` when the id names no lease.
+ * This is `signAsLandlord`/`signAsTenant` PLUS the Mongoose `pre('save')` hook,
+ * together, because that is what they were: the methods set the status and
+ * `save()` ran the hook. Splitting them would let a lease commit as `active`
+ * with no payment schedule, which is the state `generatePaymentSchedule` exists
+ * to prevent.
+ *
+ * ## What changed, and why each half had to
+ *
+ * **A signature is a ROW now** (`lease_signatures`), carrying the digest of the
+ * terms it was made against and, when the lease has one, the contract document
+ * AND that document's content digest. The six columns on `leases` recorded that
+ * somebody signed and never what they signed.
+ *
+ * **A CO-TENANT signs.** `lease_co_tenants.signed_date` and `.status` had no
+ * writer at all while `isFullySigned` read them, and the controller refused a
+ * co-tenant's signature outright. So the completion rule changes with them: a
+ * lease goes `active` once the landlord, the tenant and EVERY co-tenant has
+ * signed, rather than as soon as the two principals have. `status` and
+ * `isFullySigned` now agree, which ends a disagreement `leaseSerializer.ts`
+ * carried over from Mongo deliberately and which was always a lease calling
+ * itself active while a named tenant had not signed.
+ *
+ * **The cache is written FROM the signatures, not beside them.** The four
+ * columns on `leases` and the two on `lease_co_tenants` are recomputed in this
+ * statement out of `lease_signatures`, so the only way for them to disagree with
+ * the truth is for this transaction to roll back — in which case neither
+ * exists.
+ *
+ * ## `SELECT … FOR UPDATE` is the whole concurrency story
+ *
+ * Two parties signing at the same instant is the ordinary case, not an exotic
+ * one: the counterparty is notified the moment the first signature lands. Under
+ * READ COMMITTED, without the lock, each transaction reads a set of signatures
+ * that does not yet contain the other's, each concludes the lease is not
+ * complete, and the lease stays `pending_signatures` FOREVER with every party
+ * signed — a state no later request can repair, because
+ * `lease_signatures_lease_signer_key` refuses the retry. The lock on the lease
+ * row serializes the two, so the second one reads the first's signature and
+ * activates. `leaseSignatureBinding.test.ts` forces that interleaving with a
+ * held-open transaction rather than hoping two requests race.
  */
 export async function signLease(
   db: DatabaseOrTransaction,
-  id: string,
-  signatory: LeaseSignatory,
-  digitalSignature: string | undefined,
-  activeStatus: LeaseStatusValue,
-  pendingStatus: LeaseStatusValue,
-): Promise<HydratedLease | undefined> {
-  const [current] = await db
-    .select({
-      id: leases.id,
-      landlordSigned: leases.signaturesLandlordSigned,
-      tenantSigned: leases.signaturesTenantSigned,
-      startDate: leases.leaseTermsStartDate,
-      endDate: leases.leaseTermsEndDate,
-      monthlyRent: leases.rentDetailsMonthlyRent,
-      dueDate: leases.rentDetailsDueDate,
-      securityDeposit: leases.rentDetailsSecurityDeposit,
-    })
+  input: SignLeaseInput,
+): Promise<SignLeaseOutcome> {
+  // The lock. Everything below reads state this statement has just frozen.
+  const [locked] = await db
+    .select({ id: leases.id, status: leases.status })
     .from(leases)
-    .where(eq(leases.id, id))
-    .limit(1);
-  if (!current) return undefined;
+    .where(eq(leases.id, input.leaseId))
+    .limit(1)
+    .for('update');
+  if (!locked) return { kind: 'not_found' };
 
-  const counterpartySigned =
-    signatory === 'landlord' ? current.tenantSigned : current.landlordSigned;
-  const nextStatus = counterpartySigned ? activeStatus : pendingStatus;
-  const signedAt = new Date();
+  const before = await findLeaseById(db, input.leaseId);
+  if (!before) return { kind: 'not_found' };
 
-  const values: Partial<typeof leases.$inferInsert> =
-    signatory === 'landlord'
-      ? {
-          signaturesLandlordSigned: true,
-          signaturesLandlordSignedDate: signedAt,
-          signaturesLandlordDigitalSignature: digitalSignature,
-          status: nextStatus,
-        }
-      : {
-          signaturesTenantSigned: true,
-          signaturesTenantSignedDate: signedAt,
-          signaturesTenantDigitalSignature: digitalSignature,
-          status: nextStatus,
-        };
+  const termsSha256 = leaseTermsFingerprint(before);
+  if (input.expectedTermsSha256 !== undefined && input.expectedTermsSha256 !== termsSha256) {
+    return { kind: 'terms_changed', currentTermsSha256: termsSha256 };
+  }
+
+  const document = await findContractDocument(db, input.leaseId);
+
+  // `do nothing` rather than a read-then-insert: the read cannot see a row a
+  // concurrent transaction has inserted and not committed, so the insert is the
+  // only thing that can decide. An empty `returning` means somebody else won.
+  const [inserted] = await db
+    .insert(leaseSignatures)
+    .values({
+      leaseId: input.leaseId,
+      signerOxyUserId: input.signerOxyUserId,
+      party: input.party,
+      termsSha256,
+      documentId: document?.id ?? null,
+      // Never computed here: it is copied from the row Postgres will check the
+      // pair against, so a signature can only ever name a digest its document
+      // really has.
+      documentSha256: document?.contentSha256 ?? null,
+    })
+    .onConflictDoNothing({
+      target: [leaseSignatures.leaseId, leaseSignatures.signerOxyUserId],
+    })
+    .returning();
+
+  const signatures = await listLeaseSignatures(db, input.leaseId);
+  const signature = inserted ?? signatures.find((row) => row.signerOxyUserId === input.signerOxyUserId);
+  // Unreachable: the insert either produced a row or collided with one that is
+  // now visible inside this transaction.
+  if (!signature) return { kind: 'not_found' };
+
+  const signerIds = new Set(signatures.map((row) => row.signerOxyUserId));
+  const coTenants = await db
+    .select({ oxyUserId: leaseCoTenants.oxyUserId })
+    .from(leaseCoTenants)
+    .where(eq(leaseCoTenants.leaseId, input.leaseId));
+  const fullySigned =
+    signerIds.has(before.lease.landlordOxyUserId) &&
+    signerIds.has(before.lease.tenantOxyUserId) &&
+    coTenants.every((coTenant) => signerIds.has(coTenant.oxyUserId));
+
+  const landlordSignature = signatures.find(
+    (row) => row.signerOxyUserId === before.lease.landlordOxyUserId,
+  );
+  const tenantSignature = signatures.find(
+    (row) => row.signerOxyUserId === before.lease.tenantOxyUserId,
+  );
+
+  // Only a lease still awaiting signatures moves. An `active` lease gaining a
+  // late co-tenant signature keeps its status; a terminated one is not revived
+  // by somebody signing it.
+  const wasSignable = input.signableStatuses.includes(locked.status as LeaseStatusValue);
+  const nextStatus = !wasSignable
+    ? (locked.status as LeaseStatusValue)
+    : fullySigned
+      ? input.activeStatus
+      : input.pendingStatus;
 
   const [row] = await db
     .update(leases)
-    .set(values)
-    .where(eq(leases.id, id))
+    .set({
+      signaturesLandlordSigned: landlordSignature !== undefined,
+      signaturesLandlordSignedDate: landlordSignature?.signedAt ?? null,
+      signaturesTenantSigned: tenantSignature !== undefined,
+      signaturesTenantSignedDate: tenantSignature?.signedAt ?? null,
+      status: nextStatus,
+    })
+    .where(eq(leases.id, input.leaseId))
     .returning(leaseSelection());
-  if (!row) return undefined;
+  if (!row) return { kind: 'not_found' };
+
+  // The co-tenant half of the same cache, derived rather than patched: one
+  // statement sets every co-tenant who has a signature, and the `where` leaves
+  // the rest alone. A co-tenant who never signed keeps whatever the landlord
+  // recorded, `declined` included.
+  await restoreCoTenantSignatureCache(db, input.leaseId);
+
+  const activated = wasSignable && fullySigned && locked.status !== input.activeStatus;
 
   // The hook's second half: a lease that has just become active and has no
   // schedule gets one. The `count(*)` is what makes it idempotent — a second
   // signature on an already-active lease must not append a second schedule.
-  if (nextStatus === activeStatus) {
+  if (nextStatus === input.activeStatus) {
     const [existing] = await db
       .select({ value: sql<number>`count(*)::int` })
       .from(leasePaymentSchedule)
-      .where(eq(leasePaymentSchedule.leaseId, id));
+      .where(eq(leasePaymentSchedule.leaseId, input.leaseId));
     if (existing.value === 0) {
       const instalments = generatePaymentSchedule({
-        leaseTermsStartDate: current.startDate,
-        leaseTermsEndDate: current.endDate,
-        rentDetailsMonthlyRent: current.monthlyRent,
-        rentDetailsDueDate: current.dueDate,
-        rentDetailsSecurityDeposit: current.securityDeposit,
+        leaseTermsStartDate: before.lease.leaseTermsStartDate,
+        leaseTermsEndDate: before.lease.leaseTermsEndDate,
+        rentDetailsMonthlyRent: before.lease.rentDetailsMonthlyRent,
+        rentDetailsDueDate: before.lease.rentDetailsDueDate,
+        rentDetailsSecurityDeposit: before.lease.rentDetailsSecurityDeposit,
       });
       if (instalments.length > 0) {
         await db
           .insert(leasePaymentSchedule)
-          .values(instalments.map((instalment) => ({ ...instalment, leaseId: id })));
+          .values(instalments.map((instalment) => ({ ...instalment, leaseId: input.leaseId })));
       }
     }
   }
 
-  const [hydrated] = await hydrate(db, [row]);
-  return hydrated;
+  // The timeline, inside the same transaction as the fact it records. A `signed`
+  // entry that could commit without its signature would be a history of
+  // something that did not happen.
+  if (inserted) {
+    await appendLeaseEvent(db, {
+      leaseId: input.leaseId,
+      eventType: 'signed',
+      actorOxyUserId: input.signerOxyUserId,
+      // The SEAT, as a machine token the client renders through i18n — not the
+      // account id, which the `actor` column already carries, and not a phrase.
+      detail: input.party,
+    });
+  }
+  if (activated) {
+    await appendLeaseEvent(db, {
+      leaseId: input.leaseId,
+      eventType: 'activated',
+      // No actor: the lease became active because the LAST signature arrived,
+      // and crediting whoever signed last would attribute to one person a
+      // transition every party caused.
+      actorOxyUserId: null,
+    });
+  }
+
+  const [hydrated] = await hydrate(db, [row], { events: true, signatures: true });
+  return { kind: 'signed', lease: hydrated, signature, recorded: inserted !== undefined, activated };
 }
 
 /** Serve a termination notice and close the lease. */
@@ -629,7 +923,19 @@ export async function terminateLease(
     .where(eq(leases.id, id))
     .returning(leaseSelection());
   if (!row) return undefined;
-  const [hydrated] = await hydrate(db, [row]);
+
+  // The notice is an EVENT, and it was the clearest thing missing from the old
+  // timeline: serving one moved a status and left nothing a party could point
+  // at. `detail` carries the reason the server was given, verbatim — it is the
+  // tenant's or the landlord's words, so it is not translated and not rephrased.
+  await appendLeaseEvent(db, {
+    leaseId: id,
+    eventType: 'terminated',
+    actorOxyUserId: input.givenByOxyUserId,
+    detail: input.reason ?? null,
+  });
+
+  const [hydrated] = await hydrate(db, [row], { events: true, signatures: true });
   return hydrated;
 }
 

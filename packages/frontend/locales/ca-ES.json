@@ -1395,6 +1395,24 @@
       "column": {
         "payment": "Pagament",
         "method": "Mètode"
+      },
+      "coTenantPending": "Falta la signatura d'un cotitular",
+      "signedDocument": "Va signar «{{name}}» i les condicions mostrades",
+      "signedDocumentUnhashed": "Va signar «{{name}}»: el seu contingut no va quedar registrat",
+      "signedTermsOnly": "Va signar les condicions; no hi havia cap document adjunt",
+      "signatureStale": "Signat abans del darrer canvi",
+      "amendedInvalidates": "Les signatures anteriors ja no coincideixen amb les condicions",
+      "documentSigned": "Signat",
+      "signingDocument": "Signaràs «{{name}}» juntament amb les condicions de dalt.",
+      "signingTermsOnly": "No hi ha cap document adjunt, així que signaràs les condicions de dalt.",
+      "event": {
+        "created": "Esborrany creat",
+        "amended": "Condicions modificades",
+        "signed": "Signat",
+        "activated": "Contracte actiu",
+        "document_added": "Document afegit",
+        "terminated": "Preavís de resolució lliurat",
+        "renewed": "Renovat"
       }
     }
   },

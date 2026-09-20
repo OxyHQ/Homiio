@@ -92,10 +92,27 @@ class LeaseService {
     await api.delete(`${LEASE_BASE}/${leaseId}`);
   }
 
-  async signLease(leaseId: string, signature: string, acceptTerms: boolean): Promise<Lease> {
+  /**
+   * Sign a lease (#518 §7.4).
+   *
+   * `termsSha256` is the digest the lease response carried — the version this
+   * client actually rendered. The server refuses with `409 LEASE_TERMS_CHANGED`
+   * if the landlord amended the lease in between, which is what makes "the
+   * signature binds to the version shown" true rather than aspirational.
+   *
+   * There is no `signature` field any more. It used to carry the literal
+   * `'accepted-in-app'`, chosen by this client and stored verbatim in a column
+   * no read could return — a string that proved nothing about anything. What
+   * happened is recorded by the server as the signature's `method`.
+   */
+  async signLease(
+    leaseId: string,
+    acceptTerms: boolean,
+    termsSha256?: string,
+  ): Promise<Lease> {
     const response = await api.post<ApiResponse<Lease>>(`${LEASE_BASE}/${leaseId}/sign`, {
-      signature,
       acceptTerms,
+      ...(termsSha256 ? { termsSha256 } : {}),
     });
     if (!response.data?.data) {
       throw new Error(response.data?.message || 'Lease signing failed');

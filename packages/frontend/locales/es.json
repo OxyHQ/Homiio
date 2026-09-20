@@ -1374,6 +1374,24 @@
       "column": {
         "payment": "Pago",
         "method": "Método"
+      },
+      "coTenantPending": "Falta la firma de un cotitular",
+      "signedDocument": "Firmó «{{name}}» y las condiciones mostradas",
+      "signedDocumentUnhashed": "Firmó «{{name}}»: su contenido no quedó registrado",
+      "signedTermsOnly": "Firmó las condiciones; no había ningún documento adjunto",
+      "signatureStale": "Firmado antes del último cambio",
+      "amendedInvalidates": "Las firmas anteriores ya no coinciden con las condiciones",
+      "documentSigned": "Firmado",
+      "signingDocument": "Vas a firmar «{{name}}» junto con las condiciones de arriba.",
+      "signingTermsOnly": "No hay ningún documento adjunto, así que vas a firmar las condiciones de arriba.",
+      "event": {
+        "created": "Borrador creado",
+        "amended": "Condiciones modificadas",
+        "signed": "Firmado",
+        "activated": "Contrato activo",
+        "document_added": "Documento añadido",
+        "terminated": "Preaviso de resolución entregado",
+        "renewed": "Renovado"
       }
     }
   },

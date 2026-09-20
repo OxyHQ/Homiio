@@ -77,12 +77,14 @@ export {
 export {
   leaseCoTenants,
   leaseDocuments,
+  leaseEvents,
   leaseInspectionFindings,
   leaseInspections,
   leasePaymentSchedule,
   leasePaymentMovements,
   leases,
   leaseSharedUtilityCosts,
+  leaseSignatures,
 } from './leases';
 export {
   moderationEnforcements,

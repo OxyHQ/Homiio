@@ -1009,6 +1009,24 @@
       "column": {
         "payment": "付款项",
         "method": "方式"
+      },
+      "coTenantPending": "等待合租人签署",
+      "signedDocument": "已签署《{{name}}》及所示条款",
+      "signedDocumentUnhashed": "已签署《{{name}}》：未记录其内容",
+      "signedTermsOnly": "已签署条款；未附合同文件",
+      "signatureStale": "在最近一次修改之前签署",
+      "amendedInvalidates": "此前的签署已与当前条款不符",
+      "documentSigned": "已签署",
+      "signingDocument": "你将签署《{{name}}》以及上方的条款。",
+      "signingTermsOnly": "未附合同文件，因此你签署的是上方的条款。",
+      "event": {
+        "created": "已创建草稿",
+        "amended": "条款已修改",
+        "signed": "已签署",
+        "activated": "租约生效",
+        "document_added": "已添加文件",
+        "terminated": "已送达解约通知",
+        "renewed": "已续约"
       }
     }
   },

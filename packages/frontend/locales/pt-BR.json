@@ -1009,6 +1009,24 @@
       "column": {
         "payment": "Pagamento",
         "method": "Forma"
+      },
+      "coTenantPending": "Falta a assinatura de um corresidente",
+      "signedDocument": "Assinou “{{name}}” e as condições exibidas",
+      "signedDocumentUnhashed": "Assinou “{{name}}”: o conteúdo não foi registrado",
+      "signedTermsOnly": "Assinou as condições; nenhum documento estava anexado",
+      "signatureStale": "Assinado antes da última alteração",
+      "amendedInvalidates": "As assinaturas anteriores não correspondem mais às condições",
+      "documentSigned": "Assinado",
+      "signingDocument": "Você vai assinar “{{name}}” junto com as condições acima.",
+      "signingTermsOnly": "Nenhum documento está anexado, então você vai assinar as condições acima.",
+      "event": {
+        "created": "Rascunho criado",
+        "amended": "Condições alteradas",
+        "signed": "Assinado",
+        "activated": "Contrato ativo",
+        "document_added": "Documento adicionado",
+        "terminated": "Aviso de rescisão entregue",
+        "renewed": "Renovado"
       }
     }
   },
