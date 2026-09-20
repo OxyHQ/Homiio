@@ -51,7 +51,7 @@
  */
 
 import * as crypto from 'crypto';
-import { and, eq, sql, type SQL } from 'drizzle-orm';
+import { and, eq, ne, sql, type SQL } from 'drizzle-orm';
 
 import { getDb, type DatabaseOrTransaction } from '../db/postgres';
 import { slugifyPlaceName } from '../db/geo/placeSlug';
@@ -405,6 +405,58 @@ export async function resolveGeoNames(input: {
  * Every statement is `ON CONFLICT DO NOTHING` plus a read-back, so no statement
  * here can fail on a duplicate and abort a caller's transaction with `25P02`.
  */
+/**
+ * The one city this country already has under a REAL region for `name`, or
+ * `null`.
+ *
+ * ## Why this exists
+ *
+ * {@link upsertGeoChain} falls back to a region named {@link UNKNOWN_REGION}
+ * when a geocode returns no province, and then upserts the city under it — so a
+ * place that already had a row under its real region got a SECOND one. Measured
+ * on production 2026-09-20: ten cities sat in the placeholder region and ALL
+ * TEN had a twin under a real region, including every large German city.
+ *
+ * `placeLookup` then answered `ambiguous` for every one of them, because from
+ * the outside two rows for one slug are indistinguishable from two homonyms
+ * (ADR 0002 §12.2) — so "muéstrame pisos en Hamburg" resolved no location and
+ * Sindi did nothing at all. Migration 0030 folds the rows that exist; this
+ * stops the next one being made.
+ *
+ * ## EXACTLY ONE, and the restraint is the rule
+ *
+ * Several matches means we genuinely do not know which city this is. That is
+ * ADR 0001 §1.3's measured `Santiago` case — two different cities both landing
+ * in the bucket — and adopting the most popular one would be the homonym bug
+ * wearing a repair's clothes. So this returns `null` and the caller keeps the
+ * placeholder, which is ambiguous on purpose.
+ *
+ * Matched on {@link cities.slug}, not on `name`: the slug is `GENERATED ALWAYS`
+ * and is what `placeLookup` resolves a token to, so this asks the same question
+ * the ambiguity it prevents was answering.
+ */
+async function cityInKnownRegion(
+  db: DatabaseOrTransaction,
+  countryId: string,
+  name: string,
+): Promise<{ cityId: string; regionId: string } | null> {
+  const rows = await db
+    .select({ cityId: cities.id, regionId: cities.regionId })
+    .from(cities)
+    .innerJoin(regions, eq(regions.id, cities.regionId))
+    .where(
+      and(
+        eq(cities.countryId, countryId),
+        eq(cities.slug, slugifyPlaceName(name)),
+        ne(regions.name, UNKNOWN_REGION),
+      ),
+    )
+    // Two is enough to learn that the answer is "we do not know"; asking for
+    // more would only make the refusal more expensive.
+    .limit(2);
+  return rows.length === 1 ? rows[0] : null;
+}
+
 export async function upsertGeoChain(
   db: DatabaseOrTransaction,
   names: GeoNames,
@@ -416,10 +468,19 @@ export async function upsertGeoChain(
 
   const { code: countryCode, name: countryName } = resolveCountryCodeAndName(names);
   const countryId = await upsertCountry(db, countryCode, countryName);
+  const state = names.state?.trim();
+  const city = names.city.trim();
+
+  // A geocode with no province is not a new place. Before falling back to the
+  // placeholder region, ask whether this country already holds exactly ONE city
+  // with this slug; if it does, that is the city, and the geocoder merely
+  // omitted the province.
+  const adopted = state ? null : await cityInKnownRegion(db, countryId, city);
+
   // Fall back to a stable placeholder so the chain is always whole — the three
   // parent references on `addresses` are NOT NULL.
-  const regionId = await upsertRegion(db, countryId, names.state?.trim() || UNKNOWN_REGION);
-  const cityId = await upsertCity(db, regionId, countryId, names.city.trim(), countryCode, coordinates);
+  const regionId = adopted ? adopted.regionId : await upsertRegion(db, countryId, state || UNKNOWN_REGION);
+  const cityId = adopted ? adopted.cityId : await upsertCity(db, regionId, countryId, city, countryCode, coordinates);
 
   let neighborhoodId: string | undefined;
   if (names.neighborhood?.trim()) {
