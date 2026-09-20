@@ -1491,6 +1491,13 @@
       "applied": "Done: {{what}}.",
       "stale": "You changed the search yourself, so this was left alone.",
       "failed": "Could not do this: {{what}}."
+    },
+    "saved": {
+      "loading": "Looking at your saved homes…",
+      "failed": "Your saved homes could not be loaded.",
+      "empty": "You have not saved any homes yet.",
+      "emptyFolder": "That collection is empty.",
+      "more": "and {{count}} more"
     }
   },
   "sidebar": {

@@ -1491,6 +1491,13 @@
       "applied": "已完成：{{what}}。",
       "stale": "你自己更改了搜索条件，因此这里未作改动。",
       "failed": "无法执行：{{what}}。"
+    },
+    "saved": {
+      "loading": "正在查看你收藏的房源…",
+      "failed": "无法加载你收藏的房源。",
+      "empty": "你还没有收藏任何房源。",
+      "emptyFolder": "该收藏夹是空的。",
+      "more": "还有 {{count}} 个"
     }
   },
   "sidebar": {

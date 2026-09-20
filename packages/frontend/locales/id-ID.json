@@ -1491,6 +1491,13 @@
       "applied": "Selesai: {{what}}.",
       "stale": "Anda sendiri mengubah pencarian, jadi ini dibiarkan apa adanya.",
       "failed": "Tidak bisa dilakukan: {{what}}."
+    },
+    "saved": {
+      "loading": "Melihat hunian yang Anda simpan…",
+      "failed": "Hunian yang Anda simpan tidak dapat dimuat.",
+      "empty": "Anda belum menyimpan hunian apa pun.",
+      "emptyFolder": "Koleksi itu kosong.",
+      "more": "dan {{count}} lainnya"
     }
   },
   "sidebar": {

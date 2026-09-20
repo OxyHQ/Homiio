@@ -508,6 +508,16 @@ export interface PropertyStructuredData {
 export interface SavedProperty extends Property {
   notes?: string;
   savedAt?: string;
+  /**
+   * The collection this save belongs to, or absent for the unfiled list.
+   *
+   * The API has always returned it; the type did not declare it, so every
+   * reader that needed it cast — `app/(tabs)/saved/[folderId]/index.tsx` did
+   * exactly that to filter a folder's contents. A field that exists on the wire
+   * and not in the contract is one every new reader has to rediscover, so it is
+   * declared here instead.
+   */
+  folderId?: string;
 }
 
 export interface MapProperty extends Omit<Property, 'location'> {

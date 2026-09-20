@@ -1805,6 +1805,13 @@
       "applied": "Hecho: {{what}}.",
       "stale": "Has cambiado la búsqueda tú, así que esto se ha dejado como estaba.",
       "failed": "No se ha podido: {{what}}."
+    },
+    "saved": {
+      "loading": "Mirando tus viviendas guardadas…",
+      "failed": "No se pudieron cargar tus viviendas guardadas.",
+      "empty": "Todavía no has guardado ninguna vivienda.",
+      "emptyFolder": "Esa colección está vacía.",
+      "more": "y {{count}} más"
     }
   },
   "sidebar": {

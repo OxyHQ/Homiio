@@ -448,7 +448,7 @@ schema change. These could not, and none of them is an oversight:
 | Capability from the effective layout | **live** | `controlCapabilityOf`; overlay is chat-only |
 | Executor, dedupe, staleness, turn binding | **live** | `hooks/sindiActionRules.ts` |
 | Side-panel navigation keeps the chat | **live** | #523 |
-| Full-screen answers inline | **partial** | Property cards already render; `show_saved` offers navigation rather than inline saved homes |
+| Full-screen answers inline | **live** | `show_saved` renders the saved homes IN the thread — the answer is the list, and a button that leaves the conversation to go and look at it is a worse version of answering. The offer to open the real screen stays beside it. Loading, failure and a genuinely empty collection each say their own sentence, so a failed load never reads as "you have not saved anything". The folder rule is shared with the folder screen (`utils/savedFolders.ts`) so the two cannot list different sets |
 | Conversation-id promotion | **live** | #523; the hook holds no router |
 | Alia tool results | **blocked** | `alia.tool_result` exists in `@alia.onl/server@1.0.1`; Homiio's tools are not known to be provisioned on Sindi's agent |
 

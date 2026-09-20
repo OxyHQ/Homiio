@@ -1826,6 +1826,13 @@
       "applied": "Fet: {{what}}.",
       "stale": "Has canviat la cerca tu, així que això s’ha deixat com estava.",
       "failed": "No s’ha pogut: {{what}}."
+    },
+    "saved": {
+      "loading": "Mirant els teus habitatges desats…",
+      "failed": "No s’han pogut carregar els teus habitatges desats.",
+      "empty": "Encara no has desat cap habitatge.",
+      "emptyFolder": "Aquesta col·lecció és buida.",
+      "more": "i {{count}} més"
     }
   },
   "sidebar": {

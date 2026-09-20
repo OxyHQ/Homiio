@@ -1491,6 +1491,13 @@
       "applied": "Feito: {{what}}.",
       "stale": "Você mesmo alterou a busca, então isto ficou como estava.",
       "failed": "Não foi possível: {{what}}."
+    },
+    "saved": {
+      "loading": "Olhando os imóveis que você salvou…",
+      "failed": "Não foi possível carregar os imóveis salvos.",
+      "empty": "Você ainda não salvou nenhum imóvel.",
+      "emptyFolder": "Essa coleção está vazia.",
+      "more": "e mais {{count}}"
     }
   },
   "sidebar": {

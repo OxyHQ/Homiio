@@ -30,6 +30,8 @@ import { useTranslation } from 'react-i18next';
 
 import { Button } from '@oxy.so/bloom/button';
 import { P } from '@oxy.so/bloom/typography';
+
+import { SindiSavedHomes } from '@/components/sindi/SindiSavedHomes';
 import type { SindiAction, SindiActionOutcome } from '@homiio/shared-types';
 
 import type { SindiActionExecution } from '@/hooks/useSindiActions';
@@ -87,16 +89,25 @@ export function SindiActionCard({ execution, onTake }: SindiActionCardProps) {
 
   if (outcome === 'inline') {
     return (
-      <View className="mx-4 mb-2 flex-row flex-wrap items-center gap-2">
-        <P className="text-[13px] text-muted-foreground">{t(actionKey(envelope.action))}</P>
-        <Button
-          variant="secondary"
-          size="small"
-          onPress={take}
-          accessibilityLabel={t('sindi.actions.takeAccessible')}
-        >
-          {t('sindi.actions.take')}
-        </Button>
+      <View>
+        {/* "Show me my saved homes" is answered, not offered. The answer IS the
+            list, and a button that leaves the conversation to go and look at it
+            is a worse version of answering. The offer stays below for anybody
+            who wants the full screen. */}
+        {envelope.action.kind === 'show_saved' ? (
+          <SindiSavedHomes folderId={envelope.action.folderId} />
+        ) : null}
+        <View className="mx-4 mb-2 flex-row flex-wrap items-center gap-2">
+          <P className="text-[13px] text-muted-foreground">{t(actionKey(envelope.action))}</P>
+          <Button
+            variant="secondary"
+            size="small"
+            onPress={take}
+            accessibilityLabel={t('sindi.actions.takeAccessible')}
+          >
+            {t('sindi.actions.take')}
+          </Button>
+        </View>
       </View>
     );
   }

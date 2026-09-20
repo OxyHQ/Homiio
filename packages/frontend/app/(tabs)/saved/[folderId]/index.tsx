@@ -35,7 +35,8 @@ import savedPropertyService from '@/services/savedPropertyService';
 import savedPropertyFolderService from '@/services/savedPropertyFolderService';
 import { colors } from '@/styles/colors';
 import { spacing } from '@/constants/styles';
-import type { Property, SavedProperty } from '@homiio/shared-types';
+import { propertiesInFolder } from '@/utils/savedFolders';
+import type { Property } from '@homiio/shared-types';
 
 export default function SavedFolderScreen() {
   const { t } = useTranslation();
@@ -68,12 +69,13 @@ export default function SavedFolderScreen() {
     () => (folders ?? []).find((f) => f.id === folderId),
     [folders, folderId],
   );
-  const propertiesInFolder = useMemo(
+  const folderProperties = useMemo(
     () =>
-      (savedProperties ?? []).filter(
-        (property) =>
-          (property as SavedProperty & { folderId?: string }).folderId === folderId,
-      ),
+      // `folderId` is declared on `SavedProperty` now, so the cast this used to
+      // carry is gone. The rule itself is shared with Sindi's inline answer —
+      // `propertiesInFolder` in `utils/savedFolders.ts` — so the chat and this
+      // screen cannot come to disagree about what a folder contains.
+      propertiesInFolder(savedProperties ?? [], folderId),
     [savedProperties, folderId],
   );
 
@@ -88,13 +90,13 @@ export default function SavedFolderScreen() {
   // the note (the grid receives plain `Property` objects, not `SavedProperty`).
   const notesById = useMemo(() => {
     const map = new Map<string, string>();
-    propertiesInFolder.forEach((property) => {
+    folderProperties.forEach((property) => {
       const id = property.id as string | undefined;
       const note = property.notes?.trim();
       if (id && note) map.set(id, note);
     });
     return map;
-  }, [propertiesInFolder]);
+  }, [folderProperties]);
 
   const handlePropertyPress = useCallback((property: Property) => {
     const id = property.id as string;
@@ -208,7 +210,7 @@ export default function SavedFolderScreen() {
           />
         }
       >
-        {propertiesInFolder.length === 0 ? (
+        {folderProperties.length === 0 ? (
           <View style={styles.emptyInner}>
             <EmptyState
               icon={RiFolderLine}
@@ -221,7 +223,7 @@ export default function SavedFolderScreen() {
           </View>
         ) : (
           <PropertyResultsGrid
-            properties={propertiesInFolder}
+            properties={folderProperties}
             onPropertyPress={handlePropertyPress}
             renderFooter={renderNoteFooter}
           />
