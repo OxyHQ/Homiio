@@ -1816,6 +1816,13 @@
       "applied": "Fatto: {{what}}.",
       "stale": "Hai modificato tu la ricerca, quindi questo è stato lasciato com’era.",
       "failed": "Non è stato possibile: {{what}}."
+    },
+    "saved": {
+      "loading": "Sto guardando le case che hai salvato…",
+      "failed": "Non è stato possibile caricare le case salvate.",
+      "empty": "Non hai ancora salvato nessuna casa.",
+      "emptyFolder": "Quella raccolta è vuota.",
+      "more": "e altre {{count}}"
     }
   },
   "sidebar": {

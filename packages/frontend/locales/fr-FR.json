@@ -1491,6 +1491,13 @@
       "applied": "Fait : {{what}}.",
       "stale": "Vous avez modifié la recherche vous-même : rien n’a été changé.",
       "failed": "Impossible : {{what}}."
+    },
+    "saved": {
+      "loading": "Je regarde vos logements enregistrés…",
+      "failed": "Vos logements enregistrés n’ont pas pu être chargés.",
+      "empty": "Vous n’avez encore enregistré aucun logement.",
+      "emptyFolder": "Cette collection est vide.",
+      "more": "et {{count}} de plus"
     }
   },
   "sidebar": {
