@@ -356,12 +356,26 @@ function expectExact(body: unknown, unitAddressId: string, where: string): void 
 
 let seeded: Seeded;
 
-beforeEach(async () => {
+/**
+ * Leave the shared tables as this file found them.
+ *
+ * Cleaning up only on the way IN leaves the last test's rows for whichever
+ * suite the worker runs next — and the failure then lands there, in a file with
+ * nothing to do with the leak. `__tests__/db/tenancyRanges.test.ts` counts rows
+ * inside a range index and reads 2 where it expects 1.
+ */
+async function reset(): Promise<void> {
   await getDb().delete(leases);
   await getDb().delete(reviews);
   await resetGeoTables();
+}
+
+beforeEach(async () => {
+  await reset();
   seeded = await seed();
 });
+
+afterAll(reset);
 
 describe('the address surfaces publish the building and withhold the dwelling', () => {
   const cases: Array<[string, (s: Seeded) => string]> = [

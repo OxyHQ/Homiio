@@ -110,10 +110,22 @@ async function settledMovement(fixture: { leaseId: string; obligationId: string 
   return movementId;
 }
 
-beforeEach(async () => {
+/**
+ * Leave the shared tables as this file found them.
+ *
+ * A suite that only cleans up on the way IN leaves its last test's rows behind,
+ * and the next suite in the same worker inherits them. That is not a
+ * hypothetical: `__tests__/db/tenancyRanges.test.ts` counts the rows a range
+ * index contains, so a stray lease makes it read 2 where it expects 1 — and the
+ * failure lands in THAT file, which has nothing to do with the leak.
+ */
+async function reset(): Promise<void> {
   await getDb().delete(leases);
   await resetGeoTables();
-});
+}
+
+beforeEach(reset);
+afterAll(reset);
 
 describe('a receipt exists only for money that arrived', () => {
   it('refuses one for a declaration the landlord has not confirmed', async () => {
