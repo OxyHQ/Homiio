@@ -6,6 +6,7 @@
  */
 
 import type { NormalizedListingContact } from '@homiio/shared-types';
+import { citySlug } from '../../../slug';
 import { buildContact } from '../../../parse/contact';
 import { stripHtmlToPlainText } from '../../../parse/htmlText';
 import { isGbHousingType, rejectGbNonHousing } from '../housing';
@@ -46,11 +47,11 @@ export function openrentSourceIdFromUrl(url: string): string | undefined {
 }
 
 export function openrentSearchUrl(city: string, page = 1): string {
-  const slug = city
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
+  // `citySlug` exists so this snippet is written once; three providers had
+  // copied it, and all three copies carried the same `/^-+|-+$/g` ReDoS. The
+  // shared one also strips diacritics, which is a no-op for the GB city list
+  // and correct everywhere else.
+  const slug = citySlug(city);
   const base = `${OPENRENT_BASE_URL}/properties-to-rent/${slug}`;
   return page <= 1 ? base : `${base}?page=${page}`;
 }
