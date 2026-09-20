@@ -34,8 +34,17 @@ import { spacing } from '@/constants/styles';
 
 interface Props {
   exchange: PropertyExchange;
-  /** Open the request-exchange flow (primary CTA). */
-  onRequestExchange: () => void;
+  /**
+   * Open the request-exchange flow (primary CTA).
+   *
+   * OMITTED for an external listing, and the CTA then does not render at all.
+   * Homiio cannot arrange a swap in a home it merely copied an advertisement
+   * for: there is nobody here to agree to it. The screen decides that — the
+   * booking card and the action bar branch on `isExternal` before anything
+   * else, and this section used to be the one surface that did not, offering a
+   * live "Request exchange" button on a scraped listing.
+   */
+  onRequestExchange?: () => void;
 }
 
 const ICON_SIZE = 18;
@@ -191,14 +200,16 @@ export const ExchangeSection: React.FC<Props> = ({ exchange, onRequestExchange }
         />
       </View>
 
-      <Button
-        variant="primary"
-        size="large"
-        onPress={onRequestExchange}
-        style={styles.cta}
-      >
-        {t('listing.exchange.requestCta')}
-      </Button>
+      {onRequestExchange ? (
+        <Button
+          variant="primary"
+          size="large"
+          onPress={onRequestExchange}
+          style={styles.cta}
+        >
+          {t('listing.exchange.requestCta')}
+        </Button>
+      ) : null}
     </Section>
   );
 };

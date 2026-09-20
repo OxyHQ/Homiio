@@ -57,6 +57,7 @@ import {
   addressIs,
   booleanIs,
   calendarIsFree,
+  noConfirmedExchangeOverlaps,
   noConfirmedReservationOverlaps,
   hasOffering,
   inCity,
@@ -274,6 +275,11 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
     if (hasStay && checkInDate && checkOutDate) {
       conditions.push(calendarIsFree(checkInDate, checkOutDate));
       conditions.push(noConfirmedReservationOverlaps(checkInDate, checkOutDate));
+      // The third occupant, added with #518 §7.5: a home committed to a
+      // confirmed swap was still advertised as free for those dates, and the
+      // booking path — which now asks one question across all three tables —
+      // would have refused it after somebody chose it.
+      conditions.push(noConfirmedExchangeOverlaps(checkInDate, checkOutDate));
     }
 
     // ---- The price range, LAST, and in one currency ----

@@ -66,6 +66,7 @@ All under `/api`. Source: `packages/backend/routes/public.ts`.
 | `GET` | `/api/properties/:propertyId/stats` | View and save counts |
 | `GET` | `/api/properties/:propertyId/area-insights` | Price comparison against comparables |
 | `GET` | `/api/properties/:propertyId/nearby-services` | Presence-only everyday services |
+| `GET` | `/api/properties/:id/availability` | The stay calendar: blocked windows and committed dates |
 | `POST` | `/api/properties/calculate-ethical-pricing` | Stateless calculator |
 
 `by-ids` and the static paths are declared **before** `/:propertyId`, so
@@ -75,6 +76,15 @@ sibling.
 `nearby-services` is aggregate-only by design: presence, count and distance to
 the nearest, never a place name. `partial: true` means the upstream lookup
 degraded — treat an all-absent `partial` result as *unknown*, not as *none*.
+
+`:id/availability` is public because choosing dates is what somebody does before
+they have an account — behind the session it answered 401, the client turned
+that into an empty calendar, and a signed-out visitor saw every night of a full
+home as free. What makes it safe to publish is its PROJECTION: `{ start, end,
+status }` per span plus the listing's own booking knobs, and no guest, host,
+reservation id, price or message. Anything added to it is published to the
+anonymous internet, which `__tests__/integration/publicAvailability.test.ts`
+asserts by value rather than by field list.
 
 ### Home
 
@@ -170,9 +180,10 @@ All under `/api`, behind `createOxyAuthMiddleware(oxy)`. Source:
 | `POST` | `/api/properties/:propertyId/mark-transacted` — owner only, idempotent commission trigger |
 | `POST` | `/api/properties/:propertyId/track-view` |
 | `POST` | `/api/properties/:propertyId/report` |
+| `POST` | `/api/properties/:propertyId/viewings` — request a viewing |
+| `GET` | `/api/properties/:propertyId/viewings` — the owner sees all, anybody else only their own |
 | `GET` | `/api/properties/me/list` |
 | `GET` | `/api/properties/owner/:oxyUserId` |
-| `GET` | `/api/properties/:id/availability` — declared directly in `routes/index.ts` |
 
 ### `/api/leases`
 
@@ -312,24 +323,20 @@ queue over user content, deliberately.
 mounted directly in `server.ts` ahead of the JSON body parser, because Stripe
 signature verification needs the raw body.
 
-## Known gap: viewing creation is not mounted
+## Viewing creation, and the gap that used to be here
 
-`packages/frontend/services/viewingService.ts` calls
-`POST /api/properties/:propertyId/viewings` and
-`GET /api/properties/:propertyId/viewings`. **Neither path is registered on any
-router.** `viewingController.createViewingRequest` exists and is unreachable.
+`POST /api/properties/:propertyId/viewings` and its `GET` are mounted in
+`routes/properties.ts` and reachable. They were not, for the whole life of the
+screen that calls them: `viewingController.createViewingRequest` existed,
+`packages/frontend/services/viewingService.ts` had always posted to that path,
+and no router registered it — so production answered 404 to every attempt to
+arrange a viewing while the suite stayed green, because each viewing test
+mounted the handlers onto an express app of its own.
 
-Measured on this branch, with a positive control so "found nothing" is
-distinguishable from "the search is broken":
-
-```bash
-grep -rn "propertyId/viewings\|createViewingRequest" packages/backend/routes/   # → nothing
-grep -rn "mark-transacted" packages/backend/routes/                              # → 1 hit, so the search works
-```
-
-Recorded here rather than quietly omitted: a route table that lists only what
-exists would leave the next person to rediscover this from a 404. Approving,
-declining and cancelling a viewing all work; only creating one is missing.
+The lesson is kept rather than the gap: a handler test says nothing about
+whether an application can reach the handler.
+`__tests__/integration/viewingRoutes.test.ts` drives the REAL router and fails
+if the mount is removed.
 
 ## Frontend routes
 

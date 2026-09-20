@@ -3027,7 +3027,8 @@
     },
     "calendar": {
       "selectRange": "Selecione o check-in e o check-out",
-      "apply": "Aplicar"
+      "apply": "Aplicar",
+      "unavailable": "Não conseguimos carregar o calendário desta casa, então estas datas podem não estar livres."
     },
     "breakdown": {
       "nights_one": "{{price}} × {{count}} noite",

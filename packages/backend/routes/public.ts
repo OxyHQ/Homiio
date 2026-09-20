@@ -14,6 +14,7 @@ import { getHomeSections } from '../controllers/home/homeSectionsController';
 import { rateLimitKeyFor } from '../middlewares/rateLimitKey';
 import observabilityController from '../controllers/observabilityController';
 import * as propertyController from '../controllers/property';
+import reservationController from '../controllers/reservationController';
 import telegramController from '../controllers/telegramController';
 import analyticsController from '../controllers/analyticsController';
 import * as reviewController from '../controllers/reviewController';
@@ -95,6 +96,23 @@ export default function () {
   router.get('/properties/:propertyId/stats', asyncHandler(propertyController.getPropertyStats));
   router.get('/properties/:propertyId/area-insights', asyncHandler(propertyController.getAreaInsights));
   router.get('/properties/:propertyId/nearby-services', asyncHandler(propertyController.getPropertyNearbyServices));
+
+  // The stay calendar (#518 §7.5). PUBLIC, because choosing dates is what a
+  // visitor does BEFORE they have an account — behind the session it answered
+  // 401, the client swallowed that into "nothing is blocked", and a signed-out
+  // visitor was shown every night of a full home as free.
+  //
+  // It is safe here because of what it returns, not because of anything it
+  // checks: `{ start, end, status }` per span and the listing's own booking
+  // knobs. No guest, no host, no reservation id, no price, no message — see the
+  // handler's header, and `__tests__/integration/publicAvailability.test.ts`,
+  // which asserts the absences rather than trusting either comment. It reads
+  // nothing from `req.user`, which is the condition `AGENTS.md` sets for a
+  // handler on this router.
+  //
+  // Declared with a distinct third segment, so it cannot shadow
+  // `/properties/:propertyId` above.
+  router.get('/properties/:id/availability', asyncHandler(reservationController.getPropertyAvailability));
 
   // ── Geo gateway (#351, ADR 0002 §14.1) ──────────────────────────────────
   //

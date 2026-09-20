@@ -5,7 +5,8 @@
  *
  * ## The conflict scan becomes ONE overlap query
  *
- * `hasPropertyConflict` loaded EVERY confirmed exchange touching a property,
+ * {@link findConflictingExchange} — `hasPropertyConflict` in Mongo — loaded
+ * EVERY confirmed exchange touching a property,
  * hydrated both windows and overlapped them in JavaScript — a full scan of the
  * committed set per request, growing with the table. Postgres answers it with a
  * range overlap, and `exchange_requests_requested_window_gist` exists precisely
@@ -79,17 +80,22 @@ export interface ExchangeWindowInput {
 }
 
 /**
- * Is `propertyId` already committed over `window`, in EITHER role?
+ * The confirmed exchange committing `propertyId` over `window`, in EITHER role.
+ *
+ * It returns the ROW rather than a boolean because it is one of the three
+ * sources `db/availability/occupancy.ts` composes, and that module names which
+ * commitment refused a booking. A caller that only wants the yes/no reads the
+ * `undefined`.
  *
  * @param excludeId The request being confirmed, so it never conflicts with
  *   itself.
  */
-export async function hasPropertyConflict(
+export async function findConflictingExchange(
   db: DatabaseOrTransaction,
   propertyId: string,
   window: ExchangeWindowInput,
   options: { readonly excludeId?: string } = {},
-): Promise<boolean> {
+): Promise<{ id: string } | undefined> {
   // `tstzrange(a, b)` — default `[)` bounds. See the header: `'[]'` here would
   // make two adjacent stays collide.
   //
@@ -126,7 +132,51 @@ export async function hasPropertyConflict(
     .from(exchangeRequests)
     .where(and(...clauses) as SQL)
     .limit(1);
-  return row !== undefined;
+  return row;
+}
+
+/**
+ * The confirmed exchange stays on a property, in EITHER role, soonest first.
+ *
+ * The exchange half of the public availability projection: a home committed to
+ * a swap is as unavailable as one committed to a paid stay, and a calendar that
+ * showed those nights free would invite a booking the create path then refuses.
+ * It carries dates and NOTHING else — no requester, no host, no message — which
+ * is what lets the projection sit on the public router.
+ */
+export async function listConfirmedExchangeStays(
+  db: DatabaseOrTransaction,
+  propertyId: string,
+): Promise<readonly { start: Date; end: Date }[]> {
+  const rows = await db
+    .select({
+      requestedStart: exchangeRequests.requestedWindowStart,
+      requestedEnd: exchangeRequests.requestedWindowEnd,
+      offeredStart: exchangeRequests.offeredWindowStart,
+      offeredEnd: exchangeRequests.offeredWindowEnd,
+      isTarget: sql<boolean>`${exchangeRequests.propertyId} = ${propertyId}`,
+    })
+    .from(exchangeRequests)
+    .where(
+      and(
+        inArray(exchangeRequests.status, [...BLOCKING_EXCHANGE_STATUSES]),
+        or(
+          eq(exchangeRequests.propertyId, propertyId),
+          eq(exchangeRequests.offeredPropertyId, propertyId),
+        ),
+      ) as SQL,
+    );
+
+  const stays = rows.flatMap((row) => {
+    // The window that commits THIS home is the requested one when the home is
+    // the target and the offered one when it is the home given in return. A row
+    // can be both only if somebody swapped a home with itself, which the create
+    // path refuses.
+    if (row.isTarget) return [{ start: row.requestedStart, end: row.requestedEnd }];
+    if (row.offeredStart === null || row.offeredEnd === null) return [];
+    return [{ start: row.offeredStart, end: row.offeredEnd }];
+  });
+  return stays.sort((a, b) => a.start.getTime() - b.start.getTime());
 }
 
 export interface CreateExchangeRequestInput {

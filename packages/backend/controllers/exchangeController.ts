@@ -25,7 +25,6 @@ import { getDb } from '../db/postgres';
 import {
   createExchangeRequest,
   findExchangeRequestById,
-  hasPropertyConflict,
   isExchangeStatus,
   listExchangeRequests,
   serializeExchangeRequest,
@@ -36,7 +35,11 @@ import {
   type ExchangeWindowInput,
 } from '../db/exchanges/exchangeReads';
 import {
-  findPropertyBookingBasis,
+  findOccupancyConflict,
+  type OccupancyConflict,
+} from '../db/availability/occupancy';
+import {
+  lockPropertyBookingBases,
   type PropertyBookingBasis,
 } from '../db/properties/propertyBookingBasis';
 import { logger } from '../middlewares/logging';
@@ -92,6 +95,29 @@ function parseWindow(
   return { start, end };
 }
 
+/**
+ * The refusal for whatever already holds the dates on ONE of the two homes.
+ *
+ * An exchange used to look only at `exchange_requests`, so a home with a
+ * confirmed paid stay in it was still swappable and a host's blocked fortnight
+ * did not exist as far as this domain was concerned. The conflict is now the
+ * shared one (`db/availability/occupancy.ts`), and `role` is what turns it into
+ * the message the requester needs: which of their two homes is the problem.
+ */
+function occupancyError(conflict: OccupancyConflict, role: 'requested' | 'offered'): AppError {
+  const subject = role === 'requested' ? 'Requested dates' : 'Offered dates';
+  const code = role === 'requested' ? 'DATE_CONFLICT' : 'OFFERED_DATE_CONFLICT';
+  switch (conflict.kind) {
+    case 'reservation':
+      return new AppError(`${subject} conflict with a booked stay`, 409, code);
+    case 'exchange':
+      return new AppError(`${subject} conflict with a confirmed exchange`, 409, code);
+    case 'window':
+    default:
+      return new AppError(`${subject} are blocked by the host calendar`, 409, code);
+  }
+}
+
 function resolveOxyUserId(req: Request): string | undefined {
   const user = (req as Request & { user?: { id?: string; _id?: string }; userId?: string });
   return user.user?.id || user.user?._id || user.userId;
@@ -118,28 +144,9 @@ class ExchangeController {
         return next(new AppError('Exchange mode must be "swap" or "host"', 400, 'INVALID_MODE'));
       }
 
-      const db = getDb();
-      const property = await findPropertyBookingBasis(db, String(propertyId));
-      if (!property) return next(new AppError('Property not found', 404, 'NOT_FOUND'));
-      if (property.isExternal) {
-        return next(new AppError('Cannot request an exchange on external listings', 400, 'EXTERNAL_PROPERTY'));
-      }
-      if (!hasExchangeOffering(property)) {
-        return next(new AppError('This property is not open to home exchange', 400, 'NOT_EXCHANGEABLE'));
-      }
-      const listingMode = property.exchangeMode;
-      if (!listingMode || !modeAccepts(listingMode, mode)) {
-        return next(new AppError(`This listing does not accept "${mode}" exchanges`, 400, 'MODE_NOT_ACCEPTED'));
-      }
-
-      const hostOxyUserId = property.oxyUserId;
-      if (!hostOxyUserId) return next(new AppError('Property has no host', 400, 'INVALID_PROPERTY'));
-      if (hostOxyUserId === oxyUserId) {
-        return next(new AppError('You cannot request an exchange with your own property', 403, 'FORBIDDEN'));
-      }
-
-      // Validate requested window: start < end, not in the past. A window
-      // starting exactly now is allowed (`<`, not `<=`).
+      // Both windows are parsed and range-checked BEFORE a transaction opens:
+      // none of it reads the database. A window starting exactly now is allowed
+      // (`<`, not `<=`).
       const requested = parseWindow(requestedWindow);
       if (!requested) {
         return next(new AppError('Invalid requested window', 400, 'INVALID_WINDOW'));
@@ -149,70 +156,119 @@ class ExchangeController {
         return next(new AppError('Requested window must start in the future', 400, 'DATE_IN_PAST'));
       }
 
-      // SWAP requires a verified offered property + offered window; HOST offers
-      // nothing at all, which `exchange_requests_host_mode_offers_nothing_check`
-      // now enforces — the port of a `pre('save')` hook `findOneAndUpdate`
-      // walked straight past.
-      let resolvedOfferedPropertyId: string | undefined;
-      let resolvedOfferedWindow: ExchangeWindowInput | undefined;
+      // SWAP requires an offered property + offered window; HOST offers nothing
+      // at all, which `exchange_requests_host_mode_offers_nothing_check` now
+      // enforces — the port of a `pre('save')` hook `findOneAndUpdate` walked
+      // straight past.
+      let offered: ExchangeWindowInput | undefined;
       if (mode === ExchangeMode.SWAP) {
         if (!offeredPropertyId) {
           return next(new AppError('A swap requires an offered property', 400, 'OFFERED_PROPERTY_REQUIRED'));
         }
-        const offeredProperty = await findPropertyBookingBasis(db, String(offeredPropertyId));
-        if (!offeredProperty) return next(new AppError('Offered property not found', 404, 'NOT_FOUND'));
-        if (offeredProperty.oxyUserId !== oxyUserId) {
-          return next(new AppError('Offered property does not belong to you', 403, 'FORBIDDEN'));
-        }
-        if (!hasExchangeOffering(offeredProperty)) {
-          return next(new AppError('Offered property is not open to home exchange', 400, 'OFFERED_NOT_EXCHANGEABLE'));
-        }
-        const offered = parseWindow(offeredWindow);
-        if (!offered) {
+        const parsed = parseWindow(offeredWindow);
+        if (!parsed) {
           return next(new AppError('A swap requires a valid offered window', 400, 'OFFERED_WINDOW_REQUIRED'));
         }
-        // Same future guard as the requested window: the offered stay cannot
-        // start in the past (start === now is allowed).
-        if (offered.start.getTime() < now.getTime()) {
+        if (parsed.start.getTime() < now.getTime()) {
           return next(new AppError('Offered window must start in the future', 400, 'DATE_IN_PAST'));
         }
-        resolvedOfferedPropertyId = offeredProperty.id;
-        resolvedOfferedWindow = offered;
+        offered = parsed;
       }
 
-      // Conflict: a committed (CONFIRMED) exchange already occupies the TARGET
-      // property over the requested window. One range-overlap query, both roles
-      // — see `db/exchanges/exchangeReads.ts`. Pending requests never block.
-      if (await hasPropertyConflict(db, String(propertyId), requested)) {
-        return next(new AppError('Requested dates conflict with a confirmed exchange', 409, 'DATE_CONFLICT'));
-      }
+      /**
+       * A swap commits TWO homes, so BOTH are locked and both are decided
+       * against inside one transaction.
+       *
+       * The old shape read each listing, asked `exchange_requests` whether
+       * either home was busy, and inserted — with nothing holding the two homes
+       * still in between. Two requesters offering the same home for the same
+       * fortnight both passed; so did a request against a home that had just
+       * been booked as a paid stay, because this domain never looked at
+       * `reservations` or at the host's calendar at all.
+       *
+       * `lockPropertyBookingBases` takes the rows in sorted id order, which is
+       * what stops two mirror-image swaps deadlocking on each other.
+       */
+      const outcome = await getDb().transaction(async (tx) => {
+        const ids = [String(propertyId)];
+        if (offered) ids.push(String(offeredPropertyId));
+        const locked = await lockPropertyBookingBases(tx, ids);
 
-      // For a SWAP, the OFFERED home must also be free over its offered window —
-      // otherwise a requester could double-book the home they offer in return.
-      if (resolvedOfferedPropertyId && resolvedOfferedWindow) {
-        if (await hasPropertyConflict(db, resolvedOfferedPropertyId, resolvedOfferedWindow)) {
-          return next(new AppError('Offered dates conflict with a confirmed exchange', 409, 'OFFERED_DATE_CONFLICT'));
+        const property = locked.get(String(propertyId));
+        if (!property) return { error: new AppError('Property not found', 404, 'NOT_FOUND') };
+        if (property.isExternal) {
+          return { error: new AppError('Cannot request an exchange on external listings', 400, 'EXTERNAL_PROPERTY') };
         }
-      }
+        if (!hasExchangeOffering(property)) {
+          return { error: new AppError('This property is not open to home exchange', 400, 'NOT_EXCHANGEABLE') };
+        }
+        const listingMode = property.exchangeMode;
+        if (!listingMode || !modeAccepts(listingMode, mode)) {
+          return { error: new AppError(`This listing does not accept "${mode}" exchanges`, 400, 'MODE_NOT_ACCEPTED') };
+        }
 
-      const exchangeRequest = await createExchangeRequest(db, {
-        propertyId: String(propertyId),
-        requesterOxyUserId: oxyUserId,
-        hostOxyUserId,
-        mode: mode as ExchangeModeValue,
-        requestedWindow: requested,
-        offeredPropertyId: resolvedOfferedPropertyId,
-        offeredWindow: resolvedOfferedWindow,
-        message: typeof message === 'string' ? message : undefined,
+        const hostOxyUserId = property.oxyUserId;
+        if (!hostOxyUserId) return { error: new AppError('Property has no host', 400, 'INVALID_PROPERTY') };
+        if (hostOxyUserId === oxyUserId) {
+          return { error: new AppError('You cannot request an exchange with your own property', 403, 'FORBIDDEN') };
+        }
+
+        let resolvedOfferedPropertyId: string | undefined;
+        if (offered) {
+          const offeredProperty = locked.get(String(offeredPropertyId));
+          if (!offeredProperty) return { error: new AppError('Offered property not found', 404, 'NOT_FOUND') };
+          if (offeredProperty.oxyUserId !== oxyUserId) {
+            return { error: new AppError('Offered property does not belong to you', 403, 'FORBIDDEN') };
+          }
+          // An EXTERNAL listing is an advertisement Homiio copied from
+          // somewhere else: nobody here can promise anybody a night in it. The
+          // target was already refused for that reason; the home being offered
+          // in return was not, so a requester could offer a scraped listing as
+          // if it were theirs to give.
+          if (offeredProperty.isExternal) {
+            return { error: new AppError('Cannot offer an external listing in an exchange', 400, 'OFFERED_EXTERNAL_PROPERTY') };
+          }
+          if (!hasExchangeOffering(offeredProperty)) {
+            return { error: new AppError('Offered property is not open to home exchange', 400, 'OFFERED_NOT_EXCHANGEABLE') };
+          }
+          resolvedOfferedPropertyId = offeredProperty.id;
+        }
+
+        // Is the TARGET dwelling free? Confirmed exchanges, active
+        // reservations and the host calendar — one question, both domains ask
+        // it (`db/availability/occupancy.ts`).
+        const targetConflict = await findOccupancyConflict(tx, String(propertyId), requested);
+        if (targetConflict) return { error: occupancyError(targetConflict, 'requested') };
+
+        // And the OFFERED home over ITS window — otherwise a requester could
+        // promise a home they have already committed elsewhere.
+        if (resolvedOfferedPropertyId && offered) {
+          const offeredConflict = await findOccupancyConflict(tx, resolvedOfferedPropertyId, offered);
+          if (offeredConflict) return { error: occupancyError(offeredConflict, 'offered') };
+        }
+
+        const exchangeRequest = await createExchangeRequest(tx, {
+          propertyId: String(propertyId),
+          requesterOxyUserId: oxyUserId,
+          hostOxyUserId,
+          mode: mode as ExchangeModeValue,
+          requestedWindow: requested,
+          offeredPropertyId: resolvedOfferedPropertyId,
+          offeredWindow: offered,
+          message: typeof message === 'string' ? message : undefined,
+        });
+        return { exchangeRequest };
       });
 
+      if ('error' in outcome) return next(outcome.error);
+
       logger.info('Exchange request created', {
-        exchangeRequestId: exchangeRequest.id,
+        exchangeRequestId: outcome.exchangeRequest.id,
         propertyId: String(propertyId),
         mode,
       });
 
-      res.status(201).json(successResponse(serializeExchangeRequest(exchangeRequest), 'Exchange request created'));
+      res.status(201).json(successResponse(serializeExchangeRequest(outcome.exchangeRequest), 'Exchange request created'));
     } catch (error) {
       next(error);
     }
@@ -322,56 +378,96 @@ class ExchangeController {
         if (exchangeRequest.status !== ExchangeRequestStatus.PENDING) {
           return next(new AppError('Only pending requests can be confirmed or declined', 400, 'INVALID_STATE'));
         }
-        if (nextStatus === ExchangeRequestStatus.CONFIRMED) {
-          // Re-validate the listing at confirm time: it may have dropped the
-          // exchange intent or changed/cleared its mode since the request was
-          // made.
-          const targetProperty = await findPropertyBookingBasis(db, exchangeRequest.propertyId);
-          if (!targetProperty) {
-            return next(new AppError('Property no longer exists', 404, 'NOT_FOUND'));
-          }
-          if (!hasExchangeOffering(targetProperty)) {
-            return next(new AppError('This property is no longer open to home exchange', 409, 'NOT_EXCHANGEABLE'));
-          }
-          const listingMode = targetProperty.exchangeMode;
-          if (!listingMode || !modeAccepts(listingMode, exchangeRequest.mode)) {
-            return next(new AppError(`This listing no longer accepts "${exchangeRequest.mode}" exchanges`, 409, 'MODE_NOT_ACCEPTED'));
-          }
-
-          // Re-check conflicts before committing, excluding this request so it
-          // never collides with itself. The TARGET first…
-          const requested = {
-            start: exchangeRequest.requestedWindowStart,
-            end: exchangeRequest.requestedWindowEnd,
-          };
-          if (await hasPropertyConflict(db, exchangeRequest.propertyId, requested, { excludeId: exchangeRequest.id })) {
-            return next(new AppError('Another confirmed exchange now conflicts with this one', 409, 'DATE_CONFLICT'));
-          }
-          // …and, for a SWAP, the OFFERED home.
-          if (exchangeRequest.mode === ExchangeMode.SWAP) {
-            // `exchange_requests_offered_window_check` is all-or-none, so these
-            // three are present together or not at all — but a swap whose offer
-            // was never recorded cannot be confirmed against a calendar.
-            if (
-              !exchangeRequest.offeredPropertyId ||
-              !exchangeRequest.offeredWindowStart ||
-              !exchangeRequest.offeredWindowEnd
-            ) {
-              return next(new AppError('Invalid offered window', 400, 'INVALID_WINDOW'));
-            }
-            const offered = {
-              start: exchangeRequest.offeredWindowStart,
-              end: exchangeRequest.offeredWindowEnd,
-            };
-            if (await hasPropertyConflict(db, exchangeRequest.offeredPropertyId, offered, { excludeId: exchangeRequest.id })) {
-              return next(new AppError('The offered home now conflicts with a confirmed exchange', 409, 'OFFERED_DATE_CONFLICT'));
-            }
-          }
-        }
         fromStatuses = [ExchangeRequestStatus.PENDING];
-        updated = await transitionExchangeRequest(db, id, nextStatus, fromStatuses, { message: nextMessage });
-        if (!updated) {
-          return next(new AppError('Only pending requests can be confirmed or declined', 400, 'INVALID_STATE'));
+        if (nextStatus === ExchangeRequestStatus.CONFIRMED) {
+          /**
+           * The confirm re-verified a great deal and did all of it OUTSIDE a
+           * transaction, so every answer it acted on could be stale by the time
+           * it wrote — and two hosts confirming exchanges that overlap on the
+           * same home both passed.
+           *
+           * It now happens with both homes locked, and the conflict question is
+           * the shared one, so a paid stay or a blocked fortnight that appeared
+           * since the request was made stops the confirm exactly as another
+           * exchange does.
+           */
+          const confirmation = await db.transaction(async (tx) => {
+            const ids = [exchangeRequest.propertyId];
+            if (exchangeRequest.offeredPropertyId) ids.push(exchangeRequest.offeredPropertyId);
+            const locked = await lockPropertyBookingBases(tx, ids);
+
+            // Re-validate the listing: it may have dropped the exchange intent
+            // or changed/cleared its mode since the request was made.
+            const targetProperty = locked.get(exchangeRequest.propertyId);
+            if (!targetProperty) {
+              return { error: new AppError('Property no longer exists', 404, 'NOT_FOUND') };
+            }
+            if (!hasExchangeOffering(targetProperty)) {
+              return { error: new AppError('This property is no longer open to home exchange', 409, 'NOT_EXCHANGEABLE') };
+            }
+            const listingMode = targetProperty.exchangeMode;
+            if (!listingMode || !modeAccepts(listingMode, exchangeRequest.mode)) {
+              return { error: new AppError(`This listing no longer accepts "${exchangeRequest.mode}" exchanges`, 409, 'MODE_NOT_ACCEPTED') };
+            }
+
+            // The TARGET home first…
+            const requested = {
+              start: exchangeRequest.requestedWindowStart,
+              end: exchangeRequest.requestedWindowEnd,
+            };
+            const targetConflict = await findOccupancyConflict(tx, exchangeRequest.propertyId, requested, {
+              excludeExchangeId: exchangeRequest.id,
+            });
+            if (targetConflict) return { error: occupancyError(targetConflict, 'requested') };
+
+            // …and, for a SWAP, the OFFERED home, which must still exist, still
+            // belong to the requester and still be exchangeable.
+            if (exchangeRequest.mode === ExchangeMode.SWAP) {
+              // `exchange_requests_offered_window_check` is all-or-none, so
+              // these three are present together or not at all — but a swap
+              // whose offer was never recorded cannot be confirmed against a
+              // calendar.
+              if (
+                !exchangeRequest.offeredPropertyId ||
+                !exchangeRequest.offeredWindowStart ||
+                !exchangeRequest.offeredWindowEnd
+              ) {
+                return { error: new AppError('Invalid offered window', 400, 'INVALID_WINDOW') };
+              }
+              const offeredProperty = locked.get(exchangeRequest.offeredPropertyId);
+              if (!offeredProperty) {
+                return { error: new AppError('The offered home no longer exists', 409, 'OFFERED_NOT_FOUND') };
+              }
+              if (offeredProperty.oxyUserId !== exchangeRequest.requesterOxyUserId) {
+                return { error: new AppError('The offered home no longer belongs to the requester', 409, 'OFFERED_NOT_OWNED') };
+              }
+              if (!hasExchangeOffering(offeredProperty)) {
+                return { error: new AppError('The offered home is no longer open to home exchange', 409, 'OFFERED_NOT_EXCHANGEABLE') };
+              }
+              const offered = {
+                start: exchangeRequest.offeredWindowStart,
+                end: exchangeRequest.offeredWindowEnd,
+              };
+              const offeredConflict = await findOccupancyConflict(tx, exchangeRequest.offeredPropertyId, offered, {
+                excludeExchangeId: exchangeRequest.id,
+              });
+              if (offeredConflict) return { error: occupancyError(offeredConflict, 'offered') };
+            }
+
+            const confirmed = await transitionExchangeRequest(tx, id, nextStatus, fromStatuses, { message: nextMessage });
+            if (!confirmed) {
+              return { error: new AppError('Only pending requests can be confirmed or declined', 400, 'INVALID_STATE') };
+            }
+            return { exchangeRequest: confirmed };
+          });
+
+          if ('error' in confirmation) return next(confirmation.error);
+          updated = confirmation.exchangeRequest;
+        } else {
+          updated = await transitionExchangeRequest(db, id, nextStatus, fromStatuses, { message: nextMessage });
+          if (!updated) {
+            return next(new AppError('Only pending requests can be confirmed or declined', 400, 'INVALID_STATE'));
+          }
         }
       } else if (nextStatus === ExchangeRequestStatus.CANCELLED) {
         if (!isRequester) return next(new AppError('Only the requester can cancel', 403, 'FORBIDDEN'));

@@ -3233,7 +3233,8 @@
     },
     "calendar": {
       "selectRange": "Selecciona l'arribada i la sortida",
-      "apply": "Aplica"
+      "apply": "Aplica",
+      "unavailable": "No hem pogut carregar el calendari d'aquest habitatge, així que pot ser que aquestes dates no estiguin lliures."
     },
     "breakdown": {
       "nights_one": "{{price}} × {{count}} nit",

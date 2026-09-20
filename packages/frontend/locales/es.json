@@ -3212,7 +3212,8 @@
     },
     "calendar": {
       "selectRange": "Selecciona la llegada y la salida",
-      "apply": "Aplicar"
+      "apply": "Aplicar",
+      "unavailable": "No hemos podido cargar el calendario de esta vivienda, así que puede que estas fechas no estén libres."
     },
     "breakdown": {
       "nights_one": "{{price}} × {{count}} noche",

@@ -859,7 +859,15 @@ export default function PropertyDetailPage() {
             <View style={[styles.section, styles.divider]}>
               <ExchangeSection
                 exchange={exchangeData}
-                onRequestExchange={handleRequestExchange}
+                /* An EXTERNAL listing keeps its exchange terms on show and
+                   loses the live CTA: the swap would be arranged with a person
+                   Homiio has no relationship with, on a listing copied from
+                   somewhere else. `PropertyActionBar` and `BookingCard` have
+                   always branched on `isExternal` first; this section was the
+                   one that did not. */
+                onRequestExchange={
+                  apiProperty?.isExternal ? undefined : handleRequestExchange
+                }
               />
             </View>
           ) : null}

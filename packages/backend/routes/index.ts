@@ -27,7 +27,6 @@ import applications from './applications';
 import exchanges from './exchanges';
 import partners from './partners';
 import evictions from './evictions';
-import reservationController from '../controllers/reservationController';
 import cityController from '../controllers/cityController';
 
 export default function() {
@@ -60,12 +59,11 @@ export default function() {
   // transform cannot cover this router.
   router.use(serializeWireIds);
 
-  // Property availability (auth still required since mounted under oxy.auth() in server.ts).
-  // Returns host availability windows + booked ranges (vacation flow).
-  router.get(
-    '/properties/:id/availability',
-    asyncHandler(reservationController.getPropertyAvailability)
-  );
+  // `GET /properties/:id/availability` is NOT here any more: it moved to
+  // `routes/public.ts`. A signed-out visitor was shown a calendar with no
+  // blocked days at all, which is the most confident wrong answer a booking
+  // surface can give. What made the move safe is the projection — dates and a
+  // status, nothing else — not a check inside the handler.
 
   // Protected routes (authentication handled globally in server.ts)
   router.use('/properties', propertyRoutes);

@@ -29,7 +29,7 @@ import { getProperties } from '../../controllers/property/list';
 import { errorHandler } from '../../middlewares/errorHandler';
 import { serializeWireIds } from '../../middlewares/wireIds';
 import { getDb } from '../../db/postgres';
-import { reservations } from '../../db/schema';
+import { exchangeRequests, reservations } from '../../db/schema';
 import {
   objectIdHex,
   resetGeoTables,
@@ -104,6 +104,12 @@ async function idsAvailableForStay(): Promise<string[]> {
 }
 
 beforeEach(async () => {
+  await getDb().delete(exchangeRequests);
+  await resetGeoTables();
+});
+
+afterAll(async () => {
+  await getDb().delete(exchangeRequests);
   await resetGeoTables();
 });
 
@@ -177,6 +183,61 @@ describe('date-range availability', () => {
 
     expect(available).toContain(pending);
     expect(available).toContain(cancelled);
+  });
+
+  it('excludes a listing a CONFIRMED EXCHANGE occupies, in either role', async () => {
+    // The third occupant (#518 §7.5). The feed excluded booked homes and
+    // blocked calendars and happily offered a home already committed to a
+    // swap — which the booking path, now that it asks one question across all
+    // three tables, refuses with a 409 after somebody has chosen it.
+    const chain = await seedGeoChain({ cityName: 'Barcelona', countryCode: 'ES-bb' });
+    const swapped = await seedBookable(chain, 'Carrer Swapped');
+    const offered = await seedBookable(chain, 'Carrer Offered');
+    const proposed = await seedBookable(chain, 'Carrer Proposed');
+    const free = await seedBookable(chain, 'Carrer Untouched');
+
+    await getDb().insert(exchangeRequests).values([
+      {
+        propertyId: swapped,
+        requesterOxyUserId: 'oxy-swapper',
+        hostOxyUserId: 'oxy-host',
+        mode: 'host',
+        requestedWindowStart: new Date('2026-09-12'),
+        requestedWindowEnd: new Date('2026-09-16'),
+        status: 'confirmed',
+      },
+      {
+        // The same home in its OFFERED role, which a scan over `property_id`
+        // alone would miss.
+        propertyId: free,
+        offeredPropertyId: offered,
+        requesterOxyUserId: 'oxy-host',
+        hostOxyUserId: 'oxy-other',
+        mode: 'swap',
+        requestedWindowStart: new Date('2026-11-01'),
+        requestedWindowEnd: new Date('2026-11-05'),
+        offeredWindowStart: new Date('2026-09-12'),
+        offeredWindowEnd: new Date('2026-09-16'),
+        status: 'confirmed',
+      },
+      {
+        // A PENDING request is a proposal and holds nothing — the permit half.
+        propertyId: proposed,
+        requesterOxyUserId: 'oxy-swapper',
+        hostOxyUserId: 'oxy-host',
+        mode: 'host',
+        requestedWindowStart: new Date('2026-09-12'),
+        requestedWindowEnd: new Date('2026-09-16'),
+        status: 'pending',
+      },
+    ]);
+
+    const available = await idsAvailableForStay();
+
+    expect(available).not.toContain(swapped);
+    expect(available).not.toContain(offered);
+    expect(available).toContain(proposed);
+    expect(available).toContain(free);
   });
 
   it('excludes only the booked listing, not every listing at the same address', async () => {

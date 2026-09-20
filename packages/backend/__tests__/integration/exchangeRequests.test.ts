@@ -26,7 +26,12 @@ import { eq } from 'drizzle-orm';
 import exchangeController from '../../controllers/exchangeController';
 import exchangeReviewController from '../../controllers/exchangeReviewController';
 import { getDb } from '../../db/postgres';
-import { exchangeRequests, exchangeReviews } from '../../db/schema';
+import {
+  exchangeRequests,
+  exchangeReviews,
+  propertyAvailabilityWindows,
+  reservations,
+} from '../../db/schema';
 import { errorHandler } from '../../middlewares/errorHandler';
 import { resetGeoTables, seedListingWithGeo } from '../helpers/postgresGeoFixtures';
 
@@ -64,6 +69,7 @@ function nextCountryCode(): string {
 async function seedExchangeProperty(
   oxyUserId: string,
   mode: 'swap' | 'host' | 'both' = 'both',
+  overrides: Record<string, unknown> = {},
 ): Promise<string> {
   const { propertyId } = await seedListingWithGeo({
     countryCode: nextCountryCode(),
@@ -76,6 +82,7 @@ async function seedExchangeProperty(
       // offering to be listed.
       offerings: ['exchange'],
       exchangeMode: mode,
+      ...overrides,
     },
   });
   return propertyId;
@@ -126,6 +133,7 @@ async function createHostRequest(
 beforeEach(async () => {
   await getDb().delete(exchangeReviews);
   await getDb().delete(exchangeRequests);
+  await getDb().delete(reservations);
   await resetGeoTables();
 });
 
@@ -134,6 +142,7 @@ afterAll(async () => {
   // geoBackfill collision documented in `leaseOwnership.test.ts`.
   await getDb().delete(exchangeReviews);
   await getDb().delete(exchangeRequests);
+  await getDb().delete(reservations);
   await resetGeoTables();
 });
 
@@ -187,11 +196,52 @@ describe('createExchangeRequest — the mode matrix', () => {
       (await request(buildApp('oxy-guest')).post('/exchanges').send({ propertyId: notExchangeable, mode: 'host', requestedWindow: window(10, 20) })).status,
     ).toBe(400);
 
+    // EXTERNAL. Named in the title since this suite was written and never
+    // seeded — every listing in it carried `isExternal: false`, so the guard
+    // could have been deleted with the suite still green. An external listing
+    // is an advertisement copied from elsewhere: there is nobody here to agree
+    // to a swap.
+    const external = await seedExchangeProperty('oxy-host', 'host', {
+      isExternal: true,
+      source: 'idealista',
+      sourceUrl: 'https://x.test/exchange-1',
+    });
+    const externalAttempt = await request(buildApp('oxy-guest'))
+      .post('/exchanges')
+      .send({ propertyId: external, mode: 'host', requestedWindow: window(10, 20) });
+    expect(externalAttempt.status).toBe(400);
+    expect(externalAttempt.body.error.code).toBe('EXTERNAL_PROPERTY');
+
     const own = await seedExchangeProperty('oxy-guest', 'host');
     expect(
       (await request(buildApp('oxy-guest')).post('/exchanges').send({ propertyId: own, mode: 'host', requestedWindow: window(10, 20) })).status,
     ).toBe(403);
 
+    expect(await getDb().select().from(exchangeRequests)).toHaveLength(0);
+  });
+
+  it('refuses an EXTERNAL listing OFFERED in return, which nothing checked', async () => {
+    // The target was guarded and the offer was not, so a requester could offer
+    // a scraped listing as their half of a swap — an advertisement Homiio
+    // copied, in which nobody here can promise anybody a night. The offered
+    // listing below is seeded with the requester as its owner, so the
+    // ownership check passes and the new guard is the only thing refusing it.
+    const target = await seedExchangeProperty('oxy-host', 'swap');
+    const external = await seedExchangeProperty('oxy-guest', 'swap', {
+      isExternal: true,
+      source: 'idealista',
+      sourceUrl: 'https://x.test/exchange-2',
+    });
+
+    const res = await request(buildApp('oxy-guest')).post('/exchanges').send({
+      propertyId: target,
+      mode: 'swap',
+      offeredPropertyId: external,
+      requestedWindow: window(10, 20),
+      offeredWindow: window(30, 40),
+    });
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('OFFERED_EXTERNAL_PROPERTY');
     expect(await getDb().select().from(exchangeRequests)).toHaveLength(0);
   });
 
@@ -377,6 +427,91 @@ describe('the calendar conflict — half-open, and both roles', () => {
     });
     expect(second.status).toBe(409);
     expect(second.body.error.code).toBe('OFFERED_DATE_CONFLICT');
+  });
+
+  it('blocks on a PAID STAY and on the host calendar, not only on other exchanges', async () => {
+    // Until #518 §7.5 this domain read `exchange_requests` and nothing else,
+    // so a home with a booked stay in it was still swappable and a host's
+    // blocked fortnight did not exist here at all. One home, both offerings —
+    // the case where the two domains cannot ignore one another.
+    const base = Date.now();
+    const booked = await seedExchangeProperty('oxy-host', 'host', {
+      offerings: ['exchange', 'short_term_rent'],
+      shortTermRentNightlyRate: 90,
+      shortTermRentCurrency: 'EUR',
+    });
+    await getDb().insert(reservations).values({
+      propertyId: booked,
+      guestOxyUserId: 'oxy-paying-guest',
+      hostOxyUserId: 'oxy-host',
+      checkIn: new Date(base + 12 * DAY),
+      checkOut: new Date(base + 18 * DAY),
+      guestCount: 1,
+      nights: 6,
+      nightlyRate: 90,
+      subtotal: 540,
+      total: 540,
+      cancellationPolicy: 'moderate',
+      status: 'confirmed',
+    });
+    const overStay = await request(buildApp('oxy-guest'))
+      .post('/exchanges')
+      .send({ propertyId: booked, mode: 'host', requestedWindow: window(10, 20, base) });
+    expect(overStay.status).toBe(409);
+    expect(overStay.body.error.code).toBe('DATE_CONFLICT');
+
+    const closed = await seedExchangeProperty('oxy-host-2', 'host');
+    await getDb().insert(propertyAvailabilityWindows).values({
+      propertyId: closed,
+      scope: 'exchange',
+      startsAt: new Date(base + 12 * DAY),
+      endsAt: new Date(base + 18 * DAY),
+      status: 'blocked',
+    });
+    const overBlock = await request(buildApp('oxy-guest'))
+      .post('/exchanges')
+      .send({ propertyId: closed, mode: 'host', requestedWindow: window(10, 20, base) });
+    expect(overBlock.status).toBe(409);
+
+    expect(await getDb().select().from(exchangeRequests)).toHaveLength(0);
+  });
+
+  it('blocks a SWAP whose offered home is already booked as a paid stay', async () => {
+    // The two-home case from the other side: the home being offered in return
+    // is committed, and only a check that asks the occupancy question about
+    // BOTH homes can see it.
+    const base = Date.now();
+    const target = await seedExchangeProperty('oxy-host', 'swap');
+    const mine = await seedExchangeProperty('oxy-guest', 'swap', {
+      offerings: ['exchange', 'short_term_rent'],
+      shortTermRentNightlyRate: 70,
+      shortTermRentCurrency: 'EUR',
+    });
+    await getDb().insert(reservations).values({
+      propertyId: mine,
+      guestOxyUserId: 'oxy-somebody',
+      hostOxyUserId: 'oxy-guest',
+      checkIn: new Date(base + 32 * DAY),
+      checkOut: new Date(base + 36 * DAY),
+      guestCount: 1,
+      nights: 4,
+      nightlyRate: 70,
+      subtotal: 280,
+      total: 280,
+      cancellationPolicy: 'moderate',
+      status: 'confirmed',
+    });
+
+    const res = await request(buildApp('oxy-guest')).post('/exchanges').send({
+      propertyId: target,
+      mode: 'swap',
+      offeredPropertyId: mine,
+      requestedWindow: window(10, 20, base),
+      offeredWindow: window(30, 40, base),
+    });
+    expect(res.status).toBe(409);
+    expect(res.body.error.code).toBe('OFFERED_DATE_CONFLICT');
+    expect(await getDb().select().from(exchangeRequests)).toHaveLength(0);
   });
 
   it('does not let a request conflict with ITSELF at confirm time', async () => {

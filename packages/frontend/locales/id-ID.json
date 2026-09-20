@@ -3027,7 +3027,8 @@
     },
     "calendar": {
       "selectRange": "Pilih check-in dan check-out",
-      "apply": "Terapkan"
+      "apply": "Terapkan",
+      "unavailable": "Kami tidak dapat memuat kalender rumah ini, jadi tanggal-tanggal ini mungkin tidak kosong."
     },
     "breakdown": {
       "nights_one": "{{price}} × {{count}} malam",

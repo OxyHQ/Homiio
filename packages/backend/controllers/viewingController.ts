@@ -39,7 +39,10 @@ import {
   rescheduleViewing,
   serializeViewing,
 } from '../db/bookings/viewingReads';
-import { findPropertyBookingBasis } from '../db/properties/propertyBookingBasis';
+import {
+  findPropertyBookingBasis,
+  lockPropertyBookingBases,
+} from '../db/properties/propertyBookingBasis';
 import { logger } from '../middlewares/logging';
 import { AppError, successResponse, paginationResponse } from '../middlewares/errorHandler';
 import { notificationDispatchService } from '../services/notificationDispatchService';
@@ -85,20 +88,7 @@ class ViewingController {
         return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
       }
 
-      const db = getDb();
-      const property = await findPropertyBookingBasis(db, propertyId);
-      if (!property) return next(new AppError('Property not found', 404, 'NOT_FOUND'));
-      if (property.status !== PropertyStatus.PUBLISHED) return next(new AppError('Property is not active', 400, 'PROPERTY_INACTIVE'));
-      if (property.isExternal) return next(new AppError('Cannot book viewings for external properties', 400, 'EXTERNAL_PROPERTY'));
-
       const requesterOxyUserId = oxyUserId;
-      const ownerOxyUserId = property.oxyUserId;
-      if (!ownerOxyUserId) return next(new AppError('Property has no owner', 400, 'INVALID_PROPERTY'));
-
-      // Prevent booking own property
-      if (ownerOxyUserId === oxyUserId) {
-        return next(new AppError('You cannot book a viewing for your own property', 403, 'FORBIDDEN'));
-      }
 
       const scheduledAt = toScheduledAt(date, time);
       if (!scheduledAt) {
@@ -108,42 +98,81 @@ class ViewingController {
         return next(new AppError('Scheduled time must be in the future', 400, 'TIME_IN_PAST'));
       }
 
-      // One active request per person per property.
-      const existingActiveForProfile = await findActiveViewingForRequester(
-        db,
-        propertyId,
-        requesterOxyUserId,
-      );
-      if (existingActiveForProfile) {
-        return next(new AppError('You already have an active viewing request for this property', 409, 'ALREADY_REQUESTED'));
-      }
+      /**
+       * The two "is this slot free?" reads and the insert are ONE transaction,
+       * with the listing locked.
+       *
+       * They were four sequential statements against the pool, so two people
+       * asking for the same 10:00 both read an empty slot and both got it — and
+       * neither of the two rules ("one active request per person per property",
+       * "one active request per property per instant") can be a unique index,
+       * because both are scoped to a status SET that must still permit the
+       * historical rows. The rule lives in a read, so the read needs a lock
+       * behind it; the `properties` row is the one both requests share.
+       */
+      const outcome = await getDb().transaction(async (tx) => {
+        const property = (await lockPropertyBookingBases(tx, [propertyId])).get(propertyId);
+        if (!property) return { error: new AppError('Property not found', 404, 'NOT_FOUND') };
+        if (property.status !== PropertyStatus.PUBLISHED) {
+          return { error: new AppError('Property is not active', 400, 'PROPERTY_INACTIVE') };
+        }
+        if (property.isExternal) {
+          return { error: new AppError('Cannot book viewings for external properties', 400, 'EXTERNAL_PROPERTY') };
+        }
 
-      // One active request per property per instant.
-      const conflict = await findViewingAtInstant(db, propertyId, scheduledAt);
-      if (conflict) {
-        return next(new AppError('Time slot is no longer available', 409, 'TIME_CONFLICT'));
-      }
+        const ownerOxyUserId = property.oxyUserId;
+        if (!ownerOxyUserId) return { error: new AppError('Property has no owner', 400, 'INVALID_PROPERTY') };
+        if (ownerOxyUserId === oxyUserId) {
+          return { error: new AppError('You cannot book a viewing for your own property', 403, 'FORBIDDEN') };
+        }
 
-      const viewing = await createViewing(db, {
-        propertyId,
-        requesterOxyUserId,
-        ownerOxyUserId,
-        scheduledAt,
-        message: typeof message === 'string' ? message : undefined,
+        // One active request per person per property.
+        const existingActiveForProfile = await findActiveViewingForRequester(
+          tx,
+          propertyId,
+          requesterOxyUserId,
+        );
+        if (existingActiveForProfile) {
+          return { error: new AppError('You already have an active viewing request for this property', 409, 'ALREADY_REQUESTED') };
+        }
+
+        // One active request per property per instant.
+        const conflict = await findViewingAtInstant(tx, propertyId, scheduledAt);
+        if (conflict) {
+          return { error: new AppError('Time slot is no longer available', 409, 'TIME_CONFLICT') };
+        }
+
+        const viewing = await createViewing(tx, {
+          propertyId,
+          requesterOxyUserId,
+          ownerOxyUserId,
+          scheduledAt,
+          message: typeof message === 'string' ? message : undefined,
+        });
+        return { viewing, ownerOxyUserId };
       });
 
-      logger.info('Viewing request created', { viewingId: viewing.id, propertyId, requesterOxyUserId, ownerOxyUserId });
+      if ('error' in outcome) return next(outcome.error);
 
-      // Notify the property owner that someone requested a viewing.
-      await notificationDispatchService.createForUser(ownerOxyUserId, {
+      logger.info('Viewing request created', {
+        viewingId: outcome.viewing.id,
+        propertyId,
+        requesterOxyUserId,
+        ownerOxyUserId: outcome.ownerOxyUserId,
+      });
+
+      // Notify the property owner that someone requested a viewing. OUTSIDE the
+      // transaction on purpose: dispatch is best-effort and swallows, and a
+      // mailbox write must never be able to roll a booked viewing back.
+      await notificationDispatchService.createForUser(outcome.ownerOxyUserId, {
         type: 'property',
         title: 'New viewing request',
         message: 'Someone requested a viewing for your property.',
         priority: 'high',
-        data: { viewingId: viewing.id, propertyId, screen: '/viewings' },
+        data: { viewingId: outcome.viewing.id, propertyId, screen: '/viewings' },
       });
 
-      res.status(201).json(successResponse(serializeViewing(viewing), 'Viewing request created'));
+      res.status(201).json(successResponse(serializeViewing(outcome.viewing), 'Viewing request created'));
     } catch (error) {
       next(error);
     }
