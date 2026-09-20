@@ -12,17 +12,18 @@
  *   - Sign: a party whose signature is still missing (draft / pending_signatures)
  *   - Terminate: a party while the lease is pending_signatures or active
  *   - Delete: the landlord while the lease is still a draft
- *   - Add document: any party (uploaded to the images API, metadata stored)
+ *   - Add document: any party (the file itself goes to the lease's own
+ *     authenticated endpoint, and a PDF is the ordinary case)
  *
  * Backend remains the source of truth for every transition; the UI only
  * surfaces actions the backend would accept.
  */
 import React, { useCallback, useMemo } from 'react';
-import { Image, Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { Image, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
 import { toast } from '@oxy.so/bloom/toast';
 
 import { Button } from '@oxy.so/bloom/button';
@@ -57,6 +58,14 @@ import { getPropertyImageSource, getPropertyTitle } from '@/utils/propertyUtils'
 import { radius, spacing } from '@/constants/styles';
 
 type Role = 'landlord' | 'tenant' | 'cotenant';
+
+/**
+ * What the picker offers, matching the allowlist `routes/leases.ts` enforces.
+ * PDF first because it is the ordinary shape of a tenancy document.
+ */
+const LEASE_DOCUMENT_TYPES = ['application/pdf', 'image/*'];
+/** The server's cap, repeated here only to fail fast before an upload. */
+const MAX_DOCUMENT_BYTES = 10 * 1024 * 1024;
 
 export default function ContractDetailScreen() {
   const { t } = useTranslation();
@@ -152,25 +161,39 @@ export default function ContractDetailScreen() {
     [handleSign, handleTerminate, handleDelete, t],
   );
 
+  /**
+   * Pick a document and attach it.
+   *
+   * `DocumentPicker`, not `ImagePicker`: a tenancy agreement, an addendum and
+   * an insurance certificate are PDFs far more often than photographs, and the
+   * image picker could not offer one. It also needs no media-library
+   * permission, because it hands back only the file the person chose.
+   *
+   * The size is checked here as a courtesy — the server enforces the same 10 MB
+   * cap, and a person who picked a 40 MB scan deserves to be told before
+   * waiting for the upload to fail.
+   */
   const handleAddDocument = useCallback(async () => {
     if (!id) return;
-    if (Platform.OS !== 'web') {
-      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (permission.status !== 'granted') {
-        toast.error(t('contracts.detail.permissionRequired'));
-        return;
-      }
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 0.9,
+    const result = await DocumentPicker.getDocumentAsync({
+      type: LEASE_DOCUMENT_TYPES,
+      multiple: false,
+      copyToCacheDirectory: true,
     });
     if (result.canceled || result.assets.length === 0) return;
     const asset = result.assets[0];
+    const filename = asset.name ?? `lease-document-${Date.now()}`;
+    if (asset.size != null && asset.size > MAX_DOCUMENT_BYTES) {
+      toast.error(t('contracts.detail.documentTooLarge', { name: filename }));
+      return;
+    }
     try {
       await uploadMutation.mutateAsync({
         uri: asset.uri,
-        name: asset.fileName ?? `lease-document-${Date.now()}.jpg`,
+        name: filename,
+        filename,
+        mimeType: asset.mimeType ?? undefined,
+        file: asset.file,
         type: 'other',
       });
       toast.success(t('contracts.detail.toastDocumentAdded'));

@@ -20,6 +20,7 @@
  */
 
 import express, { type Express } from 'express';
+import multer from 'multer';
 import request from 'supertest';
 import { and, asc, eq } from 'drizzle-orm';
 
@@ -29,6 +30,9 @@ import { leaseCoTenants, leaseDocuments, leasePaymentSchedule, leases } from '..
 import { errorHandler } from '../../middlewares/errorHandler';
 import { serializeWireIds } from '../../middlewares/wireIds';
 import { resetGeoTables, seedListingWithGeo } from '../helpers/postgresGeoFixtures';
+
+/** Memory storage, as `routes/leases.ts` configures it. */
+const documentUpload = multer({ storage: multer.memoryStorage() });
 
 function buildApp(oxyUserId: string): Express {
   const app = express();
@@ -51,7 +55,11 @@ function buildApp(oxyUserId: string): Express {
   app.put('/leases/:id', (req, res, next) => leaseController.updateLease(req, res, next));
   app.delete('/leases/:id', (req, res, next) => leaseController.deleteLease(req, res, next));
   app.post('/leases/:id/sign', (req, res, next) => leaseController.signLease(req, res, next));
-  app.post('/leases/:id/documents', (req, res, next) => leaseController.uploadLeaseDocument(req, res, next));
+  // Multipart, as `routes/leases.ts` mounts it: a lease document is a FILE
+  // now, and the endpoint no longer takes a URL from the client at all.
+  app.post('/leases/:id/documents', documentUpload.single('document'), (req, res, next) =>
+    leaseController.uploadLeaseDocument(req, res, next),
+  );
   app.post('/leases/:id/renew', (req, res, next) => leaseController.renewLease(req, res, next));
   app.use(errorHandler);
   return app;
@@ -509,8 +517,16 @@ describe('leaseController.uploadLeaseDocument', () => {
     const res = await request(buildApp('oxy-tenant'))
       .post(`/leases/${id}/documents`)
       // A forged uploader must be ignored: `uploadedBy` is the one field on a
-      // document that says who is accountable for it.
-      .send({ name: 'signed.pdf', url: 'https://example.test/signed.pdf', uploadedBy: 'attacker' });
+      // document that says who is accountable for it. A forged `url` is now
+      // ignored too — the field is not read at all, and the row's location is
+      // built from the bytes this request carried.
+      .field('name', 'signed.pdf')
+      .field('uploadedBy', 'attacker')
+      .field('url', 'https://example.test/attacker.pdf')
+      .attach('document', Buffer.from('%PDF-1.7 a contract'), {
+        filename: 'signed.pdf',
+        contentType: 'application/pdf',
+      });
 
     expect(res.status).toBe(201);
     expect(res.body.data.uploadedBy).toBe('oxy-tenant');
@@ -522,6 +538,10 @@ describe('leaseController.uploadLeaseDocument', () => {
     expect(row.uploadedByOxyUserId).toBe('oxy-tenant');
     // An undeclared type falls back rather than hitting the CHECK.
     expect(row.type).toBe('other');
+    // The stored location is the server's, under a private key — not the one
+    // the request asked for.
+    expect(row.url).not.toContain('attacker');
+    expect(row.url).toContain(`/api/images/file/private/leases/${id}/`);
   });
 });
 
@@ -532,7 +552,11 @@ describe('leaseController.deleteLease', () => {
     });
     await request(buildApp('oxy-landlord'))
       .post(`/leases/${id}/documents`)
-      .send({ name: 'draft.pdf', url: 'https://example.test/draft.pdf' });
+      .field('name', 'draft.pdf')
+      .attach('document', Buffer.from('%PDF-1.7 a draft'), {
+        filename: 'draft.pdf',
+        contentType: 'application/pdf',
+      });
 
     const res = await request(buildApp('oxy-landlord')).delete(`/leases/${id}`);
     expect(res.status).toBe(200);

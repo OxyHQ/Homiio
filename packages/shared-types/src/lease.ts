@@ -88,7 +88,23 @@ export type LeaseDocumentType =
 export interface LeaseDocument {
   id: string;
   name: string;
-  url: string;
+  /**
+   * Where to ASK for the bytes — a Homiio API path, not a link to an object.
+   *
+   * `url` is gone from this shape on purpose. It held
+   * `<publicUrl>/api/images/file/<key>`: the unauthenticated route that also
+   * serves listing photos, delivered with a year of `public` cache. A tenancy
+   * agreement, an inspection report and an insurance certificate were therefore
+   * permanent, shareable links held by everyone who could see the lease, and
+   * the objects — which live in a private bucket — were reachable for exactly
+   * that reason.
+   *
+   * Fetching this path requires the session, and the handler behind it proves
+   * the viewer is the landlord, the tenant or a co-tenant before a byte moves.
+   * It is not something `Linking.openURL` can open: see
+   * `utils/privateDocument.ts` on the client.
+   */
+  downloadPath: string;
   type: LeaseDocumentType;
   uploadedBy: string;
   uploadedDate: string;

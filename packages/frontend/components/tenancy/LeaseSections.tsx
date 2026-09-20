@@ -6,7 +6,7 @@
  * `leaseTenancy.ts` does the mapping; these only lay the parts out.
  */
 import React from 'react';
-import { Linking, Platform, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { DocumentList, RentPaymentList, TenancyTimeline } from '@oxy.so/bloom/tenancy';
 import { toast } from '@oxy.so/bloom/toast';
@@ -14,6 +14,7 @@ import { H3 } from '@oxy.so/bloom/typography';
 import type { Lease, LeaseDocument } from '@homiio/shared-types';
 
 import { spacing } from '@/constants/styles';
+import { openPrivateDocument } from '@/utils/privateDocument';
 import {
   leaseDocuments,
   leaseTimeline,
@@ -100,13 +101,21 @@ export const LeasePaymentsSection: React.FC<SectionProps> = ({ lease, format }) 
   );
 };
 
-/** Opens a lease document: a new tab on web, the OS handler on native. */
+/**
+ * Open one lease document.
+ *
+ * This used to be `window.open(document.url)` / `Linking.openURL(document.url)`
+ * over an absolute link to `/api/images/file/<key>` — the unauthenticated route
+ * that also serves listing photos — so opening somebody's tenancy agreement
+ * took no session and the link, once seen, worked forever. The bytes now come
+ * from a handler that proves the viewer is a party to the lease, which is why
+ * neither of those functions can be what opens it.
+ *
+ * The failure is SHOWN. A silent catch here is indistinguishable from a row
+ * that does nothing when pressed.
+ */
 export function openLeaseDocument(document: LeaseDocument, failedLabel: string): void {
-  if (Platform.OS === 'web') {
-    window.open(document.url, '_blank', 'noopener,noreferrer');
-    return;
-  }
-  Linking.openURL(document.url).catch(() => toast.error(failedLabel));
+  void openPrivateDocument(document.downloadPath).catch(() => toast.error(failedLabel));
 }
 
 /** The lease's documents as a `DocumentList`, with an optional heading action (add). */

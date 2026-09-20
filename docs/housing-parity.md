@@ -164,7 +164,7 @@ is a product call about historical rows, not a migration.
 | "Pay rent" (a checkout) | — | **blocked** | Needs a processor decision. `kind: 'processor'` is in the model so adding one later does not migrate a live ledger, but no route creates one and no card or bank detail is stored anywhere. #518 §7.2 is explicit that its absence is a documented delivery block, not licence to drop the row |
 | `MaintenanceRequestCard` / repairs | `MaintenanceSection`, `/maintenance/*` | **live** | `maintenance_requests` + comments + events + attachments, a declared state machine under a row lock, authorization in the repository query, notifications through the dispatcher. Photos go through the private path — stored under `private/`, re-encoded so the phone's GPS does not travel with them, delivered only to the two sides of the lease |
 | "Message landlord" | — | **blocked** | The ecosystem audit §7.3 asks for is done: [`docs/messaging-audit.md`](./messaging-audit). Allo IS the platform and is explicitly multi-product, but its SDK is unpublished, its server cannot open a conversation, and enrolling Homiio enrols a device on the person's whole Allo account. Three decisions named there, none of them an implementer's. No button is drawn meanwhile — the Inbox tab is a notification list |
-| `DocumentList`, signatures | `LeaseDocumentsSection`, `/contracts/[id]` | **partial** | Upload/list/view exist; "uploaded" is not "verified" and the checklist is not yet server state. An application's documents are no longer delivered by the public image route — see below |
+| `DocumentList`, signatures | `LeaseDocumentsSection`, `/contracts/[id]` | **partial** | Upload/list/view exist, and **a lease document can now be a PDF** — it goes to the lease's own multipart endpoint, is stored under `private/leases/<lease>/`, and is delivered only to the landlord, the tenant and the co-tenants. Neither an application's nor a lease's documents come off the public image route any more — see below. Still partial: "uploaded" is not "verified" and the checklist is not yet server state |
 | `TenancyTimeline` | `LeaseHistorySection` | **live** | Real lease events |
 | `ApplicationChecklist` | `useApplicationQueries` | **partial** | Applications persist; the checklist's per-requirement state does not |
 | `SavedSearchCard` + alerts | `useSavedSearches`, `useHousingAlerts` | **live** | `housing_watch_rules` / `housing_alerts`, with a connected job — not a local toggle |
@@ -203,6 +203,34 @@ data migration, because the bytes never move — and
 and the landlord after proving the viewer, a stranger getting 404 rather than
 403. The two validators are deliberate mirror images and a test asserts that
 exactly one of them accepts any given key.
+
+**And so is the tenancy contract itself.** `lease_documents` had exactly the
+same defect one table over, and a worse one: the frontend uploaded through the
+ordinary image pipeline and POSTed the resulting `/api/images/file/<key>` string
+back, so the signed agreement, the inspection report that photographs the inside
+of somebody's home and the insurance certificate were each a permanent,
+cacheable link — and the endpoint stored whatever `url` a client sent, so a
+party could also point a lease row at any address at all. `leases/documents/` is
+now a refused prefix (which closes the door on the objects already stored, with
+no migration — the bytes never move), `GET /api/leases/:id/documents/:documentId`
+serves them after proving the viewer is a party, and a non-party gets 404 rather
+than 403, because "there is a tenancy here and you may not read it" is itself a
+fact about two named people and an address.
+
+**A tenancy document is usually a PDF, and now it can be one.** The old path
+could not accept one: the picker was `MediaTypeOptions.Images` and the upload
+Sharp-processed the buffer, so a contract had to be a photograph of one. Uploads
+go to `POST /api/leases/:id/documents` as multipart, and the handler splits on
+the type — an image is re-encoded (the EXIF measure below), a PDF is stored byte
+for byte, because Sharp would either throw on it or quietly return page one as a
+picture. The client supplies bytes and a label; it no longer names a location.
+
+**One thing deliberately left undone:** `lease_documents` still records the
+object as a URL in its `url` column, parsed back by `utils/storedDocumentKey.ts`.
+A `storage_key` / `content_type` / `bytes` triple, as
+`maintenance_request_attachments` carries, is the better model and the CHECK
+constraint that goes with it (`like 'private/%'`) would refuse a public key at
+the INSERT. That is a migration, and this change carries none.
 
 **And repair photos are shipped on it.**
 `maintenance_request_attachments` stores under `private/maintenance/<request>/`,
@@ -243,8 +271,9 @@ replayed webhook will find the row it already created — so adding a provider i
 wiring rather than a migration of live money.
 
 **Open: receipts.** A receipt is a tenancy document and may not go through the
-public image endpoint — but the authorizing path it needs now exists (see the
-private document path above), so this is work rather than a dependency.
+public image endpoint — but the authorizing path it needs now exists and carries
+lease documents already (see the private document path above), so this is work
+rather than a dependency.
 
 ## 6. The currency gap, closed
 

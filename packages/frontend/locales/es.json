@@ -1245,7 +1245,7 @@
       "toastDocumentAdded": "Documento añadido",
       "toastDocumentFailed": "No se pudo añadir el documento",
       "toastOpenDocumentFailed": "No se pudo abrir el documento.",
-      "permissionRequired": "Se requiere permiso de la biblioteca multimedia para adjuntar un documento.",
+      "documentTooLarge": "{{name}} supera los 10 MB y no se puede adjuntar.",
       "propertyFallback": "Propiedad",
       "goBack": "Volver",
       "emptyDocuments": "No hay documentos adjuntos.",

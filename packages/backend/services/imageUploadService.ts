@@ -524,11 +524,7 @@ export class ImageUploadService {
       .toBuffer();
 
     const key = `private/${folder}/${uuidv4()}.webp`;
-    if (this.isStorageConfigured()) {
-      await this.uploadPrivateToS3(processed, key);
-    } else {
-      await this.writeToLocalStore(processed, key);
-    }
+    await this.putPrivateObject(processed, key, 'image/webp');
 
     return {
       key,
@@ -540,7 +536,45 @@ export class ImageUploadService {
   }
 
   /**
-   * Put a private object.
+   * Store a PRIVATE document whose bytes must survive intact — a PDF.
+   *
+   * ## Why this is not {@link uploadPrivateImage}
+   *
+   * That method's whole body is Sharp: decode, resize, re-encode to WebP. Run a
+   * tenancy agreement through it and one of two things happens — Sharp throws,
+   * or (for a scanned contract handed in as an image) it silently returns page
+   * one as a picture. Neither is "the landlord attached the contract". A PDF is
+   * a container, not a raster, so the only honest thing to do with it is store
+   * it byte for byte.
+   *
+   * ## What that costs, said out loud
+   *
+   * The re-encode in the image path is a privacy measure: it drops the EXIF,
+   * and with it the GPS tag a phone writes into a photo taken indoors (ADR
+   * 0003). Storing verbatim keeps whatever metadata the file carries — a PDF's
+   * author, producer and timestamps. That is acceptable here and would not be
+   * for a photo: a contract's metadata names the person who already signs the
+   * document, and nothing in a PDF's header is the home's coordinates. Images
+   * therefore still go through Sharp; this path is for PDFs only, and the
+   * caller's allowlist is what keeps it that way.
+   *
+   * The key is server-built from the caller's folder and a fresh uuid — never
+   * from the filename, which is attacker-controlled — and always starts with
+   * `private/`, which is what the public delivery route refuses.
+   */
+  async uploadPrivateDocument(
+    buffer: Buffer,
+    contentType: string,
+    folder: string,
+    extension: string,
+  ): Promise<{ key: string; contentType: string; bytes: number }> {
+    const key = `private/${folder}/${uuidv4()}${extension}`;
+    await this.putPrivateObject(buffer, key, contentType);
+    return { key, contentType, bytes: buffer.length };
+  }
+
+  /**
+   * Put a private object, to S3 or to the local store.
    *
    * Separate from {@link uploadToS3} for one header: that one writes
    * `Cache-Control: public, max-age=31536000`, which is right for a listing
@@ -548,13 +582,21 @@ export class ImageUploadService {
    * flag would make the default the public one, and the default is what gets
    * used by the next caller who does not read this.
    */
-  private async uploadPrivateToS3(buffer: Buffer, key: string): Promise<void> {
+  private async putPrivateObject(
+    buffer: Buffer,
+    key: string,
+    contentType: string,
+  ): Promise<void> {
+    if (!this.isStorageConfigured()) {
+      await this.writeToLocalStore(buffer, key);
+      return;
+    }
     await this.s3Client.send(
       new PutObjectCommand({
         Bucket: config.s3.bucketName,
         Key: key,
         Body: buffer,
-        ContentType: 'image/webp',
+        ContentType: contentType,
         CacheControl: 'private, no-store',
       }),
     );

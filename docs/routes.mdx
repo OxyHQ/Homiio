@@ -185,7 +185,8 @@ All under `/api`, behind `createOxyAuthMiddleware(oxy)`. Source:
 | `GET` | `/api/leases/:id/ledger` — the MOVEMENTS, and each obligation's derived balance |
 | `POST` | `/api/leases/:id/obligations/:obligationId/declarations` — a tenant says they paid |
 | `POST` | `/api/leases/:id/movements/:movementId/confirm` \| `/reject` \| `/refunds` |
-| `GET` `POST` | `/api/leases/:id/documents` |
+| `GET` `POST` | `/api/leases/:id/documents` — POST is multipart (PDF or image); the client no longer supplies a URL |
+| `GET` | `/api/leases/:id/documents/:documentId` — the bytes, to a party to the lease only |
 | `POST` | `/api/leases/:id/sign`, `/terminate`, `/renew` |
 
 Static sub-routes are declared before `/:id`.

@@ -139,12 +139,29 @@ export function serializeLeasePayment(row: LeasePaymentRow): Record<string, unkn
   };
 }
 
-/** A `lease_documents` row, as the documents endpoint returns it. */
+/**
+ * A `lease_documents` row, as the documents endpoint returns it.
+ *
+ * ## `url` is gone, and that is the point (#518 §7.4)
+ *
+ * The column still holds one — the bytes did not move and no migration was
+ * needed — but it pointed at `<publicUrl>/api/images/file/<key>`, the
+ * unauthenticated route that also serves listing photos. Emitting it handed
+ * every reader of a lease a permanent, cacheable link to the tenancy agreement,
+ * the inspection report and the insurance certificate, which anyone they then
+ * forwarded it to could open with no session at all. Keeping the field "for
+ * compatibility" would keep the leak, because the leak IS the field.
+ *
+ * `downloadPath` is a request to make, not a link to follow: the handler behind
+ * it proves the viewer is a party to this lease before a byte moves. See
+ * `frontend/utils/privateDocument.ts` for why it cannot be opened with
+ * `Linking.openURL`.
+ */
 export function serializeLeaseDocument(row: LeaseDocumentRow): Record<string, unknown> {
   return {
     id: row.id,
     name: row.name,
-    url: row.url,
+    downloadPath: `/api/leases/${row.leaseId}/documents/${row.id}`,
     type: row.type,
     // The column was RENAMED from Mongo's `uploadedBy` so `isOxyAccountColumn`
     // could classify it (`db/MIGRATION-CONTRACT.md`); the wire keeps the old
