@@ -23,6 +23,7 @@ import {
   findApplicationById,
   isApplicationStatus,
   listApplications,
+  setDocumentVerification,
   serializeApplication,
   type TenantApplicationStatusValue,
 } from '../db/applications/applicationReads';
@@ -46,6 +47,8 @@ import {
   TenantApplicationStatus,
   OfferingType,
   LeaseStatus,
+  DOCUMENT_VERIFICATION_STATUSES,
+  type DocumentVerificationStatus,
 } from '@homiio/shared-types';
 
 /** Currency codes the Lease `rentDetails` block accepts (schema enum). */
@@ -57,6 +60,16 @@ const ACTIVE_LEASE_STATUSES: readonly LeaseStatusValue[] = [
 ];
 
 const APPLICATION_DOCUMENTS_FOLDER = 'applications/documents';
+
+/** The most a rejection reason may carry. */
+const DOCUMENT_REJECTION_REASON_MAX = 500;
+
+function isDocumentVerificationStatus(value: unknown): value is DocumentVerificationStatus {
+  return (
+    typeof value === 'string' &&
+    (DOCUMENT_VERIFICATION_STATUSES as readonly string[]).includes(value)
+  );
+}
 
 /**
  * A filename safe to write to a device and to show on a row.
@@ -473,6 +486,70 @@ class ApplicationController {
           'Document retrieved',
         ),
       );
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * `POST /api/applications/:id/documents/:documentId/verification` — the
+   * landlord says whether a document is what they asked for.
+   *
+   * §7.4: "El checklist debe reflejar estados verdaderos de requisitos, upload
+   * y verificación. Pulsar un botón no convierte localmente un documento en
+   * verificado."
+   *
+   * This is the only way a document reaches `verified`, and the ownership
+   * predicate is in the repository's WHERE rather than in a branch here — so a
+   * stranger and a landlord of some other application get the same **404**, and
+   * a document id from another application resolves to nothing.
+   *
+   * A rejection needs a reason, checked here and again by the database. A
+   * refusal with no reason tells an applicant that something is wrong and not
+   * what to send instead, which turns a five-minute fix into an abandoned
+   * application.
+   */
+  async verifyApplicationDocument(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const oxyUserId = requireSessionOxyUserId(req);
+      const { id, documentId } = req.params as { id: string; documentId: string };
+      const status = (req.body as { status?: unknown }).status;
+      if (!isDocumentVerificationStatus(status)) {
+        throw new AppError(
+          `status must be one of: ${DOCUMENT_VERIFICATION_STATUSES.join(', ')}`,
+          400,
+          'VALIDATION_ERROR',
+        );
+      }
+
+      const reasonRaw = (req.body as { reason?: unknown }).reason;
+      const reason = typeof reasonRaw === 'string' ? reasonRaw.trim() : '';
+      if (status === 'rejected' && reason.length === 0) {
+        throw new AppError('A rejection needs a reason', 400, 'VALIDATION_ERROR');
+      }
+      if (reason.length > DOCUMENT_REJECTION_REASON_MAX) {
+        throw new AppError(
+          `reason must be at most ${DOCUMENT_REJECTION_REASON_MAX} characters`,
+          400,
+          'VALIDATION_ERROR',
+        );
+      }
+
+      const outcome = await setDocumentVerification(getDb(), {
+        applicationId: id,
+        documentId,
+        landlordOxyUserId: oxyUserId,
+        status,
+        ...(status === 'rejected' ? { rejectionReason: reason } : {}),
+      });
+      if (!outcome.ok) {
+        throw new AppError('Document not found', 404, 'NOT_FOUND');
+      }
+
+      const hydrated = await findApplicationById(getDb(), id);
+      if (!hydrated) throw new AppError('Application not found', 404, 'NOT_FOUND');
+
+      res.json(successResponse(serializeApplication(hydrated), 'Document verification updated'));
     } catch (error) {
       next(error);
     }

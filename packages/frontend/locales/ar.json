@@ -2556,6 +2556,22 @@
       "pickFailed": "Could not pick documents",
       "tooLarge": "{{name}} is over 10 MB and was skipped.",
       "limit": "You can upload up to {{max}} documents per application."
+    },
+    "checklist": {
+      "required": "مطلوب",
+      "verify": "توثيق",
+      "verifyAccessible": "وضع علامة موثّق على هذا المستند",
+      "reject": "رفض",
+      "rejectAccessible": "رفض هذا المستند",
+      "defaultReason": "هذا ليس المستند المطلوب.",
+      "decisionFailed": "تعذّر حفظ هذا القرار.",
+      "rejectedBecause": "مرفوض: {{reason}}",
+      "status": {
+        "missing": "لم يُرفع بعد",
+        "awaiting_review": "بانتظار مراجعة المالك",
+        "verified": "موثّق من المالك",
+        "rejected": "مرفوض من المالك"
+      }
     }
   },
   "reservations": {

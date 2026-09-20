@@ -2528,6 +2528,22 @@
       "pickFailed": "Could not pick documents",
       "tooLarge": "{{name}} is over 10 MB and was skipped.",
       "limit": "You can upload up to {{max}} documents per application."
+    },
+    "checklist": {
+      "required": "Obligatoire",
+      "verify": "Vérifier",
+      "verifyAccessible": "Marquer ce document comme vérifié",
+      "reject": "Refuser",
+      "rejectAccessible": "Refuser ce document",
+      "defaultReason": "Ce n’est pas le document demandé.",
+      "decisionFailed": "Cette décision n’a pas pu être enregistrée.",
+      "rejectedBecause": "Refusé : {{reason}}",
+      "status": {
+        "missing": "Pas encore envoyé",
+        "awaiting_review": "En attente de vérification par le propriétaire",
+        "verified": "Vérifié par le propriétaire",
+        "rejected": "Refusé par le propriétaire"
+      }
     }
   },
   "reservations": {

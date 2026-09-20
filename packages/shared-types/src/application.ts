@@ -19,12 +19,30 @@ export enum TenantApplicationStatus {
   WITHDRAWN = 'withdrawn'
 }
 
+import type { DocumentVerificationStatus } from './applicationChecklist';
+
 export enum TenantApplicationDocumentType {
   ID = 'id',
   INCOME = 'income',
   REFERENCE = 'reference',
   OTHER = 'other'
 }
+
+/**
+ * The same four values as a TUPLE.
+ *
+ * The enum cannot be iterated or used to build a CHECK, and two places need to:
+ * `tenant_application_documents.type` and the per-property requirement list on
+ * `properties`. Those two tables import each other, so the tuple cannot live in
+ * either schema file without a cycle — it lives here, beside the enum it
+ * mirrors, and both import it.
+ */
+export const TENANT_APPLICATION_DOCUMENT_TYPE_VALUES = [
+  'id',
+  'income',
+  'reference',
+  'other',
+] as const satisfies readonly `${TenantApplicationDocumentType}`[];
 
 export interface TenantApplicationReference {
   name: string;
@@ -54,6 +72,17 @@ export interface TenantApplicationDocument {
    */
   downloadPath: string;
   filename: string;
+  /**
+   * Where the landlord stands on this document.
+   *
+   * A stored decision, written only by the landlord through
+   * `POST /api/applications/:id/documents/:documentId/verification` — §7.4:
+   * "Pulsar un botón no convierte localmente un documento en verificado."
+   */
+  verification: DocumentVerificationStatus;
+  /** Present only on a rejection, and required there. */
+  rejectionReason?: string;
+  verifiedAt?: ISODate;
 }
 
 export interface TenantApplication {
@@ -69,6 +98,14 @@ export interface TenantApplication {
   employmentStatus: EmploymentStatus;
   referenceContacts: TenantApplicationReference[];
   documents: TenantApplicationDocument[];
+  /**
+   * What the LISTING asks an applicant for.
+   *
+   * The checklist's other half: without it a screen can only report what
+   * happened to arrive, so nothing is ever missing. Empty means the landlord
+   * asked for nothing, not that the field is unknown.
+   */
+  requiredDocuments: TenantApplicationDocumentType[];
   status: TenantApplicationStatus;
   notes?: string;
   submittedAt: ISODate;

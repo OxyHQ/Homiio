@@ -357,7 +357,11 @@ export default function LandlordApplicationDetailScreen() {
 
           <ApplicationTermsGroup application={application} />
           <ApplicationReferencesGroup application={application} />
-          <ApplicationDocumentsGroup application={application} />
+          {/* The landlord's own screen: this is where verify and reject live.
+              The applicant's copy of the same component draws the states and
+              no buttons, which is the point — nothing on their side can move a
+              document to `verified`. */}
+          <ApplicationDocumentsGroup application={application} viewerIsLandlord />
 
           {application.notes ? (
             <Card variant="outlined" radius="radius-16" style={styles.card}>

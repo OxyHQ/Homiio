@@ -2528,6 +2528,22 @@
       "pickFailed": "Could not pick documents",
       "tooLarge": "{{name}} is over 10 MB and was skipped.",
       "limit": "You can upload up to {{max}} documents per application."
+    },
+    "checklist": {
+      "required": "Required",
+      "verify": "Verify",
+      "verifyAccessible": "Mark this document as verified",
+      "reject": "Reject",
+      "rejectAccessible": "Reject this document",
+      "defaultReason": "This is not the document that was asked for.",
+      "decisionFailed": "That decision could not be saved.",
+      "rejectedBecause": "Rejected: {{reason}}",
+      "status": {
+        "missing": "Not uploaded yet",
+        "awaiting_review": "Waiting for the landlord to check it",
+        "verified": "Verified by the landlord",
+        "rejected": "Rejected by the landlord"
+      }
     }
   },
   "reservations": {

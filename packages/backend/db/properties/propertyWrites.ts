@@ -210,6 +210,7 @@ export function toPropertyColumns(input: PropertyWriteInput): PropertyUpdate {
     'isVerified',
     'isEcoFriendly',
     'offerings',
+    'applicationRequiredDocuments',
     'amenities',
     'furnishedStatus',
     'petPolicy',

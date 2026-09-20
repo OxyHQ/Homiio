@@ -113,6 +113,7 @@ import {
   LeaseDuration,
   LISTING_ADDRESS_PRECISIONS,
   LISTING_CURRENCIES,
+  TENANT_APPLICATION_DOCUMENT_TYPE_VALUES,
   OfferingType,
   PROVIDER_IDS,
   PropertyStatus,
@@ -614,6 +615,24 @@ export const properties = pgTable(
     offerings: text().array().notNull().default([]),
 
     /**
+     * Which documents an applicant must supply for THIS listing.
+     *
+     * The requirement half of the application checklist (#518 §7.4). Without it
+     * a checklist can only report what happened to arrive, which is a list and
+     * not a checklist: nothing is ever missing, because nothing was ever asked
+     * for.
+     *
+     * Empty by default, and that is the honest default for every row written
+     * before the column existed — silence is not a demand. A listing with no
+     * requirements still shows whatever the applicant volunteered.
+     *
+     * A `text[]` with a CHECK rather than a child table, following `offerings`
+     * directly above: it is a small closed set with no attributes of its own,
+     * and nothing needs to point AT one of these.
+     */
+    applicationRequiredDocuments: text().array().notNull().default([]),
+
+    /**
      * Free-text amenity tokens.
      *
      * `text[]` + GIN, and **deliberately WITHOUT a containment CHECK** — twice
@@ -1076,6 +1095,10 @@ export const properties = pgTable(
      * satisfied by the empty array, which is correct: an empty `offerings` is
      * caught by the four coherence CHECKs below, not by this one.
      */
+    check(
+      'properties_application_required_documents_check',
+      sql`${table.applicationRequiredDocuments} <@ array[${sql.raw(inList(TENANT_APPLICATION_DOCUMENT_TYPE_VALUES))}]::text[]`,
+    ),
     check(
       'properties_offerings_check',
       sql`${table.offerings} <@ ${sql.raw(textArrayLiteral(OFFERING_TYPES))}`,

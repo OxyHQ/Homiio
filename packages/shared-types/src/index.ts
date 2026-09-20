@@ -52,6 +52,7 @@ export * from './reservation';
 
 // Tenant application types (long-term rent flow)
 export * from './application';
+export * from './applicationChecklist';
 
 // Home-exchange types (swap / free hosting)
 export * from './exchange';

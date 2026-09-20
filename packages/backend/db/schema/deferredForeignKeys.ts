@@ -177,6 +177,11 @@ export const OXY_ACCOUNT_COLUMN_NAMES: ReadonlySet<string> = new Set([
   // dispute turns on.
   'created_by_oxy_user_id',
   'confirmed_by_oxy_user_id',
+  // Who judged an application's document (#518 §7.4). Always the landlord named
+  // on the application today, and stored anyway rather than inferred: the
+  // landlord on the row can change hands, and "who actually said this payslip
+  // was acceptable" is the fact an argument about a tenancy turns on.
+  'verified_by_oxy_user_id',
   // The eviction board's four named roles (#358). Each one is a role and not a
   // synonym for the case owner, which is why none of them can be folded into
   // `oxy_user_id`:

@@ -59,6 +59,13 @@ export default function () {
     asyncHandler(applicationController.listMyApplications)
   );
 
+  // POST /api/applications/:id/documents/:documentId/verification — the
+  // landlord's judgement of one document. The ONLY way one reaches `verified`.
+  router.post(
+    '/:id/documents/:documentId/verification',
+    asyncHandler(applicationController.verifyApplicationDocument)
+  );
+
   // GET /api/applications/:id/documents/:documentId — the bytes of ONE attached
   // document, to the applicant or the landlord and nobody else.
   //
