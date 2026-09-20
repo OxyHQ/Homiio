@@ -141,3 +141,27 @@ HISTORY plus durable rules; this section is the current state.**
   `findOrCreateCanonical` depends on — see the column's header). A moved address
   keeps a key computed under the city it came from. That is the state those rows
   were already in.
+- **A city that failed to geocode a province is not a second city** (migration
+  0030, 2026-09-20). `upsertGeoChain` falls back to a region literally named
+  `Unknown` when a geocode returns no administrative region, because the three
+  parent references on `addresses` are NOT NULL and dropping a listing is worse
+  than bucketing one. ADR 0001 §1.3 recorded the cost; this pays it. Census of
+  production that day: **10** cities sat in the placeholder region and **all 10**
+  had a twin with the same country and slug under a real region — Berlin,
+  Bremen, Dortmund, Düsseldorf, Frankfurt am Main, Hamburg, Köln, Leipzig,
+  München, Stuttgart, i.e. every large German city in the table.
+
+  So `/api/cities/lookup?city=hamburg` answered `ambiguous`, `sindiActions`
+  resolved no location, and "muéstrame pisos en Hamburg" produced no action at
+  all. **0029 could not fix this and said so**: it folds duplicates WITHIN one
+  region, and these two rows are in different regions by construction.
+
+  The rule folds a placeholder row into its twin only when the twin is UNIQUE —
+  exactly one city with that country and slug in a non-placeholder region. Two
+  or more means we genuinely do not know which, which is ADR 0001 §1.3's
+  measured `Santiago` case, and folding those would be the homonym bug wearing a
+  repair's clothes. `addressService.cityInKnownRegion` applies the same rule at
+  write time so the next one is never created.
+
+  `addresses.region_id` moves with `city_id` here, which 0029 never had to do —
+  it merged inside one region, so the two parents could not disagree.

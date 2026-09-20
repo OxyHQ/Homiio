@@ -127,6 +127,76 @@ describe('resolveGeo', () => {
     expect(city.longitude).toBeCloseTo(2.1734, 4);
   });
 
+  /**
+   * The OTHER duplicate the placeholder region manufactured.
+   *
+   * `upsertGeoChain` falls back to a region named `Unknown` when a geocode
+   * returns no province, and then upserted the city under it — so a place that
+   * already had a row under its real region got a SECOND one. Measured on
+   * production 2026-09-20: ten cities sat in the bucket and ALL TEN had a real
+   * twin, including every large German city. `placeLookup` then answered
+   * `ambiguous` for each, so "muéstrame pisos en Hamburg" resolved no location
+   * and Sindi did nothing at all.
+   *
+   * Migration 0030 folds the rows that exist. This is the half that stops the
+   * next one being made.
+   */
+  it('adopts the city this country already has when the geocode omits the province', async () => {
+    const withState = await resolveGeoChain({
+      coordinates: [9.9937, 53.5511],
+      names: { city: 'Hamburg', state: 'Hamburg', country: 'Germany', countryCode: 'DE' },
+    });
+
+    // The same place, geocoded again by a provider that returned no state.
+    const withoutState = await resolveGeoChain({
+      coordinates: [9.9937, 53.5511],
+      names: { city: 'Hamburg', country: 'Germany', countryCode: 'DE' },
+    });
+
+    expect(withoutState.cityId).toBe(withState.cityId);
+    // And it keeps the REAL region rather than dragging the address into the
+    // bucket, which is what left `addresses` with two parents that disagreed.
+    expect(withoutState.regionId).toBe(withState.regionId);
+
+    const [cityCount] = await getDb().select({ n: count() }).from(cities);
+    expect(cityCount.n).toBe(1);
+    const buckets = await getDb().select({ n: count() }).from(regions).where(eq(regions.name, 'Unknown'));
+    expect(buckets[0].n).toBe(0);
+  });
+
+  /**
+   * And the restraint, which is the half that matters more.
+   *
+   * ADR 0001 §1.3 measured this: two genuinely different `Santiago`s both land
+   * in the bucket. Adopting the more popular one would be the homonym bug
+   * wearing a repair's clothes, so a stateless geocode for a name this country
+   * holds TWICE still goes to the placeholder — ambiguous on purpose.
+   */
+  it('refuses to adopt when the country holds two cities of that name', async () => {
+    const first = await resolveGeoChain({
+      coordinates: [-70.6483, -33.4569],
+      names: { city: 'Santiago', state: 'Metropolitana', country: 'Chile', countryCode: 'CL' },
+    });
+    const second = await resolveGeoChain({
+      coordinates: [-73.05, -36.82],
+      names: { city: 'Santiago', state: 'Biobío', country: 'Chile', countryCode: 'CL' },
+    });
+    expect(second.cityId).not.toBe(first.cityId);
+
+    const stateless = await resolveGeoChain({
+      coordinates: [-70.6483, -33.4569],
+      names: { city: 'Santiago', country: 'Chile', countryCode: 'CL' },
+    });
+
+    expect(stateless.cityId).not.toBe(first.cityId);
+    expect(stateless.cityId).not.toBe(second.cityId);
+    const [bucket] = await getDb()
+      .select({ name: regions.name })
+      .from(regions)
+      .where(eq(regions.id, stateless.regionId));
+    expect(bucket.name).toBe('Unknown');
+  });
+
   it('falls back to a stable placeholder region so the chain is always whole', async () => {
     const resolved = await resolveGeoChain({
       coordinates: BARCELONA,
