@@ -39,6 +39,30 @@
 export const LISTING_INGEST_OK_MARKER = 'listing-ingest-ok';
 
 /**
+ * Market token appended to {@link LISTING_INGEST_OK_MARKER}, e.g.
+ * `listing-ingest-ok market=ES provider=fotocasa`.
+ *
+ * A SECOND filter matches the longer substring `listing-ingest-ok market=ES`
+ * and counts Spain alone, because the aggregate cannot see a single market
+ * starving: on 2026-09-20 the database held 481 German listings and 31 Spanish
+ * ones, and an aggregate heartbeat was green throughout. That is the fixture
+ * problem one level up — a signal diluted by rows that are real but answer a
+ * different question.
+ *
+ * Substring matching is why the market comes FIRST and the provider second:
+ * `"listing-ingest-ok market=ES"` is a stable prefix, whereas a trailing market
+ * would need the provider name to be part of the pattern.
+ *
+ * Kept deliberately dumb — one filter per market worth alarming on, rather than
+ * a dimension extracted from a space-delimited pattern. Extracted dimensions
+ * depend on the exact token layout of a line that also carries a timestamp, a
+ * level and a logger name, and they fail by silently counting nothing.
+ */
+export function ingestMarketToken(market: string | undefined): string {
+  return `market=${market ?? 'unknown'}`;
+}
+
+/**
  * The residential proxy refused to open a tunnel for a reason no retry fixes —
  * an exhausted balance (402) or rejected credentials (407). A human has to act.
  * Emitted by the worker's boot check and by every periodic re-check while the

@@ -17,6 +17,7 @@
 
 import {
   countsAsLiveIngest,
+  ingestMarketToken,
   LISTING_INGEST_OK_MARKER,
   LISTING_PROXY_UNUSABLE_MARKER,
   NON_LIVE_INGEST_PROVIDERS,
@@ -52,5 +53,34 @@ describe('countsAsLiveIngest', () => {
     for (const provider of ['fotocasa', 'habitaclia', 'pisos', 'rightmove', 'otodom', 'immoweb']) {
       expect(countsAsLiveIngest(provider)).toBe(true);
     }
+  });
+});
+
+describe('per-market heartbeat', () => {
+  it('produces the exact substring the per-market filter matches', () => {
+    // oxy-infra matches `"listing-ingest-ok market=ES"` as a literal substring,
+    // so the market must be adjacent to the marker and spelled this way.
+    const line = `${LISTING_INGEST_OK_MARKER} ${ingestMarketToken('ES')} provider=fotocasa`;
+    expect(line).toContain('listing-ingest-ok market=ES');
+
+    // And the aggregate filter must still match the same line.
+    expect(line).toContain(LISTING_INGEST_OK_MARKER);
+  });
+
+  it('never omits the market, so a line cannot silently leave a filter blind', () => {
+    // Multi-market providers resolve no single market. Emitting nothing would
+    // make the line shorter and the per-market filters quietly wrong; a token
+    // that reads `unknown` is visible.
+    expect(ingestMarketToken(undefined)).toBe('market=unknown');
+    expect(ingestMarketToken('ES')).toBe('market=ES');
+  });
+
+  it('cannot be confused with a longer market code by substring matching', () => {
+    // `market=ES` must not match a hypothetical `market=ESX`. It would here —
+    // which is why this asserts the separator the emitter puts after it rather
+    // than pretending substring matching is safe on its own.
+    const line = `${LISTING_INGEST_OK_MARKER} ${ingestMarketToken('ESX')} provider=x`;
+    expect(line).toContain('listing-ingest-ok market=ESX ');
+    expect(line.includes('listing-ingest-ok market=ES ')).toBe(false);
   });
 });

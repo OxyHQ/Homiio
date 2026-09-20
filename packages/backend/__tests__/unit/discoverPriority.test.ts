@@ -5,6 +5,9 @@
  * any provider's city-1, so the browser-heavy ES portals (~180 city scopes each)
  * can't starve the market-wide providers' 2-3 scopes. Pure function — no Redis,
  * no BullMQ runtime.
+ *
+ * Note this guards ONE direction of starvation; the fetch queue starved the
+ * other way until 2026-09-20. Both are now single-band round-robin.
  */
 
 import {
@@ -43,12 +46,15 @@ describe('discoverPriorityFor', () => {
     expect(anyCity0).toBeLessThan(anyCity1);
   });
 
-  it('is SINGLE-tier — unlike fetch it does not sink ES portals into a later tier', () => {
-    // fetch deprioritises the high-volume ES portals; discover intentionally does
-    // not, so an ES portal and a market-wide provider share a rank's priority.
+  it('is SINGLE-tier, and fetch now agrees with it', () => {
+    // Discover was always single-tier: an ES portal and a market-wide provider
+    // share a rank's priority. Fetch used to disagree, sinking the ES portals
+    // behind everything else — which starved Spain to 31 listings against
+    // Germany's 481 (see fetchPriority.test.ts for the measurement). The two
+    // queues now answer this question the same way.
     for (const provider of HIGH_VOLUME_PROVIDERS) {
       expect(discoverPriorityFor(provider, 0)).toBe(discoverPriorityFor('immobilienscout24', 0));
-      expect(fetchPriorityFor(provider, 0)).toBeGreaterThan(fetchPriorityFor('immobilienscout24', 0));
+      expect(fetchPriorityFor(provider, 0)).toBe(fetchPriorityFor('immobilienscout24', 0));
     }
   });
 

@@ -48,6 +48,7 @@ import { expireExternalProperty } from './db/properties/propertyWrites';
 import { IngestionService, IngestionValidationError } from './services/ingestion/IngestionService';
 import {
   countsAsLiveIngest,
+  ingestMarketToken,
   LISTING_INGEST_OK_MARKER,
   LISTING_PROXY_UNUSABLE_MARKER,
 } from './services/ingestion/ingestHealthMarkers';
@@ -131,9 +132,11 @@ async function expireExternalListing(source: string, sourceId: string, reason: s
  * The message must stay on ONE line: the log group is shared, every line is its
  * own CloudWatch event, and a filter can only match within a single event.
  */
-function emitIngestHeartbeat(provider: string): void {
+function emitIngestHeartbeat(provider: string, market: ListingMarket | undefined): void {
   if (!countsAsLiveIngest(provider)) return;
-  logger.info(`${LISTING_INGEST_OK_MARKER} provider=${provider}`);
+  logger.info(
+    `${LISTING_INGEST_OK_MARKER} ${ingestMarketToken(market)} provider=${provider}`,
+  );
 }
 
 /**
@@ -252,7 +255,7 @@ async function processFetchRef(ref: ExternalListingRef, jobMarket?: ListingMarke
     const raw = await provider.fetch(ref, { runtime: runtimeForMarket(market) });
     const listing = provider.normalize(raw);
     await ingestionService.ingest(listing);
-    emitIngestHeartbeat(ref.provider);
+    emitIngestHeartbeat(ref.provider, market);
   } catch (error) {
     if (error instanceof BluegroundPartnerListingError) {
       logger.info('Skipped Blueground partner listing', {

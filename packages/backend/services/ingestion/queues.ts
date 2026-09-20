@@ -64,11 +64,10 @@ export function fetchJobId(ref: ExternalListingRef): string {
 /* -------------------------------------------------------------------------- */
 
 /**
- * Big-volume ES portals emit thousands of fetch jobs per discover pass and are
- * browser/rate-limit heavy. They ride a LATER priority tier so the handful of
- * jobs from market-wide providers (immobilienscout24, immoweb, mercadolibre, …)
- * drain first — while still round-robining among themselves inside the tier.
- * Configurable: move a provider between tiers by editing this set.
+ * Providers that emit large per-scope batches and are browser/rate-limit heavy.
+ *
+ * **RETAINED FOR DOCUMENTATION AND TESTS; NO LONGER A PRIORITY TIER.** See
+ * {@link fetchPriorityFor} for what this set used to do and why it stopped.
  */
 export const HIGH_VOLUME_PROVIDERS: ReadonlySet<string> = new Set([
   'fotocasa',
@@ -78,14 +77,36 @@ export const HIGH_VOLUME_PROVIDERS: ReadonlySet<string> = new Set([
 ]);
 
 /**
- * Priority tier bases. BullMQ orders prioritised jobs by
- * `score = priority * 2^32 + insertionCounter` and pops the lowest, so a lower
- * priority number runs first and the normal tier (base 0) fully precedes the
- * high-volume tier. The gap MUST exceed {@link FETCH_RANK_CAP} so the two tiers
- * never overlap.
+ * THE TIER THAT USED TO LIVE HERE STARVED AN ENTIRE MARKET. Kept as a comment
+ * because the reasoning that produced it was sound and the reasoning that
+ * removes it is only visible next to it.
+ *
+ * `FETCH_TIER_HIGH_VOLUME = 1_000_000` put the ES portals in a band that the
+ * normal band fully preceded: not "later", but "not until the normal tier is
+ * EMPTY". That was safe under its stated premise — that market-wide providers
+ * contribute "the handful of jobs" the old comment described.
+ *
+ * The premise is false. Measured in production on 2026-09-20: a single discover
+ * pass enqueued 1,500 refs from immobilienscout24 and 1,021 from kleinanzeigen
+ * — 2,521 normal-tier jobs that every fotocasa, pisos, habitaclia and idealista
+ * fetch had to wait behind, with the next pass arriving every 6 hours to refill
+ * the band. The result was a database holding 481 German listings and 31
+ * Spanish ones: Berlin 304, Hamburg 177, Barcelona 3. Spain had not stopped
+ * being discovered; its fetches simply never reached the front of the queue.
+ *
+ * Round-robin rank alone now carries the fairness, exactly as it already does
+ * for discover (see {@link discoverPriorityFor}, which faced the mirror image of
+ * this bug and resolved it the same way). No band can precede another, so no
+ * provider's backlog can hold another provider's first job hostage.
+ *
+ * WHAT THIS DOES NOT CLAIM: that the resulting share is correct. A market-wide
+ * provider discovers ONE scope of 1,500 refs while the ES portals discover 68
+ * cities each, so per-scope round-robin now favours the ES side. That is a
+ * deliberate trade of a known starvation for a measurable imbalance — and the
+ * `Oxy/Homiio ListingsIngested` alarm is per-market precisely so the imbalance
+ * is observable instead of inferred. Tune from that metric, not from taste.
  */
 const FETCH_TIER_NORMAL = 0;
-const FETCH_TIER_HIGH_VOLUME = 1_000_000;
 
 /**
  * Max round-robin rank honoured per discover batch. Clamps a pathological batch
@@ -95,17 +116,12 @@ const FETCH_TIER_HIGH_VOLUME = 1_000_000;
  */
 export const FETCH_RANK_CAP = 100_000;
 
-/** Base priority tier for a provider (normal vs high-volume). */
-function fetchTierBase(provider: string): number {
-  return HIGH_VOLUME_PROVIDERS.has(provider) ? FETCH_TIER_HIGH_VOLUME : FETCH_TIER_NORMAL;
-}
-
 /**
  * Round-robin fetch priority for the `rank`-th ref (0-based) of a provider's
  * discover batch.
  *
- * Every provider's rank-0 ref shares its tier's lowest priority, every rank-1
- * ref the next, and so on. Because rank restarts at 0 for each discover pass,
+ * Every provider's rank-0 ref shares the lowest priority, every rank-1 ref the
+ * next, and so on — across ALL providers, with no band preceding another. Because rank restarts at 0 for each discover pass,
  * all providers stay aligned, so BullMQ interleaves them (A0,B0,C0,A1,B1,C1,…)
  * instead of draining one provider's whole backlog first — even though the
  * discover jobs that enqueued them ran at different times. A free-running
@@ -118,7 +134,7 @@ function fetchTierBase(provider: string): number {
  */
 export function fetchPriorityFor(provider: string, rank: number): number {
   const clamped = Math.min(Math.max(Math.trunc(rank), 0), FETCH_RANK_CAP);
-  return fetchTierBase(provider) + clamped + 1;
+  return FETCH_TIER_NORMAL + clamped + 1;
 }
 
 /**
