@@ -99,3 +99,24 @@ export function maxImagesPerListingFromEnv(): number {
   if (!Number.isSafeInteger(parsed) || parsed < 1) return DEFAULT_MAX_IMAGES_PER_LISTING;
   return Math.min(parsed, MAX_IMAGES_CEILING);
 }
+
+/**
+ * Images re-hosted concurrently per listing (`LISTING_IMAGE_INGEST_CONCURRENCY`).
+ *
+ * Pairs with {@link maxImagesPerListingFromEnv}: that one decides how much work
+ * a listing creates, this one how fast it is worked through. Serial ingest
+ * measured 4.6 listings/minute in production with a 9.5 s median gap; six at a
+ * time is the difference between thirty hours for Madrid and about five.
+ *
+ * Kept modest on purpose. Each image fans out into four Sharp pipelines and
+ * four S3 PUTs, and several fetch workers run at once, so the real concurrency
+ * is this number times four times the worker count. Raising it far trades a
+ * throughput win for socket exhaustion and libvips thread thrash.
+ */
+export function imageIngestConcurrencyFromEnv(): number {
+  const raw = process.env.LISTING_IMAGE_INGEST_CONCURRENCY?.trim();
+  if (!raw) return 6;
+  const parsed = Number(raw);
+  if (!Number.isSafeInteger(parsed) || parsed < 1) return 6;
+  return Math.min(parsed, 24);
+}

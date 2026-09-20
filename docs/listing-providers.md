@@ -607,3 +607,56 @@ purpose: that catch folds every failure into `errorDetails` and still returns a
 and found nothing" — the same silent-zero shape as everything else on this page.
 A 3xx from the destination is likewise treated as a failure rather than as an
 empty feed.
+
+## Throughput: the ingest was 120 sequential round trips per listing
+
+Measured in production on 2026-09-20, from the worker's own log timestamps:
+
+```
+4.6 listings/minute
+median gap between ingests: 9.5 s
+```
+
+At that rate Madrid's 8,121 rentals take **thirty hours** and the Spanish market
+takes weeks — which is why Spain crawled up in tens while the portals advertise
+tens of thousands.
+
+The cause was not the network, the queue or the parsers. **Image ingest ran
+strictly serially**: one `await` per image in `ingestForProperty`, and inside
+each image one `await` per size variant in `processAndUpload`. A listing carries
+up to 30 images and every image is re-hosted into four variants, so one property
+cost up to **120 sequential fetch → Sharp → S3 round trips**. 30 images at
+~300 ms each is 9 s, which is the median gap almost exactly.
+
+Nothing about the work required that order. The images of one listing are
+independent, and `isPrimary` / `order` come from the INDEX rather than from
+insertion sequence, so running them together changes the clock and nothing else.
+
+- images within a listing: bounded-parallel via `utils/concurrency.ts`
+  (`LISTING_IMAGE_INGEST_CONCURRENCY`, default 6)
+- the four variants of one image: `Promise.all` — there are exactly four
+
+**Bounded, not `Promise.all`, on the outer loop.** Unbounded would fan 30 Sharp
+pipelines and 120 S3 PUTs out of a single job, times the fetch-worker count —
+enough to exhaust sockets and thrash libvips' thread pool, turning a throughput
+fix into an availability problem.
+
+**`LISTING_FETCH_CONCURRENCY` was deliberately NOT raised.** Six images in
+flight per listing times six fetch workers times four variants is already ~144
+concurrent S3 operations. The image parallelism multiplies the worker count;
+raising both compounds.
+
+### What the tests pin, and why they pull against each other
+
+Going parallel is easy. Going parallel without reordering the gallery or losing
+a listing to one dead photo is the work, so all three are asserted:
+
+| property | why it is fragile |
+| --- | --- |
+| order preserved | the cover photo is decided by position; a push-as-they-land implementation passes "did everything run?" and silently shuffles every gallery |
+| concurrency bounded | an unbounded fan-out passes a timing test and fails in production |
+| one bad photo skipped, not fatal | the `catch` must stay INSIDE the task; outside, one 404 rejects the batch and costs the whole property |
+
+The timing test is sized so it **can fail**: 24 images at 40 ms is 960 ms
+serially against a 600 ms budget. Verified by mutation — forcing concurrency
+back to 1 turns it red at 969 ms.

@@ -14,7 +14,11 @@
  */
 
 import type { NormalizedRemoteImage, PropertyImageRef } from '@homiio/shared-types';
-import { maxImagesPerListingFromEnv } from '@homiio/listing-providers';
+import { mapWithConcurrency } from '../../utils/concurrency';
+import {
+  imageIngestConcurrencyFromEnv,
+  maxImagesPerListingFromEnv,
+} from '@homiio/listing-providers';
 import {
   createProxiedFetch,
   residentialProxyFromEnv,
@@ -118,6 +122,11 @@ export interface ExternalMediaIngestOptions {
   fetchImage?: RemoteImageFetcher;
   /** Max images ingested per listing (defaults to {@link DEFAULT_MAX_IMAGES}). */
   maxImages?: number;
+  /**
+   * Images re-hosted concurrently per listing
+   * (`LISTING_IMAGE_INGEST_CONCURRENCY`, default 6).
+   */
+  imageConcurrency?: number;
   logger?: Logger;
 }
 
@@ -125,12 +134,15 @@ export class ExternalMediaIngest {
   private readonly imageService: ImageUploadService;
   private readonly fetchImage: RemoteImageFetcher;
   private readonly maxImages: number;
+  /** How many of a listing's images are re-hosted at once. */
+  private readonly imageConcurrency: number;
   private readonly logger: Logger;
 
   constructor(options: ExternalMediaIngestOptions = {}) {
     this.imageService = options.imageService ?? imageUploadService;
     this.fetchImage = options.fetchImage ?? createRemoteImageFetcherFromEnv();
     this.maxImages = options.maxImages ?? maxImagesPerListingFromEnv();
+    this.imageConcurrency = options.imageConcurrency ?? imageIngestConcurrencyFromEnv();
     this.logger = options.logger ?? new Logger('ExternalMediaIngest');
   }
 
@@ -150,28 +162,43 @@ export class ExternalMediaIngest {
   ): Promise<PropertyImageRef[]> {
     const allowUnconfiguredStorage = !this.imageService.isStorageConfigured();
     const capped = remoteImages.slice(0, this.maxImages);
-    const created: ImageDocument[] = [];
 
-    for (let index = 0; index < capped.length; index += 1) {
-      const remote = capped[index];
-      try {
-        const input = await this.fetchImage(remote.url);
-        const image = await this.imageService.createImageForEntity('property', propertyId, input, {
-          isPrimary: remote.isPrimary ?? index === 0,
-          order: index,
-          caption: remote.caption,
-          allowUnconfiguredStorage,
-        });
-        created.push(image);
-      } catch (error) {
-        this.logger.warn('Skipping a remote image that failed to ingest', {
-          propertyId: String(propertyId),
-          url: remote.url,
-          error: describeErrorForLog(error),
-        });
-      }
-    }
+    // PARALLEL, BOUNDED, ORDER-PRESERVING. This loop used to be serial, which
+    // made a listing cost up to 30 sequential fetch → Sharp → S3 round trips
+    // (four variants each, so ~120 in all). Production measured 4.6 listings a
+    // minute with a 9.5 s median gap — almost exactly 30 images at ~300 ms.
+    //
+    // The images of one listing are independent, and `isPrimary`/`order` come
+    // from the INDEX rather than from insertion sequence, so running them
+    // together changes the clock and nothing else. `mapWithConcurrency` keeps
+    // the order so the cover photo stays the cover photo.
+    const settled = await mapWithConcurrency(
+      capped,
+      this.imageConcurrency,
+      async (remote, index) => {
+        try {
+          const input = await this.fetchImage(remote.url);
+          return await this.imageService.createImageForEntity('property', propertyId, input, {
+            isPrimary: remote.isPrimary ?? index === 0,
+            order: index,
+            caption: remote.caption,
+            allowUnconfiguredStorage,
+          });
+        } catch (error) {
+          // Per-image tolerance is unchanged and deliberate: one unreachable
+          // photo must never cost the listing. Caught INSIDE the task so a
+          // single failure cannot reject the batch.
+          this.logger.warn('Skipping a remote image that failed to ingest', {
+            propertyId: String(propertyId),
+            url: remote.url,
+            error: describeErrorForLog(error),
+          });
+          return undefined;
+        }
+      },
+    );
 
+    const created = settled.filter((image): image is ImageDocument => image !== undefined);
     return toPropertyImages(created);
   }
 }

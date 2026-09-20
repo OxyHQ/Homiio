@@ -755,6 +755,7 @@ export {
   maxSearchPagesFromEnv,
   providerMaxSearchPages,
   maxImagesPerListingFromEnv,
+  imageIngestConcurrencyFromEnv,
   DEFAULT_MAX_IMAGES_PER_LISTING,
   MAX_IMAGES_CEILING,
 } from './discoverLimits';
