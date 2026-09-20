@@ -1,7 +1,20 @@
 import { api } from '@/utils/api';
 
 export interface UploadedImage {
+  /**
+   * The photo's identity WITHIN THE PICKER — the grid's React key and what a
+   * reorder or a remove looks it up by. It comes from the upload response,
+   * where it is the leading segment of the storage key, so it is unique per
+   * upload but is NOT a database id and must never be published as one.
+   */
   imageId: string;
+  /**
+   * The canonical `images` row this photo is, when it has one: set only for
+   * photos the edit screen loaded back from the server. A freshly uploaded
+   * photo has no row yet (see `utils/propertyPhotos`) and publishes its
+   * {@link keys} instead.
+   */
+  storedImageId?: string;
   urls: {
     small: string;
     medium: string;
@@ -16,6 +29,9 @@ export interface UploadedImage {
     originalSize: number;
     originalFormat: string;
     uploadedAt: Date;
+    /** Source pixel dimensions, when the upload pipeline could read them. */
+    width?: number;
+    height?: number;
   };
   isPrimary?: boolean;
   caption?: string;
@@ -31,6 +47,8 @@ export interface UploadResponse {
       originalSize: number;
       originalFormat: string;
       uploadedAt: Date;
+      width?: number;
+      height?: number;
     };
     keys: {
       original: string;

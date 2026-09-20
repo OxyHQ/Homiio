@@ -13,8 +13,10 @@ import {
   OfferingType,
   type Property,
   type PropertyImage,
+  type PropertyImageRef,
 } from '@homiio/shared-types';
 import { logger } from '@/utils/logger';
+import { newDraftId, saveDraft } from '@/utils/propertyDrafts';
 import { resolveBackendImageUrl } from '@/utils/imageUrl';
 import {
   resolveStepFlow,
@@ -48,24 +50,43 @@ interface GeoCoordinates {
 }
 
 /**
- * Normalises a persisted property image (string URL or `PropertyImage`) into the
- * `UploadedImage` shape the form store and `ImageUpload` component expect. The
- * available URL is mirrored across the size slots so edit-mode previews render.
+ * Normalises a persisted property image into the `UploadedImage` shape the form
+ * store and `ImageUpload` component expect. The available URL is mirrored across
+ * the size slots when the stored entry carries only one, so edit-mode previews
+ * render either way.
  *
  * `urls` is display-only and is re-homed onto the active API origin (see
  * {@link resolveBackendImageUrl}) so a baked-in dev/emulator host previews on web
- * too. `imageId` and `keys.original` are bookkeeping identifiers (the latter is
- * passed verbatim to the delete endpoint), so they keep the ORIGINAL stored
- * value and are never re-homed.
+ * too. `keys.original` is a bookkeeping identifier passed verbatim to the delete
+ * endpoint, so it keeps the ORIGINAL stored value and is never re-homed.
+ *
+ * `storedImageId` is what makes an edit SAVEABLE. A stored photo already has a
+ * canonical `images` row, and republishing it means naming that row — the server
+ * cannot re-derive it from a URL, and a save that did not name it would either
+ * fail or mint a duplicate row for bytes it already holds.
  */
-const toUploadedImage = (image: string | PropertyImage, index: number): UploadedImage => {
+const toUploadedImage = (
+  image: string | PropertyImage | PropertyImageRef,
+  index: number,
+): UploadedImage => {
+  const ref = typeof image === 'string' ? undefined : (image as PropertyImageRef);
   const url = typeof image === 'string' ? image : image.url;
   const displayUrl = resolveBackendImageUrl(url);
   const caption = typeof image === 'string' ? '' : image.caption ?? '';
   const isPrimary = typeof image === 'string' ? index === 0 : image.isPrimary ?? index === 0;
+  const variant = (name: keyof NonNullable<PropertyImageRef['urls']>): string =>
+    ref?.urls?.[name] ? resolveBackendImageUrl(ref.urls[name]) : displayUrl;
   return {
-    imageId: url,
-    urls: { small: displayUrl, medium: displayUrl, large: displayUrl, original: displayUrl },
+    // The grid's key: the canonical row id when there is one, so a reorder and a
+    // remove address the photo by the same identity the save will.
+    imageId: ref?.imageId ?? url,
+    storedImageId: ref?.imageId,
+    urls: {
+      small: variant('small'),
+      medium: variant('medium'),
+      large: variant('large'),
+      original: variant('original'),
+    },
     keys: { original: url, variants: {} },
     metadata: { originalSize: 0, originalFormat: '', uploadedAt: new Date() },
     isPrimary,
@@ -102,6 +123,9 @@ export function usePropertyCreateForm(id: string | undefined) {
   } = useCreatePropertyFormStore();
 
   const { formData, currentStep, isLoading, error: submitError } = useCreatePropertyFormSelectors();
+  // Whether the persisted form has been read back. Edit-mode hydration waits
+  // for it, so a restored in-progress edit is never overwritten by the server.
+  const hasHydrated = useCreatePropertyFormStore((state) => state.hasHydrated);
 
   const {
     property,
@@ -138,9 +162,28 @@ export function usePropertyCreateForm(id: string | undefined) {
   // Sync the fetched property into the form store exactly once per loaded id.
   const hydratedPropertyIdRef = useRef<string | null>(null);
   useEffect(() => {
-    if (!isEditMode || !property) return;
+    if (!isEditMode || !property || !hasHydrated) return;
     if (hydratedPropertyIdRef.current === property.id) return;
     hydratedPropertyIdRef.current = property.id;
+
+    const store = useCreatePropertyFormStore.getState();
+    if (store.editingPropertyId === property.id && store.isDirty) {
+      // An edit of THIS listing was interrupted and the store restored it.
+      // Overwriting it with the server's copy would discard exactly the changes
+      // the restore preserved — the server's copy is what they were editing
+      // AWAY from. Waiting on `hasHydrated` above is what makes this reachable:
+      // the restore lands after the first renders.
+      return;
+    }
+    // Anything else in the store belongs to a different listing. An unsaved NEW
+    // listing is parked in the drafts list first, so opening an edit never
+    // silently discards a listing somebody was part-way through writing.
+    if (!store.editingPropertyId && store.isDirty) {
+      saveDraft(store.draftId ?? newDraftId(), store.formData, store.currentStep).catch(
+        (error: unknown) => logger.error('Error parking in-progress listing before edit', error),
+      );
+    }
+    store.resetForm();
     setEditingPropertyId(property.id);
 
     setFormData('basicInfo', {
@@ -245,7 +288,7 @@ export function usePropertyCreateForm(id: string | undefined) {
       exchangeMealsIncluded: exchange?.mealsIncluded ?? false,
       exchangeRequiresReciprocity: exchange?.requiresReciprocity ?? false,
     });
-  }, [isEditMode, property, setFormData, setEditingPropertyId]);
+  }, [isEditMode, property, hasHydrated, setFormData, setEditingPropertyId]);
 
   // --- User geolocation on the Location step --------------------------------
   const locationMutation = useMutation<GeoCoordinates | null>({

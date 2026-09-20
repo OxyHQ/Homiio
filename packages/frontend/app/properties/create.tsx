@@ -43,9 +43,15 @@ import {
  * the quality checklist are the right rail's (`PropertyPreviewWidget`); below
  * the rail's breakpoint the Preview step draws them.
  *
- * Drafts (new listings only): advancing a step saves the form locally
- * (`utils/propertyDrafts`, the store `/properties/drafts` lists), as does the
- * "Save draft" action; publishing deletes the draft.
+ * Drafts: advancing a step saves the form to the named, listable draft
+ * (`utils/propertyDrafts`, what `/properties/drafts` shows), as does the "Save
+ * draft" action; publishing deletes it. New listings only — an edit is not a
+ * draft of anything.
+ *
+ * That is not what protects work in progress. The form store persists itself on
+ * every change, so an interruption — backgrounding, a reload, a crash — restores
+ * both what was typed and the step it was typed on, for edits as well as new
+ * listings. See `store/createPropertyFormStore`.
  */
 export default function CreatePropertyScreen() {
   const { t } = useTranslation();
@@ -99,18 +105,26 @@ export default function CreatePropertyScreen() {
 
   // --- Drafts (new listings only) --------------------------------------------
   const draftId = useCreatePropertyFormStore((state) => state.draftId);
+  const hasHydrated = useCreatePropertyFormStore((state) => state.hasHydrated);
 
-  // On arrival: resume the draft the drafts screen handed over, or — when the
-  // store still holds a listing opened for EDITING — start from a blank form.
+  // On arrival: resume the draft the drafts screen handed over. Otherwise the
+  // form the store restored IS the resumption — everything typed since the last
+  // step transition, at the step it was typed on — and the only thing to do is
+  // leave it alone. A form still holding a listing opened for EDITING is the
+  // one case that must be cleared: "Create" never starts from somebody's home.
+  //
+  // Gated on `hasHydrated` because the restore is asynchronous: acting on the
+  // first render would read the defaults, see no draft, and reset over the very
+  // work being restored.
   useEffect(() => {
-    if (isEditMode) return;
+    if (isEditMode || !hasHydrated) return;
     let cancelled = false;
     takeDraftToResume()
       .then((resumed) => {
         if (cancelled) return;
         const store = useCreatePropertyFormStore.getState();
         if (resumed) {
-          store.loadForm(resumed.formData, resumed.id);
+          store.loadForm(resumed.formData, resumed.id, resumed.step);
         } else if (store.editingPropertyId) {
           store.resetForm();
         }
@@ -122,15 +136,17 @@ export default function CreatePropertyScreen() {
     return () => {
       cancelled = true;
     };
-    // Once per visit to the create screen.
+    // Once per visit to the create screen, after the restore has been attempted.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isEditMode]);
+  }, [isEditMode, hasHydrated]);
 
   const persistDraft = useCallback(async (): Promise<boolean> => {
     const store = useCreatePropertyFormStore.getState();
     const id = store.draftId ?? newDraftId();
     try {
-      await saveDraft(id, store.formData);
+      // The step goes with the form: a draft reopened from `/properties/drafts`
+      // returns the host to where they stopped, not to step one.
+      await saveDraft(id, store.formData, store.currentStep);
       store.setDraftId(id);
       return true;
     } catch (error: unknown) {

@@ -17,7 +17,7 @@ import {
   DeepPartial
 } from './common';
 import { Address, AddressInput, ListingAddressPrecision, PropertyAddress } from './address';
-import { PropertyImageRef } from './media';
+import { PropertyImageRef, PropertyImageWrite } from './media';
 
 /**
  * Long-term (monthly) rent pricing for a listing carrying the
@@ -330,12 +330,16 @@ export interface CreatePropertyData {
   shortTermRent?: ShortTermRent;
   amenities?: string[];
   /**
-   * Photos for the new listing. Accepts bare URL strings, the
-   * `{ url, caption, isPrimary }` object form, or canonical
-   * {@link PropertyImageRef}s — mirroring `Property.images`, so a create/edit
-   * payload built from either shape conforms.
+   * Photos for the new listing.
+   *
+   * {@link PropertyImageWrite} is the shape the server can actually STORE — a
+   * photo names either the canonical image it already is or the storage keys it
+   * was uploaded under, plus its position. The other three members mirror
+   * `Property.images` and remain for payloads built from a read; note that a
+   * bare URL or a `{ url, caption, isPrimary }` entry identifies no image row
+   * and is refused by `POST /api/properties`.
    */
-  images?: string[] | PropertyImage[] | PropertyImageRef[];
+  images?: PropertyImageWrite[] | string[] | PropertyImage[] | PropertyImageRef[];
   location?: GeoJSONPoint;
   /**
    * How precisely the address and floor are published to non-owners. The

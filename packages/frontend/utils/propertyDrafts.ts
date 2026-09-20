@@ -5,11 +5,23 @@
  *   `property_drafts`  every saved draft, newest first — what the drafts screen lists
  *   `current_draft`    the draft the drafts screen asked the publish flow to resume
  *
- * A draft is the publish flow's FORM (`CreatePropertyFormData`) plus a summary
- * the drafts screen draws without understanding the form. It never reaches the
- * server: publishing still builds its body from the form with
- * `buildPropertyPayload`, so a resumed draft publishes exactly what the unsaved
- * form would have.
+ * A draft is the publish flow's FORM (`CreatePropertyFormData`), the STEP the
+ * host had reached, and a summary the drafts screen draws without understanding
+ * the form. It never reaches the server: publishing still builds its body from
+ * the form with `buildPropertyPayload`, so a resumed draft publishes exactly
+ * what the unsaved form would have.
+ *
+ * ## Two layers, and what each one is for
+ *
+ * This module is the NAMED, listable layer: a draft is something the host chose
+ * to keep and can come back to from `/properties/drafts`. It is written at step
+ * transitions and on "Save draft".
+ *
+ * It is not what survives a crash mid-sentence. That is
+ * `createPropertyFormStore`'s `persist` middleware, which writes the live form
+ * on every keystroke. The two meet through `step` and `draftId`: the live store
+ * restores the session, and the draft it was working on is still the same one,
+ * so finishing later replaces that draft rather than adding a twin of it.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -36,6 +48,13 @@ export interface PropertyDraft {
   images: unknown[];
   lastSaved: Date;
   formData: CreatePropertyFormData;
+  /**
+   * The wizard step the host had reached, so resuming returns them to it.
+   *
+   * Optional because drafts saved before this existed have no step; a draft
+   * without one resumes at the first step, which is what every draft used to do.
+   */
+  step?: number;
 }
 
 type StoredPropertyDraft = Omit<PropertyDraft, 'lastSaved'> & { lastSaved: string };
@@ -44,6 +63,8 @@ type StoredPropertyDraft = Omit<PropertyDraft, 'lastSaved'> & { lastSaved: strin
 export interface ResumedDraft {
   id: string;
   formData: CreatePropertyFormData;
+  /** Where the host was. `0` for a draft saved before steps were recorded. */
+  step: number;
 }
 
 export function newDraftId(): string {
@@ -65,8 +86,18 @@ async function writeDrafts(drafts: readonly PropertyDraft[]): Promise<void> {
   await AsyncStorage.setItem(DRAFTS_KEY, JSON.stringify(stored));
 }
 
-/** Saves the form under `id`, replacing an earlier save of the same draft. */
-export async function saveDraft(id: string, formData: CreatePropertyFormData): Promise<void> {
+/**
+ * Saves the form under `id`, replacing an earlier save of the same draft.
+ *
+ * `step` is saved with it: a draft that remembers only what was typed sends the
+ * host back to step 1 to find their way forward again, which is most of the
+ * reason an interrupted listing never gets finished.
+ */
+export async function saveDraft(
+  id: string,
+  formData: CreatePropertyFormData,
+  step = 0,
+): Promise<void> {
   const { basicInfo, location, pricing, media } = formData;
   const draft: PropertyDraft = {
     id,
@@ -83,6 +114,7 @@ export async function saveDraft(id: string, formData: CreatePropertyFormData): P
     images: media.images ?? [],
     lastSaved: new Date(),
     formData,
+    step,
   };
   const others = (await readDrafts()).filter((existing) => existing.id !== id);
   await writeDrafts([draft, ...others]);
@@ -96,7 +128,11 @@ export async function deleteDraft(id: string): Promise<PropertyDraft[]> {
 
 /** Called by the drafts screen before it opens the publish flow. */
 export async function markDraftForResume(draft: PropertyDraft): Promise<void> {
-  const resumed: ResumedDraft = { id: draft.id, formData: draft.formData };
+  const resumed: ResumedDraft = {
+    id: draft.id,
+    formData: draft.formData,
+    step: draft.step ?? 0,
+  };
   await AsyncStorage.setItem(CURRENT_DRAFT_KEY, JSON.stringify(resumed));
 }
 
@@ -107,5 +143,6 @@ export async function takeDraftToResume(): Promise<ResumedDraft | null> {
   await AsyncStorage.removeItem(CURRENT_DRAFT_KEY);
   const parsed = JSON.parse(raw) as Partial<ResumedDraft>;
   if (!parsed || typeof parsed !== 'object' || !parsed.formData || !parsed.id) return null;
-  return { id: parsed.id, formData: parsed.formData };
+  const step = typeof parsed.step === 'number' && parsed.step > 0 ? Math.floor(parsed.step) : 0;
+  return { id: parsed.id, formData: parsed.formData, step };
 }

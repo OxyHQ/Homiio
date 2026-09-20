@@ -13,20 +13,88 @@
  * through JSON first: resuming a draft must publish the same body the unsaved
  * form would have.
  *
- * ONE deliberate change since that capture: `addressPublishedPrecision`. The
- * Location step's floor "Private" toggle was never sent, so every listing
- * published its floor and unit whatever the host chose (found in #491). The
- * body now carries the choice — `building` for private (and for an untouched
- * toggle), `exact` for public — and nothing else in it moved. Both values are
- * pinned below, because a body that always sent one of them would pass a test
- * that only looked at the other.
+ * TWO deliberate changes since that capture, both of them corrections of what
+ * the capture proved was being sent:
+ *
+ *  1. `addressPublishedPrecision`. The Location step's floor "Private" toggle
+ *     was never sent, so every listing published its floor and unit whatever
+ *     the host chose (found in #491). The body now carries the choice —
+ *     `building` for private (and for an untouched toggle), `exact` for public.
+ *     Both values are pinned below, because a body that always sent one of them
+ *     would pass a test that only looked at the other.
+ *
+ *  2. `images[]`. The captured shape was `{ url, caption, isPrimary }`, and
+ *     THAT SHAPE COULD NOT BE STORED: `property_images.image_id` is NOT NULL,
+ *     so the insert raised `23502` and every publish carrying a photo answered
+ *     500. The captured expectation was therefore pinning a body that never
+ *     worked, and keeping it would mean keeping the defect. A photo now states
+ *     its identity — the canonical `imageId` when the server already holds one,
+ *     the upload's storage `keys` when it does not — and its `order`, which the
+ *     backend has always honoured and the body never carried, so a reordered
+ *     photo list published in upload order. See `utils/propertyPhotos`.
  */
 import { ExchangeMode, OfferingType, AvailabilityWindowStatus } from '@homiio/shared-types';
 
 import { buildPropertyPayload } from '@/hooks/useCreatePropertyWizard';
+import type { UploadedImage } from '@/services/imageUploadService';
 import { createDefaultFormData, type CreatePropertyFormData } from '@/store/createPropertyFormStore';
 
 jest.mock('expo-router', () => ({ useRouter: () => ({ push: jest.fn() }) }));
+
+/** A photo as the upload endpoint hands it back: no row yet, four keys. */
+function uploadedPhoto(
+  n: number,
+  extra: { isPrimary?: boolean; caption?: string } = {},
+): UploadedImage {
+  return {
+    imageId: `upload-${n}`,
+    urls: {
+      small: `https://cdn.example/${n}-s.webp`,
+      medium: `https://cdn.example/${n}-m.webp`,
+      large: `https://cdn.example/${n}-l.webp`,
+      original: `https://cdn.example/${n}.jpg`,
+    },
+    keys: {
+      original: `properties/${n}-original.jpeg`,
+      variants: {
+        small: `properties/${n}-small.webp`,
+        medium: `properties/${n}-medium.webp`,
+        large: `properties/${n}-large.webp`,
+      },
+    },
+    metadata: {
+      originalSize: 4096,
+      originalFormat: 'jpeg',
+      uploadedAt: new Date('2026-09-01T00:00:00Z'),
+      width: 1600,
+      height: 1200,
+    },
+    ...extra,
+  };
+}
+
+/** The same photo once the server holds it — what the edit screen loads back. */
+function storedPhoto(n: number, extra: { isPrimary?: boolean; caption?: string } = {}): UploadedImage {
+  return { ...uploadedPhoto(n, extra), storedImageId: `image-row-${n}` };
+}
+
+/** The publish body's entry for {@link uploadedPhoto}. */
+function uploadedPhotoBody(n: number, order: number, caption: string) {
+  return {
+    keys: {
+      original: `properties/${n}-original.jpeg`,
+      small: `properties/${n}-small.webp`,
+      medium: `properties/${n}-medium.webp`,
+      large: `properties/${n}-large.webp`,
+    },
+    caption,
+    isPrimary: order === 0,
+    order,
+    bytes: 4096,
+    width: 1600,
+    height: 1200,
+  };
+}
 
 function populatedForm(): CreatePropertyFormData {
   const form = createDefaultFormData();
@@ -77,24 +145,7 @@ function populatedForm(): CreatePropertyFormData {
     instantBook: true,
   };
   form.amenities = { selectedAmenities: ['wifi', 'elevator', 'balcony'] };
-  form.media = {
-    images: [
-      {
-        imageId: 'img-1',
-        urls: {
-          small: 'https://cdn.example/1-s.jpg',
-          medium: 'https://cdn.example/1-m.jpg',
-          large: 'https://cdn.example/1-l.jpg',
-          original: 'https://cdn.example/1.jpg',
-        },
-        keys: { original: 'properties/1.jpg', variants: {} },
-        metadata: { originalSize: 1, originalFormat: 'jpeg', uploadedAt: new Date('2026-09-01T00:00:00Z') },
-        isPrimary: true,
-        caption: 'Living room',
-      },
-    ],
-    videos: [],
-  };
+  form.media = { images: [uploadedPhoto(1, { isPrimary: true, caption: 'Living room' })], videos: [] };
   form.offering = {
     ...form.offering,
     salePrice: 385000,
@@ -141,7 +192,7 @@ const EXPECTED_BODY = {
   floor: 3,
   yearBuilt: 1998,
   amenities: ['wifi', 'elevator', 'balcony'],
-  images: [{ url: 'https://cdn.example/1.jpg', caption: 'Living room', isPrimary: true }],
+  images: [uploadedPhotoBody(1, 0, 'Living room')],
   status: 'published',
   offerings: ['long_term_rent', 'short_term_rent', 'sale', 'exchange'],
   longTermRent: {
@@ -193,6 +244,58 @@ describe('buildPropertyPayload', () => {
       ...EXPECTED_BODY,
       addressPublishedPrecision: 'exact',
     });
+  });
+
+  it('publishes the photos in the order the host arranged them', () => {
+    const form = populatedForm();
+    // The grid's order after a reorder: the cover is photo 3.
+    form.media.images = [
+      uploadedPhoto(3, { isPrimary: true, caption: 'kitchen' }),
+      uploadedPhoto(1, { caption: 'bedroom' }),
+      uploadedPhoto(2, { caption: 'balcony' }),
+    ];
+    // Position IS the order, and the backend reads the list back by it. The old
+    // body carried no `order` at all, so this arrangement was lost on publish.
+    expect(wire(buildPropertyPayload(form)).images).toEqual([
+      uploadedPhotoBody(3, 0, 'kitchen'),
+      uploadedPhotoBody(1, 1, 'bedroom'),
+      uploadedPhotoBody(2, 2, 'balcony'),
+    ]);
+  });
+
+  it('leads with the cover even when it is not first in the stored list', () => {
+    const form = populatedForm();
+    form.media.images = [
+      uploadedPhoto(1, { caption: 'bedroom' }),
+      uploadedPhoto(2, { isPrimary: true, caption: 'kitchen' }),
+    ];
+    const images = wire(buildPropertyPayload(form)).images as {
+      caption: string;
+      isPrimary: boolean;
+    }[];
+    expect(images.map((image) => image.caption)).toEqual(['kitchen', 'bedroom']);
+    // Exactly one primary reaches the server — the database permits one per
+    // listing and would reject the whole publish over a second.
+    expect(images.filter((image) => image.isPrimary)).toHaveLength(1);
+  });
+
+  it('sends a stored photo by its canonical id, not by its keys', () => {
+    const form = populatedForm();
+    form.media.images = [storedPhoto(7, { isPrimary: true, caption: 'hall' })];
+    // An edit that only reorders must not re-upload or re-mint anything.
+    expect(wire(buildPropertyPayload(form)).images).toEqual([
+      { imageId: 'image-row-7', caption: 'hall', isPrimary: true, order: 0 },
+    ]);
+  });
+
+  it('drops a photo that can identify itself neither way', () => {
+    const form = populatedForm();
+    const orphan = uploadedPhoto(9, { caption: 'orphan' });
+    orphan.keys = { original: 'properties/9-original.jpeg', variants: {} };
+    form.media.images = [uploadedPhoto(1, { isPrimary: true, caption: 'ok' }), orphan];
+    // The server would refuse it; failing the publish over one unusable entry
+    // would lose the photos that are fine too.
+    expect(wire(buildPropertyPayload(form)).images).toEqual([uploadedPhotoBody(1, 0, 'ok')]);
   });
 
   it('keeps the default new-listing body (long-term rent only) unchanged', () => {
