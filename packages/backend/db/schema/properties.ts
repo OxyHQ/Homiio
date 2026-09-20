@@ -560,7 +560,36 @@ export const properties = pgTable(
     bedrooms: doublePrecision().notNull().default(0),
     bathrooms: doublePrecision().notNull().default(0),
     squareFootage: doublePrecision().notNull().default(0),
-    floor: doublePrecision().notNull().default(0),
+    /**
+     * Which floor the dwelling is on. **NULL means nobody said.**
+     *
+     * It was `NOT NULL DEFAULT 0`, and that made "ground floor" and "not
+     * stated" the same value — so a filter for a ground-floor flat matched
+     * every listing whose floor nobody had filled in, which in practice was
+     * almost all of them. That is not a filter with a rounding error in it; it
+     * is a filter that answers a different question.
+     *
+     * `0` is now a real answer and the only one that means the ground floor.
+     * The provider layer already distinguishes them: Otodom maps `ground_floor`
+     * to `0` and leaves `cellar`, `garret` and `floor_higher_10` UNSET
+     * (`providers/pl/otodom/parse.ts`), so the information existed and the
+     * column was the thing that could not hold it.
+     *
+     * Negative values are meaningful and permitted: a basement is a floor
+     * somebody can be asked to live on.
+     *
+     * Shaped like `yearBuilt` directly below rather than like the three
+     * measurements above, because it answers the same KIND of question they do
+     * — a fact about the building that may simply not be recorded — and
+     * `yearBuilt` already had it right.
+     *
+     * Publication is a separate matter and is NOT decided here: the floor is
+     * part of the address's precision (ADR 0003), so `propertySerializer.ts`
+     * withholds it below `exact` and `db/properties/propertyFilters.ts`
+     * refuses to FILTER on a floor a listing does not publish — otherwise the
+     * result set would reveal what the payload withholds.
+     */
+    floor: doublePrecision(),
     yearBuilt: doublePrecision(),
 
     hasElevator: boolean().notNull().default(false),

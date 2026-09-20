@@ -206,6 +206,59 @@ export function priceInRange(
   return and(eq(currencyColumn, currency), range);
 }
 
+/**
+ * Listings on a given floor — and only those that PUBLISH one.
+ *
+ * ## Two rules, and the second is the one that is easy to miss
+ *
+ * **Unknown is not a match.** `floor` is NULL when nobody said, so a bound over
+ * it excludes those rows for free: `floor = 0` is NULL for a NULL floor, which
+ * is not TRUE. That works only because the column stopped being
+ * `NOT NULL DEFAULT 0` (migration 0024) — before it, every listing nobody had
+ * filled in claimed the ground floor, and "ground floor" matched the catalogue.
+ *
+ * **A floor that is not published may not be filtered on either.** The
+ * serializer withholds `floor` below `exact` precision because the floor is
+ * part of the address (ADR 0003). A filter with no such rule would hand the
+ * same fact back through a different door: ask for floor 3 inside a small
+ * enough area and the RESULT SET tells you the floor of a listing whose payload
+ * refused to. Narrowing the query to what the row publishes is what keeps the
+ * two doors agreeing.
+ *
+ * The predicate mirrors `publishedAddressPrecision` in
+ * `db/properties/propertySerializer.ts`, which resolves the public ceiling from
+ * BOTH columns — `show_address_number = false` caps it at `street`, which is
+ * coarser than `exact`. One rule in two languages is the shape a rule drifts
+ * in, and drift is silent both ways: too permissive starts revealing floors the
+ * payload withholds, too strict starts dropping listings from a filter with
+ * nothing to show for it.
+ *
+ * `__tests__/integration/floorFilter.test.ts` holds it still by seeding a
+ * listing for each combination that matters — including one at `exact`
+ * precision whose street number is hidden, which is the case a predicate
+ * reading only the precision column would get wrong while every other
+ * assertion still passed.
+ */
+export function publishesFloor(): SQL {
+  return and(
+    eq(properties.addressPublishedPrecision, 'exact'),
+    eq(properties.showAddressNumber, true),
+  ) as SQL;
+}
+
+/**
+ * An inclusive floor range over the listings that publish their floor.
+ *
+ * `undefined` on both sides is no filter at all — including no precision
+ * narrowing, because a search nobody asked to narrow must not quietly lose
+ * every listing that keeps its floor to itself.
+ */
+export function floorInRange(min: number | undefined, max: number | undefined): SQL | undefined {
+  const range = inRange(properties.floor, min, max);
+  if (!range) return undefined;
+  return and(publishesFloor(), range);
+}
+
 /** An inclusive range on a timestamp column. */
 export function inDateRange(
   column: AnyPgColumn,

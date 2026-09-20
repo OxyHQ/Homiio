@@ -353,6 +353,8 @@ export function buildSearchParams(query: SearchQuery): Record<string, string | n
   if (query.priceCurrency && (query.priceMin !== undefined || query.priceMax !== undefined)) {
     params.priceCurrency = query.priceCurrency;
   }
+  if (query.groundFloor === true) params.groundFloor = 'true';
+  if (query.hasElevator === true) params.hasElevator = 'true';
   if (typeof query.bedrooms === 'number' && query.bedrooms > 0) {
     params.bedrooms = query.bedrooms;
   }

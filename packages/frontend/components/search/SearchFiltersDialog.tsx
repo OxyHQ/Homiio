@@ -38,6 +38,7 @@ import {
   AvailabilityFilter,
   CountFilter,
   FilterFooter,
+  FloorFilter,
   FilterSection,
   PriceRangeFilter,
   SwitchFilterRow,
@@ -45,6 +46,7 @@ import {
   type ToggleChipOption,
 } from '@oxy.so/bloom/stay-filters';
 import { StepperRow } from '@oxy.so/bloom/stepper';
+import { Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { formatArea, OfferingType, type PropertyType } from '@homiio/shared-types';
 import { getAmenityById } from '@/constants/amenities';
@@ -121,6 +123,24 @@ function fromCivilDate(value: string | undefined): Date | null {
   return Number.isFinite(parsed.getTime()) ? parsed : null;
 }
 
+/**
+ * The floor chips Homiio can actually answer.
+ *
+ * `ground` resolves to `floor = 0` over the listings that publish their floor;
+ * `elevator` to `has_elevator`. Bloom's default set also offers `middle` and
+ * `top`, which need the building's floor count — a column that does not exist,
+ * so those two are not offered rather than drawn over nothing.
+ */
+type FloorChip = 'ground' | 'elevator';
+// The `label` here is never rendered — `FloorFilter`'s `labels` prop overrides
+// every one of them with a translated string. It is present because Bloom's
+// option type requires it, and it is the English so a reader of this file can
+// see which chip is which without opening the locale.
+const FLOOR_CHIPS: Array<{ value: FloorChip; label: string }> = [
+  { value: 'ground', label: 'Ground floor' },
+  { value: 'elevator', label: 'With a lift' },
+];
+
 /** The fields this dialog edits, and nothing else. */
 type FilterDraft = Pick<
   SearchQuery,
@@ -132,6 +152,8 @@ type FilterDraft = Pick<
   | 'bathrooms'
   | 'sizeMin'
   | 'sizeMax'
+  | 'groundFloor'
+  | 'hasElevator'
   | 'availableNow'
   | 'availableBy'
   | 'guests'
@@ -151,6 +173,8 @@ function draftOf(query: SearchQuery): FilterDraft {
     bathrooms: query.bathrooms,
     sizeMin: query.sizeMin,
     sizeMax: query.sizeMax,
+    groundFloor: query.groundFloor,
+    hasElevator: query.hasElevator,
     availableNow: query.availableNow,
     availableBy: query.availableBy,
     guests: query.guests,
@@ -170,6 +194,8 @@ const EMPTY_DRAFT: FilterDraft = {
   bathrooms: undefined,
   sizeMin: undefined,
   sizeMax: undefined,
+  groundFloor: undefined,
+  hasElevator: undefined,
   availableNow: undefined,
   availableBy: undefined,
   guests: undefined,
@@ -204,6 +230,10 @@ export function countActiveFilters(
   // Likewise one: the switch and the date are two spellings of the same
   // question, and only one of them is ever in force.
   if (query.availableNow === true || query.availableBy !== undefined) count += 1;
+  // Two chips, counted separately: they are two independent questions in one
+  // control, and somebody who picked both did narrow twice.
+  if (query.groundFloor === true) count += 1;
+  if (query.hasElevator === true) count += 1;
   count += query.amenities.length;
   if (query.fairPrice === true) count += 1;
   if (query.instantBook === true) count += 1;
@@ -277,6 +307,16 @@ function FiltersBody({ query, onApply, onClose, showTypes }: FiltersBodyProps): 
   // The thumbs follow the drag; the draft (and the count) follow the release.
   const [priceUi, setPriceUi] = useState<[number, number]>(() =>
     priceRangeValue(query.priceMin, query.priceMax, track),
+  );
+
+  // Derived rather than held: the chips ARE the two booleans, and a second
+  // copy of that state is the one that drifts when a draft is cleared.
+  const floorChips = useMemo<FloorChip[]>(
+    () => [
+      ...(draft.groundFloor ? (['ground'] as const) : []),
+      ...(draft.hasElevator ? (['elevator'] as const) : []),
+    ],
+    [draft.groundFloor, draft.hasElevator],
   );
 
   const patch = useCallback((next: Partial<FilterDraft>) => {
@@ -388,6 +428,39 @@ function FiltersBody({ query, onApply, onClose, showTypes }: FiltersBodyProps): 
             onChange={(priceCurrency) => patch({ priceCurrency })}
           />
           <PriceHistogramNote histogram={priceHistogram} />
+        </FilterSection>
+
+        {/* Two chips, not Bloom's four.
+            Bloom's default set is Ground / Middle / Top / With elevator, and
+            Homiio can answer exactly half of it: there is no column for how
+            many floors a building has, so "top" and "middle" have nothing to
+            resolve against and would be chips drawn over nothing.
+            "Ground" is only meaningful because `properties.floor` stopped being
+            `NOT NULL DEFAULT 0` — before that, every listing whose floor nobody
+            stated claimed the ground floor. */}
+        <FilterSection title={t('search.filters.floor')}>
+          <FloorFilter<FloorChip>
+            options={FLOOR_CHIPS}
+            labels={{
+              ground: t('search.filters.floorGround'),
+              elevator: t('search.filters.floorElevator'),
+            }}
+            value={floorChips}
+            onValueChange={(next) =>
+              patch({
+                groundFloor: next.includes('ground') ? true : undefined,
+                hasElevator: next.includes('elevator') ? true : undefined,
+              })
+            }
+            accessibilityLabel={t('search.filters.floor')}
+          />
+          {/* The honest footnote: the filter reaches only the listings whose
+              owner chose to publish their floor, because the floor is part of
+              the address. Without it an empty result reads as "no ground-floor
+              flats here" rather than "most listings here do not say". */}
+          {draft.groundFloor ? (
+            <BloomText style={styles.floorNote}>{t('search.filters.floorPublishedOnly')}</BloomText>
+          ) : null}
         </FilterSection>
 
         <FilterSection title={t('search.filters.rooms')}>
@@ -520,6 +593,10 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: spacing.xl,
+  },
+  floorNote: {
+    fontSize: 12,
+    opacity: 0.7,
   },
   countRow: {
     marginBottom: spacing.xl,

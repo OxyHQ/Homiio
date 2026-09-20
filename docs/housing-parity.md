@@ -72,7 +72,7 @@ count.
 | Floor area | ✓ | `sizeMin`/`sizeMax` | `areaInRange` | **live** — m², and an unmeasured listing is excluded from a maximum rather than matching it |
 | Availability (now / from date) | ✓ | `availableNow`/`availableBy` | `availableBy` | **live** — long-term and exchange only; a stay is booked for a range and a sale completes |
 | Features | partial | `amenities` | `hasAllAmenities` | **partial** — Bloom's `features` and Homiio's amenities are not the same vocabulary; unmapped |
-| Floor | ✗ | ✗ | ✗ | **blocked** — `properties.floor` is `NOT NULL DEFAULT 0`, so "ground floor" and "not stated" are the same value; see below |
+| Floor | ✓ | `groundFloor`, `hasElevator` | `floor = 0` over listings that PUBLISH a floor; `has_elevator` | **partial** — ground floor and lift are live; "top" and "middle" are not offered, see below |
 
 ### Buy
 
@@ -95,22 +95,39 @@ count.
 | Instant booking | **live** | `properties.short_term_rent_instant_book` |
 | Dates / guests | **partial** | In `SearchQuery` and the URL; availability is filtered on `/properties`, not on `/properties/search` |
 
-### Why the floor filter is blocked rather than open
+### The floor filter: what it took, and what it still will not claim
 
-`properties.floor` is `doublePrecision NOT NULL DEFAULT 0`. Ground floor is a
-real, common answer and it is stored as `0` — the same value a listing nobody
-filled in gets. The two are **indistinguishable in the data**.
+`properties.floor` was `doublePrecision NOT NULL DEFAULT 0`, so "ground floor"
+and "nobody said" were the same bytes and a ground-floor filter matched the
+catalogue. Migration `0024` makes the column nullable and clears the defaulted
+zeros, so `0` is now a real answer and the only one that means the ground floor.
+Negative floors — a basement is a floor somebody can be asked to live on — are
+representable for the first time.
 
-So a floor filter cannot be written honestly. "Floor 2 or above" would exclude
-every unstated listing, which is defensible; "up to floor 1" would include every
-one of them, which is the same silent widening the area filter's `> 0` guard
-exists to prevent — and here there is no guard to write, because zero is a
-legitimate answer.
+**The backfill is lossy and says so.** At rest a deliberate `0` and a defaulted
+`0` are indistinguishable, so nothing can preserve the first while clearing the
+second. Clearing both is the reading that cannot assert something false: "we do
+not know" is true of every one of those rows today. The few genuine ground
+floors are not lost for long — external listings are re-ingested continuously,
+and the provider layer has always parsed Otodom's `ground_floor` as a real `0`
+(`providers/pl/otodom/parse.ts`).
 
-Making the column nullable is the fix, and it needs a decision nobody has made:
-the existing `0` rows cannot be backfilled to `NULL` without erasing real
-ground-floor data, and cannot be left as `0` without keeping the ambiguity. That
-is a product call about historical rows, not a migration.
+**A floor that is not published is not filtered on either.** The serializer
+withholds `floor` below `exact` precision because the floor is part of the
+address (ADR 0003). A filter with no matching rule would hand the same fact back
+through a different door: ask for the ground floor inside a small enough area
+and the result set tells you the floor of a listing whose payload refused to. So
+the predicate is narrowed to what the row publishes — both columns that decide
+it, since `show_address_number = false` caps the ceiling at `street`. The chip
+carries a note saying the filter reaches only listings that publish a floor, so
+an empty result reads as "most listings here do not say" rather than "there are
+none".
+
+**Two chips, not Bloom's four.** Bloom's `FloorFilter` offers Ground / Middle /
+Top / With elevator. Homiio can answer half of it: there is **no column for how
+many floors a building has**, so "top" and "middle" have nothing to resolve
+against and are not drawn. "With a lift" is new and needs no precision gate —
+a lift is not part of the address.
 
 ### Swap
 
@@ -333,9 +350,9 @@ and most of #519 §8 (Sindi).
 
 Open, in rough order of how much they unblock:
 
-1. **Filters end to end** — floor (blocked), energy, beds, and the room-vs-whole-home
-   segment. Area and availability are live in all four columns, including the
-   histogram, and the currency contract is closed end to end (§6).
+1. **Filters end to end** — energy, beds, and the room-vs-whole-home segment
+   remain; each of the first two needs a column and a source before a filter
+   means anything. Area, availability, currency and floor are live.
 2. **Payment receipts and the processor** — the ledger is live; receipts are
    ordinary work on the private document path repair photos now use, and only
    the checkout is blocked, on a provider decision.

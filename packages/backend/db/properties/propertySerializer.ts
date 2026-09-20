@@ -342,7 +342,13 @@ export function serializeProperty(
     bedrooms: row.bedrooms,
     bathrooms: row.bathrooms,
     squareFootage: row.squareFootage,
-    floor: precision === 'exact' ? row.floor : undefined,
+    // `?? undefined` matters: the shared contract says the floor is ABSENT and
+    // "never `null`" below `exact` precision, and since migration 0024 it can
+    // be null at `exact` too — NULL now means nobody said, where it used to be
+    // an unavoidable `0`. Both silences have to look the same on the wire, or a
+    // reader learns from a `null` that the owner published a floor they do not
+    // have, which is not a fact about the home.
+    floor: precision === 'exact' ? row.floor ?? undefined : undefined,
     yearBuilt: row.yearBuilt,
 
     hasElevator: row.hasElevator,

@@ -406,7 +406,11 @@
       "availability": "প্রাপ্যতা",
       "availableNow": "এখনই উপলব্ধ",
       "availableNowHint": "আজই বসবাসের জন্য প্রস্তুত",
-      "availableFrom": "এই তারিখ থেকে উপলব্ধ"
+      "availableFrom": "এই তারিখ থেকে উপলব্ধ",
+      "floor": "তলা",
+      "floorGround": "নিচতলা",
+      "floorElevator": "লিফট সহ",
+      "floorPublishedOnly": "যেসব বিজ্ঞাপনের মালিক তলা প্রকাশ করেন কেবল সেগুলোই খুঁজে পাওয়া যায়।"
     },
     "mode": {
       "label": "Browse mode",

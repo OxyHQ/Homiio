@@ -410,7 +410,11 @@
       "availability": "التوفّر",
       "availableNow": "متاح الآن",
       "availableNowHint": "جاهز للسكن اليوم",
-      "availableFrom": "متاح اعتبارًا من"
+      "availableFrom": "متاح اعتبارًا من",
+      "floor": "الطابق",
+      "floorGround": "الطابق الأرضي",
+      "floorElevator": "مع مصعد",
+      "floorPublishedOnly": "لا يمكن العثور إلا على الإعلانات التي ينشر أصحابها الطابق."
     },
     "mode": {
       "label": "Browse mode",

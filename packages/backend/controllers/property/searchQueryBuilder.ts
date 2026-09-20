@@ -55,6 +55,7 @@ import {
   hasOffering,
   hasPhotos,
   idNotIn,
+  floorInRange,
   inRange,
   isAvailable,
   notDeleted,
@@ -521,6 +522,21 @@ export function buildSearchPlan(
   );
   if (areaRange) conditions.push(areaRange);
 
+  // --- Floor ---
+  //
+  // `floorMin`/`floorMax`, and `groundFloor=true` as the shorthand the chips
+  // actually send (`floor = 0` on both sides).
+  //
+  // Two rules, both in `floorInRange`: a floor nobody stated is NULL and
+  // matches nothing, and a floor the listing does not PUBLISH matches nothing
+  // either — filtering on a fact the payload withholds would hand it back
+  // through the result set (ADR 0003).
+  const groundFloorOnly = asString(query.groundFloor)?.toLowerCase() === 'true';
+  const floorRange = groundFloorOnly
+    ? floorInRange(0, 0)
+    : floorInRange(parseFloatParam(query.floorMin), parseFloatParam(query.floorMax));
+  if (floorRange) conditions.push(floorRange);
+
   // --- Availability: free to move into now, or by a given day ---
   //
   // `availableNow` wins over `availableBy` when both arrive, because "today"
@@ -546,6 +562,12 @@ export function buildSearchPlan(
   if (instantBook !== undefined) conditions.push(booleanIs(properties.shortTermRentInstantBook, instantBook));
   const petFriendly = parseBoolParam(query.petFriendly);
   if (petFriendly !== undefined) conditions.push(booleanIs(properties.petFriendly, petFriendly));
+  // A lift is the other half of the floor question — "third floor" and "third
+  // floor with a lift" are different homes to anybody carrying shopping, and
+  // Bloom groups the two controls together for that reason. Unlike the floor
+  // itself, this one is not part of the address, so it needs no precision gate.
+  const hasElevator = parseBoolParam(query.hasElevator);
+  if (hasElevator !== undefined) conditions.push(booleanIs(properties.hasElevator, hasElevator));
   if (parseBoolParam(query.hasPhotos) === true) conditions.push(hasPhotos());
   const fairPrice = parseBoolParam(query.fairPrice);
   if (fairPrice === true) conditions.push(booleanIs(properties.priceEthicsIsFairPrice, true));

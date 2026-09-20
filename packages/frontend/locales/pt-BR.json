@@ -406,7 +406,11 @@
       "availability": "Disponibilidade",
       "availableNow": "Disponível agora",
       "availableNowHint": "Pronto para entrar hoje",
-      "availableFrom": "Disponível a partir de"
+      "availableFrom": "Disponível a partir de",
+      "floor": "Andar",
+      "floorGround": "Térreo",
+      "floorElevator": "Com elevador",
+      "floorPublishedOnly": "Só é possível encontrar anúncios cujo proprietário publica o andar."
     },
     "mode": {
       "label": "Browse mode",
