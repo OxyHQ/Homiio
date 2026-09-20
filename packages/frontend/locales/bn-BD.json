@@ -414,7 +414,8 @@
       "placeKind": "আবাসনের ধরন",
       "placeKindAny": "যেকোনো",
       "placeKindWholeHome": "পুরো বাসা",
-      "placeKindRoom": "একটি ঘর"
+      "placeKindRoom": "একটি ঘর",
+      "features": "সুবিধা"
     },
     "mode": {
       "label": "Browse mode",
@@ -610,6 +611,19 @@
       "childrenDescription": "২–১২ বছর",
       "pets": "পোষা প্রাণী",
       "petsDescription": "শুধু পোষা প্রাণী রাখা যায় এমন বাসা"
+    },
+    "features": {
+      "elevator": "লিফট",
+      "parking": "পার্কিং",
+      "terrace": "ছাদবারান্দা",
+      "garden": "বাগান",
+      "pool": "সুইমিং পুল",
+      "furnished": "সাজানো",
+      "pets": "পোষা প্রাণী চলবে",
+      "airConditioning": "এয়ার কন্ডিশনিং",
+      "heating": "হিটিং",
+      "accessible": "ধাপবিহীন প্রবেশ",
+      "storage": "স্টোর রুম"
     }
   },
   "profile": {

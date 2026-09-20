@@ -414,7 +414,8 @@
       "placeKind": "आवास का प्रकार",
       "placeKindAny": "कोई भी",
       "placeKindWholeHome": "पूरा घर",
-      "placeKindRoom": "एक कमरा"
+      "placeKindRoom": "एक कमरा",
+      "features": "सुविधाएँ"
     },
     "mode": {
       "label": "Browse mode",
@@ -610,6 +611,19 @@
       "childrenDescription": "2–12 वर्ष",
       "pets": "पालतू जानवर",
       "petsDescription": "केवल वे घर जहाँ पालतू जानवरों की अनुमति है"
+    },
+    "features": {
+      "elevator": "लिफ़्ट",
+      "parking": "पार्किंग",
+      "terrace": "छत",
+      "garden": "बगीचा",
+      "pool": "स्विमिंग पूल",
+      "furnished": "सुसज्जित",
+      "pets": "पालतू जानवर की अनुमति",
+      "airConditioning": "एयर कंडीशनिंग",
+      "heating": "हीटिंग",
+      "accessible": "बिना सीढ़ी पहुँच",
+      "storage": "स्टोर रूम"
     }
   },
   "profile": {

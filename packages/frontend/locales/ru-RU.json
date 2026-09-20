@@ -416,7 +416,8 @@
       "placeKind": "Тип жилья",
       "placeKindAny": "Любой",
       "placeKindWholeHome": "Жильё целиком",
-      "placeKindRoom": "Комната"
+      "placeKindRoom": "Комната",
+      "features": "Удобства"
     },
     "mode": {
       "label": "Browse mode",
@@ -612,6 +613,19 @@
       "childrenDescription": "От 2 до 12 лет",
       "pets": "Питомцы",
       "petsDescription": "Только жильё, где разрешены питомцы"
+    },
+    "features": {
+      "elevator": "Лифт",
+      "parking": "Парковка",
+      "terrace": "Терраса",
+      "garden": "Сад",
+      "pool": "Бассейн",
+      "furnished": "С мебелью",
+      "pets": "Можно с животными",
+      "airConditioning": "Кондиционер",
+      "heating": "Отопление",
+      "accessible": "Вход без ступеней",
+      "storage": "Кладовая"
     }
   },
   "profile": {

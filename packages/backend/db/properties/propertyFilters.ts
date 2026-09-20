@@ -29,8 +29,10 @@
  *    too broad to be useful, not an accident of the port.
  */
 
-import { and, eq, gt, gte, inArray, isNull, lte, notInArray, or, sql, type SQL } from 'drizzle-orm';
+import { and, eq, gt, gte, inArray, isNull, lte, ne, notInArray, or, sql, type SQL } from 'drizzle-orm';
 import type { AnyPgColumn } from 'drizzle-orm/pg-core';
+
+import type { HousingFeature } from '@homiio/shared-types';
 
 import { qualified } from '../casing';
 import { escapeLikePattern } from '@oxy.so/utils/sql';
@@ -257,6 +259,43 @@ export function floorInRange(min: number | undefined, max: number | undefined): 
   const range = inRange(properties.floor, min, max);
   if (!range) return undefined;
   return and(publishesFloor(), range);
+}
+
+/**
+ * One housing feature, as a predicate over the column that records it.
+ *
+ * Only the five with a column reach here — `HOUSING_FEATURE_SOURCE` in
+ * `shared-types` decides which those are, and the other six become amenity
+ * slugs the caller folds into `hasAllAmenities`. The split is made there so
+ * this function and the chip list cannot disagree about what "garden" means.
+ *
+ * `parking` and `furnished` are not booleans and each has a value that means
+ * "no": `parking_type = 'none'` and the two furnishing states that are an
+ * absence or a silence. Treating either as a mere non-null would return every
+ * listing, which is the shape of an unfiltered result wearing a filter's name.
+ */
+export function featureColumnCondition(feature: HousingFeature): SQL | undefined {
+  switch (feature) {
+    case 'elevator':
+      return eq(properties.hasElevator, true);
+    case 'garden':
+      return eq(properties.hasGarden, true);
+    case 'pets':
+      return eq(properties.petFriendly, true);
+    case 'parking':
+      // Any arrangement that is not "there is none" — street, assigned, garage.
+      return ne(properties.parkingType, 'none');
+    case 'furnished':
+      // `partially_furnished` counts: somebody filtering for furnished wants a
+      // home they can move into, and a half-furnished one is an answer they can
+      // judge. `not_specified` does NOT — an unstated fact is not a yes.
+      return inArray(properties.furnishedStatus, ['furnished', 'partially_furnished']);
+    default:
+      // The amenity-backed six. Reaching here means the mapping and this switch
+      // have drifted, and answering `undefined` would silently widen the search
+      // rather than narrow it — so it is the caller's job never to ask.
+      return undefined;
+  }
 }
 
 /** An inclusive range on a timestamp column. */

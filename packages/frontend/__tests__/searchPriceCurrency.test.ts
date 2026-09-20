@@ -271,3 +271,26 @@ describe('the floor chips', () => {
     expect(buildSearchParams(baseQuery({})).groundFloor).toBeUndefined();
   });
 });
+
+describe('housing features', () => {
+  it('round-trips through a shareable link', () => {
+    const { params } = buildSearchParamsForUrl(
+      baseQuery({ features: ['elevator', 'pool'] }),
+    );
+    expect(params.features).toBe('elevator,pool');
+    expect(parseSearchParams(params).query.features).toEqual(['elevator', 'pool']);
+  });
+
+  it('drops a feature this build does not know', () => {
+    // A chip from a newer client must not empty an older one's results — the
+    // known half still applies, and the unknown one is simply not asked for.
+    expect(
+      parseSearchParams({ features: 'elevator,teleporter' }).query.features,
+    ).toEqual(['elevator']);
+  });
+
+  it('writes nothing when none are chosen', () => {
+    expect(buildSearchParamsForUrl(baseQuery({})).params.features).toBeUndefined();
+    expect(buildSearchParams(baseQuery({ features: [] })).features).toBeUndefined();
+  });
+});

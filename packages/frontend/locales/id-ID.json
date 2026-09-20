@@ -414,7 +414,8 @@
       "placeKind": "Jenis tempat",
       "placeKindAny": "Semua",
       "placeKindWholeHome": "Seluruh tempat",
-      "placeKindRoom": "Satu kamar"
+      "placeKindRoom": "Satu kamar",
+      "features": "Fasilitas"
     },
     "mode": {
       "label": "Browse mode",
@@ -610,6 +611,19 @@
       "childrenDescription": "Usia 2–12 tahun",
       "pets": "Hewan peliharaan",
       "petsDescription": "Hanya hunian yang mengizinkan hewan peliharaan"
+    },
+    "features": {
+      "elevator": "Lift",
+      "parking": "Parkir",
+      "terrace": "Teras",
+      "garden": "Taman",
+      "pool": "Kolam renang",
+      "furnished": "Berperabot",
+      "pets": "Boleh bawa hewan",
+      "airConditioning": "AC",
+      "heating": "Pemanas",
+      "accessible": "Akses tanpa tangga",
+      "storage": "Gudang"
     }
   },
   "profile": {

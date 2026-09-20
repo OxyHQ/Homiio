@@ -37,6 +37,7 @@ import {
   AreaRangeFilter,
   AvailabilityFilter,
   CountFilter,
+  FeatureFilter,
   FilterFooter,
   FloorFilter,
   SegmentedFilter,
@@ -51,10 +52,12 @@ import { Text as BloomText } from '@oxy.so/bloom/typography';
 
 import {
   formatArea,
+  HOUSING_FEATURES,
   OfferingType,
   PLACE_KINDS,
   placeKindOf,
   propertyTypesForPlaceKind,
+  type HousingFeature,
   type PlaceKind,
   type PropertyType,
 } from '@homiio/shared-types';
@@ -168,6 +171,7 @@ type FilterDraft = Pick<
   | 'bathrooms'
   | 'sizeMin'
   | 'sizeMax'
+  | 'features'
   | 'groundFloor'
   | 'hasElevator'
   | 'availableNow'
@@ -189,6 +193,7 @@ function draftOf(query: SearchQuery): FilterDraft {
     bathrooms: query.bathrooms,
     sizeMin: query.sizeMin,
     sizeMax: query.sizeMax,
+    features: query.features,
     groundFloor: query.groundFloor,
     hasElevator: query.hasElevator,
     availableNow: query.availableNow,
@@ -250,6 +255,8 @@ export function countActiveFilters(
   // control, and somebody who picked both did narrow twice.
   if (query.groundFloor === true) count += 1;
   if (query.hasElevator === true) count += 1;
+  // Each chip is its own question, like the amenities directly below.
+  count += query.features?.length ?? 0;
   count += query.amenities.length;
   if (query.fairPrice === true) count += 1;
   if (query.instantBook === true) count += 1;
@@ -338,6 +345,13 @@ function FiltersBody({ query, onApply, onClose, showTypes }: FiltersBodyProps): 
   // Built here rather than at module scope because the labels are translated,
   // and a module-level constant would freeze them at the language the app
   // started in.
+  // Translated here rather than at module scope, so a language change is
+  // reflected without restarting the app.
+  const featureOptions = useMemo(
+    () => HOUSING_FEATURES.map((value) => ({ value, label: t(`search.features.${value}`) })),
+    [t],
+  );
+
   const placeKindOptions = useMemo(
     () => PLACE_KINDS.map((value) => ({ value, label: t(PLACE_KIND_LABEL[value]) })),
     [t],
@@ -499,6 +513,24 @@ function FiltersBody({ query, onApply, onClose, showTypes }: FiltersBodyProps): 
           {draft.groundFloor ? (
             <BloomText style={styles.floorNote}>{t('search.filters.floorPublishedOnly')}</BloomText>
           ) : null}
+        </FilterSection>
+
+        {/* Bloom's eleven. Five are answered by a COLUMN and six by an amenity
+            slug, and which is which is decided once in
+            `shared-types/housingFeature.ts` — a garden is `has_garden`, not the
+            slug `garden_space`, because the column is on every row while a slug
+            is free text a listing carries or does not. The server folds the
+            slug half into `amenities` itself, so this control never has to
+            know. */}
+        <FilterSection title={t('search.filters.features')}>
+          <FeatureFilter<HousingFeature>
+            options={featureOptions}
+            value={draft.features ?? []}
+            onValueChange={(features) =>
+              patch({ features: features.length > 0 ? features : undefined })
+            }
+            accessibilityLabel={t('search.filters.features')}
+          />
         </FilterSection>
 
         <FilterSection title={t('search.filters.rooms')}>

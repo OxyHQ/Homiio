@@ -414,7 +414,8 @@
       "placeKind": "Type de logement",
       "placeKindAny": "Peu importe",
       "placeKindWholeHome": "Logement entier",
-      "placeKindRoom": "Une chambre"
+      "placeKindRoom": "Une chambre",
+      "features": "Caractéristiques"
     },
     "mode": {
       "label": "Browse mode",
@@ -610,6 +611,19 @@
       "childrenDescription": "De 2 à 12 ans",
       "pets": "Animaux",
       "petsDescription": "Uniquement les logements acceptant les animaux"
+    },
+    "features": {
+      "elevator": "Ascenseur",
+      "parking": "Parking",
+      "terrace": "Terrasse",
+      "garden": "Jardin",
+      "pool": "Piscine",
+      "furnished": "Meublé",
+      "pets": "Animaux acceptés",
+      "airConditioning": "Climatisation",
+      "heating": "Chauffage",
+      "accessible": "Accès de plain-pied",
+      "storage": "Cave ou débarras"
     }
   },
   "profile": {

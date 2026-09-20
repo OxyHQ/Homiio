@@ -536,7 +536,8 @@
       "placeKind": "Tipo di alloggio",
       "placeKindAny": "Qualsiasi",
       "placeKindWholeHome": "Alloggio intero",
-      "placeKindRoom": "Una stanza"
+      "placeKindRoom": "Una stanza",
+      "features": "Caratteristiche"
     },
     "mode": {
       "label": "Modalità di ricerca",
@@ -717,6 +718,19 @@
       "childrenDescription": "Da 2 a 12 anni",
       "pets": "Animali",
       "petsDescription": "Solo alloggi che accettano animali"
+    },
+    "features": {
+      "elevator": "Ascensore",
+      "parking": "Parcheggio",
+      "terrace": "Terrazza",
+      "garden": "Giardino",
+      "pool": "Piscina",
+      "furnished": "Arredato",
+      "pets": "Animali ammessi",
+      "airConditioning": "Aria condizionata",
+      "heating": "Riscaldamento",
+      "accessible": "Accesso senza gradini",
+      "storage": "Ripostiglio"
     }
   },
   "profile": {

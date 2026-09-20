@@ -418,7 +418,8 @@
       "placeKind": "Tipus d’allotjament",
       "placeKindAny": "Qualsevol",
       "placeKindWholeHome": "Habitatge sencer",
-      "placeKindRoom": "Una habitació"
+      "placeKindRoom": "Una habitació",
+      "features": "Característiques"
     },
     "mode": {
       "label": "Mode de cerca",
@@ -617,6 +618,19 @@
       "childrenDescription": "De 2 a 12 anys",
       "pets": "Mascotes",
       "petsDescription": "Només habitatges que admeten mascotes"
+    },
+    "features": {
+      "elevator": "Ascensor",
+      "parking": "Aparcament",
+      "terrace": "Terrassa",
+      "garden": "Jardí",
+      "pool": "Piscina",
+      "furnished": "Moblat",
+      "pets": "S’admeten mascotes",
+      "airConditioning": "Aire condicionat",
+      "heating": "Calefacció",
+      "accessible": "Accés sense esglaons",
+      "storage": "Traster"
     }
   },
   "profile": {

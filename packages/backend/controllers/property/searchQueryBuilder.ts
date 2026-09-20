@@ -42,6 +42,10 @@ import {
   ExchangeMode,
   isOpaqueId,
   parseListingCurrency,
+  amenitySlugsForFeatures,
+  columnFeatures,
+  parseHousingFeature,
+  type HousingFeature,
   type ListingCurrency,
 } from '@homiio/shared-types';
 
@@ -51,6 +55,7 @@ import {
   availableBy,
   booleanIs,
   exchangeModeIn,
+  featureColumnCondition,
   hasAllAmenities,
   hasOffering,
   hasPhotos,
@@ -576,7 +581,31 @@ export function buildSearchPlan(
   if (availableByDate) conditions.push(availableBy(availableByDate));
 
   // --- Amenities (must include all requested) ---
-  const amenities = hasAllAmenities(getAmenitiesParam(query.amenities));
+  // --- Housing features ---
+  //
+  // Bloom's eleven chips. Five are answered by a COLUMN and six by an amenity
+  // slug, and `HOUSING_FEATURE_SOURCE` in `shared-types` is where that is
+  // decided — a garden is `has_garden` AND the slugs `garden_space` and
+  // `garden_access`, and choosing between them silently is how a filter comes
+  // to be wrong in a way nobody notices. The column wins wherever there is one,
+  // because it is present on every row while a slug is free text a listing
+  // carries or does not.
+  //
+  // The slug half joins the caller's OWN amenities, because both mean ALL of
+  // them: asking for a pool and a terrace is one question with two answers,
+  // not two filters.
+  const features = parseList(query.features)
+    .map(parseHousingFeature)
+    .filter((feature): feature is HousingFeature => feature !== undefined);
+  for (const feature of columnFeatures(features)) {
+    const condition = featureColumnCondition(feature);
+    if (condition) conditions.push(condition);
+  }
+
+  const amenities = hasAllAmenities([
+    ...getAmenitiesParam(query.amenities),
+    ...amenitySlugsForFeatures(features),
+  ]);
   if (amenities) conditions.push(amenities);
 
   // --- Boolean feature flags ---
