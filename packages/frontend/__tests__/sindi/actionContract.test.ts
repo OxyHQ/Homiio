@@ -16,6 +16,7 @@ import {
   parseSindiActionEnvelope,
   parseSindiSearchPatch,
   SINDI_ACTION_VERSION,
+  SINDI_REQUESTED_PLACE_MAX_LENGTH,
   type SindiActionEnvelope,
 } from '@homiio/shared-types';
 import { OfferingType, PropertyType } from '@homiio/shared-types';
@@ -34,7 +35,7 @@ const envelope = (overrides: Partial<SindiActionEnvelope> = {}): SindiActionEnve
 });
 
 describe('the action union is closed', () => {
-  it('accepts each of the five permitted intents', () => {
+  it('accepts each of the six permitted intents', () => {
     expect(parseSindiAction({ kind: 'apply_search', patch: { priceMax: 1200 } })).toEqual({
       kind: 'apply_search',
       patch: { priceMax: 1200 },
@@ -52,6 +53,9 @@ describe('the action union is closed', () => {
       kind: 'navigate',
       destination: 'saved',
     });
+    expect(
+      parseSindiAction({ kind: 'clarify_location', requested: 'Barcelona', reason: 'ambiguous' }),
+    ).toEqual({ kind: 'clarify_location', requested: 'Barcelona', reason: 'ambiguous' });
   });
 
   it.each([
@@ -62,11 +66,38 @@ describe('the action union is closed', () => {
     ['a view that is not list or map', { kind: 'set_results_view', view: 'globe' }],
     ['a listing id with a path in it', { kind: 'open_listing', propertyId: '../../admin' }],
     ['a folder id with a quote in it', { kind: 'show_saved', folderId: "a' or 1=1" }],
+    // Both halves of a clarification are load-bearing and neither has an honest
+    // default: with no name the sentence has nothing to quote, and a defaulted
+    // reason would tell somebody their place does not exist when it exists
+    // twice.
+    ['a clarification with no place', { kind: 'clarify_location', reason: 'ambiguous' }],
+    ['a clarification with an empty place', { kind: 'clarify_location', requested: '', reason: 'not_found' }],
+    ['a clarification with no reason', { kind: 'clarify_location', requested: 'Barcelona' }],
+    [
+      'a clarification with an invented reason',
+      { kind: 'clarify_location', requested: 'Barcelona', reason: 'rate_limited' },
+    ],
+    [
+      'a clarification whose place is longer than the contract carries',
+      { kind: 'clarify_location', requested: 'A'.repeat(121), reason: 'not_found' },
+    ],
     ['no kind at all', { patch: {} }],
     ['a string', 'apply_search'],
     ['null', null],
   ])('refuses %s', (_label, value) => {
     expect(parseSindiAction(value)).toBeNull();
+  });
+
+  it('carries a clarification at exactly the length the contract allows', () => {
+    // The bound is shared with the server, which clamps to it before emitting.
+    // An off-by-one here would drop the refusal on arrival, which is the
+    // silence `clarify_location` exists to end, one layer further down.
+    const requested = 'A'.repeat(SINDI_REQUESTED_PLACE_MAX_LENGTH);
+    expect(parseSindiAction({ kind: 'clarify_location', requested, reason: 'not_found' })).toEqual({
+      kind: 'clarify_location',
+      requested,
+      reason: 'not_found',
+    });
   });
 
   it('refuses an apply_search whose patch changes nothing', () => {

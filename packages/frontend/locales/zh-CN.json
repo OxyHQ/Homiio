@@ -1521,6 +1521,10 @@
         "my_home": "打开「我的住所」",
         "evictions": "打开驱逐看板"
       },
+      "clarifyLocation": {
+        "ambiguous": "我无法判断你指的是哪个“{{place}}”，同名的地方不止一个。它在哪个地区？",
+        "notFound": "我没有名为“{{place}}”的地方，所以搜索条件保持不变。"
+      },
       "applied": "已完成：{{what}}。",
       "stale": "你自己更改了搜索条件，因此这里未作改动。",
       "failed": "无法执行：{{what}}。"

@@ -1886,6 +1886,10 @@
         "my_home": "Abrir Mi hogar",
         "evictions": "Abrir el tablón de desahucios"
       },
+      "clarifyLocation": {
+        "ambiguous": "No he sabido a qué “{{place}}” te refieres: hay más de uno. ¿En qué región está?",
+        "notFound": "No tengo ningún lugar llamado “{{place}}”, así que he dejado la búsqueda como estaba."
+      },
       "applied": "Hecho: {{what}}.",
       "stale": "Has cambiado la búsqueda tú, así que esto se ha dejado como estaba.",
       "failed": "No se ha podido: {{what}}."

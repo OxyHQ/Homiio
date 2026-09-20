@@ -1521,6 +1521,10 @@
         "my_home": "Abrir Minha casa",
         "evictions": "Abrir o mural de despejos"
       },
+      "clarifyLocation": {
+        "ambiguous": "Não soube a qual “{{place}}” você se refere: há mais de um. Em que região fica?",
+        "notFound": "Não tenho nenhum lugar chamado “{{place}}”, então a busca ficou como estava."
+      },
       "applied": "Feito: {{what}}.",
       "stale": "Você mesmo alterou a busca, então isto ficou como estava.",
       "failed": "Não foi possível: {{what}}."

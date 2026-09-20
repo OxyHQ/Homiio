@@ -29,6 +29,16 @@
  * not an error and must not read as one. `failed` and `rejected` say so plainly
  * rather than being hidden, since a silent refusal is indistinguishable from
  * the feature not existing.
+ *
+ * ## And it says what could not be resolved
+ *
+ * That last sentence is why `clarify_location` renders here and not as an
+ * offer. A turn naming a place Homiio cannot commit to used to produce no
+ * envelope at all, so it reached this file as nothing and the person saw the
+ * app sit still — a silent refusal, indistinguishable from the feature not
+ * existing, over the single most common thing anybody says to Sindi. Refusing
+ * to choose between two real Barcelonas is required (ADR 0002 §12.2); this row
+ * is the part that was missing.
  */
 
 import React, { useCallback } from 'react';
@@ -56,6 +66,12 @@ function actionKey(action: SindiAction): string {
       return action.view === 'map' ? 'sindi.actions.showMap' : 'sindi.actions.showList';
     case 'navigate':
       return `sindi.actions.navigate.${action.destination}`;
+    case 'clarify_location':
+      // Two sentences, not one with a severity: "which Barcelona did you mean?"
+      // is answerable by naming a region, and "I have no Atlantis" is not.
+      return action.reason === 'ambiguous'
+        ? 'sindi.actions.clarifyLocation.ambiguous'
+        : 'sindi.actions.clarifyLocation.notFound';
     default: {
       const exhaustive: never = action;
       void exhaustive;
@@ -93,6 +109,26 @@ export function SindiActionCard({ execution, onTake }: SindiActionCardProps) {
   const { envelope, outcome } = execution;
 
   const take = useCallback(() => onTake(envelope.action), [onTake, envelope.action]);
+
+  if (envelope.action.kind === 'clarify_location') {
+    // Said in every outcome and offered in none. There is no button because
+    // there is nothing to take: Homiio is not withholding a search it could
+    // run, it is reporting that it cannot tell where the person meant. The
+    // answer is a word from them, in the conversation (#519 §8.6), and the next
+    // turn resolves normally.
+    //
+    // Ahead of the `inline` branch rather than inside it, so a `stale` or
+    // `failed` outcome cannot turn this into "you changed the search yourself":
+    // a place Homiio could not resolve stays unresolved whatever the person did
+    // to their filters meanwhile.
+    return (
+      <View className="mx-4 mb-2">
+        <P className="text-[13px] text-muted-foreground">
+          {t(actionKey(envelope.action), { place: envelope.action.requested })}
+        </P>
+      </View>
+    );
+  }
 
   if (outcome === 'inline') {
     return (

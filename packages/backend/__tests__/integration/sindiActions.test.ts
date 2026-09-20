@@ -12,9 +12,9 @@ import {
   actionEnvelopeForTurn,
   parseAppContext,
   parseTurnId,
-  searchPatchForTurn,
+  searchOutcomeForTurn,
 } from '../../services/sindiActions';
-import type { SindiAppContext } from '@homiio/shared-types';
+import { parseSindiAction, type SindiAppContext } from '@homiio/shared-types';
 
 const context = (overrides: Partial<SindiAppContext> = {}): SindiAppContext => ({
   revision: 42,
@@ -32,15 +32,15 @@ describe('a turn only becomes an action when the person asked for listings', () 
     // "Cuéntame cómo es Granollers" extracts a city and is NOT a search. An
     // assistant that navigated here would move the app under somebody who
     // asked a question.
-    expect(await searchPatchForTurn({ wantsListings: false, city: 'Granollers' })).toBeNull();
+    expect((await searchOutcomeForTurn({ wantsListings: false, city: 'Granollers' })).patch).toBeNull();
   });
 
   it('produces nothing for a rights question, which extracts no filters at all', async () => {
-    expect(await searchPatchForTurn({ wantsListings: false })).toBeNull();
+    expect((await searchOutcomeForTurn({ wantsListings: false })).patch).toBeNull();
   });
 
   it('produces a patch when the person asked and named a constraint', async () => {
-    const patch = await searchPatchForTurn({ wantsListings: true, maxRent: 1200, bedrooms: 2 });
+    const { patch } = await searchOutcomeForTurn({ wantsListings: true, maxRent: 1200, bedrooms: 2 });
     expect(patch).toEqual({ priceMax: 1200, bedrooms: 2 });
   });
 });
@@ -55,7 +55,7 @@ describe('the area is resolved, never guessed', () => {
       longitude: 2.2874,
     });
 
-    const patch = await searchPatchForTurn({ wantsListings: true, city: 'Granollers' });
+    const { patch } = await searchOutcomeForTurn({ wantsListings: true, city: 'Granollers' });
 
     expect(patch?.location?.kind).toBe('place');
     if (patch?.location?.kind !== 'place') return;
@@ -64,7 +64,7 @@ describe('the area is resolved, never guessed', () => {
     expect(patch.location.source).toEqual({ kind: 'homiio', entity: 'city', id: chain.cityId });
   });
 
-  it('emits NO area for a homonym rather than picking one', async () => {
+  it('refuses a homonym rather than picking one, and names what it refused', async () => {
     // There is a Barcelona in Catalonia and one in Anzoátegui. Taking the first
     // is the bug ADR 0002 §12.2 exists for; the right answer is to let Sindi's
     // prose ask which one, and leave the app where it is.
@@ -93,12 +93,18 @@ describe('the area is resolved, never guessed', () => {
       longitude: -64.6836,
     });
 
-    const patch = await searchPatchForTurn({ wantsListings: true, city: 'Barcelona', maxRent: 900 });
+    const { patch, unresolvedPlace } = await searchOutcomeForTurn({
+      wantsListings: true,
+      city: 'Barcelona',
+      maxRent: 900,
+    });
 
-    expect(patch?.location).toBeUndefined();
-    // The rest of the turn still applies — "under 900" against whatever area is
-    // in force is the incremental behaviour the patch shape is for.
-    expect(patch?.priceMax).toBe(900);
+    // AMENDED: this used to assert `patch.priceMax === 900` beside an absent
+    // location — "the rest of the turn still applies". It does not. "Under 900"
+    // was said about Barcelona, and narrowing whatever city was already on
+    // screen to 900 answers confidently about the wrong place.
+    expect(patch).toBeNull();
+    expect(unresolvedPlace).toEqual({ requested: 'Barcelona', reason: 'ambiguous' });
     expect(spain.cityId).toBeTruthy();
   });
 
@@ -144,7 +150,7 @@ describe('the area is resolved, never guessed', () => {
       propertiesCount: 0,
     });
 
-    const patch = await searchPatchForTurn({ wantsListings: true, city: 'Barcelona' });
+    const { patch } = await searchOutcomeForTurn({ wantsListings: true, city: 'Barcelona' });
 
     expect(patch?.location?.kind).toBe('place');
     if (patch?.location?.kind !== 'place') return;
@@ -180,10 +186,14 @@ describe('the area is resolved, never guessed', () => {
       propertiesCount: 0,
     });
 
-    const patch = await searchPatchForTurn({ wantsListings: true, city: 'Barcelona', maxRent: 900 });
+    const { patch, unresolvedPlace } = await searchOutcomeForTurn({
+      wantsListings: true,
+      city: 'Barcelona',
+      maxRent: 900,
+    });
 
-    expect(patch?.location).toBeUndefined();
-    expect(patch?.priceMax).toBe(900);
+    expect(patch).toBeNull();
+    expect(unresolvedPlace).toEqual({ requested: 'Barcelona', reason: 'ambiguous' });
   });
 
   it('uses the region to disambiguate when the person supplied one', async () => {
@@ -204,7 +214,7 @@ describe('the area is resolved, never guessed', () => {
       longitude: -64.6836,
     });
 
-    const patch = await searchPatchForTurn({
+    const { patch } = await searchOutcomeForTurn({
       wantsListings: true,
       city: 'Barcelona',
       state: 'Catalonia',
@@ -213,10 +223,17 @@ describe('the area is resolved, never guessed', () => {
     expect(patch?.location?.kind).toBe('place');
   });
 
-  it('emits no area for a city Homiio does not have', async () => {
-    const patch = await searchPatchForTurn({ wantsListings: true, city: 'Atlantis', maxRent: 700 });
-    expect(patch?.location).toBeUndefined();
-    expect(patch?.priceMax).toBe(700);
+  it('refuses a city Homiio does not have, and says which one', async () => {
+    const { patch, unresolvedPlace } = await searchOutcomeForTurn({
+      wantsListings: true,
+      city: 'Atlantis',
+      maxRent: 700,
+    });
+    // The whole patch goes, not just its `location`. "Under 700" was said about
+    // Atlantis, and applying it to whichever area happened to be in force is a
+    // query whose location was requested and lost (ADR 0002 decision 5).
+    expect(patch).toBeNull();
+    expect(unresolvedPlace).toEqual({ requested: 'Atlantis', reason: 'not_found' });
   });
 });
 
@@ -253,6 +270,13 @@ describe('the envelope', () => {
   });
 
   it('does not re-open Explore when the user is already there', async () => {
+    // KEPT, deliberately. This looks like the silent path and is not: reaching
+    // it means the turn named NO place — one that named a place and lost it
+    // emits `clarify_location` before this branch — so the request is "show me
+    // homes" from somebody already standing in front of them. Pushing
+    // `/explore` from `/explore` adds a back-stack entry, changes nothing on
+    // screen, and reports "Done: open Explore" for it, which is the same lie
+    // `parseSindiSearchPatch` refuses an empty patch to avoid.
     const envelope = await actionEnvelopeForTurn({
       turnId: 't1',
       appContext: context({ destination: 'explore' }),
@@ -333,4 +357,136 @@ describe('the turn id a client sends is validated', () => {
       expect(parseTurnId(value)).toBeNull();
     },
   );
+});
+
+describe('a place the turn NAMED and Homiio could not commit to is said out loud', () => {
+  // ADR 0002 decision 5 and §4.3: "A failed resolution never runs a
+  // location-less query", and §1.3(c) names the failure this suite pins — a
+  // resolution failure that falls through to a global feed with "no signal
+  // anywhere in the UI that the location was dropped". Emitting NOTHING is the
+  // same failure with the signal turned down further: the person asked about a
+  // specific place and the app neither went there nor said it could not.
+
+  it('asks which place, rather than emitting nothing, when the name is a homonym', async () => {
+    // Two real Barcelonas, both holding listings, so the empty-row rule cannot
+    // settle it. Refusing to choose is correct (§12.2). Refusing SILENTLY is
+    // the defect.
+    await seedGeoChain({
+      countryCode: 'ES',
+      countryName: 'Spain',
+      regionName: 'Catalonia',
+      cityName: 'Barcelona',
+      propertiesCount: 12,
+    });
+    await seedGeoChain({
+      countryCode: 'VE',
+      countryName: 'Venezuela',
+      regionName: 'Anzoátegui',
+      cityName: 'Barcelona',
+      propertiesCount: 4,
+    });
+
+    const envelope = await actionEnvelopeForTurn({
+      turnId: 't1',
+      // Standing on /explore is the most common place to ask, and it is where
+      // the old code had nothing left to emit at all.
+      appContext: context({ destination: 'explore' }),
+      intent: { wantsListings: true, city: 'Barcelona' },
+    });
+
+    expect(envelope?.action).toEqual({
+      kind: 'clarify_location',
+      requested: 'Barcelona',
+      reason: 'ambiguous',
+    });
+  });
+
+  it('says a named city is unknown rather than opening a worldwide Explore', async () => {
+    // From anywhere but /explore the old code answered this with
+    // `navigate: explore` — an unrestricted feed under a request for one place,
+    // which is ADR 0002 §1.3(c) verbatim.
+    const envelope = await actionEnvelopeForTurn({
+      turnId: 't1',
+      appContext: context({ destination: 'home' }),
+      intent: { wantsListings: true, city: 'Atlantis' },
+    });
+
+    expect(envelope?.action).toEqual({
+      kind: 'clarify_location',
+      requested: 'Atlantis',
+      reason: 'not_found',
+    });
+  });
+
+  it('does not apply the turn’s other constraints to whatever area is in force', async () => {
+    // "pisos en Hamburg por menos de 900" with Hamburg unresolved used to emit
+    // `apply_search { priceMax: 900 }`, which narrows the PREVIOUS area and
+    // reports "done" — a query whose location was requested and lost, which is
+    // exactly what decision 5 forbids. One action per turn, so this is a
+    // choice, and the named place is the load-bearing half of the sentence.
+    await seedGeoChain({
+      countryCode: 'ES',
+      countryName: 'Spain',
+      regionName: 'Catalonia',
+      cityName: 'Barcelona',
+      propertiesCount: 12,
+    });
+    await seedGeoChain({
+      countryCode: 'VE',
+      countryName: 'Venezuela',
+      regionName: 'Anzoátegui',
+      cityName: 'Barcelona',
+      propertiesCount: 4,
+    });
+
+    const envelope = await actionEnvelopeForTurn({
+      turnId: 't1',
+      appContext: context({ destination: 'explore' }),
+      intent: { wantsListings: true, city: 'Barcelona', maxRent: 900 },
+    });
+
+    expect(envelope?.action.kind).toBe('clarify_location');
+  });
+
+  it('carries a name the client’s own parser will accept', async () => {
+    // The emitter and `parseSindiAction` share one bound. A name longer than
+    // the contract allows would be dropped by the client, and a refusal the
+    // client drops is the silence this whole suite is about, arriving one layer
+    // further down.
+    const long = 'A'.repeat(400);
+
+    const envelope = await actionEnvelopeForTurn({
+      turnId: 't1',
+      appContext: context({ destination: 'explore' }),
+      intent: { wantsListings: true, city: long },
+    });
+
+    expect(envelope?.action.kind).toBe('clarify_location');
+    expect(parseSindiAction(envelope?.action)).toEqual(envelope?.action);
+  });
+
+  it('says nothing when the person was not asking for listings', async () => {
+    // "Cuéntame cómo es Atlantis" names a place Homiio cannot resolve and asks
+    // the app for nothing. A clarification here would be the assistant
+    // interrupting a question with a question.
+    const envelope = await actionEnvelopeForTurn({
+      turnId: 't1',
+      appContext: context({ destination: 'explore' }),
+      intent: { wantsListings: false, city: 'Atlantis' },
+    });
+
+    expect(envelope).toBeNull();
+  });
+
+  it('still emits the search when the place did resolve', async () => {
+    await seedGeoChain({ cityName: 'Granollers', latitude: 41.6083, longitude: 2.2874 });
+
+    const envelope = await actionEnvelopeForTurn({
+      turnId: 't1',
+      appContext: context({ destination: 'explore' }),
+      intent: { wantsListings: true, city: 'Granollers', maxRent: 1200 },
+    });
+
+    expect(envelope?.action.kind).toBe('apply_search');
+  });
 });

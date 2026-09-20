@@ -1521,6 +1521,10 @@
         "my_home": "Buka Rumah Saya",
         "evictions": "Buka papan penggusuran"
       },
+      "clarifyLocation": {
+        "ambiguous": "Saya tidak tahu “{{place}}” yang mana yang Anda maksud — ada lebih dari satu. Di wilayah mana?",
+        "notFound": "Saya tidak punya tempat bernama “{{place}}”, jadi pencarian dibiarkan apa adanya."
+      },
       "applied": "Selesai: {{what}}.",
       "stale": "Anda sendiri mengubah pencarian, jadi ini dibiarkan apa adanya.",
       "failed": "Tidak bisa dilakukan: {{what}}."
