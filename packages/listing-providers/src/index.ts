@@ -1315,4 +1315,4 @@ export {
 export { fotocasaRefsFromSearchCards } from './providers/fotocasa/searchads';
 
 // Shared HTML helpers — see src/html.ts.
-export { extractMetaProperties } from './html';
+export { extractMetaProperties, scriptBlocks } from './html';

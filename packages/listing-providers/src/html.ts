@@ -121,3 +121,51 @@ export function extractJsonParseBlob(html: string, key: string): string | undefi
     /JSON\.parse\(\s*'((?:\\.|[^'\\])*)'\s*\)/.exec(slice);
   return match?.[1];
 }
+
+/**
+ * Yield the body of every `<script>` whose `type` attribute contains `type`.
+ *
+ * **Replaces `/<script[^>]*type=["']…["'][^>]*>([\s\S]*?)<\/script>/gi`**, a
+ * shape repeated across at least ten providers and flagged as
+ * `js/polynomial-redos` in several: `[^>]*` appears twice around a required
+ * attribute, so on a page with many `<script` tags the engine re-splits each
+ * opening tag from every position. The input is markup from third-party
+ * portals.
+ *
+ * Scanning is linear and, as a side effect, order-independent — `type` before
+ * or after other attributes both work, which the positional pattern only
+ * handled by luck.
+ *
+ * Matching `type` as a SUBSTRING is deliberate and preserves the old
+ * behaviour: portals write `application/ld+json`, `application/ld+json;
+ * charset=utf-8` and `text/javascript+ld` and all three were matched before.
+ */
+export function* scriptBlocks(html: string, type: string): Generator<string> {
+  const lower = html.toLowerCase();
+  const needle = type.toLowerCase();
+  let from = 0;
+
+  for (;;) {
+    const open = lower.indexOf('<script', from);
+    if (open < 0) return;
+
+    // `<scripting>` is not `<script>`.
+    const after = lower[open + 7];
+    if (after !== undefined && !/[\s/>]/.test(after)) {
+      from = open + 7;
+      continue;
+    }
+
+    const openEnd = html.indexOf('>', open);
+    if (openEnd < 0) return;
+
+    const attributes = tagAttributes(html.slice(open + 7, openEnd));
+    const close = lower.indexOf('</script', openEnd);
+    if (close < 0) return;
+
+    if (attributes.get('type')?.toLowerCase().includes(needle)) {
+      yield html.slice(openEnd + 1, close);
+    }
+    from = close + 8;
+  }
+}
