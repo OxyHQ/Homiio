@@ -2966,7 +2966,10 @@
       "toastBlockFailed": "Block failed",
       "propertyNotFound": "Property not found",
       "property": "Property",
-      "blockDates": "तारीखें ब्लॉक करें"
+      "blockDates": "तारीखें ब्लॉक करें",
+      "legendExchange": "अदला-बदली पुष्ट",
+      "legendExchangePending": "अदला-बदली का अनुरोध",
+      "bookingsError": "बुकिंग लोड नहीं हो सकीं"
     },
     "reservations": {
       "title": "Reservations",
@@ -4026,6 +4029,23 @@
       "needDates": "इस ठहराव की लागत देखने के लिए तारीख़ें चुनें।",
       "cost": "इन रातों के लिए {{count}} पॉइंट। आपके पास {{available}} हैं।",
       "short": "इस ठहराव पर {{count}} पॉइंट लगते हैं और आपके पास {{available}} हैं।"
+    }
+  },
+  "bookings": {
+    "kind": {
+      "stay": "ठहराव",
+      "swap": "अदला-बदली",
+      "viewing": "विज़िट"
+    },
+    "upcoming": {
+      "title": "आने वाला",
+      "emptyTitle": "अभी कोई बुकिंग नहीं",
+      "emptyDescription": "पुष्ट ठहराव, अदला-बदली और विज़िट अपनी तारीखों के साथ यहाँ दिखते हैं।",
+      "loadError": "आपकी बुकिंग लोड नहीं हो सकीं",
+      "loadErrorPartial": "आपकी कुछ बुकिंग लोड नहीं हो सकीं",
+      "allStays": "सभी ठहराव",
+      "allSwaps": "सभी अदला-बदली अनुरोध",
+      "allViewings": "सभी विज़िट"
     }
   }
 }

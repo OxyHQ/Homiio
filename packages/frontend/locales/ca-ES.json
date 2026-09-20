@@ -3013,7 +3013,10 @@
       "toastBlockFailed": "No s'ha pogut bloquejar",
       "propertyNotFound": "Propietat no trobada",
       "property": "Propietat",
-      "blockDates": "Bloqueja dates"
+      "blockDates": "Bloqueja dates",
+      "legendExchange": "Intercanvi confirmat",
+      "legendExchangePending": "Intercanvi sol·licitat",
+      "bookingsError": "No s’han pogut carregar les reserves"
     },
     "reservations": {
       "title": "Reserves",
@@ -4073,6 +4076,23 @@
       "needDates": "Tria les dates per veure què costa aquesta estada.",
       "cost": "{{count}} punts per aquestes nits. En tens {{available}}.",
       "short": "Aquesta estada costa {{count}} punts i en tens {{available}}."
+    }
+  },
+  "bookings": {
+    "kind": {
+      "stay": "Estada",
+      "swap": "Intercanvi",
+      "viewing": "Visita"
+    },
+    "upcoming": {
+      "title": "Properament",
+      "emptyTitle": "Encara no hi ha res reservat",
+      "emptyDescription": "Les estades, els intercanvis i les visites confirmats apareixen aquí amb les seves dates.",
+      "loadError": "No s’han pogut carregar les teves reserves",
+      "loadErrorPartial": "No s’han pogut carregar algunes de les teves reserves",
+      "allStays": "Totes les estades",
+      "allSwaps": "Totes les sol·licituds d’intercanvi",
+      "allViewings": "Totes les visites"
     }
   }
 }

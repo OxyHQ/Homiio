@@ -2966,7 +2966,10 @@
       "toastBlockFailed": "Block failed",
       "propertyNotFound": "Property not found",
       "property": "Property",
-      "blockDates": "তারিখ ব্লক করুন"
+      "blockDates": "তারিখ ব্লক করুন",
+      "legendExchange": "বিনিময় নিশ্চিত",
+      "legendExchangePending": "বিনিময়ের অনুরোধ করা হয়েছে",
+      "bookingsError": "বুকিং লোড করা যায়নি"
     },
     "reservations": {
       "title": "Reservations",
@@ -4026,6 +4029,23 @@
       "needDates": "এই সফরের খরচ দেখতে তারিখ বেছে নিন।",
       "cost": "এই রাতগুলোর জন্য {{count}} পয়েন্ট। আপনার আছে {{available}}।",
       "short": "এই সফরের জন্য {{count}} পয়েন্ট লাগে, আপনার আছে {{available}}।"
+    }
+  },
+  "bookings": {
+    "kind": {
+      "stay": "থাকা",
+      "swap": "বিনিময়",
+      "viewing": "পরিদর্শন"
+    },
+    "upcoming": {
+      "title": "আসন্ন",
+      "emptyTitle": "এখনও কোনো বুকিং নেই",
+      "emptyDescription": "নিশ্চিত হওয়া থাকা, বিনিময় ও পরিদর্শন তারিখসহ এখানে দেখা যাবে।",
+      "loadError": "আপনার বুকিং লোড করা যায়নি",
+      "loadErrorPartial": "আপনার কিছু বুকিং লোড করা যায়নি",
+      "allStays": "সব থাকা",
+      "allSwaps": "সব বিনিময়ের অনুরোধ",
+      "allViewings": "সব পরিদর্শন"
     }
   }
 }

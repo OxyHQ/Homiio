@@ -2980,7 +2980,10 @@
       "toastBlockFailed": "Block failed",
       "propertyNotFound": "Property not found",
       "property": "Property",
-      "blockDates": "Заблокировать даты"
+      "blockDates": "Заблокировать даты",
+      "legendExchange": "Обмен подтверждён",
+      "legendExchangePending": "Обмен запрошен",
+      "bookingsError": "Не удалось загрузить бронирования"
     },
     "reservations": {
       "title": "Reservations",
@@ -4046,6 +4049,23 @@
       "needDates": "Выберите даты, чтобы увидеть стоимость проживания.",
       "cost": "{{count}} баллов за эти ночи. У вас {{available}}.",
       "short": "Проживание стоит {{count}} баллов, а у вас {{available}}."
+    }
+  },
+  "bookings": {
+    "kind": {
+      "stay": "Поездка",
+      "swap": "Обмен",
+      "viewing": "Просмотр"
+    },
+    "upcoming": {
+      "title": "Скоро",
+      "emptyTitle": "Пока ничего не забронировано",
+      "emptyDescription": "Подтверждённые поездки, обмены и просмотры появятся здесь вместе с датами.",
+      "loadError": "Не удалось загрузить ваши бронирования",
+      "loadErrorPartial": "Не удалось загрузить часть ваших бронирований",
+      "allStays": "Все поездки",
+      "allSwaps": "Все запросы на обмен",
+      "allViewings": "Все просмотры"
     }
   }
 }

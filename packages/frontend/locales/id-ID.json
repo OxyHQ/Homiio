@@ -2966,7 +2966,10 @@
       "toastBlockFailed": "Block failed",
       "propertyNotFound": "Property not found",
       "property": "Property",
-      "blockDates": "Blokir tanggal"
+      "blockDates": "Blokir tanggal",
+      "legendExchange": "Tukar rumah dikonfirmasi",
+      "legendExchangePending": "Tukar rumah diminta",
+      "bookingsError": "Pemesanan tidak dapat dimuat"
     },
     "reservations": {
       "title": "Reservations",
@@ -4026,6 +4029,23 @@
       "needDates": "Pilih tanggal untuk melihat biaya menginap ini.",
       "cost": "{{count}} poin untuk malam-malam ini. Kamu punya {{available}}.",
       "short": "Menginap ini butuh {{count}} poin dan kamu punya {{available}}."
+    }
+  },
+  "bookings": {
+    "kind": {
+      "stay": "Menginap",
+      "swap": "Tukar rumah",
+      "viewing": "Kunjungan"
+    },
+    "upcoming": {
+      "title": "Akan datang",
+      "emptyTitle": "Belum ada pemesanan",
+      "emptyDescription": "Menginap, tukar rumah, dan kunjungan yang dikonfirmasi muncul di sini beserta tanggalnya.",
+      "loadError": "Pemesanan Anda tidak dapat dimuat",
+      "loadErrorPartial": "Sebagian pemesanan Anda tidak dapat dimuat",
+      "allStays": "Semua menginap",
+      "allSwaps": "Semua permintaan tukar rumah",
+      "allViewings": "Semua kunjungan"
     }
   }
 }

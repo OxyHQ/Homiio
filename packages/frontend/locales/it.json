@@ -2991,7 +2991,10 @@
       "toastBlockFailed": "Impossibile bloccare",
       "propertyNotFound": "Proprietà non trovata",
       "property": "Proprietà",
-      "blockDates": "Blocca date"
+      "blockDates": "Blocca date",
+      "legendExchange": "Scambio confermato",
+      "legendExchangePending": "Scambio richiesto",
+      "bookingsError": "Non è stato possibile caricare le prenotazioni"
     },
     "reservations": {
       "title": "Prenotazioni",
@@ -4051,6 +4054,23 @@
       "needDates": "Scegli le date per vedere quanto costa questo soggiorno.",
       "cost": "{{count}} punti per queste notti. Ne hai {{available}}.",
       "short": "Questo soggiorno costa {{count}} punti e tu ne hai {{available}}."
+    }
+  },
+  "bookings": {
+    "kind": {
+      "stay": "Soggiorno",
+      "swap": "Scambio",
+      "viewing": "Visita"
+    },
+    "upcoming": {
+      "title": "In arrivo",
+      "emptyTitle": "Ancora nessuna prenotazione",
+      "emptyDescription": "Soggiorni, scambi e visite confermati compaiono qui con le loro date.",
+      "loadError": "Non è stato possibile caricare le tue prenotazioni",
+      "loadErrorPartial": "Non è stato possibile caricare alcune delle tue prenotazioni",
+      "allStays": "Tutti i soggiorni",
+      "allSwaps": "Tutte le richieste di scambio",
+      "allViewings": "Tutte le visite"
     }
   }
 }

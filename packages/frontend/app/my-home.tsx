@@ -27,6 +27,17 @@
  *
  * Several active tenancies (a room and a parking space, a move between two
  * flats) are chosen between with chips; one is the common case and draws none.
+ *
+ * **Bookings are now on this screen** (#518 §7.5). A tenancy is not only a
+ * lease: a confirmed stay, an accepted swap and an approved viewing are dated
+ * commitments the person must not miss, and the screen named for their home
+ * mentioned none of them. `UpcomingBookingsSection` draws them, and its own
+ * header argues why only COMMITTED rows belong here.
+ *
+ * It sits OUTSIDE the lease gate on purpose. A person can have a confirmed stay
+ * next week and no active tenancy at all — a guest, somebody between flats — and
+ * sending them to the "no active tenancy" empty state while their own booking
+ * sat one query away is the defect, not a lesser version of it.
  */
 import React, { useMemo, useState } from 'react';
 import { Image, ScrollView, StyleSheet, View } from 'react-native';
@@ -47,6 +58,7 @@ import { openAccountDialog, useOxy } from '@oxy.so/services';
 import { LeaseStatus, type Lease } from '@homiio/shared-types';
 
 import { Header } from '@/components/Header';
+import { UpcomingBookingsSection } from '@/components/bookings/UpcomingBookingsSection';
 import { leaseSummaryProps } from '@/components/tenancy/leaseTenancy';
 import {
   LeaseDocumentsSection,
@@ -61,8 +73,10 @@ import { ErrorState } from '@/components/ui/ErrorState';
 import { ListSkeleton } from '@/components/ui/ListSkeleton';
 import { useUserLeases } from '@/hooks/useLeaseQueries';
 import { useIsDesktop } from '@/hooks/useOptimizedMediaQuery';
+import { useUpcomingBookings } from '@/hooks/useUpcomingBookings';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
 import { getPropertyImageSource } from '@/utils/propertyUtils';
+import { COMMITTED_ONLY } from '@/utils/upcomingBookings';
 import { radius, spacing } from '@/constants/styles';
 
 const ACTIVE_FILTER = { status: LeaseStatus.ACTIVE };
@@ -100,6 +114,17 @@ export default function MyHomeScreen() {
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const lease = homes.find((home) => home.id === selectedId) ?? homes[0];
+
+  // `COMMITTED_ONLY`: an open request is not a date somebody has to keep, so it
+  // stays on Saved (`UpcomingBookingsSection`'s header argues it). Not scoped to
+  // the selected tenancy either — a booking is the VIEWER's, not a lease's, and
+  // filtering by `lease.propertyId` would hide the stay in another city that is
+  // the whole reason to look.
+  const bookings = useUpcomingBookings({
+    enabled: isAuthed,
+    statuses: COMMITTED_ONLY,
+    includeViewings: true,
+  });
 
   const header = <Header options={{ title: t('sidebar.navigation.myHome') }} />;
   const frame = (body: React.ReactNode) => (
@@ -147,17 +172,31 @@ export default function MyHomeScreen() {
   }
 
   if (!lease) {
+    const noTenancy = (
+      <EmptyState
+        icon={RiHomeHeartLine}
+        title={t('myHome.emptyTitle')}
+        description={t('myHome.emptyDescription')}
+        actionText={t('sidebar.navigation.explore')}
+        actionIcon={RiCompass3Line}
+        onAction={() => router.push('/explore')}
+      />
+    );
+    // "No active tenancy" is TRUE here and stays on screen — but it is not the
+    // whole truth for a guest with a confirmed stay, so the bookings join it
+    // once they have something to say. While they are still loading the page
+    // keeps the centred empty state rather than flickering between two
+    // layouts: the lease answer is already final and is not what is pending.
+    const bookingsHaveSomethingToSay =
+      !bookings.isPending && (bookings.isError || bookings.items.length > 0);
+    if (!bookingsHaveSomethingToSay) {
+      return frame(<View style={styles.centerWrap}>{noTenancy}</View>);
+    }
     return frame(
-      <View style={styles.centerWrap}>
-        <EmptyState
-          icon={RiHomeHeartLine}
-          title={t('myHome.emptyTitle')}
-          description={t('myHome.emptyDescription')}
-          actionText={t('sidebar.navigation.explore')}
-          actionIcon={RiCompass3Line}
-          onAction={() => router.push('/explore')}
-        />
-      </View>,
+      <ScrollView contentContainerStyle={styles.content}>
+        <UpcomingBookingsSection bookings={bookings} />
+        {noTenancy}
+      </ScrollView>,
     );
   }
 
@@ -194,6 +233,12 @@ export default function MyHomeScreen() {
         }
       />
       {isDesktop ? null : history}
+      {/* Above the money, and the ledger's own comment below is not being
+          overruled: it argues the BALANCE outranks the SCHEDULE, which is
+          still true of the two of them. This outranks both for a different
+          reason — a balance can be settled tomorrow, and Tuesday's viewing
+          cannot be attended on Wednesday. */}
+      <UpcomingBookingsSection bookings={bookings} />
       {/* The LEDGER: what is owed, what settled, and what the tenant has merely
           claimed. Above the schedule, because "how much do I still owe?" is the
           question somebody opens this screen with — and because the schedule

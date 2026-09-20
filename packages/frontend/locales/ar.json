@@ -2994,7 +2994,10 @@
       "toastBlockFailed": "Block failed",
       "propertyNotFound": "Property not found",
       "property": "Property",
-      "blockDates": "حظر التواريخ"
+      "blockDates": "حظر التواريخ",
+      "legendExchange": "تبادل مؤكد",
+      "legendExchangePending": "تبادل مطلوب",
+      "bookingsError": "تعذّر تحميل الحجوزات"
     },
     "reservations": {
       "title": "Reservations",
@@ -4066,6 +4069,23 @@
       "needDates": "اختر التواريخ لمعرفة تكلفة هذه الإقامة.",
       "cost": "{{count}} نقطة لهذه الليالي. لديك {{available}}.",
       "short": "تكلفة هذه الإقامة {{count}} نقطة ولديك {{available}}."
+    }
+  },
+  "bookings": {
+    "kind": {
+      "stay": "إقامة",
+      "swap": "تبادل",
+      "viewing": "معاينة"
+    },
+    "upcoming": {
+      "title": "قادم قريبًا",
+      "emptyTitle": "لا توجد حجوزات بعد",
+      "emptyDescription": "تظهر هنا الإقامات والتبادلات والمعاينات المؤكدة مع تواريخها.",
+      "loadError": "تعذّر تحميل حجوزاتك",
+      "loadErrorPartial": "تعذّر تحميل بعض حجوزاتك",
+      "allStays": "كل الإقامات",
+      "allSwaps": "كل طلبات التبادل",
+      "allViewings": "كل المعاينات"
     }
   }
 }

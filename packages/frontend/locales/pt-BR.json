@@ -2966,7 +2966,10 @@
       "toastBlockFailed": "Block failed",
       "propertyNotFound": "Property not found",
       "property": "Property",
-      "blockDates": "Bloquear datas"
+      "blockDates": "Bloquear datas",
+      "legendExchange": "Troca confirmada",
+      "legendExchangePending": "Troca solicitada",
+      "bookingsError": "Não foi possível carregar as reservas"
     },
     "reservations": {
       "title": "Reservations",
@@ -4026,6 +4029,23 @@
       "needDates": "Escolha as datas para ver quanto custa esta estadia.",
       "cost": "{{count}} pontos por essas noites. Você tem {{available}}.",
       "short": "Esta estadia custa {{count}} pontos e você tem {{available}}."
+    }
+  },
+  "bookings": {
+    "kind": {
+      "stay": "Estadia",
+      "swap": "Troca",
+      "viewing": "Visita"
+    },
+    "upcoming": {
+      "title": "Em breve",
+      "emptyTitle": "Nada reservado ainda",
+      "emptyDescription": "Estadias, trocas e visitas confirmadas aparecem aqui com suas datas.",
+      "loadError": "Não foi possível carregar suas reservas",
+      "loadErrorPartial": "Não foi possível carregar algumas das suas reservas",
+      "allStays": "Todas as estadias",
+      "allSwaps": "Todas as solicitações de troca",
+      "allViewings": "Todas as visitas"
     }
   }
 }
