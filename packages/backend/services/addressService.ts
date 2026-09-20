@@ -54,6 +54,7 @@ import * as crypto from 'crypto';
 import { and, eq, sql, type SQL } from 'drizzle-orm';
 
 import { getDb, type DatabaseOrTransaction } from '../db/postgres';
+import { slugifyPlaceName } from '../db/geo/placeSlug';
 import { addresses, cities, countries, neighborhoods, regions } from '../db/schema';
 import {
   ADDRESS_GEO_NAME_COLUMNS,
@@ -233,7 +234,21 @@ async function upsertCity(
   countryCode: string,
   coordinates?: [number, number],
 ): Promise<string> {
-  const match = and(eq(cities.regionId, regionId), eq(cities.name, name));
+  // MATCHED ON THE SLUG, not on the name.
+  //
+  // This function is where every duplicate city in production came from. It
+  // matched `name` exactly and conflicted on `(region_id, name)`, both of which
+  // are case-SENSITIVE — so a provider that shouted `AARTSELAAR` sailed past the
+  // `Aartselaar` already there and got a second row, and a lower-cased
+  // `barcelona` got a third one beside Barcelona. 102 rows, 94 shared slugs, and
+  // "show me flats in Barcelona" resolving to nothing because `placeLookup`
+  // could not tell three duplicates from three homonyms (migration 0029).
+  //
+  // `cities.slug` is `GENERATED ALWAYS` from the name, and {@link
+  // slugifyPlaceName} is its TypeScript twin — `__tests__/db/placeSlug.test.ts`
+  // fails if the two ever disagree — so this predicate asks the database the
+  // same question the unique index answers.
+  const match = and(eq(cities.regionId, regionId), eq(cities.slug, slugifyPlaceName(name)));
 
   const existing = await db.select({ id: cities.id }).from(cities).where(match).limit(1);
   if (existing[0]) return existing[0].id;
@@ -252,7 +267,7 @@ async function upsertCity(
       longitude: sanitized ? sanitized[0] : null,
       latitude: sanitized ? sanitized[1] : null,
     })
-    .onConflictDoNothing({ target: [cities.regionId, cities.name] })
+    .onConflictDoNothing({ target: [cities.regionId, cities.slug] })
     .returning({ id: cities.id });
   if (inserted[0]) return inserted[0].id;
 

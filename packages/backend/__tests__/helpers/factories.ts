@@ -28,7 +28,7 @@ import { addresses, cities, countries, properties, regions } from '../../db/sche
  * Spain twice. Against Mongo whether that threw depended on whether the unique
  * index had finished building yet, so the same code failed or passed depending
  * on how early in the run it executed. Here `countries_code_key`,
- * `regions_country_name_key` and `cities_region_name_key` exist from the
+ * `regions_country_name_key` and `cities_region_slug_key` exist from the
  * migration, so `ON CONFLICT DO UPDATE` is deterministic from the first call.
  *
  * `DO UPDATE ... RETURNING` rather than `DO NOTHING`: `DO NOTHING` returns no
@@ -53,7 +53,7 @@ async function ensureGeo(): Promise<{ countryId: string; regionId: string; cityI
     .insert(cities)
     .values({ countryId: country.id, regionId: region.id, name: 'Barcelona' })
     .onConflictDoUpdate({
-      target: [cities.regionId, cities.name],
+      target: [cities.regionId, cities.slug],
       set: { countryId: country.id },
     })
     .returning({ id: cities.id });

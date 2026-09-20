@@ -204,6 +204,13 @@
       "when": 1789882329631,
       "tag": "0028_lease_signature_binding",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1789891375332,
+      "tag": "0029_city_slug_identity",
+      "breakpoints": true
     }
   ]
 }

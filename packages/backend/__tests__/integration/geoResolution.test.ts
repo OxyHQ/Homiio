@@ -60,6 +60,45 @@ describe('resolveGeo', () => {
     expect([countryCount.n, regionCount.n, cityCount.n, neighborhoodCount.n]).toEqual([1, 1, 1, 1]);
   });
 
+  /**
+   * The duplicate-city bug, at the site that produced it.
+   *
+   * `upsertCity` matched `cities.name` exactly and conflicted on
+   * `(region_id, name)`, and both are case-SENSITIVE — so a provider that
+   * shouted the city name got a SECOND row beside the one already there.
+   * Production ended up with 51 such groups and three rows named Barcelona in
+   * Spain, which is what made `placeLookup` refuse to resolve "Barcelona" at
+   * all: three candidates for one slug is indistinguishable from three
+   * homonyms. Migration 0029 folds the existing rows together; this is the half
+   * that stops them coming back.
+   *
+   * The three spellings are the three that actually occur in the data: the one
+   * already stored, an all-caps one and an all-lower one.
+   */
+  it('resolves a city whose name arrives in another CASE to the same row', async () => {
+    const first = await resolveGeoChain({ coordinates: BARCELONA, names: COMPLETE_NAMES });
+
+    const shouted = await resolveGeoChain({
+      coordinates: BARCELONA,
+      names: { ...COMPLETE_NAMES, city: 'BARCELONA' },
+    });
+    const whispered = await resolveGeoChain({
+      coordinates: BARCELONA,
+      names: { ...COMPLETE_NAMES, city: 'barcelona' },
+    });
+
+    expect(shouted.cityId).toBe(first.cityId);
+    expect(whispered.cityId).toBe(first.cityId);
+
+    const [cityCount] = await getDb().select({ n: count() }).from(cities);
+    expect(cityCount.n).toBe(1);
+    // And the row keeps the name it was created with: resolving is not editing
+    // (the `$setOnInsert` guarantee below), so an all-caps arrival must not
+    // rewrite a city's label either.
+    const [city] = await getDb().select({ name: cities.name }).from(cities);
+    expect(city.name).toBe('Barcelona');
+  });
+
   it('never OVERWRITES an existing row — the `$setOnInsert` guarantee', async () => {
     const first = await resolveGeoChain({ coordinates: BARCELONA, names: COMPLETE_NAMES });
     // Someone edits the city between resolutions (a cover sync, an operator).
