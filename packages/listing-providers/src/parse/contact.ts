@@ -36,11 +36,39 @@ export function normalizeWhatsapp(raw: string | undefined): string | undefined {
   return normalizePhone(raw);
 }
 
+/** Hosts whose links carry a WhatsApp number; matched as substrings, not by regex. */
+const WHATSAPP_HOSTS = ['wa.me', 'api.whatsapp.com', 'whatsapp.com'] as const;
+
 export function normalizeEmail(raw: string | undefined): string | undefined {
   if (!raw) return undefined;
   const trimmed = raw.trim();
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) return undefined;
+
+  // Split at `@` rather than matching `/^[^\s@]+@[^\s@]+\.[^\s@]+$/`.
+  //
+  // That pattern is a polynomial ReDoS: `[^\s@]+\.[^\s@]+$` is ambiguous about
+  // which dot is THE dot, so a long dotted domain makes the engine try every
+  // split. Splitting on `@` is unambiguous — the local part cannot contain one —
+  // and the remaining checks are index lookups.
+  const at = trimmed.indexOf('@');
+  if (at <= 0 || at !== trimmed.lastIndexOf('@')) return undefined;
+
+  const local = trimmed.slice(0, at);
+  const domain = trimmed.slice(at + 1);
+  if (!local || !domain) return undefined;
+  if (hasWhitespace(local) || hasWhitespace(domain)) return undefined;
+
+  // A domain needs a dot with something either side of it.
+  const dot = domain.lastIndexOf('.');
+  if (dot <= 0 || dot === domain.length - 1) return undefined;
+
   return trimmed;
+}
+
+function hasWhitespace(value: string): boolean {
+  for (const char of value) {
+    if (char === ' ' || char === '\t' || char === '\n' || char === '\r') return true;
+  }
+  return false;
 }
 
 export function isAjaxContactChallenge(body: string): boolean {
@@ -306,10 +334,14 @@ export function extractContactFromHtml(html: string): NormalizedListingContact |
     }
   }
   let whatsapp: string | undefined;
-  for (const match of html.matchAll(
-    /href=["']([^"']*(?:wa\.me|api\.whatsapp\.com|whatsapp\.com)[^"']*)["']/gi,
-  )) {
-    whatsapp = normalizeWhatsapp(match[1]);
+  // Collect every href with ONE unambiguous capture, then test the value with
+  // `includes`. The original wrapped the alternation in `[^"']*` on both sides,
+  // which leaves the engine free to split a long href at every position —
+  // polynomial, on attacker-supplied markup.
+  for (const match of html.matchAll(/href=["']([^"']*)["']/gi)) {
+    const href = match[1];
+    if (!href || !WHATSAPP_HOSTS.some((host) => href.toLowerCase().includes(host))) continue;
+    whatsapp = normalizeWhatsapp(href);
     if (whatsapp) break;
   }
   if (!whatsapp) {
