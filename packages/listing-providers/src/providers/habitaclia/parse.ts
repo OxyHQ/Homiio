@@ -12,20 +12,27 @@
  */
 
 import { HABITACLIA_BASE_URL, type HabitacliaRawImage, type HabitacliaRawListing } from './fixtures';
+import { scriptBlocks } from '../../html';
 import { canonicalAmenity, FURNISHED_TOKEN } from '../../parse/amenities';
 import { asCoordinate, asNumber, asString } from '../../parse/guards';
 
-/** Match every `<script type="application/ld+json">…</script>` block. */
-const JSON_LD_RE =
-  /<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+/**
+ * Attribute values, captured with ONE unambiguous run and inspected afterwards.
+ *
+ * The three patterns these replace each wrapped `[^"']*` around the part they
+ * cared about, leaving the engine free to split a long attribute at every
+ * position — `js/polynomial-redos`, on markup from a third-party portal.
+ * Capturing the whole value and reading the id out of it with an anchored
+ * matcher removes the ambiguity: there is exactly one way to match.
+ */
+const HREF_VALUE_RE = /href=["']([^"']*)["']/gi;
+const DATA_HREF_VALUE_RE = /data-href=["']([^"']*)["']/gi;
 
-/** Match a Habitaclia detail-page link and capture its numeric listing id. */
-const DETAIL_LINK_RE = /href=["']([^"']*-i(\d+)\.htm)["']/gi;
-/** List cards expose detail URLs in `data-href` (live search + listainmuebles AJAX). */
-const DETAIL_DATA_HREF_RE =
-  /data-href=["']([^"']*-i(\d+)\.htm(?:\?[^"']*)?)["']/gi;
-/** Fallback when anchors omit the `-i` prefix but keep the trailing id segment. */
-const DETAIL_LINK_FALLBACK_RE = /href=["']([^"']*\/alquiler-[^"']*-(\d{6,})\.htm)["']/gi;
+/** `…-i<digits>.htm` — anchored at the end, so there is one way to read it. */
+const DETAIL_ID_RE = /-i(\d+)\.htm$/;
+
+/** Fallback shape: `/alquiler-…-<digits>.htm`, id at the end, no `-i` prefix. */
+const DETAIL_FALLBACK_ID_RE = /-(\d{6,})\.htm$/;
 
 function asRecord(value: unknown): Record<string, unknown> | undefined {
   return value && typeof value === 'object' && !Array.isArray(value)
@@ -80,8 +87,9 @@ function htmlFragmentToText(html: string): string {
 /** Parse every JSON-LD block in the page, ignoring malformed ones. */
 function extractJsonLdNodes(html: string): Record<string, unknown>[] {
   const nodes: Record<string, unknown>[] = [];
-  for (const match of html.matchAll(JSON_LD_RE)) {
-    const body = match[1]?.trim();
+  // Linear scan rather than `/<script[^>]*type=…[^>]*>/` — see `scriptBlocks`.
+  for (const block of scriptBlocks(html, 'ld+json')) {
+    const body = block.trim();
     if (!body) continue;
     let parsed: unknown;
     try {
@@ -295,18 +303,43 @@ function pushHabitacliaRef(
 export function parseHabitacliaSearch(html: string): { sourceId: string; url: string }[] {
   const seen = new Set<string>();
   const refs: { sourceId: string; url: string }[] = [];
-  for (const match of html.matchAll(DETAIL_DATA_HREF_RE)) {
-    pushHabitacliaRef(refs, seen, match[1], match[2]);
+
+  for (const value of attributeValues(html, DATA_HREF_VALUE_RE)) {
+    pushHabitacliaRef(refs, seen, value, detailIdFrom(value, DETAIL_ID_RE));
   }
-  for (const match of html.matchAll(DETAIL_LINK_RE)) {
-    pushHabitacliaRef(refs, seen, match[1], match[2]);
+  for (const value of attributeValues(html, HREF_VALUE_RE)) {
+    pushHabitacliaRef(refs, seen, value, detailIdFrom(value, DETAIL_ID_RE));
   }
   if (refs.length === 0) {
-    for (const match of html.matchAll(DETAIL_LINK_FALLBACK_RE)) {
-      pushHabitacliaRef(refs, seen, match[1], match[2]);
+    for (const value of attributeValues(html, HREF_VALUE_RE)) {
+      // The fallback shape only applies to rental detail paths; the old pattern
+      // encoded that as `[^"']*\/alquiler-` inside the capture.
+      if (!value.includes('/alquiler-')) continue;
+      pushHabitacliaRef(refs, seen, value, detailIdFrom(value, DETAIL_FALLBACK_ID_RE));
     }
   }
   return refs;
+}
+
+/** Every value of one attribute, in document order. */
+function* attributeValues(html: string, re: RegExp): Generator<string> {
+  for (const match of html.matchAll(re)) {
+    const value = match[1];
+    if (value) yield value;
+  }
+}
+
+/**
+ * Read a listing id out of an attribute value.
+ *
+ * The id matchers are anchored at the end, so they run against the PATH only —
+ * the query is stripped first, exactly as `pushHabitacliaRef` strips it when
+ * building the URL. The old `data-href` pattern allowed `(?:\?[^"']*)?` inline
+ * for the same reason.
+ */
+function detailIdFrom(value: string, re: RegExp): string | undefined {
+  const path = value.replace(/&amp;/g, '&').split('?')[0] ?? value;
+  return re.exec(path)?.[1];
 }
 
 function decodeHtmlEntities(value: string): string {
@@ -429,7 +462,9 @@ export function parseHabitacliaDetailHtml(html: string, url: string): Habitaclia
   }
 
   const priceRaw =
-    firstMatch(html, /itemprop=["']price["'][^>]*>([^<]+)/i) ??
+    // `[^>]*` after a literal re-scans from every repetition of the literal;
+    // bounding it keeps the worst case linear and still spans any real tag.
+    firstMatch(html, /itemprop=["']price["'][^>]{0,200}>([^<]+)/i) ??
     firstMatch(html, /por\s+([\d.]+\s*€)/i) ??
     firstMatch(html, /<title>[^<]*?por\s+([\d.]+\s*€)/i);
   const price = priceRaw ? parseSpanishPrice(priceRaw) : undefined;
