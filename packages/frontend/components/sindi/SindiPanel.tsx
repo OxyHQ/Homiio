@@ -296,6 +296,11 @@ export function SindiPanel({ placement }: { placement: 'aside' | 'overlay' }) {
       ) : hasActiveConversation ? (
         <ChatContent
           key={`${activeConversationId}|${initialMessages.length}`}
+          // Both placements are the same host: `useSindiPanelLayout` already
+          // tells `docked` (act in the page column beside the chat) from the
+          // overlay tier (act, then close this panel once the answer is written
+          // so the result is not left behind a scrim).
+          host="panel"
           conversationId={activeConversationId ?? undefined}
           currentConversation={
             currentConversation?.id === activeConversationId ? currentConversation : null

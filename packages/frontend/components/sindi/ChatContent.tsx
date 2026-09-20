@@ -10,6 +10,7 @@ import {
   AdmonitionRow,
   AdmonitionText,
 } from '@oxy.so/bloom/admonition';
+import { useSindiControlCapability, type SindiChatHost } from '@/components/sindi/sindiHost';
 import { useSindiAppContext } from '@/hooks/useSindiAppContext';
 import { useSindiConversation } from '@/hooks/useSindiConversation';
 import { useSindiUpsell } from '@/hooks/useSindiUpsell';
@@ -39,14 +40,15 @@ export interface ChatContentProps {
    */
   onConversationPersisted?: (conversationId: string) => void;
   /**
-   * Whether this host can drive the app at all.
+   * WHICH SURFACE is rendering this chat.
    *
-   * `false` for the in-property bottom sheet: it floats over a listing the user
-   * is reading, so navigating the page beneath it is the same failure as
-   * navigating behind the overlay panel's scrim. With no context, no action is
-   * emitted for the turn and the chat answers in prose and cards.
+   * Required, and it replaced a `canSendAppContext` boolean that meant "I am
+   * the bottom sheet" in everything but name. The host is what decides whether
+   * Sindi may act and what acting looks like here
+   * (`components/sindi/sindiHost.ts`); whether a context is sent follows from
+   * that rather than being a second switch somebody can set the other way.
    */
-  canSendAppContext?: boolean;
+  host: SindiChatHost;
 }
 
 /**
@@ -59,6 +61,7 @@ export interface ChatContentProps {
  * in-property `SindiChatBottomSheet`; each host gives it a bounded height.
  */
 export function ChatContent({
+  host,
   conversationId,
   currentConversation,
   isAuthenticated,
@@ -67,11 +70,11 @@ export function ChatContent({
   messageFromUrl,
   style,
   onConversationPersisted,
-  canSendAppContext = true,
 }: ChatContentProps) {
   const { t } = useTranslation();
   const { openUpsell } = useSindiUpsell();
-  const appContext = useSindiAppContext();
+  const capability = useSindiControlCapability(host);
+  const appContext = useSindiAppContext(capability);
 
   const {
     messages,
@@ -93,6 +96,7 @@ export function ChatContent({
     actions,
     takeAction,
   } = useSindiConversation({
+    host,
     conversationId,
     currentConversation,
     isAuthenticated,
@@ -100,7 +104,11 @@ export function ChatContent({
     initialMessages,
     messageFromUrl,
     onOpenUpsell: openUpsell,
-    ...(canSendAppContext ? { appContext } : {}),
+    // A host that cannot act asks for nothing to act on. The server emits an
+    // action only for a turn that carried a context, so this is also what keeps
+    // the in-property sheet — which floats over a listing somebody chose to
+    // read — out of the action path entirely.
+    ...(capability.canControlApp ? { appContext } : {}),
     ...(onConversationPersisted ? { onConversationPersisted } : {}),
   });
 

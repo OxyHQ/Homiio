@@ -37,7 +37,7 @@ import { useTranslation } from 'react-i18next';
 import { serializeLocationToken, type SindiAppContext, type SindiDestination } from '@homiio/shared-types';
 
 import { locationDisplayLabel } from '@/components/search/types';
-import { useSindiControlCapability } from '@/components/sindi/sindiPanelLayout';
+import type { SindiControlCapability } from '@/components/sindi/sindiHost';
 import { useSearchQueryStore } from '@/store/searchQueryStore';
 
 /**
@@ -82,11 +82,19 @@ export function revisionOf(value: unknown): number {
   return hash;
 }
 
-export function useSindiAppContext(): SindiAppContext {
+/**
+ * The capability is PASSED IN rather than derived here.
+ *
+ * It depends on the host (`components/sindi/sindiHost.ts`), which only the
+ * component rendering the chat knows, and `ChatContent` needs the same value to
+ * decide whether to send a context at all. One derivation, two readers, no way
+ * for them to disagree about which surface they are describing.
+ */
+export function useSindiAppContext(capability: SindiControlCapability): SindiAppContext {
   const { t } = useTranslation();
   const pathname = usePathname();
   const query = useSearchQueryStore((s) => s.query);
-  const { presentation } = useSindiControlCapability();
+  const { presentation } = capability;
 
   return useMemo(() => {
     const token = query.location ? serializeLocationToken(query.location) : null;

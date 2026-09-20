@@ -1,7 +1,5 @@
 import { useWindowDimensions } from 'react-native';
 
-import type { SindiPresentation } from '@homiio/shared-types';
-
 import {
   SHELL_ASIDE_INSET,
   SIDEBAR_IN_FLOW_FROM,
@@ -67,66 +65,12 @@ export function useSindiPanelLayout(): SindiPanelLayout {
 }
 
 /**
- * Whether Sindi may act on the app, and how it should present a result.
+ * Whether Sindi may act on the app is NOT decided here any more.
  *
- * ## The capability is the LAYOUT's, not the platform's
- *
- * #519 §8.2 is explicit about this, and about the three cases a platform check
- * would get wrong: "Una pestaña web estrecha o la ruta Sindi fullscreen en un
- * monitor grande siguen siendo chat-only. Una tablet nativa suficientemente
- * ancha puede permitir control lateral." So the answer is derived from
- * {@link useSindiPanelLayout} — the same hook the shell uses to decide where
- * the panel goes — and there is deliberately no `Platform.OS` in it.
- *
- * ## An overlay is NOT side-by-side, and that is the load-bearing line
- *
- * Between 500 and 1023 the panel floats over the page behind a scrim. It is
- * narrower than the viewport, so it LOOKS like a side panel, and the tempting
- * reading is that anything not full-width is desktop. #519 answers it directly:
- * "Un overlay modal con scrim no se considera automáticamente escritorio
- * interactivo solo por no ocupar todo el ancho. Mientras bloquee la página, se
- * comporta como chat-only."
- *
- * Navigating the page underneath a scrim the user cannot see through is worse
- * than not navigating: the chat says "I've applied those filters" and the user
- * is looking at a dimmed rectangle. So `docked` — which is true only from 1024,
- * where the panel is the shell's `aside` and the main column keeps its own
- * width — is the whole condition.
- *
- * ## It is re-read at EXECUTION time
- *
- * The executor calls this again just before it applies anything, because the
- * window can be resized mid-stream: "Si el usuario redimensiona o cambia de
- * presentación durante el streaming, mostrar el resultado en el chat en vez de
- * navegar una pantalla que ya no está disponible."
+ * It was — `canControlApp = visible && docked`, straight off this layout — and
+ * that made the panel's viewport tier the answer for three different surfaces,
+ * only one of which is this panel. The decision now takes the HOST as well and
+ * lives in `components/sindi/sindiHost.ts`, which imports this module. There is
+ * deliberately no re-export: two doors onto one rule is how the copy people
+ * read stops being the copy that runs.
  */
-export interface SindiControlCapability {
-  /**
-   * The main pane is visible, interactive and beside the chat.
-   *
-   * `visible && docked`. There is no third term to add: `docked` already
-   * implies `visible` (see {@link useSindiPanelLayout}) and implies the shell
-   * is rendering the panel as an aside rather than over the page — which is
-   * exactly "mainPaneInteractive" expressed as the fact that produces it.
-   */
-  readonly canControlApp: boolean;
-  /** Where a result belongs: the main pane, or the conversation. */
-  readonly presentation: SindiPresentation;
-}
-
-export function useSindiControlCapability(): SindiControlCapability {
-  const layout = useSindiPanelLayout();
-  return controlCapabilityOf(layout);
-}
-
-/**
- * The same decision, as a pure function of the layout.
- *
- * Exported so the rule can be asserted at every breakpoint without rendering a
- * shell, and so the executor can re-derive it from a layout it already holds
- * rather than calling a hook in a callback.
- */
-export function controlCapabilityOf(layout: SindiPanelLayout): SindiControlCapability {
-  const canControlApp = layout.visible && layout.docked;
-  return { canControlApp, presentation: canControlApp ? 'side_by_side' : 'chat_only' };
-}
