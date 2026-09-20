@@ -13,6 +13,18 @@
  * An ExchangeRequest transitions: pending -> confirmed | declined | cancelled
  * and pending|confirmed -> cancelled, and confirmed -> completed.
  * Mirrors `reservationController` for structure, auth and error conventions.
+ *
+ * ## Guest points ride on this lifecycle (#518 §7.5, #519 §7.5)
+ *
+ * A request may declare `usesGuestPoints`, and when it does the transitions
+ * above are also the points lifecycle: creating RESERVES the cost against the
+ * requester, confirming SETTLES it and credits the host, declining or
+ * cancelling RELEASES it. Nothing else in Homiio moves a point.
+ *
+ * The flag is on the REQUEST and not on the mode, deliberately: #518 §7.5
+ * forbids renaming free hosting as points, and a fourth mode would make the two
+ * indistinguishable in a listing's own configuration. A `host` request with the
+ * flag unset is free hosting and stays free hosting.
  */
 
 import type { Request, Response, NextFunction } from 'express';
@@ -42,9 +54,20 @@ import {
   lockPropertyBookingBases,
   type PropertyBookingBasis,
 } from '../db/properties/propertyBookingBasis';
+import {
+  releaseStayPoints,
+  reserveStayPoints,
+  settleStayPoints,
+} from '../db/guestPoints/guestPointsLedger';
 import { logger } from '../middlewares/logging';
 import { AppError, successResponse, paginationResponse } from '../middlewares/errorHandler';
-import { ExchangeMode, ExchangeRequestStatus, OfferingType } from '@homiio/shared-types';
+import {
+  ExchangeMode,
+  ExchangeRequestStatus,
+  GUEST_POINT_IDEMPOTENCY_KEY_PATTERN,
+  guestPointsForWindow,
+  OfferingType,
+} from '@homiio/shared-types';
 
 // ---- Tunable constants (no magic numbers / strings inline) ----
 /** Default page size for list endpoints. */
@@ -123,6 +146,131 @@ function resolveOxyUserId(req: Request): string | undefined {
   return user.user?.id || user.user?._id || user.userId;
 }
 
+
+/**
+ * Whether this request is paid for in guest points, and with which key.
+ *
+ * Refuses rather than coerces. A `swap` asking to pay points is not a typo to
+ * be silently corrected — it is somebody about to be charged for a night they
+ * are also hosting — and `exchange_requests_points_mode_check` would refuse the
+ * row anyway, with an error naming a constraint instead of a person.
+ *
+ * @throws {AppError} 400 when points are asked for on a swap, or without a key.
+ */
+function readGuestPointsIntent(
+  body: CreateExchangeRequestData,
+  mode: string,
+): { readonly idempotencyKey: string } | null {
+  if (body.usesGuestPoints !== true) return null;
+  if (mode !== ExchangeMode.HOST) {
+    throw new AppError(
+      'Guest points pay for a one-way stay; a swap is already reciprocal',
+      400,
+      'POINTS_NOT_APPLICABLE',
+    );
+  }
+  const key = typeof body.guestPointsIdempotencyKey === 'string'
+    ? body.guestPointsIdempotencyKey.trim()
+    : '';
+  if (!GUEST_POINT_IDEMPOTENCY_KEY_PATTERN.test(key)) {
+    throw new AppError(
+      'guestPointsIdempotencyKey must be 8-64 characters of letters, digits, hyphen or underscore',
+      400,
+      'VALIDATION_ERROR',
+    );
+  }
+  return { idempotencyKey: key };
+}
+
+/**
+ * The key for the HOST's credit when a points stay is accepted.
+ *
+ * Derived from the stay rather than supplied by the host's client, and the
+ * asymmetry with the guest's key is deliberate. The guest's reservation is one
+ * intent among many they may have (they could request three stays in an
+ * evening), so only the caller knows which two attempts are the same one. The
+ * host's credit is one per stay by definition, so the stay IS the key — and a
+ * derived key cannot be forgotten by a client retrying an accept. A caller may
+ * still send its own; this is the fallback, not an override.
+ *
+ * Same shape as `moderation_outbox`'s deterministic id, for the same reason:
+ * two concurrent presses converge on one row instead of crediting twice.
+ */
+function hostCreditKey(exchangeRequestId: string): string {
+  return `gp-earn-${exchangeRequestId}`.replace(/[^A-Za-z0-9_-]/g, '').slice(0, 64);
+}
+
+
+/**
+ * A transition that RELEASES a points reservation, in one transaction.
+ *
+ * Declining and cancelling are the two ways a stay stops happening before it
+ * happened, and both give the guest their points back. The transition and the
+ * release are one act: a declined request whose points stayed committed is a
+ * trip somebody cannot book because of one that was refused, and nothing would
+ * ever notice.
+ *
+ * Confirming is deliberately NOT here. It settles rather than releases, and it
+ * has to happen inside the transaction that locks the two homes and re-checks
+ * the calendar — so it is written there, where the lock is, rather than being
+ * threaded through this.
+ *
+ * Returns `undefined` when the transition itself did not match; the caller
+ * turns that into the `INVALID_STATE` it always did.
+ *
+ * ## Cancelling a stay the host already ACCEPTED does not return the points
+ *
+ * By then the guest's points have settled and the host has been credited for
+ * holding the dates. Releasing would hand the points back while the credit
+ * stayed, which is the one way this ledger could mint — and reversing the
+ * host's credit instead would take back something they earned by keeping their
+ * home free.
+ *
+ * So a late cancellation leaves the ledger alone, and that is a DECISION rather
+ * than an oversight: any other answer is a refund policy — a window, a
+ * proportion, a penalty — and #518 §7.5 asks for a points system, not for
+ * Homiio to invent cancellation terms nobody agreed to. It is recorded in
+ * `docs/housing-parity.md` §7 as the open product question it is.
+ */
+async function transitionAndReleaseGuestPoints(
+  db: ReturnType<typeof getDb>,
+  request: NonNullable<Awaited<ReturnType<typeof findExchangeRequestById>>>,
+  nextStatus: ExchangeStatusValue,
+  fromStatuses: readonly ExchangeStatusValue[],
+  options: { readonly message?: string },
+): Promise<Awaited<ReturnType<typeof transitionExchangeRequest>>> {
+  return db.transaction(async (tx) => {
+    const updated = await transitionExchangeRequest(
+      tx,
+      request.id,
+      nextStatus,
+      fromStatuses,
+      options.message === undefined ? {} : { message: options.message },
+    );
+    if (!updated || !request.usesGuestPoints) return updated;
+
+    const reason =
+      nextStatus === ExchangeRequestStatus.DECLINED
+        ? ('declined' as const)
+        : ('cancelled' as const);
+    const released = await releaseStayPoints(tx, { exchangeRequestId: request.id, reason });
+    // `already_settled` is the late-cancellation case above, and
+    // `no_reservation` cannot happen on a points request — both are left alone
+    // rather than failing a decline or a cancellation the person is entitled to
+    // make. Refusing to let somebody cancel because a ledger row was not where
+    // we expected would be the worse answer by a distance.
+    if (!released.ok) {
+      logger.info('Exchange transition left guest points untouched', {
+        exchangeRequestId: request.id,
+        nextStatus,
+        outcome: released.reason,
+      });
+    }
+
+    return updated;
+  });
+}
+
 class ExchangeController {
   /**
    * POST /api/exchanges
@@ -174,6 +322,15 @@ class ExchangeController {
         }
         offered = parsed;
       }
+
+      // Points are validated BEFORE anything is written, so a refusal names
+      // the problem rather than rolling back a request the person would see
+      // appear and vanish. The COST is derived from the window the server
+      // parsed, never from the body.
+      const pointsIntent = readGuestPointsIntent(body, mode);
+      const pointsCost = pointsIntent
+        ? guestPointsForWindow(requested.start, requested.end)
+        : 0;
 
       /**
        * A swap commits TWO homes, so BOTH are locked and both are decided
@@ -256,7 +413,38 @@ class ExchangeController {
           offeredPropertyId: resolvedOfferedPropertyId,
           offeredWindow: offered,
           message: typeof message === 'string' ? message : undefined,
+          usesGuestPoints: pointsIntent !== null,
         });
+
+        if (pointsIntent) {
+          // In the SAME transaction that locked the homes. The request and its
+          // reservation are one act: a request that exists with no points
+          // reserved is a stay somebody believes they have paid for, and a
+          // reservation with no request is points committed to nothing. Either
+          // half alone is worse than neither.
+          const reservation = await reserveStayPoints(tx, {
+            exchangeRequestId: exchangeRequest.id,
+            guestOxyUserId: oxyUserId,
+            hostOxyUserId,
+            points: pointsCost,
+            idempotencyKey: pointsIntent.idempotencyKey,
+          });
+          if (!reservation.ok) {
+            // THROWN, not returned as `{ error }` like every other refusal in
+            // this transaction — and the difference is the point. The others
+            // refuse before anything is written, so returning commits an empty
+            // transaction. This one refuses AFTER the request row exists, so it
+            // has to roll back, and only an exception does that. Both numbers
+            // travel, because "you need 3 nights' worth and have 1" is a
+            // sentence somebody can act on and "insufficient points" is not.
+            throw new AppError(
+              `This stay costs ${reservation.required} guest points and you have ${reservation.available} available`,
+              409,
+              'INSUFFICIENT_GUEST_POINTS',
+            );
+          }
+        }
+
         return { exchangeRequest };
       });
 
@@ -266,6 +454,8 @@ class ExchangeController {
         exchangeRequestId: outcome.exchangeRequest.id,
         propertyId: String(propertyId),
         mode,
+        usesGuestPoints: pointsIntent !== null,
+        guestPoints: pointsCost,
       });
 
       res.status(201).json(successResponse(serializeExchangeRequest(outcome.exchangeRequest), 'Exchange request created'));
@@ -367,6 +557,17 @@ class ExchangeController {
 
       const now = new Date();
       const nextMessage = typeof message === 'string' ? message : undefined;
+      // The key for the host's credit, if this turns out to be an accepted
+      // points stay. Resolved before the branches because the confirm path
+      // needs it inside a transaction, where minting one would be a decision
+      // taken while holding two row locks.
+      const suppliedKey =
+        typeof (req.body as UpdateExchangeRequestData).guestPointsIdempotencyKey === 'string'
+          ? String((req.body as UpdateExchangeRequestData).guestPointsIdempotencyKey).trim()
+          : '';
+      const creditKey = GUEST_POINT_IDEMPOTENCY_KEY_PATTERN.test(suppliedKey)
+        ? suppliedKey
+        : hostCreditKey(exchangeRequest.id);
       // Every transition below carries its permitted FROM set into the
       // `UPDATE`'s own predicate, so two hosts confirming at once cannot both
       // succeed. The reads choose the ERROR; the predicate chooses the write.
@@ -458,13 +659,43 @@ class ExchangeController {
             if (!confirmed) {
               return { error: new AppError('Only pending requests can be confirmed or declined', 400, 'INVALID_STATE') };
             }
+
+            if (exchangeRequest.usesGuestPoints) {
+              // The guest's reservation becomes a spend and the host is
+              // credited the same number of points — here, inside the
+              // transaction that just confirmed the stay, because the two are
+              // one fact. A confirmed stay whose points did not settle is a
+              // host who hosted for nothing.
+              const settled = await settleStayPoints(tx, {
+                exchangeRequestId: id,
+                idempotencyKey: creditKey,
+              });
+              if (!settled.ok) {
+                // The reservation is gone — released by the hourly sweep
+                // because the dates passed while nobody answered. Accepting now
+                // would credit the host against points the guest no longer has
+                // committed. Thrown rather than returned because the
+                // confirmation above has already been written and must roll
+                // back with it.
+                throw new AppError(
+                  'The guest points for this stay were released when the dates passed, so it can no longer be accepted',
+                  409,
+                  'GUEST_POINTS_RESERVATION_LOST',
+                );
+              }
+            }
+
             return { exchangeRequest: confirmed };
           });
 
           if ('error' in confirmation) return next(confirmation.error);
           updated = confirmation.exchangeRequest;
         } else {
-          updated = await transitionExchangeRequest(db, id, nextStatus, fromStatuses, { message: nextMessage });
+          // A decline gives the guest their points back, in the same
+          // transaction as the transition.
+          updated = await transitionAndReleaseGuestPoints(db, exchangeRequest, nextStatus, fromStatuses, {
+            message: nextMessage,
+          });
           if (!updated) {
             return next(new AppError('Only pending requests can be confirmed or declined', 400, 'INVALID_STATE'));
           }
@@ -481,7 +712,9 @@ class ExchangeController {
           return;
         }
         fromStatuses = [ExchangeRequestStatus.PENDING, ExchangeRequestStatus.CONFIRMED];
-        updated = await transitionExchangeRequest(db, id, nextStatus, fromStatuses, { message: nextMessage });
+        updated = await transitionAndReleaseGuestPoints(db, exchangeRequest, nextStatus, fromStatuses, {
+          message: nextMessage,
+        });
         if (!updated) {
           return next(new AppError('Only pending or confirmed requests can be cancelled', 400, 'INVALID_STATE'));
         }

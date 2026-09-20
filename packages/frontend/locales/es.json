@@ -4014,5 +4014,25 @@
       "confirmFailed": "No hemos podido confirmarlo. Inténtalo otra vez.",
       "rejectFailed": "No hemos podido registrarlo. Inténtalo otra vez."
     }
+  },
+  "guestPoints": {
+    "title": "Puntos de huésped",
+    "available": "{{count}} puntos disponibles",
+    "reserved": "{{count}} reservados para estancias pendientes de respuesta",
+    "breakdown": "{{earned}} ganados alojando · {{spent}} gastados alojándote",
+    "needToHost": "Necesitas alojar a alguien antes de poder alojarte.",
+    "rule": "Una noche alojando gana un punto; una noche alojado cuesta uno. Los puntos no se compran, ni se regalan, ni se convierten en dinero.",
+    "empty": {
+      "body": "Aún no tienes puntos de huésped. Aloja a alguien una noche y tendrás uno."
+    },
+    "errors": {
+      "loadFailed": "No hemos podido cargar tus puntos. No se oculta nada: la petición falló."
+    },
+    "payWith": {
+      "label": "Pagar con puntos de huésped",
+      "needDates": "Elige las fechas para ver cuánto cuesta esta estancia.",
+      "cost": "{{count}} puntos por estas noches. Tienes {{available}}.",
+      "short": "Esta estancia cuesta {{count}} puntos y tienes {{available}}."
+    }
   }
 }

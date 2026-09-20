@@ -62,6 +62,22 @@ export const exchangeRequests = pgTable(
     offeredWindowEnd: timestamptz(),
 
     message: text(),
+    /**
+     * The stay is paid for in GUEST POINTS (#518 §7.5).
+     *
+     * A column on the REQUEST rather than a fourth `mode`, and that is the
+     * decision rather than an implementation detail. #518 §7.5 forbids
+     * "mapping points onto free hosting" — renaming `host` as points — and a
+     * mode would do precisely that by making the two indistinguishable in the
+     * listing's own configuration. A listing declares that it hosts; the
+     * REQUEST declares whether this particular stay is paid for in nights
+     * somebody already hosted.
+     *
+     * `NOT NULL DEFAULT false` because free hosting is what every existing
+     * request is, and a default of `true` would retroactively charge people for
+     * stays they were given.
+     */
+    usesGuestPoints: boolean().notNull().default(false),
     status: text({ enum: EXCHANGE_REQUEST_STATUSES }).notNull().default('pending'),
 
     createdAt: createdAt(),
@@ -135,6 +151,20 @@ export const exchangeRequests = pgTable(
      * in the other direction: the schema declares neither field required, and the
      * offer can legitimately be negotiated after the request is opened.
      */
+    /**
+     * Only a one-way stay is paid for in points.
+     *
+     * A swap is already reciprocal: each side hosts the other, so charging the
+     * requester points would take payment for a night the host is receiving
+     * back anyway — and would leave the host's own stay unpaid, which is a
+     * second, unearned asymmetry. Refused at the database because the two
+     * controllers that can set it (create, and any future edit) would otherwise
+     * each have to remember.
+     */
+    check(
+      'exchange_requests_points_mode_check',
+      sql`${table.usesGuestPoints} = false or ${table.mode} = 'host'`,
+    ),
     check(
       'exchange_requests_host_mode_offers_nothing_check',
       sql`${table.mode} <> 'host' or (

@@ -66,6 +66,7 @@ export {
 } from './evictions';
 export { exchangeRequests, exchangeReviews } from './exchanges';
 export { cities, countries, neighborhoods, regions } from './geo';
+export { guestPointMovements } from './guestPoints';
 export { images } from './images';
 export {
   maintenanceRequestAttachments,

@@ -25,6 +25,7 @@ import addresses from './addresses';
 import reservations from './reservations';
 import applications from './applications';
 import exchanges from './exchanges';
+import guestPoints from './guestPoints';
 import partners from './partners';
 import evictions from './evictions';
 import cityController from '../controllers/cityController';
@@ -49,6 +50,7 @@ export default function() {
   const reservationRoutes = reservations();
   const applicationRoutes = applications();
   const exchangeRoutes = exchanges();
+  const guestPointRoutes = guestPoints();
   const partnerRoutes = partners();
   const evictionRoutes = evictions();
 
@@ -71,6 +73,7 @@ export default function() {
   router.use('/reservations', reservationRoutes);
   router.use('/applications', applicationRoutes);
   router.use('/exchanges', exchangeRoutes);
+  router.use('/guest-points', guestPointRoutes);
   router.use('/partners', partnerRoutes);
   router.use('/evictions', evictionRoutes);
   router.use('/rooms', roomRoutes);

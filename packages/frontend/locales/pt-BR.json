@@ -3988,5 +3988,25 @@
       "confirmFailed": "Não conseguimos confirmar. Tente de novo.",
       "rejectFailed": "Não conseguimos registrar. Tente de novo."
     }
+  },
+  "guestPoints": {
+    "title": "Pontos de hóspede",
+    "available": "{{count}} pontos para usar",
+    "reserved": "{{count}} reservados para estadias aguardando resposta",
+    "breakdown": "{{earned}} ganhos hospedando · {{spent}} gastos se hospedando",
+    "needToHost": "Você precisa hospedar alguém antes de poder se hospedar.",
+    "rule": "Uma noite hospedando rende um ponto; uma noite hospedado custa um. Pontos não se compram, não se doam e não viram dinheiro.",
+    "empty": {
+      "body": "Você ainda não tem pontos de hóspede. Hospede alguém por uma noite e terá um."
+    },
+    "errors": {
+      "loadFailed": "Não conseguimos carregar seus pontos. Nada está escondido — a requisição falhou."
+    },
+    "payWith": {
+      "label": "Pagar com pontos de hóspede",
+      "needDates": "Escolha as datas para ver quanto custa esta estadia.",
+      "cost": "{{count}} pontos por essas noites. Você tem {{available}}.",
+      "short": "Esta estadia custa {{count}} pontos e você tem {{available}}."
+    }
   }
 }

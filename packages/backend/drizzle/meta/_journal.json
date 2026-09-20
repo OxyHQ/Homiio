@@ -176,6 +176,13 @@
       "when": 1789874535781,
       "tag": "0024_floor_not_stated",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1789876718479,
+      "tag": "0025_guest_points",
+      "breakpoints": true
     }
   ]
 }

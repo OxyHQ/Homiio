@@ -272,6 +272,23 @@ There is no standalone tenant picker and no free-form lease composer.
 | `POST` | `/api/exchanges`, `/api/exchanges/:id/reviews` |
 | `PATCH` | `/api/exchanges/:id` |
 
+### `/api/guest-points`
+
+| Method | Path |
+|---|---|
+| `GET` | `/api/guest-points` — my balance and every movement behind it |
+
+**One route, and no write, on purpose.** Points are earned by hosting and spent
+by staying, so every write belongs to the exchange lifecycle: `POST
+/api/exchanges` with `usesGuestPoints` RESERVES the stay's cost against the
+requester, `PATCH /api/exchanges/:id` to `confirmed` SETTLES it and credits the
+host, and `declined` or `cancelled` RELEASES it. A stay nobody ever answered is
+released by an hourly sweep in `services/cron.ts`.
+
+One point per night in both directions, no welcome grant, and no way to write a
+movement that is not attached to a stay — `guest_point_movements.exchange_request_id`
+is `NOT NULL`. `docs/housing-parity.md` §7.
+
 ### `/api/profiles`
 
 `GET /api/profiles`, `GET|PUT /api/profiles/me`, `GET /api/profiles/oxy/:oxyUserId`,

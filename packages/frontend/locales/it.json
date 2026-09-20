@@ -4013,5 +4013,25 @@
       "confirmFailed": "Non siamo riusciti a confermarlo. Riprova.",
       "rejectFailed": "Non siamo riusciti a registrarlo. Riprova."
     }
+  },
+  "guestPoints": {
+    "title": "Punti ospite",
+    "available": "{{count}} punti da spendere",
+    "reserved": "{{count}} riservati per soggiorni in attesa di risposta",
+    "breakdown": "{{earned}} guadagnati ospitando · {{spent}} spesi soggiornando",
+    "needToHost": "Devi ospitare qualcuno prima di poter soggiornare.",
+    "rule": "Una notte da ospitante vale un punto; una notte da ospite ne costa uno. I punti non si comprano, non si regalano e non si convertono in denaro.",
+    "empty": {
+      "body": "Non hai ancora punti ospite. Ospita qualcuno per una notte e ne avrai uno."
+    },
+    "errors": {
+      "loadFailed": "Non siamo riusciti a caricare i tuoi punti. Non nascondiamo nulla: la richiesta non è andata a buon fine."
+    },
+    "payWith": {
+      "label": "Paga con i punti ospite",
+      "needDates": "Scegli le date per vedere quanto costa questo soggiorno.",
+      "cost": "{{count}} punti per queste notti. Ne hai {{available}}.",
+      "short": "Questo soggiorno costa {{count}} punti e tu ne hai {{available}}."
+    }
   }
 }

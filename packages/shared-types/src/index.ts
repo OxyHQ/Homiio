@@ -56,6 +56,9 @@ export * from './application';
 // Home-exchange types (swap / free hosting)
 export * from './exchange';
 
+// Guest points — earned by hosting, spent by staying, one point per night
+export * from './guestPoints';
+
 // Listing report types (trust & safety flagging)
 export * from './report';
 

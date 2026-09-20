@@ -18,6 +18,7 @@ import {
   ProfileExchangeReviewsResponse,
   exchangeService,
 } from '@/services/exchangeService';
+import { useInvalidateGuestPoints } from '@/hooks/useGuestPointsQueries';
 
 const EXCHANGE_LIST_KEY = 'exchange-requests';
 const EXCHANGE_DETAIL_KEY = 'exchange-request';
@@ -109,10 +110,15 @@ export function useCreateExchangeRequest(): UseMutationResult<
   CreateExchangeRequestData
 > {
   const queryClient = useQueryClient();
+  const invalidateGuestPoints = useInvalidateGuestPoints();
   return useMutation<ExchangeRequest, Error, CreateExchangeRequestData>({
     mutationFn: (payload) => exchangeService.createRequest(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [EXCHANGE_LIST_KEY] });
+      // A points request has just reserved its cost, so the balance on screen
+      // is already wrong. Invalidated unconditionally — whether this request
+      // was a points stay is the server's answer, not the caller's.
+      invalidateGuestPoints();
     },
   });
 }
@@ -121,12 +127,20 @@ export function useUpdateExchangeStatus(
   id: string,
 ): UseMutationResult<ExchangeRequest, Error, UpdateExchangeRequestData> {
   const queryClient = useQueryClient();
+  const invalidateGuestPoints = useInvalidateGuestPoints();
   return useMutation<ExchangeRequest, Error, UpdateExchangeRequestData>({
     mutationFn: (payload) => exchangeService.updateStatus(id, payload),
     onSuccess: (request) => {
       queryClient.setQueryData(exchangeKeys.detail(id), request);
       queryClient.invalidateQueries({ queryKey: [EXCHANGE_LIST_KEY] });
+      // Accepting settles the guest's points and credits the host; declining or
+      // cancelling gives them back. Every one of those changes a balance
+      // somebody may be looking at.
+      invalidateGuestPoints();
     },
+    // A refused transition can also mean the reservation moved on underneath —
+    // a refetch is how the person finds out what it moved to.
+    onError: invalidateGuestPoints,
   });
 }
 

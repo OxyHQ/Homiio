@@ -3984,5 +3984,25 @@
       "confirmFailed": "We could not confirm that. Try again.",
       "rejectFailed": "We could not record that. Try again."
     }
+  },
+  "guestPoints": {
+    "title": "Guest points",
+    "available": "{{count}} points to spend",
+    "reserved": "{{count}} reserved for stays waiting on a reply",
+    "breakdown": "{{earned}} earned by hosting · {{spent}} spent staying",
+    "needToHost": "You need to host before you can stay.",
+    "rule": "One night hosted earns one point; one night stayed costs one. Points cannot be bought, given away or turned into money.",
+    "empty": {
+      "body": "No guest points yet. Host someone for a night and you will have one."
+    },
+    "errors": {
+      "loadFailed": "We could not load your guest points. Nothing is hidden — the request failed."
+    },
+    "payWith": {
+      "label": "Pay with guest points",
+      "needDates": "Choose your dates to see what this stay costs.",
+      "cost": "{{count}} points for these nights. You have {{available}}.",
+      "short": "This stay costs {{count}} points and you have {{available}}."
+    }
   }
 }
