@@ -1131,7 +1131,6 @@ export {
   FUNDA_FIXTURE_SEARCH_JSON,
 } from './providers/nl/funda/fixtures';
 
-import type { ProviderId } from '@homiio/shared-types';
 import { ProviderRegistry } from './registry';
 import type { ListingProvider } from './types';
 import { citiesOptionsFromEnv } from './cities';
