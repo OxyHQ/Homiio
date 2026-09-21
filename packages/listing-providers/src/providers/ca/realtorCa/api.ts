@@ -3,6 +3,7 @@
  */
 
 import { REALTOR_CA_API_BASE } from './fixtures';
+import { citySlug } from '../../../slug';
 
 export type RealtorCaTransaction = 'rent' | 'sale';
 
@@ -27,10 +28,10 @@ export function realtorCaDetailUrl(referenceNumber: string): string {
 }
 
 export function realtorCaSourceUrl(id: string, addressText: string): string {
-  const slug = addressText
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
+  // Shared helper, which also strips diacritics — so a Montréal address now
+  // slugs to `montreal` instead of the copy's `montr-al`. The slug is cosmetic
+  // in `/real-estate/{id}/{slug}`; the id carries identity.
+  const slug = citySlug(addressText);
   return `https://www.realtor.ca/real-estate/${id}/${slug}`;
 }
 

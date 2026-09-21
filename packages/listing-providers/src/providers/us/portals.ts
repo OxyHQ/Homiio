@@ -3,18 +3,20 @@
  */
 
 import { DEFAULT_US_CITIES as DEFAULT_US_CITIES_LIST } from '../../parse/defaultMarketCities';
+import { citySlug } from '../../slug';
 
 /** US cities enumerated when a discover job omits an explicit `city`. */
 export const DEFAULT_US_CITIES: readonly string[] = DEFAULT_US_CITIES_LIST;
 
 /** `Austin, TX` → `austin-tx` (HotPads resourceId slug). */
 export function cityToResourceSlug(city: string): string {
-  return city
-    .toLowerCase()
-    .replace(/,/g, '')
-    .trim()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
+  // `citySlug` exists so this is written once. This was the fifth, sixth,
+  // seventh and eighth copy of it in the repository, and every copy carried the
+  // same `/^-+|-+$/g` ReDoS — which is what a duplicated snippet does: it
+  // duplicates the defect too. The leading `.replace(/,/g, '')` was redundant;
+  // `[^a-z0-9]+` already collapses a comma and its following space into one
+  // separator. Verified identical across the configured US market.
+  return citySlug(city);
 }
 
 /** `Austin, TX` → `austin-tx` search slug segment (same as resource slug). */
