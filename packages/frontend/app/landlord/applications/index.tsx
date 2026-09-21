@@ -321,7 +321,7 @@ const ApplicantsTable: React.FC<ApplicantsTableProps> = ({
           <DataTableSearch
             label={t('applications.landlord.searchLabel')}
             value={searchQuery}
-            onChangeText={onSearchQueryChange}
+            onValueChange={onSearchQueryChange}
           />
         </>
       }

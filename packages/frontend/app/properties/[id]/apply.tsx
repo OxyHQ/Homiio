@@ -550,7 +550,7 @@ export default function ApplyToRentScreen() {
                 <PhoneInput
                   label={t('applications.field.phone')}
                   value={reference.phone}
-                  onChangeText={(value) => handleReferenceChange(index, { phone: value })}
+                  onValueChange={(value) => handleReferenceChange(index, { phone: value })}
                   country={reference.phoneCountry}
                   onCountryChange={(iso2) => handleReferenceChange(index, { phoneCountry: iso2 })}
                   placeholder="600 000 000"

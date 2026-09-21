@@ -460,7 +460,7 @@ const EvictionForm: React.FC<EvictionFormProps> = ({ mode, editId, existing }) =
               country={form.phone.country}
               onCountryChange={(iso2) => update('phone', withPhoneCountry(form.phone, iso2))}
               value={form.phone.number}
-              onChangeText={(number) => update('phone', withPhoneNumber(form.phone, number))}
+              onValueChange={(number) => update('phone', withPhoneNumber(form.phone, number))}
             />
             <PhoneInput
               label={t('evictions.detail.contact.whatsapp')}
@@ -468,7 +468,7 @@ const EvictionForm: React.FC<EvictionFormProps> = ({ mode, editId, existing }) =
               country={form.whatsapp.country}
               onCountryChange={(iso2) => update('whatsapp', withPhoneCountry(form.whatsapp, iso2))}
               value={form.whatsapp.number}
-              onChangeText={(number) => update('whatsapp', withPhoneNumber(form.whatsapp, number))}
+              onValueChange={(number) => update('whatsapp', withPhoneNumber(form.whatsapp, number))}
             />
             <Field label={t('evictions.detail.contact.telegram')}>
               <TextFieldInput

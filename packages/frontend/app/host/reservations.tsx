@@ -387,7 +387,7 @@ const ReservationsTable: React.FC<ReservationsTableProps> = ({
             label={t('common.search')}
             placeholder={t('common.search')}
             value={query}
-            onChangeText={setQuery}
+            onValueChange={setQuery}
           />
         </>
       }
