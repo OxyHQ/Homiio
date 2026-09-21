@@ -356,7 +356,7 @@ export default function ContractsScreen() {
                     label={t('contracts.list.searchLabel')}
                     placeholder={t('common.search')}
                     value={query}
-                    onChangeText={setQuery}
+                    onValueChange={setQuery}
                   />
                 </>
               }

@@ -218,7 +218,7 @@ export default function HomePage() {
             <View className="absolute left-4 top-[max(0.75rem,env(safe-area-inset-top))] z-10">
               <FrostedIconButton
                 onPress={openMobileDrawer}
-                icon={<RiMenuLine width={22} height={22} />}
+                icon={RiMenuLine}
                 accessibilityLabel={t('sidebar.open')}
                 hitSlop={{ top: spacing.sm, bottom: spacing.sm, left: spacing.sm, right: spacing.sm }}
               />

@@ -183,7 +183,7 @@ export function PhoneField({ label, value, onChange, placeholder }: PhoneFieldPr
         onChange(joinPhone(next, number));
       }}
       value={number}
-      onChangeText={(text) => onChange(joinPhone(country, text))}
+      onValueChange={(text) => onChange(joinPhone(country, text))}
     />
   );
 }
