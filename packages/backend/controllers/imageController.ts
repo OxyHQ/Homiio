@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { resolveStorageFolder } from '../services/imageUploadService';
 import type { ImageEntityType } from '@homiio/shared-types';
 import imageUploadService, {
   UploadedImage,
@@ -117,7 +118,9 @@ export class ImageController {
         return;
       }
 
-      const folder = typeof req.body.folder === 'string' ? req.body.folder : 'general';
+      // Allow-listed, not merely typed. `typeof === 'string'` let
+      // `{"folder": "../../.."}` through to a `path.join` against the store root.
+      const folder = resolveStorageFolder(req.body.folder);
       const uploadedImage: UploadedImage = await imageUploadService.uploadImage(req.file, folder);
       const imageUrls = imageUploadService.getAllImageUrls(uploadedImage);
 
@@ -176,7 +179,9 @@ export class ImageController {
         ? (req.files as unknown as UploadedFile[])
         : (Object.values(req.files as Record<string, UploadedFile[]>).flat().filter(Boolean) as UploadedFile[]);
 
-      const folder = typeof req.body.folder === 'string' ? req.body.folder : 'general';
+      // Allow-listed, not merely typed. `typeof === 'string'` let
+      // `{"folder": "../../.."}` through to a `path.join` against the store root.
+      const folder = resolveStorageFolder(req.body.folder);
 
       const target = resolveEntityTarget(req.body);
       if (target.kind === 'invalid') {
