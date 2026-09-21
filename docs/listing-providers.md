@@ -701,3 +701,53 @@ from the worker's own log timestamps:
 | median gap between ingests | 9,520 ms | **518 ms** |
 
 Madrid's 8,121 rentals go from a thirty-hour import to under four.
+
+## Rotation: why three providers imported nothing while being perfectly healthy
+
+Measured 2026-09-21, with the worker stable for twelve hours:
+
+```
+discover jobs started, 14h:  17
+on the live task:            5 started, 2 finished
+ingests in 12h: immowelt 636 · habitaclia 456 · otodom 391 · immoweb 375
+                openrent 351 · mercadolibre_mx 317 · mercadolibre_ar 232
+                kleinanzeigen 75 · immobilienscout24 69 · fotocasa 4 · pisos 2
+                rightmove 0 · onthemarket 0 · blueground 0
+```
+
+`rightmove`, `onthemarket` and `blueground` were **enabled, registered, healthy
+and producing nothing** — and the logs contained not one error for them in
+twelve hours, because nothing had gone wrong. **They were never reached.**
+
+Discovery schedules 224 scopes every 6 hours and ran three at a time, and one
+deep city walk — up to `LISTING_ES_MAX_PAGES` pages of 1-2 MB each — can hold a
+slot for tens of minutes. A full rotation at that pace takes days, so whatever
+sits at the back of the list never runs at all.
+
+Two changes make rotation a property rather than a hope:
+
+- **`LISTING_DISCOVER_JOB_BUDGET_MS`** (default 5 min): a scope yields what it
+  found when its time is up and frees the slot. Partial results are kept — a
+  timed-out scope that found 300 homes contributed 300 homes. The pages it did
+  not reach come on a later cycle, since discovery re-walks from page 1 and the
+  fetch queue dedupes on `(provider, sourceId)`. The budget is capped below the
+  10-minute BullMQ lock so a job can never outlive its lock and be redelivered.
+- **`LISTING_DISCOVER_CONCURRENCY` default 3 → 6.** The old value dates from
+  when every Spanish portal paged through a warmed Playwright session. Habitaclia
+  and Fotocasa now read their whole result set from JSON in the search page over
+  plain HTTP, so most scopes never touch a browser and three slots left the
+  queue idle.
+
+A timed-out scope is reported (`timedOut: true`) so a scope that is permanently
+too big to finish is visible rather than merely slow — a market whose every
+scope times out is under-collected, and nothing else would say so.
+
+## 44 providers implemented, 13 switched on
+
+The single largest lever on how much is imported is not code: 31 implemented
+providers are `PROVIDER_<ID>_ENABLED=false`, most of them documented above as
+"OFF until a browser plus residential proxy" for their market. Enabling them is
+a task-definition change, and it is **not free** — each one spends metered
+residential bandwidth, and an exhausted balance is what took the pipeline down
+on 2026-09-20. Turn them on in small batches and watch
+`Oxy/Homiio ListingsIngested` per market rather than all at once.

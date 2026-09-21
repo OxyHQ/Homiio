@@ -81,7 +81,21 @@ const FETCH_CONCURRENCY = parseInt(process.env.LISTING_FETCH_CONCURRENCY || '6',
  * parallel; the Playwright pool still caps its own concurrency, so browser
  * scopes serialise there while HTTP-first scopes proceed.
  */
-const DISCOVER_CONCURRENCY = parseInt(process.env.LISTING_DISCOVER_CONCURRENCY || '3', 10);
+/**
+ * Discover-worker concurrency (`LISTING_DISCOVER_CONCURRENCY`).
+ *
+ * RAISED FROM 3 TO 6. The old value dates from when every Spanish portal walked
+ * its pages through a warmed Playwright session and the browser pool was the
+ * real constraint. Habitaclia and Fotocasa now read their whole result set from
+ * JSON embedded in the search page over plain HTTP, so most scopes no longer
+ * touch a browser at all and three slots simply leave the queue idle.
+ *
+ * It matters because rotation is the scarce resource: 224 scopes on a 6-hour
+ * schedule cannot complete a pass if each slot is held for tens of minutes, and
+ * the scopes at the back never run. The browser pool still caps its own
+ * concurrency, so browser-bound scopes serialise there regardless of this.
+ */
+const DISCOVER_CONCURRENCY = parseInt(process.env.LISTING_DISCOVER_CONCURRENCY || '6', 10);
 
 /** Discover jobs may hold a browser session across many cities — match worker lockDuration. */
 const DISCOVER_LOCK_MS = 600_000;
@@ -295,23 +309,84 @@ async function processFetchRef(ref: ExternalListingRef, jobMarket?: ListingMarke
 }
 
 /** Enumerate a discover job's refs (BullMQ path enqueues; inline path ingests). */
-async function collectDiscoverRefs(data: DiscoverJobData): Promise<ExternalListingRef[]> {
+/**
+ * Enumerate a scope's refs, under a WALL-CLOCK BUDGET.
+ *
+ * **ONE SLOW CITY USED TO COST EVERY OTHER SCOPE ITS TURN.** Discovery runs 224
+ * scopes on a 6-hour schedule at three at a time, and a deep city walk — up to
+ * `LISTING_ES_MAX_PAGES` pages of 1-2 MB each — can hold a slot for the better
+ * part of an hour. Measured on 2026-09-21: 17 discover jobs started in 14
+ * hours, 5 on the live task with only 2 finishing. A full rotation at that pace
+ * takes days, so the scopes at the back of the list never ran at all:
+ * rightmove, onthemarket and blueground were enabled, registered, healthy, and
+ * had produced ZERO listings in twelve hours. Not failing — never reached.
+ *
+ * The budget makes rotation a property of the system rather than a hope. A
+ * scope yields whatever it found when its time is up and frees the slot; the
+ * pages it did not reach are picked up on a later cycle, because discovery is
+ * resumable by nature — it re-walks from page 1 and the fetch queue dedupes by
+ * `(provider, sourceId)`.
+ *
+ * Partial results are KEPT, never discarded. A timed-out scope that found 300
+ * homes contributed 300 homes; throwing them away to signal "incomplete" would
+ * trade real inventory for tidiness.
+ */
+async function collectDiscoverRefs(data: DiscoverJobData): Promise<{
+  refs: ExternalListingRef[];
+  timedOut: boolean;
+}> {
   if (!registry.has(data.provider)) {
     throw new UnrecoverableError(`No provider registered for id "${data.provider}"`);
   }
   const provider = registry.get(data.provider);
   const refs: ExternalListingRef[] = [];
-  for await (const ref of provider.discover({
-    provider: data.provider,
-    market: data.market,
-    city: data.city,
-    bbox: data.bbox,
-    limit: data.limit,
-    runtime: runtimeForMarket(data.market),
-  })) {
-    refs.push(ref);
+
+  const budgetMs = discoverJobBudgetMs();
+  const controller = new AbortController();
+  const deadline = budgetMs > 0 ? setTimeout(() => controller.abort(), budgetMs) : undefined;
+  deadline?.unref();
+
+  try {
+    for await (const ref of provider.discover({
+      provider: data.provider,
+      market: data.market,
+      city: data.city,
+      bbox: data.bbox,
+      limit: data.limit,
+      runtime: runtimeForMarket(data.market),
+      signal: controller.signal,
+    })) {
+      refs.push(ref);
+      // Providers thread the signal into their own fetches, but a provider that
+      // ignores it must not be able to run forever either — so the loop checks
+      // between refs as well.
+      if (controller.signal.aborted) break;
+    }
+  } catch (error) {
+    // An abort surfaces as a fetch rejection inside the provider. That is the
+    // budget working, not a failure, and the refs gathered so far still count.
+    if (!controller.signal.aborted) throw error;
+  } finally {
+    if (deadline) clearTimeout(deadline);
   }
-  return refs;
+
+  return { refs, timedOut: controller.signal.aborted };
+}
+
+/**
+ * How long one discover scope may run (`LISTING_DISCOVER_JOB_BUDGET_MS`,
+ * default 5 minutes, `0` disables).
+ *
+ * Five minutes is well under the 10-minute BullMQ lock, so a budgeted job
+ * always finishes before its lock could expire and be re-delivered to another
+ * worker — which would duplicate the whole walk.
+ */
+function discoverJobBudgetMs(): number {
+  const raw = process.env.LISTING_DISCOVER_JOB_BUDGET_MS?.trim();
+  if (!raw) return 300_000;
+  const parsed = Number(raw);
+  if (!Number.isSafeInteger(parsed) || parsed < 0) return 300_000;
+  return Math.min(parsed, DISCOVER_LOCK_MS - 60_000);
 }
 
 /** Providers whose discover pass warms a browser session per city — one job per city. */
@@ -368,7 +443,7 @@ function bootDiscoverJobs(): BootDiscoverScope[] {
 async function runInlinePass(): Promise<void> {
   logger.info('Running inline discovery pass (no REDIS_URL configured)');
   for (const { data } of bootDiscoverJobs()) {
-    const refs = await collectDiscoverRefs(data);
+    const { refs } = await collectDiscoverRefs(data);
     for (const ref of refs) {
       try {
         await processFetchRef(ref, data.market);
@@ -522,7 +597,7 @@ async function startBullMq(): Promise<() => Promise<void>> {
         market: job.data.market,
         city: job.data.city,
       });
-      const refs = await collectDiscoverRefs(job.data);
+      const { refs, timedOut } = await collectDiscoverRefs(job.data);
       // `rank` is the ref's 0-based position in THIS discover batch. It restarts
       // at 0 every pass, so every provider's rank-0 job shares the lowest
       // priority in its tier and BullMQ interleaves providers round-robin rather
@@ -548,6 +623,10 @@ async function startBullMq(): Promise<() => Promise<void>> {
         market: job.data.market,
         city: job.data.city,
         count: refs.length,
+        // Reported so a scope that is permanently too big to finish is VISIBLE
+        // rather than merely slow. A market whose every scope times out is
+        // under-collected, and nothing else in the pipeline would say so.
+        timedOut: timedOut || undefined,
       });
     },
     { connection, prefix, concurrency: DISCOVER_CONCURRENCY, lockDuration: DISCOVER_LOCK_MS },
