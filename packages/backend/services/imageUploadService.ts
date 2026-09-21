@@ -222,6 +222,53 @@ interface ProcessedUpload {
   bytes: number;
 }
 
+/**
+ * Storage folders a caller may write into.
+ *
+ * **`POST /api/images/upload` TOOK THIS STRAIGHT FROM `req.body.folder`**, with
+ * only a `typeof === 'string'` check, and it reached
+ * `path.join(LOCAL_IMAGE_STORE_DIR, key)`. A body of
+ * `{"folder": "../../../../tmp"}` wrote outside the store; on S3 it wrote to any
+ * prefix in the bucket. CodeQL called it `js/path-injection` at high severity.
+ *
+ * What made it survive is worth naming: `writeToLocalStore`'s own doc comment
+ * asserted "the key is already a safe, server-generated
+ * `<folder>/<uuid>-<variant>.<ext>`". That was true of the uuid and false of the
+ * folder, and a confident comment is why nobody looked. The READ path next to
+ * it has two independent traversal gates and a paragraph explaining why one is
+ * not enough; the write path had neither.
+ *
+ * An allowlist rather than a sanitiser, because the set is small and known —
+ * and a sanitiser has to be right about every encoding a filesystem accepts,
+ * while a list only has to be right about the folders that exist.
+ */
+const ALLOWED_STORAGE_FOLDERS: ReadonlySet<string> = new Set([
+  'general',
+  'property',
+  'profile',
+  'avatar',
+  'applications/documents',
+  'maintenance',
+  'leases',
+]);
+
+/** Default when a caller names no folder. */
+const DEFAULT_STORAGE_FOLDER = 'general';
+
+/**
+ * Resolve a caller-supplied folder to one that is safe to build a key from.
+ *
+ * Unknown folders fall back to the default rather than throwing: an upload with
+ * an odd folder is a client bug, not an attack worth failing a user's request
+ * over, and the bytes still land somewhere retrievable. A REJECTION would also
+ * tell a prober which folders exist.
+ */
+export function resolveStorageFolder(folder: unknown): string {
+  if (typeof folder !== 'string') return DEFAULT_STORAGE_FOLDER;
+  const trimmed = folder.trim().toLowerCase();
+  return ALLOWED_STORAGE_FOLDERS.has(trimmed) ? trimmed : DEFAULT_STORAGE_FOLDER;
+}
+
 export class ImageUploadService {
   private s3Client: S3Client;
   private readonly variants: ImageVariant[] = [
@@ -722,11 +769,28 @@ export class ImageUploadService {
 
   /**
    * Persist a processed variant's bytes to the self-hosted local store at
-   * `LOCAL_IMAGE_STORE_DIR/<key>` (creating parent folders as needed). The key
-   * is already a safe, server-generated `<folder>/<uuid>-<variant>.<ext>`.
+   * `LOCAL_IMAGE_STORE_DIR/<key>` (creating parent folders as needed).
+   *
+   * The uuid and variant in the key are server-generated; THE FOLDER IS NOT —
+   * it reaches here from a request body. This used to claim the whole key was
+   * safe, which is how a path traversal lived in it. Callers resolve the folder
+   * through `resolveStorageFolder`, and the containment check below holds even
+   * when they do not.
    */
   private async writeToLocalStore(buffer: Buffer, key: string): Promise<void> {
-    const target = path.join(LOCAL_IMAGE_STORE_DIR, key);
+    const root = path.resolve(LOCAL_IMAGE_STORE_DIR);
+    const target = path.resolve(root, key);
+
+    // SECOND, INDEPENDENT GATE, mirroring the read path. The caller is supposed
+    // to have resolved the folder through `resolveStorageFolder`, but the read
+    // side already argues — correctly — that a containment check must hold on
+    // its own even if the first check is bypassed or a future caller forgets it.
+    // The write side had no such check at all, and its comment claimed it did
+    // not need one.
+    if (target !== root && !target.startsWith(root + path.sep)) {
+      throw new Error('refusing to write outside the local image store');
+    }
+
     await fs.mkdir(path.dirname(target), { recursive: true });
     await fs.writeFile(target, buffer);
   }
