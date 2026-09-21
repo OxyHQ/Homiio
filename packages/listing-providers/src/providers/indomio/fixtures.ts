@@ -2,7 +2,7 @@
  * indomio.es (Spain) — JSON-first with Playwright session warm-up.
  *
  * Cold HTTP / proxy Playwright currently Cloudflare-challenged. Prefer list/
- * detail JSON once a session clears. Registered OFF (`PROVIDER_INDOMIO_ENABLED`).
+ * detail JSON once a session clears. Registered by default; opt out via `LISTING_DISABLED_PROVIDERS`.
  */
 
 export const INDOMIO_BASE_URL = 'https://www.indomio.es';

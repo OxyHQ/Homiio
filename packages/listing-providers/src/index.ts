@@ -1131,7 +1131,6 @@ export {
   FUNDA_FIXTURE_SEARCH_JSON,
 } from './providers/nl/funda/fixtures';
 
-import type { ProviderId } from '@homiio/shared-types';
 import { ProviderRegistry } from './registry';
 import type { ListingProvider } from './types';
 import { citiesOptionsFromEnv } from './cities';
@@ -1197,18 +1196,48 @@ import { FundaProvider } from './providers/nl/funda';
 
 /**
  * Whether a real portal provider is enabled via its env feature flag. Flags are
- * `PROVIDER_<ID>_ENABLED` (e.g. `PROVIDER_HABITACLIA_ENABLED`) and default OFF —
+ * `LISTING_DISABLED_PROVIDERS` and default ON —
  * a portal only ingests once its flag is explicitly `"true"`.
  */
-function providerEnabled(id: ProviderId): boolean {
-  return process.env[`PROVIDER_${id.toUpperCase()}_ENABLED`] === 'true';
+/**
+ * Providers explicitly switched off (`LISTING_DISABLED_PROVIDERS`, comma
+ * separated, empty by default).
+ *
+ * **THIS REPLACES 44 SEPARATE `PROVIDER_<ID>_ENABLED` FLAGS, AND THE DEFAULT IS
+ * NOW ON.** Opt-in was the wrong shape: a plugin had to be implemented, merged,
+ * AND remembered in a task definition before it did anything, so the registry
+ * quietly drifted from the code. Measured on 2026-09-21: 44 providers
+ * implemented, 13 switched on — thirty-one finished portals importing nothing
+ * because a variable nobody revisited said so.
+ *
+ * Inverting it means a provider that ships is a provider that runs, and the
+ * environment carries one variable instead of forty-four. The escape hatch
+ * stays, because "turn this one off right now" is a real operational need — it
+ * is just no longer the thing that decides whether the fleet works.
+ *
+ * **THIS COSTS MONEY AND THAT IS NOT HYPOTHETICAL.** Every provider spends
+ * metered residential bandwidth, and an exhausted balance is exactly what took
+ * the whole pipeline down on 2026-09-20. Three things now bound the damage that
+ * did not exist then: the direct-first ladder tries an unbilled request before
+ * paying, the discover budget stops one scope holding a slot, and
+ * `Oxy/Homiio ListingsIngested` alarms per market when a market goes quiet.
+ * Watch them.
+ */
+function disabledProviders(): ReadonlySet<string> {
+  const raw = process.env.LISTING_DISABLED_PROVIDERS ?? '';
+  return new Set(
+    raw
+      .split(',')
+      .map((entry) => entry.trim().toLowerCase())
+      .filter(Boolean),
+  );
 }
 
 /**
  * Build the default registry. The Phase-0 `fixture` provider is always on (it
- * touches no external portal); every real portal plugin is gated behind its
- * `PROVIDER_<ID>_ENABLED` flag and OFF by default. New portal plugins register
- * by appending to `flaggedProviders` — each stays a self-contained module.
+ * touches no external portal); every real portal plugin is ON unless named in
+ * `LISTING_DISABLED_PROVIDERS`. New portal plugins register by appending to
+ * `portalProviders` — each stays a self-contained module.
  */
 export function createDefaultRegistry(): ProviderRegistry {
   const registry = new ProviderRegistry([new FixtureProvider()]);
@@ -1233,7 +1262,7 @@ export function createDefaultRegistry(): ProviderRegistry {
   const beOptions = citiesOptionsFromEnv('BE');
   const plOptions = citiesOptionsFromEnv('PL');
   const nlOptions = citiesOptionsFromEnv('NL');
-  const flaggedProviders: ListingProvider[] = [
+  const portalProviders: ListingProvider[] = [
     new HabitacliaProvider(habitacliaCitiesOptionsFromEnv()),
     new BluegroundProvider(),
     new IdealistaProvider(idealistaCitiesOptionsFromEnv()),
@@ -1289,8 +1318,9 @@ export function createDefaultRegistry(): ProviderRegistry {
     new OtodomProvider(plOptions),
     new FundaProvider(nlOptions),
   ];
-  for (const provider of flaggedProviders) {
-    if (providerEnabled(provider.id)) {
+  const disabled = disabledProviders();
+  for (const provider of portalProviders) {
+    if (!disabled.has(provider.id.toLowerCase())) {
       registry.register(provider);
     }
   }

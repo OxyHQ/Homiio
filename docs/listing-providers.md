@@ -751,3 +751,48 @@ a task-definition change, and it is **not free** — each one spends metered
 residential bandwidth, and an exhausted balance is what took the pipeline down
 on 2026-09-20. Turn them on in small batches and watch
 `Oxy/Homiio ListingsIngested` per market rather than all at once.
+## Every provider runs; the fleet rests what cannot work
+
+The registry used to be opt-in, one `PROVIDER_<ID>_ENABLED` per portal. Measured
+2026-09-21: **44 providers implemented, 13 switched on.** Thirty-one finished
+portals imported nothing because a variable nobody revisited said so — and
+three of the thirteen that *were* on also imported nothing, for an unrelated
+reason. Nothing in the system could tell those two cases apart.
+
+The default is now ON, and the environment carries **one** variable:
+`LISTING_DISABLED_PROVIDERS` (comma separated, empty by default). A provider
+that ships is a provider that runs.
+
+### What replaced the per-portal knowledge
+
+The old flags carried real operational knowledge — *"OFF: DataDome"*, *"OFF:
+Akamai hard-blocks from datacenter AND residential"*, *"keep OFF until
+confirmed"*. That is not discarded; it moves from a static list a human
+maintains to a runtime decision.
+
+`services/ingestion/providerBackoff.ts` rests a provider whose discover passes
+keep coming back empty, then retries it an hour later:
+
+- **empty counts the same as failed.** A hard-blocked portal usually answers 200
+  with a challenge page, so "produced zero" and "raised an error" describe one
+  condition from outside. Treating only the noisy one as failure would rest
+  exactly the providers honest enough to fail loudly.
+- **one good pass clears the streak outright**, not by one. A provider
+  recovering from a lifted block should not have to earn back three turns.
+- **resting is logged, with the reason and the retry time.** A provider that
+  quietly stopped being tried is the defect this week has been about.
+- **state is in memory on purpose.** It is a cost heuristic about the last few
+  minutes, not a durable fact about a portal; persisting it would let a restart
+  inherit a verdict formed under conditions that no longer hold.
+
+The property that matters, and the one a flag never had: **a portal whose block
+lifts comes back on its own.** `OFF until Cloudflare clears` stays off after
+Cloudflare clears, because nobody is watching for the day it does.
+
+### This costs money
+
+More providers means more metered residential bandwidth, and an exhausted
+balance is what took the pipeline down on 2026-09-20. Three things bound it that
+did not exist then: the direct-first ladder tries an unbilled request first, the
+discover budget stops one scope holding a slot, and `Oxy/Homiio ListingsIngested`
+alarms per market. Watch the proxy balance over the first days.

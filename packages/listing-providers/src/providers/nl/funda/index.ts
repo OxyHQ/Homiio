@@ -3,7 +3,7 @@
  *
  * Uses `listing-search-wonen.funda.io` + `listing-detail-page.funda.io`. Akamai
  * blocks datacenter IPs (403) — keep OFF until `LISTING_HTTP_USE_PROXY` or
- * browser tier is provisioned. Registered OFF by default (`PROVIDER_FUNDA_ENABLED`).
+ * browser tier is provisioned. Registered by default; opt out via `LISTING_DISABLED_PROVIDERS`.
  */
 
 import {

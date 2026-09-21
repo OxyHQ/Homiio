@@ -7,7 +7,7 @@
  *   3. Parse `__NEXT_DATA__.searchResults.properties` JSON (housing-only)
  *   4. Detail: parse `window.__PAGE_MODEL` compressed JSON (contact + images)
  *
- * Registered OFF by default (`PROVIDER_RIGHTMOVE_ENABLED`).
+ * Registered by default; opt out via `LISTING_DISABLED_PROVIDERS`.
  */
 
 import {

@@ -215,7 +215,7 @@ export const PROPERTY_STATUSES = [
  * `(source, source_id)` unique key. It is written from the registered-provider
  * union rather than from those 15, because the observed set is the history of
  * what has ever been ingested, not the domain: freezing it would break the
- * first `PROVIDER_*_ENABLED` anyone turns on.
+ * first portal provider that reaches it.
  *
  * Two members are load-bearing and neither is obvious:
  *

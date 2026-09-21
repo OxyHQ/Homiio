@@ -2,8 +2,8 @@
  * Metrocuadrado (Colombia) — Navent JSON/AJAX + Playwright session.
  *
  * Thin wrapper over shared {@link ../../../navent} + {@link ../../../naventProvider}.
- * Cloudflare-gated; keep OFF until sticky residential session clears discover.
- * Registered OFF by default (`PROVIDER_METROCUADRADO_ENABLED`).
+ * Cloudflare-gated; expect it to fail until a sticky residential session clears discover; name it in `LISTING_DISABLED_PROVIDERS` to stop paying for the attempts.
+ * Registered by default; opt out via `LISTING_DISABLED_PROVIDERS`.
  */
 
 import type { ProviderId } from '@homiio/shared-types';

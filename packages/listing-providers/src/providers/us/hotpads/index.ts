@@ -3,8 +3,8 @@
  *
  * HotPads exposes a public JSON API (`hotpads-api-gke-prod-...hotpads.com`) that
  * powers its search UI — no auth, no PerimeterX on the API host. This plugin
- * uses direct HTTP JSON for discover + fetch. Registered OFF by default
- * (`PROVIDER_HOTPADS_ENABLED`).
+ * uses direct HTTP JSON for discover + fetch. Registered by default
+ * (opt out via `LISTING_DISABLED_PROVIDERS`) (`LISTING_DISABLED_PROVIDERS`).
  */
 
 import {

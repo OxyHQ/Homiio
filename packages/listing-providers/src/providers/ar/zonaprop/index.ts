@@ -2,7 +2,7 @@
  * Zonaprop provider (Argentina) — Navent JSON/AJAX + Playwright session.
  *
  * Thin wrapper over shared {@link ../../../navent} + {@link ../../../naventProvider}.
- * Registered OFF by default (`PROVIDER_ZONAPROP_ENABLED`).
+ * Registered by default; opt out via `LISTING_DISABLED_PROVIDERS`.
  */
 
 import type { ProviderId } from '@homiio/shared-types';

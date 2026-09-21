@@ -10,7 +10,7 @@
  * Contact is best-effort: DataDome may still block after warm-up.
  *
  * Official partner API remains gated (`hasOfficialApi`). Registered OFF by
- * default (`PROVIDER_IDEALISTA_ENABLED`).
+ * default (`LISTING_DISABLED_PROVIDERS`).
  */
 
 import {

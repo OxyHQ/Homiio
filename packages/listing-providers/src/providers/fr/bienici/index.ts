@@ -6,7 +6,7 @@
  * (`contactRelativeData`) and photos; price may ride in discover hints.
  *
  * Optional Playwright warm-up for sticky proxy sessions. Registered OFF by
- * default (`PROVIDER_BIENICI_ENABLED`).
+ * default (`LISTING_DISABLED_PROVIDERS`).
  */
 
 import {

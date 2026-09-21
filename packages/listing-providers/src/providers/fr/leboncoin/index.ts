@@ -5,7 +5,7 @@
  * 10 locations) from a warmed Playwright session. Cold HTTP is DataDome-blocked;
  * HTML is never the primary path. Non-housing categories are rejected in parse.
  *
- * Registered OFF by default (`PROVIDER_LEBONCOIN_ENABLED`). Do NOT enable in
+ * Registered by default; opt out via `LISTING_DISABLED_PROVIDERS`. Do NOT enable in
  * prod until a residential sticky session clears DataDome in a live probe.
  */
 

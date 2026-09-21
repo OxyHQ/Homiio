@@ -7,7 +7,7 @@
  *   3. Contact: best-effort from expose `contact` (phone / agencyName).
  *
  * Official partner REST API remains gated (`hasOfficialApi`). Registered OFF
- * by default (`PROVIDER_IMMOBILIENSCOUT24_ENABLED`).
+ * by default (`LISTING_DISABLED_PROVIDERS`).
  */
 
 import {

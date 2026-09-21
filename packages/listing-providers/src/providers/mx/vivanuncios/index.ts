@@ -7,7 +7,7 @@
  * {@link assertHousingListing}. Prefer a warmed Playwright session, then the
  * shared fetch ladder.
  *
- * Registered OFF by default (`PROVIDER_VIVANUNCIOS_ENABLED`).
+ * Registered by default; opt out via `LISTING_DISABLED_PROVIDERS`.
  */
 
 import {

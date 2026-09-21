@@ -46,6 +46,7 @@ import { connectPostgres, closePostgres } from './db/postgres';
 import { Logger } from './utils/logger';
 import { expireExternalProperty } from './db/properties/propertyWrites';
 import { IngestionService, IngestionValidationError } from './services/ingestion/IngestionService';
+import { ProviderBackoff } from './services/ingestion/providerBackoff';
 import {
   countsAsLiveIngest,
   ingestMarketToken,
@@ -101,6 +102,13 @@ const DISCOVER_CONCURRENCY = parseInt(process.env.LISTING_DISCOVER_CONCURRENCY |
 const DISCOVER_LOCK_MS = 600_000;
 
 const registry: ProviderRegistry = createDefaultRegistry();
+
+/**
+ * Rests providers that keep coming back empty, so an always-blocked portal does
+ * not spend residential bandwidth every cycle forever. Replaces the 44
+ * per-provider enable flags with something that corrects itself.
+ */
+const providerBackoff = new ProviderBackoff();
 const ingestionService = new IngestionService();
 
 /**
@@ -592,12 +600,49 @@ async function startBullMq(): Promise<() => Promise<void>> {
   const discoverWorker = new Worker<DiscoverJobData>(
     QUEUE_NAMES.discover,
     async (job: Job<DiscoverJobData>) => {
+      // A provider that has proved it cannot work right now is rested rather
+      // than asked again — every attempt spends metered residential bandwidth,
+      // and several portals are hard-blocked today. Skipping is LOGGED, because
+      // a provider that quietly stopped being tried is the defect this whole
+      // week has been about. See services/ingestion/providerBackoff.
+      const restingUntil = providerBackoff.restingUntil(job.data.provider);
+      if (restingUntil !== undefined) {
+        logger.info('Discover job skipped; provider is resting', {
+          provider: job.data.provider,
+          market: job.data.market,
+          city: job.data.city,
+          retryAfter: new Date(restingUntil).toISOString(),
+        });
+        return;
+      }
+
       logger.info('Discover job started', {
         provider: job.data.provider,
         market: job.data.market,
         city: job.data.city,
       });
       const { refs, timedOut } = await collectDiscoverRefs(job.data);
+
+      if (refs.length === 0 && !timedOut) {
+        // Empty counts the same as failed: a hard-blocked portal usually answers
+        // 200 with a challenge page, so from the outside the two are one thing.
+        //
+        // A TIMED-OUT SCOPE IS NOT A FAILING PROVIDER, which is why `timedOut`
+        // is excluded. The budget stops a scope that is merely deep, and a deep
+        // city that ran out of clock says nothing about whether the portal will
+        // answer. Resting a provider for being slow would take working
+        // inventory offline for an hour at a time.
+        const restsUntil = providerBackoff.recordFailure(job.data.provider);
+        if (restsUntil !== undefined) {
+          logger.warn('Provider rested after repeated empty discovery', {
+            provider: job.data.provider,
+            market: job.data.market,
+            retryAfter: new Date(restsUntil).toISOString(),
+          });
+        }
+      } else if (refs.length > 0) {
+        providerBackoff.recordSuccess(job.data.provider);
+      }
       // `rank` is the ref's 0-based position in THIS discover batch. It restarts
       // at 0 every pass, so every provider's rank-0 job shares the lowest
       // priority in its tier and BullMQ interleaves providers round-robin rather

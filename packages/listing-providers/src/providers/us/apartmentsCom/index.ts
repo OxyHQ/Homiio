@@ -10,8 +10,8 @@
  * search results into {@link ExternalListingRef}s; `fetch()` pulls a detail
  * page's HTML; the shared {@link extractSchemaOrgListings} parser lifts the
  * embedded schema.org JSON-LD; `normalize()` maps it onto a first-party USD
- * long-term-rent listing. Registered OFF by default
- * (`PROVIDER_APARTMENTS_COM_ENABLED`).
+ * long-term-rent listing. Registered by default
+ * (opt out via `LISTING_DISABLED_PROVIDERS`) (`LISTING_DISABLED_PROVIDERS`).
  */
 
 import {

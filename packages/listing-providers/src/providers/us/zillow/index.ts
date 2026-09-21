@@ -12,7 +12,7 @@
  * `hints.kind`); `fetch()` pulls a home-details page's HTML; the shared
  * {@link extractSchemaOrgListings} parser lifts the embedded schema.org
  * JSON-LD; `normalize()` maps it onto a first-party USD listing (long-term rent
- * or sale). Registered OFF by default (`PROVIDER_ZILLOW_ENABLED`).
+ * or sale). Registered by default; opt out via `LISTING_DISABLED_PROVIDERS`.
  */
 
 import {

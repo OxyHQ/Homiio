@@ -4,8 +4,8 @@
  * Redfin's Stingray JSON endpoints are CloudFront-gated on cold HTTP. This
  * plugin warms a Playwright session on a city search page, then calls
  * `/stingray/api/gis` and `/stingray/api/home/details/initialInfo` via
- * `session.request` (shared browser-session pattern). Registered OFF by default
- * (`PROVIDER_REDFIN_ENABLED`).
+ * `session.request` (shared browser-session pattern). Registered by default
+ * (opt out via `LISTING_DISABLED_PROVIDERS`) (`LISTING_DISABLED_PROVIDERS`).
  */
 
 import {

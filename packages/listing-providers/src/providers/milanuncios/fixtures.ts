@@ -9,7 +9,7 @@
  *      blocks cold HTTP). HTML is last resort.
  *   3. `normalize()` hard-rejects cars/jobs/electronics via {@link assertHousingListing}.
  *
- * Registered OFF by default (`PROVIDER_MILANUNCIOS_ENABLED`). Do NOT enable in
+ * Registered by default; opt out via `LISTING_DISABLED_PROVIDERS`. Do NOT enable in
  * prod until the housing filter + session path are verified end-to-end.
  */
 

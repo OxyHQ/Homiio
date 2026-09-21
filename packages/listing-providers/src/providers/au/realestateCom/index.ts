@@ -3,7 +3,7 @@
  *
  * JSON-first via embedded `window.ArgonautExchange` (search + detail). Kasada
  * blocks datacenter HTTP — prefer warmed Playwright session, then fetch ladder.
- * Registered OFF by default (`PROVIDER_REALESTATE_COM_AU_ENABLED`).
+ * Registered by default; opt out via `LISTING_DISABLED_PROVIDERS`.
  */
 
 import {

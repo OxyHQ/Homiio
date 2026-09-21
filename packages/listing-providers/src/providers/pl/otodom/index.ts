@@ -1,8 +1,8 @@
 /**
  * Otodom.pl provider (Poland) — JSON-first via `__NEXT_DATA__` (OLX vertical).
  *
- * Cold HTTP works for search + detail. Registered OFF by default
- * (`PROVIDER_OTODOM_ENABLED`).
+ * Cold HTTP works for search + detail. Registered by default
+ * (opt out via `LISTING_DISABLED_PROVIDERS`) (`LISTING_DISABLED_PROVIDERS`).
  */
 
 import {

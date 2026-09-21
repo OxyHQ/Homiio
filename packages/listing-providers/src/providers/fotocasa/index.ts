@@ -5,7 +5,7 @@
  *   Discover: warm session → urllocationsegments + searchads AJAX → SSR embed → HTML ladder.
  *   Fetch: warm city search session → property JSON API (no HTML detail fallback).
  *
- * Registered OFF by default (`PROVIDER_FOTOCASA_ENABLED`).
+ * Registered by default; opt out via `LISTING_DISABLED_PROVIDERS`.
  */
 
 import {

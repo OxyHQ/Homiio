@@ -3,7 +3,7 @@
  *
  * Cold HTTP and even residential-proxy Playwright currently hit Cloudflare
  * (challenge HTML ~1.5 KB). The provider still prefers AJAX/JSON once a session
- * clears; HTML is last resort. Registered OFF (`PROVIDER_YAENCONTRE_ENABLED`).
+ * clears; HTML is last resort. Registered by default; opt out via `LISTING_DISABLED_PROVIDERS`.
  */
 
 export const YAENCONTRE_BASE_URL = 'https://www.yaencontre.com';

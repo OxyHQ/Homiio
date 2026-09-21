@@ -1,6 +1,6 @@
 /**
  * SeLoger provider (France) — JSON-first (`initialData` / `__NEXT_DATA__`) + session.
- * Registered OFF by default (`PROVIDER_SELOGER_ENABLED`).
+ * Registered by default; opt out via `LISTING_DISABLED_PROVIDERS`.
  */
 
 import {

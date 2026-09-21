@@ -3,7 +3,7 @@
  *
  * JSON-first via embedded `__NEXT_DATA__` on search + detail pages. Live site
  * is hb-captcha gated from datacenter IPs — prefer warmed Playwright session,
- * then fetch ladder. Registered OFF by default (`PROVIDER_BAYUT_ENABLED`).
+ * then fetch ladder. Registered by default; opt out via `LISTING_DISABLED_PROVIDERS`.
  */
 
 import {

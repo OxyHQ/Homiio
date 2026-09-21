@@ -5,7 +5,7 @@
  * over HTML card scraping. Contact phones from `contactDetails` feed
  * `NormalizedListing.contact` → Property `externalContact`.
  *
- * Registered OFF by default (`PROVIDER_STORIA_ENABLED`).
+ * Registered by default; opt out via `LISTING_DISABLED_PROVIDERS`.
  */
 
 import {
