@@ -6,7 +6,7 @@
  * categories. Contact name/agency from prerendered JSON; phone via optional
  * limited-phones AJAX when a session can reveal it.
  *
- * Registered OFF by default (`PROVIDER_OLX_RO_ENABLED`).
+ * Registered by default; opt out via `LISTING_DISABLED_PROVIDERS`.
  */
 
 import {

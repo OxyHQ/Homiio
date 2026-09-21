@@ -1,7 +1,7 @@
 /**
  * yaencontre.com provider — JSON/AJAX via Playwright session; HTML last resort.
- * Registered OFF (`PROVIDER_YAENCONTRE_ENABLED`). Cloudflare currently blocks
- * cold + proxy sessions; keep OFF until managed tier or session clears.
+ * Registered by default; opt out via `LISTING_DISABLED_PROVIDERS`. Cloudflare currently blocks
+ * cold + proxy sessions; expect it to fail until the managed tier or a session clears it; name it in `LISTING_DISABLED_PROVIDERS` to stop paying for the attempts.
  */
 
 import type { NormalizedListing, ProviderId } from '@homiio/shared-types';

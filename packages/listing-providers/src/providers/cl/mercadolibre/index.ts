@@ -2,8 +2,8 @@
  * MercadoLibre Chile inmuebles — classifieds, HOUSING ONLY.
  *
  * Thin wrapper over shared {@link ../../../mercadolibre} + {@link ../../../mercadolibreProvider}.
- * Bot/suspicious-traffic gated; keep OFF until live Playwright + residential proxy probe.
- * Registered OFF by default (`PROVIDER_MERCADOLIBRE_CL_ENABLED`).
+ * Bot/suspicious-traffic gated; expect it to fail until a live Playwright + residential proxy probe; name it in `LISTING_DISABLED_PROVIDERS` to stop paying for the attempts.
+ * Registered by default; opt out via `LISTING_DISABLED_PROVIDERS`.
  */
 
 import type { ProviderId } from '@homiio/shared-types';

@@ -3,7 +3,7 @@
  *
  * Cloudflare often blocks cold HTTP; session warm required for live ingest.
  * Uses shared {@link ../../../nextData}, {@link ../../../jsonLd}, {@link ../../../contact}.
- * Registered OFF by default (`PROVIDER_PROPERATI_ENABLED`).
+ * Registered by default; opt out via `LISTING_DISABLED_PROVIDERS`.
  */
 
 import {

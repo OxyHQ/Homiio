@@ -3,7 +3,7 @@
  *
  * Discover + fetch via `api2.realtor.ca` form-encoded JSON after warming
  * `www.realtor.ca` (Imperva `reese84` / `incap_ses_*`). Registered OFF by
- * default (`PROVIDER_REALTOR_CA_ENABLED`).
+ * default (`LISTING_DISABLED_PROVIDERS`).
  */
 
 import {

@@ -4,7 +4,7 @@
  * Thin wrapper over shared {@link ../../../mercadolibre} + {@link ../../../mercadolibreProvider}.
  * Cold HTTP works for search + detail HTML (verified — no account-verification wall
  * from datacenter IPs, unlike CO/CL/PE/EC); item API is OAuth-gated. Registered OFF
- * by default (`PROVIDER_MERCADOLIBRE_MX_ENABLED`) — enable after live probe.
+ * by default (`LISTING_DISABLED_PROVIDERS`) — enable after live probe.
  */
 
 import type { ProviderId } from '@homiio/shared-types';

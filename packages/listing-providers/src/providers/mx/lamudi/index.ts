@@ -4,7 +4,7 @@
  * Discover hits `/{city}/{for-rent|for-sale}/`; detail is `/detalle/<id>`.
  * Prefer a warmed browser session, then fall back to the shared fetch ladder.
  * Often Cloudflare-gated from datacenter IPs — keep OFF until residential
- * sticky session clears (`PROVIDER_LAMUDI_ENABLED`).
+ * sticky session clears (`LISTING_DISABLED_PROVIDERS`).
  */
 
 import {

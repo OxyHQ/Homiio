@@ -1,8 +1,8 @@
 /**
  * Immoweb provider (Belgium) — JSON-first via `/en/search-results` + classified JSON.
  *
- * Cold HTTP works from datacenter IPs. Registered OFF by default
- * (`PROVIDER_IMMOWEB_ENABLED`).
+ * Cold HTTP works from datacenter IPs. Registered by default
+ * (opt out via `LISTING_DISABLED_PROVIDERS`) (`LISTING_DISABLED_PROVIDERS`).
  */
 
 import {

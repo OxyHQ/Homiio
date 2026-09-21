@@ -6,7 +6,7 @@
  * endpoints from a warmed Playwright session (GeeTest blocks cold HTTP). HTML
  * scrape is last resort and still filtered by category allowlist.
  *
- * Registered OFF by default (`PROVIDER_MILANUNCIOS_ENABLED`). Do NOT enable in
+ * Registered by default; opt out via `LISTING_DISABLED_PROVIDERS`. Do NOT enable in
  * prod until the housing filter is verified end-to-end.
  */
 

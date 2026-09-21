@@ -7,7 +7,7 @@
  * unlocks it; otherwise parse housing HTML (og: + attributes) via the shared
  * ladder. Contact (tel / WhatsApp / email) is best-effort from the detail page.
  *
- * Registered OFF by default (`PROVIDER_KLEINANZEIGEN_ENABLED`).
+ * Registered by default; opt out via `LISTING_DISABLED_PROVIDERS`.
  */
 
 import {

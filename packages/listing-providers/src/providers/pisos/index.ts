@@ -8,7 +8,7 @@
  *     rooms / m² / phone; best-effort `/WebsiteUserInfo/GetNormalizedPhone` AJAX.
  *   - HTML is last-resort for title/images/description only.
  *
- * Registered OFF by default (`PROVIDER_PISOS_ENABLED`).
+ * Registered by default; opt out via `LISTING_DISABLED_PROVIDERS`.
  */
 
 import {

@@ -4,7 +4,7 @@
  * Discover parses `data-page` listing cards (JSON). Fetch prefers schema.org
  * `@graph` and optionally enriches contact via portal AJAX
  * (`/api/portal/listings/:id/whatsapp-url`, phone endpoints) from a warmed
- * Playwright session. Registered OFF by default (`PROVIDER_IMOBILIARE_RO_ENABLED`).
+ * Playwright session. Registered by default; opt out via `LISTING_DISABLED_PROVIDERS`.
  */
 
 import {

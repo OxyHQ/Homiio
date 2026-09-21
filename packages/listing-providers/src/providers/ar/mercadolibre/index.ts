@@ -3,7 +3,7 @@
  *
  * Thin wrapper over shared {@link ../../../mercadolibre} + {@link ../../../mercadolibreProvider}.
  * Cold HTTP works for search/detail HTML; item API is often IP-gated.
- * Registered OFF by default (`PROVIDER_MERCADOLIBRE_AR_ENABLED`) — enable after live probe.
+ * Registered by default; opt out via `LISTING_DISABLED_PROVIDERS` — enable after live probe.
  */
 
 import type { ProviderId } from '@homiio/shared-types';

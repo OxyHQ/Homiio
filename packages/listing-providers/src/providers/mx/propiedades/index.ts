@@ -2,7 +2,7 @@
  * Propiedades.com (MX) — JSON-LD + session warm.
  *
  * Often Akamai/Cloudflare blocked from datacenter IPs. Keep OFF until a live
- * residential-proxy discover pass succeeds (`PROVIDER_PROPIEDADES_ENABLED`).
+ * residential-proxy discover pass succeeds (`LISTING_DISABLED_PROVIDERS`).
  */
 
 import {

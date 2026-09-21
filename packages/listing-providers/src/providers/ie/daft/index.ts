@@ -2,7 +2,7 @@
  * Daft.ie provider (Ireland) — JSON-first via embedded `__NEXT_DATA__`.
  *
  * Cold HTTP works for search + detail on datacenter IPs. Registered OFF by
- * default (`PROVIDER_DAFT_ENABLED`).
+ * default (`LISTING_DISABLED_PROVIDERS`).
  */
 
 import {

@@ -403,7 +403,7 @@ async function main(): Promise<void> {
   const registry = createDefaultRegistry();
   if (!registry.has('pisos')) {
     throw new Error(
-      'pisos provider not registered — set PROVIDER_PISOS_ENABLED=true in this task env',
+      'pisos provider not registered — remove it from LISTING_DISABLED_PROVIDERS in this task env',
     );
   }
   const provider = registry.get('pisos');

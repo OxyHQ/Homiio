@@ -5,7 +5,7 @@
  * title/og-image based (no public AJAX); contact captured when tel:/mailto
  * appear. Viable without a browser for many pages; session used when challenged.
  *
- * Registered OFF by default (`PROVIDER_OPENRENT_ENABLED`).
+ * Registered by default; opt out via `LISTING_DISABLED_PROVIDERS`.
  */
 
 import {

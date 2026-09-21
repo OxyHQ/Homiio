@@ -5,7 +5,7 @@
  * `__NEXT_DATA__.props.initialReduxState.property`. Discover pages search HTML
  * for `/details/<id>` and rejects non-housing (garages/parking) at normalize.
  *
- * Registered OFF by default (`PROVIDER_ONTHEMARKET_ENABLED`).
+ * Registered by default; opt out via `LISTING_DISABLED_PROVIDERS`.
  */
 
 import {

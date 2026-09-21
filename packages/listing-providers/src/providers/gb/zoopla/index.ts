@@ -5,7 +5,7 @@
  * parse `__NEXT_DATA__` listing JSON (contact from branch/agent). HTML link
  * scrape is the discover fallback. Housing-only.
  *
- * Registered OFF by default (`PROVIDER_ZOOPLA_ENABLED`) — enable once a
+ * Registered by default; opt out via `LISTING_DISABLED_PROVIDERS` — enable once a
  * residential proxy + browser tier clears Cloudflare in the worker.
  */
 

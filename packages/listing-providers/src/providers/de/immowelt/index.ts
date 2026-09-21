@@ -15,7 +15,7 @@
  * `contactSections` agency block). Detail pages no longer carry the SERP
  * `classified-serp-init-data` blob.
  *
- * Registered OFF by default (`PROVIDER_IMMOWELT_ENABLED`).
+ * Registered by default; opt out via `LISTING_DISABLED_PROVIDERS`.
  */
 
 import {

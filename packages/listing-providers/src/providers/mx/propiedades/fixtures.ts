@@ -1,6 +1,6 @@
 /**
  * Propiedades.com (MX) fixtures — schema.org JSON-LD.
- * Portal often Akamai-blocked from datacenter IPs; keep provider OFF until probed.
+ * Portal often Akamai-blocked from datacenter IPs; keep provider untested against the live portal; expect failures until probed.
  */
 
 export const PROPIEDADES_BASE_URL = 'https://www.propiedades.com';

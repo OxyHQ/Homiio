@@ -4,7 +4,7 @@
  * realtor.com exposes an internal GraphQL API at `/frontdoor/graphql` that powers
  * search and detail pages. This plugin uses direct JSON POST (no HTML scrape) for
  * discover + fetch; the shared {@link FetchRuntime} supplies `fetchHttp` only.
- * Registered OFF by default (`PROVIDER_REALTOR_COM_ENABLED`).
+ * Registered by default; opt out via `LISTING_DISABLED_PROVIDERS`.
  */
 
 import {
