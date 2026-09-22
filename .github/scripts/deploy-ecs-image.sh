@@ -204,9 +204,20 @@ fi
 if [[ -z "$TASK_CONFIGURATION_REMOVALS_JSON" ]]; then
   TASK_CONFIGURATION_REMOVALS_JSON='[]'
 fi
+# The removals list is bounded at 40, not 20 like the two override maps above.
+#
+# The bound is a typo guard, and the two sides are not symmetric. An override
+# ADDS a value, so a long list is a sign somebody is configuring the service
+# through the deploy rather than through terraform. A removal DELETES one, and
+# the number of removals is not chosen — it is however many stale variables a
+# task definition has accumulated, which only ever grows until they are cleaned.
+#
+# It had to grow the first time it was used for that. A single family of dead
+# variables (22 `PROVIDER_*_ENABLED`) plus the 9 already removed on this lane is
+# 31, and a cap of 20 would have refused the cleanup and left them in place.
 if ! jq -e '
   type == "array" and
-  length <= 20 and
+  length <= 40 and
   length == (unique | length) and
   all(.[]; type == "string" and test("^[A-Z][A-Z0-9_]{0,127}$"))
 ' <<<"$TASK_CONFIGURATION_REMOVALS_JSON" >/dev/null; then

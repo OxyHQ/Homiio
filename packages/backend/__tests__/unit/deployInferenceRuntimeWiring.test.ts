@@ -123,9 +123,29 @@ describe('Homiio deployment preserves the exact inference runtime boundary', () 
   it('actively removes inference configuration from the listing worker', () => {
     expect(workerStep).not.toContain('TASK_ENV_OVERRIDES_JSON');
     expect(workerStep).not.toContain('TASK_SECRET_OVERRIDES_JSON');
-    expect(workerStep).toContain(
-      'TASK_CONFIGURATION_REMOVALS_JSON: \'["ALIA_API_URL","OXY_API_URL","OXY_SERVICE_API_KEY","OXY_SERVICE_API_SECRET","SINDI_OXY_SERVICE_API_KEY","SINDI_OXY_SERVICE_API_SECRET","OXY_INFERENCE_ROUTING_PROFILE","OXY_INFERENCE_ROUTING_PROFILE_ID","SINDI_ALIA_AGENT_ID"]\'',
-    );
+    // Asserted as MEMBERSHIP, not as the whole literal.
+    //
+    // This was an exact string match on the nine-name list, and it did its job:
+    // appending the dead `PROVIDER_*_ENABLED` names to that list turned it red,
+    // which is how the append got reviewed. But "these nine are removed" is the
+    // property this file owns, and the list is shared with every other cleanup
+    // the worker lane needs — pinning the literal makes an unrelated addition
+    // look like an inference-boundary regression.
+    //
+    // Membership is also STRICTER than the substring match it replaces: it
+    // parses the list, so a name that appeared only as a prefix of another
+    // entry would no longer satisfy it.
+    const removalMatch = workerStep.match(/TASK_CONFIGURATION_REMOVALS_JSON:\s*'(\[[^']*\])'/);
+    expect(removalMatch).not.toBeNull();
+    const removals: string[] = JSON.parse(removalMatch![1]);
+    for (const name of [
+      'ALIA_API_URL', 'OXY_API_URL', 'OXY_SERVICE_API_KEY', 'OXY_SERVICE_API_SECRET',
+      'SINDI_OXY_SERVICE_API_KEY', 'SINDI_OXY_SERVICE_API_SECRET',
+      'OXY_INFERENCE_ROUTING_PROFILE', 'OXY_INFERENCE_ROUTING_PROFILE_ID',
+      'SINDI_ALIA_AGENT_ID',
+    ]) {
+      expect(removals).toContain(name);
+    }
 
     // The names may occur only in the explicit removal list; they are never
     // supplied as environment values or SSM references to the worker.

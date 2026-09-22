@@ -469,7 +469,21 @@ jobs:
           # The worker imports the shared config module but reaches none of the
           # Oxy/Alia clients. Remove stale API-only values from the inherited
           # live revision instead of preserving them forever.
-          TASK_CONFIGURATION_REMOVALS_JSON: '["ALIA_API_URL","OXY_API_URL","OXY_SERVICE_API_KEY","OXY_SERVICE_API_SECRET","SINDI_OXY_SERVICE_API_KEY","SINDI_OXY_SERVICE_API_SECRET","OXY_INFERENCE_ROUTING_PROFILE","OXY_INFERENCE_ROUTING_PROFILE_ID","SINDI_ALIA_AGENT_ID"]'
+          # The 22 `PROVIDER_*_ENABLED` entries are a cleanup, and they have to
+          # be HERE rather than in terraform.
+          #
+          # oxy-infra #217 deleted all 22 from the worker task definition, and
+          # the running service kept every one of them. `deploy-ecs-image.sh`
+          # renders each new revision from `services[0].taskDefinition` — the
+          # revision that is LIVE — not from terraform, so a variable terraform
+          # stops declaring is simply carried forward by the next deploy,
+          # forever. Measured on revision 175: all 22 still present, weeks after
+          # the terraform change merged.
+          #
+          # They are inert: `createDefaultRegistry` stopped reading them when the
+          # registry inverted to on-by-default, and a unit test pins that. This
+          # removes them so the task definition says what is true.
+          TASK_CONFIGURATION_REMOVALS_JSON: '["ALIA_API_URL","OXY_API_URL","OXY_SERVICE_API_KEY","OXY_SERVICE_API_SECRET","SINDI_OXY_SERVICE_API_KEY","SINDI_OXY_SERVICE_API_SECRET","OXY_INFERENCE_ROUTING_PROFILE","OXY_INFERENCE_ROUTING_PROFILE_ID","SINDI_ALIA_AGENT_ID","PROVIDER_APARTMENTS_COM_ENABLED","PROVIDER_BLUEGROUND_ENABLED","PROVIDER_DAFT_ENABLED","PROVIDER_FOTOCASA_ENABLED","PROVIDER_HABITACLIA_ENABLED","PROVIDER_IDEALISTA_ENABLED","PROVIDER_IMMOBILIENSCOUT24_ENABLED","PROVIDER_IMMOWEB_ENABLED","PROVIDER_IMMOWELT_ENABLED","PROVIDER_INDOMIO_ENABLED","PROVIDER_KLEINANZEIGEN_ENABLED","PROVIDER_MERCADOLIBRE_AR_ENABLED","PROVIDER_MERCADOLIBRE_MX_ENABLED","PROVIDER_MILANUNCIOS_ENABLED","PROVIDER_ONTHEMARKET_ENABLED","PROVIDER_OPENRENT_ENABLED","PROVIDER_OTODOM_ENABLED","PROVIDER_PISOS_ENABLED","PROVIDER_RIGHTMOVE_ENABLED","PROVIDER_YAENCONTRE_ENABLED","PROVIDER_ZILLOW_ENABLED","PROVIDER_ZOOPLA_ENABLED"]'
           POST_DEPLOY_TASK_COMMAND_JSON: '["node","packages/backend/dist/db/migrate.js","--target-database=homiio","--phase=post"]'
         run: |
           export APP="${APP}-worker"
