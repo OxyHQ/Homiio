@@ -61,7 +61,12 @@ export function parseOnTheMarketSearch(html: string): { sourceId: string; url: s
   const byId = new Map<string, string>();
   for (const match of html.matchAll(/<a[^>]+href="(\/details\/(\d+)\/?)"[^>]*>([\s\S]*?)<\/a>/gi)) {
     const sourceId = match[2];
-    const label = match[3]?.replace(/<[^>]+>/g, ' ') ?? '';
+    // `[^>]+` runs to the end of the document when a `<` has no `>` after it,
+    // and every later `<` repeats the walk: `'<a'.repeat(32_000)` took 471ms.
+    // Excluding `<` stops each run at the next tag, which is linear overall
+    // (0ms) and differs only for a `<` nested inside a tag — not valid HTML,
+    // and this is stripping markup to read a label either way.
+    const label = match[3]?.replace(/<[^<>]+>/g, ' ') ?? '';
     if (!sourceId || byId.has(sourceId)) continue;
     if (!isGbHousingType(label) || /garage|parking|storage/i.test(label)) continue;
     byId.set(sourceId, onthemarketDetailUrl(sourceId));

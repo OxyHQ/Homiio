@@ -72,7 +72,11 @@ function parseAddressText(text: string): {
 
 function parseSqft(value: string | undefined): number | undefined {
   if (!value) return undefined;
-  const match = /([\d,.]+)\s*sq\s*ft/i.exec(value);
+  // `[\d,.]+` was unbounded and backtracks one character at a time when
+  // `\s*sq` fails, so a long digit/comma run costs O(n^2): 16k characters
+  // took 906ms. A square footage is never 32 characters, and the bound turns
+  // the retry at each start position into constant work.
+  const match = /([\d,.]{1,32})\s*sq\s*ft/i.exec(value);
   if (!match?.[1]) return undefined;
   const parsed = Number.parseFloat(match[1].replace(/,/g, ''));
   return Number.isFinite(parsed) ? parsed : undefined;

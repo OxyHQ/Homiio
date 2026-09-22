@@ -188,7 +188,11 @@ function parseAddressLines(line1: string | undefined, line2: string | undefined)
   const address: Is24RawListing['address'] = {};
   if (line1) address.street = line1;
   if (!line2) return address;
-  const postal = line2.match(/^(\d{5})\s+(.+)$/);
+  // Same `\s+`/`.+` backtracking as blueground's title parser — anchored at
+  // `^`, so there is one start position, but the internal retry is still
+  // quadratic: 32k spaces took 266ms. The capture may now begin with
+  // whitespace, which `.split(',').map((part) => part.trim())` below erases.
+  const postal = line2.match(/^(\d{5})\s{1,20}(.+)$/);
   if (postal) {
     address.postalCode = postal[1];
     const parts = (postal[2] ?? '').split(',').map((part) => part.trim()).filter(Boolean);

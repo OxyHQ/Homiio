@@ -280,7 +280,10 @@ export function parseKleinanzeigenDetail(html: string, url: string): Kleinanzeig
     price: parseEuroAmount(priceText),
     currency: 'EUR',
     bedrooms: asNumber(detailValue(html, 'Zimmer')),
-    squareMeters: asNumber(detailValue(html, 'Wohnfläche')?.replace(/\s*m²/i, '')),
+    // Leading `\s*` dropped: unanchored, it walked the whitespace run at every
+    // index (32k spaces: 251ms; without it, 0ms). Equivalent here because
+    // `asNumber` strips everything that is not a digit, separator or sign.
+    squareMeters: asNumber(detailValue(html, 'Wohnfläche')?.replace(/m²/i, '')),
     floor: asNumber(detailValue(html, 'Etage')),
     address: {
       street: neighborhood ?? city,
