@@ -9,6 +9,7 @@
  * identically in the worker and in unit tests, with zero extra dependencies.
  */
 
+import { detailIds } from '../../parse/hrefs';
 import { extractEsSchemaListings, pickEsListing, type EsSchemaListing } from '../../parse/jsonLd';
 import { IDEALISTA_BASE_URL } from './fixtures';
 import type { IdealistaContact } from './contact';
@@ -22,8 +23,6 @@ export interface IdealistaRaw {
   contact?: IdealistaContact;
 }
 
-/** Match Idealista detail links and capture the numeric listing id. */
-const DETAIL_LINK_RE = /href=["']([^"']*\/inmueble\/(\d+)\/[^"']*)["']/gi;
 
 /** Extract the stable listing id from an Idealista URL (`/inmueble/<id>/`). */
 export function idealistaSourceIdFromUrl(url: string): string | undefined {
@@ -66,8 +65,7 @@ export function parseIdealistaDetail(html: string, url: string): IdealistaRaw {
 export function parseIdealistaSearch(html: string): { sourceId: string; url: string }[] {
   const seen = new Set<string>();
   const refs: { sourceId: string; url: string }[] = [];
-  for (const match of html.matchAll(DETAIL_LINK_RE)) {
-    const sourceId = match[2];
+  for (const sourceId of detailIds(html, 'inmueble')) {
     if (!sourceId || seen.has(sourceId)) continue;
     seen.add(sourceId);
     refs.push({ sourceId, url: `${IDEALISTA_BASE_URL}/inmueble/${sourceId}/` });

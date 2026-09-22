@@ -3,6 +3,7 @@
  */
 
 import type { NormalizedListingContact } from '@homiio/shared-types';
+import { detailIds } from '../../../parse/hrefs';
 import { contactFromAdvertiser } from '../../../parse/contact';
 import { extractItSchemaListings, pickItListing, type ItSchemaListing } from '../../../parse/jsonLd';
 import { CASA_IT_BASE_URL } from './fixtures';
@@ -14,7 +15,6 @@ export interface CasaItRaw {
   contact?: NormalizedListingContact;
 }
 
-const DETAIL_LINK_RE = /href=["']([^"']*\/immobili\/(\d+)\/?[^"']*)["']/gi;
 const CONTACT_JSON_RE =
   /<script[^>]*(?:id=["']listing-contact["']|type=["']application\/json["'][^>]*id=["']listing-contact["'])[^>]*>([\s\S]*?)<\/script>/i;
 
@@ -90,8 +90,7 @@ export function parseCasaItSearchJson(body: string): { sourceId: string; url: st
 export function parseCasaItSearch(html: string): { sourceId: string; url: string }[] {
   const seen = new Set<string>();
   const refs: { sourceId: string; url: string }[] = [];
-  for (const match of html.matchAll(DETAIL_LINK_RE)) {
-    const sourceId = match[2];
+  for (const sourceId of detailIds(html, 'immobili')) {
     if (!sourceId || seen.has(sourceId)) continue;
     seen.add(sourceId);
     refs.push({ sourceId, url: `${CASA_IT_BASE_URL}/immobili/${sourceId}/` });
