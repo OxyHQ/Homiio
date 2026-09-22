@@ -37,7 +37,15 @@ import type { PwGotoOptions, PwRoute } from './session';
 /** Hard per-navigation timeout when a caller does not pass one (ms). */
 const DEFAULT_BROWSER_TIMEOUT_MS = 45_000;
 /** Default concurrent-context cap (a browser is memory-heavy — keep it small). */
-const DEFAULT_MAX_CONCURRENCY = 2;
+/**
+ * Concurrent browser contexts when nothing says otherwise.
+ *
+ * Exported so the number is reachable from a test. It and the removal of
+ * `LISTING_BROWSER_MAX_CONCURRENCY` from the worker task definition are ONE
+ * change: raising this while the environment still pins 2 does nothing, and
+ * unpinning while this is 2 does nothing either.
+ */
+export const DEFAULT_MAX_CONCURRENCY = 6;
 
 /* -------------------------------------------------------------------------- */
 /* Minimal structural view of the parts of the Playwright API we depend on.   */

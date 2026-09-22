@@ -11,7 +11,7 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import type { FetchRuntime, FetchRuntimeInit, UrlFetcher } from './types';
-import { createBrowserFetcher, loadPlaywright } from './browser';
+import { createBrowserFetcher, loadPlaywright, DEFAULT_MAX_CONCURRENCY } from './browser';
 import { PlaywrightSessionPool } from './browserSession';
 import { DEFAULT_SESSION_TIMEOUT_MS } from './session';
 import { createManagedFetcher, type ManagedFetcherConfig } from './managed';
@@ -383,7 +383,21 @@ export async function createListingFetchRuntimeFromEnv(
   const browserEnabled = process.env.LISTING_BROWSER_ENABLED === 'true';
   const browserTimeoutMs = envInt('LISTING_BROWSER_TIMEOUT_MS', DEFAULT_SESSION_TIMEOUT_MS);
   const browserChallengeWaitMs = browserChallengeWaitMsFromEnv(browserTimeoutMs);
-  const browserMaxConcurrency = envInt('LISTING_BROWSER_MAX_CONCURRENCY', 2);
+  // MEASURED CEILING, 2026-09-22. Twelve queue consumers (6 fetch, 6 discover)
+  // shared TWO browser slots, and a browser fetch runs up to
+  // LISTING_BROWSER_TIMEOUT_MS (45s). The whole pipeline therefore completed
+  // TWO jobs per minute with 64,411 fetch jobs queued — 22 days to drain it —
+  // while the 2-vCPU/8GB worker sat at 17% CPU and 11% memory.
+  //
+  // The pool is ONE Chromium with a context per fetch, not a browser per slot,
+  // and LISTING_BROWSER_BLOCK_ASSETS is on, so a slot costs tens of megabytes
+  // against ~7GB idle. Six is chosen to stay inside 2 vCPU rather than inside
+  // memory, which is nowhere near the limit.
+  //
+  // THIS RAISES METERED PROXY SPEND ROUGHLY IN PROPORTION. An exhausted Evomi
+  // balance is what emptied the database on 2026-09-20, so the number is a
+  // deliberate trade and not a free win.
+  const browserMaxConcurrency = envInt('LISTING_BROWSER_MAX_CONCURRENCY', DEFAULT_MAX_CONCURRENCY);
   const blockAssets = browserBlockAssetsFromEnv();
   // Headed Chromium (LISTING_BROWSER_HEADED=true) clears DataDome/Kasada where
   // headless is fingerprinted and blocked. It requires a virtual display — the
