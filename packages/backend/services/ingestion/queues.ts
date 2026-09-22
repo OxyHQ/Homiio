@@ -163,6 +163,86 @@ export function discoverPriorityFor(provider: string, rank: number): number {
   return Math.min(Math.max(Math.trunc(rank), 0), FETCH_RANK_CAP) + 1;
 }
 
+/* -------------------------------------------------------------------------- */
+/* Finished-job retention                                                     */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * What happens to a job once it is finished.
+ *
+ * **BullMQ KEEPS FINISHED JOBS FOREVER BY DEFAULT, AND NOTHING HERE SET
+ * OTHERWISE.** A completed or failed job is not deleted: its hash stays in
+ * Redis and its id stays in the `completed` / `failed` sorted set. So the two
+ * listing queues grew monotonically with every pass, whether the pass succeeded
+ * or not — a queue that has done its work costs exactly as much as one that has
+ * not.
+ *
+ * Measured on the dedicated queue node on 2026-09-22, with the worker at
+ * desired-count 0 so nothing was adding anything:
+ *
+ * ```
+ *   used_memory 317.84M / maxmemory 384.00M   (82.8%, policy noeviction)
+ *   listing-fetch     prioritized 64250  completed  6988  failed 17992
+ *   listing-discover  prioritized   682  completed 21510  failed 12385
+ * ```
+ *
+ * **58,875 of the 124,506 keys were finished work** — 47% of the node held by
+ * jobs that will never run again. `noeviction` means the node does not shed
+ * them under pressure; it starts refusing WRITES instead, which is what
+ * produced 1.6 million `OOM command not allowed` errors across seven services
+ * on 2026-09-21.
+ *
+ * This is the half of that incident the scope cap does not address, and the
+ * more dangerous half: a burst is a spike that drains, unbounded retention is a
+ * ratchet that does not. Capping the burst without capping retention only
+ * changes how long the node takes to fill.
+ *
+ * Deliberately NOT configurable by environment. A retention bound that can be
+ * unset is a retention bound that will be unset, and there is no operational
+ * question these numbers answer differently from one deployment to the next.
+ */
+
+/**
+ * Completed jobs are kept briefly and in small number — long enough to inspect
+ * a pass that just ran, not long enough to accumulate. A success carries no
+ * diagnostic value once the listing is in Postgres, which is the real record.
+ */
+export const COMPLETED_JOB_RETENTION = { age: 3_600, count: 1_000 } as const;
+
+/**
+ * Failures are kept longer and deeper, because they are the only place a
+ * provider's breakage is visible: `listing-fetch` was failing 17,992 against
+ * 6,988 successes and nothing else recorded that. Still BOUNDED — the reason
+ * this constant exists is that "keep failures for debugging" is precisely the
+ * argument that produced an unbounded set.
+ */
+export const FAILED_JOB_RETENTION = { age: 86_400, count: 5_000 } as const;
+
+/**
+ * `defaultJobOptions` for both listing queues. Per-`add` options (jobId,
+ * priority) merge OVER these and none of them set `removeOn*`, so every job
+ * enqueued through these queues inherits the bounds above.
+ *
+ * Note this governs jobs added from now on. Jobs already finished on the node
+ * predate it and are removed by `Queue.clean`, not by this.
+ */
+export const LISTING_JOB_RETENTION = {
+  removeOnComplete: COMPLETED_JOB_RETENTION,
+  removeOnFail: FAILED_JOB_RETENTION,
+} as const;
+
+/**
+ * The options every listing queue is constructed with.
+ *
+ * A builder rather than a constant spread at each call site so a queue added
+ * later cannot be built without the retention bounds by simply not knowing
+ * about them — the failure mode that produced this module's problem in the
+ * first place.
+ */
+export function listingQueueOptions(connection: ConnectionOptions, prefix: string) {
+  return { connection, prefix, defaultJobOptions: LISTING_JOB_RETENTION };
+}
+
 /**
  * Build a BullMQ Redis connection OPTIONS object from a `redis[s]://` URL. We
  * pass options (not an ioredis instance) so BullMQ owns the connection, and set

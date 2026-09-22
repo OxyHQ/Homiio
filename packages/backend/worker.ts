@@ -55,6 +55,7 @@ import {
   LISTING_PROXY_UNUSABLE_MARKER,
 } from './services/ingestion/ingestHealthMarkers';
 import {
+  listingQueueOptions,
   QUEUE_NAMES,
   discoverJobId,
   discoverPriorityFor,
@@ -592,8 +593,11 @@ async function startBullMq(): Promise<() => Promise<void>> {
   const connection = parseRedisConnection(config.redis.url);
   const prefix = config.listingWorker.queuePrefix;
 
-  const fetchQueue = new Queue<FetchJobData>(QUEUE_NAMES.fetch, { connection, prefix });
-  const discoverQueue = new Queue<DiscoverJobData>(QUEUE_NAMES.discover, { connection, prefix });
+  // `defaultJobOptions` is what stops the queues growing forever — see
+  // LISTING_JOB_RETENTION. Without it BullMQ keeps every finished job.
+  const queueOptions = listingQueueOptions(connection, prefix);
+  const fetchQueue = new Queue<FetchJobData>(QUEUE_NAMES.fetch, queueOptions);
+  const discoverQueue = new Queue<DiscoverJobData>(QUEUE_NAMES.discover, queueOptions);
 
   // Purge ghost/scoped jobs before the discover worker can claim them.
   await purgeLegacyPerCityDiscoverJobs(discoverQueue);
