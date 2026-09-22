@@ -380,10 +380,17 @@ describe('a request must be a slot that was actually offered', () => {
     await publishSchedule(propertyId);
     const offered = (await availability(propertyId)).body.data.slots[0];
 
-    // Same day, an hour the schedule does not cover.
+    // Same day, an hour the schedule does not cover — and one AFTER the window
+    // rather than before it. `03:00` read as "obviously uncovered", but when the
+    // first offered slot falls on TODAY the handler reaches its past-time check
+    // first and answers 400 TIME_IN_PAST, never getting as far as the schedule.
+    // `EVENINGS` opens on weekday 2, so the suite failed every Tuesday before
+    // 16:30 UTC and passed the rest of the week. The latest slot a window can
+    // offer today starts at 18:30 Madrid, so 21:00 on the offered date is always
+    // in the future and always outside the 17:00-19:00 window.
     const res = await request(buildApi(VISITOR))
       .post(`/api/properties/${propertyId}/viewings`)
-      .send({ date: offered.date, time: '03:00', modality: 'in_person' });
+      .send({ date: offered.date, time: '21:00', modality: 'in_person' });
     expect(res.status).toBe(409);
     expect(res.body.error.code).toBe('SLOT_NOT_OFFERED');
     expect(await getDb().select().from(viewingRequests)).toHaveLength(0);
