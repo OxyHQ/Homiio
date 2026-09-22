@@ -74,7 +74,7 @@ const logger = new Logger('ListingWorker');
  * exit IP per request — a higher fan-out no longer trips a single IP's rate
  * limit. Tune via LISTING_FETCH_CONCURRENCY.
  */
-const FETCH_CONCURRENCY = parseInt(process.env.LISTING_FETCH_CONCURRENCY || '6', 10);
+const FETCH_CONCURRENCY = parseInt(process.env.LISTING_FETCH_CONCURRENCY || '12', 10);
 
 /**
  * Discover-worker concurrency. With ~15 providers and per-city scopes for the
