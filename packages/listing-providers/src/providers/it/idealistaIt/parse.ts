@@ -3,6 +3,7 @@
  */
 
 import type { NormalizedListingContact } from '@homiio/shared-types';
+import { detailIds } from '../../../parse/hrefs';
 import { extractItSchemaListings, pickItListing, type ItSchemaListing } from '../../../parse/jsonLd';
 import { IDEALISTA_IT_BASE_URL } from './fixtures';
 
@@ -13,7 +14,6 @@ export interface IdealistaItRaw {
   contact?: NormalizedListingContact;
 }
 
-const DETAIL_LINK_RE = /href=["']([^"']*\/immobile\/(\d+)\/[^"']*)["']/gi;
 
 export function idealistaItSourceIdFromUrl(url: string): string | undefined {
   return url.match(/\/immobile\/(\d+)/)?.[1];
@@ -44,8 +44,7 @@ export function parseIdealistaItDetail(html: string, url: string): IdealistaItRa
 export function parseIdealistaItSearch(html: string): { sourceId: string; url: string }[] {
   const seen = new Set<string>();
   const refs: { sourceId: string; url: string }[] = [];
-  for (const match of html.matchAll(DETAIL_LINK_RE)) {
-    const sourceId = match[2];
+  for (const sourceId of detailIds(html, 'immobile')) {
     if (!sourceId || seen.has(sourceId)) continue;
     seen.add(sourceId);
     refs.push({ sourceId, url: `${IDEALISTA_IT_BASE_URL}/immobile/${sourceId}/` });
