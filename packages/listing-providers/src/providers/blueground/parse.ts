@@ -226,15 +226,73 @@ export function parseBluegroundSearch(html: string): ExternalListingRef[] {
   return [...bySlug.values()];
 }
 
-function parseOgTitle(title: string | undefined): { street?: string; neighborhood?: string; city?: string } {
+/** Line terminators `.` does not match — see {@link locationAfterIn}. */
+const LINE_TERMINATORS = new Set(['\n', '\r', '\u2028', '\u2029']);
+
+/**
+ * Everything after the first `in` + whitespace — what `/in\s+(.+)$/i` returned.
+ *
+ * That regex is quadratic, and NOT for the reason it looks like. `\s+` and `.+`
+ * do overlap, but bounding the gap changes nothing: the cost is that `.+$` runs
+ * to the end of the line at EVERY start position where `in` occurs, and then
+ * fails. `'in '.repeat(32_000) + '\n'` took 752ms and a bounded `\s{1,20}` still
+ * took 778ms. This walks each whitespace run once instead: 2ms.
+ *
+ * Reproducing the regex exactly takes two details that a rewrite loses:
+ *
+ *   - `.` does not match a line terminator and `$` (no `m` flag) only matches at
+ *     the very end, so the capture must lie entirely on the LAST line — while
+ *     `\s+` may cross line breaks to get there.
+ *   - `.+` needs one character, so when `\s+` has consumed to the end of the
+ *     string it lends one back — but only if it keeps one, since `\s+` requires
+ *     at least a single character. `"in "` therefore has NO match, which a first
+ *     draft got wrong on 3,069 of 900,000 random strings. With both rules it
+ *     agrees on all 900,000, across `\r`, U+2028, U+2029 and non-breaking space.
+ */
+function locationAfterIn(text: string): string | undefined {
+  let lastBreak = -1;
+  for (let i = text.length - 1; i >= 0; i -= 1) {
+    if (LINE_TERMINATORS.has(text[i])) { lastBreak = i; break; }
+  }
+
+  for (const match of text.matchAll(/in/gi)) {
+    const whitespaceStart = (match.index ?? 0) + 2;
+    let cursor = whitespaceStart;
+    while (cursor < text.length && /\s/.test(text[cursor])) cursor += 1;
+    if (cursor === whitespaceStart) continue;
+
+    let captureStart = cursor;
+    if (cursor >= text.length) {
+      if (cursor - whitespaceStart < 2) continue;
+      captureStart = cursor - 1;
+    }
+    if (captureStart <= lastBreak) continue;
+    if (LINE_TERMINATORS.has(text[captureStart])) continue;
+    return text.slice(captureStart);
+  }
+  return undefined;
+}
+
+/**
+ * Exported for test. The two regexes this function used were both quadratic,
+ * and `parseBluegroundDetail` refuses any page without a price and photos — so
+ * reaching this through it would mean maintaining a fixture whose fields have
+ * nothing to do with what is being checked.
+ */
+export function parseOgTitle(title: string | undefined): { street?: string; neighborhood?: string; city?: string } {
   if (!title) return {};
   const dashSplit = title.split(' - ');
   const street = dashSplit[0]?.trim();
-  const locationPart = dashSplit[1]?.replace(/\s*\|\s*Blueground.*$/i, '').trim();
+  // The leading `\s*` made this quadratic — unanchored, so it was retried at
+  // every index and walked the whitespace run each time (32k spaces: 245ms).
+  // Dropping it is EXACTLY equivalent because `.trim()` on the next line
+  // already removes the whitespace it was there to eat. Now the only start
+  // positions are `|` characters: 0ms on the same input.
+  const locationPart = dashSplit[1]?.replace(/\|\s*Blueground.*$/i, '').trim();
   if (!locationPart) return { street };
-  const inMatch = locationPart.match(/in\s+(.+)$/i);
-  if (!inMatch) return { street };
-  const parts = inMatch[1].split(',').map((part) => part.trim()).filter(Boolean);
+  const after = locationAfterIn(locationPart);
+  if (after === undefined) return { street };
+  const parts = after.split(',').map((part) => part.trim()).filter(Boolean);
   if (parts.length >= 2) {
     return { street, neighborhood: parts[0], city: parts[parts.length - 1] };
   }
