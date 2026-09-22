@@ -47,6 +47,7 @@ import { Logger } from './utils/logger';
 import { expireExternalProperty } from './db/properties/propertyWrites';
 import { IngestionService, IngestionValidationError } from './services/ingestion/IngestionService';
 import { ProviderBackoff } from './services/ingestion/providerBackoff';
+import { discoverScopeLimit } from './services/ingestion/discoverScope';
 import {
   countsAsLiveIngest,
   ingestMarketToken,
@@ -437,11 +438,12 @@ function bootDiscoverJobs(): BootDiscoverScope[] {
   // FIFO interleave is also enforced by BullMQ priority (survives jobId dedup and
   // recurring re-enqueue, which a plain FIFO order does not).
   const interleaved: BootDiscoverScope[] = [];
+  const limit = discoverScopeLimit();
   const maxLen = perProvider.reduce((max, list) => Math.max(max, list.length), 0);
   for (let i = 0; i < maxLen; i += 1) {
     for (const list of perProvider) {
       const scope = list[i];
-      if (scope) interleaved.push({ data: scope, rank: i });
+      if (scope) interleaved.push({ data: { ...scope, limit }, rank: i });
     }
   }
   return interleaved;
