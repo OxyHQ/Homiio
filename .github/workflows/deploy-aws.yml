@@ -292,8 +292,6 @@ jobs:
               exit 1
             fi
           }
-          require_secure_string "/oxy/$APP/SINDI_OXY_SERVICE_API_KEY"
-          require_secure_string "/oxy/$APP/SINDI_OXY_SERVICE_API_SECRET"
 
       - name: Login to ECR
         uses: aws-actions/amazon-ecr-login@v2
@@ -413,14 +411,30 @@ jobs:
               SINDI_ALIA_AGENT_ID: $sindiAgentId,
               OXY_INFERENCE_ROUTING_PROFILE_ID: $routingProfileId
             }')
-          # Sindi only. Its credential is a DIFFERENT identity — a dedicated
-          # agent service credential that Alia verifies, never Homiio's own — so
-          # attestation does not replace it and it is still injected by ARN.
-          TASK_SECRET_OVERRIDES_JSON='{
-            "SINDI_OXY_SERVICE_API_KEY": "arn:aws:ssm:us-west-2:237343248947:parameter/oxy/homiio/SINDI_OXY_SERVICE_API_KEY",
-            "SINDI_OXY_SERVICE_API_SECRET": "arn:aws:ssm:us-west-2:237343248947:parameter/oxy/homiio/SINDI_OXY_SERVICE_API_SECRET"
-          }'
-          export TASK_ENV_OVERRIDES_JSON TASK_SECRET_OVERRIDES_JSON
+          # Sindi's credential is retired too, and the comment that stood here
+          # said why it could not be: "a DIFFERENT identity — a dedicated agent
+          # service credential that Alia verifies, never Homiio's own — so
+          # attestation does not replace it". Both halves of that were true and
+          # the conclusion no longer follows.
+          #
+          # What Alia verifies is the requester assertion Oxy mints, and Oxy
+          # refused to mint one for an attested caller: `nativeProductAgentEntryPoint`
+          # matched an exact (application, credential, agent) triple, and an
+          # attested token carries the binding's `wl_…` handle where the
+          # credential's UUID used to be. oxy#1351 lets that entry declare the
+          # WORKLOAD it admits alongside the credential, and Homiio's canary
+          # (`services/oxy.ts`) accepts either id.
+          #
+          # Verified against production before the pair came off, with a probe
+          # that needs no signed-in user: an attested token plus a junk subject
+          # token is refused `subject_session_invalid` — the entry point
+          # recognised the caller and rejected only the session — where before it
+          # was refused `unknown_entry_point`.
+          #
+          # So nothing is injected here. The pair came off the running revision
+          # at oxy-homiio:173, and a render derives from the RUNNING one, so
+          # re-adding this block is the only thing that could bring it back.
+          export TASK_ENV_OVERRIDES_JSON
           STATUS=$(aws ecs describe-services --cluster "$CLUSTER" --services "$APP" --query 'services[0].status' --output text 2>/dev/null || echo NONE)
           if [ "$STATUS" != "ACTIVE" ]; then
             echo "ECS service $APP not created yet - image is in ECR, skipping deploy"

@@ -195,12 +195,20 @@ describe('the deploy workflow syncs an explicit allowlist', () => {
       .join('\n');
     expect(syncStep).not.toMatch(/secrets\.(?:SINDI_)?OXY_SERVICE_API_(?:KEY|SECRET)/);
     expect(syncStep).not.toMatch(/sync_secret (?:SINDI_)?OXY_SERVICE_API_(?:KEY|SECRET)/);
-    expect(syncStep).toContain(
-      'require_secure_string "/oxy/$APP/SINDI_OXY_SERVICE_API_KEY"',
-    );
-    expect(syncStep).toContain(
-      'require_secure_string "/oxy/$APP/SINDI_OXY_SERVICE_API_SECRET"',
-    );
+    /**
+     * And it no longer REQUIRES Sindi's pair to exist either — the inverse of
+     * what stood here, for a reason that arrived rather than a rule that moved.
+     *
+     * The pre-flight refused to roll out unless both parameters were SSM
+     * SecureStrings, which was right while the deploy injected them. It stopped
+     * injecting them: Oxy now mints Sindi's requester assertion for an attested
+     * caller (oxy#1351 lets the native-agent entry point declare the WORKLOAD it
+     * admits, not only a credential UUID), and Homiio's canary accepts either
+     * id. A pre-flight that still demanded the parameters would block every
+     * rollout the moment they are deleted from SSM.
+     */
+    expect(syncStep).not.toContain('require_secure_string "/oxy/$APP/SINDI_OXY_SERVICE_API_KEY"');
+    expect(syncStep).not.toContain('require_secure_string "/oxy/$APP/SINDI_OXY_SERVICE_API_SECRET"');
     expect(executableSync).not.toContain('--with-decryption');
   });
 
