@@ -84,12 +84,30 @@ describe('Homiio deployment preserves the exact inference runtime boundary', () 
     );
   });
 
-  it('injects the isolated Sindi credential from exact SSM ARNs', () => {
-    expect(apiStep).toContain(SINDI_SERVICE_KEY_ARN);
-    expect(apiStep).toContain(SINDI_SERVICE_SECRET_ARN);
-    expect(apiStep).toContain('export TASK_ENV_OVERRIDES_JSON TASK_SECRET_OVERRIDES_JSON');
-    expect(syncStep).toContain('require_secure_string "/oxy/$APP/SINDI_OXY_SERVICE_API_KEY"');
-    expect(syncStep).toContain('require_secure_string "/oxy/$APP/SINDI_OXY_SERVICE_API_SECRET"');
+  /**
+   * Sindi's credential is not injected any more, and this is the assertion that
+   * replaces the one demanding it.
+   *
+   * What the old name called "isolated" was accurate and is the reason it
+   * survived the first migration: Sindi's identity is a dedicated agent service
+   * credential that Alia verifies, not Homiio's own, so Homiio attesting its
+   * task role did not replace it. What changed is the thing doing the verifying.
+   * Alia checks the requester assertion Oxy mints, and Oxy refused to mint one
+   * for an attested caller because `nativeProductAgentEntryPoint` matched an
+   * exact (application, credential, agent) triple. oxy#1351 lets that entry
+   * declare the WORKLOAD it admits as well, and Homiio's canary accepts either
+   * id — so the isolation is now carried by the binding rather than by a secret.
+   *
+   * Measured against production before the pair came off, with a probe needing
+   * no signed-in user: an attested token plus a junk subject token is refused
+   * `subject_session_invalid`, where before it was `unknown_entry_point`.
+   */
+  it('injects no Sindi credential, and no longer requires one to exist', () => {
+    expect(apiStep).not.toContain(SINDI_SERVICE_KEY_ARN);
+    expect(apiStep).not.toContain(SINDI_SERVICE_SECRET_ARN);
+    expect(apiStep).not.toContain('TASK_SECRET_OVERRIDES_JSON');
+    expect(syncStep).not.toContain('require_secure_string "/oxy/$APP/SINDI_OXY_SERVICE_API_KEY"');
+    expect(syncStep).not.toContain('require_secure_string "/oxy/$APP/SINDI_OXY_SERVICE_API_SECRET"');
     expect(syncStep).not.toContain('--with-decryption');
   });
 
