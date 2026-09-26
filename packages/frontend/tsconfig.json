@@ -19,9 +19,6 @@
       ],
       "@oxy.so/core": [
         "../../node_modules/@oxy.so/core"
-      ],
-      "@oxy.so/core/*": [
-        "../../node_modules/@oxy.so/core/*"
       ]
     }
   },

@@ -1,17 +1,15 @@
-import type {
-  OxyInferenceRequestOptions,
-  OxyInferenceResponse,
-  OxyResponsesRequest,
-} from '@oxy.so/core';
+import type { OxyInferenceRequestOptions, OxyInferenceResponse, OxyResponsesRequest } from '@oxy.so/core/inference';
 
 // This suite injects its own client. Keep the module-level production singleton
 // from constructing the registry-installed pre-23.2 client while the exact-ID
 // release is prepared but not yet published.
-jest.mock('@oxy.so/core', () => ({
+jest.mock('@oxy.so/core/inference', () => ({
   OxyInferenceClient: class {},
-  OxyServices: class {
-    configureServiceAuth() {}
-    async getServiceToken() {
+}));
+jest.mock('@oxy.so/core/server', () => ({
+  canAttestWorkloadIdentity: () => false,
+  OxyServer: class {
+    async serviceToken() {
       return 'unused-test-token';
     }
   },

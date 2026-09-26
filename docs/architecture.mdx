@@ -306,7 +306,8 @@ device-first Oxy session.
 
 - **Client:** one `OxyProvider` from `@oxy.so/services` with a registered
   `clientId`. `packages/frontend/utils/api.ts` builds the backend client with
-  `oxyClient.createLinkedClient({ baseURL })`, which owns auth end to end — it
+  `createLinkedClient({ baseURL })` on the provider's `OxyServices` (bound by
+  `bindApiToOxy` in the root layout), which owns auth end to end — it
   mirrors the session token, delegates 401 refresh, and invalidates the session
   when refresh fails. Never add a local token provider, an auth interceptor or a
   manual `Authorization` header.

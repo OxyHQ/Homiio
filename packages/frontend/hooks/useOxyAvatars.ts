@@ -17,7 +17,7 @@ import type { User } from '@oxy.so/core';
  * Pair the returned `getAvatarFileId(oxyUserId)` with a Bloom `Avatar`
  * `source` + `variant` and the app-wide `ImageResolverProvider` (registered in
  * the root layout): the resolver turns the file id into the canonical Oxy
- * media URL via `getFileDownloadUrl`, the single media chokepoint.
+ * media URL via `assets.publicUrl`, the single media chokepoint.
  */
 export function useOxyAvatars(oxyUserIds: readonly (string | undefined | null)[]) {
   const { oxyServices } = useOxy();
@@ -34,7 +34,7 @@ export function useOxyAvatars(oxyUserIds: readonly (string | undefined | null)[]
 
   const query = useQuery<User[]>({
     queryKey: ['oxy-users-by-ids', ids],
-    queryFn: () => oxyServices.getUsersByIds([...ids]),
+    queryFn: () => oxyServices.users.getMany([...ids]),
     enabled: ids.length > 0,
     staleTime: 1000 * 60 * 5,
     gcTime: 1000 * 60 * 30,
