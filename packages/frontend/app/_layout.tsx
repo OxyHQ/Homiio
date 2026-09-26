@@ -54,6 +54,7 @@ import { OXY_BASE_URL, OXY_CLIENT_ID } from '@/config';
 import { QueryClient, QueryClientProvider, onlineManager, focusManager } from '@tanstack/react-query';
 import NetInfo from '@react-native-community/netinfo';
 import { logger } from '@/utils/logger';
+import { bindApiToOxy } from '@/utils/api';
 import {
   isSupportedLanguage,
   setStoredLanguage,
@@ -91,17 +92,20 @@ preventNativeSplashAutoHide();
  *
  * Registers a single `ImageResolverProvider` whose resolver turns an Oxy file
  * id (plus optional rendition variant) into the canonical Oxy media/signed
- * URL via `oxyServices.getFileDownloadUrl` — the ONE place a media URL is built.
+ * URL via `oxyServices.assets.publicUrl` — the ONE place a media URL is built.
  * Any Bloom surface that renders `Avatar source={<fileId>} variant="thumb"`
  * gets correctly-resolved media for free; components never construct media URLs
  * themselves.
  */
 function MediaResolverProvider({ children }: { children: React.ReactNode }) {
   const { oxyServices } = useOxy();
+  // Homiio's own API client follows the provider's session (see `utils/api`).
+  // Bound during render, before any child can issue a request.
+  bindApiToOxy(oxyServices);
   const resolver = useMemo<ImageResolver>(
     () => (id: string, variant?: string) => {
       if (!id) return undefined;
-      return oxyServices.getFileDownloadUrl(id, variant);
+      return oxyServices.assets.publicUrl(id, variant);
     },
     [oxyServices],
   );

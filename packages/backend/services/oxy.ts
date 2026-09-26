@@ -1,7 +1,6 @@
 import crypto from 'node:crypto';
 
-import { OxyServices } from '@oxy.so/core';
-import { canAttestWorkloadIdentity } from '@oxy.so/core/server';
+import { OxyServer, canAttestWorkloadIdentity } from '@oxy.so/core/server';
 import config from '../config';
 
 /**
@@ -11,9 +10,31 @@ import config from '../config';
  * configuring service auth must not change the credential lane used to verify
  * incoming user sessions. A provider credential never reaches this process;
  * Kaana owns those in its encrypted database.
+ *
+ * The credential pair is now OPTIONAL, and a deployment no longer carries one.
+ *
+ * Under oxy ADR 0026 a first-party service proves what it IS: `serviceToken()`
+ * attests the ECS task role and gets the same short-lived token back whenever no
+ * credential is configured. Installing a pair is therefore the fallback rather
+ * than the requirement — a checkout that still has `OXY_SERVICE_API_KEY` and
+ * `OXY_SERVICE_API_SECRET` keeps using them, and dropping the two variables IS
+ * the migration.
+ *
+ * Both or neither. One alone authenticates nothing, and configuring half a pair
+ * would REPLACE the attestation path with a credential that cannot mint.
  */
-export const oxyService = new OxyServices({ baseURL: config.oxy.baseURL });
-const sindiOxyService = new OxyServices({ baseURL: config.oxy.baseURL });
+export const oxyService = new OxyServer({
+  baseURL: config.oxy.baseURL,
+  ...(config.oxy.serviceApiKey && config.oxy.serviceApiSecret
+    ? { serviceAuth: { apiKey: config.oxy.serviceApiKey, apiSecret: config.oxy.serviceApiSecret } }
+    : {}),
+});
+const sindiOxyService = new OxyServer({
+  baseURL: config.oxy.baseURL,
+  ...(config.alia.sindiServiceApiKey && config.alia.sindiServiceApiSecret
+    ? { serviceAuth: { apiKey: config.alia.sindiServiceApiKey, apiSecret: config.alia.sindiServiceApiSecret } }
+    : {}),
+});
 
 export const SINDI_OXY_APPLICATION_ID = '6a2f851751b784a86fd0e922';
 export const SINDI_OXY_SERVICE_CREDENTIAL_ID = '01a0648e-ad3f-7608-aa8b-c07bfef6cf73';
@@ -79,30 +100,6 @@ function namesSindiServiceIdentity(value: unknown): boolean {
 }
 
 /**
- * The credential pair is now OPTIONAL, and a deployment no longer carries one.
- *
- * Under oxy ADR 0026 a first-party service proves what it IS: `getServiceToken()`
- * attests the ECS task role and gets the same short-lived token back whenever no
- * credential is configured. Installing a pair is therefore the fallback rather
- * than the requirement — a checkout that still has `OXY_SERVICE_API_KEY` and
- * `OXY_SERVICE_API_SECRET` keeps using them, and dropping the two variables IS
- * the migration.
- *
- * Both or neither. One alone authenticates nothing, and configuring half a pair
- * would REPLACE the attestation path with a credential that cannot mint.
- */
-if (config.oxy.serviceApiKey && config.oxy.serviceApiSecret) {
-  oxyService.configureServiceAuth(config.oxy.serviceApiKey, config.oxy.serviceApiSecret);
-}
-
-if (config.alia.sindiServiceApiKey && config.alia.sindiServiceApiSecret) {
-  sindiOxyService.configureServiceAuth(
-    config.alia.sindiServiceApiKey,
-    config.alia.sindiServiceApiSecret,
-  );
-}
-
-/**
  * Whether this process can obtain an Oxy service token AT ALL.
  *
  * The question every caller that used to check for a key pair actually meant.
@@ -158,7 +155,7 @@ export function assertCanonicalSindiServiceToken(token: string): string {
 }
 
 export async function getCanonicalSindiServiceToken(): Promise<string> {
-  return assertCanonicalSindiServiceToken(await sindiOxyService.getServiceToken());
+  return assertCanonicalSindiServiceToken(await sindiOxyService.serviceToken());
 }
 
 /**
@@ -234,7 +231,7 @@ export async function mintSindiRequesterAssertion(input: {
 }): Promise<string> {
   let grant: unknown;
   try {
-    grant = await sindiOxyService.mintRequesterAssertion({
+    grant = await sindiOxyService.agency.mintRequesterAssertion({
       agentId: input.agentId,
       subjectToken: input.subjectToken,
     });

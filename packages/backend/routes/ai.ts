@@ -26,7 +26,7 @@
 import express, { Request, Response } from 'express';
 import multer from 'multer';
 import { formatDataStreamPart, pipeDataStreamToResponse, type JSONValue } from 'ai';
-import { OxyInferenceError } from '@oxy.so/core';
+import { OxyInferenceError } from '@oxy.so/core/inference';
 import { getOxyUserId } from '@oxy.so/core/server';
 import type { InferenceContentPart, InferenceMessage } from '@oxy.so/contracts';
 import { logger } from '../middlewares/logging';

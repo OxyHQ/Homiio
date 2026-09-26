@@ -300,7 +300,7 @@ export function useHomiioSidebarProps(): HomiioSidebarProps {
     if (!isAuthenticated || !user) return undefined;
     const name = getAccountDisplayName(user);
     const handle = getAccountFallbackHandle(user);
-    const avatarUrl = user.avatar ? oxyServices.getFileDownloadUrl(user.avatar, 'thumb') : undefined;
+    const avatarUrl = user.avatar ? oxyServices.assets.publicUrl(user.avatar, 'thumb') : undefined;
     return {
       name,
       email: handle ? `@${handle}` : undefined,

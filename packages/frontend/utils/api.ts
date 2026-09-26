@@ -1,5 +1,4 @@
-import { oxyClient } from '@oxy.so/core';
-import type { LinkedHttpClient } from '@oxy.so/core';
+import type { LinkedHttpClient, OxyServices } from '@oxy.so/core';
 import { API_URL } from '@/config';
 
 /** The HTTP client exposed by a linked backend client (Homiio's own API). */
@@ -53,17 +52,28 @@ export class ApiError extends Error {
  * refresh ultimately fails. This replaces the hand-rolled `Authorization:
  * Bearer` plumbing — apps must not manage tokens themselves.
  *
- * Created lazily (and once) so the module has no import-time side effects and so
- * it binds to the live `oxyClient` singleton, which itself tracks whichever
- * `OxyServices` instance owns the session. GET caching stays OFF (the SDK can't
+ * Bound to the provider's client by {@link bindApiToOxy} (called from the root
+ * layout, inside `OxyProvider`) and created lazily on the first request, so the
+ * module has no import-time side effects. GET caching stays OFF (the SDK can't
  * invalidate Homiio's own backend); React Query owns caching for these reads.
  */
-let linkedClient: LinkedClient | null = null;
+let boundOxy: OxyServices | null = null;
+let linked: { oxy: OxyServices; handle: LinkedHttpClient } | null = null;
+
+/** Point the Homiio API client at the `OxyServices` that owns the session. Idempotent. */
+export function bindApiToOxy(oxy: OxyServices): void {
+  boundOxy = oxy;
+}
+
 const getClient = (): LinkedClient => {
-  if (!linkedClient) {
-    linkedClient = oxyClient.createLinkedClient({ baseURL: API_CONFIG.baseURL }).client;
+  if (!boundOxy) {
+    throw new ApiError('The Homiio API was called before OxyProvider mounted');
   }
-  return linkedClient;
+  if (!linked || linked.oxy !== boundOxy) {
+    linked?.handle.dispose();
+    linked = { oxy: boundOxy, handle: boundOxy.createLinkedClient({ baseURL: API_CONFIG.baseURL }) };
+  }
+  return linked.handle.client;
 };
 
 /**

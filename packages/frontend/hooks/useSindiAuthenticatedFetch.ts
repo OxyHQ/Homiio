@@ -17,7 +17,7 @@ type ConversationFetch = typeof globalThis.fetch;
  * Single source of truth so the three hosts stay byte-identical:
  *   - Bearer token read from the active Oxy access token. The SDK
  *     (`OxyProvider`) OWNS token lifecycle — cold-boot restore plus background
- *     refresh keep `getAccessToken()` live — so this hook does NOT re-implement
+ *     refresh keep `session.accessToken` live — so this hook does NOT re-implement
  *     refresh/retry plumbing. Sindi is a streaming endpoint, which the SDK's
  *     JSON-only HTTP client cannot proxy, so we keep a raw streaming fetch but
  *     let the SDK own auth.
@@ -40,7 +40,7 @@ export function useSindiAuthenticatedFetch(): ConversationFetch {
       };
 
       if (oxyServices && activeSessionId) {
-        const accessToken = oxyServices.getAccessToken();
+        const accessToken = oxyServices.session.accessToken;
         if (accessToken) {
           headers['Authorization'] = `Bearer ${accessToken}`;
         }
