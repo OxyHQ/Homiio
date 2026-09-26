@@ -113,8 +113,8 @@ measurements and the migration history: **`docs/postgres.md`**.
   `routes/index.ts` behind `createOxyAuthMiddleware(oxy)`. Moving a handler
   between the two files changes its auth requirement silently, so a handler on
   the public router must never read `req.user` for authorization.
-- **The Oxy linked client owns auth** (`oxyClient.createLinkedClient({ baseURL })`
-  in `packages/frontend/utils/api.ts`). Do NOT add local token providers, auth
+- **The Oxy linked client owns auth** (`createLinkedClient({ baseURL })` on the
+  provider's `OxyServices`, bound by `bindApiToOxy` in `packages/frontend/utils/api.ts`). Do NOT add local token providers, auth
   interceptors or manual `Authorization` headers. `normalizeEnvelope` is an
   INTENTIONAL bridge back to the `{success, data}` envelope Homiio's consumers
   read — do not "fix" it piecemeal. The only sanctioned

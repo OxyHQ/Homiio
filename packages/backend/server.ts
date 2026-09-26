@@ -17,8 +17,7 @@ import { notFound, errorHandler } from './middlewares/errorHandler';
 import { rateLimitKeyFor } from './middlewares/rateLimitKey';
 import { connectPostgres } from './db/postgres';
 import publicRoutes from './routes/public';
-import { OxyServices } from '@oxy.so/core';
-import { createOptionalOxyAuth, createOxyAuthMiddleware, type OxyAuthRefusal } from '@oxy.so/core/server';
+import { OxyServer, createOptionalOxyAuth, createOxyAuthMiddleware, type OxyAuthRefusal } from '@oxy.so/core/server';
 import { stripeWebhook, confirmCheckoutSession } from './controllers/billingController';
 import { initCronJobs } from './services/cron';
 import { HealthService } from './services/healthService';
@@ -30,7 +29,7 @@ interface RawBodyRequest extends Request {
   rawBody?: Buffer;
 }
 
-const oxy = new OxyServices({ baseURL: config.oxy.baseURL });
+const oxy = new OxyServer({ baseURL: config.oxy.baseURL });
 
 const healthService = new HealthService();
 
@@ -201,7 +200,7 @@ app.use(cors(corsOptions));
 
 // Resolve the user BEFORE rate limiting so the limiter keys per authenticated
 // user (high budget) rather than per shared egress IP behind the ALB. Strict
-// `oxy.auth()` still guards the protected routers below.
+// `oxy.middleware.auth()` still guards the protected routers below.
 app.use(optionalAuth);
 
 const apiLimiter = rateLimit({

@@ -1,9 +1,4 @@
-import {
-  OxyInferenceClient,
-  type OxyInferenceRequestOptions,
-  type OxyInferenceResponse,
-  type OxyResponsesRequest,
-} from '@oxy.so/core';
+import { OxyInferenceClient, type OxyInferenceRequestOptions, type OxyInferenceResponse, type OxyResponsesRequest } from '@oxy.so/core/inference';
 import type { InferenceMessage, ResponseFormat } from '@oxy.so/contracts';
 import config from '../config';
 import { canAuthenticateAsOxyService, oxyService } from './oxy';
@@ -110,7 +105,7 @@ const missingConfiguration = canAuthenticateAsOxyService()
 export const homiioInference = new HomiioInferenceService({
   client: new OxyInferenceClient({
     baseURL: config.oxy.baseURL,
-    credential: () => oxyService.getServiceToken(),
+    credential: () => oxyService.serviceToken(),
   }),
   routingProfileId: config.oxy.inferenceRoutingProfileId,
   missingConfiguration,

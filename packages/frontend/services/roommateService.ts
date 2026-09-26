@@ -83,7 +83,7 @@ interface ToggleMatchingResponse {
 /**
  * Roommate matching API.
  *
- * Auth is resolved internally by the shared `api` client (via `oxyClient`
+ * Auth is resolved internally by the shared `api` client (via the provider's `OxyServices`
  * access tokens), so the optional `oxyServices` / `activeSessionId` arguments
  * accepted by the methods below are no longer forwarded to the transport.
  * They are retained on the public signatures so existing call sites that still
