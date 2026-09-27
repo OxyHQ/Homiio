@@ -58,10 +58,13 @@ const workflow = readFileSync(WORKFLOW_PATH, 'utf8');
  * definition reads it any more, because the API attests its ECS task role
  * instead (oxy ADR 0026).
  *
- * `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` / `REDIS_URL` live under
- * `/oxy/_shared/`; the rest under `/oxy/homiio/`. The split is what the
- * `SHARED_` and `APP_` prefixes encode, and it matters because a shared value
- * written to the app namespace syncs successfully and reaches nothing.
+ * Everything synced lands under `/oxy/homiio/`. The `/oxy/_shared/` parameters
+ * both task definitions also read (`AWS_ACCESS_KEY_ID`,
+ * `AWS_SECRET_ACCESS_KEY`, `REDIS_URL`) are NOT synced: shared parameters are
+ * owned by oxy-infra, not by any app, and are rotated once, centrally
+ * (oxy-infra docs/runbooks/45-shared-ssm-parameters.md). Several app deploys
+ * each copied their own secret into `/oxy/_shared/REDIS_URL`; two held
+ * different values and every deploy flipped it (incident 2026-09-27).
  *
  * `MONGODB_URI` is GONE from this list, and the order of operations is the
  * point: it was deleted from SSM first and CAME BACK, because this sync
@@ -77,8 +80,16 @@ const EXPECTED_SYNCED_SECRETS = {
     'JWT_SECRET',
     'LISTING_RESIDENTIAL_PROXY_URL',
   ],
-  SHARED: ['AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY', 'REDIS_URL'],
 };
+
+/** Shared names this deploy must never bind or write (oxy-infra owns them). */
+const INFRA_OWNED_SHARED_SECRETS = [
+  'AWS_ACCESS_KEY_ID',
+  'AWS_SECRET_ACCESS_KEY',
+  'REDIS_URL',
+  'LIVEKIT_API_KEY',
+  'LIVEKIT_API_SECRET',
+];
 
 /**
  * The body of the sync step: from its `- name:` line to the next step at the
@@ -111,12 +122,16 @@ describe('the deploy workflow syncs an explicit allowlist', () => {
     // same change that removes the secret, which is the only way a floor should
     // ever come down. It is a MINIMUM, so a secret ADDED to the task definitions
     // without being synced still has to raise it.
+    //
+    // LOWERED FROM 7 TO 4 by the shared-parameter removal, on the same terms:
+    // the change that stops writing the three oxy-infra-owned /oxy/_shared/
+    // parameters.
     expect(syncStep).not.toBe('');
     expect(syncStep).toContain('bash .github/scripts/put-secure-parameter.sh "$path"');
     expect(syncStep).not.toContain('aws ssm put-parameter');
     expect(syncStep).not.toContain('--value "$value"');
-    expect(envBindings.length).toBeGreaterThanOrEqual(7);
-    expect(syncCalls.length).toBeGreaterThanOrEqual(7);
+    expect(envBindings.length).toBeGreaterThanOrEqual(4);
+    expect(syncCalls.length).toBeGreaterThanOrEqual(4);
   });
 
   it('never enumerates the whole secrets context', () => {
@@ -135,7 +150,7 @@ describe('the deploy workflow syncs an explicit allowlist', () => {
     const envBlock = syncStep.slice(syncStep.indexOf('env:'), syncStep.indexOf('run:'));
     for (const line of envBlock.split('\n')) {
       const binding = /^ {10}([A-Za-z0-9_]+):/.exec(line);
-      if (binding) expect(binding[1]).toMatch(/^(APP|SHARED)_/);
+      if (binding) expect(binding[1]).toMatch(/^APP_/);
     }
     // The variable must be named after the secret it carries, or the loop below
     // cannot tell which value a call is actually sending.
@@ -161,31 +176,39 @@ describe('the deploy workflow syncs an explicit allowlist', () => {
     }
   });
 
-  it('routes the shared secrets to /oxy/_shared and the rest to the app namespace', () => {
+  it('routes every secret to the app namespace', () => {
     // A name with no call at all returns the empty string, which fails the
     // comparison naming the missing secret — the case this whole file exists for.
     const pathFor = (name: string): string =>
       syncCalls.find(([, candidate]) => candidate === name)?.[3] ?? '';
-    for (const name of EXPECTED_SYNCED_SECRETS.SHARED) expect(pathFor(name)).toBe(`/oxy/_shared/${name}`);
     for (const name of EXPECTED_SYNCED_SECRETS.APP) expect(pathFor(name)).toBe(`/oxy/$APP/${name}`);
+  });
+
+  it('never writes a /oxy/_shared/ parameter, which oxy-infra owns', () => {
+    // Matched against the whole workflow, not just this step: a write from any
+    // step would split the readers the same way. A task-definition ARN
+    // (`parameter/oxy/_shared/...`) is a READ and is allowed.
+    const executable = workflow.split('\n').filter((line) => !line.trimStart().startsWith('#'));
+    expect(executable.filter((line) => /(?<!parameter)\/oxy\/_shared\//.test(line))).toEqual([]);
+    expect(envBindings.filter(([, prefix]) => prefix === 'SHARED')).toEqual([]);
+    for (const name of INFRA_OWNED_SHARED_SECRETS) {
+      expect(workflow).not.toContain(`secrets.${name} }}`);
+    }
   });
 
   it('covers exactly the secrets required by the matching task definitions', () => {
     // Widening this list is the deliberate edit the workflow comment asks for.
     // Narrowing it means a container reads a parameter no deploy maintains.
     expect(syncCalls.map(([, name]) => name).sort()).toEqual(
-      [...EXPECTED_SYNCED_SECRETS.APP, ...EXPECTED_SYNCED_SECRETS.SHARED].sort(),
+      [...EXPECTED_SYNCED_SECRETS.APP].sort(),
     );
   });
 
-  it('still refuses placeholders and a non-us-west-2 REDIS_URL', () => {
-    // Both guards predate the allowlist. A secret left empty or set to a single
+  it('still refuses placeholders', () => {
+    // The guard predates the allowlist. A secret left empty or set to a single
     // dash is a mistake, not an instruction to overwrite production with
     // garbage: skipping leaves whatever SSM already holds.
     expect(syncStep).toContain('[ "$value" = "-" ]');
-    // The ESCAPED spelling, because the guard is a `grep` regex — asserting the
-    // bare hostname passes on a workflow whose dots are unescaped wildcards.
-    expect(syncStep).toContain(String.raw`'\.usw2\.cache\.amazonaws\.com'`);
   });
 
   it('does not source Oxy service credentials from GitHub and verifies exact SSM paths', () => {

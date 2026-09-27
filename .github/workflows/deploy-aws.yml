@@ -240,9 +240,6 @@ jobs:
           APP_JWT_REFRESH_SECRET: ${{ secrets.JWT_REFRESH_SECRET }}
           # Worker only.
           APP_LISTING_RESIDENTIAL_PROXY_URL: ${{ secrets.LISTING_RESIDENTIAL_PROXY_URL }}
-          SHARED_AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          SHARED_AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          SHARED_REDIS_URL: ${{ secrets.REDIS_URL }}
         run: |
           sync_secret() {
             name="$1"; value="$2"; path="$3"
@@ -258,18 +255,15 @@ jobs:
           sync_secret JWT_SECRET "$APP_JWT_SECRET" "/oxy/$APP/JWT_SECRET"
           sync_secret JWT_REFRESH_SECRET "$APP_JWT_REFRESH_SECRET" "/oxy/$APP/JWT_REFRESH_SECRET"
           sync_secret LISTING_RESIDENTIAL_PROXY_URL "$APP_LISTING_RESIDENTIAL_PROXY_URL" "/oxy/$APP/LISTING_RESIDENTIAL_PROXY_URL"
-          sync_secret AWS_ACCESS_KEY_ID "$SHARED_AWS_ACCESS_KEY_ID" "/oxy/_shared/AWS_ACCESS_KEY_ID"
-          sync_secret AWS_SECRET_ACCESS_KEY "$SHARED_AWS_SECRET_ACCESS_KEY" "/oxy/_shared/AWS_SECRET_ACCESS_KEY"
 
-          # Valkey lives in the cluster's region; a URL from another region
-          # leaves the worker silently without a cache, so it is rejected.
-          if [ -n "$SHARED_REDIS_URL" ] && [ "$SHARED_REDIS_URL" != "-" ] &&
-             [ "$AWS_REGION" = "us-west-2" ] &&
-             ! printf '%s' "$SHARED_REDIS_URL" | grep -q '\.usw2\.cache\.amazonaws\.com'; then
-            echo "::warning::skip REDIS_URL because it does not point at the us-west-2 Valkey endpoint; SSM unchanged"
-          else
-            sync_secret REDIS_URL "$SHARED_REDIS_URL" "/oxy/_shared/REDIS_URL"
-          fi
+          # Nothing here writes /oxy/_shared/*. Shared parameters are owned by
+          # oxy-infra, not by any app, and are rotated once, centrally (oxy-infra
+          # docs/runbooks/45-shared-ssm-parameters.md). When several app deploys
+          # each copied their own GitHub secret into /oxy/_shared/REDIS_URL, two
+          # held different values and every deploy flipped it between Redis
+          # clusters (incident 2026-09-27); the AWS keys had the same shape.
+          # Task definitions that read the shared parameters still do; only the
+          # write is gone.
 
           # Oxy's exact-application-ID credential provisioner owns the Sindi
           # SecureStrings. Homiio does not copy them from GitHub secrets: this
