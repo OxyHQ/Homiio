@@ -242,7 +242,6 @@ jobs:
           APP_LISTING_RESIDENTIAL_PROXY_URL: ${{ secrets.LISTING_RESIDENTIAL_PROXY_URL }}
           SHARED_AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           SHARED_AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          SHARED_REDIS_URL: ${{ secrets.REDIS_URL }}
         run: |
           sync_secret() {
             name="$1"; value="$2"; path="$3"
@@ -261,15 +260,12 @@ jobs:
           sync_secret AWS_ACCESS_KEY_ID "$SHARED_AWS_ACCESS_KEY_ID" "/oxy/_shared/AWS_ACCESS_KEY_ID"
           sync_secret AWS_SECRET_ACCESS_KEY "$SHARED_AWS_SECRET_ACCESS_KEY" "/oxy/_shared/AWS_SECRET_ACCESS_KEY"
 
-          # Valkey lives in the cluster's region; a URL from another region
-          # leaves the worker silently without a cache, so it is rejected.
-          if [ -n "$SHARED_REDIS_URL" ] && [ "$SHARED_REDIS_URL" != "-" ] &&
-             [ "$AWS_REGION" = "us-west-2" ] &&
-             ! printf '%s' "$SHARED_REDIS_URL" | grep -q '\.usw2\.cache\.amazonaws\.com'; then
-            echo "::warning::skip REDIS_URL because it does not point at the us-west-2 Valkey endpoint; SSM unchanged"
-          else
-            sync_secret REDIS_URL "$SHARED_REDIS_URL" "/oxy/_shared/REDIS_URL"
-          fi
+          # No REDIS_URL. `/oxy/_shared/REDIS_URL` is owned by oxy-infra Terraform
+          # (terraform-uswest2/redis.tf), and an app deploy must never write a
+          # shared parameter: six repos each copied their own secrets.REDIS_URL
+          # into it, two held different values, and every deploy flipped it
+          # between Redis clusters (incident 2026-09-27). Both task definitions
+          # still READ it; only the write is gone.
 
           # Oxy's exact-application-ID credential provisioner owns the Sindi
           # SecureStrings. Homiio does not copy them from GitHub secrets: this

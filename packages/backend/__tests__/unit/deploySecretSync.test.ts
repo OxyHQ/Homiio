@@ -58,8 +58,8 @@ const workflow = readFileSync(WORKFLOW_PATH, 'utf8');
  * definition reads it any more, because the API attests its ECS task role
  * instead (oxy ADR 0026).
  *
- * `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` / `REDIS_URL` live under
- * `/oxy/_shared/`; the rest under `/oxy/homiio/`. The split is what the
+ * `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` live under `/oxy/_shared/`;
+ * the rest under `/oxy/homiio/`. The split is what the
  * `SHARED_` and `APP_` prefixes encode, and it matters because a shared value
  * written to the app namespace syncs successfully and reaches nothing.
  *
@@ -69,6 +69,12 @@ const workflow = readFileSync(WORKFLOW_PATH, 'utf8');
  * that produces it. Neither task definition carries it any more, so a sync
  * would now write a parameter nothing reads — and this list is what stops it
  * being re-added without somebody noticing.
+ *
+ * `REDIS_URL` is GONE too, though both task definitions still read
+ * `/oxy/_shared/REDIS_URL`: oxy-infra Terraform (terraform-uswest2/redis.tf)
+ * owns that parameter. Six app deploys each copied their own secret into it,
+ * two held different clusters, and every deploy flipped it (incident
+ * 2026-09-27). An app deploy never writes a shared parameter Terraform owns.
  */
 const EXPECTED_SYNCED_SECRETS = {
   APP: [
@@ -77,7 +83,7 @@ const EXPECTED_SYNCED_SECRETS = {
     'JWT_SECRET',
     'LISTING_RESIDENTIAL_PROXY_URL',
   ],
-  SHARED: ['AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY', 'REDIS_URL'],
+  SHARED: ['AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY'],
 };
 
 /**
@@ -111,12 +117,15 @@ describe('the deploy workflow syncs an explicit allowlist', () => {
     // same change that removes the secret, which is the only way a floor should
     // ever come down. It is a MINIMUM, so a secret ADDED to the task definitions
     // without being synced still has to raise it.
+    //
+    // LOWERED FROM 7 TO 6 by the `REDIS_URL` removal, on the same terms: the
+    // change that stops writing the Terraform-owned shared parameter.
     expect(syncStep).not.toBe('');
     expect(syncStep).toContain('bash .github/scripts/put-secure-parameter.sh "$path"');
     expect(syncStep).not.toContain('aws ssm put-parameter');
     expect(syncStep).not.toContain('--value "$value"');
-    expect(envBindings.length).toBeGreaterThanOrEqual(7);
-    expect(syncCalls.length).toBeGreaterThanOrEqual(7);
+    expect(envBindings.length).toBeGreaterThanOrEqual(6);
+    expect(syncCalls.length).toBeGreaterThanOrEqual(6);
   });
 
   it('never enumerates the whole secrets context', () => {
@@ -178,14 +187,19 @@ describe('the deploy workflow syncs an explicit allowlist', () => {
     );
   });
 
-  it('still refuses placeholders and a non-us-west-2 REDIS_URL', () => {
-    // Both guards predate the allowlist. A secret left empty or set to a single
+  it('still refuses placeholders', () => {
+    // The guard predates the allowlist. A secret left empty or set to a single
     // dash is a mistake, not an instruction to overwrite production with
     // garbage: skipping leaves whatever SSM already holds.
     expect(syncStep).toContain('[ "$value" = "-" ]');
-    // The ESCAPED spelling, because the guard is a `grep` regex — asserting the
-    // bare hostname passes on a workflow whose dots are unescaped wildcards.
-    expect(syncStep).toContain(String.raw`'\.usw2\.cache\.amazonaws\.com'`);
+  });
+
+  it('never writes /oxy/_shared/REDIS_URL, which oxy-infra Terraform owns', () => {
+    // Matched against the whole workflow, not just this step: a write from any
+    // step would flip the shared parameter the same way.
+    expect(workflow).not.toMatch(/\$\{\{\s*secrets\.REDIS_URL\s*\}\}/);
+    expect(syncCalls.map(([, name]) => name)).not.toContain('REDIS_URL');
+    expect(workflow).not.toMatch(/^[^#\n]*\/oxy\/_shared\/REDIS_URL/m);
   });
 
   it('does not source Oxy service credentials from GitHub and verifies exact SSM paths', () => {
