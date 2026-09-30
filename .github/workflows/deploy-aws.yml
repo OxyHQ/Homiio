@@ -293,6 +293,13 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      # `--cache-from/--cache-to type=gha` below need the Actions runtime token
+      # and cache URL, which GitHub gives to JavaScript actions and NOT to `run:`
+      # steps; without them buildx skips the cache silently. Only this job writes
+      # the cache scopes, and ci.yml calls it on push to main alone.
+      - name: Expose the Actions cache to buildx
+        uses: crazy-max/ghaction-github-runtime@v4
+
       - name: Build and push API + listing worker (linux/arm64)
         id: build
         env:
@@ -306,6 +313,8 @@ jobs:
           # call fails at deploy time behind a green build.
           docker buildx build \
             --platform linux/arm64 \
+            --cache-from type=gha,scope=$APP-api \
+            --cache-to type=gha,scope=$APP-api,mode=max,ignore-error=true \
             -f "$DOCKERFILE" \
             --target api \
             -t "$IMG:$COMMIT_TAG-api" \
@@ -316,6 +325,8 @@ jobs:
 
           docker buildx build \
             --platform linux/arm64 \
+            --cache-from type=gha,scope=$APP-worker \
+            --cache-to type=gha,scope=$APP-worker,mode=max,ignore-error=true \
             -f "$DOCKERFILE" \
             --target worker \
             -t "$IMG:$COMMIT_TAG-worker" \
