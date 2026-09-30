@@ -9,7 +9,7 @@
         "@oxy.so/core": "^4.0.0",
       },
       "devDependencies": {
-        "@oxy.so/doctor": "1.0.0",
+        "@oxy.so/doctor": "1.1.0",
         "@types/node": "^22.20.1",
         "ajv": "^8.20.0",
         "ajv-keywords": "^5.1.0",
@@ -832,7 +832,7 @@
 
     "@oxy.so/db": ["@oxy.so/db@1.0.0", "", { "peerDependencies": { "drizzle-orm": "^0.45.2", "postgres": "^3.4.9" } }, "sha512-5tnH+84QR7cnTRYF7FWIN1rGF7YoE0M+sfUBC2Bdclzp1Hfb7+Msr7cEvFklluZxXMP2Mv8HzPB6/gz3Kndk4Q=="],
 
-    "@oxy.so/doctor": ["@oxy.so/doctor@1.0.0", "", { "bin": { "oxy-doctor": "src/cli.mjs" } }, "sha512-Cv+CbLGkx+CTJmRkPBAfLXkHnv+afw2r9H2j6IxvORq2M8gJsnI8X9k4NpjEpK6lthjf2UYAOJPFWKOxL8SWcw=="],
+    "@oxy.so/doctor": ["@oxy.so/doctor@1.1.0", "", { "bin": { "oxy-doctor": "src/cli.mjs" } }, "sha512-o5uDvU2c6f7Z+8jpiRyFILimouEwm7GY0pqMEfMNgCJ3/Q10ot2ccm9OpGnRlx9T2MLaWdDh/4hU4TLPq+OC8g=="],
 
     "@oxy.so/expo-splash": ["@oxy.so/expo-splash@1.0.0", "", { "dependencies": { "@expo/image-utils": ">=0.7.0", "xml2js": "^0.6.2" }, "peerDependencies": { "expo": ">=51.0.0", "expo-splash-screen": ">=0.27.0", "react": ">=18.0.0", "react-native": ">=0.74.0" } }, "sha512-v1jMNwb0WpHhDuGss8kNOi7rYWlIA2H96d8ejHiB3H12iKkrNBNA02vFfG7Q8Xrd2SlSu1vrfU8Tl4B33s3cVA=="],
 
