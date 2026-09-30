@@ -697,9 +697,9 @@ jobs:
     # hold a production rollout.
     #
     # This is NOT a statement about lint being unable to see a direct push. It
-    # can: `lint` carries no `if:`, and this workflow triggers on `push:
-    # branches: [main]` as well as `pull_request`, so lint runs on every push to
-    # main whether or not it arrived through a pull request. Verified on run
+    # can: `lint`'s `if:` is always true on a push, and this workflow triggers
+    # on `push: branches: [main]` as well as `pull_request`, so lint runs on
+    # every push to main whether or not it arrived through a pull request. Verified on run
     # 31447194657 — `event=push`, `branch=main`, `lint: success` — which is the
     # run that first executed it on the trunk after #425 armed it.
     #
@@ -708,7 +708,21 @@ jobs:
     # blocking. If that is ever the wrong trade, the change is to add `lint` to
     # this list on purpose, not to assume it is missing by oversight.
     needs: [backend, frontend, frontend-typecheck, lockfile, frontend-bundle]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # Each need is named and required to be `success`, not left to the implicit
+    # `success()`. That implicit check walks EVERY ancestor, and `changes` (an
+    # ancestor through backend/frontend) is SKIPPED on every push, so the plain
+    # form silently skipped this deploy on main — measured on run 36717150379,
+    # the first push after the path filter landed. `!cancelled()` lets the
+    # expression be evaluated at all past a skipped ancestor; the explicit
+    # results are what actually gate the rollout.
+    if: >-
+      ${{ !cancelled()
+      && github.event_name == 'push' && github.ref == 'refs/heads/main'
+      && needs.backend.result == 'success'
+      && needs.frontend.result == 'success'
+      && needs.frontend-typecheck.result == 'success'
+      && needs.lockfile.result == 'success'
+      && needs.frontend-bundle.result == 'success' }}
     permissions:
       id-token: write
       contents: read
