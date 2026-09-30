@@ -153,7 +153,51 @@ env:
   BUN_VERSION: '1.3.14'
 
 jobs:
+  # Which parts of the tree a PULL REQUEST touches, so the jobs whose inputs it
+  # does not touch are skipped. It runs on pull requests only: on a push to
+  # main this job is skipped and every job below runs, unconditionally — main
+  # deploys from this run, so it always gets the full set.
+  #
+  # `shared` is everything more than one job consumes: the lockfile, the root
+  # manifest and tsconfig, `shared-types` (everything depends on it), the root
+  # `scripts/` the jobs call, and `.github/**`, so a change to this workflow or
+  # to any CI script runs everything. A pattern missing from these lists
+  # under-tests a pull request; main still runs everything after the merge.
+  changes:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      backend: ${{ steps.filter.outputs.shared == 'true' || steps.filter.outputs.backend == 'true' }}
+      frontend: ${{ steps.filter.outputs.shared == 'true' || steps.filter.outputs.frontend == 'true' }}
+    steps:
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        id: filter
+        with:
+          filters: |
+            shared:
+              - 'bun.lock'
+              - 'package.json'
+              - 'bunfig.toml'
+              - 'tsconfig.json'
+              - '.github/**'
+              - 'scripts/**'
+              - 'packages/shared-types/**'
+            backend:
+              - 'packages/backend/**'
+              - 'packages/listing-providers/**'
+              - 'docker-compose.postgres.yml'
+            frontend:
+              - 'packages/frontend/**'
+              - 'tailwind.config.js'
+              - 'performance-budgets.json'
+
   backend:
+    needs: changes
+    if: ${{ !cancelled() && !failure() && (github.event_name != 'pull_request' || needs.changes.outputs.backend == 'true') }}
     runs-on: ubuntu-24.04
     env:
       # The Postgres server `jest.globalSetup.ts` creates one throwaway,
@@ -193,6 +237,17 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: ${{ env.BUN_VERSION }}
+
+      # Bun's global install cache, keyed on the lockfile and the runner, so an
+      # install links from disk instead of refetching every tarball. A restore
+      # from an older key is safe: `bun install` still resolves from bun.lock
+      # and fetches whatever the restored cache lacks.
+      - name: Cache bun install cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-${{ runner.arch }}-
 
       # `--frozen-lockfile` here, where it belongs: this job wants the exact
       # graph the lockfile records. It is NOT a sync check and must never be
@@ -281,6 +336,8 @@ jobs:
           "$RUNNER_TEMP/backend-tests.json" packages/backend 1520
 
   frontend:
+    needs: changes
+    if: ${{ !cancelled() && !failure() && (github.event_name != 'pull_request' || needs.changes.outputs.frontend == 'true') }}
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -288,6 +345,17 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: ${{ env.BUN_VERSION }}
+
+      # Bun's global install cache, keyed on the lockfile and the runner, so an
+      # install links from disk instead of refetching every tarball. A restore
+      # from an older key is safe: `bun install` still resolves from bun.lock
+      # and fetches whatever the restored cache lacks.
+      - name: Cache bun install cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-${{ runner.arch }}-
 
       # The root postinstall builds shared-types, which these tests import by
       # package name and therefore resolve through its BUILT dist.
@@ -338,6 +406,17 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: ${{ env.BUN_VERSION }}
+
+      # Bun's global install cache, keyed on the lockfile and the runner, so an
+      # install links from disk instead of refetching every tarball. A restore
+      # from an older key is safe: `bun install` still resolves from bun.lock
+      # and fetches whatever the restored cache lacks.
+      - name: Cache bun install cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-${{ runner.arch }}-
 
       # Its own job because it needs a PLAIN install, which no other job here
       # wants. The script runs that install itself and hands the lockfile back
@@ -398,6 +477,8 @@ jobs:
           bash .github/scripts/test-deploy-ecs-image.sh
 
   frontend-bundle:
+    needs: changes
+    if: ${{ !cancelled() && !failure() && (github.event_name != 'pull_request' || needs.changes.outputs.frontend == 'true') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 70
     steps:
@@ -406,6 +487,17 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: ${{ env.BUN_VERSION }}
+
+      # Bun's global install cache, keyed on the lockfile and the runner, so an
+      # install links from disk instead of refetching every tarball. A restore
+      # from an older key is safe: `bun install` still resolves from bun.lock
+      # and fetches whatever the restored cache lacks.
+      - name: Cache bun install cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-${{ runner.arch }}-
 
       - name: Install
         run: bash .github/scripts/bun-install.sh --frozen-lockfile
@@ -424,6 +516,8 @@ jobs:
         run: bun run check:web-bundle-budget
 
   lint:
+    needs: changes
+    if: ${{ !cancelled() && !failure() && (github.event_name != 'pull_request' || needs.changes.outputs.backend == 'true' || needs.changes.outputs.frontend == 'true') }}
     # ARMED. `bun run lint` exits 0 across all four packages.
     #
     # It was gated on `vars.HOMIIO_LINT_GATE == 'ready'` from #254 until this
@@ -459,6 +553,17 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: ${{ env.BUN_VERSION }}
+
+      # Bun's global install cache, keyed on the lockfile and the runner, so an
+      # install links from disk instead of refetching every tarball. A restore
+      # from an older key is safe: `bun install` still resolves from bun.lock
+      # and fetches whatever the restored cache lacks.
+      - name: Cache bun install cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-${{ runner.arch }}-
       # Scripts stay ENABLED so the root postinstall builds shared-types. Not for
       # types — eslint does not typecheck — but because the frontend's config
       # carries eslint-plugin-import, which resolves modules for real and would
@@ -471,6 +576,8 @@ jobs:
         run: bun run lint
 
   frontend-typecheck:
+    needs: changes
+    if: ${{ !cancelled() && !failure() && (github.event_name != 'pull_request' || needs.changes.outputs.frontend == 'true') }}
     # ARMED. Nothing else typechecks the frontend: `expo export` compiles
     # through Babel, which strips types without checking them, so the
     # frontend-bundle job proves the bundle builds and nothing more.
@@ -494,6 +601,17 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: ${{ env.BUN_VERSION }}
+
+      # Bun's global install cache, keyed on the lockfile and the runner, so an
+      # install links from disk instead of refetching every tarball. A restore
+      # from an older key is safe: `bun install` still resolves from bun.lock
+      # and fetches whatever the restored cache lacks.
+      - name: Cache bun install cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-${{ runner.arch }}-
       - name: Install
         run: bash .github/scripts/bun-install.sh --frozen-lockfile
       - name: Typecheck frontend
@@ -537,6 +655,33 @@ jobs:
   # works, and rewiring a working production deploy for symmetry is risk with no
   # return. If it ever exhibits the same conclusion, move it here too.
   # ─────────────────────────────────────────────────────────────────────────
+
+  # THE required check. Branch protection requires this one job instead of
+  # naming every job above, because on a pull request those jobs may be
+  # SKIPPED by `changes`, and a required check should be a statement about the
+  # commit, not a list of names that may or may not appear. It runs always,
+  # and fails if any job it waits for failed or was cancelled; `skipped` is
+  # the one non-success it accepts, and only `changes` produces it on a PR.
+  # A new job above MUST be added to `needs`, or it gates nothing.
+  ci-complete:
+    name: CI complete
+    if: always()
+    needs: [changes, backend, frontend, lockfile, frontend-bundle, lint, frontend-typecheck]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Every job that ran passed
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          echo "$RESULTS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'
+          bad=$(echo "$RESULTS" | jq -r '[to_entries[] | select(.value.result == "failure" or .value.result == "cancelled")] | length')
+          ran=$(echo "$RESULTS" | jq -r '[to_entries[] | select(.value.result == "success")] | length')
+          if [ "$bad" != "0" ]; then echo "::error::$bad job(s) failed or were cancelled"; exit 1; fi
+          # Vacuity floor: `lockfile` runs on every event, so zero successes
+          # means nothing was checked at all.
+          if [ "$ran" = "0" ]; then echo "::error::no job ran"; exit 1; fi
+
   deploy-backend:
     name: Deploy backend to AWS
     # `lint` IS DELIBERATELY ABSENT FROM `needs`. Do not add it for symmetry.
