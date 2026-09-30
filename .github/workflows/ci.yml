@@ -244,16 +244,6 @@ jobs:
         with:
           bun-version: ${{ env.BUN_VERSION }}
 
-      # Bun's global install cache, keyed on the lockfile and the runner, so an
-      # install links from disk instead of refetching every tarball. A restore
-      # from an older key is safe: `bun install` still resolves from bun.lock
-      # and fetches whatever the restored cache lacks.
-      - name: Cache bun install cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/.bun/install/cache
-          key: bun-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('bun.lock') }}
-          restore-keys: bun-${{ runner.os }}-${{ runner.arch }}-
 
       # `--frozen-lockfile` here, where it belongs: this job wants the exact
       # graph the lockfile records. It is NOT a sync check and must never be
@@ -352,16 +342,6 @@ jobs:
         with:
           bun-version: ${{ env.BUN_VERSION }}
 
-      # Bun's global install cache, keyed on the lockfile and the runner, so an
-      # install links from disk instead of refetching every tarball. A restore
-      # from an older key is safe: `bun install` still resolves from bun.lock
-      # and fetches whatever the restored cache lacks.
-      - name: Cache bun install cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/.bun/install/cache
-          key: bun-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('bun.lock') }}
-          restore-keys: bun-${{ runner.os }}-${{ runner.arch }}-
 
       # The root postinstall builds shared-types, which these tests import by
       # package name and therefore resolve through its BUILT dist.
@@ -413,16 +393,6 @@ jobs:
         with:
           bun-version: ${{ env.BUN_VERSION }}
 
-      # Bun's global install cache, keyed on the lockfile and the runner, so an
-      # install links from disk instead of refetching every tarball. A restore
-      # from an older key is safe: `bun install` still resolves from bun.lock
-      # and fetches whatever the restored cache lacks.
-      - name: Cache bun install cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/.bun/install/cache
-          key: bun-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('bun.lock') }}
-          restore-keys: bun-${{ runner.os }}-${{ runner.arch }}-
 
       # Its own job because it needs a PLAIN install, which no other job here
       # wants. The script runs that install itself and hands the lockfile back
@@ -494,16 +464,6 @@ jobs:
         with:
           bun-version: ${{ env.BUN_VERSION }}
 
-      # Bun's global install cache, keyed on the lockfile and the runner, so an
-      # install links from disk instead of refetching every tarball. A restore
-      # from an older key is safe: `bun install` still resolves from bun.lock
-      # and fetches whatever the restored cache lacks.
-      - name: Cache bun install cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/.bun/install/cache
-          key: bun-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('bun.lock') }}
-          restore-keys: bun-${{ runner.os }}-${{ runner.arch }}-
 
       - name: Install
         run: bash .github/scripts/bun-install.sh --frozen-lockfile
@@ -559,17 +519,6 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: ${{ env.BUN_VERSION }}
-
-      # Bun's global install cache, keyed on the lockfile and the runner, so an
-      # install links from disk instead of refetching every tarball. A restore
-      # from an older key is safe: `bun install` still resolves from bun.lock
-      # and fetches whatever the restored cache lacks.
-      - name: Cache bun install cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/.bun/install/cache
-          key: bun-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('bun.lock') }}
-          restore-keys: bun-${{ runner.os }}-${{ runner.arch }}-
       # Scripts stay ENABLED so the root postinstall builds shared-types. Not for
       # types — eslint does not typecheck — but because the frontend's config
       # carries eslint-plugin-import, which resolves modules for real and would
@@ -607,17 +556,6 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: ${{ env.BUN_VERSION }}
-
-      # Bun's global install cache, keyed on the lockfile and the runner, so an
-      # install links from disk instead of refetching every tarball. A restore
-      # from an older key is safe: `bun install` still resolves from bun.lock
-      # and fetches whatever the restored cache lacks.
-      - name: Cache bun install cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/.bun/install/cache
-          key: bun-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('bun.lock') }}
-          restore-keys: bun-${{ runner.os }}-${{ runner.arch }}-
       - name: Install
         run: bash .github/scripts/bun-install.sh --frozen-lockfile
       - name: Typecheck frontend
