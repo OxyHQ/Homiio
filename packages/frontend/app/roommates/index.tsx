@@ -490,13 +490,12 @@ export default function RoommatesPage() {
             <H1 style={styles.title}>{t('roommates.screen.title')}</H1>
           </View>
           <Button
-            variant="secondary"
-            size="small"
+            size="sm"
             onPress={() => router.push('/roommates/preferences')}
             leadingIcon={RiSettings3Line}
             iconOnly={!isWide}
             accessibilityLabel={t('roommates.preferences')}
-            style={styles.headerAction}
+            style={styles.headerAction} tone="neutral" appearance="outline"
           >
             {isWide ? t('roommates.preferences') : null}
           </Button>

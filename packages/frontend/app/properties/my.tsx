@@ -182,13 +182,12 @@ export default function MyPropertiesScreen() {
         <View style={styles.ownerActionsColumn}>
           {canCloseDeal(property.status) ? (
             <Button
-              variant="primary"
-              size="small"
+              size="sm"
               onPress={() =>
                 void handleTransact({ id: propertyId, title, status: closeStatus })
               }
               leadingIcon={RiCheckboxCircleLine}
-              style={styles.ownerActionButton}
+              style={styles.ownerActionButton} tone="accent" appearance="solid"
             >
               {closeStatus === PropertyStatus.SOLD
                 ? t('properties.my.markSold')
@@ -203,30 +202,27 @@ export default function MyPropertiesScreen() {
               with thirteen invented time slots.
             */}
             <Button
-              variant="secondary"
-              size="small"
+              size="sm"
               onPress={() => handleViewingSchedule(propertyId)}
               leadingIcon={RiCalendarLine}
-              style={styles.ownerActionButton}
+              style={styles.ownerActionButton} tone="neutral" appearance="outline"
             >
               {t('properties.my.viewingTimes')}
             </Button>
             <Button
-              variant="secondary"
-              size="small"
+              size="sm"
               onPress={() => handleEditProperty(propertyId)}
               leadingIcon={RiEditLine}
-              style={styles.ownerActionButton}
+              style={styles.ownerActionButton} tone="neutral" appearance="outline"
             >
               {t('properties.my.edit')}
             </Button>
             <Button
-              variant="secondary"
-              size="small"
+              size="sm"
               onPress={() => void handleDelete({ id: propertyId, title })}
               icon={<RiDeleteBinLine width={16} height={16} fill={theme.colors.negative} />}
               textStyle={{ color: theme.colors.negative }}
-              style={styles.ownerActionButton}
+              style={styles.ownerActionButton} tone="neutral" appearance="outline"
             >
               {t('properties.my.delete')}
             </Button>
@@ -284,11 +280,10 @@ export default function MyPropertiesScreen() {
         title={t('properties.my.title')}
         right={
           <Button
-            variant="primary"
-            size="small"
+            size="sm"
             onPress={handleCreateProperty}
             leadingIcon={RiAddLine}
-            accessibilityLabel={t('properties.my.createFirst')}
+            accessibilityLabel={t('properties.my.createFirst')} tone="accent" appearance="solid"
           >
             {t('common.add')}
           </Button>

@@ -291,7 +291,6 @@ function NoteCard({ item, onEdit, onTogglePin, onToggleArchive, onDelete }: Note
 
   return (
     <Card
-      variant="outlined"
       radius="radius-16"
       onPress={onEdit}
       accessibilityRole="button"
@@ -300,7 +299,7 @@ function NoteCard({ item, onEdit, onTogglePin, onToggleArchive, onDelete }: Note
         styles.noteCard,
         note.isArchived && styles.archived,
         note.color ? { backgroundColor: note.color, borderColor: 'transparent' } : null,
-      ]}
+      ]} appearance="outline"
     >
       <BloomText style={styles.noteText} numberOfLines={6}>
         {note.text}
@@ -318,28 +317,25 @@ function NoteCard({ item, onEdit, onTogglePin, onToggleArchive, onDelete }: Note
       />
       <View style={styles.actions}>
         <Button
-          variant="ghost"
-          size="small"
+          size="sm"
           iconOnly
           leadingIcon={note.isPinned ? RiPushpinFill : RiPushpinLine}
           accessibilityLabel={note.isPinned ? t('saved.notes.unpin') : t('saved.notes.pin')}
-          onPress={onTogglePin}
+          onPress={onTogglePin} tone="accent" appearance="subtle"
         />
         <Button
-          variant="ghost"
-          size="small"
+          size="sm"
           iconOnly
           leadingIcon={RiArchiveLine}
           accessibilityLabel={note.isArchived ? t('saved.notes.unarchive') : t('saved.notes.archive')}
-          onPress={onToggleArchive}
+          onPress={onToggleArchive} tone="accent" appearance="subtle"
         />
         <Button
-          variant="ghost"
-          size="small"
+          size="sm"
           iconOnly
           leadingIcon={RiDeleteBinLine}
           accessibilityLabel={t('common.delete')}
-          onPress={onDelete}
+          onPress={onDelete} tone="accent" appearance="subtle"
         />
       </View>
     </Card>

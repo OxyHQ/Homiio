@@ -96,12 +96,11 @@ export const AgentHero: React.FC<AgentHeroProps> = ({
         </BloomText>
 
         <Button
-          variant="primary"
-          size="large"
+          size="lg"
           onPress={onPressCta}
           loading={ctaLoading}
           disabled={ctaLoading}
-          accessibilityLabel={ctaLabel}
+          accessibilityLabel={ctaLabel} tone="accent" appearance="solid"
         >
           {ctaLabel}
         </Button>

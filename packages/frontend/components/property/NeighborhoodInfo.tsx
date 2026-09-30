@@ -26,7 +26,7 @@ interface MetricTileProps {
 
 /** One real metric: a muted label over its value, on a quiet Bloom card. */
 const MetricTile: React.FC<MetricTileProps> = ({ label, value }) => (
-  <Card variant="filled" radius="radius-12" elevation="none" style={styles.tile}>
+  <Card radius="radius-12" elevation="none" style={styles.tile} appearance="subtle">
     <BloomText variant="body-2-regular" style={styles.tileLabel}>
       {label}
     </BloomText>

@@ -154,7 +154,7 @@ export default function ApplicationDetailScreen() {
       <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
         {header}
         <View style={styles.centerWrap}>
-          <Loading variant="spinner" size="medium" />
+          <Loading variant="spinner" size="md" />
         </View>
       </View>
     );
@@ -195,7 +195,7 @@ export default function ApplicationDetailScreen() {
             )}
           </View>
 
-          <Card variant="outlined" radius="radius-16" className="p-5">
+          <Card radius="radius-16" className="p-5" appearance="outline">
             <View style={styles.headerRow}>
               <H2 style={styles.title}>{propertyTitle}</H2>
               <ApplicationStatusBadge status={application.status} />
@@ -217,7 +217,7 @@ export default function ApplicationDetailScreen() {
           </View>
 
           {application.notes ? (
-            <Card variant="outlined" radius="radius-16" className="p-5">
+            <Card radius="radius-16" className="p-5" appearance="outline">
               <BloomText style={[styles.sectionLabel, secondaryText]}>Notes</BloomText>
               <BloomText style={styles.notesBody}>{application.notes}</BloomText>
             </Card>
@@ -227,23 +227,21 @@ export default function ApplicationDetailScreen() {
             <View style={styles.actionRow}>
               {showCreateLease ? (
                 <Button
-                  variant="primary"
-                  size="medium"
+                  size="md"
                   leadingIcon={RiEditLine}
                   onPress={handleCreateLease}
-                  style={styles.actionButton}
+                  style={styles.actionButton} tone="accent" appearance="solid"
                 >
                   Create lease
                 </Button>
               ) : null}
               {canWithdraw ? (
                 <Button
-                  variant="ghost"
-                  size="medium"
+                  size="md"
                   leadingIcon={RiCloseLine}
                   onPress={() => void handleWithdraw()}
                   disabled={updateMutation.isPending}
-                  style={styles.actionButton}
+                  style={styles.actionButton} tone="accent" appearance="subtle"
                 >
                   Withdraw application
                 </Button>

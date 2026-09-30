@@ -30,7 +30,7 @@ export const FilePremiumInfoSheet: React.FC<FilePremiumInfoSheetProps> = ({
         Upload rental contracts and legal documents for instant analysis. Understand your rights and
         spot risky clauses in seconds.
       </Text>
-      <Card variant="filled" style={styles.prices}>
+      <Card style={styles.prices} appearance="subtle">
         <View style={styles.priceRow}>
           <RiCheckboxCircleFill width={18} height={18} fill={colors.primary} />
           <Text variant="body-2-regular" style={{ color: colors.text }}>
@@ -48,10 +48,10 @@ export const FilePremiumInfoSheet: React.FC<FilePremiumInfoSheetProps> = ({
         </Text>
       </Card>
       <View style={styles.actions}>
-        <Button variant="secondary" size="medium" onPress={onClose} style={styles.action}>
+        <Button size="md" onPress={onClose} style={styles.action} tone="neutral" appearance="outline">
           Maybe later
         </Button>
-        <Button variant="primary" size="medium" onPress={onUpgrade} style={styles.action}>
+        <Button size="md" onPress={onUpgrade} style={styles.action} tone="accent" appearance="solid">
           Upgrade to Homiio+
         </Button>
       </View>

@@ -20,7 +20,7 @@ export default function SearchQueryScreen() {
 
     return (
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-            <Loading size="large" />
+            <Loading size="lg" />
         </View>
     );
 }

@@ -121,11 +121,10 @@ export function MaintenanceSection({
       title={t('maintenance.section.title')}
       action={
         <Button
-          variant="secondary"
-          size="small"
+          size="sm"
           leadingIcon={RiAddLine}
           onPress={onReport}
-          accessibilityLabel={t('maintenance.action.reportAccessible')}
+          accessibilityLabel={t('maintenance.action.reportAccessible')} tone="neutral" appearance="outline"
         >
           {t('maintenance.action.report')}
         </Button>
@@ -182,20 +181,18 @@ export function MaintenanceSection({
                     .map((status) => (
                       <Button
                         key={status}
-                        variant="secondary"
-                        size="small"
+                        size="sm"
                         disabled={pendingId === request.id}
                         onPress={() => act(request.id, status)}
-                        accessibilityLabel={t(ACTION_KEY[status])}
+                        accessibilityLabel={t(ACTION_KEY[status])} tone="neutral" appearance="outline"
                       >
                         {t(ACTION_KEY[status])}
                       </Button>
                     ))}
                   <Button
-                    variant="ghost"
-                    size="small"
+                    size="sm"
                     onPress={() => onOpenRequest(request.id)}
-                    accessibilityLabel={t('maintenance.action.openAccessible')}
+                    accessibilityLabel={t('maintenance.action.openAccessible')} tone="accent" appearance="subtle"
                   >
                     {t('maintenance.action.open')}
                   </Button>

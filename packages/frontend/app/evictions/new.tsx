@@ -346,7 +346,7 @@ const EvictionForm: React.FC<EvictionFormProps> = ({ mode, editId, existing }) =
             <BloomText style={styles.subtitle}>{t('evictions.form.subtitle')}</BloomText>
           </View>
 
-          <Card variant="outlined" radius="radius-16" style={styles.section}>
+          <Card radius="radius-16" style={styles.section} appearance="outline">
             <CardTitle>{t('evictions.form.whatSection')}</CardTitle>
             <Field label={t('evictions.form.titleLabel')}>
               <TextFieldInput
@@ -368,7 +368,7 @@ const EvictionForm: React.FC<EvictionFormProps> = ({ mode, editId, existing }) =
             />
           </Card>
 
-          <Card variant="outlined" radius="radius-16" style={styles.section}>
+          <Card radius="radius-16" style={styles.section} appearance="outline">
             <CardTitle>{t('evictions.form.whereSection')}</CardTitle>
             <View style={styles.mapWrap}>
               <Map
@@ -414,8 +414,8 @@ const EvictionForm: React.FC<EvictionFormProps> = ({ mode, editId, existing }) =
                 </BloomText>
               </View>
               <Switch
-                value={householdAuthorizedExact}
-                onValueChange={setHouseholdAuthorizedExact}
+                checked={householdAuthorizedExact}
+                onCheckedChange={setHouseholdAuthorizedExact}
               />
             </View>
             <BloomText style={styles.switchHint}>
@@ -423,7 +423,7 @@ const EvictionForm: React.FC<EvictionFormProps> = ({ mode, editId, existing }) =
             </BloomText>
           </Card>
 
-          <Card variant="outlined" radius="radius-16" style={styles.section}>
+          <Card radius="radius-16" style={styles.section} appearance="outline">
             <CardTitle>{t('evictions.form.whenSection')}</CardTitle>
             <View style={styles.row}>
               <Field label={t('evictions.form.dateLabel')} required style={styles.rowField}>
@@ -452,7 +452,7 @@ const EvictionForm: React.FC<EvictionFormProps> = ({ mode, editId, existing }) =
             </View>
           </Card>
 
-          <Card variant="outlined" radius="radius-16" style={styles.section}>
+          <Card radius="radius-16" style={styles.section} appearance="outline">
             <CardTitle>{t('evictions.form.helpSection')}</CardTitle>
             <PhoneInput
               label={t('evictions.detail.contact.phone')}
@@ -500,7 +500,7 @@ const EvictionForm: React.FC<EvictionFormProps> = ({ mode, editId, existing }) =
             />
           </Card>
 
-          <Card variant="outlined" radius="radius-16" style={styles.section}>
+          <Card radius="radius-16" style={styles.section} appearance="outline">
             <CardTitle>{t('evictions.form.agencySection')}</CardTitle>
             <Field label={t('evictions.form.agencyLabel')}>
               <TextFieldInput
@@ -512,7 +512,7 @@ const EvictionForm: React.FC<EvictionFormProps> = ({ mode, editId, existing }) =
             </Field>
           </Card>
 
-          <Card variant="outlined" radius="radius-16" style={styles.section}>
+          <Card radius="radius-16" style={styles.section} appearance="outline">
             <CardTitle>{t('evictions.form.photoSection')}</CardTitle>
             {coverPreview ? (
               <Image
@@ -523,25 +523,23 @@ const EvictionForm: React.FC<EvictionFormProps> = ({ mode, editId, existing }) =
               />
             ) : null}
             <Button
-              variant="secondary"
-              size="medium"
+              size="md"
               onPress={handlePickCover}
               loading={uploading}
               disabled={uploading}
               leadingIcon={RiImageAddLine}
-              style={styles.photoButton}
+              style={styles.photoButton} tone="neutral" appearance="outline"
             >
               {cover?.imageId ? t('evictions.form.photoChange') : t('evictions.form.photoAdd')}
             </Button>
           </Card>
 
           <Button
-            variant="primary"
-            size="large"
+            size="lg"
             onPress={handleSubmit}
             loading={submitting}
             disabled={submitting}
-            style={styles.submit}
+            style={styles.submit} tone="accent" appearance="solid"
           >
             {mode === 'edit' ? t('evictions.form.saveChanges') : t('evictions.form.publish')}
           </Button>

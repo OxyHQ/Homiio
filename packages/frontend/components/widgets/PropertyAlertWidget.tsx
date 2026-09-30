@@ -168,7 +168,7 @@ export function PropertyAlertWidget() {
         <View className="items-center gap-3 py-1">
           <IconCircle icon={RiNotification3Line} size="lg" />
           <BloomText className="text-center text-sm text-muted-foreground">{t('search.widgets.alerts.signInPrompt')}</BloomText>
-          <Button variant="primary" size="medium" onPress={() => openAccountDialog()}>
+          <Button size="md" onPress={() => openAccountDialog()} tone="accent" appearance="solid">
             {t('search.widgets.common.signIn')}
           </Button>
         </View>
@@ -226,14 +226,14 @@ export function PropertyAlertWidget() {
           subtitle={t('search.widgets.alerts.notifyHelper')}
           trailing={
             <Switch
-              value={notify}
-              onValueChange={setNotify}
+              checked={notify}
+              onCheckedChange={setNotify}
               accessibilityLabel={t('search.widgets.alerts.notify')}
             />
           }
         />
 
-        <Button variant="primary" size="medium" onPress={handleCreateAlert} loading={isSaving}>
+        <Button size="md" onPress={handleCreateAlert} loading={isSaving} tone="accent" appearance="solid">
           {t('search.widgets.alerts.create')}
         </Button>
       </View>

@@ -81,24 +81,23 @@ export const SaveSearchBottomSheet: React.FC<SaveSearchBottomSheetProps> = ({
                 title={t('search.save.enableNotifications')}
                 trailing={
                     <Switch
-                        value={notificationsEnabled}
-                        onValueChange={setNotificationsEnabled}
+                        checked={notificationsEnabled}
+                        onCheckedChange={setNotificationsEnabled}
                         accessibilityLabel={t('search.save.enableNotifications')}
                     />
                 }
             />
 
             <View style={styles.actions}>
-                <Button variant="secondary" size="medium" onPress={onClose} style={styles.action}>
+                <Button size="md" onPress={onClose} style={styles.action} tone="neutral" appearance="outline">
                     {t('common.cancel')}
                 </Button>
                 <Button
-                    variant="primary"
-                    size="medium"
+                    size="md"
                     disabled={!canSave || submitting}
                     loading={submitting}
                     onPress={handleSave}
-                    style={styles.action}
+                    style={styles.action} tone="accent" appearance="solid"
                 >
                     {submitting ? t('common.saving') : t('common.save')}
                 </Button>

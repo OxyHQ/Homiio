@@ -102,7 +102,7 @@ export default function NewContractScreen() {
       <View style={[styles.root, { backgroundColor: themeColors.background }]}>
         {header}
         <View style={styles.centerWrap}>
-          <Loading variant="spinner" size="medium" />
+          <Loading variant="spinner" size="md" />
         </View>
       </View>
     );
@@ -145,7 +145,7 @@ export default function NewContractScreen() {
             )}
           </View>
 
-          <Card variant="outlined" radius="radius-16" className="p-5">
+          <Card radius="radius-16" className="p-5" appearance="outline">
             <H2 style={styles.title}>{propertyTitle}</H2>
             <BloomText style={[styles.subtitle, { color: themeColors.textSecondary }]}>{t('contracts.new.subtitle')}</BloomText>
           </Card>
@@ -168,12 +168,11 @@ export default function NewContractScreen() {
 
         <View style={styles.footer}>
           <Button
-            variant="primary"
-            size="large"
+            size="lg"
             onPress={handleCreate}
             disabled={!isApproved || createLease.isPending}
             loading={createLease.isPending}
-            style={styles.footerButton}
+            style={styles.footerButton} tone="accent" appearance="solid"
           >
             {t('contracts.new.createButton')}
           </Button>

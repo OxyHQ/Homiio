@@ -196,11 +196,10 @@ export default function EvictionsBoardScreen() {
   const publishButton = (
     <Button
       key="publish"
-      variant="primary"
-      size="small"
+      size="sm"
       onPress={handlePublish}
       leadingIcon={RiAddLine}
-      accessibilityLabel={t('evictions.publishCta')}
+      accessibilityLabel={t('evictions.publishCta')} tone="accent" appearance="solid"
     >
       {t('evictions.publishCta')}
     </Button>
@@ -215,14 +214,13 @@ export default function EvictionsBoardScreen() {
         {/* The picker, not a bare "use my location": when location is off the
             picker says so on the row, where a button here could only fail. */}
         <Button
-          variant="primary"
-          size="medium"
+          size="md"
           onPress={() => setAreaPickerOpen(true)}
-          leadingIcon={RiMapPinLine}
+          leadingIcon={RiMapPinLine} tone="accent" appearance="solid"
         >
           {t('location.scope.chooseArea')}
         </Button>
-        <Button variant="outline" size="medium" onPress={scope.exploreGlobal}>
+        <Button size="md" onPress={scope.exploreGlobal} tone="neutral" appearance="outline">
           {t('evictions.scope.browseGlobal')}
         </Button>
       </View>
@@ -258,11 +256,10 @@ export default function EvictionsBoardScreen() {
             {t('evictions.empty.scoped')}
           </BloomText>
           <Button
-            variant="primary"
-            size="medium"
+            size="md"
             onPress={handlePublish}
             leadingIcon={RiAddLine}
-            style={styles.emptyCta}
+            style={styles.emptyCta} tone="accent" appearance="solid"
           >
             {t('evictions.publishCta')}
           </Button>

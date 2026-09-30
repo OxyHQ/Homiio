@@ -379,7 +379,7 @@ export default function EvictionDetailScreen() {
           )}
 
           {eviction.organization ? (
-            <Card variant="outlined" radius="radius-16" style={styles.section}>
+            <Card radius="radius-16" style={styles.section} appearance="outline">
               <CardTitle>{t('evictions.detail.organization')}</CardTitle>
               <BloomText style={styles.organizationName}>{eviction.organization.name}</BloomText>
               <BloomText style={styles.muted}>
@@ -397,7 +397,7 @@ export default function EvictionDetailScreen() {
             </Card>
           ) : null}
 
-          <Card variant="outlined" radius="radius-16" style={styles.section}>
+          <Card radius="radius-16" style={styles.section} appearance="outline">
             <CardTitle>{t('evictions.detail.howToHelp')}</CardTitle>
             <EvictionHelpNeeds needs={eviction.helpNeeds} />
             <Divider />
@@ -439,7 +439,7 @@ export default function EvictionDetailScreen() {
             )}
           </Card>
 
-          <Card variant="outlined" radius="radius-16" style={styles.section}>
+          <Card radius="radius-16" style={styles.section} appearance="outline">
             <CardTitle>{t('evictions.detail.where')}</CardTitle>
             {hasPin ? (
               <View style={styles.mapWrap}>
@@ -467,7 +467,7 @@ export default function EvictionDetailScreen() {
             />
           </Card>
 
-          <Card variant="outlined" radius="radius-16" style={styles.section}>
+          <Card radius="radius-16" style={styles.section} appearance="outline">
             <CardTitle>{t('evictions.detail.localResources')}</CardTitle>
             <EvictionResources
               resources={resources.data?.resources ?? []}
@@ -478,7 +478,7 @@ export default function EvictionDetailScreen() {
             />
           </Card>
 
-          <Card variant="outlined" radius="radius-16" style={styles.section}>
+          <Card radius="radius-16" style={styles.section} appearance="outline">
             <CardTitle>{t('evictions.detail.timeline')}</CardTitle>
             {timelineEvents.length === 0 ? (
               <BloomText style={styles.muted}>{t('evictions.timeline.empty')}</BloomText>
@@ -501,7 +501,7 @@ export default function EvictionDetailScreen() {
             />
           ) : null}
 
-          <Card variant="outlined" radius="radius-16" style={styles.section}>
+          <Card radius="radius-16" style={styles.section} appearance="outline">
             <CardTitle>
               {`${t('evictions.detail.comments')}${commentTotal > 0 ? ` · ${commentTotal}` : ''}`}
             </CardTitle>
@@ -529,7 +529,7 @@ export default function EvictionDetailScreen() {
                   );
                 })}
                 {isFetchingNextPage ? (
-                  <Loading variant="inline" size="small" text={t('common.loading')} />
+                  <Loading variant="inline" size="sm" text={t('common.loading')} />
                 ) : null}
                 <LoadMoreSentinel enabled={hasNextPage} onLoadMore={handleEndReached} />
               </View>
@@ -547,18 +547,17 @@ export default function EvictionDetailScreen() {
                   maxRows={6}
                 />
                 <Button
-                  variant="primary"
-                  size="medium"
+                  size="md"
                   style={styles.composerSend}
                   onPress={handlePostComment}
                   disabled={!commentText.trim() || createComment.isPending}
-                  loading={createComment.isPending}
+                  loading={createComment.isPending} tone="accent" appearance="solid"
                 >
                   {t('evictions.comments.send')}
                 </Button>
               </View>
             ) : (
-              <Button variant="secondary" size="medium" onPress={() => openAccountDialog()}>
+              <Button size="md" onPress={() => openAccountDialog()} tone="neutral" appearance="outline">
                 {t('evictions.comments.signInToComment')}
               </Button>
             )}
@@ -567,8 +566,9 @@ export default function EvictionDetailScreen() {
 
         <View style={styles.footer}>
           <Button
-            variant={eviction.isAttending ? 'secondary' : 'primary'}
-            size="large"
+            appearance={eviction.isAttending ? 'outline' : 'solid'}
+            tone={eviction.isAttending ? 'neutral' : 'accent'}
+            size="lg"
             onPress={handleRSVP}
             loading={toggleAttend.isPending}
             accessibilityLabel={
@@ -584,14 +584,13 @@ export default function EvictionDetailScreen() {
               either spams watchers or inflates the turnout number the page
               exists to report. */}
           <Button
-            variant="outline"
-            size="large"
+            size="lg"
             onPress={handleFollow}
             loading={toggleFollow.isPending}
             accessibilityLabel={
               eviction.isFollowing ? t('evictions.unfollow') : t('evictions.follow')
             }
-            leadingIcon={eviction.isFollowing ? RiNotification3Fill : RiNotification3Line}
+            leadingIcon={eviction.isFollowing ? RiNotification3Fill : RiNotification3Line} tone="neutral" appearance="outline"
           >
             {eviction.isFollowing ? t('evictions.following') : t('evictions.follow')}
           </Button>

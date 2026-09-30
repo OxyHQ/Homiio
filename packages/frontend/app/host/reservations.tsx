@@ -131,29 +131,26 @@ const CardActions: React.FC<{ reservation: Reservation }> = ({ reservation }) =>
   return (
     <>
       <Button
-        variant="primary"
-        size="small"
+        size="sm"
         leadingIcon={RiCheckLine}
         loading={busy === ReservationStatus.CONFIRMED}
         disabled={isPending}
-        onPress={() => void decide(ReservationStatus.CONFIRMED)}
+        onPress={() => void decide(ReservationStatus.CONFIRMED)} tone="accent" appearance="solid"
       >
         {t('host.reservations.approve')}
       </Button>
       <Button
-        variant="secondary"
-        size="small"
+        size="sm"
         leadingIcon={RiCloseLine}
         loading={busy === ReservationStatus.DECLINED}
         disabled={isPending}
-        onPress={() => void decide(ReservationStatus.DECLINED)}
+        onPress={() => void decide(ReservationStatus.DECLINED)} tone="neutral" appearance="outline"
       >
         {t('host.reservations.decline')}
       </Button>
       <Button
-        variant="ghost"
-        size="small"
-        onPress={() => router.push(`/reservations/${reservation.id}`)}
+        size="sm"
+        onPress={() => router.push(`/reservations/${reservation.id}`)} tone="accent" appearance="subtle"
       >
         {t('host.reservations.view')}
       </Button>
@@ -197,7 +194,7 @@ const RowActions: React.FC<{ reservation: Reservation; name: string }> = ({
 const ReservationListSkeleton: React.FC = () => (
   <View style={styles.listWrap}>
     {Array.from({ length: 3 }).map((_, index) => (
-      <Card key={index} variant="outlined" radius="radius-16" className="gap-2 p-4">
+      <Card key={index}  radius="radius-16" className="gap-2 p-4" appearance="outline">
         <View style={styles.skeletonHeader}>
           <Skeleton.Text style={{ width: 140, lineHeight: 20 }} />
           <Skeleton.Pill size={20} />

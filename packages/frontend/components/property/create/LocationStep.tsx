@@ -69,12 +69,11 @@ export function LocationStep({
               screenId="create-property"
             />
             <Button
-              variant="secondary"
               iconOnly
               leadingIcon={RiExpandDiagonalSLine}
               onPress={onOpenFullscreenMap}
               accessibilityLabel={t('propertyCreate.location.openFullscreenMap', 'Open full-screen map')}
-              style={styles.mapOverlayButton}
+              style={styles.mapOverlayButton} tone="neutral" appearance="outline"
             />
           </View>
         </View>

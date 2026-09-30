@@ -76,9 +76,8 @@ export const LandlordSection: React.FC<LandlordSectionProps> = ({
           <Button
             leadingIcon={RiGlobalLine}
             onPress={onApplyPublic}
-            variant="primary"
-            size="large"
-            style={styles.start}
+            size="lg"
+            style={styles.start} tone="accent" appearance="solid"
           >
             {t('listing.cta.applyOnStateWebsite')}
           </Button>
@@ -120,7 +119,7 @@ export const LandlordSection: React.FC<LandlordSectionProps> = ({
 
         {showFollowButton && landlordOxyUserId ? (
           <View style={[styles.gutter, styles.start]}>
-            <FollowButton userId={landlordOxyUserId} size="small" />
+            <FollowButton userId={landlordOxyUserId} size="sm" />
           </View>
         ) : null}
 

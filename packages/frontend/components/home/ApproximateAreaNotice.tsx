@@ -94,19 +94,17 @@ export function ApproximateAreaNotice({ scope, onChangeArea }: ApproximateAreaNo
       <View className="flex-row flex-wrap items-center gap-x-3 gap-y-1">
         <P className="text-[13px] text-muted-foreground">{t('location.scope.approximateLead')}</P>
         <Button
-          variant="ghost"
-          size="small"
+          size="sm"
           onPress={() => setShowDetail((shown) => !shown)}
-          accessibilityLabel={t('location.scope.provenance.toggleAccessible')}
+          accessibilityLabel={t('location.scope.provenance.toggleAccessible')} tone="accent" appearance="subtle"
         >
           {t('location.scope.provenance.toggle')}
         </Button>
         <Button
-          variant="secondary"
-          size="small"
+          size="sm"
           leadingIcon={RiMapPinLine}
           onPress={onChangeArea}
-          accessibilityLabel={t('location.scope.changeAccessible')}
+          accessibilityLabel={t('location.scope.changeAccessible')} tone="neutral" appearance="outline"
         >
           {t('location.scope.chooseArea')}
         </Button>
@@ -124,10 +122,9 @@ export function ApproximateAreaNotice({ scope, onChangeArea }: ApproximateAreaNo
       {scope.upgrade ? (
         <View className="flex-row">
           <Button
-            variant="secondary"
-            size="small"
+            size="sm"
             onPress={scope.applyUpgrade}
-            accessibilityLabel={t('location.scope.upgradeAccessible')}
+            accessibilityLabel={t('location.scope.upgradeAccessible')} tone="neutral" appearance="outline"
           >
             {t('location.scope.upgrade')}
           </Button>

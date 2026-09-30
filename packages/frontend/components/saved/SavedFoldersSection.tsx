@@ -138,7 +138,7 @@ export function SavedFoldersSection({ folders, savedProperties, loading }: Saved
     <SavedSection
       title={t('saved.sections.folders')}
       action={
-        <Button variant="secondary" size="small" leadingIcon={RiAddLine} onPress={() => setCreating(true)}>
+        <Button size="sm" leadingIcon={RiAddLine} onPress={() => setCreating(true)} tone="neutral" appearance="outline">
           {t('saved.createFolder')}
         </Button>
       }

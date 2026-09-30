@@ -142,7 +142,7 @@ export default function CityPropertiesPage() {
         </View>
         <View style={{ paddingTop: headerHeight, flex: 1 }}>
           <View style={styles.loadingContainer}>
-            <Loading variant="spinner" size="large" text={t('properties.city.loadingProperties')} />
+            <Loading variant="spinner" size="lg" text={t('properties.city.loadingProperties')} />
           </View>
         </View>
       </View>
@@ -271,12 +271,12 @@ export default function CityPropertiesPage() {
 
         {/* City Stats Cards */}
         <View style={styles.statsSection}>
-          <Card variant="outlined" radius="radius-16" style={styles.statCard}>
+          <Card radius="radius-16" style={styles.statCard} appearance="outline">
             <Text style={styles.statNumber}>{city.propertiesCount}</Text>
             <Text style={styles.statLabel}>{t('properties.city.properties')}</Text>
           </Card>
           {typeof city.population === 'number' && city.population > 0 ? (
-            <Card variant="outlined" radius="radius-16" style={styles.statCard}>
+            <Card radius="radius-16" style={styles.statCard} appearance="outline">
               <Text style={styles.statNumber}>{formatNumber(city.population, locale)}</Text>
               <Text style={styles.statLabel}>{t('properties.city.population')}</Text>
             </Card>

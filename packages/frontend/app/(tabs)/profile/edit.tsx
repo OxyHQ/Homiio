@@ -39,11 +39,10 @@ export default function ProfileEditScreen() {
           rightComponents: [
             <Button
               key="save"
-              variant="primary"
-              size="small"
+              size="sm"
               onPress={form.handleSave}
               disabled={form.isSaving}
-              loading={form.isSaving}
+              loading={form.isSaving} tone="accent" appearance="solid"
             >
               {form.isSaving ? 'Saving…' : 'Save'}
             </Button>,

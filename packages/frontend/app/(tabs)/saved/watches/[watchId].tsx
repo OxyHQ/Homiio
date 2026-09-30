@@ -150,7 +150,7 @@ export default function WatchAlertSettingsScreen() {
         {/* Keyed on the watch so the field seeds from the loaded row. */}
         <RenameCard key={watch.id} watch={watch} />
 
-        <Card variant="outlined" radius="radius-16" style={styles.card}>
+        <Card radius="radius-16" style={styles.card} appearance="outline">
           <H3>{t('alerts.settings.cadence')}</H3>
           <BloomText style={{ color: theme.colors.textSecondary }}>
             {t('alerts.settings.cadenceHint')}
@@ -185,9 +185,9 @@ export default function WatchAlertSettingsScreen() {
                 rightElement={
                   <Switch
                     accessibilityLabel={name}
-                    value={Boolean(rule?.enabled)}
+                    checked={Boolean(rule?.enabled)}
                     disabled={!usable}
-                    onValueChange={(next: boolean) => toggleRule(type, next)}
+                    onCheckedChange={(next: boolean) => toggleRule(type, next)}
                   />
                 }
               />
@@ -201,8 +201,8 @@ export default function WatchAlertSettingsScreen() {
             rightElement={
               <Switch
                 accessibilityLabel={t('alerts.settings.pauseAction')}
-                value={muted}
-                onValueChange={toggleMute}
+                checked={muted}
+                onCheckedChange={toggleMute}
               />
             }
           />
@@ -230,8 +230,7 @@ export default function WatchAlertSettingsScreen() {
         </SettingsListGroup>
 
         <Button
-          variant="secondary"
-          onPress={() => router.push(`/saved/alerts?watchId=${watch.id}`)}
+          onPress={() => router.push(`/saved/alerts?watchId=${watch.id}`)} tone="neutral" appearance="outline"
         >
           {t('alerts.settings.viewHistory')}
         </Button>
@@ -259,7 +258,7 @@ function RenameCard({ watch }: { watch: SavedSearch }) {
   };
 
   return (
-    <Card variant="outlined" radius="radius-16" style={styles.card}>
+    <Card radius="radius-16" style={styles.card} appearance="outline">
       <TextFieldInput
         label={t('common.name')}
         value={name}
@@ -268,11 +267,10 @@ function RenameCard({ watch }: { watch: SavedSearch }) {
         disabled={saving}
       />
       <Button
-        variant="secondary"
         onPress={() => void save()}
         loading={saving}
         disabled={saving || !trimmed || trimmed === watch.name}
-        style={styles.saveName}
+        style={styles.saveName} tone="neutral" appearance="outline"
       >
         {t('common.save')}
       </Button>

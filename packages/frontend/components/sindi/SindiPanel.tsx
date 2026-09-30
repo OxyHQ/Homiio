@@ -240,11 +240,10 @@ export function SindiPanel({ placement }: { placement: 'aside' | 'overlay' }) {
         <View style={styles.headerLeft}>
           {hasActiveConversation ? (
             <Button
-              variant="icon"
               iconOnly
               leadingIcon={RiArrowLeftSLine}
               onPress={handleBackToList}
-              accessibilityLabel={t('sindi.panel.conversations')}
+              accessibilityLabel={t('sindi.panel.conversations')} tone="neutral" appearance="outline"
             />
           ) : (
             <View style={[styles.headerBrand, { backgroundColor: themeColors.primarySubtle }]}>
@@ -266,18 +265,16 @@ export function SindiPanel({ placement }: { placement: 'aside' | 'overlay' }) {
         </View>
         <View style={styles.headerActions}>
           <Button
-            variant="icon"
             iconOnly
             leadingIcon={RiEditBoxLine}
             onPress={handleNewChat}
-            accessibilityLabel={t('sindi.panel.newChat')}
+            accessibilityLabel={t('sindi.panel.newChat')} tone="neutral" appearance="outline"
           />
           <Button
-            variant="icon"
             iconOnly
             leadingIcon={RiCloseLine}
             onPress={closeSindiPanel}
-            accessibilityLabel={t('sindi.panel.close')}
+            accessibilityLabel={t('sindi.panel.close')} tone="neutral" appearance="outline"
           />
         </View>
       </View>
@@ -329,7 +326,7 @@ export function SindiPanel({ placement }: { placement: 'aside' | 'overlay' }) {
             </Text>
           </View>
 
-          <Button variant="primary" leadingIcon={RiAddLine} onPress={handleNewChat} fullWidth>
+          <Button leadingIcon={RiAddLine} onPress={handleNewChat} fullWidth tone="accent" appearance="solid">
             {t('sindi.panel.startNew')}
           </Button>
 

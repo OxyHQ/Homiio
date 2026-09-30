@@ -46,7 +46,7 @@ export function DonationWidget() {
           ))}
         </View>
 
-        <Button leadingIcon={RiHeartFill} onPress={() => router.push('/donate')} variant="primary">
+        <Button leadingIcon={RiHeartFill} onPress={() => router.push('/donate')}  tone="accent" appearance="solid">
           {t('donations.widget.button')}
         </Button>
       </View>

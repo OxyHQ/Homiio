@@ -61,7 +61,7 @@ const FEATURES = [
 const SindiSkeleton: React.FC = () => (
   <View style={styles.skeletonList}>
     {Array.from({ length: 4 }).map((_, idx) => (
-      <Card key={idx} variant="outlined" style={styles.skeletonRow}>
+      <Card key={idx}  style={styles.skeletonRow} appearance="outline">
         <Skeleton.Circle size={36} />
         <View style={styles.skeletonBody}>
           <Skeleton.Text style={{ width: 180, lineHeight: 16 }} />
@@ -188,7 +188,7 @@ export default function Sindi() {
       />
 
       <ScrollView contentContainerStyle={styles.content}>
-        <Card variant="outlined" radius="radius-24" style={styles.heroCard}>
+        <Card radius="radius-24" style={styles.heroCard} appearance="outline">
           <SindiIcon size={56} color={colors.primary} />
           <SectionEyebrow>Meet Sindi</SectionEyebrow>
           <H1 style={styles.center}>{t('sindi.title')}</H1>
@@ -198,8 +198,7 @@ export default function Sindi() {
             challenges with confidence.
           </Text>
           <Button
-            variant="secondary"
-            size="medium"
+            size="md"
             onPress={() => {
               if (bottomSheetContext) {
                 bottomSheetContext.openBottomSheet(
@@ -210,7 +209,7 @@ export default function Sindi() {
                 );
               }
             }}
-            accessibilityLabel="Learn how Sindi works"
+            accessibilityLabel="Learn how Sindi works" tone="neutral" appearance="outline"
           >
             Learn how it works
           </Button>
@@ -218,7 +217,7 @@ export default function Sindi() {
 
         <View style={styles.featuresRow}>
           {FEATURES.map(({ icon: Icon, label }) => (
-            <Card key={label} variant="outlined" style={styles.featureCell}>
+            <Card key={label}  style={styles.featureCell} appearance="outline">
               <Icon width={20} height={20} fill={colors.primary} />
               <Text variant="body-2-medium" style={[styles.center, { color: colors.text }]}>
                 {label}
@@ -228,11 +227,10 @@ export default function Sindi() {
         </View>
 
         <Button
-          variant="primary"
-          size="large"
+          size="lg"
           onPress={createNewConversation}
           leadingIcon={RiAddLine}
-          fullWidth
+          fullWidth tone="accent" appearance="solid"
         >
           Start new conversation
         </Button>

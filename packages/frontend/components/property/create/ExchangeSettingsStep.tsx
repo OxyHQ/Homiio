@@ -147,12 +147,11 @@ export function ExchangeSettingsStep({ formData, setFormData }: PropertyStepProp
                   title={formatWindow(window)}
                   trailing={
                     <Button
-                      variant="ghost"
                       size="xs"
                       iconOnly
                       leadingIcon={RiCloseLine}
                       onPress={() => handleRemoveWindow(key)}
-                      accessibilityLabel={t('listing.exchange.removeWindow')}
+                      accessibilityLabel={t('listing.exchange.removeWindow')} tone="accent" appearance="subtle"
                     />
                   }
                 />
@@ -165,10 +164,9 @@ export function ExchangeSettingsStep({ formData, setFormData }: PropertyStepProp
           </ThemedText>
         )}
         <Button
-          variant="secondary"
           leadingIcon={RiAddLine}
           onPress={() => setCalendarOpen(true)}
-          style={exchangeStyles.addWindowButton}
+          style={exchangeStyles.addWindowButton} tone="neutral" appearance="outline"
         >
           {t('listing.exchange.addWindow')}
         </Button>

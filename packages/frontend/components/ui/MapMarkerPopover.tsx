@@ -56,10 +56,9 @@ export const MapMarkerPopover: React.FC<MapMarkerPopoverProps> = ({
         <View style={styles.dismissAnchor}>
           <Button
             onPress={onDismiss}
-            variant="ghost"
-            size="small"
+            size="sm"
             icon={RiCloseLine}
-            accessibilityLabel="Close preview"
+            accessibilityLabel="Close preview" tone="accent" appearance="subtle"
           />
         </View>
         <PropertyCard

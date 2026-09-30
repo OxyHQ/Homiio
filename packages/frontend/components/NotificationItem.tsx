@@ -117,12 +117,11 @@ export function NotificationItem({
           </View>
           {onDelete ? (
             <Button
-              variant="ghost"
-              size="small"
+              size="sm"
               iconOnly
               leadingIcon={RiDeleteBinLine}
               accessibilityLabel={t('notification.delete.title')}
-              onPress={onDelete}
+              onPress={onDelete} tone="accent" appearance="subtle"
             />
           ) : null}
         </View>

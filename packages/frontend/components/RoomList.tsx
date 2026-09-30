@@ -79,11 +79,10 @@ const RoomCard = React.memo(({ property, matchScore }: RoomCardProps) => {
             style={styles.cardWrap}
         >
             <Card
-                variant="outlined"
                 onPress={handlePress}
                 accessibilityRole="link"
                 accessibilityLabel={title}
-                style={styles.roomCard}
+                style={styles.roomCard} appearance="outline"
             >
                 <View style={styles.imageContainer}>
                     {primaryImage ? (
@@ -255,7 +254,7 @@ export function RoomList({ filters, onFilterChange }: RoomListProps) {
         if (!loading || !hasMore) return null;
         return (
             <View style={styles.footerLoader}>
-                <Loading size="small" showText={false} />
+                <Loading size="sm" showText={false} />
             </View>
         );
     };
@@ -284,7 +283,7 @@ export function RoomList({ filters, onFilterChange }: RoomListProps) {
     if (loading && rooms.length === 0) {
         return (
             <View style={styles.loadingContainer}>
-                <Loading size="large" showText={false} />
+                <Loading size="lg" showText={false} />
             </View>
         );
     }
@@ -325,11 +324,10 @@ export function RoomList({ filters, onFilterChange }: RoomListProps) {
                     />
                 </View>
                 <Button
-                    variant="secondary"
                     iconOnly
                     icon={RiEqualizerLine}
                     onPress={() => setShowFilters(true)}
-                    accessibilityLabel={t('common.filter')}
+                    accessibilityLabel={t('common.filter')} tone="neutral" appearance="outline"
                 />
             </View>
 

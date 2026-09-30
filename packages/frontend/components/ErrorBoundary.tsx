@@ -245,12 +245,11 @@ function ErrorFallback({
         <View style={[styles.actions, isWide && styles.actionsWide]}>
           <View style={isWide ? styles.actionWide : styles.actionFull}>
             <Button
-              variant="primary"
-              size="large"
+              size="lg"
               onPress={handleRetry}
               leadingIcon={RiRefreshLine}
               accessibilityLabel={t('error.boundary.retry')}
-              style={styles.button}>
+              style={styles.button} tone="accent" appearance="solid">
               {retryCount > 0
                 ? `${t('error.boundary.retry')}  (${retryCount}/${maxRetries})`
                 : t('error.boundary.retry')}
@@ -258,12 +257,11 @@ function ErrorFallback({
           </View>
           <View style={isWide ? styles.actionWide : styles.actionFull}>
             <Button
-              variant="ghost"
-              size="large"
+              size="lg"
               onPress={handleReportIssue}
               leadingIcon={RiFeedbackLine}
               accessibilityLabel={t('error.boundary.reportIssue')}
-              style={styles.button}>
+              style={styles.button} tone="accent" appearance="subtle">
               {t('error.boundary.reportIssue')}
             </Button>
           </View>

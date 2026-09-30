@@ -74,7 +74,7 @@ export default function AlertReasonScreen() {
     <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
       <Header options={{ title: t('alerts.reason.title') }} />
       <ScrollView contentContainerStyle={styles.content}>
-        <Card variant="outlined" radius="radius-16" style={styles.card}>
+        <Card radius="radius-16" style={styles.card} appearance="outline">
           <H3>{t('alerts.reason.whatChanged')}</H3>
           <AlertExplanationText
             detail={alert.explanation.detail}
@@ -82,7 +82,7 @@ export default function AlertReasonScreen() {
           />
         </Card>
 
-        <Card variant="outlined" radius="radius-16" style={styles.card}>
+        <Card radius="radius-16" style={styles.card} appearance="outline">
           <H3>{t('alerts.reason.whyYou')}</H3>
           <BloomText>
             {t('alerts.reason.matchedWatch', { name: alert.explanation.watchName })}
@@ -122,7 +122,7 @@ export default function AlertReasonScreen() {
           </Button>
         ) : null}
         {watch ? (
-          <Button variant="secondary" onPress={() => router.push(`/saved/watches/${watch.id}`)}>
+          <Button onPress={() => router.push(`/saved/watches/${watch.id}`)} tone="neutral" appearance="outline">
             {t('alerts.reason.adjustRules')}
           </Button>
         ) : null}

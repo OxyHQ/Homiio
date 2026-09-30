@@ -14,7 +14,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useMediaQuery } from 'react-responsive';
 
-import { Button } from '@oxy.so/bloom/button';
+import { InverseButton } from '@oxy.so/bloom/button';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { colors } from '@/styles/colors';
@@ -115,9 +115,9 @@ export function AgentCtaBanner({
             {subtitle}
           </BloomText>
           <View style={styles.buttonWrap}>
-            <Button variant="inverse" size="medium" onPress={onPress}>
+            <InverseButton size="md" onPress={onPress}>
               {ctaLabel}
-            </Button>
+            </InverseButton>
           </View>
           {trustLine ? (
             <BloomText style={styles.trustLine}>{trustLine}</BloomText>

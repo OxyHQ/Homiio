@@ -41,14 +41,13 @@ export function SavedSearchesSection() {
         </Text>
         {error ? (
           <Button
-            variant="secondary"
-            size="small"
-            onPress={() => void queryClient.invalidateQueries({ queryKey: ['savedSearches'] })}
+            size="sm"
+            onPress={() => void queryClient.invalidateQueries({ queryKey: ['savedSearches'] })} tone="neutral" appearance="outline"
           >
             {t('common.retry')}
           </Button>
         ) : (
-          <Button variant="secondary" size="small" leadingIcon={RiSearchLine} onPress={() => router.push('/explore')}>
+          <Button size="sm" leadingIcon={RiSearchLine} onPress={() => router.push('/explore')} tone="neutral" appearance="outline">
             {t('saved.exploreCta')}
           </Button>
         )}

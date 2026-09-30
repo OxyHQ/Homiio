@@ -120,14 +120,13 @@ export function SindiSection({ property }: SindiSectionProps) {
 
         <Button
           onPress={() => openSindi()}
-          variant="primary"
-          size="large"
+          size="lg"
           icon={
             <SindiIcon size={18} color={colors.primaryForeground} />
           }
           iconPosition="left"
           accessibilityLabel="Ask Sindi AI about this home"
-          accessibilityHint="Opens a chat with Sindi about this property"
+          accessibilityHint="Opens a chat with Sindi about this property" tone="accent" appearance="solid"
         >
           Ask Sindi about this home
         </Button>

@@ -133,10 +133,9 @@ export const CommunityNoteCard: React.FC<CommunityNoteCardProps> = ({ note }) =>
 
       {isTruncatable ? (
         <Button
-          variant="text"
-          size="small"
+          size="sm"
           onPress={() => setExpanded((prev) => !prev)}
-          style={styles.readMore}
+          style={styles.readMore} tone="accent" appearance="plain"
         >
           {expanded
             ? t('property.communityNotes.readLess')

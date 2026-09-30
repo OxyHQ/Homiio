@@ -167,7 +167,7 @@ export function SavedHomesSection({
         <Text variant="body-2-regular" style={{ color: theme.colors.textSecondary }}>
           {t('saved.noPropertiesDescription')}
         </Text>
-        <Button variant="secondary" size="small" leadingIcon={RiSearchLine} onPress={() => router.push('/explore')}>
+        <Button size="sm" leadingIcon={RiSearchLine} onPress={() => router.push('/explore')} tone="neutral" appearance="outline">
           {t('saved.exploreCta')}
         </Button>
       </View>

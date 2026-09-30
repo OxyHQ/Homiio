@@ -116,7 +116,7 @@ export const RoommateRelationshipComponent: React.FC<RoommateRelationshipProps> 
   const secondary = { color: theme.colors.textSecondary };
 
   return (
-    <Card variant="outlined" radius="radius-16" style={styles.card}>
+    <Card radius="radius-16" style={styles.card} appearance="outline">
       <View style={styles.header}>
         <View style={styles.headerInfo}>
           <H3>{t('roommates.relationship.title')}</H3>
@@ -157,11 +157,10 @@ export const RoommateRelationshipComponent: React.FC<RoommateRelationshipProps> 
           {people.map((person) => (
             <Button
               key={person.id}
-              variant="secondary"
-              size="small"
+              size="sm"
               onPress={() => onViewProfile(person.id)}
               accessibilityLabel={`${t('roommates.actions.viewProfile')}: ${getDisplayName(person)}`}
-              style={styles.personButton}
+              style={styles.personButton} tone="neutral" appearance="outline"
             >
               {getDisplayName(person)}
             </Button>
@@ -173,9 +172,8 @@ export const RoommateRelationshipComponent: React.FC<RoommateRelationshipProps> 
         <Button
           leadingIcon={RiCloseCircleLine}
           onPress={handleEndRelationship}
-          variant="secondary"
           loading={isLoading}
-          style={styles.endButton}
+          style={styles.endButton} tone="neutral" appearance="outline"
         >
           {t('roommates.relationship.endRelationship')}
         </Button>

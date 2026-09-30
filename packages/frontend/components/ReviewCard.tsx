@@ -310,14 +310,13 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ review, author, onPressA
 
       {review.agency ? (
         <Button
-          variant="ghost"
-          size="small"
+          size="sm"
           leadingIcon={RiBuilding2Line}
           trailingIcon={onPressAgency ? RiArrowRightSLine : undefined}
           onPress={() => onPressAgency?.(review.agency?.slug ?? '')}
           disabled={!onPressAgency}
           accessibilityLabel={t('reviews.card.managedBy', { name: review.agency.name })}
-          style={styles.agencyLink}
+          style={styles.agencyLink} tone="accent" appearance="subtle"
         >
           {t('reviews.card.managedBy', { name: review.agency.name })}
         </Button>
@@ -341,8 +340,9 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ review, author, onPressA
 
       <View style={styles.footer}>
         <Button
-          variant={review.viewerHasVotedHelpful ? 'secondary' : 'ghost'}
-          size="small"
+          appearance={review.viewerHasVotedHelpful ? 'outline' : 'subtle'}
+          tone="neutral"
+          size="sm"
           leadingIcon={RiThumbUpLine}
           onPress={() => toggleHelpful.mutate(review.id)}
           disabled={isOwnReview || toggleHelpful.isPending}
@@ -352,11 +352,10 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ review, author, onPressA
         </Button>
         {isOwnReview ? null : (
           <Button
-            variant="ghost"
-            size="small"
+            size="sm"
             leadingIcon={RiFlagLine}
             onPress={() => setReportVisible(true)}
-            accessibilityLabel={t('reviews.card.report')}
+            accessibilityLabel={t('reviews.card.report')} tone="accent" appearance="subtle"
           >
             {t('reviews.card.report')}
           </Button>

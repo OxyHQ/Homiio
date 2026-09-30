@@ -216,18 +216,18 @@ export default function AddressDetailsPage() {
             />
           }
         >
-          <Card variant="outlined" radius="radius-16" style={styles.sectionCard}>
+          <Card radius="radius-16" style={styles.sectionCard} appearance="outline">
             <AddressDisplay address={addressForDisplay} variant="detailed" showActions />
           </Card>
 
           {reviews.length > 0 ? (
-            <Card variant="outlined" radius="radius-16" style={styles.sectionCard}>
+            <Card radius="radius-16" style={styles.sectionCard} appearance="outline">
               <SectionEyebrow>{t('addresses.detail.reviewsSection')}</SectionEyebrow>
               <PlaceReviewsSummary stats={summary} />
             </Card>
           ) : null}
 
-          <Card variant="outlined" radius="radius-16" style={styles.sectionCard}>
+          <Card radius="radius-16" style={styles.sectionCard} appearance="outline">
             <NeighborhoodRatingWidget
               neighborhoodName={address.neighborhoodName || ''}
               city={address.cityName ?? ''}
@@ -254,7 +254,7 @@ export default function AddressDetailsPage() {
           </Tabs>
 
           {contentTab === 'properties' ? (
-            <Card variant="outlined" radius="radius-16" style={styles.sectionCard}>
+            <Card radius="radius-16" style={styles.sectionCard} appearance="outline">
               <H3 style={styles.cardHeading}>{t('addresses.detail.propertiesSection')}</H3>
               {properties.length === 0 ? (
                 <EmptyState
@@ -277,7 +277,7 @@ export default function AddressDetailsPage() {
               )}
             </Card>
           ) : (
-            <Card variant="outlined" radius="radius-16" style={styles.sectionCard}>
+            <Card radius="radius-16" style={styles.sectionCard} appearance="outline">
               <View style={styles.headerText}>
                 <SectionEyebrow>{t('addresses.detail.reviewsSection')}</SectionEyebrow>
                 <H2 style={styles.cardHeading}>{t('addresses.detail.storiesTitle')}</H2>

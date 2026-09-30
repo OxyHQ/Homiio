@@ -158,7 +158,7 @@ export default function SettingsScreen() {
             title={t('settings.preferences.notifications')}
             description={t('settings.preferences.notificationsDesc')}
             rightElement={
-              <Switch value={notifications} onValueChange={setNotifications} />
+              <Switch checked={notifications} onCheckedChange={setNotifications} />
             }
           />
           <SettingsListItem
@@ -175,7 +175,7 @@ export default function SettingsScreen() {
             title={t('settings.preferences.autoSync')}
             description={t('settings.preferences.autoSyncDesc')}
             rightElement={
-              <Switch value={autoSync} onValueChange={setAutoSync} />
+              <Switch checked={autoSync} onCheckedChange={setAutoSync} />
             }
           />
           <SettingsListItem
@@ -183,7 +183,7 @@ export default function SettingsScreen() {
             title={t('settings.preferences.offlineMode')}
             description={t('settings.preferences.offlineModeDesc')}
             rightElement={
-              <Switch value={offlineMode} onValueChange={setOfflineMode} />
+              <Switch checked={offlineMode} onCheckedChange={setOfflineMode} />
             }
           />
           <SettingsListItem

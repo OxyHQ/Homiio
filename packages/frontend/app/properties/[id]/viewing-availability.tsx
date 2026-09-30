@@ -219,7 +219,7 @@ export default function ViewingAvailabilityPage() {
       <SafeAreaView style={styles.safeArea} edges={['bottom']}>
         <Header options={{ showBackButton: true, title: t('viewings.schedule.title') }} />
         <View style={styles.centered}>
-          <Loading variant="spinner" size="large" />
+          <Loading variant="spinner" size="lg" />
         </View>
       </SafeAreaView>
     );
@@ -270,7 +270,7 @@ export default function ViewingAvailabilityPage() {
         ) : null}
 
         {drafts.map((draft, index) => (
-          <Card key={draft.key} variant="outlined" radius="radius-16" className="gap-3 p-4">
+          <Card key={draft.key}  radius="radius-16" className="gap-3 p-4" appearance="outline">
             <Text style={styles.rowTitle}>
               {t('viewings.schedule.rowTitle', { row: index + 1 })}
             </Text>
@@ -333,9 +333,8 @@ export default function ViewingAvailabilityPage() {
             </View>
 
             <Button
-              variant="ghost"
               leadingIcon={RiDeleteBinLine}
-              onPress={() => setDrafts((rows) => rows.filter((row) => row.key !== draft.key))}
+              onPress={() => setDrafts((rows) => rows.filter((row) => row.key !== draft.key))} tone="accent" appearance="subtle"
             >
               {t('viewings.schedule.removeWindow')}
             </Button>
@@ -343,10 +342,9 @@ export default function ViewingAvailabilityPage() {
         ))}
 
         <Button
-          variant="secondary"
           leadingIcon={RiAddLine}
           disabled={drafts.length >= VIEWING_WINDOWS_MAX}
-          onPress={() => setDrafts((rows) => [...rows, newDraft()])}
+          onPress={() => setDrafts((rows) => [...rows, newDraft()])} tone="neutral" appearance="outline"
         >
           {t('viewings.schedule.addWindow')}
         </Button>
@@ -354,11 +352,10 @@ export default function ViewingAvailabilityPage() {
         {problem ? <Admonition type="warning">{problem}</Admonition> : null}
 
         <Button
-          variant="primary"
-          size="large"
+          size="lg"
           onPress={submit}
           disabled={save.isPending}
-          loading={save.isPending}
+          loading={save.isPending} tone="accent" appearance="solid"
         >
           {t('viewings.schedule.save')}
         </Button>

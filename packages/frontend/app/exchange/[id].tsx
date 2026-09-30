@@ -197,7 +197,7 @@ export default function ExchangeRequestDetailScreen() {
       <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
         {header}
         <View style={styles.centerWrap}>
-          <Loading variant="spinner" size="medium" />
+          <Loading variant="spinner" size="md" />
         </View>
       </View>
     );
@@ -258,7 +258,7 @@ export default function ExchangeRequestDetailScreen() {
             )}
           </View>
 
-          <Card variant="outlined" radius="radius-16" className="p-5">
+          <Card radius="radius-16" className="p-5" appearance="outline">
             <View style={styles.headerRow}>
               <H2 style={styles.title}>{propertyTitle}</H2>
               <ExchangeStatusBadge status={request.status} />
@@ -291,7 +291,7 @@ export default function ExchangeRequestDetailScreen() {
           </SettingsListGroup>
 
           {request.message ? (
-            <Card variant="outlined" radius="radius-16" className="p-5">
+            <Card radius="radius-16" className="p-5" appearance="outline">
               <BloomText style={[styles.sectionLabel, { color: theme.colors.textSecondary }]}>
                 {t('listing.exchange.messageHeading')}
               </BloomText>
@@ -304,22 +304,20 @@ export default function ExchangeRequestDetailScreen() {
               {showHostConfirmDecline ? (
                 <>
                   <Button
-                    variant="primary"
-                    size="medium"
+                    size="md"
                     leadingIcon={RiCheckLine}
                     onPress={() => void confirmAction('confirm')}
                     disabled={updateMutation.isPending}
-                    style={styles.actionButton}
+                    style={styles.actionButton} tone="accent" appearance="solid"
                   >
                     {t('listing.exchange.actions.approve')}
                   </Button>
                   <Button
-                    variant="secondary"
-                    size="medium"
+                    size="md"
                     leadingIcon={RiCloseLine}
                     onPress={() => void confirmAction('decline')}
                     disabled={updateMutation.isPending}
-                    style={styles.actionButton}
+                    style={styles.actionButton} tone="neutral" appearance="outline"
                   >
                     {t('listing.exchange.actions.decline')}
                   </Button>
@@ -327,24 +325,22 @@ export default function ExchangeRequestDetailScreen() {
               ) : null}
               {showComplete ? (
                 <Button
-                  variant="primary"
-                  size="medium"
+                  size="md"
                   leadingIcon={RiCheckLine}
                   onPress={() => void confirmAction('complete')}
                   disabled={updateMutation.isPending}
-                  style={styles.actionButton}
+                  style={styles.actionButton} tone="accent" appearance="solid"
                 >
                   {t('listing.exchange.actions.complete')}
                 </Button>
               ) : null}
               {showRequesterCancel ? (
                 <Button
-                  variant="ghost"
-                  size="medium"
+                  size="md"
                   leadingIcon={RiCloseCircleLine}
                   onPress={() => void confirmAction('cancel')}
                   disabled={updateMutation.isPending}
-                  style={styles.actionButton}
+                  style={styles.actionButton} tone="accent" appearance="subtle"
                 >
                   {t('listing.exchange.actions.cancel')}
                 </Button>
@@ -353,7 +349,7 @@ export default function ExchangeRequestDetailScreen() {
           ) : null}
 
           {showReviewForm ? (
-            <Card variant="outlined" radius="radius-16" className="p-5">
+            <Card radius="radius-16" className="p-5" appearance="outline">
               <ExchangeReviewForm
                 exchangeRequestId={request.id}
                 onSubmitted={() => reviewsQuery.refetch()}

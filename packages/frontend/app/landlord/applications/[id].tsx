@@ -124,7 +124,7 @@ const DetailSkeleton: React.FC = () => (
       <Skeleton.Pill size={20} />
     </View>
     <Skeleton.Box width="100%" height={180} borderRadius={radius.xl} />
-    <Card variant="outlined" radius="radius-16" style={styles.card}>
+    <Card radius="radius-16" style={styles.card} appearance="outline">
       <Skeleton.Text style={{ width: 140, lineHeight: 16 }} />
       <Skeleton.Text style={{ width: 220, lineHeight: 14 }} />
       <Skeleton.Text style={{ width: 200, lineHeight: 14 }} />
@@ -343,7 +343,7 @@ export default function LandlordApplicationDetailScreen() {
             )}
           </View>
 
-          <Card variant="outlined" radius="radius-16" style={styles.card}>
+          <Card radius="radius-16" style={styles.card} appearance="outline">
             <SectionEyebrow>{t('applications.card.propertyFallback')}</SectionEyebrow>
             <H3 style={styles.cardHeading}>{propertyTitle}</H3>
             {property?.address ? (
@@ -364,7 +364,7 @@ export default function LandlordApplicationDetailScreen() {
           <ApplicationDocumentsGroup application={application} viewerIsLandlord />
 
           {application.notes ? (
-            <Card variant="outlined" radius="radius-16" style={styles.card}>
+            <Card radius="radius-16" style={styles.card} appearance="outline">
               <SectionEyebrow>{t('applications.landlord.sectionNotes')}</SectionEyebrow>
               <BloomText style={styles.notesBody}>{application.notes}</BloomText>
             </Card>
@@ -373,11 +373,10 @@ export default function LandlordApplicationDetailScreen() {
           {canCreateLease ? (
             <View style={styles.actionRow}>
               <Button
-                variant="primary"
-                size="medium"
+                size="md"
                 leadingIcon={RiEditLine}
                 onPress={handleCreateLease}
-                style={styles.actionButton}
+                style={styles.actionButton} tone="accent" appearance="solid"
               >
                 {t('applications.landlord.createLease')}
               </Button>
@@ -385,32 +384,29 @@ export default function LandlordApplicationDetailScreen() {
           ) : canDecide ? (
             <View style={styles.actionRow}>
               <Button
-                variant="secondary"
-                size="medium"
+                size="md"
                 leadingIcon={RiEyeLine}
                 onPress={() => handleOpen('reviewing')}
                 disabled={!canMoveToReviewing || updateMutation.isPending}
-                style={styles.actionButton}
+                style={styles.actionButton} tone="neutral" appearance="outline"
               >
                 {t('applications.landlord.review.reviewing.confirm')}
               </Button>
               <Button
-                variant="primary"
-                size="medium"
+                size="md"
                 leadingIcon={RiCheckLine}
                 onPress={() => handleOpen('approve')}
                 disabled={updateMutation.isPending}
-                style={styles.actionButton}
+                style={styles.actionButton} tone="accent" appearance="solid"
               >
                 {t('applications.landlord.review.approve.confirm')}
               </Button>
               <Button
-                variant="ghost"
-                size="medium"
+                size="md"
                 leadingIcon={RiCloseLine}
                 onPress={() => handleOpen('reject')}
                 disabled={updateMutation.isPending}
-                style={styles.actionButton}
+                style={styles.actionButton} tone="accent" appearance="subtle"
               >
                 {t('applications.landlord.review.reject.confirm')}
               </Button>

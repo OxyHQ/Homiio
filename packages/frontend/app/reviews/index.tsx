@@ -38,11 +38,10 @@ export default function ReviewExploreScreen() {
             <H1 style={styles.introTitle}>{t('reviews.explore.heroTitle')}</H1>
             <BloomText style={styles.introText}>{t('reviews.explore.heroSubtitle')}</BloomText>
             <Button
-              variant="primary"
-              size="large"
+              size="lg"
               onPress={() => router.push('/reviews/write')}
               leadingIcon={RiEditBoxLine}
-              style={styles.cta}
+              style={styles.cta} tone="accent" appearance="solid"
             >
               {t('reviews.explore.writeCta')}
             </Button>

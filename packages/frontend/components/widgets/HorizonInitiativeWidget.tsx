@@ -25,12 +25,11 @@ export function HorizonInitiativeWidget() {
           local `style` + `textStyle` override painted a pale fill under Bloom's
           own label colour, so on `/` the button rendered with no visible text. */}
       <Button
-        variant="secondary"
-        size="medium"
+        size="md"
         onPress={() => {
           Linking.openURL('https://oxy.so/horizon').catch(() => undefined);
         }}
-        accessibilityLabel={t('home.horizon.learnMore')}
+        accessibilityLabel={t('home.horizon.learnMore')} tone="neutral" appearance="outline"
       >
         {t('home.horizon.learnMore')}
       </Button>

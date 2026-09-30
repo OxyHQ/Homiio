@@ -105,7 +105,12 @@ export function SindiExplanationBottomSheet({ onClose }: SindiExplanationBottomS
         ))}
       </Carousel>
 
-      <Button variant={onLastSlide ? 'primary' : 'ghost'} onPress={onClose} fullWidth>
+      <Button
+        appearance={onLastSlide ? 'solid' : 'subtle'}
+        tone={onLastSlide ? 'accent' : 'neutral'}
+        onPress={onClose}
+        fullWidth
+      >
         {onLastSlide ? 'Start with Sindi' : 'Skip'}
       </Button>
     </View>

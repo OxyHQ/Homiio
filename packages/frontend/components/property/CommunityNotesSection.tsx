@@ -276,9 +276,8 @@ export const CommunityNotesSection: React.FC<CommunityNotesSectionProps> = ({
               {canExpandInline ? (
                 <Button
                   onPress={() => setExpanded(true)}
-                  variant="secondary"
-                  size="medium"
-                  accessibilityLabel={t('property.communityNotes.showAll', { count: notes.length })}
+                  size="md"
+                  accessibilityLabel={t('property.communityNotes.showAll', { count: notes.length })} tone="neutral" appearance="outline"
                 >
                   {t('property.communityNotes.showAll', { count: notes.length })}
                 </Button>
@@ -287,10 +286,9 @@ export const CommunityNotesSection: React.FC<CommunityNotesSectionProps> = ({
               {isPreview && notes.length > 0 ? (
                 <Button
                   onPress={handleViewAll}
-                  variant="ghost"
-                  size="medium"
+                  size="md"
                   leadingIcon={RiExternalLinkLine}
-                  accessibilityLabel={t('property.communityNotes.showMore')}
+                  accessibilityLabel={t('property.communityNotes.showMore')} tone="accent" appearance="subtle"
                 >
                   {t('property.communityNotes.showMore')}
                 </Button>
@@ -298,10 +296,9 @@ export const CommunityNotesSection: React.FC<CommunityNotesSectionProps> = ({
 
               <Button
                 onPress={handleAddNote}
-                variant="ghost"
-                size="medium"
+                size="md"
                 leadingIcon={RiEditLine}
-                accessibilityLabel={t('property.communityNotes.addAction')}
+                accessibilityLabel={t('property.communityNotes.addAction')} tone="accent" appearance="subtle"
               >
                 {t('property.communityNotes.addAction')}
               </Button>

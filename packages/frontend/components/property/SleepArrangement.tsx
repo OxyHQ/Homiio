@@ -71,9 +71,8 @@ export const SleepArrangement: React.FC<SleepArrangementProps> = ({ property }) 
         {bedrooms.map((bedroom) => (
           <Card
             key={bedroom.id}
-            variant="outlined"
             radius="radius-16"
-            style={styles.bedroomCard}
+            style={styles.bedroomCard} appearance="outline"
           >
             <RiHotelBedLine width={26} height={26} fill={colors.COLOR_BLACK} />
             <View>

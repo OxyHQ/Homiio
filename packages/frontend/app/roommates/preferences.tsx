@@ -347,7 +347,7 @@ export default function RoommatePreferencesPage() {
             </BloomText>
           </View>
 
-          <Card variant="outlined" radius="radius-16" style={styles.card}>
+          <Card radius="radius-16" style={styles.card} appearance="outline">
             <View style={styles.toggleHeader}>
               <View style={styles.toggleHeaderText}>
                 <BloomText style={styles.toggleTitle}>
@@ -358,14 +358,14 @@ export default function RoommatePreferencesPage() {
                 </BloomText>
               </View>
               <Switch
-                value={roommateEnabled}
-                onValueChange={setRoommateEnabled}
+                checked={roommateEnabled}
+                onCheckedChange={setRoommateEnabled}
                 accessibilityLabel={t('roommates.preferencesPage.enableTitle')}
               />
             </View>
           </Card>
 
-          <Card variant="outlined" radius="radius-16" style={styles.card}>
+          <Card radius="radius-16" style={styles.card} appearance="outline">
             <H3 style={styles.cardTitle}>{t('roommates.preferencesPage.budgetTimeline')}</H3>
             <RangeInputs
               label={t('roommates.preferencesPage.monthlyBudget')}
@@ -392,7 +392,7 @@ export default function RoommatePreferencesPage() {
             />
           </Card>
 
-          <Card variant="outlined" radius="radius-16" style={styles.card}>
+          <Card radius="radius-16" style={styles.card} appearance="outline">
             <H3 style={styles.cardTitle}>{t('roommates.preferencesPage.roommateSection')}</H3>
             <ChipRow
               label={t('roommates.preferencesPage.preferredGender')}
@@ -409,7 +409,7 @@ export default function RoommatePreferencesPage() {
             />
           </Card>
 
-          <Card variant="outlined" radius="radius-16" style={styles.card}>
+          <Card radius="radius-16" style={styles.card} appearance="outline">
             <H3 style={styles.cardTitle}>{t('roommates.preferencesPage.lifestyle')}</H3>
             <ChipRow
               label={t('roommates.preferencesPage.smoking')}
@@ -444,12 +444,11 @@ export default function RoommatePreferencesPage() {
           </Card>
 
           <Button
-            variant="primary"
-            size="large"
+            size="lg"
             onPress={handleSave}
             loading={saveMutation.isPending}
             disabled={saveMutation.isPending}
-            style={styles.saveButton}
+            style={styles.saveButton} tone="accent" appearance="solid"
           >
             {saveMutation.isPending ? t('roommates.preferencesPage.saving') : t('roommates.preferencesPage.save')}
           </Button>

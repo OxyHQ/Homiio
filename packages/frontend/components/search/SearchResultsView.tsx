@@ -589,8 +589,7 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
         />
         {/* A sibling of the composer, never inside it: its own named control. */}
         <Button
-          variant="outline"
-          size={isWide ? 'large' : 'medium'}
+          size={isWide ? 'lg' : 'md'}
           style={isWide ? styles.saveBesideBar : undefined}
           iconOnly
           icon={
@@ -601,7 +600,7 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
             )
           }
           onPress={handleSaveSearch}
-          accessibilityLabel={saveLabel}
+          accessibilityLabel={saveLabel} tone="neutral" appearance="outline"
         />
       </View>
       <View style={styles.categoryRow}>
@@ -759,12 +758,11 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
           <View style={[styles.searchAreaButton, cardShadow.md, styles.interactive]}>
             <Button
               onPress={handleSearchThisArea}
-              variant="primary"
-              size="small"
+              size="sm"
               leadingIcon={RiRefreshLine}
               accessibilityLabel={
                 t('search.actions.searchArea', 'Search this area') || 'Search this area'
-              }
+              } tone="accent" appearance="solid"
             >
               {t('search.actions.searchArea', 'Search this area') || 'Search this area'}
             </Button>
@@ -777,12 +775,11 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
             {returnBounds ? (
               <Button
                 onPress={handleReturnToSearchedArea}
-                variant="secondary"
-                size="small"
+                size="sm"
                 accessibilityLabel={
                   t('search.actions.backToSearchedArea', 'Back to searched area') ||
                   'Back to searched area'
-                }
+                } tone="neutral" appearance="outline"
               >
                 {t('search.actions.backToSearchedArea', 'Back to searched area') ||
                   'Back to searched area'}

@@ -1,11 +1,10 @@
 /**
  * MapFab — the centred "Map / List" toggle floating over a results list.
  *
- * The button is Bloom's extended `Fab`. Bloom anchors a FAB to a CORNER only,
- * and this toggle sits bottom-CENTRE (the list-over-map pattern), so it uses
- * `placement="static"` and this wrapper owns the position — the case Bloom's
- * docs name for `static`. The caller may still lift it (`style.bottom`) to
- * clear a home indicator or an action bar.
+ * The button is Bloom's extended `Fab`. Bloom 6 leaves a FAB's position to its
+ * parent, and this toggle sits bottom-CENTRE (the list-over-map pattern), so
+ * this wrapper owns the position. The caller may still lift it (`style.bottom`)
+ * to clear a home indicator or an action bar.
  */
 import React from 'react';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
@@ -27,13 +26,14 @@ export const MapFab: React.FC<MapFabProps> = ({ onPress, label, icon = 'map', st
     // Pass-through row (valid CSS `none`) so only the button itself takes taps.
     <View style={[styles.anchor, style]}>
       <Fab
-        placement="static"
-        variant="primary"
         label={label}
         accessibilityLabel={label}
-        icon={<Icon size="md" />}
+        icon={Icon}
         onPress={onPress}
+        size="md"
         style={styles.fab}
+        appearance="solid"
+        tone="accent"
       />
     </View>
   );

@@ -102,30 +102,27 @@ export function UpcomingBookingsSection({ bookings }: { bookings: UpcomingBookin
         <View style={styles.links}>
           {kinds.has('stay') ? (
             <Button
-              variant="ghost"
-              size="small"
+              size="sm"
               trailingIcon={RiArrowRightSLine}
-              onPress={() => router.push('/stays')}
+              onPress={() => router.push('/stays')} tone="accent" appearance="subtle"
             >
               {t('bookings.upcoming.allStays')}
             </Button>
           ) : null}
           {kinds.has('swap') ? (
             <Button
-              variant="ghost"
-              size="small"
+              size="sm"
               trailingIcon={RiArrowRightSLine}
-              onPress={() => router.push('/exchange/requests')}
+              onPress={() => router.push('/exchange/requests')} tone="accent" appearance="subtle"
             >
               {t('bookings.upcoming.allSwaps')}
             </Button>
           ) : null}
           {kinds.has('viewing') ? (
             <Button
-              variant="ghost"
-              size="small"
+              size="sm"
               trailingIcon={RiArrowRightSLine}
-              onPress={() => router.push('/viewings')}
+              onPress={() => router.push('/viewings')} tone="accent" appearance="subtle"
             >
               {t('bookings.upcoming.allViewings')}
             </Button>

@@ -113,9 +113,8 @@ export default function HorizonPage() {
             {benefitItems.map((item) => (
               <Card
                 key={item.title}
-                variant="outlined"
                 radius="radius-16"
-                style={styles.benefitCard}
+                style={styles.benefitCard} appearance="outline"
               >
                 <IconCircle icon={item.icon} />
                 <BloomText style={styles.itemTitle}>{item.title}</BloomText>
@@ -142,16 +141,15 @@ export default function HorizonPage() {
           ))}
         </View>
 
-        <Card variant="filled" radius="radius-24" style={styles.joinCard}>
+        <Card radius="radius-24" style={styles.joinCard} appearance="subtle">
           <H3 style={styles.centerText}>{t('horizon.page.joinTitle')}</H3>
           <BloomText style={[styles.bodyText, styles.centerText, secondary]}>
             {t('horizon.page.joinSubtitle')}
           </BloomText>
           <Button
-            variant="primary"
-            size="large"
+            size="lg"
             trailingIcon={RiArrowRightUpLine}
-            onPress={openHorizon}
+            onPress={openHorizon} tone="accent" appearance="solid"
           >
             {t('horizon.page.steps.apply.title')}
           </Button>
@@ -160,7 +158,7 @@ export default function HorizonPage() {
         <View style={styles.section}>
           <H3>{t('horizon.page.storiesTitle')}</H3>
           {STORIES.map((story) => (
-            <Card key={story.name} variant="outlined" radius="radius-16" style={styles.storyCard}>
+            <Card key={story.name}  radius="radius-16" style={styles.storyCard} appearance="outline">
               <View style={styles.storyHeader}>
                 <Avatar name={story.name} initials={story.initials} size={40} />
                 <View>

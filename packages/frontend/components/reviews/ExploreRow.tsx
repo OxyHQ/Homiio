@@ -52,7 +52,7 @@ export const ExploreRow: React.FC<ExploreRowProps> = ({ title, subtitle, rating,
 export const ExploreList: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const rows = React.Children.toArray(children).filter(Boolean);
   return (
-    <Card variant="outlined" style={styles.list}>
+    <Card style={styles.list} appearance="outline">
       {rows.map((row, index) => (
         <React.Fragment key={(row as React.ReactElement).key ?? index}>
           {index > 0 ? <Divider spacing={0} /> : null}

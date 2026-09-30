@@ -233,7 +233,7 @@ export default function CreatePropertyScreen() {
       <View style={styles.container}>
         <Header options={{ title, showBackButton: true }} />
         <View style={styles.centeredState}>
-          <Loading size="large" text={t('propertyCreate.loading')} />
+          <Loading size="lg" text={t('propertyCreate.loading')} />
         </View>
       </View>
     );
@@ -278,10 +278,9 @@ export default function CreatePropertyScreen() {
           action={
             isEditMode ? undefined : (
               <Button
-                variant="secondary"
-                size="small"
+                size="sm"
                 onPress={() => void handleSaveDraft()}
-                testID="create-property-save-draft"
+                testID="create-property-save-draft" tone="neutral" appearance="outline"
               >
                 {t('propertyCreate.saveDraft')}
               </Button>

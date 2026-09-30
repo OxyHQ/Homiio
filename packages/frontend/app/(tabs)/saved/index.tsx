@@ -34,21 +34,19 @@ export default function SavedScreen() {
             ? [
                 <Button
                   key="notes"
-                  variant="ghost"
                   iconOnly
                   leadingIcon={RiFileTextLine}
                   accessibilityLabel={t('saved.notes.title')}
-                  onPress={() => router.push('/saved/notes')}
+                  onPress={() => router.push('/saved/notes')} tone="accent" appearance="subtle"
                 />,
                 // The alert history spans every saved search, so it lives on
                 // the page header; one search's settings open from its card.
                 <Button
                   key="alerts"
-                  variant="ghost"
                   iconOnly
                   leadingIcon={RiNotification3Line}
                   accessibilityLabel={t('alerts.history.title')}
-                  onPress={() => router.push('/saved/alerts')}
+                  onPress={() => router.push('/saved/alerts')} tone="accent" appearance="subtle"
                 />,
               ]
             : [],

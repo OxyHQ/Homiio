@@ -219,10 +219,10 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
       </View>
       {!hideActions ? (
         <View style={[styles.footerRow, { borderTopColor: theme.colors.border }]}>
-          <Button variant="ghost" size="medium" onPress={handleClear}>
+          <Button size="md" onPress={handleClear} tone="accent" appearance="subtle">
             {t('common.clear')}
           </Button>
-          <Button variant="primary" size="medium" onPress={handleApply} disabled={isIncomplete}>
+          <Button size="md" onPress={handleApply} disabled={isIncomplete} tone="accent" appearance="solid">
             {t('booking.calendar.apply', 'Apply')}
           </Button>
         </View>

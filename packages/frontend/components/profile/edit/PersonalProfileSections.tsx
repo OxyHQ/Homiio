@@ -312,7 +312,7 @@ export function PersonalProfileSections({
           <SectionHeader
             title={t('profile.edit.sections.references')}
             action={
-              <Button variant="secondary" size="small" leadingIcon={RiAddLine} onPress={addReference}>
+              <Button size="sm" leadingIcon={RiAddLine} onPress={addReference} tone="neutral" appearance="outline">
                 {t('profile.edit.actions.addReference')}
               </Button>
             }
@@ -321,16 +321,15 @@ export function PersonalProfileSections({
           {references.map((reference, index) => {
             const cardTitle = t('profile.edit.actions.referenceLabel', { index: index + 1 });
             return (
-              <Card key={index} variant="outlined" radius="radius-16" style={styles.entryCard}>
+              <Card key={index}  radius="radius-16" style={styles.entryCard} appearance="outline">
                 <SectionHeader
                   title={cardTitle}
                   action={
                     <Button
-                      variant="ghost"
-                      size="small"
+                      size="sm"
                       leadingIcon={RiDeleteBinLine}
                       accessibilityLabel={`${t('profile.edit.actions.remove')} ${cardTitle}`}
-                      onPress={() => removeReference(index)}
+                      onPress={() => removeReference(index)} tone="accent" appearance="subtle"
                     >
                       {t('profile.edit.actions.remove')}
                     </Button>
@@ -385,7 +384,7 @@ export function PersonalProfileSections({
           <SectionHeader
             title={t('profile.edit.sections.rentalHistory')}
             action={
-              <Button variant="secondary" size="small" leadingIcon={RiAddLine} onPress={addRentalHistory}>
+              <Button size="sm" leadingIcon={RiAddLine} onPress={addRentalHistory} tone="neutral" appearance="outline">
                 {t('profile.edit.actions.addHistory')}
               </Button>
             }
@@ -398,16 +397,15 @@ export function PersonalProfileSections({
                 landlordContact: { ...history.landlordContact, ...updates },
               });
             return (
-              <Card key={index} variant="outlined" radius="radius-16" style={styles.entryCard}>
+              <Card key={index}  radius="radius-16" style={styles.entryCard} appearance="outline">
                 <SectionHeader
                   title={cardTitle}
                   action={
                     <Button
-                      variant="ghost"
-                      size="small"
+                      size="sm"
                       leadingIcon={RiDeleteBinLine}
                       accessibilityLabel={`${t('profile.edit.actions.remove')} ${cardTitle}`}
-                      onPress={() => removeRentalHistory(index)}
+                      onPress={() => removeRentalHistory(index)} tone="accent" appearance="subtle"
                     >
                       {t('profile.edit.actions.remove')}
                     </Button>
@@ -495,8 +493,8 @@ export function PersonalProfileSections({
               rightElement={
                 <Switch
                   accessibilityLabel={t('profile.edit.toggles.emailNotifications')}
-                  value={settings.notifications.email}
-                  onValueChange={(email) =>
+                  checked={settings.notifications.email}
+                  onCheckedChange={(email) =>
                     updateSettings({ notifications: { ...settings.notifications, email } })
                   }
                 />
@@ -507,8 +505,8 @@ export function PersonalProfileSections({
               rightElement={
                 <Switch
                   accessibilityLabel={t('profile.edit.toggles.pushNotifications')}
-                  value={settings.notifications.push}
-                  onValueChange={(push) =>
+                  checked={settings.notifications.push}
+                  onCheckedChange={(push) =>
                     updateSettings({ notifications: { ...settings.notifications, push } })
                   }
                 />
@@ -524,8 +522,8 @@ export function PersonalProfileSections({
                 rightElement={
                   <Switch
                     accessibilityLabel={t(label)}
-                    value={settings.privacy[key]}
-                    onValueChange={(value) =>
+                    checked={settings.privacy[key]}
+                    onCheckedChange={(value) =>
                       updateSettings({ privacy: { ...settings.privacy, [key]: value } })
                     }
                   />

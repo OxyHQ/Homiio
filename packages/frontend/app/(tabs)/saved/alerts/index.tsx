@@ -151,12 +151,11 @@ function AlertRow({ alert }: { readonly alert: HousingAlert }) {
 
   return (
     <Card
-      variant="outlined"
       radius="radius-16"
       onPress={() => router.push(`/saved/alerts/${alert.id}`)}
       accessibilityRole="button"
       accessibilityLabel={t('alerts.history.openReason')}
-      style={styles.row}
+      style={styles.row} appearance="outline"
     >
       <View style={styles.rowHeader}>
         <RiMapPinLine width={ICON_SIZE} height={ICON_SIZE} fill={theme.colors.textSecondary} />

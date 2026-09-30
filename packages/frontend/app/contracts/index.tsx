@@ -277,11 +277,10 @@ export default function ContractsScreen() {
 
   const newContractButton = (
     <Button
-      variant="primary"
-      size={showTable ? 'medium' : 'large'}
+      size={showTable ? 'md' : 'lg'}
       onPress={handleAddNewContract}
       leadingIcon={RiAddLine}
-      style={showTable ? undefined : styles.footerButton}
+      style={showTable ? undefined : styles.footerButton} tone="accent" appearance="solid"
     >
       {t('contracts.list.newContract')}
     </Button>

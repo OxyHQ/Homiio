@@ -412,7 +412,7 @@ export default function BookViewingPage() {
           }}
         />
         <View style={styles.loadingContainer}>
-          <Loading variant="spinner" size="large" text={t('property.loading')} />
+          <Loading variant="spinner" size="lg" text={t('property.loading')} />
         </View>
       </SafeAreaView>
     );
@@ -428,7 +428,7 @@ export default function BookViewingPage() {
       />
 
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-        <Card variant="outlined" radius="radius-16">
+        <Card radius="radius-16" appearance="outline">
           <CardHeader>
             <CardTitle>{property.title}</CardTitle>
             {property.location ? (
@@ -441,7 +441,7 @@ export default function BookViewingPage() {
         </Card>
 
         {availabilityQuery.isLoading ? (
-          <Loading variant="spinner" size="small" text={t('viewings.loadingSlots')} />
+          <Loading variant="spinner" size="sm" text={t('viewings.loadingSlots')} />
         ) : null}
 
         {/*
@@ -559,10 +559,9 @@ export default function BookViewingPage() {
         <Button
           leadingIcon={RiCalendarLine}
           onPress={handleSubmit}
-          variant="primary"
-          size="large"
+          size="lg"
           disabled={!selectedDate || !activeTime || submitting}
-          loading={submitting}
+          loading={submitting} tone="accent" appearance="solid"
         >
           {isModifyMode ? t('viewings.actions.modify') : t('properties.bookViewing')}
         </Button>

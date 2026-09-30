@@ -69,10 +69,11 @@ const TierCard: React.FC<TierCardProps> = ({
   const tint = TIER_TINTS[tier.key];
   return (
     <Card
-      variant="outlined"
       radius="radius-16"
       className="gap-3 p-5"
-      style={[{ width }, isCurrent && { borderColor: theme.colors.primary, borderWidth: 2 }]}
+      border={isCurrent ? 'medium' : undefined}
+      style={[{ width }, isCurrent && { borderColor: theme.colors.primary }]}
+      appearance="outline"
     >
       <View style={[styles.medal, { backgroundColor: `${tint}22` }]}>
         <RiVipCrownLine width={24} height={24} fill={tint} />

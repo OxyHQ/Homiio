@@ -99,20 +99,18 @@ export function UpcomingTripsSection({
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
           {hasStays ? (
             <Button
-              variant="ghost"
-              size="small"
+              size="sm"
               trailingIcon={RiArrowRightSLine}
-              onPress={() => router.push('/stays')}
+              onPress={() => router.push('/stays')} tone="accent" appearance="subtle"
             >
               {t('saved.trips.allStays')}
             </Button>
           ) : null}
           {hasSwaps ? (
             <Button
-              variant="ghost"
-              size="small"
+              size="sm"
               trailingIcon={RiArrowRightSLine}
-              onPress={() => router.push('/exchange/requests')}
+              onPress={() => router.push('/exchange/requests')} tone="accent" appearance="subtle"
             >
               {t('saved.trips.allSwaps')}
             </Button>

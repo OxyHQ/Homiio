@@ -72,11 +72,10 @@ export const SortMenu: React.FC<SortMenuProps> = ({ sortBy, sortOrder, onChange,
     <DropdownMenu>
       <DropdownMenuTrigger asChild label={`${sortWord}: ${activeLabel}`}>
         <Button
-          variant="outline"
-          size="medium"
+          size="md"
           icon={RiExpandUpDownLine}
           iconOnly={iconOnly}
-          accessibilityLabel={`${sortWord}: ${activeLabel}`}
+          accessibilityLabel={`${sortWord}: ${activeLabel}`} tone="neutral" appearance="outline"
         >
           {iconOnly ? undefined : isDefault ? sortWord : activeLabel}
         </Button>

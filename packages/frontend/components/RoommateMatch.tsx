@@ -88,7 +88,7 @@ export const RoommateMatch: React.FC<RoommateMatchProps> = ({
   const iconFill = theme.colors.textSecondary;
 
   return (
-    <Card variant="outlined" radius="radius-16" style={styles.card}>
+    <Card radius="radius-16" style={styles.card} appearance="outline">
       <View style={styles.header}>
         <Avatar
           name={displayName}
@@ -100,7 +100,7 @@ export const RoommateMatch: React.FC<RoommateMatchProps> = ({
           <H3 numberOfLines={1}>{displayName}</H3>
           {profile.matchScore ? (
             <View style={styles.matchRow}>
-              <Chip size="small" variant="subtle" color={matchTone(profile.matchScore)}>
+              <Chip size="sm" variant="subtle" color={matchTone(profile.matchScore)}>
                 {t('roommates.match.compatibility', { score: profile.matchScore })}
               </Chip>
               <BloomText style={[styles.matchLabel, { color: theme.colors.textSecondary }]}>
@@ -110,7 +110,7 @@ export const RoommateMatch: React.FC<RoommateMatchProps> = ({
           ) : null}
         </View>
 
-        <FollowButton userId={profile.oxyUserId} size="small" />
+        <FollowButton userId={profile.oxyUserId} size="sm" />
       </View>
 
       {profile.personalProfile?.personalInfo?.bio ? (
@@ -189,9 +189,8 @@ export const RoommateMatch: React.FC<RoommateMatchProps> = ({
 
       <View style={styles.actions}>
         <Button
-          variant="ghost"
           leadingIcon={RiEyeLine}
-          onPress={() => onViewProfile(profile.id)}
+          onPress={() => onViewProfile(profile.id)} tone="accent" appearance="subtle"
         >
           {t('roommates.match.viewProfile')}
         </Button>
@@ -199,9 +198,8 @@ export const RoommateMatch: React.FC<RoommateMatchProps> = ({
         <Button
           leadingIcon={showMessageInput ? RiSendPlaneLine : RiUserAddLine}
           onPress={handleSendRequest}
-          variant="primary"
           loading={isLoading}
-          style={styles.sendRequestButton}
+          style={styles.sendRequestButton} tone="accent" appearance="solid"
         >
           {t('roommates.match.sendRequest')}
         </Button>

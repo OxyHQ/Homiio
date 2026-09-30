@@ -62,9 +62,9 @@ const TipCard: React.FC<TipCardProps> = ({ tip, onPress, featured = false }) => 
       accessibilityLabel={tip.title}
     >
       <Card
-        variant="filled"
         radius={featured ? 'radius-24' : 'radius-16'}
-        style={styles.tipCard}
+        clipContent
+        appearance="subtle"
       >
         <View style={[styles.tipImageContainer, featured && styles.tipImageFeatured]}>
           {tip.coverImageUrl ? (
@@ -294,9 +294,6 @@ const styles = StyleSheet.create({
   gridItem: {
     width: '48%',
     flexGrow: 1,
-  },
-  tipCard: {
-    overflow: 'hidden',
   },
   tipImageContainer: {
     position: 'relative',

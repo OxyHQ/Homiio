@@ -218,11 +218,10 @@ export default function MaintenanceRequestScreen(): React.ReactElement {
               {(request.availableTransitions ?? []).map((status) => (
                 <Button
                   key={status}
-                  variant="secondary"
-                  size="small"
+                  size="sm"
                   disabled={transition.isPending}
                   onPress={() => act(status)}
-                  accessibilityLabel={t(ACTION_KEY[status])}
+                  accessibilityLabel={t(ACTION_KEY[status])} tone="neutral" appearance="outline"
                 >
                   {t(ACTION_KEY[status])}
                 </Button>
@@ -243,15 +242,14 @@ export default function MaintenanceRequestScreen(): React.ReactElement {
             attachments.map((attachment) => (
               <Button
                 key={attachment.id}
-                variant="secondary"
-                size="small"
+                size="sm"
                 disabled={openingId !== null}
                 loading={openingId === attachment.id}
                 onPress={() => view(attachment.id, attachment.downloadPath)}
                 accessibilityLabel={t('maintenance.photos.openAccessible', {
                   role: t(`maintenance.role.${attachment.role}`),
                   date: formatLocalized(new Date(attachment.createdAt), 'd MMM, HH:mm'),
-                })}
+                })} tone="neutral" appearance="outline"
               >
                 {t('maintenance.photos.row', {
                   role: t(`maintenance.role.${attachment.role}`),
@@ -262,12 +260,11 @@ export default function MaintenanceRequestScreen(): React.ReactElement {
           )}
           {attachments.length < MAINTENANCE_PHOTOS_MAX ? (
             <Button
-              variant="secondary"
-              size="small"
+              size="sm"
               disabled={attach.isPending}
               loading={attach.isPending}
               onPress={addPhoto}
-              accessibilityLabel={t('maintenance.photos.addAccessible')}
+              accessibilityLabel={t('maintenance.photos.addAccessible')} tone="neutral" appearance="outline"
             >
               {t('maintenance.photos.add')}
             </Button>
@@ -306,12 +303,11 @@ export default function MaintenanceRequestScreen(): React.ReactElement {
         </Field>
         <View style={styles.actions}>
           <Button
-            variant="primary"
-            size="medium"
+            size="md"
             disabled={draft.trim().length === 0 || comment.isPending}
             loading={comment.isPending}
             onPress={send}
-            accessibilityLabel={t('maintenance.comments.sendAccessible')}
+            accessibilityLabel={t('maintenance.comments.sendAccessible')} tone="accent" appearance="solid"
           >
             {t('maintenance.comments.send')}
           </Button>
@@ -329,10 +325,9 @@ export default function MaintenanceRequestScreen(): React.ReactElement {
 
         <View style={styles.actions}>
           <Button
-            variant="ghost"
-            size="small"
+            size="sm"
             onPress={() => router.replace('/my-home')}
-            accessibilityLabel={t('maintenance.report.goToMyHome')}
+            accessibilityLabel={t('maintenance.report.goToMyHome')} tone="accent" appearance="subtle"
           >
             {t('maintenance.report.goToMyHome')}
           </Button>

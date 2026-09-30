@@ -43,16 +43,15 @@ export function FullscreenMapModal({
       <View style={styles.fullscreenMapContainer}>
         <View style={[styles.fullscreenMapHeader, { paddingTop: insets.top + 12 }]}>
           <Button
-            variant="ghost"
             iconOnly
             leadingIcon={RiCloseLine}
             onPress={onClose}
-            accessibilityLabel={t('common.close')}
+            accessibilityLabel={t('common.close')} tone="accent" appearance="subtle"
           />
           <H4 style={styles.fullscreenMapTitle}>
             {t('propertyCreate.location.mapPickerTitle', 'Select Location')}
           </H4>
-          <Button size="small" onPress={onClose}>
+          <Button size="sm" onPress={onClose}>
             {t('common.confirm')}
           </Button>
         </View>

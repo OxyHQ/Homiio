@@ -47,7 +47,7 @@ export const ExchangeRequestCard: React.FC<ExchangeRequestCardProps> = ({
       : t('listing.exchange.mode.host');
 
   return (
-    <Card variant="outlined" radius="radius-16" style={styles.card}>
+    <Card radius="radius-16" style={styles.card} appearance="outline">
       <Pressable
         style={styles.row}
         onPress={() => router.push(`/exchange/${request.id}`)}
