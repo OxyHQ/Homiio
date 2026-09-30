@@ -35,7 +35,7 @@ Homiio users can:
 - 🏡 List and browse rental properties.
 - ✅ Verify identity as landlords or tenants.
 - 🌟 Leave and view ratings/reviews for landlords and tenants.
-- ⚖️ Maintain a trust-based **karma system** for ethical rentals.
+- ⚖️ Build trust through **Oxy reputation** for ethical rentals.
 - 💰 Process **secure payments**, including transactions via **FairCoin**.
 - 🔍 Detect fraudulent listings with built-in security alerts.
 - 📜 Manage rental contracts and documentation verification.
