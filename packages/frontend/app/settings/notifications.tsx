@@ -311,8 +311,8 @@ export default function NotificationSettingsScreen() {
               description={row.description}
               rightElement={
                 <Switch
-                  value={preferences[row.key]}
-                  onValueChange={(value) =>
+                  checked={preferences[row.key]}
+                  onCheckedChange={(value) =>
                     handlePreferenceChange(row.key, value)
                   }
                   disabled={isUpdating}
@@ -333,8 +333,8 @@ export default function NotificationSettingsScreen() {
               description={row.description}
               rightElement={
                 <Switch
-                  value={preferences[row.key]}
-                  onValueChange={(value) =>
+                  checked={preferences[row.key]}
+                  onCheckedChange={(value) =>
                     handlePreferenceChange(row.key, value)
                   }
                   disabled={isUpdating}

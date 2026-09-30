@@ -257,11 +257,10 @@ export function ImageUpload({
 
       {IS_NATIVE ? (
         <Button
-          variant="secondary"
           leadingIcon={RiCameraLine}
           onPress={() => void takePhoto()}
           disabled={disabled || atLimit}
-          style={styles.cameraButton}
+          style={styles.cameraButton} tone="neutral" appearance="outline"
         >
           {t('imageUpload.takePhoto')}
         </Button>

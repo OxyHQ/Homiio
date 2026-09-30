@@ -49,7 +49,7 @@ export function SavedSearchesWidget() {
           <BloomText className="text-center text-[15px] font-semibold text-foreground">
             {t('search.widgets.savedSearches.signInPrompt')}
           </BloomText>
-          <Button variant="primary" size="medium" onPress={() => openAccountDialog('signin')}>
+          <Button size="md" onPress={() => openAccountDialog('signin')} tone="accent" appearance="solid">
             {t('search.widgets.common.signIn')}
           </Button>
         </StateBlock>
@@ -68,9 +68,8 @@ export function SavedSearchesWidget() {
             {t('search.widgets.savedSearches.loadError')}
           </BloomText>
           <Button
-            variant="secondary"
-            size="medium"
-            onPress={() => queryClient.invalidateQueries({ queryKey: ['savedSearches'] })}
+            size="md"
+            onPress={() => queryClient.invalidateQueries({ queryKey: ['savedSearches'] })} tone="neutral" appearance="outline"
           >
             {t('common.retry')}
           </Button>
@@ -90,7 +89,7 @@ export function SavedSearchesWidget() {
               {t('search.widgets.savedSearches.emptyHelper')}
             </BloomText>
           </View>
-          <Button variant="primary" size="medium" onPress={() => router.push('/explore')}>
+          <Button size="md" onPress={() => router.push('/explore')} tone="accent" appearance="solid">
             {t('search.widgets.savedSearches.createNew')}
           </Button>
         </StateBlock>
@@ -102,7 +101,7 @@ export function SavedSearchesWidget() {
       <View className="gap-3">
         <SavedSearchCards searches={searches.slice(0, PREVIEW_COUNT)} />
         {remaining > 0 ? (
-          <Button variant="ghost" size="medium" onPress={() => router.push('/saved')}>
+          <Button size="md" onPress={() => router.push('/saved')} tone="accent" appearance="subtle">
             {t('search.widgets.savedSearches.viewAllCount', { count: remaining })}
           </Button>
         ) : null}

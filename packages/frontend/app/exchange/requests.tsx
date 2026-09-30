@@ -99,20 +99,18 @@ const HostPendingActions: React.FC<{ request: ExchangeRequest }> = ({ request })
   return (
     <>
       <Button
-        variant="primary"
-        size="small"
+        size="sm"
         loading={busy === 'confirm'}
         disabled={mutation.isPending}
-        onPress={() => handle(ExchangeRequestStatus.CONFIRMED)}
+        onPress={() => handle(ExchangeRequestStatus.CONFIRMED)} tone="accent" appearance="solid"
       >
         {t('listing.exchange.actions.approve')}
       </Button>
       <Button
-        variant="secondary"
-        size="small"
+        size="sm"
         loading={busy === 'decline'}
         disabled={mutation.isPending}
-        onPress={() => handle(ExchangeRequestStatus.DECLINED)}
+        onPress={() => handle(ExchangeRequestStatus.DECLINED)} tone="neutral" appearance="outline"
       >
         {t('listing.exchange.actions.decline')}
       </Button>

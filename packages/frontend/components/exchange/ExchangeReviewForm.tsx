@@ -73,7 +73,7 @@ export const ExchangeReviewForm: React.FC<ExchangeReviewFormProps> = ({
       <RatingInput
         value={rating > 0 ? rating : null}
         onChange={setRating}
-        size="large"
+        size="lg"
         accessibilityLabel={t('listing.exchange.review.ratingLabel')}
         formatStarLabel={(star) => t('listing.exchange.review.starLabel', { count: star })}
         testID="exchange-review-rating"
@@ -88,12 +88,11 @@ export const ExchangeReviewForm: React.FC<ExchangeReviewFormProps> = ({
         maxLength={MAX_COMMENT}
       />
       <Button
-        variant="primary"
-        size="medium"
+        size="md"
         onPress={handleSubmit}
         loading={mutation.isPending}
         disabled={mutation.isPending}
-        style={styles.submit}
+        style={styles.submit} tone="accent" appearance="solid"
       >
         {t('listing.exchange.review.submit')}
       </Button>

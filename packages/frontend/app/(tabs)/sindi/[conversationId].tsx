@@ -121,7 +121,7 @@ export default function ConversationDetail() {
       <View style={styles.container}>
         <Header options={{ title: t('sindi.conversation.loading'), showBackButton: true }} />
         <Loading
-          size="large"
+          size="lg"
           text={t('sindi.conversation.loadingMessage')}
           style={styles.loading}
         />
@@ -139,11 +139,10 @@ export default function ConversationDetail() {
           rightComponents: [
             <Button
               key="share"
-              variant="icon"
               iconOnly
               leadingIcon={RiShare2Line}
               onPress={handleShare}
-              accessibilityLabel={t('common.share')}
+              accessibilityLabel={t('common.share')} tone="neutral" appearance="outline"
             />,
           ],
         }}

@@ -183,7 +183,7 @@ export default function ReservationDetailScreen() {
       <View style={styles.root}>
         {header}
         <View style={styles.centerWrap}>
-          <Loading variant="spinner" size="medium" />
+          <Loading variant="spinner" size="md" />
         </View>
       </View>
     );
@@ -234,7 +234,7 @@ export default function ReservationDetailScreen() {
             )}
           </View>
 
-          <Card variant="outlined" radius="radius-16" className="p-5">
+          <Card radius="radius-16" className="p-5" appearance="outline">
             <View style={styles.headerRow}>
               <H2 style={styles.title}>{propertyTitle}</H2>
               <ReservationStatusBadge status={reservation.status} />
@@ -248,7 +248,7 @@ export default function ReservationDetailScreen() {
             ) : null}
           </Card>
 
-          <Card variant="outlined" radius="radius-16" className="p-5">
+          <Card radius="radius-16" className="p-5" appearance="outline">
             <BloomText style={styles.sectionLabel}>{t('reservations.detail.tripDetails')}</BloomText>
             <DetailRow
               label={t('reservations.detail.checkIn')}
@@ -269,7 +269,7 @@ export default function ReservationDetailScreen() {
             <DetailRow label={t('reservations.detail.nights')} value={String(reservation.nights)} />
           </Card>
 
-          <Card variant="outlined" radius="radius-16" className="p-5">
+          <Card radius="radius-16" className="p-5" appearance="outline">
             <BloomText style={styles.sectionLabel}>{t('reservations.detail.price')}</BloomText>
             <PriceBreakdown
               nights={reservation.nights}
@@ -296,20 +296,18 @@ export default function ReservationDetailScreen() {
               {showHostApproveDecline ? (
                 <>
                   <Button
-                    variant="primary"
-                    size="medium"
+                    size="md"
                     onPress={() => void confirmAction('confirm')}
                     disabled={updateMutation.isPending}
-                    style={styles.actionButton}
+                    style={styles.actionButton} tone="accent" appearance="solid"
                   >
                     {t('reservations.detail.approve')}
                   </Button>
                   <Button
-                    variant="secondary"
-                    size="medium"
+                    size="md"
                     onPress={() => void confirmAction('decline')}
                     disabled={updateMutation.isPending}
-                    style={styles.actionButton}
+                    style={styles.actionButton} tone="neutral" appearance="outline"
                   >
                     {t('reservations.detail.decline')}
                   </Button>
@@ -317,11 +315,10 @@ export default function ReservationDetailScreen() {
               ) : null}
               {showGuestCancel || showHostCancel ? (
                 <Button
-                  variant="ghost"
-                  size="medium"
+                  size="md"
                   onPress={() => void confirmAction('cancel')}
                   disabled={updateMutation.isPending}
-                  style={styles.actionButton}
+                  style={styles.actionButton} tone="accent" appearance="subtle"
                 >
                   {t('reservations.detail.cancelReservation')}
                 </Button>

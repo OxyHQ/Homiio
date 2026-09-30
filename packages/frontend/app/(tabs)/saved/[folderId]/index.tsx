@@ -187,10 +187,9 @@ export default function SavedFolderScreen() {
             : [
                 <Button
                   key="editFolder"
-                  variant="ghost"
-                  size="small"
+                  size="sm"
                   onPress={() => router.push(`/saved/${folderId}/edit`)}
-                  leadingIcon={RiEditLine}
+                  leadingIcon={RiEditLine} tone="accent" appearance="subtle"
                 >
                   {t('common.edit')}
                 </Button>,

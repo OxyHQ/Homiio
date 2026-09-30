@@ -180,9 +180,8 @@ export default function ProfileScreen() {
 
             <View style={styles.heroActions}>
               <Button
-                variant="secondary"
-                size="medium"
-                onPress={() => router.push('/profile/edit')}
+                size="md"
+                onPress={() => router.push('/profile/edit')} tone="neutral" appearance="outline"
               >
                 {t('profile.actions.editProfile')}
               </Button>
@@ -290,12 +289,11 @@ const StatTile: React.FC<StatTileProps> = ({ label, value, description, onPress 
   return (
     <View style={styles.statTile}>
       <Card
-        variant="outlined"
         radius="radius-16"
         className="p-4"
         onPress={onPress}
         accessibilityRole={onPress ? 'button' : undefined}
-        accessibilityLabel={onPress ? `${label}: ${value}. Open ${label.toLowerCase()}` : undefined}
+        accessibilityLabel={onPress ? `${label}: ${value}. Open ${label.toLowerCase()}` : undefined} appearance="outline"
       >
         <H2 style={styles.statValue}>{value}</H2>
         <BloomText style={styles.statLabel}>{label}</BloomText>

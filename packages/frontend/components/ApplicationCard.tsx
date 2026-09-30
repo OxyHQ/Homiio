@@ -84,12 +84,11 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
 
   return (
     <Card
-      variant="outlined"
       radius="radius-16"
       style={styles.card}
       onPress={handlePress}
       accessibilityRole="button"
-      accessibilityLabel={t('applications.card.accessibility', { id: application.id })}
+      accessibilityLabel={t('applications.card.accessibility', { id: application.id })} appearance="outline"
     >
       <View style={styles.row}>
         <View style={styles.thumb}><ThumbnailImage source={imageSource} /></View>

@@ -51,7 +51,7 @@ export const EvictionResources: React.FC<EvictionResourcesProps> = ({
   const { t } = useTranslation();
 
   if (isLoading) {
-    return <Loading variant="inline" size="small" text={t('evictions.resources.loading')} />;
+    return <Loading variant="inline" size="sm" text={t('evictions.resources.loading')} />;
   }
   if (isError) {
     return <BloomText style={styles.state}>{t('evictions.resources.error')}</BloomText>;

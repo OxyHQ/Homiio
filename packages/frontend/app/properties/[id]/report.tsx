@@ -185,7 +185,7 @@ export default function ReportListingScreen() {
           </Text>
 
           {property ? (
-            <Card variant="outlined" radius="radius-16">
+            <Card radius="radius-16" appearance="outline">
               <CardHeader>
                 <CardTitle>{propertyTitle}</CardTitle>
                 <CardDescription>
@@ -252,8 +252,7 @@ export default function ReportListingScreen() {
             onPress={handleSubmit}
             disabled={!formIsValid || isSubmitting}
             loading={isSubmitting}
-            variant="primary"
-            size="large"
+            size="lg" tone="accent" appearance="solid"
           >
             {t('property.report.actions.submit')}
           </Button>

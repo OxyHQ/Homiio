@@ -262,7 +262,7 @@ export default function ContractDetailScreen() {
       <View style={[styles.root, { backgroundColor: colors.background }]}>
         {header}
         <View style={styles.centerWrap}>
-          <Loading variant="spinner" size="medium" />
+          <Loading variant="spinner" size="md" />
         </View>
       </View>
     );
@@ -331,30 +331,27 @@ export default function ContractDetailScreen() {
       <>
         {canSign ? (
           <Button
-            variant="primary"
-            size="small"
+            size="sm"
             onPress={() => void confirmAction('sign')}
-            disabled={busy}
+            disabled={busy} tone="accent" appearance="solid"
           >
             {t('contracts.detail.signLease')}
           </Button>
         ) : null}
         {canTerminate ? (
           <Button
-            variant="secondary"
-            size="small"
+            size="sm"
             onPress={() => void confirmAction('terminate')}
-            disabled={busy}
+            disabled={busy} tone="neutral" appearance="outline"
           >
             {t('contracts.detail.terminate')}
           </Button>
         ) : null}
         {canDelete ? (
           <Button
-            variant="ghost"
-            size="small"
+            size="sm"
             onPress={() => void confirmAction('delete')}
-            disabled={busy}
+            disabled={busy} tone="accent" appearance="subtle"
           >
             {t('contracts.detail.deleteDraft')}
           </Button>
@@ -400,12 +397,11 @@ export default function ContractDetailScreen() {
           // the people this change lets sign.
           role !== null ? (
             <Button
-              variant="secondary"
-              size="small"
+              size="sm"
               onPress={handleAddDocument}
               disabled={uploadMutation.isPending}
               loading={uploadMutation.isPending}
-              leadingIcon={RiAddLine}
+              leadingIcon={RiAddLine} tone="neutral" appearance="outline"
             >
               {t('contracts.detail.addShort')}
             </Button>

@@ -167,12 +167,11 @@ export default function ReportRepairScreen(): React.ReactElement {
 
         <View style={styles.footer}>
           <Button
-            variant="primary"
-            size="medium"
+            size="md"
             disabled={!canSubmit}
             loading={report.isPending}
             onPress={submit}
-            accessibilityLabel={t('maintenance.report.submitAccessible')}
+            accessibilityLabel={t('maintenance.report.submitAccessible')} tone="accent" appearance="solid"
           >
             {t('maintenance.report.submit')}
           </Button>

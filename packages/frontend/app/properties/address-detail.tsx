@@ -50,7 +50,7 @@ export default function AddressDetailExample() {
         style={styles.addressCard}
       />
 
-      <Button variant="primary" size="large" onPress={handleNavigateToAddressDetail}>
+      <Button size="lg" onPress={handleNavigateToAddressDetail} tone="accent" appearance="solid">
         View Address Details
       </Button>
     </View>

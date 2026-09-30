@@ -303,7 +303,7 @@ export default function HomePage() {
           {surface === 'failed' ? (
             <View className={`gap-2 ${PAGE_GUTTER_CLASS}`}>
               <P className="text-sm text-muted-foreground">{t('home.sections.error')}</P>
-              <Button variant="secondary" size="medium" onPress={onRefresh} accessibilityLabel={t('common.retry')}>
+              <Button size="md" onPress={onRefresh} accessibilityLabel={t('common.retry')} tone="neutral" appearance="outline">
                 {t('common.retry')}
               </Button>
             </View>
@@ -325,19 +325,17 @@ export default function HomePage() {
               <P className="text-sm text-muted-foreground">{t('home.empty.body')}</P>
               <View className="flex-row flex-wrap gap-3">
                 <Button
-                  variant="secondary"
-                  size="medium"
+                  size="md"
                   onPress={openExplore}
-                  accessibilityLabel={t('home.empty.changeFiltersAccessible')}
+                  accessibilityLabel={t('home.empty.changeFiltersAccessible')} tone="neutral" appearance="outline"
                 >
                   {t('home.empty.changeFilters')}
                 </Button>
                 {scope.isGlobal ? null : (
                   <Button
-                    variant="secondary"
-                    size="medium"
+                    size="md"
                     onPress={scope.exploreGlobal}
-                    accessibilityLabel={t('location.scope.exploreGlobalAccessible')}
+                    accessibilityLabel={t('location.scope.exploreGlobalAccessible')} tone="neutral" appearance="outline"
                   >
                     {t('location.scope.exploreGlobal')}
                   </Button>
@@ -387,11 +385,10 @@ export default function HomePage() {
             </H1>
             <View className="flex-row">
               <Button
-                variant="primary"
-                size="medium"
+                size="md"
                 onPress={openExplore}
                 disabled={exploreScopedHref === null}
-                accessibilityLabel={t('home.explore.ctaAccessible')}
+                accessibilityLabel={t('home.explore.ctaAccessible')} tone="accent" appearance="solid"
               >
                 {t('home.explore.cta')}
               </Button>

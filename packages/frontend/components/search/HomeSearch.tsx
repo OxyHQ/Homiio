@@ -69,7 +69,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 
-import { Button, CloseButton } from '@oxy.so/bloom/button';
+import { Button, CloseButton, LinkButton } from '@oxy.so/bloom/button';
 import { Dialog } from '@oxy.so/bloom/dialog';
 import { HomeSearchBar, SearchModeTabs, type HomeSearchSegment } from '@oxy.so/bloom/home-search';
 import { RiSearchLine } from '@oxy.so/bloom/icons';
@@ -829,15 +829,14 @@ export function HomeSearch({
               { borderTopColor: colors.border, paddingBottom: spacing.md + insets.bottom },
             ]}
           >
-            <Button variant="link" onPress={handleClear} accessibilityLabel={t('search.actions.clearAll')}>
+            <LinkButton onPress={handleClear} accessibilityLabel={t('search.actions.clearAll')}>
               {t('search.actions.clearAll')}
-            </Button>
+            </LinkButton>
             <Button
-              variant="primary"
-              size="large"
+              size="lg"
               icon={RiSearchLine}
               onPress={handleSubmit}
-              accessibilityLabel={t('search.actions.search')}
+              accessibilityLabel={t('search.actions.search')} tone="accent" appearance="solid"
             >
               {t('search.actions.search')}
             </Button>

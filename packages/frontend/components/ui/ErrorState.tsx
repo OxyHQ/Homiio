@@ -52,7 +52,7 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
       ) : null}
       {onRetry ? (
         <View style={styles.action}>
-          <Button onPress={onRetry} variant="primary" size="medium">
+          <Button onPress={onRetry}  size="md" tone="accent" appearance="solid">
             {retryLabel}
           </Button>
         </View>

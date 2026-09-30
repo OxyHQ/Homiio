@@ -79,7 +79,7 @@ export const StepManagement: React.FC<StepProps> = ({ data, update }) => {
           />
         </Field>
         {showSuggestions ? (
-          <Card variant="outlined" radius="radius-12" style={styles.results}>
+          <Card radius="radius-12" style={styles.results} appearance="outline">
             {results.map((agency) => (
               <Item
                 key={agency.id}

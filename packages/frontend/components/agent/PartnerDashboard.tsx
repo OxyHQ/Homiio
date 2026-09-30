@@ -128,7 +128,7 @@ const ListSection: React.FC<ListSectionProps> = ({
         {title}
       </BloomText>
       {loading ? (
-        <Loading size="small" />
+        <Loading size="sm" />
       ) : isEmpty ? (
         <BloomText variant="body-regular" style={{ color: theme.colors.textSecondary }}>
           {emptyText}
@@ -237,9 +237,8 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({
   return (
     <View style={{ paddingHorizontal: horizontalPadding }}>
       <Card
-        variant="outlined"
         radius="radius-24"
-        className="w-full max-w-[720px] self-center gap-6 p-6"
+        className="w-full max-w-[720px] self-center gap-6 p-6" appearance="outline"
       >
         <H2 style={{ color: theme.colors.text }}>{t('agent.dashboard.title')}</H2>
 

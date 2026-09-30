@@ -397,7 +397,7 @@ export default function ApplyToRentScreen() {
       <SafeAreaView style={styles.scrollWrapper} edges={['bottom']}>
         <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
           {property && (
-            <Card variant="outlined" radius="radius-16">
+            <Card radius="radius-16" appearance="outline">
               <CardHeader>
                 <CardTitle>{propertyTitle}</CardTitle>
                 <CardDescription>
@@ -507,19 +507,18 @@ export default function ApplyToRentScreen() {
             description={t('applications.section.referencesHelp')}
           >
             {references.map((reference, index) => (
-              <Card key={index} variant="filled" radius="radius-12" style={styles.referenceCard}>
+              <Card key={index}  radius="radius-12" style={styles.referenceCard} appearance="subtle">
                 <View style={styles.referenceHeader}>
                   <Text style={styles.referenceTitle}>
                     {t('applications.field.referenceIndex', { index: index + 1 })}
                   </Text>
                   {references.length > 1 && (
                     <Button
-                      variant="ghost"
-                      size="small"
+                      size="sm"
                       iconOnly
                       leadingIcon={RiCloseLine}
                       onPress={() => handleRemoveReference(index)}
-                      accessibilityLabel={t('applications.field.removeReference')}
+                      accessibilityLabel={t('applications.field.removeReference')} tone="accent" appearance="subtle"
                     />
                   )}
                 </View>
@@ -573,10 +572,9 @@ export default function ApplyToRentScreen() {
             ))}
             {references.length < 3 && (
               <Button
-                variant="secondary"
                 onPress={handleAddReference}
                 leadingIcon={RiAddLine}
-                style={styles.secondaryAction}
+                style={styles.secondaryAction} tone="neutral" appearance="outline"
               >
                 {t('applications.field.addReference')}
               </Button>
@@ -588,18 +586,17 @@ export default function ApplyToRentScreen() {
             description={t('applications.section.documentsHelp', { max: MAX_DOCUMENTS })}
           >
             <Button
-              variant="secondary"
               onPress={handlePickDocuments}
               disabled={documents.length >= MAX_DOCUMENTS}
               leadingIcon={RiUploadCloud2Line}
-              style={styles.secondaryAction}
+              style={styles.secondaryAction} tone="neutral" appearance="outline"
             >
               {t('applications.field.pickDocuments')}
             </Button>
             {documents.map((doc) => {
               const DocIcon = doc.mimeType?.startsWith('image/') ? RiImageLine : RiFileTextLine;
               return (
-                <Card key={doc.id} variant="filled" radius="radius-12" style={styles.documentCard}>
+                <Card key={doc.id}  radius="radius-12" style={styles.documentCard} appearance="subtle">
                   <Item
                     density="compact"
                     leading={<DocIcon width={20} height={20} fill={theme.colors.primary} />}
@@ -607,12 +604,11 @@ export default function ApplyToRentScreen() {
                     subtitle={formatDocumentSize(doc.sizeBytes) ?? undefined}
                     trailing={
                       <Button
-                        variant="ghost"
-                        size="small"
+                        size="sm"
                         iconOnly
                         leadingIcon={RiCloseLine}
                         onPress={() => handleRemoveDocument(doc.id)}
-                        accessibilityLabel={t('applications.field.removeDocument')}
+                        accessibilityLabel={t('applications.field.removeDocument')} tone="accent" appearance="subtle"
                       />
                     }
                   />
@@ -653,8 +649,7 @@ export default function ApplyToRentScreen() {
             onPress={handleSubmit}
             disabled={!formIsValid || isSubmitting}
             loading={isSubmitting}
-            variant="primary"
-            size="large"
+            size="lg" tone="accent" appearance="solid"
           >
             {t('applications.actions.submit')}
           </Button>
@@ -670,7 +665,7 @@ function Section({
   children,
 }: React.PropsWithChildren<{ title: string; description?: string }>) {
   return (
-    <Card variant="outlined" radius="radius-16">
+    <Card radius="radius-16" appearance="outline">
       <CardHeader>
         <CardTitle>{title}</CardTitle>
         {description ? <CardDescription>{description}</CardDescription> : null}

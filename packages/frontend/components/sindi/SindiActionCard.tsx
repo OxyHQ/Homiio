@@ -143,10 +143,9 @@ export function SindiActionCard({ execution, onTake }: SindiActionCardProps) {
         <View className="mx-4 mb-2 flex-row flex-wrap items-center gap-2">
           <P className="text-[13px] text-muted-foreground">{t(actionKey(envelope.action))}</P>
           <Button
-            variant="secondary"
-            size="small"
+            size="sm"
             onPress={take}
-            accessibilityLabel={t('sindi.actions.takeAccessible')}
+            accessibilityLabel={t('sindi.actions.takeAccessible')} tone="neutral" appearance="outline"
           >
             {t('sindi.actions.take')}
           </Button>

@@ -179,15 +179,14 @@ export function QuickFiltersWidget() {
         </View>
 
         <Button
-          variant="primary"
-          size="medium"
+          size="md"
           disabled={!hasSelection}
-          onPress={applyFilters}
+          onPress={applyFilters} tone="accent" appearance="solid"
         >
           {primaryLabel}
         </Button>
 
-        <Button variant="secondary" size="medium" onPress={openAdvancedFilters}>
+        <Button size="md" onPress={openAdvancedFilters} tone="neutral" appearance="outline">
           {t('search.widgets.quickFilters.advancedFilters')}
         </Button>
       </View>

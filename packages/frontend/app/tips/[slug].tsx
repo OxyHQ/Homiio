@@ -121,7 +121,7 @@ const RelatedCard: React.FC<RelatedCardProps> = ({ tip, onPress }) => {
       accessibilityRole="button"
       accessibilityLabel={tip.title}
     >
-      <Card variant="outlined" radius="radius-16" style={styles.relatedCard}>
+      <Card radius="radius-16" style={styles.relatedCard} appearance="outline">
         {tip.coverImageUrl ? (
           <ZoomableImage active={hovered || pressed} style={styles.relatedImage}>
             <Image

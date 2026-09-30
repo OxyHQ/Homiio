@@ -205,12 +205,11 @@ export default function PropertiesScreen() {
             iconOnly={!isWide}
           />
           <Button
-            variant="outline"
-            size="medium"
+            size="md"
             icon={RiTimeLine}
             iconOnly={!isWide}
             onPress={() => router.push('/properties/recently-viewed')}
-            accessibilityLabel={t('properties.actions.recent')}
+            accessibilityLabel={t('properties.actions.recent')} tone="neutral" appearance="outline"
           >
             {isWide ? t('properties.actions.recent') : undefined}
           </Button>
@@ -247,20 +246,27 @@ export default function PropertiesScreen() {
         ) : null}
         <LoadMoreSentinel enabled={hasNextPage} onLoadMore={handleEndReached} />
       </ScrollView>
-      <Fab
-        placement="bottom-right"
-        variant="primary"
-        offset={spacing['2xl']}
-        icon={<RiAddLine size="lg" />}
-        onPress={() => router.push('/properties/create')}
-        accessibilityLabel={t('properties.actions.create')}
-        style={{ bottom: insets.bottom + spacing['3xl'] }}
-      />
+      {/* Bloom 6 leaves a FAB's position to its parent: this anchor is it. */}
+      <View style={[styles.fabAnchor, { bottom: insets.bottom + spacing['3xl'] }]}>
+        <Fab
+          icon={RiAddLine}
+          size="lg"
+          onPress={() => router.push('/properties/create')}
+          accessibilityLabel={t('properties.actions.create')}
+          appearance="solid"
+          tone="accent"
+        />
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  fabAnchor: {
+    position: 'absolute',
+    right: spacing['2xl'],
+    pointerEvents: 'box-none',
+  },
   container: {
     flex: 1,
     backgroundColor: colors.background,

@@ -250,8 +250,8 @@ export default function DonatePage() {
                       value={tier.id}
                       title={`${tier.title} · ${price}${period}`}
                       description={tier.subtitle}
-                      selected={selectedTier?.id === tier.id}
-                      onSelect={setSelectedTierId}
+                      checked={selectedTier?.id === tier.id}
+                      onValueChange={setSelectedTierId}
                       accessibilityLabel={`${tier.title}, ${spokenPrice}${period}`}
                     />
                   );
@@ -259,13 +259,12 @@ export default function DonatePage() {
               </View>
 
               <Button
-                variant="primary"
-                size="large"
+                size="lg"
                 onPress={handleDonate}
                 loading={loading}
                 disabled={!selectedTier}
                 fullWidth
-                leadingIcon={RiHeartFill}
+                leadingIcon={RiHeartFill} tone="accent" appearance="solid"
               >
                 {selectedTier?.ctaLabel ?? t('donations.page.tiers.monthly.button')}
               </Button>

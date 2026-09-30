@@ -184,8 +184,7 @@ export function LeaseLedgerSection({
                   asserts that money arrived because somebody said it had. */}
               {settledMovements.get(summary.obligationId) ? (
                 <Button
-                  variant="secondary"
-                  size="small"
+                  size="sm"
                   disabled={busy}
                   onPress={() =>
                     run(
@@ -199,7 +198,7 @@ export function LeaseLedgerSection({
                       'ledger.errors.receiptFailed',
                     )
                   }
-                  accessibilityLabel={t('ledger.action.receiptAccessible')}
+                  accessibilityLabel={t('ledger.action.receiptAccessible')} tone="neutral" appearance="outline"
                 >
                   {t('ledger.action.receipt')}
                 </Button>
@@ -207,8 +206,7 @@ export function LeaseLedgerSection({
               {/* The tenant's only action: say they sent it. */}
               {!viewerIsLandlord && !summary.settled && !pending ? (
                 <Button
-                  variant="secondary"
-                  size="small"
+                  size="sm"
                   disabled={busy}
                   onPress={() =>
                     run(
@@ -217,7 +215,7 @@ export function LeaseLedgerSection({
                       'ledger.errors.declareFailed',
                     )
                   }
-                  accessibilityLabel={t('ledger.action.declareAccessible')}
+                  accessibilityLabel={t('ledger.action.declareAccessible')} tone="neutral" appearance="outline"
                 >
                   {t('ledger.action.declare')}
                 </Button>
@@ -227,8 +225,7 @@ export function LeaseLedgerSection({
               {viewerIsLandlord && pending ? (
                 <>
                   <Button
-                    variant="primary"
-                    size="small"
+                    size="sm"
                     disabled={busy}
                     onPress={() =>
                       run(
@@ -237,13 +234,12 @@ export function LeaseLedgerSection({
                         'ledger.errors.confirmFailed',
                       )
                     }
-                    accessibilityLabel={t('ledger.action.confirmAccessible')}
+                    accessibilityLabel={t('ledger.action.confirmAccessible')} tone="accent" appearance="solid"
                   >
                     {t('ledger.action.confirm')}
                   </Button>
                   <Button
-                    variant="secondary"
-                    size="small"
+                    size="sm"
                     disabled={busy}
                     onPress={() =>
                       run(
@@ -255,7 +251,7 @@ export function LeaseLedgerSection({
                         'ledger.errors.rejectFailed',
                       )
                     }
-                    accessibilityLabel={t('ledger.action.rejectAccessible')}
+                    accessibilityLabel={t('ledger.action.rejectAccessible')} tone="neutral" appearance="outline"
                   >
                     {t('ledger.action.reject')}
                   </Button>

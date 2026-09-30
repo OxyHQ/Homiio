@@ -65,7 +65,7 @@ export default function SindiSettingsScreen() {
             title={t('sindi.settings.tips')}
             description={t('sindi.settings.tipsDescription')}
             rightElement={
-              <Switch value={showTips} onValueChange={setShowTips} />
+              <Switch checked={showTips} onCheckedChange={setShowTips} />
             }
           />
         </SettingsListGroup>

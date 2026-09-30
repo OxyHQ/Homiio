@@ -115,7 +115,7 @@ export const RoommateRequestComponent: React.FC<RoommateRequestProps> = ({
   const secondary = { color: theme.colors.textSecondary };
 
   return (
-    <Card variant="outlined" radius="radius-16" style={styles.card}>
+    <Card radius="radius-16" style={styles.card} appearance="outline">
       <View style={styles.header}>
         <Avatar name={otherName} size={48} onPress={() => onViewProfile(otherProfile.id)} />
 
@@ -166,18 +166,16 @@ export const RoommateRequestComponent: React.FC<RoommateRequestProps> = ({
             <Button
               leadingIcon={RiCloseCircleLine}
               onPress={handleDecline}
-              variant="secondary"
               loading={isLoading}
-              style={styles.actionButton}
+              style={styles.actionButton} tone="neutral" appearance="outline"
             >
               {t('roommates.request.decline')}
             </Button>
             <Button
               leadingIcon={RiCheckboxCircleFill}
               onPress={handleAccept}
-              variant="primary"
               loading={isLoading}
-              style={styles.actionButton}
+              style={styles.actionButton} tone="accent" appearance="solid"
             >
               {t('roommates.request.accept')}
             </Button>
@@ -189,11 +187,10 @@ export const RoommateRequestComponent: React.FC<RoommateRequestProps> = ({
         )
       ) : (
         <Button
-          variant="ghost"
-          size="small"
+          size="sm"
           leadingIcon={RiEyeLine}
           onPress={() => onViewProfile(otherProfile.id)}
-          style={styles.viewProfile}
+          style={styles.viewProfile} tone="accent" appearance="subtle"
         >
           {t('roommates.request.viewProfile')}
         </Button>

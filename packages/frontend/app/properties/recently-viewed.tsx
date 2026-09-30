@@ -105,10 +105,9 @@ export default function RecentlyViewedScreen() {
         right={
           properties.length > 0 ? (
             <Button
-              variant="ghost"
-              size="small"
+              size="sm"
               onPress={handleClear}
-              accessibilityLabel={t('common.clear')}
+              accessibilityLabel={t('common.clear')} tone="accent" appearance="subtle"
             >
               {t('common.clear')}
             </Button>

@@ -78,7 +78,7 @@ ConversationItem.displayName = 'ConversationItem';
 /** The card a run of `ConversationItem` rows sits in. */
 export function ConversationList({ children }: { children: React.ReactNode }) {
   return (
-    <Card variant="outlined" style={styles.list}>
+    <Card style={styles.list} appearance="outline">
       {children}
     </Card>
   );

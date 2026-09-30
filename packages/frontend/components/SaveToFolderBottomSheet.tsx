@@ -272,7 +272,7 @@ export function SaveToFolderBottomSheet({
             </Field>
 
             <View style={styles.formActions}>
-              <Button variant="secondary" style={styles.flex} onPress={() => setShowCreateFolder(false)}>
+              <Button style={styles.flex} onPress={() => setShowCreateFolder(false)} tone="neutral" appearance="outline">
                 {t('common.cancel')}
               </Button>
               <Button
@@ -289,11 +289,10 @@ export function SaveToFolderBottomSheet({
           <>
             {folders.map(renderFolderItem)}
             <Button
-              variant="secondary"
               leadingIcon={RiAddLine}
               onPress={() => setShowCreateFolder(true)}
               disabled={isLoading}
-              style={styles.createButton}
+              style={styles.createButton} tone="neutral" appearance="outline"
             >
               {t('saved.folder.createNew')}
             </Button>

@@ -37,11 +37,10 @@ export const ContractCard: React.FC<ContractCardProps> = ({ lease, title, format
         <View style={styles.actions}>
           <ContractStatusBadge status={lease.status} />
           <Button
-            variant="secondary"
-            size="small"
+            size="sm"
             trailingIcon={RiArrowRightSLine}
             onPress={onPress}
-            accessibilityLabel={t('contracts.card.accessibility', { title })}
+            accessibilityLabel={t('contracts.card.accessibility', { title })} tone="neutral" appearance="outline"
           >
             {t('contracts.actions.view')}
           </Button>

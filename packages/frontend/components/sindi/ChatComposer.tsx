@@ -184,11 +184,10 @@ export const ChatComposer = React.memo<ChatComposerProps>(
             </View>
             {isLoading ? (
               <Button
-                variant="secondary"
-                size="small"
+                size="sm"
                 leadingIcon={RiStopFill}
                 onPress={handleStop}
-                accessibilityLabel={t('sindi.chat.stop')}
+                accessibilityLabel={t('sindi.chat.stop')} tone="neutral" appearance="outline"
               >
                 {t('sindi.chat.stop')}
               </Button>

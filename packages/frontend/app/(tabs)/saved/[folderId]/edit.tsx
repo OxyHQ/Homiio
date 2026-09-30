@@ -166,7 +166,7 @@ function EditFolderForm({ folder }: { folder: SavedPropertyFolder }) {
 
         <Button
           onPress={handleSave}
-          size="large"
+          size="lg"
           loading={updateFolderMutation.isPending}
           disabled={updateFolderMutation.isPending || deleting}
         >
@@ -175,12 +175,11 @@ function EditFolderForm({ folder }: { folder: SavedPropertyFolder }) {
 
         {folder.isDefault ? null : (
           <Button
-            variant="destructive"
-            size="large"
+            size="lg"
             leadingIcon={RiDeleteBinLine}
             onPress={() => void handleDelete()}
             loading={deleting}
-            disabled={locked}
+            disabled={locked} tone="danger" appearance="solid"
           >
             {t('saved.folders.deleteTitle')}
           </Button>

@@ -94,7 +94,7 @@ export default function RoommateProfilePage() {
 
     return (
       <ScrollView contentContainerStyle={styles.content}>
-        <Card variant="outlined" radius="radius-16" style={styles.headerCard}>
+        <Card radius="radius-16" style={styles.headerCard} appearance="outline">
           <Avatar name={info.name} size={72} style={styles.avatar} />
           <SectionEyebrow>{t('roommates.profileDetail.title')}</SectionEyebrow>
           <H2 style={styles.name}>{info.name}</H2>
@@ -109,7 +109,7 @@ export default function RoommateProfilePage() {
           ) : null}
           {!isOwnProfile ? (
             <View style={styles.followRow}>
-              <FollowButton userId={oxyUserId} size="medium" />
+              <FollowButton userId={oxyUserId} size="md" />
             </View>
           ) : null}
           {(followerCount != null || followingCount != null) && (
@@ -129,13 +129,13 @@ export default function RoommateProfilePage() {
         </Card>
 
         {info.bio ? (
-          <Card variant="outlined" radius="radius-16" style={styles.card}>
+          <Card radius="radius-16" style={styles.card} appearance="outline">
             <H3 style={styles.cardTitle}>{t('roommates.profileDetail.about')}</H3>
             <BloomText style={styles.bodyText}>{info.bio}</BloomText>
           </Card>
         ) : null}
 
-        <Card variant="outlined" radius="radius-16" style={styles.card}>
+        <Card radius="radius-16" style={styles.card} appearance="outline">
           <H3 style={styles.cardTitle}>{t('roommates.profileDetail.preferencesTitle')}</H3>
           <View style={styles.detailRow}>
             <BloomText style={styles.detailLabel}>{t('roommates.profileDetail.budget')}</BloomText>
@@ -155,7 +155,7 @@ export default function RoommateProfilePage() {
           </View>
         </Card>
 
-        <Card variant="outlined" radius="radius-16" style={styles.card}>
+        <Card radius="radius-16" style={styles.card} appearance="outline">
           <H3 style={styles.cardTitle}>{t('roommates.profileDetail.trust')}</H3>
           <View style={styles.badgeRow}>
             <TrustBadge label={t('roommates.profileDetail.verified')} active={info.isVerified} />
@@ -165,12 +165,11 @@ export default function RoommateProfilePage() {
         </Card>
 
         <Button
-          variant="primary"
-          size="large"
+          size="lg"
           onPress={handleSendRequest}
           loading={isSending}
           disabled={isSending}
-          style={styles.sendButton}
+          style={styles.sendButton} tone="accent" appearance="solid"
         >
           {isSending ? t('roommates.profileDetail.sending') : t('roommates.profileDetail.sendRequest')}
         </Button>

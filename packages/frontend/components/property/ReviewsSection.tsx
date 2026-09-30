@@ -149,9 +149,8 @@ export const ReviewsSection: React.FC<ReviewsSectionProps> = ({
               <View style={styles.actionsRow}>
                 <Button
                   onPress={handleViewAll}
-                  variant="secondary"
-                  size="medium"
-                  accessibilityLabel={t('property.reviews.showAll', { count: reviews.length })}
+                  size="md"
+                  accessibilityLabel={t('property.reviews.showAll', { count: reviews.length })} tone="neutral" appearance="outline"
                 >
                   {t('property.reviews.showAll', { count: reviews.length })}
                 </Button>

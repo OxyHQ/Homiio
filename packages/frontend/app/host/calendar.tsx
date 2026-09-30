@@ -478,16 +478,15 @@ export default function HostCalendarScreen() {
   const blockRange = blockState.range;
   const body = (
     <View style={styles.content}>
-      <Card variant="outlined" radius="radius-16" className="p-4">
+      <Card radius="radius-16" className="p-4" appearance="outline">
         <View style={styles.stack}>
           <SectionEyebrow>{t('host.calendar.property')}</SectionEyebrow>
           <DropdownMenu>
             <DropdownMenuTrigger asChild label={t('host.calendar.chooseProperty')}>
               <Button
-                variant="secondary"
-                size="large"
+                size="lg"
                 style={styles.pickerButton}
-                trailingIcon={RiArrowDownSLine}
+                trailingIcon={RiArrowDownSLine} tone="neutral" appearance="outline"
               >
                 {selectedProperty
                   ? getPropertyTitle(selectedProperty)

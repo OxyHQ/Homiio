@@ -110,11 +110,10 @@ export function RecentlyViewedWidget() {
       {renderBody()}
       <View className="flex-row">
         <Button
-          variant="text"
-          size="small"
+          size="sm"
           trailingIcon={RiArrowRightSLine}
           onPress={() => router.push('/properties/recently-viewed')}
-          accessibilityLabel={t('home.viewAll')}
+          accessibilityLabel={t('home.viewAll')} tone="accent" appearance="plain"
         >
           {t('home.viewAll')}
         </Button>

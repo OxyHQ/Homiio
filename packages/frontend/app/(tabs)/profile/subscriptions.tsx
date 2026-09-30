@@ -213,12 +213,11 @@ export default function SubscriptionsScreen() {
           description={t('subscriptions.page.payPerContract.description')}
         >
           <Button
-            variant="secondary"
-            size="large"
+            size="lg"
             fullWidth
             loading={checkoutBusy}
             disabled={checkoutBusy}
-            onPress={() => void handleStartCheckout('file')}
+            onPress={() => void handleStartCheckout('file')} tone="neutral" appearance="outline"
           >
             {t('subscriptions.page.payPerContract.reviewButton')}
           </Button>
@@ -256,12 +255,11 @@ export default function SubscriptionsScreen() {
             ))}
           </View>
           <Button
-            variant="primary"
-            size="large"
+            size="lg"
             fullWidth
             loading={!plusActive && checkoutBusy}
             disabled={checkoutBusy}
-            onPress={() => void (plusActive ? handleManageSubscription() : handleStartCheckout('plus'))}
+            onPress={() => void (plusActive ? handleManageSubscription() : handleStartCheckout('plus'))} tone="accent" appearance="solid"
           >
             {plusCta}
           </Button>
@@ -274,12 +272,11 @@ export default function SubscriptionsScreen() {
           description={t('subscriptions.page.founder.description')}
         >
           <Button
-            variant="secondary"
-            size="large"
+            size="lg"
             fullWidth
             loading={checkoutBusy}
             disabled={checkoutBusy}
-            onPress={() => void handleStartCheckout('founder')}
+            onPress={() => void handleStartCheckout('founder')} tone="neutral" appearance="outline"
           >
             {t('subscriptions.page.founder.becomeSupporter')}
           </Button>
@@ -350,9 +347,10 @@ const ProductCard: React.FC<ProductCardProps> = ({
   const { colors: theme } = useTheme();
   return (
     <Card
-      variant={highlighted ? 'filled' : 'outlined'}
+      appearance={highlighted ? 'subtle' : 'outline'}
       radius="radius-24"
-      style={[styles.card, highlighted && { borderWidth: 2, borderColor: theme.primary }]}
+      border={highlighted ? 'medium' : undefined}
+      style={[styles.card, highlighted && { borderColor: theme.primary }]}
     >
       {badge ? <View style={styles.badgeRow}>{badge}</View> : null}
       <View style={styles.cardHeader}>

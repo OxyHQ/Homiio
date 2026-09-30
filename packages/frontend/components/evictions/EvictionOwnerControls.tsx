@@ -93,7 +93,7 @@ export const EvictionOwnerControls: React.FC<EvictionOwnerControlsProps> = ({
   };
 
   return (
-    <Card variant="outlined" radius="radius-16" style={styles.wrap}>
+    <Card radius="radius-16" style={styles.wrap} appearance="outline">
       <H3 style={styles.title}>{t('evictions.owner.title')}</H3>
 
       <Textarea
@@ -145,34 +145,31 @@ export const EvictionOwnerControls: React.FC<EvictionOwnerControlsProps> = ({
       </Field>
 
       <Button
-        variant="primary"
-        size="medium"
+        size="md"
         onPress={handlePost}
         disabled={!canPost}
         loading={createUpdate.isPending}
-        style={styles.action}
+        style={styles.action} tone="accent" appearance="solid"
       >
         {t('evictions.update.post')}
       </Button>
 
       <View style={styles.ownerActions}>
         <Button
-          variant="secondary"
-          size="medium"
+          size="md"
           onPress={onEdit}
           leadingIcon={RiEditLine}
-          style={styles.ownerAction}
+          style={styles.ownerAction} tone="neutral" appearance="outline"
         >
           {t('evictions.owner.edit')}
         </Button>
         {currentStatus !== EvictionCaseStatus.CANCELLED ? (
           <Button
-            variant="destructive"
-            size="medium"
+            size="md"
             onPress={handleCancelCase}
             loading={updateCase.isPending}
             leadingIcon={RiCloseCircleLine}
-            style={styles.ownerAction}
+            style={styles.ownerAction} tone="danger" appearance="solid"
           >
             {t('evictions.owner.cancelCase')}
           </Button>

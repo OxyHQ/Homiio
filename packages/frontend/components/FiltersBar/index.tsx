@@ -96,10 +96,9 @@ export function FiltersBar({ filters, onApplyFilters, sortBy, onSortChange }: Fi
       <DropdownMenu>
         <DropdownMenuTrigger asChild label={`${sortWord}: ${sortLabel}`}>
           <Button
-            variant="outline"
-            size="medium"
+            size="md"
             icon={RiExpandUpDownLine}
-            accessibilityLabel={`${sortWord}: ${sortLabel}`}
+            accessibilityLabel={`${sortWord}: ${sortLabel}`} tone="neutral" appearance="outline"
           >
             {sortLabel}
           </Button>

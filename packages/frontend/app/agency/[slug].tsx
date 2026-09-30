@@ -58,7 +58,7 @@ interface StatTileProps {
 }
 
 const StatTile: React.FC<StatTileProps> = ({ value, label }) => (
-  <Card variant="outlined" radius="radius-12" style={styles.statTile}>
+  <Card radius="radius-12" style={styles.statTile} appearance="outline">
     <BloomText style={styles.statValue}>{value}</BloomText>
     <BloomText style={styles.statLabel}>{label}</BloomText>
   </Card>
@@ -77,13 +77,12 @@ const AgencyReviewItem: React.FC<AgencyReviewItemProps> = ({ review, author, onP
   return (
     <View style={styles.reviewItem}>
       <Button
-        variant="ghost"
-        size="small"
+        size="sm"
         leadingIcon={RiMapPinLine}
         trailingIcon={RiArrowRightSLine}
         onPress={onPressAddress}
         accessibilityLabel={label}
-        style={styles.addressLink}
+        style={styles.addressLink} tone="accent" appearance="subtle"
       >
         {label}
       </Button>

@@ -202,10 +202,9 @@ export const ExchangeSection: React.FC<Props> = ({ exchange, onRequestExchange }
 
       {onRequestExchange ? (
         <Button
-          variant="primary"
-          size="large"
+          size="lg"
           onPress={onRequestExchange}
-          style={styles.cta}
+          style={styles.cta} tone="accent" appearance="solid"
         >
           {t('listing.exchange.requestCta')}
         </Button>

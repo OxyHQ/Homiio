@@ -344,8 +344,8 @@ export const ExchangeRequestBottomSheet: React.FC<ExchangeRequestBottomSheetProp
                 </View>
                 <Switch
                   accessibilityLabel={t('guestPoints.payWith.label')}
-                  value={usePoints}
-                  onValueChange={setUsePoints}
+                  checked={usePoints}
+                  onCheckedChange={setUsePoints}
                   disabled={!canAffordPoints}
                 />
               </View>
@@ -418,12 +418,11 @@ const DateField: React.FC<DateFieldProps> = ({ label, value, placeholder, onPres
     <View style={styles.field}>
       <BloomText style={[styles.label, { color: theme.colors.text }]}>{label}</BloomText>
       <Button
-        variant="outline"
-        size="large"
+        size="lg"
         leadingIcon={RiCalendarLine}
         onPress={onPress}
         accessibilityLabel={label}
-        style={styles.dateTrigger}
+        style={styles.dateTrigger} tone="neutral" appearance="outline"
       >
         {value || placeholder}
       </Button>

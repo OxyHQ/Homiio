@@ -142,18 +142,16 @@ function DraftCard({
         </View>
         <View style={styles.draftActions}>
           <Button
-            variant="ghost"
             iconOnly
             leadingIcon={RiEditLine}
             onPress={onContinue}
-            accessibilityLabel={t('common.edit')}
+            accessibilityLabel={t('common.edit')} tone="accent" appearance="subtle"
           />
           <Button
-            variant="ghost"
             iconOnly
             leadingIcon={RiDeleteBinLine}
             onPress={onDelete}
-            accessibilityLabel={t('common.delete')}
+            accessibilityLabel={t('common.delete')} tone="accent" appearance="subtle"
           />
         </View>
       </View>
@@ -273,10 +271,9 @@ export default function PropertyDraftsScreen() {
           ))}
         </View>
         <Button
-          variant="secondary"
           onPress={() => router.push('/properties/create')}
           leadingIcon={RiAddCircleLine}
-          style={styles.createNewButton}
+          style={styles.createNewButton} tone="neutral" appearance="outline"
         >
           {t('property.drafts.createFirst')}
         </Button>

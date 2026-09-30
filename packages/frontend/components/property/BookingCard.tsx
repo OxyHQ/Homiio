@@ -31,7 +31,7 @@ import { useRouter } from 'expo-router';
 import { openAccountDialog, useOxy } from '@oxy.so/services';
 
 import { BookingCard as BloomBookingCard } from '@oxy.so/bloom/booking';
-import { Button } from '@oxy.so/bloom/button';
+import { LinkButton } from '@oxy.so/bloom/button';
 import { Card } from '@oxy.so/bloom/card';
 import { RiFlagLine } from '@oxy.so/bloom/icons';
 import {
@@ -117,15 +117,14 @@ export const BookingCard: React.FC<BookingCardProps> = ({ property, stay }) => {
   };
 
   const reportLink = (
-    <Button
-      variant="link"
+    <LinkButton
       linkTone="secondary"
-      size="small"
+      size="sm"
       leadingIcon={RiFlagLine}
       onPress={handleReport}
     >
       {t('property.report.title')}
-    </Button>
+    </LinkButton>
   );
 
   if (bookingMode === 'vacation' && booking.bookable) {
@@ -146,7 +145,7 @@ export const BookingCard: React.FC<BookingCardProps> = ({ property, stay }) => {
           activeField={booking.activeField}
           guestPicker={
             <GuestPicker
-              size="small"
+              size="sm"
               kinds={GUEST_KINDS}
               value={booking.guests}
               onChange={booking.setGuests}
@@ -203,7 +202,7 @@ export const BookingCard: React.FC<BookingCardProps> = ({ property, stay }) => {
   if (property.isExternal) {
     const { priceLabel } = resolveHeadlinePrice(property, browseMode, t, formatting);
     return (
-      <Card variant="outlined" radius="radius-16" className="p-6" style={styles.card}>
+      <Card radius="radius-16" className="p-6" style={styles.card} appearance="outline">
         <View style={styles.header}>
           {priceLabel ? (
             <BloomText variant="title-3-semibold" style={styles.price}>

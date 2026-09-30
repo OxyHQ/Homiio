@@ -210,7 +210,7 @@ export function FeaturedPropertiesWidget() {
               />
             ))}
             {seeAllHref ? (
-              <Button variant="secondary" onPress={() => router.push(seeAllHref)}>
+              <Button onPress={() => router.push(seeAllHref)} tone="neutral" appearance="outline">
                 {t('home.viewAll')}
               </Button>
             ) : null}

@@ -55,7 +55,7 @@ export const ReservationCard: React.FC<ReservationCardProps> = ({
       : t('reservations.card.nights');
 
   return (
-    <Card variant="outlined" radius="radius-16">
+    <Card radius="radius-16" appearance="outline">
       <Pressable
         style={styles.row}
         onPress={handlePress}

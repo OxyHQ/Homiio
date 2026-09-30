@@ -241,20 +241,18 @@ export default function InboxScreen() {
           unreadCount > 0 ? (
             <Button
               key="mark-all"
-              variant="ghost"
               iconOnly
               leadingIcon={RiCheckboxCircleLine}
               accessibilityLabel={t('notification.markAllRead.action')}
-              onPress={() => void handleMarkAllAsRead()}
+              onPress={() => void handleMarkAllAsRead()} tone="accent" appearance="subtle"
             />
           ) : null,
           <Button
             key="settings"
-            variant="ghost"
             iconOnly
             leadingIcon={RiSettings3Line}
             accessibilityLabel={t('notification.settings.title')}
-            onPress={() => router.push('/settings/notifications')}
+            onPress={() => router.push('/settings/notifications')} tone="accent" appearance="subtle"
           />,
         ],
       }}

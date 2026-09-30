@@ -108,7 +108,7 @@ export default function SharedConversationView() {
     return (
       <SafeAreaView style={containerStyle} edges={['bottom']}>
         <Header options={{ title: t('sindi.shared.loading'), showBackButton: true }} />
-        <Loading size="large" text={t('sindi.shared.loadingMessage')} style={styles.fill} />
+        <Loading size="lg" text={t('sindi.shared.loadingMessage')} style={styles.fill} />
       </SafeAreaView>
     );
   }

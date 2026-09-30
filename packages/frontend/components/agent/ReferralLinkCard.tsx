@@ -64,9 +64,8 @@ export const ReferralLinkCard: React.FC<ReferralLinkCardProps> = ({ link }) => {
   return (
     <View style={{ paddingHorizontal: horizontalPadding }}>
       <Card
-        variant="outlined"
         radius="radius-24"
-        className="w-full max-w-[720px] self-center gap-4 p-6"
+        className="w-full max-w-[720px] self-center gap-4 p-6" appearance="outline"
       >
         <BloomText
           variant="caption-1-semibold"
@@ -75,7 +74,7 @@ export const ReferralLinkCard: React.FC<ReferralLinkCardProps> = ({ link }) => {
           {t('agent.referral.title')}
         </BloomText>
 
-        <Card variant="filled" radius="radius-12" className="flex-row items-center gap-2 px-4 py-3">
+        <Card radius="radius-12" className="flex-row items-center gap-2 px-4 py-3" appearance="subtle">
           <RiLink width={20} height={20} fill={theme.colors.icon} />
           <BloomText
             variant="body-medium"
@@ -89,20 +88,18 @@ export const ReferralLinkCard: React.FC<ReferralLinkCardProps> = ({ link }) => {
 
         <View className="flex-row flex-wrap gap-3">
           <Button
-            variant="primary"
-            size="medium"
+            size="md"
             leadingIcon={copied ? RiCheckLine : RiFileCopyLine}
             onPress={handleCopy}
-            style={{ flexGrow: 1, flexBasis: 140 }}
+            style={{ flexGrow: 1, flexBasis: 140 }} tone="accent" appearance="solid"
           >
             {copied ? t('agent.referral.copiedShort') : t('agent.referral.copy')}
           </Button>
           <Button
-            variant="secondary"
-            size="medium"
+            size="md"
             leadingIcon={RiShare2Line}
             onPress={handleShare}
-            style={{ flexGrow: 1, flexBasis: 140 }}
+            style={{ flexGrow: 1, flexBasis: 140 }} tone="neutral" appearance="outline"
           >
             {t('agent.referral.share')}
           </Button>

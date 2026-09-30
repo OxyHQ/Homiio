@@ -62,9 +62,8 @@ export function EmptyState({
         <View style={styles.action}>
           <Button
             onPress={onAction}
-            variant="primary"
-            size="medium"
-            leadingIcon={actionIcon}
+            size="md"
+            leadingIcon={actionIcon} tone="accent" appearance="solid"
           >
             {actionText}
           </Button>

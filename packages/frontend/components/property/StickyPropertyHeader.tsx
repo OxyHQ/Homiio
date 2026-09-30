@@ -83,11 +83,10 @@ export const StickyPropertyHeader: React.FC<StickyPropertyHeaderProps> = ({
       actions={
         <>
           <Button
-            variant="secondary"
             iconOnly
             leadingIcon={RiShare2Line}
             onPress={onShare}
-            accessibilityLabel={t('common.share')}
+            accessibilityLabel={t('common.share')} tone="neutral" appearance="outline"
           />
           {property ? (
             <SaveButton
@@ -101,9 +100,8 @@ export const StickyPropertyHeader: React.FC<StickyPropertyHeaderProps> = ({
           {onCtaPress ? (
             <Button
               onPress={onCtaPress}
-              variant="primary"
-              size="medium"
-              accessibilityLabel={ctaLabel}
+              size="md"
+              accessibilityLabel={ctaLabel} tone="accent" appearance="solid"
             >
               {ctaLabel}
             </Button>

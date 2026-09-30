@@ -269,20 +269,18 @@ export const ApplicationDocumentsGroup: React.FC<GroupProps> = ({ application, v
               {viewerIsLandlord ? (
                 <View style={styles.checklistActions}>
                   <Button
-                    variant="secondary"
-                    size="small"
+                    size="sm"
                     disabled={busyId !== null || document.verification === 'verified'}
                     onPress={() => decide(document.id, 'verified')}
-                    accessibilityLabel={t('applications.checklist.verifyAccessible')}
+                    accessibilityLabel={t('applications.checklist.verifyAccessible')} tone="neutral" appearance="outline"
                   >
                     {t('applications.checklist.verify')}
                   </Button>
                   <Button
-                    variant="secondary"
-                    size="small"
+                    size="sm"
                     disabled={busyId !== null || document.verification === 'rejected'}
                     onPress={() => decide(document.id, 'rejected')}
-                    accessibilityLabel={t('applications.checklist.rejectAccessible')}
+                    accessibilityLabel={t('applications.checklist.rejectAccessible')} tone="neutral" appearance="outline"
                   >
                     {t('applications.checklist.reject')}
                   </Button>

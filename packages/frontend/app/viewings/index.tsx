@@ -76,7 +76,7 @@ const formatDateTime = (scheduledAt: string, locale: string, timeZone: string): 
 const ViewingsSkeleton: React.FC = () => (
   <View style={styles.listWrap}>
     {Array.from({ length: 3 }).map((_, idx) => (
-      <Card key={idx} variant="outlined" radius="radius-16" className="gap-2 p-4">
+      <Card key={idx}  radius="radius-16" className="gap-2 p-4" appearance="outline">
         <View style={styles.skeletonHeader}>
           <Skeleton.Text style={{ width: 160, lineHeight: 18 }} />
           <Skeleton.Pill size={20} />
@@ -108,7 +108,7 @@ const ViewingCard: React.FC<ViewingCardProps> = ({
   const isActionable = status === 'pending' || status === 'approved';
 
   return (
-    <Card variant="outlined" radius="radius-16" className="gap-2 p-4">
+    <Card radius="radius-16" className="gap-2 p-4" appearance="outline">
       <View style={styles.headerRow}>
         {/*
           Rendered in the PROPERTY's zone when the server told us which one
@@ -156,21 +156,19 @@ const ViewingCard: React.FC<ViewingCardProps> = ({
         <View style={styles.actionRow}>
           {status === 'pending' ? (
             <Button
-              variant="primary"
-              size="medium"
+              size="md"
               onPress={onModify}
-              style={styles.actionButton}
+              style={styles.actionButton} tone="accent" appearance="solid"
             >
               {t('viewings.actions.modify')}
             </Button>
           ) : null}
           <Button
-            variant="ghost"
-            size="medium"
+            size="md"
             onPress={onCancel}
             loading={cancelling}
             disabled={cancelling}
-            style={styles.actionButton}
+            style={styles.actionButton} tone="accent" appearance="subtle"
           >
             {t('viewings.actions.cancel')}
           </Button>

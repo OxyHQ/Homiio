@@ -98,12 +98,11 @@ export function WizardSelect({
   return (
     <Field label={label} error={error || null} style={style}>
       <Button
-        variant="secondary"
         fullWidth
         trailingIcon={RiArrowDownSLine}
         onPress={() => setOpen(true)}
         accessibilityLabel={value ? `${label}: ${value}` : label}
-        style={styles.trigger}
+        style={styles.trigger} tone="neutral" appearance="outline"
       >
         {value || placeholder}
       </Button>
