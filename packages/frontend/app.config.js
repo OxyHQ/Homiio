@@ -189,14 +189,11 @@ module.exports = function (config) {
         'expo-image',
         'expo-localization',
         'expo-sharing',
-        // Android sharedUserId for cross-app authentication: every Oxy app
-        // signed with the shared ecosystem certificate joins the same UID, so
-        // the device session is shared ("sign in once, use everywhere").
-        './plugins/withSharedUserId',
-        // Reader side of the shared-identity native module (ships in
-        // @oxy.so/services): request the signature permission + <queries> so
-        // cold boot can silently read the Commons-hosted shared identity.
-        '@oxy.so/services/plugins/withSharedIdentityReader',
+        // Homiio runs on its own Android UID. It shares the Oxy identity and the
+        // device session with Commons and Accounts over signature-protected IPC:
+        // this declares and requests so.oxy.permission.IDENTITY and
+        // DEVICE_SESSION and adds the <queries> for their providers.
+        '@oxy.so/services/plugins/withOxySharedPermissions',
         // Points the Android home-screen widget (`modules/homiio-widgets`) at a
         // backend. The native module itself is autolinked from `modules/` — this
         // plugin only writes the two origin string resources, and only when a
