@@ -1,0 +1,70 @@
+name: Refresh build cache
+
+# Weekly, rebuild the production image(s) with NO cache and write the fresh
+# layers into the same GitHub Actions cache scope deploy-aws.yml reads.
+#
+# The deploy reuses cached layers, so without this an `apt-get`/`apk` layer or
+# a base-image tag would stay as old as the last time its inputs changed and
+# stop picking up OS security patches. This job re-resolves the base images and
+# re-runs every step, then overwrites the scope; the next real deploy builds on
+# those fresh layers.
+#
+# It builds only: no AWS credentials, no ECR push, no deploy. It runs on the
+# default branch (schedule) or a dispatch from main, so it writes main's cache,
+# which only main-branch deploys read; no pull_request workflow writes a scope.
+# Same Dockerfile, context, platform and target(s) as deploy-aws.yml, so the
+# layers it writes are the ones the deploy looks up.
+
+on:
+  schedule:
+    - cron: '47 3 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: refresh-build-cache
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      # `--cache-to type=gha` needs the Actions runtime token and cache URL,
+      # which GitHub gives to JavaScript actions and NOT to `run:` steps.
+      - name: Expose the Actions cache to buildx
+        uses: crazy-max/ghaction-github-runtime@v4
+
+      # No output: the result lives only in the exported cache. A failed export
+      # fails the job, since writing the cache is the whole point.
+      - name: Rebuild the API image from scratch into the cache
+        run: |
+          docker buildx build \
+            --platform linux/arm64 \
+            --no-cache \
+            --pull \
+            --cache-to type=gha,scope=homiio-api,mode=max \
+            -f packages/backend/Dockerfile \
+            --target api \
+            .
+
+      # No output: the result lives only in the exported cache. A failed export
+      # fails the job, since writing the cache is the whole point.
+      - name: Rebuild the listing-worker image from scratch into the cache
+        run: |
+          docker buildx build \
+            --platform linux/arm64 \
+            --no-cache \
+            --pull \
+            --cache-to type=gha,scope=homiio-worker,mode=max \
+            -f packages/backend/Dockerfile \
+            --target worker \
+            .
