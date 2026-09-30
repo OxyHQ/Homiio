@@ -31,7 +31,7 @@
     "postinstall": "bun run build:shared-types"
   },
   "devDependencies": {
-    "@oxy.so/doctor": "1.0.0",
+    "@oxy.so/doctor": "1.1.0",
     "@types/node": "^22.20.1",
     "ajv": "^8.20.0",
     "ajv-keywords": "^5.1.0",
