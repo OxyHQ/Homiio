@@ -171,7 +171,13 @@ jobs:
       contents: read
       pull-requests: read
     outputs:
-      backend: ${{ steps.filter.outputs.shared == 'true' || steps.filter.outputs.backend == 'true' }}
+      # `code`: any package source. The backend and frontend SUITES both run on
+      # it, not just on their own package, because each carries census tests
+      # that read the other (noHardcodedCurrency, noLabelAsFreeText,
+      # noClientGeocoder, directProviderInferenceUnreachable scan across
+      # packages), so a frontend-only diff can fail a backend test.
+      code: ${{ steps.filter.outputs.shared == 'true' || steps.filter.outputs.backend == 'true' || steps.filter.outputs.frontend == 'true' }}
+      # `frontend`: what only the frontend's own typecheck and web bundle read.
       frontend: ${{ steps.filter.outputs.shared == 'true' || steps.filter.outputs.frontend == 'true' }}
     steps:
       - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
@@ -197,7 +203,7 @@ jobs:
 
   backend:
     needs: changes
-    if: ${{ !cancelled() && !failure() && (github.event_name != 'pull_request' || needs.changes.outputs.backend == 'true') }}
+    if: ${{ !cancelled() && !failure() && (github.event_name != 'pull_request' || needs.changes.outputs.code == 'true') }}
     runs-on: ubuntu-24.04
     env:
       # The Postgres server `jest.globalSetup.ts` creates one throwaway,
@@ -337,7 +343,7 @@ jobs:
 
   frontend:
     needs: changes
-    if: ${{ !cancelled() && !failure() && (github.event_name != 'pull_request' || needs.changes.outputs.frontend == 'true') }}
+    if: ${{ !cancelled() && !failure() && (github.event_name != 'pull_request' || needs.changes.outputs.code == 'true') }}
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -517,7 +523,7 @@ jobs:
 
   lint:
     needs: changes
-    if: ${{ !cancelled() && !failure() && (github.event_name != 'pull_request' || needs.changes.outputs.backend == 'true' || needs.changes.outputs.frontend == 'true') }}
+    if: ${{ !cancelled() && !failure() && (github.event_name != 'pull_request' || needs.changes.outputs.code == 'true') }}
     # ARMED. `bun run lint` exits 0 across all four packages.
     #
     # It was gated on `vars.HOMIIO_LINT_GATE == 'ready'` from #254 until this
