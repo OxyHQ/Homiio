@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Platform, type ScrollView } from 'react-native';
 import { toast } from '@oxy.so/bloom/toast';
 import { useQuery } from '@tanstack/react-query';
@@ -174,6 +174,19 @@ export function useSindiConversation({
   onConversationPersisted,
 }: UseSindiConversationArgs): UseSindiConversationResult {
   const oxyContext = useOxy();
+  const [streamOwner, setStreamOwner] = useState(() => authenticatedFetch);
+  const ownsStream = streamOwner === authenticatedFetch;
+  const mountedOwner = useRef<ConversationFetch | null>(authenticatedFetch);
+  // Pure render identity; the layout effect owns each mounted lifetime separately.
+  const ownerGeneration = useMemo(() => ({ authenticatedFetch, isAuthenticated }), [authenticatedFetch, isAuthenticated]);
+  const mountedGeneration = useRef<{ generation: object } | null>(null);
+  useLayoutEffect(() => {
+    const mounted = { generation: ownerGeneration };
+    mountedGeneration.current = mounted;
+    return () => {
+      if (mountedGeneration.current === mounted) mountedGeneration.current = null;
+    };
+  }, [ownerGeneration]);
 
   const [attachedFile, setAttachedFile] = useState<AttachedAsset | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -245,6 +258,7 @@ export function useSindiConversation({
     stop,
     data,
     setData,
+    setMessages,
   } = useChat(chatOptions);
   const needsConsent = error instanceof SindiConsentRequiredError;
 
@@ -252,15 +266,37 @@ export function useSindiConversation({
     setActions((previous) => [...previous, execution]);
   }, []);
 
-  const { execute, take, settleTurn } = useSindiActions({
+  const { execute, take, settleTurn, cancelTurn } = useSindiActions({
     host,
-    activeTurnId,
+    activeTurnId: ownsStream ? activeTurnId : null,
     // The revision the SERVER was told about. A manual filter change since then
     // bumps the context's revision, so the action no longer matches and is
     // reported `stale` rather than overwriting what the user just did.
     contextRevision: appContext?.revision ?? 0,
     onExecuted: onActionExecuted,
   });
+
+  // Response ownership continues in the AI SDK after the transport returns.
+  // Abort that stream and discard deferred effects before a new account renders.
+  useLayoutEffect(() => {
+    mountedOwner.current = authenticatedFetch;
+    if (streamOwner !== authenticatedFetch) {
+      setMessages([]);
+      setData([]);
+      // Reset local turn state in the same commit as the external AI SDK cache.
+      // Delaying this to another effect leaves a previous owner's actions visible.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setActiveTurnId(null);
+      setActions([]);
+      setAttachedFile(null);
+      setStreamOwner(() => authenticatedFetch);
+    }
+    return () => {
+      mountedOwner.current = null;
+      stop();
+      cancelTurn();
+    };
+  }, [authenticatedFetch, streamOwner, stop, cancelTurn, setMessages, setData]);
 
   /**
    * Offer every action frame of this turn to the executor.
@@ -276,13 +312,13 @@ export function useSindiConversation({
    * break the chat.
    */
   useEffect(() => {
-    if (!data || data.length === 0) return;
+    if (!ownsStream || !data || data.length === 0) return;
     for (const frame of data) {
       const envelope: SindiActionEnvelope | null = parseSindiActionEnvelope(frame);
       if (!envelope) continue;
       execute(envelope);
     }
-  }, [data, execute]);
+  }, [data, execute, ownsStream]);
 
   const onRequestConsent = useCallback(async () => {
     if (!needsConsent || isRequestingConsent) return;
@@ -316,6 +352,10 @@ export function useSindiConversation({
   // While streaming (`isLoading`) the dedicated auto-scroll effect handles the
   // viewport, so this effect bails without persisting or scrolling.
   useEffect(() => {
+    const mounted = mountedGeneration.current;
+    const isCurrent = () => isAuthenticated && mounted !== null &&
+      mountedGeneration.current === mounted && mounted.generation === ownerGeneration;
+    if (!ownsStream || !isCurrent()) return;
     const syncable =
       Boolean(currentConversation) &&
       messages.length > 0 &&
@@ -368,13 +408,13 @@ export function useSindiConversation({
             title: deriveTitle(currentConversation, messages),
           };
 
-          saveConversation(updatedConversation, authenticatedFetch)
+          saveConversation(updatedConversation, authenticatedFetch, isCurrent)
             .then((saved) => {
               // The HOST decides what a new id means. See
               // `onConversationPersisted`: this used to be an unconditional
               // `router.replace('/sindi/' + id)`, which let a chat started in
               // the side panel navigate the main pane to the full-screen chat.
-              if (saved && saved.id !== conversationId) {
+              if (isCurrent() && saved && saved.id !== conversationId) {
                 onConversationPersisted?.(saved.id);
               }
             })
@@ -388,6 +428,7 @@ export function useSindiConversation({
     scrollToEnd();
   }, [
     messages,
+    ownsStream,
     currentConversation,
     conversationId,
     isLoading,
@@ -395,6 +436,8 @@ export function useSindiConversation({
     updateConversationMessages,
     saveConversation,
     authenticatedFetch,
+    isAuthenticated,
+    ownerGeneration,
     onConversationPersisted,
     scrollToEnd,
   ]);
@@ -417,10 +460,10 @@ export function useSindiConversation({
    * action.
    */
   useEffect(() => {
-    if (isLoading) return;
+    if (!ownsStream || isLoading) return;
     if (activeTurnId !== null) setActiveTurnId(null);
     settleTurn();
-  }, [isLoading, activeTurnId, settleTurn]);
+  }, [isLoading, activeTurnId, settleTurn, ownsStream]);
 
   // Auto-scroll when a new last message arrives.
   useEffect(() => {
@@ -489,6 +532,10 @@ export function useSindiConversation({
   }, [stop]);
 
   const onAttachFile = useCallback(async () => {
+    const mounted = mountedGeneration.current;
+    const isCurrent = () => isAuthenticated && mounted !== null &&
+      mountedGeneration.current === mounted && mounted.generation === ownerGeneration;
+    if (!isCurrent()) return;
     try {
       // Gate behind Homiio+ or per-file credits.
       if (!plusActive && fileCredits <= 0) {
@@ -499,8 +546,10 @@ export function useSindiConversation({
       // Show the one-time upsell on the first attempt for non-subscribers.
       if (!plusActive) {
         const alreadyShown = await getData<boolean>(FILE_UPSELL_KEY);
+        if (!isCurrent()) return;
         if (!alreadyShown) {
           await storeData(FILE_UPSELL_KEY, true);
+          if (!isCurrent()) return;
           onOpenUpsell();
           return;
         }
@@ -511,13 +560,13 @@ export function useSindiConversation({
         copyToCacheDirectory: true,
         multiple: false,
       });
-      if (!result.canceled && result.assets.length > 0) {
+      if (isCurrent() && !result.canceled && result.assets.length > 0) {
         setAttachedFile(result.assets[0]);
       }
     } catch (e) {
       logger.error('File pick error:', e);
     }
-  }, [plusActive, fileCredits, onOpenUpsell]);
+  }, [plusActive, fileCredits, onOpenUpsell, isAuthenticated, ownerGeneration]);
 
   const onSubmit = useCallback(async () => {
     try {
@@ -553,6 +602,7 @@ export function useSindiConversation({
           ? `<FILE_DATA_URL>${dataUrl}</FILE_DATA_URL>`
           : `<IMAGE_DATA_URL>${dataUrl}</IMAGE_DATA_URL>`;
 
+        if (mountedOwner.current !== authenticatedFetch) return;
         append({
           id: `${Date.now()}-user-file`,
           role: 'user',
@@ -591,6 +641,7 @@ export function useSindiConversation({
         throw new Error(txt || 'Failed to analyze file');
       }
       const data: { output?: unknown } = await res.json();
+      if (mountedOwner.current !== authenticatedFetch) return;
       if (data?.output) {
         append({
           id: `${Date.now()}-assistant-file`,

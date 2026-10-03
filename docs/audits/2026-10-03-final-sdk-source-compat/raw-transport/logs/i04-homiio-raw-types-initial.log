@@ -1,0 +1,21 @@
+$ tsc --noEmit
+hooks/sindiLinkedFetch.ts(1,15): error TS2305: Module '"@oxy.so/core"' has no exported member 'HttpService'.
+services/homeSectionsService.ts(92,7): error TS2322: Type 'HomeSectionsParams' is not assignable to type 'Record<string, unknown>'.
+  Index signature for type 'string' is missing in type 'HomeSectionsParams'.
+services/leaseService.ts(58,22): error TS2322: Type 'LeaseFilters | undefined' is not assignable to type 'Record<string, unknown> | undefined'.
+  Type 'LeaseFilters' is not assignable to type 'Record<string, unknown>'.
+    Index signature for type 'string' is missing in type 'LeaseFilters'.
+services/neighborhoodService.ts(81,7): error TS2322: Type 'NeighborhoodSearchFilters' is not assignable to type 'Record<string, unknown>'.
+  Index signature for type 'string' is missing in type 'NeighborhoodSearchFilters'.
+services/notificationService.ts(35,52): error TS2322: Type 'NotificationFilters | undefined' is not assignable to type 'Record<string, unknown> | undefined'.
+  Type 'NotificationFilters' is not assignable to type 'Record<string, unknown>'.
+    Index signature for type 'string' is missing in type 'NotificationFilters'.
+services/propertyService.ts(68,7): error TS2322: Type 'PropertyFilters | undefined' is not assignable to type 'Record<string, unknown> | undefined'.
+  Type 'PropertyFilters' is not assignable to type 'Record<string, unknown>'.
+    Index signature for type 'string' is missing in type 'PropertyFilters'.
+services/propertyService.ts(193,7): error TS2322: Type 'PropertyFilters | undefined' is not assignable to type 'Record<string, unknown> | undefined'.
+  Type 'PropertyFilters' is not assignable to type 'Record<string, unknown>'.
+    Index signature for type 'string' is missing in type 'PropertyFilters'.
+services/roommateService.ts(111,24): error TS2322: Type 'RoommateFilters | undefined' is not assignable to type 'Record<string, unknown> | undefined'.
+  Type 'RoommateFilters' is not assignable to type 'Record<string, unknown>'.
+    Index signature for type 'string' is missing in type 'RoommateFilters'.

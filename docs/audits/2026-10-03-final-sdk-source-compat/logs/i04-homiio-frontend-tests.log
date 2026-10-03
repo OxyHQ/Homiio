@@ -1,0 +1,248 @@
+$ jest --ci --runInBand
+PASS __tests__/location/locationToken.test.ts (9.484 s)
+PASS __tests__/home/locationScopeLadder.test.ts
+PASS __tests__/buildSearchParams.test.ts
+PASS __tests__/searchUrlRoundTrip.test.ts
+PASS __tests__/noClientGeocoder.test.ts
+PASS __tests__/location/locationKey.test.ts
+PASS __tests__/widgets/featuredWidgetScope.test.tsx (5.021 s)
+  ● Console
+
+    console.warn
+      react-i18next:: useTranslation: You will need to pass in an i18next instance by using initReactI18next or by passing it via props or context. In monorepo setups, make sure there is only one instance of react-i18next. { code: 'NO_I18NEXT_INSTANCE' }
+
+      110 |
+      111 | export function FeaturedPropertiesWidget() {
+    > 112 |   const { t } = useTranslation();
+          |                               ^
+      113 |   const router = useRouter();
+      114 |   const scope = useLocationScope();
+      115 |   const { offering } = useRentalMode();
+
+      at warn (../../node_modules/react-i18next/dist/commonjs/utils.js:19:13)
+      at warnOnce (../../node_modules/react-i18next/dist/commonjs/utils.js:27:3)
+      at useTranslation (../../node_modules/react-i18next/dist/commonjs/useTranslation.js:37:25)
+      at FeaturedPropertiesWidget (components/widgets/FeaturedPropertiesWidget.tsx:112:31)
+      at Object.react_stack_bottom_frame (../../node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15670:20)
+      at renderWithHooks (../../node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4863:22)
+      at updateFunctionComponent (../../node_modules/react-test-renderer/cjs/react-test-renderer.development.js:7018:19)
+      at beginWork (../../node_modules/react-test-renderer/cjs/react-test-renderer.development.js:8499:18)
+      at runWithFiberInDEV (../../node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at performUnitOfWork (../../node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13224:22)
+      at workLoopSync (../../node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13068:41)
+      at renderRootSync (../../node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13049:11)
+      at performWorkOnRoot (../../node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12181:11)
+      at performWorkOnRootViaSchedulerTask (../../node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2908:7)
+      at flushActQueue (../../node_modules/react/cjs/react.development.js:590:34)
+      at Object.<anonymous>.process.env.NODE_ENV.exports.act (../../node_modules/react/cjs/react.development.js:884:10)
+      at actImplementation (../../node_modules/@testing-library/react-native/src/act.ts:30:25)
+      at renderWithAct (../../node_modules/@testing-library/react-native/src/render-act.ts:13:11)
+      at renderInternal (../../node_modules/@testing-library/react-native/src/render.tsx:69:33)
+      at renderInternal (../../node_modules/@testing-library/react-native/src/render.tsx:44:10)
+      at Object.<anonymous> (__tests__/widgets/featuredWidgetScope.test.tsx:190:11)
+      at asyncGeneratorStep (../../node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (../../node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at ../../node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (../../node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+PASS __tests__/widgets/routeRailTotality.test.ts
+PASS __tests__/noHardcodedCurrency.test.ts
+PASS __tests__/searchPriceCurrency.test.ts
+PASS __tests__/leaseTimeline.test.ts
+PASS __tests__/i18n/localeValueParity.test.ts
+PASS __tests__/resolveLocationRef.test.ts
+PASS __tests__/sindi/actionContract.test.ts
+PASS __tests__/format/money.test.ts
+PASS __tests__/propertyPayload.test.ts
+PASS __tests__/upcomingBookings.test.ts
+PASS __tests__/location/placeGeometry.test.ts
+PASS __tests__/searchArea.test.ts
+PASS __tests__/sindi/actionExecution.test.ts
+PASS __tests__/publishFlow.test.ts
+PASS __tests__/stripComments.test.ts
+PASS __tests__/home/homeSectionsScope.test.ts
+PASS __tests__/noLabelAsFreeText.test.ts
+PASS __tests__/searchThisAreaContract.test.ts
+PASS __tests__/searchQueryIdentity.test.ts
+PASS __tests__/searchStaleResponse.test.tsx
+PASS __tests__/noFunctionFormStyle.test.ts
+PASS __tests__/format/dates.test.ts
+PASS __tests__/reviewPublishedFacts.test.ts
+PASS __tests__/searchQueryStoreAtomicity.test.ts
+PASS __tests__/home/homeFailureSurfacing.test.ts
+PASS __tests__/location/noPermissionOnMount.test.ts
+PASS __tests__/mapCamera.test.ts
+PASS __tests__/evictionScope.test.ts
+PASS __tests__/mapMoveSource.test.ts
+PASS __tests__/sindi/conversationHostPromotion.test.ts
+PASS __tests__/format/units.test.ts
+PASS __tests__/sindi/clarifyLocation.test.tsx
+PASS __tests__/guestPoints.test.ts
+PASS __tests__/location/scopeWhere.test.ts
+PASS __tests__/mapOverlays.test.ts
+PASS __tests__/sindi/controlCapability.test.ts
+PASS __tests__/cityLookup.test.ts
+PASS __tests__/location/approximateLocation.test.ts
+PASS __tests__/upcomingBookingsState.test.tsx (6.389 s)
+PASS __tests__/home/homeFailureToast.test.tsx
+PASS __tests__/home/primarySavedArea.test.ts
+PASS __tests__/deviceScopeRadiusUnit.test.ts
+PASS __tests__/savedSearchTarget.test.ts
+PASS __tests__/applicationChecklist.test.ts
+PASS __tests__/widgets/rightBarRail.test.tsx
+PASS __tests__/priceHistogramParams.test.ts
+PASS __tests__/sindiVoiceDraft.test.ts
+PASS __tests__/observabilityContract.test.ts
+PASS __tests__/evictionPhone.test.ts
+PASS __tests__/location/boundsCenter.test.ts
+PASS __tests__/sindiConsent.test.ts
+PASS __tests__/profileEditFields.test.tsx
+  ● Console
+
+    console.warn
+      react-i18next:: useTranslation: You will need to pass in an i18next instance by using initReactI18next or by passing it via props or context. In monorepo setups, make sure there is only one instance of react-i18next. { code: 'NO_I18NEXT_INSTANCE' }
+
+      146 |   removeRentalHistory,
+      147 | }: PersonalProfileSectionsProps) {
+    > 148 |   const { t } = useTranslation();
+          |                               ^
+      149 |
+      150 |   switch (activeSection) {
+      151 |     case 'personal':
+
+      at warn (../../node_modules/react-i18next/dist/commonjs/utils.js:19:13)
+      at warnOnce (../../node_modules/react-i18next/dist/commonjs/utils.js:27:3)
+      at useTranslation (../../node_modules/react-i18next/dist/commonjs/useTranslation.js:37:25)
+      at PersonalProfileSections (components/profile/edit/PersonalProfileSections.tsx:148:31)
+      at Object.react_stack_bottom_frame (../../node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15670:20)
+      at renderWithHooks (../../node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4863:22)
+      at updateFunctionComponent (../../node_modules/react-test-renderer/cjs/react-test-renderer.development.js:7018:19)
+      at beginWork (../../node_modules/react-test-renderer/cjs/react-test-renderer.development.js:8499:18)
+      at runWithFiberInDEV (../../node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at performUnitOfWork (../../node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13224:22)
+      at workLoopSync (../../node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13068:41)
+      at renderRootSync (../../node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13049:11)
+      at performWorkOnRoot (../../node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12181:11)
+      at performWorkOnRootViaSchedulerTask (../../node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2908:7)
+      at flushActQueue (../../node_modules/react/cjs/react.development.js:590:34)
+      at Object.<anonymous>.process.env.NODE_ENV.exports.act (../../node_modules/react/cjs/react.development.js:884:10)
+      at actImplementation (../../node_modules/@testing-library/react-native/src/act.ts:30:25)
+      at renderWithAct (../../node_modules/@testing-library/react-native/src/render-act.ts:13:11)
+      at renderInternal (../../node_modules/@testing-library/react-native/src/render.tsx:69:33)
+      at renderInternal (../../node_modules/@testing-library/react-native/src/render.tsx:44:10)
+      at __tests__/profileEditFields.test.tsx:80:24
+
+    console.error
+      An update to Animated(Path) inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+      at ../../node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14402:19
+      at runWithFiberInDEV (../../node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at warnIfUpdatesNotWrappedWithActDEV (../../node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14401:9)
+      at scheduleUpdateOnFiber (../../node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12086:9)
+      at dispatchReducerAction (../../node_modules/react-test-renderer/cjs/react-test-renderer.development.js:6155:13)
+      at Object.scheduleUpdate [as current] (../../node_modules/react-native/src/private/animated/createAnimatedPropsHook.js:131:20)
+      at AnimatedProps._callback (../../node_modules/react-native/src/private/animated/createAnimatedPropsHook.js:71:36)
+      at AnimatedProps._callback [as update] (../../node_modules/react-native/Libraries/Animated/nodes/AnimatedProps.js:237:10)
+      at update (../../node_modules/react-native/Libraries/Animated/nodes/AnimatedValue.js:67:31)
+          at Set.forEach (<anonymous>)
+      at forEach (../../node_modules/react-native/Libraries/Animated/nodes/AnimatedValue.js:67:10)
+      at AnimatedValue.flushValue [as _updateValue] (../../node_modules/react-native/Libraries/Animated/nodes/AnimatedValue.js:361:7)
+      at TimingAnimation._updateValue [as _onUpdate] (../../node_modules/react-native/Libraries/Animated/nodes/AnimatedValue.js:325:14)
+      at TimingAnimation._onUpdate [as onUpdate] (../../node_modules/react-native/Libraries/Animated/animations/TimingAnimation.js:157:10)
+      at onUpdate (../../node_modules/react-native/Libraries/Animated/animations/TimingAnimation.js:132:67)
+      at Timeout.callback [as _onTimeout] (../../node_modules/react-native-worklets/src/runLoop/uiRuntime/mockedRequestAnimationFrame.ts:10:27)
+
+    console.error
+      An update to Animated(Path) inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+      at ../../node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14402:19
+      at runWithFiberInDEV (../../node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at warnIfUpdatesNotWrappedWithActDEV (../../node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14401:9)
+      at scheduleUpdateOnFiber (../../node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12086:9)
+      at dispatchReducerAction (../../node_modules/react-test-renderer/cjs/react-test-renderer.development.js:6155:13)
+      at Object.scheduleUpdate [as current] (../../node_modules/react-native/src/private/animated/createAnimatedPropsHook.js:131:20)
+      at AnimatedProps._callback (../../node_modules/react-native/src/private/animated/createAnimatedPropsHook.js:71:36)
+      at AnimatedProps._callback [as update] (../../node_modules/react-native/Libraries/Animated/nodes/AnimatedProps.js:237:10)
+      at update (../../node_modules/react-native/Libraries/Animated/nodes/AnimatedValue.js:67:31)
+          at Set.forEach (<anonymous>)
+      at forEach (../../node_modules/react-native/Libraries/Animated/nodes/AnimatedValue.js:67:10)
+      at AnimatedValue.flushValue [as _updateValue] (../../node_modules/react-native/Libraries/Animated/nodes/AnimatedValue.js:361:7)
+      at TimingAnimation._updateValue [as _onUpdate] (../../node_modules/react-native/Libraries/Animated/nodes/AnimatedValue.js:325:14)
+      at TimingAnimation._onUpdate [as onUpdate] (../../node_modules/react-native/Libraries/Animated/animations/TimingAnimation.js:157:10)
+      at onUpdate (../../node_modules/react-native/Libraries/Animated/animations/TimingAnimation.js:132:67)
+      at Timeout.callback [as _onTimeout] (../../node_modules/react-native-worklets/src/runLoop/uiRuntime/mockedRequestAnimationFrame.ts:10:27)
+
+PASS __tests__/discoverInsights.test.ts
+PASS __tests__/searchMarkers.test.ts
+PASS __tests__/mapDocument.test.ts
+PASS __tests__/placeKind.test.ts
+PASS __tests__/privateDocument.test.ts
+PASS __tests__/currency.test.ts
+PASS __tests__/homiioWidgetsPlugin.test.ts
+PASS __tests__/ThemedText.test.tsx
+PASS __tests__/widgets/sindiPanelLayout.test.tsx
+PASS __tests__/pricingDetailsOffering.test.tsx
+  ● Console
+
+    console.warn
+      react-i18next:: useTranslation: You will need to pass in an i18next instance by using initReactI18next or by passing it via props or context. In monorepo setups, make sure there is only one instance of react-i18next. { code: 'NO_I18NEXT_INSTANCE' }
+
+      59 |
+      60 | export const PricingDetails: React.FC<Props> = ({ property, mode }) => {
+    > 61 |   const { t } = useTranslation();
+         |                               ^
+      62 |
+      63 |   const isVacation = mode === 'vacation';
+      64 |   // The priced block counts only when the listing actually OFFERS it. A sale
+
+      at warn (../../node_modules/react-i18next/dist/commonjs/utils.js:19:13)
+      at warnOnce (../../node_modules/react-i18next/dist/commonjs/utils.js:27:3)
+      at useTranslation (../../node_modules/react-i18next/dist/commonjs/useTranslation.js:37:25)
+      at PricingDetails (components/property/PricingDetails.tsx:61:31)
+      at Object.react_stack_bottom_frame (../../node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15670:20)
+      at renderWithHooks (../../node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4863:22)
+      at updateFunctionComponent (../../node_modules/react-test-renderer/cjs/react-test-renderer.development.js:7018:19)
+      at beginWork (../../node_modules/react-test-renderer/cjs/react-test-renderer.development.js:8499:18)
+      at runWithFiberInDEV (../../node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at performUnitOfWork (../../node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13224:22)
+      at workLoopSync (../../node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13068:41)
+      at renderRootSync (../../node_modules/react-test-renderer/cjs/react-test-renderer.development.js:13049:11)
+      at performWorkOnRoot (../../node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12181:11)
+      at performWorkOnRootViaSchedulerTask (../../node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2908:7)
+      at flushActQueue (../../node_modules/react/cjs/react.development.js:590:34)
+      at Object.<anonymous>.process.env.NODE_ENV.exports.act (../../node_modules/react/cjs/react.development.js:884:10)
+      at actImplementation (../../node_modules/@testing-library/react-native/src/act.ts:30:25)
+      at renderWithAct (../../node_modules/@testing-library/react-native/src/render-act.ts:13:11)
+      at renderInternal (../../node_modules/@testing-library/react-native/src/render.tsx:69:33)
+      at renderInternal (../../node_modules/@testing-library/react-native/src/render.tsx:44:10)
+      at renderPricing (__tests__/pricingDetailsOffering.test.tsx:25:16)
+      at Object.renderPricing (__tests__/pricingDetailsOffering.test.tsx:36:18)
+
+PASS __tests__/savedFolders.test.ts
+PASS __tests__/format/percentage.test.ts
+PASS __tests__/i18n/localeOnDemand.test.ts
+PASS __tests__/sindiTurnPersistence.test.ts
+
+Test Suites: 73 passed, 73 total
+Tests:       940 passed, 940 total
+Snapshots:   0 total
+Time:        49.4 s
+Ran all test suites.

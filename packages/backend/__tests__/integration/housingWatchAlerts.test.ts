@@ -1222,7 +1222,18 @@ describe('the producer', () => {
 
     const [notification] = await notificationsFor(owner);
     expect(notification.message).toContain('deposit');
-    expect(JSON.stringify(notification)).not.toContain('9999');
+    // Opaque generated IDs can contain these digits without publishing an amount.
+    // Check the narrative and the typed cost detail, not the row's identifiers.
+    const data = notification.data as Record<string, unknown>;
+    expect(data.explanation).toEqual(expect.objectContaining({
+      detail: { kind: 'cost_terms_changed', listingTitle: 'Flat', terms: ['deposit'] },
+    }));
+    expect(JSON.stringify({
+      title: notification.title,
+      message: notification.message,
+      explanation: data.explanation,
+      push: data.push,
+    })).not.toContain('9999');
   });
 });
 

@@ -1,0 +1,72 @@
+{
+  "base": "a7860c11e681f75697dac4705986bad471f88217",
+  "sources": [
+    {
+      "path": "packages/frontend/hooks/useSindiConversation.ts",
+      "sha256": "d07420546c135b403b7a9abc5cb6a9f6130d7506e41d466206fc904bd13fece1"
+    },
+    {
+      "path": "packages/frontend/store/conversationStore.ts",
+      "sha256": "0e5966d131cbb31a88d9c252d66acff2c68a06ab0f1ecff1ef9553381835cd6d"
+    },
+    {
+      "path": "packages/frontend/__tests__/sindiDeferredOwner.test.tsx",
+      "sha256": "457be8af0598afc793ec5ed40cd2bed512323b79f732a2f6add889b81f9ca8be"
+    }
+  ],
+  "records": [
+    {
+      "path": "docs/audits/2026-10-03-final-sdk-source-compat/deferred-owner/red-final.log",
+      "sha256": "a5e05713bc7340fd9d89372f72cd666a1f9fe2232ccdb019c9bf1b4c4d5356d8"
+    },
+    {
+      "path": "docs/audits/2026-10-03-final-sdk-source-compat/deferred-owner/red-final-fixture.tsx",
+      "sha256": "d86e168cb8aac58f3579b6b1d421d7f96674dda19ab6de50426f73b04d530983"
+    },
+    {
+      "path": "docs/audits/2026-10-03-final-sdk-source-compat/deferred-owner/green-final.log",
+      "sha256": "a234a06e18df5f5d9cca81bb52108cc84d617526a6bd69b77e6227ac36781936"
+    },
+    {
+      "path": "docs/audits/2026-10-03-final-sdk-source-compat/deferred-owner/typecheck-final.log",
+      "sha256": "8366207267355d3e3d5bf3bf6e8c94c5f93f6078c34f08973fa2b38cdda6cc92"
+    },
+    {
+      "path": "docs/audits/2026-10-03-final-sdk-source-compat/deferred-owner/lint-baseline.json",
+      "sha256": "a59300e2ede9ef6ce14170de3934a98a231cd188ba50f7f49080ea6ff5fee15b"
+    },
+    {
+      "path": "docs/audits/2026-10-03-final-sdk-source-compat/deferred-owner/lint-final.json",
+      "sha256": "f1b7e5ce05f4d5cedede98895384fefe6b688a7436650f43ce93e5de70096c50"
+    },
+    {
+      "path": "docs/audits/2026-10-03-final-sdk-source-compat/deferred-owner/lint-comparison.json",
+      "sha256": "b3a1239958520a541e23cedf801964276e95b8d427fcc76b947de29ecb1104c6"
+    },
+    {
+      "path": "docs/audits/2026-10-03-final-sdk-source-compat/deferred-owner/initial-fixture-shape.log",
+      "sha256": "9eda03bb330b156d00b859a703cbb3e4fe58650d42b7d48c4774094cf3919407"
+    },
+    {
+      "path": "docs/audits/2026-10-03-final-sdk-source-compat/deferred-owner/red-with-logout-fixture-error.log",
+      "sha256": "f38f0156c25e6375f6ea75024d84ea72bd473ddddadc9c9de81880c02d00f93f"
+    },
+    {
+      "path": "docs/audits/2026-10-03-final-sdk-source-compat/deferred-owner/green-with-logout-fixture-error.log",
+      "sha256": "3ceb8f5bd8c194d3914d8cb315abd17bc9d220a5466c715caf1e4bc73fa3cf87"
+    }
+  ],
+  "tests": {
+    "baselineRed": {
+      "failed": 7,
+      "passed": 2
+    },
+    "finalGreen": {
+      "suites": 12,
+      "passed": 127
+    },
+    "typecheck": "PASS",
+    "lint": "baseline-equivalent: 1 error / 7 warnings, zero new"
+  },
+  "scope": "real Zustand store, real loopback HTTP and installed candidate SDK; deferred native picker mocked at OS boundary; no backend mutation or device runtime claim"
+}

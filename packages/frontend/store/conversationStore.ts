@@ -42,6 +42,7 @@ interface ConversationState {
   saveConversation: (
     conversation: Conversation,
     authenticatedFetch: (url: string, options?: RequestInit) => Promise<Response>,
+    isCurrent: () => boolean,
   ) => Promise<Conversation | null>;
   createConversation: (
     title: string,
@@ -189,7 +190,8 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
   },
 
   // Save conversation
-  saveConversation: async (conversation, authenticatedFetch) => {
+  saveConversation: async (conversation, authenticatedFetch, isCurrent) => {
+    if (!isCurrent()) return null;
     try {
       logger.debug('saveConversation called', {
         id: conversation.id,
@@ -222,8 +224,10 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
           body: JSON.stringify(requestBody),
         });
 
+        if (!isCurrent()) return null;
         if (response.ok) {
           const data = await response.json();
+          if (!isCurrent()) return null;
           if (data.success && data.conversation) {
             const newConversation: Conversation = {
               ...conversation,
@@ -274,6 +278,7 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
         },
       );
 
+      if (!isCurrent()) return null;
       if (response.ok) {
         logger.debug('Update conversation request successful');
         // Update conversations list
@@ -288,6 +293,7 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
 
       return conversation;
     } catch (error) {
+      if (!isCurrent()) return null;
       logger.error('Exception in saveConversation:', error);
       return conversation;
     }

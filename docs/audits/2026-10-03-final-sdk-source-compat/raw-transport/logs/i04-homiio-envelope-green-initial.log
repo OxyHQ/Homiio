@@ -1,0 +1,26 @@
+$ jest --ci --runInBand --runTestsByPath __tests__/linkedResponses.test.ts
+FAIL __tests__/linkedResponses.test.ts
+  ✕ retains the actual public envelope without reconstructing success or losing fields (40 ms)
+
+  ● retains the actual public envelope without reconstructing success or losing fields
+
+    ApiError: Request failed with status undefined
+
+      74 |       const message = typeof value?.message === 'string' ? value.message
+      75 |         : typeof value?.error === 'string' ? value.error : `Request failed with status ${response.status}`;
+    > 76 |       throw new ApiError(message, response.status, data);
+         |             ^
+      77 |     }
+      78 |     return { data: data as T };
+      79 |   } catch (error) { throw toApiError(error); }
+
+      at utils/api.ts:76:13
+      at asyncGeneratorStep (../../node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (../../node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 1 total
+Snapshots:   0 total
+Time:        1.01 s, estimated 6 s
+Ran all test suites within paths "__tests__/linkedResponses.test.ts".
+error: script "test" exited with code 1

@@ -1,0 +1,9 @@
+$ jest --ci --runInBand --runTestsByPath __tests__/linkedResponses.test.ts __tests__/sindiConsent.test.ts
+PASS __tests__/linkedResponses.test.ts
+PASS __tests__/sindiConsent.test.ts
+
+Test Suites: 2 passed, 2 total
+Tests:       18 passed, 18 total
+Snapshots:   0 total
+Time:        1.331 s
+Ran all test suites within paths "__tests__/linkedResponses.test.ts", "__tests__/sindiConsent.test.ts".
