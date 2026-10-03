@@ -33,6 +33,7 @@
         "@oxy.so/core": "^4.0.0",
         "@oxy.so/db": "^1.0.0",
         "@oxy.so/utils": "^1.0.1",
+        "@peable.to/sdk": "0.2.2",
         "ai": "^4.3.19",
         "axios": "^1.18.1",
         "bcryptjs": "^3.0.3",
@@ -845,6 +846,10 @@
     "@oxy.so/utils": ["@oxy.so/utils@1.0.1", "", {}, "sha512-7bZTyXBd5z99D9zsm3k1BSHSODsUxnTZOZd9sPBuip59E71v08hYAwCHqqQIpitwLeFxDpgwADfyaP3s82gRUA=="],
 
     "@paralleldrive/cuid2": ["@paralleldrive/cuid2@2.3.1", "", { "dependencies": { "@noble/hashes": "^1.1.5" } }, "sha512-XO7cAxhnTZl0Yggq6jOgjiOHhbgcO4NqFqwSmQpjK3b6TEE6Uj/jfSk6wzYyemh3+I0sHirKSetjQwn5cZktFw=="],
+
+    "@peable.to/sdk": ["@peable.to/sdk@0.2.2", "", { "dependencies": { "@peable.to/shared-types": "^0.3.0", "qrcode-generator": "^2.0.4", "socket.io-client": "^4.8.3" } }, "sha512-U1i6gGK2yGXvsIIjHBMga+RzuvgSl9+74N0+ENFLinv7vD56syP5lfrD+Jmuw208E5H9tLars61ucq7HW00a9A=="],
+
+    "@peable.to/shared-types": ["@peable.to/shared-types@0.3.0", "", {}, "sha512-SczFYX93BkY1OghT95oKemixSFsbWI98jeV6gwXBqWtBAuXS6mit2fk0hLyoFQVvSpul1Rq3RCjsBEobygZOaw=="],
 
     "@pkgjs/parseargs": ["@pkgjs/parseargs@0.11.0", "", {}, "sha512-+1VkjdD0QBLPodGrJUeqarH8VAIvQODIbwh9XpP5Syisf7YoQgsJKPNFoqqLQlu+VQ/tVSshMR6loPMn8U+dPg=="],
 
@@ -2637,6 +2642,8 @@
     "pure-rand": ["pure-rand@6.1.0", "", {}, "sha512-bVWawvoZoBYpp6yIoQtQXHZjmz35RSVHnUOTefl8Vcjr8snTPY1wnpSPMWekcFwbxI6gtmT7rSYPFvz71ldiOA=="],
 
     "qrcode": ["qrcode@1.5.4", "", { "dependencies": { "dijkstrajs": "^1.0.1", "pngjs": "^5.0.0", "yargs": "^15.3.1" }, "bin": { "qrcode": "bin/qrcode" } }, "sha512-1ca71Zgiu6ORjHqFBDpnSMTR2ReToX4l1Au1VFLyVeBTFavzQnv5JxMFr3ukHVKpSrSA2MCk0lNJSykjUfz7Zg=="],
+
+    "qrcode-generator": ["qrcode-generator@2.0.4", "", {}, "sha512-mZSiP6RnbHl4xL2Ap5HfkjLnmxfKcPWpWe/c+5XxCuetEenqmNFf1FH/ftXPCtFG5/TDobjsjz6sSNL0Sr8Z9g=="],
 
     "qrcode-terminal": ["qrcode-terminal@0.12.0", "", { "bin": { "qrcode-terminal": "./bin/qrcode-terminal.js" } }, "sha512-EXtzRZmC+YGmGlDFbXKxQiMZNwCLEO6BANKXG4iCtSIM0yqc/pappSx3RIKr4r0uh5JsBckOXeKrB3Iz7mdQpQ=="],
 

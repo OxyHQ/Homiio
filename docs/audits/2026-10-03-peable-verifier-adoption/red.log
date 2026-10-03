@@ -1,0 +1,108 @@
+$ cd ../listing-providers && bun run build && cd ../backend && NODE_OPTIONS='--max-old-space-size=6144' jest --runInBand __tests__/unit/peableContract.test.ts
+$ bunx tsc
+[2026-10-03T08:50:33.740Z] [INFO] [PostgresMigrate] Postgres migration plan {
+  "target": "oxydb_test_4f2752182dfc0291",
+  "phase": "all",
+  "dryRun": false,
+  "journalEntries": 31,
+  "migrationsFolder": "/home/nate/Oxy/Homiio/.worktrees/1519-peable-verifier-adoption-20261003/packages/backend/drizzle"
+}
+[2026-10-03T08:50:33.960Z] [INFO] [PostgresMigrate] Applying 31 migration(s): 0000_geo_images_addresses, 0001_geo_lookup_indexes, 0002_property, 0003_identity_partners_billing, 0004_tenancy_leases_bookings, 0005_community_reviews_evictions, 0006_engagement_saved_cache, 0007_crowdsource_moderation, 0008_review_author_address_key, 0009_roommate_preferences_location_interests, 0010_deterministic_place_slug, 0011_saved_search_location, 0012_housing_watches_and_alerts, 0013_evictions_local_privacy, 0014_housing_candidate_materialization, 0015_address_merge_workflow, 0016_address_merge_collision_refusal, 0017_listing_address_published_precision, 0018_address_correction_proposals, 0019_review_author_publication, 0020_review_pseudonym_not_null, 0021_maintenance_requests, 0022_lease_payment_ledger, 0023_maintenance_attachments, 0024_floor_not_stated, 0025_guest_points, 0026_application_checklist, 0027_viewing_availability, 0028_lease_signature_binding, 0029_city_slug_identity, 0030_placeholder_region_merge
+[2026-10-03T08:50:34.353Z] [INFO] [PostgresMigrate] Applied 31 migration(s): 0000_geo_images_addresses, 0001_geo_lookup_indexes, 0002_property, 0003_identity_partners_billing, 0004_tenancy_leases_bookings, 0005_community_reviews_evictions, 0006_engagement_saved_cache, 0007_crowdsource_moderation, 0008_review_author_address_key, 0009_roommate_preferences_location_interests, 0010_deterministic_place_slug, 0011_saved_search_location, 0012_housing_watches_and_alerts, 0013_evictions_local_privacy, 0014_housing_candidate_materialization, 0015_address_merge_workflow, 0016_address_merge_collision_refusal, 0017_listing_address_published_precision, 0018_address_correction_proposals, 0019_review_author_publication, 0020_review_pseudonym_not_null, 0021_maintenance_requests, 0022_lease_payment_ledger, 0023_maintenance_attachments, 0024_floor_not_stated, 0025_guest_points, 0026_application_checklist, 0027_viewing_availability, 0028_lease_signature_binding, 0029_city_slug_identity, 0030_placeholder_region_merge
+[2026-10-03T08:50:34.405Z] [INFO] [PostgresMigrate] Postgres migration plan {
+  "target": "oxydb_test_c8af12a07aa57718",
+  "phase": "all",
+  "dryRun": false,
+  "journalEntries": 31,
+  "migrationsFolder": "/home/nate/Oxy/Homiio/.worktrees/1519-peable-verifier-adoption-20261003/packages/backend/drizzle"
+}
+[2026-10-03T08:50:34.635Z] [INFO] [PostgresMigrate] Applying 31 migration(s): 0000_geo_images_addresses, 0001_geo_lookup_indexes, 0002_property, 0003_identity_partners_billing, 0004_tenancy_leases_bookings, 0005_community_reviews_evictions, 0006_engagement_saved_cache, 0007_crowdsource_moderation, 0008_review_author_address_key, 0009_roommate_preferences_location_interests, 0010_deterministic_place_slug, 0011_saved_search_location, 0012_housing_watches_and_alerts, 0013_evictions_local_privacy, 0014_housing_candidate_materialization, 0015_address_merge_workflow, 0016_address_merge_collision_refusal, 0017_listing_address_published_precision, 0018_address_correction_proposals, 0019_review_author_publication, 0020_review_pseudonym_not_null, 0021_maintenance_requests, 0022_lease_payment_ledger, 0023_maintenance_attachments, 0024_floor_not_stated, 0025_guest_points, 0026_application_checklist, 0027_viewing_availability, 0028_lease_signature_binding, 0029_city_slug_identity, 0030_placeholder_region_merge
+[2026-10-03T08:50:35.015Z] [INFO] [PostgresMigrate] Applied 31 migration(s): 0000_geo_images_addresses, 0001_geo_lookup_indexes, 0002_property, 0003_identity_partners_billing, 0004_tenancy_leases_bookings, 0005_community_reviews_evictions, 0006_engagement_saved_cache, 0007_crowdsource_moderation, 0008_review_author_address_key, 0009_roommate_preferences_location_interests, 0010_deterministic_place_slug, 0011_saved_search_location, 0012_housing_watches_and_alerts, 0013_evictions_local_privacy, 0014_housing_candidate_materialization, 0015_address_merge_workflow, 0016_address_merge_collision_refusal, 0017_listing_address_published_precision, 0018_address_correction_proposals, 0019_review_author_publication, 0020_review_pseudonym_not_null, 0021_maintenance_requests, 0022_lease_payment_ledger, 0023_maintenance_attachments, 0024_floor_not_stated, 0025_guest_points, 0026_application_checklist, 0027_viewing_availability, 0028_lease_signature_binding, 0029_city_slug_identity, 0030_placeholder_region_merge
+  console.log
+    [2026-10-03T08:50:36.038Z] [INFO] [Postgres] Connected to PostgreSQL successfully {
+      "maxPoolSize": 8
+    }
+
+      at Logger.info (utils/logger.ts:33:15)
+
+FAIL __tests__/unit/peableContract.test.ts
+  what a Peable status means to the ledger
+    ✓ settles only on `settled` (2 ms)
+    ✓ treats a refund as a ROW, never as a state
+    ✓ calls a status it has never heard of unknown, rather than guessing (1 ms)
+    ✓ is total over every status this build knows (1 ms)
+    ✓ keeps `requires_action` out of flight
+    ✓ counts an expiry as a failure, because the rent is still owed
+  proving a webhook came from Peable
+    ✓ accepts a correctly signed delivery
+    ✓ refuses a body that changed by one byte (1 ms)
+    ✓ refuses a re-serialised body — the classic way this is got wrong
+    ✓ refuses another merchant's secret
+    ✓ refuses a delivery captured and replayed later
+    ✓ refuses a replay dressed in a fresh timestamp (1 ms)
+    ✓ refuses a header that is missing, empty or malformed
+    ✓ names an unrecognised signature version rather than calling it malformed
+    ✓ refuses a short forged digest instead of throwing
+  published event envelope boundary
+    ✕ refuses a signed non-event: not-json (1 ms)
+    ✕ refuses a signed non-event: {}
+    ✕ refuses a signed non-event: {"id":"evt_unknown","object":"event","type":"toString","created":"2026-10-03T00:00:00.000Z","data":{"object":{}}}
+
+  ● published event envelope boundary › refuses a signed non-event: not-json
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: false
+    Received: true
+
+      185 |   it.each(['not-json', '{}', JSON.stringify({ id: 'evt_unknown', object: 'event', type: 'toString', created: '2026-10-03T00:00:00.000Z', data: { object: {} } })])('refuses a signed non-event: %s', rawBody => {
+      186 |     const now = Math.floor(Date.now() / 1000);
+    > 187 |     expect(verifyPeableSignature({ rawBody, header: sign(rawBody, now), secret: SECRET }).ok).toBe(false);
+          |                                                                                               ^
+      188 |   });
+      189 | });
+      190 |
+
+      at __tests__/unit/peableContract.test.ts:187:95
+
+  ● published event envelope boundary › refuses a signed non-event: {}
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: false
+    Received: true
+
+      185 |   it.each(['not-json', '{}', JSON.stringify({ id: 'evt_unknown', object: 'event', type: 'toString', created: '2026-10-03T00:00:00.000Z', data: { object: {} } })])('refuses a signed non-event: %s', rawBody => {
+      186 |     const now = Math.floor(Date.now() / 1000);
+    > 187 |     expect(verifyPeableSignature({ rawBody, header: sign(rawBody, now), secret: SECRET }).ok).toBe(false);
+          |                                                                                               ^
+      188 |   });
+      189 | });
+      190 |
+
+      at __tests__/unit/peableContract.test.ts:187:95
+
+  ● published event envelope boundary › refuses a signed non-event: {"id":"evt_unknown","object":"event","type":"toString","created":"2026-10-03T00:00:00.000Z","data":{"object":{}}}
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: false
+    Received: true
+
+      185 |   it.each(['not-json', '{}', JSON.stringify({ id: 'evt_unknown', object: 'event', type: 'toString', created: '2026-10-03T00:00:00.000Z', data: { object: {} } })])('refuses a signed non-event: %s', rawBody => {
+      186 |     const now = Math.floor(Date.now() / 1000);
+    > 187 |     expect(verifyPeableSignature({ rawBody, header: sign(rawBody, now), secret: SECRET }).ok).toBe(false);
+          |                                                                                               ^
+      188 |   });
+      189 | });
+      190 |
+
+      at __tests__/unit/peableContract.test.ts:187:95
+
+A worker process has failed to exit gracefully and has been force exited. This is likely caused by tests leaking due to improper teardown. Try running with --detectOpenHandles to find leaks. Active timers can also cause this, ensure that .unref() was called on them.
+Test Suites: 1 failed, 1 total
+Tests:       3 failed, 15 passed, 18 total
+Snapshots:   0 total
+Time:        1.543 s
+Ran all test suites matching /__tests__\/unit\/peableContract.test.ts/i.
+error: script "test" exited with code 1

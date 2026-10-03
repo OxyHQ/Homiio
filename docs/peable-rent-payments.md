@@ -1,99 +1,40 @@
 # Paying rent through Peable
 
-Peable is the chosen processor for rent. **It is not connected**, and this page
-says exactly why, what is already in place, and what remains.
+Peable remains the intended rent processor. Homiio has an **unmounted, pure contract module**; it holds no payment credential, mounts no webhook route, calls no provider, and enables no Pay rent button. Publication of a client package does not establish a Homiio merchant namespace or authorize a rent charge.
 
-Everything below was read out of `~/Oxy/Peable` and verified against the live
-service and the public registry on 2026-09-20, with file paths, because the
-difference between "the gateway supports cards" and "the card rail has ever
-taken a payment" is the whole of this page.
+## Current evidence — 2026-10-03
 
-## What is already in place
+The earlier 2026-09-20 report identified an un-installable SDK0.1.1 (`workspace:^` runtime dependency) and a five-event allowlist. Both package blockers have been resolved upstream: **`@peable.to/sdk@0.2.2` with `@peable.to/shared-types@0.3.0` is published and installable**, and its standalone `WebhooksResource` covers ten canonical event types, including refunds, disputes and connected-account updates. [Publication evidence](https://github.com/OxyHQ/Peable/pull/98) records registry digests, isolated CJS/ESM/TypeScript checks and independent review. Homiio installs the registry release and has no local HMAC implementation.
 
-**The ledger.** `lease_payment_movements` was built with a processor in mind and
-needs no migration to accept one:
+Peable backend readiness was verified on TD7, with health/ready200 and unauthenticated billing401; its provider/cohort configuration remained absent. Separately, the approved **Mercaria-specific** cohort implementation passed real Stripe test-account Checkout and TestClock exercises. Those facts replace “never tested anywhere”; they do not prove a configured Homiio EUR rail, Homiio acceptance, a production card payment, or permission to reuse Mercaria's financial namespace. [I08 and its scope](https://github.com/OxyHQ/Peable/issues/87) remain the authority for that distinction.
 
-- `kind: 'processor'` sits beside `manual_declaration`, so a processor payment
-  and a tenant's claim that they sent a transfer are different rows with
-  different settlement rules rather than one column with a flag.
-- `processor_reference` carries its own **partial** unique index, which is what
-  makes a replayed webhook find the row it already created instead of creating a
-  second one. Partial, because every declaration's reference is null and a total
-  index would permit exactly one declaration in the whole table.
-- Every write already takes an idempotency key, unique per lease.
+Peable's billing provider exposes explicit customer/checkout/portal/subscription operations for an approved cohort. That is not a rent scheduler, mandate, automatic entitlement or a change to Homiio's obligation model. No FX assumption changes: a EUR obligation cannot be treated as a FAIR payment.
 
-**The pure half of the integration**, in
-`packages/backend/services/payments/peableContract.ts`, with tests:
+## What Homiio owns
 
-- `peableStatusMeaning` — what each Peable intent status means to the ledger.
-  Three outcomes, not one: a state, a **refund** (which is its own row in
-  Homiio's ledger, never an edit to the original), or `unknown`. A status this
-  build has never seen changes nothing, because reading a new status as a
-  settlement is how a payment system credits money that never arrived.
-- `verifyPeableSignature` — `Peable-Signature: t=…,v1=…`, HMAC-SHA256 over
-  `"<t>.<raw body>"`. The raw bytes; re-serialising the parsed JSON breaks every
-  signature, and the test suite pins that case specifically.
+`lease_payment_movements` distinguishes `processor` movements from `manual_declaration`, and a partial unique processor-reference index supports replay detection. Each ledger write already carries an idempotency key unique per lease. A refund is a new movement referencing the original; it never rewrites a succeeded payment.
 
-No credential is held, no route is mounted, and nothing calls Peable.
+`packages/backend/services/payments/peableContract.ts` retains the existing domain mapping:
 
-## Why it is not connected: four blockers
+- Only `settled` means `succeeded`.
+- Created/approval/action states mean initiated; in-flight states mean pending.
+- Refunded and partially refunded mean a separate refund row.
+- Unknown statuses remain unknown and authorize no ledger change.
 
-**1. Rent in euros needs the card rail, and the card rail is not live.**
-Peable's own roadmap (`docs/PEABLE-ROADMAP.md`) marks card payments as
-implemented, **never exercised against Stripe's sandbox by a person**, not
-deployed and not live — and says no row may move without that. A deployment
-without the Stripe secrets answers `503` on `POST /v1/payment_intents`
-(`services/createIntent.ts`).
+`verifyPeableSignature` delegates to the **published standalone `WebhooksResource`**. It verifies the raw UTF-8 bytes, signed timestamp window, JSON event envelope and canonical event type without constructing a credential-bearing client or minting a token. Invalid UTF-8 buffers are refused before lossy decoding. The local unmounted seam now reports one `invalid_webhook` refusal instead of parsing SDK error messages into the old local header/version categories. No mounted caller relied on those categories. Tests control the clock rather than adding a production time override.
 
-**2. There is no FX anywhere in Peable**, and its source says so in as many
-words. The FairCoin rail is deployed and healthy (`api.peable.to/health` answers
-`200`), but `assertRailCurrency` refuses any currency but `FAIR` on it. So a EUR
-rent amount cannot settle over the rail that works, and the rail that could take
-EUR is the one that is not live. These two facts together are why this is a seam
-and not an integration.
+The SDK's envelope check is not Homiio domain authorization or full nested-resource validation. A future mounted ingress still needs exact merchant/environment, obligation/reference/amount/currency validation, event deduplication and atomic ledger handling. Valid HMAC alone is never sufficient authority to settle an obligation.
 
-**3. The published SDK cannot be installed.** `@peable.to/sdk@0.1.1` declares
-`"@peable.to/shared-types": "workspace:^"` as a runtime dependency, which
-resolves only inside Peable's own monorepo — anywhere else npm fails with
-`EUNSUPPORTEDPROTOCOL`. Verified directly against the registry manifest. The
-published surface is also behind the repository: it carries no refunds,
-transfers or disputes namespace. So integrating means REST plus our own types,
-which is what `peableContract.ts` holds.
+## Remaining activation gates
 
-**4. Nothing in Peable is a subscription engine**, and its roadmap says so
-outright. Rent is recurring by definition. That is not an obstacle so much as a
-shape: each month is its own intent minted by Homiio against its own obligation
-row, which is what the ledger already models.
-
-## What the wiring will be
-
-Recorded now so it is not re-derived under time pressure later.
-
-| Piece | Shape |
+| Piece | Required evidence before connection |
 |---|---|
-| Auth | No Peable API key exists. The SDK presents the **same Oxy `ApplicationCredential`** Console already issues, exchanges it at `POST https://api.oxy.so/auth/service-token`, and caches the token. Homiio needs an Oxy Application with a `service` credential carrying `payments:read` and `payments:write`, then one `POST /v1/merchants`. |
-| Taking money | `POST /v1/payment_intents`, with `Idempotency-Key` as a **required header**. Amounts are canonical minor-unit integer strings, never floats. A replay with a different amount, currency or rail is a `409`, not a second charge. |
-| Hosted payment | `POST /v1/checkout_sessions` wraps exactly one intent and returns a `checkout.peable.to` URL. |
-| Settlement | The webhook. `payment_intent.settled` is the only event that may move a movement to `succeeded`. |
-| Refunds | `POST /v1/refunds`, idempotent on `externalRef` rather than a header. **A FairCoin payment cannot be refunded through Peable at all** — the gateway never held the funds — so it answers `503`. Homiio's refund-as-its-own-row model already tolerates that: the row simply never reaches `succeeded`. |
-| Environment | Test versus live comes from the credential, never from a flag Homiio sends. |
+| Identity | Existing Homiio app, properly issued service credential with only the required payment scopes, correct environment, and verified technical merchant mapping. No invented user or merchant consent. |
+| Rail | Exact deployed processor account/mode, currency support, Homiio commercial scope and a verified sandbox-to-live rollout. Package installation does not activate a rail. |
+| Creating payment | Canonical minor-unit integer strings, one stable idempotency key per obligation/intent, parameter-conflict refusal and explicit retry of an uncertain response using the same key. |
+| Hosted checkout | Published SDK checkout surface, correct obligation correlation and success confirmed by authorized ingress, never by the browser return URL. |
+| Ingress | Raw-body mount, SDK verification, merchant/environment/obligation/resource checks, deduplication and atomic processor movement. No local signature or token client. |
+| Refund | Separate authorized refund movement and processor evidence; no reversal inferred from a status string or a FairCoin rail that cannot refund custody it never held. |
+| Recurrence | Existing obligation model and explicit approved operations. No scheduler, mandate, dunning or automatic debit is introduced by this change. |
 
-**One bug to route around when the time comes.** Peable's SDK
-`constructEvent` structurally whitelists five event types, so a
-`payment_intent.refunded`, `.partially_refunded`, `.disputed`,
-`.dispute_closed` or `connected_account.updated` delivery verifies its signature
-and is then discarded as not matching the expected shape. Homiio verifies
-signatures itself (`verifyPeableSignature`) and is not exposed to it, but
-anybody reaching for the SDK should know.
-
-## What Homiio must not do meanwhile
-
-There is **no "Pay rent" button**, and there must not be one until a rail can
-actually settle the amount. A button that opened a checkout Homiio cannot
-confirm is the simulated success both epics forbid, and #518 §7.2 is explicit
-that the absence is a documented delivery block rather than licence to drop the
-row.
-
-The honest affordance is the one that ships: a tenant declares a transfer, the
-landlord confirms it or rejects it with a reason, and the ledger records who
-said what and when.
+There is still no Pay rent button. This change adopts a published verifier and updates source-backed readiness facts; it does not connect Homiio payments or migrate commercial records. TNP and other planned consumers do not acquire an integration from this module.

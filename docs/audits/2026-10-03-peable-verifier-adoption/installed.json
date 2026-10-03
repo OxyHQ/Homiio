@@ -1,0 +1,221 @@
+{
+  "registryArchiveSha256": "68687dabc8caddcdb3f60d846d720f5103d29c4d2a0eacb774ebc08ca37f4494",
+  "sdkVersion": "0.2.2",
+  "sharedTypesVersion": "0.3.0",
+  "allFilesIdentical": true,
+  "fileCount": 53,
+  "files": [
+    {
+      "path": "package.json",
+      "sha256": "b9d2f594c86ae89d9462952f7142a3797ee62b83ed02a594b25e2d47e4eba9d0"
+    },
+    {
+      "path": "README.md",
+      "sha256": "f4125276c893a5fd04dfc7efb3923533843df6e564c241d67f75856ce1d429b8"
+    },
+    {
+      "path": "dist/cjs/browser/mount.js",
+      "sha256": "760df1005e3cf0d38a65cbae3a5179f81fae769818e2a6a8205989c432adc652"
+    },
+    {
+      "path": "dist/cjs/browser/payerClient.js",
+      "sha256": "4bd009ae240ec1c5c05555765a48b3f71dc2c100b510b43c799793d8da9bf2b6"
+    },
+    {
+      "path": "dist/cjs/checkout.js",
+      "sha256": "647f6bb1841720791b1abe44db938b7d6e401c0a9ccf01a063b42ddff2d912ba"
+    },
+    {
+      "path": "dist/cjs/core/client.js",
+      "sha256": "c8f2f8c87b90c573e637be94ed64fe415405a84209f0ed29e17ba6aa8ee741ba"
+    },
+    {
+      "path": "dist/cjs/core/config.js",
+      "sha256": "273e336e66fac6204465236615f448f6669b25252d126436f2a832dcc5062bcd"
+    },
+    {
+      "path": "dist/cjs/core/errors.js",
+      "sha256": "c031334f7b7f80c383536e4376fe17e62e3d5c3c0192b01a0099728d2c820380"
+    },
+    {
+      "path": "dist/cjs/core/serviceToken.js",
+      "sha256": "b5ee4575221300dffdcab8c90ca018231f8ab613fa4bf61fe8572667736e143d"
+    },
+    {
+      "path": "dist/cjs/index.js",
+      "sha256": "a27f8dfa4c7d5a45eb7f6b06e9d4775be5ef9cae46d013b60e1de1f626499360"
+    },
+    {
+      "path": "dist/cjs/resources/billing.js",
+      "sha256": "e26a31ec160dc3e1238801f2d137e435d9b86739f35d40bface29afae507d2bd"
+    },
+    {
+      "path": "dist/cjs/resources/checkoutSessions.js",
+      "sha256": "8b6ec4bd9a866843142a04a40ea48c0fd12621d892f2c7aee592b1f0b66f8d24"
+    },
+    {
+      "path": "dist/cjs/resources/connectedAccounts.js",
+      "sha256": "632cb59bf81292d6e1161c0b9063b4880c450c12a319fd55798d2e7b41c3c957"
+    },
+    {
+      "path": "dist/cjs/resources/merchants.js",
+      "sha256": "0cedf0a2353a56c398fa79bb5192dbf8a1abde04f9b8ced3952226f2960e04ef"
+    },
+    {
+      "path": "dist/cjs/resources/paymentIntents.js",
+      "sha256": "2102882740d718a67066d346ab2540e80e20d8ee5583d96c1019ceb38aa7c3cc"
+    },
+    {
+      "path": "dist/cjs/resources/paymentLinks.js",
+      "sha256": "f7a8328f84741e14ca876a70901ba30d1b31d4aaed82cde7cb8ef46d01b1ca37"
+    },
+    {
+      "path": "dist/cjs/resources/refunds.js",
+      "sha256": "a58c4108f05a303d1a959c7deca714bdc95fda2ca571ce8b4ed408f193bce122"
+    },
+    {
+      "path": "dist/cjs/resources/transfers.js",
+      "sha256": "470251b50caa4761b40d89967680291297d15838797ec02bd2ce8e1e3e4b12d1"
+    },
+    {
+      "path": "dist/cjs/resources/webhooks.js",
+      "sha256": "0bef32d53756f9441ab249e5d4128d90b7da2f997efbe63a8ebc580e5b789a1c"
+    },
+    {
+      "path": "dist/esm/browser/mount.js",
+      "sha256": "1fecc56f9db190785a37ac20128673a184ed49ea29f088636eef8508b6843607"
+    },
+    {
+      "path": "dist/esm/browser/payerClient.js",
+      "sha256": "da8ee5f01012cf493c60c11f22fb64e4471fb68a680928b1a56b09c24c32cc36"
+    },
+    {
+      "path": "dist/esm/checkout.js",
+      "sha256": "9585906cb1a25ff6050be88490b862585ab0a9ea978ab8776c8eb16bf06b478f"
+    },
+    {
+      "path": "dist/esm/core/client.js",
+      "sha256": "2dd7270935666510a6bab82e13b2baa70858e0616f06ce1d4b8fafd1fb644b5e"
+    },
+    {
+      "path": "dist/esm/core/config.js",
+      "sha256": "bece4ef7a3828c811565578930918c55dfadb355534fee5fd9830e36d2f12707"
+    },
+    {
+      "path": "dist/esm/core/errors.js",
+      "sha256": "a5cb6672959848c82e800138917e2e3c90bf4eaf42d3099857abca7a59be5928"
+    },
+    {
+      "path": "dist/esm/core/serviceToken.js",
+      "sha256": "44ed198e199a1c737746085f572ea45a6103e7d9249c3eb81c0e26e2ab657292"
+    },
+    {
+      "path": "dist/esm/index.js",
+      "sha256": "35e9c5ccc6a740e8e84b78a7dad10b4b86b27088ff82313a5e5f74284928809c"
+    },
+    {
+      "path": "dist/esm/resources/billing.js",
+      "sha256": "50ee9577ab5506caebcf734057eb767d11390dfa4ea11dd7db19ccde902da7ef"
+    },
+    {
+      "path": "dist/esm/resources/checkoutSessions.js",
+      "sha256": "db7547d7344d41ddffb462c05e1f9168667a4e96182e9dfefc7f709d05d8b596"
+    },
+    {
+      "path": "dist/esm/resources/connectedAccounts.js",
+      "sha256": "80703414103359a1650198ea754d6784220d72c6df45e4ae46b1fc5e7dbca533"
+    },
+    {
+      "path": "dist/esm/resources/merchants.js",
+      "sha256": "81fde5fa800dd99245c18d238bd260ddfc20cc75d201d92749b91d17e9b479b1"
+    },
+    {
+      "path": "dist/esm/resources/paymentIntents.js",
+      "sha256": "0058da5f130cc22ed27dbb0a0156873fe8d7a31319c3e279e17c55fc35b0ce41"
+    },
+    {
+      "path": "dist/esm/resources/paymentLinks.js",
+      "sha256": "6f8128001946c7d8a649124e7f4afac86d01305c42e0b6e68d0914fb176bba65"
+    },
+    {
+      "path": "dist/esm/resources/refunds.js",
+      "sha256": "d38c4a344ffa7233860794d403f4c233ce1bd708eefed979be84bb19d3e7dfc2"
+    },
+    {
+      "path": "dist/esm/resources/transfers.js",
+      "sha256": "deb459f755b1954be03d771386711b8f02938b7beb95e2c64de11070daf203aa"
+    },
+    {
+      "path": "dist/esm/resources/webhooks.js",
+      "sha256": "abba4a91ca840b96de58a2630896c5d780d5870951ba1df6858136d84d2cf853"
+    },
+    {
+      "path": "dist/types/browser/mount.d.ts",
+      "sha256": "866f4ba353abb4596b513cf9e8f2165bf698cc2332439dc3b08c63ced28093f2"
+    },
+    {
+      "path": "dist/types/browser/payerClient.d.ts",
+      "sha256": "09812f077264deece8cfbac105c2eff36b8752295200bbc219645b809aab9ea4"
+    },
+    {
+      "path": "dist/types/checkout.d.ts",
+      "sha256": "a9da269044b7fdcf4e6bab8f8e6c6f59bd74159bcdc13b9e63973af629d281ee"
+    },
+    {
+      "path": "dist/types/core/client.d.ts",
+      "sha256": "a3b31b76347884ba87f3eaa30f83878e270cbab5482437269a03d7e143206f9d"
+    },
+    {
+      "path": "dist/types/core/config.d.ts",
+      "sha256": "7274f7e9111f38acf708eb83a607fa6317d1adad625a1f46545b5ba8e3760c89"
+    },
+    {
+      "path": "dist/types/core/errors.d.ts",
+      "sha256": "3e191d179dd059f28281827f0c57983e1280e92bfad16a37b9d48dd5548cf2cc"
+    },
+    {
+      "path": "dist/types/core/serviceToken.d.ts",
+      "sha256": "d90b65fe8e1bbffd865c36543db17a18f5f9a69bff474edfb651d3caea8a081d"
+    },
+    {
+      "path": "dist/types/index.d.ts",
+      "sha256": "829ef93e284a2068ca9a56de7f550d37527c941b583a2faf35f2a95ce305bef2"
+    },
+    {
+      "path": "dist/types/resources/billing.d.ts",
+      "sha256": "e9013ba832aa0bebcb38b64bacf713ce29b97db02c781763468bd7237fd36652"
+    },
+    {
+      "path": "dist/types/resources/checkoutSessions.d.ts",
+      "sha256": "9f3fb3ca5f98f0fa37cdf6eba21cd34506fa5f55fbcc619bc22e77896954b642"
+    },
+    {
+      "path": "dist/types/resources/connectedAccounts.d.ts",
+      "sha256": "b0b82ac2d6ba38def7b80f615498151f2e1217b26184c94a6b1115d2e7989aa2"
+    },
+    {
+      "path": "dist/types/resources/merchants.d.ts",
+      "sha256": "c833a304308fad62ed4d691f414dd65644c66de1986b342aa41d6009af0d12fb"
+    },
+    {
+      "path": "dist/types/resources/paymentIntents.d.ts",
+      "sha256": "9fbdd8c8438ca97f6a572db142a0379bd463ec2282416c142d6b4ee4d0830aec"
+    },
+    {
+      "path": "dist/types/resources/paymentLinks.d.ts",
+      "sha256": "4f2508361e1e969a822ecc56166d7a7e1a18e86e0b8175c8e9b1ef49d3377dca"
+    },
+    {
+      "path": "dist/types/resources/refunds.d.ts",
+      "sha256": "7433dada20f3907dcbcfc9c6137ed69c2ebf9e33fa083a709b5f15d6481330ad"
+    },
+    {
+      "path": "dist/types/resources/transfers.d.ts",
+      "sha256": "4bbd69b87cec08d8ae4bd0c0108b98225619bbf09a94352dc714aeab3b0db223"
+    },
+    {
+      "path": "dist/types/resources/webhooks.d.ts",
+      "sha256": "d9daf4d8b2936f28465717a499038737bd46a0667ecefb6ae9226bf690f6ce56"
+    }
+  ]
+}

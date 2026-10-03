@@ -1,0 +1,2 @@
+$ bun ./scripts/check-docs.mjs
+Documentation OK — 25 authoritative page(s) scanned (of 49 tracked markdown files), 22 mounted router(s) and 26 frontend segment(s) documented.
