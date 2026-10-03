@@ -1,0 +1,19 @@
+$ jest --ci --runInBand sindi
+PASS __tests__/sindiDeferredOwner.test.tsx (6.927 s)
+PASS __tests__/sindi/clarifyLocation.test.tsx
+PASS __tests__/sindiStreamLifecycle.test.tsx
+PASS __tests__/sindiFetchLifecycle.test.tsx
+PASS __tests__/sindi/actionExecution.test.ts
+PASS __tests__/widgets/sindiPanelLayout.test.tsx
+PASS __tests__/sindi/actionContract.test.ts
+PASS __tests__/sindiVoiceDraft.test.ts
+PASS __tests__/sindi/conversationHostPromotion.test.ts
+PASS __tests__/sindiConsent.test.ts
+PASS __tests__/sindi/controlCapability.test.ts
+PASS __tests__/sindiTurnPersistence.test.ts
+
+Test Suites: 12 passed, 12 total
+Tests:       127 passed, 127 total
+Snapshots:   0 total
+Time:        9.334 s, estimated 10 s
+Ran all test suites matching /sindi/i.
