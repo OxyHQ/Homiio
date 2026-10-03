@@ -1,0 +1,54 @@
+{
+  "sourceCommit": "3339cb37aff96d664392344711ed4f257b1d1a10",
+  "sources": [
+    {
+      "path": "packages/frontend/hooks/useSindiAuthenticatedFetch.ts",
+      "bytes": 1743,
+      "sha256": "7bdb96262836ec8c47ef7cfe404a5d169f8faf7c8d6c25d0f888d40b396ce5bb"
+    },
+    {
+      "path": "packages/frontend/__tests__/sindiFetchLifecycle.test.tsx",
+      "bytes": 4855,
+      "sha256": "64fd2fe36576ce3f3a9941ec29a4c462cc307fe96e87b42a1cd3608495884d08"
+    }
+  ],
+  "records": [
+    {
+      "path": "docs/audits/2026-10-03-final-sdk-source-compat/lifecycle/aba/logs/i04-homiio-lifecycle-aba-red.log",
+      "bytes": 1793,
+      "sha256": "00d4f64657a25d8bd2a8655321529dac3c278c23638172c18999f9b42437e1ed"
+    },
+    {
+      "path": "docs/audits/2026-10-03-final-sdk-source-compat/lifecycle/aba/logs/i04-homiio-lifecycle-aba-green.log",
+      "bytes": 687,
+      "sha256": "81e8f71a7f6a77ae079123721d1be7581ec7f4e5cd68b81099f49ea72c53f481"
+    },
+    {
+      "path": "docs/audits/2026-10-03-final-sdk-source-compat/lifecycle/aba/logs/i04-homiio-lifecycle-aba-types.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/audits/2026-10-03-final-sdk-source-compat/lifecycle/aba/logs/i04-homiio-lifecycle-aba-lint.log",
+      "bytes": 343,
+      "sha256": "4e1e824c6475095aea447ccf7c0c9d6d8747931fd548061ac1775b21d0eca18a"
+    },
+    {
+      "path": "docs/audits/2026-10-03-final-sdk-source-compat/lifecycle/aba/logs/i04-homiio-lifecycle-aba-lint-final.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/audits/2026-10-03-final-sdk-source-compat/lifecycle/aba/logs/i04-homiio-lifecycle-aba-final.log",
+      "bytes": 447,
+      "sha256": "730853fdd50376aae1956cc694c933a66dad75899292b61ed3ee9657cb63618f"
+    }
+  ],
+  "observations": [
+    "Real ABA callback regression: previous b083 source 1 FAIL / 3 PASS; generation guard 4 suites / 29 PASS.",
+    "Final generation stores owner/session fields to satisfy hook dependency analysis; unchanged identity guard. Final focused hook/stream 2 suites / 6 PASS, lint 0.",
+    "TypeScript passed before final generation object fields (no public type change); previous full suite 76 / 953 remains historical, not rerun or claimed on this amendment.",
+    "No resource acquisition during render; pure useMemo identity only. StrictMode effect replay still creates/disposes each linked subscription.",
+    "No SDK or frozen Metro changes."
+  ]
+}

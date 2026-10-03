@@ -1,0 +1,35 @@
+$ jest --ci --runInBand --runTestsByPath __tests__/sindiFetchLifecycle.test.tsx
+FAIL __tests__/sindiFetchLifecycle.test.tsx
+  ✓ survives StrictMode effect replay and disposes every subscription on unmount (30 ms)
+  ✓ follows a replacement Oxy owner and closes previous/unmounted linked clients (5 ms)
+  ✓ rejects a retained callback after switching session on the same Oxy owner (4 ms)
+  ✕ never revives the first A callback after A → B → A (3 ms)
+
+  ● never revives the first A callback after A → B → A
+
+    expect(received).rejects.toThrow()
+
+    Received promise resolved instead of rejected
+    Resolved to value: {}
+
+      81 |     mockSession = 'A'; mockOxy.session.setAccessToken(token('A')); hook.rerender(undefined);
+      82 |     const count = seen.length;
+    > 83 |     await expect(firstA(mockOrigin)).rejects.toThrow('not mounted');
+         |           ^
+      84 |     expect(seen.length).toBe(count);
+      85 |     await (await hook.result.current(mockOrigin)).text();
+      86 |     expect(seen.at(-1)).toBe(`Bearer ${token('A')}`);
+
+      at expect (../../node_modules/expect/build/index.js:113:15)
+      at Object.expect (__tests__/sindiFetchLifecycle.test.tsx:83:11)
+      at asyncGeneratorStep (../../node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (../../node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at ../../node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (../../node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 3 passed, 4 total
+Snapshots:   0 total
+Time:        1.105 s
+Ran all test suites within paths "__tests__/sindiFetchLifecycle.test.tsx".
+error: script "test" exited with code 1
