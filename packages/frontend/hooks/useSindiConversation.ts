@@ -177,6 +177,16 @@ export function useSindiConversation({
   const [streamOwner, setStreamOwner] = useState(() => authenticatedFetch);
   const ownsStream = streamOwner === authenticatedFetch;
   const mountedOwner = useRef<ConversationFetch | null>(authenticatedFetch);
+  // Pure render identity; the layout effect owns each mounted lifetime separately.
+  const ownerGeneration = useMemo(() => ({ authenticatedFetch, isAuthenticated }), [authenticatedFetch, isAuthenticated]);
+  const mountedGeneration = useRef<{ generation: object } | null>(null);
+  useLayoutEffect(() => {
+    const mounted = { generation: ownerGeneration };
+    mountedGeneration.current = mounted;
+    return () => {
+      if (mountedGeneration.current === mounted) mountedGeneration.current = null;
+    };
+  }, [ownerGeneration]);
 
   const [attachedFile, setAttachedFile] = useState<AttachedAsset | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -342,7 +352,10 @@ export function useSindiConversation({
   // While streaming (`isLoading`) the dedicated auto-scroll effect handles the
   // viewport, so this effect bails without persisting or scrolling.
   useEffect(() => {
-    if (!ownsStream) return;
+    const mounted = mountedGeneration.current;
+    const isCurrent = () => isAuthenticated && mounted !== null &&
+      mountedGeneration.current === mounted && mounted.generation === ownerGeneration;
+    if (!ownsStream || !isCurrent()) return;
     const syncable =
       Boolean(currentConversation) &&
       messages.length > 0 &&
@@ -395,13 +408,13 @@ export function useSindiConversation({
             title: deriveTitle(currentConversation, messages),
           };
 
-          saveConversation(updatedConversation, authenticatedFetch)
+          saveConversation(updatedConversation, authenticatedFetch, isCurrent)
             .then((saved) => {
               // The HOST decides what a new id means. See
               // `onConversationPersisted`: this used to be an unconditional
               // `router.replace('/sindi/' + id)`, which let a chat started in
               // the side panel navigate the main pane to the full-screen chat.
-              if (mountedOwner.current === authenticatedFetch && saved && saved.id !== conversationId) {
+              if (isCurrent() && saved && saved.id !== conversationId) {
                 onConversationPersisted?.(saved.id);
               }
             })
@@ -423,6 +436,8 @@ export function useSindiConversation({
     updateConversationMessages,
     saveConversation,
     authenticatedFetch,
+    isAuthenticated,
+    ownerGeneration,
     onConversationPersisted,
     scrollToEnd,
   ]);
@@ -517,6 +532,10 @@ export function useSindiConversation({
   }, [stop]);
 
   const onAttachFile = useCallback(async () => {
+    const mounted = mountedGeneration.current;
+    const isCurrent = () => isAuthenticated && mounted !== null &&
+      mountedGeneration.current === mounted && mounted.generation === ownerGeneration;
+    if (!isCurrent()) return;
     try {
       // Gate behind Homiio+ or per-file credits.
       if (!plusActive && fileCredits <= 0) {
@@ -527,8 +546,10 @@ export function useSindiConversation({
       // Show the one-time upsell on the first attempt for non-subscribers.
       if (!plusActive) {
         const alreadyShown = await getData<boolean>(FILE_UPSELL_KEY);
+        if (!isCurrent()) return;
         if (!alreadyShown) {
           await storeData(FILE_UPSELL_KEY, true);
+          if (!isCurrent()) return;
           onOpenUpsell();
           return;
         }
@@ -539,13 +560,13 @@ export function useSindiConversation({
         copyToCacheDirectory: true,
         multiple: false,
       });
-      if (!result.canceled && result.assets.length > 0) {
+      if (isCurrent() && !result.canceled && result.assets.length > 0) {
         setAttachedFile(result.assets[0]);
       }
     } catch (e) {
       logger.error('File pick error:', e);
     }
-  }, [plusActive, fileCredits, onOpenUpsell]);
+  }, [plusActive, fileCredits, onOpenUpsell, isAuthenticated, ownerGeneration]);
 
   const onSubmit = useCallback(async () => {
     try {

@@ -1,0 +1,103 @@
+{
+  "baseline": [
+    [
+      "useSindiConversation.ts",
+      "import/no-named-as-default-member",
+      1,
+      "Caution: `i18next` also has a named export `t`. Check if you meant to write `import {t} from 'i18next'` instead."
+    ],
+    [
+      "useSindiConversation.ts",
+      "import/no-named-as-default-member",
+      1,
+      "Caution: `i18next` also has a named export `t`. Check if you meant to write `import {t} from 'i18next'` instead."
+    ],
+    [
+      "useSindiConversation.ts",
+      "import/no-named-as-default-member",
+      1,
+      "Caution: `i18next` also has a named export `t`. Check if you meant to write `import {t} from 'i18next'` instead."
+    ],
+    [
+      "useSindiConversation.ts",
+      "import/no-named-as-default-member",
+      1,
+      "Caution: `i18next` also has a named export `t`. Check if you meant to write `import {t} from 'i18next'` instead."
+    ],
+    [
+      "useSindiConversation.ts",
+      "import/no-named-as-default-member",
+      1,
+      "Caution: `i18next` also has a named export `t`. Check if you meant to write `import {t} from 'i18next'` instead."
+    ],
+    [
+      "useSindiConversation.ts",
+      "import/no-named-as-default-member",
+      1,
+      "Caution: `i18next` also has a named export `t`. Check if you meant to write `import {t} from 'i18next'` instead."
+    ],
+    [
+      "useSindiConversation.ts",
+      "react-hooks/exhaustive-deps",
+      1,
+      "React Hook useCallback has missing dependencies: 'appContext' and 'beginTurn'. Either include them or remove the dependency array."
+    ],
+    [
+      "useSindiConversation.ts",
+      "react-hooks/set-state-in-effect",
+      2,
+      "Error: Calling setState synchronously within an effect can trigger cascading renders"
+    ]
+  ],
+  "final": [
+    [
+      "useSindiConversation.ts",
+      "import/no-named-as-default-member",
+      1,
+      "Caution: `i18next` also has a named export `t`. Check if you meant to write `import {t} from 'i18next'` instead."
+    ],
+    [
+      "useSindiConversation.ts",
+      "import/no-named-as-default-member",
+      1,
+      "Caution: `i18next` also has a named export `t`. Check if you meant to write `import {t} from 'i18next'` instead."
+    ],
+    [
+      "useSindiConversation.ts",
+      "import/no-named-as-default-member",
+      1,
+      "Caution: `i18next` also has a named export `t`. Check if you meant to write `import {t} from 'i18next'` instead."
+    ],
+    [
+      "useSindiConversation.ts",
+      "import/no-named-as-default-member",
+      1,
+      "Caution: `i18next` also has a named export `t`. Check if you meant to write `import {t} from 'i18next'` instead."
+    ],
+    [
+      "useSindiConversation.ts",
+      "import/no-named-as-default-member",
+      1,
+      "Caution: `i18next` also has a named export `t`. Check if you meant to write `import {t} from 'i18next'` instead."
+    ],
+    [
+      "useSindiConversation.ts",
+      "import/no-named-as-default-member",
+      1,
+      "Caution: `i18next` also has a named export `t`. Check if you meant to write `import {t} from 'i18next'` instead."
+    ],
+    [
+      "useSindiConversation.ts",
+      "react-hooks/exhaustive-deps",
+      1,
+      "React Hook useCallback has missing dependencies: 'appContext' and 'beginTurn'. Either include them or remove the dependency array."
+    ],
+    [
+      "useSindiConversation.ts",
+      "react-hooks/set-state-in-effect",
+      2,
+      "Error: Calling setState synchronously within an effect can trigger cascading renders"
+    ]
+  ],
+  "sameDiagnostics": true
+}
