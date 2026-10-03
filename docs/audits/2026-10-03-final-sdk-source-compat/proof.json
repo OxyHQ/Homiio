@@ -102,7 +102,7 @@
     "backend": "typecheck/build 0; no backend SQL suite rerun for unchanged runtime",
     "listingProviders": "build 0",
     "nativePeer": "keyboard-controller 1.21.6; exclude preserved/added",
-    "installedBytes": "5 candidate packages + registry Bloom 6.2.1 matched archive files"
+    "installedBytes": "4 candidate packages + registry Bloom 6.2.1 matched archive files"
   },
   "limitations": [
     "f364 static candidate only; native SDK fixes pending; no final registry lock",
