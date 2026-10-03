@@ -1,0 +1,113 @@
+{
+  "base": "c73042291f25de400d33022f0c59f398c1c89d55",
+  "sdkCandidate": "f364fe58a41aab6913cf92ec01a9a9c1ea489120",
+  "sourceUnchanged": true,
+  "preservedInputs": [
+    {
+      "path": "AGENTS.md",
+      "sha256": "6fa6baa389d9507f3affeb4a42abb540fa7c504c854f6e9644a769e4e85be787"
+    },
+    {
+      "path": "packages/frontend/app/_layout.tsx",
+      "sha256": "462358cd4635c2dc6132d56e5f5c57f86da37be9798dcfea2b8618bf0498607e"
+    },
+    {
+      "path": "packages/frontend/utils/api.ts",
+      "sha256": "0900155065dbdaa50478b3df32645ae866ea6eb27f3cf98170a806453c9e96c1"
+    },
+    {
+      "path": "packages/frontend/hooks/useSindiAuthenticatedFetch.ts",
+      "sha256": "74df2ae58b5616ac3d7ec1544802dfc65d5ca15d6bca723b6cf6a456b7fd22e9"
+    },
+    {
+      "path": "packages/frontend/jest.config.js",
+      "sha256": "f1c83e7b42cd9bf2f240d91ebf5867cd234af802cad74b0af9915920dda0c156"
+    },
+    {
+      "path": "packages/backend/jest.config.js",
+      "sha256": "30dd26590735a1b55999d1867971b9fc4be6bc9ae3edd86d92abf8375f5e1160"
+    }
+  ],
+  "installationInputs": [
+    {
+      "path": "docs/audits/2026-10-03-final-sdk-source-compat/candidate-install/package.json",
+      "sha256": "3a7a2992c454463ec0489c82268b2205d63e4b072539251503f8c74d3ade88e1"
+    },
+    {
+      "path": "docs/audits/2026-10-03-final-sdk-source-compat/candidate-install/packages/backend/package.json",
+      "sha256": "afc8c9e031ce48ca0a559c7975c0199f33c78f80a5c21a539aeb790eed2fb598"
+    },
+    {
+      "path": "docs/audits/2026-10-03-final-sdk-source-compat/candidate-install/packages/frontend/package.json",
+      "sha256": "805cc1d04743ac51d2267cfdd64bd6665c05508cae4b5e345d26f77c06bd5e4b"
+    },
+    {
+      "path": "docs/audits/2026-10-03-final-sdk-source-compat/candidate-install/packages/shared-types/package.json",
+      "sha256": "17422d7694e12cf93c981e2bb7cd71a75f7d344f456ad53eed38b975c394c42d"
+    },
+    {
+      "path": "docs/audits/2026-10-03-final-sdk-source-compat/candidate-install/bun.lock",
+      "sha256": "54f7071c705a426a57038f946828e182e4e2c0477244e7e6ac4ecdc40549af06"
+    }
+  ],
+  "records": [
+    {
+      "path": "docs/audits/2026-10-03-final-sdk-source-compat/logs/i04-homiio-backend-build.log",
+      "sha256": "24c42b76aecef2c39c8a5639a3536efb936b03bdac9a8f8be50c0e71ffbc7af8",
+      "bytes": 29
+    },
+    {
+      "path": "docs/audits/2026-10-03-final-sdk-source-compat/logs/i04-homiio-backend-types-initial.log",
+      "sha256": "8366207267355d3e3d5bf3bf6e8c94c5f93f6078c34f08973fa2b38cdda6cc92",
+      "bytes": 15
+    },
+    {
+      "path": "docs/audits/2026-10-03-final-sdk-source-compat/logs/i04-homiio-candidate-install.log",
+      "sha256": "659523fc05cba4b2a9205049403899d496ac8122cb886bdf88685102b1c2a035",
+      "bytes": 583
+    },
+    {
+      "path": "docs/audits/2026-10-03-final-sdk-source-compat/logs/i04-homiio-ci-final-20261003.json",
+      "sha256": "49c32ec404f4ad4a79bfdcda0711f5ee6490fc8b7d4c8ddb5a3dbeb660f5cef5",
+      "bytes": 164
+    },
+    {
+      "path": "docs/audits/2026-10-03-final-sdk-source-compat/logs/i04-homiio-frontend-build.log",
+      "sha256": "11f69e953d955313cf8753f577122f342b28af0961291fc97ab74c765e75da29",
+      "bytes": 17276
+    },
+    {
+      "path": "docs/audits/2026-10-03-final-sdk-source-compat/logs/i04-homiio-frontend-tests.log",
+      "sha256": "f90ea4db0844f9ec5b5b58bfc3189bdbe3a3a0b9faab0fecac93e70172c74130",
+      "bytes": 16591
+    },
+    {
+      "path": "docs/audits/2026-10-03-final-sdk-source-compat/logs/i04-homiio-frontend-types-initial.log",
+      "sha256": "8366207267355d3e3d5bf3bf6e8c94c5f93f6078c34f08973fa2b38cdda6cc92",
+      "bytes": 15
+    },
+    {
+      "path": "docs/audits/2026-10-03-final-sdk-source-compat/logs/i04-homiio-installed-bytes.json",
+      "sha256": "0907e71536f7384349190e1932c20c361233029da92ddf9f4f817bacf60227a9",
+      "bytes": 2019
+    },
+    {
+      "path": "docs/audits/2026-10-03-final-sdk-source-compat/logs/i04-homiio-listing-build.log",
+      "sha256": "e35fea6ddcb2618b7f69f48cf159c84f8cc3e151644a0f3875850db8a3a72cac",
+      "bytes": 11
+    }
+  ],
+  "results": {
+    "frontend": "73 suites / 940 PASS; typecheck and Expo web export 0",
+    "backend": "typecheck/build 0; no backend SQL suite rerun for unchanged runtime",
+    "listingProviders": "build 0",
+    "nativePeer": "keyboard-controller 1.21.6; exclude preserved/added",
+    "installedBytes": "5 candidate packages + registry Bloom 6.2.1 matched archive files"
+  },
+  "limitations": [
+    "f364 static candidate only; native SDK fixes pending; no final registry lock",
+    "No native rendering, live authentication, deployment or payments activation",
+    "Peable verifier previously accepted source is unchanged and unmounted",
+    "Existing Sindi fetch uses session.accessToken and platform-specific expo/fetch; not migrated by this static compatibility checkpoint"
+  ]
+}
