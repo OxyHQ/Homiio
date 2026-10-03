@@ -1,0 +1,115 @@
+{
+  "sourceCommit": "b94053ae1b81203cc1f29e2c388663cf2c1c0a12",
+  "baseCommit": "64d458c542fcb0980c28c0c338dd2d600def0dae",
+  "sources": [
+    {
+      "path": "bun.lock",
+      "sha256": "5cfc96b8c5ab6b061d78dac9f975022438d1698e2df857413e7fd82a7b5e58b8"
+    },
+    {
+      "path": "docs/peable-rent-payments.md",
+      "sha256": "c1bf13686a6b9643c020164b6873f8c13ad8e3067bfd753f527821ca57fedf09"
+    },
+    {
+      "path": "packages/backend/__tests__/unit/peableContract.test.ts",
+      "sha256": "43d40dd5994d698001dc780cd9aa3a4329745eea73d23d64f79473cb3ba16551"
+    },
+    {
+      "path": "packages/backend/package.json",
+      "sha256": "583048d8988a539a863b0cfc2fa739e49ba72186d36ac35886c253f6779c4b2d"
+    },
+    {
+      "path": "packages/backend/services/payments/peableContract.ts",
+      "sha256": "dbc97741054b695bc81efa75e5769cb9052913c57d6e9d585eb364aff6c4f03e"
+    }
+  ],
+  "records": [
+    {
+      "path": "docs/audits/2026-10-03-peable-verifier-adoption/install.log",
+      "sha256": "4062d691225d8ebe3eff326beb4a816dad3ee539fa38a472ef6b508fe92f72ed"
+    },
+    {
+      "path": "docs/audits/2026-10-03-peable-verifier-adoption/red.log",
+      "sha256": "2b21d7210e70d6970840eb7f66fe1b2a3dc304518d9004ff73e01380238a4bdc"
+    },
+    {
+      "path": "docs/audits/2026-10-03-peable-verifier-adoption/green-final.log",
+      "sha256": "a3022ae52f0e72163bde985c4fcdbe1a013e52fa68694b91019f7cdbb820595a"
+    },
+    {
+      "path": "docs/audits/2026-10-03-peable-verifier-adoption/types-final.log",
+      "sha256": "8366207267355d3e3d5bf3bf6e8c94c5f93f6078c34f08973fa2b38cdda6cc92"
+    },
+    {
+      "path": "docs/audits/2026-10-03-peable-verifier-adoption/lint.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/audits/2026-10-03-peable-verifier-adoption/build.log",
+      "sha256": "24c42b76aecef2c39c8a5639a3536efb936b03bdac9a8f8be50c0e71ffbc7af8"
+    },
+    {
+      "path": "docs/audits/2026-10-03-peable-verifier-adoption/lockfile-pinned.log",
+      "sha256": "6bf3ffbd67797c1c6096095b86be94c94accb4fc3480270c4b50ef310c3af830"
+    },
+    {
+      "path": "docs/audits/2026-10-03-peable-verifier-adoption/docs.log",
+      "sha256": "aeecd81c17041dabed7aa4b4a686e2584a469091d216d04025f458961e2f9c97"
+    },
+    {
+      "path": "docs/audits/2026-10-03-peable-verifier-adoption/teardown.log",
+      "sha256": "bffd08fa35a268dcde98106f04d938505512f3c99b07aad31b828a94da368780"
+    },
+    {
+      "path": "docs/audits/2026-10-03-peable-verifier-adoption/installed.json",
+      "sha256": "abfa0a9a8179136faea86a8634062d7808b08dae1efc56accba771e8e688bc8c"
+    }
+  ],
+  "developmentDiagnostics": [
+    {
+      "path": "/home/nate/Oxy/.agent-evidence/i04-handoff-i08-20261003/homiio-verifier/types.log",
+      "sha256": "1fba94749b811e3a12e791de71ab6aab25143f746509156823af1919a1346ffb"
+    },
+    {
+      "path": "/home/nate/Oxy/.agent-evidence/i04-handoff-i08-20261003/homiio-verifier/lockfile.log",
+      "sha256": "14fe4808e0b89fbbb51a8e7526dc08d45048fc3a3da2995eabfe6ddcdd1e8c31"
+    },
+    {
+      "path": "/home/nate/Oxy/.agent-evidence/i04-handoff-i08-20261003/homiio-verifier/lockfile-final.log",
+      "sha256": "c83a7c0042297e337582a3b5096222892b4b0be4012be22e3bb138a0b6a095d6"
+    }
+  ],
+  "registry": {
+    "name": "@peable.to/sdk",
+    "version": "0.2.2",
+    "sha256": "68687dabc8caddcdb3f60d846d720f5103d29c4d2a0eacb774ebc08ca37f4494",
+    "installedFilesIdentical": 53,
+    "sharedTypes": "0.3.0"
+  },
+  "validation": {
+    "redPassed": 15,
+    "redFailed": 3,
+    "greenPassed": 32,
+    "greenFailed": 0,
+    "typecheck": "PASS",
+    "build": "PASS",
+    "lint": "PASS zero warnings",
+    "lockfile": "PASS pinned Bun1.3.14",
+    "docs": "PASS"
+  },
+  "scope": {
+    "moduleUnmounted": true,
+    "networkCalls": false,
+    "credentialCreated": false,
+    "paymentRouteAdded": false,
+    "financialMutation": false
+  },
+  "database": {
+    "host": "127.0.0.1",
+    "port": 5575,
+    "owner": "oxy_i08_mercaria",
+    "serverPersistent": true,
+    "harnessDatabasePrefix": "oxydb_test_",
+    "remaining": []
+  }
+}
