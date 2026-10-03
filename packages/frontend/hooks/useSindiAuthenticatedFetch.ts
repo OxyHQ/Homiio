@@ -1,74 +1,16 @@
-import { useCallback } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Platform } from 'react-native';
 import { fetch as expoFetch } from 'expo/fetch';
 import { useOxy } from '@oxy.so/services';
-import {
-  responseRequiresSindiConsent,
-  SindiConsentRequiredError,
-} from './sindiConsent';
+import type { ResponseTransport } from '@oxy.so/core';
+import { API_URL } from '@/config';
+import { createSindiLinkedFetch } from './sindiLinkedFetch';
 
-/** Shape compatible with the AI SDK / conversation store fetchers. */
-type ConversationFetch = typeof globalThis.fetch;
-
-/**
- * Builds the authenticated fetch used by every Sindi surface (the `/sindi`
- * index, the `/sindi/[conversationId]` route, and the docked `SindiPanel`).
- *
- * Single source of truth so the three hosts stay byte-identical:
- *   - Bearer token read from the active Oxy access token. The SDK
- *     (`OxyProvider`) OWNS token lifecycle — cold-boot restore plus background
- *     refresh keep `session.accessToken` live — so this hook does NOT re-implement
- *     refresh/retry plumbing. Sindi is a streaming endpoint, which the SDK's
- *     JSON-only HTTP client cannot proxy, so we keep a raw streaming fetch but
- *     let the SDK own auth.
- *   - On web we use the browser's native `fetch` to preserve `ReadableStream`
- *     streaming semantics; native uses `expo/fetch`.
- *   - Multipart (`FormData`) bodies strip the `Content-Type` header so fetch
- *     sets the boundary itself.
- *
- * Memoized on `oxyServices` + `activeSessionId` so it is referentially stable
- * across renders (callers pass it straight into React Query / `useChat`).
- */
-export function useSindiAuthenticatedFetch(): ConversationFetch {
-  const { oxyServices, activeSessionId } = useOxy();
-
-  return useCallback<ConversationFetch>(
-    async (input, init = {}) => {
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-        ...((init.headers as Record<string, string>) || {}),
-      };
-
-      if (oxyServices && activeSessionId) {
-        const accessToken = oxyServices.session.accessToken;
-        if (accessToken) {
-          headers['Authorization'] = `Bearer ${accessToken}`;
-        }
-      }
-
-      const { body, ...rest } = init;
-
-      // Let fetch set the multipart boundary header automatically.
-      if (typeof FormData !== 'undefined' && body instanceof FormData) {
-        delete headers['Content-Type'];
-      }
-
-      const fetchOptions: RequestInit = {
-        ...rest,
-        headers,
-        ...(body !== null ? { body } : {}),
-      };
-
-      const fetchImpl =
-        Platform.OS === 'web'
-          ? globalThis.fetch
-          : (expoFetch as unknown as ConversationFetch);
-      const response = await fetchImpl(input, fetchOptions);
-      if (await responseRequiresSindiConsent(response)) {
-        throw new SindiConsentRequiredError();
-      }
-      return response;
-    },
-    [oxyServices, activeSessionId],
-  );
+/** One linked authority boundary for JSON, multipart and streaming Sindi calls. */
+export function useSindiAuthenticatedFetch(): typeof globalThis.fetch {
+  const { oxyServices } = useOxy();
+  const linked = useMemo(() => oxyServices.createLinkedClient({ baseURL: API_URL }), [oxyServices]);
+  useEffect(() => () => linked.dispose(), [linked]);
+  return useMemo(() => createSindiLinkedFetch(linked.client,
+    Platform.OS === 'web' ? globalThis.fetch : expoFetch as ResponseTransport), [linked]);
 }
