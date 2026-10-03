@@ -1,18 +1,6 @@
-/**
- * The two halves of the Peable integration that can be proven before it is
- * connected (#518 §7.2, #519 §7.2).
- *
- * Peable is the chosen processor and is not wired up — rent in euros needs its
- * card rail, which is implemented but not live, and it performs no FX, so a
- * euro amount cannot settle over its deployed FairCoin rail.
- *
- * What CAN be built now is the part that is pure, and it happens to be the part
- * most easily got wrong later: what a processor status means to a ledger, and
- * whether a webhook really came from the processor. Both are worth having
- * settled and covered before anybody is holding a production incident.
- */
-
 import { createHmac } from 'node:crypto';
+import { closePostgres } from '../../db/postgres';
+import type { WebhooksResource } from '@peable.to/sdk';
 
 import {
   PEABLE_INTENT_STATUSES,
@@ -22,7 +10,20 @@ import {
 } from '../../services/payments/peableContract';
 
 const SECRET = 'whsec_test_secret';
-const BODY = JSON.stringify({ id: 'evt_1', type: 'payment_intent.settled' });
+const TIMESTAMP = 1791000000;
+const created = new Date(TIMESTAMP * 1000).toISOString();
+type Event = ReturnType<WebhooksResource['constructEvent']>;
+const EVENT = {
+  id: 'evt_fixture', object: 'event', type: 'payment_intent.settled', created,
+  data: { object: { id: 'pi_fixture', object: 'payment_intent', status: 'settled', rail: 'faircoin',
+    amount: '100000', currency: 'FAIR', network: 'testnet', address: 'synthetic-address', merchantId: 'merch_fixture',
+    txid: 'synthetic-tx', confirmations: 6, clientSecret: 'synthetic-unused-secret', metadata: {}, expiresAt: created,
+    createdAt: created, updatedAt: created } },
+} satisfies Event;
+const BODY = JSON.stringify(EVENT);
+beforeEach(() => { jest.spyOn(Date, 'now').mockReturnValue(TIMESTAMP * 1000); });
+afterEach(() => { jest.restoreAllMocks(); });
+afterAll(closePostgres);
 
 function sign(body: string, timestamp: number, secret = SECRET): string {
   const digest = createHmac('sha256', secret).update(`${timestamp}.${body}`).digest('hex');
@@ -50,9 +51,7 @@ describe('what a Peable status means to the ledger', () => {
   });
 
   it('calls a status it has never heard of unknown, rather than guessing', () => {
-    // The statuses are copied, because Peable's SDK cannot be installed. Copied
-    // values go stale. The failure mode that matters is a NEW status being read
-    // as a settlement.
+    // A new processor status must never become a settlement by default.
     expect(peableStatusMeaning('captured_offline')).toEqual({
       kind: 'unknown',
       status: 'captured_offline',
@@ -78,105 +77,60 @@ describe('what a Peable status means to the ledger', () => {
   });
 });
 
-describe('proving a webhook came from Peable', () => {
-  const now = 1_800_000_000;
 
-  it('accepts a correctly signed delivery', () => {
-    expect(
-      verifyPeableSignature({ rawBody: BODY, header: sign(BODY, now), secret: SECRET, nowSeconds: now }),
-    ).toEqual({ ok: true });
+describe('published SDK webhook verification without a client or token mint', () => {
+  const verify = (rawBody: string | Buffer, header: string | undefined, secret = SECRET) => verifyPeableSignature({ rawBody, header, secret });
+  it('accepts canonical raw strings and buffers', () => {
+    expect(verify(BODY, sign(BODY, TIMESTAMP))).toEqual({ ok: true });
+    expect(verify(Buffer.from(BODY), sign(BODY, TIMESTAMP))).toEqual({ ok: true });
   });
-
-  it('refuses a body that changed by one byte', () => {
-    const header = sign(BODY, now);
-    const tampered = BODY.replace('settled', 'settle_');
-
-    expect(
-      verifyPeableSignature({ rawBody: tampered, header, secret: SECRET, nowSeconds: now }),
-    ).toEqual({ ok: false, reason: 'bad_signature' });
+  it('rejects tampering, reserialisation, another secret, and short forged digests', () => {
+    const header = sign(BODY, TIMESTAMP);
+    for (const raw of [BODY.replace('evt_fixture', 'evt_changed'), JSON.stringify(EVENT, null, 2)]) expect(verify(raw, header).ok).toBe(false);
+    expect(verify(BODY, header, 'other-secret').ok).toBe(false);
+    expect(verify(BODY, `t=${TIMESTAMP},v1=ff`).ok).toBe(false);
   });
-
-  it('refuses a re-serialised body — the classic way this is got wrong', () => {
-    // Same JSON, different bytes: a caller that parsed and re-stringified would
-    // break every signature, and the symptom is "webhooks stopped working"
-    // rather than anything pointing at the cause.
-    const header = sign(BODY, now);
-    const reserialised = JSON.stringify(JSON.parse(BODY), null, 2);
-
-    expect(
-      verifyPeableSignature({ rawBody: reserialised, header, secret: SECRET, nowSeconds: now }),
-    ).toEqual({ ok: false, reason: 'bad_signature' });
+  it('enforces the exact signed timestamp window without refreshing old signatures', () => {
+    expect(verify(BODY, sign(BODY, TIMESTAMP - PEABLE_SIGNATURE_TOLERANCE_SECONDS)).ok).toBe(true);
+    for (const offset of [-301, 301]) expect(verify(BODY, sign(BODY, TIMESTAMP + offset)).ok).toBe(false);
+    expect(verify(BODY, sign(BODY, TIMESTAMP - 10000).replace(`t=${TIMESTAMP - 10000}`, `t=${TIMESTAMP}`)).ok).toBe(false);
   });
-
-  it('refuses another merchant\'s secret', () => {
-    expect(
-      verifyPeableSignature({
-        rawBody: BODY,
-        header: sign(BODY, now, 'whsec_someone_else'),
-        secret: SECRET,
-        nowSeconds: now,
-      }),
-    ).toEqual({ ok: false, reason: 'bad_signature' });
+  it.each([undefined, '', 'nonsense', 't=abc,v1=ff', `t=${TIMESTAMP}`, `t=${TIMESTAMP},v2=deadbeef`])('refuses malformed or unknown-version headers: %s', header => {
+    expect(verify(BODY, header)).toEqual({ ok: false, reason: 'invalid_webhook' });
   });
-
-  it('refuses a delivery captured and replayed later', () => {
-    const header = sign(BODY, now);
-
-    expect(
-      verifyPeableSignature({
-        rawBody: BODY,
-        header,
-        secret: SECRET,
-        nowSeconds: now + PEABLE_SIGNATURE_TOLERANCE_SECONDS + 1,
-      }),
-    ).toEqual({ ok: false, reason: 'stale_timestamp' });
-    // …and it is still good one second inside the window, so the tolerance is
-    // a boundary rather than an approximation.
-    expect(
-      verifyPeableSignature({
-        rawBody: BODY,
-        header,
-        secret: SECRET,
-        nowSeconds: now + PEABLE_SIGNATURE_TOLERANCE_SECONDS - 1,
-      }),
-    ).toEqual({ ok: true });
+  it.each(['not-json', '{}', JSON.stringify({ ...EVENT, type: 'toString' }), JSON.stringify({ ...EVENT, type: 'unknown.event' }), JSON.stringify({ ...EVENT, created: 42 })])('refuses signed malformed or unknown event: %s', raw => {
+    expect(verify(raw, sign(raw, TIMESTAMP))).toEqual({ ok: false, reason: 'invalid_webhook' });
   });
-
-  it('refuses a replay dressed in a fresh timestamp', () => {
-    // The timestamp is inside the signed material, so moving it forward to beat
-    // the tolerance invalidates the digest. This is the attack the window
-    // exists for, and it must fail as a SIGNATURE problem.
-    const header = sign(BODY, now).replace(`t=${now}`, `t=${now + 10_000}`);
-
-    expect(
-      verifyPeableSignature({ rawBody: BODY, header, secret: SECRET, nowSeconds: now + 10_000 }),
-    ).toEqual({ ok: false, reason: 'bad_signature' });
+  const dispute = { id: 'dp_fixture', object: 'dispute', paymentIntentId: 'pi_fixture', amount: '100', currency: 'EUR',
+    status: 'needs_response', reason: null, evidenceDueAt: null, evidenceSubmittedAt: null, createdAt: created, updatedAt: created } as const;
+  const account = { id: 'ca_fixture', object: 'connected_account', externalRef: 'synthetic-fixture', country: 'ES', defaultCurrency: 'EUR',
+    payable: false, payoutsEnabled: false, chargesEnabled: false, transfersCapability: 'pending', cardPaymentsCapability: null,
+    requirements: { currentlyDue: 1, eventuallyDue: 1, pastDue: 0, pendingVerification: 0 }, disabledReasonCodes: [], lastSyncedAt: null,
+    createdAt: created, updatedAt: created } as const;
+  const payloads = {
+    'payment_intent.confirming': EVENT.data.object, 'payment_intent.settled': EVENT.data.object,
+    'payment_intent.failed': EVENT.data.object, 'payment_intent.rejected': EVENT.data.object,
+    'payment_intent.expired': EVENT.data.object, 'payment_intent.refunded': EVENT.data.object,
+    'payment_intent.partially_refunded': EVENT.data.object, 'payment_intent.disputed': dispute,
+    'payment_intent.dispute_closed': { ...dispute, status: 'won' }, 'connected_account.updated': account,
+  } satisfies { [T in Event['type']]: Extract<Event, { type: T }>['data']['object'] };
+  for (const type of Object.keys(payloads) as (keyof typeof payloads)[]) {
+    it(`accepts signed ${type} with its actual resource family`, () => {
+      const raw = JSON.stringify({ ...EVENT, type, data: { object: payloads[type] } });
+      expect(verify(raw, sign(raw, TIMESTAMP))).toEqual({ ok: true });
+      expect(verify(raw, sign(raw, TIMESTAMP), 'wrong').ok).toBe(false);
+    });
+  }
+  it('does not silently replace invalid UTF-8 before verifying raw buffer bytes', () => {
+    const raw = JSON.stringify({ ...EVENT, id: 'evt_\uFFFD' });
+    const bytes = Buffer.from(raw); const index = bytes.indexOf(Buffer.from('\uFFFD'));
+    const malformed = Buffer.concat([bytes.subarray(0, index), Buffer.from([0xff]), bytes.subarray(index + 3)]);
+    expect(verify(raw, sign(raw, TIMESTAMP)).ok).toBe(true);
+    expect(verify(malformed, sign(raw, TIMESTAMP)).ok).toBe(false);
   });
-
-  it('refuses a header that is missing, empty or malformed', () => {
-    for (const header of [undefined, '', '   ', 'nonsense', 't=abc,v1=ff', `t=${now}`]) {
-      expect(
-        verifyPeableSignature({ rawBody: BODY, header, secret: SECRET, nowSeconds: now }).ok,
-      ).toBe(false);
-    }
-  });
-
-  it('names an unrecognised signature version rather than calling it malformed', () => {
-    expect(
-      verifyPeableSignature({
-        rawBody: BODY,
-        header: `t=${now},v2=deadbeef`,
-        secret: SECRET,
-        nowSeconds: now,
-      }),
-    ).toEqual({ ok: false, reason: 'unknown_version' });
-  });
-
-  it('refuses a short forged digest instead of throwing', () => {
-    // `timingSafeEqual` throws on a length mismatch rather than returning
-    // false, so a one-byte signature would be a 500 on a public endpoint.
-    expect(
-      verifyPeableSignature({ rawBody: BODY, header: `t=${now},v1=ff`, secret: SECRET, nowSeconds: now }),
-    ).toEqual({ ok: false, reason: 'bad_signature' });
+  it('never calls fetch or a credential provider', () => {
+    const fetch = jest.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('network forbidden'));
+    expect(verify(BODY, sign(BODY, TIMESTAMP))).toEqual({ ok: true });
+    expect(fetch).not.toHaveBeenCalled();
   });
 });
