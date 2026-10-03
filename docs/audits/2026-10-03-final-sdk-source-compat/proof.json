@@ -67,11 +67,6 @@
       "bytes": 583
     },
     {
-      "path": "docs/audits/2026-10-03-final-sdk-source-compat/logs/i04-homiio-ci-final-20261003.json",
-      "sha256": "49c32ec404f4ad4a79bfdcda0711f5ee6490fc8b7d4c8ddb5a3dbeb660f5cef5",
-      "bytes": 164
-    },
-    {
       "path": "docs/audits/2026-10-03-final-sdk-source-compat/logs/i04-homiio-frontend-build.log",
       "sha256": "11f69e953d955313cf8753f577122f342b28af0961291fc97ab74c765e75da29",
       "bytes": 17276
