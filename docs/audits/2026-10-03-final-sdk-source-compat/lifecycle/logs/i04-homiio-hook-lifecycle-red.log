@@ -1,0 +1,19 @@
+$ jest --ci --runInBand --runTestsByPath __tests__/sindiFetchLifecycle.test.tsx
+FAIL __tests__/sindiFetchLifecycle.test.tsx
+  ✕ survives StrictMode effect replay and disposes every subscription on unmount (13 ms)
+  ✓ follows a replacement Oxy owner and closes previous/unmounted linked clients (17 ms)
+
+  ● survives StrictMode effect replay and disposes every subscription on unmount
+
+    OxyAuthenticationError: An active Oxy session is required for this request
+
+      at HttpService.<anonymous> (../../node_modules/@oxy.so/core/dist/cjs/HttpService.js:1249:19)
+      at asyncGeneratorStep (../../node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (../../node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 1 passed, 2 total
+Snapshots:   0 total
+Time:        1.204 s
+Ran all test suites within paths "__tests__/sindiFetchLifecycle.test.tsx".
+error: script "test" exited with code 1

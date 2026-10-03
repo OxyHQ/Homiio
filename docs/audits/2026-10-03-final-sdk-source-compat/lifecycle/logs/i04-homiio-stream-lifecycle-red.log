@@ -1,0 +1,79 @@
+$ jest --ci --runInBand --runTestsByPath __tests__/sindiStreamLifecycle.test.tsx
+FAIL __tests__/sindiStreamLifecycle.test.tsx
+  ✕ aborts a delivered HTTP stream on session switch (1066 ms)
+  ✕ aborts a delivered HTTP stream on unmount (1053 ms)
+
+  ● aborts a delivered HTTP stream on session switch
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  -  1
+    + Received  + 28
+
+    - Array []
+    + Array [
+    +   Object {
+    +     "content": "hello",
+    +     "createdAt": 2026-10-03T16:45:22.492Z,
+    +     "experimental_attachments": undefined,
+    +     "id": "2NoER3irAwqdxRMd",
+    +     "parts": Array [
+    +       Object {
+    +         "text": "hello",
+    +         "type": "text",
+    +       },
+    +     ],
+    +     "role": "user",
+    +   },
+    +   Object {
+    +     "content": "private-A",
+    +     "createdAt": 2026-10-03T16:45:22.509Z,
+    +     "id": "39lU16WKt4huxlSY",
+    +     "parts": Array [
+    +       Object {
+    +         "text": "private-A",
+    +         "type": "text",
+    +       },
+    +     ],
+    +     "revisionId": "6K2rPJeluyYW56C3",
+    +     "role": "assistant",
+    +   },
+    + ]
+
+      54 |       mockSession = 'B'; mockOxy.session.setAccessToken(token('B'));
+      55 |       hook.rerender(undefined);
+    > 56 |       await waitFor(() => expect(hook.result.current.messages).toEqual([]));
+         |                    ^
+      57 |     }
+      58 |     await waitFor(() => expect(closed).toBe(true));
+      59 |   } finally {
+
+      at __tests__/sindiStreamLifecycle.test.tsx:56:20
+      at asyncGeneratorStep (../../node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (../../node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● aborts a delivered HTTP stream on unmount
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      56 |       await waitFor(() => expect(hook.result.current.messages).toEqual([]));
+      57 |     }
+    > 58 |     await waitFor(() => expect(closed).toBe(true));
+         |                  ^
+      59 |   } finally {
+      60 |     openResponse?.end();
+      61 |     if (operation !== 'unmount') hook.unmount();
+
+      at __tests__/sindiStreamLifecycle.test.tsx:58:18
+      at asyncGeneratorStep (../../node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (../../node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       2 failed, 2 total
+Snapshots:   0 total
+Time:        3.338 s
+Ran all test suites within paths "__tests__/sindiStreamLifecycle.test.tsx".
+error: script "test" exited with code 1
