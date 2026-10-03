@@ -293,3 +293,12 @@ describe('what settling does not do', () => {
     expect(executions).toEqual(['stale']);
   });
 });
+
+
+it('discards a deferred navigation when its stream owner leaves', () => {
+  const { result } = executor('screen');
+  act(() => { result.current.execute(envelope()); });
+  expect(mockPush).not.toHaveBeenCalled();
+  act(() => { result.current.cancelTurn(); result.current.settleTurn(); });
+  expect(mockPush).not.toHaveBeenCalled();
+});
