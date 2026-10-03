@@ -1,0 +1,70 @@
+{
+  "name": "homiio-monorepo",
+  "version": "2.0.0",
+  "license": "SEE LICENSE IN LICENSE",
+  "description": "Homiio Monorepo - Frontend and Backend",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "packageManager": "bun@1.3.14",
+  "scripts": {
+    "dev": "bun run dev --filter '*'",
+    "dev:frontend": "bun run --filter @homiio/frontend dev",
+    "dev:backend": "bun run --filter @homiio/backend dev",
+    "build": "bun run --filter '*' build",
+    "build:shared-types": "bun run --filter @homiio/shared-types build",
+    "build:frontend": "bun run --filter @homiio/frontend build",
+    "build:backend": "bun run --filter @homiio/backend build",
+    "test": "bun run --filter '*' test",
+    "lint": "bun run --filter '*' lint",
+    "doctor:oxy": "oxy-doctor --ci",
+    "check:bundle-imports": "bun ./scripts/check-frontend-bundle-imports.mjs && bun ./scripts/test-check-frontend-bundle-imports.mjs",
+    "check:web-bundle-budget": "bun ./scripts/check-web-export-budget.mjs",
+    "check:lockfile": "bun ./scripts/check-lockfile-sync.mjs",
+    "validate:agents-md": "bun ./scripts/check-agents-md-size.mjs && bun ./scripts/test-check-agents-md-size.mjs",
+    "check:docs": "bun ./scripts/check-docs.mjs",
+    "clean": "bun run --filter '*' clean && rm -rf node_modules",
+    "install:all": "bun install",
+    "start:frontend": "bun run --filter @homiio/frontend start",
+    "start:backend": "bun run --filter @homiio/backend start",
+    "postinstall": "bun run build:shared-types"
+  },
+  "devDependencies": {
+    "@oxy.so/doctor": "1.1.0",
+    "@types/node": "^22.20.1",
+    "ajv": "^8.20.0",
+    "ajv-keywords": "^5.1.0",
+    "prettier-plugin-tailwindcss": "^0.8.1",
+    "tailwindcss": "4.2.2",
+    "typescript": "^6.0.3"
+  },
+  "engines": {
+    "node": "22.x"
+  },
+  "overrides": {
+    "@oxy.so/core": "file:/home/nate/Oxy/.agent-evidence/i04-raw-response-deadline-pack/oxy.so-core-4.2.0.tgz",
+    "@oxy.so/bloom": "6.2.1",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "@react-native-async-storage/async-storage": "2.2.0",
+    "@react-native-community/netinfo": "12.0.1",
+    "react-native-reanimated": "4.3.1",
+    "react-native-worklets": "0.8.3",
+    "react-native-svg": "15.15.4",
+    "@oxy.so/contracts": "file:/home/nate/Oxy/.agent-evidence/i04-consumer-candidate-f364-packs/oxy.so-contracts-4.9.0.tgz",
+    "@oxy.so/protocol": "file:/home/nate/Oxy/.agent-evidence/i04-consumer-candidate-f364-packs/oxy.so-protocol-1.2.2.tgz",
+    "@oxy.so/services": "file:/home/nate/Oxy/.agent-evidence/i04-consumer-candidate-f364-packs/oxy.so-services-11.1.0.tgz",
+    "@oxy.so/mcp": "file:/home/nate/Oxy/.agent-evidence/i04-consumer-candidate-f364-packs/oxy.so-mcp-1.1.0.tgz",
+    "@oxy.so/telemetry": "1.2.0",
+    "react-native-keyboard-controller": "1.21.6"
+  },
+  "resolutions": {
+    "@oxy.so/core": "file:/home/nate/Oxy/.agent-evidence/i04-consumer-candidate-f364-packs/oxy.so-core-4.2.0.tgz"
+  },
+  "cacheDirectories": [],
+  "dependencies": {
+    "@oxy.so/core": "file:/home/nate/Oxy/.agent-evidence/i04-raw-response-deadline-pack/oxy.so-core-4.2.0.tgz",
+    "@oxy.so/bloom": "6.2.1"
+  }
+}

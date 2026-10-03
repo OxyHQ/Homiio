@@ -1,0 +1,26 @@
+$ jest --ci --runInBand --runTestsByPath __tests__/linkedResponses.test.ts
+FAIL __tests__/linkedResponses.test.ts
+  ✕ retains the actual public envelope without reconstructing success or losing fields
+
+  ● retains the actual public envelope without reconstructing success or losing fields
+
+    TypeError: A dynamic import callback was invoked without --experimental-vm-modules
+
+      19 |   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+      20 |   mockOrigin = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+    > 21 |   apiModule = await import('../utils/api');
+         |   ^
+      22 | });
+      23 | afterAll(async () => { server.closeAllConnections(); await new Promise<void>((resolve) => server.close(() => resolve())); });
+      24 | it('retains the actual public envelope without reconstructing success or losing fields', async () => {
+
+      at Object.apiModule (__tests__/linkedResponses.test.ts:21:3)
+      at asyncGeneratorStep (../../node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (../../node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 1 total
+Snapshots:   0 total
+Time:        1.244 s
+Ran all test suites within paths "__tests__/linkedResponses.test.ts".
+error: script "test" exited with code 1

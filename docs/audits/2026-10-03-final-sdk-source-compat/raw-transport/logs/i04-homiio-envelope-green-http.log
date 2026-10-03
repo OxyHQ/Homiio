@@ -1,0 +1,9 @@
+$ jest --ci --runInBand --runTestsByPath __tests__/linkedResponses.test.ts
+PASS __tests__/linkedResponses.test.ts
+  ✓ retains the actual public envelope without reconstructing success or losing fields (18 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       1 passed, 1 total
+Snapshots:   0 total
+Time:        1.95 s
+Ran all test suites within paths "__tests__/linkedResponses.test.ts".
