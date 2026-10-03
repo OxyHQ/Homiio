@@ -71,3 +71,18 @@ it('rejects a retained callback after switching session on the same Oxy owner', 
     expect(seen.at(-1)).toBe(`Bearer ${token('B')}`);
   } finally { hook.unmount(); }
 });
+
+it('never revives the first A callback after A → B → A', async () => {
+  mockSession = 'A'; mockOxy = new OxyServices({ baseURL: mockOrigin }); mockOxy.session.setAccessToken(token('A'));
+  const hook = renderHook(() => useSindiAuthenticatedFetch());
+  try {
+    const firstA = hook.result.current;
+    mockSession = 'B'; mockOxy.session.setAccessToken(token('B')); hook.rerender(undefined);
+    mockSession = 'A'; mockOxy.session.setAccessToken(token('A')); hook.rerender(undefined);
+    const count = seen.length;
+    await expect(firstA(mockOrigin)).rejects.toThrow('not mounted');
+    expect(seen.length).toBe(count);
+    await (await hook.result.current(mockOrigin)).text();
+    expect(seen.at(-1)).toBe(`Bearer ${token('A')}`);
+  } finally { hook.unmount(); }
+});
