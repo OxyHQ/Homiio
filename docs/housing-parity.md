@@ -178,7 +178,7 @@ a lift is not part of the address.
 |---|---|---|---|
 | `LeaseSummaryCard` | `app/my-home.tsx` | **live** | |
 | `RentPaymentList` | `LeasePaymentsSection`, `LeaseLedgerSection` | **live** | The **ledger** exists (`lease_payment_movements`): obligation, attempt, confirmed payment, manual declaration, partial, refund and a DERIVED balance, with idempotency on every write. A tenant declares a transfer and a landlord confirms it. Receipts are derived from the ledger and downloadable by both parties; the processor is blocked — see below |
-| "Pay rent" (a checkout) | — | **blocked** | The processor is chosen — **Peable** — and the seam is built: status mapping and webhook signature verification are live and tested (`services/payments/peableContract.ts`). It is not connected because rent in euros needs Peable's card rail, which its own roadmap marks as never exercised against Stripe's sandbox and not deployed, and Peable performs no FX, so a euro amount cannot settle over its working FairCoin rail. [`docs/peable-rent-payments.md`](./peable-rent-payments) has the four blockers and the exact wiring |
+| "Pay rent" (a checkout) | — | **blocked** | Peable backend readiness is deployed and SDK0.2.2/shared-types0.3.0 are published; Mercaria-specific Checkout/TestClock exercises passed against Stripe TEST. Homiio adopts the published verifier in an **unmounted contract seam**, not a live checkout or webhook. Homiio still needs its own verified identity/environment/merchant/rail configuration and authorized ingress/obligation correlation; Mercaria evidence does not establish those. [Current evidence and activation gates](./peable-rent-payments) |
 | `MaintenanceRequestCard` / repairs | `MaintenanceSection`, `/maintenance/*` | **live** | `maintenance_requests` + comments + events + attachments, a declared state machine under a row lock, authorization in the repository query, notifications through the dispatcher. Photos go through the private path — stored under `private/`, re-encoded so the phone's GPS does not travel with them, delivered only to the two sides of the lease |
 | "Message landlord" | — | **blocked** | The ecosystem audit §7.3 asks for is done: [`docs/messaging-audit.md`](./messaging-audit). Allo IS the platform and is explicitly multi-product, but its SDK is unpublished, its server cannot open a conversation, and enrolling Homiio enrols a device on the person's whole Allo account. Three decisions named there, none of them an implementer's. No button is drawn meanwhile — the Inbox tab is a notification list |
 | `DocumentList`, signatures | `LeaseDocumentsSection`, `/contracts/[id]` | **live** | Upload/list/view exist, and **a lease document can now be a PDF** — it goes to the lease's own multipart endpoint, is stored under `private/leases/<lease>/`, and is delivered only to the landlord, the tenant and the co-tenants. Neither an application's nor a lease's documents come off the public image route any more — see below. **A signature is a row in `lease_signatures` naming what was signed**: the SHA-256 of the lease's canonicalized terms (always) and the contract document plus the digest of its stored bytes (when the lease has one). Three bindings, and the CONSTRAINTS decide which — a composite FK checks the digest against `lease_documents.content_sha256`, `MATCH SIMPLE` admits a document that predates hashing, and a digest naming no document is refused. A client that sends back the `termsSha256` it rendered gets a `409` if the landlord amended the lease in between. CO-TENANTS sign, the lease activates only when every party has, and the boolean columns on `leases` are a cache written from the signature rows by the same statement. The table is append-only by trigger. An APPLICATION's documents carry a real verification — see the `ApplicationChecklist` row |
@@ -280,13 +280,14 @@ resolve to the row that already exists. `recordPayment`, the dead writer that
 could mark an obligation paid with no evidence of who confirmed it, is deleted,
 so the balance has exactly one source.
 
-**Blocked: the processor — now by name.** Peable is the choice, and
-[`docs/peable-rent-payments.md`](./peable-rent-payments) records what is
-already in place (the ledger needs no migration; the status mapping and the
-webhook signature verifier are written and tested) and the four things that
-stop it being connected: the card rail is not live, there is no FX so a euro
-amount cannot settle over the FairCoin rail, the published SDK cannot be
-installed, and nothing in Peable is a subscription engine.
+**Blocked: Homiio payment activation.** Peable backend readiness is deployed,
+and SDK0.2.2 is published and installed here. Mercaria-specific Stripe TEST
+Checkout and TestClock evidence is available. Homiio's status mapping and SDK
+webhook verifier remain an unmounted contract seam, with no provider call or
+payment credential. [Current evidence and activation gates](./peable-rent-payments)
+separate those completed upstream facts from Homiio's missing identity,
+environment/merchant/rail configuration and authorized ingress/obligation
+correlation. No FX, rent scheduler, mandate or production charge is inferred.
 
 There is still no "Pay rent" checkout, because Homiio cannot settle one. A button that opened a checkout it could not confirm is the
 simulated success both epics forbid. The model carries `kind: 'processor'` and a
@@ -520,9 +521,10 @@ Open, in rough order of how much they unblock:
 1. **Filters end to end** — energy rating and beds remain, and each needs a
    column AND an ingest source before a filter over it means anything. Area,
    availability, currency, floor and the room-vs-whole-home segment are live.
-2. **The rent checkout** — the ledger and receipts are live; only the checkout
-   is left, blocked on Peable's card rail going live rather than on a decision
-   (§ [`docs/peable-rent-payments.md`](./peable-rent-payments)).
+2. **The rent checkout** — the ledger and receipts are live; the published SDK
+   verifier is adopted only in an unmounted seam. Homiio-specific configuration,
+   checkout correlation and authorized ingress remain activation gates
+   ([current evidence](./peable-rent-payments)).
 3. **Messaging** — the audit is done ([`docs/messaging-audit.md`](./messaging-audit)); now blocked on
    three decisions it names, not on work.
 4. **Listing facts** — floor plans, energy, price history: each needs a source

@@ -1,0 +1,47 @@
+$ jest --ci --runInBand __tests__/sindiDeferredOwner.test.tsx __tests__/sindiStreamLifecycle.test.tsx
+FAIL __tests__/sindiDeferredOwner.test.tsx (6.791 s)
+  ● does not write a delayed 200 body into the real store after logout
+
+    TypeError: mockOxy.session.clearTokens is not a function
+
+      55 |   mockSession = id;
+      56 |   if (id) mockOxy.session.setAccessToken(token(id));
+    > 57 |   else mockOxy.session.clearTokens();
+         |                        ^
+      58 | }
+      59 | it.each(['switch', 'logout', 'ABA', 'unmount'])('does not write a delayed 200 body into the real store after %s', async (operation) => {
+      60 |   const hook = renderHook(useConversation, { initialProps: { persist: true } });
+
+      at clearTokens (__tests__/sindiDeferredOwner.test.tsx:57:24)
+      at switchOwner (__tests__/sindiDeferredOwner.test.tsx:67:7)
+      at asyncGeneratorStep (../../node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (../../node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● accepts picker results only for their mounted generation: logout
+
+    TypeError: mockOxy.session.clearTokens is not a function
+
+      55 |   mockSession = id;
+      56 |   if (id) mockOxy.session.setAccessToken(token(id));
+    > 57 |   else mockOxy.session.clearTokens();
+         |                        ^
+      58 | }
+      59 | it.each(['switch', 'logout', 'ABA', 'unmount'])('does not write a delayed 200 body into the real store after %s', async (operation) => {
+      60 |   const hook = renderHook(useConversation, { initialProps: { persist: true } });
+
+      at clearTokens (__tests__/sindiDeferredOwner.test.tsx:57:24)
+      at switchOwner (__tests__/sindiDeferredOwner.test.tsx:96:7)
+      at asyncGeneratorStep (../../node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (../../node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at ../../node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at ../../node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12
+      at apply (__tests__/sindiDeferredOwner.test.tsx:103:2)
+
+PASS __tests__/sindiStreamLifecycle.test.tsx
+
+Test Suites: 1 failed, 1 passed, 2 total
+Tests:       2 failed, 9 passed, 11 total
+Snapshots:   0 total
+Time:        7.189 s, estimated 8 s
+Ran all test suites matching /__tests__\/sindiDeferredOwner.test.tsx|__tests__\/sindiStreamLifecycle.test.tsx/i.
+error: script "test" exited with code 1

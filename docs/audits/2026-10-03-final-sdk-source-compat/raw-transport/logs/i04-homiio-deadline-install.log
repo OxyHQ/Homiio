@@ -1,0 +1,12 @@
+bun install v1.4.2 (744846f84)
+Resolving dependencies
+Resolved, downloaded and extracted [141]
+Saved lockfile
+
+$ bun run build:shared-types
+$ bun run --filter @homiio/shared-types build
+@homiio/shared-types build: Exited with code 0
+
++ @oxy.so/core@/home/nate/Oxy/.agent-evidence/i04-raw-response-deadline-pack/oxy.so-core-4.2.0.tgz
+
+4 packages installed [1371.00ms]

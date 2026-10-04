@@ -1,0 +1,227 @@
+$ jest --ci --runInBand __tests__/sindiDeferredOwner.test.tsx
+FAIL __tests__/sindiDeferredOwner.test.tsx (6.954 s)
+  ✕ does not write a delayed 200 body into the real store after switch (1216 ms)
+  ✕ does not write a delayed 200 body into the real store after logout (1195 ms)
+  ✕ does not write a delayed 200 body into the real store after ABA (1195 ms)
+  ✕ does not write a delayed 200 body into the real store after unmount (1148 ms)
+  ✓ persists a current owner response through the real store (1054 ms)
+  ✕ accepts picker results only for their mounted generation: switch (2 ms)
+  ✕ accepts picker results only for their mounted generation: logout (1 ms)
+  ✕ accepts picker results only for their mounted generation: ABA (1 ms)
+  ✓ accepts picker results only for their mounted generation: current (1 ms)
+
+  ● does not write a delayed 200 body into the real store after switch
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  -  4
+    + Received  + 11
+
+      Object {
+        "createdAt": 1970-01-01T00:00:00.000Z,
+    -   "id": "current-owner",
+    -   "messages": Array [],
+    -   "title": "current-owner",
+    -   "updatedAt": 1970-01-01T00:00:00.000Z,
+    +   "id": "saved-A",
+    +   "messages": Array [
+    +     Object {
+    +       "content": "private-A",
+    +       "id": "message-A",
+    +       "role": "user",
+    +       "timestamp": 2026-10-03T20:33:33.106Z,
+    +     },
+    +   ],
+    +   "title": "conv_A",
+    +   "updatedAt": 2026-10-03T20:33:34.107Z,
+      }
+
+      74 |       await new Promise((resolve) => setTimeout(resolve, 100));
+      75 |     });
+    > 76 |     expect(useConversationStore.getState().currentConversation).toEqual(current);
+         |                                                                 ^
+      77 |     expect(useConversationStore.getState().conversations).toEqual([current]);
+      78 |   } finally { pending?.end(); if (operation !== 'unmount') hook.unmount(); }
+      79 | });
+
+      at toEqual (__tests__/sindiDeferredOwner.test.tsx:76:65)
+      at asyncGeneratorStep (../../node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (../../node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● does not write a delayed 200 body into the real store after logout
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  -  4
+    + Received  + 11
+
+      Object {
+        "createdAt": 1970-01-01T00:00:00.000Z,
+    -   "id": "current-owner",
+    -   "messages": Array [],
+    -   "title": "current-owner",
+    -   "updatedAt": 1970-01-01T00:00:00.000Z,
+    +   "id": "saved-A",
+    +   "messages": Array [
+    +     Object {
+    +       "content": "private-A",
+    +       "id": "message-A",
+    +       "role": "user",
+    +       "timestamp": 2026-10-03T20:33:34.317Z,
+    +     },
+    +   ],
+    +   "title": "conv_A",
+    +   "updatedAt": 2026-10-03T20:33:35.317Z,
+      }
+
+      74 |       await new Promise((resolve) => setTimeout(resolve, 100));
+      75 |     });
+    > 76 |     expect(useConversationStore.getState().currentConversation).toEqual(current);
+         |                                                                 ^
+      77 |     expect(useConversationStore.getState().conversations).toEqual([current]);
+      78 |   } finally { pending?.end(); if (operation !== 'unmount') hook.unmount(); }
+      79 | });
+
+      at toEqual (__tests__/sindiDeferredOwner.test.tsx:76:65)
+      at asyncGeneratorStep (../../node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (../../node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● does not write a delayed 200 body into the real store after ABA
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  -  4
+    + Received  + 11
+
+      Object {
+        "createdAt": 1970-01-01T00:00:00.000Z,
+    -   "id": "current-owner",
+    -   "messages": Array [],
+    -   "title": "current-owner",
+    -   "updatedAt": 1970-01-01T00:00:00.000Z,
+    +   "id": "saved-A",
+    +   "messages": Array [
+    +     Object {
+    +       "content": "private-A",
+    +       "id": "message-A",
+    +       "role": "user",
+    +       "timestamp": 2026-10-03T20:33:35.513Z,
+    +     },
+    +   ],
+    +   "title": "conv_A",
+    +   "updatedAt": 2026-10-03T20:33:36.512Z,
+      }
+
+      74 |       await new Promise((resolve) => setTimeout(resolve, 100));
+      75 |     });
+    > 76 |     expect(useConversationStore.getState().currentConversation).toEqual(current);
+         |                                                                 ^
+      77 |     expect(useConversationStore.getState().conversations).toEqual([current]);
+      78 |   } finally { pending?.end(); if (operation !== 'unmount') hook.unmount(); }
+      79 | });
+
+      at toEqual (__tests__/sindiDeferredOwner.test.tsx:76:65)
+      at asyncGeneratorStep (../../node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (../../node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● does not write a delayed 200 body into the real store after unmount
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  -  4
+    + Received  + 11
+
+      Object {
+        "createdAt": 1970-01-01T00:00:00.000Z,
+    -   "id": "current-owner",
+    -   "messages": Array [],
+    -   "title": "current-owner",
+    -   "updatedAt": 1970-01-01T00:00:00.000Z,
+    +   "id": "saved-A",
+    +   "messages": Array [
+    +     Object {
+    +       "content": "private-A",
+    +       "id": "message-A",
+    +       "role": "user",
+    +       "timestamp": 2026-10-03T20:33:36.708Z,
+    +     },
+    +   ],
+    +   "title": "conv_A",
+    +   "updatedAt": 2026-10-03T20:33:37.708Z,
+      }
+
+      74 |       await new Promise((resolve) => setTimeout(resolve, 100));
+      75 |     });
+    > 76 |     expect(useConversationStore.getState().currentConversation).toEqual(current);
+         |                                                                 ^
+      77 |     expect(useConversationStore.getState().conversations).toEqual([current]);
+      78 |   } finally { pending?.end(); if (operation !== 'unmount') hook.unmount(); }
+      79 | });
+
+      at toEqual (__tests__/sindiDeferredOwner.test.tsx:76:65)
+      at asyncGeneratorStep (../../node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (../../node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● accepts picker results only for their mounted generation: switch
+
+    expect(received).toEqual(expected) // deep equality
+
+    Expected: null
+    Received: {"mimeType": "text/plain", "name": "fixture-A.txt", "uri": "file:///fixture-A.txt"}
+
+       99 |     const asset = { uri: 'file:///fixture-A.txt', name: 'fixture-A.txt', mimeType: 'text/plain' };
+      100 |     await act(async () => resolvePicker({ canceled: false, assets: [asset] }));
+    > 101 |     expect(hook.result.current.attachedFile).toEqual(operation === 'current' ? asset : null);
+          |                                              ^
+      102 |   } finally { hook.unmount(); }
+      103 | });
+      104 |
+
+      at toEqual (__tests__/sindiDeferredOwner.test.tsx:101:46)
+      at asyncGeneratorStep (../../node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (../../node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● accepts picker results only for their mounted generation: logout
+
+    expect(received).toEqual(expected) // deep equality
+
+    Expected: null
+    Received: {"mimeType": "text/plain", "name": "fixture-A.txt", "uri": "file:///fixture-A.txt"}
+
+       99 |     const asset = { uri: 'file:///fixture-A.txt', name: 'fixture-A.txt', mimeType: 'text/plain' };
+      100 |     await act(async () => resolvePicker({ canceled: false, assets: [asset] }));
+    > 101 |     expect(hook.result.current.attachedFile).toEqual(operation === 'current' ? asset : null);
+          |                                              ^
+      102 |   } finally { hook.unmount(); }
+      103 | });
+      104 |
+
+      at toEqual (__tests__/sindiDeferredOwner.test.tsx:101:46)
+      at asyncGeneratorStep (../../node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (../../node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● accepts picker results only for their mounted generation: ABA
+
+    expect(received).toEqual(expected) // deep equality
+
+    Expected: null
+    Received: {"mimeType": "text/plain", "name": "fixture-A.txt", "uri": "file:///fixture-A.txt"}
+
+       99 |     const asset = { uri: 'file:///fixture-A.txt', name: 'fixture-A.txt', mimeType: 'text/plain' };
+      100 |     await act(async () => resolvePicker({ canceled: false, assets: [asset] }));
+    > 101 |     expect(hook.result.current.attachedFile).toEqual(operation === 'current' ? asset : null);
+          |                                              ^
+      102 |   } finally { hook.unmount(); }
+      103 | });
+      104 |
+
+      at toEqual (__tests__/sindiDeferredOwner.test.tsx:101:46)
+      at asyncGeneratorStep (../../node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (../../node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       7 failed, 2 passed, 9 total
+Snapshots:   0 total
+Time:        6.986 s, estimated 7 s
+Ran all test suites matching /__tests__\/sindiDeferredOwner.test.tsx/i.
+error: script "test" exited with code 1

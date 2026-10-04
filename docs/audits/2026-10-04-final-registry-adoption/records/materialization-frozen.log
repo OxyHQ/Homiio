@@ -1,0 +1,9 @@
+bun install v1.4.2 (744846f84)
+
+$ bun run build:shared-types
+$ bun run --filter @homiio/shared-types build
+@homiio/shared-types build: Exited with code 0
+
++ @oxy.so/core@4.2.0
+
+2 packages installed [348.00ms]

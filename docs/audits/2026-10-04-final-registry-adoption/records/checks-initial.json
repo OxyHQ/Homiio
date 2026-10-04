@@ -1,0 +1,64 @@
+{
+  "worktree": "/home/nate/Oxy/Homiio/.worktrees/1519-final-sdk-adoption-20261003",
+  "output": "/home/nate/Oxy/.agent-evidence/i04-consumer-final-prs/registry-Homiio-20261004",
+  "receipt": "local-initial-checks.json",
+  "jobs": [
+    {
+      "name": "shared-build",
+      "cwd": ".",
+      "argv": [
+        "bun",
+        "run",
+        "build:shared-types"
+      ]
+    },
+    {
+      "name": "frontend-focal",
+      "cwd": "packages/frontend",
+      "argv": [
+        "bun",
+        "run",
+        "test",
+        "--runInBand",
+        "sindi",
+        "linkedResponses"
+      ]
+    },
+    {
+      "name": "frontend-types",
+      "cwd": "packages/frontend",
+      "argv": [
+        "bun",
+        "run",
+        "typecheck"
+      ]
+    },
+    {
+      "name": "backend-types",
+      "cwd": "packages/backend",
+      "argv": [
+        "bun",
+        "run",
+        "typecheck"
+      ]
+    },
+    {
+      "name": "backend-build",
+      "cwd": ".",
+      "argv": [
+        "bun",
+        "run",
+        "build:backend"
+      ]
+    },
+    {
+      "name": "doctor",
+      "cwd": ".",
+      "argv": [
+        "bun",
+        "run",
+        "doctor:oxy"
+      ]
+    }
+  ]
+}

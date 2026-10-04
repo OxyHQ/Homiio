@@ -1,0 +1,47 @@
+[
+  {
+    "name": "@oxy.so/contracts",
+    "version": "4.9.0",
+    "resolutionFrom": "/home/nate/Oxy/Homiio/.worktrees/1519-final-sdk-adoption-20261003",
+    "path": "/home/nate/Oxy/Homiio/.worktrees/1519-final-sdk-adoption-20261003/node_modules/@oxy.so/contracts",
+    "filesCompared": 198,
+    "tarballSha256": "6b1e6a8da92341871d2832834ad063df1a1e84a46dc367786599fdd26be6e635",
+    "published": false
+  },
+  {
+    "name": "@oxy.so/protocol",
+    "version": "1.2.2",
+    "resolutionFrom": "/home/nate/Oxy/Homiio/.worktrees/1519-final-sdk-adoption-20261003",
+    "path": "/home/nate/Oxy/Homiio/.worktrees/1519-final-sdk-adoption-20261003/node_modules/@oxy.so/protocol",
+    "filesCompared": 145,
+    "tarballSha256": "325b20125f1cf5159c36ca7a75f32c83a4560cf41c55526828b1718595acc843",
+    "published": false
+  },
+  {
+    "name": "@oxy.so/core",
+    "version": "4.2.0",
+    "resolutionFrom": "/home/nate/Oxy/Homiio/.worktrees/1519-final-sdk-adoption-20261003",
+    "path": "/home/nate/Oxy/Homiio/.worktrees/1519-final-sdk-adoption-20261003/node_modules/@oxy.so/core",
+    "filesCompared": 581,
+    "tarballSha256": "12547d59cb300ce1e56107aa51587f9d0819caa285a491416276f57d18cc4902",
+    "published": false
+  },
+  {
+    "name": "@oxy.so/services",
+    "version": "11.1.0",
+    "resolutionFrom": "/home/nate/Oxy/Homiio/.worktrees/1519-final-sdk-adoption-20261003",
+    "path": "/home/nate/Oxy/Homiio/.worktrees/1519-final-sdk-adoption-20261003/node_modules/@oxy.so/services",
+    "filesCompared": 2418,
+    "tarballSha256": "94736eac20be3c99c6296c8a75a065104f1a43905f31423d365a04c4f6b683e1",
+    "published": false
+  },
+  {
+    "name": "@oxy.so/bloom",
+    "version": "6.2.1",
+    "resolutionFrom": "/home/nate/Oxy/Homiio/.worktrees/1519-final-sdk-adoption-20261003",
+    "path": "/home/nate/Oxy/Homiio/.worktrees/1519-final-sdk-adoption-20261003/node_modules/@oxy.so/bloom",
+    "filesCompared": 20940,
+    "tarballSha256": "edf4cfe3d8597e4bf86f997bceacf332f7fce4a8f92c541b3cd375decbce3a0a",
+    "published": true
+  }
+]

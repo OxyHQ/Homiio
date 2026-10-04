@@ -1,0 +1,2 @@
+$ bun run --filter @homiio/backend build
+@homiio/backend build: Exited with code 0

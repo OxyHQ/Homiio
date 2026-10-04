@@ -151,6 +151,8 @@ export interface UseSindiActions {
    * is refused by `envelopeRefusal`.
    */
   readonly settleTurn: () => void;
+  /** Discard deferred UI effects when the stream owner leaves. */
+  readonly cancelTurn: () => void;
 }
 
 export function useSindiActions({
@@ -180,6 +182,8 @@ export function useSindiActions({
    * to the executor.
    */
   const deferred = useRef<(() => void)[]>([]);
+
+  const cancelTurn = useCallback(() => { deferred.current = []; }, []);
 
   const settleTurn = useCallback(() => {
     if (deferred.current.length === 0) return;
@@ -231,7 +235,7 @@ export function useSindiActions({
     [host, layout, router],
   );
 
-  return useMemo(() => ({ execute, take, settleTurn }), [execute, take, settleTurn]);
+  return useMemo(() => ({ execute, take, settleTurn, cancelTurn }), [execute, take, settleTurn, cancelTurn]);
 }
 
 type Router = ReturnType<typeof useRouter>;

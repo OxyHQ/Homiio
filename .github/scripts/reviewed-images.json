@@ -1,0 +1,29 @@
+{
+  "repository": "OxyHQ/Homiio",
+  "recipes": [
+    {
+      "name": "homiio",
+      "services": [
+        "homiio"
+      ],
+      "ecrRepository": "oxy/homiio",
+      "dockerfile": "packages/backend/Dockerfile",
+      "dockerfileSha256": "5e2dbd0194e858f3efcb6791f3ae2941e5422146f1195a79c2eaca4955986473",
+      "target": "api",
+      "tagSuffix": "-api",
+      "cacheScope": "homiio-api"
+    },
+    {
+      "name": "homiio-worker",
+      "services": [
+        "homiio-worker"
+      ],
+      "ecrRepository": "oxy/homiio",
+      "dockerfile": "packages/backend/Dockerfile",
+      "dockerfileSha256": "5e2dbd0194e858f3efcb6791f3ae2941e5422146f1195a79c2eaca4955986473",
+      "target": "worker",
+      "tagSuffix": "-worker",
+      "cacheScope": "homiio-worker"
+    }
+  ]
+}

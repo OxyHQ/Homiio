@@ -1,0 +1,2 @@
+$ bun ./scripts/check-lockfile-sync.mjs
+bun.lock is in sync: it matches every package.json it records, and a plain `bun install` left it unchanged.

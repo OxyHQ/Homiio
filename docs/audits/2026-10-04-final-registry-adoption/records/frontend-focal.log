@@ -1,0 +1,20 @@
+$ jest --ci --runInBand sindi linkedResponses
+PASS __tests__/sindiDeferredOwner.test.tsx (18.48 s)
+PASS __tests__/sindi/clarifyLocation.test.tsx
+PASS __tests__/sindiStreamLifecycle.test.tsx
+PASS __tests__/linkedResponses.test.ts
+PASS __tests__/sindiFetchLifecycle.test.tsx
+PASS __tests__/sindi/actionExecution.test.ts
+PASS __tests__/widgets/sindiPanelLayout.test.tsx
+PASS __tests__/sindi/conversationHostPromotion.test.ts
+PASS __tests__/sindiVoiceDraft.test.ts
+PASS __tests__/sindiConsent.test.ts
+PASS __tests__/sindi/actionContract.test.ts
+PASS __tests__/sindi/controlCapability.test.ts
+PASS __tests__/sindiTurnPersistence.test.ts
+
+Test Suites: 13 passed, 13 total
+Tests:       134 passed, 134 total
+Snapshots:   0 total
+Time:        23.829 s
+Ran all test suites matching /sindi|linkedResponses/i.

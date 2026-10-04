@@ -1,0 +1,7 @@
+bun install v1.4.2 (744846f84)
+
+$ bun run build:shared-types
+$ bun run --filter @homiio/shared-types build
+@homiio/shared-types build: Exited with code 0
+
+Checked 1895 installs across 1762 packages (no changes) [298.00ms]

@@ -1,0 +1,6 @@
+
+/home/nate/Oxy/Homiio/.worktrees/1519-final-sdk-adoption-20261003/packages/frontend/hooks/useSindiAuthenticatedFetch.ts
+  14:42  warning  React Hook useMemo has unnecessary dependencies: 'activeSessionId' and 'oxyServices'. Either exclude them or remove the dependency array  react-hooks/exhaustive-deps
+
+✖ 1 problem (0 errors, 1 warning)
+
