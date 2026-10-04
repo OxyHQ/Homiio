@@ -1,0 +1,73 @@
+[2026-10-04T04:30:39.357Z] [INFO] [Postgres] Connected to PostgreSQL successfully {
+  "maxPoolSize": 20
+}
+[2026-10-04T04:30:39.358Z] [INFO] [ListingWorker] Listing worker connected to database {
+  "providers": [
+    "fixture",
+    "habitaclia",
+    "blueground",
+    "idealista",
+    "fotocasa",
+    "pisos",
+    "milanuncios",
+    "yaencontre",
+    "indomio",
+    "apartments_com",
+    "zillow",
+    "realtor_com",
+    "hotpads",
+    "redfin",
+    "rightmove",
+    "zoopla",
+    "onthemarket",
+    "openrent",
+    "idealista_it",
+    "immobiliare",
+    "casa_it",
+    "subito",
+    "immobilienscout24",
+    "immowelt",
+    "zonaprop",
+    "argenprop",
+    "mercadolibre_ar",
+    "properati",
+    "kleinanzeigen",
+    "storia",
+    "imobiliare_ro",
+    "olx_ro",
+    "plusvalia",
+    "mercadolibre_ec",
+    "properati_ec",
+    "bienici",
+    "leboncoin",
+    "seloger",
+    "inmuebles24",
+    "lamudi",
+    "vivanuncios",
+    "propiedades",
+    "mercadolibre_mx",
+    "mercadolibre_co",
+    "metrocuadrado",
+    "mercadolibre_cl",
+    "mercadolibre_pe",
+    "idealista_pt",
+    "realtor_ca",
+    "realestate_com_au",
+    "bayut",
+    "daft",
+    "immoweb",
+    "otodom",
+    "funda"
+  ],
+  "redis": true,
+  "browserTier": false,
+  "managedTier": false,
+  "perMarketProxyGeo": false
+}
+[2026-10-04T04:30:39.374Z] [INFO] [ListingWorker] Listing worker started on BullMQ {
+  "queues": [
+    "listing-discover",
+    "listing-fetch"
+  ]
+}
+[2026-10-04T04:30:49.368Z] [INFO] [ListingWorker] Received SIGTERM, shutting down listing worker

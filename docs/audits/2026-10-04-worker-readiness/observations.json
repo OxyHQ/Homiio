@@ -1,0 +1,47 @@
+[
+  {
+    "path": "/internal/activity/infrastructure",
+    "body": {
+      "instanceId": "3065d9e4-f191-45e6-a46a-8d007bc3724a",
+      "service": "homiio-worker",
+      "region": "us-west-2",
+      "label": "Oregon",
+      "coordinates": [
+        -122.6765,
+        45.5231
+      ],
+      "status": "unknown",
+      "removed": false
+    }
+  },
+  {
+    "path": "/internal/activity/infrastructure",
+    "body": {
+      "instanceId": "3065d9e4-f191-45e6-a46a-8d007bc3724a",
+      "service": "homiio-worker",
+      "region": "us-west-2",
+      "label": "Oregon",
+      "coordinates": [
+        -122.6765,
+        45.5231
+      ],
+      "status": "online",
+      "removed": false
+    }
+  },
+  {
+    "path": "/internal/activity/infrastructure",
+    "body": {
+      "instanceId": "3065d9e4-f191-45e6-a46a-8d007bc3724a",
+      "service": "homiio-worker",
+      "region": "us-west-2",
+      "label": "Oregon",
+      "coordinates": [
+        -122.6765,
+        45.5231
+      ],
+      "status": "unknown",
+      "removed": true
+    }
+  }
+]

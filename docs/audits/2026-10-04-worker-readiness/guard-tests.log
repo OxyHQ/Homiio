@@ -1,0 +1,11 @@
+✔ allows actual loopback TCP with normalized Node arguments (24.279505ms)
+✔ blocks non-loopback TCP before opening a socket (19.142882ms)
+✔ blocks fetch transport egress without replacing fetch (39.727624ms)
+ℹ tests 3
+ℹ suites 0
+ℹ pass 3
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 119.0249

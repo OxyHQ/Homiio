@@ -1,0 +1,13 @@
+bun install v1.4.2 (744846f84)
+
++ @oxy.so/doctor@1.1.0
++ @types/node@22.20.2
++ ajv@8.20.0
++ ajv-keywords@5.1.0
++ prettier-plugin-tailwindcss@0.8.1
++ tailwindcss@4.2.2
++ typescript@6.0.3
++ @oxy.so/bloom@6.2.1
++ @oxy.so/core@4.2.0
+
+1607 packages installed [2.90s]

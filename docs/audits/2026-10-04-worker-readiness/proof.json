@@ -1,0 +1,112 @@
+{
+  "sourceCommit": "55ac7ffde87de2f5f34010c66314614271a9b76a",
+  "productBase": "4d9e1ed843be0d22ec360933b76ccf63cb3c26ec",
+  "sources": [
+    {
+      "path": "scripts/acceptance/worker-readiness/loopback-only.cjs",
+      "sha256": "3592a3801d42ec8fa65cc8a6bef0de7ec1105259f3723cb5e39321c9f0d4dde9"
+    },
+    {
+      "path": "scripts/acceptance/worker-readiness/loopback-only.test.mjs",
+      "sha256": "b606d919f535514483791d5a00b06a547c433fb3ac6d1d06c19609005e514b6e"
+    },
+    {
+      "path": "scripts/acceptance/worker-readiness/run.mjs",
+      "sha256": "f5856b0b5ce0f6779553bc8bcba757a989a21f48326d26bc645edc74fce02cab"
+    },
+    {
+      "path": "scripts/acceptance/worker-readiness/README.md",
+      "sha256": "1e1ff03d69dd09b7339746dc65b4ffe35dbb69d39f3fbfcbb8f0e4b9215dd05b"
+    },
+    {
+      "path": "packages/backend/worker.ts",
+      "sha256": "778e347f7848f06cb2471b0b5e68ff789c11786ee838482ae8c2e336ca99428f"
+    },
+    {
+      "path": "packages/backend/config.ts",
+      "sha256": "0a7a78620f18fa2ce5294a075c5cf69e1958e9ba491f0d0188889d518d150ff0"
+    },
+    {
+      "path": "packages/backend/db/postgres.ts",
+      "sha256": "237b74de41b57fe3407837db9536ece3efd3bb02f0ec71716240bab25720bb75"
+    },
+    {
+      "path": "packages/backend/services/platformActivity.ts",
+      "sha256": "67d49406896d15586b68f451e2f764230b3884cc24c24bf2552475b50b8a0b5f"
+    },
+    {
+      "path": "packages/backend/services/ingestion/queues.ts",
+      "sha256": "2eef6ea43bfb6f580b396e31d0e307c79c06d0e58cc2428912922d0763e7a4a7"
+    },
+    {
+      "path": "package.json",
+      "sha256": "05c70c5ef08d1a0f01a88d7b3709f1847826d2ca70a304e9f238a3c64572b4a6"
+    },
+    {
+      "path": "bun.lock",
+      "sha256": "7ef25eaafb15a264b73659ce527fff513f35adca6a49bd7813708bcc2701fa4b"
+    },
+    {
+      "path": "packages/backend/package.json",
+      "sha256": "8c8cce98addacacc7564fb3f15cb1958966a90d24b6f74630a4c9b0720f03e13"
+    }
+  ],
+  "records": [
+    {
+      "path": "docs/audits/2026-10-04-worker-readiness/build.log",
+      "sha256": "c05c288610c7df71c253468351605073face1bee3dc48dfd4e0e97e08b987d88"
+    },
+    {
+      "path": "docs/audits/2026-10-04-worker-readiness/compiled.json",
+      "sha256": "69570e976472347217cdbfe8d91a6597dc932d2a14297dcbbfb5e565265ff2d6"
+    },
+    {
+      "path": "docs/audits/2026-10-04-worker-readiness/core-installed.json",
+      "sha256": "e4d6aa30b22a5d85062abb490c9b29066678bb8e6ae8597ae472790eb9025ad7"
+    },
+    {
+      "path": "docs/audits/2026-10-04-worker-readiness/guard-tests.log",
+      "sha256": "3fe151a30caad94a7d64cd3a78356ffc3465f30c4e202ea3bf74e6b74a0fb903"
+    },
+    {
+      "path": "docs/audits/2026-10-04-worker-readiness/install.log",
+      "sha256": "4c88451956eb156c4c857a958ac6b3c6d62d31eaeceb3858abf47c0c8483ce80"
+    },
+    {
+      "path": "docs/audits/2026-10-04-worker-readiness/observations.json",
+      "sha256": "28b0598da46c6f530717156b92efeb829b615662f75a8bb16156ffed1f69c6fb"
+    },
+    {
+      "path": "docs/audits/2026-10-04-worker-readiness/result.json",
+      "sha256": "b3ac546d8a895519103cd89e8109a7e4e5c10cbd180983a72605ec0bc5cefa55"
+    },
+    {
+      "path": "docs/audits/2026-10-04-worker-readiness/worker.log",
+      "sha256": "de226114b5e153a02e330ec9a167c785894cb72f0eb7535e97e86821f3c5da4b"
+    }
+  ],
+  "limits": [
+    "Local x86 worker process with compiled unchanged product source and published core 4.2.0 bytes",
+    "Synthetic loopback issuer/activity sink; real local PostgreSQL and Redis/BullMQ",
+    "No jobs, domain DDL or writes; no migration, Chromium, provider, production or ARM claim"
+  ],
+  "result": {
+    "source": "4d9e1ed843be0d22ec360933b76ccf63cb3c26ec",
+    "checks": {
+      "databaseAndTwoBullMqConsumers": true,
+      "infrastructureHeartbeat": true,
+      "noJobsOrDomainWrites": true,
+      "sigtermRetiresHeartbeatAndConsumers": true
+    },
+    "cleanup": {
+      "worker": true,
+      "queues": true,
+      "postgresClient": true,
+      "http": true,
+      "redis": true,
+      "postgres": true
+    },
+    "workerSha256": "e0ab3c9fc7dbb1cbee9b3e030f9ae92ce55b83dbad9760eb7c05d48884ee2efd",
+    "pass": true
+  }
+}

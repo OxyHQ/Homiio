@@ -1,0 +1,19 @@
+{
+  "source": "4d9e1ed843be0d22ec360933b76ccf63cb3c26ec",
+  "checks": {
+    "databaseAndTwoBullMqConsumers": true,
+    "infrastructureHeartbeat": true,
+    "noJobsOrDomainWrites": true,
+    "sigtermRetiresHeartbeatAndConsumers": true
+  },
+  "cleanup": {
+    "worker": true,
+    "queues": true,
+    "postgresClient": true,
+    "http": true,
+    "redis": true,
+    "postgres": true
+  },
+  "workerSha256": "e0ab3c9fc7dbb1cbee9b3e030f9ae92ce55b83dbad9760eb7c05d48884ee2efd",
+  "pass": true
+}
