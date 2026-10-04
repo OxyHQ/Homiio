@@ -1,0 +1,11 @@
+$ jest --ci --runInBand --runTestsByPath __tests__/sindiFetchLifecycle.test.tsx __tests__/sindiStreamLifecycle.test.tsx __tests__/linkedResponses.test.ts __tests__/sindi/actionExecution.test.ts
+PASS __tests__/sindiFetchLifecycle.test.tsx
+PASS __tests__/sindiStreamLifecycle.test.tsx
+PASS __tests__/linkedResponses.test.ts
+PASS __tests__/sindi/actionExecution.test.ts
+
+Test Suites: 4 passed, 4 total
+Tests:       29 passed, 29 total
+Snapshots:   0 total
+Time:        1.939 s, estimated 2 s
+Ran all test suites within paths "__tests__/sindiFetchLifecycle.test.tsx", "__tests__/sindiStreamLifecycle.test.tsx", "__tests__/linkedResponses.test.ts", "__tests__/sindi/actionExecution.test.ts".

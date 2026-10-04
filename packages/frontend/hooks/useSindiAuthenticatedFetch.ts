@@ -1,74 +1,33 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { Platform } from 'react-native';
 import { fetch as expoFetch } from 'expo/fetch';
 import { useOxy } from '@oxy.so/services';
-import {
-  responseRequiresSindiConsent,
-  SindiConsentRequiredError,
-} from './sindiConsent';
+import type { LinkedHttpClient, ResponseTransport } from '@oxy.so/core';
+import { API_URL } from '@/config';
+import { createSindiLinkedFetch } from './sindiLinkedFetch';
 
-/** Shape compatible with the AI SDK / conversation store fetchers. */
-type ConversationFetch = typeof globalThis.fetch;
-
-/**
- * Builds the authenticated fetch used by every Sindi surface (the `/sindi`
- * index, the `/sindi/[conversationId]` route, and the docked `SindiPanel`).
- *
- * Single source of truth so the three hosts stay byte-identical:
- *   - Bearer token read from the active Oxy access token. The SDK
- *     (`OxyProvider`) OWNS token lifecycle — cold-boot restore plus background
- *     refresh keep `session.accessToken` live — so this hook does NOT re-implement
- *     refresh/retry plumbing. Sindi is a streaming endpoint, which the SDK's
- *     JSON-only HTTP client cannot proxy, so we keep a raw streaming fetch but
- *     let the SDK own auth.
- *   - On web we use the browser's native `fetch` to preserve `ReadableStream`
- *     streaming semantics; native uses `expo/fetch`.
- *   - Multipart (`FormData`) bodies strip the `Content-Type` header so fetch
- *     sets the boundary itself.
- *
- * Memoized on `oxyServices` + `activeSessionId` so it is referentially stable
- * across renders (callers pass it straight into React Query / `useChat`).
- */
-export function useSindiAuthenticatedFetch(): ConversationFetch {
+/** One linked authority boundary for JSON, multipart and streaming Sindi calls. */
+export function useSindiAuthenticatedFetch(): typeof globalThis.fetch {
   const { oxyServices, activeSessionId } = useOxy();
-
-  return useCallback<ConversationFetch>(
-    async (input, init = {}) => {
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-        ...((init.headers as Record<string, string>) || {}),
-      };
-
-      if (oxyServices && activeSessionId) {
-        const accessToken = oxyServices.session.accessToken;
-        if (accessToken) {
-          headers['Authorization'] = `Bearer ${accessToken}`;
-        }
-      }
-
-      const { body, ...rest } = init;
-
-      // Let fetch set the multipart boundary header automatically.
-      if (typeof FormData !== 'undefined' && body instanceof FormData) {
-        delete headers['Content-Type'];
-      }
-
-      const fetchOptions: RequestInit = {
-        ...rest,
-        headers,
-        ...(body !== null ? { body } : {}),
-      };
-
-      const fetchImpl =
-        Platform.OS === 'web'
-          ? globalThis.fetch
-          : (expoFetch as unknown as ConversationFetch);
-      const response = await fetchImpl(input, fetchOptions);
-      if (await responseRequiresSindiConsent(response)) {
-        throw new SindiConsentRequiredError();
-      }
-      return response;
-    },
-    [oxyServices, activeSessionId],
-  );
+  // A pure identity per committed owner transition also fences A → B → A.
+  // The memo allocates no linked client or subscription during render.
+  const generation = useMemo(() => ({ owner: oxyServices, sessionId: activeSessionId }), [oxyServices, activeSessionId]);
+  const resource = useRef<{ generation: object; linked: LinkedHttpClient } | null>(null);
+  useEffect(() => {
+    const current = { generation, linked: oxyServices.createLinkedClient({ baseURL: API_URL }) };
+    resource.current = current;
+    return () => {
+      if (resource.current === current) resource.current = null;
+      current.linked.dispose();
+    };
+  }, [oxyServices, generation]);
+  return useCallback<typeof globalThis.fetch>((input, init) => {
+    const current = resource.current;
+    if (!current || current.generation !== generation) {
+      return Promise.reject(new Error('Sindi transport is not mounted'));
+    }
+    return createSindiLinkedFetch(current.linked.client,
+      Platform.OS === 'web' ? globalThis.fetch : expoFetch as ResponseTransport)(input, init);
+    // Session changes also identify a new stream owner to the conversation hook.
+  }, [generation]);
 }

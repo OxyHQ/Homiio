@@ -1,0 +1,10 @@
+$ jest --ci --runInBand --runTestsByPath __tests__/sindiFetchLifecycle.test.tsx
+PASS __tests__/sindiFetchLifecycle.test.tsx
+  ✓ survives StrictMode effect replay and disposes every subscription on unmount (24 ms)
+  ✓ follows a replacement Oxy owner and closes previous/unmounted linked clients (5 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       2 passed, 2 total
+Snapshots:   0 total
+Time:        0.933 s, estimated 2 s
+Ran all test suites within paths "__tests__/sindiFetchLifecycle.test.tsx".

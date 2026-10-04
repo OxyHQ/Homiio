@@ -1,0 +1,71 @@
+[
+  {
+    "name": "shared-build",
+    "cwd": ".",
+    "argv": [
+      "bun",
+      "run",
+      "build:shared-types"
+    ],
+    "exitCode": 0,
+    "seconds": 0.315
+  },
+  {
+    "name": "frontend-focal",
+    "cwd": "packages/frontend",
+    "argv": [
+      "bun",
+      "run",
+      "test",
+      "--runInBand",
+      "sindi",
+      "linkedResponses"
+    ],
+    "exitCode": 0,
+    "seconds": 24.479
+  },
+  {
+    "name": "frontend-types",
+    "cwd": "packages/frontend",
+    "argv": [
+      "bun",
+      "run",
+      "typecheck"
+    ],
+    "exitCode": 0,
+    "seconds": 9.239
+  },
+  {
+    "name": "backend-types",
+    "cwd": "packages/backend",
+    "argv": [
+      "bun",
+      "run",
+      "typecheck"
+    ],
+    "exitCode": 0,
+    "seconds": 5.779
+  },
+  {
+    "name": "backend-build",
+    "cwd": ".",
+    "argv": [
+      "bun",
+      "run",
+      "build:backend"
+    ],
+    "exitCode": 0,
+    "seconds": 3.825
+  },
+  {
+    "name": "doctor",
+    "cwd": ".",
+    "argv": [
+      "bun",
+      "run",
+      "doctor:oxy"
+    ],
+    "exitCode": 0,
+    "seconds": 1.317
+  }
+]

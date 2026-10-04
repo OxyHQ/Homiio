@@ -1,0 +1,35 @@
+$ bun run --filter '*' test --runInBand --runTestsByPath __tests__/sindiFetchLifecycle.test.tsx
+@homiio/shared-types test: No tests specified
+@homiio/shared-types test: /usr/bin/bash: line 1: exit: too many arguments
+@homiio/shared-types test: Exited with code 1
+@homiio/listing-providers test: $ cd ../listing-providers && bun run build && cd ../backend && NODE_OPTIONS='--max-old-space-size=6144' jest "--testPathPattern=listing|provider|ingest|proxy|browser|strategy|blueground|fixture|klein|idealista|fotocasa|habitaclia|price|contact|classifieds|registry|realtor|realestate|bayut" --runInBand --runTestsByPath __tests__/sindiFetchLifecycle.test.tsx
+@homiio/listing-providers test: $ bunx tsc
+@homiio/listing-providers test: No tests found, exiting with code 1
+@homiio/listing-providers test: Run with `--passWithNoTests` to exit with code 0
+@homiio/listing-providers test: No files found in /home/nate/Oxy/Homiio/.worktrees/1519-final-sdk-adoption-20261003/packages/backend.
+@homiio/listing-providers test: Make sure Jest's configuration does not exclude this directory.
+@homiio/listing-providers test: To set up Jest, make sure a package.json file exists.
+@homiio/listing-providers test: Jest Documentation: https://jestjs.io/docs/configuration
+@homiio/listing-providers test: Files: "__tests__/sindiFetchLifecycle.test.tsx"
+@homiio/listing-providers test: error: script "test" exited with code 1
+@homiio/listing-providers test: Exited with code 1
+@homiio/backend test: $ bunx tsc
+@homiio/frontend test: PASS __tests__/sindiFetchLifecycle.test.tsx
+@homiio/frontend test:   ✓ survives StrictMode effect replay and disposes every subscription on unmount (28 ms)
+@homiio/frontend test:   ✓ follows a replacement Oxy owner and closes previous/unmounted linked clients (8 ms)
+@homiio/frontend test: 
+@homiio/frontend test: Test Suites: 1 passed, 1 total
+@homiio/frontend test: Tests:       2 passed, 2 total
+@homiio/frontend test: Snapshots:   0 total
+@homiio/frontend test: Time:        1.12 s, estimated 2 s
+@homiio/frontend test: Ran all test suites within paths "__tests__/sindiFetchLifecycle.test.tsx".
+@homiio/frontend test: Exited with code 0
+@homiio/backend test: No tests found, exiting with code 1
+@homiio/backend test: Run with `--passWithNoTests` to exit with code 0
+@homiio/backend test: No files found in /home/nate/Oxy/Homiio/.worktrees/1519-final-sdk-adoption-20261003/packages/backend.
+@homiio/backend test: Make sure Jest's configuration does not exclude this directory.
+@homiio/backend test: To set up Jest, make sure a package.json file exists.
+@homiio/backend test: Jest Documentation: https://jestjs.io/docs/configuration
+@homiio/backend test: Files: "__tests__/sindiFetchLifecycle.test.tsx"
+@homiio/backend test: Exited with code 1
+error: script "test" exited with code 1

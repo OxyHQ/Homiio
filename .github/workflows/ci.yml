@@ -654,13 +654,13 @@ jobs:
     # expression be evaluated at all past a skipped ancestor; the explicit
     # results are what actually gate the rollout.
     if: >-
-      ${{ !cancelled()
+      ${{ vars.OXY_1519_ROLLOUT_HOLD != 'true' && (!cancelled()
       && github.event_name == 'push' && github.ref == 'refs/heads/main'
       && needs.backend.result == 'success'
       && needs.frontend.result == 'success'
       && needs.frontend-typecheck.result == 'success'
       && needs.lockfile.result == 'success'
-      && needs.frontend-bundle.result == 'success' }}
+      && needs.frontend-bundle.result == 'success') }}
     permissions:
       id-token: write
       contents: read

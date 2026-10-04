@@ -1,0 +1,19 @@
+{
+  "archiveSha256": "edf4cfe3d8597e4bf86f997bceacf332f7fce4a8f92c541b3cd375decbce3a0a",
+  "importers": [
+    {
+      "importer": "package.json",
+      "version": "6.2.1",
+      "root": "/home/nate/Oxy/Homiio/.worktrees/1519-final-sdk-adoption-20261003/node_modules/@oxy.so/bloom",
+      "files": 20940,
+      "allFilesEqual": true
+    },
+    {
+      "importer": "packages/frontend/package.json",
+      "version": "6.2.1",
+      "root": "/home/nate/Oxy/Homiio/.worktrees/1519-final-sdk-adoption-20261003/node_modules/@oxy.so/bloom",
+      "files": 20940,
+      "allFilesEqual": true
+    }
+  ]
+}

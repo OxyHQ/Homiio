@@ -1,0 +1,188 @@
+{
+  "source": "af889e0f9483dff1be2dbda548e55ef15a1e45f6",
+  "sources": [
+    {
+      "path": "package.json",
+      "sha256": "05c70c5ef08d1a0f01a88d7b3709f1847826d2ca70a304e9f238a3c64572b4a6"
+    },
+    {
+      "path": "packages/backend/package.json",
+      "sha256": "8c8cce98addacacc7564fb3f15cb1958966a90d24b6f74630a4c9b0720f03e13"
+    },
+    {
+      "path": "packages/frontend/package.json",
+      "sha256": "a4367cc8ccb106e9da083d75b533e69d0ac2504e742348a57d82737113c9f364"
+    },
+    {
+      "path": "bun.lock",
+      "sha256": "7ef25eaafb15a264b73659ce527fff513f35adca6a49bd7813708bcc2701fa4b"
+    }
+  ],
+  "records": [
+    {
+      "path": "docs/audits/2026-10-04-final-registry-adoption/records/Homiio-frozen.log",
+      "sha256": "25c6c40e41ad739541edff2c1d2762bec601b3f13306e343e30cd478b00d339f",
+      "bytes": 222
+    },
+    {
+      "path": "docs/audits/2026-10-04-final-registry-adoption/records/Homiio-installed.json",
+      "sha256": "69ff70a82e7cb4859cd9616436e5e71206df1bf1adba09ea785fc866579b9edc",
+      "bytes": 1639
+    },
+    {
+      "path": "docs/audits/2026-10-04-final-registry-adoption/records/Homiio-resolve.log",
+      "sha256": "154db181151474a1d577644c74e5f5e4a11a6027b241c3e5efbbed30f715d4a8",
+      "bytes": 302
+    },
+    {
+      "path": "docs/audits/2026-10-04-final-registry-adoption/records/backend-auth-realdb.log",
+      "sha256": "7d10585c9639b9b27c57f5621d9ae6b81fd0a750976ccc65633caaac189ec44a",
+      "bytes": 6233
+    },
+    {
+      "path": "docs/audits/2026-10-04-final-registry-adoption/records/backend-build.log",
+      "sha256": "b34a4bb95522a7899749d5e1c9ebd85e4d6232f3d1798c306ba2b166922cccfc",
+      "bytes": 83
+    },
+    {
+      "path": "docs/audits/2026-10-04-final-registry-adoption/records/backend-types.log",
+      "sha256": "8366207267355d3e3d5bf3bf6e8c94c5f93f6078c34f08973fa2b38cdda6cc92",
+      "bytes": 15
+    },
+    {
+      "path": "docs/audits/2026-10-04-final-registry-adoption/records/bloom-final-importers.json",
+      "sha256": "c32bcfe75864bbbbb1dd9513eeb4ecdba98155c273dd696a072bda7ef115d7a3",
+      "bytes": 595
+    },
+    {
+      "path": "docs/audits/2026-10-04-final-registry-adoption/records/checks-export.json",
+      "sha256": "bcbdcb8dec61b085fe83bf73ff0a65ac22c0554e55f7c464c9f17f14ee6a1947",
+      "bytes": 364
+    },
+    {
+      "path": "docs/audits/2026-10-04-final-registry-adoption/records/checks-initial.json",
+      "sha256": "19d52be15461f6e6bac44d4295db34609584df660c7cd7cda0ead89af75e177f",
+      "bytes": 1171
+    },
+    {
+      "path": "docs/audits/2026-10-04-final-registry-adoption/records/contracts-registry.json",
+      "sha256": "fb1ded2797bdbd0ca31460f3cba087f078a86dc201365c923da9fcc23b07ed7b",
+      "bytes": 380
+    },
+    {
+      "path": "docs/audits/2026-10-04-final-registry-adoption/records/core-registry.json",
+      "sha256": "99b7f8a1cc87cf46ff54b3113a1911a938f39b4f086537e0a4138ee38dd035b7",
+      "bytes": 375
+    },
+    {
+      "path": "docs/audits/2026-10-04-final-registry-adoption/records/doctor.log",
+      "sha256": "5ebe476d05dbf6caa663c5d0d96e62b2602a6118c28126b871bfdd628f7f41b7",
+      "bytes": 410
+    },
+    {
+      "path": "docs/audits/2026-10-04-final-registry-adoption/records/failed.json",
+      "sha256": "e45a08861b705a4bd04a1ac5bec7dfdc902621991070d99debf9062f9e6cfe3d",
+      "bytes": 89
+    },
+    {
+      "path": "docs/audits/2026-10-04-final-registry-adoption/records/frontend-export-check.json",
+      "sha256": "ef7fbffd8301e4b282d78533ba3c0b7078828cacf748dfd6b9ccc6f31da7eb1a",
+      "bytes": 170
+    },
+    {
+      "path": "docs/audits/2026-10-04-final-registry-adoption/records/frontend-export.log",
+      "sha256": "3b9f8923296334e8a5f73c005232c3c9c90e49321c2d2c01598c972bf3ee006d",
+      "bytes": 16601
+    },
+    {
+      "path": "docs/audits/2026-10-04-final-registry-adoption/records/frontend-focal.log",
+      "sha256": "248424e40d169a4b7ba64485647e79ccccd47ee87852b026ca5afe5782d05ab4",
+      "bytes": 799
+    },
+    {
+      "path": "docs/audits/2026-10-04-final-registry-adoption/records/frontend-types.log",
+      "sha256": "8366207267355d3e3d5bf3bf6e8c94c5f93f6078c34f08973fa2b38cdda6cc92",
+      "bytes": 15
+    },
+    {
+      "path": "docs/audits/2026-10-04-final-registry-adoption/records/intent.json",
+      "sha256": "c0d4785427df4b22891f4e0d5ac6b75baf242d46340c9d3eeb1193463f6cc201",
+      "bytes": 150
+    },
+    {
+      "path": "docs/audits/2026-10-04-final-registry-adoption/records/local-initial-checks.json",
+      "sha256": "c6da1e56bd73788b754371257fae36e92ca41330665955c92b8773743ee9d46d",
+      "bytes": 1069
+    },
+    {
+      "path": "docs/audits/2026-10-04-final-registry-adoption/records/materialization-frozen.log",
+      "sha256": "a407b411c37e04012283ee76cf12c1df18ce5f72d12e0cfff6a3714aadb08d65",
+      "bytes": 209
+    },
+    {
+      "path": "docs/audits/2026-10-04-final-registry-adoption/records/materialization-repair-intent.json",
+      "sha256": "9f689c78664aef7657776a597868658fb30e765cbe0b3fe8268c8e5bf681193c",
+      "bytes": 2250
+    },
+    {
+      "path": "docs/audits/2026-10-04-final-registry-adoption/records/mcp-registry.json",
+      "sha256": "cc279f4f5b1ca68041f6f0d3583e4d9dc218bd7c0b77846207aa3b981086d7ac",
+      "bytes": 373
+    },
+    {
+      "path": "docs/audits/2026-10-04-final-registry-adoption/records/owned-pg.py",
+      "sha256": "aae168a7d89b70fedfcc64718ebecd27d37cc5e6df9114f350abd32eb02075a3",
+      "bytes": 3198
+    },
+    {
+      "path": "docs/audits/2026-10-04-final-registry-adoption/records/pinned-frozen.log",
+      "sha256": "e289864f5eb57b78879c190d2f91805fee611066c136c28347264d19863b3583",
+      "bytes": 222
+    },
+    {
+      "path": "docs/audits/2026-10-04-final-registry-adoption/records/pinned-installed.json",
+      "sha256": "19538605f5509d01e452b5c4c4525dd17d980354b49e60fcd5da919ca16398b0",
+      "bytes": 1505
+    },
+    {
+      "path": "docs/audits/2026-10-04-final-registry-adoption/records/preflight.json",
+      "sha256": "866fbf0e07be422f822566f68820845454719b2760f719e6197c547bbd4a46cd",
+      "bytes": 251
+    },
+    {
+      "path": "docs/audits/2026-10-04-final-registry-adoption/records/protocol-registry.json",
+      "sha256": "cc0b427dca92d55ea5e1debe7e76580618a26f997b2c888b8484537b64b70bbd",
+      "bytes": 379
+    },
+    {
+      "path": "docs/audits/2026-10-04-final-registry-adoption/records/registry.json",
+      "sha256": "a39da224fafeec388f0ac27e08ea13cf666427a0177b67f7b077c65cadb59df0",
+      "bytes": 415373
+    },
+    {
+      "path": "docs/audits/2026-10-04-final-registry-adoption/records/services-registry.json",
+      "sha256": "444599f0eb56d104d64c288ed3a6544163e54430c0f275c2feec219d5f624611",
+      "bytes": 381
+    },
+    {
+      "path": "docs/audits/2026-10-04-final-registry-adoption/records/shared-build.log",
+      "sha256": "f1bc74f5291f1c781c5e15224899402e955cb28e55e52acc92d860bcfc0ab3e5",
+      "bytes": 93
+    }
+  ],
+  "validation": {
+    "frontendSuites": 13,
+    "frontendPassed": 134,
+    "backendSuites": 2,
+    "backendPassed": 64,
+    "sdkImporterMembers": 4359,
+    "bloomImporterMembers": 41880,
+    "typesBuildExport": "passed"
+  },
+  "limits": [
+    "Published registry archives and all installed SDK importer members were compared byte for byte. Stale same-version candidate materializations were retained and repaired with a frozen install; their setup failures remain in the records.",
+    "Local web export proves compilation, not browser/native acceptance or deployed public-client configuration. Required PR/main CI and root image/promotion remain separate.",
+    "No production database, provider writes, grants, credentials or auth fixtures were changed. Owned PostgreSQL was stopped and its PID absence verified.",
+    "The backend Jest run exited 0 with all 64 tests passing but reported a worker force-exit warning. This is preserved; it is not evidence of graceful Jest worker teardown."
+  ]
+}

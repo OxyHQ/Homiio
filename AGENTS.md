@@ -115,11 +115,10 @@ measurements and the migration history: **`docs/postgres.md`**.
   the public router must never read `req.user` for authorization.
 - **The Oxy linked client owns auth** (`createLinkedClient({ baseURL })` on the
   provider's `OxyServices`, bound by `bindApiToOxy` in `packages/frontend/utils/api.ts`). Do NOT add local token providers, auth
-  interceptors or manual `Authorization` headers. `normalizeEnvelope` is an
-  INTENTIONAL bridge back to the `{success, data}` envelope Homiio's consumers
-  read — do not "fix" it piecemeal. The only sanctioned
-  `oxyServices.getAccessToken()` call site is Sindi's streaming fetch, because
-  the linked client is JSON-only; that human bearer authenticates only to
+  interceptors or manual `Authorization` headers. Read complete domain envelopes
+  through the SDK's `requestResponse`; do not reconstruct them heuristically.
+  Sindi uses `requestAuthenticatedResponse` with the explicit web/Expo transport,
+  preserving multipart, streams and caller abort. Human authority authenticates only to
   Homiio and must never be forwarded to Alia. For chat the backend sends the
   request's verified bearer to OXY only, to mint a one-use requester assertion
   (OxyHQServices ADR 0025), and calls Alia with the exact Sindi Oxy service

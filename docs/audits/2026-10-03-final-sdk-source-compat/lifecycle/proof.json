@@ -1,0 +1,105 @@
+{
+  "sourceCommit": "b08340b5806f99aea30a6d6a8fed53d5280cd1fe",
+  "sources": [
+    {
+      "path": "packages/frontend/__tests__/sindi/actionExecution.test.ts",
+      "sha256": "6b95b0bc9a4642bdf83d3f3b82800fc030f3332698f9a2423ff82d8b26987568",
+      "bytes": 10895
+    },
+    {
+      "path": "packages/frontend/__tests__/sindiFetchLifecycle.test.tsx",
+      "sha256": "c10261f6b2956690410720d01fe96d8a528022e07c21dd928d37b10e091f736d",
+      "bytes": 4080
+    },
+    {
+      "path": "packages/frontend/__tests__/sindiStreamLifecycle.test.tsx",
+      "sha256": "09758aa5a2ecf01a7941f9869bc1a3966f3cd953bad39d1be3b5f1c44bc84774",
+      "bytes": 3478
+    },
+    {
+      "path": "packages/frontend/hooks/useSindiActions.ts",
+      "sha256": "463d511b0e5a418875e8dee60f3b8308a5506808becf3bbf6cc23c6a1eb46325",
+      "bytes": 16390
+    },
+    {
+      "path": "packages/frontend/hooks/useSindiAuthenticatedFetch.ts",
+      "sha256": "b06a3e212f964d754e9a73e3064130a9dd93e62fe1c8c039a9a28369122b7e12",
+      "bytes": 1599
+    },
+    {
+      "path": "packages/frontend/hooks/useSindiConversation.ts",
+      "sha256": "5ff40e024a86a14453c1e306fc43a55f701ec246508a8b77ee00674c9db215b6",
+      "bytes": 24621
+    }
+  ],
+  "records": [
+    {
+      "path": "docs/audits/2026-10-03-final-sdk-source-compat/lifecycle/logs/i04-homiio-hook-lifecycle-red.log",
+      "sha256": "703fd9926ce10730ed514585c7a21adecce8ae44eb1cab0fc6745b7b24867452",
+      "bytes": 981,
+      "observation": "StrictMode real HTTP: 1 failure / 1 pass"
+    },
+    {
+      "path": "docs/audits/2026-10-03-final-sdk-source-compat/lifecycle/logs/i04-homiio-hook-lifecycle-green.log",
+      "sha256": "2b6e82ad8d42107855c2f55b4230b8f2df6ac091292b566ccf41d844be9e51e3",
+      "bytes": 2800,
+      "observation": "Wrong root runner: frontend passed; other packages rejected arguments. Setup failure, not product failure."
+    },
+    {
+      "path": "docs/audits/2026-10-03-final-sdk-source-compat/lifecycle/logs/i04-homiio-hook-lifecycle-green-final.log",
+      "sha256": "9e3cb1411372021ab7d95e815f1c58ee63a0ddcfbfb9666982e183a6f17fa71f",
+      "bytes": 500,
+      "observation": "Correct frontend runner: 2 passes"
+    },
+    {
+      "path": "docs/audits/2026-10-03-final-sdk-source-compat/lifecycle/logs/i04-homiio-stream-lifecycle-red.log",
+      "sha256": "4cf0bb4894516f8f5dcadc6a007e3225e213ea76b8de69cab49729474ed0a3f9",
+      "bytes": 2673,
+      "observation": "Real useChat + delivered HTTP stream: 2 failures (old text on switch, socket open on unmount)"
+    },
+    {
+      "path": "docs/audits/2026-10-03-final-sdk-source-compat/lifecycle/logs/i04-homiio-lifecycle-final-focal.log",
+      "sha256": "0a359e40adba445aa3815c3dfa9486910d14be80c363aee12971550fa3b7c5a5",
+      "bytes": 687,
+      "observation": "4 suites / 28 passes"
+    },
+    {
+      "path": "docs/audits/2026-10-03-final-sdk-source-compat/lifecycle/logs/i04-homiio-lifecycle-full.log",
+      "sha256": "291f48d6186202aa77ba0e227e609a5060f60e345e65b67c612b14bfcdcf8a9f",
+      "bytes": 16707,
+      "observation": "76 suites / 953 passes"
+    },
+    {
+      "path": "docs/audits/2026-10-03-final-sdk-source-compat/lifecycle/logs/i04-homiio-lifecycle-types-final.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0,
+      "observation": "TypeScript exit 0"
+    },
+    {
+      "path": "docs/audits/2026-10-03-final-sdk-source-compat/lifecycle/logs/i04-homiio-lifecycle-lint.log",
+      "sha256": "7fdab777def1cca7777beab42a7ee3eb968abc9a15d67643962a589cbe331ee7",
+      "bytes": 11321,
+      "observation": "Initial lint: unused React import and one newly introduced deliberate state reset diagnostic, plus baseline"
+    },
+    {
+      "path": "docs/audits/2026-10-03-final-sdk-source-compat/lifecycle/logs/i04-homiio-lifecycle-final-lint.log",
+      "sha256": "d2ff6375cfa4f81ca62c1b23a4d22997952620b4aa0baddea88e11ec53665099",
+      "bytes": 9834,
+      "observation": "Final lint: baseline 1 error / 7 warnings preserved; one documented targeted state-reset exemption"
+    },
+    {
+      "path": "docs/audits/2026-10-03-final-sdk-source-compat/lifecycle/logs/i04-homiio-lifecycle-baseline-lint.log",
+      "sha256": "5124f1db3f7eedc3835e5cf3d51daf8fe5b08d2b6136989897feae52e683b0d0",
+      "bytes": 9618,
+      "observation": "Exact d2566640 useSindiConversation baseline: 1 error / 7 warnings"
+    }
+  ],
+  "scope": "App-only lifecycle correction after raw SDK adoption. No SDK, backend, schema or frozen native changes.",
+  "limits": [
+    "Actual React StrictMode, actual linked SDK, useChat and loopback HTTP; useOxy context and external UI/domain dependencies are mocked. Expo transport explicitly delegates to Node fetch; no native Expo runtime claim.",
+    "Stream/action cleanup covers owner change and unmount, retained transport callbacks refuse stale owners. No claim of revalidation of all previously persisted conversation history.",
+    "Full suite precedes final comment/lint-only removal of unused React import; final source TypeScript passed.",
+    "Package manifests and bun.lock remain uncommitted local candidate installations; no final registry adoption.",
+    "An effect reset has one narrow documented lint exemption to clear local turn state in the same commit as the AI SDK cache. Existing baseline diagnostics remain and are recorded."
+  ]
+}

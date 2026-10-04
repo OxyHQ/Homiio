@@ -1,0 +1,50 @@
+{
+  "head": "086c90b636c7898b9d20d3fa145ddf5c8a651d92",
+  "originalFailedReceiptPreserved": true,
+  "directories": {
+    "/home/nate/Oxy/Homiio/.worktrees/1519-final-sdk-adoption-20261003/node_modules/@oxy.so/core": {
+      "name": "@oxy.so/core",
+      "mismatches": [
+        "dist/cjs/boot/sessionColdBoot.js",
+        "dist/cjs/session/authStateStore.js",
+        "dist/cjs/session/refresh.js",
+        "dist/cjs/session/sharedDeviceCredential.js",
+        "dist/esm/boot/sessionColdBoot.js",
+        "dist/esm/session/authStateStore.js",
+        "dist/esm/session/refresh.js",
+        "dist/esm/session/sharedDeviceCredential.js",
+        "dist/types/boot/sessionColdBoot.d.ts",
+        "dist/types/session/authStateStore.d.ts",
+        "dist/types/session/index.d.ts",
+        "dist/types/session/refresh.d.ts",
+        "dist/types/session/sharedDeviceCredential.d.ts",
+        "src/boot/sessionColdBoot.ts",
+        "src/session/authStateStore.ts",
+        "src/session/index.ts",
+        "src/session/refresh.ts",
+        "src/session/sharedDeviceCredential.ts"
+      ]
+    },
+    "/home/nate/Oxy/Homiio/.worktrees/1519-final-sdk-adoption-20261003/node_modules/@oxy.so/services": {
+      "name": "@oxy.so/services",
+      "mismatches": [
+        "package.json",
+        "lib/commonjs/ui/context/OxyContext.js",
+        "lib/commonjs/ui/context/OxyContext.js.map",
+        "lib/commonjs/ui/session/deviceCredentialTracker.js",
+        "lib/commonjs/ui/session/deviceCredentialTracker.js.map",
+        "lib/module/ui/context/OxyContext.js",
+        "lib/module/ui/context/OxyContext.js.map",
+        "lib/module/ui/session/deviceCredentialTracker.js",
+        "lib/module/ui/session/deviceCredentialTracker.js.map",
+        "lib/typescript/commonjs/ui/context/OxyContext.d.ts.map",
+        "lib/typescript/commonjs/ui/session/deviceCredentialTracker.d.ts.map",
+        "lib/typescript/module/ui/context/OxyContext.d.ts.map",
+        "lib/typescript/module/ui/session/deviceCredentialTracker.d.ts.map",
+        "src/ui/context/OxyContext.tsx",
+        "src/ui/session/deviceCredentialTracker.ts"
+      ]
+    }
+  },
+  "method": "Move only own mismatched package directories aside, canonical frozen reinstall, then complete importer comparison"
+}

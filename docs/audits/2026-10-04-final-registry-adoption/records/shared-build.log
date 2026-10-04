@@ -1,0 +1,2 @@
+$ bun run --filter @homiio/shared-types build
+@homiio/shared-types build: Exited with code 0

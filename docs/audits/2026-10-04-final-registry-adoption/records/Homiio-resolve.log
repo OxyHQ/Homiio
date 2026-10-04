@@ -1,0 +1,10 @@
+bun install v1.4.2 (744846f84)
+Resolving dependencies
+Resolved, downloaded and extracted [137]
+Saved lockfile
+
+$ bun run build:shared-types
+$ bun run --filter @homiio/shared-types build
+@homiio/shared-types build: Exited with code 0
+
+Checked 1895 installs across 1762 packages (no changes) [1142.00ms]

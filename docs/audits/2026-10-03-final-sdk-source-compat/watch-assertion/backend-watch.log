@@ -1,0 +1,721 @@
+$ cd ../listing-providers && bun run build && cd ../backend && NODE_OPTIONS='--max-old-space-size=6144' jest --runInBand __tests__/integration/housingWatchAlerts.test.ts
+$ bunx tsc
+[2026-10-03T20:40:22.976Z] [INFO] [PostgresMigrate] Postgres migration plan {
+  "target": "oxydb_test_60c2f12cc2fb885c",
+  "phase": "all",
+  "dryRun": false,
+  "journalEntries": 31,
+  "migrationsFolder": "/home/nate/Oxy/Homiio/.worktrees/1519-final-sdk-adoption-20261003/packages/backend/drizzle"
+}
+[2026-10-03T20:40:23.240Z] [INFO] [PostgresMigrate] Applying 31 migration(s): 0000_geo_images_addresses, 0001_geo_lookup_indexes, 0002_property, 0003_identity_partners_billing, 0004_tenancy_leases_bookings, 0005_community_reviews_evictions, 0006_engagement_saved_cache, 0007_crowdsource_moderation, 0008_review_author_address_key, 0009_roommate_preferences_location_interests, 0010_deterministic_place_slug, 0011_saved_search_location, 0012_housing_watches_and_alerts, 0013_evictions_local_privacy, 0014_housing_candidate_materialization, 0015_address_merge_workflow, 0016_address_merge_collision_refusal, 0017_listing_address_published_precision, 0018_address_correction_proposals, 0019_review_author_publication, 0020_review_pseudonym_not_null, 0021_maintenance_requests, 0022_lease_payment_ledger, 0023_maintenance_attachments, 0024_floor_not_stated, 0025_guest_points, 0026_application_checklist, 0027_viewing_availability, 0028_lease_signature_binding, 0029_city_slug_identity, 0030_placeholder_region_merge
+[2026-10-03T20:40:23.627Z] [INFO] [PostgresMigrate] Applied 31 migration(s): 0000_geo_images_addresses, 0001_geo_lookup_indexes, 0002_property, 0003_identity_partners_billing, 0004_tenancy_leases_bookings, 0005_community_reviews_evictions, 0006_engagement_saved_cache, 0007_crowdsource_moderation, 0008_review_author_address_key, 0009_roommate_preferences_location_interests, 0010_deterministic_place_slug, 0011_saved_search_location, 0012_housing_watches_and_alerts, 0013_evictions_local_privacy, 0014_housing_candidate_materialization, 0015_address_merge_workflow, 0016_address_merge_collision_refusal, 0017_listing_address_published_precision, 0018_address_correction_proposals, 0019_review_author_publication, 0020_review_pseudonym_not_null, 0021_maintenance_requests, 0022_lease_payment_ledger, 0023_maintenance_attachments, 0024_floor_not_stated, 0025_guest_points, 0026_application_checklist, 0027_viewing_availability, 0028_lease_signature_binding, 0029_city_slug_identity, 0030_placeholder_region_merge
+[2026-10-03T20:40:23.679Z] [INFO] [PostgresMigrate] Postgres migration plan {
+  "target": "oxydb_test_20df17f4a32c2625",
+  "phase": "all",
+  "dryRun": false,
+  "journalEntries": 31,
+  "migrationsFolder": "/home/nate/Oxy/Homiio/.worktrees/1519-final-sdk-adoption-20261003/packages/backend/drizzle"
+}
+[2026-10-03T20:40:23.911Z] [INFO] [PostgresMigrate] Applying 31 migration(s): 0000_geo_images_addresses, 0001_geo_lookup_indexes, 0002_property, 0003_identity_partners_billing, 0004_tenancy_leases_bookings, 0005_community_reviews_evictions, 0006_engagement_saved_cache, 0007_crowdsource_moderation, 0008_review_author_address_key, 0009_roommate_preferences_location_interests, 0010_deterministic_place_slug, 0011_saved_search_location, 0012_housing_watches_and_alerts, 0013_evictions_local_privacy, 0014_housing_candidate_materialization, 0015_address_merge_workflow, 0016_address_merge_collision_refusal, 0017_listing_address_published_precision, 0018_address_correction_proposals, 0019_review_author_publication, 0020_review_pseudonym_not_null, 0021_maintenance_requests, 0022_lease_payment_ledger, 0023_maintenance_attachments, 0024_floor_not_stated, 0025_guest_points, 0026_application_checklist, 0027_viewing_availability, 0028_lease_signature_binding, 0029_city_slug_identity, 0030_placeholder_region_merge
+[2026-10-03T20:40:24.288Z] [INFO] [PostgresMigrate] Applied 31 migration(s): 0000_geo_images_addresses, 0001_geo_lookup_indexes, 0002_property, 0003_identity_partners_billing, 0004_tenancy_leases_bookings, 0005_community_reviews_evictions, 0006_engagement_saved_cache, 0007_crowdsource_moderation, 0008_review_author_address_key, 0009_roommate_preferences_location_interests, 0010_deterministic_place_slug, 0011_saved_search_location, 0012_housing_watches_and_alerts, 0013_evictions_local_privacy, 0014_housing_candidate_materialization, 0015_address_merge_workflow, 0016_address_merge_collision_refusal, 0017_listing_address_published_precision, 0018_address_correction_proposals, 0019_review_author_publication, 0020_review_pseudonym_not_null, 0021_maintenance_requests, 0022_lease_payment_ledger, 0023_maintenance_attachments, 0024_floor_not_stated, 0025_guest_points, 0026_application_checklist, 0027_viewing_availability, 0028_lease_signature_binding, 0029_city_slug_identity, 0030_placeholder_region_merge
+  console.log
+    [2026-10-03T20:40:25.937Z] [INFO] [Postgres] Connected to PostgreSQL successfully {
+      "maxPoolSize": 8
+    }
+
+      at Logger.info (utils/logger.ts:33:15)
+
+  console.log
+    [2026-10-03T20:40:26.046Z] INFO: Notification dispatched {
+      notificationId: '01a1037f-22bb-738d-9863-1e474f1595e5',
+      recipientOxyUserId: 'oxy-01a1037f-226b-729a-bc19-b1711e964c9c',
+      type: 'housing_alert'
+    }
+
+      at log (middlewares/logging.ts:97:15)
+
+  console.log
+    [2026-10-03T20:40:26.157Z] INFO: Notification dispatched {
+      notificationId: '01a1037f-232b-7890-a17f-baba050f245f',
+      recipientOxyUserId: 'oxy-01a1037f-230b-71d7-9739-2dfc5ca5ebe8',
+      type: 'housing_alert'
+    }
+
+      at log (middlewares/logging.ts:97:15)
+
+  console.log
+    [2026-10-03T20:40:26.238Z] INFO: Notification dispatched {
+      notificationId: '01a1037f-237c-700d-9908-38928993db4a',
+      recipientOxyUserId: 'oxy-01a1037f-2352-7f54-b12c-efc071361f0e',
+      type: 'housing_alert'
+    }
+
+      at log (middlewares/logging.ts:97:15)
+
+  console.log
+    [2026-10-03T20:40:26.285Z] INFO: Notification dispatched {
+      notificationId: '01a1037f-23aa-7332-ad0b-a1ffabe239c4',
+      recipientOxyUserId: 'oxy-01a1037f-238c-7e95-94e6-742fba142fcb',
+      type: 'housing_alert'
+    }
+
+      at log (middlewares/logging.ts:97:15)
+
+  console.log
+    [2026-10-03T20:40:26.331Z] INFO: Notification dispatched {
+      notificationId: '01a1037f-23d8-7e99-bebc-3c1fde558170',
+      recipientOxyUserId: 'oxy-01a1037f-23c3-7e69-a5ff-32833b05fe13',
+      type: 'housing_alert'
+    }
+
+      at log (middlewares/logging.ts:97:15)
+
+  console.log
+    [2026-10-03T20:40:26.373Z] INFO: Notification dispatched {
+      notificationId: '01a1037f-2402-756d-9823-1970cfe44948',
+      recipientOxyUserId: 'oxy-01a1037f-23ef-7b48-9aaf-413329bbc388',
+      type: 'housing_alert'
+    }
+
+      at log (middlewares/logging.ts:97:15)
+
+  console.log
+    [2026-10-03T20:40:26.434Z] INFO: Notification dispatched {
+      notificationId: '01a1037f-243f-7c13-9ac0-e348b4793231',
+      recipientOxyUserId: 'oxy-01a1037f-242b-7272-a103-522407a07712',
+      type: 'housing_alert'
+    }
+
+      at log (middlewares/logging.ts:97:15)
+
+  console.log
+    [2026-10-03T20:40:26.475Z] INFO: Notification dispatched {
+      notificationId: '01a1037f-2468-7e0d-8a53-64ab067e457f',
+      recipientOxyUserId: 'oxy-01a1037f-2454-7724-9915-4466b217cab3',
+      type: 'housing_alert'
+    }
+
+      at log (middlewares/logging.ts:97:15)
+
+  console.log
+    [2026-10-03T20:40:26.492Z] INFO: Notification dispatched {
+      notificationId: '01a1037f-2477-7eef-ad6c-78631e740967',
+      recipientOxyUserId: 'oxy-01a1037f-2454-7724-9915-4466b217cab3',
+      type: 'housing_alert'
+    }
+
+      at log (middlewares/logging.ts:97:15)
+
+  console.log
+    [2026-10-03T20:40:26.648Z] INFO: Notification dispatched {
+      notificationId: '01a1037f-2515-794c-8470-ba141a7e5fbf',
+      recipientOxyUserId: 'oxy-01a1037f-2503-7b48-bafc-857a85e05640',
+      type: 'housing_alert'
+    }
+
+      at log (middlewares/logging.ts:97:15)
+
+  console.log
+    [2026-10-03T20:40:26.664Z] INFO: Notification dispatched {
+      notificationId: '01a1037f-2524-79ff-8d86-3ea7679d69cc',
+      recipientOxyUserId: 'oxy-01a1037f-2503-7b48-bafc-857a85e05640',
+      type: 'housing_alert'
+    }
+
+      at log (middlewares/logging.ts:97:15)
+
+  console.log
+    [2026-10-03T20:40:26.681Z] INFO: Notification dispatched {
+      notificationId: '01a1037f-2536-769b-9c99-1670fd6684e1',
+      recipientOxyUserId: 'oxy-01a1037f-2503-7b48-bafc-857a85e05640',
+      type: 'housing_alert'
+    }
+
+      at log (middlewares/logging.ts:97:15)
+
+  console.log
+    [2026-10-03T20:40:26.699Z] INFO: Notification dispatched {
+      notificationId: '01a1037f-2547-726f-a41b-f4bba76e2388',
+      recipientOxyUserId: 'oxy-01a1037f-2503-7b48-bafc-857a85e05640',
+      type: 'housing_alert'
+    }
+
+      at log (middlewares/logging.ts:97:15)
+
+  console.log
+    [2026-10-03T20:40:26.717Z] INFO: Notification dispatched {
+      notificationId: '01a1037f-255a-76b6-810d-8c60f430b4d9',
+      recipientOxyUserId: 'oxy-01a1037f-2503-7b48-bafc-857a85e05640',
+      type: 'housing_alert'
+    }
+
+      at log (middlewares/logging.ts:97:15)
+
+  console.log
+    [2026-10-03T20:40:26.732Z] INFO: Notification dispatched {
+      notificationId: '01a1037f-2569-71dd-9406-980c98e4c86c',
+      recipientOxyUserId: 'oxy-01a1037f-2503-7b48-bafc-857a85e05640',
+      type: 'housing_alert'
+    }
+
+      at log (middlewares/logging.ts:97:15)
+
+  console.log
+    [2026-10-03T20:40:26.748Z] INFO: Notification dispatched {
+      notificationId: '01a1037f-2578-7d87-93ce-38597125076e',
+      recipientOxyUserId: 'oxy-01a1037f-2503-7b48-bafc-857a85e05640',
+      type: 'housing_alert'
+    }
+
+      at log (middlewares/logging.ts:97:15)
+
+  console.log
+    [2026-10-03T20:40:26.764Z] INFO: Notification dispatched {
+      notificationId: '01a1037f-2589-75c0-82cb-477bb336e41d',
+      recipientOxyUserId: 'oxy-01a1037f-2503-7b48-bafc-857a85e05640',
+      type: 'housing_alert'
+    }
+
+      at log (middlewares/logging.ts:97:15)
+
+  console.log
+    [2026-10-03T20:40:26.782Z] INFO: Notification dispatched {
+      notificationId: '01a1037f-259a-7053-8256-360bc4d70325',
+      recipientOxyUserId: 'oxy-01a1037f-2503-7b48-bafc-857a85e05640',
+      type: 'housing_alert'
+    }
+
+      at log (middlewares/logging.ts:97:15)
+
+  console.log
+    [2026-10-03T20:40:26.798Z] INFO: Notification dispatched {
+      notificationId: '01a1037f-25ab-7435-9d38-5054c2af1317',
+      recipientOxyUserId: 'oxy-01a1037f-2503-7b48-bafc-857a85e05640',
+      type: 'housing_alert'
+    }
+
+      at log (middlewares/logging.ts:97:15)
+
+  console.log
+    [2026-10-03T20:40:26.815Z] INFO: Notification dispatched {
+      notificationId: '01a1037f-25bc-7792-95f6-ba4cb78daa75',
+      recipientOxyUserId: 'oxy-01a1037f-2503-7b48-bafc-857a85e05640',
+      type: 'housing_alert'
+    }
+
+      at log (middlewares/logging.ts:97:15)
+
+  console.log
+    [2026-10-03T20:40:26.831Z] INFO: Notification dispatched {
+      notificationId: '01a1037f-25cc-72b9-a9c8-25d9491f648d',
+      recipientOxyUserId: 'oxy-01a1037f-2503-7b48-bafc-857a85e05640',
+      type: 'housing_alert'
+    }
+
+      at log (middlewares/logging.ts:97:15)
+
+  console.log
+    [2026-10-03T20:40:26.848Z] INFO: Notification dispatched {
+      notificationId: '01a1037f-25de-747d-967a-62fc2c898115',
+      recipientOxyUserId: 'oxy-01a1037f-2503-7b48-bafc-857a85e05640',
+      type: 'housing_alert'
+    }
+
+      at log (middlewares/logging.ts:97:15)
+
+  console.log
+    [2026-10-03T20:40:26.870Z] INFO: Notification dispatched {
+      notificationId: '01a1037f-25f3-74b9-b329-0f8650499119',
+      recipientOxyUserId: 'oxy-01a1037f-2503-7b48-bafc-857a85e05640',
+      type: 'housing_alert'
+    }
+
+      at log (middlewares/logging.ts:97:15)
+
+  console.log
+    [2026-10-03T20:40:26.892Z] INFO: Notification dispatched {
+      notificationId: '01a1037f-260a-7b02-879b-ddf0064070bf',
+      recipientOxyUserId: 'oxy-01a1037f-2503-7b48-bafc-857a85e05640',
+      type: 'housing_alert'
+    }
+
+      at log (middlewares/logging.ts:97:15)
+
+  console.log
+    [2026-10-03T20:40:26.910Z] INFO: Notification dispatched {
+      notificationId: '01a1037f-261b-7116-9a3e-9a2f92c23af7',
+      recipientOxyUserId: 'oxy-01a1037f-2503-7b48-bafc-857a85e05640',
+      type: 'housing_alert'
+    }
+
+      at log (middlewares/logging.ts:97:15)
+
+  console.log
+    [2026-10-03T20:40:26.928Z] INFO: Notification dispatched {
+      notificationId: '01a1037f-262d-7d66-8cf1-f1ac182f0d75',
+      recipientOxyUserId: 'oxy-01a1037f-2503-7b48-bafc-857a85e05640',
+      type: 'housing_alert'
+    }
+
+      at log (middlewares/logging.ts:97:15)
+
+  console.log
+    [2026-10-03T20:40:26.945Z] INFO: Notification dispatched {
+      notificationId: '01a1037f-263e-7bb3-88d7-b07f29086240',
+      recipientOxyUserId: 'oxy-01a1037f-2503-7b48-bafc-857a85e05640',
+      type: 'housing_alert'
+    }
+
+      at log (middlewares/logging.ts:97:15)
+
+  console.log
+    [2026-10-03T20:40:26.962Z] INFO: Notification dispatched {
+      notificationId: '01a1037f-264f-77f6-b533-08f33750583c',
+      recipientOxyUserId: 'oxy-01a1037f-2503-7b48-bafc-857a85e05640',
+      type: 'housing_alert'
+    }
+
+      at log (middlewares/logging.ts:97:15)
+
+  console.log
+    [2026-10-03T20:40:26.979Z] INFO: Notification dispatched {
+      notificationId: '01a1037f-2661-7d76-a36d-97c5f3973740',
+      recipientOxyUserId: 'oxy-01a1037f-2503-7b48-bafc-857a85e05640',
+      type: 'housing_alert'
+    }
+
+      at log (middlewares/logging.ts:97:15)
+
+  console.log
+    [2026-10-03T20:40:26.996Z] INFO: Notification dispatched {
+      notificationId: '01a1037f-2671-7864-b4a6-ca70ddbb40cf',
+      recipientOxyUserId: 'oxy-01a1037f-2503-7b48-bafc-857a85e05640',
+      type: 'housing_alert'
+    }
+
+      at log (middlewares/logging.ts:97:15)
+
+  console.log
+    [2026-10-03T20:40:27.015Z] INFO: Notification dispatched {
+      notificationId: '01a1037f-2685-7a6b-85fb-afb51f492611',
+      recipientOxyUserId: 'oxy-01a1037f-2503-7b48-bafc-857a85e05640',
+      type: 'housing_alert'
+    }
+
+      at log (middlewares/logging.ts:97:15)
+
+  console.log
+    [2026-10-03T20:40:27.031Z] INFO: Notification dispatched {
+      notificationId: '01a1037f-2695-7e95-97ca-1a1103a7e124',
+      recipientOxyUserId: 'oxy-01a1037f-2503-7b48-bafc-857a85e05640',
+      type: 'housing_alert'
+    }
+
+      at log (middlewares/logging.ts:97:15)
+
+  console.log
+    [2026-10-03T20:40:27.047Z] INFO: Notification dispatched {
+      notificationId: '01a1037f-26a5-78e6-8f09-751f98eb59fd',
+      recipientOxyUserId: 'oxy-01a1037f-2503-7b48-bafc-857a85e05640',
+      type: 'housing_alert'
+    }
+
+      at log (middlewares/logging.ts:97:15)
+
+  console.log
+    [2026-10-03T20:40:27.063Z] INFO: Notification dispatched {
+      notificationId: '01a1037f-26b5-7c38-a1ea-efe133f39d89',
+      recipientOxyUserId: 'oxy-01a1037f-2503-7b48-bafc-857a85e05640',
+      type: 'housing_alert'
+    }
+
+      at log (middlewares/logging.ts:97:15)
+
+  console.log
+    [2026-10-03T20:40:27.081Z] INFO: Notification dispatched {
+      notificationId: '01a1037f-26c6-729f-bfe1-6ac12baa567f',
+      recipientOxyUserId: 'oxy-01a1037f-2503-7b48-bafc-857a85e05640',
+      type: 'housing_alert'
+    }
+
+      at log (middlewares/logging.ts:97:15)
+
+  console.log
+    [2026-10-03T20:40:27.098Z] INFO: Notification dispatched {
+      notificationId: '01a1037f-26d8-7296-83df-a038d33a3608',
+      recipientOxyUserId: 'oxy-01a1037f-2503-7b48-bafc-857a85e05640',
+      type: 'housing_alert'
+    }
+
+      at log (middlewares/logging.ts:97:15)
+
+  console.log
+    [2026-10-03T20:40:27.112Z] INFO: Notification dispatched {
+      notificationId: '01a1037f-26e6-7e3d-961d-1d204903aa8e',
+      recipientOxyUserId: 'oxy-01a1037f-2503-7b48-bafc-857a85e05640',
+      type: 'housing_alert'
+    }
+
+      at log (middlewares/logging.ts:97:15)
+
+  console.log
+    [2026-10-03T20:40:27.127Z] INFO: Notification dispatched {
+      notificationId: '01a1037f-26f5-7d6f-a6b7-a0c1870b7ce1',
+      recipientOxyUserId: 'oxy-01a1037f-2503-7b48-bafc-857a85e05640',
+      type: 'housing_alert'
+    }
+
+      at log (middlewares/logging.ts:97:15)
+
+  console.log
+    [2026-10-03T20:40:27.142Z] INFO: Notification dispatched {
+      notificationId: '01a1037f-2704-7616-b85c-8f5d71238758',
+      recipientOxyUserId: 'oxy-01a1037f-2503-7b48-bafc-857a85e05640',
+      type: 'housing_alert'
+    }
+
+      at log (middlewares/logging.ts:97:15)
+
+  console.log
+    [2026-10-03T20:40:27.157Z] INFO: Notification dispatched {
+      notificationId: '01a1037f-2712-70e2-aeb6-4a27dad30e75',
+      recipientOxyUserId: 'oxy-01a1037f-2503-7b48-bafc-857a85e05640',
+      type: 'housing_alert'
+    }
+
+      at log (middlewares/logging.ts:97:15)
+
+  console.log
+    [2026-10-03T20:40:27.175Z] INFO: Notification dispatched {
+      notificationId: '01a1037f-2725-71b7-890e-ec2994f2af21',
+      recipientOxyUserId: 'oxy-01a1037f-2503-7b48-bafc-857a85e05640',
+      type: 'housing_alert'
+    }
+
+      at log (middlewares/logging.ts:97:15)
+
+  console.log
+    [2026-10-03T20:40:27.191Z] INFO: Notification dispatched {
+      notificationId: '01a1037f-2734-759b-93bd-01377fe811ff',
+      recipientOxyUserId: 'oxy-01a1037f-2503-7b48-bafc-857a85e05640',
+      type: 'housing_alert'
+    }
+
+      at log (middlewares/logging.ts:97:15)
+
+  console.log
+    [2026-10-03T20:40:27.206Z] INFO: Notification dispatched {
+      notificationId: '01a1037f-2743-75de-bbaf-c6d7026ed1ed',
+      recipientOxyUserId: 'oxy-01a1037f-2503-7b48-bafc-857a85e05640',
+      type: 'housing_alert'
+    }
+
+      at log (middlewares/logging.ts:97:15)
+
+  console.log
+    [2026-10-03T20:40:27.223Z] INFO: Notification dispatched {
+      notificationId: '01a1037f-2754-74b9-81f6-8f68f7d0cc59',
+      recipientOxyUserId: 'oxy-01a1037f-2503-7b48-bafc-857a85e05640',
+      type: 'housing_alert'
+    }
+
+      at log (middlewares/logging.ts:97:15)
+
+  console.log
+    [2026-10-03T20:40:27.239Z] INFO: Notification dispatched {
+      notificationId: '01a1037f-2764-70b0-b919-0da3d0e0578e',
+      recipientOxyUserId: 'oxy-01a1037f-2503-7b48-bafc-857a85e05640',
+      type: 'housing_alert'
+    }
+
+      at log (middlewares/logging.ts:97:15)
+
+  console.log
+    [2026-10-03T20:40:27.258Z] INFO: Notification dispatched {
+      notificationId: '01a1037f-2777-79d6-a75e-6ef3a95b421e',
+      recipientOxyUserId: 'oxy-01a1037f-2503-7b48-bafc-857a85e05640',
+      type: 'housing_alert'
+    }
+
+      at log (middlewares/logging.ts:97:15)
+
+  console.log
+    [2026-10-03T20:40:27.275Z] INFO: Notification dispatched {
+      notificationId: '01a1037f-2789-74a0-8f05-c3ddd1e1d60d',
+      recipientOxyUserId: 'oxy-01a1037f-2503-7b48-bafc-857a85e05640',
+      type: 'housing_alert'
+    }
+
+      at log (middlewares/logging.ts:97:15)
+
+  console.log
+    [2026-10-03T20:40:27.294Z] INFO: Notification dispatched {
+      notificationId: '01a1037f-279c-7e6f-81ac-383180117edf',
+      recipientOxyUserId: 'oxy-01a1037f-2503-7b48-bafc-857a85e05640',
+      type: 'housing_alert'
+    }
+
+      at log (middlewares/logging.ts:97:15)
+
+  console.log
+    [2026-10-03T20:40:27.310Z] INFO: Notification dispatched {
+      notificationId: '01a1037f-27ac-72af-9353-12c7b1e5701e',
+      recipientOxyUserId: 'oxy-01a1037f-2503-7b48-bafc-857a85e05640',
+      type: 'housing_alert'
+    }
+
+      at log (middlewares/logging.ts:97:15)
+
+  console.log
+    [2026-10-03T20:40:27.495Z] INFO: Notification dispatched {
+      notificationId: '01a1037f-2864-7784-8fcb-f5446840fdbf',
+      recipientOxyUserId: 'oxy-01a1037f-284f-7bfe-a14b-a52135091654',
+      type: 'housing_alert'
+    }
+
+      at log (middlewares/logging.ts:97:15)
+
+  console.log
+    [2026-10-03T20:40:27.673Z] INFO: Notification dispatched {
+      notificationId: '01a1037f-2916-7ee4-9862-4413dd7afd9d',
+      recipientOxyUserId: 'oxy-01a1037f-28f1-7236-86d4-c6b847c5212c',
+      type: 'housing_alert'
+    }
+
+      at log (middlewares/logging.ts:97:15)
+
+  console.log
+    [2026-10-03T20:40:27.714Z] INFO: Notification dispatched {
+      notificationId: '01a1037f-293f-7036-b105-7af1f63f88d2',
+      recipientOxyUserId: 'oxy-01a1037f-2929-79f5-967a-468c585f3909',
+      type: 'housing_alert'
+    }
+
+      at log (middlewares/logging.ts:97:15)
+
+  console.log
+    [2026-10-03T20:40:27.752Z] INFO: Notification dispatched {
+      notificationId: '01a1037f-2965-7fbf-9dcd-d535f953fa9b',
+      recipientOxyUserId: 'oxy-01a1037f-294d-723f-a1b9-c4728bd62c3c',
+      type: 'housing_alert'
+    }
+
+      at log (middlewares/logging.ts:97:15)
+
+  console.log
+    [2026-10-03T20:40:27.782Z] INFO: Notification dispatched {
+      notificationId: '01a1037f-2984-782e-b74e-173fb355ea03',
+      recipientOxyUserId: 'oxy-01a1037f-2971-79c9-81c5-f9d57e411a5a',
+      type: 'housing_alert'
+    }
+
+      at log (middlewares/logging.ts:97:15)
+
+  console.log
+    [2026-10-03T20:40:27.823Z] INFO: Notification dispatched {
+      notificationId: '01a1037f-29ad-70d9-8031-5294b99e718f',
+      recipientOxyUserId: 'oxy-01a1037f-2998-7295-b8b4-64730ab7f552',
+      type: 'housing_alert'
+    }
+
+      at log (middlewares/logging.ts:97:15)
+
+  console.log
+    [2026-10-03T20:40:28.197Z] INFO: Notification dispatched {
+      notificationId: '01a1037f-2b22-7630-8449-956ea1245b89',
+      recipientOxyUserId: 'oxy-01a1037f-2b09-7cad-84f3-eb164855a90a',
+      type: 'housing_alert'
+    }
+
+      at log (middlewares/logging.ts:97:15)
+
+  console.log
+    [2026-10-03T20:40:28.266Z] INFO: Notification dispatched {
+      notificationId: '01a1037f-2b67-7249-8782-fe9925a5094a',
+      recipientOxyUserId: 'oxy-01a1037f-2b49-738f-9dfd-077452eaa394',
+      type: 'housing_alert'
+    }
+
+      at log (middlewares/logging.ts:97:15)
+
+  console.log
+    [2026-10-03T20:40:28.322Z] INFO: Notification dispatched {
+      notificationId: '01a1037f-2b9f-7176-b594-04f056a3bce0',
+      recipientOxyUserId: 'oxy-01a1037f-2b80-71f3-9460-aef00c0c3ab0',
+      type: 'housing_alert'
+    }
+
+      at log (middlewares/logging.ts:97:15)
+
+  console.log
+    [2026-10-03T20:40:28.369Z] INFO: Notification dispatched {
+      notificationId: '01a1037f-2bcf-746c-b8a0-430584a5511b',
+      recipientOxyUserId: 'oxy-01a1037f-2bb4-7f86-a8b2-b5a4538486d6',
+      type: 'housing_alert'
+    }
+
+      at log (middlewares/logging.ts:97:15)
+
+  console.log
+    [2026-10-03T20:40:28.387Z] INFO: Notification dispatched {
+      notificationId: '01a1037f-2be1-72f5-92ce-625ff20bcbe7',
+      recipientOxyUserId: 'oxy-01a1037f-2bb4-7f86-a8b2-b5a4538486d6',
+      type: 'housing_alert'
+    }
+
+      at log (middlewares/logging.ts:97:15)
+
+  console.log
+    [2026-10-03T20:40:28.430Z] INFO: Notification dispatched {
+      notificationId: '01a1037f-2c0c-7ece-83dc-36ee22af4b54',
+      recipientOxyUserId: 'oxy-01a1037f-2bee-7798-8d6d-db7b285ba1ea',
+      type: 'housing_alert'
+    }
+
+      at log (middlewares/logging.ts:97:15)
+
+  console.log
+    [2026-10-03T20:40:28.443Z] INFO: Notification dispatched {
+      notificationId: '01a1037f-2c17-718a-8513-3814272f5a63',
+      recipientOxyUserId: 'oxy-01a1037f-2bee-7798-8d6d-db7b285ba1ea',
+      type: 'housing_alert'
+    }
+
+      at log (middlewares/logging.ts:97:15)
+
+  console.log
+    [2026-10-03T20:40:28.484Z] INFO: Notification dispatched {
+      notificationId: '01a1037f-2c41-7fea-80b5-f038114232e6',
+      recipientOxyUserId: 'oxy-01a1037f-2c27-704b-af8c-0936c41c0330',
+      type: 'housing_alert'
+    }
+
+      at log (middlewares/logging.ts:97:15)
+
+  console.log
+    [2026-10-03T20:40:28.490Z] [INFO] [CronJobManager] Housing alert sweep completed {
+      "claimed": 1,
+      "matched": 1,
+      "created": 1,
+      "delivered": 1,
+      "suppressed": 0,
+      "duplicates": 0,
+      "remaining": 0
+    }
+
+      at Logger.info (utils/logger.ts:33:15)
+
+  console.log
+    [2026-10-03T20:40:28.534Z] INFO: Notification dispatched {
+      notificationId: '01a1037f-2c73-71ae-8246-6e8f2d9913cc',
+      recipientOxyUserId: 'oxy-01a1037f-2c54-7fb6-b4b9-679b16dd05a3',
+      type: 'housing_alert'
+    }
+
+      at log (middlewares/logging.ts:97:15)
+
+  console.log
+    [2026-10-03T20:40:28.575Z] INFO: Notification dispatched {
+      notificationId: '01a1037f-2c9d-7053-a796-60b5febdd74e',
+      recipientOxyUserId: 'oxy-01a1037f-2c83-70a2-9882-e792f5fa1be6',
+      type: 'housing_alert'
+    }
+
+      at log (middlewares/logging.ts:97:15)
+
+  console.log
+    [2026-10-03T20:40:28.660Z] INFO: Notification dispatched {
+      notificationId: '01a1037f-2cf2-7a25-b1c3-8c64cf31beb2',
+      recipientOxyUserId: 'oxy-01a1037f-2cd8-7872-b2c0-01475c4862e7',
+      type: 'housing_alert'
+    }
+
+      at log (middlewares/logging.ts:97:15)
+
+  console.log
+    [2026-10-03T20:40:28.717Z] INFO: Notification dispatched {
+      notificationId: '01a1037f-2d2a-7d16-b9ab-20f17ae24ab5',
+      recipientOxyUserId: 'oxy-01a1037f-2d00-732e-bbb6-6587dabbc0c4',
+      type: 'housing_alert'
+    }
+
+      at log (middlewares/logging.ts:97:15)
+
+PASS __tests__/integration/housingWatchAlerts.test.ts
+  area matching
+    ✓ alerts on a new listing INSIDE the watched area (107 ms)
+    ✓ does NOT alert on a listing OUTSIDE it (37 ms)
+    ✓ does NOT alert on an event with no coordinates at all (23 ms)
+  price thresholds
+    ✓ alerts on a drop ABOVE the threshold, and explains it with both amounts (47 ms)
+    ✓ stays silent on a drop BELOW the threshold (25 ms)
+    ✓ lets two watches disagree about the same move (55 ms)
+  idempotency
+    ✓ collapses a second delivery of the SAME event onto one alert (55 ms)
+    ✓ collapses two DIFFERENT events describing the same transition (45 ms)
+    ✓ is INSENSITIVE to the key order a producer happened to use (42 ms)
+    ✓ re-ingest with NO semantic change produces no event and no alert (21 ms)
+  cooldown
+    ✓ suppresses a SECOND price change for the same listing inside the window (37 ms)
+    ✓ does NOT apply a window to a rule whose cooldown is zero (52 ms)
+  first indexing of the catalogue
+    ✓ emits NOTHING for a bulk backfill run, however many listings it carries (100 ms)
+    ✓ does not tell a NEW watch about a listing that appeared before it existed (24 ms)
+    ✓ caps DELIVERIES per watch even when nothing was flagged as a backfill (755 ms)
+  pausing and deleting a watch
+    ✓ records but does not DELIVER while the watch is muted (50 ms)
+    ✓ delivers nothing at all once the watch is deleted (41 ms)
+    ✓ takes the alert history with the watch, so a delete is a real delete (42 ms)
+    ✓ stops delivering when the cadence is switched OFF (58 ms)
+    ✓ does not replay the silence when a watch is switched back on (61 ms)
+  digest
+    ✓ groups several changes to ONE listing into a single notification (54 ms)
+    ✓ re-running the same digest window sends nothing further (37 ms)
+    ✓ leaves another cadence's pending alerts alone (36 ms)
+  privacy
+    ✓ publishes no coordinates in a notification (31 ms)
+    ✓ the safety sweep REFUSES a payload carrying a coordinate (9 ms)
+    ✓ describes an eviction by a STATED radius, with no unit and no household (2 ms)
+    ✓ names the listing on the lock screen only when the watch asked for detail (1 ms)
+  channels
+    ✓ delivers in-app and does NOT claim to have pushed (31 ms)
+    ✓ always keeps the in-app channel, whatever the client sent (20 ms)
+    ✓ refuses an unknown channel rather than dropping it (14 ms)
+  rule availability
+    ✓ refuses to ENABLE a rule whose source is not reliable yet (21 ms)
+    ✓ accepts the same rule DISABLED, so a stored preference survives (25 ms)
+    ✓ tells the client which rules may be offered at all (21 ms)
+    ✓ never persists an unavailable rule, even disabled (21 ms)
+  alertStatus and the matcher agree
+    ✓ says `no_area` for a place with no extent — and matches nothing (27 ms)
+    ✓ says `location_needs_confirmation` for a legacy row — and matches nothing (20 ms)
+    ✓ says `cadence_off` for a saved search that is not a watch (16 ms)
+    ✓ says `no_rules_enabled` when every rule is switched off (19 ms)
+    ✓ says `active` when everything lines up (25 ms)
+  the watch surface #353 and the push deep link read
+    ✓ keeps at most ONE primary area per person, and moves it on request (58 ms)
+    ✓ round-trips its deep link through ADR 0002's own parser (26 ms)
+    ✓ emits no deep link for a selection the grammar cannot express (21 ms)
+    ✓ serves an in-app history, scoped to its owner (63 ms)
+    ✓ answers "why did I get this?" from the STORED explanation (54 ms)
+    ✓ refuses somebody else's alert with a 404 (52 ms)
+  the same dwelling advertised on two portals
+    ✓ produces TWO alerts today, which is why `source_conflict` is unavailable (59 ms)
+  the sweep
+    ✓ drains the queue and marks what it processed (57 ms)
+    ✓ is reachable from the cron wiring, with the REAL registry behind it (43 ms)
+  the producer
+    ✓ records a price transition as a FACT, and the matcher turns it into an alert (48 ms)
+    ✓ never publishes a deposit AMOUNT, only that it changed (43 ms)
+  legacy saved searches
+    ✓ demotes a row with no canonical selection to query version 1 (43 ms)
+    ✓ confirming a location promotes the row and it starts working (40 ms)
+  ownership
+    ✓ never delivers one person's alert to another (58 ms)
+    ✓ refuses to let a stranger mute somebody else's watch (35 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       54 passed, 54 total
+Snapshots:   0 total
+Time:        4.486 s
+Ran all test suites matching /__tests__\/integration\/housingWatchAlerts.test.ts/i.

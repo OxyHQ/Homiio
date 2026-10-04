@@ -1,0 +1,20 @@
+bun install v1.4.2 (744846f84)
+Resolving dependencies
+Resolved, downloaded and extracted [98]
+Saved lockfile
+
+$ bun run build:shared-types
+$ bun run --filter @homiio/shared-types build
+@homiio/shared-types build: Exited with code 0
+
++ @oxy.so/doctor@1.1.0
++ @types/node@22.20.2 (v26.6.4 available)
++ ajv@8.20.0
++ ajv-keywords@5.1.0
++ prettier-plugin-tailwindcss@0.8.1
++ tailwindcss@4.2.2
++ typescript@6.0.3 (v7.0.2 available)
++ @oxy.so/bloom@6.2.1
++ @oxy.so/core@/home/nate/Oxy/.agent-evidence/i04-consumer-candidate-f364-packs/oxy.so-core-4.2.0.tgz
+
+1607 packages installed [4.82s]

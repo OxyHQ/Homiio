@@ -1,0 +1,156 @@
+{
+  "sourceCommit": "d25666400a26d36ae507898dd1face9423c27ec4",
+  "sources": [
+    {
+      "path": "AGENTS.md",
+      "sha256": "1868973ad7ce05896a0bd32622ae1c01610b3ab56470b64ce82418168761f7db",
+      "bytes": 10375
+    },
+    {
+      "path": "packages/frontend/utils/api.ts",
+      "sha256": "fa0f8bc338c1b9387175b308dda819ea27a7b0d05110e45930b8e37203017b44",
+      "bytes": 4339
+    },
+    {
+      "path": "packages/frontend/hooks/useSindiAuthenticatedFetch.ts",
+      "sha256": "b397ef10d236b1a1aef5761e86f89b185965beded91f964a3911629337930680",
+      "bytes": 830
+    },
+    {
+      "path": "packages/frontend/hooks/sindiLinkedFetch.ts",
+      "sha256": "c04e18877d421a1a497c348c51b6b4b6de7d06de8253716babae4e3d9a652ab1",
+      "bytes": 1520
+    },
+    {
+      "path": "packages/frontend/__tests__/linkedResponses.test.ts",
+      "sha256": "fda2ebb02aa54e27d0c4fea7a515c388523073695aaebe6c190b10ea233ab281",
+      "bytes": 7619
+    },
+    {
+      "path": "packages/frontend/test/http-environment.cjs",
+      "sha256": "5cc15648d00728ff6e9a9bb1c3e5da7f77770a30e9270e315d220c8807e408e6",
+      "bytes": 461
+    }
+  ],
+  "records": [
+    {
+      "path": "docs/audits/2026-10-03-final-sdk-source-compat/raw-transport/logs/i04-homiio-envelope-red.log",
+      "sha256": "a69b69b5ed016dfd26c14ede0e25bc571f503e35aaa3fdec69d8475a3d444bb9",
+      "bytes": 1361
+    },
+    {
+      "path": "docs/audits/2026-10-03-final-sdk-source-compat/raw-transport/logs/i04-homiio-envelope-red-real.log",
+      "sha256": "5b30af3f400c50c45e18a50295a33471fc0ddd2901446860fdab67867f7a9522",
+      "bytes": 1547
+    },
+    {
+      "path": "docs/audits/2026-10-03-final-sdk-source-compat/raw-transport/logs/i04-homiio-envelope-green-initial.log",
+      "sha256": "2dae83b6c5a311fff27eb1fbea675803696d7487ee5ce01e3d25164378c08569",
+      "bytes": 1208
+    },
+    {
+      "path": "docs/audits/2026-10-03-final-sdk-source-compat/raw-transport/logs/i04-homiio-envelope-red-http.log",
+      "sha256": "1dc355b60c845db96b3ee1196999b92159f977547135c695d2b4a2d7adb6938c",
+      "bytes": 1703
+    },
+    {
+      "path": "docs/audits/2026-10-03-final-sdk-source-compat/raw-transport/logs/i04-homiio-envelope-green-http.log",
+      "sha256": "c134f6c404d67d4436c0542930a333fa4b648f2d9c7bb2572e2741d8c6b9cb53",
+      "bytes": 385
+    },
+    {
+      "path": "docs/audits/2026-10-03-final-sdk-source-compat/raw-transport/logs/i04-homiio-raw-types-initial.log",
+      "sha256": "97e402660ee78e46945ee6af7ee114cc6acced21d77ece55bfee02c81da32535",
+      "bytes": 2080
+    },
+    {
+      "path": "docs/audits/2026-10-03-final-sdk-source-compat/raw-transport/logs/i04-homiio-raw-final-focal.log",
+      "sha256": "186ee90f6bb497fa5ca96a4b6bf971911bf6cf7b5871e478e1f78eaacda6ca17",
+      "bytes": 392
+    },
+    {
+      "path": "docs/audits/2026-10-03-final-sdk-source-compat/raw-transport/logs/i04-homiio-deadline-install.log",
+      "sha256": "b01dc2228ab28b707a492b679e644511d72f2d6fddfbc52561df2ff0f654d051",
+      "bytes": 367
+    },
+    {
+      "path": "docs/audits/2026-10-03-final-sdk-source-compat/raw-transport/logs/i04-homiio-raw-full-tests.log",
+      "sha256": "ec311e317df422cdeed6472eb524c4f306a5f525e6ab2c5a73d5869e97695b0a",
+      "bytes": 16618
+    },
+    {
+      "path": "docs/audits/2026-10-03-final-sdk-source-compat/raw-transport/logs/i04-homiio-raw-final-types.log",
+      "sha256": "8366207267355d3e3d5bf3bf6e8c94c5f93f6078c34f08973fa2b38cdda6cc92",
+      "bytes": 15
+    },
+    {
+      "path": "docs/audits/2026-10-03-final-sdk-source-compat/raw-transport/logs/i04-homiio-raw-web-export.log",
+      "sha256": "8afaa2b715c37b0a0a5f24c3b288c017750eb672faaa6e284e47c9dacab3c9fc",
+      "bytes": 15517
+    },
+    {
+      "path": "docs/audits/2026-10-03-final-sdk-source-compat/raw-transport/logs/i04-homiio-raw-lint.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    }
+  ],
+  "candidateInstallationInputs": [
+    {
+      "path": "docs/audits/2026-10-03-final-sdk-source-compat/raw-transport/inputs/package.json",
+      "sha256": "76280a0f955a44b1985f7f5864c2a90303cd8e93ff38d9211922f05851722082",
+      "bytes": 3115
+    },
+    {
+      "path": "docs/audits/2026-10-03-final-sdk-source-compat/raw-transport/inputs/bun.lock",
+      "sha256": "d27bea28c7a9e0d003efc60fba1f01738b6cb7479a47736ea3794cc98284c5f9",
+      "bytes": 537624
+    },
+    {
+      "path": "docs/audits/2026-10-03-final-sdk-source-compat/raw-transport/inputs/packages_frontend_package.json",
+      "sha256": "829e0001c0a58c13d6083bfbf6c4deff52ef327c31d33e5feb938fc5ae824e08",
+      "bytes": 5224
+    }
+  ],
+  "sdk": {
+    "source": "04f73b2a7",
+    "pack": {
+      "path": "/home/nate/Oxy/.agent-evidence/i04-raw-response-deadline-pack/oxy.so-core-4.2.0.tgz",
+      "sha256": "7065f27e42dc59eb02dd18a37f0944967f5b8e4fb3addd7ab5779bb95edb6506",
+      "bytes": 1603061
+    },
+    "resolvers": [
+      {
+        "importer": "/home/nate/Oxy/Homiio/.worktrees/1519-final-sdk-adoption-20261003",
+        "installed": "/home/nate/Oxy/Homiio/.worktrees/1519-final-sdk-adoption-20261003/node_modules/@oxy.so/core",
+        "filesCompared": 581
+      },
+      {
+        "importer": "/home/nate/Oxy/Homiio/.worktrees/1519-final-sdk-adoption-20261003/packages/frontend",
+        "installed": "/home/nate/Oxy/Homiio/.worktrees/1519-final-sdk-adoption-20261003/node_modules/@oxy.so/core",
+        "filesCompared": 581
+      }
+    ]
+  },
+  "validation": {
+    "realEnvelopeRed": {
+      "failed": 1
+    },
+    "focal": {
+      "suites": 2,
+      "passed": 18
+    },
+    "frontendFull": {
+      "suites": 74,
+      "passed": 947
+    },
+    "types": "PASS",
+    "scopedLint": "PASS",
+    "webExport": "PASS"
+  },
+  "limits": [
+    "Real loopback HTTP plus synthetic tokens; no identity verifier or domain SQL claim.",
+    "Explicit transport test delegates to Node fetch, not the Expo native module; no native-runtime claim.",
+    "Registry Oxy versions and final lock adoption are pending; candidate manifests remain local.",
+    "No backend, SQL, Pay rent, payment credential, deployment or financial effect change."
+  ]
+}

@@ -1,0 +1,13 @@
+[
+  {
+    "name": "frontend-export",
+    "cwd": ".",
+    "argv": [
+      "bun",
+      "run",
+      "build:frontend"
+    ],
+    "exitCode": 0,
+    "seconds": 19.623
+  }
+]

@@ -1,0 +1,44 @@
+$ jest --ci --runInBand --runTestsByPath __tests__/linkedResponses.test.ts
+FAIL __tests__/linkedResponses.test.ts
+  ✕ retains the actual public envelope without reconstructing success or losing fields (19 ms)
+
+  ● retains the actual public envelope without reconstructing success or losing fields
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 5
+    + Received  + 0
+
+    @@ -3,13 +3,8 @@
+          "data": Array [
+            Object {
+              "id": "home",
+            },
+          ],
+    -     "deleted": Array [
+    -       "old",
+    -     ],
+    -     "message": "kept",
+    -     "serverTime": "fixture-time",
+          "success": true,
+        },
+      }
+
+      28 |   const oxy = new OxyServices({ baseURL: mockOrigin });
+      29 |   apiModule.bindApiToOxy(oxy);
+    > 30 |   expect(await apiModule.api.get('/public', { params: { q: 'a & b' }, requireAuth: false })).toEqual({ data: envelope });
+         |                                                                                              ^
+      31 |   expect(seen.at(-1)?.bearer).toBeUndefined();
+      32 |   expect(new URL(seen.at(-1)?.url ?? '/', mockOrigin).searchParams.get('q')).toBe('a & b');
+      33 | });
+
+      at Object.toEqual (__tests__/linkedResponses.test.ts:30:94)
+      at asyncGeneratorStep (../../node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (../../node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 1 total
+Snapshots:   0 total
+Time:        0.873 s, estimated 2 s
+Ran all test suites within paths "__tests__/linkedResponses.test.ts".
+error: script "test" exited with code 1
