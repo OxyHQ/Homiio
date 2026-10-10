@@ -71,19 +71,10 @@ MIGRATION_SERVICE="${MIGRATION_SERVICE:-}"
 # moment no old image is serving. A `post` migration drops or narrows something,
 # so running it from this table would break the image still running.
 #
-# THE POPULATION FLOOR IS STILL THE ENTRY THAT IS NOT HERE, AND THE REASON HAS
-# CHANGED. `db/assertPostgresPopulated.ts` asserts that Postgres is AUTHORITATIVE.
-# That was false before the cutover and would have been false again after the
-# planned rollback to Mongo, which is why this comment used to say the cutover
-# commit would append the entry and a revert would remove it.
-#
-# The cutover has happened and there is no rollback target: `AGENTS.md`'s data
-# storage section records that `models/`, `db/backfill/` and mongoose are deleted,
-# `MONGODB_URI` is off both task definitions and out of SSM, and the only copy of
-# the old data is an offline dump. So the ORIGINAL objection is gone.
-#
-# What replaces it is narrower and has to be measured rather than reasoned about:
-# the five floors are numbers taken from a Mongo census on 2026-08-06, and no one
+# THE POPULATION FLOOR IS THE ENTRY THAT IS NOT HERE.
+# `db/assertPostgresPopulated.ts` asserts that the database holds production.
+# What keeps it out has to be measured rather than reasoned about: the five
+# floors are numbers taken from a production census on 2026-08-06, and no one
 # has counted the rows Postgres holds today. Wiring a floor that production does
 # not clear blocks every deploy, which is the failure this guard exists to avoid
 # causing. Count first, then append this entry verbatim:

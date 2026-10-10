@@ -10,8 +10,8 @@
  *
  * `keys_*` and `urls_*` are all `NOT NULL`: the Sharp pipeline produces the four
  * variants as a set, and `imageUploadService.assertCompleteVariants` already
- * refuses a partial one before it reaches storage. Flattening the two Mongo
- * subdocuments into eight columns is what makes that a schema fact rather than
+ * refuses a partial one before it reaches storage. Flattening the `keys` and
+ * `urls` objects into eight columns is what makes that a schema fact rather than
  * a convention — a half-processed image cannot be stored at all.
  *
  * ## `entity_id` carries no foreign key, permanently

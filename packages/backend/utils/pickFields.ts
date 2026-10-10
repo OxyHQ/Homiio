@@ -1,8 +1,7 @@
 /**
  * Mass-assignment guard shared by every write controller (property, room, lease).
  *
- * Write endpoints must NEVER spread `req.body` straight into a Mongoose
- * create/update: that lets a client set owner/system-managed fields
+ * Write endpoints must NEVER spread `req.body` straight into a create/update: that lets a client set owner/system-managed fields
  * (`profileId`, `landlordOxyUserId`, `status`, `signatures`, …) and reassign
  * ownership (IDOR / privilege escalation). Instead, each controller declares an
  * explicit allowlist of user-editable fields and picks ONLY those. Anything not
@@ -14,8 +13,8 @@
  * present on `body`. Never mutates `body`; never carries over unknown keys.
  *
  * `req.body` is untyped (Express types it as `any`); the picked keys form a
- * partial payload that downstream consumers (schema validators, offering rules,
- * the Mongoose model) validate field-by-field. The generic `T` lets a caller
+ * partial payload that downstream consumers (input normalizers, offering rules,
+ * the database's CHECKs) validate field-by-field. The generic `T` lets a caller
  * name the partial-payload shape it expects at this validated boundary, so the
  * result is typed without `any` and without re-spreading the raw body.
  */

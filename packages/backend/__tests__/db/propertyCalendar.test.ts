@@ -2,12 +2,10 @@
  * `property_availability_windows` — the GiST range index, asserted on BOTH the
  * answer it gives and the plan it gives it with.
  *
- * Mongo indexed `availabilityWindows.start` and `availabilityWindows.end`
- * separately, and two independent btrees cannot answer an overlap query: the
- * planner narrows on one of them and filters the rest by hand. Those two
- * indexes are deliberately NOT ported, which means this index is not an
- * optimization of the old behaviour — it is the only thing that provides the
- * behaviour at all. A test asserting merely that a row came back would pass
+ * Two independent btrees on start and end cannot answer an overlap query: the
+ * planner narrows on one of them and filters the rest by hand. So this index is
+ * not an optimization — it is the only thing that provides the behaviour at
+ * all. A test asserting merely that a row came back would pass
  * against a sequential scan, i.e. against the index not existing.
  *
  * The second half of the file is the half-open (`[)`) contract. Adjacent
@@ -78,10 +76,8 @@ afterAll(async () => {
 
 describe('one table, two calendars', () => {
   it('holds a listing window and an exchange window side by side', async () => {
-    // Mongo declared the identical `availabilityWindowSchema` TWICE — on
-    // `Property.availabilityWindows` and inside
-    // `Property.exchange.availabilityWindows` — so an overlap question had to
-    // be asked against two arrays. One table with a `scope` discriminator makes
+    // A listing has two calendars with an identical shape —
+    // `availabilityWindows` and `exchange.availabilityWindows`. One table with a `scope` discriminator makes
     // it one query, which is the whole reason the GiST index below can serve
     // both.
     await db.insert(propertyAvailabilityWindows).values([
@@ -114,9 +110,7 @@ describe('one table, two calendars', () => {
   });
 
   it('refuses a window that ends before it starts', async () => {
-    // Mongo enforced this with a sub-schema validator on `end`
-    // (`value > this.start`) which, like every other validator in this package,
-    // did not run on an update.
+    // A CHECK, so no update path can skip it.
     let caught: unknown;
     try {
       await db
@@ -205,8 +199,7 @@ describe('overlap', () => {
 
   it('is answered BY THE GiST INDEX, not by a sequential scan', async () => {
     // The assertion that makes this table's index worth having. Two separate
-    // btrees on `starts_at` and `ends_at` — which is what Mongo had and what is
-    // deliberately not ported — cannot serve `&&` at all, so a plan that never
+    // btrees on `starts_at` and `ends_at` cannot serve `&&` at all, so a plan that never
     // names this index is a plan that is filtering the whole table by hand.
     const filler = Array.from({ length: FILLER_WINDOWS }, (_, offset) => ({
       propertyId,

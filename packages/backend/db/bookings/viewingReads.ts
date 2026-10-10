@@ -6,10 +6,10 @@
  * ## `cancelled_by` is now an EQUIVALENCE, and it is the database's
  *
  * `viewing_requests_cancelled_by_status_check` states
- * `(status = 'cancelled') = (cancelled_by is not null)`. Mongo allowed a
- * `pending` request to name a canceller and — the damaging half — a `cancelled`
- * one to name nobody, which is a cancellation neither party can be shown to have
- * made. {@link cancelViewing} therefore writes both columns in ONE statement, and
+ * `(status = 'cancelled') = (cancelled_by is not null)`. Without it a
+ * `pending` request could name a canceller and — the damaging half — a
+ * `cancelled` one name nobody, which is a cancellation neither party can be
+ * shown to have made. {@link cancelViewing} therefore writes both columns in ONE statement, and
  * {@link approveViewing} / {@link declineViewing} cannot reach a state where one
  * is set without the other.
  *
@@ -349,17 +349,14 @@ export async function rescheduleViewing(
  * RETENTION_DAYS` stays in `cleanupService`, beside the RecentlyViewed window it
  * sits next to, so the two retention policies are read in one place.
  *
- * ## Why this one mattered more than the other stale readers
+ * ## Why a sweep matters more than a read
  *
- * When the table moved to Postgres this sweep kept issuing its `deleteMany`
- * against Mongo, so it reaped NOTHING — and unlike a read that returns an empty
- * list, a sweep that deletes nothing produces no output a caller can notice. Its
- * only symptom is disk, months later, by which time nobody connects it to a
- * migration. `db/expiry.ts` records the same hazard from the schema side: a
- * table ported without its sweep grows forever, with no error and no failing
- * test.
+ * Unlike a read that returns an empty list, a sweep that deletes nothing
+ * produces no output a caller can notice. Its only symptom is disk, months
+ * later. `db/expiry.ts` records the same hazard from the schema side: a table
+ * without its sweep grows forever, with no error and no failing test.
  *
- * `updated_at` is the retention key, exactly as in Mongo — it carries drizzle's
+ * `updated_at` is the retention key — it carries drizzle's
  * `$onUpdate`, so it moves when the request is declined or cancelled, which is
  * the instant the clock should start from.
  *
@@ -385,8 +382,8 @@ export async function pruneClosedViewingsBefore(
 /**
  * Viewing requests received by a listing owner since `since`, grouped by status.
  *
- * The analytics rollup. A `group by` in SQL where Mongo used a `$group`
- * pipeline, so the five buckets come from one statement rather than five.
+ * The analytics rollup. One `group by`, so the five buckets come from one
+ * statement rather than five.
  */
 export async function countViewingsByStatusForOwner(
   db: DatabaseOrTransaction,
@@ -408,9 +405,8 @@ export async function countViewingsByStatusForOwner(
 /**
  * The wire shape the viewings screen reads.
  *
- * `id`, never `_id` — the wire contract is PR #287's clean cut. The Mongoose
- * handlers returned `viewing.toJSON()`, i.e. every field, so this carries every
- * column; there is nothing on this table that is not the requester's to see.
+ * `id`, never `_id` — the wire contract is PR #287's clean cut. Every column;
+ * there is nothing on this table that is not the requester's to see.
  *
  * ## `timeZone`, `date` and `time` are derived here rather than on the client
  *

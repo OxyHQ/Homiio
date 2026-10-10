@@ -89,8 +89,7 @@ import { findOrCreateCanonicalAddress } from '../services/addressService';
 /**
  * The `source` a seeded listing carries.
  *
- * `internal`, not the `'seed'` this script used against Mongo: `source` is now
- * `text` under `properties_source_check`, whose value set is
+ * `internal`, not `'seed'`: `source` is `text` under `properties_source_check`, whose value set is
  * `['internal', ...PROVIDER_IDS]` — `'seed'` is not in it and the write would be
  * rejected outright. `internal` is also the honest answer, since these are
  * first-party owner-held demo listings (`isExternal: false`), not a portal's.
@@ -1150,10 +1149,9 @@ async function upsertProperty(
 
   const doc: PropertyWriteInput = {
     // `oxy_user_id`, not `profileId`: the column is the Oxy user's own id and
-    // the `profiles` sidecar the Mongo document pointed at is a different
-    // domain's row. There is no foreign key here (Oxy owns identity), which is
-    // why the seed owner does not need a profile to exist at all — the
-    // `ensureSeedOwner` upsert this replaces was creating one for nothing.
+    // the `profiles` sidecar is a different domain's row. There is no foreign
+    // key here (Oxy owns identity), which is why the seed owner does not need a
+    // profile to exist at all.
     oxyUserId: SEED_OWNER_OXY_USER_ID,
     isExternal: false,
     source: SEED_SOURCE,
@@ -1184,9 +1182,8 @@ async function upsertProperty(
     // id, then the resolved refs become `property_images` rows (see
     // `seedPropertyImages`). Start empty so the listing has an id to own them.
     //
-    // `coverImageIndex` is gone with the Mongo document — it was `-1` on all
-    // 17,644 production rows and its meaning moved to
-    // `property_images.is_primary`, which `toPropertyImages` already sets.
+    // The cover is `property_images.is_primary`, which `toPropertyImages`
+    // already sets.
     images: [],
     leaseTerm: isLongTermCapable ? LeaseDuration.YEARLY : LeaseDuration.FLEXIBLE,
     maxGuests: seed.maxGuests ?? Math.max(1, seed.bedrooms * 2 || 1),
@@ -1222,8 +1219,8 @@ async function upsertProperty(
     }
   }
 
-  // The cross-field `offerings`↔blocks rule that needed a whole Mongoose
-  // document as `this` is now four CHECK constraints on the table
+  // The cross-field `offerings`↔blocks rule is four CHECK constraints on the
+  // table
   // (`properties_offering_{long_term_rent,short_term_rent,sale,exchange}_check`),
   // so it holds for every writer rather than only for `.save()`.
   doc.sourceId = seed.sourceId;
@@ -1231,8 +1228,7 @@ async function upsertProperty(
 
   // Create the canonical `images` rows for this listing, then point
   // `property_images` at them. Exactly one row may claim `is_primary` — the
-  // partial unique `property_images_one_primary_key` enforces what the Mongo
-  // `coverImageIndex` merely described.
+  // partial unique `property_images_one_primary_key` enforces it.
   const imageRefs = await seedPropertyImages(
     property.property.id,
     withUnsplashParams(seed.imageUrls),
@@ -1275,9 +1271,8 @@ async function seedCityCoverImages(fetchImage: SeedImageFetcher): Promise<void> 
         fetchImage,
       );
       if (imageId) {
-        // Only the cover pointer. The `imageIds[]` array the Mongo document
-        // carried was dropped in the port: the membership it denormalized is
-        // already `images.(entity_type, entity_id)`, which
+        // Only the cover pointer. Membership is `images.(entity_type,
+        // entity_id)`, which
         // `seedEntityCoverImage` has just written.
         await getDb().update(cities).set({ coverImageId: imageId }).where(eq(cities.id, city.id));
         console.log(`[seed-properties] city image  ${city.name} -> ${imageId}`);
@@ -1320,13 +1315,10 @@ export async function seedProperties(
   const fetchImage = options.fetchImage ?? fetchImageBuffer;
 
   if (options.fresh) {
-    // ONE `TRUNCATE ... CASCADE`, where the Mongo version fired seven parallel
-    // `deleteMany`s. It has to be one statement: these tables reference each
-    // other (`properties.address_id` is ON DELETE RESTRICT,
+    // ONE `TRUNCATE ... CASCADE`. It has to be one statement: these tables
+    // reference each other (`properties.address_id` is ON DELETE RESTRICT,
     // `property_images.image_id` likewise), so any independent order fails on
-    // the first table something still points at. The parallel version only
-    // appeared to work because Mongo has no foreign keys — it was leaving
-    // dangling references, not avoiding them.
+    // the first table something still points at.
     //
     // A truncate cannot be filtered to `oxy_user_id = 'seed-demo-host'`, so this
     // is a FULL wipe of five shared tables. That is why it is opt-in.
@@ -1437,10 +1429,8 @@ if (require.main === module) {
     })
     .finally(async () => {
       try {
-        // Close the pool this script actually opened. The teardown here used to
-        // be the Mongo `database.disconnect()` — a database the seeder had not
-        // opened since the write path moved — which left the Postgres pool for
-        // `process.exit` to reap.
+        // Close the pool this script actually opened, rather than leaving it
+        // for `process.exit` to reap.
         await closePostgres();
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err);

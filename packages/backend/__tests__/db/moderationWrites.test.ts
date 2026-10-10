@@ -139,10 +139,8 @@ describe('a repeated enqueue is a genuine no-op', () => {
    * `ON CONFLICT DO NOTHING` must write NOTHING — no tuple version, no
    * timestamp, no lock.
    *
-   * The Mongo original carried a long comment about `timestamps: false` because
-   * Mongoose's `$set: { updatedAt }` turned a repeated upsert into a real write
-   * that contended with the dispatcher's live lease on that same row. `DO
-   * UPDATE` reintroduces exactly that: drizzle applies a column's `$onUpdate` to
+   * A repeated upsert that wrote anything would contend with the dispatcher's
+   * live lease on that same row. `DO UPDATE` does exactly that: drizzle applies a column's `$onUpdate` to
    * a conflict branch's `set`, so even "write the same data back" moves
    * `updated_at`.
    *
@@ -267,8 +265,8 @@ describe('one report per reporter per object', () => {
   /**
    * The unique index, not a preceding read.
    *
-   * Mongo's intake read `findOne(...)` and then inserted, which is a window two
-   * concurrent submissions both pass — and the answer it produces is "you already
+   * A read followed by an insert is a window two concurrent submissions both
+   * pass — and the answer it produces is "you already
    * reported this" about a row that may not exist yet.
    */
   it('refuses a second report from the same reporter and returns the first', async () => {
@@ -448,13 +446,10 @@ describe('the property restriction lever', () => {
   });
 
   /**
-   * The regression this file exists to prevent, and the reason two guards were
-   * deliberately NOT ported.
+   * The regression this file exists to prevent: an id-shape guard.
    *
-   * The Mongo effects opened with `if (!mongoose.isValidObjectId(subject.id))
-   * return { changed: false }`. Post-cutover every id `generatedId()` mints is a
-   * uuid v7, for which `isValidObjectId` is FALSE — so keeping that guard would
-   * have made every listing created after the cutover permanently
+   * Every id `generatedId()` mints is a uuid v7, for which a 24-hex test is
+   * FALSE — so such a guard would make every new listing permanently
    * un-enforceable, while still reporting "nothing to do" as though it had
    * looked. A jury could restrict such a listing and it would stay up.
    */

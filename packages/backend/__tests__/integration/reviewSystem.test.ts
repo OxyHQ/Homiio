@@ -3,8 +3,7 @@
  * mass-assignment guards, ownership, helpful votes, reports, agency attribution
  * and the review-explore aggregations.
  *
- * Postgres throughout — `reviewController` has no Mongoose import left. Geo
- * resolution still runs fully OFFLINE, because every seeded address supplies a
+ * Postgres throughout. Geo resolution runs fully OFFLINE, because every seeded address supplies a
  * complete name set (city + state + countryCode) plus coordinates, so
  * `resolveGeoChain` never reaches the geocoder.
  *
@@ -17,8 +16,6 @@
  * does, and the ids come back out of the response.
  */
 
-import { readFileSync } from 'fs';
-import { join } from 'path';
 import { eq } from 'drizzle-orm';
 import express, { type Express } from 'express';
 import request from 'supertest';
@@ -229,9 +226,9 @@ describe('createReview (allowlist + agency + geo)', () => {
   });
 
   /**
-   * Mongoose used to CAST and VALIDATE on the way in; `controllers/review/reviewInput.ts`
-   * is what replaced it, and its whole job is to keep a rejection a 400 rather
-   * than letting a CHECK answer 500 from the driver.
+   * `controllers/review/reviewInput.ts` casts and validates on the way in, and
+   * its whole job is to keep a rejection a 400 rather than letting a CHECK
+   * answer 500 from the driver.
    */
   it('rejects an out-of-range rating with a 400 rather than a constraint violation', async () => {
     const res = await request(buildApp('oxy-bad-rating'))
@@ -370,11 +367,10 @@ describe('getReviewById + getUserReviews and the removed-review rule', () => {
   });
 
   /**
-   * The one deliberate behaviour change in this port, stated here as a test.
+   * The author-visibility rule, stated here as a test.
    *
-   * The Mongo listing filtered `$ne: 'removed'` for EVERYONE including the
-   * author, which contradicted both `getReviewById` above and the docblock on
-   * `reviews_oxy_user_created_idx` — the ONE scoped index that is not partial,
+   * Hiding a removed review from its author too would contradict both
+   * `getReviewById` above and the docblock on `reviews_oxy_user_created_idx` — the ONE scoped index that is not partial,
    * precisely so this listing can show an author their own removed review.
    * Hiding it makes a removal indistinguishable from a lost submission.
    */
@@ -622,8 +618,7 @@ describe('agency reads', () => {
   /**
    * The LIKE escape, not the regex escape.
    *
-   * Mongo ran the term through `escapeRegex`; the Postgres form is `LIKE`, whose
-   * metacharacter set is `%`, `_` and `\`. A term containing `%` would silently
+   * The search is `LIKE`, whose metacharacter set is `%`, `_` and `\`. A term containing `%` would silently
    * stop filtering — see `db/likePattern.ts`.
    */
   it('treats a wildcard character in the search term literally', async () => {
@@ -829,31 +824,4 @@ describe('the review-created notification fan-out', () => {
     expect(await findOwnerOxyUserIdsAtAddresses([addressId])).toEqual(['oxy-real-owner']);
     expect(await findOwnerOxyUserIdsAtAddresses([])).toEqual([]);
   });
-});
-
-describe('nothing in this controller reaches Mongo', () => {
-  /**
-   * A guard against the failure mode `db/MIGRATION-CONTRACT.md` opens with: a
-   * stale Mongo read against a collection whose rows live in Postgres is not an
-   * error, it is an empty result.
-   */
-  it('has no mongoose import left in reviewController', () => {
-    const source = readFileSync(join(__dirname, '../../controllers/reviewController.ts'), 'utf8');
-    // Anti-vacuity: a path typo would read as a clean pass, so assert the file
-    // really is the one under test before asserting what it does not contain.
-    expect(source).toContain('export const createReview');
-    expect(source).not.toMatch(/from 'mongoose'/);
-    expect(source).not.toMatch(/from '\.\.\/models'/);
-  });
-
-  /**
-   * `leaves no review rows behind in Mongo` stood here and is DELETED, not
-   * moved: it counted documents through the `Review` Mongoose model, and that
-   * model no longer exists. The assertion it made — the create path writes
-   * nothing to the old store — is now structural rather than measured, because
-   * there is no longer a model through which this controller could write. What
-   * still guards it is the source scan above plus
-   * `__tests__/unit/mongoUnreachable.test.ts`, which fails the build if any
-   * module under a scanned root reacquires a Mongo import.
-   */
 });

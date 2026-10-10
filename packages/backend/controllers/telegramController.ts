@@ -35,8 +35,8 @@ import { resolveCityId } from '../services/geoQueryService';
 /**
  * How many listings one bulk-notification request may fan out to.
  *
- * Carried over from the Mongo `.limit(50)`, whose comment read "prevent abuse" —
- * this endpoint sends real messages, so the bound is the point.
+ * "Prevent abuse" — this endpoint sends real messages, so the bound is the
+ * point.
  */
 const BULK_NOTIFICATION_LIMIT = 50;
 

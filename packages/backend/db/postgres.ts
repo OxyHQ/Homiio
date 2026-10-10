@@ -9,11 +9,8 @@
  * global and hard-fails the moment anything loads it outside Bun — which is
  * every production process and every test run in this package.
  *
- * Shape mirrors the Mongo setup in `database/connection.ts`: connect once at
- * boot, then read the handle synchronously from anywhere via {@link getDb}.
- * Both stores are live during the dual-run; neither connector knows about the
- * other, and `config.ts` keeps their URLs in separate keys so a `postgres://`
- * string can never reach mongoose (see the comment on `config.database.url`).
+ * Connect once at boot, then read the handle synchronously from anywhere via
+ * {@link getDb}.
  */
 
 import { drizzle, type PostgresJsDatabase } from 'drizzle-orm/postgres-js';
@@ -66,10 +63,8 @@ export type DatabaseOrTransaction = Database | Transaction;
  * The symptom is not a lost write. It is that the recovery read dies, the
  * repository's `DuplicateReportError` is never constructed, and the controller
  * branch that answers a re-file with a friendly 200 becomes unreachable — so a
- * user re-filing a report gets a 500. It is a port regression: Mongo detected
- * the duplicate with a `findOne` BEFORE the insert, so nothing was ever aborted,
- * and moving that check into the index (which is what makes it race-free) is
- * what introduced it.
+ * user re-filing a report gets a 500. Moving the duplicate check into the index
+ * (which is what makes it race-free) is exactly what creates this hazard.
  *
  * ## Why a nested transaction is the fix
  *

@@ -9,18 +9,18 @@
  * services/notificationService) lists, reads, updates and deletes them through
  * these handlers.
  *
- * ## What the Mongo port changed, and what it deliberately did not
+ * ## Ids and validation
  *
- * The `CastError` branches are GONE, not widened. A `text` primary key takes any
+ * There is no id-shape branch. A `text` primary key takes any
  * string, so a malformed id is simply a lookup that matches nothing and the
  * handler answers the same 404 it always answered for an id that did not exist.
  * `db/ids.ts` is explicit that these guards are deleted rather than ported, and
  * that using `isLiveEntityId` as a query precondition would re-introduce the
  * fail-open bug in a new costume.
  *
- * The `ValidationError` branch is gone for the same class of reason: the two
- * things Mongoose validated here are `type`/`title`/`message` presence, which
- * this handler checks itself and answers 400 for, and `priority`, which the
+ * There is no generic validation-error branch either: the two things worth
+ * validating here are `type`/`title`/`message` presence, which this handler
+ * checks itself and answers 400 for, and `priority`, which the
  * handler narrows against the declared tuple before the insert can see it. What
  * remains — a `NOT NULL` or a CHECK — is a programming error rather than a
  * caller's, and it belongs in the error handler as a 500 rather than being
@@ -136,7 +136,7 @@ class NotificationController {
         message: String(message),
         // `undefined` rather than `null`: the column is `NOT NULL DEFAULT`, so
         // omitting the key is what lets the default apply. See the repository
-        // header — this is the one place drizzle and mongoose disagree.
+        // header.
         app: app === undefined ? undefined : String(app),
         priority: priorityFilter(priority),
         data: data ?? {},

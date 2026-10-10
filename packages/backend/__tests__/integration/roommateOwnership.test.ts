@@ -3,14 +3,11 @@
  * the request handshake, relationship lifecycle, relationship ownership, and
  * the wire shape all of it is served in.
  *
- * ## Both stores are gone from this suite, and that is the point
+ * ## One store, and that is the point
  *
- * `roommate_requests` and `roommate_relationships` moved first; the PROFILE
- * reads beside them moved with this change, so the file no longer touches
- * mongoose at all. While the two were split, a profile written by
- * `PUT /api/profiles/me` (Postgres) was invisible to every roommate endpoint
- * (Mongo) — the fixtures below are Postgres rows for the same reason the
- * controller now reads them.
+ * Requests, relationships and the PROFILE reads beside them all use the same
+ * `profiles` table `PUT /api/profiles/me` writes — the fixtures below are
+ * Postgres rows for the same reason the controller reads them.
  *
  * ## What makes these tests non-vacuous
  *
@@ -80,8 +77,8 @@ function buildApp(oxyUserId: string): Express {
 }
 
 /**
- * A profile with roommate matching on, carrying the same preferences the
- * Mongo-era fixture did (budget 500-1200, non-smoker, pets welcome).
+ * A profile with roommate matching on (budget 500-1200, non-smoker, pets
+ * welcome).
  */
 async function createRoommateProfile(
   oxyUserId: string,
@@ -168,11 +165,9 @@ describe('roommateController.getRoommateProfiles — profile resolution', () => 
 
 describe('the discover filters that used to match nothing', () => {
   /**
-   * Each of these was written against a path `personalProfileSchema` never
-   * declared (`personalProfile.gender` / `.location` / `.dateOfBirth`). With
-   * `strictQuery: false` mongoose passed them through to MongoDB rather than
-   * stripping them, so they matched NO document and the endpoint answered an
-   * empty page for every value. The cases below are the wiring — that a query
+   * Each of these was once written against a field no row stored
+   * (`personalProfile.gender` / `.location` / `.dateOfBirth`), so they matched
+   * NOTHING and the endpoint answered an empty page for every value. The cases below are the wiring — that a query
    * parameter reaches the column the filter now means; the predicates
    * themselves, with the fixtures that can tell them apart, are pinned in
    * `__tests__/db/roommateDiscovery.test.ts`.
@@ -305,8 +300,8 @@ describe('the wire shape the roommate endpoints serve', () => {
   });
 
   it("never carries another person's annual income or transcript", async () => {
-    // The Mongo version attached `personalProfile` verbatim to every candidate
-    // and every request participant. `personal_info_annual_income` is a
+    // Never `personalProfile` verbatim on a candidate or a request participant.
+    // `personal_info_annual_income` is a
     // PROTECTED COLUMN and the participant DTO is built at PUBLIC visibility.
     await createRoommateProfile('oxy-me');
     await createRoommateProfile('oxy-rich', { personalInfoAnnualIncome: 48000 });
@@ -345,8 +340,8 @@ describe('roommateController.updateRoommatePreferences — mass-assignment guard
   });
 
   it('replaces only the fields the body names', async () => {
-    // The Mongo version `$set` one path per field, so a body naming `budget`
-    // alone left `lifestyle` alone. That is the difference from
+    // One column per field, so a body naming `budget` alone leaves `lifestyle`
+    // alone. That is the difference from
     // `PUT /api/profiles/me`, which sends the block and replaces it.
     await createRoommateProfile('oxy-me');
 
@@ -358,11 +353,10 @@ describe('roommateController.updateRoommatePreferences — mass-assignment guard
     expect(reloaded.settingsRoommatePreferencesLifestylePets).toBe('yes');
   });
 
-  it('round-trips location and interests, which strict mode used to discard', async () => {
+  it('round-trips location and interests, which used to be discarded', async () => {
     // The whole reason migration 0008 exists. `EDITABLE_ROOMMATE_PREFERENCE_FIELDS`
-    // has always accepted both, and both were written to paths
-    // `personalProfileSchema` does not declare — so mongoose dropped them from
-    // every update and the endpoint answered 200 having stored nothing.
+    // has always accepted both, and nothing used to store them — the endpoint
+    // answered 200 having stored nothing.
     await createRoommateProfile('oxy-me');
     const app = buildApp('oxy-me');
 
@@ -385,8 +379,7 @@ describe('roommateController.updateRoommatePreferences — mass-assignment guard
 
   it('answers data: null for somebody who has stated nothing', async () => {
     // A row full of NULLs is not the same fact as an object full of nulls:
-    // mongoose never materialised `personalProfile`, so "never answered" was
-    // `undefined` and has to stay expressible.
+    // "never answered" has to stay expressible.
     await getDb().insert(profiles).values({ oxyUserId: 'oxy-blank' });
     const res = await request(buildApp('oxy-blank')).get('/roommates/preferences');
     expect(res.status).toBe(200);
@@ -419,9 +412,8 @@ describe('toggleRoommateMatching', () => {
 describe('the compatibility score', () => {
   /**
    * The interests branch is worth 20 of the 100 points and has NEVER been able
-   * to fire: `prefs1.interests && prefs2.interests` guarded a field mongoose
-   * strict mode discarded on every write, so the scorer has been running on 80
-   * points for its whole life.
+   * to fire: `prefs1.interests && prefs2.interests` guarded a field nothing
+   * stored, so the scorer had been running on 80 points for its whole life.
    */
   const lifestyle = {
     settingsRoommatePreferencesLifestyleSmoking: 'no',
@@ -464,9 +456,8 @@ describe('the compatibility score', () => {
   it('scores a person who has stated nothing at 0 rather than perfectly', async () => {
     // Two all-NULL rows agree on every `===` the scorer performs, so the naive
     // flattening of `personalProfile` — where "did not answer" stops being
-    // representable — reads them as a 100% match. Mongo got the distinction for
-    // free (`personalProfile` was `undefined` until somebody filled the form
-    // in); here it is rebuilt by two guards in `toMatchInputs`.
+    // representable — reads them as a 100% match. The distinction is rebuilt by
+    // two guards in `toMatchInputs`.
     //
     // Mutation-tested, and the result is worth stating because it bounds what
     // this assertion can see: the two guards are INDEPENDENTLY sufficient.

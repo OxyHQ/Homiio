@@ -1,7 +1,7 @@
 ##
 ## Dockerfile for the Homiio Backend API + listing worker (@homiio/backend)
 ##
-## Production image for the Express + Mongoose API and the listing-ingestion
+## Production image for the Express + PostgreSQL API and the listing-ingestion
 ## worker. Built for AWS Graviton (linux/arm64) but also runs on linux/amd64.
 ## The build context MUST be the monorepo root so the workspace packages
 ## (shared-types + listing-providers + backend) resolve:

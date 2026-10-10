@@ -1,30 +1,17 @@
 /**
  * Single-listing and own-listings reads.
  *
- * Both read Postgres, and the view counter now WRITES Postgres — the dual-run
- * is over and Postgres is the single authority for properties.
+ * Both read Postgres, and the view counter writes it.
  *
- * **The counter starts working here for the first time.** `views` is absent
- * from `PropertySchema`, so mongoose strict mode stripped it from this `$inc`
- * and every increment this product ever issued was an empty update; the column
- * starts at zero for every listing (`db/schema/unmappedColumns.ts`) and climbs
- * from now on. Recorded because somebody comparing view counts across the
- * cutover will see them reset, and the honest explanation is that they were
- * never being counted, not that the port lost them.
+ * **The view counter** is `properties.views`, which started at zero for every
+ * listing (`db/schema/unmappedColumns.ts`), so a low count on an old listing is
+ * expected rather than a lost increment.
  *
- * ## The recently-viewed upsert moved too, and it had drifted further than a
- * ## store
+ * ## The recently-viewed write is keyed like its read
  *
- * It wrote Mongo keyed by a `profileId` while #308 moved the READ of that table
- * to Postgres keyed by `oxy_user_id` — so the write and the read were in
- * different stores AND on different keys, and neither would ever have found the
- * other's rows. It is `trackPropertyView` now, which takes the Oxy user id
- * directly.
- *
- * That removes the `Profile.findByOxyUserId` lookup entirely rather than
- * porting it: it existed only to turn an Oxy user id into the profile id this
- * table used to be keyed by, and the table is not keyed that way any more. A
- * listing view no longer depends on the viewer having a profile row at all.
+ * {@link trackPropertyView} takes the Oxy user id directly, the same key the
+ * read uses, so the write and the read always find each other's rows. A listing
+ * view does not depend on the viewer having a profile row at all.
  */
 
 import { AppError, successResponse, paginationResponse } from '../../middlewares/errorHandler';

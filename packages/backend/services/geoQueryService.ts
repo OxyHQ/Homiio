@@ -11,18 +11,14 @@
  * (the caller should treat that as "no results"), distinct from an empty filter
  * (no geo constraint at all), which the callers detect before calling.
  *
- * ## The `isValidObjectId` DISCRIMINATOR is gone, and it is not replaced
+ * ## "Is this an id or a name?" is asked of the DATABASE, never of the shape
  *
- * This file used to decide "is this an id or a place name?" by testing the
- * string's SHAPE (`Types.ObjectId.isValid`). That is not a validity guard, it is
- * a branch — and post-cutover it branches WRONG: a uuid v7 city id fails the
- * test, falls through to the name lookup, matches no city, and the caller reads
- * "unknown city → no results". No error, no log, an empty result page.
- *
- * Widening it to also accept uuid v7 would rebuild the same bug in a new
- * costume, so the shape test is DELETED rather than widened
- * (`db/MIGRATION-CONTRACT.md` §"`isValidObjectId` guards are DELETED, not
- * widened"). What replaces it is not another test: the ambiguity is REAL — every
+ * Deciding by the string's SHAPE is not a validity guard, it is a branch — and
+ * it branches WRONG: a uuid v7 city id fails a 24-hex test, falls through to the
+ * name lookup, matches no city, and the caller reads "unknown city → no
+ * results". No error, no log, an empty result page
+ * (`db/MIGRATION-CONTRACT.md` §"Never branch on an id's FORMAT"). The ambiguity
+ * is REAL — every
  * caller's parameter is documented as "city (id or name)" and the frontend sends
  * both — so the question "is this an id?" is answered by ASKING THE DATABASE,
  * with `id = $1 or lower(name) = lower($1)` in a single statement. Both sides are
@@ -31,10 +27,9 @@
  * every id shape that will ever exist — 24-char hex, uuid v7, or whatever
  * follows — because nothing here knows or cares what an id looks like.
  *
- * One behaviour note, deliberately different and better: where two rows share a
- * name (case-insensitively) Mongo's `findOne` returned an ARBITRARY one, which
- * could differ between two identical requests. The `order by … , id` tiebreak
- * makes the answer stable.
+ * Where two rows share a name (case-insensitively), the `order by … , id`
+ * tiebreak makes the answer stable rather than arbitrary between two identical
+ * requests.
  */
 
 import { and, eq, sql, type SQL } from 'drizzle-orm';
@@ -102,9 +97,8 @@ export async function resolveRegionId(state: string): Promise<string | null> {
  * Resolve a neighborhood query (id or name) to a single neighborhood id, or null
  * if unknown.
  *
- * `cityId` scopes the NAME side only, never the id side — matching the Mongo
- * filter this replaces, where an explicitly supplied neighborhood id was looked
- * up unscoped. That asymmetry is deliberate: an id already names exactly one
+ * `cityId` scopes the NAME side only, never the id side — an explicitly
+ * supplied neighborhood id is looked up unscoped. That asymmetry is deliberate: an id already names exactly one
  * row, so scoping it could only ever turn a correct answer into no answer.
  */
 export async function resolveNeighborhoodId(
@@ -142,39 +136,12 @@ export async function resolveNeighborhoodId(
  * Callers that pass no constraint at all should not call this (they have no
  * narrowing to do); when every provided field is blank this returns `null`.
  *
- * **Every catalogue read has stopped calling this, and the two that remain are
- * named.** The property list, search, geo and city feeds used to load an entire
- * city's addresses into one uncapped `$in`; they now compare
- * `addresses.city_id` on the row the property read already joins
- * (`db/properties/propertyGeo.ts`). What still calls it reads MONGO properties
- * and therefore cannot use a Postgres join:
- *
- *  - `controllers/roomController.getRooms` — rooms are `properties` rows, but
- *    this controller also CREATES and UPDATES them, and writes stay on Mongo for
- *    the dual-run.
- *  - `controllers/telegramController.sendBulkNotifications` — resolves a city
- *    filter to `Property.find({ addressId: { $in: … } })` for a broadcast.
- *  - `models/schemas/PropertySchema.statics.search` — part of the Mongoose model
- *    itself.
- *
- * All three move with the property WRITE path, and this function goes with them.
- * Do not add a caller: for anything reading Postgres properties, the predicates
- * in `db/properties/propertyFilters` are the replacement.
- *
- * **The list above is load-bearing and was wrong once already.** It shipped in
- * #298 naming two of the three — `telegramController` was missed — and an
- * inventory that under-counts is worse than none, because the whole point of it
- * is to tell the next reader when the function is finally safe to delete. If
- * you change this list, `git grep -n resolveGeoFilterAddressIds` is the check;
- * ignore the two doc-comment mentions in `controllers/property/{list,search}.ts`
- * and `db/schema/geo.ts`, which name it only to say it is no longer used there.
- *
- * **Its one non-Property caller is gone.** `addressController.searchAddresses`
- * used it to turn a search term into an address-id list and then match
- * `_id IN (…)` against the very table it was searching. There is no Property in
- * that query, so the id list was never buying anything: the geo scope is three
- * foreign keys ON `addresses`, and it is now three ordinary `OR` predicates
- * there. What is left here is the Property-filter shape, and only that.
+ * **No production read calls this.** The property list, search, geo, city,
+ * room and Telegram feeds compare `addresses.city_id` on the row the property
+ * read already joins (`db/properties/propertyGeo.ts`) rather than loading an
+ * entire city's addresses into one uncapped id list. Do not add a caller: for
+ * anything reading properties, the predicates in `db/properties/propertyFilters`
+ * are the replacement. `git grep -n resolveGeoFilterAddressIds` is the check.
  */
 export async function resolveGeoFilterAddressIds(input: GeoFilterInput): Promise<string[] | null> {
   const conditions: SQL[] = [];

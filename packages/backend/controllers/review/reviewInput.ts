@@ -1,26 +1,20 @@
 /**
- * Turning an allowlisted review body into typed column values — the layer
- * Mongoose used to be.
+ * Turning an allowlisted review body into typed column values.
  *
- * ## Why this file exists at all, when the previous port did not need one
+ * ## Why this file exists at all
  *
- * `createReview` used to hand `pickFields` output straight to `new Review(...)`,
- * and mongoose did three separate jobs on the way in that no longer happen:
+ * Three jobs happen on the way in, and nothing else does them:
  *
- *  1. **CASTING.** `price: "1200"` became `1200`, `livedFrom: "2020-01-01"`
- *     became a `Date`, `rating: "4"` became `4`. postgres.js does none of it: a
- *     string bound to `double precision` is `22P02 invalid_text_representation`,
+ *  1. **CASTING.** `price: "1200"` becomes `1200`, `livedFrom: "2020-01-01"`
+ *     becomes a `Date`, `rating: "4"` becomes `4`. postgres.js does none of it:
+ *     a string bound to `double precision` is `22P02 invalid_text_representation`,
  *     and an `Invalid Date` is not a storable `timestamptz` at all.
- *  2. **VALIDATION that produced a 400.** The schema's `enum`, `min`/`max`,
- *     `minlength`/`maxlength` and the pros/cons `≤ 10` validator all ran on
- *     CREATE, and the controller answered `ValidationError` with a 400 naming
- *     the fields. The equivalent CHECKs now live in `db/schema/reviews.ts` —
- *     which is STRONGER, because they also hold on an UPDATE, where mongoose's
- *     validators never ran — but a CHECK violation reaches the controller as a
- *     driver error and would be answered 500. A rejected review is a 400.
+ *  2. **VALIDATION that produces a 400.** The CHECKs in `db/schema/reviews.ts`
+ *     hold on every write, but a CHECK violation reaches the controller as a
+ *     driver error and would be answered 500. A rejected review is a 400 naming
+ *     the fields.
  *  3. **The length caps that have NO Postgres counterpart.** `CONVENTIONS.md`
- *     defers `maxlength` and format validators out of this migration
- *     deliberately, so `title ≤ 120`, `opinion ≤ 2000` and the image-URL shape
+ *     defers `maxlength` and format validators deliberately, so `title ≤ 120`, `opinion ≤ 2000` and the image-URL shape
  *     are enforced HERE or nowhere. `db/schema/reviews.ts` states the pros/cons
  *     cap as the controller's job in as many words ("capped at ten by the
  *     controller"), so this module is the place that sentence points at.
@@ -92,15 +86,14 @@ export type ReviewCreateFields = ReviewPatch &
  * A normalization outcome.
  *
  * A discriminated union rather than a throw, because the caller answers a
- * refusal with the SAME `{ message: 'Validation error', errors: [...] }` body
- * the mongoose `ValidationError` branch produced — a shape the frontend already
- * renders.
+ * refusal with the `{ message: 'Validation error', errors: [...] }` body — a
+ * shape the frontend already renders.
  */
 export type ReviewInputResult<T> =
   | { readonly ok: true; readonly values: T }
   | { readonly ok: false; readonly errors: string[] };
 
-/** A collector, so one bad body reports every problem at once as mongoose did. */
+/** A collector, so one bad body reports every problem at once. */
 class Errors {
   readonly list: string[] = [];
 
@@ -231,9 +224,8 @@ function serviceList(errors: Errors, value: unknown): string[] | undefined {
 /**
  * A tenancy date.
  *
- * Accepts what mongoose accepted — an ISO string or an epoch number — and
- * refuses anything `Date` cannot parse, which mongoose reported as a
- * `CastError`. An `Invalid Date` is not a storable `timestamptz`, so this
+ * Accepts an ISO string or an epoch number and refuses anything `Date` cannot
+ * parse. An `Invalid Date` is not a storable `timestamptz`, so this
  * refusal is the difference between a 400 and a driver error.
  */
 function tenancyDate(errors: Errors, field: string, value: unknown): Date | undefined {
@@ -301,7 +293,7 @@ function normalize(picked: Record<string, unknown>): ReviewInputResult<ReviewPat
 
   const currency = optionalEnum(errors, 'currency', picked.currency, PAYMENT_CURRENCIES);
   // `currency` is `NOT NULL DEFAULT 'EUR'`, so a cleared value is an omission
-  // rather than a NULL — the default then applies, exactly as mongoose's did.
+  // rather than a NULL — the default then applies.
   if (currency !== undefined && currency !== null) values.currency = currency;
 
   if (picked.rating !== undefined) {

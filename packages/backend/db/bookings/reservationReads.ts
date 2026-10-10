@@ -254,8 +254,7 @@ export async function transitionReservation(
 /**
  * The wire shape the booking screens read.
  *
- * The Mongoose handlers returned `reservation.toJSON()` — every field — so this
- * carries every column. `id`, never `_id`.
+ * Every column. `id`, never `_id`.
  */
 export function serializeReservation(row: ReservationRow): Record<string, unknown> {
   return {

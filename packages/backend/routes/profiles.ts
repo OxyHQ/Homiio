@@ -88,9 +88,9 @@ export default function () {
       // either way, so it is the honest place for the row to appear.
       await ensureBilling(oxyUserId);
 
-      // ONE guarded statement decides all three outcomes. The Mongo version read
-      // the record, checked `fileCredits > 0`, and then decremented — so two
-      // concurrent requests could each see 1 and each spend it. `consumeFileCredit`
+      // ONE guarded statement decides all three outcomes. Reading the record,
+      // checking `fileCredits > 0` and then decrementing would let two concurrent
+      // requests each see 1 and each spend it. `consumeFileCredit`
       // carries the predicate into the UPDATE, so the guard and the write cannot
       // interleave, and "no row updated" IS the out-of-credits answer.
       const result = await consumeFileCredit(oxyUserId);

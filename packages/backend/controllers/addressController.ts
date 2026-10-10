@@ -9,7 +9,7 @@
  * Each address serializes with ONE id, `id` — these responses used to carry
  * `_id` beside it and no longer do. Its `coordinates` still leave as a
  * GeoJSON `{ type: 'Point', coordinates: [lng, lat] }` pair even though the table
- * stores named `longitude` / `latitude` columns, and the Mongo field spellings
+ * stores named `longitude` / `latitude` columns, and the wire field spellings
  * (`postal_code`, `building_name`, `address_lines`, `po_box`, `land_plot`) are
  * preserved because those are the names the frontend reads.
  *
@@ -212,8 +212,7 @@ export const searchAddresses = async (req: Request, res: Response) => {
     // city/region/neighborhood rows — but the SCOPE it produces is three foreign
     // keys ON `addresses`, which is the table being searched. So this resolves
     // three ids and ORs three ordinary predicates; it deliberately does NOT go
-    // through `resolveGeoFilterAddressIds`, which exists to hand an address-id
-    // list to a Mongo PROPERTY query. Materialising an entire city's addresses
+    // through an address-id list. Materialising an entire city's addresses
     // only to match them against their own table buys nothing and costs a scan.
     const [cityId, regionId, neighborhoodId] = await Promise.all([
       resolveCityId(term),
@@ -241,8 +240,7 @@ export const searchAddresses = async (req: Request, res: Response) => {
         where,
         limit: Number(limit),
         offset: skip,
-        // `created_at` is NOT NULL, so Postgres' NULLS FIRST on a DESC order and
-        // Mongo's missing-first cannot disagree here.
+        // `created_at` is NOT NULL, so NULL ordering cannot matter here.
         orderBy: desc(addresses.createdAt),
       }),
       getDb().select({ total: count() }).from(addresses).where(where),

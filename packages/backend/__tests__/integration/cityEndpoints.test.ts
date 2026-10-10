@@ -107,7 +107,7 @@ describe('GET /api/cities', () => {
 
     const res = await request(app).get('/api/cities').expect(200);
 
-    // Mongoose omitted an unset path entirely; `res.json` would ship an explicit
+    // The wire omits an unset field entirely; `res.json` would ship an explicit
     // `null`, which a `??` on the frontend treats differently from absence.
     expect(res.body.data[0]).not.toHaveProperty('timezone');
     expect(res.body.data[0]).not.toHaveProperty('coordinates');
@@ -185,10 +185,9 @@ describe('GET /api/cities/popular', () => {
     await getDb().update(cities).set({ coverImageId: coverId }).where(eq(cities.id, chain.cityId));
     expect((await request(app).get('/api/cities/popular').expect(200)).body.data).toHaveLength(1);
 
-    // Mongo held 17 cities whose `coverImageId` named an image that no longer
-    // existed (measured 2026-08-06); the real foreign key makes that state
-    // unrepresentable here — `ON DELETE SET NULL` turns it into a NULL, and the
-    // backfill applies the same rule to those 17. What this pins is that the
+    // A cover naming an image that no longer exists is unrepresentable — the
+    // real foreign key's `ON DELETE SET NULL` turns it into a NULL. What this
+    // pins is that the
     // endpoint drops the city either way rather than emitting a cover the
     // frontend cannot render.
     await getDb().delete(images).where(eq(images.id, coverId));

@@ -1,9 +1,7 @@
 /**
  * `generatePaymentSchedule` — the instalments a lease is billed in.
  *
- * Ported from `LeaseSchema.methods.generatePaymentSchedule`, a Mongoose METHOD
- * with no Postgres counterpart, so it becomes an ordinary pure function that
- * returns rows for `lease_payment_schedule`. It is a separate module from the
+ * An ordinary pure function that returns rows for `lease_payment_schedule`. It is a separate module from the
  * repository because it is the one piece of real arithmetic in the lease domain
  * and it earns its own test: this is the PRICED quantity a tenant agreed to, and
  * a wrong instalment is money.
@@ -47,7 +45,7 @@
  * runs UTC, so this changes nothing about what production would have generated
  * and removes the way it could have been wrong.
  *
- * ## What the CHECK now enforces that Mongo did not
+ * ## What the CHECK enforces
  *
  * Every row this returns is `pending` with no `paidDate` and no `paidAmount`,
  * which is the half of `lease_payment_schedule_paid_evidence_check` that says an

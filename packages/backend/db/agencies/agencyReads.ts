@@ -8,11 +8,10 @@
  *
  * ## The prefix search is `LIKE`, and the escape is a different escape
  *
- * Mongo spelled it `{ normalizedName: { $regex: '^' + escapeRegex(term) } }`.
- * Its Postgres form is `LIKE $1 || '%'` on the same normalized column, so the
- * term goes through {@link escapeLikePattern} rather than `escapeRegex` — the
- * two metacharacter sets barely overlap, and porting the call site without
- * changing the escape silently turns a term containing `%` into a wildcard. See
+ * It is `LIKE $1 || '%'` on the normalized column, so the term goes through
+ * {@link escapeLikePattern} rather than a regex escape — the two metacharacter
+ * sets barely overlap, and the wrong escape silently turns a term containing
+ * `%` into a wildcard. See
  * `db/likePattern.ts`, which records the whole table.
  *
  * It is `LIKE`, not `ILIKE`, deliberately: `normalized_name` is already
@@ -29,7 +28,7 @@ import { agencies } from '../schema';
 import { escapeLikePattern } from '@oxy.so/utils/sql';
 import type { AgencyRow } from './agencyWrites';
 
-/** How many agencies the create-review typeahead offers. Verbatim from the Mongo read. */
+/** How many agencies the create-review typeahead offers. */
 const AGENCY_SEARCH_LIMIT = 10;
 
 /** One agency by its public slug, or `undefined`. */

@@ -228,8 +228,8 @@ describe('property catalogue reads (Postgres)', () => {
 
       const property = res.body.data;
       expect(property.longTermRent).toEqual({ monthlyAmount: 1450, currency: 'EUR' });
-      // Absent, not null: Mongoose omitted an unset subdocument and `res.json`
-      // would have shipped an explicit `null`.
+      // Absent, not null: the wire omits an unset block, and `res.json` would
+      // ship an explicit `null`.
       expect('shortTermRent' in property).toBe(false);
       expect('sale' in property).toBe(false);
       expect('exchange' in property).toBe(false);

@@ -2,8 +2,7 @@
  * Saved searches — ownership, the unique-name rule, and the `jsonb` filters.
  *
  * The real handlers against the REAL Postgres this worker owns, mounted behind a
- * fake-auth middleware. The Mongo collection was empty in production, so nothing
- * here asserts a preserved row; what it asserts is that the RULES the schema now
+ * fake-auth middleware. What it asserts is that the RULES the schema now
  * carries actually hold, in both directions.
  *
  * ## What makes these tests non-vacuous

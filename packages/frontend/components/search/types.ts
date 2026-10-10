@@ -189,8 +189,8 @@ export interface SearchQuery {
    * Minimum floor area, in SQUARE METRES.
    *
    * Metres, and the unit is worth saying because the column behind it is named
-   * `square_footage` — a legacy misnomer carried through the Mongo port, which
-   * every reader confirms holds metres (`formatArea(..., 'sqm', ...)`,
+   * `square_footage` — a legacy misnomer, which every reader confirms holds
+   * metres (`formatArea(..., 'sqm', ...)`,
    * `pricePerSqm`). A filter that assumed feet would return homes three times
    * the size somebody asked for and nothing would throw.
    */

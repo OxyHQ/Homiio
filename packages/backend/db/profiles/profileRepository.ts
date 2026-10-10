@@ -2,38 +2,24 @@
  * `profiles` and its five child tables — the tenant profile Oxy does not own, on
  * Postgres.
  *
- * ## The row counts, measured on BOTH stores rather than assumed
+ * ## The row counts, measured rather than assumed
  *
- * Run 2026-08-09 from a one-shot on the live task definition, against
- * `homiio-production` and the `homiio` Postgres database:
- *
- * | store | rows |
- * |---|--:|
- * | Mongo `profiles` | **5** |
- * | Postgres `profiles` | **5** — the SAME five `oxy_user_id`s, all 24-char hex ids |
- * | all five child collections / tables, both stores | **0** |
- *
- * So the copy is COMPLETE for this collection, and the apparent gap between
- * "five rows in Postgres" and "a much larger Mongo collection" is an artefact of
- * the comparison rather than of the backfill: the Mongo collection is five rows
- * too. It is recorded here because the opposite conclusion — a partial copy —
- * would make every read below a consistency hazard, and nothing in the code
- * could tell you which it was.
+ * Run 2026-08-09 from a one-shot on the live task definition: `profiles` holds
+ * **5** rows (all 24-char hex ids) and all five child tables hold **0**.
  *
  * The population being this small has a cause worth stating, because it is the
  * thing that would otherwise make five look wrong: production holds 17,644
  * properties and **not one** carries an `oxy_user_id` (they are all external
- * aggregator listings, and the ingest hook strips the owner). There is no larger
- * set of "profiles reachable from properties" a backfill could have missed — the
- * join that would find them is empty on the other side.
+ * aggregator listings, which carry no owner). There is no larger set of
+ * "profiles reachable from properties" — the join that would find them is empty
+ * on the other side.
  *
  * ## One profile per Oxy account, and the INDEX is what enforces it
  *
- * Mongoose declared `unique: true` on `oxyUserId` and the controller wrapped a
- * read-then-create around it, which is a window two concurrent first requests
- * both pass. {@link ensureProfile} INSERTs `ON CONFLICT DO NOTHING` against
+ * A read-then-create is a window two concurrent first requests both pass.
+ * {@link ensureProfile} INSERTs `ON CONFLICT DO NOTHING` against
  * `profiles_oxy_user_id_key` instead — `db/MIGRATION-CONTRACT.md`'s rule that
- * idempotency which moved into an index must not be re-implemented as a read.
+ * idempotency lives in a unique key, never in a read.
  * Why `ON CONFLICT` rather than a caught `23505` is the load-bearing part, and
  * it is explained on the function.
  *
@@ -77,9 +63,8 @@ import { type HydratedProfile, type ProfileRow, profileSelection } from './profi
 /**
  * How many transcript turns the profile keeps.
  *
- * Mongo's `POST /api/ai/history` trimmed with `slice(-100)` on every append. The
- * cap is preserved because it is the only thing bounding an array that grows
- * with every turn — see {@link appendProfileChatTurn}.
+ * `POST /api/ai/history` keeps the last 100 turns on every append. The cap is
+ * the only thing bounding a transcript that grows with every turn — see {@link appendProfileChatTurn}.
  */
 export const PROFILE_CHAT_HISTORY_LIMIT = 100;
 
@@ -105,9 +90,8 @@ export type ProfileRoommateHistoryInput = Omit<
  * A whole update: the scalar columns, plus any child collection being REPLACED.
  *
  * A child key left `undefined` is untouched; a key present as an array replaces
- * that collection wholesale, and an EMPTY array clears it. Those are the same
- * semantics Mongoose had — assigning `personalProfile.references` replaced the
- * array — and they are why `undefined` and `[]` must stay distinguishable.
+ * that collection wholesale, and an EMPTY array clears it. That is why
+ * `undefined` and `[]` must stay distinguishable.
  */
 export interface ProfileUpdate {
   readonly columns: ProfileWriteColumns;
@@ -274,8 +258,7 @@ export async function findHydratedProfile(
  * Absent ids are simply absent from the map. A participant with no profile row
  * is a real state (the roommate tables carry no foreign key to `profiles`,
  * because their columns hold Oxy account ids), and the caller renders `null`
- * for them exactly as it did when the Mongo `$in` returned fewer documents than
- * it was given ids.
+ * for them.
  */
 export async function findHydratedProfilesByOxyUserIds(
   db: DatabaseOrTransaction,
@@ -330,15 +313,10 @@ export interface RoommateCandidatePage {
  *
  * ## Three of these filters used to match NOTHING, and they are REPAIRED here
  *
- * The Mongo query filtered `personalProfile.gender`, `personalProfile.location`
- * and `personalProfile.dateOfBirth`. `personalProfileSchema` declares none of
- * the three, and `database/connection.ts` sets `strictQuery: false` — so rather
- * than being stripped from the filter, all three were passed through to
- * MongoDB, where they matched no document. Setting any of `?gender=`,
- * `?location=` or `?ageRange=` returned an empty page, always. Porting the
- * selectors verbatim would have moved that to Postgres, where they would answer
- * zero just as reliably and look finished; so each is re-pointed at the fact
- * this product actually stores:
+ * `?gender=`, `?location=` and `?ageRange=` once filtered on fields no row
+ * stored (`personalProfile.gender`, `.location`, `.dateOfBirth`) and returned an
+ * empty page, always. Each is re-pointed at the fact this product actually
+ * stores:
  *
  *  - **`gender`** → `settings_roommate_preferences_gender`, the CHECK-constrained
  *    column whose vocabulary (`male | female | any`) is the same one
@@ -346,22 +324,21 @@ export interface RoommateCandidatePage {
  *    want to live with X", which is the only stored fact the filter can mean.
  *  - **`ageRange`** → an OVERLAP against
  *    `settings_roommate_preferences_age_range_{min,max}`. There is no date of
- *    birth in either store and there must not be one: Oxy owns identity and
+ *    birth stored and there must not be one: Oxy owns identity and
  *    Homiio does not mirror it. So "people aged 25-30" becomes "people whose
  *    stated preferred age range overlaps 25-30", which is a different question
  *    with the same intent.
  *  - **`location`** → `settings_roommate_preferences_location`, a column added
  *    by migration 0008 because the write allow-list accepted the field while
- *    mongoose strict mode discarded it. `ILIKE` over `escapeLikePattern` is the
- *    port of `{ $regex, $options: 'i' }`; escaping matters because `%` and `_`
- *    are LIKE metacharacters that mean nothing to a regex, so an unescaped
+ *    nothing stored it. A case-insensitive `ILIKE` over `escapeLikePattern`;
+ *    escaping matters because `%` and `_` are LIKE metacharacters, so an
+ *    unescaped
  *    `100%` would silently stop filtering.
  *
  * ## An unknown answer ADMITS the candidate, everywhere
  *
- * `maxBudget` in the Mongo controller read `if (typeof profileMax !== 'number')
- * return true` — a candidate who stated no budget was kept. Every predicate
- * here follows that rule (`is null or …`), including both halves of the age
+ * A candidate who stated no budget is kept by `maxBudget`. Every predicate here
+ * follows that rule (`is null or …`), including both halves of the age
  * overlap, so a filter narrows the field by what people SAID and never hides
  * the ones who have not answered yet.
  *
@@ -443,7 +420,7 @@ function roommateCandidateFilter(query: RoommateCandidateQuery): SQL | undefined
 /**
  * One page of roommate candidates, hydrated, plus how many there are in total.
  *
- * Ordered by `updated_at` descending like the Mongo query, with the id as a
+ * Ordered by `updated_at` descending, with the id as a
  * TIEBREAK so two rows saved in the same millisecond cannot swap places between
  * the page that shows them and the page that should. The id is never the sort
  * key itself: a `text` primary key mixes ObjectId hex with uuid v7 and the two
@@ -482,16 +459,12 @@ export async function searchRoommateCandidates(
 /**
  * The profile for an Oxy account, created empty if it is not there.
  *
- * **Every column stays NULL on creation**, which is a change from Mongo's
- * `_createDefaultProfile` and a deliberate one. That helper wrote a
- * `personalProfile` block seeded with the schema's defaults — `language: 'en'`,
- * `timezone: 'UTC'`, `profileVisibility: 'public'`, `showContactInfo: true` — so
- * a stored row could not distinguish "the user chose UTC" from "nobody ever
- * asked". `db/schema/profiles.ts` declares every column nullable precisely to
- * keep that distinction, and mongoose never materialized the sub-document
- * either: `personalProfile` is declared with no `default`, so for the five rows
- * that exist NONE of those defaults was ever written. Seeding them here would
- * manufacture five people's answers and then present them as given.
+ * **Every column stays NULL on creation**, deliberately. Seeding the defaults
+ * (`language: 'en'`, `timezone: 'UTC'`, `profileVisibility: 'public'`,
+ * `showContactInfo: true`) would leave a stored row unable to distinguish "the
+ * user chose UTC" from "nobody ever asked". `db/schema/profiles.ts` declares
+ * every column nullable precisely to keep that distinction; seeding them here
+ * would manufacture people's answers and then present them as given.
  *
  * The one place that costs something is the public serializer, which reads
  * `showContactInfo === true` — so a profile that has never been edited discloses
@@ -657,8 +630,8 @@ export async function listProfileChatHistory(
  * would both take the same position and the transcript would have no defined
  * order at that point.
  *
- * Both messages get the SAME timestamp, matching the Mongo handler, which took
- * one `new Date()` for the pair. `position` is what tells them apart.
+ * Both messages get the SAME timestamp — one `new Date()` for the pair.
+ * `position` is what tells them apart.
  *
  * Runs several statements, so the caller supplies the transaction.
  */

@@ -1,6 +1,5 @@
 /**
- * `properties.search_vector` — the replacement for Mongo's
- * `{ title: 'text', description: 'text' }` index.
+ * `properties.search_vector` — the listing full-text index.
  *
  * Two properties are asserted here and they fail in completely different ways:
  *
@@ -18,10 +17,8 @@
  *     with its description. An attempt fails with SQLSTATE `428C9`.
  *
  * `title` is deliberately absent from the expression. It exists on ZERO of the
- * 17,644 production rows (it is not declared in `PropertySchema`, so mongoose
- * strict mode drops it from every write) while Mongo spends 43.51 MiB indexing
- * it — 89% of the collection's whole index footprint. Weighting a field with no
- * data would copy the phantom index into Postgres.
+ * 17,644 production rows, and weighting a field with no data would index
+ * nothing at a cost.
  */
 
 import { and, eq, inArray, sql } from 'drizzle-orm';

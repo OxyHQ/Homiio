@@ -10,19 +10,12 @@
  * `excludeIds` bug (`db/ids.ts`). The duplication is gone: one filter parser,
  * one reader, two thin handlers that supply the radius and the message.
  *
- * ## The two-phase query is gone with it
+ * ## One statement, never two phases
  *
- * Both handlers went through `Property.findNearby` / `Property.findWithinRadius`,
- * Mongoose statics that ran `Address.find({ coordinates: { $near: … } })
- * .select('_id')` — **uncapped** — and then fed every id in the radius back as
- * an `$in`. Here the spatial predicate is `ST_DWithin` against `addresses.geo`
- * in the same statement as the property read; nothing is materialized in the
- * application and the `LIMIT` reaches the planner. See
+ * The spatial predicate is `ST_DWithin` against `addresses.geo` in the same
+ * statement as the property read; no uncapped list of address ids is
+ * materialized in the application, and the `LIMIT` reaches the planner. See
  * `db/properties/propertyGeo.ts`.
- *
- * Those two statics are now unreferenced. They are left on the Mongoose model
- * with the rest of it, because the model is still the WRITE path and deleting
- * half of it is the write batch's job, not this one's.
  */
 
 import type { SQL } from 'drizzle-orm';

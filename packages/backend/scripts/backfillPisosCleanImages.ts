@@ -158,9 +158,7 @@ interface ScanResult {
 /**
  * Classify every pisos property as watermarked (candidate), clean, or imageless.
  *
- * ONE statement, where Mongo needed three phases (load every pisos listing,
- * collect its embedded image ids, then batch `Image.find` them 500 at a time).
- * `property_images` is a real table joined to `images`, so the width of each
+ * ONE statement. `property_images` is a real table joined to `images`, so the width of each
  * referenced photo is just another column — which is why `WIDTH_LOOKUP_BATCH`
  * and `loadReferencedWidths` are gone rather than ported: they existed to work
  * around the absence of a join, not to bound memory.

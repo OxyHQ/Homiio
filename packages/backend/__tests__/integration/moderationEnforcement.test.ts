@@ -16,17 +16,15 @@
  *
  * What had to be added is the truncation below. `moderation_enforcements` is
  * keyed `(decision_id, decision_revision, action)` and `decisionFixture()`
- * defaults to the SAME id (`dec_test_1`) on every call — so under Mongo's
- * per-test collection wipe those tests were independent, and without an
- * equivalent here the second test to use the default would be answered
+ * defaults to the SAME id (`dec_test_1`) on every call — so without a reset the
+ * second test to use the default would be answered
  * `duplicate` by a row the first one left behind. A test file sharing a worker's
  * database with another does the same thing across files.
  *
  * One assertion changed SHAPE and is not weakened: a listing seeded with the
  * column DEFAULT is `moderation_restricted = false`, and absence is not
- * representable — so where the Mongo test read `not.toBe(true)` against a
- * missing subdocument, this reads `toBe(false)` against a real column, which is
- * strictly stronger.
+ * representable — so this reads `toBe(false)` against a real column rather than
+ * `not.toBe(true)`, which is strictly stronger.
  */
 
 import { decisionFixture } from '@crowdsource.you/core/testing';
@@ -482,16 +480,13 @@ describe('enforcement execution', () => {
   });
 
   /**
-   * A listing created AFTER the cutover carries a uuid v7, for which
-   * `mongoose.isValidObjectId` is FALSE. The Mongo effect opened with exactly
-   * that guard, so keeping it would have made every post-cutover listing
-   * permanently un-enforceable while still reporting `changed: false` as though
+   * A new listing carries a uuid v7, for which a 24-hex test is FALSE. An
+   * id-shape guard would make every such listing permanently un-enforceable while still reporting `changed: false` as though
    * it had looked: a jury could restrict such a listing and it would stay up,
    * with an enforcement row claiming the action was handled.
    *
-   * The guard is deliberately gone, and this is the assertion that replaces the
-   * Mongo-era "rejects a malformed id" test — the id shape a report carries is
-   * no longer a precondition on the query.
+   * There is deliberately no such guard — the id shape a report carries is not
+   * a precondition on the query.
    */
   it('restricts a listing whose id is a uuid v7, not an ObjectId hex', async () => {
     const addressId = await seedAddress({ chain: await chain(), street: 'Carrer Generated' });

@@ -4,16 +4,6 @@
  * Publishes the environment `config` captures at module load, and opens the
  * Postgres pool — the store every suite here reads.
  *
- * ## Mongo is not booted anywhere, because Mongo is not installed
- *
- * This file used to spin up an in-memory replica set for every suite. That
- * moved to an opt-in `useMongoMemoryServer()` helper so the remaining users
- * were ENUMERABLE rather than assumed, the list shrank port by port, and the
- * helper is now deleted along with `mongoose` and `mongodb-memory-server`.
- *
- * The enumeration was the mechanism that made this finishable: it turned "how
- * much Mongo is left?" from a measurement somebody had to redo into a grep
- * against the repository, and the answer reached zero.
  */
 
 // Give config a real https public URL so self-hosted image URLs

@@ -104,8 +104,7 @@ async function countImageRows(propertyId: string): Promise<number> {
 
 beforeEach(async () => {
   // Two of these tests ingest the SAME `(rightmove, 90551949)` identity, and
-  // Postgres persists for the whole worker where the per-test in-memory Mongo
-  // did not. Without the reset the second would meet
+  // Postgres persists for the whole worker. Without the reset the second would meet
   // `properties_source_source_id_key` instead of a clean table.
   await resetGeoTables();
   fetchImage.mockClear();

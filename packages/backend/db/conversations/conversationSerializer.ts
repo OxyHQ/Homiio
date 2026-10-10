@@ -5,18 +5,16 @@
  * Three shapes, deliberately not one:
  *
  *  - {@link toConversationSummaryDTO} — a row in the sidebar list. Carries
- *    `messageCount` and `lastMessage`, which were Mongoose VIRTUALS and are
- *    computed by the repository's lateral now (`db/MIGRATION-CONTRACT.md` lists
- *    both under "Virtuals a DTO has to compute").
+ *    `messageCount` and `lastMessage`, computed by the repository's lateral
+ *    (`db/MIGRATION-CONTRACT.md` lists both under "Values a DTO computes").
  *  - {@link toConversationDTO} — one conversation with its whole transcript.
  *  - {@link toSharedConversationDTO} — what a STRANGER following a share link
  *    gets, which is the same minus everything identifying.
  *
  * ## The shared shape omits the owner, and that is the whole point of it
  *
- * `GET /api/ai/shared/:token` needs no authentication. The Mongo handler already
- * hand-picked five fields for exactly this reason; picking them here keeps that
- * property when the row gains a column, whereas returning the row minus a
+ * `GET /api/ai/shared/:token` needs no authentication, so it hand-picks five
+ * fields; picking them here keeps that property when the row gains a column, whereas returning the row minus a
  * blocklist would leak the next one somebody adds. `oxy_user_id`, the share
  * token itself, the token's deadline and the token spend are all absent.
  *
@@ -55,8 +53,7 @@ export function toMessageDTO(hydrated: HydratedMessage): Record<string, unknown>
 /**
  * The shared fields every conversation shape carries.
  *
- * `id` and not `_id` — Mongoose's `toJSON` transform renamed it and PR #287 made
- * that a clean cut across the wire contract.
+ * `id` and not `_id` — PR #287 made that a clean cut across the wire contract.
  */
 function core(conversation: ConversationRow): Record<string, unknown> {
   return {
@@ -97,8 +94,7 @@ export function toConversationDTO(hydrated: HydratedConversation): Record<string
 /**
  * A row in the sidebar list.
  *
- * `messages: []` is carried because the Mongo handler carried it — it mapped
- * `o.messages || []` onto every row — and the client's `loadConversations`
+ * `messages: []` is carried because the client's `loadConversations`
  * reads `conv.messages || []` into its store. Emitting the key empty rather than
  * omitting it keeps a client that renders from the list alone at "no messages
  * yet" instead of "undefined".
@@ -123,8 +119,7 @@ export function toConversationSummaryDTO(summary: ConversationSummary): Record<s
  * What a stranger following a share link gets.
  *
  * Deliberately a PICK and not the row minus a blocklist — see the header. The
- * five fields are the ones the Mongo handler chose, plus the message ids the
- * transcript needs.
+ * five shared fields, plus the message ids the transcript needs.
  */
 export function toSharedConversationDTO(hydrated: HydratedConversation): Record<string, unknown> {
   return {

@@ -4,7 +4,6 @@
  */
 
 // Note: This is a standalone test script that doesn't require database connection
-// const mongoose = require('mongoose');
 // const config = require('../config');
 // const telegramService = require('../services/telegramService').default;
 

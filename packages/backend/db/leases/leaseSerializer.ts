@@ -1,19 +1,17 @@
 /**
  * `leases` row + children → the wire DTO the contracts screens read.
  *
- * Replaces `controllers/lease/toLeaseDTO.ts`, which reshaped a Mongoose
- * document. Two things it has to do that a `.toJSON()` did for free:
+ * Two things it has to do:
  *
  * **Re-nest the flattened columns.** `db/schema/CONVENTIONS.md` flattens
  * `leaseTerms.startDate` to `lease_terms_start_date`, and the wire shape is
- * still `leaseTerms: { startDate }` — the frontend and `Lease` in
- * `@homiio/shared-types` are unchanged by this migration, so the nesting is
- * rebuilt here rather than pushed onto every consumer.
+ * `leaseTerms: { startDate }` — the shape the frontend and `Lease` in
+ * `@homiio/shared-types` read, so the nesting is rebuilt here rather than
+ * pushed onto every consumer.
  *
- * **Compute the four VIRTUALS.** `leaseDuration`, `formattedRent`,
- * `isFullySigned` and `daysUntilExpiration` were Mongoose virtuals; Postgres has
- * no counterpart, so they are derived here. `db/MIGRATION-CONTRACT.md` lists
- * them under "Virtuals a DTO has to compute".
+ * **Compute the four derived fields.** `leaseDuration`, `formattedRent`,
+ * `isFullySigned` and `daysUntilExpiration` have no column, so they are derived
+ * here. `db/MIGRATION-CONTRACT.md` lists them under "Values a DTO computes".
  *
  * ## Two fields a screen cannot compute for itself (#518 §7.4)
  *
@@ -28,8 +26,8 @@
  * `signatures_landlord_digital_signature` and its tenant counterpart are in
  * `db/schema/protectedColumns.ts`. Reads go through `publicColumns(leases)`, so
  * the columns are not in {@link LeaseRow} at all and this module could not emit
- * them if it tried — which is the point. Mongoose hid them only by their absence
- * from `toLeaseDTO`'s field list, i.e. by nobody having added them.
+ * them if it tried — which is the point. Absence from a field list would
+ * protect them only until somebody added them.
  */
 
 import type { InferSelectModel } from 'drizzle-orm';
@@ -130,11 +128,10 @@ function formattedRent(row: LeaseRow): string {
  * `isFullySigned` — both parties AND every co-tenant.
  *
  * **It used to disagree with `status` on purpose, and no longer does** (#518
- * §7.4). Mongo's `signAsLandlord`/`signAsTenant` set `status = 'active'` as soon
- * as the OTHER principal had signed, consulting no co-tenant, while this virtual
- * consulted all of them — so a lease with an unsigned co-tenant read
- * `status: 'active'` and `isFullySigned: false`. That was faithful to the source
- * and it was a lease calling itself active while a person named on it had not
+ * §7.4). Status once went `active` as soon as the OTHER principal had signed,
+ * consulting no co-tenant, while this field consulted all of them — so a lease
+ * with an unsigned co-tenant read `status: 'active'` and `isFullySigned: false`.
+ * That was a lease calling itself active while a person named on it had not
  * signed, in a schema where that person had no way to sign at all. `signLease`
  * now waits for every party, so the two answers agree.
  *
@@ -200,10 +197,9 @@ export function serializeLeaseDocument(row: LeaseDocumentRow): Record<string, un
      * that could not see both could only be told the answer.
      */
     contentSha256: row.contentSha256 ?? undefined,
-    // The column was RENAMED from Mongo's `uploadedBy` so `isOxyAccountColumn`
-    // could classify it (`db/MIGRATION-CONTRACT.md`); the wire keeps the old
-    // name, because renaming a response field is a frontend change and this
-    // migration is not one.
+    // The column is `uploaded_by_oxy_user_id` so `isOxyAccountColumn` can
+    // classify it (`db/MIGRATION-CONTRACT.md`); the wire keeps `uploadedBy`,
+    // because renaming a response field is a frontend change.
     uploadedBy: row.uploadedByOxyUserId,
     uploadedDate: row.uploadedDate,
   };
@@ -411,7 +407,7 @@ export function serializeLease(hydrated: HydratedLease): Record<string, unknown>
       serializeInspection(inspection, findingsByInspection.get(inspection.id) ?? []),
     ),
 
-    // The four Mongoose virtuals.
+    // The four derived fields.
     leaseDuration: leaseDuration(row),
     formattedRent: formattedRent(row),
     isFullySigned: isFullySigned(row, hydrated.coTenants),

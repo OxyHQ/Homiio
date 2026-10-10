@@ -10,20 +10,17 @@
  *
  * ## Why every field is named, and why it may not be a spread
  *
- * Mongoose let the controller assign a nested object onto the document and sort
- * the paths out itself. The equivalent here — spreading a subtree into `.set()`
- * — sends drizzle keys that are not columns, and **drizzle IGNORES an unknown
+ * Spreading a subtree into `.set()` sends drizzle keys that are not columns, and **drizzle IGNORES an unknown
  * key rather than refusing it**. The write would succeed, report success, and
  * store nothing. So the cost is a long function and the benefit is that a field
  * nobody mapped cannot look like a field that was saved. Same reasoning, same
  * shape, as `controllers/lease/leaseWriteColumns.ts`.
  *
- * ## Block-at-a-time replacement, matching what Mongo did
+ * ## Block-at-a-time replacement
  *
- * `updateMyProfile` merged at the TOP level only
- * (`{...profile.personalProfile, ...body.personalProfile}`), so sending
- * `personalInfo` replaced the whole `personalInfo` block and left `preferences`
- * alone. That is reproduced exactly: a block absent from the body contributes no
+ * `updateMyProfile` merges at the TOP level only, so sending `personalInfo`
+ * replaces the whole `personalInfo` block and leaves `preferences` alone: a
+ * block absent from the body contributes no
  * columns, and a block PRESENT contributes every one of its columns — including
  * the ones the client omitted, which are written NULL. Anything else would make
  * "clear my bio" impossible to express.
@@ -35,8 +32,8 @@
  *
  * ## Vocabularies are FILTERED, not rejected
  *
- * A value outside a declared set is dropped to `null` rather than 400ing, which
- * is what mongoose did with `runValidators` off on an update. The alternative is
+ * A value outside a declared set is dropped to `null` rather than 400ing. The
+ * alternative is
  * a `23514` from the CHECK, which is a 500 for a field the client can simply not
  * have known about.
  */
@@ -84,8 +81,8 @@ function asString(value: unknown): string | null {
 }
 
 function asTrimmed(value: unknown): string | null {
-  // Mongo's `trim: true` was application behaviour with no Postgres counterpart,
-  // so `db/schema/CONVENTIONS.md` says re-apply it at the CALL SITE. This is it.
+  // `db/schema/CONVENTIONS.md` says trimming is applied at the CALL SITE. This
+  // is it.
   const raw = asString(value);
   return raw === null ? null : raw.trim();
 }
@@ -133,7 +130,7 @@ function asMemberArray<T extends string>(value: unknown, vocabulary: readonly T[
   );
 }
 
-/** A free-text array, trimmed and lowercased (Mongo's `preferredAmenities`). */
+/** A free-text array, trimmed and lowercased (`preferredAmenities`). */
 function asLowercasedArray(value: unknown): string[] | null {
   if (!Array.isArray(value)) return null;
   return value
@@ -145,8 +142,8 @@ function asLowercasedArray(value: unknown): string[] | null {
 /**
  * A free-text array, trimmed but NOT lowercased — the roommate `interests` tags.
  *
- * `preferredAmenities` is lowercased because Mongo declared `lowercase: true`
- * on it and the amenity vocabulary is machine-matched. Interests are typed by
+ * `preferredAmenities` is lowercased because the amenity vocabulary is
+ * machine-matched. Interests are typed by
  * people and shown back to them, and the only thing that compares them is
  * `calculateMatchPercentage`'s exact-string intersection, which two users type
  * consistently or not regardless of case. Folding them would be inventing a
@@ -166,8 +163,8 @@ function toReference(value: unknown): ProfileReferenceInput | undefined {
   if (!entry) return undefined;
   const name = asTrimmed(entry.name);
   const relationship = asMember(entry.relationship, REFERENCE_RELATIONSHIPS);
-  // Both are `NOT NULL` in the schema because both were `required: true` in
-  // Mongo. An entry missing either is dropped rather than 500ing on a `23502`.
+  // Both are `NOT NULL` in the schema. An entry missing either is dropped
+  // rather than 500ing on a `23502`.
   if (!name || !relationship) return undefined;
   return {
     name,
@@ -210,7 +207,7 @@ function toPreferredLocation(value: unknown): ProfilePreferredLocationInput | un
   return {
     city: asTrimmed(entry.city),
     state: asTrimmed(entry.state),
-    // Miles, keeping Mongo's units — `db/schema/profiles.ts` says so and says
+    // Miles — `db/schema/profiles.ts` says so and says
     // renaming the column would be an API change rather than a schema one.
     radius: asNumber(entry.radius),
   };
@@ -382,7 +379,7 @@ export function toProfileUpdate(body: unknown): ProfileUpdate {
     columns.preferencesAccessibility = asBoolean(preferences.accessibility);
     // `preferredLocations` lives INSIDE the preferences block in the wire shape
     // and in its own table here, so it is replaced exactly when that block is
-    // present — which is what assigning the block did in Mongo.
+    // present.
     update.preferredLocations =
       mapEntries(preferences.preferredLocations, toPreferredLocation) ?? [];
   }

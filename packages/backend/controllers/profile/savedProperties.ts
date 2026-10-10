@@ -1,24 +1,19 @@
 /**
  * Saved properties, on Postgres.
  *
- * Ported from the Mongo `Saved` collection to `db/saved/savedPropertyRepository.ts`.
- * The collection held 0 documents in production, so no user-visible behaviour
- * depends on a row this port had to preserve.
+ * Backed by `db/saved/savedPropertyRepository.ts`.
  *
  * ## The listings themselves come from the catalogue repository
  *
- * `Property.find({ _id: { $in: ids } }).populate('addressId')` becomes
  * `findProperties` + `serializeProperty` — the same path every catalogue read
  * already takes, so a saved listing is serialized by the ONE module that knows
  * how to re-nest the flattened columns. Two orderings are in play and only one
  * of them is the catalogue's: the response is ordered by when each listing was
  * SAVED, so the ids are re-ordered here rather than in SQL.
  *
- * ## The dead-pointer filter is gone, because a dead pointer is unrepresentable
+ * ## No dead-pointer filter, because a dead pointer is unrepresentable
  *
- * The Mongo handler dropped any save whose property could not be found
- * (`if (!prop) return null`), which was necessary: `targetId` was a bare string
- * with nothing behind it. `saved_items.target_id` is a real foreign key with
+ * `saved_items.target_id` is a real foreign key with
  * `ON DELETE CASCADE`, so a save outlives its listing for exactly no time at
  * all. Keeping the filter would mean writing a branch no test could ever reach.
  *
@@ -187,10 +182,7 @@ export async function unsaveProperty(req: Request, res: Response, next: NextFunc
 /**
  * Update saved property notes for the current user's profile
  *
- * The Mongo handler followed this with a best-effort mirror of the note into
- * `SavedPropertyFolder.properties[].notes`, inside a `try {} catch {}` that
- * swallowed its own failures. That second copy is not written any more — see the
- * header of `db/saved/savedFolderRepository.ts` for why folder membership has
+ * No second copy of the note is written anywhere — see the header of `db/saved/savedFolderRepository.ts` for why folder membership has
  * exactly one representation.
  */
 export async function updateSavedPropertyNotes(req: Request, res: Response, next: NextFunction) {

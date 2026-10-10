@@ -2,12 +2,7 @@
  * Test data factories.
  *
  * Every factory here writes POSTGRES — the store the controllers and services
- * under test actually read and write. Nothing in this file reaches a Mongoose
- * model any more, and nothing should: a suite that genuinely needs a Mongo
- * document (the backfill suites, and the handful of tests still pinned to a
- * domain that has not moved) imports the model it wants directly, where the
- * dependency is visible in that file rather than acquired by anyone who imports
- * a factory.
+ * under test actually read and write.
  *
  * Ids are returned as `id`, never `_id`: that is the wire contract (#287) and
  * the column name, and a factory that spelled it the old way would keep every
@@ -25,9 +20,7 @@ import { addresses, cities, countries, properties, regions } from '../../db/sche
  *
  * UPSERTS rather than inserts, and the difference is a real flake rather than a
  * style choice: a test calling `createAddress()` twice must not try to insert
- * Spain twice. Against Mongo whether that threw depended on whether the unique
- * index had finished building yet, so the same code failed or passed depending
- * on how early in the run it executed. Here `countries_code_key`,
+ * Spain twice. `countries_code_key`,
  * `regions_country_name_key` and `cities_region_slug_key` exist from the
  * migration, so `ON CONFLICT DO UPDATE` is deterministic from the first call.
  *
@@ -65,7 +58,7 @@ async function ensureGeo(): Promise<{ countryId: string; regionId: string; cityI
  *
  * Looked up by street before inserting, because several listings at the same
  * door legitimately share one address row and `addresses_normalized_key_key`
- * would refuse a second — the same reason the Mongo version did this.
+ * would refuse a second.
  */
 export async function createAddress(): Promise<{ id: string }> {
   const geo = await ensureGeo();

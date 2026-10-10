@@ -117,8 +117,7 @@ function emptyStats(): PartnerStats {
 async function computeStats(partnerId: string): Promise<PartnerStats> {
   const db = getDb();
   const [listingCounts, commissionTotals] = await Promise.all([
-    // Both listing counts in ONE pass. The Mongo version issued two
-    // `countDocuments` over the same index; a filtered aggregate reads the rows
+    // Both listing counts in ONE pass: a filtered aggregate reads the rows
     // once and cannot report an `activeListings` from a different instant than
     // its own `referredCount`.
     db
@@ -265,8 +264,7 @@ class PartnerController {
       }
       // Through the shared read repository, so a partner's referral list is the
       // same listing shape (address join, photos, calendar) every other feed
-      // serves — the Mongo version's `.populate('addressId')` produced a
-      // different body from `GET /properties`.
+      // serves, the same body as `GET /properties`.
       const sourced = await findProperties({
         where: allOf([eq(properties.sourcedByPartnerId, partner.id)]),
         orderBy: propertyOrderBy(NEWEST_FIRST),

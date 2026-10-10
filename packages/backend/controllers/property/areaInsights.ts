@@ -23,12 +23,9 @@
  *
  * ## The scopes are SQL predicates, not id lists
  *
- * The copy resolved each scope by loading every matching ADDRESS id into an
- * uncapped array and `$in`-ing it against the listings, because Mongo could not
- * join. `radiusScope` / `cityScope` / `neighborhoodScope` are predicates over
- * the address join `propertyReads` already makes, so those intermediate arrays —
- * and the over-fetch-then-re-sort that reproduced their distance ordering — are
- * gone rather than ported.
+ * `radiusScope` / `cityScope` / `neighborhoodScope` are predicates over the
+ * address join `propertyReads` already makes, so no scope loads every matching
+ * ADDRESS id into an uncapped array, and nothing over-fetches and re-sorts.
  */
 
 import type { Request, Response, NextFunction } from 'express';

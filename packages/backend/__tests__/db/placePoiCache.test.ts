@@ -11,9 +11,9 @@
  *
  * ## What is genuinely different about the Postgres shape
  *
- * Mongo embedded `categories[]` on the document, so a write was one assignment
- * and could not half-happen. `place_poi_categories` is a child table, which
- * makes two things newly possible and therefore worth pinning:
+ * `place_poi_categories` is a child table, so a write is more than one
+ * statement and could half-happen. That makes two things possible and
+ * therefore worth pinning:
  *
  *  - a refresh that updates the cell but leaves the OLD categories behind — a
  *    cache that confidently serves the wrong answer, which is worse than a miss;

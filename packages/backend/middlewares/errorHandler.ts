@@ -163,26 +163,6 @@ const errorHandler = (err: any, req: Request, res: Response, next: NextFunction)
   // a library error carrying its own `statusCode` — has not been vetted.
   const clientSafeMessage = err instanceof AppError;
 
-  // Mongoose bad ObjectId
-  if (err.name === 'CastError') {
-    const message = 'Invalid resource ID';
-    error = new AppError(message, 400, 'INVALID_ID');
-  }
-
-  // Mongoose duplicate key
-  if (err.code === 11000) {
-    const message = 'Duplicate field value entered';
-    error = new AppError(message, 400, 'DUPLICATE_FIELD');
-  }
-
-  // Mongoose validation error
-  if (err.name === 'ValidationError' && err.errors && typeof err.errors === 'object') {
-    const message = Object.values(err.errors)
-      .map((val: any) => val.message)
-      .join(', ');
-    error = new AppError(message, 400, 'VALIDATION_ERROR');
-  }
-
   // JWT errors
   if (err.name === 'JsonWebTokenError') {
     const message = 'Invalid token';
@@ -221,12 +201,6 @@ const errorHandler = (err: any, req: Request, res: Response, next: NextFunction)
   if (err.code === 'LIMIT_FILE_COUNT') {
     const message = 'Too many files';
     error = new AppError(message, 400, 'TOO_MANY_FILES');
-  }
-
-  // Database connection errors
-  if (err.name === 'MongoNetworkError' || err.name === 'MongoTimeoutError') {
-    const message = 'Database connection error';
-    error = new AppError(message, 503, 'DATABASE_ERROR');
   }
 
   // Default to 500 server error

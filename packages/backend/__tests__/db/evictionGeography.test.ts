@@ -147,8 +147,8 @@ describe('eviction_cases.location_geo', () => {
   it('refuses an out-of-range coordinate rather than silently relocating it', async () => {
     // PostGIS does NOT reject this on its own: `ST_MakePoint(0, 100)::geography`
     // emits a NOTICE, wraps latitude 100 over the pole to 80, and SUCCEEDS. The
-    // CHECK is what keeps Mongo's validator rather than degrading it into a
-    // gathering advertised 2,000 km from where it is.
+    // CHECK is what keeps that from becoming a gathering advertised 2,000 km
+    // from where it is.
     let caught: unknown;
     try {
       await insertCaseAt({ latitude: 100, longitude: 0 });

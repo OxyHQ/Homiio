@@ -19,9 +19,7 @@
  *
  * ## The escalation is counted and applied inside the caller's transaction
  *
- * Mongo pushed onto an embedded array and read `array.length` — the count and
- * the rows could not disagree, because they were the same object. Split into a
- * table, the count is a real query, so {@link insertReviewReportAndEscalate}
+ * Reports are a table, so the count is a real query, so {@link insertReviewReportAndEscalate}
  * does the insert, the count and the status flip in ONE statement sequence
  * inside the caller's transaction. Counting outside it would let two concurrent
  * third reports both read two and neither escalate.

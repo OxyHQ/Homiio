@@ -13,9 +13,8 @@
  * a row nobody can attribute. The repository is the only writer of either.
  *
  * **Every transition carries its precondition in the `UPDATE`'s predicate.**
- * The Mongoose version read the document, checked `status === 'pending'` in JS,
- * assigned and saved — a window in which two owners could both approve. The
- * read is still there, because it is what decides WHICH error the caller sees
+ * Reading the row, checking `status === 'pending'` in JS and then writing would
+ * leave a window in which two owners could both approve. A read is still there, because it is what decides WHICH error the caller sees
  * (404 vs 403 vs 400), but the write no longer trusts it.
  *
  * **The property read is a narrow projection**

@@ -2,19 +2,17 @@
  * Recently-viewed listings — the unique key, the ordering, and the 90-day
  * retention sweep that is the table's ONLY bound.
  *
- * The real handlers against the REAL Postgres this worker owns. The Mongo
- * collection was empty in production because BOTH of its write paths were
- * broken (see `db/saved/recentlyViewedRepository.ts`), so nothing here asserts a
- * preserved row.
+ * The real handlers against the REAL Postgres this worker owns. The table was
+ * empty in production because BOTH of its write paths were broken (see
+ * `db/saved/recentlyViewedRepository.ts`).
  *
  * ## The retention sweep is tested through `CleanupService`, not the repository
  *
  * This is the append-heavy table in the domain — it grows on READS rather than
  * on deliberate user action — so the thing that actually has to hold is that the
- * scheduled job still prunes it after the store changed underneath it.
- * `cleanupOldData` is what cron calls; testing `pruneRecentlyViewedBefore`
- * alone would pass just as happily with the service still wired to a Mongoose
- * model that no longer receives any rows.
+ * scheduled job prunes it. `cleanupOldData` is what cron calls; testing
+ * `pruneRecentlyViewedBefore` alone would pass just as happily with the service
+ * wired to something else.
  */
 
 import express, { type Express } from 'express';
@@ -179,7 +177,7 @@ describe('getRecentProperties', () => {
   });
 
   it('caps an absurd `?limit` rather than hydrating whatever was asked for', async () => {
-    // Mongo's `parseInt(limit)` was unbounded, and hydration here is a catalogue
+    // An unbounded `?limit` would be expensive: hydration here is a catalogue
     // read with four joins plus three batched child queries per page.
     const app = buildApp('oxy-a');
     await request(app).post(`/recent-properties/${listingA}`);
@@ -218,8 +216,8 @@ describe('clearRecentProperties', () => {
   });
 
   it('succeeds for a caller who has no profile document — the guard is gone', async () => {
-    // The Mongo handler required `Profile.findByOxyUserId` and answered 404
-    // without one. That was never an authorisation check: the delete is scoped
+    // Requiring a profile row and answering 404 without one would never be an
+    // authorisation check: the delete is scoped
     // by `oxyUserId` from the session either way. Nothing in this suite creates
     // a profile, so a restored guard would fail every case above too — this one
     // states the rule rather than relying on that.
@@ -237,7 +235,7 @@ describe('the 90-day retention sweep', () => {
   it('deletes views older than the window and keeps the rest, across ALL users', async () => {
     // The table's only bound. It runs from cron via `cleanupOldData`, which is
     // what this calls — a test of the repository alone would still pass with the
-    // service wired to the Mongoose model that no longer receives rows.
+    // service wired to something else.
     await request(buildApp('oxy-a')).post(`/recent-properties/${listingA}`);
     await backdateView('oxy-a', listingA, 91);
     await request(buildApp('oxy-b')).post(`/recent-properties/${listingB}`);

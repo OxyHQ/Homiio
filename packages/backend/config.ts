@@ -95,9 +95,8 @@ export interface Config {
     groups: Record<string, { language: string; name: string }>;
   };
   /**
-   * PostgreSQL — the only database this service opens. There is no longer a
-   * `database` key beside it: the Mongo connection is gone, so a second
-   * connection-string key would describe a store nothing can reach.
+   * PostgreSQL — the only database this service opens, so there is no second
+   * connection-string key beside it.
    *
    * `url` stays optional in the TYPE because `connectPostgres()` is what fails,
    * loudly and with a message naming the missing variable. Making it required
@@ -361,13 +360,6 @@ const config: Config = {
   },
 
   // PostgreSQL Configuration — the only database this service opens.
-  //
-  // `MONGODB_URI` is no longer read here, and its `|| 'mongodb://localhost:27017/homiio'`
-  // fallback went with it rather than surviving as a term nothing consumes. A
-  // fallback outlives the code that used it silently: it turns a missing secret
-  // into a connection attempt against a host that is not there, which fails
-  // slowly and describes the wrong problem. The variable stops being read in
-  // the same change that stops the connection being opened.
   postgres: {
     // No fallback URL. A default like `postgres://localhost/homiio` would make
     // an unprovisioned deployment connect to nothing in particular and report a

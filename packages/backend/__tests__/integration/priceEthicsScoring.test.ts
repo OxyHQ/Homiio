@@ -6,17 +6,12 @@
  * Every write path calls `schedulePriceEthicsScore`, which is deliberately
  * FIRE-AND-FORGET: a scorer must never fail a listing create. The cost of that
  * is that when it breaks it breaks SILENTLY — the request still returns 201 and
- * the only trace is a log line nobody reads. Both halves of the port broke it
- * exactly that way and both were invisible to the rest of the suite:
- *
- *  - the read still went to Mongo, so every score threw
- *    `Cast to ObjectId failed for value "019fe6…"` — a uuid v7 id against an
- *    ObjectId path;
- *  - and once that was fixed, the WRITE threw `value.toISOString is not a
- *    function`, because `PropertyPriceEthics.scoredAt` is an ISO string on the
+ * the only trace is a log line nobody reads. It has broken exactly that way,
+ * invisibly to the rest of the suite: the WRITE threw `value.toISOString is
+ * not a function`, because `PropertyPriceEthics.scoredAt` is an ISO string on the
  *    wire and `price_ethics_scored_at` is a `timestamptz`.
  *
- * Neither turned a single existing test red. So the assertions below are on
+ * It turned no existing test red. So the assertions below are on
  * the STORED COLUMNS after an awaited score — not on the promise resolving,
  * which it does either way.
  *

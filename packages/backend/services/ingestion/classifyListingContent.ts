@@ -41,7 +41,7 @@ import type { DETECTED_LANGUAGES } from '../../db/schema/properties';
  * required would collapse "not examined" into "examined and negative", a claim
  * about a listing that nobody made.
  *
- * `noDSS` keeps its Mongo spelling on the wire; the column is
+ * `noDSS` is the wire spelling; the column is
  * `listing_flags_no_dss`, and `db/properties/propertyWrites` maps between them.
  */
 export interface ListingFlags {

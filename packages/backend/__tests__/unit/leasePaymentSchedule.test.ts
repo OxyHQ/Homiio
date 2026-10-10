@@ -6,11 +6,11 @@
  *
  * ## The case this file exists for
  *
- * The Mongoose original built its month cursor with `new Date(y, m, d)`, which
- * constructs in the process's LOCAL zone, and compared it against a
- * `timestamptz` read back as an absolute instant. Both the instalment COUNT and
- * every due date therefore moved with `TZ` — every zone east of UTC silently
- * dropped the tenant's first month. `db/leases/paymentSchedule.ts` records the
+ * A month cursor built with `new Date(y, m, d)` constructs in the process's
+ * LOCAL zone, and compared it against a
+ * `timestamptz` read back as an absolute instant, so both the instalment COUNT
+ * and every due date would move with `TZ` — every zone east of UTC silently
+ * dropping the tenant's first month. `db/leases/paymentSchedule.ts` records the
  * measurements; this file is what stops it coming back.
  *
  * `TZ` is re-read by V8 on assignment (`process.env.TZ = …` takes effect for

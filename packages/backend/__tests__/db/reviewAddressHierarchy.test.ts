@@ -72,13 +72,13 @@ async function levelOf(addressId: string): Promise<string | null> {
 
 describe('a UNIT address resolves a real building and a real street', () => {
   /**
-   * THE regression, and the reason this is a fix rather than a port.
+   * THE regression.
    *
-   * `Address.findOne(address.createBuildingLevel())` matched the unit row
-   * ITSELF, because a Mongo filter constrains only the fields it names and the
-   * building projection is a strict subset of a unit address's own fields. So
-   * `buildingLevelId` came back as the review's own `addressId`, and two flats
-   * in one building never shared a building id.
+   * A filter that constrains only the fields it names matches the unit row
+   * ITSELF when asked for its building, because the building projection is a
+   * strict subset of a unit address's own fields. Then `buildingLevelId` comes
+   * back as the review's own `addressId`, and two flats in one building never
+   * share a building id.
    *
    * The fixture is two DIFFERENT flats at one street number: under the old
    * behaviour their building ids differ (each is its own id), under the fixed

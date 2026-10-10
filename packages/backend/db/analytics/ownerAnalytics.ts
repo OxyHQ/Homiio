@@ -7,27 +7,13 @@
  * belong to no single table's repository, and adding them to somebody else's
  * would make three modules co-own one endpoint's shape.
  *
- * ## The endpoint has always returned zeros, and this is where that is fixed
+ * ## The owner key is `oxy_user_id`, and nothing else
  *
- * `analyticsController` selected the caller's listings with
- * `Property.distinct('_id', { profileId: activeProfile._id, … })` — and
- * **`PropertySchema` declares no `profileId`**. It has `oxyUserId` and nothing
- * else that names an owner. Mongo matches no document against an undeclared
- * field, so `propertyIds` was ALWAYS empty; the views and saves aggregates were
- * guarded by `propertyIds.length ? … : Promise.resolve([])` and therefore never
- * ran at all, and the viewing rollup matched `ownerOxyUserId` against a PROFILE
- * id, which is a different id space again.
- *
- * So every number this endpoint reports has been 0 since it was written. Fixing
- * the owner key is what makes the port meaningful — porting the reads while
- * leaving the selector broken would move three queries to Postgres and still
- * return zeros, which is worse than not porting them, because it looks done.
- *
- * **This is a user-visible behaviour change**, in the same class as the two
- * `db/MIGRATION-CONTRACT.md` already names — `properties.views` starting to
- * increment, and the saved-listing count starting to be non-zero once both
- * sides of the comparison are `text`. Real numbers appearing where zeros were is
- * correct behaviour arriving, not a defect to diagnose.
+ * A listing's owner is `properties.oxy_user_id`. This endpoint once selected the
+ * caller's listings by a `profileId` no row carries, so every number it
+ * reported was 0 — and a viewing rollup matched `owner_oxy_user_id` against a
+ * PROFILE id, which is a different id space again. Every read here keys on the
+ * Oxy account.
  */
 
 import { and, count, countDistinct, desc, eq, gte, inArray, isNotNull, ne, sql } from 'drizzle-orm';
@@ -37,8 +23,7 @@ import { addresses, cities, properties, recentlyViewed, regions, savedItems } fr
 /**
  * The ids of the listings this person owns, excluding archived ones.
  *
- * `oxy_user_id` is the owner column — see the header for why the Mongo original
- * matched nothing.
+ * `oxy_user_id` is the owner column — see the header.
  */
 export async function listOwnedPropertyIds(
   db: DatabaseOrTransaction,
@@ -59,11 +44,8 @@ export interface ViewRollup {
 /**
  * Views of `propertyIds` since `since`.
  *
- * `countDistinct` on the viewer, where Mongo used `$addToSet` then `$size` —
- * the same question, answered without materialising the set. Note the source
- * grouped `$addToSet: '$profileId'` on a collection whose column is
- * `oxy_user_id`; that path does not exist either, so the unique count was
- * `[null]`, i.e. 1, on any row it had ever seen. It counts the owner column now.
+ * `countDistinct` on the viewer's `oxy_user_id`, answered without materialising
+ * the set.
  */
 export async function countViewsOfProperties(
   db: DatabaseOrTransaction,
@@ -140,7 +122,7 @@ export async function countAppWideCatalogue(
  *
  * `> 0` rather than "field exists": a listing with no long-term price has NULL
  * in that column, and including it would drag the average toward zero. This is
- * the same predicate the Mongo `$match` used, said against a column.
+ * the predicate, said against a column.
  */
 export async function summarizeCatalogueRent(
   db: DatabaseOrTransaction,
@@ -175,10 +157,8 @@ export interface TopCity {
 /**
  * The cities with the most listings, with each city's average long-term rent.
  *
- * ONE statement. The Mongo pipeline needed three `$lookup` + `$unwind` pairs —
- * into `addresses`, then `cities`, then `regions` — because it could not join;
- * grouping by the canonical `city_id` rather than a free-text city name was
- * already the intent and is now simply what the query does.
+ * ONE statement, joining `addresses`, `cities` and `regions`, grouped by the
+ * canonical `city_id` rather than a free-text city name.
  */
 export async function findTopCitiesByListings(
   db: DatabaseOrTransaction,
@@ -213,10 +193,10 @@ export async function findTopCitiesByListings(
 /**
  * How many listings fall in each preset monthly-rent band.
  *
- * `width_bucket` over the same boundaries the Mongo `$bucket` used. Bucket 0
+ * `width_bucket` over the preset boundaries. Bucket 0
  * (below the first boundary) cannot occur because the predicate excludes
  * negative rents, and `boundaries.length` is the overflow band — the
- * `default: '10000+'` the pipeline declared.
+ * `'10000+'` band.
  *
  * Written as ONE raw statement rather than a `.select()` projection, and that is
  * load-bearing: inside a projection drizzle renders an interpolated column

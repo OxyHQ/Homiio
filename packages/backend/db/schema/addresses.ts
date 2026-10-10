@@ -2,15 +2,14 @@
  * `addresses` — a BUILDING-level record, and the anchor of every spatial query
  * in Homiio.
  *
- * Ported from `models/Address.ts`. Administrative geo is NOT free text here: an
+ * Administrative geo is NOT free text here: an
  * address references `countries` / `regions` / `cities` / `neighborhoods` by id
  * (`geoResolutionService` resolves the chain), and the only denormalized geo
  * field is `country_code`, kept for filtering without a join.
  *
  * Two things in this table are `GENERATED ALWAYS ... STORED` rather than
- * application-maintained, and both replace something a hook or a method did in
- * Mongo. That is the substantive change in this file; see the columns
- * themselves.
+ * application-maintained, because application code is bypassable and a
+ * generated column is not. See the columns themselves.
  *
  * See `CONVENTIONS.md` for the rules every other decision follows.
  */
@@ -91,7 +90,7 @@ export const addresses = pgTable(
     poBox: text(),
     reference: text(),
 
-    // Mongo's `land_plot: { block, lot, parcel }` — a subdocument with a KNOWN,
+    // `land_plot: { block, lot, parcel }` — a nested object with a KNOWN,
     // closed shape that nothing queries. Three flattened columns, not `jsonb`:
     // jsonb is for genuinely shape-less data (see `extras` below), and using it
     // for a fixed triple would make three typed strings untyped for no gain.
@@ -102,8 +101,7 @@ export const addresses = pgTable(
     /**
      * Ingest-supplied extras.
      *
-     * `jsonb`, and the ONE column in this migration that earns it: `extras` is
-     * declared `Schema.Types.Mixed` in Mongo precisely because its shape is
+     * `jsonb`, and the ONE column on this table that earns it: its shape is
      * whatever a portal happened to send. Shapelessness is its purpose, not an
      * accident to be normalized away.
      */
@@ -113,12 +111,11 @@ export const addresses = pgTable(
     //
     // NAMED coordinate columns, and the point GENERATED from them.
     //
-    // Mongo stored `coordinates: { type: 'Point', coordinates: [lng, lat] }` —
-    // a positional pair a `2dsphere` index reads by INDEX, so a transposition is
-    // both easy to write and impossible to see: swapping Barcelona's pair yields
+    // A positional `[lng, lat]` pair makes a transposition both easy to write
+    // and impossible to see: swapping Barcelona's pair yields
     // a perfectly valid point in the Indian Ocean. Naming the two scalars fixes
     // half of that; generating the point from them fixes the rest, because it
-    // means there is no write path — route, service, backfill or `psql` — that
+    // means there is no write path — route, service, script or `psql` — that
     // can produce a row whose point disagrees with its coordinates. An attempt
     // fails with SQLSTATE 428C9.
     longitude: doublePrecision().notNull(),
@@ -145,16 +142,14 @@ export const addresses = pgTable(
     /**
      * STREET / BUILDING / UNIT, derived from which identifying fields are set.
      *
-     * This was `AddressSchema.methods.getAddressLevel()` — and a method is
-     * BYPASSABLE. Every `.lean()` read skips it, every raw update sidesteps it,
-     * and the review hierarchy that depends on it has no way to tell. As a
-     * generated column the derivation is a property of the ROW, so a lean read
-     * and a populated document cannot disagree about what level an address is.
+     * Application code that derives this is BYPASSABLE — a raw update
+     * sidesteps it, and the review hierarchy that depends on it has no way to
+     * tell. As a generated column the derivation is a property of the ROW, so
+     * no two reads can disagree about what level an address is.
      *
      * The predicate is `coalesce(x, '') <> ''`, not `x is not null`, and the
-     * difference is load-bearing: the Mongo method tested TRUTHINESS
-     * (`if (this.floor || this.unit || ...)`), so an empty-string `floor`
-     * counted as ABSENT there. `is not null` would count it as present and
+     * difference is load-bearing: the rule is TRUTHINESS, so an empty-string
+     * `floor` counts as ABSENT. `is not null` would count it as present and
      * promote a street-level address to UNIT. Both `coalesce` and `<>` are
      * IMMUTABLE.
      *
@@ -178,13 +173,11 @@ export const addresses = pgTable(
      *
      * Written NULL when absent, NEVER `''`. An empty string is a VALUE, so under
      * the partial unique index below two unkeyed addresses would collide for
-     * real — turning a non-problem into a live 500 on the create path. Mongo's
-     * `sparse: true` had the same requirement and the same trap.
+     * real — turning a non-problem into a live 500 on the create path.
      *
-     * The backfill copies this VERBATIM and never recomputes it: the `pre('save')`
-     * hook that derives it has already changed shape once, so recomputing during
-     * the copy would silently re-key every existing building and break the
-     * dedup that `findOrCreateCanonical` depends on.
+     * Never recomputed for an existing row: the derivation has already changed
+     * shape once, so recomputing would silently re-key every existing building
+     * and break the dedup that `findOrCreateCanonical` depends on.
      */
     normalizedKey: text(),
 
@@ -265,8 +258,7 @@ export const addresses = pgTable(
     updatedAt: updatedAt(),
   },
   (table) => [
-    // Mongo's `{ normalizedKey: 1 }, { unique: true, sparse: true }`. Postgres
-    // treats NULLs as DISTINCT so a plain UNIQUE would already behave
+    // Postgres treats NULLs as DISTINCT so a plain UNIQUE would already behave
     // correctly — the partial form is used anyway because it keeps the index the
     // size of the real set and states the "only keyed addresses are deduped"
     // rule at the constraint, where a reader will find it.
@@ -298,8 +290,7 @@ export const addresses = pgTable(
     // surface stands on.
     index('addresses_geo_gist').using('gist', table.geo),
 
-    // The four parent lookups Mongo indexed individually. All four are ported:
-    // none of them is a prefix of another, and each serves a real "everything in
+    // The four parent lookups, each indexed: none of them is a prefix of another, and each serves a real "everything in
     // this place" query.
     index('addresses_city_id_idx').on(table.cityId),
     index('addresses_region_id_idx').on(table.regionId),
@@ -308,10 +299,8 @@ export const addresses = pgTable(
     index('addresses_postal_code_country_idx').on(table.postalCode, table.countryCode),
 
     // `addressController.searchAddresses` matches the building-level street with
-    // an UNANCHORED, case-insensitive term (`{ $regex: q, $options: 'i' }` in
-    // Mongo, `ILIKE '%q%'` here). Mongo had no index for it at all — an
-    // unanchored `/i` regex is a collection scan — and `ILIKE '%…%'` only uses
-    // an index with `gin_trgm_ops`. Without this, every keystroke of the address
+    // an UNANCHORED, case-insensitive term (`ILIKE '%q%'`), and `ILIKE '%…%'`
+    // only uses an index with `gin_trgm_ops`. Without this, every keystroke of the address
     // typeahead sequentially scans every address in the product.
     index('addresses_street_trgm_idx').using('gin', sql`${table.street} gin_trgm_ops`),
 
@@ -320,8 +309,8 @@ export const addresses = pgTable(
       sql`${table.addressLevel} in (${sql.raw(inList(ADDRESS_LEVELS))})`,
     ),
 
-    // Mongo validated this range on the coordinate pair and REJECTED a document
-    // outside it. Postgres will not do that for us, and the reason this CHECK
+    // A coordinate outside this range is REJECTED. Postgres will not do that for
+    // us, and the reason this CHECK
     // exists is that the obvious assumption — "geography validates its own
     // input" — is FALSE, measured against PostGIS 3.5 rather than reasoned
     // about:
@@ -333,13 +322,12 @@ export const addresses = pgTable(
     // It is a NOTICE and the insert SUCCEEDS. And the coercion is not a clamp to
     // the nearest valid value — latitude 100 becomes **80**, wrapping over the
     // pole — so a bad coordinate silently becomes a DIFFERENT, entirely
-    // plausible location rather than an obviously broken one. Dropping Mongo's
-    // validator without replacing it would convert a loud rejection into a
-    // listing quietly pinned to the wrong place, which no test asserting "a row
+    // plausible location rather than an obviously broken one. Without this
+    // CHECK a loud rejection becomes a listing quietly pinned to the wrong place, which no test asserting "a row
     // came back" would ever catch.
     //
-    // Safe to apply during the backfill precisely because Mongo enforced it:
-    // every stored pair passed the same test on the way in.
+    // Safe on a populated table because the application has always enforced
+    // it: every stored pair passed the same test on the way in.
     check(
       'addresses_coordinates_range_check',
       sql`${table.longitude} between -180 and 180 and ${table.latitude} between -90 and 90`,

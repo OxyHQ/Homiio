@@ -9,9 +9,9 @@
  * ## The fixtures seed Postgres, because that is what the providers read
  *
  * Both subject providers read the catalogue's own Postgres path —
- * `findPropertyById` for a listing, one explicit select for a review — so a
- * suite seeding Mongo would describe nothing at all and every assertion below
- * would fail on an absent snapshot rather than on what it was written to check.
+ * `findPropertyById` for a listing, one explicit select for a review — so the
+ * fixtures are Postgres rows, or every assertion below would fail on an absent
+ * snapshot rather than on what it was written to check.
  * The rows are seeded through `postgresGeoFixtures`, the same helpers every
  * ported catalogue suite uses, so a snapshot cannot be measured against a geo
  * chain spelled only here.

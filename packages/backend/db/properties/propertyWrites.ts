@@ -1,29 +1,20 @@
 /**
  * The property write repository — every listing INSERT, UPDATE and delete.
  *
- * `propertyReads.ts` said of itself that it "does not write … nothing here may
- * become the only writer of a Postgres row", because during the dual-run the
- * worker still ingested into Mongo. That period is over: Postgres is the single
- * authority for properties, and this module is the other half of that sentence.
+ * Postgres is the single authority for properties; `propertyReads.ts` is the
+ * read half and this module is the write half.
  *
- * ## Why a deserializer exists, and why it is not the backfill's
+ * ## Why a deserializer exists
  *
- * `db/backfill/dataPlan.ts` already maps a nested document onto these flat
- * columns, and reusing it here would be the obvious economy. It is the wrong
- * one. That mapper reads a MONGO DOCUMENT — it resolves schema defaults that
- * mongoose would have applied, logs a named resolution for each, and treats
- * every absent path as a fact about a document that already exists. This one
- * reads an API PAYLOAD that has been through `pickFields` and the offering
+ * It reads an API PAYLOAD that has been through `pickFields` and the offering
  * rules, where an absent key means "the caller did not mention it" and must
- * leave the stored value alone. Those are different questions with different
- * right answers, and the backfill is a one-shot copier that should be deletable
- * without taking the write path with it.
+ * leave the stored value alone.
  *
- * ## A block is replaced wholesale, exactly as a subdocument was
+ * ## A block is replaced wholesale
  *
- * `Property.findByIdAndUpdate(id, { longTermRent: {...} })` REPLACED the whole
- * subdocument: a member the caller omitted came back unset, not preserved. The
- * flattened columns have to reproduce that or an edit that clears a deposit
+ * Writing `{ longTermRent: {...} }` REPLACES the whole block: a member the
+ * caller omitted comes back unset, not preserved. The flattened columns have to
+ * do that or an edit that clears a deposit
  * would silently keep the old one. So {@link toPropertyColumns} works at BLOCK
  * granularity — mention `longTermRent` and all six of its columns are written,
  * from the block or as `null`; omit it and none of them are touched. The four
@@ -234,8 +225,8 @@ export function toPropertyColumns(input: PropertyWriteInput): PropertyUpdate {
     scalar(key);
   }
 
-  // RENAMED from Mongo's `sourcedByPartner` — see the column's own doc. Both
-  // spellings are accepted on the way in because `controllers/property/create`
+  // The column is `sourcedByPartnerId` — see its own doc. Both spellings of the
+  // key are accepted on the way in because `controllers/property/create`
   // resolves a referral code into the old name and the ingest uses the new one;
   // only one column exists to write.
   if (mentions(input, 'sourcedByPartnerId')) columns.sourcedByPartnerId = input.sourcedByPartnerId;
@@ -262,7 +253,7 @@ export function toPropertyColumns(input: PropertyWriteInput): PropertyUpdate {
     columns.listingFlagsNoPets = member(block, 'noPets');
     columns.listingFlagsNoSmoking = member(block, 'noSmoking');
     columns.listingFlagsNoCouples = member(block, 'noCouples');
-    // Mongo spells this one `noDSS`; the column is `listing_flags_no_dss`.
+    // The wire spells this one `noDSS`; the column is `listing_flags_no_dss`.
     columns.listingFlagsNoDss = member(block, 'noDSS');
     columns.listingFlagsDetectedLanguage = member(block, 'detectedLanguage');
   }
@@ -497,9 +488,8 @@ async function resolveImageRows(
 /**
  * Replace a listing's photos, then re-derive `has_images`.
  *
- * A replace rather than a diff, because that is what the Mongo write did
- * (`property.set('images', refs)` assigned the whole array) and because the
- * partial unique index makes an incremental update of `is_primary` a two-
+ * A replace rather than a diff, because the caller sends the whole photo list
+ * and because the partial unique index makes an incremental update of `is_primary` a two-
  * statement dance that can transiently hold two primaries. The rows are cheap
  * and the listing is locked by the enclosing transaction.
  */
@@ -709,12 +699,9 @@ export async function softDeleteProperty(
 /**
  * Increment a listing's view counter.
  *
- * In Mongo this was `$inc: { views: 1 }` against a path `PropertySchema` never
- * declared, so strict mode dropped it and every increment ever issued was a
- * no-op. `properties.views` is a real `NOT NULL DEFAULT 0` column, so this is
- * the first time the counter actually moves — stated because a reader comparing
- * production numbers before and after the port will see them start from zero
- * and climb, and would otherwise reasonably suspect the port broke something.
+ * `properties.views` is a `NOT NULL DEFAULT 0` column. Every listing started
+ * counting at zero, so a low count on an old listing is expected, not a sign
+ * that increments are lost.
  *
  * Best-effort by contract: a failed increment must never fail the read that
  * triggered it, so callers do not await it in the response path.
@@ -731,8 +718,7 @@ export async function incrementPropertyViews(propertyId: string): Promise<void> 
  * probe every ingest starts with.
  *
  * `properties_source_source_id_key` is PARTIAL (`WHERE source_id IS NOT NULL`),
- * which is the port of Mongo's `partialFilterExpression`, so this is only ever
- * asked about a listing that HAS a source id.
+ * so this is only ever asked about a listing that HAS a source id.
  */
 export async function findPropertyBySource(
   source: string,
@@ -784,7 +770,7 @@ export async function findPropertyBySource(
  * identity. The port of `worker.ts`'s `expireExternalListing`.
  *
  * `expires_at` is set alongside the status because `db/expiry.ts`'s sweep is
- * what replaces Mongo's TTL index, and a listing archived without a deadline
+ * what reaps an expired listing, and a listing archived without a deadline
  * would sit in the table forever.
  *
  * @returns whether a row matched.
@@ -883,8 +869,8 @@ export async function countExpiredExternalProperties(before: Date): Promise<numb
  * When the STALEST external listing was last touched — the other half of the
  * scraper health probe.
  *
- * A single `min()` rather than the Mongo `findOne().sort({updatedAt: 1})` it
- * replaces, which fetched a whole document to read one timestamp off it.
+ * A single `min()` rather than fetching a whole row to read one timestamp off
+ * it.
  */
 export async function findOldestExternalPropertyUpdate(): Promise<Date | null> {
   const [row] = await getDb()

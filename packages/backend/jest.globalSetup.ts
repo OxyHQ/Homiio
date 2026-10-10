@@ -14,10 +14,7 @@
  *
  *   docker compose -f docker-compose.postgres.yml up -d postgres
  *
- * Postgres is the only store this harness prepares. `__tests__/jest.setup.ts`
- * used to boot an in-memory Mongo replica set per worker; that went with
- * `mongoose` and `mongodb-memory-server`, so there is no second harness left to
- * coordinate with.
+ * Postgres is the only store this harness prepares.
  */
 
 import { writeFileSync } from 'node:fs';
@@ -67,9 +64,9 @@ const TEST_MAX_POOL_SIZE = '8';
  * whichever suite happened to ask while the server was saturated, never in the
  * one at fault. At 1s they are reclaimed continuously and the run stays flat.
  *
- * This was latent long before it fired. The suite stayed under the ceiling only
- * because two slow Mongo-booting suites ran first and throttled the early
- * phase; deleting them removed that accidental throttling.
+ * This was latent long before it fired: the suite once stayed under the ceiling
+ * only because two slow suites ran first and throttled the early phase, and
+ * deleting them removed that accidental throttling.
  *
  * It changes nothing a test MEASURES — a reaped connection is reopened on
  * demand, and `PG_MAX_POOL_SIZE` still governs concurrency, which is the knob

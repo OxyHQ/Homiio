@@ -38,9 +38,7 @@ const LIMIT = readIntFlag('limit', Number.MAX_SAFE_INTEGER);
 /**
  * A listing whose verdict is missing or incomplete.
  *
- * The four Mongo branches this replaces (`priceEthics` absent, `priceEthics`
- * null, `fairnessScore` absent, `scoredAt` absent) collapse to two column
- * tests: the flattened block has no "absent versus null" distinction to make,
+ * Two column tests: the flattened block has no "absent versus null" distinction to make,
  * so a NULL in either column IS the un-scored state.
  */
 const NEEDS_SCORE = or(
@@ -118,7 +116,7 @@ async function main(): Promise<void> {
     return;
   }
 
-  // KEYSET pagination on the primary key, not a Mongo cursor.
+  // KEYSET pagination on the primary key.
   //
   // The scorer WRITES the very columns the filter selects on, so an OFFSET walk
   // would skip listings: each batch scored shrinks the result set under the

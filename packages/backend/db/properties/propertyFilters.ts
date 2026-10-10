@@ -1,32 +1,23 @@
 /**
  * The predicates every property read is assembled from.
  *
- * Six controllers used to build the same clauses independently as Mongo filter
- * objects, and the duplication cost real bugs — the `excludeIds` filter alone
- * had been copy-pasted into four places, each silently dropping any id that was
- * not a 24-char hex, which post-cutover means every uuid v7 in an exclude list
- * (see `db/ids.ts`). Here each clause is written once and the id-shape test is
- * simply gone: a `text` column takes any string, so an id that matches nothing
+ * Each clause is written ONCE. Six controllers building the same clauses
+ * independently is how an `excludeIds` filter that silently dropped every uuid
+ * v7 got copy-pasted into four places (see `db/ids.ts`). There is no id-shape
+ * test here: a `text` column takes any string, so an id that matches nothing
  * excludes nothing, which is what the filter meant all along.
  *
- * Everything returns `SQL | undefined`, so a caller can build its list with the
- * same one-clause-at-a-time style the Mongo code used and hand the result to
- * `allOf`.
+ * Everything returns `SQL | undefined`, so a caller can build its list one
+ * clause at a time and hand the result to `allOf`.
  *
- * ## Two ports that are NOT literal, and why each is better
+ * ## Two readings worth stating
  *
- *  - **`hasPhotos`** was `{ 'images.url': { $exists: true, $nin: [null, ''] } }`
- *    — a probe into a denormalized copy of the photo list. It is now
- *    `has_images`, the column the schema keeps precisely to answer this
- *    question and the leading column of the feed's index. They differ only for a
- *    listing whose every photo row carries a NULL url, and having the FILTER and
- *    the SORT read the same fact is worth more than reproducing a `$exists` on a
- *    copy.
- *  - **Free text** was a Mongo `$text` search, which ORs its terms: "apartment
- *    barcelona" returned every apartment anywhere. {@link matchesText} uses
- *    `websearch_to_tsquery`, which ANDs them and understands quoted phrases and
- *    an explicit `or`. This is a deliberate narrowing of a search box that was
- *    too broad to be useful, not an accident of the port.
+ *  - **`hasPhotos`** reads `has_images`, the column the schema keeps precisely
+ *    to answer this question and the leading column of the feed's index, so the
+ *    FILTER and the SORT read the same fact.
+ *  - **Free text** uses `websearch_to_tsquery`, which ANDs its terms and
+ *    understands quoted phrases and an explicit `or` — an OR of terms would
+ *    make "apartment barcelona" return every apartment anywhere.
  */
 
 import {
@@ -66,10 +57,8 @@ export function notDeleted(): SQL {
 /**
  * Never surface a listing a community jury has restricted.
  *
- * Mongo needed `$ne: true` here, because `moderation` was a late addition and is
- * absent on 17,642 of 17,644 rows — `{ restricted: false }` would have matched a
- * stored `false` and NOT a missing field, hiding the entire catalogue. The
- * column is `NOT NULL DEFAULT false`, so absence is not representable and plain
+ * The column is `NOT NULL DEFAULT false`, so absence is not representable and
+ * plain
  * equality is exact. The trap did not survive the port; the rule did.
  */
 export function notModerationRestricted(): SQL {
@@ -169,8 +158,8 @@ export function booleanIs(column: AnyPgColumn, value: boolean): SQL {
 
 /**
  * All of the requested amenities — the ONE amenity reading of every catalogue
- * feed. The list feed and `/rooms` used to match ANY (Mongo's `$in`), so a
- * multi-select widened with each chip instead of narrowing.
+ * feed. Matching ANY would make a multi-select widen with each chip instead of
+ * narrowing.
  */
 export function hasAllAmenities(amenities: readonly string[]): SQL | undefined {
   if (amenities.length === 0) return undefined;
@@ -433,7 +422,7 @@ export function matchesText(
   return or(...branches) ?? branches[0];
 }
 
-/** Relevance score for a text term — the port of Mongo's `{ $meta: 'textScore' }`. */
+/** Relevance score for a text term. */
 export function textRank(term: string): SQL<number> {
   return sql<number>`ts_rank(${properties.searchVector}, ${textQuery(term)})`;
 }
@@ -446,11 +435,10 @@ export function textRank(term: string): SQL<number> {
  * nobody sleeps there, and `db/availability/occupancy.ts` refuses a booking in
  * it, so a feed that still offered it would be advertising a 409.
  *
- * The port of `$nor: [{ availabilityWindows: { $elemMatch: { status != available,
- * start < checkOut, end > checkIn } } }]`. `tstzrange(a, b)` defaults to `[)`
- * bounds — inclusive start, exclusive end — which is both the contract in
- * `shared-types` and exactly the `start < checkOut AND end > checkIn` test Mongo
- * spelled out, so adjacent stays still do not collide. The GiST index over that
+ * "No non-available window overlaps the stay". `tstzrange(a, b)` defaults to
+ * `[)` bounds — inclusive start, exclusive end — which is both the contract in
+ * `shared-types` and exactly the `start < checkOut AND end > checkIn` test, so
+ * adjacent stays still do not collide. The GiST index over that
  * expression answers `&&` directly.
  *
  * `qualified` on the correlated reference is not optional: a drizzle column
@@ -473,22 +461,20 @@ export function textRank(term: string): SQL<number> {
 /**
  * Listings with no CONFIRMED reservation overlapping the stay.
  *
- * The other half of availability, and the half that fails DANGEROUSLY. The
- * Mongo version this replaces read `Reservation.find({...}).select('propertyId')`
- * into an id list and pushed `idNotIn(...)` — but only `if (ids.length > 0)`.
- * Once `reservations` moved to Postgres that read returned nothing, the guard
- * skipped the exclusion entirely, and every booked listing was reported free.
- * An availability check that sees no bookings does not error, it APPROVES: the
+ * The other half of availability, and the half that fails DANGEROUSLY. An
+ * availability check that sees no bookings does not error, it APPROVES: the
  * wrong answer is the successful-looking one, and a double booking is the
- * result.
+ * result. An id-list form guarded by `if (ids.length > 0)` once did exactly
+ * that — its read returned nothing, the guard skipped the exclusion, and every
+ * booked listing was reported free.
  *
- * A `NOT EXISTS` rather than an id list, matching {@link calendarIsFree}. The
- * id-list form also loaded EVERY confirmed reservation in the system into an
- * uncapped `$in` to answer a question about one page of listings.
+ * A `NOT EXISTS` rather than an id list, matching {@link calendarIsFree}. An
+ * id list would also load EVERY confirmed reservation in the system to answer a
+ * question about one page of listings.
  *
  * `[)` bounds via `tstzrange`, so a checkout and the next checkin on the same
  * day do not collide — the same `checkIn < checkOut AND checkOut > checkIn`
- * test Mongo spelled out, and the same convention the calendar half uses.
+ * test, and the same convention the calendar half uses.
  *
  * `qualified` on the correlated reference is not optional, for the reason
  * {@link calendarIsFree} records: a drizzle column interpolated into a subquery
@@ -559,7 +545,7 @@ export function noConfirmedExchangeOverlaps(checkIn: Date, checkOut: Date): SQL 
  * ## The column's name lies, and the unit is worth stating twice
  *
  * `properties.square_footage` holds SQUARE METRES. The name is a legacy
- * misnomer carried through the Mongo port; every reader confirms the unit —
+ * misnomer; every reader confirms the unit —
  * `PropertyCard` and `RoomList` render it with `formatArea(..., 'sqm', ...)`,
  * and `pricePerSqm` is derived from it. A filter that assumed square feet would
  * return homes three times the size somebody asked for, and nothing would throw.

@@ -8,29 +8,13 @@
  * otherwise fetches them by id. Used by display-only consumers (Telegram
  * messages, AI context, diagnostic payloads) that need names, not ids.
  *
- * ## Why this still issues four lookups
+ * ## Why this still issues up to four lookups
  *
- * Its five call sites (Telegram ×4, the AI route) all hand over an address
- * OBJECT they already hold, not an address id — the shape a Mongo populate
- * produces on the property read path, which is batch 4's to replace. Given an
- * address id, all four names come back from one join; the callers cannot supply
- * one yet, so anticipating that here would add an entry point nothing calls.
- * `addressController` does exactly that join for its own reads, in
- * `addressService.selectAddressWithGeoNames`.
- *
- * ## Known consequence while the property read is still Mongo — NOT a defect
- *
- * Those five call sites hand over an address loaded through
- * `populate('addressId')`, whose `cityId` is a bson `ObjectId` naming a row in
- * the MONGO geo collections. This module reads the POSTGRES ones, and during the
- * migration the two hold different rows: the Mongo ingest writes Mongo geo, and
- * only `POST /api/addresses` writes Postgres geo. So on this branch a Telegram
- * message or an AI context can render a location label as `null` where it used
- * to render a name.
- *
- * That is a property of the intermediate state, not of this code. Ids are
- * preserved verbatim, so the same lookup is correct the moment the backfill has
- * run — and batch 4 moves these callers onto the join before then.
+ * Its call sites (Telegram, the AI route) hand over an address OBJECT they
+ * already hold, not an address id; a name already resolved on that object is
+ * used as-is, and only a bare id is fetched. Given an address id, all four names
+ * come back from one join — `addressController` does exactly that for its own
+ * reads, in `addressService.selectAddressWithGeoNames`.
  */
 
 import { eq } from 'drizzle-orm';

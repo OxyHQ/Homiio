@@ -24,9 +24,8 @@ export const notifications = pgTable(
      * The semantic category the client groups and routes on (`property`,
      * `message`, `contract`, `payment`, `reminder`, `system`, `marketing`).
      *
-     * NO CHECK, and that is a decision rather than an omission: Mongoose
-     * declared a bare required `String` with no `enum`, so the vocabulary has
-     * never been enforced and every one of those seven values is a convention in
+     * NO CHECK, and that is a decision rather than an omission: the vocabulary
+     * has never been enforced and every one of those seven values is a convention in
      * the frontend rather than a rule in the model. Deriving a tuple from a
      * comment would freeze a list nothing has ever validated — the same reasoning
      * `properties.amenities` is left unconstrained under.
@@ -43,8 +42,7 @@ export const notifications = pgTable(
     /**
      * The client's deep-link payload (`{ propertyId, screen, amount, dueDate }`).
      *
-     * `jsonb`, and one of the small set that earns it: it is declared
-     * `Schema.Types.Mixed` in Mongo precisely because its shape is decided by
+     * `jsonb`, and one of the small set that earns it: its shape is decided by
      * whichever notifier wrote the row, and every consumer is a client that reads
      * the keys it recognises. Shapelessness is the point, which is the test
      * `CONVENTIONS.md` sets — the same one `addresses.extras` passes.
@@ -63,8 +61,8 @@ export const notifications = pgTable(
     /**
      * The unread badge and the unread-only listing.
      *
-     * PARTIAL on `not read`, where Mongo carried the full compound
-     * `{ recipient, read, createdAt }`. The badge is a `count(*)` of unread rows
+     * PARTIAL on `not read`, not a full `(recipient, read, created_at)`
+     * compound. The badge is a `count(*)` of unread rows
      * and the unread listing is the same set — nobody asks for "my READ
      * notifications" as a separate view — so the index only has to hold the
      * unread ones, and it shrinks as a mailbox is worked through instead of

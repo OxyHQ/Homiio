@@ -8,9 +8,7 @@
  *
  * ## Why this is not `Object.assign(lease, updates)` any more, and must not be
  *
- * Mongoose let the controller assign a whole nested object onto the document and
- * sort the paths out itself. Doing the equivalent here — spreading a picked
- * subtree into `.set()` — would send drizzle keys that are not columns, and
+ * Spreading a picked subtree into `.set()` would send drizzle keys that are not columns, and
  * drizzle IGNORES an unknown key rather than refusing it. The write would
  * succeed, report success, and silently store nothing.
  *
@@ -65,9 +63,8 @@ function asString(value: unknown): string | undefined {
 /**
  * A string array filtered to a declared vocabulary.
  *
- * Filtered rather than rejected, matching what Mongoose did with an `enum` on an
- * array element under `runValidators: false` — except that here an undeclared
- * value would hit a `<@` CHECK and 500. Dropping it keeps the request working
+ * Filtered rather than rejected: an undeclared value would hit a `<@` CHECK and
+ * 500. Dropping it keeps the request working
  * and keeps the constraint true.
  */
 function asVocabularyArray(value: unknown, vocabulary: readonly string[]): string[] | undefined {

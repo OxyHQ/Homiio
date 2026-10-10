@@ -8,7 +8,7 @@
  * with a way to be wrong:
  *
  *  - `viewing_requests_cancelled_by_status_check` is asserted in BOTH
- *    directions — the shapes it refuses are the ones Mongo allowed,
+ *    directions — both shapes it refuses are representable without it,
  *  - every refusal re-reads the row, because a handler that 403s and writes
  *    anyway passes any assertion made on its response alone,
  *  - the two conflict rules are asserted on what they PERMIT (a re-request
@@ -330,8 +330,7 @@ describe('cancel — the `cancelled_by` equivalence', () => {
   });
 
   it('REFUSES a cancelled row with no canceller, and a canceller on a pending row', async () => {
-    // The CHECK, in both directions. Mongo permitted each; the second is the
-    // damaging one — a cancellation neither party can be shown to have made.
+    // The CHECK, in both directions. The second is the damaging one — a cancellation neither party can be shown to have made.
     const propertyId = await seedBookableProperty();
     const base = {
       propertyId,

@@ -1,29 +1,23 @@
 /**
  * City cover sync, and the city→properties read — both against a REAL Postgres.
  *
- * ## The whole file seeds ONE store now
+ * ## Images first, then the city
  *
- * `cityCoverSyncService` was the last city module on Mongo, and it could not
- * move alone: it does not only WRITE a city, it creates the IMAGE first through
- * `imageUploadService.createImageForEntity`, and `cities.cover_image_id` is a
- * real foreign key to `images.id` — porting the city half while images still
- * minted Mongo `_id`s would have made every cover write a guaranteed `23503`.
- * Both halves moved together, so the split this file used to document (a ported
- * READ seeded in Postgres beside an unported WRITE seeded in Mongo) is gone.
+ * `cityCoverSyncService` does not only WRITE a city, it creates the IMAGE first
+ * through `imageUploadService.createImageForEntity`, and `cities.cover_image_id`
+ * is a real foreign key to `images.id`.
  *
  * ## What the foreign key changed about these assertions
  *
  * `createImageForEntity` is mocked, so nothing here inserts a real `images`
  * row — which means a mocked id cannot simply be asserted onto
- * `cities.cover_image_id` the way a Mongo ObjectId could. Every case therefore
+ * `cities.cover_image_id`. Every case therefore
  * seeds a REAL image row (`seedCityImage`) and returns its id from the mock.
  * That is not a workaround: it is the constraint doing its job, and a test that
  * dodged it with a random id would assert a write production cannot perform.
  *
- * `imageIds[]` is gone with the Mongo document — the membership it denormalized
- * is `images.(entity_type, entity_id)`, which `createImageForEntity` writes —
- * so the old `expect(imageIds).toEqual([...])` has no counterpart and is not
- * replaced by a weaker assertion.
+ * There is no `imageIds[]` on a city — the membership is
+ * `images.(entity_type, entity_id)`, which `createImageForEntity` writes.
  */
 
 import express, { type Express } from 'express';
@@ -412,10 +406,8 @@ describe('GET /api/cities/:id/properties', () => {
 });
 
 /**
- * `GET /api/cities/popular` used to be asserted here, seeded through the Mongo
- * City model. It reads Postgres now, so those cases moved to
- * `__tests__/integration/cityEndpoints.test.ts`, where the fixtures are seeded
- * in the store the endpoint actually queries. They cover strictly more than
- * they did: the plausible-name filter, the missing-cover filter, AND a cover
- * whose image row has been deleted.
+ * `GET /api/cities/popular` is asserted in
+ * `__tests__/integration/cityEndpoints.test.ts`. It covers the plausible-name
+ * filter, the missing-cover filter, AND a cover whose image row has been
+ * deleted.
  */

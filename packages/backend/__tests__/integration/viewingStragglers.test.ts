@@ -1,22 +1,17 @@
 /**
- * The two readers that were left pointing at Mongo after `viewing_requests`
- * moved — the retention sweep and the owner analytics — plus the owner selector
- * they both depend on.
+ * The two readers of `viewing_requests` that can fail SILENTLY — the retention
+ * sweep and the owner analytics — plus the owner selector they both depend on.
  *
- * ## Why these need tests at all, when the port itself was mechanical
+ * ## Why these need tests at all
  *
- * Both failed SILENTLY, and in the worse of the two ways:
- *
- *  - `cleanupService` kept issuing its `deleteMany` against Mongo, so it reaped
- *    NOTHING. Unlike a read that returns an empty list, a sweep that deletes
+ *  - A retention sweep that reaps NOTHING raises nothing. Unlike a read that returns an empty list, a sweep that deletes
  *    nothing produces no output at all — its only symptom is disk, months
  *    later. So the test asserts a POSITIVE deletion count and that the rows
  *    really went, not merely that the call resolved.
- *  - `analyticsController` selected the caller's listings by `profileId`, which
- *    `PropertySchema` never declared, so every figure it reported had been 0
- *    since it was written. The test asserts NON-ZERO numbers, because a port
- *    that moved the queries and left the selector broken would still return
- *    zeros and look done.
+ *  - `analyticsController` once selected the caller's listings by a `profileId`
+ *    no row carries, so every figure it reported was 0. The test asserts
+ *    NON-ZERO numbers, because a broken selector still returns zeros and looks
+ *    done.
  *
  * The retention window and the status filter are asserted on what they SPARE as
  * well as what they reap: a sweep scoped too widely deletes live rows, and
@@ -130,8 +125,7 @@ describe('pruneClosedViewingsBefore — the sweep that was reaping nothing', () 
     const removed = await pruneClosedViewingsBefore(getDb(), new Date(Date.now() - 90 * DAY));
 
     // A POSITIVE count, and the rows really gone. A sweep that resolved without
-    // deleting — which is exactly what the Mongo-backed version did after the
-    // table moved — passes any assertion that only checks it did not throw.
+    // deleting passes any assertion that only checks it did not throw.
     expect(removed).toBe(2);
     expect(
       await getDb().select().from(viewingRequests).where(eq(viewingRequests.id, declined.id)),
@@ -185,12 +179,7 @@ describe('owner analytics — the endpoint that always returned zeros', () => {
    * and exchange cases, this endpoint's early return is a documented response
    * shape rather than a vestigial ownership check.
    *
-   * It is a POSTGRES row now. The gate itself was always sound — a plain
-   * `findOne({ oxyUserId })` on a declared, indexed path — but profiles are
-   * WRITTEN to Postgres, so a Mongo read of them would answer zeros forever for
-   * anyone whose profile was created after that port landed. A fixture left on
-   * `Profile.create` would go on passing against the Mongo version and fail
-   * here, which is what it did.
+   * It is a POSTGRES row, in the same table the profile screen writes.
    */
   async function seedProfile(oxyUserId: string) {
     return getDb().insert(profiles).values({ oxyUserId });

@@ -1,34 +1,26 @@
 /**
  * The home/browse feed.
  *
- * Everything it reads is Postgres now — the listings, their addresses and
- * photos, and the three things it decorates the page with (`saved_items`,
- * `recently_viewed`, `reservations`). This file used to carry a note saying
- * those three "stay Mongo"; they were ported in #308 and #311, and the readers
- * here were the stragglers left behind.
+ * Everything it reads is Postgres — the listings, their addresses and photos,
+ * and the three things it decorates the page with (`saved_items`,
+ * `recently_viewed`, `reservations`).
  *
- * ## The straggler that mattered: an availability check that APPROVED
+ * ## An availability check must never APPROVE by default
  *
- * The reservation conflict half read Mongo into an id list and applied it only
- * `if (ids.length > 0)`. Once `reservations` moved, that read returned nothing,
- * the guard skipped the exclusion, and every booked listing was reported free.
- * Nothing errored — an availability check with no bookings in front of it
- * approves, so the wrong answer was the successful-looking one and the symptom
- * would have been a double booking. It is now a `NOT EXISTS` beside the
- * calendar half, in the same statement, with no id list to be empty.
+ * The reservation conflict half is a `NOT EXISTS` beside the calendar half, in
+ * the same statement, with no id list to be empty. An availability check with
+ * no bookings in front of it approves, so an id list guarded by
+ * `if (ids.length > 0)` that came back empty would report every booked listing
+ * free — the wrong answer is the successful-looking one, and the symptom is a
+ * double booking.
  *
- * ## Two behaviours that changed with the port, both deliberate
+ * ## Two deliberate behaviours
  *
- *  - **`savesCount` reports real numbers.** The Mongo pipeline compared
- *    `Saved.targetId` (declared `String`) against `ObjectId`s, and `aggregate`
- *    does not cast, so it matched nothing and the count was always `0`. The
- *    same defect is recorded for `stats.ts` in `db/MIGRATION-CONTRACT.md`: a
- *    count that starts being non-zero after the cutover is correct behaviour
- *    arriving, not a regression. The geo-ranked branch orders by it.
+ *  - **`savesCount` reports real numbers** — both sides of the comparison are
+ *    `text`. The geo-ranked branch orders by it.
  *  - **An unknown `sortBy` falls back to recency** instead of being passed
- *    through as a field name. Mongo accepted any string and sorted by a path
- *    that did not exist — a silent no-op; the SQL equivalent would be building
- *    a column name out of user input. The five real sort fields are unchanged.
+ *    through as a field name; the alternative would be building a column name
+ *    out of user input. The five real sort fields are the only ones honoured.
  */
 
 import { Request, Response, NextFunction } from 'express';
@@ -99,7 +91,7 @@ const DEFAULT_PREFERRED_RADIUS_METERS = 45000;
 /**
  * How far back the personalisation signal looks.
  *
- * Ten, carried over from the Mongo `.limit(10)` it replaces. It bounds the
+ * Ten. It bounds the
  * INPUT to the preference weighting, not the table — `recently_viewed` has its
  * own retention sweep.
  */
@@ -139,9 +131,7 @@ function priceBucket(price: number): 'low' | 'medium' | 'high' {
  * Stable city key for location-based personalization.
  *
  * Geo is relational, so this keys on the address's `cityId`. Under the join it
- * is always a bare id string — the "is the ref populated or not?" branch the
- * Mongo version needed has no counterpart, because a join has no unpopulated
- * state.
+ * is always a bare id string — a join has no unpopulated state.
  */
 function cityIdKey(property: { address?: { cityId?: unknown } }): string | null {
   const ref = property.address?.cityId;
@@ -264,12 +254,10 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
     // a confirmed reservation overlapping it. BOTH halves are now `NOT EXISTS`
     // predicates in the same statement.
     //
-    // The reservation half used to read Mongo into an id list and apply it only
-    // `if (ids.length > 0)`. Once `reservations` moved to Postgres that read
-    // returned nothing, the guard skipped the exclusion, and every booked
-    // listing was reported free — an availability check that sees no bookings
-    // APPROVES rather than fails, so the symptom was a double booking and not
-    // an error anywhere.
+    // Never an id list guarded by `if (ids.length > 0)`: an empty list would
+    // skip the exclusion and report every booked listing free — an
+    // availability check that sees no bookings APPROVES rather than fails, so
+    // the symptom would be a double booking and not an error anywhere.
     const checkInDate = parseDateParam(checkIn);
     const checkOutDate = parseDateParam(checkOut);
     const hasStay =
@@ -416,9 +404,9 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
       }));
     }
 
-    // Narrowed to a `string` in ONE place rather than re-derived: the Mongo
-    // reads took `unknown` filters and never had to, and the repositories are
-    // typed, so the union has to collapse before it reaches them.
+    // Narrowed to a `string` in ONE place rather than re-derived: the
+    // repositories are typed, so the union has to collapse before it reaches
+    // them.
     const oxyUserId = req.user?.id ?? req.user?._id;
     if (typeof oxyUserId === 'string' && oxyUserId.length > 0) {
       try {

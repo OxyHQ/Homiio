@@ -1,7 +1,7 @@
 /**
  * `profiles` and its five child tables — the tenant profile Oxy does not own.
  *
- * Ported from `models/schemas/ProfileSchema.ts`. Oxy owns identity; this table
+ * Oxy owns identity; this table
  * owns everything Homiio knows about a person that Oxy has no opinion about —
  * income, search preferences, references, rental history, roommate settings.
  * The join to Oxy is `oxy_user_id`, which carries no foreign key for the reason
@@ -15,10 +15,10 @@
  *
  * ## The `personalProfile` wrapper is DROPPED from the column names
  *
- * `properties` keeps the Mongo path in the column name
- * (`longTermRent.monthlyAmount` → `long_term_rent_monthly_amount`) so the
- * backfill's column-coverage check can map source to target mechanically. This
- * table cannot follow that rule, and the reason is a hard limit rather than
+ * `properties` keeps the wire path in the column name
+ * (`longTermRent.monthlyAmount` → `long_term_rent_monthly_amount`) so a
+ * serializer can map a DTO to its columns mechanically. This table cannot
+ * follow that rule, and the reason is a hard limit rather than
  * taste: `personalProfile.settings.roommate.preferences.lifestyle.cleanliness`
  * spells out to `personal_profile_settings_roommate_preferences_lifestyle_cleanliness`,
  * which is **68 bytes**. Postgres truncates an identifier at 63 and does it
@@ -27,37 +27,31 @@
  *
  * So the wrapper goes: `settings_roommate_preferences_lifestyle_cleanliness`
  * (51 bytes) is the longest column here. Dropping it costs nothing in meaning —
- * `personalProfile` is 1:1 with the profile row and exists in Mongo only
- * because a sub-schema was the way to group the fields — and the backfill's
- * mapping gains exactly one rule ("strip the leading `personalProfile.`")
- * rather than a table of exceptions.
+ * `personalProfile` is 1:1 with the profile row and exists on the wire only to
+ * group the fields — and the serializer's mapping gains exactly one rule
+ * ("strip the leading `personalProfile.`") rather than a table of exceptions.
  *
- * ## Every column is NULLABLE, including the ones with a Mongoose default
+ * ## Every column is NULLABLE, including the ones with a wire default
  *
- * `personalProfile` is declared `{ type: personalProfileSchema }` with no
- * `default`, so mongoose never materializes it and none of its defaults are
- * ever written. Column nullness is the only representation of the block being
- * ABSENT once the block is flattened away — the same rule, and the same
- * measurement, that made `properties.long_term_rent_currency` nullable.
+ * `personalProfile` is an optional block, so column nullness is the only
+ * representation of the block being ABSENT once it is flattened away — the same
+ * rule that made `properties.long_term_rent_currency` nullable.
  *
  * ## Arrays
  *
  * Three scalar arrays stay native `text[]` (`preferences.propertyTypes`,
- * `preferences.preferredAmenities` and the roommate `interests` this migration
- * ADDS) — each is read whole and none is ever queried by element. The five
+ * `preferences.preferredAmenities` and the roommate `interests`) — each is read whole and none is ever queried by element. The five
  * arrays that carry STRUCTURE become child tables, because a native array of a
  * composite type is not queryable, not constrainable and not indexable in any
  * useful way.
  *
- * ## Two columns here have NO Mongo source, deliberately
+ * ## Two columns here were added to store what the API already accepted
  *
  * `settings_roommate_preferences_location` and
- * `settings_roommate_preferences_interests` are not ports of stored fields —
- * they are the fix for a field that was accepted, sent, and silently discarded.
- * Each carries its own reason where it is declared. They are the profile
- * counterpart of `schema/unmappedColumns.ts`'s `properties.views` /
- * `properties.title`: a column starting to hold data after the cutover is the
- * EXPECTED condition, not a copy failure.
+ * `settings_roommate_preferences_interests` are the fix for fields that were
+ * accepted, sent, and silently discarded. Each carries its own reason where it
+ * is declared. They are the profile counterpart of `schema/unmappedColumns.ts`'s
+ * `properties.views` / `properties.title`: empty on older rows by design.
  */
 
 import {
@@ -169,8 +163,8 @@ export const GENDER_PREFERENCES = [
 ] as const satisfies readonly `${GenderPreference}`[];
 
 /**
- * Three lifestyle preferences share one three-valued vocabulary in Mongo and
- * one tuple here. `prefer_not` is a real answer — "I would rather not say" — and
+ * Three lifestyle preferences share one three-valued vocabulary and one tuple
+ * here. `prefer_not` is a real answer — "I would rather not say" — and
  * is NOT the same as the column being NULL, which means the person never
  * answered at all.
  */
@@ -189,8 +183,8 @@ export const profiles = pgTable(
     /**
      * The Oxy account this profile belongs to. One profile per account.
      *
-     * Mongoose declared `unique: true` AND `index: true`, which creates the same
-     * index twice; only the unique one is ported.
+     * One unique index and no second plain one — the unique index already
+     * serves every lookup.
      */
     oxyUserId: text().notNull(),
 
@@ -219,7 +213,7 @@ export const profiles = pgTable(
     preferencesPriceUnit: text({ enum: PRICE_UNITS }),
     preferencesMinBedrooms: doublePrecision(),
     preferencesMinBathrooms: doublePrecision(),
-    /** Free-text amenity keywords, lowercased at the call site (Mongo `lowercase: true`). */
+    /** Free-text amenity keywords, lowercased at the call site. */
     preferencesPreferredAmenities: text().array(),
     preferencesPetFriendly: boolean(),
     preferencesSmokingAllowed: boolean(),
@@ -267,19 +261,13 @@ export const profiles = pgTable(
      * Where the person wants to share a home — free text, the way the roommate
      * filter has always collected it ("Barcelona", "Gràcia").
      *
-     * **This column has no Mongo counterpart, and that is the defect it exists
-     * to close rather than an omission being carried forward.**
-     * `EDITABLE_ROOMMATE_PREFERENCE_FIELDS` accepts `location`,
-     * `RoommateFilters` sends it, and `updateRoommatePreferences` wrote it to
-     * `personalProfile.settings.roommate.preferences.location` — a path
-     * `personalProfileSchema` never declared, so mongoose strict mode (ON for
-     * writes, always) dropped it from every update. Nothing errored and nothing
-     * was ever stored, which is why the discover filter that reads it has never
-     * returned a row.
+     * **This column closes a defect.** `EDITABLE_ROOMMATE_PREFERENCE_FIELDS`
+     * accepts `location`, `RoommateFilters` sends it, and
+     * `updateRoommatePreferences` writes it — but nothing used to store it, so
+     * the discover filter that reads it never returned a row.
      *
-     * Filtered with `ILIKE` over `escapeLikePattern` (`db/likePattern.ts`) —
-     * the port of the `{ $regex, $options: 'i' }` the Mongo filter used. No
-     * index: the table holds five rows, and `CONVENTIONS.md` forbids a
+     * Filtered with a case-insensitive `ILIKE` over `escapeLikePattern`
+     * (`db/likePattern.ts`). No index: the table holds five rows, and `CONVENTIONS.md` forbids a
      * speculative one.
      */
     settingsRoommatePreferencesLocation: text(),
@@ -307,8 +295,7 @@ export const profiles = pgTable(
      * The person's DISPLAY currency preference, and deliberately NOT constrained
      * to `LISTING_CURRENCIES`.
      *
-     * Mongoose declared it a bare `String` with `default: 'USD'` and no `enum`,
-     * so nothing has ever restricted what lands here. A CHECK derived from a
+     * A bare string defaulting to `'USD'` that nothing has ever restricted. A CHECK derived from a
      * vocabulary the source never enforced is exactly the shape
      * `CONVENTIONS.md` defers until the `distinct()` audit has measured the real
      * values.
@@ -320,9 +307,7 @@ export const profiles = pgTable(
   },
   (table) => [
     uniqueIndex('profiles_oxy_user_id_key').on(table.oxyUserId),
-    // Mongo carried `{ createdAt: -1 }` and `{ updatedAt: -1 }` as two
-    // single-field indexes on a five-row collection. Neither is ported: a btree
-    // on a table this size is never chosen by the planner, and both would be
+    // No index on `created_at` or `updated_at`: a btree on a table this size is never chosen by the planner, and both would be
     // speculative even if it were larger — nothing in this package sorts
     // profiles by either.
     check(
@@ -391,8 +376,7 @@ export const profiles = pgTable(
  * the whole array.
  *
  * CASCADE from `profiles` everywhere below: a reference, a rental-history entry
- * or a chat message has no meaning without the profile it belongs to, and
- * mongoose deleted them with the parent document by construction.
+ * or a chat message has no meaning without the profile it belongs to.
  */
 export const profileReferences = pgTable(
   'profile_references',
@@ -443,9 +427,7 @@ export const profileRentalHistory = pgTable(
       sql`${table.reasonForLeaving} in (${sql.raw(inList(REASONS_FOR_LEAVING))})`,
     ),
     /**
-     * Mongo declared no ordering rule here at all — unlike `livedTo` on a review
-     * or `end` on an availability window, which both carried a validator. It is
-     * expressed anyway because an open-ended tenancy is NULL rather than a date
+     * An ordering rule, because an open-ended tenancy is NULL rather than a date
      * before its own start, and because the collection holds five rows: there is
      * nothing for it to reject.
      */
@@ -460,11 +442,10 @@ export const profileRentalHistory = pgTable(
  * `personalProfile.preferences.preferredLocations[]` — a city/state pair plus a
  * search radius.
  *
- * `radius` keeps Mongo's units, which are MILES (the validator reads "Radius
- * must be at least 1 mile"). Nothing converts it and the column does not claim
- * otherwise; renaming it `radius_miles` would be the honest fix and is a change
- * to the API contract, not to the schema, so it is left for the batch that ports
- * the profile controller.
+ * `radius` is in MILES (the validator reads "Radius must be at least 1 mile").
+ * Nothing converts it and the column does not claim otherwise; renaming it
+ * `radius_miles` would be the honest fix and is a change to the API contract,
+ * not to the schema.
  */
 export const profilePreferredLocations = pgTable(
   'profile_preferred_locations',
@@ -474,8 +455,7 @@ export const profilePreferredLocations = pgTable(
       .notNull()
       .references(() => profiles.id, { onDelete: 'cascade' }),
     /**
-     * Free text, NOT a `cities.id`. Mongo declared plain strings and the profile
-     * UI collects typed text, so a foreign key here would be an invention rather
+     * Free text, NOT a `cities.id`. The profile UI collects typed text, so a foreign key here would be an invention rather
      * than a link that exists — the prime directive is that no relational link is
      * LOST, not that one is manufactured.
      */
@@ -514,9 +494,8 @@ export const profileRoommateHistory = pgTable(
  * `personalProfile.chatHistory[]` — the Sindi assistant transcript.
  *
  * An UNBOUNDED embedded array, which is the deciding property: it grows with
- * every message and Mongo kept it inside the profile document, where it competes
- * with the 16 MB BSON ceiling and is rewritten in full on every append. A child
- * table makes an append an INSERT.
+ * every message, and an array column would be rewritten in full on every
+ * append. A child table makes an append an INSERT.
  *
  * `position` is the array index, preserved because the transcript's ORDER is its
  * meaning and `timestamp` cannot substitute for it: it defaults to `Date.now`

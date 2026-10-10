@@ -1,8 +1,7 @@
 /**
  * The search plan, asserted on the SQL it actually renders.
  *
- * `buildSearchPlan` used to return a Mongo filter OBJECT, which a test could
- * read a key off. It now returns drizzle `SQL` fragments, and the only honest
+ * `buildSearchPlan` returns drizzle `SQL` fragments, and the only honest
  * way to assert on one is to render it the way the driver will — column names
  * come from the casing authority and values are BOUND, so a test that stringified
  * the fragment by hand would be asserting against a spelling nothing uses.
@@ -110,9 +109,8 @@ describe('buildSort', () => {
   });
 
   /**
-   * NULLS LAST in BOTH directions, which is a deliberate difference from Mongo:
-   * a missing price sorted FIRST there, so "cheapest first" led with listings
-   * that have no price at all. See `db/properties/propertyReads`.
+   * NULLS LAST in BOTH directions, deliberately: "cheapest first" must never
+   * lead with listings that have no price at all. See `db/properties/propertyReads`.
    */
   it('puts unpriced listings last in both price directions', () => {
     const ascending = buildSearchPlan({ sortBy: 'price', sortOrder: 'asc' });
@@ -161,9 +159,8 @@ describe('buildSort', () => {
 
   /**
    * `has_images DESC` is prepended by `propertyOrderBy`, not by `buildSort` —
-   * once, for every feed, so a caller cannot forget it. Pinned here because the
-   * Mongo original prepended it at four separate call sites and this is where a
-   * reader will look for it.
+   * once, for every feed, so a caller cannot forget it. Pinned here because this
+   * is where a reader will look for it.
    */
   it('does not prepend the image-first key itself', () => {
     const { params } = buildSearchPlan({});

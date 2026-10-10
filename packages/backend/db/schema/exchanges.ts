@@ -10,13 +10,12 @@
  * `requestedWindow` and `offeredWindow` are `{ start, end }` sub-schemas with a
  * 1:0..1 cardinality and — the deciding property — they are the FILTER of the
  * calendar-overlap query. A child table would put a join in front of it. This is
- * the same call `properties` makes for its twelve subdocuments, and the opposite
+ * the same call `properties` makes for its twelve nested blocks, and the opposite
  * of `property_availability_windows`, which is a 1:N calendar.
  *
  * `requestedWindow` is `required`, so its two columns are `NOT NULL`.
- * `offeredWindow` is declared `default: undefined` and never materializes, so
- * both of its columns are nullable — the measured mongoose rule
- * `CONVENTIONS.md` states.
+ * `offeredWindow` is optional, so both of its columns are nullable — the rule
+ * `CONVENTIONS.md` states for an optional block.
  */
 
 import {
@@ -93,8 +92,7 @@ export const exchangeRequests = pgTable(
   },
   (table) => [
     /**
-     * The overlap index Mongo's `{ 'requestedWindow.start': 1,
-     * 'requestedWindow.end': 1 }` could not be. `[)` bounds, matching
+     * The overlap index a `(start, end)` btree could not be. `[)` bounds, matching
      * `property_availability_windows` — the `AvailabilityWindow` contract these
      * windows are checked against says adjacent windows do not overlap, and the
      * schema's own comment calls the range "half-open [start, end)".
@@ -221,7 +219,7 @@ export const exchangeReviews = pgTable(
     updatedAt: updatedAt(),
   },
   (table) => [
-    /** One review per reviewer per exchange — Mongo's own unique compound. */
+    /** One review per reviewer per exchange. */
     uniqueIndex('exchange_reviews_request_reviewer_key').on(
       table.exchangeRequestId,
       table.reviewerOxyUserId,
@@ -245,7 +243,7 @@ export const exchangeReviews = pgTable(
         and (${table.categoriesHospitality} is null or ${table.categoriesHospitality} between 1 and 5)`,
     ),
     /**
-     * Nobody reviews themselves. Mongo enforced nothing; the controller resolves
+     * Nobody reviews themselves. The controller resolves
      * both ids server-side, so this rejects only a bug — which is what a CHECK
      * on an empty table is for.
      */

@@ -33,12 +33,7 @@
  * geo joins every catalogue read goes through, so a jury sees the listing the
  * app renders rather than a second, privately-spelled projection of it.
  *
- * With it goes the question "was the address populated?", which under Mongoose
- * was answerable three ways at once: `PropertySchema`'s `post(['find','findOne'])`
- * hook RENAMED a populated `addressId` to `address` (on `.lean()` reads too), so
- * a reader spelling it the other way silently lost the listing's location and
- * its entire location resource — and delivery still succeeded. There is no such
- * state left to detect: `properties.address_id` is `NOT NULL` behind an inner
+ * There is no "was the address populated?" question to get wrong: `properties.address_id` is `NOT NULL` behind an inner
  * join and `addresses.longitude` / `latitude` are `NOT NULL` with a range CHECK
  * that also rejects `NaN`, so a listing that resolves has an address and a
  * point, and the location resource always travels.
@@ -110,9 +105,8 @@ function geoName(name: string | null): string | undefined {
  *
  * Price and currency must travel TOGETHER (the contract refuses one without the
  * other), so a listing with an amount and no currency sends neither rather than
- * guessing one from the country. `Number.isFinite` survives the port for a
- * reason that is now stronger than it was under Mongo: `double precision`
- * genuinely stores `NaN` and `Infinity`, and no CHECK on these columns forbids
+ * guessing one from the country. `Number.isFinite` is required: `double
+ * precision` genuinely stores `NaN` and `Infinity`, and no CHECK on these columns forbids
  * either.
  */
 function listingPrice(property: PropertyRow): { price: number; currency: string } | null {
@@ -159,9 +153,8 @@ function publishedAddressLabel(
 /**
  * Where the home is, coarsely, plus the label the advert publishes.
  *
- * Never absent, unlike its Mongo ancestor: the coordinates are `NOT NULL`
- * columns behind an inner join, so there is no "the address did not come back"
- * branch to take — see the module comment for what that branch used to hide.
+ * Never absent: the coordinates are `NOT NULL` columns behind an inner join, so
+ * there is no "the address did not come back" branch to take.
  */
 function locationContext(
   property: PropertyRow,
@@ -193,9 +186,8 @@ function locationContext(
  * differently and turn a legitimate outbox retry into a permanent 409.
  *
  * `listing_flags_detected_language` is deliberately absent: it holds a language
- * code, not a restriction the advert placed on who may live there, and it never
- * travelled under Mongo either (the old loop emitted only members that were
- * literally `true`). A three-state flag that is `false` or unknown is absent
+ * code, not a restriction the advert placed on who may live there. Only members
+ * that are literally `true` travel; a three-state flag that is `false` or unknown is absent
  * too — "the classifier did not read this restriction" and "the classifier read
  * that there is no such restriction" are different facts, and neither is
  * something a jury should be handed as a finding.

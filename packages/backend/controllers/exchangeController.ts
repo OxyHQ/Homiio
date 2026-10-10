@@ -92,8 +92,8 @@ function hasExchangeOffering(property: PropertyBookingBasis): boolean {
 
 /**
  * Parse + validate a requested/offered window into concrete Dates. The wire
- * shape uses ISO strings (`ExchangeWindow`) but Mongoose hydrates persisted
- * windows to `Date`, so accept either at the boundary.
+ * shape uses ISO strings (`ExchangeWindow`) but persisted windows are read
+ * back as `Date`, so accept either at the boundary.
  */
 function parseWindow(
   window: { start: Date | string; end: Date | string } | undefined,
@@ -844,7 +844,7 @@ class ExchangeController {
           return next(new AppError('Only the requester can cancel', 403, 'FORBIDDEN'));
         if (exchangeRequest.status === ExchangeRequestStatus.CANCELLED) {
           // Already in the state the caller asked for. The message is still
-          // applied, matching the Mongoose handler's convergence path.
+          // applied, so a repeat converges.
           const converged =
             nextMessage === undefined
               ? exchangeRequest

@@ -7,25 +7,23 @@
  *
  * ## "Has this person stated any preference at all?" is a real question here
  *
- * In Mongo it answered itself. `personalProfile` was declared with no `default`,
- * so mongoose never materialised it and `prefsOf(profile)` was `undefined` for
- * anybody who had not filled the form in — which is what
- * `calculateMatchPercentage`'s `if (!prefs1 || !prefs2) return 0` reads. Flatten
- * the block into columns and that distinction has nowhere to live unless it is
- * rebuilt: an all-NULL row would otherwise present as a preferences object whose
+ * `calculateMatchPercentage`'s `if (!prefs1 || !prefs2) return 0` reads
+ * `prefsOf(profile)` being `undefined` for anybody who has not filled the form
+ * in. With the block flattened into columns that distinction has nowhere to
+ * live unless it is rebuilt: an all-NULL row would otherwise present as a preferences object whose
  * every field happens to be empty, and two such people would score against each
  * other as though they had answered.
  *
  * So {@link toMatchInputs} returns `undefined` when NO roommate preference
  * column is set, and each sub-block is present only when one of ITS columns is —
- * reproducing exactly which branches of the scorer used to fire.
+ * so exactly the right branches of the scorer fire.
  *
  * ## The scorer's own quirks are carried VERBATIM, with one exception
  *
  * Two people who both left `smoking` unanswered score 15 points for agreeing,
- * because the comparison is `===` on two absent values — `undefined ===
- * undefined` in Mongo, `null === null` here. That is the same answer the same
- * arithmetic has always given and it is not this port's to change.
+ * because the comparison is `===` on two absent values (`null === null`). That
+ * is the answer the arithmetic has always given, and changing it is a product
+ * decision.
  *
  * The exception is forced rather than chosen. `interests` has never been
  * storable (see `db/schema/profiles.ts`), so the branch that divides by

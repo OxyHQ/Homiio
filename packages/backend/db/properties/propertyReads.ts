@@ -4,9 +4,8 @@
  * One place issues the property SELECT, so the address join, the protected-column
  * exclusion, the child hydration and the wire shape cannot be spelled five
  * different ways by five controllers. That is not tidiness: `list`, `search`,
- * `geospatial`, `batch`, the city feed and the agency feed each assembled their
- * own Mongo filter, and three of them had independently copy-pasted the same
- * `excludeIds` bug.
+ * `geospatial`, `batch`, the city feed and the agency feed each assembling their
+ * own filter is how three of them once copy-pasted the same `excludeIds` bug.
  *
  * ## The shape of a read
  *
@@ -22,21 +21,19 @@
  * `LIMIT` and the count; three small indexed `IN` queries against a page of at
  * most 100 ids is the honest shape.
  *
- * ## Ordering: two deliberate differences from Mongo, both stated
+ * ## Ordering: two deliberate rules, both stated
  *
- *  - **NULLs sort LAST in a price sort, in both directions.** Mongo sorted a
- *    MISSING price first ascending, so "cheapest first" led with listings that
- *    have no price at all. Postgres would put them last ascending and first
+ *  - **NULLs sort LAST in a price sort, in both directions**, so "cheapest
+ *    first" never leads with listings that have no price at all. Postgres would
+ *    put them last ascending and first
  *    descending; neither default is the product's intent, so both directions say
  *    `NULLS LAST` explicitly and priced listings always rank above unpriced ones.
- *  - **`has_images DESC` leads every sort**, unchanged — the product rule, and
+ *  - **`has_images DESC` leads every sort** — the product rule, and
  *    the leading column of `properties_has_images_created_at_idx`.
  *
  * ## What this module does NOT do
  *
- * It does not write. Property, address and image WRITES are still Mongoose, and
- * during the dual-run the worker keeps ingesting into Mongo — so nothing here
- * may become the only writer of a Postgres row.
+ * It does not write. Property writes are `propertyWrites.ts`.
  */
 
 import {
@@ -227,14 +224,11 @@ export async function findPropertyById(id: string): Promise<HydratedProperty | n
 /**
  * The distinct Oxy accounts that advertise a listing at any of these addresses.
  *
- * The port of `Property.distinct('oxyUserId', { addressId: { $in: … },
- * oxyUserId: { $nin: [null, ''] } })`, which the review-created notification
- * fan-out uses to find who to tell. `selectDistinct` answers it in the server
- * where Mongo's `distinct` materialised the whole list in the driver.
+ * The review-created notification fan-out uses it to find who to tell.
+ * `selectDistinct` answers it in the server.
  *
- * Both halves of the `$nin` are carried across and BOTH are load-bearing:
- * `oxy_user_id` is genuinely nullable (`PropertySchema`'s `pre('save')` strips it
- * from every external listing), and an empty string is a VALUE that would be
+ * Both exclusions — NULL and `''` — are load-bearing: `oxy_user_id` is
+ * genuinely nullable (no external listing carries one), and an empty string is a VALUE that would be
  * dispatched to as though it named somebody.
  *
  * `inArray` rather than a `sql` template: an array interpolated into a template
@@ -276,8 +270,7 @@ export function allOf(conditions: readonly (SQL | undefined)[]): SQL | undefined
  * The sort a discovery feed uses, with `has_images DESC` always in front.
  *
  * Callers pass the ordering they want WITHIN the image-bearing group; this
- * prepends the product rule so no feed can forget it, which is how the Mongo
- * code was written too — and there the prepending was duplicated in four places.
+ * prepends the product rule ONCE so no feed can forget it.
  */
 export function propertyOrderBy(...within: SQL[]): SQL[] {
   return [sql`${properties.hasImages} desc`, ...within];

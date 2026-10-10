@@ -1,13 +1,10 @@
 /**
  * The four offering-coherence CHECKs, asserted against REAL ROWS.
  *
- * This is the invariant `services/offeringValidation.ts` states and that
- * Mongo enforced on ONE of its write paths. `save()` ran the path validator on
- * `offerings`; `findOneAndUpdate` made the same validator skip itself (its
- * `isPropertyDocument` guard returns true only for a document `this`, because a
- * Query cannot see sibling blocks); and `services/scraperService.ts:285` — the
- * steady-state path for every one of the 17,644 external listings in production
- * — reaches the collection through `updateOne` with no `runValidators` at all.
+ * This is the invariant `services/offeringValidation.ts` states. An
+ * application-side check alone is skippable — the ingest writer is the
+ * steady-state path for every one of the 17,644 external listings in
+ * production — so the database holds it on every write path.
  *
  * So the point of this file is not "the constraint exists". It is that each
  * violation is REFUSED and that the refusal NAMES THE OFFERING. A single
@@ -192,8 +189,8 @@ describe('block integrity', () => {
   // `offeringValidation.ts` states the invariant over BLOCK PRESENCE; the four
   // coherence CHECKs above state it over PRICE NULL-NESS. These four close the
   // gap between the two readings — the case where a block is populated but
-  // carries no price and no offering, which Mongo rejects and a coherence CHECK
-  // alone accepts because all it sees is `false = false`.
+  // carries no price and no offering, which `validateOfferings` rejects and a
+  // coherence CHECK alone accepts because all it sees is `false = false`.
   it.each(OFFERINGS)(
     'refuses a $offering satellite column with no discriminator, naming $blockConstraint',
     async ({ blockConstraint, satellite }) => {

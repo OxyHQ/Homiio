@@ -2,8 +2,8 @@
  * `addresses.geo` and `addresses.address_level`, asserted against REAL ROWS.
  *
  * The point of this file is the ORDERING check. `ST_MakePoint` takes
- * `(longitude, latitude)` and Mongo stored `coordinates: [lng, lat]` — a
- * POSITIONAL pair a `2dsphere` index reads by index — so a transposed pair is
+ * `(longitude, latitude)` and the wire carries `coordinates: [lng, lat]` — a
+ * POSITIONAL pair — so a transposed pair is
  * the single most likely thing to get wrong here. And it does not look wrong: a
  * lat/lon swap yields a perfectly valid point in a plausible-looking place.
  *
@@ -193,9 +193,9 @@ describe('addresses.geo', () => {
     //   NOTICE: Coordinate values were coerced into range …
     //   POINT(0 80)
     // A NOTICE, a successful insert, and latitude 100 stored as 80 — wrapped
-    // over the pole into a different, entirely plausible place. Mongo's
-    // validator rejected it, so the CHECK constraint is what keeps that
-    // behaviour rather than degrading it into a silently mislocated listing.
+    // over the pole into a different, entirely plausible place. The CHECK
+    // constraint is what keeps that from becoming a silently mislocated
+    // listing.
     await expect(insertAddressAt({ latitude: 100, longitude: 0 })).rejects.toThrow();
   });
 });
@@ -217,10 +217,9 @@ describe('addresses.address_level', () => {
     expect(levels.get(unit)).toBe('UNIT');
   });
 
-  it('treats an EMPTY STRING as absent, the way the Mongo method did', async () => {
+  it('treats an EMPTY STRING as absent', async () => {
     // The fixture that makes the strict and loose readings disagree, and the
-    // only one that does. `getAddressLevel()` tested `if (this.floor || ...)`,
-    // so `floor: ''` was ABSENT — while `floor is not null` would call it
+    // only one that does. The rule is truthiness, so `floor: ''` is ABSENT — while `floor is not null` would call it
     // present and promote this row to UNIT. Without a row in exactly this shape,
     // both spellings pass every other case in this file.
     const id = await insertAddressAt(BARCELONA, { number: '', floor: '', unit: '' });

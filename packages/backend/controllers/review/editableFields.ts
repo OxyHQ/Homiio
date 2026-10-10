@@ -10,8 +10,7 @@
  *
  * This is the FIRST of two layers and it decides only WHICH keys survive.
  * `controllers/review/reviewInput.ts` is the second and decides whether their
- * values are storable — the job mongoose's casting and validators used to do,
- * and the reason a rejected review is still a 400 rather than a CHECK violation
+ * values are storable — casting and validation, and the reason a rejected review is still a 400 rather than a CHECK violation
  * surfacing as a 500.
  *
  * `agencyName` is a WRITE-ONLY input: the controller resolves it into a

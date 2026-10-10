@@ -54,8 +54,8 @@ const COORD_BOUNDS = {
  * 48h TTL keeps Overpass traffic minimal while still refreshing twice a week.
  * Drives both the row's `expires_at` and the staleness check on read.
  *
- * Mongo's TTL index used to reap the expired rows itself. Postgres has none, so
- * `db/expiry.ts` registers `place_pois.expires_at` and a sweep does it — the
+ * Postgres reaps nothing on its own, so `db/expiry.ts` registers
+ * `place_pois.expires_at` and a sweep does it — the
  * table grows forever without that entry, silently and with no failing test.
  */
 const CACHE_TTL_MS = 48 * 60 * 60 * 1000; // 48h

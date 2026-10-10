@@ -15,10 +15,8 @@
  * success from failure. Each IDOR case therefore re-reads the row afterwards and
  * asserts it did NOT move.
  *
- * `resetNotifications` runs in `beforeEach` because the Postgres side of the
- * harness has no per-test cleanup: `__tests__/jest.setup.ts` clears the Mongo
- * collections after every test and deliberately leaves Postgres alone, so a file
- * that writes rows owns emptying them.
+ * `resetNotifications` runs in `beforeEach` because the harness has no per-test
+ * cleanup, so a file that writes rows owns emptying them.
  */
 
 import express, { type Express } from 'express';
@@ -155,9 +153,8 @@ describe('notificationController — bulk routes are per-user', () => {
   });
 
   it('read-all counts only the rows that MOVED, and leaves an already-read row alone', async () => {
-    // The Mongo handler counted `modifiedCount`, which excludes rows the update
-    // matched but did not change. The Postgres predicate has to carry the same
-    // exclusion explicitly — without `read = false` every already-read row would
+    // The count excludes rows the update matched but did not change, so the
+    // predicate carries that exclusion explicitly — without `read = false` every already-read row would
     // be rewritten with a fresh `read_at`, restamping when the user read
     // something days ago, and the count would silently include it.
     const alreadyRead = await createNotificationFor('oxy-a', {

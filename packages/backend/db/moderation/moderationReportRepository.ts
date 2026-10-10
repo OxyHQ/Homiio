@@ -6,9 +6,10 @@
  * `decision_*` columns are a CACHE of a published revision, overwritten by a
  * later revision and never edited in place.
  *
- * ## `reporter` became `reporter_oxy_user_id`
+ * ## The column is `reporter_oxy_user_id`
  *
- * Mongo named the field `reporter`. `db/schema/moderation.ts` renamed it to match
+ * The wire calls it `reporter`. `db/schema/moderation.ts` names the column to
+ * match
  * `listing_reports` and `eviction_reports`, which hold the same fact — and, more
  * than cosmetics, to bring it inside `isOxyAccountColumn` so the foreign-key gate
  * CLASSIFIES it instead of skipping a column whose name says nothing about what
@@ -17,8 +18,8 @@
  *
  * ## The duplicate check is the INDEX, not a preceding read
  *
- * Mongo's intake read `findOne({reporter, reportedType, reportedId})` and then
- * inserted, which is a window two concurrent submissions both pass.
+ * A read of `(reporter, reportedType, reportedId)` followed by an insert is a
+ * window two concurrent submissions both pass.
  * `moderation_reports_reporter_object_key` is a unique index over exactly that
  * triple, so {@link insertModerationReport} inserts and converges on `23505`.
  * The read is kept only to ANSWER with the existing row — the caller needs its id
@@ -172,8 +173,7 @@ export async function updateModerationReport(
  * answer with a stale one. Expressed as a predicate, the database decides, and
  * two concurrent appliers cannot interleave a read and a write between them.
  *
- * `decision_revision IS NULL` is the "no decision cached yet" arm, matching
- * Mongo's `{$exists: false}`: a column that has never been written is not
+ * `decision_revision IS NULL` is the "no decision cached yet" arm: a column that has never been written is not
  * comparable, and `NULL <= n` is NULL rather than true.
  *
  * @returns `true` when this call wrote the row — `false` means a NEWER revision

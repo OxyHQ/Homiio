@@ -88,9 +88,8 @@ export const tenantApplications = pgTable(
     notes: text(),
     /**
      * Kept ALONGSIDE `created_at` rather than collapsed into it, the same call
-     * `cities.last_updated` gets: Mongo declared both, they are written by
-     * different things (`submittedAt` has `default: Date.now`, `createdAt` comes
-     * from `timestamps: true`), and a resubmission flow could legitimately move
+     * `cities.last_updated` gets: they are different facts, and a resubmission
+     * flow could legitimately move
      * one and not the other.
      */
     submittedAt: timestamptz().notNull(),
@@ -136,11 +135,9 @@ export const tenantApplications = pgTable(
 /**
  * `referenceContacts[]` — the referees the applicant names.
  *
- * Declared `{ _id: false }` in Mongo, so these subdocuments have NO id to
- * preserve and the backfill MINTS a uuid v7 for each. That is not a remap — it
- * is an id where there was none, and nothing references an application reference
- * by construction. See `db/MIGRATION-CONTRACT.md` for the full list of arrays in
- * this class.
+ * Rows carry a deterministically minted uuid v7, and nothing references an
+ * application reference by id. See `db/MIGRATION-CONTRACT.md` for the full list
+ * of tables in this class.
  */
 export const tenantApplicationReferences = pgTable(
   'tenant_application_references',

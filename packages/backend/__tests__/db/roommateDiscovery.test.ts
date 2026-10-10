@@ -1,17 +1,15 @@
 /**
  * The roommate candidate search, against a REAL Postgres server.
  *
- * This file exists because THREE of the filters it covers matched nothing at
- * all in Mongo, and the failure was invisible from the code: the selectors named
+ * This file exists because THREE of the filters it covers once matched nothing
+ * at all, and the failure was invisible from the code: the selectors named
  * `personalProfile.gender`, `personalProfile.location` and
- * `personalProfile.dateOfBirth`, `personalProfileSchema` declares none of them,
- * and `database/connection.ts` sets `strictQuery: false` — so mongoose passed
- * them through rather than stripping them, and MongoDB matched no document.
- * Nothing errored. `?gender=`, `?location=` and `?ageRange=` simply returned an
- * empty page, always.
+ * `personalProfile.dateOfBirth`, fields no row stored. Nothing errored.
+ * `?gender=`, `?location=` and `?ageRange=` simply returned an empty page,
+ * always.
  *
- * A port that carried those selectors verbatim would answer zero just as
- * reliably in Postgres and LOOK finished, so each one is re-pointed at a fact
+ * A selector naming a field nothing stores answers zero just as reliably in
+ * Postgres and LOOKS finished, so each one is re-pointed at a fact
  * this product really stores. That makes every case below a behaviour change,
  * and a test is the only place a behaviour change can be pinned rather than
  * described.
@@ -186,9 +184,9 @@ describe('the AGE RANGE filter — an overlap, because no date of birth exists',
   });
 
   it('admits an unstated bound, and answers a ONE-SIDED range on the side that was stated', async () => {
-    // "Did not say" is not "does not match". The Mongo controller's own budget
-    // filter established the rule — `if (typeof profileMax !== 'number') return
-    // true` — and every predicate here follows it.
+    // "Did not say" is not "does not match". The budget filter established the
+    // rule — a candidate who stated no budget is kept — and every predicate here
+    // follows it.
     //
     // The two halves are answered independently rather than through a single
     // "did they state a range" guard, which is what puts `oxy-min-only`
@@ -390,8 +388,8 @@ describe('hydration of a page', () => {
 
 describe('the two columns migration 0008 added', () => {
   it('stores and reads back an interests array', async () => {
-    // Mongoose strict mode discarded every write of this field, so the column
-    // holding a value at all is the fact under test.
+    // Nothing used to store this field, so the column holding a value at all
+    // is the fact under test.
     const id = await seedCandidate(`oxy-${uuidv7()}`, {
       settingsRoommatePreferencesInterests: ['climbing', 'cooking'],
       settingsRoommatePreferencesLocation: 'Barcelona',

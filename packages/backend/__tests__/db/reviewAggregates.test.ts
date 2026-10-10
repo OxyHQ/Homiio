@@ -1,8 +1,8 @@
 /**
  * The seven review rollups, against a REAL Postgres server.
  *
- * These were Mongo aggregation pipelines, and an aggregation is exactly the kind
- * of code a mocked driver cannot test at all: a mock returns whatever the test
+ * An aggregation is exactly the kind of code a mocked driver cannot test at
+ * all: a mock returns whatever the test
  * told it to, so the `GROUP BY`, the join, the `filter (where …)` and the
  * `count(distinct …)` would all be asserted against the fixture rather than
  * against the server.
@@ -182,8 +182,7 @@ describe('the street → building → unit rollups', () => {
   });
 
   /**
-   * `count(distinct building_level_id)`, where Mongo shipped every distinct id to
-   * the application to take `.length`.
+   * `count(distinct building_level_id)`, in the server.
    *
    * Five reviews across TWO buildings is the discriminating fixture: a plain
    * `count(*)` reports 5 and reads exactly like a plausible building count.
@@ -295,8 +294,8 @@ describe('the three explore levels', () => {
 
   /**
    * A review with NO neighborhood is counted by the city and by no
-   * neighborhood — Mongo's `$match` carried `neighborhoodId: { $ne: null }` and
-   * the join here would drop it anyway, so both halves are asserted.
+   * neighborhood — the predicate says `neighborhood_id is not null` and the join
+   * would drop it anyway, so both halves are asserted.
    */
   it('excludes a review that resolved no neighborhood', async () => {
     const before = await getNeighborhoodSummaries(chain.cityId);

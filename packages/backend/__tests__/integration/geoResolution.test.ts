@@ -4,8 +4,8 @@
  * These are the hot ingest path: every external listing resolves
  * country → region → city → neighborhood and then dedupes its building. What
  * has to hold is that re-resolving the same place returns the SAME ids and
- * creates no second row — the property Mongo's `$setOnInsert` upserts gave, and
- * that `insert … on conflict do nothing` has to reproduce exactly.
+ * creates no second row — insert-only-if-absent, which `insert … on conflict do
+ * nothing` provides.
  *
  * The geocoder is mocked: `resolveGeo` consults it only to fill missing names,
  * and every case here supplies a complete name set, so a live call would mean

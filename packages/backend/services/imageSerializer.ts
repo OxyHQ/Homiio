@@ -12,12 +12,9 @@
  *
  * ## This is now a WRITE-path module only
  *
- * `serializePropertyImages` / `rewritePropertyImageRef` lived here to rewrite
- * legacy direct-S3 URLs on the way OUT of a Mongo read. Property reads come from
- * Postgres now and `db/properties/propertySerializer` applies the same rewrite to
- * `property_images` rows, so those two had no callers left. What remains builds
- * the embedded array at INGEST time (`ExternalMediaIngest`, `scripts/seedImages`),
- * which is still Mongo.
+ * `db/properties/propertySerializer` rewrites legacy direct-S3 URLs on the way
+ * OUT of a read. What lives here builds the image refs at INGEST time
+ * (`ExternalMediaIngest`, `scripts/seedImages`).
  */
 
 import type { ImageVariantName, PropertyImageRef } from '@homiio/shared-types';

@@ -1,29 +1,20 @@
 /**
  * Saved-property folders, on Postgres.
  *
- * Ported from the Mongo `SavedPropertyFolder` collection to
- * `db/saved/savedFolderRepository.ts`. The collection held 0 documents in
- * production, so no user-visible behaviour depends on a preserved row.
+ * Backed by `db/saved/savedFolderRepository.ts`.
  *
- * ## Three things the port changed, all deliberate
+ * ## Three deliberate rules
  *
- * **The duplicate-name check is the INDEX.** Both handlers built a case-insensitive
- * `RegExp` from the submitted name and searched with it before writing. That was
- * a read-then-write two concurrent requests both pass, and the regex was
- * unescaped user input besides — a folder named `.*` matched every existing name,
- * so the 409 fired against a folder the caller had never seen. The 409 is
- * unchanged and now comes from `saved_property_folders_owner_name_key`'s own
- * `23505`.
+ * **The duplicate-name check is the INDEX.** A search before writing is a
+ * read-then-write two concurrent requests both pass. The 409 comes from
+ * `saved_property_folders_owner_name_key`'s own `23505`.
  *
- * **Deleting a folder no longer re-files its saves in application code.**
+ * **Deleting a folder does not re-file its saves in application code.**
  * `saved_items.folder_id` is `ON DELETE SET NULL`, so the saves return to "not in
  * a folder" in the same statement that drops the folder.
  *
  * **`propertyCount` is computed from `saved_items`**, which is where folder
- * membership lives. It was a Mongoose virtual over the folder's own
- * `properties[]` array on the WRITE side and a `Saved` aggregation on the READ
- * side — two answers to one question. Only the second was ever correct, and it
- * is the one that survives.
+ * membership lives — one answer to one question.
  */
 
 import type { NextFunction, Request, Response } from 'express';
@@ -99,8 +90,7 @@ export async function createSavedPropertyFolder(req: Request, res: Response, nex
     try {
       folder = await createSavedFolder(getDb(), {
         oxyUserId,
-        // Trimmed HERE: mongoose's `trim` has no Postgres counterpart, and the
-        // unique index is on `lower(name)` over the stored bytes — an untrimmed
+        // Trimmed HERE, because the unique index is on `lower(name)` over the stored bytes — an untrimmed
         // name would make `'Madrid '` a second folder and quietly retire the
         // duplicate-name rule.
         name: name.trim(),

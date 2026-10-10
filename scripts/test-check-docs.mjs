@@ -102,13 +102,13 @@ async function createFixture() {
   }
 
   // Unscanned markdown, so the tracked-markdown floor (25) is cleared and the
-  // affirmative-scope behaviour is exercised: these are FULL of forbidden
-  // vocabulary and must not fail the gate.
+  // affirmative-scope behaviour is exercised: these carry BROKEN links and must
+  // not fail the gate, because archived pages are not scanned.
   for (let i = 0; i < 6; i += 1) {
     await write(
       root,
       `docs/qa/archive-${i}.md`,
-      `# Archived ${i}\n\nThis used mongoose and MongoDB and _id and a TTL index.\n`,
+      `# Archived ${i}\n\nSee [a page that was removed](./removed-page-${i}).\n`,
     );
   }
 
@@ -232,9 +232,8 @@ async function mutation(name, root, path, contents, mustMention) {
   const red = run(root);
   expect(name, red.exitCode !== 0, `expected a non-zero exit, got ${red.exitCode}\n${red.output}`);
   for (const needle of mustMention) {
-    // Case-insensitive: the failure output echoes the offending LINE verbatim,
-    // so a term written `Mongoose` in prose will not match a lowercase needle.
-    // Comparing case-sensitively made this assertion fail on a correct gate.
+    // Case-insensitive, so a needle's capitalisation never decides whether a
+    // correct gate passes.
     expect(
       `${name} (names ${needle})`,
       red.output.toLowerCase().includes(needle.toLowerCase()),
@@ -268,102 +267,7 @@ const root = await createFixture();
   );
 }
 
-// ── 1. Forbidden vocabulary asserting live behaviour ───────────────────────
-await mutation(
-  'planted mongoose claim',
-  root,
-  'docs/page-3.mdx',
-  '---\ntitle: Page 3\norder: 3\n---\n\n# Page 3\n\nProperties are stored with Mongoose.\n',
-  ['docs/page-3.mdx', 'mongoose'],
-);
-
-await mutation(
-  'planted _id response example',
-  root,
-  'docs/page-4.mdx',
-  '---\ntitle: Page 4\norder: 4\n---\n\n# Page 4\n\n```json\n{ "_id": "abc" }\n```\n',
-  ['docs/page-4.mdx'],
-);
-
-await mutation(
-  'planted TTL index claim in a package README',
-  root,
-  'packages/backend/README.md',
-  '# Backend\n\nExternal listings are reaped by a TTL index on `expiresAt`.\n',
-  ['packages/backend/README.md'],
-);
-
-// A term that legitimately looks similar must NOT fire. `oxy_user_id` and
-// `address_id` are real column names; a boundary that matched them would make
-// the gate cry wolf, and a gate that cries wolf gets disabled.
-await (async () => {
-  ran += 1;
-  await write(
-    root,
-    'docs/page-5.mdx',
-    '---\ntitle: Page 5\norder: 5\n---\n\n# Page 5\n\nColumns: `oxy_user_id`, `address_id`, `city_id`. Postgres has no TTL behaviour.\n',
-  );
-  commit(root);
-  const result = run(root);
-  if (result.exitCode !== 0) {
-    failures.push(`false positive on snake_case ids: exit ${result.exitCode}\n${result.output}`);
-  }
-  await write(root, 'docs/page-5.mdx', '---\ntitle: Page 5\norder: 5\n---\n\n# Page 5\n');
-  commit(root);
-})();
-
-// ── 2. Exemption blocks ────────────────────────────────────────────────────
-{
-  // A properly-marked exemption PASSES.
-  ran += 1;
-  await write(
-    root,
-    'docs/page-6.mdx',
-    '---\ntitle: Page 6\norder: 6\n---\n\n# Page 6\n\n' +
-      '<!-- vocabulary-exempt:start states the wire contract by naming the token it forbids -->\n' +
-      'Every identity is `id`, never `_id`.\n' +
-      '<!-- vocabulary-exempt:end -->\n',
-  );
-  commit(root);
-  const result = run(root);
-  if (result.exitCode !== 0) {
-    failures.push(`a correctly-marked exemption was rejected:\n${result.output}`);
-  }
-}
-
-await mutation(
-  'exemption with a trivial reason',
-  root,
-  'docs/page-6.mdx',
-  '---\ntitle: Page 6\norder: 6\n---\n\n# Page 6\n\n' +
-    '<!-- vocabulary-exempt:start legacy -->\n' +
-    'Every identity is `id`, never `_id`.\n' +
-    '<!-- vocabulary-exempt:end -->\n',
-  ['docs/page-6.mdx', 'substantive reason'],
-);
-
-await mutation(
-  'exemption around clean prose',
-  root,
-  'docs/page-7.mdx',
-  '---\ntitle: Page 7\norder: 7\n---\n\n# Page 7\n\n' +
-    '<!-- vocabulary-exempt:start this reason is long enough to be substantive -->\n' +
-    'Nothing forbidden lives in here at all.\n' +
-    '<!-- vocabulary-exempt:end -->\n',
-  ['docs/page-7.mdx', 'exempts nothing'],
-);
-
-await mutation(
-  'unclosed exemption block',
-  root,
-  'docs/page-8.mdx',
-  '---\ntitle: Page 8\norder: 8\n---\n\n# Page 8\n\n' +
-    '<!-- vocabulary-exempt:start this reason is long enough to be substantive -->\n' +
-    'Every identity is `id`, never `_id`.\n',
-  ['docs/page-8.mdx', 'never closed'],
-);
-
-// ── 3. Links ───────────────────────────────────────────────────────────────
+// ── 1. Links ───────────────────────────────────────────────────────────────
 await mutation(
   'broken internal link',
   root,
@@ -432,7 +336,7 @@ await mutation(
   commit(root);
 }
 
-// ── 4. Route drift ─────────────────────────────────────────────────────────
+// ── 2. Route drift ─────────────────────────────────────────────────────────
 {
   const routesDoc = await readFile(join(root, 'docs/routes.mdx'), 'utf8');
   await mutation(
@@ -451,7 +355,7 @@ await mutation(
   );
 }
 
-// ── 5. Vacuity ─────────────────────────────────────────────────────────────
+// ── 3. Vacuity ─────────────────────────────────────────────────────────────
 // The floors are the defence against a broken enumeration reading as clean. If
 // removing most of the docs still passes, every case above proves nothing.
 {
@@ -498,7 +402,7 @@ await mutation(
   commit(root);
 }
 
-// ── 6. Final control ───────────────────────────────────────────────────────
+// ── 4. Final control ───────────────────────────────────────────────────────
 {
   const final = run(root);
   expect(

@@ -2,28 +2,24 @@
  * The seven review rollups — the street → building → unit hierarchy, the agency
  * profile, and the three explore levels.
  *
- * Every one of these was a Mongo aggregation pipeline on `ReviewSchema`, and
- * every one of them opened with `$match: { moderationStatus: { $ne: 'removed' } }`.
- * That is why the seven scoped indexes on `reviews` are PARTIAL on exactly that
- * predicate, and why {@link visibleModeration} spells it as a literal — see
+ * Every one of these opens with `moderation_status <> 'removed'`. That is why
+ * the seven scoped indexes on `reviews` are PARTIAL on exactly that predicate,
+ * and why {@link visibleModeration} spells it as a literal — see
  * `reviewReads.ts`, which records what a bound parameter costs.
  *
- * ## What the collapse removed
+ * ## Joins, not lookups
  *
- * Three of the pipelines ended in a `$lookup` + `$unwind` against `cities`,
- * `neighborhoods` or `addresses` — Mongo's join, executed per group, with an
- * `$unwind` that silently DROPPED a group whose parent document was missing.
- * Here they are ordinary joins on real foreign keys, so "the city row is
- * missing" is not a state the schema permits and the drop cannot happen.
+ * Every rollup that needs a city, neighbourhood or address name gets it from an
+ * ordinary join on a real foreign key, so "the city row is missing" is not a
+ * state the schema permits and a group cannot silently drop out.
  *
- * `getStreetViewData`'s `distinct('buildingLevelId')` materialised every
- * distinct building id in the application to take its `.length`;
- * `count(distinct …)` answers it in the server.
+ * Distinct counts are `count(distinct …)` in the server, never a list of ids
+ * materialised in the application to take its `.length`.
  *
  * ## Rounding is applied in the APPLICATION, on purpose
  *
- * `round1` and `roundPct` were JS in the Mongoose statics and are JS here, so
- * the published numbers are bit-identical to what the endpoint returned before.
+ * `round1` and `roundPct` are JS, so the published numbers are bit-identical
+ * across every endpoint that rounds.
  * Rounding in SQL with `round(x::numeric, 1)` uses half-away-from-zero on
  * `numeric` while `Math.round` is half-UP on a double — they disagree at exactly
  * the .x5 boundaries an average rating lands on.
@@ -48,7 +44,7 @@ export interface ReviewSummaryStats {
   recommendationPercentage: number;
 }
 
-/** Round a rating/average to one decimal place. Verbatim from the Mongoose static. */
+/** Round a rating/average to one decimal place. */
 function round1(value: number): number {
   return Math.round(value * 10) / 10;
 }
@@ -106,11 +102,9 @@ async function summarize(
  * behaviour and is what makes it a different number from
  * {@link getBuildingViewData}'s `aggregatedStats`.
  *
- * Mongo read a sample review to discover the building id and returned an empty
- * summary when there was none. The building id is on every one of this unit's
- * reviews and they are already in hand, so the sample read is gone; when the
- * unit has no visible reviews there is no building to summarise, exactly as
- * before.
+ * The building id is on every one of this unit's reviews and they are already
+ * in hand, so no sample read is needed; when the unit has no visible reviews
+ * there is no building to summarise and the summary is empty.
  */
 export async function summarizeBuildingOfUnit(
   buildingLevelId: string | undefined,
@@ -168,8 +162,7 @@ export async function summarizeStreet(
 /**
  * How many DISTINCT buildings on a street carry a visible review.
  *
- * `count(distinct …)`, where Mongo shipped every distinct id to the application
- * and took `.length`.
+ * `count(distinct …)` in the server.
  */
 export async function countBuildingsOnStreet(
   streetLevelId: string,
@@ -186,8 +179,8 @@ export async function countBuildingsOnStreet(
  * The agency profile header: average rating, review count, recommendation
  * percentage and the share of tenancies whose deposit came back in full.
  *
- * `depositKnownCount` counts rows where `deposit_returned` is present. Mongo
- * spelled it `$in: Object.values(DepositReturn)`, which is the same set:
+ * `depositKnownCount` counts rows where `deposit_returned` is present. "In
+ * `Object.values(DepositReturn)`" is the same set:
  * `reviews_deposit_returned_check` admits exactly those three values or NULL, so
  * "in the vocabulary" and "not null" cannot differ. `is not null` is written
  * because it is the one the index and the planner understand.
@@ -257,9 +250,9 @@ export async function getCitiesWithReviews(
     .where(allOfReviews([isNotNull(reviews.cityId), visibleModeration()]))
     .groupBy(cities.id, cities.name)
     // `city_id` second, so a tie between two cities is resolved the same way on
-    // every request. Mongo sorted on `reviewCount` alone and its order between
-    // equal counts was whatever the pipeline happened to emit — which reads as a
-    // list that shuffles itself on refresh.
+    // every request. Sorting on the count alone would leave equal counts in
+    // whatever order the plan emits — which reads as a list that shuffles itself
+    // on refresh.
     .orderBy(desc(count()), asc(cities.id));
 
   return rows.map((row) => ({
@@ -311,17 +304,15 @@ export interface BuildingSummariesResult {
 /**
  * EXPLORE, level three: the buildings of one neighborhood, paginated.
  *
- * Mongo used a `$facet` to get the page and the total from one pipeline. Two
- * statements here rather than a window function: the count is over GROUPS, so
- * the window form (`count(*) over ()` beside the grouped rows) would have to
- * survive the `LIMIT`, and a `$facet`'s two branches were never one scan either.
+ * Two statements — the page and the total — rather than a window function: the
+ * count is over GROUPS, so the window form (`count(*) over ()` beside the
+ * grouped rows) would have to survive the `LIMIT`.
  *
  * The address `leftJoin` is deliberate where the geo joins elsewhere in this
  * module are inner: `building_level_id` references `addresses` with `ON DELETE
  * RESTRICT`, so the row is always there — but a building whose street is somehow
  * unreadable must still appear with its rating rather than vanish from the list,
- * which is what an inner join would do and what Mongo's `preserveNullAndEmptyArrays`
- * was there to prevent.
+ * which is what an inner join would do.
  */
 export async function getBuildingSummaries(
   input: { neighborhoodId: string; page: number; limit: number },

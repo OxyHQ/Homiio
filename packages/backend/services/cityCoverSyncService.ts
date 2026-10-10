@@ -4,14 +4,10 @@
  *
  * ## It moved WITH `imageUploadService`, because it had to
  *
- * This was the one city module that could not go to Postgres in batch 1: it
- * does not merely write a city, it creates the image FIRST, and
- * `cities.cover_image_id` REFERENCES `images.id` for real — so porting the city
- * half while the image half still minted Mongo `_id`s would have made every
- * cover write a guaranteed `23503`. Now that `createImageForEntity` writes the
- * `images` table, both halves are on the same side of the foreign key and the
- * `imageIds[]` array is gone with the Mongo document: the relation it
- * denormalized already exists as `images.(entity_type, entity_id)`.
+ * It does not merely write a city, it creates the image FIRST, because
+ * `cities.cover_image_id` REFERENCES `images.id` for real. There is no image-id
+ * array on the city: the relation already exists as
+ * `images.(entity_type, entity_id)`.
  */
 
 import { and, eq, gt, isNull, ne, or } from 'drizzle-orm';
@@ -239,8 +235,7 @@ export async function ensureCover(cityId: string, options: EnsureCoverOptions = 
       allowUnconfiguredStorage,
     });
 
-    // Only the cover pointer is written. The `imageIds[]` array the Mongo
-    // document carried alongside it is gone: `createImageForEntity` already
+    // Only the cover pointer is written: `createImageForEntity` already
     // stamped `entity_type='city'`/`entity_id=<city>` on the row, so the
     // membership it denormalized is a query, not a second list to keep in sync.
     await getDb().update(cities).set({ coverImageId: image.id }).where(eq(cities.id, city.id));
@@ -268,10 +263,8 @@ async function findCitiesNeedingCoverSync(
       .limit(limit);
   }
 
-  // The `$lookup` + second `$match` this replaces existed only to reach the
-  // cover image's `entityType`. A LEFT JOIN says the same thing directly, and
-  // the three Mongo branches collapse to two: a missing reference and a
-  // dangling one are both `images.id IS NULL` here, because the foreign key
+  // A LEFT JOIN reaches the cover image's `entity_type` directly. A missing
+  // reference and a dangling one are both `images.id IS NULL` here, because the foreign key
   // makes "points at a row that is not there" unrepresentable.
   return getDb()
     .select({ id: cities.id })

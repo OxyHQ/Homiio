@@ -332,8 +332,7 @@ export async function saveSearch(req: Request, res: Response, next: NextFunction
     try {
       savedSearch = await createSavedSearch(getDb(), {
         oxyUserId,
-        // Trimmed HERE: mongoose's `trim` has no Postgres counterpart, and the
-        // unique index is on the stored bytes — an untrimmed name would make
+        // Trimmed HERE, because the unique index is on the stored bytes — an untrimmed name would make
         // `'Madrid '` a second row and quietly retire the duplicate-name rule.
         name: name.trim(),
         query: text,

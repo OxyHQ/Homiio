@@ -14,8 +14,8 @@
  * Idempotent, and now by CONSTRUCTION rather than by convention: each upsert is
  * an `INSERT ... ON CONFLICT DO UPDATE` on the table's own unique index
  * (`countries_code_key`, `regions_country_name_key`, `cities_region_slug_key`,
- * `neighborhoods_city_name_key`). Where Mongo's `findOneAndUpdate({upsert:true})`
- * could interleave two racers into a duplicate, the index cannot.
+ * `neighborhoods_city_name_key`), so two racers cannot interleave into a
+ * duplicate.
  *
  * Exported `seedGeo()` is also called by `seedProperties.ts` so a single
  * `bun run seed:properties` produces a fully-resolved dataset.
@@ -186,8 +186,8 @@ async function upsertCities(countryId: string, regionIds: Map<string, string>): 
     if (!regionId) {
       throw new Error(`Region "${city.regionName}" not seeded for city "${city.name}"`);
     }
-    // Mongo stored a `{lng, lat}` object; the table has NAMED columns, which is
-    // what makes a transposed pair unrepresentable rather than merely unlikely.
+    // The table has NAMED coordinate columns, which is what makes a transposed
+    // pair unrepresentable rather than merely unlikely.
     const [cityRow] = await getDb()
       .insert(cities)
       .values({
@@ -254,9 +254,8 @@ async function run(): Promise<void> {
 
   // ONE statement, and it has to be: `addresses`, `properties` and `images` all
   // reference this hierarchy, so four independent `DELETE`s would fail on the
-  // first table that something still points at. `CASCADE` is what the Mongo
-  // version was silently assuming when it deleted four collections in parallel
-  // and left every address pointing at a city that no longer existed.
+  // first table that something still points at. `CASCADE` makes the wipe
+  // whole, so no address is left pointing at a city that no longer exists.
   console.log('[seed-geo] Wiping existing geo tables...');
   await getDb().execute(
     sql`truncate table ${countries}, ${regions}, ${cities}, ${neighborhoods} cascade`,

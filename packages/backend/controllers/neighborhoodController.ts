@@ -20,19 +20,12 @@
  * Public (no auth), mirroring `area-insights` / `cities` reads: the handlers
  * read only `req.params`/`req.query` and never touch `req.user`.
  *
- * ## The two-store seam is gone, and so is what it cost
+ * ## Joins, never id arrays
  *
- * This file used to straddle both stores: neighbourhoods, cities and addresses
- * in Postgres, the rent STATISTICS as Mongoose pipelines keyed by address ids
- * Postgres supplied. Every scope therefore materialised an uncapped array of
- * address ids just to hand it to an `$in`, and each id had to be converted to an
- * `ObjectId` by hand because an aggregation `$match` does not apply Mongoose's
- * casting — a string list matched nothing and returned an empty result with no
- * error, the silent-zero shape the migration contract warns about.
- *
- * Listings are in the same database as addresses now, so every one of those is
- * an ordinary join: no id arrays, no conversion, and no way for the two halves
- * to disagree about what an id is.
+ * Listings are in the same database as addresses, so every rent statistic is
+ * an ordinary join: no uncapped array of address ids materialised just to hand
+ * it back as a parameter, no conversion, and no way for two halves to disagree
+ * about what an id is.
  */
 
 import type { Request, Response, NextFunction } from 'express';
@@ -100,15 +93,11 @@ const NEIGHBORHOOD_COLUMNS = {
  * Listing count + average long-term monthly rent over a set of addresses,
  * restricted to published + available listings.
  *
- * Takes a PREDICATE on `addresses`, not a list of address ids. The Mongo
- * version could only take ids — it read every address in the neighbourhood (or
- * the whole city) into an uncapped array, converted each to an `ObjectId`
- * because `aggregate` does not cast, and `$in`-ed the result. Listings live in
- * the same database as addresses now, so it is one join, and `toMongoAddressIds`
- * plus the two id-list helpers are gone rather than ported.
+ * Takes a PREDICATE on `addresses`, not a list of address ids, so it is one
+ * join and nothing is read into an uncapped array.
  *
  * `rentAvg` averages only listings with a positive monthly amount — `avg()`
- * ignores NULLs, so `nullif(..., 0)` does what the `$$REMOVE` branch did — and
+ * ignores NULLs, so `nullif(..., 0)` drops the zeros — and
  * is `null` when none qualify.
  */
 async function rentStatsForAddresses(addressScope: SQL): Promise<RentStats> {
@@ -309,8 +298,7 @@ export async function getNeighborhoodByName(
  * Resolve the neighborhood a property sits in (via its address). 404 when the
  * property has no resolved neighborhood.
  *
- * The PROPERTY lookup is still Mongo (batch 3 owns `properties`); the
- * neighborhood it resolves to is read from Postgres.
+ * One statement: listing → address → neighbourhood.
  */
 export async function getNeighborhoodByProperty(
   req: Request,
@@ -319,13 +307,11 @@ export async function getNeighborhoodByProperty(
 ): Promise<void> {
   try {
     const { propertyId } = req.params;
-    // No id-SHAPE guard — `Types.ObjectId.isValid` rejects every uuid v7 id
-    // minted after the cutover. See `db/ids.ts`.
+    // No id-SHAPE guard — a 24-char hex test rejects every uuid v7 id. See
+    // `db/ids.ts`.
 
-    // ONE statement, listings → addresses → neighbourhoods. The Mongo hop this
-    // replaces read `properties.addressId` from a different store first, which
-    // is what made `addressId` nullable-looking here; the column is `NOT NULL`
-    // with a RESTRICT reference, so a listing always has an address and the
+    // ONE statement, listings → addresses → neighbourhoods. `address_id` is
+    // `NOT NULL` with a RESTRICT reference, so a listing always has an address and the
     // only real absence is a neighbourhood the address never resolved.
     const rows = await getDb()
       .select(NEIGHBORHOOD_COLUMNS)
@@ -386,8 +372,7 @@ export async function searchNeighborhoods(
       .select(NEIGHBORHOOD_COLUMNS)
       .from(neighborhoods)
       .where(and(...conditions))
-      // `name` is NOT NULL, so Postgres' NULLS LAST and Mongo's missing-first
-      // cannot disagree about this ordering.
+      // `name` is NOT NULL, so NULL ordering cannot matter here.
       .orderBy(asc(neighborhoods.name))
       .limit(limit);
 
@@ -429,10 +414,8 @@ export async function getPopularNeighborhoods(
 
     const limit = parseLimit(req.query.limit, DEFAULT_POPULAR_LIMIT);
 
-    // ONE grouped join, where this used to be: read every neighbourhood-bearing
-    // address in the city into an array, `$in` it against a Mongo aggregation,
-    // then fold the per-address groups up to their neighbourhood in JS. The
-    // grouping is the query's now, and nothing intermediate is materialised.
+    // ONE grouped join. The grouping is the query's, and nothing intermediate
+    // is materialised.
     const grouped = await getDb()
       .select({
         neighborhoodId: addresses.neighborhoodId,

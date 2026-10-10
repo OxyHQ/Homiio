@@ -86,15 +86,11 @@ export async function hydrateDisplayNames(
  *
  * Two things follow from that, and both are changes:
  *
- *  - **`id` is the profile row id and there is no `_id`.** The Mongoose
- *    `toJSON` transform renamed `_id` → `id` and stripped `__v`; these
- *    endpoints bypassed it (they `.lean()`-ed and re-projected by hand), so the
- *    rename is applied here rather than lost with the transform. `__v` has no
- *    Postgres counterpart to leak.
- *  - **A stranger no longer receives the whole profile document.** The Mongo
- *    version attached `personalProfile` verbatim — annual income, references,
- *    landlord phone numbers and the Sindi transcript included — to everybody
- *    who had ever sent or received a request. `toProfileDTO(…, 'public')`
+ *  - **`id` is the profile row id and there is no `_id`.**
+ *  - **A stranger never receives the whole profile.** Attaching
+ *    `personalProfile` verbatim would hand annual income, references, landlord
+ *    phone numbers and the Sindi transcript to everybody who had ever sent or
+ *    received a request. `toProfileDTO(…, 'public')`
  *    applies the same privacy flags `/api/public/profiles/*` does, and the
  *    income column is unreachable at the TYPE level.
  *

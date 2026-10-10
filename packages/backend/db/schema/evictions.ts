@@ -27,9 +27,8 @@
  * columns are in `protectedColumns.ts`, so reading one without naming it is a
  * `tsc` error.
  *
- * **`attendees` is a TABLE, not a column.** Mongoose hid the RSVP roster with
- * `select: false`, a per-QUERY default drizzle does not have — a bare `select()`
- * would return it. As `eviction_case_attendees` it cannot be returned by
+ * **`attendees` is a TABLE, not a column.** drizzle has no per-QUERY "hidden
+ * column" default — a bare `select()` would return an attendee column. As `eviction_case_attendees` it cannot be returned by
  * accident at all: getting the roster requires writing a join. ADR 0003 §7.4
  * then confirms the roster is disclosed to NOBODY, the organiser included.
  *
@@ -237,8 +236,7 @@ export const evictionCases = pgTable(
      * The PUBLISHED centre — a fresh random offset from the true point, not the
      * true point rounded.
      *
-     * NAMED columns, replacing Mongo's positional `[lng, lat]` array, for the
-     * same reason `addresses` has them: an ordered pair is transposable and a
+     * NAMED columns, never a positional `[lng, lat]` array, for the same reason `addresses` has them: an ordered pair is transposable and a
      * named pair is not, and a lat/lon swap does not look wrong — it yields a
      * plausible point in the wrong hemisphere. On a board whose entire purpose
      * is telling people WHERE to turn up, that is the worst kind of silent
@@ -355,7 +353,7 @@ export const evictionCases = pgTable(
      * `regions.cover_image_id` and `cities.cover_image_id`.
      */
     coverImageId: text().references(() => images.id, { onDelete: 'set null' }),
-    /** The denormalized URL, as Mongo stored it beside the reference. */
+    /** The denormalized URL, stored beside the reference. */
     coverImageUrl: text(),
 
     /**
@@ -383,7 +381,7 @@ export const evictionCases = pgTable(
     index('eviction_cases_location_geo_gist').using('gist', table.locationGeo),
     // "Recently updated" ordering, and the archival sweep's scan.
     index('eviction_cases_updated_idx').on(sql`${table.updatedAt} desc`),
-    // Mongo's standalone `{ agencyId: 1 }`, kept partial: an agency is named on
+    // Partial: an agency is named on
     // a minority of cases and the index has no reason to hold a NULL for the rest.
     index('eviction_cases_agency_id_idx')
       .on(table.agencyId)
@@ -405,9 +403,8 @@ export const evictionCases = pgTable(
      *
      * `geography` does NOT validate its input — measured on PostGIS 3.5:
      * `ST_MakePoint(0, 100)::geography` emits a NOTICE, coerces latitude 100 to
-     * **80** by wrapping over the pole, and the insert SUCCEEDS. Dropping
-     * Mongo's validator without replacing it would turn a loud rejection into a
-     * gathering advertised at a different, entirely plausible place.
+     * **80** by wrapping over the pole, and the insert SUCCEEDS. Without this
+     * CHECK a loud rejection becomes a gathering advertised at a different, entirely plausible place.
      */
     check(
       'eviction_cases_coordinates_range_check',
@@ -538,7 +535,7 @@ export const evictionCaseAttendees = pgTable(
       .notNull()
       .references(() => evictionCases.id, { onDelete: 'cascade' }),
     oxyUserId: text().notNull(),
-    /** Mongo's `at`, renamed: `at` alone says nothing about what happened then. */
+    /** Not `at`: `at` alone says nothing about what happened then. */
     rsvpedAt: createdAt(),
     /** When the second factor was satisfied. NULL means RSVP'd but not confirmed. */
     confirmedAt: timestamptz(),
@@ -550,8 +547,8 @@ export const evictionCaseAttendees = pgTable(
     /**
      * One RSVP per person per case.
      *
-     * Mongo could not express it, so the controller's "have they already
-     * RSVP'd?" read raced its own insert — and the count it feeds is what the
+     * A controller's "have they already RSVP'd?" read alone would race its own
+     * insert — and the count it feeds is what the
      * public board shows as turnout. The unique index closes the window and
      * makes `count(*)` over this table the honest number.
      */
@@ -773,7 +770,7 @@ export const evictionComments = pgTable(
   },
   (table) => [
     index('eviction_comments_case_created_idx').on(table.caseId, sql`${table.createdAt} desc`),
-    // Mongo's standalone `{ oxyUserId: 1 }` — an author's own comments, and not
+    // An author's own comments, and not
     // a prefix of the index above.
     index('eviction_comments_oxy_user_id_idx').on(table.oxyUserId),
   ],
@@ -818,7 +815,7 @@ export const evictionReports = pgTable(
   (table) => [
     index('eviction_reports_status_created_idx').on(table.status, sql`${table.createdAt} desc`),
     index('eviction_reports_case_status_idx').on(table.caseId, table.status),
-    /** One OPEN report per reporter per case — Mongo's partial unique index. */
+    /** One OPEN report per reporter per case — a partial unique index. */
     uniqueIndex('eviction_reports_open_reporter_key')
       .on(table.caseId, table.reporterOxyUserId)
       .where(sql`${table.status} = 'open'`),

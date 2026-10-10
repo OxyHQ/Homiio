@@ -122,8 +122,7 @@ export const moderationReports = pgTable(
     /**
      * The reporter's Oxy account.
      *
-     * Mongo named the field `reporter`. Renamed to match `listing_reports` and
-     * `eviction_reports`, which hold the same fact under
+     * Named to match `listing_reports` and `eviction_reports`, which hold the same fact under
      * `reporter_oxy_user_id` — and, more than cosmetics, to bring it inside
      * `isOxyAccountColumn`, so the foreign-key gate classifies it instead of
      * skipping a column whose name says nothing about what it holds. The table is
@@ -189,12 +188,12 @@ export const moderationReports = pgTable(
     index('moderation_reports_local_status_created_idx').on(table.localStatus, table.createdAt),
     /**
      * "What has been reported about this object", scoped by the discriminator.
-     * Mongo indexed `reportedId` ALONE, which is ambiguous across three nouns —
-     * a `properties.id` and a `reviews.id` are both 24-char hex.
+     * `reported_id` ALONE would be ambiguous across three nouns — a
+     * `properties.id` and a `reviews.id` can share a shape.
      */
     index('moderation_reports_object_idx').on(table.reportedType, table.reportedId),
-    // Mongo's standalone `{ reporter: 1 }` and `{ localStatus: 1 }` are the
-    // leading prefixes of the two indexes above and are not ported.
+    // No standalone `reporter_oxy_user_id` or `local_status` index: each is the
+    // leading prefix of one of the two indexes above.
     index('moderation_reports_case_id_idx')
       .on(table.crowdSourceCaseId)
       .where(sql`${table.crowdSourceCaseId} is not null`),

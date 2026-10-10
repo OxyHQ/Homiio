@@ -33,9 +33,8 @@
  *
  * ## The read lives HERE, and states what it selects
  *
- * There is no `db/reviews/` repository — this is the only reader of the table
- * outside the review controllers' own Mongo path, and a repository built for one
- * caller would be a shared module nothing shares. The join is the same address +
+ * It selects exactly what a snapshot sends, which no general review read does.
+ * The join is the same address +
  * geo-name shape every other reader uses, through `ADDRESS_GEO_JOINS` and
  * `ADDRESS_GEO_NAME_COLUMNS`, so a snapshot cannot spell the geo chain its own
  * way.
@@ -46,10 +45,7 @@
  *
  * `reviews.address_id` is `NOT NULL` with an `ON DELETE RESTRICT` foreign key
  * and `addresses.longitude` / `latitude` are `NOT NULL` with a range CHECK, so
- * the permalink and the location context always travel. Under Mongoose both
- * depended on whether the `addressId` ref happened to have been populated, and
- * reading only one of the two branches was how a permalink stopped being emitted
- * for every review at once.
+ * the permalink and the location context always travel.
  */
 
 import { eq } from 'drizzle-orm';

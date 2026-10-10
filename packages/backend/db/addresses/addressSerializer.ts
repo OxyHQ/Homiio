@@ -11,15 +11,11 @@
  * Two readers is exactly when a shape starts drifting, so the selection, the
  * row mapping and the serialization live here rather than once per caller.
  *
- * ## What this replaced
+ * ## One input shape
  *
- * `services/propertyAddressSerializer.ts`, which had to serve TWO input shapes:
- * a joined Postgres row AND a Mongoose document whose `cityId` held either a
- * bare id or a populated `{ _id, name }` sub-document, depending on the query.
- * That file said the ref-reading half would die when the property read became a
- * join. It has, and it did — there is no longer any way to receive an address
- * whose geo reference might or might not be expanded, so there is nothing left
- * to detect.
+ * Every address arrives as a joined row, so there is no way to receive an
+ * address whose geo reference might or might not be expanded, and nothing to
+ * detect.
  *
  * ## Why `leftJoin` on all four, including the three that are NOT NULL
  *
@@ -94,7 +90,7 @@ export function toAddressWithGeoNames(row: AddressGeoNameRow): AddressWithGeoNam
   };
 }
 
-/** Drop keys whose value is null/undefined, matching Mongoose's omission of unset paths. */
+/** Drop keys whose value is null/undefined, so an unset field is omitted from the wire. */
 function withoutAbsent(record: Record<string, unknown>): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(record)) {
@@ -167,12 +163,12 @@ export type PublishedPlaceIdOverride = string | undefined;
  *
  * Withheld keys are ABSENT, never `null`: a `null` reads as "not recorded".
  *
- * The Mongo FIELD SPELLINGS are preserved deliberately: the schema declares them
+ * The wire FIELD SPELLINGS are kept deliberately: the schema declares them
  * camelCase in TypeScript and drizzle derives the identical snake_case SQL name
  * (`postalCode` → `postal_code`), so the column and the wire agree and nothing
  * in the frontend has to change. `land_plot` is re-nested from its three
  * flattened columns for the same reason, and is omitted entirely when all three
- * are absent — as Mongoose omitted an empty subdocument.
+ * are absent.
  *
  * `coordinates` is rebuilt as the GeoJSON `{ type: 'Point', coordinates: [lng,
  * lat] }` the wire has always carried, from the NAMED `longitude` / `latitude`

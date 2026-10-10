@@ -1,15 +1,13 @@
 /**
  * Review-related types shared across Homiio frontend and backend.
  *
- * This file is the single source of truth for the TARGET review model: the
- * enums are copied verbatim from the runtime Mongoose model
- * (`packages/backend/models/Review.ts`, which imports them back from here), and
- * the interfaces mirror the current model plus the planned reviucasa-style
+ * This file is the single source of truth for the review model: the backend
+ * schema (`packages/backend/db/schema/reviews.ts`) derives its CHECK
+ * vocabularies from the enums here, and the interfaces carry the reviucasa-style
  * fields (rich dimensions, agencies, moderation, helpful/report).
  *
- * Ids are plain `string`s: shared-types MUST NOT depend on mongoose. The
- * backend Review model declares its own `IReview` with `ObjectId` fields and
- * Mongoose transparently casts these string ids to `ObjectId` at the DB layer.
+ * Ids are plain `string`s: shared-types MUST NOT depend on the backend's
+ * storage.
  */
 
 // ---------------------------------------------------------------------------

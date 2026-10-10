@@ -1,27 +1,22 @@
 /**
- * Postgres geo fixtures for the batch-1 suites.
+ * Postgres geo fixtures.
  *
- * ## Ids are 24-char ObjectId hex, deliberately
+ * ## Ids are 24-char hex, deliberately
  *
- * `generatedId()` mints a uuid v7 for a row created by the application, and the
- * backfill copies each Mongo `_id` VERBATIM — so after the cutover both shapes
- * are live in the same column, permanently. Seeding 24-hex ids is therefore not
- * a convenience: it is the shape the overwhelming majority of production rows
- * carry, and the one an `isLiveEntityId` guard, a `.toHexString()` call or an
+ * `generatedId()` mints a uuid v7 for a row created by the application, while
+ * older rows hold a 24-char hex id — both shapes are live in the same column,
+ * permanently. Seeding 24-hex ids is therefore not a convenience: it is the
+ * shape the overwhelming majority of production rows carry, and the one an `isLiveEntityId` guard, a `.toHexString()` call or an
  * id-versus-name branch behaves differently on. A fixture that seeded only uuids
- * would exercise the post-cutover half of every such site and none of the other.
+ * would exercise the newer half of every such site and none of the other.
  * Suites that want the uuid half ask for it explicitly — see `seedProperty`'s
  * `idShape`.
  *
- * ## The minter is LOCAL, and does not go through mongoose
+ * ## The minter is LOCAL
  *
- * {@link objectIdHex} composes the BSON ObjectId layout itself (4-byte
- * big-endian seconds, 5 random bytes fixed per process, a 3-byte counter)
- * instead of calling `new mongoose.Types.ObjectId()`. The point is that these
- * fixtures seed POSTGRES: reaching mongoose for a *string format* pulled the
- * driver — and, through the root setup, the in-memory replica set — into 26 test
- * files that do not otherwise touch Mongo at all, which is what kept `mongoose`
- * un-removable from `package.json` long after the domains under test had moved.
+ * {@link objectIdHex} composes the 24-char hex layout itself (4-byte
+ * big-endian seconds, 5 random bytes fixed per process, a 3-byte counter), so
+ * these fixtures need no driver dependency for a *string format*.
  *
  * ### Two things measured about the layout, so neither is re-derived
  *
@@ -29,9 +24,9 @@
  *    Mutating this function to a bare `randomBytes(12).toString('hex')` — which
  *    destroys the property that two ids minted in order sort in that order —
  *    leaves all 125 suites and all 1,625 tests green. So the layout is kept
- *    because it is what a real backfilled id looks like (a suite that orders by
- *    id, the way Mongo code routinely used `_id` as a creation proxy, would then
- *    behave here as it does in production), NOT because a test catches it today.
+ *    because it is what a real legacy id looks like (a suite that orders by id,
+ *    using it as a creation proxy, would then behave here as it does in
+ *    production), NOT because a test catches it today.
  *    Do not read the structure as protected — if you come to rely on that
  *    ordering, pin it.
  *  - **The uniqueness IS load-bearing, and widely.** Mutating this function to a
@@ -91,10 +86,10 @@ const PROCESS_RANDOM = randomBytes(5);
 let objectIdCounter = randomBytes(3).readUIntBE(0, 3);
 
 /**
- * A fresh 24-char ObjectId hex — the id shape every pre-cutover row carries.
+ * A fresh 24-char hex id — the id shape every older row carries.
  *
- * Composed here rather than obtained from mongoose; see the module comment for
- * why, and for what is and is not asserted about the byte layout.
+ * Composed here; see the module comment for what is and is not asserted about
+ * the byte layout.
  */
 export function objectIdHex(): string {
   const buffer = Buffer.alloc(12);
@@ -136,8 +131,8 @@ export async function resetGeoTables(): Promise<void> {
   await db.delete(properties);
   // Reviews before agencies AND before addresses. `reviews.address_id` is ON
   // DELETE RESTRICT too — the same class as `properties.address_id` above — and
-  // a review is now a real row in several suites rather than a Mongo document,
-  // so an address delete under one RAISES. Its two child tables
+  // a review is a real row in several suites, so an address delete under one
+  // RAISES. Its two child tables
   // (`review_reports`, `review_helpful_votes`) both CASCADE from `reviews`, so
   // this single statement takes them with it.
   //
@@ -206,8 +201,8 @@ export async function resetGeoTables(): Promise<void> {
  * that action: attribution is not ownership.
  *
  * The reason a suite needs this at all is worth stating: Postgres persists for
- * the whole jest WORKER, where the in-memory Mongo this replaced was wiped
- * between tests by a global `afterEach`. A partner-program suite that re-joins
+ * the whole jest WORKER, and nothing wipes it between tests. A partner-program
+ * suite that re-joins
  * the same Oxy user in two tests therefore meets the row the previous test
  * created — measured, as a points total of 200 where the test asserted 100,
  * which reads exactly like a broken idempotency guard and is not one.
@@ -351,11 +346,9 @@ export async function seedNeighborhood(options: {
  * Insert a listing on an address and return its id.
  *
  * `idShape` decides which of the two live id shapes the row gets, and BOTH are
- * needed by tests: `objectId` is what every pre-cutover row carries (copied
- * verbatim from Mongo, and addressable from a Mongo-side write), `generated`
- * lets the column default mint a uuid v7 — what a listing created after the
- * cutover will carry, and the shape the deleted `ObjectId.isValid` guards used
- * to silently drop.
+ * needed by tests: `objectId` is what every older row carries, `generated` lets
+ * the column default mint a uuid v7 — what a new listing carries, and the shape
+ * an id-shape guard would silently drop.
  */
 export async function seedProperty(options: {
   addressId: string;
@@ -471,10 +464,8 @@ export async function seedListingWithGeo(
  * Mirror an agency into Postgres under a given id.
  *
  * `properties.agency_id` is a REAL foreign key (migration 0003), so a listing
- * cannot name an agency that only exists in Mongo. Suites that create an agency
- * through `Agency.findOrCreateByName` — still the WRITE path — pass its `_id`
- * here so the same id resolves on both sides, which is exactly what the
- * verbatim-id rule buys.
+ * cannot name an agency that does not exist. Suites that need an agency under a
+ * known id pass it here.
  */
 export async function seedAgency(options: {
   id: string;

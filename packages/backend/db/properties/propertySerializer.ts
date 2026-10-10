@@ -2,14 +2,14 @@
  * Property wire serialization — flat Postgres columns back into the nested shape
  * the API has always returned.
  *
- * `db/schema/properties.ts` flattens TWELVE Mongo subdocuments into columns
+ * `db/schema/properties.ts` flattens TWELVE nested wire objects into columns
  * (`longTermRent.monthlyAmount` → `long_term_rent_monthly_amount`) because they
  * are filter and sort targets. The wire contract did not change with them, so
  * exactly one module re-nests them, and this is it.
  *
  * ## Absence is a value here, and `null` is not the way to spell it
  *
- * Mongoose OMITS an unset path; `res.json` ships an explicit `null`. Those are
+ * The wire OMITS an unset field; `res.json` ships an explicit `null`. Those are
  * different bodies, and a frontend written against the first reads the second as
  * "the server told me there is no price" only if it happens to check for `null`
  * as well as `undefined`. So every optional field goes through
@@ -25,17 +25,12 @@
  * are keyed on "any member present"; `rating`, `accommodationDetails`,
  * `availability` and `rules` are present on ALL 17,644 and are always emitted.
  *
- * ## Three fields the wire genuinely loses, each already decided
+ * ## Three fields worth knowing about
  *
- * Recorded here because a reader comparing a response against the old one will
- * notice, and `db/MIGRATION-CONTRACT.md` is where each was decided:
- *
- *  - **`coverImageIndex`** is gone. It was `-1` on all 17,644 rows and its
- *    meaning moved to `property_images.is_primary`.
- *  - **`sourcedByPartner`** is now `sourcedByPartnerId`, renamed so
- *    `idShapedColumns` can see it — a column no gate can see is a column that
- *    can ship unconstrained. Absent on all 17,644 rows, so nothing observable
- *    changes.
+ *  - **There is no `coverImageIndex`.** The cover is
+ *    `property_images.is_primary`.
+ *  - **`sourcedByPartnerId`**, not `sourcedByPartner`, so `idShapedColumns` can
+ *    see it — a column no gate can see is a column that can ship unconstrained.
  *  - **`moderation`** is emitted only when a jury has actually restricted the
  *    listing. The column is `NOT NULL DEFAULT false` (it has to be — the
  *    sub-object is absent on 17,642 of 17,644 rows), so emitting it
@@ -109,7 +104,7 @@ export interface HydratedProperty {
   distance?: number;
 }
 
-/** Drop keys whose value is null/undefined, matching Mongoose's omission of unset paths. */
+/** Drop keys whose value is null/undefined, so an unset field is omitted from the wire. */
 function withoutAbsent(record: Record<string, unknown>): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(record)) {
@@ -136,8 +131,8 @@ function blockIfAny(record: Record<string, unknown>): Record<string, unknown> | 
  * One `property_images` row in the historical `Property.images[]` read shape.
  *
  * Every URL goes through `resolveStoredImageUrl`, which rewrites a legacy
- * direct-S3 URL to the current delivery host. That rewrite is why the Mongo read
- * path ran `serializePropertyImages` over every response: the URLs are STORED,
+ * direct-S3 URL to the current delivery host. It runs over every response
+ * because the URLs are STORED,
  * so rows written before the delivery host changed still carry the old one, and
  * dropping the rewrite here would serve dead image links for those rows with
  * nothing to indicate why.
@@ -238,9 +233,7 @@ export function publishedAddressPrecision(
  * Build the API representation of one listing, for a stated audience.
  *
  * The `address` is nested under `address` and there is no `addressId` on the
- * wire, reproducing `utils/helpers.transformAddressFields` — which existed
- * because Mongoose named the populated reference after the column. A join has
- * no such constraint, so the shape is simply built correctly here instead.
+ * wire — the shape the API has always returned, built directly from the join.
  *
  * Below `exact`, `floor` is ABSENT alongside the address's own floor and unit:
  * the listing's floor is the same fact about the same dwelling, and withholding
@@ -344,7 +337,7 @@ export function serializeProperty(
       noPets: row.listingFlagsNoPets,
       noSmoking: row.listingFlagsNoSmoking,
       noCouples: row.listingFlagsNoCouples,
-      // Mongo spells this one `noDSS`; the column is `listing_flags_no_dss`.
+      // The wire spells this one `noDSS`; the column is `listing_flags_no_dss`.
       noDSS: row.listingFlagsNoDss,
       detectedLanguage: row.listingFlagsDetectedLanguage,
     }),

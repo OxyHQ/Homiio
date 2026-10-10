@@ -1,27 +1,21 @@
 /**
  * `conversations` and its two child tables — the Sindi assistant transcript.
  *
- * Ported from `models/schemas/ConversationSchema.ts`. Empty in production, and
- * the reason it is empty is itself a finding — see the TTL section below.
+ * ## `messages[]` is unbounded, so it is a table
  *
- * ## `messages[]` is the unbounded embedded array this migration exists to fix
- *
- * It grows with every turn, Mongo rewrote the whole document on each append, and
- * it competes with the 16 MB BSON ceiling. As a child table an append is an
- * INSERT. `CONVENTIONS.md` says an array queried by element becomes a table;
+ * It grows with every turn, and an array column would be rewritten whole on
+ * each append. As a child table an append is an INSERT. `CONVENTIONS.md` says an array queried by element becomes a table;
  * this one qualifies on a stronger ground — it is unbounded.
  *
- * ## The TTL index here is DESTRUCTIVE and must NOT be ported as a sweep
+ * ## `sharing_expires_at` must NOT be swept as a row deadline
  *
- * `{ 'sharing.expiresAt': 1 }, { expireAfterSeconds: 0 }` deletes the WHOLE
- * CONVERSATION, messages and all, once a share link expires — and
- * `generateShareToken` sets that deadline to +24 h. So every conversation anyone
- * has ever shared has been destroyed a day later, along with the transcript the
- * user was sharing.
+ * It is the deadline of a share LINK — `generateShareToken` sets it to +24 h.
+ * Deleting the row when it passes would destroy the WHOLE CONVERSATION, messages
+ * and all, a day after anybody shared it.
  *
  * `db/expiry.ts` names this column in `EXPIRY_COLUMNS_THAT_MUST_NOT_DELETE` and
  * `__tests__/db/expiry.test.ts` fails if it ever appears in
- * `EXPIRY_SWEEP_TARGETS`. The correct port is to CLEAR the four `sharing_*`
+ * `EXPIRY_SWEEP_TARGETS`. The correct handling is to CLEAR the four `sharing_*`
  * columns — which is what `revokeSharing` already does — and `findByShareToken`
  * already refuses an expired token on the read side, so nothing depends on the
  * row being gone.
@@ -64,10 +58,10 @@ export const conversations = pgTable(
 
     // ── analytics ──
     //
-    // `messageCount` is NOT ported: it is `count(*)` over `conversation_messages`
+    // `messageCount` is NOT stored: it is `count(*)` over `conversation_messages`
     // and, unlike `properties.has_images`, it is not a sort key of anything, so
-    // no `ORDER BY` has to survive an aggregate. Recorded as an uncarried field
-    // in `db/MIGRATION-CONTRACT.md`.
+    // no `ORDER BY` has to survive an aggregate. See "Derived counts are not
+    // stored" in `db/MIGRATION-CONTRACT.md`.
     /**
      * Moves on any save, not only on an append — the same two-timestamps case as
      * `cities.last_updated`, and kept for the same reason: it and `updated_at`
@@ -92,8 +86,7 @@ export const conversations = pgTable(
       sql`${table.updatedAt} desc`,
     ),
     /**
-     * Mongo's `unique: true, sparse: true` on `sharing.shareToken`, as a partial
-     * unique index. Postgres treats NULLs as distinct so a plain UNIQUE would
+     * The share token is unique, as a partial unique index. Postgres treats NULLs as distinct so a plain UNIQUE would
      * already behave correctly; partial keeps the index the size of the shared
      * set and states the rule where a reader finds it — the same call
      * `addresses.normalized_key` makes.
@@ -153,7 +146,7 @@ export const conversations = pgTable(
 /**
  * `messages[]` — one turn of the conversation.
  *
- * Declared `{ _id: true }` in Mongo, so every row keeps its id.
+ * Every row has its own id.
  *
  * `position` is the array index and it is not redundant with `timestamp`:
  * `timestamp` defaults to `Date.now` at millisecond resolution, so two turns

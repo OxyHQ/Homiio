@@ -77,8 +77,7 @@ describe(`the ${TEXT_SEARCH_CONFIGURATION} text-search configuration`, () => {
   });
 
   it('does NOT stem, which is why it is not the english configuration', async () => {
-    // Homiio's corpus is Spanish-first while Mongo applied ENGLISH stemming by
-    // default, so a faithful port of Mongo's CONFIG would have carried a bug.
+    // Homiio's corpus is Spanish-first, so ENGLISH stemming would be a bug.
     // `english` reduces `viviendas` to `vivienda`; `simple` keeps the token
     // whole, which is the honest behaviour for a multi-language corpus.
     const rows = await db.execute<{ lexemes: string }>(sql`

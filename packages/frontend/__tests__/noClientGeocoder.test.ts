@@ -65,8 +65,7 @@
  * already bitten this repo twice: several modules here explain what they no
  * longer do in exactly the forbidden vocabulary (this file's own header names
  * the host four times), and a comment renders to nobody and calls nothing. It
- * is the same call `packages/backend/__tests__/unit/mongoUnreachable.test.ts`
- * and `noHardcodedCurrency.test.ts` both make.
+ * is the same call `noHardcodedCurrency.test.ts` makes.
  *
  * The stripping itself comes from `@homiio/shared-types/testing/stripComments`
  * (#388) rather than being implemented here. This gate briefly carried its own,

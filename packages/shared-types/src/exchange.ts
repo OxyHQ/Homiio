@@ -6,7 +6,7 @@
  * vacation booking) and a `ViewingRequest` (in-person tour for the rent flow).
  *
  * Ids and timestamps are plain `string`s here (ISO-8601 for dates): shared-types
- * MUST NOT depend on mongoose. The backend casts these to ObjectId/Date.
+ * MUST NOT depend on the backend's storage. The backend parses dates to `Date`.
  */
 
 import { ExchangeMode, ExchangeRequestStatus, ISODate } from './common';

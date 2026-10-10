@@ -2,9 +2,9 @@
  * `maintenance_requests` and its two child tables — repairs, from reported to
  * closed (#518 §7.1, #519 §7.1).
  *
- * ## A new domain, not a port
+ * ## A new domain
  *
- * There is no Mongo predecessor. Homiio had no maintenance anything, and
+ * Homiio had no maintenance anything before this table, and
  * `app/my-home.tsx` said so in its own header while both epics rejected that as
  * an ending. The nearest existing rows are `lease_inspections` — a landlord's
  * scheduled walkthrough — which is a different fact reported by a different
@@ -267,7 +267,7 @@ export const maintenanceRequestEvents = pgTable(
  * `storage_key` is a bucket key under `private/maintenance/…`, written by the
  * server from the request id and a fresh uuid — never a URL, and never anything
  * a client supplied. The difference from `tenant_application_documents`, which
- * stores a URL, is deliberate: that column is a Mongo-era shape being read
+ * stores a URL, is deliberate: that column is a legacy shape being read
  * defensively, and this one starts from what the delivery route actually needs.
  *
  * There is no `url`. A row that carried one would invite somebody to render it,

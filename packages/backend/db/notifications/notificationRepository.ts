@@ -1,24 +1,18 @@
 /**
  * `notifications` — the in-app mailbox, on Postgres.
  *
- * The Mongo collection was empty in production, so this port has no backfill and
- * no consistency window: the first row this repository writes is the first row
- * the table has ever held.
+ * ## Two rules this repository owns
  *
- * ## Two Mongoose behaviours had to be absorbed rather than dropped
- *
- * **`type` and `priority` were coerced with `String(...)` at the controller and
- * defaulted by the schema.** Mongoose applies a `default` at document
- * CONSTRUCTION, so `app: undefined` stored `'homiio'` and `priority: undefined`
- * stored `'medium'`. drizzle does the opposite — an explicit `undefined` in the
- * values object is simply omitted, which lets the column DEFAULT apply, so the
- * two agree here only because every optional column carries its default in the
- * schema. Passing an explicit `null` would NOT agree, and would fail `NOT NULL`;
+ * **`app` and `priority` default in the schema.** `app: undefined` stores
+ * `'homiio'` and `priority: undefined` stores `'medium'`: drizzle omits an
+ * explicit `undefined` from the values object, which lets the column DEFAULT
+ * apply — which works only because every optional column carries its default
+ * in the schema. Passing an explicit `null` would NOT agree, and would fail `NOT NULL`;
  * {@link createNotification} therefore takes `undefined` and never `null`.
  *
- * **`read` and `read_at` move together.** Mongo let a row be `read: true` with
- * no `readAt` and vice versa, because the controller wrote them as two
- * independent `$set` keys. There is no CHECK for it — the pair is not one of the
+ * **`read` and `read_at` move together.** Written as two independent keys, a row
+ * could be `read: true` with no `readAt` and vice versa. There is no CHECK for
+ * it — the pair is not one of the
  * coherence rules `db/schema/CONVENTIONS.md` expresses — so it is enforced HERE
  * instead, by {@link markRead} and {@link updateNotification} being the only
  * writers of either column and always writing both.
@@ -115,7 +109,7 @@ function listFilter(filter: ListNotificationsFilter): SQL {
 /**
  * One page of the mailbox, newest first, plus the two counts the badge needs.
  *
- * `unreadCount` is the whole mailbox's, matching the Mongo handler: the filter
+ * `unreadCount` is the whole mailbox's: the filter
  * chips change what is LISTED and must not change the badge, or switching to
  * "payments" would appear to clear every other unread notification.
  */
@@ -296,7 +290,7 @@ export async function countUnread(
  *
  * `id` and not `_id` — the wire contract this repository was written against is
  * the one PR #287 made a clean cut to. Timestamps are `Date`s and `res.json`
- * serialises them to ISO, which is what the Mongoose handler shipped; the
+ * serialises them to ISO; the
  * `db/schema/CONVENTIONS.md` warning about raw strings applies to `db.execute`
  * and not to a drizzle `select`, which runs the column mappers.
  */

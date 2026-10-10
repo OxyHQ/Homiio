@@ -23,7 +23,7 @@
  * that says no.
  *
  * `source` is here for a different reason: it is a real closed vocabulary that
- * NO Mongoose enum declares, and it is half of the `(source, source_id)` dedup
+ * no other layer declares, and it is half of the `(source, source_id)` dedup
  * key. Its two non-obvious members are what this file pins.
  */
 
@@ -157,23 +157,19 @@ describe('portal-writable vocabularies', () => {
 /**
  * The listing-currency vocabulary, on all THREE priced blocks.
  *
- * ## Why this is here and not in a Mongoose test
+ * ## Why this is a database test
  *
- * This is the port of `__tests__/unit/propertyCurrencyEnum.test.ts`, which
- * asserted the same property against `PropertySchema`'s Mongoose enum by calling
- * `new Property({...}).validateSync()`. Listings are saved through
- * `controllers/property/` into POSTGRES, so that file was guarding a validator
- * no write in this service runs any more — it passed while proving nothing about
- * the store a rejected currency would actually be rejected by, and it was the
+ * Listings are saved through `controllers/property/` into POSTGRES, so the
+ * CHECK is the thing a rejected currency is actually rejected by — a test of
+ * any other validator would pass while proving nothing about the store, and be
+ * the
  * last reason a unit test imported the model barrel.
  *
  * The regression it guards is real and worth keeping: production ingest failed
  * on `sale.currency: PLN is not a valid enum value` (otodom) and
  * `longTermRent.currency: MXN is not a valid enum value` (mercadolibre_mx),
- * because the enum was narrower than the markets that were wired. Both the
- * Mongoose enum and the three CHECKs here are derived from the same
- * `LISTING_CURRENCIES` tuple, so the property survives the move intact — what
- * changes is which store is asked.
+ * because the vocabulary was narrower than the markets that were wired. The
+ * three CHECKs here are derived from the `LISTING_CURRENCIES` tuple.
  *
  * ## Why all three blocks, when `VOCABULARIES` above already covers one
  *
@@ -261,7 +257,7 @@ describe('the listing-currency vocabulary, on all three priced blocks', () => {
     },
   );
 
-  it('accepts the three expansion-market codes that failed ingest against the Mongo enum', async () => {
+  it('accepts the three expansion-market codes that once failed ingest', async () => {
     // The named regression, kept as its own case so a future narrowing of
     // `LISTING_CURRENCIES` reports the incident rather than an anonymous code.
     expect(await attempt(PRICED_BLOCKS[2].priced('PLN'))).toBeUndefined();
@@ -272,7 +268,7 @@ describe('the listing-currency vocabulary, on all three priced blocks', () => {
 
 describe('properties.source', () => {
   it('accepts `internal`, which no production row carries yet', async () => {
-    // The Mongoose DEFAULT, and therefore what EVERY user-created listing will
+    // The column DEFAULT, and therefore what EVERY user-created listing will
     // carry. The census observed zero of them only because production holds
     // zero user-created listings — `oxy_user_id` is absent on all 17,644 rows.
     // A CHECK built from the fifteen observed values would reject the first
@@ -302,9 +298,8 @@ describe('properties.source', () => {
 describe('the four SPARSE sub-objects', () => {
   // Production absence rates, measured: `moderation` 17,642 of 17,644 ·
   // `listingFlags` 9,594 · `externalContact` 5,174 · `priceEthics` 133. A
-  // `NOT NULL` on any subfield of these is only safe with a DEFAULT the backfill
-  // can fall through to, because the parent object mongoose would have
-  // materialized was never written.
+  // `NOT NULL` on any subfield of these is only safe with a DEFAULT a writer
+  // can fall through to, because the parent object is absent.
   it('inserts a listing that supplies NONE of the four, the way 17,642 rows will', async () => {
     // The single row that stands in for the whole copy. If any subfield of the
     // four ever gains a bare `NOT NULL`, this goes red at 23502 — which is
@@ -422,8 +417,8 @@ describe('amenities', () => {
     //
     // It is here because a containment CHECK on `amenities` — the obvious
     // symmetry with `offerings` — would reject ≥1,688 of the 36,983 production
-    // elements mid-copy. Mongo declares no `enum` on this path at all, so there
-    // is no vocabulary to check against either. This row is what fails if
+    // elements. Amenity tokens are never checked against a list, so there is no
+    // vocabulary to check against either. This row is what fails if
     // somebody adds one from a UI dropdown.
     expect(
       await attempt({

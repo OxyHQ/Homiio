@@ -2,26 +2,23 @@
  * The nearby-services cache — one row per rounded coordinate cell, plus its
  * per-category counts.
  *
- * Ported from `models/schemas/PlacePoiSchema.ts`, whose whole job was to keep
- * Homiio off Overpass: a lookup is an equality on `cell_key`, which is why the
+ * Its whole job is to keep Homiio off Overpass: a lookup is an equality on `cell_key`, which is why the
  * coordinates are rounded before they become one.
  *
  * ## The categories are a CHILD TABLE, not an array
  *
- * Mongo embedded `categories[]` on the document. `place_poi_categories`
- * normalizes it, with `UNIQUE(place_poi_id, key)` and CHECKs tying `present`,
- * `count` and `nearest_m` together — three views of one measurement that the
- * embedded array let disagree (`present: false` alongside `count: 5` was
- * representable). So a write REPLACES the child rows rather than assigning an
+ * `place_poi_categories` holds the per-category summaries, with
+ * `UNIQUE(place_poi_id, key)` and CHECKs tying `present`, `count` and
+ * `nearest_m` together — three views of one measurement that must not disagree
+ * (`present: false` alongside `count: 5` is refused). So a write REPLACES the child rows rather than assigning an
  * array, and it does both halves in one transaction: a cell whose parent
  * refreshed while its categories did not is a cache that confidently serves the
  * wrong answer, which is worse than a miss.
  *
- * ## The TTL index became a registry entry, and that is the load-bearing part
+ * ## The expiry is a registry entry, and that is the load-bearing part
  *
- * `PlacePoiSchema` carried `{ expiresAt: 1 }, { expireAfterSeconds: 0 }` —
- * Mongo reaped the cache itself. Postgres has no TTL index, so `db/expiry.ts`
- * registers `place_pois.expires_at` and a sweep does it instead. Without that
+ * Postgres reaps nothing on a deadline, so `db/expiry.ts` registers
+ * `place_pois.expires_at` and a sweep does it. Without that
  * registration this table grows forever, with no error and no failing test —
  * which is why the entry is checked in rather than left to whoever notices.
  * `place_poi_categories` needs no entry of its own: its reference is
@@ -85,9 +82,8 @@ export async function findCachedCell(
  * Upsert a freshly fetched cell and replace its categories.
  *
  * Idempotent on `place_pois_cell_key_key`, so two concurrent refreshes of the
- * same cell converge on one row rather than racing — the same guarantee the
- * Mongo `{ upsert: true }` on `cellKey` gave, now enforced by an index instead
- * of by the write being the only one in flight.
+ * same cell converge on one row rather than racing — enforced by an index
+ * rather than by the write being the only one in flight.
  *
  * ONE transaction, because the parent and its categories are one snapshot.
  */

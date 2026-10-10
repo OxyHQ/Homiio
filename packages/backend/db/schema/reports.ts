@@ -78,8 +78,7 @@ export const listingReports = pgTable(
     index('listing_reports_status_created_idx').on(table.status, sql`${table.createdAt} desc`),
     index('listing_reports_property_status_idx').on(table.propertyId, table.status),
     /**
-     * One OPEN report per reporter per property — Mongo's
-     * `partialFilterExpression: { status: 'open' }`, ported directly.
+     * One OPEN report per reporter per property.
      *
      * Partial, and the partiality is load-bearing: once a report is resolved or
      * dismissed the same person must be able to file again if the listing is

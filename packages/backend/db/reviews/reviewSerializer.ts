@@ -2,38 +2,25 @@
  * A review, everything a read has to fetch WITH it, and the ONE way it reaches
  * the wire.
  *
- * Replaces `controllers/review/toReviewDTO.ts`, which existed to reconcile the
- * three shapes a Mongoose review could arrive in — a hydrated document, a
- * `.lean()` object, and `.toJSON()` output — and to detect, per reference,
- * whether `agencyId` / `addressId` held a bare `ObjectId` or a populated
- * sub-document. None of that exists here: a read either joined the agency and
- * the address or it did not, and the row type says which, so there is nothing
- * left to sniff.
+ * A read either joined the agency and the address or it did not, and the row
+ * type says which, so there is nothing to sniff.
  *
- * ## Three things this serializer computes that Mongo did not, or did unevenly
+ * ## Three things this serializer computes
  *
- *  - **`helpfulCount` / `viewerHasVotedHelpful`** were `helpfulVoters.length` and
- *    `.includes(viewer)` over an embedded `[String]`. They are now counted and
- *    tested in SQL, per review, by `reviewReads.ts` — the array itself is a
- *    table, and shipping it to the application to be counted would ship the
- *    whole voter list to a process that must never publish it.
- *  - **`livedDurationText`** was a Mongoose VIRTUAL, and virtuals do not survive
- *    `.lean()`. Five of the six read paths in `reviewController` were lean, so
- *    the field reached the wire from the hierarchical address reads and from
- *    nowhere else. It is computed here for every review, which makes the field
- *    consistent for the first time — stated as a behaviour change rather than
- *    discovered as one.
- *  - **`populatedAddress`** was a hand-written `select` string plus four nested
- *    `populate`s, which produced `cityId: { _id, name }` — a shape nothing else
- *    in the product emits. It is now `serializeAddressRow`, the single address
- *    wire shape every other endpoint already uses.
+ *  - **`helpfulCount` / `viewerHasVotedHelpful`** are counted and tested in SQL,
+ *    per review, by `reviewReads.ts` — the voters are a table, and shipping them
+ *    to the application to be counted would ship the whole voter list to a
+ *    process that must never publish it.
+ *  - **`livedDurationText`** is computed here for EVERY review, on every read
+ *    path.
+ *  - **`populatedAddress`** is `serializeAddressRow`, the single address wire
+ *    shape every other endpoint already uses.
  *
- * ## What is stripped, and why it is stronger than it was
+ * ## What is never on the wire
  *
- * `helpfulVoters` and `reports` were deleted from the DTO by key. Here they are
- * separate TABLES that no read in this domain selects from, so there is no key
- * to forget to delete — the same strengthening `eviction_case_attendees` got.
- * `_id` and `__v` are gone with the store.
+ * The helpful voters and the reports are separate TABLES that no read in this
+ * domain selects from, so there is no key to forget to delete — the same
+ * guarantee `eviction_case_attendees` has.
  */
 
 import { serializeAddressRow, type AddressWithGeoNames } from '../addresses/addressSerializer';
@@ -88,7 +75,7 @@ export function livedDurationText(months: number): string {
   return `${years} year${years !== 1 ? 's' : ''} ${remainingMonths} month${remainingMonths !== 1 ? 's' : ''}`;
 }
 
-/** Drop keys whose value is null/undefined, matching Mongoose's omission of unset paths. */
+/** Drop keys whose value is null/undefined, so an unset field is omitted from the wire. */
 function withoutAbsent(record: Record<string, unknown>): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(record)) {

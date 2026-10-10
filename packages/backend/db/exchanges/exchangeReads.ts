@@ -5,9 +5,8 @@
  *
  * ## The conflict scan becomes ONE overlap query
  *
- * {@link findConflictingExchange} — `hasPropertyConflict` in Mongo — loaded
- * EVERY confirmed exchange touching a property,
- * hydrated both windows and overlapped them in JavaScript — a full scan of the
+ * {@link findConflictingExchange} does not load every confirmed exchange
+ * touching a property and overlap the windows in JavaScript — a full scan of the
  * committed set per request, growing with the table. Postgres answers it with a
  * range overlap, and `exchange_requests_requested_window_gist` exists precisely
  * for the target half.

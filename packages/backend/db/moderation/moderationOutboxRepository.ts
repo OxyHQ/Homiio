@@ -1,14 +1,12 @@
 /**
  * `moderation_outbox` — the durable promise that moderation work will happen.
  *
- * The at-least-once contract is unchanged from the Mongo original: an expired
- * lease is reclaimable and a worker can die mid-delivery, so every handler MUST
+ * The contract is at-least-once: an expired lease is reclaimable and a worker can die mid-delivery, so every handler MUST
  * make its downstream effect idempotent using the event id.
  *
- * ## The claim is `FOR UPDATE SKIP LOCKED`, not a `findOneAndUpdate`
+ * ## The claim is `FOR UPDATE SKIP LOCKED`
  *
- * Mongo claimed with an atomic `findOneAndUpdate` over a disjunctive filter.
- * Postgres has a better primitive for exactly this shape: the `SELECT … ORDER BY
+ * Postgres has the right primitive for exactly this shape: the `SELECT … ORDER BY
  * created_at LIMIT 1 FOR UPDATE SKIP LOCKED` lives INSIDE the `UPDATE`, so N
  * dispatchers draining the queue never hand each other the same row and never
  * block on one another either — `SKIP LOCKED` steps over a row another task is
@@ -17,24 +15,16 @@
  * that is the normal case rather than an edge one.
  *
  * `lease_until` is nullable and `NULL <= now` is NULL, so a row that has never
- * been leased is excluded from the reclaim branch by the comparison itself —
- * matching Mongo, where a missing field did not match `{$lte: now}` either.
+ * been leased is excluded from the reclaim branch by the comparison itself.
  *
- * ## The Mongo `timestamps: false` hazard has no counterpart here, and that is the point
+ * ## A repeated enqueue writes NOTHING
  *
- * The Mongo enqueue carried a long comment about writing `createdAt`/`updatedAt`
- * explicitly under `timestamps: false`, because Mongoose otherwise named
- * `updatedAt` in two operators of one update document and the server rejected
- * the WHOLE write — which, inside the intake transaction, took the report with
- * it. The fix it settled on was not interchangeable with the obvious one:
- * letting Mongoose own the timestamps also cleared the server error but left a
- * `$set: { updatedAt }` on the upsert, turning a repeated enqueue into a real
- * write that contends with the dispatcher's live lease on that same row.
- *
+ * A repeated enqueue that wrote anything — even the same values back — would
+ * contend with the dispatcher's live lease on that same row.
  * `ON CONFLICT (id) DO NOTHING` writes nothing at all — no tuple version, no
  * timestamp, no lock — so a repeat is a genuine no-op for a STRUCTURAL reason
  * rather than by matching a spelling. `DO UPDATE` would reintroduce precisely
- * the bug the Mongo flag existed to fix, and measurably so: drizzle applies a
+ * that contention, and measurably so: drizzle applies a
  * column's `$onUpdate` to a conflict branch's `set`, so "write the same data
  * back" is not even a quiet write. `__tests__/db/moderationWrites.test.ts`
  * asserts both `updated_at` and the row's `xmin`; the `xmin` assertion is what
@@ -42,7 +32,7 @@
  *
  * ## The payload is FLATTENED, except the half that is genuinely opaque
  *
- * Mongo stored one `payload` sub-document. `db/schema/moderation.ts` splits it
+ * The wire carries one `payload` object. `db/schema/moderation.ts` splits it
  * into `report_id`, `event_id`, `case_id` and a `decision` jsonb, because the
  * first three have a closed shape and the decision does not. {@link toEvent}
  * reassembles the `ModerationOutboxPayload` the workers already read, so the
@@ -111,8 +101,8 @@ type OutboxRow = typeof moderationOutbox.$inferSelect;
 /**
  * Reassemble the payload, and normalise absent optionals to `undefined`.
  *
- * A field Mongo left ABSENT is `NULL` in Postgres, and every caller here was
- * written against `undefined` — so the normalization happens once, at the edge
+ * An absent field is `NULL` in Postgres, and every caller here is written
+ * against `undefined` — so the normalization happens once, at the edge
  * of the repository, rather than at each `if (event.leaseOwner)`.
  */
 function toEvent(row: OutboxRow): ModerationOutboxEvent {

@@ -1,72 +1,43 @@
 /**
- * Expiry Sweep Registry — the replacement for Homiio's Mongo TTL indexes
+ * Expiry Sweep Registry — how Homiio deletes rows whose deadline has passed
  *
  * The MECHANISM lives in `@oxy.so/db/expiry` (batched delete by `ctid`, one
  * statement per batch, a ceiling per table per call). This module is Homiio's
- * REGISTRY: one entry per table that used to carry a TTL index, and nothing
- * else. Re-exported here so a caller has one import path and so the rule below
- * sits where somebody porting a table will read it.
+ * REGISTRY: one entry per table whose rows expire, and nothing else.
+ * Re-exported here so a caller has one import path and so the rule below sits
+ * where somebody adding a table will read it.
  *
- * ## The rule, because it is the quietest failure in this whole migration
+ * ## The rule, because it is the quietest failure in this package
  *
- * **A TTL index is a behaviour of the SOURCE that does not survive the port.**
- * Mongo reaps; Postgres does not. A table ported without an entry here grows
- * FOREVER — no error, no failing test, no symptom of any kind until disk.
+ * **Postgres deletes nothing on a deadline.** A table whose rows are meant to
+ * expire and that has no entry here grows FOREVER — no error, no failing test,
+ * no symptom of any kind until disk.
  *
- * It is structurally invisible in review, and that is what makes it the first
- * risk on this migration's list rather than a footnote: the thing doing the work
- * was never in Homiio's code to be missed. There is no deleted call site, no
- * orphaned function, nothing a reviewer diffing the port would see go absent.
- * The only trace is a line in a Mongoose schema that the new schema file has no
- * reason to mention.
+ * It is structurally invisible in review: there is no call site to notice
+ * missing. So a table with an expiry column is not done when its schema and its
+ * migration exist; it is done only once a matching entry appears BELOW.
  *
- * So porting a collection is not done when its schema, its migration and its
- * backfill plan exist. If its Mongoose model declares `expireAfterSeconds`, it
- * is done only once a matching entry appears BELOW.
+ * ## Every entry needs to be checked for INTENT, not merely registered
  *
- * ## Every entry needs to be checked for INTENT, not merely replicated
+ * A sweep DELETES the row, unconditionally, once the deadline passes. Not every
+ * deadline column means that:
  *
- * A Mongo TTL index DELETES the document, unconditionally, once the deadline
- * passes. Two of Homiio's are already known NOT to mean that, and both are
- * recorded in the tracking issue rather than discovered during the cutover:
- *
- *  - **`Conversation.sharing.expiresAt` destroys the whole conversation.**
- *    `generateShareToken` sets it to +24h, so every conversation that was ever
- *    shared has been deleted a day later, with its messages. It is ported as
- *    "clear the sharing fields", NEVER as a delete — and a near-zero count in
- *    the census is evidence of the DAMAGE, not of safety.
- *  - **`Property.expiresAt`** reaps external listings. That one is genuine
- *    housekeeping and it is the reason `services/cron.ts` must be wired to this
- *    sweep in the same batch that ports `properties`: Mongo mowed those rows
- *    whether or not anyone remembered, and Postgres will not.
+ *  - **`conversations.sharing_expires_at` is the deadline of a share LINK.**
+ *    `generateShareToken` sets it to +24h; deleting the row would delete the
+ *    whole conversation, with its messages, a day after anybody shared it. It
+ *    is handled as "clear the sharing fields", NEVER as a delete.
+ *  - **`properties.expires_at`** reaps external listings. That one is genuine
+ *    housekeeping, and `services/cron.ts` must stay wired to this sweep for it.
  *
  * ## Coexistence with reads
  *
- * Mongo's TTL monitor lags roughly its own check interval; this sweep lags one
- * call. An entry is only safe to add once its table's read paths are audited for
- * depending on a swept row already being GONE. Adding a read that relies on
- * absence turns the sweep interval into a correctness window.
+ * This sweep lags one call. An entry is only safe to add once its table's read
+ * paths are audited for depending on a swept row already being GONE. Adding a
+ * read that relies on absence turns the sweep interval into a correctness
+ * window.
  *
- * ## The registry was empty through migration 0000, and is not any more
- *
- * None of `countries`, `regions`, `cities`, `neighborhoods`, `images` or
- * `addresses` carried a TTL index, so an empty registry was the CORRECT state.
- * `properties` is the first table that needs one, and it needs it more than any
- * other table in this migration will: `expires_at` is populated on **100% of
- * production rows**, so the entire listing inventory is under an active scythe
- * today and would stop being reaped the moment the cutover lands.
- *
- * ## The complete census: FIVE TTL indexes, not six
- *
- * `grep -rn expireAfterSeconds models/` returns five, on `PropertySchema`,
- * `ConversationSchema`, `PlacePoiSchema`, `ModerationEvent` and
- * `ModerationOutbox`. Recorded because a wrong count is worse than no count: a
- * sixth nobody can find reads as an outstanding risk forever, and the whole
- * value of this registry is being able to say the set is CLOSED.
- *
- * Four of the five are ordinary housekeeping and are registered below. The
- * fifth is not, and it is the reason {@link EXPIRY_COLUMNS_THAT_MUST_NOT_DELETE}
- * exists as data rather than as a warning in a comment.
+ * {@link EXPIRY_COLUMNS_THAT_MUST_NOT_DELETE} exists as data rather than as a
+ * warning in a comment for the share-link reason above.
  */
 
 import type { PgColumn, PgTable } from 'drizzle-orm/pg-core';
@@ -88,14 +59,13 @@ export {
 } from '@oxy.so/db/expiry';
 
 /**
- * Every table whose rows expire, with the retention Mongo's TTL index used.
+ * Every table whose rows expire, with its retention.
  *
  * Every registered column MUST have a supporting btree index: the sweep's
- * predicate is a range scan, and Mongo's TTL index carried the same obligation
- * implicitly. `@oxy.so/db/assert`'s `findUnsupportedExpiryColumns` checks it
+ * predicate is a range scan. `@oxy.so/db/assert`'s `findUnsupportedExpiryColumns` checks it
  * against the real database.
  *
- * **Registering a target is only half of the port.** This list is data; nothing
+ * **Registering a target is only half of the job.** This list is data; nothing
  * runs it. `services/cron.ts` must call `sweepAllExpiredRows` with it, and until
  * that lands the table still grows forever — the registry makes the omission
  * VISIBLE, it does not close it.
@@ -104,12 +74,12 @@ export const EXPIRY_SWEEP_TARGETS: readonly ExpirySweepTarget[] = [
   {
     table: properties,
     column: properties.expiresAt,
-    // Mongo declared `index: { expireAfterSeconds: 0 }`, i.e. the column IS the
-    // deadline rather than a birth date to measure from.
+    // Retention 0: the column IS the deadline rather than a birth date to
+    // measure from.
     retentionSeconds: 0,
     reason:
       'Reaps external aggregator listings once the portal ad is assumed stale ' +
-      "(the `pre('save')` hook sets the deadline to now + " +
+      '(ingest sets the deadline to now + ' +
       '`EXTERNAL_PROPERTY_TTL_DAYS`, default 30). INTENT CHECKED, and it is ' +
       'genuine housekeeping rather than a destructive TTL wearing a ' +
       'housekeeping name: the row it deletes is a cached copy of somebody ' +
@@ -171,12 +141,9 @@ export const EXPIRY_SWEEP_TARGETS: readonly ExpirySweepTarget[] = [
       'EVIDENCE for an alert that has already been delivered, never the alert ' +
       'itself. `housing_alerts.event_id` is `ON DELETE SET NULL` and every alert ' +
       'stores its own explanation, so this sweep costs the "why did I get this?" ' +
-      'answer its supporting fact and costs the history nothing. It is the only ' +
-      'entry here with NO Mongo ancestor — registered on the way IN rather than ' +
-      'ported, because a table that grows with every listing change in the ' +
-      'catalogue is exactly the shape this registry exists to catch, and the ' +
-      'only reason the others needed catching is that nobody was there to ' +
-      'register them at birth.',
+      'answer its supporting fact and costs the history nothing. Registered at ' +
+      'BIRTH, because a table that grows with every listing change in the ' +
+      'catalogue is exactly the shape this registry exists to catch.',
   },
   {
     table: addressCandidates,
@@ -190,20 +157,18 @@ export const EXPIRY_SWEEP_TARGETS: readonly ExpirySweepTarget[] = [
       'it produces a canonical row (provider, ref, raw text, its hash, the ' +
       'normalization version), which is also why `candidate_id` there carries ' +
       'no foreign key. So this sweep costs a materialized place nothing and ' +
-      'costs an unmaterialized guess exactly what it is worth. It is the second ' +
-      'entry here with NO Mongo ancestor, registered at BIRTH for the same ' +
-      'reason as the one above: a table that grows with every keystroke in an ' +
-      'autocomplete is the shape this registry exists to catch, and the only ' +
-      'reason the ported entries needed catching is that nobody was there to ' +
-      'register them at birth.',
+      'costs an unmaterialized guess exactly what it is worth. Registered at ' +
+      'BIRTH for the same reason as the one above: a table that grows with ' +
+      'every keystroke in an autocomplete is the shape this registry exists to ' +
+      'catch.',
   },
 ];
 
-/** A column whose Mongo TTL index must NOT become a delete. */
+/** A deadline column that must NOT become a delete. */
 export interface NonDeletingExpiryColumn {
   readonly table: PgTable;
   readonly column: PgColumn;
-  /** What the deadline actually means, and what the correct port is. */
+  /** What the deadline actually means, and what the correct handling is. */
   readonly reason: string;
 }
 
@@ -211,13 +176,13 @@ export interface NonDeletingExpiryColumn {
  * TTL columns that must NEVER appear in {@link EXPIRY_SWEEP_TARGETS}.
  *
  * The registry above answers "which tables need a sweep". This one answers the
- * question that is easier to get wrong: which TTL index in the source is not
+ * question that is easier to get wrong: which deadline column is not
  * housekeeping at all. `__tests__/db/expiry.test.ts` fails if any column named
- * here is ever registered as a sweep target, so "check every TTL for INTENT"
- * stops being advice the moment somebody tidies up the registry.
+ * here is ever registered as a sweep target, so "check every deadline for
+ * INTENT" stops being advice the moment somebody tidies up the registry.
  *
- * Without this list, a later reader comparing `grep expireAfterSeconds` against
- * the registry finds one short and closes the gap — which is the exact change
+ * Without this list, a later reader who finds a deadline column missing from the
+ * registry closes the gap — which is the exact change
  * that would start deleting people's conversations.
  */
 export const EXPIRY_COLUMNS_THAT_MUST_NOT_DELETE: readonly NonDeletingExpiryColumn[] = [
@@ -225,12 +190,11 @@ export const EXPIRY_COLUMNS_THAT_MUST_NOT_DELETE: readonly NonDeletingExpiryColu
     table: conversations,
     column: conversations.sharingExpiresAt,
     reason:
-      "This deadline belongs to a SHARE LINK, not to the row. Mongo's TTL index " +
-      'on `sharing.expiresAt` deletes the whole conversation and every message ' +
-      'in it, and `generateShareToken` sets the deadline to +24h — so every ' +
-      'conversation anyone has ever shared has been destroyed a day later, with ' +
-      'the transcript the user was sharing. A near-zero row count is evidence of ' +
-      'that DAMAGE, not of safety. The correct port clears the four `sharing_*` ' +
+      'This deadline belongs to a SHARE LINK, not to the row. Deleting the row ' +
+      'would delete the whole conversation and every message in it, and ' +
+      '`generateShareToken` sets the deadline to +24h — so every conversation ' +
+      'anyone shared would be destroyed a day later, with the transcript the ' +
+      'user was sharing. The correct handling clears the four `sharing_*` ' +
       'columns, which is exactly what `revokeSharing` already does; the read ' +
       'side needs nothing, because `findByShareToken` already refuses an expired ' +
       'token.',

@@ -1,10 +1,9 @@
 /**
  * `properties` and its three child tables — the listing, and the largest table
- * in the migration.
+ * in the schema.
  *
- * Ported from `models/schemas/PropertySchema.ts` (1,207 lines) and
- * `services/offeringValidation.ts`. A property has no coordinates of its
- * own: it reaches its place through `address_id`, which is why `addresses` had
+ * The offering rules mirror `services/offeringValidation.ts`. A property has no
+ * coordinates of its own: it reaches its place through `address_id`, which is why `addresses` had
  * to land first.
  *
  * See `CONVENTIONS.md` for the rules every decision follows. What is decided
@@ -12,7 +11,7 @@
  *
  * ## Flattening, and what it costs
  *
- * Twelve Mongo subdocuments become columns rather than child tables:
+ * Twelve nested wire objects are columns rather than child tables:
  * `longTermRent`, `shortTermRent`, `sale`, `exchange`, `externalContact`,
  * `listingFlags`, `accommodationDetails`, `availability`, `rules`,
  * `moderation`, `priceEthics`, `rating`. Every one has a KNOWN, CLOSED shape
@@ -20,22 +19,18 @@
  * SORT targets. `long_term_rent_monthly_amount` is the price sort of the
  * primary feed; a child table would put a join in front of it.
  *
- * Column names keep the Mongo path (`longTermRent.monthlyAmount` →
+ * Column names keep the wire path (`longTermRent.monthlyAmount` →
  * `long_term_rent_monthly_amount`), the same rule `images.keys_medium` follows,
- * because it is what lets the backfill's column-coverage check map source to
- * target mechanically rather than through a hand-written table of exceptions.
+ * because it is what lets a serializer map a DTO to its columns mechanically
+ * rather than through a hand-written table of exceptions.
  *
- * **Flattening an OPTIONAL subdocument makes every one of its columns
- * NULLABLE, including the ones whose sub-schema declares a default.** Column
- * nullness is the only representation of block ABSENCE once the block is gone,
- * so `long_term_rent_currency` (Mongo default `'EUR'`) and
- * `exchange_meals_included` (Mongo default `false`) are nullable even though a
- * present block always carries them. Measured on this repository's mongoose
- * 8.24.1 rather than assumed: a sub-schema declared `default: undefined` does
- * not materialize, so none of its defaults are ever written; a sub-schema
- * declared `default: {}` (`availability`, `rules`) DOES, and so does a NESTED
- * PATH carrying at least one default (`moderation`, `rating`,
- * `accommodationDetails`) — including empty arrays for its array members. Those
+ * **Flattening an OPTIONAL block makes every one of its columns NULLABLE,
+ * including the ones that carry a default when the block is present.** Column
+ * nullness is the only representation of block ABSENCE, so
+ * `long_term_rent_currency` and `exchange_meals_included` are nullable even
+ * though a present block always carries them. The blocks that are ALWAYS
+ * present (`availability`, `rules`, `moderation`, `rating`,
+ * `accommodationDetails`) — including empty arrays for their array members —
  * are the ones that get `NOT NULL DEFAULT`.
  *
  * That nullability is not a compromise: it is exactly what makes the four
@@ -43,9 +38,9 @@
  *
  * ## Four sub-objects are SPARSE in production, and each gets a different answer
  *
- * The mongoose probe above says what a document CONSTRUCTED today carries. It
- * does not say what production holds, and for four sub-objects those differ —
- * measured, after the first draft of this file assumed they agreed:
+ * What a listing written today carries is not what production holds, and for
+ * four sub-objects those differ — measured, after the first draft of this file
+ * assumed they agreed:
  *
  * | sub-object | absent on | answer |
  * |---|--:|---|
@@ -59,8 +54,8 @@
  *
  * The rule this is an instance of: **a `NOT NULL` on a subfield is only safe
  * when the SUB-OBJECT is present on every row, not when the FIELD has a default
- * in the schema.** A default only fires when mongoose materializes the parent,
- * and three of the four above show it did not. Where the column still takes
+ * in the schema.** A default only fires when the parent is written, and three
+ * of the four above show it was not. Where the column still takes
  * `NOT NULL DEFAULT`, the backfill must supply the value under a named rule or
  * OMIT the column and let the DEFAULT fire — it must never write NULL.
  *
@@ -72,8 +67,8 @@
  *
  * ## Numbers
  *
- * Every ported Mongo `Number` is `double precision`, including the ones that
- * look integral (`bedrooms`, `max_guests`, `year_built`). A Mongo `Number` is
+ * Every portal-supplied number is `double precision`, including the ones that
+ * look integral (`bedrooms`, `max_guests`, `year_built`). The wire number is
  * an unconstrained double, portals write `bathrooms: 1.5` and
  * `square_footage: 85.5`, and `integer` is a NARROWING — the same class of
  * change as a range validator, which CONVENTIONS.md defers until the census has
@@ -210,8 +205,7 @@ export const PROPERTY_STATUSES = [
 /**
  * Where a listing came from.
  *
- * The census found this to be a REAL closed vocabulary that no Mongoose `enum`
- * declares — 15 distinct values across 17,644 rows, and it is half of the
+ * The census found this to be a REAL closed vocabulary — 15 distinct values across 17,644 rows, and it is half of the
  * `(source, source_id)` unique key. It is written from the registered-provider
  * union rather than from those 15, because the observed set is the history of
  * what has ever been ingested, not the domain: freezing it would break the
@@ -220,10 +214,10 @@ export const PROPERTY_STATUSES = [
  * Two members are load-bearing and neither is obvious:
  *
  *  - **`fixture`** is `PROVIDER_IDS`' local-JSON test provider, and there are
- *    real rows carrying it IN PRODUCTION. A CHECK without it kills the copy.
+ *    real rows carrying it IN PRODUCTION. A CHECK without it fails at apply.
  *    Purging them is a separate decision, taken with the count in front of you.
- *  - **`internal`** is the Mongoose DEFAULT (`PropertySchema.ts:244`) and is
- *    therefore what every user-created listing carries. The census observed
+ *  - **`internal`** is the column DEFAULT and is therefore what every
+ *    user-created listing carries. The census observed
  *    zero of them only because production holds zero user-created listings
  *    (`oxy_user_id` is absent on all 17,644 rows). A CHECK built from the
  *    observed values would reject the first property a user ever creates —
@@ -284,8 +278,8 @@ export const AVAILABILITY_WINDOW_STATUSES = [
 ] as const satisfies readonly `${AvailabilityWindowStatus}`[];
 
 /**
- * The four vocabularies below are declared INLINE in the Mongoose schema and
- * have no `shared-types` counterpart at all, so there is nothing to `satisfies`
+ * The four vocabularies below are declared only here and have no
+ * `shared-types` counterpart at all, so there is nothing to `satisfies`
  * them against. That absence is itself the drift risk the enum audit flagged:
  * the frontend and the backend each spell them out separately today.
  */
@@ -336,9 +330,8 @@ export const CAMPSITE_TYPES = ['tent_site', 'rv_site', 'cabin', 'glamping', 'bac
 /**
  * Which calendar a window belongs to.
  *
- * Mongo declared `availabilityWindowSchema` TWICE — once on
- * `Property.availabilityWindows` and once inside `Property.exchange
- * .availabilityWindows` — with the identical sub-schema. One table with a
+ * A listing has TWO calendars — `availabilityWindows` and
+ * `exchange.availabilityWindows` — with the identical shape. One table with a
  * discriminator means one calendar-overlap query instead of two, and it is why
  * the GiST index below can serve both.
  */
@@ -354,11 +347,10 @@ export const properties = pgTable(
      *
      * NULLABLE, and measured: `oxy_user_id` is ABSENT on all 17,644 production
      * rows — every listing in production today is an external aggregator
-     * listing with no owner. Mongoose declared it
-     * `required: !this.isExternal`, a conditional that Postgres could express
-     * as a CHECK — and deliberately does not, because that CHECK would also
-     * have to encode `isExternal`'s own write rule (the `pre('save')` hook
-     * CLEARS `oxyUserId` whenever `isExternal` is true), and encoding half of a
+     * listing with no owner. "Required unless external" is a conditional that
+     * Postgres could express as a CHECK — and deliberately does not, because
+     * that CHECK would also have to encode `isExternal`'s own write rule (an
+     * external listing carries no `oxyUserId`), and encoding half of a
      * two-sided invariant is worse than encoding none of it.
      *
      * No foreign key, ever: Oxy owns identity and this is a foreign service's
@@ -400,11 +392,10 @@ export const properties = pgTable(
     /**
      * When this listing is reaped.
      *
-     * Mongo carried `index: { expireAfterSeconds: 0 }` here, and it covers
-     * **100% of production** — all 17,644 rows have a date in this column, so
-     * the entire inventory is under an active scythe. Postgres has no TTL
-     * index; `db/expiry.ts` carries the registry entry that replaces it, and
-     * the btree below is what that sweep's range scan needs. Without BOTH,
+     * It covers **100% of production** — all 17,644 rows have a date in this
+     * column, so the entire inventory is under an active scythe. Postgres
+     * deletes nothing on a deadline; `db/expiry.ts` carries the registry entry
+     * that sweeps it, and the btree below is what that sweep's range scan needs. Without BOTH,
      * external listings grow forever with no error and no failing test.
      */
     expiresAt: timestamptz(),
@@ -412,10 +403,9 @@ export const properties = pgTable(
     /**
      * The partner whose referral link produced this listing.
      *
-     * RENAMED from Mongo's `sourcedByPartner`. Its three sibling references on
-     * this same schema (`addressId`, `agencyId`, `parentPropertyId`) all end in
-     * `Id`; this one did not, which made it the odd one out in its own model
-     * AND invisible to `idShapedColumns`, whose `_id` suffix test is what
+     * Named `sourcedByPartnerId`, not `sourcedByPartner`. Its three sibling
+     * references (`addressId`, `agencyId`, `parentPropertyId`) all end in `Id`;
+     * a name without it would be invisible to `idShapedColumns`, whose `_id` suffix test is what
      * classifies every id-shaped column in this schema. A column no gate can
      * see is a column that can ship unconstrained. Free of data risk: the
      * census found the field ABSENT on all 17,644 rows.
@@ -479,21 +469,17 @@ export const properties = pgTable(
     /**
      * The listing headline.
      *
-     * Declared with NO Mongo source, and that is the point: `title` is absent
-     * from `PropertySchema` entirely, so mongoose strict mode drops it from
-     * every write, and the census confirms it is missing on all 17,644 rows —
-     * while a 43.51 MiB Mongo text index has been indexing it. See
-     * `unmappedColumns.ts`; the consequence for `search_vector` is recorded on
-     * that column.
+     * No production row carries one — the census found it missing on all
+     * 17,644 rows. See `unmappedColumns.ts`; the consequence for
+     * `search_vector` is recorded on that column.
      */
     title: text(),
     description: text(),
     /**
      * Full-text search over the listing.
      *
-     * **`description` only.** Mongo's text index named `{ title, description }`
-     * and `title` does not exist on a single document, so weighting it would
-     * copy a 43.51 MiB phantom index into Postgres. When `title` starts
+     * **`description` only.** `title` carries no data on a single row, so
+     * weighting it would index nothing at a cost. When `title` starts
      * carrying data, this becomes
      * `setweight(to_tsvector(…, title), 'A') || setweight(…, 'B')` and the
      * column is regenerated — a `post`-phase migration, not a guess made now.
@@ -592,8 +578,8 @@ export const properties = pgTable(
      * Which offerings this listing carries — the single source of truth the
      * four coherence CHECKs at the bottom of this table are written against.
      *
-     * A native `text[]` with a GIN index, not a child table: Mongo's `$in`
-     * membership test becomes the array overlap operator `&&`, which GIN
+     * A native `text[]` with a GIN index, not a child table: the membership
+     * test is the array overlap operator `&&`, which GIN
      * answers directly, and the set is read whole on every serialization.
      */
     offerings: text().array().notNull().default([]),
@@ -620,13 +606,13 @@ export const properties = pgTable(
      * Free-text amenity tokens.
      *
      * `text[]` + GIN, and **deliberately WITHOUT a containment CHECK** — twice
-     * over. Mongo declares no `enum` on this path at all (only
-     * `trim`/`lowercase`), so there is no vocabulary to check against; and the
+     * over. Tokens are only trimmed and lower-cased, never checked against a
+     * list, so there is no vocabulary to check against; and the
      * production data carries measured encoding corruption — hex-escaped UTF-8
      * bytes (`calefacci_xf3_n` ×592, `1_ba_xf1_o` ×324, `2_ba_xf1_os` ×280,
      * `cerca_de_transporte_p_xfa_blico` ×143, ≥40 distinct tokens over ≥1,688
      * of 36,983 elements) — so a CHECK built from any clean vocabulary would
-     * reject those rows outright, mid-copy.
+     * reject those rows outright.
      *
      * The corruption is a real, user-visible search bug and it is NOT this
      * table's to fix: under GIN each mangled token is its own index entry, so a
@@ -753,8 +739,8 @@ export const properties = pgTable(
 
     // ── Accommodation details (couchsurfing / hostel / campsite listings) ──
     //
-    // A NESTED PATH carrying defaults, so mongoose materializes it on every
-    // document and the defaulted members really are stored — which is why the
+    // A block present on every listing, so the defaulted members really are
+    // stored — which is why the
     // two booleans and the four arrays are NOT NULL here while the priced
     // blocks above are nullable.
     accommodationDetailsSleepingArrangement: text({ enum: SLEEPING_ARRANGEMENTS }),
@@ -769,9 +755,8 @@ export const properties = pgTable(
      * The wifi password for the accommodation.
      *
      * **A PROTECTED COLUMN** (`schema/protectedColumns.ts`) — a credential for
-     * a real network, sitting on the most-read table in the product. Mongoose
-     * hid it only by accident: it is not `select: false`, it simply never
-     * appeared in a DTO's field list. Drizzle has no such accident —
+     * a real network, sitting on the most-read table in the product. Leaving
+     * it out of every DTO's field list is not enough —
      * `db.select().from(properties)` returns every column — so the exclusion is
      * made at the TYPE level, where a serializer that reads it fails `tsc`
      * instead of being caught in review.
@@ -812,20 +797,9 @@ export const properties = pgTable(
     // **`NOT NULL DEFAULT false`, and the DEFAULT is load-bearing — this column
     // would fail `23502` on 99.99% of production without it.** The `moderation`
     // sub-object is ABSENT on 17,642 of 17,644 rows, and that is a stable
-    // steady state rather than a backlog:
+    // steady state rather than a backlog: re-ingesting does not add it.
     //
-    //  - the field was added to `PropertySchema` on 2026-07-30 (`0bbc574`,
-    //    PR #248), and the newest `createdAt` in the whole collection is
-    //    2026-07-25 — every row predates the schema change;
-    //  - the rows WITHOUT it have a max `updatedAt` four minutes LATER than the
-    //    two that have it, across all twelve providers, so RE-INGESTING DOES NOT
-    //    ADD IT;
-    //  - the only two rows carrying it are the two `fixture` rows.
-    //
-    // So the backfill DERIVES `false` where the path is absent, under the named
-    // resolution `MODERATION_ABSENT` with the count frozen at 17,642 (see
-    // `db/MIGRATION-CONTRACT.md`) — never a silent coalesce. `false` is the
-    // correct value and not merely the convenient one: `moderation.restricted`
+    // `false` is the correct value and not merely the convenient one: `moderation.restricted`
     // is written ONLY by `ModerationEnforcementService`, CrowdSource is switched
     // off in production entirely, and the schema's own default says the same
     // thing. Absent here unambiguously means "no jury has restricted this".
@@ -836,10 +810,8 @@ export const properties = pgTable(
 
     // ── Server-computed ethical + market price score ──
     //
-    // Every column nullable, and that matches the source exactly: the Mongoose
-    // nested path declares NO defaults on ANY member ("written atomically on
-    // score — no subfield defaults (avoids partial subdocs on save)"), so it
-    // never materializes until `priceEthicsService` scores the listing.
+    // Every column nullable: the block is written atomically when
+    // `priceEthicsService` scores the listing, and is absent until then.
     priceEthicsEthicalSuggested: doublePrecision(),
     priceEthicsEthicalMax: doublePrecision(),
     priceEthicsWithinEthical: boolean(),
@@ -857,14 +829,9 @@ export const properties = pgTable(
     /**
      * Detail-page view count.
      *
-     * Declared with NO Mongo source. `views` is absent from `PropertySchema`,
-     * so mongoose strict mode silently strips it from
-     * `findByIdAndUpdate(id, { $inc: { views: 1 } })` — the census confirms the
-     * field is missing on all 17,644 rows, i.e. every `$inc` this product has
-     * ever issued was an empty update. There is nothing to copy: the column
-     * starts at zero for every listing and a later batch restores the writer as
-     * `UPDATE … SET views = views + 1`. Counting starting from zero after the
-     * cutover is an EXPECTED condition, not a defect. See `unmappedColumns.ts`.
+     * Incremented as `UPDATE … SET views = views + 1`. Every listing started
+     * at zero, so a low count on an old listing is EXPECTED, not a defect. See
+     * `unmappedColumns.ts`.
      *
      * `bigint`, not `integer`: a counter with no ceiling in the domain should
      * not have one in the column.
@@ -874,15 +841,15 @@ export const properties = pgTable(
     /**
      * Whether this listing has at least one photo.
      *
-     * **A denormalized counter, kept DELIBERATELY, against the rule in
-     * CONVENTIONS.md that says Mongo's join-less workarounds do not travel.**
+     * **A denormalized flag, kept DELIBERATELY, against the CONVENTIONS.md rule
+     * that a queryable relation is not copied onto its parent.**
      * The trade-off, written down so nobody has to re-derive it:
      *
      * It is the PRIMARY SORT KEY of every discovery feed —
      * `{ hasImages: -1, createdAt: -1 }` — and the honest relational
      * alternative, `ORDER BY EXISTS (SELECT 1 FROM property_images …) DESC`, is
      * a correlated subquery in an `ORDER BY`, which Postgres cannot serve from
-     * an index any more than Mongo could. Every page of the main feed would
+     * an index. Every page of the main feed would
      * become a full sort. So the column stays, and pays for itself with a
      * maintenance obligation instead:
      *
@@ -937,10 +904,8 @@ export const properties = pgTable(
   (table) => [
     // ── The dedup key ──
     //
-    // Mongo's `{ source: 1, sourceId: 1 }` unique index with
-    // `partialFilterExpression: { sourceId: { $type: 'string' } }`. A `text`
-    // column can hold nothing but text, so `is not null` is the exact
-    // equivalent of the `$type` test. Census: 17,644 distinct `source_id`
+    // Unique over the listings that carry a `source_id`; a `text` column can
+    // hold nothing but text, so `is not null` is the whole condition. Census: 17,644 distinct `source_id`
     // values over 17,644 rows — no violation to resolve.
     uniqueIndex('properties_source_source_id_key')
       .on(table.source, table.sourceId)
@@ -956,7 +921,7 @@ export const properties = pgTable(
     // `created_at desc` alone: NOT a prefix of the composite above (its leading
     // column differs), and it backs the plain newest-first listings.
     index('properties_created_at_idx').on(sql`${table.createdAt} desc`),
-    // The replacement for Mongo's `{ title: 'text', description: 'text' }`.
+    // The full-text index.
     index('properties_search_vector_gin').using('gin', table.searchVector),
 
     // ── Ownership and place ──
@@ -971,11 +936,9 @@ export const properties = pgTable(
     index('properties_type_available_idx').on(table.type, table.availabilityIsAvailable),
     index('properties_status_available_idx').on(table.status, table.availabilityIsAvailable),
     index('properties_bedrooms_bathrooms_idx').on(table.bedrooms, table.bathrooms),
-    // Mongo's `{ amenities: 1 }` was a MULTIKEY index; GIN is its Postgres
-    // equivalent, and it is what makes `&&` (the port of `$in`) index-backed.
+    // GIN is what makes `&&` (array membership) index-backed.
     index('properties_amenities_gin').using('gin', table.amenities),
-    // Mongo's `{ offerings: 1, status: 1 }` cannot be reproduced as one index
-    // without the `btree_gin` extension, which would be a new infrastructure
+    // `(offerings, status)` cannot be one index without the `btree_gin` extension, which would be a new infrastructure
     // precondition on three shared databases for one compound. The GIN alone
     // answers the selective half (the offering membership); `status` is served
     // by the composite above it.
@@ -992,8 +955,7 @@ export const properties = pgTable(
 
     // ── Sparse references ──
     //
-    // Both partial, matching Mongo's `sparse: true`, and both kept the size of
-    // the real set: 8,374 of 17,644 listings name an agency and none names a
+    // Both partial, so each stays the size of the real set: 8,374 of 17,644 listings name an agency and none names a
     // partner.
     index('properties_agency_id_idx').on(table.agencyId).where(sql`${table.agencyId} is not null`),
     index('properties_sourced_by_partner_id_idx')
@@ -1127,22 +1089,14 @@ export const properties = pgTable(
     /**
      * ── The four offering-coherence CHECKs ──
      *
-     * These are the largest correctness win in the Property port, and they are
+     * These are the largest correctness guarantee on this table, and they are
      * the reason the priced blocks are flattened into nullable columns rather
      * than pushed into child tables.
      *
      * `services/offeringValidation.ts` states one invariant: `offerings`
-     * must equal EXACTLY the set of priced blocks present on the document. In
-     * Mongo that rule has TWO enforcement paths for one invariant, and they do
-     * not agree:
-     *
-     *  - on `save()`, the path validator on `offerings` runs `validateOfferings`;
-     *  - on `findOneAndUpdate` the same validator EXPLICITLY SKIPS ITSELF (the
-     *    `isPropertyDocument` guard returns true for a Query `this`, because a
-     *    Query cannot see sibling blocks), leaving the rule to a controller
-     *    helper — and `services/scraperService.ts:285` reaches the collection
-     *    through `updateOne` with no `runValidators` at all, which is the
-     *    steady-state path for every external listing.
+     * must equal EXACTLY the set of priced blocks present on the listing. An
+     * application-side check alone is skippable — the ingest writer is the
+     * steady-state path for every external listing and never calls it.
      *
      * Here it is ONE rule, enforced by the database, on every write path there
      * is or will be. Each direction of the biconditional catches a different
@@ -1188,12 +1142,12 @@ export const properties = pgTable(
      * readings diverge in exactly one direction, and it is a real semantic loss
      * if left alone: a block present, carrying no price, with the offering not
      * declared — `sale: { currency: 'EUR' }` and `offerings: []` — is REJECTED
-     * by Mongo ("Pricing block for sale is present but the offering is not
-     * declared") and ACCEPTED by the coherence CHECK alone, because all it sees
-     * is `false = false`.
+     * by `validateOfferings` ("Pricing block for sale is present but the
+     * offering is not declared") and ACCEPTED by the coherence CHECK alone,
+     * because all it sees is `false = false`.
      *
-     * Zero production rows are in that state, so nothing here can block the
-     * copy. It is restored anyway rather than documented as a narrowing,
+     * Zero production rows are in that state. It is enforced rather than
+     * documented as a narrowing,
      * because the flattened form CAN express it: after flattening, "the block is
      * present" is "any of its columns is non-null", so each of these says a
      * satellite column may only be populated when its block's discriminator is.
@@ -1201,8 +1155,8 @@ export const properties = pgTable(
      * **The one residual, which genuinely cannot be represented and is therefore
      * written down instead:** an EMPTY block (`sale: {}`) counts as present to
      * `isPresent`, and flattens to exactly the same all-NULL row as no block at
-     * all. Mongo rejects `sale: {}` with `offerings: []`; no CHECK here can see
-     * it, because there is nothing left to see. That is a strictly smaller loss
+     * all. `validateOfferings` rejects `sale: {}` with `offerings: []`; no
+     * CHECK here can see it, because there is nothing left to see. That is a strictly smaller loss
      * than the one these four close, and it is the irreducible cost of
      * flattening a subdocument whose mere existence carried meaning.
      */
@@ -1265,10 +1219,9 @@ export const properties = pgTable(
 /**
  * `property_images` — a listing's photos, in order.
  *
- * Mongo kept these as an embedded array on the property, each entry holding a
- * reference to the canonical `Image` document plus a denormalized copy of the
- * medium variant's URL. The array becomes a child table; the `urls` subdocument
- * (four fixed variants) becomes four named columns, exactly as `images.urls_*`
+ * Each row holds a reference to the canonical `images` row plus a denormalized
+ * copy of the medium variant's URL. The `urls` object (four fixed variants) is
+ * four named columns, exactly as `images.urls_*`
  * does, for the same reason: `jsonb` would make the most-read URL in the
  * product untyped and unindexable.
  */
@@ -1321,9 +1274,8 @@ export const propertyImages = pgTable(
     /**
      * The medium variant's URL, denormalized at write time.
      *
-     * Nullable, matching the source: Mongo declared no `required` here, and
-     * legacy/external entries that predate the `Image` collection carry the
-     * reference without the copy.
+     * Nullable: legacy and external entries carry the reference without the
+     * copy.
      */
     url: text(),
     caption: text(),
@@ -1332,8 +1284,8 @@ export const propertyImages = pgTable(
     /** Position in the listing's photo list, ascending. A loop index, so `bigint`. */
     order: bigint({ mode: 'number' }).notNull().default(0),
 
-    // The `urls` subdocument, flattened. Nullable because Mongo declared it
-    // `default: undefined` precisely so pre-Image entries still validate.
+    // The `urls` object, flattened. Nullable because legacy entries carry no
+    // variants.
     urlsOriginal: text(),
     urlsSmall: text(),
     urlsMedium: text(),
@@ -1344,10 +1296,7 @@ export const propertyImages = pgTable(
     /**
      * At most ONE primary photo per listing.
      *
-     * Mongo enforced this in a `pre('save')` hook that walked the array and
-     * un-set every extra `isPrimary` — a hook that `updateOne` and
-     * `findOneAndUpdate` never ran. Here it is a constraint, so no write path
-     * can produce a second one.
+     * A constraint, so no write path can produce a second one.
      *
      * Safe from day one, measured: the census counted primaries per property
      * and found **1 on 16,585 listings and 0 on 1,059 — never more than one**.
@@ -1374,10 +1323,8 @@ export const propertyImages = pgTable(
  * listing.
  *
  * Deliberately WITHOUT `created_at` / `updated_at`, as are the two child tables
- * around it. The Mongo subdocuments carried no timestamps, so a backfill would
- * have to fabricate one — and a fabricated `created_at` that reads as the
- * migration's own clock is worse than an absent column, because it looks like a
- * fact.
+ * around it. Their source rows carried no timestamps, and a fabricated
+ * `created_at` is worse than an absent column, because it looks like a fact.
  */
 export const propertyDocuments = pgTable(
   'property_documents',
@@ -1405,18 +1352,17 @@ export const propertyDocuments = pgTable(
  *
  * ## One table, two scopes
  *
- * Mongo declared the identical `availabilityWindowSchema` twice —
- * `Property.availabilityWindows[]` and `Property.exchange.availabilityWindows[]`
- * — so a "does anything overlap this range?" question had to be asked twice,
- * against two arrays, with two sets of indexes. One table plus a `scope`
- * discriminator makes it one query and one index.
+ * A listing has two calendars with an identical shape —
+ * `availabilityWindows[]` and `exchange.availabilityWindows[]` on the wire. Two
+ * tables would mean asking "does anything overlap this range?" twice, against
+ * two sets of indexes. One table plus a `scope` discriminator makes it one query
+ * and one index.
  *
  * ## The GiST index is the point of this table
  *
- * Mongo indexed `availabilityWindows.start` and `availabilityWindows.end`
- * separately, and **two independent btrees cannot answer an overlap query**:
+ * **Two independent btrees on start and end cannot answer an overlap query**:
  * the planner can use one of them to narrow by start OR by end, then filters the
- * rest by hand. Those two indexes are NOT ported. A GiST index over
+ * rest by hand. A GiST index over
  * `tstzrange(starts_at, ends_at)` answers `&&` directly, which is the actual
  * question every calendar asks.
  *
@@ -1434,7 +1380,7 @@ export const propertyAvailabilityWindows = pgTable(
       .references(() => properties.id, { onDelete: 'cascade' }),
     /** Which calendar this window belongs to. */
     scope: text({ enum: AVAILABILITY_WINDOW_SCOPES }).notNull(),
-    /** Mongo's `start`. Renamed: `end` is a reserved word and the pair reads better together. */
+    /** The wire's `start`. Named `startsAt`: `end` is a reserved word and the pair reads better together. */
     startsAt: timestamptz().notNull(),
     endsAt: timestamptz().notNull(),
     status: text({ enum: AVAILABILITY_WINDOW_STATUSES }).notNull().default('available'),
@@ -1461,9 +1407,8 @@ export const propertyAvailabilityWindows = pgTable(
       sql`${table.status} in (${sql.raw(inList(AVAILABILITY_WINDOW_STATUSES))})`,
     ),
     /**
-     * Mongo enforced this with a sub-schema validator on `end`
-     * (`value > this.start`) — which, like every other Mongoose validator in
-     * this package, did not run on an update.
+     * A window ends after it starts. A CHECK rather than an application
+     * validator, so an update path cannot skip it.
      */
     check('property_availability_windows_order_check', sql`${table.endsAt} > ${table.startsAt}`),
   ],

@@ -40,12 +40,10 @@ import { conversationMessages, conversations } from '../../db/schema';
 import { objectIdHex } from '../helpers/postgresGeoFixtures';
 
 /**
- * A 24-char ObjectId hex, exactly as every pre-cutover row carries.
+ * A 24-char hex id, exactly as every older row carries.
  *
- * The shared minter rather than a second local one: this file used
- * `new Types.ObjectId().toHexString()`, which was the last reason it imported
- * mongoose at all — it seeds nothing in Mongo. The property the cases below
- * actually rest on (a fresh ObjectId hex sorts AFTER a fresh uuid v7) is not
+ * The shared minter rather than a second local one. The property the cases
+ * below actually rest on (a fresh 24-hex id sorts AFTER a fresh uuid v7) is not
  * assumed either way; the first `describe` measures it.
  */
 const legacyId = objectIdHex;
@@ -102,8 +100,8 @@ describe('conversation_messages — ordered by position, never by id', () => {
       analyticsLastActivity: now,
     });
 
-    // The natural shape: the backfilled question carries its Mongo id, the reply
-    // the user got after the cutover carries a fresh uuid v7. Position — and
+    // The natural shape: the older question carries a 24-hex id, the reply the
+    // user got later carries a fresh uuid v7. Position — and
     // therefore meaning — is question first.
     const legacyMessageId = legacyId();
     await db.insert(conversationMessages).values([
@@ -316,7 +314,7 @@ describe('appendMessages — position is assigned, never guessed', () => {
     expect(stored.map((row) => row.position)).toEqual([7, 8, 9]);
   });
 
-  it('moves analytics.last_activity, which is the hook the Mongo pre-save was', async () => {
+  it('moves analytics.last_activity on every mutation', async () => {
     const oxyUserId = owner();
     const conversationId = uuidv7();
     const stale = new Date('2026-07-01T00:00:00.000Z');

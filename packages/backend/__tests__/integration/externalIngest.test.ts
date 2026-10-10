@@ -169,8 +169,8 @@ async function imageRowsFor(propertyId: string): Promise<{ id: string }[]> {
 }
 
 beforeEach(async () => {
-  // Every test in this file ingests the SAME fixture ids, and Postgres — unlike
-  // the per-test in-memory Mongo this replaced — persists for the whole worker.
+  // Every test in this file ingests the SAME fixture ids, and Postgres persists
+  // for the whole worker.
   // Without this reset the second test would meet `properties_source_source_id_key`
   // rather than a clean table, and would fail for a reason unrelated to what it
   // asserts.

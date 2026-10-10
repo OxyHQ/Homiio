@@ -94,11 +94,9 @@ distance on the spheroid; nothing here re-implements Haversine.
 Paginated through `paginationResponse` — shape in
 [`docs/routes.mdx`](../../../docs/routes.mdx).
 
-<!-- vocabulary-exempt:start states the wire contract by naming the token it forbids -->
 **Every identity on the wire is `id`**; nothing this API returns is named `_id`,
 and `__tests__/integration/wireIdContract.test.ts` fails if one appears anywhere
 in any body.
-<!-- vocabulary-exempt:end -->
 
 | Code | Status | Raised when |
 |---|---|---|

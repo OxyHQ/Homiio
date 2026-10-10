@@ -1,26 +1,23 @@
 /**
  * AI Routes — streaming, search, conversations.
  *
- * ## The conversation surface here was BROKEN, and the port is the fix
+ * ## Conversations are keyed on the Oxy account, and nothing else
  *
- * `2d1376a` renamed `Conversation.profileId` to `oxyUserId` and updated the
- * handlers that then lived in `controllers/ai/`. `eeb4845` deleted that
- * directory; this file — the one `routes/index.ts` actually mounts at `/api/ai`
- * — kept the old spelling. mongoose strict mode drops a path the schema does not
- * declare, so every `new Conversation({ profileId })` lost the field and then
- * failed `required: true` on `oxyUserId`, and every `find({ profileId })`
- * matched nothing. Production holds ZERO conversations as a result.
+ * `2d1376a` renamed the conversation owner from `profileId` to `oxyUserId`, but
+ * this file — the one `routes/index.ts` actually mounts at `/api/ai` — kept the
+ * old spelling, so every write failed validation and every read matched
+ * nothing. Production holds ZERO conversations as a result.
  *
- * The ported handlers key on the session's Oxy account id directly. There is no
+ * The handlers key on the session's Oxy account id directly. There is no
  * `Profile` lookup in front of them any more: `conversations.oxy_user_id` IS the
  * owner, so resolving a profile first only added a 404 for a person who has
  * never opened the profile screen.
  *
  * `/history` had the same defect one level up — it read and wrote
- * `profile.chatHistory`, while `ProfileSchema` declares the array at
- * `personalProfile.chatHistory`. Strict mode dropped it on write and returned
- * `undefined` on read, so `GET` always answered `[]`, `POST` stored nothing and
- * `DELETE` was a no-op. All five production profiles have an empty transcript.
+ * `profile.chatHistory` where the transcript lives at
+ * `personalProfile.chatHistory`, so `GET` always answered `[]`, `POST` stored
+ * nothing and `DELETE` was a no-op. All five production profiles have an empty
+ * transcript.
  */
 
 import express, { Request, Response } from 'express';
@@ -201,12 +198,10 @@ const isClientPlaceholderId = (id: string): boolean => id.startsWith(CLIENT_PLAC
 /**
  * Tell the client which stored conversation its turn landed in.
  *
- * Sent whenever `/stream` CREATED one, which is wider than the Mongo handler:
- * that only set the header when the client had supplied a `conv_…` placeholder,
- * so a request carrying no `conversationId` at all created a conversation and
- * never told anybody its id — an orphan on every such call. Widening it is
- * safe in the only direction that matters, since a client that ignores the
- * header is unaffected.
+ * Sent whenever `/stream` CREATED one — not only when the client supplied a
+ * `conv_…` placeholder, or a request carrying no `conversationId` at all would
+ * create a conversation and never tell anybody its id. A client that ignores
+ * the header is unaffected.
  */
 function announceConversationId(
   res: Response,
@@ -261,8 +256,7 @@ function readAttachmentInputs(value: unknown): MessageInput['attachments'] {
 /**
  * The opening transcript off a request body.
  *
- * `messages` wins over `initialMessage`, matching the Mongo handler's
- * `if (Array.isArray(messages)) … else if (initialMessage) …`. A turn with no
+ * `messages` wins over `initialMessage`. A turn with no
  * usable role or content is DROPPED rather than defaulted to `user` with an
  * empty string: `content` is `NOT NULL` and an empty assistant turn in a
  * transcript is worse than a missing one.
@@ -295,15 +289,10 @@ function readMessageInputs(messages: unknown, initialMessage: unknown): MessageI
 }
 
 /**
- * The two `mongoose.Types.ObjectId.isValid` guards that used to live here are
- * DELETED rather than widened.
- *
- * `db/ids.ts` names this file specifically: the guard was reached through a
- * local `isObjectId` wrapper, so a grep for the literal saw one site where there
- * were three. Post-cutover it answers `false` for every uuid v7, so keeping it
- * would 400 every conversation created from the cutover onward. A `text` column
- * takes any string and a lookup for a nonsense id returns no rows, which is the
- * 404 the handler already produces — so the guard has nothing left to do.
+ * No id-shape guard on a conversation id (`db/ids.ts`). A guard testing for a
+ * 24-char hex id would 400 every uuid v7. A `text` column takes any string and
+ * a lookup for a nonsense id returns no rows, which is the 404 the handler
+ * already produces.
  */
 const getBaseUrl = () => {
   const baseUrl =
@@ -1018,11 +1007,8 @@ Return only the JSON array, no other text.`;
       // `useSindiConversation` sends `conversationId: undefined` for a chat it
       // has not persisted yet, and `conversationStore.saveConversation`
       // separately POSTs `/ai/conversations` with the whole transcript. So
-      // treating "no id" as CREATE — which the Mongo handler did — produces TWO
-      // rows for one chat, one of which the user cannot recognise. That never
-      // showed up before only because every Mongo write failed validation; the
-      // moment the write path works, the duplicate is real and visible in
-      // `GET /ai/conversations`.
+      // treating "no id" as CREATE would produce TWO rows for one chat, one of
+      // which the user cannot recognise, visible in `GET /ai/conversations`.
       //
       // Nothing on the client reads `X-Conversation-ID` either (the AI SDK's
       // `useChat` does not surface response headers), so announcing the id
@@ -1320,8 +1306,8 @@ Return only the JSON array, no other text.`;
                 { role: 'assistant', content: assistantResponse.trim() },
               ]);
 
-              // Name the conversation from its first user turn, which is what
-              // Mongo's `pre('save')` hook did. The title is re-read from the
+              // Name the conversation from its first user turn. The title is
+              // re-read from the
               // ROW rather than from the local copy: `persisted` was loaded
               // before the stream started and another turn may have renamed it
               // since, and the rename is scoped to the owner either way.
@@ -1520,8 +1506,7 @@ Return only the JSON array, no other text.`;
     const db = getDb();
     const profile = await db.transaction((tx) => ensureProfile(tx, userId));
     const rows = await listProfileChatHistory(db, profile.profile.id);
-    // Newest first, matching the Mongo handler's `[...].reverse()` on an
-    // oldest-first array.
+    // Newest first: the rows come back oldest-first.
     const history = [...rows].reverse().map((row) => ({
       id: row.id,
       role: row.role,
@@ -1599,7 +1584,7 @@ Return only the JSON array, no other text.`;
       }),
     );
 
-    // Name it from the first user turn, as the Mongo handler did. The AI call
+    // Name it from the first user turn. The AI call
     // is deliberately OUTSIDE the transaction: it is a network round trip to
     // the Oxy inference edge, and holding a Postgres transaction open across
     // one is how a slow inference request turns into a connection-pool outage.

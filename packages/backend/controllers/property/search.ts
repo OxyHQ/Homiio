@@ -26,12 +26,11 @@
  *  - the free-text place match → the same two id comparisons, ORed with the
  *    listing's `search_vector` and an `ILIKE` on `addresses.street`.
  *
- * ## `$text` became `websearch_to_tsquery`, which is narrower
+ * ## Free text is `websearch_to_tsquery`, which ANDs
  *
- * Mongo's `$text` ORs its terms, so "apartment barcelona" matched every
- * apartment anywhere. `websearch_to_tsquery` ANDs them and understands quoted
- * phrases and an explicit `or`. Stated because it is a deliberate change of what
- * this endpoint returns, not a mechanical translation — see
+ * An OR of terms would make "apartment barcelona" match every apartment
+ * anywhere. `websearch_to_tsquery` ANDs them and understands quoted phrases and
+ * an explicit `or`. A deliberate choice of what this endpoint returns — see
  * `db/properties/propertyFilters`.
  */
 

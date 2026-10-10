@@ -7,10 +7,9 @@
 - **Related ADRs:** `0001-canonical-housing-graph.md` (what a place *is*), `0003-privacy-verification-publication.md` (what may be *published* about a place), `0004-local-explainable-pricing.md` (what a place's prices *mean*)
 
 > Everything measured in this document was re-derived from this repository at
-> commit `c4d73a43` on 2026-08-10. Homiio is on PostgreSQL + PostGIS only —
-> `models/`, `mongoose` and `db/backfill/` are deleted — so no claim here is
-> carried over from the Mongo era. Figures elsewhere that predate that cutover
-> should not be trusted for this domain without re-measuring.
+> commit `c4d73a43` on 2026-08-10, against PostgreSQL + PostGIS. Figures
+> elsewhere that predate that date should not be trusted for this domain without
+> re-measuring.
 
 ---
 
