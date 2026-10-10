@@ -140,11 +140,7 @@ class ViewingAvailabilityController {
       // picks a time rather than after.
       if (property.isExternal) {
         return next(
-          new AppError(
-            'Cannot book viewings for external properties',
-            400,
-            'EXTERNAL_PROPERTY',
-          ),
+          new AppError('Cannot book viewings for external properties', 400, 'EXTERNAL_PROPERTY'),
         );
       }
 

@@ -145,13 +145,17 @@ function DraftCard({
             iconOnly
             leadingIcon={RiEditLine}
             onPress={onContinue}
-            accessibilityLabel={t('common.edit')} tone="accent" appearance="subtle"
+            accessibilityLabel={t('common.edit')}
+            tone="accent"
+            appearance="subtle"
           />
           <Button
             iconOnly
             leadingIcon={RiDeleteBinLine}
             onPress={onDelete}
-            accessibilityLabel={t('common.delete')} tone="accent" appearance="subtle"
+            accessibilityLabel={t('common.delete')}
+            tone="accent"
+            appearance="subtle"
           />
         </View>
       </View>
@@ -176,7 +180,9 @@ function DraftCard({
         <View style={styles.draftMeta}>
           <View style={styles.draftMetaItem}>
             <RiTimeLine size="xs" fill={theme.colors.textSecondary} />
-            <BloomText style={styles.draftMetaText}>{formatRelativeDate(draft.lastSaved)}</BloomText>
+            <BloomText style={styles.draftMetaText}>
+              {formatRelativeDate(draft.lastSaved)}
+            </BloomText>
           </View>
           <View style={styles.draftMetaItem}>
             <RiSaveLine size="xs" fill={theme.colors.textSecondary} />
@@ -239,12 +245,7 @@ export default function PropertyDraftsScreen() {
 
   const body = (() => {
     if (isLoading && drafts.length === 0) {
-      return (
-        <PropertyResultsGridSkeleton
-          count={SKELETON_COUNT}
-          style={styles.gridPadding}
-        />
-      );
+      return <PropertyResultsGridSkeleton count={SKELETON_COUNT} style={styles.gridPadding} />;
     }
     if (drafts.length === 0) {
       return (
@@ -273,7 +274,9 @@ export default function PropertyDraftsScreen() {
         <Button
           onPress={() => router.push('/properties/create')}
           leadingIcon={RiAddCircleLine}
-          style={styles.createNewButton} tone="neutral" appearance="outline"
+          style={styles.createNewButton}
+          tone="neutral"
+          appearance="outline"
         >
           {t('property.drafts.createFirst')}
         </Button>

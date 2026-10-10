@@ -114,7 +114,10 @@ export async function findImagesByIds(
   db: DatabaseOrTransaction = getDb(),
 ): Promise<ImageRow[]> {
   if (ids.length === 0) return [];
-  return db.select().from(images).where(inArray(images.id, [...ids]));
+  return db
+    .select()
+    .from(images)
+    .where(inArray(images.id, [...ids]));
 }
 
 /**
@@ -152,12 +155,14 @@ export async function findImagesForEntity(
   entityId: string,
   db: DatabaseOrTransaction = getDb(),
 ): Promise<ImageRow[]> {
-  return db
-    .select()
-    .from(images)
-    // `(entity_type, entity_id, order)` is the index, so this ordering is free.
-    .where(and(eq(images.entityType, entityType), eq(images.entityId, entityId)))
-    .orderBy(images.order);
+  return (
+    db
+      .select()
+      .from(images)
+      // `(entity_type, entity_id, order)` is the index, so this ordering is free.
+      .where(and(eq(images.entityType, entityType), eq(images.entityId, entityId)))
+      .orderBy(images.order)
+  );
 }
 
 /**

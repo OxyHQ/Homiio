@@ -23,7 +23,12 @@ import { OfferingType, PropertyStatus, PropertyType } from '@homiio/shared-types
 import { searchProperties } from '../../controllers/property/search';
 import { errorHandler } from '../../middlewares/errorHandler';
 import { serializeWireIds } from '../../middlewares/wireIds';
-import { resetGeoTables, seedAddress, seedGeoChain, seedProperty } from '../helpers/postgresGeoFixtures';
+import {
+  resetGeoTables,
+  seedAddress,
+  seedGeoChain,
+  seedProperty,
+} from '../helpers/postgresGeoFixtures';
 
 function buildApp(): Express {
   const app = express();
@@ -140,7 +145,7 @@ describe('combining and refusing', () => {
     expect(idsOf(both.body)).toEqual([]);
   });
 
-  it('folds a feature slug into the caller\'s own amenities', async () => {
+  it("folds a feature slug into the caller's own amenities", async () => {
     const res = await request(buildApp())
       .get('/properties/search')
       .query({ city, features: 'pool', amenities: 'swimming_pool' });

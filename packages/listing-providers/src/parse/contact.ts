@@ -226,7 +226,12 @@ export function contactFromRecord(value: unknown): PortalContact {
     root.publisherType,
   )?.toLowerCase();
   let kind: PortalContact['kind'];
-  if (data.contactIsAgency === true || data.contactIsPro === true || data.isPro === true || root.isPrivateOwner === false) {
+  if (
+    data.contactIsAgency === true ||
+    data.contactIsPro === true ||
+    data.isPro === true ||
+    root.isPrivateOwner === false
+  ) {
     kind = 'agency';
   } else if (root.isPrivateOwner === true) {
     kind = 'private';
@@ -366,5 +371,11 @@ export function extractContactFromHtml(html: string): NormalizedListingContact |
 
 export function hasContactFields(contact: NormalizedListingContact | undefined): boolean {
   if (!contact) return false;
-  return !!(contact.phone || contact.email || contact.whatsapp || contact.agencyName || contact.name);
+  return !!(
+    contact.phone ||
+    contact.email ||
+    contact.whatsapp ||
+    contact.agencyName ||
+    contact.name
+  );
 }

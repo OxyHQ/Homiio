@@ -11,7 +11,7 @@ const storage = multer.memoryStorage();
 // File filter to only allow images
 const fileFilter = (req: Request, file: any, cb: multer.FileFilterCallback) => {
   const allowedMimeTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
-  
+
   if (allowedMimeTypes.includes(file.mimetype)) {
     cb(null, true);
   } else {
@@ -51,7 +51,14 @@ const debugAfterMulter = (req: any, res: any, next: any) => {
 router.post('/upload', upload.single('image'), handleUploadError, imageController.uploadImage);
 
 // Multiple images upload
-router.post('/upload-multiple', debugMulter, testUpload.array('images', 10), debugAfterMulter, handleUploadError, imageController.uploadMultipleImages);
+router.post(
+  '/upload-multiple',
+  debugMulter,
+  testUpload.array('images', 10),
+  debugAfterMulter,
+  handleUploadError,
+  imageController.uploadMultipleImages,
+);
 
 // Delete single image
 router.delete('/:imageKey', imageController.deleteImage);

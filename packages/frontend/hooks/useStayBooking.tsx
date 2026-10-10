@@ -28,10 +28,7 @@ import {
   type AvailabilityCalendarRange,
 } from '@/components/AvailabilityCalendar';
 import { useStayQuoteBreakdown } from '@/components/PriceBreakdown';
-import {
-  useCreateReservation,
-  usePropertyAvailabilityQuery,
-} from '@/hooks/useReservationQueries';
+import { useCreateReservation, usePropertyAvailabilityQuery } from '@/hooks/useReservationQueries';
 import { formatLocalized } from '@/utils/dateLocale';
 import { useFormatting } from '@/utils/format';
 import { isShortTermRentable } from '@/utils/propertyUtils';
@@ -200,10 +197,7 @@ export function useStayBooking(
           night free — so a failure looked exactly like an empty diary. It
           throws now, and the person is told what they are looking at. */}
       {availabilityQuery.isError ? (
-        <BloomText
-          variant="body-2-regular"
-          className="px-4 pb-2 text-center text-muted-foreground"
-        >
+        <BloomText variant="body-2-regular" className="px-4 pb-2 text-center text-muted-foreground">
           {t('booking.calendar.unavailable')}
         </BloomText>
       ) : null}

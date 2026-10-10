@@ -50,11 +50,9 @@ export const SleepArrangement: React.FC<SleepArrangementProps> = ({ property }) 
       id: idx + 1,
       title:
         idx === 0
-          ? t('property.sleep.mainBedroom') ?? 'Main bedroom'
-          : (t('property.sleep.bedroomN', { n: idx + 1 }) as string) ||
-            `Bedroom ${idx + 1}`,
-      description:
-        (t('property.sleep.oneBed') as string) || '1 bed',
+          ? (t('property.sleep.mainBedroom') ?? 'Main bedroom')
+          : (t('property.sleep.bedroomN', { n: idx + 1 }) as string) || `Bedroom ${idx + 1}`,
+      description: (t('property.sleep.oneBed') as string) || '1 bed',
     }));
   }, [property.bedrooms, t]);
 
@@ -69,11 +67,7 @@ export const SleepArrangement: React.FC<SleepArrangementProps> = ({ property }) 
         contentContainerStyle={styles.scrollContent}
       >
         {bedrooms.map((bedroom) => (
-          <Card
-            key={bedroom.id}
-            radius="radius-16"
-            style={styles.bedroomCard} appearance="outline"
-          >
+          <Card key={bedroom.id} radius="radius-16" style={styles.bedroomCard} appearance="outline">
             <RiHotelBedLine width={26} height={26} fill={colors.COLOR_BLACK} />
             <View>
               <BloomText variant="headline-semibold" style={styles.bedroomTitle}>

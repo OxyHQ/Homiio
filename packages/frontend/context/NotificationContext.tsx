@@ -1,11 +1,11 @@
 import React, {
-    createContext,
-    useContext,
-    useState,
-    useEffect,
-    useCallback,
-    useRef,
-    ReactNode,
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  ReactNode,
 } from 'react';
 import { AppState, AppStateStatus, NativeEventSubscription, Platform } from 'react-native';
 import type { EventSubscription } from 'expo-modules-core';
@@ -13,19 +13,19 @@ import { useRouter } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 
 import {
-    requestNotificationPermissions,
-    setupNotifications,
-    getBadgeCount,
-    setBadgeCount,
-    clearBadge,
-    getScheduledNotifications,
-    cancelNotification,
-    cancelAllNotifications,
-    createNotification,
-    scheduleNotification,
-    getNotificationsModule,
-    NotificationData,
-    NotificationContent,
+  requestNotificationPermissions,
+  setupNotifications,
+  getBadgeCount,
+  setBadgeCount,
+  clearBadge,
+  getScheduledNotifications,
+  cancelNotification,
+  cancelAllNotifications,
+  createNotification,
+  scheduleNotification,
+  getNotificationsModule,
+  NotificationData,
+  NotificationContent,
 } from '@/utils/notifications';
 import { notificationService, Notification } from '@/services/notificationService';
 import { useOxy } from '@oxy.so/services';
@@ -33,492 +33,500 @@ import { logger } from '@/utils/logger';
 import { getData, storeData } from '@/utils/storage';
 
 export interface NotificationPreferences {
-    property: boolean;
-    message: boolean;
-    contract: boolean;
-    payment: boolean;
-    reminder: boolean;
-    system: boolean;
-    marketing: boolean;
-    sound: boolean;
-    badge: boolean;
-    push: boolean;
+  property: boolean;
+  message: boolean;
+  contract: boolean;
+  payment: boolean;
+  reminder: boolean;
+  system: boolean;
+  marketing: boolean;
+  sound: boolean;
+  badge: boolean;
+  push: boolean;
 }
 
 export interface NotificationState {
-    // Local state
-    hasPermission: boolean;
-    badgeCount: number;
-    scheduledNotifications: any[];
+  // Local state
+  hasPermission: boolean;
+  badgeCount: number;
+  scheduledNotifications: any[];
 
-    // Server state
-    notifications: Notification[];
-    unreadCount: number;
-    isLoading: boolean;
-    error: string | null;
+  // Server state
+  notifications: Notification[];
+  unreadCount: number;
+  isLoading: boolean;
+  error: string | null;
 
-    // Preferences
-    preferences: NotificationPreferences;
+  // Preferences
+  preferences: NotificationPreferences;
 }
 
 export interface NotificationActions {
-    // Permission management
-    requestPermissions: () => Promise<boolean>;
+  // Permission management
+  requestPermissions: () => Promise<boolean>;
 
-    // Badge management
-    updateBadgeCount: (count: number) => Promise<void>;
-    clearBadgeCount: () => Promise<void>;
+  // Badge management
+  updateBadgeCount: (count: number) => Promise<void>;
+  clearBadgeCount: () => Promise<void>;
 
-    // Local notifications
-    createLocalNotification: (
-        title: string,
-        body: string,
-        data?: NotificationData,
-        options?: {
-            sound?: boolean;
-            priority?: 'default' | 'normal' | 'high';
-            badge?: number;
-        }
-    ) => Promise<string | undefined>;
+  // Local notifications
+  createLocalNotification: (
+    title: string,
+    body: string,
+    data?: NotificationData,
+    options?: {
+      sound?: boolean;
+      priority?: 'default' | 'normal' | 'high';
+      badge?: number;
+    },
+  ) => Promise<string | undefined>;
 
-    scheduleLocalNotification: (
-        content: NotificationContent,
-        trigger: any,
-        repeats?: boolean
-    ) => Promise<string>;
+  scheduleLocalNotification: (
+    content: NotificationContent,
+    trigger: any,
+    repeats?: boolean,
+  ) => Promise<string>;
 
-    cancelLocalNotification: (id: string) => Promise<void>;
-    cancelAllLocalNotifications: () => Promise<void>;
+  cancelLocalNotification: (id: string) => Promise<void>;
+  cancelAllLocalNotifications: () => Promise<void>;
 
-    // Server notifications
-    loadNotifications: (filters?: {
-        unreadOnly?: boolean;
-        type?: string;
-        page?: number;
-        limit?: number;
-    }) => Promise<void>;
+  // Server notifications
+  loadNotifications: (filters?: {
+    unreadOnly?: boolean;
+    type?: string;
+    page?: number;
+    limit?: number;
+  }) => Promise<void>;
 
-    markAsRead: (notificationId: string) => Promise<void>;
-    markAllAsRead: () => Promise<void>;
-    deleteNotification: (notificationId: string) => Promise<void>;
-    clearAllNotifications: () => Promise<void>;
+  markAsRead: (notificationId: string) => Promise<void>;
+  markAllAsRead: () => Promise<void>;
+  deleteNotification: (notificationId: string) => Promise<void>;
+  clearAllNotifications: () => Promise<void>;
 
-    // Preferences
-    updatePreferences: (preferences: Partial<NotificationPreferences>) => Promise<void>;
+  // Preferences
+  updatePreferences: (preferences: Partial<NotificationPreferences>) => Promise<void>;
 
-    // Utility
-    refreshAll: () => Promise<void>;
+  // Utility
+  refreshAll: () => Promise<void>;
 }
 
-export interface NotificationContextType extends NotificationState, NotificationActions { }
+export interface NotificationContextType extends NotificationState, NotificationActions {}
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
 
 const PREFERENCES_STORAGE_KEY = 'homiio.notificationPreferences';
 
 const DEFAULT_PREFERENCES: NotificationPreferences = {
-    property: true,
-    message: true,
-    contract: true,
-    payment: true,
-    reminder: true,
-    system: true,
-    marketing: false,
-    sound: true,
-    badge: true,
-    push: true,
+  property: true,
+  message: true,
+  contract: true,
+  payment: true,
+  reminder: true,
+  system: true,
+  marketing: false,
+  sound: true,
+  badge: true,
+  push: true,
 };
 
 export function NotificationProvider({ children }: { children: ReactNode }) {
-    const router = useRouter();
-    const queryClient = useQueryClient();
-    const { oxyServices, activeSessionId } = useOxy();
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const { oxyServices, activeSessionId } = useOxy();
 
-    // State
-    const [state, setState] = useState<NotificationState>({
-        hasPermission: false,
-        badgeCount: 0,
-        scheduledNotifications: [],
+  // State
+  const [state, setState] = useState<NotificationState>({
+    hasPermission: false,
+    badgeCount: 0,
+    scheduledNotifications: [],
+    notifications: [],
+    unreadCount: 0,
+    isLoading: false,
+    error: null,
+    preferences: DEFAULT_PREFERENCES,
+  });
+
+  // Refs
+  const notificationListener = useRef<EventSubscription | null>(null);
+  const responseListener = useRef<EventSubscription | null>(null);
+  const appStateListener = useRef<NativeEventSubscription | null>(null);
+  const preferencesRef = useRef<NotificationPreferences>(DEFAULT_PREFERENCES);
+
+  // Initialize notifications
+  const initializeNotifications = useCallback(async () => {
+    try {
+      const storedPreferences = await getData<NotificationPreferences>(PREFERENCES_STORAGE_KEY);
+      if (storedPreferences) {
+        const preferences = { ...DEFAULT_PREFERENCES, ...storedPreferences };
+        preferencesRef.current = preferences;
+        setState((prev) => ({ ...prev, preferences }));
+      }
+
+      if (Platform.OS === 'web') return;
+
+      await setupNotifications();
+      const hasPermission = await requestNotificationPermissions();
+
+      setState((prev) => ({ ...prev, hasPermission }));
+
+      if (hasPermission) {
+        const badgeCount = await getBadgeCount();
+        const scheduledNotifications = await getScheduledNotifications();
+
+        setState((prev) => ({
+          ...prev,
+          badgeCount,
+          scheduledNotifications,
+        }));
+      }
+    } catch (error) {
+      logger.error('Notifications: initialization failed', error);
+      setState((prev) => ({ ...prev, error: 'Failed to initialize notifications' }));
+    }
+  }, []);
+
+  // Request permissions
+  const requestPermissions = useCallback(async (): Promise<boolean> => {
+    try {
+      const hasPermission = await requestNotificationPermissions();
+      setState((prev) => ({ ...prev, hasPermission }));
+      return hasPermission;
+    } catch (error) {
+      logger.error('Notifications: permission request failed', error);
+      return false;
+    }
+  }, []);
+
+  // Badge management (best-effort: failures are non-fatal but logged)
+  const updateBadgeCount = useCallback(async (count: number) => {
+    try {
+      await setBadgeCount(count);
+      setState((prev) => ({ ...prev, badgeCount: count }));
+    } catch (error) {
+      logger.warn('Notifications: updateBadgeCount failed', error);
+    }
+  }, []);
+
+  const clearBadgeCount = useCallback(async () => {
+    try {
+      await clearBadge();
+      setState((prev) => ({ ...prev, badgeCount: 0 }));
+    } catch (error) {
+      logger.warn('Notifications: clearBadgeCount failed', error);
+    }
+  }, []);
+
+  // Local notifications
+  const createLocalNotification = useCallback(
+    async (
+      title: string,
+      body: string,
+      data?: NotificationData,
+      options?: {
+        sound?: boolean;
+        priority?: 'default' | 'normal' | 'high';
+        badge?: number;
+      },
+    ) => {
+      try {
+        const notificationId = await createNotification(title, body, data, options);
+
+        // Refresh scheduled notifications
+        const scheduledNotifications = await getScheduledNotifications();
+        setState((prev) => ({ ...prev, scheduledNotifications }));
+
+        return notificationId;
+      } catch (error) {
+        logger.error('Notifications: createLocalNotification failed', error);
+        return undefined;
+      }
+    },
+    [],
+  );
+
+  const scheduleLocalNotification = useCallback(
+    async (content: NotificationContent, trigger: any, repeats?: boolean) => {
+      try {
+        const notificationId = await scheduleNotification(content, trigger, repeats);
+
+        // Refresh scheduled notifications
+        const scheduledNotifications = await getScheduledNotifications();
+        setState((prev) => ({ ...prev, scheduledNotifications }));
+
+        return notificationId;
+      } catch (error) {
+        logger.error('Notifications: scheduleLocalNotification failed', error);
+        throw error;
+      }
+    },
+    [],
+  );
+
+  const cancelLocalNotification = useCallback(async (id: string) => {
+    try {
+      await cancelNotification(id);
+
+      // Refresh scheduled notifications
+      const scheduledNotifications = await getScheduledNotifications();
+      setState((prev) => ({ ...prev, scheduledNotifications }));
+    } catch (error) {
+      logger.error('Notifications: cancelLocalNotification failed', error);
+    }
+  }, []);
+
+  const cancelAllLocalNotifications = useCallback(async () => {
+    try {
+      await cancelAllNotifications();
+      setState((prev) => ({ ...prev, scheduledNotifications: [] }));
+    } catch (error) {
+      logger.error('Notifications: cancelAllLocalNotifications failed', error);
+    }
+  }, []);
+
+  // Server notifications
+  const loadNotifications = useCallback(
+    async (filters?: { unreadOnly?: boolean; type?: string; page?: number; limit?: number }) => {
+      if (!oxyServices || !activeSessionId) return;
+
+      try {
+        setState((prev) => ({ ...prev, isLoading: true, error: null }));
+
+        const response = await notificationService.getNotifications(filters);
+
+        setState((prev) => ({
+          ...prev,
+          notifications: response.notifications,
+          unreadCount: response.unreadCount,
+          isLoading: false,
+        }));
+      } catch (error) {
+        logger.error('Notifications: loadNotifications failed', error);
+        setState((prev) => ({
+          ...prev,
+          error: 'Failed to load notifications',
+          isLoading: false,
+        }));
+      }
+    },
+    [oxyServices, activeSessionId],
+  );
+
+  const markAsRead = useCallback(
+    async (notificationId: string) => {
+      if (!oxyServices || !activeSessionId) return;
+
+      try {
+        await notificationService.markAsRead(notificationId);
+
+        // Update local state
+        setState((prev) => ({
+          ...prev,
+          notifications: prev.notifications.map((n) =>
+            n.id === notificationId ? { ...n, read: true } : n,
+          ),
+          unreadCount: Math.max(0, prev.unreadCount - 1),
+        }));
+
+        // Update badge count
+        const newUnreadCount = Math.max(0, state.unreadCount - 1);
+        await updateBadgeCount(newUnreadCount);
+
+        // Invalidate queries
+        queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      } catch (error) {
+        logger.error('Notifications: markAsRead failed', error);
+      }
+    },
+    [oxyServices, activeSessionId, state.unreadCount, updateBadgeCount, queryClient],
+  );
+
+  const markAllAsRead = useCallback(async () => {
+    if (!oxyServices || !activeSessionId) return;
+
+    try {
+      await notificationService.markAllAsRead();
+
+      // Update local state
+      setState((prev) => ({
+        ...prev,
+        notifications: prev.notifications.map((n) => ({ ...n, read: true })),
+        unreadCount: 0,
+      }));
+
+      // Clear badge
+      await clearBadgeCount();
+
+      // Invalidate queries
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    } catch (error) {
+      logger.error('Notifications: markAllAsRead failed', error);
+    }
+  }, [oxyServices, activeSessionId, clearBadgeCount, queryClient]);
+
+  const deleteNotification = useCallback(
+    async (notificationId: string) => {
+      if (!oxyServices || !activeSessionId) return;
+
+      try {
+        await notificationService.deleteNotification(notificationId);
+
+        // Update local state
+        setState((prev) => ({
+          ...prev,
+          notifications: prev.notifications.filter((n) => n.id !== notificationId),
+          unreadCount:
+            prev.notifications.find((n) => n.id === notificationId)?.read === false
+              ? Math.max(0, prev.unreadCount - 1)
+              : prev.unreadCount,
+        }));
+
+        // Invalidate queries
+        queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      } catch (error) {
+        logger.error('Notifications: deleteNotification failed', error);
+      }
+    },
+    [oxyServices, activeSessionId, queryClient],
+  );
+
+  const clearAllNotifications = useCallback(async () => {
+    if (!oxyServices || !activeSessionId) return;
+
+    try {
+      await notificationService.clearAllNotifications();
+
+      setState((prev) => ({
+        ...prev,
         notifications: [],
         unreadCount: 0,
-        isLoading: false,
-        error: null,
-        preferences: DEFAULT_PREFERENCES,
+      }));
+
+      await clearBadgeCount();
+
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    } catch (error) {
+      logger.error('Notifications: clearAllNotifications failed', error);
+      throw error;
+    }
+  }, [oxyServices, activeSessionId, clearBadgeCount, queryClient]);
+
+  // Preferences — the backend exposes no notification-preferences endpoint,
+  // so preferences are persisted locally (AsyncStorage) to survive restarts.
+  const updatePreferences = useCallback(async (preferences: Partial<NotificationPreferences>) => {
+    const nextPreferences = { ...preferencesRef.current, ...preferences };
+    preferencesRef.current = nextPreferences;
+    setState((prev) => ({ ...prev, preferences: nextPreferences }));
+
+    try {
+      await storeData(PREFERENCES_STORAGE_KEY, nextPreferences);
+    } catch (error) {
+      logger.error('Notifications: failed to persist preferences', error);
+    }
+  }, []);
+
+  // Utility — the app has no realtime notifications channel; the inbox stays
+  // fresh via refetch-on-focus (AppState) + query invalidation after writes.
+  const refreshAll = useCallback(async () => {
+    await loadNotifications();
+  }, [loadNotifications]);
+
+  // Set up notification listeners
+  useEffect(() => {
+    const Notifications = getNotificationsModule();
+    if (!Notifications) return;
+
+    // Listen for notifications received while app is running
+    notificationListener.current = Notifications.addNotificationReceivedListener((notification) => {
+      const { data } = notification.request.content;
+
+      // Handle notification based on type
+      const propertyId = data?.propertyId;
+      if (data?.type === 'property' && typeof propertyId === 'string') {
+        router.push(`/properties/${propertyId}`);
+      }
+
+      // Update badge count
+      updateBadgeCount(state.badgeCount + 1);
     });
 
-    // Refs
-    const notificationListener = useRef<EventSubscription | null>(null);
-    const responseListener = useRef<EventSubscription | null>(null);
-    const appStateListener = useRef<NativeEventSubscription | null>(null);
-    const preferencesRef = useRef<NotificationPreferences>(DEFAULT_PREFERENCES);
+    // Listen for notification responses (taps)
+    responseListener.current = Notifications.addNotificationResponseReceivedListener((response) => {
+      const { data } = response.notification.request.content;
 
-    // Initialize notifications
-    const initializeNotifications = useCallback(async () => {
-        try {
-            const storedPreferences = await getData<NotificationPreferences>(PREFERENCES_STORAGE_KEY);
-            if (storedPreferences) {
-                const preferences = { ...DEFAULT_PREFERENCES, ...storedPreferences };
-                preferencesRef.current = preferences;
-                setState(prev => ({ ...prev, preferences }));
-            }
+      const screen = data?.screen;
+      if (typeof screen === 'string') {
+        router.push(screen);
+      }
 
-            if (Platform.OS === 'web') return;
+      const id = data?.id;
+      if (typeof id === 'string') {
+        markAsRead(id);
+      }
+    });
 
-            await setupNotifications();
-            const hasPermission = await requestNotificationPermissions();
-
-            setState(prev => ({ ...prev, hasPermission }));
-
-            if (hasPermission) {
-                const badgeCount = await getBadgeCount();
-                const scheduledNotifications = await getScheduledNotifications();
-
-                setState(prev => ({
-                    ...prev,
-                    badgeCount,
-                    scheduledNotifications,
-                }));
-            }
-        } catch (error) {
-            logger.error('Notifications: initialization failed', error);
-            setState(prev => ({ ...prev, error: 'Failed to initialize notifications' }));
+    // Listen for app state changes
+    appStateListener.current = AppState.addEventListener(
+      'change',
+      (nextAppState: AppStateStatus) => {
+        if (nextAppState === 'active') {
+          refreshAll();
+          clearBadgeCount();
         }
-    }, []);
-
-    // Request permissions
-    const requestPermissions = useCallback(async (): Promise<boolean> => {
-        try {
-            const hasPermission = await requestNotificationPermissions();
-            setState(prev => ({ ...prev, hasPermission }));
-            return hasPermission;
-        } catch (error) {
-            logger.error('Notifications: permission request failed', error);
-            return false;
-        }
-    }, []);
-
-    // Badge management (best-effort: failures are non-fatal but logged)
-    const updateBadgeCount = useCallback(async (count: number) => {
-        try {
-            await setBadgeCount(count);
-            setState(prev => ({ ...prev, badgeCount: count }));
-        } catch (error) {
-            logger.warn('Notifications: updateBadgeCount failed', error);
-        }
-    }, []);
-
-    const clearBadgeCount = useCallback(async () => {
-        try {
-            await clearBadge();
-            setState(prev => ({ ...prev, badgeCount: 0 }));
-        } catch (error) {
-            logger.warn('Notifications: clearBadgeCount failed', error);
-        }
-    }, []);
-
-    // Local notifications
-    const createLocalNotification = useCallback(async (
-        title: string,
-        body: string,
-        data?: NotificationData,
-        options?: {
-            sound?: boolean;
-            priority?: 'default' | 'normal' | 'high';
-            badge?: number;
-        }
-    ) => {
-        try {
-            const notificationId = await createNotification(title, body, data, options);
-
-            // Refresh scheduled notifications
-            const scheduledNotifications = await getScheduledNotifications();
-            setState(prev => ({ ...prev, scheduledNotifications }));
-
-            return notificationId;
-        } catch (error) {
-            logger.error('Notifications: createLocalNotification failed', error);
-            return undefined;
-        }
-    }, []);
-
-    const scheduleLocalNotification = useCallback(async (
-        content: NotificationContent,
-        trigger: any,
-        repeats?: boolean
-    ) => {
-        try {
-            const notificationId = await scheduleNotification(content, trigger, repeats);
-
-            // Refresh scheduled notifications
-            const scheduledNotifications = await getScheduledNotifications();
-            setState(prev => ({ ...prev, scheduledNotifications }));
-
-            return notificationId;
-        } catch (error) {
-            logger.error('Notifications: scheduleLocalNotification failed', error);
-            throw error;
-        }
-    }, []);
-
-    const cancelLocalNotification = useCallback(async (id: string) => {
-        try {
-            await cancelNotification(id);
-
-            // Refresh scheduled notifications
-            const scheduledNotifications = await getScheduledNotifications();
-            setState(prev => ({ ...prev, scheduledNotifications }));
-        } catch (error) {
-            logger.error('Notifications: cancelLocalNotification failed', error);
-        }
-    }, []);
-
-    const cancelAllLocalNotifications = useCallback(async () => {
-        try {
-            await cancelAllNotifications();
-            setState(prev => ({ ...prev, scheduledNotifications: [] }));
-        } catch (error) {
-            logger.error('Notifications: cancelAllLocalNotifications failed', error);
-        }
-    }, []);
-
-    // Server notifications
-    const loadNotifications = useCallback(async (filters?: {
-        unreadOnly?: boolean;
-        type?: string;
-        page?: number;
-        limit?: number;
-    }) => {
-        if (!oxyServices || !activeSessionId) return;
-
-        try {
-            setState(prev => ({ ...prev, isLoading: true, error: null }));
-
-            const response = await notificationService.getNotifications(filters);
-
-            setState(prev => ({
-                ...prev,
-                notifications: response.notifications,
-                unreadCount: response.unreadCount,
-                isLoading: false,
-            }));
-        } catch (error) {
-            logger.error('Notifications: loadNotifications failed', error);
-            setState(prev => ({
-                ...prev,
-                error: 'Failed to load notifications',
-                isLoading: false,
-            }));
-        }
-    }, [oxyServices, activeSessionId]);
-
-    const markAsRead = useCallback(async (notificationId: string) => {
-        if (!oxyServices || !activeSessionId) return;
-
-        try {
-            await notificationService.markAsRead(notificationId);
-
-            // Update local state
-            setState(prev => ({
-                ...prev,
-                notifications: prev.notifications.map(n =>
-                    n.id === notificationId ? { ...n, read: true } : n
-                ),
-                unreadCount: Math.max(0, prev.unreadCount - 1),
-            }));
-
-            // Update badge count
-            const newUnreadCount = Math.max(0, state.unreadCount - 1);
-            await updateBadgeCount(newUnreadCount);
-
-            // Invalidate queries
-            queryClient.invalidateQueries({ queryKey: ['notifications'] });
-        } catch (error) {
-            logger.error('Notifications: markAsRead failed', error);
-        }
-    }, [oxyServices, activeSessionId, state.unreadCount, updateBadgeCount, queryClient]);
-
-    const markAllAsRead = useCallback(async () => {
-        if (!oxyServices || !activeSessionId) return;
-
-        try {
-            await notificationService.markAllAsRead();
-
-            // Update local state
-            setState(prev => ({
-                ...prev,
-                notifications: prev.notifications.map(n => ({ ...n, read: true })),
-                unreadCount: 0,
-            }));
-
-            // Clear badge
-            await clearBadgeCount();
-
-            // Invalidate queries
-            queryClient.invalidateQueries({ queryKey: ['notifications'] });
-        } catch (error) {
-            logger.error('Notifications: markAllAsRead failed', error);
-        }
-    }, [oxyServices, activeSessionId, clearBadgeCount, queryClient]);
-
-    const deleteNotification = useCallback(async (notificationId: string) => {
-        if (!oxyServices || !activeSessionId) return;
-
-        try {
-            await notificationService.deleteNotification(notificationId);
-
-            // Update local state
-            setState(prev => ({
-                ...prev,
-                notifications: prev.notifications.filter(n => n.id !== notificationId),
-                unreadCount: prev.notifications.find(n => n.id === notificationId)?.read === false
-                    ? Math.max(0, prev.unreadCount - 1)
-                    : prev.unreadCount,
-            }));
-
-            // Invalidate queries
-            queryClient.invalidateQueries({ queryKey: ['notifications'] });
-        } catch (error) {
-            logger.error('Notifications: deleteNotification failed', error);
-        }
-    }, [oxyServices, activeSessionId, queryClient]);
-
-    const clearAllNotifications = useCallback(async () => {
-        if (!oxyServices || !activeSessionId) return;
-
-        try {
-            await notificationService.clearAllNotifications();
-
-            setState(prev => ({
-                ...prev,
-                notifications: [],
-                unreadCount: 0,
-            }));
-
-            await clearBadgeCount();
-
-            queryClient.invalidateQueries({ queryKey: ['notifications'] });
-        } catch (error) {
-            logger.error('Notifications: clearAllNotifications failed', error);
-            throw error;
-        }
-    }, [oxyServices, activeSessionId, clearBadgeCount, queryClient]);
-
-    // Preferences — the backend exposes no notification-preferences endpoint,
-    // so preferences are persisted locally (AsyncStorage) to survive restarts.
-    const updatePreferences = useCallback(async (preferences: Partial<NotificationPreferences>) => {
-        const nextPreferences = { ...preferencesRef.current, ...preferences };
-        preferencesRef.current = nextPreferences;
-        setState(prev => ({ ...prev, preferences: nextPreferences }));
-
-        try {
-            await storeData(PREFERENCES_STORAGE_KEY, nextPreferences);
-        } catch (error) {
-            logger.error('Notifications: failed to persist preferences', error);
-        }
-    }, []);
-
-    // Utility — the app has no realtime notifications channel; the inbox stays
-    // fresh via refetch-on-focus (AppState) + query invalidation after writes.
-    const refreshAll = useCallback(async () => {
-        await loadNotifications();
-    }, [loadNotifications]);
-
-    // Set up notification listeners
-    useEffect(() => {
-        const Notifications = getNotificationsModule();
-        if (!Notifications) return;
-
-        // Listen for notifications received while app is running
-        notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
-            const { data } = notification.request.content;
-
-            // Handle notification based on type
-            const propertyId = data?.propertyId;
-            if (data?.type === 'property' && typeof propertyId === 'string') {
-                router.push(`/properties/${propertyId}`);
-            }
-
-            // Update badge count
-            updateBadgeCount(state.badgeCount + 1);
-        });
-
-        // Listen for notification responses (taps)
-        responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
-            const { data } = response.notification.request.content;
-
-            const screen = data?.screen;
-            if (typeof screen === 'string') {
-                router.push(screen);
-            }
-
-            const id = data?.id;
-            if (typeof id === 'string') {
-                markAsRead(id);
-            }
-        });
-
-        // Listen for app state changes
-        appStateListener.current = AppState.addEventListener('change', (nextAppState: AppStateStatus) => {
-            if (nextAppState === 'active') {
-                refreshAll();
-                clearBadgeCount();
-            }
-        });
-
-        return () => {
-            if (notificationListener.current) {
-                notificationListener.current.remove();
-            }
-            if (responseListener.current) {
-                responseListener.current.remove();
-            }
-            if (appStateListener.current) {
-                appStateListener.current.remove();
-            }
-        };
-    }, [router, state.badgeCount, updateBadgeCount, markAsRead, refreshAll, clearBadgeCount]);
-
-    // Initialize on mount
-    useEffect(() => {
-        initializeNotifications();
-    }, [initializeNotifications]);
-
-    // Load the mailbox when authenticated.
-    useEffect(() => {
-        if (oxyServices && activeSessionId) {
-            loadNotifications();
-        }
-    }, [oxyServices, activeSessionId, loadNotifications]);
-
-    const contextValue: NotificationContextType = {
-        ...state,
-        requestPermissions,
-        updateBadgeCount,
-        clearBadgeCount,
-        createLocalNotification,
-        scheduleLocalNotification,
-        cancelLocalNotification,
-        cancelAllLocalNotifications,
-        loadNotifications,
-        markAsRead,
-        markAllAsRead,
-        deleteNotification,
-        clearAllNotifications,
-        updatePreferences,
-        refreshAll,
-    };
-
-    return (
-        <NotificationContext.Provider value={contextValue}>
-            {children}
-        </NotificationContext.Provider>
+      },
     );
+
+    return () => {
+      if (notificationListener.current) {
+        notificationListener.current.remove();
+      }
+      if (responseListener.current) {
+        responseListener.current.remove();
+      }
+      if (appStateListener.current) {
+        appStateListener.current.remove();
+      }
+    };
+  }, [router, state.badgeCount, updateBadgeCount, markAsRead, refreshAll, clearBadgeCount]);
+
+  // Initialize on mount
+  useEffect(() => {
+    initializeNotifications();
+  }, [initializeNotifications]);
+
+  // Load the mailbox when authenticated.
+  useEffect(() => {
+    if (oxyServices && activeSessionId) {
+      loadNotifications();
+    }
+  }, [oxyServices, activeSessionId, loadNotifications]);
+
+  const contextValue: NotificationContextType = {
+    ...state,
+    requestPermissions,
+    updateBadgeCount,
+    clearBadgeCount,
+    createLocalNotification,
+    scheduleLocalNotification,
+    cancelLocalNotification,
+    cancelAllLocalNotifications,
+    loadNotifications,
+    markAsRead,
+    markAllAsRead,
+    deleteNotification,
+    clearAllNotifications,
+    updatePreferences,
+    refreshAll,
+  };
+
+  return (
+    <NotificationContext.Provider value={contextValue}>{children}</NotificationContext.Provider>
+  );
 }
 
 export function useNotifications() {
-    const context = useContext(NotificationContext);
-    if (!context) {
-        throw new Error('useNotifications must be used within a NotificationProvider');
-    }
-    return context;
+  const context = useContext(NotificationContext);
+  if (!context) {
+    throw new Error('useNotifications must be used within a NotificationProvider');
+  }
+  return context;
 }

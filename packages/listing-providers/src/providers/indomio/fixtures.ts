@@ -43,7 +43,12 @@ export const INDOMIO_FIXTURE_DETAIL_JSON = JSON.stringify({
   rooms: 2,
   bathrooms: 1,
   size: 68,
-  address: { street: 'Carrer de Verdi', city: 'Barcelona', province: 'Barcelona', neighborhood: 'Gràcia' },
+  address: {
+    street: 'Carrer de Verdi',
+    city: 'Barcelona',
+    province: 'Barcelona',
+    neighborhood: 'Gràcia',
+  },
   images: ['https://cdn.indomio.es/example/876543210/1.jpg'],
   contact: { phone: '930000222', agencyName: 'Indomio Demo' },
 });

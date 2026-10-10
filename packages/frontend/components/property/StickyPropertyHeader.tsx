@@ -66,9 +66,7 @@ export const StickyPropertyHeader: React.FC<StickyPropertyHeaderProps> = ({
           zIndex: STICKY_PROPERTY_HEADER_Z_INDEX,
         };
 
-  const ctaLabel = rentalMode === 'vacation'
-    ? t('property.cta.reserve')
-    : t('property.cta.apply');
+  const ctaLabel = rentalMode === 'vacation' ? t('property.cta.reserve') : t('property.cta.apply');
 
   return (
     <PageHeader
@@ -86,7 +84,9 @@ export const StickyPropertyHeader: React.FC<StickyPropertyHeaderProps> = ({
             iconOnly
             leadingIcon={RiShare2Line}
             onPress={onShare}
-            accessibilityLabel={t('common.share')} tone="neutral" appearance="outline"
+            accessibilityLabel={t('common.share')}
+            tone="neutral"
+            appearance="outline"
           />
           {property ? (
             <SaveButton
@@ -101,7 +101,9 @@ export const StickyPropertyHeader: React.FC<StickyPropertyHeaderProps> = ({
             <Button
               onPress={onCtaPress}
               size="md"
-              accessibilityLabel={ctaLabel} tone="accent" appearance="solid"
+              accessibilityLabel={ctaLabel}
+              tone="accent"
+              appearance="solid"
             >
               {ctaLabel}
             </Button>

@@ -42,5 +42,7 @@ export function useSidebarWidth(): number {
   const sidebarCollapsed = useUIStore((s) => s.sidebarCollapsed);
 
   if (width < SIDEBAR_IN_FLOW_FROM) return 0;
-  return SHELL_INSET + (sidebarCollapsed ? SIDEBAR_PANEL_COLLAPSED_WIDTH : SIDEBAR_PANEL_EXPANDED_WIDTH);
+  return (
+    SHELL_INSET + (sidebarCollapsed ? SIDEBAR_PANEL_COLLAPSED_WIDTH : SIDEBAR_PANEL_EXPANDED_WIDTH)
+  );
 }

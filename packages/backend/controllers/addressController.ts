@@ -78,11 +78,16 @@ import { resolveCityId, resolveNeighborhoodId, resolveRegionId } from '../servic
 /**
  * Response helpers
  */
-const ok = (res: Response, data: Record<string, unknown>) => res.status(200).json({ success: true, ...data });
-const created = (res: Response, data: Record<string, unknown>) => res.status(201).json({ success: true, ...data });
-const badRequest = (res: Response, data: Record<string, unknown>) => res.status(400).json({ success: false, ...data });
-const notFound = (res: Response, data: Record<string, unknown>) => res.status(404).json({ success: false, ...data });
-const serverError = (res: Response, data: Record<string, unknown>) => res.status(500).json({ success: false, ...data });
+const ok = (res: Response, data: Record<string, unknown>) =>
+  res.status(200).json({ success: true, ...data });
+const created = (res: Response, data: Record<string, unknown>) =>
+  res.status(201).json({ success: true, ...data });
+const badRequest = (res: Response, data: Record<string, unknown>) =>
+  res.status(400).json({ success: false, ...data });
+const notFound = (res: Response, data: Record<string, unknown>) =>
+  res.status(404).json({ success: false, ...data });
+const serverError = (res: Response, data: Record<string, unknown>) =>
+  res.status(500).json({ success: false, ...data });
 const unauthorized = (res: Response) =>
   res.status(401).json({ success: false, message: 'Authentication required' });
 
@@ -155,7 +160,10 @@ function serializeAddress(
  * to the precision, not a requirement of the handler, and these handlers must
  * keep answering when the router they are mounted on changes.
  */
-async function precisionForViewer(req: Request, addressId: string): Promise<ListingAddressPrecision> {
+async function precisionForViewer(
+  req: Request,
+  addressId: string,
+): Promise<ListingAddressPrecision> {
   return addressPrecisionFor(await addressAudienceFor(addressId, getOxyUserId(req)));
 }
 
@@ -176,7 +184,9 @@ export const getAddressById = async (req: Request, res: Response) => {
       return notFound(res, { message: 'Address not found' });
     }
 
-    return ok(res, { address: serializeAddress(rows[0], await precisionForViewer(req, rows[0].id)) });
+    return ok(res, {
+      address: serializeAddress(rows[0], await precisionForViewer(req, rows[0].id)),
+    });
   } catch (error) {
     logger.error('Error fetching address:', error);
     return serverError(res, { message: 'Failed to fetch address' });
@@ -249,8 +259,8 @@ export const searchAddresses = async (req: Request, res: Response) => {
         totalPages: Math.ceil(totalCount / Number(limit)),
         totalItems: totalCount,
         hasNextPage: skip + rows.length < totalCount,
-        hasPrevPage: Number(page) > 1
-      }
+        hasPrevPage: Number(page) > 1,
+      },
     });
   } catch (error) {
     logger.error('Error searching addresses:', error);
@@ -269,11 +279,13 @@ export const createAddress = async (req: Request, res: Response) => {
     // Validate required fields
     if (!addressData.street || !addressData.city || !addressData.country) {
       return badRequest(res, {
-        message: 'Street, city, and country are required'
+        message: 'Street, city, and country are required',
       });
     }
     if (!addressData.coordinates?.coordinates) {
-      return badRequest(res, { message: 'Coordinates are required to resolve the address location' });
+      return badRequest(res, {
+        message: 'Coordinates are required to resolve the address location',
+      });
     }
 
     // Geo is relational: `findOrCreateCanonicalAddress` resolves the country/
@@ -294,7 +306,7 @@ export const createAddress = async (req: Request, res: Response) => {
     if (getErrorName(error) === 'ValidationError') {
       return badRequest(res, {
         message: 'Validation error',
-        errors: getValidationMessages(error)
+        errors: getValidationMessages(error),
       });
     }
     return serverError(res, { message: 'Failed to create address' });
@@ -396,7 +408,7 @@ export const updateAddress = async (req: Request, res: Response) => {
     if (getErrorName(error) === 'ValidationError') {
       return badRequest(res, {
         message: 'Validation error',
-        errors: getValidationMessages(error)
+        errors: getValidationMessages(error),
       });
     }
     return serverError(res, { message: 'Failed to update address' });
@@ -554,7 +566,11 @@ export const withdrawCorrection = async (req: Request, res: Response) => {
     const proposedByOxyUserId = sessionWriterOf(req);
     if (proposedByOxyUserId === null) return unauthorized(res);
 
-    const withdrawn = await withdrawCorrectionProposal({ proposalId, addressId: id, proposedByOxyUserId });
+    const withdrawn = await withdrawCorrectionProposal({
+      proposalId,
+      addressId: id,
+      proposedByOxyUserId,
+    });
     if (!withdrawn) return notFound(res, { message: 'Correction not found' });
 
     return ok(res, {

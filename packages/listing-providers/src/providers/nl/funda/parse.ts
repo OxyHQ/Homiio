@@ -54,7 +54,12 @@ function fundaAreaSlug(city: string): string {
   return FUNDA_AREA_BY_CITY[slug] ?? slug;
 }
 
-export function fundaSearchBody(city: string, kind: 'rent' | 'sale', page: number, pageSize = 15): string {
+export function fundaSearchBody(
+  city: string,
+  kind: 'rent' | 'sale',
+  page: number,
+  pageSize = 15,
+): string {
   const area = fundaAreaSlug(city);
   const offering = kind === 'rent' ? 'rent' : 'buy';
   const from = Math.max(0, (page - 1) * pageSize);
@@ -82,13 +87,18 @@ function kindFromOffering(value: unknown): 'rent' | 'sale' {
     : 'rent';
 }
 
-function priceFromSource(source: Record<string, unknown>, kind: 'rent' | 'sale'): number | undefined {
+function priceFromSource(
+  source: Record<string, unknown>,
+  kind: 'rent' | 'sale',
+): number | undefined {
   const price = isRecord(source.price) ? source.price : undefined;
   if (!price) return undefined;
   if (kind === 'rent') {
     return asNumber(price.rent_price) ?? asNumber(price.rentPrice);
   }
-  return asNumber(price.selling_price) ?? asNumber(price.sellingPrice) ?? asNumber(price.sale_price);
+  return (
+    asNumber(price.selling_price) ?? asNumber(price.sellingPrice) ?? asNumber(price.sale_price)
+  );
 }
 
 function streetFromAddress(address: Record<string, unknown> | undefined): string | undefined {

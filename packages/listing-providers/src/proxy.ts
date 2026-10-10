@@ -25,18 +25,15 @@ export interface PlaywrightProxyOptions {
 }
 
 /** Resource types aborted when asset blocking is enabled in the browser tier. */
-export const BLOCKED_BROWSER_RESOURCE_TYPES = new Set([
-  'image',
-  'media',
-  'font',
-  'stylesheet',
-]);
+export const BLOCKED_BROWSER_RESOURCE_TYPES = new Set(['image', 'media', 'font', 'stylesheet']);
 
 /**
  * Parse `http://user:pass@host:port` into structured proxy config.
  * Returns `undefined` when the value is empty or not a valid URL.
  */
-export function parseResidentialProxyUrl(raw: string | undefined): ResidentialProxyConfig | undefined {
+export function parseResidentialProxyUrl(
+  raw: string | undefined,
+): ResidentialProxyConfig | undefined {
   const trimmed = raw?.trim();
   if (!trimmed) return undefined;
   let parsed: URL;

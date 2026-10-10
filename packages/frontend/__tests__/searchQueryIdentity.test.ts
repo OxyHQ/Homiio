@@ -23,11 +23,7 @@ import {
   isOpaqueId,
   type LocationSelection,
 } from '@homiio/shared-types';
-import {
-  buildSearchParams,
-  searchQueryDescriptor,
-  searchQueryId,
-} from '@/hooks/usePropertySearch';
+import { buildSearchParams, searchQueryDescriptor, searchQueryId } from '@/hooks/usePropertySearch';
 import type { SearchQuery } from '@/components/search/types';
 
 function baseQuery(overrides: Partial<SearchQuery> = {}): SearchQuery {
@@ -83,7 +79,9 @@ describe('searchQueryId', () => {
   });
 
   it('is stable for the same query', () => {
-    expect(searchQueryId(baseQuery({ bedrooms: 2 }))).toBe(searchQueryId(baseQuery({ bedrooms: 2 })));
+    expect(searchQueryId(baseQuery({ bedrooms: 2 }))).toBe(
+      searchQueryId(baseQuery({ bedrooms: 2 })),
+    );
   });
 
   it('changes when the geographic scope is replaced', () => {

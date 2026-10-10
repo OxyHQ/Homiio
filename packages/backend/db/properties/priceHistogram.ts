@@ -97,7 +97,9 @@ export interface PriceHistogramOptions {
  * The price distribution of a search scope, or `null` when the scope holds no
  * priced listing in the chosen currency.
  */
-export async function priceHistogramForScope(options: PriceHistogramOptions): Promise<PriceHistogram | null> {
+export async function priceHistogramForScope(
+  options: PriceHistogramOptions,
+): Promise<PriceHistogram | null> {
   const { priceColumn, currencyColumn, bucketCount } = options;
   const db = getDb();
 
@@ -135,7 +137,12 @@ export async function priceHistogramForScope(options: PriceHistogramOptions): Pr
   // `edges` widens a zero-width span (every price equal, or a named minimum at
   // or above the percentile) by one unit, because `width_bucket` rejects
   // `low = high` and a single bar is the honest picture of one price anyway.
-  const bucketRows = await db.execute<{ lo: number; hi: number; bucket: number | null; total: number }>(sql`
+  const bucketRows = await db.execute<{
+    lo: number;
+    hi: number;
+    bucket: number | null;
+    total: number;
+  }>(sql`
     with scoped as (
       select ${priceColumn}::double precision as price
       ${scoped}

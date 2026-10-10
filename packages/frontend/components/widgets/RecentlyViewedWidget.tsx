@@ -50,7 +50,9 @@ export function RecentlyViewedWidget() {
     return null;
   }
 
-  const headerIcon = <RiTimeLine width={HEADER_ICON_SIZE} height={HEADER_ICON_SIZE} fill={colors.primary} />;
+  const headerIcon = (
+    <RiTimeLine width={HEADER_ICON_SIZE} height={HEADER_ICON_SIZE} fill={colors.primary} />
+  );
 
   if (error) {
     return (
@@ -113,7 +115,9 @@ export function RecentlyViewedWidget() {
           size="sm"
           trailingIcon={RiArrowRightSLine}
           onPress={() => router.push('/properties/recently-viewed')}
-          accessibilityLabel={t('home.viewAll')} tone="accent" appearance="plain"
+          accessibilityLabel={t('home.viewAll')}
+          tone="accent"
+          appearance="plain"
         >
           {t('home.viewAll')}
         </Button>

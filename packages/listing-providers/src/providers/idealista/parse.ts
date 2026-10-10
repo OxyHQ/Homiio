@@ -23,7 +23,6 @@ export interface IdealistaRaw {
   contact?: IdealistaContact;
 }
 
-
 /** Extract the stable listing id from an Idealista URL (`/inmueble/<id>/`). */
 export function idealistaSourceIdFromUrl(url: string): string | undefined {
   return url.match(/\/inmueble\/(\d+)/)?.[1];

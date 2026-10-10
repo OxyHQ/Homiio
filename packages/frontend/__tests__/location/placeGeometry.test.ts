@@ -220,7 +220,10 @@ describe('a place with neither a centre nor an extent', () => {
   it('is framable with a centre, with or without an extent', () => {
     expect(isFramablePlace(GREENWICH)).toBe(true);
     expect(
-      isFramablePlace({ ...GREENWICH, bounds: { west: -0.1, south: 51.4, east: 0.1, north: 51.5 } }),
+      isFramablePlace({
+        ...GREENWICH,
+        bounds: { west: -0.1, south: 51.4, east: 0.1, north: 51.5 },
+      }),
     ).toBe(true);
     // A place at (0, 0) is framable — the sentinel trap again, one layer up.
     expect(isFramablePlace(AT_NULL_ISLAND)).toBe(true);

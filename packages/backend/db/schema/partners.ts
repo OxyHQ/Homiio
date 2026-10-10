@@ -11,7 +11,15 @@
  * listing's deal closes.
  */
 
-import { bigint, check, doublePrecision, index, pgTable, text, uniqueIndex } from 'drizzle-orm/pg-core';
+import {
+  bigint,
+  check,
+  doublePrecision,
+  index,
+  pgTable,
+  text,
+  uniqueIndex,
+} from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import { createdAt, generatedId, inList, updatedAt } from '@oxy.so/db';
 import type {

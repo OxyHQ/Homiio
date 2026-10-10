@@ -118,7 +118,10 @@ function roundCoordinate(value: number, decimals: number): number {
  * building precision the place id is the BUILDING's — and where no parent is
  * recorded there is no building id to give, so the key is absent.
  */
-function publishedPlaceId(row: AddressWithGeoNames, precision: ListingAddressPrecision): string | undefined {
+function publishedPlaceId(
+  row: AddressWithGeoNames,
+  precision: ListingAddressPrecision,
+): string | undefined {
   if (precision === 'exact') return row.id;
   if (precision === 'building') {
     if (row.addressLevel !== 'UNIT') return row.id;

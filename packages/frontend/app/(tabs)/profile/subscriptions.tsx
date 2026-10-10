@@ -15,12 +15,7 @@ import { Badge } from '@oxy.so/bloom/badge';
 import { Button } from '@oxy.so/bloom/button';
 import { Card } from '@oxy.so/bloom/card';
 import { IconCircle } from '@oxy.so/bloom/icon-circle';
-import {
-  RiCheckboxCircleFill,
-  RiFileTextLine,
-  RiHeartLine,
-  RiStarLine,
-} from '@oxy.so/bloom/icons';
+import { RiCheckboxCircleFill, RiFileTextLine, RiHeartLine, RiStarLine } from '@oxy.so/bloom/icons';
 import { SettingsListGroup, SettingsListItem } from '@oxy.so/bloom/settings-list';
 import { confirm } from '@oxy.so/bloom/surfaces';
 import { useTheme } from '@oxy.so/bloom/theme';
@@ -217,7 +212,9 @@ export default function SubscriptionsScreen() {
             fullWidth
             loading={checkoutBusy}
             disabled={checkoutBusy}
-            onPress={() => void handleStartCheckout('file')} tone="neutral" appearance="outline"
+            onPress={() => void handleStartCheckout('file')}
+            tone="neutral"
+            appearance="outline"
           >
             {t('subscriptions.page.payPerContract.reviewButton')}
           </Button>
@@ -231,10 +228,17 @@ export default function SubscriptionsScreen() {
           description={t('subscriptions.page.plus.description')}
           badge={
             plusActive ? (
-              <Badge content={t('subscriptions.page.plus.activeBadge')} color="success" variant="subtle" size="small" />
+              <Badge
+                content={t('subscriptions.page.plus.activeBadge')}
+                color="success"
+                variant="subtle"
+                size="small"
+              />
             ) : plusCanceledAt ? (
               <Badge
-                content={t('subscriptions.page.plus.canceledBadge', { date: formatDate(plusCanceledAt) })}
+                content={t('subscriptions.page.plus.canceledBadge', {
+                  date: formatDate(plusCanceledAt),
+                })}
                 color="error"
                 variant="subtle"
                 size="small"
@@ -259,7 +263,11 @@ export default function SubscriptionsScreen() {
             fullWidth
             loading={!plusActive && checkoutBusy}
             disabled={checkoutBusy}
-            onPress={() => void (plusActive ? handleManageSubscription() : handleStartCheckout('plus'))} tone="accent" appearance="solid"
+            onPress={() =>
+              void (plusActive ? handleManageSubscription() : handleStartCheckout('plus'))
+            }
+            tone="accent"
+            appearance="solid"
           >
             {plusCta}
           </Button>
@@ -276,7 +284,9 @@ export default function SubscriptionsScreen() {
             fullWidth
             loading={checkoutBusy}
             disabled={checkoutBusy}
-            onPress={() => void handleStartCheckout('founder')} tone="neutral" appearance="outline"
+            onPress={() => void handleStartCheckout('founder')}
+            tone="neutral"
+            appearance="outline"
           >
             {t('subscriptions.page.founder.becomeSupporter')}
           </Button>
@@ -315,8 +325,14 @@ export default function SubscriptionsScreen() {
                   onPress={() => void handleCancelSubscription(true)}
                 />
               ) : null}
-              <SettingsListItem title="Sync from Stripe" onPress={() => void handleSyncSubscription()} />
-              <SettingsListItem title="Debug Subscription" onPress={() => void handleDebugSubscription()} />
+              <SettingsListItem
+                title="Sync from Stripe"
+                onPress={() => void handleSyncSubscription()}
+              />
+              <SettingsListItem
+                title="Debug Subscription"
+                onPress={() => void handleDebugSubscription()}
+              />
             </SettingsListGroup>
           </View>
         ) : null}

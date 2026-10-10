@@ -89,14 +89,23 @@ export default function () {
   // Public property routes
   router.get('/properties', asyncHandler(propertyController.getProperties));
   router.get('/properties/search', asyncHandler(propertyController.searchProperties));
-  router.get('/properties/search/price-histogram', asyncHandler(propertyController.getSearchPriceHistogram));
+  router.get(
+    '/properties/search/price-histogram',
+    asyncHandler(propertyController.getSearchPriceHistogram),
+  );
   router.get('/properties/by-ids', asyncHandler(propertyController.getPropertiesByIds));
   router.get('/properties/nearby', asyncHandler(propertyController.findNearbyProperties));
   router.get('/properties/radius', asyncHandler(propertyController.findPropertiesInRadius));
   router.get('/properties/:propertyId', asyncHandler(propertyController.getPropertyById));
   router.get('/properties/:propertyId/stats', asyncHandler(propertyController.getPropertyStats));
-  router.get('/properties/:propertyId/area-insights', asyncHandler(propertyController.getAreaInsights));
-  router.get('/properties/:propertyId/nearby-services', asyncHandler(propertyController.getPropertyNearbyServices));
+  router.get(
+    '/properties/:propertyId/area-insights',
+    asyncHandler(propertyController.getAreaInsights),
+  );
+  router.get(
+    '/properties/:propertyId/nearby-services',
+    asyncHandler(propertyController.getPropertyNearbyServices),
+  );
 
   // The stay calendar (#518 §7.5). PUBLIC, because choosing dates is what a
   // visitor does BEFORE they have an account — behind the session it answered
@@ -113,7 +122,10 @@ export default function () {
   //
   // Declared with a distinct third segment, so it cannot shadow
   // `/properties/:propertyId` above.
-  router.get('/properties/:id/availability', asyncHandler(reservationController.getPropertyAvailability));
+  router.get(
+    '/properties/:id/availability',
+    asyncHandler(reservationController.getPropertyAvailability),
+  );
 
   // The viewing slots an owner publishes (#518 §7.5). PUBLIC for the same
   // reason as the stay calendar above: picking a time to visit is something a
@@ -200,14 +212,20 @@ export default function () {
   // so they belong here next to `area-insights` rather than behind `oxy.auth()`.
   // Review WRITES (POST/PUT/DELETE) stay on the authenticated `/reviews` router.
   router.get('/reviews/address/:addressId', asyncHandler(reviewController.getReviewsByAddress));
-  router.get('/reviews/address/:addressId/stats', asyncHandler(reviewController.getAddressReviewStats));
+  router.get(
+    '/reviews/address/:addressId/stats',
+    asyncHandler(reviewController.getAddressReviewStats),
+  );
 
   // Public review-explore aggregations (cities → neighborhoods → buildings).
   // Coverage-only stats; no per-review reads here. Declared as distinct literal
   // segments so they don't collide with `/reviews/address/...` above.
   router.get('/reviews/explore', asyncHandler(reviewController.getExploreCities));
   router.get('/reviews/explore/city/:cityId', asyncHandler(reviewController.getExploreCity));
-  router.get('/reviews/explore/neighborhood/:neighborhoodId', asyncHandler(reviewController.getExploreNeighborhood));
+  router.get(
+    '/reviews/explore/neighborhood/:neighborhoodId',
+    asyncHandler(reviewController.getExploreNeighborhood),
+  );
 
   // Public agency profile reads. `/agencies/search` is declared BEFORE the
   // `/agencies/:slug` catch so "search" is never captured as a slug.
@@ -251,124 +269,128 @@ export default function () {
   router.get('/analytics/stats', asyncHandler(analyticsController.getAppStats));
 
   // Ethical pricing calculation endpoint (public - no authentication required)
-  router.post('/properties/calculate-ethical-pricing', asyncHandler(async (req, res) => {
-    const { localMedianIncome, areaAverageRent, propertyType } = req.body;
+  router.post(
+    '/properties/calculate-ethical-pricing',
+    asyncHandler(async (req, res) => {
+      const { localMedianIncome, areaAverageRent, propertyType } = req.body;
 
-    // Validate required fields
-    if (!localMedianIncome || !areaAverageRent) {
-      return res.status(400).json({
-        success: false,
-        message: 'Local median income and area average rent are required'
-      });
-    }
-
-    if (localMedianIncome <= 0 || areaAverageRent <= 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Income and rent values must be positive numbers'
-      });
-    }
-
-    // Calculate monthly income
-    const monthlyMedianIncome = localMedianIncome / 12;
-    
-    // Adjust percentages based on income level - lower incomes need higher housing percentages
-    let standardRentPercentage, affordableRentPercentage, communityRentPercentage;
-    
-    if (monthlyMedianIncome < 2000) {
-      // Lower income: higher percentage needed for housing
-      standardRentPercentage = 0.65; // 65% for very low income
-      affordableRentPercentage = 0.55; // 55% for affordable
-      communityRentPercentage = 0.45; // 45% for community
-    } else if (monthlyMedianIncome < 4000) {
-      // Moderate income
-      standardRentPercentage = 0.5; // 50%
-      affordableRentPercentage = 0.4; // 40%
-      communityRentPercentage = 0.35; // 35%
-    } else if (monthlyMedianIncome < 8000) {
-      // Higher income
-      standardRentPercentage = 0.4; // 40%
-      affordableRentPercentage = 0.35; // 35%
-      communityRentPercentage = 0.3; // 30%
-    } else {
-      // High income: can afford lower percentages
-      standardRentPercentage = 0.35; // 35%
-      affordableRentPercentage = 0.3; // 30%
-      communityRentPercentage = 0.25; // 25%
-    }
-
-    // Calculate ethical pricing suggestions
-    const suggestions = {
-      standardRent: Math.round(monthlyMedianIncome * standardRentPercentage),
-      affordableRent: Math.round(monthlyMedianIncome * affordableRentPercentage),
-      marketRate: areaAverageRent,
-      reducedDeposit: Math.round(monthlyMedianIncome * standardRentPercentage),
-      communityRent: Math.round(monthlyMedianIncome * communityRentPercentage),
-      slidingScaleBase: Math.round(monthlyMedianIncome * (communityRentPercentage - 0.1)),
-      slidingScaleMax: Math.round(monthlyMedianIncome * (standardRentPercentage + 0.1)),
-      marketAdjustedRent: Math.round(Math.min(areaAverageRent * 0.9, monthlyMedianIncome * 0.7)),
-      incomeBasedRent: Math.round(monthlyMedianIncome * 0.7),
-    };
-
-    // Validate suggestions against market rate
-    const isMarketRateReasonable = areaAverageRent >= suggestions.affordableRent * 0.7 && 
-                                  areaAverageRent <= suggestions.standardRent * 2.0;
-
-    // Provide market context
-    const rentToIncomeRatio = (areaAverageRent / monthlyMedianIncome) * 100;
-    let marketContext = '';
-    
-    if (rentToIncomeRatio < 25) {
-      marketContext = 'Very affordable market';
-    } else if (rentToIncomeRatio < 35) {
-      marketContext = 'Affordable market';
-    } else if (rentToIncomeRatio < 45) {
-      marketContext = 'Moderate market';
-    } else if (rentToIncomeRatio < 55) {
-      marketContext = 'Expensive market';
-    } else {
-      marketContext = 'Very expensive market';
-    }
-
-    // Generate warnings if needed
-    const warnings = [];
-    if (!isMarketRateReasonable) {
-      if (areaAverageRent < suggestions.affordableRent * 0.7) {
-        warnings.push('Market rate seems unusually low compared to local income');
-      } else {
-        warnings.push('Market rate seems unusually high compared to local income');
+      // Validate required fields
+      if (!localMedianIncome || !areaAverageRent) {
+        return res.status(400).json({
+          success: false,
+          message: 'Local median income and area average rent are required',
+        });
       }
-    }
 
-    const adjustmentFactor = getPropertyAdjustmentFactor(propertyType);
-    const adjustedSuggestions = {
-      standardRent: Math.round(suggestions.standardRent * adjustmentFactor),
-      affordableRent: Math.round(suggestions.affordableRent * adjustmentFactor),
-      marketRate: suggestions.marketRate,
-      reducedDeposit: suggestions.reducedDeposit,
-      communityRent: Math.round(suggestions.communityRent * adjustmentFactor),
-      slidingScaleBase: Math.round(suggestions.slidingScaleBase * adjustmentFactor),
-      slidingScaleMax: Math.round(suggestions.slidingScaleMax * adjustmentFactor),
-      marketAdjustedRent: Math.round(suggestions.marketAdjustedRent * adjustmentFactor),
-      incomeBasedRent: Math.round(suggestions.incomeBasedRent * adjustmentFactor),
-    };
+      if (localMedianIncome <= 0 || areaAverageRent <= 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Income and rent values must be positive numbers',
+        });
+      }
 
-    res.json({
-      success: true,
-      data: {
-        suggestions: adjustedSuggestions,
-        marketContext,
-        warnings,
-        calculations: {
-          monthlyMedianIncome,
-          rentToIncomeRatio: Math.round(rentToIncomeRatio * 100) / 100,
-          standardRentPercentage: Math.round(standardRentPercentage * 100),
-          affordableRentPercentage: Math.round(affordableRentPercentage * 100),
-          communityRentPercentage: Math.round(communityRentPercentage * 100),
+      // Calculate monthly income
+      const monthlyMedianIncome = localMedianIncome / 12;
+
+      // Adjust percentages based on income level - lower incomes need higher housing percentages
+      let standardRentPercentage, affordableRentPercentage, communityRentPercentage;
+
+      if (monthlyMedianIncome < 2000) {
+        // Lower income: higher percentage needed for housing
+        standardRentPercentage = 0.65; // 65% for very low income
+        affordableRentPercentage = 0.55; // 55% for affordable
+        communityRentPercentage = 0.45; // 45% for community
+      } else if (monthlyMedianIncome < 4000) {
+        // Moderate income
+        standardRentPercentage = 0.5; // 50%
+        affordableRentPercentage = 0.4; // 40%
+        communityRentPercentage = 0.35; // 35%
+      } else if (monthlyMedianIncome < 8000) {
+        // Higher income
+        standardRentPercentage = 0.4; // 40%
+        affordableRentPercentage = 0.35; // 35%
+        communityRentPercentage = 0.3; // 30%
+      } else {
+        // High income: can afford lower percentages
+        standardRentPercentage = 0.35; // 35%
+        affordableRentPercentage = 0.3; // 30%
+        communityRentPercentage = 0.25; // 25%
+      }
+
+      // Calculate ethical pricing suggestions
+      const suggestions = {
+        standardRent: Math.round(monthlyMedianIncome * standardRentPercentage),
+        affordableRent: Math.round(monthlyMedianIncome * affordableRentPercentage),
+        marketRate: areaAverageRent,
+        reducedDeposit: Math.round(monthlyMedianIncome * standardRentPercentage),
+        communityRent: Math.round(monthlyMedianIncome * communityRentPercentage),
+        slidingScaleBase: Math.round(monthlyMedianIncome * (communityRentPercentage - 0.1)),
+        slidingScaleMax: Math.round(monthlyMedianIncome * (standardRentPercentage + 0.1)),
+        marketAdjustedRent: Math.round(Math.min(areaAverageRent * 0.9, monthlyMedianIncome * 0.7)),
+        incomeBasedRent: Math.round(monthlyMedianIncome * 0.7),
+      };
+
+      // Validate suggestions against market rate
+      const isMarketRateReasonable =
+        areaAverageRent >= suggestions.affordableRent * 0.7 &&
+        areaAverageRent <= suggestions.standardRent * 2.0;
+
+      // Provide market context
+      const rentToIncomeRatio = (areaAverageRent / monthlyMedianIncome) * 100;
+      let marketContext = '';
+
+      if (rentToIncomeRatio < 25) {
+        marketContext = 'Very affordable market';
+      } else if (rentToIncomeRatio < 35) {
+        marketContext = 'Affordable market';
+      } else if (rentToIncomeRatio < 45) {
+        marketContext = 'Moderate market';
+      } else if (rentToIncomeRatio < 55) {
+        marketContext = 'Expensive market';
+      } else {
+        marketContext = 'Very expensive market';
+      }
+
+      // Generate warnings if needed
+      const warnings = [];
+      if (!isMarketRateReasonable) {
+        if (areaAverageRent < suggestions.affordableRent * 0.7) {
+          warnings.push('Market rate seems unusually low compared to local income');
+        } else {
+          warnings.push('Market rate seems unusually high compared to local income');
         }
       }
-    });
-  }));
+
+      const adjustmentFactor = getPropertyAdjustmentFactor(propertyType);
+      const adjustedSuggestions = {
+        standardRent: Math.round(suggestions.standardRent * adjustmentFactor),
+        affordableRent: Math.round(suggestions.affordableRent * adjustmentFactor),
+        marketRate: suggestions.marketRate,
+        reducedDeposit: suggestions.reducedDeposit,
+        communityRent: Math.round(suggestions.communityRent * adjustmentFactor),
+        slidingScaleBase: Math.round(suggestions.slidingScaleBase * adjustmentFactor),
+        slidingScaleMax: Math.round(suggestions.slidingScaleMax * adjustmentFactor),
+        marketAdjustedRent: Math.round(suggestions.marketAdjustedRent * adjustmentFactor),
+        incomeBasedRent: Math.round(suggestions.incomeBasedRent * adjustmentFactor),
+      };
+
+      res.json({
+        success: true,
+        data: {
+          suggestions: adjustedSuggestions,
+          marketContext,
+          warnings,
+          calculations: {
+            monthlyMedianIncome,
+            rentToIncomeRatio: Math.round(rentToIncomeRatio * 100) / 100,
+            standardRentPercentage: Math.round(standardRentPercentage * 100),
+            affordableRentPercentage: Math.round(affordableRentPercentage * 100),
+            communityRentPercentage: Math.round(communityRentPercentage * 100),
+          },
+        },
+      });
+    }),
+  );
 
   // Public Telegram routes (for testing and bot management)
   router.get('/telegram/status', asyncHandler(telegramController.getBotStatus));
@@ -380,8 +402,14 @@ export default function () {
   // `profileController` namespace import; the local `require` this replaced was
   // still pointing at a module that has been deleted, and no typechecker could
   // see that because `require()` is opaque to one.
-  router.get('/public/profiles/by-user/:oxyUserId', asyncHandler(profileController.getPublicProfileByOxyUserId));
-  router.get('/public/profiles/oxy/:oxyUserId', asyncHandler(profileController.getProfileByOxyUserId));
+  router.get(
+    '/public/profiles/by-user/:oxyUserId',
+    asyncHandler(profileController.getPublicProfileByOxyUserId),
+  );
+  router.get(
+    '/public/profiles/oxy/:oxyUserId',
+    asyncHandler(profileController.getProfileByOxyUserId),
+  );
 
   // Public shared conversation endpoint (no authentication required).
   //
@@ -395,13 +423,16 @@ export default function () {
   // The `try/catch` that used to swallow every failure into a 500 is gone:
   // `asyncHandler` forwards to `errorHandler`, which is the one place that
   // decides what a caller sees.
-  router.get('/ai/shared/:token', asyncHandler(async (req, res) => {
-    const hydrated = await findConversationByShareToken(getDb(), String(req.params.token || ''));
-    if (!hydrated) {
-      return res.status(404).json({ error: 'Shared conversation not found or expired' });
-    }
-    res.json({ success: true, conversation: toSharedConversationDTO(hydrated) });
-  }));
+  router.get(
+    '/ai/shared/:token',
+    asyncHandler(async (req, res) => {
+      const hydrated = await findConversationByShareToken(getDb(), String(req.params.token || ''));
+      if (!hydrated) {
+        return res.status(404).json({ error: 'Shared conversation not found or expired' });
+      }
+      res.json({ success: true, conversation: toSharedConversationDTO(hydrated) });
+    }),
+  );
 
   return router;
-}; 
+}

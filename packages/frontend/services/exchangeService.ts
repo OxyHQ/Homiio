@@ -66,10 +66,7 @@ class ExchangeService {
 
   /** Propose a swap or hosting stay against an EXCHANGE listing. */
   async createRequest(payload: CreateExchangeRequestData): Promise<ExchangeRequest> {
-    const response = await api.post<ApiResponse<ExchangeRequest>>(
-      this.baseUrl,
-      payload,
-    );
+    const response = await api.post<ApiResponse<ExchangeRequest>>(this.baseUrl, payload);
     if (!response.data?.data) {
       throw new Error(response.data?.message || 'Exchange request failed');
     }
@@ -100,9 +97,7 @@ class ExchangeService {
   }
 
   async getRequest(id: string): Promise<ExchangeRequest> {
-    const response = await api.get<ApiResponse<ExchangeRequest>>(
-      `${this.baseUrl}/${id}`,
-    );
+    const response = await api.get<ApiResponse<ExchangeRequest>>(`${this.baseUrl}/${id}`);
     if (!response.data?.data) {
       throw new Error(response.data?.message || 'Exchange request not found');
     }
@@ -114,10 +109,7 @@ class ExchangeService {
    * pending|confirmed → cancelled. Either: confirmed → completed (after the
    * stay window ended). The backend owns the authorization + transition rules.
    */
-  async updateStatus(
-    id: string,
-    payload: UpdateExchangeRequestData,
-  ): Promise<ExchangeRequest> {
+  async updateStatus(id: string, payload: UpdateExchangeRequestData): Promise<ExchangeRequest> {
     const response = await api.patch<ApiResponse<ExchangeRequest>>(
       `${this.baseUrl}/${id}`,
       payload,
@@ -129,10 +121,7 @@ class ExchangeService {
   }
 
   /** Review the other party of a COMPLETED exchange (one review per reviewer). */
-  async createReview(
-    id: string,
-    body: CreateExchangeReviewBody,
-  ): Promise<ExchangeReview> {
+  async createReview(id: string, body: CreateExchangeReviewBody): Promise<ExchangeReview> {
     const response = await api.post<ApiResponse<ExchangeReview>>(
       `${this.baseUrl}/${id}/reviews`,
       body,
@@ -145,9 +134,7 @@ class ExchangeService {
 
   /** Both reviews tied to a single exchange (requester + host). */
   async getRequestReviews(id: string): Promise<ExchangeReview[]> {
-    const response = await api.get<ApiResponse<ExchangeReview[]>>(
-      `${this.baseUrl}/${id}/reviews`,
-    );
+    const response = await api.get<ApiResponse<ExchangeReview[]>>(`${this.baseUrl}/${id}/reviews`);
     return response.data.data ?? [];
   }
 

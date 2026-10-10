@@ -69,7 +69,12 @@ export function isRealtorCaApiChallenge(body: string): boolean {
   if (trimmed.startsWith('{')) {
     try {
       const parsed: unknown = JSON.parse(trimmed);
-      if (typeof parsed === 'object' && parsed !== null && !('Results' in parsed) && !('Id' in parsed)) {
+      if (
+        typeof parsed === 'object' &&
+        parsed !== null &&
+        !('Results' in parsed) &&
+        !('Id' in parsed)
+      ) {
         return true;
       }
     } catch {

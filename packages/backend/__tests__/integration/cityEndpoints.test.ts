@@ -52,7 +52,6 @@ beforeEach(async () => {
   await resetGeoTables();
 });
 
-
 describe('GET /api/cities', () => {
   it('returns active cities ordered by popularity then name, with paging metadata', async () => {
     const chain = await seedGeoChain({ cityName: 'Barcelona', propertiesCount: 5 });
@@ -62,7 +61,11 @@ describe('GET /api/cities', () => {
     const res = await request(app).get('/api/cities?limit=10').expect(200);
 
     expect(res.body.success).toBe(true);
-    expect(res.body.data.map((c: { name: string }) => c.name)).toEqual(['Girona', 'Barcelona', 'Lleida']);
+    expect(res.body.data.map((c: { name: string }) => c.name)).toEqual([
+      'Girona',
+      'Barcelona',
+      'Lleida',
+    ]);
     // `count(*)` comes back from postgres.js as a bigint STRING; an unmapped one
     // would ship `"3"` and silently change the wire type.
     expect(res.body.pagination.total).toBe(3);
@@ -143,7 +146,9 @@ describe('GET /api/cities', () => {
   it('filters by countryCode, and reports an empty page for an unknown one', async () => {
     await seedGeoChain({ cityName: 'Barcelona', countryCode: 'ES' });
 
-    expect((await request(app).get('/api/cities?countryCode=es').expect(200)).body.data).toHaveLength(1);
+    expect(
+      (await request(app).get('/api/cities?countryCode=es').expect(200)).body.data,
+    ).toHaveLength(1);
     const unknown = await request(app).get('/api/cities?countryCode=ZZ').expect(200);
     expect(unknown.body.data).toEqual([]);
     expect(unknown.body.pagination.total).toBe(0);
@@ -205,7 +210,9 @@ describe('GET /api/cities/:id', () => {
 
   it('404s for an unknown id, whatever shape it is', async () => {
     await request(app).get('/api/cities/not-an-id-at-all').expect(404);
-    await request(app).get(`/api/cities/${'0'.repeat(24)}`).expect(404);
+    await request(app)
+      .get(`/api/cities/${'0'.repeat(24)}`)
+      .expect(404);
   });
 });
 
@@ -227,10 +234,22 @@ describe('GET /api/cities/lookup', () => {
   });
 
   it('narrows by country and region NAME', async () => {
-    const es = await seedGeoChain({ countryCode: 'ES', countryName: 'Spain', regionName: 'Catalonia', cityName: 'Valencia' });
-    await seedGeoChain({ countryCode: 'VE', countryName: 'Venezuela', regionName: 'Valencia', cityName: 'Valencia' });
+    const es = await seedGeoChain({
+      countryCode: 'ES',
+      countryName: 'Spain',
+      regionName: 'Catalonia',
+      cityName: 'Valencia',
+    });
+    await seedGeoChain({
+      countryCode: 'VE',
+      countryName: 'Venezuela',
+      regionName: 'Valencia',
+      cityName: 'Valencia',
+    });
 
-    const res = await request(app).get('/api/cities/lookup?name=Valencia&country=Spain&state=catalonia').expect(200);
+    const res = await request(app)
+      .get('/api/cities/lookup?name=Valencia&country=Spain&state=catalonia')
+      .expect(200);
     expect(res.body.data.status).toBe('resolved');
     expect(res.body.data.place.id).toBe(es.cityId);
   });

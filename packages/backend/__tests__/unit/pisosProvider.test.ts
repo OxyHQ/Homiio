@@ -29,7 +29,11 @@ describe('PisosProvider.normalize', () => {
       PISOS_FIXTURE_DETAIL_HTML,
       'https://www.pisos.com/alquilar/piso-sol_barrio28012-20026385030_992099/',
     );
-    const ref: ExternalListingRef = { provider: 'pisos', sourceId: payload.sourceId, url: payload.url };
+    const ref: ExternalListingRef = {
+      provider: 'pisos',
+      sourceId: payload.sourceId,
+      url: payload.url,
+    };
     const listing = provider.normalize({ ref, payload });
 
     expect(listing.source).toBe('pisos');
@@ -52,7 +56,10 @@ describe('PisosProvider.normalize', () => {
     // non-amenity `soleado` is dropped.
     expect(listing.amenities).toEqual(['elevator', 'balcony']);
     expect(listing.address.city).toBe('Madrid Capital');
-    expect(listing.address.coordinates).toEqual({ lat: 40.41593545782718, lng: -3.7083892232908435 });
+    expect(listing.address.coordinates).toEqual({
+      lat: 40.41593545782718,
+      lng: -3.7083892232908435,
+    });
   });
 
   it('assigns distinct portal coordinates and cities for two detail fixtures', () => {
@@ -75,7 +82,10 @@ describe('PisosProvider.normalize', () => {
 
     expect(madrid.address.city).toBe('Madrid Capital');
     expect(valladolid.address.city).toBe('Valladolid Capital');
-    expect(madrid.address.coordinates).toEqual({ lat: 40.41593545782718, lng: -3.7083892232908435 });
+    expect(madrid.address.coordinates).toEqual({
+      lat: 40.41593545782718,
+      lng: -3.7083892232908435,
+    });
     expect(valladolid.address.coordinates).toEqual({ lat: 41.6531628, lng: -4.7216201 });
     expect(madrid.address.coordinates).not.toEqual(valladolid.address.coordinates);
     // Valladolid's trimmed `data-var` omits planta / año / plazas — stay undefined.
@@ -249,7 +259,9 @@ describe('PisosProvider search + helpers', () => {
 
   it('extracts a source id from a detail url', () => {
     expect(
-      pisosSourceIdFromUrl('https://www.pisos.com/alquilar/piso-sol_barrio28012-20026385030_992099/'),
+      pisosSourceIdFromUrl(
+        'https://www.pisos.com/alquilar/piso-sol_barrio28012-20026385030_992099/',
+      ),
     ).toBe('20026385030.992099');
   });
 });

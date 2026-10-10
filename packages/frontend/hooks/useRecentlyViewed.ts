@@ -3,55 +3,49 @@ import { useOxy } from '@oxy.so/services';
 import type { Property } from '@homiio/shared-types';
 import { RecentlyViewedType } from '@homiio/shared-types';
 import { useCallback, useMemo } from 'react';
-import { 
-  useRecentlyViewedProperties, 
-  useTrackPropertyView, 
-  useClearRecentlyViewed 
+import {
+  useRecentlyViewedProperties,
+  useTrackPropertyView,
+  useClearRecentlyViewed,
 } from './useRecentlyViewedQueries';
 
 export function useRecentlyViewed() {
-  const {
-    addItem,
-    removeItem,
-    clearAll,
-    setError,
-    clearError,
-  } = useRecentlyViewedStore();
+  const { addItem, removeItem, clearAll, setError, clearError } = useRecentlyViewedStore();
   const { oxyServices, activeSessionId } = useOxy();
 
   // React Query hooks - only fetch if we don't have local data
-  const {
-    data: properties = [],
-    isLoading,
-    error,
-    refetch,
-  } = useRecentlyViewedProperties();
+  const { data: properties = [], isLoading, error, refetch } = useRecentlyViewedProperties();
 
   const trackPropertyViewMutation = useTrackPropertyView();
   const clearRecentlyViewedMutation = useClearRecentlyViewed();
 
   // Add property to recently viewed
-  const addProperty = useCallback(async (property: Property) => {
-    const propertyId = property.id;
+  const addProperty = useCallback(
+    async (property: Property) => {
+      const propertyId = property.id;
 
-    if (!propertyId) return;
+      if (!propertyId) return;
 
-    // Add to local state immediately for instant UI feedback
-    addItem(propertyId, RecentlyViewedType.PROPERTY, property);
+      // Add to local state immediately for instant UI feedback
+      addItem(propertyId, RecentlyViewedType.PROPERTY, property);
 
-    // Track view in backend if authenticated
-    if (oxyServices && activeSessionId) {
-      trackPropertyViewMutation.mutate(propertyId, {
-        onError: (error) => {
-        }
-      });
-    }
-  }, [addItem, oxyServices, activeSessionId, trackPropertyViewMutation]);
+      // Track view in backend if authenticated
+      if (oxyServices && activeSessionId) {
+        trackPropertyViewMutation.mutate(propertyId, {
+          onError: (error) => {},
+        });
+      }
+    },
+    [addItem, oxyServices, activeSessionId, trackPropertyViewMutation],
+  );
 
   // Remove property from recently viewed
-  const removeProperty = useCallback(async (propertyId: string) => {
-    removeItem(propertyId);
-  }, [removeItem]);
+  const removeProperty = useCallback(
+    async (propertyId: string) => {
+      removeItem(propertyId);
+    },
+    [removeItem],
+  );
 
   // Clear all recently viewed properties
   const clear = useCallback(async () => {
@@ -68,7 +62,7 @@ export function useRecentlyViewed() {
 
   // Subscribe to items array directly to avoid infinite loops
   const items = useRecentlyViewedStore((state) => state.items);
-  
+
   // Process items to get properties
   const localProperties = useMemo(() => {
     return items
@@ -82,7 +76,8 @@ export function useRecentlyViewed() {
 
   return {
     properties: displayProperties,
-    isLoading: isLoading || trackPropertyViewMutation.isPending || clearRecentlyViewedMutation.isPending,
+    isLoading:
+      isLoading || trackPropertyViewMutation.isPending || clearRecentlyViewedMutation.isPending,
     error: error?.message || null,
     refetch,
     clear,

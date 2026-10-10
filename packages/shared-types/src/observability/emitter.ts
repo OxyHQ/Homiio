@@ -70,11 +70,7 @@ export interface ObservabilityEmitterConfig {
   readonly onTransportError?: (error: unknown) => void;
 }
 
-export type ObservabilityEmitStatus =
-  | 'emitted'
-  | 'sampled_out'
-  | 'refused'
-  | 'transport_error';
+export type ObservabilityEmitStatus = 'emitted' | 'sampled_out' | 'refused' | 'transport_error';
 
 export interface ObservabilityEmitResult {
   readonly status: ObservabilityEmitStatus;
@@ -95,8 +91,9 @@ export interface ObservabilityStats {
  * reference. `schemaVersion`, `occurredAt` and `surface` are stamped by the
  * emitter and are not the caller's to set.
  */
-export type ObservabilityEmitInput<E extends ObservabilityEventName> =
-  ObservabilityPayloads[E] & { readonly sessionId?: string };
+export type ObservabilityEmitInput<E extends ObservabilityEventName> = ObservabilityPayloads[E] & {
+  readonly sessionId?: string;
+};
 
 export interface ObservabilityEmitter {
   emit<E extends ObservabilityEventName>(

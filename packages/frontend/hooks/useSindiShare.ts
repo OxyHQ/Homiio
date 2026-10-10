@@ -56,7 +56,9 @@ export function useSindiShare({
     }
 
     if (!currentConversation.messages || currentConversation.messages.length === 0) {
-      toast.error(t('sindi.share.error.title'), { description: t('sindi.share.error.emptyConversation') });
+      toast.error(t('sindi.share.error.title'), {
+        description: t('sindi.share.error.emptyConversation'),
+      });
       return;
     }
 
@@ -88,7 +90,9 @@ export function useSindiShare({
     });
 
     if (outcome === 'copied') {
-      toast.success(t('sindi.share.success.title'), { description: t('sindi.share.success.copied') });
+      toast.success(t('sindi.share.success.title'), {
+        description: t('sindi.share.success.copied'),
+      });
     } else if (outcome === 'failed') {
       toast.error(t('sindi.share.error.title'), { description: t('sindi.share.error.failed') });
     }

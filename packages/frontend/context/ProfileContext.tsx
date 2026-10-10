@@ -53,11 +53,7 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
     [profile, hasProfile, canAccessRoommates],
   );
 
-  return (
-    <ProfileContext.Provider value={contextValue}>
-      {children}
-    </ProfileContext.Provider>
-  );
+  return <ProfileContext.Provider value={contextValue}>{children}</ProfileContext.Provider>;
 }
 
 export function useProfile() {

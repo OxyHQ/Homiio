@@ -52,8 +52,8 @@ export const BasicInfoSection: React.FC<Props> = ({
   // Read the active mode's priced block — the unit is fixed per block.
   const isVacation = mode === 'vacation';
   const rentAmount = isVacation
-    ? property?.shortTermRent?.nightlyRate ?? 0
-    : property?.longTermRent?.monthlyAmount ?? 0;
+    ? (property?.shortTermRent?.nightlyRate ?? 0)
+    : (property?.longTermRent?.monthlyAmount ?? 0);
   const rentCurrency =
     (isVacation ? property?.shortTermRent?.currency : property?.longTermRent?.currency) || 'USD';
   const description = property?.description;
@@ -68,10 +68,7 @@ export const BasicInfoSection: React.FC<Props> = ({
         <BloomText variant="headline-regular" style={styles.priceLabel}>
           {rentLabel}
         </BloomText>
-        <MoneyText
-          amount={rentAmount}
-          currency={rentCurrency}
-        />
+        <MoneyText amount={rentAmount} currency={rentCurrency} />
       </View>
 
       {property?.isExternal && property?.source && property.source !== 'internal' ? (

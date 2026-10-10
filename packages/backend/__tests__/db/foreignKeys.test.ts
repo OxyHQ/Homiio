@@ -87,16 +87,16 @@ describe('deferred foreign keys', () => {
     // state for most of this migration. What must never happen is an entry whose
     // parent HAS since landed and which nobody converted into a real constraint.
     const existing = new Set(declaredTables().map(getTableName));
-    const overdue = DEFERRED_FOREIGN_KEYS
-      .filter((entry) => existing.has(entry.parentTable))
-      .map((entry) => `${columnLabel(entry.column)} -> ${entry.parentTable}.${entry.parentColumn}`);
+    const overdue = DEFERRED_FOREIGN_KEYS.filter((entry) => existing.has(entry.parentTable)).map(
+      (entry) => `${columnLabel(entry.column)} -> ${entry.parentTable}.${entry.parentColumn}`,
+    );
     expect(overdue).toEqual([]);
   });
 
   it('gives every deferred entry a decided ON DELETE and a reason', () => {
-    const undecided = DEFERRED_FOREIGN_KEYS
-      .filter((entry) => !entry.onDelete || entry.reason.trim().length < 20)
-      .map((entry) => columnLabel(entry.column));
+    const undecided = DEFERRED_FOREIGN_KEYS.filter(
+      (entry) => !entry.onDelete || entry.reason.trim().length < 20,
+    ).map((entry) => columnLabel(entry.column));
     expect(undecided).toEqual([]);
   });
 });
@@ -162,16 +162,16 @@ describe('id-shaped column classification', () => {
 
   it('holds no stale exception for a column that now carries a constraint', async () => {
     const constrained = await constrainedColumns();
-    const stale = ID_COLUMNS_WITHOUT_FOREIGN_KEY
-      .map((entry) => columnLabel(entry.column))
-      .filter((label) => constrained.has(label));
+    const stale = ID_COLUMNS_WITHOUT_FOREIGN_KEY.map((entry) => columnLabel(entry.column)).filter(
+      (label) => constrained.has(label),
+    );
     expect(stale).toEqual([]);
   });
 
   it('gives every permanent exception a reason', () => {
-    const missing = ID_COLUMNS_WITHOUT_FOREIGN_KEY
-      .filter((entry) => entry.reason.trim().length < 20)
-      .map((entry) => columnLabel(entry.column));
+    const missing = ID_COLUMNS_WITHOUT_FOREIGN_KEY.filter(
+      (entry) => entry.reason.trim().length < 20,
+    ).map((entry) => columnLabel(entry.column));
     expect(missing).toEqual([]);
   });
 });

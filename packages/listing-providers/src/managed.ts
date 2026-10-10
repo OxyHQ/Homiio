@@ -104,7 +104,9 @@ export class ManagedFetcher implements UrlFetcher {
  * endpoint is configured (the ladder then skips the managed rung). We never
  * fabricate a managed fetch — an unset endpoint means the rung does not exist.
  */
-export function createManagedFetcher(config: ManagedFetcherConfig | undefined): UrlFetcher | undefined {
+export function createManagedFetcher(
+  config: ManagedFetcherConfig | undefined,
+): UrlFetcher | undefined {
   if (!config?.endpoint) return undefined;
   return new ManagedFetcher(config);
 }

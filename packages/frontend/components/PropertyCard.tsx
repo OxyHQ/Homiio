@@ -188,7 +188,7 @@ export const PropertyCard = React.memo(function PropertyCard({
   const isSaved = propertyId
     ? isInitialized
       ? isPropertySaved(propertyId)
-      : (property as PropertyWithSavedHint).isSaved ?? false
+      : ((property as PropertyWithSavedHint).isSaved ?? false)
     : false;
 
   // Only offered where the heart is: the sheet's whole subject is which folder

@@ -135,19 +135,13 @@ export const applicationService = {
 
     const documents = input.documents ?? [];
     if (documents.length > 0) {
-      formData.append(
-        'documentTypes',
-        JSON.stringify(documents.map((d) => d.type)),
-      );
+      formData.append('documentTypes', JSON.stringify(documents.map((d) => d.type)));
       for (const doc of documents) {
         await appendFileToFormData(formData, 'documents', doc);
       }
     }
 
-    const response = await api.post<ApiResponse<TenantApplication>>(
-      API_BASE_PATH,
-      formData,
-    );
+    const response = await api.post<ApiResponse<TenantApplication>>(API_BASE_PATH, formData);
     const created = response.data?.data;
     if (!created) {
       throw new ApiError('Empty application response', 500, response.data);
@@ -155,7 +149,14 @@ export const applicationService = {
     return created;
   },
 
-  async list(params: { asLandlord?: boolean; status?: TenantApplicationStatus; page?: number; limit?: number } = {}): Promise<ApplicationListResponse> {
+  async list(
+    params: {
+      asLandlord?: boolean;
+      status?: TenantApplicationStatus;
+      page?: number;
+      limit?: number;
+    } = {},
+  ): Promise<ApplicationListResponse> {
     const response = await api.get<ApplicationListResponse & ApiResponse<TenantApplication[]>>(
       API_BASE_PATH,
       {

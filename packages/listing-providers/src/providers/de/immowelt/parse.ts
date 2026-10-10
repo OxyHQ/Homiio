@@ -66,8 +66,7 @@ export interface ImmoweltRawListing {
   contact?: NormalizedListingContact;
 }
 
-const EXPOSE_UUID_RE =
-  /\/expose\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/gi;
+const EXPOSE_UUID_RE = /\/expose\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/gi;
 
 export function immoweltSearchUrl(city: string, page = 1): string {
   const slug = citySlugDe(city);
@@ -98,8 +97,7 @@ export function parseImmoweltSearchCards(html: string): Record<string, unknown>[
     const outerString = JSON.parse(`"${blob}"`) as string;
     const outer = asRecord(JSON.parse(outerString) as unknown);
     const compressed =
-      asString(asRecord(outer?.data)?.['classified-serp-init-data']) ??
-      asString(outer?.compressed);
+      asString(asRecord(outer?.data)?.['classified-serp-init-data']) ?? asString(outer?.compressed);
     if (!compressed) return [];
     const decompressed = decompressFromBase64(compressed);
     if (!decompressed) return [];
@@ -403,9 +401,7 @@ export function parseImmoweltDetailClassified(
   const metadata = asRecord(classified.metadata);
   const item = detailAvItem(classified);
   const legacyId =
-    asString(metadata?.legacyId) ??
-    asString(item?.legacy_id) ??
-    immoweltSourceIdFromUrl(url);
+    asString(metadata?.legacyId) ?? asString(item?.legacy_id) ?? immoweltSourceIdFromUrl(url);
   if (!legacyId) throw new Error('immowelt: detail classified missing legacyId / expose uuid');
 
   const sections = asRecord(classified.sections);
@@ -427,8 +423,7 @@ export function parseImmoweltDetailClassified(
 
   const distribution = asString(item?.distribution_type);
   const priceType = asString(priceBase?.type)?.toUpperCase();
-  const operation: 'rent' | 'sale' =
-    distribution === '2' || priceType === 'SALE' ? 'sale' : 'rent';
+  const operation: 'rent' | 'sale' = distribution === '2' || priceType === 'SALE' ? 'sale' : 'rent';
 
   const images = collectGalleryImages(asRecord(sections?.gallery));
 

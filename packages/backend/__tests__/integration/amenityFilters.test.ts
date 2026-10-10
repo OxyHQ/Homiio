@@ -19,7 +19,12 @@ import { getProperties } from '../../controllers/property/list';
 import { searchProperties } from '../../controllers/property/search';
 import { errorHandler } from '../../middlewares/errorHandler';
 import { serializeWireIds } from '../../middlewares/wireIds';
-import { resetGeoTables, seedAddress, seedGeoChain, seedProperty } from '../helpers/postgresGeoFixtures';
+import {
+  resetGeoTables,
+  seedAddress,
+  seedGeoChain,
+  seedProperty,
+} from '../helpers/postgresGeoFixtures';
 
 function buildApp(): Express {
   const app = express();
@@ -37,7 +42,11 @@ describe('amenities filter: all must match', () => {
 
   beforeEach(async () => {
     await resetGeoTables();
-    const chain = await seedGeoChain({ cityName: 'Valencia', regionName: 'Valencian Community', countryCode: 'ES-AM' });
+    const chain = await seedGeoChain({
+      cityName: 'Valencia',
+      regionName: 'Valencian Community',
+      countryCode: 'ES-AM',
+    });
     const seedRoom = async (amenities: string[]): Promise<string> =>
       seedProperty({
         addressId: await seedAddress({ chain }),

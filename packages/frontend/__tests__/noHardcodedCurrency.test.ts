@@ -192,12 +192,14 @@ function trackedSourceFiles(): string[] {
     encoding: 'utf8',
     maxBuffer: 32 * 1024 * 1024,
   });
-  return output
-    .split('\n')
-    .filter(Boolean)
-    .filter((file) => SCANNED_EXTENSIONS.some((extension) => file.endsWith(extension)))
-    // This file quotes the very patterns it forbids, so it cannot scan itself.
-    .filter((file) => !file.endsWith('__tests__/noHardcodedCurrency.test.ts'));
+  return (
+    output
+      .split('\n')
+      .filter(Boolean)
+      .filter((file) => SCANNED_EXTENSIONS.some((extension) => file.endsWith(extension)))
+      // This file quotes the very patterns it forbids, so it cannot scan itself.
+      .filter((file) => !file.endsWith('__tests__/noHardcodedCurrency.test.ts'))
+  );
 }
 
 describe('no hardcoded currency or implicit locale in rendered text', () => {
@@ -279,7 +281,9 @@ describe('no hardcoded currency or implicit locale in rendered text', () => {
 
     expect(unreadable).toEqual([]);
     expect(
-      findings.map((finding) => `${finding.file}:${finding.line}  [${finding.rule}]  ${finding.text}`),
+      findings.map(
+        (finding) => `${finding.file}:${finding.line}  [${finding.rule}]  ${finding.text}`,
+      ),
     ).toEqual([]);
   });
 });

@@ -28,8 +28,7 @@ export const INMUEBLES24_SITE: NaventSiteConfig = {
   countryCode: 'MX',
   defaultCity: 'Ciudad de México',
   defaultCurrency: 'MXN',
-  hrefRe:
-    /href="((?:https:\/\/www\.inmuebles24\.com)?\/propiedades\/[^"]+-(\d{5,})\.html)"/i,
+  hrefRe: /href="((?:https:\/\/www\.inmuebles24\.com)?\/propiedades\/[^"]+-(\d{5,})\.html)"/i,
 };
 
 const DEFAULT_CITIES: readonly string[] = [

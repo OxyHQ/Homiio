@@ -3,9 +3,7 @@ import type { Profile } from '@homiio/shared-types';
 export function resolveHostName(profile: Profile | null | undefined): string {
   if (!profile) return 'Host';
   return (
-    profile.personalProfile?.personalInfo?.bio?.trim() ||
-    profile.oxyUserId ||
-    'Property owner'
+    profile.personalProfile?.personalInfo?.bio?.trim() || profile.oxyUserId || 'Property owner'
   );
 }
 

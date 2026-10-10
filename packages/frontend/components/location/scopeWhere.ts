@@ -109,7 +109,9 @@ export function scopeStatement(input: {
 }): ScopeStatement {
   const { selection, isGlobal, resolution, t } = input;
   const placeholder =
-    resolution.status === 'resolving' ? t('location.scope.resolving') : t('location.scope.chooseArea');
+    resolution.status === 'resolving'
+      ? t('location.scope.resolving')
+      : t('location.scope.chooseArea');
   if (!selection && !isGlobal) return { value: null, placeholder };
   return { value: describeScope(input), placeholder };
 }

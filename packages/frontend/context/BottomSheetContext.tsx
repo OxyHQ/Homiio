@@ -14,8 +14,8 @@ interface BottomSheetContextProps {
 }
 
 export const BottomSheetContext = createContext<BottomSheetContextProps>({
-  openBottomSheet: () => { },
-  closeBottomSheet: () => { },
+  openBottomSheet: () => {},
+  closeBottomSheet: () => {},
   isOpen: false,
   bottomSheetRef: { current: null },
 });
@@ -37,12 +37,15 @@ export const BottomSheetProvider: React.FC<{ children: ReactNode }> = ({ childre
   const [hideHandle, setHideHandle] = useState(false);
   const bottomSheetRef = useRef<BottomSheetRef | null>(null);
 
-  const openBottomSheet = useCallback((newContent: ReactNode, options?: { hideHandle?: boolean }) => {
-    setContent(newContent);
-    setHideHandle(!!options?.hideHandle);
-    setIsOpen(true);
-    bottomSheetRef.current?.present();
-  }, []);
+  const openBottomSheet = useCallback(
+    (newContent: ReactNode, options?: { hideHandle?: boolean }) => {
+      setContent(newContent);
+      setHideHandle(!!options?.hideHandle);
+      setIsOpen(true);
+      bottomSheetRef.current?.present();
+    },
+    [],
+  );
 
   const closeBottomSheet = useCallback(() => {
     bottomSheetRef.current?.dismiss();

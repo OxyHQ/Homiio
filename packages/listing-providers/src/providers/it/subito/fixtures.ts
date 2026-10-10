@@ -80,7 +80,11 @@ export const SUBITO_FIXTURE_DETAIL_HTML = searchPage([AD_632623436]);
 export const SUBITO_FIXTURE_NON_HOUSING_HTML = searchPage([AD_AUTO_999888777]);
 
 /** Search page with two housing ads plus one car (car must be filtered out). */
-export const SUBITO_FIXTURE_SEARCH_HTML = searchPage([AD_632623436, AD_632623437, AD_AUTO_999888777]);
+export const SUBITO_FIXTURE_SEARCH_HTML = searchPage([
+  AD_632623436,
+  AD_632623437,
+  AD_AUTO_999888777,
+]);
 
 /** Portal-shaped JSON search response (housing categories + one car to reject). */
 export const SUBITO_FIXTURE_SEARCH_JSON = `{

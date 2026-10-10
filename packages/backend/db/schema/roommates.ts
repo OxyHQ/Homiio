@@ -109,7 +109,10 @@ export const roommateRelationships = pgTable(
       sql`${table.status} in (${sql.raw(inList(ROOMMATE_RELATIONSHIP_STATUSES))})`,
     ),
     /** The canonical ordering. Also rules out a self-relationship, since `x < x` is false. */
-    check('roommate_relationships_sorted_pair_check', sql`${table.oxyUser1Id} < ${table.oxyUser2Id}`),
+    check(
+      'roommate_relationships_sorted_pair_check',
+      sql`${table.oxyUser1Id} < ${table.oxyUser2Id}`,
+    ),
     /** `min: 0, max: 100` from the schema. Empty table, nothing to reject. */
     check('roommate_relationships_match_score_check', sql`${table.matchScore} between 0 and 100`),
     check(

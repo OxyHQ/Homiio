@@ -85,7 +85,9 @@ export async function priceCurrencyCensus(
  * with no priced listing has no currency, and a bound applied in an invented
  * one would return homes nobody asked about.
  */
-export function dominantCurrency(census: readonly PriceCurrencyCount[]): ListingCurrency | undefined {
+export function dominantCurrency(
+  census: readonly PriceCurrencyCount[],
+): ListingCurrency | undefined {
   for (const row of census) {
     // A code outside `LISTING_CURRENCIES` can exist in the column: external
     // listings are upserted with `updateOne`, which runs no validator (see the

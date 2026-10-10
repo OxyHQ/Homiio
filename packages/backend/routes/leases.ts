@@ -57,15 +57,23 @@ const documentUpload = multer({
   },
 });
 
-export default function() {
+export default function () {
   const router = express.Router();
 
   router.get('/', validation.validateLeaseListQuery, asyncHandler(leaseController.getLeases));
   router.post('/', validation.validateLeaseCreate, asyncHandler(leaseController.createLease));
 
   // Sub-resource + lifecycle routes (static-segment first).
-  router.get('/:id/payments', validation.validateLeaseId, asyncHandler(leaseController.getLeasePayments));
-  router.post('/:id/payments', validation.validateLeaseId, asyncHandler(leaseController.createPayment));
+  router.get(
+    '/:id/payments',
+    validation.validateLeaseId,
+    asyncHandler(leaseController.getLeasePayments),
+  );
+  router.post(
+    '/:id/payments',
+    validation.validateLeaseId,
+    asyncHandler(leaseController.createPayment),
+  );
   // ── The rent LEDGER (#518 §7.2, #519 §7.2) ──────────────────────────────
   //
   // `/:id/payments` above is the OBLIGATION list — what is owed. These are the
@@ -76,7 +84,11 @@ export default function() {
   //
   // There is no processor route. See `controllers/leasePaymentController.ts`
   // and `docs/housing-parity.md`.
-  router.get('/:id/ledger', validation.validateLeaseId, asyncHandler(leasePaymentController.getLedger));
+  router.get(
+    '/:id/ledger',
+    validation.validateLeaseId,
+    asyncHandler(leasePaymentController.getLedger),
+  );
   // A receipt for a settled payment. Declared before the `/:id` matcher for the
   // same reason the rest of this file is: a static segment must never be
   // swallowed by a parameter.
@@ -106,7 +118,11 @@ export default function() {
     asyncHandler(leasePaymentController.refundPayment),
   );
 
-  router.get('/:id/documents', validation.validateLeaseId, asyncHandler(leaseController.getLeaseDocuments));
+  router.get(
+    '/:id/documents',
+    validation.validateLeaseId,
+    asyncHandler(leaseController.getLeaseDocuments),
+  );
   // The bytes of ONE document, to a party to the lease and to nobody else
   // (#518 §7.4). Declared before `/:id/documents` POST only for readability —
   // what matters is that it is on THIS router, the authenticated one, which is
@@ -125,7 +141,11 @@ export default function() {
     asyncHandler(leaseController.uploadLeaseDocument),
   );
   router.post('/:id/sign', validation.validateLeaseId, asyncHandler(leaseController.signLease));
-  router.post('/:id/terminate', validation.validateLeaseId, asyncHandler(leaseController.terminateLease));
+  router.post(
+    '/:id/terminate',
+    validation.validateLeaseId,
+    asyncHandler(leaseController.terminateLease),
+  );
   router.post('/:id/renew', validation.validateLeaseId, asyncHandler(leaseController.renewLease));
 
   router.get('/:id', validation.validateLeaseId, asyncHandler(leaseController.getLeaseById));
@@ -133,4 +153,4 @@ export default function() {
   router.delete('/:id', validation.validateLeaseId, asyncHandler(leaseController.deleteLease));
 
   return router;
-};
+}

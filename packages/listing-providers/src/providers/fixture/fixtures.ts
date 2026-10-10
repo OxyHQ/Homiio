@@ -99,7 +99,7 @@ export const FIXTURE_LISTINGS: readonly FixtureRawListing[] = [
       country: 'Spain',
       countryCode: 'ES',
       postalCode: '08009',
-      neighborhood: 'La Dreta de l\'Eixample',
+      neighborhood: "La Dreta de l'Eixample",
       lat: 41.3985,
       lng: 2.1686,
     },

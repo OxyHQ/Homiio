@@ -322,7 +322,9 @@ const shortString = (value: unknown, max: number): string | undefined =>
 
 const stringArray = (value: unknown, max: number): string[] | undefined => {
   if (!Array.isArray(value)) return undefined;
-  const out = value.filter((item): item is string => typeof item === 'string' && item.length > 0 && item.length <= 64);
+  const out = value.filter(
+    (item): item is string => typeof item === 'string' && item.length > 0 && item.length <= 64,
+  );
   return out.slice(0, max);
 };
 

@@ -14,10 +14,7 @@ import {
   STEP_SALE_DETAILS,
   resolveStepFlow,
 } from '@/components/property/create/constants';
-import {
-  draftPreviewData,
-  draftQualityItems,
-} from '@/components/property/create/listingDraft';
+import { draftPreviewData, draftQualityItems } from '@/components/property/create/listingDraft';
 import {
   CREATE_PROPERTY_FORM_PERSIST_KEY,
   createDefaultFormData,
@@ -47,7 +44,11 @@ const formatting = {
 describe('resolveStepFlow', () => {
   it('follows the housing template order and inserts one step per offering', () => {
     expect(
-      resolveStepFlow('apartment', [OfferingType.LONG_TERM_RENT, OfferingType.SALE, OfferingType.EXCHANGE]),
+      resolveStepFlow('apartment', [
+        OfferingType.LONG_TERM_RENT,
+        OfferingType.SALE,
+        OfferingType.EXCHANGE,
+      ]),
     ).toEqual([
       'Property Type',
       'Location',
@@ -80,7 +81,9 @@ describe('draftPreviewData', () => {
     const form = createDefaultFormData();
     form.basicInfo.propertyType = 'apartment';
     form.location = { ...form.location, floor: 7, unit: '7-1', showFloor: false };
-    expect(draftPreviewData(form, t, formatting).dates ?? '').not.toContain('property.sections.floor');
+    expect(draftPreviewData(form, t, formatting).dates ?? '').not.toContain(
+      'property.sections.floor',
+    );
 
     form.location.showFloor = true;
     const published = draftPreviewData(form, t, formatting);

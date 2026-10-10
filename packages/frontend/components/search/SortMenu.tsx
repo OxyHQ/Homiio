@@ -41,7 +41,9 @@ const SORT_OPTIONS: readonly SortOption[] = [
 
 /** Resolve the active option from a (sortBy, sortOrder) pair. */
 function matchOption(sortBy: SearchSortBy, sortOrder: SearchSortOrder): SortOption {
-  return SORT_OPTIONS.find((o) => o.sortBy === sortBy && o.sortOrder === sortOrder) ?? SORT_OPTIONS[0];
+  return (
+    SORT_OPTIONS.find((o) => o.sortBy === sortBy && o.sortOrder === sortOrder) ?? SORT_OPTIONS[0]
+  );
 }
 
 interface SortMenuProps {
@@ -53,7 +55,12 @@ interface SortMenuProps {
 }
 
 /** The toolbar Sort button, opening the orders as a Bloom dropdown menu. */
-export const SortMenu: React.FC<SortMenuProps> = ({ sortBy, sortOrder, onChange, iconOnly = false }) => {
+export const SortMenu: React.FC<SortMenuProps> = ({
+  sortBy,
+  sortOrder,
+  onChange,
+  iconOnly = false,
+}) => {
   const { t } = useTranslation();
   const active = matchOption(sortBy, sortOrder);
   const activeLabel = t(active.labelKey);
@@ -75,7 +82,9 @@ export const SortMenu: React.FC<SortMenuProps> = ({ sortBy, sortOrder, onChange,
           size="md"
           icon={RiExpandUpDownLine}
           iconOnly={iconOnly}
-          accessibilityLabel={`${sortWord}: ${activeLabel}`} tone="neutral" appearance="outline"
+          accessibilityLabel={`${sortWord}: ${activeLabel}`}
+          tone="neutral"
+          appearance="outline"
         >
           {iconOnly ? undefined : isDefault ? sortWord : activeLabel}
         </Button>

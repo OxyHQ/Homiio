@@ -114,8 +114,18 @@ describe('pruneClosedViewingsBefore — the sweep that was reaping nothing', () 
   it('REAPS declined and cancelled requests past the cutoff', async () => {
     const propertyId = await seedOwnedListing('oxy-owner');
     const old = new Date(Date.now() - 200 * DAY);
-    const declined = await seedViewing({ propertyId, ownerOxyUserId: 'oxy-owner', status: 'declined', updatedAt: old });
-    const cancelled = await seedViewing({ propertyId, ownerOxyUserId: 'oxy-owner', status: 'cancelled', updatedAt: old });
+    const declined = await seedViewing({
+      propertyId,
+      ownerOxyUserId: 'oxy-owner',
+      status: 'declined',
+      updatedAt: old,
+    });
+    const cancelled = await seedViewing({
+      propertyId,
+      ownerOxyUserId: 'oxy-owner',
+      status: 'cancelled',
+      updatedAt: old,
+    });
 
     const removed = await pruneClosedViewingsBefore(getDb(), new Date(Date.now() - 90 * DAY));
 
@@ -123,8 +133,12 @@ describe('pruneClosedViewingsBefore — the sweep that was reaping nothing', () 
     // deleting — which is exactly what the Mongo-backed version did after the
     // table moved — passes any assertion that only checks it did not throw.
     expect(removed).toBe(2);
-    expect(await getDb().select().from(viewingRequests).where(eq(viewingRequests.id, declined.id))).toHaveLength(0);
-    expect(await getDb().select().from(viewingRequests).where(eq(viewingRequests.id, cancelled.id))).toHaveLength(0);
+    expect(
+      await getDb().select().from(viewingRequests).where(eq(viewingRequests.id, declined.id)),
+    ).toHaveLength(0);
+    expect(
+      await getDb().select().from(viewingRequests).where(eq(viewingRequests.id, cancelled.id)),
+    ).toHaveLength(0);
   });
 
   it('SPARES a closed request inside the window, and open ones at any age', async () => {
@@ -134,15 +148,32 @@ describe('pruneClosedViewingsBefore — the sweep that was reaping nothing', () 
     const old = new Date(Date.now() - 200 * DAY);
     const recent = new Date(Date.now() - 10 * DAY);
 
-    const recentlyDeclined = await seedViewing({ propertyId, ownerOxyUserId: 'oxy-owner', status: 'declined', updatedAt: recent });
-    const oldPending = await seedViewing({ propertyId, ownerOxyUserId: 'oxy-owner', status: 'pending', updatedAt: old });
-    const oldApproved = await seedViewing({ propertyId, ownerOxyUserId: 'oxy-owner', status: 'approved', updatedAt: old });
+    const recentlyDeclined = await seedViewing({
+      propertyId,
+      ownerOxyUserId: 'oxy-owner',
+      status: 'declined',
+      updatedAt: recent,
+    });
+    const oldPending = await seedViewing({
+      propertyId,
+      ownerOxyUserId: 'oxy-owner',
+      status: 'pending',
+      updatedAt: old,
+    });
+    const oldApproved = await seedViewing({
+      propertyId,
+      ownerOxyUserId: 'oxy-owner',
+      status: 'approved',
+      updatedAt: old,
+    });
 
     const removed = await pruneClosedViewingsBefore(getDb(), new Date(Date.now() - 90 * DAY));
 
     expect(removed).toBe(0);
     for (const row of [recentlyDeclined, oldPending, oldApproved]) {
-      expect(await getDb().select().from(viewingRequests).where(eq(viewingRequests.id, row.id))).toHaveLength(1);
+      expect(
+        await getDb().select().from(viewingRequests).where(eq(viewingRequests.id, row.id)),
+      ).toHaveLength(1);
     }
   });
 });
@@ -179,11 +210,13 @@ describe('owner analytics — the endpoint that always returned zeros', () => {
     // other survives — measured, it did. `recently_viewed_owner_property_key`
     // is unique per (person, listing), so the repeat has to be a second
     // listing rather than a second row on the same one.
-    await getDb().insert(recentlyViewed).values([
-      { oxyUserId: 'oxy-viewer-a', propertyId },
-      { oxyUserId: 'oxy-viewer-a', propertyId: second },
-      { oxyUserId: 'oxy-viewer-b', propertyId },
-    ]);
+    await getDb()
+      .insert(recentlyViewed)
+      .values([
+        { oxyUserId: 'oxy-viewer-a', propertyId },
+        { oxyUserId: 'oxy-viewer-a', propertyId: second },
+        { oxyUserId: 'oxy-viewer-b', propertyId },
+      ]);
     await getDb().insert(savedItems).values({
       oxyUserId: 'oxy-viewer-a',
       targetType: 'property',
@@ -215,10 +248,12 @@ describe('owner analytics — the endpoint that always returned zeros', () => {
     const mine = await seedOwnedListing('oxy-owner');
     const theirs = await seedOwnedListing('oxy-other');
 
-    await getDb().insert(recentlyViewed).values([
-      { oxyUserId: 'oxy-viewer-a', propertyId: mine },
-      { oxyUserId: 'oxy-viewer-b', propertyId: theirs },
-    ]);
+    await getDb()
+      .insert(recentlyViewed)
+      .values([
+        { oxyUserId: 'oxy-viewer-a', propertyId: mine },
+        { oxyUserId: 'oxy-viewer-b', propertyId: theirs },
+      ]);
     await seedViewing({ propertyId: mine, ownerOxyUserId: 'oxy-owner', status: 'pending' });
     await seedViewing({ propertyId: theirs, ownerOxyUserId: 'oxy-other', status: 'pending' });
 
@@ -235,10 +270,12 @@ describe('owner analytics — the endpoint that always returned zeros', () => {
       overrides: { oxyUserId: 'oxy-owner', status: 'archived' },
     });
 
-    await getDb().insert(recentlyViewed).values([
-      { oxyUserId: 'oxy-viewer-a', propertyId: live },
-      { oxyUserId: 'oxy-viewer-b', propertyId: archived },
-    ]);
+    await getDb()
+      .insert(recentlyViewed)
+      .values([
+        { oxyUserId: 'oxy-viewer-a', propertyId: live },
+        { oxyUserId: 'oxy-viewer-b', propertyId: archived },
+      ]);
 
     const res = await request(buildApp('oxy-owner')).get('/analytics');
     expect(res.body.data.views.total).toBe(1);
@@ -248,11 +285,13 @@ describe('owner analytics — the endpoint that always returned zeros', () => {
     await seedProfile('oxy-owner');
     const propertyId = await seedOwnedListing('oxy-owner');
 
-    await getDb().insert(recentlyViewed).values([
-      { oxyUserId: 'oxy-recent', propertyId },
-      // `viewed_at` is `createdAt()`-defaulted, so an old row has to name it.
-      { oxyUserId: 'oxy-ancient', propertyId, viewedAt: new Date(Date.now() - 400 * DAY) },
-    ]);
+    await getDb()
+      .insert(recentlyViewed)
+      .values([
+        { oxyUserId: 'oxy-recent', propertyId },
+        // `viewed_at` is `createdAt()`-defaulted, so an old row has to name it.
+        { oxyUserId: 'oxy-ancient', propertyId, viewedAt: new Date(Date.now() - 400 * DAY) },
+      ]);
 
     const res = await request(buildApp('oxy-owner')).get('/analytics?period=30d');
     expect(res.body.data.views.total).toBe(1);

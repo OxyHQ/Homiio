@@ -101,7 +101,9 @@ export function UpcomingTripsSection({
             <Button
               size="sm"
               trailingIcon={RiArrowRightSLine}
-              onPress={() => router.push('/stays')} tone="accent" appearance="subtle"
+              onPress={() => router.push('/stays')}
+              tone="accent"
+              appearance="subtle"
             >
               {t('saved.trips.allStays')}
             </Button>
@@ -110,7 +112,9 @@ export function UpcomingTripsSection({
             <Button
               size="sm"
               trailingIcon={RiArrowRightSLine}
-              onPress={() => router.push('/exchange/requests')} tone="accent" appearance="subtle"
+              onPress={() => router.push('/exchange/requests')}
+              tone="accent"
+              appearance="subtle"
             >
               {t('saved.trips.allSwaps')}
             </Button>

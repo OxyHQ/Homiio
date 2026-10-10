@@ -29,9 +29,7 @@ type ContactLink = {
   href: string;
 };
 
-function buildContactLinks(
-  contact: NonNullable<Property['externalContact']>,
-): ContactLink[] {
+function buildContactLinks(contact: NonNullable<Property['externalContact']>): ContactLink[] {
   const links: ContactLink[] = [];
   if (contact.phone) {
     links.push({ key: 'phone', label: contact.phone, href: `tel:${contact.phone}` });
@@ -57,12 +55,16 @@ function buildContactLinks(
  */
 function ContactIcon({ kind }: { kind: ContactLink['key'] }) {
   if (kind === 'phone') {
-    return <RiPhoneLine width={LINK_ICON_SIZE} height={LINK_ICON_SIZE} fill={colors.primaryColor} />;
+    return (
+      <RiPhoneLine width={LINK_ICON_SIZE} height={LINK_ICON_SIZE} fill={colors.primaryColor} />
+    );
   }
   if (kind === 'email') {
     return <RiMailLine width={LINK_ICON_SIZE} height={LINK_ICON_SIZE} fill={colors.primaryColor} />;
   }
-  return <RiWhatsappLine width={LINK_ICON_SIZE} height={LINK_ICON_SIZE} fill={colors.primaryColor} />;
+  return (
+    <RiWhatsappLine width={LINK_ICON_SIZE} height={LINK_ICON_SIZE} fill={colors.primaryColor} />
+  );
 }
 
 function ContactLinkRow({ link }: { link: ContactLink }) {
@@ -102,17 +104,12 @@ export const ExternalContactSection: React.FC<Props> = ({ property }) => {
   if (links.length === 0) return null;
 
   const displayName =
-    property.externalContact.agencyName?.trim() ||
-    property.externalContact.name?.trim();
+    property.externalContact.agencyName?.trim() || property.externalContact.name?.trim();
 
   return (
     <View style={styles.container}>
-      <BloomText style={styles.title}>
-        {t('property.external.contactTitle')}
-      </BloomText>
-      {displayName ? (
-        <BloomText style={styles.subtitle}>{displayName}</BloomText>
-      ) : null}
+      <BloomText style={styles.title}>{t('property.external.contactTitle')}</BloomText>
+      {displayName ? <BloomText style={styles.subtitle}>{displayName}</BloomText> : null}
       <View style={styles.links}>
         {links.map((link) => (
           <ContactLinkRow key={link.key} link={link} />

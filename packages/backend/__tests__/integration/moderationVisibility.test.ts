@@ -28,11 +28,7 @@ import express, { type Express } from 'express';
 import request from 'supertest';
 import { and } from 'drizzle-orm';
 import { PgDialect } from 'drizzle-orm/pg-core';
-import {
-  PropertyStatus,
-  PropertyType,
-  OfferingType,
-} from '@homiio/shared-types';
+import { PropertyStatus, PropertyType, OfferingType } from '@homiio/shared-types';
 
 import { getProperties } from '../../controllers/property/list';
 import { getPropertyById } from '../../controllers/property/retrieve';
@@ -82,9 +78,7 @@ function buildApp(oxyUserId?: string): Express {
 }
 
 /** A published listing owned by `oxy-landlord`, in its own city. */
-async function listing(
-  overrides: Partial<typeof properties.$inferInsert> = {},
-): Promise<string> {
+async function listing(overrides: Partial<typeof properties.$inferInsert> = {}): Promise<string> {
   // A unique country code per listing: `countries_code_key` is UNIQUE and these
   // tests seed two listings each.
   const chain = await seedGeoChain({ countryCode: `ES-${nextChain++}` });

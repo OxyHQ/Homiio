@@ -30,7 +30,7 @@ import partners from './partners';
 import evictions from './evictions';
 import cityController from '../controllers/cityController';
 
-export default function() {
+export default function () {
   const propertyRoutes = properties();
   const roomRoutes = rooms();
   const leaseRoutes = leases();
@@ -101,9 +101,9 @@ export default function() {
       status: 'ok',
       timestamp: new Date().toISOString(),
       service: 'Homio API',
-      version: '1.0.0'
+      version: '1.0.0',
     });
   });
 
   return router;
-};
+}

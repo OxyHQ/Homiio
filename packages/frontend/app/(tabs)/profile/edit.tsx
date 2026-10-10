@@ -28,11 +28,7 @@ export default function ProfileEditScreen() {
   const title = `Edit profile${form.hasUnsavedChanges ? ' *' : ''}`;
 
   return (
-    <SafeAreaView
-      style={styles.safeArea}
-      edges={['bottom']}
-      key={`edit-${activeProfile?.id}`}
-    >
+    <SafeAreaView style={styles.safeArea} edges={['bottom']} key={`edit-${activeProfile?.id}`}>
       <Header
         options={{
           title,
@@ -42,7 +38,9 @@ export default function ProfileEditScreen() {
               size="sm"
               onPress={form.handleSave}
               disabled={form.isSaving}
-              loading={form.isSaving} tone="accent" appearance="solid"
+              loading={form.isSaving}
+              tone="accent"
+              appearance="solid"
             >
               {form.isSaving ? 'Saving…' : 'Save'}
             </Button>,

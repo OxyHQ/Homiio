@@ -34,7 +34,8 @@ export const TENANT_APPLICATION_STATUSES = [
  * adding a value to the contract without adding it here is a compile error
  * rather than a row the database refuses at runtime.
  */
-export const DOCUMENT_VERIFICATION_STATUS_VALUES = DOCUMENT_VERIFICATION_STATUSES satisfies readonly DocumentVerificationStatus[];
+export const DOCUMENT_VERIFICATION_STATUS_VALUES =
+  DOCUMENT_VERIFICATION_STATUSES satisfies readonly DocumentVerificationStatus[];
 
 /**
  * Re-exported from the shared contract rather than re-declared.

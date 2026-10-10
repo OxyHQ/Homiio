@@ -13,7 +13,7 @@ export enum ReservationStatus {
   CONFIRMED = 'confirmed',
   CANCELLED = 'cancelled',
   COMPLETED = 'completed',
-  DECLINED = 'declined'
+  DECLINED = 'declined',
 }
 
 export interface Reservation {

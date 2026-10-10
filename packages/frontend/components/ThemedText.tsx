@@ -6,22 +6,12 @@
  * existing call sites.
  */
 import React from 'react';
-import {
-  StyleSheet,
-  type StyleProp,
-  type TextProps,
-  type TextStyle,
-} from 'react-native';
+import { StyleSheet, type StyleProp, type TextProps, type TextStyle } from 'react-native';
 
 import { H1, H2, P, Text } from '@oxy.so/bloom/typography';
 import { colors } from '@/styles/colors';
 
-export type ThemedTextType =
-  | 'default'
-  | 'title'
-  | 'defaultSemiBold'
-  | 'subtitle'
-  | 'link';
+export type ThemedTextType = 'default' | 'title' | 'defaultSemiBold' | 'subtitle' | 'link';
 
 export type ThemedTextProps = TextProps & {
   lightColor?: string;
@@ -56,15 +46,8 @@ const typeStyles = StyleSheet.create({
   },
 });
 
-export function ThemedText({
-  style,
-  type = 'default',
-  className,
-  ...rest
-}: ThemedTextProps) {
-  const resolvedStyle: StyleProp<TextStyle> = className?.trim()
-    ? style
-    : [typeStyles[type], style];
+export function ThemedText({ style, type = 'default', className, ...rest }: ThemedTextProps) {
+  const resolvedStyle: StyleProp<TextStyle> = className?.trim() ? style : [typeStyles[type], style];
 
   if (type === 'title') {
     return <H1 {...rest} className={className} style={resolvedStyle} />;

@@ -52,9 +52,7 @@ export function applySearchPatch(query: SearchQuery, patch: SindiSearchPatch): S
           priceMin: undefined,
           priceMax: undefined,
           priceCurrency: undefined,
-          ...(patch.offering === 'short_term_rent'
-            ? {}
-            : { dates: undefined, guests: undefined }),
+          ...(patch.offering === 'short_term_rent' ? {} : { dates: undefined, guests: undefined }),
         }
       : query;
 
@@ -102,4 +100,3 @@ export function envelopeRefusal(input: {
   if (input.envelope.contextRevision !== input.contextRevision) return 'stale';
   return null;
 }
-

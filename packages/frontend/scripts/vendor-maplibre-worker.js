@@ -48,7 +48,8 @@ function vendorMaplibreWorker() {
   // Drop directories left by a previous version so an old worker is never
   // exported next to the new one.
   for (const entry of fs.readdirSync(VENDOR_ROOT)) {
-    if (entry !== version) fs.rmSync(path.join(VENDOR_ROOT, entry), { recursive: true, force: true });
+    if (entry !== version)
+      fs.rmSync(path.join(VENDOR_ROOT, entry), { recursive: true, force: true });
   }
 
   return targetDir;
@@ -57,5 +58,7 @@ function vendorMaplibreWorker() {
 module.exports = { vendorMaplibreWorker, WORKER_FILES };
 
 if (require.main === module) {
-  console.log(`maplibre-gl worker vendored to ${path.relative(process.cwd(), vendorMaplibreWorker())}`);
+  console.log(
+    `maplibre-gl worker vendored to ${path.relative(process.cwd(), vendorMaplibreWorker())}`,
+  );
 }

@@ -11,11 +11,7 @@
  * The API/Express process never imports providers — only the worker does.
  */
 
-import type {
-  ListingMarket,
-  NormalizedListing,
-  ProviderId,
-} from '@homiio/shared-types';
+import type { ListingMarket, NormalizedListing, ProviderId } from '@homiio/shared-types';
 import type { BrowserSession } from './session';
 import type { BrowserSessionOptions } from './browserSession';
 

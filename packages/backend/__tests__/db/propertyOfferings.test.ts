@@ -117,7 +117,10 @@ describe('offering coherence', () => {
     // rejection could mean the constraint fired or that the fixture was never
     // insertable at all — and those read identically.
     const id = await insert({});
-    const rows = await db.select({ id: properties.id }).from(properties).where(eq(properties.id, id));
+    const rows = await db
+      .select({ id: properties.id })
+      .from(properties)
+      .where(eq(properties.id, id));
     expect(rows).toHaveLength(1);
   });
 

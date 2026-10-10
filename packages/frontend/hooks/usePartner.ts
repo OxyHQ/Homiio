@@ -18,12 +18,7 @@ import {
   type UseQueryResult,
 } from '@tanstack/react-query';
 import { useOxy } from '@oxy.so/services';
-import type {
-  Commission,
-  PartnerMeResponse,
-  Property,
-  PropertyStatus,
-} from '@homiio/shared-types';
+import type { Commission, PartnerMeResponse, Property, PropertyStatus } from '@homiio/shared-types';
 
 import { partnerApi } from '@/services/partnerApi';
 import { propertyService, type MarkTransactedResult } from '@/services/propertyService';

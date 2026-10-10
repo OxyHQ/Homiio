@@ -600,9 +600,7 @@ function FiltersBody({ query, onApply, onClose, showTypes }: FiltersBodyProps): 
               availableNow={draft.availableNow === true}
               onAvailableNowChange={(on) => patch({ availableNow: on ? true : undefined })}
               date={availableByDate}
-              onDateChange={(date) =>
-                patch({ availableBy: date ? toCivilDate(date) : undefined })
-              }
+              onDateChange={(date) => patch({ availableBy: date ? toCivilDate(date) : undefined })}
               availableNowLabel={t('search.filters.availableNow')}
               availableNowDescription={t('search.filters.availableNowHint')}
               dateLabel={t('search.filters.availableFrom')}

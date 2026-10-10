@@ -141,9 +141,7 @@ export const StepAddress: React.FC<StepAddressProps> = ({
           screenId="write-review"
         />
       </View>
-      <BloomText style={styles.mapHint}>
-        {t('reviews.write.mapHint')}
-      </BloomText>
+      <BloomText style={styles.mapHint}>{t('reviews.write.mapHint')}</BloomText>
     </View>
   );
 };

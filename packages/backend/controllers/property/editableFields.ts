@@ -77,7 +77,9 @@ export const CREATABLE_PROPERTY_FIELDS: readonly string[] = [
  * valid precision or does not mention one (a create then stores the column
  * default, `building`; an update leaves the stored choice alone).
  */
-export function invalidAddressPublishedPrecision(payload: Record<string, unknown>): AppError | null {
+export function invalidAddressPublishedPrecision(
+  payload: Record<string, unknown>,
+): AppError | null {
   if (!Object.prototype.hasOwnProperty.call(payload, 'addressPublishedPrecision')) return null;
   if (isListingAddressPrecision(payload.addressPublishedPrecision)) return null;
   return new AppError(

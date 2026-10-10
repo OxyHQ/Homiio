@@ -136,7 +136,12 @@ describe('warmBrowserPage', () => {
     const challenge = '<html><script src="https://geo.captcha-delivery.com/x"></script></html>';
     const goto = jest.fn(async () => undefined);
     const page = buildPage({
-      contents: [challenge, challenge, challenge, listingHtml('<article class="item">listing</article>')],
+      contents: [
+        challenge,
+        challenge,
+        challenge,
+        listingHtml('<article class="item">listing</article>'),
+      ],
       goto,
     });
 
@@ -163,7 +168,10 @@ describe('fetchJsonInPage', () => {
       request: buildRequestContext(get),
     });
 
-    const result = await fetchJsonInPage(page, 'https://portal.example/es/ajax/listing/georeach/madrid-madrid');
+    const result = await fetchJsonInPage(
+      page,
+      'https://portal.example/es/ajax/listing/georeach/madrid-madrid',
+    );
 
     expect(result.status).toBe(200);
     expect(result.body).toBe('{"ads":[]}');

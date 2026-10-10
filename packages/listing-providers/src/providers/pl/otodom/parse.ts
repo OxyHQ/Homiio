@@ -138,13 +138,14 @@ function cityFromLocation(location: unknown): {
   const streetObj = address && isRecord(address.street) ? address.street : undefined;
   const streetName = streetObj ? asString(streetObj.name) : undefined;
   const streetNumber = streetObj ? asString(streetObj.number) : undefined;
-  const street =
-    streetName && streetNumber ? `${streetName} ${streetNumber}` : streetName;
+  const street = streetName && streetNumber ? `${streetName} ${streetNumber}` : streetName;
 
   return { city, region, neighborhood, street, coordinates };
 }
 
-function moneyFromItem(item: Record<string, unknown>): { value: number; currency: string; operation: 'rent' | 'sale' } | undefined {
+function moneyFromItem(
+  item: Record<string, unknown>,
+): { value: number; currency: string; operation: 'rent' | 'sale' } | undefined {
   const operation = operationFromTransaction(item.transaction);
   const total = isRecord(item.totalPrice) ? item.totalPrice : undefined;
   if (total) {
@@ -179,7 +180,8 @@ function detailOperation(
     if (/sell|sale/i.test(categoryType)) return 'sale';
     if (/rent/i.test(categoryType)) return 'rent';
   }
-  const priceType = unified && isRecord(unified.price) ? asString(unified.price.__typename) : undefined;
+  const priceType =
+    unified && isRecord(unified.price) ? asString(unified.price.__typename) : undefined;
   if (priceType) {
     if (/sell|sale/i.test(priceType)) return 'sale';
     if (/rent/i.test(priceType)) return 'rent';
@@ -228,9 +230,11 @@ function detailMoney(
   const fromCharacteristics = characteristicPrice(ad);
   if (fromCharacteristics) return { ...fromCharacteristics, operation };
   const fromTarget = ad && isRecord(ad.target) ? asNumber(ad.target.Price) : undefined;
-  if (fromTarget !== undefined && fromTarget > 0) return { value: fromTarget, currency: 'PLN', operation };
+  if (fromTarget !== undefined && fromTarget > 0)
+    return { value: fromTarget, currency: 'PLN', operation };
   // Legacy markup: `ad.totalPrice` / `ad.price.value` (kept for older payloads).
-  const legacy = (ad ? moneyFromItem(ad) : undefined) ?? (unified ? moneyFromItem(unified) : undefined);
+  const legacy =
+    (ad ? moneyFromItem(ad) : undefined) ?? (unified ? moneyFromItem(unified) : undefined);
   if (legacy) return legacy;
   return undefined;
 }
@@ -419,10 +423,7 @@ export function parseOtodomDetail(html: string, url: string): OtodomRawListing {
   }
 
   const sourceId =
-    asString(ad?.id) ??
-    asString(unified?.id) ??
-    asString(props.id) ??
-    otodomSourceIdFromUrl(url);
+    asString(ad?.id) ?? asString(unified?.id) ?? asString(props.id) ?? otodomSourceIdFromUrl(url);
   if (!sourceId) {
     throw new Error('otodom: could not resolve sourceId');
   }
@@ -459,7 +460,8 @@ export function parseOtodomDetail(html: string, url: string): OtodomRawListing {
   };
 
   const description = asString(unified?.description) ?? asString(ad?.description);
-  if (description) result.description = description.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '');
+  if (description)
+    result.description = description.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '');
   const bedrooms = roomsFromValue(attrs.rooms_num) ?? roomsFromValue(ad?.roomsNumber);
   if (bedrooms !== undefined) result.bedrooms = bedrooms;
   const squareMeters = asNumber(attrs.m) ?? asNumber(ad?.areaInSquareMeters);

@@ -38,10 +38,7 @@ export function formatPercentage(
   options: FormatPercentageOptions = {},
 ): string {
   const minimumFractionDigits = options.minimumFractionDigits ?? 0;
-  const maximumFractionDigits = Math.max(
-    minimumFractionDigits,
-    options.maximumFractionDigits ?? 1,
-  );
+  const maximumFractionDigits = Math.max(minimumFractionDigits, options.maximumFractionDigits ?? 1);
   const safeValue = Number.isFinite(value) ? value : 0;
   // `style: 'percent'` expects a fraction, so a caller holding `87` for 87% has
   // to be scaled down before it is multiplied back up.

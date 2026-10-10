@@ -326,13 +326,11 @@ export async function resolveAgencyId(agencyName: string): Promise<string | unde
  *
  * @returns the basis that was satisfied, or `undefined` when neither was.
  */
-export async function tryConfirmSupporter(
-  input: {
-    readonly caseId: string;
-    readonly oxyUserId: string;
-    readonly minTenureDays: number;
-  },
-): Promise<'account_tenure' | 'supporter_vouch' | undefined> {
+export async function tryConfirmSupporter(input: {
+  readonly caseId: string;
+  readonly oxyUserId: string;
+  readonly minTenureDays: number;
+}): Promise<'account_tenure' | 'supporter_vouch' | undefined> {
   const db = getDb();
 
   const profile = await findProfileByOxyUserId(db, input.oxyUserId);
@@ -369,14 +367,12 @@ export async function tryConfirmSupporter(
  * dispatch is best-effort by design (the domain action must succeed even if a
  * mailbox write fails), so a missed notification is better than a repeated one.
  */
-export async function notifyTimelineEvent(
-  input: {
-    readonly caseId: string;
-    readonly updateId: string;
-    readonly excludeOxyUserId: string;
-    readonly payload: DispatchPayload;
-  },
-): Promise<readonly string[]> {
+export async function notifyTimelineEvent(input: {
+  readonly caseId: string;
+  readonly updateId: string;
+  readonly excludeOxyUserId: string;
+  readonly payload: DispatchPayload;
+}): Promise<readonly string[]> {
   const recipients = await listFollowerOxyUserIds(input.caseId, input.excludeOxyUserId);
   const claimed = await claimUpdateNotificationRecipients(input.updateId, recipients);
   await Promise.allSettled(

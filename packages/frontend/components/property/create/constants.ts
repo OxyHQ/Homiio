@@ -12,7 +12,14 @@ import { ExchangeMode, OfferingType } from '@homiio/shared-types';
  * The property types a host can publish, in tile order. Labels are
  * `properties.titles.types.<id>`; icons are Bloom's (`DEFAULT_PROPERTY_TYPES`).
  */
-export const PROPERTY_TYPE_IDS = ['apartment', 'house', 'room', 'studio', 'coliving', 'other'] as const;
+export const PROPERTY_TYPE_IDS = [
+  'apartment',
+  'house',
+  'room',
+  'studio',
+  'coliving',
+  'other',
+] as const;
 
 export const DEFAULT_PROPERTY_TYPE = 'apartment';
 export const FALLBACK_PROPERTY_TYPE = 'other';
@@ -46,11 +53,17 @@ export const STEP_COPY: Readonly<Record<string, { title: string; description?: s
     description: 'propertyCreate.steps.location.description',
   },
   [STEP_BASIC_INFO]: { title: 'propertyCreate.steps.basicInfo.title' },
-  [STEP_OFFERING]: { title: 'listing.offering.stepTitle', description: 'listing.offering.stepHelp' },
+  [STEP_OFFERING]: {
+    title: 'listing.offering.stepTitle',
+    description: 'listing.offering.stepHelp',
+  },
   [STEP_LONG_TERM_PRICING]: { title: 'listing.offering.longTermStepTitle' },
   [STEP_NIGHTLY_PRICING]: { title: 'listing.offering.nightlyStepTitle' },
   [STEP_SALE_DETAILS]: { title: 'listing.sale.stepTitle' },
-  [STEP_EXCHANGE_SETTINGS]: { title: 'listing.exchange.stepTitle', description: 'listing.exchange.stepHelp' },
+  [STEP_EXCHANGE_SETTINGS]: {
+    title: 'listing.exchange.stepTitle',
+    description: 'listing.exchange.stepHelp',
+  },
   [STEP_AMENITIES]: { title: 'propertyCreate.amenities.rulesTitle' },
   [STEP_COLIVING]: { title: 'propertyCreate.steps.coliving.title' },
   [STEP_MEDIA]: {
@@ -131,7 +144,13 @@ const FULL_ADDRESS = [
   'latitude',
   'longitude',
 ];
-const HOUSE_RULES = ['petsAllowed', 'smokingAllowed', 'partiesAllowed', 'guestsAllowed', 'maxGuests'];
+const HOUSE_RULES = [
+  'petsAllowed',
+  'smokingAllowed',
+  'partiesAllowed',
+  'guestsAllowed',
+  'maxGuests',
+];
 const COMMON_STEPS = {
   [STEP_PROPERTY_TYPE]: ['propertyType'],
   [STEP_MEDIA]: ['images'],
@@ -171,7 +190,15 @@ export const FIELD_CONFIG: Record<string, Record<string, string[]>> = {
   other: {
     ...COMMON_STEPS,
     [STEP_BASIC_INFO]: ['bathrooms', 'squareFootage', 'floor', 'yearBuilt'],
-    [STEP_LOCATION]: ['address', 'city', 'state', 'postal_code', 'country', 'latitude', 'longitude'],
+    [STEP_LOCATION]: [
+      'address',
+      'city',
+      'state',
+      'postal_code',
+      'country',
+      'latitude',
+      'longitude',
+    ],
   },
 };
 

@@ -29,7 +29,12 @@ describe('canonicalAmenity', () => {
       expect(canonicalAmenity(input)).toBe('pool');
     }
     // air conditioning (localized + EN + camelCase)
-    for (const input of ['aire acondicionado', 'aria condizionata', 'air_conditioner', 'airConditioning']) {
+    for (const input of [
+      'aire acondicionado',
+      'aria condizionata',
+      'air_conditioner',
+      'airConditioning',
+    ]) {
       expect(canonicalAmenity(input)).toBe('air_conditioning');
     }
     // washing machine (blueground washerUnit / laundryRoomUnit / raw washer)
@@ -53,7 +58,14 @@ describe('canonicalAmenity', () => {
   });
 
   it('drops non-amenity words (condition, orientation, marketing copy)', () => {
-    for (const input of ['soleado', 'exterior', 'reformado', 'Double glazing', 'coffeeMachine', '']) {
+    for (const input of [
+      'soleado',
+      'exterior',
+      'reformado',
+      'Double glazing',
+      'coffeeMachine',
+      '',
+    ]) {
       expect(canonicalAmenity(input)).toBeUndefined();
     }
   });

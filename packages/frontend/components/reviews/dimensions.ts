@@ -35,30 +35,105 @@ export interface DimensionDescriptor {
 }
 
 export const APARTMENT_DIMENSIONS: DimensionDescriptor[] = [
-  { field: 'summerTemperature', labelKey: 'reviews.write.fields.summerTemperature', enumPrefix: 'reviews.enums.temperature', values: Object.values(TemperatureRating) },
-  { field: 'winterTemperature', labelKey: 'reviews.write.fields.winterTemperature', enumPrefix: 'reviews.enums.temperature', values: Object.values(TemperatureRating) },
-  { field: 'noise', labelKey: 'reviews.write.fields.noise', enumPrefix: 'reviews.enums.noise', values: Object.values(NoiseLevel) },
-  { field: 'light', labelKey: 'reviews.write.fields.light', enumPrefix: 'reviews.enums.light', values: Object.values(LightLevel) },
-  { field: 'conditionAndMaintenance', labelKey: 'reviews.write.fields.conditionAndMaintenance', enumPrefix: 'reviews.enums.condition', values: Object.values(ConditionRating) },
+  {
+    field: 'summerTemperature',
+    labelKey: 'reviews.write.fields.summerTemperature',
+    enumPrefix: 'reviews.enums.temperature',
+    values: Object.values(TemperatureRating),
+  },
+  {
+    field: 'winterTemperature',
+    labelKey: 'reviews.write.fields.winterTemperature',
+    enumPrefix: 'reviews.enums.temperature',
+    values: Object.values(TemperatureRating),
+  },
+  {
+    field: 'noise',
+    labelKey: 'reviews.write.fields.noise',
+    enumPrefix: 'reviews.enums.noise',
+    values: Object.values(NoiseLevel),
+  },
+  {
+    field: 'light',
+    labelKey: 'reviews.write.fields.light',
+    enumPrefix: 'reviews.enums.light',
+    values: Object.values(LightLevel),
+  },
+  {
+    field: 'conditionAndMaintenance',
+    labelKey: 'reviews.write.fields.conditionAndMaintenance',
+    enumPrefix: 'reviews.enums.condition',
+    values: Object.values(ConditionRating),
+  },
 ];
 
 export const MANAGEMENT_DIMENSIONS: DimensionDescriptor[] = [
-  { field: 'landlordTreatment', labelKey: 'reviews.write.fields.landlordTreatment', enumPrefix: 'reviews.enums.landlordTreatment', values: Object.values(LandlordTreatment) },
-  { field: 'problemResponse', labelKey: 'reviews.write.fields.problemResponse', enumPrefix: 'reviews.enums.problemResponse', values: Object.values(ResponseRating) },
-  { field: 'depositReturned', labelKey: 'reviews.write.fields.depositReturned', enumPrefix: 'reviews.enums.depositReturned', values: Object.values(DepositReturn) },
+  {
+    field: 'landlordTreatment',
+    labelKey: 'reviews.write.fields.landlordTreatment',
+    enumPrefix: 'reviews.enums.landlordTreatment',
+    values: Object.values(LandlordTreatment),
+  },
+  {
+    field: 'problemResponse',
+    labelKey: 'reviews.write.fields.problemResponse',
+    enumPrefix: 'reviews.enums.problemResponse',
+    values: Object.values(ResponseRating),
+  },
+  {
+    field: 'depositReturned',
+    labelKey: 'reviews.write.fields.depositReturned',
+    enumPrefix: 'reviews.enums.depositReturned',
+    values: Object.values(DepositReturn),
+  },
 ];
 
 export const BUILDING_DIMENSIONS: DimensionDescriptor[] = [
-  { field: 'staircaseNeighbors', labelKey: 'reviews.write.fields.staircaseNeighbors', enumPrefix: 'reviews.enums.staircaseNeighbors', values: Object.values(NeighborRating) },
-  { field: 'neighborRelations', labelKey: 'reviews.write.fields.neighborRelations', enumPrefix: 'reviews.enums.neighborRelations', values: Object.values(NeighborRelations) },
-  { field: 'cleaning', labelKey: 'reviews.write.fields.cleaning', enumPrefix: 'reviews.enums.cleaning', values: Object.values(CleaningRating) },
+  {
+    field: 'staircaseNeighbors',
+    labelKey: 'reviews.write.fields.staircaseNeighbors',
+    enumPrefix: 'reviews.enums.staircaseNeighbors',
+    values: Object.values(NeighborRating),
+  },
+  {
+    field: 'neighborRelations',
+    labelKey: 'reviews.write.fields.neighborRelations',
+    enumPrefix: 'reviews.enums.neighborRelations',
+    values: Object.values(NeighborRelations),
+  },
+  {
+    field: 'cleaning',
+    labelKey: 'reviews.write.fields.cleaning',
+    enumPrefix: 'reviews.enums.cleaning',
+    values: Object.values(CleaningRating),
+  },
 ];
 
 export const AREA_DIMENSIONS: DimensionDescriptor[] = [
-  { field: 'areaTourists', labelKey: 'reviews.write.fields.areaTourists', enumPrefix: 'reviews.enums.areaTourists', values: Object.values(TouristLevel) },
-  { field: 'areaNoise', labelKey: 'reviews.write.fields.areaNoise', enumPrefix: 'reviews.enums.noise', values: Object.values(NoiseLevel) },
-  { field: 'areaCleanliness', labelKey: 'reviews.write.fields.areaCleanliness', enumPrefix: 'reviews.enums.cleaning', values: Object.values(CleaningRating) },
-  { field: 'areaSecurity', labelKey: 'reviews.write.fields.areaSecurity', enumPrefix: 'reviews.enums.areaSecurity', values: Object.values(SecurityLevel) },
+  {
+    field: 'areaTourists',
+    labelKey: 'reviews.write.fields.areaTourists',
+    enumPrefix: 'reviews.enums.areaTourists',
+    values: Object.values(TouristLevel),
+  },
+  {
+    field: 'areaNoise',
+    labelKey: 'reviews.write.fields.areaNoise',
+    enumPrefix: 'reviews.enums.noise',
+    values: Object.values(NoiseLevel),
+  },
+  {
+    field: 'areaCleanliness',
+    labelKey: 'reviews.write.fields.areaCleanliness',
+    enumPrefix: 'reviews.enums.cleaning',
+    values: Object.values(CleaningRating),
+  },
+  {
+    field: 'areaSecurity',
+    labelKey: 'reviews.write.fields.areaSecurity',
+    enumPrefix: 'reviews.enums.areaSecurity',
+    values: Object.values(SecurityLevel),
+  },
 ];
 
 export const SERVICE_VALUES: readonly string[] = Object.values(ServiceType);

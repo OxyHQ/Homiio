@@ -325,14 +325,10 @@ describe('a lease document can be a PDF, and the client no longer names where it
 
     expect(created.status).toBe(201);
     const documentId: string = created.body.data.id;
-    expect(created.body.data.downloadPath).toBe(
-      `/api/leases/${leaseId}/documents/${documentId}`,
-    );
+    expect(created.body.data.downloadPath).toBe(`/api/leases/${leaseId}/documents/${documentId}`);
     expect(JSON.stringify(created.body)).not.toContain('/api/images/file/');
 
-    const fetched = await request(authed(TENANT)).get(
-      `/leases/${leaseId}/documents/${documentId}`,
-    );
+    const fetched = await request(authed(TENANT)).get(`/leases/${leaseId}/documents/${documentId}`);
     expect(fetched.status).toBe(200);
     expect(fetched.body.data.contentType).toBe('application/pdf');
     expect(Buffer.from(fetched.body.data.base64, 'base64')).toEqual(pdf);

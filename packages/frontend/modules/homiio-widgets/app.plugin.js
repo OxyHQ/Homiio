@@ -52,7 +52,9 @@ function assertBaseUrl(option, value) {
   try {
     parsed = new URL(value);
   } catch {
-    throw new Error(`withHomiioWidgets: \`${option}\` must be an absolute URL, got ${JSON.stringify(value)}.`);
+    throw new Error(
+      `withHomiioWidgets: \`${option}\` must be an absolute URL, got ${JSON.stringify(value)}.`,
+    );
   }
 
   if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {

@@ -30,11 +30,7 @@ import { RiEqualizerLine, RiHomeLine } from '@oxy.so/bloom/icons';
 import { FilterTriggerButton } from '@oxy.so/bloom/stay-filters';
 import { SortMenu } from '@/components/search/SortMenu';
 import { SearchFiltersDialog, countActiveFilters } from '@/components/search/SearchFiltersDialog';
-import type {
-  SearchQuery,
-  SearchSortBy,
-  SearchSortOrder,
-} from '@/components/search/types';
+import type { SearchQuery, SearchSortBy, SearchSortOrder } from '@/components/search/types';
 import { usePropertySearch } from '@/hooks/usePropertySearch';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import { DEFAULT_SEARCH_QUERY } from '@/store/searchQueryStore';
@@ -138,12 +134,7 @@ export default function PropertyTypeScreen() {
 
   const body = (() => {
     if (isLoading && properties.length === 0) {
-      return (
-        <PropertyResultsGridSkeleton
-          count={SKELETON_COUNT}
-          style={styles.gridPadding}
-        />
-      );
+      return <PropertyResultsGridSkeleton count={SKELETON_COUNT} style={styles.gridPadding} />;
     }
     if (isError) {
       return (

@@ -207,9 +207,9 @@ export function digestNarrative(input: {
   readonly cadence: 'daily' | 'weekly';
   readonly pushPrivacyMode: PushPrivacyMode;
 }): DigestNarrative {
-  const headline = input.explanations.slice(0, DIGEST_HEADLINE_COUNT).map((explanation) =>
-    describeChange(explanation.detail),
-  );
+  const headline = input.explanations
+    .slice(0, DIGEST_HEADLINE_COUNT)
+    .map((explanation) => describeChange(explanation.detail));
   const remaining = input.explanations.length - headline.length;
   const homes = input.distinctSubjects === 1 ? '1 home' : `${input.distinctSubjects} homes`;
   const period = input.cadence === 'daily' ? 'today' : 'this week';

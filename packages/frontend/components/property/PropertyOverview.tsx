@@ -48,10 +48,7 @@ export const PropertyOverview: React.FC<Props> = ({ property }) => {
     },
     {
       label: t('property.sections.size'),
-      value:
-        size !== undefined
-          ? formatArea(size, 'sqm', locale, { labels: areaUnitLabels })
-          : '-',
+      value: size !== undefined ? formatArea(size, 'sqm', locale, { labels: areaUnitLabels }) : '-',
     },
     ...(property?.floor !== undefined
       ? [

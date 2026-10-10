@@ -71,10 +71,7 @@ interface PwPage {
   goto(url: string, options: PwGotoOptions): Promise<unknown>;
   content(): Promise<string>;
   waitForSelector?(selector: string, options?: { timeout?: number }): Promise<unknown>;
-  route(
-    pattern: string,
-    handler: (route: PwRoute) => void | Promise<void>,
-  ): Promise<void>;
+  route(pattern: string, handler: (route: PwRoute) => void | Promise<void>): Promise<void>;
 }
 
 /** Soft content markers — waited after goto when present (not a hard failure). */
@@ -253,7 +250,8 @@ export class PlaywrightBrowserPool implements UrlFetcher {
         locale: esLocale ? 'es-ES' : 'en-US',
         viewport: { width: 1366, height: 900 },
         extraHTTPHeaders: {
-          Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+          Accept:
+            'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
           'Accept-Language': esLocale ? 'es-ES,es;q=0.9,en;q=0.8' : 'en-US,en;q=0.9',
           ...init?.headers,
         },

@@ -27,8 +27,13 @@ import { sql } from 'drizzle-orm';
 import { closePostgres, connectPostgres, getDb } from '../db/postgres';
 import { cities, countries, neighborhoods, regions } from '../db/schema';
 
-
-const SPAIN = { code: 'ES', name: 'Spain', currency: 'EUR', flag: '🇪🇸', defaultLocale: 'es-ES' } as const;
+const SPAIN = {
+  code: 'ES',
+  name: 'Spain',
+  currency: 'EUR',
+  flag: '🇪🇸',
+  defaultLocale: 'es-ES',
+} as const;
 
 /** Autonomous communities (regions) of Spain seeded with their ISO-3166-2 code. */
 interface RegionSeed {
@@ -69,7 +74,17 @@ const CITIES: CitySeed[] = [
     description:
       'Catalonia’s cosmopolitan capital on the Mediterranean, famed for Gaudí’s architecture, vibrant neighborhoods and a beachfront city centre.',
     timezone: TIMEZONE_MADRID,
-    neighborhoods: ['Eixample', 'Gràcia', 'El Born', 'Sants', 'Poblenou', 'Barri Gòtic', 'El Raval', 'Barceloneta', 'Sarrià'],
+    neighborhoods: [
+      'Eixample',
+      'Gràcia',
+      'El Born',
+      'Sants',
+      'Poblenou',
+      'Barri Gòtic',
+      'El Raval',
+      'Barceloneta',
+      'Sarrià',
+    ],
   },
   {
     name: 'Madrid',
@@ -114,7 +129,7 @@ const CITIES: CitySeed[] = [
   {
     name: 'Bilbao',
     regionName: 'Basque Country',
-    coordinates: [-2.9350, 43.2630],
+    coordinates: [-2.935, 43.263],
     population: 346405,
     description:
       'The Basque Country’s reinvented industrial city, anchored by the Guggenheim Museum and renowned for its pintxos and riverfront design.',
@@ -220,7 +235,12 @@ async function upsertCities(countryId: string, regionIds: Map<string, string>): 
  * Seed the full Spain geo hierarchy. Idempotent. Returns a summary of the
  * counts so callers (and the CLI) can log the result.
  */
-export async function seedGeo(): Promise<{ countries: number; regions: number; cities: number; neighborhoods: number }> {
+export async function seedGeo(): Promise<{
+  countries: number;
+  regions: number;
+  cities: number;
+  neighborhoods: number;
+}> {
   const countryId = await upsertCountry();
   const regionIds = await upsertRegions(countryId);
   const neighborhoods = await upsertCities(countryId, regionIds);

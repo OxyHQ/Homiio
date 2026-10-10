@@ -103,9 +103,7 @@ export type LeasePaymentMethodValue = (typeof LEASE_PAYMENT_METHODS)[number];
  * update, so the failure names a constraint rather than the field.
  */
 export function isLeasePaymentMethod(value: unknown): value is LeasePaymentMethodValue {
-  return (
-    typeof value === 'string' && (LEASE_PAYMENT_METHODS as readonly string[]).includes(value)
-  );
+  return typeof value === 'string' && (LEASE_PAYMENT_METHODS as readonly string[]).includes(value);
 }
 
 /**
@@ -276,7 +274,11 @@ async function hydrate(
           .select()
           .from(leaseSignatures)
           .where(inArray(leaseSignatures.leaseId, ids))
-          .orderBy(asc(leaseSignatures.leaseId), asc(leaseSignatures.signedAt), asc(leaseSignatures.id))
+          .orderBy(
+            asc(leaseSignatures.leaseId),
+            asc(leaseSignatures.signedAt),
+            asc(leaseSignatures.id),
+          )
       : Promise.resolve(undefined),
   ]);
   const inspectionIdsByLease = new Map<string, Set<string>>();
@@ -297,9 +299,7 @@ async function hydrate(
       ),
       sharedUtilityCosts: children.sharedCosts.get(lease.id) ?? [],
       ...(events ? { events: events.get(lease.id) ?? [] } : {}),
-      ...(signatures
-        ? { signatures: signatures.filter((row) => row.leaseId === lease.id) }
-        : {}),
+      ...(signatures ? { signatures: signatures.filter((row) => row.leaseId === lease.id) } : {}),
     };
   });
 }
@@ -661,9 +661,7 @@ export async function findContractDocument(
       contentSha256: leaseDocuments.contentSha256,
     })
     .from(leaseDocuments)
-    .where(
-      and(eq(leaseDocuments.leaseId, leaseId), eq(leaseDocuments.type, 'lease_agreement')),
-    )
+    .where(and(eq(leaseDocuments.leaseId, leaseId), eq(leaseDocuments.type, 'lease_agreement')))
     // `id` breaks the tie: two documents uploaded in the same millisecond must
     // not make "the contract" depend on Postgres's row order.
     .orderBy(desc(leaseDocuments.uploadedDate), desc(leaseDocuments.id))
@@ -794,7 +792,8 @@ export async function signLease(
     .returning();
 
   const signatures = await listLeaseSignatures(db, input.leaseId);
-  const signature = inserted ?? signatures.find((row) => row.signerOxyUserId === input.signerOxyUserId);
+  const signature =
+    inserted ?? signatures.find((row) => row.signerOxyUserId === input.signerOxyUserId);
   // Unreachable: the insert either produced a row or collided with one that is
   // now visible inside this transaction.
   if (!signature) return { kind: 'not_found' };
@@ -896,7 +895,13 @@ export async function signLease(
   }
 
   const [hydrated] = await hydrate(db, [row], { events: true, signatures: true });
-  return { kind: 'signed', lease: hydrated, signature, recorded: inserted !== undefined, activated };
+  return {
+    kind: 'signed',
+    lease: hydrated,
+    signature,
+    recorded: inserted !== undefined,
+    activated,
+  };
 }
 
 /** Serve a termination notice and close the lease. */
@@ -958,10 +963,7 @@ export async function listLeasePayments(
       .orderBy(asc(leasePaymentSchedule.dueDate))
       .limit(page.limit)
       .offset(page.offset),
-    db
-      .select({ value: sql<number>`count(*)::int` })
-      .from(leasePaymentSchedule)
-      .where(where),
+    db.select({ value: sql<number>`count(*)::int` }).from(leasePaymentSchedule).where(where),
   ]);
   return { rows, total: totalRow.value };
 }
@@ -998,7 +1000,6 @@ export async function addLeasePayment(
  * writer, which is the strongest state it has ever been in, and it stays
  * because a future import path would need it.
  */
-
 
 /** A lease's documents. */
 export async function listLeaseDocuments(

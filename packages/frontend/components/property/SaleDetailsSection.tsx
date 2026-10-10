@@ -30,10 +30,7 @@ interface Props {
 const PERCENT_MAX_FRACTION_DIGITS = 1;
 
 /** Chain-status → i18n key + fallback. */
-const CHAIN_STATUS_LABEL: Record<
-  NonNullable<PropertySale['chainStatus']>,
-  { key: string }
-> = {
+const CHAIN_STATUS_LABEL: Record<NonNullable<PropertySale['chainStatus']>, { key: string }> = {
   no_chain: { key: 'listing.sale.chainStatus.noChain' },
   chain: { key: 'listing.sale.chainStatus.chain' },
   unknown: { key: 'listing.sale.chainStatus.unknown' },
@@ -48,11 +45,7 @@ export const SaleDetailsSection: React.FC<Props> = ({ sale }) => {
   return (
     <Section title={t('listing.sale.sectionTitle')}>
       <View style={styles.headline}>
-        <MoneyText
-          amount={sale.price}
-          currency={sale.currency}
-          style={styles.price}
-        />
+        <MoneyText amount={sale.price} currency={sale.currency} style={styles.price} />
         {sale.isPriceReduced ? (
           <Chip
             variant="subtle"
@@ -69,15 +62,9 @@ export const SaleDetailsSection: React.FC<Props> = ({ sale }) => {
         <>
           <Divider />
           <View style={styles.row}>
-            <BloomText style={styles.label}>
-              {t('listing.sale.pricePerSqm')}
-            </BloomText>
+            <BloomText style={styles.label}>{t('listing.sale.pricePerSqm')}</BloomText>
             <BloomText style={styles.value}>
-              <MoneyText
-                amount={sale.pricePerSqm}
-                currency={sale.currency}
-                style={styles.value}
-              />
+              <MoneyText amount={sale.pricePerSqm} currency={sale.currency} style={styles.value} />
             </BloomText>
           </View>
         </>
@@ -87,9 +74,7 @@ export const SaleDetailsSection: React.FC<Props> = ({ sale }) => {
         <>
           <Divider />
           <View style={styles.row}>
-            <BloomText style={styles.label}>
-              {t('listing.sale.estimatedYield')}
-            </BloomText>
+            <BloomText style={styles.label}>{t('listing.sale.estimatedYield')}</BloomText>
             <BloomText style={styles.value}>
               {formatPercentage(sale.estimatedYield, locale, {
                 input: 'percent',
@@ -104,9 +89,7 @@ export const SaleDetailsSection: React.FC<Props> = ({ sale }) => {
         <>
           <Divider />
           <View style={styles.row}>
-            <BloomText style={styles.label}>
-              {t('listing.sale.chainStatus.label')}
-            </BloomText>
+            <BloomText style={styles.label}>{t('listing.sale.chainStatus.label')}</BloomText>
             <BloomText style={styles.value}>{t(chain.key)}</BloomText>
           </View>
         </>

@@ -91,11 +91,7 @@ import { and, asc, desc, eq, gt, inArray, lte, sql } from 'drizzle-orm';
 import crypto from 'crypto';
 import { qualified } from '../casing';
 import type { DatabaseOrTransaction } from '../postgres';
-import {
-  conversationMessageAttachments,
-  conversationMessages,
-  conversations,
-} from '../schema';
+import { conversationMessageAttachments, conversationMessages, conversations } from '../schema';
 import { isUniqueViolation } from '../uniqueViolation';
 
 export type ConversationRow = typeof conversations.$inferSelect;
@@ -654,7 +650,10 @@ export async function findConversationByShareToken(
  * cleared is not rewritten — an `UPDATE` that touched it would move `updated_at`
  * through drizzle's `$onUpdate` and restamp a conversation nobody edited.
  */
-export async function expireShareLinks(db: DatabaseOrTransaction, now: Date = new Date()): Promise<number> {
+export async function expireShareLinks(
+  db: DatabaseOrTransaction,
+  now: Date = new Date(),
+): Promise<number> {
   const rows = await db
     .update(conversations)
     .set({

@@ -46,7 +46,10 @@ describe('a number the user types', () => {
   });
 
   it('follows a country the user picked', () => {
-    const field = withPhoneCountry(withPhoneNumber(emptyEvictionPhone('ES'), '6 12 34 56 78'), 'FR');
+    const field = withPhoneCountry(
+      withPhoneNumber(emptyEvictionPhone('ES'), '6 12 34 56 78'),
+      'FR',
+    );
     expect(joinEvictionPhone(field)).toBe('+33 6 12 34 56 78');
   });
 

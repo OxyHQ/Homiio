@@ -63,11 +63,17 @@ describe('MilanunciosProvider housing filter', () => {
   });
 
   it('discover URLs are scoped to housing category allowlist', () => {
-    expect(isHousingCategoryUrl(milanunciosHousingSearchUrl('madrid'), MILANUNCIOS_HOUSING_CATEGORY_SLUGS)).toBe(
-      true,
-    );
     expect(
-      isHousingCategoryUrl('https://www.milanuncios.com/coches-en-madrid/', MILANUNCIOS_HOUSING_CATEGORY_SLUGS),
+      isHousingCategoryUrl(
+        milanunciosHousingSearchUrl('madrid'),
+        MILANUNCIOS_HOUSING_CATEGORY_SLUGS,
+      ),
+    ).toBe(true);
+    expect(
+      isHousingCategoryUrl(
+        'https://www.milanuncios.com/coches-en-madrid/',
+        MILANUNCIOS_HOUSING_CATEGORY_SLUGS,
+      ),
     ).toBe(false);
   });
 });

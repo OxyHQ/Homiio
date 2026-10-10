@@ -63,8 +63,7 @@ export function parseIndomioSearchJson(body: string): { sourceId: string; url: s
     const sourceId =
       asString(entry.id) ?? (typeof entry.id === 'number' ? String(entry.id) : undefined);
     const url =
-      asString(entry.url) ??
-      (sourceId ? `${INDOMIO_BASE_URL}/anuncio/${sourceId}/` : undefined);
+      asString(entry.url) ?? (sourceId ? `${INDOMIO_BASE_URL}/anuncio/${sourceId}/` : undefined);
     if (!sourceId || !url || seen.has(sourceId)) continue;
     seen.add(sourceId);
     refs.push({ sourceId, url });

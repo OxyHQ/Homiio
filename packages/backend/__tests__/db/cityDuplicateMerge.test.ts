@@ -219,8 +219,14 @@ async function runMerge(): Promise<MergeOutcome> {
       }
 
       const remaining = await tx
-        .select({ id: cities.id, name: cities.name, propertiesCount: cities.propertiesCount,
-                  timezone: cities.timezone, latitude: cities.latitude, longitude: cities.longitude })
+        .select({
+          id: cities.id,
+          name: cities.name,
+          propertiesCount: cities.propertiesCount,
+          timezone: cities.timezone,
+          latitude: cities.latitude,
+          longitude: cities.longitude,
+        })
         .from(cities)
         .where(eq(cities.regionId, regionId));
       const survivor = remaining.find((row) => row.id === survivorId);

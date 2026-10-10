@@ -35,10 +35,7 @@ import {
 } from '@oxy.so/bloom/icons';
 import { Switch } from '@oxy.so/bloom/switch';
 import { useTheme } from '@oxy.so/bloom/theme';
-import {
-  SettingsListGroup,
-  SettingsListItem,
-} from '@oxy.so/bloom/settings-list';
+import { SettingsListGroup, SettingsListItem } from '@oxy.so/bloom/settings-list';
 
 import { Header } from '@/components/Header';
 import { confirm } from '@oxy.so/bloom/surfaces';
@@ -56,7 +53,6 @@ export default function SettingsScreen() {
   const [notifications, setNotifications] = useState(true);
   const [autoSync, setAutoSync] = useState(true);
   const [offlineMode, setOfflineMode] = useState(false);
-
 
   const userDisplayName =
     typeof user?.name === 'string'
@@ -157,9 +153,7 @@ export default function SettingsScreen() {
             icon={<SettingsRowIcon icon={RiNotification3Line} />}
             title={t('settings.preferences.notifications')}
             description={t('settings.preferences.notificationsDesc')}
-            rightElement={
-              <Switch checked={notifications} onCheckedChange={setNotifications} />
-            }
+            rightElement={<Switch checked={notifications} onCheckedChange={setNotifications} />}
           />
           <SettingsListItem
             icon={<SettingsRowIcon icon={RiEqualizerLine} />}
@@ -174,17 +168,13 @@ export default function SettingsScreen() {
             icon={<SettingsRowIcon icon={RiRefreshLine} />}
             title={t('settings.preferences.autoSync')}
             description={t('settings.preferences.autoSyncDesc')}
-            rightElement={
-              <Switch checked={autoSync} onCheckedChange={setAutoSync} />
-            }
+            rightElement={<Switch checked={autoSync} onCheckedChange={setAutoSync} />}
           />
           <SettingsListItem
             icon={<SettingsRowIcon icon={RiEyeOffLine} />}
             title={t('settings.preferences.offlineMode')}
             description={t('settings.preferences.offlineModeDesc')}
-            rightElement={
-              <Switch checked={offlineMode} onCheckedChange={setOfflineMode} />
-            }
+            rightElement={<Switch checked={offlineMode} onCheckedChange={setOfflineMode} />}
           />
           <SettingsListItem
             icon={<SettingsRowIcon icon={RiDownloadLine} />}
@@ -243,11 +233,7 @@ export default function SettingsScreen() {
             icon={<SettingsRowIcon icon={RiSmartphoneLine} />}
             title={t('settings.aboutHomiio.platform')}
             value={
-              Constants.platform?.ios
-                ? 'iOS'
-                : Constants.platform?.android
-                  ? 'Android'
-                  : 'Web'
+              Constants.platform?.ios ? 'iOS' : Constants.platform?.android ? 'Android' : 'Web'
             }
           />
           <SettingsListItem
@@ -267,7 +253,6 @@ export default function SettingsScreen() {
             onPress={() => void handleSignOut()}
           />
         </SettingsListGroup>
-
       </ScrollView>
     </View>
   );

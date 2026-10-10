@@ -46,8 +46,17 @@ const en = JSON.parse(readFileSync(join(LOCALES_DIR, 'en.json'), 'utf8')) as Jso
 const enFlat = flatten(en);
 
 for (const localeFile of [
-  'es.json', 'ca-ES.json', 'it.json', 'zh-CN.json', 'hi-IN.json', 'fr-FR.json',
-  'ar.json', 'bn-BD.json', 'pt-BR.json', 'ru-RU.json', 'id-ID.json',
+  'es.json',
+  'ca-ES.json',
+  'it.json',
+  'zh-CN.json',
+  'hi-IN.json',
+  'fr-FR.json',
+  'ar.json',
+  'bn-BD.json',
+  'pt-BR.json',
+  'ru-RU.json',
+  'id-ID.json',
 ]) {
   const target = JSON.parse(readFileSync(join(LOCALES_DIR, localeFile), 'utf8')) as JsonObject;
   const targetFlat = flatten(target);

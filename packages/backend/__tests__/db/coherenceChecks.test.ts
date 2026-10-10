@@ -253,9 +253,7 @@ describe('tenant_applications — a decided application has a decision date', ()
         },
       ]),
     ).resolves.toBeDefined();
-    await db
-      .delete(tenantApplications)
-      .where(eq(tenantApplications.applicantOxyUserId, applicant));
+    await db.delete(tenantApplications).where(eq(tenantApplications.applicantOxyUserId, applicant));
   });
 });
 

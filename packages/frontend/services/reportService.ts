@@ -16,10 +16,7 @@ export const reportService = {
    * File a report against a property listing. Returns the created (or, when an
    * open report by the same user already exists, the existing) report.
    */
-  async reportListing(
-    propertyId: string,
-    input: CreateListingReportInput,
-  ): Promise<ListingReport> {
+  async reportListing(propertyId: string, input: CreateListingReportInput): Promise<ListingReport> {
     const response = await api.post<ApiResponse<ListingReport>>(
       `/api/properties/${propertyId}/report`,
       input,

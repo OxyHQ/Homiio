@@ -19,13 +19,25 @@ interface SavedSectionProps {
   testID?: string;
 }
 
-export function SavedSection({ title, description, action, children, style, testID }: SavedSectionProps) {
+export function SavedSection({
+  title,
+  description,
+  action,
+  children,
+  style,
+  testID,
+}: SavedSectionProps) {
   const theme = useTheme();
   return (
     <View style={[{ gap: 16 }, style]} testID={testID}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
         <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
-          <Text role="heading" aria-level={2} variant="title-3-semibold" style={{ color: theme.colors.text }}>
+          <Text
+            role="heading"
+            aria-level={2}
+            variant="title-3-semibold"
+            style={{ color: theme.colors.text }}
+          >
             {title}
           </Text>
           {description ? (

@@ -63,7 +63,8 @@ export function contactFromUnknown(value: unknown): NormalizedListingContact | u
     asString(value.telephone) ??
     asString(value.telephoneEnquiries) ??
     (isRecord(value.telephoneNumbers)
-      ? asString(value.telephoneNumbers.localNumber) ?? asString(value.telephoneNumbers.internationalNumber)
+      ? (asString(value.telephoneNumbers.localNumber) ??
+        asString(value.telephoneNumbers.internationalNumber))
       : undefined);
   const email = asString(value.email) ?? asString(value.emailAddress);
   const whatsapp =

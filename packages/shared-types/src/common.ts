@@ -17,7 +17,7 @@ export enum PropertyType {
   BOAT = 'boat',
   TREEHOUSE = 'treehouse',
   YURT = 'yurt',
-  OTHER = 'other'
+  OTHER = 'other',
 }
 
 export enum PropertyStatus {
@@ -28,12 +28,12 @@ export enum PropertyStatus {
   SOLD = 'sold',
   INACTIVE = 'inactive',
   /** Soft-deleted listing: hidden from all public queries, kept for audit. */
-  ARCHIVED = 'archived'
+  ARCHIVED = 'archived',
 }
 
 export enum HousingType {
   PRIVATE = 'private',
-  PUBLIC = 'public'
+  PUBLIC = 'public',
 }
 
 export enum LayoutType {
@@ -42,19 +42,19 @@ export enum LayoutType {
   PARTITIONED = 'partitioned',
   TRADITIONAL = 'traditional',
   STUDIO = 'studio',
-  OTHER = 'other'
+  OTHER = 'other',
 }
 
 export enum PaymentFrequency {
   MONTHLY = 'monthly',
   WEEKLY = 'weekly',
-  DAILY = 'daily'
+  DAILY = 'daily',
 }
 
 export enum UtilitiesIncluded {
   INCLUDED = 'included',
   EXCLUDED = 'excluded',
-  PARTIAL = 'partial'
+  PARTIAL = 'partial',
 }
 
 export enum PriceUnit {
@@ -62,14 +62,14 @@ export enum PriceUnit {
   NIGHT = 'night',
   WEEK = 'week',
   MONTH = 'month',
-  YEAR = 'year'
+  YEAR = 'year',
 }
 
 /** Status of an availability window on the property calendar. */
 export enum AvailabilityWindowStatus {
   AVAILABLE = 'available',
   BLOCKED = 'blocked',
-  BOOKED = 'booked'
+  BOOKED = 'booked',
 }
 
 /**
@@ -87,7 +87,7 @@ export enum OfferingType {
   LONG_TERM_RENT = 'long_term_rent',
   SHORT_TERM_RENT = 'short_term_rent',
   SALE = 'sale',
-  EXCHANGE = 'exchange'
+  EXCHANGE = 'exchange',
 }
 
 /**
@@ -99,7 +99,7 @@ export enum OfferingType {
 export enum ExchangeMode {
   SWAP = 'swap',
   HOST = 'host',
-  BOTH = 'both'
+  BOTH = 'both',
 }
 
 /** Lifecycle of an exchange (home-swap / hosting) request. */
@@ -108,7 +108,7 @@ export enum ExchangeRequestStatus {
   CONFIRMED = 'confirmed',
   DECLINED = 'declined',
   CANCELLED = 'cancelled',
-  COMPLETED = 'completed'
+  COMPLETED = 'completed',
 }
 
 /** Vacation-rental cancellation policy presets (Airbnb-style). */
@@ -116,7 +116,7 @@ export enum CancellationPolicy {
   FLEXIBLE = 'flexible',
   MODERATE = 'moderate',
   STRICT = 'strict',
-  SUPER_STRICT = 'super_strict'
+  SUPER_STRICT = 'super_strict',
 }
 
 /** ISO-8601 timestamp string (e.g. `2026-05-28T12:34:56.000Z`). */
@@ -139,7 +139,7 @@ export enum EmploymentStatus {
   STUDENT = 'student',
   RETIRED = 'retired',
   UNEMPLOYED = 'unemployed',
-  OTHER = 'other'
+  OTHER = 'other',
 }
 
 export enum LeaseDuration {
@@ -147,7 +147,7 @@ export enum LeaseDuration {
   THREE_MONTHS = '3_months',
   SIX_MONTHS = '6_months',
   YEARLY = 'yearly',
-  FLEXIBLE = 'flexible'
+  FLEXIBLE = 'flexible',
 }
 
 // AI Assistant Types
@@ -159,7 +159,7 @@ export enum ReferenceRelationship {
   LANDLORD = 'landlord',
   EMPLOYER = 'employer',
   PERSONAL = 'personal',
-  OTHER = 'other'
+  OTHER = 'other',
 }
 
 export enum ReasonForLeaving {
@@ -168,25 +168,25 @@ export enum ReasonForLeaving {
   JOB_RELOCATION = 'job_relocation',
   FAMILY_REASONS = 'family_reasons',
   UPGRADE = 'upgrade',
-  OTHER = 'other'
+  OTHER = 'other',
 }
 
 export enum ProfileVisibility {
   PUBLIC = 'public',
   PRIVATE = 'private',
-  CONTACTS_ONLY = 'contacts_only'
+  CONTACTS_ONLY = 'contacts_only',
 }
 
 export enum RecentlyViewedType {
   PROPERTY = 'property',
   ROOM = 'room',
-  ROOMMATE = 'roommate'
+  ROOMMATE = 'roommate',
 }
 
 export enum GenderPreference {
   MALE = 'male',
   FEMALE = 'female',
-  ANY = 'any'
+  ANY = 'any',
 }
 
 // Common interfaces
@@ -231,4 +231,4 @@ export type Optional<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
 export type RequiredFields<T, K extends keyof T> = T & Required<Pick<T, K>>;
 export type DeepPartial<T> = {
   [P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P];
-}; 
+};

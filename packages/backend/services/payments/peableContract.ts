@@ -4,7 +4,11 @@
  * No credential, network call, route, rent action or settlement is enabled here.
  * See docs/peable-rent-payments.md for the current integration boundaries.
  */
-import { PeableSignatureVerificationError, WebhooksResource, WEBHOOK_SIGNATURE_HEADER } from '@peable.to/sdk';
+import {
+  PeableSignatureVerificationError,
+  WebhooksResource,
+  WEBHOOK_SIGNATURE_HEADER,
+} from '@peable.to/sdk';
 
 import type { LeaseMovementState } from '@homiio/shared-types';
 
@@ -117,15 +121,16 @@ export function verifyPeableSignature(input: {
 }): PeableSignatureVerdict {
   const raw = Buffer.isBuffer(input.rawBody) ? input.rawBody.toString('utf8') : input.rawBody;
   // SDK accepts UTF-8 strings; reject lossy decoding so different raw bytes cannot verify as the same string.
-  if (Buffer.isBuffer(input.rawBody) && !Buffer.from(raw, 'utf8').equals(input.rawBody)) return { ok: false, reason: 'invalid_webhook' };
+  if (Buffer.isBuffer(input.rawBody) && !Buffer.from(raw, 'utf8').equals(input.rawBody))
+    return { ok: false, reason: 'invalid_webhook' };
   try {
-    webhooks.constructEvent(
-      raw,
-      input.header ?? '', input.secret, { toleranceSec: PEABLE_SIGNATURE_TOLERANCE_SECONDS },
-    );
+    webhooks.constructEvent(raw, input.header ?? '', input.secret, {
+      toleranceSec: PEABLE_SIGNATURE_TOLERANCE_SECONDS,
+    });
     return { ok: true };
   } catch (error) {
-    if (error instanceof PeableSignatureVerificationError) return { ok: false, reason: 'invalid_webhook' };
+    if (error instanceof PeableSignatureVerificationError)
+      return { ok: false, reason: 'invalid_webhook' };
     throw error;
   }
 }

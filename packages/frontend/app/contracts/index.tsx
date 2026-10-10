@@ -27,13 +27,7 @@ import {
   DataTableSearch,
   type DataTableColumn,
 } from '@oxy.so/bloom/data-table';
-import {
-  RiAddLine,
-  RiAlertLine,
-  RiEyeLine,
-  RiFileTextLine,
-  RiHomeLine,
-} from '@oxy.so/bloom/icons';
+import { RiAddLine, RiAlertLine, RiEyeLine, RiFileTextLine, RiHomeLine } from '@oxy.so/bloom/icons';
 import { H2, Text as BloomText } from '@oxy.so/bloom/typography';
 import { formatMoney } from '@homiio/shared-types';
 import { Header } from '@/components/Header';
@@ -116,8 +110,7 @@ export default function ContractsScreen() {
     error: leasesError,
     refetch: refetchLeases,
   } = useUserLeases();
-  const { hasRentalProperties, isLoading: hasPropertiesLoading } =
-    useHasRentalProperties();
+  const { hasRentalProperties, isLoading: hasPropertiesLoading } = useHasRentalProperties();
 
   const leases = useMemo<Lease[]>(() => leasesData?.leases ?? [], [leasesData]);
   const format = useLeaseFormatContext(leases);
@@ -204,7 +197,9 @@ export default function ContractsScreen() {
         header: t('contracts.card.start'),
         basis: 120,
         accessor: (row) => toDate(row.startDate),
-        cell: ({ row }) => <BloomText style={styles.cellText}>{formatDate(row.startDate)}</BloomText>,
+        cell: ({ row }) => (
+          <BloomText style={styles.cellText}>{formatDate(row.startDate)}</BloomText>
+        ),
       },
       {
         id: 'end',
@@ -280,7 +275,9 @@ export default function ContractsScreen() {
       size={showTable ? 'md' : 'lg'}
       onPress={handleAddNewContract}
       leadingIcon={RiAddLine}
-      style={showTable ? undefined : styles.footerButton} tone="accent" appearance="solid"
+      style={showTable ? undefined : styles.footerButton}
+      tone="accent"
+      appearance="solid"
     >
       {t('contracts.list.newContract')}
     </Button>
@@ -370,7 +367,9 @@ export default function ContractsScreen() {
             />
           ) : null}
 
-          {!isLoading && !leasesError && (showTable ? hasNoContracts : filteredContracts.length === 0) ? (
+          {!isLoading &&
+          !leasesError &&
+          (showTable ? hasNoContracts : filteredContracts.length === 0) ? (
             <View style={styles.emptyWrap}>
               <EmptyState
                 icon={RiFileTextLine}

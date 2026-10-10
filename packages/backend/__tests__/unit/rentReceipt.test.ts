@@ -74,9 +74,7 @@ describe('what the document may say', () => {
 
 describe('escaping', () => {
   it('escapes a value that came from a person', () => {
-    const html = rentReceiptFor(
-      input({ propertyLabel: '<script>alert(1)</script>' }),
-    ).html;
+    const html = rentReceiptFor(input({ propertyLabel: '<script>alert(1)</script>' })).html;
 
     expect(html).not.toContain('<script>alert(1)</script>');
     expect(html).toContain('&lt;script&gt;');

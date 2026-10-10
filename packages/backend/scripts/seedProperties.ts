@@ -63,7 +63,7 @@ const FurnishedStatus = {
   FURNISHED: 'furnished',
   UNFURNISHED: 'unfurnished',
   PARTIALLY_FURNISHED: 'partially_furnished',
-  NOT_SPECIFIED: 'not_specified'
+  NOT_SPECIFIED: 'not_specified',
 } as const;
 
 import { eq, sql } from 'drizzle-orm';
@@ -113,8 +113,8 @@ const openShortTermWindow = () => [
   {
     start: today,
     end: ninetyDaysFromNow,
-    status: AvailabilityWindowStatus.AVAILABLE
-  }
+    status: AvailabilityWindowStatus.AVAILABLE,
+  },
 ];
 
 // Curated Unsplash interior/apartment imagery (same style the home already uses).
@@ -136,7 +136,7 @@ const IMG = {
   terrace1: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c',
   loft1: 'https://images.unsplash.com/photo-1536376072261-38c75010e6c9',
   room1: 'https://images.unsplash.com/photo-1567016432779-094069958ea5',
-  room2: 'https://images.unsplash.com/photo-1598928506311-c55ded91a20c'
+  room2: 'https://images.unsplash.com/photo-1598928506311-c55ded91a20c',
 } as const;
 
 interface SeedAddress {
@@ -244,13 +244,27 @@ const properties: SeedProperty[] = [
     furnishedStatus: FurnishedStatus.FURNISHED,
     petFriendly: true,
     parkingType: 'none',
-    amenities: ['wifi', 'air_conditioning', 'heating', 'elevator', 'balcony', 'washing_machine', 'dishwasher', 'kitchen'],
+    amenities: [
+      'wifi',
+      'air_conditioning',
+      'heating',
+      'elevator',
+      'balcony',
+      'washing_machine',
+      'dishwasher',
+      'kitchen',
+    ],
     imageUrls: [IMG.apartment1, IMG.livingRoom1, IMG.bedroom1, IMG.kitchen1, IMG.bathroom1],
     isVerified: true,
     address: {
-      street: 'Carrer de Mallorca', number: '215', neighborhood: 'Eixample', district: "L'Eixample",
-      postal_code: '08008', coordinates: [2.1589, 41.3935], ...BCN
-    }
+      street: 'Carrer de Mallorca',
+      number: '215',
+      neighborhood: 'Eixample',
+      district: "L'Eixample",
+      postal_code: '08008',
+      coordinates: [2.1589, 41.3935],
+      ...BCN,
+    },
   },
   {
     sourceId: 'bcn-gracia-02',
@@ -272,9 +286,14 @@ const properties: SeedProperty[] = [
     imageUrls: [IMG.apartment2, IMG.livingRoom2, IMG.bedroom2, IMG.kitchen2],
     isVerified: true,
     address: {
-      street: 'Carrer de Verdi', number: '48', neighborhood: 'Gràcia', district: 'Gràcia',
-      postal_code: '08012', coordinates: [2.1573, 41.4045], ...BCN
-    }
+      street: 'Carrer de Verdi',
+      number: '48',
+      neighborhood: 'Gràcia',
+      district: 'Gràcia',
+      postal_code: '08012',
+      coordinates: [2.1573, 41.4045],
+      ...BCN,
+    },
   },
   {
     sourceId: 'bcn-elborn-03',
@@ -292,14 +311,27 @@ const properties: SeedProperty[] = [
     furnishedStatus: FurnishedStatus.FURNISHED,
     petFriendly: true,
     parkingType: 'none',
-    amenities: ['wifi', 'air_conditioning', 'heating', 'washing_machine', 'dishwasher', 'kitchen', 'smart_home'],
+    amenities: [
+      'wifi',
+      'air_conditioning',
+      'heating',
+      'washing_machine',
+      'dishwasher',
+      'kitchen',
+      'smart_home',
+    ],
     imageUrls: [IMG.loft1, IMG.livingRoom3, IMG.bedroom3, IMG.kitchen1],
     isVerified: true,
     isEcoFriendly: true,
     address: {
-      street: 'Carrer dels Banys Vells', number: '12', neighborhood: 'El Born', district: 'Ciutat Vella',
-      postal_code: '08003', coordinates: [2.1818, 41.3845], ...BCN
-    }
+      street: 'Carrer dels Banys Vells',
+      number: '12',
+      neighborhood: 'El Born',
+      district: 'Ciutat Vella',
+      postal_code: '08003',
+      coordinates: [2.1818, 41.3845],
+      ...BCN,
+    },
   },
   {
     sourceId: 'bcn-sants-04',
@@ -317,12 +349,25 @@ const properties: SeedProperty[] = [
     furnishedStatus: FurnishedStatus.PARTIALLY_FURNISHED,
     petFriendly: true,
     parkingType: 'street',
-    amenities: ['wifi', 'heating', 'elevator', 'balcony', 'washing_machine', 'kitchen', 'public_transit_access'],
+    amenities: [
+      'wifi',
+      'heating',
+      'elevator',
+      'balcony',
+      'washing_machine',
+      'kitchen',
+      'public_transit_access',
+    ],
     imageUrls: [IMG.apartment3, IMG.livingRoom1, IMG.bedroom1, IMG.bedroom2],
     address: {
-      street: 'Carrer de Sants', number: '178', neighborhood: 'Sants', district: 'Sants-Montjuïc',
-      postal_code: '08028', coordinates: [2.1330, 41.3756], ...BCN
-    }
+      street: 'Carrer de Sants',
+      number: '178',
+      neighborhood: 'Sants',
+      district: 'Sants-Montjuïc',
+      postal_code: '08028',
+      coordinates: [2.133, 41.3756],
+      ...BCN,
+    },
   },
   {
     sourceId: 'bcn-studio-eixample-05',
@@ -344,9 +389,14 @@ const properties: SeedProperty[] = [
     imageUrls: [IMG.studio1, IMG.studio2, IMG.kitchen2],
     isVerified: true,
     address: {
-      street: 'Carrer de Girona', number: '92', neighborhood: 'Eixample', district: "L'Eixample",
-      postal_code: '08009', coordinates: [2.1685, 41.3962], ...BCN
-    }
+      street: 'Carrer de Girona',
+      number: '92',
+      neighborhood: 'Eixample',
+      district: "L'Eixample",
+      postal_code: '08009',
+      coordinates: [2.1685, 41.3962],
+      ...BCN,
+    },
   },
   {
     sourceId: 'bcn-room-gracia-06',
@@ -368,9 +418,14 @@ const properties: SeedProperty[] = [
     amenities: ['wifi', 'heating', 'washing_machine', 'kitchen'],
     imageUrls: [IMG.room1, IMG.room2, IMG.kitchen1],
     address: {
-      street: 'Carrer de Bailèn', number: '210', neighborhood: 'Gràcia', district: 'Gràcia',
-      postal_code: '08037', coordinates: [2.1645, 41.4012], ...BCN
-    }
+      street: 'Carrer de Bailèn',
+      number: '210',
+      neighborhood: 'Gràcia',
+      district: 'Gràcia',
+      postal_code: '08037',
+      coordinates: [2.1645, 41.4012],
+      ...BCN,
+    },
   },
   {
     sourceId: 'bcn-poblenou-07',
@@ -389,14 +444,31 @@ const properties: SeedProperty[] = [
     petFriendly: true,
     parkingType: 'garage',
     parkingSpaces: 1,
-    amenities: ['wifi', 'air_conditioning', 'heating', 'elevator', 'balcony', 'washing_machine', 'dishwasher', 'kitchen', 'gym', 'rooftop_deck', 'parking_space'],
+    amenities: [
+      'wifi',
+      'air_conditioning',
+      'heating',
+      'elevator',
+      'balcony',
+      'washing_machine',
+      'dishwasher',
+      'kitchen',
+      'gym',
+      'rooftop_deck',
+      'parking_space',
+    ],
     imageUrls: [IMG.apartment1, IMG.livingRoom2, IMG.bedroom3, IMG.kitchen2, IMG.terrace1],
     isVerified: true,
     isEcoFriendly: true,
     address: {
-      street: 'Carrer de Pujades', number: '140', neighborhood: 'Poblenou', district: 'Sant Martí',
-      postal_code: '08005', coordinates: [2.1985, 41.4002], ...BCN
-    }
+      street: 'Carrer de Pujades',
+      number: '140',
+      neighborhood: 'Poblenou',
+      district: 'Sant Martí',
+      postal_code: '08005',
+      coordinates: [2.1985, 41.4002],
+      ...BCN,
+    },
   },
   {
     sourceId: 'bcn-raval-09',
@@ -416,9 +488,14 @@ const properties: SeedProperty[] = [
     amenities: ['wifi', 'heating', 'washing_machine', 'kitchen', 'public_transit_access'],
     imageUrls: [IMG.apartment3, IMG.livingRoom1, IMG.bedroom3],
     address: {
-      street: 'Carrer de Joaquín Costa', number: '28', neighborhood: 'El Raval', district: 'Ciutat Vella',
-      postal_code: '08001', coordinates: [2.1668, 41.3812], ...BCN
-    }
+      street: 'Carrer de Joaquín Costa',
+      number: '28',
+      neighborhood: 'El Raval',
+      district: 'Ciutat Vella',
+      postal_code: '08001',
+      coordinates: [2.1668, 41.3812],
+      ...BCN,
+    },
   },
   // ---------------------- LONG TERM (Madrid) ----------------------
   {
@@ -437,13 +514,27 @@ const properties: SeedProperty[] = [
     furnishedStatus: FurnishedStatus.FURNISHED,
     petFriendly: true,
     parkingType: 'none',
-    amenities: ['wifi', 'air_conditioning', 'heating', 'elevator', 'balcony', 'washing_machine', 'dishwasher', 'kitchen'],
+    amenities: [
+      'wifi',
+      'air_conditioning',
+      'heating',
+      'elevator',
+      'balcony',
+      'washing_machine',
+      'dishwasher',
+      'kitchen',
+    ],
     imageUrls: [IMG.apartment1, IMG.livingRoom2, IMG.bedroom2, IMG.kitchen1],
     isVerified: true,
     address: {
-      street: 'Calle del Espíritu Santo', number: '18', neighborhood: 'Malasaña', district: 'Centro',
-      postal_code: '28004', coordinates: [-3.7038, 40.4255], ...MAD
-    }
+      street: 'Calle del Espíritu Santo',
+      number: '18',
+      neighborhood: 'Malasaña',
+      district: 'Centro',
+      postal_code: '28004',
+      coordinates: [-3.7038, 40.4255],
+      ...MAD,
+    },
   },
   {
     sourceId: 'mad-chamberi-11',
@@ -461,13 +552,27 @@ const properties: SeedProperty[] = [
     furnishedStatus: FurnishedStatus.PARTIALLY_FURNISHED,
     petFriendly: false,
     parkingType: 'street',
-    amenities: ['wifi', 'air_conditioning', 'heating', 'elevator', 'balcony', 'washing_machine', 'dishwasher', 'kitchen'],
+    amenities: [
+      'wifi',
+      'air_conditioning',
+      'heating',
+      'elevator',
+      'balcony',
+      'washing_machine',
+      'dishwasher',
+      'kitchen',
+    ],
     imageUrls: [IMG.apartment2, IMG.livingRoom3, IMG.bedroom1, IMG.kitchen2, IMG.bathroom1],
     isVerified: true,
     address: {
-      street: 'Calle de Almagro', number: '26', neighborhood: 'Chamberí', district: 'Chamberí',
-      postal_code: '28010', coordinates: [-3.6938, 40.4318], ...MAD
-    }
+      street: 'Calle de Almagro',
+      number: '26',
+      neighborhood: 'Chamberí',
+      district: 'Chamberí',
+      postal_code: '28010',
+      coordinates: [-3.6938, 40.4318],
+      ...MAD,
+    },
   },
   {
     sourceId: 'mad-studio-lavapies-12',
@@ -488,9 +593,14 @@ const properties: SeedProperty[] = [
     amenities: ['wifi', 'air_conditioning', 'heating', 'kitchen', 'refrigerator'],
     imageUrls: [IMG.studio2, IMG.studio1, IMG.kitchen1],
     address: {
-      street: 'Calle de Argumosa', number: '11', neighborhood: 'Lavapiés', district: 'Centro',
-      postal_code: '28012', coordinates: [-3.7008, 40.4078], ...MAD
-    }
+      street: 'Calle de Argumosa',
+      number: '11',
+      neighborhood: 'Lavapiés',
+      district: 'Centro',
+      postal_code: '28012',
+      coordinates: [-3.7008, 40.4078],
+      ...MAD,
+    },
   },
   // ---------------------- SHORT TERM (Barcelona) ----------------------
   {
@@ -498,7 +608,15 @@ const properties: SeedProperty[] = [
     description:
       'Sun-drenched beach apartment in Barceloneta, 50 meters from the Mediterranean. Wake up to sea breeze, walk to the boardwalk for tapas and swim before breakfast. Perfect summer getaway for couples and small families.',
     type: PropertyType.APARTMENT,
-    shortTermRent: { nightlyRate: 145, cleaningFee: 45, serviceFee: 20, taxesPercent: 10, minNights: 2, maxNights: 30, instantBook: true },
+    shortTermRent: {
+      nightlyRate: 145,
+      cleaningFee: 45,
+      serviceFee: 20,
+      taxesPercent: 10,
+      minNights: 2,
+      maxNights: 30,
+      instantBook: true,
+    },
     cancellationPolicy: CancellationPolicy.MODERATE,
     bedrooms: 2,
     bathrooms: 1,
@@ -509,21 +627,41 @@ const properties: SeedProperty[] = [
     hasBalcony: true,
     furnishedStatus: FurnishedStatus.FURNISHED,
     parkingType: 'none',
-    amenities: ['wifi', 'air_conditioning', 'kitchen', 'washing_machine', 'balcony', 'refrigerator'],
+    amenities: [
+      'wifi',
+      'air_conditioning',
+      'kitchen',
+      'washing_machine',
+      'balcony',
+      'refrigerator',
+    ],
     imageUrls: [IMG.apartment1, IMG.livingRoom1, IMG.bedroom1, IMG.kitchen1, IMG.terrace1],
     isVerified: true,
     maxGuests: 4,
     address: {
-      street: 'Carrer del Mar', number: '24', neighborhood: 'Barceloneta', district: 'Ciutat Vella',
-      postal_code: '08003', coordinates: [2.1898, 41.3782], ...BCN
-    }
+      street: 'Carrer del Mar',
+      number: '24',
+      neighborhood: 'Barceloneta',
+      district: 'Ciutat Vella',
+      postal_code: '08003',
+      coordinates: [2.1898, 41.3782],
+      ...BCN,
+    },
   },
   {
     sourceId: 'bcn-vac-gothic-14',
     description:
       'Historic apartment in the Gothic Quarter with medieval charm and modern comfort. Stone walls, beamed ceilings and a balcony over a romantic lantern-lit alley. Steps from the Cathedral and Plaça Reial.',
     type: PropertyType.APARTMENT,
-    shortTermRent: { nightlyRate: 120, cleaningFee: 35, serviceFee: 15, taxesPercent: 10, minNights: 2, maxNights: 21, instantBook: true },
+    shortTermRent: {
+      nightlyRate: 120,
+      cleaningFee: 35,
+      serviceFee: 15,
+      taxesPercent: 10,
+      minNights: 2,
+      maxNights: 21,
+      instantBook: true,
+    },
     cancellationPolicy: CancellationPolicy.FLEXIBLE,
     bedrooms: 1,
     bathrooms: 1,
@@ -539,16 +677,29 @@ const properties: SeedProperty[] = [
     isVerified: true,
     maxGuests: 2,
     address: {
-      street: 'Carrer dels Escudellers', number: '8', neighborhood: 'Barri Gòtic', district: 'Ciutat Vella',
-      postal_code: '08002', coordinates: [2.1762, 41.3795], ...BCN
-    }
+      street: 'Carrer dels Escudellers',
+      number: '8',
+      neighborhood: 'Barri Gòtic',
+      district: 'Ciutat Vella',
+      postal_code: '08002',
+      coordinates: [2.1762, 41.3795],
+      ...BCN,
+    },
   },
   {
     sourceId: 'bcn-vac-eixample-loft-15',
     description:
       'Luxury designer loft in the Eixample with a private terrace and plunge pool. Floor-to-ceiling windows, premium furnishings and a rooftop chill-out. The ultimate stylish base to explore Gaudí’s Barcelona.',
     type: PropertyType.APARTMENT,
-    shortTermRent: { nightlyRate: 195, cleaningFee: 65, serviceFee: 30, taxesPercent: 10, minNights: 3, maxNights: 60, instantBook: false },
+    shortTermRent: {
+      nightlyRate: 195,
+      cleaningFee: 65,
+      serviceFee: 30,
+      taxesPercent: 10,
+      minNights: 3,
+      maxNights: 60,
+      instantBook: false,
+    },
     cancellationPolicy: CancellationPolicy.STRICT,
     bedrooms: 2,
     bathrooms: 2,
@@ -560,15 +711,39 @@ const properties: SeedProperty[] = [
     furnishedStatus: FurnishedStatus.FURNISHED,
     parkingType: 'garage',
     parkingSpaces: 1,
-    amenities: ['wifi', 'air_conditioning', 'heating', 'elevator', 'kitchen', 'washing_machine', 'dishwasher', 'swimming_pool', 'rooftop_deck', 'smart_home', 'parking_space'],
-    imageUrls: [IMG.loft1, IMG.livingRoom3, IMG.bedroom3, IMG.kitchen1, IMG.terrace1, IMG.bathroom1],
+    amenities: [
+      'wifi',
+      'air_conditioning',
+      'heating',
+      'elevator',
+      'kitchen',
+      'washing_machine',
+      'dishwasher',
+      'swimming_pool',
+      'rooftop_deck',
+      'smart_home',
+      'parking_space',
+    ],
+    imageUrls: [
+      IMG.loft1,
+      IMG.livingRoom3,
+      IMG.bedroom3,
+      IMG.kitchen1,
+      IMG.terrace1,
+      IMG.bathroom1,
+    ],
     isVerified: true,
     isEcoFriendly: true,
     maxGuests: 4,
     address: {
-      street: 'Carrer de València', number: '302', neighborhood: 'Eixample', district: "L'Eixample",
-      postal_code: '08009', coordinates: [2.1648, 41.3938], ...BCN
-    }
+      street: 'Carrer de València',
+      number: '302',
+      neighborhood: 'Eixample',
+      district: "L'Eixample",
+      postal_code: '08009',
+      coordinates: [2.1648, 41.3938],
+      ...BCN,
+    },
   },
   // ---------------------- SHORT TERM (València) ----------------------
   {
@@ -576,7 +751,15 @@ const properties: SeedProperty[] = [
     description:
       'Atmospheric apartment in the historic Carmen quarter of València, surrounded by the old city walls, tapas bars and the buzzing Central Market. A characterful base to explore paella’s birthplace.',
     type: PropertyType.APARTMENT,
-    shortTermRent: { nightlyRate: 78, cleaningFee: 30, serviceFee: 12, taxesPercent: 10, minNights: 2, maxNights: 30, instantBook: true },
+    shortTermRent: {
+      nightlyRate: 78,
+      cleaningFee: 30,
+      serviceFee: 12,
+      taxesPercent: 10,
+      minNights: 2,
+      maxNights: 30,
+      instantBook: true,
+    },
     cancellationPolicy: CancellationPolicy.FLEXIBLE,
     bedrooms: 1,
     bathrooms: 1,
@@ -592,16 +775,29 @@ const properties: SeedProperty[] = [
     isVerified: true,
     maxGuests: 3,
     address: {
-      street: 'Carrer de Quart', number: '20', neighborhood: 'El Carme', district: 'Ciutat Vella',
-      postal_code: '46001', coordinates: [-0.3825, 39.4762], ...VLC
-    }
+      street: 'Carrer de Quart',
+      number: '20',
+      neighborhood: 'El Carme',
+      district: 'Ciutat Vella',
+      postal_code: '46001',
+      coordinates: [-0.3825, 39.4762],
+      ...VLC,
+    },
   },
   {
     sourceId: 'vlc-vac-malvarrosa-18',
     description:
       'Beachfront apartment on Malvarrosa beach with panoramic sea views and direct boardwalk access. Spacious terrace for sunset dinners. The perfect Mediterranean escape for families and groups of friends.',
     type: PropertyType.APARTMENT,
-    shortTermRent: { nightlyRate: 135, cleaningFee: 55, serviceFee: 25, taxesPercent: 10, minNights: 3, maxNights: 60, instantBook: false },
+    shortTermRent: {
+      nightlyRate: 135,
+      cleaningFee: 55,
+      serviceFee: 25,
+      taxesPercent: 10,
+      minNights: 3,
+      maxNights: 60,
+      instantBook: false,
+    },
     cancellationPolicy: CancellationPolicy.MODERATE,
     bedrooms: 3,
     bathrooms: 2,
@@ -613,14 +809,30 @@ const properties: SeedProperty[] = [
     furnishedStatus: FurnishedStatus.FURNISHED,
     parkingType: 'garage',
     parkingSpaces: 1,
-    amenities: ['wifi', 'air_conditioning', 'heating', 'elevator', 'kitchen', 'washing_machine', 'dishwasher', 'balcony', 'swimming_pool', 'parking_space'],
+    amenities: [
+      'wifi',
+      'air_conditioning',
+      'heating',
+      'elevator',
+      'kitchen',
+      'washing_machine',
+      'dishwasher',
+      'balcony',
+      'swimming_pool',
+      'parking_space',
+    ],
     imageUrls: [IMG.apartment2, IMG.livingRoom3, IMG.bedroom3, IMG.bedroom1, IMG.terrace1],
     isVerified: true,
     maxGuests: 6,
     address: {
-      street: 'Passeig Marítim de la Patacona', number: '14', neighborhood: 'Malvarrosa', district: 'Poblats Marítims',
-      postal_code: '46011', coordinates: [-0.3258, 39.4778], ...VLC
-    }
+      street: 'Passeig Marítim de la Patacona',
+      number: '14',
+      neighborhood: 'Malvarrosa',
+      district: 'Poblats Marítims',
+      postal_code: '46011',
+      coordinates: [-0.3258, 39.4778],
+      ...VLC,
+    },
   },
   // ---------------------- MULTI-OFFERING: long-term + short-term ----------------------
   // Eixample flat offered BOTH monthly (1700/month) AND by the night (110/night)
@@ -631,7 +843,15 @@ const properties: SeedProperty[] = [
       'Flexible Eixample apartment available for both long stays and shorter vacation bookings. A beautifully furnished two-bedroom with a balcony, ideal whether you are relocating to Barcelona or visiting for a few weeks.',
     type: PropertyType.APARTMENT,
     longTermRent: { monthlyAmount: 1700, deposit: 3400 },
-    shortTermRent: { nightlyRate: 110, cleaningFee: 50, serviceFee: 22, taxesPercent: 10, minNights: 4, maxNights: 90, instantBook: true },
+    shortTermRent: {
+      nightlyRate: 110,
+      cleaningFee: 50,
+      serviceFee: 22,
+      taxesPercent: 10,
+      minNights: 4,
+      maxNights: 90,
+      instantBook: true,
+    },
     cancellationPolicy: CancellationPolicy.MODERATE,
     bedrooms: 2,
     bathrooms: 1,
@@ -643,14 +863,28 @@ const properties: SeedProperty[] = [
     furnishedStatus: FurnishedStatus.FURNISHED,
     petFriendly: true,
     parkingType: 'none',
-    amenities: ['wifi', 'air_conditioning', 'heating', 'elevator', 'balcony', 'washing_machine', 'dishwasher', 'kitchen'],
+    amenities: [
+      'wifi',
+      'air_conditioning',
+      'heating',
+      'elevator',
+      'balcony',
+      'washing_machine',
+      'dishwasher',
+      'kitchen',
+    ],
     imageUrls: [IMG.apartment3, IMG.livingRoom1, IMG.bedroom2, IMG.kitchen2, IMG.bathroom1],
     isVerified: true,
     maxGuests: 4,
     address: {
-      street: 'Carrer d’Aragó', number: '255', neighborhood: 'Eixample', district: "L'Eixample",
-      postal_code: '08007', coordinates: [2.1612, 41.3905], ...BCN
-    }
+      street: 'Carrer d’Aragó',
+      number: '255',
+      neighborhood: 'Eixample',
+      district: "L'Eixample",
+      postal_code: '08007',
+      coordinates: [2.1612, 41.3905],
+      ...BCN,
+    },
   },
   // Salamanca flat offered BOTH monthly (2300/month) AND by the night (160/night).
   {
@@ -659,7 +893,15 @@ const properties: SeedProperty[] = [
       'Upscale apartment in Madrid’s elegant Salamanca district, offered for both monthly rentals and vacation stays. Designer interiors, doorman building and the city’s best shopping right outside. Premium living, your way.',
     type: PropertyType.APARTMENT,
     longTermRent: { monthlyAmount: 2300, deposit: 4600 },
-    shortTermRent: { nightlyRate: 160, cleaningFee: 70, serviceFee: 35, taxesPercent: 10, minNights: 5, maxNights: 120, instantBook: false },
+    shortTermRent: {
+      nightlyRate: 160,
+      cleaningFee: 70,
+      serviceFee: 35,
+      taxesPercent: 10,
+      minNights: 5,
+      maxNights: 120,
+      instantBook: false,
+    },
     cancellationPolicy: CancellationPolicy.STRICT,
     bedrooms: 2,
     bathrooms: 2,
@@ -672,14 +914,38 @@ const properties: SeedProperty[] = [
     petFriendly: false,
     parkingType: 'garage',
     parkingSpaces: 1,
-    amenities: ['wifi', 'air_conditioning', 'heating', 'elevator', 'balcony', 'washing_machine', 'dishwasher', 'kitchen', 'gym', 'secure_entry', 'parking_space'],
-    imageUrls: [IMG.apartment1, IMG.livingRoom3, IMG.bedroom1, IMG.bedroom3, IMG.kitchen1, IMG.bathroom1],
+    amenities: [
+      'wifi',
+      'air_conditioning',
+      'heating',
+      'elevator',
+      'balcony',
+      'washing_machine',
+      'dishwasher',
+      'kitchen',
+      'gym',
+      'secure_entry',
+      'parking_space',
+    ],
+    imageUrls: [
+      IMG.apartment1,
+      IMG.livingRoom3,
+      IMG.bedroom1,
+      IMG.bedroom3,
+      IMG.kitchen1,
+      IMG.bathroom1,
+    ],
     isVerified: true,
     maxGuests: 4,
     address: {
-      street: 'Calle de Velázquez', number: '60', neighborhood: 'Salamanca', district: 'Salamanca',
-      postal_code: '28001', coordinates: [-3.6838, 40.4285], ...MAD
-    }
+      street: 'Calle de Velázquez',
+      number: '60',
+      neighborhood: 'Salamanca',
+      district: 'Salamanca',
+      postal_code: '28001',
+      coordinates: [-3.6838, 40.4285],
+      ...MAD,
+    },
   },
   // ---------------------- MULTI-OFFERING: long-term + sale ----------------------
   // Sarrià family home offered for rent (2450/month) AND for sale (785,000).
@@ -702,13 +968,26 @@ const properties: SeedProperty[] = [
     petFriendly: true,
     parkingType: 'garage',
     parkingSpaces: 2,
-    amenities: ['wifi', 'heating', 'air_conditioning', 'garden_access', 'parking_space', 'kitchen', 'dishwasher'],
+    amenities: [
+      'wifi',
+      'heating',
+      'air_conditioning',
+      'garden_access',
+      'parking_space',
+      'kitchen',
+      'dishwasher',
+    ],
     imageUrls: [IMG.apartment2, IMG.livingRoom3, IMG.bedroom1, IMG.bedroom2, IMG.bathroom1],
     isVerified: true,
     address: {
-      street: 'Carrer de Margenat', number: '34', neighborhood: 'Sarrià', district: 'Sarrià-Sant Gervasi',
-      postal_code: '08017', coordinates: [2.1245, 41.3998], ...BCN
-    }
+      street: 'Carrer de Margenat',
+      number: '34',
+      neighborhood: 'Sarrià',
+      district: 'Sarrià-Sant Gervasi',
+      postal_code: '08017',
+      coordinates: [2.1245, 41.3998],
+      ...BCN,
+    },
   },
   // ---------------------- SALE-ONLY ----------------------
   {
@@ -730,9 +1009,14 @@ const properties: SeedProperty[] = [
     imageUrls: [IMG.apartment3, IMG.livingRoom2, IMG.bedroom3, IMG.kitchen2],
     isVerified: true,
     address: {
-      street: 'Calle de Alcalá', number: '142', neighborhood: 'Retiro', district: 'Retiro',
-      postal_code: '28009', coordinates: [-3.6745, 40.4231], ...MAD
-    }
+      street: 'Calle de Alcalá',
+      number: '142',
+      neighborhood: 'Retiro',
+      district: 'Retiro',
+      postal_code: '28009',
+      coordinates: [-3.6745, 40.4231],
+      ...MAD,
+    },
   },
   // ---------------------- EXCHANGE-ONLY ----------------------
   {
@@ -742,10 +1026,11 @@ const properties: SeedProperty[] = [
     type: PropertyType.APARTMENT,
     exchange: {
       mode: ExchangeMode.BOTH,
-      welcomeNote: 'Happy to swap or host. We speak English, Spanish and Catalan and love sharing local tips.',
+      welcomeNote:
+        'Happy to swap or host. We speak English, Spanish and Catalan and love sharing local tips.',
       languages: ['en', 'es', 'ca'],
       mealsIncluded: false,
-      requiresReciprocity: false
+      requiresReciprocity: false,
     },
     bedrooms: 2,
     bathrooms: 1,
@@ -757,14 +1042,27 @@ const properties: SeedProperty[] = [
     furnishedStatus: FurnishedStatus.FURNISHED,
     petFriendly: true,
     parkingType: 'none',
-    amenities: ['wifi', 'air_conditioning', 'heating', 'kitchen', 'washing_machine', 'balcony', 'pet_friendly'],
+    amenities: [
+      'wifi',
+      'air_conditioning',
+      'heating',
+      'kitchen',
+      'washing_machine',
+      'balcony',
+      'pet_friendly',
+    ],
     imageUrls: [IMG.apartment3, IMG.livingRoom1, IMG.bedroom1, IMG.kitchen2],
     maxGuests: 4,
     address: {
-      street: 'Carrer de Torrijos', number: '57', neighborhood: 'Gràcia', district: 'Gràcia',
-      postal_code: '08012', coordinates: [2.1592, 41.4028], ...BCN
-    }
-  }
+      street: 'Carrer de Torrijos',
+      number: '57',
+      neighborhood: 'Gràcia',
+      district: 'Gràcia',
+      postal_code: '08012',
+      coordinates: [2.1592, 41.4028],
+      ...BCN,
+    },
+  },
 ];
 
 /**
@@ -833,17 +1131,15 @@ async function upsertProperty(
     countryCode: seed.address.countryCode,
     coordinates: {
       type: 'Point',
-      coordinates: seed.address.coordinates
-    }
+      coordinates: seed.address.coordinates,
+    },
   });
 
   const offerings = resolveOfferings(seed);
   const isShortTermCapable = offerings.includes(OfferingType.SHORT_TERM_RENT);
   const isLongTermCapable = offerings.includes(OfferingType.LONG_TERM_RENT);
 
-  const longTermRent = seed.longTermRent
-    ? { ...seed.longTermRent, currency: CURRENCY }
-    : undefined;
+  const longTermRent = seed.longTermRent ? { ...seed.longTermRent, currency: CURRENCY } : undefined;
   const shortTermRent = seed.shortTermRent
     ? { ...seed.shortTermRent, currency: CURRENCY }
     : undefined;
@@ -914,9 +1210,9 @@ async function upsertProperty(
       // The values here are the column defaults, so the row is what the schema
       // would have written on its own.
       minimumStay: 1,
-      maximumStay: 12
+      maximumStay: 12,
     },
-    availableFrom: today
+    availableFrom: today,
   };
 
   // Drop undefined keys so absent optional blocks aren't persisted as nulls.
@@ -1044,7 +1340,9 @@ export async function seedProperties(
 
   console.log('[seed-properties] Seeding geo hierarchy (Spain)...');
   const geoSummary = await seedGeo();
-  console.log(`[seed-properties] Geo seeded: ${geoSummary.countries} country, ${geoSummary.regions} regions, ${geoSummary.cities} cities, ${geoSummary.neighborhoods} neighborhoods`);
+  console.log(
+    `[seed-properties] Geo seeded: ${geoSummary.countries} country, ${geoSummary.regions} regions, ${geoSummary.cities} cities, ${geoSummary.neighborhoods} neighborhoods`,
+  );
 
   // Seed each city's cover image: fetch the curated photo ONCE, store it as an
   // `images` row (entity_type 'city') in our own object storage, and link it via
@@ -1063,7 +1361,9 @@ export async function seedProperties(
       } else {
         unchanged += 1;
       }
-      console.log(`[seed-properties] ${result.padEnd(9)} ${seed.sourceId} (${resolveOfferings(seed).join('+')})`);
+      console.log(
+        `[seed-properties] ${result.padEnd(9)} ${seed.sourceId} (${resolveOfferings(seed).join('+')})`,
+      );
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       console.error(`[seed-properties] FAILED ${seed.sourceId}: ${message}`);

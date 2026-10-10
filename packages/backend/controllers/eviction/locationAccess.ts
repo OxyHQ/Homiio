@@ -84,7 +84,11 @@ export async function createLocationGrant(
     }
     if (granteeOxyUserId === oxyUserId) {
       return next(
-        new AppError('You already hold this case; a grant would record nothing.', 400, 'INVALID_GRANTEE'),
+        new AppError(
+          'You already hold this case; a grant would record nothing.',
+          400,
+          'INVALID_GRANTEE',
+        ),
       );
     }
 
@@ -101,7 +105,9 @@ export async function createLocationGrant(
 
     const hours = Number(req.body?.hours);
     if (!Number.isFinite(hours) || hours <= 0) {
-      return next(new AppError('A positive duration in hours is required', 400, 'INVALID_DURATION'));
+      return next(
+        new AppError('A positive duration in hours is required', 400, 'INVALID_DURATION'),
+      );
     }
 
     const grant = await grantLocationAccess({

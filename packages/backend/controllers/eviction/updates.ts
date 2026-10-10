@@ -76,9 +76,7 @@ const ORGANISER_EVENT_TYPES: readonly EvictionTimelineEventType[] = [
 ];
 
 /** The status a timeline entry announces → the event type that names it. */
-const EVENT_TYPE_BY_STATUS: Readonly<
-  Record<EvictionStatusValue, EvictionTimelineEventType>
-> = {
+const EVENT_TYPE_BY_STATUS: Readonly<Record<EvictionStatusValue, EvictionTimelineEventType>> = {
   upcoming: EvictionTimelineEventType.DATE_CHANGED,
   postponed: EvictionTimelineEventType.POSTPONED,
   stopped: EvictionTimelineEventType.STOPPED,
@@ -127,7 +125,9 @@ export async function createUpdate(
     if (picked.newScheduledAt !== undefined) {
       const parsed = parseDate(picked.newScheduledAt);
       if (!parsed) {
-        return next(new AppError('A valid scheduled date is required', 400, 'INVALID_SCHEDULED_AT'));
+        return next(
+          new AppError('A valid scheduled date is required', 400, 'INVALID_SCHEDULED_AT'),
+        );
       }
       newScheduledAt = parsed;
       patch.scheduledAt = parsed;

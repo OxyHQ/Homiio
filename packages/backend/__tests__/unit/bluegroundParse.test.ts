@@ -108,7 +108,8 @@ describe('Blueground parse', () => {
   });
 
   it('degrades to empty amenities when no amenities object is present', () => {
-    const html = '<meta property="og:title" content="x"> "lowestRent":{"amount":3473,"currency":"EUR"}';
+    const html =
+      '<meta property="og:title" content="x"> "lowestRent":{"amount":3473,"currency":"EUR"}';
     expect(readBluegroundAmenities(html)).toEqual({ amenities: [] });
   });
 
@@ -118,7 +119,9 @@ describe('Blueground parse', () => {
       sourceId: 'bcn-1549599p',
       url: 'https://www.theblueground.com/p/furnished-apartments/bcn-1549599p',
     };
-    expect(() => parseBluegroundDetail(PARTNER_DETAIL_HTML, ref)).toThrow(BluegroundPartnerListingError);
+    expect(() => parseBluegroundDetail(PARTNER_DETAIL_HTML, ref)).toThrow(
+      BluegroundPartnerListingError,
+    );
     try {
       parseBluegroundDetail(PARTNER_DETAIL_HTML, ref);
     } catch (error) {

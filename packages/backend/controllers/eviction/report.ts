@@ -107,9 +107,7 @@ export async function createEvictionReport(
       return next(new AppError('Details are too long', 400, 'DETAILS_TOO_LONG'));
     }
     if (REASONS_REQUIRING_DETAILS.includes(reason) && !rawDetails) {
-      return next(
-        new AppError('Details are required for this reason', 400, 'DETAILS_REQUIRED'),
-      );
+      return next(new AppError('Details are required for this reason', 400, 'DETAILS_REQUIRED'));
     }
     // The reporter's own prose is sanitised too. A report saying "they published
     // 600 123 456 and the flat is 3r 2a" would otherwise store, and later

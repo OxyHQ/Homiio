@@ -12,10 +12,7 @@
  * Transport failures propagate, as everywhere else in this package.
  */
 
-import type {
-  LeaseObligationSummary,
-  LeasePaymentMovement,
-} from '@homiio/shared-types';
+import type { LeaseObligationSummary, LeasePaymentMovement } from '@homiio/shared-types';
 
 import { api, type ApiResponse } from '@/utils/api';
 

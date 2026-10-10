@@ -102,7 +102,9 @@ export function collectOverlays(
  * The web adapter re-reads the source on every rendered frame; this is what
  * keeps a pan from re-rendering React when nothing entered or left the view.
  */
-export function overlaySignature(items: readonly (OverlayDescriptor & { leafIds?: readonly string[] | null })[]): string {
+export function overlaySignature(
+  items: readonly (OverlayDescriptor & { leafIds?: readonly string[] | null })[],
+): string {
   return items
     .map((item) =>
       item.kind === 'point'

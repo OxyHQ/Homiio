@@ -16,7 +16,14 @@ import { cities } from '../../db/schema';
 import { resetGeoTables, seedGeoChain } from '../helpers/postgresGeoFixtures';
 
 /** City names to match against, each carrying a different LIKE metacharacter. */
-const CITY_NAMES = ['100% Villa', '1000 Villas', 'C_2 Town', 'CX2 Town', 'Back\\slash City', 'Backslash City'];
+const CITY_NAMES = [
+  '100% Villa',
+  '1000 Villas',
+  'C_2 Town',
+  'CX2 Town',
+  'Back\\slash City',
+  'Backslash City',
+];
 
 async function namesMatching(term: string, escape: boolean): Promise<string[]> {
   const pattern = `%${escape ? escapeLikePattern(term) : term}%`;
@@ -42,7 +49,6 @@ beforeEach(async () => {
   }
 });
 
-
 describe('escapeLikePattern', () => {
   it('makes a typed % match literally instead of as a wildcard', async () => {
     expect(await namesMatching('100%', true)).toEqual(['100% Villa']);
@@ -60,7 +66,9 @@ describe('escapeLikePattern', () => {
     expect(await namesMatching('C_2', true)).toEqual(['C_2 Town']);
     // The database's collation decides the order here, so compare the SET —
     // sorting BOTH sides, because JS orders `_` after `X` and Postgres does not.
-    expect([...(await namesMatching('C_2', false))].sort()).toEqual(['C_2 Town', 'CX2 Town'].sort());
+    expect([...(await namesMatching('C_2', false))].sort()).toEqual(
+      ['C_2 Town', 'CX2 Town'].sort(),
+    );
   });
 
   it('escapes the escape character itself, so a typed backslash matches literally', async () => {

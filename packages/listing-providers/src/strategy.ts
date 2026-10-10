@@ -23,11 +23,7 @@
  */
 
 import type { ProviderId } from '@homiio/shared-types';
-import {
-  errorMessage,
-  hostOf,
-  sleep,
-} from './http';
+import { errorMessage, hostOf, sleep } from './http';
 import { isAntiBotChallenge } from './parse/challenge';
 import {
   defaultProviderMetrics,
@@ -168,7 +164,14 @@ export async function fetchListingViaLadder(
       );
       lastStatus = status;
       const outcome = classifyOutcome(status, body, options.isChallenge);
-      metrics.record({ provider: options.provider, strategy: tier, outcome, status, latencyMs: Date.now() - start, url });
+      metrics.record({
+        provider: options.provider,
+        strategy: tier,
+        outcome,
+        status,
+        latencyMs: Date.now() - start,
+        url,
+      });
       if (outcome === 'success') {
         return { tier, html: body, status };
       }
@@ -217,7 +220,11 @@ function resolveRunner(
 }
 
 /** Retry a runner on thrown (transient) errors with exponential backoff. */
-async function withRetries<T>(run: () => Promise<T>, retries: number, signal?: AbortSignal): Promise<T> {
+async function withRetries<T>(
+  run: () => Promise<T>,
+  retries: number,
+  signal?: AbortSignal,
+): Promise<T> {
   let attempt = 0;
   let lastError: unknown;
   while (attempt <= retries) {

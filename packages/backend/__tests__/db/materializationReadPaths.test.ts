@@ -40,16 +40,8 @@ import { eq, sql } from 'drizzle-orm';
 import { constraintNameOf, uuidv7 } from '@oxy.so/db';
 
 import { closePostgres, connectPostgres, type Database } from '../../db/postgres';
-import {
-  addressCandidates,
-  addressMaterializations,
-  addresses,
-  cities,
-} from '../../db/schema';
-import {
-  nearestAddressesQuery,
-  selectAddressWithGeoNames,
-} from '../../services/addressService';
+import { addressCandidates, addressMaterializations, addresses, cities } from '../../db/schema';
+import { nearestAddressesQuery, selectAddressWithGeoNames } from '../../services/addressService';
 import { lookupCityPlaces } from '../../db/geo/placeLookup';
 import { escapeLikePattern } from '@oxy.so/utils/sql';
 import { materializeHousingCandidate } from '../../services/housingMaterialization';

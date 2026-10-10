@@ -213,8 +213,14 @@ export interface OfferingSummary {
 }
 
 const OFFERING_SUMMARY_META: Record<OfferingType, { i18nKey: string; fallback: string }> = {
-  [OfferingType.LONG_TERM_RENT]: { i18nKey: 'listing.offering.summary.longTerm', fallback: 'Monthly' },
-  [OfferingType.SHORT_TERM_RENT]: { i18nKey: 'listing.offering.summary.nightly', fallback: 'By night' },
+  [OfferingType.LONG_TERM_RENT]: {
+    i18nKey: 'listing.offering.summary.longTerm',
+    fallback: 'Monthly',
+  },
+  [OfferingType.SHORT_TERM_RENT]: {
+    i18nKey: 'listing.offering.summary.nightly',
+    fallback: 'By night',
+  },
   [OfferingType.SALE]: { i18nKey: 'listing.offering.summary.sale', fallback: 'For sale' },
   [OfferingType.EXCHANGE]: { i18nKey: 'listing.offering.summary.exchange', fallback: 'Exchange' },
 };
@@ -239,13 +245,13 @@ export function resolveOfferingSummaries(
 ): OfferingSummary[] {
   const active = BROWSE_MODE_TO_OFFERING[browseMode];
   const present = offeringsOf(property);
-  return OFFERING_ORDER.filter(
-    (offering) => offering !== active && present.includes(offering),
-  ).map((offering) => ({
-    offering,
-    i18nKey: OFFERING_SUMMARY_META[offering].i18nKey,
-    fallback: OFFERING_SUMMARY_META[offering].fallback,
-  }));
+  return OFFERING_ORDER.filter((offering) => offering !== active && present.includes(offering)).map(
+    (offering) => ({
+      offering,
+      i18nKey: OFFERING_SUMMARY_META[offering].i18nKey,
+      fallback: OFFERING_SUMMARY_META[offering].fallback,
+    }),
+  );
 }
 
 /**
@@ -384,12 +390,15 @@ export function getPropertyLocationLabel(property: Property | undefined): string
  * @returns The property title
  */
 export function getPropertyTitle(property: Property, format: TitleFormat = 'default'): string {
-  return generatePropertyTitle({
-    type: property.type,
-    address: addressDisplayNames(property.address),
-    bedrooms: property.bedrooms,
-    bathrooms: property.bathrooms,
-  }, format);
+  return generatePropertyTitle(
+    {
+      type: property.type,
+      address: addressDisplayNames(property.address),
+      bedrooms: property.bedrooms,
+      bathrooms: property.bathrooms,
+    },
+    format,
+  );
 }
 
 /**
@@ -538,4 +547,3 @@ export function getPropertyPhotos(
   }
   return photos;
 }
-

@@ -31,12 +31,7 @@
 import express, { type Express } from 'express';
 import request from 'supertest';
 import { and, eq, sql } from 'drizzle-orm';
-import {
-  CHECK_VIOLATION,
-  FOREIGN_KEY_VIOLATION,
-  constraintNameOf,
-  sqlStateOf,
-} from '@oxy.so/db';
+import { CHECK_VIOLATION, FOREIGN_KEY_VIOLATION, constraintNameOf, sqlStateOf } from '@oxy.so/db';
 import { LeaseStatus, PropertyStatus } from '@homiio/shared-types';
 
 import leaseController from '../../controllers/leaseController';
@@ -135,7 +130,9 @@ async function seedDocument(
 }
 
 const sign = (leaseId: string, as: string, body: Record<string, unknown> = {}) =>
-  request(authed(as)).post(`/leases/${leaseId}/sign`).send({ acceptTerms: true, ...body });
+  request(authed(as))
+    .post(`/leases/${leaseId}/sign`)
+    .send({ acceptTerms: true, ...body });
 
 const signaturesOf = (leaseId: string) =>
   getDb().select().from(leaseSignatures).where(eq(leaseSignatures.leaseId, leaseId));

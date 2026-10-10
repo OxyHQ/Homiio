@@ -39,7 +39,7 @@ const ensureLogDirectory = (): boolean => {
     fileLoggingEnabled = false;
     console.error(
       `File logging disabled: cannot create log directory "${path.dirname(config.logging.file)}". Falling back to stdout. Set LOG_FILE to a writable path to enable file logs.`,
-      error
+      error,
     );
     return false;
   }
@@ -52,20 +52,20 @@ const logger = {
   info: (message: string, meta: Record<string, unknown> = {}): void => {
     log('INFO', message, meta);
   },
-  
+
   warn: (message: string, meta: Record<string, unknown> = {}): void => {
     log('WARN', message, meta);
   },
-  
+
   error: (message: string, meta: Record<string, unknown> = {}): void => {
     log('ERROR', message, meta);
   },
-  
+
   debug: (message: string, meta: Record<string, unknown> = {}): void => {
     if (config.environment === 'development') {
       log('DEBUG', message, meta);
     }
-  }
+  },
 };
 
 /**
@@ -77,12 +77,12 @@ const log = (level: string, message: string, meta: Record<string, unknown> = {})
     timestamp,
     level,
     message,
-    ...meta
+    ...meta,
   };
 
   // Console output
   const consoleMessage = `[${timestamp}] ${level}: ${message}`;
-  
+
   switch (level) {
     case 'ERROR':
       console.error(consoleMessage, meta);
@@ -100,7 +100,8 @@ const log = (level: string, message: string, meta: Record<string, unknown> = {})
   // File output (in production, but not in serverless environments).
   // Skipped entirely once file logging has been disabled for this process
   // (unwritable path) — stdout above is the source of truth in containers.
-  const isServerless = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.FUNCTION_TARGET;
+  const isServerless =
+    process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.FUNCTION_TARGET;
   if (config.environment === 'production' && !isServerless && fileLoggingEnabled) {
     if (!ensureLogDirectory()) {
       return;
@@ -113,7 +114,7 @@ const log = (level: string, message: string, meta: Record<string, unknown> = {})
       fileLoggingEnabled = false;
       console.error(
         `File logging disabled: cannot write to "${config.logging.file}". Falling back to stdout.`,
-        error
+        error,
       );
     }
   }
@@ -132,17 +133,17 @@ const requestLogger = (req: Request, res: Response, next: NextFunction): void =>
     url: req.originalUrl,
     userAgent: userAgent,
     userId: req.userId || (req.user ? req.user.id : null),
-    requestId: req.id || null
+    requestId: req.id || null,
   });
 
   // Capture response
   const originalSend = res.send;
-  res.send = function(data: unknown) {
+  res.send = function (data: unknown) {
     const duration = Date.now() - start;
-    
+
     // Call original send first
     const result = originalSend.call(this, data);
-    
+
     // Then log response (after Content-Length is set)
     const headerLength = res.get('Content-Length');
     let contentLength: number | string = headerLength || 0;
@@ -165,7 +166,7 @@ const requestLogger = (req: Request, res: Response, next: NextFunction): void =>
       duration: duration,
       contentLength: contentLength,
       userId: req.userId || (req.user ? req.user.id : null),
-      requestId: req.id || null
+      requestId: req.id || null,
     });
 
     return result;
@@ -190,17 +191,22 @@ const businessLogger = {
     logger.info('Property created', {
       event: 'BUSINESS_PROPERTY_CREATED',
       propertyId: propertyId,
-      ownerId: ownerId
+      ownerId: ownerId,
     });
   },
 
-  leaseCreated: (leaseId: string, propertyId: string, landlordId: string, tenantId: string): void => {
+  leaseCreated: (
+    leaseId: string,
+    propertyId: string,
+    landlordId: string,
+    tenantId: string,
+  ): void => {
     logger.info('Lease created', {
       event: 'BUSINESS_LEASE_CREATED',
       leaseId: leaseId,
       propertyId: propertyId,
       landlordId: landlordId,
-      tenantId: tenantId
+      tenantId: tenantId,
     });
   },
 
@@ -210,13 +216,9 @@ const businessLogger = {
       paymentId: paymentId,
       amount: amount,
       method: method,
-      status: status
+      status: status,
     });
   },
 };
 
-export {
-  logger,
-  requestLogger,
-  businessLogger
-};
+export { logger, requestLogger, businessLogger };

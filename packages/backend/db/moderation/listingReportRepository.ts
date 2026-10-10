@@ -94,11 +94,7 @@ export async function insertListingReport(
     return row;
   } catch (error) {
     if (!isUniqueViolation(error, 'listing_reports_open_reporter_key')) throw error;
-    const existing = await findOpenListingReport(
-      values.propertyId,
-      values.reporterOxyUserId,
-      db,
-    );
+    const existing = await findOpenListingReport(values.propertyId, values.reporterOxyUserId, db);
     // The index refused the insert, so a row satisfying it existed at that
     // instant. Not finding it now means it was resolved in between — a real
     // state, and one the caller must not be handed a fabricated row for.

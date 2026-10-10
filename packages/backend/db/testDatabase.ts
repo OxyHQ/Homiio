@@ -37,7 +37,10 @@
  * what teardown may drop.
  */
 
-import { createTestDatabase as createSharedTestDatabase, dropTestDatabase as dropSharedTestDatabase } from '@oxy.so/db/testing';
+import {
+  createTestDatabase as createSharedTestDatabase,
+  dropTestDatabase as dropSharedTestDatabase,
+} from '@oxy.so/db/testing';
 import { applyMigrations } from './migrate';
 
 /**
@@ -65,11 +68,11 @@ function adminUrl(): string {
   if (!url) {
     throw new Error(
       'TEST_DATABASE_URL (or DATABASE_URL) must point at a Postgres server so a ' +
-      'throwaway test database can be created on it. Start one with:\n' +
-      '  docker compose -f docker-compose.postgres.yml up -d postgres\n' +
-      'A reachable Postgres is a HARD prerequisite of this suite — skipping the ' +
-      'database tests when it is absent would be a check that cannot tell ' +
-      'success from failure.',
+        'throwaway test database can be created on it. Start one with:\n' +
+        '  docker compose -f docker-compose.postgres.yml up -d postgres\n' +
+        'A reachable Postgres is a HARD prerequisite of this suite — skipping the ' +
+        'database tests when it is absent would be a check that cannot tell ' +
+        'success from failure.',
     );
   }
   return url;
@@ -85,7 +88,7 @@ export function assertDroppableTestDatabase(databaseUrl: string): void {
   if (!TEST_DATABASE_NAME.test(name)) {
     throw new Error(
       `Refusing to drop "${name}": only throwaway databases created by ` +
-      `createTestDatabase (${TEST_DATABASE_NAME.source}) may be dropped.`,
+        `createTestDatabase (${TEST_DATABASE_NAME.source}) may be dropped.`,
     );
   }
 }

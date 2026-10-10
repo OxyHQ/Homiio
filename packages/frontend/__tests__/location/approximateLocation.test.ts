@@ -80,7 +80,12 @@ describe('the startup budget', () => {
 
   it('maps every server-side failure onto one unavailable state', () => {
     expect(
-      approximateStateOf({ enabled: true, isPending: false, elapsedBudget: false, data: UNAVAILABLE }),
+      approximateStateOf({
+        enabled: true,
+        isPending: false,
+        elapsedBudget: false,
+        data: UNAVAILABLE,
+      }),
     ).toEqual({ status: 'unavailable' });
   });
 });

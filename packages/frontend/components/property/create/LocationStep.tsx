@@ -72,8 +72,13 @@ export function LocationStep({
               iconOnly
               leadingIcon={RiExpandDiagonalSLine}
               onPress={onOpenFullscreenMap}
-              accessibilityLabel={t('propertyCreate.location.openFullscreenMap', 'Open full-screen map')}
-              style={styles.mapOverlayButton} tone="neutral" appearance="outline"
+              accessibilityLabel={t(
+                'propertyCreate.location.openFullscreenMap',
+                'Open full-screen map',
+              )}
+              style={styles.mapOverlayButton}
+              tone="neutral"
+              appearance="outline"
             />
           </View>
         </View>
@@ -155,7 +160,11 @@ export function LocationStep({
           placeholder={t('propertyCreate.location.floorPlaceholder')}
           keyboardType="numeric"
           error={validationErrors.floor}
-          description={hasUnitDetail && !location.showFloor ? t('propertyCreate.location.floorPrivacyHint') : undefined}
+          description={
+            hasUnitDetail && !location.showFloor
+              ? t('propertyCreate.location.floorPrivacyHint')
+              : undefined
+          }
         />
       </View>
 
@@ -167,7 +176,9 @@ export function LocationStep({
           startIcon={
             <FloorVisibilityIcon
               size="sm"
-              fill={location.showFloor ? theme.colors.primaryForeground : theme.colors.textSecondary}
+              fill={
+                location.showFloor ? theme.colors.primaryForeground : theme.colors.textSecondary
+              }
             />
           }
           accessibilityLabel={

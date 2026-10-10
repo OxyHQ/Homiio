@@ -67,7 +67,6 @@ export interface OlxRoRawListing {
   numericId?: string;
 }
 
-
 export function olxRoSourceIdFromUrl(url: string): string | undefined {
   const match = /-ID([A-Za-z0-9]+)(?:\.html)?(?:\?|$)/i.exec(url);
   return match?.[1] ? `ID${match[1]}` : undefined;
@@ -144,9 +143,7 @@ export function parseOlxRoDetail(html: string, url: string): OlxRoRawListing {
   const category = isRecord(ad.category) ? ad.category : undefined;
   const categoryType = asString(category?.type) ?? 'unknown';
   const sourceId =
-    olxRoSourceIdFromUrl(url) ??
-    olxRoSourceIdFromUrl(asString(ad.url) ?? '') ??
-    asString(ad.id);
+    olxRoSourceIdFromUrl(url) ?? olxRoSourceIdFromUrl(asString(ad.url) ?? '') ?? asString(ad.id);
   if (!sourceId) {
     throw new Error('olx_ro: could not resolve sourceId');
   }

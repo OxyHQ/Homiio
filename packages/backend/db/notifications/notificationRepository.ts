@@ -46,8 +46,7 @@ export type NotificationRow = typeof notifications.$inferSelect;
  */
 export function isNotificationPriority(value: unknown): value is NotificationPriority {
   return (
-    typeof value === 'string' &&
-    (NOTIFICATION_PRIORITIES as readonly string[]).includes(value)
+    typeof value === 'string' && (NOTIFICATION_PRIORITIES as readonly string[]).includes(value)
   );
 }
 
@@ -163,12 +162,7 @@ export async function findNotificationForRecipient(
   const [row] = await db
     .select()
     .from(notifications)
-    .where(
-      and(
-        eq(notifications.id, id),
-        eq(notifications.recipientOxyUserId, recipientOxyUserId),
-      ),
-    )
+    .where(and(eq(notifications.id, id), eq(notifications.recipientOxyUserId, recipientOxyUserId)))
     .limit(1);
   return row;
 }
@@ -213,12 +207,7 @@ export async function updateNotification(
   const [row] = await db
     .update(notifications)
     .set(values)
-    .where(
-      and(
-        eq(notifications.id, id),
-        eq(notifications.recipientOxyUserId, recipientOxyUserId),
-      ),
-    )
+    .where(and(eq(notifications.id, id), eq(notifications.recipientOxyUserId, recipientOxyUserId)))
     .returning();
   return row;
 }
@@ -232,12 +221,7 @@ export async function markRead(
   const [row] = await db
     .update(notifications)
     .set({ read: true, readAt: new Date() })
-    .where(
-      and(
-        eq(notifications.id, id),
-        eq(notifications.recipientOxyUserId, recipientOxyUserId),
-      ),
-    )
+    .where(and(eq(notifications.id, id), eq(notifications.recipientOxyUserId, recipientOxyUserId)))
     .returning();
   return row;
 }
@@ -257,10 +241,7 @@ export async function markAllRead(
     .update(notifications)
     .set({ read: true, readAt: new Date() })
     .where(
-      and(
-        eq(notifications.recipientOxyUserId, recipientOxyUserId),
-        eq(notifications.read, false),
-      ),
+      and(eq(notifications.recipientOxyUserId, recipientOxyUserId), eq(notifications.read, false)),
     )
     .returning({ id: notifications.id });
   return rows.length;
@@ -274,12 +255,7 @@ export async function deleteNotification(
 ): Promise<boolean> {
   const rows = await db
     .delete(notifications)
-    .where(
-      and(
-        eq(notifications.id, id),
-        eq(notifications.recipientOxyUserId, recipientOxyUserId),
-      ),
-    )
+    .where(and(eq(notifications.id, id), eq(notifications.recipientOxyUserId, recipientOxyUserId)))
     .returning({ id: notifications.id });
   return rows.length > 0;
 }
@@ -310,10 +286,7 @@ export async function countUnread(
     .select({ value: count() })
     .from(notifications)
     .where(
-      and(
-        eq(notifications.recipientOxyUserId, recipientOxyUserId),
-        eq(notifications.read, false),
-      ),
+      and(eq(notifications.recipientOxyUserId, recipientOxyUserId), eq(notifications.read, false)),
     );
   return row.value;
 }

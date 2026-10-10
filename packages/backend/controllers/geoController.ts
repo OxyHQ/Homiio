@@ -30,7 +30,11 @@ import {
   searchPlaces,
   type GatewayMeta,
 } from '../services/geocoding/gateway';
-import { observeGeoRequest, type GeoOperation, type GeoOutcome } from '../services/geocoding/telemetry';
+import {
+  observeGeoRequest,
+  type GeoOperation,
+  type GeoOutcome,
+} from '../services/geocoding/telemetry';
 import { resolveApproximateLocation } from '../services/geoip/resolve';
 import { GeocodingProviderError } from '../services/geocoding/types';
 import {
@@ -245,9 +249,7 @@ export async function resolve(req: Request, res: Response, next: NextFunction): 
       cacheHit: result.cacheHit,
     });
 
-    res.json(
-      successResponse({ place: result.place, ...transportFor(result) }, 'Place resolved'),
-    );
+    res.json(successResponse({ place: result.place, ...transportFor(result) }, 'Place resolved'));
   } catch (error) {
     observeGeoRequest({
       operation,

@@ -156,9 +156,7 @@ function mutate(sql, mutation) {
   const pattern = mutation.unique
     ? new RegExp(`^CREATE UNIQUE INDEX "${mutation.constraint}"`, 'gm')
     : new RegExp(`^(\\tCONSTRAINT "${mutation.constraint}" CHECK )\\(`, 'gm');
-  const replacement = mutation.unique
-    ? `CREATE INDEX "${mutation.constraint}"`
-    : '$1(true or ';
+  const replacement = mutation.unique ? `CREATE INDEX "${mutation.constraint}"` : '$1(true or ';
 
   const matches = sql.match(pattern);
   if (!matches || matches.length !== 1) {
@@ -174,11 +172,12 @@ function mutate(sql, mutation) {
 /** Run one jest suite. Returns its exit status and combined output. */
 function runSuite(suite) {
   try {
-    const output = execFileSync(
-      'bunx',
-      ['jest', suite, '--runInBand', '--verbose'],
-      { cwd: BACKEND, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], env: process.env },
-    );
+    const output = execFileSync('bunx', ['jest', suite, '--runInBand', '--verbose'], {
+      cwd: BACKEND,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+      env: process.env,
+    });
     return { failed: false, output };
   } catch (error) {
     const stdout = typeof error.stdout === 'string' ? error.stdout : '';

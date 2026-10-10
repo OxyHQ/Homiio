@@ -23,10 +23,7 @@ export interface ExchangeRequestCardProps {
   actions?: React.ReactNode;
 }
 
-export const ExchangeRequestCard: React.FC<ExchangeRequestCardProps> = ({
-  request,
-  actions,
-}) => {
+export const ExchangeRequestCard: React.FC<ExchangeRequestCardProps> = ({ request, actions }) => {
   const router = useRouter();
   const { t } = useTranslation();
   const theme = useTheme();
@@ -54,7 +51,9 @@ export const ExchangeRequestCard: React.FC<ExchangeRequestCardProps> = ({
         accessibilityRole="button"
         accessibilityLabel={title}
       >
-        <View style={styles.thumb}><ThumbnailImage source={imageSource} /></View>
+        <View style={styles.thumb}>
+          <ThumbnailImage source={imageSource} />
+        </View>
         <View style={styles.body}>
           <View style={styles.headerRow}>
             <BloomText style={[styles.title, { color: theme.colors.text }]} numberOfLines={1}>
@@ -62,7 +61,10 @@ export const ExchangeRequestCard: React.FC<ExchangeRequestCardProps> = ({
             </BloomText>
             <ExchangeStatusBadge status={request.status} />
           </View>
-          <BloomText style={[styles.dates, { color: theme.colors.textSecondary }]} numberOfLines={1}>
+          <BloomText
+            style={[styles.dates, { color: theme.colors.textSecondary }]}
+            numberOfLines={1}
+          >
             {formatDateRange(request.requestedWindow.start, request.requestedWindow.end)}
           </BloomText>
           <View style={styles.metaRow}>
@@ -71,7 +73,10 @@ export const ExchangeRequestCard: React.FC<ExchangeRequestCardProps> = ({
             ) : (
               <RiHotelBedLine size="xs" fill={colors.exchangeAccent} />
             )}
-            <BloomText style={[styles.meta, { color: theme.colors.textTertiary }]} numberOfLines={1}>
+            <BloomText
+              style={[styles.meta, { color: theme.colors.textTertiary }]}
+              numberOfLines={1}
+            >
               {modeLabel}
             </BloomText>
           </View>

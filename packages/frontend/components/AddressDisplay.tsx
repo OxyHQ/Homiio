@@ -1,18 +1,20 @@
 import React from 'react';
-import { View, StyleSheet, TouchableOpacity, Platform, Linking, StyleProp, ViewStyle } from 'react-native';
+import {
+  View,
+  StyleSheet,
+  TouchableOpacity,
+  Platform,
+  Linking,
+  StyleProp,
+  ViewStyle,
+} from 'react-native';
 import { ThemedText } from './ThemedText';
 import { colors } from '@/styles/colors';
 import { useTranslation } from 'react-i18next';
 import * as Clipboard from 'expo-clipboard';
 import { toast } from '@oxy.so/bloom/toast';
 import * as Haptics from 'expo-haptics';
-import {
-  RiArrowRightSLine,
-  RiFileCopyLine,
-  RiMapPinFill,
-  RiMapPinLine,
-} from '@oxy.so/bloom/icons';
-
+import { RiArrowRightSLine, RiFileCopyLine, RiMapPinFill, RiMapPinLine } from '@oxy.so/bloom/icons';
 
 export interface Address {
   street: string;
@@ -96,9 +98,7 @@ export function AddressDisplay({
         <ThemedText style={styles.compactText} numberOfLines={1}>
           {shortAddress}
         </ThemedText>
-        {onPress && (
-          <RiArrowRightSLine width={16} height={16} fill={colors.COLOR_BLACK_LIGHT_5} />
-        )}
+        {onPress && <RiArrowRightSLine width={16} height={16} fill={colors.COLOR_BLACK_LIGHT_5} />}
       </TouchableOpacity>
     );
   }
@@ -130,7 +130,9 @@ export function AddressDisplay({
         {showMap && address.coordinates && (
           <View style={styles.mapPlaceholder}>
             <RiMapPinLine width={24} height={24} fill={colors.COLOR_BLACK_LIGHT_5} />
-            <ThemedText style={styles.mapPlaceholderText}>{t('address.display.mapPlaceholder')}</ThemedText>
+            <ThemedText style={styles.mapPlaceholderText}>
+              {t('address.display.mapPlaceholder')}
+            </ThemedText>
           </View>
         )}
       </View>
@@ -162,7 +164,9 @@ export function AddressDisplay({
 
           <TouchableOpacity style={styles.detailedActionButton} onPress={handleOpenInMaps}>
             <RiMapPinLine width={16} height={16} fill={colors.primaryColor} />
-            <ThemedText style={styles.actionButtonText}>{t('address.display.openInMaps')}</ThemedText>
+            <ThemedText style={styles.actionButtonText}>
+              {t('address.display.openInMaps')}
+            </ThemedText>
           </TouchableOpacity>
         </View>
       )}

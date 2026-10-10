@@ -271,9 +271,7 @@ export const housingWatchRules = pgTable(
      * preference and never a candidate — and because a watch carries a row for
      * every available rule, so the disabled ones are the majority.
      */
-    index('housing_watch_rules_type_enabled_idx')
-      .on(table.type)
-      .where(sql`${table.enabled}`),
+    index('housing_watch_rules_type_enabled_idx').on(table.type).where(sql`${table.enabled}`),
     check(
       'housing_watch_rules_type_check',
       sql`${table.type} in (${sql.raw(inList(HOUSING_ALERT_RULE_TYPES))})`,
@@ -394,15 +392,9 @@ export const housingAlerts = pgTable(
       table.cooldownBucket,
     ),
     /** The user's alert history, newest first. */
-    index('housing_alerts_owner_created_idx').on(
-      table.oxyUserId,
-      sql`${table.createdAt} desc`,
-    ),
+    index('housing_alerts_owner_created_idx').on(table.oxyUserId, sql`${table.createdAt} desc`),
     /** One watch's history, for the grouped view the UX asks for. */
-    index('housing_alerts_watch_created_idx').on(
-      table.watchId,
-      sql`${table.createdAt} desc`,
-    ),
+    index('housing_alerts_watch_created_idx').on(table.watchId, sql`${table.createdAt} desc`),
     /**
      * The digest's work list: what is still waiting to be sent.
      *

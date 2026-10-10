@@ -86,7 +86,9 @@ export function contactFromAdvertiser(value: unknown): NormalizedListingContact 
   if (whatsapp) contact.whatsapp = whatsapp;
   if (agencyName) contact.agencyName = agencyName;
   if (kind) contact.kind = kind;
-  return contact.phone || contact.email || contact.whatsapp || contact.agencyName ? contact : undefined;
+  return contact.phone || contact.email || contact.whatsapp || contact.agencyName
+    ? contact
+    : undefined;
 }
 
 export function mergeContact(

@@ -466,9 +466,7 @@ describe('the property restriction lever', () => {
     expect(await findPropertyRestriction(propertyId)).toBe(false);
 
     const decisionId = unique('decision');
-    expect(
-      await setPropertyRestriction({ propertyId, restricted: true, decisionId }),
-    ).toBe(true);
+    expect(await setPropertyRestriction({ propertyId, restricted: true, decisionId })).toBe(true);
     expect(await findPropertyRestriction(propertyId)).toBe(true);
   });
 

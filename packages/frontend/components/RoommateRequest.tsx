@@ -167,7 +167,9 @@ export const RoommateRequestComponent: React.FC<RoommateRequestProps> = ({
               leadingIcon={RiCloseCircleLine}
               onPress={handleDecline}
               loading={isLoading}
-              style={styles.actionButton} tone="neutral" appearance="outline"
+              style={styles.actionButton}
+              tone="neutral"
+              appearance="outline"
             >
               {t('roommates.request.decline')}
             </Button>
@@ -175,7 +177,9 @@ export const RoommateRequestComponent: React.FC<RoommateRequestProps> = ({
               leadingIcon={RiCheckboxCircleFill}
               onPress={handleAccept}
               loading={isLoading}
-              style={styles.actionButton} tone="accent" appearance="solid"
+              style={styles.actionButton}
+              tone="accent"
+              appearance="solid"
             >
               {t('roommates.request.accept')}
             </Button>
@@ -190,7 +194,9 @@ export const RoommateRequestComponent: React.FC<RoommateRequestProps> = ({
           size="sm"
           leadingIcon={RiEyeLine}
           onPress={() => onViewProfile(otherProfile.id)}
-          style={styles.viewProfile} tone="accent" appearance="subtle"
+          style={styles.viewProfile}
+          tone="accent"
+          appearance="subtle"
         >
           {t('roommates.request.viewProfile')}
         </Button>

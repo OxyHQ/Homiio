@@ -47,10 +47,7 @@ import { ErrorState } from '@/components/ui/ErrorState';
 import type { SearchQuery, SearchStep } from '@/components/search/types';
 import { spacing } from '@/constants/styles';
 import { useUserCoordinates } from '@/hooks/useHomeFeed';
-import {
-  useSearchQueryStore,
-  type SearchFilterPatch,
-} from '@/store/searchQueryStore';
+import { useSearchQueryStore, type SearchFilterPatch } from '@/store/searchQueryStore';
 import {
   buildSearchParamsForUrl,
   isNavigationChange,
@@ -77,17 +74,17 @@ export default function SearchScreen() {
    * Held rather than silently dropped: the row is not runnable, and the person
    * who saved it is the only one who can say which place they meant.
    */
-  const [pendingConfirmation, setPendingConfirmation] = useState<
-    { name: string; label: string } | null
-  >(null);
+  const [pendingConfirmation, setPendingConfirmation] = useState<{
+    name: string;
+    label: string;
+  } | null>(null);
   /**
    * A committed location the URL grammar cannot express, if one was attempted.
    *
    * Held so the refusal is visible. The alternative — navigating with `loc`
    * absent — produces a URL that looks fine and reopens as a global search.
    */
-  const [unshareableLocation, setUnshareableLocation] =
-    useState<LocationTokenFailure | null>(null);
+  const [unshareableLocation, setUnshareableLocation] = useState<LocationTokenFailure | null>(null);
 
   // Parsing is pure, so it is derived rather than an effect.
   //
@@ -113,8 +110,7 @@ export default function SearchScreen() {
    * Keyed on the TOKEN so it re-resolves when the location changes and NOT when
    * an unrelated filter does.
    */
-  const needsResolving =
-    locationRequest.kind === 'ref' || locationRequest.kind === 'legacy_city';
+  const needsResolving = locationRequest.kind === 'ref' || locationRequest.kind === 'legacy_city';
 
   const resolutionQuery = useQuery({
     queryKey: ['locationResolution', requestKey],
@@ -146,7 +142,13 @@ export default function SearchScreen() {
     if (resolutionQuery.isPending || resolutionQuery.isFetching) return { status: 'resolving' };
     if (resolutionQuery.isError) return { status: 'failed', reason: 'network' };
     return resolutionQuery.data ?? { status: 'resolving' };
-  }, [locationRequest, resolutionQuery.isPending, resolutionQuery.isFetching, resolutionQuery.isError, resolutionQuery.data]);
+  }, [
+    locationRequest,
+    resolutionQuery.isPending,
+    resolutionQuery.isFetching,
+    resolutionQuery.isError,
+    resolutionQuery.data,
+  ]);
 
   /**
    * Sync the derived query into the store.
@@ -271,7 +273,8 @@ export default function SearchScreen() {
     const unsubscribe = onApplySavedSearch((payload) => {
       // Absent status is read as `needs_confirmation`: an older payload shape
       // must land on the cautious side rather than run unscoped.
-      const status = payload.locationStatus ?? (payload.location ? 'resolved' : 'needs_confirmation');
+      const status =
+        payload.locationStatus ?? (payload.location ? 'resolved' : 'needs_confirmation');
       if (status !== 'resolved' || !payload.location) {
         setPendingConfirmation({ name: payload.name ?? payload.query, label: payload.query });
         return;
@@ -325,10 +328,15 @@ export default function SearchScreen() {
       <View style={styles.root}>
         {searchPanel}
         <ErrorState
-          title={t('search.location.unshareable.title', 'This area cannot be opened by link') ?? undefined}
-          description={
-            t('search.location.unshareable.description', 'Try choosing a place or drawing a smaller area.') ??
+          title={
+            t('search.location.unshareable.title', 'This area cannot be opened by link') ??
             undefined
+          }
+          description={
+            t(
+              'search.location.unshareable.description',
+              'Try choosing a place or drawing a smaller area.',
+            ) ?? undefined
           }
           retryLabel={t('search.location.chooseAnother', 'Choose a place') ?? undefined}
           onRetry={() => {
@@ -348,9 +356,7 @@ export default function SearchScreen() {
       <View style={styles.root}>
         {searchPanel}
         <ErrorState
-          title={
-            t('search.savedSearch.confirmTitle', 'Which place did you mean?') ?? undefined
-          }
+          title={t('search.savedSearch.confirmTitle', 'Which place did you mean?') ?? undefined}
           description={
             t('search.savedSearch.confirmDescription', {
               name: pendingConfirmation.label,
@@ -378,7 +384,8 @@ export default function SearchScreen() {
           title={t('search.location.failed.title', 'We could not find that place') ?? undefined}
           description={
             t(`search.location.failed.${resolution.reason}`, {
-              defaultValue: t('search.location.failed.generic', 'Try choosing a different place.') ?? '',
+              defaultValue:
+                t('search.location.failed.generic', 'Try choosing a different place.') ?? '',
             }) ?? undefined
           }
           retryLabel={t('search.location.chooseAnother', 'Choose a place') ?? undefined}

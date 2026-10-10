@@ -32,11 +32,7 @@ import {
 } from './cache';
 import { toGeoPlace } from './normalize';
 import { providerById, withFallback } from './registry';
-import {
-  GeocodingProviderError,
-  type ProviderAttribution,
-  type ProviderPlace,
-} from './types';
+import { GeocodingProviderError, type ProviderAttribution, type ProviderPlace } from './types';
 import type { ParsedPoint, RequestablePlaceType } from './validation';
 
 /**
@@ -295,9 +291,7 @@ function boundsOfColumns(
 }
 
 const toGeoPlaces = (places: ProviderPlace[]): GeoPlace[] =>
-  places
-    .map(toGeoPlace)
-    .filter((place): place is GeoPlace => place !== null);
+  places.map(toGeoPlace).filter((place): place is GeoPlace => place !== null);
 
 /**
  * Keep only the requested place types.
@@ -326,10 +320,7 @@ function filterByType(
  * routed through `cityService`: this is one join per entity and needs none of
  * that module's search behaviour.
  */
-async function resolveHomiioPlace(
-  placeType: string,
-  id: string,
-): Promise<GeoPlace | null> {
+async function resolveHomiioPlace(placeType: string, id: string): Promise<GeoPlace | null> {
   const db = getDb();
 
   const source = (entity: 'country' | 'region' | 'city' | 'neighborhood'): PlaceSource => ({
@@ -496,7 +487,6 @@ async function resolveHomiioPlace(
   return null;
 }
 
-
 /**
  * The middle of a rectangle, CORRECT across the antimeridian.
  *
@@ -545,9 +535,7 @@ function centerOfBounds(bounds: GeoBounds): { longitude: number; latitude: numbe
  * database today, and the honest fix is a PostGIS extent computed with
  * `::geography`, which is a schema change rather than a query change.
  */
-async function cityExtent(
-  scope: ReturnType<typeof eq>,
-): Promise<{
+async function cityExtent(scope: ReturnType<typeof eq>): Promise<{
   center: { longitude: number; latitude: number };
   bounds: { west: number; south: number; east: number; north: number };
 } | null> {

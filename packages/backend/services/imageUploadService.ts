@@ -1,4 +1,9 @@
-import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import {
+  S3Client,
+  PutObjectCommand,
+  DeleteObjectCommand,
+  GetObjectCommand,
+} from '@aws-sdk/client-s3';
 import sharp from 'sharp';
 import { v4 as uuidv4 } from 'uuid';
 import { createHash } from 'crypto';
@@ -275,7 +280,7 @@ export class ImageUploadService {
     { name: 'small', width: 300, height: 300, quality: 80, format: 'webp' },
     { name: 'medium', width: 600, height: 600, quality: 85, format: 'webp' },
     { name: 'large', width: 1200, height: 1200, quality: 90, format: 'webp' },
-    { name: 'original', width: 0, height: 0, quality: 95, format: 'jpeg' }
+    { name: 'original', width: 0, height: 0, quality: 95, format: 'jpeg' },
   ];
 
   constructor() {
@@ -326,7 +331,7 @@ export class ImageUploadService {
     buffer: Buffer,
     mimetype: string,
     folder: string,
-    skipUpload = false
+    skipUpload = false,
   ): Promise<ProcessedUpload> {
     const imageId = uuidv4();
     const originalFormat = this.getImageFormat(mimetype);
@@ -410,7 +415,7 @@ export class ImageUploadService {
     entityType: ImageEntityType,
     entityId: string,
     input: ImageFileInput | ImageBufferInput,
-    options: CreateImageOptions = {}
+    options: CreateImageOptions = {},
   ): Promise<ImageDocument> {
     const folder = options.folder ?? entityType;
     // Skip the upload only when storage is unconfigured AND the caller explicitly
@@ -452,7 +457,7 @@ export class ImageUploadService {
    * {@link ImageVariantKeys} without a non-null assertion.
    */
   private assertCompleteVariants(
-    keys: Partial<Record<ImageVariantName, string>>
+    keys: Partial<Record<ImageVariantName, string>>,
   ): ImageVariantKeys {
     const missing = VARIANT_NAMES.filter((name) => keys[name] === undefined);
     if (missing.length > 0) {
@@ -472,7 +477,7 @@ export class ImageUploadService {
         Bucket: config.s3.bucketName,
         Key: imageKey,
       });
-      
+
       await this.s3Client.send(command);
     } catch (error) {
       throw new Error(`Failed to delete image: ${errorMessage(error)}`);
@@ -481,7 +486,7 @@ export class ImageUploadService {
 
   async deleteImageVariants(imageKeys: string[]): Promise<void> {
     try {
-      const deletePromises = imageKeys.map(key => this.deleteImage(key));
+      const deletePromises = imageKeys.map((key) => this.deleteImage(key));
       await Promise.all(deletePromises);
     } catch (error) {
       throw new Error(`Failed to delete image variants: ${errorMessage(error)}`);
@@ -501,13 +506,9 @@ export class ImageUploadService {
 
     // Apply format and quality
     if (variant.format === 'webp') {
-      return await sharpInstance
-        .webp({ quality: variant.quality })
-        .toBuffer();
+      return await sharpInstance.webp({ quality: variant.quality }).toBuffer();
     } else {
-      return await sharpInstance
-        .jpeg({ quality: variant.quality })
-        .toBuffer();
+      return await sharpInstance.jpeg({ quality: variant.quality }).toBuffer();
     }
   }
 
@@ -537,7 +538,7 @@ export class ImageUploadService {
       'image/webp': 'webp',
       'image/gif': 'gif',
     };
-    
+
     return formatMap[mimeType] || 'jpeg';
   }
 
@@ -682,11 +683,7 @@ export class ImageUploadService {
    * flag would make the default the public one, and the default is what gets
    * used by the next caller who does not read this.
    */
-  private async putPrivateObject(
-    buffer: Buffer,
-    key: string,
-    contentType: string,
-  ): Promise<void> {
+  private async putPrivateObject(buffer: Buffer, key: string, contentType: string): Promise<void> {
     if (!this.isStorageConfigured()) {
       await this.writeToLocalStore(buffer, key);
       return;
@@ -913,20 +910,19 @@ export class ImageUploadService {
     const name = (error as { name?: string }).name;
     if (name === 'NoSuchKey' || name === 'NotFound' || name === 'AccessDenied') return true;
 
-    const status = (error as { $metadata?: { httpStatusCode?: number } }).$metadata
-      ?.httpStatusCode;
+    const status = (error as { $metadata?: { httpStatusCode?: number } }).$metadata?.httpStatusCode;
     return status === 404 || status === 403;
   }
 
   getAllImageUrls(uploadedImage: UploadedImage): Record<string, string> {
     const urls: Record<string, string> = {};
-    
+
     urls.original = this.getImageUrl(uploadedImage.original);
-    
+
     for (const [variant, key] of Object.entries(uploadedImage.variants)) {
       urls[variant] = this.getImageUrl(key);
     }
-    
+
     return urls;
   }
 }

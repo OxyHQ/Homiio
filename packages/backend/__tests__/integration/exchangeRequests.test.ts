@@ -46,13 +46,27 @@ function buildApp(oxyUserId?: string): Express {
     }
     next();
   });
-  app.post('/exchanges', (req, res, next) => exchangeController.createExchangeRequest(req, res, next));
-  app.get('/exchanges', (req, res, next) => exchangeController.listMyExchangeRequests(req, res, next));
-  app.get('/exchanges/:id', (req, res, next) => exchangeController.getExchangeRequest(req, res, next));
-  app.patch('/exchanges/:id', (req, res, next) => exchangeController.updateExchangeRequestStatus(req, res, next));
-  app.post('/exchanges/:id/reviews', (req, res, next) => exchangeReviewController.createExchangeReview(req, res, next));
-  app.get('/exchanges/:id/reviews', (req, res, next) => exchangeReviewController.getExchangeReviews(req, res, next));
-  app.get('/profiles/:oxyUserId/exchange-reviews', (req, res, next) => exchangeReviewController.getProfileExchangeReviews(req, res, next));
+  app.post('/exchanges', (req, res, next) =>
+    exchangeController.createExchangeRequest(req, res, next),
+  );
+  app.get('/exchanges', (req, res, next) =>
+    exchangeController.listMyExchangeRequests(req, res, next),
+  );
+  app.get('/exchanges/:id', (req, res, next) =>
+    exchangeController.getExchangeRequest(req, res, next),
+  );
+  app.patch('/exchanges/:id', (req, res, next) =>
+    exchangeController.updateExchangeRequestStatus(req, res, next),
+  );
+  app.post('/exchanges/:id/reviews', (req, res, next) =>
+    exchangeReviewController.createExchangeReview(req, res, next),
+  );
+  app.get('/exchanges/:id/reviews', (req, res, next) =>
+    exchangeReviewController.getExchangeReviews(req, res, next),
+  );
+  app.get('/profiles/:oxyUserId/exchange-reviews', (req, res, next) =>
+    exchangeReviewController.getProfileExchangeReviews(req, res, next),
+  );
   app.use(errorHandler);
   return app;
 }
@@ -152,7 +166,13 @@ describe('createExchangeRequest — the mode matrix', () => {
     const res = await request(buildApp('oxy-guest'))
       .post('/exchanges')
       // A forged host and status must be ignored.
-      .send({ propertyId, mode: 'host', requestedWindow: window(10, 20), hostOxyUserId: 'attacker', status: 'confirmed' });
+      .send({
+        propertyId,
+        mode: 'host',
+        requestedWindow: window(10, 20),
+        hostOxyUserId: 'attacker',
+        status: 'confirmed',
+      });
 
     expect(res.status).toBe(201);
     const persisted = await exchangeRow(res.body.data.id);
@@ -188,12 +208,18 @@ describe('createExchangeRequest — the mode matrix', () => {
   });
 
   it('refuses a listing not open to exchange, an external one, and your own', async () => {
-    const notExchangeable = (await seedListingWithGeo({
-      countryCode: nextCountryCode(),
-      overrides: { oxyUserId: 'oxy-host', status: 'published' },
-    })).propertyId;
+    const notExchangeable = (
+      await seedListingWithGeo({
+        countryCode: nextCountryCode(),
+        overrides: { oxyUserId: 'oxy-host', status: 'published' },
+      })
+    ).propertyId;
     expect(
-      (await request(buildApp('oxy-guest')).post('/exchanges').send({ propertyId: notExchangeable, mode: 'host', requestedWindow: window(10, 20) })).status,
+      (
+        await request(buildApp('oxy-guest'))
+          .post('/exchanges')
+          .send({ propertyId: notExchangeable, mode: 'host', requestedWindow: window(10, 20) })
+      ).status,
     ).toBe(400);
 
     // EXTERNAL. Named in the title since this suite was written and never
@@ -214,7 +240,11 @@ describe('createExchangeRequest — the mode matrix', () => {
 
     const own = await seedExchangeProperty('oxy-guest', 'host');
     expect(
-      (await request(buildApp('oxy-guest')).post('/exchanges').send({ propertyId: own, mode: 'host', requestedWindow: window(10, 20) })).status,
+      (
+        await request(buildApp('oxy-guest'))
+          .post('/exchanges')
+          .send({ propertyId: own, mode: 'host', requestedWindow: window(10, 20) })
+      ).status,
     ).toBe(403);
 
     expect(await getDb().select().from(exchangeRequests)).toHaveLength(0);
@@ -233,13 +263,15 @@ describe('createExchangeRequest — the mode matrix', () => {
       sourceUrl: 'https://x.test/exchange-2',
     });
 
-    const res = await request(buildApp('oxy-guest')).post('/exchanges').send({
-      propertyId: target,
-      mode: 'swap',
-      offeredPropertyId: external,
-      requestedWindow: window(10, 20),
-      offeredWindow: window(30, 40),
-    });
+    const res = await request(buildApp('oxy-guest'))
+      .post('/exchanges')
+      .send({
+        propertyId: target,
+        mode: 'swap',
+        offeredPropertyId: external,
+        requestedWindow: window(10, 20),
+        offeredWindow: window(30, 40),
+      });
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe('OFFERED_EXTERNAL_PROPERTY');
     expect(await getDb().select().from(exchangeRequests)).toHaveLength(0);
@@ -249,9 +281,13 @@ describe('createExchangeRequest — the mode matrix', () => {
     const propertyId = await seedExchangeProperty('oxy-host', 'host');
     const app = buildApp('oxy-guest');
 
-    const inPast = await request(app).post('/exchanges').send({ propertyId, mode: 'host', requestedWindow: window(-5, 5) });
+    const inPast = await request(app)
+      .post('/exchanges')
+      .send({ propertyId, mode: 'host', requestedWindow: window(-5, 5) });
     expect(inPast.status).toBe(400);
-    const inverted = await request(app).post('/exchanges').send({ propertyId, mode: 'host', requestedWindow: window(20, 10) });
+    const inverted = await request(app)
+      .post('/exchanges')
+      .send({ propertyId, mode: 'host', requestedWindow: window(20, 10) });
     expect(inverted.status).toBe(400);
   });
 
@@ -265,22 +301,26 @@ describe('createExchangeRequest — the mode matrix', () => {
     expect(noOffer.status).toBe(400);
 
     const notMine = await seedExchangeProperty('oxy-somebody-else', 'swap');
-    const notOwned = await request(app).post('/exchanges').send({
-      propertyId: target,
-      mode: 'swap',
-      offeredPropertyId: notMine,
-      requestedWindow: window(10, 20),
-      offeredWindow: window(30, 40),
-    });
+    const notOwned = await request(app)
+      .post('/exchanges')
+      .send({
+        propertyId: target,
+        mode: 'swap',
+        offeredPropertyId: notMine,
+        requestedWindow: window(10, 20),
+        offeredWindow: window(30, 40),
+      });
     expect(notOwned.status).toBe(403);
 
     const mine = await seedExchangeProperty('oxy-guest', 'swap');
-    const noWindow = await request(app).post('/exchanges').send({
-      propertyId: target,
-      mode: 'swap',
-      offeredPropertyId: mine,
-      requestedWindow: window(10, 20),
-    });
+    const noWindow = await request(app)
+      .post('/exchanges')
+      .send({
+        propertyId: target,
+        mode: 'swap',
+        offeredPropertyId: mine,
+        requestedWindow: window(10, 20),
+      });
     expect(noWindow.status).toBe(400);
 
     expect(await getDb().select().from(exchangeRequests)).toHaveLength(0);
@@ -290,13 +330,15 @@ describe('createExchangeRequest — the mode matrix', () => {
     const target = await seedExchangeProperty('oxy-host', 'swap');
     const mine = await seedExchangeProperty('oxy-guest', 'swap');
 
-    const res = await request(buildApp('oxy-guest')).post('/exchanges').send({
-      propertyId: target,
-      mode: 'swap',
-      offeredPropertyId: mine,
-      requestedWindow: window(10, 20),
-      offeredWindow: window(30, 40),
-    });
+    const res = await request(buildApp('oxy-guest'))
+      .post('/exchanges')
+      .send({
+        propertyId: target,
+        mode: 'swap',
+        offeredPropertyId: mine,
+        requestedWindow: window(10, 20),
+        offeredWindow: window(30, 40),
+      });
     expect(res.status).toBe(201);
     expect(res.body.data.offeredWindow.start).toBeTruthy();
 
@@ -325,11 +367,15 @@ describe('exchange_requests_offered_window_check', () => {
     };
 
     await expect(
-      getDb().insert(exchangeRequests).values({ ...base, offeredWindowStart: new Date(Date.now() + 30 * DAY) }),
+      getDb()
+        .insert(exchangeRequests)
+        .values({ ...base, offeredWindowStart: new Date(Date.now() + 30 * DAY) }),
     ).rejects.toThrow();
 
     await expect(
-      getDb().insert(exchangeRequests).values({ ...base, offeredWindowEnd: new Date(Date.now() + 40 * DAY) }),
+      getDb()
+        .insert(exchangeRequests)
+        .values({ ...base, offeredWindowEnd: new Date(Date.now() + 40 * DAY) }),
     ).rejects.toThrow();
 
     // And it PERMITS both halves absent, which is the `host` shape.
@@ -341,15 +387,17 @@ describe('exchange_requests_offered_window_check', () => {
     const propertyId = await seedExchangeProperty('oxy-host', 'host');
     const offered = await seedExchangeProperty('oxy-guest', 'swap');
     await expect(
-      getDb().insert(exchangeRequests).values({
-        propertyId,
-        requesterOxyUserId: 'oxy-guest',
-        hostOxyUserId: 'oxy-host',
-        mode: 'host',
-        requestedWindowStart: new Date(Date.now() + 10 * DAY),
-        requestedWindowEnd: new Date(Date.now() + 20 * DAY),
-        offeredPropertyId: offered,
-      }),
+      getDb()
+        .insert(exchangeRequests)
+        .values({
+          propertyId,
+          requesterOxyUserId: 'oxy-guest',
+          hostOxyUserId: 'oxy-host',
+          mode: 'host',
+          requestedWindowStart: new Date(Date.now() + 10 * DAY),
+          requestedWindowEnd: new Date(Date.now() + 20 * DAY),
+          offeredPropertyId: offered,
+        }),
     ).rejects.toThrow();
   });
 });
@@ -392,7 +440,9 @@ describe('the calendar conflict — half-open, and both roles', () => {
     // starts. Only this direction catches a closed bound on the STORED range.
     const other = await seedExchangeProperty('oxy-host-2', 'host');
     const later = await createHostRequest(other, 'oxy-guest-a', window(20, 30, base));
-    await request(buildApp('oxy-host-2')).patch(`/exchanges/${later}`).send({ status: 'confirmed' });
+    await request(buildApp('oxy-host-2'))
+      .patch(`/exchanges/${later}`)
+      .send({ status: 'confirmed' });
 
     const earlier = await request(buildApp('oxy-guest-b'))
       .post('/exchanges')
@@ -406,25 +456,31 @@ describe('the calendar conflict — half-open, and both roles', () => {
     const targetB = await seedExchangeProperty('oxy-host-b', 'swap');
     const mine = await seedExchangeProperty('oxy-guest', 'swap');
 
-    const first = await request(buildApp('oxy-guest')).post('/exchanges').send({
-      propertyId: targetA,
-      mode: 'swap',
-      offeredPropertyId: mine,
-      requestedWindow: window(10, 20),
-      offeredWindow: window(30, 40),
-    });
+    const first = await request(buildApp('oxy-guest'))
+      .post('/exchanges')
+      .send({
+        propertyId: targetA,
+        mode: 'swap',
+        offeredPropertyId: mine,
+        requestedWindow: window(10, 20),
+        offeredWindow: window(30, 40),
+      });
     expect(first.status).toBe(201);
-    await request(buildApp('oxy-host-a')).patch(`/exchanges/${first.body.data.id}`).send({ status: 'confirmed' });
+    await request(buildApp('oxy-host-a'))
+      .patch(`/exchanges/${first.body.data.id}`)
+      .send({ status: 'confirmed' });
 
     // My home is now committed for days 30-40. Offering it again over an
     // overlapping window must be refused, even against a different host.
-    const second = await request(buildApp('oxy-guest')).post('/exchanges').send({
-      propertyId: targetB,
-      mode: 'swap',
-      offeredPropertyId: mine,
-      requestedWindow: window(50, 60),
-      offeredWindow: window(35, 45),
-    });
+    const second = await request(buildApp('oxy-guest'))
+      .post('/exchanges')
+      .send({
+        propertyId: targetB,
+        mode: 'swap',
+        offeredPropertyId: mine,
+        requestedWindow: window(50, 60),
+        offeredWindow: window(35, 45),
+      });
     expect(second.status).toBe(409);
     expect(second.body.error.code).toBe('OFFERED_DATE_CONFLICT');
   });
@@ -440,20 +496,22 @@ describe('the calendar conflict — half-open, and both roles', () => {
       shortTermRentNightlyRate: 90,
       shortTermRentCurrency: 'EUR',
     });
-    await getDb().insert(reservations).values({
-      propertyId: booked,
-      guestOxyUserId: 'oxy-paying-guest',
-      hostOxyUserId: 'oxy-host',
-      checkIn: new Date(base + 12 * DAY),
-      checkOut: new Date(base + 18 * DAY),
-      guestCount: 1,
-      nights: 6,
-      nightlyRate: 90,
-      subtotal: 540,
-      total: 540,
-      cancellationPolicy: 'moderate',
-      status: 'confirmed',
-    });
+    await getDb()
+      .insert(reservations)
+      .values({
+        propertyId: booked,
+        guestOxyUserId: 'oxy-paying-guest',
+        hostOxyUserId: 'oxy-host',
+        checkIn: new Date(base + 12 * DAY),
+        checkOut: new Date(base + 18 * DAY),
+        guestCount: 1,
+        nights: 6,
+        nightlyRate: 90,
+        subtotal: 540,
+        total: 540,
+        cancellationPolicy: 'moderate',
+        status: 'confirmed',
+      });
     const overStay = await request(buildApp('oxy-guest'))
       .post('/exchanges')
       .send({ propertyId: booked, mode: 'host', requestedWindow: window(10, 20, base) });
@@ -461,13 +519,15 @@ describe('the calendar conflict — half-open, and both roles', () => {
     expect(overStay.body.error.code).toBe('DATE_CONFLICT');
 
     const closed = await seedExchangeProperty('oxy-host-2', 'host');
-    await getDb().insert(propertyAvailabilityWindows).values({
-      propertyId: closed,
-      scope: 'exchange',
-      startsAt: new Date(base + 12 * DAY),
-      endsAt: new Date(base + 18 * DAY),
-      status: 'blocked',
-    });
+    await getDb()
+      .insert(propertyAvailabilityWindows)
+      .values({
+        propertyId: closed,
+        scope: 'exchange',
+        startsAt: new Date(base + 12 * DAY),
+        endsAt: new Date(base + 18 * DAY),
+        status: 'blocked',
+      });
     const overBlock = await request(buildApp('oxy-guest'))
       .post('/exchanges')
       .send({ propertyId: closed, mode: 'host', requestedWindow: window(10, 20, base) });
@@ -487,28 +547,32 @@ describe('the calendar conflict — half-open, and both roles', () => {
       shortTermRentNightlyRate: 70,
       shortTermRentCurrency: 'EUR',
     });
-    await getDb().insert(reservations).values({
-      propertyId: mine,
-      guestOxyUserId: 'oxy-somebody',
-      hostOxyUserId: 'oxy-guest',
-      checkIn: new Date(base + 32 * DAY),
-      checkOut: new Date(base + 36 * DAY),
-      guestCount: 1,
-      nights: 4,
-      nightlyRate: 70,
-      subtotal: 280,
-      total: 280,
-      cancellationPolicy: 'moderate',
-      status: 'confirmed',
-    });
+    await getDb()
+      .insert(reservations)
+      .values({
+        propertyId: mine,
+        guestOxyUserId: 'oxy-somebody',
+        hostOxyUserId: 'oxy-guest',
+        checkIn: new Date(base + 32 * DAY),
+        checkOut: new Date(base + 36 * DAY),
+        guestCount: 1,
+        nights: 4,
+        nightlyRate: 70,
+        subtotal: 280,
+        total: 280,
+        cancellationPolicy: 'moderate',
+        status: 'confirmed',
+      });
 
-    const res = await request(buildApp('oxy-guest')).post('/exchanges').send({
-      propertyId: target,
-      mode: 'swap',
-      offeredPropertyId: mine,
-      requestedWindow: window(10, 20, base),
-      offeredWindow: window(30, 40, base),
-    });
+    const res = await request(buildApp('oxy-guest'))
+      .post('/exchanges')
+      .send({
+        propertyId: target,
+        mode: 'swap',
+        offeredPropertyId: mine,
+        requestedWindow: window(10, 20, base),
+        offeredWindow: window(30, 40, base),
+      });
     expect(res.status).toBe(409);
     expect(res.body.error.code).toBe('OFFERED_DATE_CONFLICT');
     expect(await getDb().select().from(exchangeRequests)).toHaveLength(0);
@@ -517,7 +581,9 @@ describe('the calendar conflict — half-open, and both roles', () => {
   it('does not let a request conflict with ITSELF at confirm time', async () => {
     const propertyId = await seedExchangeProperty('oxy-host', 'host');
     const id = await createHostRequest(propertyId);
-    const res = await request(buildApp('oxy-host')).patch(`/exchanges/${id}`).send({ status: 'confirmed' });
+    const res = await request(buildApp('oxy-host'))
+      .patch(`/exchanges/${id}`)
+      .send({ status: 'confirmed' });
     expect(res.status).toBe(200);
     expect(res.body.data.status).toBe('confirmed');
   });
@@ -528,23 +594,40 @@ describe('the transition machine', () => {
     const propertyId = await seedExchangeProperty('oxy-host', 'host');
     const id = await createHostRequest(propertyId);
 
-    expect((await request(buildApp('oxy-guest')).patch(`/exchanges/${id}`).send({ status: 'confirmed' })).status).toBe(403);
+    expect(
+      (await request(buildApp('oxy-guest')).patch(`/exchanges/${id}`).send({ status: 'confirmed' }))
+        .status,
+    ).toBe(403);
     expect((await exchangeRow(id)).status).toBe('pending');
 
-    expect((await request(buildApp('oxy-host')).patch(`/exchanges/${id}`).send({ status: 'confirmed' })).status).toBe(200);
+    expect(
+      (await request(buildApp('oxy-host')).patch(`/exchanges/${id}`).send({ status: 'confirmed' }))
+        .status,
+    ).toBe(200);
     // The precondition is in the UPDATE, so a second confirm matches no row.
-    expect((await request(buildApp('oxy-host')).patch(`/exchanges/${id}`).send({ status: 'declined' })).status).toBe(400);
+    expect(
+      (await request(buildApp('oxy-host')).patch(`/exchanges/${id}`).send({ status: 'declined' }))
+        .status,
+    ).toBe(400);
   });
 
   it('lets only the requester cancel, from pending or confirmed, and converges', async () => {
     const propertyId = await seedExchangeProperty('oxy-host', 'host');
     const id = await createHostRequest(propertyId);
 
-    expect((await request(buildApp('oxy-host')).patch(`/exchanges/${id}`).send({ status: 'cancelled' })).status).toBe(403);
+    expect(
+      (await request(buildApp('oxy-host')).patch(`/exchanges/${id}`).send({ status: 'cancelled' }))
+        .status,
+    ).toBe(403);
 
-    expect((await request(buildApp('oxy-guest')).patch(`/exchanges/${id}`).send({ status: 'cancelled' })).status).toBe(200);
+    expect(
+      (await request(buildApp('oxy-guest')).patch(`/exchanges/${id}`).send({ status: 'cancelled' }))
+        .status,
+    ).toBe(200);
     // Already cancelled: 200 with the current state, and the message still applies.
-    const again = await request(buildApp('oxy-guest')).patch(`/exchanges/${id}`).send({ status: 'cancelled', message: 'sorry' });
+    const again = await request(buildApp('oxy-guest'))
+      .patch(`/exchanges/${id}`)
+      .send({ status: 'cancelled', message: 'sorry' });
     expect(again.status).toBe(200);
     expect((await exchangeRow(id)).message).toBe('sorry');
   });
@@ -567,10 +650,18 @@ describe('the transition machine', () => {
       .returning();
 
     // Not confirmed yet.
-    expect((await request(buildApp('oxy-guest')).patch(`/exchanges/${row.id}`).send({ status: 'completed' })).status).toBe(400);
+    expect(
+      (
+        await request(buildApp('oxy-guest'))
+          .patch(`/exchanges/${row.id}`)
+          .send({ status: 'completed' })
+      ).status,
+    ).toBe(400);
 
     await request(buildApp('oxy-host')).patch(`/exchanges/${row.id}`).send({ status: 'confirmed' });
-    const completed = await request(buildApp('oxy-guest')).patch(`/exchanges/${row.id}`).send({ status: 'completed' });
+    const completed = await request(buildApp('oxy-guest'))
+      .patch(`/exchanges/${row.id}`)
+      .send({ status: 'completed' });
     expect(completed.status).toBe(200);
   });
 
@@ -579,7 +670,9 @@ describe('the transition machine', () => {
     const id = await createHostRequest(propertyId);
     await request(buildApp('oxy-host')).patch(`/exchanges/${id}`).send({ status: 'confirmed' });
 
-    const res = await request(buildApp('oxy-guest')).patch(`/exchanges/${id}`).send({ status: 'completed' });
+    const res = await request(buildApp('oxy-guest'))
+      .patch(`/exchanges/${id}`)
+      .send({ status: 'completed' });
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe('STAY_NOT_ENDED');
   });
@@ -588,8 +681,17 @@ describe('the transition machine', () => {
     const propertyId = await seedExchangeProperty('oxy-host', 'host');
     const id = await createHostRequest(propertyId);
 
-    expect((await request(buildApp('oxy-host')).patch(`/exchanges/${id}`).send({ status: 'pending' })).status).toBe(400);
-    expect((await request(buildApp('oxy-stranger')).patch(`/exchanges/${id}`).send({ status: 'confirmed' })).status).toBe(403);
+    expect(
+      (await request(buildApp('oxy-host')).patch(`/exchanges/${id}`).send({ status: 'pending' }))
+        .status,
+    ).toBe(400);
+    expect(
+      (
+        await request(buildApp('oxy-stranger'))
+          .patch(`/exchanges/${id}`)
+          .send({ status: 'confirmed' })
+      ).status,
+    ).toBe(403);
   });
 });
 
@@ -665,7 +767,9 @@ describe('exchange reviews', () => {
     expect(twice.body.error.code).toBe('ALREADY_REVIEWED');
 
     // The other party may still review.
-    const byHost = await request(buildApp('oxy-host')).post(`/exchanges/${id}/reviews`).send({ rating: 4 });
+    const byHost = await request(buildApp('oxy-host'))
+      .post(`/exchanges/${id}/reviews`)
+      .send({ rating: 4 });
     expect(byHost.status).toBe(201);
     expect(byHost.body.data.subjectOxyUserId).toBe('oxy-guest');
 
@@ -675,17 +779,31 @@ describe('exchange reviews', () => {
   it('refuses a review before the exchange is completed, and from a non-party', async () => {
     const propertyId = await seedExchangeProperty('oxy-host', 'host');
     const pending = await createHostRequest(propertyId);
-    expect((await request(buildApp('oxy-guest')).post(`/exchanges/${pending}/reviews`).send({ rating: 5 })).status).toBe(400);
+    expect(
+      (
+        await request(buildApp('oxy-guest'))
+          .post(`/exchanges/${pending}/reviews`)
+          .send({ rating: 5 })
+      ).status,
+    ).toBe(400);
 
     const done = await completedExchange();
-    expect((await request(buildApp('oxy-stranger')).post(`/exchanges/${done}/reviews`).send({ rating: 5 })).status).toBe(403);
+    expect(
+      (
+        await request(buildApp('oxy-stranger'))
+          .post(`/exchanges/${done}/reviews`)
+          .send({ rating: 5 })
+      ).status,
+    ).toBe(403);
 
     expect(await getDb().select().from(exchangeReviews)).toHaveLength(0);
   });
 
   it('REFUSES a rating outside 1-5 and a self-review', async () => {
     const id = await completedExchange();
-    const res = await request(buildApp('oxy-guest')).post(`/exchanges/${id}/reviews`).send({ rating: 9 });
+    const res = await request(buildApp('oxy-guest'))
+      .post(`/exchanges/${id}/reviews`)
+      .send({ rating: 9 });
     // The CHECK, surfaced as a 500 rather than a 400 — the rating is not
     // narrowed in the controller, so this pins where the refusal comes from
     // rather than claiming a validation that is not there.

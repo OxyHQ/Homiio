@@ -108,8 +108,7 @@ export default function ReportListingScreen() {
   }, [property]);
 
   const detailsRequired = reason === ListingReportReason.OTHER;
-  const emailInvalid =
-    contactEmail.trim().length > 0 && !EMAIL_REGEX.test(contactEmail.trim());
+  const emailInvalid = contactEmail.trim().length > 0 && !EMAIL_REGEX.test(contactEmail.trim());
 
   const reasonOptions = useMemo<RadioOption<ListingReportReason>[]>(
     () => REASON_OPTIONS.map((option) => ({ value: option.value, label: t(option.labelKey) })),
@@ -179,7 +178,10 @@ export default function ReportListingScreen() {
         }}
       />
       <SafeAreaView style={styles.scrollWrapper} edges={['bottom']}>
-        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+        >
           <Text style={[styles.intro, { color: theme.colors.textSecondary }]}>
             {t('property.report.intro')}
           </Text>
@@ -252,7 +254,9 @@ export default function ReportListingScreen() {
             onPress={handleSubmit}
             disabled={!formIsValid || isSubmitting}
             loading={isSubmitting}
-            size="lg" tone="accent" appearance="solid"
+            size="lg"
+            tone="accent"
+            appearance="solid"
           >
             {t('property.report.actions.submit')}
           </Button>

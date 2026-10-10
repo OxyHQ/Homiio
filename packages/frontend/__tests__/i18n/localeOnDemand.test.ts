@@ -12,7 +12,11 @@ import i18n from 'i18next';
 import enUS from '@/locales/en.json';
 import esES from '@/locales/es.json';
 import { LOCALE_FILES } from '@/utils/localeFiles';
-import { ensureLanguageLoaded, setStoredLanguage, SUPPORTED_LANGUAGE_CODES } from '@/utils/languagePreference';
+import {
+  ensureLanguageLoaded,
+  setStoredLanguage,
+  SUPPORTED_LANGUAGE_CODES,
+} from '@/utils/languagePreference';
 
 beforeAll(async () => {
   await i18n.init({

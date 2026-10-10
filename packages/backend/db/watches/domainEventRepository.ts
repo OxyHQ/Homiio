@@ -180,9 +180,7 @@ export async function claimUnprocessedEvents(
   const claimed = await db
     .select({ id: housingDomainEvents.id })
     .from(housingDomainEvents)
-    .where(
-      and(isNull(housingDomainEvents.processedAt), lte(housingDomainEvents.occurredAt, now)),
-    )
+    .where(and(isNull(housingDomainEvents.processedAt), lte(housingDomainEvents.occurredAt, now)))
     .orderBy(asc(housingDomainEvents.occurredAt))
     .limit(limit)
     .for('update', { skipLocked: true });

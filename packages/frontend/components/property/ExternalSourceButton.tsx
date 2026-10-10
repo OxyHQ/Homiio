@@ -34,7 +34,13 @@ export const ExternalSourceButton: React.FC<ExternalSourceButtonProps> = ({ prop
   }, [sourceUrl, t]);
 
   return (
-    <Button size="lg" leadingIcon={RiExternalLinkLine} onPress={handlePress} tone="accent" appearance="solid">
+    <Button
+      size="lg"
+      leadingIcon={RiExternalLinkLine}
+      onPress={handlePress}
+      tone="accent"
+      appearance="solid"
+    >
       {t('listing.cta.viewOnSourceWebsite')}
     </Button>
   );

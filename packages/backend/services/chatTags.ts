@@ -74,7 +74,9 @@ export function withoutTag(content: string, tag: string): string {
  * this returns are used to anchor a nearby search and to exclude what has
  * already been shown.
  */
-export const extractLastPropertyIdsFromMessages = (msgs: readonly TaggedChatMessage[]): string[] => {
+export const extractLastPropertyIdsFromMessages = (
+  msgs: readonly TaggedChatMessage[],
+): string[] => {
   for (const m of [...msgs].reverse()) {
     if (m.role !== 'assistant' || !m.content) continue;
     const payload = taggedContent(m.content, PROPERTIES_JSON_TAG);

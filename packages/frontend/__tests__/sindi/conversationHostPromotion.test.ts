@@ -54,7 +54,7 @@ describe('conversation-id promotion belongs to the host', () => {
   it('the side panel updates its selection and touches no route', () => {
     const panel = codeOf('components/sindi/SindiPanel.tsx');
     expect(panel).toContain('onConversationPersisted={setActiveConversationId}');
-    expect(panel).not.toContain("router.replace(`/sindi/");
+    expect(panel).not.toContain('router.replace(`/sindi/');
   });
 
   it('the in-property sheet drives nothing, and sends no app context', () => {

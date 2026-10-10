@@ -32,11 +32,7 @@ import type {
 } from '@homiio/shared-types';
 import { getDb } from '../db/postgres';
 import { addresses, properties } from '../db/schema';
-import {
-  allOf,
-  findProperties,
-  type DistanceOrigin,
-} from '../db/properties/propertyReads';
+import { allOf, findProperties, type DistanceOrigin } from '../db/properties/propertyReads';
 import { distanceTo, withinCircle } from '../db/properties/propertyGeo';
 import { serializeProperty } from '../db/properties/propertySerializer';
 
@@ -220,7 +216,9 @@ export async function aggregatePriceStats(
       avg: sql<number>`avg(${priceColumn})`,
       median: sql<number | null>`percentile_cont(0.5) within group (order by ${priceColumn})`,
       prices: sql<number[]>`array_agg(${priceColumn} order by ${priceColumn})`,
-      avgPricePerSqm: sql<number | null>`avg(${priceColumn} / nullif(${properties.squareFootage}, 0))`,
+      avgPricePerSqm: sql<
+        number | null
+      >`avg(${priceColumn} / nullif(${properties.squareFootage}, 0))`,
     })
     .from(properties)
     .innerJoin(addresses, eq(properties.addressId, addresses.id))
@@ -265,7 +263,10 @@ export function classifyVerdict(percentDiffFromAvg: number): AreaPriceVerdict {
   return 'above_average';
 }
 
-export function buildComparison(stats: PriceStatsRow | null, thisPrice: number): AreaPriceComparison {
+export function buildComparison(
+  stats: PriceStatsRow | null,
+  thisPrice: number,
+): AreaPriceComparison {
   if (!stats) {
     return {
       min: roundInt(thisPrice),
@@ -297,7 +298,10 @@ function medianFromSorted(sorted: number[]): number {
   return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
 }
 
-export function buildDistribution(stats: PriceStatsRow | null, thisPrice: number): AreaPriceDistribution {
+export function buildDistribution(
+  stats: PriceStatsRow | null,
+  thisPrice: number,
+): AreaPriceDistribution {
   const prices = stats ? [...stats.prices, thisPrice] : [thisPrice];
   const min = stats ? Math.min(stats.min, thisPrice) : thisPrice;
   const max = stats ? Math.max(stats.max, thisPrice) : thisPrice;

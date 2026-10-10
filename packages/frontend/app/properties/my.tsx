@@ -92,11 +92,7 @@ export default function MyPropertiesScreen() {
   const { deleteProperty } = useDeleteProperty();
   const markTransacted = useMarkPropertyTransacted();
 
-
-  const properties = useMemo<Property[]>(
-    () => data?.properties ?? [],
-    [data?.properties],
-  );
+  const properties = useMemo<Property[]>(() => data?.properties ?? [], [data?.properties]);
 
   const handleCreateProperty = useCallback(() => {
     router.push('/properties/create');
@@ -123,50 +119,54 @@ export default function MyPropertiesScreen() {
     [router],
   );
 
-  const handleDelete = useCallback(async (deleteTarget: DeleteTarget) => {
-    const ok = await confirm({
-      title: t('properties.my.deleteTitle'),
-      description: t('properties.my.deleteMessage', { title: deleteTarget.title }),
-      confirmLabel: t('common.delete'),
-      cancelLabel: t('common.cancel'),
-      destructive: true,
-    });
-    if (!ok) return;
-    try {
-      await deleteProperty(deleteTarget.id);
-      await refetch();
-    } catch (deleteError: unknown) {
-      logger.error('Failed to delete property:', deleteError);
-    }
-  }, [deleteProperty, refetch, t]);
-
-  const handleTransact = useCallback(async (transactTarget: TransactTarget) => {
-    const sold = transactTarget.status === PropertyStatus.SOLD;
-    const ok = await confirm({
-      title: sold ? t('properties.my.markSoldTitle') : t('properties.my.markRentedTitle'),
-      description: t('properties.my.transactMessage', { title: transactTarget.title }),
-      confirmLabel: sold ? t('properties.my.markSold') : t('properties.my.markRented'),
-      cancelLabel: t('common.cancel'),
-    });
-    if (!ok) return;
-    try {
-      const result = await markTransacted.mutateAsync({
-        propertyId: transactTarget.id,
-        status: transactTarget.status,
+  const handleDelete = useCallback(
+    async (deleteTarget: DeleteTarget) => {
+      const ok = await confirm({
+        title: t('properties.my.deleteTitle'),
+        description: t('properties.my.deleteMessage', { title: deleteTarget.title }),
+        confirmLabel: t('common.delete'),
+        cancelLabel: t('common.cancel'),
+        destructive: true,
       });
-      await refetch();
-      if (result.commission) {
-        toast.success(
-          t('properties.my.transactCommission'),
-        );
-      } else {
-        toast.success(t('properties.my.transactDone'));
+      if (!ok) return;
+      try {
+        await deleteProperty(deleteTarget.id);
+        await refetch();
+      } catch (deleteError: unknown) {
+        logger.error('Failed to delete property:', deleteError);
       }
-    } catch (transactError: unknown) {
-      logger.error('Failed to mark property transacted:', transactError);
-      toast.error(t('properties.my.transactError'));
-    }
-  }, [markTransacted, refetch, t]);
+    },
+    [deleteProperty, refetch, t],
+  );
+
+  const handleTransact = useCallback(
+    async (transactTarget: TransactTarget) => {
+      const sold = transactTarget.status === PropertyStatus.SOLD;
+      const ok = await confirm({
+        title: sold ? t('properties.my.markSoldTitle') : t('properties.my.markRentedTitle'),
+        description: t('properties.my.transactMessage', { title: transactTarget.title }),
+        confirmLabel: sold ? t('properties.my.markSold') : t('properties.my.markRented'),
+        cancelLabel: t('common.cancel'),
+      });
+      if (!ok) return;
+      try {
+        const result = await markTransacted.mutateAsync({
+          propertyId: transactTarget.id,
+          status: transactTarget.status,
+        });
+        await refetch();
+        if (result.commission) {
+          toast.success(t('properties.my.transactCommission'));
+        } else {
+          toast.success(t('properties.my.transactDone'));
+        }
+      } catch (transactError: unknown) {
+        logger.error('Failed to mark property transacted:', transactError);
+        toast.error(t('properties.my.transactError'));
+      }
+    },
+    [markTransacted, refetch, t],
+  );
 
   const renderFooter = useCallback(
     (property: Property) => {
@@ -183,11 +183,11 @@ export default function MyPropertiesScreen() {
           {canCloseDeal(property.status) ? (
             <Button
               size="sm"
-              onPress={() =>
-                void handleTransact({ id: propertyId, title, status: closeStatus })
-              }
+              onPress={() => void handleTransact({ id: propertyId, title, status: closeStatus })}
               leadingIcon={RiCheckboxCircleLine}
-              style={styles.ownerActionButton} tone="accent" appearance="solid"
+              style={styles.ownerActionButton}
+              tone="accent"
+              appearance="solid"
             >
               {closeStatus === PropertyStatus.SOLD
                 ? t('properties.my.markSold')
@@ -205,7 +205,9 @@ export default function MyPropertiesScreen() {
               size="sm"
               onPress={() => handleViewingSchedule(propertyId)}
               leadingIcon={RiCalendarLine}
-              style={styles.ownerActionButton} tone="neutral" appearance="outline"
+              style={styles.ownerActionButton}
+              tone="neutral"
+              appearance="outline"
             >
               {t('properties.my.viewingTimes')}
             </Button>
@@ -213,7 +215,9 @@ export default function MyPropertiesScreen() {
               size="sm"
               onPress={() => handleEditProperty(propertyId)}
               leadingIcon={RiEditLine}
-              style={styles.ownerActionButton} tone="neutral" appearance="outline"
+              style={styles.ownerActionButton}
+              tone="neutral"
+              appearance="outline"
             >
               {t('properties.my.edit')}
             </Button>
@@ -222,7 +226,9 @@ export default function MyPropertiesScreen() {
               onPress={() => void handleDelete({ id: propertyId, title })}
               icon={<RiDeleteBinLine width={16} height={16} fill={theme.colors.negative} />}
               textStyle={{ color: theme.colors.negative }}
-              style={styles.ownerActionButton} tone="neutral" appearance="outline"
+              style={styles.ownerActionButton}
+              tone="neutral"
+              appearance="outline"
             >
               {t('properties.my.delete')}
             </Button>
@@ -230,17 +236,19 @@ export default function MyPropertiesScreen() {
         </View>
       );
     },
-    [t, theme.colors.negative, handleEditProperty, handleViewingSchedule, handleDelete, handleTransact],
+    [
+      t,
+      theme.colors.negative,
+      handleEditProperty,
+      handleViewingSchedule,
+      handleDelete,
+      handleTransact,
+    ],
   );
 
   const body = (() => {
     if (isLoading && properties.length === 0) {
-      return (
-        <PropertyResultsGridSkeleton
-          count={SKELETON_COUNT}
-          style={styles.gridPadding}
-        />
-      );
+      return <PropertyResultsGridSkeleton count={SKELETON_COUNT} style={styles.gridPadding} />;
     }
     if (error) {
       return (
@@ -283,7 +291,9 @@ export default function MyPropertiesScreen() {
             size="sm"
             onPress={handleCreateProperty}
             leadingIcon={RiAddLine}
-            accessibilityLabel={t('properties.my.createFirst')} tone="accent" appearance="solid"
+            accessibilityLabel={t('properties.my.createFirst')}
+            tone="accent"
+            appearance="solid"
           >
             {t('common.add')}
           </Button>

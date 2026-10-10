@@ -41,10 +41,7 @@ export interface StoredDocumentKeyOptions {
  * against the old one would stop resolving if the host had to match. The path
  * is server-generated and constant.
  */
-export function storedDocumentKey(
-  url: string,
-  options: StoredDocumentKeyOptions,
-): string | null {
+export function storedDocumentKey(url: string, options: StoredDocumentKeyOptions): string | null {
   if (typeof url !== 'string' || url.length === 0) return null;
 
   let parsed: URL;

@@ -42,13 +42,13 @@ class AddressService {
       return {
         success: true,
         data: data,
-        message: 'Address fetched successfully'
+        message: 'Address fetched successfully',
       };
     } catch (error) {
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to fetch address',
-        data: null
+        data: null,
       };
     }
   }
@@ -59,11 +59,11 @@ class AddressService {
   async searchAddresses(
     query: string,
     page: number = 1,
-    limit: number = 10
+    limit: number = 10,
   ): Promise<ApiResponse<{ addresses: AddressData[] }>> {
     try {
       const response = await fetch(
-        `${this.baseUrl}/api/addresses/search?q=${encodeURIComponent(query)}&page=${page}&limit=${limit}`
+        `${this.baseUrl}/api/addresses/search?q=${encodeURIComponent(query)}&page=${page}&limit=${limit}`,
       );
 
       if (!response.ok) {
@@ -74,13 +74,13 @@ class AddressService {
       return {
         success: true,
         data: data,
-        message: 'Addresses searched successfully'
+        message: 'Addresses searched successfully',
       };
     } catch (error) {
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to search addresses',
-        data: null
+        data: null,
       };
     }
   }
@@ -92,11 +92,11 @@ class AddressService {
     longitude: number,
     latitude: number,
     radius: number = 1000, // in meters
-    limit: number = 10
+    limit: number = 10,
   ): Promise<ApiResponse<{ addresses: AddressData[] }>> {
     try {
       const response = await fetch(
-        `${this.baseUrl}/api/addresses/nearby?lng=${longitude}&lat=${latitude}&radius=${radius}&limit=${limit}`
+        `${this.baseUrl}/api/addresses/nearby?lng=${longitude}&lat=${latitude}&radius=${radius}&limit=${limit}`,
       );
 
       if (!response.ok) {
@@ -107,13 +107,13 @@ class AddressService {
       return {
         success: true,
         data: data,
-        message: 'Nearby addresses fetched successfully'
+        message: 'Nearby addresses fetched successfully',
       };
     } catch (error) {
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to fetch nearby addresses',
-        data: null
+        data: null,
       };
     }
   }

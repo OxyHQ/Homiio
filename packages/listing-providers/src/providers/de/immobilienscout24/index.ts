@@ -27,7 +27,11 @@ import type {
   RawListing,
 } from '../../../types';
 import { createFetchRuntime } from '../../../runtime';
-import { defaultProviderMetrics, type ProviderMetricsReader, type ProviderMetricsSink } from '../../../metrics';
+import {
+  defaultProviderMetrics,
+  type ProviderMetricsReader,
+  type ProviderMetricsSink,
+} from '../../../metrics';
 import { IMMOBILIENSCOUT24_BASE_URL, IMMOBILIENSCOUT24_MOBILE_API } from './fixtures';
 import {
   is24ExposeUrl,
@@ -76,7 +80,9 @@ function resolvePropertyType(realEstateType: string | undefined): PropertyType {
 function asIs24Raw(payload: unknown): Is24RawListing {
   const record = payload as { sourceId?: unknown; url?: unknown } | null;
   if (!record || typeof record.sourceId !== 'string' || typeof record.url !== 'string') {
-    throw new Error('immobilienscout24: normalize received a payload that is not an Is24RawListing');
+    throw new Error(
+      'immobilienscout24: normalize received a payload that is not an Is24RawListing',
+    );
   }
   return payload as Is24RawListing;
 }
@@ -250,7 +256,9 @@ export class ImmobilienScout24Provider implements ListingProvider {
       },
       type: resolvePropertyType(listing.realEstateType),
       offerings: isSale ? [OfferingType.SALE] : [OfferingType.LONG_TERM_RENT],
-      longTermRent: isSale ? undefined : { monthlyAmount: listing.price, currency: listing.currency },
+      longTermRent: isSale
+        ? undefined
+        : { monthlyAmount: listing.price, currency: listing.currency },
       sale: isSale ? { price: listing.price, currency: listing.currency } : undefined,
       remoteImages: toRemoteImages(listing.images),
       status: 'published',
@@ -275,7 +283,11 @@ export class ImmobilienScout24Provider implements ListingProvider {
     const snapshot = this.metrics.snapshot(this.id);
     if (snapshot && snapshot.attempts > 0) {
       const status =
-        snapshot.challengeRate >= 0.8 ? 'unhealthy' : snapshot.challengeRate >= 0.3 ? 'degraded' : 'healthy';
+        snapshot.challengeRate >= 0.8
+          ? 'unhealthy'
+          : snapshot.challengeRate >= 0.3
+            ? 'degraded'
+            : 'healthy';
       return {
         provider: this.id,
         status,

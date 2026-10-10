@@ -71,8 +71,16 @@ describe('search price histogram', () => {
 
   beforeEach(async () => {
     await resetGeoTables();
-    barcelona = await seedGeoChain({ cityName: 'Barcelona', regionName: 'Catalonia', countryCode: 'ES-HB' });
-    madrid = await seedGeoChain({ cityName: 'Madrid', regionName: 'Community of Madrid', countryCode: 'ES-HM' });
+    barcelona = await seedGeoChain({
+      cityName: 'Barcelona',
+      regionName: 'Catalonia',
+      countryCode: 'ES-HB',
+    });
+    madrid = await seedGeoChain({
+      cityName: 'Madrid',
+      regionName: 'Community of Madrid',
+      countryCode: 'ES-HM',
+    });
 
     for (const price of [700, 900, 1100, 1300, 1500, 2400]) await seedRent(barcelona, price);
     await seedRent(barcelona, 800, { type: PropertyType.HOUSE, bedrooms: 3 });
@@ -85,20 +93,30 @@ describe('search price histogram', () => {
   it('counts exactly the listings the search matches, bucketed over the requested span', async () => {
     const qs = `offering=long_term_rent&city=${barcelona.cityId}`;
     const [histogram, search] = await Promise.all([
-      request(buildApp()).get(`/properties/search/price-histogram?${qs}&histogramMin=0&histogramMax=2000&histogramBuckets=10`),
+      request(buildApp()).get(
+        `/properties/search/price-histogram?${qs}&histogramMin=0&histogramMax=2000&histogramBuckets=10`,
+      ),
       request(buildApp()).get(`/properties/search?${qs}`),
     ]);
 
     expect(histogram.status).toBe(200);
     const body = histogram.body.priceHistogram;
     expect(search.body.total).toBe(7);
-    expect(body).toMatchObject({ offering: 'long_term_rent', currency: 'EUR', min: 0, max: 2000, count: 7 });
+    expect(body).toMatchObject({
+      offering: 'long_term_rent',
+      currency: 'EUR',
+      min: 0,
+      max: 2000,
+      count: 7,
+    });
     expect(body.buckets).toHaveLength(10);
     expect(sum(body.buckets)).toBe(search.body.total);
     // 200-wide buckets, 0-indexed: 700 → [600,800) #3, 800 and 900 → #4,
     // 1100 → #5, 1300 → #6, 1500 → #7, and 2400 is ABOVE the span and lands in
     // the open last bucket.
-    expect(body.buckets.map((bucket: Bucket) => bucket.count)).toEqual([0, 0, 0, 1, 2, 1, 1, 1, 0, 1]);
+    expect(body.buckets.map((bucket: Bucket) => bucket.count)).toEqual([
+      0, 0, 0, 1, 2, 1, 1, 1, 0, 1,
+    ]);
     expect(body.buckets[0]).toMatchObject({ from: 0, to: 200 });
     expect(body.buckets[9]).toMatchObject({ from: 1800, to: 2000 });
     expect(histogram.body.location).toMatchObject({ status: 'resolved', cityId: barcelona.cityId });
@@ -117,18 +135,30 @@ describe('search price histogram', () => {
     expect(houses.body.priceHistogram.count).toBe(1);
     expect(sum(houses.body.priceHistogram.buckets)).toBe(1);
 
-    const everywhere = await request(buildApp()).get('/properties/search/price-histogram?offering=long_term_rent');
+    const everywhere = await request(buildApp()).get(
+      '/properties/search/price-histogram?offering=long_term_rent',
+    );
     expect(everywhere.body.priceHistogram.count).toBe(9);
     expect(everywhere.body.location).toMatchObject({ status: 'none' });
   });
 
   it('scopes a country by its ISO code', async () => {
-    const lisbon = await seedGeoChain({ cityName: 'Lisbon', regionName: 'Lisboa', countryCode: 'PT-H' });
+    const lisbon = await seedGeoChain({
+      cityName: 'Lisbon',
+      regionName: 'Lisboa',
+      countryCode: 'PT-H',
+    });
     await seedRent(lisbon, 950, {}, 'PT');
 
-    const res = await request(buildApp()).get('/properties/search/price-histogram?offering=long_term_rent&country=PT');
+    const res = await request(buildApp()).get(
+      '/properties/search/price-histogram?offering=long_term_rent&country=PT',
+    );
 
-    expect(res.body.location).toMatchObject({ status: 'resolved', appliedLocationKind: 'country', countryCode: 'PT' });
+    expect(res.body.location).toMatchObject({
+      status: 'resolved',
+      appliedLocationKind: 'country',
+      countryCode: 'PT',
+    });
     expect(res.body.priceHistogram.count).toBe(1);
   });
 
@@ -176,14 +206,22 @@ describe('search price histogram', () => {
       `/properties/search/price-histogram?offering=long_term_rent&city=${barcelona.cityId}&currency=EUR`,
     );
 
-    expect(res.body.priceHistogram).toMatchObject({ currency: 'EUR', count: 7, otherCurrencyCount: 1 });
+    expect(res.body.priceHistogram).toMatchObject({
+      currency: 'EUR',
+      count: 7,
+      otherCurrencyCount: 1,
+    });
     expect(sum(res.body.priceHistogram.buckets)).toBe(7);
   });
 
   describe('the currency is the SCOPE’s, not the caller’s default', () => {
     /** A city whose whole inventory is priced in something other than euros. */
     async function seedLondon(): Promise<GeoChain> {
-      const london = await seedGeoChain({ cityName: 'London', regionName: 'Greater London', countryCode: 'GB-H' });
+      const london = await seedGeoChain({
+        cityName: 'London',
+        regionName: 'Greater London',
+        countryCode: 'GB-H',
+      });
       for (const price of [1400, 1800, 2600]) {
         await seedRent(london, price, { longTermRentCurrency: 'GBP' }, 'GB');
       }
@@ -197,7 +235,11 @@ describe('search price histogram', () => {
         `/properties/search/price-histogram?offering=long_term_rent&city=${london.cityId}`,
       );
 
-      expect(res.body.priceHistogram).toMatchObject({ currency: 'GBP', count: 3, otherCurrencyCount: 0 });
+      expect(res.body.priceHistogram).toMatchObject({
+        currency: 'GBP',
+        count: 3,
+        otherCurrencyCount: 0,
+      });
       expect(sum(res.body.priceHistogram.buckets)).toBe(3);
     });
 
@@ -209,7 +251,11 @@ describe('search price histogram', () => {
         `/properties/search/price-histogram?offering=long_term_rent&city=${barcelona.cityId}`,
       );
 
-      expect(res.body.priceHistogram).toMatchObject({ currency: 'EUR', count: 7, otherCurrencyCount: 1 });
+      expect(res.body.priceHistogram).toMatchObject({
+        currency: 'EUR',
+        count: 7,
+        otherCurrencyCount: 1,
+      });
     });
 
     it('answers NO histogram for a currency the scope does not price in', async () => {
@@ -246,7 +292,10 @@ describe('search price histogram', () => {
     );
 
     expect(res.status).toBe(200);
-    expect(res.body.location).toMatchObject({ status: 'unresolved', requested: { param: 'city', value: 'Atlantis' } });
+    expect(res.body.location).toMatchObject({
+      status: 'unresolved',
+      requested: { param: 'city', value: 'Atlantis' },
+    });
     // Never the distribution of the whole catalogue under a place's name.
     expect(res.body.priceHistogram).toBeNull();
   });
@@ -268,7 +317,9 @@ describe('search price histogram', () => {
   });
 
   it('has no histogram for exchange, which carries no price', async () => {
-    const res = await request(buildApp()).get('/properties/search/price-histogram?offering=exchange');
+    const res = await request(buildApp()).get(
+      '/properties/search/price-histogram?offering=exchange',
+    );
     expect(res.status).toBe(200);
     expect(res.body.priceHistogram).toBeNull();
   });

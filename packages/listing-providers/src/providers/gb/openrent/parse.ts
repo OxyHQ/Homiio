@@ -15,8 +15,7 @@ import { OPENRENT_BASE_URL } from './fixtures';
 /** Square feet → square metres (the app stores `squareFootage` in m²). */
 const SQFT_TO_SQM = 0.092903;
 
-const DETAIL_PATH_RE =
-  /href="(\/property-to-rent\/[^"]+\/(\d+))"/gi;
+const DETAIL_PATH_RE = /href="(\/property-to-rent\/[^"]+\/(\d+))"/gi;
 
 function asNumber(value: string | undefined): number | undefined {
   if (!value) return undefined;

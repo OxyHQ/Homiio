@@ -28,7 +28,11 @@ import type {
 } from '../../../types';
 import { createFetchRuntime } from '../../../runtime';
 import { fetchListingViaLadder } from '../../../strategy';
-import { defaultProviderMetrics, type ProviderMetricsReader, type ProviderMetricsSink } from '../../../metrics';
+import {
+  defaultProviderMetrics,
+  type ProviderMetricsReader,
+  type ProviderMetricsSink,
+} from '../../../metrics';
 import { LAMUDI_BASE_URL } from './fixtures';
 import {
   isLamudiChallenge,
@@ -49,8 +53,7 @@ const DEFAULT_CITIES: readonly string[] = [
 
 const MAX_SEARCH_PAGES = 2;
 const OPERATIONS: readonly ('for-rent' | 'for-sale')[] = ['for-rent', 'for-sale'];
-const CONTENT_SELECTOR =
-  'script[type="application/ld+json"], main, a[href*="/detalle/"]';
+const CONTENT_SELECTOR = 'script[type="application/ld+json"], main, a[href*="/detalle/"]';
 
 export interface LamudiProviderOptions {
   runtime?: FetchRuntime;

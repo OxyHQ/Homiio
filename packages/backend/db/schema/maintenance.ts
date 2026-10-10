@@ -81,9 +81,12 @@ import { properties } from './properties';
  * adding a value to the shared contract without adding it here a compile error
  * rather than a row the database refuses at runtime.
  */
-export const MAINTENANCE_CATEGORY_VALUES = MAINTENANCE_CATEGORIES satisfies readonly MaintenanceCategory[];
-export const MAINTENANCE_URGENCY_VALUES = MAINTENANCE_URGENCIES satisfies readonly MaintenanceUrgency[];
-export const MAINTENANCE_STATUS_VALUES = MAINTENANCE_STATUSES satisfies readonly MaintenanceStatus[];
+export const MAINTENANCE_CATEGORY_VALUES =
+  MAINTENANCE_CATEGORIES satisfies readonly MaintenanceCategory[];
+export const MAINTENANCE_URGENCY_VALUES =
+  MAINTENANCE_URGENCIES satisfies readonly MaintenanceUrgency[];
+export const MAINTENANCE_STATUS_VALUES =
+  MAINTENANCE_STATUSES satisfies readonly MaintenanceStatus[];
 
 /** Which side of the lease an author is on. Resolved server-side, never sent. */
 export const MAINTENANCE_ROLES = ['tenant', 'landlord'] as const;
@@ -206,10 +209,7 @@ export const maintenanceRequestComments = pgTable(
     createdAt: createdAt(),
   },
   (table) => [
-    index('maintenance_request_comments_request_created_idx').on(
-      table.requestId,
-      table.createdAt,
-    ),
+    index('maintenance_request_comments_request_created_idx').on(table.requestId, table.createdAt),
     check(
       'maintenance_request_comments_role_check',
       sql`${table.role} in (${sql.raw(inList(MAINTENANCE_ROLES))})`,

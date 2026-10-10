@@ -17,15 +17,8 @@
  *     and a restored payload is never presented as current.
  */
 
-import {
-  homeSectionsQueryKey,
-  resolveFreshness,
-  STALE_AFTER_MS,
-} from '@/hooks/useHomeSections';
-import {
-  buildHomeSectionsParams,
-  UnscopableLocationError,
-} from '@/services/homeSectionsService';
+import { homeSectionsQueryKey, resolveFreshness, STALE_AFTER_MS } from '@/hooks/useHomeSections';
+import { buildHomeSectionsParams, UnscopableLocationError } from '@/services/homeSectionsService';
 import { readHomeSnapshot, type HomeSnapshot } from '@/store/homeSectionsCacheStore';
 import { describeScope } from '@/components/location/scopeWhere';
 import { OfferingType, locationKey, type LocationSelection } from '@homiio/shared-types';
@@ -116,7 +109,14 @@ describe('the request parameters', () => {
       kind: 'polygon',
       polygon: {
         type: 'Polygon',
-        coordinates: [[[2.1, 41.3], [2.2, 41.3], [2.2, 41.4], [2.1, 41.3]]],
+        coordinates: [
+          [
+            [2.1, 41.3],
+            [2.2, 41.3],
+            [2.2, 41.4],
+            [2.1, 41.3],
+          ],
+        ],
       },
       bounds: { west: 2.1, south: 41.3, east: 2.2, north: 41.4 },
       label: { primary: 'Drawn area', kind: 'generated' },
@@ -138,17 +138,15 @@ describe('the offline snapshot is scoped', () => {
   };
 
   it('serves a snapshot for the scope it was taken in', () => {
-    expect(
-      readHomeSnapshot(snapshot, locationKey(BARCELONA), OfferingType.LONG_TERM_RENT),
-    ).toBe(snapshot);
+    expect(readHomeSnapshot(snapshot, locationKey(BARCELONA), OfferingType.LONG_TERM_RENT)).toBe(
+      snapshot,
+    );
   });
 
   it('REFUSES a snapshot taken in another city', () => {
     // Opening the app offline in Madrid must not show yesterday's Barcelona
     // under a Madrid heading. It would look like a working app.
-    expect(
-      readHomeSnapshot(snapshot, locationKey(MADRID), OfferingType.LONG_TERM_RENT),
-    ).toBeNull();
+    expect(readHomeSnapshot(snapshot, locationKey(MADRID), OfferingType.LONG_TERM_RENT)).toBeNull();
   });
 
   it('REFUSES a snapshot taken for another offering', () => {
@@ -163,7 +161,12 @@ describe('the offline snapshot is scoped', () => {
 describe('live, cached and stale are three different answers', () => {
   it('calls a fresh successful fetch live', () => {
     expect(
-      resolveFreshness({ hasLiveData: true, servedFromSnapshot: false, failed: false, ageMs: 1000 }),
+      resolveFreshness({
+        hasLiveData: true,
+        servedFromSnapshot: false,
+        failed: false,
+        ageMs: 1000,
+      }),
     ).toBe('live');
   });
 

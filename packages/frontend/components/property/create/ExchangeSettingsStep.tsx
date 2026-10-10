@@ -11,11 +11,7 @@ import { Item } from '@oxy.so/bloom/item';
 import { RadioGroup } from '@oxy.so/bloom/radio';
 import { SwitchFilterRow, ToggleChipGroup } from '@oxy.so/bloom/stay-filters';
 import { Textarea } from '@oxy.so/bloom/textarea';
-import {
-  AvailabilityWindow,
-  AvailabilityWindowStatus,
-  ExchangeMode,
-} from '@homiio/shared-types';
+import { AvailabilityWindow, AvailabilityWindowStatus, ExchangeMode } from '@homiio/shared-types';
 
 import { ThemedText } from '@/components/ThemedText';
 import {
@@ -24,10 +20,7 @@ import {
 } from '@/components/AvailabilityCalendar';
 import { colors } from '@/styles/colors';
 import { radius, spacing } from '@/constants/styles';
-import {
-  EXCHANGE_LANGUAGE_OPTIONS,
-  EXCHANGE_MODE_OPTIONS,
-} from './constants';
+import { EXCHANGE_LANGUAGE_OPTIONS, EXCHANGE_MODE_OPTIONS } from './constants';
 import { createPropertyStyles as styles } from './styles';
 import type { PropertyStepProps } from './types';
 
@@ -38,8 +31,7 @@ const formatWindow = (window: AvailabilityWindow): string => {
   return `${format(start, 'MMM d, yyyy')} → ${format(end, 'MMM d, yyyy')}`;
 };
 
-const windowKey = (window: AvailabilityWindow): string =>
-  `${window.start}_${window.end}`;
+const windowKey = (window: AvailabilityWindow): string => `${window.start}_${window.end}`;
 
 /**
  * "Exchange Settings" wizard step — only reachable when the listing carries the
@@ -93,9 +85,7 @@ export function ExchangeSettingsStep({ formData, setFormData }: PropertyStepProp
   const handleRemoveWindow = useCallback(
     (key: string) => {
       setFormData('offering', {
-        exchangeAvailabilityWindows: windows.filter(
-          (window) => windowKey(window) !== key,
-        ),
+        exchangeAvailabilityWindows: windows.filter((window) => windowKey(window) !== key),
       });
     },
     [setFormData, windows],
@@ -151,7 +141,9 @@ export function ExchangeSettingsStep({ formData, setFormData }: PropertyStepProp
                       iconOnly
                       leadingIcon={RiCloseLine}
                       onPress={() => handleRemoveWindow(key)}
-                      accessibilityLabel={t('listing.exchange.removeWindow')} tone="accent" appearance="subtle"
+                      accessibilityLabel={t('listing.exchange.removeWindow')}
+                      tone="accent"
+                      appearance="subtle"
                     />
                   }
                 />
@@ -159,14 +151,14 @@ export function ExchangeSettingsStep({ formData, setFormData }: PropertyStepProp
             })}
           </View>
         ) : (
-          <ThemedText style={styles.instructions}>
-            {t('listing.exchange.noWindows')}
-          </ThemedText>
+          <ThemedText style={styles.instructions}>{t('listing.exchange.noWindows')}</ThemedText>
         )}
         <Button
           leadingIcon={RiAddLine}
           onPress={() => setCalendarOpen(true)}
-          style={exchangeStyles.addWindowButton} tone="neutral" appearance="outline"
+          style={exchangeStyles.addWindowButton}
+          tone="neutral"
+          appearance="outline"
         >
           {t('listing.exchange.addWindow')}
         </Button>
@@ -186,7 +178,10 @@ export function ExchangeSettingsStep({ formData, setFormData }: PropertyStepProp
       {/* Languages */}
       <Field label={t('listing.exchange.languages')}>
         <ToggleChipGroup
-          options={EXCHANGE_LANGUAGE_OPTIONS.map((language) => ({ value: language, label: language }))}
+          options={EXCHANGE_LANGUAGE_OPTIONS.map((language) => ({
+            value: language,
+            label: language,
+          }))}
           value={languages}
           onValueChange={handleLanguages}
           accessibilityLabel={t('listing.exchange.languages')}
@@ -204,9 +199,7 @@ export function ExchangeSettingsStep({ formData, setFormData }: PropertyStepProp
           title={t('listing.exchange.requiresReciprocity')}
           description={t('listing.exchange.requiresReciprocityHelp')}
           value={offering.exchangeRequiresReciprocity}
-          onValueChange={(value) =>
-            setFormData('offering', { exchangeRequiresReciprocity: value })
-          }
+          onValueChange={(value) => setFormData('offering', { exchangeRequiresReciprocity: value })}
         />
       </View>
 

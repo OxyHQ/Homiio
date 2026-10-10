@@ -81,7 +81,10 @@ function getStripe() {
 function requireStripe(res: Response) {
   const stripe = getStripe();
   if (!stripe) {
-    res.status(501).json({ success: false, error: { message: 'Stripe not configured', code: 'STRIPE_NOT_CONFIGURED' }});
+    res.status(501).json({
+      success: false,
+      error: { message: 'Stripe not configured', code: 'STRIPE_NOT_CONFIGURED' },
+    });
     return null;
   }
   return stripe;
@@ -94,12 +97,17 @@ export async function createCheckoutSession(req: Request, res: Response) {
 
     const { product } = (req.body || {}) as { product: 'plus' | 'file' | 'founder' };
     if (!product || !['plus', 'file', 'founder'].includes(product)) {
-      return res.status(400).json({ success: false, error: { message: 'Invalid product', code: 'INVALID_PRODUCT' }});
+      return res
+        .status(400)
+        .json({ success: false, error: { message: 'Invalid product', code: 'INVALID_PRODUCT' } });
     }
 
     const oxyUserId = getOxyUserId(req);
     if (!oxyUserId) {
-      return res.status(401).json({ success: false, error: { message: 'Authentication required', code: 'AUTH_REQUIRED' }});
+      return res.status(401).json({
+        success: false,
+        error: { message: 'Authentication required', code: 'AUTH_REQUIRED' },
+      });
     }
 
     const priceId = product === 'plus' ? config.stripe?.pricePlus : config.stripe?.priceFile;
@@ -124,18 +132,18 @@ export async function createCheckoutSession(req: Request, res: Response) {
                 currency: 'eur',
                 unit_amount: 500, // 5.00 €
                 product_data: { name: 'Contract Review' },
-            },
-            quantity: 1,
-          }
-        : {
-            price_data: {
+              },
+              quantity: 1,
+            }
+          : {
+              price_data: {
                 currency: 'eur',
                 unit_amount: 1000, // 10.00 €
                 recurring: { interval: 'month' },
                 product_data: { name: 'Founder Supporter' },
-            },
-            quantity: 1,
-          };
+              },
+              quantity: 1,
+            };
 
     const session = await stripe.checkout.sessions.create({
       mode,
@@ -152,7 +160,9 @@ export async function createCheckoutSession(req: Request, res: Response) {
     return res.json({ success: true, url: session.url, id: session.id });
   } catch (error: any) {
     logUnexpectedError(error, req, 'Billing request failed');
-    return res.status(500).json({ success: false, error: { message: 'Failed to create checkout session' }});
+    return res
+      .status(500)
+      .json({ success: false, error: { message: 'Failed to create checkout session' } });
   }
 }
 
@@ -161,12 +171,19 @@ export async function stripeWebhook(req: Request, res: Response) {
   const webhookSecret = config.stripe?.webhookSecret;
   const stripe = getStripe();
 
-  if (!stripe) return res.status(501).json({ success: false, error: { message: 'Stripe not configured' }});
-  if (!webhookSecret) return res.status(500).json({ success: false, error: { message: 'Webhook secret not configured' }});
+  if (!stripe)
+    return res.status(501).json({ success: false, error: { message: 'Stripe not configured' } });
+  if (!webhookSecret)
+    return res
+      .status(500)
+      .json({ success: false, error: { message: 'Webhook secret not configured' } });
 
   // Only use rawBody for signature verification — never fall back to parsed body
   const rawBody = req.rawBody;
-  if (!rawBody) return res.status(400).json({ success: false, error: { message: 'Missing raw body for signature verification' }});
+  if (!rawBody)
+    return res
+      .status(400)
+      .json({ success: false, error: { message: 'Missing raw body for signature verification' } });
 
   let event;
   try {
@@ -179,12 +196,14 @@ export async function stripeWebhook(req: Request, res: Response) {
     logUnexpectedError(err, req, 'Stripe webhook signature verification failed');
     return res.status(400).json({
       success: false,
-      error: { message: 'Webhook signature verification failed', code: 'INVALID_WEBHOOK_SIGNATURE' }
+      error: {
+        message: 'Webhook signature verification failed',
+        code: 'INVALID_WEBHOOK_SIGNATURE',
+      },
     });
   }
 
   try {
-
     switch (event.type) {
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session;
@@ -257,18 +276,25 @@ export async function confirmCheckoutSession(req: Request, res: Response) {
     const stripe = requireStripe(res);
     if (!stripe) return;
     const { session_id } = (req.body || {}) as { session_id?: string };
-    if (!session_id) return res.status(400).json({ success: false, error: { message: 'Missing session_id' }});
+    if (!session_id)
+      return res.status(400).json({ success: false, error: { message: 'Missing session_id' } });
 
-    const session = await stripe.checkout.sessions.retrieve(session_id, { expand: ['subscription'] });
-    if (!session) return res.status(404).json({ success: false, error: { message: 'Session not found' }});
+    const session = await stripe.checkout.sessions.retrieve(session_id, {
+      expand: ['subscription'],
+    });
+    if (!session)
+      return res.status(404).json({ success: false, error: { message: 'Session not found' } });
 
     if (session.payment_status !== 'paid' && session.status !== 'complete') {
-      return res.status(409).json({ success: false, error: { message: 'Session not completed' }});
+      return res.status(409).json({ success: false, error: { message: 'Session not completed' } });
     }
 
     const product = asCheckoutProduct(session.metadata?.product);
     const oxyUserId = session.client_reference_id || session.metadata?.oxyUserId;
-    if (!product || !oxyUserId) return res.status(400).json({ success: false, error: { message: 'Missing product/oxyUserId in session' }});
+    if (!product || !oxyUserId)
+      return res
+        .status(400)
+        .json({ success: false, error: { message: 'Missing product/oxyUserId in session' } });
 
     // The SAME claim the webhook takes, so a user landing on the success page
     // before Stripe's delivery arrives — or after it — is credited exactly once
@@ -295,7 +321,9 @@ export async function confirmCheckoutSession(req: Request, res: Response) {
     return res.json({ success: true, entitlements: await readEntitlements(oxyUserId) });
   } catch (error: any) {
     logUnexpectedError(error, req, 'Billing request failed');
-    return res.status(500).json({ success: false, error: { message: 'Failed to confirm session' }});
+    return res
+      .status(500)
+      .json({ success: false, error: { message: 'Failed to confirm session' } });
   }
 }
 
@@ -309,14 +337,20 @@ export async function testWebhookConfig(req: Request, res: Response) {
       hasPricePlus: !!process.env.STRIPE_PRICE_PLUS,
       hasPriceFile: !!process.env.STRIPE_PRICE_FILE,
       webhookUrl: `${process.env.API_URL || 'http://localhost:4130'}/api/billing/webhook`,
-      successUrl: process.env.STRIPE_SUCCESS_URL || `${process.env.API_URL || 'http://localhost:4130'}/payments/success`,
-      cancelUrl: process.env.STRIPE_CANCEL_URL || `${process.env.API_URL || 'http://localhost:4130'}/profile/subscriptions`
+      successUrl:
+        process.env.STRIPE_SUCCESS_URL ||
+        `${process.env.API_URL || 'http://localhost:4130'}/payments/success`,
+      cancelUrl:
+        process.env.STRIPE_CANCEL_URL ||
+        `${process.env.API_URL || 'http://localhost:4130'}/profile/subscriptions`,
     };
 
     return res.json({ success: true, config });
   } catch (err: any) {
     logUnexpectedError(err, req, 'Billing request failed');
-    return res.status(500).json({ success: false, error: { message: 'Failed to read webhook configuration' }});
+    return res
+      .status(500)
+      .json({ success: false, error: { message: 'Failed to read webhook configuration' } });
   }
 }
 
@@ -324,13 +358,19 @@ export async function debugBillingStatus(req: Request, res: Response) {
   try {
     const oxyUserId = getOxyUserId(req);
     if (!oxyUserId) {
-      return res.status(401).json({ success: false, error: { message: 'Authentication required', code: 'AUTH_REQUIRED' }});
+      return res.status(401).json({
+        success: false,
+        error: { message: 'Authentication required', code: 'AUTH_REQUIRED' },
+      });
     }
 
     // Find billing record for this user
     const entitlements = await readEntitlements(oxyUserId);
     if (!entitlements) {
-      return res.status(404).json({ success: false, error: { message: 'Billing record not found', code: 'BILLING_NOT_FOUND' }});
+      return res.status(404).json({
+        success: false,
+        error: { message: 'Billing record not found', code: 'BILLING_NOT_FOUND' },
+      });
     }
 
     // Get detailed billing information
@@ -344,17 +384,21 @@ export async function debugBillingStatus(req: Request, res: Response) {
       fileCredits: entitlements.fileCredits,
       lastPaymentAt: entitlements.lastPaymentAt,
       processedSessions: entitlements.processedSessions,
-      processedSessionsCount: entitlements.processedSessions.length
+      processedSessionsCount: entitlements.processedSessions.length,
     };
 
     return res.json({
       success: true,
       billing: billingInfo,
-      message: billingInfo.plusActive ? 'Plus subscription is active' : 'Plus subscription is not active'
+      message: billingInfo.plusActive
+        ? 'Plus subscription is active'
+        : 'Plus subscription is not active',
     });
   } catch (err: any) {
     logUnexpectedError(err, req, 'Billing request failed');
-    return res.status(500).json({ success: false, error: { message: 'Failed to get billing status' }});
+    return res
+      .status(500)
+      .json({ success: false, error: { message: 'Failed to get billing status' } });
   }
 }
 
@@ -365,13 +409,18 @@ export async function debugSubscriptionStatus(req: Request, res: Response) {
 
     const oxyUserId = req.user?.id || req.user?._id;
     if (!oxyUserId) {
-      return res.status(401).json({ success: false, error: { message: 'Authentication required', code: 'AUTH_REQUIRED' }});
+      return res.status(401).json({
+        success: false,
+        error: { message: 'Authentication required', code: 'AUTH_REQUIRED' },
+      });
     }
 
     // Find the billing record
     const billing = await findBillingByOxyUserId(oxyUserId);
     if (!billing) {
-      return res.status(404).json({ success: false, error: { message: 'No billing record found' }});
+      return res
+        .status(404)
+        .json({ success: false, error: { message: 'No billing record found' } });
     }
 
     interface SubscriptionDebugInfo {
@@ -413,10 +462,10 @@ export async function debugSubscriptionStatus(req: Request, res: Response) {
         plusStripeSubscriptionId: billing.plusStripeSubscriptionId,
         plusCanceledAt: billing.plusCanceledAt,
         plusSince: billing.plusSince,
-        lastPaymentAt: billing.lastPaymentAt
+        lastPaymentAt: billing.lastPaymentAt,
       },
       stripe: null,
-      comparison: null
+      comparison: null,
     };
 
     if (billing.plusStripeSubscriptionId) {
@@ -428,20 +477,21 @@ export async function debugSubscriptionStatus(req: Request, res: Response) {
           cancel_at_period_end: subscription.cancel_at_period_end,
           canceled_at: subscription.canceled_at,
           current_period_end: subscription.current_period_end,
-          created: subscription.created
+          created: subscription.created,
         };
 
         // Compare database vs Stripe
         const dbActive = billing.plusActive;
         const stripeActive = subscription.status === 'active' && !subscription.cancel_at_period_end;
-        const stripeCanceled = subscription.cancel_at_period_end || subscription.status === 'canceled';
+        const stripeCanceled =
+          subscription.cancel_at_period_end || subscription.status === 'canceled';
 
         debugInfo.comparison = {
           databaseActive: dbActive,
           stripeActive: stripeActive,
           stripeCanceled: stripeCanceled,
-          needsSync: (dbActive !== stripeActive) || (stripeCanceled && !billing.plusCanceledAt),
-          syncAction: stripeCanceled ? 'mark_canceled' : stripeActive ? 'mark_active' : 'no_action'
+          needsSync: dbActive !== stripeActive || (stripeCanceled && !billing.plusCanceledAt),
+          syncAction: stripeCanceled ? 'mark_canceled' : stripeActive ? 'mark_active' : 'no_action',
         };
       } catch (stripeError) {
         // Same rule as the two above: a fixed string in the body, the real one
@@ -459,8 +509,8 @@ export async function debugSubscriptionStatus(req: Request, res: Response) {
       success: false,
       error: {
         message: 'Internal server error',
-        code: 'INTERNAL_ERROR'
-      }
+        code: 'INTERNAL_ERROR',
+      },
     });
   }
 }
@@ -469,12 +519,15 @@ export async function manuallyActivateSubscription(req: Request, res: Response) 
   try {
     const oxyUserId = getOxyUserId(req);
     if (!oxyUserId) {
-      return res.status(401).json({ success: false, error: { message: 'Authentication required', code: 'AUTH_REQUIRED' }});
+      return res.status(401).json({
+        success: false,
+        error: { message: 'Authentication required', code: 'AUTH_REQUIRED' },
+      });
     }
 
     const { session_id, product = 'plus' } = req.body;
     if (!session_id) {
-      return res.status(400).json({ success: false, error: { message: 'Missing session_id' }});
+      return res.status(400).json({ success: false, error: { message: 'Missing session_id' } });
     }
 
     // `founder` is deliberately NOT accepted here, matching the Mongo handler:
@@ -482,7 +535,7 @@ export async function manuallyActivateSubscription(req: Request, res: Response) 
     // never arrived, and it grants an entitlement without any Stripe evidence,
     // so its product list stays as narrow as it was.
     if (product !== 'plus' && product !== 'file') {
-      return res.status(400).json({ success: false, error: { message: 'Invalid product type' }});
+      return res.status(400).json({ success: false, error: { message: 'Invalid product type' } });
     }
 
     // The product is validated BEFORE the session is claimed, where Mongo
@@ -511,81 +564,96 @@ export async function manuallyActivateSubscription(req: Request, res: Response) 
     });
   } catch (err: any) {
     logUnexpectedError(err, req, 'Billing request failed');
-    return res.status(500).json({ success: false, error: { message: 'Failed to activate subscription' }});
+    return res
+      .status(500)
+      .json({ success: false, error: { message: 'Failed to activate subscription' } });
   }
 }
 
 export async function createCustomerPortalSession(req: Request, res: Response) {
-    try {
-        const stripe = requireStripe(res);
-        if (!stripe) return;
+  try {
+    const stripe = requireStripe(res);
+    if (!stripe) return;
 
-        const { subscriptionId } = req.body;
-        const oxyUserId = getOxyUserId(req);
+    const { subscriptionId } = req.body;
+    const oxyUserId = getOxyUserId(req);
 
-        if (!oxyUserId) {
-            return res.status(401).json({ success: false, error: { message: 'Authentication required', code: 'AUTH_REQUIRED' }});
-        }
-
-        if (!subscriptionId) {
-            return res.status(400).json({ success: false, error: { message: 'Subscription ID required', code: 'SUBSCRIPTION_ID_REQUIRED' }});
-        }
-
-        // Find the billing record to get the subscription details
-        const billing = await findBillingByOxyUserId(oxyUserId);
-        if (!billing || !billing.plusStripeSubscriptionId) {
-            return res.status(404).json({ success: false, error: { message: 'Subscription not found', code: 'SUBSCRIPTION_NOT_FOUND' }});
-        }
-
-        try {
-            // Get the subscription to find the customer ID
-            const subscription = await stripe.subscriptions.retrieve(billing.plusStripeSubscriptionId);
-            const customerId = subscription.customer as string;
-
-            // Create customer portal session
-            const session = await stripe.billingPortal.sessions.create({
-                customer: customerId,
-                return_url: `${process.env.FRONTEND_URL || 'http://localhost:8130'}/profile/subscriptions`,
-            });
-
-            return res.json({ success: true, url: session.url });
-        } catch (stripeError: any) {
-            // Check if it's a configuration error
-            if (stripeError.message && stripeError.message.includes('No configuration provided')) {
-                return res.status(503).json({
-                    success: false,
-                    error: {
-                        message: 'Customer portal not configured. Please contact support to manage your subscription.',
-                        code: 'PORTAL_NOT_CONFIGURED'
-                    }
-                });
-            }
-
-            // For other Stripe errors, return a generic error
-            return res.status(500).json({
-                success: false,
-                error: {
-                    message: 'Unable to access subscription management. Please contact support.',
-                    code: 'STRIPE_ERROR'
-                }
-            });
-        }
-    } catch {
-        return res.status(500).json({
-            success: false,
-            error: {
-                message: 'Internal server error',
-                code: 'INTERNAL_ERROR'
-            }
-        });
+    if (!oxyUserId) {
+      return res.status(401).json({
+        success: false,
+        error: { message: 'Authentication required', code: 'AUTH_REQUIRED' },
+      });
     }
+
+    if (!subscriptionId) {
+      return res.status(400).json({
+        success: false,
+        error: { message: 'Subscription ID required', code: 'SUBSCRIPTION_ID_REQUIRED' },
+      });
+    }
+
+    // Find the billing record to get the subscription details
+    const billing = await findBillingByOxyUserId(oxyUserId);
+    if (!billing || !billing.plusStripeSubscriptionId) {
+      return res.status(404).json({
+        success: false,
+        error: { message: 'Subscription not found', code: 'SUBSCRIPTION_NOT_FOUND' },
+      });
+    }
+
+    try {
+      // Get the subscription to find the customer ID
+      const subscription = await stripe.subscriptions.retrieve(billing.plusStripeSubscriptionId);
+      const customerId = subscription.customer as string;
+
+      // Create customer portal session
+      const session = await stripe.billingPortal.sessions.create({
+        customer: customerId,
+        return_url: `${process.env.FRONTEND_URL || 'http://localhost:8130'}/profile/subscriptions`,
+      });
+
+      return res.json({ success: true, url: session.url });
+    } catch (stripeError: any) {
+      // Check if it's a configuration error
+      if (stripeError.message && stripeError.message.includes('No configuration provided')) {
+        return res.status(503).json({
+          success: false,
+          error: {
+            message:
+              'Customer portal not configured. Please contact support to manage your subscription.',
+            code: 'PORTAL_NOT_CONFIGURED',
+          },
+        });
+      }
+
+      // For other Stripe errors, return a generic error
+      return res.status(500).json({
+        success: false,
+        error: {
+          message: 'Unable to access subscription management. Please contact support.',
+          code: 'STRIPE_ERROR',
+        },
+      });
+    }
+  } catch {
+    return res.status(500).json({
+      success: false,
+      error: {
+        message: 'Internal server error',
+        code: 'INTERNAL_ERROR',
+      },
+    });
+  }
 }
 
 export async function manuallyCancelSubscription(req: Request, res: Response) {
   try {
     const oxyUserId = getOxyUserId(req);
     if (!oxyUserId) {
-      return res.status(401).json({ success: false, error: { message: 'Authentication required', code: 'AUTH_REQUIRED' }});
+      return res.status(401).json({
+        success: false,
+        error: { message: 'Authentication required', code: 'AUTH_REQUIRED' },
+      });
     }
 
     // Mongo answered 404 on `modifiedCount === 0`, which meant "no record" and
@@ -598,7 +666,9 @@ export async function manuallyCancelSubscription(req: Request, res: Response) {
     });
 
     if (!entitlements) {
-      return res.status(404).json({ success: false, error: { message: 'No subscription found to cancel' }});
+      return res
+        .status(404)
+        .json({ success: false, error: { message: 'No subscription found to cancel' } });
     }
 
     return res.json({ success: true, entitlements });
@@ -607,8 +677,8 @@ export async function manuallyCancelSubscription(req: Request, res: Response) {
       success: false,
       error: {
         message: 'Internal server error',
-        code: 'INTERNAL_ERROR'
-      }
+        code: 'INTERNAL_ERROR',
+      },
     });
   }
 }
@@ -620,17 +690,24 @@ export async function syncSubscriptionStatus(req: Request, res: Response) {
 
     const oxyUserId = getOxyUserId(req);
     if (!oxyUserId) {
-      return res.status(401).json({ success: false, error: { message: 'Authentication required', code: 'AUTH_REQUIRED' }});
+      return res.status(401).json({
+        success: false,
+        error: { message: 'Authentication required', code: 'AUTH_REQUIRED' },
+      });
     }
 
     // Find the billing record
     const billing = await findBillingByOxyUserId(oxyUserId);
     if (!billing) {
-      return res.status(404).json({ success: false, error: { message: 'No billing record found' }});
+      return res
+        .status(404)
+        .json({ success: false, error: { message: 'No billing record found' } });
     }
 
     if (!billing.plusStripeSubscriptionId) {
-      return res.status(404).json({ success: false, error: { message: 'No subscription ID found' }});
+      return res
+        .status(404)
+        .json({ success: false, error: { message: 'No subscription ID found' } });
     }
 
     // Get current status from Stripe
@@ -646,8 +723,8 @@ export async function syncSubscriptionStatus(req: Request, res: Response) {
         success: false,
         error: {
           message: 'Subscription not found in Stripe',
-          code: 'SUBSCRIPTION_NOT_FOUND'
-        }
+          code: 'SUBSCRIPTION_NOT_FOUND',
+        },
       });
     }
 
@@ -691,8 +768,8 @@ export async function syncSubscriptionStatus(req: Request, res: Response) {
         cancelAtPeriodEnd: subscription.cancel_at_period_end,
         canceledAt: subscription.canceled_at,
         statusChanged,
-        updateData
-      }
+        updateData,
+      },
     });
   } catch (error: any) {
     logUnexpectedError(error, req, 'Billing request failed');
@@ -700,8 +777,8 @@ export async function syncSubscriptionStatus(req: Request, res: Response) {
       success: false,
       error: {
         message: 'Internal server error',
-        code: 'INTERNAL_ERROR'
-      }
+        code: 'INTERNAL_ERROR',
+      },
     });
   }
 }
@@ -715,13 +792,18 @@ export async function cancelSubscription(req: Request, res: Response) {
     const oxyUserId = getOxyUserId(req);
 
     if (!oxyUserId) {
-      return res.status(401).json({ success: false, error: { message: 'Authentication required', code: 'AUTH_REQUIRED' }});
+      return res.status(401).json({
+        success: false,
+        error: { message: 'Authentication required', code: 'AUTH_REQUIRED' },
+      });
     }
 
     // Find the billing record to get the subscription ID
     const billing = await findBillingByOxyUserId(oxyUserId);
     if (!billing || !billing.plusStripeSubscriptionId) {
-      return res.status(404).json({ success: false, error: { message: 'No subscription found to cancel' }});
+      return res
+        .status(404)
+        .json({ success: false, error: { message: 'No subscription found to cancel' } });
     }
 
     // Cancel the subscription in Stripe
@@ -733,7 +815,7 @@ export async function cancelSubscription(req: Request, res: Response) {
     } else {
       // Cancel at period end
       canceledSubscription = await stripe.subscriptions.update(billing.plusStripeSubscriptionId, {
-        cancel_at_period_end: true
+        cancel_at_period_end: true,
       });
     }
 
@@ -759,8 +841,8 @@ export async function cancelSubscription(req: Request, res: Response) {
       success: false,
       error: {
         message: 'Failed to cancel subscription',
-        code: 'CANCEL_ERROR'
-      }
+        code: 'CANCEL_ERROR',
+      },
     });
   }
 }
@@ -773,18 +855,23 @@ export async function reactivateSubscription(req: Request, res: Response) {
     const oxyUserId = getOxyUserId(req);
 
     if (!oxyUserId) {
-      return res.status(401).json({ success: false, error: { message: 'Authentication required', code: 'AUTH_REQUIRED' }});
+      return res.status(401).json({
+        success: false,
+        error: { message: 'Authentication required', code: 'AUTH_REQUIRED' },
+      });
     }
 
     // Find the billing record to get the subscription ID
     const billing = await findBillingByOxyUserId(oxyUserId);
     if (!billing || !billing.plusStripeSubscriptionId) {
-      return res.status(404).json({ success: false, error: { message: 'No subscription found to reactivate' }});
+      return res
+        .status(404)
+        .json({ success: false, error: { message: 'No subscription found to reactivate' } });
     }
 
     // Reactivate the subscription in Stripe
     await stripe.subscriptions.update(billing.plusStripeSubscriptionId, {
-      cancel_at_period_end: false
+      cancel_at_period_end: false,
     });
 
     // Update the database to reflect the reactivation. `null` CLEARS the
@@ -803,8 +890,8 @@ export async function reactivateSubscription(req: Request, res: Response) {
       success: false,
       error: {
         message: 'Failed to reactivate subscription',
-        code: 'REACTIVATE_ERROR'
-      }
+        code: 'REACTIVATE_ERROR',
+      },
     });
   }
 }
@@ -816,15 +903,15 @@ export async function testWebhookEndpoint(req: Request, res: Response) {
       message: 'Webhook endpoint is working',
       timestamp: new Date().toISOString(),
       headers: req.headers,
-      body: req.body
+      body: req.body,
     });
   } catch {
     return res.status(500).json({
       success: false,
       error: {
         message: 'Webhook test failed',
-        code: 'WEBHOOK_TEST_ERROR'
-      }
+        code: 'WEBHOOK_TEST_ERROR',
+      },
     });
   }
 }

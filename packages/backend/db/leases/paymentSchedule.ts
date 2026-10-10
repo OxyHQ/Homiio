@@ -58,10 +58,7 @@
 import type { leasePaymentSchedule } from '../schema';
 
 /** A row to insert, minus the id and the lease it belongs to. */
-export type GeneratedInstalment = Omit<
-  typeof leasePaymentSchedule.$inferInsert,
-  'id' | 'leaseId'
->;
+export type GeneratedInstalment = Omit<typeof leasePaymentSchedule.$inferInsert, 'id' | 'leaseId'>;
 
 /** The lease fields the schedule is derived from. */
 export interface PaymentScheduleInput {
@@ -84,9 +81,7 @@ export interface PaymentScheduleInput {
  *   the term is inverted — which `leases_term_order_check` already refuses at
  *   the database, so it is unreachable through a lease that exists.
  */
-export function generatePaymentSchedule(
-  lease: PaymentScheduleInput,
-): GeneratedInstalment[] {
+export function generatePaymentSchedule(lease: PaymentScheduleInput): GeneratedInstalment[] {
   const startDate = new Date(lease.leaseTermsStartDate);
   const endDate = new Date(lease.leaseTermsEndDate);
   const schedule: GeneratedInstalment[] = [];

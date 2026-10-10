@@ -1,11 +1,4 @@
-import React, {
-  createContext,
-  useContext,
-  useState,
-  useCallback,
-  useMemo,
-  ReactNode,
-} from 'react';
+import React, { createContext, useContext, useState, useCallback, useMemo, ReactNode } from 'react';
 import { toast } from '@oxy.so/bloom/toast';
 import i18next from 'i18next';
 import { useOxy } from '@oxy.so/services';
@@ -47,7 +40,11 @@ interface SavedPropertiesContextType {
     folderData: { name?: string; description?: string; color?: string; icon?: string },
   ) => Promise<SavedPropertyFolder | undefined>;
   deleteFolder: (folderId: string) => Promise<void>;
-  savePropertyToFolder: (propertyId: string, folderId: string | null, property?: Partial<SavedProperty>) => Promise<void>;
+  savePropertyToFolder: (
+    propertyId: string,
+    folderId: string | null,
+    property?: Partial<SavedProperty>,
+  ) => Promise<void>;
   unsaveProperty: (propertyId: string) => Promise<void>;
   getDefaultFolder: () => SavedPropertyFolder | undefined;
   getFolderById: (folderId: string) => SavedPropertyFolder | undefined;
@@ -72,8 +69,7 @@ interface SavedPropertiesProviderProps {
   children: ReactNode;
 }
 
-const propertyKey = (property: Pick<SavedProperty, 'id' | 'id'>): string | undefined =>
-  property.id;
+const propertyKey = (property: Pick<SavedProperty, 'id' | 'id'>): string | undefined => property.id;
 
 export const SavedPropertiesProvider: React.FC<SavedPropertiesProviderProps> = ({ children }) => {
   const queryClient = useQueryClient();

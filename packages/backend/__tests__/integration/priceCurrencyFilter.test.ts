@@ -47,7 +47,12 @@ import { searchProperties } from '../../controllers/property/search';
 import { getSearchPriceHistogram } from '../../controllers/property/priceHistogram';
 import { errorHandler } from '../../middlewares/errorHandler';
 import { serializeWireIds } from '../../middlewares/wireIds';
-import { resetGeoTables, seedAddress, seedGeoChain, seedProperty } from '../helpers/postgresGeoFixtures';
+import {
+  resetGeoTables,
+  seedAddress,
+  seedGeoChain,
+  seedProperty,
+} from '../helpers/postgresGeoFixtures';
 
 function buildApp(): Express {
   const app = express();
@@ -111,9 +116,12 @@ describe('a price bound applies in ONE currency', () => {
   });
 
   it('leaves out a listing that is inside the bound only as a NUMBER', async () => {
-    const res = await request(buildApp())
-      .get('/properties/search')
-      .query({ city, offering: OfferingType.LONG_TERM_RENT, priceMax: '1200', priceCurrency: 'EUR' });
+    const res = await request(buildApp()).get('/properties/search').query({
+      city,
+      offering: OfferingType.LONG_TERM_RENT,
+      priceMax: '1200',
+      priceCurrency: 'EUR',
+    });
 
     expect(res.status).toBe(200);
     // Exactly the two EUR listings under 1,200 — named, not counted.
@@ -128,9 +136,12 @@ describe('a price bound applies in ONE currency', () => {
   });
 
   it('answers a different question when the caller names PLN instead', async () => {
-    const res = await request(buildApp())
-      .get('/properties/search')
-      .query({ city, offering: OfferingType.LONG_TERM_RENT, priceMax: '1050', priceCurrency: 'PLN' });
+    const res = await request(buildApp()).get('/properties/search').query({
+      city,
+      offering: OfferingType.LONG_TERM_RENT,
+      priceMax: '1050',
+      priceCurrency: 'PLN',
+    });
 
     expect(res.status).toBe(200);
     // Every EUR listing is out — including the 900, which is under 1,050 by
@@ -139,7 +150,7 @@ describe('a price bound applies in ONE currency', () => {
     expect(res.body.priceCurrency).toBe('PLN');
   });
 
-  it('resolves the scope\'s own currency when the caller names none', async () => {
+  it("resolves the scope's own currency when the caller names none", async () => {
     const res = await request(buildApp())
       .get('/properties/search')
       .query({ city, offering: OfferingType.LONG_TERM_RENT, priceMax: '1200' });

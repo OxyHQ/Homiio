@@ -38,7 +38,8 @@ export const useProfileActions = () => {
         toast.success(i18next.t('profile.toast.updateSuccess'));
         return updatedProfile;
       } catch (updateError: unknown) {
-        const message = updateError instanceof Error ? updateError.message : 'Failed to update profile';
+        const message =
+          updateError instanceof Error ? updateError.message : 'Failed to update profile';
         setError(message);
         toast.error(i18next.t('profile.toast.updateFailed'));
         throw updateError;

@@ -17,7 +17,9 @@
     "build:frontend": "bun run --filter @homiio/frontend build",
     "build:backend": "bun run --filter @homiio/backend build",
     "test": "bun run --filter '*' test",
-    "lint": "bun run --filter '*' lint",
+    "lint": "biome check . && bun run --cwd packages/frontend lint",
+    "lint:fix": "biome check --write .",
+    "format": "biome format --write .",
     "doctor:oxy": "oxy-doctor --ci",
     "check:bundle-imports": "bun ./scripts/check-frontend-bundle-imports.mjs && bun ./scripts/test-check-frontend-bundle-imports.mjs",
     "check:web-bundle-budget": "bun ./scripts/check-web-export-budget.mjs",
@@ -31,11 +33,11 @@
     "postinstall": "bun run build:shared-types"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.5.15",
     "@oxy.so/doctor": "1.1.0",
     "@types/node": "^22.20.1",
     "ajv": "^8.20.0",
     "ajv-keywords": "^5.1.0",
-    "prettier-plugin-tailwindcss": "^0.8.1",
     "tailwindcss": "4.2.2",
     "typescript": "^6.0.3"
   },

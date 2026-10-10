@@ -21,10 +21,7 @@ import {
 } from '@oxy.so/bloom/segmented-control';
 import { confirm } from '@oxy.so/bloom/surfaces';
 import { useOxy, openAccountDialog } from '@oxy.so/services';
-import {
-  ExchangeRequest,
-  ExchangeRequestStatus,
-} from '@homiio/shared-types';
+import { ExchangeRequest, ExchangeRequestStatus } from '@homiio/shared-types';
 
 import { Header } from '@/components/Header';
 import { ExchangeRequestCard } from '@/components/exchange/ExchangeRequestCard';
@@ -32,10 +29,7 @@ import { GuestPointsSummary } from '@/components/exchange/GuestPointsSummary';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { ListSkeleton } from '@/components/ui/ListSkeleton';
-import {
-  useMyExchangeRequests,
-  useUpdateExchangeStatus,
-} from '@/hooks/useExchangeQueries';
+import { useMyExchangeRequests, useUpdateExchangeStatus } from '@/hooks/useExchangeQueries';
 import { toast } from '@oxy.so/bloom/toast';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { spacing } from '@/constants/styles';
@@ -86,10 +80,7 @@ const HostPendingActions: React.FC<{ request: ExchangeRequest }> = ({ request })
           : t('listing.exchange.toasts.declined'),
       );
     } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : t('listing.exchange.errors.failed');
+      const message = error instanceof Error ? error.message : t('listing.exchange.errors.failed');
       toast.error(message);
     } finally {
       setBusy(null);
@@ -102,7 +93,9 @@ const HostPendingActions: React.FC<{ request: ExchangeRequest }> = ({ request })
         size="sm"
         loading={busy === 'confirm'}
         disabled={mutation.isPending}
-        onPress={() => handle(ExchangeRequestStatus.CONFIRMED)} tone="accent" appearance="solid"
+        onPress={() => handle(ExchangeRequestStatus.CONFIRMED)}
+        tone="accent"
+        appearance="solid"
       >
         {t('listing.exchange.actions.approve')}
       </Button>
@@ -110,7 +103,9 @@ const HostPendingActions: React.FC<{ request: ExchangeRequest }> = ({ request })
         size="sm"
         loading={busy === 'decline'}
         disabled={mutation.isPending}
-        onPress={() => handle(ExchangeRequestStatus.DECLINED)} tone="neutral" appearance="outline"
+        onPress={() => handle(ExchangeRequestStatus.DECLINED)}
+        tone="neutral"
+        appearance="outline"
       >
         {t('listing.exchange.actions.decline')}
       </Button>
@@ -136,10 +131,7 @@ export default function ExchangeRequestsScreen() {
     { enabled: isAuthed },
   );
 
-  const items = useMemo<ExchangeRequest[]>(
-    () => query.data?.items ?? [],
-    [query.data?.items],
-  );
+  const items = useMemo<ExchangeRequest[]>(() => query.data?.items ?? [], [query.data?.items]);
 
   const header = (
     <Header
@@ -254,11 +246,7 @@ export default function ExchangeRequestsScreen() {
                 <ExchangeRequestCard
                   key={request.id}
                   request={request}
-                  actions={
-                    role === 'host' ? (
-                      <HostPendingActions request={request} />
-                    ) : undefined
-                  }
+                  actions={role === 'host' ? <HostPendingActions request={request} /> : undefined}
                 />
               ))}
             </View>

@@ -181,12 +181,19 @@ describe('the bound conventions differ, and the boundary instant proves it', () 
     // The opposite answer on the SAME instant. A stay that ends on the morning
     // another begins is not a double booking — with `'[]'` this reads 1 and
     // every back-to-back booking would be refused.
-    expect(await containing('reservations', 'reservations_stay_range_gist', BOUNDARY, reservationId)).toBe(0);
+    expect(
+      await containing('reservations', 'reservations_stay_range_gist', BOUNDARY, reservationId),
+    ).toBe(0);
   });
 
   it('frees an exchange window at its end instant', async () => {
     expect(
-      await containing('exchange_requests', 'exchange_requests_requested_window_gist', BOUNDARY, exchangeId),
+      await containing(
+        'exchange_requests',
+        'exchange_requests_requested_window_gist',
+        BOUNDARY,
+        exchangeId,
+      ),
     ).toBe(0);
   });
 
@@ -196,9 +203,16 @@ describe('the bound conventions differ, and the boundary instant proves it', () 
     // — none of which is what the assertion claims to measure.
     const inside = new Date(Date.UTC(2026, 5, 1));
     expect(await containing('leases', 'leases_term_range_gist', inside, leaseId)).toBe(1);
-    expect(await containing('reservations', 'reservations_stay_range_gist', inside, reservationId)).toBe(1);
     expect(
-      await containing('exchange_requests', 'exchange_requests_requested_window_gist', inside, exchangeId),
+      await containing('reservations', 'reservations_stay_range_gist', inside, reservationId),
+    ).toBe(1);
+    expect(
+      await containing(
+        'exchange_requests',
+        'exchange_requests_requested_window_gist',
+        inside,
+        exchangeId,
+      ),
     ).toBe(1);
   });
 });

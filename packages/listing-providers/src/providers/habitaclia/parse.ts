@@ -11,7 +11,11 @@
  * produces, so tests can cover the full HTML → normalized path from a fixture.
  */
 
-import { HABITACLIA_BASE_URL, type HabitacliaRawImage, type HabitacliaRawListing } from './fixtures';
+import {
+  HABITACLIA_BASE_URL,
+  type HabitacliaRawImage,
+  type HabitacliaRawListing,
+} from './fixtures';
 import { scriptBlocks } from '../../html';
 import { canonicalAmenity, FURNISHED_TOKEN } from '../../parse/amenities';
 import { asCoordinate, asNumber, asString } from '../../parse/guards';
@@ -81,7 +85,10 @@ function htmlFragmentToText(html: string): string {
     }
     if (!inTag) text += ch;
   }
-  return text.replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+  return text
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
 }
 
 /** Parse every JSON-LD block in the page, ignoring malformed ones. */
@@ -180,7 +187,9 @@ function resolvePropertyType(node: Record<string, unknown>): string {
  */
 export function parseHabitacliaDetail(html: string, url: string): HabitacliaRawListing {
   const node = extractJsonLdNodes(html).find(isListingNode);
-  const raw = node ? parseHabitacliaDetailFromJsonLd(node, url) : parseHabitacliaDetailHtml(html, url);
+  const raw = node
+    ? parseHabitacliaDetailFromJsonLd(node, url)
+    : parseHabitacliaDetailHtml(html, url);
   const enriched = applyDetailCharacteristics(raw, html);
   return { ...enriched, images: resolveDetailImages(enriched.images, html) };
 }
@@ -226,7 +235,10 @@ function applyDetailCharacteristics(raw: HabitacliaRawListing, html: string): Ha
   };
 }
 
-function parseHabitacliaDetailFromJsonLd(node: Record<string, unknown>, url: string): HabitacliaRawListing {
+function parseHabitacliaDetailFromJsonLd(
+  node: Record<string, unknown>,
+  url: string,
+): HabitacliaRawListing {
   const offer = asRecord(node['offers']) ?? {};
   const address = asRecord(node['address']) ?? {};
   const geo = asRecord(node['geo']);
@@ -249,8 +261,7 @@ function parseHabitacliaDetailFromJsonLd(node: Record<string, unknown>, url: str
 
   const { amenities, furnished } = toAmenities(node);
   const countryValue =
-    asString(address['addressCountry']) ??
-    asString(asRecord(address['addressCountry'])?.['name']);
+    asString(address['addressCountry']) ?? asString(asRecord(address['addressCountry'])?.['name']);
 
   return {
     id: sourceId,
@@ -449,7 +460,8 @@ function resolvePropertyTypeFromUrl(url: string): string {
 
 function resolveOperationFromUrl(url: string, title: string): 'rent' | 'sale' {
   const lower = `${url} ${title}`.toLowerCase();
-  if (lower.includes('/venta') || lower.includes('venta ') || lower.includes('/pisos-')) return 'sale';
+  if (lower.includes('/venta') || lower.includes('venta ') || lower.includes('/pisos-'))
+    return 'sale';
   return 'rent';
 }
 
@@ -473,7 +485,9 @@ export function parseHabitacliaDetailHtml(html: string, url: string): Habitaclia
   }
 
   const title =
-    firstMatch(html, /<h1[^>]*>([^<]+)/i) ?? metaContent(html, 'og:title') ?? metaContent(html, 'title');
+    firstMatch(html, /<h1[^>]*>([^<]+)/i) ??
+    metaContent(html, 'og:title') ??
+    metaContent(html, 'title');
   const description =
     (() => {
       const fragment = firstMatch(html, /id=["']js-detail-description["'][^>]*>([\s\S]*?)<\/p>/i);

@@ -68,11 +68,7 @@ export async function getOrCreateProfile(req: Request, res: Response, next: Next
  * session. A person reading their own profile through the public route gets the
  * public view, which is the honest answer for a route named `public`.
  */
-export async function getPublicProfileByOxyUserId(
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) {
+export async function getPublicProfileByOxyUserId(req: Request, res: Response, next: NextFunction) {
   try {
     const { oxyUserId } = req.params;
     if (!oxyUserId) {

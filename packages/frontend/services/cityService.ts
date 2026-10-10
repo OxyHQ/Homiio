@@ -38,7 +38,14 @@ import {
 } from '@homiio/shared-types';
 
 // Re-export the types for backward compatibility
-export type { City, CityFilters, CityLookupResult, CityPlaceCandidate, CityPropertiesResponse, CitiesResponse };
+export type {
+  City,
+  CityFilters,
+  CityLookupResult,
+  CityPlaceCandidate,
+  CityPropertiesResponse,
+  CitiesResponse,
+};
 
 /**
  * What a caller may hand the lookup besides the token.
@@ -183,7 +190,6 @@ class CityService {
     const response = await api.put(`/api/cities/${cityId}/update-count`);
     return response.data;
   }
-
 }
 
 export const cityService = new CityService();

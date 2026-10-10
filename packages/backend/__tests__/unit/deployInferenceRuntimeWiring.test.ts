@@ -38,9 +38,7 @@ const stepBody = (name: string): string => {
 };
 
 const apiStep = stepBody('Register immutable task definition and deploy (API)');
-const workerStep = stepBody(
-  'Register immutable task definition and deploy (listing worker)',
-);
+const workerStep = stepBody('Register immutable task definition and deploy (listing worker)');
 /** Every executable line of the deploy workflow (comments dropped). */
 const workflowDirectives = workflow
   .split('\n')
@@ -65,9 +63,7 @@ describe('Homiio deployment preserves the exact inference runtime boundary', () 
   });
 
   it('takes exact non-secret identifiers from repository variables and validates them', () => {
-    expect(apiStep).toContain(
-      'HOMIIO_SINDI_ALIA_AGENT_ID: ${{ vars.SINDI_ALIA_AGENT_ID }}',
-    );
+    expect(apiStep).toContain('HOMIIO_SINDI_ALIA_AGENT_ID: ${{ vars.SINDI_ALIA_AGENT_ID }}');
     expect(apiStep).toContain(
       'HOMIIO_OXY_INFERENCE_ROUTING_PROFILE_ID: ${{ vars.OXY_INFERENCE_ROUTING_PROFILE_ID }}',
     );
@@ -109,8 +105,12 @@ describe('Homiio deployment preserves the exact inference runtime boundary', () 
     expect(apiStep).not.toContain(SINDI_SERVICE_KEY_ARN);
     expect(apiStep).not.toContain(SINDI_SERVICE_SECRET_ARN);
     expect(apiStep).not.toContain('TASK_SECRET_OVERRIDES_JSON');
-    expect(workflowDirectives).not.toContain('require_secure_string "/oxy/$APP/SINDI_OXY_SERVICE_API_KEY"');
-    expect(workflowDirectives).not.toContain('require_secure_string "/oxy/$APP/SINDI_OXY_SERVICE_API_SECRET"');
+    expect(workflowDirectives).not.toContain(
+      'require_secure_string "/oxy/$APP/SINDI_OXY_SERVICE_API_KEY"',
+    );
+    expect(workflowDirectives).not.toContain(
+      'require_secure_string "/oxy/$APP/SINDI_OXY_SERVICE_API_SECRET"',
+    );
     expect(workflowDirectives).not.toContain('--with-decryption');
   });
 
@@ -128,17 +128,12 @@ describe('Homiio deployment preserves the exact inference runtime boundary', () 
    * about the task definition's reference to them.
    */
   it('actively removes Homiio own Oxy service credential from the API revision', () => {
-    const apiWithoutRemovalList = apiStep.replace(
-      /^\s*TASK_CONFIGURATION_REMOVALS_JSON:.*$/m,
-      '',
-    );
+    const apiWithoutRemovalList = apiStep.replace(/^\s*TASK_CONFIGURATION_REMOVALS_JSON:.*$/m, '');
     expect(apiWithoutRemovalList).not.toContain(SERVICE_KEY_ARN);
     expect(apiWithoutRemovalList).not.toContain(SERVICE_SECRET_ARN);
     // Anchored so `SINDI_OXY_SERVICE_API_KEY` — a different identity, still
     // injected — does not satisfy a bare substring search and hide a relapse.
-    expect(apiWithoutRemovalList).not.toMatch(
-      /(?<![A-Z_])OXY_SERVICE_API_(?:KEY|SECRET)/,
-    );
+    expect(apiWithoutRemovalList).not.toMatch(/(?<![A-Z_])OXY_SERVICE_API_(?:KEY|SECRET)/);
   });
 
   it('actively removes inference configuration from the listing worker', () => {
@@ -160,9 +155,14 @@ describe('Homiio deployment preserves the exact inference runtime boundary', () 
     expect(removalMatch).not.toBeNull();
     const removals: string[] = JSON.parse(removalMatch![1]);
     for (const name of [
-      'ALIA_API_URL', 'OXY_API_URL', 'OXY_SERVICE_API_KEY', 'OXY_SERVICE_API_SECRET',
-      'SINDI_OXY_SERVICE_API_KEY', 'SINDI_OXY_SERVICE_API_SECRET',
-      'OXY_INFERENCE_ROUTING_PROFILE', 'OXY_INFERENCE_ROUTING_PROFILE_ID',
+      'ALIA_API_URL',
+      'OXY_API_URL',
+      'OXY_SERVICE_API_KEY',
+      'OXY_SERVICE_API_SECRET',
+      'SINDI_OXY_SERVICE_API_KEY',
+      'SINDI_OXY_SERVICE_API_SECRET',
+      'OXY_INFERENCE_ROUTING_PROFILE',
+      'OXY_INFERENCE_ROUTING_PROFILE_ID',
       'SINDI_ALIA_AGENT_ID',
     ]) {
       expect(removals).toContain(name);

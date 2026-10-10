@@ -21,10 +21,7 @@ import {
   type NormalizedRemoteImage,
   type ProviderId,
 } from '@homiio/shared-types';
-import type {
-  BrowserSession,
-  BrowserStorageState,
-} from '../../session';
+import type { BrowserSession, BrowserStorageState } from '../../session';
 import { BrowserSessionChallengeError } from '../../session';
 import { createProxySessionId, envBool } from '../../proxy';
 import type {
@@ -38,7 +35,11 @@ import type {
 } from '../../types';
 import { createFetchRuntime } from '../../runtime';
 import { ChallengeError, fetchListingViaLadder } from '../../strategy';
-import { defaultProviderMetrics, type ProviderMetricsReader, type ProviderMetricsSink } from '../../metrics';
+import {
+  defaultProviderMetrics,
+  type ProviderMetricsReader,
+  type ProviderMetricsSink,
+} from '../../metrics';
 import { providerMaxSearchPages } from '../../discoverLimits';
 import { isDataDomeHtmlChallenge } from '../../parse/challenge';
 import type { EsSchemaListing } from '../../parse/jsonLd';
@@ -59,7 +60,12 @@ import {
   isIdealistaGeoreachChallenge,
   parseIdealistaGeoreach,
 } from './georeach';
-import { idealistaSourceIdFromUrl, parseIdealistaDetail, parseIdealistaSearch, type IdealistaRaw } from './parse';
+import {
+  idealistaSourceIdFromUrl,
+  parseIdealistaDetail,
+  parseIdealistaSearch,
+  type IdealistaRaw,
+} from './parse';
 import { idealistaCitiesFromEnv } from './cities';
 
 const ES_PROXY_COUNTRY = 'es';
@@ -78,7 +84,9 @@ const IDEALISTA_AJAX_HEADERS: Readonly<Record<string, string>> = {
 
 /** True when warmed HTML still carries listing/search markup (not a bot wall). */
 function idealistaPageHasContent(html: string): boolean {
-  return /article\.item|items-container|inmueble\/\d{5,}|application\/ld\+json|listingFilter/i.test(html);
+  return /article\.item|items-container|inmueble\/\d{5,}|application\/ld\+json|listingFilter/i.test(
+    html,
+  );
 }
 
 /** HTML markers of an Idealista interstitial/anti-bot page served with a 200. */
@@ -103,7 +111,8 @@ function searchUrl(city: string, page: number): string {
 
 function resolvePropertyType(types: readonly string[]): PropertyType {
   const lower = types.map((type) => type.toLowerCase());
-  if (lower.some((type) => type.includes('house') || type.includes('singlefamily'))) return PropertyType.HOUSE;
+  if (lower.some((type) => type.includes('house') || type.includes('singlefamily')))
+    return PropertyType.HOUSE;
   if (lower.some((type) => type.includes('studio'))) return PropertyType.STUDIO;
   return PropertyType.APARTMENT;
 }
@@ -131,7 +140,9 @@ function asIdealistaRaw(payload: unknown): IdealistaRaw {
   return record;
 }
 
-function toNormalizedContact(contact: IdealistaContact | undefined): NormalizedListingContact | undefined {
+function toNormalizedContact(
+  contact: IdealistaContact | undefined,
+): NormalizedListingContact | undefined {
   if (!contact) return undefined;
   const mapped: NormalizedListingContact = {};
   if (contact.phone) mapped.phone = contact.phone;
@@ -178,7 +189,8 @@ export class IdealistaProvider implements ListingProvider {
 
   constructor(options: IdealistaProviderOptions = {}) {
     this.runtime = options.runtime ?? createFetchRuntime();
-    this.cities = options.cities && options.cities.length > 0 ? options.cities : idealistaCitiesFromEnv();
+    this.cities =
+      options.cities && options.cities.length > 0 ? options.cities : idealistaCitiesFromEnv();
     this.metrics = options.metrics ?? defaultProviderMetrics;
     this.maxSearchPages = providerMaxSearchPages(PROVIDER_ID, DEFAULT_MAX_SEARCH_PAGES, 'ES');
   }
@@ -193,7 +205,14 @@ export class IdealistaProvider implements ListingProvider {
     for (const city of cities) {
       if (yielded.count >= limit) return;
 
-      const viaHttp = await this.discoverCityViaHttp(runtime, city, job.signal, seen, limit, yielded);
+      const viaHttp = await this.discoverCityViaHttp(
+        runtime,
+        city,
+        job.signal,
+        seen,
+        limit,
+        yielded,
+      );
       for (const ref of viaHttp) yield ref;
       if (yielded.count >= limit) return;
 
@@ -205,7 +224,14 @@ export class IdealistaProvider implements ListingProvider {
 
       // HTML fallback when georeach yielded nothing (no session, challenge, empty).
       if (viaAjax.length === 0) {
-        for await (const ref of this.discoverCityViaHtml(runtime, city, job.signal, seen, limit, yielded)) {
+        for await (const ref of this.discoverCityViaHtml(
+          runtime,
+          city,
+          job.signal,
+          seen,
+          limit,
+          yielded,
+        )) {
           yield ref;
         }
       }
@@ -609,7 +635,11 @@ export class IdealistaProvider implements ListingProvider {
     const snapshot = this.metrics.snapshot(this.id);
     if (snapshot && snapshot.attempts > 0) {
       const status =
-        snapshot.challengeRate >= 0.8 ? 'unhealthy' : snapshot.challengeRate >= 0.3 ? 'degraded' : 'healthy';
+        snapshot.challengeRate >= 0.8
+          ? 'unhealthy'
+          : snapshot.challengeRate >= 0.3
+            ? 'degraded'
+            : 'healthy';
       return {
         provider: this.id,
         status,

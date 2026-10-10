@@ -68,17 +68,19 @@ const CANONICAL_SET: ReadonlySet<string> = new Set(CANONICAL_AMENITIES);
  * and collapse every non-alphanumeric run to a single `_`.
  */
 export function slugifyAmenityToken(raw: string): string {
-  return raw
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
-    .toLowerCase()
-    // German ß has no NFD decomposition; transliterate so labels like
-    // `Fußbodenheizung` slug to `fussbodenheizung` (matched by the alias table).
-    .replace(/ß/g, 'ss')
-    .trim()
-    .replace(/[^a-z0-9]+/g, '_')
-    .replace(/^_+|_+$/g, '');
+  return (
+    raw
+      .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '')
+      .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
+      .toLowerCase()
+      // German ß has no NFD decomposition; transliterate so labels like
+      // `Fußbodenheizung` slug to `fussbodenheizung` (matched by the alias table).
+      .replace(/ß/g, 'ss')
+      .trim()
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '')
+  );
 }
 
 /**
@@ -269,9 +271,7 @@ export interface CanonicalizeAmenitiesResult {
  * `furnished` token into the returned {@link CanonicalizeAmenitiesResult.furnished}
  * flag instead of the amenity list.
  */
-export function canonicalizeAmenities(
-  inputs: Iterable<string>,
-): CanonicalizeAmenitiesResult {
+export function canonicalizeAmenities(inputs: Iterable<string>): CanonicalizeAmenitiesResult {
   const seen = new Set<string>();
   const amenities: string[] = [];
   let furnished: boolean | undefined;

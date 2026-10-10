@@ -5,12 +5,11 @@ import config from '../config';
 const createMockFile = (): any => {
   // Create a simple test image buffer (1x1 pixel PNG)
   const pngBuffer = Buffer.from([
-    0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D,
-    0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
-    0x08, 0x02, 0x00, 0x00, 0x00, 0x90, 0x77, 0x53, 0xDE, 0x00, 0x00, 0x00,
-    0x0C, 0x49, 0x44, 0x41, 0x54, 0x08, 0x99, 0x01, 0x01, 0x00, 0x00, 0x00,
-    0xFF, 0xFF, 0x00, 0x00, 0x00, 0x02, 0x00, 0x01, 0xE2, 0x21, 0xBC, 0x33,
-    0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82
+    0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
+    0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x02, 0x00, 0x00, 0x00, 0x90, 0x77, 0x53,
+    0xde, 0x00, 0x00, 0x00, 0x0c, 0x49, 0x44, 0x41, 0x54, 0x08, 0x99, 0x01, 0x01, 0x00, 0x00, 0x00,
+    0xff, 0xff, 0x00, 0x00, 0x00, 0x02, 0x00, 0x01, 0xe2, 0x21, 0xbc, 0x33, 0x00, 0x00, 0x00, 0x00,
+    0x49, 0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82,
   ]);
 
   return {
@@ -32,12 +31,14 @@ async function testImageUpload() {
   try {
     // Test 1: Check if S3 configuration is set
     console.log('1. Checking S3 configuration...');
-    
+
     if (!config.s3.accessKeyId || !config.s3.secretAccessKey) {
-      console.log('❌ S3 credentials not configured. Please set S3_ACCESS_KEY_ID and S3_SECRET_ACCESS_KEY environment variables.');
+      console.log(
+        '❌ S3 credentials not configured. Please set S3_ACCESS_KEY_ID and S3_SECRET_ACCESS_KEY environment variables.',
+      );
       return;
     }
-    
+
     console.log('✅ S3 configuration found');
     console.log(`   Endpoint: ${config.s3.endpoint}`);
     console.log(`   Region: ${config.s3.region}`);
@@ -56,7 +57,7 @@ async function testImageUpload() {
       console.log(`   Image ID: ${result.original.split('/').pop()?.split('-')[0]}`);
       console.log(`   Original size: ${result.metadata.originalSize} bytes`);
       console.log(`   Variants created: ${Object.keys(result.variants).length}`);
-      
+
       // Display URLs
       const urls = imageUploadService.getAllImageUrls(result);
       console.log('\n   Generated URLs:');
@@ -69,10 +70,11 @@ async function testImageUpload() {
       const allKeys = [result.original, ...Object.values(result.variants)];
       await imageUploadService.deleteImageVariants(allKeys);
       console.log('✅ Image variants deleted successfully');
-
     } catch (uploadError) {
       console.log('⚠️  Image upload test skipped (likely due to missing S3 credentials)');
-      console.log(`   Error: ${uploadError instanceof Error ? uploadError.message : 'Unknown error'}`);
+      console.log(
+        `   Error: ${uploadError instanceof Error ? uploadError.message : 'Unknown error'}`,
+      );
     }
 
     console.log('\n🎉 Image upload service test completed!');
@@ -85,7 +87,6 @@ async function testImageUpload() {
     console.log('   - S3_SECRET_ACCESS_KEY');
     console.log('   - S3_BUCKET_NAME');
     console.log('3. Test with real images using the API endpoints');
-
   } catch (error) {
     console.error('❌ Test failed:', error);
   }

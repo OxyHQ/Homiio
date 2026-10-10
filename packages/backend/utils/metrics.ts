@@ -26,7 +26,7 @@ export class MetricsService {
       scrapes: [],
       health: [],
       cleanups: [],
-      cycles: []
+      cycles: [],
     };
   }
 
@@ -38,9 +38,9 @@ export class MetricsService {
       source,
       duration,
       success: true,
-      timestamp: new Date()
+      timestamp: new Date(),
     };
-    
+
     this.metrics.scrapes.push(metric);
     this.logger.debug(`Recorded scrape success for ${source}`, { duration });
   }
@@ -54,11 +54,14 @@ export class MetricsService {
       duration,
       success: false,
       error: error.message || 'Unknown error',
-      timestamp: new Date()
+      timestamp: new Date(),
     };
-    
+
     this.metrics.scrapes.push(metric);
-    this.logger.debug(`Recorded scrape error for ${source}`, { duration, error: describeErrorForLog(error) });
+    this.logger.debug(`Recorded scrape error for ${source}`, {
+      duration,
+      error: describeErrorForLog(error),
+    });
   }
 
   /**
@@ -70,9 +73,9 @@ export class MetricsService {
       duration,
       success: true,
       sourceCount,
-      timestamp: new Date()
+      timestamp: new Date(),
     });
-    
+
     this.logger.debug(`Recorded cycle success`, { cycleId, duration, sourceCount });
   }
 
@@ -85,10 +88,14 @@ export class MetricsService {
       duration,
       success: false,
       sourceCount: 0,
-      timestamp: new Date()
+      timestamp: new Date(),
     });
-    
-    this.logger.debug(`Recorded cycle error`, { cycleId, duration, error: describeErrorForLog(error) });
+
+    this.logger.debug(`Recorded cycle error`, {
+      cycleId,
+      duration,
+      error: describeErrorForLog(error),
+    });
   }
 
   /**
@@ -115,9 +122,9 @@ export class MetricsService {
       deleted: deletedCount,
       duration: 0, // Would be calculated in the actual cleanup
       success: true,
-      timestamp: new Date()
+      timestamp: new Date(),
     };
-    
+
     this.metrics.cleanups.push(metric);
     this.logger.debug(`Recorded cleanup success`, { deletedCount });
   }
@@ -130,9 +137,9 @@ export class MetricsService {
       deleted: 0,
       duration: 0,
       success: false,
-      timestamp: new Date()
+      timestamp: new Date(),
     };
-    
+
     this.metrics.cleanups.push(metric);
     this.logger.debug('Recorded cleanup failure');
   }
@@ -145,36 +152,47 @@ export class MetricsService {
     const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
     const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
-    const recentScrapes = this.metrics.scrapes.filter(m => m.timestamp > oneHourAgo);
-    const recentCycles = this.metrics.cycles.filter(m => m.timestamp > oneHourAgo);
-    const recentCleanups = this.metrics.cleanups.filter(m => m.timestamp > oneDayAgo);
+    const recentScrapes = this.metrics.scrapes.filter((m) => m.timestamp > oneHourAgo);
+    const recentCycles = this.metrics.cycles.filter((m) => m.timestamp > oneHourAgo);
+    const recentCleanups = this.metrics.cleanups.filter((m) => m.timestamp > oneDayAgo);
 
     return {
       scrapes: {
         total: this.metrics.scrapes.length,
         recent: recentScrapes.length,
-        successRate: recentScrapes.length > 0 
-          ? (recentScrapes.filter(s => s.success).length / recentScrapes.length * 100).toFixed(2) + '%'
-          : '0%',
-        averageDuration: recentScrapes.length > 0
-          ? Math.round(recentScrapes.reduce((sum, s) => sum + s.duration, 0) / recentScrapes.length)
-          : 0
+        successRate:
+          recentScrapes.length > 0
+            ? (
+                (recentScrapes.filter((s) => s.success).length / recentScrapes.length) *
+                100
+              ).toFixed(2) + '%'
+            : '0%',
+        averageDuration:
+          recentScrapes.length > 0
+            ? Math.round(
+                recentScrapes.reduce((sum, s) => sum + s.duration, 0) / recentScrapes.length,
+              )
+            : 0,
       },
       cycles: {
         total: this.metrics.cycles.length,
         recent: recentCycles.length,
-        successRate: recentCycles.length > 0
-          ? (recentCycles.filter(c => c.success).length / recentCycles.length * 100).toFixed(2) + '%'
-          : '0%',
-        averageDuration: recentCycles.length > 0
-          ? Math.round(recentCycles.reduce((sum, c) => sum + c.duration, 0) / recentCycles.length)
-          : 0
+        successRate:
+          recentCycles.length > 0
+            ? ((recentCycles.filter((c) => c.success).length / recentCycles.length) * 100).toFixed(
+                2,
+              ) + '%'
+            : '0%',
+        averageDuration:
+          recentCycles.length > 0
+            ? Math.round(recentCycles.reduce((sum, c) => sum + c.duration, 0) / recentCycles.length)
+            : 0,
       },
       cleanups: {
         total: this.metrics.cleanups.length,
         recent: recentCleanups.length,
-        totalDeleted: this.metrics.cleanups.reduce((sum, c) => sum + c.deleted, 0)
-      }
+        totalDeleted: this.metrics.cleanups.reduce((sum, c) => sum + c.deleted, 0),
+      },
     };
   }
 
@@ -183,12 +201,12 @@ export class MetricsService {
    */
   clearOldMetrics(): void {
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-    
-    this.metrics.scrapes = this.metrics.scrapes.filter(m => m.timestamp > sevenDaysAgo);
-    this.metrics.cycles = this.metrics.cycles.filter(m => m.timestamp > sevenDaysAgo);
-    this.metrics.cleanups = this.metrics.cleanups.filter(m => m.timestamp > sevenDaysAgo);
-    this.metrics.health = this.metrics.health.filter(m => m.timestamp > sevenDaysAgo);
-    
+
+    this.metrics.scrapes = this.metrics.scrapes.filter((m) => m.timestamp > sevenDaysAgo);
+    this.metrics.cycles = this.metrics.cycles.filter((m) => m.timestamp > sevenDaysAgo);
+    this.metrics.cleanups = this.metrics.cleanups.filter((m) => m.timestamp > sevenDaysAgo);
+    this.metrics.health = this.metrics.health.filter((m) => m.timestamp > sevenDaysAgo);
+
     this.logger.info('Cleared old metrics');
   }
 }

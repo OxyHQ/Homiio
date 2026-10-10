@@ -378,10 +378,7 @@ export const evictionCases = pgTable(
     // The public board: filter by status, order by date.
     index('eviction_cases_status_scheduled_idx').on(table.status, table.scheduledAt),
     // "My cases".
-    index('eviction_cases_oxy_user_created_idx').on(
-      table.oxyUserId,
-      sql`${table.createdAt} desc`,
-    ),
+    index('eviction_cases_oxy_user_created_idx').on(table.oxyUserId, sql`${table.createdAt} desc`),
     // The bbox / nearby board query. GiST over the generated PUBLIC point.
     index('eviction_cases_location_geo_gist').using('gist', table.locationGeo),
     // "Recently updated" ordering, and the archival sweep's scan.
@@ -446,14 +443,8 @@ export const evictionCases = pgTable(
         )`,
     ),
     /** A published disc with no radius is a pin pretending to be honest. */
-    check(
-      'eviction_cases_radius_positive_check',
-      sql`${table.locationRadiusMeters} > 0`,
-    ),
-    check(
-      'eviction_cases_contact_tenure_check',
-      sql`${table.contactUnlockMinTenureDays} >= 0`,
-    ),
+    check('eviction_cases_radius_positive_check', sql`${table.locationRadiusMeters} > 0`),
+    check('eviction_cases_contact_tenure_check', sql`${table.contactUnlockMinTenureDays} >= 0`),
   ],
 );
 
@@ -498,10 +489,7 @@ export const evictionCaseUpdates = pgTable(
     createdAt: createdAt(),
   },
   (table) => [
-    index('eviction_case_updates_case_position_idx').on(
-      table.caseId,
-      sql`${table.position} desc`,
-    ),
+    index('eviction_case_updates_case_position_idx').on(table.caseId, sql`${table.position} desc`),
     uniqueIndex('eviction_case_updates_case_position_key').on(table.caseId, table.position),
     check(
       'eviction_case_updates_new_status_check',
@@ -719,10 +707,7 @@ export const evictionLocationGrants = pgTable(
       sql`${table.purpose} in (${sql.raw(inList(EVICTION_LOCATION_ACCESS_PURPOSES))})`,
     ),
     /** A grant that expires before it is issued is a grant nobody meant to make. */
-    check(
-      'eviction_location_grants_window_check',
-      sql`${table.expiresAt} > ${table.grantedAt}`,
-    ),
+    check('eviction_location_grants_window_check', sql`${table.expiresAt} > ${table.grantedAt}`),
   ],
 );
 

@@ -37,9 +37,15 @@ export function getQueryInteger(value: unknown, fallback: number): number {
  * filtering by one of its selections.
  */
 export function getQueryList(value: unknown): string[] {
-  const collect = (raw: string): string[] => raw.split(',').map((part) => part.trim()).filter(Boolean);
+  const collect = (raw: string): string[] =>
+    raw
+      .split(',')
+      .map((part) => part.trim())
+      .filter(Boolean);
   if (Array.isArray(value)) {
-    return Array.from(new Set(value.flatMap((entry) => (typeof entry === 'string' ? collect(entry) : []))));
+    return Array.from(
+      new Set(value.flatMap((entry) => (typeof entry === 'string' ? collect(entry) : []))),
+    );
   }
   if (typeof value === 'string') return Array.from(new Set(collect(value)));
   return [];

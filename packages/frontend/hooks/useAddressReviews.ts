@@ -69,9 +69,7 @@ export interface UseAddressReviewsResult {
  * Shares the `['addressReviews', addressId]` cache key with the review
  * sections, so calling this alongside them does NOT duplicate the request.
  */
-export function useAddressReviews(
-  property: Property | null | undefined,
-): UseAddressReviewsResult {
+export function useAddressReviews(property: Property | null | undefined): UseAddressReviewsResult {
   const addressId = useMemo(() => getReviewAddressId(property), [property]);
 
   const query = useQuery<ReviewDTO[], Error>({
@@ -84,10 +82,7 @@ export function useAddressReviews(
     },
   });
 
-  const ratingSummary = useMemo(
-    () => computeReviewRatingSummary(query.data ?? []),
-    [query.data],
-  );
+  const ratingSummary = useMemo(() => computeReviewRatingSummary(query.data ?? []), [query.data]);
 
   return { addressId, reviews: query.data ?? [], ratingSummary, query };
 }

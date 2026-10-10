@@ -16,6 +16,6 @@ router.get('/me', asyncHandler(partnerController.me));
 router.get('/me/referrals', asyncHandler(partnerController.referrals));
 router.get('/me/earnings', asyncHandler(partnerController.earnings));
 
-export default function() {
+export default function () {
   return router;
-};
+}

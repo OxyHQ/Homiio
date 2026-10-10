@@ -32,7 +32,12 @@ export const oxyService = new OxyServer({
 const sindiOxyService = new OxyServer({
   baseURL: config.oxy.baseURL,
   ...(config.alia.sindiServiceApiKey && config.alia.sindiServiceApiSecret
-    ? { serviceAuth: { apiKey: config.alia.sindiServiceApiKey, apiSecret: config.alia.sindiServiceApiSecret } }
+    ? {
+        serviceAuth: {
+          apiKey: config.alia.sindiServiceApiKey,
+          apiSecret: config.alia.sindiServiceApiSecret,
+        },
+      }
     : {}),
 });
 
@@ -93,10 +98,7 @@ export const SINDI_OXY_WORKLOAD_ATTESTATION_ID = `wl_${crypto
  * for anything else, under either path.
  */
 function namesSindiServiceIdentity(value: unknown): boolean {
-  return (
-    value === SINDI_OXY_SERVICE_CREDENTIAL_ID ||
-    value === SINDI_OXY_WORKLOAD_ATTESTATION_ID
-  );
+  return value === SINDI_OXY_SERVICE_CREDENTIAL_ID || value === SINDI_OXY_WORKLOAD_ATTESTATION_ID;
 }
 
 /**
@@ -114,8 +116,7 @@ function namesSindiServiceIdentity(value: unknown): boolean {
  */
 export function canAuthenticateAsOxyService(): boolean {
   return (
-    canAttestWorkloadIdentity() ||
-    Boolean(config.oxy.serviceApiKey && config.oxy.serviceApiSecret)
+    canAttestWorkloadIdentity() || Boolean(config.oxy.serviceApiKey && config.oxy.serviceApiSecret)
   );
 }
 
@@ -215,7 +216,11 @@ export function assertCanonicalSindiRequesterAssertion(
 /** Why a mint did not produce an assertion, as far as chat needs to know. */
 export class SindiRequesterAssertionError extends Error {
   constructor(readonly kind: 'refused' | 'unavailable') {
-    super(kind === 'refused' ? 'Oxy refused the requester assertion' : 'Requester assertions are unavailable');
+    super(
+      kind === 'refused'
+        ? 'Oxy refused the requester assertion'
+        : 'Requester assertions are unavailable',
+    );
     this.name = 'SindiRequesterAssertionError';
   }
 }
@@ -237,8 +242,9 @@ export async function mintSindiRequesterAssertion(input: {
     });
   } catch (error) {
     const status = (error as { status?: unknown } | null)?.status;
-    throw new SindiRequesterAssertionError(status === 401 || status === 403 ? 'refused' : 'unavailable');
+    throw new SindiRequesterAssertionError(
+      status === 401 || status === 403 ? 'refused' : 'unavailable',
+    );
   }
   return assertCanonicalSindiRequesterAssertion(grant, input);
 }
-

@@ -51,7 +51,14 @@ import {
   type AnyPgColumn,
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
-import { createdAt, generatedId, inList, textArrayLiteral, timestamptz, updatedAt } from '@oxy.so/db';
+import {
+  createdAt,
+  generatedId,
+  inList,
+  textArrayLiteral,
+  timestamptz,
+  updatedAt,
+} from '@oxy.so/db';
 import {
   LEASE_MOVEMENT_DIRECTIONS,
   LEASE_MOVEMENT_STATES,
@@ -298,10 +305,7 @@ export const leases = pgTable(
      * the table is EMPTY: there is nothing to reject, and the alternative is a
      * payment schedule generated against day 0 or day 47 of a month.
      */
-    check(
-      'leases_rent_due_date_check',
-      sql`${table.rentDetailsDueDate} between 1 and 31`,
-    ),
+    check('leases_rent_due_date_check', sql`${table.rentDetailsDueDate} between 1 and 31`),
     /**
      * Mongo's own validator lived on `Reservation.checkOut` and on the exchange
      * window but NOT here — a lease could end before it started. Same reasoning
@@ -309,7 +313,10 @@ export const leases = pgTable(
      * `startDate` to `endDate`, so an inverted term silently produces an empty
      * schedule and a lease nobody ever has to pay.
      */
-    check('leases_term_order_check', sql`${table.leaseTermsEndDate} > ${table.leaseTermsStartDate}`),
+    check(
+      'leases_term_order_check',
+      sql`${table.leaseTermsEndDate} > ${table.leaseTermsStartDate}`,
+    ),
   ],
 );
 
@@ -707,10 +714,7 @@ export const leasePaymentMovements = pgTable(
     index('lease_payment_movements_obligation_idx').on(table.obligationId, table.createdAt),
     index('lease_payment_movements_lease_idx').on(table.leaseId, table.createdAt),
     /** One movement per key per lease. The whole of the idempotency guarantee. */
-    uniqueIndex('lease_payment_movements_idempotency_key').on(
-      table.leaseId,
-      table.idempotencyKey,
-    ),
+    uniqueIndex('lease_payment_movements_idempotency_key').on(table.leaseId, table.idempotencyKey),
     /**
      * A processor reference identifies ONE movement.
      *

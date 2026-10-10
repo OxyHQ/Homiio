@@ -152,9 +152,7 @@ export function SindiPanel({ placement }: { placement: 'aside' | 'overlay' }) {
     createConversation,
   } = useConversationStore();
 
-  const [activeConversationId, setActiveConversationId] = useState<string | null>(
-    null,
-  );
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
 
   const isAuthenticated = useMemo(
     () => Boolean(oxyServices) && Boolean(activeSessionId),
@@ -196,9 +194,7 @@ export function SindiPanel({ placement }: { placement: 'aside' | 'overlay' }) {
   // the route screen's mapping so both surfaces hydrate identically.
   const initialMessages = useMemo<Message[]>(() => {
     const stored =
-      currentConversation?.id === activeConversationId
-        ? currentConversation?.messages
-        : undefined;
+      currentConversation?.id === activeConversationId ? currentConversation?.messages : undefined;
     if (!stored || stored.length === 0) return [];
     return stored.map((msg, index) => {
       const ts = msg.timestamp ? new Date(msg.timestamp).getTime() : index;
@@ -216,11 +212,7 @@ export function SindiPanel({ placement }: { placement: 'aside' | 'overlay' }) {
       openAccountDialog();
       return;
     }
-    const created = await createConversation(
-      'New Conversation',
-      undefined,
-      conversationFetch,
-    );
+    const created = await createConversation('New Conversation', undefined, conversationFetch);
     setActiveConversationId(created.id);
     loadConversations(conversationFetch);
   }, [isAuthenticated, createConversation, conversationFetch, loadConversations]);
@@ -243,7 +235,9 @@ export function SindiPanel({ placement }: { placement: 'aside' | 'overlay' }) {
               iconOnly
               leadingIcon={RiArrowLeftSLine}
               onPress={handleBackToList}
-              accessibilityLabel={t('sindi.panel.conversations')} tone="neutral" appearance="outline"
+              accessibilityLabel={t('sindi.panel.conversations')}
+              tone="neutral"
+              appearance="outline"
             />
           ) : (
             <View style={[styles.headerBrand, { backgroundColor: themeColors.primarySubtle }]}>
@@ -268,13 +262,17 @@ export function SindiPanel({ placement }: { placement: 'aside' | 'overlay' }) {
             iconOnly
             leadingIcon={RiEditBoxLine}
             onPress={handleNewChat}
-            accessibilityLabel={t('sindi.panel.newChat')} tone="neutral" appearance="outline"
+            accessibilityLabel={t('sindi.panel.newChat')}
+            tone="neutral"
+            appearance="outline"
           />
           <Button
             iconOnly
             leadingIcon={RiCloseLine}
             onPress={closeSindiPanel}
-            accessibilityLabel={t('sindi.panel.close')} tone="neutral" appearance="outline"
+            accessibilityLabel={t('sindi.panel.close')}
+            tone="neutral"
+            appearance="outline"
           />
         </View>
       </View>
@@ -326,7 +324,13 @@ export function SindiPanel({ placement }: { placement: 'aside' | 'overlay' }) {
             </Text>
           </View>
 
-          <Button leadingIcon={RiAddLine} onPress={handleNewChat} fullWidth tone="accent" appearance="solid">
+          <Button
+            leadingIcon={RiAddLine}
+            onPress={handleNewChat}
+            fullWidth
+            tone="accent"
+            appearance="solid"
+          >
             {t('sindi.panel.startNew')}
           </Button>
 
@@ -373,9 +377,7 @@ export function SindiPanel({ placement }: { placement: 'aside' | 'overlay' }) {
         style={[
           styles.panel,
           panelBorders.docked,
-          Platform.OS === 'web'
-            ? { height: viewportHeight - SHELL_VERTICAL_PADDING }
-            : { flex: 1 },
+          Platform.OS === 'web' ? { height: viewportHeight - SHELL_VERTICAL_PADDING } : { flex: 1 },
         ]}
       >
         {content}
@@ -391,19 +393,14 @@ export function SindiPanel({ placement }: { placement: 'aside' | 'overlay' }) {
       {/* The wrapper passes touches through (`'none'`; the RN-only
           `'box-none'` is invalid CSS that RN-Web drops) and the scrim and panel
           re-enable themselves with `'auto'`. */}
-      <View
-        style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]}
-      >
+      <View style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]}>
         <AnimatedPressable
           entering={FadeIn.duration(SCRIM_FADE_DURATION)}
           exiting={FadeOut.duration(SCRIM_FADE_DURATION)}
           accessibilityRole="button"
           accessibilityLabel={t('sindi.panel.close')}
           onPress={closeSindiPanel}
-          style={[
-            StyleSheet.absoluteFill,
-            { backgroundColor: PANEL_SCRIM, pointerEvents: 'auto' },
-          ]}
+          style={[StyleSheet.absoluteFill, { backgroundColor: PANEL_SCRIM, pointerEvents: 'auto' }]}
         />
         <Animated.View
           entering={FadeIn.duration(120)}

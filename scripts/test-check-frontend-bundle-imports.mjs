@@ -45,7 +45,7 @@ const mutations = [
   ['Lucide.tsx', "import { Home } from 'lucide-react-native';\n"],
   ['LucideSubpath.tsx', "import Home from 'lucide-react-native/dist/esm/icons/home';\n"],
   ['BloomFrom.tsx', "import { Button } from '@oxy.so/bloom';\n"],
-  ['BloomMultiline.tsx', "import {\n  Button,\n  alert,\n} from \"@oxy.so/bloom\";\n"],
+  ['BloomMultiline.tsx', 'import {\n  Button,\n  alert,\n} from "@oxy.so/bloom";\n'],
   ['BloomExport.ts', "export { Button } from '@oxy.so/bloom';\n"],
   ['BloomRequire.js', "const bloom = require('@oxy.so/bloom');\n"],
   ['BloomMock.tsx', "jest.mock('@oxy.so/bloom', () => ({}));\n"],

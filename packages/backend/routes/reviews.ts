@@ -11,7 +11,7 @@ import {
   deleteReview,
   getUserReviews,
   toggleHelpful,
-  reportReview
+  reportReview,
 } from '../controllers/reviewController';
 
 const router = Router();
@@ -37,6 +37,6 @@ router.delete('/:reviewId', deleteReview);
 // Profile-specific reviews
 router.get('/user/:oxyUserId', getUserReviews);
 
-export default function() {
+export default function () {
   return router;
-};
+}

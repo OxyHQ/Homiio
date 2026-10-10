@@ -91,7 +91,7 @@ i18n.configure({
   defaultLocale: 'es', // Spanish as default
   directory: path.join(__dirname, '..', 'locales'),
   objectNotation: true,
-  updateFiles: false
+  updateFiles: false,
 });
 
 // City-Country to Topic ID mapping
@@ -135,7 +135,7 @@ class TelegramService {
 
       this.bot = new TelegramBot(config.telegram.botToken, options);
       this.isInitialized = true;
-      
+
       logger.info('Telegram bot initialized successfully');
     } catch (error) {
       logger.error('Failed to initialize Telegram bot:', { error: describeErrorForLog(error) });
@@ -160,7 +160,10 @@ class TelegramService {
    * @param {string} country - The country name
    * @returns {number|null} - Topic ID if found, null otherwise
    */
-  getTopicIdForLocation(city: string | null | undefined, country: string | null | undefined): number | null {
+  getTopicIdForLocation(
+    city: string | null | undefined,
+    country: string | null | undefined,
+  ): number | null {
     if (!city || !country) {
       return null;
     }
@@ -175,7 +178,10 @@ class TelegramService {
    * @param {string} country - The country name
    * @returns {boolean} - True if location is supported
    */
-  isLocationSupported(city: string | null | undefined, country: string | null | undefined): boolean {
+  isLocationSupported(
+    city: string | null | undefined,
+    country: string | null | undefined,
+  ): boolean {
     return this.getTopicIdForLocation(city, country) !== null;
   }
 
@@ -210,7 +216,7 @@ class TelegramService {
     // Check if property has valid images array
     if (!property.images || !Array.isArray(property.images) || property.images.length === 0) {
       logger.info('No images found for property, using default placeholder', {
-        propertyId: property._id
+        propertyId: property._id,
       });
       return 'https://homiio.com/images/property-placeholder.jpg';
     }
@@ -220,7 +226,7 @@ class TelegramService {
     if (primaryImage && primaryImage.url) {
       logger.debug('Using primary image for property', {
         propertyId: property._id,
-        imageUrl: primaryImage.url
+        imageUrl: primaryImage.url,
       });
       return primaryImage.url;
     }
@@ -230,7 +236,7 @@ class TelegramService {
     if (firstImage && firstImage.url) {
       logger.debug('Using first image for property', {
         propertyId: property._id,
-        imageUrl: firstImage.url
+        imageUrl: firstImage.url,
       });
       return firstImage.url;
     }
@@ -238,7 +244,7 @@ class TelegramService {
     // If no valid images found, return default
     logger.warn('No valid image URLs found for property, using default placeholder', {
       propertyId: property._id,
-      imageCount: property.images.length
+      imageCount: property.images.length,
     });
     return 'https://homiio.com/images/property-placeholder.jpg';
   }
@@ -249,7 +255,11 @@ class TelegramService {
    * @param {string} language - Language code for translations
    * @returns {string} - Formatted message
    */
-  formatPropertyMessage(property: PropertyLike, language: string = 'es', geo: GeoDisplay | null = null): string {
+  formatPropertyMessage(
+    property: PropertyLike,
+    language: string = 'es',
+    geo: GeoDisplay | null = null,
+  ): string {
     const {
       type,
       bedrooms,
@@ -280,9 +290,9 @@ class TelegramService {
         ? {
             city: geo.city ?? undefined,
             region: geo.region ?? undefined,
-            neighborhood: geo.neighborhood ?? undefined
+            neighborhood: geo.neighborhood ?? undefined,
           }
-        : null
+        : null,
     });
 
     const dynamicTitle = `🏠 **${this.escapeMarkdown(largeTitle)}**`;
@@ -302,13 +312,18 @@ class TelegramService {
       const perNight = t.__('telegram.perNight') || 'night';
       rentDisplay = `${formatMoney(Number(shortTermRent.nightlyRate), shortTermRent.currency ?? LISTING_FALLBACK_CURRENCY, locale)}/${perNight}`;
     } else if (sale?.price) {
-      rentDisplay = formatMoney(Number(sale.price), sale.currency ?? LISTING_FALLBACK_CURRENCY, locale);
+      rentDisplay = formatMoney(
+        Number(sale.price),
+        sale.currency ?? LISTING_FALLBACK_CURRENCY,
+        locale,
+      );
     }
-    
+
     // Format amenities (limit to first 5)
-    const amenitiesText = amenities && amenities.length > 0 
-      ? amenities.slice(0, 5).join(', ') + (amenities.length > 5 ? '...' : '')
-      : t.__('telegram.noneListedAmenities');
+    const amenitiesText =
+      amenities && amenities.length > 0
+        ? amenities.slice(0, 5).join(', ') + (amenities.length > 5 ? '...' : '')
+        : t.__('telegram.noneListedAmenities');
 
     // Available date — a CIVIL date (a move-in day is the same day everywhere),
     // so it renders zone-independently rather than through `new Date()`, which
@@ -320,15 +335,14 @@ class TelegramService {
     // Build description section only if description exists
     let descriptionSection = '';
     if (description && description.trim()) {
-      const truncatedDescription = description.length > 200 
-        ? description.substring(0, 200) + '...' 
-        : description;
+      const truncatedDescription =
+        description.length > 200 ? description.substring(0, 200) + '...' : description;
       descriptionSection = `\n📝 **${t.__('telegram.description')}:**\n${this.escapeMarkdown(truncatedDescription)}\n`;
     }
 
     // Get property type for hashtags and details
     const propertyType: string = t.__(`telegram.propertyTypes.${type}`) || type || '';
-    
+
     // Helper function to remove property numbers for privacy (used in details)
     const removePropertyNumber = (street: string | undefined): string => {
       if (!street) return '';
@@ -340,7 +354,11 @@ class TelegramService {
     const cityLabel = (geo && geo.city) || '';
     const regionLabel = (geo && geo.region) || '';
     const postalCode = address?.postal_code || '';
-    const locationLine = [removePropertyNumber(address?.street), cityLabel, `${regionLabel} ${postalCode}`.trim()]
+    const locationLine = [
+      removePropertyNumber(address?.street),
+      cityLabel,
+      `${regionLabel} ${postalCode}`.trim(),
+    ]
       .filter((part): part is string => Boolean(part))
       .map((part: string) => this.escapeMarkdown(part))
       .join(', ');
@@ -385,7 +403,7 @@ ${t.__('telegram.hashtags.newProperty')}${cityHashtag} #${this.escapeMarkdown(pr
         logger.info('Location not supported for Telegram notifications. Skipping notification.', {
           city,
           country,
-          propertyId: property._id
+          propertyId: property._id,
         });
         return false;
       }
@@ -400,44 +418,44 @@ ${t.__('telegram.hashtags.newProperty')}${cityHashtag} #${this.escapeMarkdown(pr
         logger.warn('No Telegram group configured. Skipping notification.', {
           city,
           country,
-          propertyId: property._id
+          propertyId: property._id,
         });
         return false;
       }
 
       // Format message with appropriate language
       const message = this.formatPropertyMessage(property, groupConfig.language, geo);
-      
+
       // Get translations for button text
       const t = this.getI18nForLanguage(groupConfig.language);
-      
+
       // Create inline keyboard with link to property
       const keyboard = {
         inline_keyboard: [
           [
             {
               text: t.__('telegram.viewPropertyDetails'),
-              url: `https://homiio.com/properties/${property._id}`
-            }
-          ]
-        ]
+              url: `https://homiio.com/properties/${property._id}`,
+            },
+          ],
+        ],
       };
 
       // Get the best image for the property
       const imageUrl = this.getPropertyImage(property);
-      
+
       // Prepare message options with topic support
       const messageOptions: TelegramBot.SendPhotoOptions = {
         caption: message,
         parse_mode: 'Markdown',
-        reply_markup: keyboard
+        reply_markup: keyboard,
       };
 
       // Add topic ID if available
       if (topicId) {
         messageOptions.message_thread_id = topicId;
       }
-      
+
       try {
         // Send photo with caption instead of text message
         await this.bot.sendPhoto(groupConfig.id, imageUrl, messageOptions);
@@ -449,20 +467,20 @@ ${t.__('telegram.hashtags.newProperty')}${cityHashtag} #${this.escapeMarkdown(pr
           topicId,
           groupId: groupConfig.id,
           language: groupConfig.language,
-          imageUrl: imageUrl
+          imageUrl: imageUrl,
         });
       } catch (imageError) {
         // If image sending fails, fall back to text message
         logger.warn('Failed to send image, falling back to text message', {
           propertyId: property._id,
           imageUrl: imageUrl,
-          error: describeErrorForLog(imageError)
+          error: describeErrorForLog(imageError),
         });
 
         const textMessageOptions: TelegramBot.SendMessageOptions = {
           parse_mode: 'Markdown',
           disable_web_page_preview: true,
-          reply_markup: keyboard
+          reply_markup: keyboard,
         };
 
         // Add topic ID for text message as well
@@ -472,14 +490,17 @@ ${t.__('telegram.hashtags.newProperty')}${cityHashtag} #${this.escapeMarkdown(pr
 
         await this.bot.sendMessage(groupConfig.id, message, textMessageOptions);
 
-        logger.info('Property notification sent to Telegram group as text message (fallback) with topic', {
-          propertyId: property._id,
-          city,
-          country,
-          topicId,
-          groupId: groupConfig.id,
-          language: groupConfig.language
-        });
+        logger.info(
+          'Property notification sent to Telegram group as text message (fallback) with topic',
+          {
+            propertyId: property._id,
+            city,
+            country,
+            topicId,
+            groupId: groupConfig.id,
+            language: groupConfig.language,
+          },
+        );
       }
 
       return true;
@@ -488,7 +509,7 @@ ${t.__('telegram.hashtags.newProperty')}${cityHashtag} #${this.escapeMarkdown(pr
         error: describeErrorForLog(error),
         propertyId: property._id,
         city: property.address?.city,
-        country: property.address?.country
+        country: property.address?.country,
       });
       return false;
     }
@@ -506,7 +527,7 @@ ${t.__('telegram.hashtags.newProperty')}${cityHashtag} #${this.escapeMarkdown(pr
     groupId: string | number,
     message: string | null = null,
     includeButton: boolean = true,
-    topicId: number | null = null
+    topicId: number | null = null,
   ): Promise<boolean> {
     try {
       if (!this.isInitialized || !this.bot) {
@@ -523,7 +544,7 @@ ${t.__('telegram.hashtags.newProperty')}${cityHashtag} #${this.escapeMarkdown(pr
       const finalMessage = message || t.__('telegram.testMessage');
 
       const options: TelegramBot.SendMessageOptions = {
-        parse_mode: 'Markdown'
+        parse_mode: 'Markdown',
       };
 
       // Add topic ID if provided
@@ -538,10 +559,10 @@ ${t.__('telegram.hashtags.newProperty')}${cityHashtag} #${this.escapeMarkdown(pr
             [
               {
                 text: t.__('telegram.visitHomiio'),
-                url: 'https://homiio.com'
-              }
-            ]
-          ]
+                url: 'https://homiio.com',
+              },
+            ],
+          ],
         };
       }
 
@@ -552,7 +573,7 @@ ${t.__('telegram.hashtags.newProperty')}${cityHashtag} #${this.escapeMarkdown(pr
       logger.error('Failed to send test message:', {
         error: describeErrorForLog(error),
         groupId,
-        topicId
+        topicId,
       });
       return false;
     }
@@ -587,7 +608,7 @@ ${t.__('telegram.hashtags.newProperty')}${cityHashtag} #${this.escapeMarkdown(pr
       successful: 0,
       failed: 0,
       skipped: 0,
-      errors: []
+      errors: [],
     };
 
     for (const property of properties) {
@@ -602,7 +623,7 @@ ${t.__('telegram.hashtags.newProperty')}${cityHashtag} #${this.escapeMarkdown(pr
           logger.info('Skipping property - location not supported for Telegram notifications', {
             propertyId: property._id,
             city,
-            country
+            country,
           });
           continue;
         }
@@ -613,20 +634,20 @@ ${t.__('telegram.hashtags.newProperty')}${cityHashtag} #${this.escapeMarkdown(pr
         } else {
           results.failed++;
         }
-        
+
         // Add delay between messages to avoid rate limiting
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise((resolve) => setTimeout(resolve, 1000));
       } catch (error) {
         results.failed++;
         // The summary is returned to an HTTP caller, so it names WHICH listing
         // failed and nothing else; Telegram's own text goes to the log.
         logger.warn('Bulk Telegram notification failed for one property', {
           propertyId: property._id,
-          error: describeErrorForLog(error)
+          error: describeErrorForLog(error),
         });
         results.errors.push({
           propertyId: property._id,
-          error: 'Notification failed'
+          error: 'Notification failed',
         });
       }
     }
@@ -646,7 +667,7 @@ ${t.__('telegram.hashtags.newProperty')}${cityHashtag} #${this.escapeMarkdown(pr
       totalGroups: 0,
       configuredGroups: 0,
       supportedLocations: Object.keys(CITY_TOPIC_MAPPING),
-      topicMappings: CITY_TOPIC_MAPPING
+      topicMappings: CITY_TOPIC_MAPPING,
     };
 
     // Process configured groups
@@ -656,7 +677,7 @@ ${t.__('telegram.hashtags.newProperty')}${cityHashtag} #${this.escapeMarkdown(pr
         if (groupId && groupId !== 'undefined' && groupId !== 'null') {
           summary.groups[groupId] = {
             ...groupConfig,
-            configured: true
+            configured: true,
           };
           summary.configuredGroups++;
         }
@@ -687,9 +708,9 @@ ${t.__('telegram.hashtags.newProperty')}${cityHashtag} #${this.escapeMarkdown(pr
           address: { city: 'Barcelona', state: 'Catalunya' },
           rent: { amount: 1200, currency: 'EUR', paymentFrequency: 'monthly' },
           bedrooms: 2,
-          bathrooms: 1
+          bathrooms: 1,
         },
-        expectedResult: 'https://homiio.com/images/property-placeholder.jpg'
+        expectedResult: 'https://homiio.com/images/property-placeholder.jpg',
       },
       {
         name: 'Property with primary image',
@@ -703,10 +724,10 @@ ${t.__('telegram.hashtags.newProperty')}${cityHashtag} #${this.escapeMarkdown(pr
           images: [
             { url: 'https://example.com/image1.jpg', isPrimary: false },
             { url: 'https://example.com/image2.jpg', isPrimary: true },
-            { url: 'https://example.com/image3.jpg', isPrimary: false }
-          ]
+            { url: 'https://example.com/image3.jpg', isPrimary: false },
+          ],
         },
-        expectedResult: 'https://example.com/image2.jpg'
+        expectedResult: 'https://example.com/image2.jpg',
       },
       {
         name: 'Property with images but no primary',
@@ -719,10 +740,10 @@ ${t.__('telegram.hashtags.newProperty')}${cityHashtag} #${this.escapeMarkdown(pr
           bathrooms: 1,
           images: [
             { url: 'https://example.com/image1.jpg', isPrimary: false },
-            { url: 'https://example.com/image2.jpg', isPrimary: false }
-          ]
+            { url: 'https://example.com/image2.jpg', isPrimary: false },
+          ],
         },
-        expectedResult: 'https://example.com/image1.jpg'
+        expectedResult: 'https://example.com/image1.jpg',
       },
       {
         name: 'Property with invalid image URLs',
@@ -736,33 +757,33 @@ ${t.__('telegram.hashtags.newProperty')}${cityHashtag} #${this.escapeMarkdown(pr
           images: [
             { url: '', isPrimary: false },
             { url: null, isPrimary: true },
-            { url: undefined, isPrimary: false }
-          ]
+            { url: undefined, isPrimary: false },
+          ],
         },
-        expectedResult: 'https://homiio.com/images/property-placeholder.jpg'
-      }
+        expectedResult: 'https://homiio.com/images/property-placeholder.jpg',
+      },
     ];
 
-    const results = testCases.map(testCase => {
+    const results = testCases.map((testCase) => {
       const actualResult = this.getPropertyImage(testCase.property);
       const passed = actualResult === testCase.expectedResult;
-      
+
       return {
         name: testCase.name,
         expected: testCase.expectedResult,
         actual: actualResult,
-        passed
+        passed,
       };
     });
 
-    const allPassed = results.every(result => result.passed);
+    const allPassed = results.every((result) => result.passed);
 
     return {
       success: allPassed,
       totalTests: results.length,
-      passedTests: results.filter(r => r.passed).length,
-      failedTests: results.filter(r => !r.passed).length,
-      results
+      passedTests: results.filter((r) => r.passed).length,
+      failedTests: results.filter((r) => !r.passed).length,
+      results,
     };
   }
 
@@ -777,52 +798,52 @@ ${t.__('telegram.hashtags.newProperty')}${cityHashtag} #${this.escapeMarkdown(pr
         city: 'New York',
         country: 'US',
         expectedSupported: true,
-        expectedTopicId: 4
+        expectedTopicId: 4,
       },
       {
         name: 'Barcelona, Spain - should be supported',
         city: 'Barcelona',
         country: 'Spain',
         expectedSupported: true,
-        expectedTopicId: 2
+        expectedTopicId: 2,
       },
       {
         name: 'Madrid, Spain - should not be supported',
         city: 'Madrid',
         country: 'Spain',
         expectedSupported: false,
-        expectedTopicId: null
+        expectedTopicId: null,
       },
       {
         name: 'London, UK - should not be supported',
         city: 'London',
         country: 'UK',
         expectedSupported: false,
-        expectedTopicId: null
+        expectedTopicId: null,
       },
       {
         name: 'Empty city - should not be supported',
         city: '',
         country: 'US',
         expectedSupported: false,
-        expectedTopicId: null
+        expectedTopicId: null,
       },
       {
         name: 'Empty country - should not be supported',
         city: 'New York',
         country: '',
         expectedSupported: false,
-        expectedTopicId: null
-      }
+        expectedTopicId: null,
+      },
     ];
 
-    const results = testCases.map(testCase => {
+    const results = testCases.map((testCase) => {
       const actualSupported = this.isLocationSupported(testCase.city, testCase.country);
       const actualTopicId = this.getTopicIdForLocation(testCase.city, testCase.country);
-      
+
       const supportedPassed = actualSupported === testCase.expectedSupported;
       const topicIdPassed = actualTopicId === testCase.expectedTopicId;
-      
+
       return {
         name: testCase.name,
         city: testCase.city,
@@ -833,18 +854,18 @@ ${t.__('telegram.hashtags.newProperty')}${cityHashtag} #${this.escapeMarkdown(pr
         expectedTopicId: testCase.expectedTopicId,
         actualTopicId: actualTopicId,
         topicIdPassed,
-        passed: supportedPassed && topicIdPassed
+        passed: supportedPassed && topicIdPassed,
       };
     });
 
-    const allPassed = results.every(result => result.passed);
+    const allPassed = results.every((result) => result.passed);
 
     return {
       success: allPassed,
       totalTests: results.length,
-      passedTests: results.filter(r => r.passed).length,
-      failedTests: results.filter(r => !r.passed).length,
-      results
+      passedTests: results.filter((r) => r.passed).length,
+      failedTests: results.filter((r) => !r.passed).length,
+      results,
     };
   }
 }

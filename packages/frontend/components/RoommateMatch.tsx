@@ -90,11 +90,7 @@ export const RoommateMatch: React.FC<RoommateMatchProps> = ({
   return (
     <Card radius="radius-16" style={styles.card} appearance="outline">
       <View style={styles.header}>
-        <Avatar
-          name={displayName}
-          size={56}
-          onPress={() => onViewProfile(profile.id)}
-        />
+        <Avatar name={displayName} size={56} onPress={() => onViewProfile(profile.id)} />
 
         <View style={styles.headerInfo}>
           <H3 numberOfLines={1}>{displayName}</H3>
@@ -190,7 +186,9 @@ export const RoommateMatch: React.FC<RoommateMatchProps> = ({
       <View style={styles.actions}>
         <Button
           leadingIcon={RiEyeLine}
-          onPress={() => onViewProfile(profile.id)} tone="accent" appearance="subtle"
+          onPress={() => onViewProfile(profile.id)}
+          tone="accent"
+          appearance="subtle"
         >
           {t('roommates.match.viewProfile')}
         </Button>
@@ -199,7 +197,9 @@ export const RoommateMatch: React.FC<RoommateMatchProps> = ({
           leadingIcon={showMessageInput ? RiSendPlaneLine : RiUserAddLine}
           onPress={handleSendRequest}
           loading={isLoading}
-          style={styles.sendRequestButton} tone="accent" appearance="solid"
+          style={styles.sendRequestButton}
+          tone="accent"
+          appearance="solid"
         >
           {t('roommates.match.sendRequest')}
         </Button>

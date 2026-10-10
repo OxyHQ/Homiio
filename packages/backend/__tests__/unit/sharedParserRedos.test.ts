@@ -24,11 +24,7 @@
  * parse exactly what the patterns parsed.
  */
 
-import {
-  citySlug,
-  extractMetaProperties,
-  normalizeEmail,
-} from '@homiio/listing-providers';
+import { citySlug, extractMetaProperties, normalizeEmail } from '@homiio/listing-providers';
 
 describe('extractMetaProperties', () => {
   it('stays linear on a document stuffed with <meta tags', () => {
@@ -59,9 +55,9 @@ describe('extractMetaProperties', () => {
   });
 
   it('accepts name= as well as property=, and single quotes', () => {
-    expect(extractMetaProperties("<meta name='description' content='Casa'>").get('description')).toBe(
-      'Casa',
-    );
+    expect(
+      extractMetaProperties("<meta name='description' content='Casa'>").get('description'),
+    ).toBe('Casa');
   });
 
   it('keeps the first value when a key repeats', () => {

@@ -5,7 +5,10 @@
  */
 
 import { PropertyType } from '@homiio/shared-types';
-import { toDedupComparable, type DedupListingInput } from '../../services/ingestion/dedupeFingerprint';
+import {
+  toDedupComparable,
+  type DedupListingInput,
+} from '../../services/ingestion/dedupeFingerprint';
 import { planDeduplication, type Row } from '../../scripts/dedupeExternalListings';
 
 let seq = 0;
@@ -49,8 +52,18 @@ describe('planDeduplication', () => {
   });
 
   it('breaks image ties by longer description, then older createdAt', () => {
-    const older = row({ id: 'older', imageCount: 5, createdAt: 1, listing: { description: words(60, ['x']) } });
-    const newer = row({ id: 'newer', imageCount: 5, createdAt: 9, listing: { description: words(60, ['y']) } });
+    const older = row({
+      id: 'older',
+      imageCount: 5,
+      createdAt: 1,
+      listing: { description: words(60, ['x']) },
+    });
+    const newer = row({
+      id: 'newer',
+      imageCount: 5,
+      createdAt: 9,
+      listing: { description: words(60, ['y']) },
+    });
     const [group] = planDeduplication([newer, older]);
     expect(group.keep.id).toBe('older');
   });
@@ -71,9 +84,17 @@ describe('planDeduplication', () => {
     // union-find would wrongly archive two of three.
     //   A = 60 common + 2 unique, C = 60 common + 2 (different) unique, B = 60 common
     //   Jaccard(A,B)=Jaccard(B,C)=60/62≈0.968 (dup); Jaccard(A,C)=60/64=0.9375 (not)
-    const a = row({ id: 'aaa', imageCount: 5, listing: { description: words(60, ['extraaa', 'extrabb']) } });
+    const a = row({
+      id: 'aaa',
+      imageCount: 5,
+      listing: { description: words(60, ['extraaa', 'extrabb']) },
+    });
     const b = row({ id: 'bbb', imageCount: 5, listing: { description: words(60) } });
-    const c = row({ id: 'ccc', imageCount: 5, listing: { description: words(60, ['gammaaa', 'gammabb']) } });
+    const c = row({
+      id: 'ccc',
+      imageCount: 5,
+      listing: { description: words(60, ['gammaaa', 'gammabb']) },
+    });
     const groups = planDeduplication([a, b, c]);
     const archivedIds = groups.flatMap((g) => g.archive.map((r) => r.id));
     // B is a duplicate of the keeper A; C is NOT and must survive.
@@ -82,8 +103,12 @@ describe('planDeduplication', () => {
   });
 
   it('does not group templated different units below the Jaccard floor', () => {
-    const a = row({ listing: { description: words(60, ['unoaa', 'dosaa', 'tresaa', 'cuatroaa', 'cincoaa']) } });
-    const b = row({ listing: { description: words(60, ['unobb', 'dosbb', 'tresbb', 'cuatrobb', 'cincobb']) } });
+    const a = row({
+      listing: { description: words(60, ['unoaa', 'dosaa', 'tresaa', 'cuatroaa', 'cincoaa']) },
+    });
+    const b = row({
+      listing: { description: words(60, ['unobb', 'dosbb', 'tresbb', 'cuatrobb', 'cincobb']) },
+    });
     expect(planDeduplication([a, b])).toHaveLength(0);
   });
 

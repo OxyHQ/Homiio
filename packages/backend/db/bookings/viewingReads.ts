@@ -46,10 +46,7 @@ import {
 } from '@homiio/shared-types';
 import type { DatabaseOrTransaction } from '../postgres';
 import { viewingRequests } from '../schema';
-import {
-  VIEWING_REQUEST_CANCELLERS,
-  VIEWING_REQUEST_STATUSES,
-} from '../schema/bookings';
+import { VIEWING_REQUEST_CANCELLERS, VIEWING_REQUEST_STATUSES } from '../schema/bookings';
 
 /** A viewing status the CHECK accepts. */
 export type ViewingStatusValue = (typeof VIEWING_REQUEST_STATUSES)[number];
@@ -83,11 +80,7 @@ export async function findViewingById(
   db: DatabaseOrTransaction,
   id: string,
 ): Promise<ViewingRow | undefined> {
-  const [row] = await db
-    .select()
-    .from(viewingRequests)
-    .where(eq(viewingRequests.id, id))
-    .limit(1);
+  const [row] = await db.select().from(viewingRequests).where(eq(viewingRequests.id, id)).limit(1);
   return row;
 }
 
@@ -151,9 +144,7 @@ export async function findOverlappingViewing(
   options: { readonly excludeId?: string; readonly statuses?: readonly ViewingStatusValue[] } = {},
 ): Promise<ViewingRow | undefined> {
   const endsAt = new Date(scheduledAt.getTime() + durationMinutes * 60_000);
-  const earliestStart = new Date(
-    scheduledAt.getTime() - MAX_VIEWING_DURATION_MINUTES * 60_000,
-  );
+  const earliestStart = new Date(scheduledAt.getTime() - MAX_VIEWING_DURATION_MINUTES * 60_000);
 
   const clauses: SQL[] = [
     eq(viewingRequests.propertyId, propertyId),
@@ -247,10 +238,7 @@ export async function listViewings(
       .orderBy(asc(viewingRequests.scheduledAt))
       .limit(page.limit)
       .offset(page.offset),
-    db
-      .select({ value: sql<number>`count(*)::int` })
-      .from(viewingRequests)
-      .where(where),
+    db.select({ value: sql<number>`count(*)::int` }).from(viewingRequests).where(where),
   ]);
   return { rows, total: totalRow.value };
 }
@@ -440,10 +428,7 @@ export async function countViewingsByStatusForOwner(
  *   genuinely has no listing in hand, in which case no civil reading is sent
  *   rather than one in some convenient zone.
  */
-export function serializeViewing(
-  row: ViewingRow,
-  timeZone?: string,
-): Record<string, unknown> {
+export function serializeViewing(row: ViewingRow, timeZone?: string): Record<string, unknown> {
   const civil = timeZone ? instantToZonedCivil(row.scheduledAt, timeZone) : null;
   return {
     id: row.id,

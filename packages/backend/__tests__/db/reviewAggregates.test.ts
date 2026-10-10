@@ -214,8 +214,20 @@ describe('the agency profile', () => {
       slug: `stats-agency-${uuidv7()}`,
     });
 
-    await seedReview({ addressId: buildingId, agencyId, rating: 5, recommendation: true, depositReturned: 'full' });
-    await seedReview({ addressId: buildingId, agencyId, rating: 3, recommendation: false, depositReturned: 'no' });
+    await seedReview({
+      addressId: buildingId,
+      agencyId,
+      rating: 5,
+      recommendation: true,
+      depositReturned: 'full',
+    });
+    await seedReview({
+      addressId: buildingId,
+      agencyId,
+      rating: 3,
+      recommendation: false,
+      depositReturned: 'no',
+    });
     // A tenancy whose deposit outcome was never answered: it counts toward the
     // rating and the recommendation and NOT toward the deposit percentage. That
     // is what makes `depositKnownCount` a different denominator from
@@ -288,12 +300,14 @@ describe('the three explore levels', () => {
    */
   it('excludes a review that resolved no neighborhood', async () => {
     const before = await getNeighborhoodSummaries(chain.cityId);
-    const mineBefore = before.find((entry) => entry.neighborhoodId === neighborhoodId)?.reviewCount ?? 0;
+    const mineBefore =
+      before.find((entry) => entry.neighborhoodId === neighborhoodId)?.reviewCount ?? 0;
 
     await seedReview({ addressId: buildingId, neighborhoodId: null });
 
     const after = await getNeighborhoodSummaries(chain.cityId);
-    const mineAfter = after.find((entry) => entry.neighborhoodId === neighborhoodId)?.reviewCount ?? 0;
+    const mineAfter =
+      after.find((entry) => entry.neighborhoodId === neighborhoodId)?.reviewCount ?? 0;
     expect(mineAfter).toBe(mineBefore);
   });
 
@@ -373,7 +387,7 @@ describe('the partial indexes are REACHABLE from the visibility predicate', () =
         await reserved<{ indexname: string }[]>`
           select indexname from pg_indexes
           where tablename = 'reviews'
-            and indexdef like ${'%moderation_status <> \'removed\'%'}`
+            and indexdef like ${"%moderation_status <> 'removed'%"}`
       ).map((row) => row.indexname);
       // If the schema ever stops making these partial, the probe below would
       // pass by having nothing to look for.
@@ -417,13 +431,20 @@ describe('the partial indexes are REACHABLE from the visibility predicate', () =
 
 describe('a removed review reaches no rollup', () => {
   it('is invisible to every level it belongs to', async () => {
-    const isolatedChain = await seedGeoChain({ countryCode: 'RB', cityName: `Quietville ${uuidv7()}` });
+    const isolatedChain = await seedGeoChain({
+      countryCode: 'RB',
+      cityName: `Quietville ${uuidv7()}`,
+    });
     const isolatedNeighborhood = await seedNeighborhood({
       cityId: isolatedChain.cityId,
       name: `Silent ${uuidv7()}`,
     });
     const street = `Carrer Silent ${uuidv7()}`;
-    const isolatedStreet = await seedAddress({ chain: isolatedChain, street, neighborhoodId: isolatedNeighborhood });
+    const isolatedStreet = await seedAddress({
+      chain: isolatedChain,
+      street,
+      neighborhoodId: isolatedNeighborhood,
+    });
     const isolatedBuilding = await seedAddress({
       chain: isolatedChain,
       street,
@@ -462,11 +483,15 @@ describe('a removed review reaches no rollup', () => {
     });
     expect(await countBuildingsOnStreet(isolatedStreet)).toBe(0);
     expect(await getNeighborhoodSummaries(isolatedChain.cityId)).toEqual([]);
-    expect(await getBuildingSummaries({ neighborhoodId: isolatedNeighborhood, page: 1, limit: 10 })).toEqual({
+    expect(
+      await getBuildingSummaries({ neighborhoodId: isolatedNeighborhood, page: 1, limit: 10 }),
+    ).toEqual({
       buildings: [],
       total: 0,
     });
-    expect((await getCitiesWithReviews()).find((city) => city.cityId === isolatedChain.cityId)).toBeUndefined();
+    expect(
+      (await getCitiesWithReviews()).find((city) => city.cityId === isolatedChain.cityId),
+    ).toBeUndefined();
 
     // The row really is there — otherwise every assertion above passes on an
     // empty table and the test proves nothing.

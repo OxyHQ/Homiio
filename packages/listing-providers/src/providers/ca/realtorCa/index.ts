@@ -26,13 +26,14 @@ import type {
 } from '../../../types';
 import { createFetchRuntime } from '../../../runtime';
 import { fetchListingViaLadder } from '../../../strategy';
-import { defaultProviderMetrics, type ProviderMetricsReader, type ProviderMetricsSink } from '../../../metrics';
+import {
+  defaultProviderMetrics,
+  type ProviderMetricsReader,
+  type ProviderMetricsSink,
+} from '../../../metrics';
 import { providerMaxSearchPages } from '../../../discoverLimits';
 import { citySlug } from '../../../slug';
-import {
-  REALTOR_CA_BASE_URL,
-  REALTOR_CA_CITY_BBOX,
-} from './fixtures';
+import { REALTOR_CA_BASE_URL, REALTOR_CA_CITY_BBOX } from './fixtures';
 import {
   buildRealtorCaSearchBody,
   isRealtorCaApiChallenge,
@@ -147,7 +148,12 @@ export class RealtorCaProvider implements ListingProvider {
     const start = Date.now();
 
     if (runtime.openBrowserSession) {
-      const fromSession = await this.postViaSession(runtime, searchUrl, bodyParams.toString(), signal);
+      const fromSession = await this.postViaSession(
+        runtime,
+        searchUrl,
+        bodyParams.toString(),
+        signal,
+      );
       if (fromSession && !isRealtorCaApiChallenge(fromSession)) {
         this.metrics.record({
           provider: this.id,

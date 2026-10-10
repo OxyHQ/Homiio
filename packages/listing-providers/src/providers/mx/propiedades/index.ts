@@ -26,7 +26,11 @@ import type {
 } from '../../../types';
 import { createFetchRuntime } from '../../../runtime';
 import { fetchListingViaLadder } from '../../../strategy';
-import { defaultProviderMetrics, type ProviderMetricsReader, type ProviderMetricsSink } from '../../../metrics';
+import {
+  defaultProviderMetrics,
+  type ProviderMetricsReader,
+  type ProviderMetricsSink,
+} from '../../../metrics';
 import { PROPIEDADES_BASE_URL } from './fixtures';
 import {
   isPropiedadesChallenge,

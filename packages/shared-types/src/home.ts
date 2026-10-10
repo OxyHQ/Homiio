@@ -120,7 +120,10 @@ export type HomeLocationSummary =
   | {
       readonly status: 'unresolved';
       /** Which parameter named a place we could not resolve, and its value. */
-      readonly requested: { readonly param: 'city' | 'state' | 'neighborhood'; readonly value: string };
+      readonly requested: {
+        readonly param: 'city' | 'state' | 'neighborhood';
+        readonly value: string;
+      };
     };
 
 /**

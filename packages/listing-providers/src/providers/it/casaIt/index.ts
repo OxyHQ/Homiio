@@ -24,7 +24,11 @@ import type {
 import { createFetchRuntime } from '../../../runtime';
 import { ChallengeError, fetchListingViaLadder } from '../../../strategy';
 import { isAntiBotChallenge } from '../../../parse/challenge';
-import { defaultProviderMetrics, type ProviderMetricsReader, type ProviderMetricsSink } from '../../../metrics';
+import {
+  defaultProviderMetrics,
+  type ProviderMetricsReader,
+  type ProviderMetricsSink,
+} from '../../../metrics';
 import type { ItSchemaListing } from '../../../parse/jsonLd';
 import { CASA_IT_BASE_URL } from './fixtures';
 import {
@@ -58,8 +62,10 @@ export interface CasaItProviderOptions {
 
 function resolvePropertyType(types: readonly string[]): PropertyType {
   const lower = types.map((type) => type.toLowerCase());
-  if (lower.some((type) => type.includes('house') || type.includes('villa'))) return PropertyType.HOUSE;
-  if (lower.some((type) => type.includes('studio') || type.includes('monolocale'))) return PropertyType.STUDIO;
+  if (lower.some((type) => type.includes('house') || type.includes('villa')))
+    return PropertyType.HOUSE;
+  if (lower.some((type) => type.includes('studio') || type.includes('monolocale')))
+    return PropertyType.STUDIO;
   return PropertyType.APARTMENT;
 }
 
@@ -128,7 +134,14 @@ export class CasaItProvider implements ListingProvider {
       for (const ref of viaAjax) yield ref;
       if (yielded.count >= limit) return;
       if (viaAjax.length === 0) {
-        for await (const ref of this.discoverCityViaHtml(runtime, city, job.signal, seen, limit, yielded)) {
+        for await (const ref of this.discoverCityViaHtml(
+          runtime,
+          city,
+          job.signal,
+          seen,
+          limit,
+          yielded,
+        )) {
           yield ref;
         }
       }
@@ -171,8 +184,7 @@ export class CasaItProvider implements ListingProvider {
           referer: session.pageUrl(),
           timeoutMs: 30_000,
         });
-        let pageRefs =
-          status < 400 && !isCasaItChallenge(body) ? parseCasaItSearchJson(body) : [];
+        let pageRefs = status < 400 && !isCasaItChallenge(body) ? parseCasaItSearchJson(body) : [];
         if (pageRefs.length === 0 && page === 1) {
           pageRefs = parseCasaItSearch(await session.content());
         }

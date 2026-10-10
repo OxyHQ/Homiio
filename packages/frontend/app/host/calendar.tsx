@@ -486,7 +486,9 @@ export default function HostCalendarScreen() {
               <Button
                 size="lg"
                 style={styles.pickerButton}
-                trailingIcon={RiArrowDownSLine} tone="neutral" appearance="outline"
+                trailingIcon={RiArrowDownSLine}
+                tone="neutral"
+                appearance="outline"
               >
                 {selectedProperty
                   ? getPropertyTitle(selectedProperty)
@@ -536,9 +538,7 @@ export default function HostCalendarScreen() {
                 onSelectDate={(date) => setMonth(startOfMonth(date))}
                 // No blocking over an incomplete calendar: a block chosen
                 // against missing spans is how a booked night gets double-sold.
-                onNewEvent={
-                  availabilityQuery.isSuccess && !bookingsError ? openDialog : undefined
-                }
+                onNewEvent={availabilityQuery.isSuccess && !bookingsError ? openDialog : undefined}
                 newEventLabel={t('host.calendar.blockDates')}
                 actions={
                   <View style={styles.legendRow}>

@@ -28,8 +28,18 @@
  * version of that which survives a careless caller.
  */
 
-import { deriveQueryId, type GeoBounds, type GeoPoint, type QueryDescriptor } from './queryIdentity';
-import type { AddressPrecisionLevel, GeocoderOutcome, LocationKind, SearchFallback } from './schema';
+import {
+  deriveQueryId,
+  type GeoBounds,
+  type GeoPoint,
+  type QueryDescriptor,
+} from './queryIdentity';
+import type {
+  AddressPrecisionLevel,
+  GeocoderOutcome,
+  LocationKind,
+  SearchFallback,
+} from './schema';
 
 export type InvariantCode =
   | 'query_identity_divergent'
@@ -102,9 +112,7 @@ function longitudeIntervals(bounds: GeoBounds): [number, number][] {
 }
 
 function longitudeSpan(bounds: GeoBounds): number {
-  return crossesAntimeridian(bounds)
-    ? 360 - bounds.west + bounds.east
-    : bounds.east - bounds.west;
+  return crossesAntimeridian(bounds) ? 360 - bounds.west + bounds.east : bounds.east - bounds.west;
 }
 
 function latitudeSpan(bounds: GeoBounds): number {

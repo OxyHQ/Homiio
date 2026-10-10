@@ -69,7 +69,8 @@ async function main(): Promise<void> {
 
   const stuck = stuckRows
     .filter((row): row is { sourceId: string; sourceUrl: string } =>
-      Boolean(row.sourceId && row.sourceUrl))
+      Boolean(row.sourceId && row.sourceUrl),
+    )
     .map((row) => ({
       sourceId: row.sourceId,
       sourceUrl: row.sourceUrl,

@@ -10,7 +10,16 @@
  * See `CONVENTIONS.md` for the rules every decision below follows.
  */
 
-import { boolean, check, doublePrecision, index, integer, pgTable, text, uniqueIndex } from 'drizzle-orm/pg-core';
+import {
+  boolean,
+  check,
+  doublePrecision,
+  index,
+  integer,
+  pgTable,
+  text,
+  uniqueIndex,
+} from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import { createdAt, generatedId, inList, timestamptz, updatedAt } from '@oxy.so/db';
 import { LISTING_CURRENCIES } from '@homiio/shared-types';

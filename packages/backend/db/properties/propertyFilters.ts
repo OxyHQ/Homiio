@@ -29,7 +29,20 @@
  *    too broad to be useful, not an accident of the port.
  */
 
-import { and, eq, gt, gte, inArray, isNull, lte, ne, notInArray, or, sql, type SQL } from 'drizzle-orm';
+import {
+  and,
+  eq,
+  gt,
+  gte,
+  inArray,
+  isNull,
+  lte,
+  ne,
+  notInArray,
+  or,
+  sql,
+  type SQL,
+} from 'drizzle-orm';
 import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 
 import type { HousingFeature } from '@homiio/shared-types';
@@ -37,7 +50,13 @@ import type { HousingFeature } from '@homiio/shared-types';
 import { qualified } from '../casing';
 import { escapeLikePattern } from '@oxy.so/utils/sql';
 import { TEXT_SEARCH_CONFIGURATION } from '../extensions';
-import { addresses, exchangeRequests, properties, propertyAvailabilityWindows, reservations } from '../schema';
+import {
+  addresses,
+  exchangeRequests,
+  properties,
+  propertyAvailabilityWindows,
+  reservations,
+} from '../schema';
 
 /** Never surface a soft-deleted (archived) listing. */
 export function notDeleted(): SQL {
@@ -559,10 +578,7 @@ export function noConfirmedExchangeOverlaps(checkIn: Date, checkOut: Date): SQL 
  * "unknown is not an answer to a question about size" is one rule and a reader
  * should not have to work out that one end enforces it accidentally.
  */
-export function areaInRange(
-  min: number | undefined,
-  max: number | undefined,
-): SQL | undefined {
+export function areaInRange(min: number | undefined, max: number | undefined): SQL | undefined {
   if (min === undefined && max === undefined) return undefined;
   const bounds: SQL[] = [gt(properties.squareFootage, 0)];
   if (min !== undefined) bounds.push(gte(properties.squareFootage, min));

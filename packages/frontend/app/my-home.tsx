@@ -225,7 +225,9 @@ export default function MyHomeScreen() {
           <Button
             size="sm"
             trailingIcon={RiArrowRightSLine}
-            onPress={() => router.push(`/contracts/${lease.id}`)} tone="neutral" appearance="outline"
+            onPress={() => router.push(`/contracts/${lease.id}`)}
+            tone="neutral"
+            appearance="outline"
           >
             {t('myHome.viewContract')}
           </Button>

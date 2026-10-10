@@ -156,7 +156,15 @@ export interface AddressDetail extends Address {
   };
   nearbyAmenities?: Array<{
     name: string;
-    type: 'restaurant' | 'grocery' | 'pharmacy' | 'school' | 'hospital' | 'park' | 'transit' | 'shopping';
+    type:
+      | 'restaurant'
+      | 'grocery'
+      | 'pharmacy'
+      | 'school'
+      | 'hospital'
+      | 'park'
+      | 'transit'
+      | 'shopping';
     distance: number;
     rating?: number;
     address?: string;

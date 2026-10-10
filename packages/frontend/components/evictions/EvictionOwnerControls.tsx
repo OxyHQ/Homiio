@@ -149,7 +149,9 @@ export const EvictionOwnerControls: React.FC<EvictionOwnerControlsProps> = ({
         onPress={handlePost}
         disabled={!canPost}
         loading={createUpdate.isPending}
-        style={styles.action} tone="accent" appearance="solid"
+        style={styles.action}
+        tone="accent"
+        appearance="solid"
       >
         {t('evictions.update.post')}
       </Button>
@@ -159,7 +161,9 @@ export const EvictionOwnerControls: React.FC<EvictionOwnerControlsProps> = ({
           size="md"
           onPress={onEdit}
           leadingIcon={RiEditLine}
-          style={styles.ownerAction} tone="neutral" appearance="outline"
+          style={styles.ownerAction}
+          tone="neutral"
+          appearance="outline"
         >
           {t('evictions.owner.edit')}
         </Button>
@@ -169,7 +173,9 @@ export const EvictionOwnerControls: React.FC<EvictionOwnerControlsProps> = ({
             onPress={handleCancelCase}
             loading={updateCase.isPending}
             leadingIcon={RiCloseCircleLine}
-            style={styles.ownerAction} tone="danger" appearance="solid"
+            style={styles.ownerAction}
+            tone="danger"
+            appearance="solid"
           >
             {t('evictions.owner.cancelCase')}
           </Button>

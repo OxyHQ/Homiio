@@ -43,7 +43,8 @@ export const MortgageCalculatorSection: React.FC<Props> = ({ salePrice, currency
   const { locale } = useFormatting();
 
   const formatCurrency = useCallback(
-    (amount: number) => formatMoney(Math.round(amount), currency, locale, { maximumFractionDigits: 0 }),
+    (amount: number) =>
+      formatMoney(Math.round(amount), currency, locale, { maximumFractionDigits: 0 }),
     [currency, locale],
   );
 
@@ -71,7 +72,9 @@ export const MortgageCalculatorSection: React.FC<Props> = ({ salePrice, currency
     <Section>
       <MortgageCalculator
         defaultPrice={salePrice}
-        defaultDownPayment={Math.round(salePrice * DEFAULT_MORTGAGE_CONFIG.defaultDownPaymentFraction)}
+        defaultDownPayment={Math.round(
+          salePrice * DEFAULT_MORTGAGE_CONFIG.defaultDownPaymentFraction,
+        )}
         defaultYears={DEFAULT_TERM_YEARS}
         defaultAnnualRate={DEFAULT_ANNUAL_RATE_PERCENT}
         termOptions={DEFAULT_MORTGAGE_CONFIG.termOptions}

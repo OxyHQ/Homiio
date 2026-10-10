@@ -18,7 +18,7 @@ const ALLOWED_DOCUMENT_MIME_TYPES = new Set([
   'image/jpg',
   'image/png',
   'image/webp',
-  'image/gif'
+  'image/gif',
 ]);
 
 const MAX_DOCUMENT_BYTES = 10 * 1024 * 1024; // 10 MB
@@ -28,7 +28,7 @@ const documentUpload = multer({
   storage: multer.memoryStorage(),
   limits: {
     fileSize: MAX_DOCUMENT_BYTES,
-    files: MAX_DOCUMENT_COUNT
+    files: MAX_DOCUMENT_COUNT,
   },
   fileFilter: (_req, file, cb) => {
     if (ALLOWED_DOCUMENT_MIME_TYPES.has(file.mimetype)) {
@@ -36,12 +36,11 @@ const documentUpload = multer({
     } else {
       cb(new Error('Invalid file type. Only PDF and common image formats are allowed.'));
     }
-  }
+  },
 });
 
 export default function () {
   const router = express.Router();
-
 
   // POST /api/applications — applicant submits long-term application
   // Accepts either application/json or multipart/form-data with `documents[]` files.
@@ -50,20 +49,17 @@ export default function () {
     documentUpload.array('documents', MAX_DOCUMENT_COUNT),
     handleUploadError,
     validation.validateTenantApplication,
-    asyncHandler(applicationController.createApplication)
+    asyncHandler(applicationController.createApplication),
   );
 
   // GET /api/applications — list my applications (as applicant or ?asLandlord=true)
-  router.get(
-    '/',
-    asyncHandler(applicationController.listMyApplications)
-  );
+  router.get('/', asyncHandler(applicationController.listMyApplications));
 
   // POST /api/applications/:id/documents/:documentId/verification — the
   // landlord's judgement of one document. The ONLY way one reaches `verified`.
   router.post(
     '/:id/documents/:documentId/verification',
-    asyncHandler(applicationController.verifyApplicationDocument)
+    asyncHandler(applicationController.verifyApplicationDocument),
   );
 
   // GET /api/applications/:id/documents/:documentId — the bytes of ONE attached
@@ -78,28 +74,22 @@ export default function () {
   // documents used to be delivered by `routes/public.ts`.
   router.get(
     '/:id/documents/:documentId',
-    asyncHandler(applicationController.getApplicationDocument)
+    asyncHandler(applicationController.getApplicationDocument),
   );
 
   // GET /api/applications/:id
-  router.get(
-    '/:id',
-    asyncHandler(applicationController.getApplicationById)
-  );
+  router.get('/:id', asyncHandler(applicationController.getApplicationById));
 
   // PATCH /api/applications/:id — landlord approves/rejects, applicant withdraws
   router.patch(
     '/:id',
     validation.validateTenantApplicationUpdate,
-    asyncHandler(applicationController.updateApplicationStatus)
+    asyncHandler(applicationController.updateApplicationStatus),
   );
 
   // POST /api/applications/:id/create-lease — landlord turns an approved
   // application into a draft lease (owner ids resolved server-side).
-  router.post(
-    '/:id/create-lease',
-    asyncHandler(applicationController.createLeaseFromApplication)
-  );
+  router.post('/:id/create-lease', asyncHandler(applicationController.createLeaseFromApplication));
 
   return router;
 }

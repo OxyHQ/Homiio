@@ -44,10 +44,7 @@ import {
 } from '../../db/watches/alertRepository';
 import { logger } from '../../middlewares/logging';
 import notificationDispatchService from '../notificationDispatchService';
-import {
-  digestNarrative,
-  HOUSING_ALERT_NOTIFICATION_TYPE,
-} from './alertNarrative';
+import { digestNarrative, HOUSING_ALERT_NOTIFICATION_TYPE } from './alertNarrative';
 import { matchDomainEvent } from './housingAlertMatcher';
 import { describeErrorForLog } from '../../middlewares/errorHandler';
 
@@ -273,9 +270,7 @@ export async function deliverDueDigests(
  * an idle one — the same "a sweep that did nothing must be distinguishable from
  * one that never ran" property the expiry sweep documents.
  */
-export async function countAlertsByState(
-  db: Database = getDb(),
-): Promise<Record<string, number>> {
+export async function countAlertsByState(db: Database = getDb()): Promise<Record<string, number>> {
   // Aggregated by the database, not by loading every row and counting in
   // JavaScript — this runs on a schedule against a table that grows with the
   // product's success, and the naive version's cost is the whole history.

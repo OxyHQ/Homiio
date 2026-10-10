@@ -294,10 +294,7 @@ async function applyEffect(
  * and Homiio has no queue and no reader. Taking something down still waits for
  * `automatic`.
  */
-function modeAllows(
-  mode: ModerationEnforcementMode,
-  action: ModerationEnforcementAction,
-): boolean {
+function modeAllows(mode: ModerationEnforcementMode, action: ModerationEnforcementAction): boolean {
   switch (mode) {
     case 'observe':
       return false;

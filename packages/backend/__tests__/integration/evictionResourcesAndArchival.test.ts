@@ -127,9 +127,9 @@ describe('jurisdiction resources', () => {
     // DIFFERENT region must not leak in, which is the half a naive country match
     // gets wrong.
     const nationalOnly = await request(buildApp()).get('/evictions/resources?countryCode=ES');
-    expect(
-      nationalOnly.body.data.resources.map((row: { title: string }) => row.title),
-    ).toEqual(['National']);
+    expect(nationalOnly.body.data.resources.map((row: { title: string }) => row.title)).toEqual([
+      'National',
+    ]);
   });
 
   it('carries a disclaimer and a verification date on every entry', async () => {
@@ -248,7 +248,9 @@ describe('archival sweep', () => {
 
     const result = await sweepEvictionArchive();
     expect(result.deleted).toBe(1);
-    expect(await getDb().select().from(evictionCases).where(eq(evictionCases.id, id))).toHaveLength(0);
+    expect(await getDb().select().from(evictionCases).where(eq(evictionCases.id, id))).toHaveLength(
+      0,
+    );
   });
 
   it('is REACHABLE from the cron manager, not merely callable', async () => {

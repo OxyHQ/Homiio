@@ -11,7 +11,12 @@ import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@oxy.so/bloom/button';
-import { RiFileTextLine, RiLockLine, RiLoginBoxLine, RiNotification3Line } from '@oxy.so/bloom/icons';
+import {
+  RiFileTextLine,
+  RiLockLine,
+  RiLoginBoxLine,
+  RiNotification3Line,
+} from '@oxy.so/bloom/icons';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { useOxy, openAccountDialog } from '@oxy.so/services';
 
@@ -37,7 +42,9 @@ export default function SavedScreen() {
                   iconOnly
                   leadingIcon={RiFileTextLine}
                   accessibilityLabel={t('saved.notes.title')}
-                  onPress={() => router.push('/saved/notes')} tone="accent" appearance="subtle"
+                  onPress={() => router.push('/saved/notes')}
+                  tone="accent"
+                  appearance="subtle"
                 />,
                 // The alert history spans every saved search, so it lives on
                 // the page header; one search's settings open from its card.
@@ -46,7 +53,9 @@ export default function SavedScreen() {
                   iconOnly
                   leadingIcon={RiNotification3Line}
                   accessibilityLabel={t('alerts.history.title')}
-                  onPress={() => router.push('/saved/alerts')} tone="accent" appearance="subtle"
+                  onPress={() => router.push('/saved/alerts')}
+                  tone="accent"
+                  appearance="subtle"
                 />,
               ]
             : [],

@@ -51,15 +51,9 @@ import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
 import { useProperty } from '@/hooks';
 import { useOxyAvatars } from '@/hooks/useOxyAvatars';
 import { useProfile } from '@/context/ProfileContext';
-import {
-  useApplicationById,
-  useUpdateApplicationMutation,
-} from '@/hooks/useApplicationQueries';
+import { useApplicationById, useUpdateApplicationMutation } from '@/hooks/useApplicationQueries';
 import profileService from '@/services/profileService';
-import {
-  getPropertyImageSource,
-  getPropertyTitle,
-} from '@/utils/propertyUtils';
+import { getPropertyImageSource, getPropertyTitle } from '@/utils/propertyUtils';
 import { radius, spacing } from '@/constants/styles';
 
 type ReviewAction = 'reviewing' | 'approve' | 'reject';
@@ -256,8 +250,7 @@ export default function LandlordApplicationDetailScreen() {
           icon={RiAlertLine}
           title={t('applications.landlord.unavailableTitle')}
           description={
-            applicationQuery.error?.message ??
-            t('applications.landlord.unavailableDescription')
+            applicationQuery.error?.message ?? t('applications.landlord.unavailableDescription')
           }
           onRetry={() => applicationQuery.refetch()}
         />
@@ -292,11 +285,12 @@ export default function LandlordApplicationDetailScreen() {
     applicantUser?.username ||
     t('applications.card.applicantFallback');
   const applicantAvatar = getApplicantAvatarFileId(applicant, getAvatarFileId);
-  const propertyTitle = property ? getPropertyTitle(property) : t('applications.card.propertyFallback');
+  const propertyTitle = property
+    ? getPropertyTitle(property)
+    : t('applications.card.propertyFallback');
   const imageSource = property ? getPropertyImageSource(property) : null;
 
-  const canMoveToReviewing =
-    application.status === TenantApplicationStatus.SUBMITTED;
+  const canMoveToReviewing = application.status === TenantApplicationStatus.SUBMITTED;
   const canCreateLease = application.status === TenantApplicationStatus.APPROVED;
   const secondaryText = { color: theme.colors.textSecondary };
   const canDecide =
@@ -324,8 +318,7 @@ export default function LandlordApplicationDetailScreen() {
               <H2 style={styles.applicantName}>{applicantName}</H2>
               <BloomText style={[styles.subtitle, secondaryText]}>
                 {t(`profile.edit.options.employmentStatus.${application.employmentStatus}`)} ·{' '}
-                {formatApplicationIncome(application, locale)}{' '}
-                {t('applications.card.perMonth')}
+                {formatApplicationIncome(application, locale)} {t('applications.card.perMonth')}
               </BloomText>
             </View>
             <ApplicationStatusBadge status={application.status} />
@@ -333,11 +326,7 @@ export default function LandlordApplicationDetailScreen() {
 
           <View style={[styles.heroCard, { backgroundColor: theme.colors.backgroundSecondary }]}>
             {imageSource ? (
-              <Image
-                source={imageSource}
-                style={styles.thumb}
-                resizeMode="cover"
-              />
+              <Image source={imageSource} style={styles.thumb} resizeMode="cover" />
             ) : (
               <View style={styles.thumb} />
             )}
@@ -376,7 +365,9 @@ export default function LandlordApplicationDetailScreen() {
                 size="md"
                 leadingIcon={RiEditLine}
                 onPress={handleCreateLease}
-                style={styles.actionButton} tone="accent" appearance="solid"
+                style={styles.actionButton}
+                tone="accent"
+                appearance="solid"
               >
                 {t('applications.landlord.createLease')}
               </Button>
@@ -388,7 +379,9 @@ export default function LandlordApplicationDetailScreen() {
                 leadingIcon={RiEyeLine}
                 onPress={() => handleOpen('reviewing')}
                 disabled={!canMoveToReviewing || updateMutation.isPending}
-                style={styles.actionButton} tone="neutral" appearance="outline"
+                style={styles.actionButton}
+                tone="neutral"
+                appearance="outline"
               >
                 {t('applications.landlord.review.reviewing.confirm')}
               </Button>
@@ -397,7 +390,9 @@ export default function LandlordApplicationDetailScreen() {
                 leadingIcon={RiCheckLine}
                 onPress={() => handleOpen('approve')}
                 disabled={updateMutation.isPending}
-                style={styles.actionButton} tone="accent" appearance="solid"
+                style={styles.actionButton}
+                tone="accent"
+                appearance="solid"
               >
                 {t('applications.landlord.review.approve.confirm')}
               </Button>
@@ -406,7 +401,9 @@ export default function LandlordApplicationDetailScreen() {
                 leadingIcon={RiCloseLine}
                 onPress={() => handleOpen('reject')}
                 disabled={updateMutation.isPending}
-                style={styles.actionButton} tone="accent" appearance="subtle"
+                style={styles.actionButton}
+                tone="accent"
+                appearance="subtle"
               >
                 {t('applications.landlord.review.reject.confirm')}
               </Button>

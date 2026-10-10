@@ -182,19 +182,22 @@ describe('the geo predicates the search actually ships', () => {
   it.each([
     ['a bounding box', withinBoundingBox(BARCELONA_BOX)],
     ['a centre and radius', withinCircle(BARCELONA_CIRCLE)],
-  ])('is asked a SELECTIVE question by %s, which is what determines the plan', async (_label, predicate) => {
-    // The precondition every plan assertion below rests on, asserted rather
-    // than assumed. A fixture where the predicate matches most of the table
-    // makes a sequential scan correct, and the plan tests then fail for a
-    // reason that has nothing to do with the SQL — which is exactly how this
-    // file went flaky and blocked two other PRs.
-    const total = await matchCount(sql`true`);
-    const matched = await matchCount(predicate);
+  ])(
+    'is asked a SELECTIVE question by %s, which is what determines the plan',
+    async (_label, predicate) => {
+      // The precondition every plan assertion below rests on, asserted rather
+      // than assumed. A fixture where the predicate matches most of the table
+      // makes a sequential scan correct, and the plan tests then fail for a
+      // reason that has nothing to do with the SQL — which is exactly how this
+      // file went flaky and blocked two other PRs.
+      const total = await matchCount(sql`true`);
+      const matched = await matchCount(predicate);
 
-    expect(total).toBe(MATCHING_ROWS + SCATTERED_ROWS);
-    expect(matched).toBe(MATCHING_ROWS);
-    expect(matched / total).toBeLessThan(MAX_SELECTIVITY);
-  });
+      expect(total).toBe(MATCHING_ROWS + SCATTERED_ROWS);
+      expect(matched).toBe(MATCHING_ROWS);
+      expect(matched / total).toBeLessThan(MAX_SELECTIVITY);
+    },
+  );
 
   it.each([
     ['a bounding box', withinBoundingBox(BARCELONA_BOX)],

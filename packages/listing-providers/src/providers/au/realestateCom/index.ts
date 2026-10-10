@@ -26,7 +26,11 @@ import type {
 } from '../../../types';
 import { createFetchRuntime } from '../../../runtime';
 import { ChallengeError, fetchListingViaLadder } from '../../../strategy';
-import { defaultProviderMetrics, type ProviderMetricsReader, type ProviderMetricsSink } from '../../../metrics';
+import {
+  defaultProviderMetrics,
+  type ProviderMetricsReader,
+  type ProviderMetricsSink,
+} from '../../../metrics';
 import { providerMaxSearchPages } from '../../../discoverLimits';
 import { citySlug } from '../../../slug';
 import { REALESTATE_COM_AU_BASE_URL } from './fixtures';
@@ -229,13 +233,8 @@ export class RealestateComAuProvider implements ListingProvider {
       type: resolvePropertyType(listing.propertyType),
       offerings: isSale ? [OfferingType.SALE] : [OfferingType.LONG_TERM_RENT],
       longTermRent:
-        monthlyAmount !== undefined
-          ? { monthlyAmount, currency: listing.currency }
-          : undefined,
-      sale:
-        salePrice !== undefined
-          ? { price: salePrice, currency: listing.currency }
-          : undefined,
+        monthlyAmount !== undefined ? { monthlyAmount, currency: listing.currency } : undefined,
+      sale: salePrice !== undefined ? { price: salePrice, currency: listing.currency } : undefined,
       remoteImages: toRemoteImages(listing.images),
       status: 'published',
     };

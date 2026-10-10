@@ -266,8 +266,10 @@ describe('HabitacliaProvider.discover listainmuebles path', () => {
     // …/alquiler-<city>-<page>.htm` timeouts: deep search pages are the
     // canonical `-<page>.htm` GET URLs and return listings cold, so discover must
     // walk them over HTTP and never escalate a healthy city to the browser tier.
-    const page2 = HABITACLIA_FIXTURE_SEARCH_HTML.replace('i12345678900000', 'i22222222200000')
-      .replace('i98765432100000', 'i33333333300000');
+    const page2 = HABITACLIA_FIXTURE_SEARCH_HTML.replace(
+      'i12345678900000',
+      'i22222222200000',
+    ).replace('i98765432100000', 'i33333333300000');
     // A real exhausted-pagination page is a full-size results page with search
     // chrome but no listing cards — NOT a short challenge stub (which the
     // >512-char challenge heuristic would otherwise flag and escalate).

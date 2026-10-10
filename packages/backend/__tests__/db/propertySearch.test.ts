@@ -145,7 +145,9 @@ describe('search_vector', () => {
     // expression without regenerating the column or updating this file, this
     // goes red and names why.
     const titleOnly = await insert(null);
-    await db.update(properties).set({ title: `Ático en Málaga ${MARKER}` })
+    await db
+      .update(properties)
+      .set({ title: `Ático en Málaga ${MARKER}` })
       .where(eq(properties.id, titleOnly));
 
     expect(await matching(`malaga ${MARKER}`)).toEqual([]);

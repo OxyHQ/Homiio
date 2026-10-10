@@ -54,16 +54,16 @@ export function EmptyState({
 
       <H3 style={styles.title}>{title}</H3>
 
-      {description ? (
-        <BloomText style={styles.description}>{description}</BloomText>
-      ) : null}
+      {description ? <BloomText style={styles.description}>{description}</BloomText> : null}
 
       {actionText && onAction ? (
         <View style={styles.action}>
           <Button
             onPress={onAction}
             size="md"
-            leadingIcon={actionIcon} tone="accent" appearance="solid"
+            leadingIcon={actionIcon}
+            tone="accent"
+            appearance="solid"
           >
             {actionText}
           </Button>

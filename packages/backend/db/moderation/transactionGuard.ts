@@ -64,10 +64,7 @@ export class MissingTransactionError extends Error {
  *
  * @throws {MissingTransactionError} When handed the root connection.
  */
-export function requireTransaction(
-  db: DatabaseOrTransaction,
-  operation: string,
-): Transaction {
+export function requireTransaction(db: DatabaseOrTransaction, operation: string): Transaction {
   const rollback: unknown = (db as { rollback?: unknown }).rollback;
   if (typeof rollback !== 'function') {
     throw new MissingTransactionError(operation);

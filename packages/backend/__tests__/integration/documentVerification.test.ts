@@ -60,18 +60,20 @@ async function seedApplication(required: string[] = ['id', 'income']) {
     .where(eq(properties.id, propertyId));
 
   const applicationId = objectIdHex();
-  await getDb().insert(tenantApplications).values({
-    id: applicationId,
-    propertyId,
-    applicantOxyUserId: APPLICANT,
-    landlordOxyUserId: LANDLORD,
-    moveInDate: new Date('2026-11-01T00:00:00.000Z'),
-    leaseTermMonths: 12,
-    monthlyIncome: 2400,
-    employmentStatus: 'employed',
-    status: 'submitted',
-    submittedAt: new Date('2026-09-20T00:00:00.000Z'),
-  });
+  await getDb()
+    .insert(tenantApplications)
+    .values({
+      id: applicationId,
+      propertyId,
+      applicantOxyUserId: APPLICANT,
+      landlordOxyUserId: LANDLORD,
+      moveInDate: new Date('2026-11-01T00:00:00.000Z'),
+      leaseTermMonths: 12,
+      monthlyIncome: 2400,
+      employmentStatus: 'employed',
+      status: 'submitted',
+      submittedAt: new Date('2026-09-20T00:00:00.000Z'),
+    });
 
   const documentId = objectIdHex();
   await getDb().insert(tenantApplicationDocuments).values({

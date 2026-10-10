@@ -92,7 +92,7 @@ describe('Sindi service identity canary', () => {
      * passphrase: only THIS role's handle is Sindi.
      */
     it.each([
-      ['another service\'s task role', 'wl_d61be5cd068abb658ed4d193'],
+      ["another service's task role", 'wl_d61be5cd068abb658ed4d193'],
       ['a handle one character off', 'wl_f28159178c5e993eb03b8cc2'],
       ['an unprefixed digest', 'f28159178c5e993eb03b8cc1'],
       ['the prefix alone', 'wl_'],
@@ -107,7 +107,10 @@ describe('Sindi service identity canary', () => {
       ['another application', { ...attested, appId: '6a2f851751b784a86fd0e923' }],
       ['another owner account', { ...attested, ownerAccountId: '69b2d3df5d12f58c9800d651' }],
       ['a dropped privileged scope', { ...attested, scopes: ['inference:invoke'] }],
-      ['a widened scope set', { ...attested, scopes: ['inference:invoke', 'acting-as:offline', 'user:read'] }],
+      [
+        'a widened scope set',
+        { ...attested, scopes: ['inference:invoke', 'acting-as:offline', 'user:read'] },
+      ],
       ['an expired token', { ...attested, exp: Math.floor(Date.now() / 1000) - 1 }],
     ])('still enforces every other claim on an attested token: %s', (_label, payload) => {
       expect(() => assertCanonicalSindiServiceToken(token(payload))).toThrow(
@@ -141,19 +144,29 @@ describe('Sindi requester assertion canary (ADR 0025)', () => {
 
   it('passes an assertion naming exactly Sindi, the Sindi credential and this requester', () => {
     const value = grant(claims);
-    expect(assertCanonicalSindiRequesterAssertion(value, { requesterAccountId, agentId })).toBe(value.assertion);
+    expect(assertCanonicalSindiRequesterAssertion(value, { requesterAccountId, agentId })).toBe(
+      value.assertion,
+    );
   });
 
   it('passes an assertion whose cid is the Homiio task role handle', () => {
     const value = grant({ ...claims, cid: SINDI_OXY_WORKLOAD_ATTESTATION_ID });
-    expect(assertCanonicalSindiRequesterAssertion(value, { requesterAccountId, agentId })).toBe(value.assertion);
+    expect(assertCanonicalSindiRequesterAssertion(value, { requesterAccountId, agentId })).toBe(
+      value.assertion,
+    );
   });
 
   it.each([
-    ['another service\'s task role handle', grant({ ...claims, cid: 'wl_d61be5cd068abb658ed4d193' })],
+    [
+      "another service's task role handle",
+      grant({ ...claims, cid: 'wl_d61be5cd068abb658ed4d193' }),
+    ],
     ['a handle one character off', grant({ ...claims, cid: 'wl_f28159178c5e993eb03b8cc2' })],
     ['another requester', grant({ ...claims, sub: '69b2d3df5d12f58c9800d651' })],
-    ['a response naming another requester', grant(claims, { requesterAccountId: '69b2d3df5d12f58c9800d651' })],
+    [
+      'a response naming another requester',
+      grant(claims, { requesterAccountId: '69b2d3df5d12f58c9800d651' }),
+    ],
     ['another agent', grant({ ...claims, agentId: '01a0646a-078f-7642-95ef-439952f4f3f9' })],
     ['another application', grant({ ...claims, azp: '6a2f851751b784a86fd0e934' })],
     ['another credential', grant({ ...claims, cid: '01a0648b-8d74-7240-adba-80707fdfdf9c' })],
@@ -161,8 +174,8 @@ describe('Sindi requester assertion canary (ADR 0025)', () => {
     ['an expired assertion', grant({ ...claims, exp: Math.floor(Date.now() / 1000) - 1 })],
     ['no assertion at all', { requesterAccountId, agentId }],
   ])('refuses %s before it can leave Homiio', (_label, value) => {
-    expect(() => assertCanonicalSindiRequesterAssertion(value, { requesterAccountId, agentId })).toThrow(
-      'unexpected Sindi identity',
-    );
+    expect(() =>
+      assertCanonicalSindiRequesterAssertion(value, { requesterAccountId, agentId }),
+    ).toThrow('unexpected Sindi identity');
   });
 });

@@ -245,7 +245,12 @@ describe('a city token, and the homonym it must not resolve', () => {
 
   it('refuses an EXTERNAL place ref rather than guessing one', async () => {
     const result = await resolveLocationRef(
-      { kind: 'place', placeType: 'city', source: { kind: 'external', provider: 'osm' }, id: 'R349036' },
+      {
+        kind: 'place',
+        placeType: 'city',
+        source: { kind: 'external', provider: 'osm' },
+        id: 'R349036',
+      },
       null,
     );
     expect(result).toEqual({ status: 'failed', reason: 'unsupported' });
@@ -254,7 +259,10 @@ describe('a city token, and the homonym it must not resolve', () => {
 
   it('refuses a multi ref rather than resolving part of it', async () => {
     const result = await resolveLocationRef(
-      { kind: 'multi', refs: [{ kind: 'bounds', bounds: { west: 1, south: 1, east: 2, north: 2 } }] },
+      {
+        kind: 'multi',
+        refs: [{ kind: 'bounds', bounds: { west: 1, south: 1, east: 2, north: 2 } }],
+      },
       null,
     );
     expect(result).toEqual({ status: 'failed', reason: 'unsupported' });

@@ -71,7 +71,11 @@ export class GeoValidationError extends Error {
 export function readStringParam(value: unknown, field: string): string | undefined {
   if (value === undefined || value === null) return undefined;
   if (typeof value !== 'string') {
-    throw new GeoValidationError(field, 'INVALID_PARAM_TYPE', `${field} must be a single text value`);
+    throw new GeoValidationError(
+      field,
+      'INVALID_PARAM_TYPE',
+      `${field} must be a single text value`,
+    );
   }
   return value;
 }
@@ -158,8 +162,10 @@ export interface ParsedPoint {
   readonly latitude: number;
 }
 
-const isLongitude = (value: number): boolean => Number.isFinite(value) && value >= -180 && value <= 180;
-const isLatitude = (value: number): boolean => Number.isFinite(value) && value >= -90 && value <= 90;
+const isLongitude = (value: number): boolean =>
+  Number.isFinite(value) && value >= -180 && value <= 180;
+const isLatitude = (value: number): boolean =>
+  Number.isFinite(value) && value >= -90 && value <= 90;
 
 /** `near=lng,lat` — GeoJSON order, matching every other coordinate on the wire. */
 export function parseNear(value: unknown): ParsedPoint | undefined {

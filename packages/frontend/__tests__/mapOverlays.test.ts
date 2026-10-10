@@ -69,12 +69,16 @@ describe('overlaySignature', () => {
   it('changes when a price, a count or a cluster membership changes, and not otherwise', () => {
     const base = collectOverlays([point('a', [0, 0]), cluster(7, 3)], inputs);
     const withLeaves = base.map((overlay) => ({ ...overlay, leafIds: null }));
-    expect(overlaySignature(withLeaves)).toBe(overlaySignature(base.map((o) => ({ ...o, leafIds: null }))));
+    expect(overlaySignature(withLeaves)).toBe(
+      overlaySignature(base.map((o) => ({ ...o, leafIds: null }))),
+    );
     expect(overlaySignature(collectOverlays([point('a', [0, 0]), cluster(7, 4)], inputs))).not.toBe(
       overlaySignature(base),
     );
     expect(
-      overlaySignature(base.map((o) => ({ ...o, leafIds: o.kind === 'cluster' ? ['a', 'b', 'c'] : null }))),
+      overlaySignature(
+        base.map((o) => ({ ...o, leafIds: o.kind === 'cluster' ? ['a', 'b', 'c'] : null })),
+      ),
     ).not.toBe(overlaySignature(withLeaves));
   });
 });
@@ -125,7 +129,7 @@ describe('the native document draws the same markers', () => {
   });
 
   it('positions a pin from the published input, never the tile geometry', () => {
-    expect(document).toContain('makeMarker(key, \'hm-pill\', input.coordinates');
+    expect(document).toContain("makeMarker(key, 'hm-pill', input.coordinates");
     expect(document).toContain('entry.marker.setLngLat(input.coordinates)');
   });
 

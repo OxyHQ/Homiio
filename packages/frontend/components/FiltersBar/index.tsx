@@ -91,14 +91,18 @@ export function FiltersBar({ filters, onApplyFilters, sortBy, onSortChange }: Fi
         count={count}
         onPress={() => setOpen(true)}
         label={t('search.actions.filters')}
-        accessibilityLabel={count > 0 ? `${t('search.actions.filters')}, ${count}` : t('search.actions.filters')}
+        accessibilityLabel={
+          count > 0 ? `${t('search.actions.filters')}, ${count}` : t('search.actions.filters')
+        }
       />
       <DropdownMenu>
         <DropdownMenuTrigger asChild label={`${sortWord}: ${sortLabel}`}>
           <Button
             size="md"
             icon={RiExpandUpDownLine}
-            accessibilityLabel={`${sortWord}: ${sortLabel}`} tone="neutral" appearance="outline"
+            accessibilityLabel={`${sortWord}: ${sortLabel}`}
+            tone="neutral"
+            appearance="outline"
           >
             {sortLabel}
           </Button>
@@ -128,7 +132,11 @@ export function FiltersBar({ filters, onApplyFilters, sortBy, onSortChange }: Fi
         contentPadding={0}
       >
         {open ? (
-          <CityFiltersBody filters={filters} onApply={onApplyFilters} onClose={() => setOpen(false)} />
+          <CityFiltersBody
+            filters={filters}
+            onApply={onApplyFilters}
+            onClose={() => setOpen(false)}
+          />
         ) : null}
       </Dialog>
     </View>

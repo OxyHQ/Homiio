@@ -75,9 +75,7 @@ export function HomeCarouselSection<T>({
       <View className={`mb-4 flex-row items-end justify-between gap-4 ${PAGE_GUTTER_CLASS}`}>
         <View className="min-w-0 flex-1 shrink">
           {eyebrow ? <SectionEyebrow>{eyebrow}</SectionEyebrow> : null}
-          <H1
-            className="text-[26px] font-bold leading-8 tracking-tight text-foreground"
-          >
+          <H1 className="text-[26px] font-bold leading-8 tracking-tight text-foreground">
             {title}
           </H1>
         </View>
@@ -105,15 +103,15 @@ export function HomeCarouselSection<T>({
             >
               {loading
                 ? Array.from({ length: SKELETON_COUNT }).map((_, idx) => (
-                  <CarouselItem key={`skeleton-${idx}`} width={cardWidth}>
-                    <View className="h-[200px] rounded-2xl bg-muted" />
-                  </CarouselItem>
-                ))
+                    <CarouselItem key={`skeleton-${idx}`} width={cardWidth}>
+                      <View className="h-[200px] rounded-2xl bg-muted" />
+                    </CarouselItem>
+                  ))
                 : items.map((item, idx) => (
-                  <CarouselItem key={idx} width={cardWidth}>
-                    {renderItem(item, idx)}
-                  </CarouselItem>
-                ))}
+                    <CarouselItem key={idx} width={cardWidth}>
+                      {renderItem(item, idx)}
+                    </CarouselItem>
+                  ))}
             </Carousel>
           )}
         </View>

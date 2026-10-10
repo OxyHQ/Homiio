@@ -78,7 +78,11 @@ beforeEach(() => {
 describe('cityService.lookupCity', () => {
   it('passes an ambiguous result through with BOTH candidates and no place', async () => {
     mockGet.mockResolvedValue({
-      data: { status: 'ambiguous', code: 'AMBIGUOUS_LOCATION', candidates: [barcelonaEs, barcelonaVe] },
+      data: {
+        status: 'ambiguous',
+        code: 'AMBIGUOUS_LOCATION',
+        candidates: [barcelonaEs, barcelonaVe],
+      },
     });
 
     const result = await cityService.lookupCity('barcelona');

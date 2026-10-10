@@ -190,7 +190,12 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ review, author, onPressA
   return (
     <View style={styles.card}>
       <View style={styles.header}>
-        <Avatar source={avatarUser?.avatar ?? undefined} variant="thumb" size={44} name={displayName} />
+        <Avatar
+          source={avatarUser?.avatar ?? undefined}
+          variant="thumb"
+          size={44}
+          name={displayName}
+        />
         <View style={styles.headerText}>
           <View style={styles.nameRow}>
             <BloomText style={[styles.authorName, { color: theme.colors.text }]}>
@@ -316,7 +321,9 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ review, author, onPressA
           onPress={() => onPressAgency?.(review.agency?.slug ?? '')}
           disabled={!onPressAgency}
           accessibilityLabel={t('reviews.card.managedBy', { name: review.agency.name })}
-          style={styles.agencyLink} tone="accent" appearance="subtle"
+          style={styles.agencyLink}
+          tone="accent"
+          appearance="subtle"
         >
           {t('reviews.card.managedBy', { name: review.agency.name })}
         </Button>
@@ -355,7 +362,9 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ review, author, onPressA
             size="sm"
             leadingIcon={RiFlagLine}
             onPress={() => setReportVisible(true)}
-            accessibilityLabel={t('reviews.card.report')} tone="accent" appearance="subtle"
+            accessibilityLabel={t('reviews.card.report')}
+            tone="accent"
+            appearance="subtle"
           >
             {t('reviews.card.report')}
           </Button>

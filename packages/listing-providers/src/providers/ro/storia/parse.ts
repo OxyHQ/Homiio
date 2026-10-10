@@ -51,7 +51,6 @@ export interface StoriaRawListing {
   estate?: string;
 }
 
-
 /** Extract Storia listing id from a detail URL or slug (`…-IDHQMd` or numeric). */
 export function storiaSourceIdFromUrl(url: string): string | undefined {
   const idMatch = /[-/]ID([A-Za-z0-9]+)(?:\/|$|\?)/i.exec(url);
@@ -121,8 +120,7 @@ function cityFromLocation(location: unknown): {
   const streetObj = address && isRecord(address.street) ? address.street : undefined;
   const streetName = streetObj ? asString(streetObj.name) : undefined;
   const streetNumber = streetObj ? asString(streetObj.number) : undefined;
-  const street =
-    streetName && streetNumber ? `${streetName} ${streetNumber}` : streetName;
+  const street = streetName && streetNumber ? `${streetName} ${streetNumber}` : streetName;
 
   if (address && isRecord(address.province)) {
     const provinceName = asString(address.province.name);
@@ -134,7 +132,9 @@ function cityFromLocation(location: unknown): {
   return { city, region, neighborhood, street, coordinates };
 }
 
-function moneyFromPrice(price: unknown): { value: number; currency: string; operation: 'rent' | 'sale' } | undefined {
+function moneyFromPrice(
+  price: unknown,
+): { value: number; currency: string; operation: 'rent' | 'sale' } | undefined {
   if (!isRecord(price)) return undefined;
   const typename = asString(price.__typename)?.toLowerCase() ?? '';
   if (isRecord(price.salePrice)) {
@@ -248,18 +248,13 @@ export function parseStoriaDetail(html: string, url: string): StoriaRawListing {
   }
 
   const sourceId =
-    asString(ad?.id) ??
-    asString(unified?.id) ??
-    asString(props.id) ??
-    storiaSourceIdFromUrl(url);
+    asString(ad?.id) ?? asString(unified?.id) ?? asString(props.id) ?? storiaSourceIdFromUrl(url);
   if (!sourceId) {
     throw new Error('storia: could not resolve sourceId');
   }
 
   const priceInfo =
-    moneyFromPrice(unified?.price) ??
-    moneyFromPrice(ad?.totalPrice) ??
-    moneyFromPrice(ad?.price);
+    moneyFromPrice(unified?.price) ?? moneyFromPrice(ad?.totalPrice) ?? moneyFromPrice(ad?.price);
   if (!priceInfo) {
     throw new Error(`storia: listing ${sourceId} has no resolvable price`);
   }
@@ -291,7 +286,8 @@ export function parseStoriaDetail(html: string, url: string): StoriaRawListing {
   };
 
   const description = asString(unified?.description) ?? asString(ad?.description);
-  if (description) result.description = description.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '');
+  if (description)
+    result.description = description.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '');
   const bedrooms = roomsFromValue(attrs.rooms_num) ?? roomsFromValue(ad?.roomsNumber);
   if (bedrooms !== undefined) result.bedrooms = bedrooms;
   const squareMeters = asNumber(attrs.m) ?? asNumber(ad?.areaInSquareMeters);

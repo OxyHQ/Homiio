@@ -206,20 +206,12 @@ export function formatMoney(
   options: FormatMoneyOptions = {},
 ): string {
   const minimumFractionDigits = options.minimumFractionDigits ?? 0;
-  const maximumFractionDigits = Math.max(
-    minimumFractionDigits,
-    options.maximumFractionDigits ?? 2,
-  );
+  const maximumFractionDigits = Math.max(minimumFractionDigits, options.maximumFractionDigits ?? 2);
   const safeAmount = Number.isFinite(amount) ? amount : 0;
   const code = currency.trim().toUpperCase();
 
   if (!isSupportedCurrencyCode(code)) {
-    const digits = formatDecimal(
-      safeAmount,
-      locale,
-      minimumFractionDigits,
-      maximumFractionDigits,
-    );
+    const digits = formatDecimal(safeAmount, locale, minimumFractionDigits, maximumFractionDigits);
     return code ? `${digits}${CODE_SEPARATOR}${code}` : digits;
   }
 

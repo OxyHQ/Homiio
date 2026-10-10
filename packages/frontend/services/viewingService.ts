@@ -113,9 +113,11 @@ export const viewingService = {
     return response.data;
   },
 
-  async listMyViewingRequests(
-    params?: { status?: ViewingStatus; page?: number; limit?: number },
-  ): Promise<ApiResponse<ViewingRequest[]>> {
+  async listMyViewingRequests(params?: {
+    status?: ViewingStatus;
+    page?: number;
+    limit?: number;
+  }): Promise<ApiResponse<ViewingRequest[]>> {
     const response = await api.get<ApiResponse<ViewingRequest[]>>('/api/viewings/me', {
       params,
     });
@@ -137,26 +139,23 @@ export const viewingService = {
 
   /** `response` is the owner's own words, and only an owner may send it. */
   async approve(viewingId: string, response?: string): Promise<ApiResponse<ViewingRequest>> {
-    const res = await api.post<ApiResponse<ViewingRequest>>(
-      `/api/viewings/${viewingId}/approve`,
-      { response },
-    );
+    const res = await api.post<ApiResponse<ViewingRequest>>(`/api/viewings/${viewingId}/approve`, {
+      response,
+    });
     return res.data;
   },
 
   async decline(viewingId: string, response?: string): Promise<ApiResponse<ViewingRequest>> {
-    const res = await api.post<ApiResponse<ViewingRequest>>(
-      `/api/viewings/${viewingId}/decline`,
-      { response },
-    );
+    const res = await api.post<ApiResponse<ViewingRequest>>(`/api/viewings/${viewingId}/decline`, {
+      response,
+    });
     return res.data;
   },
 
   async cancel(viewingId: string, response?: string): Promise<ApiResponse<ViewingRequest>> {
-    const res = await api.post<ApiResponse<ViewingRequest>>(
-      `/api/viewings/${viewingId}/cancel`,
-      { response },
-    );
+    const res = await api.post<ApiResponse<ViewingRequest>>(`/api/viewings/${viewingId}/cancel`, {
+      response,
+    });
     return res.data;
   },
 
@@ -173,5 +172,3 @@ export const viewingService = {
 };
 
 export default viewingService;
-
-

@@ -11,7 +11,12 @@ import { render } from '@testing-library/react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { PersonalProfileSections } from '@/components/profile/edit/PersonalProfileSections';
-import { joinPhone, splitPhone, parseDateInput, formatDateInput } from '@/components/profile/edit/fields';
+import {
+  joinPhone,
+  splitPhone,
+  parseDateInput,
+  formatDateInput,
+} from '@/components/profile/edit/fields';
 import { NotificationItem } from '@/components/NotificationItem';
 
 const metrics = {
@@ -45,13 +50,28 @@ const props = {
     accessibility: false,
   },
   settings: {
-    notifications: { email: true, push: false, sms: false, propertyAlerts: true, viewingReminders: true, leaseUpdates: true },
-    privacy: { profileVisibility: 'public' as const, showContactInfo: true, showIncome: false, showRentalHistory: false, showReferences: false },
+    notifications: {
+      email: true,
+      push: false,
+      sms: false,
+      propertyAlerts: true,
+      viewingReminders: true,
+      leaseUpdates: true,
+    },
+    privacy: {
+      profileVisibility: 'public' as const,
+      showContactInfo: true,
+      showIncome: false,
+      showRentalHistory: false,
+      showReferences: false,
+    },
     language: 'en',
     timezone: 'UTC',
     currency: 'USD',
   },
-  references: [{ name: 'A', relationship: 'landlord' as const, phone: '+34 600 111 222', email: '' }],
+  references: [
+    { name: 'A', relationship: 'landlord' as const, phone: '+34 600 111 222', email: '' },
+  ],
   rentalHistory: [
     {
       address: 'x',
@@ -76,20 +96,34 @@ const props = {
 };
 
 describe('profile edit form on Bloom', () => {
-  it.each(['personal', 'preferences', 'references', 'rental-history', 'settings'])('renders %s', (section) => {
-    const view = render(
-      <SafeAreaProvider initialMetrics={metrics}><BloomThemeProvider>
-        <PersonalProfileSections activeSection={section} {...props} />
-      </BloomThemeProvider></SafeAreaProvider>,
-    );
-    expect(view.toJSON()).toBeTruthy();
-  });
+  it.each(['personal', 'preferences', 'references', 'rental-history', 'settings'])(
+    'renders %s',
+    (section) => {
+      const view = render(
+        <SafeAreaProvider initialMetrics={metrics}>
+          <BloomThemeProvider>
+            <PersonalProfileSections activeSection={section} {...props} />
+          </BloomThemeProvider>
+        </SafeAreaProvider>,
+      );
+      expect(view.toJSON()).toBeTruthy();
+    },
+  );
 
   it('renders a notification item', () => {
     const view = render(
-      <SafeAreaProvider initialMetrics={metrics}><BloomThemeProvider>
-        <NotificationItem type="property" title="t" description="d" time="now" read={false} onDelete={noop} />
-      </BloomThemeProvider></SafeAreaProvider>,
+      <SafeAreaProvider initialMetrics={metrics}>
+        <BloomThemeProvider>
+          <NotificationItem
+            type="property"
+            title="t"
+            description="d"
+            time="now"
+            read={false}
+            onDelete={noop}
+          />
+        </BloomThemeProvider>
+      </SafeAreaProvider>,
     );
     expect(view.toJSON()).toBeTruthy();
   });

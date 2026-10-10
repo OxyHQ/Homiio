@@ -173,7 +173,7 @@ describe('/ai/stream — creation has exactly ONE owner', () => {
     expect(rows).toHaveLength(0);
   });
 
-  it('does not adopt or write into somebody else\'s conversation', async () => {
+  it("does not adopt or write into somebody else's conversation", async () => {
     const victim = owner();
     const id = await createFor(victim, { initialMessage: 'private' });
 
@@ -188,7 +188,7 @@ describe('/ai/stream — creation has exactly ONE owner', () => {
 });
 
 describe('GET /ai/conversations — the list, and the two derived figures', () => {
-  it('returns only the caller\'s own conversations', async () => {
+  it("returns only the caller's own conversations", async () => {
     const a = owner();
     const b = owner();
     await createFor(a, { title: 'A owns this' });
@@ -411,7 +411,7 @@ describe('sharing — the link expires, the conversation does not', () => {
     expect(followed.body.conversation).not.toHaveProperty('sharing');
   });
 
-  it('404s a stranger asking to share somebody else\'s conversation, and mints nothing', async () => {
+  it("404s a stranger asking to share somebody else's conversation, and mints nothing", async () => {
     const oxyUserId = owner();
     const id = await createFor(oxyUserId, { initialMessage: 'not yours' });
 
@@ -445,7 +445,10 @@ describe('sharing — the link expires, the conversation does not', () => {
     // `db/expiry.ts` names the column in `EXPIRY_COLUMNS_THAT_MUST_NOT_DELETE`;
     // this proves the replacement clears four columns rather than reaping a row.
     const oxyUserId = owner();
-    const id = await createFor(oxyUserId, { title: 'Survives its own link', initialMessage: 'kept' });
+    const id = await createFor(oxyUserId, {
+      title: 'Survives its own link',
+      initialMessage: 'kept',
+    });
     await request(buildApp(oxyUserId)).post(`/ai/conversations/${id}/share`);
     await getDb()
       .update(conversations)

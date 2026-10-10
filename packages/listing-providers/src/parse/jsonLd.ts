@@ -91,7 +91,8 @@ export function matchFeatureKeyAmenity(key: string): string | undefined {
 
 function readTypes(value: unknown): string[] {
   if (typeof value === 'string') return [value];
-  if (Array.isArray(value)) return value.filter((entry): entry is string => typeof entry === 'string');
+  if (Array.isArray(value))
+    return value.filter((entry): entry is string => typeof entry === 'string');
   return [];
 }
 
@@ -114,7 +115,10 @@ function collectImages(value: unknown): string[] {
 }
 
 function readCountry(value: unknown): string | undefined {
-  return asString(value) ?? (isRecord(value) ? asString(value.name) ?? asString(value['@id']) : undefined);
+  return (
+    asString(value) ??
+    (isRecord(value) ? (asString(value.name) ?? asString(value['@id'])) : undefined)
+  );
 }
 
 function readEurAddress(value: unknown, defaultCountryCode: string): EurSchemaListing['address'] {
@@ -144,13 +148,21 @@ function readFloorSize(value: unknown): number | undefined {
   return asNumberEu(value);
 }
 
-function readEurOffer(value: unknown): { price?: number; currency?: string; operation?: 'rent' | 'sale' } {
+function readEurOffer(value: unknown): {
+  price?: number;
+  currency?: string;
+  operation?: 'rent' | 'sale';
+} {
   const offers = Array.isArray(value) ? value : [value];
   for (const offer of offers) {
     if (!isRecord(offer)) continue;
     const businessFunction = asString(offer.businessFunction)?.toLowerCase() ?? '';
     let operation: 'rent' | 'sale' | undefined;
-    if (businessFunction.includes('leaseout') || businessFunction.includes('rent') || businessFunction.includes('lease')) {
+    if (
+      businessFunction.includes('leaseout') ||
+      businessFunction.includes('rent') ||
+      businessFunction.includes('lease')
+    ) {
       operation = 'rent';
     } else if (businessFunction.includes('sell') || businessFunction.includes('sale')) {
       operation = 'sale';
@@ -160,7 +172,11 @@ function readEurOffer(value: unknown): { price?: number; currency?: string; oper
     if (isRecord(offer.priceSpecification)) {
       const specPrice = asNumberEu(offer.priceSpecification.price);
       if (specPrice !== undefined) {
-        return { price: specPrice, currency: asString(offer.priceSpecification.priceCurrency), operation };
+        return {
+          price: specPrice,
+          currency: asString(offer.priceSpecification.priceCurrency),
+          operation,
+        };
       }
     }
   }
@@ -357,7 +373,9 @@ function readUsAddress(value: unknown): SchemaOrgListing['address'] {
     locality: asString(value.addressLocality),
     region: asString(value.addressRegion),
     postalCode: asString(value.postalCode),
-    country: asString(value.addressCountry) ?? (isRecord(value.addressCountry) ? asString(value.addressCountry.name) : undefined),
+    country:
+      asString(value.addressCountry) ??
+      (isRecord(value.addressCountry) ? asString(value.addressCountry.name) : undefined),
   };
 }
 
@@ -385,7 +403,10 @@ function readUsOffer(value: unknown): { price?: number; priceCurrency?: string }
     if (isRecord(offer.priceSpecification)) {
       const specPrice = asNumberUs(offer.priceSpecification.price);
       if (specPrice !== undefined) {
-        return { price: specPrice, priceCurrency: asString(offer.priceSpecification.priceCurrency) };
+        return {
+          price: specPrice,
+          priceCurrency: asString(offer.priceSpecification.priceCurrency),
+        };
       }
     }
   }
@@ -428,7 +449,9 @@ export function extractSchemaOrgListings(html: string): SchemaOrgListing[] {
 }
 
 function hasUsableAddress(listing: SchemaOrgListing): boolean {
-  return Boolean(listing.address.locality) && Boolean(listing.address.street ?? listing.address.locality);
+  return (
+    Boolean(listing.address.locality) && Boolean(listing.address.street ?? listing.address.locality)
+  );
 }
 
 export function pickPrimaryListing(listings: SchemaOrgListing[]): SchemaOrgListing | undefined {

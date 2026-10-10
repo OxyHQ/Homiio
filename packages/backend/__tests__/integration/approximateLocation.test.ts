@@ -92,7 +92,9 @@ describe('resolving a city', () => {
 
   it('never claims exact precision: an inferred city is a centroid', async () => {
     await seedGeoChain({ cityName: 'Barcelona', latitude: 41.3874, longitude: 2.1686 });
-    fakeProvider(found({ countryCode: 'ES', cityName: 'Barcelona', latitude: 41.39, longitude: 2.17 }));
+    fakeProvider(
+      found({ countryCode: 'ES', cityName: 'Barcelona', latitude: 41.39, longitude: 2.17 }),
+    );
 
     const result = await resolveApproximateLocation(from('203.0.113.5'), 'en');
 
@@ -111,7 +113,7 @@ describe('resolving a city', () => {
     // Provider says "Barcelone"; Homiio has "Barcelona" three kilometres away.
     await seedGeoChain({ cityName: 'Barcelona', latitude: 41.3874, longitude: 2.1686 });
     fakeProvider(
-      found({ countryCode: 'ES', cityName: 'Barcelone', latitude: 41.40, longitude: 2.18 }),
+      found({ countryCode: 'ES', cityName: 'Barcelone', latitude: 41.4, longitude: 2.18 }),
     );
 
     const result = await resolveApproximateLocation(from('203.0.113.5'), 'en');
@@ -159,7 +161,9 @@ describe('resolving a city', () => {
       latitude: 41.3874,
       longitude: 2.1686,
     });
-    fakeProvider(found({ countryCode: 'VE', cityName: 'Barcelona', latitude: 10.13, longitude: -64.68 }));
+    fakeProvider(
+      found({ countryCode: 'VE', cityName: 'Barcelona', latitude: 10.13, longitude: -64.68 }),
+    );
 
     const result = await resolveApproximateLocation(from('203.0.113.5'), 'en');
 
@@ -276,8 +280,15 @@ describe('unavailable answers keep their reasons apart', () => {
     const first = await resolveApproximateLocation(from('203.0.113.5'), 'en');
     expect(first).toMatchObject({ status: 'unavailable', reason: 'provider_error' });
 
-    await seedGeoChain({ countryCode: 'ES', cityName: 'Barcelona', latitude: 41.3874, longitude: 2.1686 });
-    fakeProvider(found({ countryCode: 'ES', cityName: 'Barcelona', latitude: 41.39, longitude: 2.17 }));
+    await seedGeoChain({
+      countryCode: 'ES',
+      cityName: 'Barcelona',
+      latitude: 41.3874,
+      longitude: 2.1686,
+    });
+    fakeProvider(
+      found({ countryCode: 'ES', cityName: 'Barcelona', latitude: 41.39, longitude: 2.17 }),
+    );
     const second = await resolveApproximateLocation(from('203.0.113.5'), 'en');
     expect(second.status).toBe('resolved');
   });
@@ -285,7 +296,12 @@ describe('unavailable answers keep their reasons apart', () => {
 
 describe('the cache is per address and expires', () => {
   it('serves a second request for the same address without asking again', async () => {
-    await seedGeoChain({ countryCode: 'ES', cityName: 'Barcelona', latitude: 41.3874, longitude: 2.1686 });
+    await seedGeoChain({
+      countryCode: 'ES',
+      cityName: 'Barcelona',
+      latitude: 41.3874,
+      longitude: 2.1686,
+    });
     const seen = fakeProvider(
       found({ countryCode: 'ES', cityName: 'Barcelona', latitude: 41.39, longitude: 2.17 }),
     );
@@ -297,7 +313,12 @@ describe('the cache is per address and expires', () => {
   });
 
   it('does not serve one visitor the answer computed for another', async () => {
-    await seedGeoChain({ countryCode: 'ES', cityName: 'Barcelona', latitude: 41.3874, longitude: 2.1686 });
+    await seedGeoChain({
+      countryCode: 'ES',
+      cityName: 'Barcelona',
+      latitude: 41.3874,
+      longitude: 2.1686,
+    });
     const seen = fakeProvider(
       found({ countryCode: 'ES', cityName: 'Barcelona', latitude: 41.39, longitude: 2.17 }),
     );
@@ -309,8 +330,15 @@ describe('the cache is per address and expires', () => {
   });
 
   it('stamps an expiry the client can honour', async () => {
-    await seedGeoChain({ countryCode: 'ES', cityName: 'Barcelona', latitude: 41.3874, longitude: 2.1686 });
-    fakeProvider(found({ countryCode: 'ES', cityName: 'Barcelona', latitude: 41.39, longitude: 2.17 }));
+    await seedGeoChain({
+      countryCode: 'ES',
+      cityName: 'Barcelona',
+      latitude: 41.3874,
+      longitude: 2.1686,
+    });
+    fakeProvider(
+      found({ countryCode: 'ES', cityName: 'Barcelona', latitude: 41.39, longitude: 2.17 }),
+    );
 
     const result = await resolveApproximateLocation(from('203.0.113.5'), 'en');
 
@@ -323,8 +351,15 @@ describe('the cache is per address and expires', () => {
 
 describe('the answer carries no address and no provider payload', () => {
   it('serialises without the requester’s address anywhere in it', async () => {
-    await seedGeoChain({ countryCode: 'ES', cityName: 'Barcelona', latitude: 41.3874, longitude: 2.1686 });
-    fakeProvider(found({ countryCode: 'ES', cityName: 'Barcelona', latitude: 41.39, longitude: 2.17 }));
+    await seedGeoChain({
+      countryCode: 'ES',
+      cityName: 'Barcelona',
+      latitude: 41.3874,
+      longitude: 2.1686,
+    });
+    fakeProvider(
+      found({ countryCode: 'ES', cityName: 'Barcelona', latitude: 41.39, longitude: 2.17 }),
+    );
 
     const result = await resolveApproximateLocation(from('203.0.113.5'), 'en');
 

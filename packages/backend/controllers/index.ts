@@ -3,7 +3,6 @@
  * Central export for all controller components
  */
 
-
 import * as propertyController from './property';
 import roomController from './roomController';
 import analyticsController from './analyticsController';

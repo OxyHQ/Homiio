@@ -28,9 +28,7 @@ export const leaseKeys = {
  * The current user's leases (as landlord, tenant, or co-tenant). Backed by
  * `GET /api/leases`, which resolves the party from the authenticated profile.
  */
-export function useUserLeases(
-  filters?: LeaseFilters,
-): UseQueryResult<LeaseListResponse, Error> {
+export function useUserLeases(filters?: LeaseFilters): UseQueryResult<LeaseListResponse, Error> {
   const { oxyServices, activeSessionId } = useOxy();
   const isAuthed = Boolean(oxyServices && activeSessionId);
   return useQuery<LeaseListResponse, Error>({
@@ -113,9 +111,7 @@ export function useSignLease(
   });
 }
 
-export function useTerminateLease(
-  id: string,
-): UseMutationResult<Lease, Error, TerminateLeaseData> {
+export function useTerminateLease(id: string): UseMutationResult<Lease, Error, TerminateLeaseData> {
   const queryClient = useQueryClient();
   return useMutation<Lease, Error, TerminateLeaseData>({
     mutationFn: (payload) => leaseService.terminateLease(id, payload),

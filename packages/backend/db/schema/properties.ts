@@ -271,7 +271,11 @@ export const CANCELLATION_POLICIES = [
   'super_strict',
 ] as const satisfies readonly `${CancellationPolicy}`[];
 
-export const EXCHANGE_MODES = ['swap', 'host', 'both'] as const satisfies readonly `${ExchangeMode}`[];
+export const EXCHANGE_MODES = [
+  'swap',
+  'host',
+  'both',
+] as const satisfies readonly `${ExchangeMode}`[];
 
 export const AVAILABILITY_WINDOW_STATUSES = [
   'available',
@@ -292,12 +296,7 @@ export const FURNISHED_STATUSES = [
   'not_specified',
 ] as const;
 
-export const PET_POLICIES = [
-  'allowed',
-  'not_allowed',
-  'case_by_case',
-  'not_specified',
-] as const;
+export const PET_POLICIES = ['allowed', 'not_allowed', 'case_by_case', 'not_specified'] as const;
 
 export const PARKING_TYPES = ['none', 'street', 'assigned', 'garage'] as const;
 
@@ -320,20 +319,9 @@ export const DETECTED_LANGUAGES = ['es', 'ca', 'en', 'fr', 'nl', 'de', 'it'] as 
 
 export const PROPERTY_DOCUMENT_TYPES = ['lease', 'inspection', 'insurance', 'other'] as const;
 
-export const MARKET_VERDICTS = [
-  'good_deal',
-  'below_average',
-  'average',
-  'above_average',
-] as const;
+export const MARKET_VERDICTS = ['good_deal', 'below_average', 'average', 'above_average'] as const;
 
-export const SLEEPING_ARRANGEMENTS = [
-  'couch',
-  'air_mattress',
-  'floor',
-  'tent',
-  'hammock',
-] as const;
+export const SLEEPING_ARRANGEMENTS = ['couch', 'air_mattress', 'floor', 'tent', 'hammock'] as const;
 
 export const HOSTEL_ROOM_TYPES = [
   'dormitory',
@@ -343,13 +331,7 @@ export const HOSTEL_ROOM_TYPES = [
   'male_dorm',
 ] as const;
 
-export const CAMPSITE_TYPES = [
-  'tent_site',
-  'rv_site',
-  'cabin',
-  'glamping',
-  'backcountry',
-] as const;
+export const CAMPSITE_TYPES = ['tent_site', 'rv_site', 'cabin', 'glamping', 'backcountry'] as const;
 
 /**
  * Which calendar a window belongs to.
@@ -552,7 +534,9 @@ export const properties = pgTable(
      * so no stored listing carries evidence its owner meant to publish either,
      * and the safe reading of silence is not to.
      */
-    addressPublishedPrecision: text({ enum: LISTING_ADDRESS_PRECISIONS }).notNull().default('building'),
+    addressPublishedPrecision: text({ enum: LISTING_ADDRESS_PRECISIONS })
+      .notNull()
+      .default('building'),
 
     type: text({ enum: PROPERTY_TYPES }).notNull().default('apartment'),
     housingType: text({ enum: HOUSING_TYPES }).notNull().default('private'),
@@ -1011,9 +995,7 @@ export const properties = pgTable(
     // Both partial, matching Mongo's `sparse: true`, and both kept the size of
     // the real set: 8,374 of 17,644 listings name an agency and none names a
     // partner.
-    index('properties_agency_id_idx')
-      .on(table.agencyId)
-      .where(sql`${table.agencyId} is not null`),
+    index('properties_agency_id_idx').on(table.agencyId).where(sql`${table.agencyId} is not null`),
     index('properties_sourced_by_partner_id_idx')
       .on(table.sourcedByPartnerId)
       .where(sql`${table.sourcedByPartnerId} is not null`),
@@ -1032,13 +1014,19 @@ export const properties = pgTable(
       .where(sql`${table.expiresAt} is not null`),
 
     // ── Vocabularies ──
-    check('properties_source_check', sql`${table.source} in (${sql.raw(inList(PROPERTY_SOURCES))})`),
+    check(
+      'properties_source_check',
+      sql`${table.source} in (${sql.raw(inList(PROPERTY_SOURCES))})`,
+    ),
     check('properties_type_check', sql`${table.type} in (${sql.raw(inList(PROPERTY_TYPES))})`),
     check(
       'properties_address_published_precision_check',
       sql`${table.addressPublishedPrecision} in (${sql.raw(inList(LISTING_ADDRESS_PRECISIONS))})`,
     ),
-    check('properties_status_check', sql`${table.status} in (${sql.raw(inList(PROPERTY_STATUSES))})`),
+    check(
+      'properties_status_check',
+      sql`${table.status} in (${sql.raw(inList(PROPERTY_STATUSES))})`,
+    ),
     check(
       'properties_housing_type_check',
       sql`${table.housingType} in (${sql.raw(inList(HOUSING_TYPES))})`,
@@ -1477,9 +1465,6 @@ export const propertyAvailabilityWindows = pgTable(
      * (`value > this.start`) — which, like every other Mongoose validator in
      * this package, did not run on an update.
      */
-    check(
-      'property_availability_windows_order_check',
-      sql`${table.endsAt} > ${table.startsAt}`,
-    ),
+    check('property_availability_windows_order_check', sql`${table.endsAt} > ${table.startsAt}`),
   ],
 );

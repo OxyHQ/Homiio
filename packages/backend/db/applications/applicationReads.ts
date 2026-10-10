@@ -60,8 +60,7 @@ export const ACTIVE_APPLICATION_STATUSES: readonly TenantApplicationStatusValue[
 /** Whether `value` is one of the five declared statuses. */
 export function isApplicationStatus(value: unknown): value is TenantApplicationStatusValue {
   return (
-    typeof value === 'string' &&
-    (TENANT_APPLICATION_STATUSES as readonly string[]).includes(value)
+    typeof value === 'string' && (TENANT_APPLICATION_STATUSES as readonly string[]).includes(value)
   );
 }
 
@@ -183,7 +182,7 @@ export async function setDocumentVerification(
       // exactly its job.
       verifiedByOxyUserId: decided ? input.landlordOxyUserId : null,
       verifiedAt: decided ? new Date() : null,
-      rejectionReason: input.status === 'rejected' ? input.rejectionReason ?? null : null,
+      rejectionReason: input.status === 'rejected' ? (input.rejectionReason ?? null) : null,
     })
     .where(
       and(
@@ -311,10 +310,7 @@ export async function listApplications(
       .orderBy(desc(tenantApplications.submittedAt))
       .limit(page.limit)
       .offset(page.offset),
-    db
-      .select({ value: sql<number>`count(*)::int` })
-      .from(tenantApplications)
-      .where(where),
+    db.select({ value: sql<number>`count(*)::int` }).from(tenantApplications).where(where),
   ]);
   return { applications: await hydrate(db, rows), total: totalRow.value };
 }
@@ -349,10 +345,7 @@ export async function decideApplication(
     .update(tenantApplications)
     .set(values)
     .where(
-      and(
-        eq(tenantApplications.id, id),
-        inArray(tenantApplications.status, [...fromStatuses]),
-      ),
+      and(eq(tenantApplications.id, id), inArray(tenantApplications.status, [...fromStatuses])),
     )
     .returning();
   if (!row) return undefined;

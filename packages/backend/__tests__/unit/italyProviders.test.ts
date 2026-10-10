@@ -67,18 +67,20 @@ describe('IdealistaItProvider', () => {
   });
 
   it('parses georeach JSON and search HTML', () => {
-    expect(parseIdealistaItGeoreach(IDEALISTA_IT_FIXTURE_GEOREACH_JSON).map((r) => r.sourceId).sort()).toEqual([
-      '87654321',
-      '87654322',
-      '87654323',
-    ]);
+    expect(
+      parseIdealistaItGeoreach(IDEALISTA_IT_FIXTURE_GEOREACH_JSON)
+        .map((r) => r.sourceId)
+        .sort(),
+    ).toEqual(['87654321', '87654322', '87654323']);
     expect(isIdealistaItGeoreachChallenge(IDEALISTA_IT_FIXTURE_GEOREACH_CHALLENGE)).toBe(true);
-    expect(parseIdealistaItSearch(IDEALISTA_IT_FIXTURE_SEARCH_HTML).map((r) => r.sourceId).sort()).toEqual([
+    expect(
+      parseIdealistaItSearch(IDEALISTA_IT_FIXTURE_SEARCH_HTML)
+        .map((r) => r.sourceId)
+        .sort(),
+    ).toEqual(['87654321', '87654322', '87654323']);
+    expect(idealistaItSourceIdFromUrl('https://www.idealista.it/immobile/87654321/')).toBe(
       '87654321',
-      '87654322',
-      '87654323',
-    ]);
-    expect(idealistaItSourceIdFromUrl('https://www.idealista.it/immobile/87654321/')).toBe('87654321');
+    );
     expect(isIdealistaItChallenge('tiny')).toBe(true);
   });
 
@@ -148,11 +150,11 @@ describe('ImmobiliareProvider', () => {
   });
 
   it('parses search JSON and HTML (JSON-first)', () => {
-    expect(parseImmobiliareSearchJson(IMMOBILIARE_FIXTURE_SEARCH_JSON).map((r) => r.sourceId).sort()).toEqual([
-      '112233445',
-      '112233446',
-      '112233447',
-    ]);
+    expect(
+      parseImmobiliareSearchJson(IMMOBILIARE_FIXTURE_SEARCH_JSON)
+        .map((r) => r.sourceId)
+        .sort(),
+    ).toEqual(['112233445', '112233446', '112233447']);
     const fromHtml = parseImmobiliareSearch(IMMOBILIARE_FIXTURE_SEARCH_HTML);
     expect(fromHtml.some((r) => r.sourceId === '112233445')).toBe(true);
   });
@@ -162,7 +164,10 @@ describe('CasaItProvider', () => {
   const provider = new CasaItProvider();
 
   it('normalizes JSON-LD detail with contact script', () => {
-    const payload = parseCasaItDetail(CASA_IT_FIXTURE_DETAIL_HTML, 'https://www.casa.it/immobili/123456789/');
+    const payload = parseCasaItDetail(
+      CASA_IT_FIXTURE_DETAIL_HTML,
+      'https://www.casa.it/immobili/123456789/',
+    );
     const listing = provider.normalize({
       ref: { provider: 'casa_it', sourceId: payload.sourceId, url: payload.url },
       payload,
@@ -175,15 +180,16 @@ describe('CasaItProvider', () => {
   });
 
   it('parses search JSON and HTML', () => {
-    expect(parseCasaItSearchJson(CASA_IT_FIXTURE_SEARCH_JSON).map((r) => r.sourceId).sort()).toEqual([
-      '123456789',
-      '123456790',
-      '123456791',
-    ]);
-    expect(parseCasaItSearch(CASA_IT_FIXTURE_SEARCH_HTML).map((r) => r.sourceId).sort()).toEqual([
-      '123456789',
-      '123456790',
-    ]);
+    expect(
+      parseCasaItSearchJson(CASA_IT_FIXTURE_SEARCH_JSON)
+        .map((r) => r.sourceId)
+        .sort(),
+    ).toEqual(['123456789', '123456790', '123456791']);
+    expect(
+      parseCasaItSearch(CASA_IT_FIXTURE_SEARCH_HTML)
+        .map((r) => r.sourceId)
+        .sort(),
+    ).toEqual(['123456789', '123456790']);
   });
 });
 
@@ -254,7 +260,13 @@ describe('SubitoProvider (housing-only)', () => {
     };
     const local = new SubitoProvider({ runtime, cities: ['milano'] });
     const refs: ExternalListingRef[] = [];
-    for await (const ref of local.discover({ provider: 'subito', market: 'IT', city: 'milano', limit: 5, runtime })) {
+    for await (const ref of local.discover({
+      provider: 'subito',
+      market: 'IT',
+      city: 'milano',
+      limit: 5,
+      runtime,
+    })) {
       refs.push(ref);
     }
     expect(refs.map((r) => r.sourceId).sort()).toEqual(['632623436', '632623437']);

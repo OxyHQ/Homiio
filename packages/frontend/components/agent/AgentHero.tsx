@@ -100,7 +100,9 @@ export const AgentHero: React.FC<AgentHeroProps> = ({
           onPress={onPressCta}
           loading={ctaLoading}
           disabled={ctaLoading}
-          accessibilityLabel={ctaLabel} tone="accent" appearance="solid"
+          accessibilityLabel={ctaLabel}
+          tone="accent"
+          appearance="solid"
         >
           {ctaLabel}
         </Button>

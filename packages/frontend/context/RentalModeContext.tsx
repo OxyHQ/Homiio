@@ -3,10 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { OfferingType } from '@homiio/shared-types';
 
-import {
-  BROWSE_MODE_OFFERING,
-  type BrowseMode,
-} from '@/components/search/types';
+import { BROWSE_MODE_OFFERING, type BrowseMode } from '@/components/search/types';
 import { useSearchQueryStore } from '@/store/searchQueryStore';
 
 /**
@@ -64,10 +61,7 @@ const STORAGE_KEY = '@homiio/browse-mode';
 const DEFAULT_BROWSE_MODE: BrowseMode = 'long_term';
 
 const isBrowseMode = (value: string | null): value is BrowseMode =>
-  value === 'long_term' ||
-  value === 'vacation' ||
-  value === 'buy' ||
-  value === 'exchange';
+  value === 'long_term' || value === 'vacation' || value === 'buy' || value === 'exchange';
 
 interface RentalModeProviderProps {
   children: React.ReactNode;

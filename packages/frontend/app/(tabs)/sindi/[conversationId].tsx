@@ -27,11 +27,11 @@ const IOS_KEYBOARD_OFFSET = 64;
  */
 const webContainer: ViewStyle | undefined =
   Platform.OS === 'web'
-    ? ({
+    ? {
         height: '100vh' as unknown as number,
         display: 'flex' as const,
         flexDirection: 'column' as const,
-      })
+      }
     : undefined;
 
 /**
@@ -120,11 +120,7 @@ export default function ConversationDetail() {
     return (
       <View style={styles.container}>
         <Header options={{ title: t('sindi.conversation.loading'), showBackButton: true }} />
-        <Loading
-          size="lg"
-          text={t('sindi.conversation.loadingMessage')}
-          style={styles.loading}
-        />
+        <Loading size="lg" text={t('sindi.conversation.loadingMessage')} style={styles.loading} />
       </View>
     );
   }
@@ -142,7 +138,9 @@ export default function ConversationDetail() {
               iconOnly
               leadingIcon={RiShare2Line}
               onPress={handleShare}
-              accessibilityLabel={t('common.share')} tone="neutral" appearance="outline"
+              accessibilityLabel={t('common.share')}
+              tone="neutral"
+              appearance="outline"
             />,
           ],
         }}

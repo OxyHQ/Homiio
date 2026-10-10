@@ -16,7 +16,6 @@ import { ONTHEMARKET_BASE_URL } from './fixtures';
 
 const DETAIL_ID_RE = /\/details\/(\d+)/g;
 
-
 export interface OnTheMarketListingJson {
   sourceId: string;
   url: string;
@@ -100,13 +99,9 @@ function imagesFromProperty(prop: Record<string, unknown>): string[] {
 function contactFromProperty(prop: Record<string, unknown>): NormalizedListingContact | undefined {
   const agent = isRecord(prop.agent) ? prop.agent : undefined;
   return buildContact({
-    phone: agent
-      ? asString(agent.telephone) ?? asString(agent.telephoneEnquiries)
-      : undefined,
+    phone: agent ? (asString(agent.telephone) ?? asString(agent.telephoneEnquiries)) : undefined,
     whatsapp: asString(prop.whatsappLink),
-    agencyName: agent
-      ? asString(agent.name) ?? asString(agent.companyName)
-      : undefined,
+    agencyName: agent ? (asString(agent.name) ?? asString(agent.companyName)) : undefined,
     kind: 'agency',
   });
 }

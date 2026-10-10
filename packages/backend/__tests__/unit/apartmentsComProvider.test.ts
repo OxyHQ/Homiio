@@ -15,11 +15,7 @@ import {
   parseApartmentsComDetail,
   parseApartmentsComSearch,
 } from '@homiio/listing-providers';
-import type {
-  ExternalListingRef,
-  FetchRuntime,
-  RawListing,
-} from '@homiio/listing-providers';
+import type { ExternalListingRef, FetchRuntime, RawListing } from '@homiio/listing-providers';
 import { OfferingType, PropertyType } from '@homiio/shared-types';
 
 const provider = new ApartmentsComProvider();
@@ -69,7 +65,9 @@ describe('ApartmentsComProvider', () => {
 
   it('discovers refs from a ladder-backed runtime, honouring the limit', async () => {
     const testProvider = new ApartmentsComProvider({
-      runtime: ladderRuntime(new Map([['https://www.apartments.com/austin-tx/', APARTMENTS_COM_SEARCH_FIXTURE]])),
+      runtime: ladderRuntime(
+        new Map([['https://www.apartments.com/austin-tx/', APARTMENTS_COM_SEARCH_FIXTURE]]),
+      ),
       ladderTiers: ['browser'],
     });
     const refs: ExternalListingRef[] = [];
@@ -103,7 +101,10 @@ describe('ApartmentsComProvider', () => {
       sourceId: harlow.sourceId,
       url: harlow.url,
     };
-    const listing = provider.normalize({ ref, payload: parseApartmentsComDetail(harlow.html, ref) });
+    const listing = provider.normalize({
+      ref,
+      payload: parseApartmentsComDetail(harlow.html, ref),
+    });
 
     expect(listing.source).toBe('apartments_com');
     expect(listing.sourceId).toBe(harlow.sourceId);
@@ -132,7 +133,10 @@ describe('ApartmentsComProvider', () => {
       sourceId: gramercy.sourceId,
       url: gramercy.url,
     };
-    const listing = provider.normalize({ ref, payload: parseApartmentsComDetail(gramercy.html, ref) });
+    const listing = provider.normalize({
+      ref,
+      payload: parseApartmentsComDetail(gramercy.html, ref),
+    });
     expect(listing.longTermRent?.monthlyAmount).toBe(2100);
     expect(listing.address.city).toBe('Chicago');
     expect(listing.remoteImages).toHaveLength(1);

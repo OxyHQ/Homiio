@@ -12,19 +12,30 @@ import * as validation from '../middlewares/validation';
 import { asyncHandler } from '../middlewares/errorHandler';
 
 // Property creation (requires authentication)
-router.post("/", validation.validateProperty, asyncHandler(propertyController.createProperty));
+router.post('/', validation.validateProperty, asyncHandler(propertyController.createProperty));
 
 // Property management (requires authentication)
-router.post("/test-telegram", validation.validateProperty, asyncHandler(propertyController.createProperty));
-router.put("/:propertyId", validation.validateProperty, asyncHandler(propertyController.updateProperty));
-router.delete("/:propertyId", asyncHandler(propertyController.deleteProperty));
+router.post(
+  '/test-telegram',
+  validation.validateProperty,
+  asyncHandler(propertyController.createProperty),
+);
+router.put(
+  '/:propertyId',
+  validation.validateProperty,
+  asyncHandler(propertyController.updateProperty),
+);
+router.delete('/:propertyId', asyncHandler(propertyController.deleteProperty));
 
 // Close a deal (rented/sold/exchanged) — owner only; fires the partner
 // commission trigger (idempotent: at most one commission per property).
-router.post("/:propertyId/mark-transacted", asyncHandler(propertyController.markPropertyTransacted));
+router.post(
+  '/:propertyId/mark-transacted',
+  asyncHandler(propertyController.markPropertyTransacted),
+);
 
 // Property tracking (requires authentication)
-router.post("/:propertyId/track-view", asyncHandler(profileController.trackPropertyView));
+router.post('/:propertyId/track-view', asyncHandler(profileController.trackPropertyView));
 
 /**
  * Viewing requests ON a listing — the two handlers the app has always called.
@@ -40,8 +51,8 @@ router.post("/:propertyId/track-view", asyncHandler(profileController.trackPrope
  * `createOxyAuthMiddleware` in `routes/index.ts` — the router is what decides
  * that (see `AGENTS.md`), and both handlers read the session.
  */
-router.post("/:propertyId/viewings", asyncHandler(viewingController.createViewingRequest));
-router.get("/:propertyId/viewings", asyncHandler(viewingController.listPropertyViewingRequests));
+router.post('/:propertyId/viewings', asyncHandler(viewingController.createViewingRequest));
+router.get('/:propertyId/viewings', asyncHandler(viewingController.listPropertyViewingRequests));
 
 /**
  * The owner's own viewing schedule (#518 §7.5).
@@ -51,18 +62,24 @@ router.get("/:propertyId/viewings", asyncHandler(viewingController.listPropertyV
  * 404 rather than 403. The PUBLIC half, the slots a visitor picks from, is
  * `GET /api/properties/:propertyId/viewing-availability` on `routes/public.ts`.
  */
-router.get("/:propertyId/viewing-windows", asyncHandler(viewingAvailabilityController.getViewingWindows));
-router.put("/:propertyId/viewing-windows", asyncHandler(viewingAvailabilityController.putViewingWindows));
+router.get(
+  '/:propertyId/viewing-windows',
+  asyncHandler(viewingAvailabilityController.getViewingWindows),
+);
+router.put(
+  '/:propertyId/viewing-windows',
+  asyncHandler(viewingAvailabilityController.putViewingWindows),
+);
 
 // Trust & safety: file a report against a listing (requires authentication)
-router.post("/:propertyId/report", asyncHandler(createListingReport));
+router.post('/:propertyId/report', asyncHandler(createListingReport));
 
 // User properties (requires authentication)
-router.get("/me/list", asyncHandler(propertyController.getMyProperties));
+router.get('/me/list', asyncHandler(propertyController.getMyProperties));
 
 // Owner properties (requires authentication)
-router.get("/owner/:oxyUserId", asyncHandler(propertyController.getPropertiesByOwner));
+router.get('/owner/:oxyUserId', asyncHandler(propertyController.getPropertiesByOwner));
 
-export default function() {
+export default function () {
   return router;
-};
+}

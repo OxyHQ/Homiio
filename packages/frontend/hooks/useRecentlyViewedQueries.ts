@@ -76,13 +76,13 @@ export const useTrackPropertyView = () => {
       if (!oxyServices || !activeSessionId) {
         throw new Error('Authentication required');
       }
-      
+
       const response = await recentlyViewedService.trackPropertyView(propertyId);
-      
+
       if (!response.success) {
         throw new Error(response.error || 'Failed to track property view');
       }
-      
+
       return response;
     },
     // No optimistic updates - let the main hook handle all cache updates
@@ -106,19 +106,19 @@ export const useClearRecentlyViewed = () => {
       if (!oxyServices || !activeSessionId) {
         throw new Error('Authentication required');
       }
-      
+
       const response = await recentlyViewedService.clearRecentlyViewedProperties();
-      
+
       if (!response.success) {
         throw new Error(response.error || 'Failed to clear recently viewed properties');
       }
-      
+
       return response;
     },
     onSuccess: async () => {
       // Clear local state immediately for instant UI feedback
       useRecentlyViewedStore.getState().clearAll();
-      
+
       // Invalidate queries
       await queryClient.invalidateQueries({ queryKey: ['recentlyViewed', 'properties'] });
       toast.success(i18next.t('recentlyViewed.clearSuccess'));

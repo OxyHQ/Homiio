@@ -55,7 +55,9 @@ describe('formatArea — the label always names the unit the number is in', () =
   });
 
   it('defaults to `auto` when no preference is given', () => {
-    expect(formatArea(85, 'sqm', 'en-US')).toBe(formatArea(85, 'sqm', 'en-US', { preference: 'auto' }));
+    expect(formatArea(85, 'sqm', 'en-US')).toBe(
+      formatArea(85, 'sqm', 'en-US', { preference: 'auto' }),
+    );
   });
 
   it('groups the number in the locale, so a large floor plate reads correctly', () => {

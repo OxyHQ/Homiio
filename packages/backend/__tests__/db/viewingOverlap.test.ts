@@ -47,9 +47,7 @@ beforeAll(async () => {
 
 afterEach(async () => {
   await db.delete(viewingRequests).where(eq(viewingRequests.propertyId, propertyId));
-  await db
-    .delete(propertyViewingWindows)
-    .where(eq(propertyViewingWindows.propertyId, propertyId));
+  await db.delete(propertyViewingWindows).where(eq(propertyViewingWindows.propertyId, propertyId));
 });
 
 afterAll(async () => {
@@ -387,9 +385,7 @@ describe('property_viewing_windows', () => {
   it('refuses a window on a listing that does not exist', async () => {
     let caught: unknown;
     try {
-      await db
-        .insert(propertyViewingWindows)
-        .values({ ...window, propertyId: 'no-such-listing' });
+      await db.insert(propertyViewingWindows).values({ ...window, propertyId: 'no-such-listing' });
     } catch (error) {
       caught = error;
     }

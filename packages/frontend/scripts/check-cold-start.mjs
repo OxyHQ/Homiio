@@ -226,9 +226,7 @@ ws.onmessage = (event) => {
     return;
   }
   if (msg.method === 'Runtime.consoleAPICalled' && msg.params.type === 'error') {
-    consoleErrors.push(
-      msg.params.args.map((a) => a.value ?? a.description ?? a.type).join(' '),
-    );
+    consoleErrors.push(msg.params.args.map((a) => a.value ?? a.description ?? a.type).join(' '));
   }
   if (msg.method === 'Runtime.exceptionThrown') {
     const details = msg.params.exceptionDetails;
@@ -287,7 +285,9 @@ for (const route of ROUTES.length ? ROUTES : ['/']) {
   console.log(JSON.stringify({ route, ...probe, consoleErrors, pageErrors }, null, 2));
 
   if (probe.visibility !== 'visible') {
-    console.error(`INCONCLUSIVE ${route}: tab was not foregrounded, so "blank" would mean nothing.`);
+    console.error(
+      `INCONCLUSIVE ${route}: tab was not foregrounded, so "blank" would mean nothing.`,
+    );
     inconclusive += 1;
   } else if (probe.rootChildren === 0 || probe.elements < MIN_ELEMENTS) {
     console.error(`FAIL ${route}: the app rendered nothing (${probe.elements} elements).`);

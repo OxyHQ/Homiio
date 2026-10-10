@@ -42,10 +42,7 @@ import {
   recordPropertyCreatedEvent,
 } from '../watches/propertyEventProducer';
 import { ensureCover } from '../cityCoverSyncService';
-import {
-  findOrCreateCanonicalAddress,
-  type AddressCanonicalInput,
-} from '../addressService';
+import { findOrCreateCanonicalAddress, type AddressCanonicalInput } from '../addressService';
 import { validateOfferings } from '../offeringValidation';
 import { forwardGeocode, reverseGeocode } from '../geocodingService';
 import { resolveCityCentroid } from '../geoResolutionService';
@@ -53,11 +50,7 @@ import { sanitizeGeoJsonCoordinates } from '../../utils/geoCoordinates';
 import { deriveStructuredFeatures } from './deriveFeatures';
 import { classifyListingContent } from './classifyListingContent';
 import { ExternalMediaIngest } from './ExternalMediaIngest';
-import {
-  areDuplicateListings,
-  toDedupComparable,
-  type DedupComparable,
-} from './dedupeFingerprint';
+import { areDuplicateListings, toDedupComparable, type DedupComparable } from './dedupeFingerprint';
 import { schedulePriceEthicsScore } from '../priceEthicsService';
 import { Logger } from '../../utils/logger';
 import { describeErrorForLog } from '../../middlewares/errorHandler';
@@ -560,7 +553,13 @@ export class IngestionService {
   private async resolveCoordinatesWithFallback(
     address: NormalizedListingAddress,
   ): Promise<{ coordinates: [number, number]; postalCode?: string }> {
-    const fullQuery = [address.street, address.city, address.state, address.postalCode, address.country]
+    const fullQuery = [
+      address.street,
+      address.city,
+      address.state,
+      address.postalCode,
+      address.country,
+    ]
       .filter(Boolean)
       .join(', ');
 
@@ -579,11 +578,14 @@ export class IngestionService {
       countryCode: address.countryCode,
     });
     if (centroid) {
-      this.logger.warn('Using city-centroid coordinates for external listing (street geocode failed)', {
-        street: address.street,
-        city: address.city,
-        fullQueryError: full.error,
-      });
+      this.logger.warn(
+        'Using city-centroid coordinates for external listing (street geocode failed)',
+        {
+          street: address.street,
+          city: address.city,
+          fullQueryError: full.error,
+        },
+      );
       // Use the postal fallback directly rather than reverse-geocoding the
       // centroid: the point is already the city center, so a reverse-geocoded
       // postal would belong to the city center, not this listing — and, being a
@@ -602,10 +604,7 @@ export class IngestionService {
    * derived/whitelisted fields are written; owner/lifecycle fields are fixed
    * (no `profileId`, `status` published, `isExternal` true).
    */
-  private buildPropertyFields(
-    listing: NormalizedListing,
-    addressId: string,
-  ): PropertyWriteInput {
+  private buildPropertyFields(listing: NormalizedListing, addressId: string): PropertyWriteInput {
     const ttlDays = listing.ttlDays ?? this.defaultTtlDays;
     const expiresAt = new Date(Date.now() + ttlDays * 24 * 60 * 60 * 1000);
 

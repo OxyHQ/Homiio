@@ -100,7 +100,10 @@ const workerStep = stepBody(WORKER_STEP);
 const workflowEnv = (key: string): string | null => {
   const matches = [...workflow.matchAll(new RegExp(`^ {2}${key}: (.*)$`, 'gm'))];
   if (matches.length !== 1) return null;
-  return matches[0][1].trim().replace(/^'(.*)'$/, '$1').replace(/^"(.*)"$/, '$1');
+  return matches[0][1]
+    .trim()
+    .replace(/^'(.*)'$/, '$1')
+    .replace(/^"(.*)"$/, '$1');
 };
 
 /**
@@ -151,7 +154,7 @@ describe('the deploy applies migrations', () => {
     // unparseable value as off — a typo'd `True` silently skipping every
     // migration is the same failure with a different cause.
     expect(deployScript).toContain(
-      "if [[ \"$RUN_MIGRATIONS\" != \"true\" && \"$RUN_MIGRATIONS\" != \"false\" ]]; then",
+      'if [[ "$RUN_MIGRATIONS" != "true" && "$RUN_MIGRATIONS" != "false" ]]; then',
     );
   });
 

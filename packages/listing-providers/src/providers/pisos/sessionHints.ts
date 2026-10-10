@@ -30,9 +30,7 @@ export function readPisosBrowserSessionHint(
   const record = raw as Record<string, unknown>;
   const proxySessionId =
     typeof record.proxySessionId === 'string' ? record.proxySessionId : undefined;
-  const storageState = isBrowserStorageState(record.storageState)
-    ? record.storageState
-    : undefined;
+  const storageState = isBrowserStorageState(record.storageState) ? record.storageState : undefined;
   if (!proxySessionId && !storageState) return undefined;
   return { proxySessionId, storageState };
 }

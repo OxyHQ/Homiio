@@ -96,7 +96,9 @@ export function ApproximateAreaNotice({ scope, onChangeArea }: ApproximateAreaNo
         <Button
           size="sm"
           onPress={() => setShowDetail((shown) => !shown)}
-          accessibilityLabel={t('location.scope.provenance.toggleAccessible')} tone="accent" appearance="subtle"
+          accessibilityLabel={t('location.scope.provenance.toggleAccessible')}
+          tone="accent"
+          appearance="subtle"
         >
           {t('location.scope.provenance.toggle')}
         </Button>
@@ -104,7 +106,9 @@ export function ApproximateAreaNotice({ scope, onChangeArea }: ApproximateAreaNo
           size="sm"
           leadingIcon={RiMapPinLine}
           onPress={onChangeArea}
-          accessibilityLabel={t('location.scope.changeAccessible')} tone="neutral" appearance="outline"
+          accessibilityLabel={t('location.scope.changeAccessible')}
+          tone="neutral"
+          appearance="outline"
         >
           {t('location.scope.chooseArea')}
         </Button>
@@ -124,7 +128,9 @@ export function ApproximateAreaNotice({ scope, onChangeArea }: ApproximateAreaNo
           <Button
             size="sm"
             onPress={scope.applyUpgrade}
-            accessibilityLabel={t('location.scope.upgradeAccessible')} tone="neutral" appearance="outline"
+            accessibilityLabel={t('location.scope.upgradeAccessible')}
+            tone="neutral"
+            appearance="outline"
           >
             {t('location.scope.upgrade')}
           </Button>

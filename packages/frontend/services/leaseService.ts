@@ -105,11 +105,7 @@ class LeaseService {
    * no read could return — a string that proved nothing about anything. What
    * happened is recorded by the server as the signature's `method`.
    */
-  async signLease(
-    leaseId: string,
-    acceptTerms: boolean,
-    termsSha256?: string,
-  ): Promise<Lease> {
+  async signLease(leaseId: string, acceptTerms: boolean, termsSha256?: string): Promise<Lease> {
     const response = await api.post<ApiResponse<Lease>>(`${LEASE_BASE}/${leaseId}/sign`, {
       acceptTerms,
       ...(termsSha256 ? { termsSha256 } : {}),
@@ -121,10 +117,7 @@ class LeaseService {
   }
 
   async terminateLease(leaseId: string, data: TerminateLeaseData): Promise<Lease> {
-    const response = await api.post<ApiResponse<Lease>>(
-      `${LEASE_BASE}/${leaseId}/terminate`,
-      data,
-    );
+    const response = await api.post<ApiResponse<Lease>>(`${LEASE_BASE}/${leaseId}/terminate`, data);
     if (!response.data?.data) {
       throw new Error(response.data?.message || 'Lease termination failed');
     }

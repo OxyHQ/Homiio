@@ -36,7 +36,9 @@ describe('OnTheMarketProvider', () => {
   it('declares GB and filters garages from search', () => {
     expect(provider.markets).toEqual(['GB']);
     const refs = parseOnTheMarketSearch(ONTHEMARKET_FIXTURE_SEARCH_HTML);
-    expect(refs.map((ref) => ref.sourceId)).toEqual(expect.arrayContaining(['19901416', '19901417']));
+    expect(refs.map((ref) => ref.sourceId)).toEqual(
+      expect.arrayContaining(['19901416', '19901417']),
+    );
     expect(refs.map((ref) => ref.sourceId)).not.toContain('19890062');
   });
 

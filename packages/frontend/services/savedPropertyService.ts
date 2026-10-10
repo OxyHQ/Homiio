@@ -16,11 +16,11 @@ export interface SavedPropertiesResponse {
 class SavedPropertyService {
   async getSavedProperties(): Promise<SavedPropertiesResponse> {
     const response = await api.get('/api/profiles/me/saved-properties');
-    
+
     // The API returns { success: true, data: [...], message: "..." }
     // where response.data contains the wrapper and response.data.data contains the actual properties array
     const properties = Array.isArray(response.data.data) ? response.data.data : [];
-    
+
     return {
       properties,
       total: properties.length,
@@ -29,11 +29,7 @@ class SavedPropertyService {
     };
   }
 
-  async saveProperty(
-    propertyId: string,
-    notes?: string,
-    folderId?: string | null,
-  ): Promise<any> {
+  async saveProperty(propertyId: string, notes?: string, folderId?: string | null): Promise<any> {
     const response = await api.post('/api/profiles/me/save-property', {
       propertyId,
       notes,
@@ -56,9 +52,7 @@ class SavedPropertyService {
   async bulkUnsave(propertyIds: string[]): Promise<void> {
     // For bulk operations, we'll need to implement this in the API utility
     // For now, we'll use individual calls
-    const promises = propertyIds.map((propertyId) =>
-      this.unsaveProperty(propertyId),
-    );
+    const promises = propertyIds.map((propertyId) => this.unsaveProperty(propertyId));
     await Promise.all(promises);
   }
 }

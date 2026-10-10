@@ -39,11 +39,21 @@ function buildApp(oxyUserId?: string): Express {
     }
     next();
   });
-  app.post('/reservations', (req, res, next) => reservationController.createReservation(req, res, next));
-  app.get('/reservations', (req, res, next) => reservationController.listMyReservations(req, res, next));
-  app.get('/reservations/:id', (req, res, next) => reservationController.getReservationById(req, res, next));
-  app.patch('/reservations/:id', (req, res, next) => reservationController.updateReservationStatus(req, res, next));
-  app.get('/properties/:id/availability', (req, res, next) => reservationController.getPropertyAvailability(req, res, next));
+  app.post('/reservations', (req, res, next) =>
+    reservationController.createReservation(req, res, next),
+  );
+  app.get('/reservations', (req, res, next) =>
+    reservationController.listMyReservations(req, res, next),
+  );
+  app.get('/reservations/:id', (req, res, next) =>
+    reservationController.getReservationById(req, res, next),
+  );
+  app.patch('/reservations/:id', (req, res, next) =>
+    reservationController.updateReservationStatus(req, res, next),
+  );
+  app.get('/properties/:id/availability', (req, res, next) =>
+    reservationController.getPropertyAvailability(req, res, next),
+  );
   app.use(errorHandler);
   return app;
 }
@@ -57,9 +67,7 @@ function nextCountryCode(): string {
 }
 
 /** A vacation-bookable listing. Pricing is explicit so the maths is checkable. */
-async function seedBookableProperty(
-  overrides: Record<string, unknown> = {},
-): Promise<string> {
+async function seedBookableProperty(overrides: Record<string, unknown> = {}): Promise<string> {
   const { propertyId } = await seedListingWithGeo({
     countryCode: nextCountryCode(),
     overrides: {
@@ -100,11 +108,7 @@ function stay(fromDays: number, toDays: number, base = Date.now()) {
 }
 
 async function reservationRow(id: string) {
-  const [row] = await getDb()
-    .select()
-    .from(reservations)
-    .where(eq(reservations.id, id))
-    .limit(1);
+  const [row] = await getDb().select().from(reservations).where(eq(reservations.id, id)).limit(1);
   return row;
 }
 
@@ -173,7 +177,13 @@ describe('createReservation — pricing', () => {
 
   it('refuses an unpublished, external, non-bookable or own listing', async () => {
     const draft = await seedBookableProperty({ status: 'draft' });
-    expect((await request(buildApp('oxy-guest')).post('/reservations').send({ propertyId: draft, ...stay(10, 15), guestCount: 1 })).status).toBe(400);
+    expect(
+      (
+        await request(buildApp('oxy-guest'))
+          .post('/reservations')
+          .send({ propertyId: draft, ...stay(10, 15), guestCount: 1 })
+      ).status,
+    ).toBe(400);
 
     // EXTERNAL. This case was named in the title and never seeded: every
     // listing in it carried `isExternal: false`, so the guard the name claims
@@ -191,14 +201,28 @@ describe('createReservation — pricing', () => {
     expect(externalAttempt.status).toBe(400);
     expect(externalAttempt.body.error.code).toBe('EXTERNAL_PROPERTY');
 
-    const notBookable = (await seedListingWithGeo({
-      countryCode: nextCountryCode(),
-      overrides: { oxyUserId: 'oxy-host', status: 'published' },
-    })).propertyId;
-    expect((await request(buildApp('oxy-guest')).post('/reservations').send({ propertyId: notBookable, ...stay(10, 15), guestCount: 1 })).status).toBe(400);
+    const notBookable = (
+      await seedListingWithGeo({
+        countryCode: nextCountryCode(),
+        overrides: { oxyUserId: 'oxy-host', status: 'published' },
+      })
+    ).propertyId;
+    expect(
+      (
+        await request(buildApp('oxy-guest'))
+          .post('/reservations')
+          .send({ propertyId: notBookable, ...stay(10, 15), guestCount: 1 })
+      ).status,
+    ).toBe(400);
 
     const own = await seedBookableProperty();
-    expect((await request(buildApp('oxy-host')).post('/reservations').send({ propertyId: own, ...stay(10, 15), guestCount: 1 })).status).toBe(403);
+    expect(
+      (
+        await request(buildApp('oxy-host'))
+          .post('/reservations')
+          .send({ propertyId: own, ...stay(10, 15), guestCount: 1 })
+      ).status,
+    ).toBe(403);
 
     expect(await getDb().select().from(reservations)).toHaveLength(0);
   });
@@ -210,11 +234,17 @@ describe('createReservation — pricing', () => {
     });
     const app = buildApp('oxy-guest');
 
-    const tooShort = await request(app).post('/reservations').send({ propertyId, ...stay(10, 12), guestCount: 1 });
+    const tooShort = await request(app)
+      .post('/reservations')
+      .send({ propertyId, ...stay(10, 12), guestCount: 1 });
     expect(tooShort.status).toBe(400);
-    const tooLong = await request(app).post('/reservations').send({ propertyId, ...stay(10, 30), guestCount: 1 });
+    const tooLong = await request(app)
+      .post('/reservations')
+      .send({ propertyId, ...stay(10, 30), guestCount: 1 });
     expect(tooLong.status).toBe(400);
-    const tooMany = await request(app).post('/reservations').send({ propertyId, ...stay(10, 15), guestCount: 9 });
+    const tooMany = await request(app)
+      .post('/reservations')
+      .send({ propertyId, ...stay(10, 15), guestCount: 9 });
     expect(tooMany.status).toBe(400);
 
     expect(await getDb().select().from(reservations)).toHaveLength(0);
@@ -267,13 +297,15 @@ describe('the two calendar conflicts — half-open, at the boundary', () => {
   it('blocks a stay a host calendar window closes, and ignores an `available` one', async () => {
     const base = Date.now();
     const propertyId = await seedBookableProperty();
-    await getDb().insert(propertyAvailabilityWindows).values({
-      propertyId,
-      scope: 'listing',
-      startsAt: new Date(base + 12 * DAY),
-      endsAt: new Date(base + 18 * DAY),
-      status: 'blocked',
-    });
+    await getDb()
+      .insert(propertyAvailabilityWindows)
+      .values({
+        propertyId,
+        scope: 'listing',
+        startsAt: new Date(base + 12 * DAY),
+        endsAt: new Date(base + 18 * DAY),
+        status: 'blocked',
+      });
 
     const blocked = await request(buildApp('oxy-guest'))
       .post('/reservations')
@@ -285,13 +317,15 @@ describe('the two calendar conflicts — half-open, at the boundary', () => {
     // opposite, and dropping that exclusion refuses every booking on a listing
     // whose host published a calendar.
     const other = await seedBookableProperty();
-    await getDb().insert(propertyAvailabilityWindows).values({
-      propertyId: other,
-      scope: 'listing',
-      startsAt: new Date(base + 5 * DAY),
-      endsAt: new Date(base + 30 * DAY),
-      status: 'available',
-    });
+    await getDb()
+      .insert(propertyAvailabilityWindows)
+      .values({
+        propertyId: other,
+        scope: 'listing',
+        startsAt: new Date(base + 5 * DAY),
+        endsAt: new Date(base + 30 * DAY),
+        status: 'available',
+      });
     const allowed = await request(buildApp('oxy-guest'))
       .post('/reservations')
       .send({ propertyId: other, ...stay(10, 15, base), guestCount: 1 });
@@ -308,13 +342,15 @@ describe('the two calendar conflicts — half-open, at the boundary', () => {
     // nights the home has beds free. See `db/availability/occupancy.ts`.
     const base = Date.now();
     const propertyId = await seedBookableProperty();
-    await getDb().insert(propertyAvailabilityWindows).values({
-      propertyId,
-      scope: 'exchange',
-      startsAt: new Date(base + 5 * DAY),
-      endsAt: new Date(base + 30 * DAY),
-      status: 'blocked',
-    });
+    await getDb()
+      .insert(propertyAvailabilityWindows)
+      .values({
+        propertyId,
+        scope: 'exchange',
+        startsAt: new Date(base + 5 * DAY),
+        endsAt: new Date(base + 30 * DAY),
+        status: 'blocked',
+      });
 
     const res = await request(buildApp('oxy-guest'))
       .post('/reservations')
@@ -335,15 +371,17 @@ describe('the two calendar conflicts — half-open, at the boundary', () => {
       offerings: ['short_term_rent', 'exchange'],
       exchangeMode: 'both',
     });
-    await getDb().insert(exchangeRequests).values({
-      propertyId: asTarget,
-      requesterOxyUserId: 'oxy-swapper',
-      hostOxyUserId: 'oxy-host',
-      mode: 'host',
-      requestedWindowStart: new Date(base + 12 * DAY),
-      requestedWindowEnd: new Date(base + 18 * DAY),
-      status: 'confirmed',
-    });
+    await getDb()
+      .insert(exchangeRequests)
+      .values({
+        propertyId: asTarget,
+        requesterOxyUserId: 'oxy-swapper',
+        hostOxyUserId: 'oxy-host',
+        mode: 'host',
+        requestedWindowStart: new Date(base + 12 * DAY),
+        requestedWindowEnd: new Date(base + 18 * DAY),
+        status: 'confirmed',
+      });
     const onTarget = await request(buildApp('oxy-guest'))
       .post('/reservations')
       .send({ propertyId: asTarget, ...stay(10, 15, base), guestCount: 1 });
@@ -359,18 +397,20 @@ describe('the two calendar conflicts — half-open, at the boundary', () => {
       offerings: ['short_term_rent', 'exchange'],
       exchangeMode: 'both',
     });
-    await getDb().insert(exchangeRequests).values({
-      propertyId: elsewhere,
-      offeredPropertyId: asOffered,
-      requesterOxyUserId: 'oxy-host',
-      hostOxyUserId: 'oxy-other-host',
-      mode: 'swap',
-      requestedWindowStart: new Date(base + 60 * DAY),
-      requestedWindowEnd: new Date(base + 65 * DAY),
-      offeredWindowStart: new Date(base + 12 * DAY),
-      offeredWindowEnd: new Date(base + 18 * DAY),
-      status: 'confirmed',
-    });
+    await getDb()
+      .insert(exchangeRequests)
+      .values({
+        propertyId: elsewhere,
+        offeredPropertyId: asOffered,
+        requesterOxyUserId: 'oxy-host',
+        hostOxyUserId: 'oxy-other-host',
+        mode: 'swap',
+        requestedWindowStart: new Date(base + 60 * DAY),
+        requestedWindowEnd: new Date(base + 65 * DAY),
+        offeredWindowStart: new Date(base + 12 * DAY),
+        offeredWindowEnd: new Date(base + 18 * DAY),
+        status: 'confirmed',
+      });
     const onOffered = await request(buildApp('oxy-guest'))
       .post('/reservations')
       .send({ propertyId: asOffered, ...stay(10, 15, base), guestCount: 1 });
@@ -383,15 +423,17 @@ describe('the two calendar conflicts — half-open, at the boundary', () => {
       offerings: ['short_term_rent', 'exchange'],
       exchangeMode: 'both',
     });
-    await getDb().insert(exchangeRequests).values({
-      propertyId: proposedOnly,
-      requesterOxyUserId: 'oxy-swapper',
-      hostOxyUserId: 'oxy-host',
-      mode: 'host',
-      requestedWindowStart: new Date(base + 12 * DAY),
-      requestedWindowEnd: new Date(base + 18 * DAY),
-      status: 'pending',
-    });
+    await getDb()
+      .insert(exchangeRequests)
+      .values({
+        propertyId: proposedOnly,
+        requesterOxyUserId: 'oxy-swapper',
+        hostOxyUserId: 'oxy-host',
+        mode: 'host',
+        requestedWindowStart: new Date(base + 12 * DAY),
+        requestedWindowEnd: new Date(base + 18 * DAY),
+        status: 'pending',
+      });
     const despitePending = await request(buildApp('oxy-guest'))
       .post('/reservations')
       .send({ propertyId: proposedOnly, ...stay(10, 15, base), guestCount: 1 });
@@ -417,18 +459,24 @@ describe('the range CHECKs', () => {
     // `reservations_stay_order_check` — Mongo declared this as a `validate` on
     // `checkOut`, which does not run on an update.
     await expect(
-      getDb().insert(reservations).values({ ...base, checkIn: checkOut, checkOut: checkIn, guestCount: 1, nights: 5 }),
+      getDb()
+        .insert(reservations)
+        .values({ ...base, checkIn: checkOut, checkOut: checkIn, guestCount: 1, nights: 5 }),
     ).rejects.toThrow();
 
     // `reservations_nights_check` — a zero-night booking is a charge with
     // nothing behind it.
     await expect(
-      getDb().insert(reservations).values({ ...base, checkIn, checkOut, guestCount: 1, nights: 0 }),
+      getDb()
+        .insert(reservations)
+        .values({ ...base, checkIn, checkOut, guestCount: 1, nights: 0 }),
     ).rejects.toThrow();
 
     // `reservations_guest_count_check`.
     await expect(
-      getDb().insert(reservations).values({ ...base, checkIn, checkOut, guestCount: 0, nights: 5 }),
+      getDb()
+        .insert(reservations)
+        .values({ ...base, checkIn, checkOut, guestCount: 0, nights: 5 }),
     ).rejects.toThrow();
   });
 });
@@ -438,19 +486,39 @@ describe('the transition machine', () => {
     const propertyId = await seedBookableProperty();
     const id = await book(propertyId);
 
-    expect((await request(buildApp('oxy-guest')).patch(`/reservations/${id}`).send({ status: 'confirmed' })).status).toBe(403);
+    expect(
+      (
+        await request(buildApp('oxy-guest'))
+          .patch(`/reservations/${id}`)
+          .send({ status: 'confirmed' })
+      ).status,
+    ).toBe(403);
     expect((await reservationRow(id)).status).toBe('pending');
 
-    expect((await request(buildApp('oxy-host')).patch(`/reservations/${id}`).send({ status: 'confirmed' })).status).toBe(200);
+    expect(
+      (
+        await request(buildApp('oxy-host'))
+          .patch(`/reservations/${id}`)
+          .send({ status: 'confirmed' })
+      ).status,
+    ).toBe(200);
     // The precondition is in the UPDATE, so a second decision matches no row.
-    expect((await request(buildApp('oxy-host')).patch(`/reservations/${id}`).send({ status: 'declined' })).status).toBe(400);
+    expect(
+      (
+        await request(buildApp('oxy-host'))
+          .patch(`/reservations/${id}`)
+          .send({ status: 'declined' })
+      ).status,
+    ).toBe(400);
   });
 
   it('refuses confirming a stay another CONFIRMED booking now overlaps', async () => {
     const base = Date.now();
     const propertyId = await seedBookableProperty();
     const first = await book(propertyId, 'oxy-guest-a', stay(10, 15, base));
-    await request(buildApp('oxy-host')).patch(`/reservations/${first}`).send({ status: 'confirmed' });
+    await request(buildApp('oxy-host'))
+      .patch(`/reservations/${first}`)
+      .send({ status: 'confirmed' });
 
     // A second overlapping request can only exist if it predates the confirm —
     // seeded directly, since the create path refuses it.
@@ -472,7 +540,9 @@ describe('the transition machine', () => {
       })
       .returning();
 
-    const res = await request(buildApp('oxy-host')).patch(`/reservations/${second.id}`).send({ status: 'confirmed' });
+    const res = await request(buildApp('oxy-host'))
+      .patch(`/reservations/${second.id}`)
+      .send({ status: 'confirmed' });
     expect(res.status).toBe(409);
     expect((await reservationRow(second.id)).status).toBe('pending');
   });
@@ -480,7 +550,9 @@ describe('the transition machine', () => {
   it('lets a guest cancel a PENDING booking whatever the policy says', async () => {
     const propertyId = await seedBookableProperty({ cancellationPolicy: 'super_strict' });
     const id = await book(propertyId);
-    const res = await request(buildApp('oxy-guest')).patch(`/reservations/${id}`).send({ status: 'cancelled' });
+    const res = await request(buildApp('oxy-guest'))
+      .patch(`/reservations/${id}`)
+      .send({ status: 'cancelled' });
     expect(res.status).toBe(200);
     expect((await reservationRow(id)).status).toBe('cancelled');
   });
@@ -492,12 +564,16 @@ describe('the transition machine', () => {
     const id = await book(propertyId, 'oxy-guest', stay(10, 15));
     await request(buildApp('oxy-host')).patch(`/reservations/${id}`).send({ status: 'confirmed' });
 
-    const byGuest = await request(buildApp('oxy-guest')).patch(`/reservations/${id}`).send({ status: 'cancelled' });
+    const byGuest = await request(buildApp('oxy-guest'))
+      .patch(`/reservations/${id}`)
+      .send({ status: 'cancelled' });
     expect(byGuest.status).toBe(403);
     expect(byGuest.body.error.code).toBe('POLICY_FORBIDS_CANCEL');
     expect((await reservationRow(id)).status).toBe('confirmed');
 
-    const byHost = await request(buildApp('oxy-host')).patch(`/reservations/${id}`).send({ status: 'cancelled' });
+    const byHost = await request(buildApp('oxy-host'))
+      .patch(`/reservations/${id}`)
+      .send({ status: 'cancelled' });
     expect(byHost.status).toBe(200);
   });
 
@@ -508,7 +584,9 @@ describe('the transition machine', () => {
     const id = await book(propertyId, 'oxy-guest', stay(10, 15));
     await request(buildApp('oxy-host')).patch(`/reservations/${id}`).send({ status: 'confirmed' });
 
-    const res = await request(buildApp('oxy-guest')).patch(`/reservations/${id}`).send({ status: 'cancelled' });
+    const res = await request(buildApp('oxy-guest'))
+      .patch(`/reservations/${id}`)
+      .send({ status: 'cancelled' });
     expect(res.status).toBe(200);
   });
 
@@ -517,8 +595,20 @@ describe('the transition machine', () => {
     const id = await book(propertyId);
     await request(buildApp('oxy-guest')).patch(`/reservations/${id}`).send({ status: 'cancelled' });
 
-    expect((await request(buildApp('oxy-guest')).patch(`/reservations/${id}`).send({ status: 'cancelled' })).status).toBe(200);
-    expect((await request(buildApp('oxy-host')).patch(`/reservations/${id}`).send({ status: 'completed' })).status).toBe(400);
+    expect(
+      (
+        await request(buildApp('oxy-guest'))
+          .patch(`/reservations/${id}`)
+          .send({ status: 'cancelled' })
+      ).status,
+    ).toBe(200);
+    expect(
+      (
+        await request(buildApp('oxy-host'))
+          .patch(`/reservations/${id}`)
+          .send({ status: 'completed' })
+      ).status,
+    ).toBe(400);
   });
 });
 
@@ -536,23 +626,29 @@ describe('reads', () => {
     await book(propertyId);
 
     expect((await request(buildApp('oxy-guest')).get('/reservations')).body.data).toHaveLength(1);
-    expect((await request(buildApp('oxy-host')).get('/reservations?asHost=true')).body.data).toHaveLength(1);
+    expect(
+      (await request(buildApp('oxy-host')).get('/reservations?asHost=true')).body.data,
+    ).toHaveLength(1);
     expect((await request(buildApp('oxy-host')).get('/reservations')).body.data).toHaveLength(0);
   });
 
   it('reports the calendar and the CONFIRMED stays on the availability endpoint', async () => {
     const base = Date.now();
     const propertyId = await seedBookableProperty({ shortTermRentMinNights: 2 });
-    await getDb().insert(propertyAvailabilityWindows).values({
-      propertyId,
-      scope: 'listing',
-      startsAt: new Date(base + 40 * DAY),
-      endsAt: new Date(base + 45 * DAY),
-      status: 'blocked',
-    });
+    await getDb()
+      .insert(propertyAvailabilityWindows)
+      .values({
+        propertyId,
+        scope: 'listing',
+        startsAt: new Date(base + 40 * DAY),
+        endsAt: new Date(base + 45 * DAY),
+        status: 'blocked',
+      });
     const pending = await book(propertyId, 'oxy-guest-a', stay(10, 15, base));
     const confirmed = await book(propertyId, 'oxy-guest-b', stay(20, 25, base));
-    await request(buildApp('oxy-host')).patch(`/reservations/${confirmed}`).send({ status: 'confirmed' });
+    await request(buildApp('oxy-host'))
+      .patch(`/reservations/${confirmed}`)
+      .send({ status: 'confirmed' });
 
     const res = await request(buildApp('oxy-anyone')).get(`/properties/${propertyId}/availability`);
     expect(res.status).toBe(200);

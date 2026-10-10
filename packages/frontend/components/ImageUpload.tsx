@@ -79,7 +79,8 @@ export function ImageUpload({
 
   const labels = useMemo(
     () => ({
-      photo: (position: number, count: number) => t('imageUpload.grid.photo', { position, total: count }),
+      photo: (position: number, count: number) =>
+        t('imageUpload.grid.photo', { position, total: count }),
       cover: t('imageUpload.grid.cover'),
       moveEarlier: (position: number) => t('imageUpload.grid.moveEarlier', { position }),
       moveLater: (position: number) => t('imageUpload.grid.moveLater', { position }),
@@ -89,7 +90,8 @@ export function ImageUpload({
       uploading: (position: number) => t('imageUpload.grid.uploading', { position }),
       failed: t('imageUpload.grid.failed'),
       add: t('imageUpload.grid.add'),
-      moved: (position: number, count: number) => t('imageUpload.grid.moved', { position, total: count }),
+      moved: (position: number, count: number) =>
+        t('imageUpload.grid.moved', { position, total: count }),
     }),
     [t],
   );
@@ -260,7 +262,9 @@ export function ImageUpload({
           leadingIcon={RiCameraLine}
           onPress={() => void takePhoto()}
           disabled={disabled || atLimit}
-          style={styles.cameraButton} tone="neutral" appearance="outline"
+          style={styles.cameraButton}
+          tone="neutral"
+          appearance="outline"
         >
           {t('imageUpload.takePhoto')}
         </Button>

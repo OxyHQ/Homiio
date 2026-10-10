@@ -16,11 +16,7 @@ import {
   parseZillowDetail,
   parseZillowSearch,
 } from '@homiio/listing-providers';
-import type {
-  ExternalListingRef,
-  FetchRuntime,
-  RawListing,
-} from '@homiio/listing-providers';
+import type { ExternalListingRef, FetchRuntime, RawListing } from '@homiio/listing-providers';
 import { OfferingType, PropertyType } from '@homiio/shared-types';
 
 const provider = new ZillowProvider();
@@ -102,9 +98,9 @@ describe('ZillowProvider', () => {
       hints: { kind: 'rent' },
     };
     const raw = await testProvider.fetch(ref, { runtime });
-    expect((raw.payload as { listing: { address: { locality?: string } } }).listing.address.locality).toBe(
-      'Portland',
-    );
+    expect(
+      (raw.payload as { listing: { address: { locality?: string } } }).listing.address.locality,
+    ).toBe('Portland');
   });
 
   it('normalizes a for-rent apartment into a published long-term rental', () => {

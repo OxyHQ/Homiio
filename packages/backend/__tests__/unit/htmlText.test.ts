@@ -55,8 +55,7 @@ describe('sanitizeNormalizedListingTextFields', () => {
 
   it('sanitizes description, amenities, contact, captions, and address text', () => {
     const listing = baseListing();
-    listing.description =
-      '<b>Council Tax Band:</b> E<br /><br /><i>Guidance only</i>';
+    listing.description = '<b>Council Tax Band:</b> E<br /><br /><i>Guidance only</i>';
     listing.amenities = ['<li>Garden</li>', '  ', '<em>Parking</em>'];
     listing.contact = {
       name: '<b>Jane</b> Doe',

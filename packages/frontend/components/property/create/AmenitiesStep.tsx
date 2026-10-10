@@ -17,7 +17,12 @@ import type { AmenitiesStepProps } from './types';
 const MAX_GUESTS = 99;
 
 type RuleField = 'petsAllowed' | 'smokingAllowed' | 'partiesAllowed' | 'guestsAllowed';
-const RULES: readonly RuleField[] = ['petsAllowed', 'smokingAllowed', 'partiesAllowed', 'guestsAllowed'];
+const RULES: readonly RuleField[] = [
+  'petsAllowed',
+  'smokingAllowed',
+  'partiesAllowed',
+  'guestsAllowed',
+];
 
 /**
  * "Amenities" wizard step: the amenities for the property type as a Bloom

@@ -105,8 +105,7 @@ function nodeToRaw(node: Record<string, unknown>): LamudiRawListing | undefined 
   const offer = resolveOffer(node);
   const address = isRecord(node.address) ? node.address : undefined;
   const city = asString(address?.addressLocality);
-  const urlRaw =
-    asString(node.url) ?? (typeof node['@id'] === 'string' ? node['@id'] : undefined);
+  const urlRaw = asString(node.url) ?? (typeof node['@id'] === 'string' ? node['@id'] : undefined);
   if (offer.price === undefined || !city || !urlRaw) return undefined;
 
   const url = absoluteUrl(urlRaw);

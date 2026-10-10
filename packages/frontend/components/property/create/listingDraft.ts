@@ -156,8 +156,16 @@ function unpricedStep(form: CreatePropertyFormData): string | null {
   const { offerings } = form.pricing;
   if (offerings.length === 0) return STEP_OFFERING;
   const checks: [OfferingType, string, () => object][] = [
-    [OfferingType.LONG_TERM_RENT, STEP_LONG_TERM_PRICING, () => validateLongTermPricingStep(form.pricing)],
-    [OfferingType.SHORT_TERM_RENT, STEP_NIGHTLY_PRICING, () => validateNightlyPricingStep(form.pricing)],
+    [
+      OfferingType.LONG_TERM_RENT,
+      STEP_LONG_TERM_PRICING,
+      () => validateLongTermPricingStep(form.pricing),
+    ],
+    [
+      OfferingType.SHORT_TERM_RENT,
+      STEP_NIGHTLY_PRICING,
+      () => validateNightlyPricingStep(form.pricing),
+    ],
     [OfferingType.SALE, STEP_SALE_DETAILS, () => validateSaleDetailsStep(form.offering)],
   ];
   for (const [offering, step, validate] of checks) {

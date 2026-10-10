@@ -39,8 +39,7 @@ export function useMyApplications(status?: TenantApplicationStatus) {
   const { isAuthenticated } = useOxy();
   return useQuery({
     queryKey: applicationQueryKeys.list('applicant', status),
-    queryFn: async () =>
-      applicationService.list({ asLandlord: false, status, limit: 50 }),
+    queryFn: async () => applicationService.list({ asLandlord: false, status, limit: 50 }),
     enabled: isAuthenticated,
     staleTime: STALE_TIME,
     gcTime: GC_TIME,
@@ -51,8 +50,7 @@ export function useLandlordApplications(status?: TenantApplicationStatus) {
   const { isAuthenticated } = useOxy();
   return useQuery({
     queryKey: applicationQueryKeys.list('landlord', status),
-    queryFn: async () =>
-      applicationService.list({ asLandlord: true, status, limit: 50 }),
+    queryFn: async () => applicationService.list({ asLandlord: true, status, limit: 50 }),
     enabled: isAuthenticated,
     staleTime: STALE_TIME,
     gcTime: GC_TIME,
@@ -102,14 +100,10 @@ export function useActiveApplicationForProperty(propertyId: string | undefined) 
 export function useCreateApplicationMutation() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (input: CreateApplicationInput) =>
-      applicationService.create(input),
+    mutationFn: async (input: CreateApplicationInput) => applicationService.create(input),
     onSuccess: (application) => {
       queryClient.invalidateQueries({ queryKey: applicationQueryKeys.all });
-      queryClient.setQueryData(
-        applicationQueryKeys.detail(String(application.id)),
-        application,
-      );
+      queryClient.setQueryData(applicationQueryKeys.detail(String(application.id)), application);
     },
   });
 }
@@ -117,19 +111,11 @@ export function useCreateApplicationMutation() {
 export function useUpdateApplicationMutation() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({
-      id,
-      input,
-    }: {
-      id: string;
-      input: UpdateApplicationInput;
-    }) => applicationService.update(id, input),
+    mutationFn: async ({ id, input }: { id: string; input: UpdateApplicationInput }) =>
+      applicationService.update(id, input),
     onSuccess: (application) => {
       queryClient.invalidateQueries({ queryKey: applicationQueryKeys.all });
-      queryClient.setQueryData(
-        applicationQueryKeys.detail(String(application.id)),
-        application,
-      );
+      queryClient.setQueryData(applicationQueryKeys.detail(String(application.id)), application);
     },
   });
 }

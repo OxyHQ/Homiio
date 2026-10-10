@@ -9,13 +9,7 @@
  * small) provides the dismiss affordance.
  */
 import React, { useCallback } from 'react';
-import {
-  Platform,
-  StyleSheet,
-  View,
-  type StyleProp,
-  type ViewStyle,
-} from 'react-native';
+import { Platform, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { Button } from '@oxy.so/bloom/button';
 
@@ -58,7 +52,9 @@ export const MapMarkerPopover: React.FC<MapMarkerPopoverProps> = ({
             onPress={onDismiss}
             size="sm"
             icon={RiCloseLine}
-            accessibilityLabel="Close preview" tone="accent" appearance="subtle"
+            accessibilityLabel="Close preview"
+            tone="accent"
+            appearance="subtle"
           />
         </View>
         <PropertyCard

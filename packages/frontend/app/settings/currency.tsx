@@ -11,10 +11,7 @@ import { toast } from '@oxy.so/bloom/toast';
 
 import { RiCheckLine } from '@oxy.so/bloom/icons';
 import { useTheme } from '@oxy.so/bloom/theme';
-import {
-  SettingsListGroup,
-  SettingsListItem,
-} from '@oxy.so/bloom/settings-list';
+import { SettingsListGroup, SettingsListItem } from '@oxy.so/bloom/settings-list';
 
 import { Header } from '@/components/Header';
 import { useCurrency } from '@/hooks/useCurrency';
@@ -32,14 +29,10 @@ export default function CurrencySettingsScreen() {
   const handleCurrencySelect = async (currencyCode: string): Promise<void> => {
     try {
       await changeCurrency(currencyCode);
-      toast.success(
-        t('settings.currency.currencyChanged'),
-      );
+      toast.success(t('settings.currency.currencyChanged'));
       router.back();
     } catch {
-      toast.error(
-        t('settings.currency.errorChanging'),
-      );
+      toast.error(t('settings.currency.errorChanging'));
     }
   };
 
@@ -62,9 +55,7 @@ export default function CurrencySettingsScreen() {
               currency.code === currentCurrency
                 ? undefined
                 : getExchangeRateDisplay(currentCurrency, currency.code, locale);
-            const description = exchangeRate
-              ? `${currency.code} · ${exchangeRate}`
-              : currency.code;
+            const description = exchangeRate ? `${currency.code} · ${exchangeRate}` : currency.code;
             return (
               <SettingsListItem
                 key={currency.code}
@@ -73,9 +64,7 @@ export default function CurrencySettingsScreen() {
                 description={description}
                 value={currency.symbol}
                 rightElement={
-                  isActive ? (
-                    <RiCheckLine width={20} height={20} fill={theme.primary} />
-                  ) : undefined
+                  isActive ? <RiCheckLine width={20} height={20} fill={theme.primary} /> : undefined
                 }
                 showChevron={!isActive}
                 onPress={() => handleCurrencySelect(currency.code)}

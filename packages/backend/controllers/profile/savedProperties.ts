@@ -45,10 +45,7 @@ import {
   unsaveProperty as unsavePropertyRow,
   updateSavedPropertyNotes as updateSavedPropertyNotesRow,
 } from '../../db/saved/savedPropertyRepository';
-import {
-  ensureDefaultFolder,
-  findSavedFolder,
-} from '../../db/saved/savedFolderRepository';
+import { ensureDefaultFolder, findSavedFolder } from '../../db/saved/savedFolderRepository';
 import { errorResponse, successResponse } from './shared';
 
 /** Resolve the owner from the session, in the shape the auth layer sets. */
@@ -64,18 +61,21 @@ export async function getSavedProperties(req: Request, res: Response, next: Next
     const oxyUserId = ownerOf(req);
 
     if (!oxyUserId) {
-      return res.status(401).json(
-        errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
-      );
+      return res
+        .status(401)
+        .json(errorResponse('Authentication required', 'AUTHENTICATION_REQUIRED'));
     }
 
     const saved = await listSavedProperties(getDb(), oxyUserId);
     if (saved.length === 0) {
-      return res.json(successResponse([], "Saved properties retrieved successfully"));
+      return res.json(successResponse([], 'Saved properties retrieved successfully'));
     }
 
     const hydrated = await findProperties({
-      where: inArray(properties.id, saved.map((row) => row.targetId)),
+      where: inArray(
+        properties.id,
+        saved.map((row) => row.targetId),
+      ),
     });
     const byId = new Map(hydrated.map((entry) => [entry.property.id, entry]));
 
@@ -86,10 +86,15 @@ export async function getSavedProperties(req: Request, res: Response, next: Next
       // Only reachable if a listing is deleted BETWEEN the two statements above;
       // the foreign key rules out every other case. See the header.
       if (!listing) return [];
-      return [{ ...serializeProperty(listing, propertyAudienceFor(listing, oxyUserId)), ...toSavedPropertyFields(row) }];
+      return [
+        {
+          ...serializeProperty(listing, propertyAudienceFor(listing, oxyUserId)),
+          ...toSavedPropertyFields(row),
+        },
+      ];
     });
 
-    res.json(successResponse(merged, "Saved properties retrieved successfully"));
+    res.json(successResponse(merged, 'Saved properties retrieved successfully'));
   } catch (error) {
     next(error);
   }
@@ -104,15 +109,13 @@ export async function saveProperty(req: Request, res: Response, next: NextFuncti
     const { propertyId, notes, folderId } = req.body;
 
     if (!oxyUserId) {
-      return res.status(401).json(
-        errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
-      );
+      return res
+        .status(401)
+        .json(errorResponse('Authentication required', 'AUTHENTICATION_REQUIRED'));
     }
 
     if (typeof propertyId !== 'string' || !propertyId) {
-      return res.status(400).json(
-        errorResponse("Property ID is required", "PROPERTY_ID_REQUIRED")
-      );
+      return res.status(400).json(errorResponse('Property ID is required', 'PROPERTY_ID_REQUIRED'));
     }
 
     // A named folder must be one of the CALLER's own. Scoped by owner in the
@@ -123,9 +126,7 @@ export async function saveProperty(req: Request, res: Response, next: NextFuncti
     if (folderId) {
       folder = await findSavedFolder(getDb(), String(folderId), oxyUserId);
       if (!folder) {
-        return res.status(404).json(
-          errorResponse("Folder not found", "FOLDER_NOT_FOUND")
-        );
+        return res.status(404).json(errorResponse('Folder not found', 'FOLDER_NOT_FOUND'));
       }
     } else {
       folder = await ensureDefaultFolder(getDb(), oxyUserId);
@@ -140,14 +141,12 @@ export async function saveProperty(req: Request, res: Response, next: NextFuncti
       });
     } catch (error) {
       if (error instanceof SavedPropertyNotFoundError) {
-        return res.status(404).json(
-          errorResponse("Property not found", "PROPERTY_NOT_FOUND")
-        );
+        return res.status(404).json(errorResponse('Property not found', 'PROPERTY_NOT_FOUND'));
       }
       throw error;
     }
 
-    res.json(successResponse({ folderId: folder.id }, "Property saved successfully"));
+    res.json(successResponse({ folderId: folder.id }, 'Property saved successfully'));
   } catch (error) {
     next(error);
   }
@@ -162,26 +161,24 @@ export async function unsaveProperty(req: Request, res: Response, next: NextFunc
     const { propertyId } = req.params;
 
     if (!oxyUserId) {
-      return res.status(401).json(
-        errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
-      );
+      return res
+        .status(401)
+        .json(errorResponse('Authentication required', 'AUTHENTICATION_REQUIRED'));
     }
 
     if (!propertyId) {
-      return res.status(400).json(
-        errorResponse("Property ID is required", "PROPERTY_ID_REQUIRED")
-      );
+      return res.status(400).json(errorResponse('Property ID is required', 'PROPERTY_ID_REQUIRED'));
     }
 
     const deleted = await unsavePropertyRow(getDb(), oxyUserId, propertyId);
 
     if (!deleted) {
-      return res.status(404).json(
-        errorResponse("Saved property not found", "SAVED_PROPERTY_NOT_FOUND")
-      );
+      return res
+        .status(404)
+        .json(errorResponse('Saved property not found', 'SAVED_PROPERTY_NOT_FOUND'));
     }
 
-    res.json(successResponse(null, "Property unsaved successfully"));
+    res.json(successResponse(null, 'Property unsaved successfully'));
   } catch (error) {
     next(error);
   }
@@ -203,29 +200,29 @@ export async function updateSavedPropertyNotes(req: Request, res: Response, next
     const { notes } = req.body;
 
     if (!oxyUserId) {
-      return res.status(401).json(
-        errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
-      );
+      return res
+        .status(401)
+        .json(errorResponse('Authentication required', 'AUTHENTICATION_REQUIRED'));
     }
 
     if (!propertyId) {
-      return res.status(400).json(
-        errorResponse("Property ID is required", "PROPERTY_ID_REQUIRED")
-      );
+      return res.status(400).json(errorResponse('Property ID is required', 'PROPERTY_ID_REQUIRED'));
     }
 
     const updated = await updateSavedPropertyNotesRow(getDb(), oxyUserId, propertyId, notes);
 
     if (!updated) {
-      return res.status(404).json(
-        errorResponse("Saved property not found", "SAVED_PROPERTY_NOT_FOUND")
-      );
+      return res
+        .status(404)
+        .json(errorResponse('Saved property not found', 'SAVED_PROPERTY_NOT_FOUND'));
     }
 
-    res.json(successResponse(
-      { propertyId: updated.targetId, ...toSavedPropertyFields(updated) },
-      "Property notes updated successfully",
-    ));
+    res.json(
+      successResponse(
+        { propertyId: updated.targetId, ...toSavedPropertyFields(updated) },
+        'Property notes updated successfully',
+      ),
+    );
   } catch (error) {
     next(error);
   }

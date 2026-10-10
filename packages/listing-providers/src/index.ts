@@ -65,7 +65,15 @@ export {
   NonHousingListingError,
   type HousingSignalInput,
 } from './parse/classifieds';
-export { isRecord, asString, asNumberEu, asNumberUs, asCoordinate, deaccent, firstString } from './parse/guards';
+export {
+  isRecord,
+  asString,
+  asNumberEu,
+  asNumberUs,
+  asCoordinate,
+  deaccent,
+  firstString,
+} from './parse/guards';
 
 export { FixtureProvider } from './providers/fixture';
 export { FIXTURE_LISTINGS } from './providers/fixture/fixtures';
@@ -123,12 +131,20 @@ export type {
   BluegroundRawPhoto,
 } from './providers/blueground/fixtures';
 
-export { IdealistaProvider, isIdealistaChallenge, idealistaSourceIdFromUrl } from './providers/idealista';
+export {
+  IdealistaProvider,
+  isIdealistaChallenge,
+  idealistaSourceIdFromUrl,
+} from './providers/idealista';
 export {
   idealistaCitiesFromEnv,
   idealistaCitiesOptionsFromEnv,
 } from './providers/idealista/cities';
-export { parseIdealistaDetail, parseIdealistaSearch, type IdealistaRaw } from './providers/idealista/parse';
+export {
+  parseIdealistaDetail,
+  parseIdealistaSearch,
+  type IdealistaRaw,
+} from './providers/idealista/parse';
 export {
   parseIdealistaGeoreach,
   idealistaGeoreachUrl,
@@ -157,12 +173,20 @@ export {
   IDEALISTA_FIXTURE_CONTACT_INFO_JSON,
 } from './providers/idealista/fixtures';
 
-export { FotocasaProvider, isFotocasaChallenge, fotocasaSourceIdFromUrl } from './providers/fotocasa';
+export {
+  FotocasaProvider,
+  isFotocasaChallenge,
+  fotocasaSourceIdFromUrl,
+} from './providers/fotocasa';
 export {
   fotocasaCitiesFromEnv,
   fotocasaCitiesOptionsFromEnv,
 } from './providers/fotocasa/cities';
-export { parseFotocasaDetail, parseFotocasaSearch, type FotocasaRaw } from './providers/fotocasa/parse';
+export {
+  parseFotocasaDetail,
+  parseFotocasaSearch,
+  type FotocasaRaw,
+} from './providers/fotocasa/parse';
 export {
   parseFotocasaSearchads,
   parseFotocasaLocationSegments,
@@ -760,7 +784,6 @@ export {
   MAX_IMAGES_CEILING,
 } from './discoverLimits';
 
-
 // Ecuador (EC) — Plusvalía (shared Navent) / MercadoLibre housing-only / Properati (OFF).
 export {
   PlusvaliaProvider,
@@ -819,7 +842,6 @@ export {
   type NaventSiteConfig,
   type NaventRawListing,
 } from './navent';
-
 
 // Argentina (AR) — shared Navent/ML factories; housing-only for MercadoLibre.
 export * from './providers/ar/exports';

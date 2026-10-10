@@ -13,12 +13,12 @@ import { useTheme } from '@oxy.so/bloom/theme';
 const SHEET_HEIGHT_RATIO = 0.85;
 
 interface SindiChatBottomSheetProps {
-    /** Property object containing details to discuss with Sindi AI */
-    property: Property;
-    /** Callback function called when the bottom sheet should be closed */
-    onClose: () => void;
-    /** Optional initial message to send instead of the default property message */
-    initialMessage?: string;
+  /** Property object containing details to discuss with Sindi AI */
+  property: Property;
+  /** Callback function called when the bottom sheet should be closed */
+  onClose: () => void;
+  /** Optional initial message to send instead of the default property message */
+  initialMessage?: string;
 }
 
 /**
@@ -26,130 +26,130 @@ interface SindiChatBottomSheetProps {
  * Creates a new conversation with the property context and automatically sends an initial message.
  */
 export function SindiChatBottomSheet({ property, initialMessage }: SindiChatBottomSheetProps) {
-    const { oxyServices, activeSessionId } = useOxy();
-    const { height: windowHeight } = useWindowDimensions();
-    const { colors } = useTheme();
-    const { createConversation } = useConversationStore();
-    const [conversationId, setConversationId] = useState<string | undefined>();
-    const [currentConversation, setCurrentConversation] = useState<Conversation | null>(null);
-    const [initialMessageToSend, setInitialMessageToSend] = useState<string | undefined>();
-    const isInitialized = useRef(false);
+  const { oxyServices, activeSessionId } = useOxy();
+  const { height: windowHeight } = useWindowDimensions();
+  const { colors } = useTheme();
+  const { createConversation } = useConversationStore();
+  const [conversationId, setConversationId] = useState<string | undefined>();
+  const [currentConversation, setCurrentConversation] = useState<Conversation | null>(null);
+  const [initialMessageToSend, setInitialMessageToSend] = useState<string | undefined>();
+  const isInitialized = useRef(false);
 
-    // Shared streaming-capable authenticated fetch (single source of truth for
-    // every Sindi surface). The token comes straight from the SDK; no app-local
-    // refresh plumbing here.
-    const authenticatedFetch = useSindiAuthenticatedFetch();
+  // Shared streaming-capable authenticated fetch (single source of truth for
+  // every Sindi surface). The token comes straight from the SDK; no app-local
+  // refresh plumbing here.
+  const authenticatedFetch = useSindiAuthenticatedFetch();
 
-    useEffect(() => {
-        // Prevent multiple initializations and ensure auth is ready
-        if (isInitialized.current || !oxyServices || !activeSessionId) return;
+  // biome-ignore lint/correctness/useExhaustiveDependencies: only depend on auth state
+  useEffect(() => {
+    // Prevent multiple initializations and ensure auth is ready
+    if (isInitialized.current || !oxyServices || !activeSessionId) return;
 
-        // Validate required property data
-        if (!property.id) {
-            logger.error('Property ID is required for Sindi chat');
-            return;
+    // Validate required property data
+    if (!property.id) {
+      logger.error('Property ID is required for Sindi chat');
+      return;
+    }
+
+    // Create a new conversation when the bottom sheet opens
+    const initializeConversation = async () => {
+      try {
+        isInitialized.current = true;
+
+        // Create conversation title with fallback values
+        const city = property.address?.cityName || 'Unknown Location';
+        const type = property.type || 'Property';
+        const conversationTitle = `Property: ${city} - ${type}`;
+
+        // Create an empty conversation (no initial message)
+        const newConversation = await createConversation(
+          conversationTitle,
+          undefined, // No initial message - we'll send it manually
+          authenticatedFetch,
+        );
+
+        if (newConversation?.id) {
+          setConversationId(newConversation.id);
+          setCurrentConversation(newConversation);
+
+          let messageToSend: string;
+
+          if (initialMessage) {
+            // Use the provided initial message (e.g., from suggestion chips)
+            const propertyId = property.id;
+            messageToSend = `${initialMessage}
+
+<PROPERTIES_JSON>["${propertyId}"]</PROPERTIES_JSON>`;
+          } else {
+            // Build default property message with safe property access.
+            // Prefer the long-term (monthly) price; fall back to the
+            // short-term (nightly) price for vacation-only listings.
+            const bedrooms = property.bedrooms || 'unspecified';
+            const bathrooms = property.bathrooms || 'unspecified';
+            const location = property.address?.cityName || 'the area';
+            const longTerm = property.longTermRent;
+            const shortTerm = property.shortTermRent;
+            const rent = longTerm?.monthlyAmount ?? shortTerm?.nightlyRate ?? 'unspecified';
+            const currency = longTerm?.currency || shortTerm?.currency || '';
+            const priceUnit = longTerm ? 'month' : shortTerm ? 'night' : 'month';
+            const propertyId = property.id;
+
+            messageToSend = `I'm interested in this property: ${type} with ${bedrooms} bedrooms and ${bathrooms} bathrooms in ${location}. The rent is ${rent} ${currency}/${priceUnit}. Can you help me understand more about this property and my rental rights?
+
+<PROPERTIES_JSON>["${propertyId}"]</PROPERTIES_JSON>`;
+          }
+
+          // Set the message immediately - no timeout needed
+          setInitialMessageToSend(messageToSend);
+        } else {
+          logger.error('Failed to create conversation: Invalid response');
+          isInitialized.current = false;
         }
+      } catch (error) {
+        logger.error('Failed to create conversation:', error);
+        // Reset so user can try again
+        isInitialized.current = false;
+        // Fallback to undefined conversation ID which will create a new one
+        setConversationId(undefined);
+      }
+    };
 
-        // Create a new conversation when the bottom sheet opens
-        const initializeConversation = async () => {
-            try {
-                isInitialized.current = true;
+    initializeConversation();
+  }, [oxyServices, activeSessionId]); // Only depend on auth state
 
-                // Create conversation title with fallback values
-                const city = property.address?.cityName || 'Unknown Location';
-                const type = property.type || 'Property';
-                const conversationTitle = `Property: ${city} - ${type}`;
+  // Check if user is authenticated
+  const isAuthenticated = !!oxyServices && !!activeSessionId;
 
-                // Create an empty conversation (no initial message)
-                const newConversation = await createConversation(
-                    conversationTitle,
-                    undefined, // No initial message - we'll send it manually
-                    authenticatedFetch
-                );
-
-                if (newConversation?.id) {
-                    setConversationId(newConversation.id);
-                    setCurrentConversation(newConversation);
-
-                    let messageToSend: string;
-
-                    if (initialMessage) {
-                        // Use the provided initial message (e.g., from suggestion chips)
-                        const propertyId = property.id;
-                        messageToSend = `${initialMessage}
-
-<PROPERTIES_JSON>["${propertyId}"]</PROPERTIES_JSON>`;
-                    } else {
-                        // Build default property message with safe property access.
-                        // Prefer the long-term (monthly) price; fall back to the
-                        // short-term (nightly) price for vacation-only listings.
-                        const bedrooms = property.bedrooms || 'unspecified';
-                        const bathrooms = property.bathrooms || 'unspecified';
-                        const location = property.address?.cityName || 'the area';
-                        const longTerm = property.longTermRent;
-                        const shortTerm = property.shortTermRent;
-                        const rent = longTerm?.monthlyAmount ?? shortTerm?.nightlyRate ?? 'unspecified';
-                        const currency = longTerm?.currency || shortTerm?.currency || '';
-                        const priceUnit = longTerm ? 'month' : shortTerm ? 'night' : 'month';
-                        const propertyId = property.id;
-
-                        messageToSend = `I'm interested in this property: ${type} with ${bedrooms} bedrooms and ${bathrooms} bathrooms in ${location}. The rent is ${rent} ${currency}/${priceUnit}. Can you help me understand more about this property and my rental rights?
-
-<PROPERTIES_JSON>["${propertyId}"]</PROPERTIES_JSON>`;
-                    }
-
-                    // Set the message immediately - no timeout needed
-                    setInitialMessageToSend(messageToSend);
-                } else {
-                    logger.error('Failed to create conversation: Invalid response');
-                    isInitialized.current = false;
-                }
-            } catch (error) {
-                logger.error('Failed to create conversation:', error);
-                // Reset so user can try again
-                isInitialized.current = false;
-                // Fallback to undefined conversation ID which will create a new one
-                setConversationId(undefined);
-            }
-        };
-
-        initializeConversation();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [oxyServices, activeSessionId]); // Only depend on auth state
-
-    // Check if user is authenticated
-    const isAuthenticated = !!oxyServices && !!activeSessionId;
-
-    return (
-        // A bounded column rather than a ScrollView: the chat's own thread
-        // scrolls, and the composer stays pinned under it.
-        <View
-            style={[
-                styles.container,
-                { height: windowHeight * SHEET_HEIGHT_RATIO, backgroundColor: colors.background },
-            ]}
-        >
-            <ChatContent
-              // The one host that still does not act. It floats over the
-              // listing somebody chose to read, so moving the page beneath it
-              // would take that listing away to show a result they cannot see
-              // anyway — the sheet is on top of it. A host that cannot act
-              // sends no app context, so no action is ever emitted for these
-              // turns and the chat answers in prose and cards.
-              host="sheet"
-                conversationId={conversationId}
-                currentConversation={currentConversation}
-                isAuthenticated={isAuthenticated}
-                authenticatedFetch={authenticatedFetch}
-                initialMessages={[]}
-                messageFromUrl={initialMessageToSend}
-            />
-        </View>
-    );
+  return (
+    // A bounded column rather than a ScrollView: the chat's own thread
+    // scrolls, and the composer stays pinned under it.
+    <View
+      style={[
+        styles.container,
+        { height: windowHeight * SHEET_HEIGHT_RATIO, backgroundColor: colors.background },
+      ]}
+    >
+      <ChatContent
+        // The one host that still does not act. It floats over the
+        // listing somebody chose to read, so moving the page beneath it
+        // would take that listing away to show a result they cannot see
+        // anyway — the sheet is on top of it. A host that cannot act
+        // sends no app context, so no action is ever emitted for these
+        // turns and the chat answers in prose and cards.
+        host="sheet"
+        conversationId={conversationId}
+        currentConversation={currentConversation}
+        isAuthenticated={isAuthenticated}
+        authenticatedFetch={authenticatedFetch}
+        initialMessages={[]}
+        messageFromUrl={initialMessageToSend}
+      />
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
-    container: {
-        width: '100%',
-    },
+  container: {
+    width: '100%',
+  },
 });

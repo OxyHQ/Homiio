@@ -18,13 +18,7 @@ class GeocodingController {
 
       // Validate required parameters
       if (!longitude || !latitude) {
-        return next(
-          new AppError(
-            'Longitude and latitude are required',
-            400,
-            'MISSING_PARAMETERS'
-          )
-        );
+        return next(new AppError('Longitude and latitude are required', 400, 'MISSING_PARAMETERS'));
       }
 
       // Parse and validate coordinates
@@ -32,30 +26,17 @@ class GeocodingController {
       const lat = parseFloat(latitude as string);
 
       if (isNaN(lng) || isNaN(lat)) {
-        return next(
-          new AppError(
-            'Invalid coordinates provided',
-            400,
-            'INVALID_COORDINATES'
-          )
-        );
+        return next(new AppError('Invalid coordinates provided', 400, 'INVALID_COORDINATES'));
       }
 
       // Perform reverse geocoding
       const result = await reverseGeocode(lng, lat);
 
       if (!result.success) {
-        return next(
-          new AppError(
-            result.error || 'Geocoding failed',
-            400,
-            'GEOCODING_FAILED'
-          )
-        );
+        return next(new AppError(result.error || 'Geocoding failed', 400, 'GEOCODING_FAILED'));
       }
 
       res.json(successResponse(result.data, 'Address found successfully'));
-
     } catch (error) {
       next(error);
     }
@@ -71,30 +52,17 @@ class GeocodingController {
 
       // Validate required parameters
       if (!address) {
-        return next(
-          new AppError(
-            'Address is required',
-            400,
-            'MISSING_PARAMETERS'
-          )
-        );
+        return next(new AppError('Address is required', 400, 'MISSING_PARAMETERS'));
       }
 
       // Perform forward geocoding
       const result = await forwardGeocode(address as string);
 
       if (!result.success) {
-        return next(
-          new AppError(
-            result.error || 'Geocoding failed',
-            400,
-            'GEOCODING_FAILED'
-          )
-        );
+        return next(new AppError(result.error || 'Geocoding failed', 400, 'GEOCODING_FAILED'));
       }
 
       res.json(successResponse(result.data, 'Coordinates found successfully'));
-
     } catch (error) {
       next(error);
     }

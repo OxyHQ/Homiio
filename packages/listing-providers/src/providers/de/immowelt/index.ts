@@ -39,7 +39,11 @@ import type {
 } from '../../../types';
 import { createFetchRuntime } from '../../../runtime';
 import { ChallengeError, fetchListingViaLadder } from '../../../strategy';
-import { defaultProviderMetrics, type ProviderMetricsReader, type ProviderMetricsSink } from '../../../metrics';
+import {
+  defaultProviderMetrics,
+  type ProviderMetricsReader,
+  type ProviderMetricsSink,
+} from '../../../metrics';
 import { IMMOWELT_BASE_URL } from './fixtures';
 import {
   immoweltExposeUrl,
@@ -370,7 +374,9 @@ export class ImmoweltProvider implements ListingProvider {
       },
       type: resolvePropertyType(listing.propertyType),
       offerings: isSale ? [OfferingType.SALE] : [OfferingType.LONG_TERM_RENT],
-      longTermRent: isSale ? undefined : { monthlyAmount: listing.price, currency: listing.currency },
+      longTermRent: isSale
+        ? undefined
+        : { monthlyAmount: listing.price, currency: listing.currency },
       sale: isSale ? { price: listing.price, currency: listing.currency } : undefined,
       remoteImages: toRemoteImages(listing.images),
       status: 'published',
@@ -398,7 +404,11 @@ export class ImmoweltProvider implements ListingProvider {
     const snapshot = this.metrics.snapshot(this.id);
     if (snapshot && snapshot.attempts > 0) {
       const status =
-        snapshot.challengeRate >= 0.8 ? 'unhealthy' : snapshot.challengeRate >= 0.3 ? 'degraded' : 'healthy';
+        snapshot.challengeRate >= 0.8
+          ? 'unhealthy'
+          : snapshot.challengeRate >= 0.3
+            ? 'degraded'
+            : 'healthy';
       return {
         provider: this.id,
         status,

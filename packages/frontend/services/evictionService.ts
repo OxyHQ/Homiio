@@ -280,10 +280,7 @@ class EvictionService {
    * jurisdiction yet — and the UI says so rather than showing a neighbouring
    * country's.
    */
-  async resources(
-    countryCode: string,
-    regionId?: string,
-  ): Promise<JurisdictionResourcesResponse> {
+  async resources(countryCode: string, regionId?: string): Promise<JurisdictionResourcesResponse> {
     const response = await api.get<ApiResponse<JurisdictionResourcesResponse>>(
       `${this.baseUrl}/resources`,
       { params: { countryCode, regionId }, requireAuth: false },
@@ -293,7 +290,6 @@ class EvictionService {
     }
     return response.data.data;
   }
-
 }
 
 export const evictionService = new EvictionService();

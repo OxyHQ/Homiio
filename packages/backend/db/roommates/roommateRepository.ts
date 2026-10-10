@@ -72,7 +72,11 @@ export function sortPair(a: string, b: string): readonly [string, string] {
  */
 export async function createRoommateRequest(
   db: DatabaseOrTransaction,
-  input: { readonly fromOxyUserId: string; readonly toOxyUserId: string; readonly message?: string },
+  input: {
+    readonly fromOxyUserId: string;
+    readonly toOxyUserId: string;
+    readonly message?: string;
+  },
 ): Promise<RoommateRequestRow> {
   const reverse = await findPendingRequestBetween(db, input.toOxyUserId, input.fromOxyUserId);
   if (reverse) throw new PendingRoommateRequestExistsError();

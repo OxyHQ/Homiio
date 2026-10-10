@@ -17,10 +17,7 @@ const STREET_BUILDING_TOKENS = [
   'plaza',
 ] as const;
 
-const STREET_BUILDING_PATTERN = new RegExp(
-  `\\b(?:${STREET_BUILDING_TOKENS.join('|')})\\b`,
-  'i',
-);
+const STREET_BUILDING_PATTERN = new RegExp(`\\b(?:${STREET_BUILDING_TOKENS.join('|')})\\b`, 'i');
 
 /** Returns true when `name` looks like a real city/municipality label. */
 export function isPlausibleCityName(name: string | null | undefined): boolean {

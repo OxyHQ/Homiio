@@ -132,9 +132,7 @@ describe('one primary photo per listing', () => {
     const rows = await db
       .select({ id: propertyImages.id })
       .from(propertyImages)
-      .where(
-        and(eq(propertyImages.propertyId, propertyId), eq(propertyImages.isPrimary, true)),
-      );
+      .where(and(eq(propertyImages.propertyId, propertyId), eq(propertyImages.isPrimary, true)));
     expect(rows).toEqual([]);
   });
 
@@ -199,7 +197,12 @@ describe('one primary photo per listing', () => {
     const rows = await db
       .select({ propertyId: propertyImages.propertyId })
       .from(propertyImages)
-      .where(and(eq(propertyImages.isPrimary, true), inArray(propertyImages.propertyId, [first, second])));
+      .where(
+        and(
+          eq(propertyImages.isPrimary, true),
+          inArray(propertyImages.propertyId, [first, second]),
+        ),
+      );
     expect(rows.map((row) => row.propertyId).sort()).toEqual([first, second].sort());
   });
 });

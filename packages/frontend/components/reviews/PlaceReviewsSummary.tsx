@@ -73,7 +73,8 @@ export function distinctPublishedAuthors(reviews: readonly ReviewDTO[]): number 
 export function placeReviewStats(reviews: readonly ReviewDTO[]): PlaceReviewStats {
   const totalReviews = reviews.length;
   if (totalReviews === 0) return { averageRating: 0, totalReviews: 0 };
-  const averageRating = reviews.reduce((sum, review) => sum + (review.rating || 0), 0) / totalReviews;
+  const averageRating =
+    reviews.reduce((sum, review) => sum + (review.rating || 0), 0) / totalReviews;
 
   const authors = distinctPublishedAuthors(reviews);
   if (totalReviews < AGGREGATE_MIN_RECORDS || authors < AGGREGATE_MIN_AUTHORS) {
@@ -81,10 +82,13 @@ export function placeReviewStats(reviews: readonly ReviewDTO[]): PlaceReviewStat
   }
 
   const recommendRate = reviews.filter((review) => review.recommendation).length / totalReviews;
-  const answered = reviews.filter((review) => typeof review.depositReturned === 'string' && review.depositReturned);
+  const answered = reviews.filter(
+    (review) => typeof review.depositReturned === 'string' && review.depositReturned,
+  );
   const depositReturnedRate =
     answered.length >= AGGREGATE_MIN_RECORDS
-      ? answered.filter((review) => review.depositReturned === DepositReturn.FULL).length / answered.length
+      ? answered.filter((review) => review.depositReturned === DepositReturn.FULL).length /
+        answered.length
       : undefined;
 
   return { averageRating, totalReviews, recommendRate, depositReturnedRate };

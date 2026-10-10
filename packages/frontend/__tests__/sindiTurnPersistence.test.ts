@@ -10,6 +10,11 @@ describe('Sindi transcript persistence', () => {
   });
 
   it('never persists a failed turn, which would remount the pane and erase its error callout', () => {
-    expect(shouldPersistSindiTranscript({ isLoading: false, error: new Error('Sindi chat is temporarily unavailable') })).toBe(false);
+    expect(
+      shouldPersistSindiTranscript({
+        isLoading: false,
+        error: new Error('Sindi chat is temporarily unavailable'),
+      }),
+    ).toBe(false);
   });
 });

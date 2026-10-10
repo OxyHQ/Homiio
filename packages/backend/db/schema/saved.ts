@@ -101,9 +101,7 @@ export const savedItems = pgTable(
       table.targetId,
     ),
     // `savedFolders` aggregates saves by folder for the folder counts.
-    index('saved_items_folder_id_idx')
-      .on(table.folderId)
-      .where(sql`${table.folderId} is not null`),
+    index('saved_items_folder_id_idx').on(table.folderId).where(sql`${table.folderId} is not null`),
     // The reverse lookup: "who saved this listing", for the property stats.
     index('saved_items_target_idx').on(table.targetId),
     check(
@@ -335,10 +333,7 @@ export const savedSearches = pgTable(
      * `location_needs_confirmation` so the UI can ask. Enforcing it here would
      * have contradicted a landed contract in order to look stricter.
      */
-    check(
-      'saved_searches_query_version_check',
-      sql.raw('query_version >= 1'),
-    ),
+    check('saved_searches_query_version_check', sql.raw('query_version >= 1')),
   ],
 );
 
@@ -434,9 +429,6 @@ export const recentlyViewed = pgTable(
   (table) => [
     /** One row per person per listing; a repeat view moves `viewed_at`. */
     uniqueIndex('recently_viewed_owner_property_key').on(table.oxyUserId, table.propertyId),
-    index('recently_viewed_owner_viewed_at_idx').on(
-      table.oxyUserId,
-      sql`${table.viewedAt} desc`,
-    ),
+    index('recently_viewed_owner_viewed_at_idx').on(table.oxyUserId, sql`${table.viewedAt} desc`),
   ],
 );

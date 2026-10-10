@@ -37,14 +37,24 @@ describe('generateShortPropertyTitle', () => {
 
   it('falls back to city, then region, then a TBD placeholder', () => {
     expect(
-      generateShortPropertyTitle({ type: 'house', bedrooms: 3, address: {}, geo: { city: 'Girona' } }),
+      generateShortPropertyTitle({
+        type: 'house',
+        bedrooms: 3,
+        address: {},
+        geo: { city: 'Girona' },
+      }),
     ).toBe('House in Girona');
     expect(
-      generateShortPropertyTitle({ type: 'house', bedrooms: 3, address: {}, geo: { region: 'Catalonia' } }),
+      generateShortPropertyTitle({
+        type: 'house',
+        bedrooms: 3,
+        address: {},
+        geo: { region: 'Catalonia' },
+      }),
     ).toBe('House in Catalonia');
-    expect(
-      generateShortPropertyTitle({ type: 'house', bedrooms: 3, address: {}, geo: null }),
-    ).toBe('House in Location TBD');
+    expect(generateShortPropertyTitle({ type: 'house', bedrooms: 3, address: {}, geo: null })).toBe(
+      'House in Location TBD',
+    );
   });
 
   it('labels unknown property types as Property', () => {

@@ -74,23 +74,10 @@ export const LOCATION_KINDS = [
 export type LocationKind = (typeof LOCATION_KINDS)[number];
 
 /** Where a location scope came from. */
-export const LOCATION_SOURCES = [
-  'device',
-  'manual',
-  'saved',
-  'map',
-  'url',
-  'default',
-] as const;
+export const LOCATION_SOURCES = ['device', 'manual', 'saved', 'map', 'url', 'default'] as const;
 
 /** How precisely an address candidate resolves. Mirrors the publication ladder. */
-export const ADDRESS_PRECISION_LEVELS = [
-  'unit',
-  'building',
-  'street',
-  'locality',
-  'area',
-] as const;
+export const ADDRESS_PRECISION_LEVELS = ['unit', 'building', 'street', 'locality', 'area'] as const;
 export type AddressPrecisionLevel = (typeof ADDRESS_PRECISION_LEVELS)[number];
 
 /**
@@ -313,9 +300,7 @@ export const OBSERVABILITY_EVENT_SPECS = {
 
   /** An address candidate was picked, and whether it became canonical. */
   address_candidate_selected: {
-    candidateSource: required(
-      enumOf(['geocoder', 'internal', 'listing', 'map_pin'] as const),
-    ),
+    candidateSource: required(enumOf(['geocoder', 'internal', 'listing', 'map_pin'] as const)),
     precisionLevel: required(enumOf(ADDRESS_PRECISION_LEVELS)),
     materialized: required(boolean),
     countryCode: optional(countryCode),
@@ -335,9 +320,7 @@ export const OBSERVABILITY_EVENT_SPECS = {
     lastStepId: required(enumOf(REVIEW_STEPS)),
     lastStepIndex: required(smallInt(32)),
     durationBucketS: required(enumOf(DURATION_BUCKETS_S)),
-    reason: required(
-      enumOf(['navigated_away', 'closed', 'error', 'timeout', 'unknown'] as const),
-    ),
+    reason: required(enumOf(['navigated_away', 'closed', 'error', 'timeout', 'unknown'] as const)),
   },
 
   /** A duplicate group was expanded — the anti-double-counting surface. */

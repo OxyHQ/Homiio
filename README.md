@@ -109,7 +109,8 @@ bun run dev:frontend     # Expo app
 bun run dev:backend      # API
 bun run build            # every workspace
 bun run test             # every workspace
-bun run lint             # every workspace
+bun run lint             # Biome + the frontend's minimal ESLint
+bun run format           # Biome format --write
 bun run check:lockfile   # bun.lock really matches the manifests
 bun run clean            # build artifacts and node_modules
 

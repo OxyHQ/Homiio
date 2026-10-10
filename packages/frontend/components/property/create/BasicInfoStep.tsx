@@ -2,10 +2,7 @@ import React, { useMemo } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Field } from '@oxy.so/bloom/field';
-import {
-  DEFAULT_PROPERTY_TYPES,
-  PropertyTypeSelector,
-} from '@oxy.so/bloom/listing-editor';
+import { DEFAULT_PROPERTY_TYPES, PropertyTypeSelector } from '@oxy.so/bloom/listing-editor';
 import { StepperRow } from '@oxy.so/bloom/stepper';
 import { PROPERTY_TYPE_IDS } from './constants';
 import { WizardTextField, WizardTextarea } from './fields';
@@ -47,7 +44,13 @@ export function BasicInfoStep({
     () =>
       DEFAULT_PROPERTY_TYPES.flatMap((option) =>
         isPublishableType(option.value)
-          ? [{ value: option.value, label: t(`properties.titles.types.${option.value}`), icon: option.icon }]
+          ? [
+              {
+                value: option.value,
+                label: t(`properties.titles.types.${option.value}`),
+                icon: option.icon,
+              },
+            ]
           : [],
       ),
     [t],

@@ -17,34 +17,34 @@ const mockTelegramService = {
         city: 'New York',
         country: 'US',
         expectedSupported: true,
-        expectedTopicId: 4
+        expectedTopicId: 4,
       },
       {
         name: 'Barcelona, Spain - should be supported',
         city: 'Barcelona',
         country: 'Spain',
         expectedSupported: true,
-        expectedTopicId: 2
+        expectedTopicId: 2,
       },
       {
         name: 'Madrid, Spain - should not be supported',
         city: 'Madrid',
         country: 'Spain',
         expectedSupported: false,
-        expectedTopicId: null
+        expectedTopicId: null,
       },
       {
         name: 'London, UK - should not be supported',
         city: 'London',
         country: 'UK',
         expectedSupported: false,
-        expectedTopicId: null
-      }
+        expectedTopicId: null,
+      },
     ];
 
     const CITY_TOPIC_MAPPING = {
       'New York, US': 4,
-      'Barcelona, Spain': 2
+      'Barcelona, Spain': 2,
     };
 
     const getTopicIdForLocation = (city, country) => {
@@ -57,13 +57,13 @@ const mockTelegramService = {
       return getTopicIdForLocation(city, country) !== null;
     };
 
-    const results = testCases.map(testCase => {
+    const results = testCases.map((testCase) => {
       const actualSupported = isLocationSupported(testCase.city, testCase.country);
       const actualTopicId = getTopicIdForLocation(testCase.city, testCase.country);
-      
+
       const supportedPassed = actualSupported === testCase.expectedSupported;
       const topicIdPassed = actualTopicId === testCase.expectedTopicId;
-      
+
       return {
         name: testCase.name,
         city: testCase.city,
@@ -74,18 +74,18 @@ const mockTelegramService = {
         expectedTopicId: testCase.expectedTopicId,
         actualTopicId: actualTopicId,
         topicIdPassed,
-        passed: supportedPassed && topicIdPassed
+        passed: supportedPassed && topicIdPassed,
       };
     });
 
-    const allPassed = results.every(result => result.passed);
+    const allPassed = results.every((result) => result.passed);
 
     return {
       success: allPassed,
       totalTests: results.length,
-      passedTests: results.filter(r => r.passed).length,
-      failedTests: results.filter(r => !r.passed).length,
-      results
+      passedTests: results.filter((r) => r.passed).length,
+      failedTests: results.filter((r) => !r.passed).length,
+      results,
     };
   },
 
@@ -93,7 +93,7 @@ const mockTelegramService = {
     const CITY_TOPIC_MAPPING = {
       'New York, US': 4,
       'New York, United States': 4,
-      'Barcelona, Spain': 2
+      'Barcelona, Spain': 2,
     };
     if (!city || !country) return false;
     const locationKey = `${city}, ${country}`;
@@ -104,7 +104,7 @@ const mockTelegramService = {
     const CITY_TOPIC_MAPPING = {
       'New York, US': 4,
       'New York, United States': 4,
-      'Barcelona, Spain': 2
+      'Barcelona, Spain': 2,
     };
     if (!city || !country) return null;
     const locationKey = `${city}, ${country}`;
@@ -115,7 +115,7 @@ const mockTelegramService = {
     const CITY_TOPIC_MAPPING = {
       'New York, US': 4,
       'New York, United States': 4,
-      'Barcelona, Spain': 2
+      'Barcelona, Spain': 2,
     };
 
     const getTopicIdForLocation = (city, country) => {
@@ -133,13 +133,13 @@ const mockTelegramService = {
       successful: 0,
       failed: 0,
       skipped: 0,
-      errors: []
+      errors: [],
     };
 
     for (const property of properties) {
       const city = property.address?.city;
       const country = property.address?.country;
-      
+
       if (!isLocationSupported(city, country)) {
         results.skipped++;
         continue;
@@ -166,10 +166,10 @@ const mockTelegramService = {
       topicMappings: {
         'New York, US': 4,
         'New York, United States': 4,
-        'Barcelona, Spain': 2
-      }
+        'Barcelona, Spain': 2,
+      },
     };
-  }
+  },
 };
 
 const telegramService = mockTelegramService;
@@ -185,7 +185,7 @@ const sampleProperties = [
       city: 'Hostafrancs',
       state: 'CA',
       zipCode: '08014',
-      country: 'US'
+      country: 'US',
     },
     type: 'apartment',
     housingType: 'private',
@@ -198,16 +198,16 @@ const sampleProperties = [
       currency: 'EUR',
       paymentFrequency: 'monthly',
       deposit: 0,
-      utilities: 'excluded'
+      utilities: 'excluded',
     },
     amenities: ['stove', 'refrigerator', 'water'],
     availability: {
       isAvailable: true,
       minimumStay: 1,
       maximumStay: 12,
-      availableFrom: new Date('2025-07-28T08:25:49.315Z')
+      availableFrom: new Date('2025-07-28T08:25:49.315Z'),
     },
-    status: 'published'
+    status: 'published',
   },
   {
     _id: '68873ead87d5d680768a5a71',
@@ -218,7 +218,7 @@ const sampleProperties = [
       city: 'Rambla del Raval',
       state: 'Barcelona',
       zipCode: '08001',
-      country: 'Spain'
+      country: 'Spain',
     },
     type: 'apartment',
     housingType: 'private',
@@ -231,16 +231,16 @@ const sampleProperties = [
       currency: 'EUR',
       paymentFrequency: 'monthly',
       deposit: 0,
-      utilities: 'excluded'
+      utilities: 'excluded',
     },
     amenities: ['refrigerator', 'elevator', 'dishwasher'],
     availability: {
       isAvailable: true,
       minimumStay: 1,
       maximumStay: 12,
-      availableFrom: new Date('2025-07-28T09:11:09.182Z')
+      availableFrom: new Date('2025-07-28T09:11:09.182Z'),
     },
-    status: 'published'
+    status: 'published',
   },
   {
     _id: '6887400287d5d680768a5a8b',
@@ -251,7 +251,7 @@ const sampleProperties = [
       city: 'Barcelona',
       state: 'Catalonia',
       zipCode: '08015',
-      country: 'Spain'
+      country: 'Spain',
     },
     type: 'apartment',
     housingType: 'private',
@@ -264,16 +264,16 @@ const sampleProperties = [
       currency: 'EUR',
       paymentFrequency: 'monthly',
       deposit: 0,
-      utilities: 'excluded'
+      utilities: 'excluded',
     },
     amenities: ['refrigerator', 'elevator', 'dishwasher'],
     availability: {
       isAvailable: true,
       minimumStay: 1,
       maximumStay: 12,
-      availableFrom: new Date('2025-07-28T09:16:50.437Z')
+      availableFrom: new Date('2025-07-28T09:16:50.437Z'),
     },
-    status: 'active'
+    status: 'active',
   },
   {
     _id: '68874ea687d5d680768a5c86',
@@ -284,7 +284,7 @@ const sampleProperties = [
       city: 'New York',
       state: 'New York',
       zipCode: '10038',
-      country: 'United States'
+      country: 'United States',
     },
     type: 'apartment',
     housingType: 'private',
@@ -297,16 +297,16 @@ const sampleProperties = [
       currency: 'USD',
       paymentFrequency: 'monthly',
       deposit: 0,
-      utilities: 'excluded'
+      utilities: 'excluded',
     },
     amenities: ['water', 'refrigerator', 'intercom', 'dishwasher', 'elevator'],
     availability: {
       isAvailable: true,
       minimumStay: 1,
       maximumStay: 12,
-      availableFrom: new Date('2025-07-28T10:19:18.287Z')
+      availableFrom: new Date('2025-07-28T10:19:18.287Z'),
     },
-    status: 'active'
+    status: 'active',
   },
   {
     _id: '68881c3b47aa54b19fe5b14a',
@@ -317,7 +317,7 @@ const sampleProperties = [
       city: 'Paris',
       state: 'Palma',
       zipCode: '75018',
-      country: 'France'
+      country: 'France',
     },
     type: 'apartment',
     housingType: 'private',
@@ -330,17 +330,17 @@ const sampleProperties = [
       currency: 'EUR',
       paymentFrequency: 'monthly',
       deposit: 0,
-      utilities: 'excluded'
+      utilities: 'excluded',
     },
     amenities: [],
     availability: {
       isAvailable: true,
       minimumStay: 1,
       maximumStay: 12,
-      availableFrom: new Date('2025-07-29T00:56:27.143Z')
+      availableFrom: new Date('2025-07-29T00:56:27.143Z'),
     },
-    status: 'active'
-  }
+    status: 'active',
+  },
 ];
 
 async function testTelegramTopics() {
@@ -360,7 +360,7 @@ async function testTelegramTopics() {
       const country = property.address.country;
       const isSupported = telegramService.isLocationSupported(city, country);
       const topicId = telegramService.getTopicIdForLocation(city, country);
-      
+
       console.log(`Property ${index + 1}: ${city}, ${country}`);
       console.log(`  - Supported: ${isSupported ? '✅ Yes' : '❌ No'}`);
       console.log(`  - Topic ID: ${topicId || 'N/A'}`);
@@ -378,14 +378,14 @@ async function testTelegramTopics() {
     console.log('📋 Test 4: Topic ID Mapping Verification');
     const expectedMappings = {
       'New York, US': 4,
-      'Barcelona, Spain': 2
+      'Barcelona, Spain': 2,
     };
 
     Object.entries(expectedMappings).forEach(([location, expectedTopicId]) => {
       const [city, country] = location.split(', ');
       const actualTopicId = telegramService.getTopicIdForLocation(city, country);
       const isCorrect = actualTopicId === expectedTopicId;
-      
+
       console.log(`${location}:`);
       console.log(`  - Expected Topic ID: ${expectedTopicId}`);
       console.log(`  - Actual Topic ID: ${actualTopicId}`);
@@ -397,7 +397,6 @@ async function testTelegramTopics() {
     console.log('📋 Test 5: Group Summary with Topic Information');
     const groupSummary = telegramService.getGroupsSummary();
     console.log('✅ Group summary with topic mappings:', JSON.stringify(groupSummary, null, 2));
-
   } catch (error) {
     console.error('❌ Test failed:', error.message);
     console.error(error.stack);
@@ -417,4 +416,4 @@ if (require.main === module) {
     });
 }
 
-module.exports = { testTelegramTopics }; 
+module.exports = { testTelegramTopics };

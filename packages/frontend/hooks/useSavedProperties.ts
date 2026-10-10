@@ -31,9 +31,9 @@ export const useSavedProperties = (): UseSavedPropertiesReturn => {
   const isSaving = savingPropertyIds.size > 0;
 
   // Memoize saved property IDs for performance
-  const savedPropertyIds = useMemo(() =>
-    savedProperties.map((property: any) => property.id).filter(Boolean),
-    [savedProperties]
+  const savedPropertyIds = useMemo(
+    () => savedProperties.map((property: any) => property.id).filter(Boolean),
+    [savedProperties],
   );
 
   // Use context's isPropertySaved method

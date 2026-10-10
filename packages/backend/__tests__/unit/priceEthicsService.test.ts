@@ -73,7 +73,9 @@ describe('computePriceEthics fairnessScore', () => {
   it('adds within-ethical bonus when rent is within the ethical max', async () => {
     mockMarketVerdict.mockResolvedValue(null);
 
-    const result = await computePriceEthics(baseProperty({ longTermRent: { monthlyAmount: 130, currency: 'EUR' } }));
+    const result = await computePriceEthics(
+      baseProperty({ longTermRent: { monthlyAmount: 130, currency: 'EUR' } }),
+    );
 
     expect(result?.withinEthical).toBe(true);
     expect(result?.fairnessScore).toBe(70);
@@ -82,7 +84,9 @@ describe('computePriceEthics fairnessScore', () => {
   it('applies the above-ethical penalty when rent exceeds the ethical max', async () => {
     mockMarketVerdict.mockResolvedValue(null);
 
-    const result = await computePriceEthics(baseProperty({ longTermRent: { monthlyAmount: 5000, currency: 'EUR' } }));
+    const result = await computePriceEthics(
+      baseProperty({ longTermRent: { monthlyAmount: 5000, currency: 'EUR' } }),
+    );
 
     expect(result?.withinEthical).toBe(false);
     expect(result?.fairnessScore).toBe(25);
@@ -91,7 +95,9 @@ describe('computePriceEthics fairnessScore', () => {
   it('combines market verdict bonuses with ethical adjustments', async () => {
     mockMarketVerdict.mockResolvedValue(marketResult('good_deal', -12));
 
-    const result = await computePriceEthics(baseProperty({ longTermRent: { monthlyAmount: 130, currency: 'EUR' } }));
+    const result = await computePriceEthics(
+      baseProperty({ longTermRent: { monthlyAmount: 130, currency: 'EUR' } }),
+    );
 
     expect(result?.marketVerdict).toBe('good_deal');
     expect(result?.fairnessScore).toBe(100);
@@ -109,13 +115,17 @@ describe('computePriceEthics fairnessScore', () => {
   it('maps above_average market verdict without an ethical bonus beyond base', async () => {
     mockMarketVerdict.mockResolvedValue(marketResult('above_average', 8));
 
-    const result = await computePriceEthics(baseProperty({ longTermRent: { monthlyAmount: 130, currency: 'EUR' } }));
+    const result = await computePriceEthics(
+      baseProperty({ longTermRent: { monthlyAmount: 130, currency: 'EUR' } }),
+    );
 
     expect(result?.fairnessScore).toBe(70);
   });
 
   it('returns null when the listing has no scorable price', async () => {
-    const result = await computePriceEthics(baseProperty({ longTermRent: undefined, sale: undefined }));
+    const result = await computePriceEthics(
+      baseProperty({ longTermRent: undefined, sale: undefined }),
+    );
 
     expect(result).toBeNull();
     expect(mockMarketVerdict).not.toHaveBeenCalled();
@@ -130,7 +140,9 @@ describe('computePriceEthics isFairPrice', () => {
   it('marks Homiio listings fair when within ethical bounds and market is not above average', async () => {
     mockMarketVerdict.mockResolvedValue(marketResult('average', 1));
 
-    const result = await computePriceEthics(baseProperty({ longTermRent: { monthlyAmount: 130, currency: 'EUR' } }));
+    const result = await computePriceEthics(
+      baseProperty({ longTermRent: { monthlyAmount: 130, currency: 'EUR' } }),
+    );
 
     expect(result?.isFairPrice).toBe(true);
   });
@@ -138,7 +150,9 @@ describe('computePriceEthics isFairPrice', () => {
   it('rejects Homiio listings above the ethical max even with a good market verdict', async () => {
     mockMarketVerdict.mockResolvedValue(marketResult('good_deal', -10));
 
-    const result = await computePriceEthics(baseProperty({ longTermRent: { monthlyAmount: 5000, currency: 'EUR' } }));
+    const result = await computePriceEthics(
+      baseProperty({ longTermRent: { monthlyAmount: 5000, currency: 'EUR' } }),
+    );
 
     expect(result?.isFairPrice).toBe(false);
   });
@@ -146,7 +160,9 @@ describe('computePriceEthics isFairPrice', () => {
   it('rejects Homiio listings within ethical bounds but above market average', async () => {
     mockMarketVerdict.mockResolvedValue(marketResult('above_average', 10));
 
-    const result = await computePriceEthics(baseProperty({ longTermRent: { monthlyAmount: 130, currency: 'EUR' } }));
+    const result = await computePriceEthics(
+      baseProperty({ longTermRent: { monthlyAmount: 130, currency: 'EUR' } }),
+    );
 
     expect(result?.isFairPrice).toBe(false);
   });
@@ -154,7 +170,9 @@ describe('computePriceEthics isFairPrice', () => {
   it('allows Homiio listings within ethical bounds when market data is unavailable', async () => {
     mockMarketVerdict.mockResolvedValue(noMarketData);
 
-    const result = await computePriceEthics(baseProperty({ longTermRent: { monthlyAmount: 130, currency: 'EUR' } }));
+    const result = await computePriceEthics(
+      baseProperty({ longTermRent: { monthlyAmount: 130, currency: 'EUR' } }),
+    );
 
     expect(result?.isFairPrice).toBe(true);
   });

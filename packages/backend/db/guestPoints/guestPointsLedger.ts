@@ -445,10 +445,7 @@ export async function releaseExpiredReservations(
   const due = await db
     .select({ id: guestPointMovements.id })
     .from(guestPointMovements)
-    .innerJoin(
-      exchangeRequests,
-      eq(exchangeRequests.id, guestPointMovements.exchangeRequestId),
-    )
+    .innerJoin(exchangeRequests, eq(exchangeRequests.id, guestPointMovements.exchangeRequestId))
     .where(
       and(
         eq(guestPointMovements.direction, 'spend'),
@@ -500,9 +497,7 @@ export function toMovementDTO(row: GuestPointMovementRow): GuestPointMovement {
     points: row.points,
     ...(row.settledAt ? { settledAt: row.settledAt.toISOString() } : {}),
     ...(row.releasedAt ? { releasedAt: row.releasedAt.toISOString() } : {}),
-    ...(row.releaseReason
-      ? { releaseReason: row.releaseReason as GuestPointReleaseReason }
-      : {}),
+    ...(row.releaseReason ? { releaseReason: row.releaseReason as GuestPointReleaseReason } : {}),
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };

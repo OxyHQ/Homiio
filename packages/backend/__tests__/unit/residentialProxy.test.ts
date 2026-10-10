@@ -49,7 +49,6 @@ afterEach(() => {
 /* Proxy URL parsing                                                          */
 /* -------------------------------------------------------------------------- */
 
-
 describe('maskProxyUrl', () => {
   it('redacts userinfo from proxy URLs for safe logging', () => {
     expect(proxyModule.maskProxyUrl('http://user:pass@host:823')).toBe('http://***:***@host:823/');
@@ -104,9 +103,7 @@ describe('toPlaywrightProxy (dataimpulse dialect)', () => {
       password: 'mypass',
     });
     expect(toPlaywrightProxy(config, 'sess1').username).toBe('mylogin__sessid.sess1');
-    expect(toPlaywrightProxy(config, 'sess1', 'es').username).toBe(
-      'mylogin__cr.es;sessid.sess1',
-    );
+    expect(toPlaywrightProxy(config, 'sess1', 'es').username).toBe('mylogin__cr.es;sessid.sess1');
   });
 });
 
@@ -209,7 +206,10 @@ interface FakeCounters {
   routes: FakeRouteCall[];
 }
 
-function fakePlaywrightWithRoutes(html: string): { module: PlaywrightModule; counters: FakeCounters } {
+function fakePlaywrightWithRoutes(html: string): {
+  module: PlaywrightModule;
+  counters: FakeCounters;
+} {
   const counters: FakeCounters = {
     launches: 0,
     contexts: [],
@@ -231,11 +231,14 @@ function fakePlaywrightWithRoutes(html: string): { module: PlaywrightModule; cou
                 counters.closes += 1;
               },
               newPage: async () => ({
-                route: async (_pattern: string, handler: (route: {
-                  request: () => { resourceType: () => string; url: () => string };
-                  abort: () => Promise<void>;
-                  continue: () => Promise<void>;
-                }) => void | Promise<void>) => {
+                route: async (
+                  _pattern: string,
+                  handler: (route: {
+                    request: () => { resourceType: () => string; url: () => string };
+                    abort: () => Promise<void>;
+                    continue: () => Promise<void>;
+                  }) => void | Promise<void>,
+                ) => {
                   for (const type of ['document', 'image', 'stylesheet', 'script', 'font']) {
                     let action: FakeRouteCall['action'] = 'unhandled';
                     await handler({
@@ -416,7 +419,10 @@ describe('ExternalMediaIngest — media proxy policy', () => {
     );
     jest.spyOn(proxyModule, 'createProxiedFetch').mockResolvedValue(proxiedFetch);
 
-    const result = await fetchRemoteImageWithProxyFallback('https://cdn.portal.example/p.jpg', config);
+    const result = await fetchRemoteImageWithProxyFallback(
+      'https://cdn.portal.example/p.jpg',
+      config,
+    );
     expect(result.mimetype).toBe('image/jpeg');
     expect(directAttempts).toBe(1);
     expect(proxiedFetch).toHaveBeenCalledTimes(1);

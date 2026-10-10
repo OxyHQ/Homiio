@@ -44,7 +44,8 @@ export function isBayutChallenge(html: string): boolean {
 }
 
 export function bayutSourceIdFromUrl(url: string): string | undefined {
-  const match = /(?:details-|property\/details\/)(\d+)/i.exec(url) ?? /-(\d{5,})(?:\.html)?$/i.exec(url);
+  const match =
+    /(?:details-|property\/details\/)(\d+)/i.exec(url) ?? /-(\d{5,})(?:\.html)?$/i.exec(url);
   return match?.[1];
 }
 
@@ -108,7 +109,9 @@ function hitToRaw(hit: Record<string, unknown>): BayutRawListing | undefined {
   const sourceId = asString(hit.externalID) ?? asString(hit.id);
   const slug = asString(hit.slug);
   if (!sourceId) return undefined;
-  const url = slug ? absoluteBayutUrl(slug, sourceId) : `${BAYUT_BASE_URL}/property/details-${sourceId}.html`;
+  const url = slug
+    ? absoluteBayutUrl(slug, sourceId)
+    : `${BAYUT_BASE_URL}/property/details-${sourceId}.html`;
 
   const kind = resolveKind(hit);
   const price = asNumber(hit.price);
@@ -136,8 +139,7 @@ function hitToRaw(hit: Record<string, unknown>): BayutRawListing | undefined {
       city: location.city,
       neighborhood: location.neighborhood,
       countryCode: 'AE',
-      coordinates:
-        lat !== undefined && lng !== undefined ? { lat, lng } : undefined,
+      coordinates: lat !== undefined && lng !== undefined ? { lat, lng } : undefined,
     },
     images: collectImages(hit),
     contact: resolveContact(hit),
@@ -189,7 +191,11 @@ export function parseBayutDetail(html: string, url: string): BayutRawListing {
   return raw;
 }
 
-export function bayutSearchUrl(locationSlug: string, purpose: 'for-rent' | 'for-sale', page = 1): string {
+export function bayutSearchUrl(
+  locationSlug: string,
+  purpose: 'for-rent' | 'for-sale',
+  page = 1,
+): string {
   const pathPurpose = purpose === 'for-rent' ? 'to-rent' : 'for-sale';
   const base = `${BAYUT_BASE_URL}/${pathPurpose}/property/${locationSlug}/`;
   return page <= 1 ? base : `${base}?page=${page}`;

@@ -14,10 +14,7 @@ import { toast } from '@oxy.so/bloom/toast';
 
 import { RiInformationLine, RiRefreshLine } from '@oxy.so/bloom/icons';
 import { Switch } from '@oxy.so/bloom/switch';
-import {
-  SettingsListGroup,
-  SettingsListItem,
-} from '@oxy.so/bloom/settings-list';
+import { SettingsListGroup, SettingsListItem } from '@oxy.so/bloom/settings-list';
 
 import { Header } from '@/components/Header';
 import { confirm } from '@oxy.so/bloom/surfaces';
@@ -64,9 +61,7 @@ export default function SindiSettingsScreen() {
             icon={<SettingsRowIcon icon={RiInformationLine} />}
             title={t('sindi.settings.tips')}
             description={t('sindi.settings.tipsDescription')}
-            rightElement={
-              <Switch checked={showTips} onCheckedChange={setShowTips} />
-            }
+            rightElement={<Switch checked={showTips} onCheckedChange={setShowTips} />}
           />
         </SettingsListGroup>
 

@@ -205,7 +205,10 @@ export function upcomingBookings(
 
   for (const row of sources.viewings ?? []) {
     const status = viewingStatus(row.status);
-    if (!wanted(status, statuses) || !viewingIsUpcoming(row.scheduledAt, nowMs, row.durationMinutes))
+    if (
+      !wanted(status, statuses) ||
+      !viewingIsUpcoming(row.scheduledAt, nowMs, row.durationMinutes)
+    )
       continue;
     const startMs = parse(row.scheduledAt);
     const length = Number.isFinite(row.durationMinutes) ? Math.max(0, row.durationMinutes) : 0;

@@ -62,12 +62,7 @@ export const Stars: React.FC<StarsProps> = ({
         </View>
       ) : null}
       {Array.from({ length: emptyStars }).map((_, i) => (
-        <RiStarLine
-          key={`e-${i}`}
-          width={size}
-          height={size}
-          fill={colors.COLOR_BLACK_LIGHT_5}
-        />
+        <RiStarLine key={`e-${i}`} width={size} height={size} fill={colors.COLOR_BLACK_LIGHT_5} />
       ))}
     </View>
   );

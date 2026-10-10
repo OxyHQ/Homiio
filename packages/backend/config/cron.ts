@@ -13,7 +13,7 @@ export const cronConfig: CronConfig = {
   scrapeInterval: '', // retired — no scrape loop runs in the API process
   healthCheckInterval: '*/5 * * * *', // Every 5 minutes
   cleanupSchedule: '0 2 * * *', // Daily at 2 AM
-  timezone: 'UTC'
+  timezone: 'UTC',
 };
 
 /**

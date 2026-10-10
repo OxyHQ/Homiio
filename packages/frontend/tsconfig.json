@@ -8,25 +8,13 @@
     "jsx": "react-jsx",
     "types": ["node", "jest"],
     "paths": {
-      "@/*": [
-        "./*"
-      ],
-      "@homiio/shared-types": [
-        "../shared-types/src"
-      ],
-      "@homiio/shared-types/*": [
-        "../shared-types/src/*"
-      ],
-      "@oxy.so/core": [
-        "../../node_modules/@oxy.so/core"
-      ]
+      "@/*": ["./*"],
+      "@homiio/shared-types": ["../shared-types/src"],
+      "@homiio/shared-types/*": ["../shared-types/src/*"],
+      "@oxy.so/core": ["../../node_modules/@oxy.so/core"]
     }
   },
-  "include": [
-    "**/*.ts",
-    "**/*.tsx",
-    "nativewind-env.d.ts"
-  ],
+  "include": ["**/*.ts", "**/*.tsx", "nativewind-env.d.ts"],
   "references": [
     {
       "path": "../shared-types"

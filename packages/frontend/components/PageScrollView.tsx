@@ -97,8 +97,7 @@ export function PageScrollView({
         const { contentOffset, layoutMeasurement, contentSize } = event;
         if (contentSize.height <= 0) return;
         const reachedEnd =
-          contentOffset.y + layoutMeasurement.height >=
-          contentSize.height * onEndReachedThreshold;
+          contentOffset.y + layoutMeasurement.height >= contentSize.height * onEndReachedThreshold;
         if (!reachedEnd) {
           endArmed.value = true;
           return;

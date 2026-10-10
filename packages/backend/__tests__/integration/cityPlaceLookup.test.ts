@@ -55,8 +55,15 @@ async function seedCountry(id: string, code: string, name: string): Promise<stri
   return id;
 }
 
-async function seedRegion(id: string, countryId: string, name: string, code?: string): Promise<string> {
-  await getDb().insert(regions).values({ id, countryId, name, ...(code ? { code } : {}) });
+async function seedRegion(
+  id: string,
+  countryId: string,
+  name: string,
+  code?: string,
+): Promise<string> {
+  await getDb()
+    .insert(regions)
+    .values({ id, countryId, name, ...(code ? { code } : {}) });
   return id;
 }
 
@@ -70,16 +77,18 @@ async function seedCity(options: {
   longitude?: number;
   isActive?: boolean;
 }): Promise<string> {
-  await getDb().insert(cities).values({
-    id: options.id,
-    countryId: options.countryId,
-    regionId: options.regionId,
-    name: options.name,
-    propertiesCount: options.propertiesCount ?? 0,
-    latitude: options.latitude ?? null,
-    longitude: options.longitude ?? null,
-    ...(options.isActive === undefined ? {} : { isActive: options.isActive }),
-  });
+  await getDb()
+    .insert(cities)
+    .values({
+      id: options.id,
+      countryId: options.countryId,
+      regionId: options.regionId,
+      name: options.name,
+      propertiesCount: options.propertiesCount ?? 0,
+      latitude: options.latitude ?? null,
+      longitude: options.longitude ?? null,
+      ...(options.isActive === undefined ? {} : { isActive: options.isActive }),
+    });
   return options.id;
 }
 
@@ -91,7 +100,12 @@ async function seedCity(options: {
  * fixture points at Venezuela — every test that expects Venezuela is therefore
  * testing a discriminator and nothing else.
  */
-async function seedTwoBarcelonas(): Promise<{ es: string; ve: string; esRegion: string; veRegion: string }> {
+async function seedTwoBarcelonas(): Promise<{
+  es: string;
+  ve: string;
+  esRegion: string;
+  veRegion: string;
+}> {
   const spain = await seedCountry('t-ctry-a-es', 'ES', 'Spain');
   const catalonia = await seedRegion('t-rg-a-cat', spain, 'Catalonia', 'ES-CT');
   const es = await seedCity({
@@ -144,7 +158,11 @@ describe('two cities called Barcelona, in different countries and regions', () =
     // implementation that resolved to Spain would satisfy every positive
     // assertion a lazier test could make.
     expect(res.body.data).not.toHaveProperty('place');
-    expect(candidatesOf(res.body).map((c) => c.id).sort()).toEqual([es, ve].sort());
+    expect(
+      candidatesOf(res.body)
+        .map((c) => c.id)
+        .sort(),
+    ).toEqual([es, ve].sort());
   });
 
   it('gives each candidate the country, region, centre and id #352 needs to tell them apart', async () => {
@@ -163,7 +181,11 @@ describe('two cities called Barcelona, in different countries and regions', () =
         center: { longitude: 2.1734, latitude: 41.3851 },
         source: { kind: 'homiio', entity: 'city', id: byCountry.get('ES')?.id },
         label: { primary: 'Barcelona', secondary: 'Catalonia, Spain', kind: 'place' },
-        admin: expect.objectContaining({ regionName: 'Catalonia', regionCode: 'ES-CT', cityName: 'Barcelona' }),
+        admin: expect.objectContaining({
+          regionName: 'Catalonia',
+          regionCode: 'ES-CT',
+          cityName: 'Barcelona',
+        }),
       }),
     );
     expect(byCountry.get('VE')).toEqual(
@@ -182,7 +204,9 @@ describe('two cities called Barcelona, in different countries and regions', () =
   it('resolves to the SECOND, less popular Barcelona when the country says so', async () => {
     const { ve } = await seedTwoBarcelonas();
 
-    const res = await request(app).get('/api/cities/lookup?name=Barcelona&countryCode=VE').expect(200);
+    const res = await request(app)
+      .get('/api/cities/lookup?name=Barcelona&countryCode=VE')
+      .expect(200);
 
     expect(res.body.data.status).toBe('resolved');
     expect(placeOf(res.body)?.id).toBe(ve);
@@ -192,7 +216,9 @@ describe('two cities called Barcelona, in different countries and regions', () =
   it('resolves by region id, without a country', async () => {
     const { ve, veRegion } = await seedTwoBarcelonas();
 
-    const res = await request(app).get(`/api/cities/lookup?name=Barcelona&regionId=${veRegion}`).expect(200);
+    const res = await request(app)
+      .get(`/api/cities/lookup?name=Barcelona&regionId=${veRegion}`)
+      .expect(200);
 
     expect(res.body.data.status).toBe('resolved');
     expect(placeOf(res.body)?.id).toBe(ve);
@@ -201,7 +227,9 @@ describe('two cities called Barcelona, in different countries and regions', () =
   it('resolves by region NAME, which is what the legacy `?state=` param carries', async () => {
     const { ve } = await seedTwoBarcelonas();
 
-    const res = await request(app).get('/api/cities/lookup?name=Barcelona&state=Anzoátegui').expect(200);
+    const res = await request(app)
+      .get('/api/cities/lookup?name=Barcelona&state=Anzoátegui')
+      .expect(200);
 
     expect(res.body.data.status).toBe('resolved');
     expect(placeOf(res.body)?.id).toBe(ve);
@@ -226,23 +254,55 @@ describe('two homonyms inside the SAME country', () => {
     const spain = await seedCountry('t-ctry-es', 'ES', 'Spain');
     const valenciana = await seedRegion('t-rg-a-vc', spain, 'Valencian Community', 'ES-VC');
     const aragon = await seedRegion('t-rg-b-ar', spain, 'Aragon', 'ES-AR');
-    const city = await seedCity({ id: 't-city-a-val', countryId: spain, regionId: valenciana, name: 'Valencia', propertiesCount: 300 });
-    const village = await seedCity({ id: 't-city-b-val', countryId: spain, regionId: aragon, name: 'Valencia', propertiesCount: 0 });
+    const city = await seedCity({
+      id: 't-city-a-val',
+      countryId: spain,
+      regionId: valenciana,
+      name: 'Valencia',
+      propertiesCount: 300,
+    });
+    const village = await seedCity({
+      id: 't-city-b-val',
+      countryId: spain,
+      regionId: aragon,
+      name: 'Valencia',
+      propertiesCount: 0,
+    });
 
-    const res = await request(app).get('/api/cities/lookup?name=Valencia&countryCode=ES').expect(200);
+    const res = await request(app)
+      .get('/api/cities/lookup?name=Valencia&countryCode=ES')
+      .expect(200);
 
     expect(res.body.data.status).toBe('ambiguous');
-    expect(candidatesOf(res.body).map((c) => c.id).sort()).toEqual([city, village].sort());
+    expect(
+      candidatesOf(res.body)
+        .map((c) => c.id)
+        .sort(),
+    ).toEqual([city, village].sort());
   });
 
   it('resolves the same pair once a region is named', async () => {
     const spain = await seedCountry('t-ctry-es', 'ES', 'Spain');
     const valenciana = await seedRegion('t-rg-a-vc', spain, 'Valencian Community', 'ES-VC');
     const aragon = await seedRegion('t-rg-b-ar', spain, 'Aragon', 'ES-AR');
-    await seedCity({ id: 't-city-a-val', countryId: spain, regionId: valenciana, name: 'Valencia', propertiesCount: 300 });
-    const village = await seedCity({ id: 't-city-b-val', countryId: spain, regionId: aragon, name: 'Valencia', propertiesCount: 0 });
+    await seedCity({
+      id: 't-city-a-val',
+      countryId: spain,
+      regionId: valenciana,
+      name: 'Valencia',
+      propertiesCount: 300,
+    });
+    const village = await seedCity({
+      id: 't-city-b-val',
+      countryId: spain,
+      regionId: aragon,
+      name: 'Valencia',
+      propertiesCount: 0,
+    });
 
-    const res = await request(app).get('/api/cities/lookup?name=Valencia&region=Aragon').expect(200);
+    const res = await request(app)
+      .get('/api/cities/lookup?name=Valencia&region=Aragon')
+      .expect(200);
 
     expect(res.body.data.status).toBe('resolved');
     expect(placeOf(res.body)?.id).toBe(village);
@@ -271,13 +331,21 @@ describe('a DISCRIMINATOR that is itself ambiguous', () => {
     const spain = await seedCountry('t-ctry-a-es', 'ES', 'Spain');
     const valenciaProvince = await seedRegion('t-rg-a-val-es', spain, 'Valencia', 'ES-V');
     const es = await seedCity({
-      id: 't-city-a-torrent-es', countryId: spain, regionId: valenciaProvince, name: 'Torrent', propertiesCount: 400,
+      id: 't-city-a-torrent-es',
+      countryId: spain,
+      regionId: valenciaProvince,
+      name: 'Torrent',
+      propertiesCount: 400,
     });
 
     const venezuela = await seedCountry('t-ctry-b-ve', 'VE', 'Venezuela');
     const valenciaState = await seedRegion('t-rg-b-val-ve', venezuela, 'Valencia', 'VE-G');
     const ve = await seedCity({
-      id: 't-city-b-torrent-ve', countryId: venezuela, regionId: valenciaState, name: 'Torrent', propertiesCount: 1,
+      id: 't-city-b-torrent-ve',
+      countryId: venezuela,
+      regionId: valenciaState,
+      name: 'Torrent',
+      propertiesCount: 1,
     });
 
     return { es, ve };
@@ -286,20 +354,32 @@ describe('a DISCRIMINATOR that is itself ambiguous', () => {
   it('does not pick one of two same-named REGIONS — it answers ambiguous with both cities', async () => {
     const { es, ve } = await seedTwoValenciaRegions();
 
-    const res = await request(app).get('/api/cities/lookup?name=Torrent&state=Valencia').expect(200);
+    const res = await request(app)
+      .get('/api/cities/lookup?name=Torrent&state=Valencia')
+      .expect(200);
 
     expect(res.body.data.status).toBe('ambiguous');
     expect(res.body.data).not.toHaveProperty('place');
-    expect(candidatesOf(res.body).map((c) => c.id).sort()).toEqual([es, ve].sort());
+    expect(
+      candidatesOf(res.body)
+        .map((c) => c.id)
+        .sort(),
+    ).toEqual([es, ve].sort());
     // Each candidate names its own country, so the list is choosable rather than
     // merely plural.
-    expect(candidatesOf(res.body).map((c) => c.admin.countryCode).sort()).toEqual(['ES', 'VE']);
+    expect(
+      candidatesOf(res.body)
+        .map((c) => c.admin.countryCode)
+        .sort(),
+    ).toEqual(['ES', 'VE']);
   });
 
   it('resolves the same query once a country narrows the region', async () => {
     const { ve } = await seedTwoValenciaRegions();
 
-    const res = await request(app).get('/api/cities/lookup?name=Torrent&state=Valencia&countryCode=VE').expect(200);
+    const res = await request(app)
+      .get('/api/cities/lookup?name=Torrent&state=Valencia&countryCode=VE')
+      .expect(200);
 
     expect(res.body.data.status).toBe('resolved');
     expect(placeOf(res.body)?.id).toBe(ve);
@@ -307,7 +387,9 @@ describe('a DISCRIMINATOR that is itself ambiguous', () => {
 
   it('still 404s when the region name matches nothing at all', async () => {
     await seedTwoValenciaRegions();
-    const res = await request(app).get('/api/cities/lookup?name=Torrent&state=Atlantis').expect(404);
+    const res = await request(app)
+      .get('/api/cities/lookup?name=Torrent&state=Atlantis')
+      .expect(404);
     expect(res.body.code).toBe('PLACE_NOT_FOUND');
   });
 
@@ -323,7 +405,12 @@ describe('a DISCRIMINATOR that is itself ambiguous', () => {
     const other = await seedCountry('t-ctry-b-xx', 'XX', 'Es');
     const catalonia = await seedRegion('t-rg-a-cat', spain, 'Catalonia');
     const elsewhere = await seedRegion('t-rg-b-else', other, 'Elsewhere');
-    const inSpain = await seedCity({ id: 't-city-a-sp', countryId: spain, regionId: catalonia, name: 'Girona' });
+    const inSpain = await seedCity({
+      id: 't-city-a-sp',
+      countryId: spain,
+      regionId: catalonia,
+      name: 'Girona',
+    });
     await seedCity({ id: 't-city-b-other', countryId: other, regionId: elsewhere, name: 'Girona' });
 
     const res = await request(app).get('/api/cities/lookup?name=Girona&country=ES').expect(200);
@@ -349,7 +436,9 @@ describe('a geographic bias', () => {
       .expect(200);
     expect(candidatesOf(nearVenezuela.body).map((c) => c.id)).toEqual([ve, es]);
 
-    const nearSpain = await request(app).get('/api/cities/lookup?name=Barcelona&near=2.2,41.4').expect(200);
+    const nearSpain = await request(app)
+      .get('/api/cities/lookup?name=Barcelona&near=2.2,41.4')
+      .expect(200);
     expect(candidatesOf(nearSpain.body).map((c) => c.id)).toEqual([es, ve]);
   });
 
@@ -357,7 +446,9 @@ describe('a geographic bias', () => {
     await seedTwoBarcelonas();
 
     for (const value of ['nonsense', '2.2', '2.2,41.4,0', '400,41.4']) {
-      const res = await request(app).get(`/api/cities/lookup?name=Barcelona&near=${encodeURIComponent(value)}`).expect(400);
+      const res = await request(app)
+        .get(`/api/cities/lookup?name=Barcelona&near=${encodeURIComponent(value)}`)
+        .expect(400);
       expect(res.body.code).toBe('INVALID_PLACE_QUERY');
     }
   });
@@ -367,7 +458,9 @@ describe('a bounding box', () => {
   it('filters candidates to the box', async () => {
     const { es } = await seedTwoBarcelonas();
 
-    const res = await request(app).get('/api/cities/lookup?name=Barcelona&bounds=2.0,41.3,2.3,41.5').expect(200);
+    const res = await request(app)
+      .get('/api/cities/lookup?name=Barcelona&bounds=2.0,41.3,2.3,41.5')
+      .expect(200);
 
     expect(res.body.data.status).toBe('resolved');
     expect(placeOf(res.body)?.id).toBe(es);
@@ -379,10 +472,26 @@ describe('a bounding box', () => {
     // Suva is inside the 20-degree strip over the Pacific; Madrid is outside it
     // at the same latitude band's longitude scale. A box normalised by SWAPPING
     // west and east returns the exact complement of this — Madrid and not Suva.
-    const suva = await seedCity({ id: 't-city-suva', countryId: fiji, regionId: central, name: 'Portside', latitude: -18.14, longitude: 178.44 });
-    await seedCity({ id: 't-city-far', countryId: fiji, regionId: central, name: 'Portside Far', latitude: -18, longitude: 0 });
+    const suva = await seedCity({
+      id: 't-city-suva',
+      countryId: fiji,
+      regionId: central,
+      name: 'Portside',
+      latitude: -18.14,
+      longitude: 178.44,
+    });
+    await seedCity({
+      id: 't-city-far',
+      countryId: fiji,
+      regionId: central,
+      name: 'Portside Far',
+      latitude: -18,
+      longitude: 0,
+    });
 
-    const res = await request(app).get('/api/cities/lookup?name=Portside&bounds=170,-20,-170,-16').expect(200);
+    const res = await request(app)
+      .get('/api/cities/lookup?name=Portside&bounds=170,-20,-170,-16')
+      .expect(200);
 
     expect(res.body.data.status).toBe('resolved');
     expect(placeOf(res.body)?.id).toBe(suva);
@@ -390,7 +499,9 @@ describe('a bounding box', () => {
 
   it('400s when latitudes are inverted, which is a real error', async () => {
     await seedTwoBarcelonas();
-    const res = await request(app).get('/api/cities/lookup?name=Barcelona&bounds=2.0,41.5,2.3,41.3').expect(400);
+    const res = await request(app)
+      .get('/api/cities/lookup?name=Barcelona&bounds=2.0,41.5,2.3,41.3')
+      .expect(400);
     expect(res.body.code).toBe('INVALID_PLACE_QUERY');
   });
 });
@@ -410,8 +521,20 @@ describe('a complete tie', () => {
     const nowhere = await seedCountry('t-ctry-xx', 'XX', 'Elsewhere');
     const north = await seedRegion('t-rg-a-n', nowhere, 'North');
     const south = await seedRegion('t-rg-b-s', nowhere, 'South');
-    const later = await seedCity({ id: 't-city-z-tie', countryId: nowhere, regionId: north, name: 'Springfield', propertiesCount: 7 });
-    const earlier = await seedCity({ id: 't-city-a-tie', countryId: nowhere, regionId: south, name: 'Springfield', propertiesCount: 7 });
+    const later = await seedCity({
+      id: 't-city-z-tie',
+      countryId: nowhere,
+      regionId: north,
+      name: 'Springfield',
+      propertiesCount: 7,
+    });
+    const earlier = await seedCity({
+      id: 't-city-a-tie',
+      countryId: nowhere,
+      regionId: south,
+      name: 'Springfield',
+      propertiesCount: 7,
+    });
 
     const res = await request(app).get('/api/cities/lookup?name=Springfield').expect(200);
 
@@ -431,9 +554,21 @@ describe('ranking below the ambiguity decision', () => {
     const nowhere = await seedCountry('t-ctry-xx', 'XX', 'Elsewhere');
     const north = await seedRegion('t-rg-a-n', nowhere, 'North');
     const south = await seedRegion('t-rg-b-s', nowhere, 'South');
-    const blind = await seedCity({ id: 't-city-a-blind', countryId: nowhere, regionId: north, name: 'Riverside', propertiesCount: 90 });
+    const blind = await seedCity({
+      id: 't-city-a-blind',
+      countryId: nowhere,
+      regionId: north,
+      name: 'Riverside',
+      propertiesCount: 90,
+    });
     const mapped = await seedCity({
-      id: 't-city-b-mapped', countryId: nowhere, regionId: south, name: 'Riverside', propertiesCount: 2, latitude: 12, longitude: 34,
+      id: 't-city-b-mapped',
+      countryId: nowhere,
+      regionId: south,
+      name: 'Riverside',
+      propertiesCount: 2,
+      latitude: 12,
+      longitude: 34,
     });
 
     const res = await request(app).get('/api/cities/lookup?name=Riverside').expect(200);
@@ -453,8 +588,20 @@ describe('ranking below the ambiguity decision', () => {
     const nowhere = await seedCountry('t-ctry-xx', 'XX', 'Elsewhere');
     const north = await seedRegion('t-rg-a-n', nowhere, 'North');
     const south = await seedRegion('t-rg-b-s', nowhere, 'South');
-    const quiet = await seedCity({ id: 't-city-a-quiet', countryId: nowhere, regionId: north, name: 'Lakeview', propertiesCount: 1 });
-    const busy = await seedCity({ id: 't-city-b-busy', countryId: nowhere, regionId: south, name: 'Lakeview', propertiesCount: 900 });
+    const quiet = await seedCity({
+      id: 't-city-a-quiet',
+      countryId: nowhere,
+      regionId: north,
+      name: 'Lakeview',
+      propertiesCount: 1,
+    });
+    const busy = await seedCity({
+      id: 't-city-b-busy',
+      countryId: nowhere,
+      regionId: south,
+      name: 'Lakeview',
+      propertiesCount: 900,
+    });
 
     const res = await request(app).get('/api/cities/lookup?name=Lakeview').expect(200);
 
@@ -475,7 +622,12 @@ describe('slugs and old URLs', () => {
   it('resolves a bare slug when only one city carries it', async () => {
     const spain = await seedCountry('t-ctry-es', 'ES', 'Spain');
     const andalusia = await seedRegion('t-rg-and', spain, 'Andalusia');
-    const malaga = await seedCity({ id: 't-city-malaga', countryId: spain, regionId: andalusia, name: 'Málaga' });
+    const malaga = await seedCity({
+      id: 't-city-malaga',
+      countryId: spain,
+      regionId: andalusia,
+      name: 'Málaga',
+    });
 
     const res = await request(app).get('/api/cities/lookup?city=malaga').expect(200);
 
@@ -490,7 +642,11 @@ describe('slugs and old URLs', () => {
     const res = await request(app).get('/api/cities/lookup?city=barcelona').expect(200);
 
     expect(res.body.data.status).toBe('ambiguous');
-    expect(candidatesOf(res.body).map((c) => c.id).sort()).toEqual([es, ve].sort());
+    expect(
+      candidatesOf(res.body)
+        .map((c) => c.id)
+        .sort(),
+    ).toEqual([es, ve].sort());
   });
 
   it('resolves the context-carrying form, in all three qualified spellings', async () => {
@@ -512,7 +668,12 @@ describe('slugs and old URLs', () => {
   it('matches an accented name through its unaccented slug', async () => {
     const spain = await seedCountry('t-ctry-es', 'ES', 'Spain');
     const castile = await seedRegion('t-rg-cyl', spain, 'Castile and León');
-    const avila = await seedCity({ id: 't-city-avila', countryId: spain, regionId: castile, name: 'Ávila' });
+    const avila = await seedCity({
+      id: 't-city-avila',
+      countryId: spain,
+      regionId: castile,
+      name: 'Ávila',
+    });
 
     const res = await request(app).get('/api/cities/lookup?city=avila').expect(200);
 
@@ -542,7 +703,13 @@ describe('identity', () => {
   it('never returns an inactive city', async () => {
     const spain = await seedCountry('t-ctry-es', 'ES', 'Spain');
     const catalonia = await seedRegion('t-rg-cat', spain, 'Catalonia');
-    await seedCity({ id: 't-city-hidden', countryId: spain, regionId: catalonia, name: 'Hidden', isActive: false });
+    await seedCity({
+      id: 't-city-hidden',
+      countryId: spain,
+      regionId: catalonia,
+      name: 'Hidden',
+      isActive: false,
+    });
 
     await request(app).get('/api/cities/lookup?name=Hidden').expect(404);
   });
@@ -557,7 +724,9 @@ describe('validation', () => {
   it('400s on a limit outside the allowed range', async () => {
     await seedTwoBarcelonas();
     for (const limit of ['0', '26', '2.5', 'many']) {
-      const res = await request(app).get(`/api/cities/lookup?name=Barcelona&limit=${limit}`).expect(400);
+      const res = await request(app)
+        .get(`/api/cities/lookup?name=Barcelona&limit=${limit}`)
+        .expect(400);
       expect(res.body.code).toBe('INVALID_PLACE_QUERY');
     }
   });

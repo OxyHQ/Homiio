@@ -28,7 +28,11 @@ import type {
 } from '../../../types';
 import { createFetchRuntime } from '../../../runtime';
 import { ChallengeError, fetchListingViaLadder } from '../../../strategy';
-import { defaultProviderMetrics, type ProviderMetricsReader, type ProviderMetricsSink } from '../../../metrics';
+import {
+  defaultProviderMetrics,
+  type ProviderMetricsReader,
+  type ProviderMetricsSink,
+} from '../../../metrics';
 import { providerMaxSearchPages } from '../../../discoverLimits';
 import { DEFAULT_GB_CITIES } from '../../../parse/defaultMarketCities';
 import { isGbPortalChallenge } from '../challenge';
@@ -192,7 +196,10 @@ export class OpenRentProvider implements ListingProvider {
       address,
       type: resolveGbPropertyType(listing.propertyType),
       offerings: [OfferingType.LONG_TERM_RENT],
-      longTermRent: { monthlyAmount: listing.priceAmount, currency: listing.priceCurrency ?? 'GBP' },
+      longTermRent: {
+        monthlyAmount: listing.priceAmount,
+        currency: listing.priceCurrency ?? 'GBP',
+      },
       remoteImages: toRemoteImages(listing.images),
       status: 'published',
     };

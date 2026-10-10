@@ -27,17 +27,10 @@ export const PLUSVALIA_SITE: NaventSiteConfig = {
   countryCode: 'EC',
   defaultCity: 'Quito',
   defaultCurrency: 'USD',
-  hrefRe:
-    /href="((?:https:\/\/www\.plusvalia\.com)?\/propiedades\/[^"]+-(\d{5,})\.html)"/i,
+  hrefRe: /href="((?:https:\/\/www\.plusvalia\.com)?\/propiedades\/[^"]+-(\d{5,})\.html)"/i,
 };
 
-const DEFAULT_CITIES: readonly string[] = [
-  'quito',
-  'guayaquil',
-  'cuenca',
-  'manta',
-  'ambato',
-];
+const DEFAULT_CITIES: readonly string[] = ['quito', 'guayaquil', 'cuenca', 'manta', 'ambato'];
 
 export interface PlusvaliaProviderOptions {
   runtime?: FetchRuntime;

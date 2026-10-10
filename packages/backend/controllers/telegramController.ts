@@ -82,12 +82,11 @@ class TelegramController {
    */
   async getBotStatus(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-
       const status: TelegramBotStatus = {
         enabled: config.telegram.enabled,
         initialized: false, // We'll determine this by trying to get bot info
         botToken: config.telegram.botToken ? '***CONFIGURED***' : 'NOT_CONFIGURED',
-        groupMappings: telegramService.getGroupsSummary()
+        groupMappings: telegramService.getGroupsSummary(),
       };
 
       // Try to get bot info to determine if initialized
@@ -100,7 +99,7 @@ class TelegramController {
           firstName: botInfo.first_name,
           canJoinGroups: botInfo.can_join_groups,
           canReadAllGroupMessages: botInfo.can_read_all_group_messages,
-          supportsInlineQueries: botInfo.supports_inline_queries
+          supportsInlineQueries: botInfo.supports_inline_queries,
         };
       } catch (error) {
         status.initialized = false;
@@ -127,15 +126,13 @@ class TelegramController {
       const success = await telegramService.sendTestMessage(groupId, message, true, topicId);
 
       if (success) {
-        res.json(successResponse(
-          { groupId, topicId, sent: true },
-          'Test message sent successfully'
-        ));
+        res.json(
+          successResponse({ groupId, topicId, sent: true }, 'Test message sent successfully'),
+        );
       } else {
-        res.status(500).json(successResponse(
-          { groupId, topicId, sent: false },
-          'Failed to send test message'
-        ));
+        res
+          .status(500)
+          .json(successResponse({ groupId, topicId, sent: false }, 'Failed to send test message'));
       }
     } catch (error) {
       next(error);
@@ -161,10 +158,16 @@ class TelegramController {
       const geo = await resolveAddressDisplay(property.address as AddressGeoLike);
       const success = await telegramService.sendPropertyNotification(property);
 
-      res.status(success ? 200 : 500).json(successResponse(
-        { propertyId, city: geo.city, sent: success },
-        success ? 'Property notification sent successfully' : 'Failed to send property notification'
-      ));
+      res
+        .status(success ? 200 : 500)
+        .json(
+          successResponse(
+            { propertyId, city: geo.city, sent: success },
+            success
+              ? 'Property notification sent successfully'
+              : 'Failed to send property notification',
+          ),
+        );
     } catch (error) {
       if (errorName(error) === 'CastError') {
         return next(new AppError('Invalid property ID', 400, 'INVALID_PROPERTY_ID'));
@@ -176,7 +179,11 @@ class TelegramController {
   /**
    * Send bulk notifications for multiple properties
    */
-  async sendBulkNotifications(req: Request, res: Response, next: NextFunction): Promise<void | Response> {
+  async sendBulkNotifications(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void | Response> {
     try {
       const { propertyIds, filters } = req.body;
 
@@ -185,7 +192,9 @@ class TelegramController {
       if (propertyIds && propertyIds.length > 0) {
         // Send notifications for specific properties
         const ids = (propertyIds as unknown[]).map(String);
-        notifiable = (await findProperties({ where: idIn(ids) })).map((listing) => serializeProperty(listing, 'public'));
+        notifiable = (await findProperties({ where: idIn(ids) })).map((listing) =>
+          serializeProperty(listing, 'public'),
+        );
       } else if (filters) {
         const conditions: (SQL | undefined)[] = [];
 
@@ -196,17 +205,21 @@ class TelegramController {
         if (filters.city) {
           const cityId = await resolveCityId(String(filters.city));
           if (!cityId) {
-            return res.json(successResponse(
-              { total: 0, successful: 0, failed: 0 },
-              'No properties found in specified city'
-            ));
+            return res.json(
+              successResponse(
+                { total: 0, successful: 0, failed: 0 },
+                'No properties found in specified city',
+              ),
+            );
           }
           conditions.push(inCity(cityId));
         }
 
         if (filters.type) conditions.push(typeIn([String(filters.type)]));
         if (filters.createdAfter) {
-          conditions.push(inDateRange(properties.createdAt, new Date(String(filters.createdAfter)), undefined));
+          conditions.push(
+            inDateRange(properties.createdAt, new Date(String(filters.createdAfter)), undefined),
+          );
         }
         if (filters.status) conditions.push(statusIs(String(filters.status)));
 
@@ -214,14 +227,18 @@ class TelegramController {
           await findProperties({ where: allOf(conditions), limit: BULK_NOTIFICATION_LIMIT })
         ).map((listing) => serializeProperty(listing, 'public'));
       } else {
-        return next(new AppError('Either propertyIds or filters must be provided', 400, 'MISSING_PARAMETERS'));
+        return next(
+          new AppError('Either propertyIds or filters must be provided', 400, 'MISSING_PARAMETERS'),
+        );
       }
 
       if (notifiable.length === 0) {
-        return res.json(successResponse(
-          { total: 0, successful: 0, failed: 0 },
-          'No properties found matching criteria'
-        ));
+        return res.json(
+          successResponse(
+            { total: 0, successful: 0, failed: 0 },
+            'No properties found matching criteria',
+          ),
+        );
       }
 
       const results = await telegramService.sendBulkNotifications(notifiable);
@@ -238,16 +255,21 @@ class TelegramController {
   async getGroupMapping(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { city } = req.params;
-      
+
       const groupConfig = telegramService.getDefaultGroup();
       const groupsSummary = telegramService.getGroupsSummary();
 
-      res.json(successResponse({
-        city,
-        groupId: groupConfig?.id,
-        configured: !!groupConfig?.id,
-        allMappings: groupsSummary
-      }, 'Group mapping retrieved successfully'));
+      res.json(
+        successResponse(
+          {
+            city,
+            groupId: groupConfig?.id,
+            configured: !!groupConfig?.id,
+            allMappings: groupsSummary,
+          },
+          'Group mapping retrieved successfully',
+        ),
+      );
     } catch (error) {
       next(error);
     }
@@ -259,7 +281,7 @@ class TelegramController {
   async testLocationSupport(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const testResults = telegramService.testLocationSupport();
-      
+
       res.json(successResponse(testResults, 'Location support test completed'));
     } catch (error) {
       next(error);
@@ -282,13 +304,18 @@ class TelegramController {
       const isSupported = telegramService.isLocationSupported(cityStr, countryStr);
       const topicId = telegramService.getTopicIdForLocation(cityStr, countryStr);
 
-      res.json(successResponse({
-        city: cityStr,
-        country: countryStr,
-        isSupported,
-        topicId,
-        locationKey: `${cityStr}, ${countryStr}`
-      }, 'Location support check completed'));
+      res.json(
+        successResponse(
+          {
+            city: cityStr,
+            country: countryStr,
+            isSupported,
+            topicId,
+            locationKey: `${cityStr}, ${countryStr}`,
+          },
+          'Location support check completed',
+        ),
+      );
     } catch (error) {
       next(error);
     }
@@ -297,7 +324,11 @@ class TelegramController {
   /**
    * Test notifications for recent properties
    */
-  async testRecentProperties(req: Request, res: Response, next: NextFunction): Promise<void | Response> {
+  async testRecentProperties(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void | Response> {
     try {
       const { limit = 5, hours = 24 } = req.query;
       const limitNum = parseInt(String(limit), 10) || 5;
@@ -331,30 +362,39 @@ class TelegramController {
       ).map((listing) => serializeProperty(listing, 'public'));
 
       if (recentProperties.length === 0) {
-        return res.json(successResponse(
-          {
-            found: 0,
-            sent: 0,
-            message: `No properties created in the last ${hoursNum} hours`
-          },
-          'No recent properties to test with'
-        ));
+        return res.json(
+          successResponse(
+            {
+              found: 0,
+              sent: 0,
+              message: `No properties created in the last ${hoursNum} hours`,
+            },
+            'No recent properties to test with',
+          ),
+        );
       }
 
       const results = await telegramService.sendBulkNotifications(recentProperties);
 
-      const summaries = await Promise.all(recentProperties.map(async (listing) => ({
-        id: listing.id,
-        city: (await resolveAddressDisplay(listing.address as AddressGeoLike)).city,
-        type: listing.type,
-        createdAt: listing.createdAt,
-      })));
+      const summaries = await Promise.all(
+        recentProperties.map(async (listing) => ({
+          id: listing.id,
+          city: (await resolveAddressDisplay(listing.address as AddressGeoLike)).city,
+          type: listing.type,
+          createdAt: listing.createdAt,
+        })),
+      );
 
-      res.json(successResponse({
-        ...results,
-        timeframe: `${hoursNum} hours`,
-        properties: summaries,
-      }, 'Test notifications sent for recent properties'));
+      res.json(
+        successResponse(
+          {
+            ...results,
+            timeframe: `${hoursNum} hours`,
+            properties: summaries,
+          },
+          'Test notifications sent for recent properties',
+        ),
+      );
     } catch (error) {
       next(error);
     }

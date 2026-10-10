@@ -71,9 +71,7 @@ export const SindiSavedHomes: React.FC<SindiSavedHomesProps> = ({ folderId }) =>
 
   if (inFolder.length === 0) {
     return (
-      <P style={styles.note}>
-        {folderId ? t('sindi.saved.emptyFolder') : t('sindi.saved.empty')}
-      </P>
+      <P style={styles.note}>{folderId ? t('sindi.saved.emptyFolder') : t('sindi.saved.empty')}</P>
     );
   }
 

@@ -28,8 +28,7 @@ export const METROCUADRADO_SITE: NaventSiteConfig = {
   countryCode: 'CO',
   defaultCity: 'Bogotá D.C.',
   defaultCurrency: 'COP',
-  hrefRe:
-    /href="((?:https:\/\/www\.metrocuadrado\.com)?\/propiedades\/[^"]+-(\d{5,})\.html)"/i,
+  hrefRe: /href="((?:https:\/\/www\.metrocuadrado\.com)?\/propiedades\/[^"]+-(\d{5,})\.html)"/i,
 };
 
 const DEFAULT_CITIES: readonly string[] = [

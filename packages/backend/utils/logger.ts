@@ -20,11 +20,11 @@ export class Logger {
   private formatMessage(level: string, message: string, data?: any): string {
     const timestamp = new Date().toISOString();
     const baseMessage = `[${timestamp}] [${level.toUpperCase()}] [${this.context}] ${message}`;
-    
+
     if (data) {
       return `${baseMessage} ${JSON.stringify(data, null, 2)}`;
     }
-    
+
     return baseMessage;
   }
 
@@ -42,11 +42,13 @@ export class Logger {
 
   error(message: string, error?: any): void {
     if (this.shouldLog('error')) {
-      const errorData = error ? {
-        message: error.message,
-        stack: error.stack,
-        ...error
-      } : undefined;
+      const errorData = error
+        ? {
+            message: error.message,
+            stack: error.stack,
+            ...error,
+          }
+        : undefined;
       console.error(this.formatMessage('error', message, errorData));
     }
   }

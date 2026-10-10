@@ -101,15 +101,18 @@ describe('place POI cache', () => {
   });
 
   it('REPLACES categories on refresh rather than appending or leaving them', async () => {
-    await write(categories([{ key: 'pharmacy', count: 3 }, { key: 'school', count: 9 }]));
+    await write(
+      categories([
+        { key: 'pharmacy', count: 3 },
+        { key: 'school', count: 9 },
+      ]),
+    );
     await write(categories([{ key: 'pharmacy', count: 5 }]));
 
     const cell = await findCachedCell(CELL_KEY);
     // `school` is gone because the new snapshot did not report it — not left at
     // its old count, which is what a diff-style write would do.
-    expect(cell?.categories).toEqual([
-      { key: 'pharmacy', present: true, count: 5, nearestM: 100 },
-    ]);
+    expect(cell?.categories).toEqual([{ key: 'pharmacy', present: true, count: 5, nearestM: 100 }]);
 
     // And one cell, one row: the upsert converges rather than duplicating.
     expect(await counts()).toEqual({ cells: 1, categoryRows: 1 });

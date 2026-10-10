@@ -46,13 +46,9 @@ export const ReservationCard: React.FC<ReservationCardProps> = ({
   };
 
   const guestLabel =
-    reservation.guestCount === 1
-      ? t('reservations.card.guest')
-      : t('reservations.card.guests');
+    reservation.guestCount === 1 ? t('reservations.card.guest') : t('reservations.card.guests');
   const nightLabel =
-    reservation.nights === 1
-      ? t('reservations.card.night')
-      : t('reservations.card.nights');
+    reservation.nights === 1 ? t('reservations.card.night') : t('reservations.card.nights');
 
   return (
     <Card radius="radius-16" appearance="outline">
@@ -62,7 +58,9 @@ export const ReservationCard: React.FC<ReservationCardProps> = ({
         accessibilityRole="button"
         accessibilityLabel={t('reservations.card.accessibility', { id: reservation.id })}
       >
-        <View style={styles.thumb}><ThumbnailImage source={imageSource} /></View>
+        <View style={styles.thumb}>
+          <ThumbnailImage source={imageSource} />
+        </View>
         <View style={styles.body}>
           <View style={styles.headerRow}>
             <BloomText className="flex-1 text-[15px] font-bold text-foreground" numberOfLines={1}>

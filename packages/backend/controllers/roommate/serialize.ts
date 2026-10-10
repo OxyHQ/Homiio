@@ -29,9 +29,10 @@ const USERS_BY_IDS_CAP = 100;
 export async function hydrateDisplayNames(
   oxyUserIds: ReadonlyArray<string | undefined | null>,
 ): Promise<Map<string, string>> {
-  const unique = Array.from(
-    new Set(oxyUserIds.filter((id): id is string => Boolean(id))),
-  ).slice(0, USERS_BY_IDS_CAP);
+  const unique = Array.from(new Set(oxyUserIds.filter((id): id is string => Boolean(id)))).slice(
+    0,
+    USERS_BY_IDS_CAP,
+  );
 
   const result = new Map<string, string>();
   if (unique.length === 0) {

@@ -23,7 +23,11 @@ import type {
   RawListing,
 } from '../../../types';
 import { createFetchRuntime } from '../../../runtime';
-import { defaultProviderMetrics, type ProviderMetricsReader, type ProviderMetricsSink } from '../../../metrics';
+import {
+  defaultProviderMetrics,
+  type ProviderMetricsReader,
+  type ProviderMetricsSink,
+} from '../../../metrics';
 import { SELOGER_BASE_URL } from './fixtures';
 import {
   parseSelogerDetail,

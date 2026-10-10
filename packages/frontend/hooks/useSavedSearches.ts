@@ -1,8 +1,5 @@
 import { useCallback, useMemo } from 'react';
-import {
-  type SavedSearch,
-  type SavedSearchFilters,
-} from '@/store/savedSearchesStore';
+import { type SavedSearch, type SavedSearchFilters } from '@/store/savedSearchesStore';
 import { toast } from '@oxy.so/bloom/toast';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -18,7 +15,6 @@ import {
   type WatchAlertStatus,
   type WatchCadence,
 } from '@homiio/shared-types';
-
 
 /**
  * Stable React Query key for the authenticated user's saved searches. Mutations
@@ -128,7 +124,10 @@ const extractSearchList = (payload: SavedSearchPayload): RawSavedSearch[] => {
   return payload?.searches ?? [];
 };
 
-const normalizeSearch = (raw: RawSavedSearch, defaults: Partial<SavedSearch> = {}): SavedSearch => ({
+const normalizeSearch = (
+  raw: RawSavedSearch,
+  defaults: Partial<SavedSearch> = {},
+): SavedSearch => ({
   id: raw.id ?? defaults.id ?? '',
   name: raw.name ?? raw.title ?? defaults.name ?? '',
   query: raw.query ?? raw.search ?? defaults.query ?? '',
@@ -138,13 +137,14 @@ const normalizeSearch = (raw: RawSavedSearch, defaults: Partial<SavedSearch> = {
   // does not recognise must land on the cautious side: the cost of a spurious
   // "confirm where" prompt is one tap, and the cost of the opposite default is
   // a saved alert quietly running against the whole planet.
-  locationStatus:
-    raw.locationStatus ?? (raw.location ? 'resolved' : 'needs_confirmation'),
+  locationStatus: raw.locationStatus ?? (raw.location ? 'resolved' : 'needs_confirmation'),
   filters: raw.filters ?? raw.criteria ?? defaults.filters,
   notifications:
     typeof raw.notifications === 'boolean'
       ? raw.notifications
-      : Boolean(raw.notificationsEnabled ?? raw.emailNotifications ?? raw.pushNotifications ?? false),
+      : Boolean(
+          raw.notificationsEnabled ?? raw.emailNotifications ?? raw.pushNotifications ?? false,
+        ),
   notificationsEnabled:
     typeof raw.notificationsEnabled === 'boolean'
       ? raw.notificationsEnabled
@@ -415,9 +415,7 @@ export const useSavedSearches = (): UseSavedSearches => {
             ? (error.response as { message?: unknown })
             : undefined;
         const responseMessage =
-          typeof response?.message === 'string'
-            ? response.message
-            : t('search.duplicateName');
+          typeof response?.message === 'string' ? response.message : t('search.duplicateName');
         toast.error(responseMessage + '. ' + t('search.tryDifferentName'));
         return;
       }
@@ -651,7 +649,8 @@ export const useSavedSearches = (): UseSavedSearches => {
   );
 
   const getSearchById = useCallback(
-    (searchId: string): SavedSearch | undefined => searches.find((search) => search.id === searchId),
+    (searchId: string): SavedSearch | undefined =>
+      searches.find((search) => search.id === searchId),
     [searches],
   );
 

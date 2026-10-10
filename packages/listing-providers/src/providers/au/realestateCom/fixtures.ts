@@ -87,10 +87,7 @@ const LISTING_SALE = {
   },
 };
 
-function buildArgonautScript(
-  experienceKey: string,
-  innerData: Record<string, unknown>,
-): string {
+function buildArgonautScript(experienceKey: string, innerData: Record<string, unknown>): string {
   const cachePayload = JSON.stringify({
     'query-hash-1': { data: JSON.stringify(innerData) },
   });

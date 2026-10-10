@@ -157,7 +157,7 @@ describe('property catalogue reads (Postgres)', () => {
 
       const res = await request(buildApp()).get(
         `/properties/radius?longitude=${BARCELONA.longitude}&latitude=${BARCELONA.latitude}` +
-        `&radius=${RADIUS_BETWEEN_MADRID_AND_SEVILLE}&limit=50`,
+          `&radius=${RADIUS_BETWEEN_MADRID_AND_SEVILLE}&limit=50`,
       );
 
       expect(res.status).toBe(200);
@@ -263,8 +263,17 @@ describe('property catalogue reads (Postgres)', () => {
 
     it('carries photos in order, with the full variant map', async () => {
       const seeded = await seedListingAt({ city: 'Barcelona', ...BARCELONA });
-      await seedPropertyImage({ propertyId: seeded.propertyId, order: 1, url: 'https://cdn.test/b.webp' });
-      await seedPropertyImage({ propertyId: seeded.propertyId, order: 0, url: 'https://cdn.test/a.webp', isPrimary: true });
+      await seedPropertyImage({
+        propertyId: seeded.propertyId,
+        order: 1,
+        url: 'https://cdn.test/b.webp',
+      });
+      await seedPropertyImage({
+        propertyId: seeded.propertyId,
+        order: 0,
+        url: 'https://cdn.test/a.webp',
+        isPrimary: true,
+      });
 
       const res = await request(buildApp()).get(`/properties/${seeded.propertyId}`);
 

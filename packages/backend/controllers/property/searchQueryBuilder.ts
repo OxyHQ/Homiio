@@ -334,7 +334,13 @@ export function parseBoundingBox(query: Record<string, RawQueryValue>): Bounding
 
   const provided = [swLat, swLng, neLat, neLng].filter((v) => v !== undefined).length;
   if (provided === 0) return undefined;
-  if (provided !== 4 || swLat === undefined || swLng === undefined || neLat === undefined || neLng === undefined) {
+  if (
+    provided !== 4 ||
+    swLat === undefined ||
+    swLng === undefined ||
+    neLat === undefined ||
+    neLng === undefined
+  ) {
     throw new GeoParamError('A bounding box requires swLat, swLng, neLat and neLng');
   }
 
@@ -466,9 +472,11 @@ export interface ParsedSearchParams {
  * need an async lookup (a place name resolved to a canonical id) and this
  * function stays pure so it can be unit tested with no database at all.
  */
-export function buildSearchPlan(
-  query: Record<string, RawQueryValue>
-): { conditions: SQL[]; price: PriceBoundPlan | null; params: ParsedSearchParams } {
+export function buildSearchPlan(query: Record<string, RawQueryValue>): {
+  conditions: SQL[];
+  price: PriceBoundPlan | null;
+  params: ParsedSearchParams;
+} {
   const conditions: SQL[] = [];
 
   // Public search: never surface soft-deleted (archived) listings, nor ones a
@@ -480,15 +488,16 @@ export function buildSearchPlan(
   conditions.push(...statusConditions(asString(query.status)));
 
   // --- Property type (one or many) ---
-  const typeCondition = typeIn(parseList(query.propertyType ?? query.type).filter((t) => PROPERTY_TYPE_VALUES.has(t)));
+  const typeCondition = typeIn(
+    parseList(query.propertyType ?? query.type).filter((t) => PROPERTY_TYPE_VALUES.has(t)),
+  );
   if (typeCondition) conditions.push(typeCondition);
 
   // --- Offering (long_term_rent / short_term_rent / sale / exchange). Parsed
   //     early because the price-range column below is resolved from it. ---
   const offeringRaw = asString(query.offering)?.toLowerCase();
-  const offering = offeringRaw && OFFERING_VALUES.has(offeringRaw)
-    ? (offeringRaw as OfferingType)
-    : undefined;
+  const offering =
+    offeringRaw && OFFERING_VALUES.has(offeringRaw) ? (offeringRaw as OfferingType) : undefined;
   if (offering !== undefined) {
     conditions.push(hasOffering(offering));
   }
@@ -524,10 +533,7 @@ export function buildSearchPlan(
   // legacy misnomer — and "unknown" is stored as `0`, so a maximum has to
   // exclude it or "up to 120 m²" matches every listing whose area nobody
   // filled in. Both rules live in `areaInRange`; see its header.
-  const areaRange = areaInRange(
-    parseFloatParam(query.sizeMin),
-    parseFloatParam(query.sizeMax),
-  );
+  const areaRange = areaInRange(parseFloatParam(query.sizeMin), parseFloatParam(query.sizeMax));
   if (areaRange) conditions.push(areaRange);
 
   // --- Date-range availability ---
@@ -614,7 +620,8 @@ export function buildSearchPlan(
   const eco = parseBoolParam(query.eco);
   if (eco !== undefined) conditions.push(booleanIs(properties.isEcoFriendly, eco));
   const instantBook = parseBoolParam(query.instantBook);
-  if (instantBook !== undefined) conditions.push(booleanIs(properties.shortTermRentInstantBook, instantBook));
+  if (instantBook !== undefined)
+    conditions.push(booleanIs(properties.shortTermRentInstantBook, instantBook));
   const petFriendly = parseBoolParam(query.petFriendly);
   if (petFriendly !== undefined) conditions.push(booleanIs(properties.petFriendly, petFriendly));
   // A lift is the other half of the floor question — "third floor" and "third
@@ -645,10 +652,15 @@ export function buildSearchPlan(
   // the mode filter is gated on `offering === EXCHANGE`. A `both` listing
   // matches a swap or a host request.
   const exchangeMode = asString(query.exchangeMode)?.toLowerCase();
-  if (exchangeMode && EXCHANGE_MODE_VALUES.has(exchangeMode) && offering === OfferingType.EXCHANGE) {
-    const condition = exchangeMode === ExchangeMode.BOTH
-      ? exchangeModeIn([ExchangeMode.BOTH])
-      : exchangeModeIn([exchangeMode, ExchangeMode.BOTH]);
+  if (
+    exchangeMode &&
+    EXCHANGE_MODE_VALUES.has(exchangeMode) &&
+    offering === OfferingType.EXCHANGE
+  ) {
+    const condition =
+      exchangeMode === ExchangeMode.BOTH
+        ? exchangeModeIn([ExchangeMode.BOTH])
+        : exchangeModeIn([exchangeMode, ExchangeMode.BOTH]);
     if (condition) conditions.push(condition);
   }
 
@@ -663,14 +675,17 @@ export function buildSearchPlan(
 
   // --- Sorting ---
   const requestedSort = asString(query.sortBy)?.toLowerCase();
-  const sortField: SortField = requestedSort && SORT_FIELDS.has(requestedSort)
-    ? (requestedSort as SortField)
-    : SORT_CREATED_AT;
-  const sortDirection: SortDirection = asString(query.sortOrder)?.toLowerCase() === SORT_ASC ? SORT_ASC : SORT_DESC;
+  const sortField: SortField =
+    requestedSort && SORT_FIELDS.has(requestedSort)
+      ? (requestedSort as SortField)
+      : SORT_CREATED_AT;
+  const sortDirection: SortDirection =
+    asString(query.sortOrder)?.toLowerCase() === SORT_ASC ? SORT_ASC : SORT_DESC;
 
-  const exchangeModeParam = exchangeMode && EXCHANGE_MODE_VALUES.has(exchangeMode)
-    ? (exchangeMode as ExchangeMode)
-    : undefined;
+  const exchangeModeParam =
+    exchangeMode && EXCHANGE_MODE_VALUES.has(exchangeMode)
+      ? (exchangeMode as ExchangeMode)
+      : undefined;
 
   // A request may name AT MOST ONE authoritative geographic scope. Sending
   // both a box and a centre+radius used to be resolved by the controller
@@ -746,7 +761,7 @@ export function buildSearchPlan(
       : {
           priceColumn: saleQuery
             ? properties.salePrice
-            : priceColumnForOffering(offering) ?? DEFAULT_PRICE_COLUMN,
+            : (priceColumnForOffering(offering) ?? DEFAULT_PRICE_COLUMN),
           currencyColumn: currencyColumnForOffering(offering),
           min: boundMin,
           max: boundMax,

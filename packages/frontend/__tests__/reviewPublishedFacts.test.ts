@@ -96,7 +96,11 @@ describe('reviewAuthorDisplay', () => {
 
 describe('reviewRentLabel', () => {
   it('renders the band on somebody else’s review, where there is no exact figure', () => {
-    const label = reviewRentLabel(review({ priceBand: { min: 1250, max: 1500, currency: 'EUR' } }), 'en', t);
+    const label = reviewRentLabel(
+      review({ priceBand: { min: 1250, max: 1500, currency: 'EUR' } }),
+      'en',
+      t,
+    );
     expect(label).toContain('reviews.card.perMonthBand');
     // Both ends of the band, and no exact rent anywhere in the string.
     expect(label).toContain('1,250');
@@ -184,8 +188,15 @@ describe('placeReviewStats reads the published author handle', () => {
   });
 
   it('withholds them when five anonymous reviews collapse to one author', () => {
-    const anonymous = () => review({ authorIdentity: ReviewAuthorIdentity.VERIFIED_ANONYMOUS_RESIDENT });
-    const stats = placeReviewStats([anonymous(), anonymous(), anonymous(), anonymous(), anonymous()]);
+    const anonymous = () =>
+      review({ authorIdentity: ReviewAuthorIdentity.VERIFIED_ANONYMOUS_RESIDENT });
+    const stats = placeReviewStats([
+      anonymous(),
+      anonymous(),
+      anonymous(),
+      anonymous(),
+      anonymous(),
+    ]);
     expect(stats.totalReviews).toBe(5);
     expect(stats.recommendRate).toBeUndefined();
   });

@@ -35,7 +35,14 @@ describe('discoverPriorityFor', () => {
   });
 
   it('aligns every provider at the same rank (round-robin: city-0 before any city-1)', () => {
-    const providers = ['immobilienscout24', 'immoweb', 'blueground', 'fotocasa', 'habitaclia', 'pisos'];
+    const providers = [
+      'immobilienscout24',
+      'immoweb',
+      'blueground',
+      'fotocasa',
+      'habitaclia',
+      'pisos',
+    ];
     for (const rank of [0, 1, 7, 137]) {
       const priorities = providers.map((provider) => discoverPriorityFor(provider, rank));
       expect(new Set(priorities).size).toBe(1);
@@ -70,7 +77,9 @@ describe('discoverPriorityFor', () => {
   it('clamps pathological ranks so priority never approaches PRIORITY_LIMIT', () => {
     const capped = discoverPriorityFor('fotocasa', FETCH_RANK_CAP);
     expect(discoverPriorityFor('fotocasa', FETCH_RANK_CAP + 1)).toBe(capped);
-    expect(discoverPriorityFor('fotocasa', Number.MAX_SAFE_INTEGER)).toBeLessThan(BULLMQ_PRIORITY_LIMIT);
+    expect(discoverPriorityFor('fotocasa', Number.MAX_SAFE_INTEGER)).toBeLessThan(
+      BULLMQ_PRIORITY_LIMIT,
+    );
   });
 
   it('defends against negative and fractional ranks', () => {

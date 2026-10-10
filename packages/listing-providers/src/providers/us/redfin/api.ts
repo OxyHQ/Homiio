@@ -163,7 +163,8 @@ export function parseRedfinGisResponse(body: string): RedfinSearchRef[] {
   } catch {
     return [];
   }
-  if (!isRecord(parsed) || !isRecord(parsed.payload) || !Array.isArray(parsed.payload.homes)) return [];
+  if (!isRecord(parsed) || !isRecord(parsed.payload) || !Array.isArray(parsed.payload.homes))
+    return [];
   const out: RedfinSearchRef[] = [];
   for (const entry of parsed.payload.homes) {
     if (!isRecord(entry)) continue;
@@ -208,4 +209,5 @@ export function isRedfinStingrayChallenge(body: string): boolean {
 }
 
 /** CSS selector for Redfin city search warm-up. */
-export const REDFIN_CONTENT_SELECTOR = '#results-display, .HomeCardsContainer, .MapAndListViewSection';
+export const REDFIN_CONTENT_SELECTOR =
+  '#results-display, .HomeCardsContainer, .MapAndListViewSection';

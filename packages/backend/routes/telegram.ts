@@ -8,26 +8,26 @@ import express from 'express';
 import { asyncHandler } from '../middlewares';
 const { telegramController } = controllers;
 
-export default function() {
+export default function () {
   const router = express.Router();
 
   // Status and configuration
   router.get('/status', asyncHandler(telegramController.getBotStatus));
-  
+
   // Testing endpoints
   router.post('/test-message', asyncHandler(telegramController.sendTestMessage));
   router.post('/test-location-support', asyncHandler(telegramController.testLocationSupport));
   router.get('/check-location-support', asyncHandler(telegramController.checkLocationSupport));
-  
+
   // Property notifications
   router.post('/notify/:propertyId', asyncHandler(telegramController.sendPropertyNotification));
   router.post('/bulk-notify', asyncHandler(telegramController.sendBulkNotifications));
-  
+
   // Group mapping
   router.get('/group-mapping/:city', asyncHandler(telegramController.getGroupMapping));
-  
+
   // Test recent properties
   router.get('/test-recent-properties', asyncHandler(telegramController.testRecentProperties));
 
   return router;
-}; 
+}

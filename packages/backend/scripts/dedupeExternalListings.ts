@@ -33,7 +33,6 @@ import {
   type DedupComparable,
 } from '../services/ingestion/dedupeFingerprint';
 
-
 // `--apply` (CLI) or `DEDUP_APPLY=1` (env, for the argv-less ECS `node -e` boot).
 const APPLY = process.argv.includes('--apply') || process.env.DEDUP_APPLY === '1';
 
@@ -94,7 +93,9 @@ function keepOrder(a: Row, b: Row): number {
 }
 
 function blockKey(c: DedupComparable): string {
-  return [c.type, c.cityId, c.offering, c.amount, c.currency, c.bedrooms, c.squareFootage].join('|');
+  return [c.type, c.cityId, c.offering, c.amount, c.currency, c.bedrooms, c.squareFootage].join(
+    '|',
+  );
 }
 
 /**

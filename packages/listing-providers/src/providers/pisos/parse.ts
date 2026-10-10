@@ -288,7 +288,9 @@ function decodeHtmlEntities(value: string): string {
   return value
     .replace(/&amp;/g, '&')
     .replace(/&quot;/g, '"')
-    .replace(/&#x([0-9a-f]{1,6});/gi, (_, hex: string) => String.fromCharCode(Number.parseInt(hex, 16)))
+    .replace(/&#x([0-9a-f]{1,6});/gi, (_, hex: string) =>
+      String.fromCharCode(Number.parseInt(hex, 16)),
+    )
     .replace(/&#(\d{1,7});/g, (_, dec: string) => String.fromCharCode(Number.parseInt(dec, 10)));
 }
 
@@ -347,7 +349,9 @@ function priceFromPisosTitle(title: string | undefined): number | undefined {
 }
 
 /** Detail pages embed map coords in `locationmap` data-params (JSON-LD is search-only). */
-export function readPisosLocationMapCoordinates(html: string): { lat: number; lng: number } | undefined {
+export function readPisosLocationMapCoordinates(
+  html: string,
+): { lat: number; lng: number } | undefined {
   const match = html.match(/locationmap[^>]*data-params="([^"]+)"/i);
   if (!match) return undefined;
   const params = decodeHtmlEntities(match[1]);
@@ -422,14 +426,16 @@ function readPisosFloor(dataVar: Record<string, unknown> | undefined): number | 
 function readPisosYearBuilt(dataVar: Record<string, unknown> | undefined): number | undefined {
   const year = asNumber(dataVar?.anioConstruccion) ?? asNumber(dataVar?.antiguedad);
   const maxYear = new Date().getFullYear() + 2;
-  if (year === undefined || !Number.isInteger(year) || year < 1800 || year > maxYear) return undefined;
+  if (year === undefined || !Number.isInteger(year) || year < 1800 || year > maxYear)
+    return undefined;
   return year;
 }
 
 /** Garage spaces from the `data-var` `nPlazasGaraje` field (non-negative int). */
 function readPisosParkingSpaces(dataVar: Record<string, unknown> | undefined): number | undefined {
   const spaces = asNumber(dataVar?.nPlazasGaraje);
-  if (spaces === undefined || !Number.isInteger(spaces) || spaces < 0 || spaces > 50) return undefined;
+  if (spaces === undefined || !Number.isInteger(spaces) || spaces < 0 || spaces > 50)
+    return undefined;
   return spaces;
 }
 
@@ -490,7 +496,11 @@ export function parsePisosDetail(html: string, url: string): PisosRaw {
   // `descending-geo` picker with no named row (only province/comarca ascend), so
   // fall back to the `<title>` municipality before the province.
   const city =
-    geo.municipality ?? municipalityFromPisosTitle(title) ?? ld?.address?.city ?? geo.province ?? '';
+    geo.municipality ??
+    municipalityFromPisosTitle(title) ??
+    ld?.address?.city ??
+    geo.province ??
+    '';
   if (!city) {
     throw new Error(`pisos: listing ${resolvedId} has no resolvable city`);
   }

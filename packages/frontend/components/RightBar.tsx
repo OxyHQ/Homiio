@@ -59,11 +59,7 @@ export const RightBar = React.memo(function RightBar() {
 
   return (
     <View className="flex-col gap-4 px-2 pt-2 pb-4">
-      <WidgetManager
-        screenId={rail.screenId}
-        propertyId={rail.propertyId}
-        city={rail.city}
-      />
+      <WidgetManager screenId={rail.screenId} propertyId={rail.propertyId} city={rail.city} />
     </View>
   );
 });

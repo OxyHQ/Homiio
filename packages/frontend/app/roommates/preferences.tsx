@@ -100,7 +100,10 @@ const SCHEDULE_OPTIONS: { value: Schedule; labelKey: string }[] = [
 
 const LEASE_OPTIONS: { value: LeaseDuration; labelKey: string }[] = [
   { value: LeaseDuration.MONTHLY, labelKey: 'roommates.preferencesPage.options.lease.monthly' },
-  { value: LeaseDuration.THREE_MONTHS, labelKey: 'roommates.preferencesPage.options.lease.3_months' },
+  {
+    value: LeaseDuration.THREE_MONTHS,
+    labelKey: 'roommates.preferencesPage.options.lease.3_months',
+  },
   { value: LeaseDuration.SIX_MONTHS, labelKey: 'roommates.preferencesPage.options.lease.6_months' },
   { value: LeaseDuration.YEARLY, labelKey: 'roommates.preferencesPage.options.lease.yearly' },
   { value: LeaseDuration.FLEXIBLE, labelKey: 'roommates.preferencesPage.options.lease.flexible' },
@@ -448,9 +451,13 @@ export default function RoommatePreferencesPage() {
             onPress={handleSave}
             loading={saveMutation.isPending}
             disabled={saveMutation.isPending}
-            style={styles.saveButton} tone="accent" appearance="solid"
+            style={styles.saveButton}
+            tone="accent"
+            appearance="solid"
           >
-            {saveMutation.isPending ? t('roommates.preferencesPage.saving') : t('roommates.preferencesPage.save')}
+            {saveMutation.isPending
+              ? t('roommates.preferencesPage.saving')
+              : t('roommates.preferencesPage.save')}
           </Button>
         </ScrollView>
       </SafeAreaView>

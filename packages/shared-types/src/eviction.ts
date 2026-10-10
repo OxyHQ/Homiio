@@ -234,9 +234,7 @@ export enum EvictionTimelineEventType {
  * deliberately anonymous: "three people reported this" must not become "these
  * three people reported this" (ADR 0003 §5.8).
  */
-export type EvictionTimelineActor =
-  | { kind: 'organizer'; oxyUserId: string }
-  | { kind: 'system' };
+export type EvictionTimelineActor = { kind: 'organizer'; oxyUserId: string } | { kind: 'system' };
 
 export interface EvictionTimelineEvent {
   id: string;

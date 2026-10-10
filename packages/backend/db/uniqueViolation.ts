@@ -122,11 +122,7 @@ export function isForeignKeyViolation(error: unknown, constraintName: string): b
  * the header), so the check has to look past the outermost object, and it is
  * depth-bounded so a cyclic `cause` cannot spin.
  */
-function hasConstraintViolation(
-  error: unknown,
-  sqlState: string,
-  constraintName: string,
-): boolean {
+function hasConstraintViolation(error: unknown, sqlState: string, constraintName: string): boolean {
   let current = error;
   for (let depth = 0; depth < MAX_CAUSE_DEPTH; depth += 1) {
     if (!current || typeof current !== 'object') return false;

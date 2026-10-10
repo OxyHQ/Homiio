@@ -74,7 +74,15 @@ describe('ImmobilienScout24Provider', () => {
     // splits into both features.
     expect((listing.amenities ?? []).length).toBeGreaterThan(0);
     expect(listing.amenities).toEqual(
-      expect.arrayContaining(['elevator', 'balcony', 'terrace', 'storage', 'garden', 'parking', 'heating']),
+      expect.arrayContaining([
+        'elevator',
+        'balcony',
+        'terrace',
+        'storage',
+        'garden',
+        'parking',
+        'heating',
+      ]),
     );
     expect(listing.address.city).toMatch(/Berlin/i);
   });

@@ -49,10 +49,10 @@ export const useRecentlyViewedStore = create<RecentlyViewedState>()((set, get) =
 
       // Remove any existing item with the same id to prevent duplicates
       const filteredItems = state.items.filter((item) => item.id !== id);
-      
+
       // Add new item to the beginning and keep only the 20 most recent
       const updatedItems = [newItem, ...filteredItems].slice(0, 20);
-      
+
       return { items: updatedItems };
     }),
 

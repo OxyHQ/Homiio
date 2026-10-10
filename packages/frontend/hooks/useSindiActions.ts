@@ -79,7 +79,11 @@ import {
   type SindiActionOutcome,
 } from '@homiio/shared-types';
 
-import { controlCapabilityOf, type SindiActMode, type SindiChatHost } from '@/components/sindi/sindiHost';
+import {
+  controlCapabilityOf,
+  type SindiActMode,
+  type SindiChatHost,
+} from '@/components/sindi/sindiHost';
 import { useSindiPanelLayout } from '@/components/sindi/sindiPanelLayout';
 import { applySearchPatch, envelopeRefusal } from './sindiActionRules';
 import { useExploreViewStore } from '@/store/exploreViewStore';
@@ -183,7 +187,9 @@ export function useSindiActions({
    */
   const deferred = useRef<(() => void)[]>([]);
 
-  const cancelTurn = useCallback(() => { deferred.current = []; }, []);
+  const cancelTurn = useCallback(() => {
+    deferred.current = [];
+  }, []);
 
   const settleTurn = useCallback(() => {
     if (deferred.current.length === 0) return;
@@ -235,7 +241,10 @@ export function useSindiActions({
     [host, layout, router],
   );
 
-  return useMemo(() => ({ execute, take, settleTurn, cancelTurn }), [execute, take, settleTurn, cancelTurn]);
+  return useMemo(
+    () => ({ execute, take, settleTurn, cancelTurn }),
+    [execute, take, settleTurn, cancelTurn],
+  );
 }
 
 type Router = ReturnType<typeof useRouter>;

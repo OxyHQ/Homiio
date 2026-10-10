@@ -88,7 +88,10 @@ afterAll(async () => {
  * short-circuit, so nothing in this file makes a network call — the same
  * arrangement `reviewAddressHierarchy.test.ts` relies on.
  */
-function draft(city: string, overrides: Partial<HousingCandidateDraft> = {}): HousingCandidateDraft {
+function draft(
+  city: string,
+  overrides: Partial<HousingCandidateDraft> = {},
+): HousingCandidateDraft {
   return {
     provider: 'osm',
     rawText: 'Carrer de Provença 42, Barcelona',
@@ -214,12 +217,20 @@ describe('the candidate → canonical boundary', () => {
     const city = nextCity();
     const first = expectMaterialized(
       await materialize(
-        draft(city, { proposedStreet: 'Carrer de Provença', proposedNumber: '42', proposedFloor: '3r' }),
+        draft(city, {
+          proposedStreet: 'Carrer de Provença',
+          proposedNumber: '42',
+          proposedFloor: '3r',
+        }),
       ),
     );
     const second = expectMaterialized(
       await materialize(
-        draft(city, { proposedStreet: 'Carrer de Provença', proposedNumber: '42', proposedFloor: '4t' }),
+        draft(city, {
+          proposedStreet: 'Carrer de Provença',
+          proposedNumber: '42',
+          proposedFloor: '4t',
+        }),
       ),
     );
 
@@ -242,12 +253,20 @@ describe('the candidate → canonical boundary', () => {
     const city = nextCity();
     const a = expectMaterialized(
       await materialize(
-        draft(city, { proposedStreet: 'Avinguda del Mar', proposedNumber: '100', proposedEntrance: 'A' }),
+        draft(city, {
+          proposedStreet: 'Avinguda del Mar',
+          proposedNumber: '100',
+          proposedEntrance: 'A',
+        }),
       ),
     );
     const b = expectMaterialized(
       await materialize(
-        draft(city, { proposedStreet: 'Avinguda del Mar', proposedNumber: '100', proposedEntrance: 'B' }),
+        draft(city, {
+          proposedStreet: 'Avinguda del Mar',
+          proposedNumber: '100',
+          proposedEntrance: 'B',
+        }),
       ),
     );
 
@@ -282,11 +301,17 @@ describe('the candidate → canonical boundary', () => {
     const city = nextCity();
     const one = expectMaterialized(
       await materialize(
-        draft(city, { proposedStreet: 'Avinguda dels Romans', proposedBuildingName: 'Torre Mapfre I' }),
+        draft(city, {
+          proposedStreet: 'Avinguda dels Romans',
+          proposedBuildingName: 'Torre Mapfre I',
+        }),
       ),
     );
     const two = await materialize(
-      draft(city, { proposedStreet: 'Avinguda dels Romans', proposedBuildingName: 'Torre Mapfre II' }),
+      draft(city, {
+        proposedStreet: 'Avinguda dels Romans',
+        proposedBuildingName: 'Torre Mapfre II',
+      }),
     );
     // `Torre Mapfre I` and `Torre Mapfre II` are COMPATIBLE only if one side is
     // absent, and both name a building — so this is not even an ambiguity.
@@ -318,16 +343,22 @@ describe('idempotency and concurrency', () => {
     const city = nextCity();
     const key = `idem-${SUITE}`;
     const first = expectMaterialized(
-      await materialize(draft(city, { proposedStreet: 'Carrer de Muntaner', proposedNumber: '9' }), {
-        idempotencyKey: key,
-      }),
+      await materialize(
+        draft(city, { proposedStreet: 'Carrer de Muntaner', proposedNumber: '9' }),
+        {
+          idempotencyKey: key,
+        },
+      ),
     );
     // A DIFFERENT address in the second call, so the replay is demonstrably keyed
     // on the idempotency key rather than on the two candidates being identical.
     const second = expectMaterialized(
-      await materialize(draft(city, { proposedStreet: 'Carrer de Muntaner', proposedNumber: '11' }), {
-        idempotencyKey: key,
-      }),
+      await materialize(
+        draft(city, { proposedStreet: 'Carrer de Muntaner', proposedNumber: '11' }),
+        {
+          idempotencyKey: key,
+        },
+      ),
     );
 
     expect(second.addressId).toBe(first.addressId);
@@ -350,7 +381,9 @@ describe('idempotency and concurrency', () => {
     const ids: string[] = [];
     for (const number of ['1', '2', '3']) {
       const result = expectMaterialized(
-        await materialize(draft(city, { proposedStreet: 'Carrer de Girona', proposedNumber: number })),
+        await materialize(
+          draft(city, { proposedStreet: 'Carrer de Girona', proposedNumber: number }),
+        ),
       );
       ids.push(result.materializationId);
     }
@@ -380,7 +413,9 @@ describe('ambiguity is returned, never guessed', () => {
   it('refuses to decide between a building and the same building with an entrance', async () => {
     const city = nextCity();
     const existing = expectMaterialized(
-      await materialize(draft(city, { proposedStreet: 'Carrer del Rosselló', proposedNumber: '42' })),
+      await materialize(
+        draft(city, { proposedStreet: 'Carrer del Rosselló', proposedNumber: '42' }),
+      ),
     );
 
     // The genuine near-duplicate: every identifying field is COMPATIBLE (the
@@ -407,7 +442,9 @@ describe('ambiguity is returned, never guessed', () => {
     // the assertion above would pass for entirely the wrong reason.
     const city = nextCity();
     const first = expectMaterialized(
-      await materialize(draft(city, { proposedStreet: 'Carrer del Rosselló', proposedNumber: '42' })),
+      await materialize(
+        draft(city, { proposedStreet: 'Carrer del Rosselló', proposedNumber: '42' }),
+      ),
     );
     const second = await materialize(
       draft(city, { proposedStreet: 'Carrer del Rosselló', proposedNumber: '43' }),
@@ -422,7 +459,9 @@ describe('ambiguity is returned, never guessed', () => {
   it('accepts a confirmation and creates no rival row beside it', async () => {
     const city = nextCity();
     const existing = expectMaterialized(
-      await materialize(draft(city, { proposedStreet: 'Carrer de Casanova', proposedNumber: '42' })),
+      await materialize(
+        draft(city, { proposedStreet: 'Carrer de Casanova', proposedNumber: '42' }),
+      ),
     );
     const before = await addressCountInCity(city);
 
@@ -489,7 +528,11 @@ describe('conflicts are refused, never overwritten', () => {
     const ref = `stable-${SUITE}`;
     const first = expectMaterialized(
       await materialize(
-        draft(city, { proposedStreet: 'Carrer de Provença', proposedNumber: '3', providerRef: ref }),
+        draft(city, {
+          proposedStreet: 'Carrer de Provença',
+          proposedNumber: '3',
+          providerRef: ref,
+        }),
       ),
     );
 
@@ -498,7 +541,11 @@ describe('conflicts are refused, never overwritten', () => {
     // the row it names is still a probable match, so the ref wins.
     const again = expectMaterialized(
       await materialize(
-        draft(city, { proposedStreet: 'Carrer de Provenza', proposedNumber: '3', providerRef: ref }),
+        draft(city, {
+          proposedStreet: 'Carrer de Provenza',
+          proposedNumber: '3',
+          providerRef: ref,
+        }),
       ),
     );
     expect(again.addressId).toBe(first.addressId);
@@ -521,7 +568,11 @@ describe('validation refuses a permanent identity it cannot justify', () => {
     // unrelated flats. 94-100% of habitaclia and fotocasa listings carry one.
     const city = nextCity();
     const result = await materialize(
-      draft(city, { proposedStreet: 'Carrer del Centroide', proposedNumber: '8', precision: 'centroid' }),
+      draft(city, {
+        proposedStreet: 'Carrer del Centroide',
+        proposedNumber: '8',
+        precision: 'centroid',
+      }),
     );
 
     expect(result.status).toBe('rejected');
@@ -609,7 +660,9 @@ describe('living beside the v1 key', () => {
     expect(legacy.identityKey).toBeNull();
 
     const result = expectMaterialized(
-      await materialize(draft(city, { proposedStreet: 'Carrer de Provença', proposedNumber: '21' })),
+      await materialize(
+        draft(city, { proposedStreet: 'Carrer de Provença', proposedNumber: '21' }),
+      ),
     );
     expect(result.addressId).toBe(legacy.id);
     expect(result.match.matchKind).toBe('adopted_v1_key');
@@ -626,11 +679,17 @@ describe('living beside the v1 key', () => {
     // carry one. NULL is the honest answer, and it is what lets the two exist.
     const city = nextCity();
     const building = expectMaterialized(
-      await materialize(draft(city, { proposedStreet: 'Carrer de Sardenya', proposedNumber: '33' })),
+      await materialize(
+        draft(city, { proposedStreet: 'Carrer de Sardenya', proposedNumber: '33' }),
+      ),
     );
     const flat = expectMaterialized(
       await materialize(
-        draft(city, { proposedStreet: 'Carrer de Sardenya', proposedNumber: '33', proposedFloor: '2n' }),
+        draft(city, {
+          proposedStreet: 'Carrer de Sardenya',
+          proposedNumber: '33',
+          proposedFloor: '2n',
+        }),
       ),
     );
 

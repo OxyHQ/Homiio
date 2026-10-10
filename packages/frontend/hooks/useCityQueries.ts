@@ -49,12 +49,12 @@ export function usePopularCities(limit = 8, filters: CityFilters = {}) {
       const regionId = filters.regionId;
       if (!countryId && !regionId) return cities;
       return cities.filter((city) => {
-        const cityCountryId = typeof city.countryId === 'object'
-          ? (city.countryId as { id?: string }).id
-          : city.countryId;
-        const cityRegionId = typeof city.regionId === 'object'
-          ? (city.regionId as { id?: string }).id
-          : city.regionId;
+        const cityCountryId =
+          typeof city.countryId === 'object'
+            ? (city.countryId as { id?: string }).id
+            : city.countryId;
+        const cityRegionId =
+          typeof city.regionId === 'object' ? (city.regionId as { id?: string }).id : city.regionId;
         if (regionId && cityRegionId !== regionId) return false;
         if (countryId && cityCountryId !== countryId) return false;
         return true;

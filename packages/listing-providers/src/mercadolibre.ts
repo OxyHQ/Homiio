@@ -128,7 +128,10 @@ export function isMercadolibreHousingCategory(
   category: string | undefined,
   domainId: string | undefined,
 ): boolean {
-  if (domainId && /REAL_ESTATE|PROPERTIES|APARTMENTS|HOUSES|LAND|MLA-APARTMENTS|MLA-HOUSES/i.test(domainId)) {
+  if (
+    domainId &&
+    /REAL_ESTATE|PROPERTIES|APARTMENTS|HOUSES|LAND|MLA-APARTMENTS|MLA-HOUSES/i.test(domainId)
+  ) {
     return true;
   }
   if (domainId && /CARS|ELECTRONICS|FASHION|JOBS|SERVICES|AND_VANS/i.test(domainId)) return false;
@@ -139,7 +142,8 @@ function attributeValue(attrs: unknown, id: string): number | undefined {
   if (!Array.isArray(attrs)) return undefined;
   for (const entry of attrs) {
     if (!isRecord(entry)) continue;
-    if (asString(entry.id) === id) return asNumber(entry.value_name) ?? asNumber(entry.value_struct);
+    if (asString(entry.id) === id)
+      return asNumber(entry.value_name) ?? asNumber(entry.value_struct);
   }
   return undefined;
 }
@@ -158,12 +162,12 @@ function itemToRaw(
   item: Record<string, unknown>,
 ): MercadolibreRawListing | undefined {
   const id =
-    asString(item.id) ??
-    mercadolibreSourceIdFromUrl(config.siteId, asString(item.permalink) ?? '');
+    asString(item.id) ?? mercadolibreSourceIdFromUrl(config.siteId, asString(item.permalink) ?? '');
   const url = asString(item.permalink) ?? asString(item.url);
   if (!id || !url) return undefined;
   const sourceId = normalizeSourceId(config, id);
-  const price = asNumber(item.price) ?? asNumber(isRecord(item.price) ? item.price.amount : undefined);
+  const price =
+    asNumber(item.price) ?? asNumber(isRecord(item.price) ? item.price.amount : undefined);
   if (price === undefined) return undefined;
 
   const domainId = asString(item.domain_id) ?? asString(item.domainId);
@@ -209,7 +213,9 @@ function itemToRaw(
     contactFromUnknown(seller),
     buildContact({
       phone: isRecord(seller) && isRecord(seller.phone) ? asString(seller.phone.number) : undefined,
-      agencyName: isRecord(seller) ? asString(seller.nickname) ?? asString(seller.name) : undefined,
+      agencyName: isRecord(seller)
+        ? (asString(seller.nickname) ?? asString(seller.name))
+        : undefined,
     }),
   );
 
@@ -353,7 +359,8 @@ function extractVipFields(html: string): {
     /"city"\s*:\s*"([^"]+)"\s*,\s*"neighborhood"\s*:\s*"([^"]*)"\s*,\s*"state"\s*:\s*"([^"]+)"/,
   );
   const city = loc?.[1] ?? html.match(/"city"\s*:\s*"([^"]+)"/)?.[1];
-  const neighborhood = (loc?.[2]?.trim() || undefined) ?? html.match(/"neighborhood"\s*:\s*"([^"]+)"/)?.[1];
+  const neighborhood =
+    (loc?.[2]?.trim() || undefined) ?? html.match(/"neighborhood"\s*:\s*"([^"]+)"/)?.[1];
   const state = loc?.[3];
   const domainId = html.match(/"domain_id"\s*:\s*"([^"]+)"/)?.[1];
   return { city, neighborhood, state, domainId };
@@ -419,7 +426,8 @@ function extractHighlightedSpecs(html: string): {
 function extractGalleryImages(html: string): string[] {
   const out: string[] = [];
   const seen = new Set<string>();
-  const re = /class="gallery-image__link"[^>]{0,400}>\s{0,20}<img[^>]{0,400}\bsrc="(https:\/\/[^"]{0,2000})"/g;
+  const re =
+    /class="gallery-image__link"[^>]{0,400}>\s{0,20}<img[^>]{0,400}\bsrc="(https:\/\/[^"]{0,2000})"/g;
   for (const match of html.matchAll(re)) {
     const url = match[1];
     if (seen.has(url)) continue;
@@ -571,7 +579,8 @@ function derivedFromSpecTable(spec: Map<string, string>): MercadolibreSpecDerive
     bedrooms: specInt(get('dormitorios', 'recamaras', 'habitaciones')),
     bathrooms: specInt(get('banos', 'bano')),
     squareMeters: labelArea(
-      get('superficie total', 'superficie cubierta', 'superficie construida', 'superficie util') ?? '',
+      get('superficie total', 'superficie cubierta', 'superficie construida', 'superficie util') ??
+        '',
     ),
     floor,
     yearBuilt: yearBuiltFromAntiquity(get('antiguedad')),
@@ -618,8 +627,7 @@ export function parseMercadolibreDetail(
   const price = asNumber(offer?.price) ?? asNumber(product.price);
   const vip = extractVipFields(html);
   const address = isRecord(product.address) ? product.address : undefined;
-  const city =
-    asString(address?.addressLocality) ?? vip.city ?? config.defaultCity;
+  const city = asString(address?.addressLocality) ?? vip.city ?? config.defaultCity;
   if (price === undefined) throw new Error(`${config.provider}: missing price for ${url}`);
 
   const sourceId =

@@ -8,12 +8,7 @@
 import React, { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import {
-  RiBuilding2Line,
-  RiDoorOpenLine,
-  RiHome4Line,
-  RiHotelBedLine,
-} from '@oxy.so/bloom/icons';
+import { RiBuilding2Line, RiDoorOpenLine, RiHome4Line, RiHotelBedLine } from '@oxy.so/bloom/icons';
 import { PropertyTypePicker } from '@oxy.so/bloom/home-search';
 import type { PropertyTypeOption } from '@oxy.so/bloom/stay-filters';
 

@@ -81,9 +81,7 @@ import { requireSessionOxyUserId } from '../../utils/sessionUser';
 import type { ControllerNext, ControllerRequest, ControllerResponse } from '../controllerTypes';
 
 /** The status a timeline entry announces → the event type that names it. */
-const EVENT_TYPE_BY_STATUS: Readonly<
-  Record<EvictionStatusValue, EvictionTimelineEventType>
-> = {
+const EVENT_TYPE_BY_STATUS: Readonly<Record<EvictionStatusValue, EvictionTimelineEventType>> = {
   upcoming: EvictionTimelineEventType.DATE_CHANGED,
   postponed: EvictionTimelineEventType.POSTPONED,
   stopped: EvictionTimelineEventType.STOPPED,
@@ -115,8 +113,7 @@ export async function createEviction(
     const title = typeof picked.title === 'string' ? picked.title.trim() : '';
     if (!title) return next(new AppError('Title is required', 400, 'INVALID_TITLE'));
 
-    const rawDescription =
-      typeof picked.description === 'string' ? picked.description.trim() : '';
+    const rawDescription = typeof picked.description === 'string' ? picked.description.trim() : '';
     if (!rawDescription) {
       return next(new AppError('Description is required', 400, 'INVALID_DESCRIPTION'));
     }
@@ -242,9 +239,7 @@ export async function createEviction(
             },
           ),
           // Categories only. The removed VALUES never travel.
-          removedForPrivacy: [
-            ...new Set([...location.removedFromLabel, ...description.removed]),
-          ],
+          removedForPrivacy: [...new Set([...location.removedFromLabel, ...description.removed])],
         },
         'Eviction case created',
       ),
@@ -301,11 +296,7 @@ export async function updateEviction(
 
     if (picked.location !== undefined) {
       const location = sanitizeLocation(picked.location);
-      if (
-        !location?.label ||
-        location.longitude === undefined ||
-        location.latitude === undefined
-      ) {
+      if (!location?.label || location.longitude === undefined || location.latitude === undefined) {
         return next(
           new AppError(
             'A location with a label and coordinates is required',
@@ -382,7 +373,9 @@ export async function updateEviction(
     if (picked.scheduledAt !== undefined) {
       const parsed = parseDate(picked.scheduledAt);
       if (!parsed) {
-        return next(new AppError('A valid scheduled date is required', 400, 'INVALID_SCHEDULED_AT'));
+        return next(
+          new AppError('A valid scheduled date is required', 400, 'INVALID_SCHEDULED_AT'),
+        );
       }
       if (parsed.getTime() !== existing.scheduledAt.getTime()) {
         nextScheduledAt = parsed;

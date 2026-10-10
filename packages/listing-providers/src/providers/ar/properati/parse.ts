@@ -3,7 +3,12 @@
  */
 
 import type { NormalizedListingContact } from '@homiio/shared-types';
-import { buildContact, contactFromUnknown, extractContactFromHtml, mergeContact } from '../../../contact';
+import {
+  buildContact,
+  contactFromUnknown,
+  extractContactFromHtml,
+  mergeContact,
+} from '../../../contact';
 import { collectJsonLdNodes, findJsonLdByType, jsonLdTypes } from '../../../jsonLd';
 import { findNextDataArray, findNextDataRecord, parseNextDataPageProps } from '../../../nextData';
 import { PROPERATI_BASE_URL } from './fixtures';
@@ -36,7 +41,6 @@ export interface ProperatiRawListing {
   contact?: NormalizedListingContact;
 }
 
-
 export function isProperatiChallenge(body: string): boolean {
   if (body.trim().length < 128) return true;
   return /just a moment|cloudflare|cf-mitigated|captcha|access denied/i.test(body);
@@ -47,7 +51,11 @@ export function properatiSourceIdFromUrl(url: string): string | undefined {
     /properati-ar-([a-z0-9-]+)/i.exec(url) ??
     /\/detalle\/[^/]*-([a-z0-9-]{4,})(?:\/|$|\?)/i.exec(url) ??
     /-(\d{5,})(?:\.html)?(?:\?|$)/i.exec(url);
-  return match?.[1] ? (match[0].includes('properati-ar') ? `properati-ar-${match[1]}` : match[1]) : undefined;
+  return match?.[1]
+    ? match[0].includes('properati-ar')
+      ? `properati-ar-${match[1]}`
+      : match[1]
+    : undefined;
 }
 
 function absoluteUrl(pathOrUrl: string): string {
@@ -70,9 +78,13 @@ function listingFromRecord(record: Record<string, unknown>): ProperatiRawListing
     (path ? properatiSourceIdFromUrl(path) : undefined) ??
     asString(record.slug);
   if (!id || !path) return undefined;
-  const price = asNumber(record.price) ?? asNumber(isRecord(record.price) ? record.price.amount : undefined);
+  const price =
+    asNumber(record.price) ?? asNumber(isRecord(record.price) ? record.price.amount : undefined);
   if (price === undefined) return undefined;
-  const city = asString(record.city) ?? asString(isRecord(record.address) ? record.address.city : undefined) ?? 'Capital Federal';
+  const city =
+    asString(record.city) ??
+    asString(isRecord(record.address) ? record.address.city : undefined) ??
+    'Capital Federal';
   const operationRaw = asString(record.operation) ?? asString(record.operation_type) ?? path;
   const operation: 'rent' | 'sale' = /venta|sale|sell/i.test(operationRaw) ? 'sale' : 'rent';
   const images: string[] = [];
@@ -99,11 +111,14 @@ function listingFromRecord(record: Record<string, unknown>): ProperatiRawListing
     currency: asString(record.currency) ?? asString(record.currency_id) ?? 'ARS',
     bedrooms: asNumber(record.bedrooms) ?? asNumber(record.rooms),
     bathrooms: asNumber(record.bathrooms),
-    squareMeters: asNumber(record.surface) ?? asNumber(record.area) ?? asNumber(record.squareMeters),
+    squareMeters:
+      asNumber(record.surface) ?? asNumber(record.area) ?? asNumber(record.squareMeters),
     address: {
       street: asString(isRecord(record.address) ? record.address.street : undefined),
       city,
-      region: asString(record.state) ?? asString(isRecord(record.address) ? record.address.region : undefined),
+      region:
+        asString(record.state) ??
+        asString(isRecord(record.address) ? record.address.region : undefined),
       neighborhood:
         asString(record.neighborhood) ??
         asString(isRecord(record.address) ? record.address.neighborhood : undefined),
@@ -169,7 +184,8 @@ export function parseProperatiDetail(html: string, url: string): ProperatiRawLis
   const address = isRecord(node.address) ? node.address : undefined;
   const city = asString(address?.addressLocality) ?? 'Capital Federal';
   if (price === undefined) throw new Error(`properati: missing price for ${url}`);
-  const sourceId = properatiSourceIdFromUrl(url) ?? properatiSourceIdFromUrl(asString(node.url) ?? '');
+  const sourceId =
+    properatiSourceIdFromUrl(url) ?? properatiSourceIdFromUrl(asString(node.url) ?? '');
   if (!sourceId) throw new Error(`properati: missing id for ${url}`);
 
   const images: string[] = [];

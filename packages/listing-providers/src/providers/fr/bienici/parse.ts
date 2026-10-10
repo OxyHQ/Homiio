@@ -111,7 +111,11 @@ export function bieniciWarmSearchUrl(city: string): string {
 
 function coordsFromBlur(blur: unknown): { lat: number; lng: number } | undefined {
   if (!isRecord(blur)) return undefined;
-  const pos = isRecord(blur.position) ? blur.position : isRecord(blur.centroid) ? blur.centroid : undefined;
+  const pos = isRecord(blur.position)
+    ? blur.position
+    : isRecord(blur.centroid)
+      ? blur.centroid
+      : undefined;
   if (!pos) return undefined;
   const lat = asNumber(pos.lat);
   const lng = asNumber(pos.lng) ?? asNumber(pos.lon);

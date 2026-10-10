@@ -198,7 +198,10 @@ function trackedSourceFiles(pathspec: string): string[] {
 }
 
 /** Read every file, recording the ones git tracks but the tree does not have. */
-function scanFiles(files: string[], skip: ReadonlySet<string>): {
+function scanFiles(
+  files: string[],
+  skip: ReadonlySet<string>,
+): {
   findings: Finding[];
   unreadable: string[];
 } {
@@ -246,7 +249,7 @@ describe('the client never talks to a geocoder', () => {
     // quietly become vacuous.
     const offending = [
       "const r = await fetch('https://nominatim.openstreetmap.org/search?q=' + q);",
-      "await fetch(`https://photon.komoot.io/api/?q=${q}`);",
+      'await fetch(`https://photon.komoot.io/api/?q=${q}`);',
       "fetch('https://maps.googleapis.com/maps/api/geocode/json?address=' + a);",
     ].join('\n');
     expect(scanSource('probe.ts', offending).map((finding) => finding.host)).toEqual([
@@ -263,7 +266,7 @@ describe('the client never talks to a geocoder', () => {
         [
           "const STYLE_URL = 'https://tiles.openfreemap.org/styles/liberty';",
           "<A href='https://www.openstreetmap.org/copyright'>© OpenStreetMap</A>",
-          "Linking.openURL(`https://maps.google.com/?q=${lat},${lng}`);",
+          'Linking.openURL(`https://maps.google.com/?q=${lat},${lng}`);',
           "const places = await api.get('/api/geo/search', { params: { q } });",
         ].join('\n'),
       ),

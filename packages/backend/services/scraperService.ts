@@ -1,8 +1,5 @@
 import axios from 'axios';
-import {
-  assertAllowedScraperEndpoint,
-  guardedRequestConfig,
-} from '../utils/outboundGuard';
+import { assertAllowedScraperEndpoint, guardedRequestConfig } from '../utils/outboundGuard';
 import { OfferingType } from '@homiio/shared-types';
 import { forwardGeocode } from './geocodingService';
 import { schedulePriceEthicsScore } from './priceEthicsService';
@@ -51,7 +48,11 @@ function errorStatusOf(error: unknown): number | undefined {
   return undefined;
 }
 
-interface ExternalRawImage { url?: string; caption?: string; isPrimary?: boolean }
+interface ExternalRawImage {
+  url?: string;
+  caption?: string;
+  isPrimary?: boolean;
+}
 
 interface ExternalRawAddress {
   street?: string;
@@ -176,9 +177,9 @@ function validateExternalProperty(raw: any): { isValid: boolean; errors: string[
 function sanitizeData(raw: any): any {
   return {
     ...raw,
-    description: raw.description ? 
-      raw.description.slice(0, SCRAPER_CONFIG.MAX_DESCRIPTION_LENGTH).trim() : 
-      undefined,
+    description: raw.description
+      ? raw.description.slice(0, SCRAPER_CONFIG.MAX_DESCRIPTION_LENGTH).trim()
+      : undefined,
     // Ensure numeric fields are valid
     bedrooms: Math.max(0, raw.bedrooms || 0),
     bathrooms: Math.max(0, raw.bathrooms || 0),
@@ -196,7 +197,10 @@ function sanitizeData(raw: any): any {
  * and (b) the Property fields. Geo is relational, so the address is never
  * embedded on the Property; the upserter resolves it to an `addressId`.
  */
-function mapToProperty(raw: any): { property: Record<string, unknown>; addressInput: AddressCanonicalInput } {
+function mapToProperty(raw: any): {
+  property: Record<string, unknown>;
+  addressInput: AddressCanonicalInput;
+} {
   try {
     const addressInput = {
       street: raw.address?.street || '',
@@ -209,7 +213,10 @@ function mapToProperty(raw: any): { property: Record<string, unknown>; addressIn
       coordinates: raw.address?.coordinates
         ? {
             type: 'Point',
-            coordinates: [Number(raw.address.coordinates.lng), Number(raw.address.coordinates.lat)] as [number, number],
+            coordinates: [
+              Number(raw.address.coordinates.lng),
+              Number(raw.address.coordinates.lat),
+            ] as [number, number],
           }
         : undefined,
     };
@@ -228,7 +235,7 @@ function mapToProperty(raw: any): { property: Record<string, unknown>; addressIn
       offerings: [OfferingType.LONG_TERM_RENT],
       longTermRent: {
         monthlyAmount: raw.rent?.amount ?? 0,
-        currency: raw.rent?.currency ?? 'EUR'
+        currency: raw.rent?.currency ?? 'EUR',
       },
       amenities: Array.isArray(raw.amenities) ? raw.amenities : [],
       furnishedStatus: raw.furnishedStatus ?? 'unfurnished',
@@ -237,7 +244,7 @@ function mapToProperty(raw: any): { property: Record<string, unknown>; addressIn
         ? raw.images.map((img: ExternalRawImage, idx: number) => ({
             url: img.url,
             caption: img.caption,
-            isPrimary: !!img.isPrimary || idx === 0
+            isPrimary: !!img.isPrimary || idx === 0,
           }))
         : [],
       // External aggregator listings are published (visible in search). The
@@ -253,10 +260,10 @@ function mapToProperty(raw: any): { property: Record<string, unknown>; addressIn
 
 // Enhanced upsert with retry logic and better error handling
 export async function upsertExternalListing(
-  raw: any, 
-  source: string, 
+  raw: any,
+  source: string,
   logger: ScraperLogger,
-  ttlDays: number = SCRAPER_CONFIG.DEFAULT_TTL_DAYS
+  ttlDays: number = SCRAPER_CONFIG.DEFAULT_TTL_DAYS,
 ): Promise<{ status: 'created' | 'updated' | 'error'; error?: string }> {
   const maxRetries = SCRAPER_CONFIG.MAX_RETRIES;
   let lastError: unknown;
@@ -266,9 +273,9 @@ export async function upsertExternalListing(
       // Validate and sanitize data
       const validation = validateExternalProperty(raw);
       if (!validation.isValid) {
-        return { 
-          status: 'error', 
-          error: `Validation failed: ${validation.errors.join(', ')}` 
+        return {
+          status: 'error',
+          error: `Validation failed: ${validation.errors.join(', ')}`,
         };
       }
 
@@ -278,12 +285,21 @@ export async function upsertExternalListing(
       // Resolve the canonical building Address (relational geo). Coordinates are
       // required; when the source omits them, forward-geocode the address once.
       if (!addressInput.coordinates) {
-        const query = [addressInput.street, addressInput.city, addressInput.state, addressInput.postal_code, addressInput.country]
+        const query = [
+          addressInput.street,
+          addressInput.city,
+          addressInput.state,
+          addressInput.postal_code,
+          addressInput.country,
+        ]
           .filter(Boolean)
           .join(', ');
         const geocoded = await forwardGeocode(query);
         if (!geocoded.success || !geocoded.data?.coordinates) {
-          return { status: 'error', error: 'Could not resolve coordinates for the external listing address' };
+          return {
+            status: 'error',
+            error: 'Could not resolve coordinates for the external listing address',
+          };
         }
         addressInput.coordinates = { type: 'Point', coordinates: geocoded.data.coordinates };
       }
@@ -298,7 +314,7 @@ export async function upsertExternalListing(
         sourceUrl: raw.sourceUrl || raw.url,
         isExternal: true,
         // Extend TTL by resetting expiresAt each refresh
-        expiresAt: new Date(Date.now() + ttlDays * 24 * 60 * 60 * 1000)
+        expiresAt: new Date(Date.now() + ttlDays * 24 * 60 * 60 * 1000),
       };
 
       const existing = await findPropertyBySource(source, raw.id);
@@ -317,10 +333,10 @@ export async function upsertExternalListing(
     } catch (error) {
       lastError = error;
       logger.warn(`Upsert attempt ${attempt} failed for ${raw.id}:`, errorMessageOf(error));
-      
+
       if (attempt < maxRetries) {
         // Wait before retrying
-        await new Promise(resolve => setTimeout(resolve, SCRAPER_CONFIG.RETRY_DELAY * attempt));
+        await new Promise((resolve) => setTimeout(resolve, SCRAPER_CONFIG.RETRY_DELAY * attempt));
       }
     }
   }
@@ -332,22 +348,22 @@ export async function upsertExternalListing(
 
 // Helper function to make HTTP requests with retry logic
 async function makeRequest(
-  url: string, 
+  url: string,
   options: { apiKey?: string; timeout?: number; maxRetries?: number },
-  logger: ScraperLogger
+  logger: ScraperLogger,
 ): Promise<any> {
   const maxRetries = options.maxRetries || SCRAPER_CONFIG.MAX_RETRIES;
   const timeout = options.timeout || SCRAPER_CONFIG.DEFAULT_TIMEOUT;
-  
+
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       logger.debug(`Making request to ${url} (attempt ${attempt})`);
-      
+
       // The destination comes from the request body, so every request goes out
       // under the outbound guard: no redirects, and every socket resolves
       // through a lookup that refuses internal addresses. See utils/outboundGuard.
       const response = await axios.get(url, {
-        headers: options.apiKey ? { 'Authorization': `Bearer ${options.apiKey}` } : {},
+        headers: options.apiKey ? { Authorization: `Bearer ${options.apiKey}` } : {},
         timeout,
         validateStatus: (status) => status < 500, // Don't throw for 4xx errors
         ...guardedRequestConfig(),
@@ -372,29 +388,37 @@ async function makeRequest(
       const isLastAttempt = attempt === maxRetries;
       const code = errorCodeOf(error);
       const status = errorStatusOf(error);
-      const shouldRetry = code === 'ECONNRESET' ||
-                         code === 'ETIMEDOUT' ||
-                         (status !== undefined && status >= 500);
+      const shouldRetry =
+        code === 'ECONNRESET' || code === 'ETIMEDOUT' || (status !== undefined && status >= 500);
 
       if (!shouldRetry || isLastAttempt) {
         throw error;
       }
 
       logger.warn(`Request attempt ${attempt} failed, retrying:`, errorMessageOf(error));
-      await new Promise(resolve => setTimeout(resolve, SCRAPER_CONFIG.RETRY_DELAY * attempt));
+      await new Promise((resolve) => setTimeout(resolve, SCRAPER_CONFIG.RETRY_DELAY * attempt));
     }
   }
 }
 
 // Process listings in batches for better performance
-interface BatchErrorDetail { id?: string; error: string; timestamp: Date }
-interface BatchResult { created: number; updated: number; errors: number; errorDetails: BatchErrorDetail[] }
+interface BatchErrorDetail {
+  id?: string;
+  error: string;
+  timestamp: Date;
+}
+interface BatchResult {
+  created: number;
+  updated: number;
+  errors: number;
+  errorDetails: BatchErrorDetail[];
+}
 
 async function processBatch(
   listings: ExternalRawListing[],
   source: string,
   logger: ScraperLogger,
-  ttlDays: number
+  ttlDays: number,
 ): Promise<BatchResult> {
   const batchResult: BatchResult = { created: 0, updated: 0, errors: 0, errorDetails: [] };
 
@@ -413,7 +437,7 @@ async function processBatch(
   });
 
   const results = await Promise.allSettled(promises);
-  
+
   results.forEach((promiseResult, index) => {
     if (promiseResult.status === 'fulfilled') {
       const value = promiseResult.value;
@@ -425,8 +449,9 @@ async function processBatch(
         batchResult.errors++;
         batchResult.errorDetails.push({
           id: listings[index]?.id,
-          error: ('error' in value && typeof value.error === 'string') ? value.error : 'Unknown error',
-          timestamp: new Date()
+          error:
+            'error' in value && typeof value.error === 'string' ? value.error : 'Unknown error',
+          timestamp: new Date(),
         });
       }
     } else {
@@ -434,7 +459,7 @@ async function processBatch(
       batchResult.errorDetails.push({
         id: listings[index]?.id,
         error: errorMessageOf(promiseResult.reason),
-        timestamp: new Date()
+        timestamp: new Date(),
       });
     }
   });
@@ -461,26 +486,30 @@ export async function runExternalScrape(options: ScraperOptions): Promise<Scrape
   const logger = new ScraperLogger(options.source);
   const batchSize = options.batchSize || SCRAPER_CONFIG.BATCH_SIZE;
   const ttlDays = options.ttlDays || SCRAPER_CONFIG.DEFAULT_TTL_DAYS;
-  
-  const result: ScrapeResult = { 
-    created: 0, 
-    updated: 0, 
-    skipped: 0, 
-    errors: 0, 
+
+  const result: ScrapeResult = {
+    created: 0,
+    updated: 0,
+    skipped: 0,
+    errors: 0,
     totalProcessed: 0,
     duration: 0,
-    errorDetails: []
+    errorDetails: [],
   };
 
   try {
     logger.info(`Starting scrape from ${endpoint.origin}`);
 
     // Make API request with retry logic
-    const data = await makeRequest(endpoint.toString(), {
-      apiKey: options.apiKey,
-      timeout: options.timeout,
-      maxRetries: options.maxRetries
-    }, logger);
+    const data = await makeRequest(
+      endpoint.toString(),
+      {
+        apiKey: options.apiKey,
+        timeout: options.timeout,
+        maxRetries: options.maxRetries,
+      },
+      logger,
+    );
 
     // API now returns data in the correct format
     const listings: any[] = Array.isArray(data) ? data : data?.listings || [];
@@ -497,14 +526,14 @@ export async function runExternalScrape(options: ScraperOptions): Promise<Scrape
     for (let i = 0; i < listings.length; i += batchSize) {
       const batch = listings.slice(i, i + batchSize);
       logger.debug(`Processing batch ${Math.floor(i / batchSize) + 1} (${batch.length} items)`);
-      
+
       // Add delay between batches to be respectful to the database
       if (i > 0) {
-        await new Promise(resolve => setTimeout(resolve, SCRAPER_CONFIG.REQUEST_DELAY));
+        await new Promise((resolve) => setTimeout(resolve, SCRAPER_CONFIG.REQUEST_DELAY));
       }
 
       const batchResult = await processBatch(batch, options.source, logger, ttlDays);
-      
+
       result.created += batchResult.created;
       result.updated += batchResult.updated;
       result.errors += batchResult.errors;
@@ -519,15 +548,14 @@ export async function runExternalScrape(options: ScraperOptions): Promise<Scrape
       updated: result.updated,
       skipped: result.skipped,
       errors: result.errors,
-      totalProcessed: result.totalProcessed
+      totalProcessed: result.totalProcessed,
     });
-
   } catch (error) {
     result.duration = Date.now() - startTime;
     logger.error('Scrape failed:', errorMessageOf(error));
     result.errorDetails.push({
       error: `Scrape failed: ${errorMessageOf(error)}`,
-      timestamp: new Date()
+      timestamp: new Date(),
     });
   }
 
@@ -564,7 +592,7 @@ export async function getScraperHealth(): Promise<{
         externalPropertyCount,
         lastScrapeErrors: 0, // Could be implemented with error tracking
         oldestExternalProperty,
-      }
+      },
     };
   } catch {
     return {
@@ -573,7 +601,7 @@ export async function getScraperHealth(): Promise<{
         externalPropertyCount: 0,
         lastScrapeErrors: 1,
         oldestExternalProperty: null,
-      }
+      },
     };
   }
 }
@@ -584,7 +612,7 @@ export async function cleanupExpiredProperties(dryRun: boolean = true): Promise<
   errors: number;
 }> {
   const logger = new ScraperLogger('cleanup');
-  
+
   try {
     const now = new Date();
 
@@ -618,13 +646,16 @@ export class ScraperService {
    */
   async runExternalScrape(options: ScraperOptions): Promise<ScrapeResult> {
     try {
-      this.logger.debug('Starting external scrape', { source: options.source, endpoint: options.endpoint });
+      this.logger.debug('Starting external scrape', {
+        source: options.source,
+        endpoint: options.endpoint,
+      });
       const result = await runExternalScrape(options);
-      this.logger.debug('External scrape completed', { 
-        source: options.source, 
-        created: result.created, 
+      this.logger.debug('External scrape completed', {
+        source: options.source,
+        created: result.created,
         updated: result.updated,
-        errors: result.errors 
+        errors: result.errors,
       });
       return result;
     } catch (error) {
@@ -636,21 +667,24 @@ export class ScraperService {
   /**
    * Upsert an external listing
    */
-  async upsertExternalListing(listing: any, source: string): Promise<{
+  async upsertExternalListing(
+    listing: any,
+    source: string,
+  ): Promise<{
     created: boolean;
     propertyId: string;
   }> {
     try {
       this.logger.debug('Upserting external listing', { source, id: listing.id });
       const result = await upsertExternalListing(listing, source, this.logger);
-      this.logger.debug('External listing upserted', { 
-        source, 
-        id: listing.id, 
-        created: result.status === 'created' 
+      this.logger.debug('External listing upserted', {
+        source,
+        id: listing.id,
+        created: result.status === 'created',
       });
-      return { 
-        created: result.status === 'created', 
-        propertyId: listing.id
+      return {
+        created: result.status === 'created',
+        propertyId: listing.id,
       };
     } catch (error) {
       this.logger.error('Failed to upsert external listing', error);

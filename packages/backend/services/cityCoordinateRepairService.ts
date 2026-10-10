@@ -23,7 +23,12 @@ const logger = new Logger('CityCoordinateRepair');
  */
 export async function repairCorruptCityCoordinates(limit = 200): Promise<number> {
   const corrupt = await getDb()
-    .select({ id: cities.id, name: cities.name, latitude: cities.latitude, longitude: cities.longitude })
+    .select({
+      id: cities.id,
+      name: cities.name,
+      latitude: cities.latitude,
+      longitude: cities.longitude,
+    })
     .from(cities)
     .where(
       or(
@@ -54,7 +59,10 @@ export async function repairCorruptCityCoordinates(limit = 200): Promise<number>
 
     if (pair.lat === lat && pair.lng === lng) continue;
 
-    await getDb().update(cities).set({ latitude: pair.lat, longitude: pair.lng }).where(eq(cities.id, city.id));
+    await getDb()
+      .update(cities)
+      .set({ latitude: pair.lat, longitude: pair.lng })
+      .where(eq(cities.id, city.id));
     repaired += 1;
     logger.info('Repaired city coordinates', {
       cityId: city.id,

@@ -27,8 +27,14 @@ import { resetGeoTables } from '../helpers/postgresGeoFixtures';
 
 jest.mock('../../services/geocodingService', () => ({
   __esModule: true,
-  reverseGeocode: jest.fn(async () => ({ success: false as const, error: 'not called in this suite' })),
-  forwardGeocode: jest.fn(async () => ({ success: false as const, error: 'not called in this suite' })),
+  reverseGeocode: jest.fn(async () => ({
+    success: false as const,
+    error: 'not called in this suite',
+  })),
+  forwardGeocode: jest.fn(async () => ({
+    success: false as const,
+    error: 'not called in this suite',
+  })),
 }));
 
 const BARCELONA: [number, number] = [2.1734, 41.3851];
@@ -44,11 +50,16 @@ beforeEach(async () => {
   await resetGeoTables();
 });
 
-
 describe('resolveGeo', () => {
   it('creates the whole chain once and returns the same ids on re-resolution', async () => {
-    const first = await resolveGeoChain({ coordinates: BARCELONA, names: { ...COMPLETE_NAMES, neighborhood: 'Gràcia' } });
-    const second = await resolveGeoChain({ coordinates: BARCELONA, names: { ...COMPLETE_NAMES, neighborhood: 'Gràcia' } });
+    const first = await resolveGeoChain({
+      coordinates: BARCELONA,
+      names: { ...COMPLETE_NAMES, neighborhood: 'Gràcia' },
+    });
+    const second = await resolveGeoChain({
+      coordinates: BARCELONA,
+      names: { ...COMPLETE_NAMES, neighborhood: 'Gràcia' },
+    });
 
     expect(second).toEqual(first);
 
@@ -107,7 +118,10 @@ describe('resolveGeo', () => {
   it('never OVERWRITES an existing row — the `$setOnInsert` guarantee', async () => {
     const first = await resolveGeoChain({ coordinates: BARCELONA, names: COMPLETE_NAMES });
     // Someone edits the city between resolutions (a cover sync, an operator).
-    await getDb().update(cities).set({ description: 'edited', propertiesCount: 42 }).where(eq(cities.id, first.cityId));
+    await getDb()
+      .update(cities)
+      .set({ description: 'edited', propertiesCount: 42 })
+      .where(eq(cities.id, first.cityId));
 
     await resolveGeoChain({ coordinates: [2.2, 41.4], names: COMPLETE_NAMES });
 
@@ -165,7 +179,10 @@ describe('resolveGeo', () => {
 
     const [cityCount] = await getDb().select({ n: count() }).from(cities);
     expect(cityCount.n).toBe(1);
-    const buckets = await getDb().select({ n: count() }).from(regions).where(eq(regions.name, 'Unknown'));
+    const buckets = await getDb()
+      .select({ n: count() })
+      .from(regions)
+      .where(eq(regions.name, 'Unknown'));
     expect(buckets[0].n).toBe(0);
   });
 
@@ -208,7 +225,10 @@ describe('resolveGeo', () => {
       names: { city: 'Barcelona', country: 'Spain', countryCode: 'ES', state: undefined },
     });
 
-    const [region] = await getDb().select({ name: regions.name }).from(regions).where(eq(regions.id, resolved.regionId));
+    const [region] = await getDb()
+      .select({ name: regions.name })
+      .from(regions)
+      .where(eq(regions.id, resolved.regionId));
     expect(region.name).toBe('Unknown');
   });
 
@@ -224,7 +244,10 @@ describe('findOrCreateCanonicalAddress', () => {
     street: 'Carrer de Mallorca',
     number: '401',
     postal_code: '08013',
-    coordinates: { type: 'Point', coordinates: BARCELONA } as { type: string; coordinates: [number, number] },
+    coordinates: { type: 'Point', coordinates: BARCELONA } as {
+      type: string;
+      coordinates: [number, number];
+    },
     ...COMPLETE_NAMES,
   };
 
@@ -344,7 +367,11 @@ describe('normalizeAddressAliases', () => {
   });
 
   it('leaves the geo NAMES untouched — they are resolved to ids, never stored', () => {
-    const normalized = normalizeAddressAliases({ street: 'x', city: 'Barcelona', state: 'Catalonia' });
+    const normalized = normalizeAddressAliases({
+      street: 'x',
+      city: 'Barcelona',
+      state: 'Catalonia',
+    });
     expect(normalized.city).toBe('Barcelona');
     expect(normalized.state).toBe('Catalonia');
   });

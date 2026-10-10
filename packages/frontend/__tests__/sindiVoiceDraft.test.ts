@@ -10,12 +10,20 @@ import type { SpeechCallbacks } from '@/hooks/voice/speechTypes';
 import { useVoiceDraft } from '@/hooks/voice/useVoiceDraft';
 
 const mockToastError = jest.fn();
-jest.mock('@oxy.so/bloom/toast', () => ({ toast: { error: (...args: unknown[]) => mockToastError(...args) } }));
+jest.mock('@oxy.so/bloom/toast', () => ({
+  toast: { error: (...args: unknown[]) => mockToastError(...args) },
+}));
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'es' } }),
 }));
 
-type MockScript = { lang?: string; callbacks?: SpeechCallbacks; stop: jest.Mock; abort: jest.Mock; unsupported: boolean };
+type MockScript = {
+  lang?: string;
+  callbacks?: SpeechCallbacks;
+  stop: jest.Mock;
+  abort: jest.Mock;
+  unsupported: boolean;
+};
 const mockScript: MockScript = { stop: jest.fn(), abort: jest.fn(), unsupported: false };
 
 jest.mock('@/hooks/voice/speechEngine', () => ({
@@ -101,6 +109,8 @@ test('a refused permission toasts and ends listening', () => {
     mockScript.callbacks!.onFailure('denied');
     mockScript.callbacks!.onEnd();
   });
-  expect(mockToastError).toHaveBeenCalledWith('sindi.voice.deniedTitle', { description: 'sindi.voice.deniedMessage' });
+  expect(mockToastError).toHaveBeenCalledWith('sindi.voice.deniedTitle', {
+    description: 'sindi.voice.deniedMessage',
+  });
   expect(hook.result.current.listening).toBe(false);
 });

@@ -24,11 +24,11 @@
 // lists, so an orphan file is a migration nobody runs, and an orphan entry is an
 // image shipped without its migrations.
 
-import { readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
-import { readJournal, readMigrationPhases } from "@oxy.so/db/migrate";
+import { readdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { readJournal, readMigrationPhases } from '@oxy.so/db/migrate';
 
-const folder = process.argv[2] ?? "packages/backend/drizzle";
+const folder = process.argv[2] ?? 'packages/backend/drizzle';
 
 let entries;
 try {
@@ -50,8 +50,8 @@ const problems = [];
 if (entries.length === 0) {
   problems.push(
     `${folder}/meta/_journal.json lists no migrations. Either the path is wrong ` +
-      "or the journal was truncated — an empty journal makes the migrator apply " +
-      "nothing and exit 0.",
+      'or the journal was truncated — an empty journal makes the migrator apply ' +
+      'nothing and exit 0.',
   );
 }
 
@@ -62,13 +62,11 @@ problems.push(...phaseProblems);
 // Orphan `.sql` files: present on disk, absent from the journal, therefore
 // applied by nothing.
 const onDisk = readdirSync(folder)
-  .filter((name) => name.endsWith(".sql"))
-  .map((name) => name.slice(0, -".sql".length));
+  .filter((name) => name.endsWith('.sql'))
+  .map((name) => name.slice(0, -'.sql'.length));
 const journalled = new Set(tags);
 for (const name of onDisk.filter((tag) => !journalled.has(tag))) {
-  problems.push(
-    `${name}.sql is not listed in meta/_journal.json, so nothing will ever apply it.`,
-  );
+  problems.push(`${name}.sql is not listed in meta/_journal.json, so nothing will ever apply it.`);
 }
 
 if (problems.length > 0) {

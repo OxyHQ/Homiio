@@ -62,10 +62,18 @@ function buildApp(oxyUserId: string): Express {
     authed.userId = oxyUserId;
     next();
   });
-  app.post('/reservations', (req, res, next) => reservationController.createReservation(req, res, next));
-  app.patch('/reservations/:id', (req, res, next) => reservationController.updateReservationStatus(req, res, next));
-  app.post('/exchanges', (req, res, next) => exchangeController.createExchangeRequest(req, res, next));
-  app.post('/properties/:propertyId/viewings', (req, res, next) => viewingController.createViewingRequest(req, res, next));
+  app.post('/reservations', (req, res, next) =>
+    reservationController.createReservation(req, res, next),
+  );
+  app.patch('/reservations/:id', (req, res, next) =>
+    reservationController.updateReservationStatus(req, res, next),
+  );
+  app.post('/exchanges', (req, res, next) =>
+    exchangeController.createExchangeRequest(req, res, next),
+  );
+  app.post('/properties/:propertyId/viewings', (req, res, next) =>
+    viewingController.createViewingRequest(req, res, next),
+  );
   app.use(errorHandler);
   return app;
 }
@@ -81,9 +89,7 @@ function nextCountryCode(): string {
 const DAY = 24 * 60 * 60 * 1000;
 const HOST = 'oxy-host';
 
-async function seedBookableProperty(
-  overrides: Record<string, unknown> = {},
-): Promise<string> {
+async function seedBookableProperty(overrides: Record<string, unknown> = {}): Promise<string> {
   const { propertyId } = await seedListingWithGeo({
     countryCode: nextCountryCode(),
     overrides: {
@@ -136,7 +142,9 @@ async function seedLongTermProperty(): Promise<string> {
  */
 function holdListingLocked(
   propertyId: string,
-  write: (tx: Parameters<Parameters<ReturnType<typeof getDb>['transaction']>[0]>[0]) => Promise<void>,
+  write: (
+    tx: Parameters<Parameters<ReturnType<typeof getDb>['transaction']>[0]>[0],
+  ) => Promise<void>,
 ): { taken: Promise<void>; release: () => void; finished: Promise<void> } {
   let markTaken: () => void = () => undefined;
   const taken = new Promise<void>((resolve) => {
@@ -148,7 +156,11 @@ function holdListingLocked(
   });
 
   const finished = getDb().transaction(async (tx) => {
-    await tx.select({ id: properties.id }).from(properties).where(eq(properties.id, propertyId)).for('update');
+    await tx
+      .select({ id: properties.id })
+      .from(properties)
+      .where(eq(properties.id, propertyId))
+      .for('update');
     await write(tx);
     markTaken();
     await mayCommit;
@@ -231,7 +243,11 @@ describe('a stay cannot be sold twice', () => {
     // all outside a transaction, and wrote whichever number it happened to
     // read first.
     const base = Date.now();
-    const propertyId = await seedBookableProperty({ shortTermRentCleaningFee: 0, shortTermRentServiceFee: 0, shortTermRentTaxesPercent: 0 });
+    const propertyId = await seedBookableProperty({
+      shortTermRentCleaningFee: 0,
+      shortTermRentServiceFee: 0,
+      shortTermRentTaxesPercent: 0,
+    });
 
     const holder = holdListingLocked(propertyId, async (tx) => {
       await tx
@@ -402,13 +418,15 @@ describe('what a confirm re-verifies', () => {
     const propertyId = await seedBookableProperty();
     const id = await pendingBooking(propertyId);
 
-    await getDb().insert(propertyAvailabilityWindows).values({
-      propertyId,
-      scope: 'listing',
-      startsAt: new Date(base + 12 * DAY),
-      endsAt: new Date(base + 18 * DAY),
-      status: 'blocked',
-    });
+    await getDb()
+      .insert(propertyAvailabilityWindows)
+      .values({
+        propertyId,
+        scope: 'listing',
+        startsAt: new Date(base + 12 * DAY),
+        endsAt: new Date(base + 18 * DAY),
+        status: 'blocked',
+      });
 
     const res = await confirm(id);
     expect(res.status).toBe(409);
@@ -426,15 +444,17 @@ describe('what a confirm re-verifies', () => {
     });
     const id = await pendingBooking(propertyId);
 
-    await getDb().insert(exchangeRequests).values({
-      propertyId,
-      requesterOxyUserId: 'oxy-swapper',
-      hostOxyUserId: HOST,
-      mode: 'host',
-      requestedWindowStart: new Date(base + 12 * DAY),
-      requestedWindowEnd: new Date(base + 18 * DAY),
-      status: 'confirmed',
-    });
+    await getDb()
+      .insert(exchangeRequests)
+      .values({
+        propertyId,
+        requesterOxyUserId: 'oxy-swapper',
+        hostOxyUserId: HOST,
+        mode: 'host',
+        requestedWindowStart: new Date(base + 12 * DAY),
+        requestedWindowEnd: new Date(base + 18 * DAY),
+        status: 'confirmed',
+      });
 
     const res = await confirm(id);
     expect(res.status).toBe(409);
@@ -458,20 +478,22 @@ describe('what a confirm re-verifies', () => {
     const propertyId = await seedBookableProperty();
     const id = await pendingBooking(propertyId);
 
-    await getDb().insert(reservations).values({
-      propertyId,
-      guestOxyUserId: 'oxy-guest-b',
-      hostOxyUserId: HOST,
-      checkIn: new Date(base + 11 * DAY),
-      checkOut: new Date(base + 14 * DAY),
-      guestCount: 1,
-      nights: 3,
-      nightlyRate: 100,
-      subtotal: 300,
-      total: 300,
-      cancellationPolicy: 'moderate',
-      status: 'pending',
-    });
+    await getDb()
+      .insert(reservations)
+      .values({
+        propertyId,
+        guestOxyUserId: 'oxy-guest-b',
+        hostOxyUserId: HOST,
+        checkIn: new Date(base + 11 * DAY),
+        checkOut: new Date(base + 14 * DAY),
+        guestCount: 1,
+        nights: 3,
+        nightlyRate: 100,
+        subtotal: 300,
+        total: 300,
+        cancellationPolicy: 'moderate',
+        status: 'pending',
+      });
 
     expect((await confirm(id)).status).toBe(200);
     const [confirmed] = await getDb()

@@ -25,11 +25,10 @@ export function LongTermPricingStep({
   // es/it/ca numeric keyboards emit a comma decimal; normalise before parse so
   // "1234,5" isn't truncated. NaN → 0 keeps the field a controlled number.
   const handleNumber = useCallback(
-    (field: 'monthlyRent' | 'securityDeposit' | 'applicationFee' | 'lateFee') =>
-      (text: string) => {
-        const parsed = parseLocaleNumber(text);
-        updateFormField('pricing', field, Number.isNaN(parsed) ? 0 : parsed);
-      },
+    (field: 'monthlyRent' | 'securityDeposit' | 'applicationFee' | 'lateFee') => (text: string) => {
+      const parsed = parseLocaleNumber(text);
+      updateFormField('pricing', field, Number.isNaN(parsed) ? 0 : parsed);
+    },
     [updateFormField],
   );
 

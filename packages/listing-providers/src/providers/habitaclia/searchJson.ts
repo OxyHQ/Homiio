@@ -100,7 +100,9 @@ export function parseHabitacliaSearchJson(html: string): HabitacliaSearchPage | 
  * either would re-import the entire Spanish catalogue as new rows alongside the
  * old ones rather than updating them.
  */
-function refFromItem(item: Record<string, unknown> | undefined): { sourceId: string; url: string } | undefined {
+function refFromItem(
+  item: Record<string, unknown> | undefined,
+): { sourceId: string; url: string } | undefined {
   if (!item) return undefined;
 
   const sourceId = asString(item['legacyNumericId'])?.trim();
@@ -120,7 +122,8 @@ function refFromItem(item: Record<string, unknown> | undefined): { sourceId: str
  */
 function detailUrlFor(item: Record<string, unknown>, sourceId: string): string {
   const navigation = asString(item['navigationUrl'])?.trim();
-  const path = navigation && navigation.startsWith('/') ? navigation.split('?')[0] : `/i${sourceId}.htm`;
+  const path =
+    navigation && navigation.startsWith('/') ? navigation.split('?')[0] : `/i${sourceId}.htm`;
   return `${HABITACLIA_BASE_URL}${path}`;
 }
 
@@ -196,9 +199,7 @@ const PROPERTY_CATEGORIES: Readonly<Record<string, string>> = {
  * detail-page path and this one produce identical rows, so a listing that
  * arrives by either route normalizes the same way.
  */
-export function habitacliaListingFromSearchItem(
-  raw: unknown,
-): HabitacliaRawListing | undefined {
+export function habitacliaListingFromSearchItem(raw: unknown): HabitacliaRawListing | undefined {
   const item = asRecord(raw);
   const ref = refFromItem(item);
   if (!item || !ref) return undefined;
@@ -212,7 +213,8 @@ export function habitacliaListingFromSearchItem(
   if (price === undefined || price <= 0) return undefined;
 
   const operation = asString(transaction['type'])?.toLowerCase() === 'rent' ? 'rent' : 'sale';
-  const category = asString(property['propertySubtype']) ?? asString(property['propertyType']) ?? '';
+  const category =
+    asString(property['propertySubtype']) ?? asString(property['propertyType']) ?? '';
 
   return {
     id: ref.sourceId,
@@ -241,7 +243,10 @@ export function habitacliaListingFromSearchItem(
 function addressFromLocation(location: Record<string, unknown>): HabitacliaRawListing['address'] {
   const address = asRecord(location['address']) ?? {};
   const coordinates = asRecord(location['coordinates']) ?? {};
-  const street = [asString(address['streetName'])?.trim(), asString(address['streetNumber'])?.trim()]
+  const street = [
+    asString(address['streetName'])?.trim(),
+    asString(address['streetNumber'])?.trim(),
+  ]
     .filter(Boolean)
     .join(' ')
     .trim();
@@ -308,7 +313,9 @@ function imagesFrom(summary: Record<string, unknown>): HabitacliaRawImage[] {
 }
 
 /** Never fabricate a contact — only fields the portal actually returned. */
-function contactFrom(contact: Record<string, unknown> | undefined): HabitacliaRawListing['contact'] {
+function contactFrom(
+  contact: Record<string, unknown> | undefined,
+): HabitacliaRawListing['contact'] {
   const phone = asString(contact?.['phone'])?.trim();
   const email = asString(contact?.['email'])?.trim();
   if (!phone && !email) return undefined;

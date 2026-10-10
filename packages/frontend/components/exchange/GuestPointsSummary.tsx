@@ -51,9 +51,7 @@ export function GuestPointsSummary({
   if (error || !data) {
     return (
       <View style={styles.container}>
-        <P style={{ color: theme.colors.textSecondary }}>
-          {t('guestPoints.errors.loadFailed')}
-        </P>
+        <P style={{ color: theme.colors.textSecondary }}>{t('guestPoints.errors.loadFailed')}</P>
       </View>
     );
   }
@@ -96,9 +94,7 @@ export function GuestPointsSummary({
 
       {/* The rule itself, stated on the surface rather than assumed. A points
           system whose exchange rate is invisible is one people guess at. */}
-      <P style={[styles.rule, { color: theme.colors.textSecondary }]}>
-        {t('guestPoints.rule')}
-      </P>
+      <P style={[styles.rule, { color: theme.colors.textSecondary }]}>{t('guestPoints.rule')}</P>
     </View>
   );
 }

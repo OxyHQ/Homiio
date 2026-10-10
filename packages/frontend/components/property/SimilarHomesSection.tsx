@@ -25,9 +25,7 @@ interface SimilarHomesSectionProps {
   propertyId: string;
 }
 
-export const SimilarHomesSection: React.FC<SimilarHomesSectionProps> = ({
-  propertyId,
-}) => {
+export const SimilarHomesSection: React.FC<SimilarHomesSectionProps> = ({ propertyId }) => {
   const { t } = useTranslation();
   const router = useRouter();
   const { insights, loading, error } = useAreaInsights(propertyId);

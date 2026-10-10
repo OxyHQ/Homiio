@@ -127,12 +127,7 @@ export default function PropertiesScreen() {
 
   const body = (() => {
     if (isLoading && properties.length === 0) {
-      return (
-        <PropertyResultsGridSkeleton
-          count={SKELETON_COUNT}
-          style={styles.gridPadding}
-        />
-      );
+      return <PropertyResultsGridSkeleton count={SKELETON_COUNT} style={styles.gridPadding} />;
     }
     if (isError) {
       return (
@@ -149,9 +144,7 @@ export default function PropertiesScreen() {
         <EmptyState
           icon={RiHomeLine}
           title={t('properties.empty.title')}
-          description={
-            t('properties.empty.description')
-          }
+          description={t('properties.empty.description')}
           actionText={t('properties.empty.action')}
           actionIcon={RiEqualizerLine}
           onAction={handleFiltersPress}
@@ -209,7 +202,9 @@ export default function PropertiesScreen() {
             icon={RiTimeLine}
             iconOnly={!isWide}
             onPress={() => router.push('/properties/recently-viewed')}
-            accessibilityLabel={t('properties.actions.recent')} tone="neutral" appearance="outline"
+            accessibilityLabel={t('properties.actions.recent')}
+            tone="neutral"
+            appearance="outline"
           >
             {isWide ? t('properties.actions.recent') : undefined}
           </Button>
@@ -239,10 +234,7 @@ export default function PropertiesScreen() {
         </View>
         {body}
         {isFetchingNextPage ? (
-          <PropertyResultsGridSkeleton
-            count={2}
-            style={styles.gridPadding}
-          />
+          <PropertyResultsGridSkeleton count={2} style={styles.gridPadding} />
         ) : null}
         <LoadMoreSentinel enabled={hasNextPage} onLoadMore={handleEndReached} />
       </ScrollView>

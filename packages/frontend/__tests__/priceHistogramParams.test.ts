@@ -85,11 +85,19 @@ describe('priceHistogramSpan', () => {
     expect(span).not.toHaveProperty('currency');
     // Every value it does send, so "no currency" cannot be satisfied by an
     // empty object from a builder that stopped working.
-    expect(span).toEqual({ histogramMin: 0, histogramMax: 5000, histogramBuckets: PRICE_HISTOGRAM_BUCKETS });
+    expect(span).toEqual({
+      histogramMin: 0,
+      histogramMax: 5000,
+      histogramBuckets: PRICE_HISTOGRAM_BUCKETS,
+    });
   });
 
   it('covers each offering’s own track, top included', () => {
-    for (const offering of [OfferingType.LONG_TERM_RENT, OfferingType.SHORT_TERM_RENT, OfferingType.SALE]) {
+    for (const offering of [
+      OfferingType.LONG_TERM_RENT,
+      OfferingType.SHORT_TERM_RENT,
+      OfferingType.SALE,
+    ]) {
       const track = priceTrackFor(offering);
       expect(priceHistogramSpan(track)).toMatchObject({ histogramMin: 0, histogramMax: track.max });
     }
@@ -110,7 +118,9 @@ describe('priceHistogramQueryKey', () => {
   });
 
   it('carries no device coordinate', () => {
-    const serialized = JSON.stringify(priceHistogramQueryKey(baseQuery({ location: nearMe }), SPAN));
+    const serialized = JSON.stringify(
+      priceHistogramQueryKey(baseQuery({ location: nearMe }), SPAN),
+    );
     expect(serialized).not.toContain('41.387');
     expect(serialized).not.toContain('2.168');
   });

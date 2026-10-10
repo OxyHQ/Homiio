@@ -1,37 +1,37 @@
 {
-    "telegram": {
-        "forRent": "en alquiler en",
-        "rent": "Alquiler",
-        "available": "Disponible",
-        "details": "Detalles",
-        "bedrooms": "Habitaciones",
-        "bathrooms": "Baños",
-        "type": "Tipo",
-        "size": "Tamaño",
-        "amenities": "Servicios",
-        "description": "Descripción",
-        "immediately": "Inmediatamente",
-        "noneListedAmenities": "Ninguno listado",
-        "noDescriptionProvided": "No hay descripción disponible",
-        "locationNotSpecified": "Ubicación no especificada",
-        "viewPropertyDetails": "🏠 Ver Detalles de la Propiedad",
-        "visitHomiio": "🏠 Visitar Homiio",
-        "testMessage": "🤖 Mensaje de prueba del Bot de Propiedades Homiio",
-        "propertyTypes": {
-            "apartment": "Apartamento",
-            "house": "Casa",
-            "room": "Habitación",
-            "studio": "Estudio",
-            "duplex": "Dúplex",
-            "penthouse": "Ático"
-        },
-        "paymentFrequency": {
-            "monthly": "mensual",
-            "weekly": "semanal",
-            "daily": "diario"
-        },
-        "hashtags": {
-            "newProperty": "#NuevaPropiedad"
-        }
+  "telegram": {
+    "forRent": "en alquiler en",
+    "rent": "Alquiler",
+    "available": "Disponible",
+    "details": "Detalles",
+    "bedrooms": "Habitaciones",
+    "bathrooms": "Baños",
+    "type": "Tipo",
+    "size": "Tamaño",
+    "amenities": "Servicios",
+    "description": "Descripción",
+    "immediately": "Inmediatamente",
+    "noneListedAmenities": "Ninguno listado",
+    "noDescriptionProvided": "No hay descripción disponible",
+    "locationNotSpecified": "Ubicación no especificada",
+    "viewPropertyDetails": "🏠 Ver Detalles de la Propiedad",
+    "visitHomiio": "🏠 Visitar Homiio",
+    "testMessage": "🤖 Mensaje de prueba del Bot de Propiedades Homiio",
+    "propertyTypes": {
+      "apartment": "Apartamento",
+      "house": "Casa",
+      "room": "Habitación",
+      "studio": "Estudio",
+      "duplex": "Dúplex",
+      "penthouse": "Ático"
+    },
+    "paymentFrequency": {
+      "monthly": "mensual",
+      "weekly": "semanal",
+      "daily": "diario"
+    },
+    "hashtags": {
+      "newProperty": "#NuevaPropiedad"
     }
+  }
 }

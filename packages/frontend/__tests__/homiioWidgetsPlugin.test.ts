@@ -8,7 +8,6 @@
  * a tap that opens nothing.
  */
 
- 
 const { assertBaseUrl } = require('../modules/homiio-widgets/app.plugin');
 
 describe('withHomiioWidgets origin validation', () => {

@@ -43,9 +43,7 @@ import imageController from '../../controllers/imageController';
 import { getDb } from '../../db/postgres';
 import { tenantApplicationDocuments, tenantApplications } from '../../db/schema';
 import { errorHandler } from '../../middlewares/errorHandler';
-import imageUploadService, {
-  LOCAL_IMAGE_STORE_DIR,
-} from '../../services/imageUploadService';
+import imageUploadService, { LOCAL_IMAGE_STORE_DIR } from '../../services/imageUploadService';
 import config from '../../config';
 import { objectIdHex, resetGeoTables, seedListingWithGeo } from '../helpers/postgresGeoFixtures';
 
@@ -151,7 +149,6 @@ beforeEach(reset);
 afterAll(reset);
 
 describe('the public image route does not serve tenancy evidence', () => {
-
   it('refuses the key that used to work', async () => {
     const fixture = await seedApplicationWithDocument();
 
@@ -194,7 +191,6 @@ describe('the public image route does not serve tenancy evidence', () => {
 });
 
 describe('the authorized route serves them, to two people', () => {
-
   it('gives the applicant their own document', async () => {
     const fixture = await seedApplicationWithDocument();
 
@@ -210,7 +206,7 @@ describe('the authorized route serves them, to two people', () => {
     expect(res.headers['cache-control']).toBe('private, no-store');
   });
 
-  it('gives the landlord the applicant\'s document', async () => {
+  it("gives the landlord the applicant's document", async () => {
     const fixture = await seedApplicationWithDocument();
 
     const res = await request(authed(LANDLORD)).get(
@@ -234,7 +230,7 @@ describe('the authorized route serves them, to two people', () => {
     expect(res.text).not.toContain(fixture.bytes.toString('base64'));
   });
 
-  it('refuses a document id from somebody else\'s application', async () => {
+  it("refuses a document id from somebody else's application", async () => {
     const mine = await seedApplicationWithDocument();
     const theirs = await seedApplicationWithDocument();
 
@@ -266,7 +262,6 @@ describe('the authorized route serves them, to two people', () => {
 });
 
 describe('the wire shape no longer hands out a storage link', () => {
-
   it('serializes a path that needs the session, not a URL that does not', async () => {
     const fixture = await seedApplicationWithDocument();
 

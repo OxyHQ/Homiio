@@ -106,7 +106,11 @@ export function useStayQuoteBreakdown(
       });
     }
     if (quote.taxes > 0) {
-      rows.push({ key: 'taxes', label: t('property.moveInCost.taxes'), amount: money(quote.taxes) });
+      rows.push({
+        key: 'taxes',
+        label: t('property.moveInCost.taxes'),
+        amount: money(quote.taxes),
+      });
     }
     return { rows, totalLabel: t('booking.breakdown.total'), total: money(quote.total) };
   }, [nights, nightlyRate, cleaningFee, serviceFee, taxesPercent, currency, locale, t]);

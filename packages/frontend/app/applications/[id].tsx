@@ -40,14 +40,8 @@ import {
 import { confirm } from '@oxy.so/bloom/surfaces';
 import { useProperty } from '@/hooks';
 import { useProfile } from '@/context/ProfileContext';
-import {
-  useApplicationById,
-  useUpdateApplicationMutation,
-} from '@/hooks/useApplicationQueries';
-import {
-  getPropertyImageSource,
-  getPropertyTitle,
-} from '@/utils/propertyUtils';
+import { useApplicationById, useUpdateApplicationMutation } from '@/hooks/useApplicationQueries';
+import { getPropertyImageSource, getPropertyTitle } from '@/utils/propertyUtils';
 import { Card } from '@oxy.so/bloom/card';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { radius, spacing, tracker } from '@/constants/styles';
@@ -84,10 +78,7 @@ export default function ApplicationDetailScreen() {
 
   const showCreateLease = useMemo<boolean>(() => {
     if (!application) return false;
-    return (
-      role === 'landlord' &&
-      application.status === TenantApplicationStatus.APPROVED
-    );
+    return role === 'landlord' && application.status === TenantApplicationStatus.APPROVED;
   }, [application, role]);
 
   const handleWithdraw = useCallback(async () => {
@@ -108,9 +99,7 @@ export default function ApplicationDetailScreen() {
       toast.success(t('applications.toast.withdrawn'));
     } catch (error) {
       const message =
-        error instanceof Error
-          ? error.message
-          : t('applications.toast.withdrawFailed');
+        error instanceof Error ? error.message : t('applications.toast.withdrawFailed');
       toast.error(message);
     }
   }, [id, application, updateMutation, t]);
@@ -167,9 +156,7 @@ export default function ApplicationDetailScreen() {
         <View style={styles.centerWrap}>
           <ErrorState
             title="Application unavailable"
-            description={
-              applicationQuery.error?.message ?? 'This application could not be loaded.'
-            }
+            description={applicationQuery.error?.message ?? 'This application could not be loaded.'}
             retryLabel="Go back"
             onRetry={() => router.back()}
           />
@@ -223,14 +210,16 @@ export default function ApplicationDetailScreen() {
             </Card>
           ) : null}
 
-          {(showCreateLease || canWithdraw) ? (
+          {showCreateLease || canWithdraw ? (
             <View style={styles.actionRow}>
               {showCreateLease ? (
                 <Button
                   size="md"
                   leadingIcon={RiEditLine}
                   onPress={handleCreateLease}
-                  style={styles.actionButton} tone="accent" appearance="solid"
+                  style={styles.actionButton}
+                  tone="accent"
+                  appearance="solid"
                 >
                   Create lease
                 </Button>
@@ -241,7 +230,9 @@ export default function ApplicationDetailScreen() {
                   leadingIcon={RiCloseLine}
                   onPress={() => void handleWithdraw()}
                   disabled={updateMutation.isPending}
-                  style={styles.actionButton} tone="accent" appearance="subtle"
+                  style={styles.actionButton}
+                  tone="accent"
+                  appearance="subtle"
                 >
                   Withdraw application
                 </Button>

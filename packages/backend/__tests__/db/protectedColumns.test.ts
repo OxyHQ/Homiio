@@ -30,9 +30,9 @@ import { addresses, images, properties } from '../../db/schema';
 
 describe('protected column registry', () => {
   it('agrees with the type-level registry about what is protected', () => {
-    const fromReasons = PROTECTED_COLUMNS
-      .map((entry) => `${getTableName(entry.table)}.${entry.property}`)
-      .sort();
+    const fromReasons = PROTECTED_COLUMNS.map(
+      (entry) => `${getTableName(entry.table)}.${entry.property}`,
+    ).sort();
     const fromRegistry = Object.entries(
       PROTECTED_COLUMNS_BY_TABLE as Record<string, readonly string[]>,
     )
@@ -42,9 +42,9 @@ describe('protected column registry', () => {
   });
 
   it('gives every protected column a reason', () => {
-    const unexplained = PROTECTED_COLUMNS
-      .filter((entry) => entry.reason.trim().length < 20)
-      .map((entry) => `${getTableName(entry.table)}.${entry.property}`);
+    const unexplained = PROTECTED_COLUMNS.filter((entry) => entry.reason.trim().length < 20).map(
+      (entry) => `${getTableName(entry.table)}.${entry.property}`,
+    );
     expect(unexplained).toEqual([]);
   });
 
@@ -52,9 +52,9 @@ describe('protected column registry', () => {
     // A registry entry naming a column that does not exist protects nothing, and
     // nothing else would report it — `Omit` over a property that is not there is
     // a no-op, so the type-level exclusion would silently do nothing too.
-    const missing = PROTECTED_COLUMNS
-      .filter((entry) => !(entry.property in getTableColumns(entry.table)))
-      .map((entry) => `${getTableName(entry.table)}.${entry.property}`);
+    const missing = PROTECTED_COLUMNS.filter(
+      (entry) => !(entry.property in getTableColumns(entry.table)),
+    ).map((entry) => `${getTableName(entry.table)}.${entry.property}`);
     expect(missing).toEqual([]);
   });
 });

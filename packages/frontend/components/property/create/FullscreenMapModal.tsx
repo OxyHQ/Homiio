@@ -46,7 +46,9 @@ export function FullscreenMapModal({
             iconOnly
             leadingIcon={RiCloseLine}
             onPress={onClose}
-            accessibilityLabel={t('common.close')} tone="accent" appearance="subtle"
+            accessibilityLabel={t('common.close')}
+            tone="accent"
+            appearance="subtle"
           />
           <H4 style={styles.fullscreenMapTitle}>
             {t('propertyCreate.location.mapPickerTitle', 'Select Location')}

@@ -42,11 +42,15 @@ function buildApp(oxyUserId?: string): Express {
   });
   app.get('/saved-searches', (req, res, next) => savedSearches.getSavedSearches(req, res, next));
   app.post('/saved-searches', (req, res, next) => savedSearches.saveSearch(req, res, next));
-  app.put('/saved-searches/:searchId', (req, res, next) => savedSearches.updateSavedSearch(req, res, next));
+  app.put('/saved-searches/:searchId', (req, res, next) =>
+    savedSearches.updateSavedSearch(req, res, next),
+  );
   app.patch('/saved-searches/:searchId/notifications', (req, res, next) =>
     savedSearches.toggleSearchNotifications(req, res, next),
   );
-  app.delete('/saved-searches/:searchId', (req, res, next) => savedSearches.deleteSavedSearch(req, res, next));
+  app.delete('/saved-searches/:searchId', (req, res, next) =>
+    savedSearches.deleteSavedSearch(req, res, next),
+  );
   app.use(errorHandler);
   return app;
 }
@@ -109,10 +113,14 @@ describe('saveSearch', () => {
 
   it('answers 409 on a duplicate name and leaves the FIRST row untouched', async () => {
     const app = buildApp('oxy-a');
-    const created = await request(app).post('/saved-searches').send({ name: 'Madrid', query: 'one' });
+    const created = await request(app)
+      .post('/saved-searches')
+      .send({ name: 'Madrid', query: 'one' });
     expect(created.status).toBe(201);
 
-    const second = await request(app).post('/saved-searches').send({ name: 'Madrid', query: 'two' });
+    const second = await request(app)
+      .post('/saved-searches')
+      .send({ name: 'Madrid', query: 'two' });
     expect(second.status).toBe(409);
     expect(second.body.code).toBe('SEARCH_NAME_EXISTS');
 
@@ -130,8 +138,12 @@ describe('saveSearch', () => {
     // The index that would break this is a plain `UNIQUE(name)`, which passes
     // every "rejects a duplicate" assertion above. This is the permit half that
     // `CONVENTIONS.md` says a unique index has to be tested on.
-    const a = await request(buildApp('oxy-a')).post('/saved-searches').send({ name: 'Madrid', query: 'q' });
-    const b = await request(buildApp('oxy-b')).post('/saved-searches').send({ name: 'Madrid', query: 'q' });
+    const a = await request(buildApp('oxy-a'))
+      .post('/saved-searches')
+      .send({ name: 'Madrid', query: 'q' });
+    const b = await request(buildApp('oxy-b'))
+      .post('/saved-searches')
+      .send({ name: 'Madrid', query: 'q' });
     expect(a.status).toBe(201);
     expect(b.status).toBe(201);
 
@@ -203,12 +215,14 @@ describe('updateSavedSearch / toggleSearchNotifications — ownership', () => {
     expect(persisted?.name).toBe('mine');
   });
 
-  it('answers 409 when a rename collides with another of the same owner\'s searches', async () => {
+  it("answers 409 when a rename collides with another of the same owner's searches", async () => {
     const app = buildApp('oxy-a');
     await request(app).post('/saved-searches').send({ name: 'taken', query: 'q' });
     const other = await request(app).post('/saved-searches').send({ name: 'free', query: 'q' });
 
-    const res = await request(app).put(`/saved-searches/${other.body.data.id}`).send({ name: 'taken' });
+    const res = await request(app)
+      .put(`/saved-searches/${other.body.data.id}`)
+      .send({ name: 'taken' });
     expect(res.status).toBe(409);
     expect(res.body.code).toBe('SEARCH_NAME_EXISTS');
 
@@ -263,8 +277,12 @@ describe('deleteSavedSearch — ownership', () => {
     // handler that still recognised only a 24-hex ObjectId would answer 400 for
     // a perfectly valid uuid v7.
     const app = buildApp('oxy-a');
-    expect((await request(app).delete('/saved-searches/0198f0a1-0000-7000-8000-000000000000')).status).toBe(404);
-    expect((await request(app).delete('/saved-searches/507f1f77bcf86cd799439011')).status).toBe(404);
+    expect(
+      (await request(app).delete('/saved-searches/0198f0a1-0000-7000-8000-000000000000')).status,
+    ).toBe(404);
+    expect((await request(app).delete('/saved-searches/507f1f77bcf86cd799439011')).status).toBe(
+      404,
+    );
     expect((await request(app).delete('/saved-searches/not-an-id')).status).toBe(404);
   });
 });

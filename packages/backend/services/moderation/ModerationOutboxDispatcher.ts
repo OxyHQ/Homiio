@@ -27,9 +27,7 @@ import type { ModerationOutboxEvent } from '../../db/moderation/moderationOutbox
 import { describeErrorForLog } from '../../middlewares/errorHandler';
 
 /** Route an event to the worker that owns its kind. */
-export async function handleModerationOutboxEvent(
-  event: ModerationOutboxEvent,
-): Promise<void> {
+export async function handleModerationOutboxEvent(event: ModerationOutboxEvent): Promise<void> {
   switch (event.kind) {
     case 'report.submit':
       await deliverReportOutboxEvent(event);

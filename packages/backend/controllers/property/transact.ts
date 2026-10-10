@@ -56,13 +56,17 @@ export async function markPropertyTransacted(
       return next(new AppError('Property not found', 404, 'PROPERTY_NOT_FOUND'));
     }
     if (!existing.property.oxyUserId || existing.property.oxyUserId !== oxyUserId) {
-      return next(new AppError('Access denied - you can only close your own properties', 403, 'FORBIDDEN'));
+      return next(
+        new AppError('Access denied - you can only close your own properties', 403, 'FORBIDDEN'),
+      );
     }
 
     // Resolve the requested terminal status, defaulting from the offerings.
     const requested = typeof req.body?.status === 'string' ? req.body.status : undefined;
     if (requested !== undefined && !TERMINAL_STATUSES.includes(requested)) {
-      return next(new AppError('status must be a terminal status (rented or sold)', 400, 'INVALID_STATUS'));
+      return next(
+        new AppError('status must be a terminal status (rented or sold)', 400, 'INVALID_STATUS'),
+      );
     }
     const nextStatus = requested ?? defaultTerminalStatus(existing.property.offerings);
 
@@ -95,8 +99,8 @@ export async function markPropertyTransacted(
           property,
           commission: commission ? commission.toJSON() : null,
         },
-        'Property marked as transacted'
-      )
+        'Property marked as transacted',
+      ),
     );
   } catch (error) {
     next(error);

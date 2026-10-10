@@ -34,7 +34,12 @@ import type {
 } from '../../../types';
 import { createFetchRuntime } from '../../../runtime';
 import { fetchListingViaLadder } from '../../../strategy';
-import { defaultProviderMetrics, type ProviderMetricsReader, type ProviderMetricsSink, type StrategyName } from '../../../metrics';
+import {
+  defaultProviderMetrics,
+  type ProviderMetricsReader,
+  type ProviderMetricsSink,
+  type StrategyName,
+} from '../../../metrics';
 import { extractSchemaOrgListings, pickPrimaryListing, type SchemaOrgListing } from '../jsonLd';
 import { isUsPortalChallenge } from '../challenge';
 import { DEFAULT_US_CITIES } from '../portals';
@@ -112,7 +117,9 @@ function buildAddress(listing: SchemaOrgListing): NormalizedListingAddress {
     city: listing.address.locality ?? '',
     state: listing.address.region,
     country:
-      listing.address.country && listing.address.country !== 'US' ? listing.address.country : COUNTRY,
+      listing.address.country && listing.address.country !== 'US'
+        ? listing.address.country
+        : COUNTRY,
     countryCode: 'US',
     postalCode: listing.address.postalCode,
   };

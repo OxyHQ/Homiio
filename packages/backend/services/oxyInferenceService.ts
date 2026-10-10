@@ -1,4 +1,9 @@
-import { OxyInferenceClient, type OxyInferenceRequestOptions, type OxyInferenceResponse, type OxyResponsesRequest } from '@oxy.so/core/inference';
+import {
+  OxyInferenceClient,
+  type OxyInferenceRequestOptions,
+  type OxyInferenceResponse,
+  type OxyResponsesRequest,
+} from '@oxy.so/core/inference';
 import type { InferenceMessage, ResponseFormat } from '@oxy.so/contracts';
 import config from '../config';
 import { canAuthenticateAsOxyService, oxyService } from './oxy';
@@ -56,9 +61,7 @@ export class HomiioInferenceService {
       routingProfileId: this.#routingProfileId,
       input: input.messages,
       labels: { product: 'homiio', feature: input.feature },
-      ...(input.maxOutputTokens === undefined
-        ? {}
-        : { maxOutputTokens: input.maxOutputTokens }),
+      ...(input.maxOutputTokens === undefined ? {} : { maxOutputTokens: input.maxOutputTokens }),
       ...(input.temperature === undefined ? {} : { temperature: input.temperature }),
       ...(input.responseFormat === undefined ? {} : { responseFormat: input.responseFormat }),
     };

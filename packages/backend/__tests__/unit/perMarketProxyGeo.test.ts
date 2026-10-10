@@ -223,12 +223,12 @@ describe('resolveProxyCredentials threads the market country per dialect', () =>
   });
 
   it('dataimpulse dialect: params ride on the username', () => {
-    expect(resolveProxyCredentials(config, 'sess1', marketProxyCountry('PL'), 'dataimpulse')).toEqual(
-      {
-        username: 'user__cr.pl;sessid.sess1',
-        password: 'pass',
-      },
-    );
+    expect(
+      resolveProxyCredentials(config, 'sess1', marketProxyCountry('PL'), 'dataimpulse'),
+    ).toEqual({
+      username: 'user__cr.pl;sessid.sess1',
+      password: 'pass',
+    });
   });
 
   it('an unknown market yields NO country param (never a 407-inducing junk param)', () => {
@@ -237,12 +237,12 @@ describe('resolveProxyCredentials threads the market country per dialect', () =>
       username: 'user',
       password: 'pass_session-sess1',
     });
-    expect(resolveProxyCredentials(config, 'sess1', marketProxyCountry('ZZ'), 'dataimpulse')).toEqual(
-      {
-        username: 'user__sessid.sess1',
-        password: 'pass',
-      },
-    );
+    expect(
+      resolveProxyCredentials(config, 'sess1', marketProxyCountry('ZZ'), 'dataimpulse'),
+    ).toEqual({
+      username: 'user__sessid.sess1',
+      password: 'pass',
+    });
   });
 
   it('an unknown market falls back to LISTING_PROXY_GEO when set', () => {

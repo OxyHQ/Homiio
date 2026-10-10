@@ -29,10 +29,18 @@ interface SubscriptionState {
 
   // Actions
   fetchEntitlements: (oxyServices: OxyServices, activeSessionId: string) => Promise<void>;
-  startCheckout: (product: 'plus' | 'file' | 'founder', oxyServices: OxyServices, activeSessionId: string) => Promise<void>;
+  startCheckout: (
+    product: 'plus' | 'file' | 'founder',
+    oxyServices: OxyServices,
+    activeSessionId: string,
+  ) => Promise<void>;
   openCustomerPortal: (oxyServices: OxyServices, activeSessionId: string) => Promise<void>;
   syncSubscription: (oxyServices: OxyServices, activeSessionId: string) => Promise<void>;
-  cancelSubscription: (immediate: boolean, oxyServices: OxyServices, activeSessionId: string) => Promise<void>;
+  cancelSubscription: (
+    immediate: boolean,
+    oxyServices: OxyServices,
+    activeSessionId: string,
+  ) => Promise<void>;
   reactivateSubscription: (oxyServices: OxyServices, activeSessionId: string) => Promise<void>;
   resetError: () => void;
 }
@@ -61,7 +69,7 @@ export const useSubscriptionStore = create<SubscriptionState>((set, get) => ({
   fetchEntitlements: async (oxyServices: OxyServices, activeSessionId: string) => {
     try {
       set({ isLoading: true, error: null });
-      
+
       const { data } = await api.get<{ success: boolean; entitlements: Entitlements }>(
         '/api/profiles/me/entitlements',
       );
@@ -70,25 +78,29 @@ export const useSubscriptionStore = create<SubscriptionState>((set, get) => ({
         throw new Error('Failed to load entitlements');
       }
 
-      set({ 
+      set({
         entitlements: data.entitlements || defaultEntitlements,
-        isLoading: false 
+        isLoading: false,
       });
     } catch (error: any) {
-      set({ 
+      set({
         error: error.message || 'Failed to load entitlements',
-        isLoading: false 
+        isLoading: false,
       });
       throw error;
     }
   },
 
   // Start checkout
-  startCheckout: async (product: 'plus' | 'file' | 'founder', oxyServices: OxyServices, activeSessionId: string) => {
+  startCheckout: async (
+    product: 'plus' | 'file' | 'founder',
+    oxyServices: OxyServices,
+    activeSessionId: string,
+  ) => {
     try {
-      set(state => ({ 
+      set((state) => ({
         loadingStates: { ...state.loadingStates, checkout: true },
-        error: null 
+        error: null,
       }));
 
       // Prevent redundant purchase if Plus is active
@@ -100,10 +112,9 @@ export const useSubscriptionStore = create<SubscriptionState>((set, get) => ({
         throw new Error('File uploads are included in your Homiio+ subscription');
       }
 
-      const { data } = await api.post<{ success: boolean; url: string }>(
-        '/api/billing/checkout',
-        { product },
-      );
+      const { data } = await api.post<{ success: boolean; url: string }>('/api/billing/checkout', {
+        product,
+      });
 
       if (!data?.success) {
         throw new Error('Failed to create checkout session');
@@ -113,14 +124,14 @@ export const useSubscriptionStore = create<SubscriptionState>((set, get) => ({
       const { Linking } = require('react-native');
       await Linking.openURL(data.url);
     } catch (error: any) {
-      set(state => ({ 
+      set((state) => ({
         loadingStates: { ...state.loadingStates, checkout: false },
-        error: error.message || 'Failed to start checkout'
+        error: error.message || 'Failed to start checkout',
       }));
       throw error;
     } finally {
-      set(state => ({ 
-        loadingStates: { ...state.loadingStates, checkout: false }
+      set((state) => ({
+        loadingStates: { ...state.loadingStates, checkout: false },
       }));
     }
   },
@@ -128,9 +139,9 @@ export const useSubscriptionStore = create<SubscriptionState>((set, get) => ({
   // Open customer portal
   openCustomerPortal: async (oxyServices: OxyServices, activeSessionId: string) => {
     try {
-      set(state => ({ 
+      set((state) => ({
         loadingStates: { ...state.loadingStates, customerPortal: true },
-        error: null 
+        error: null,
       }));
 
       const { entitlements } = get();
@@ -138,10 +149,11 @@ export const useSubscriptionStore = create<SubscriptionState>((set, get) => ({
         throw new Error('No subscription found to manage');
       }
 
-      const { data } = await api.post<{ success: boolean; url: string; error?: { code: string; message: string } }>(
-        '/api/billing/customer-portal',
-        { subscriptionId: entitlements.plusStripeSubscriptionId },
-      );
+      const { data } = await api.post<{
+        success: boolean;
+        url: string;
+        error?: { code: string; message: string };
+      }>('/api/billing/customer-portal', { subscriptionId: entitlements.plusStripeSubscriptionId });
 
       if (!data?.success) {
         throw new Error(data?.error?.message || 'Failed to create customer portal session');
@@ -151,14 +163,14 @@ export const useSubscriptionStore = create<SubscriptionState>((set, get) => ({
       const { Linking } = require('react-native');
       await Linking.openURL(data.url);
     } catch (error: any) {
-      set(state => ({ 
+      set((state) => ({
         loadingStates: { ...state.loadingStates, customerPortal: false },
-        error: error.message || 'Failed to open customer portal'
+        error: error.message || 'Failed to open customer portal',
       }));
       throw error;
     } finally {
-      set(state => ({ 
-        loadingStates: { ...state.loadingStates, customerPortal: false }
+      set((state) => ({
+        loadingStates: { ...state.loadingStates, customerPortal: false },
       }));
     }
   },
@@ -166,9 +178,9 @@ export const useSubscriptionStore = create<SubscriptionState>((set, get) => ({
   // Sync subscription from Stripe
   syncSubscription: async (oxyServices: OxyServices, activeSessionId: string) => {
     try {
-      set(state => ({ 
+      set((state) => ({
         loadingStates: { ...state.loadingStates, sync: true },
-        error: null 
+        error: null,
       }));
 
       const { data } = await api.post<{ success: boolean; entitlements: Entitlements }>(
@@ -180,25 +192,29 @@ export const useSubscriptionStore = create<SubscriptionState>((set, get) => ({
         throw new Error('Failed to sync subscription');
       }
 
-      set({ 
+      set({
         entitlements: data.entitlements || defaultEntitlements,
-        loadingStates: { ...get().loadingStates, sync: false }
+        loadingStates: { ...get().loadingStates, sync: false },
       });
     } catch (error: any) {
-      set(state => ({ 
+      set((state) => ({
         loadingStates: { ...state.loadingStates, sync: false },
-        error: error.message || 'Failed to sync subscription'
+        error: error.message || 'Failed to sync subscription',
       }));
       throw error;
     }
   },
 
   // Cancel subscription
-  cancelSubscription: async (immediate: boolean, oxyServices: OxyServices, activeSessionId: string) => {
+  cancelSubscription: async (
+    immediate: boolean,
+    oxyServices: OxyServices,
+    activeSessionId: string,
+  ) => {
     try {
-      set(state => ({ 
+      set((state) => ({
         loadingStates: { ...state.loadingStates, cancel: true },
-        error: null 
+        error: null,
       }));
 
       const { data } = await api.post<{ success: boolean; entitlements: Entitlements }>(
@@ -210,14 +226,14 @@ export const useSubscriptionStore = create<SubscriptionState>((set, get) => ({
         throw new Error('Failed to cancel subscription');
       }
 
-      set({ 
+      set({
         entitlements: data.entitlements || defaultEntitlements,
-        loadingStates: { ...get().loadingStates, cancel: false }
+        loadingStates: { ...get().loadingStates, cancel: false },
       });
     } catch (error: any) {
-      set(state => ({ 
+      set((state) => ({
         loadingStates: { ...state.loadingStates, cancel: false },
-        error: error.message || 'Failed to cancel subscription'
+        error: error.message || 'Failed to cancel subscription',
       }));
       throw error;
     }
@@ -226,9 +242,9 @@ export const useSubscriptionStore = create<SubscriptionState>((set, get) => ({
   // Reactivate subscription
   reactivateSubscription: async (oxyServices: OxyServices, activeSessionId: string) => {
     try {
-      set(state => ({ 
+      set((state) => ({
         loadingStates: { ...state.loadingStates, reactivate: true },
-        error: null 
+        error: null,
       }));
 
       const { data } = await api.post<{ success: boolean; entitlements: Entitlements }>(
@@ -240,14 +256,14 @@ export const useSubscriptionStore = create<SubscriptionState>((set, get) => ({
         throw new Error('Failed to reactivate subscription');
       }
 
-      set({ 
+      set({
         entitlements: data.entitlements || defaultEntitlements,
-        loadingStates: { ...get().loadingStates, reactivate: false }
+        loadingStates: { ...get().loadingStates, reactivate: false },
       });
     } catch (error: any) {
-      set(state => ({ 
+      set((state) => ({
         loadingStates: { ...state.loadingStates, reactivate: false },
-        error: error.message || 'Failed to reactivate subscription'
+        error: error.message || 'Failed to reactivate subscription',
       }));
       throw error;
     }

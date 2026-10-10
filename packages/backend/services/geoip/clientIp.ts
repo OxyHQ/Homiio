@@ -56,9 +56,7 @@ export interface PublicClientAddress {
 }
 
 /** Why no address is available to look up. Mirrors the contract's reasons. */
-export type ClientAddressRefusal =
-  | { readonly kind: 'absent' }
-  | { readonly kind: 'private' };
+export type ClientAddressRefusal = { readonly kind: 'absent' } | { readonly kind: 'private' };
 
 export type ClientAddress = PublicClientAddress | ClientAddressRefusal;
 

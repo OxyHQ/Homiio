@@ -79,18 +79,18 @@ export const DetailIcon: React.FC<{
 }> = ({ image, fallbackIcon: FallbackIcon, muted = false }) => {
   const tint = muted ? colors.COLOR_BLACK_LIGHT_5 : colors.COLOR_BLACK_LIGHT_1;
   return (
-  <View style={styles.detailIconBox}>
-    {image ? (
-      <Image
-        source={image}
-        style={[styles.detailIconImage, muted && styles.detailIconImageMuted]}
-        resizeMode="contain"
-        accessible={false}
-      />
-    ) : (
-      <FallbackIcon width={DETAIL_ICON_SIZE} height={DETAIL_ICON_SIZE} fill={tint} />
-    )}
-  </View>
+    <View style={styles.detailIconBox}>
+      {image ? (
+        <Image
+          source={image}
+          style={[styles.detailIconImage, muted && styles.detailIconImageMuted]}
+          resizeMode="contain"
+          accessible={false}
+        />
+      ) : (
+        <FallbackIcon width={DETAIL_ICON_SIZE} height={DETAIL_ICON_SIZE} fill={tint} />
+      )}
+    </View>
   );
 };
 
@@ -137,11 +137,7 @@ interface DetailIconCellProps {
 export const DetailIconCell: React.FC<DetailIconCellProps> = ({
   children,
   reserveTrailing = false,
-}) => (
-  <View style={[styles.cell, reserveTrailing && styles.cellReserveTrailing]}>
-    {children}
-  </View>
-);
+}) => <View style={[styles.cell, reserveTrailing && styles.cellReserveTrailing]}>{children}</View>;
 
 interface DetailIconRowProps {
   /** Leading glyph — a pre-sized, pre-tinted Remix icon (use `DETAIL_ICON_SIZE`). */

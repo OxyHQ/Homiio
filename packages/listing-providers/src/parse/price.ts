@@ -82,9 +82,10 @@ export function validateMonthlyRentAmount(
     return null;
   }
 
-  const cap = bedroomCap(normalizedCurrency, context.bedrooms)
-    ?? ABSOLUTE_MAX_MONTHLY_RENT[normalizedCurrency]
-    ?? DEFAULT_ABSOLUTE_MAX_MONTHLY_RENT;
+  const cap =
+    bedroomCap(normalizedCurrency, context.bedrooms) ??
+    ABSOLUTE_MAX_MONTHLY_RENT[normalizedCurrency] ??
+    DEFAULT_ABSOLUTE_MAX_MONTHLY_RENT;
 
   if (amount > cap) {
     const beds = context.bedrooms ?? 1;

@@ -33,14 +33,10 @@ import { assertFound } from '../helpers/assertFound';
 
 function buildApp(): Express {
   const app = express();
-  app.post(
-    '/webhook',
-    bodyParser.raw({ type: '*/*' }),
-    (req, res, next) => {
-      (req as unknown as { rawBody: Buffer }).rawBody = req.body as Buffer;
-      return stripeWebhook(req as never, res as never).catch(next);
-    },
-  );
+  app.post('/webhook', bodyParser.raw({ type: '*/*' }), (req, res, next) => {
+    (req as unknown as { rawBody: Buffer }).rawBody = req.body as Buffer;
+    return stripeWebhook(req as never, res as never).catch(next);
+  });
   return app;
 }
 

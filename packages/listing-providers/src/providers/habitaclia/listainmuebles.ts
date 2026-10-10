@@ -48,15 +48,15 @@ export function habitacliaWarmSearchUrl(city: string, page: number): string {
 export function isHabitacliaListainmueblesChallenge(body: string): boolean {
   const trimmed = body.trim();
   if (trimmed.length < 512) return true;
-  return /403 ERROR|Pardon Our Interruption|Request unsuccessful\. Incapsula/i.test(
-    trimmed,
-  );
+  return /403 ERROR|Pardon Our Interruption|Request unsuccessful\. Incapsula/i.test(trimmed);
 }
 
 /** Extract hidden search-form fields from a warmed search page (or page-1 HTML). */
 export function extractHabitacliaListadoFormFields(html: string): Record<string, string> {
   const fields: Record<string, string> = {};
-  for (const match of html.matchAll(/<input[^>]*name=["']([^"']+)["'][^>]*value=["']([^"']*)["']/gi)) {
+  for (const match of html.matchAll(
+    /<input[^>]*name=["']([^"']+)["'][^>]*value=["']([^"']*)["']/gi,
+  )) {
     const name = match[1];
     const value = match[2] ?? '';
     if (name.startsWith('Filtros.') || name === 'pagina') {

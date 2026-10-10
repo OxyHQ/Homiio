@@ -90,12 +90,7 @@ const STALE_UPCOMING_MS = 24 * 60 * 60 * 1000;
 const MAX_SCOPE_RADIUS_METERS = 100_000;
 const DEFAULT_SCOPE_RADIUS_METERS = 5_000;
 
-const SORTS: readonly EvictionBoardSort[] = [
-  'soonest',
-  'distance',
-  'recently_updated',
-  'newest',
-];
+const SORTS: readonly EvictionBoardSort[] = ['soonest', 'distance', 'recently_updated', 'newest'];
 
 /** A finite number from a query param, or undefined when absent/unparseable. */
 function numberParam(value: unknown): number | undefined {
@@ -120,10 +115,7 @@ type ScopeResult =
   | { readonly ok: true; readonly scope: EvictionScope }
   | { readonly ok: false; readonly code: string; readonly message: string };
 
-function parseScope(
-  query: Record<string, unknown>,
-  viewerOxyUserId: string | null,
-): ScopeResult {
+function parseScope(query: Record<string, unknown>, viewerOxyUserId: string | null): ScopeResult {
   if (isTrue(query.global)) return { ok: true, scope: { kind: 'global' } };
 
   if (isTrue(query.following) || isTrue(query.attending)) {
@@ -244,9 +236,7 @@ async function boardResponse(
         timeline: timelineByCase.get(row.id) ?? [],
         attendeeCount: attendeeCounts.get(row.id) ?? 0,
         helpNeeds: helpNeedsByCase.get(row.id) ?? [],
-        organization: row.organizationId
-          ? organizations.get(row.organizationId)
-          : undefined,
+        organization: row.organizationId ? organizations.get(row.organizationId) : undefined,
         distanceMeters: row.distanceMeters ?? undefined,
       },
       {
@@ -282,7 +272,8 @@ function parseFilters(
     return { ok: false, message: 'Invalid status filter' };
   }
 
-  const scheduledFrom = query.scheduledFrom === undefined ? undefined : parseDate(query.scheduledFrom);
+  const scheduledFrom =
+    query.scheduledFrom === undefined ? undefined : parseDate(query.scheduledFrom);
   if (query.scheduledFrom !== undefined && !scheduledFrom) {
     return { ok: false, message: 'Invalid scheduledFrom' };
   }
@@ -319,8 +310,7 @@ function parseFilters(
       // stale, unmaintained notices whose real outcome was never reported. They
       // stay reachable by direct link and in the owner's own list, and the owner
       // gets an outcome-reminder nudge.
-      scheduledAfter:
-        status === 'upcoming' ? new Date(Date.now() - STALE_UPCOMING_MS) : undefined,
+      scheduledAfter: status === 'upcoming' ? new Date(Date.now() - STALE_UPCOMING_MS) : undefined,
     },
   };
 }

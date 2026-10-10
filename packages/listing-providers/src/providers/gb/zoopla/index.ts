@@ -29,7 +29,11 @@ import type {
 } from '../../../types';
 import { createFetchRuntime } from '../../../runtime';
 import { ChallengeError, fetchListingViaLadder } from '../../../strategy';
-import { defaultProviderMetrics, type ProviderMetricsReader, type ProviderMetricsSink } from '../../../metrics';
+import {
+  defaultProviderMetrics,
+  type ProviderMetricsReader,
+  type ProviderMetricsSink,
+} from '../../../metrics';
 import { isGbPortalChallenge } from '../challenge';
 import { resolveGbPropertyType } from '../housing';
 import { ZOOPLA_BASE_URL } from './fixtures';
@@ -42,7 +46,13 @@ import {
 } from './parse';
 
 const PROVIDER_ID: ProviderId = 'zoopla';
-const DEFAULT_CITIES: readonly string[] = ['london', 'manchester', 'birmingham', 'edinburgh', 'bristol'];
+const DEFAULT_CITIES: readonly string[] = [
+  'london',
+  'manchester',
+  'birmingham',
+  'edinburgh',
+  'bristol',
+];
 const MAX_SEARCH_PAGES = 3;
 
 export function isZooplaChallenge(html: string): boolean {
@@ -74,12 +84,15 @@ function splitAddress(displayAddress: string | undefined): {
   postalCode?: string;
 } {
   if (!displayAddress) return { street: '', city: '' };
-  const parts = displayAddress.split(',').map((part) => part.trim()).filter(Boolean);
+  const parts = displayAddress
+    .split(',')
+    .map((part) => part.trim())
+    .filter(Boolean);
   if (parts.length === 0) return { street: '', city: '' };
   if (parts.length === 1) return { street: parts[0], city: parts[0] };
   const last = parts[parts.length - 1];
   const postcodeMatch = last.match(/\b([A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2})\b/i);
-  const city = postcodeMatch ? parts[parts.length - 2] ?? last : last;
+  const city = postcodeMatch ? (parts[parts.length - 2] ?? last) : last;
   const street = parts.slice(0, Math.max(1, parts.length - (postcodeMatch ? 2 : 1))).join(', ');
   return { street: street || city, city, postalCode: postcodeMatch?.[1]?.toUpperCase() };
 }
@@ -224,7 +237,9 @@ export class ZooplaProvider implements ListingProvider {
       longTermRent: isSale
         ? undefined
         : { monthlyAmount: listing.priceAmount, currency: listing.priceCurrency ?? 'GBP' },
-      sale: isSale ? { price: listing.priceAmount, currency: listing.priceCurrency ?? 'GBP' } : undefined,
+      sale: isSale
+        ? { price: listing.priceAmount, currency: listing.priceCurrency ?? 'GBP' }
+        : undefined,
       remoteImages: toRemoteImages(listing.images),
       status: 'published',
     };

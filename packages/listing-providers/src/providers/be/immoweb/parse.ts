@@ -79,7 +79,11 @@ function classifiedUrl(
 ): string {
   const type = asString(property?.type)?.toLowerCase() ?? 'apartment';
   const tx = kindFromTransaction(transaction) === 'sale' ? 'for-sale' : 'for-rent';
-  const locality = citySlug(asString(property?.location && isRecord(property.location) ? property.location.locality : undefined) ?? 'belgium');
+  const locality = citySlug(
+    asString(
+      property?.location && isRecord(property.location) ? property.location.locality : undefined,
+    ) ?? 'belgium',
+  );
   const postal = asString(
     property?.location && isRecord(property.location) ? property.location.postalCode : undefined,
   );
@@ -95,9 +99,7 @@ function collectImages(media: unknown): string[] {
   for (const picture of media.pictures) {
     if (!isRecord(picture)) continue;
     const url =
-      asString(picture.extralargeUrl) ??
-      asString(picture.largeUrl) ??
-      asString(picture.mediumUrl);
+      asString(picture.extralargeUrl) ?? asString(picture.largeUrl) ?? asString(picture.mediumUrl);
     if (url) out.push(url);
   }
   return [...new Set(out)];
@@ -244,17 +246,19 @@ function parkingFromProperty(
   const outdoor = asNumber(property.parkingCountOutdoor);
   if (indoor === undefined && outdoor === undefined) return undefined;
   const spaces = (indoor ?? 0) + (outdoor ?? 0);
-  const type = indoor !== undefined && indoor > 0
-    ? 'garage'
-    : outdoor !== undefined && outdoor > 0
-      ? 'street'
-      : 'none';
+  const type =
+    indoor !== undefined && indoor > 0
+      ? 'garage'
+      : outdoor !== undefined && outdoor > 0
+        ? 'street'
+        : 'none';
   return { spaces, type };
 }
 
 function parseClassified(classified: Record<string, unknown>): ImmowebRawListing | undefined {
   const sourceId =
-    asString(classified.id) ?? (typeof classified.id === 'number' ? String(classified.id) : undefined);
+    asString(classified.id) ??
+    (typeof classified.id === 'number' ? String(classified.id) : undefined);
   if (!sourceId) return undefined;
 
   const property = isRecord(classified.property) ? classified.property : undefined;
@@ -328,11 +332,7 @@ export function immowebProvinceForCity(city: string): string | undefined {
   return IMMOWEB_PROVINCE_BY_CITY[citySlug(city)];
 }
 
-export function immowebSearchUrl(
-  city: string,
-  kind: 'rent' | 'sale',
-  page = 1,
-): string {
+export function immowebSearchUrl(city: string, kind: 'rent' | 'sale', page = 1): string {
   const province = immowebProvinceForCity(city);
   const params = new URLSearchParams({
     countries: 'BE',

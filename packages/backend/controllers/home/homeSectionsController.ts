@@ -346,7 +346,10 @@ async function resolveScope(
         );
       }
       if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
-        throw new HomeScopeError('INVALID_DEVICE_POSITION', 'lat must be within ±90 and lng within ±180.');
+        throw new HomeScopeError(
+          'INVALID_DEVICE_POSITION',
+          'lat must be within ±90 and lng within ±180.',
+        );
       }
       return {
         scope: { centerRadius: { lat, lng, radiusMeters: ref.radiusMeters } },
@@ -408,7 +411,10 @@ async function resolveScope(
       // A multi-area scope would need the covering box, which is a SUPERSET of
       // what the user asked for — the silent widening ADR §4.3 forbids. Refusing
       // is the honest answer until Home has a real multi-area design.
-      throw new HomeScopeError('UNSUPPORTED_LOCATION', 'Home does not accept a multi-area scope yet.');
+      throw new HomeScopeError(
+        'UNSUPPORTED_LOCATION',
+        'Home does not accept a multi-area scope yet.',
+      );
 
     default: {
       const exhaustive: never = ref;
@@ -446,7 +452,9 @@ export async function getHomeSections(req: Request, res: Response): Promise<void
     } catch (error) {
       if (error instanceof HomeScopeError) {
         // `status` decides whether the client may retry — see the class comment.
-        res.status(error.status).json({ success: false, message: error.message, error: error.code });
+        res
+          .status(error.status)
+          .json({ success: false, message: error.message, error: error.code });
         return;
       }
       throw error;
@@ -470,7 +478,11 @@ export async function getHomeSections(req: Request, res: Response): Promise<void
   // `Record<string, unknown>` because that is what `serializeProperty` returns;
   // the wire shape is `Property` and the frontend parses it as such. See the
   // `SerializedProperty` note in the repository.
-  const payload: HomeSectionsResponse<Record<string, unknown>> = { location, generatedAt, sections };
+  const payload: HomeSectionsResponse<Record<string, unknown>> = {
+    location,
+    generatedAt,
+    sections,
+  };
 
   res.json({ success: true, data: payload });
 }

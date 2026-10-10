@@ -27,10 +27,7 @@ const LABEL_SEPARATOR = ' · ';
  * Result of parsing one price input: either a valid finite non-negative number,
  * an empty (omitted) field, or an invalid entry the caller must reject.
  */
-type ParsedPrice =
-  | { kind: 'empty' }
-  | { kind: 'value'; value: number }
-  | { kind: 'invalid' };
+type ParsedPrice = { kind: 'empty' } | { kind: 'value'; value: number } | { kind: 'invalid' };
 
 /** Parse a raw price string with guards against non-numeric/NaN/negative input. */
 function parsePrice(raw: string): ParsedPrice {
@@ -161,13 +158,12 @@ export function PropertyAlertWidget() {
   // Logged-out: compact sign-in empty state instead of the form.
   if (!isAuthenticated) {
     return (
-      <BaseWidget
-        title={t('search.widgets.alerts.title')}
-        icon={headerIcon}
-      >
+      <BaseWidget title={t('search.widgets.alerts.title')} icon={headerIcon}>
         <View className="items-center gap-3 py-1">
           <IconCircle icon={RiNotification3Line} size="lg" />
-          <BloomText className="text-center text-sm text-muted-foreground">{t('search.widgets.alerts.signInPrompt')}</BloomText>
+          <BloomText className="text-center text-sm text-muted-foreground">
+            {t('search.widgets.alerts.signInPrompt')}
+          </BloomText>
           <Button size="md" onPress={() => openAccountDialog()} tone="accent" appearance="solid">
             {t('search.widgets.common.signIn')}
           </Button>
@@ -177,12 +173,11 @@ export function PropertyAlertWidget() {
   }
 
   return (
-    <BaseWidget
-      title={t('search.widgets.alerts.title')}
-      icon={headerIcon}
-    >
+    <BaseWidget title={t('search.widgets.alerts.title')} icon={headerIcon}>
       <View className="gap-3">
-        <BloomText className="text-sm text-muted-foreground">{t('search.widgets.alerts.subtitle')}</BloomText>
+        <BloomText className="text-sm text-muted-foreground">
+          {t('search.widgets.alerts.subtitle')}
+        </BloomText>
 
         <TextFieldInput
           label={t('search.widgets.alerts.location')}
@@ -233,7 +228,13 @@ export function PropertyAlertWidget() {
           }
         />
 
-        <Button size="md" onPress={handleCreateAlert} loading={isSaving} tone="accent" appearance="solid">
+        <Button
+          size="md"
+          onPress={handleCreateAlert}
+          loading={isSaving}
+          tone="accent"
+          appearance="solid"
+        >
           {t('search.widgets.alerts.create')}
         </Button>
       </View>

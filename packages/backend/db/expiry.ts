@@ -109,11 +109,11 @@ export const EXPIRY_SWEEP_TARGETS: readonly ExpirySweepTarget[] = [
     retentionSeconds: 0,
     reason:
       'Reaps external aggregator listings once the portal ad is assumed stale ' +
-      '(the `pre(\'save\')` hook sets the deadline to now + ' +
+      "(the `pre('save')` hook sets the deadline to now + " +
       '`EXTERNAL_PROPERTY_TTL_DAYS`, default 30). INTENT CHECKED, and it is ' +
       'genuine housekeeping rather than a destructive TTL wearing a ' +
       'housekeeping name: the row it deletes is a cached copy of somebody ' +
-      'else\'s advertisement, re-created by the next discover pass if the ad ' +
+      "else's advertisement, re-created by the next discover pass if the ad " +
       'is still up. Deleting it cascades to `property_images`, ' +
       '`property_documents` and `property_availability_windows` — all of them ' +
       'copies of the same ad — but NOT to the `images` rows behind those ' +
@@ -154,12 +154,12 @@ export const EXPIRY_SWEEP_TARGETS: readonly ExpirySweepTarget[] = [
     retentionSeconds: 0,
     reason:
       'The 90-day retention on the webhook dedupe store. INTENT CHECKED: a ' +
-      'sender\'s retry schedule ends within a day, so the DEDUPE half only has ' +
+      "sender's retry schedule ends within a day, so the DEDUPE half only has " +
       'to outlive that; the long tail is the AUDIT half — what a third party ' +
       'told this deployment to do — and 90 days is the answer the model already ' +
       'chose. Note `moderation_outbox.event_id` deliberately carries no foreign ' +
       'key into this table, precisely so this sweep and that one cannot decide ' +
-      'each other\'s outcome.',
+      "each other's outcome.",
   },
   {
     table: housingDomainEvents,
@@ -225,7 +225,7 @@ export const EXPIRY_COLUMNS_THAT_MUST_NOT_DELETE: readonly NonDeletingExpiryColu
     table: conversations,
     column: conversations.sharingExpiresAt,
     reason:
-      'This deadline belongs to a SHARE LINK, not to the row. Mongo\'s TTL index ' +
+      "This deadline belongs to a SHARE LINK, not to the row. Mongo's TTL index " +
       'on `sharing.expiresAt` deletes the whole conversation and every message ' +
       'in it, and `generateShareToken` sets the deadline to +24h — so every ' +
       'conversation anyone has ever shared has been destroyed a day later, with ' +
@@ -248,7 +248,7 @@ export const EXPIRY_COLUMNS_THAT_MUST_NOT_DELETE: readonly NonDeletingExpiryColu
       'it here as a sweep target would delete the case ninety days after its ' +
       'last edit, which is the opposite of the policy and would look like ' +
       'housekeeping in the diff. The actual deletion, at 24 months AFTER ' +
-      'archival, is that service\'s second half and belongs there because it ' +
+      "archival, is that service's second half and belongs there because it " +
       'measures from this column rather than expiring it.',
   },
 ];

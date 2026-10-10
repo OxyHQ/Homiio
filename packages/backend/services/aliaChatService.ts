@@ -22,8 +22,7 @@ type FetchClient = typeof fetch;
 declare const aliaAgentIdBrand: unique symbol;
 type AliaAgentId = string & { readonly [aliaAgentIdBrand]: true };
 
-export const CANONICAL_SINDI_ALIA_AGENT_ID =
-  '01a0646a-078f-7514-9800-9f43ceed7df8' as AliaAgentId;
+export const CANONICAL_SINDI_ALIA_AGENT_ID = '01a0646a-078f-7514-9800-9f43ceed7df8' as AliaAgentId;
 
 function parseAliaAgentId(value: string | undefined): AliaAgentId | undefined {
   return value === CANONICAL_SINDI_ALIA_AGENT_ID ? CANONICAL_SINDI_ALIA_AGENT_ID : undefined;
@@ -207,7 +206,8 @@ export class AliaChatService {
  */
 function toAliaChatError(error: unknown): unknown {
   if (error instanceof AliaRequestError) {
-    if (error.code !== null) logger.error('Alia refused the turn', { status: error.status, code: error.code });
+    if (error.code !== null)
+      logger.error('Alia refused the turn', { status: error.status, code: error.code });
     return new AliaChatError(error.status);
   }
   if (error instanceof AliaStreamError) {

@@ -37,7 +37,7 @@ describe('the saves in one collection', () => {
     expect(propertiesInFolder([saved('a')], 'trips')).toEqual([]);
   });
 
-  it('copies rather than returning the caller\'s array', () => {
+  it("copies rather than returning the caller's array", () => {
     // The unfiltered path is the one that could hand back the context's own
     // array, and a caller sorting it in place would reorder every other
     // surface's list.

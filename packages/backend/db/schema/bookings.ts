@@ -385,10 +385,7 @@ export const propertyViewingWindows = pgTable(
       'property_viewing_windows_end_check',
       sql`${table.endMinute} > 0 and ${table.endMinute} <= ${literal(MINUTES_PER_DAY)}`,
     ),
-    check(
-      'property_viewing_windows_order_check',
-      sql`${table.endMinute} > ${table.startMinute}`,
-    ),
+    check('property_viewing_windows_order_check', sql`${table.endMinute} > ${table.startMinute}`),
     check(
       'property_viewing_windows_slot_minutes_check',
       sql`${table.slotMinutes} between ${literal(MIN_VIEWING_DURATION_MINUTES)} and ${literal(MAX_VIEWING_DURATION_MINUTES)}`,

@@ -21,8 +21,14 @@ describe('YaencontreProvider.normalize', () => {
   const provider = new YaencontreProvider();
 
   it('maps detail JSON into a rent listing with contact', () => {
-    const payload = parseYaencontreDetailJson(JSON.parse(YAENCONTRE_FIXTURE_DETAIL_JSON) as unknown);
-    const ref: ExternalListingRef = { provider: 'yaencontre', sourceId: payload.sourceId, url: payload.url };
+    const payload = parseYaencontreDetailJson(
+      JSON.parse(YAENCONTRE_FIXTURE_DETAIL_JSON) as unknown,
+    );
+    const ref: ExternalListingRef = {
+      provider: 'yaencontre',
+      sourceId: payload.sourceId,
+      url: payload.url,
+    };
     const listing = provider.normalize({ ref, payload });
     expect(listing.source).toBe('yaencontre');
     expect(listing.longTermRent?.monthlyAmount).toBe(2100);
@@ -42,7 +48,11 @@ describe('IndomioProvider.normalize', () => {
 
   it('maps detail JSON into a rent listing with contact', () => {
     const payload = parseIndomioDetailJson(JSON.parse(INDOMIO_FIXTURE_DETAIL_JSON) as unknown);
-    const ref: ExternalListingRef = { provider: 'indomio', sourceId: payload.sourceId, url: payload.url };
+    const ref: ExternalListingRef = {
+      provider: 'indomio',
+      sourceId: payload.sourceId,
+      url: payload.url,
+    };
     const listing = provider.normalize({ ref, payload });
     expect(listing.source).toBe('indomio');
     expect(listing.longTermRent?.monthlyAmount).toBe(1650);

@@ -42,9 +42,9 @@ describe('isAntiBotChallenge', () => {
       '<article data-cy="listing-item">flat in Warsaw</article></body></html>';
     expect(isAntiBotChallenge(goodSerp)).toBe(false);
     // A page merely fronted by a CDN (Cloudflare/Akamai) is not a challenge.
-    expect(isAntiBotChallenge('<html><body>Powered by cloudflare and akamai CDN</body></html>')).toBe(
-      false,
-    );
+    expect(
+      isAntiBotChallenge('<html><body>Powered by cloudflare and akamai CDN</body></html>'),
+    ).toBe(false);
   });
 });
 
@@ -53,9 +53,9 @@ describe('isDataDomeAjaxChallenge', () => {
     expect(isDataDomeAjaxChallenge('<!DOCTYPE html><html>geo.captcha-delivery.com</html>')).toBe(
       true,
     );
-    expect(
-      isDataDomeAjaxChallenge('{"url":"https://geo.captcha-delivery.com/captcha"}'),
-    ).toBe(true);
+    expect(isDataDomeAjaxChallenge('{"url":"https://geo.captcha-delivery.com/captcha"}')).toBe(
+      true,
+    );
   });
 
   it('accepts normal JSON payloads', () => {

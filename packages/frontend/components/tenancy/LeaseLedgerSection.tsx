@@ -81,10 +81,7 @@ export function LeaseLedgerSection({
     [currency, locale],
   );
 
-  const outstanding = useMemo(
-    () => (data ? leaseOutstandingTotal(data.obligations) : 0),
-    [data],
-  );
+  const outstanding = useMemo(() => (data ? leaseOutstandingTotal(data.obligations) : 0), [data]);
 
   /** A tenant's claim awaiting the landlord, by obligation. */
   const pendingByObligation = useMemo(() => {
@@ -111,9 +108,7 @@ export function LeaseLedgerSection({
   const run = useCallback(
     (id: string, work: Promise<unknown>, failureKey: string) => {
       setBusyId(id);
-      work
-        .catch(() => toast.error(t(failureKey)))
-        .finally(() => setBusyId(null));
+      work.catch(() => toast.error(t(failureKey))).finally(() => setBusyId(null));
     },
     [t],
   );
@@ -142,9 +137,7 @@ export function LeaseLedgerSection({
   return (
     <View style={styles.section}>
       <LeaseSectionTitle title={t('ledger.section.title')} />
-      <P style={styles.total}>
-        {t('ledger.section.outstanding', { amount: money(outstanding) })}
-      </P>
+      <P style={styles.total}>{t('ledger.section.outstanding', { amount: money(outstanding) })}</P>
 
       {data.obligations.map((summary: LeaseObligationSummary) => {
         const obligation = obligationOf(lease, summary.obligationId);
@@ -198,7 +191,9 @@ export function LeaseLedgerSection({
                       'ledger.errors.receiptFailed',
                     )
                   }
-                  accessibilityLabel={t('ledger.action.receiptAccessible')} tone="neutral" appearance="outline"
+                  accessibilityLabel={t('ledger.action.receiptAccessible')}
+                  tone="neutral"
+                  appearance="outline"
                 >
                   {t('ledger.action.receipt')}
                 </Button>
@@ -215,7 +210,9 @@ export function LeaseLedgerSection({
                       'ledger.errors.declareFailed',
                     )
                   }
-                  accessibilityLabel={t('ledger.action.declareAccessible')} tone="neutral" appearance="outline"
+                  accessibilityLabel={t('ledger.action.declareAccessible')}
+                  tone="neutral"
+                  appearance="outline"
                 >
                   {t('ledger.action.declare')}
                 </Button>
@@ -234,7 +231,9 @@ export function LeaseLedgerSection({
                         'ledger.errors.confirmFailed',
                       )
                     }
-                    accessibilityLabel={t('ledger.action.confirmAccessible')} tone="accent" appearance="solid"
+                    accessibilityLabel={t('ledger.action.confirmAccessible')}
+                    tone="accent"
+                    appearance="solid"
                   >
                     {t('ledger.action.confirm')}
                   </Button>
@@ -251,7 +250,9 @@ export function LeaseLedgerSection({
                         'ledger.errors.rejectFailed',
                       )
                     }
-                    accessibilityLabel={t('ledger.action.rejectAccessible')} tone="neutral" appearance="outline"
+                    accessibilityLabel={t('ledger.action.rejectAccessible')}
+                    tone="neutral"
+                    appearance="outline"
                   >
                     {t('ledger.action.reject')}
                   </Button>

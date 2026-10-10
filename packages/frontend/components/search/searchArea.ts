@@ -150,10 +150,7 @@ export function viewportsMatch(
  * 4. **Any other user movement becomes the pending viewport.** Which changes no
  *    results, no request and no URL until it is confirmed.
  */
-export function reduceMapMovement(
-  state: SearchAreaState,
-  movement: MapMovement,
-): SearchAreaState {
+export function reduceMapMovement(state: SearchAreaState, movement: MapMovement): SearchAreaState {
   if (!movement.isFinal) return state;
 
   if (movement.source === 'programmatic') {

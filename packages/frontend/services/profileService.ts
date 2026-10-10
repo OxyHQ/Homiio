@@ -41,10 +41,9 @@ class ProfileService {
   }
 
   async getPublicProfileByOxyUserId(oxyUserId: string): Promise<Profile> {
-    const response = await api.get(
-      `/api/public/profiles/oxy/${encodeURIComponent(oxyUserId)}`,
-      { requireAuth: false },
-    );
+    const response = await api.get(`/api/public/profiles/oxy/${encodeURIComponent(oxyUserId)}`, {
+      requireAuth: false,
+    });
     return response.data.data;
   }
 }

@@ -11,12 +11,7 @@
  *   - Flat wrappers (hairline border) around list content.
  */
 import React, { useCallback, useEffect, useState } from 'react';
-import {
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  View,
-} from 'react-native';
+import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -113,6 +108,7 @@ export default function RoommatesPage() {
   );
 
   // Tab-driven fetch (kept as effect since data is owned by the legacy hook)
+  // biome-ignore lint/correctness/useExhaustiveDependencies: useRoommate fns are stable but lint can't always see that
   useEffect(() => {
     if (!hasProfile || !hasProfile) return;
     switch (activeTab) {
@@ -129,18 +125,18 @@ export default function RoommatesPage() {
         break;
     }
     // useRoommate fns are stable but lint can't always see that
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, hasProfile, hasProfile]);
 
   // When the user just enabled matching, refresh the discover list
+  // biome-ignore lint/correctness/useExhaustiveDependencies: refresh the discover list only when matching is switched on
   useEffect(() => {
     if (hasRoommateMatching && activeTab === 'discover') {
       fetchProfiles();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasRoommateMatching]);
 
   // Auth-bound re-fetch on first mount so we don't race the auth context
+  // biome-ignore lint/correctness/useExhaustiveDependencies: auth-bound re-fetch; re-runs only when the auth session changes
   useEffect(() => {
     if (!oxyServices || !activeSessionId) return;
     if (!hasProfile || !hasProfile) return;
@@ -148,7 +144,6 @@ export default function RoommatesPage() {
     if (activeTab === 'discover') fetchProfiles();
     if (activeTab === 'requests') fetchRequests();
     if (activeTab === 'relationships') fetchRelationships();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [oxyServices, activeSessionId]);
 
   const onRefresh = useCallback(async () => {
@@ -229,10 +224,7 @@ export default function RoommatesPage() {
   const preferencesQuery = useQuery({
     queryKey: ['roommates', 'preferences'],
     queryFn: async () =>
-      roommateService.getMyRoommatePreferences(
-        oxyServices,
-        activeSessionId ?? undefined,
-      ),
+      roommateService.getMyRoommatePreferences(oxyServices, activeSessionId ?? undefined),
     enabled: Boolean(oxyServices && activeSessionId),
     staleTime: 1000 * 30,
     gcTime: 1000 * 60 * 10,
@@ -286,7 +278,9 @@ export default function RoommatesPage() {
           icon={RiGroupLine}
           title={t('roommates.screen.enableMatchingTitle')}
           description={t('roommates.screen.enableMatchingDescription')}
-          actionText={isToggling ? t('roommates.screen.enabling') : t('roommates.screen.enableMatching')}
+          actionText={
+            isToggling ? t('roommates.screen.enabling') : t('roommates.screen.enableMatching')
+          }
           actionIcon={RiCheckboxCircleFill}
           onAction={handleToggleMatching}
         />
@@ -309,9 +303,7 @@ export default function RoommatesPage() {
     return (
       <ScrollView
         contentContainerStyle={styles.listContent}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
         {profiles.map((profile) => (
           <RoommateMatch
@@ -364,9 +356,7 @@ export default function RoommatesPage() {
     return (
       <ScrollView
         contentContainerStyle={styles.listContent}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
         {requests.received.map((request) => (
           <RoommateRequestComponent
@@ -429,9 +419,7 @@ export default function RoommatesPage() {
     return (
       <ScrollView
         contentContainerStyle={styles.listContent}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
         {relationships.map((relationship) => (
           <RoommateRelationshipComponent
@@ -495,7 +483,9 @@ export default function RoommatesPage() {
             leadingIcon={RiSettings3Line}
             iconOnly={!isWide}
             accessibilityLabel={t('roommates.preferences')}
-            style={styles.headerAction} tone="neutral" appearance="outline"
+            style={styles.headerAction}
+            tone="neutral"
+            appearance="outline"
           >
             {isWide ? t('roommates.preferences') : null}
           </Button>

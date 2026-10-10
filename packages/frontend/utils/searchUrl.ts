@@ -44,15 +44,8 @@ import {
 
 const HOUSING_FEATURE_VALUES = new Set<string>(HOUSING_FEATURES);
 
-import {
-  DEFAULT_SEARCH_QUERY,
-  type SearchFilterPatch,
-} from '@/store/searchQueryStore';
-import type {
-  SearchQuery,
-  SearchSortBy,
-  SearchSortOrder,
-} from '@/components/search/types';
+import { DEFAULT_SEARCH_QUERY, type SearchFilterPatch } from '@/store/searchQueryStore';
+import type { SearchQuery, SearchSortBy, SearchSortOrder } from '@/components/search/types';
 
 /** Route params as expo-router hands them over, on web AND native. */
 export type RouteParams = Record<string, string | string[] | undefined>;

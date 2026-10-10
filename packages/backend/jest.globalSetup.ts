@@ -25,7 +25,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createTestDatabases } from './db/testDatabase';
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
+// biome-ignore lint/style/noCommonJs: jest.workerCount.cjs is CommonJS, shared with jest.config.js
 const { computeMaxWorkers, HOMIIO_JEST_DATABASE_MANIFEST } = require('./jest.workerCount.cjs');
 
 /**

@@ -28,8 +28,14 @@ import {
 
 jest.mock('../../services/geocodingService', () => ({
   __esModule: true,
-  reverseGeocode: jest.fn(async () => ({ success: false as const, error: 'not called in this suite' })),
-  forwardGeocode: jest.fn(async () => ({ success: false as const, error: 'not called in this suite' })),
+  reverseGeocode: jest.fn(async () => ({
+    success: false as const,
+    error: 'not called in this suite',
+  })),
+  forwardGeocode: jest.fn(async () => ({
+    success: false as const,
+    error: 'not called in this suite',
+  })),
 }));
 
 function buildApp(): Express {
@@ -46,12 +52,20 @@ beforeEach(async () => {
   await resetGeoTables();
 });
 
-
 describe('GET /api/addresses/:id', () => {
   it('resolves the geo display names in the same read', async () => {
-    const chain = await seedGeoChain({ cityName: 'Barcelona', regionName: 'Catalonia', countryName: 'Spain' });
+    const chain = await seedGeoChain({
+      cityName: 'Barcelona',
+      regionName: 'Catalonia',
+      countryName: 'Spain',
+    });
     const neighborhoodId = await seedNeighborhood({ cityId: chain.cityId, name: 'Gràcia' });
-    const addressId = await seedAddress({ chain, neighborhoodId, street: 'Carrer de Mallorca', number: '401' });
+    const addressId = await seedAddress({
+      chain,
+      neighborhoodId,
+      street: 'Carrer de Mallorca',
+      number: '401',
+    });
 
     const res = await request(app).get(`/api/addresses/${addressId}`).expect(200);
 
@@ -90,7 +104,9 @@ describe('GET /api/addresses/:id', () => {
     const streetId = await seedAddress({ chain });
     const unitId = await seedAddress({ chain, street: 'Other', floor: '3' });
 
-    expect((await request(app).get(`/api/addresses/${streetId}`).expect(200)).body.address.addressLevel).toBe('STREET');
+    expect(
+      (await request(app).get(`/api/addresses/${streetId}`).expect(200)).body.address.addressLevel,
+    ).toBe('STREET');
 
     // A UNIT row published at building precision names neither its own id nor
     // its level — announcing `UNIT` is announcing that the id names one
@@ -220,8 +236,14 @@ describe('POST /api/addresses', () => {
   });
 
   it('400s without street, city or country', async () => {
-    await request(app).post('/api/addresses').send({ ...BODY, street: undefined }).expect(400);
-    await request(app).post('/api/addresses').send({ ...BODY, city: undefined }).expect(400);
+    await request(app)
+      .post('/api/addresses')
+      .send({ ...BODY, street: undefined })
+      .expect(400);
+    await request(app)
+      .post('/api/addresses')
+      .send({ ...BODY, city: undefined })
+      .expect(400);
   });
 });
 
@@ -231,7 +253,12 @@ describe('PUT /api/addresses/:id', () => {
   // that geo is never among them.
   it('refuses the identity fields and never spreads the body', async () => {
     const chain = await seedGeoChain({ cityName: 'Barcelona' });
-    const other = await seedGeoChain({ countryCode: 'PT', countryName: 'Portugal', regionName: 'Lisbon', cityName: 'Lisbon' });
+    const other = await seedGeoChain({
+      countryCode: 'PT',
+      countryName: 'Portugal',
+      regionName: 'Lisbon',
+      cityName: 'Lisbon',
+    });
     const addressId = await seedAddress({ chain, street: 'Carrer de Mallorca' });
 
     // `street` and `floor` re-key the place, so this is a merge PROPOSAL and not
@@ -275,7 +302,10 @@ describe('PUT /api/addresses/:id', () => {
   });
 
   it('404s for an unknown address', async () => {
-    await request(app).put(`/api/addresses/${'0'.repeat(24)}`).send({}).expect(404);
+    await request(app)
+      .put(`/api/addresses/${'0'.repeat(24)}`)
+      .send({})
+      .expect(404);
   });
 });
 

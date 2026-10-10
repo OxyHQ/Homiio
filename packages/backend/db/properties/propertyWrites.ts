@@ -139,7 +139,9 @@ type Block = Record<string, unknown> | null | undefined;
 
 function asBlock(value: unknown): Block {
   if (value === null || value === undefined) return value as Block;
-  return typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
+  return typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
 }
 
 /**
@@ -654,7 +656,11 @@ export async function updateProperty(
     // touch, since a child-collection change IS a change to the listing.
     const updated = await tx
       .update(properties)
-      .set(Object.keys(columns).length > 0 ? { ...columns, updatedAt: new Date() } : { updatedAt: new Date() })
+      .set(
+        Object.keys(columns).length > 0
+          ? { ...columns, updatedAt: new Date() }
+          : { updatedAt: new Date() },
+      )
       .where(where)
       .returning({ id: properties.id });
 
@@ -783,10 +789,7 @@ export async function findPropertyBySource(
  *
  * @returns whether a row matched.
  */
-export async function expireExternalProperty(
-  source: string,
-  sourceId: string,
-): Promise<boolean> {
+export async function expireExternalProperty(source: string, sourceId: string): Promise<boolean> {
   const updated = await getDb()
     .update(properties)
     .set({ status: 'archived', expiresAt: new Date(), updatedAt: new Date() })
@@ -906,9 +909,7 @@ export async function propertyExists(propertyId: string): Promise<boolean> {
  * deciding whether a transition is allowed, without hydrating the whole
  * listing and its children.
  */
-export async function findPropertyWriteContext(
-  propertyId: string,
-): Promise<{
+export async function findPropertyWriteContext(propertyId: string): Promise<{
   id: string;
   oxyUserId: string | null;
   status: string;

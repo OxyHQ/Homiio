@@ -52,7 +52,10 @@ import { geoIpProvider } from './registry';
  * is the only thing standing between the two. It stays a `Map` in this module.
  */
 const CACHE_MAX_ENTRIES = 5_000;
-const cache = new Map<string, { readonly value: ApproximateLocation; readonly expiresAtMs: number }>();
+const cache = new Map<
+  string,
+  { readonly value: ApproximateLocation; readonly expiresAtMs: number }
+>();
 
 /** Test seam: forget every cached resolution. */
 export function resetApproximateLocationCache(): void {

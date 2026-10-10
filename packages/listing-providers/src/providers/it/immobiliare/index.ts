@@ -27,7 +27,11 @@ import type {
 import { createFetchRuntime } from '../../../runtime';
 import { ChallengeError, fetchListingViaLadder } from '../../../strategy';
 import { isAntiBotChallenge } from '../../../parse/challenge';
-import { defaultProviderMetrics, type ProviderMetricsReader, type ProviderMetricsSink } from '../../../metrics';
+import {
+  defaultProviderMetrics,
+  type ProviderMetricsReader,
+  type ProviderMetricsSink,
+} from '../../../metrics';
 import { IMMOBILIARE_BASE_URL } from './fixtures';
 import {
   immobiliareSearchApiUrls,
@@ -121,7 +125,14 @@ export class ImmobiliareProvider implements ListingProvider {
       for (const ref of viaAjax) yield ref;
       if (yielded.count >= limit) return;
       if (viaAjax.length === 0) {
-        for await (const ref of this.discoverCityViaHtml(runtime, city, job.signal, seen, limit, yielded)) {
+        for await (const ref of this.discoverCityViaHtml(
+          runtime,
+          city,
+          job.signal,
+          seen,
+          limit,
+          yielded,
+        )) {
           yield ref;
         }
       }
@@ -220,12 +231,16 @@ export class ImmobiliareProvider implements ListingProvider {
     for (let page = 1; page <= MAX_SEARCH_PAGES; page += 1) {
       if (yielded.count >= limit) return;
       try {
-        const { html } = await fetchListingViaLadder(runtime, immobiliareWarmSearchUrl(city, page), {
-          provider: this.id,
-          isChallenge: isImmobiliareChallenge,
-          metrics: this.metrics,
-          init: { signal },
-        });
+        const { html } = await fetchListingViaLadder(
+          runtime,
+          immobiliareWarmSearchUrl(city, page),
+          {
+            provider: this.id,
+            isChallenge: isImmobiliareChallenge,
+            metrics: this.metrics,
+            init: { signal },
+          },
+        );
         const refs = parseImmobiliareSearch(html);
         if (refs.length === 0) return;
         for (const ref of yieldRefs(refs, seen, limit, yielded)) yield ref;
@@ -319,12 +334,15 @@ export class ImmobiliareProvider implements ListingProvider {
       },
       type: resolvePropertyType(listing.propertyType),
       offerings: isSale ? [OfferingType.SALE] : [OfferingType.LONG_TERM_RENT],
-      longTermRent: isSale ? undefined : { monthlyAmount: listing.price, currency: listing.currency },
+      longTermRent: isSale
+        ? undefined
+        : { monthlyAmount: listing.price, currency: listing.currency },
       sale: isSale ? { price: listing.price, currency: listing.currency } : undefined,
       remoteImages: images,
       status: 'published',
     };
-    if (listing.description ?? listing.title) result.description = listing.description ?? listing.title;
+    if (listing.description ?? listing.title)
+      result.description = listing.description ?? listing.title;
     if (listing.bedrooms !== undefined) result.bedrooms = listing.bedrooms;
     if (listing.bathrooms !== undefined) result.bathrooms = listing.bathrooms;
     if (listing.squareMeters !== undefined) result.squareFootage = listing.squareMeters;

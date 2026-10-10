@@ -129,9 +129,7 @@ async function listing(
  * assertions need a review too, and a second copy of these columns is a second
  * place a fixture can drift from the CHECKs below.
  */
-async function seedReview(
-  overrides: Partial<typeof reviews.$inferInsert> = {},
-): Promise<string> {
+async function seedReview(overrides: Partial<typeof reviews.$inferInsert> = {}): Promise<string> {
   const { chain, neighborhoodId } = await geoChain();
   const addressId = await addressAt();
   const [row] = await getDb()
@@ -194,9 +192,7 @@ function requireResource<T extends string>(
   what: string,
 ): Extract<ModerationResource | ModerationContextResource, { type: T }> {
   if (typeof resource !== 'object' || resource === null || resource.type !== type) {
-    throw new Error(
-      `expected ${what} to be a '${type}' resource, got ${JSON.stringify(resource)}`,
-    );
+    throw new Error(`expected ${what} to be a '${type}' resource, got ${JSON.stringify(resource)}`);
   }
   return resource as Extract<ModerationResource | ModerationContextResource, { type: T }>;
 }
@@ -632,8 +628,16 @@ describe('report input', () => {
 
 describe('report taxonomy', () => {
   it.each([
-    [ModerationReportedType.PROPERTY, ListingReportReason.INACCURATE, 'commerce.misleading_listing'],
-    [ModerationReportedType.PROPERTY, ListingReportReason.UNAVAILABLE, 'commerce.misleading_listing'],
+    [
+      ModerationReportedType.PROPERTY,
+      ListingReportReason.INACCURATE,
+      'commerce.misleading_listing',
+    ],
+    [
+      ModerationReportedType.PROPERTY,
+      ListingReportReason.UNAVAILABLE,
+      'commerce.misleading_listing',
+    ],
     [ModerationReportedType.PROPERTY, ListingReportReason.SCAM, 'integrity.scam'],
     [ModerationReportedType.PROPERTY, ListingReportReason.PRIVACY, 'privacy.location_exposure'],
     [ModerationReportedType.PROPERTY, ListingReportReason.UNSAFE, 'commerce.unsafe_product'],
@@ -641,7 +645,11 @@ describe('report taxonomy', () => {
     [ModerationReportedType.PROPERTY, ListingReportReason.OTHER, 'other.unclassifiable'],
     [ModerationReportedType.REVIEW, ReviewReportReason.FAKE, 'integrity.fraud'],
     [ModerationReportedType.REVIEW, ReviewReportReason.OFFENSIVE, 'harassment.insult'],
-    [ModerationReportedType.REVIEW, ReviewReportReason.PERSONAL_DATA, 'privacy.personal_information'],
+    [
+      ModerationReportedType.REVIEW,
+      ReviewReportReason.PERSONAL_DATA,
+      'privacy.personal_information',
+    ],
     [ModerationReportedType.REVIEW, ReviewReportReason.SPAM, 'integrity.spam'],
     [ModerationReportedType.REVIEW, ReviewReportReason.OTHER, 'other.unclassifiable'],
   ])('%s/%s alleges %s', (reportedType, reason, expected) => {

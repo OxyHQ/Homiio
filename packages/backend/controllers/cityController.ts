@@ -147,7 +147,14 @@ function serializeCity(row: CityQueryRow): Record<string, unknown> {
     // it is exactly what `db/geo/placeSlug.ts` exists to prevent. It is a LABEL:
     // two cities can share one, which is why nothing resolves by it alone.
     slug: city.slug,
-    countryId: country ? withIds(country.id, { name: country.name, code: country.code, currency: country.currency, flag: country.flag }) : city.countryId,
+    countryId: country
+      ? withIds(country.id, {
+          name: country.name,
+          code: country.code,
+          currency: country.currency,
+          flag: country.flag,
+        })
+      : city.countryId,
     regionId: region ? withIds(region.id, { name: region.name, code: region.code }) : city.regionId,
     coordinates,
     timezone: city.timezone,
@@ -215,7 +222,9 @@ function finiteNumbers(value: string, count: number): number[] | typeof INVALID 
 }
 
 /** `lng,lat` in degrees. */
-function parsePoint(value: string | undefined): { longitude: number; latitude: number } | undefined | typeof INVALID {
+function parsePoint(
+  value: string | undefined,
+): { longitude: number; latitude: number } | undefined | typeof INVALID {
   if (value === undefined) return undefined;
   const parts = finiteNumbers(value, 2);
   if (parts === INVALID) return INVALID;
@@ -290,7 +299,11 @@ class CityController {
           .where(eq(countries.code, String(countryCode).toUpperCase()))
           .limit(1);
         if (!country[0]) {
-          return res.json({ success: true, data: [], pagination: { page: numericPage, limit: numericLimit, total: 0, pages: 0 } });
+          return res.json({
+            success: true,
+            data: [],
+            pagination: { page: numericPage, limit: numericLimit, total: 0, pages: 0 },
+          });
         }
         conditions.push(eq(cities.countryId, country[0].id));
       }
@@ -330,7 +343,11 @@ class CityController {
       });
     } catch (error) {
       logUnexpectedError(error, req, 'Failed to fetch cities');
-      res.status(500).json({ success: false, message: 'Failed to fetch cities', error: 'Internal server error' });
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch cities',
+        error: 'Internal server error',
+      });
     }
   }
 
@@ -365,7 +382,11 @@ class CityController {
       res.json({ success: true, data: filtered });
     } catch (error) {
       logUnexpectedError(error, req, 'Failed to fetch popular cities');
-      res.status(500).json({ success: false, message: 'Failed to fetch popular cities', error: 'Internal server error' });
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch popular cities',
+        error: 'Internal server error',
+      });
     }
   }
 
@@ -383,7 +404,9 @@ class CityController {
       res.json({ success: true, data: serializeCity(rows[0]) });
     } catch (error) {
       logUnexpectedError(error, req, 'Failed to fetch city');
-      res.status(500).json({ success: false, message: 'Failed to fetch city', error: 'Internal server error' });
+      res
+        .status(500)
+        .json({ success: false, message: 'Failed to fetch city', error: 'Internal server error' });
     }
   }
 
@@ -437,7 +460,11 @@ class CityController {
 
       const near = parsePoint(firstString(req.query.near));
       if (near === INVALID) {
-        return res.status(400).json({ success: false, code: 'INVALID_PLACE_QUERY', message: '`near` must be `lng,lat` in degrees' });
+        return res.status(400).json({
+          success: false,
+          code: 'INVALID_PLACE_QUERY',
+          message: '`near` must be `lng,lat` in degrees',
+        });
       }
       const bounds = parseBounds(firstString(req.query.bounds));
       if (bounds === INVALID) {
@@ -471,7 +498,9 @@ class CityController {
 
       const outcome = await lookupCityPlaces(input);
       if (outcome.status === 'not_found') {
-        return res.status(404).json({ success: false, code: 'PLACE_NOT_FOUND', message: 'City not found' });
+        return res
+          .status(404)
+          .json({ success: false, code: 'PLACE_NOT_FOUND', message: 'City not found' });
       }
       if (outcome.status === 'ambiguous') {
         return res.json({
@@ -482,7 +511,9 @@ class CityController {
       res.json({ success: true, data: { status: 'resolved', place: outcome.place } });
     } catch (error) {
       logUnexpectedError(error, req, 'Failed to fetch city');
-      res.status(500).json({ success: false, message: 'Failed to fetch city', error: 'Internal server error' });
+      res
+        .status(500)
+        .json({ success: false, message: 'Failed to fetch city', error: 'Internal server error' });
     }
   }
 
@@ -527,7 +558,9 @@ class CityController {
         verified === 'true' ? booleanIs(propertiesTable.isVerified, true) : undefined,
         eco === 'true' ? booleanIs(propertiesTable.isEcoFriendly, true) : undefined,
         minBedrooms ? inRange(propertiesTable.bedrooms, Number(minBedrooms), undefined) : undefined,
-        minBathrooms ? inRange(propertiesTable.bathrooms, Number(minBathrooms), undefined) : undefined,
+        minBathrooms
+          ? inRange(propertiesTable.bathrooms, Number(minBathrooms), undefined)
+          : undefined,
         inRange(
           propertiesTable.longTermRentMonthlyAmount,
           minPrice ? Number(minPrice) : undefined,
@@ -538,10 +571,14 @@ class CityController {
       // Image-bearing listings first (product rule), then the requested order.
       const withinImages: SQL[] = (() => {
         switch (sort) {
-          case 'price_asc': return [nullsLast(propertiesTable.longTermRentMonthlyAmount, 'asc')];
-          case 'price_desc': return [nullsLast(propertiesTable.longTermRentMonthlyAmount, 'desc')];
-          case 'updatedAt': return [desc(propertiesTable.updatedAt)];
-          default: return [NEWEST_FIRST];
+          case 'price_asc':
+            return [nullsLast(propertiesTable.longTermRentMonthlyAmount, 'asc')];
+          case 'price_desc':
+            return [nullsLast(propertiesTable.longTermRentMonthlyAmount, 'desc')];
+          case 'updatedAt':
+            return [desc(propertiesTable.updatedAt)];
+          default:
+            return [NEWEST_FIRST];
         }
       })();
 
@@ -585,7 +622,11 @@ class CityController {
       });
     } catch (error) {
       logUnexpectedError(error, req, 'Failed to fetch properties');
-      res.status(500).json({ success: false, message: 'Failed to fetch properties', error: 'Internal server error' });
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch properties',
+        error: 'Internal server error',
+      });
     }
   }
 
@@ -603,11 +644,19 @@ class CityController {
 
       const resolvedCountryId = await resolveCountryRef({ countryId, country });
       if (!resolvedCountryId) {
-        return res.status(400).json({ success: false, message: 'A valid country (id or name) is required' });
+        return res
+          .status(400)
+          .json({ success: false, message: 'A valid country (id or name) is required' });
       }
-      const resolvedRegionId = await resolveRegionRef({ regionId, state, countryId: resolvedCountryId });
+      const resolvedRegionId = await resolveRegionRef({
+        regionId,
+        state,
+        countryId: resolvedCountryId,
+      });
       if (!resolvedRegionId) {
-        return res.status(400).json({ success: false, message: 'A valid region/state (id or name) is required' });
+        return res
+          .status(400)
+          .json({ success: false, message: 'A valid region/state (id or name) is required' });
       }
 
       // The city centre arrives as `{ lat, lng }` on the wire and is stored in
@@ -625,7 +674,9 @@ class CityController {
           population: typeof rest.population === 'number' ? rest.population : null,
           description: typeof rest.description === 'string' ? rest.description : null,
           averageRent: typeof rest.averageRent === 'number' ? rest.averageRent : null,
-          ...(typeof rest.currency === 'string' ? { currency: rest.currency as typeof cities.$inferInsert.currency } : {}),
+          ...(typeof rest.currency === 'string'
+            ? { currency: rest.currency as typeof cities.$inferInsert.currency }
+            : {}),
           ...(typeof rest.isActive === 'boolean' ? { isActive: rest.isActive } : {}),
         })
         .returning({ id: cities.id });
@@ -634,7 +685,9 @@ class CityController {
       res.status(201).json({ success: true, data: serializeCity(rows[0]) });
     } catch (error) {
       logUnexpectedError(error, req, 'Failed to create city');
-      res.status(400).json({ success: false, message: 'Failed to create city', error: 'Invalid city data' });
+      res
+        .status(400)
+        .json({ success: false, message: 'Failed to create city', error: 'Invalid city data' });
     }
   }
 
@@ -654,7 +707,11 @@ class CityController {
   async updateCityPropertiesCount(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      const existing = await getDb().select({ id: cities.id }).from(cities).where(eq(cities.id, id)).limit(1);
+      const existing = await getDb()
+        .select({ id: cities.id })
+        .from(cities)
+        .where(eq(cities.id, id))
+        .limit(1);
       if (!existing[0]) {
         return res.status(404).json({ success: false, message: 'City not found' });
       }
@@ -669,7 +726,11 @@ class CityController {
       res.json({ success: true, data: serializeCity(rows[0]) });
     } catch (error) {
       logUnexpectedError(error, req, 'Failed to update city properties count');
-      res.status(500).json({ success: false, message: 'Failed to update city properties count', error: 'Internal server error' });
+      res.status(500).json({
+        success: false,
+        message: 'Failed to update city properties count',
+        error: 'Internal server error',
+      });
     }
   }
 
@@ -690,7 +751,9 @@ class CityController {
         return res.status(400).json({ success: false, message: 'Search query is required' });
       }
       const rows = await cityQuery()
-        .where(and(ilike(cities.name, `%${escapeLikePattern(String(q))}%`), eq(cities.isActive, true)))
+        .where(
+          and(ilike(cities.name, `%${escapeLikePattern(String(q))}%`), eq(cities.isActive, true)),
+        )
         // `id` last: two same-named cities with the same listing count tie on
         // both keys, and a typeahead that reorders itself between keystrokes for
         // no reason is the visible face of a plan-dependent sort.
@@ -699,23 +762,39 @@ class CityController {
       res.json({ success: true, data: rows.map(serializeCity) });
     } catch (error) {
       logUnexpectedError(error, req, 'Failed to search cities');
-      res.status(500).json({ success: false, message: 'Failed to search cities', error: 'Internal server error' });
+      res.status(500).json({
+        success: false,
+        message: 'Failed to search cities',
+        error: 'Internal server error',
+      });
     }
   }
 }
 
 /** Resolve a country ref (id or name/code) to a country id, or null. */
-async function resolveCountryRef(input: { countryId?: string; country?: string }): Promise<string | null> {
+async function resolveCountryRef(input: {
+  countryId?: string;
+  country?: string;
+}): Promise<string | null> {
   const db = getDb();
   if (input.countryId) {
-    const byId = await db.select({ id: countries.id }).from(countries).where(eq(countries.id, input.countryId)).limit(1);
+    const byId = await db
+      .select({ id: countries.id })
+      .from(countries)
+      .where(eq(countries.id, input.countryId))
+      .limit(1);
     if (byId[0]) return byId[0].id;
   }
   if (input.country) {
     const byName = await db
       .select({ id: countries.id })
       .from(countries)
-      .where(or(eq(countries.code, String(input.country).toUpperCase()), nameEquals(countries.name, String(input.country))))
+      .where(
+        or(
+          eq(countries.code, String(input.country).toUpperCase()),
+          nameEquals(countries.name, String(input.country)),
+        ),
+      )
       .limit(1);
     if (byName[0]) return byName[0].id;
   }
@@ -723,17 +802,27 @@ async function resolveCountryRef(input: { countryId?: string; country?: string }
 }
 
 /** Resolve a region ref (id or name within a country) to a region id, or null. */
-async function resolveRegionRef(input: { regionId?: string; state?: string; countryId: string }): Promise<string | null> {
+async function resolveRegionRef(input: {
+  regionId?: string;
+  state?: string;
+  countryId: string;
+}): Promise<string | null> {
   const db = getDb();
   if (input.regionId) {
-    const byId = await db.select({ id: regions.id }).from(regions).where(eq(regions.id, input.regionId)).limit(1);
+    const byId = await db
+      .select({ id: regions.id })
+      .from(regions)
+      .where(eq(regions.id, input.regionId))
+      .limit(1);
     if (byId[0]) return byId[0].id;
   }
   if (input.state) {
     const byName = await db
       .select({ id: regions.id })
       .from(regions)
-      .where(and(nameEquals(regions.name, String(input.state)), eq(regions.countryId, input.countryId)))
+      .where(
+        and(nameEquals(regions.name, String(input.state)), eq(regions.countryId, input.countryId)),
+      )
       .limit(1);
     if (byName[0]) return byName[0].id;
   }

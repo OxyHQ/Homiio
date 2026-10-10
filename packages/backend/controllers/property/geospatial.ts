@@ -86,9 +86,12 @@ async function serveProximityFeed(
     const radiusMeters = getQueryNumber(rawRadius, DEFAULT_NEARBY_DISTANCE_METERS);
 
     if (
-      !Number.isFinite(lat) || !Number.isFinite(lng) ||
-      lat < MIN_LATITUDE || lat > MAX_LATITUDE ||
-      lng < MIN_LONGITUDE || lng > MAX_LONGITUDE
+      !Number.isFinite(lat) ||
+      !Number.isFinite(lng) ||
+      lat < MIN_LATITUDE ||
+      lat > MAX_LATITUDE ||
+      lng < MIN_LONGITUDE ||
+      lng > MAX_LONGITUDE
     ) {
       return res.status(400).json({
         success: false,
@@ -119,19 +122,25 @@ async function serveProximityFeed(
       countProperties(where),
     ]);
 
-    return res.json(paginationResponse(
-      hydrated.map((listing) => serializeProperty(listing, 'public')),
-      page,
-      limit,
-      total,
-      feed.successMessage,
-    ));
+    return res.json(
+      paginationResponse(
+        hydrated.map((listing) => serializeProperty(listing, 'public')),
+        page,
+        limit,
+        total,
+        feed.successMessage,
+      ),
+    );
   } catch (error) {
     return next(error);
   }
 }
 
-export function findNearbyProperties(req: ControllerRequest, res: ControllerResponse, next: ControllerNext) {
+export function findNearbyProperties(
+  req: ControllerRequest,
+  res: ControllerResponse,
+  next: ControllerNext,
+) {
   return serveProximityFeed(req, res, next, {
     radiusParam: 'maxDistance',
     radiusRequired: false,
@@ -141,7 +150,11 @@ export function findNearbyProperties(req: ControllerRequest, res: ControllerResp
   });
 }
 
-export function findPropertiesInRadius(req: ControllerRequest, res: ControllerResponse, next: ControllerNext) {
+export function findPropertiesInRadius(
+  req: ControllerRequest,
+  res: ControllerResponse,
+  next: ControllerNext,
+) {
   return serveProximityFeed(req, res, next, {
     radiusParam: 'radius',
     radiusRequired: true,

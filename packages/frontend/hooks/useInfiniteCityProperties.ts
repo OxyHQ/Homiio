@@ -14,10 +14,7 @@ import { type InfiniteData, type UseInfiniteQueryResult } from '@tanstack/react-
 import { useMemo } from 'react';
 
 import type { Property } from '@homiio/shared-types';
-import {
-  PROPERTY_LIST_PAGE_SIZE,
-  useInfinitePropertyList,
-} from './useInfinitePropertyList';
+import { PROPERTY_LIST_PAGE_SIZE, useInfinitePropertyList } from './useInfinitePropertyList';
 
 /** Sort options the city screen exposes, mapped to the backend `sort` param. */
 export type CitySortBy = 'newest' | 'priceAsc' | 'priceDesc';
@@ -106,7 +103,7 @@ export function useInfiniteCityProperties(
     mapResponse: (data, pageParam) => ({
       properties: data.properties ?? [],
       page: data.pagination?.page ?? pageParam,
-      total: data.pagination?.total ?? (data.properties?.length ?? 0),
+      total: data.pagination?.total ?? data.properties?.length ?? 0,
       hasMore: data.hasMore ?? false,
     }),
   });

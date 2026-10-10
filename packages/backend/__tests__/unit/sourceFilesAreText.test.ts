@@ -88,9 +88,7 @@ describe('tracked source files are text, not binary', () => {
     const files = trackedTextFiles();
     expect(files.length).toBeGreaterThan(MINIMUM_FILES_SCANNED);
 
-    const offenders = files.filter((path) =>
-      readFileSync(join(REPOSITORY_ROOT, path)).includes(0),
-    );
+    const offenders = files.filter((path) => readFileSync(join(REPOSITORY_ROOT, path)).includes(0));
     expect(offenders).toEqual([]);
   });
 

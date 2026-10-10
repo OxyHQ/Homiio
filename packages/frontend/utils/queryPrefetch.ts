@@ -20,6 +20,3 @@ export async function prefetchPropertyStats(queryClient: QueryClient, id: string
     gcTime: 1000 * 60 * 10,
   });
 }
-
-
-

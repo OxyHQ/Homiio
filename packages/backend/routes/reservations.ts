@@ -13,31 +13,24 @@ import * as validation from '../middlewares/validation';
 export default function () {
   const router = express.Router();
 
-
   // POST /api/reservations — guest creates a reservation
   router.post(
     '/',
     validation.validateReservation,
-    asyncHandler(reservationController.createReservation)
+    asyncHandler(reservationController.createReservation),
   );
 
   // GET /api/reservations — list my reservations (as guest or ?asHost=true)
-  router.get(
-    '/',
-    asyncHandler(reservationController.listMyReservations)
-  );
+  router.get('/', asyncHandler(reservationController.listMyReservations));
 
   // GET /api/reservations/:id — view a single reservation
-  router.get(
-    '/:id',
-    asyncHandler(reservationController.getReservationById)
-  );
+  router.get('/:id', asyncHandler(reservationController.getReservationById));
 
   // PATCH /api/reservations/:id — host approves/declines, guest cancels
   router.patch(
     '/:id',
     validation.validateReservationUpdate,
-    asyncHandler(reservationController.updateReservationStatus)
+    asyncHandler(reservationController.updateReservationStatus),
   );
 
   return router;

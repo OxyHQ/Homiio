@@ -5,7 +5,11 @@
 import type { NormalizedListingContact } from '@homiio/shared-types';
 import { detailIds } from '../../../parse/hrefs';
 import { contactFromAdvertiser } from '../../../parse/contact';
-import { extractItSchemaListings, pickItListing, type ItSchemaListing } from '../../../parse/jsonLd';
+import {
+  extractItSchemaListings,
+  pickItListing,
+  type ItSchemaListing,
+} from '../../../parse/jsonLd';
 import { CASA_IT_BASE_URL } from './fixtures';
 
 export interface CasaItRaw {

@@ -27,17 +27,16 @@ export type AppStats = {
  */
 type AnalyticsEnvelope<T> = T & { data?: T };
 
-const unwrap = <T,>(payload: AnalyticsEnvelope<T>): T => payload.data ?? payload;
+const unwrap = <T>(payload: AnalyticsEnvelope<T>): T => payload.data ?? payload;
 
 class AnalyticsService {
   private baseUrl = '/api/analytics';
 
   async getAnalytics(period: '7d' | '30d' | '90d' = '30d'): Promise<AnalyticsInsights> {
     try {
-      const response = await api.get<AnalyticsEnvelope<AnalyticsInsights>>(
-        this.baseUrl,
-        { params: { period } },
-      );
+      const response = await api.get<AnalyticsEnvelope<AnalyticsInsights>>(this.baseUrl, {
+        params: { period },
+      });
       // Some backends wrap payload under data.data
       return unwrap(response.data);
     } catch (error) {
@@ -76,5 +75,3 @@ class AnalyticsService {
 }
 
 export const analyticsService = new AnalyticsService();
-
-

@@ -62,7 +62,15 @@ export interface MapProps {
   onAddressSelect?: (address: GeocodedAddress, coordinates: LonLat) => void;
   onAddressLookupStart?: () => void;
   onAddressLookupEnd?: () => void;
-  onRegionChange?: (e: { center: LonLat; zoom: number; bearing: number; pitch: number; bounds: { west: number; south: number; east: number; north: number }; isFinal?: boolean; source: MapMoveSource }) => void;
+  onRegionChange?: (e: {
+    center: LonLat;
+    zoom: number;
+    bearing: number;
+    pitch: number;
+    bounds: { west: number; south: number; east: number; north: number };
+    isFinal?: boolean;
+    source: MapMoveSource;
+  }) => void;
   onMarkerPress?: (e: { id: string; lngLat: LonLat }) => void;
   onClusterPress?: (e: { leaves: ClusterLeaf[] }) => void;
 }
@@ -86,7 +94,9 @@ const DEFAULT_CENTER: LonLat = [2.16538, 41.38723];
 const DEFAULT_ZOOM = 12;
 
 // Address lookup function using backend API (Nominatim-backed, no API key).
-const lookupAddressFromCoordinates = async (coordinates: LonLat): Promise<GeocodedAddress | null> => {
+const lookupAddressFromCoordinates = async (
+  coordinates: LonLat,
+): Promise<GeocodedAddress | null> => {
   try {
     const [longitude, latitude] = coordinates;
     const { data: result } = await api.get<ApiResponse<GeocodedAddress>>('/api/geocoding/reverse', {
@@ -130,7 +140,9 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
   const [userCoord, setUserCoord] = useState<LonLat | null>(null);
   const [locationAccuracy, setLocationAccuracy] = useState<number | null>(null);
   const [childReady, setChildReady] = useState(false);
-  const [showInstructions, setShowInstructions] = useState(enableAddressLookup && showAddressInstructions);
+  const [showInstructions, setShowInstructions] = useState(
+    enableAddressLookup && showAddressInstructions,
+  );
   const pending = useRef<string[]>([]);
   const mapInitialized = useRef(false);
 
@@ -152,11 +164,14 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
   const initialZoomRef = useRef<number>(savedState?.zoom || initialZoom);
 
   // Memoize cluster configuration
-  const clusterFinal = useMemo<Required<ClusterOptions>>(() => ({
-    enabled: cluster?.enabled ?? true,
-    radius: cluster?.radius ?? 40,
-    maxZoom: cluster?.maxZoom ?? 17,
-  }), [cluster]);
+  const clusterFinal = useMemo<Required<ClusterOptions>>(
+    () => ({
+      enabled: cluster?.enabled ?? true,
+      radius: cluster?.radius ?? 40,
+      maxZoom: cluster?.maxZoom ?? 17,
+    }),
+    [cluster],
+  );
 
   // The document draws Bloom's marker geometry in CSS; its colours come from the
   // Bloom theme. The document opens with the paint of its first render and a
@@ -236,16 +251,17 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
 
   // Generate HTML once with frozen initial coordinates to prevent iframe reloads
   const html = useMemo(
-    () => buildMapDocument({
-      center: initialCenterRef.current,
-      zoom: initialZoomRef.current,
-      style: resolvedStyle,
-      cluster: clusterFinal,
-      paint: initialPaintRef.current,
-      clusterLabel,
-      enableAddressLookup,
-    }),
-    [resolvedStyle, clusterFinal, enableAddressLookup, clusterLabel]
+    () =>
+      buildMapDocument({
+        center: initialCenterRef.current,
+        zoom: initialZoomRef.current,
+        style: resolvedStyle,
+        cluster: clusterFinal,
+        paint: initialPaintRef.current,
+        clusterLabel,
+        enableAddressLookup,
+      }),
+    [resolvedStyle, clusterFinal, enableAddressLookup, clusterLabel],
   );
 
   const webviewRef = useRef<WebView | null>(null);
@@ -257,18 +273,23 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
       iframeRef.current.contentWindow.postMessage(str, '*');
     } else {
       webviewRef.current?.postMessage?.(str);
-      webviewRef.current?.injectJavaScript?.(`window.dispatchEvent(new MessageEvent('message',{data:${JSON.stringify(str)}})); true;`);
+      webviewRef.current?.injectJavaScript?.(
+        `window.dispatchEvent(new MessageEvent('message',{data:${JSON.stringify(str)}})); true;`,
+      );
     }
   }, []);
 
-  const post = useCallback((payload: OutboundMapMessage) => {
-    const str = JSON.stringify(payload);
-    if (childReady) {
-      reallyPost(str);
-    } else {
-      pending.current.push(str);
-    }
-  }, [childReady, reallyPost]);
+  const post = useCallback(
+    (payload: OutboundMapMessage) => {
+      const str = JSON.stringify(payload);
+      if (childReady) {
+        reallyPost(str);
+      } else {
+        pending.current.push(str);
+      }
+    },
+    [childReady, reallyPost],
+  );
 
   useEffect(() => {
     if (paint === initialPaintRef.current) return;
@@ -288,14 +309,17 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
       const currentState = getMapState(screenId);
       const currentMarkers = currentState?.markers || [];
 
-      const markersChanged = markers.length !== currentMarkers.length ||
+      const markersChanged =
+        markers.length !== currentMarkers.length ||
         markers.some((marker, index) => {
           const current = currentMarkers[index];
-          return !current ||
+          return (
+            !current ||
             marker.id !== current.id ||
             marker.coordinates[0] !== current.coordinates[0] ||
             marker.coordinates[1] !== current.coordinates[1] ||
-            marker.priceLabel !== current.priceLabel;
+            marker.priceLabel !== current.priceLabel
+          );
         });
 
       if (markersChanged) {
@@ -332,14 +356,17 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
       const currentState = getMapState(screenId);
       const currentMarkers = currentState?.markers || [];
 
-      const markersChanged = markers.length !== currentMarkers.length ||
+      const markersChanged =
+        markers.length !== currentMarkers.length ||
         markers.some((marker, index) => {
           const current = currentMarkers[index];
-          return !current ||
+          return (
+            !current ||
             marker.id !== current.id ||
             marker.coordinates[0] !== current.coordinates[0] ||
             marker.coordinates[1] !== current.coordinates[1] ||
-            marker.priceLabel !== current.priceLabel;
+            marker.priceLabel !== current.priceLabel
+          );
         });
 
       if (markersChanged) {
@@ -366,15 +393,16 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
     post({ type: 'setUserLocation', coordinates: userCoord });
 
     // Only auto-center on user location if no specific initialCoordinates were provided
-    const hasSpecificInitialCoords = initialCoordinates !== DEFAULT_CENTER &&
-      (initialCoordinates[0] !== DEFAULT_CENTER[0] ||
-        initialCoordinates[1] !== DEFAULT_CENTER[1]);
+    const hasSpecificInitialCoords =
+      initialCoordinates !== DEFAULT_CENTER &&
+      (initialCoordinates[0] !== DEFAULT_CENTER[0] || initialCoordinates[1] !== DEFAULT_CENTER[1]);
 
     if (!hasCenteredOnce.current && !savedState && !hasSpecificInitialCoords) {
       // If location accuracy is poor, use a lower zoom level to show a wider area
-      const zoomLevel = locationAccuracy && locationAccuracy > 1000
-        ? Math.max(initialZoom, 10) // Lower zoom for poor accuracy
-        : Math.max(initialZoom, 14); // Higher zoom for good accuracy
+      const zoomLevel =
+        locationAccuracy && locationAccuracy > 1000
+          ? Math.max(initialZoom, 10) // Lower zoom for poor accuracy
+          : Math.max(initialZoom, 14); // Higher zoom for good accuracy
 
       post({ type: 'setView', center: userCoord, zoom: zoomLevel });
       hasCenteredOnce.current = true;
@@ -382,76 +410,99 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
   }, [userCoord, post, initialZoom, savedState, locationAccuracy, initialCoordinates]);
 
   // Memoize message handler
-  const handleMessage = useCallback((event: MessageEvent | WebViewMessageEvent) => {
-    try {
-      const rawData =
-        'data' in event && typeof event.data === 'string'
-          ? event.data
-          : 'nativeEvent' in event
-            ? event.nativeEvent.data
-            : undefined;
-      const msg = JSON.parse(rawData || '{}') as MapEvent;
+  const handleMessage = useCallback(
+    (event: MessageEvent | WebViewMessageEvent) => {
+      try {
+        const rawData =
+          'data' in event && typeof event.data === 'string'
+            ? event.data
+            : 'nativeEvent' in event
+              ? event.nativeEvent.data
+              : undefined;
+        const msg = JSON.parse(rawData || '{}') as MapEvent;
 
-      if (msg.type === 'ready') {
-        setChildReady(true);
-        mapInitialized.current = true;
-        flushPending();
+        if (msg.type === 'ready') {
+          setChildReady(true);
+          mapInitialized.current = true;
+          flushPending();
 
-        // Set the view if we have saved state (otherwise HTML already has correct coordinates)
-        if (savedState) {
-          post({ type: 'setView', center: savedState.center, zoom: savedState.zoom, duration: 0 });
-        }
-
-        // Restore saved markers
-        if (savedState?.markers && savedState.markers.length > 0) {
-          post({ type: 'setData', features: savedState.markers });
-        }
-
-        return;
-      }
-
-      if (msg.type === 'mapClick') {
-        // Hide instructions when user clicks on map (for address lookup)
-        if (enableAddressLookup && showInstructions) {
-          setShowInstructions(false);
-        }
-        onMapPress?.(msg);
-      }
-      if (msg.type === 'markerClick') onMarkerPress?.(msg);
-      if (msg.type === 'clusterClick') onClusterPress?.(msg);
-      if (msg.type === 'addressLookup' && onAddressSelect) {
-        onAddressSelect(msg.address, msg.coordinates);
-      }
-      if (msg.type === 'requestAddressLookup' && onAddressSelect) {
-        // Handle address lookup request using the TypeScript function
-        lookupAddressFromCoordinates(msg.coordinates).then(address => {
-          if (address) {
-            onAddressSelect(address, msg.coordinates);
+          // Set the view if we have saved state (otherwise HTML already has correct coordinates)
+          if (savedState) {
+            post({
+              type: 'setView',
+              center: savedState.center,
+              zoom: savedState.zoom,
+              duration: 0,
+            });
           }
-        }).catch(() => {
-          // Silently handle address lookup errors
-        });
-      }
-      if (msg.type === 'region') {
-        if (screenId) {
-          setMapState(screenId, {
-            center: msg.center,
-            zoom: msg.zoom,
-            bounds: msg.bounds,
-          });
+
+          // Restore saved markers
+          if (savedState?.markers && savedState.markers.length > 0) {
+            post({ type: 'setData', features: savedState.markers });
+          }
+
+          return;
         }
-        // The document is the ONLY producer of this message and it always
-        // stamps a source (`buildMapDocument`, pinned by
-        // `__tests__/mapMoveSource.test.ts`). Normalising anyway means a
-        // payload this host cannot read is treated as "the app moved the
-        // camera" — the reading that changes nothing — rather than arming a
-        // button off a message that arrived malformed.
-        onRegionChange?.({ ...msg, source: msg.source === 'user' ? 'user' : 'programmatic' });
+
+        if (msg.type === 'mapClick') {
+          // Hide instructions when user clicks on map (for address lookup)
+          if (enableAddressLookup && showInstructions) {
+            setShowInstructions(false);
+          }
+          onMapPress?.(msg);
+        }
+        if (msg.type === 'markerClick') onMarkerPress?.(msg);
+        if (msg.type === 'clusterClick') onClusterPress?.(msg);
+        if (msg.type === 'addressLookup' && onAddressSelect) {
+          onAddressSelect(msg.address, msg.coordinates);
+        }
+        if (msg.type === 'requestAddressLookup' && onAddressSelect) {
+          // Handle address lookup request using the TypeScript function
+          lookupAddressFromCoordinates(msg.coordinates)
+            .then((address) => {
+              if (address) {
+                onAddressSelect(address, msg.coordinates);
+              }
+            })
+            .catch(() => {
+              // Silently handle address lookup errors
+            });
+        }
+        if (msg.type === 'region') {
+          if (screenId) {
+            setMapState(screenId, {
+              center: msg.center,
+              zoom: msg.zoom,
+              bounds: msg.bounds,
+            });
+          }
+          // The document is the ONLY producer of this message and it always
+          // stamps a source (`buildMapDocument`, pinned by
+          // `__tests__/mapMoveSource.test.ts`). Normalising anyway means a
+          // payload this host cannot read is treated as "the app moved the
+          // camera" — the reading that changes nothing — rather than arming a
+          // button off a message that arrived malformed.
+          onRegionChange?.({ ...msg, source: msg.source === 'user' ? 'user' : 'programmatic' });
+        }
+      } catch {
+        // Silently handle message parsing errors
       }
-    } catch {
-      // Silently handle message parsing errors
-    }
-  }, [onMapPress, onMarkerPress, onClusterPress, onAddressSelect, onRegionChange, screenId, setMapState, flushPending, post, savedState, enableAddressLookup, showInstructions]);
+    },
+    [
+      onMapPress,
+      onMarkerPress,
+      onClusterPress,
+      onAddressSelect,
+      onRegionChange,
+      screenId,
+      setMapState,
+      flushPending,
+      post,
+      savedState,
+      enableAddressLookup,
+      showInstructions,
+    ],
+  );
 
   // Set up message listeners
   useEffect(() => {
@@ -464,56 +515,61 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
     };
   }, [handleMessage]);
 
-  const handleNativeMessage = useCallback((event: WebViewMessageEvent) => handleMessage(event), [handleMessage]);
+  const handleNativeMessage = useCallback(
+    (event: WebViewMessageEvent) => handleMessage(event),
+    [handleMessage],
+  );
 
   // Expose map API
-  React.useImperativeHandle(ref, () => ({
-    navigateToLocation: (center: LonLat, zoom: number = 15) => {
-      post({ type: 'setView', center, zoom, duration: 500 });
-    },
-    fitBounds: (bounds, options) => {
-      // A degenerate box asks MapLibre to fit an infinitely small region, which
-      // pins the zoom to its maximum — a city with a point-like extent would
-      // open at building level. Framing its centre at a sane zoom is the honest
-      // answer, and the decision is named in `mapCamera` rather than inlined.
-      if (isDegenerateBounds(bounds)) {
-        const centre = boundsCenter(bounds);
+  React.useImperativeHandle(
+    ref,
+    () => ({
+      navigateToLocation: (center: LonLat, zoom: number = 15) => {
+        post({ type: 'setView', center, zoom, duration: 500 });
+      },
+      fitBounds: (bounds, options) => {
+        // A degenerate box asks MapLibre to fit an infinitely small region, which
+        // pins the zoom to its maximum — a city with a point-like extent would
+        // open at building level. Framing its centre at a sane zoom is the honest
+        // answer, and the decision is named in `mapCamera` rather than inlined.
+        if (isDegenerateBounds(bounds)) {
+          const centre = boundsCenter(bounds);
+          post({
+            type: 'setView',
+            center: [centre.longitude, centre.latitude],
+            zoom: DEGENERATE_BOUNDS_ZOOM,
+            duration: options?.duration ?? FIT_BOUNDS_DURATION_MS,
+          });
+          return;
+        }
+        // Padding and duration are sent EXPLICITLY rather than left to the
+        // document's own fallbacks. The document is a template literal with no
+        // type checking and no tests, so a default living only there is a second
+        // copy of a number the web host already owns — and the two would drift
+        // silently, giving the same box a different frame per platform.
         post({
-          type: 'setView',
-          center: [centre.longitude, centre.latitude],
-          zoom: DEGENERATE_BOUNDS_ZOOM,
+          type: 'fitBounds',
+          bounds: toCameraBounds(bounds),
+          padding: options?.padding ?? FIT_BOUNDS_PADDING,
           duration: options?.duration ?? FIT_BOUNDS_DURATION_MS,
         });
-        return;
-      }
-      // Padding and duration are sent EXPLICITLY rather than left to the
-      // document's own fallbacks. The document is a template literal with no
-      // type checking and no tests, so a default living only there is a second
-      // copy of a number the web host already owns — and the two would drift
-      // silently, giving the same box a different frame per platform.
-      post({
-        type: 'fitBounds',
-        bounds: toCameraBounds(bounds),
-        padding: options?.padding ?? FIT_BOUNDS_PADDING,
-        duration: options?.duration ?? FIT_BOUNDS_DURATION_MS,
-      });
-    },
-    highlightMarker: (id: string | null) => {
-      post({ type: 'highlightMarker', id });
-    },
-    lookupAddress: async (coordinates: LonLat) => {
-      return await lookupAddressFromCoordinates(coordinates);
-    }
-  }), [post]);
+      },
+      highlightMarker: (id: string | null) => {
+        post({ type: 'highlightMarker', id });
+      },
+      lookupAddress: async (coordinates: LonLat) => {
+        return await lookupAddressFromCoordinates(coordinates);
+      },
+    }),
+    [post],
+  );
 
   if (Platform.OS === 'web') {
     return (
       <View style={{ flex: 1, ...style }}>
         {showInstructions && enableAddressLookup && (
           <View style={addressInstructionStyles.overlay}>
-            <Text style={addressInstructionStyles.text}>
-              Tap on the map to select a location
-            </Text>
+            <Text style={addressInstructionStyles.text}>Tap on the map to select a location</Text>
           </View>
         )}
         {/* Mount once the hardened style has settled so the document builds a
@@ -538,9 +594,7 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
     <View style={[{ flex: 1 }, style]}>
       {showInstructions && enableAddressLookup && (
         <View style={addressInstructionStyles.overlay}>
-          <Text style={addressInstructionStyles.text}>
-            Tap on the map to select a location
-          </Text>
+          <Text style={addressInstructionStyles.text}>Tap on the map to select a location</Text>
         </View>
       )}
       {/* Mount once the hardened style has settled so the WebView builds a
@@ -566,7 +620,10 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
 // Optimized memoization with custom comparison
 const Map = React.memo(MapComponent, (prevProps, nextProps) => {
   // For create property screens, ignore coordinate changes to prevent reloads
-  if (nextProps.screenId === 'create-property' || nextProps.screenId === 'create-property-fullscreen') {
+  if (
+    nextProps.screenId === 'create-property' ||
+    nextProps.screenId === 'create-property-fullscreen'
+  ) {
     return (
       prevProps.screenId === nextProps.screenId &&
       prevProps.enableAddressLookup === nextProps.enableAddressLookup &&
@@ -618,7 +675,7 @@ const addressInstructionStyles = {
     fontSize: 14,
     textAlign: 'center' as const,
     fontWeight: '500' as const,
-  }
+  },
 };
 
 export default Map;

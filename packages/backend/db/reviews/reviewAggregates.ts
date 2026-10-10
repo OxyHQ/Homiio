@@ -74,12 +74,17 @@ function emptySummary(): ReviewSummaryStats {
  * `numeric` for an integer input and postgres.js hands a `numeric` back as a
  * STRING — which `Math.round` would silently coerce and `round1` would not.
  */
-async function summarize(where: SQL | undefined, db: DatabaseOrTransaction): Promise<ReviewSummaryStats> {
+async function summarize(
+  where: SQL | undefined,
+  db: DatabaseOrTransaction,
+): Promise<ReviewSummaryStats> {
   const [row] = await db
     .select({
       averageRating: sql<number | null>`avg(${reviews.rating})::double precision`,
       totalReviews: count(),
-      recommendationPercentage: sql<number | null>`avg(case when ${reviews.recommendation} then 100 else 0 end)::double precision`,
+      recommendationPercentage: sql<
+        number | null
+      >`avg(case when ${reviews.recommendation} then 100 else 0 end)::double precision`,
     })
     .from(reviews)
     .where(where);
@@ -229,7 +234,9 @@ export async function getAgencyStats(
     totalReviews: row.totalReviews,
     recommendationPercentage: roundPct((row.recommendCount / row.totalReviews) * 100),
     depositFullPct:
-      row.depositKnownCount > 0 ? roundPct((row.depositFullCount / row.depositKnownCount) * 100) : 0,
+      row.depositKnownCount > 0
+        ? roundPct((row.depositFullCount / row.depositKnownCount) * 100)
+        : 0,
     distinctAuthors: row.distinctAuthors,
   };
 }

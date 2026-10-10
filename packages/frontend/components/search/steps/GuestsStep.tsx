@@ -53,14 +53,20 @@ export function guestsValueFor(counts: GuestCounts): GuestsValue {
   };
 }
 
-export const GuestsStep: React.FC<GuestsStepProps> = ({ value, onChange, counts, onCountsChange }) => {
+export const GuestsStep: React.FC<GuestsStepProps> = ({
+  value,
+  onChange,
+  counts,
+  onCountsChange,
+}) => {
   const { t } = useTranslation();
 
   // The split is kept only while the owner holds it; otherwise it is derived.
   const shown = useMemo(() => {
     if (counts) {
       const mirrored = guestsValueFor(counts);
-      if (mirrored.guests === value.guests && mirrored.petFriendly === value.petFriendly) return counts;
+      if (mirrored.guests === value.guests && mirrored.petFriendly === value.petFriendly)
+        return counts;
     }
     return guestCountsFor(value);
   }, [counts, value]);

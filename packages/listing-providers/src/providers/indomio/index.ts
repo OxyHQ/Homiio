@@ -15,7 +15,11 @@ import type {
   RawListing,
 } from '../../types';
 import { createFetchRuntime } from '../../runtime';
-import { defaultProviderMetrics, type ProviderMetricsReader, type ProviderMetricsSink } from '../../metrics';
+import {
+  defaultProviderMetrics,
+  type ProviderMetricsReader,
+  type ProviderMetricsSink,
+} from '../../metrics';
 import { INDOMIO_BASE_URL, indomioListAjaxUrl, indomioSearchUrl } from './fixtures';
 import {
   normalizeIndomioRaw,
@@ -72,7 +76,9 @@ export class IndomioProvider implements ListingProvider {
       for (let page = 1; page <= MAX_SEARCH_PAGES; page += 1) {
         if (yielded >= limit) return;
         const warmUrl = indomioSearchUrl(city, page);
-        let session: Awaited<ReturnType<NonNullable<FetchRuntime['openBrowserSession']>>> | undefined;
+        let session:
+          | Awaited<ReturnType<NonNullable<FetchRuntime['openBrowserSession']>>>
+          | undefined;
         const start = Date.now();
         try {
           session = await runtime.openBrowserSession({
@@ -150,7 +156,12 @@ export class IndomioProvider implements ListingProvider {
         referer: ref.url,
         timeoutMs: 20_000,
       });
-      if (status >= 200 && status < 300 && body.trim().startsWith('{') && !isIndomioChallenge(body)) {
+      if (
+        status >= 200 &&
+        status < 300 &&
+        body.trim().startsWith('{') &&
+        !isIndomioChallenge(body)
+      ) {
         return { ref, payload: parseIndomioDetailJson(JSON.parse(body) as unknown, ref.url) };
       }
       throw new Error(`indomio: no JSON detail for ${ref.sourceId} (status=${status})`);

@@ -28,7 +28,9 @@ export function DonationWidget() {
   return (
     <BaseWidget
       title={t('donations.widget.title')}
-      icon={<RiHeartFill width={HEADER_ICON_SIZE} height={HEADER_ICON_SIZE} fill={colors.primary} />}
+      icon={
+        <RiHeartFill width={HEADER_ICON_SIZE} height={HEADER_ICON_SIZE} fill={colors.primary} />
+      }
     >
       <View className="gap-4">
         <BloomText className="text-sm leading-5 text-muted-foreground">
@@ -46,7 +48,12 @@ export function DonationWidget() {
           ))}
         </View>
 
-        <Button leadingIcon={RiHeartFill} onPress={() => router.push('/donate')}  tone="accent" appearance="solid">
+        <Button
+          leadingIcon={RiHeartFill}
+          onPress={() => router.push('/donate')}
+          tone="accent"
+          appearance="solid"
+        >
           {t('donations.widget.button')}
         </Button>
       </View>

@@ -110,7 +110,9 @@ module.exports = function (config) {
         metro: {
           resolver: {
             alias: {
-              '@react-native-async-storage/async-storage': require.resolve('@react-native-async-storage/async-storage'),
+              '@react-native-async-storage/async-storage': require.resolve(
+                '@react-native-async-storage/async-storage',
+              ),
             },
           },
         },

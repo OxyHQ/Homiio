@@ -154,8 +154,7 @@ export default function DonatePage() {
   // control flips, default to the first tier of that frequency (derived, no
   // effect needed).
   const [selectedTierId, setSelectedTierId] = useState<string>('monthly-10');
-  const selectedTier =
-    visibleTiers.find((tier) => tier.id === selectedTierId) ?? visibleTiers[0];
+  const selectedTier = visibleTiers.find((tier) => tier.id === selectedTierId) ?? visibleTiers[0];
 
   const handleFrequencyChange = (next: DonationFrequency) => {
     setFrequency(next);
@@ -167,10 +166,11 @@ export default function DonatePage() {
     if (!selectedTier) return;
     try {
       setLoading(true);
-      const { data } = await api.post<{ success: boolean; url?: string; error?: { message?: string } }>(
-        '/api/billing/checkout',
-        { product: selectedTier.product },
-      );
+      const { data } = await api.post<{
+        success: boolean;
+        url?: string;
+        error?: { message?: string };
+      }>('/api/billing/checkout', { product: selectedTier.product });
       if (data?.success && data.url) {
         await Linking.openURL(data.url);
       } else {
@@ -209,10 +209,7 @@ export default function DonatePage() {
 
           {/* Contribution picker — frequency toggle + flat tier list. */}
           <View style={[styles.section, styles.firstSection]}>
-            <Section
-              title={t('donations.page.chooseContribution')}
-              bodyStyle={styles.pickerBody}
-            >
+            <Section title={t('donations.page.chooseContribution')} bodyStyle={styles.pickerBody}>
               <SegmentedControl<DonationFrequency>
                 label={t('donations.page.frequency.label')}
                 type="tabs"
@@ -264,7 +261,9 @@ export default function DonatePage() {
                 loading={loading}
                 disabled={!selectedTier}
                 fullWidth
-                leadingIcon={RiHeartFill} tone="accent" appearance="solid"
+                leadingIcon={RiHeartFill}
+                tone="accent"
+                appearance="solid"
               >
                 {selectedTier?.ctaLabel ?? t('donations.page.tiers.monthly.button')}
               </Button>

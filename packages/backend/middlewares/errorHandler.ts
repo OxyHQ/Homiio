@@ -91,9 +91,10 @@ const describeErrorForLog = (err: any): Record<string, unknown> => {
     description.cause = {
       name: cause.name,
       code: cause.code,
-      message: typeof cause.message === 'string'
-        ? redactTrailingValue(stripQueryParams(cause.message))
-        : undefined,
+      message:
+        typeof cause.message === 'string'
+          ? redactTrailingValue(stripQueryParams(cause.message))
+          : undefined,
       // postgres-js spells these `*_name`; node-postgres does not.
       constraint: cause.constraint_name ?? cause.constraint,
       table: cause.table_name ?? cause.table,
@@ -124,7 +125,11 @@ const describeRequestForLog = (req: Request): Record<string, unknown> => {
  * handler that answers a 500 itself calls this instead of echoing the error to
  * the client.
  */
-const logUnexpectedError = (err: unknown, req: Request, context = 'Unhandled request error'): void => {
+const logUnexpectedError = (
+  err: unknown,
+  req: Request,
+  context = 'Unhandled request error',
+): void => {
   logger.error(context, {
     ...describeRequestForLog(req),
     error: describeErrorForLog(err),
@@ -172,7 +177,9 @@ const errorHandler = (err: any, req: Request, res: Response, next: NextFunction)
 
   // Mongoose validation error
   if (err.name === 'ValidationError' && err.errors && typeof err.errors === 'object') {
-    const message = Object.values(err.errors).map((val: any) => val.message).join(', ');
+    const message = Object.values(err.errors)
+      .map((val: any) => val.message)
+      .join(', ');
     error = new AppError(message, 400, 'VALIDATION_ERROR');
   }
 
@@ -248,8 +255,8 @@ const errorHandler = (err: any, req: Request, res: Response, next: NextFunction)
     error: {
       message: (exposeMessage && error.message) || GENERIC_SERVER_ERROR_MESSAGE,
       code: code,
-      statusCode: statusCode
-    }
+      statusCode: statusCode,
+    },
   };
 
   // Add validation details if they exist
@@ -272,7 +279,7 @@ const errorHandler = (err: any, req: Request, res: Response, next: NextFunction)
       body: req.body,
       params: req.params,
       query: req.query,
-      user: req.user ? { id: req.user.id, role: req.user.role } : null
+      user: req.user ? { id: req.user.id, role: req.user.role } : null,
     };
   }
 
@@ -292,27 +299,33 @@ const asyncHandler =
 /**
  * Validation error formatter
  */
-const formatValidationError = (errors: Array<{ param: string; msg: string; value: any; location: string }>) => {
-  return errors.map(err => ({
+const formatValidationError = (
+  errors: Array<{ param: string; msg: string; value: any; location: string }>,
+) => {
+  return errors.map((err) => ({
     field: err.param,
     message: err.msg,
     value: err.value,
-    location: err.location
+    location: err.location,
   }));
 };
 
 /**
  * Success response formatter
  */
-const successResponse = (data: unknown, message = 'Success', meta: Record<string, unknown> = {}) => {
+const successResponse = (
+  data: unknown,
+  message = 'Success',
+  meta: Record<string, unknown> = {},
+) => {
   return {
     success: true,
     message,
     data,
     meta: {
       timestamp: new Date().toISOString(),
-      ...meta
-    }
+      ...meta,
+    },
   };
 };
 
@@ -325,7 +338,7 @@ const paginationResponse = (
   limit: number,
   total: number,
   message = 'Success',
-  meta: Record<string, unknown> = {}
+  meta: Record<string, unknown> = {},
 ) => {
   const totalPages = Math.ceil(total / limit);
   const hasNext = page < totalPages;
@@ -343,12 +356,12 @@ const paginationResponse = (
       hasNext: hasNext,
       hasPrev: hasPrev,
       nextPage: hasNext ? page + 1 : null,
-      prevPage: hasPrev ? page - 1 : null
+      prevPage: hasPrev ? page - 1 : null,
     },
     meta: {
       timestamp: new Date().toISOString(),
-      ...meta
-    }
+      ...meta,
+    },
   };
 };
 
@@ -361,5 +374,5 @@ export {
   asyncHandler,
   formatValidationError,
   successResponse,
-  paginationResponse
+  paginationResponse,
 };

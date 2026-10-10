@@ -6,7 +6,13 @@ import { toast } from '@oxy.so/bloom/toast';
 import type { UpdateProfileData } from '@homiio/shared-types';
 
 export const useProfileRedux = () => {
-  const { profile, isLoading, error, fetchProfile, updateProfile: storeUpdateProfile } = useProfileStore();
+  const {
+    profile,
+    isLoading,
+    error,
+    fetchProfile,
+    updateProfile: storeUpdateProfile,
+  } = useProfileStore();
   const { oxyServices, activeSessionId } = useOxy();
 
   const refetchProfiles = useCallback(async () => {
@@ -24,7 +30,10 @@ export const useProfileRedux = () => {
         toast.success(i18next.t('profile.toast.updateSuccess'));
         return updatedProfile;
       } catch (updateError: unknown) {
-        const message = updateError instanceof Error ? updateError.message : i18next.t('profile.toast.updateFailed');
+        const message =
+          updateError instanceof Error
+            ? updateError.message
+            : i18next.t('profile.toast.updateFailed');
         toast.error(message);
         throw updateError;
       }

@@ -30,7 +30,16 @@
  * and off the wire.
  */
 
-import { check, doublePrecision, index, integer, jsonb, pgTable, text, uniqueIndex } from 'drizzle-orm/pg-core';
+import {
+  check,
+  doublePrecision,
+  index,
+  integer,
+  jsonb,
+  pgTable,
+  text,
+  uniqueIndex,
+} from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import { createdAt, generatedId, inList, timestamptz, updatedAt } from '@oxy.so/db';
 import { addresses } from './addresses';
@@ -459,10 +468,7 @@ export const addressExternalRefs = pgTable(
   (table) => [
     uniqueIndex('address_external_refs_source_external_id_key').on(table.source, table.externalId),
     index('address_external_refs_address_id_idx').on(table.addressId),
-    check(
-      'address_external_refs_confidence_range_check',
-      sql`${table.confidence} between 0 and 1`,
-    ),
+    check('address_external_refs_confidence_range_check', sql`${table.confidence} between 0 and 1`),
     check(
       'address_external_refs_seen_order_check',
       sql`${table.lastSeenAt} >= ${table.firstSeenAt}`,

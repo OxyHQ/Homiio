@@ -38,10 +38,7 @@ export function useAgency(slug: string | undefined): UseQueryResult<AgencyProfil
   });
 }
 
-export type AgencyReviewsResult = UseInfiniteQueryResult<
-  InfiniteData<AgencyReviewsPage>,
-  Error
-> & {
+export type AgencyReviewsResult = UseInfiniteQueryResult<InfiniteData<AgencyReviewsPage>, Error> & {
   /** All loaded reviews flattened across pages. */
   reviews: ReviewDTO[];
 };

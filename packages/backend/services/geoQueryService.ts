@@ -202,7 +202,9 @@ export async function resolveGeoFilterAddressIds(input: GeoFilterInput): Promise
   const neighborhoodValue = asTrimmed(input.neighborhood);
   if (neighborhoodValue) {
     // Scoped to the resolved city when one was given.
-    const neighborhoodId = await resolveNeighborhoodId(neighborhoodValue, { cityId: resolvedCityId });
+    const neighborhoodId = await resolveNeighborhoodId(neighborhoodValue, {
+      cityId: resolvedCityId,
+    });
     if (!neighborhoodId) return null;
     conditions.push(eq(addresses.neighborhoodId, neighborhoodId));
   }

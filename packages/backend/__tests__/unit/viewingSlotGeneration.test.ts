@@ -175,10 +175,7 @@ describe('generateViewingSlots', () => {
 
   it('offers two modalities in the same hour when the owner declared both', () => {
     const slots = generateViewingSlots({
-      windows: [
-        window(),
-        window({ modality: 'video', startMinute: 17 * 60, endMinute: 18 * 60 }),
-      ],
+      windows: [window(), window({ modality: 'video', startMinute: 17 * 60, endMinute: 18 * 60 })],
       timeZone: MADRID,
       now: MONDAY,
       days: 7,

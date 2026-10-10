@@ -29,7 +29,11 @@ import type {
 } from '../../types';
 import { createFetchRuntime } from '../../runtime';
 import { fetchListingViaLadder } from '../../strategy';
-import { defaultProviderMetrics, type ProviderMetricsReader, type ProviderMetricsSink } from '../../metrics';
+import {
+  defaultProviderMetrics,
+  type ProviderMetricsReader,
+  type ProviderMetricsSink,
+} from '../../metrics';
 import { providerMaxSearchPages } from '../../discoverLimits';
 import type { EsSchemaListing } from '../../parse/jsonLd';
 import { createProxySessionId, envBool } from '../../proxy';
@@ -71,7 +75,8 @@ export interface PisosProviderOptions {
 
 function resolvePropertyType(types: readonly string[]): PropertyType {
   const lower = types.map((type) => type.toLowerCase());
-  if (lower.some((type) => type.includes('house') || type.includes('chalet'))) return PropertyType.HOUSE;
+  if (lower.some((type) => type.includes('house') || type.includes('chalet')))
+    return PropertyType.HOUSE;
   if (lower.some((type) => type.includes('studio'))) return PropertyType.STUDIO;
   return PropertyType.APARTMENT;
 }
@@ -126,7 +131,8 @@ export class PisosProvider implements ListingProvider {
 
   constructor(options: PisosProviderOptions = {}) {
     this.runtime = options.runtime ?? createFetchRuntime();
-    this.cities = options.cities && options.cities.length > 0 ? options.cities : pisosCitiesFromEnv();
+    this.cities =
+      options.cities && options.cities.length > 0 ? options.cities : pisosCitiesFromEnv();
     this.metrics = options.metrics ?? defaultProviderMetrics;
     this.maxSearchPages = providerMaxSearchPages(PROVIDER_ID, DEFAULT_MAX_SEARCH_PAGES, 'ES');
   }
@@ -416,7 +422,9 @@ export class PisosProvider implements ListingProvider {
   }
 
   normalize(raw: RawListing): NormalizedListing {
-    const { sourceId, url, listing, contact, floor, yearBuilt, parkingSpaces } = asPisosRaw(raw.payload);
+    const { sourceId, url, listing, contact, floor, yearBuilt, parkingSpaces } = asPisosRaw(
+      raw.payload,
+    );
     if (listing.price === undefined) {
       throw new Error(`pisos: listing ${sourceId} has no resolvable price`);
     }
@@ -466,7 +474,11 @@ export class PisosProvider implements ListingProvider {
     const snapshot = this.metrics.snapshot(this.id);
     if (snapshot && snapshot.attempts > 0) {
       const status =
-        snapshot.challengeRate >= 0.8 ? 'unhealthy' : snapshot.challengeRate >= 0.3 ? 'degraded' : 'healthy';
+        snapshot.challengeRate >= 0.8
+          ? 'unhealthy'
+          : snapshot.challengeRate >= 0.3
+            ? 'degraded'
+            : 'healthy';
       return {
         provider: this.id,
         status,

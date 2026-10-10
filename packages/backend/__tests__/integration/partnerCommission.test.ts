@@ -51,10 +51,7 @@ async function partnerByCode(referralCode: string) {
 
 /** Every commission booked against a listing. */
 async function commissionsFor(propertyId: string) {
-  return getDb()
-    .select()
-    .from(commissionsTable)
-    .where(eq(commissionsTable.propertyId, propertyId));
+  return getDb().select().from(commissionsTable).where(eq(commissionsTable.propertyId, propertyId));
 }
 
 /** Fake-auth app that injects `req.user.id` / `req.userId` for one Oxy user. */

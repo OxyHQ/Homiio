@@ -22,7 +22,6 @@ import {
 import { findProfileByOxyUserId } from '../db/profiles/profileRepository';
 import { countViewingsByStatusForOwner } from '../db/bookings/viewingReads';
 
-
 const PERIOD_DAYS: Record<string, number> = { '7d': 7, '30d': 30, '90d': 90 };
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -50,7 +49,10 @@ function priceBucketLabels(
   const labels: { bucket: string; count: number }[] = [];
   for (const [bucket, count] of [...counts.entries()].sort((a, b) => a[0] - b[0])) {
     if (bucket >= PRICE_BUCKET_BOUNDARIES.length) {
-      labels.push({ bucket: `${PRICE_BUCKET_BOUNDARIES[PRICE_BUCKET_BOUNDARIES.length - 1]}+`, count });
+      labels.push({
+        bucket: `${PRICE_BUCKET_BOUNDARIES[PRICE_BUCKET_BOUNDARIES.length - 1]}+`,
+        count,
+      });
       continue;
     }
     const low = PRICE_BUCKET_BOUNDARIES[bucket - 1];
@@ -81,7 +83,6 @@ class AnalyticsController {
       const periodDays = PERIOD_DAYS[periodParam] || PERIOD_DAYS['30d'];
       const period = PERIOD_DAYS[periodParam] ? periodParam : '30d';
       const since = new Date(Date.now() - periodDays * DAY_MS);
-
 
       // A GATE, not a lookup: nothing below reads this row — every figure is
       // keyed by `oxyUserId` — so its only job is "does this person have a
@@ -184,7 +185,6 @@ class AnalyticsController {
    */
   async getAppStats(req: Request, res: Response, next: NextFunction): Promise<void | Response> {
     try {
-
       // All five aggregates read Postgres. `uniqueSavers` used to be a
       // `distinct('profileId')` against a schema whose column is `oxyUserId`,
       // so it answered 0 for as long as it existed; `countAppWideSaves` counts

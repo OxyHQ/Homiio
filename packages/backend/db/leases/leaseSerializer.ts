@@ -103,9 +103,7 @@ const MILLISECONDS_PER_DAY = 1000 * 60 * 60 * 24;
  * did for any input.
  */
 function leaseDuration(row: LeaseRow): number {
-  const diff = Math.abs(
-    row.leaseTermsEndDate.getTime() - row.leaseTermsStartDate.getTime(),
-  );
+  const diff = Math.abs(row.leaseTermsEndDate.getTime() - row.leaseTermsStartDate.getTime());
   return Math.ceil(diff / MILLISECONDS_PER_DAY);
 }
 

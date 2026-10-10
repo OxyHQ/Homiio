@@ -97,13 +97,15 @@ const DENSITY_SAMPLE_RADIUS_METERS = 1_000;
  * about how many homes surround the case, which is information about the place
  * nobody asked us to disclose.
  */
-const RADIUS_BY_DENSITY: readonly { readonly minAddresses: number; readonly radiusMeters: number }[] =
-  [
-    { minAddresses: 200, radiusMeters: EVICTION_MIN_PUBLIC_RADIUS_METERS },
-    { minAddresses: 50, radiusMeters: 750 },
-    { minAddresses: 10, radiusMeters: 1_500 },
-    { minAddresses: 0, radiusMeters: EVICTION_MAX_PUBLIC_RADIUS_METERS },
-  ];
+const RADIUS_BY_DENSITY: readonly {
+  readonly minAddresses: number;
+  readonly radiusMeters: number;
+}[] = [
+  { minAddresses: 200, radiusMeters: EVICTION_MIN_PUBLIC_RADIUS_METERS },
+  { minAddresses: 50, radiusMeters: 750 },
+  { minAddresses: 10, radiusMeters: 1_500 },
+  { minAddresses: 0, radiusMeters: EVICTION_MAX_PUBLIC_RADIUS_METERS },
+];
 
 /** A published location: a centre nobody lives at, and how far off it may be. */
 export interface PublicDisc {
@@ -144,7 +146,7 @@ function cryptoUnitFloat(): number {
  * correctness requirement rather than tidiness.
  */
 function wrapLongitude(value: number): number {
-  const wrapped = ((value + 180) % 360 + 360) % 360 - 180;
+  const wrapped = ((((value + 180) % 360) + 360) % 360) - 180;
   return wrapped;
 }
 
@@ -209,10 +211,7 @@ export function distanceMeters(a: TruePoint, b: TruePoint): number {
  * looking like a measurement. Same call, for the same reason, as
  * `resolveAgencyId`.
  */
-async function countNearbyAddresses(
-  point: TruePoint,
-  db: DatabaseOrTransaction,
-): Promise<number> {
+async function countNearbyAddresses(point: TruePoint, db: DatabaseOrTransaction): Promise<number> {
   const rows = await db.execute<{ nearby: string | number }>(sql`
     select count(*)::int as nearby
     from addresses
@@ -269,10 +268,7 @@ export async function derivePublicDisc(
  * can average towards it. Refusing to move is also the honest answer — the
  * existing disc still contains the point, so it is still a true statement.
  */
-export function shouldRedrawPublicLocation(
-  published: PublicDisc,
-  point: TruePoint,
-): boolean {
+export function shouldRedrawPublicLocation(published: PublicDisc, point: TruePoint): boolean {
   return (
     distanceMeters({ longitude: published.longitude, latitude: published.latitude }, point) >
     published.radiusMeters

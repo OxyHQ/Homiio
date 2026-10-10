@@ -115,7 +115,10 @@ function buildApp(): Express {
 }
 
 /** A published long-term listing at a point, in its own geo chain. */
-async function seedListingAt(name: string, point: { longitude: number; latitude: number }): Promise<string> {
+async function seedListingAt(
+  name: string,
+  point: { longitude: number; latitude: number },
+): Promise<string> {
   // `countries_code_key` is UNIQUE, so each chain needs its own code.
   const chain = await seedGeoChain({
     cityName: name,
@@ -153,7 +156,11 @@ describe('a bounding box crossing the antimeridian (real PostGIS)', () => {
   it('accepts west > east rather than rejecting it — a swLng <= neLng validation would 400 here', () => {
     // The loud wrong answer. This is the assertion that fails first if somebody
     // "tidies up" the asymmetry in parseBoundingBox.
-    expect(parseBoundingBox({ ...Object.fromEntries(Object.entries(PACIFIC_BOX).map(([k, v]) => [k, String(v)])) })).toEqual({
+    expect(
+      parseBoundingBox({
+        ...Object.fromEntries(Object.entries(PACIFIC_BOX).map(([k, v]) => [k, String(v)])),
+      }),
+    ).toEqual({
       swLng: 170,
       swLat: -20,
       neLng: -170,

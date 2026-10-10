@@ -51,7 +51,9 @@ function runtimeWith(options: {
     return new Response(result.body, { status: result.status });
   }) as typeof fetch;
 
-  jest.spyOn(proxyModule, 'createProxiedFetch').mockResolvedValue((async (url: RequestInfo | URL) => {
+  jest.spyOn(proxyModule, 'createProxiedFetch').mockResolvedValue((async (
+    url: RequestInfo | URL,
+  ) => {
     calls.proxied += 1;
     const result = options.proxied(String(url));
     if (result instanceof Error) throw result;

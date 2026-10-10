@@ -72,7 +72,9 @@ function asString(value: unknown): string | undefined {
  */
 function asVocabularyArray(value: unknown, vocabulary: readonly string[]): string[] | undefined {
   if (!Array.isArray(value)) return undefined;
-  return value.filter((entry): entry is string => typeof entry === 'string' && vocabulary.includes(entry));
+  return value.filter(
+    (entry): entry is string => typeof entry === 'string' && vocabulary.includes(entry),
+  );
 }
 
 /** Free-text array (pet restrictions), with no vocabulary to check against. */
@@ -103,7 +105,10 @@ export function toLeaseColumns(picked: Loose): LeaseColumnPatch {
   put(columns, 'leaseTermsStartDate', asDate(terms.startDate));
   put(columns, 'leaseTermsEndDate', asDate(terms.endDate));
   const renewalOptions = asString(terms.renewalOptions);
-  if (renewalOptions !== undefined && (LEASE_RENEWAL_OPTIONS as readonly string[]).includes(renewalOptions)) {
+  if (
+    renewalOptions !== undefined &&
+    (LEASE_RENEWAL_OPTIONS as readonly string[]).includes(renewalOptions)
+  ) {
     columns.leaseTermsRenewalOptions = renewalOptions;
   }
   put(columns, 'leaseTermsRenewalNoticeRequired', asNumber(terms.renewalNoticeRequired));

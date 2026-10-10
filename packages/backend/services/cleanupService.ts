@@ -37,15 +37,15 @@ export class CleanupService {
   }> {
     try {
       this.logger.info(`Starting expired property cleanup (dryRun: ${dryRun})`);
-      
+
       const result = await cleanupExpiredProperties(dryRun);
-      
+
       if (dryRun) {
         this.logger.info(`Would delete ${result.deleted} expired properties`);
       } else {
         this.logger.info(`Deleted ${result.deleted} expired properties`);
       }
-      
+
       return result;
     } catch (error) {
       this.logger.error('Cleanup failed', error);
@@ -78,7 +78,9 @@ export class CleanupService {
     try {
       const removed = await pruneRecentlyViewedBefore(getDb(), recentlyViewedCutoff);
       deleted += removed;
-      this.logger.info(`Deleted ${removed} recently-viewed entries older than ${RECENTLY_VIEWED_RETENTION_DAYS} days`);
+      this.logger.info(
+        `Deleted ${removed} recently-viewed entries older than ${RECENTLY_VIEWED_RETENTION_DAYS} days`,
+      );
     } catch (error) {
       errors += 1;
       this.logger.error('RecentlyViewed cleanup failed', error);
@@ -87,7 +89,9 @@ export class CleanupService {
     try {
       const removed = await pruneClosedViewingsBefore(getDb(), viewingRequestCutoff);
       deleted += removed;
-      this.logger.info(`Deleted ${removed} declined/cancelled viewing requests older than ${VIEWING_REQUEST_RETENTION_DAYS} days`);
+      this.logger.info(
+        `Deleted ${removed} declined/cancelled viewing requests older than ${VIEWING_REQUEST_RETENTION_DAYS} days`,
+      );
     } catch (error) {
       errors += 1;
       this.logger.error('ViewingRequest cleanup failed', error);
@@ -106,23 +110,23 @@ export class CleanupService {
   }> {
     try {
       this.logger.info('Starting full system cleanup');
-      
+
       const [properties, data] = await Promise.all([
         this.cleanupExpiredProperties(false),
-        this.cleanupOldData()
+        this.cleanupOldData(),
       ]);
-      
+
       this.logger.info('Full cleanup completed', {
         propertiesDeleted: properties.deleted,
-        dataDeleted: data.deleted
+        dataDeleted: data.deleted,
       });
-      
+
       return { properties, data };
     } catch (error) {
       this.logger.error('Full cleanup failed', error);
       return {
         properties: { deleted: 0, errors: 1 },
-        data: { deleted: 0, errors: 1 }
+        data: { deleted: 0, errors: 1 },
       };
     }
   }

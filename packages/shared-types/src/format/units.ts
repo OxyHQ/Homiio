@@ -165,9 +165,7 @@ function formatMeasurement(
     try {
       return new Intl.NumberFormat(undefined, options).format(safeValue);
     } catch {
-      const digits = new Intl.NumberFormat(undefined, { maximumFractionDigits }).format(
-        safeValue,
-      );
+      const digits = new Intl.NumberFormat(undefined, { maximumFractionDigits }).format(safeValue);
       return `${digits} ${FALLBACK_UNIT_SUFFIX[unit]}`;
     }
   }

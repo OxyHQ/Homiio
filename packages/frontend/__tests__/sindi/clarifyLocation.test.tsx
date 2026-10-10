@@ -61,7 +61,10 @@ jest.mock('react-i18next', () => ({
           jest.requireActual('@/locales/en.json'),
         );
       if (typeof value !== 'string') return key;
-      return value.replace(/{{(\w+)}}/g, (_match, name: string) => options?.[name] ?? `{{${name}}}`);
+      return value.replace(
+        /{{(\w+)}}/g,
+        (_match, name: string) => options?.[name] ?? `{{${name}}}`,
+      );
     },
     i18n: { language: 'en' },
   }),

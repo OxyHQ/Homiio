@@ -2,7 +2,8 @@
 
 export const FUNDA_BASE_URL = 'https://www.funda.nl';
 export const FUNDA_SEARCH_URL = 'https://listing-search-wonen.funda.io/_msearch/template';
-export const FUNDA_DETAIL_BASE_URL = 'https://listing-detail-page.funda.io/api/v4/listing/object/nl';
+export const FUNDA_DETAIL_BASE_URL =
+  'https://listing-detail-page.funda.io/api/v4/listing/object/nl';
 
 export const FUNDA_SEARCH_INDEX = 'listings-wonen-searcher-alias-prod';
 export const FUNDA_SEARCH_TEMPLATE_ID = 'search_result_20250805';

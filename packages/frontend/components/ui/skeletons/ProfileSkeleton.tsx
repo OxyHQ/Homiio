@@ -62,7 +62,8 @@ export function ProfileSkeleton({ showHeader = true, showActions = true }: Profi
           {Array.from({ length: 4 }).map((_, index) => (
             <View
               key={index}
-              style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
+              style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}
+            >
               <Skeleton.Box width={100} height={16} />
               <Skeleton.Box width={120} height={16} />
             </View>
@@ -92,7 +93,8 @@ export function ProfileSkeleton({ showHeader = true, showActions = true }: Profi
                 marginBottom: 12,
                 borderWidth: 1,
                 borderColor: colors.border,
-              }}>
+              }}
+            >
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
                 <Skeleton.Box width={40} height={40} borderRadius={20} />
                 <View style={{ marginLeft: 12, flex: 1 }}>

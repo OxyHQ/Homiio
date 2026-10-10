@@ -33,7 +33,11 @@ import type { ControllerNext, ControllerRequest, ControllerResponse } from '../c
 
 const MAX_BODY_LENGTH = 2000;
 
-export async function listComments(req: ControllerRequest, res: ControllerResponse, next: ControllerNext) {
+export async function listComments(
+  req: ControllerRequest,
+  res: ControllerResponse,
+  next: ControllerNext,
+) {
   try {
     const { id } = req.params;
     const { page, limit, skip } = parsePagination(req.query);
@@ -59,18 +63,24 @@ export async function listComments(req: ControllerRequest, res: ControllerRespon
   }
 }
 
-export async function createComment(req: ControllerRequest, res: ControllerResponse, next: ControllerNext) {
+export async function createComment(
+  req: ControllerRequest,
+  res: ControllerResponse,
+  next: ControllerNext,
+) {
   try {
     const { id } = req.params;
     const oxyUserId = requireSessionOxyUserId(req);
 
     const evictionCase = await findEvictionCase(id);
-    if (!evictionCase) return next(new AppError('Eviction case not found', 404, 'EVICTION_NOT_FOUND'));
+    if (!evictionCase)
+      return next(new AppError('Eviction case not found', 404, 'EVICTION_NOT_FOUND'));
 
     const picked = pickFields<Record<string, unknown>>(req.body, ['body']);
     const body = typeof picked.body === 'string' ? picked.body.trim() : '';
     if (!body) return next(new AppError('A comment body is required', 400, 'INVALID_COMMENT'));
-    if (body.length > MAX_BODY_LENGTH) return next(new AppError('Comment is too long', 400, 'COMMENT_TOO_LONG'));
+    if (body.length > MAX_BODY_LENGTH)
+      return next(new AppError('Comment is too long', 400, 'COMMENT_TOO_LONG'));
 
     const comment = await insertEvictionComment({ caseId: id, oxyUserId, body });
 
@@ -89,7 +99,11 @@ export async function createComment(req: ControllerRequest, res: ControllerRespo
   }
 }
 
-export async function deleteComment(req: ControllerRequest, res: ControllerResponse, next: ControllerNext) {
+export async function deleteComment(
+  req: ControllerRequest,
+  res: ControllerResponse,
+  next: ControllerNext,
+) {
   try {
     const { id, commentId } = req.params;
     const oxyUserId = requireSessionOxyUserId(req);

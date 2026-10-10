@@ -57,7 +57,8 @@ export const useProfileStore = create<ProfileState>((set) => ({
       set({ landlordProfile: profile, landlordProfileLoading: false });
       return profile;
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch landlord profile';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Failed to fetch landlord profile';
       set({
         landlordProfileError: errorMessage,
         landlordProfileLoading: false,

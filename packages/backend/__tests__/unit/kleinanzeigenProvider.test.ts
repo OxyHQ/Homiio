@@ -56,8 +56,7 @@ describe('KleinanzeigenProvider housing filter', () => {
   });
 
   it('extracts amenities + bathrooms + yearBuilt + agency contact from real markup', () => {
-    const url =
-      'https://www.kleinanzeigen.de/s-anzeige/modernes-apartment/3382686830-203-3436';
+    const url = 'https://www.kleinanzeigen.de/s-anzeige/modernes-apartment/3382686830-203-3436';
     const payload = parseKleinanzeigenDetail(KLEINANZEIGEN_FIXTURE_DETAIL_ENRICHED_HTML, url);
     const ref: ExternalListingRef = {
       provider: 'kleinanzeigen',
@@ -91,7 +90,9 @@ describe('KleinanzeigenProvider housing filter', () => {
     const url = kleinanzeigenHousingSearchUrl('berlin', 1, '203');
     expect(url).toContain('/c203');
     expect(url).toContain('wohnung-mieten');
-    expect(() => kleinanzeigenHousingSearchUrl('berlin', 1, '216')).toThrow(/not a housing category/);
+    expect(() => kleinanzeigenHousingSearchUrl('berlin', 1, '216')).toThrow(
+      /not a housing category/,
+    );
   });
 
   // Regression for the polynomial-ReDoS pair CodeQL flagged on the amenity and

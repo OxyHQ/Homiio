@@ -86,7 +86,8 @@ const ErrorBoundary = ({
                 showErrorDetails={showErrorDetails}
               />
             )
-      }>
+      }
+    >
       {children}
     </BloomErrorBoundary>
   );
@@ -210,17 +211,17 @@ function ErrorFallback({
     <ScrollView
       contentContainerStyle={styles.scrollContent}
       style={styles.scrollRoot}
-      keyboardShouldPersistTaps="handled">
-      <View
-        {...a11yAlertProps}
-        style={[styles.card, isWide && styles.cardWide]}>
+      keyboardShouldPersistTaps="handled"
+    >
+      <View {...a11yAlertProps} style={[styles.card, isWide && styles.cardWide]}>
         <Pressable
           onPress={handleBadgePress}
           onPressIn={() => setBadgePressed(true)}
           onPressOut={() => setBadgePressed(false)}
           accessibilityRole="button"
           accessibilityLabel={t('error.boundary.title')}
-          style={[styles.iconBadge, badgePressed && styles.iconBadgePressed]}>
+          style={[styles.iconBadge, badgePressed && styles.iconBadgePressed]}
+        >
           <RiErrorWarningFill width={56} height={56} fill={colors.danger} />
         </Pressable>
 
@@ -236,10 +237,16 @@ function ErrorFallback({
           accessibilityRole="button"
           accessibilityLabel={t('error.boundary.copyIdHint')}
           accessibilityHint={errorId}
-          style={[styles.errorIdChip, errorIdPressed && styles.errorIdChipPressed]}>
+          style={[styles.errorIdChip, errorIdPressed && styles.errorIdChipPressed]}
+        >
           <BloomText style={styles.errorIdLabel}>{t('error.boundary.errorId')}</BloomText>
           <BloomText style={styles.errorIdValue}>{errorId}</BloomText>
-          <RiFileCopyLine width={12} height={12} fill={colors.muted} style={styles.errorIdCopyIcon} />
+          <RiFileCopyLine
+            width={12}
+            height={12}
+            fill={colors.muted}
+            style={styles.errorIdCopyIcon}
+          />
         </Pressable>
 
         <View style={[styles.actions, isWide && styles.actionsWide]}>
@@ -249,7 +256,10 @@ function ErrorFallback({
               onPress={handleRetry}
               leadingIcon={RiRefreshLine}
               accessibilityLabel={t('error.boundary.retry')}
-              style={styles.button} tone="accent" appearance="solid">
+              style={styles.button}
+              tone="accent"
+              appearance="solid"
+            >
               {retryCount > 0
                 ? `${t('error.boundary.retry')}  (${retryCount}/${maxRetries})`
                 : t('error.boundary.retry')}
@@ -261,7 +271,10 @@ function ErrorFallback({
               onPress={handleReportIssue}
               leadingIcon={RiFeedbackLine}
               accessibilityLabel={t('error.boundary.reportIssue')}
-              style={styles.button} tone="accent" appearance="subtle">
+              style={styles.button}
+              tone="accent"
+              appearance="subtle"
+            >
               {t('error.boundary.reportIssue')}
             </Button>
           </View>
@@ -274,7 +287,8 @@ function ErrorFallback({
             onPressOut={() => setDetailsTogglePressed(false)}
             accessibilityRole="button"
             accessibilityState={{ expanded: showDetails }}
-            style={[styles.detailsToggle, detailsTogglePressed && styles.detailsTogglePressed]}>
+            style={[styles.detailsToggle, detailsTogglePressed && styles.detailsTogglePressed]}
+          >
             <BloomText style={styles.detailsToggleText}>
               {showDetails ? t('error.boundary.hideDetails') : t('error.boundary.showDetails')}
             </BloomText>
@@ -299,11 +313,16 @@ function ErrorFallback({
               <DetailBlock label={t('error.boundary.stackTrace')} value={error.stack} />
             ) : null}
             {errorInfo?.componentStack ? (
-              <DetailBlock label={t('error.boundary.componentStack')} value={errorInfo.componentStack} />
+              <DetailBlock
+                label={t('error.boundary.componentStack')}
+                value={errorInfo.componentStack}
+              />
             ) : null}
 
             <View style={styles.deviceBlock}>
-              <BloomText style={styles.detailLabel}>{t('error.boundary.deviceInformation')}</BloomText>
+              <BloomText style={styles.detailLabel}>
+                {t('error.boundary.deviceInformation')}
+              </BloomText>
               <BloomText style={styles.deviceLine}>
                 {`Platform: ${Platform.OS} ${Platform.Version ?? ''}`.trim()}
               </BloomText>

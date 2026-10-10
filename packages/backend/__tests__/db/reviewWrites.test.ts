@@ -264,7 +264,10 @@ describe('`findOrCreateAgencyByName` survives a slug collision inside a transact
     expect(second?.id).not.toBe(first?.id);
     expect(second?.slug).not.toBe(first?.slug);
 
-    const rows = await db.select().from(agencies).where(eq(agencies.slug, second?.slug ?? ''));
+    const rows = await db
+      .select()
+      .from(agencies)
+      .where(eq(agencies.slug, second?.slug ?? ''));
     expect(rows).toHaveLength(1);
   });
 });
@@ -294,7 +297,9 @@ describe('ownership lives in the statement', () => {
     const oxyUserId = unique('oxy-deleter');
     const created = await insertReview(db, reviewValues({ addressId, oxyUserId }));
 
-    expect(await deleteOwnReview({ reviewId: created.id, oxyUserId: unique('oxy-other') })).toBe(false);
+    expect(await deleteOwnReview({ reviewId: created.id, oxyUserId: unique('oxy-other') })).toBe(
+      false,
+    );
     expect(await deleteOwnReview({ reviewId: created.id, oxyUserId })).toBe(true);
     expect(await deleteOwnReview({ reviewId: created.id, oxyUserId })).toBe(false);
   });
@@ -494,9 +499,11 @@ describe('the serializer', () => {
     const oxyUserId = unique('oxy-serialize');
     const created = await insertReview(db, reviewValues({ addressId, oxyUserId }));
     await toggleHelpfulVote({ reviewId: created.id, oxyUserId: unique('oxy-serialize-voter') });
-    await db
-      .insert(reviewReports)
-      .values({ reviewId: created.id, oxyUserId: unique('oxy-serialize-reporter'), reason: 'spam' });
+    await db.insert(reviewReports).values({
+      reviewId: created.id,
+      oxyUserId: unique('oxy-serialize-reporter'),
+      reason: 'spam',
+    });
 
     const hydrated = await findReviewById(created.id, oxyUserId);
     expect(hydrated).not.toBeNull();

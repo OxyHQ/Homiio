@@ -24,7 +24,8 @@ afterAll(() => {
   config.environment = originalEnvironment;
 });
 
-const SQL = 'select coalesce(sum("rent_details_monthly_rent"), 0) from "properties" where ("id" = $1 and "status" = $2)';
+const SQL =
+  'select coalesce(sum("rent_details_monthly_rent"), 0) from "properties" where ("id" = $1 and "status" = $2)';
 const PARAMS = ['0b5a6f1e-secret-property-id', 'active', '2026-09-01T00:00:00.000Z'];
 
 /** The shape drizzle-orm 0.45's `DrizzleQueryError` has at runtime. */
@@ -133,10 +134,13 @@ describe('errorHandler', () => {
     it('drops the offending value from a postgres error raised with no drizzle wrapper', () => {
       // Every `db.execute` throws the postgres error itself, so the value is in
       // `err.message` and there is no `cause` to redact it out of.
-      const err = Object.assign(new Error('invalid input syntax for type uuid: "0b5a6f1e-secret-property-id"'), {
-        name: 'PostgresError',
-        code: '22P02',
-      });
+      const err = Object.assign(
+        new Error('invalid input syntax for type uuid: "0b5a6f1e-secret-property-id"'),
+        {
+          name: 'PostgresError',
+          code: '22P02',
+        },
+      );
       run(err);
 
       const [, meta] = mockLogger.error.mock.calls[0];
@@ -145,7 +149,9 @@ describe('errorHandler', () => {
     });
 
     it('does not trust a statusCode on an error our code did not build', () => {
-      const err = Object.assign(new Error('connect ECONNREFUSED 10.0.3.7:5432'), { statusCode: 503 });
+      const err = Object.assign(new Error('connect ECONNREFUSED 10.0.3.7:5432'), {
+        statusCode: 503,
+      });
       const res = run(err);
 
       expect(res.statusCode).toBe(503);
@@ -154,9 +160,12 @@ describe('errorHandler', () => {
     });
 
     it('replaces an upstream FairCoin message with a fixed one', () => {
-      const err = Object.assign(new Error('POST https://internal-node:8080/tx rejected for acct 42'), {
-        code: 'FAIRCOIN_ERROR',
-      });
+      const err = Object.assign(
+        new Error('POST https://internal-node:8080/tx rejected for acct 42'),
+        {
+          code: 'FAIRCOIN_ERROR',
+        },
+      );
       const res = run(err);
 
       expect(res.statusCode).toBe(502);

@@ -72,7 +72,9 @@ afterAll(async () => {
  * to delete the assertion.
  */
 function expectIdOrderIsWrong(actualIds: readonly string[], direction: 'asc' | 'desc'): void {
-  const byId = [...actualIds].sort((a, b) => (direction === 'asc' ? (a < b ? -1 : 1) : a < b ? 1 : -1));
+  const byId = [...actualIds].sort((a, b) =>
+    direction === 'asc' ? (a < b ? -1 : 1) : a < b ? 1 : -1,
+  );
   expect(byId).not.toEqual([...actualIds]);
 }
 
@@ -145,8 +147,22 @@ describe('conversation_messages — ordered by position, never by id', () => {
     });
 
     await db.insert(conversationMessages).values([
-      { id: uuidv7(), conversationId, role: 'assistant', content: 'second', timestamp: stamp, position: 1 },
-      { id: legacyId(), conversationId, role: 'user', content: 'first', timestamp: stamp, position: 0 },
+      {
+        id: uuidv7(),
+        conversationId,
+        role: 'assistant',
+        content: 'second',
+        timestamp: stamp,
+        position: 1,
+      },
+      {
+        id: legacyId(),
+        conversationId,
+        role: 'user',
+        content: 'first',
+        timestamp: stamp,
+        position: 0,
+      },
     ]);
 
     const contents = (await listMessages(db, conversationId)).map((entry) => entry.message.content);
@@ -227,7 +243,14 @@ describe('listConversations — the two figures that stopped being stored', () =
     const lastId = legacyId();
     await db.insert(conversationMessages).values([
       { id: uuidv7(), conversationId, role: 'user', content: 'one', timestamp: now, position: 0 },
-      { id: uuidv7(), conversationId, role: 'assistant', content: 'two', timestamp: now, position: 1 },
+      {
+        id: uuidv7(),
+        conversationId,
+        role: 'assistant',
+        content: 'two',
+        timestamp: now,
+        position: 1,
+      },
       { id: lastId, conversationId, role: 'user', content: 'three', timestamp: now, position: 2 },
     ]);
 
@@ -270,9 +293,14 @@ describe('appendMessages — position is assigned, never guessed', () => {
       title: 'Continued',
       analyticsLastActivity: now,
     });
-    await db
-      .insert(conversationMessages)
-      .values({ id: legacyId(), conversationId, role: 'user', content: 'backfilled', timestamp: now, position: 7 });
+    await db.insert(conversationMessages).values({
+      id: legacyId(),
+      conversationId,
+      role: 'user',
+      content: 'backfilled',
+      timestamp: now,
+      position: 7,
+    });
 
     const appended = await appendMessages(db, conversationId, [
       { role: 'assistant', content: 'a' },

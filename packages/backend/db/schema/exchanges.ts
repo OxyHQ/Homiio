@@ -19,7 +19,15 @@
  * `CONVENTIONS.md` states.
  */
 
-import { boolean, check, doublePrecision, index, pgTable, text, uniqueIndex } from 'drizzle-orm/pg-core';
+import {
+  boolean,
+  check,
+  doublePrecision,
+  index,
+  pgTable,
+  text,
+  uniqueIndex,
+} from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import { createdAt, generatedId, inList, timestamptz, updatedAt } from '@oxy.so/db';
 import type { ExchangeMode, ExchangeRequestStatus } from '@homiio/shared-types';

@@ -43,15 +43,18 @@ import React, { useCallback, useMemo } from 'react';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
-import { RiEarthLine, RiFocus3Line, RiHistoryLine, RiMapPinLine, RiTimeLine } from '@oxy.so/bloom/icons';
+import {
+  RiEarthLine,
+  RiFocus3Line,
+  RiHistoryLine,
+  RiMapPinLine,
+  RiTimeLine,
+} from '@oxy.so/bloom/icons';
 import { Search } from '@oxy.so/bloom/search';
 import { DestinationSuggestions, type DestinationSuggestion } from '@oxy.so/bloom/stay-search';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 
-import {
-  useDebouncedAddressSearch,
-  type AddressSearchState,
-} from '@/hooks/useAddressSearch';
+import { useDebouncedAddressSearch, type AddressSearchState } from '@/hooks/useAddressSearch';
 import type { GeoAttribution } from '@/services/geoService';
 import { useRecentSearchesStore, type RecentSearch } from '@/store/recentSearchesStore';
 import {
@@ -177,8 +180,7 @@ function synthesizeBounds(place: GeoPlace, center: GeoPoint): GeoBounds | undefi
  * around an area type at all.
  */
 function toLocationSelection(place: GeoPlace): LocationSelection {
-  const bounds =
-    place.bounds ?? (place.center ? synthesizeBounds(place, place.center) : undefined);
+  const bounds = place.bounds ?? (place.center ? synthesizeBounds(place, place.center) : undefined);
   return geoPlaceToSelection(bounds === undefined ? place : { ...place, bounds });
 }
 
@@ -340,7 +342,8 @@ export function WhereSuggestions({
    * what is wrong rather than only looking wrong.
    */
   const device = options?.device && options.device.state !== 'hidden' ? options.device : null;
-  const deviceDisabled = device !== null && (device.state === 'denied' || device.state === 'locating');
+  const deviceDisabled =
+    device !== null && (device.state === 'denied' || device.state === 'locating');
   const lastArea = options?.lastArea ?? null;
   const onEverywhere = options?.onEverywhere;
   const optionItems = useMemo<DestinationSuggestion[]>(() => {
@@ -397,11 +400,15 @@ export function WhereSuggestions({
   ) : null;
 
   const degraded = !showRecents && state.status === 'results' && state.degraded;
-  const status = showRecents ? null : statusMessage ?? (items.length === 0 ? emptyHint ?? null : null);
+  const status = showRecents
+    ? null
+    : (statusMessage ?? (items.length === 0 ? (emptyHint ?? null) : null));
   if (items.length === 0 && !status) {
     if (hasOptions) return <View style={[styles.list, style]}>{optionRows}</View>;
     return emptyHint ? (
-      <BloomText style={[styles.statusText, { color: colors.textSecondary }, style]}>{emptyHint}</BloomText>
+      <BloomText style={[styles.statusText, { color: colors.textSecondary }, style]}>
+        {emptyHint}
+      </BloomText>
     ) : null;
   }
 

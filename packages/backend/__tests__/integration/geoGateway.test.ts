@@ -26,20 +26,13 @@ import { cities } from '../../db/schema';
 import publicRoutes from '../../routes/public';
 import { errorHandler } from '../../middlewares/errorHandler';
 import { resetGeoCache } from '../../services/geocoding/cache';
-import {
-  registerProvider,
-  resetProviderRegistry,
-} from '../../services/geocoding/registry';
+import { registerProvider, resetProviderRegistry } from '../../services/geocoding/registry';
 import {
   GeocodingProviderError,
   type GeocodingProvider,
   type ProviderPlace,
 } from '../../services/geocoding/types';
-import {
-  resetGeoTables,
-  seedGeoChain,
-  seedNeighborhood,
-} from '../helpers/postgresGeoFixtures';
+import { resetGeoTables, seedGeoChain, seedNeighborhood } from '../helpers/postgresGeoFixtures';
 
 function buildApp(): Express {
   const app = express();
@@ -64,9 +57,7 @@ function installFake(behaviour: FakeBehaviour = {}): void {
     id: PROVIDER_ID,
     attribution: { text: '© Fake contributors', url: 'https://example.invalid/copyright' },
     autocomplete: async (input) =>
-      behaviour.autocomplete
-        ? behaviour.autocomplete(input.query, input.language)
-        : [barcelona()],
+      behaviour.autocomplete ? behaviour.autocomplete(input.query, input.language) : [barcelona()],
     resolve: async (input) => (behaviour.resolve ? behaviour.resolve(input.ref) : barcelona()),
     reverse: async () => (behaviour.reverse ? behaviour.reverse() : barcelona()),
     health: async () => ({ providerId: PROVIDER_ID, healthy: true }),
@@ -147,7 +138,12 @@ describe('GET /api/geo/search', () => {
         place({
           ref: 'R123',
           displayName: 'Barcelona, Anzoátegui, Venezuela',
-          address: { city: 'Barcelona', region: 'Anzoátegui', country: 'Venezuela', countryCode: 'VE' },
+          address: {
+            city: 'Barcelona',
+            region: 'Anzoátegui',
+            country: 'Venezuela',
+            countryCode: 'VE',
+          },
           center: { longitude: -64.7, latitude: 10.13 },
         }),
       ],
@@ -156,9 +152,9 @@ describe('GET /api/geo/search', () => {
     const res = await request(app).get('/api/geo/search').query({ q: 'Barcelona' }).expect(200);
 
     expect(res.body.data.candidates).toHaveLength(2);
-    expect(res.body.data.candidates.map((c: { admin: { countryCode: string } }) => c.admin.countryCode)).toEqual(
-      ['ES', 'VE'],
-    );
+    expect(
+      res.body.data.candidates.map((c: { admin: { countryCode: string } }) => c.admin.countryCode),
+    ).toEqual(['ES', 'VE']);
   });
 
   it('keeps a valid result from ANOTHER country when a bias is supplied', async () => {
@@ -168,7 +164,12 @@ describe('GET /api/geo/search', () => {
       autocomplete: async () => [
         place({
           ref: 'R123',
-          address: { city: 'Barcelona', region: 'Anzoátegui', country: 'Venezuela', countryCode: 'VE' },
+          address: {
+            city: 'Barcelona',
+            region: 'Anzoátegui',
+            country: 'Venezuela',
+            countryCode: 'VE',
+          },
           center: { longitude: -64.7, latitude: 10.13 },
         }),
       ],
@@ -224,7 +225,11 @@ describe('GET /api/geo/search', () => {
     installFake({
       autocomplete: async () => [
         place({ rawAddressType: 'city' }),
-        place({ ref: 'R2', rawAddressType: 'house_number', address: { ...place().address, houseNumber: '401' } }),
+        place({
+          ref: 'R2',
+          rawAddressType: 'house_number',
+          address: { ...place().address, houseNumber: '401' },
+        }),
       ],
     });
 
@@ -301,10 +306,7 @@ describe('GET /api/geo/search — failures never become an empty list', () => {
     // the client must be able to trust that it means what it says.
     installFake({ autocomplete: async () => [] });
 
-    const res = await request(app)
-      .get('/api/geo/search')
-      .query({ q: 'Zzzzzznowhere' })
-      .expect(200);
+    const res = await request(app).get('/api/geo/search').query({ q: 'Zzzzzznowhere' }).expect(200);
     expect(res.body.data.candidates).toEqual([]);
   });
 
@@ -323,7 +325,10 @@ describe('GET /api/geo/search — input validation', () => {
   it('rejects a missing, too-short or too-long query', async () => {
     await request(app).get('/api/geo/search').expect(400);
     await request(app).get('/api/geo/search').query({ q: 'a' }).expect(400);
-    await request(app).get('/api/geo/search').query({ q: 'x'.repeat(121) }).expect(400);
+    await request(app)
+      .get('/api/geo/search')
+      .query({ q: 'x'.repeat(121) })
+      .expect(400);
   });
 
   it('rejects a non-textual payload rather than coercing it', async () => {
@@ -335,8 +340,14 @@ describe('GET /api/geo/search — input validation', () => {
   });
 
   it('rejects an out-of-range bias, an unknown type and an oversized limit', async () => {
-    await request(app).get('/api/geo/search').query({ q: 'Barcelona', near: '2.17,191' }).expect(400);
-    await request(app).get('/api/geo/search').query({ q: 'Barcelona', types: 'planet' }).expect(400);
+    await request(app)
+      .get('/api/geo/search')
+      .query({ q: 'Barcelona', near: '2.17,191' })
+      .expect(400);
+    await request(app)
+      .get('/api/geo/search')
+      .query({ q: 'Barcelona', types: 'planet' })
+      .expect(400);
     await request(app).get('/api/geo/search').query({ q: 'Barcelona', limit: '99' }).expect(400);
   });
 });
@@ -626,7 +637,10 @@ describe('GET /api/geo/resolve', () => {
   });
 
   it('400s a malformed token, and a well-formed one that names no place', async () => {
-    const malformed = await request(app).get('/api/geo/resolve').query({ loc: 'nonsense' }).expect(400);
+    const malformed = await request(app)
+      .get('/api/geo/resolve')
+      .query({ loc: 'nonsense' })
+      .expect(400);
     expect(malformed.body.error.code).toBe('INVALID_LOC');
 
     // `bbox.` is a VALID token carrying its own geometry. Answering 404 would
@@ -638,7 +652,10 @@ describe('GET /api/geo/resolve', () => {
     expect(bbox.body.error.code).toBe('LOC_NOT_RESOLVABLE');
 
     // `here.` never carries coordinates, and resolves to no place either.
-    const here = await request(app).get('/api/geo/resolve').query({ loc: 'here.25000' }).expect(400);
+    const here = await request(app)
+      .get('/api/geo/resolve')
+      .query({ loc: 'here.25000' })
+      .expect(400);
     expect(here.body.error.code).toBe('LOC_NOT_RESOLVABLE');
   });
 

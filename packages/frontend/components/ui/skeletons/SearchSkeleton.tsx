@@ -55,7 +55,8 @@ function SearchResultSkeleton() {
         borderRadius: 12,
         marginBottom: 16,
         overflow: 'hidden',
-      }}>
+      }}
+    >
       {/* Image */}
       <Skeleton.Box width="100%" height={200} borderRadius={0} />
 
@@ -68,7 +69,8 @@ function SearchResultSkeleton() {
             justifyContent: 'space-between',
             alignItems: 'flex-start',
             marginBottom: 8,
-          }}>
+          }}
+        >
           <Skeleton.Box width="65%" height={20} />
           <Skeleton.Box width={80} height={24} borderRadius={4} />
         </View>

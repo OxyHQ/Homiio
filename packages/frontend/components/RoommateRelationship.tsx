@@ -160,7 +160,9 @@ export const RoommateRelationshipComponent: React.FC<RoommateRelationshipProps> 
               size="sm"
               onPress={() => onViewProfile(person.id)}
               accessibilityLabel={`${t('roommates.actions.viewProfile')}: ${getDisplayName(person)}`}
-              style={styles.personButton} tone="neutral" appearance="outline"
+              style={styles.personButton}
+              tone="neutral"
+              appearance="outline"
             >
               {getDisplayName(person)}
             </Button>
@@ -173,7 +175,9 @@ export const RoommateRelationshipComponent: React.FC<RoommateRelationshipProps> 
           leadingIcon={RiCloseCircleLine}
           onPress={handleEndRelationship}
           loading={isLoading}
-          style={styles.endButton} tone="neutral" appearance="outline"
+          style={styles.endButton}
+          tone="neutral"
+          appearance="outline"
         >
           {t('roommates.relationship.endRelationship')}
         </Button>

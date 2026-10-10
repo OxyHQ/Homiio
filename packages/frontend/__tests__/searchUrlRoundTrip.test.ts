@@ -185,7 +185,9 @@ describe('multi-area: order is preserved in the URL and SORTED in the key', () =
   it('refuses a nested multi rather than flattening it', () => {
     // Flattening would round-trip to a DIFFERENT token than it was given, which
     // is the one thing the URL contract cannot allow.
-    const parsed = parseSearchParams({ loc: 'multi.multi.city.homiio.a+city.homiio.b+city.homiio.c' });
+    const parsed = parseSearchParams({
+      loc: 'multi.multi.city.homiio.a+city.homiio.b+city.homiio.c',
+    });
     expect(parsed.location.kind).toBe('invalid');
   });
 });
@@ -196,7 +198,15 @@ describe('a polygon deliberately has no token, and does not degrade to its box',
       kind: 'polygon',
       polygon: {
         type: 'Polygon',
-        coordinates: [[[2.0, 41.3], [2.3, 41.3], [2.3, 41.5], [2.0, 41.5], [2.0, 41.3]]],
+        coordinates: [
+          [
+            [2.0, 41.3],
+            [2.3, 41.3],
+            [2.3, 41.5],
+            [2.0, 41.5],
+            [2.0, 41.3],
+          ],
+        ],
       },
       bounds: { west: 2.0, south: 41.3, east: 2.3, north: 41.5 },
       label: { primary: 'search.summary.drawnArea', kind: 'generated' },

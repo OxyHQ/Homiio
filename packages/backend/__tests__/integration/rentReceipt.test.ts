@@ -96,7 +96,10 @@ async function seedLeaseWithObligation(): Promise<{ leaseId: string; obligationI
 }
 
 /** Declare and confirm, which is the only way a movement reaches `succeeded`. */
-async function settledMovement(fixture: { leaseId: string; obligationId: string }): Promise<string> {
+async function settledMovement(fixture: {
+  leaseId: string;
+  obligationId: string;
+}): Promise<string> {
   const declared = await request(buildApp(TENANT))
     .post(`/leases/${fixture.leaseId}/obligations/${fixture.obligationId}/declarations`)
     .send({ idempotencyKey: `receipt-${objectIdHex()}` });

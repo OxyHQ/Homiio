@@ -130,7 +130,9 @@ export const EvictionReportSheet: React.FC<EvictionReportSheetProps> = ({ caseId
         onPress={handleSubmit}
         disabled={!isValid || reportMutation.isPending}
         loading={reportMutation.isPending}
-        style={styles.submit} tone="accent" appearance="solid"
+        style={styles.submit}
+        tone="accent"
+        appearance="solid"
       >
         {t('evictions.report.submit')}
       </Button>

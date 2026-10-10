@@ -57,11 +57,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Platform } from 'react-native';
 import * as Location from 'expo-location';
-import {
-  KEY_COORD_DECIMALS,
-  type GeoPlace,
-  type LocationSelection,
-} from '@homiio/shared-types';
+import { KEY_COORD_DECIMALS, type GeoPlace, type LocationSelection } from '@homiio/shared-types';
 
 import { reversePlace } from '@/services/geoService';
 import { useLocationScopeStore } from '@/store/locationScopeStore';
@@ -319,7 +315,11 @@ export function useLocationScope(): LocationScope {
 
   const areaQuery = useQuery({
     // Keyed by the GRID SQUARE, never the exact position — see `deviceAreaKey`.
-    queryKey: ['locationScope', 'deviceArea', fix ? deviceAreaKey(fix.longitude, fix.latitude) : 'none'] as const,
+    queryKey: [
+      'locationScope',
+      'deviceArea',
+      fix ? deviceAreaKey(fix.longitude, fix.latitude) : 'none',
+    ] as const,
     // Only ever invoked with `fix` present (`enabled` below), so the fallbacks
     // are unreachable; they exist because the queryFn is typed independently of
     // `enabled` and a non-null assertion is not allowed here.
@@ -341,7 +341,11 @@ export function useLocationScope(): LocationScope {
    * nobody benefits from.
    */
   const inferenceUsable =
-    !explicitGlobal && !sessionSelection && !savedAreaPending && !savedAreaSelection && !lastChosenArea;
+    !explicitGlobal &&
+    !sessionSelection &&
+    !savedAreaPending &&
+    !savedAreaSelection &&
+    !lastChosenArea;
 
   // ONE clock for both rungs. See the header: chaining two timeouts is the
   // failure mode, not a slow first one.
@@ -376,7 +380,8 @@ export function useLocationScope(): LocationScope {
     }
     if (outcome.status === 'not_asked') return { status: 'idle' };
     if (outcome.status === 'denied') return { status: 'failed', reason: 'permission_denied' };
-    if (outcome.status === 'unavailable') return { status: 'failed', reason: 'position_unavailable' };
+    if (outcome.status === 'unavailable')
+      return { status: 'failed', reason: 'position_unavailable' };
     return {
       status: 'resolved',
       selection: {

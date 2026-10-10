@@ -68,7 +68,9 @@ async function seedRoom(oxyUserId: string, parentPropertyId: string): Promise<{ 
 describe('roomController.createRoom', () => {
   it('creates a room owned by the authenticated user', async () => {
     const parent = await createRentProperty({ oxyUserId: 'oxy-owner' });
-    const res = await request(buildApp('oxy-owner')).post('/rooms').send(await validRoomBody(parent.id));
+    const res = await request(buildApp('oxy-owner'))
+      .post('/rooms')
+      .send(await validRoomBody(parent.id));
     expect(res.status).toBe(201);
     const persisted = await findPropertyById(res.body.data.id);
     assertFound(persisted, 'persisted');

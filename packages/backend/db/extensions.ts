@@ -128,7 +128,7 @@ export const REQUIRED_EXTENSIONS: readonly RequiredExtension[] = [
     reason:
       `the \`${TEXT_SEARCH_CONFIGURATION}\` text-search configuration maps its ` +
       'word tokens through the `unaccent` dictionary, so a search for ' +
-      '`malaga` matches `Málaga`. Homiio\'s corpus is Spanish-first and ' +
+      "`malaga` matches `Málaga`. Homiio's corpus is Spanish-first and " +
       'accented place names are the norm, not the exception.',
   },
   {
@@ -136,7 +136,7 @@ export const REQUIRED_EXTENSIONS: readonly RequiredExtension[] = [
     reason:
       'the unanchored name typeahead in `cityController.searchCities` and ' +
       '`neighborhoodController` is a `/q/i` regex in Mongo. Its Postgres form ' +
-      'is `ILIKE \'%q%\'`, which only uses an index with a `gin_trgm_ops` GIN ' +
+      "is `ILIKE '%q%'`, which only uses an index with a `gin_trgm_ops` GIN " +
       'index — without it every keystroke is a sequential scan of the whole ' +
       'cities table.',
   },
@@ -193,7 +193,7 @@ async function ensureTextSearchConfiguration(client: postgres.Sql): Promise<void
   if (!IDENTIFIER.test(TEXT_SEARCH_CONFIGURATION)) {
     throw new Error(
       `Refusing to create text search configuration "${TEXT_SEARCH_CONFIGURATION}": ` +
-      'a configuration name must match /^[a-z][a-z0-9_]*$/.',
+        'a configuration name must match /^[a-z][a-z0-9_]*$/.',
     );
   }
 
@@ -215,18 +215,18 @@ async function ensureTextSearchConfiguration(client: postgres.Sql): Promise<void
     );
     await client.unsafe(
       `alter text search configuration public."${TEXT_SEARCH_CONFIGURATION}" ` +
-      `alter mapping for ${UNACCENTED_TOKEN_TYPES.join(', ')} ` +
-      'with unaccent, simple',
+        `alter mapping for ${UNACCENTED_TOKEN_TYPES.join(', ')} ` +
+        'with unaccent, simple',
     );
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     throw new Error(
       `Could not create the "${TEXT_SEARCH_CONFIGURATION}" text search configuration: ${detail}\n` +
-      'It is required because every Homiio `tsvector` names it as a literal ' +
-      'configuration, and a text search configuration is PER DATABASE — it does ' +
-      'not travel through `template1`, so a database restored from a dump or ' +
-      'created fresh needs it created explicitly. On a managed database the ' +
-      '`unaccent` extension must exist first, which needs a privileged role.',
+        'It is required because every Homiio `tsvector` names it as a literal ' +
+        'configuration, and a text search configuration is PER DATABASE — it does ' +
+        'not travel through `template1`, so a database restored from a dump or ' +
+        'created fresh needs it created explicitly. On a managed database the ' +
+        '`unaccent` extension must exist first, which needs a privileged role.',
     );
   }
 }

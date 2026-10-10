@@ -48,10 +48,7 @@ export interface NetworkAttempt {
 }
 
 /** Best-effort method + URL for whatever shape the caller passed `fetch`. */
-function describeRequest(
-  input: RequestInfo | URL,
-  init?: RequestInit,
-): NetworkAttempt {
+function describeRequest(input: RequestInfo | URL, init?: RequestInit): NetworkAttempt {
   const method = init?.method ?? (input instanceof Request ? input.method : 'GET');
   if (typeof input === 'string') return { method, url: input };
   if (input instanceof URL) return { method, url: input.toString() };

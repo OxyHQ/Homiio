@@ -48,10 +48,22 @@ export const FilePremiumInfoSheet: React.FC<FilePremiumInfoSheetProps> = ({
         </Text>
       </Card>
       <View style={styles.actions}>
-        <Button size="md" onPress={onClose} style={styles.action} tone="neutral" appearance="outline">
+        <Button
+          size="md"
+          onPress={onClose}
+          style={styles.action}
+          tone="neutral"
+          appearance="outline"
+        >
           Maybe later
         </Button>
-        <Button size="md" onPress={onUpgrade} style={styles.action} tone="accent" appearance="solid">
+        <Button
+          size="md"
+          onPress={onUpgrade}
+          style={styles.action}
+          tone="accent"
+          appearance="solid"
+        >
           Upgrade to Homiio+
         </Button>
       </View>

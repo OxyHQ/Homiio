@@ -32,13 +32,13 @@
 // DOCS_CHECK_ROOT exists so the mutation test can point the whole thing at a
 // fixture tree. Nothing in CI sets it.
 
-import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync, statSync } from "node:fs";
-import { dirname, join, relative, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { execFileSync } from 'node:child_process';
+import { existsSync, readFileSync, statSync } from 'node:fs';
+import { dirname, join, relative, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const ROOT = resolve(
-  process.env.DOCS_CHECK_ROOT ?? join(dirname(fileURLToPath(import.meta.url)), ".."),
+  process.env.DOCS_CHECK_ROOT ?? join(dirname(fileURLToPath(import.meta.url)), '..'),
 );
 
 /**
@@ -66,12 +66,12 @@ const ROOT = resolve(
  *     those two files.
  */
 const SCANNED_GLOBS = [
-  "README.md",
-  "AGENTS.md",
-  "docs/*.mdx",
-  "docs/adr/README.md",
-  "packages/*/README.md",
-  "packages/*/docs/*.md",
+  'README.md',
+  'AGENTS.md',
+  'docs/*.mdx',
+  'docs/adr/README.md',
+  'packages/*/README.md',
+  'packages/*/docs/*.md',
 ];
 
 /**
@@ -91,20 +91,26 @@ const SCANNED_GLOBS = [
  *     with other tools.
  */
 const FORBIDDEN = [
-  { pattern: /mongoose/i, why: "the ORM was removed; the store is PostgreSQL via Drizzle" },
-  { pattern: /mongodb/i, why: "MongoDB is not a datastore in this repository" },
-  { pattern: /\bmongo\b/i, why: "MongoDB is not a datastore in this repository" },
-  { pattern: /MONGODB_URI/, why: "the secret is deleted from every task definition and from SSM" },
-  { pattern: /ObjectId/, why: "identities are uuid v7 text, not ObjectIds" },
-  { pattern: /(^|[^A-Za-z0-9_])_id([^A-Za-z0-9_]|$)/, why: "the wire contract names every identity `id`" },
-  { pattern: /2dsphere/, why: "geospatial indexes are PostGIS GiST, not 2dsphere" },
-  { pattern: /expireAfterSeconds/, why: "expiry is the sweep in db/expiry.ts, not an index option" },
-  { pattern: /TTL index/i, why: "expiry is the sweep in db/expiry.ts, not an index" },
-  { pattern: /\$lookup/, why: "joins are SQL joins" },
-  { pattern: /\$bucket\b/, why: "histograms use width_bucket" },
-  { pattern: /\$geoWithin/, why: "geospatial predicates are PostGIS functions" },
-  { pattern: /\$centerSphere/, why: "geospatial predicates are PostGIS functions" },
-  { pattern: /\.lean\(\)/, why: "there is no ORM document to flatten" },
+  { pattern: /mongoose/i, why: 'the ORM was removed; the store is PostgreSQL via Drizzle' },
+  { pattern: /mongodb/i, why: 'MongoDB is not a datastore in this repository' },
+  { pattern: /\bmongo\b/i, why: 'MongoDB is not a datastore in this repository' },
+  { pattern: /MONGODB_URI/, why: 'the secret is deleted from every task definition and from SSM' },
+  { pattern: /ObjectId/, why: 'identities are uuid v7 text, not ObjectIds' },
+  {
+    pattern: /(^|[^A-Za-z0-9_])_id([^A-Za-z0-9_]|$)/,
+    why: 'the wire contract names every identity `id`',
+  },
+  { pattern: /2dsphere/, why: 'geospatial indexes are PostGIS GiST, not 2dsphere' },
+  {
+    pattern: /expireAfterSeconds/,
+    why: 'expiry is the sweep in db/expiry.ts, not an index option',
+  },
+  { pattern: /TTL index/i, why: 'expiry is the sweep in db/expiry.ts, not an index' },
+  { pattern: /\$lookup/, why: 'joins are SQL joins' },
+  { pattern: /\$bucket\b/, why: 'histograms use width_bucket' },
+  { pattern: /\$geoWithin/, why: 'geospatial predicates are PostGIS functions' },
+  { pattern: /\$centerSphere/, why: 'geospatial predicates are PostGIS functions' },
+  { pattern: /\.lean\(\)/, why: 'there is no ORM document to flatten' },
 ];
 
 /**
@@ -168,7 +174,7 @@ const FLOORS = {
   frontendSegments: 16,
 };
 
-const ROUTES_DOC = "docs/routes.mdx";
+const ROUTES_DOC = 'docs/routes.mdx';
 
 const failures = [];
 
@@ -177,7 +183,7 @@ function fail(check, message, detail = []) {
 }
 
 function git(args) {
-  return execFileSync("git", args, { cwd: ROOT, encoding: "utf8" });
+  return execFileSync('git', args, { cwd: ROOT, encoding: 'utf8' });
 }
 
 /**
@@ -186,8 +192,8 @@ function git(args) {
  * free rather than by an ignore list that rots.
  */
 function trackedMarkdown() {
-  return git(["ls-files", "--", "*.md", "*.mdx"])
-    .split("\n")
+  return git(['ls-files', '--', '*.md', '*.mdx'])
+    .split('\n')
     .map((line) => line.trim())
     .filter(Boolean);
 }
@@ -195,7 +201,7 @@ function trackedMarkdown() {
 /** Match a `dir/*.ext` or literal glob against a repo-relative path. */
 function matchesGlob(path, glob) {
   const pattern = new RegExp(
-    `^${glob.replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*/g, "[^/]*")}$`,
+    `^${glob.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '[^/]*')}$`,
   );
   return pattern.test(path);
 }
@@ -213,7 +219,7 @@ function scannedFiles(tracked) {
  * report structural problems with the blocks themselves.
  */
 function readWithExemptions(path, source) {
-  const lines = source.split("\n");
+  const lines = source.split('\n');
   const marked = [];
   const blocks = [];
   let open = null;
@@ -222,7 +228,7 @@ function readWithExemptions(path, source) {
     const start = EXEMPT_START.exec(line);
     if (start) {
       if (open) {
-        fail("vocabulary", `${path}:${index + 1} — nested vocabulary-exempt block`);
+        fail('vocabulary', `${path}:${index + 1} — nested vocabulary-exempt block`);
       }
       open = { reason: start[1], startLine: index + 1, sawForbidden: false };
       marked.push({ line, exempt: true, number: index + 1 });
@@ -230,7 +236,7 @@ function readWithExemptions(path, source) {
     }
     if (EXEMPT_END.test(line)) {
       if (!open) {
-        fail("vocabulary", `${path}:${index + 1} — vocabulary-exempt:end without a start`);
+        fail('vocabulary', `${path}:${index + 1} — vocabulary-exempt:end without a start`);
       } else {
         blocks.push(open);
         open = null;
@@ -245,14 +251,14 @@ function readWithExemptions(path, source) {
   });
 
   if (open) {
-    fail("vocabulary", `${path}:${open.startLine} — vocabulary-exempt block is never closed`);
+    fail('vocabulary', `${path}:${open.startLine} — vocabulary-exempt block is never closed`);
   }
   return { marked, blocks };
 }
 
 function checkVocabulary(files) {
   for (const path of files) {
-    const source = readFileSync(join(ROOT, path), "utf8");
+    const source = readFileSync(join(ROOT, path), 'utf8');
     const { marked, blocks } = readWithExemptions(path, source);
 
     for (const { line, exempt, number } of marked) {
@@ -260,7 +266,7 @@ function checkVocabulary(files) {
       for (const { pattern, why } of FORBIDDEN) {
         if (pattern.test(line)) {
           fail(
-            "vocabulary",
+            'vocabulary',
             `${path}:${number} — forbidden term (${why})`,
             // Print the FULL matched line. A truncated capture group reads as a
             // confirmed match even when the pattern matched something else.
@@ -273,17 +279,17 @@ function checkVocabulary(files) {
     for (const block of blocks) {
       if (block.reason.trim().length < MIN_REASON_LENGTH) {
         fail(
-          "vocabulary",
+          'vocabulary',
           `${path}:${block.startLine} — vocabulary-exempt needs a substantive reason ` +
             `(at least ${MIN_REASON_LENGTH} characters), got "${block.reason}"`,
         );
       }
       if (!block.sawForbidden) {
         fail(
-          "vocabulary",
+          'vocabulary',
           `${path}:${block.startLine} — vocabulary-exempt block contains no forbidden term, ` +
-            "so it exempts nothing. Remove it: an exemption nothing needs is " +
-            "indistinguishable from one something is hiding behind.",
+            'so it exempts nothing. Remove it: an exemption nothing needs is ' +
+            'indistinguishable from one something is hiding behind.',
         );
       }
     }
@@ -311,7 +317,7 @@ const LINK = /\[[^\]]*\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g;
  * Lines are blanked rather than removed so reported line numbers stay true.
  */
 function stripCodeFences(source) {
-  const lines = source.split("\n");
+  const lines = source.split('\n');
   let fence = null;
   return lines
     .map((line) => {
@@ -319,16 +325,16 @@ function stripCodeFences(source) {
       if (marker) {
         if (fence === null) {
           fence = marker[1][0];
-          return "";
+          return '';
         }
         if (marker[1][0] === fence) {
           fence = null;
-          return "";
+          return '';
         }
       }
-      return fence === null ? line : "";
+      return fence === null ? line : '';
     })
-    .join("\n");
+    .join('\n');
 }
 
 /**
@@ -348,43 +354,43 @@ function stripCodeFences(source) {
  * slow, and a gate nobody runs is worse than none.
  */
 function resolveLink(fromFile, target) {
-  if (/^[a-z][a-z0-9+.-]*:/i.test(target)) return { kind: "external" };
-  if (target.startsWith("#")) return { kind: "anchor" };
-  if (target.startsWith("//")) return { kind: "external" };
+  if (/^[a-z][a-z0-9+.-]*:/i.test(target)) return { kind: 'external' };
+  if (target.startsWith('#')) return { kind: 'anchor' };
+  if (target.startsWith('//')) return { kind: 'external' };
 
-  const [rawPath] = target.split("#");
-  if (!rawPath) return { kind: "anchor" };
+  const [rawPath] = target.split('#');
+  if (!rawPath) return { kind: 'anchor' };
 
-  const base = target.startsWith("/") ? ROOT : join(ROOT, dirname(fromFile));
-  const candidate = resolve(base, target.startsWith("/") ? `.${rawPath}` : rawPath);
+  const base = target.startsWith('/') ? ROOT : join(ROOT, dirname(fromFile));
+  const candidate = resolve(base, target.startsWith('/') ? `.${rawPath}` : rawPath);
 
   if (!candidate.startsWith(ROOT)) {
-    return { kind: "outside", candidate };
+    return { kind: 'outside', candidate };
   }
-  if (existsSync(candidate)) return { kind: "ok" };
-  for (const extension of [".mdx", ".md"]) {
-    if (existsSync(`${candidate}${extension}`)) return { kind: "ok" };
+  if (existsSync(candidate)) return { kind: 'ok' };
+  for (const extension of ['.mdx', '.md']) {
+    if (existsSync(`${candidate}${extension}`)) return { kind: 'ok' };
   }
   // A docs slug pointing at a directory index.
-  for (const index of ["index.mdx", "index.md", "README.md"]) {
-    if (existsSync(join(candidate, index))) return { kind: "ok" };
+  for (const index of ['index.mdx', 'index.md', 'README.md']) {
+    if (existsSync(join(candidate, index))) return { kind: 'ok' };
   }
-  return { kind: "missing", candidate };
+  return { kind: 'missing', candidate };
 }
 
 function checkLinks(files) {
   for (const path of files) {
-    const source = stripCodeFences(readFileSync(join(ROOT, path), "utf8"));
+    const source = stripCodeFences(readFileSync(join(ROOT, path), 'utf8'));
     for (const match of source.matchAll(LINK)) {
       const target = match[1];
       const result = resolveLink(path, target);
-      if (result.kind === "missing") {
-        fail("links", `${path} — link target does not exist: ${target}`, [
+      if (result.kind === 'missing') {
+        fail('links', `${path} — link target does not exist: ${target}`, [
           `    resolved to ${relative(ROOT, result.candidate)}`,
         ]);
       }
-      if (result.kind === "outside") {
-        fail("links", `${path} — link escapes the repository: ${target}`);
+      if (result.kind === 'outside') {
+        fail('links', `${path} — link escapes the repository: ${target}`);
       }
     }
   }
@@ -405,7 +411,7 @@ function checkLinks(files) {
  * worth of routes and misses 5 others entirely.
  */
 function mountedRouters() {
-  const source = readFileSync(join(ROOT, "packages/backend/routes/index.ts"), "utf8");
+  const source = readFileSync(join(ROOT, 'packages/backend/routes/index.ts'), 'utf8');
   const mounts = new Set();
   for (const match of source.matchAll(/router\s*\.\s*use\s*\(\s*["'](\/[a-z-]+)["']/gs)) {
     mounts.add(match[1]);
@@ -415,17 +421,17 @@ function mountedRouters() {
 
 /** Every top-level segment under the Expo Router app directory. */
 function frontendSegments() {
-  const files = git(["ls-files", "--", "packages/frontend/app/"])
-    .split("\n")
+  const files = git(['ls-files', '--', 'packages/frontend/app/'])
+    .split('\n')
     .map((line) => line.trim())
     .filter(Boolean);
   const segments = new Set();
   for (const file of files) {
-    const relativePath = file.replace("packages/frontend/app/", "");
-    const [head] = relativePath.split("/");
+    const relativePath = file.replace('packages/frontend/app/', '');
+    const [head] = relativePath.split('/');
     // `_layout.tsx`, `+html.tsx`, `+not-found.tsx` are framework files, not routes.
-    if (head.startsWith("_") || head.startsWith("+")) continue;
-    segments.add(head.replace(/\.(tsx|ts)$/, ""));
+    if (head.startsWith('_') || head.startsWith('+')) continue;
+    segments.add(head.replace(/\.(tsx|ts)$/, ''));
   }
   return [...segments].sort();
 }
@@ -433,29 +439,29 @@ function frontendSegments() {
 function checkRoutes() {
   const routesDocPath = join(ROOT, ROUTES_DOC);
   if (!existsSync(routesDocPath)) {
-    fail("routes", `${ROUTES_DOC} does not exist`);
+    fail('routes', `${ROUTES_DOC} does not exist`);
     return;
   }
-  const doc = readFileSync(routesDocPath, "utf8");
+  const doc = readFileSync(routesDocPath, 'utf8');
 
   const routers = mountedRouters();
   if (routers.length < FLOORS.mountedRouters) {
     fail(
-      "routes",
+      'routes',
       `only ${routers.length} mounted routers found in routes/index.ts, expected at least ` +
         `${FLOORS.mountedRouters}. The extraction is broken, not the code.`,
     );
   }
   for (const mount of routers) {
     if (!doc.includes(`/api${mount}`)) {
-      fail("routes", `${ROUTES_DOC} does not mention the mounted router /api${mount}`);
+      fail('routes', `${ROUTES_DOC} does not mention the mounted router /api${mount}`);
     }
   }
 
   const segments = frontendSegments();
   if (segments.length < FLOORS.frontendSegments) {
     fail(
-      "routes",
+      'routes',
       `only ${segments.length} top-level frontend segments found, expected at least ` +
         `${FLOORS.frontendSegments}. The extraction is broken, not the app.`,
     );
@@ -473,9 +479,9 @@ function checkRoutes() {
     // this handles for free since the whole token is compared.
     if (!doc.includes(`\`${segment}\``)) {
       fail(
-        "routes",
+        'routes',
         `${ROUTES_DOC} does not mention the frontend route segment \`${segment}\` ` +
-          "(it must appear as a backticked token, not merely as a substring)",
+          '(it must appear as a backticked token, not merely as a substring)',
       );
     }
   }
@@ -486,17 +492,17 @@ function checkRoutes() {
 const tracked = trackedMarkdown();
 if (tracked.length < FLOORS.trackedMarkdown) {
   fail(
-    "setup",
+    'setup',
     `git ls-files reported only ${tracked.length} markdown files, expected at least ` +
       `${FLOORS.trackedMarkdown}. The enumeration is broken; an empty scan passes ` +
-      "every check below by examining nothing.",
+      'every check below by examining nothing.',
   );
 }
 
 const files = scannedFiles(tracked);
 if (files.length < FLOORS.scannedFiles) {
   fail(
-    "setup",
+    'setup',
     `only ${files.length} authoritative pages matched SCANNED_GLOBS, expected at least ` +
       `${FLOORS.scannedFiles}. A glob has stopped matching.`,
   );
@@ -507,7 +513,7 @@ if (files.length < FLOORS.scannedFiles) {
 for (const path of files) {
   const full = join(ROOT, path);
   if (!existsSync(full) || !statSync(full).isFile()) {
-    fail("setup", `${path} is tracked but not readable as a file`);
+    fail('setup', `${path} is tracked but not readable as a file`);
   }
 }
 
@@ -523,19 +529,19 @@ if (failures.length > 0) {
     if (!byCheck.has(failure.check)) byCheck.set(failure.check, []);
     byCheck.get(failure.check).push(failure);
   }
-  console.error("Documentation check FAILED.\n");
+  console.error('Documentation check FAILED.\n');
   for (const [check, entries] of byCheck) {
     console.error(`## ${check} (${entries.length})`);
     for (const entry of entries) {
       console.error(`  - ${entry.message}`);
       for (const line of entry.detail) console.error(line);
     }
-    console.error("");
+    console.error('');
   }
   console.error(
-    "The vocabulary rule and the three legitimate uses of an exemption are documented at\n" +
-      "the top of scripts/check-docs.mjs. Describing LIVE behaviour with removed vocabulary\n" +
-      "is never exemptible.",
+    'The vocabulary rule and the three legitimate uses of an exemption are documented at\n' +
+      'the top of scripts/check-docs.mjs. Describing LIVE behaviour with removed vocabulary\n' +
+      'is never exemptible.',
   );
   process.exit(1);
 }

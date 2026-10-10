@@ -6,7 +6,10 @@
  * rules are written to survive.
  */
 
-import { classifyListingContent, type ListingFlags } from '../../services/ingestion/classifyListingContent';
+import {
+  classifyListingContent,
+  type ListingFlags,
+} from '../../services/ingestion/classifyListingContent';
 
 /** True iff the classifier set exactly this one boolean flag (order-independent). */
 function flag(text: string): ListingFlags {
@@ -260,7 +263,9 @@ describe('classifyListingContent', () => {
     });
 
     it('does NOT flag "great benefits nearby"', () => {
-      expect(flag('lots of great benefits nearby including shops and transport').noDSS).toBeUndefined();
+      expect(
+        flag('lots of great benefits nearby including shops and transport').noDSS,
+      ).toBeUndefined();
     });
   });
 
@@ -323,7 +328,9 @@ describe('classifyListingContent', () => {
 
     it('leaves short / ambiguous text unlabeled', () => {
       expect(classifyListingContent('piso centro').detectedLanguage).toBeUndefined();
-      expect(classifyListingContent('123 456 789 000 111 222 333 444 555 666 777').detectedLanguage).toBeUndefined();
+      expect(
+        classifyListingContent('123 456 789 000 111 222 333 444 555 666 777').detectedLanguage,
+      ).toBeUndefined();
     });
   });
 });

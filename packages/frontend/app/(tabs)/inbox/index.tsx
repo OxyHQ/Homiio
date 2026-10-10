@@ -244,7 +244,9 @@ export default function InboxScreen() {
               iconOnly
               leadingIcon={RiCheckboxCircleLine}
               accessibilityLabel={t('notification.markAllRead.action')}
-              onPress={() => void handleMarkAllAsRead()} tone="accent" appearance="subtle"
+              onPress={() => void handleMarkAllAsRead()}
+              tone="accent"
+              appearance="subtle"
             />
           ) : null,
           <Button
@@ -252,7 +254,9 @@ export default function InboxScreen() {
             iconOnly
             leadingIcon={RiSettings3Line}
             accessibilityLabel={t('notification.settings.title')}
-            onPress={() => router.push('/settings/notifications')} tone="accent" appearance="subtle"
+            onPress={() => router.push('/settings/notifications')}
+            tone="accent"
+            appearance="subtle"
           />,
         ],
       }}

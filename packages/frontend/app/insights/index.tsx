@@ -166,7 +166,11 @@ export default function InsightsScreen() {
           <View className="gap-4 md:flex-row md:items-start">
             <View className="md:flex-1">
               <ChartCardSurface height="auto">
-                <ChartHeadline label={t('home.insights.averageRent')} value={pricing.averageRent} format={money} />
+                <ChartHeadline
+                  label={t('home.insights.averageRent')}
+                  value={pricing.averageRent}
+                  format={money}
+                />
                 <ChartStatTiles
                   items={[
                     { label: t('home.insights.min'), value: money(pricing.minRent) },
@@ -203,7 +207,9 @@ export default function InsightsScreen() {
               ]}
               onTabChange={(id) => setCityTab(id === 'rent' ? 'rent' : 'listings')}
               metric={cityTab === 'rent' ? 'value' : 'share'}
-              metricLabel={cityTab === 'rent' ? t('home.insights.rent') : t('home.insights.listings')}
+              metricLabel={
+                cityTab === 'rent' ? t('home.insights.rent') : t('home.insights.listings')
+              }
               format={money}
               limit={6}
             />

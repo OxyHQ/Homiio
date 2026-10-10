@@ -29,7 +29,11 @@ import type {
   RawListing,
 } from '../../../types';
 import { createFetchRuntime } from '../../../runtime';
-import { defaultProviderMetrics, type ProviderMetricsReader, type ProviderMetricsSink } from '../../../metrics';
+import {
+  defaultProviderMetrics,
+  type ProviderMetricsReader,
+  type ProviderMetricsSink,
+} from '../../../metrics';
 import { BIENICI_BASE_URL } from './fixtures';
 import {
   bieniciDetailJsonUrl,
@@ -57,7 +61,12 @@ export interface BieniciProviderOptions {
 }
 
 function asBieniciRaw(payload: unknown): BieniciRawListing {
-  const record = payload as { sourceId?: unknown; url?: unknown; price?: unknown; city?: unknown } | null;
+  const record = payload as {
+    sourceId?: unknown;
+    url?: unknown;
+    price?: unknown;
+    city?: unknown;
+  } | null;
   if (
     !record ||
     typeof record.sourceId !== 'string' ||
@@ -396,7 +405,11 @@ export class BieniciProvider implements ListingProvider {
     const snapshot = this.metrics.snapshot(this.id);
     if (snapshot && snapshot.attempts > 0) {
       const status =
-        snapshot.challengeRate >= 0.8 ? 'unhealthy' : snapshot.challengeRate >= 0.3 ? 'degraded' : 'healthy';
+        snapshot.challengeRate >= 0.8
+          ? 'unhealthy'
+          : snapshot.challengeRate >= 0.3
+            ? 'degraded'
+            : 'healthy';
       return {
         provider: this.id,
         status,

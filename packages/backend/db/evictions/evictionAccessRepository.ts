@@ -34,10 +34,7 @@
  */
 
 import { and, desc, eq, gt, isNull, sql } from 'drizzle-orm';
-import {
-  EvictionLocationAccessPurpose,
-  type EvictionLocationPrivate,
-} from '@homiio/shared-types';
+import { EvictionLocationAccessPurpose, type EvictionLocationPrivate } from '@homiio/shared-types';
 import { getDb, type DatabaseOrTransaction } from '../postgres';
 import {
   evictionCases,
@@ -256,7 +253,10 @@ export async function resolveExactLocation(
     // and the audit has to say which — so the reason comes from the row's own
     // state rather than from the absence of a live one.
     const [any] = await db
-      .select({ revokedAt: evictionLocationGrants.revokedAt, expiresAt: evictionLocationGrants.expiresAt })
+      .select({
+        revokedAt: evictionLocationGrants.revokedAt,
+        expiresAt: evictionLocationGrants.expiresAt,
+      })
       .from(evictionLocationGrants)
       .where(
         and(

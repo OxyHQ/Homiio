@@ -131,8 +131,7 @@ function parseListingNode(
   node: Record<string, unknown>,
   fallbackCity: string,
 ): DaftRawListing | undefined {
-  const sourceId =
-    asString(node.id) ?? (typeof node.id === 'number' ? String(node.id) : undefined);
+  const sourceId = asString(node.id) ?? (typeof node.id === 'number' ? String(node.id) : undefined);
   if (!sourceId) return undefined;
 
   const kind = kindFromCategory(node.category ?? node.saleType);
@@ -201,7 +200,11 @@ export function parseDaftSearch(htmlOrJson: string, fallbackCity = 'Ireland'): D
 }
 
 /** Parse a detail page `__NEXT_DATA__` into a {@link DaftRawListing}. */
-export function parseDaftDetail(html: string, url: string, fallbackCity = 'Ireland'): DaftRawListing {
+export function parseDaftDetail(
+  html: string,
+  url: string,
+  fallbackCity = 'Ireland',
+): DaftRawListing {
   const nextData = parseNextData(html);
   if (!nextData) {
     throw new Error('daft: detail page has no __NEXT_DATA__ JSON');

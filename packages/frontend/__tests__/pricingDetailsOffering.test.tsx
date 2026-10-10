@@ -39,13 +39,25 @@ describe('PricingDetails offering gate', () => {
     });
     expect(view.queryByText(/money:/)).toBeNull();
     expect(view.queryByText(/pricingAndCosts|Pricing & Costs/)).toBeNull();
-    expect(hasPricingDetails({ offerings: [OfferingType.SALE], longTermRent: { monthlyAmount: 0 } } as unknown as Property, 'long_term')).toBe(false);
+    expect(
+      hasPricingDetails(
+        {
+          offerings: [OfferingType.SALE],
+          longTermRent: { monthlyAmount: 0 },
+        } as unknown as Property,
+        'long_term',
+      ),
+    ).toBe(false);
   });
 
   it('shows the monthly rent for a listing that offers long-term rent', () => {
     const view = renderPricing({
       offerings: [OfferingType.LONG_TERM_RENT],
-      longTermRent: { monthlyAmount: 1200, currency: 'EUR', deposit: 1200 } as Property['longTermRent'],
+      longTermRent: {
+        monthlyAmount: 1200,
+        currency: 'EUR',
+        deposit: 1200,
+      } as Property['longTermRent'],
     });
     expect(view.getAllByText('money:1200').length).toBeGreaterThan(0);
   });

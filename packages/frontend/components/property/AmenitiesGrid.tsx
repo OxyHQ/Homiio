@@ -137,7 +137,9 @@ const AmenitiesSheet: React.FC<AmenitiesSheetProps> = ({ ids, maxScrollHeight })
       >
         {groups.map((group) => (
           <View key={group.categoryId} style={styles.group}>
-            <BloomText variant="title-3-semibold" style={styles.groupTitle}>{resolveGroupTitle(group)}</BloomText>
+            <BloomText variant="title-3-semibold" style={styles.groupTitle}>
+              {resolveGroupTitle(group)}
+            </BloomText>
             <View>
               {group.amenities.map((entry, idx) => (
                 <AmenityRow
@@ -155,10 +157,7 @@ const AmenitiesSheet: React.FC<AmenitiesSheetProps> = ({ ids, maxScrollHeight })
   );
 };
 
-export const AmenitiesGrid: React.FC<AmenitiesGridProps> = ({
-  property,
-  maxVisible = 10,
-}) => {
+export const AmenitiesGrid: React.FC<AmenitiesGridProps> = ({ property, maxVisible = 10 }) => {
   const { t } = useTranslation();
   const bottomSheet = useContext(BottomSheetContext);
   const resolveLabel = useAmenityLabel();
@@ -178,15 +177,10 @@ export const AmenitiesGrid: React.FC<AmenitiesGridProps> = ({
     [ids, resolveLabel],
   );
 
-  const maxScrollHeight = useMemo(
-    () => Math.round(height * SHEET_MAX_HEIGHT_RATIO),
-    [height],
-  );
+  const maxScrollHeight = useMemo(() => Math.round(height * SHEET_MAX_HEIGHT_RATIO), [height]);
 
   const handleShowAll = useCallback(() => {
-    bottomSheet.openBottomSheet(
-      <AmenitiesSheet ids={ids} maxScrollHeight={maxScrollHeight} />,
-    );
+    bottomSheet.openBottomSheet(<AmenitiesSheet ids={ids} maxScrollHeight={maxScrollHeight} />);
   }, [bottomSheet, ids, maxScrollHeight]);
 
   if (ids.length === 0) return null;

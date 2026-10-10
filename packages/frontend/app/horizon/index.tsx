@@ -31,7 +31,12 @@ const HORIZON_URL = 'https://oxy.so/horizon';
 
 const STORIES = [
   { initials: 'JS', name: 'Julia S.', route: 'Barcelona → Berlin', bodyKey: 'horizon.page.story1' },
-  { initials: 'MR', name: 'Marco R.', route: 'Amsterdam → Stockholm', bodyKey: 'horizon.page.story2' },
+  {
+    initials: 'MR',
+    name: 'Marco R.',
+    route: 'Amsterdam → Stockholm',
+    bodyKey: 'horizon.page.story2',
+  },
 ] as const;
 
 export default function HorizonPage() {
@@ -114,7 +119,8 @@ export default function HorizonPage() {
               <Card
                 key={item.title}
                 radius="radius-16"
-                style={styles.benefitCard} appearance="outline"
+                style={styles.benefitCard}
+                appearance="outline"
               >
                 <IconCircle icon={item.icon} />
                 <BloomText style={styles.itemTitle}>{item.title}</BloomText>
@@ -149,7 +155,9 @@ export default function HorizonPage() {
           <Button
             size="lg"
             trailingIcon={RiArrowRightUpLine}
-            onPress={openHorizon} tone="accent" appearance="solid"
+            onPress={openHorizon}
+            tone="accent"
+            appearance="solid"
           >
             {t('horizon.page.steps.apply.title')}
           </Button>
@@ -158,7 +166,7 @@ export default function HorizonPage() {
         <View style={styles.section}>
           <H3>{t('horizon.page.storiesTitle')}</H3>
           {STORIES.map((story) => (
-            <Card key={story.name}  radius="radius-16" style={styles.storyCard} appearance="outline">
+            <Card key={story.name} radius="radius-16" style={styles.storyCard} appearance="outline">
               <View style={styles.storyHeader}>
                 <Avatar name={story.name} initials={story.initials} size={40} />
                 <View>

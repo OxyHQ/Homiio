@@ -130,13 +130,15 @@ export async function listSavedFolders(
   db: DatabaseOrTransaction,
   oxyUserId: string,
 ): Promise<readonly SavedFolderRow[]> {
-  return db
-    .select()
-    .from(savedPropertyFolders)
-    .where(eq(savedPropertyFolders.oxyUserId, oxyUserId))
-    // `{ isDefault: -1, createdAt: 1 }`, unchanged. `desc` on a boolean puts
-    // `true` first in Postgres, which is the same order Mongo produced.
-    .orderBy(sql`${savedPropertyFolders.isDefault} desc`, asc(savedPropertyFolders.createdAt));
+  return (
+    db
+      .select()
+      .from(savedPropertyFolders)
+      .where(eq(savedPropertyFolders.oxyUserId, oxyUserId))
+      // `{ isDefault: -1, createdAt: 1 }`, unchanged. `desc` on a boolean puts
+      // `true` first in Postgres, which is the same order Mongo produced.
+      .orderBy(sql`${savedPropertyFolders.isDefault} desc`, asc(savedPropertyFolders.createdAt))
+  );
 }
 
 /** One folder, scoped to its owner. */
@@ -241,10 +243,7 @@ export async function ensureDefaultFolder(
     .select()
     .from(savedPropertyFolders)
     .where(
-      and(
-        eq(savedPropertyFolders.oxyUserId, oxyUserId),
-        eq(savedPropertyFolders.isDefault, true),
-      ),
+      and(eq(savedPropertyFolders.oxyUserId, oxyUserId), eq(savedPropertyFolders.isDefault, true)),
     )
     .orderBy(asc(savedPropertyFolders.createdAt))
     .limit(1);

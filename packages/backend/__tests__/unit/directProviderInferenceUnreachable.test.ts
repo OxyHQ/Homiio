@@ -110,11 +110,13 @@ describe('Homiio never reaches an inference provider directly', () => {
     expect(route).not.toContain('getUserAccessToken');
     // The bearer handed to the service is the one the auth middleware verified
     // for a USER; a service-token caller has none to trade.
-    expect(route).toContain('requester: { accountId: userId, accessToken: getVerifiedUserAccessToken(req) }');
-    expect(route).toMatch(/authenticated\.serviceApp === undefined && typeof authenticated\.accessToken === 'string'/);
     expect(route).toContain(
-      "message.role === 'user' || message.role === 'assistant'",
+      'requester: { accountId: userId, accessToken: getVerifiedUserAccessToken(req) }',
     );
+    expect(route).toMatch(
+      /authenticated\.serviceApp === undefined && typeof authenticated\.accessToken === 'string'/,
+    );
+    expect(route).toContain("message.role === 'user' || message.role === 'assistant'");
     expect(route).not.toContain(
       "const enhanced: ChatMessage[] = [{ role: 'system', content: SINDI_SYSTEM_PROMPT }",
     );

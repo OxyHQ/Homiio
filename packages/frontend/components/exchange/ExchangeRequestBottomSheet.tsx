@@ -91,10 +91,8 @@ export const ExchangeRequestBottomSheet: React.FC<ExchangeRequestBottomSheetProp
   const [mode, setMode] = useState<RequestMode>(
     listingMode === ExchangeMode.HOST ? ExchangeMode.HOST : ExchangeMode.SWAP,
   );
-  const [requestedWindow, setRequestedWindow] =
-    useState<AvailabilityCalendarRange | null>(null);
-  const [offeredWindow, setOfferedWindow] =
-    useState<AvailabilityCalendarRange | null>(null);
+  const [requestedWindow, setRequestedWindow] = useState<AvailabilityCalendarRange | null>(null);
+  const [offeredWindow, setOfferedWindow] = useState<AvailabilityCalendarRange | null>(null);
   const [offeredPropertyId, setOfferedPropertyId] = useState<string>('');
   const [message, setMessage] = useState('');
   const [usePoints, setUsePoints] = useState(false);
@@ -151,21 +149,15 @@ export const ExchangeRequestBottomSheet: React.FC<ExchangeRequestBottomSheetProp
   // also hosting, and the server refuses it.
   const pointsOffered = !isSwap;
 
-  const handleApplyRequested = useCallback(
-    (range: AvailabilityCalendarRange | null) => {
-      setRequestedWindow(range);
-      setCalendarTarget(null);
-    },
-    [],
-  );
+  const handleApplyRequested = useCallback((range: AvailabilityCalendarRange | null) => {
+    setRequestedWindow(range);
+    setCalendarTarget(null);
+  }, []);
 
-  const handleApplyOffered = useCallback(
-    (range: AvailabilityCalendarRange | null) => {
-      setOfferedWindow(range);
-      setCalendarTarget(null);
-    },
-    [],
-  );
+  const handleApplyOffered = useCallback((range: AvailabilityCalendarRange | null) => {
+    setOfferedWindow(range);
+    setCalendarTarget(null);
+  }, []);
 
   const handleSubmit = useCallback(async () => {
     if (!oxyServices || !activeSessionId) {
@@ -220,9 +212,7 @@ export const ExchangeRequestBottomSheet: React.FC<ExchangeRequestBottomSheetProp
       router.push(`/exchange/${request.id}`);
     } catch (error) {
       const messageText =
-        error instanceof Error
-          ? error.message
-          : t('listing.exchange.errors.failed');
+        error instanceof Error ? error.message : t('listing.exchange.errors.failed');
       toast.error(messageText);
     }
   }, [
@@ -326,9 +316,7 @@ export const ExchangeRequestBottomSheet: React.FC<ExchangeRequestBottomSheetProp
                   <BloomText style={[styles.label, { color: theme.colors.text }]}>
                     {t('guestPoints.payWith.label')}
                   </BloomText>
-                  <BloomText
-                    style={[styles.helperText, { color: theme.colors.textSecondary }]}
-                  >
+                  <BloomText style={[styles.helperText, { color: theme.colors.textSecondary }]}>
                     {pointsCost === 0
                       ? t('guestPoints.payWith.needDates')
                       : canAffordPoints
@@ -422,7 +410,9 @@ const DateField: React.FC<DateFieldProps> = ({ label, value, placeholder, onPres
         leadingIcon={RiCalendarLine}
         onPress={onPress}
         accessibilityLabel={label}
-        style={styles.dateTrigger} tone="neutral" appearance="outline"
+        style={styles.dateTrigger}
+        tone="neutral"
+        appearance="outline"
       >
         {value || placeholder}
       </Button>

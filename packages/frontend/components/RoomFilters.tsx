@@ -48,10 +48,10 @@ export type RoomSortOrder = 'asc' | 'desc';
  * supports (sorting).
  */
 export interface RoomFilterOptions extends PropertyFilters {
-    /** Field to sort the room results by (maps to the backend `sortBy`). */
-    sortBy?: string;
-    /** Sort direction (maps to the backend `sortOrder`). */
-    sortOrder?: RoomSortOrder;
+  /** Field to sort the room results by (maps to the backend `sortBy`). */
+  sortBy?: string;
+  /** Sort direction (maps to the backend `sortOrder`). */
+  sortOrder?: RoomSortOrder;
 }
 
 /** Monthly rent slider bounds. A thumb resting on an end means "no bound". */
@@ -62,171 +62,174 @@ const AMENITY_SLUGS = ['balcony', 'walk_in_closet', 'air_conditioning', 'heating
 
 /** The orders the list endpoint sorts by, with the direction each implies. */
 const SORT_OPTIONS = {
-    createdAt: { order: 'desc', labelKey: 'roommates.rooms.sort.newest' },
-    price: { order: 'asc', labelKey: 'roommates.rooms.sort.price' },
+  createdAt: { order: 'desc', labelKey: 'roommates.rooms.sort.newest' },
+  price: { order: 'asc', labelKey: 'roommates.rooms.sort.price' },
 } as const satisfies Record<string, { order: RoomSortOrder; labelKey: string }>;
 type RoomSortKey = keyof typeof SORT_OPTIONS;
 
 const ROOM_DEFAULTS: RoomFilterOptions = {
-    type: PropertyType.ROOM,
-    sortBy: 'createdAt',
-    sortOrder: 'desc',
+  type: PropertyType.ROOM,
+  sortBy: 'createdAt',
+  sortOrder: 'desc',
 };
 
 interface RoomFiltersProps {
-    filters: RoomFilterOptions;
-    onApplyFilters: (filters: RoomFilterOptions) => void;
-    onClose: () => void;
+  filters: RoomFilterOptions;
+  onApplyFilters: (filters: RoomFilterOptions) => void;
+  onClose: () => void;
 }
 
 export function RoomFilters({ filters, onApplyFilters, onClose }: RoomFiltersProps) {
-    const { t } = useTranslation();
-    const insets = useSafeAreaInsets();
-    const formatRent = usePriceFormatter(RENT_TRACK);
-    const [draft, setDraft] = useState<RoomFilterOptions>(filters);
+  const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
+  const formatRent = usePriceFormatter(RENT_TRACK);
+  const [draft, setDraft] = useState<RoomFilterOptions>(filters);
 
-    const patch = useCallback((next: Partial<RoomFilterOptions>) => {
-        setDraft((prev) => ({ ...prev, ...next }));
-    }, []);
+  const patch = useCallback((next: Partial<RoomFilterOptions>) => {
+    setDraft((prev) => ({ ...prev, ...next }));
+  }, []);
 
-    const rentRange = useMemo<[number, number]>(
-        () => [draft.minRent ?? 0, Math.min(draft.maxRent ?? RENT_TRACK.max, RENT_TRACK.max)],
-        [draft.minRent, draft.maxRent],
-    );
+  const rentRange = useMemo<[number, number]>(
+    () => [draft.minRent ?? 0, Math.min(draft.maxRent ?? RENT_TRACK.max, RENT_TRACK.max)],
+    [draft.minRent, draft.maxRent],
+  );
 
-    const handleRentChange = useCallback(
-        ([min, max]: [number, number]) =>
-            patch({
-                minRent: min <= 0 ? undefined : min,
-                maxRent: max >= RENT_TRACK.max ? undefined : max,
-            }),
-        [patch],
-    );
+  const handleRentChange = useCallback(
+    ([min, max]: [number, number]) =>
+      patch({
+        minRent: min <= 0 ? undefined : min,
+        maxRent: max >= RENT_TRACK.max ? undefined : max,
+      }),
+    [patch],
+  );
 
-    const amenityOptions = useMemo<ToggleChipOption[]>(
-        () =>
-            AMENITY_SLUGS.map((slug) => {
-                const amenity = getAmenityById(slug);
-                return {
-                    value: slug,
-                    label: amenity?.nameKey ? t(amenity.nameKey) : slug,
-                    // The catalog types its glyphs as Button icons; they are the
-                    // same Bloom SVG components the filter chips draw.
-                    icon: amenity?.icon as FilterIconComponent | undefined,
-                };
-            }),
-        [t],
-    );
+  const amenityOptions = useMemo<ToggleChipOption[]>(
+    () =>
+      AMENITY_SLUGS.map((slug) => {
+        const amenity = getAmenityById(slug);
+        return {
+          value: slug,
+          label: amenity?.nameKey ? t(amenity.nameKey) : slug,
+          // The catalog types its glyphs as Button icons; they are the
+          // same Bloom SVG components the filter chips draw.
+          icon: amenity?.icon as FilterIconComponent | undefined,
+        };
+      }),
+    [t],
+  );
 
-    const sortKey: RoomSortKey = draft.sortBy === 'price' ? 'price' : 'createdAt';
-    const sortOptions = useMemo(
-        () =>
-            (Object.keys(SORT_OPTIONS) as RoomSortKey[]).map((value) => ({
-                value,
-                label: t(SORT_OPTIONS[value].labelKey),
-            })),
-        [t],
-    );
+  const sortKey: RoomSortKey = draft.sortBy === 'price' ? 'price' : 'createdAt';
+  const sortOptions = useMemo(
+    () =>
+      (Object.keys(SORT_OPTIONS) as RoomSortKey[]).map((value) => ({
+        value,
+        label: t(SORT_OPTIONS[value].labelKey),
+      })),
+    [t],
+  );
 
-    const handleApply = () => {
-        onApplyFilters(draft);
-        onClose();
-    };
+  const handleApply = () => {
+    onApplyFilters(draft);
+    onClose();
+  };
 
-    return (
-        <>
-            <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
-                <FilterSection title={t('properties.filters.priceRange')} description={t('search.step.price.perMonth')}>
-                    <PriceRangeFilter
-                        min={0}
-                        max={RENT_TRACK.max}
-                        step={RENT_TRACK.step}
-                        value={rentRange}
-                        onValueChange={handleRentChange}
-                        formatPrice={formatRent}
-                        minLabel={t('search.step.price.min')}
-                        maxLabel={t('search.step.price.max')}
-                        accessibilityLabel={t('properties.filters.priceRange')}
-                    />
-                </FilterSection>
+  return (
+    <>
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
+        <FilterSection
+          title={t('properties.filters.priceRange')}
+          description={t('search.step.price.perMonth')}
+        >
+          <PriceRangeFilter
+            min={0}
+            max={RENT_TRACK.max}
+            step={RENT_TRACK.step}
+            value={rentRange}
+            onValueChange={handleRentChange}
+            formatPrice={formatRent}
+            minLabel={t('search.step.price.min')}
+            maxLabel={t('search.step.price.max')}
+            accessibilityLabel={t('properties.filters.priceRange')}
+          />
+        </FilterSection>
 
-                <FilterSection title={t('properties.filters.amenities')}>
-                    <AmenityFilter
-                        options={amenityOptions}
-                        value={draft.amenities ?? []}
-                        onValueChange={(amenities) =>
-                            patch({ amenities: amenities.length > 0 ? amenities : undefined })
-                        }
-                        accessibilityLabel={t('properties.filters.amenities')}
-                        showMoreLabel={t('search.filters.showMore')}
-                        showLessLabel={t('search.filters.showLess')}
-                    />
-                    <SwitchFilterRow
-                        title={t('home.category.petFriendly')}
-                        value={draft.petFriendly ?? false}
-                        onValueChange={(petFriendly) => patch({ petFriendly: petFriendly || undefined })}
-                        style={styles.switchRow}
-                    />
-                </FilterSection>
+        <FilterSection title={t('properties.filters.amenities')}>
+          <AmenityFilter
+            options={amenityOptions}
+            value={draft.amenities ?? []}
+            onValueChange={(amenities) =>
+              patch({ amenities: amenities.length > 0 ? amenities : undefined })
+            }
+            accessibilityLabel={t('properties.filters.amenities')}
+            showMoreLabel={t('search.filters.showMore')}
+            showLessLabel={t('search.filters.showLess')}
+          />
+          <SwitchFilterRow
+            title={t('home.category.petFriendly')}
+            value={draft.petFriendly ?? false}
+            onValueChange={(petFriendly) => patch({ petFriendly: petFriendly || undefined })}
+            style={styles.switchRow}
+          />
+        </FilterSection>
 
-                <FilterSection title={t('roommates.rooms.location')}>
-                    <View style={styles.row}>
-                        <View style={styles.half}>
-                            <TextFieldInput
-                                label={t('roommates.rooms.city')}
-                                placeholder={t('roommates.rooms.cityPlaceholder')}
-                                value={draft.city ?? ''}
-                                onChangeText={(value) => patch({ city: value || undefined })}
-                            />
-                        </View>
-                        <View style={styles.half}>
-                            <TextFieldInput
-                                label={t('roommates.rooms.state')}
-                                placeholder={t('roommates.rooms.statePlaceholder')}
-                                value={draft.state ?? ''}
-                                onChangeText={(value) => patch({ state: value || undefined })}
-                            />
-                        </View>
-                    </View>
-                </FilterSection>
+        <FilterSection title={t('roommates.rooms.location')}>
+          <View style={styles.row}>
+            <View style={styles.half}>
+              <TextFieldInput
+                label={t('roommates.rooms.city')}
+                placeholder={t('roommates.rooms.cityPlaceholder')}
+                value={draft.city ?? ''}
+                onChangeText={(value) => patch({ city: value || undefined })}
+              />
+            </View>
+            <View style={styles.half}>
+              <TextFieldInput
+                label={t('roommates.rooms.state')}
+                placeholder={t('roommates.rooms.statePlaceholder')}
+                value={draft.state ?? ''}
+                onChangeText={(value) => patch({ state: value || undefined })}
+              />
+            </View>
+          </View>
+        </FilterSection>
 
-                <FilterSection title={t('search.sort.title')} divider={false}>
-                    <SegmentedFilter<RoomSortKey>
-                        options={sortOptions}
-                        value={sortKey}
-                        onValueChange={(value) =>
-                            patch({ sortBy: value, sortOrder: SORT_OPTIONS[value].order })
-                        }
-                        accessibilityLabel={t('search.sort.title')}
-                    />
-                </FilterSection>
-            </ScrollView>
-            <FilterFooter
-                resultsLabel={t('properties.filters.apply')}
-                onApply={handleApply}
-                onClear={() => setDraft(ROOM_DEFAULTS)}
-                clearLabel={t('search.actions.clearAll')}
-                style={{ paddingBottom: spacing.md + insets.bottom }}
-            />
-        </>
-    );
+        <FilterSection title={t('search.sort.title')} divider={false}>
+          <SegmentedFilter<RoomSortKey>
+            options={sortOptions}
+            value={sortKey}
+            onValueChange={(value) =>
+              patch({ sortBy: value, sortOrder: SORT_OPTIONS[value].order })
+            }
+            accessibilityLabel={t('search.sort.title')}
+          />
+        </FilterSection>
+      </ScrollView>
+      <FilterFooter
+        resultsLabel={t('properties.filters.apply')}
+        onApply={handleApply}
+        onClear={() => setDraft(ROOM_DEFAULTS)}
+        clearLabel={t('search.actions.clearAll')}
+        style={{ paddingBottom: spacing.md + insets.bottom }}
+      />
+    </>
+  );
 }
 
 const styles = StyleSheet.create({
-    scroll: {
-        flexShrink: 1,
-    },
-    scrollContent: {
-        paddingHorizontal: spacing.xl,
-    },
-    switchRow: {
-        marginTop: spacing.lg,
-    },
-    row: {
-        flexDirection: 'row',
-        gap: spacing.md,
-    },
-    half: {
-        flex: 1,
-    },
+  scroll: {
+    flexShrink: 1,
+  },
+  scrollContent: {
+    paddingHorizontal: spacing.xl,
+  },
+  switchRow: {
+    marginTop: spacing.lg,
+  },
+  row: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  half: {
+    flex: 1,
+  },
 });

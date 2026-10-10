@@ -43,9 +43,7 @@ export const DEFAULT_DISCOVER_SCOPE_LIMIT = 250;
  * falls back to the default instead of throwing: this is edited by hand in a
  * task definition, and a typo must not stop the worker booting.
  */
-export function discoverScopeLimit(
-  env: NodeJS.ProcessEnv = process.env,
-): number | undefined {
+export function discoverScopeLimit(env: NodeJS.ProcessEnv = process.env): number | undefined {
   const raw = env.LISTING_DISCOVER_SCOPE_LIMIT?.trim();
   if (!raw) return DEFAULT_DISCOVER_SCOPE_LIMIT;
   const parsed = Number(raw);

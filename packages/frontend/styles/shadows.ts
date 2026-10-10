@@ -42,8 +42,7 @@ const ALPHA_PRECISION = 2;
 /** Fully opaque alpha — the implicit alpha of a color with no explicit channel. */
 const OPAQUE = 1;
 
-const clampChannel = (value: number): number =>
-  Math.max(0, Math.min(255, Math.round(value)));
+const clampChannel = (value: number): number => Math.max(0, Math.min(255, Math.round(value)));
 
 const clampUnit = (value: number): number => Math.max(0, Math.min(1, value));
 
@@ -175,10 +174,7 @@ type ShadowTokenStyle = Pick<ViewStyle, 'boxShadow' | 'elevation'>;
  * replacement for a `{ shadowColor, shadowOffset, shadowOpacity, shadowRadius,
  * elevation }` block. `elevation` is passed through unchanged for Android.
  */
-export const shadowToken = ({
-  elevation,
-  ...shadow
-}: ShadowTokenInput): ShadowTokenStyle =>
+export const shadowToken = ({ elevation, ...shadow }: ShadowTokenInput): ShadowTokenStyle =>
   elevation === undefined
     ? { boxShadow: boxShadow(shadow) }
     : { boxShadow: boxShadow(shadow), elevation };
@@ -207,12 +203,7 @@ interface TextShadowInput {
  * (e.g. a CSS keyword) is passed through verbatim, exactly as `normalizeColor`
  * would.
  */
-export const textShadow = ({
-  x = 0,
-  y = 0,
-  blur = 0,
-  color,
-}: TextShadowInput): string => {
+export const textShadow = ({ x = 0, y = 0, blur = 0, color }: TextShadowInput): string => {
   const resolved = toRgba(color, OPAQUE) ?? color;
   return `${x}px ${y}px ${blur}px ${resolved}`;
 };

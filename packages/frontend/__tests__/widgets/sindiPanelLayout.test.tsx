@@ -23,8 +23,9 @@ jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
 }));
 
 jest.mock('@/store/uiStore', () => ({
-  useUIStore: (selector: (state: { sindiPanelOpen: boolean; sidebarCollapsed: boolean }) => unknown) =>
-    selector({ sindiPanelOpen: mockOpen, sidebarCollapsed: false }),
+  useUIStore: (
+    selector: (state: { sindiPanelOpen: boolean; sidebarCollapsed: boolean }) => unknown,
+  ) => selector({ sindiPanelOpen: mockOpen, sidebarCollapsed: false }),
 }));
 
 function layoutAt(width: number, open = true) {

@@ -36,5 +36,4 @@ export const EDITABLE_ROOMMATE_PREFERENCE_FIELDS = [
   'location',
 ] as const;
 
-export type EditableRoommatePreferenceField =
-  (typeof EDITABLE_ROOMMATE_PREFERENCE_FIELDS)[number];
+export type EditableRoommatePreferenceField = (typeof EDITABLE_ROOMMATE_PREFERENCE_FIELDS)[number];

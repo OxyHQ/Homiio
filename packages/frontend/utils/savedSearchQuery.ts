@@ -25,12 +25,7 @@ import type { TFunction } from 'i18next';
 import { OfferingType, parseListingCurrency, type PropertyType } from '@homiio/shared-types';
 
 import { locationDisplayLabel, type SearchQuery } from '@/components/search/types';
-import {
-  datesLabel,
-  guestsLabel,
-  priceLabel,
-  typeLabel,
-} from '@/components/search/searchLabels';
+import { datesLabel, guestsLabel, priceLabel, typeLabel } from '@/components/search/searchLabels';
 import { DEFAULT_SEARCH_QUERY } from '@/store/searchQueryStore';
 import type { SavedSearch } from '@/store/savedSearchesStore';
 import { exploreHref } from '@/utils/searchUrl';
@@ -49,7 +44,9 @@ const readString = (value: unknown): string | undefined =>
  * Mirrors the reader `/explore` applies to a saved-search event, including the
  * older field spellings (`type`, `minPrice`, `checkIn`) rows were written with.
  */
-export function savedSearchFiltersToQuery(search: Pick<SavedSearch, 'filters' | 'query'>): SearchQuery {
+export function savedSearchFiltersToQuery(
+  search: Pick<SavedSearch, 'filters' | 'query'>,
+): SearchQuery {
   const filters = search.filters ?? {};
 
   const offeringRaw = readString(filters.offering);
@@ -124,10 +121,9 @@ export const OFFERING_LABEL_KEYS: Record<OfferingType, string> = {
  */
 export function savedSearchCriteria(search: SavedSearch, t: TFunction, locale: string): string[] {
   const query = savedSearchFiltersToQuery(search);
-  const place =
-    search.location
-      ? locationDisplayLabel(search.location, t)
-      : search.query.trim() || t('search.summary.anywhere');
+  const place = search.location
+    ? locationDisplayLabel(search.location, t)
+    : search.query.trim() || t('search.summary.anywhere');
 
   const chips = [place, t(OFFERING_LABEL_KEYS[query.offering])];
   const price = priceLabel(query, t, locale);

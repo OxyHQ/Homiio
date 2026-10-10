@@ -16,10 +16,7 @@ import { useOxy } from '@oxy.so/services';
 import { getNativeLanguageName } from '@oxy.so/core';
 import { RiGlobalLine } from '@oxy.so/bloom/icons';
 import { useTheme } from '@oxy.so/bloom/theme';
-import {
-  SettingsListGroup,
-  SettingsListItem,
-} from '@oxy.so/bloom/settings-list';
+import { SettingsListGroup, SettingsListItem } from '@oxy.so/bloom/settings-list';
 
 import { Header } from '@/components/Header';
 import { SettingsRowIcon, settingsScreenStyles } from '@/components/profile/SettingsRowIcon';
@@ -37,7 +34,9 @@ export default function LanguageSettingsScreen() {
   // set), else the single resolved device/fallback locale — the same
   // fallback `LanguageSelectorScreen` itself uses.
   const selectedLanguages = currentLanguages.length > 0 ? currentLanguages : [currentLanguage];
-  const languageDescription = selectedLanguages.map((code) => getNativeLanguageName(code)).join(', ');
+  const languageDescription = selectedLanguages
+    .map((code) => getNativeLanguageName(code))
+    .join(', ');
 
   return (
     <View style={[styles.root, { backgroundColor: theme.background }]}>

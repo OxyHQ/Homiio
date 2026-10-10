@@ -224,10 +224,7 @@ export async function findModerationReportsByCaseId(
   caseId: string,
   db: DatabaseOrTransaction = getDb(),
 ): Promise<readonly ModerationReportRow[]> {
-  return db
-    .select()
-    .from(moderationReports)
-    .where(eq(moderationReports.crowdSourceCaseId, caseId));
+  return db.select().from(moderationReports).where(eq(moderationReports.crowdSourceCaseId, caseId));
 }
 
 /**
@@ -278,9 +275,7 @@ export async function countReportsAwaitingDecision(
  * The only number that makes "reports stored here that no jury will ever see"
  * visible, which is precisely the cost of accepting them.
  */
-export async function countLocalOnlyReports(
-  db: DatabaseOrTransaction = getDb(),
-): Promise<number> {
+export async function countLocalOnlyReports(db: DatabaseOrTransaction = getDb()): Promise<number> {
   const [row] = await db
     .select({ total: count() })
     .from(moderationReports)

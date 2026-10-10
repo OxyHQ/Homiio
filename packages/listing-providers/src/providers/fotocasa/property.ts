@@ -7,7 +7,11 @@
  */
 
 import type { NormalizedListingContact } from '@homiio/shared-types';
-import { matchEsAmenityKey, matchFeatureKeyAmenity, type EsSchemaListing } from '../../parse/jsonLd';
+import {
+  matchEsAmenityKey,
+  matchFeatureKeyAmenity,
+  type EsSchemaListing,
+} from '../../parse/jsonLd';
 import { asCoordinate, asNumberEu, asString, isRecord } from '../../parse/guards';
 import { buildContact, contactFromUnknown, mergeContact } from '../../parse/contact';
 import {
@@ -94,7 +98,11 @@ function readFotocasaAmenities(record: Record<string, unknown>): {
     }
   };
 
-  const consider = (rawKey: string | undefined, label: string | undefined, present: unknown): void => {
+  const consider = (
+    rawKey: string | undefined,
+    label: string | undefined,
+    present: unknown,
+  ): void => {
     // Property-JSON marks an absent amenity with `value: false`; searchads cards
     // never do (their `value` is a positive internal id), so this only prunes the
     // localized shape.
@@ -147,7 +155,10 @@ function readFotocasaAmenities(record: Record<string, unknown>): {
  * `features[]` as `{ key, value }` (e.g. `{ key: "surface", value: 223 }`).
  * Returns the first matching key's numeric value, or `undefined`.
  */
-function fotocasaFeatureNumber(record: Record<string, unknown>, ...keys: readonly string[]): number | undefined {
+function fotocasaFeatureNumber(
+  record: Record<string, unknown>,
+  ...keys: readonly string[]
+): number | undefined {
   const features = record.features;
   if (!Array.isArray(features)) return undefined;
   const wanted = new Set(keys);
@@ -179,7 +190,9 @@ function readFotocasaFloor(record: Record<string, unknown>): number | undefined 
 /**
  * Map a Fotocasa `clientType` (`professional` / `private`) to the contact kind.
  */
-function fotocasaContactKind(record: Record<string, unknown>): NormalizedListingContact['kind'] | undefined {
+function fotocasaContactKind(
+  record: Record<string, unknown>,
+): NormalizedListingContact['kind'] | undefined {
   const raw = asString(record.clientType)?.toLowerCase();
   if (!raw) return undefined;
   if (/professional|agency|agencia|inmobiliaria|pro/.test(raw)) return 'agency';
@@ -195,7 +208,9 @@ function fotocasaContactKind(record: Record<string, unknown>): NormalizedListing
  * first, then merge any wrapper nodes the property JSON uses. Delegates to the
  * shared contact chokepoint; never invents a contact when the record omits one.
  */
-function readFotocasaContact(record: Record<string, unknown>): NormalizedListingContact | undefined {
+function readFotocasaContact(
+  record: Record<string, unknown>,
+): NormalizedListingContact | undefined {
   const cardContact = buildContact({
     phone: asString(record.phone),
     agencyName: asString(record.clientAlias),
@@ -249,7 +264,10 @@ function fotocasaRecordToListing(
       ? detailUrl
       : `${FOTOCASA_BASE_URL}${detailUrl}`
     : url;
-  const streetParts = [asString(record.street), asString(record.number)].filter(Boolean).join(' ').trim();
+  const streetParts = [asString(record.street), asString(record.number)]
+    .filter(Boolean)
+    .join(' ')
+    .trim();
   const images = collectNestedImages(record);
   const { amenities, furnished } = readFotocasaAmenities(record);
 

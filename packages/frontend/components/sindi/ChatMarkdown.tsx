@@ -198,7 +198,9 @@ export function renderMarkdownBlocks(content: string): React.ReactNode[] {
     if (trimmed.startsWith('> ')) {
       out.push(
         <AiChatMessageLine key={key} block>
-          <Blockquote style={{ marginTop: 0 }}>{renderInline(trimmed.substring(2), key)}</Blockquote>
+          <Blockquote style={{ marginTop: 0 }}>
+            {renderInline(trimmed.substring(2), key)}
+          </Blockquote>
         </AiChatMessageLine>,
       );
       continue;

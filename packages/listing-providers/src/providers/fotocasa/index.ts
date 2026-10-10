@@ -29,11 +29,20 @@ import type {
 } from '../../types';
 import { createFetchRuntime } from '../../runtime';
 import { ChallengeError, fetchListingViaLadder } from '../../strategy';
-import { defaultProviderMetrics, type ProviderMetricsReader, type ProviderMetricsSink } from '../../metrics';
+import {
+  defaultProviderMetrics,
+  type ProviderMetricsReader,
+  type ProviderMetricsSink,
+} from '../../metrics';
 import { providerMaxSearchPages } from '../../discoverLimits';
 import type { EsSchemaListing } from '../../parse/jsonLd';
 import { FOTOCASA_BASE_URL } from './fixtures';
-import { fotocasaSourceIdFromUrl, parseFotocasaDetail, parseFotocasaSearch, type FotocasaRaw } from './parse';
+import {
+  fotocasaSourceIdFromUrl,
+  parseFotocasaDetail,
+  parseFotocasaSearch,
+  type FotocasaRaw,
+} from './parse';
 import {
   fotocasaCityFromRefUrl,
   fotocasaDefaultLocationSegments,
@@ -49,7 +58,12 @@ import {
   type FotocasaLocationSegments,
   type FotocasaTransactionType,
 } from './searchads';
-import { fotocasaPropertyApiUrl, isFotocasaPropertyChallenge, parseFotocasaPropertyJson, parseFotocasaSearchCardRecord } from './property';
+import {
+  fotocasaPropertyApiUrl,
+  isFotocasaPropertyChallenge,
+  parseFotocasaPropertyJson,
+  parseFotocasaSearchCardRecord,
+} from './property';
 import {
   fotocasaBrowserSessionHints,
   fotocasaSearchCardHints,
@@ -99,13 +113,18 @@ function resolveTransactionTypes(): readonly FotocasaTransactionType[] {
   return types.length > 0 ? types : DEFAULT_TRANSACTION_TYPES;
 }
 
-function searchUrl(city: string, page: number, transactionType: FotocasaTransactionType = 'RENT'): string {
+function searchUrl(
+  city: string,
+  page: number,
+  transactionType: FotocasaTransactionType = 'RENT',
+): string {
   return fotocasaWarmSearchUrl(city, page, transactionType);
 }
 
 function resolvePropertyType(types: readonly string[]): PropertyType {
   const lower = types.map((type) => type.toLowerCase());
-  if (lower.some((type) => type.includes('house') || type.includes('singlefamily'))) return PropertyType.HOUSE;
+  if (lower.some((type) => type.includes('house') || type.includes('singlefamily')))
+    return PropertyType.HOUSE;
   if (lower.some((type) => type.includes('studio'))) return PropertyType.STUDIO;
   return PropertyType.APARTMENT;
 }
@@ -181,7 +200,8 @@ export class FotocasaProvider implements ListingProvider {
 
   constructor(options: FotocasaProviderOptions = {}) {
     this.runtime = options.runtime ?? createFetchRuntime();
-    this.cities = options.cities && options.cities.length > 0 ? options.cities : fotocasaCitiesFromEnv();
+    this.cities =
+      options.cities && options.cities.length > 0 ? options.cities : fotocasaCitiesFromEnv();
     this.metrics = options.metrics ?? defaultProviderMetrics;
     this.maxSearchPages = providerMaxSearchPages(PROVIDER_ID, DEFAULT_MAX_SEARCH_PAGES, 'ES');
     this.transactionTypes = resolveTransactionTypes();
@@ -326,11 +346,7 @@ export class FotocasaProvider implements ListingProvider {
           timeoutMs: 30_000,
         });
         status = response.status;
-        if (
-          status === 403 ||
-          status === 429 ||
-          isFotocasaSearchadsChallenge(response.body)
-        ) {
+        if (status === 403 || status === 429 || isFotocasaSearchadsChallenge(response.body)) {
           this.metrics.record({
             provider: this.id,
             strategy: 'browser',
@@ -431,12 +447,16 @@ export class FotocasaProvider implements ListingProvider {
     for (let page = 1; page <= this.maxSearchPages; page += 1) {
       if (yielded.count >= limit) return;
       try {
-        const { html } = await fetchListingViaLadder(runtime, searchUrl(city, page, transactionType), {
-          provider: this.id,
-          isChallenge: isFotocasaChallenge,
-          metrics: this.metrics,
-          init: { signal },
-        });
+        const { html } = await fetchListingViaLadder(
+          runtime,
+          searchUrl(city, page, transactionType),
+          {
+            provider: this.id,
+            isChallenge: isFotocasaChallenge,
+            metrics: this.metrics,
+            init: { signal },
+          },
+        );
         // CARDS FIRST, MARKUP SECOND. `parseFotocasaSearch` reads anchors out
         // of the rendered page; on the live site it finds ONE ref per page
         // while the same bytes carry thirty in the SSR payload (measured on a
@@ -476,7 +496,11 @@ export class FotocasaProvider implements ListingProvider {
     const searchCard = readFotocasaSearchCardHint(ref.hints);
     if (searchCard) {
       try {
-        const payload = parseFotocasaSearchCardRecord(searchCard.card, ref.url, searchCard.warmCity);
+        const payload = parseFotocasaSearchCardRecord(
+          searchCard.card,
+          ref.url,
+          searchCard.warmCity,
+        );
         this.metrics.record({
           provider: this.id,
           strategy: 'browser',
@@ -519,7 +543,8 @@ export class FotocasaProvider implements ListingProvider {
 
     let session: BrowserSession | undefined;
     const warmCity = discoverSession?.warmCity ?? fotocasaCityFromRefUrl(ref.url);
-    const transactionType = ref.url.includes('/comprar') || ref.url.includes('/venta') ? 'BUY' : 'RENT';
+    const transactionType =
+      ref.url.includes('/comprar') || ref.url.includes('/venta') ? 'BUY' : 'RENT';
     const warmUrl = fotocasaWarmSearchUrl(warmCity, 1, transactionType);
     const start = Date.now();
     try {
@@ -543,10 +568,7 @@ export class FotocasaProvider implements ListingProvider {
         timeoutMs: 30_000,
       });
 
-      if (
-        propertyRes.status < 400 &&
-        !isFotocasaPropertyChallenge(propertyRes.body)
-      ) {
+      if (propertyRes.status < 400 && !isFotocasaPropertyChallenge(propertyRes.body)) {
         const payload = parseFotocasaPropertyJson(propertyRes.body, ref.url);
         this.metrics.record({
           provider: this.id,
@@ -669,7 +691,11 @@ export class FotocasaProvider implements ListingProvider {
     const snapshot = this.metrics.snapshot(this.id);
     if (snapshot && snapshot.attempts > 0) {
       const status =
-        snapshot.challengeRate >= 0.8 ? 'unhealthy' : snapshot.challengeRate >= 0.3 ? 'degraded' : 'healthy';
+        snapshot.challengeRate >= 0.8
+          ? 'unhealthy'
+          : snapshot.challengeRate >= 0.3
+            ? 'degraded'
+            : 'healthy';
       return {
         provider: this.id,
         status,

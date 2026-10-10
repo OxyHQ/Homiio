@@ -35,10 +35,7 @@
  * error. An empty list is therefore treated as an unstated one.
  */
 
-import {
-  hasStatedRoommatePreferences,
-  type ProfileRow,
-} from '../../db/profiles/profileSerializer';
+import { hasStatedRoommatePreferences, type ProfileRow } from '../../db/profiles/profileSerializer';
 
 /**
  * The four facts the score is computed from.

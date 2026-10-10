@@ -440,15 +440,17 @@ export async function seedPropertyImage(options: {
  * three lines each and keeps the coordinates in one place, so a suite that DOES
  * care about position states it explicitly and stands out.
  */
-export async function seedListingWithGeo(options: {
-  cityName?: string;
-  regionName?: string;
-  countryCode?: string;
-  longitude?: number;
-  latitude?: number;
-  street?: string;
-  overrides?: Partial<typeof properties.$inferInsert>;
-} = {}): Promise<{ chain: GeoChain; addressId: string; propertyId: string }> {
+export async function seedListingWithGeo(
+  options: {
+    cityName?: string;
+    regionName?: string;
+    countryCode?: string;
+    longitude?: number;
+    latitude?: number;
+    street?: string;
+    overrides?: Partial<typeof properties.$inferInsert>;
+  } = {},
+): Promise<{ chain: GeoChain; addressId: string; propertyId: string }> {
   const chain = await seedGeoChain({
     cityName: options.cityName,
     regionName: options.regionName,

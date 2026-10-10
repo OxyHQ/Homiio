@@ -156,10 +156,7 @@ export async function countSavesByPropertyIds(
     .select({ propertyId: savedItems.targetId, total: count() })
     .from(savedItems)
     .where(
-      and(
-        eq(savedItems.targetType, 'property'),
-        inArray(savedItems.targetId, [...propertyIds]),
-      ),
+      and(eq(savedItems.targetType, 'property'), inArray(savedItems.targetId, [...propertyIds])),
     )
     .groupBy(savedItems.targetId);
 

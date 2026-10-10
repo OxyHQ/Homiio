@@ -2,7 +2,7 @@
 
 /**
  * Test Stripe Webhook Configuration
- * 
+ *
  * This script helps verify that your Stripe webhook is properly configured
  * and can receive events from Stripe.
  */
@@ -28,21 +28,21 @@ const config = {
         customer: null,
         metadata: {
           product: 'plus',
-          profileId: '507f1f77bcf86cd799439011' // Test ObjectId
+          profileId: '507f1f77bcf86cd799439011', // Test ObjectId
         },
         payment_status: 'paid',
         status: 'complete',
-        subscription: 'sub_test_webhook'
-      }
+        subscription: 'sub_test_webhook',
+      },
     },
     livemode: false,
     pending_webhooks: 1,
     request: {
       id: 'req_test_webhook',
-      idempotency_key: null
+      idempotency_key: null,
     },
-    type: 'checkout.session.completed'
-  }
+    type: 'checkout.session.completed',
+  },
 };
 
 // Create webhook signature
@@ -50,11 +50,8 @@ function createWebhookSignature(payload, secret) {
   const crypto = require('crypto');
   const timestamp = Math.floor(Date.now() / 1000);
   const signedPayload = `${timestamp}.${payload}`;
-  const signature = crypto
-    .createHmac('sha256', secret)
-    .update(signedPayload, 'utf8')
-    .digest('hex');
-  
+  const signature = crypto.createHmac('sha256', secret).update(signedPayload, 'utf8').digest('hex');
+
   return `t=${timestamp},v1=${signature}`;
 }
 
@@ -62,7 +59,7 @@ function createWebhookSignature(payload, secret) {
 function sendTestWebhook() {
   const payload = JSON.stringify(config.testEvent);
   const signature = createWebhookSignature(payload, config.webhookSecret);
-  
+
   const url = new URL(config.webhookUrl);
   const options = {
     hostname: url.hostname,
@@ -73,29 +70,29 @@ function sendTestWebhook() {
       'Content-Type': 'application/json',
       'Content-Length': Buffer.byteLength(payload),
       'Stripe-Signature': signature,
-      'User-Agent': 'Stripe/v1 WebhooksSimulator'
-    }
+      'User-Agent': 'Stripe/v1 WebhooksSimulator',
+    },
   };
 
   const client = url.protocol === 'https:' ? https : http;
-  
+
   console.log('🔔 Sending test webhook...');
   console.log('URL:', config.webhookUrl);
   console.log('Event Type:', config.testEvent.type);
   console.log('Signature:', signature.substring(0, 50) + '...');
-  
+
   const req = client.request(options, (res) => {
     let data = '';
-    
+
     res.on('data', (chunk) => {
       data += chunk;
     });
-    
+
     res.on('end', () => {
       console.log('📡 Response Status:', res.statusCode);
       console.log('📡 Response Headers:', res.headers);
       console.log('📡 Response Body:', data);
-      
+
       if (res.statusCode === 200) {
         console.log('✅ Webhook test successful!');
       } else {
@@ -115,21 +112,17 @@ function sendTestWebhook() {
 // Check environment variables
 function checkEnvironment() {
   console.log('🔍 Checking environment variables...');
-  
-  const required = [
-    'STRIPE_SECRET_KEY',
-    'STRIPE_WEBHOOK_SECRET',
-    'STRIPE_PRICE_PLUS'
-  ];
-  
-  const missing = required.filter(key => !process.env[key]);
-  
+
+  const required = ['STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET', 'STRIPE_PRICE_PLUS'];
+
+  const missing = required.filter((key) => !process.env[key]);
+
   if (missing.length > 0) {
     console.log('❌ Missing environment variables:', missing);
     console.log('Please set these variables before running the test.');
     return false;
   }
-  
+
   console.log('✅ All required environment variables are set');
   return true;
 }
@@ -138,18 +131,18 @@ function checkEnvironment() {
 async function main() {
   console.log('🧪 Stripe Webhook Test Script');
   console.log('=============================\n');
-  
+
   if (!checkEnvironment()) {
     process.exit(1);
   }
-  
+
   console.log('\n📋 Test Configuration:');
   console.log('- Webhook URL:', config.webhookUrl);
   console.log('- Event Type:', config.testEvent.type);
   console.log('- Test Profile ID:', config.testEvent.data.object.metadata.profileId);
-  
+
   console.log('\n🚀 Starting webhook test...\n');
-  
+
   sendTestWebhook();
 }
 

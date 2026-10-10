@@ -35,7 +35,13 @@ import {
 } from '../../db/schema';
 import { errorHandler } from '../../middlewares/errorHandler';
 import { serializeWireIds } from '../../middlewares/wireIds';
-import { objectIdHex, resetGeoTables, seedAddress, seedGeoChain, seedProperty } from '../helpers/postgresGeoFixtures';
+import {
+  objectIdHex,
+  resetGeoTables,
+  seedAddress,
+  seedGeoChain,
+  seedProperty,
+} from '../helpers/postgresGeoFixtures';
 
 function buildApp(): Express {
   const app = express();
@@ -95,40 +101,46 @@ beforeEach(async () => {
   blocked = await seedStay();
   swapped = await seedStay();
 
-  await getDb().insert(reservations).values({
-    id: objectIdHex(),
-    propertyId: reserved,
-    guestOxyUserId: 'oxy-guest',
-    hostOxyUserId: 'oxy-host',
-    checkIn: new Date('2026-07-11T00:00:00.000Z'),
-    checkOut: new Date('2026-07-13T00:00:00.000Z'),
-    guestCount: 2,
-    nights: 2,
-    nightlyRate: 90,
-    subtotal: 180,
-    total: 180,
-    status: 'confirmed',
-    cancellationPolicy: 'moderate',
-  });
+  await getDb()
+    .insert(reservations)
+    .values({
+      id: objectIdHex(),
+      propertyId: reserved,
+      guestOxyUserId: 'oxy-guest',
+      hostOxyUserId: 'oxy-host',
+      checkIn: new Date('2026-07-11T00:00:00.000Z'),
+      checkOut: new Date('2026-07-13T00:00:00.000Z'),
+      guestCount: 2,
+      nights: 2,
+      nightlyRate: 90,
+      subtotal: 180,
+      total: 180,
+      status: 'confirmed',
+      cancellationPolicy: 'moderate',
+    });
 
-  await getDb().insert(propertyAvailabilityWindows).values({
-    propertyId: blocked,
-    scope: 'listing',
-    startsAt: new Date('2026-07-09T00:00:00.000Z'),
-    endsAt: new Date('2026-07-15T00:00:00.000Z'),
-    status: 'blocked',
-  });
+  await getDb()
+    .insert(propertyAvailabilityWindows)
+    .values({
+      propertyId: blocked,
+      scope: 'listing',
+      startsAt: new Date('2026-07-09T00:00:00.000Z'),
+      endsAt: new Date('2026-07-15T00:00:00.000Z'),
+      status: 'blocked',
+    });
 
-  await getDb().insert(exchangeRequests).values({
-    id: objectIdHex(),
-    propertyId: swapped,
-    requesterOxyUserId: 'oxy-requester',
-    hostOxyUserId: 'oxy-host',
-    mode: ExchangeMode.SWAP,
-    requestedWindowStart: new Date('2026-07-12T00:00:00.000Z'),
-    requestedWindowEnd: new Date('2026-07-16T00:00:00.000Z'),
-    status: 'confirmed',
-  });
+  await getDb()
+    .insert(exchangeRequests)
+    .values({
+      id: objectIdHex(),
+      propertyId: swapped,
+      requesterOxyUserId: 'oxy-requester',
+      hostOxyUserId: 'oxy-host',
+      mode: ExchangeMode.SWAP,
+      requestedWindowStart: new Date('2026-07-12T00:00:00.000Z'),
+      requestedWindowEnd: new Date('2026-07-16T00:00:00.000Z'),
+      status: 'confirmed',
+    });
 });
 
 afterEach(async () => {
@@ -138,7 +150,9 @@ afterEach(async () => {
 });
 
 const search = (query: Record<string, string>) =>
-  request(buildApp()).get('/properties/search').query({ city, ...query });
+  request(buildApp())
+    .get('/properties/search')
+    .query({ city, ...query });
 
 describe('a dated search agrees with the booking path', () => {
   it('leaves out a home with a confirmed reservation over those nights', async () => {

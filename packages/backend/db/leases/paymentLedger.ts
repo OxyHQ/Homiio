@@ -69,10 +69,7 @@ export async function findObligation(
     .select()
     .from(leasePaymentSchedule)
     .where(
-      and(
-        eq(leasePaymentSchedule.id, obligationId),
-        eq(leasePaymentSchedule.leaseId, leaseId),
-      ),
+      and(eq(leasePaymentSchedule.id, obligationId), eq(leasePaymentSchedule.leaseId, leaseId)),
     )
     .limit(1);
   return row;
@@ -146,9 +143,7 @@ export async function recordMovement(
       idempotencyKey: input.idempotencyKey,
       ...(input.reversesMovementId ? { reversesMovementId: input.reversesMovementId } : {}),
       ...(input.note ? { note: input.note } : {}),
-      ...(input.confirmedByOxyUserId
-        ? { confirmedByOxyUserId: input.confirmedByOxyUserId }
-        : {}),
+      ...(input.confirmedByOxyUserId ? { confirmedByOxyUserId: input.confirmedByOxyUserId } : {}),
       ...(input.confirmedAt ? { confirmedAt: input.confirmedAt } : {}),
       ...(input.processorReference ? { processorReference: input.processorReference } : {}),
       ...(input.failureReason ? { failureReason: input.failureReason } : {}),
@@ -284,10 +279,7 @@ export async function findMovement(
     .select()
     .from(leasePaymentMovements)
     .where(
-      and(
-        eq(leasePaymentMovements.id, movementId),
-        eq(leasePaymentMovements.leaseId, leaseId),
-      ),
+      and(eq(leasePaymentMovements.id, movementId), eq(leasePaymentMovements.leaseId, leaseId)),
     )
     .limit(1);
   return row;
@@ -319,11 +311,7 @@ export async function obligationSettlement(
     )
     .orderBy(desc(leasePaymentMovements.createdAt));
 
-  return leaseObligationSettlement(
-    obligation.id,
-    obligation.amount,
-    movements.map(toMovementDTO),
-  );
+  return leaseObligationSettlement(obligation.id, obligation.amount, movements.map(toMovementDTO));
 }
 
 /** A ledger row on the wire. No credential, no card detail — there are none. */

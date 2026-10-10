@@ -31,11 +31,7 @@ import { getOxyUserId } from '@oxy.so/core/server';
 import type { InferenceContentPart, InferenceMessage } from '@oxy.so/contracts';
 import { logger } from '../middlewares/logging';
 import { getDb } from '../db/postgres';
-import {
-  actionEnvelopeForTurn,
-  parseAppContext,
-  parseTurnId,
-} from '../services/sindiActions';
+import { actionEnvelopeForTurn, parseAppContext, parseTurnId } from '../services/sindiActions';
 import {
   extractLastPropertyIdsFromMessages,
   taggedContent,
@@ -310,12 +306,14 @@ function readMessageInputs(messages: unknown, initialMessage: unknown): MessageI
  * 404 the handler already produces — so the guard has nothing left to do.
  */
 const getBaseUrl = () => {
-  const baseUrl = process.env.INTERNAL_API_BASE_URL || `http://localhost:${process.env.PORT || 3001}`;
+  const baseUrl =
+    process.env.INTERNAL_API_BASE_URL || `http://localhost:${process.env.PORT || 3001}`;
   return baseUrl;
 };
 
 const ok = (res: Response, data: any) => res.json(data);
-const err = (res: Response, code: number, message: string) => res.status(code).json({ error: message });
+const err = (res: Response, code: number, message: string) =>
+  res.status(code).json({ error: message });
 
 const pipeTextDataStream = (res: Response, text: string): void => {
   pipeDataStreamToResponse(res, {
@@ -360,7 +358,8 @@ const pipeStreamingTextDataStream = (
         // `formatDataStreamPart('data', …)` takes an ARRAY: the frame is a list
         // of JSON values, and `useChat` concatenates every frame's items into
         // one `data` array.
-        if (envelope) writer.write(formatDataStreamPart('data', [envelope as unknown as JSONValue]));
+        if (envelope)
+          writer.write(formatDataStreamPart('data', [envelope as unknown as JSONValue]));
       }
       for await (const text of stream) {
         completeText += text;
@@ -389,7 +388,9 @@ const onGracefulClose = (req: Request, res: Response) => {
     try {
       res.end();
     } catch (error: unknown) {
-      logger.warn('Failed to end AI response on client disconnect', { error: describeErrorForLog(error) });
+      logger.warn('Failed to end AI response on client disconnect', {
+        error: describeErrorForLog(error),
+      });
     }
   };
   req.on('aborted', onClose);
@@ -453,7 +454,6 @@ const parseDataUrl = (dataUrl: string): { mediaType: string; buffer: Buffer } | 
     return null;
   }
 };
-
 
 const getPropertyById = async (id: string) => {
   try {
@@ -538,7 +538,7 @@ async function generateAITitle(userMessage: string, oxyUserId: string) {
       messages: [
         textMessage(
           'system',
-          "Generate a concise, descriptive title (≤50 chars) for a tenant-rights chat based on the first user message. Return ONLY the title, no quotes.",
+          'Generate a concise, descriptive title (≤50 chars) for a tenant-rights chat based on the first user message. Return ONLY the title, no quotes.',
         ),
         textMessage('user', userMessage),
       ],
@@ -645,7 +645,11 @@ just extract the city name. Don't add extra filters unless explicitly mentioned.
     put('maxYearBuilt', numberish(raw.maxYearBuilt));
     put(
       'amenities',
-      Array.isArray(raw.amenities) ? raw.amenities.filter((s: any) => typeof s === 'string' && s.trim()).map((s: string) => s.trim()) : undefined,
+      Array.isArray(raw.amenities)
+        ? raw.amenities
+            .filter((s: any) => typeof s === 'string' && s.trim())
+            .map((s: string) => s.trim())
+        : undefined,
     );
     put('hasPhotos', typeof raw.hasPhotos === 'boolean' ? raw.hasPhotos : undefined);
     put('hasImages', typeof raw.hasImages === 'boolean' ? raw.hasImages : undefined);
@@ -655,18 +659,39 @@ just extract the city name. Don't add extra filters unless explicitly mentioned.
     put('budgetFriendly', typeof raw.budgetFriendly === 'boolean' ? raw.budgetFriendly : undefined);
     put('housingType', typeof raw.housingType === 'string' ? raw.housingType : undefined);
     put('layoutType', typeof raw.layoutType === 'string' ? raw.layoutType : undefined);
-    put('furnishedStatus', typeof raw.furnishedStatus === 'string' ? raw.furnishedStatus : undefined);
+    put(
+      'furnishedStatus',
+      typeof raw.furnishedStatus === 'string' ? raw.furnishedStatus : undefined,
+    );
     put('petFriendly', typeof raw.petFriendly === 'boolean' ? raw.petFriendly : undefined);
-    put('utilitiesIncluded', typeof raw.utilitiesIncluded === 'boolean' ? raw.utilitiesIncluded : undefined);
+    put(
+      'utilitiesIncluded',
+      typeof raw.utilitiesIncluded === 'boolean' ? raw.utilitiesIncluded : undefined,
+    );
     put('parkingType', typeof raw.parkingType === 'string' ? raw.parkingType : undefined);
     put('petPolicy', typeof raw.petPolicy === 'string' ? raw.petPolicy : undefined);
     put('leaseTerm', typeof raw.leaseTerm === 'string' ? raw.leaseTerm : undefined);
     put('offering', typeof raw.offering === 'string' ? raw.offering : undefined);
-    put('proximityToTransport', typeof raw.proximityToTransport === 'boolean' ? raw.proximityToTransport : undefined);
-    put('proximityToSchools', typeof raw.proximityToSchools === 'boolean' ? raw.proximityToSchools : undefined);
-    put('proximityToShopping', typeof raw.proximityToShopping === 'boolean' ? raw.proximityToShopping : undefined);
-    put('availableFromBefore', typeof raw.availableFromBefore === 'string' ? raw.availableFromBefore : undefined);
-    put('availableFromAfter', typeof raw.availableFromAfter === 'string' ? raw.availableFromAfter : undefined);
+    put(
+      'proximityToTransport',
+      typeof raw.proximityToTransport === 'boolean' ? raw.proximityToTransport : undefined,
+    );
+    put(
+      'proximityToSchools',
+      typeof raw.proximityToSchools === 'boolean' ? raw.proximityToSchools : undefined,
+    );
+    put(
+      'proximityToShopping',
+      typeof raw.proximityToShopping === 'boolean' ? raw.proximityToShopping : undefined,
+    );
+    put(
+      'availableFromBefore',
+      typeof raw.availableFromBefore === 'string' ? raw.availableFromBefore : undefined,
+    );
+    put(
+      'availableFromAfter',
+      typeof raw.availableFromAfter === 'string' ? raw.availableFromAfter : undefined,
+    );
 
     // Absent or non-boolean reads as FALSE, which is the safe direction: the
     // cost of a missed action is an app that did not move, and the cost of a
@@ -751,11 +776,12 @@ async function performAppPropertySearch(
 
     // Determine if this is a location-based search or text search
     const isLocationSearch = filters.city || filters.state;
-    const hasTextualSearchTerms = /\b(furnished|pet|parking|balcony|pool|gym|modern|luxury|cheap|budget)\b/i.test(query);
-    
+    const hasTextualSearchTerms =
+      /\b(furnished|pet|parking|balcony|pool|gym|modern|luxury|cheap|budget)\b/i.test(query);
+
     // For location searches, don't pass the full query as text search
     const searchQuery = isLocationSearch && !hasTextualSearchTerms ? undefined : query;
-    
+
     // Nearby (anchor on previous shown property)
     let nearby: any[] = [];
     if (prevIds.length) {
@@ -789,8 +815,12 @@ async function performAppPropertySearch(
     });
     const resp = await fetch(`${getBaseUrl()}/api/properties/search?${searchParams.toString()}`);
     const searchData = resp.ok ? await resp.json() : null;
-    
-    const search = Array.isArray(searchData?.data) ? searchData.data : Array.isArray(searchData) ? searchData : [];
+
+    const search = Array.isArray(searchData?.data)
+      ? searchData.data
+      : Array.isArray(searchData)
+        ? searchData
+        : [];
 
     return {
       nearby: nearby.slice(0, RESULTS_RETURN_MAX),
@@ -806,7 +836,10 @@ async function performAppPropertySearch(
 
 const toAmenityFlags = (p: any) => {
   const out: string[] = [];
-  const has = (...keys: string[]) => keys.some(k => (Array.isArray(p.amenities) ? p.amenities.includes(k) : p[k] || p.features?.[k]));
+  const has = (...keys: string[]) =>
+    keys.some((k) =>
+      Array.isArray(p.amenities) ? p.amenities.includes(k) : p[k] || p.features?.[k],
+    );
   if (has('balcony', 'terrace')) out.push('balcony');
   if (has('pet_friendly', 'pets', 'petFriendly')) out.push('pet-friendly');
   if (has('furnished')) out.push('furnished');
@@ -820,7 +853,10 @@ const toAmenityFlags = (p: any) => {
   return out.slice(0, 8);
 };
 
-const compact = (o: Record<string, any>) => Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined && v !== null && v !== ''));
+const compact = (o: Record<string, any>) =>
+  Object.fromEntries(
+    Object.entries(o).filter(([, v]) => v !== undefined && v !== null && v !== ''),
+  );
 
 // -------------------------------
 // Router
@@ -846,12 +882,14 @@ export default function aiRouter() {
       // and `/history` — and the same reason `getUserId` above is the real gate.
 
       const { propertyContext, conversationContext } = req.body || {};
-      
+
       // Build context for AI suggestion generation
-      let contextPrompt = 'Generate 5-6 relevant, actionable chat suggestions for a rental property chat assistant. ';
-      
+      let contextPrompt =
+        'Generate 5-6 relevant, actionable chat suggestions for a rental property chat assistant. ';
+
       if (propertyContext) {
-        const { type, city, bedrooms, bathrooms, longTermRent, shortTermRent, amenities } = propertyContext;
+        const { type, city, bedrooms, bathrooms, longTermRent, shortTermRent, amenities } =
+          propertyContext;
         contextPrompt += `Property context: ${type || 'Property'} in ${city || 'the area'}`;
         if (bedrooms) contextPrompt += `, ${bedrooms} bedrooms`;
         if (bathrooms) contextPrompt += `, ${bathrooms} bathrooms`;
@@ -905,18 +943,17 @@ Return only the JSON array, no other text.`;
         // Clean the response and extract JSON
         const cleaned = generatedText.trim().replace(/```json|```/g, '');
         suggestions = JSON.parse(cleaned);
-        
+
         // Validate format
         if (!Array.isArray(suggestions)) {
           throw new Error('Response is not an array');
         }
-        
+
         // Ensure all suggestions have required fields
-        suggestions = suggestions.filter(s => s.text && typeof s.text === 'string');
-        
+        suggestions = suggestions.filter((s) => s.text && typeof s.text === 'string');
+
         // Limit to 8 suggestions max
         suggestions = suggestions.slice(0, 8);
-        
       } catch {
         // Fallback to default suggestions
         suggestions = [
@@ -937,7 +974,6 @@ Return only the JSON array, no other text.`;
         generated: suggestions.length > 0,
         propertyContext: !!propertyContext,
       });
-
     } catch (error: unknown) {
       logger.error('AI suggestions failed', { error: describeErrorForLog(error) });
       return inferenceFailure(res, error, 'Failed to generate suggestions');
@@ -1022,7 +1058,8 @@ Return only the JSON array, no other text.`;
       const cleanedLastContent = hasInlineFile
         ? withoutTag(withoutTag(lastContent, FILE_DATA_URL_TAG), IMAGE_DATA_URL_TAG).trim()
         : lastContent;
-      const isAttachmentStub = hasInlineFile || /^(sent a file:|attached (image|file):)/i.test(lastContent);
+      const isAttachmentStub =
+        hasInlineFile || /^(sent a file:|attached (image|file):)/i.test(lastContent);
 
       // If last message is not user, return empty stream for clean client resolution
       if (!isLastTurnUser) {
@@ -1046,16 +1083,35 @@ Return only the JSON array, no other text.`;
         (message) => message.role === 'user' || message.role === 'assistant',
       );
 
-      if (!isAttachmentStub && ((propertyResults?.nearby?.length ?? 0) || (propertyResults?.search?.length ?? 0))) {
-        const nearbyList: any[] = Array.isArray(propertyResults?.nearby) ? propertyResults.nearby : [];
-        const searchList: any[] = Array.isArray(propertyResults?.search) ? propertyResults.search : [];
+      if (
+        !isAttachmentStub &&
+        ((propertyResults?.nearby?.length ?? 0) || (propertyResults?.search?.length ?? 0))
+      ) {
+        const nearbyList: any[] = Array.isArray(propertyResults?.nearby)
+          ? propertyResults.nearby
+          : [];
+        const searchList: any[] = Array.isArray(propertyResults?.search)
+          ? propertyResults.search
+          : [];
 
-        const simplifiedNearby = nearbyList.slice(0, RESULTS_RETURN_MAX).map((p: any) => p._id?.toString?.() || p.id).filter(Boolean);
-        const simplifiedSearch = searchList.slice(0, RESULTS_RETURN_MAX).map((p: any) => p._id?.toString?.() || p.id).filter(Boolean);
+        const simplifiedNearby = nearbyList
+          .slice(0, RESULTS_RETURN_MAX)
+          .map((p: any) => p._id?.toString?.() || p.id)
+          .filter(Boolean);
+        const simplifiedSearch = searchList
+          .slice(0, RESULTS_RETURN_MAX)
+          .map((p: any) => p._id?.toString?.() || p.id)
+          .filter(Boolean);
 
-        enhanced.push({ role: 'system', content: `<PROPERTIES_HINTS>${JSON.stringify({ nearby: simplifiedNearby, search: simplifiedSearch })}</PROPERTIES_HINTS>` });
+        enhanced.push({
+          role: 'system',
+          content: `<PROPERTIES_HINTS>${JSON.stringify({ nearby: simplifiedNearby, search: simplifiedSearch })}</PROPERTIES_HINTS>`,
+        });
 
-        const mergedLists = [...nearbyList.slice(0, RESULTS_RETURN_MAX), ...searchList.slice(0, RESULTS_RETURN_MAX)];
+        const mergedLists = [
+          ...nearbyList.slice(0, RESULTS_RETURN_MAX),
+          ...searchList.slice(0, RESULTS_RETURN_MAX),
+        ];
         const seen = new Set<string>();
         const deduped = mergedLists
           .filter((p: any) => {
@@ -1077,10 +1133,16 @@ Return only the JSON array, no other text.`;
               type: p.type,
               offerings: Array.isArray(p.offerings) ? p.offerings : undefined,
               longTermRent: p.longTermRent?.monthlyAmount
-                ? compact({ monthlyAmount: p.longTermRent.monthlyAmount, currency: p.longTermRent.currency })
+                ? compact({
+                    monthlyAmount: p.longTermRent.monthlyAmount,
+                    currency: p.longTermRent.currency,
+                  })
                 : undefined,
               shortTermRent: p.shortTermRent?.nightlyRate
-                ? compact({ nightlyRate: p.shortTermRent.nightlyRate, currency: p.shortTermRent.currency })
+                ? compact({
+                    nightlyRate: p.shortTermRent.nightlyRate,
+                    currency: p.shortTermRent.currency,
+                  })
                 : undefined,
               city: geo.city ?? undefined,
               neighborhood: geo.neighborhood ?? p.address?.district,
@@ -1089,12 +1151,18 @@ Return only the JSON array, no other text.`;
               sizeSqm: p.size ?? p.area?.m2 ?? p.areaSqm,
               amenities: toAmenityFlags(p),
               availabilityDate: p.availableFrom ?? p.availability?.from,
-              description: (p.description || p.summary) ? String(p.description || p.summary).slice(0, 240) : undefined,
+              description:
+                p.description || p.summary
+                  ? String(p.description || p.summary).slice(0, 240)
+                  : undefined,
             });
           }),
         );
 
-        enhanced.push({ role: 'system', content: `<PROPERTIES_CONTEXT>${JSON.stringify(contexts)}</PROPERTIES_CONTEXT>` });
+        enhanced.push({
+          role: 'system',
+          content: `<PROPERTIES_CONTEXT>${JSON.stringify(contexts)}</PROPERTIES_CONTEXT>`,
+        });
         enhanced.push({
           role: 'system',
           content:
@@ -1129,7 +1197,10 @@ Return only the JSON array, no other text.`;
             });
           }
           const content: InferenceContentPart[] = [
-            { type: 'text', text: parsedText ? `${userText}\n\n${parsedText.slice(0, 120000)}` : userText },
+            {
+              type: 'text',
+              text: parsedText ? `${userText}\n\n${parsedText.slice(0, 120000)}` : userText,
+            },
           ];
           if (!parsedText) {
             content.push(inlineContent('file', mediaType, parsed.buffer, 'upload.pdf'));
@@ -1233,7 +1304,9 @@ Return only the JSON array, no other text.`;
         try {
           await appendMessages(db, conversation.id, [{ role: 'user', content: savedUserContent }]);
         } catch (error: unknown) {
-          logger.warn('Failed to persist user message to conversation', { error: describeErrorForLog(error) });
+          logger.warn('Failed to persist user message to conversation', {
+            error: describeErrorForLog(error),
+          });
         }
       }
 
@@ -1266,7 +1339,9 @@ Return only the JSON array, no other text.`;
               }
             }
           } catch (error: unknown) {
-            logger.warn('Failed to persist assistant reply to conversation', { error: describeErrorForLog(error) });
+            logger.warn('Failed to persist assistant reply to conversation', {
+              error: describeErrorForLog(error),
+            });
           }
         })();
       };
@@ -1294,7 +1369,9 @@ Return only the JSON array, no other text.`;
         try {
           res.end();
         } catch (endError) {
-          logger.warn('Failed to end aborted AI stream response', { error: describeErrorForLog(endError) });
+          logger.warn('Failed to end aborted AI stream response', {
+            error: describeErrorForLog(endError),
+          });
         }
         return;
       }
@@ -1323,7 +1400,11 @@ Return only the JSON array, no other text.`;
       const userTextRaw: string = typeof req.body?.text === 'string' ? req.body.text : '';
       const userText = userTextRaw.trim().slice(0, 2000);
       if (!mediaType.startsWith('application/pdf') && !mediaType.startsWith('image/')) {
-        return err(res, 415, 'Unsupported media type. Please upload an image (png/jpeg/webp) or a PDF.');
+        return err(
+          res,
+          415,
+          'Unsupported media type. Please upload an image (png/jpeg/webp) or a PDF.',
+        );
       }
       const output = await analyzeHousingFile({
         buffer: file.buffer,
@@ -1347,55 +1428,69 @@ Return only the JSON array, no other text.`;
   });
 
   // ---------- Analyze single uploaded file (stream/SSE) ----------
-  router.post('/analyze-file/stream', upload.single('file'), async (req: Request, res: Response) => {
-    try {
-      setStreamingHeaders(res);
-      if (!res.getHeader('Access-Control-Allow-Origin')) {
-        res.setHeader('Access-Control-Allow-Origin', '*');
-        res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type, X-Oxy-Edge-Region, X-Oxy-Activity-Id');
-      }
-
-      const userId = getUserId(req);
-      if (!userId) return err(res, 401, 'Unauthorized');
-
-      // The `Profile.findByOxyUserId` gate that stood here is GONE. It bound
-      // `activeProfile` and never read it: the profile row scoped nothing, so
-      // the only thing it did was 404 an authenticated caller who had never
-      // opened the profile screen. Same removal, same reason, as in `/stream`
-      // and `/history` — and the same reason `getUserId` above is the real gate.
-
-      const file = req.file;
-      if (!file?.buffer) return err(res, 400, 'file is required (multipart/form-data, key: file)');
-
-      const mediaType = file.mimetype || 'application/octet-stream';
-      const userTextRaw: string = typeof req.body?.text === 'string' ? req.body.text : '';
-      const userText = userTextRaw.trim().slice(0, 2000);
-      if (!mediaType.startsWith('application/pdf') && !mediaType.startsWith('image/')) {
-        return err(res, 415, 'Unsupported media type. Please upload an image (png/jpeg/webp) or a PDF.');
-      }
-      const output = await analyzeHousingFile({
-        buffer: file.buffer,
-        mediaType,
-        filename: file.originalname || 'upload',
-        userText,
-        oxyUserId: userId,
-      });
-
-      onGracefulClose(req, res);
-      pipeTextDataStream(res, output);
-    } catch (error: unknown) {
-      logger.error('AI analyze-file stream failed', { error: describeErrorForLog(error) });
-      if (res.headersSent) {
-        try {
-          res.end();
-        } catch (endError) {
-          logger.warn('Failed to end aborted AI analyze-file stream response', { error: describeErrorForLog(endError) });
+  router.post(
+    '/analyze-file/stream',
+    upload.single('file'),
+    async (req: Request, res: Response) => {
+      try {
+        setStreamingHeaders(res);
+        if (!res.getHeader('Access-Control-Allow-Origin')) {
+          res.setHeader('Access-Control-Allow-Origin', '*');
+          res.setHeader(
+            'Access-Control-Allow-Headers',
+            'Authorization, Content-Type, X-Oxy-Edge-Region, X-Oxy-Activity-Id',
+          );
         }
-        return;
+
+        const userId = getUserId(req);
+        if (!userId) return err(res, 401, 'Unauthorized');
+
+        // The `Profile.findByOxyUserId` gate that stood here is GONE. It bound
+        // `activeProfile` and never read it: the profile row scoped nothing, so
+        // the only thing it did was 404 an authenticated caller who had never
+        // opened the profile screen. Same removal, same reason, as in `/stream`
+        // and `/history` — and the same reason `getUserId` above is the real gate.
+
+        const file = req.file;
+        if (!file?.buffer)
+          return err(res, 400, 'file is required (multipart/form-data, key: file)');
+
+        const mediaType = file.mimetype || 'application/octet-stream';
+        const userTextRaw: string = typeof req.body?.text === 'string' ? req.body.text : '';
+        const userText = userTextRaw.trim().slice(0, 2000);
+        if (!mediaType.startsWith('application/pdf') && !mediaType.startsWith('image/')) {
+          return err(
+            res,
+            415,
+            'Unsupported media type. Please upload an image (png/jpeg/webp) or a PDF.',
+          );
+        }
+        const output = await analyzeHousingFile({
+          buffer: file.buffer,
+          mediaType,
+          filename: file.originalname || 'upload',
+          userText,
+          oxyUserId: userId,
+        });
+
+        onGracefulClose(req, res);
+        pipeTextDataStream(res, output);
+      } catch (error: unknown) {
+        logger.error('AI analyze-file stream failed', { error: describeErrorForLog(error) });
+        if (res.headersSent) {
+          try {
+            res.end();
+          } catch (endError) {
+            logger.warn('Failed to end aborted AI analyze-file stream response', {
+              error: describeErrorForLog(endError),
+            });
+          }
+          return;
+        }
+        return inferenceFailure(res, error, 'File analysis is unavailable');
       }
-      return inferenceFailure(res, error, 'File analysis is unavailable');
-    }
-  });
+    },
+  );
 
   // ---------- Health ----------
   router.get('/health', (_req, res) =>
@@ -1427,9 +1522,12 @@ Return only the JSON array, no other text.`;
     const rows = await listProfileChatHistory(db, profile.profile.id);
     // Newest first, matching the Mongo handler's `[...].reverse()` on an
     // oldest-first array.
-    const history = [...rows]
-      .reverse()
-      .map((row) => ({ id: row.id, role: row.role, content: row.content, timestamp: row.timestamp }));
+    const history = [...rows].reverse().map((row) => ({
+      id: row.id,
+      role: row.role,
+      content: row.content,
+      timestamp: row.timestamp,
+    }));
     return ok(res, { success: true, history });
   });
 

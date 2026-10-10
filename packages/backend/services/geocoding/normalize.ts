@@ -116,7 +116,10 @@ export function precisionOf(
  * called Barcelona reads "Catalunya, España" rather than "Barcelona, Barcelona,
  * Catalunya, España".
  */
-export function secondaryLabelOf(place: ProviderPlace, placeType: GeoPlaceType): string | undefined {
+export function secondaryLabelOf(
+  place: ProviderPlace,
+  placeType: GeoPlaceType,
+): string | undefined {
   const own = place.name;
   const parts: Array<string | undefined> = [];
 

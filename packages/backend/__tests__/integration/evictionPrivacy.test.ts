@@ -36,10 +36,7 @@ import {
   profiles,
 } from '../../db/schema';
 import { PROTECTED_COLUMNS_BY_TABLE } from '../../db/schema/protectedColumns';
-import {
-  distanceMeters,
-  offsetWithinDisc,
-} from '../../db/evictions/locationApproximation';
+import { distanceMeters, offsetWithinDisc } from '../../db/evictions/locationApproximation';
 import { errorHandler } from '../../middlewares/errorHandler';
 import { assertFound } from '../helpers/assertFound';
 
@@ -110,10 +107,7 @@ function caseBody(overrides: Record<string, unknown> = {}): Record<string, unkno
   };
 }
 
-async function createCase(
-  owner: string,
-  overrides: Record<string, unknown> = {},
-): Promise<string> {
+async function createCase(owner: string, overrides: Record<string, unknown> = {}): Promise<string> {
   const res = await request(buildApp(owner)).post('/evictions').send(caseBody(overrides));
   expect(res.status).toBe(201);
   return res.body.data.eviction.id;

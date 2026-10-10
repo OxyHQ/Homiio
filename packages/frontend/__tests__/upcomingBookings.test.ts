@@ -143,15 +143,37 @@ describe('upcomingBookings — what each surface asks for', () => {
   const sources = {
     reservations: [
       reservation({ id: 'stay-soon', checkIn: iso(2), checkOut: iso(5) }),
-      reservation({ id: 'stay-pending', status: ReservationStatus.PENDING, checkIn: iso(20), checkOut: iso(24) }),
-      reservation({ id: 'stay-cancelled', status: ReservationStatus.CANCELLED, checkIn: iso(1), checkOut: iso(4) }),
+      reservation({
+        id: 'stay-pending',
+        status: ReservationStatus.PENDING,
+        checkIn: iso(20),
+        checkOut: iso(24),
+      }),
+      reservation({
+        id: 'stay-cancelled',
+        status: ReservationStatus.CANCELLED,
+        checkIn: iso(1),
+        checkOut: iso(4),
+      }),
       reservation({ id: 'stay-past', checkIn: iso(-20), checkOut: iso(-15) }),
     ],
     exchanges: [
       exchange({ id: 'swap-confirmed' }),
-      exchange({ id: 'swap-pending', status: ExchangeRequestStatus.PENDING, requestedWindow: { start: iso(30), end: iso(34) } }),
-      exchange({ id: 'swap-declined', status: ExchangeRequestStatus.DECLINED, requestedWindow: { start: iso(2), end: iso(4) } }),
-      exchange({ id: 'swap-completed', status: ExchangeRequestStatus.COMPLETED, requestedWindow: { start: iso(2), end: iso(4) } }),
+      exchange({
+        id: 'swap-pending',
+        status: ExchangeRequestStatus.PENDING,
+        requestedWindow: { start: iso(30), end: iso(34) },
+      }),
+      exchange({
+        id: 'swap-declined',
+        status: ExchangeRequestStatus.DECLINED,
+        requestedWindow: { start: iso(2), end: iso(4) },
+      }),
+      exchange({
+        id: 'swap-completed',
+        status: ExchangeRequestStatus.COMPLETED,
+        requestedWindow: { start: iso(2), end: iso(4) },
+      }),
     ],
     viewings: [
       viewing({ id: 'viewing-approved', scheduledAt: iso(1) }),
@@ -204,14 +226,20 @@ describe('upcomingBookings — what each surface asks for', () => {
 
   it('carries the swap mode and each row a route can be built from', () => {
     const swap = upcomingBookings(sources, NOW).find((booking) => booking.kind === 'swap');
-    expect(swap).toMatchObject({ mode: ExchangeMode.SWAP, propertyId: 'p2', key: 'swap-swap-confirmed' });
+    expect(swap).toMatchObject({
+      mode: ExchangeMode.SWAP,
+      propertyId: 'p2',
+      key: 'swap-swap-confirmed',
+    });
   });
 
   it('asks for nothing it was not given', () => {
     // A surface that does not fetch viewings must not be handed invented ones.
-    expect(upcomingBookings({ reservations: sources.reservations }, NOW).every(
-      (booking) => booking.kind === 'stay',
-    )).toBe(true);
+    expect(
+      upcomingBookings({ reservations: sources.reservations }, NOW).every(
+        (booking) => booking.kind === 'stay',
+      ),
+    ).toBe(true);
     expect(upcomingBookings({}, NOW)).toEqual([]);
   });
 });
@@ -247,12 +275,26 @@ describe('exchangeSpansForProperty — which nights a swap takes off a host cale
       HOME,
     );
     expect(spans).toHaveLength(1);
-    expect(spans[0]).toMatchObject({ exchangeId: 'b', isTarget: false, start: iso(8), end: iso(11) });
+    expect(spans[0]).toMatchObject({
+      exchangeId: 'b',
+      isTarget: false,
+      start: iso(8),
+      end: iso(11),
+    });
   });
 
   it('ignores an offered property with no offered window', () => {
     const spans = exchangeSpansForProperty(
-      [[exchange({ id: 'c', propertyId: 'other', offeredPropertyId: HOME, offeredWindow: undefined })]],
+      [
+        [
+          exchange({
+            id: 'c',
+            propertyId: 'other',
+            offeredPropertyId: HOME,
+            offeredWindow: undefined,
+          }),
+        ],
+      ],
       HOME,
     );
     expect(spans).toEqual([]);
@@ -264,7 +306,9 @@ describe('exchangeSpansForProperty — which nights a swap takes off a host cale
   });
 
   it('ignores another home entirely', () => {
-    expect(exchangeSpansForProperty([[exchange({ id: 'e', propertyId: 'elsewhere' })]], HOME)).toEqual([]);
+    expect(
+      exchangeSpansForProperty([[exchange({ id: 'e', propertyId: 'elsewhere' })]], HOME),
+    ).toEqual([]);
   });
 
   it('keeps pending apart from confirmed, and drops what no longer blocks', () => {
@@ -285,7 +329,15 @@ describe('exchangeSpansForProperty — which nights a swap takes off a host cale
     // Unlike the trip list: a host scrolling to last month must still see who
     // was in the home. Only `upcomingBookings` filters on the clock.
     const spans = exchangeSpansForProperty(
-      [[exchange({ id: 'i', propertyId: HOME, requestedWindow: { start: iso(-40), end: iso(-35) } })]],
+      [
+        [
+          exchange({
+            id: 'i',
+            propertyId: HOME,
+            requestedWindow: { start: iso(-40), end: iso(-35) },
+          }),
+        ],
+      ],
       HOME,
     );
     expect(spans).toHaveLength(1);

@@ -45,7 +45,12 @@ export const YAENCONTRE_FIXTURE_DETAIL_JSON = JSON.stringify({
   rooms: 3,
   bathrooms: 2,
   size: 90,
-  address: { street: 'Calle de Serrano', city: 'Madrid', province: 'Madrid', neighborhood: 'Salamanca' },
+  address: {
+    street: 'Calle de Serrano',
+    city: 'Madrid',
+    province: 'Madrid',
+    neighborhood: 'Salamanca',
+  },
   images: ['https://cdn.yaencontre.com/example/987654321/1.jpg'],
   contact: { phone: '910000111', agencyName: 'Yaencontre Demo Agency' },
 });

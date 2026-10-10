@@ -37,10 +37,10 @@ import {
  * described in this file's header. `status` is what the proxy answered with.
  */
 function refusedTunnelError(status: number): Error {
-  const inner = Object.assign(
-    new Error(`Proxy response (${status}) !== 200 when HTTP Tunneling`),
-    { name: 'AbortError', code: 'UND_ERR_ABORTED' },
-  );
+  const inner = Object.assign(new Error(`Proxy response (${status}) !== 200 when HTTP Tunneling`), {
+    name: 'AbortError',
+    code: 'UND_ERR_ABORTED',
+  });
   const middle = Object.assign(new Error('Request was cancelled.'), { cause: inner });
   return Object.assign(new TypeError('fetch failed'), { cause: middle });
 }

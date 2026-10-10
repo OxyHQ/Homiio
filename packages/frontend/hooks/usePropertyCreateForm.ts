@@ -72,8 +72,8 @@ const toUploadedImage = (
   const ref = typeof image === 'string' ? undefined : (image as PropertyImageRef);
   const url = typeof image === 'string' ? image : image.url;
   const displayUrl = resolveBackendImageUrl(url);
-  const caption = typeof image === 'string' ? '' : image.caption ?? '';
-  const isPrimary = typeof image === 'string' ? index === 0 : image.isPrimary ?? index === 0;
+  const caption = typeof image === 'string' ? '' : (image.caption ?? '');
+  const isPrimary = typeof image === 'string' ? index === 0 : (image.isPrimary ?? index === 0);
   const variant = (name: keyof NonNullable<PropertyImageRef['urls']>): string =>
     ref?.urls?.[name] ? resolveBackendImageUrl(ref.urls[name]) : displayUrl;
   return {
@@ -114,24 +114,15 @@ const mapPropertyImages = (images: Property['images']): UploadedImage[] => {
 export function usePropertyCreateForm(id: string | undefined) {
   const isEditMode = Boolean(id);
 
-  const {
-    setFormData,
-    updateFormField,
-    nextStep,
-    setCurrentStep,
-    setEditingPropertyId,
-  } = useCreatePropertyFormStore();
+  const { setFormData, updateFormField, nextStep, setCurrentStep, setEditingPropertyId } =
+    useCreatePropertyFormStore();
 
   const { formData, currentStep, isLoading, error: submitError } = useCreatePropertyFormSelectors();
   // Whether the persisted form has been read back. Edit-mode hydration waits
   // for it, so a restored in-progress edit is never overwritten by the server.
   const hasHydrated = useCreatePropertyFormStore((state) => state.hasHydrated);
 
-  const {
-    property,
-    loading: propertyLoading,
-    error: propertyError,
-  } = useProperty(id ?? '');
+  const { property, loading: propertyLoading, error: propertyError } = useProperty(id ?? '');
 
   const [validationErrors, setValidationErrors] = useState<StepValidationErrors>({});
   const mapRef = useRef<MapApi | null>(null);
@@ -142,10 +133,7 @@ export function usePropertyCreateForm(id: string | undefined) {
   // selected offering, so it must recompute when either changes.
   const propertyType = formData.basicInfo.propertyType || DEFAULT_PROPERTY_TYPE;
   const offerings = formData.pricing.offerings;
-  const steps = useMemo(
-    () => resolveStepFlow(propertyType, offerings),
-    [propertyType, offerings],
-  );
+  const steps = useMemo(() => resolveStepFlow(propertyType, offerings), [propertyType, offerings]);
 
   const currentType = formData.basicInfo.propertyType || DEFAULT_PROPERTY_TYPE;
   // Clamp the lookup index to the active flow. The flow can shrink when the

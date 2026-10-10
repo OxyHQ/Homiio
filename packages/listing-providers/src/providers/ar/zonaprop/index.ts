@@ -26,8 +26,7 @@ export const ZONAPROP_SITE: NaventSiteConfig = {
   countryCode: 'AR',
   defaultCity: 'Buenos Aires',
   defaultCurrency: 'ARS',
-  hrefRe:
-    /href="((?:https:\/\/www\.zonaprop\.com\.ar)?\/propiedades\/[^"]+-(\d{5,})\.html)"/i,
+  hrefRe: /href="((?:https:\/\/www\.zonaprop\.com\.ar)?\/propiedades\/[^"]+-(\d{5,})\.html)"/i,
 };
 
 const DEFAULT_CITIES: readonly string[] = [

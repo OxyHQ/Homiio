@@ -67,10 +67,28 @@ describe('the worker task definition is cleaned of dead provider flags', () => {
     // by one rather than matched by prefix: the removal list is literal, and a
     // prefix test here would pass against a list that had lost half of them.
     const expected = [
-      'APARTMENTS_COM', 'BLUEGROUND', 'DAFT', 'FOTOCASA', 'HABITACLIA', 'IDEALISTA',
-      'IMMOBILIENSCOUT24', 'IMMOWEB', 'IMMOWELT', 'INDOMIO', 'KLEINANZEIGEN',
-      'MERCADOLIBRE_AR', 'MERCADOLIBRE_MX', 'MILANUNCIOS', 'ONTHEMARKET', 'OPENRENT',
-      'OTODOM', 'PISOS', 'RIGHTMOVE', 'YAENCONTRE', 'ZILLOW', 'ZOOPLA',
+      'APARTMENTS_COM',
+      'BLUEGROUND',
+      'DAFT',
+      'FOTOCASA',
+      'HABITACLIA',
+      'IDEALISTA',
+      'IMMOBILIENSCOUT24',
+      'IMMOWEB',
+      'IMMOWELT',
+      'INDOMIO',
+      'KLEINANZEIGEN',
+      'MERCADOLIBRE_AR',
+      'MERCADOLIBRE_MX',
+      'MILANUNCIOS',
+      'ONTHEMARKET',
+      'OPENRENT',
+      'OTODOM',
+      'PISOS',
+      'RIGHTMOVE',
+      'YAENCONTRE',
+      'ZILLOW',
+      'ZOOPLA',
     ].map((provider) => `PROVIDER_${provider}_ENABLED`);
 
     const removals = workerRemovals();
@@ -84,9 +102,14 @@ describe('the worker task definition is cleaned of dead provider flags', () => {
     // that has no business carrying it, and nothing else would notice.
     const removals = workerRemovals();
     for (const name of [
-      'ALIA_API_URL', 'OXY_API_URL', 'OXY_SERVICE_API_KEY', 'OXY_SERVICE_API_SECRET',
-      'SINDI_OXY_SERVICE_API_KEY', 'SINDI_OXY_SERVICE_API_SECRET',
-      'OXY_INFERENCE_ROUTING_PROFILE', 'OXY_INFERENCE_ROUTING_PROFILE_ID',
+      'ALIA_API_URL',
+      'OXY_API_URL',
+      'OXY_SERVICE_API_KEY',
+      'OXY_SERVICE_API_SECRET',
+      'SINDI_OXY_SERVICE_API_KEY',
+      'SINDI_OXY_SERVICE_API_SECRET',
+      'OXY_INFERENCE_ROUTING_PROFILE',
+      'OXY_INFERENCE_ROUTING_PROFILE_ID',
       'SINDI_ALIA_AGENT_ID',
     ]) {
       expect(removals).toContain(name);
@@ -113,7 +136,9 @@ describe('the worker task definition is cleaned of dead provider flags', () => {
   it('never removes a variable the same lane overrides', () => {
     // The script refuses this combination outright. Cheaper to catch here than
     // in the middle of a production rollout.
-    const overridden = [...workflow.matchAll(/^\s*([A-Z][A-Z0-9_]*):\s*"?\$\{\{/gm)].map((m) => m[1]);
+    const overridden = [...workflow.matchAll(/^\s*([A-Z][A-Z0-9_]*):\s*"?\$\{\{/gm)].map(
+      (m) => m[1],
+    );
     for (const name of workerRemovals()) {
       if (name.startsWith('PROVIDER_')) expect(overridden).not.toContain(name);
     }

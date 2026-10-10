@@ -17,13 +17,7 @@
  * component, so there are never hooks inside a `.map`.
  */
 import React, { useState } from 'react';
-import {
-  Platform,
-  StyleSheet,
-  View,
-  type StyleProp,
-  type ViewStyle,
-} from 'react-native';
+import { Platform, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
 const IS_WEB = Platform.OS === 'web';
 
@@ -99,11 +93,7 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = ({
       ]}
     >
       <View
-        style={[
-          styles.inner,
-          WEB_ZOOM_TRANSITION,
-          { transform: [{ scale: isActive ? ZOOM : 1 }] },
-        ]}
+        style={[styles.inner, WEB_ZOOM_TRANSITION, { transform: [{ scale: isActive ? ZOOM : 1 }] }]}
       >
         {children}
       </View>

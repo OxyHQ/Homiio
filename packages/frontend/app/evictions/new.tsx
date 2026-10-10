@@ -528,7 +528,9 @@ const EvictionForm: React.FC<EvictionFormProps> = ({ mode, editId, existing }) =
               loading={uploading}
               disabled={uploading}
               leadingIcon={RiImageAddLine}
-              style={styles.photoButton} tone="neutral" appearance="outline"
+              style={styles.photoButton}
+              tone="neutral"
+              appearance="outline"
             >
               {cover?.imageId ? t('evictions.form.photoChange') : t('evictions.form.photoAdd')}
             </Button>
@@ -539,7 +541,9 @@ const EvictionForm: React.FC<EvictionFormProps> = ({ mode, editId, existing }) =
             onPress={handleSubmit}
             loading={submitting}
             disabled={submitting}
-            style={styles.submit} tone="accent" appearance="solid"
+            style={styles.submit}
+            tone="accent"
+            appearance="solid"
           >
             {mode === 'edit' ? t('evictions.form.saveChanges') : t('evictions.form.publish')}
           </Button>

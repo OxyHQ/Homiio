@@ -12,7 +12,9 @@ import { LOCALE_FILES, type LocaleCode, type LocaleResource } from './localeFile
  * copy, because the URL carries no content hash: a deploy that changes a string
  * must not be masked by a browser cache.
  */
-export async function loadLocaleResource(code: Exclude<LocaleCode, 'en-US'>): Promise<LocaleResource> {
+export async function loadLocaleResource(
+  code: Exclude<LocaleCode, 'en-US'>,
+): Promise<LocaleResource> {
   const response = await fetch(`/locales/${LOCALE_FILES[code]}.json`, { cache: 'no-cache' });
   if (!response.ok) {
     throw new Error(`Locale ${code} failed to load (${response.status})`);
