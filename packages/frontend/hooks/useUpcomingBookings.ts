@@ -76,6 +76,12 @@ export function useUpcomingBookings(options: UseUpcomingBookingsOptions): Upcomi
 
   // The freshest fetch is "now". Keeping the clock out of the render makes the
   // classification pure and the list stable until something actually refetches.
+  //
+  // No `Date.now()` fallback for `fetchedAt === 0`: React Query stamps
+  // `dataUpdatedAt` whenever a query holds data (none of these three uses
+  // `placeholderData`), so 0 means all three lists are undefined and
+  // `upcomingBookings` returns [] whatever "now" is. The fallback was the one
+  // impure read in this hook and could never change the result.
   const fetchedAt = Math.max(
     reservations.dataUpdatedAt,
     exchanges.dataUpdatedAt,
@@ -86,7 +92,7 @@ export function useUpcomingBookings(options: UseUpcomingBookingsOptions): Upcomi
     () =>
       upcomingBookings(
         { reservations: reservationItems, exchanges: exchangeItems, viewings: viewingItems },
-        fetchedAt > 0 ? fetchedAt : Date.now(),
+        fetchedAt,
         { statuses },
       ),
     [reservationItems, exchangeItems, viewingItems, fetchedAt, statuses],

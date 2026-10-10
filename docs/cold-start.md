@@ -68,6 +68,11 @@ transformation that does not run here.
 premise and a revisit condition written there and beside `experiments` in
 `app.config.js`. Do not widen it.
 
+The frontend lint script is `expo lint .`. Bare `expo lint` never read
+`hooks/` or `context/`, so it reported none of the findings below. Each one
+that is still open carries an `eslint-disable-next-line` with its reason,
+because the rule runs at error.
+
 **Open, deliberately deferred: `context/NotificationContext.tsx`, 2 findings.**
 `loadNotifications` opens with a synchronous
 `setState({ isLoading: true, error: null })` before its first `await`, called

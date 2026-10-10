@@ -490,12 +490,14 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
   // Initialize on mount
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- every setState in initializeNotifications runs after its first await, so none is synchronous
     initializeNotifications();
   }, [initializeNotifications]);
 
   // Load the mailbox when authenticated.
   useEffect(() => {
     if (oxyServices && activeSessionId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- genuine; the fix (move the list to React Query) is deferred until it can be verified with a session, see docs/cold-start.md
       loadNotifications();
     }
   }, [oxyServices, activeSessionId, loadNotifications]);

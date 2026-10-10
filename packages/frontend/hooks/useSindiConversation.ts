@@ -466,6 +466,7 @@ export function useSindiConversation({
    */
   useEffect(() => {
     if (!ownsStream || isLoading) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- the stream ending is only observable here; guarded so it writes once per turn, in the same pass that settles the turn
     if (activeTurnId !== null) setActiveTurnId(null);
     settleTurn();
   }, [isLoading, activeTurnId, settleTurn, ownsStream]);
