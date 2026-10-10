@@ -19,15 +19,8 @@ import { useTheme } from '@oxy.so/bloom/theme';
 import { Avatar } from '@oxy.so/bloom/avatar';
 import { Badge } from '@oxy.so/bloom/badge';
 import { Button } from '@oxy.so/bloom/button';
-import {
-  SettingsListGroup,
-  SettingsListItem,
-} from '@oxy.so/bloom/settings-list';
-import {
-  H1,
-  H2,
-  Text as BloomText,
-} from '@oxy.so/bloom/typography';
+import { SettingsListGroup, SettingsListItem } from '@oxy.so/bloom/settings-list';
+import { H1, H2, Text as BloomText } from '@oxy.so/bloom/typography';
 import { useOxy } from '@oxy.so/services';
 import { TenantApplicationStatus } from '@homiio/shared-types';
 
@@ -45,7 +38,6 @@ import { colors } from '@/styles/colors';
 import { contentClamp, spacing } from '@/constants/styles';
 import { logger } from '@/utils/logger';
 
-
 export default function ProfileScreen() {
   const { t } = useTranslation();
   const router = useRouter();
@@ -55,7 +47,6 @@ export default function ProfileScreen() {
   const applicationsQuery = useMyApplications();
   const reservationsQuery = useReservationsQuery({ limit: 200 });
   const { savedProperties } = useSavedPropertiesContext();
-
 
   const profile = profileQuery.data ?? null;
   const isLoading = profileQuery.isLoading;
@@ -138,8 +129,10 @@ export default function ProfileScreen() {
   const verifiedBadges: { label: string; key: string }[] = [];
   if (verification?.identity) verifiedBadges.push({ label: 'ID verified', key: 'identity' });
   if (verification?.income) verifiedBadges.push({ label: 'Income verified', key: 'income' });
-  if (verification?.references) verifiedBadges.push({ label: 'References verified', key: 'references' });
-  if (verification?.background) verifiedBadges.push({ label: 'Background verified', key: 'background' });
+  if (verification?.references)
+    verifiedBadges.push({ label: 'References verified', key: 'references' });
+  if (verification?.background)
+    verifiedBadges.push({ label: 'Background verified', key: 'background' });
 
   return (
     <View style={styles.root}>
@@ -181,7 +174,9 @@ export default function ProfileScreen() {
             <View style={styles.heroActions}>
               <Button
                 size="md"
-                onPress={() => router.push('/profile/edit')} tone="neutral" appearance="outline"
+                onPress={() => router.push('/profile/edit')}
+                tone="neutral"
+                appearance="outline"
               >
                 {t('profile.actions.editProfile')}
               </Button>
@@ -213,64 +208,64 @@ export default function ProfileScreen() {
         </View>
 
         <View style={styles.groups}>
-        <SettingsListGroup title={t('profile.sections.activity')}>
-          <SettingsListItem
-            icon={<SettingsRowIcon icon={RiBookmarkLine} />}
-            title={t('saved.header')}
-            value={String(totalSaved)}
-            onPress={() => router.push('/saved')}
-          />
-          <SettingsListItem
-            icon={<SettingsRowIcon icon={RiFileTextLine} />}
-            title={t('profile.applications')}
-            value={String(totalApplications)}
-            onPress={() => router.push('/applications')}
-          />
-          <SettingsListItem
-            icon={<SettingsRowIcon icon={RiHotelBedLine} />}
-            title={t('profile.stays')}
-            value={String(totalReservations)}
-            onPress={() => router.push('/stays')}
-          />
-          <SettingsListItem
-            icon={<SettingsRowIcon icon={RiArrowLeftRightLine} />}
-            title={t('profile.exchanges')}
-            description={t('profile.exchangesDescription')}
-            onPress={() => router.push('/exchange/requests')}
-          />
-        </SettingsListGroup>
+          <SettingsListGroup title={t('profile.sections.activity')}>
+            <SettingsListItem
+              icon={<SettingsRowIcon icon={RiBookmarkLine} />}
+              title={t('saved.header')}
+              value={String(totalSaved)}
+              onPress={() => router.push('/saved')}
+            />
+            <SettingsListItem
+              icon={<SettingsRowIcon icon={RiFileTextLine} />}
+              title={t('profile.applications')}
+              value={String(totalApplications)}
+              onPress={() => router.push('/applications')}
+            />
+            <SettingsListItem
+              icon={<SettingsRowIcon icon={RiHotelBedLine} />}
+              title={t('profile.stays')}
+              value={String(totalReservations)}
+              onPress={() => router.push('/stays')}
+            />
+            <SettingsListItem
+              icon={<SettingsRowIcon icon={RiArrowLeftRightLine} />}
+              title={t('profile.exchanges')}
+              description={t('profile.exchangesDescription')}
+              onPress={() => router.push('/exchange/requests')}
+            />
+          </SettingsListGroup>
 
-        <SettingsListGroup title={t('agent.menu.section')}>
-          <SettingsListItem
-            icon={<SettingsRowIcon icon={RiCoinsLine} />}
-            title={t('agent.menu.title')}
-            description={t('agent.menu.description')}
-            onPress={() => router.push('/agent')}
-          />
-        </SettingsListGroup>
+          <SettingsListGroup title={t('agent.menu.section')}>
+            <SettingsListItem
+              icon={<SettingsRowIcon icon={RiCoinsLine} />}
+              title={t('agent.menu.title')}
+              description={t('agent.menu.description')}
+              onPress={() => router.push('/agent')}
+            />
+          </SettingsListGroup>
 
-        <SettingsListGroup title={t('profile.sections.account')}>
-          <SettingsListItem
-            icon={<SettingsRowIcon icon={RiStarLine} />}
-            title={t('profile.subscriptions')}
-            description={t('profile.subscriptionsDescription')}
-            onPress={() => router.push('/profile/subscriptions')}
-          />
-          <SettingsListItem
-            icon={<SettingsRowIcon icon={RiSettings3Line} />}
-            title={t('settings.title')}
-            onPress={() => router.push('/settings')}
-          />
-        </SettingsListGroup>
+          <SettingsListGroup title={t('profile.sections.account')}>
+            <SettingsListItem
+              icon={<SettingsRowIcon icon={RiStarLine} />}
+              title={t('profile.subscriptions')}
+              description={t('profile.subscriptionsDescription')}
+              onPress={() => router.push('/profile/subscriptions')}
+            />
+            <SettingsListItem
+              icon={<SettingsRowIcon icon={RiSettings3Line} />}
+              title={t('settings.title')}
+              onPress={() => router.push('/settings')}
+            />
+          </SettingsListGroup>
 
-        <SettingsListGroup>
-          <SettingsListItem
-            icon={<SettingsRowIcon icon={RiLogoutBoxRLine} destructive />}
-            title={t('settings.signOut')}
-            destructive
-            onPress={() => void handleLogout()}
-          />
-        </SettingsListGroup>
+          <SettingsListGroup>
+            <SettingsListItem
+              icon={<SettingsRowIcon icon={RiLogoutBoxRLine} destructive />}
+              title={t('settings.signOut')}
+              destructive
+              onPress={() => void handleLogout()}
+            />
+          </SettingsListGroup>
         </View>
       </ScrollView>
     </View>
@@ -293,7 +288,8 @@ const StatTile: React.FC<StatTileProps> = ({ label, value, description, onPress 
         className="p-4"
         onPress={onPress}
         accessibilityRole={onPress ? 'button' : undefined}
-        accessibilityLabel={onPress ? `${label}: ${value}. Open ${label.toLowerCase()}` : undefined} appearance="outline"
+        accessibilityLabel={onPress ? `${label}: ${value}. Open ${label.toLowerCase()}` : undefined}
+        appearance="outline"
       >
         <H2 style={styles.statValue}>{value}</H2>
         <BloomText style={styles.statLabel}>{label}</BloomText>

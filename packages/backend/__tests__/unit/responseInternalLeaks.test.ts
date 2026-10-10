@@ -67,7 +67,7 @@ const SIGNATURE_FAILURE =
 
 /** Stripe's real text for a subscription the account cannot see. */
 const MISSING_SUBSCRIPTION =
-  'No such subscription: \'sub_1PsecretXYZ\'; a similar object exists in test mode, ' +
+  "No such subscription: 'sub_1PsecretXYZ'; a similar object exists in test mode, " +
   'but a live mode key was used to make this request. (request req_lEaKeD123)';
 
 /** Telegram's real text for a rejected token — the token's tail is in it. */
@@ -226,14 +226,22 @@ describe('telegram getBotStatus, when the bot cannot be reached', () => {
   it('logs the failure rather than swallowing it', async () => {
     mockGetBotInfo.mockRejectedValue(new Error(TELEGRAM_UNAUTHORIZED));
 
-    await telegramController.getBotStatus(mockRequest({ method: 'GET' }), mockResponse(), jest.fn());
+    await telegramController.getBotStatus(
+      mockRequest({ method: 'GET' }),
+      mockResponse(),
+      jest.fn(),
+    );
 
     expect(mockLogger.warn).toHaveBeenCalledTimes(1);
     expect(loggedText()).toContain('ETELEGRAM: 401 Unauthorized');
   });
 
   it('still reports a reachable bot', async () => {
-    mockGetBotInfo.mockResolvedValue({ id: 7712345678, username: 'homiio_bot', first_name: 'Homiio' });
+    mockGetBotInfo.mockResolvedValue({
+      id: 7712345678,
+      username: 'homiio_bot',
+      first_name: 'Homiio',
+    });
     const res = mockResponse();
 
     await telegramController.getBotStatus(mockRequest({ method: 'GET' }), res, jest.fn());

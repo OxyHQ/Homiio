@@ -289,7 +289,11 @@ export async function getRequestAttachment(
 }
 
 /** `POST /api/maintenance` — raise a request against a lease you are on. */
-export async function createRequest(req: Request, res: Response, next: NextFunction): Promise<void> {
+export async function createRequest(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
   try {
     const oxyUserId = requireSessionOxyUserId(req);
     const leaseId = requiredText(req.body?.leaseId, 'leaseId', 64);
@@ -343,9 +347,11 @@ export async function createRequest(req: Request, res: Response, next: NextFunct
       data: { requestId: request.id, leaseId, propertyId: access.propertyId },
     });
 
-    res.status(201).json(
-      successResponse(toMaintenanceRequestDTO(request, 'tenant'), 'Maintenance request created'),
-    );
+    res
+      .status(201)
+      .json(
+        successResponse(toMaintenanceRequestDTO(request, 'tenant'), 'Maintenance request created'),
+      );
   } catch (error) {
     next(error);
   }

@@ -16,7 +16,7 @@ export enum TenantApplicationStatus {
   REVIEWING = 'reviewing',
   APPROVED = 'approved',
   REJECTED = 'rejected',
-  WITHDRAWN = 'withdrawn'
+  WITHDRAWN = 'withdrawn',
 }
 
 import type { DocumentVerificationStatus } from './applicationChecklist';
@@ -25,7 +25,7 @@ export enum TenantApplicationDocumentType {
   ID = 'id',
   INCOME = 'income',
   REFERENCE = 'reference',
-  OTHER = 'other'
+  OTHER = 'other',
 }
 
 /**

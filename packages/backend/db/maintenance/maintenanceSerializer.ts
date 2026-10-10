@@ -88,9 +88,7 @@ export function toMaintenanceCommentDTO(row: MaintenanceCommentRow): Maintenance
  * domain has a private path at all is that those are exactly the places a
  * tenancy's evidence should not turn up.
  */
-export function toMaintenanceAttachmentDTO(
-  row: MaintenanceAttachmentRow,
-): MaintenanceAttachment {
+export function toMaintenanceAttachmentDTO(row: MaintenanceAttachmentRow): MaintenanceAttachment {
   return {
     id: row.id,
     role: row.role,
@@ -113,9 +111,7 @@ export function toMaintenanceEventDTO(row: MaintenanceEventRow): MaintenanceEven
 }
 
 /** One request with its thread and history. */
-export function toHydratedMaintenanceDTO(
-  hydrated: HydratedMaintenanceRequest,
-): MaintenanceRequest {
+export function toHydratedMaintenanceDTO(hydrated: HydratedMaintenanceRequest): MaintenanceRequest {
   return {
     ...toMaintenanceRequestDTO(hydrated.request, hydrated.role),
     comments: hydrated.comments.map(toMaintenanceCommentDTO),

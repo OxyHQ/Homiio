@@ -407,7 +407,16 @@ describe('an unscopeable location refuses rather than widening', () => {
 
     expect(isUnscopeableLocation(malformed)).toBe(true);
     const params = buildSearchParams(baseQuery({ location: malformed }));
-    for (const key of ['country', 'city', 'state', 'neighborhood', 'lat', 'lng', 'swLat', 'neLat']) {
+    for (const key of [
+      'country',
+      'city',
+      'state',
+      'neighborhood',
+      'lat',
+      'lng',
+      'swLat',
+      'neLat',
+    ]) {
       expect(params).not.toHaveProperty(key);
     }
   });

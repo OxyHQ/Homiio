@@ -41,7 +41,6 @@ export function SaleDetailsStep({
     [updateFormField],
   );
 
-
   return (
     <View style={styles.step}>
       <WizardTextField
@@ -70,7 +69,9 @@ export function SaleDetailsStep({
             value: option.value,
             label: t(option.i18nKey),
           }))}
-          value={offering.chainStatus && isChainStatus(offering.chainStatus) ? offering.chainStatus : ''}
+          value={
+            offering.chainStatus && isChainStatus(offering.chainStatus) ? offering.chainStatus : ''
+          }
           onValueChange={(value) => updateFormField('offering', 'chainStatus', value || undefined)}
           accessibilityLabel={t('listing.sale.chainStatus.label')}
           testID="create-sale-chain"

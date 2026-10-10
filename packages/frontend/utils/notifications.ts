@@ -89,7 +89,7 @@ export async function createNotification(
     sound?: boolean;
     priority?: 'default' | 'normal' | 'high';
     badge?: number;
-  } = {}
+  } = {},
 ) {
   if (!Notifications) return;
 
@@ -116,7 +116,7 @@ export async function createNotification(
 export async function scheduleNotification(
   content: NotificationContent,
   trigger: import('expo-notifications').NotificationTriggerInput,
-  _repeats: boolean = false
+  _repeats: boolean = false,
 ): Promise<string> {
   if (!Notifications) {
     throw new Error('Notifications not supported on web');
@@ -267,21 +267,26 @@ export async function createPropertyNotification(
   propertyId: string,
   title: string,
   body: string,
-  data: Record<string, any> = {}
+  data: Record<string, any> = {},
 ) {
-  return createNotification(title, body, {
-    screen: 'properties',
-    type: 'property',
-    propertyId,
-    ...data,
-  }, { priority: 'high' });
+  return createNotification(
+    title,
+    body,
+    {
+      screen: 'properties',
+      type: 'property',
+      propertyId,
+      ...data,
+    },
+    { priority: 'high' },
+  );
 }
 
 export async function createMessageNotification(
   messageId: string,
   senderName: string,
   message: string,
-  data: Record<string, any> = {}
+  data: Record<string, any> = {},
 ) {
   return createNotification(
     `New message from ${senderName}`,
@@ -293,7 +298,7 @@ export async function createMessageNotification(
       senderName,
       ...data,
     },
-    { priority: 'high', sound: true }
+    { priority: 'high', sound: true },
   );
 }
 
@@ -301,7 +306,7 @@ export async function createReminderNotification(
   title: string,
   body: string,
   date: Date,
-  data: Record<string, any> = {}
+  data: Record<string, any> = {},
 ) {
   if (!Notifications) {
     throw new Error('Notifications not supported on web');
@@ -322,7 +327,7 @@ export async function createReminderNotification(
     {
       type: Notifications.SchedulableTriggerInputTypes.DATE,
       date,
-    }
+    },
   );
 }
 
@@ -330,7 +335,7 @@ export async function createRepeatingNotification(
   title: string,
   body: string,
   interval: 'hour' | 'day' | 'week',
-  data: Record<string, any> = {}
+  data: Record<string, any> = {},
 ) {
   if (!Notifications) {
     throw new Error('Notifications not supported on web');
@@ -354,7 +359,7 @@ export async function createRepeatingNotification(
       priority: 'normal',
     },
     trigger,
-    true
+    true,
   );
 }
 

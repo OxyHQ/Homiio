@@ -27,7 +27,12 @@ import { desc, eq, inArray, sql } from 'drizzle-orm';
 
 import { getDb } from '../db/postgres';
 import { commissions, partners, properties } from '../db/schema';
-import { allOf, findProperties, NEWEST_FIRST, propertyOrderBy } from '../db/properties/propertyReads';
+import {
+  allOf,
+  findProperties,
+  NEWEST_FIRST,
+  propertyOrderBy,
+} from '../db/properties/propertyReads';
 import { serializeProperty } from '../db/properties/propertySerializer';
 import { logger } from '../middlewares/logging';
 import { AppError, successResponse } from '../middlewares/errorHandler';
@@ -214,7 +219,9 @@ class PartnerController {
       });
 
       const payload = await buildMeResponse(partner);
-      return res.status(201).json(successResponse(payload, 'Welcome to the Homiio partner program'));
+      return res
+        .status(201)
+        .json(successResponse(payload, 'Welcome to the Homiio partner program'));
     } catch (error) {
       next(error);
     }
@@ -264,7 +271,9 @@ class PartnerController {
         where: allOf([eq(properties.sourcedByPartnerId, partner.id)]),
         orderBy: propertyOrderBy(NEWEST_FIRST),
       });
-      const payload = { properties: sourced.map((listing) => serializeProperty(listing, 'public')) };
+      const payload = {
+        properties: sourced.map((listing) => serializeProperty(listing, 'public')),
+      };
       return res.json(successResponse(payload, 'Partner referrals'));
     } catch (error) {
       next(error);

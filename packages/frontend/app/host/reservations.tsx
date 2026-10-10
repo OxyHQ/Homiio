@@ -40,12 +40,7 @@ import * as Skeleton from '@oxy.so/bloom/skeleton';
 import { H2, Text as BloomText } from '@oxy.so/bloom/typography';
 import { useOxy, openAccountDialog } from '@oxy.so/services';
 import { useTranslation } from 'react-i18next';
-import {
-  Reservation,
-  ReservationStatus,
-  formatMoney,
-  type Property,
-} from '@homiio/shared-types';
+import { Reservation, ReservationStatus, formatMoney, type Property } from '@homiio/shared-types';
 import { Header } from '@/components/Header';
 import { ReservationCard } from '@/components/ReservationCard';
 import { ReservationStatusBadge } from '@/components/ReservationStatusBadge';
@@ -54,10 +49,7 @@ import { ErrorState } from '@/components/ui/ErrorState';
 import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
 import { ThumbnailImage } from '@/components/ui/ThumbnailImage';
 import { useIsDesktop } from '@/hooks/useOptimizedMediaQuery';
-import {
-  useReservationsQuery,
-  useUpdateReservation,
-} from '@/hooks/useReservationQueries';
+import { useReservationsQuery, useUpdateReservation } from '@/hooks/useReservationQueries';
 import { propertyService } from '@/services/propertyService';
 import { getPropertyImageSource, getPropertyTitle } from '@/utils/propertyUtils';
 import { useFormatting } from '@/utils/format';
@@ -135,7 +127,9 @@ const CardActions: React.FC<{ reservation: Reservation }> = ({ reservation }) =>
         leadingIcon={RiCheckLine}
         loading={busy === ReservationStatus.CONFIRMED}
         disabled={isPending}
-        onPress={() => void decide(ReservationStatus.CONFIRMED)} tone="accent" appearance="solid"
+        onPress={() => void decide(ReservationStatus.CONFIRMED)}
+        tone="accent"
+        appearance="solid"
       >
         {t('host.reservations.approve')}
       </Button>
@@ -144,13 +138,17 @@ const CardActions: React.FC<{ reservation: Reservation }> = ({ reservation }) =>
         leadingIcon={RiCloseLine}
         loading={busy === ReservationStatus.DECLINED}
         disabled={isPending}
-        onPress={() => void decide(ReservationStatus.DECLINED)} tone="neutral" appearance="outline"
+        onPress={() => void decide(ReservationStatus.DECLINED)}
+        tone="neutral"
+        appearance="outline"
       >
         {t('host.reservations.decline')}
       </Button>
       <Button
         size="sm"
-        onPress={() => router.push(`/reservations/${reservation.id}`)} tone="accent" appearance="subtle"
+        onPress={() => router.push(`/reservations/${reservation.id}`)}
+        tone="accent"
+        appearance="subtle"
       >
         {t('host.reservations.view')}
       </Button>
@@ -194,7 +192,7 @@ const RowActions: React.FC<{ reservation: Reservation; name: string }> = ({
 const ReservationListSkeleton: React.FC = () => (
   <View style={styles.listWrap}>
     {Array.from({ length: 3 }).map((_, index) => (
-      <Card key={index}  radius="radius-16" className="gap-2 p-4" appearance="outline">
+      <Card key={index} radius="radius-16" className="gap-2 p-4" appearance="outline">
         <View style={styles.skeletonHeader}>
           <Skeleton.Text style={{ width: 140, lineHeight: 20 }} />
           <Skeleton.Pill size={20} />
@@ -447,7 +445,7 @@ export default function HostReservationsScreen() {
   const activeLabel =
     statusFilter === 'all'
       ? t('host.reservations.allReservations')
-      : filters.find((entry) => entry.id === statusFilter)?.label ?? t('host.reservations.title');
+      : (filters.find((entry) => entry.id === statusFilter)?.label ?? t('host.reservations.title'));
 
   const isLoading = reservationsQuery.isLoading;
   const isError = reservationsQuery.isError;
@@ -487,9 +485,7 @@ export default function HostReservationsScreen() {
             <ErrorState
               icon={RiAlertLine}
               title={t('host.reservations.loadError')}
-              description={
-                reservationsQuery.error?.message ?? t('host.reservations.tryAgain')
-              }
+              description={reservationsQuery.error?.message ?? t('host.reservations.tryAgain')}
               onRetry={() => reservationsQuery.refetch()}
             />
           ) : null}

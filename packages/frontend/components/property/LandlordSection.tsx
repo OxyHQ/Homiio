@@ -77,7 +77,9 @@ export const LandlordSection: React.FC<LandlordSectionProps> = ({
             leadingIcon={RiGlobalLine}
             onPress={onApplyPublic}
             size="lg"
-            style={styles.start} tone="accent" appearance="solid"
+            style={styles.start}
+            tone="accent"
+            appearance="solid"
           >
             {t('listing.cta.applyOnStateWebsite')}
           </Button>
@@ -92,9 +94,7 @@ export const LandlordSection: React.FC<LandlordSectionProps> = ({
     getAvatarFileId(landlordProfile.oxyUserId) ??
     landlordProfile.personalProfile?.personalInfo?.avatar ??
     landlordProfile.avatar;
-  const showFollowButton = Boolean(
-    landlordOxyUserId && user?.id && user.id !== landlordOxyUserId,
-  );
+  const showFollowButton = Boolean(landlordOxyUserId && user?.id && user.id !== landlordOxyUserId);
 
   return (
     <Section title={t('listing.cta.landlord')} fullBleed>
@@ -108,7 +108,12 @@ export const LandlordSection: React.FC<LandlordSectionProps> = ({
             label={isSuperHost(landlordProfile) ? t('property.host.superHost') : undefined}
             details={
               hostingSince
-                ? [{ icon: RiCalendarLine, text: `${t('property.host.hostingSince')} ${hostingSince}` }]
+                ? [
+                    {
+                      icon: RiCalendarLine,
+                      text: `${t('property.host.hostingSince')} ${hostingSince}`,
+                    },
+                  ]
                 : undefined
             }
             onPressProfile={

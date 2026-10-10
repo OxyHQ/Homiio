@@ -158,7 +158,10 @@ function freeText(value: string): string {
 
 function filterValue(value: QueryFilterValue): string {
   if (Array.isArray(value)) {
-    return [...(value as readonly string[])].map((entry) => String(entry)).sort().join(',');
+    return [...(value as readonly string[])]
+      .map((entry) => String(entry))
+      .sort()
+      .join(',');
   }
   return String(value);
 }

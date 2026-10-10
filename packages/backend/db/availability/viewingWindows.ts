@@ -193,9 +193,8 @@ export function parseViewingWindows(value: unknown): ViewingWindowParse {
     const weekday = asInteger(raw.weekday);
     const startMinute = asInteger(raw.startMinute);
     const endMinute = asInteger(raw.endMinute);
-    const slotMinutes = raw.slotMinutes === undefined
-      ? DEFAULT_VIEWING_DURATION_MINUTES
-      : asInteger(raw.slotMinutes);
+    const slotMinutes =
+      raw.slotMinutes === undefined ? DEFAULT_VIEWING_DURATION_MINUTES : asInteger(raw.slotMinutes);
     const modality = raw.modality;
 
     if (weekday === null || weekday < VIEWING_WEEKDAY_MIN || weekday > VIEWING_WEEKDAY_MAX) {

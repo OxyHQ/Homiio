@@ -80,7 +80,9 @@ export async function clearHold(
       // Either not theirs, or not held. Both answer 404 for the same reason
       // every other ownership gate here does: a distinguishable error confirms
       // the case exists to somebody who should not be asking.
-      return next(new AppError('Eviction case not found or not on hold', 404, 'EVICTION_NOT_FOUND'));
+      return next(
+        new AppError('Eviction case not found or not on hold', 404, 'EVICTION_NOT_FOUND'),
+      );
     }
 
     await appendTimelineEntry(id, {

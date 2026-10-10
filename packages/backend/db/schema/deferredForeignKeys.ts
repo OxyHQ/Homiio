@@ -256,8 +256,8 @@ export const ID_COLUMNS_WITHOUT_FOREIGN_KEY: readonly IdColumnWithoutForeignKey[
     table: properties,
     column: properties.sourceId,
     reason:
-      'Not an id INTO anything — it is the PORTAL\'s own identifier for the ' +
-      'ad (Idealista\'s listing number, Otodom\'s slug id), and the only ' +
+      "Not an id INTO anything — it is the PORTAL's own identifier for the " +
+      "ad (Idealista's listing number, Otodom's slug id), and the only " +
       'reason it ends in `_id` is that Mongo named it `sourceId`. It is half ' +
       'of the `(source, source_id)` dedup key and references no table here or ' +
       'anywhere else. Listed rather than renamed because the name is what ' +
@@ -267,7 +267,7 @@ export const ID_COLUMNS_WITHOUT_FOREIGN_KEY: readonly IdColumnWithoutForeignKey[
     table: properties,
     column: properties.moderationRestrictedByDecisionId,
     reason:
-      'A CrowdSource decision-revision id — a foreign SERVICE\'s primary key, ' +
+      "A CrowdSource decision-revision id — a foreign SERVICE's primary key, " +
       'the same class as `oxy_user_id` but from a different service, so the ' +
       '`isOxyAccountColumn` predicate does not (and must not) cover it. ' +
       'Audit-only: nothing joins on it, and CrowdSource is switched off in ' +
@@ -291,7 +291,7 @@ export const ID_COLUMNS_WITHOUT_FOREIGN_KEY: readonly IdColumnWithoutForeignKey[
     table: moderationReports,
     column: moderationReports.crowdSourceReportId,
     reason:
-      'CrowdSource\'s own id for the report it accepted — a foreign SERVICE\'s ' +
+      "CrowdSource's own id for the report it accepted — a foreign SERVICE's " +
       'primary key, the same class as `oxy_user_id` but from a different ' +
       'service, which is why `isOxyAccountColumn` does not (and must not) ' +
       'cover it.',
@@ -301,7 +301,7 @@ export const ID_COLUMNS_WITHOUT_FOREIGN_KEY: readonly IdColumnWithoutForeignKey[
     column: moderationReports.crowdSourceCaseId,
     reason:
       'The CrowdSource case this report was filed into or merged with. A ' +
-      'foreign service\'s key, and one Homiio does not control: CrowdSource ' +
+      "foreign service's key, and one Homiio does not control: CrowdSource " +
       'decides when two reports become one case.',
   },
   {
@@ -309,7 +309,7 @@ export const ID_COLUMNS_WITHOUT_FOREIGN_KEY: readonly IdColumnWithoutForeignKey[
     column: moderationReports.decisionId,
     reason:
       'A CACHE of a published CrowdSource decision, overwritten by a later ' +
-      'revision and never edited in place. A foreign service\'s key, and ' +
+      "revision and never edited in place. A foreign service's key, and " +
       'deliberately not a reference to `moderation_enforcements` either — that ' +
       'table records what HOMIIO did, which is a different fact with a ' +
       'different lifecycle.',
@@ -324,21 +324,21 @@ export const ID_COLUMNS_WITHOUT_FOREIGN_KEY: readonly IdColumnWithoutForeignKey[
       'retention as this table, and two independent sweeps have no ordering ' +
       'between them: CASCADE would let the event sweep delete unprocessed ' +
       'decision work, RESTRICT would make the event sweep fail on its first ' +
-      'batch. Either way one table\'s housekeeping would decide the other\'s ' +
+      "batch. Either way one table's housekeeping would decide the other's " +
       'correctness. The pairing survives without a constraint because ' +
-      '`decisionApplyEventId` derives this row\'s own primary key from it.',
+      "`decisionApplyEventId` derives this row's own primary key from it.",
   },
   {
     table: moderationOutbox,
     column: moderationOutbox.caseId,
-    reason: 'The CrowdSource case a decision belongs to — a foreign service\'s key.',
+    reason: "The CrowdSource case a decision belongs to — a foreign service's key.",
   },
   {
     table: moderationEvents,
     column: moderationEvents.caseId,
     reason:
       'The CrowdSource case, as the delivered event names it. A foreign ' +
-      'service\'s key, and this table is a DEDUPE store plus an audit trail — ' +
+      "service's key, and this table is a DEDUPE store plus an audit trail — " +
       'it deliberately records what ARRIVED rather than what Homiio could ' +
       'resolve.',
   },
@@ -346,7 +346,7 @@ export const ID_COLUMNS_WITHOUT_FOREIGN_KEY: readonly IdColumnWithoutForeignKey[
     table: moderationEnforcements,
     column: moderationEnforcements.decisionId,
     reason:
-      'The CrowdSource decision this action answered. A foreign service\'s key, ' +
+      "The CrowdSource decision this action answered. A foreign service's key, " +
       'and two thirds of the idempotency key `UNIQUE(decision_id, ' +
       'decision_revision, action)` — which is why it must not become a Homiio ' +
       'primary key either: an id from a service whose key space Homiio does not ' +
@@ -355,13 +355,13 @@ export const ID_COLUMNS_WITHOUT_FOREIGN_KEY: readonly IdColumnWithoutForeignKey[
   {
     table: moderationEnforcements,
     column: moderationEnforcements.caseId,
-    reason: 'The CrowdSource case — a foreign service\'s key.',
+    reason: "The CrowdSource case — a foreign service's key.",
   },
   {
     table: moderationEnforcements,
     column: moderationEnforcements.subjectId,
     reason:
-      'Polymorphic by `subject_type` across Homiio\'s own nouns (`property`, ' +
+      "Polymorphic by `subject_type` across Homiio's own nouns (`property`, " +
       '`review`), so one column cannot reference it — and, like ' +
       '`moderation_reports.reported_id`, the row is the durable record of what ' +
       'was done and must outlive the object it names.',
@@ -370,7 +370,7 @@ export const ID_COLUMNS_WITHOUT_FOREIGN_KEY: readonly IdColumnWithoutForeignKey[
     table: billing,
     column: billing.plusStripeSubscriptionId,
     reason:
-      'Stripe\'s subscription id. A foreign service\'s key, and one whose key ' +
+      "Stripe's subscription id. A foreign service's key, and one whose key " +
       'SPACE differs between test and live mode — which is why it is a plain ' +
       'indexed column and must never become part of a Homiio key.',
   },
@@ -378,8 +378,8 @@ export const ID_COLUMNS_WITHOUT_FOREIGN_KEY: readonly IdColumnWithoutForeignKey[
     table: billingProcessedSessions,
     column: billingProcessedSessions.sessionId,
     reason:
-      'Stripe\'s Checkout session id — a foreign service\'s key, same class as ' +
-      '`billing.plus_stripe_subscription_id`. It is half of this table\'s ' +
+      "Stripe's Checkout session id — a foreign service's key, same class as " +
+      "`billing.plus_stripe_subscription_id`. It is half of this table's " +
       'unique key rather than a reference into anything: the row exists to ' +
       'record that a session was already credited, so its value is meaningful ' +
       'even after Stripe has forgotten the session.',
@@ -388,8 +388,8 @@ export const ID_COLUMNS_WITHOUT_FOREIGN_KEY: readonly IdColumnWithoutForeignKey[
     table: leasePaymentSchedule,
     column: leasePaymentSchedule.transactionId,
     reason:
-      'The payment processor\'s own reference for a recorded rent payment. A ' +
-      'foreign service\'s key, written by `recordPayment` from whatever the ' +
+      "The payment processor's own reference for a recorded rent payment. A " +
+      "foreign service's key, written by `recordPayment` from whatever the " +
       'processor returned, and never resolved against anything in this schema.',
   },
   {
@@ -421,7 +421,7 @@ export const ID_COLUMNS_WITHOUT_FOREIGN_KEY: readonly IdColumnWithoutForeignKey[
     table: addressExternalRefs,
     column: addressExternalRefs.externalId,
     reason:
-      'A PROVIDER\'s own id for a place — a portal\'s building id, an OSM ref, ' +
+      "A PROVIDER's own id for a place — a portal's building id, an OSM ref, " +
       'a cadastral value — so there is nothing in this schema for it to ' +
       'reference, the same class as `properties.source_id`. It is half of this ' +
       'table\'s unique key rather than a pointer: the row exists to say "that ' +

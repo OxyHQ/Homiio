@@ -113,7 +113,9 @@ export function NotificationItem({
             <BloomText style={[styles.time, { color: colors.textTertiary }]} numberOfLines={1}>
               {time}
             </BloomText>
-            {!read ? <View style={[styles.unreadDot, { backgroundColor: colors.primary }]} /> : null}
+            {!read ? (
+              <View style={[styles.unreadDot, { backgroundColor: colors.primary }]} />
+            ) : null}
           </View>
           {onDelete ? (
             <Button
@@ -121,7 +123,9 @@ export function NotificationItem({
               iconOnly
               leadingIcon={RiDeleteBinLine}
               accessibilityLabel={t('notification.delete.title')}
-              onPress={onDelete} tone="accent" appearance="subtle"
+              onPress={onDelete}
+              tone="accent"
+              appearance="subtle"
             />
           ) : null}
         </View>

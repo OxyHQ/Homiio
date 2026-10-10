@@ -316,7 +316,7 @@ const config: Config = {
   // terraform-uswest2/app-services.tf sets it to 4000). 4130 is Homiio's slot
   // in the per-app port map so several Oxy backends can run side by side.
   port: parseInt(process.env.PORT || '4130', 10),
-  
+
   // Oxy Services Configuration.
   // api.oxy.so is ALWAYS the default — deliberately no dev branch. Oxy owns the
   // account, and pointing identity at a machine-specific LAN address that is not
@@ -327,7 +327,7 @@ const config: Config = {
     serviceApiKey: optionalEnvironmentValue(process.env.OXY_SERVICE_API_KEY),
     serviceApiSecret: optionalEnvironmentValue(process.env.OXY_SERVICE_API_SECRET),
     inferenceRoutingProfileId: optionalExactIdentifier(
-      process.env.OXY_INFERENCE_ROUTING_PROFILE_ID
+      process.env.OXY_INFERENCE_ROUTING_PROFILE_ID,
     ),
   },
 
@@ -337,7 +337,7 @@ const config: Config = {
     sindiServiceApiKey: optionalEnvironmentValue(process.env.SINDI_OXY_SERVICE_API_KEY),
     sindiServiceApiSecret: optionalEnvironmentValue(process.env.SINDI_OXY_SERVICE_API_SECRET),
   },
-  
+
   // Telegram Bot Configuration
   telegram: {
     botToken: process.env.TELEGRAM_BOT_TOKEN,
@@ -346,20 +346,20 @@ const config: Config = {
     defaultGroup: {
       id: process.env.TELEGRAM_GROUP_DEFAULT || '-1002750613848',
       language: 'es', // Spanish as default
-      name: 'Homiio España'
+      name: 'Homiio España',
     },
     // Group configurations with language settings
     groups: {
       // Current Spanish group
-      [process.env.TELEGRAM_GROUP_DEFAULT || '-1002750613848']: { 
-        language: 'es', 
-        name: 'Homiio España' 
+      [process.env.TELEGRAM_GROUP_DEFAULT || '-1002750613848']: {
+        language: 'es',
+        name: 'Homiio España',
       },
       // Future groups can be added here
       // [process.env.TELEGRAM_GROUP_US]: { language: 'en', name: 'Homiio US' }
-    }
+    },
   },
-  
+
   // PostgreSQL Configuration — the only database this service opens.
   //
   // `MONGODB_URI` is no longer read here, and its `|| 'mongodb://localhost:27017/homiio'`
@@ -414,14 +414,14 @@ const config: Config = {
       .map((id) => id.trim())
       .filter(Boolean),
   },
-  
+
   // Email Configuration
   email: {
     service: process.env.EMAIL_SERVICE || 'gmail',
     user: process.env.EMAIL_USER,
     password: process.env.EMAIL_PASSWORD,
   },
-  
+
   // Object storage — native AWS S3 in production (oxy-infra media bucket).
   // Set AWS_ENDPOINT_URL only for S3-compatible mocks / local MinIO; leave
   // unset for real AWS so the SDK uses the regional endpoint.
@@ -439,11 +439,12 @@ const config: Config = {
   // storage (S3) is not configured. Sourced from `PUBLIC_API_URL`, falling back
   // to the local dev server. (For an Android emulator pointing at the host's
   // 10.0.2.2 alias, set `PUBLIC_API_URL=http://10.0.2.2:<port>`.)
-  publicUrl: process.env.PUBLIC_API_URL ||
+  publicUrl:
+    process.env.PUBLIC_API_URL ||
     (process.env.NODE_ENV === 'production'
       ? 'https://api.homiio.com'
       : `http://localhost:${process.env.PORT || '4130'}`),
-  
+
   // Rate Limiting. The global API limiter (server.ts) keys per authenticated
   // user with realistic media-app budgets (see AUTHENTICATED_RATE_LIMIT_MAX /
   // UNAUTHENTICATED_RATE_LIMIT_MAX) and only consumes `windowMs` from here.
@@ -452,7 +453,7 @@ const config: Config = {
     windowMs: 15 * 60 * 1000, // 15 minutes
     max: 600, // anonymous per-IP fallback budget per window
   },
-  
+
   // Logging
   logging: {
     level: process.env.LOG_LEVEL || 'info',
@@ -465,12 +466,18 @@ const config: Config = {
   observability: {
     enabled: process.env.OBSERVABILITY_ENABLED === 'true',
     sampleRate: observabilitySampleRate(process.env.OBSERVABILITY_SAMPLE_RATE),
-    maxEventsPerRequest: boundedInteger(process.env.OBSERVABILITY_MAX_EVENTS_PER_REQUEST, 20, 1, 100),
+    maxEventsPerRequest: boundedInteger(
+      process.env.OBSERVABILITY_MAX_EVENTS_PER_REQUEST,
+      20,
+      1,
+      100,
+    ),
   },
 
   // Web frontend base URL — single source for server-built deep links.
   web: {
-    baseUrl: process.env.FRONTEND_URL ||
+    baseUrl:
+      process.env.FRONTEND_URL ||
       (process.env.NODE_ENV === 'production' ? 'https://homiio.com' : 'http://localhost:8130'),
   },
 
@@ -485,16 +492,17 @@ const config: Config = {
     // - In production: allow STRIPE_* overrides, else default to the web base URL
     ...((): { successUrl: string; cancelUrl: string } => {
       const isProd = process.env.NODE_ENV === 'production';
-      const defaultFrontend = process.env.FRONTEND_URL || (isProd ? 'https://homiio.com' : 'http://localhost:8130');
+      const defaultFrontend =
+        process.env.FRONTEND_URL || (isProd ? 'https://homiio.com' : 'http://localhost:8130');
       const successDefault = `${defaultFrontend}/payments/success?session_id={CHECKOUT_SESSION_ID}`;
       const cancelDefault = `${defaultFrontend}/payments/cancelled`;
       return {
-        successUrl: isProd ? (process.env.STRIPE_SUCCESS_URL || successDefault) : successDefault,
-        cancelUrl: isProd ? (process.env.STRIPE_CANCEL_URL || cancelDefault) : cancelDefault,
+        successUrl: isProd ? process.env.STRIPE_SUCCESS_URL || successDefault : successDefault,
+        cancelUrl: isProd ? process.env.STRIPE_CANCEL_URL || cancelDefault : cancelDefault,
       };
     })(),
   },
-  
+
   // Geocoding Configuration (Nominatim / OpenStreetMap — free, no API key)
   geocoding: {
     nominatimBaseUrl: process.env.NOMINATIM_BASE_URL || 'https://nominatim.openstreetmap.org',
@@ -519,7 +527,10 @@ const config: Config = {
   overpass: {
     apiUrl: process.env.OVERPASS_API_URL || 'https://overpass-api.de/api/interpreter',
     // OSM requires a descriptive, identifying User-Agent on every request.
-    userAgent: process.env.OVERPASS_USER_AGENT || process.env.GEOCODING_USER_AGENT || 'Homiio/1.0 (+https://homiio.com)',
+    userAgent:
+      process.env.OVERPASS_USER_AGENT ||
+      process.env.GEOCODING_USER_AGENT ||
+      'Homiio/1.0 (+https://homiio.com)',
   },
 
   // CrowdSource participatory moderation. Off by default: an unconfigured

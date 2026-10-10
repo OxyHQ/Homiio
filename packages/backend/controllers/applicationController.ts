@@ -103,7 +103,9 @@ interface ParsedDocument {
 function isReferenceRelationship(
   value: unknown,
 ): value is (typeof REFERENCE_RELATIONSHIPS)[number] {
-  return typeof value === 'string' && (REFERENCE_RELATIONSHIPS as readonly string[]).includes(value);
+  return (
+    typeof value === 'string' && (REFERENCE_RELATIONSHIPS as readonly string[]).includes(value)
+  );
 }
 
 /** Whether `value` is one of the four declared document types. */
@@ -128,7 +130,11 @@ function parseReferenceContacts(raw: unknown): ParsedReferenceContact[] {
     try {
       value = JSON.parse(value);
     } catch {
-      throw new AppError('referenceContacts must be valid JSON or an array', 400, 'INVALID_REFERENCES');
+      throw new AppError(
+        'referenceContacts must be valid JSON or an array',
+        400,
+        'INVALID_REFERENCES',
+      );
     }
   }
   if (!Array.isArray(value)) {
@@ -137,7 +143,11 @@ function parseReferenceContacts(raw: unknown): ParsedReferenceContact[] {
   return value.map((item, index) => {
     const ref = item as Partial<ParsedReferenceContact>;
     if (!ref?.name || !ref?.relationship || !ref?.phone || !ref?.email) {
-      throw new AppError(`referenceContacts[${index}] is missing required fields`, 400, 'INVALID_REFERENCES');
+      throw new AppError(
+        `referenceContacts[${index}] is missing required fields`,
+        400,
+        'INVALID_REFERENCES',
+      );
     }
     // Narrowed HERE rather than left to `tenant_application_references_
     // relationship_check`: Mongoose validated this enum on `create`, and an
@@ -154,7 +164,7 @@ function parseReferenceContacts(raw: unknown): ParsedReferenceContact[] {
       name: String(ref.name).trim(),
       relationship: ref.relationship,
       phone: String(ref.phone).trim(),
-      email: String(ref.email).trim().toLowerCase()
+      email: String(ref.email).trim().toLowerCase(),
     };
   });
 }
@@ -180,15 +190,23 @@ function parseDocumentsFromBody(raw: unknown): ParsedDocument[] {
   return value.map((item, index) => {
     const doc = item as Partial<ParsedDocument>;
     if (!doc?.type || !doc?.url || !doc?.filename) {
-      throw new AppError(`documents[${index}] is missing required fields`, 400, 'INVALID_DOCUMENTS');
+      throw new AppError(
+        `documents[${index}] is missing required fields`,
+        400,
+        'INVALID_DOCUMENTS',
+      );
     }
     if (!isApplicationDocumentType(doc.type)) {
-      throw new AppError(`documents[${index}] has invalid type "${String(doc.type)}"`, 400, 'INVALID_DOCUMENT_TYPE');
+      throw new AppError(
+        `documents[${index}] has invalid type "${String(doc.type)}"`,
+        400,
+        'INVALID_DOCUMENT_TYPE',
+      );
     }
     return {
       type: doc.type,
       url: doc.url,
-      filename: doc.filename
+      filename: doc.filename,
     };
   });
 }
@@ -213,18 +231,26 @@ function parseDocumentTypes(
     }
   }
   if (!Array.isArray(value)) {
-    throw new AppError('documentTypes must be an array matching uploaded files', 400, 'INVALID_DOCUMENT_TYPES');
+    throw new AppError(
+      'documentTypes must be an array matching uploaded files',
+      400,
+      'INVALID_DOCUMENT_TYPES',
+    );
   }
   if (value.length !== count) {
     throw new AppError(
       `documentTypes length (${value.length}) must match uploaded files length (${count})`,
       400,
-      'INVALID_DOCUMENT_TYPES'
+      'INVALID_DOCUMENT_TYPES',
     );
   }
   return value.map((type, index) => {
     if (!isApplicationDocumentType(type)) {
-      throw new AppError(`documentTypes[${index}] is not a valid document type`, 400, 'INVALID_DOCUMENT_TYPE');
+      throw new AppError(
+        `documentTypes[${index}] is not a valid document type`,
+        400,
+        'INVALID_DOCUMENT_TYPE',
+      );
     }
     return type;
   });
@@ -246,7 +272,7 @@ async function uploadDocumentFiles(
     uploaded.push({
       type,
       url: urls.original,
-      filename: file.originalname
+      filename: file.originalname,
     });
   }
   return uploaded;
@@ -280,19 +306,27 @@ class ApplicationController {
         notes,
         referenceContacts,
         documents,
-        documentTypes
+        documentTypes,
       } = req.body || {};
 
       const db = getDb();
       const property = await findPropertyBookingBasis(db, String(propertyId));
       if (!property) return next(new AppError('Property not found', 404, 'NOT_FOUND'));
-      if (property.isExternal) return next(new AppError('Cannot apply to external listings', 400, 'EXTERNAL_PROPERTY'));
+      if (property.isExternal)
+        return next(new AppError('Cannot apply to external listings', 400, 'EXTERNAL_PROPERTY'));
       if (!property.offerings.includes(OfferingType.LONG_TERM_RENT)) {
-        return next(new AppError('This property is not offered for long-term rent and does not accept applications', 400, 'NOT_APPLICABLE'));
+        return next(
+          new AppError(
+            'This property is not offered for long-term rent and does not accept applications',
+            400,
+            'NOT_APPLICABLE',
+          ),
+        );
       }
 
       const landlordOxyUserId = property.oxyUserId;
-      if (!landlordOxyUserId) return next(new AppError('Property has no landlord', 400, 'INVALID_PROPERTY'));
+      if (!landlordOxyUserId)
+        return next(new AppError('Property has no landlord', 400, 'INVALID_PROPERTY'));
       if (landlordOxyUserId === oxyUserId) {
         return next(new AppError('You cannot apply to your own property', 403, 'FORBIDDEN'));
       }
@@ -306,7 +340,13 @@ class ApplicationController {
         oxyUserId,
       );
       if (existingActive) {
-        return next(new AppError('You already have an active application for this property', 409, 'ALREADY_APPLIED'));
+        return next(
+          new AppError(
+            'You already have an active application for this property',
+            409,
+            'ALREADY_APPLIED',
+          ),
+        );
       }
 
       const moveInDateParsed = new Date(moveInDate);
@@ -350,10 +390,12 @@ class ApplicationController {
       logger.info('Tenant application created', {
         applicationId: hydrated.application.id,
         propertyId: String(propertyId),
-        applicantOxyUserId: oxyUserId
+        applicantOxyUserId: oxyUserId,
       });
 
-      res.status(201).json(successResponse(serializeApplication(hydrated), 'Application submitted'));
+      res
+        .status(201)
+        .json(successResponse(serializeApplication(hydrated), 'Application submitted'));
     } catch (error) {
       next(error);
     }
@@ -383,7 +425,15 @@ class ApplicationController {
         { limit: limitNumber, offset: skip },
       );
 
-      res.json(paginationResponse(result.applications.map(serializeApplication), pageNumber, limitNumber, result.total, 'Applications retrieved'));
+      res.json(
+        paginationResponse(
+          result.applications.map(serializeApplication),
+          pageNumber,
+          limitNumber,
+          result.total,
+          'Applications retrieved',
+        ),
+      );
     } catch (error) {
       next(error);
     }
@@ -607,16 +657,24 @@ class ApplicationController {
       const landlordTransitions = new Set<TenantApplicationStatusValue>([
         TenantApplicationStatus.REVIEWING,
         TenantApplicationStatus.APPROVED,
-        TenantApplicationStatus.REJECTED
+        TenantApplicationStatus.REJECTED,
       ]);
 
       if (landlordTransitions.has(nextStatus)) {
-        if (!isLandlord) return next(new AppError('Only the landlord can perform this transition', 403, 'FORBIDDEN'));
+        if (!isLandlord)
+          return next(
+            new AppError('Only the landlord can perform this transition', 403, 'FORBIDDEN'),
+          );
         if (!ACTIVE_APPLICATION_STATUSES.includes(existing.application.status)) {
-          return next(new AppError('Application is no longer pending review', 400, 'INVALID_STATE'));
+          return next(
+            new AppError('Application is no longer pending review', 400, 'INVALID_STATE'),
+          );
         }
       } else if (nextStatus === TenantApplicationStatus.WITHDRAWN) {
-        if (!isApplicant) return next(new AppError('Only the applicant can withdraw the application', 403, 'FORBIDDEN'));
+        if (!isApplicant)
+          return next(
+            new AppError('Only the applicant can withdraw the application', 403, 'FORBIDDEN'),
+          );
         if (!ACTIVE_APPLICATION_STATUSES.includes(existing.application.status)) {
           return next(new AppError('Application can no longer be withdrawn', 400, 'INVALID_STATE'));
         }
@@ -632,13 +690,9 @@ class ApplicationController {
       // The permitted FROM statuses are in the `UPDATE`'s own predicate, so two
       // landlords deciding at once cannot both succeed; the read above chose the
       // error message, this chooses whether the write happens.
-      const hydrated = await decideApplication(
-        db,
-        id,
-        nextStatus,
-        ACTIVE_APPLICATION_STATUSES,
-        { notes: typeof notes === 'string' ? notes : undefined },
-      );
+      const hydrated = await decideApplication(db, id, nextStatus, ACTIVE_APPLICATION_STATUSES, {
+        notes: typeof notes === 'string' ? notes : undefined,
+      });
       if (!hydrated) {
         return next(new AppError('Application is no longer pending review', 400, 'INVALID_STATE'));
       }
@@ -647,7 +701,7 @@ class ApplicationController {
         applicationId: hydrated.application.id,
         nextStatus,
         byLandlord: isLandlord,
-        byApplicant: isApplicant
+        byApplicant: isApplicant,
       });
 
       res.json(successResponse(serializeApplication(hydrated), 'Application updated'));
@@ -671,14 +725,27 @@ class ApplicationController {
       const oxyUserId = requireSessionOxyUserId(req);
 
       const hydratedApplication = await findApplicationById(getDb(), id);
-      if (!hydratedApplication) return next(new AppError('Application not found', 404, 'NOT_FOUND'));
+      if (!hydratedApplication)
+        return next(new AppError('Application not found', 404, 'NOT_FOUND'));
       const application = hydratedApplication.application;
 
       if (application.landlordOxyUserId !== oxyUserId) {
-        return next(new AppError('Only the landlord can create a lease from this application', 403, 'FORBIDDEN'));
+        return next(
+          new AppError(
+            'Only the landlord can create a lease from this application',
+            403,
+            'FORBIDDEN',
+          ),
+        );
       }
       if (application.status !== TenantApplicationStatus.APPROVED) {
-        return next(new AppError('Application must be approved before creating a lease', 400, 'INVALID_STATE'));
+        return next(
+          new AppError(
+            'Application must be approved before creating a lease',
+            400,
+            'INVALID_STATE',
+          ),
+        );
       }
 
       // Both the application and the lease are Postgres now. The application is
@@ -695,7 +762,13 @@ class ApplicationController {
         ACTIVE_LEASE_STATUSES,
       );
       if (existingLease) {
-        return next(new AppError('A lease already exists for this tenant and property', 409, 'LEASE_ALREADY_EXISTS'));
+        return next(
+          new AppError(
+            'A lease already exists for this tenant and property',
+            409,
+            'LEASE_ALREADY_EXISTS',
+          ),
+        );
       }
 
       const startDate = new Date(application.moveInDate as string | number | Date);
@@ -709,7 +782,13 @@ class ApplicationController {
       // ordinary state rather than a defect.
       const monthlyRent = property.longTermRentMonthlyAmount;
       if (monthlyRent === null) {
-        return next(new AppError('Property has no long-term rent price to base the lease on', 400, 'INVALID_PROPERTY'));
+        return next(
+          new AppError(
+            'Property has no long-term rent price to base the lease on',
+            400,
+            'INVALID_PROPERTY',
+          ),
+        );
       }
       const currency =
         property.longTermRentCurrency && LEASE_CURRENCIES.has(property.longTermRentCurrency)
@@ -736,10 +815,12 @@ class ApplicationController {
       logger.info('Lease draft created from application', {
         applicationId: application.id,
         leaseId: hydrated.lease.id,
-        landlordOxyUserId: oxyUserId
+        landlordOxyUserId: oxyUserId,
       });
 
-      res.status(201).json(successResponse(serializeLease(hydrated), 'Lease draft created from application'));
+      res
+        .status(201)
+        .json(successResponse(serializeLease(hydrated), 'Lease draft created from application'));
     } catch (error) {
       next(error);
     }

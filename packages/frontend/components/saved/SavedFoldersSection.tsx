@@ -72,7 +72,11 @@ interface SavedFoldersSectionProps {
   loading: boolean;
 }
 
-export function SavedFoldersSection({ folders, savedProperties, loading }: SavedFoldersSectionProps) {
+export function SavedFoldersSection({
+  folders,
+  savedProperties,
+  loading,
+}: SavedFoldersSectionProps) {
   const { t } = useTranslation();
   const theme = useTheme();
   const [width, setWidth] = useState(0);
@@ -91,7 +95,10 @@ export function SavedFoldersSection({ folders, savedProperties, loading }: Saved
     return covers;
   }, [savedProperties]);
 
-  const onLayout = useCallback((event: LayoutChangeEvent) => setWidth(event.nativeEvent.layout.width), []);
+  const onLayout = useCallback(
+    (event: LayoutChangeEvent) => setWidth(event.nativeEvent.layout.width),
+    [],
+  );
   const columns = folderColumns(width);
 
   let body: React.ReactNode;
@@ -138,7 +145,13 @@ export function SavedFoldersSection({ folders, savedProperties, loading }: Saved
     <SavedSection
       title={t('saved.sections.folders')}
       action={
-        <Button size="sm" leadingIcon={RiAddLine} onPress={() => setCreating(true)} tone="neutral" appearance="outline">
+        <Button
+          size="sm"
+          leadingIcon={RiAddLine}
+          onPress={() => setCreating(true)}
+          tone="neutral"
+          appearance="outline"
+        >
           {t('saved.createFolder')}
         </Button>
       }

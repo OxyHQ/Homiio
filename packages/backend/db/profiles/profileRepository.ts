@@ -288,7 +288,10 @@ export async function findHydratedProfilesByOxyUserIds(
     .select(profileSelection())
     .from(profiles)
     .where(inArray(profiles.oxyUserId, [...oxyUserIds]));
-  const children = await loadChildrenByProfileId(db, rows.map((row) => row.id));
+  const children = await loadChildrenByProfileId(
+    db,
+    rows.map((row) => row.id),
+  );
   for (const row of rows) {
     hydrated.set(row.oxyUserId, { profile: row, ...(children.get(row.id) ?? emptyChildren()) });
   }
@@ -384,10 +387,7 @@ function roommateCandidateFilter(query: RoommateCandidateQuery): SQL | undefined
 
   if (query.location) {
     conditions.push(
-      ilike(
-        profiles.settingsRoommatePreferencesLocation,
-        `%${escapeLikePattern(query.location)}%`,
-      ),
+      ilike(profiles.settingsRoommatePreferencesLocation, `%${escapeLikePattern(query.location)}%`),
     );
   }
 
@@ -463,13 +463,13 @@ export async function searchRoommateCandidates(
       .orderBy(desc(profiles.updatedAt), asc(profiles.id))
       .limit(query.limit)
       .offset(query.offset),
-    db
-      .select({ total: sql<number>`count(*)::int` })
-      .from(profiles)
-      .where(filter),
+    db.select({ total: sql<number>`count(*)::int` }).from(profiles).where(filter),
   ]);
 
-  const children = await loadChildrenByProfileId(db, rows.map((row) => row.id));
+  const children = await loadChildrenByProfileId(
+    db,
+    rows.map((row) => row.id),
+  );
   return {
     candidates: rows.map((row) => ({
       profile: row,
@@ -667,7 +667,11 @@ export async function appendProfileChatTurn(
   profileId: string,
   turn: { readonly userMessage: string; readonly assistantMessage: string },
 ): Promise<void> {
-  await db.select({ id: profiles.id }).from(profiles).where(eq(profiles.id, profileId)).for('update');
+  await db
+    .select({ id: profiles.id })
+    .from(profiles)
+    .where(eq(profiles.id, profileId))
+    .for('update');
 
   // `::double precision` for the same reason `conversation_messages` casts to
   // `::int`: an aggregate's driver representation is not the column's, and a

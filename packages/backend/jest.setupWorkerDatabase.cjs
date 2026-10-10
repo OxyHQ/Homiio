@@ -52,7 +52,4 @@ process.env.DATABASE_URL = urls[index];
  * variable and exports the resolved path; tests import that constant rather than
  * rebuilding it, so there is one authority instead of three.
  */
-process.env.HOMIIO_LOCAL_IMAGE_STORE_DIR = path.join(
-  __dirname,
-  `.local-image-store-w${workerId}`,
-);
+process.env.HOMIIO_LOCAL_IMAGE_STORE_DIR = path.join(__dirname, `.local-image-store-w${workerId}`);

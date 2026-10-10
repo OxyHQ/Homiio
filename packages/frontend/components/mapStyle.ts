@@ -67,8 +67,7 @@ const ORDERING_OPERATORS = ['<', '<=', '>', '>='] as const;
 type OrderingOperator = (typeof ORDERING_OPERATORS)[number];
 
 const isOrderingOperator = (value: unknown): value is OrderingOperator =>
-  typeof value === 'string' &&
-  (ORDERING_OPERATORS as readonly string[]).includes(value);
+  typeof value === 'string' && (ORDERING_OPERATORS as readonly string[]).includes(value);
 
 /**
  * A node inside a MapLibre filter / expression. Filters are JSON, so we model a
@@ -76,13 +75,7 @@ const isOrderingOperator = (value: unknown): value is OrderingOperator =>
  * concrete shapes we rewrite (`["get", <prop>]` and ordering comparisons). This
  * keeps the transform fully typed without `as any`.
  */
-type FilterNode =
-  | string
-  | number
-  | boolean
-  | null
-  | FilterNode[]
-  | { [key: string]: FilterNode };
+type FilterNode = string | number | boolean | null | FilterNode[] | { [key: string]: FilterNode };
 
 /** A two-operand ordering comparison expression, e.g. `[">=", <a>, <b>]`. */
 type OrderingComparison = [OrderingOperator, FilterNode, FilterNode];
@@ -202,9 +195,7 @@ export const sanitizeMapStyle = (style: StyleSpecification): StyleSpecification 
  * caller can fall back to loading the raw URL (worst case: the original noisy
  * log returns, but the map still renders).
  */
-export const fetchSanitizedMapStyle = async (
-  styleURL: string,
-): Promise<StyleSpecification> => {
+export const fetchSanitizedMapStyle = async (styleURL: string): Promise<StyleSpecification> => {
   const response = await fetch(styleURL);
   if (!response.ok) {
     throw new Error(`Failed to load map style (${response.status}) from ${styleURL}`);

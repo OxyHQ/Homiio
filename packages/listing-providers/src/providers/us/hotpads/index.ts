@@ -25,7 +25,11 @@ import type {
   RawListing,
 } from '../../../types';
 import { createFetchRuntime } from '../../../runtime';
-import { defaultProviderMetrics, type ProviderMetricsReader, type ProviderMetricsSink } from '../../../metrics';
+import {
+  defaultProviderMetrics,
+  type ProviderMetricsReader,
+  type ProviderMetricsSink,
+} from '../../../metrics';
 import { cityToResourceSlug, DEFAULT_US_CITIES } from '../portals';
 import {
   hotpadsAreaUrl,
@@ -94,7 +98,11 @@ function asHotpadsRaw(payload: unknown): HotpadsRaw {
   return payload as HotpadsRaw;
 }
 
-async function fetchArea(runtime: FetchRuntime, city: string, signal?: AbortSignal): Promise<HotpadsArea> {
+async function fetchArea(
+  runtime: FetchRuntime,
+  city: string,
+  signal?: AbortSignal,
+): Promise<HotpadsArea> {
   const resourceId = cityToResourceSlug(city);
   const { status, body } = await runtime.fetchHttp(hotpadsAreaUrl(resourceId), { signal });
   if (status >= 400 || isHotpadsApiChallenge(body)) {

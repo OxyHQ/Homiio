@@ -102,7 +102,11 @@ import {
   ofAgency,
   visibleModeration,
 } from '../db/reviews/reviewReads';
-import { reviewAudienceFor, serializeReview, type HydratedReview } from '../db/reviews/reviewSerializer';
+import {
+  reviewAudienceFor,
+  serializeReview,
+  type HydratedReview,
+} from '../db/reviews/reviewSerializer';
 import {
   countBuildingsOnStreet,
   getAgencyStats,
@@ -126,11 +130,16 @@ import {
 } from '../db/reviews/reviewWrites';
 import { describeErrorForLog } from '../middlewares/errorHandler';
 
-const ok = (res: Response, data: Record<string, unknown>) => res.status(200).json({ success: true, ...data });
-const created = (res: Response, data: Record<string, unknown>) => res.status(201).json({ success: true, ...data });
-const badRequest = (res: Response, data: Record<string, unknown>) => res.status(400).json({ success: false, ...data });
-const notFound = (res: Response, data: Record<string, unknown>) => res.status(404).json({ success: false, ...data });
-const serverError = (res: Response, data: Record<string, unknown>) => res.status(500).json({ success: false, ...data });
+const ok = (res: Response, data: Record<string, unknown>) =>
+  res.status(200).json({ success: true, ...data });
+const created = (res: Response, data: Record<string, unknown>) =>
+  res.status(201).json({ success: true, ...data });
+const badRequest = (res: Response, data: Record<string, unknown>) =>
+  res.status(400).json({ success: false, ...data });
+const notFound = (res: Response, data: Record<string, unknown>) =>
+  res.status(404).json({ success: false, ...data });
+const serverError = (res: Response, data: Record<string, unknown>) =>
+  res.status(500).json({ success: false, ...data });
 
 const MIN_TITLE_LENGTH = 5;
 const MIN_OPINION_LENGTH = 10;
@@ -268,7 +277,11 @@ async function loadHierarchy(
   if (address.addressLevel === 'BUILDING') {
     const [buildingReviews, unitReviews, aggregatedStats] = await Promise.all([
       findReviews({
-        where: allOfReviews([atBuildingLevel(address.id), levelIs('BUILDING'), visibleModeration()]),
+        where: allOfReviews([
+          atBuildingLevel(address.id),
+          levelIs('BUILDING'),
+          visibleModeration(),
+        ]),
         orderBy: [NEWEST_REVIEWS_FIRST],
         viewer,
       }),
@@ -304,8 +317,13 @@ interface HierarchyAddress {
  * because drizzle types every GENERATED column as nullable and a narrowing
  * silently widened to `string` is how a level ends up mis-filed.
  */
-async function findHierarchyAddress(addressId: string): Promise<HierarchyAddress | null | undefined> {
-  const [address] = await selectAddressWithGeoNames({ where: eq(addresses.id, addressId), limit: 1 });
+async function findHierarchyAddress(
+  addressId: string,
+): Promise<HierarchyAddress | null | undefined> {
+  const [address] = await selectAddressWithGeoNames({
+    where: eq(addresses.id, addressId),
+    limit: 1,
+  });
   if (!address) return undefined;
   const addressLevel = address.addressLevel;
   if (addressLevel !== 'STREET' && addressLevel !== 'BUILDING' && addressLevel !== 'UNIT') {
@@ -475,18 +493,30 @@ export const createReview = async (req: Request, res: Response) => {
     const addressData = (req.body || {}).address as Record<string, string> | undefined;
     const picked = pickFields<Record<string, unknown>>(req.body, CREATABLE_REVIEW_FIELDS);
 
-    if (!addressData || !addressData.street || !addressData.city || !addressData.postal_code || !addressData.country) {
-      return badRequest(res, { message: 'Address information is required (street, city, postal_code, country)' });
+    if (
+      !addressData ||
+      !addressData.street ||
+      !addressData.city ||
+      !addressData.postal_code ||
+      !addressData.country
+    ) {
+      return badRequest(res, {
+        message: 'Address information is required (street, city, postal_code, country)',
+      });
     }
 
     const title = typeof picked.title === 'string' ? picked.title.trim() : '';
     if (title.length < MIN_TITLE_LENGTH) {
-      return badRequest(res, { message: `Title must be at least ${MIN_TITLE_LENGTH} characters long` });
+      return badRequest(res, {
+        message: `Title must be at least ${MIN_TITLE_LENGTH} characters long`,
+      });
     }
 
     const opinion = typeof picked.opinion === 'string' ? picked.opinion.trim() : '';
     if (opinion.length < MIN_OPINION_LENGTH) {
-      return badRequest(res, { message: `Opinion must be at least ${MIN_OPINION_LENGTH} characters long` });
+      return badRequest(res, {
+        message: `Opinion must be at least ${MIN_OPINION_LENGTH} characters long`,
+      });
     }
 
     // The submitted agency NAME is a write-only input: it is resolved into a
@@ -500,17 +530,34 @@ export const createReview = async (req: Request, res: Response) => {
       return badRequest(res, { message: 'Validation error', errors: normalized.errors });
     }
 
-    let coordinates = addressData.latitude && addressData.longitude
-      ? { type: 'Point' as const, coordinates: [parseFloat(addressData.longitude), parseFloat(addressData.latitude)] as [number, number] }
-      : undefined;
+    let coordinates =
+      addressData.latitude && addressData.longitude
+        ? {
+            type: 'Point' as const,
+            coordinates: [parseFloat(addressData.longitude), parseFloat(addressData.latitude)] as [
+              number,
+              number,
+            ],
+          }
+        : undefined;
 
     if (!coordinates) {
-      const query = [addressData.street, addressData.number, addressData.city, addressData.state, addressData.postal_code, addressData.country]
+      const query = [
+        addressData.street,
+        addressData.number,
+        addressData.city,
+        addressData.state,
+        addressData.postal_code,
+        addressData.country,
+      ]
         .filter(Boolean)
         .join(', ');
       const geocoded = await forwardGeocode(query);
       if (!geocoded.success || !geocoded.data?.coordinates) {
-        return badRequest(res, { message: 'Could not resolve coordinates for the address; please include latitude and longitude' });
+        return badRequest(res, {
+          message:
+            'Could not resolve coordinates for the address; please include latitude and longitude',
+        });
       }
       coordinates = { type: 'Point', coordinates: geocoded.data.coordinates };
     }
@@ -535,7 +582,9 @@ export const createReview = async (req: Request, res: Response) => {
     // narrowing on a PROPERTY at every function boundary.
     const addressLevel = address.addressLevel;
     if (addressLevel !== 'BUILDING' && addressLevel !== 'UNIT') {
-      return badRequest(res, { message: 'Reviews can only be created at BUILDING or UNIT level addresses' });
+      return badRequest(res, {
+        message: 'Reviews can only be created at BUILDING or UNIT level addresses',
+      });
     }
 
     const hierarchy = await resolveAddressHierarchy(address);
@@ -772,7 +821,10 @@ export const toggleHelpful = async (req: Request, res: Response) => {
       return badRequest(res, { message: 'You cannot mark your own review as helpful' });
     }
 
-    const { helpfulCount, viewerHasVotedHelpful } = await toggleHelpfulVote({ reviewId, oxyUserId });
+    const { helpfulCount, viewerHasVotedHelpful } = await toggleHelpfulVote({
+      reviewId,
+      oxyUserId,
+    });
 
     // Notify the author on a NEW helpful vote only (never on un-vote, never for
     // one's own review — already rejected above). Best-effort.
@@ -830,7 +882,10 @@ export const reportReview = async (req: Request, res: Response) => {
     // count of these rows crossing three is what flips the review to
     // `under_review` — see `db/moderation/reviewReportRepository.ts`.
     if (await hasReportedReview(reviewId, oxyUserId)) {
-      return ok(res, { message: 'Report already submitted', moderationStatus: review.moderationStatus });
+      return ok(res, {
+        message: 'Report already submitted',
+        moderationStatus: review.moderationStatus,
+      });
     }
 
     /**
@@ -880,12 +935,18 @@ export const reportReview = async (req: Request, res: Response) => {
         error instanceof DuplicateReviewReportError ||
         error instanceof DuplicateModerationReportError
       ) {
-        return ok(res, { message: 'Report already submitted', moderationStatus: review.moderationStatus });
+        return ok(res, {
+          message: 'Report already submitted',
+          moderationStatus: review.moderationStatus,
+        });
       }
       throw error;
     }
 
-    return created(res, { message: 'Report submitted', moderationStatus: outcome.moderationStatus });
+    return created(res, {
+      message: 'Report submitted',
+      moderationStatus: outcome.moderationStatus,
+    });
   } catch (error) {
     logger.error('Error reporting review', { error: describeErrorForLog(error) });
     return serverError(res, { message: 'Failed to report review' });

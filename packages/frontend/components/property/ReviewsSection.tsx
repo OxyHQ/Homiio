@@ -70,10 +70,7 @@ export const ReviewsSection: React.FC<ReviewsSectionProps> = ({
     : null;
 
   const stats = useMemo(() => placeReviewStats(reviews), [reviews]);
-  const visibleReviews = useMemo(
-    () => reviews.slice(0, maxVisible),
-    [reviews, maxVisible],
-  );
+  const visibleReviews = useMemo(() => reviews.slice(0, maxVisible), [reviews, maxVisible]);
 
   if (!addressId) return null;
 
@@ -109,9 +106,24 @@ export const ReviewsSection: React.FC<ReviewsSectionProps> = ({
             {Array.from({ length: 4 }).map((_, idx) => (
               <View key={idx} style={styles.skeletonCard}>
                 <Skeleton.Box width="60%" height={14} borderRadius={4} />
-                <Skeleton.Box width="100%" height={12} borderRadius={4} style={styles.skeletonLine} />
-                <Skeleton.Box width="85%" height={12} borderRadius={4} style={styles.skeletonLine} />
-                <Skeleton.Box width="70%" height={12} borderRadius={4} style={styles.skeletonLine} />
+                <Skeleton.Box
+                  width="100%"
+                  height={12}
+                  borderRadius={4}
+                  style={styles.skeletonLine}
+                />
+                <Skeleton.Box
+                  width="85%"
+                  height={12}
+                  borderRadius={4}
+                  style={styles.skeletonLine}
+                />
+                <Skeleton.Box
+                  width="70%"
+                  height={12}
+                  borderRadius={4}
+                  style={styles.skeletonLine}
+                />
               </View>
             ))}
           </View>
@@ -150,7 +162,9 @@ export const ReviewsSection: React.FC<ReviewsSectionProps> = ({
                 <Button
                   onPress={handleViewAll}
                   size="md"
-                  accessibilityLabel={t('property.reviews.showAll', { count: reviews.length })} tone="neutral" appearance="outline"
+                  accessibilityLabel={t('property.reviews.showAll', { count: reviews.length })}
+                  tone="neutral"
+                  appearance="outline"
                 >
                   {t('property.reviews.showAll', { count: reviews.length })}
                 </Button>

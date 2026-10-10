@@ -27,7 +27,11 @@ import type {
   RawListing,
 } from './types';
 import { createFetchRuntime } from './runtime';
-import { defaultProviderMetrics, type ProviderMetricsReader, type ProviderMetricsSink } from './metrics';
+import {
+  defaultProviderMetrics,
+  type ProviderMetricsReader,
+  type ProviderMetricsSink,
+} from './metrics';
 import {
   isNaventChallenge,
   naventPostingDetailApiUrls,
@@ -99,7 +103,8 @@ export function createNaventProvider(options: NaventProviderFactoryOptions): Lis
   const cities =
     options.cities && options.cities.length > 0 ? options.cities : options.defaultCities;
   const metrics = options.metrics ?? defaultProviderMetrics;
-  const buildSearch = options.searchUrl ?? ((city, page, kind) => defaultSearchUrl(options.site, city, page, kind));
+  const buildSearch =
+    options.searchUrl ?? ((city, page, kind) => defaultSearchUrl(options.site, city, page, kind));
 
   let stickyProxySessionId: string | undefined;
   let stickyStorageState: BrowserStorageState | undefined;

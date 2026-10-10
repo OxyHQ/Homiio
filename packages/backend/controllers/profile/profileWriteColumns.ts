@@ -127,8 +127,9 @@ function asMember<T extends string>(value: unknown, vocabulary: readonly T[]): T
 /** A string array filtered to a declared vocabulary. `null` when the key is absent. */
 function asMemberArray<T extends string>(value: unknown, vocabulary: readonly T[]): T[] | null {
   if (!Array.isArray(value)) return null;
-  return value.filter((entry): entry is T =>
-    typeof entry === 'string' && (vocabulary as readonly string[]).includes(entry),
+  return value.filter(
+    (entry): entry is T =>
+      typeof entry === 'string' && (vocabulary as readonly string[]).includes(entry),
   );
 }
 
@@ -382,7 +383,8 @@ export function toProfileUpdate(body: unknown): ProfileUpdate {
     // `preferredLocations` lives INSIDE the preferences block in the wire shape
     // and in its own table here, so it is replaced exactly when that block is
     // present — which is what assigning the block did in Mongo.
-    update.preferredLocations = mapEntries(preferences.preferredLocations, toPreferredLocation) ?? [];
+    update.preferredLocations =
+      mapEntries(preferences.preferredLocations, toPreferredLocation) ?? [];
   }
 
   const verification = block(personalProfile.verification);

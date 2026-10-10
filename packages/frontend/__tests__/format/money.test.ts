@@ -211,9 +211,13 @@ describe('formatPrice — the frequency comes from the priced block, never the s
   it('maps every stored PriceUnit onto a display frequency', () => {
     // Exhaustive on purpose: a new PriceUnit member must fail to compile in
     // `priceFrequencyFromPriceUnit` rather than fall through to a default.
-    expect(Object.values(PriceUnit).map(priceFrequencyFromPriceUnit).sort()).toEqual(
-      ['day', 'month', 'night', 'week', 'year'],
-    );
+    expect(Object.values(PriceUnit).map(priceFrequencyFromPriceUnit).sort()).toEqual([
+      'day',
+      'month',
+      'night',
+      'week',
+      'year',
+    ]);
   });
 });
 

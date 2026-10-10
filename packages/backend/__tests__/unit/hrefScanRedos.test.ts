@@ -57,7 +57,10 @@ describe('detailIds matches the regex it replaced', () => {
     // An oracle comparison passes when BOTH return nothing, which is precisely
     // the regression worth fearing here.
     expect([...detailIds(SEARCH_PAGE, 'inmueble')]).toEqual([
-      '12345678', '87654321', '11112222', '12345678',
+      '12345678',
+      '87654321',
+      '11112222',
+      '12345678',
     ]);
   });
 
@@ -126,8 +129,9 @@ describe('the scan is linear where the old pattern was quadratic', () => {
   });
 
   it('still finishes fast when the page is large AND well-formed', () => {
-    const html = '<a href="/alquiler-viviendas/barcelona/pagina-2.htm">x</a>'.repeat(40_000)
-      + '<a href="/inmueble/424242/">real</a>';
+    const html =
+      '<a href="/alquiler-viviendas/barcelona/pagina-2.htm">x</a>'.repeat(40_000) +
+      '<a href="/inmueble/424242/">real</a>';
 
     const started = Date.now();
     const ids = [...detailIds(html, 'inmueble')];

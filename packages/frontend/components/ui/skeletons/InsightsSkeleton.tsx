@@ -9,9 +9,17 @@ export function InsightsSkeleton() {
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: colors.primaryLight }}
-      contentContainerStyle={{ paddingBottom: 24 }}>
+      contentContainerStyle={{ paddingBottom: 24 }}
+    >
       {/* Header */}
-      <View style={{ paddingHorizontal: 20, paddingBottom: 20, paddingTop: insets.top + 20, alignItems: 'center' }}>
+      <View
+        style={{
+          paddingHorizontal: 20,
+          paddingBottom: 20,
+          paddingTop: insets.top + 20,
+          alignItems: 'center',
+        }}
+      >
         <Skeleton.Box width={200} height={28} style={{ marginBottom: 8 }} />
         <Skeleton.Box width={150} height={16} />
       </View>
@@ -28,7 +36,8 @@ export function InsightsSkeleton() {
               borderRadius: 12,
               borderWidth: 1,
               borderColor: colors.border,
-            }}>
+            }}
+          >
             <Skeleton.Box width={40} height={40} borderRadius={20} style={{ marginBottom: 12 }} />
             <Skeleton.Box width={60} height={24} style={{ marginBottom: 8 }} />
             <Skeleton.Box width="80%" height={14} />
@@ -45,7 +54,8 @@ export function InsightsSkeleton() {
             borderRadius: 12,
             borderWidth: 1,
             borderColor: colors.border,
-          }}>
+          }}
+        >
           <Skeleton.Box width={150} height={20} style={{ marginBottom: 16 }} />
           <Skeleton.Box width="100%" height={200} borderRadius={8} />
         </View>
@@ -65,7 +75,8 @@ export function InsightsSkeleton() {
               overflow: 'hidden',
               borderWidth: 1,
               borderColor: colors.border,
-            }}>
+            }}
+          >
             <View style={{ flexDirection: 'row' }}>
               <Skeleton.Box width={100} height={80} borderRadius={0} />
               <View style={{ flex: 1, padding: 12 }}>
@@ -79,7 +90,8 @@ export function InsightsSkeleton() {
                     flexDirection: 'row',
                     justifyContent: 'space-between',
                     alignItems: 'center',
-                  }}>
+                  }}
+                >
                   <Skeleton.Box width={80} height={20} borderRadius={4} />
                   <Skeleton.Box width={60} height={14} />
                 </View>

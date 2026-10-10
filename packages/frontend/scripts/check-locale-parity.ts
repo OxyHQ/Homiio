@@ -4,8 +4,18 @@ import { fileURLToPath } from 'node:url';
 
 const LOCALES_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', 'locales');
 const LOCALES = [
-  'en', 'es', 'ca-ES', 'it', 'zh-CN', 'hi-IN', 'fr-FR', 'ar', 'bn-BD',
-  'pt-BR', 'ru-RU', 'id-ID',
+  'en',
+  'es',
+  'ca-ES',
+  'it',
+  'zh-CN',
+  'hi-IN',
+  'fr-FR',
+  'ar',
+  'bn-BD',
+  'pt-BR',
+  'ru-RU',
+  'id-ID',
 ] as const;
 
 function flattenKeys(obj: Record<string, unknown>, prefix = ''): Set<string> {
@@ -29,7 +39,9 @@ function flattenKeys(obj: Record<string, unknown>, prefix = ''): Set<string> {
 
 function loadKeys(locale: (typeof LOCALES)[number]): Set<string> {
   const file = locale === 'en' ? 'en.json' : `${locale}.json`;
-  return flattenKeys(JSON.parse(readFileSync(join(LOCALES_DIR, file), 'utf8')) as Record<string, unknown>);
+  return flattenKeys(
+    JSON.parse(readFileSync(join(LOCALES_DIR, file), 'utf8')) as Record<string, unknown>,
+  );
 }
 
 const enKeys = loadKeys('en');

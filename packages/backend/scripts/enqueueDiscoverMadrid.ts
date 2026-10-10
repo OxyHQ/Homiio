@@ -115,7 +115,13 @@ async function main(): Promise<void> {
     enqueued.push(jobId);
   }
 
-  const counts = await discoverQueue.getJobCounts('waiting', 'active', 'completed', 'failed', 'delayed');
+  const counts = await discoverQueue.getJobCounts(
+    'waiting',
+    'active',
+    'completed',
+    'failed',
+    'delayed',
+  );
   console.log(
     JSON.stringify({
       releasedStaleActive: released,

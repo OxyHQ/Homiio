@@ -436,9 +436,7 @@ describe('idempotency', () => {
       rules: [{ type: 'price_decrease', enabled: true, threshold: 1 }],
     });
 
-    const before = await db
-      .select({ value: sql<number>`count(*)::int` })
-      .from(housingDomainEvents);
+    const before = await db.select({ value: sql<number>`count(*)::int` }).from(housingDomainEvents);
     const snapshot = {
       id: `property-${uuidv7()}`,
       title: 'Flat',
@@ -509,14 +507,8 @@ describe('cooldown', () => {
     // DIFFERENT transitions on one subject under the windowless rule must both
     // land, which is what a NULL bucket permits and a sentinel bucket would not.
     const subjectId = `property-${uuidv7()}`;
-    await matchDomainEvent(
-      await recordEvent({ subjectId, transition: { title: 'Flat A' } }),
-      db,
-    );
-    await matchDomainEvent(
-      await recordEvent({ subjectId, transition: { title: 'Flat B' } }),
-      db,
-    );
+    await matchDomainEvent(await recordEvent({ subjectId, transition: { title: 'Flat A' } }), db);
+    await matchDomainEvent(await recordEvent({ subjectId, transition: { title: 'Flat B' } }), db);
 
     const alerts = await alertsFor(owner);
     expect(alerts).toHaveLength(2);
@@ -720,7 +712,7 @@ describe('digest', () => {
     expect(await notificationsFor(owner)).toHaveLength(1);
   });
 
-  it('leaves another cadence\'s pending alerts alone', async () => {
+  it("leaves another cadence's pending alerts alone", async () => {
     // A pending alert whose watch is weekly must not arrive inside somebody's
     // daily digest. The bug this guards is a digest that reads every `pending`
     // row rather than every pending row FOR THIS CADENCE.
@@ -1002,7 +994,7 @@ describe('the watch surface #353 and the push deep link read', () => {
     expect(primary[0].id).not.toBe(first.id);
   });
 
-  it('round-trips its deep link through ADR 0002\'s own parser', async () => {
+  it("round-trips its deep link through ADR 0002's own parser", async () => {
     const watch = await createWatch(oxy(), 'Eixample');
     const token = watch.locToken;
     expect(typeof token).toBe('string');
@@ -1075,7 +1067,7 @@ describe('the watch surface #353 and the push deep link read', () => {
     expect(why.body.data.event.type).toBe('new_listing');
   });
 
-  it('refuses somebody else\'s alert with a 404', async () => {
+  it("refuses somebody else's alert with a 404", async () => {
     const owner = oxy();
     await createWatch(owner, 'Eixample');
     await matchDomainEvent(await recordEvent(), db);
@@ -1225,15 +1217,19 @@ describe('the producer', () => {
     // Opaque generated IDs can contain these digits without publishing an amount.
     // Check the narrative and the typed cost detail, not the row's identifiers.
     const data = notification.data as Record<string, unknown>;
-    expect(data.explanation).toEqual(expect.objectContaining({
-      detail: { kind: 'cost_terms_changed', listingTitle: 'Flat', terms: ['deposit'] },
-    }));
-    expect(JSON.stringify({
-      title: notification.title,
-      message: notification.message,
-      explanation: data.explanation,
-      push: data.push,
-    })).not.toContain('9999');
+    expect(data.explanation).toEqual(
+      expect.objectContaining({
+        detail: { kind: 'cost_terms_changed', listingTitle: 'Flat', terms: ['deposit'] },
+      }),
+    );
+    expect(
+      JSON.stringify({
+        title: notification.title,
+        message: notification.message,
+        explanation: data.explanation,
+        push: data.push,
+      }),
+    ).not.toContain('9999');
   });
 });
 
@@ -1304,7 +1300,7 @@ describe('legacy saved searches', () => {
 // ---------------------------------------------------------------------------
 
 describe('ownership', () => {
-  it('never delivers one person\'s alert to another', async () => {
+  it("never delivers one person's alert to another", async () => {
     const owner = oxy();
     const stranger = oxy();
     await createWatch(owner, 'Eixample');
@@ -1324,7 +1320,7 @@ describe('ownership', () => {
     expect(await alertsFor(stranger)).toHaveLength(0);
   });
 
-  it('refuses to let a stranger mute somebody else\'s watch', async () => {
+  it("refuses to let a stranger mute somebody else's watch", async () => {
     const owner = oxy();
     const watch = await createWatch(owner, 'Eixample');
 
@@ -1336,7 +1332,9 @@ describe('ownership', () => {
     const [row] = await db
       .select()
       .from(savedSearchesTable)
-      .where(and(eq(savedSearchesTable.id, String(watch.id)), eq(savedSearchesTable.oxyUserId, owner)));
+      .where(
+        and(eq(savedSearchesTable.id, String(watch.id)), eq(savedSearchesTable.oxyUserId, owner)),
+      );
     expect(row.cadence).toBe('instant');
   });
 });

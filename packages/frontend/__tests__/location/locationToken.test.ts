@@ -37,7 +37,11 @@ import {
 
 type PlaceSelection = Extract<LocationSelection, { kind: 'place' }>;
 
-const PLACE_LABEL: PlaceLabel = { primary: 'Barcelona', secondary: 'Catalonia, Spain', kind: 'place' };
+const PLACE_LABEL: PlaceLabel = {
+  primary: 'Barcelona',
+  secondary: 'Catalonia, Spain',
+  kind: 'place',
+};
 
 /** Unwrap a result, failing loudly with the reason rather than on `undefined`. */
 function expectOk<T>(result: LocationTokenResult<T>): T {
@@ -220,7 +224,19 @@ describe('loc token: a selection serialises to its reference', () => {
   it('propagates that refusal out of a multi_area containing a polygon', () => {
     const polygon: Extract<LocationSelection, { kind: 'polygon' }> = {
       kind: 'polygon',
-      polygon: { type: 'MultiPolygon', coordinates: [[[[0, 0], [1, 0], [1, 1], [0, 0]]]] },
+      polygon: {
+        type: 'MultiPolygon',
+        coordinates: [
+          [
+            [
+              [0, 0],
+              [1, 0],
+              [1, 1],
+              [0, 0],
+            ],
+          ],
+        ],
+      },
       bounds: { west: 0, south: 0, east: 1, north: 1 },
       label: { primary: 'Drawn area', kind: 'generated' },
       precision: 'area',
@@ -248,7 +264,12 @@ describe('loc token: a selection serialises to its reference', () => {
         kind: 'multi_area',
         areas: [
           BARCELONA_ES,
-          { kind: 'current_location', center: { longitude: 0, latitude: 0 }, radiusMeters: 25000, precision: 'exact' },
+          {
+            kind: 'current_location',
+            center: { longitude: 0, latitude: 0 },
+            radiusMeters: 25000,
+            precision: 'exact',
+          },
         ],
         label: { primary: '2 areas', kind: 'generated' },
       }),
@@ -257,7 +278,12 @@ describe('loc token: a selection serialises to its reference', () => {
       serializeLocationToken({
         kind: 'multi_area',
         areas: [
-          { kind: 'current_location', center: { longitude: 0, latitude: 0 }, radiusMeters: 25000, precision: 'exact' },
+          {
+            kind: 'current_location',
+            center: { longitude: 0, latitude: 0 },
+            radiusMeters: 25000,
+            precision: 'exact',
+          },
           BARCELONA_ES,
         ],
         label: { primary: '2 areas', kind: 'generated' },
@@ -480,7 +506,9 @@ describe('bounds validation: west > east is legal, south > north is not', () => 
 
   it('rejects a non-finite component', () => {
     expect(isValidBounds({ west: Number.NaN, south: 0, east: 1, north: 10 })).toBe(false);
-    expect(isValidBounds({ west: 0, south: 0, east: Number.POSITIVE_INFINITY, north: 10 })).toBe(false);
+    expect(isValidBounds({ west: 0, south: 0, east: Number.POSITIVE_INFINITY, north: 10 })).toBe(
+      false,
+    );
   });
 
   it('validates the two coordinate ranges separately', () => {

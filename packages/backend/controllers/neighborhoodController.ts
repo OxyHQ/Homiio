@@ -87,7 +87,6 @@ interface RentStats {
   rentAvg: number | null;
 }
 
-
 /** The neighborhood columns every response reads. */
 const NEIGHBORHOOD_COLUMNS = {
   id: neighborhoods.id,
@@ -129,7 +128,10 @@ async function rentStatsForAddresses(addressScope: SQL): Promise<RentStats> {
     );
   if (!row) return { listingCount: 0, rentAvg: null };
   // postgres.js returns `numeric` aggregates as strings.
-  return { listingCount: row.listingCount, rentAvg: row.rentAvg === null ? null : Number(row.rentAvg) };
+  return {
+    listingCount: row.listingCount,
+    rentAvg: row.rentAvg === null ? null : Number(row.rentAvg),
+  };
 }
 
 /** Resolve a city's display name + currency (once per city, via the caches). */
@@ -143,7 +145,10 @@ async function resolveCityInfo(cityId: string): Promise<CityInfo> {
 }
 
 /** Build the neighborhood-vs-city contrast, or null when it can't be computed. */
-function buildVsCity(neighborhoodAvg: number | null, cityAvg: number | null): NeighborhoodVsCity | null {
+function buildVsCity(
+  neighborhoodAvg: number | null,
+  cityAvg: number | null,
+): NeighborhoodVsCity | null {
   if (neighborhoodAvg === null || cityAvg === null || cityAvg <= 0) return null;
   return {
     cityAverageRent: roundInt(cityAvg),
@@ -209,7 +214,11 @@ async function buildMetrics(
  * address that carries a `neighborhood_id` (within a bounded radius). 404 when no
  * neighborhood-bearing address is near enough.
  */
-export async function getNeighborhoodByLocation(req: Request, res: Response, next: NextFunction): Promise<void> {
+export async function getNeighborhoodByLocation(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
   try {
     const latitude = Number(req.query.latitude);
     const longitude = Number(req.query.longitude);
@@ -251,7 +260,11 @@ export async function getNeighborhoodByLocation(req: Request, res: Response, nex
  * Resolve a neighborhood by its (case-insensitive) name, optionally scoped to a
  * city (id or name). 404 when unknown.
  */
-export async function getNeighborhoodByName(req: Request, res: Response, next: NextFunction): Promise<void> {
+export async function getNeighborhoodByName(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
   try {
     const name = typeof req.query.name === 'string' ? req.query.name.trim() : '';
     if (!name) {
@@ -274,7 +287,11 @@ export async function getNeighborhoodByName(req: Request, res: Response, next: N
       conditions.push(eq(neighborhoods.cityId, cityId));
     }
 
-    const rows = await getDb().select(NEIGHBORHOOD_COLUMNS).from(neighborhoods).where(and(...conditions)).limit(1);
+    const rows = await getDb()
+      .select(NEIGHBORHOOD_COLUMNS)
+      .from(neighborhoods)
+      .where(and(...conditions))
+      .limit(1);
     if (!rows[0]) {
       return next(new AppError('Neighborhood not found', 404, 'NOT_FOUND'));
     }
@@ -295,7 +312,11 @@ export async function getNeighborhoodByName(req: Request, res: Response, next: N
  * The PROPERTY lookup is still Mongo (batch 3 owns `properties`); the
  * neighborhood it resolves to is read from Postgres.
  */
-export async function getNeighborhoodByProperty(req: Request, res: Response, next: NextFunction): Promise<void> {
+export async function getNeighborhoodByProperty(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
   try {
     const { propertyId } = req.params;
     // No id-SHAPE guard — `Types.ObjectId.isValid` rejects every uuid v7 id
@@ -334,7 +355,11 @@ export async function getNeighborhoodByProperty(req: Request, res: Response, nex
  * each with derived metrics. Returns an empty list when a provided city is
  * unknown.
  */
-export async function searchNeighborhoods(req: Request, res: Response, next: NextFunction): Promise<void> {
+export async function searchNeighborhoods(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
   try {
     const limit = parseLimit(req.query.limit, DEFAULT_SEARCH_LIMIT);
     const conditions: SQL[] = [eq(neighborhoods.isActive, true)];
@@ -378,7 +403,6 @@ export async function searchNeighborhoods(req: Request, res: Response, next: Nex
   }
 }
 
-
 /**
  * GET /api/neighborhoods/popular?city=&limit=
  *
@@ -387,7 +411,11 @@ export async function searchNeighborhoods(req: Request, res: Response, next: Nex
  * or name); an unknown city yields an empty list. Neighborhoods with zero
  * listings never appear.
  */
-export async function getPopularNeighborhoods(req: Request, res: Response, next: NextFunction): Promise<void> {
+export async function getPopularNeighborhoods(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
   try {
     const cityQuery = typeof req.query.city === 'string' ? req.query.city.trim() : '';
     if (!cityQuery) {
@@ -443,7 +471,12 @@ export async function getPopularNeighborhoods(req: Request, res: Response, next:
     const neighborhoodRows = await getDb()
       .select(NEIGHBORHOOD_COLUMNS)
       .from(neighborhoods)
-      .where(inArray(neighborhoods.id, ranked.map((r) => r.neighborhoodId)));
+      .where(
+        inArray(
+          neighborhoods.id,
+          ranked.map((r) => r.neighborhoodId),
+        ),
+      );
     const byId = new Map(neighborhoodRows.map((n) => [n.id, n]));
 
     const cityInfoCache = new Map<string, CityInfo>();

@@ -62,13 +62,19 @@ export function removePropertyNumber(street: string): string {
   // the last line — only the digits are.
   let lastBreak = -1;
   for (let i = street.length - 1; i >= 0; i -= 1) {
-    if (LINE_TERMINATORS.has(street[i])) { lastBreak = i; break; }
+    if (LINE_TERMINATORS.has(street[i])) {
+      lastBreak = i;
+      break;
+    }
   }
 
   let firstDigit = -1;
   for (let i = lastBreak + 1; i < street.length; i += 1) {
     const code = street.charCodeAt(i);
-    if (code >= 48 && code <= 57) { firstDigit = i; break; }
+    if (code >= 48 && code <= 57) {
+      firstDigit = i;
+      break;
+    }
   }
   if (firstDigit === -1) return street.trim();
 

@@ -6,10 +6,7 @@ import type { NormalizedListingContact } from '@homiio/shared-types';
 import { buildContact } from '../../../contact';
 import { asNumber, asString, isRecord } from '../../../parse/guards';
 import { isCloudflareChallenge } from '../../../parse/challenge';
-import {
-  realtorCaSourceUrl,
-  type RealtorCaTransaction,
-} from './api';
+import { realtorCaSourceUrl, type RealtorCaTransaction } from './api';
 
 export interface RealtorCaSearchRef {
   sourceId: string;
@@ -51,7 +48,10 @@ function parseAddressText(text: string): {
   state?: string;
   postalCode?: string;
 } {
-  const parts = text.split(',').map((part) => part.trim()).filter(Boolean);
+  const parts = text
+    .split(',')
+    .map((part) => part.trim())
+    .filter(Boolean);
   if (parts.length === 0) return { city: 'Canada' };
   const street = parts[0];
   const city = parts.length >= 2 ? parts[1] : 'Canada';
@@ -82,7 +82,10 @@ function parseSqft(value: string | undefined): number | undefined {
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
-function resolveKind(priceDisplay: string | undefined, unformatted: string | undefined): RealtorCaTransaction {
+function resolveKind(
+  priceDisplay: string | undefined,
+  unformatted: string | undefined,
+): RealtorCaTransaction {
   if (priceDisplay && /month|\/mo|rent/i.test(priceDisplay)) return 'rent';
   if (unformatted && Number.parseFloat(unformatted) < 50_000) return 'rent';
   return 'sale';
@@ -106,7 +109,10 @@ function resolveContact(individuals: unknown): NormalizedListingContact | undefi
   });
 }
 
-function resultToRaw(result: Record<string, unknown>, kindHint?: RealtorCaTransaction): RealtorCaRawListing | undefined {
+function resultToRaw(
+  result: Record<string, unknown>,
+  kindHint?: RealtorCaTransaction,
+): RealtorCaRawListing | undefined {
   const sourceId = asString(result.Id);
   if (!sourceId) return undefined;
 
@@ -151,8 +157,7 @@ function resultToRaw(result: Record<string, unknown>, kindHint?: RealtorCaTransa
       state: parsedAddress.state,
       postalCode: parsedAddress.postalCode,
       countryCode: 'CA',
-      coordinates:
-        lat !== undefined && lng !== undefined ? { lat, lng } : undefined,
+      coordinates: lat !== undefined && lng !== undefined ? { lat, lng } : undefined,
     },
     images: [...new Set(images)],
     contact: resolveContact(result.Individual),
@@ -161,7 +166,10 @@ function resultToRaw(result: Record<string, unknown>, kindHint?: RealtorCaTransa
 }
 
 /** Parse PropertySearch_Post JSON into listing refs. */
-export function parseRealtorCaSearch(body: string, kind: RealtorCaTransaction): RealtorCaSearchRef[] {
+export function parseRealtorCaSearch(
+  body: string,
+  kind: RealtorCaTransaction,
+): RealtorCaSearchRef[] {
   if (isRealtorCaChallenge(body)) return [];
   const parsed: unknown = JSON.parse(body);
   if (!isRecord(parsed)) return [];

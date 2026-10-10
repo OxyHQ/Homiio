@@ -1,30 +1,30 @@
 {
-    "name": "@homiio/shared-types",
-    "version": "1.0.0",
-    "private": true,
-    "type": "commonjs",
-    "description": "Shared TypeScript types for Homiio frontend and backend",
-    "main": "dist/index.js",
-    "types": "dist/index.d.ts",
-    "scripts": {
-        "build": "bunx tsc",
-        "dev": "bunx tsc --watch",
-        "clean": "rm -rf dist tsconfig.tsbuildinfo",
-        "test": "echo \"No tests specified\" && exit 0",
-        "prepublishOnly": "bun run build"
-    },
-    "keywords": [
-        "typescript",
-        "types",
-        "shared",
-        "homiio"
-    ],
-    "author": "Homiio Team",
-    "devDependencies": {
-        "typescript": "^6.0.3",
-        "@types/node": "^22.20.1"
-    },
-    "files": [
-        "dist/**/*"
-    ]
+  "name": "@homiio/shared-types",
+  "version": "1.0.0",
+  "private": true,
+  "type": "commonjs",
+  "description": "Shared TypeScript types for Homiio frontend and backend",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "bunx tsc",
+    "dev": "bunx tsc --watch",
+    "clean": "rm -rf dist tsconfig.tsbuildinfo",
+    "test": "echo \"No tests specified\" && exit 0",
+    "prepublishOnly": "bun run build"
+  },
+  "keywords": [
+    "typescript",
+    "types",
+    "shared",
+    "homiio"
+  ],
+  "author": "Homiio Team",
+  "devDependencies": {
+    "typescript": "^6.0.3",
+    "@types/node": "^22.20.1"
+  },
+  "files": [
+    "dist/**/*"
+  ]
 }

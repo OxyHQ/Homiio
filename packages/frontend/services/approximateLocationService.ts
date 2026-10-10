@@ -21,10 +21,7 @@
  * to handle both arms.
  */
 
-import {
-  type ApproximateLocation,
-  type ApiResponse,
-} from '@homiio/shared-types';
+import { type ApproximateLocation, type ApiResponse } from '@homiio/shared-types';
 
 import { api } from '@/utils/api';
 
@@ -43,7 +40,12 @@ export async function fetchApproximateLocation(): Promise<ApproximateLocation> {
     );
     const payload = result.data;
     if (!payload) {
-      return { status: 'unavailable', source: 'ip', reason: 'provider_error', resolvedAt: new Date().toISOString() };
+      return {
+        status: 'unavailable',
+        source: 'ip',
+        reason: 'provider_error',
+        resolvedAt: new Date().toISOString(),
+      };
     }
     return payload;
   } catch {

@@ -86,7 +86,9 @@ async function runMerge(): Promise<Outcome> {
   let captured: Outcome | undefined;
 
   const region = async (tx: Database, id: string, name: string): Promise<string> => {
-    await tx.execute(sql`insert into regions (id, country_id, name) values (${id}, ${countryId}, ${name})`);
+    await tx.execute(
+      sql`insert into regions (id, country_id, name) values (${id}, ${countryId}, ${name})`,
+    );
     return id;
   };
   const city = async (
@@ -113,19 +115,49 @@ async function runMerge(): Promise<Outcome> {
 
       // Folds: exactly one real twin. The twin carries the listings and lacks a
       // timezone, so both halves of the carry-forward are measured.
-      const keptHamburg = await city(tx as Database, `ci-hh-${SUITE}`, realHamburg, 'Hamburg', 4, null);
-      const shadowHamburg = await city(tx as Database, `ci-hh-shadow-${SUITE}`, bucket, 'Hamburg', 3, 'Europe/Berlin');
+      const keptHamburg = await city(
+        tx as Database,
+        `ci-hh-${SUITE}`,
+        realHamburg,
+        'Hamburg',
+        4,
+        null,
+      );
+      const shadowHamburg = await city(
+        tx as Database,
+        `ci-hh-shadow-${SUITE}`,
+        bucket,
+        'Hamburg',
+        3,
+        'Europe/Berlin',
+      );
 
       // Stays: TWO real twins, so which one it is remains unknown.
       await city(tx as Database, `ci-sa-a-${SUITE}`, chileA, 'Santiago', 1, null);
       await city(tx as Database, `ci-sa-b-${SUITE}`, chileB, 'Santiago', 1, null);
-      const shadowSantiago = await city(tx as Database, `ci-sa-shadow-${SUITE}`, bucket, 'Santiago', 0, null);
+      const shadowSantiago = await city(
+        tx as Database,
+        `ci-sa-shadow-${SUITE}`,
+        bucket,
+        'Santiago',
+        0,
+        null,
+      );
 
       // Stays: nothing to fold into.
-      const shadowOrphan = await city(tx as Database, `ci-orphan-${SUITE}`, bucket, `Nowhere ${SUITE}`, 0, null);
+      const shadowOrphan = await city(
+        tx as Database,
+        `ci-orphan-${SUITE}`,
+        bucket,
+        `Nowhere ${SUITE}`,
+        0,
+        null,
+      );
 
       const neighborhoodId = `n-${SUITE}`;
-      await tx.insert(neighborhoods).values({ id: neighborhoodId, cityId: shadowHamburg, name: `Altona ${SUITE}` });
+      await tx
+        .insert(neighborhoods)
+        .values({ id: neighborhoodId, cityId: shadowHamburg, name: `Altona ${SUITE}` });
 
       const addressId = `a-${SUITE}`;
       await tx.insert(addresses).values({
@@ -149,7 +181,12 @@ async function runMerge(): Promise<Outcome> {
       }
 
       const survivors = await tx
-        .select({ id: cities.id, props: cities.propertiesCount, tz: cities.timezone, regionId: cities.regionId })
+        .select({
+          id: cities.id,
+          props: cities.propertiesCount,
+          tz: cities.timezone,
+          regionId: cities.regionId,
+        })
         .from(cities)
         .where(eq(cities.countryId, countryId));
       const kept = survivors.find((row) => row.id === keptHamburg);

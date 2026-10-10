@@ -80,10 +80,7 @@ export interface MultipleUploadResponse {
 }
 
 class ImageUploadService {
-  async uploadSingleImage(
-    imageUri: string,
-    folder: string = 'properties',
-  ): Promise<UploadedImage> {
+  async uploadSingleImage(imageUri: string, folder: string = 'properties'): Promise<UploadedImage> {
     const formData = new FormData();
     formData.append('image', {
       uri: imageUri,
@@ -93,7 +90,7 @@ class ImageUploadService {
     formData.append('folder', folder);
 
     const response = await api.post('/api/images/upload', formData);
-    
+
     if (!response.data.success) {
       throw new Error(response.data.message || 'Upload failed');
     }
@@ -106,7 +103,7 @@ class ImageUploadService {
     folder: string = 'properties',
   ): Promise<MultipleUploadResponse> {
     const formData = new FormData();
-    
+
     imageUris.forEach((uri, index) => {
       formData.append('images', {
         uri,
@@ -117,7 +114,7 @@ class ImageUploadService {
     formData.append('folder', folder);
 
     const response = await api.post('/api/images/upload-multiple', formData);
-    
+
     if (!response.data.success) {
       throw new Error(response.data.message || 'Upload failed');
     }
@@ -127,7 +124,7 @@ class ImageUploadService {
 
   async deleteImage(imageKey: string): Promise<{ success: boolean; message: string }> {
     const response = await api.delete(`/api/images/${imageKey}`);
-    
+
     if (!response.data.success) {
       throw new Error(response.data.message || 'Delete failed');
     }
@@ -135,12 +132,14 @@ class ImageUploadService {
     return response.data;
   }
 
-  async deleteMultipleImages(imageKeys: string[]): Promise<{ success: boolean; message: string; results: any[] }> {
+  async deleteMultipleImages(
+    imageKeys: string[],
+  ): Promise<{ success: boolean; message: string; results: any[] }> {
     const response = await api.post('/api/images/variants', {
       method: 'DELETE',
       keys: imageKeys,
     });
-    
+
     if (!response.data.success) {
       throw new Error(response.data.message || 'Delete failed');
     }
@@ -150,7 +149,7 @@ class ImageUploadService {
 
   async getImageInfo(imageKey: string): Promise<UploadedImage> {
     const response = await api.get(`/api/images/info/${imageKey}`);
-    
+
     if (!response.data.success) {
       throw new Error(response.data.message || 'Failed to get image info');
     }
@@ -159,7 +158,10 @@ class ImageUploadService {
   }
 
   // Helper method to get the best image URL for a given size
-  getImageUrl(image: UploadedImage, size: 'small' | 'medium' | 'large' | 'original' = 'medium'): string {
+  getImageUrl(
+    image: UploadedImage,
+    size: 'small' | 'medium' | 'large' | 'original' = 'medium',
+  ): string {
     return image.urls[size] || image.urls.original;
   }
 

@@ -29,7 +29,11 @@ import type {
 } from '../../../types';
 import { createFetchRuntime } from '../../../runtime';
 import { fetchListingViaLadder } from '../../../strategy';
-import { defaultProviderMetrics, type ProviderMetricsReader, type ProviderMetricsSink } from '../../../metrics';
+import {
+  defaultProviderMetrics,
+  type ProviderMetricsReader,
+  type ProviderMetricsSink,
+} from '../../../metrics';
 import { envBool, createProxySessionId } from '../../../proxy';
 import { cityToResourceSlug, DEFAULT_US_CITIES } from '../portals';
 import { isUsPortalChallenge } from '../challenge';
@@ -99,7 +103,12 @@ function buildAddress(home: RedfinHomeFixture): NormalizedListingAddress {
 }
 
 function asRedfinRaw(payload: unknown): RedfinRaw {
-  const record = payload as { sourceId?: unknown; url?: unknown; kind?: unknown; home?: unknown } | null;
+  const record = payload as {
+    sourceId?: unknown;
+    url?: unknown;
+    kind?: unknown;
+    home?: unknown;
+  } | null;
   if (
     !record ||
     typeof record.sourceId !== 'string' ||
@@ -167,7 +176,14 @@ export class RedfinProvider implements ListingProvider {
       if (yielded.count >= limit) return;
 
       if (viaAjax.length === 0) {
-        for await (const ref of this.discoverCityViaHtml(runtime, city, job.signal, seen, limit, yielded)) {
+        for await (const ref of this.discoverCityViaHtml(
+          runtime,
+          city,
+          job.signal,
+          seen,
+          limit,
+          yielded,
+        )) {
           yield ref;
         }
       }
@@ -427,7 +443,11 @@ export class RedfinProvider implements ListingProvider {
     const snapshot = this.metrics.snapshot(this.id);
     if (snapshot && snapshot.attempts > 0) {
       const status =
-        snapshot.challengeRate >= 0.8 ? 'unhealthy' : snapshot.challengeRate >= 0.3 ? 'degraded' : 'healthy';
+        snapshot.challengeRate >= 0.8
+          ? 'unhealthy'
+          : snapshot.challengeRate >= 0.3
+            ? 'degraded'
+            : 'healthy';
       return {
         provider: this.id,
         status,

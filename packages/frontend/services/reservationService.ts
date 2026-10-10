@@ -48,19 +48,14 @@ export interface ListReservationsParams {
 
 export const reservationService = {
   async createReservation(payload: CreateReservationData): Promise<Reservation> {
-    const response = await api.post<ApiResponse<Reservation>>(
-      '/api/reservations',
-      payload,
-    );
+    const response = await api.post<ApiResponse<Reservation>>('/api/reservations', payload);
     if (!response.data?.data) {
       throw new Error(response.data?.message || 'Reservation creation failed');
     }
     return response.data.data;
   },
 
-  async listReservations(
-    params: ListReservationsParams = {},
-  ): Promise<ReservationListResponse> {
+  async listReservations(params: ListReservationsParams = {}): Promise<ReservationListResponse> {
     const response = await api.get<{
       data?: Reservation[];
       pagination?: ReservationListResponse['pagination'];
@@ -83,23 +78,15 @@ export const reservationService = {
   },
 
   async getReservationById(id: string): Promise<Reservation> {
-    const response = await api.get<ApiResponse<Reservation>>(
-      `/api/reservations/${id}`,
-    );
+    const response = await api.get<ApiResponse<Reservation>>(`/api/reservations/${id}`);
     if (!response.data?.data) {
       throw new Error(response.data?.message || 'Reservation not found');
     }
     return response.data.data;
   },
 
-  async updateReservation(
-    id: string,
-    payload: UpdateReservationData,
-  ): Promise<Reservation> {
-    const response = await api.patch<ApiResponse<Reservation>>(
-      `/api/reservations/${id}`,
-      payload,
-    );
+  async updateReservation(id: string, payload: UpdateReservationData): Promise<Reservation> {
+    const response = await api.patch<ApiResponse<Reservation>>(`/api/reservations/${id}`, payload);
     if (!response.data?.data) {
       throw new Error(response.data?.message || 'Reservation update failed');
     }
@@ -118,9 +105,7 @@ export const reservationService = {
    * to `isError` and the screen can say so, rather than quietly inventing
    * availability.
    */
-  async getPropertyAvailability(
-    propertyId: string,
-  ): Promise<PropertyAvailabilityResponse> {
+  async getPropertyAvailability(propertyId: string): Promise<PropertyAvailabilityResponse> {
     const response = await api.get<ApiResponse<PropertyAvailabilityResponse>>(
       `/api/properties/${propertyId}/availability`,
     );

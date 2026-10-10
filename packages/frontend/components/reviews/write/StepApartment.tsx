@@ -6,12 +6,7 @@ import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
-import {
-  TemperatureRating,
-  NoiseLevel,
-  LightLevel,
-  ConditionRating,
-} from '@homiio/shared-types';
+import { TemperatureRating, NoiseLevel, LightLevel, ConditionRating } from '@homiio/shared-types';
 
 import { EnumChipSelector } from '@/components/reviews/EnumChipSelector';
 import type { StepProps } from '@/components/reviews/write/types';

@@ -114,9 +114,7 @@ export function useAlertReason(alertId: string | undefined) {
     queryKey: [...ALERTS_KEY, 'reason', alertId],
     enabled: isAuthenticated && Boolean(alertId),
     queryFn: async (): Promise<AlertReason> => {
-      const response = await api.get<{ data: AlertReason }>(
-        `/api/profiles/me/alerts/${alertId}`,
-      );
+      const response = await api.get<{ data: AlertReason }>(`/api/profiles/me/alerts/${alertId}`);
       return response.data.data;
     },
   });

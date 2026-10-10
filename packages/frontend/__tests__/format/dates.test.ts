@@ -43,7 +43,13 @@ describe('civil dates — a calendar day must not shift by timezone', () => {
   });
 
   it('renders the same civil date identically in every zone', () => {
-    const zones = ['UTC', 'America/Los_Angeles', 'Europe/Madrid', 'Asia/Tokyo', 'Pacific/Kiritimati'];
+    const zones = [
+      'UTC',
+      'America/Los_Angeles',
+      'Europe/Madrid',
+      'Asia/Tokyo',
+      'Pacific/Kiritimati',
+    ];
     const rendered = zones.map((zone) => formatDate('2026-01-01', 'en-US', zone));
     expect(new Set(rendered).size).toBe(1);
     expect(rendered[0]).toContain('2026');

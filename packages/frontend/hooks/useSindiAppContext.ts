@@ -34,7 +34,11 @@ import { useMemo } from 'react';
 import { usePathname } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
-import { serializeLocationToken, type SindiAppContext, type SindiDestination } from '@homiio/shared-types';
+import {
+  serializeLocationToken,
+  type SindiAppContext,
+  type SindiDestination,
+} from '@homiio/shared-types';
 
 import { locationDisplayLabel } from '@/components/search/types';
 import type { SindiControlCapability } from '@/components/sindi/sindiHost';

@@ -13,11 +13,7 @@ import { Avatar } from '@oxy.so/bloom/avatar';
 import { Button } from '@oxy.so/bloom/button';
 import { Card } from '@oxy.so/bloom/card';
 import { Chip } from '@oxy.so/bloom/chip';
-import {
-  RiCheckboxBlankCircleLine,
-  RiCheckboxCircleFill,
-  RiMapPinLine,
-} from '@oxy.so/bloom/icons';
+import { RiCheckboxBlankCircleLine, RiCheckboxCircleFill, RiMapPinLine } from '@oxy.so/bloom/icons';
 import { Loading } from '@oxy.so/bloom/loading';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { toast } from '@oxy.so/bloom/toast';
@@ -150,7 +146,9 @@ export default function RoommateProfilePage() {
             <BloomText style={styles.detailValue}>{info.moveInDate}</BloomText>
           </View>
           <View style={styles.detailRow}>
-            <BloomText style={styles.detailLabel}>{t('roommates.profileDetail.leaseLength')}</BloomText>
+            <BloomText style={styles.detailLabel}>
+              {t('roommates.profileDetail.leaseLength')}
+            </BloomText>
             <BloomText style={styles.detailValue}>{info.duration}</BloomText>
           </View>
         </Card>
@@ -159,8 +157,14 @@ export default function RoommateProfilePage() {
           <H3 style={styles.cardTitle}>{t('roommates.profileDetail.trust')}</H3>
           <View style={styles.badgeRow}>
             <TrustBadge label={t('roommates.profileDetail.verified')} active={info.isVerified} />
-            <TrustBadge label={t('roommates.profileDetail.references')} active={info.hasReferences} />
-            <TrustBadge label={t('roommates.profileDetail.rentalHistory')} active={info.rentalHistory} />
+            <TrustBadge
+              label={t('roommates.profileDetail.references')}
+              active={info.hasReferences}
+            />
+            <TrustBadge
+              label={t('roommates.profileDetail.rentalHistory')}
+              active={info.rentalHistory}
+            />
           </View>
         </Card>
 
@@ -169,9 +173,13 @@ export default function RoommateProfilePage() {
           onPress={handleSendRequest}
           loading={isSending}
           disabled={isSending}
-          style={styles.sendButton} tone="accent" appearance="solid"
+          style={styles.sendButton}
+          tone="accent"
+          appearance="solid"
         >
-          {isSending ? t('roommates.profileDetail.sending') : t('roommates.profileDetail.sendRequest')}
+          {isSending
+            ? t('roommates.profileDetail.sending')
+            : t('roommates.profileDetail.sendRequest')}
         </Button>
       </ScrollView>
     );

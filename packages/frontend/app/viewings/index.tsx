@@ -76,7 +76,7 @@ const formatDateTime = (scheduledAt: string, locale: string, timeZone: string): 
 const ViewingsSkeleton: React.FC = () => (
   <View style={styles.listWrap}>
     {Array.from({ length: 3 }).map((_, idx) => (
-      <Card key={idx}  radius="radius-16" className="gap-2 p-4" appearance="outline">
+      <Card key={idx} radius="radius-16" className="gap-2 p-4" appearance="outline">
         <View style={styles.skeletonHeader}>
           <Skeleton.Text style={{ width: 160, lineHeight: 18 }} />
           <Skeleton.Pill size={20} />
@@ -95,12 +95,7 @@ interface ViewingCardProps {
   cancelling: boolean;
 }
 
-const ViewingCard: React.FC<ViewingCardProps> = ({
-  viewing,
-  onCancel,
-  onModify,
-  cancelling,
-}) => {
+const ViewingCard: React.FC<ViewingCardProps> = ({ viewing, onCancel, onModify, cancelling }) => {
   const { t } = useTranslation();
   const { locale } = useFormatting();
   const status = viewing.status as ViewingStatus;
@@ -158,7 +153,9 @@ const ViewingCard: React.FC<ViewingCardProps> = ({
             <Button
               size="md"
               onPress={onModify}
-              style={styles.actionButton} tone="accent" appearance="solid"
+              style={styles.actionButton}
+              tone="accent"
+              appearance="solid"
             >
               {t('viewings.actions.modify')}
             </Button>
@@ -168,7 +165,9 @@ const ViewingCard: React.FC<ViewingCardProps> = ({
             onPress={onCancel}
             loading={cancelling}
             disabled={cancelling}
-            style={styles.actionButton} tone="accent" appearance="subtle"
+            style={styles.actionButton}
+            tone="accent"
+            appearance="subtle"
           >
             {t('viewings.actions.cancel')}
           </Button>
@@ -298,8 +297,7 @@ export default function ViewingsPage() {
             <SectionEyebrow>Upcoming visits</SectionEyebrow>
             <H2 style={styles.title}>Your viewings</H2>
             <BloomText style={styles.subtitle}>
-              Track every visit you have requested and reschedule or cancel
-              with one tap.
+              Track every visit you have requested and reschedule or cancel with one tap.
             </BloomText>
           </View>
 
@@ -333,9 +331,7 @@ export default function ViewingsPage() {
             />
           ) : null}
 
-          {!viewingsQuery.isLoading &&
-          !viewingsQuery.isError &&
-          filteredViewings.length === 0 ? (
+          {!viewingsQuery.isLoading && !viewingsQuery.isError && filteredViewings.length === 0 ? (
             <View style={styles.emptyWrap}>
               <EmptyState
                 icon={RiCalendarLine}
@@ -351,10 +347,7 @@ export default function ViewingsPage() {
                 <ViewingCard
                   key={viewing.id}
                   viewing={viewing}
-                  cancelling={
-                    cancelMutation.isPending &&
-                    cancelTarget?.id === viewing.id
-                  }
+                  cancelling={cancelMutation.isPending && cancelTarget?.id === viewing.id}
                   onCancel={() => void handleCancel(viewing)}
                   onModify={() => handleModify(viewing)}
                 />

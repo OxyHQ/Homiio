@@ -86,7 +86,9 @@ function hasFeature(
  * corresponding tag is present — absent tags are left undefined so the caller
  * keeps provider-explicit values and schema defaults.
  */
-export function deriveStructuredFeatures(amenities: readonly string[] | undefined): DerivedFeatures {
+export function deriveStructuredFeatures(
+  amenities: readonly string[] | undefined,
+): DerivedFeatures {
   if (!amenities || amenities.length === 0) return {};
   const tokens = amenities.map(normalizeToken).filter(Boolean);
   if (tokens.length === 0) return {};

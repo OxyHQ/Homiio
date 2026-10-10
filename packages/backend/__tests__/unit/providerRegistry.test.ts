@@ -2,11 +2,7 @@
  * Provider registry contract tests (pure — no DB, no network).
  */
 
-import {
-  FixtureProvider,
-  IdealistaProvider,
-  ProviderRegistry,
-} from '@homiio/listing-providers';
+import { FixtureProvider, IdealistaProvider, ProviderRegistry } from '@homiio/listing-providers';
 
 describe('ProviderRegistry', () => {
   it('registers providers and resolves by id', () => {
@@ -29,7 +25,10 @@ describe('ProviderRegistry', () => {
 
   it('filters providers by market', () => {
     const registry = new ProviderRegistry([new FixtureProvider(), new IdealistaProvider()]);
-    const esProviders = registry.forMarket('ES').map((provider) => provider.id).sort();
+    const esProviders = registry
+      .forMarket('ES')
+      .map((provider) => provider.id)
+      .sort();
     expect(esProviders).toEqual(['fixture', 'idealista']);
     expect(registry.forMarket('US')).toHaveLength(0);
   });

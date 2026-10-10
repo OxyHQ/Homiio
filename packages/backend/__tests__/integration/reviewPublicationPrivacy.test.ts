@@ -155,12 +155,27 @@ async function seedAddressRow(input: {
 }
 
 async function seed(): Promise<Seeded> {
-  const chain = await seedGeoChain({ cityName: `Publicacio ${uuidv7().slice(-8)}`, countryCode: 'ES' });
+  const chain = await seedGeoChain({
+    cityName: `Publicacio ${uuidv7().slice(-8)}`,
+    countryCode: 'ES',
+  });
   const db = getDb();
 
   const buildingId = await seedAddressRow({ chain, street: STREET });
-  const unitAId = await seedAddressRow({ chain, street: STREET, floor: '3r', unit: '1a', parentAddressId: buildingId });
-  const unitBId = await seedAddressRow({ chain, street: STREET, floor: '4t', unit: '2a', parentAddressId: buildingId });
+  const unitAId = await seedAddressRow({
+    chain,
+    street: STREET,
+    floor: '3r',
+    unit: '1a',
+    parentAddressId: buildingId,
+  });
+  const unitBId = await seedAddressRow({
+    chain,
+    street: STREET,
+    floor: '4t',
+    unit: '2a',
+    parentAddressId: buildingId,
+  });
   const otherBuildingId = await seedAddressRow({ chain, street: OTHER_STREET });
 
   const agency = await findOrCreateAgencyByName(`Publicacio Agency ${uuidv7().slice(-8)}`);
@@ -277,7 +292,11 @@ function expectPublishedReduced(body: unknown, where: string): void {
 
   for (const review of bodies) {
     // The floor: what a public reader IS entitled to is present.
-    expect({ where, rating: review.rating, hasOpinion: typeof review.opinion === 'string' }).toEqual({
+    expect({
+      where,
+      rating: review.rating,
+      hasOpinion: typeof review.opinion === 'string',
+    }).toEqual({
       where,
       rating: 4,
       hasOpinion: true,
@@ -301,7 +320,10 @@ function expectPublishedReduced(body: unknown, where: string): void {
   // some other key would carry them.
   const serialized = JSON.stringify(body);
   for (const leak of [String(EXACT.price), EXACT.from.toISOString(), EXACT.to.toISOString()]) {
-    expect({ where, leaked: serialized.includes(leak) ? leak : null }).toEqual({ where, leaked: null });
+    expect({ where, leaked: serialized.includes(leak) ? leak : null }).toEqual({
+      where,
+      leaked: null,
+    });
   }
   // Nobody's Oxy account id travels unless they chose `identified`.
   for (const id of [PSEUDO_AUTHOR, ANON_AUTHOR]) {
@@ -361,13 +383,19 @@ describe('the author reads their own review exactly as they wrote it', () => {
     expect(review.oxyUserId).toBe(PSEUDO_AUTHOR);
     // …and so do the reduced shapes, so one renderer draws both audiences.
     expect(review.livedFromMonth).toBe(PUBLISHED.fromMonth);
-    expect(review.priceBand).toEqual({ min: PUBLISHED.bandMin, max: PUBLISHED.bandMax, currency: 'EUR' });
+    expect(review.priceBand).toEqual({
+      min: PUBLISHED.bandMin,
+      max: PUBLISHED.bandMax,
+      currency: 'EUR',
+    });
   });
 });
 
 describe('the three author-identity forms (ADR 0003 §5.2)', () => {
   const publicReviewById = async (addressId: string, reviewId: string) => {
-    const res = await request(publicApp(STRANGER)).get(`/api/reviews/address/${addressId}`).expect(200);
+    const res = await request(publicApp(STRANGER))
+      .get(`/api/reviews/address/${addressId}`)
+      .expect(200);
     const found = reviewBodiesIn(res.body).find((review) => review.id === reviewId);
     if (!found) throw new Error(`review ${reviewId} is not in the response`);
     return found;

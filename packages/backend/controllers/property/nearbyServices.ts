@@ -63,7 +63,7 @@ function resolveCoordinates(property: Record<string, unknown>): [number, number]
 export async function getPropertyNearbyServices(
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ): Promise<void> {
   try {
     const { propertyId } = req.params;
@@ -78,9 +78,7 @@ export async function getPropertyNearbyServices(
     if (!coordinates) {
       // No usable coordinates — return a graceful degraded snapshot so the
       // frontend can simply hide the section rather than handle an error.
-      res.json(
-        successResponse(emptyNearbyServices(), 'Nearby services retrieved successfully')
-      );
+      res.json(successResponse(emptyNearbyServices(), 'Nearby services retrieved successfully'));
       return;
     }
 

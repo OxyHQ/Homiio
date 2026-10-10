@@ -66,14 +66,20 @@ describe('a line with several documents', () => {
     // Somebody whose payslip was rejected and who then sent a contract that was
     // verified has satisfied the requirement. Showing the line as rejected
     // would tell them to do something they have already done.
-    const [line] = applicationChecklist([INCOME], [doc(INCOME, 'rejected'), doc(INCOME, 'verified')]);
+    const [line] = applicationChecklist(
+      [INCOME],
+      [doc(INCOME, 'rejected'), doc(INCOME, 'verified')],
+    );
     expect(line.status).toBe('verified');
     // …and the rejected one is still listed, so nothing is hidden.
     expect(line.documents).toHaveLength(2);
   });
 
   it('is awaiting review while anything is still unread', () => {
-    const [line] = applicationChecklist([INCOME], [doc(INCOME, 'rejected'), doc(INCOME, 'pending')]);
+    const [line] = applicationChecklist(
+      [INCOME],
+      [doc(INCOME, 'rejected'), doc(INCOME, 'pending')],
+    );
     expect(line.status).toBe('awaiting_review');
   });
 });
@@ -86,8 +92,11 @@ describe('what is shown at all', () => {
     expect(volunteered).toMatchObject({ required: false, status: 'awaiting_review' });
   });
 
-  it('keeps the landlord\'s ordering, then whatever else arrived', () => {
-    const items = applicationChecklist([INCOME, ID], [doc(REFERENCE, 'pending'), doc(ID, 'pending')]);
+  it("keeps the landlord's ordering, then whatever else arrived", () => {
+    const items = applicationChecklist(
+      [INCOME, ID],
+      [doc(REFERENCE, 'pending'), doc(ID, 'pending')],
+    );
     expect(items.map((item) => item.type)).toEqual([INCOME, ID, REFERENCE]);
   });
 

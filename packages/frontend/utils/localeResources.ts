@@ -21,6 +21,8 @@ const NATIVE_LOCALES: Record<Exclude<LocaleCode, 'en-US'>, () => LocaleResource>
   'it-IT': () => require('@/locales/it.json'),
 };
 
-export async function loadLocaleResource(code: Exclude<LocaleCode, 'en-US'>): Promise<LocaleResource> {
+export async function loadLocaleResource(
+  code: Exclude<LocaleCode, 'en-US'>,
+): Promise<LocaleResource> {
   return NATIVE_LOCALES[code]();
 }

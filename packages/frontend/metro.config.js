@@ -38,11 +38,7 @@ config.resolver = {
     path.join(monorepoRoot, 'node_modules'),
   ],
   unstable_enableSymlinks: true,
-  assetExts: [
-    ...config.resolver.assetExts.filter((ext) => ext !== 'svg'),
-    'woff2',
-    'woff',
-  ],
+  assetExts: [...config.resolver.assetExts.filter((ext) => ext !== 'svg'), 'woff2', 'woff'],
   sourceExts: [...config.resolver.sourceExts, 'svg'],
 };
 

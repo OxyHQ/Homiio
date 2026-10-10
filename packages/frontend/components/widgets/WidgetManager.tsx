@@ -73,9 +73,7 @@ export const WidgetManager = React.memo(function WidgetManager({
         <RecentlyViewedWidget key="recently-viewed" />,
         <EcoCertificationWidget key="eco-cert" />,
       ],
-      profile: [
-        <DonationWidget key="donation" />,
-      ],
+      profile: [<DonationWidget key="donation" />],
       explore: [
         <QuickFiltersWidget key="quick-filters" />,
         <SavedSearchesWidget key="saved-searches" />,

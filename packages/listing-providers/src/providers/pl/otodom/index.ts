@@ -23,7 +23,11 @@ import type {
 } from '../../../types';
 import { createFetchRuntime } from '../../../runtime';
 import { ChallengeError, fetchListingViaLadder } from '../../../strategy';
-import { defaultProviderMetrics, type ProviderMetricsReader, type ProviderMetricsSink } from '../../../metrics';
+import {
+  defaultProviderMetrics,
+  type ProviderMetricsReader,
+  type ProviderMetricsSink,
+} from '../../../metrics';
 import { providerMaxSearchPages } from '../../../discoverLimits';
 import { citiesFromEnv } from '../../../parse/cities';
 import { OTODOM_BASE_URL } from './fixtures';
@@ -44,7 +48,12 @@ export interface OtodomProviderOptions {
 }
 
 function asRaw(payload: unknown): OtodomRawListing {
-  const record = payload as { sourceId?: unknown; url?: unknown; operation?: unknown; price?: unknown } | null;
+  const record = payload as {
+    sourceId?: unknown;
+    url?: unknown;
+    operation?: unknown;
+    price?: unknown;
+  } | null;
   if (
     !record ||
     typeof record.sourceId !== 'string' ||
@@ -57,7 +66,10 @@ function asRaw(payload: unknown): OtodomRawListing {
   return payload as OtodomRawListing;
 }
 
-function resolvePropertyType(estate: string | undefined, bedrooms: number | undefined): PropertyType {
+function resolvePropertyType(
+  estate: string | undefined,
+  bedrooms: number | undefined,
+): PropertyType {
   const lower = (estate ?? '').toLowerCase();
   if (lower.includes('house') || lower === 'house') return PropertyType.HOUSE;
   if (lower.includes('studio') || bedrooms === 0) return PropertyType.STUDIO;
@@ -118,7 +130,12 @@ export class OtodomProvider implements ListingProvider {
               if (yielded >= limit) return;
               if (seen.has(ref.sourceId)) continue;
               seen.add(ref.sourceId);
-              yield { provider: this.id, sourceId: ref.sourceId, url: ref.url, hints: { city, kind } };
+              yield {
+                provider: this.id,
+                sourceId: ref.sourceId,
+                url: ref.url,
+                hints: { city, kind },
+              };
               yielded += 1;
             }
           } catch (error) {

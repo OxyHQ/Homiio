@@ -181,9 +181,7 @@ describe('a response stamped with another query', () => {
   it('accepts a response that carries the matching identity', async () => {
     // The positive control for the case above. Without it, a hook that refused
     // EVERY response would pass that test and show nothing, ever.
-    apiGet.mockResolvedValueOnce(
-      page(searchQueryId(MADRID_QUERY), 'madrid-listing', 7) as never,
-    );
+    apiGet.mockResolvedValueOnce(page(searchQueryId(MADRID_QUERY), 'madrid-listing', 7) as never);
 
     const view = renderHook(() => usePropertySearch(MADRID_QUERY), { wrapper });
 

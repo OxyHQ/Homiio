@@ -177,7 +177,8 @@ export const EarningsCalculator: React.FC = () => {
     <View style={{ paddingHorizontal: horizontalPadding }}>
       <Card
         radius="radius-24"
-        className="w-full max-w-[720px] self-center gap-6 p-6" appearance="outline"
+        className="w-full max-w-[720px] self-center gap-6 p-6"
+        appearance="outline"
       >
         <H2 style={{ color: theme.colors.text }}>{title}</H2>
 

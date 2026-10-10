@@ -27,10 +27,12 @@ export const REALTOR_CA_FIXTURE_SEARCH_JSON = JSON.stringify({
         Type: 'Condo Apartment',
         Photo: [
           {
-            HighResPath: 'https://cdn.realtor.ca/listings/TS638765432100000000/highres/0/c1314114_1.jpg',
+            HighResPath:
+              'https://cdn.realtor.ca/listings/TS638765432100000000/highres/0/c1314114_1.jpg',
           },
           {
-            HighResPath: 'https://cdn.realtor.ca/listings/TS638765432100000000/highres/0/c1314114_2.jpg',
+            HighResPath:
+              'https://cdn.realtor.ca/listings/TS638765432100000000/highres/0/c1314114_2.jpg',
           },
         ],
       },
@@ -70,7 +72,8 @@ export const REALTOR_CA_FIXTURE_DETAIL_JSON = JSON.stringify({
     Type: 'Condo Apartment',
     Photo: [
       {
-        HighResPath: 'https://cdn.realtor.ca/listings/TS638765432100000000/highres/0/c1314114_1.jpg',
+        HighResPath:
+          'https://cdn.realtor.ca/listings/TS638765432100000000/highres/0/c1314114_1.jpg',
       },
     ],
   },
@@ -85,7 +88,10 @@ export const REALTOR_CA_FIXTURE_DETAIL_JSON = JSON.stringify({
 
 /** Default map bounding boxes for major Canadian cities. */
 export const REALTOR_CA_CITY_BBOX: Readonly<
-  Record<string, { latMin: number; latMax: number; lngMin: number; lngMax: number; province: string }>
+  Record<
+    string,
+    { latMin: number; latMax: number; lngMin: number; lngMax: number; province: string }
+  >
 > = {
   toronto: { latMin: 43.58, latMax: 43.85, lngMin: -79.64, lngMax: -79.12, province: 'ON' },
   vancouver: { latMin: 49.2, latMax: 49.35, lngMin: -123.25, lngMax: -123.0, province: 'BC' },

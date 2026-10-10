@@ -54,10 +54,7 @@ export const ExchangeReviewForm: React.FC<ExchangeReviewFormProps> = ({
       toast.success(t('listing.exchange.review.thanks'));
       onSubmitted();
     } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : t('listing.exchange.review.failed');
+      const message = error instanceof Error ? error.message : t('listing.exchange.review.failed');
       toast.error(message);
     }
   }, [rating, comment, mutation, onSubmitted, t]);
@@ -92,7 +89,9 @@ export const ExchangeReviewForm: React.FC<ExchangeReviewFormProps> = ({
         onPress={handleSubmit}
         loading={mutation.isPending}
         disabled={mutation.isPending}
-        style={styles.submit} tone="accent" appearance="solid"
+        style={styles.submit}
+        tone="accent"
+        appearance="solid"
       >
         {t('listing.exchange.review.submit')}
       </Button>

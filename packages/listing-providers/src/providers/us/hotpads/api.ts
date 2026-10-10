@@ -3,11 +3,7 @@
  */
 
 import { asNumberUs as asNumber, asString, isRecord } from '../../../parse/guards';
-import {
-  HOTPADS_API_BASE,
-  HOTPADS_BASE_URL,
-  type HotpadsListingFixture,
-} from './fixtures';
+import { HOTPADS_API_BASE, HOTPADS_BASE_URL, type HotpadsListingFixture } from './fixtures';
 
 export interface HotpadsArea {
   id: string;
@@ -74,7 +70,12 @@ export function parseHotpadsArea(body: string): HotpadsArea | undefined {
   const minLon = asNumber(d.minLon);
   const maxLon = asNumber(d.maxLon);
   if (!id || !resourceId || !name || !state || !city) return undefined;
-  if (minLat === undefined || maxLat === undefined || minLon === undefined || maxLon === undefined) {
+  if (
+    minLat === undefined ||
+    maxLat === undefined ||
+    minLon === undefined ||
+    maxLon === undefined
+  ) {
     return undefined;
   }
   return { id, resourceId, name, state, city, minLat, maxLat, minLon, maxLon };
@@ -118,7 +119,16 @@ function readListingNode(
   const addressRaw = isRecord(listing.address) ? listing.address : null;
   const geoRaw = isRecord(listing.geo) ? listing.geo : buildingGeo;
   const modelSummary = readModelSummary(listing.modelSummary);
-  if (!aliasEncoded || !uriMalone || !title || !propertyType || !listingType || !addressRaw || !geoRaw || !modelSummary) {
+  if (
+    !aliasEncoded ||
+    !uriMalone ||
+    !title ||
+    !propertyType ||
+    !listingType ||
+    !addressRaw ||
+    !geoRaw ||
+    !modelSummary
+  ) {
     return undefined;
   }
   const street = asString(addressRaw.street);
@@ -127,7 +137,8 @@ function readListingNode(
   const zip = asString(addressRaw.zip);
   const lat = asNumber(geoRaw.lat);
   const lon = asNumber(geoRaw.lon);
-  if (!street || !city || !state || !zip || lat === undefined || lon === undefined) return undefined;
+  if (!street || !city || !state || !zip || lat === undefined || lon === undefined)
+    return undefined;
 
   const medPhotoUrl = asString(listing.medPhotoUrl) ?? '';
   const medPhotoUrls: string[] = [];
@@ -161,7 +172,8 @@ export function parseHotpadsSearch(body: string): HotpadsSearchRef[] {
   } catch {
     return [];
   }
-  if (!isRecord(parsed) || !isRecord(parsed.data) || !Array.isArray(parsed.data.buildings)) return [];
+  if (!isRecord(parsed) || !isRecord(parsed.data) || !Array.isArray(parsed.data.buildings))
+    return [];
   const out: HotpadsSearchRef[] = [];
   for (const building of parsed.data.buildings) {
     if (!isRecord(building)) continue;
@@ -184,14 +196,18 @@ export function parseHotpadsSearch(body: string): HotpadsSearchRef[] {
 }
 
 /** Find one listing node in a byCoordsV2 body by alias/source id. */
-export function parseHotpadsListingById(body: string, sourceId: string): HotpadsListingFixture | undefined {
+export function parseHotpadsListingById(
+  body: string,
+  sourceId: string,
+): HotpadsListingFixture | undefined {
   let parsed: unknown;
   try {
     parsed = JSON.parse(body) as unknown;
   } catch {
     return undefined;
   }
-  if (!isRecord(parsed) || !isRecord(parsed.data) || !Array.isArray(parsed.data.buildings)) return undefined;
+  if (!isRecord(parsed) || !isRecord(parsed.data) || !Array.isArray(parsed.data.buildings))
+    return undefined;
   for (const building of parsed.data.buildings) {
     if (!isRecord(building)) continue;
     const lotIdEncoded = asString(building.lotIdEncoded) ?? '';

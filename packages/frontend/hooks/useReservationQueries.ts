@@ -5,11 +5,7 @@ import {
   type UseMutationResult,
   type UseQueryResult,
 } from '@tanstack/react-query';
-import {
-  CreateReservationData,
-  Reservation,
-  UpdateReservationData,
-} from '@homiio/shared-types';
+import { CreateReservationData, Reservation, UpdateReservationData } from '@homiio/shared-types';
 import {
   ListReservationsParams,
   PropertyAvailabilityResponse,
@@ -24,8 +20,7 @@ const PROPERTY_AVAILABILITY_KEY = 'property-availability';
 export const reservationKeys = {
   list: (params: ListReservationsParams) => [RESERVATION_LIST_KEY, params] as const,
   detail: (id: string) => [RESERVATION_DETAIL_KEY, id] as const,
-  availability: (propertyId: string) =>
-    [PROPERTY_AVAILABILITY_KEY, propertyId] as const,
+  availability: (propertyId: string) => [PROPERTY_AVAILABILITY_KEY, propertyId] as const,
 };
 
 /**
@@ -47,9 +42,7 @@ export function useReservationsQuery(
 /**
  * Single reservation by id. Disabled until `id` is non-empty.
  */
-export function useReservationQuery(
-  id: string | undefined,
-): UseQueryResult<Reservation, Error> {
+export function useReservationQuery(id: string | undefined): UseQueryResult<Reservation, Error> {
   return useQuery<Reservation, Error>({
     queryKey: reservationKeys.detail(id ?? ''),
     queryFn: () => {

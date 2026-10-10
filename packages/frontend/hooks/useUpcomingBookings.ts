@@ -55,9 +55,7 @@ export interface UpcomingBookingsResult {
   readonly refetch: () => void;
 }
 
-export function useUpcomingBookings(
-  options: UseUpcomingBookingsOptions,
-): UpcomingBookingsResult {
+export function useUpcomingBookings(options: UseUpcomingBookingsOptions): UpcomingBookingsResult {
   const { enabled, statuses, includeViewings = false } = options;
 
   const reservations = useReservationsQuery({ limit: PAGE }, { enabled });
@@ -106,9 +104,7 @@ export function useUpcomingBookings(
 
   // A disabled query reports `pending` forever, so an unwanted source is left
   // out of the roll-call rather than pinning the surface on a spinner.
-  const active = includeViewings
-    ? [reservations, exchanges, viewings]
-    : [reservations, exchanges];
+  const active = includeViewings ? [reservations, exchanges, viewings] : [reservations, exchanges];
 
   const isError = active.some((query) => query.isError);
   return {

@@ -135,7 +135,9 @@ export default function ContractDetailScreen() {
       await terminateMutation.mutateAsync({});
       toast.success(t('contracts.detail.toastTerminated'));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t('contracts.detail.toastTerminateFailed'));
+      toast.error(
+        error instanceof Error ? error.message : t('contracts.detail.toastTerminateFailed'),
+      );
     }
   }, [id, terminateMutation, t]);
 
@@ -227,7 +229,9 @@ export default function ContractDetailScreen() {
       });
       toast.success(t('contracts.detail.toastDocumentAdded'));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t('contracts.detail.toastDocumentFailed'));
+      toast.error(
+        error instanceof Error ? error.message : t('contracts.detail.toastDocumentFailed'),
+      );
     }
   }, [id, uploadMutation, t]);
 
@@ -275,9 +279,7 @@ export default function ContractDetailScreen() {
         <View style={styles.centerWrap}>
           <ErrorState
             title={t('contracts.detail.unavailableTitle')}
-            description={
-              leaseQuery.error?.message ?? t('contracts.detail.unavailableDescription')
-            }
+            description={leaseQuery.error?.message ?? t('contracts.detail.unavailableDescription')}
             retryLabel={t('contracts.detail.goBack')}
             onRetry={() => router.back()}
           />
@@ -323,8 +325,7 @@ export default function ContractDetailScreen() {
     (lease.status === LeaseStatus.ACTIVE || lease.status === LeaseStatus.PENDING_SIGNATURES);
   const canDelete = role === 'landlord' && lease.status === LeaseStatus.DRAFT;
 
-  const busy =
-    signMutation.isPending || terminateMutation.isPending || deleteMutation.isPending;
+  const busy = signMutation.isPending || terminateMutation.isPending || deleteMutation.isPending;
 
   const actions =
     canSign || canTerminate || canDelete ? (
@@ -333,7 +334,9 @@ export default function ContractDetailScreen() {
           <Button
             size="sm"
             onPress={() => void confirmAction('sign')}
-            disabled={busy} tone="accent" appearance="solid"
+            disabled={busy}
+            tone="accent"
+            appearance="solid"
           >
             {t('contracts.detail.signLease')}
           </Button>
@@ -342,7 +345,9 @@ export default function ContractDetailScreen() {
           <Button
             size="sm"
             onPress={() => void confirmAction('terminate')}
-            disabled={busy} tone="neutral" appearance="outline"
+            disabled={busy}
+            tone="neutral"
+            appearance="outline"
           >
             {t('contracts.detail.terminate')}
           </Button>
@@ -351,7 +356,9 @@ export default function ContractDetailScreen() {
           <Button
             size="sm"
             onPress={() => void confirmAction('delete')}
-            disabled={busy} tone="accent" appearance="subtle"
+            disabled={busy}
+            tone="accent"
+            appearance="subtle"
           >
             {t('contracts.detail.deleteDraft')}
           </Button>
@@ -401,7 +408,9 @@ export default function ContractDetailScreen() {
               onPress={handleAddDocument}
               disabled={uploadMutation.isPending}
               loading={uploadMutation.isPending}
-              leadingIcon={RiAddLine} tone="neutral" appearance="outline"
+              leadingIcon={RiAddLine}
+              tone="neutral"
+              appearance="outline"
             >
               {t('contracts.detail.addShort')}
             </Button>

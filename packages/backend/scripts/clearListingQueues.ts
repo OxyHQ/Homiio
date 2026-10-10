@@ -9,12 +9,13 @@
  */
 
 import { Queue } from 'bullmq';
-import {
-  QUEUE_NAMES,
-  parseRedisConnection,
-} from '../services/ingestion/queues';
+import { QUEUE_NAMES, parseRedisConnection } from '../services/ingestion/queues';
 
-async function cleanQueue(name: string, prefix: string, connection: ReturnType<typeof parseRedisConnection>): Promise<void> {
+async function cleanQueue(
+  name: string,
+  prefix: string,
+  connection: ReturnType<typeof parseRedisConnection>,
+): Promise<void> {
   const queue = new Queue(name, { connection, prefix });
   const completed = await queue.clean(0, 1000, 'completed');
   const failed = await queue.clean(0, 1000, 'failed');

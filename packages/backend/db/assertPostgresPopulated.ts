@@ -218,9 +218,7 @@ export function evaluatePopulation(
     }
     const verdict = reading.rows >= floor.minimum ? 'ok' : 'BELOW FLOOR';
     if (reading.rows < floor.minimum) ok = false;
-    lines.push(
-      `${floor.table}: ${reading.rows} row(s), floor ${floor.minimum} — ${verdict}`,
-    );
+    lines.push(`${floor.table}: ${reading.rows} row(s), floor ${floor.minimum} — ${verdict}`);
   }
   return { ok, lines };
 }
@@ -252,7 +250,7 @@ async function main(): Promise<number> {
   if (!url) {
     throw new Error(
       'DATABASE_URL is not set, so the population floor could not read anything. ' +
-      'An unreadable database is not a passing check.',
+        'An unreadable database is not a passing check.',
     );
   }
 
@@ -269,10 +267,10 @@ async function main(): Promise<number> {
     if (!verdict.ok) {
       logger.error(
         'REFUSING THE ROLLOUT. The schema is present and the connection works, ' +
-        'so this is not an unreachable database — it is a REACHABLE EMPTY ONE, ' +
-        'which every HTTP check in this pipeline reports as healthy. If the copy ' +
-        'has not run yet, that is the answer: run it. If it has, something ' +
-        'emptied the target and the deploy must not proceed.',
+          'so this is not an unreachable database — it is a REACHABLE EMPTY ONE, ' +
+          'which every HTTP check in this pipeline reports as healthy. If the copy ' +
+          'has not run yet, that is the answer: run it. If it has, something ' +
+          'emptied the target and the deploy must not proceed.',
       );
       return 1;
     }

@@ -62,9 +62,18 @@ function buildApp(oxyUserId: string): Express {
   app.get('/roommates/status', asyncHandler(roommateController.getCurrentUserRoommateStatus));
   app.get('/roommates/requests', asyncHandler(roommateController.getRoommateRequests));
   app.get('/roommates/relationships', asyncHandler(roommateController.getRoommateRelationships));
-  app.delete('/roommates/relationships/:relationshipId', asyncHandler(roommateController.endRoommateRelationship));
-  app.post('/roommates/requests/:requestId/accept', asyncHandler(roommateController.acceptRoommateRequest));
-  app.post('/roommates/requests/:requestId/decline', asyncHandler(roommateController.declineRoommateRequest));
+  app.delete(
+    '/roommates/relationships/:relationshipId',
+    asyncHandler(roommateController.endRoommateRelationship),
+  );
+  app.post(
+    '/roommates/requests/:requestId/accept',
+    asyncHandler(roommateController.acceptRoommateRequest),
+  );
+  app.post(
+    '/roommates/requests/:requestId/decline',
+    asyncHandler(roommateController.declineRoommateRequest),
+  );
   app.post('/roommates/:oxyUserId/request', asyncHandler(roommateController.sendRoommateRequest));
   app.use(errorHandler);
   return app;
@@ -209,7 +218,9 @@ describe('the discover filters that used to match nothing', () => {
     });
     await createRoommateProfile('oxy-mad', { settingsRoommatePreferencesLocation: 'Madrid' });
 
-    const res = await request(buildApp('oxy-me')).get('/roommates').query({ location: 'barcelona' });
+    const res = await request(buildApp('oxy-me'))
+      .get('/roommates')
+      .query({ location: 'barcelona' });
     expect((res.body.profiles as Array<{ oxyUserId: string }>).map((p) => p.oxyUserId)).toEqual([
       'oxy-bcn',
     ]);
@@ -293,7 +304,7 @@ describe('the wire shape the roommate endpoints serve', () => {
     expect(status.body.profile.id).toEqual(expect.any(String));
   });
 
-  it('never carries another person\'s annual income or transcript', async () => {
+  it("never carries another person's annual income or transcript", async () => {
     // The Mongo version attached `personalProfile` verbatim to every candidate
     // and every request participant. `personal_info_annual_income` is a
     // PROTECTED COLUMN and the participant DTO is built at PUBLIC visibility.
@@ -387,7 +398,9 @@ describe('toggleRoommateMatching', () => {
   it('writes the flag and reports what was stored', async () => {
     await createRoommateProfile('oxy-me', { settingsRoommateEnabled: false });
 
-    const res = await request(buildApp('oxy-me')).patch('/roommates/toggle').send({ enabled: true });
+    const res = await request(buildApp('oxy-me'))
+      .patch('/roommates/toggle')
+      .send({ enabled: true });
     expect(res.status).toBe(200);
     expect(res.body.enabled).toBe(true);
     expect((await storedProfile('oxy-me')).settingsRoommateEnabled).toBe(true);
@@ -395,7 +408,9 @@ describe('toggleRoommateMatching', () => {
 
   it('refuses a non-boolean rather than guessing', async () => {
     await createRoommateProfile('oxy-me', { settingsRoommateEnabled: false });
-    const res = await request(buildApp('oxy-me')).patch('/roommates/toggle').send({ enabled: 'yes' });
+    const res = await request(buildApp('oxy-me'))
+      .patch('/roommates/toggle')
+      .send({ enabled: 'yes' });
     expect(res.status).toBe(400);
     expect((await storedProfile('oxy-me')).settingsRoommateEnabled).toBe(false);
   });
@@ -473,7 +488,9 @@ describe('sendRoommateRequest — the pending-pair rule', () => {
     await createRoommateProfile('oxy-a');
     await createRoommateProfile('oxy-b');
 
-    const res = await request(buildApp('oxy-a')).post('/roommates/oxy-b/request').send({ message: 'hola' });
+    const res = await request(buildApp('oxy-a'))
+      .post('/roommates/oxy-b/request')
+      .send({ message: 'hola' });
     expect(res.status).toBe(201);
     expect(res.body.data.id).toEqual(expect.any(String));
     expect(res.body.data.status).toBe('pending');
@@ -595,8 +612,12 @@ describe('respondToRoommateRequest — only the recipient, only once', () => {
     const first = await seedPendingRequest('oxy-a', 'oxy-b');
     const second = await seedPendingRequest('oxy-b', 'oxy-a');
 
-    expect((await request(buildApp('oxy-b')).post(`/roommates/requests/${first.id}/accept`)).status).toBe(200);
-    expect((await request(buildApp('oxy-a')).post(`/roommates/requests/${second.id}/accept`)).status).toBe(200);
+    expect(
+      (await request(buildApp('oxy-b')).post(`/roommates/requests/${first.id}/accept`)).status,
+    ).toBe(200);
+    expect(
+      (await request(buildApp('oxy-a')).post(`/roommates/requests/${second.id}/accept`)).status,
+    ).toBe(200);
 
     expect(await getDb().select().from(roommateRelationships)).toHaveLength(1);
   });
@@ -607,7 +628,9 @@ describe('respondToRoommateRequest — only the recipient, only once', () => {
     await createRoommateProfile('oxy-stranger');
     const pending = await seedPendingRequest('oxy-a', 'oxy-b');
 
-    const res = await request(buildApp('oxy-stranger')).post(`/roommates/requests/${pending.id}/accept`);
+    const res = await request(buildApp('oxy-stranger')).post(
+      `/roommates/requests/${pending.id}/accept`,
+    );
     expect(res.status).toBe(404);
 
     const [row] = await getDb()
@@ -628,7 +651,7 @@ describe('respondToRoommateRequest — only the recipient, only once', () => {
 });
 
 describe('getRoommateRequests', () => {
-  it('splits the caller\'s own sent and received requests', async () => {
+  it("splits the caller's own sent and received requests", async () => {
     await createRoommateProfile('oxy-me');
     await seedPendingRequest('oxy-me', 'oxy-x');
     await seedPendingRequest('oxy-y', 'oxy-me');
@@ -679,7 +702,9 @@ describe('endRoommateRelationship — participant-scoped', () => {
       .values({ oxyUser1Id: 'oxy-a', oxyUser2Id: 'oxy-b', status: 'active', startDate: new Date() })
       .returning();
 
-    const res = await request(buildApp('oxy-b')).delete(`/roommates/relationships/${relationship.id}`);
+    const res = await request(buildApp('oxy-b')).delete(
+      `/roommates/relationships/${relationship.id}`,
+    );
     expect(res.status).toBe(200);
     expect(res.body.data.status).toBe('ended');
 

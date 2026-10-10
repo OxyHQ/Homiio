@@ -14,15 +14,38 @@ const TIMESTAMP = 1791000000;
 const created = new Date(TIMESTAMP * 1000).toISOString();
 type Event = ReturnType<WebhooksResource['constructEvent']>;
 const EVENT = {
-  id: 'evt_fixture', object: 'event', type: 'payment_intent.settled', created,
-  data: { object: { id: 'pi_fixture', object: 'payment_intent', status: 'settled', rail: 'faircoin',
-    amount: '100000', currency: 'FAIR', network: 'testnet', address: 'synthetic-address', merchantId: 'merch_fixture',
-    txid: 'synthetic-tx', confirmations: 6, clientSecret: 'synthetic-unused-secret', metadata: {}, expiresAt: created,
-    createdAt: created, updatedAt: created } },
+  id: 'evt_fixture',
+  object: 'event',
+  type: 'payment_intent.settled',
+  created,
+  data: {
+    object: {
+      id: 'pi_fixture',
+      object: 'payment_intent',
+      status: 'settled',
+      rail: 'faircoin',
+      amount: '100000',
+      currency: 'FAIR',
+      network: 'testnet',
+      address: 'synthetic-address',
+      merchantId: 'merch_fixture',
+      txid: 'synthetic-tx',
+      confirmations: 6,
+      clientSecret: 'synthetic-unused-secret',
+      metadata: {},
+      expiresAt: created,
+      createdAt: created,
+      updatedAt: created,
+    },
+  },
 } satisfies Event;
 const BODY = JSON.stringify(EVENT);
-beforeEach(() => { jest.spyOn(Date, 'now').mockReturnValue(TIMESTAMP * 1000); });
-afterEach(() => { jest.restoreAllMocks(); });
+beforeEach(() => {
+  jest.spyOn(Date, 'now').mockReturnValue(TIMESTAMP * 1000);
+});
+afterEach(() => {
+  jest.restoreAllMocks();
+});
 afterAll(closePostgres);
 
 function sign(body: string, timestamp: number, secret = SECRET): string {
@@ -77,42 +100,91 @@ describe('what a Peable status means to the ledger', () => {
   });
 });
 
-
 describe('published SDK webhook verification without a client or token mint', () => {
-  const verify = (rawBody: string | Buffer, header: string | undefined, secret = SECRET) => verifyPeableSignature({ rawBody, header, secret });
+  const verify = (rawBody: string | Buffer, header: string | undefined, secret = SECRET) =>
+    verifyPeableSignature({ rawBody, header, secret });
   it('accepts canonical raw strings and buffers', () => {
     expect(verify(BODY, sign(BODY, TIMESTAMP))).toEqual({ ok: true });
     expect(verify(Buffer.from(BODY), sign(BODY, TIMESTAMP))).toEqual({ ok: true });
   });
   it('rejects tampering, reserialisation, another secret, and short forged digests', () => {
     const header = sign(BODY, TIMESTAMP);
-    for (const raw of [BODY.replace('evt_fixture', 'evt_changed'), JSON.stringify(EVENT, null, 2)]) expect(verify(raw, header).ok).toBe(false);
+    for (const raw of [BODY.replace('evt_fixture', 'evt_changed'), JSON.stringify(EVENT, null, 2)])
+      expect(verify(raw, header).ok).toBe(false);
     expect(verify(BODY, header, 'other-secret').ok).toBe(false);
     expect(verify(BODY, `t=${TIMESTAMP},v1=ff`).ok).toBe(false);
   });
   it('enforces the exact signed timestamp window without refreshing old signatures', () => {
     expect(verify(BODY, sign(BODY, TIMESTAMP - PEABLE_SIGNATURE_TOLERANCE_SECONDS)).ok).toBe(true);
-    for (const offset of [-301, 301]) expect(verify(BODY, sign(BODY, TIMESTAMP + offset)).ok).toBe(false);
-    expect(verify(BODY, sign(BODY, TIMESTAMP - 10000).replace(`t=${TIMESTAMP - 10000}`, `t=${TIMESTAMP}`)).ok).toBe(false);
+    for (const offset of [-301, 301])
+      expect(verify(BODY, sign(BODY, TIMESTAMP + offset)).ok).toBe(false);
+    expect(
+      verify(
+        BODY,
+        sign(BODY, TIMESTAMP - 10000).replace(`t=${TIMESTAMP - 10000}`, `t=${TIMESTAMP}`),
+      ).ok,
+    ).toBe(false);
   });
-  it.each([undefined, '', 'nonsense', 't=abc,v1=ff', `t=${TIMESTAMP}`, `t=${TIMESTAMP},v2=deadbeef`])('refuses malformed or unknown-version headers: %s', header => {
+  it.each([
+    undefined,
+    '',
+    'nonsense',
+    't=abc,v1=ff',
+    `t=${TIMESTAMP}`,
+    `t=${TIMESTAMP},v2=deadbeef`,
+  ])('refuses malformed or unknown-version headers: %s', (header) => {
     expect(verify(BODY, header)).toEqual({ ok: false, reason: 'invalid_webhook' });
   });
-  it.each(['not-json', '{}', JSON.stringify({ ...EVENT, type: 'toString' }), JSON.stringify({ ...EVENT, type: 'unknown.event' }), JSON.stringify({ ...EVENT, created: 42 })])('refuses signed malformed or unknown event: %s', raw => {
+  it.each([
+    'not-json',
+    '{}',
+    JSON.stringify({ ...EVENT, type: 'toString' }),
+    JSON.stringify({ ...EVENT, type: 'unknown.event' }),
+    JSON.stringify({ ...EVENT, created: 42 }),
+  ])('refuses signed malformed or unknown event: %s', (raw) => {
     expect(verify(raw, sign(raw, TIMESTAMP))).toEqual({ ok: false, reason: 'invalid_webhook' });
   });
-  const dispute = { id: 'dp_fixture', object: 'dispute', paymentIntentId: 'pi_fixture', amount: '100', currency: 'EUR',
-    status: 'needs_response', reason: null, evidenceDueAt: null, evidenceSubmittedAt: null, createdAt: created, updatedAt: created } as const;
-  const account = { id: 'ca_fixture', object: 'connected_account', externalRef: 'synthetic-fixture', country: 'ES', defaultCurrency: 'EUR',
-    payable: false, payoutsEnabled: false, chargesEnabled: false, transfersCapability: 'pending', cardPaymentsCapability: null,
-    requirements: { currentlyDue: 1, eventuallyDue: 1, pastDue: 0, pendingVerification: 0 }, disabledReasonCodes: [], lastSyncedAt: null,
-    createdAt: created, updatedAt: created } as const;
+  const dispute = {
+    id: 'dp_fixture',
+    object: 'dispute',
+    paymentIntentId: 'pi_fixture',
+    amount: '100',
+    currency: 'EUR',
+    status: 'needs_response',
+    reason: null,
+    evidenceDueAt: null,
+    evidenceSubmittedAt: null,
+    createdAt: created,
+    updatedAt: created,
+  } as const;
+  const account = {
+    id: 'ca_fixture',
+    object: 'connected_account',
+    externalRef: 'synthetic-fixture',
+    country: 'ES',
+    defaultCurrency: 'EUR',
+    payable: false,
+    payoutsEnabled: false,
+    chargesEnabled: false,
+    transfersCapability: 'pending',
+    cardPaymentsCapability: null,
+    requirements: { currentlyDue: 1, eventuallyDue: 1, pastDue: 0, pendingVerification: 0 },
+    disabledReasonCodes: [],
+    lastSyncedAt: null,
+    createdAt: created,
+    updatedAt: created,
+  } as const;
   const payloads = {
-    'payment_intent.confirming': EVENT.data.object, 'payment_intent.settled': EVENT.data.object,
-    'payment_intent.failed': EVENT.data.object, 'payment_intent.rejected': EVENT.data.object,
-    'payment_intent.expired': EVENT.data.object, 'payment_intent.refunded': EVENT.data.object,
-    'payment_intent.partially_refunded': EVENT.data.object, 'payment_intent.disputed': dispute,
-    'payment_intent.dispute_closed': { ...dispute, status: 'won' }, 'connected_account.updated': account,
+    'payment_intent.confirming': EVENT.data.object,
+    'payment_intent.settled': EVENT.data.object,
+    'payment_intent.failed': EVENT.data.object,
+    'payment_intent.rejected': EVENT.data.object,
+    'payment_intent.expired': EVENT.data.object,
+    'payment_intent.refunded': EVENT.data.object,
+    'payment_intent.partially_refunded': EVENT.data.object,
+    'payment_intent.disputed': dispute,
+    'payment_intent.dispute_closed': { ...dispute, status: 'won' },
+    'connected_account.updated': account,
   } satisfies { [T in Event['type']]: Extract<Event, { type: T }>['data']['object'] };
   for (const type of Object.keys(payloads) as (keyof typeof payloads)[]) {
     it(`accepts signed ${type} with its actual resource family`, () => {
@@ -123,8 +195,13 @@ describe('published SDK webhook verification without a client or token mint', ()
   }
   it('does not silently replace invalid UTF-8 before verifying raw buffer bytes', () => {
     const raw = JSON.stringify({ ...EVENT, id: 'evt_\uFFFD' });
-    const bytes = Buffer.from(raw); const index = bytes.indexOf(Buffer.from('\uFFFD'));
-    const malformed = Buffer.concat([bytes.subarray(0, index), Buffer.from([0xff]), bytes.subarray(index + 3)]);
+    const bytes = Buffer.from(raw);
+    const index = bytes.indexOf(Buffer.from('\uFFFD'));
+    const malformed = Buffer.concat([
+      bytes.subarray(0, index),
+      Buffer.from([0xff]),
+      bytes.subarray(index + 3),
+    ]);
     expect(verify(raw, sign(raw, TIMESTAMP)).ok).toBe(true);
     expect(verify(malformed, sign(raw, TIMESTAMP)).ok).toBe(false);
   });

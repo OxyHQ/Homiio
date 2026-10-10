@@ -40,7 +40,9 @@ export const ContractCard: React.FC<ContractCardProps> = ({ lease, title, format
             size="sm"
             trailingIcon={RiArrowRightSLine}
             onPress={onPress}
-            accessibilityLabel={t('contracts.card.accessibility', { title })} tone="neutral" appearance="outline"
+            accessibilityLabel={t('contracts.card.accessibility', { title })}
+            tone="neutral"
+            appearance="outline"
           >
             {t('contracts.actions.view')}
           </Button>

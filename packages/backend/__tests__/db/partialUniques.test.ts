@@ -97,9 +97,7 @@ describe('listing_reports — one OPEN report per reporter per property', () => 
       .where(eq(listingReports.id, first.id));
 
     await expect(
-      db
-        .insert(listingReports)
-        .values({ propertyId, reporterOxyUserId: reporter, reason: 'scam' }),
+      db.insert(listingReports).values({ propertyId, reporterOxyUserId: reporter, reason: 'scam' }),
     ).resolves.toBeDefined();
   });
 });
@@ -221,17 +219,11 @@ describe('sparse uniques permit many NULLs and exactly one of any value', () => 
       sharingSharedAt: new Date(),
       sharingExpiresAt: new Date(Date.now() + 86_400_000),
     };
-    await db
-      .update(conversations)
-      .set(shared)
-      .where(eq(conversations.id, rows[0].id));
+    await db.update(conversations).set(shared).where(eq(conversations.id, rows[0].id));
 
     let caught: unknown;
     try {
-      await db
-        .update(conversations)
-        .set(shared)
-        .where(eq(conversations.id, rows[1].id));
+      await db.update(conversations).set(shared).where(eq(conversations.id, rows[1].id));
     } catch (error) {
       caught = error;
     }

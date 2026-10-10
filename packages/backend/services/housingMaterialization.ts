@@ -346,14 +346,14 @@ async function followMergeRedirect(
     if (!row) {
       throw new Error(
         `Address ${current.id} redirects to ${next}, which does not exist. The redirect is a ` +
-        'foreign key, so this means the row was removed by something that bypassed it.',
+          'foreign key, so this means the row was removed by something that bypassed it.',
       );
     }
     current = row;
   }
   throw new Error(
     `Address ${start.id} did not resolve to a survivor within ${MAX_MERGE_REDIRECTS} redirects — ` +
-    'the merge chain contains a cycle.',
+      'the merge chain contains a cycle.',
   );
 }
 
@@ -471,10 +471,10 @@ function identityFieldsOfRow(row: AddressRow): AddressIdentityFields {
 function legacyKeyOf(fields: AddressIdentityFields, level: AddressLevel): string {
   return computeAddressNormalizedKey({
     street: fields.street,
-    number: level === 'STREET' ? undefined : fields.number ?? undefined,
-    unit: level === 'UNIT' ? fields.unit ?? undefined : undefined,
-    buildingName: level === 'STREET' ? undefined : fields.buildingName ?? undefined,
-    block: level === 'STREET' ? undefined : fields.block ?? undefined,
+    number: level === 'STREET' ? undefined : (fields.number ?? undefined),
+    unit: level === 'UNIT' ? (fields.unit ?? undefined) : undefined,
+    buildingName: level === 'STREET' ? undefined : (fields.buildingName ?? undefined),
+    block: level === 'STREET' ? undefined : (fields.block ?? undefined),
     postalCode: fields.postalCode ?? undefined,
     cityId: fields.cityId,
     countryCode: fields.countryCode,
@@ -530,13 +530,13 @@ function addressValuesFor(
     // NULL" needs the column to become nullable, which is a separate migration
     // and a separate decision about 11,734 existing rows.
     postalCode: fields.postalCode ?? '',
-    number: atBuildingOrBelow ? fields.number ?? null : null,
-    buildingName: atBuildingOrBelow ? fields.buildingName ?? null : null,
-    block: atBuildingOrBelow ? fields.block ?? null : null,
-    entrance: atBuildingOrBelow ? fields.entrance ?? null : null,
-    floor: level === 'UNIT' ? fields.floor ?? null : null,
-    unit: level === 'UNIT' ? fields.unit ?? null : null,
-    subunit: level === 'UNIT' ? fields.subunit ?? null : null,
+    number: atBuildingOrBelow ? (fields.number ?? null) : null,
+    buildingName: atBuildingOrBelow ? (fields.buildingName ?? null) : null,
+    block: atBuildingOrBelow ? (fields.block ?? null) : null,
+    entrance: atBuildingOrBelow ? (fields.entrance ?? null) : null,
+    floor: level === 'UNIT' ? (fields.floor ?? null) : null,
+    unit: level === 'UNIT' ? (fields.unit ?? null) : null,
+    subunit: level === 'UNIT' ? (fields.subunit ?? null) : null,
     longitude: point.longitude,
     latitude: point.latitude,
     identityKey: keys.identityKey,
@@ -587,7 +587,14 @@ async function resolveLevel(
   // keeps resolving to the row it already had; this row is reachable by its v2
   // identity. ADR 0001 §5.1's plan is forward-only and says so.
   const normalizedKey = legacyHolder ? null : legacyKey;
-  const values = addressValuesFor(geo, fields, level, point, { identityKey, normalizedKey }, parentAddressId);
+  const values = addressValuesFor(
+    geo,
+    fields,
+    level,
+    point,
+    { identityKey, normalizedKey },
+    parentAddressId,
+  );
 
   const inserted = await db
     .insert(addresses)
@@ -621,7 +628,10 @@ async function resolveLevel(
       `Address with identity_key ${identityKey} could not be resolved after an insert conflict`,
     );
   }
-  return { ...raced, detail: `identity_key ${identityKey.slice(0, 12)}… created concurrently at ${level}` };
+  return {
+    ...raced,
+    detail: `identity_key ${identityKey.slice(0, 12)}… created concurrently at ${level}`,
+  };
 }
 
 /** An exact v2 hit, redirected to its merge survivor. */
@@ -812,7 +822,15 @@ async function ensureAncestors(
     return { streetId: street.row.id, buildingId: row.id, unitId: null };
   }
 
-  const building = await resolveLevel(db, geo, fields, legacyFields, 'BUILDING', point, street.row.id);
+  const building = await resolveLevel(
+    db,
+    geo,
+    fields,
+    legacyFields,
+    'BUILDING',
+    point,
+    street.row.id,
+  );
   await stampParent(db, row, building.row.id);
   return { streetId: street.row.id, buildingId: building.row.id, unitId: row.id };
 }
@@ -880,9 +898,7 @@ function proposedNames(source: HousingCandidateDraft | CandidateRow): GeoNames {
 }
 
 /** The coordinate pair, or undefined when the candidate has none. */
-function coordinatesOf(
-  source: HousingCandidateDraft | CandidateRow,
-): [number, number] | undefined {
+function coordinatesOf(source: HousingCandidateDraft | CandidateRow): [number, number] | undefined {
   const { longitude, latitude } = source;
   if (longitude === null || longitude === undefined) return undefined;
   if (latitude === null || latitude === undefined) return undefined;
@@ -908,7 +924,7 @@ async function recordCandidate(
   if (!draft) {
     throw new Error(
       'materializeHousingCandidate needs either `candidateId` or `candidate`. A materialization ' +
-      'with no candidate has no provenance, which is the one thing this chokepoint exists to guarantee.',
+        'with no candidate has no provenance, which is the one thing this chokepoint exists to guarantee.',
     );
   }
 
@@ -933,9 +949,10 @@ async function recordCandidate(
       proposedStreet: draft.proposedStreet ?? null,
       // NULL, never `''` and never `'00000'`: both are VALUES and both would
       // enter an identity as though a real postcode had been observed.
-      proposedPostalCode: identityValueOrNull(draft.proposedPostalCode) === null
-        ? null
-        : draft.proposedPostalCode ?? null,
+      proposedPostalCode:
+        identityValueOrNull(draft.proposedPostalCode) === null
+          ? null
+          : (draft.proposedPostalCode ?? null),
       proposedNumber: draft.proposedNumber ?? null,
       proposedBuildingName: draft.proposedBuildingName ?? null,
       proposedBlock: draft.proposedBlock ?? null,
@@ -946,8 +963,7 @@ async function recordCandidate(
       origin: draft.origin,
       sourceUrl: draft.sourceUrl ?? null,
       confidence: draft.confidence ?? null,
-      expiresAt:
-        draft.expiresAt ?? new Date(Date.now() + CANDIDATE_TTL_DAYS * 24 * 60 * 60 * 1000),
+      expiresAt: draft.expiresAt ?? new Date(Date.now() + CANDIDATE_TTL_DAYS * 24 * 60 * 60 * 1000),
     })
     .returning();
   return created;
@@ -981,7 +997,10 @@ export async function materializeHousingCandidate(
   let names: GeoNames | null = null;
   let namesError: string | null = null;
   try {
-    names = await resolveGeoNames({ coordinates: coordinatesOf(source), names: proposedNames(source) });
+    names = await resolveGeoNames({
+      coordinates: coordinatesOf(source),
+      names: proposedNames(source),
+    });
   } catch (error) {
     if (!(error instanceof GeoResolutionError)) throw error;
     namesError = error.message;
@@ -1109,7 +1128,7 @@ export async function materializeHousingCandidate(
               `${candidate.provider}:${providerRef} is already bound to ${existingRef.addressId}, ` +
               `but this candidate resolves to ${resolved?.row.id ?? 'a place that does not exist yet'}. ` +
               'One of the two bindings is wrong, and moving the ref silently would republish one ' +
-              'place\'s history under another.',
+              "place's history under another.",
           },
         ],
       };
@@ -1127,8 +1146,16 @@ export async function materializeHousingCandidate(
           : await resolveLevel(db, geo, fields, legacyFields, 'BUILDING', point, street.row.id);
       resolved =
         level === 'UNIT'
-          ? await resolveLevel(db, geo, fields, legacyFields, 'UNIT', point, (building ?? street).row.id)
-          : building ?? street;
+          ? await resolveLevel(
+              db,
+              geo,
+              fields,
+              legacyFields,
+              'UNIT',
+              point,
+              (building ?? street).row.id,
+            )
+          : (building ?? street);
     }
 
     const hierarchy = await ensureAncestors(db, resolved.row, geo);
@@ -1305,7 +1332,11 @@ async function replayMaterialization(
     : null;
 
   const streetId =
-    level === 'STREET' ? address.id : level === 'BUILDING' ? parent?.id ?? address.id : grandparent?.id ?? address.id;
+    level === 'STREET'
+      ? address.id
+      : level === 'BUILDING'
+        ? (parent?.id ?? address.id)
+        : (grandparent?.id ?? address.id);
 
   return {
     status: 'materialized',
@@ -1314,7 +1345,7 @@ async function replayMaterialization(
     addressLevel: level,
     streetAddressId: streetId,
     buildingAddressId:
-      level === 'BUILDING' ? address.id : level === 'UNIT' ? parent?.id ?? null : null,
+      level === 'BUILDING' ? address.id : level === 'UNIT' ? (parent?.id ?? null) : null,
     unitAddressId: level === 'UNIT' ? address.id : null,
     materializationId: row.id,
     match: {
@@ -1335,7 +1366,7 @@ async function loadCandidateForNames(candidateId: string | undefined): Promise<C
   if (!candidateId) {
     throw new Error(
       'materializeHousingCandidate needs either `candidateId` or `candidate`. A materialization ' +
-      'with no candidate has no provenance, which is the one thing this chokepoint exists to guarantee.',
+        'with no candidate has no provenance, which is the one thing this chokepoint exists to guarantee.',
     );
   }
   const [row] = await getDb()

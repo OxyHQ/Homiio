@@ -18,7 +18,9 @@ export function EcoCertificationWidget() {
       title={t('home.eco.title')}
       icon={<RiLeafLine width={HEADER_ICON_SIZE} height={HEADER_ICON_SIZE} fill={colors.success} />}
     >
-      <BloomText className="text-sm leading-5 text-muted-foreground">{t('home.eco.description')}</BloomText>
+      <BloomText className="text-sm leading-5 text-muted-foreground">
+        {t('home.eco.description')}
+      </BloomText>
     </BaseWidget>
   );
 }

@@ -28,11 +28,7 @@ import request from 'supertest';
 import apiRoutes from '../../routes';
 import publicRoutes from '../../routes/public';
 import { getDb } from '../../db/postgres';
-import {
-  exchangeRequests,
-  propertyAvailabilityWindows,
-  reservations,
-} from '../../db/schema';
+import { exchangeRequests, propertyAvailabilityWindows, reservations } from '../../db/schema';
 import { errorHandler } from '../../middlewares/errorHandler';
 import { resetGeoTables, seedListingWithGeo } from '../helpers/postgresGeoFixtures';
 
@@ -93,51 +89,57 @@ async function seedFullCalendar(): Promise<string> {
     },
   });
 
-  await getDb().insert(reservations).values({
-    propertyId,
-    guestOxyUserId: GUEST,
-    hostOxyUserId: HOST,
-    checkIn: new Date(BASE + 10 * DAY),
-    checkOut: new Date(BASE + 15 * DAY),
-    guestCount: 2,
-    nights: 5,
-    nightlyRate: 137,
-    subtotal: 685,
-    cleaningFee: 41,
-    total: 726,
-    currency: 'EUR',
-    cancellationPolicy: 'moderate',
-    status: 'confirmed',
-    specialRequests: SECRET_MESSAGE,
-  });
-
-  await getDb().insert(exchangeRequests).values({
-    propertyId,
-    requesterOxyUserId: SWAPPER,
-    hostOxyUserId: HOST,
-    mode: 'host',
-    requestedWindowStart: new Date(BASE + 20 * DAY),
-    requestedWindowEnd: new Date(BASE + 25 * DAY),
-    message: SECRET_MESSAGE,
-    status: 'confirmed',
-  });
-
-  await getDb().insert(propertyAvailabilityWindows).values([
-    {
+  await getDb()
+    .insert(reservations)
+    .values({
       propertyId,
-      scope: 'listing',
-      startsAt: new Date(BASE + 40 * DAY),
-      endsAt: new Date(BASE + 45 * DAY),
-      status: 'blocked',
-    },
-    {
+      guestOxyUserId: GUEST,
+      hostOxyUserId: HOST,
+      checkIn: new Date(BASE + 10 * DAY),
+      checkOut: new Date(BASE + 15 * DAY),
+      guestCount: 2,
+      nights: 5,
+      nightlyRate: 137,
+      subtotal: 685,
+      cleaningFee: 41,
+      total: 726,
+      currency: 'EUR',
+      cancellationPolicy: 'moderate',
+      status: 'confirmed',
+      specialRequests: SECRET_MESSAGE,
+    });
+
+  await getDb()
+    .insert(exchangeRequests)
+    .values({
       propertyId,
-      scope: 'exchange',
-      startsAt: new Date(BASE + 50 * DAY),
-      endsAt: new Date(BASE + 55 * DAY),
-      status: 'blocked',
-    },
-  ]);
+      requesterOxyUserId: SWAPPER,
+      hostOxyUserId: HOST,
+      mode: 'host',
+      requestedWindowStart: new Date(BASE + 20 * DAY),
+      requestedWindowEnd: new Date(BASE + 25 * DAY),
+      message: SECRET_MESSAGE,
+      status: 'confirmed',
+    });
+
+  await getDb()
+    .insert(propertyAvailabilityWindows)
+    .values([
+      {
+        propertyId,
+        scope: 'listing',
+        startsAt: new Date(BASE + 40 * DAY),
+        endsAt: new Date(BASE + 45 * DAY),
+        status: 'blocked',
+      },
+      {
+        propertyId,
+        scope: 'exchange',
+        startsAt: new Date(BASE + 50 * DAY),
+        endsAt: new Date(BASE + 55 * DAY),
+        status: 'blocked',
+      },
+    ]);
 
   return propertyId;
 }
@@ -192,14 +194,10 @@ describe('the availability projection is PUBLIC', () => {
     // The paid stay AND the confirmed swap — a home committed to a swap is as
     // unavailable as one committed to a booking, and the calendar used to show
     // the swap's nights as free.
-    expect(starts(res.body.data.booked)).toEqual(
-      [BASE + 10 * DAY, BASE + 20 * DAY].sort(),
-    );
+    expect(starts(res.body.data.booked)).toEqual([BASE + 10 * DAY, BASE + 20 * DAY].sort());
     // Both calendars' windows: the `exchange`-scope block is a fortnight
     // nobody sleeps there, whatever calendar the host was editing.
-    expect(starts(res.body.data.windows)).toEqual(
-      [BASE + 40 * DAY, BASE + 50 * DAY].sort(),
-    );
+    expect(starts(res.body.data.windows)).toEqual([BASE + 40 * DAY, BASE + 50 * DAY].sort());
   });
 
   it('is no longer served by the authenticated router', async () => {
@@ -229,7 +227,13 @@ describe('what the projection must never carry', () => {
     for (const amount of ['137', '685', '726', '41']) {
       expect(values).not.toContain(amount);
     }
-    for (const field of ['guestOxyUserId', 'hostOxyUserId', 'specialRequests', 'total', 'nightlyRate']) {
+    for (const field of [
+      'guestOxyUserId',
+      'hostOxyUserId',
+      'specialRequests',
+      'total',
+      'nightlyRate',
+    ]) {
       expect(values).not.toContain(field);
     }
 

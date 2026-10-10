@@ -280,7 +280,9 @@ export default function CreatePropertyScreen() {
               <Button
                 size="sm"
                 onPress={() => void handleSaveDraft()}
-                testID="create-property-save-draft" tone="neutral" appearance="outline"
+                testID="create-property-save-draft"
+                tone="neutral"
+                appearance="outline"
               >
                 {t('propertyCreate.saveDraft')}
               </Button>

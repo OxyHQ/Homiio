@@ -24,7 +24,11 @@ import type { PricedListing } from '@homiio/shared-types';
 // back to the barrel: it compiled before only because the canonical contract
 // did not exist yet, and folding the two encodings into one is the location
 // migration's job (#352), not a change to make silently from here.
-import type { GeoBounds, GeoPoint, QueryDescriptor } from '@homiio/shared-types/observability/queryIdentity';
+import type {
+  GeoBounds,
+  GeoPoint,
+  QueryDescriptor,
+} from '@homiio/shared-types/observability/queryIdentity';
 
 export interface PlaceFixture {
   /** A stable key, never a display string — see `LocationScopeContract`. */

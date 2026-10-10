@@ -100,7 +100,8 @@ export async function fetchImageBuffer(url: string): Promise<ImageBufferInput> {
       throw new Error(`Image fetch failed: ${response.status} ${response.statusText}`);
     }
     const contentType = response.headers.get('content-type');
-    const mimetype = contentType && contentType.startsWith('image/') ? contentType : DEFAULT_IMAGE_MIME;
+    const mimetype =
+      contentType && contentType.startsWith('image/') ? contentType : DEFAULT_IMAGE_MIME;
     const arrayBuffer = await response.arrayBuffer();
     return { buffer: Buffer.from(arrayBuffer), mimetype };
   } finally {
@@ -124,7 +125,7 @@ function shouldAllowUnconfiguredStorage(): boolean {
 export async function seedPropertyImages(
   propertyId: string,
   imageUrls: readonly string[],
-  fetchImage: SeedImageFetcher = fetchImageBuffer
+  fetchImage: SeedImageFetcher = fetchImageBuffer,
 ): Promise<PropertyImageRef[]> {
   const allowUnconfiguredStorage = shouldAllowUnconfiguredStorage();
   const created = [];
@@ -152,22 +153,17 @@ export async function seedEntityCoverImage(
   entityId: string,
   url: string | undefined,
   caption: string,
-  fetchImage: SeedImageFetcher = fetchImageBuffer
+  fetchImage: SeedImageFetcher = fetchImageBuffer,
 ): Promise<string | null> {
   if (!url) return null;
   const allowUnconfiguredStorage = shouldAllowUnconfiguredStorage();
   const input = await fetchImage(url);
-  const image = await imageUploadService.createImageForEntity(
-    entityType,
-    entityId,
-    input,
-    {
-      isPrimary: true,
-      order: 0,
-      caption,
-      allowUnconfiguredStorage,
-    },
-  );
+  const image = await imageUploadService.createImageForEntity(entityType, entityId, input, {
+    isPrimary: true,
+    order: 0,
+    caption,
+    allowUnconfiguredStorage,
+  });
   return image.id;
 }
 
@@ -177,7 +173,7 @@ export function logStorageMode(): void {
     logger.info('Object storage configured — seed images will be uploaded to S3.');
   } else {
     logger.info(
-      'Object storage NOT configured (no S3 credentials): processed image bytes are persisted to the self-hosted local store and served by the backend at /api/images/file/*. Set AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY to use S3 instead.'
+      'Object storage NOT configured (no S3 credentials): processed image bytes are persisted to the self-hosted local store and served by the backend at /api/images/file/*. Set AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY to use S3 instead.',
     );
   }
 }

@@ -90,8 +90,16 @@ export default function WatchAlertSettingsScreen() {
       const next: HousingAlertRule[] = [...available].map((ruleType) => {
         const current = rulesByType.get(ruleType);
         return ruleType === type
-          ? { type: ruleType, enabled, ...(current?.threshold === undefined ? {} : { threshold: current.threshold }) }
-          : { type: ruleType, enabled: current?.enabled ?? false, ...(current?.threshold === undefined ? {} : { threshold: current.threshold }) };
+          ? {
+              type: ruleType,
+              enabled,
+              ...(current?.threshold === undefined ? {} : { threshold: current.threshold }),
+            }
+          : {
+              type: ruleType,
+              enabled: current?.enabled ?? false,
+              ...(current?.threshold === undefined ? {} : { threshold: current.threshold }),
+            };
       });
       void updateAlertSettings(watchId, { alertRules: next });
     },
@@ -108,7 +116,8 @@ export default function WatchAlertSettingsScreen() {
   }, [watchId, muted, updateAlertSettings]);
 
   const cadenceOptions = useMemo(
-    () => WATCH_CADENCES.map((cadence) => ({ value: cadence, label: t(`alerts.cadence.${cadence}`) })),
+    () =>
+      WATCH_CADENCES.map((cadence) => ({ value: cadence, label: t(`alerts.cadence.${cadence}`) })),
     [t],
   );
 
@@ -195,7 +204,10 @@ export default function WatchAlertSettingsScreen() {
           })}
         </SettingsListGroup>
 
-        <SettingsListGroup title={t('alerts.settings.pause')} footer={t('alerts.settings.pauseHint')}>
+        <SettingsListGroup
+          title={t('alerts.settings.pause')}
+          footer={t('alerts.settings.pauseHint')}
+        >
           <SettingsListItem
             title={t('alerts.settings.pauseAction')}
             rightElement={
@@ -225,12 +237,16 @@ export default function WatchAlertSettingsScreen() {
                 <RiCheckLine width={20} height={20} fill={theme.colors.primary} />
               ) : undefined
             }
-            onPress={watch.isPrimaryArea ? undefined : () => watchId && void setPrimaryArea(watchId)}
+            onPress={
+              watch.isPrimaryArea ? undefined : () => watchId && void setPrimaryArea(watchId)
+            }
           />
         </SettingsListGroup>
 
         <Button
-          onPress={() => router.push(`/saved/alerts?watchId=${watch.id}`)} tone="neutral" appearance="outline"
+          onPress={() => router.push(`/saved/alerts?watchId=${watch.id}`)}
+          tone="neutral"
+          appearance="outline"
         >
           {t('alerts.settings.viewHistory')}
         </Button>
@@ -270,7 +286,9 @@ function RenameCard({ watch }: { watch: SavedSearch }) {
         onPress={() => void save()}
         loading={saving}
         disabled={saving || !trimmed || trimmed === watch.name}
-        style={styles.saveName} tone="neutral" appearance="outline"
+        style={styles.saveName}
+        tone="neutral"
+        appearance="outline"
       >
         {t('common.save')}
       </Button>

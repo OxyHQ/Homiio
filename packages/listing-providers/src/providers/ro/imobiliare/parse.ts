@@ -6,11 +6,7 @@
 
 import type { NormalizedListingContact } from '@homiio/shared-types';
 import { buildContact, contactFromAjaxBody, mergeContact } from '../../../contact';
-import {
-  collectJsonLdNodes,
-  findJsonLdByType,
-  resolveJsonLdRef,
-} from '../../../jsonLd';
+import { collectJsonLdNodes, findJsonLdByType, resolveJsonLdRef } from '../../../jsonLd';
 import { IMOBILIARE_RO_BASE_URL } from './fixtures';
 import { asNumber, asString, isRecord } from '../../../parse/guards';
 
@@ -98,7 +94,8 @@ export function parseImobiliareRoSearch(html: string): ImobiliareRoSearchRef[] {
     const listings = data && Array.isArray(data.listings) ? data.listings : [];
     for (const listing of listings) {
       if (!isRecord(listing)) continue;
-      const id = asString(listing.id) ?? (typeof listing.id === 'number' ? String(listing.id) : undefined);
+      const id =
+        asString(listing.id) ?? (typeof listing.id === 'number' ? String(listing.id) : undefined);
       const path = asString(listing.url);
       if (!id || !path) continue;
       const offerType = parseOfferType(listing.offerType);
@@ -140,7 +137,8 @@ export function parseImobiliareRoDetail(
   const addressNode =
     resolveJsonLdRef(nodes, addressRef) ?? findJsonLdByType(nodes, 'PostalAddress');
 
-  const priceSpec = offer && isRecord(offer.priceSpecification) ? offer.priceSpecification : undefined;
+  const priceSpec =
+    offer && isRecord(offer.priceSpecification) ? offer.priceSpecification : undefined;
   const price = asNumber(priceSpec?.price) ?? asNumber(offer?.price);
   if (price === undefined) {
     throw new Error('imobiliare_ro: detail JSON-LD has no price');
@@ -174,9 +172,7 @@ export function parseImobiliareRoDetail(
   }
 
   const city =
-    asString(addressNode?.addressLocality) ??
-    asString(addressNode?.addressRegion) ??
-    'Romania';
+    asString(addressNode?.addressLocality) ?? asString(addressNode?.addressRegion) ?? 'Romania';
 
   const result: ImobiliareRoRawListing = {
     sourceId,
@@ -196,7 +192,8 @@ export function parseImobiliareRoDetail(
 
   const description = asString(listing?.description) ?? asString(product?.description);
   if (description) result.description = description;
-  const bedrooms = asNumber(accommodation?.numberOfBedrooms) ?? asNumber(accommodation?.numberOfRooms);
+  const bedrooms =
+    asNumber(accommodation?.numberOfBedrooms) ?? asNumber(accommodation?.numberOfRooms);
   if (bedrooms !== undefined) result.bedrooms = bedrooms;
   const bathrooms = asNumber(accommodation?.numberOfBathroomsTotal);
   if (bathrooms !== undefined) result.bathrooms = bathrooms;

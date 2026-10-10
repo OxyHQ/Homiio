@@ -86,9 +86,5 @@ export function AlertExplanationText({ detail, watchName }: Props) {
     }
   })();
 
-  return (
-    <BloomText>
-      {t('alerts.explanation.matched', { change, watchName })}
-    </BloomText>
-  );
+  return <BloomText>{t('alerts.explanation.matched', { change, watchName })}</BloomText>;
 }

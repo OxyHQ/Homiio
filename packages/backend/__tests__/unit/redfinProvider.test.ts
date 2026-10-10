@@ -36,7 +36,9 @@ describe('RedfinProvider', () => {
 
   it('parses initialInfo detail payload', () => {
     const home = parseRedfinDetailResponse(
-      stripStingrayPrefix(`{}&&${JSON.stringify({ payload: REDFIN_GIS_FIXTURE.payload.homes[0] })}`),
+      stripStingrayPrefix(
+        `{}&&${JSON.stringify({ payload: REDFIN_GIS_FIXTURE.payload.homes[0] })}`,
+      ),
     );
     expect(home?.street).toBe('2100 San Jacinto Blvd');
     expect(home?.price).toBe(425000);

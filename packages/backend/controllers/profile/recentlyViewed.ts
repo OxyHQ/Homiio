@@ -73,9 +73,9 @@ export async function getRecentProperties(req: Request, res: Response, next: Nex
     const oxyUserId = ownerOf(req);
 
     if (!oxyUserId) {
-      return res.status(401).json(
-        errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
-      );
+      return res
+        .status(401)
+        .json(errorResponse('Authentication required', 'AUTHENTICATION_REQUIRED'));
     }
 
     // `getQueryInteger` already floors at 1 by falling back on a non-positive
@@ -87,11 +87,14 @@ export async function getRecentProperties(req: Request, res: Response, next: Nex
 
     const views = await listRecentlyViewed(getDb(), oxyUserId, limit);
     if (views.length === 0) {
-      return res.json(successResponse([], "Recent properties retrieved successfully"));
+      return res.json(successResponse([], 'Recent properties retrieved successfully'));
     }
 
     const hydrated = await findProperties({
-      where: inArray(properties.id, views.map((view) => view.propertyId)),
+      where: inArray(
+        properties.id,
+        views.map((view) => view.propertyId),
+      ),
     });
     const byId = new Map(hydrated.map((entry) => [entry.property.id, entry]));
 
@@ -101,10 +104,15 @@ export async function getRecentProperties(req: Request, res: Response, next: Nex
       // Only reachable if a listing is deleted BETWEEN the two statements above;
       // the foreign key rules out every other case.
       if (!listing) return [];
-      return [{ ...serializeProperty(listing, propertyAudienceFor(listing, oxyUserId)), viewedAt: view.viewedAt }];
+      return [
+        {
+          ...serializeProperty(listing, propertyAudienceFor(listing, oxyUserId)),
+          viewedAt: view.viewedAt,
+        },
+      ];
     });
 
-    res.json(successResponse(recent, "Recent properties retrieved successfully"));
+    res.json(successResponse(recent, 'Recent properties retrieved successfully'));
   } catch (error) {
     next(error);
   }
@@ -119,29 +127,25 @@ export async function trackPropertyView(req: Request, res: Response, next: NextF
     const { propertyId } = req.params;
 
     if (!oxyUserId) {
-      return res.status(401).json(
-        errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
-      );
+      return res
+        .status(401)
+        .json(errorResponse('Authentication required', 'AUTHENTICATION_REQUIRED'));
     }
 
     if (!propertyId) {
-      return res.status(400).json(
-        errorResponse("Property ID is required", "PROPERTY_ID_REQUIRED")
-      );
+      return res.status(400).json(errorResponse('Property ID is required', 'PROPERTY_ID_REQUIRED'));
     }
 
     try {
       await trackPropertyViewRow(getDb(), oxyUserId, propertyId);
     } catch (error) {
       if (error instanceof ViewedPropertyNotFoundError) {
-        return res.status(404).json(
-          errorResponse("Property not found", "PROPERTY_NOT_FOUND")
-        );
+        return res.status(404).json(errorResponse('Property not found', 'PROPERTY_NOT_FOUND'));
       }
       throw error;
     }
 
-    res.json(successResponse(null, "Property view tracked successfully"));
+    res.json(successResponse(null, 'Property view tracked successfully'));
   } catch (error) {
     next(error);
   }
@@ -155,14 +159,14 @@ export async function clearRecentProperties(req: Request, res: Response, next: N
     const oxyUserId = ownerOf(req);
 
     if (!oxyUserId) {
-      return res.status(401).json(
-        errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
-      );
+      return res
+        .status(401)
+        .json(errorResponse('Authentication required', 'AUTHENTICATION_REQUIRED'));
     }
 
     const deletedCount = await clearRecentlyViewed(getDb(), oxyUserId);
 
-    res.json(successResponse({ deletedCount }, "Recently viewed properties cleared successfully"));
+    res.json(successResponse({ deletedCount }, 'Recently viewed properties cleared successfully'));
   } catch (error) {
     next(error);
   }

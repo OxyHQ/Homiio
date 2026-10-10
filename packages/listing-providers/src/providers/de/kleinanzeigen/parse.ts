@@ -5,17 +5,9 @@
 import type { NormalizedListingContact } from '@homiio/shared-types';
 import { buildContact, extractContactFromHtml, mergeListingContact } from '../../../contact';
 import { canonicalizeAmenities } from '../../../parse/amenities';
-import {
-  asNumber,
-  citySlugDe,
-  extractMetaProperties,
-  parseEuroAmount,
-} from '../../../html';
+import { asNumber, citySlugDe, extractMetaProperties, parseEuroAmount } from '../../../html';
 import { NonHousingListingError } from '../../../classifieds';
-import {
-  KLEINANZEIGEN_BASE_URL,
-  KLEINANZEIGEN_HOUSING_CATEGORY_IDS,
-} from './fixtures';
+import { KLEINANZEIGEN_BASE_URL, KLEINANZEIGEN_HOUSING_CATEGORY_IDS } from './fixtures';
 
 export interface KleinanzeigenSearchRef {
   sourceId: string;
@@ -51,8 +43,7 @@ export interface KleinanzeigenRawListing {
   contact?: NormalizedListingContact;
 }
 
-const DETAIL_LINK_RE =
-  /href=["']([^"']*\/s-anzeige\/[^"']+\/(\d+)-(\d+)-(\d+)[^"']*)["']/gi;
+const DETAIL_LINK_RE = /href=["']([^"']*\/s-anzeige\/[^"']+\/(\d+)-(\d+)-(\d+)[^"']*)["']/gi;
 
 const CITY_LOCATION_IDS: Readonly<Record<string, string>> = {
   berlin: '3331',
@@ -232,7 +223,8 @@ const MAX_POSTER_NAME = 80;
 function extractKleinanzeigenPoster(html: string): NormalizedListingContact | undefined {
   const name = html.match(POSTER_NAME_RE)?.[1]?.trim();
   if (!name || name.length < MIN_POSTER_NAME || name.length > MAX_POSTER_NAME) return undefined;
-  const isAgency = /class=["'][^"']*bizteaser/i.test(html) || /"Verkaeufer"\s*:\s*"gewerblich"/i.test(html);
+  const isAgency =
+    /class=["'][^"']*bizteaser/i.test(html) || /"Verkaeufer"\s*:\s*"gewerblich"/i.test(html);
   return buildContact({
     name,
     agencyName: isAgency ? name : undefined,
@@ -261,7 +253,9 @@ export function parseKleinanzeigenDetail(html: string, url: string): Kleinanzeig
     // characters spans any real tag and caps the worst case.
     html.match(/id=["']viewad-price["'][^>]{0,200}>[ \t\r\n]{0,40}([^<]+)/i)?.[1]?.trim() ??
     html
-      .match(/class=["'][^"']{0,200}boxedarticle--price[^"']{0,200}["'][^>]{0,200}>[ \t\r\n]{0,40}([^<]+)/i)?.[1]
+      .match(
+        /class=["'][^"']{0,200}boxedarticle--price[^"']{0,200}["'][^>]{0,200}>[ \t\r\n]{0,40}([^<]+)/i,
+      )?.[1]
       ?.trim();
 
   const neighborhood = meta.get('og:locality');

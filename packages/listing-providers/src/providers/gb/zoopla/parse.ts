@@ -16,7 +16,6 @@ import { ZOOPLA_BASE_URL } from './fixtures';
 
 const DETAIL_RE = /https?:\/\/www\.zoopla\.co\.uk\/(?:to-rent|for-sale)\/details\/(\d+)\/?/gi;
 
-
 export interface ZooplaListingJson {
   sourceId: string;
   url: string;
@@ -55,7 +54,9 @@ export function zooplaSearchUrl(city: string, page = 1): string {
   return page <= 1 ? base : `${base}?pn=${page}`;
 }
 
-export function parseZooplaSearch(html: string): { sourceId: string; url: string; kind: 'rent' | 'sale' }[] {
+export function parseZooplaSearch(
+  html: string,
+): { sourceId: string; url: string; kind: 'rent' | 'sale' }[] {
   const byId = new Map<string, { url: string; kind: 'rent' | 'sale' }>();
   for (const match of html.matchAll(DETAIL_RE)) {
     const sourceId = match[1];
@@ -90,9 +91,12 @@ function collectZooplaListingIds(
   const listingId =
     asString(node.listingId) ??
     asString(node.listing_id) ??
-    (asNumber(node.listingId) !== undefined ? String(Math.trunc(asNumber(node.listingId)!)) : undefined);
+    (asNumber(node.listingId) !== undefined
+      ? String(Math.trunc(asNumber(node.listingId)!))
+      : undefined);
   if (listingId && /^\d{5,}$/.test(listingId) && !out.has(listingId)) {
-    const title = asString(node.title) ?? asString(node.propertyType) ?? asString(node.property_type);
+    const title =
+      asString(node.title) ?? asString(node.propertyType) ?? asString(node.property_type);
     if (isGbHousingType(title)) {
       const status = asString(node.listingStatus) ?? asString(node.status) ?? 'rent';
       const kind: 'rent' | 'sale' = /sale/i.test(status) ? 'sale' : 'rent';
@@ -156,7 +160,11 @@ function priceFromNode(node: Record<string, unknown>): number | undefined {
   return asNumber(node.price) ?? asNumber(node.rentalPrice);
 }
 
-export function parseZooplaDetail(html: string, url: string, kindHint: 'rent' | 'sale' = 'rent'): ZooplaListingJson {
+export function parseZooplaDetail(
+  html: string,
+  url: string,
+  kindHint: 'rent' | 'sale' = 'rent',
+): ZooplaListingJson {
   const sourceId = zooplaSourceIdFromUrl(url);
   if (!sourceId) throw new Error(`zoopla: cannot parse source id from ${url}`);
 
@@ -173,7 +181,11 @@ export function parseZooplaDetail(html: string, url: string, kindHint: 'rent' | 
         const status = asString(node.listingStatus) ?? asString(node.status);
         const kind: 'rent' | 'sale' = status && /sale/i.test(status) ? 'sale' : kindHint;
         const address = isRecord(node.address) ? node.address : undefined;
-        const location = isRecord(node.location) ? node.location : isRecord(node.coordinates) ? node.coordinates : undefined;
+        const location = isRecord(node.location)
+          ? node.location
+          : isRecord(node.coordinates)
+            ? node.coordinates
+            : undefined;
         const agent = node.branch ?? node.agent ?? node.advertiser;
         const contact = isRecord(agent)
           ? buildContact({
@@ -182,19 +194,21 @@ export function parseZooplaDetail(html: string, url: string, kindHint: 'rent' | 
               agencyName: asString(agent.name) ?? asString(agent.displayName),
               kind: 'agency',
             })
-          : contactFromUnknown(agent) ??
+          : (contactFromUnknown(agent) ??
             buildContact({
               phone: asString(node.phone),
               agencyName: asString(node.agentName),
               kind: 'agency',
-            });
+            }));
         return {
           sourceId,
           url: zooplaDetailUrl(sourceId, kind),
           kind,
           displayAddress:
             asString(node.displayAddress) ??
-            (address ? asString(address.fullAddress) ?? asString(address.postalAddress) : undefined),
+            (address
+              ? (asString(address.fullAddress) ?? asString(address.postalAddress))
+              : undefined),
           summary: asString(node.summary) ?? asString(node.title),
           description: asString(node.description),
           bedrooms: asNumber(node.numBedrooms) ?? asNumber(node.bedrooms),
@@ -202,8 +216,10 @@ export function parseZooplaDetail(html: string, url: string, kindHint: 'rent' | 
           propertyType,
           priceAmount: priceFromNode(node),
           priceCurrency: 'GBP',
-          latitude: location ? asNumber(location.latitude) ?? asNumber(location.lat) : undefined,
-          longitude: location ? asNumber(location.longitude) ?? asNumber(location.lng) ?? asNumber(location.lon) : undefined,
+          latitude: location ? (asNumber(location.latitude) ?? asNumber(location.lat)) : undefined,
+          longitude: location
+            ? (asNumber(location.longitude) ?? asNumber(location.lng) ?? asNumber(location.lon))
+            : undefined,
           images: imagesFromNode(node),
           contact,
         };
@@ -220,9 +236,7 @@ export function parseZooplaDetail(html: string, url: string, kindHint: 'rent' | 
   }
   const priceMatch = title?.match(/£([\d,]+)/);
   const images = [
-    ...new Set(
-      [...html.matchAll(/https:\/\/lid\.zoocdn\.com\/[^"'>\s]+/gi)].map((m) => m[0]),
-    ),
+    ...new Set([...html.matchAll(/https:\/\/lid\.zoocdn\.com\/[^"'>\s]+/gi)].map((m) => m[0])),
   ];
   return {
     sourceId,

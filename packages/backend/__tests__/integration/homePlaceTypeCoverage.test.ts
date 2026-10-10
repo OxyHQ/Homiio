@@ -216,7 +216,12 @@ describe('every place type a token can name reaches a decision', () => {
       // row, so omitting it stamps a Portuguese address as Spanish and the
       // country scope then matches both — a fixture in which the predicate under
       // test cannot fail. Caught by this test failing on its first run.
-      const addressId = await seedAddress({ chain, street: `${title} street`, countryCode, ...point });
+      const addressId = await seedAddress({
+        chain,
+        street: `${title} street`,
+        countryCode,
+        ...point,
+      });
       await seedProperty({
         addressId,
         overrides: {

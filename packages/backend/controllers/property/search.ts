@@ -224,11 +224,13 @@ async function resolvePlaceConditions(params: ParsedSearchParams): Promise<Resol
   if (params.boundingBox) {
     conditions.push(withinBoundingBox(params.boundingBox));
   } else if (params.centerRadius) {
-    conditions.push(withinCircle({
-      longitude: params.centerRadius.lng,
-      latitude: params.centerRadius.lat,
-      radiusMeters: params.centerRadius.radiusMeters,
-    }));
+    conditions.push(
+      withinCircle({
+        longitude: params.centerRadius.lng,
+        latitude: params.centerRadius.lat,
+        radiusMeters: params.centerRadius.radiusMeters,
+      }),
+    );
   }
 
   let cityId: string | undefined;
@@ -441,7 +443,11 @@ export async function resolveSearchScope(
   };
 }
 
-export async function searchProperties(req: Request, res: Response, next: NextFunction): Promise<void> {
+export async function searchProperties(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
   try {
     // Parse + validate the request. Geo parsing can reject malformed params
     // with a GeoParamError, which maps to a clean 400 rather than a 500.
@@ -458,15 +464,17 @@ export async function searchProperties(req: Request, res: Response, next: NextFu
       // Still an empty page rather than an unfiltered one — a location that was
       // requested and lost must never widen into a global feed — but now it
       // says so, so the screen can render "we could not find that place".
-      res.json(buildSearchResponse(
-        [],
-        params.page,
-        params.limit,
-        0,
-        'No properties found for the specified location',
-        scope.location,
-        params.queryId,
-      ));
+      res.json(
+        buildSearchResponse(
+          [],
+          params.page,
+          params.limit,
+          0,
+          'No properties found for the specified location',
+          scope.location,
+          params.queryId,
+        ),
+      );
       return;
     }
 
@@ -484,16 +492,18 @@ export async function searchProperties(req: Request, res: Response, next: NextFu
       countProperties(where),
     ]);
 
-    res.json(buildSearchResponse(
-      hydrated.map((listing) => serializeProperty(listing, 'public')),
-      params.page,
-      params.limit,
-      total,
-      'Search completed successfully',
-      scope.location,
-      params.queryId,
-      scope.priceCurrency,
-    ));
+    res.json(
+      buildSearchResponse(
+        hydrated.map((listing) => serializeProperty(listing, 'public')),
+        params.page,
+        params.limit,
+        total,
+        'Search completed successfully',
+        scope.location,
+        params.queryId,
+        scope.priceCurrency,
+      ),
+    );
   } catch (error) {
     // The parameter NAMES, never their values. This used to log `req.query`
     // wholesale, which put full-precision `lat`/`lng` — a device fix, on the

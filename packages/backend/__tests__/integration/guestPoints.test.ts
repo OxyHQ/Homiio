@@ -275,15 +275,13 @@ const requestPointsStay = (
   key: string,
   as = GUEST,
 ) =>
-  request(buildApp(as))
-    .post('/exchanges')
-    .send({
-      propertyId,
-      mode: 'host',
-      requestedWindow,
-      usesGuestPoints: true,
-      guestPointsIdempotencyKey: key,
-    });
+  request(buildApp(as)).post('/exchanges').send({
+    propertyId,
+    mode: 'host',
+    requestedWindow,
+    usesGuestPoints: true,
+    guestPointsIdempotencyKey: key,
+  });
 
 beforeEach(async () => {
   await getDb().delete(guestPointMovements);
@@ -456,9 +454,9 @@ describe('reserve, then settle or release', () => {
     // The dates have passed, but the host accepted: releasing now would refund
     // the guest while the host keeps the credit, which is the one way this
     // ledger could mint.
-    expect(
-      await releaseExpiredReservations(getDb(), { now: new Date(BASE + 30 * DAY) }),
-    ).toEqual({ released: 0 });
+    expect(await releaseExpiredReservations(getDb(), { now: new Date(BASE + 30 * DAY) })).toEqual({
+      released: 0,
+    });
     expect(await standingOf(GUEST)).toMatchObject({ spent: 2 });
     expect(await standingOf(HOST)).toMatchObject({ earned: 2 });
     expect(await systemTotal()).toBe(0);
@@ -532,9 +530,12 @@ describe('double spend', () => {
     expect(standing).toMatchObject({ balance: 1, reserved: 1, available: 0 });
     // The loser left nothing behind at all — not a request, not a row.
     expect(
-      await getDb().select().from(exchangeRequests).then((rows) =>
-        rows.filter((row) => row.usesGuestPoints && row.requesterOxyUserId === GUEST),
-      ),
+      await getDb()
+        .select()
+        .from(exchangeRequests)
+        .then((rows) =>
+          rows.filter((row) => row.usesGuestPoints && row.requesterOxyUserId === GUEST),
+        ),
     ).toHaveLength(1);
   });
 
@@ -785,35 +786,31 @@ describe('what the rules refuse', () => {
   it('the database refuses somebody hosting themselves', async () => {
     const stay = await seedDetachedExchange(GUEST);
     await expect(
-      getDb()
-        .insert(guestPointMovements)
-        .values({
-          accountOxyUserId: GUEST,
-          counterpartyOxyUserId: GUEST,
-          exchangeRequestId: stay,
-          direction: 'earn',
-          state: 'settled',
-          points: 1,
-          settledAt: new Date(),
-          idempotencyKey: 'self-hosting-loop',
-        }),
+      getDb().insert(guestPointMovements).values({
+        accountOxyUserId: GUEST,
+        counterpartyOxyUserId: GUEST,
+        exchangeRequestId: stay,
+        direction: 'earn',
+        state: 'settled',
+        points: 1,
+        settledAt: new Date(),
+        idempotencyKey: 'self-hosting-loop',
+      }),
     ).rejects.toThrow();
   });
 
   it('the database refuses a reserved EARN', async () => {
     const stay = await seedDetachedExchange(GUEST);
     await expect(
-      getDb()
-        .insert(guestPointMovements)
-        .values({
-          accountOxyUserId: HOST,
-          counterpartyOxyUserId: GUEST,
-          exchangeRequestId: stay,
-          direction: 'earn',
-          state: 'reserved',
-          points: 1,
-          idempotencyKey: 'reserved-earn-attempt',
-        }),
+      getDb().insert(guestPointMovements).values({
+        accountOxyUserId: HOST,
+        counterpartyOxyUserId: GUEST,
+        exchangeRequestId: stay,
+        direction: 'earn',
+        state: 'reserved',
+        points: 1,
+        idempotencyKey: 'reserved-earn-attempt',
+      }),
     ).rejects.toThrow();
   });
 });

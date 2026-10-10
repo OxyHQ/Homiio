@@ -270,7 +270,11 @@ export const useRoommate = () => {
     profiles,
     requests,
     relationships,
-    isLoading: isLoading || profilesQuery.isFetching || requestsQuery.isFetching || relationshipsQuery.isFetching,
+    isLoading:
+      isLoading ||
+      profilesQuery.isFetching ||
+      requestsQuery.isFetching ||
+      relationshipsQuery.isFetching,
     error,
     fetchProfiles,
     fetchRequests,

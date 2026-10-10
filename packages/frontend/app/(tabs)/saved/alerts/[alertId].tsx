@@ -122,7 +122,11 @@ export default function AlertReasonScreen() {
           </Button>
         ) : null}
         {watch ? (
-          <Button onPress={() => router.push(`/saved/watches/${watch.id}`)} tone="neutral" appearance="outline">
+          <Button
+            onPress={() => router.push(`/saved/watches/${watch.id}`)}
+            tone="neutral"
+            appearance="outline"
+          >
             {t('alerts.reason.adjustRules')}
           </Button>
         ) : null}

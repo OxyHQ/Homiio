@@ -88,9 +88,15 @@ export function rentReceiptFor(input: RentReceiptInput): RentReceipt {
     ['Reference', input.movementId],
     ['Paid on', formatDay(paidOn, input.locale)],
     ['Amount', formatMoney(input.amount, input.currency, input.locale)],
-    ['Method', input.kind === 'processor' ? 'Card or transfer via processor' : 'Bank transfer, confirmed by the landlord'],
+    [
+      'Method',
+      input.kind === 'processor'
+        ? 'Card or transfer via processor'
+        : 'Bank transfer, confirmed by the landlord',
+    ],
   ];
-  if (input.obligationDueDate) rows.push(['For the period due', formatDay(input.obligationDueDate, input.locale)]);
+  if (input.obligationDueDate)
+    rows.push(['For the period due', formatDay(input.obligationDueDate, input.locale)]);
   if (input.obligationType) rows.push(['Covers', input.obligationType.replace(/_/g, ' ')]);
   if (input.propertyLabel) rows.push(['Home', input.propertyLabel]);
   rows.push(['Paid by', input.tenantOxyUserId]);
@@ -130,7 +136,9 @@ function escapeHtml(value: string): string {
 
 function document(rows: Array<[string, string]>, paidOn: string, locale: string): string {
   const body = rows
-    .map(([label, value]) => `    <tr><th>${escapeHtml(label)}</th><td>${escapeHtml(value)}</td></tr>`)
+    .map(
+      ([label, value]) => `    <tr><th>${escapeHtml(label)}</th><td>${escapeHtml(value)}</td></tr>`,
+    )
     .join('\n');
 
   // Self-contained on purpose: no stylesheet, no font, no image, nothing that

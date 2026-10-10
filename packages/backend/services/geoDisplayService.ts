@@ -93,7 +93,11 @@ async function nameById(
   if (resolved) return resolved;
   const id = idFromRef(ref);
   if (!id) return null;
-  const rows = await getDb().select({ name: table.name }).from(table).where(eq(table.id, id)).limit(1);
+  const rows = await getDb()
+    .select({ name: table.name })
+    .from(table)
+    .where(eq(table.id, id))
+    .limit(1);
   return rows[0]?.name ?? null;
 }
 
@@ -105,7 +109,9 @@ async function nameById(
  * it is one statement instead of four. This entry point exists for callers that
  * hold a partially resolved address object rather than its id.
  */
-export async function resolveAddressDisplay(address: AddressGeoLike | null | undefined): Promise<GeoDisplay> {
+export async function resolveAddressDisplay(
+  address: AddressGeoLike | null | undefined,
+): Promise<GeoDisplay> {
   if (!address) return EMPTY_DISPLAY;
   const [city, region, country, neighborhood] = await Promise.all([
     nameById(cities, address.cityId),

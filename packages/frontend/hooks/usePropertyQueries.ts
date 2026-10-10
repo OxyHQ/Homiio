@@ -29,8 +29,7 @@ export const useProperties = () => {
     async (filters?: PropertyFilters) => {
       const result = await queryClient.fetchQuery({
         queryKey: ['properties', { filters: filters ?? null }],
-        queryFn: async () =>
-          propertyService.getProperties(filters),
+        queryFn: async () => propertyService.getProperties(filters),
         staleTime: 1000 * 30,
         gcTime: 1000 * 60 * 10,
       });
@@ -79,15 +78,9 @@ export const useProperty = (id: string) => {
   const { setCurrentProperty, clearCurrentProperty } = usePropertyStore();
   const queryClient = useQueryClient();
 
-  const {
-    data,
-    isLoading,
-    error,
-    refetch,
-  } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['property', id],
-    queryFn: async () =>
-      propertyService.getPropertyById(id),
+    queryFn: async () => propertyService.getPropertyById(id),
     enabled: Boolean(id),
     staleTime: 1000 * 30,
     gcTime: 1000 * 60 * 10,
@@ -265,10 +258,7 @@ export const useUpdateProperty = () => {
         setError(null);
 
         // Use propertyService instead of propertyApi
-        const response = await propertyService.updateProperty(
-          id,
-          data,
-        );
+        const response = await propertyService.updateProperty(id, data);
 
         toast.success(i18next.t('property.toast.updateSuccess'));
         return response;

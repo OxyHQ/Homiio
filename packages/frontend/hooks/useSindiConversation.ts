@@ -145,8 +145,7 @@ function isPersistedConversation(conversationId?: string): conversationId is str
 /** Derive a conversation title from its first user message when still unnamed. */
 function deriveTitle(current: Conversation, messages: Message[]): string {
   const firstUser = messages[0];
-  const shouldDerive =
-    current.title === 'New Conversation' && firstUser?.role === 'user';
+  const shouldDerive = current.title === 'New Conversation' && firstUser?.role === 'user';
   if (!shouldDerive) return current.title;
   const text = firstUser.content;
   return text.length > TITLE_MAX_LENGTH ? `${text.substring(0, TITLE_MAX_LENGTH)}...` : text;
@@ -178,7 +177,10 @@ export function useSindiConversation({
   const ownsStream = streamOwner === authenticatedFetch;
   const mountedOwner = useRef<ConversationFetch | null>(authenticatedFetch);
   // Pure render identity; the layout effect owns each mounted lifetime separately.
-  const ownerGeneration = useMemo(() => ({ authenticatedFetch, isAuthenticated }), [authenticatedFetch, isAuthenticated]);
+  const ownerGeneration = useMemo(
+    () => ({ authenticatedFetch, isAuthenticated }),
+    [authenticatedFetch, isAuthenticated],
+  );
   const mountedGeneration = useRef<{ generation: object } | null>(null);
   useLayoutEffect(() => {
     const mounted = { generation: ownerGeneration };
@@ -353,8 +355,11 @@ export function useSindiConversation({
   // viewport, so this effect bails without persisting or scrolling.
   useEffect(() => {
     const mounted = mountedGeneration.current;
-    const isCurrent = () => isAuthenticated && mounted !== null &&
-      mountedGeneration.current === mounted && mounted.generation === ownerGeneration;
+    const isCurrent = () =>
+      isAuthenticated &&
+      mounted !== null &&
+      mountedGeneration.current === mounted &&
+      mounted.generation === ownerGeneration;
     if (!ownsStream || !isCurrent()) return;
     const syncable =
       Boolean(currentConversation) &&
@@ -533,8 +538,11 @@ export function useSindiConversation({
 
   const onAttachFile = useCallback(async () => {
     const mounted = mountedGeneration.current;
-    const isCurrent = () => isAuthenticated && mounted !== null &&
-      mountedGeneration.current === mounted && mounted.generation === ownerGeneration;
+    const isCurrent = () =>
+      isAuthenticated &&
+      mounted !== null &&
+      mountedGeneration.current === mounted &&
+      mounted.generation === ownerGeneration;
     if (!isCurrent()) return;
     try {
       // Gate behind Homiio+ or per-file credits.

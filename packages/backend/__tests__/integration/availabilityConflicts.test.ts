@@ -196,41 +196,43 @@ describe('date-range availability', () => {
     const proposed = await seedBookable(chain, 'Carrer Proposed');
     const free = await seedBookable(chain, 'Carrer Untouched');
 
-    await getDb().insert(exchangeRequests).values([
-      {
-        propertyId: swapped,
-        requesterOxyUserId: 'oxy-swapper',
-        hostOxyUserId: 'oxy-host',
-        mode: 'host',
-        requestedWindowStart: new Date('2026-09-12'),
-        requestedWindowEnd: new Date('2026-09-16'),
-        status: 'confirmed',
-      },
-      {
-        // The same home in its OFFERED role, which a scan over `property_id`
-        // alone would miss.
-        propertyId: free,
-        offeredPropertyId: offered,
-        requesterOxyUserId: 'oxy-host',
-        hostOxyUserId: 'oxy-other',
-        mode: 'swap',
-        requestedWindowStart: new Date('2026-11-01'),
-        requestedWindowEnd: new Date('2026-11-05'),
-        offeredWindowStart: new Date('2026-09-12'),
-        offeredWindowEnd: new Date('2026-09-16'),
-        status: 'confirmed',
-      },
-      {
-        // A PENDING request is a proposal and holds nothing — the permit half.
-        propertyId: proposed,
-        requesterOxyUserId: 'oxy-swapper',
-        hostOxyUserId: 'oxy-host',
-        mode: 'host',
-        requestedWindowStart: new Date('2026-09-12'),
-        requestedWindowEnd: new Date('2026-09-16'),
-        status: 'pending',
-      },
-    ]);
+    await getDb()
+      .insert(exchangeRequests)
+      .values([
+        {
+          propertyId: swapped,
+          requesterOxyUserId: 'oxy-swapper',
+          hostOxyUserId: 'oxy-host',
+          mode: 'host',
+          requestedWindowStart: new Date('2026-09-12'),
+          requestedWindowEnd: new Date('2026-09-16'),
+          status: 'confirmed',
+        },
+        {
+          // The same home in its OFFERED role, which a scan over `property_id`
+          // alone would miss.
+          propertyId: free,
+          offeredPropertyId: offered,
+          requesterOxyUserId: 'oxy-host',
+          hostOxyUserId: 'oxy-other',
+          mode: 'swap',
+          requestedWindowStart: new Date('2026-11-01'),
+          requestedWindowEnd: new Date('2026-11-05'),
+          offeredWindowStart: new Date('2026-09-12'),
+          offeredWindowEnd: new Date('2026-09-16'),
+          status: 'confirmed',
+        },
+        {
+          // A PENDING request is a proposal and holds nothing — the permit half.
+          propertyId: proposed,
+          requesterOxyUserId: 'oxy-swapper',
+          hostOxyUserId: 'oxy-host',
+          mode: 'host',
+          requestedWindowStart: new Date('2026-09-12'),
+          requestedWindowEnd: new Date('2026-09-16'),
+          status: 'pending',
+        },
+      ]);
 
     const available = await idsAvailableForStay();
 

@@ -95,7 +95,10 @@ function pickImageUrlFromSearchResponse(data: WikimediaSearchResponse): string |
   return null;
 }
 
-async function fetchWikimediaImageUrl(cityName: string, countryName: string): Promise<string | null> {
+async function fetchWikimediaImageUrl(
+  cityName: string,
+  countryName: string,
+): Promise<string | null> {
   for (const query of buildWikimediaSearchQueries(cityName, countryName)) {
     const params = new URLSearchParams({
       action: 'query',
@@ -182,10 +185,7 @@ async function shouldSkipExistingCover(coverImageId: string, force: boolean): Pr
 }
 
 /** Fetch a Wikimedia cityscape and store it as this city's cover image. */
-export async function ensureCover(
-  cityId: string,
-  options: EnsureCoverOptions = {},
-): Promise<void> {
+export async function ensureCover(cityId: string, options: EnsureCoverOptions = {}): Promise<void> {
   try {
     const [city]: CityCoverFields[] = await getDb()
       .select({
@@ -243,10 +243,7 @@ export async function ensureCover(
     // document carried alongside it is gone: `createImageForEntity` already
     // stamped `entity_type='city'`/`entity_id=<city>` on the row, so the
     // membership it denormalized is a query, not a second list to keep in sync.
-    await getDb()
-      .update(cities)
-      .set({ coverImageId: image.id })
-      .where(eq(cities.id, city.id));
+    await getDb().update(cities).set({ coverImageId: image.id }).where(eq(cities.id, city.id));
     logger.info('Stored city cover from Wikimedia', {
       cityId: city.id,
       imageId: image.id,

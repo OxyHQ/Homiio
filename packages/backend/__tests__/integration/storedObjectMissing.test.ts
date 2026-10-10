@@ -36,8 +36,9 @@ function publicImages(): Express {
 
 /** The private method under test, reached without widening its visibility. */
 const isMissing = (error: unknown): boolean =>
-  (imageUploadService as unknown as { isFileMissingError(e: unknown): boolean })
-    .isFileMissingError(error);
+  (imageUploadService as unknown as { isFileMissingError(e: unknown): boolean }).isFileMissingError(
+    error,
+  );
 
 describe('what counts as "there is no such object"', () => {
   it('still recognises the local store', () => {
@@ -49,9 +50,9 @@ describe('what counts as "there is no such object"', () => {
     // The shape the SDK gives when the role MAY list the bucket.
     expect(isMissing(Object.assign(new Error('x'), { name: 'NoSuchKey' }))).toBe(true);
     expect(isMissing(Object.assign(new Error('x'), { name: 'NotFound' }))).toBe(true);
-    expect(
-      isMissing(Object.assign(new Error('x'), { $metadata: { httpStatusCode: 404 } })),
-    ).toBe(true);
+    expect(isMissing(Object.assign(new Error('x'), { $metadata: { httpStatusCode: 404 } }))).toBe(
+      true,
+    );
   });
 
   it('counts AccessDenied as missing, because that is what S3 says', () => {
@@ -60,9 +61,9 @@ describe('what counts as "there is no such object"', () => {
     // stranger cannot probe which keys exist. That is the COMMON case here, and
     // it is the one that was producing 500s.
     expect(isMissing(Object.assign(new Error('x'), { name: 'AccessDenied' }))).toBe(true);
-    expect(
-      isMissing(Object.assign(new Error('x'), { $metadata: { httpStatusCode: 403 } })),
-    ).toBe(true);
+    expect(isMissing(Object.assign(new Error('x'), { $metadata: { httpStatusCode: 403 } }))).toBe(
+      true,
+    );
   });
 
   it('does NOT swallow a real failure', () => {
@@ -96,8 +97,8 @@ describe('the route answers its own contract', () => {
       (await request(publicImages()).get('/images/file/applications/documents/x-original.jpeg'))
         .status,
     ).toBe(400);
-    expect(
-      (await request(publicImages()).get('/images/file/property/x-original.txt')).status,
-    ).toBe(400);
+    expect((await request(publicImages()).get('/images/file/property/x-original.txt')).status).toBe(
+      400,
+    );
   });
 });

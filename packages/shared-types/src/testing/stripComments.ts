@@ -59,12 +59,43 @@
 
 /** Characters after which a `/` starts a regular expression rather than dividing. */
 const REGEX_CAN_FOLLOW = new Set([
-  '(', ',', '=', ':', '[', '!', '&', '|', '?', '{', '}', ';', '+', '-', '*', '%', '<', '>', '~', '^',
+  '(',
+  ',',
+  '=',
+  ':',
+  '[',
+  '!',
+  '&',
+  '|',
+  '?',
+  '{',
+  '}',
+  ';',
+  '+',
+  '-',
+  '*',
+  '%',
+  '<',
+  '>',
+  '~',
+  '^',
 ]);
 
 /** Keywords after which a `/` starts a regular expression. */
 const REGEX_CAN_FOLLOW_KEYWORD = new Set([
-  'return', 'typeof', 'instanceof', 'in', 'of', 'new', 'delete', 'void', 'case', 'do', 'else', 'yield', 'await',
+  'return',
+  'typeof',
+  'instanceof',
+  'in',
+  'of',
+  'new',
+  'delete',
+  'void',
+  'case',
+  'do',
+  'else',
+  'yield',
+  'await',
 ]);
 
 /**
@@ -104,8 +135,14 @@ export function stripComments(source: string): string {
     index += 1;
     while (index < source.length) {
       const char = source[index];
-      if (char === '\\') { index += 2; continue; }
-      if (char === '\n' || char === quote) { index += 1; return; }
+      if (char === '\\') {
+        index += 2;
+        continue;
+      }
+      if (char === '\n' || char === quote) {
+        index += 1;
+        return;
+      }
       index += 1;
     }
   };
@@ -115,8 +152,14 @@ export function stripComments(source: string): string {
     index += 1;
     while (index < source.length) {
       const char = source[index];
-      if (char === '\\') { index += 2; continue; }
-      if (char === '\n') { index += 1; return; }
+      if (char === '\\') {
+        index += 2;
+        continue;
+      }
+      if (char === '\n') {
+        index += 1;
+        return;
+      }
       if (char === '[') {
         index += 1;
         while (index < source.length && source[index] !== ']' && source[index] !== '\n') {
@@ -125,7 +168,10 @@ export function stripComments(source: string): string {
         index += 1;
         continue;
       }
-      if (char === '/') { index += 1; return; }
+      if (char === '/') {
+        index += 1;
+        return;
+      }
       index += 1;
     }
   };
@@ -135,7 +181,10 @@ export function stripComments(source: string): string {
     const next = source[index + 1];
 
     if (inTemplate()) {
-      if (char === '\\') { index += 2; continue; }
+      if (char === '\\') {
+        index += 2;
+        continue;
+      }
       if (char === '$' && next === '{') {
         stack.push({ kind: 'interpolation', depth: 0 });
         index += 2;
@@ -143,7 +192,13 @@ export function stripComments(source: string): string {
         lastWord = '';
         continue;
       }
-      if (char === '`') { stack.pop(); index += 1; lastSignificant = '`'; lastWord = ''; continue; }
+      if (char === '`') {
+        stack.pop();
+        index += 1;
+        lastSignificant = '`';
+        lastWord = '';
+        continue;
+      }
       index += 1;
       continue;
     }
@@ -182,14 +237,25 @@ export function stripComments(source: string): string {
         lastSignificant === undefined ||
         REGEX_CAN_FOLLOW.has(lastSignificant) ||
         REGEX_CAN_FOLLOW_KEYWORD.has(lastWord);
-      if (opensRegex) { readRegex(); lastSignificant = '/'; lastWord = ''; continue; }
+      if (opensRegex) {
+        readRegex();
+        lastSignificant = '/';
+        lastWord = '';
+        continue;
+      }
     }
 
     const frame = stack[stack.length - 1];
     if (frame !== undefined && frame.kind === 'interpolation') {
       if (char === '{') frame.depth += 1;
       else if (char === '}') {
-        if (frame.depth === 0) { stack.pop(); index += 1; lastSignificant = '}'; lastWord = ''; continue; }
+        if (frame.depth === 0) {
+          stack.pop();
+          index += 1;
+          lastSignificant = '}';
+          lastWord = '';
+          continue;
+        }
         frame.depth -= 1;
       }
     }

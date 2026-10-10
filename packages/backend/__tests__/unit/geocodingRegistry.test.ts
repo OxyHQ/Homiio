@@ -164,17 +164,14 @@ describe('fallback policy', () => {
     config.geocoding.providerOrder = ['first', 'backup'];
     registerProvider(
       fakeProvider('first', {
-        autocomplete: () =>
-          Promise.reject(new GeocodingProviderError('invalid_request', 'first')),
+        autocomplete: () => Promise.reject(new GeocodingProviderError('invalid_request', 'first')),
       }),
     );
     const backup = fakeProvider('backup');
     registerProvider(backup);
 
     await expect(
-      withFallback((provider) =>
-        provider.autocomplete({ query: 'x', language: 'en', limit: 5 }),
-      ),
+      withFallback((provider) => provider.autocomplete({ query: 'x', language: 'en', limit: 5 })),
     ).rejects.toMatchObject({ reason: 'invalid_request' });
     expect(backup.calls).toEqual([]);
   });
@@ -190,8 +187,7 @@ describe('fallback policy', () => {
     );
     registerProvider(
       fakeProvider('b', {
-        autocomplete: () =>
-          Promise.reject(new GeocodingProviderError('rate_limited', 'b', 30)),
+        autocomplete: () => Promise.reject(new GeocodingProviderError('rate_limited', 'b', 30)),
       }),
     );
 
@@ -264,9 +260,9 @@ describe('cache keys', () => {
     expect(autocompleteCacheKey({ ...base, limit: 5 })).not.toBe(
       autocompleteCacheKey({ ...base, limit: 10 }),
     );
-    expect(
-      autocompleteCacheKey({ ...base, near: { longitude: 2.17, latitude: 41.38 } }),
-    ).not.toBe(autocompleteCacheKey({ ...base, near: { longitude: -3.7, latitude: 40.4 } }));
+    expect(autocompleteCacheKey({ ...base, near: { longitude: 2.17, latitude: 41.38 } })).not.toBe(
+      autocompleteCacheKey({ ...base, near: { longitude: -3.7, latitude: 40.4 } }),
+    );
   });
 
   it('is insensitive to the ORDER of requested types', () => {
@@ -280,9 +276,9 @@ describe('cache keys', () => {
     const base = { query: 'Barcelona', language: 'en', limit: 5 };
     // ~200 m apart. Without the grid every device mints its own entry, which is
     // both a cache that never hits and a finer-grained position than needed.
-    expect(
-      autocompleteCacheKey({ ...base, near: { longitude: 2.1701, latitude: 41.3801 } }),
-    ).toBe(autocompleteCacheKey({ ...base, near: { longitude: 2.1719, latitude: 41.3818 } }));
+    expect(autocompleteCacheKey({ ...base, near: { longitude: 2.1701, latitude: 41.3801 } })).toBe(
+      autocompleteCacheKey({ ...base, near: { longitude: 2.1719, latitude: 41.3818 } }),
+    );
   });
 
   it('folds case, whitespace and unicode form so one query is one entry', () => {

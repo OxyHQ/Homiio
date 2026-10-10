@@ -250,7 +250,11 @@ export function SaveToFolderBottomSheet({
         </BloomText>
       )}
 
-      <ScrollView style={styles.content} contentContainerStyle={styles.contentInner} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={styles.contentInner}
+        showsVerticalScrollIndicator={false}
+      >
         {showCreateFolder ? (
           <View style={styles.form}>
             <H3>{t('saved.folder.createNew')}</H3>
@@ -272,7 +276,12 @@ export function SaveToFolderBottomSheet({
             </Field>
 
             <View style={styles.formActions}>
-              <Button style={styles.flex} onPress={() => setShowCreateFolder(false)} tone="neutral" appearance="outline">
+              <Button
+                style={styles.flex}
+                onPress={() => setShowCreateFolder(false)}
+                tone="neutral"
+                appearance="outline"
+              >
                 {t('common.cancel')}
               </Button>
               <Button
@@ -292,7 +301,9 @@ export function SaveToFolderBottomSheet({
               leadingIcon={RiAddLine}
               onPress={() => setShowCreateFolder(true)}
               disabled={isLoading}
-              style={styles.createButton} tone="neutral" appearance="outline"
+              style={styles.createButton}
+              tone="neutral"
+              appearance="outline"
             >
               {t('saved.folder.createNew')}
             </Button>

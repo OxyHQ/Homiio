@@ -23,7 +23,11 @@ import type {
 } from '../../../types';
 import { createFetchRuntime } from '../../../runtime';
 import { ChallengeError, fetchListingViaLadder } from '../../../strategy';
-import { defaultProviderMetrics, type ProviderMetricsReader, type ProviderMetricsSink } from '../../../metrics';
+import {
+  defaultProviderMetrics,
+  type ProviderMetricsReader,
+  type ProviderMetricsSink,
+} from '../../../metrics';
 import { providerMaxSearchPages } from '../../../discoverLimits';
 import { citiesFromEnv } from '../../../parse/cities';
 import { DAFT_BASE_URL } from './fixtures';
@@ -44,7 +48,12 @@ export interface DaftProviderOptions {
 }
 
 function asRaw(payload: unknown): DaftRawListing {
-  const record = payload as { sourceId?: unknown; url?: unknown; kind?: unknown; price?: unknown } | null;
+  const record = payload as {
+    sourceId?: unknown;
+    url?: unknown;
+    kind?: unknown;
+    price?: unknown;
+  } | null;
   if (
     !record ||
     typeof record.sourceId !== 'string' ||
@@ -189,4 +198,10 @@ export class DaftProvider implements ListingProvider {
   }
 }
 
-export { isDaftChallenge, parseDaftDetail, parseDaftSearch, daftSearchUrl, daftSourceIdFromUrl } from './parse';
+export {
+  isDaftChallenge,
+  parseDaftDetail,
+  parseDaftSearch,
+  daftSearchUrl,
+  daftSourceIdFromUrl,
+} from './parse';

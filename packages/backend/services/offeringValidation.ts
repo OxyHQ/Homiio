@@ -47,7 +47,7 @@ export function presentOfferings(doc: OfferingBearing): OfferingType[] {
 export function parseOfferings(raw: unknown): OfferingType[] | null {
   if (!Array.isArray(raw)) return null;
   const valid = raw.filter(
-    (value): value is OfferingType => typeof value === 'string' && VALID_OFFERINGS.has(value)
+    (value): value is OfferingType => typeof value === 'string' && VALID_OFFERINGS.has(value),
   );
   if (valid.length !== raw.length) return null;
   return Array.from(new Set(valid));
@@ -84,10 +84,16 @@ export function validateOfferings(doc: OfferingBearing): string | null {
     }
   }
 
-  if (declared.has(OfferingType.LONG_TERM_RENT) && !isPositiveNumber(doc.longTermRent?.monthlyAmount)) {
+  if (
+    declared.has(OfferingType.LONG_TERM_RENT) &&
+    !isPositiveNumber(doc.longTermRent?.monthlyAmount)
+  ) {
     return 'A long-term-rent listing requires longTermRent.monthlyAmount (a positive number)';
   }
-  if (declared.has(OfferingType.SHORT_TERM_RENT) && !isPositiveNumber(doc.shortTermRent?.nightlyRate)) {
+  if (
+    declared.has(OfferingType.SHORT_TERM_RENT) &&
+    !isPositiveNumber(doc.shortTermRent?.nightlyRate)
+  ) {
     return 'A short-term-rent listing requires shortTermRent.nightlyRate (a positive number)';
   }
   if (declared.has(OfferingType.SALE) && !isPositiveNumber(doc.sale?.price)) {

@@ -46,7 +46,11 @@ const IDEALISTA_DATADOME_HTML = `<!doctype html>
 
 function normalizeFromHtml(html: string, url: string) {
   const payload = parseIdealistaDetail(html, url);
-  const ref: ExternalListingRef = { provider: 'idealista', sourceId: payload.sourceId, url: payload.url };
+  const ref: ExternalListingRef = {
+    provider: 'idealista',
+    sourceId: payload.sourceId,
+    url: payload.url,
+  };
   return provider.normalize({ ref, payload });
 }
 
@@ -78,7 +82,9 @@ describe('IdealistaProvider.normalize', () => {
     expect(listing.bathrooms).toBe(1);
     expect(listing.squareFootage).toBe(78);
     expect(listing.furnishedStatus).toBe('furnished');
-    expect(listing.amenities).toEqual(expect.arrayContaining(['elevator', 'air_conditioning', 'terrace']));
+    expect(listing.amenities).toEqual(
+      expect.arrayContaining(['elevator', 'air_conditioning', 'terrace']),
+    );
     // "Amueblado" becomes furnishedStatus, never an amenity key.
     expect(listing.amenities).not.toContain('furnished');
   });
@@ -111,9 +117,9 @@ describe('IdealistaProvider.normalize', () => {
   });
 
   it('throws on a page with no real-estate JSON-LD', () => {
-    expect(() => parseIdealistaDetail('<html><body>no data</body></html>', 'https://x/inmueble/1/')).toThrow(
-      /no real-estate JSON-LD/,
-    );
+    expect(() =>
+      parseIdealistaDetail('<html><body>no data</body></html>', 'https://x/inmueble/1/'),
+    ).toThrow(/no real-estate JSON-LD/);
   });
 });
 
@@ -127,7 +133,9 @@ describe('IdealistaProvider search + helpers', () => {
   });
 
   it('extracts a source id from a detail url', () => {
-    expect(idealistaSourceIdFromUrl('https://www.idealista.com/inmueble/98765432/')).toBe('98765432');
+    expect(idealistaSourceIdFromUrl('https://www.idealista.com/inmueble/98765432/')).toBe(
+      '98765432',
+    );
     expect(idealistaSourceIdFromUrl('https://www.idealista.com/en/nope/')).toBeUndefined();
   });
 
@@ -451,7 +459,9 @@ describe('Idealista DataDome challenge helpers', () => {
     const page: SessionPage = {
       url: () => 'https://www.idealista.com/alquiler-viviendas/madrid/',
       goto,
-      content: jest.fn(async () => contents[Math.min(contentIndex++, contents.length - 1)] ?? contents[0]),
+      content: jest.fn(
+        async () => contents[Math.min(contentIndex++, contents.length - 1)] ?? contents[0],
+      ),
       waitForSelector: jest.fn(async () => undefined),
       waitForTimeout: jest.fn(async () => undefined),
       route: jest.fn(async () => undefined),

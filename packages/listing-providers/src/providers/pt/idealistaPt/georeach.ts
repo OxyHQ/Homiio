@@ -87,7 +87,17 @@ function collectFromUnknown(value: unknown, out: Map<string, string>): void {
   if (typeof value === 'object' && value !== null) {
     const record = value as Record<string, unknown>;
     collectIdsFromRecord(record, out);
-    for (const key of ['items', 'listings', 'ads', 'elements', 'data', 'result', 'content', 'html', 'body']) {
+    for (const key of [
+      'items',
+      'listings',
+      'ads',
+      'elements',
+      'data',
+      'result',
+      'content',
+      'html',
+      'body',
+    ]) {
       if (key in record) collectFromUnknown(record[key], out);
     }
   }

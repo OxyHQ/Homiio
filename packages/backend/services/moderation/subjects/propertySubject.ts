@@ -146,7 +146,9 @@ function publishedAddressLabel(
   const street = address.street.trim();
   const number = address.number?.trim();
   const parts = [
-    publishedAddressPrecision(property, 'public') !== 'street' && number ? `${street} ${number}` : street,
+    publishedAddressPrecision(property, 'public') !== 'street' && number
+      ? `${street} ${number}`
+      : street,
     geoName(address.neighborhoodName),
     geoName(address.cityName),
   ].filter((part): part is string => Boolean(part && part.length > 0));

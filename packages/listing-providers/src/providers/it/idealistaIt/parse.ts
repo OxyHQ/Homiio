@@ -4,7 +4,11 @@
 
 import type { NormalizedListingContact } from '@homiio/shared-types';
 import { detailIds } from '../../../parse/hrefs';
-import { extractItSchemaListings, pickItListing, type ItSchemaListing } from '../../../parse/jsonLd';
+import {
+  extractItSchemaListings,
+  pickItListing,
+  type ItSchemaListing,
+} from '../../../parse/jsonLd';
 import { IDEALISTA_IT_BASE_URL } from './fixtures';
 
 export interface IdealistaItRaw {
@@ -13,7 +17,6 @@ export interface IdealistaItRaw {
   listing: ItSchemaListing;
   contact?: NormalizedListingContact;
 }
-
 
 export function idealistaItSourceIdFromUrl(url: string): string | undefined {
   return url.match(/\/immobile\/(\d+)/)?.[1];

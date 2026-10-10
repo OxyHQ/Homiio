@@ -21,7 +21,12 @@ import {
   resolveNeighborhoodId,
   resolveRegionId,
 } from '../../services/geoQueryService';
-import { resetGeoTables, seedAddress, seedGeoChain, seedNeighborhood } from '../helpers/postgresGeoFixtures';
+import {
+  resetGeoTables,
+  seedAddress,
+  seedGeoChain,
+  seedNeighborhood,
+} from '../helpers/postgresGeoFixtures';
 
 /** A real uuid v7, the shape `generatedId()` mints for every post-cutover row. */
 const UUID_V7 = '01997f2c-6b40-7000-8000-0000000000ab';
@@ -29,7 +34,6 @@ const UUID_V7 = '01997f2c-6b40-7000-8000-0000000000ab';
 beforeEach(async () => {
   await resetGeoTables();
 });
-
 
 describe('resolveCityId', () => {
   it('resolves a 24-hex id', async () => {
@@ -88,7 +92,9 @@ describe('resolveRegionId', () => {
 
   it('resolves a uuid v7 region id as an id', async () => {
     const chain = await seedGeoChain({ regionName: 'Catalonia' });
-    await getDb().insert(regions).values({ id: UUID_V7, countryId: chain.countryId, name: 'Aragon' });
+    await getDb()
+      .insert(regions)
+      .values({ id: UUID_V7, countryId: chain.countryId, name: 'Aragon' });
     expect(await resolveRegionId(UUID_V7)).toBe(UUID_V7);
   });
 });
@@ -159,7 +165,11 @@ describe('resolveGeoFilterAddressIds', () => {
     await seedAddress({ chain });
 
     expect(
-      await resolveGeoFilterAddressIds({ city: 'Barcelona', neighborhood: 'gràcia', countryCode: 'es' }),
+      await resolveGeoFilterAddressIds({
+        city: 'Barcelona',
+        neighborhood: 'gràcia',
+        countryCode: 'es',
+      }),
     ).toEqual([inGracia]);
   });
 

@@ -77,7 +77,11 @@ export function isDataDomeHtmlChallenge(html: string, hasContent?: boolean): boo
   const trimmed = (html ?? '').trim();
   if (trimmed.length < 512) return true;
   if (hasContent) return false;
-  if (/acceso denegado|comprueba que eres humano|verifica que eres|sentimos la interrupci|pardon our interruption/i.test(trimmed)) {
+  if (
+    /acceso denegado|comprueba que eres humano|verifica que eres|sentimos la interrupci|pardon our interruption/i.test(
+      trimmed,
+    )
+  ) {
     return true;
   }
   return DATADOME_MARKERS.test(trimmed) || isAntiBotChallenge(trimmed);
@@ -87,11 +91,16 @@ export function isDataDomeHtmlChallenge(html: string, hasContent?: boolean): boo
 export function isDataDomeAjaxChallenge(body: string): boolean {
   const trimmed = body.trim();
   if (trimmed.length === 0) return true;
-  if (/captcha-delivery\.com|geo\.captcha|datadome|acceso denegado|accesso negato|px-captcha/i.test(trimmed)) {
+  if (
+    /captcha-delivery\.com|geo\.captcha|datadome|acceso denegado|accesso negato|px-captcha/i.test(
+      trimmed,
+    )
+  ) {
     return true;
   }
   if (trimmed.startsWith('<!DOCTYPE') || trimmed.startsWith('<html')) return true;
-  if (/sentimos la interrupci|pardon our interruption|verifica que eres/i.test(trimmed)) return true;
+  if (/sentimos la interrupci|pardon our interruption|verifica que eres/i.test(trimmed))
+    return true;
   if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
     return /"url"\s*:\s*"https?:\/\/geo\.captcha/i.test(trimmed);
   }

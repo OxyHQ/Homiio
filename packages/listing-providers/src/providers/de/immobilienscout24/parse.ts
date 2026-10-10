@@ -65,7 +65,11 @@ export function is24Geocode(city: string): string {
   return CITY_GEOCODES[slug] ?? `/de/${slug}/${slug}`;
 }
 
-export function is24SearchListUrl(city: string, page = 1, operation: 'rent' | 'sale' = 'rent'): string {
+export function is24SearchListUrl(
+  city: string,
+  page = 1,
+  operation: 'rent' | 'sale' = 'rent',
+): string {
   const realEstateType = operation === 'sale' ? 'apartmentbuy' : 'apartmentrent';
   const geocodes = encodeURIComponent(is24Geocode(city));
   return `${IMMOBILIENSCOUT24_MOBILE_API}/search/list?pricetype=calculatedtotalrent&realestatetype=${realEstateType}&searchType=region&geocodes=${geocodes}&pagenumber=${page}`;
@@ -184,7 +188,10 @@ function collectIs24Amenities(attrs: Is24Attributes): {
   return canonicalizeAmenities(tokens);
 }
 
-function parseAddressLines(line1: string | undefined, line2: string | undefined): Is24RawListing['address'] {
+function parseAddressLines(
+  line1: string | undefined,
+  line2: string | undefined,
+): Is24RawListing['address'] {
   const address: Is24RawListing['address'] = {};
   if (line1) address.street = line1;
   if (!line2) return address;
@@ -195,7 +202,10 @@ function parseAddressLines(line1: string | undefined, line2: string | undefined)
   const postal = line2.match(/^(\d{5})\s{1,20}(.+)$/);
   if (postal) {
     address.postalCode = postal[1];
-    const parts = (postal[2] ?? '').split(',').map((part) => part.trim()).filter(Boolean);
+    const parts = (postal[2] ?? '')
+      .split(',')
+      .map((part) => part.trim())
+      .filter(Boolean);
     if (parts.length >= 2) {
       address.neighborhood = parts[0];
       address.city = parts[parts.length - 1];
@@ -242,7 +252,10 @@ export function parseIs24Expose(body: string, fallbackUrl?: string): Is24RawList
       // The mobile expose splits free text into titled TEXT_AREA blocks
       // ('Objektbeschreibung', 'Lage', 'Sonstiges'). Only the object
       // description is a real listing description; keep the first one.
-      if (description === undefined && asString(record.title)?.toLowerCase() === 'objektbeschreibung') {
+      if (
+        description === undefined &&
+        asString(record.title)?.toLowerCase() === 'objektbeschreibung'
+      ) {
         description = asString(record.text);
       }
     } else if (type === 'TOP_ATTRIBUTES' || type === 'ATTRIBUTES' || type === 'ATTRIBUTE_LIST') {

@@ -44,17 +44,14 @@ export const useUIStore = create<UIState>()(
       sidebarCollapsed: false,
       mobileDrawerOpen: false,
       sindiPanelOpen: false,
-      toggleSidebarCollapsed: () =>
-        set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
+      toggleSidebarCollapsed: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
       setSidebarCollapsed: (value) => set({ sidebarCollapsed: value }),
       openMobileDrawer: () => set({ mobileDrawerOpen: true }),
       closeMobileDrawer: () => set({ mobileDrawerOpen: false }),
-      toggleMobileDrawer: () =>
-        set((state) => ({ mobileDrawerOpen: !state.mobileDrawerOpen })),
+      toggleMobileDrawer: () => set((state) => ({ mobileDrawerOpen: !state.mobileDrawerOpen })),
       openSindiPanel: () => set({ sindiPanelOpen: true }),
       closeSindiPanel: () => set({ sindiPanelOpen: false }),
-      toggleSindiPanel: () =>
-        set((state) => ({ sindiPanelOpen: !state.sindiPanelOpen })),
+      toggleSindiPanel: () => set((state) => ({ sindiPanelOpen: !state.sindiPanelOpen })),
     }),
     {
       name: '@homiio/ui-store',

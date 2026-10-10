@@ -3,7 +3,9 @@ import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { gzipSync } from 'node:zlib';
 
-const DIST = resolve(process.argv[2] ?? new URL('../packages/frontend/dist', import.meta.url).pathname);
+const DIST = resolve(
+  process.argv[2] ?? new URL('../packages/frontend/dist', import.meta.url).pathname,
+);
 const BUDGET_FILE = resolve(
   process.argv[3] ?? new URL('../performance-budgets.json', import.meta.url).pathname,
 );

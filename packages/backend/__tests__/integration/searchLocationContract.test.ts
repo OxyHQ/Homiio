@@ -74,10 +74,7 @@ async function attachNeighborhood(propertyId: string, neighborhoodId: string): P
     .from(properties)
     .where(eq(properties.id, propertyId))
     .limit(1);
-  await db
-    .update(addresses)
-    .set({ neighborhoodId })
-    .where(eq(addresses.id, row.addressId));
+  await db.update(addresses).set({ neighborhoodId }).where(eq(addresses.id, row.addressId));
 }
 
 describe('search location contract', () => {
@@ -206,9 +203,7 @@ describe('search location contract', () => {
     it('does NOT expand `q` into a place when a city id already scoped the query', async () => {
       const { cityId } = await seedBarcelonaListing();
 
-      const res = await request(buildApp()).get(
-        `/properties/search?city=${cityId}&q=Barcelona`,
-      );
+      const res = await request(buildApp()).get(`/properties/search?city=${cityId}&q=Barcelona`);
 
       expect(res.status).toBe(200);
       expect(res.body.data).toHaveLength(0);

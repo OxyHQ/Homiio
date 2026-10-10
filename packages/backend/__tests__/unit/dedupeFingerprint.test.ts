@@ -77,21 +77,25 @@ describe('descriptionJaccard', () => {
 
 describe('extractPrimaryPricing', () => {
   it('prefers long-term rent, then short-term, then sale', () => {
-    expect(extractPrimaryPricing({ longTermRent: { monthlyAmount: 900, currency: 'eur' } })).toEqual({
+    expect(
+      extractPrimaryPricing({ longTermRent: { monthlyAmount: 900, currency: 'eur' } }),
+    ).toEqual({
       offering: OfferingType.LONG_TERM_RENT,
       amount: 900,
       currency: 'EUR',
     });
-    expect(extractPrimaryPricing({ shortTermRent: { nightlyRate: 120, currency: 'EUR' } })?.offering).toBe(
-      OfferingType.SHORT_TERM_RENT,
-    );
+    expect(
+      extractPrimaryPricing({ shortTermRent: { nightlyRate: 120, currency: 'EUR' } })?.offering,
+    ).toBe(OfferingType.SHORT_TERM_RENT);
     expect(extractPrimaryPricing({ sale: { price: 249000, currency: 'EUR' } })?.offering).toBe(
       OfferingType.SALE,
     );
   });
 
   it('ignores non-positive amounts and returns null when unpriced', () => {
-    expect(extractPrimaryPricing({ longTermRent: { monthlyAmount: 0, currency: 'EUR' } })).toBeNull();
+    expect(
+      extractPrimaryPricing({ longTermRent: { monthlyAmount: 0, currency: 'EUR' } }),
+    ).toBeNull();
     expect(extractPrimaryPricing({})).toBeNull();
   });
 });
@@ -168,7 +172,10 @@ describe('areDuplicateListings — false positives it must reject', () => {
 
   it('rejects listings with the same copy but a different price', () => {
     const a = comparableOrThrow(BASE);
-    const b = comparableOrThrow({ ...BASE, longTermRent: { monthlyAmount: 1800, currency: 'EUR' } });
+    const b = comparableOrThrow({
+      ...BASE,
+      longTermRent: { monthlyAmount: 1800, currency: 'EUR' },
+    });
     expect(areDuplicateListings(a, b)).toBe(false);
   });
 
@@ -182,7 +189,10 @@ describe('areDuplicateListings — false positives it must reject', () => {
     const a = comparableOrThrow(BASE);
     const b = comparableOrThrow({
       ...BASE,
-      description: buildDescription(0, Array.from({ length: 62 }, (_, i) => `distinto${i}`)),
+      description: buildDescription(
+        0,
+        Array.from({ length: 62 }, (_, i) => `distinto${i}`),
+      ),
     });
     expect(areDuplicateListings(a, b)).toBe(false);
   });

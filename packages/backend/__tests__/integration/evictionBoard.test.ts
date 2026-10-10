@@ -332,7 +332,9 @@ describe('comments', () => {
       .send({ body: 'aquí estaré' });
     const commentId = created.body.data.id;
 
-    const del = await request(buildApp('oxy-author')).delete(`/evictions/${id}/comments/${commentId}`);
+    const del = await request(buildApp('oxy-author')).delete(
+      `/evictions/${id}/comments/${commentId}`,
+    );
     expect(del.status).toBe(200);
     expect(await commentsWithId(commentId)).toHaveLength(0);
   });
@@ -350,7 +352,9 @@ describe('comments', () => {
     expect(stranger.status).toBe(404);
     expect(await commentsWithId(commentId)).toHaveLength(1);
 
-    const owner = await request(buildApp('oxy-owner')).delete(`/evictions/${id}/comments/${commentId}`);
+    const owner = await request(buildApp('oxy-owner')).delete(
+      `/evictions/${id}/comments/${commentId}`,
+    );
     expect(owner.status).toBe(200);
     expect(await commentsWithId(commentId)).toHaveLength(0);
   });
@@ -422,7 +426,9 @@ describe('public browse — the board is LOCAL', () => {
     const res = await request(buildApp()).get('/evictions?global=true&status=upcoming');
     expect(res.status).toBe(200);
     expect(res.body.data.scope).toEqual({ kind: 'global' });
-    expect(res.body.data.evictions.map((row: { title: string }) => row.title)).toContain('anywhere');
+    expect(res.body.data.evictions.map((row: { title: string }) => row.title)).toContain(
+      'anywhere',
+    );
   });
 
   it('sorts an upcoming board by soonest first and excludes other statuses', async () => {
@@ -573,7 +579,9 @@ describe('detail — contact needs a CONFIRMED supporter, not just an RSVP', () 
     const locked = await request(buildApp('oxy-newcomer')).get(`/evictions/${id}`);
     expect(locked.body.data.contactLocked).toBe(true);
 
-    const vouch = await request(buildApp('oxy-veteran')).post(`/evictions/${id}/vouch/oxy-newcomer`);
+    const vouch = await request(buildApp('oxy-veteran')).post(
+      `/evictions/${id}/vouch/oxy-newcomer`,
+    );
     expect(vouch.status).toBe(200);
     expect(vouch.body.data.confirmed).toBe(true);
 
@@ -600,8 +608,9 @@ describe('detail — contact needs a CONFIRMED supporter, not just an RSVP', () 
     const id = await createCase('oxy-owner', { contactInfo: contact });
     await giveProfileAgedDays('oxy-veteran', 30);
     await request(buildApp('oxy-veteran')).post(`/evictions/${id}/attend`);
-    expect((await request(buildApp('oxy-veteran')).get(`/evictions/${id}`)).body.data.contactInfo)
-      .toBeDefined();
+    expect(
+      (await request(buildApp('oxy-veteran')).get(`/evictions/${id}`)).body.data.contactInfo,
+    ).toBeDefined();
 
     const revoke = await request(buildApp('oxy-owner')).post(
       `/evictions/${id}/supporters/oxy-veteran/revoke`,

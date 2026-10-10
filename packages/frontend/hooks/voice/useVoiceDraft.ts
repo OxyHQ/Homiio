@@ -62,7 +62,11 @@ export function useVoiceDraft({ value, onChange }: UseVoiceDraftArgs): UseVoiceD
     (failure: SpeechFailure) => {
       if (failure === 'unsupported') {
         toast.error(
-          t(Platform.OS === 'web' ? 'sindi.voice.unsupportedBrowser' : 'sindi.voice.unsupportedDevice'),
+          t(
+            Platform.OS === 'web'
+              ? 'sindi.voice.unsupportedBrowser'
+              : 'sindi.voice.unsupportedDevice',
+          ),
         );
       } else if (failure === 'denied') {
         toast.error(t('sindi.voice.deniedTitle'), { description: t('sindi.voice.deniedMessage') });

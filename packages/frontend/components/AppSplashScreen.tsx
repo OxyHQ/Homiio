@@ -77,10 +77,7 @@ const AppSplashScreen: React.FC<AppSplashScreenProps> = ({ onFadeComplete, start
 
   return (
     <Animated.View style={containerStyle}>
-      <StyledLinearGradient
-        colors={gradientColors}
-        className="flex-1 items-center justify-center"
-      >
+      <StyledLinearGradient colors={gradientColors} className="flex-1 items-center justify-center">
         <View style={logoContainerStyle}>
           <LogoIcon size={100} color={colors.secondaryColor} />
           <View style={spinnerContainerStyle}>

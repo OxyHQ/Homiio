@@ -26,10 +26,7 @@ import {
   transitionReservation,
   type ReservationRow,
 } from '../db/bookings/reservationReads';
-import {
-  findOccupancyConflict,
-  type OccupancyConflict,
-} from '../db/availability/occupancy';
+import { findOccupancyConflict, type OccupancyConflict } from '../db/availability/occupancy';
 import { listConfirmedExchangeStays } from '../db/exchanges/exchangeReads';
 import {
   findPropertyBookingBasis,
@@ -38,7 +35,13 @@ import {
 } from '../db/properties/propertyBookingBasis';
 import { logger } from '../middlewares/logging';
 import { AppError, successResponse, paginationResponse } from '../middlewares/errorHandler';
-import { ReservationStatus, PropertyStatus, CancellationPolicy, OfferingType, AvailabilityWindowStatus } from '@homiio/shared-types';
+import {
+  ReservationStatus,
+  PropertyStatus,
+  CancellationPolicy,
+  OfferingType,
+  AvailabilityWindowStatus,
+} from '@homiio/shared-types';
 import { RESERVATION_CANCELLATION_POLICIES } from '../db/schema/bookings';
 
 /** Default currency used when a short-term block somehow lacks one. */
@@ -85,10 +88,12 @@ function quoteStay(property: PropertyBookingBasis, nights: number): StayQuote | 
   const serviceFee = property.shortTermRentServiceFee ?? 0;
   const taxesPercent = property.shortTermRentTaxesPercent ?? 0;
   const taxes =
-    Math.round((subtotal + cleaningFee + serviceFee) * (taxesPercent / PERCENT) * CURRENCY_ROUNDING) /
-    CURRENCY_ROUNDING;
+    Math.round(
+      (subtotal + cleaningFee + serviceFee) * (taxesPercent / PERCENT) * CURRENCY_ROUNDING,
+    ) / CURRENCY_ROUNDING;
   const total =
-    Math.round((subtotal + cleaningFee + serviceFee + taxes) * CURRENCY_ROUNDING) / CURRENCY_ROUNDING;
+    Math.round((subtotal + cleaningFee + serviceFee + taxes) * CURRENCY_ROUNDING) /
+    CURRENCY_ROUNDING;
 
   return {
     nightlyRate,
@@ -126,12 +131,24 @@ function quoteMatches(reservation: ReservationRow, quote: StayQuote): boolean {
 function occupancyError(conflict: OccupancyConflict): AppError {
   switch (conflict.kind) {
     case 'reservation':
-      return new AppError('Selected dates conflict with an existing reservation', 409, 'DATE_CONFLICT');
+      return new AppError(
+        'Selected dates conflict with an existing reservation',
+        409,
+        'DATE_CONFLICT',
+      );
     case 'exchange':
-      return new AppError('Selected dates conflict with a confirmed home exchange', 409, 'DATE_CONFLICT');
+      return new AppError(
+        'Selected dates conflict with a confirmed home exchange',
+        409,
+        'DATE_CONFLICT',
+      );
     case 'window':
     default:
-      return new AppError('Selected dates are blocked by the host calendar', 409, 'BLOCKED_BY_HOST');
+      return new AppError(
+        'Selected dates are blocked by the host calendar',
+        409,
+        'BLOCKED_BY_HOST',
+      );
   }
 }
 
@@ -175,7 +192,8 @@ class ReservationController {
       const { propertyId, checkIn, checkOut, guestCount, specialRequests } = req.body;
 
       const oxyUserId = req.user?.id || req.user?._id || req.userId;
-      if (!oxyUserId) return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
+      if (!oxyUserId)
+        return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
 
       // Parse + validate the date window. Nothing here reads the database, so
       // it is settled before a transaction is opened.
@@ -190,7 +208,8 @@ class ReservationController {
       }
 
       const nights = computeNights(checkInDate, checkOutDate);
-      if (nights < 1) return next(new AppError('Reservation must be at least 1 night', 400, 'INVALID_RANGE'));
+      if (nights < 1)
+        return next(new AppError('Reservation must be at least 1 night', 400, 'INVALID_RANGE'));
 
       const stay = { start: checkInDate, end: checkOutDate };
 
@@ -214,33 +233,64 @@ class ReservationController {
         );
         if (!property) return { error: new AppError('Property not found', 404, 'NOT_FOUND') };
         if (property.status !== PropertyStatus.PUBLISHED) {
-          return { error: new AppError('Property is not available for booking', 400, 'PROPERTY_NOT_BOOKABLE') };
+          return {
+            error: new AppError(
+              'Property is not available for booking',
+              400,
+              'PROPERTY_NOT_BOOKABLE',
+            ),
+          };
         }
         if (property.isExternal) {
           return { error: new AppError('Cannot book external listings', 400, 'EXTERNAL_PROPERTY') };
         }
         if (!isVacationBookable(property)) {
-          return { error: new AppError('This property is not offered for short-term booking', 400, 'NOT_VACATION_BOOKABLE') };
+          return {
+            error: new AppError(
+              'This property is not offered for short-term booking',
+              400,
+              'NOT_VACATION_BOOKABLE',
+            ),
+          };
         }
 
         const hostOxyUserId = property.oxyUserId;
-        if (!hostOxyUserId) return { error: new AppError('Property has no host', 400, 'INVALID_PROPERTY') };
+        if (!hostOxyUserId)
+          return { error: new AppError('Property has no host', 400, 'INVALID_PROPERTY') };
         if (hostOxyUserId === oxyUserId) {
           return { error: new AppError('You cannot book your own property', 403, 'FORBIDDEN') };
         }
 
         // Min/max stay, from the short-term block.
         if (property.shortTermRentMinNights && nights < property.shortTermRentMinNights) {
-          return { error: new AppError(`Minimum stay is ${property.shortTermRentMinNights} night(s)`, 400, 'BELOW_MIN_STAY') };
+          return {
+            error: new AppError(
+              `Minimum stay is ${property.shortTermRentMinNights} night(s)`,
+              400,
+              'BELOW_MIN_STAY',
+            ),
+          };
         }
         if (property.shortTermRentMaxNights && nights > property.shortTermRentMaxNights) {
-          return { error: new AppError(`Maximum stay is ${property.shortTermRentMaxNights} night(s)`, 400, 'ABOVE_MAX_STAY') };
+          return {
+            error: new AppError(
+              `Maximum stay is ${property.shortTermRentMaxNights} night(s)`,
+              400,
+              'ABOVE_MAX_STAY',
+            ),
+          };
         }
 
         // Guest capacity, from the row we hold — not from one read earlier.
         const cappedMaxGuests = property.maxGuests || 1;
         if (guestCount > cappedMaxGuests) {
-          return { error: new AppError(`Property accepts at most ${cappedMaxGuests} guest(s)`, 400, 'TOO_MANY_GUESTS') };
+          return {
+            error: new AppError(
+              `Property accepts at most ${cappedMaxGuests} guest(s)`,
+              400,
+              'TOO_MANY_GUESTS',
+            ),
+          };
         }
 
         // Is the DWELLING free? Reservations, confirmed exchanges and the host
@@ -270,7 +320,8 @@ class ReservationController {
           ...quote,
           status,
           instantBooked,
-          cancellationPolicy: cancellationPolicy as (typeof RESERVATION_CANCELLATION_POLICIES)[number],
+          cancellationPolicy:
+            cancellationPolicy as (typeof RESERVATION_CANCELLATION_POLICIES)[number],
           specialRequests: typeof specialRequests === 'string' ? specialRequests : undefined,
         });
         return { reservation, status, instantBooked };
@@ -282,10 +333,12 @@ class ReservationController {
         reservationId: outcome.reservation.id,
         propertyId: String(propertyId),
         status: outcome.status,
-        instantBooked: outcome.instantBooked
+        instantBooked: outcome.instantBooked,
       });
 
-      res.status(201).json(successResponse(serializeReservation(outcome.reservation), 'Reservation created'));
+      res
+        .status(201)
+        .json(successResponse(serializeReservation(outcome.reservation), 'Reservation created'));
     } catch (error) {
       next(error);
     }
@@ -299,7 +352,8 @@ class ReservationController {
     try {
       const { page = 1, limit = 10, status, asHost } = req.query;
       const oxyUserId = req.user?.id || req.user?._id || req.userId;
-      if (!oxyUserId) return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
+      if (!oxyUserId)
+        return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
 
       const pageNumber = Math.max(1, parseInt(String(page)) || 1);
       const limitNumber = Math.min(100, Math.max(1, parseInt(String(limit)) || 10));
@@ -316,7 +370,15 @@ class ReservationController {
         { limit: limitNumber, offset: skip },
       );
 
-      res.json(paginationResponse(result.rows.map(serializeReservation), pageNumber, limitNumber, result.total, 'Reservations retrieved'));
+      res.json(
+        paginationResponse(
+          result.rows.map(serializeReservation),
+          pageNumber,
+          limitNumber,
+          result.total,
+          'Reservations retrieved',
+        ),
+      );
     } catch (error) {
       next(error);
     }
@@ -329,14 +391,16 @@ class ReservationController {
     try {
       const { id } = req.params;
       const oxyUserId = req.user?.id || req.user?._id || req.userId;
-      if (!oxyUserId) return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
+      if (!oxyUserId)
+        return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
 
       const reservation = await findReservationById(getDb(), id);
       if (!reservation) return next(new AppError('Reservation not found', 404, 'NOT_FOUND'));
 
       const isGuest = reservation.guestOxyUserId === oxyUserId;
       const isHost = reservation.hostOxyUserId === oxyUserId;
-      if (!isGuest && !isHost) return next(new AppError('Not authorized to view this reservation', 403, 'FORBIDDEN'));
+      if (!isGuest && !isHost)
+        return next(new AppError('Not authorized to view this reservation', 403, 'FORBIDDEN'));
 
       res.json(successResponse(serializeReservation(reservation), 'Reservation retrieved'));
     } catch (error) {
@@ -355,7 +419,8 @@ class ReservationController {
       const { status: nextStatus } = req.body;
 
       const oxyUserId = req.user?.id || req.user?._id || req.userId;
-      if (!oxyUserId) return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
+      if (!oxyUserId)
+        return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
 
       const db = getDb();
       const reservation = await findReservationById(db, id);
@@ -363,7 +428,8 @@ class ReservationController {
 
       const isGuest = reservation.guestOxyUserId === oxyUserId;
       const isHost = reservation.hostOxyUserId === oxyUserId;
-      if (!isGuest && !isHost) return next(new AppError('Not authorized to update this reservation', 403, 'FORBIDDEN'));
+      if (!isGuest && !isHost)
+        return next(new AppError('Not authorized to update this reservation', 403, 'FORBIDDEN'));
 
       const now = new Date();
       // Every transition carries its permitted FROM set into the `UPDATE`'s own
@@ -371,9 +437,16 @@ class ReservationController {
       let updated: ReservationRow | undefined;
 
       if (nextStatus === ReservationStatus.CONFIRMED || nextStatus === ReservationStatus.DECLINED) {
-        if (!isHost) return next(new AppError('Only the host can approve or decline', 403, 'FORBIDDEN'));
+        if (!isHost)
+          return next(new AppError('Only the host can approve or decline', 403, 'FORBIDDEN'));
         if (reservation.status !== ReservationStatus.PENDING) {
-          return next(new AppError('Only pending reservations can be approved or declined', 400, 'INVALID_STATE'));
+          return next(
+            new AppError(
+              'Only pending reservations can be approved or declined',
+              400,
+              'INVALID_STATE',
+            ),
+          );
         }
         if (nextStatus === ReservationStatus.CONFIRMED) {
           /**
@@ -393,12 +466,19 @@ class ReservationController {
             const property = (await lockPropertyBookingBases(tx, [reservation.propertyId])).get(
               reservation.propertyId,
             );
-            if (!property) return { error: new AppError('Property no longer exists', 404, 'NOT_FOUND') };
+            if (!property)
+              return { error: new AppError('Property no longer exists', 404, 'NOT_FOUND') };
 
             const locked = await lockReservationById(tx, id);
             if (!locked) return { error: new AppError('Reservation not found', 404, 'NOT_FOUND') };
             if (locked.status !== ReservationStatus.PENDING) {
-              return { error: new AppError('Only pending reservations can be approved or declined', 400, 'INVALID_STATE') };
+              return {
+                error: new AppError(
+                  'Only pending reservations can be approved or declined',
+                  400,
+                  'INVALID_STATE',
+                ),
+              };
             }
 
             // DATES: a stay that has already begun cannot be accepted.
@@ -422,7 +502,11 @@ class ReservationController {
               return {
                 error:
                   conflict.kind === 'reservation'
-                    ? new AppError('Another confirmed reservation now conflicts with this one', 409, 'DATE_CONFLICT')
+                    ? new AppError(
+                        'Another confirmed reservation now conflicts with this one',
+                        409,
+                        'DATE_CONFLICT',
+                      )
                     : occupancyError(conflict),
               };
             }
@@ -430,7 +514,13 @@ class ReservationController {
             // CAPACITY: against the listing as it stands now.
             const cappedMaxGuests = property.maxGuests || 1;
             if (locked.guestCount > cappedMaxGuests) {
-              return { error: new AppError(`Property accepts at most ${cappedMaxGuests} guest(s)`, 409, 'TOO_MANY_GUESTS') };
+              return {
+                error: new AppError(
+                  `Property accepts at most ${cappedMaxGuests} guest(s)`,
+                  409,
+                  'TOO_MANY_GUESTS',
+                ),
+              };
             }
 
             // PRICE: the quote has to still BE the listing's price. If the host
@@ -440,15 +530,31 @@ class ReservationController {
             // re-priced.
             const quote = quoteStay(property, locked.nights);
             if (!quote) {
-              return { error: new AppError('This property has no short-term pricing', 409, 'NO_RATE') };
+              return {
+                error: new AppError('This property has no short-term pricing', 409, 'NO_RATE'),
+              };
             }
             if (!quoteMatches(locked, quote)) {
-              return { error: new AppError('The listing has been re-priced since this request', 409, 'PRICE_CHANGED') };
+              return {
+                error: new AppError(
+                  'The listing has been re-priced since this request',
+                  409,
+                  'PRICE_CHANGED',
+                ),
+              };
             }
 
-            const confirmed = await transitionReservation(tx, id, nextStatus, [ReservationStatus.PENDING]);
+            const confirmed = await transitionReservation(tx, id, nextStatus, [
+              ReservationStatus.PENDING,
+            ]);
             if (!confirmed) {
-              return { error: new AppError('Only pending reservations can be approved or declined', 400, 'INVALID_STATE') };
+              return {
+                error: new AppError(
+                  'Only pending reservations can be approved or declined',
+                  400,
+                  'INVALID_STATE',
+                ),
+              };
             }
             return { reservation: confirmed };
           });
@@ -458,19 +564,35 @@ class ReservationController {
         } else {
           updated = await transitionReservation(db, id, nextStatus, [ReservationStatus.PENDING]);
           if (!updated) {
-            return next(new AppError('Only pending reservations can be approved or declined', 400, 'INVALID_STATE'));
+            return next(
+              new AppError(
+                'Only pending reservations can be approved or declined',
+                400,
+                'INVALID_STATE',
+              ),
+            );
           }
         }
       } else if (nextStatus === ReservationStatus.CANCELLED) {
         if (reservation.status === ReservationStatus.CANCELLED) {
-          return res.json(successResponse(serializeReservation(reservation), 'Reservation already cancelled'));
+          return res.json(
+            successResponse(serializeReservation(reservation), 'Reservation already cancelled'),
+          );
         }
         if (reservation.status === ReservationStatus.COMPLETED) {
-          return next(new AppError('Completed reservations cannot be cancelled', 400, 'INVALID_STATE'));
+          return next(
+            new AppError('Completed reservations cannot be cancelled', 400, 'INVALID_STATE'),
+          );
         }
         // Host can always cancel; guest must satisfy the cancellation policy.
         if (isGuest && !isHost && !canGuestCancel(reservation, now)) {
-          return next(new AppError('Cancellation policy does not permit cancellation at this time', 403, 'POLICY_FORBIDS_CANCEL'));
+          return next(
+            new AppError(
+              'Cancellation policy does not permit cancellation at this time',
+              403,
+              'POLICY_FORBIDS_CANCEL',
+            ),
+          );
         }
         updated = await transitionReservation(db, id, ReservationStatus.CANCELLED, [
           ReservationStatus.PENDING,
@@ -478,7 +600,9 @@ class ReservationController {
           ReservationStatus.DECLINED,
         ]);
         if (!updated) {
-          return next(new AppError('Completed reservations cannot be cancelled', 400, 'INVALID_STATE'));
+          return next(
+            new AppError('Completed reservations cannot be cancelled', 400, 'INVALID_STATE'),
+          );
         }
       } else {
         return next(new AppError('Unsupported status transition', 400, 'INVALID_STATE'));
@@ -488,7 +612,7 @@ class ReservationController {
         reservationId: updated.id,
         nextStatus: updated.status,
         byHost: isHost,
-        byGuest: isGuest
+        byGuest: isGuest,
       });
 
       res.json(successResponse(serializeReservation(updated), 'Reservation updated'));

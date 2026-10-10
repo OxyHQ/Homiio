@@ -125,6 +125,9 @@ export async function createRentProperty(
       oxyUserId: properties.oxyUserId,
       status: properties.status,
     });
-  return { id: created.id, oxyUserId: created.oxyUserId ?? options.oxyUserId, status: created.status };
+  return {
+    id: created.id,
+    oxyUserId: created.oxyUserId ?? options.oxyUserId,
+    status: created.status,
+  };
 }
-

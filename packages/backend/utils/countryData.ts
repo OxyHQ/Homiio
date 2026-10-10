@@ -38,18 +38,18 @@ const DEFAULT_CURRENCY: ListingCurrency = 'EUR';
 
 /** Common alternative spellings → canonical ISO-2 code. */
 const NAME_ALIASES: Readonly<Record<string, string>> = {
-  'usa': 'US',
+  usa: 'US',
   'u.s.a.': 'US',
   'u.s.': 'US',
   'united states of america': 'US',
-  'uk': 'GB',
+  uk: 'GB',
   'u.k.': 'GB',
   'great britain': 'GB',
-  'england': 'GB',
-  'españa': 'ES',
-  'espana': 'ES',
-  'deutschland': 'DE',
-  'italia': 'IT',
+  england: 'GB',
+  españa: 'ES',
+  espana: 'ES',
+  deutschland: 'DE',
+  italia: 'IT',
 };
 
 const byCode = new Map<string, CountryEntry>(COUNTRIES.map((c) => [c.code, c]));

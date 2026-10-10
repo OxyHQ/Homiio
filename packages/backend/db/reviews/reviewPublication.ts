@@ -65,7 +65,8 @@ export const REVIEW_PRICE_BAND_CEILING = 3000;
  * `NaN` band, because a malformed band is worse on the wire than a wrong one.
  */
 export function reviewPriceBand(price: number, currency: string): ReviewPriceBand {
-  if (!Number.isFinite(price) || price <= 0) return { min: 0, max: REVIEW_PRICE_BAND_WIDTH, currency };
+  if (!Number.isFinite(price) || price <= 0)
+    return { min: 0, max: REVIEW_PRICE_BAND_WIDTH, currency };
   if (price >= REVIEW_PRICE_BAND_CEILING) return { min: REVIEW_PRICE_BAND_CEILING, currency };
   const min = Math.floor(price / REVIEW_PRICE_BAND_WIDTH) * REVIEW_PRICE_BAND_WIDTH;
   return { min, max: min + REVIEW_PRICE_BAND_WIDTH, currency };

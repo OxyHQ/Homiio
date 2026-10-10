@@ -239,8 +239,7 @@ export const AVAILABLE_HOUSING_ALERT_RULE_TYPES: readonly HousingAlertRuleType[]
 
 export function isHousingAlertRuleType(value: unknown): value is HousingAlertRuleType {
   return (
-    typeof value === 'string' &&
-    (HOUSING_ALERT_RULE_TYPES as readonly string[]).includes(value)
+    typeof value === 'string' && (HOUSING_ALERT_RULE_TYPES as readonly string[]).includes(value)
   );
 }
 
@@ -602,9 +601,7 @@ export function findUnsafeAlertFields(payload: unknown): string[] {
     if (value !== null && typeof value === 'object') {
       for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
         const lowered = key.toLowerCase();
-        const fragment = FORBIDDEN_ALERT_FIELD_FRAGMENTS.find((needle) =>
-          lowered.includes(needle),
-        );
+        const fragment = FORBIDDEN_ALERT_FIELD_FRAGMENTS.find((needle) => lowered.includes(needle));
         const childPath = path ? `${path}.${key}` : key;
         if (fragment !== undefined) {
           violations.push(`${childPath}: field name contains '${fragment}'`);

@@ -49,7 +49,12 @@ export function SavedSearchesWidget() {
           <BloomText className="text-center text-[15px] font-semibold text-foreground">
             {t('search.widgets.savedSearches.signInPrompt')}
           </BloomText>
-          <Button size="md" onPress={() => openAccountDialog('signin')} tone="accent" appearance="solid">
+          <Button
+            size="md"
+            onPress={() => openAccountDialog('signin')}
+            tone="accent"
+            appearance="solid"
+          >
             {t('search.widgets.common.signIn')}
           </Button>
         </StateBlock>
@@ -69,7 +74,9 @@ export function SavedSearchesWidget() {
           </BloomText>
           <Button
             size="md"
-            onPress={() => queryClient.invalidateQueries({ queryKey: ['savedSearches'] })} tone="neutral" appearance="outline"
+            onPress={() => queryClient.invalidateQueries({ queryKey: ['savedSearches'] })}
+            tone="neutral"
+            appearance="outline"
           >
             {t('common.retry')}
           </Button>
@@ -89,7 +96,12 @@ export function SavedSearchesWidget() {
               {t('search.widgets.savedSearches.emptyHelper')}
             </BloomText>
           </View>
-          <Button size="md" onPress={() => router.push('/explore')} tone="accent" appearance="solid">
+          <Button
+            size="md"
+            onPress={() => router.push('/explore')}
+            tone="accent"
+            appearance="solid"
+          >
             {t('search.widgets.savedSearches.createNew')}
           </Button>
         </StateBlock>
@@ -112,7 +124,9 @@ export function SavedSearchesWidget() {
   return (
     <BaseWidget
       title={t('search.widgets.savedSearches.title')}
-      icon={<RiBookmarkFill width={HEADER_ICON_SIZE} height={HEADER_ICON_SIZE} fill={colors.primary} />}
+      icon={
+        <RiBookmarkFill width={HEADER_ICON_SIZE} height={HEADER_ICON_SIZE} fill={colors.primary} />
+      }
     >
       {renderState()}
     </BaseWidget>

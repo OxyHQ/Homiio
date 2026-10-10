@@ -38,7 +38,8 @@ import {
   EmploymentStatus,
   ReferenceRelationship,
   TenantApplicationDocumentType,
- PropertyType } from '@homiio/shared-types';
+  PropertyType,
+} from '@homiio/shared-types';
 import { Header } from '@/components/Header';
 import { useProperty } from '@/hooks';
 import { useCreateApplicationMutation } from '@/hooks/useApplicationQueries';
@@ -132,7 +133,12 @@ function inferDocumentType(filename: string): TenantApplicationDocumentType {
   if (lower.includes('id') || lower.includes('passport') || lower.includes('license')) {
     return TenantApplicationDocumentType.ID;
   }
-  if (lower.includes('pay') || lower.includes('salary') || lower.includes('income') || lower.includes('tax')) {
+  if (
+    lower.includes('pay') ||
+    lower.includes('salary') ||
+    lower.includes('income') ||
+    lower.includes('tax')
+  ) {
     return TenantApplicationDocumentType.INCOME;
   }
   if (lower.includes('reference') || lower.includes('letter')) {
@@ -190,9 +196,7 @@ export default function ApplyToRentScreen() {
     EmploymentStatus.EMPLOYED,
   );
   const [notes, setNotes] = useState('');
-  const [references, setReferences] = useState<ReferenceFormState[]>([
-    makeBlankReference(),
-  ]);
+  const [references, setReferences] = useState<ReferenceFormState[]>([makeBlankReference()]);
   const [documents, setDocuments] = useState<DocumentDraft[]>([]);
 
   const createMutation = useCreateApplicationMutation();
@@ -235,20 +239,14 @@ export default function ApplyToRentScreen() {
     if (parsed.getTime() < moveInBounds.min.getTime()) return false;
     if (parsed.getTime() > moveInBounds.max.getTime()) return false;
     if (effectiveTermMonths == null) return false;
-    if (effectiveTermMonths < MIN_LEASE_MONTHS || effectiveTermMonths > MAX_LEASE_MONTHS) return false;
+    if (effectiveTermMonths < MIN_LEASE_MONTHS || effectiveTermMonths > MAX_LEASE_MONTHS)
+      return false;
     if (monthlyIncomeNumber == null || monthlyIncomeNumber < 0) return false;
     if (references.length === 0) return false;
     return references.every(
       (ref) => ref.name.trim() && ref.phone.trim() && /\S+@\S+\.\S+/.test(ref.email),
     );
-  }, [
-    propertyId,
-    moveInDate,
-    effectiveTermMonths,
-    monthlyIncomeNumber,
-    references,
-    moveInBounds,
-  ]);
+  }, [propertyId, moveInDate, effectiveTermMonths, monthlyIncomeNumber, references, moveInBounds]);
 
   const handleReferenceChange = (index: number, patch: Partial<ReferenceFormState>) => {
     setReferences((prev) =>
@@ -266,9 +264,7 @@ export default function ApplyToRentScreen() {
   };
 
   const handleDocumentTypeChange = (id: string, type: TenantApplicationDocumentType) => {
-    setDocuments((prev) =>
-      prev.map((doc) => (doc.id === id ? { ...doc, type } : doc)),
-    );
+    setDocuments((prev) => prev.map((doc) => (doc.id === id ? { ...doc, type } : doc)));
   };
 
   const handleRemoveDocument = (id: string) => {
@@ -289,9 +285,7 @@ export default function ApplyToRentScreen() {
       const next: DocumentDraft[] = [];
       for (const asset of slice) {
         if (asset.size != null && asset.size > MAX_DOCUMENT_BYTES) {
-          toast.error(
-            t('applications.documents.tooLarge', { name: asset.name }),
-          );
+          toast.error(t('applications.documents.tooLarge', { name: asset.name }));
           continue;
         }
         const inferredType = inferDocumentType(asset.name ?? 'file');
@@ -306,9 +300,7 @@ export default function ApplyToRentScreen() {
         });
       }
       if (slice.length < assets.length) {
-        toast.error(
-          t('applications.documents.limit', { max: MAX_DOCUMENTS }),
-        );
+        toast.error(t('applications.documents.limit', { max: MAX_DOCUMENTS }));
       }
       if (next.length > 0) {
         setDocuments((prev) => [...prev, ...next]);
@@ -395,7 +387,10 @@ export default function ApplyToRentScreen() {
         }}
       />
       <SafeAreaView style={styles.scrollWrapper} edges={['bottom']}>
-        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+        >
           {property && (
             <Card radius="radius-16" appearance="outline">
               <CardHeader>
@@ -441,7 +436,6 @@ export default function ApplyToRentScreen() {
                     <Chip
                       key={preset}
                       selected={isActive}
-
                       variant={isActive ? 'solid' : 'outlined'}
                       onPress={() => {
                         setUsingCustomTerm(false);
@@ -491,7 +485,6 @@ export default function ApplyToRentScreen() {
                   <Chip
                     key={option.value}
                     selected={employmentStatus === option.value}
-
                     variant={employmentStatus === option.value ? 'solid' : 'outlined'}
                     onPress={() => setEmploymentStatus(option.value)}
                   >
@@ -507,7 +500,7 @@ export default function ApplyToRentScreen() {
             description={t('applications.section.referencesHelp')}
           >
             {references.map((reference, index) => (
-              <Card key={index}  radius="radius-12" style={styles.referenceCard} appearance="subtle">
+              <Card key={index} radius="radius-12" style={styles.referenceCard} appearance="subtle">
                 <View style={styles.referenceHeader}>
                   <Text style={styles.referenceTitle}>
                     {t('applications.field.referenceIndex', { index: index + 1 })}
@@ -518,7 +511,9 @@ export default function ApplyToRentScreen() {
                       iconOnly
                       leadingIcon={RiCloseLine}
                       onPress={() => handleRemoveReference(index)}
-                      accessibilityLabel={t('applications.field.removeReference')} tone="accent" appearance="subtle"
+                      accessibilityLabel={t('applications.field.removeReference')}
+                      tone="accent"
+                      appearance="subtle"
                     />
                   )}
                 </View>
@@ -537,7 +532,6 @@ export default function ApplyToRentScreen() {
                       <Chip
                         key={option.value}
                         selected={reference.relationship === option.value}
-
                         variant={reference.relationship === option.value ? 'solid' : 'outlined'}
                         onPress={() => handleReferenceChange(index, { relationship: option.value })}
                       >
@@ -574,7 +568,9 @@ export default function ApplyToRentScreen() {
               <Button
                 onPress={handleAddReference}
                 leadingIcon={RiAddLine}
-                style={styles.secondaryAction} tone="neutral" appearance="outline"
+                style={styles.secondaryAction}
+                tone="neutral"
+                appearance="outline"
               >
                 {t('applications.field.addReference')}
               </Button>
@@ -589,14 +585,21 @@ export default function ApplyToRentScreen() {
               onPress={handlePickDocuments}
               disabled={documents.length >= MAX_DOCUMENTS}
               leadingIcon={RiUploadCloud2Line}
-              style={styles.secondaryAction} tone="neutral" appearance="outline"
+              style={styles.secondaryAction}
+              tone="neutral"
+              appearance="outline"
             >
               {t('applications.field.pickDocuments')}
             </Button>
             {documents.map((doc) => {
               const DocIcon = doc.mimeType?.startsWith('image/') ? RiImageLine : RiFileTextLine;
               return (
-                <Card key={doc.id}  radius="radius-12" style={styles.documentCard} appearance="subtle">
+                <Card
+                  key={doc.id}
+                  radius="radius-12"
+                  style={styles.documentCard}
+                  appearance="subtle"
+                >
                   <Item
                     density="compact"
                     leading={<DocIcon width={20} height={20} fill={theme.colors.primary} />}
@@ -608,7 +611,9 @@ export default function ApplyToRentScreen() {
                         iconOnly
                         leadingIcon={RiCloseLine}
                         onPress={() => handleRemoveDocument(doc.id)}
-                        accessibilityLabel={t('applications.field.removeDocument')} tone="accent" appearance="subtle"
+                        accessibilityLabel={t('applications.field.removeDocument')}
+                        tone="accent"
+                        appearance="subtle"
                       />
                     }
                   />
@@ -618,7 +623,6 @@ export default function ApplyToRentScreen() {
                         key={option.value}
                         size="small"
                         selected={doc.type === option.value}
-
                         variant={doc.type === option.value ? 'solid' : 'outlined'}
                         onPress={() => handleDocumentTypeChange(doc.id, option.value)}
                       >
@@ -649,7 +653,9 @@ export default function ApplyToRentScreen() {
             onPress={handleSubmit}
             disabled={!formIsValid || isSubmitting}
             loading={isSubmitting}
-            size="lg" tone="accent" appearance="solid"
+            size="lg"
+            tone="accent"
+            appearance="solid"
           >
             {t('applications.actions.submit')}
           </Button>

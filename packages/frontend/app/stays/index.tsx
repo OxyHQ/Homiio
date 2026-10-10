@@ -19,10 +19,7 @@ import {
   SegmentedControlItemText,
 } from '@oxy.so/bloom/segmented-control';
 import { useOxy, openAccountDialog } from '@oxy.so/services';
-import {
-  Reservation,
-  ReservationStatus,
-} from '@homiio/shared-types';
+import { Reservation, ReservationStatus } from '@homiio/shared-types';
 
 import { Header } from '@/components/Header';
 import { ReservationCard } from '@/components/ReservationCard';
@@ -90,10 +87,7 @@ export default function StaysScreen() {
   const router = useRouter();
   const { oxyServices, activeSessionId } = useOxy();
   const isAuthed = Boolean(oxyServices && activeSessionId);
-  const reservationsQuery = useReservationsQuery(
-    { limit: 50 },
-    { enabled: isAuthed },
-  );
+  const reservationsQuery = useReservationsQuery({ limit: 50 }, { enabled: isAuthed });
   const [filter, setFilter] = useState<Filter>('all');
 
   const buckets = useMemo(
@@ -217,10 +211,7 @@ export default function StaysScreen() {
                 <SectionEyebrow>{group.label}</SectionEyebrow>
                 <View style={styles.cards}>
                   {group.items.map((reservation) => (
-                    <ReservationCard
-                      key={reservation.id}
-                      reservation={reservation}
-                    />
+                    <ReservationCard key={reservation.id} reservation={reservation} />
                   ))}
                 </View>
               </View>

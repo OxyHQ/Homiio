@@ -110,7 +110,9 @@ describe('GET /profiles/me — get or create', () => {
 
     const ids = new Set(results.map((r) => r.profile.id));
     expect(ids.size).toBe(1);
-    expect(await getDb().select().from(profiles).where(eq(profiles.oxyUserId, oxyUserId))).toHaveLength(1);
+    expect(
+      await getDb().select().from(profiles).where(eq(profiles.oxyUserId, oxyUserId)),
+    ).toHaveLength(1);
   });
 
   it('converges when the row is created between the read and the insert', async () => {
@@ -322,7 +324,9 @@ describe('PUT /profiles/me — the allow-listed write', () => {
     expect(roommate.preferences.location).toBe('Barcelona');
     expect(roommate.preferences.interests).toEqual(['climbing', 'cooking']);
 
-    await request(app).put('/profiles/me').send({ personalProfile: { settings: { roommate } } });
+    await request(app)
+      .put('/profiles/me')
+      .send({ personalProfile: { settings: { roommate } } });
 
     const [stored] = await getDb().select().from(profiles).where(eq(profiles.oxyUserId, oxyUserId));
     expect(stored.settingsRoommatePreferencesLocation).toBe('Barcelona');
@@ -445,7 +449,11 @@ describe('the public read — what a stranger gets', () => {
     const oxyUserId = owner();
     // Both flags default to FALSE in the product; here they are explicit so the
     // case states what it is testing rather than relying on absence.
-    await seed(oxyUserId, { showReferences: false, showRentalHistory: false, showContactInfo: false });
+    await seed(oxyUserId, {
+      showReferences: false,
+      showRentalHistory: false,
+      showContactInfo: false,
+    });
 
     const res = await request(buildApp(null)).get(`/public/profiles/oxy/${oxyUserId}`);
     expect(res.status).toBe(200);
@@ -474,7 +482,11 @@ describe('the public read — what a stranger gets', () => {
 
   it('gives the owner everything the two flags withhold from a stranger', async () => {
     const oxyUserId = owner();
-    await seed(oxyUserId, { showReferences: false, showRentalHistory: false, showContactInfo: false });
+    await seed(oxyUserId, {
+      showReferences: false,
+      showRentalHistory: false,
+      showContactInfo: false,
+    });
 
     const res = await request(buildApp(oxyUserId)).get('/profiles/me');
     expect(res.body.data.personalProfile.references).toHaveLength(1);
@@ -485,7 +497,9 @@ describe('the public read — what a stranger gets', () => {
     const stranger = owner();
     const res = await request(buildApp(null)).get(`/public/profiles/oxy/${stranger}`);
     expect(res.status).toBe(404);
-    expect(await getDb().select().from(profiles).where(eq(profiles.oxyUserId, stranger))).toHaveLength(0);
+    expect(
+      await getDb().select().from(profiles).where(eq(profiles.oxyUserId, stranger)),
+    ).toHaveLength(0);
   });
 });
 
@@ -532,10 +546,15 @@ describe('/ai/history — the transcript that never persisted', () => {
     const app = buildApp(oxyUserId);
     const pairs = PROFILE_CHAT_HISTORY_LIMIT / 2 + 3;
     for (let i = 0; i < pairs; i += 1) {
-      await request(app).post('/ai/history').send({ userMessage: `q${i}`, assistantMessage: `a${i}` });
+      await request(app)
+        .post('/ai/history')
+        .send({ userMessage: `q${i}`, assistantMessage: `a${i}` });
     }
 
-    const [profile] = await getDb().select().from(profiles).where(eq(profiles.oxyUserId, oxyUserId));
+    const [profile] = await getDb()
+      .select()
+      .from(profiles)
+      .where(eq(profiles.oxyUserId, oxyUserId));
     const stored = await getDb()
       .select()
       .from(profileChatMessages)
@@ -559,14 +578,20 @@ describe('/ai/history — the transcript that never persisted', () => {
     expect(del.body.cleared).toBe(2);
 
     expect((await request(app).get('/ai/history')).body.history).toEqual([]);
-    expect(await getDb().select().from(profiles).where(eq(profiles.oxyUserId, oxyUserId))).toHaveLength(1);
+    expect(
+      await getDb().select().from(profiles).where(eq(profiles.oxyUserId, oxyUserId)),
+    ).toHaveLength(1);
   });
 
-  it('never mixes two people\'s transcripts', async () => {
+  it("never mixes two people's transcripts", async () => {
     const a = owner();
     const b = owner();
-    await request(buildApp(a)).post('/ai/history').send({ userMessage: 'a-q', assistantMessage: 'a-a' });
-    await request(buildApp(b)).post('/ai/history').send({ userMessage: 'b-q', assistantMessage: 'b-a' });
+    await request(buildApp(a))
+      .post('/ai/history')
+      .send({ userMessage: 'a-q', assistantMessage: 'a-a' });
+    await request(buildApp(b))
+      .post('/ai/history')
+      .send({ userMessage: 'b-q', assistantMessage: 'b-a' });
 
     const read = await request(buildApp(a)).get('/ai/history');
     expect(read.body.history.map((m: { content: string }) => m.content)).toEqual(['a-a', 'a-q']);
@@ -575,13 +600,18 @@ describe('/ai/history — the transcript that never persisted', () => {
   it('400s a call missing either half of the turn', async () => {
     const app = buildApp(owner());
     expect((await request(app).post('/ai/history').send({ userMessage: 'q' })).status).toBe(400);
-    expect((await request(app).post('/ai/history').send({ assistantMessage: 'a' })).status).toBe(400);
+    expect((await request(app).post('/ai/history').send({ assistantMessage: 'a' })).status).toBe(
+      400,
+    );
   });
 
   it('refuses an unauthenticated caller on all three verbs', async () => {
     const app = buildApp(null);
     expect((await request(app).get('/ai/history')).status).toBe(401);
     expect((await request(app).delete('/ai/history')).status).toBe(401);
-    expect((await request(app).post('/ai/history').send({ userMessage: 'q', assistantMessage: 'a' })).status).toBe(401);
+    expect(
+      (await request(app).post('/ai/history').send({ userMessage: 'q', assistantMessage: 'a' }))
+        .status,
+    ).toBe(401);
   });
 });

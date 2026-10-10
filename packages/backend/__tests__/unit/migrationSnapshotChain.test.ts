@@ -176,9 +176,9 @@ describe('the drizzle snapshot chain', () => {
     // Not the snapshot chain, but the same class of drift and free to check
     // here: the journal is what the MIGRATOR reads, and a `.sql` file absent
     // from it is never applied while an entry with no file fails the run.
-    const journal = JSON.parse(
-      fs.readFileSync(path.join(META_DIR, '_journal.json'), 'utf8'),
-    ) as { entries: Array<{ idx: number; tag: string }> };
+    const journal = JSON.parse(fs.readFileSync(path.join(META_DIR, '_journal.json'), 'utf8')) as {
+      entries: Array<{ idx: number; tag: string }>;
+    };
     const tags = journal.entries.map((entry) => entry.tag);
     expect(tags.length).toBeGreaterThanOrEqual(MINIMUM_SNAPSHOTS);
 

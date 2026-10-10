@@ -55,12 +55,7 @@ export default function RecentlyViewedScreen() {
 
   const body = (() => {
     if (isLoading && properties.length === 0) {
-      return (
-        <PropertyResultsGridSkeleton
-          count={SKELETON_COUNT}
-          style={styles.gridPadding}
-        />
-      );
+      return <PropertyResultsGridSkeleton count={SKELETON_COUNT} style={styles.gridPadding} />;
     }
     if (error) {
       return (
@@ -107,7 +102,9 @@ export default function RecentlyViewedScreen() {
             <Button
               size="sm"
               onPress={handleClear}
-              accessibilityLabel={t('common.clear')} tone="accent" appearance="subtle"
+              accessibilityLabel={t('common.clear')}
+              tone="accent"
+              appearance="subtle"
             >
               {t('common.clear')}
             </Button>

@@ -51,7 +51,12 @@ import { ImageResolverProvider, type ImageResolver } from '@oxy.so/bloom/image-r
 import { PortalProvider, PortalOutlet } from '@oxy.so/bloom/portal';
 import '../styles/global.css';
 import { OXY_BASE_URL, OXY_CLIENT_ID } from '@/config';
-import { QueryClient, QueryClientProvider, onlineManager, focusManager } from '@tanstack/react-query';
+import {
+  QueryClient,
+  QueryClientProvider,
+  onlineManager,
+  focusManager,
+} from '@tanstack/react-query';
 import NetInfo from '@react-native-community/netinfo';
 import { logger } from '@/utils/logger';
 import { bindApiToOxy } from '@/utils/api';
@@ -73,10 +78,9 @@ i18nInit({
   lng: 'en-US',
   fallbackLng: 'en-US',
   interpolation: { escapeValue: false },
-})
-  .catch((error: unknown) => {
-    logger.warn('Failed to initialize i18n:', error);
-  });
+}).catch((error: unknown) => {
+  logger.warn('Failed to initialize i18n:', error);
+});
 
 // NATIVE ONLY: hold the OS splash so it stays visible until the app has finished
 // loading fonts + running init, then hide it once `appIsReady` flips (via
@@ -109,9 +113,7 @@ function MediaResolverProvider({ children }: { children: React.ReactNode }) {
     },
     [oxyServices],
   );
-  return (
-    <ImageResolverProvider value={resolver}>{children}</ImageResolverProvider>
-  );
+  return <ImageResolverProvider value={resolver}>{children}</ImageResolverProvider>;
 }
 
 /** A header that draws nothing: the page (or nothing at all) owns the menu button. */
@@ -170,7 +172,11 @@ function AppFrame() {
   // Native: keep the rail clear of the status bar and home indicator. The
   // in-flow rail stretches in the shell's row; the drawer's fills its column.
   const nativeSidebar = useMemo<HomiioSidebarProps>(() => {
-    const safeArea: ViewStyle = { marginTop: insets.top, marginBottom: insets.bottom, height: undefined };
+    const safeArea: ViewStyle = {
+      marginTop: insets.top,
+      marginBottom: insets.bottom,
+      height: undefined,
+    };
     return {
       ...sidebar,
       style: railInFlow
@@ -183,7 +189,10 @@ function AppFrame() {
     return (
       <>
         <Slot />
-        <View pointerEvents="none" style={{ position: 'absolute', width: 0, height: 0, overflow: 'hidden' }}>
+        <View
+          pointerEvents="none"
+          style={{ position: 'absolute', width: 0, height: 0, overflow: 'hidden' }}
+        >
           <AppShell
             sidebar={nativeSidebar}
             header={NO_SHELL_HEADER}
@@ -222,9 +231,7 @@ function AppFrame() {
   );
 }
 
-
 export default function RootLayout() {
-
   // `startFade` is fully derived from initialization completing — there is no
   // other trigger — so we keep a single source of truth and derive the fade
   // flag instead of syncing it in an effect (which caused cascading renders).
@@ -232,17 +239,21 @@ export default function RootLayout() {
   const [fadeComplete, setFadeComplete] = useState(false);
   const startFade = initializationComplete;
 
-  const queryClient = useMemo(() => new QueryClient({
-    defaultOptions: {
-      queries: {
-        retry: 2,
-        staleTime: 1000 * 60 * 5,  // 5 min — reduces duplicate fetches
-        gcTime: 1000 * 60 * 30,    // 30 min — keeps data in cache longer
-        refetchOnReconnect: true,
-        refetchOnWindowFocus: false, // Disable to prevent unnecessary refetches
-      },
-    },
-  }), []);
+  const queryClient = useMemo(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: {
+            retry: 2,
+            staleTime: 1000 * 60 * 5, // 5 min — reduces duplicate fetches
+            gcTime: 1000 * 60 * 30, // 30 min — keeps data in cache longer
+            refetchOnReconnect: true,
+            refetchOnWindowFocus: false, // Disable to prevent unnecessary refetches
+          },
+        },
+      }),
+    [],
+  );
 
   // --- Splash Fade Handler (WEB only) ---
   // The custom `AppSplashScreen` fades out on web once init completes; its
@@ -273,7 +284,6 @@ export default function RootLayout() {
   // no-op on web (the OS splash was never held; the custom overlay handles the
   // transition there).
   useHideNativeSplashWhenReady(appIsReady);
-
 
   useEffect(() => {
     // React Query online manager using NetInfo
@@ -325,7 +335,6 @@ export default function RootLayout() {
     };
   }, []);
 
-
   return (
     <View className="flex-1">
       <SafeAreaProvider initialMetrics={initialWindowMetrics}>
@@ -342,79 +351,81 @@ export default function RootLayout() {
             at a different depth. `imageResolver` is not passed here: Homiio's
             resolver needs `useOxy()`, so it stays its own provider below.
           */}
-          <BloomProvider mode="light" colorPreset="yellow" fonts onFontsLoading={Platform.OS === 'web' ? <AppSplashScreen /> : null}>
-          {!appIsReady ? (
-            // WEB: the custom splash covers font-load + init and fades out; its
-            // `onFadeComplete` gates `appIsReady`. NATIVE renders null here — the
-            // held OS splash is on top, so nothing underneath needs to paint.
-            Platform.OS === 'web' ? (
-              <AppSplashScreen
-                startFade={startFade}
-                onFadeComplete={handleSplashFadeComplete}
-              />
-            ) : null
-          ) : (
+          <BloomProvider
+            mode="light"
+            colorPreset="yellow"
+            fonts
+            onFontsLoading={Platform.OS === 'web' ? <AppSplashScreen /> : null}
+          >
+            {!appIsReady ? (
+              // WEB: the custom splash covers font-load + init and fades out; its
+              // `onFadeComplete` gates `appIsReady`. NATIVE renders null here — the
+              // held OS splash is on top, so nothing underneath needs to paint.
+              Platform.OS === 'web' ? (
+                <AppSplashScreen startFade={startFade} onFadeComplete={handleSplashFadeComplete} />
+              ) : null
+            ) : (
               <QueryClientProvider client={queryClient}>
                 <RentalModeProvider>
-                <OxyProvider
-                  baseURL={OXY_BASE_URL}
-                  clientId={OXY_CLIENT_ID}
-                  language={{
-                    supportedLocales: SUPPORTED_LANGUAGE_CODES,
-                    fallbackLocale: 'en-US',
-                    onChange: (locale) => {
-                      if (!isSupportedLanguage(locale)) return;
-                      return setStoredLanguage(locale);
-                    },
-                    onError: (error, locale) => {
-                      logger.warn('Failed to follow the Oxy-resolved language', locale, error);
-                    },
-                  }}
-                >
-                  {/*
+                  <OxyProvider
+                    baseURL={OXY_BASE_URL}
+                    clientId={OXY_CLIENT_ID}
+                    language={{
+                      supportedLocales: SUPPORTED_LANGUAGE_CODES,
+                      fallbackLocale: 'en-US',
+                      onChange: (locale) => {
+                        if (!isSupportedLanguage(locale)) return;
+                        return setStoredLanguage(locale);
+                      },
+                      onError: (error, locale) => {
+                        logger.warn('Failed to follow the Oxy-resolved language', locale, error);
+                      },
+                    }}
+                  >
+                    {/*
                     Renders nothing itself — it just pushes to the toast store
                     that `OxyProvider`'s own `<ToastOutlet />` renders. Mounted
                     here (inside `BloomProvider` for theme, inside `OxyProvider`
                     for the toast host) so a lost connection surfaces as a
                     toast instead of a per-screen banner.
                   */}
-                  <ConnectionStatusToasts />
-                  <MediaResolverProvider>
-                  <ProfileProvider>
-                    <SavedPropertiesProvider>
-                      <NotificationProvider>
-                        <I18nextProvider i18n={i18n}>
-                          <BottomSheetProvider>
-                            <MenuProvider>
-                              <PortalProvider>
-                                <ErrorBoundary>
-                                  <MapStateProvider>
-                                    <SearchModeProvider>
-                                      <AppFrame />
-                                    </SearchModeProvider>
-                                  </MapStateProvider>
-                                  <StatusBar style="auto" />
-                                </ErrorBoundary>
-                                {/*
+                    <ConnectionStatusToasts />
+                    <MediaResolverProvider>
+                      <ProfileProvider>
+                        <SavedPropertiesProvider>
+                          <NotificationProvider>
+                            <I18nextProvider i18n={i18n}>
+                              <BottomSheetProvider>
+                                <MenuProvider>
+                                  <PortalProvider>
+                                    <ErrorBoundary>
+                                      <MapStateProvider>
+                                        <SearchModeProvider>
+                                          <AppFrame />
+                                        </SearchModeProvider>
+                                      </MapStateProvider>
+                                      <StatusBar style="auto" />
+                                    </ErrorBoundary>
+                                    {/*
                                   Root overlay outlet. `AppShell`'s navigation
                                   drawer renders here through Bloom's Portal so
                                   the panel and its backdrop cover the whole
                                   viewport. Placed last so it sits above all app
                                   chrome.
                                 */}
-                                <PortalOutlet />
-                              </PortalProvider>
-                            </MenuProvider>
-                          </BottomSheetProvider>
-                        </I18nextProvider>
-                      </NotificationProvider>
-                    </SavedPropertiesProvider>
-                  </ProfileProvider>
-                  </MediaResolverProvider>
-                </OxyProvider>
+                                    <PortalOutlet />
+                                  </PortalProvider>
+                                </MenuProvider>
+                              </BottomSheetProvider>
+                            </I18nextProvider>
+                          </NotificationProvider>
+                        </SavedPropertiesProvider>
+                      </ProfileProvider>
+                    </MediaResolverProvider>
+                  </OxyProvider>
                 </RentalModeProvider>
               </QueryClientProvider>
-          )}
+            )}
           </BloomProvider>
         </GestureHandlerRootView>
       </SafeAreaProvider>

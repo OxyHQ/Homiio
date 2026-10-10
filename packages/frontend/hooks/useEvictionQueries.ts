@@ -84,8 +84,7 @@ export function useEvictions(
     staleTime: LIST_STALE_TIME,
     queryFn: ({ pageParam }) =>
       evictionService.list({ ...params, page: pageParam as number, limit: PAGE_SIZE }),
-    getNextPageParam: (lastPage) =>
-      lastPage.hasMore ? lastPage.pagination.page + 1 : undefined,
+    getNextPageParam: (lastPage) => (lastPage.hasMore ? lastPage.pagination.page + 1 : undefined),
   });
 
   const cases = useMemo<EvictionCase[]>(
@@ -98,9 +97,7 @@ export function useEvictions(
 }
 
 /** Single case by id. Disabled until `id` is non-empty. */
-export function useEvictionDetail(
-  id: string | undefined,
-): UseQueryResult<EvictionCase, Error> {
+export function useEvictionDetail(id: string | undefined): UseQueryResult<EvictionCase, Error> {
   return useQuery<EvictionCase, Error>({
     queryKey: evictionKeys.detail(id ?? ''),
     queryFn: () => {
@@ -121,9 +118,7 @@ export type EvictionCommentsInfiniteResult = UseInfiniteQueryResult<
 };
 
 /** Paginated public comment thread for a case (newest-first). */
-export function useEvictionComments(
-  id: string | undefined,
-): EvictionCommentsInfiniteResult {
+export function useEvictionComments(id: string | undefined): EvictionCommentsInfiniteResult {
   const result = useInfiniteQuery<EvictionCommentListResponse, Error>({
     queryKey: evictionKeys.comments(id ?? ''),
     initialPageParam: 1,
@@ -133,8 +128,7 @@ export function useEvictionComments(
       if (!id) throw new Error('Eviction case id is required');
       return evictionService.listComments(id, pageParam as number, PAGE_SIZE);
     },
-    getNextPageParam: (lastPage) =>
-      lastPage.hasMore ? lastPage.pagination.page + 1 : undefined,
+    getNextPageParam: (lastPage) => (lastPage.hasMore ? lastPage.pagination.page + 1 : undefined),
   });
 
   const comments = useMemo<EvictionComment[]>(
@@ -309,9 +303,7 @@ export function useCreateEvictionComment(
   });
 }
 
-export function useDeleteEvictionComment(
-  id: string,
-): UseMutationResult<void, Error, string> {
+export function useDeleteEvictionComment(id: string): UseMutationResult<void, Error, string> {
   const queryClient = useQueryClient();
   return useMutation<void, Error, string>({
     mutationFn: (commentId) => evictionService.deleteComment(id, commentId),

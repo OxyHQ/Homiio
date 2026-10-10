@@ -85,10 +85,7 @@ export const conversations = pgTable(
     updatedAt: updatedAt(),
   },
   (table) => [
-    index('conversations_oxy_user_created_idx').on(
-      table.oxyUserId,
-      sql`${table.createdAt} desc`,
-    ),
+    index('conversations_oxy_user_created_idx').on(table.oxyUserId, sql`${table.createdAt} desc`),
     index('conversations_oxy_user_status_updated_idx').on(
       table.oxyUserId,
       table.status,

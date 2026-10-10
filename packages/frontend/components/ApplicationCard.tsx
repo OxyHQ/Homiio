@@ -88,14 +88,19 @@ export const ApplicationCard: React.FC<ApplicationCardProps> = ({
       style={styles.card}
       onPress={handlePress}
       accessibilityRole="button"
-      accessibilityLabel={t('applications.card.accessibility', { id: application.id })} appearance="outline"
+      accessibilityLabel={t('applications.card.accessibility', { id: application.id })}
+      appearance="outline"
     >
       <View style={styles.row}>
-        <View style={styles.thumb}><ThumbnailImage source={imageSource} /></View>
+        <View style={styles.thumb}>
+          <ThumbnailImage source={imageSource} />
+        </View>
         <View style={styles.body}>
           <View style={styles.headerRow}>
             <BloomText style={styles.title} numberOfLines={1}>
-              {variant === 'landlord' ? applicantName ?? t('applications.card.applicantFallback') : propertyTitle}
+              {variant === 'landlord'
+                ? (applicantName ?? t('applications.card.applicantFallback'))
+                : propertyTitle}
             </BloomText>
             <ApplicationStatusBadge status={application.status} />
           </View>

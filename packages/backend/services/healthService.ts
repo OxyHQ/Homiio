@@ -37,7 +37,7 @@ export class HealthService {
           externalPropertyCount: 0,
           lastScrapeErrors: 1,
           oldestExternalProperty: null,
-        }
+        },
       };
     }
   }
@@ -93,19 +93,20 @@ export class HealthService {
         this.getDatabaseHealth(),
       ]);
 
-      const overallStatus = scraperHealth.status === 'healthy' && databaseHealth === 'healthy' 
-        ? 'healthy' 
-        : (scraperHealth.status === 'unhealthy' || databaseHealth === 'unhealthy')
-        ? 'unhealthy'
-        : 'degraded';
+      const overallStatus =
+        scraperHealth.status === 'healthy' && databaseHealth === 'healthy'
+          ? 'healthy'
+          : scraperHealth.status === 'unhealthy' || databaseHealth === 'unhealthy'
+            ? 'unhealthy'
+            : 'degraded';
 
       return {
         status: overallStatus,
         services: {
           scraper: scraperHealth.status,
-          database: databaseHealth
+          database: databaseHealth,
         },
-        timestamp: new Date()
+        timestamp: new Date(),
       };
     } catch (error) {
       this.logger.error('System health check failed', error);
@@ -113,9 +114,9 @@ export class HealthService {
         status: 'unhealthy',
         services: {
           scraper: 'unhealthy',
-          database: 'unhealthy'
+          database: 'unhealthy',
         },
-        timestamp: new Date()
+        timestamp: new Date(),
       };
     }
   }

@@ -413,10 +413,7 @@ export async function deliverAlert(
     countDeliveredSince(db, { watchId: watch.watchId }, since),
     countDeliveredSince(db, { oxyUserId: watch.oxyUserId }, since),
   ]);
-  if (
-    perWatch >= MAX_DELIVERIES_PER_WATCH_PER_DAY ||
-    perUser >= MAX_DELIVERIES_PER_USER_PER_DAY
-  ) {
+  if (perWatch >= MAX_DELIVERIES_PER_WATCH_PER_DAY || perUser >= MAX_DELIVERIES_PER_USER_PER_DAY) {
     await markAlertSuppressed(db, alert.id, 'rate_limited');
     return 'suppressed';
   }

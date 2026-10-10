@@ -99,7 +99,11 @@ export const ChatComposer = React.memo<ChatComposerProps>(
       [onChangeText],
     );
 
-    const { listening, setListening, cancel: cancelVoice } = useVoiceDraft({
+    const {
+      listening,
+      setListening,
+      cancel: cancelVoice,
+    } = useVoiceDraft({
       value: input,
       onChange: handleChange,
     });
@@ -187,7 +191,9 @@ export const ChatComposer = React.memo<ChatComposerProps>(
                 size="sm"
                 leadingIcon={RiStopFill}
                 onPress={handleStop}
-                accessibilityLabel={t('sindi.chat.stop')} tone="neutral" appearance="outline"
+                accessibilityLabel={t('sindi.chat.stop')}
+                tone="neutral"
+                appearance="outline"
               >
                 {t('sindi.chat.stop')}
               </Button>

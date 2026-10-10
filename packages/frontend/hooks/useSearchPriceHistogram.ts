@@ -124,7 +124,10 @@ export function useSearchPriceHistogram(
     enabled: runnable,
     staleTime: STALE_TIME_MS,
     queryFn: async (): Promise<PriceHistogramResponse> => {
-      const response = await api.get<PriceHistogramResponse>(ENDPOINT, { params, requireAuth: false });
+      const response = await api.get<PriceHistogramResponse>(ENDPOINT, {
+        params,
+        requireAuth: false,
+      });
       return response.data;
     },
   });

@@ -51,9 +51,8 @@ export function asCoordinate(value: unknown): number | undefined {
   if (typeof value === 'string') {
     const cleaned = value.trim().replace(/[^0-9.,+-]/g, '');
     if (!cleaned) return undefined;
-    const normalized = cleaned.includes(',') && !cleaned.includes('.')
-      ? cleaned.replace(',', '.')
-      : cleaned;
+    const normalized =
+      cleaned.includes(',') && !cleaned.includes('.') ? cleaned.replace(',', '.') : cleaned;
     const parsed = Number.parseFloat(normalized);
     return Number.isFinite(parsed) ? parsed : undefined;
   }
@@ -73,7 +72,11 @@ export function asNumberUs(value: unknown): number | undefined {
 }
 
 export function deaccent(value: string): string {
-  return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
 }
 
 export function firstString(...candidates: unknown[]): string | undefined {

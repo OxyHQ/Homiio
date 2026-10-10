@@ -44,7 +44,12 @@ const CITY_CODE_LOOKUP: Readonly<
   LAX: { city: 'Los Angeles', country: 'United States', countryCode: 'US', region: 'California' },
   BOS: { city: 'Boston', country: 'United States', countryCode: 'US', region: 'Massachusetts' },
   CHI: { city: 'Chicago', country: 'United States', countryCode: 'US', region: 'Illinois' },
-  WDC: { city: 'Washington', country: 'United States', countryCode: 'US', region: 'District of Columbia' },
+  WDC: {
+    city: 'Washington',
+    country: 'United States',
+    countryCode: 'US',
+    region: 'District of Columbia',
+  },
   MIA: { city: 'Miami', country: 'United States', countryCode: 'US', region: 'Florida' },
   SFO: { city: 'San Francisco', country: 'United States', countryCode: 'US', region: 'California' },
   ROM: { city: 'Rome', country: 'Italy', countryCode: 'IT', region: 'Lazio' },
@@ -252,7 +257,10 @@ const LINE_TERMINATORS = new Set(['\n', '\r', '\u2028', '\u2029']);
 function locationAfterIn(text: string): string | undefined {
   let lastBreak = -1;
   for (let i = text.length - 1; i >= 0; i -= 1) {
-    if (LINE_TERMINATORS.has(text[i])) { lastBreak = i; break; }
+    if (LINE_TERMINATORS.has(text[i])) {
+      lastBreak = i;
+      break;
+    }
   }
 
   for (const match of text.matchAll(/in/gi)) {
@@ -279,7 +287,11 @@ function locationAfterIn(text: string): string | undefined {
  * reaching this through it would mean maintaining a fixture whose fields have
  * nothing to do with what is being checked.
  */
-export function parseOgTitle(title: string | undefined): { street?: string; neighborhood?: string; city?: string } {
+export function parseOgTitle(title: string | undefined): {
+  street?: string;
+  neighborhood?: string;
+  city?: string;
+} {
   if (!title) return {};
   const dashSplit = title.split(' - ');
   const street = dashSplit[0]?.trim();
@@ -292,7 +304,10 @@ export function parseOgTitle(title: string | undefined): { street?: string; neig
   if (!locationPart) return { street };
   const after = locationAfterIn(locationPart);
   if (after === undefined) return { street };
-  const parts = after.split(',').map((part) => part.trim()).filter(Boolean);
+  const parts = after
+    .split(',')
+    .map((part) => part.trim())
+    .filter(Boolean);
   if (parts.length >= 2) {
     return { street, neighborhood: parts[0], city: parts[parts.length - 1] };
   }

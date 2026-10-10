@@ -81,9 +81,7 @@ export async function shareContent(content: ShareContent): Promise<ShareOutcome>
   }
 
   try {
-    const result = await Share.share(
-      url ? { title, message, url } : { title, message },
-    );
+    const result = await Share.share(url ? { title, message, url } : { title, message });
     return result.action === Share.dismissedAction ? 'dismissed' : 'shared';
   } catch {
     return copyToClipboard(clipboardText);

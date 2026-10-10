@@ -72,9 +72,17 @@ describe('removePropertyNumber keeps the building number out of a title', () => 
     // digits must lie on the LAST line — `"0\n"` keeps its digit. A rewrite
     // that ignores this looks correct on every realistic address and is wrong.
     for (const street of [
-      '0\n', 'Calle 6\n', '12345\r', `Gran Via 3${LINE_SEPARATOR}`,
-      `Rambla${PARAGRAPH_SEPARATOR}7`, 'Calle\n 6', 'a1b2', '1\n2',
-      'Calle, 6', 'Passeig de Gràcia,  128 bis', 'Baker Street 221B',
+      '0\n',
+      'Calle 6\n',
+      '12345\r',
+      `Gran Via 3${LINE_SEPARATOR}`,
+      `Rambla${PARAGRAPH_SEPARATOR}7`,
+      'Calle\n 6',
+      'a1b2',
+      '1\n2',
+      'Calle, 6',
+      'Passeig de Gràcia,  128 bis',
+      'Baker Street 221B',
     ]) {
       expect(removePropertyNumber(street)).toBe(legacyRemovePropertyNumber(street));
     }
@@ -133,9 +141,15 @@ describe('the Blueground title parser', () => {
     // capture is the whole run. That is what the original did too, and a
     // hand-written expectation here would assert the padding away.
     const padded = 'Street - ' + 'in '.repeat(32_000) + 'Barcelona | Blueground';
-    const locationPart = padded.split(' - ')[1].replace(/\|\s*Blueground.*$/i, '').trim();
+    const locationPart = padded
+      .split(' - ')[1]
+      .replace(/\|\s*Blueground.*$/i, '')
+      .trim();
     const legacyCapture = locationPart.match(/in\s+(.+)$/i)?.[1] ?? '';
-    const legacyParts = legacyCapture.split(',').map((part) => part.trim()).filter(Boolean);
+    const legacyParts = legacyCapture
+      .split(',')
+      .map((part) => part.trim())
+      .filter(Boolean);
 
     const started = Date.now();
     const parsed = parseOgTitle(padded);

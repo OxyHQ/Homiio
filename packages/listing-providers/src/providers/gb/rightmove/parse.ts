@@ -21,7 +21,6 @@ const SQFT_TO_SQM = 0.092903;
 
 export type RightmoveFurnishedStatus = 'furnished' | 'unfurnished' | 'partially_furnished';
 
-
 /** Flatten Rightmove's compressed `__PAGE_MODEL` integer-pointer graph. */
 export function resolvePageModelGraph(data: unknown[]): Record<string, unknown> | undefined {
   if (!Array.isArray(data) || data.length === 0 || !isRecord(data[0])) return undefined;
@@ -33,7 +32,12 @@ export function resolvePageModelGraph(data: unknown[]): Record<string, unknown> 
     if (depth > 24) return node;
     if (typeof node === 'number' && node >= 0 && node < data.length) {
       const target = data[node];
-      if (typeof target === 'number' || typeof target === 'string' || typeof target === 'boolean' || target === null) {
+      if (
+        typeof target === 'number' ||
+        typeof target === 'string' ||
+        typeof target === 'boolean' ||
+        target === null
+      ) {
         return target;
       }
       return resolve(target, depth + 1);
@@ -148,7 +152,9 @@ export function parseRightmoveSearchJson(html: string): {
   const pageProps = isRecord(parsed.props) ? parsed.props.pageProps : undefined;
   const searchResults = isRecord(pageProps) ? pageProps.searchResults : undefined;
   const properties =
-    isRecord(searchResults) && Array.isArray(searchResults.properties) ? searchResults.properties : [];
+    isRecord(searchResults) && Array.isArray(searchResults.properties)
+      ? searchResults.properties
+      : [];
 
   const out: {
     sourceId: string;
@@ -218,10 +224,15 @@ function imagesFromDetail(prop: Record<string, unknown>): string[] {
 
 function contactFromDetail(prop: Record<string, unknown>): NormalizedListingContact | undefined {
   const contactInfo = isRecord(prop.contactInfo) ? prop.contactInfo : undefined;
-  const phones = contactInfo && isRecord(contactInfo.telephoneNumbers) ? contactInfo.telephoneNumbers : undefined;
+  const phones =
+    contactInfo && isRecord(contactInfo.telephoneNumbers)
+      ? contactInfo.telephoneNumbers
+      : undefined;
   const customer = isRecord(prop.customer) ? prop.customer : undefined;
   return buildContact({
-    phone: phones ? asString(phones.localNumber) ?? asString(phones.internationalNumber) : undefined,
+    phone: phones
+      ? (asString(phones.localNumber) ?? asString(phones.internationalNumber))
+      : undefined,
     email: undefined,
     agencyName:
       (customer ? asString(customer.branchDisplayName) : undefined) ??
@@ -255,7 +266,9 @@ function squareMetersFromDisplaySize(prop: Record<string, unknown>): number | un
   if (!display) return undefined;
   const match = display
     .replace(/,/g, '')
-    .match(/(\d{1,7}(?:\.\d{1,3})?)\s{0,3}(sq\.?\s*m|sqm|square\s*met|sq\.?\s*ft|sqft|square\s*f)/i);
+    .match(
+      /(\d{1,7}(?:\.\d{1,3})?)\s{0,3}(sq\.?\s*m|sqm|square\s*met|sq\.?\s*ft|sqft|square\s*f)/i,
+    );
   if (!match?.[1] || !match[2]) return undefined;
   const value = Number.parseFloat(match[1]);
   if (!Number.isFinite(value) || value <= 0) return undefined;
@@ -285,7 +298,9 @@ function keyFeaturesFromDetail(prop: Record<string, unknown>): string[] {
 }
 
 /** Map `propertyData.letting.furnishType` to the normalized furnished status. */
-function furnishedStatusFromDetail(prop: Record<string, unknown>): RightmoveFurnishedStatus | undefined {
+function furnishedStatusFromDetail(
+  prop: Record<string, unknown>,
+): RightmoveFurnishedStatus | undefined {
   const letting = isRecord(prop.letting) ? prop.letting : undefined;
   const furnish = letting ? asString(letting.furnishType) : undefined;
   if (!furnish) return undefined;
@@ -342,7 +357,11 @@ export function parseRightmoveDetail(html: string, url: string): RightmoveListin
   }
 
   if (!isGbHousingType(asString(prop.propertySubType))) {
-    rejectGbNonHousing('rightmove', sourceId, `propertySubType "${asString(prop.propertySubType) ?? ''}"`);
+    rejectGbNonHousing(
+      'rightmove',
+      sourceId,
+      `propertySubType "${asString(prop.propertySubType) ?? ''}"`,
+    );
   }
 
   const address = isRecord(prop.address) ? prop.address : undefined;
@@ -352,7 +371,9 @@ export function parseRightmoveDetail(html: string, url: string): RightmoveListin
   const channel = asString(prop.channel)?.toUpperCase();
   const transaction = asString(prop.transactionType)?.toUpperCase();
   const kind: 'rent' | 'sale' =
-    channel === 'RENT' || transaction === 'RENT' || /pcm/i.test(asString(prices?.primaryPrice) ?? '')
+    channel === 'RENT' ||
+    transaction === 'RENT' ||
+    /pcm/i.test(asString(prices?.primaryPrice) ?? '')
       ? 'rent'
       : 'sale';
 
@@ -364,14 +385,14 @@ export function parseRightmoveDetail(html: string, url: string): RightmoveListin
     url: rightmoveDetailUrl(sourceId),
     kind,
     displayAddress: address ? asString(address.displayAddress) : undefined,
-    description: text ? asString(text.description) ?? asString(text.shortDescription) : undefined,
+    description: text ? (asString(text.description) ?? asString(text.shortDescription)) : undefined,
     bedrooms: asNumber(prop.bedrooms),
     bathrooms: asNumber(prop.bathrooms),
     propertySubType: asString(prop.propertySubType),
     priceAmount: parsePrimaryPricePcm(prices),
     priceCurrency: 'GBP',
     priceFrequency: kind === 'rent' ? 'monthly' : undefined,
-    countryCode: address ? asString(address.countryCode) ?? 'GB' : 'GB',
+    countryCode: address ? (asString(address.countryCode) ?? 'GB') : 'GB',
     outcode,
     incode,
     latitude: location ? asNumber(location.latitude) : undefined,
@@ -388,7 +409,11 @@ export function rightmoveTypeaheadUrl(city: string): string {
   return `https://los.rightmove.co.uk/typeahead?query=${encodeURIComponent(city)}`;
 }
 
-export function rightmoveSearchUrl(locationIdentifier: string, kind: 'rent' | 'sale', index = 0): string {
+export function rightmoveSearchUrl(
+  locationIdentifier: string,
+  kind: 'rent' | 'sale',
+  index = 0,
+): string {
   const path = kind === 'rent' ? 'property-to-rent' : 'property-for-sale';
   const channel = kind === 'rent' ? 'RENT' : 'BUY';
   const params = new URLSearchParams({

@@ -102,7 +102,10 @@ export function generateLargePropertyTitle(propertyData: PropertyData): string {
  * @param format - Title format ('default', 'short', or 'large')
  * @returns Generated title
  */
-export function generatePropertyTitle(propertyData: PropertyData, format: TitleFormat = 'default'): string {
+export function generatePropertyTitle(
+  propertyData: PropertyData,
+  format: TitleFormat = 'default',
+): string {
   switch (format) {
     case 'short':
       return generateShortPropertyTitle(propertyData);
@@ -156,7 +159,10 @@ export function generateDetailedPropertyTitle(
  * @param format - Title format ('default', 'short', or 'large')
  * @returns Preview title or null if insufficient data
  */
-export function previewPropertyTitle(propertyData: PropertyData, format: TitleFormat = 'default'): string | null {
+export function previewPropertyTitle(
+  propertyData: PropertyData,
+  format: TitleFormat = 'default',
+): string | null {
   const { type, address } = propertyData;
 
   // Need at least type and some address info

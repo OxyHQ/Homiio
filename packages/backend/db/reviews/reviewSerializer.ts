@@ -207,8 +207,7 @@ export function serializeReview(
 
     // The author, in the form they chose (§5.2).
     authorIdentity: review.authorIdentity,
-    oxyUserId:
-      !published || review.authorIdentity === 'identified' ? review.oxyUserId : undefined,
+    oxyUserId: !published || review.authorIdentity === 'identified' ? review.oxyUserId : undefined,
     // Published to a public reader under `pseudonymous` only — and to the author
     // always, so their own card renders the handle other people see.
     authorKey:

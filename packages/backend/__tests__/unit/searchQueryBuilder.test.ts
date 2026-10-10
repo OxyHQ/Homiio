@@ -208,8 +208,12 @@ describe('buildSearchPlan category-lens filters', () => {
 
 describe('priceColumnForOffering', () => {
   it('maps each priced offering to its own column, and exchange to none', () => {
-    expect(priceColumnForOffering(OfferingType.LONG_TERM_RENT)).toBe(properties.longTermRentMonthlyAmount);
-    expect(priceColumnForOffering(OfferingType.SHORT_TERM_RENT)).toBe(properties.shortTermRentNightlyRate);
+    expect(priceColumnForOffering(OfferingType.LONG_TERM_RENT)).toBe(
+      properties.longTermRentMonthlyAmount,
+    );
+    expect(priceColumnForOffering(OfferingType.SHORT_TERM_RENT)).toBe(
+      properties.shortTermRentNightlyRate,
+    );
     expect(priceColumnForOffering(OfferingType.SALE)).toBe(properties.salePrice);
     expect(priceColumnForOffering(OfferingType.EXCHANGE)).toBeNull();
     expect(priceColumnForOffering(undefined)).toBeNull();
@@ -266,14 +270,16 @@ describe('buildSearchPlan price ranges', () => {
   });
 
   it('carries the currency the caller named, and nothing when they named none', () => {
-    expect(buildSearchPlan({ priceMax: '1200', priceCurrency: 'pln' }).price?.requestedCurrency)
-      .toBe('PLN');
+    expect(
+      buildSearchPlan({ priceMax: '1200', priceCurrency: 'pln' }).price?.requestedCurrency,
+    ).toBe('PLN');
     // Absent is "they did not say", which is what lets the scope answer it.
     expect(buildSearchPlan({ priceMax: '1200' }).price?.requestedCurrency).toBeUndefined();
     // A code the column cannot hold is dropped rather than passed through: a
     // filter applied in `XYZ` matches nothing and would read as an empty area.
-    expect(buildSearchPlan({ priceMax: '1200', priceCurrency: 'XYZ' }).price?.requestedCurrency)
-      .toBeUndefined();
+    expect(
+      buildSearchPlan({ priceMax: '1200', priceCurrency: 'XYZ' }).price?.requestedCurrency,
+    ).toBeUndefined();
   });
 
   it('plans nothing at all when no bound was sent', () => {

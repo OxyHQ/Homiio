@@ -72,12 +72,19 @@ export function SavedSearchCards({ searches }: { searches: readonly SavedSearch[
       if (target.kind === 'href') {
         router.push(target.href);
       } else if (target.kind === 'needs_place') {
-        alert(t('saved.search.needsPlaceTitle'), t('saved.search.needsPlaceDescription', { name: search.name }), [
-          { text: t('common.cancel'), style: 'cancel' },
-          { text: t('saved.search.choosePlace'), onPress: () => router.push('/explore') },
-        ]);
+        alert(
+          t('saved.search.needsPlaceTitle'),
+          t('saved.search.needsPlaceDescription', { name: search.name }),
+          [
+            { text: t('common.cancel'), style: 'cancel' },
+            { text: t('saved.search.choosePlace'), onPress: () => router.push('/explore') },
+          ],
+        );
       } else {
-        alert(t('saved.search.unshareableTitle'), t('saved.search.unshareableDescription', { name: search.name }));
+        alert(
+          t('saved.search.unshareableTitle'),
+          t('saved.search.unshareableDescription', { name: search.name }),
+        );
       }
     },
     [t],

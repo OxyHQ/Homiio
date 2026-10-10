@@ -59,17 +59,11 @@ export const CommunityNoteCard: React.FC<CommunityNoteCardProps> = ({ note }) =>
   // the API no longer serves to a third party.
   const rentLabel = reviewRentLabel(note, i18n.language, t);
 
-  const pros = (note.prosItems?.length
-    ? note.prosItems
-    : note.positiveComment
-      ? [note.positiveComment]
-      : []
+  const pros = (
+    note.prosItems?.length ? note.prosItems : note.positiveComment ? [note.positiveComment] : []
   ).slice(0, MAX_PROS_CONS);
-  const cons = (note.consItems?.length
-    ? note.consItems
-    : note.negativeComment
-      ? [note.negativeComment]
-      : []
+  const cons = (
+    note.consItems?.length ? note.consItems : note.negativeComment ? [note.negativeComment] : []
   ).slice(0, MAX_PROS_CONS);
 
   const handleTextLayout = (event: NativeSyntheticEvent<TextLayoutEventData>) => {
@@ -84,9 +78,7 @@ export const CommunityNoteCard: React.FC<CommunityNoteCardProps> = ({ note }) =>
         <Avatar
           size={AVATAR_SIZE}
           color="neutral"
-          placeholderIcon={
-            <RiUserLine width={20} height={20} fill={colors.COLOR_BLACK_LIGHT_3} />
-          }
+          placeholderIcon={<RiUserLine width={20} height={20} fill={colors.COLOR_BLACK_LIGHT_3} />}
         />
         <View style={styles.headerText}>
           <View style={styles.nameRow}>
@@ -135,11 +127,11 @@ export const CommunityNoteCard: React.FC<CommunityNoteCardProps> = ({ note }) =>
         <Button
           size="sm"
           onPress={() => setExpanded((prev) => !prev)}
-          style={styles.readMore} tone="accent" appearance="plain"
+          style={styles.readMore}
+          tone="accent"
+          appearance="plain"
         >
-          {expanded
-            ? t('property.communityNotes.readLess')
-            : t('property.communityNotes.readMore')}
+          {expanded ? t('property.communityNotes.readLess') : t('property.communityNotes.readMore')}
         </Button>
       ) : null}
 

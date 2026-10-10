@@ -551,13 +551,20 @@ export default function EvictionDetailScreen() {
                   style={styles.composerSend}
                   onPress={handlePostComment}
                   disabled={!commentText.trim() || createComment.isPending}
-                  loading={createComment.isPending} tone="accent" appearance="solid"
+                  loading={createComment.isPending}
+                  tone="accent"
+                  appearance="solid"
                 >
                   {t('evictions.comments.send')}
                 </Button>
               </View>
             ) : (
-              <Button size="md" onPress={() => openAccountDialog()} tone="neutral" appearance="outline">
+              <Button
+                size="md"
+                onPress={() => openAccountDialog()}
+                tone="neutral"
+                appearance="outline"
+              >
                 {t('evictions.comments.signInToComment')}
               </Button>
             )}
@@ -590,7 +597,9 @@ export default function EvictionDetailScreen() {
             accessibilityLabel={
               eviction.isFollowing ? t('evictions.unfollow') : t('evictions.follow')
             }
-            leadingIcon={eviction.isFollowing ? RiNotification3Fill : RiNotification3Line} tone="neutral" appearance="outline"
+            leadingIcon={eviction.isFollowing ? RiNotification3Fill : RiNotification3Line}
+            tone="neutral"
+            appearance="outline"
           >
             {eviction.isFollowing ? t('evictions.following') : t('evictions.follow')}
           </Button>

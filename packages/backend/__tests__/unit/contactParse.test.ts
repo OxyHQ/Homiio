@@ -101,9 +101,7 @@ describe('contactFromRecord', () => {
 describe('buildContact and merge helpers', () => {
   it('buildContact omits empty contact objects', () => {
     expect(buildContact({})).toBeUndefined();
-    expect(
-      buildContact({ phone: '+34612345678', agencyName: 'Demo Agency' }),
-    ).toEqual({
+    expect(buildContact({ phone: '+34612345678', agencyName: 'Demo Agency' })).toEqual({
       phone: '+34612345678',
       agencyName: 'Demo Agency',
     });

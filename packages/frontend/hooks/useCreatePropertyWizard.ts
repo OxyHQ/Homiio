@@ -29,9 +29,11 @@ const DEFAULT_COUNTRY = 'US';
 const DEFAULT_CURRENCY = 'USD';
 
 /** Valid `PropertySale.chainStatus` values, used to narrow the stored string. */
-const SALE_CHAIN_STATUSES: ReadonlySet<string> = new Set<
-  NonNullable<PropertySale['chainStatus']>
->(['no_chain', 'chain', 'unknown']);
+const SALE_CHAIN_STATUSES: ReadonlySet<string> = new Set<NonNullable<PropertySale['chainStatus']>>([
+  'no_chain',
+  'chain',
+  'unknown',
+]);
 
 /** Narrow a stored chain-status string to the `PropertySale` union, or undefined. */
 function toChainStatus(value: string | undefined): PropertySale['chainStatus'] | undefined {
@@ -141,9 +143,7 @@ export function buildPropertyPayload(formData: CreatePropertyFormData): Property
     const longTermRent: LongTermRent = {
       monthlyAmount: pricing.monthlyRent ? parseFloat(pricing.monthlyRent.toString()) : 0,
       currency,
-      deposit: pricing.securityDeposit
-        ? parseFloat(pricing.securityDeposit.toString())
-        : 0,
+      deposit: pricing.securityDeposit ? parseFloat(pricing.securityDeposit.toString()) : 0,
       // The wizard does not yet collect a utilities-included selection, so we
       // default to EXCLUDED (the host can refine it later via edit).
       utilities: UtilitiesIncluded.EXCLUDED,

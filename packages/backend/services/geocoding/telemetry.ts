@@ -93,9 +93,7 @@ export interface GeoRequestObservation {
  * a test can feed a query containing a marker and assert the marker appears
  * nowhere in `JSON.stringify` of the result.
  */
-export function buildGeoObservation(
-  observation: GeoRequestObservation,
-): Record<string, unknown> {
+export function buildGeoObservation(observation: GeoRequestObservation): Record<string, unknown> {
   const payload: Record<string, unknown> = {
     operation: observation.operation,
     outcome: observation.outcome,

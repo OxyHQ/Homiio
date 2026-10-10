@@ -145,11 +145,14 @@ export function isFotocasaSearchadsChallenge(body: string): boolean {
   if (trimmed.length === 0) return true;
   if (/captcha-delivery\.com|geo\.captcha|datadome|px-captcha/i.test(trimmed)) return true;
   if (trimmed.startsWith('<!DOCTYPE') || trimmed.startsWith('<html')) return true;
-  if (/sentimos la interrupci|pardon our interruption|verifica que eres/i.test(trimmed)) return true;
+  if (/sentimos la interrupci|pardon our interruption|verifica que eres/i.test(trimmed))
+    return true;
   return false;
 }
 
-function refFromRecord(record: Record<string, unknown>): { sourceId: string; url: string } | undefined {
+function refFromRecord(
+  record: Record<string, unknown>,
+): { sourceId: string; url: string } | undefined {
   const rawId = record.propertyId ?? record.id ?? record.adId ?? record.realEstateId;
   const sourceId = asString(rawId)?.replace(/\D/g, '');
   if (!sourceId || !/^\d{5,}$/.test(sourceId)) return undefined;

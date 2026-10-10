@@ -73,7 +73,10 @@ const SAMPLE_MINIMUMS: Record<string, { low: number; medium: number }> = {
  * The confidence a sample supports, or `null` when it is too small to place a
  * price at all. Capped at `medium`: the sample is asking prices only.
  */
-export function areaPriceConfidence(sampleSize: number, priceUnit: string): EstimateConfidence | null {
+export function areaPriceConfidence(
+  sampleSize: number,
+  priceUnit: string,
+): EstimateConfidence | null {
   const minimums = SAMPLE_MINIMUMS[priceUnit] ?? SAMPLE_MINIMUMS.month;
   if (sampleSize < minimums.low) return null;
   return sampleSize < minimums.medium ? 'low' : 'medium';
@@ -128,10 +131,16 @@ const PriceRangeContent: React.FC<PriceRangeContentProps> = ({ insights, bedroom
     insights.basis === 'radius'
       ? isStudio
         ? t('property.areaInsights.subtitleStudioRadius', { radiusKm: insights.radiusKm })
-        : t('property.areaInsights.subtitleRadius', { count: bedrooms, radiusKm: insights.radiusKm })
+        : t('property.areaInsights.subtitleRadius', {
+            count: bedrooms,
+            radiusKm: insights.radiusKm,
+          })
       : isStudio
         ? t('property.areaInsights.subtitleStudioCity', { areaLabel: insights.areaLabel })
-        : t('property.areaInsights.subtitleCity', { count: bedrooms, areaLabel: insights.areaLabel });
+        : t('property.areaInsights.subtitleCity', {
+            count: bedrooms,
+            areaLabel: insights.areaLabel,
+          });
 
   if (sampleSize === 0) {
     return (
@@ -161,8 +170,10 @@ const PriceRangeContent: React.FC<PriceRangeContentProps> = ({ insights, bedroom
 
   const formatVerdict = (verdict: PriceVerdict): string => {
     const percent = Math.max(1, Math.round(verdict.ratio * 100));
-    if (verdict.position === 'above') return t('property.areaInsights.placement.above', { percent });
-    if (verdict.position === 'below') return t('property.areaInsights.placement.below', { percent });
+    if (verdict.position === 'above')
+      return t('property.areaInsights.placement.above', { percent });
+    if (verdict.position === 'below')
+      return t('property.areaInsights.placement.below', { percent });
     return t('property.areaInsights.placement.within');
   };
 
@@ -173,8 +184,14 @@ const PriceRangeContent: React.FC<PriceRangeContentProps> = ({ insights, bedroom
           radiusKm: insights.radiusKm,
         })
       : t('property.areaInsights.reason.radiusBasis', { radiusKm: insights.radiusKm }),
-    t('property.areaInsights.reason.middle', { median: money(comparison.median), avg: money(comparison.avg) }),
-    t('property.areaInsights.reason.range', { min: money(comparison.min), max: money(comparison.max) }),
+    t('property.areaInsights.reason.middle', {
+      median: money(comparison.median),
+      avg: money(comparison.avg),
+    }),
+    t('property.areaInsights.reason.range', {
+      min: money(comparison.min),
+      max: money(comparison.max),
+    }),
     ...(neighborhoodVsCity
       ? [
           neighborhoodVsCity.percentDiff === 0
@@ -209,7 +226,8 @@ const PriceRangeContent: React.FC<PriceRangeContentProps> = ({ insights, bedroom
     };
   });
 
-  const perSqm = (amount: number) => t('property.areaInsights.perSqmValue', { price: money(amount) });
+  const perSqm = (amount: number) =>
+    t('property.areaInsights.perSqmValue', { price: money(amount) });
 
   return (
     <Section title={t('property.areaInsights.title')} subtitle={subtitle}>

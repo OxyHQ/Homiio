@@ -33,10 +33,7 @@ import {
   type SingleLocationSelection,
 } from '@homiio/shared-types';
 import type { SearchQuery } from '@/components/search/types';
-import {
-  PROPERTY_LIST_PAGE_SIZE,
-  useInfinitePropertyList,
-} from './useInfinitePropertyList';
+import { PROPERTY_LIST_PAGE_SIZE, useInfinitePropertyList } from './useInfinitePropertyList';
 
 /** Endpoint path for the public property search. */
 const SEARCH_ENDPOINT = '/api/properties/search';
@@ -470,10 +467,7 @@ function descriptorLocationKind(selection: LocationSelection | null): LocationKi
 }
 
 /** Read a numeric param back out of the built params, or `undefined`. */
-function numericParam(
-  params: Record<string, string | number>,
-  key: string,
-): number | undefined {
+function numericParam(params: Record<string, string | number>, key: string): number | undefined {
   const value = params[key];
   return typeof value === 'number' ? value : undefined;
 }
@@ -728,10 +722,7 @@ export function usePropertySearch(
   // Sent so the server can stamp its answer with the identity it was asked
   // under. It is an echo, never an input: nothing server-side reads it as a
   // filter, and a response carrying somebody else's stamp is refused below.
-  const baseParams = useMemo(
-    () => ({ ...searchParams, queryId }),
-    [searchParams, queryId],
-  );
+  const baseParams = useMemo(() => ({ ...searchParams, queryId }), [searchParams, queryId]);
   // Built from the already-constructed params so the object is not built twice
   // per query, through the SAME helper `searchQueryKey` uses so the two cannot
   // drift — a hook keyed differently from the exported key function is a cache
@@ -760,7 +751,7 @@ export function usePropertySearch(
         properties: data.data ?? [],
         page: data.page ?? pageParam,
         totalPages: data.totalPages ?? 1,
-        total: data.total ?? (data.data?.length ?? 0),
+        total: data.total ?? data.data?.length ?? 0,
         hasMore: data.hasMore ?? false,
         queryId: data.queryId ?? null,
         location: data.location ?? null,

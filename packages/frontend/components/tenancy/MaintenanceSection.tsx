@@ -124,7 +124,9 @@ export function MaintenanceSection({
           size="sm"
           leadingIcon={RiAddLine}
           onPress={onReport}
-          accessibilityLabel={t('maintenance.action.reportAccessible')} tone="neutral" appearance="outline"
+          accessibilityLabel={t('maintenance.action.reportAccessible')}
+          tone="neutral"
+          appearance="outline"
         >
           {t('maintenance.action.report')}
         </Button>
@@ -184,7 +186,9 @@ export function MaintenanceSection({
                         size="sm"
                         disabled={pendingId === request.id}
                         onPress={() => act(request.id, status)}
-                        accessibilityLabel={t(ACTION_KEY[status])} tone="neutral" appearance="outline"
+                        accessibilityLabel={t(ACTION_KEY[status])}
+                        tone="neutral"
+                        appearance="outline"
                       >
                         {t(ACTION_KEY[status])}
                       </Button>
@@ -192,7 +196,9 @@ export function MaintenanceSection({
                   <Button
                     size="sm"
                     onPress={() => onOpenRequest(request.id)}
-                    accessibilityLabel={t('maintenance.action.openAccessible')} tone="accent" appearance="subtle"
+                    accessibilityLabel={t('maintenance.action.openAccessible')}
+                    tone="accent"
+                    appearance="subtle"
                   >
                     {t('maintenance.action.open')}
                   </Button>

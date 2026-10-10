@@ -181,7 +181,9 @@ export function QuickFiltersWidget() {
         <Button
           size="md"
           disabled={!hasSelection}
-          onPress={applyFilters} tone="accent" appearance="solid"
+          onPress={applyFilters}
+          tone="accent"
+          appearance="solid"
         >
           {primaryLabel}
         </Button>

@@ -27,7 +27,11 @@ import type {
   RawListing,
 } from '../../../types';
 import { createFetchRuntime } from '../../../runtime';
-import { defaultProviderMetrics, type ProviderMetricsReader, type ProviderMetricsSink } from '../../../metrics';
+import {
+  defaultProviderMetrics,
+  type ProviderMetricsReader,
+  type ProviderMetricsSink,
+} from '../../../metrics';
 import { PROPERATI_BASE_URL } from './fixtures';
 import {
   isProperatiChallenge,
@@ -245,7 +249,9 @@ export class ProperatiProvider implements ListingProvider {
       },
       type: PropertyType.APARTMENT,
       offerings: isSale ? [OfferingType.SALE] : [OfferingType.LONG_TERM_RENT],
-      longTermRent: isSale ? undefined : { monthlyAmount: listing.price, currency: listing.currency },
+      longTermRent: isSale
+        ? undefined
+        : { monthlyAmount: listing.price, currency: listing.currency },
       sale: isSale ? { price: listing.price, currency: listing.currency } : undefined,
       remoteImages: toRemoteImages(listing.images),
       status: 'published',

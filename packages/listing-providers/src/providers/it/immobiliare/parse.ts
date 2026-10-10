@@ -35,7 +35,6 @@ export interface ImmobiliareRaw {
 
 const DETAIL_LINK_RE = /\/annunci\/(\d+)\/?/gi;
 
-
 export function immobiliareSourceIdFromUrl(url: string): string | undefined {
   return url.match(/\/annunci\/(\d+)/)?.[1];
 }
@@ -109,7 +108,10 @@ function collectImages(value: unknown): string[] {
   return [...new Set(out)];
 }
 
-function listingFromRecord(record: Record<string, unknown>, fallbackUrl?: string): ImmobiliareRaw | undefined {
+function listingFromRecord(
+  record: Record<string, unknown>,
+  fallbackUrl?: string,
+): ImmobiliareRaw | undefined {
   const nested = asRecord(record.realEstate) ?? record;
   const id =
     asString(nested.id) ??
@@ -135,7 +137,9 @@ function listingFromRecord(record: Record<string, unknown>, fallbackUrl?: string
 
   const raw: ImmobiliareRaw = {
     sourceId: id,
-    url: url.startsWith('http') ? url : `${IMMOBILIARE_BASE_URL}${url.startsWith('/') ? '' : '/'}${url}`,
+    url: url.startsWith('http')
+      ? url
+      : `${IMMOBILIARE_BASE_URL}${url.startsWith('/') ? '' : '/'}${url}`,
     currency: 'EUR',
     operation: operationFromContract(nested.contract ?? record.contract, url),
     images: collectImages(nested.photos ?? nested.medias ?? record.medias ?? record.photos),
@@ -152,9 +156,11 @@ function listingFromRecord(record: Record<string, unknown>, fallbackUrl?: string
   if (propertyType) raw.propertyType = propertyType;
   const bedrooms = asNumber(nested.rooms) ?? asNumber(props0?.rooms) ?? asNumber(record.rooms);
   if (bedrooms !== undefined) raw.bedrooms = bedrooms;
-  const bathrooms = asNumber(nested.bathrooms) ?? asNumber(props0?.bathrooms) ?? asNumber(record.bathrooms);
+  const bathrooms =
+    asNumber(nested.bathrooms) ?? asNumber(props0?.bathrooms) ?? asNumber(record.bathrooms);
   if (bathrooms !== undefined) raw.bathrooms = bathrooms;
-  const squareMeters = asNumber(nested.surface) ?? asNumber(props0?.surface) ?? asNumber(record.surface);
+  const squareMeters =
+    asNumber(nested.surface) ?? asNumber(props0?.surface) ?? asNumber(record.surface);
   if (squareMeters !== undefined) raw.squareMeters = squareMeters;
   const floor = asNumber(nested.floor) ?? asNumber(props0?.floor);
   if (floor !== undefined) raw.floor = floor;
@@ -259,7 +265,9 @@ export function parseImmobiliareDetail(html: string, url: string): ImmobiliareRa
   }
   const listings: ImmobiliareRaw[] = [];
   collectListings(parsed, listings);
-  const byUrl = listings.find((listing) => listing.url.includes(immobiliareSourceIdFromUrl(url) ?? ''));
+  const byUrl = listings.find((listing) =>
+    listing.url.includes(immobiliareSourceIdFromUrl(url) ?? ''),
+  );
   const listing = byUrl ?? listings.find((entry) => entry.price !== undefined) ?? listings[0];
   if (!listing) {
     throw new Error(`immobiliare: no listing object in __NEXT_DATA__ at ${url}`);

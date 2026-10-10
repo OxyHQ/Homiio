@@ -66,7 +66,10 @@ describe('fetchListingViaLadder — managed rung', () => {
   it('escalates past a blocked HTTP + browser to the managed tier', async () => {
     // HTTP tier: bare 403 (forbidden). Browser tier: DataDome challenge body
     // (captcha host + interstitial text — what a real block page carries).
-    (global as { fetch: unknown }).fetch = jest.fn(async () => ({ status: 403, text: async () => 'Forbidden' }));
+    (global as { fetch: unknown }).fetch = jest.fn(async () => ({
+      status: 403,
+      text: async () => 'Forbidden',
+    }));
     const runtime = createListingFetchRuntime({
       browser: {
         fetch: async () =>
@@ -99,12 +102,17 @@ describe('fetchListingViaLadder — managed rung', () => {
 describe('ManagedFetcher', () => {
   it('sends the key as a header and the target as the url query param', async () => {
     const calls: Array<{ url: string; headers: Record<string, string> }> = [];
-    (global as { fetch: unknown }).fetch = jest.fn(async (url: string, opts: { headers: Record<string, string> }) => {
-      calls.push({ url, headers: opts.headers });
-      return { ok: true, status: 200, text: async () => '<html>ok</html>' };
-    });
+    (global as { fetch: unknown }).fetch = jest.fn(
+      async (url: string, opts: { headers: Record<string, string> }) => {
+        calls.push({ url, headers: opts.headers });
+        return { ok: true, status: 200, text: async () => '<html>ok</html>' };
+      },
+    );
 
-    const fetcher = new ManagedFetcher({ endpoint: 'https://managed.test/fetch', apiKey: 'secret-key' });
+    const fetcher = new ManagedFetcher({
+      endpoint: 'https://managed.test/fetch',
+      apiKey: 'secret-key',
+    });
     const html = await fetcher.fetch('https://portal.example/listing/1?x=2');
 
     expect(html).toBe('<html>ok</html>');
@@ -137,7 +145,11 @@ describe('ManagedFetcher', () => {
   });
 
   it('throws on a non-2xx managed response', async () => {
-    (global as { fetch: unknown }).fetch = jest.fn(async () => ({ ok: false, status: 502, text: async () => 'bad gateway' }));
+    (global as { fetch: unknown }).fetch = jest.fn(async () => ({
+      ok: false,
+      status: 502,
+      text: async () => 'bad gateway',
+    }));
     const fetcher = new ManagedFetcher({ endpoint: 'https://managed.test/fetch' });
     await expect(fetcher.fetch('https://portal.example/x')).rejects.toThrow(/Managed fetch failed/);
   });
@@ -145,7 +157,9 @@ describe('ManagedFetcher', () => {
   it('createManagedFetcher returns undefined without an endpoint', () => {
     expect(createManagedFetcher(undefined)).toBeUndefined();
     expect(createManagedFetcher({ endpoint: '' })).toBeUndefined();
-    expect(createManagedFetcher({ endpoint: 'https://managed.test/' })).toBeInstanceOf(ManagedFetcher);
+    expect(createManagedFetcher({ endpoint: 'https://managed.test/' })).toBeInstanceOf(
+      ManagedFetcher,
+    );
   });
 });
 

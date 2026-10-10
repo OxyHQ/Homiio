@@ -15,23 +15,25 @@
 // (`numTotalTests`, `numFailedTests`, `success`, `testResults`), which is checked
 // by the format guard below rather than assumed.
 
-import { readFile } from "node:fs/promises";
+import { readFile } from 'node:fs/promises';
 
 const [reportPath, label, minimumArgument] = process.argv.slice(2);
 if (!reportPath || !label || !minimumArgument) {
-  console.error("::error::usage: assert-test-floor.mjs <jest-json-report> <label> <minimum-tests>");
+  console.error('::error::usage: assert-test-floor.mjs <jest-json-report> <label> <minimum-tests>');
   process.exit(1);
 }
 
 const minimumTests = Number(minimumArgument);
 if (!Number.isInteger(minimumTests) || minimumTests < 1) {
-  console.error(`::error::${label}: the minimum test count must be a positive integer, got ${minimumArgument}.`);
+  console.error(
+    `::error::${label}: the minimum test count must be a positive integer, got ${minimumArgument}.`,
+  );
   process.exit(1);
 }
 
 let report;
 try {
-  report = JSON.parse(await readFile(reportPath, "utf8"));
+  report = JSON.parse(await readFile(reportPath, 'utf8'));
 } catch (error) {
   // An unreadable report is the shape of a suite that never ran, so it must fail
   // rather than be treated as "nothing to check".

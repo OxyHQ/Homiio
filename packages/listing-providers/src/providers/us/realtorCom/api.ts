@@ -81,7 +81,12 @@ export function realtorSourceUrl(permalink: string): string {
   return `${REALTOR_COM_BASE_URL}/realestateandhomes-detail/${permalink}`;
 }
 
-export function realtorSearchBody(city: string, kind: RealtorKind, offset: number, limit: number): string {
+export function realtorSearchBody(
+  city: string,
+  kind: RealtorKind,
+  offset: number,
+  limit: number,
+): string {
   return JSON.stringify({
     operationName: 'ConsumerSearchMainQuery',
     query: SEARCH_QUERY,
@@ -134,7 +139,8 @@ export function parseRealtorListingNode(node: unknown): RecordedRealtorListing |
   if (!property_id || !listing_id || !permalink || !status) return undefined;
 
   const descriptionRaw = isRecord(node.description) ? node.description : {};
-  const locationRaw = isRecord(node.location) && isRecord(node.location.address) ? node.location.address : null;
+  const locationRaw =
+    isRecord(node.location) && isRecord(node.location.address) ? node.location.address : null;
   if (!locationRaw) return undefined;
 
   const line = asString(locationRaw.line);
@@ -220,7 +226,8 @@ export function isRealtorGraphqlChallenge(body: string): boolean {
   try {
     const parsed = JSON.parse(trimmed) as { errors?: unknown; message?: unknown };
     if (Array.isArray(parsed.errors) && parsed.errors.length > 0) return true;
-    if (typeof parsed.message === 'string' && /missing client|denied|blocked/i.test(parsed.message)) return true;
+    if (typeof parsed.message === 'string' && /missing client|denied|blocked/i.test(parsed.message))
+      return true;
     return false;
   } catch {
     return true;

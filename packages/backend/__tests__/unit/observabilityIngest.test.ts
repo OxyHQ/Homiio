@@ -18,10 +18,7 @@ import express from 'express';
 import bodyParser from 'body-parser';
 import request from 'supertest';
 
-import {
-  OBSERVABILITY_SCHEMA_VERSION,
-  type ObservabilityEvent,
-} from '@homiio/shared-types';
+import { OBSERVABILITY_SCHEMA_VERSION, type ObservabilityEvent } from '@homiio/shared-types';
 
 import { createIngestEventsHandler } from '../../controllers/observabilityController';
 import { ingestObservabilityEvents } from '../../observability/serverObservability';

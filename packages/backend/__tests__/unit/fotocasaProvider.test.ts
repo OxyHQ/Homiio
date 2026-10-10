@@ -50,7 +50,11 @@ describe('FotocasaProvider.normalize', () => {
       FOTOCASA_FIXTURE_DETAIL_HTML,
       'https://www.fotocasa.es/es/alquiler/vivienda/madrid-capital/x/187654321/d',
     );
-    const ref: ExternalListingRef = { provider: 'fotocasa', sourceId: payload.sourceId, url: payload.url };
+    const ref: ExternalListingRef = {
+      provider: 'fotocasa',
+      sourceId: payload.sourceId,
+      url: payload.url,
+    };
     const listing = provider.normalize({ ref, payload });
 
     expect(listing.source).toBe('fotocasa');
@@ -71,7 +75,9 @@ describe('FotocasaProvider.normalize', () => {
     expect(listing.bedrooms).toBe(3);
     expect(listing.bathrooms).toBe(2);
     expect(listing.squareFootage).toBe(95);
-    expect(listing.amenities).toEqual(expect.arrayContaining(['elevator', 'heating', 'air_conditioning']));
+    expect(listing.amenities).toEqual(
+      expect.arrayContaining(['elevator', 'heating', 'air_conditioning']),
+    );
     expect(listing.remoteImages).toHaveLength(3);
     expect(listing.remoteImages[0].isPrimary).toBe(true);
   });
@@ -85,7 +91,11 @@ describe('FotocasaProvider.normalize', () => {
       FOTOCASA_FIXTURE_PROPERTY_JSON,
       'https://www.fotocasa.es/es/alquiler/vivienda/barcelona-capital/x/186718824/d',
     );
-    const ref: ExternalListingRef = { provider: 'fotocasa', sourceId: payload.sourceId, url: payload.url };
+    const ref: ExternalListingRef = {
+      provider: 'fotocasa',
+      sourceId: payload.sourceId,
+      url: payload.url,
+    };
     const listing = provider.normalize({ ref, payload });
 
     expect(listing.sourceId).toBe('186718824');
@@ -109,7 +119,11 @@ describe('FotocasaProvider.normalize', () => {
       FOTOCASA_FIXTURE_PROPERTY_JSON,
       'https://www.fotocasa.es/es/alquiler/vivienda/barcelona-capital/x/186718824/d',
     );
-    const ref: ExternalListingRef = { provider: 'fotocasa', sourceId: payload.sourceId, url: payload.url };
+    const ref: ExternalListingRef = {
+      provider: 'fotocasa',
+      sourceId: payload.sourceId,
+      url: payload.url,
+    };
     const listing = provider.normalize({ ref, payload });
 
     // English feature-slug keys normalize to the SAME canonical vocabulary as JSON-LD.
@@ -118,7 +132,14 @@ describe('FotocasaProvider.normalize', () => {
     );
     // Dimension keys and non-amenity metadata never leak as amenities.
     expect(listing.amenities).toEqual(
-      expect.not.arrayContaining(['rooms', 'bathrooms', 'surface', 'floor', 'conservation_status', 'antiquity']),
+      expect.not.arrayContaining([
+        'rooms',
+        'bathrooms',
+        'surface',
+        'floor',
+        'conservation_status',
+        'antiquity',
+      ]),
     );
     // `not_furnished` is hoisted into furnishedStatus, not left as a raw amenity.
     expect(listing.amenities).not.toContain('furnished');
@@ -205,9 +226,9 @@ describe('Fotocasa searchads + property JSON parsers', () => {
     expect(isFotocasaSearchadsChallenge(FOTOCASA_FIXTURE_SEARCHADS_CHALLENGE)).toBe(true);
     expect(isFotocasaPropertyChallenge(FOTOCASA_FIXTURE_SEARCHADS_CHALLENGE)).toBe(true);
     expect(parseFotocasaSearchads(FOTOCASA_FIXTURE_SEARCHADS_CHALLENGE)).toEqual([]);
-    expect(() => parseFotocasaPropertyJson(FOTOCASA_FIXTURE_SEARCHADS_CHALLENGE, 'https://x/1/d')).toThrow(
-      /property API challenge/,
-    );
+    expect(() =>
+      parseFotocasaPropertyJson(FOTOCASA_FIXTURE_SEARCHADS_CHALLENGE, 'https://x/1/d'),
+    ).toThrow(/property API challenge/);
   });
 
   it('builds the property JSON API URL', () => {
@@ -227,9 +248,9 @@ describe('FotocasaProvider search + helpers', () => {
   });
 
   it('extracts a source id from a detail url', () => {
-    expect(fotocasaSourceIdFromUrl('https://www.fotocasa.es/es/alquiler/vivienda/x/187654321/d')).toBe(
-      '187654321',
-    );
+    expect(
+      fotocasaSourceIdFromUrl('https://www.fotocasa.es/es/alquiler/vivienda/x/187654321/d'),
+    ).toBe('187654321');
   });
 
   it('flags an anti-bot / tiny body as a challenge', () => {
@@ -265,8 +286,10 @@ describe('FotocasaProvider.discover searchads path', () => {
           }
           return { status: 200, body: FOTOCASA_FIXTURE_SEARCHADS_JSON };
         },
-        content: async () => '<html><main class="re-Searchresult"><h1>Alquiler Madrid</h1></main></html>',
-        pageUrl: () => 'https://www.fotocasa.es/es/alquiler/viviendas/madrid-capital/todas-las-zonas/l',
+        content: async () =>
+          '<html><main class="re-Searchresult"><h1>Alquiler Madrid</h1></main></html>',
+        pageUrl: () =>
+          'https://www.fotocasa.es/es/alquiler/viviendas/madrid-capital/todas-las-zonas/l',
         warmNavigate: async () => undefined,
         exportStorageState: async () => ({ cookies: [] }),
         close: async () => undefined,
@@ -311,7 +334,8 @@ describe('FotocasaProvider.discover searchads path', () => {
       openBrowserSession: async () => ({
         request: async () => ({ status: 403, body: FOTOCASA_FIXTURE_SEARCHADS_CHALLENGE }),
         content: async () => FOTOCASA_FIXTURE_SEARCHADS_CHALLENGE,
-        pageUrl: () => 'https://www.fotocasa.es/es/alquiler/viviendas/madrid-capital/todas-las-zonas/l',
+        pageUrl: () =>
+          'https://www.fotocasa.es/es/alquiler/viviendas/madrid-capital/todas-las-zonas/l',
         warmNavigate: async () => undefined,
         exportStorageState: async () => ({ cookies: [] }),
         close: async () => undefined,
@@ -360,8 +384,10 @@ describe('FotocasaProvider.discover searchads path', () => {
           }
           return { status: 200, body: JSON.stringify({ realEstates: [], pageNumber: page }) };
         },
-        content: async () => '<html><main class="re-Searchresult"><h1>Alquiler Madrid</h1></main></html>',
-        pageUrl: () => 'https://www.fotocasa.es/es/alquiler/viviendas/madrid-capital/todas-las-zonas/l',
+        content: async () =>
+          '<html><main class="re-Searchresult"><h1>Alquiler Madrid</h1></main></html>',
+        pageUrl: () =>
+          'https://www.fotocasa.es/es/alquiler/viviendas/madrid-capital/todas-las-zonas/l',
         warmNavigate: async () => undefined,
         exportStorageState: async () => ({ cookies: [] }),
         close: async () => undefined,
@@ -420,7 +446,12 @@ describe('FotocasaProvider.discover searchads path', () => {
               return {
                 status: 200,
                 body: JSON.stringify({
-                  realEstates: [{ propertyId: '299900001', detailUrl: '/es/comprar/vivienda/madrid-capital/x/299900001/d' }],
+                  realEstates: [
+                    {
+                      propertyId: '299900001',
+                      detailUrl: '/es/comprar/vivienda/madrid-capital/x/299900001/d',
+                    },
+                  ],
                 }),
               };
             }
@@ -452,7 +483,12 @@ describe('FotocasaProvider.discover searchads path', () => {
       }
 
       expect(transactionTypes).toEqual(['RENT', 'BUY']);
-      expect(refs.map((ref) => ref.sourceId).sort()).toEqual(['187654321', '187654322', '187654323', '299900001']);
+      expect(refs.map((ref) => ref.sourceId).sort()).toEqual([
+        '187654321',
+        '187654322',
+        '187654323',
+        '299900001',
+      ]);
     } finally {
       if (previousTypes === undefined) delete process.env.LISTING_FOTOCASA_TRANSACTION_TYPES;
       else process.env.LISTING_FOTOCASA_TRANSACTION_TYPES = previousTypes;
@@ -470,7 +506,9 @@ describe('FotocasaProvider.fetch property JSON path', () => {
       ),
     ).toBe('madrid');
     expect(
-      fotocasaCityFromRefUrl('https://www.fotocasa.es/es/alquiler/vivienda/aranjuez/parking/190037811/d'),
+      fotocasaCityFromRefUrl(
+        'https://www.fotocasa.es/es/alquiler/vivienda/aranjuez/parking/190037811/d',
+      ),
     ).toBe('aranjuez');
   });
 
@@ -499,7 +537,8 @@ describe('FotocasaProvider.fetch property JSON path', () => {
             return { status: 403, body: FOTOCASA_FIXTURE_SEARCHADS_CHALLENGE };
           },
           content: async () => FOTOCASA_FIXTURE_SEARCHADS_CHALLENGE,
-          pageUrl: () => 'https://www.fotocasa.es/es/alquiler/viviendas/madrid-capital/todas-las-zonas/l',
+          pageUrl: () =>
+            'https://www.fotocasa.es/es/alquiler/viviendas/madrid-capital/todas-las-zonas/l',
           warmNavigate: async () => undefined,
           exportStorageState: async () => ({ cookies: [] }),
           close: async () => undefined,
@@ -547,7 +586,8 @@ describe('FotocasaProvider.fetch property JSON path', () => {
             return { status: 403, body: FOTOCASA_FIXTURE_SEARCHADS_CHALLENGE };
           },
           content: async () => FOTOCASA_FIXTURE_SEARCHADS_CHALLENGE,
-          pageUrl: () => 'https://www.fotocasa.es/es/alquiler/viviendas/madrid-capital/todas-las-zonas/l',
+          pageUrl: () =>
+            'https://www.fotocasa.es/es/alquiler/viviendas/madrid-capital/todas-las-zonas/l',
           warmNavigate: async () => undefined,
           exportStorageState: async () => ({ cookies: discoverCookies }),
           close: async () => undefined,
@@ -651,7 +691,9 @@ describe('FotocasaProvider.fetch property JSON path', () => {
     expect(listing.bedrooms).toBe(5);
     expect(listing.bathrooms).toBe(4);
     expect(listing.squareFootage).toBe(223);
-    expect(listing.amenities).toEqual(expect.arrayContaining(['elevator', 'parking', 'terrace', 'heating']));
+    expect(listing.amenities).toEqual(
+      expect.arrayContaining(['elevator', 'parking', 'terrace', 'heating']),
+    );
     expect(listing.contact?.phone).toBe('+34670501198');
     expect(listing.contact?.agencyName).toBe('Nolkers Consulting');
   });
@@ -676,7 +718,8 @@ describe('FotocasaProvider.fetch property JSON path', () => {
           throw new Error('detail warm blocked');
         },
         content: async () => FOTOCASA_FIXTURE_SEARCHADS_CHALLENGE,
-        pageUrl: () => 'https://www.fotocasa.es/es/alquiler/viviendas/madrid-capital/todas-las-zonas/l',
+        pageUrl: () =>
+          'https://www.fotocasa.es/es/alquiler/viviendas/madrid-capital/todas-las-zonas/l',
         exportStorageState: async () => ({ cookies: [] }),
         close: async () => undefined,
       }),
@@ -689,8 +732,8 @@ describe('FotocasaProvider.fetch property JSON path', () => {
       url: 'https://www.fotocasa.es/es/alquiler/vivienda/madrid-capital/x/187654321/d',
     };
 
-    await expect(local.fetch(ref, { runtime, signal: new AbortController().signal })).rejects.toBeInstanceOf(
-      ChallengeError,
-    );
+    await expect(
+      local.fetch(ref, { runtime, signal: new AbortController().signal }),
+    ).rejects.toBeInstanceOf(ChallengeError);
   });
 });

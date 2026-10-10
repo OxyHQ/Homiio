@@ -86,7 +86,9 @@ describe('fetchPriorityFor', () => {
     const capped = fetchPriorityFor('immobilienscout24', FETCH_RANK_CAP);
     expect(fetchPriorityFor('immobilienscout24', FETCH_RANK_CAP + 1)).toBe(capped);
     expect(fetchPriorityFor('immobilienscout24', 5_000_000)).toBe(capped);
-    expect(fetchPriorityFor('habitaclia', Number.MAX_SAFE_INTEGER)).toBeLessThan(BULLMQ_PRIORITY_LIMIT);
+    expect(fetchPriorityFor('habitaclia', Number.MAX_SAFE_INTEGER)).toBeLessThan(
+      BULLMQ_PRIORITY_LIMIT,
+    );
   });
 
   it('defends against negative and fractional ranks', () => {

@@ -195,8 +195,7 @@ function listingNodeToRaw(listing: Record<string, unknown>): RealestateComAuRawL
       state,
       postalCode,
       countryCode: 'AU',
-      coordinates:
-        lat !== undefined && lng !== undefined ? { lat, lng } : undefined,
+      coordinates: lat !== undefined && lng !== undefined ? { lat, lng } : undefined,
     },
     images: resolveImages(listing),
     contact: resolveContact(listing),
@@ -249,7 +248,11 @@ export function parseRealestateComAuDetail(html: string, url: string): Realestat
   return raw;
 }
 
-export function realestateComAuSearchUrl(citySlug: string, channel: 'rent' | 'buy', page = 1): string {
+export function realestateComAuSearchUrl(
+  citySlug: string,
+  channel: 'rent' | 'buy',
+  page = 1,
+): string {
   const base = `${REALESTATE_COM_AU_BASE_URL}/${channel}/in-${citySlug}`;
   return page <= 1 ? `${base}/list-1` : `${base}/list-${page}`;
 }

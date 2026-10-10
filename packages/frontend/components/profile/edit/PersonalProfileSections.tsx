@@ -71,7 +71,12 @@ const REASONS_FOR_LEAVING = [
   'other',
 ] as const;
 
-type PreferenceToggle = 'petFriendly' | 'smokingAllowed' | 'furnished' | 'parkingRequired' | 'accessibility';
+type PreferenceToggle =
+  | 'petFriendly'
+  | 'smokingAllowed'
+  | 'furnished'
+  | 'parkingRequired'
+  | 'accessibility';
 
 const PREFERENCE_TOGGLES: readonly { key: PreferenceToggle; label: string }[] = [
   { key: 'petFriendly', label: 'profile.edit.toggles.petFriendly' },
@@ -119,7 +124,10 @@ const Row: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   </View>
 );
 
-const SectionHeader: React.FC<{ title: string; action?: React.ReactNode }> = ({ title, action }) => (
+const SectionHeader: React.FC<{ title: string; action?: React.ReactNode }> = ({
+  title,
+  action,
+}) => (
   <View style={styles.sectionHeader}>
     <H3 style={styles.sectionTitle}>{title}</H3>
     {action}
@@ -312,7 +320,13 @@ export function PersonalProfileSections({
           <SectionHeader
             title={t('profile.edit.sections.references')}
             action={
-              <Button size="sm" leadingIcon={RiAddLine} onPress={addReference} tone="neutral" appearance="outline">
+              <Button
+                size="sm"
+                leadingIcon={RiAddLine}
+                onPress={addReference}
+                tone="neutral"
+                appearance="outline"
+              >
                 {t('profile.edit.actions.addReference')}
               </Button>
             }
@@ -321,7 +335,7 @@ export function PersonalProfileSections({
           {references.map((reference, index) => {
             const cardTitle = t('profile.edit.actions.referenceLabel', { index: index + 1 });
             return (
-              <Card key={index}  radius="radius-16" style={styles.entryCard} appearance="outline">
+              <Card key={index} radius="radius-16" style={styles.entryCard} appearance="outline">
                 <SectionHeader
                   title={cardTitle}
                   action={
@@ -329,7 +343,9 @@ export function PersonalProfileSections({
                       size="sm"
                       leadingIcon={RiDeleteBinLine}
                       accessibilityLabel={`${t('profile.edit.actions.remove')} ${cardTitle}`}
-                      onPress={() => removeReference(index)} tone="accent" appearance="subtle"
+                      onPress={() => removeReference(index)}
+                      tone="accent"
+                      appearance="subtle"
                     >
                       {t('profile.edit.actions.remove')}
                     </Button>
@@ -384,7 +400,13 @@ export function PersonalProfileSections({
           <SectionHeader
             title={t('profile.edit.sections.rentalHistory')}
             action={
-              <Button size="sm" leadingIcon={RiAddLine} onPress={addRentalHistory} tone="neutral" appearance="outline">
+              <Button
+                size="sm"
+                leadingIcon={RiAddLine}
+                onPress={addRentalHistory}
+                tone="neutral"
+                appearance="outline"
+              >
                 {t('profile.edit.actions.addHistory')}
               </Button>
             }
@@ -397,7 +419,7 @@ export function PersonalProfileSections({
                 landlordContact: { ...history.landlordContact, ...updates },
               });
             return (
-              <Card key={index}  radius="radius-16" style={styles.entryCard} appearance="outline">
+              <Card key={index} radius="radius-16" style={styles.entryCard} appearance="outline">
                 <SectionHeader
                   title={cardTitle}
                   action={
@@ -405,7 +427,9 @@ export function PersonalProfileSections({
                       size="sm"
                       leadingIcon={RiDeleteBinLine}
                       accessibilityLabel={`${t('profile.edit.actions.remove')} ${cardTitle}`}
-                      onPress={() => removeRentalHistory(index)} tone="accent" appearance="subtle"
+                      onPress={() => removeRentalHistory(index)}
+                      tone="accent"
+                      appearance="subtle"
                     >
                       {t('profile.edit.actions.remove')}
                     </Button>
@@ -449,7 +473,9 @@ export function PersonalProfileSections({
                     value={history.reasonForLeaving}
                     options={REASONS_FOR_LEAVING}
                     labelPrefix="profile.edit.options.reasonForLeaving"
-                    onChange={(reasonForLeaving) => updateRentalHistory(index, { reasonForLeaving })}
+                    onChange={(reasonForLeaving) =>
+                      updateRentalHistory(index, { reasonForLeaving })
+                    }
                   />
                 </Row>
 

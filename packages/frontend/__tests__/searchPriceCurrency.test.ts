@@ -118,8 +118,9 @@ describe('the URL round-trips the unit', () => {
   it('drops a code no listing can be priced in', () => {
     // A link carrying `priceCurrency=XYZ` would otherwise narrow the page to a
     // currency nothing is priced in, which renders as "this area is empty".
-    expect(parseSearchParams({ priceMax: '1200', priceCurrency: 'XYZ' }).query.priceCurrency)
-      .toBeUndefined();
+    expect(
+      parseSearchParams({ priceMax: '1200', priceCurrency: 'XYZ' }).query.priceCurrency,
+    ).toBeUndefined();
     // …and the bound survives, to be answered by the scope.
     expect(parseSearchParams({ priceMax: '1200', priceCurrency: 'XYZ' }).query.priceMax).toBe(1200);
   });
@@ -231,7 +232,7 @@ describe('the chip says what the filter means', () => {
   const t = ((key: string, options?: { value?: string }) =>
     `${key}:${options?.value ?? ''}`) as never;
 
-  it('formats the bound in the query\'s own currency', () => {
+  it("formats the bound in the query's own currency", () => {
     const label = priceLabel(baseQuery({ priceMax: 1200, priceCurrency: 'PLN' }), t, 'pl');
     // A chip reading "1.200 €" over a search filtering złoty would describe a
     // different search from the one that ran.
@@ -247,9 +248,7 @@ describe('the chip says what the filter means', () => {
 
 describe('the floor chips', () => {
   it('round-trips through a shareable link', () => {
-    const { params } = buildSearchParamsForUrl(
-      baseQuery({ groundFloor: true, hasElevator: true }),
-    );
+    const { params } = buildSearchParamsForUrl(baseQuery({ groundFloor: true, hasElevator: true }));
     expect(params.groundFloor).toBe('true');
     expect(params.hasElevator).toBe('true');
 
@@ -274,9 +273,7 @@ describe('the floor chips', () => {
 
 describe('housing features', () => {
   it('round-trips through a shareable link', () => {
-    const { params } = buildSearchParamsForUrl(
-      baseQuery({ features: ['elevator', 'pool'] }),
-    );
+    const { params } = buildSearchParamsForUrl(baseQuery({ features: ['elevator', 'pool'] }));
     expect(params.features).toBe('elevator,pool');
     expect(parseSearchParams(params).query.features).toEqual(['elevator', 'pool']);
   });
@@ -284,9 +281,9 @@ describe('housing features', () => {
   it('drops a feature this build does not know', () => {
     // A chip from a newer client must not empty an older one's results — the
     // known half still applies, and the unknown one is simply not asked for.
-    expect(
-      parseSearchParams({ features: 'elevator,teleporter' }).query.features,
-    ).toEqual(['elevator']);
+    expect(parseSearchParams({ features: 'elevator,teleporter' }).query.features).toEqual([
+      'elevator',
+    ]);
   });
 
   it('writes nothing when none are chosen', () => {

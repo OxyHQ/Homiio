@@ -46,7 +46,6 @@ const ONE_BY_ONE_PNG = Buffer.from(
   'base64',
 );
 
-
 /**
  * Listings in the seed dataset. An EQUALITY rather than a floor, so adding a
  * listing without updating this fails loudly instead of silently weakening the

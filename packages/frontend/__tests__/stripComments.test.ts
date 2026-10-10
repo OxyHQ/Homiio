@@ -50,7 +50,8 @@ describe('stripComments', () => {
     // Verbatim from `packages/backend/config.ts` — the line that sent the
     // currency gate's stripper off a cliff. Everything from `//` onward was
     // discarded, taking the whole template literal with it.
-    const line = "  publicUrl: process.env.PUBLIC_API_URL || `http://localhost:${process.env.PORT || '4130'}`,";
+    const line =
+      "  publicUrl: process.env.PUBLIC_API_URL || `http://localhost:${process.env.PORT || '4130'}`,";
 
     it('keeps the whole line', () => {
       expect(stripComments(line)).toBe(line);
@@ -196,7 +197,13 @@ describe('stripComments', () => {
   describe('blanking, not deleting', () => {
     // Both gates report `file:line`. A stripper that deletes shifts every line
     // after the comment, so every location it reports is wrong.
-    const source = ['/**', ' * A header.', ' */', 'const first = 1;', 'const second = 2; // trailing'].join('\n');
+    const source = [
+      '/**',
+      ' * A header.',
+      ' */',
+      'const first = 1;',
+      'const second = 2; // trailing',
+    ].join('\n');
 
     it('preserves the length of the file exactly', () => {
       expect(stripComments(source)).toHaveLength(source.length);
@@ -222,7 +229,9 @@ describe('stripComments', () => {
 
   describe('the things a stripper must still do', () => {
     it('removes a line comment on its own line', () => {
-      expect(codeLines(stripComments(['// gone', 'const kept = 1;'].join('\n')))).toEqual(['const kept = 1;']);
+      expect(codeLines(stripComments(['// gone', 'const kept = 1;'].join('\n')))).toEqual([
+        'const kept = 1;',
+      ]);
     });
 
     it('removes a trailing line comment', () => {
@@ -235,7 +244,9 @@ describe('stripComments', () => {
     });
 
     it('removes an unterminated block comment to the end of the file', () => {
-      const stripped = stripComments(['const kept = 1;', '/* runs off the end', 'not code'].join('\n'));
+      const stripped = stripComments(
+        ['const kept = 1;', '/* runs off the end', 'not code'].join('\n'),
+      );
       expect(codeLines(stripped)).toEqual(['const kept = 1;']);
     });
 

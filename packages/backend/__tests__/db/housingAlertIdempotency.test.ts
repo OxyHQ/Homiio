@@ -75,7 +75,9 @@ async function dropIndex(): Promise<void> {
 
 async function restoreIndex(): Promise<void> {
   await db.execute(
-    sql.raw(`create unique index if not exists "${INDEX_NAME}" on "housing_alerts" ("idempotency_key")`),
+    sql.raw(
+      `create unique index if not exists "${INDEX_NAME}" on "housing_alerts" ("idempotency_key")`,
+    ),
   );
 }
 

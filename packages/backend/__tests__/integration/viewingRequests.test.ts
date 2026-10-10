@@ -37,13 +37,25 @@ function buildApp(oxyUserId?: string): Express {
     }
     next();
   });
-  app.post('/properties/:propertyId/viewings', (req, res, next) => viewingController.createViewingRequest(req, res, next));
-  app.get('/properties/:propertyId/viewings', (req, res, next) => viewingController.listPropertyViewingRequests(req, res, next));
+  app.post('/properties/:propertyId/viewings', (req, res, next) =>
+    viewingController.createViewingRequest(req, res, next),
+  );
+  app.get('/properties/:propertyId/viewings', (req, res, next) =>
+    viewingController.listPropertyViewingRequests(req, res, next),
+  );
   app.get('/viewings', (req, res, next) => viewingController.listMyViewingRequests(req, res, next));
-  app.post('/viewings/:viewingId/approve', (req, res, next) => viewingController.approveViewingRequest(req, res, next));
-  app.post('/viewings/:viewingId/decline', (req, res, next) => viewingController.declineViewingRequest(req, res, next));
-  app.post('/viewings/:viewingId/cancel', (req, res, next) => viewingController.cancelViewingRequest(req, res, next));
-  app.put('/viewings/:viewingId', (req, res, next) => viewingController.updateViewingRequest(req, res, next));
+  app.post('/viewings/:viewingId/approve', (req, res, next) =>
+    viewingController.approveViewingRequest(req, res, next),
+  );
+  app.post('/viewings/:viewingId/decline', (req, res, next) =>
+    viewingController.declineViewingRequest(req, res, next),
+  );
+  app.post('/viewings/:viewingId/cancel', (req, res, next) =>
+    viewingController.cancelViewingRequest(req, res, next),
+  );
+  app.put('/viewings/:viewingId', (req, res, next) =>
+    viewingController.updateViewingRequest(req, res, next),
+  );
   app.use(errorHandler);
   return app;
 }
@@ -130,20 +142,39 @@ describe('createViewingRequest', () => {
   });
 
   it('refuses an unpublished, an external and an owner-booked listing', async () => {
-    const draft = (await seedListingWithGeo({
-      countryCode: nextCountryCode(),
-      overrides: { oxyUserId: 'oxy-owner', status: 'draft' },
-    })).propertyId;
-    expect((await request(buildApp('oxy-r')).post(`/properties/${draft}/viewings`).send(futureSlot())).status).toBe(400);
+    const draft = (
+      await seedListingWithGeo({
+        countryCode: nextCountryCode(),
+        overrides: { oxyUserId: 'oxy-owner', status: 'draft' },
+      })
+    ).propertyId;
+    expect(
+      (await request(buildApp('oxy-r')).post(`/properties/${draft}/viewings`).send(futureSlot()))
+        .status,
+    ).toBe(400);
 
-    const external = (await seedListingWithGeo({
-      countryCode: nextCountryCode(),
-      overrides: { oxyUserId: 'oxy-owner', status: 'published', isExternal: true, source: 'idealista', sourceUrl: 'https://x.test/1' },
-    })).propertyId;
-    expect((await request(buildApp('oxy-r')).post(`/properties/${external}/viewings`).send(futureSlot())).status).toBe(400);
+    const external = (
+      await seedListingWithGeo({
+        countryCode: nextCountryCode(),
+        overrides: {
+          oxyUserId: 'oxy-owner',
+          status: 'published',
+          isExternal: true,
+          source: 'idealista',
+          sourceUrl: 'https://x.test/1',
+        },
+      })
+    ).propertyId;
+    expect(
+      (await request(buildApp('oxy-r')).post(`/properties/${external}/viewings`).send(futureSlot()))
+        .status,
+    ).toBe(400);
 
     const own = await seedBookableProperty();
-    expect((await request(buildApp('oxy-owner')).post(`/properties/${own}/viewings`).send(futureSlot())).status).toBe(403);
+    expect(
+      (await request(buildApp('oxy-owner')).post(`/properties/${own}/viewings`).send(futureSlot()))
+        .status,
+    ).toBe(403);
 
     expect(await getDb().select().from(viewingRequests)).toHaveLength(0);
   });
@@ -227,7 +258,9 @@ describe('approve / decline — owner only, pending only', () => {
     const propertyId = await seedBookableProperty();
     const slot = futureSlot();
     const first = await createRequest(propertyId, 'oxy-a', slot);
-    expect((await request(buildApp('oxy-owner')).post(`/viewings/${first}/approve`)).status).toBe(200);
+    expect((await request(buildApp('oxy-owner')).post(`/viewings/${first}/approve`)).status).toBe(
+      200,
+    );
 
     // A second request at the same instant can only exist if it was created
     // before the first was approved — seeded directly, since the create path
@@ -261,11 +294,18 @@ describe('cancel — the `cancelled_by` equivalence', () => {
     const propertyId = await seedBookableProperty();
 
     const byRequester = await createRequest(propertyId, 'oxy-requester');
-    expect((await request(buildApp('oxy-requester')).post(`/viewings/${byRequester}/cancel`)).status).toBe(200);
-    expect(await viewingRow(byRequester)).toMatchObject({ status: 'cancelled', cancelledBy: 'requester' });
+    expect(
+      (await request(buildApp('oxy-requester')).post(`/viewings/${byRequester}/cancel`)).status,
+    ).toBe(200);
+    expect(await viewingRow(byRequester)).toMatchObject({
+      status: 'cancelled',
+      cancelledBy: 'requester',
+    });
 
     const byOwner = await createRequest(propertyId, 'oxy-other', futureSlot(21));
-    expect((await request(buildApp('oxy-owner')).post(`/viewings/${byOwner}/cancel`)).status).toBe(200);
+    expect((await request(buildApp('oxy-owner')).post(`/viewings/${byOwner}/cancel`)).status).toBe(
+      200,
+    );
     expect(await viewingRow(byOwner)).toMatchObject({ status: 'cancelled', cancelledBy: 'owner' });
   });
 
@@ -278,7 +318,9 @@ describe('cancel — the `cancelled_by` equivalence', () => {
 
   it('is idempotent — a second cancel answers 200 and does not re-attribute', async () => {
     const id = await createRequest(await seedBookableProperty());
-    expect((await request(buildApp('oxy-requester')).post(`/viewings/${id}/cancel`)).status).toBe(200);
+    expect((await request(buildApp('oxy-requester')).post(`/viewings/${id}/cancel`)).status).toBe(
+      200,
+    );
 
     // The OWNER cancels an already-cancelled request: the answer is the current
     // state, and `cancelled_by` must still name the requester who really did it.
@@ -299,11 +341,15 @@ describe('cancel — the `cancelled_by` equivalence', () => {
     };
 
     await expect(
-      getDb().insert(viewingRequests).values({ ...base, status: 'cancelled' }),
+      getDb()
+        .insert(viewingRequests)
+        .values({ ...base, status: 'cancelled' }),
     ).rejects.toThrow();
 
     await expect(
-      getDb().insert(viewingRequests).values({ ...base, status: 'pending', cancelledBy: 'owner' }),
+      getDb()
+        .insert(viewingRequests)
+        .values({ ...base, status: 'pending', cancelledBy: 'owner' }),
     ).rejects.toThrow();
   });
 });
@@ -318,7 +364,9 @@ describe('reschedule — requester only, pending only', () => {
     const clash = await request(buildApp('oxy-requester')).put(`/viewings/${mine}`).send(taken);
     expect(clash.status).toBe(409);
 
-    const moved = await request(buildApp('oxy-requester')).put(`/viewings/${mine}`).send(futureSlot(17));
+    const moved = await request(buildApp('oxy-requester'))
+      .put(`/viewings/${mine}`)
+      .send(futureSlot(17));
     expect(moved.status).toBe(200);
   });
 
@@ -326,10 +374,14 @@ describe('reschedule — requester only, pending only', () => {
     const propertyId = await seedBookableProperty();
     const id = await createRequest(propertyId);
 
-    expect((await request(buildApp('oxy-owner')).put(`/viewings/${id}`).send(futureSlot(18))).status).toBe(403);
+    expect(
+      (await request(buildApp('oxy-owner')).put(`/viewings/${id}`).send(futureSlot(18))).status,
+    ).toBe(403);
 
     await request(buildApp('oxy-owner')).post(`/viewings/${id}/approve`);
-    expect((await request(buildApp('oxy-requester')).put(`/viewings/${id}`).send(futureSlot(18))).status).toBe(400);
+    expect(
+      (await request(buildApp('oxy-requester')).put(`/viewings/${id}`).send(futureSlot(18))).status,
+    ).toBe(400);
   });
 });
 
@@ -357,6 +409,9 @@ describe('listing — scope IS the authorisation', () => {
 
     const res = await request(buildApp('oxy-me')).get('/viewings');
     expect(res.status).toBe(200);
-    expect(res.body.data.map((row: { propertyId: string }) => row.propertyId)).toEqual([first, second]);
+    expect(res.body.data.map((row: { propertyId: string }) => row.propertyId)).toEqual([
+      first,
+      second,
+    ]);
   });
 });

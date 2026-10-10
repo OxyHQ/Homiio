@@ -73,11 +73,7 @@ import {
 import { requireSessionOxyUserId } from '../utils/sessionUser';
 import { pickFields } from '../utils/pickFields';
 import { CREATABLE_LEASE_FIELDS, EDITABLE_LEASE_FIELDS } from './lease/editableFields';
-import {
-  toCoTenantRows,
-  toLeaseColumns,
-  toSharedUtilityCostRows,
-} from './lease/leaseWriteColumns';
+import { toCoTenantRows, toLeaseColumns, toSharedUtilityCostRows } from './lease/leaseWriteColumns';
 import { notificationDispatchService } from '../services/notificationDispatchService';
 import imageUploadService from '../services/imageUploadService';
 import { storedDocumentKey } from '../utils/storedDocumentKey';
@@ -143,7 +139,11 @@ interface UploadedDocumentFile {
  * are all things it must not carry.
  */
 function safeDocumentName(raw: string): string {
-  const cleaned = raw.replace(/[^A-Za-z0-9._ -]/g, '_').replace(/\s+/g, ' ').trim().slice(0, 120);
+  const cleaned = raw
+    .replace(/[^A-Za-z0-9._ -]/g, '_')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 120);
   return cleaned.length > 0 ? cleaned : 'document';
 }
 
@@ -186,7 +186,10 @@ function parsePagination(query: Request['query']): { page: number; limit: number
   const rawPage = parseInt(String(query.page ?? ''), 10);
   const rawLimit = parseInt(String(query.limit ?? ''), 10);
   const page = Number.isFinite(rawPage) && rawPage > 0 ? rawPage : 1;
-  const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(rawLimit, MAX_PAGE_SIZE) : DEFAULT_PAGE_SIZE;
+  const limit =
+    Number.isFinite(rawLimit) && rawLimit > 0
+      ? Math.min(rawLimit, MAX_PAGE_SIZE)
+      : DEFAULT_PAGE_SIZE;
   return { page, limit, skip: (page - 1) * limit };
 }
 
@@ -237,13 +240,15 @@ class LeaseController {
         { limit, offset: skip },
       );
 
-      res.json(paginationResponse(
-        result.leases.map(serializeLease),
-        page,
-        limit,
-        result.total,
-        'Leases retrieved successfully'
-      ));
+      res.json(
+        paginationResponse(
+          result.leases.map(serializeLease),
+          page,
+          limit,
+          result.total,
+          'Leases retrieved successfully',
+        ),
+      );
     } catch (error) {
       next(error);
     }
@@ -264,7 +269,11 @@ class LeaseController {
         throw new AppError('tenantOxyUserId is required', 400, 'VALIDATION_ERROR');
       }
       if (!leaseTerms?.startDate || !leaseTerms?.endDate) {
-        throw new AppError('leaseTerms.startDate and leaseTerms.endDate are required', 400, 'VALIDATION_ERROR');
+        throw new AppError(
+          'leaseTerms.startDate and leaseTerms.endDate are required',
+          400,
+          'VALIDATION_ERROR',
+        );
       }
       if (rentDetails?.monthlyRent === undefined || rentDetails?.monthlyRent === null) {
         throw new AppError('rentDetails.monthlyRent is required', 400, 'VALIDATION_ERROR');
@@ -276,7 +285,11 @@ class LeaseController {
         throw new AppError('Property not found', 404, 'PROPERTY_NOT_FOUND');
       }
       if (!property.oxyUserId || property.oxyUserId !== oxyUserId) {
-        throw new AppError('Access denied - you can only create leases for your own properties', 403, 'FORBIDDEN');
+        throw new AppError(
+          'Access denied - you can only create leases for your own properties',
+          403,
+          'FORBIDDEN',
+        );
       }
 
       const picked = pickFields<Record<string, unknown>>(req.body, CREATABLE_LEASE_FIELDS);
@@ -286,7 +299,11 @@ class LeaseController {
       const endDate = columns.leaseTermsEndDate;
       const monthlyRent = columns.rentDetailsMonthlyRent;
       if (!startDate || !endDate) {
-        throw new AppError('leaseTerms.startDate and leaseTerms.endDate must be valid dates', 400, 'VALIDATION_ERROR');
+        throw new AppError(
+          'leaseTerms.startDate and leaseTerms.endDate must be valid dates',
+          400,
+          'VALIDATION_ERROR',
+        );
       }
       if (monthlyRent === undefined) {
         throw new AppError('rentDetails.monthlyRent must be a number', 400, 'VALIDATION_ERROR');
@@ -365,10 +382,18 @@ class LeaseController {
         throw new AppError('Lease not found', 404, 'LEASE_NOT_FOUND');
       }
       if (!isLandlord(access, oxyUserId)) {
-        throw new AppError('Access denied - only the landlord can update this lease', 403, 'FORBIDDEN');
+        throw new AppError(
+          'Access denied - only the landlord can update this lease',
+          403,
+          'FORBIDDEN',
+        );
       }
       if (!EDITABLE_STATUSES.includes(access.status as LeaseStatusValue)) {
-        throw new AppError('Cannot update a lease that is signed, active, or closed', 409, 'LEASE_NOT_EDITABLE');
+        throw new AppError(
+          'Cannot update a lease that is signed, active, or closed',
+          409,
+          'LEASE_NOT_EDITABLE',
+        );
       }
 
       const picked = pickFields<Record<string, unknown>>(req.body, EDITABLE_LEASE_FIELDS);
@@ -384,7 +409,11 @@ class LeaseController {
         }),
       );
       if (!hydrated) {
-        throw new AppError('Cannot update a lease that is signed, active, or closed', 409, 'LEASE_NOT_EDITABLE');
+        throw new AppError(
+          'Cannot update a lease that is signed, active, or closed',
+          409,
+          'LEASE_NOT_EDITABLE',
+        );
       }
 
       logger.info('Lease updated', { leaseId: hydrated.lease.id, updatedBy: oxyUserId });
@@ -408,17 +437,29 @@ class LeaseController {
         throw new AppError('Lease not found', 404, 'LEASE_NOT_FOUND');
       }
       if (!isLandlord(access, oxyUserId)) {
-        throw new AppError('Access denied - only the landlord can delete this lease', 403, 'FORBIDDEN');
+        throw new AppError(
+          'Access denied - only the landlord can delete this lease',
+          403,
+          'FORBIDDEN',
+        );
       }
       if (!DELETABLE_STATUSES.includes(access.status as LeaseStatusValue)) {
-        throw new AppError('Cannot delete a lease that is signed, active, or closed', 409, 'LEASE_NOT_DELETABLE');
+        throw new AppError(
+          'Cannot delete a lease that is signed, active, or closed',
+          409,
+          'LEASE_NOT_DELETABLE',
+        );
       }
 
       // Every child table CASCADEs, so this one statement takes the co-tenants,
       // schedule, documents and inspections with it.
       const deleted = await deleteLease(db, req.params.id, oxyUserId, DELETABLE_STATUSES);
       if (!deleted) {
-        throw new AppError('Cannot delete a lease that is signed, active, or closed', 409, 'LEASE_NOT_DELETABLE');
+        throw new AppError(
+          'Cannot delete a lease that is signed, active, or closed',
+          409,
+          'LEASE_NOT_DELETABLE',
+        );
       }
 
       logger.info('Lease deleted', { leaseId: req.params.id, deletedBy: oxyUserId });
@@ -624,7 +665,11 @@ class LeaseController {
       }
       const source = original.lease;
       if (source.landlordOxyUserId !== oxyUserId) {
-        throw new AppError('Access denied - only the landlord can renew this lease', 403, 'FORBIDDEN');
+        throw new AppError(
+          'Access denied - only the landlord can renew this lease',
+          403,
+          'FORBIDDEN',
+        );
       }
 
       const parsedStartDate = startDate ? new Date(startDate) : source.leaseTermsEndDate;
@@ -703,7 +748,9 @@ class LeaseController {
         createdBy: oxyUserId,
       });
 
-      res.status(201).json(successResponse(serializeLease(hydrated), 'Lease renewal created successfully'));
+      res
+        .status(201)
+        .json(successResponse(serializeLease(hydrated), 'Lease renewal created successfully'));
     } catch (error) {
       next(error);
     }
@@ -739,13 +786,15 @@ class LeaseController {
         { limit, offset: skip },
       );
 
-      res.json(paginationResponse(
-        result.rows.map(serializeLeasePayment),
-        page,
-        limit,
-        result.total,
-        'Lease payments retrieved successfully'
-      ));
+      res.json(
+        paginationResponse(
+          result.rows.map(serializeLeasePayment),
+          page,
+          limit,
+          result.total,
+          'Lease payments retrieved successfully',
+        ),
+      );
     } catch (error) {
       next(error);
     }
@@ -775,7 +824,11 @@ class LeaseController {
       // 400 naming the field.
       const types: readonly string[] = LEASE_PAYMENT_TYPES;
       if (typeof type !== 'string' || !types.includes(type)) {
-        throw new AppError('type must be one of rent, deposit, fee, utility', 400, 'VALIDATION_ERROR');
+        throw new AppError(
+          'type must be one of rent, deposit, fee, utility',
+          400,
+          'VALIDATION_ERROR',
+        );
       }
 
       const db = getDb();
@@ -802,7 +855,9 @@ class LeaseController {
         createdBy: oxyUserId,
       });
 
-      res.status(201).json(successResponse(serializeLeasePayment(created), 'Payment created successfully'));
+      res
+        .status(201)
+        .json(successResponse(serializeLeasePayment(created), 'Payment created successfully'));
     } catch (error) {
       next(error);
     }
@@ -825,10 +880,12 @@ class LeaseController {
 
       const documents = await listLeaseDocuments(db, req.params.id);
 
-      res.json(successResponse(
-        documents.map(serializeLeaseDocument),
-        'Lease documents retrieved successfully'
-      ));
+      res.json(
+        successResponse(
+          documents.map(serializeLeaseDocument),
+          'Lease documents retrieved successfully',
+        ),
+      );
     } catch (error) {
       next(error);
     }

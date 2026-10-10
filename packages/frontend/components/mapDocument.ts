@@ -42,7 +42,8 @@ const MAPLIBRE_DIST_URL = `https://unpkg.com/maplibre-gl@${MAPLIBRE_VERSION}/dis
  */
 export const MAPLIBRE_INTEGRITY = {
   'maplibre-gl.mjs': 'sha384-2g0hrGNSeleJsCzq4bdDa1QEBwj09vTce/Hf9TbggAsMv37hy9xmKfJfCfOojhyx',
-  'maplibre-gl-shared.mjs': 'sha384-jw07Ono+c6G30wWc0ndm4f9k5wolLAdoHS5hC/WiNNVmg8Sfk4cJKfVGefVigjwA',
+  'maplibre-gl-shared.mjs':
+    'sha384-jw07Ono+c6G30wWc0ndm4f9k5wolLAdoHS5hC/WiNNVmg8Sfk4cJKfVGefVigjwA',
   'maplibre-gl.css': 'sha384-Q5Blg3vUVAlUKqIPJYz7wGnz40Vwrx4pVuFVicI73+8c/26Zr5hhckfuIiIUflLE',
 } as const;
 

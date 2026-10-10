@@ -24,11 +24,12 @@ export function getValidationMessages(error: unknown): string[] {
   }
 
   return Object.values(error.errors)
-    .map((entry) => (isRecord(entry) && typeof entry.message === 'string' ? entry.message : undefined))
+    .map((entry) =>
+      isRecord(entry) && typeof entry.message === 'string' ? entry.message : undefined,
+    )
     .filter((message): message is string => Boolean(message));
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
-

@@ -30,7 +30,11 @@ import type {
 import { createFetchRuntime } from '../../../runtime';
 import { ChallengeError, fetchListingViaLadder } from '../../../strategy';
 import { isAntiBotChallenge } from '../../../parse/challenge';
-import { defaultProviderMetrics, type ProviderMetricsReader, type ProviderMetricsSink } from '../../../metrics';
+import {
+  defaultProviderMetrics,
+  type ProviderMetricsReader,
+  type ProviderMetricsSink,
+} from '../../../metrics';
 import type { ItSchemaListing } from '../../../parse/jsonLd';
 import { IDEALISTA_IT_BASE_URL } from './fixtures';
 import {
@@ -75,10 +79,15 @@ export interface IdealistaItProviderOptions {
 
 function resolvePropertyType(types: readonly string[]): PropertyType {
   const lower = types.map((type) => type.toLowerCase());
-  if (lower.some((type) => type.includes('house') || type.includes('villa') || type.includes('singlefamily'))) {
+  if (
+    lower.some(
+      (type) => type.includes('house') || type.includes('villa') || type.includes('singlefamily'),
+    )
+  ) {
     return PropertyType.HOUSE;
   }
-  if (lower.some((type) => type.includes('studio') || type.includes('monolocale'))) return PropertyType.STUDIO;
+  if (lower.some((type) => type.includes('studio') || type.includes('monolocale')))
+    return PropertyType.STUDIO;
   return PropertyType.APARTMENT;
 }
 
@@ -171,7 +180,14 @@ export class IdealistaItProvider implements ListingProvider {
       for (const ref of viaAjax) yield ref;
       if (yielded.count >= limit) return;
       if (viaAjax.length === 0) {
-        for await (const ref of this.discoverCityViaHtml(runtime, city, job.signal, seen, limit, yielded)) {
+        for await (const ref of this.discoverCityViaHtml(
+          runtime,
+          city,
+          job.signal,
+          seen,
+          limit,
+          yielded,
+        )) {
           yield ref;
         }
       }
@@ -273,12 +289,16 @@ export class IdealistaItProvider implements ListingProvider {
     for (let page = 1; page <= MAX_SEARCH_PAGES; page += 1) {
       if (yielded.count >= limit) return;
       try {
-        const { html } = await fetchListingViaLadder(runtime, idealistaItWarmSearchUrl(city, page), {
-          provider: this.id,
-          isChallenge: isIdealistaItChallenge,
-          metrics: this.metrics,
-          init: { signal },
-        });
+        const { html } = await fetchListingViaLadder(
+          runtime,
+          idealistaItWarmSearchUrl(city, page),
+          {
+            provider: this.id,
+            isChallenge: isIdealistaItChallenge,
+            metrics: this.metrics,
+            init: { signal },
+          },
+        );
         const refs = parseIdealistaItSearch(html);
         if (refs.length === 0) return;
         for (const ref of yieldRefs(refs, seen, limit, yielded)) yield ref;
@@ -415,7 +435,11 @@ export class IdealistaItProvider implements ListingProvider {
     const snapshot = this.metrics.snapshot(this.id);
     if (snapshot && snapshot.attempts > 0) {
       const status =
-        snapshot.challengeRate >= 0.8 ? 'unhealthy' : snapshot.challengeRate >= 0.3 ? 'degraded' : 'healthy';
+        snapshot.challengeRate >= 0.8
+          ? 'unhealthy'
+          : snapshot.challengeRate >= 0.3
+            ? 'degraded'
+            : 'healthy';
       return {
         provider: this.id,
         status,

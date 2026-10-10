@@ -6,19 +6,8 @@
  * `Item` conversation rows (`ConversationList`) and `Skeleton` rows while the
  * list loads; the shared `EmptyState` covers the signed-out and empty cases.
  */
-import React, {
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-} from 'react';
-import {
-  Platform,
-  ScrollView,
-  StyleSheet,
-  View,
-} from 'react-native';
+import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -61,7 +50,7 @@ const FEATURES = [
 const SindiSkeleton: React.FC = () => (
   <View style={styles.skeletonList}>
     {Array.from({ length: 4 }).map((_, idx) => (
-      <Card key={idx}  style={styles.skeletonRow} appearance="outline">
+      <Card key={idx} style={styles.skeletonRow} appearance="outline">
         <Skeleton.Circle size={36} />
         <View style={styles.skeletonBody}>
           <Skeleton.Text style={{ width: 180, lineHeight: 16 }} />
@@ -77,12 +66,7 @@ export default function Sindi() {
   const router = useRouter();
   const { t } = useTranslation();
   const { colors } = useTheme();
-  const {
-    conversations,
-    loading,
-    loadConversations,
-    createConversation,
-  } = useConversationStore();
+  const { conversations, loading, loadConversations, createConversation } = useConversationStore();
   const [searchQuery, setSearchQuery] = useState('');
   const bottomSheetContext = useContext(BottomSheetContext);
 
@@ -106,18 +90,10 @@ export default function Sindi() {
       router.push(`/sindi/${newConversation.id}`);
       loadConversations(conversationFetch);
     } catch {
-      const conversationId = `conv_${Date.now()}_${Math.random()
-        .toString(36)
-        .substr(2, 9)}`;
+      const conversationId = `conv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       router.push(`/sindi/${conversationId}`);
     }
-  }, [
-    isAuthenticated,
-    conversationFetch,
-    router,
-    createConversation,
-    loadConversations,
-  ]);
+  }, [isAuthenticated, conversationFetch, router, createConversation, loadConversations]);
 
   const filteredConversations = useMemo(() => {
     if (!searchQuery.trim()) return conversations;
@@ -125,17 +101,14 @@ export default function Sindi() {
     return conversations.filter(
       (c) =>
         c.title.toLowerCase().includes(q) ||
-        (c.messages[c.messages.length - 1]?.content || '')
-          .toLowerCase()
-          .includes(q),
+        (c.messages[c.messages.length - 1]?.content || '').toLowerCase().includes(q),
     );
   }, [conversations, searchQuery]);
 
   const sortedConversations = useMemo(
     () =>
       [...filteredConversations].sort(
-        (a, b) =>
-          new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+        (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
       ),
     [filteredConversations],
   );
@@ -151,19 +124,17 @@ export default function Sindi() {
   // platform-specific web overrides used elsewhere in the app.
   const webContainerStyle =
     Platform.OS === 'web'
-      ? ({
+      ? {
           height: '100vh' as unknown as number,
           display: 'flex' as const,
           flexDirection: 'column' as const,
-        })
+        }
       : undefined;
 
   if (!isAuthenticated) {
     return (
       <View style={styles.root}>
-        <Header
-          options={{ title: t('sindi.title'), showBackButton: true }}
-        />
+        <Header options={{ title: t('sindi.title'), showBackButton: true }} />
         <EmptyState
           icon={RiLockLine}
           title={t('sindi.auth.required')}
@@ -192,10 +163,12 @@ export default function Sindi() {
           <SindiIcon size={56} color={colors.primary} />
           <SectionEyebrow>Meet Sindi</SectionEyebrow>
           <H1 style={styles.center}>{t('sindi.title')}</H1>
-          <Text variant="body-regular" style={[styles.heroDescription, { color: colors.textSecondary }]}>
-            Your AI-powered housing rights assistant. Get instant help with
-            tenant issues, understand your rights, and navigate housing
-            challenges with confidence.
+          <Text
+            variant="body-regular"
+            style={[styles.heroDescription, { color: colors.textSecondary }]}
+          >
+            Your AI-powered housing rights assistant. Get instant help with tenant issues,
+            understand your rights, and navigate housing challenges with confidence.
           </Text>
           <Button
             size="md"
@@ -209,7 +182,9 @@ export default function Sindi() {
                 );
               }
             }}
-            accessibilityLabel="Learn how Sindi works" tone="neutral" appearance="outline"
+            accessibilityLabel="Learn how Sindi works"
+            tone="neutral"
+            appearance="outline"
           >
             Learn how it works
           </Button>
@@ -217,7 +192,7 @@ export default function Sindi() {
 
         <View style={styles.featuresRow}>
           {FEATURES.map(({ icon: Icon, label }) => (
-            <Card key={label}  style={styles.featureCell} appearance="outline">
+            <Card key={label} style={styles.featureCell} appearance="outline">
               <Icon width={20} height={20} fill={colors.primary} />
               <Text variant="body-2-medium" style={[styles.center, { color: colors.text }]}>
                 {label}
@@ -230,7 +205,9 @@ export default function Sindi() {
           size="lg"
           onPress={createNewConversation}
           leadingIcon={RiAddLine}
-          fullWidth tone="accent" appearance="solid"
+          fullWidth
+          tone="accent"
+          appearance="solid"
         >
           Start new conversation
         </Button>
@@ -251,9 +228,7 @@ export default function Sindi() {
               icon={RiDiscussLine}
               title={searchQuery ? 'No matches' : 'No conversations yet'}
               description={
-                searchQuery
-                  ? 'Try a different keyword.'
-                  : 'Start a new conversation to get help.'
+                searchQuery ? 'Try a different keyword.' : 'Start a new conversation to get help.'
               }
               actionText={searchQuery ? undefined : 'Start first chat'}
               actionIcon={searchQuery ? undefined : RiAddCircleLine}

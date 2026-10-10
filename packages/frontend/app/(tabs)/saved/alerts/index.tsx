@@ -110,7 +110,11 @@ export default function AlertHistoryScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
       <Header options={{ title: t('alerts.history.title') }} />
-      <ScrollView contentContainerStyle={styles.content} onScroll={onScroll} scrollEventThrottle={16}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
+      >
         {groups.length === 0 ? (
           <EmptyState
             icon={RiNotification3Line}
@@ -120,9 +124,7 @@ export default function AlertHistoryScreen() {
         ) : (
           groups.map((group) => (
             <View key={group.key}>
-              <H3 style={styles.dayLabel}>
-                {group.label}
-              </H3>
+              <H3 style={styles.dayLabel}>{group.label}</H3>
               <View style={styles.dayList}>
                 {group.alerts.map((alert) => (
                   <AlertRow key={alert.id} alert={alert} />
@@ -155,7 +157,8 @@ function AlertRow({ alert }: { readonly alert: HousingAlert }) {
       onPress={() => router.push(`/saved/alerts/${alert.id}`)}
       accessibilityRole="button"
       accessibilityLabel={t('alerts.history.openReason')}
-      style={styles.row} appearance="outline"
+      style={styles.row}
+      appearance="outline"
     >
       <View style={styles.rowHeader}>
         <RiMapPinLine width={ICON_SIZE} height={ICON_SIZE} fill={theme.colors.textSecondary} />

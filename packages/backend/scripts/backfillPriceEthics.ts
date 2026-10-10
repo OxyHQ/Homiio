@@ -15,10 +15,7 @@ dotenv.config({ path: path.join(__dirname, '..', '.env') });
 
 import { PropertyStatus } from '@homiio/shared-types';
 import { scoreAndPersistProperty } from '../services/priceEthicsService';
-import {
-  finalBatchToFlush,
-  readyBatchAfterAppend,
-} from './backfillPriceEthicsBatching';
+import { finalBatchToFlush, readyBatchAfterAppend } from './backfillPriceEthicsBatching';
 
 import { and, asc, eq, gt, isNull, or, sql } from 'drizzle-orm';
 
@@ -157,7 +154,9 @@ async function main(): Promise<void> {
         const result = await processBatch(ready);
         scored += result.scored;
         failed += result.failed;
-        console.log(`  batch done: ${processed}/${toProcess} processed (${scored} scored, ${failed} failed)`);
+        console.log(
+          `  batch done: ${processed}/${toProcess} processed (${scored} scored, ${failed} failed)`,
+        );
         batch = [];
       }
     }
@@ -168,7 +167,9 @@ async function main(): Promise<void> {
     const result = await processBatch(remaining);
     scored += result.scored;
     failed += result.failed;
-    console.log(`  batch done: ${processed}/${toProcess} processed (${scored} scored, ${failed} failed)`);
+    console.log(
+      `  batch done: ${processed}/${toProcess} processed (${scored} scored, ${failed} failed)`,
+    );
   }
 
   console.log(`Finished: ${scored} scored, ${failed} failed out of ${processed} processed`);

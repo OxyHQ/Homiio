@@ -91,9 +91,7 @@ export const ChatMessage = React.memo<ChatMessageProps>(
             </View>
           ) : null}
           {text ? (
-            <AiChatUserMessage animate={animate}>
-              {renderMarkdownBlocks(text)}
-            </AiChatUserMessage>
+            <AiChatUserMessage animate={animate}>{renderMarkdownBlocks(text)}</AiChatUserMessage>
           ) : null}
           {footnote ? <View style={styles.userFootnote}>{footnoteLine}</View> : null}
         </View>

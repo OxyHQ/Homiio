@@ -94,9 +94,7 @@ export function SindiSection({ property }: SindiSectionProps) {
             <Chip
               variant="subtle"
               color="success"
-              startIcon={
-                <RiVerifiedBadgeFill width={16} height={16} fill={themeColors.success} />
-              }
+              startIcon={<RiVerifiedBadgeFill width={16} height={16} fill={themeColors.success} />}
             >
               Verified by Sindi
             </Chip>
@@ -121,12 +119,12 @@ export function SindiSection({ property }: SindiSectionProps) {
         <Button
           onPress={() => openSindi()}
           size="lg"
-          icon={
-            <SindiIcon size={18} color={colors.primaryForeground} />
-          }
+          icon={<SindiIcon size={18} color={colors.primaryForeground} />}
           iconPosition="left"
           accessibilityLabel="Ask Sindi AI about this home"
-          accessibilityHint="Opens a chat with Sindi about this property" tone="accent" appearance="solid"
+          accessibilityHint="Opens a chat with Sindi about this property"
+          tone="accent"
+          appearance="solid"
         >
           Ask Sindi about this home
         </Button>

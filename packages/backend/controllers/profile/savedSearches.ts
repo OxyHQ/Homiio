@@ -58,11 +58,7 @@ import {
   updateSavedSearch as updateSavedSearchRow,
   type WatchAlertSettings,
 } from '../../db/saved/savedSearchRepository';
-import {
-  findAlertForOwner,
-  listAlerts,
-  toHousingAlertDTO,
-} from '../../db/watches/alertRepository';
+import { findAlertForOwner, listAlerts, toHousingAlertDTO } from '../../db/watches/alertRepository';
 import { findDomainEvent } from '../../db/watches/domainEventRepository';
 import { errorResponse, successResponse } from './shared';
 
@@ -272,14 +268,14 @@ export async function getSavedSearches(req: Request, res: Response, next: NextFu
     const oxyUserId = ownerOf(req);
 
     if (!oxyUserId) {
-      return res.status(401).json(
-        errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
-      );
+      return res
+        .status(401)
+        .json(errorResponse('Authentication required', 'AUTHENTICATION_REQUIRED'));
     }
 
     const rows = await listSavedSearches(getDb(), oxyUserId);
 
-    res.json(successResponse(rows.map(toSavedSearchDTO), "Saved searches retrieved successfully"));
+    res.json(successResponse(rows.map(toSavedSearchDTO), 'Saved searches retrieved successfully'));
   } catch (error) {
     next(error);
   }
@@ -294,16 +290,16 @@ export async function saveSearch(req: Request, res: Response, next: NextFunction
     const { name, query, filters } = req.body;
 
     if (!oxyUserId) {
-      return res.status(401).json(
-        errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
-      );
+      return res
+        .status(401)
+        .json(errorResponse('Authentication required', 'AUTHENTICATION_REQUIRED'));
     }
 
     const location = readLocation(req.body.location);
     if (location === null) {
-      return res.status(400).json(
-        errorResponse("The location is not a recognised selection", "INVALID_LOCATION")
-      );
+      return res
+        .status(400)
+        .json(errorResponse('The location is not a recognised selection', 'INVALID_LOCATION'));
     }
 
     // A name, and SOMETHING to search — a location, free text, or both.
@@ -314,9 +310,14 @@ export async function saveSearch(req: Request, res: Response, next: NextFunction
     // with a 400 the user could do nothing about.
     const text = typeof query === 'string' ? query.trim() : '';
     if (typeof name !== 'string' || !name.trim() || (!location && !text)) {
-      return res.status(400).json(
-        errorResponse("A search name and either a location or search text are required", "SEARCH_DATA_REQUIRED")
-      );
+      return res
+        .status(400)
+        .json(
+          errorResponse(
+            'A search name and either a location or search text are required',
+            'SEARCH_DATA_REQUIRED',
+          ),
+        );
     }
 
     let settings;
@@ -342,14 +343,16 @@ export async function saveSearch(req: Request, res: Response, next: NextFunction
       });
     } catch (error) {
       if (error instanceof SavedSearchNameTakenError) {
-        return res.status(409).json(
-          errorResponse("A search with this name already exists", "SEARCH_NAME_EXISTS")
-        );
+        return res
+          .status(409)
+          .json(errorResponse('A search with this name already exists', 'SEARCH_NAME_EXISTS'));
       }
       throw error;
     }
 
-    res.status(201).json(successResponse(toSavedSearchDTO(savedSearch), "Search saved successfully"));
+    res
+      .status(201)
+      .json(successResponse(toSavedSearchDTO(savedSearch), 'Search saved successfully'));
   } catch (error) {
     next(error);
   }
@@ -364,26 +367,24 @@ export async function deleteSavedSearch(req: Request, res: Response, next: NextF
     const { searchId } = req.params;
 
     if (!oxyUserId) {
-      return res.status(401).json(
-        errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
-      );
+      return res
+        .status(401)
+        .json(errorResponse('Authentication required', 'AUTHENTICATION_REQUIRED'));
     }
 
     if (!searchId) {
-      return res.status(400).json(
-        errorResponse("Search ID is required", "SEARCH_ID_REQUIRED")
-      );
+      return res.status(400).json(errorResponse('Search ID is required', 'SEARCH_ID_REQUIRED'));
     }
 
     const deleted = await deleteSavedSearchRow(getDb(), searchId, oxyUserId);
 
     if (!deleted) {
-      return res.status(404).json(
-        errorResponse("Saved search not found", "SAVED_SEARCH_NOT_FOUND")
-      );
+      return res
+        .status(404)
+        .json(errorResponse('Saved search not found', 'SAVED_SEARCH_NOT_FOUND'));
     }
 
-    res.json(successResponse(null, "Search deleted successfully"));
+    res.json(successResponse(null, 'Search deleted successfully'));
   } catch (error) {
     next(error);
   }
@@ -399,22 +400,20 @@ export async function updateSavedSearch(req: Request, res: Response, next: NextF
     const { name, query, filters } = req.body;
 
     if (!oxyUserId) {
-      return res.status(401).json(
-        errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
-      );
+      return res
+        .status(401)
+        .json(errorResponse('Authentication required', 'AUTHENTICATION_REQUIRED'));
     }
 
     if (!searchId) {
-      return res.status(400).json(
-        errorResponse("Search ID is required", "SEARCH_ID_REQUIRED")
-      );
+      return res.status(400).json(errorResponse('Search ID is required', 'SEARCH_ID_REQUIRED'));
     }
 
     const location = readLocation(req.body.location);
     if (req.body.location !== undefined && req.body.location !== null && location === null) {
-      return res.status(400).json(
-        errorResponse("The location is not a recognised selection", "INVALID_LOCATION")
-      );
+      return res
+        .status(400)
+        .json(errorResponse('The location is not a recognised selection', 'INVALID_LOCATION'));
     }
 
     let settings;
@@ -436,20 +435,20 @@ export async function updateSavedSearch(req: Request, res: Response, next: NextF
       });
     } catch (error) {
       if (error instanceof SavedSearchNameTakenError) {
-        return res.status(409).json(
-          errorResponse("A search with this name already exists", "SEARCH_NAME_EXISTS")
-        );
+        return res
+          .status(409)
+          .json(errorResponse('A search with this name already exists', 'SEARCH_NAME_EXISTS'));
       }
       throw error;
     }
 
     if (!savedSearch) {
-      return res.status(404).json(
-        errorResponse("Saved search not found", "SAVED_SEARCH_NOT_FOUND")
-      );
+      return res
+        .status(404)
+        .json(errorResponse('Saved search not found', 'SAVED_SEARCH_NOT_FOUND'));
     }
 
-    res.json(successResponse(toSavedSearchDTO(savedSearch), "Search updated successfully"));
+    res.json(successResponse(toSavedSearchDTO(savedSearch), 'Search updated successfully'));
   } catch (error) {
     next(error);
   }
@@ -469,40 +468,42 @@ export async function toggleSearchNotifications(req: Request, res: Response, nex
     const { notificationsEnabled } = req.body;
 
     if (!oxyUserId) {
-      return res.status(401).json(
-        errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
-      );
+      return res
+        .status(401)
+        .json(errorResponse('Authentication required', 'AUTHENTICATION_REQUIRED'));
     }
 
     if (!searchId) {
-      return res.status(400).json(
-        errorResponse("Search ID is required", "SEARCH_ID_REQUIRED")
-      );
+      return res.status(400).json(errorResponse('Search ID is required', 'SEARCH_ID_REQUIRED'));
     }
 
     const enabled = Boolean(notificationsEnabled);
     const existing = await findSavedSearch(getDb(), searchId, oxyUserId);
     if (!existing) {
-      return res.status(404).json(
-        errorResponse("Saved search not found", "SAVED_SEARCH_NOT_FOUND")
-      );
+      return res
+        .status(404)
+        .json(errorResponse('Saved search not found', 'SAVED_SEARCH_NOT_FOUND'));
     }
 
     const savedSearch = await updateSavedSearchRow(getDb(), searchId, oxyUserId, {
       notificationsEnabled: enabled,
       // Kept in lockstep in ONE statement. A cadence the caller already chose is
       // not clobbered by a re-enable: only the off↔instant transition is implied.
-      cadence: enabled ? (existing.row.cadence === 'off' ? 'instant' : existing.row.cadence) : 'off',
+      cadence: enabled
+        ? existing.row.cadence === 'off'
+          ? 'instant'
+          : existing.row.cadence
+        : 'off',
     });
 
     if (!savedSearch) {
-      return res.status(404).json(
-        errorResponse("Saved search not found", "SAVED_SEARCH_NOT_FOUND")
-      );
+      return res
+        .status(404)
+        .json(errorResponse('Saved search not found', 'SAVED_SEARCH_NOT_FOUND'));
     }
 
     res.json(
-      successResponse(toSavedSearchDTO(savedSearch), "Search notifications updated successfully")
+      successResponse(toSavedSearchDTO(savedSearch), 'Search notifications updated successfully'),
     );
   } catch (error) {
     next(error);
@@ -519,9 +520,9 @@ export async function getHousingAlerts(req: Request, res: Response, next: NextFu
   try {
     const oxyUserId = ownerOf(req);
     if (!oxyUserId) {
-      return res.status(401).json(
-        errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
-      );
+      return res
+        .status(401)
+        .json(errorResponse('Authentication required', 'AUTHENTICATION_REQUIRED'));
     }
 
     const requested = Number.parseInt(String(req.query.limit ?? ''), 10);
@@ -536,19 +537,15 @@ export async function getHousingAlerts(req: Request, res: Response, next: NextFu
     const { rows, total } = await listAlerts(getDb(), { oxyUserId, watchId }, { limit, offset });
 
     res.json(
-      successResponse(
-        rows.map(toHousingAlertDTO),
-        "Alerts retrieved successfully",
-        {
-          total,
-          limit,
-          offset,
-          // Flat aliases beside the nested object, the convention every list
-          // endpoint feeding an infinite grid here follows.
-          hasMore: offset + rows.length < total,
-          pagination: { total, limit, offset },
-        },
-      ),
+      successResponse(rows.map(toHousingAlertDTO), 'Alerts retrieved successfully', {
+        total,
+        limit,
+        offset,
+        // Flat aliases beside the nested object, the convention every list
+        // endpoint feeding an infinite grid here follows.
+        hasMore: offset + rows.length < total,
+        pagination: { total, limit, offset },
+      }),
     );
   } catch (error) {
     next(error);
@@ -567,19 +564,19 @@ export async function getHousingAlert(req: Request, res: Response, next: NextFun
   try {
     const oxyUserId = ownerOf(req);
     if (!oxyUserId) {
-      return res.status(401).json(
-        errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
-      );
+      return res
+        .status(401)
+        .json(errorResponse('Authentication required', 'AUTHENTICATION_REQUIRED'));
     }
 
     const { alertId } = req.params;
     if (!alertId) {
-      return res.status(400).json(errorResponse("Alert ID is required", "ALERT_ID_REQUIRED"));
+      return res.status(400).json(errorResponse('Alert ID is required', 'ALERT_ID_REQUIRED'));
     }
 
     const alert = await findAlertForOwner(getDb(), alertId, oxyUserId);
     if (!alert) {
-      return res.status(404).json(errorResponse("Alert not found", "ALERT_NOT_FOUND"));
+      return res.status(404).json(errorResponse('Alert not found', 'ALERT_NOT_FOUND'));
     }
 
     const watch = await findSavedSearch(getDb(), alert.watchId, oxyUserId);
@@ -607,7 +604,7 @@ export async function getHousingAlert(req: Request, res: Response, next: NextFun
               }
             : null,
         },
-        "Alert retrieved successfully",
+        'Alert retrieved successfully',
       ),
     );
   } catch (error) {

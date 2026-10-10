@@ -467,7 +467,7 @@ export function normalizeLongitude(value: number): number {
   // that no longer round-trips and a cache key that drifts every time a URL is
   // re-serialised, for coordinates that never needed wrapping at all.
   if (value >= -180 && value < 180) return value === 0 ? 0 : value;
-  const wrapped = (((value + 180) % 360) + 360) % 360 - 180;
+  const wrapped = ((((value + 180) % 360) + 360) % 360) - 180;
   // -0 can fall out of the modulo; normalise it so two spellings of zero cannot
   // produce two tokens.
   return wrapped === 0 ? 0 : wrapped;
@@ -895,7 +895,9 @@ export function locationRefOf(selection: LocationSelection): LocationTokenResult
 }
 
 function refSourceOf(source: PlaceSource): LocationRefSource {
-  return source.kind === 'homiio' ? { kind: 'homiio' } : { kind: 'external', provider: source.provider };
+  return source.kind === 'homiio'
+    ? { kind: 'homiio' }
+    : { kind: 'external', provider: source.provider };
 }
 
 function sourceIdOf(source: PlaceSource): string {
@@ -1002,7 +1004,9 @@ function parsePlaceToken(placeType: GeoPlaceType, rest: string): LocationTokenRe
   const id = rest.slice(dot + 1);
   if (!isEncodableSegment(id, false)) return fail('malformed');
   const source: LocationRefSource =
-    sourceSegment === HOMIIO_SOURCE ? { kind: 'homiio' } : { kind: 'external', provider: sourceSegment };
+    sourceSegment === HOMIIO_SOURCE
+      ? { kind: 'homiio' }
+      : { kind: 'external', provider: sourceSegment };
   if (source.kind === 'external' && !isEncodableSegment(source.provider, true)) {
     return fail('malformed');
   }

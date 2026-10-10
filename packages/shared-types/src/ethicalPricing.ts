@@ -230,7 +230,8 @@ export function calculateEthicalRent(
     basePrice = 800;
     reasoning.push(`Base room price: ${money(800)}`);
   } else {
-    const basePricePerSqft = BASE_PRICES_PER_SQFT[property.type] ?? BASE_PRICES_PER_SQFT[PropertyType.OTHER];
+    const basePricePerSqft =
+      BASE_PRICES_PER_SQFT[property.type] ?? BASE_PRICES_PER_SQFT[PropertyType.OTHER];
     basePrice = property.squareFootage * basePricePerSqft;
     reasoning.push(
       `${property.type} base price: ${formatMoney(basePricePerSqft, display.currency, display.locale, { maximumFractionDigits: 2 })}/sqft × ${property.squareFootage}sqft = ${money(basePrice)}`,
@@ -256,7 +257,9 @@ export function calculateEthicalRent(
     }
   }
   const sizeAdjustedPrice = bathroomAdjustedPrice * sizeEfficiencyAdjustment;
-  reasoning.push(`Size efficiency adjustment (${sizeEfficiencyAdjustment}x): ${money(sizeAdjustedPrice)}`);
+  reasoning.push(
+    `Size efficiency adjustment (${sizeEfficiencyAdjustment}x): ${money(sizeAdjustedPrice)}`,
+  );
 
   let qualityAdjustment = 1.0;
   if (property.yearBuilt) {
@@ -285,7 +288,9 @@ export function calculateEthicalRent(
   }
   const floorAdjustedPrice = qualityAdjustedPrice * floorAdjustment;
   if (property.floor && property.floor > 0) {
-    reasoning.push(`Floor adjustment (${floorAdjustment}x, floor ${property.floor}): ${money(floorAdjustedPrice)}`);
+    reasoning.push(
+      `Floor adjustment (${floorAdjustment}x, floor ${property.floor}): ${money(floorAdjustedPrice)}`,
+    );
   }
 
   let amenityValue = 0;
@@ -313,11 +318,15 @@ export function calculateEthicalRent(
   }
   if (property.utilitiesIncluded) {
     amenityValue += ADDITIONAL_AMENITY_VALUES.utilities_included;
-    amenityBreakdown.push(`utilities included: +${money(ADDITIONAL_AMENITY_VALUES.utilities_included)}`);
+    amenityBreakdown.push(
+      `utilities included: +${money(ADDITIONAL_AMENITY_VALUES.utilities_included)}`,
+    );
   }
   if (property.proximityToTransport) {
     amenityValue += ADDITIONAL_AMENITY_VALUES.proximity_transport;
-    amenityBreakdown.push(`near transport: +${money(ADDITIONAL_AMENITY_VALUES.proximity_transport)}`);
+    amenityBreakdown.push(
+      `near transport: +${money(ADDITIONAL_AMENITY_VALUES.proximity_transport)}`,
+    );
   }
   if (property.proximityToSchools) {
     amenityValue += ADDITIONAL_AMENITY_VALUES.proximity_schools;
@@ -334,7 +343,8 @@ export function calculateEthicalRent(
     amenityBreakdown.push(`additional parking (${additionalSpaces}): +${money(parkingValue)}`);
   }
 
-  const housingTypeMultiplier = HOUSING_TYPE_MULTIPLIERS[property.housingType ?? HousingType.PRIVATE];
+  const housingTypeMultiplier =
+    HOUSING_TYPE_MULTIPLIERS[property.housingType ?? HousingType.PRIVATE];
   const housingTypeAdjustedPrice = (floorAdjustedPrice + amenityValue) * housingTypeMultiplier;
   const suggestedRent = Math.round(housingTypeAdjustedPrice);
 
@@ -342,7 +352,9 @@ export function calculateEthicalRent(
     reasoning.push(`Amenities added: +${money(amenityValue)} (${amenityBreakdown.join(', ')})`);
   }
   if (property.housingType === HousingType.PUBLIC) {
-    reasoning.push(`Public housing discount (${housingTypeMultiplier}x): ${money(housingTypeAdjustedPrice)}`);
+    reasoning.push(
+      `Public housing discount (${housingTypeMultiplier}x): ${money(housingTypeAdjustedPrice)}`,
+    );
   }
   reasoning.push(`Final suggested rent: ${money(suggestedRent)}`);
 

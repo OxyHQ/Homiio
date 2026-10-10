@@ -34,11 +34,7 @@ import { and, eq } from 'drizzle-orm';
 import * as savedFolders from '../../controllers/profile/savedFolders';
 import * as savedProperties from '../../controllers/profile/savedProperties';
 import { getDb } from '../../db/postgres';
-import {
-  properties as propertiesTable,
-  savedItems,
-  savedPropertyFolders,
-} from '../../db/schema';
+import { properties as propertiesTable, savedItems, savedPropertyFolders } from '../../db/schema';
 import { errorHandler } from '../../middlewares/errorHandler';
 import { resetGeoTables, seedListingWithGeo, seedProperty } from '../helpers/postgresGeoFixtures';
 
@@ -51,7 +47,9 @@ function buildApp(oxyUserId?: string): Express {
     }
     next();
   });
-  app.get('/saved-properties', (req, res, next) => savedProperties.getSavedProperties(req, res, next));
+  app.get('/saved-properties', (req, res, next) =>
+    savedProperties.getSavedProperties(req, res, next),
+  );
   app.post('/save-property', (req, res, next) => savedProperties.saveProperty(req, res, next));
   app.delete('/saved-properties/:propertyId', (req, res, next) =>
     savedProperties.unsaveProperty(req, res, next),
@@ -124,7 +122,9 @@ afterAll(async () => {
 
 describe('saveProperty', () => {
   it('saves a listing into a default folder it creates on first use', async () => {
-    const res = await request(buildApp('oxy-a')).post('/save-property').send({ propertyId: listingA });
+    const res = await request(buildApp('oxy-a'))
+      .post('/save-property')
+      .send({ propertyId: listingA });
 
     expect(res.status).toBe(200);
     const folders = await foldersOf('oxy-a');
@@ -169,8 +169,12 @@ describe('saveProperty', () => {
     // The index that breaks this is `UNIQUE(target_type, target_id)`, which
     // passes every "rejects a duplicate" assertion above. This is the permit
     // half `CONVENTIONS.md` requires a unique index to be tested on.
-    const a = await request(buildApp('oxy-a')).post('/save-property').send({ propertyId: listingA });
-    const b = await request(buildApp('oxy-b')).post('/save-property').send({ propertyId: listingA });
+    const a = await request(buildApp('oxy-a'))
+      .post('/save-property')
+      .send({ propertyId: listingA });
+    const b = await request(buildApp('oxy-b'))
+      .post('/save-property')
+      .send({ propertyId: listingA });
     expect(a.status).toBe(200);
     expect(b.status).toBe(200);
 
@@ -191,7 +195,9 @@ describe('saveProperty', () => {
   });
 
   it('requires authentication and a property id', async () => {
-    expect((await request(buildApp()).post('/save-property').send({ propertyId: listingA })).status).toBe(401);
+    expect(
+      (await request(buildApp()).post('/save-property').send({ propertyId: listingA })).status,
+    ).toBe(401);
     expect((await request(buildApp('oxy-a')).post('/save-property').send({})).status).toBe(400);
   });
 
@@ -304,7 +310,9 @@ describe('unsaveProperty / updateSavedPropertyNotes — ownership', () => {
     expect(updated.status).toBe(200);
     expect(updated.body.data.notes).toBe('second');
 
-    const cleared = await request(app).patch(`/saved-properties/${listingA}/notes`).send({ notes: '' });
+    const cleared = await request(app)
+      .patch(`/saved-properties/${listingA}/notes`)
+      .send({ notes: '' });
     expect(cleared.status).toBe(200);
     expect((await savesOf('oxy-a'))[0].notes).toBeNull();
   });
@@ -338,7 +346,9 @@ describe('saved-property folders', () => {
   });
 
   it('stores a blank description as NULL rather than as an empty string', async () => {
-    const res = await request(buildApp('oxy-a')).post('/folders').send({ name: 'Plain', description: '  ' });
+    const res = await request(buildApp('oxy-a'))
+      .post('/folders')
+      .send({ name: 'Plain', description: '  ' });
     expect(res.status).toBe(201);
     expect(res.body.data.description).toBeNull();
   });
@@ -372,15 +382,22 @@ describe('saved-property folders', () => {
     // controller supplies (the count map omits empty folders).
     await request(app).post('/folders').send({ name: 'City' });
 
-    await request(app).post('/save-property').send({ propertyId: listingA, folderId: beach.body.data.id });
-    await request(app).post('/save-property').send({ propertyId: listingB, folderId: beach.body.data.id });
+    await request(app)
+      .post('/save-property')
+      .send({ propertyId: listingA, folderId: beach.body.data.id });
+    await request(app)
+      .post('/save-property')
+      .send({ propertyId: listingB, folderId: beach.body.data.id });
     // Another person's save in their OWN folder must not be counted here.
     await request(buildApp('oxy-b')).post('/save-property').send({ propertyId: listingA });
 
     const res = await request(app).get('/folders');
     expect(res.status).toBe(200);
     const counts = Object.fromEntries(
-      res.body.data.folders.map((f: { name: string; propertyCount: number }) => [f.name, f.propertyCount]),
+      res.body.data.folders.map((f: { name: string; propertyCount: number }) => [
+        f.name,
+        f.propertyCount,
+      ]),
     );
     expect(counts).toEqual({ Beach: 2, City: 0 });
   });
@@ -414,7 +431,9 @@ describe('saved-property folders', () => {
     await request(app).post('/save-property').send({ propertyId: listingA });
     const defaultFolder = (await foldersOf('oxy-a'))[0];
 
-    const updated = await request(app).put(`/folders/${defaultFolder.id}`).send({ name: 'Renamed' });
+    const updated = await request(app)
+      .put(`/folders/${defaultFolder.id}`)
+      .send({ name: 'Renamed' });
     expect(updated.status).toBe(400);
     expect(updated.body.code).toBe('CANNOT_UPDATE_DEFAULT_FOLDER');
 
@@ -441,7 +460,7 @@ describe('saved-property folders', () => {
     expect(folders[0].name).toBe('Mine');
   });
 
-  it('answers 409 when a rename collides with another of the same owner\'s folders', async () => {
+  it("answers 409 when a rename collides with another of the same owner's folders", async () => {
     const app = buildApp('oxy-a');
     await request(app).post('/folders').send({ name: 'Taken' });
     const other = await request(app).post('/folders').send({ name: 'Free' });
@@ -462,8 +481,12 @@ describe('saved-property folders', () => {
     // listing by tidying up a folder.
     const app = buildApp('oxy-a');
     const folder = await request(app).post('/folders').send({ name: 'Temporary' });
-    await request(app).post('/save-property').send({ propertyId: listingA, folderId: folder.body.data.id });
-    await request(app).post('/save-property').send({ propertyId: listingB, folderId: folder.body.data.id });
+    await request(app)
+      .post('/save-property')
+      .send({ propertyId: listingA, folderId: folder.body.data.id });
+    await request(app)
+      .post('/save-property')
+      .send({ propertyId: listingB, folderId: folder.body.data.id });
 
     const res = await request(app).delete(`/folders/${folder.body.data.id}`);
     expect(res.status).toBe(200);
@@ -482,7 +505,9 @@ describe('saved-property folders', () => {
     // handler that recognised only a 24-hex ObjectId would answer 400 for a
     // perfectly valid uuid v7.
     const app = buildApp('oxy-a');
-    expect((await request(app).delete('/folders/0198f0a1-0000-7000-8000-000000000000')).status).toBe(404);
+    expect(
+      (await request(app).delete('/folders/0198f0a1-0000-7000-8000-000000000000')).status,
+    ).toBe(404);
     expect((await request(app).delete('/folders/507f1f77bcf86cd799439011')).status).toBe(404);
     expect((await request(app).delete('/folders/not-an-id')).status).toBe(404);
   });
@@ -504,7 +529,9 @@ describe('the folder membership table has no writer', () => {
     // survives; this pins that the port did not quietly start maintaining both.
     const app = buildApp('oxy-a');
     const folder = await request(app).post('/folders').send({ name: 'Beach' });
-    await request(app).post('/save-property').send({ propertyId: listingA, folderId: folder.body.data.id });
+    await request(app)
+      .post('/save-property')
+      .send({ propertyId: listingA, folderId: folder.body.data.id });
 
     const filed = await getDb()
       .select()

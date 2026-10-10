@@ -39,9 +39,7 @@ const errorResponse = (message = 'Error occurred', code = 'ERROR') => ({
  * resolve its owner server-side, and every handler in this directory is scoped
  * to whoever is holding the credential.
  */
-function _getOxyUserId(req: {
-  user?: { id?: string; _id?: string } | null;
-}): string | undefined {
+function _getOxyUserId(req: { user?: { id?: string; _id?: string } | null }): string | undefined {
   return req?.user?.id || req?.user?._id;
 }
 

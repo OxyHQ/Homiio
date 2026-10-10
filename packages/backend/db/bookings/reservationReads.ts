@@ -58,9 +58,7 @@ export const ACTIVE_RESERVATION_STATUSES: readonly ReservationStatusValue[] = [
 
 /** Whether `value` is one of the five declared statuses. */
 export function isReservationStatus(value: unknown): value is ReservationStatusValue {
-  return (
-    typeof value === 'string' && (RESERVATION_STATUSES as readonly string[]).includes(value)
-  );
+  return typeof value === 'string' && (RESERVATION_STATUSES as readonly string[]).includes(value);
 }
 
 /** Milliseconds in one day, used to derive nights from a date range. */

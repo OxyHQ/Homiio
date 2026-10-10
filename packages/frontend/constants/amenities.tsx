@@ -1407,9 +1407,7 @@ export const groupAmenitiesByCategory = (ids: string[]): AmenityGroup[] => {
     const resolvedId = resolveAmenityId(id);
     const amenity = getAmenityById(resolvedId);
     const categoryId =
-      amenity && getCategoryById(amenity.category)
-        ? amenity.category
-        : UNCATEGORIZED_AMENITY_ID;
+      amenity && getCategoryById(amenity.category) ? amenity.category : UNCATEGORIZED_AMENITY_ID;
     const bucket = byCategory.get(categoryId);
     if (bucket) {
       bucket.push({ id: resolvedId, amenity });

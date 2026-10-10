@@ -33,7 +33,15 @@ import type { City } from '@homiio/shared-types';
 
 import { colors } from '@/styles/colors';
 import { textShadow } from '@/styles/shadows';
-import { cardShadow, gridGap, PAGE_GUTTER_CLASS, pagePadding, radius, spacing, tracker } from '@/constants/styles';
+import {
+  cardShadow,
+  gridGap,
+  PAGE_GUTTER_CLASS,
+  pagePadding,
+  radius,
+  spacing,
+  tracker,
+} from '@/constants/styles';
 import { cityRegionName, getCityImageSource } from '@/utils/cityDisplay';
 import { ZoomableImage } from '@/components/ui/ZoomableImage';
 import { RiArrowLeftSLine, RiArrowRightSLine } from '@oxy.so/bloom/icons';
@@ -112,10 +120,7 @@ export function CityShowcaseSection({ title, items, onPressCity }: CityShowcaseS
         ) : null}
       </View>
 
-      <View
-        className="w-full"
-        onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}
-      >
+      <View className="w-full" onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}>
         <ScrollView
           ref={scrollRef}
           horizontal

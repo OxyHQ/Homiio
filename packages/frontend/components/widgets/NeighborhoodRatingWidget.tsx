@@ -63,18 +63,24 @@ export function NeighborhoodRatingWidget({
   return (
     <BaseWidget
       title={t('property.neighborhood.title')}
-      icon={<RiMapPinLine width={HEADER_ICON_SIZE} height={HEADER_ICON_SIZE} fill={colors.primary} />}
+      icon={
+        <RiMapPinLine width={HEADER_ICON_SIZE} height={HEADER_ICON_SIZE} fill={colors.primary} />
+      }
     >
       <View className="gap-3.5 py-2.5">
         <View className="gap-0.5">
           <BloomText className="text-base font-semibold text-foreground">{name}</BloomText>
-          {cityName ? <BloomText className="text-[13px] text-muted-foreground">{cityName}</BloomText> : null}
+          {cityName ? (
+            <BloomText className="text-[13px] text-muted-foreground">{cityName}</BloomText>
+          ) : null}
         </View>
 
         <View className="flex-row gap-3">
           <View className="flex-1 gap-0.5">
             <BloomText className="text-lg font-bold text-foreground">{listingCount}</BloomText>
-            <BloomText className="text-xs text-muted-foreground">{t('property.neighborhood.listings')}</BloomText>
+            <BloomText className="text-xs text-muted-foreground">
+              {t('property.neighborhood.listings')}
+            </BloomText>
           </View>
           {averageRent !== null ? (
             <View className="flex-1 gap-0.5">

@@ -84,7 +84,10 @@ export function SindiExplanationBottomSheet({ onClose }: SindiExplanationBottomS
                 {slide.title}
               </Text>
               {slide.description ? (
-                <Text variant="body-regular" style={[styles.center, { color: colors.textSecondary }]}>
+                <Text
+                  variant="body-regular"
+                  style={[styles.center, { color: colors.textSecondary }]}
+                >
                   {slide.description}
                 </Text>
               ) : null}

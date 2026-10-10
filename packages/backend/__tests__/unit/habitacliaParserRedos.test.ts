@@ -21,7 +21,11 @@
  * nothing.
  */
 
-import { parseHabitacliaDetail, parseHabitacliaSearch, scriptBlocks } from '@homiio/listing-providers';
+import {
+  parseHabitacliaDetail,
+  parseHabitacliaSearch,
+  scriptBlocks,
+} from '@homiio/listing-providers';
 
 describe('Habitaclia parser, pathological input', () => {
   it('scans JSON-LD blocks linearly', () => {
@@ -59,10 +63,7 @@ describe('parseHabitacliaSearch (legacy markup path)', () => {
     ].join('');
 
     const refs = parseHabitacliaSearch(html);
-    expect(refs.map((ref) => ref.sourceId).sort()).toEqual([
-      '12345678900000',
-      '98765432100000',
-    ]);
+    expect(refs.map((ref) => ref.sourceId).sort()).toEqual(['12345678900000', '98765432100000']);
     expect(refs.every((ref) => ref.url.startsWith('https://www.habitaclia.com/'))).toBe(true);
   });
 

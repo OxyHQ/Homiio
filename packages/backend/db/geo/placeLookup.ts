@@ -238,7 +238,11 @@ async function resolveCountryIds(input: PlaceLookupInput): Promise<Discriminator
   if (byId) {
     // A PRIMARY KEY equality. At most one row can match, so `.limit(1)` here
     // caps nothing that could have been ambiguous.
-    const rows = await getDb().select({ id: countries.id }).from(countries).where(eq(countries.id, byId)).limit(1);
+    const rows = await getDb()
+      .select({ id: countries.id })
+      .from(countries)
+      .where(eq(countries.id, byId))
+      .limit(1);
     return rows[0] ? [rows[0].id] : null;
   }
   const code = trimmed(input.countryCode);
@@ -255,9 +259,14 @@ async function resolveCountryIds(input: PlaceLookupInput): Promise<Discriminator
   if (!named) return undefined;
 
   const rows = await getDb()
-    .select({ id: countries.id, isCode: sql<boolean>`(${countries.code} = ${named.toUpperCase()})` })
+    .select({
+      id: countries.id,
+      isCode: sql<boolean>`(${countries.code} = ${named.toUpperCase()})`,
+    })
     .from(countries)
-    .where(or(eq(countries.code, named.toUpperCase()), sql`lower(${countries.name}) = lower(${named})`))
+    .where(
+      or(eq(countries.code, named.toUpperCase()), sql`lower(${countries.name}) = lower(${named})`),
+    )
     .orderBy(asc(countries.id));
   if (rows.length === 0) return null;
   const byCode = rows.filter((row) => row.isCode);
@@ -282,7 +291,11 @@ async function resolveRegionIds(
   const byId = trimmed(input.regionId);
   if (byId) {
     // Primary key again: one row at most.
-    const rows = await getDb().select({ id: regions.id }).from(regions).where(eq(regions.id, byId)).limit(1);
+    const rows = await getDb()
+      .select({ id: regions.id })
+      .from(regions)
+      .where(eq(regions.id, byId))
+      .limit(1);
     return rows[0] ? [rows[0].id] : null;
   }
   const named = trimmed(input.region);
@@ -340,7 +353,10 @@ export async function lookupCityPlaces(input: PlaceLookupInput): Promise<PlaceLo
 
   const isIdMatch = sql<boolean>`(${cities.id} = ${token})`;
   const isNameMatch = sql<boolean>`(lower(${cities.name}) = lower(${token}))`;
-  const limit = Math.min(Math.max(Math.trunc(input.limit ?? DEFAULT_LOOKUP_LIMIT), 1), MAX_LOOKUP_LIMIT);
+  const limit = Math.min(
+    Math.max(Math.trunc(input.limit ?? DEFAULT_LOOKUP_LIMIT), 1),
+    MAX_LOOKUP_LIMIT,
+  );
 
   // THE DOCUMENTED ORDERING. Every clause is here for a stated reason and the
   // last one is `id`, so a complete tie is still one answer rather than the

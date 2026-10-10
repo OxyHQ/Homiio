@@ -14,7 +14,7 @@ import {
   AvailabilityWindow,
   CancellationPolicy,
   ExchangeMode,
-  DeepPartial
+  DeepPartial,
 } from './common';
 import { Address, AddressInput, ListingAddressPrecision, PropertyAddress } from './address';
 import { PropertyImageRef, PropertyImageWrite } from './media';
@@ -103,7 +103,7 @@ export interface MortgageConfig {
 export const DEFAULT_MORTGAGE_CONFIG: MortgageConfig = {
   defaultAnnualRate: 0.035,
   termOptions: [10, 15, 20, 25, 30],
-  defaultDownPaymentFraction: 0.20
+  defaultDownPaymentFraction: 0.2,
 };
 
 export interface PropertyImage {
@@ -588,11 +588,7 @@ export interface PropertyPriceEthics {
  * area. Mirrors the thresholds applied server-side in the area-insights
  * controller (negative percent = cheaper than the local average).
  */
-export type AreaPriceVerdict =
-  | 'good_deal'
-  | 'below_average'
-  | 'average'
-  | 'above_average';
+export type AreaPriceVerdict = 'good_deal' | 'below_average' | 'average' | 'above_average';
 
 /** Scope the area comparison was computed against. */
 export type AreaInsightsBasis = 'radius' | 'city';

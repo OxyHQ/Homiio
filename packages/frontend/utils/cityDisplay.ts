@@ -9,12 +9,7 @@
  * DB-backed photos + names without an external image host.
  */
 
-import type {
-  City,
-  Country,
-  ImageVariantName,
-  Region,
-} from '@homiio/shared-types';
+import type { City, Country, ImageVariantName, Region } from '@homiio/shared-types';
 
 import { resolveBackendImageUrl } from '@/utils/imageUrl';
 

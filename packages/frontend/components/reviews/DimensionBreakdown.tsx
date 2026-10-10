@@ -56,7 +56,10 @@ export const DimensionBreakdown: React.FC<DimensionBreakdownProps> = ({ reviews,
     }
     const entries: DistributionEntry[] = dimension.values
       .filter((value) => counts.has(value))
-      .map((value) => ({ label: t(`${dimension.enumPrefix}.${value}`), count: counts.get(value) ?? 0 }));
+      .map((value) => ({
+        label: t(`${dimension.enumPrefix}.${value}`),
+        count: counts.get(value) ?? 0,
+      }));
     if (entries.length > 0) {
       blocks.push({ title: t(dimension.labelKey), entries });
     }
@@ -85,9 +88,12 @@ export const DimensionBreakdown: React.FC<DimensionBreakdownProps> = ({ reviews,
         serviceCounts.set(service, (serviceCounts.get(service) ?? 0) + 1);
       }
     }
-    const serviceEntries: DistributionEntry[] = SERVICE_VALUES.filter((value) => serviceCounts.has(value)).map(
-      (value) => ({ label: t(`reviews.enums.services.${value}`), count: serviceCounts.get(value) ?? 0 }),
-    );
+    const serviceEntries: DistributionEntry[] = SERVICE_VALUES.filter((value) =>
+      serviceCounts.has(value),
+    ).map((value) => ({
+      label: t(`reviews.enums.services.${value}`),
+      count: serviceCounts.get(value) ?? 0,
+    }));
     if (serviceEntries.length > 0) {
       blocks.push({ title: t('reviews.write.fields.services'), entries: serviceEntries });
     }

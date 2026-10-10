@@ -81,13 +81,8 @@ export function SaveButton({
   const sizeAll = Math.max(10, effectiveSize);
 
   // Use SavedPropertiesContext for all state management
-  const {
-    savePropertyToFolder,
-    unsaveProperty,
-    isPropertySaved,
-    isPropertySaving,
-    isInitialized,
-  } = useSavedPropertiesContext();
+  const { savePropertyToFolder, unsaveProperty, isPropertySaved, isPropertySaving, isInitialized } =
+    useSavedPropertiesContext();
 
   // Determine property ID
   const propertyId = property?.id;
@@ -212,7 +207,9 @@ export function SaveButton({
     return (
       <View style={[styles.inlineWrap, style]}>
         {button}
-        <ThemedText style={[styles.inlineCount, { fontSize: sizeAll, color: isSaved ? activeColor : color }]}>
+        <ThemedText
+          style={[styles.inlineCount, { fontSize: sizeAll, color: isSaved ? activeColor : color }]}
+        >
           {savedCount > 99 ? '99+' : savedCount}
         </ThemedText>
       </View>

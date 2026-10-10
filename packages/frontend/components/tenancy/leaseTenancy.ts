@@ -68,7 +68,9 @@ export const formatLeaseDate = (raw?: string): string => {
 };
 
 const money = (amount: number | undefined, lease: Lease, locale: string): string =>
-  formatMoney(amount ?? 0, lease.rentDetails?.currency ?? 'EUR', locale, { maximumFractionDigits: 0 });
+  formatMoney(amount ?? 0, lease.rentDetails?.currency ?? 'EUR', locale, {
+    maximumFractionDigits: 0,
+  });
 
 /** Every Oxy account a lease names, for one batched `useOxyAvatars` lookup. */
 export function leasePartyIds(lease: Lease | undefined): string[] {
@@ -84,9 +86,10 @@ function leaseParties(lease: Lease, { t, resolveParty }: LeaseFormatContext): Le
   const entries: [string, string][] = [
     [lease.landlordOxyUserId, t('contracts.detail.landlord')],
     [lease.tenantOxyUserId, t('contracts.detail.tenant')],
-    ...(lease.coTenants ?? []).map(
-      (coTenant): [string, string] => [coTenant.oxyUserId, t('contracts.tenancy.coTenant')],
-    ),
+    ...(lease.coTenants ?? []).map((coTenant): [string, string] => [
+      coTenant.oxyUserId,
+      t('contracts.tenancy.coTenant'),
+    ]),
   ];
   return entries.flatMap(([oxyUserId, role]) => {
     const identity = oxyUserId ? resolveParty(oxyUserId) : null;
@@ -101,13 +104,20 @@ export function nextOwedPayment(lease: Lease): LeasePayment | undefined {
     .sort((a, b) => (toDate(a.dueDate)?.getTime() ?? 0) - (toDate(b.dueDate)?.getTime() ?? 0))[0];
 }
 
-function nextPayment(lease: Lease, { locale, now = new Date() }: LeaseFormatContext): LeaseNextPayment | undefined {
+function nextPayment(
+  lease: Lease,
+  { locale, now = new Date() }: LeaseFormatContext,
+): LeaseNextPayment | undefined {
   const payment = nextOwedPayment(lease);
   const due = toDate(payment?.dueDate);
   if (!payment || !due) return undefined;
   const days = differenceInCalendarDays(due, now);
   const status: LeaseNextPayment['status'] =
-    payment.status === 'overdue' || days < 0 ? 'overdue' : days <= DUE_SOON_DAYS ? 'due' : 'upcoming';
+    payment.status === 'overdue' || days < 0
+      ? 'overdue'
+      : days <= DUE_SOON_DAYS
+        ? 'due'
+        : 'upcoming';
   return {
     // What is still owed: a part-paid instalment is not owed in full.
     amount: money(payment.amount - (payment.paidAmount ?? 0), lease, locale),
@@ -131,7 +141,12 @@ export function leaseSummaryProps(
   const start = toDate(lease.leaseTerms?.startDate);
   const end = toDate(lease.leaseTerms?.endDate);
   const running =
-    lease.status === LeaseStatus.ACTIVE && start && end && end > start && now >= start && now <= end;
+    lease.status === LeaseStatus.ACTIVE &&
+    start &&
+    end &&
+    end > start &&
+    now >= start &&
+    now <= end;
   const deposit = lease.rentDetails?.securityDeposit;
   return {
     title,
@@ -139,7 +154,9 @@ export function leaseSummaryProps(
     startDate: formatLeaseDate(lease.leaseTerms?.startDate),
     endDate: formatLeaseDate(lease.leaseTerms?.endDate),
     periodLabel: t('contracts.tenancy.period'),
-    progress: running ? (now.getTime() - start.getTime()) / (end.getTime() - start.getTime()) : undefined,
+    progress: running
+      ? (now.getTime() - start.getTime()) / (end.getTime() - start.getTime())
+      : undefined,
     remainingLabel: running
       ? t('contracts.tenancy.remaining', {
           duration: formatDistanceStrict(end, now, { locale: getDateFnsLocale() }),
@@ -170,12 +187,17 @@ const RENT_STATUS: Record<Exclude<LeasePayment['status'], 'cancelled'>, RentPaym
  */
 export function rentPayments(lease: Lease, { t, locale }: LeaseFormatContext): RentPayment[] {
   return [...(lease.paymentSchedule ?? [])]
-    .filter((payment): payment is LeasePayment & { status: keyof typeof RENT_STATUS } => payment.status !== 'cancelled')
+    .filter(
+      (payment): payment is LeasePayment & { status: keyof typeof RENT_STATUS } =>
+        payment.status !== 'cancelled',
+    )
     .sort((a, b) => (toDate(b.dueDate)?.getTime() ?? 0) - (toDate(a.dueDate)?.getTime() ?? 0))
     .map((payment) => {
       const due = toDate(payment.dueDate);
       const partial =
-        payment.status !== 'paid' && (payment.paidAmount ?? 0) > 0 && (payment.paidAmount ?? 0) < payment.amount;
+        payment.status !== 'paid' &&
+        (payment.paidAmount ?? 0) > 0 &&
+        (payment.paidAmount ?? 0) < payment.amount;
       return {
         id: payment.id,
         month:
@@ -184,8 +206,8 @@ export function rentPayments(lease: Lease, { t, locale }: LeaseFormatContext): R
             : payment.type !== 'rent'
               ? t(`contracts.tenancy.paymentType.${payment.type}`)
               : due
-              ? formatLocalized(due, 'LLLL yyyy')
-              : t('contracts.detail.monthlyRent'),
+                ? formatLocalized(due, 'LLLL yyyy')
+                : t('contracts.detail.monthlyRent'),
         dueDate: due ? formatLocalized(due, 'd MMM yyyy') : '—',
         amount: partial
           ? t('contracts.tenancy.partialAmount', {
@@ -294,10 +316,7 @@ const EVENT_TONE: Partial<Record<LeaseEventType, TenancyTimelineEvent['tone']>> 
  * bytes were checked. Saying nothing at all would be the same claim, made
  * silently.
  */
-function signatureDescription(
-  signature: LeaseSignatureRecord,
-  t: TFunction,
-): string {
+function signatureDescription(signature: LeaseSignatureRecord, t: TFunction): string {
   const bound = signature.documentName
     ? signature.documentSha256
       ? t('contracts.tenancy.signedDocument', { name: signature.documentName })
@@ -342,10 +361,17 @@ function recordedEvent(
 }
 
 /** Whose signature the lease is still waiting for, in party order. */
-function pendingSignatories(lease: Lease, { t, resolveParty }: LeaseFormatContext): TenancyTimelineEvent[] {
+function pendingSignatories(
+  lease: Lease,
+  { t, resolveParty }: LeaseFormatContext,
+): TenancyTimelineEvent[] {
   const signed = new Set((lease.signatureRecords ?? []).map((record) => record.signerOxyUserId));
   const seats: { id: string; oxyUserId: string; label: string }[] = [
-    { id: 'landlord', oxyUserId: lease.landlordOxyUserId, label: t('contracts.tenancy.landlordPending') },
+    {
+      id: 'landlord',
+      oxyUserId: lease.landlordOxyUserId,
+      label: t('contracts.tenancy.landlordPending'),
+    },
     { id: 'tenant', oxyUserId: lease.tenantOxyUserId, label: t('contracts.tenancy.tenantPending') },
     ...(lease.coTenants ?? []).map((coTenant, index) => ({
       id: `cotenant-${index}`,
@@ -401,8 +427,7 @@ export function leaseTimeline(lease: Lease, context: LeaseFormatContext): Tenanc
   const recorded = lease.events ?? [];
   if (recorded.length === 0) return legacyLeaseTimeline(lease, context);
 
-  const closed =
-    lease.status === LeaseStatus.TERMINATED || lease.status === LeaseStatus.CANCELLED;
+  const closed = lease.status === LeaseStatus.TERMINATED || lease.status === LeaseStatus.CANCELLED;
   const events: TenancyTimelineEvent[] = [
     ...recorded.map((event) => recordedEvent(event, lease, context)),
     ...pendingSignatories(lease, context),
@@ -440,9 +465,7 @@ function legacyLeaseTimeline(
 ): TenancyTimelineEvent[] {
   const awaitingSignatures =
     lease.status === LeaseStatus.DRAFT || lease.status === LeaseStatus.PENDING_SIGNATURES;
-  const signature = (
-    key: 'landlord' | 'tenant',
-  ): TenancyTimelineEvent => {
+  const signature = (key: 'landlord' | 'tenant'): TenancyTimelineEvent => {
     const signed = lease.signatures?.[key]?.signed;
     return {
       id: `signed-${key}`,
@@ -463,7 +486,11 @@ function legacyLeaseTimeline(
   };
 
   const events: TenancyTimelineEvent[] = [
-    { id: 'created', title: t('contracts.tenancy.created'), date: formatLeaseDate(lease.createdAt) },
+    {
+      id: 'created',
+      title: t('contracts.tenancy.created'),
+      date: formatLeaseDate(lease.createdAt),
+    },
     signature('landlord'),
     signature('tenant'),
     dated('start', t('contracts.tenancy.starts'), lease.leaseTerms?.startDate),
@@ -471,7 +498,11 @@ function legacyLeaseTimeline(
   if (lease.status === LeaseStatus.TERMINATED || lease.status === LeaseStatus.CANCELLED) {
     events.push({
       id: 'outcome',
-      title: t(lease.status === LeaseStatus.TERMINATED ? 'statusBadge.terminated' : 'statusBadge.cancelled'),
+      title: t(
+        lease.status === LeaseStatus.TERMINATED
+          ? 'statusBadge.terminated'
+          : 'statusBadge.cancelled',
+      ),
       tone: 'error',
     });
   } else {
@@ -491,7 +522,9 @@ function legacyLeaseTimeline(
 export function signingSubject(lease: Lease, { t }: LeaseFormatContext): string {
   const contract = [...(lease.documents ?? [])]
     .filter((document) => document.type === 'lease_agreement')
-    .sort((a, b) => (toDate(b.uploadedDate)?.getTime() ?? 0) - (toDate(a.uploadedDate)?.getTime() ?? 0))[0];
+    .sort(
+      (a, b) => (toDate(b.uploadedDate)?.getTime() ?? 0) - (toDate(a.uploadedDate)?.getTime() ?? 0),
+    )[0];
   return contract
     ? t('contracts.tenancy.signingDocument', { name: contract.name })
     : t('contracts.tenancy.signingTermsOnly');

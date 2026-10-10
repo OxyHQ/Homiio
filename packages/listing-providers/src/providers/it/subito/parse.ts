@@ -123,7 +123,10 @@ function collectHousingRefs(value: unknown, out: Map<string, string>): void {
 
   const urls = asRecord(record.urls);
   const url =
-    asString(urls?.default) ?? asString(record.url) ?? asString(record.detailUrl) ?? asString(record.href);
+    asString(urls?.default) ??
+    asString(record.url) ??
+    asString(record.detailUrl) ??
+    asString(record.href);
   if (url && isSubitoHousingCategory(categoryUriFromAd(record, url) || url)) {
     const sourceId =
       subitoSourceIdFromUrl(url) ?? urnSourceId(asString(record.urn)) ?? asString(record.id);
@@ -181,7 +184,10 @@ function featureFirstValue(
   return Array.isArray(values) ? asRecord(values[0]) : undefined;
 }
 
-function featureNumber(features: Record<string, unknown> | undefined, uri: string): number | undefined {
+function featureNumber(
+  features: Record<string, unknown> | undefined,
+  uri: string,
+): number | undefined {
   const first = featureFirstValue(features, uri);
   return parseNumberFromGuard(first?.key) ?? parseNumberFromGuard(first?.value);
 }
@@ -191,7 +197,11 @@ function featureIsYes(features: Record<string, unknown> | undefined, uri: string
 }
 
 /** Subito ad `type` encodes the offering: `u` = affitto (rent), `s` = vendita (sale). */
-function operationFromAd(ad: Record<string, unknown>, url: string, categoryUri: string): 'rent' | 'sale' {
+function operationFromAd(
+  ad: Record<string, unknown>,
+  url: string,
+  categoryUri: string,
+): 'rent' | 'sale' {
   const type = asRecord(ad.type);
   const typeKey = asString(type?.key)?.toLowerCase();
   const typeValue = asString(type?.value)?.toLowerCase() ?? '';
@@ -207,7 +217,9 @@ function subitoImageUrl(raw: string): string | undefined {
   return raw.includes('?') ? raw : `${raw}?${SUBITO_IMAGE_RULE}`;
 }
 
-function subitoContact(advertiser: Record<string, unknown> | undefined): NormalizedListingContact | undefined {
+function subitoContact(
+  advertiser: Record<string, unknown> | undefined,
+): NormalizedListingContact | undefined {
   if (!advertiser) return undefined;
   const isCompany = advertiser.company === true;
   const name = asString(advertiser.name);
@@ -253,7 +265,9 @@ function listingFromAd(ad: Record<string, unknown>, fallbackUrl: string): Subito
   const price = featureNumber(features, '/price') ?? asNumber(ad.price);
   if (price !== undefined) raw.price = price;
   const bedrooms =
-    featureNumber(features, '/room') ?? featureNumber(features, '/rooms') ?? featureNumber(features, '/locali');
+    featureNumber(features, '/room') ??
+    featureNumber(features, '/rooms') ??
+    featureNumber(features, '/locali');
   if (bedrooms !== undefined) raw.bedrooms = bedrooms;
   const bathrooms = featureNumber(features, '/bathrooms') ?? featureNumber(features, '/bathroom');
   if (bathrooms !== undefined) raw.bathrooms = bathrooms;
@@ -334,11 +348,15 @@ export function parseSubitoDetail(html: string, url: string): SubitoRaw {
     const ads: Record<string, unknown>[] = [];
     findAdNodes(next, ads);
     const wantId = subitoSourceIdFromUrl(url);
-    const parsed = ads.map((ad) => listingFromAd(ad, url)).filter((listing) => listing.price !== undefined);
+    const parsed = ads
+      .map((ad) => listingFromAd(ad, url))
+      .filter((listing) => listing.price !== undefined);
     const chosen = parsed.find((listing) => listing.sourceId === wantId) ?? parsed[0];
     if (chosen) {
       if (!isSubitoHousingCategory(chosen.categoryUri || chosen.url)) {
-        throw new Error(`subito: non-housing category rejected (${chosen.categoryUri || chosen.url})`);
+        throw new Error(
+          `subito: non-housing category rejected (${chosen.categoryUri || chosen.url})`,
+        );
       }
       return chosen;
     }

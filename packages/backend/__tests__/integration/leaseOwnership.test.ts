@@ -56,7 +56,9 @@ function buildApp(oxyUserId: string): Express {
   });
   app.get('/leases', (req, res, next) => leaseController.getLeases(req, res, next));
   app.post('/leases', (req, res, next) => leaseController.createLease(req, res, next));
-  app.get('/leases/:id/payments', (req, res, next) => leaseController.getLeasePayments(req, res, next));
+  app.get('/leases/:id/payments', (req, res, next) =>
+    leaseController.getLeasePayments(req, res, next),
+  );
   app.get('/leases/:id', (req, res, next) => leaseController.getLeaseById(req, res, next));
   app.put('/leases/:id', (req, res, next) => leaseController.updateLease(req, res, next));
   app.delete('/leases/:id', (req, res, next) => leaseController.deleteLease(req, res, next));
@@ -161,9 +163,7 @@ describe('leaseController.createLease', () => {
 
   it('rejects create for a property the requester does not own', async () => {
     const propertyId = await seedOwnedProperty('oxy-someone-else');
-    const res = await request(buildApp('oxy-landlord'))
-      .post('/leases')
-      .send(leaseBody(propertyId));
+    const res = await request(buildApp('oxy-landlord')).post('/leases').send(leaseBody(propertyId));
 
     expect(res.status).toBe(403);
     expect(await getDb().select().from(leases)).toHaveLength(0);
@@ -188,10 +188,7 @@ describe('leaseController.createLease', () => {
       ],
     });
 
-    const rows = await getDb()
-      .select()
-      .from(leaseCoTenants)
-      .where(eq(leaseCoTenants.leaseId, id));
+    const rows = await getDb().select().from(leaseCoTenants).where(eq(leaseCoTenants.leaseId, id));
     expect(rows).toHaveLength(2);
     expect(rows.every((row) => row.status === 'pending')).toBe(true);
   });
@@ -512,13 +509,15 @@ describe('lease_payment_schedule_paid_evidence_check', () => {
     // indistinguishable, afterwards, from a payment somebody recorded by hand.
     const id = await createDraftLease(await seedOwnedProperty());
     await expect(
-      getDb().insert(leasePaymentSchedule).values({
-        leaseId: id,
-        dueDate: new Date('2026-02-01T00:00:00.000Z'),
-        amount: 1200,
-        type: 'rent',
-        status: 'paid',
-      }),
+      getDb()
+        .insert(leasePaymentSchedule)
+        .values({
+          leaseId: id,
+          dueDate: new Date('2026-02-01T00:00:00.000Z'),
+          amount: 1200,
+          type: 'rent',
+          status: 'paid',
+        }),
     ).rejects.toThrow();
   });
 
@@ -526,15 +525,17 @@ describe('lease_payment_schedule_paid_evidence_check', () => {
     // The reverse half — a payment nobody counted.
     const id = await createDraftLease(await seedOwnedProperty());
     await expect(
-      getDb().insert(leasePaymentSchedule).values({
-        leaseId: id,
-        dueDate: new Date('2026-02-01T00:00:00.000Z'),
-        amount: 1200,
-        type: 'rent',
-        status: 'pending',
-        paidDate: new Date('2026-02-01T00:00:00.000Z'),
-        paidAmount: 1200,
-      }),
+      getDb()
+        .insert(leasePaymentSchedule)
+        .values({
+          leaseId: id,
+          dueDate: new Date('2026-02-01T00:00:00.000Z'),
+          amount: 1200,
+          type: 'rent',
+          status: 'pending',
+          paidDate: new Date('2026-02-01T00:00:00.000Z'),
+          paidAmount: 1200,
+        }),
     ).rejects.toThrow();
   });
 });
@@ -584,10 +585,7 @@ describe('leaseController.uploadLeaseDocument', () => {
     expect(res.status).toBe(201);
     expect(res.body.data.uploadedBy).toBe('oxy-tenant');
 
-    const [row] = await getDb()
-      .select()
-      .from(leaseDocuments)
-      .where(eq(leaseDocuments.leaseId, id));
+    const [row] = await getDb().select().from(leaseDocuments).where(eq(leaseDocuments.leaseId, id));
     expect(row.uploadedByOxyUserId).toBe('oxy-tenant');
     // An undeclared type falls back rather than hitting the CHECK.
     expect(row.type).toBe('other');
@@ -614,8 +612,12 @@ describe('leaseController.deleteLease', () => {
     const res = await request(buildApp('oxy-landlord')).delete(`/leases/${id}`);
     expect(res.status).toBe(200);
 
-    expect(await getDb().select().from(leaseCoTenants).where(eq(leaseCoTenants.leaseId, id))).toHaveLength(0);
-    expect(await getDb().select().from(leaseDocuments).where(eq(leaseDocuments.leaseId, id))).toHaveLength(0);
+    expect(
+      await getDb().select().from(leaseCoTenants).where(eq(leaseCoTenants.leaseId, id)),
+    ).toHaveLength(0);
+    expect(
+      await getDb().select().from(leaseDocuments).where(eq(leaseDocuments.leaseId, id)),
+    ).toHaveLength(0);
     expect(await leaseRow(id)).toBeUndefined();
   });
 

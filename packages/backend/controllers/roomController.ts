@@ -17,7 +17,12 @@ import type { Request, Response, NextFunction } from 'express';
 
 import { PropertyType, PropertyStatus } from '@homiio/shared-types';
 import { logger } from '../middlewares/logging';
-import { AppError, describeErrorForLog, paginationResponse, successResponse } from '../middlewares/errorHandler';
+import {
+  AppError,
+  describeErrorForLog,
+  paginationResponse,
+  successResponse,
+} from '../middlewares/errorHandler';
 import { requireSessionOxyUserId } from '../utils/sessionUser';
 import {
   CREATABLE_PROPERTY_FIELDS,
@@ -192,7 +197,9 @@ class RoomController {
       const oxyUserId = requireSessionOxyUserId(req);
       const { parentPropertyId } = req.body;
       if (!parentPropertyId) {
-        return next(new AppError('parentPropertyId is required to create a room', 400, 'VALIDATION_ERROR'));
+        return next(
+          new AppError('parentPropertyId is required to create a room', 400, 'VALIDATION_ERROR'),
+        );
       }
       const parent = await findPropertyById(String(parentPropertyId));
       if (!parent || parent.property.oxyUserId !== oxyUserId) {
@@ -256,7 +263,9 @@ class RoomController {
       // every other signed-in caller.
       const audience = propertyAudienceFor(hydrated, req.user?.id || req.user?._id);
       if (audience === 'owner') res.set('Cache-Control', 'private, no-store');
-      res.json(successResponse(serializeProperty(hydrated, audience), 'Room retrieved successfully'));
+      res.json(
+        successResponse(serializeProperty(hydrated, audience), 'Room retrieved successfully'),
+      );
     } catch (error) {
       next(error);
     }
@@ -303,7 +312,11 @@ class RoomController {
           });
         }
       }
-      logger.info('Room updated', { roomId: id, oxyUserId, updatedFields: Object.keys(updateData) });
+      logger.info('Room updated', {
+        roomId: id,
+        oxyUserId,
+        updatedFields: Object.keys(updateData),
+      });
       res.json(successResponse(updatedRoom, 'Room updated successfully'));
     } catch (error) {
       next(error);

@@ -77,7 +77,8 @@ export default function NotesScreen() {
     const out: FlatNote[] = [];
     savedProperties.forEach((p) => {
       const propertyId = p.id as string;
-      const title = getPropertyTitle(p) || p.address?.cityName || t('reservations.card.propertyFallback');
+      const title =
+        getPropertyTitle(p) || p.address?.cityName || t('reservations.card.propertyFallback');
       const image = getPropertyImageSource(p);
       // The price the saved card shows: the browse mode's block, formatted in
       // the listing's own currency, with that block's unit.
@@ -89,7 +90,8 @@ export default function NotesScreen() {
             ? [
                 formatMoney(offering.amount, offering.currency, formatting.locale),
                 offering.priceUnit
-                  ? formatting.priceUnitLabels[priceFrequencyFromPriceUnit(offering.priceUnit)].short
+                  ? formatting.priceUnitLabels[priceFrequencyFromPriceUnit(offering.priceUnit)]
+                      .short
                   : '',
               ]
                 .filter(Boolean)
@@ -103,7 +105,9 @@ export default function NotesScreen() {
       ]
         .filter(Boolean)
         .join(' • ');
-      parseNotesString(p.notes).forEach((note) => out.push({ propertyId, note, title, image, meta }));
+      parseNotesString(p.notes).forEach((note) =>
+        out.push({ propertyId, note, title, image, meta }),
+      );
     });
     return out;
   }, [savedProperties, browseMode, formatting, t]);
@@ -299,7 +303,8 @@ function NoteCard({ item, onEdit, onTogglePin, onToggleArchive, onDelete }: Note
         styles.noteCard,
         note.isArchived && styles.archived,
         note.color ? { backgroundColor: note.color, borderColor: 'transparent' } : null,
-      ]} appearance="outline"
+      ]}
+      appearance="outline"
     >
       <BloomText style={styles.noteText} numberOfLines={6}>
         {note.text}
@@ -321,21 +326,29 @@ function NoteCard({ item, onEdit, onTogglePin, onToggleArchive, onDelete }: Note
           iconOnly
           leadingIcon={note.isPinned ? RiPushpinFill : RiPushpinLine}
           accessibilityLabel={note.isPinned ? t('saved.notes.unpin') : t('saved.notes.pin')}
-          onPress={onTogglePin} tone="accent" appearance="subtle"
+          onPress={onTogglePin}
+          tone="accent"
+          appearance="subtle"
         />
         <Button
           size="sm"
           iconOnly
           leadingIcon={RiArchiveLine}
-          accessibilityLabel={note.isArchived ? t('saved.notes.unarchive') : t('saved.notes.archive')}
-          onPress={onToggleArchive} tone="accent" appearance="subtle"
+          accessibilityLabel={
+            note.isArchived ? t('saved.notes.unarchive') : t('saved.notes.archive')
+          }
+          onPress={onToggleArchive}
+          tone="accent"
+          appearance="subtle"
         />
         <Button
           size="sm"
           iconOnly
           leadingIcon={RiDeleteBinLine}
           accessibilityLabel={t('common.delete')}
-          onPress={onDelete} tone="accent" appearance="subtle"
+          onPress={onDelete}
+          tone="accent"
+          appearance="subtle"
         />
       </View>
     </Card>

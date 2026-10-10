@@ -40,9 +40,25 @@
  * nothing chooses is a write cost with no read.
  */
 
-import { bigint, boolean, check, doublePrecision, index, pgTable, text, uniqueIndex } from 'drizzle-orm/pg-core';
+import {
+  bigint,
+  boolean,
+  check,
+  doublePrecision,
+  index,
+  pgTable,
+  text,
+  uniqueIndex,
+} from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
-import { createdAt, generatedId, inList, textArrayLiteral, timestamptz, updatedAt } from '@oxy.so/db';
+import {
+  createdAt,
+  generatedId,
+  inList,
+  textArrayLiteral,
+  timestamptz,
+  updatedAt,
+} from '@oxy.so/db';
 import { PAYMENT_CURRENCIES } from '@homiio/shared-types';
 import type {
   CleaningRating,
@@ -502,7 +518,10 @@ export const reviews = pgTable(
       'reviews_neighbor_relations_check',
       sql`${table.neighborRelations} in (${sql.raw(inList(NEIGHBOR_RELATIONS))})`,
     ),
-    check('reviews_cleaning_check', sql`${table.cleaning} in (${sql.raw(inList(CLEANING_RATINGS))})`),
+    check(
+      'reviews_cleaning_check',
+      sql`${table.cleaning} in (${sql.raw(inList(CLEANING_RATINGS))})`,
+    ),
     check(
       'reviews_area_tourists_check',
       sql`${table.areaTourists} in (${sql.raw(inList(TOURIST_LEVELS))})`,
@@ -511,7 +530,10 @@ export const reviews = pgTable(
       'reviews_area_security_check',
       sql`${table.areaSecurity} in (${sql.raw(inList(SECURITY_LEVELS))})`,
     ),
-    check('reviews_area_noise_check', sql`${table.areaNoise} in (${sql.raw(inList(NOISE_LEVELS))})`),
+    check(
+      'reviews_area_noise_check',
+      sql`${table.areaNoise} in (${sql.raw(inList(NOISE_LEVELS))})`,
+    ),
     check(
       'reviews_area_cleanliness_check',
       sql`${table.areaCleanliness} in (${sql.raw(inList(CLEANING_RATINGS))})`,
@@ -547,7 +569,9 @@ export const reviewHelpfulVotes = pgTable(
     oxyUserId: text().notNull(),
     votedAt: createdAt(),
   },
-  (table) => [uniqueIndex('review_helpful_votes_review_user_key').on(table.reviewId, table.oxyUserId)],
+  (table) => [
+    uniqueIndex('review_helpful_votes_review_user_key').on(table.reviewId, table.oxyUserId),
+  ],
 );
 
 /**

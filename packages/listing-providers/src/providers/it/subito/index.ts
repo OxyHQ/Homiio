@@ -27,7 +27,11 @@ import type {
 import { createFetchRuntime } from '../../../runtime';
 import { ChallengeError, fetchListingViaLadder } from '../../../strategy';
 import { isAntiBotChallenge } from '../../../parse/challenge';
-import { defaultProviderMetrics, type ProviderMetricsReader, type ProviderMetricsSink } from '../../../metrics';
+import {
+  defaultProviderMetrics,
+  type ProviderMetricsReader,
+  type ProviderMetricsSink,
+} from '../../../metrics';
 import { SUBITO_BASE_URL } from './fixtures';
 import {
   coerceSubitoRaw,
@@ -147,7 +151,14 @@ export class SubitoProvider implements ListingProvider {
       for (const ref of viaBrowser) yield ref;
       if (yielded.count >= limit) return;
       if (viaBrowser.length === 0) {
-        for await (const ref of this.discoverCityViaHtml(runtime, city, job.signal, seen, limit, yielded)) {
+        for await (const ref of this.discoverCityViaHtml(
+          runtime,
+          city,
+          job.signal,
+          seen,
+          limit,
+          yielded,
+        )) {
           yield ref;
         }
       }
@@ -274,7 +285,8 @@ export class SubitoProvider implements ListingProvider {
       let session: BrowserSession | undefined;
       try {
         const sticky = envBool('LISTING_PROXY_STICKY', false);
-        if (sticky && !this.stickyProxySessionId) this.stickyProxySessionId = createProxySessionId();
+        if (sticky && !this.stickyProxySessionId)
+          this.stickyProxySessionId = createProxySessionId();
         session = await ctx.runtime.openBrowserSession({
           warmUrl: ref.url,
           signal: ctx.signal,
@@ -335,12 +347,15 @@ export class SubitoProvider implements ListingProvider {
       },
       type: PropertyType.APARTMENT,
       offerings: isSale ? [OfferingType.SALE] : [OfferingType.LONG_TERM_RENT],
-      longTermRent: isSale ? undefined : { monthlyAmount: listing.price, currency: listing.currency },
+      longTermRent: isSale
+        ? undefined
+        : { monthlyAmount: listing.price, currency: listing.currency },
       sale: isSale ? { price: listing.price, currency: listing.currency } : undefined,
       remoteImages: images,
       status: 'published',
     };
-    if (listing.description ?? listing.title) result.description = listing.description ?? listing.title;
+    if (listing.description ?? listing.title)
+      result.description = listing.description ?? listing.title;
     if (listing.bedrooms !== undefined) result.bedrooms = listing.bedrooms;
     if (listing.bathrooms !== undefined) result.bathrooms = listing.bathrooms;
     if (listing.squareMeters !== undefined) result.squareFootage = listing.squareMeters;

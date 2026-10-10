@@ -37,17 +37,29 @@ export function SavedSearchesSection() {
     body = (
       <View style={{ gap: 12, alignItems: 'flex-start' }}>
         <Text variant="body-2-regular" style={{ color: theme.colors.textSecondary }}>
-          {t(error ? 'search.widgets.savedSearches.loadError' : 'search.widgets.savedSearches.emptyHelper')}
+          {t(
+            error
+              ? 'search.widgets.savedSearches.loadError'
+              : 'search.widgets.savedSearches.emptyHelper',
+          )}
         </Text>
         {error ? (
           <Button
             size="sm"
-            onPress={() => void queryClient.invalidateQueries({ queryKey: ['savedSearches'] })} tone="neutral" appearance="outline"
+            onPress={() => void queryClient.invalidateQueries({ queryKey: ['savedSearches'] })}
+            tone="neutral"
+            appearance="outline"
           >
             {t('common.retry')}
           </Button>
         ) : (
-          <Button size="sm" leadingIcon={RiSearchLine} onPress={() => router.push('/explore')} tone="neutral" appearance="outline">
+          <Button
+            size="sm"
+            leadingIcon={RiSearchLine}
+            onPress={() => router.push('/explore')}
+            tone="neutral"
+            appearance="outline"
+          >
             {t('saved.exploreCta')}
           </Button>
         )}

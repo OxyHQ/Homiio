@@ -121,10 +121,7 @@ function isValidForKind(kind: ObservabilityFieldKind, value: unknown): boolean {
       return typeof value === 'boolean';
     case 'smallInt':
       return (
-        typeof value === 'number' &&
-        Number.isInteger(value) &&
-        value >= 0 &&
-        value <= kind.max
+        typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= kind.max
       );
     case 'epochMs':
       return (

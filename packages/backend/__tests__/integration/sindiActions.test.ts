@@ -32,7 +32,9 @@ describe('a turn only becomes an action when the person asked for listings', () 
     // "Cuéntame cómo es Granollers" extracts a city and is NOT a search. An
     // assistant that navigated here would move the app under somebody who
     // asked a question.
-    expect((await searchOutcomeForTurn({ wantsListings: false, city: 'Granollers' })).patch).toBeNull();
+    expect(
+      (await searchOutcomeForTurn({ wantsListings: false, city: 'Granollers' })).patch,
+    ).toBeNull();
   });
 
   it('produces nothing for a rights question, which extracts no filters at all', async () => {
@@ -40,7 +42,11 @@ describe('a turn only becomes an action when the person asked for listings', () 
   });
 
   it('produces a patch when the person asked and named a constraint', async () => {
-    const { patch } = await searchOutcomeForTurn({ wantsListings: true, maxRent: 1200, bedrooms: 2 });
+    const { patch } = await searchOutcomeForTurn({
+      wantsListings: true,
+      maxRent: 1200,
+      bedrooms: 2,
+    });
     expect(patch).toEqual({ priceMax: 1200, bedrooms: 2 });
   });
 });
@@ -351,12 +357,14 @@ describe('the turn id a client sends is validated', () => {
     expect(parseTurnId('t1abc')).toBe('t1abc');
   });
 
-  it.each([['a path', '../x'], ['an empty string', ''], ['a number', 7], ['undefined', undefined]])(
-    'refuses %s',
-    (_label, value) => {
-      expect(parseTurnId(value)).toBeNull();
-    },
-  );
+  it.each([
+    ['a path', '../x'],
+    ['an empty string', ''],
+    ['a number', 7],
+    ['undefined', undefined],
+  ])('refuses %s', (_label, value) => {
+    expect(parseTurnId(value)).toBeNull();
+  });
 });
 
 describe('a place the turn NAMED and Homiio could not commit to is said out loud', () => {

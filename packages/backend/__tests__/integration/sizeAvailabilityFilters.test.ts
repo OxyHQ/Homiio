@@ -23,7 +23,12 @@ import { searchProperties } from '../../controllers/property/search';
 import { getSearchPriceHistogram } from '../../controllers/property/priceHistogram';
 import { errorHandler } from '../../middlewares/errorHandler';
 import { serializeWireIds } from '../../middlewares/wireIds';
-import { resetGeoTables, seedAddress, seedGeoChain, seedProperty } from '../helpers/postgresGeoFixtures';
+import {
+  resetGeoTables,
+  seedAddress,
+  seedGeoChain,
+  seedProperty,
+} from '../helpers/postgresGeoFixtures';
 
 function buildApp(): Express {
   const app = express();

@@ -376,8 +376,7 @@ export function createNominatimProvider(): GeocodingProvider {
         return {
           providerId: NOMINATIM_PROVIDER_ID,
           healthy: false,
-          detail:
-            error instanceof GeocodingProviderError ? error.reason : 'unknown',
+          detail: error instanceof GeocodingProviderError ? error.reason : 'unknown',
         };
       }
     },

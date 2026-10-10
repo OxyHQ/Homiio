@@ -33,8 +33,7 @@ export const exchangeKeys = {
   list: (params: ListExchangeRequestsParams) => [EXCHANGE_LIST_KEY, params] as const,
   detail: (id: string) => [EXCHANGE_DETAIL_KEY, id] as const,
   requestReviews: (id: string) => [EXCHANGE_REVIEWS_KEY, id] as const,
-  profileReviews: (profileId: string) =>
-    [PROFILE_EXCHANGE_REVIEWS_KEY, profileId] as const,
+  profileReviews: (profileId: string) => [PROFILE_EXCHANGE_REVIEWS_KEY, profileId] as const,
 };
 
 /**
@@ -54,9 +53,7 @@ export function useMyExchangeRequests(
 }
 
 /** Single exchange request by id. Disabled until `id` is non-empty. */
-export function useExchangeRequest(
-  id: string | undefined,
-): UseQueryResult<ExchangeRequest, Error> {
+export function useExchangeRequest(id: string | undefined): UseQueryResult<ExchangeRequest, Error> {
   return useQuery<ExchangeRequest, Error>({
     queryKey: exchangeKeys.detail(id ?? ''),
     queryFn: () => {

@@ -128,7 +128,9 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
       }
 
       // Try to load from API
-      const response = await authenticatedFetch(`${API_URL}/api/ai/conversations/${conversationId}`);
+      const response = await authenticatedFetch(
+        `${API_URL}/api/ai/conversations/${conversationId}`,
+      );
 
       if (response.ok) {
         const data = await response.json();
@@ -303,7 +305,10 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
   createConversation: async (title, initialMessage, authenticatedFetch) => {
     try {
       if (authenticatedFetch) {
-        logger.debug('Creating conversation', { title, hasInitialMessage: Boolean(initialMessage) });
+        logger.debug('Creating conversation', {
+          title,
+          hasInitialMessage: Boolean(initialMessage),
+        });
         const requestBody = {
           title,
           initialMessage,

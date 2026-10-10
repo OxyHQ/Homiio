@@ -137,15 +137,10 @@ interface LeaseHeartbeatResult {
   error?: unknown;
 }
 
-function startLeaseHeartbeat(options: {
-  eventId: string;
-  leaseOwner: string;
-  leaseMs: number;
-}): { stop: () => Promise<LeaseHeartbeatResult> } {
-  const renewIntervalMs = Math.max(
-    MIN_LEASE_RENEW_INTERVAL_MS,
-    Math.floor(options.leaseMs / 3),
-  );
+function startLeaseHeartbeat(options: { eventId: string; leaseOwner: string; leaseMs: number }): {
+  stop: () => Promise<LeaseHeartbeatResult>;
+} {
+  const renewIntervalMs = Math.max(MIN_LEASE_RENEW_INTERVAL_MS, Math.floor(options.leaseMs / 3));
   let stopped = false;
   let lost = false;
   let renewalError: unknown;
@@ -153,11 +148,7 @@ function startLeaseHeartbeat(options: {
 
   const renew = (): void => {
     if (stopped || lost || renewalInFlight) return;
-    const renewal = renewModerationOutboxEvent(
-      options.eventId,
-      options.leaseOwner,
-      options.leaseMs,
-    )
+    const renewal = renewModerationOutboxEvent(options.eventId, options.leaseOwner, options.leaseMs)
       .then((stillOwner) => {
         if (!stillOwner) lost = true;
       })
@@ -202,10 +193,7 @@ export async function dispatchModerationOutbox(options: {
   signal?: AbortSignal;
 }): Promise<ModerationDispatchResult> {
   const leaseOwner = options.leaseOwner ?? `moderation:${process.pid}:${randomUUID()}`;
-  const batchSize = Math.min(
-    Math.max(1, options.batchSize ?? DEFAULT_BATCH_SIZE),
-    MAX_BATCH_SIZE,
-  );
+  const batchSize = Math.min(Math.max(1, options.batchSize ?? DEFAULT_BATCH_SIZE), MAX_BATCH_SIZE);
   const leaseMs = Math.max(1_000, options.leaseMs ?? DEFAULT_LEASE_MS);
   let processed = 0;
   let failed = 0;
@@ -249,8 +237,7 @@ export async function dispatchModerationOutbox(options: {
         eventId: event.id,
         kind: event.kind,
         attempts: event.attempts,
-        error:
-          deliveryError instanceof Error ? deliveryError.message : String(deliveryError),
+        error: deliveryError instanceof Error ? deliveryError.message : String(deliveryError),
       };
       // A dead letter is moderation work that will not happen without a human,
       // so it must not be discoverable only by reading a warn-level line.

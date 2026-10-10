@@ -38,7 +38,13 @@ const DENIED: LocationResolution = { status: 'failed', reason: 'permission_denie
 describe('the statement is never a silent empty', () => {
   it('nothing chosen: no value, and the placeholder ASKS for an area', () => {
     expect(
-      scopeStatement({ selection: null, isGlobal: false, resolution: IDLE, t, formatDistanceValue }),
+      scopeStatement({
+        selection: null,
+        isGlobal: false,
+        resolution: IDLE,
+        t,
+        formatDistanceValue,
+      }),
     ).toEqual({ value: null, placeholder: 'location.scope.chooseArea' });
   });
 
@@ -56,7 +62,13 @@ describe('the statement is never a silent empty', () => {
 
   it('device fix pending: no value, and the placeholder says it is finding the area', () => {
     expect(
-      scopeStatement({ selection: null, isGlobal: false, resolution: RESOLVING, t, formatDistanceValue }),
+      scopeStatement({
+        selection: null,
+        isGlobal: false,
+        resolution: RESOLVING,
+        t,
+        formatDistanceValue,
+      }),
     ).toEqual({ value: null, placeholder: 'location.scope.resolving' });
   });
 
@@ -73,11 +85,13 @@ describe('the statement is never a silent empty', () => {
 
   it('"Everywhere" is a value ONLY when the user chose it', () => {
     expect(
-      scopeStatement({ selection: null, isGlobal: true, resolution: IDLE, t, formatDistanceValue }).value,
+      scopeStatement({ selection: null, isGlobal: true, resolution: IDLE, t, formatDistanceValue })
+        .value,
     ).toBe('location.scope.everywhere');
     // The floor: the same inputs without the flag must not say it.
     expect(
-      scopeStatement({ selection: null, isGlobal: false, resolution: IDLE, t, formatDistanceValue }).value,
+      scopeStatement({ selection: null, isGlobal: false, resolution: IDLE, t, formatDistanceValue })
+        .value,
     ).not.toBe('location.scope.everywhere');
   });
 });
@@ -85,7 +99,9 @@ describe('the statement is never a silent empty', () => {
 describe('a search bound to the scope never runs the world by accident', () => {
   it('runs the SCOPE, not whatever location the draft carried', () => {
     const draft = { ...DEFAULT_SEARCH_QUERY, location: null };
-    expect(scopedSearchQuery(draft, { selection: BARCELONA, isGlobal: false })?.location).toEqual(BARCELONA);
+    expect(scopedSearchQuery(draft, { selection: BARCELONA, isGlobal: false })?.location).toEqual(
+      BARCELONA,
+    );
   });
 
   it('with no area chosen, returns NOTHING to run — the bar asks instead', () => {
@@ -122,7 +138,11 @@ describe('the "use my location" row', () => {
   });
 
   it('is DISABLED with the reason when permission was denied', () => {
-    const state = deviceOptionState({ ...base, resolution: DENIED, deviceIssue: 'permission_denied' });
+    const state = deviceOptionState({
+      ...base,
+      resolution: DENIED,
+      deviceIssue: 'permission_denied',
+    });
     expect(state).toBe('denied');
     expect(deviceOptionDescription(state, t, '25 km')).toBe('location.scope.locationOff');
   });

@@ -122,8 +122,7 @@ export async function withFallback<T>(
       return { value, providerId: provider.id, degraded: index > 0 };
     } catch (error) {
       lastError = error;
-      const recoverable =
-        error instanceof GeocodingProviderError && error.isRecoverable;
+      const recoverable = error instanceof GeocodingProviderError && error.isRecoverable;
       if (!recoverable) throw error;
     }
   }

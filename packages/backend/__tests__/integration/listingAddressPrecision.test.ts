@@ -105,9 +105,15 @@ function authedApp(oxyUserId: string): Express {
   app.put('/properties/:propertyId', updateProperty);
   app.get('/properties/me/list', getMyProperties);
   app.get('/properties/owner/:oxyUserId', getPropertiesByOwner);
-  app.get('/recent-properties', (req, res, next) => recentlyViewedController.getRecentProperties(req, res, next));
-  app.post('/save-property', (req, res, next) => savedPropertiesController.saveProperty(req, res, next));
-  app.get('/saved-properties', (req, res, next) => savedPropertiesController.getSavedProperties(req, res, next));
+  app.get('/recent-properties', (req, res, next) =>
+    recentlyViewedController.getRecentProperties(req, res, next),
+  );
+  app.post('/save-property', (req, res, next) =>
+    savedPropertiesController.saveProperty(req, res, next),
+  );
+  app.get('/saved-properties', (req, res, next) =>
+    savedPropertiesController.getSavedProperties(req, res, next),
+  );
   app.get('/rooms', (req, res, next) => roomController.getRooms(req, res, next));
   app.get('/rooms/:id', (req, res, next) => roomController.getRoomById(req, res, next));
   app.use(errorHandler);
@@ -199,7 +205,10 @@ async function seed(): Promise<Seeded> {
     overrides: listing({ addressPublishedPrecision: 'exact', longTermRentMonthlyAmount: 1500 }),
   });
   const orphanListing = await seedProperty({ addressId: orphanUnitId, overrides: listing() });
-  const room = await seedProperty({ addressId: unitId, overrides: listing({ type: PropertyType.ROOM }) });
+  const room = await seedProperty({
+    addressId: unitId,
+    overrides: listing({ type: PropertyType.ROOM }),
+  });
 
   return {
     chain,
@@ -247,7 +256,12 @@ const DWELLING_ADDRESS_KEYS = [
  * The non-owner half: the listing is IN the body (the vacuity floor), and
  * nothing that names the dwelling inside the building is.
  */
-function expectPublishedAtBuilding(body: unknown, listingId: string, unitAddressId: string, where: string): void {
+function expectPublishedAtBuilding(
+  body: unknown,
+  listingId: string,
+  unitAddressId: string,
+  where: string,
+): void {
   const copies = listingsIn(body, listingId);
   if (copies.length === 0) throw new Error(`${where}: listing ${listingId} is not in the response`);
 
@@ -265,7 +279,10 @@ function expectPublishedAtBuilding(body: unknown, listingId: string, unitAddress
     // The unit row's id would hand the unit back through `/api/addresses/:id`.
     expect({ where, addressId: address.id }).not.toEqual({ where, addressId: unitAddressId });
     const [lng, lat] = (address.coordinates as { coordinates: [number, number] }).coordinates;
-    expect({ where, precision: checkPublicPrecisionWithinPolicy({ lat, lng }, 'building').ok }).toEqual({
+    expect({
+      where,
+      precision: checkPublicPrecisionWithinPolicy({ lat, lng }, 'building').ok,
+    }).toEqual({
       where,
       precision: true,
     });
@@ -275,7 +292,10 @@ function expectPublishedAtBuilding(body: unknown, listingId: string, unitAddress
   // because a feed legitimately carries the `exact` fixture beside it.
   const serialized = JSON.stringify(copies);
   for (const secret of Object.values(SECRETS)) {
-    expect({ where, leaked: serialized.includes(secret) ? secret : null }).toEqual({ where, leaked: null });
+    expect({ where, leaked: serialized.includes(secret) ? secret : null }).toEqual({
+      where,
+      leaked: null,
+    });
   }
 }
 
@@ -285,14 +305,23 @@ function expectExact(body: unknown, listingId: string, where: string): void {
   if (copies.length === 0) throw new Error(`${where}: listing ${listingId} is not in the response`);
   for (const copy of copies) {
     const address = copy.address as Record<string, unknown>;
-    expect({ where, floor: copy.floor, unit: address.unit, addressFloor: address.floor, subunit: address.subunit }).toEqual({
+    expect({
+      where,
+      floor: copy.floor,
+      unit: address.unit,
+      addressFloor: address.floor,
+      subunit: address.subunit,
+    }).toEqual({
       where,
       floor: LISTING_FLOOR,
       unit: SECRETS.unit,
       addressFloor: SECRETS.floor,
       subunit: SECRETS.subunit,
     });
-    expect({ where, lng: (address.coordinates as { coordinates: number[] }).coordinates[0] }).toEqual({
+    expect({
+      where,
+      lng: (address.coordinates as { coordinates: number[] }).coordinates[0],
+    }).toEqual({
       where,
       lng: POINT.longitude,
     });
@@ -325,7 +354,8 @@ describe('the column and its default', () => {
 
   it('refuses a value outside the ladder at the CHECK', async () => {
     await expect(
-      getDb().update(properties)
+      getDb()
+        .update(properties)
         .set({ addressPublishedPrecision: 'unit' as never })
         .where(eq(properties.id, seeded.privateListing)),
     ).rejects.toMatchObject({ cause: expect.objectContaining({ code: '23514' }) });
@@ -348,14 +378,34 @@ describe('every public read path withholds the floor and the unit from a non-own
   const cases: Array<[string, (s: Seeded) => string]> = [
     ['GET /api/properties/:id', (s) => `/api/properties/${s.privateListing}`],
     ['GET /api/properties', () => '/api/properties?limit=50'],
-    ['GET /api/properties/search', (s) => `/api/properties/search?city=${encodeURIComponent(s.cityName)}&limit=50`],
+    [
+      'GET /api/properties/search',
+      (s) => `/api/properties/search?city=${encodeURIComponent(s.cityName)}&limit=50`,
+    ],
     ['GET /api/properties/by-ids', (s) => `/api/properties/by-ids?ids=${s.privateListing}`],
-    ['GET /api/properties/nearby', () => `/api/properties/nearby?longitude=${POINT.longitude}&latitude=${POINT.latitude}&maxDistance=5000&limit=50`],
-    ['GET /api/properties/radius', () => `/api/properties/radius?longitude=${POINT.longitude}&latitude=${POINT.latitude}&radius=5000&limit=50`],
-    ['GET /api/properties/:id/area-insights (comparables)', (s) => `/api/properties/${s.exactListing}/area-insights`],
-    ['GET /api/home/sections', (s) => `/api/home/sections?loc=city.homiio.${s.chain.cityId}&offering=long_term_rent`],
+    [
+      'GET /api/properties/nearby',
+      () =>
+        `/api/properties/nearby?longitude=${POINT.longitude}&latitude=${POINT.latitude}&maxDistance=5000&limit=50`,
+    ],
+    [
+      'GET /api/properties/radius',
+      () =>
+        `/api/properties/radius?longitude=${POINT.longitude}&latitude=${POINT.latitude}&radius=5000&limit=50`,
+    ],
+    [
+      'GET /api/properties/:id/area-insights (comparables)',
+      (s) => `/api/properties/${s.exactListing}/area-insights`,
+    ],
+    [
+      'GET /api/home/sections',
+      (s) => `/api/home/sections?loc=city.homiio.${s.chain.cityId}&offering=long_term_rent`,
+    ],
     ['GET /api/cities/:id/properties', (s) => `/api/cities/${s.chain.cityId}/properties?limit=50`],
-    ['GET /api/agencies/:slug/properties', (s) => `/api/agencies/${s.agencySlug}/properties?limit=50`],
+    [
+      'GET /api/agencies/:slug/properties',
+      (s) => `/api/agencies/${s.agencySlug}/properties?limit=50`,
+    ],
   ];
 
   it.each(cases)('%s, anonymous', async (where, path) => {
@@ -371,18 +421,32 @@ describe('every public read path withholds the floor and the unit from a non-own
   });
 
   it('publishes the building id in place of the unit id, and no id when there is no building', async () => {
-    const withParent = await request(publicApp()).get(`/api/properties/${seeded.privateListing}`).expect(200);
+    const withParent = await request(publicApp())
+      .get(`/api/properties/${seeded.privateListing}`)
+      .expect(200);
     expect(withParent.body.data.address.id).toBe(seeded.buildingId);
     expect(withParent.body.data.address).not.toHaveProperty('addressLevel');
 
-    const orphan = await request(publicApp()).get(`/api/properties/${seeded.orphanListing}`).expect(200);
-    expectPublishedAtBuilding(orphan.body, seeded.orphanListing, seeded.orphanUnitId, 'orphan unit');
+    const orphan = await request(publicApp())
+      .get(`/api/properties/${seeded.orphanListing}`)
+      .expect(200);
+    expectPublishedAtBuilding(
+      orphan.body,
+      seeded.orphanListing,
+      seeded.orphanUnitId,
+      'orphan unit',
+    );
     expect(orphan.body.data.address).not.toHaveProperty('id');
   });
 
   it('withholds the number too when the advertiser hid it', async () => {
-    await getDb().update(properties).set({ showAddressNumber: false }).where(eq(properties.id, seeded.privateListing));
-    const res = await request(publicApp()).get(`/api/properties/${seeded.privateListing}`).expect(200);
+    await getDb()
+      .update(properties)
+      .set({ showAddressNumber: false })
+      .where(eq(properties.id, seeded.privateListing));
+    const res = await request(publicApp())
+      .get(`/api/properties/${seeded.privateListing}`)
+      .expect(200);
     const address = res.body.data.address as Record<string, unknown>;
     expect(address.street).toBe(STREET);
     expect(address).not.toHaveProperty('number');
@@ -394,15 +458,27 @@ describe('every public read path withholds the floor and the unit from a non-own
 
 describe('the authenticated reads a non-owner can reach', () => {
   it('GET /properties/owner/:oxyUserId — naming the owner in the URL confers nothing', async () => {
-    const res = await request(authedApp(STRANGER)).get(`/properties/owner/${OWNER}?limit=50`).expect(200);
-    expectPublishedAtBuilding(res.body, seeded.privateListing, seeded.unitId, 'owner feed, stranger');
+    const res = await request(authedApp(STRANGER))
+      .get(`/properties/owner/${OWNER}?limit=50`)
+      .expect(200);
+    expectPublishedAtBuilding(
+      res.body,
+      seeded.privateListing,
+      seeded.unitId,
+      'owner feed, stranger',
+    );
     // Not even for the owner: the id is a URL parameter, not the session.
-    const own = await request(authedApp(OWNER)).get(`/properties/owner/${OWNER}?limit=50`).expect(200);
+    const own = await request(authedApp(OWNER))
+      .get(`/properties/owner/${OWNER}?limit=50`)
+      .expect(200);
     expectPublishedAtBuilding(own.body, seeded.privateListing, seeded.unitId, 'owner feed, owner');
   });
 
   it('saved properties', async () => {
-    await request(authedApp(STRANGER)).post('/save-property').send({ propertyId: seeded.privateListing }).expect(200);
+    await request(authedApp(STRANGER))
+      .post('/save-property')
+      .send({ propertyId: seeded.privateListing })
+      .expect(200);
     const res = await request(authedApp(STRANGER)).get('/saved-properties').expect(200);
     expectPublishedAtBuilding(res.body, seeded.privateListing, seeded.unitId, 'saved');
   });
@@ -423,7 +499,9 @@ describe('the authenticated reads a non-owner can reach', () => {
 
 describe('the owner, and a listing published exact', () => {
   it('serves the owner every stored detail on the public detail route, uncacheable', async () => {
-    const res = await request(publicApp(OWNER)).get(`/api/properties/${seeded.privateListing}`).expect(200);
+    const res = await request(publicApp(OWNER))
+      .get(`/api/properties/${seeded.privateListing}`)
+      .expect(200);
     expectExact(res.body, seeded.privateListing, 'detail, owner');
     expect(res.body.data.address.id).toBe(seeded.unitId);
     expect(res.headers['cache-control']).toBe('private, no-store');
@@ -438,7 +516,9 @@ describe('the owner, and a listing published exact', () => {
   });
 
   it('serves a listing published `exact` to anybody', async () => {
-    const res = await request(publicApp()).get(`/api/properties/${seeded.exactListing}`).expect(200);
+    const res = await request(publicApp())
+      .get(`/api/properties/${seeded.exactListing}`)
+      .expect(200);
     expectExact(res.body, seeded.exactListing, 'exact listing, anonymous');
     expect(res.headers['cache-control']).toBeUndefined();
   });
@@ -467,7 +547,9 @@ describe('create and update persist the owner’s choice', () => {
     expect(res.body.data.floor).toBe(3);
     expect(res.body.data.address.unit).toBe(SECRETS.unit);
 
-    const publicRead = await request(publicApp()).get(`/api/properties/${res.body.data.id}`).expect(200);
+    const publicRead = await request(publicApp())
+      .get(`/api/properties/${res.body.data.id}`)
+      .expect(200);
     expect(publicRead.body.data).not.toHaveProperty('floor');
   });
 
@@ -479,7 +561,9 @@ describe('create and update persist the owner’s choice', () => {
     const stored = await findPropertyById(res.body.data.id);
     assertFound(stored, 'created');
     expect(stored.property.addressPublishedPrecision).toBe('exact');
-    const publicRead = await request(publicApp()).get(`/api/properties/${res.body.data.id}`).expect(200);
+    const publicRead = await request(publicApp())
+      .get(`/api/properties/${res.body.data.id}`)
+      .expect(200);
     expect(publicRead.body.data.floor).toBe(3);
     expect(publicRead.body.data.address.unit).toBe(SECRETS.unit);
   });
@@ -505,14 +589,18 @@ describe('create and update persist the owner’s choice', () => {
       .put(`/properties/${seeded.privateListing}`)
       .send({ addressPublishedPrecision: 'exact' })
       .expect(200);
-    const opened = await request(publicApp()).get(`/api/properties/${seeded.privateListing}`).expect(200);
+    const opened = await request(publicApp())
+      .get(`/api/properties/${seeded.privateListing}`)
+      .expect(200);
     expect(opened.body.data.address.unit).toBe(SECRETS.unit);
 
     await request(authedApp(OWNER))
       .put(`/properties/${seeded.exactListing}`)
       .send({ addressPublishedPrecision: 'building' })
       .expect(200);
-    const closed = await request(publicApp()).get(`/api/properties/${seeded.exactListing}`).expect(200);
+    const closed = await request(publicApp())
+      .get(`/api/properties/${seeded.exactListing}`)
+      .expect(200);
     expectPublishedAtBuilding(closed.body, seeded.exactListing, seeded.unitId, 'after closing');
   });
 });

@@ -38,9 +38,7 @@ export const ThumbnailImage: React.FC<ThumbnailImageProps> = ({
   resizeMode = 'cover',
 }) => (
   <View style={[styles.fill, !source && styles.placeholder, style]}>
-    {source ? (
-      <Image source={source} style={styles.fill} resizeMode={resizeMode} />
-    ) : null}
+    {source ? <Image source={source} style={styles.fill} resizeMode={resizeMode} /> : null}
   </View>
 );
 

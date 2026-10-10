@@ -205,10 +205,7 @@ export async function getReceipt(req: Request, res: Response, next: NextFunction
       .select()
       .from(leasePaymentMovements)
       .where(
-        and(
-          eq(leasePaymentMovements.id, movementId),
-          eq(leasePaymentMovements.leaseId, leaseId),
-        ),
+        and(eq(leasePaymentMovements.id, movementId), eq(leasePaymentMovements.leaseId, leaseId)),
       )
       .limit(1);
     if (!movement) throw new AppError('Receipt not found', 404, 'NOT_FOUND');
@@ -344,8 +341,7 @@ export async function declarePayment(
       // default that ignored the ledger would over-declare by design.
       const settled = await settledAmountOf(tx, leaseId, obligationId);
       const outstanding = Math.max(0, obligation.amount - settled);
-      const amount =
-        req.body?.amount === undefined ? outstanding : requireAmount(req.body.amount);
+      const amount = req.body?.amount === undefined ? outstanding : requireAmount(req.body.amount);
 
       if (outstanding <= 0) {
         throw new AppError('That obligation is already settled', 409, 'OBLIGATION_SETTLED');
@@ -416,11 +412,7 @@ export async function confirmPayment(
     const oxyUserId = requireSessionOxyUserId(req);
     const access = await requireLeaseAccess(req, oxyUserId);
     if (!isLandlord(access, oxyUserId)) {
-      throw new AppError(
-        'Only the landlord can confirm a payment on this lease',
-        403,
-        'FORBIDDEN',
-      );
+      throw new AppError('Only the landlord can confirm a payment on this lease', 403, 'FORBIDDEN');
     }
 
     const leaseId = String(req.params.id);
@@ -434,11 +426,7 @@ export async function confirmPayment(
       if (outcome.reason === 'not_found') {
         throw new AppError('Payment not found', 404, 'NOT_FOUND');
       }
-      throw new AppError(
-        'That payment is not awaiting confirmation',
-        409,
-        'PAYMENT_NOT_PENDING',
-      );
+      throw new AppError('That payment is not awaiting confirmation', 409, 'PAYMENT_NOT_PENDING');
     }
 
     if (!outcome.alreadyConfirmed) {

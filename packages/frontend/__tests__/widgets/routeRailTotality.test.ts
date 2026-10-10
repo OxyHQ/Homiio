@@ -139,9 +139,7 @@ describe('routeFromFile follows expo-router, not a guess', () => {
   it('keeps dynamic segments verbatim, at any depth', () => {
     expect(routeFromFile('explore/[query].tsx')).toBe('/explore/[query]');
     expect(routeFromFile('(tabs)/saved/[folderId]/edit.tsx')).toBe('/saved/[folderId]/edit');
-    expect(routeFromFile('properties/[id]/book-viewing.tsx')).toBe(
-      '/properties/[id]/book-viewing',
-    );
+    expect(routeFromFile('properties/[id]/book-viewing.tsx')).toBe('/properties/[id]/book-viewing');
   });
 
   it('resolves a platform variant to the same route as its base file', () => {
@@ -205,9 +203,7 @@ describe('railForPathname agrees with the map for every real route', () => {
     // The map being total is worth nothing if the MATCHER cannot find the entry.
     // Checked over every route rather than a sample, because the cases that go
     // wrong are the ones nobody thinks to sample.
-    const mismatched = ROUTES.filter(
-      (route) => railForPathname(concrete(route)).pattern !== route,
-    );
+    const mismatched = ROUTES.filter((route) => railForPathname(concrete(route)).pattern !== route);
     expect(mismatched).toEqual([]);
   });
 

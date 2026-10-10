@@ -31,7 +31,13 @@ export function WizardTextField({
   ...input
 }: WizardTextFieldProps) {
   return (
-    <Field label={label} error={error || null} description={description} required={required} style={style}>
+    <Field
+      label={label}
+      error={error || null}
+      description={description}
+      required={required}
+      style={style}
+    >
       <TextFieldInput label={label} isInvalid={Boolean(error)} {...input} />
     </Field>
   );
@@ -102,7 +108,9 @@ export function WizardSelect({
         trailingIcon={RiArrowDownSLine}
         onPress={() => setOpen(true)}
         accessibilityLabel={value ? `${label}: ${value}` : label}
-        style={styles.trigger} tone="neutral" appearance="outline"
+        style={styles.trigger}
+        tone="neutral"
+        appearance="outline"
       >
         {value || placeholder}
       </Button>
@@ -120,7 +128,10 @@ export function WizardSelect({
 
 /** Case- and accent-insensitive, so "malaga" finds "Málaga". */
 function foldForSearch(text: string): string {
-  return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  return text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
 }
 
 function matchesIgnoringAccents(item: CommandItem, query: string): boolean {

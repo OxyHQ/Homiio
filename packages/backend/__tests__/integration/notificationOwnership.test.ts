@@ -38,11 +38,21 @@ function buildApp(oxyUserId: string): Express {
     (req as unknown as { user: { id: string } }).user = { id: oxyUserId };
     next();
   });
-  app.get('/notifications/:id', (req, res, next) => notificationController.getNotificationById(req, res, next));
-  app.patch('/notifications/read-all', (req, res, next) => notificationController.markAllAsRead(req, res, next));
-  app.delete('/notifications/clear-all', (req, res, next) => notificationController.clearAllNotifications(req, res, next));
-  app.patch('/notifications/:id/read', (req, res, next) => notificationController.markAsRead(req, res, next));
-  app.delete('/notifications/:id', (req, res, next) => notificationController.deleteNotification(req, res, next));
+  app.get('/notifications/:id', (req, res, next) =>
+    notificationController.getNotificationById(req, res, next),
+  );
+  app.patch('/notifications/read-all', (req, res, next) =>
+    notificationController.markAllAsRead(req, res, next),
+  );
+  app.delete('/notifications/clear-all', (req, res, next) =>
+    notificationController.clearAllNotifications(req, res, next),
+  );
+  app.patch('/notifications/:id/read', (req, res, next) =>
+    notificationController.markAsRead(req, res, next),
+  );
+  app.delete('/notifications/:id', (req, res, next) =>
+    notificationController.deleteNotification(req, res, next),
+  );
   app.use(errorHandler);
   return app;
 }
@@ -161,9 +171,7 @@ describe('notificationController — bulk routes are per-user', () => {
     expect(res.body.data.modifiedCount).toBe(1);
 
     expect((await findById(unread.id))?.read).toBe(true);
-    expect((await findById(alreadyRead.id))?.readAt).toEqual(
-      new Date('2020-01-01T00:00:00.000Z'),
-    );
+    expect((await findById(alreadyRead.id))?.readAt).toEqual(new Date('2020-01-01T00:00:00.000Z'));
   });
 
   it("clear-all only deletes the caller's own notifications", async () => {

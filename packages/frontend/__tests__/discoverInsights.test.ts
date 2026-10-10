@@ -46,7 +46,12 @@ describe('placeReviewStats', () => {
   });
 
   it('keeps the average but withholds the shares below the record floor', () => {
-    const stats = placeReviewStats([review('1', 'a'), review('2', 'b'), review('3', 'c'), review('4', 'd')]);
+    const stats = placeReviewStats([
+      review('1', 'a'),
+      review('2', 'b'),
+      review('3', 'c'),
+      review('4', 'd'),
+    ]);
     expect(stats.totalReviews).toBe(4);
     expect(stats.averageRating).toBe(4);
     expect(stats.recommendRate).toBeUndefined();

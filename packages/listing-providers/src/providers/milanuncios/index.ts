@@ -21,7 +21,11 @@ import type {
   RawListing,
 } from '../../types';
 import { createFetchRuntime } from '../../runtime';
-import { defaultProviderMetrics, type ProviderMetricsReader, type ProviderMetricsSink } from '../../metrics';
+import {
+  defaultProviderMetrics,
+  type ProviderMetricsReader,
+  type ProviderMetricsSink,
+} from '../../metrics';
 import { isHousingCategoryUrl } from '../../parse/classifieds';
 import {
   MILANUNCIOS_BASE_URL,
@@ -53,7 +57,12 @@ export interface MilanunciosProviderOptions {
 }
 
 function asMilanunciosRaw(payload: unknown): MilanunciosRaw {
-  const record = payload as { sourceId?: unknown; url?: unknown; price?: unknown; city?: unknown } | null;
+  const record = payload as {
+    sourceId?: unknown;
+    url?: unknown;
+    price?: unknown;
+    city?: unknown;
+  } | null;
   if (
     !record ||
     typeof record.sourceId !== 'string' ||
@@ -175,7 +184,10 @@ export class MilanunciosProvider implements ListingProvider {
   }
 
   async fetch(ref: ExternalListingRef, ctx: FetchContext): Promise<RawListing> {
-    if (!isHousingCategoryUrl(ref.url, MILANUNCIOS_HOUSING_CATEGORY_SLUGS) && !ref.url.includes('inmobiliaria')) {
+    if (
+      !isHousingCategoryUrl(ref.url, MILANUNCIOS_HOUSING_CATEGORY_SLUGS) &&
+      !ref.url.includes('inmobiliaria')
+    ) {
       // Still allow detail URLs that embed the id but carry housing hints in path.
       if (!/piso|casa|chalet|habitacion|atico|duplex|inmueble|alquiler|venta/i.test(ref.url)) {
         throw new Error(`milanuncios: refuse fetch of non-housing URL ${ref.url}`);
@@ -206,7 +218,12 @@ export class MilanunciosProvider implements ListingProvider {
           referer: ref.url,
           timeoutMs: 20_000,
         });
-        if (status >= 200 && status < 300 && body.trim().startsWith('{') && !isMilanunciosChallenge(body)) {
+        if (
+          status >= 200 &&
+          status < 300 &&
+          body.trim().startsWith('{') &&
+          !isMilanunciosChallenge(body)
+        ) {
           const payload = parseMilanunciosAdvert(JSON.parse(body) as unknown, ref.url);
           this.metrics.record({
             provider: this.id,
@@ -249,7 +266,11 @@ export class MilanunciosProvider implements ListingProvider {
     const snapshot = this.metrics.snapshot(this.id);
     if (snapshot && snapshot.attempts > 0) {
       const status =
-        snapshot.challengeRate >= 0.8 ? 'unhealthy' : snapshot.challengeRate >= 0.3 ? 'degraded' : 'healthy';
+        snapshot.challengeRate >= 0.8
+          ? 'unhealthy'
+          : snapshot.challengeRate >= 0.3
+            ? 'degraded'
+            : 'healthy';
       return {
         provider: this.id,
         status,

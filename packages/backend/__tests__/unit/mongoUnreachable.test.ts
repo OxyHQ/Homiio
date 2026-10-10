@@ -248,7 +248,9 @@ describe('the runtime cannot reach Mongo', () => {
    * day that list is empty, the secret can come off the task definition.
    */
   it('has no unaccounted Mongo reader', () => {
-    const offenders = scanned.filter((file) => reachesMongo(file) && !PENDING_MONGO_FILES.has(file));
+    const offenders = scanned.filter(
+      (file) => reachesMongo(file) && !PENDING_MONGO_FILES.has(file),
+    );
     expect(offenders).toEqual([]);
   });
 
@@ -260,7 +262,7 @@ describe('the runtime cannot reach Mongo', () => {
    */
   it('has no stale pending entry', () => {
     const stale = [...PENDING_MONGO_FILES.keys()].filter(
-      (file) => !scanned.includes(file) || !reachesMongo(file)
+      (file) => !scanned.includes(file) || !reachesMongo(file),
     );
     expect(stale).toEqual([]);
   });
@@ -334,7 +336,9 @@ describe('boot does not require Mongo', () => {
   it('names every production module reading MONGODB_URI', () => {
     const readers = trackedFiles()
       .filter((file) => !file.includes('__tests__'))
-      .filter((file) => stripComments(readFileSync(path.join(BACKEND_ROOT, file), 'utf8')).includes('MONGODB_URI'));
+      .filter((file) =>
+        stripComments(readFileSync(path.join(BACKEND_ROOT, file), 'utf8')).includes('MONGODB_URI'),
+      );
 
     expect(readers).toEqual([]);
   });

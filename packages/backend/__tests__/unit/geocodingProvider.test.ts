@@ -190,9 +190,7 @@ describe('nominatim adapter — building a provider place', () => {
     // `types.ts` declares that ordering an error. Passing it on would put an
     // unsatisfiable rectangle into a search query, which returns zero results
     // and looks like "nothing here".
-    stubFetch(() =>
-      json([{ ...BARCELONA, boundingbox: ['41.9', '41.1', '2.05', '2.22'] }]),
-    );
+    stubFetch(() => json([{ ...BARCELONA, boundingbox: ['41.9', '41.1', '2.05', '2.22'] }]));
     const [place] = await createNominatimProvider().autocomplete({
       query: 'Barcelona',
       language: 'es',
@@ -205,9 +203,7 @@ describe('nominatim adapter — building a provider place', () => {
   it('keeps a bounding box whose west exceeds its east', async () => {
     // LEGAL: that is the antimeridian-crossing box (ADR 0002 §9.3), and
     // "tidying it up" inverts every such query into its complement.
-    stubFetch(() =>
-      json([{ ...BARCELONA, boundingbox: ['-20', '-16', '170', '-170'] }]),
-    );
+    stubFetch(() => json([{ ...BARCELONA, boundingbox: ['-20', '-16', '170', '-170'] }]));
     const [place] = await createNominatimProvider().autocomplete({
       query: 'Fiji',
       language: 'en',
@@ -295,8 +291,7 @@ describe('nominatim adapter — request construction', () => {
 
 describe('nominatim adapter — failure classification', () => {
   const provider = () => createNominatimProvider();
-  const search = () =>
-    provider().autocomplete({ query: 'Barcelona', language: 'en', limit: 5 });
+  const search = () => provider().autocomplete({ query: 'Barcelona', language: 'en', limit: 5 });
 
   it('classifies 429 as rate_limited and carries Retry-After', async () => {
     stubFetch(() => new Response('slow down', { status: 429, headers: { 'retry-after': '42' } }));

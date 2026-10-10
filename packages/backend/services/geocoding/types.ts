@@ -53,11 +53,7 @@ export class GeocodingProviderError extends Error {
   /** Seconds the provider asked us to wait, when it said so (HTTP 429). */
   readonly retryAfterSeconds?: number;
 
-  constructor(
-    reason: GeocodingFailureReason,
-    providerId: string,
-    retryAfterSeconds?: number,
-  ) {
+  constructor(reason: GeocodingFailureReason, providerId: string, retryAfterSeconds?: number) {
     super(`geocoding provider "${providerId}" failed: ${reason}`);
     this.name = 'GeocodingProviderError';
     this.reason = reason;

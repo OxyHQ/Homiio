@@ -1,8 +1,21 @@
-import { createCheckoutSession, stripeWebhook, testWebhookConfig, debugBillingStatus, manuallyActivateSubscription, createCustomerPortalSession, manuallyCancelSubscription, syncSubscriptionStatus, cancelSubscription, reactivateSubscription, testWebhookEndpoint, debugSubscriptionStatus } from '../controllers/billingController';
+import {
+  createCheckoutSession,
+  stripeWebhook,
+  testWebhookConfig,
+  debugBillingStatus,
+  manuallyActivateSubscription,
+  createCustomerPortalSession,
+  manuallyCancelSubscription,
+  syncSubscriptionStatus,
+  cancelSubscription,
+  reactivateSubscription,
+  testWebhookEndpoint,
+  debugSubscriptionStatus,
+} from '../controllers/billingController';
 import express from 'express';
 import performanceMonitor from '../middlewares/performance';
 
-export default function() {
+export default function () {
   const router = express.Router();
 
   router.use(performanceMonitor);

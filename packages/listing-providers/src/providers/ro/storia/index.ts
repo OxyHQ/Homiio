@@ -30,7 +30,11 @@ import type {
 } from '../../../types';
 import { createFetchRuntime } from '../../../runtime';
 import { ChallengeError, fetchListingViaLadder } from '../../../strategy';
-import { defaultProviderMetrics, type ProviderMetricsReader, type ProviderMetricsSink } from '../../../metrics';
+import {
+  defaultProviderMetrics,
+  type ProviderMetricsReader,
+  type ProviderMetricsSink,
+} from '../../../metrics';
 import { STORIA_BASE_URL } from './fixtures';
 import {
   isStoriaChallenge,
@@ -60,7 +64,11 @@ export interface StoriaProviderOptions {
 }
 
 /** Rental search URL (housing-native portal — no classifieds guard needed). */
-function searchUrl(city: string, page: number, operation: 'inchiriere' | 'vanzare' = 'inchiriere'): string {
+function searchUrl(
+  city: string,
+  page: number,
+  operation: 'inchiriere' | 'vanzare' = 'inchiriere',
+): string {
   const base = `${STORIA_BASE_URL}/ro/rezultate/${operation}/apartament/${citySlug(city)}`;
   return page <= 1 ? base : `${base}?page=${page}`;
 }
@@ -73,9 +81,13 @@ function asStoriaRaw(payload: unknown): StoriaRawListing {
   return payload as StoriaRawListing;
 }
 
-function resolvePropertyType(estate: string | undefined, bedrooms: number | undefined): PropertyType {
+function resolvePropertyType(
+  estate: string | undefined,
+  bedrooms: number | undefined,
+): PropertyType {
   const lower = (estate ?? '').toLowerCase();
-  if (lower.includes('house') || lower.includes('terrain') || lower === 'house') return PropertyType.HOUSE;
+  if (lower.includes('house') || lower.includes('terrain') || lower === 'house')
+    return PropertyType.HOUSE;
   if (lower.includes('studio') || bedrooms === 0) return PropertyType.STUDIO;
   return PropertyType.APARTMENT;
 }
@@ -133,7 +145,14 @@ export class StoriaProvider implements ListingProvider {
       if (yielded.count >= limit) return;
 
       if (viaSession.length === 0) {
-        for await (const ref of this.discoverCityViaLadder(runtime, city, job.signal, seen, limit, yielded)) {
+        for await (const ref of this.discoverCityViaLadder(
+          runtime,
+          city,
+          job.signal,
+          seen,
+          limit,
+          yielded,
+        )) {
           yield ref;
         }
       }
@@ -371,7 +390,9 @@ export class StoriaProvider implements ListingProvider {
       },
       type: resolvePropertyType(listing.estate, listing.bedrooms),
       offerings: isSale ? [OfferingType.SALE] : [OfferingType.LONG_TERM_RENT],
-      longTermRent: isSale ? undefined : { monthlyAmount: listing.price, currency: listing.currency },
+      longTermRent: isSale
+        ? undefined
+        : { monthlyAmount: listing.price, currency: listing.currency },
       sale: isSale ? { price: listing.price, currency: listing.currency } : undefined,
       remoteImages: toRemoteImages(listing.images),
       status: 'published',
@@ -391,7 +412,11 @@ export class StoriaProvider implements ListingProvider {
     const snapshot = this.metrics.snapshot(this.id);
     if (snapshot && snapshot.attempts > 0) {
       const status =
-        snapshot.challengeRate >= 0.8 ? 'unhealthy' : snapshot.challengeRate >= 0.3 ? 'degraded' : 'healthy';
+        snapshot.challengeRate >= 0.8
+          ? 'unhealthy'
+          : snapshot.challengeRate >= 0.3
+            ? 'degraded'
+            : 'healthy';
       return {
         provider: this.id,
         status,
@@ -406,4 +431,9 @@ export class StoriaProvider implements ListingProvider {
   }
 }
 
-export { isStoriaChallenge, parseStoriaDetail, parseStoriaSearch, storiaSourceIdFromUrl } from './parse';
+export {
+  isStoriaChallenge,
+  parseStoriaDetail,
+  parseStoriaSearch,
+  storiaSourceIdFromUrl,
+} from './parse';

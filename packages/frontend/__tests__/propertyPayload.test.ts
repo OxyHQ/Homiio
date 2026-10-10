@@ -37,7 +37,10 @@ import { ExchangeMode, OfferingType, AvailabilityWindowStatus } from '@homiio/sh
 
 import { buildPropertyPayload } from '@/hooks/useCreatePropertyWizard';
 import type { UploadedImage } from '@/services/imageUploadService';
-import { createDefaultFormData, type CreatePropertyFormData } from '@/store/createPropertyFormStore';
+import {
+  createDefaultFormData,
+  type CreatePropertyFormData,
+} from '@/store/createPropertyFormStore';
 
 jest.mock('expo-router', () => ({ useRouter: () => ({ push: jest.fn() }) }));
 
@@ -74,7 +77,10 @@ function uploadedPhoto(
 }
 
 /** The same photo once the server holds it — what the edit screen loads back. */
-function storedPhoto(n: number, extra: { isPrimary?: boolean; caption?: string } = {}): UploadedImage {
+function storedPhoto(
+  n: number,
+  extra: { isPrimary?: boolean; caption?: string } = {},
+): UploadedImage {
   return { ...uploadedPhoto(n, extra), storedImageId: `image-row-${n}` };
 }
 
@@ -145,7 +151,10 @@ function populatedForm(): CreatePropertyFormData {
     instantBook: true,
   };
   form.amenities = { selectedAmenities: ['wifi', 'elevator', 'balcony'] };
-  form.media = { images: [uploadedPhoto(1, { isPrimary: true, caption: 'Living room' })], videos: [] };
+  form.media = {
+    images: [uploadedPhoto(1, { isPrimary: true, caption: 'Living room' })],
+    videos: [],
+  };
   form.offering = {
     ...form.offering,
     salePrice: 385000,

@@ -172,9 +172,7 @@ const ServiceRow: React.FC<ServiceRowProps> = ({ category, label, distanceLabel 
   );
 };
 
-export const NearbyServicesSection: React.FC<NearbyServicesSectionProps> = ({
-  propertyId,
-}) => {
+export const NearbyServicesSection: React.FC<NearbyServicesSectionProps> = ({ propertyId }) => {
   const { t } = useTranslation();
   const { nearbyServices, loading, error } = useNearbyServices(propertyId);
 
@@ -197,9 +195,7 @@ export const NearbyServicesSection: React.FC<NearbyServicesSectionProps> = ({
 
   if (!nearbyServices) return null;
 
-  return (
-    <NearbyServicesContent t={t} data={nearbyServices} />
-  );
+  return <NearbyServicesContent t={t} data={nearbyServices} />;
 };
 
 interface NearbyServicesContentProps {

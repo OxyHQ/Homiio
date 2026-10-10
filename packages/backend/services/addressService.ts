@@ -62,7 +62,11 @@ import {
   type AddressRow,
   type AddressWithGeoNames,
 } from '../db/addresses/addressSerializer';
-import { countryCodeToName, countryNameToCode, defaultCurrencyForCountry } from '../utils/countryData';
+import {
+  countryCodeToName,
+  countryNameToCode,
+  defaultCurrencyForCountry,
+} from '../utils/countryData';
 import { sanitizeGeoJsonCoordinates } from '../utils/geoCoordinates';
 import type { GeocodedAddress } from '@homiio/shared-types';
 import { forwardGeocode, reverseGeocode } from './geocodingService';
@@ -188,8 +192,16 @@ export function normalizeAddressAliases(input: AddressCanonicalInput): AddressCa
 // place already exists) one indexed lookup and no write at all; the trailing
 // SELECT is the branch a concurrent inserter takes.
 
-async function upsertCountry(db: DatabaseOrTransaction, code: string, name: string): Promise<string> {
-  const existing = await db.select({ id: countries.id }).from(countries).where(eq(countries.code, code)).limit(1);
+async function upsertCountry(
+  db: DatabaseOrTransaction,
+  code: string,
+  name: string,
+): Promise<string> {
+  const existing = await db
+    .select({ id: countries.id })
+    .from(countries)
+    .where(eq(countries.code, code))
+    .limit(1);
   if (existing[0]) return existing[0].id;
 
   const inserted = await db
@@ -199,8 +211,13 @@ async function upsertCountry(db: DatabaseOrTransaction, code: string, name: stri
     .returning({ id: countries.id });
   if (inserted[0]) return inserted[0].id;
 
-  const raced = await db.select({ id: countries.id }).from(countries).where(eq(countries.code, code)).limit(1);
-  if (!raced[0]) throw new GeoResolutionError(`Country ${code} could not be resolved after an insert conflict`);
+  const raced = await db
+    .select({ id: countries.id })
+    .from(countries)
+    .where(eq(countries.code, code))
+    .limit(1);
+  if (!raced[0])
+    throw new GeoResolutionError(`Country ${code} could not be resolved after an insert conflict`);
   return raced[0].id;
 }
 
@@ -222,7 +239,8 @@ async function upsertRegion(
   if (inserted[0]) return inserted[0].id;
 
   const raced = await db.select({ id: regions.id }).from(regions).where(match).limit(1);
-  if (!raced[0]) throw new GeoResolutionError(`Region ${name} could not be resolved after an insert conflict`);
+  if (!raced[0])
+    throw new GeoResolutionError(`Region ${name} could not be resolved after an insert conflict`);
   return raced[0].id;
 }
 
@@ -272,7 +290,8 @@ async function upsertCity(
   if (inserted[0]) return inserted[0].id;
 
   const raced = await db.select({ id: cities.id }).from(cities).where(match).limit(1);
-  if (!raced[0]) throw new GeoResolutionError(`City ${name} could not be resolved after an insert conflict`);
+  if (!raced[0])
+    throw new GeoResolutionError(`City ${name} could not be resolved after an insert conflict`);
   return raced[0].id;
 }
 
@@ -284,7 +303,11 @@ async function upsertNeighborhood(
 ): Promise<string> {
   const match = and(eq(neighborhoods.cityId, cityId), eq(neighborhoods.name, name));
 
-  const existing = await db.select({ id: neighborhoods.id }).from(neighborhoods).where(match).limit(1);
+  const existing = await db
+    .select({ id: neighborhoods.id })
+    .from(neighborhoods)
+    .where(match)
+    .limit(1);
   if (existing[0]) return existing[0].id;
 
   const sanitized = centroid ? sanitizeGeoJsonCoordinates(centroid) : null;
@@ -302,7 +325,10 @@ async function upsertNeighborhood(
   if (inserted[0]) return inserted[0].id;
 
   const raced = await db.select({ id: neighborhoods.id }).from(neighborhoods).where(match).limit(1);
-  if (!raced[0]) throw new GeoResolutionError(`Neighborhood ${name} could not be resolved after an insert conflict`);
+  if (!raced[0])
+    throw new GeoResolutionError(
+      `Neighborhood ${name} could not be resolved after an insert conflict`,
+    );
   return raced[0].id;
 }
 
@@ -313,7 +339,10 @@ function namesAreComplete(names: GeoNames | undefined): boolean {
 }
 
 /** Merge geocoder output into caller-supplied names (caller wins). */
-function mergeNames(provided: GeoNames | undefined, geocoded: GeocodedAddress | undefined): GeoNames {
+function mergeNames(
+  provided: GeoNames | undefined,
+  geocoded: GeocodedAddress | undefined,
+): GeoNames {
   return {
     city: provided?.city || geocoded?.city || undefined,
     state: provided?.state || geocoded?.state || undefined,
@@ -327,13 +356,21 @@ function mergeNames(provided: GeoNames | undefined, geocoded: GeocodedAddress | 
 function resolveCountryCodeAndName(names: GeoNames): { code: string; name: string } {
   const explicitCode = names.countryCode?.trim().toUpperCase();
   if (explicitCode && /^[A-Z]{2}$/.test(explicitCode)) {
-    return { code: explicitCode, name: names.country?.trim() || countryCodeToName(explicitCode) || explicitCode };
+    return {
+      code: explicitCode,
+      name: names.country?.trim() || countryCodeToName(explicitCode) || explicitCode,
+    };
   }
   const fromName = names.country ? countryNameToCode(names.country) : undefined;
   if (fromName) {
-    return { code: fromName, name: names.country?.trim() || countryCodeToName(fromName) || fromName };
+    return {
+      code: fromName,
+      name: names.country?.trim() || countryCodeToName(fromName) || fromName,
+    };
   }
-  throw new GeoResolutionError('Unable to resolve a country (no countryCode and unrecognised country name)');
+  throw new GeoResolutionError(
+    'Unable to resolve a country (no countryCode and unrecognised country name)',
+  );
 }
 
 /**
@@ -479,8 +516,12 @@ export async function upsertGeoChain(
 
   // Fall back to a stable placeholder so the chain is always whole — the three
   // parent references on `addresses` are NOT NULL.
-  const regionId = adopted ? adopted.regionId : await upsertRegion(db, countryId, state || UNKNOWN_REGION);
-  const cityId = adopted ? adopted.cityId : await upsertCity(db, regionId, countryId, city, countryCode, coordinates);
+  const regionId = adopted
+    ? adopted.regionId
+    : await upsertRegion(db, countryId, state || UNKNOWN_REGION);
+  const cityId = adopted
+    ? adopted.cityId
+    : await upsertCity(db, regionId, countryId, city, countryCode, coordinates);
 
   let neighborhoodId: string | undefined;
   if (names.neighborhood?.trim()) {
@@ -559,7 +600,9 @@ export function computeAddressNormalizedKey(fields: NormalizedKeyFields): string
  *   `latitude` are NOT NULL and its point is generated from them, so an address
  *   without a location is not a degraded address, it is an unrepresentable one.
  */
-export async function findOrCreateCanonicalAddress(input: AddressCanonicalInput): Promise<AddressRow> {
+export async function findOrCreateCanonicalAddress(
+  input: AddressCanonicalInput,
+): Promise<AddressRow> {
   const normalized = normalizeAddressAliases(input);
   const coordinates = normalized.coordinates?.coordinates;
   if (!coordinates) {
@@ -688,7 +731,10 @@ type ParentAddressLevel = 'STREET' | 'BUILDING';
  * as `createStreetLevel()` did not project them: they describe the specific
  * dwelling a portal or a tenant described, not the building it sits in.
  */
-function projectToLevel(child: AddressRow, level: ParentAddressLevel): typeof addresses.$inferInsert {
+function projectToLevel(
+  child: AddressRow,
+  level: ParentAddressLevel,
+): typeof addresses.$inferInsert {
   const street = {
     countryId: child.countryId,
     regionId: child.regionId,

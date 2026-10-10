@@ -32,7 +32,11 @@ import type {
 } from '../../../types';
 import { createFetchRuntime } from '../../../runtime';
 import { ChallengeError, fetchListingViaLadder } from '../../../strategy';
-import { defaultProviderMetrics, type ProviderMetricsReader, type ProviderMetricsSink } from '../../../metrics';
+import {
+  defaultProviderMetrics,
+  type ProviderMetricsReader,
+  type ProviderMetricsSink,
+} from '../../../metrics';
 import { OLX_RO_BASE_URL } from './fixtures';
 import {
   isOlxRoChallenge,
@@ -208,7 +212,11 @@ export class OlxRoProvider implements ListingProvider {
     });
     const payload = parseOlxRoDetail(html, ref.url);
     if (!isOlxRoHousingCategory(payload.categoryType)) {
-      throw new NonHousingListingError(this.id, payload.sourceId, `non-housing category "${payload.categoryType}"`);
+      throw new NonHousingListingError(
+        this.id,
+        payload.sourceId,
+        `non-housing category "${payload.categoryType}"`,
+      );
     }
     return { ref, payload };
   }
@@ -241,7 +249,11 @@ export class OlxRoProvider implements ListingProvider {
       if (isOlxRoChallenge(html)) return undefined;
       let payload = parseOlxRoDetail(html, ref.url);
       if (!isOlxRoHousingCategory(payload.categoryType)) {
-        throw new NonHousingListingError(this.id, payload.sourceId, `non-housing category "${payload.categoryType}"`);
+        throw new NonHousingListingError(
+          this.id,
+          payload.sourceId,
+          `non-housing category "${payload.categoryType}"`,
+        );
       }
       if (payload.numericId) {
         try {
@@ -269,7 +281,11 @@ export class OlxRoProvider implements ListingProvider {
   normalize(raw: RawListing): NormalizedListing {
     const listing = asRaw(raw.payload);
     if (!isOlxRoHousingCategory(listing.categoryType)) {
-      throw new NonHousingListingError(this.id, listing.sourceId, `non-housing category "${listing.categoryType}"`);
+      throw new NonHousingListingError(
+        this.id,
+        listing.sourceId,
+        `non-housing category "${listing.categoryType}"`,
+      );
     }
     const isSale = listing.operation === 'sale';
     const result: NormalizedListing = {
@@ -286,7 +302,9 @@ export class OlxRoProvider implements ListingProvider {
       },
       type: PropertyType.APARTMENT,
       offerings: isSale ? [OfferingType.SALE] : [OfferingType.LONG_TERM_RENT],
-      longTermRent: isSale ? undefined : { monthlyAmount: listing.price, currency: listing.currency },
+      longTermRent: isSale
+        ? undefined
+        : { monthlyAmount: listing.price, currency: listing.currency },
       sale: isSale ? { price: listing.price, currency: listing.currency } : undefined,
       remoteImages: toRemoteImages(listing.images),
       status: 'published',

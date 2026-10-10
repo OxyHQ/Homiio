@@ -1,7 +1,6 @@
-
 import { habitacliaCitiesFromEnv } from '@homiio/listing-providers';
 import { pisosCitiesFromEnv } from '@homiio/listing-providers';
-import { idealistaCitiesFromEnv } from '@homiio/listing-providers';/**
+import { idealistaCitiesFromEnv } from '@homiio/listing-providers'; /**
  * City list parsing and discover pagination cap tests.
  */
 

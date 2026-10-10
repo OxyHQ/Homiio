@@ -40,7 +40,13 @@ export interface AreaChipProps {
   testID?: string;
 }
 
-export function AreaChip({ scope, title, open, onOpenChange, testID }: AreaChipProps): React.ReactElement {
+export function AreaChip({
+  scope,
+  title,
+  open,
+  onOpenChange,
+  testID,
+}: AreaChipProps): React.ReactElement {
   const { t } = useTranslation();
   const colors = useColors();
   const [text, setText] = useState('');
@@ -67,7 +73,9 @@ export function AreaChip({ scope, title, open, onOpenChange, testID }: AreaChipP
         variant={value ? 'outlined' : 'subtle'}
         size="large"
         startIcon={<RiMapPinLine width={ICON_SIZE} height={ICON_SIZE} fill={colors.text} />}
-        endIcon={<RiArrowDownSLine width={ICON_SIZE} height={ICON_SIZE} fill={colors.textSecondary} />}
+        endIcon={
+          <RiArrowDownSLine width={ICON_SIZE} height={ICON_SIZE} fill={colors.textSecondary} />
+        }
         onPress={() => onOpenChange(true)}
         accessibilityLabel={`${t('location.scope.announce', { scope: label })}. ${t('location.scope.changeAccessible')}`}
         testID={testID}

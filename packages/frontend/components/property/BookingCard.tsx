@@ -117,12 +117,7 @@ export const BookingCard: React.FC<BookingCardProps> = ({ property, stay }) => {
   };
 
   const reportLink = (
-    <LinkButton
-      linkTone="secondary"
-      size="sm"
-      leadingIcon={RiFlagLine}
-      onPress={handleReport}
-    >
+    <LinkButton linkTone="secondary" size="sm" leadingIcon={RiFlagLine} onPress={handleReport}>
       {t('property.report.title')}
     </LinkButton>
   );
@@ -242,7 +237,11 @@ export const BookingCard: React.FC<BookingCardProps> = ({ property, stay }) => {
 
     const facts: KeyFact[] = [];
     if (typeof rent.deposit === 'number' && rent.deposit > 0) {
-      facts.push({ key: 'deposit', label: t('property.sections.deposit'), value: money(rent.deposit, rent.currency) });
+      facts.push({
+        key: 'deposit',
+        label: t('property.sections.deposit'),
+        value: money(rent.deposit, rent.currency),
+      });
     }
     if (property.availableFrom) {
       facts.push({
@@ -253,12 +252,19 @@ export const BookingCard: React.FC<BookingCardProps> = ({ property, stay }) => {
       });
     }
     if (property.leaseTerm) {
-      facts.push({ key: 'leaseTerm', label: t('property.sections.leaseTerm'), value: property.leaseTerm });
+      facts.push({
+        key: 'leaseTerm',
+        label: t('property.sections.leaseTerm'),
+        value: property.leaseTerm,
+      });
     }
 
     const handleApply = () => {
       if (activeApplication) {
-        router.push({ pathname: '/applications/[id]', params: { id: String(activeApplication.id) } });
+        router.push({
+          pathname: '/applications/[id]',
+          params: { id: String(activeApplication.id) },
+        });
         return;
       }
       if (!isAuthenticated) {
@@ -273,18 +279,29 @@ export const BookingCard: React.FC<BookingCardProps> = ({ property, stay }) => {
       <RentalActionCard
         price={money(rent.monthlyAmount, rent.currency)}
         priceUnit={formatting.priceUnitLabels.month.short}
-        priceAccessibilityLabel={`${formatMoney(rent.monthlyAmount, rent.currency, formatting.locale, {
-          currencyDisplay: 'name',
-          maximumFractionDigits: 0,
-        })} ${formatting.priceUnitLabels.month.spoken}`}
-        billsNote={rent.utilities ? t(`listing.actions.bills.${BILLS_KEY[rent.utilities]}`) : undefined}
+        priceAccessibilityLabel={`${formatMoney(
+          rent.monthlyAmount,
+          rent.currency,
+          formatting.locale,
+          {
+            currencyDisplay: 'name',
+            maximumFractionDigits: 0,
+          },
+        )} ${formatting.priceUnitLabels.month.spoken}`}
+        billsNote={
+          rent.utilities ? t(`listing.actions.bills.${BILLS_KEY[rent.utilities]}`) : undefined
+        }
         facts={facts}
         status={status}
         statusLabel={status === 'available' ? undefined : t(`listing.actions.status.${status}`)}
-        statusMessage={status === 'available' ? undefined : t(`listing.actions.status.${status}Message`)}
+        statusMessage={
+          status === 'available' ? undefined : t(`listing.actions.status.${status}Message`)
+        }
         requestViewingLabel={t('listing.sale.requestViewing')}
         onRequestViewing={handleRequestViewing}
-        applyLabel={activeApplication ? t('applications.detail.viewStatus') : t('applications.cta.apply')}
+        applyLabel={
+          activeApplication ? t('applications.detail.viewStatus') : t('applications.cta.apply')
+        }
         onApply={handleApply}
         note={activeApplication ? t('applications.detail.alreadySubmitted') : undefined}
         footer={reportLink}
@@ -305,8 +322,9 @@ export const BookingCard: React.FC<BookingCardProps> = ({ property, stay }) => {
       price: sale.price,
       downPayment: sale.price * DEFAULT_MORTGAGE_CONFIG.defaultDownPaymentFraction,
       years:
-        DEFAULT_MORTGAGE_CONFIG.termOptions[Math.floor(DEFAULT_MORTGAGE_CONFIG.termOptions.length / 2)] ??
-        DEFAULT_MORTGAGE_CONFIG.termOptions[0],
+        DEFAULT_MORTGAGE_CONFIG.termOptions[
+          Math.floor(DEFAULT_MORTGAGE_CONFIG.termOptions.length / 2)
+        ] ?? DEFAULT_MORTGAGE_CONFIG.termOptions[0],
       annualRate: DEFAULT_MORTGAGE_CONFIG.defaultAnnualRate * 100,
     });
 
@@ -319,17 +337,23 @@ export const BookingCard: React.FC<BookingCardProps> = ({ property, stay }) => {
         })}
         pricePerArea={
           typeof sale.pricePerSqm === 'number' && sale.pricePerSqm > 0
-            ? t('property.areaInsights.perSqmValue', { price: money(sale.pricePerSqm, sale.currency) })
+            ? t('property.areaInsights.perSqmValue', {
+                price: money(sale.pricePerSqm, sale.currency),
+              })
             : undefined
         }
         mortgageEstimate={
           mortgage.monthlyPayment > 0
-            ? t('listing.mortgage.estimate', { amount: money(mortgage.monthlyPayment, sale.currency) })
+            ? t('listing.mortgage.estimate', {
+                amount: money(mortgage.monthlyPayment, sale.currency),
+              })
             : undefined
         }
         status={status}
         statusLabel={status === 'available' ? undefined : t(`listing.actions.status.${status}`)}
-        statusMessage={status === 'available' ? undefined : t(`listing.actions.status.${status}Message`)}
+        statusMessage={
+          status === 'available' ? undefined : t(`listing.actions.status.${status}Message`)
+        }
         contactLabel={t('listing.sale.requestViewing')}
         onContact={handleRequestViewing}
         footer={reportLink}

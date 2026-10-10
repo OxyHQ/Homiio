@@ -2,7 +2,7 @@
 import 'dotenv/config';
 import { startPlatformActivity } from './services/platformActivity';
 
-import express from "express";
+import express from 'express';
 import type { Request, Response } from 'express';
 import cors, { type CorsOptions } from 'cors';
 import helmet from 'helmet';
@@ -17,7 +17,12 @@ import { notFound, errorHandler } from './middlewares/errorHandler';
 import { rateLimitKeyFor } from './middlewares/rateLimitKey';
 import { connectPostgres } from './db/postgres';
 import publicRoutes from './routes/public';
-import { OxyServer, createOptionalOxyAuth, createOxyAuthMiddleware, type OxyAuthRefusal } from '@oxy.so/core/server';
+import {
+  OxyServer,
+  createOptionalOxyAuth,
+  createOxyAuthMiddleware,
+  type OxyAuthRefusal,
+} from '@oxy.so/core/server';
 import { stripeWebhook, confirmCheckoutSession } from './controllers/billingController';
 import { initCronJobs } from './services/cron';
 import { HealthService } from './services/healthService';
@@ -151,7 +156,7 @@ const allowedOriginsSet = new Set([
   'http://localhost:19006',
   'http://127.0.0.1:4130',
   'http://127.0.0.1:8130',
-  'http://127.0.0.1:19006'
+  'http://127.0.0.1:19006',
 ]);
 // Extra production web origins (e.g. a preview deployment), comma-separated
 for (const origin of (process.env.CORS_ALLOWED_ORIGINS || '').split(',')) {
@@ -159,7 +164,8 @@ for (const origin of (process.env.CORS_ALLOWED_ORIGINS || '').split(',')) {
   if (trimmed) allowedOriginsSet.add(trimmed);
 }
 // Single combined regex for all private LAN ranges
-const lanRegex = /^https?:\/\/(192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3})(:\d+)?$/;
+const lanRegex =
+  /^https?:\/\/(192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3})(:\d+)?$/;
 
 const corsOptions: CorsOptions = {
   origin(origin, callback) {
@@ -189,10 +195,10 @@ const corsOptions: CorsOptions = {
     'X-Oxy-Edge-Region',
     'X-Oxy-Activity-Id',
     'Cache-Control',
-    'Pragma'
+    'Pragma',
   ],
   exposedHeaders: ['Content-Length'],
-  maxAge: 86400
+  maxAge: 86400,
 };
 
 // Middleware
@@ -209,9 +215,7 @@ const apiLimiter = rateLimit({
   // anonymous traffic. Authenticated users are keyed individually, so a busy
   // user can no longer exhaust the shared-IP bucket.
   max: (req: Request): number =>
-    req.user?.id || req.user?._id
-      ? AUTHENTICATED_RATE_LIMIT_MAX
-      : UNAUTHENTICATED_RATE_LIMIT_MAX,
+    req.user?.id || req.user?._id ? AUTHENTICATED_RATE_LIMIT_MAX : UNAUTHENTICATED_RATE_LIMIT_MAX,
   keyGenerator: rateLimitKey,
   standardHeaders: true,
   legacyHeaders: false,
@@ -247,9 +251,13 @@ app.post('/api/billing/webhook', bodyParser.raw({ type: '*/*' }), (req: Request,
 });
 
 // Public confirm endpoint to finalize entitlements after redirect (does not require auth)
-app.post('/api/billing/confirm', bodyParser.json({ limit: '1mb' }), (req: Request, res: Response) => {
-  void confirmCheckoutSession(req, res);
-});
+app.post(
+  '/api/billing/confirm',
+  bodyParser.json({ limit: '1mb' }),
+  (req: Request, res: Response) => {
+    void confirmCheckoutSession(req, res);
+  },
+);
 
 // Pre-create body parsers to avoid re-creation per request
 const jsonParser = bodyParser.json({ limit: '1mb' });
@@ -285,11 +293,7 @@ app.get('/', (req, res) => {
     message: 'Welcome to the Homio API',
     version,
     description: 'Housing and rental solutions API',
-    features: [
-      'Property management',
-      'Room management',
-      'Oxy ecosystem integration'
-    ]
+    features: ['Property management', 'Room management', 'Oxy ecosystem integration'],
   });
 });
 
@@ -311,8 +315,8 @@ app.get('/health', async (req, res) => {
     environment: config.environment,
     features: ['property-management', 'room-management'],
     database: {
-      status: await healthService.getDatabaseHealth()
-    }
+      status: await healthService.getDatabaseHealth(),
+    },
   });
 });
 
@@ -368,7 +372,7 @@ async function startServer() {
       const timeout = setTimeout(() => process.exit(1), 10_000);
       timeout.unref();
       await Promise.all([
-        new Promise<void>(resolve => server.close(() => resolve())),
+        new Promise<void>((resolve) => server.close(() => resolve())),
         moderationOutboxDispatcher.stop(),
       ]);
       await activity?.stop();

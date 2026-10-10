@@ -40,18 +40,20 @@ describe('IdealistaPtProvider', () => {
   });
 
   it('parses georeach JSON and search HTML', () => {
-    expect(parseIdealistaPtGeoreach(IDEALISTA_PT_FIXTURE_GEOREACH_JSON).map((r) => r.sourceId).sort()).toEqual([
-      '76543210',
-      '76543211',
-      '76543212',
-    ]);
+    expect(
+      parseIdealistaPtGeoreach(IDEALISTA_PT_FIXTURE_GEOREACH_JSON)
+        .map((r) => r.sourceId)
+        .sort(),
+    ).toEqual(['76543210', '76543211', '76543212']);
     expect(isIdealistaPtGeoreachChallenge(IDEALISTA_PT_FIXTURE_GEOREACH_CHALLENGE)).toBe(true);
-    expect(parseIdealistaPtSearch(IDEALISTA_PT_FIXTURE_SEARCH_HTML).map((r) => r.sourceId).sort()).toEqual([
+    expect(
+      parseIdealistaPtSearch(IDEALISTA_PT_FIXTURE_SEARCH_HTML)
+        .map((r) => r.sourceId)
+        .sort(),
+    ).toEqual(['76543210', '76543211', '76543212']);
+    expect(idealistaPtSourceIdFromUrl('https://www.idealista.pt/imovel/76543210/')).toBe(
       '76543210',
-      '76543211',
-      '76543212',
-    ]);
-    expect(idealistaPtSourceIdFromUrl('https://www.idealista.pt/imovel/76543210/')).toBe('76543210');
+    );
     expect(isIdealistaPtChallenge('tiny')).toBe(true);
   });
 

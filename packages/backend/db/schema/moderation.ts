@@ -43,7 +43,16 @@
  * shapeless.
  */
 
-import { bigint, boolean, check, index, jsonb, pgTable, text, uniqueIndex } from 'drizzle-orm/pg-core';
+import {
+  bigint,
+  boolean,
+  check,
+  index,
+  jsonb,
+  pgTable,
+  text,
+  uniqueIndex,
+} from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import { createdAt, generatedId, inList, timestamptz, updatedAt } from '@oxy.so/db';
 import type {
@@ -319,9 +328,7 @@ export const moderationEvents = pgTable(
     updatedAt: updatedAt(),
   },
   (table) => [
-    index('moderation_events_case_id_idx')
-      .on(table.caseId)
-      .where(sql`${table.caseId} is not null`),
+    index('moderation_events_case_id_idx').on(table.caseId).where(sql`${table.caseId} is not null`),
     /** The expiry sweep's range scan. Registered in `db/expiry.ts`. */
     index('moderation_events_expires_at_idx').on(table.expiresAt),
     /** Operational: what arrived recently, and what never got past `claimed`. */

@@ -21,12 +21,7 @@ import {
   RiUserLine,
 } from '@oxy.so/bloom/icons';
 import { useTheme } from '@oxy.so/bloom/theme';
-import {
-  H1,
-  H2,
-  H3,
-  Text as BloomText,
-} from '@oxy.so/bloom/typography';
+import { H1, H2, H3, Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { Header } from '@/components/Header';
 import { ErrorState } from '@/components/ui/ErrorState';
@@ -83,9 +78,7 @@ const renderMarkdown = (content: string): React.ReactNode[] => {
     } else if (trimmed.startsWith('> ')) {
       elements.push(
         <View key={key} style={styles.blockquote}>
-          <BloomText style={styles.blockquoteText}>
-            {trimmed.substring(2)}
-          </BloomText>
+          <BloomText style={styles.blockquoteText}>{trimmed.substring(2)}</BloomText>
         </View>,
       );
     } else {
@@ -279,9 +272,7 @@ export default function TipArticleScreen() {
             {tip.publishedAt ? (
               <View style={styles.metaItem}>
                 <RiCalendarLine width={14} height={14} fill={theme.colors.textSecondary} />
-                <BloomText style={styles.metaText}>
-                  {formatPublishDate(tip.publishedAt)}
-                </BloomText>
+                <BloomText style={styles.metaText}>{formatPublishDate(tip.publishedAt)}</BloomText>
               </View>
             ) : null}
           </View>
@@ -292,9 +283,7 @@ export default function TipArticleScreen() {
 
         {relatedTips.length >= 2 ? (
           <View style={styles.relatedSection}>
-            <H2 style={styles.relatedHeading}>
-              {t('tips.related')}
-            </H2>
+            <H2 style={styles.relatedHeading}>{t('tips.related')}</H2>
             <View style={styles.relatedGrid}>
               {relatedTips.map((related) => (
                 <RelatedCard

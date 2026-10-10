@@ -132,18 +132,14 @@ describe('1. list and map must be showing the same query', () => {
     expect(result.ok).toBe(false);
     // A name-keyed scope would make these identical; the stable place key is
     // the only field that differs in a way an implementation cannot fake.
-    expect(deriveQueryId(cityQuery(BARCELONA_ES))).not.toBe(
-      deriveQueryId(cityQuery(BARCELONA_VE)),
-    );
+    expect(deriveQueryId(cityQuery(BARCELONA_ES))).not.toBe(deriveQueryId(cityQuery(BARCELONA_VE)));
     expect(canonicalQueryDescriptor(cityQuery(BARCELONA_ES))).toContain(BARCELONA_ES.placeKey);
   });
 
   it('agrees when two surfaces built the same query independently', () => {
     // The positive control. Without it, an implementation that reports
     // divergence for everything would pass every case above.
-    expect(checkQueryIdentityMatch(cityQuery(BARCELONA_ES), cityQuery(BARCELONA_ES)).ok).toBe(
-      true,
-    );
+    expect(checkQueryIdentityMatch(cityQuery(BARCELONA_ES), cityQuery(BARCELONA_ES)).ok).toBe(true);
   });
 
   it('is stable across float noise inside the published grid cell', () => {
@@ -168,9 +164,7 @@ describe('1. list and map must be showing the same query', () => {
     const listQuery = viewportQuery(MADRID_ES.bounds, { cityKey: BARCELONA_ES.placeKey });
 
     expect(checkQueryIdentityMatch(listQuery, mapQuery).ok).toBe(false);
-    expect(
-      checkVisibleAreaMatchesQueriedArea(MADRID_ES.bounds, MADRID_ES.bounds).ok,
-    ).toBe(true);
+    expect(checkVisibleAreaMatchesQueriedArea(MADRID_ES.bounds, MADRID_ES.bounds).ok).toBe(true);
   });
 
   it('treats free text and geographic scope as separate dimensions', () => {
@@ -179,7 +173,10 @@ describe('1. list and map must be showing the same query', () => {
     // the previous area's results — or the reverse.
     const inArea = viewportQuery(MADRID_ES.bounds);
     const inAreaWithText = { ...inArea, freeText: 'ático con terraza' };
-    const elsewhereWithText = { ...viewportQuery(BARCELONA_ES.bounds), freeText: 'ático con terraza' };
+    const elsewhereWithText = {
+      ...viewportQuery(BARCELONA_ES.bounds),
+      freeText: 'ático con terraza',
+    };
 
     expect(deriveQueryId(inAreaWithText)).not.toBe(deriveQueryId(inArea));
     expect(deriveQueryId(inAreaWithText)).not.toBe(deriveQueryId(elsewhereWithText));
@@ -206,19 +203,16 @@ describe('2. the visible area must be the queried area', () => {
   });
 
   it('rejects two cities that share a name and nothing else', () => {
-    expect(
-      checkVisibleAreaMatchesQueriedArea(BARCELONA_ES.bounds, BARCELONA_VE.bounds).ok,
-    ).toBe(false);
+    expect(checkVisibleAreaMatchesQueriedArea(BARCELONA_ES.bounds, BARCELONA_VE.bounds).ok).toBe(
+      false,
+    );
   });
 
   it('accepts an antimeridian viewport compared with itself', () => {
     // `east - west` on this box is -358. An implementation that computes the
     // span that way reads it as empty or as the whole planet, and BOTH readings
     // are silent — the second makes every comparison pass.
-    const result = checkVisibleAreaMatchesQueriedArea(
-      ANTIMERIDIAN_VIEWPORT,
-      ANTIMERIDIAN_VIEWPORT,
-    );
+    const result = checkVisibleAreaMatchesQueriedArea(ANTIMERIDIAN_VIEWPORT, ANTIMERIDIAN_VIEWPORT);
 
     expect(result.ok).toBe(true);
     expect(result.safe.overlapClass).toBe('match');

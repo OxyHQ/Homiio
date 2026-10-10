@@ -89,7 +89,9 @@ describe('property create ownership', () => {
   }
 
   it('creates a listing owned by the authenticated user', async () => {
-    const res = await request(buildApp('oxy-owner')).post('/properties').send(await validCreateBody());
+    const res = await request(buildApp('oxy-owner'))
+      .post('/properties')
+      .send(await validCreateBody());
     expect(res.status).toBe(201);
     const persisted = await findPropertyById(res.body.data.id);
     assertFound(persisted, 'persisted');

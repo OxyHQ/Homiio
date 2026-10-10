@@ -43,7 +43,20 @@
  * beside it, and visible to a test that counts rows.
  */
 
-import { and, asc, count, desc, eq, gte, inArray, isNotNull, isNull, lt, lte, sql } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  gte,
+  inArray,
+  isNotNull,
+  isNull,
+  lt,
+  lte,
+  sql,
+} from 'drizzle-orm';
 import { EVICTION_STATUS_TRANSITIONS, type EvictionHelpNeedType } from '@homiio/shared-types';
 import { getDb, inSavepoint, type DatabaseOrTransaction } from '../postgres';
 import {
@@ -842,7 +855,10 @@ export async function toggleAttendance(
   let attending: boolean;
   try {
     await inSavepoint(db, (tx) =>
-      tx.insert(evictionCaseAttendees).values({ caseId, oxyUserId }).returning({ id: evictionCaseAttendees.id }),
+      tx
+        .insert(evictionCaseAttendees)
+        .values({ caseId, oxyUserId })
+        .returning({ id: evictionCaseAttendees.id }),
     );
     attending = true;
   } catch (error) {
@@ -880,10 +896,7 @@ export async function findSupporterStanding(
     })
     .from(evictionCaseAttendees)
     .where(
-      and(
-        eq(evictionCaseAttendees.caseId, caseId),
-        eq(evictionCaseAttendees.oxyUserId, oxyUserId),
-      ),
+      and(eq(evictionCaseAttendees.caseId, caseId), eq(evictionCaseAttendees.oxyUserId, oxyUserId)),
     )
     .limit(1);
   if (!row) return { attending: false, confirmed: false, revoked: false };
@@ -1027,10 +1040,7 @@ export async function toggleFollow(
   await db
     .delete(evictionCaseFollowers)
     .where(
-      and(
-        eq(evictionCaseFollowers.caseId, caseId),
-        eq(evictionCaseFollowers.oxyUserId, oxyUserId),
-      ),
+      and(eq(evictionCaseFollowers.caseId, caseId), eq(evictionCaseFollowers.oxyUserId, oxyUserId)),
     );
   return false;
 }
@@ -1045,10 +1055,7 @@ export async function isFollowing(
     .select({ id: evictionCaseFollowers.id })
     .from(evictionCaseFollowers)
     .where(
-      and(
-        eq(evictionCaseFollowers.caseId, caseId),
-        eq(evictionCaseFollowers.oxyUserId, oxyUserId),
-      ),
+      and(eq(evictionCaseFollowers.caseId, caseId), eq(evictionCaseFollowers.oxyUserId, oxyUserId)),
     )
     .limit(1);
   return row !== undefined;
@@ -1211,11 +1218,7 @@ export async function insertEvictionReport(
     return row;
   } catch (error) {
     if (!isUniqueViolation(error, 'eviction_reports_open_reporter_key')) throw error;
-    const existing = await findOpenEvictionReport(
-      values.caseId,
-      values.reporterOxyUserId,
-      db,
-    );
+    const existing = await findOpenEvictionReport(values.caseId, values.reporterOxyUserId, db);
     if (!existing) throw error;
     throw new DuplicateEvictionReportError(existing);
   }
@@ -1317,9 +1320,7 @@ export async function claimEvictionOutcomeReminder(
   const claimed = await db
     .update(evictionCases)
     .set({ outcomeReminderSentAt: now })
-    .where(
-      and(eq(evictionCases.id, caseId), isNull(evictionCases.outcomeReminderSentAt)),
-    )
+    .where(and(eq(evictionCases.id, caseId), isNull(evictionCases.outcomeReminderSentAt)))
     .returning({ id: evictionCases.id });
   return claimed.length === 1;
 }
@@ -1357,12 +1358,7 @@ export async function archiveStaleCases(
       locationExactLatitude: null,
       locationExactAddress: null,
     })
-    .where(
-      and(
-        isNull(evictionCases.archivedAt),
-        lt(evictionCases.updatedAt, input.changedBefore),
-      ),
-    )
+    .where(and(isNull(evictionCases.archivedAt), lt(evictionCases.updatedAt, input.changedBefore)))
     .returning({ id: evictionCases.id });
   // The `limit` is applied here rather than in the statement because an UPDATE
   // takes no LIMIT without a sub-select, and the archive set is bounded by how
@@ -1380,10 +1376,7 @@ export async function deleteLongArchivedCases(
   const deleted = await db
     .delete(evictionCases)
     .where(
-      and(
-        isNotNull(evictionCases.archivedAt),
-        lt(evictionCases.archivedAt, input.archivedBefore),
-      ),
+      and(isNotNull(evictionCases.archivedAt), lt(evictionCases.archivedAt, input.archivedBefore)),
     )
     .returning({ id: evictionCases.id });
   return deleted.length;

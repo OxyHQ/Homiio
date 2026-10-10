@@ -3,9 +3,7 @@
   "recipes": [
     {
       "name": "homiio",
-      "services": [
-        "homiio"
-      ],
+      "services": ["homiio"],
       "ecrRepository": "oxy/homiio",
       "dockerfile": "packages/backend/Dockerfile",
       "dockerfileSha256": "5e2dbd0194e858f3efcb6791f3ae2941e5422146f1195a79c2eaca4955986473",
@@ -15,9 +13,7 @@
     },
     {
       "name": "homiio-worker",
-      "services": [
-        "homiio-worker"
-      ],
+      "services": ["homiio-worker"],
       "ecrRepository": "oxy/homiio",
       "dockerfile": "packages/backend/Dockerfile",
       "dockerfileSha256": "5e2dbd0194e858f3efcb6791f3ae2941e5422146f1195a79c2eaca4955986473",

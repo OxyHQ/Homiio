@@ -143,9 +143,7 @@ describe('the owner publishes a schedule', () => {
     // Persisted, not merely answered.
     expect(await windowRows(propertyId)).toHaveLength(2);
 
-    const get = await request(buildApi(OWNER)).get(
-      `/api/properties/${propertyId}/viewing-windows`,
-    );
+    const get = await request(buildApi(OWNER)).get(`/api/properties/${propertyId}/viewing-windows`);
     expect(get.status).toBe(200);
     expect(get.body.data.windows.map((w: { weekday: number }) => w.weekday)).toEqual([2, 4]);
   });
@@ -219,7 +217,13 @@ describe('the owner publishes a schedule', () => {
   it('refuses an unknown modality', async () => {
     const { propertyId } = await seedListing();
     const res = await publishSchedule(propertyId, [
-      { weekday: 2, startMinute: 600, endMinute: 660, slotMinutes: 30, modality: 'in_the_metaverse' },
+      {
+        weekday: 2,
+        startMinute: 600,
+        endMinute: 660,
+        slotMinutes: 30,
+        modality: 'in_the_metaverse',
+      },
     ]);
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe('INVALID_VIEWING_WINDOW');
@@ -350,7 +354,7 @@ describe('the public slot list', () => {
 });
 
 describe('a request must be a slot that was actually offered', () => {
-  it('accepts an offered slot and takes the window\'s length and modality', async () => {
+  it("accepts an offered slot and takes the window's length and modality", async () => {
     const { propertyId } = await seedListing();
     await publishSchedule(propertyId);
 
@@ -474,10 +478,7 @@ describe('the owner answers in their own words', () => {
     expect(res.status).toBe(200);
     expect(res.body.data.ownerResponse).toContain('studio upstairs');
 
-    const [row] = await getDb()
-      .select()
-      .from(viewingRequests)
-      .where(eq(viewingRequests.id, id));
+    const [row] = await getDb().select().from(viewingRequests).where(eq(viewingRequests.id, id));
     expect(row.status).toBe('declined');
     expect(row.ownerResponse).toContain('studio upstairs');
   });
@@ -504,7 +505,7 @@ describe('the owner answers in their own words', () => {
     expect(res.body.data.ownerResponse).toBeNull();
   });
 
-  it('will not let the REQUESTER write the owner\'s answer', async () => {
+  it("will not let the REQUESTER write the owner's answer", async () => {
     const { propertyId } = await seedListing();
     await publishSchedule(propertyId);
     const id = await pendingRequest(propertyId);
@@ -516,10 +517,7 @@ describe('the owner answers in their own words', () => {
 
     // Re-read: a refusal that answered 403 and wrote anyway would pass every
     // assertion about the response.
-    const [row] = await getDb()
-      .select()
-      .from(viewingRequests)
-      .where(eq(viewingRequests.id, id));
+    const [row] = await getDb().select().from(viewingRequests).where(eq(viewingRequests.id, id));
     expect(row.status).toBe('pending');
     expect(row.ownerResponse).toBeNull();
   });
@@ -534,10 +532,7 @@ describe('the owner answers in their own words', () => {
       .send({ response: 'the owner said it is fine' });
     expect(res.status).toBe(200);
 
-    const [row] = await getDb()
-      .select()
-      .from(viewingRequests)
-      .where(eq(viewingRequests.id, id));
+    const [row] = await getDb().select().from(viewingRequests).where(eq(viewingRequests.id, id));
     expect(row.cancelledBy).toBe('requester');
     expect(row.ownerResponse).toBeNull();
   });

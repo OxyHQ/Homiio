@@ -6,24 +6,14 @@
  * for the page background.
  */
 import React, { useCallback, useMemo } from 'react';
-import {
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  View,
-} from 'react-native';
+import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useOxy } from '@oxy.so/services';
 
 import { Button } from '@oxy.so/bloom/button';
-import {
-  RiEditLine,
-  RiFolderLine,
-  RiFolderOpenLine,
-  RiSearchLine,
-} from '@oxy.so/bloom/icons';
+import { RiEditLine, RiFolderLine, RiFolderOpenLine, RiSearchLine } from '@oxy.so/bloom/icons';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { Header } from '@/components/Header';
@@ -65,10 +55,7 @@ export default function SavedFolderScreen() {
   const savedProperties = savedQuery.data?.properties;
   const folders = foldersQuery.data?.folders;
 
-  const folder = useMemo(
-    () => (folders ?? []).find((f) => f.id === folderId),
-    [folders, folderId],
-  );
+  const folder = useMemo(() => (folders ?? []).find((f) => f.id === folderId), [folders, folderId]);
   const folderProperties = useMemo(
     () =>
       // `folderId` is declared on `SavedProperty` now, so the cast this used to
@@ -189,7 +176,9 @@ export default function SavedFolderScreen() {
                   key="editFolder"
                   size="sm"
                   onPress={() => router.push(`/saved/${folderId}/edit`)}
-                  leadingIcon={RiEditLine} tone="accent" appearance="subtle"
+                  leadingIcon={RiEditLine}
+                  tone="accent"
+                  appearance="subtle"
                 >
                   {t('common.edit')}
                 </Button>,

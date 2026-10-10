@@ -34,7 +34,9 @@ describe('isAllowedBrowserRequest', () => {
 
   it('allows anti-bot vendors a warm session needs', () => {
     expect(isAllowedBrowserRequest('https://geo.captcha-delivery.com/js', portal)).toBe(true);
-    expect(isAllowedBrowserRequest('https://challenges.cloudflare.com/turnstile', portal)).toBe(true);
+    expect(isAllowedBrowserRequest('https://challenges.cloudflare.com/turnstile', portal)).toBe(
+      true,
+    );
   });
 
   it('blocks third-party ads/trackers/maps/video', () => {

@@ -104,7 +104,9 @@ export function UpcomingBookingsSection({ bookings }: { bookings: UpcomingBookin
             <Button
               size="sm"
               trailingIcon={RiArrowRightSLine}
-              onPress={() => router.push('/stays')} tone="accent" appearance="subtle"
+              onPress={() => router.push('/stays')}
+              tone="accent"
+              appearance="subtle"
             >
               {t('bookings.upcoming.allStays')}
             </Button>
@@ -113,7 +115,9 @@ export function UpcomingBookingsSection({ bookings }: { bookings: UpcomingBookin
             <Button
               size="sm"
               trailingIcon={RiArrowRightSLine}
-              onPress={() => router.push('/exchange/requests')} tone="accent" appearance="subtle"
+              onPress={() => router.push('/exchange/requests')}
+              tone="accent"
+              appearance="subtle"
             >
               {t('bookings.upcoming.allSwaps')}
             </Button>
@@ -122,7 +126,9 @@ export function UpcomingBookingsSection({ bookings }: { bookings: UpcomingBookin
             <Button
               size="sm"
               trailingIcon={RiArrowRightSLine}
-              onPress={() => router.push('/viewings')} tone="accent" appearance="subtle"
+              onPress={() => router.push('/viewings')}
+              tone="accent"
+              appearance="subtle"
             >
               {t('bookings.upcoming.allViewings')}
             </Button>

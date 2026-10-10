@@ -103,7 +103,8 @@ export function datesLabel(query: SearchQuery, locale: string): string | null {
 /** The guest count (and the pets flag it carries), or `null`. */
 export function guestsLabel(query: SearchQuery, t: TFunction): string | null {
   const parts: string[] = [];
-  if (query.guests && query.guests > 0) parts.push(t('search.summary.guestCount', { count: query.guests }));
+  if (query.guests && query.guests > 0)
+    parts.push(t('search.summary.guestCount', { count: query.guests }));
   if (query.petFriendly) parts.push(t('home.category.petFriendly'));
   return parts.length > 0 ? parts.join(' · ') : null;
 }

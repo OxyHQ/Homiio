@@ -141,7 +141,11 @@ function runtimeForMarket(market: ListingMarket | undefined): FetchRuntime {
 }
 
 /** Soft-remove a previously ingested external listing that must no longer publish. */
-async function expireExternalListing(source: string, sourceId: string, reason: string): Promise<void> {
+async function expireExternalListing(
+  source: string,
+  sourceId: string,
+  reason: string,
+): Promise<void> {
   const expired = await expireExternalProperty(source, sourceId);
   if (expired) {
     logger.info('Expired external listing after skip', { source, sourceId, reason });
@@ -158,9 +162,7 @@ async function expireExternalListing(source: string, sourceId: string, reason: s
  */
 function emitIngestHeartbeat(provider: string, market: ListingMarket | undefined): void {
   if (!countsAsLiveIngest(provider)) return;
-  logger.info(
-    `${LISTING_INGEST_OK_MARKER} ${ingestMarketToken(market)} provider=${provider}`,
-  );
+  logger.info(`${LISTING_INGEST_OK_MARKER} ${ingestMarketToken(market)} provider=${provider}`);
 }
 
 /**
@@ -565,14 +567,22 @@ async function purgeLegacyMarketWideDiscoverJobs(
 }
 
 /** Drop pre per-city discover scopes that can block the queue for hours. */
-async function purgeLegacyPerCityDiscoverJobs(discoverQueue: BullQueue<DiscoverJobData>): Promise<void> {
+async function purgeLegacyPerCityDiscoverJobs(
+  discoverQueue: BullQueue<DiscoverJobData>,
+): Promise<void> {
   await purgeLegacyMarketWideDiscoverJobs(discoverQueue, 'fotocasa');
-  for (const provider of ['habitaclia', 'idealista', 'pisos'] as const satisfies readonly ProviderId[]) {
+  for (const provider of [
+    'habitaclia',
+    'idealista',
+    'pisos',
+  ] as const satisfies readonly ProviderId[]) {
     await purgeLegacyMarketWideDiscoverJobs(discoverQueue, provider);
   }
 }
 
-async function releaseStaleActiveDiscoverJobs(discoverQueue: BullQueue<DiscoverJobData>): Promise<number> {
+async function releaseStaleActiveDiscoverJobs(
+  discoverQueue: BullQueue<DiscoverJobData>,
+): Promise<number> {
   const activeJobs = await discoverQueue.getJobs(['active'], 0, 50);
   const staleBefore = Date.now() - DISCOVER_LOCK_MS;
   let released = 0;
@@ -662,12 +672,16 @@ async function startBullMq(): Promise<() => Promise<void>> {
             await existingFetch.remove();
           }
         }
-        await fetchQueue.add(QUEUE_NAMES.fetch, { ref, market: job.data.market }, {
-          jobId,
-          priority: fetchPriorityFor(ref.provider, rank),
-          attempts: 3,
-          backoff: { type: 'exponential', delay: 60_000 },
-        });
+        await fetchQueue.add(
+          QUEUE_NAMES.fetch,
+          { ref, market: job.data.market },
+          {
+            jobId,
+            priority: fetchPriorityFor(ref.provider, rank),
+            attempts: 3,
+            backoff: { type: 'exponential', delay: 60_000 },
+          },
+        );
       }
       logger.info('Discover job enqueued fetch jobs', {
         provider: job.data.provider,
@@ -818,7 +832,9 @@ async function main(): Promise<void> {
     await closePostgres();
     return;
   } else {
-    logger.warn('No REDIS_URL and discoverOnBoot=false — worker idle. Set REDIS_URL to enable queues.');
+    logger.warn(
+      'No REDIS_URL and discoverOnBoot=false — worker idle. Set REDIS_URL to enable queues.',
+    );
   }
 
   const shutdown = async (signal: string): Promise<void> => {

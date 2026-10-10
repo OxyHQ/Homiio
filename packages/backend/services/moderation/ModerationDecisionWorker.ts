@@ -99,9 +99,7 @@ function primaryAction(
 }
 
 /** Handle one `decision.apply` outbox event. */
-export async function applyDecisionOutboxEvent(
-  event: ModerationOutboxEvent,
-): Promise<void> {
+export async function applyDecisionOutboxEvent(event: ModerationOutboxEvent): Promise<void> {
   const caseId = event.payload.caseId;
   if (caseId === undefined) {
     throw new ModerationDecisionRejectedError('A decision.apply event carried no caseId.');
@@ -136,9 +134,7 @@ export async function applyDecisionOutboxEvent(
      * delivery is being retried. Backing off is correct; dead-lettering would
      * throw the decision away.
      */
-    throw new ModerationDecisionDeferredError(
-      `No local report is linked to case ${caseId} yet.`,
-    );
+    throw new ModerationDecisionDeferredError(`No local report is linked to case ${caseId} yet.`);
   }
 
   /**

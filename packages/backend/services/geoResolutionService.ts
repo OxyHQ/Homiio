@@ -63,7 +63,6 @@ export class GeoResolutionError extends Error {
   }
 }
 
-
 /**
  * Resolve APPROXIMATE coordinates for a place from its city, without a
  * per-listing external geocode. Used as the ingest coordinate fallback so an

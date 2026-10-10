@@ -39,7 +39,9 @@ export function parseNotesString(raw: string | undefined | null): PropertyNote[]
     if (Array.isArray(parsed)) {
       // basic shape validation
       return (parsed as RawPropertyNote[])
-        .filter((n): n is RawPropertyNote => !!n && typeof n === 'object' && typeof n.text === 'string')
+        .filter(
+          (n): n is RawPropertyNote => !!n && typeof n === 'object' && typeof n.text === 'string',
+        )
         .map((n) => ({
           id: asString(n.id) || generateId(),
           text: asString(n.text) ?? '',

@@ -85,9 +85,7 @@ const sortNotes = (notes: ReviewDTO[], sort: SortKey): ReviewDTO[] => {
       return copy.sort((a, b) => (b.helpfulCount ?? 0) - (a.helpfulCount ?? 0));
     case 'recent':
     default:
-      return copy.sort(
-        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-      );
+      return copy.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }
 };
 
@@ -121,9 +119,7 @@ const RatingSummary: React.FC<RatingSummaryProps> = ({ stats }) => {
               <BloomText style={styles.distributionStar}>{star}</BloomText>
               <RiStarFill width={11} height={11} fill={colors.COLOR_BLACK_LIGHT_5} />
               <View style={styles.distributionTrack}>
-                <View
-                  style={[styles.distributionFill, { width: `${Math.round(ratio * 100)}%` }]}
-                />
+                <View style={[styles.distributionFill, { width: `${Math.round(ratio * 100)}%` }]} />
               </View>
               <BloomText style={styles.distributionCount}>{count}</BloomText>
             </View>
@@ -205,11 +201,26 @@ export const CommunityNotesSection: React.FC<CommunityNotesSectionProps> = ({
                   <Skeleton.Box width={40} height={40} borderRadius={20} />
                   <View style={styles.skeletonHeaderText}>
                     <Skeleton.Box width="50%" height={13} borderRadius={4} />
-                    <Skeleton.Box width="35%" height={11} borderRadius={4} style={styles.skeletonLine} />
+                    <Skeleton.Box
+                      width="35%"
+                      height={11}
+                      borderRadius={4}
+                      style={styles.skeletonLine}
+                    />
                   </View>
                 </View>
-                <Skeleton.Box width="100%" height={12} borderRadius={4} style={styles.skeletonLine} />
-                <Skeleton.Box width="80%" height={12} borderRadius={4} style={styles.skeletonLine} />
+                <Skeleton.Box
+                  width="100%"
+                  height={12}
+                  borderRadius={4}
+                  style={styles.skeletonLine}
+                />
+                <Skeleton.Box
+                  width="80%"
+                  height={12}
+                  borderRadius={4}
+                  style={styles.skeletonLine}
+                />
               </View>
             ))}
           </View>
@@ -263,10 +274,7 @@ export const CommunityNotesSection: React.FC<CommunityNotesSectionProps> = ({
 
             <View style={styles.notesList}>
               {visibleNotes.map((note, index) => (
-                <View
-                  key={note.id}
-                  style={[styles.noteRow, index > 0 && styles.noteRowDivider]}
-                >
+                <View key={note.id} style={[styles.noteRow, index > 0 && styles.noteRowDivider]}>
                   <CommunityNoteCard note={note} />
                 </View>
               ))}
@@ -277,7 +285,9 @@ export const CommunityNotesSection: React.FC<CommunityNotesSectionProps> = ({
                 <Button
                   onPress={() => setExpanded(true)}
                   size="md"
-                  accessibilityLabel={t('property.communityNotes.showAll', { count: notes.length })} tone="neutral" appearance="outline"
+                  accessibilityLabel={t('property.communityNotes.showAll', { count: notes.length })}
+                  tone="neutral"
+                  appearance="outline"
                 >
                   {t('property.communityNotes.showAll', { count: notes.length })}
                 </Button>
@@ -288,7 +298,9 @@ export const CommunityNotesSection: React.FC<CommunityNotesSectionProps> = ({
                   onPress={handleViewAll}
                   size="md"
                   leadingIcon={RiExternalLinkLine}
-                  accessibilityLabel={t('property.communityNotes.showMore')} tone="accent" appearance="subtle"
+                  accessibilityLabel={t('property.communityNotes.showMore')}
+                  tone="accent"
+                  appearance="subtle"
                 >
                   {t('property.communityNotes.showMore')}
                 </Button>
@@ -298,7 +310,9 @@ export const CommunityNotesSection: React.FC<CommunityNotesSectionProps> = ({
                 onPress={handleAddNote}
                 size="md"
                 leadingIcon={RiEditLine}
-                accessibilityLabel={t('property.communityNotes.addAction')} tone="accent" appearance="subtle"
+                accessibilityLabel={t('property.communityNotes.addAction')}
+                tone="accent"
+                appearance="subtle"
               >
                 {t('property.communityNotes.addAction')}
               </Button>

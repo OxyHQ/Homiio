@@ -79,7 +79,9 @@ describe('MercadolibreEcProvider', () => {
   });
 
   it('rejects non-housing classifieds', () => {
-    expect(() => parseMercadolibreEcSearchJson(MERCADOLIBRE_EC_FIXTURE_NON_HOUSING_JSON)).not.toThrow();
+    expect(() =>
+      parseMercadolibreEcSearchJson(MERCADOLIBRE_EC_FIXTURE_NON_HOUSING_JSON),
+    ).not.toThrow();
     expect(parseMercadolibreEcSearchJson(MERCADOLIBRE_EC_FIXTURE_NON_HOUSING_JSON)).toEqual([]);
   });
 

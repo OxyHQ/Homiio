@@ -443,7 +443,11 @@ export interface AddCommentInput {
 }
 
 export type AddCommentOutcome =
-  | { readonly ok: true; readonly comment: MaintenanceCommentRow; readonly request: MaintenanceRequestRow }
+  | {
+      readonly ok: true;
+      readonly comment: MaintenanceCommentRow;
+      readonly request: MaintenanceRequestRow;
+    }
   | { readonly ok: false; readonly reason: 'not_found' };
 
 /**

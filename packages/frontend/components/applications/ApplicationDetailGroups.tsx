@@ -7,12 +7,7 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import {
-  RiFileTextLine,
-  RiMailLine,
-  RiUserLine,
-  RiWallet3Line,
-} from '@oxy.so/bloom/icons';
+import { RiFileTextLine, RiMailLine, RiUserLine, RiWallet3Line } from '@oxy.so/bloom/icons';
 import { SettingsListGroup, SettingsListItem } from '@oxy.so/bloom/settings-list';
 import { Button } from '@oxy.so/bloom/button';
 import { toast } from '@oxy.so/bloom/toast';
@@ -172,7 +167,10 @@ export const ApplicationReferencesGroup: React.FC<GroupProps> = ({ application }
  * Each row fetches its bytes through the authenticated API and hands them to
  * the platform. There is no link to hand out.
  */
-export const ApplicationDocumentsGroup: React.FC<GroupProps> = ({ application, viewerIsLandlord }) => {
+export const ApplicationDocumentsGroup: React.FC<GroupProps> = ({
+  application,
+  viewerIsLandlord,
+}) => {
   const { t } = useTranslation();
   const verify = useVerifyApplicationDocument(application.id);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -272,7 +270,9 @@ export const ApplicationDocumentsGroup: React.FC<GroupProps> = ({ application, v
                     size="sm"
                     disabled={busyId !== null || document.verification === 'verified'}
                     onPress={() => decide(document.id, 'verified')}
-                    accessibilityLabel={t('applications.checklist.verifyAccessible')} tone="neutral" appearance="outline"
+                    accessibilityLabel={t('applications.checklist.verifyAccessible')}
+                    tone="neutral"
+                    appearance="outline"
                   >
                     {t('applications.checklist.verify')}
                   </Button>
@@ -280,7 +280,9 @@ export const ApplicationDocumentsGroup: React.FC<GroupProps> = ({ application, v
                     size="sm"
                     disabled={busyId !== null || document.verification === 'rejected'}
                     onPress={() => decide(document.id, 'rejected')}
-                    accessibilityLabel={t('applications.checklist.rejectAccessible')} tone="neutral" appearance="outline"
+                    accessibilityLabel={t('applications.checklist.rejectAccessible')}
+                    tone="neutral"
+                    appearance="outline"
                   >
                     {t('applications.checklist.reject')}
                   </Button>

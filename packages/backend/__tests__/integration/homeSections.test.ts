@@ -131,7 +131,10 @@ describe('GET /home/sections', () => {
 
       const response = await request(app)
         .get('/home/sections')
-        .query({ loc: `city.homiio.${barcelona.chain.cityId}`, offering: OfferingType.LONG_TERM_RENT })
+        .query({
+          loc: `city.homiio.${barcelona.chain.cityId}`,
+          offering: OfferingType.LONG_TERM_RENT,
+        })
         .expect(200);
 
       const payload = response.body.data as HomePayload;
@@ -197,7 +200,10 @@ describe('GET /home/sections', () => {
 
       const response = await request(app)
         .get('/home/sections')
-        .query({ loc: `city.homiio.${barcelona.chain.cityId}`, offering: OfferingType.LONG_TERM_RENT })
+        .query({
+          loc: `city.homiio.${barcelona.chain.cityId}`,
+          offering: OfferingType.LONG_TERM_RENT,
+        })
         .expect(200);
 
       const payload = response.body.data as HomePayload;
@@ -221,7 +227,10 @@ describe('GET /home/sections', () => {
 
       const response = await request(app)
         .get('/home/sections')
-        .query({ loc: `city.homiio.${barcelona.chain.cityId}`, offering: OfferingType.LONG_TERM_RENT })
+        .query({
+          loc: `city.homiio.${barcelona.chain.cityId}`,
+          offering: OfferingType.LONG_TERM_RENT,
+        })
         .expect(200);
 
       const payload = response.body.data as HomePayload;
@@ -240,7 +249,10 @@ describe('GET /home/sections', () => {
 
       const response = await request(app)
         .get('/home/sections')
-        .query({ loc: `city.homiio.${barcelona.chain.cityId}`, offering: OfferingType.LONG_TERM_RENT })
+        .query({
+          loc: `city.homiio.${barcelona.chain.cityId}`,
+          offering: OfferingType.LONG_TERM_RENT,
+        })
         .expect(200);
 
       const payload = response.body.data as HomePayload;
@@ -353,7 +365,10 @@ describe('GET /home/sections', () => {
 
       const response = await request(app)
         .get('/home/sections')
-        .query({ loc: `city.homiio.${barcelona.chain.cityId}`, offering: OfferingType.LONG_TERM_RENT })
+        .query({
+          loc: `city.homiio.${barcelona.chain.cityId}`,
+          offering: OfferingType.LONG_TERM_RENT,
+        })
         .expect(200);
 
       const payload = response.body.data as HomePayload;

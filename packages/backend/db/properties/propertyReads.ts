@@ -141,7 +141,10 @@ async function loadAvailabilityWindows(
     .select()
     .from(propertyAvailabilityWindows)
     .where(inArray(propertyAvailabilityWindows.propertyId, propertyIds))
-    .orderBy(asc(propertyAvailabilityWindows.propertyId), asc(propertyAvailabilityWindows.startsAt));
+    .orderBy(
+      asc(propertyAvailabilityWindows.propertyId),
+      asc(propertyAvailabilityWindows.startsAt),
+    );
   return groupByProperty(rows);
 }
 
@@ -238,7 +241,9 @@ export async function findPropertyById(id: string): Promise<HydratedProperty | n
  * renders as a ROW CONSTRUCTOR, which Postgres rejects outright — the trap
  * `db/MIGRATION-CONTRACT.md` records four predicates shipping with.
  */
-export async function findOwnerOxyUserIdsAtAddresses(addressIds: readonly string[]): Promise<string[]> {
+export async function findOwnerOxyUserIdsAtAddresses(
+  addressIds: readonly string[],
+): Promise<string[]> {
   if (addressIds.length === 0) return [];
   const rows = await getDb()
     .selectDistinct({ oxyUserId: properties.oxyUserId })

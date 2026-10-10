@@ -34,7 +34,8 @@ const metricsService = new MetricsService();
 class CronJobManager {
   private logger: Logger;
   private jobs: Map<string, cron.ScheduledTask> = new Map();
-  private jobStatus: Map<string, { isRunning: boolean; lastRun?: Date; nextRun?: Date }> = new Map();
+  private jobStatus: Map<string, { isRunning: boolean; lastRun?: Date; nextRun?: Date }> =
+    new Map();
 
   constructor() {
     this.logger = new Logger('CronJobManager');
@@ -108,12 +109,16 @@ class CronJobManager {
    * Setup health check job - runs every 5 minutes
    */
   private setupHealthCheckJob(): void {
-    const job = cron.schedule('*/5 * * * *', async () => {
-      await this.runHealthCheck();
-    }, { 
-      timezone: 'UTC',
-      scheduled: false
-    });
+    const job = cron.schedule(
+      '*/5 * * * *',
+      async () => {
+        await this.runHealthCheck();
+      },
+      {
+        timezone: 'UTC',
+        scheduled: false,
+      },
+    );
 
     this.jobs.set('health', job);
     this.jobStatus.set('health', { isRunning: true, lastRun: undefined, nextRun: undefined });
@@ -124,12 +129,16 @@ class CronJobManager {
    * Setup cleanup job - runs daily at 2 AM
    */
   private setupCleanupJob(): void {
-    const job = cron.schedule('0 2 * * *', async () => {
-      await this.runCleanup();
-    }, { 
-      timezone: 'UTC',
-      scheduled: false
-    });
+    const job = cron.schedule(
+      '0 2 * * *',
+      async () => {
+        await this.runCleanup();
+      },
+      {
+        timezone: 'UTC',
+        scheduled: false,
+      },
+    );
 
     this.jobs.set('cleanup', job);
     this.jobStatus.set('cleanup', { isRunning: true, lastRun: undefined, nextRun: undefined });
@@ -153,12 +162,16 @@ class CronJobManager {
    * size of the live set.
    */
   private setupShareLinkExpiryJob(): void {
-    const job = cron.schedule('7 * * * *', async () => {
-      await this.runShareLinkExpiry();
-    }, {
-      timezone: 'UTC',
-      scheduled: false,
-    });
+    const job = cron.schedule(
+      '7 * * * *',
+      async () => {
+        await this.runShareLinkExpiry();
+      },
+      {
+        timezone: 'UTC',
+        scheduled: false,
+      },
+    );
 
     this.jobs.set('shareLinks', job);
     this.jobStatus.set('shareLinks', { isRunning: true, lastRun: undefined, nextRun: undefined });
@@ -184,12 +197,16 @@ class CronJobManager {
    * are still being replaced by Wikimedia cityscapes.
    */
   private setupCityCoverSyncJob(): void {
-    const job = cron.schedule('*/15 * * * *', async () => {
-      await this.runCityCoverSync();
-    }, {
-      timezone: 'UTC',
-      scheduled: false,
-    });
+    const job = cron.schedule(
+      '*/15 * * * *',
+      async () => {
+        await this.runCityCoverSync();
+      },
+      {
+        timezone: 'UTC',
+        scheduled: false,
+      },
+    );
 
     this.jobs.set('cityCovers', job);
     this.jobStatus.set('cityCovers', { isRunning: true, lastRun: undefined, nextRun: undefined });
@@ -202,15 +219,23 @@ class CronJobManager {
    * the status). Idempotent + best-effort (see evictionOutcomeReminderService).
    */
   private setupEvictionOutcomeReminderJob(): void {
-    const job = cron.schedule('0 * * * *', async () => {
-      await this.runEvictionOutcomeReminders();
-    }, {
-      timezone: 'UTC',
-      scheduled: false,
-    });
+    const job = cron.schedule(
+      '0 * * * *',
+      async () => {
+        await this.runEvictionOutcomeReminders();
+      },
+      {
+        timezone: 'UTC',
+        scheduled: false,
+      },
+    );
 
     this.jobs.set('evictionOutcomeReminders', job);
-    this.jobStatus.set('evictionOutcomeReminders', { isRunning: true, lastRun: undefined, nextRun: undefined });
+    this.jobStatus.set('evictionOutcomeReminders', {
+      isRunning: true,
+      lastRun: undefined,
+      nextRun: undefined,
+    });
     job.start();
   }
 
@@ -229,15 +254,23 @@ class CronJobManager {
    * frequent sweep over a whole table buys nothing.
    */
   private setupEvictionArchivalJob(): void {
-    const job = cron.schedule('20 3 * * *', async () => {
-      await this.runEvictionArchival();
-    }, {
-      timezone: 'UTC',
-      scheduled: false,
-    });
+    const job = cron.schedule(
+      '20 3 * * *',
+      async () => {
+        await this.runEvictionArchival();
+      },
+      {
+        timezone: 'UTC',
+        scheduled: false,
+      },
+    );
 
     this.jobs.set('evictionArchival', job);
-    this.jobStatus.set('evictionArchival', { isRunning: true, lastRun: undefined, nextRun: undefined });
+    this.jobStatus.set('evictionArchival', {
+      isRunning: true,
+      lastRun: undefined,
+      nextRun: undefined,
+    });
     job.start();
   }
 
@@ -253,7 +286,6 @@ class CronJobManager {
       this.jobStatus.set('evictionArchival', { isRunning: false, lastRun: new Date() });
     }
   }
-
 
   /**
    * Setup the guest-point reservation release — hourly.
@@ -276,15 +308,23 @@ class CronJobManager {
    * concurrent sweep already released simply does not match.
    */
   private setupGuestPointReleaseJob(): void {
-    const job = cron.schedule('35 * * * *', async () => {
-      await this.runGuestPointRelease();
-    }, {
-      timezone: 'UTC',
-      scheduled: false,
-    });
+    const job = cron.schedule(
+      '35 * * * *',
+      async () => {
+        await this.runGuestPointRelease();
+      },
+      {
+        timezone: 'UTC',
+        scheduled: false,
+      },
+    );
 
     this.jobs.set('guestPointRelease', job);
-    this.jobStatus.set('guestPointRelease', { isRunning: true, lastRun: undefined, nextRun: undefined });
+    this.jobStatus.set('guestPointRelease', {
+      isRunning: true,
+      lastRun: undefined,
+      nextRun: undefined,
+    });
     job.start();
   }
 
@@ -343,12 +383,16 @@ class CronJobManager {
    * nothing else. It is the same argument the moderation reconciliation makes.
    */
   private setupExpirySweepJob(): void {
-    const job = cron.schedule('*/5 * * * *', async () => {
-      await this.runExpirySweep();
-    }, {
-      timezone: 'UTC',
-      scheduled: false,
-    });
+    const job = cron.schedule(
+      '*/5 * * * *',
+      async () => {
+        await this.runExpirySweep();
+      },
+      {
+        timezone: 'UTC',
+        scheduled: false,
+      },
+    );
 
     this.jobs.set('expirySweep', job);
     this.jobStatus.set('expirySweep', { isRunning: true, lastRun: undefined, nextRun: undefined });
@@ -404,10 +448,9 @@ class CronJobManager {
       else this.logger.debug('Expiry sweep found nothing due', detail);
 
       if (truncated.length > 0) {
-        this.logger.warn(
-          'Expiry sweep hit its batch ceiling; rows remain for the next run',
-          { truncated },
-        );
+        this.logger.warn('Expiry sweep hit its batch ceiling; rows remain for the next run', {
+          truncated,
+        });
       }
     } catch (error) {
       this.logger.error('Expiry sweep failed', error);
@@ -432,29 +475,53 @@ class CronJobManager {
    * stored watermark here and would not be if the digest deleted anything.
    */
   private setupHousingAlertJobs(): void {
-    const matcher = cron.schedule('*/2 * * * *', async () => {
-      await this.runHousingAlertSweep();
-    }, { timezone: 'UTC', scheduled: false });
+    const matcher = cron.schedule(
+      '*/2 * * * *',
+      async () => {
+        await this.runHousingAlertSweep();
+      },
+      { timezone: 'UTC', scheduled: false },
+    );
     this.jobs.set('housingAlerts', matcher);
-    this.jobStatus.set('housingAlerts', { isRunning: true, lastRun: undefined, nextRun: undefined });
+    this.jobStatus.set('housingAlerts', {
+      isRunning: true,
+      lastRun: undefined,
+      nextRun: undefined,
+    });
     matcher.start();
 
     // 08:05 UTC — a morning digest, and five past so it cannot collide with the
     // top-of-hour jobs above on a task that has just started.
-    const daily = cron.schedule('5 8 * * *', async () => {
-      await this.runHousingDigest('daily');
-    }, { timezone: 'UTC', scheduled: false });
+    const daily = cron.schedule(
+      '5 8 * * *',
+      async () => {
+        await this.runHousingDigest('daily');
+      },
+      { timezone: 'UTC', scheduled: false },
+    );
     this.jobs.set('housingDigestDaily', daily);
-    this.jobStatus.set('housingDigestDaily', { isRunning: true, lastRun: undefined, nextRun: undefined });
+    this.jobStatus.set('housingDigestDaily', {
+      isRunning: true,
+      lastRun: undefined,
+      nextRun: undefined,
+    });
     daily.start();
 
     // Monday 08:15 UTC, ten minutes after the daily one so a task running both
     // does not start them in the same tick.
-    const weekly = cron.schedule('15 8 * * 1', async () => {
-      await this.runHousingDigest('weekly');
-    }, { timezone: 'UTC', scheduled: false });
+    const weekly = cron.schedule(
+      '15 8 * * 1',
+      async () => {
+        await this.runHousingDigest('weekly');
+      },
+      { timezone: 'UTC', scheduled: false },
+    );
     this.jobs.set('housingDigestWeekly', weekly);
-    this.jobStatus.set('housingDigestWeekly', { isRunning: true, lastRun: undefined, nextRun: undefined });
+    this.jobStatus.set('housingDigestWeekly', {
+      isRunning: true,
+      lastRun: undefined,
+      nextRun: undefined,
+    });
     weekly.start();
   }
 
@@ -514,15 +581,23 @@ class CronJobManager {
   private setupModerationReconciliationJob(): void {
     if (!config.crowdSource.enabled) return;
 
-    const job = cron.schedule('*/15 * * * *', async () => {
-      await this.runModerationReconciliation();
-    }, {
-      timezone: 'UTC',
-      scheduled: false,
-    });
+    const job = cron.schedule(
+      '*/15 * * * *',
+      async () => {
+        await this.runModerationReconciliation();
+      },
+      {
+        timezone: 'UTC',
+        scheduled: false,
+      },
+    );
 
     this.jobs.set('moderationReconciliation', job);
-    this.jobStatus.set('moderationReconciliation', { isRunning: true, lastRun: undefined, nextRun: undefined });
+    this.jobStatus.set('moderationReconciliation', {
+      isRunning: true,
+      lastRun: undefined,
+      nextRun: undefined,
+    });
     job.start();
   }
 
@@ -596,23 +671,22 @@ class CronJobManager {
       status.lastRun = new Date();
       status.isRunning = true;
     }
-    
+
     try {
       const health = await healthService.getScraperHealth();
-      
+
       this.logger.info('Health check completed', {
         status: health.status,
         externalProperties: health.details.externalPropertyCount,
-        oldestUpdate: health.details.oldestExternalProperty
+        oldestUpdate: health.details.oldestExternalProperty,
       });
-      
+
       if (health.status === 'unhealthy') {
         this.logger.warn('External-listing health is unhealthy!');
         metricsService.recordHealthCheckFailure();
       } else {
         metricsService.recordHealthCheckSuccess();
       }
-      
     } catch (error) {
       this.logger.error('Health check failed', error);
       metricsService.recordHealthCheckFailure();
@@ -629,14 +703,14 @@ class CronJobManager {
       status.lastRun = new Date();
       status.isRunning = true;
     }
-    
+
     try {
       this.logger.info('Starting expired property cleanup');
-      
+
       // First run a dry run to see what would be deleted
       const dryRun = await cleanupService.cleanupExpiredProperties(true);
       this.logger.info(`Would delete ${dryRun.deleted} expired properties`);
-      
+
       if (dryRun.deleted > 0) {
         // Actually delete them
         const result = await cleanupService.cleanupExpiredProperties(false);
@@ -650,7 +724,6 @@ class CronJobManager {
       if (dataResult.deleted > 0) {
         metricsService.recordCleanupSuccess(dataResult.deleted);
       }
-
     } catch (error) {
       this.logger.error('Cleanup failed', error);
       metricsService.recordCleanupFailure();

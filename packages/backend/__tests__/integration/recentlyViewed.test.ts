@@ -127,7 +127,9 @@ describe('trackPropertyView', () => {
   });
 
   it('answers 404 for a listing that does not exist, and stores nothing', async () => {
-    const res = await request(buildApp('oxy-a')).post('/recent-properties/507f1f77bcf86cd799439011');
+    const res = await request(buildApp('oxy-a')).post(
+      '/recent-properties/507f1f77bcf86cd799439011',
+    );
     expect(res.status).toBe(404);
     expect(res.body.code).toBe('PROPERTY_NOT_FOUND');
     expect(await viewsOf('oxy-a')).toHaveLength(0);

@@ -53,20 +53,20 @@ const handleValidationErrors = (req: Request, res: Response, next: NextFunction)
       errors: errors.array(),
       body: req.body,
       params: req.params,
-      query: req.query
+      query: req.query,
     });
 
     const formattedErrors = errors.array().map((error: any) => ({
       field: error.path || error.param,
       message: error.msg,
       value: error.value,
-      location: error.location
+      location: error.location,
     }));
 
     res.status(400).json({
       error: 'Validation failed',
       details: formattedErrors,
-      message: `Validation failed for: ${formattedErrors.map(e => e.field).join(', ')}`
+      message: `Validation failed for: ${formattedErrors.map((e) => e.field).join(', ')}`,
     });
     return;
   }
@@ -89,67 +89,166 @@ const validateProperty = [
     }
     return true;
   }),
-  body('bedrooms').optional().isInt({ min: 0 }).withMessage('Bedrooms must be a non-negative integer'),
+  body('bedrooms')
+    .optional()
+    .isInt({ min: 0 })
+    .withMessage('Bedrooms must be a non-negative integer'),
   body('bathrooms').optional().isFloat({ min: 0 }).withMessage('Bathrooms must be non-negative'),
-  body('squareFootage').optional().isFloat({ min: 0 }).withMessage('Square footage must be non-negative'),
-  body('type').isIn(['apartment', 'house', 'room', 'studio', 'couchsurfing', 'roommates', 'coliving', 'hostel', 'guesthouse', 'campsite', 'boat', 'treehouse', 'yurt', 'other']).withMessage('Invalid property type'),
+  body('squareFootage')
+    .optional()
+    .isFloat({ min: 0 })
+    .withMessage('Square footage must be non-negative'),
+  body('type')
+    .isIn([
+      'apartment',
+      'house',
+      'room',
+      'studio',
+      'couchsurfing',
+      'roommates',
+      'coliving',
+      'hostel',
+      'guesthouse',
+      'campsite',
+      'boat',
+      'treehouse',
+      'yurt',
+      'other',
+    ])
+    .withMessage('Invalid property type'),
   body('housingType').optional().isIn(['private', 'public']).withMessage('Invalid housing type'),
   // ---- Per-offering fields ----
   // The "offerings equals the present blocks, each with a positive price" rule
   // is enforced once in the offeringRules controller + schema validator. This
   // layer validates the SHAPE of each field when present.
   body('offerings').isArray({ min: 1 }).withMessage('offerings must be a non-empty array'),
-  body('offerings.*').isIn(['long_term_rent', 'short_term_rent', 'sale', 'exchange']).withMessage('Invalid offering type'),
+  body('offerings.*')
+    .isIn(['long_term_rent', 'short_term_rent', 'sale', 'exchange'])
+    .withMessage('Invalid offering type'),
   // Long-term rent block
-  body('longTermRent.monthlyAmount').optional().isFloat({ gt: 0 }).withMessage('monthlyAmount must be a positive number'),
+  body('longTermRent.monthlyAmount')
+    .optional()
+    .isFloat({ gt: 0 })
+    .withMessage('monthlyAmount must be a positive number'),
   body('longTermRent.currency').optional().isIn(LISTING_CURRENCIES).withMessage('Invalid currency'),
-  body('longTermRent.deposit').optional().isFloat({ min: 0 }).withMessage('deposit must be non-negative'),
-  body('longTermRent.applicationFee').optional().isFloat({ min: 0 }).withMessage('applicationFee must be non-negative'),
-  body('longTermRent.lateFee').optional().isFloat({ min: 0 }).withMessage('lateFee must be non-negative'),
-  body('longTermRent.utilities').optional().isIn(['included', 'excluded', 'partial']).withMessage('Invalid utilities value'),
+  body('longTermRent.deposit')
+    .optional()
+    .isFloat({ min: 0 })
+    .withMessage('deposit must be non-negative'),
+  body('longTermRent.applicationFee')
+    .optional()
+    .isFloat({ min: 0 })
+    .withMessage('applicationFee must be non-negative'),
+  body('longTermRent.lateFee')
+    .optional()
+    .isFloat({ min: 0 })
+    .withMessage('lateFee must be non-negative'),
+  body('longTermRent.utilities')
+    .optional()
+    .isIn(['included', 'excluded', 'partial'])
+    .withMessage('Invalid utilities value'),
   // Short-term rent block
-  body('shortTermRent.nightlyRate').optional().isFloat({ gt: 0 }).withMessage('nightlyRate must be a positive number'),
-  body('shortTermRent.currency').optional().isIn(LISTING_CURRENCIES).withMessage('Invalid currency'),
-  body('shortTermRent.cleaningFee').optional().isFloat({ min: 0 }).withMessage('cleaningFee must be non-negative'),
-  body('shortTermRent.serviceFee').optional().isFloat({ min: 0 }).withMessage('serviceFee must be non-negative'),
-  body('shortTermRent.taxesPercent').optional().isFloat({ min: 0, max: 100 }).withMessage('taxesPercent must be between 0 and 100'),
-  body('shortTermRent.minNights').optional().isInt({ min: 1 }).withMessage('minNights must be a positive integer'),
-  body('shortTermRent.maxNights').optional().isInt({ min: 1 }).withMessage('maxNights must be a positive integer'),
-  body('shortTermRent.maxNights').optional().custom((value, { req }) => {
-    const min = req.body?.shortTermRent?.minNights;
-    if (value !== undefined && min !== undefined && Number(value) < Number(min)) {
-      throw new Error('maxNights must be greater than or equal to minNights');
-    }
-    return true;
-  }),
-  body('shortTermRent.instantBook').optional().isBoolean().withMessage('instantBook must be a boolean'),
-  body('shortTermRent.deposit').optional().isFloat({ min: 0 }).withMessage('deposit must be non-negative'),
+  body('shortTermRent.nightlyRate')
+    .optional()
+    .isFloat({ gt: 0 })
+    .withMessage('nightlyRate must be a positive number'),
+  body('shortTermRent.currency')
+    .optional()
+    .isIn(LISTING_CURRENCIES)
+    .withMessage('Invalid currency'),
+  body('shortTermRent.cleaningFee')
+    .optional()
+    .isFloat({ min: 0 })
+    .withMessage('cleaningFee must be non-negative'),
+  body('shortTermRent.serviceFee')
+    .optional()
+    .isFloat({ min: 0 })
+    .withMessage('serviceFee must be non-negative'),
+  body('shortTermRent.taxesPercent')
+    .optional()
+    .isFloat({ min: 0, max: 100 })
+    .withMessage('taxesPercent must be between 0 and 100'),
+  body('shortTermRent.minNights')
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage('minNights must be a positive integer'),
+  body('shortTermRent.maxNights')
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage('maxNights must be a positive integer'),
+  body('shortTermRent.maxNights')
+    .optional()
+    .custom((value, { req }) => {
+      const min = req.body?.shortTermRent?.minNights;
+      if (value !== undefined && min !== undefined && Number(value) < Number(min)) {
+        throw new Error('maxNights must be greater than or equal to minNights');
+      }
+      return true;
+    }),
+  body('shortTermRent.instantBook')
+    .optional()
+    .isBoolean()
+    .withMessage('instantBook must be a boolean'),
+  body('shortTermRent.deposit')
+    .optional()
+    .isFloat({ min: 0 })
+    .withMessage('deposit must be non-negative'),
   // Sale block
-  body('sale.price').optional().isFloat({ gt: 0 }).withMessage('sale.price must be a positive number'),
+  body('sale.price')
+    .optional()
+    .isFloat({ gt: 0 })
+    .withMessage('sale.price must be a positive number'),
   body('sale.currency').optional().isIn(LISTING_CURRENCIES).withMessage('Invalid currency'),
   // Exchange block
-  body('exchange.mode').optional().isIn(['swap', 'host', 'both']).withMessage('Invalid exchange mode'),
+  body('exchange.mode')
+    .optional()
+    .isIn(['swap', 'host', 'both'])
+    .withMessage('Invalid exchange mode'),
   // Short-term calendar + booking policy
-  body('cancellationPolicy').optional().isIn(['flexible', 'moderate', 'strict', 'super_strict']).withMessage('Invalid cancellation policy'),
-  body('maxGuests').optional().isInt({ min: 1 }).withMessage('maxGuests must be a positive integer'),
-  body('availabilityWindows').optional().isArray().withMessage('availabilityWindows must be an array'),
-  body('availabilityWindows.*.start').optional().isISO8601().withMessage('Each availability window start must be a valid ISO-8601 date'),
-  body('availabilityWindows.*.end').optional().isISO8601().withMessage('Each availability window end must be a valid ISO-8601 date'),
-  body('availabilityWindows.*.status').optional().isIn(['available', 'blocked', 'booked']).withMessage('Invalid availability window status'),
-  body('availabilityWindows').optional().custom((windows: unknown) => {
-    if (!Array.isArray(windows)) return true;
-    for (const window of windows) {
-      const w = window as { start?: string; end?: string };
-      if (w.start && w.end && new Date(w.end) <= new Date(w.start)) {
-        throw new Error('Each availability window end must be after start');
+  body('cancellationPolicy')
+    .optional()
+    .isIn(['flexible', 'moderate', 'strict', 'super_strict'])
+    .withMessage('Invalid cancellation policy'),
+  body('maxGuests')
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage('maxGuests must be a positive integer'),
+  body('availabilityWindows')
+    .optional()
+    .isArray()
+    .withMessage('availabilityWindows must be an array'),
+  body('availabilityWindows.*.start')
+    .optional()
+    .isISO8601()
+    .withMessage('Each availability window start must be a valid ISO-8601 date'),
+  body('availabilityWindows.*.end')
+    .optional()
+    .isISO8601()
+    .withMessage('Each availability window end must be a valid ISO-8601 date'),
+  body('availabilityWindows.*.status')
+    .optional()
+    .isIn(['available', 'blocked', 'booked'])
+    .withMessage('Invalid availability window status'),
+  body('availabilityWindows')
+    .optional()
+    .custom((windows: unknown) => {
+      if (!Array.isArray(windows)) return true;
+      for (const window of windows) {
+        const w = window as { start?: string; end?: string };
+        if (w.start && w.end && new Date(w.end) <= new Date(w.start)) {
+          throw new Error('Each availability window end must be after start');
+        }
       }
-    }
-    return true;
-  }),
+      return true;
+    }),
   // Optional partner referral code captured from the share link. Validated
   // loosely (a short slug); resolved to a partner in the create controller.
-  body('referralCode').optional().isString().isLength({ max: 64 }).withMessage('referralCode must be a string up to 64 chars'),
-  handleValidationErrors
+  body('referralCode')
+    .optional()
+    .isString()
+    .isLength({ max: 64 })
+    .withMessage('referralCode must be a string up to 64 chars'),
+  handleValidationErrors,
 ];
 
 /**
@@ -161,10 +260,16 @@ const validateLease = [
   body('startDate').isISO8601().withMessage('Valid start date is required'),
   body('endDate').optional().isISO8601().withMessage('End date must be valid'),
   body('rent.amount').isFloat({ min: 0 }).withMessage('Rent amount must be positive'),
-  body('rent.dueDay').optional().isInt({ min: 1, max: 31 }).withMessage('Due day must be between 1-31'),
+  body('rent.dueDay')
+    .optional()
+    .isInt({ min: 1, max: 31 })
+    .withMessage('Due day must be between 1-31'),
   body('terms.duration').optional().isInt({ min: 1 }).withMessage('Duration must be positive'),
-  body('terms.noticePeriod').optional().isInt({ min: 0 }).withMessage('Notice period must be non-negative'),
-  handleValidationErrors
+  body('terms.noticePeriod')
+    .optional()
+    .isInt({ min: 0 })
+    .withMessage('Notice period must be non-negative'),
+  handleValidationErrors,
 ];
 
 /**
@@ -173,11 +278,18 @@ const validateLease = [
 const validatePayment = [
   body('leaseId').notEmpty().withMessage('Lease ID is required'),
   body('amount').isFloat({ min: 0 }).withMessage('Amount must be positive'),
-  body('type').isIn(['rent', 'deposit', 'late_fee', 'utility', 'maintenance']).withMessage('Invalid payment type'),
-  body('paymentMethod').isIn(['faircoin', 'bank_transfer', 'credit_card', 'cash']).withMessage('Invalid payment method'),
+  body('type')
+    .isIn(['rent', 'deposit', 'late_fee', 'utility', 'maintenance'])
+    .withMessage('Invalid payment type'),
+  body('paymentMethod')
+    .isIn(['faircoin', 'bank_transfer', 'credit_card', 'cash'])
+    .withMessage('Invalid payment method'),
   body('dueDate').isISO8601().withMessage('Valid due date is required'),
-  body('fairCoin.walletTo').if(body('paymentMethod').equals('faircoin')).notEmpty().withMessage('FairCoin wallet address required'),
-  handleValidationErrors
+  body('fairCoin.walletTo')
+    .if(body('paymentMethod').equals('faircoin'))
+    .notEmpty()
+    .withMessage('FairCoin wallet address required'),
+  handleValidationErrors,
 ];
 
 /**
@@ -188,15 +300,19 @@ const validatePagination = [
   query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1-100'),
   query('sortBy').optional().isString().withMessage('SortBy must be a string'),
   query('sortOrder').optional().isIn(['asc', 'desc']).withMessage('SortOrder must be asc or desc'),
-  handleValidationErrors
+  handleValidationErrors,
 ];
 
 /**
  * ID parameter validation
  */
 const validateId = (paramName = 'id') => [
-  param(paramName).matches(/^[a-zA-Z0-9_-]+$/).withMessage(`${paramName} must contain only alphanumeric characters, underscores, and hyphens`),
-  handleValidationErrors
+  param(paramName)
+    .matches(/^[a-zA-Z0-9_-]+$/)
+    .withMessage(
+      `${paramName} must contain only alphanumeric characters, underscores, and hyphens`,
+    ),
+  handleValidationErrors,
 ];
 
 /**
@@ -212,7 +328,7 @@ const validateDateRange = [
     }
     return true;
   }),
-  handleValidationErrors
+  handleValidationErrors,
 ];
 
 /**
@@ -257,9 +373,15 @@ export {
 const validateViewingRequest = [
   param('propertyId').isString().notEmpty().withMessage('Property ID is required'),
   body('date').isISO8601().withMessage('Valid date is required'),
-  body('time').matches(/^\d{2}:\d{2}$/).withMessage('Time must be in HH:MM format'),
-  body('message').optional().isString().isLength({ max: 1000 }).withMessage('Message max length is 1000'),
-  handleValidationErrors
+  body('time')
+    .matches(/^\d{2}:\d{2}$/)
+    .withMessage('Time must be in HH:MM format'),
+  body('message')
+    .optional()
+    .isString()
+    .isLength({ max: 1000 })
+    .withMessage('Message max length is 1000'),
+  handleValidationErrors,
 ];
 
 export { validateViewingRequest };
@@ -278,8 +400,12 @@ const validateReservation = [
     return true;
   }),
   body('guestCount').isInt({ min: 1 }).withMessage('Guest count must be a positive integer'),
-  body('specialRequests').optional().isString().isLength({ max: 2000 }).withMessage('Special requests max length is 2000'),
-  handleValidationErrors
+  body('specialRequests')
+    .optional()
+    .isString()
+    .isLength({ max: 2000 })
+    .withMessage('Special requests max length is 2000'),
+  handleValidationErrors,
 ];
 
 /**
@@ -287,8 +413,10 @@ const validateReservation = [
  */
 const validateReservationUpdate = [
   param('id').isString().notEmpty().withMessage('Reservation ID is required'),
-  body('status').isIn(['confirmed', 'declined', 'cancelled']).withMessage('Invalid status transition'),
-  handleValidationErrors
+  body('status')
+    .isIn(['confirmed', 'declined', 'cancelled'])
+    .withMessage('Invalid status transition'),
+  handleValidationErrors,
 ];
 
 /**
@@ -302,11 +430,19 @@ const validateReservationUpdate = [
 const validateTenantApplication = [
   body('propertyId').isString().notEmpty().withMessage('Property ID is required'),
   body('moveInDate').isISO8601().withMessage('Valid move-in date is required'),
-  body('leaseTermMonths').isInt({ min: 1 }).withMessage('Lease term (months) must be a positive integer'),
+  body('leaseTermMonths')
+    .isInt({ min: 1 })
+    .withMessage('Lease term (months) must be a positive integer'),
   body('monthlyIncome').isFloat({ min: 0 }).withMessage('Monthly income must be non-negative'),
-  body('employmentStatus').isIn(['employed', 'self_employed', 'student', 'retired', 'unemployed', 'other']).withMessage('Invalid employment status'),
-  body('notes').optional().isString().isLength({ max: 4000 }).withMessage('Notes max length is 4000'),
-  handleValidationErrors
+  body('employmentStatus')
+    .isIn(['employed', 'self_employed', 'student', 'retired', 'unemployed', 'other'])
+    .withMessage('Invalid employment status'),
+  body('notes')
+    .optional()
+    .isString()
+    .isLength({ max: 4000 })
+    .withMessage('Notes max length is 4000'),
+  handleValidationErrors,
 ];
 
 /**
@@ -314,9 +450,15 @@ const validateTenantApplication = [
  */
 const validateTenantApplicationUpdate = [
   param('id').isString().notEmpty().withMessage('Application ID is required'),
-  body('status').isIn(['reviewing', 'approved', 'rejected', 'withdrawn']).withMessage('Invalid status transition'),
-  body('notes').optional().isString().isLength({ max: 4000 }).withMessage('Notes max length is 4000'),
-  handleValidationErrors
+  body('status')
+    .isIn(['reviewing', 'approved', 'rejected', 'withdrawn'])
+    .withMessage('Invalid status transition'),
+  body('notes')
+    .optional()
+    .isString()
+    .isLength({ max: 4000 })
+    .withMessage('Notes max length is 4000'),
+  handleValidationErrors,
 ];
 
 export {
@@ -346,18 +488,33 @@ const validateExchangeRequest = [
     }
     return true;
   }),
-  body('offeredPropertyId').optional().isString().withMessage('Offered property ID must be a string'),
-  body('offeredWindow.start').optional().isISO8601().withMessage('Offered window start must be a valid date'),
-  body('offeredWindow.end').optional().isISO8601().withMessage('Offered window end must be a valid date'),
-  body('offeredWindow.end').optional().custom((value, { req }) => {
-    const start = req.body?.offeredWindow?.start;
-    if (value && start && new Date(value) <= new Date(start)) {
-      throw new Error('Offered window end must be after start');
-    }
-    return true;
-  }),
-  body('message').optional().isString().isLength({ max: 2000 }).withMessage('Message max length is 2000'),
-  handleValidationErrors
+  body('offeredPropertyId')
+    .optional()
+    .isString()
+    .withMessage('Offered property ID must be a string'),
+  body('offeredWindow.start')
+    .optional()
+    .isISO8601()
+    .withMessage('Offered window start must be a valid date'),
+  body('offeredWindow.end')
+    .optional()
+    .isISO8601()
+    .withMessage('Offered window end must be a valid date'),
+  body('offeredWindow.end')
+    .optional()
+    .custom((value, { req }) => {
+      const start = req.body?.offeredWindow?.start;
+      if (value && start && new Date(value) <= new Date(start)) {
+        throw new Error('Offered window end must be after start');
+      }
+      return true;
+    }),
+  body('message')
+    .optional()
+    .isString()
+    .isLength({ max: 2000 })
+    .withMessage('Message max length is 2000'),
+  handleValidationErrors,
 ];
 
 /**
@@ -365,9 +522,15 @@ const validateExchangeRequest = [
  */
 const validateExchangeUpdate = [
   param('id').isString().notEmpty().withMessage('Exchange request ID is required'),
-  body('status').isIn(['confirmed', 'declined', 'cancelled', 'completed']).withMessage('Invalid status transition'),
-  body('message').optional().isString().isLength({ max: 2000 }).withMessage('Message max length is 2000'),
-  handleValidationErrors
+  body('status')
+    .isIn(['confirmed', 'declined', 'cancelled', 'completed'])
+    .withMessage('Invalid status transition'),
+  body('message')
+    .optional()
+    .isString()
+    .isLength({ max: 2000 })
+    .withMessage('Message max length is 2000'),
+  handleValidationErrors,
 ];
 
 /**
@@ -376,20 +539,32 @@ const validateExchangeUpdate = [
 const validateExchangeReview = [
   param('id').isString().notEmpty().withMessage('Exchange request ID is required'),
   body('rating').isInt({ min: 1, max: 5 }).withMessage('Rating must be an integer between 1 and 5'),
-  body('comment').optional().isString().isLength({ max: 2000 }).withMessage('Comment max length is 2000'),
+  body('comment')
+    .optional()
+    .isString()
+    .isLength({ max: 2000 })
+    .withMessage('Comment max length is 2000'),
   body('categories').optional().isObject().withMessage('Categories must be an object'),
-  body('categories.communication').optional().isInt({ min: 1, max: 5 }).withMessage('communication must be 1-5'),
-  body('categories.cleanliness').optional().isInt({ min: 1, max: 5 }).withMessage('cleanliness must be 1-5'),
-  body('categories.accuracy').optional().isInt({ min: 1, max: 5 }).withMessage('accuracy must be 1-5'),
-  body('categories.hospitality').optional().isInt({ min: 1, max: 5 }).withMessage('hospitality must be 1-5'),
-  handleValidationErrors
+  body('categories.communication')
+    .optional()
+    .isInt({ min: 1, max: 5 })
+    .withMessage('communication must be 1-5'),
+  body('categories.cleanliness')
+    .optional()
+    .isInt({ min: 1, max: 5 })
+    .withMessage('cleanliness must be 1-5'),
+  body('categories.accuracy')
+    .optional()
+    .isInt({ min: 1, max: 5 })
+    .withMessage('accuracy must be 1-5'),
+  body('categories.hospitality')
+    .optional()
+    .isInt({ min: 1, max: 5 })
+    .withMessage('hospitality must be 1-5'),
+  handleValidationErrors,
 ];
 
-export {
-  validateExchangeRequest,
-  validateExchangeUpdate,
-  validateExchangeReview,
-};
+export { validateExchangeRequest, validateExchangeUpdate, validateExchangeReview };
 
 // ── The four review validators are DELETED, and their absence is the fix ──
 //
@@ -430,8 +605,12 @@ const ROOMMATE_SCHEDULE = ['early_bird', 'night_owl', 'flexible'];
  */
 const validateRoommateRequest = [
   param('oxyUserId').isString().trim().notEmpty().withMessage('Invalid user ID'),
-  body('message').optional().isString().isLength({ max: 1000 }).withMessage('Message max length is 1000'),
-  handleValidationErrors
+  body('message')
+    .optional()
+    .isString()
+    .isLength({ max: 1000 })
+    .withMessage('Message max length is 1000'),
+  handleValidationErrors,
 ];
 
 /**
@@ -445,21 +624,55 @@ const validateRoommateRequest = [
 const validateRoommatePreferences = [
   body('enabled').optional().isBoolean().withMessage('enabled must be a boolean'),
   body('gender').optional().isIn(ROOMMATE_GENDERS).withMessage('Invalid gender'),
-  body('location').optional().isString().isLength({ max: 200 }).withMessage('location max length is 200'),
-  body('moveInDate').optional().isString().isLength({ max: 100 }).withMessage('moveInDate max length is 100'),
-  body('leaseDuration').optional().isString().isLength({ max: 100 }).withMessage('leaseDuration max length is 100'),
-  body('ageRange.min').optional().isInt({ min: 0, max: 120 }).withMessage('ageRange.min must be between 0 and 120'),
-  body('ageRange.max').optional().isInt({ min: 0, max: 120 }).withMessage('ageRange.max must be between 0 and 120'),
+  body('location')
+    .optional()
+    .isString()
+    .isLength({ max: 200 })
+    .withMessage('location max length is 200'),
+  body('moveInDate')
+    .optional()
+    .isString()
+    .isLength({ max: 100 })
+    .withMessage('moveInDate max length is 100'),
+  body('leaseDuration')
+    .optional()
+    .isString()
+    .isLength({ max: 100 })
+    .withMessage('leaseDuration max length is 100'),
+  body('ageRange.min')
+    .optional()
+    .isInt({ min: 0, max: 120 })
+    .withMessage('ageRange.min must be between 0 and 120'),
+  body('ageRange.max')
+    .optional()
+    .isInt({ min: 0, max: 120 })
+    .withMessage('ageRange.max must be between 0 and 120'),
   body('budget.min').optional().isFloat({ min: 0 }).withMessage('budget.min must be non-negative'),
   body('budget.max').optional().isFloat({ min: 0 }).withMessage('budget.max must be non-negative'),
-  body('lifestyle.smoking').optional().isIn(ROOMMATE_TRISTATE).withMessage('Invalid lifestyle.smoking'),
+  body('lifestyle.smoking')
+    .optional()
+    .isIn(ROOMMATE_TRISTATE)
+    .withMessage('Invalid lifestyle.smoking'),
   body('lifestyle.pets').optional().isIn(ROOMMATE_TRISTATE).withMessage('Invalid lifestyle.pets'),
-  body('lifestyle.partying').optional().isIn(ROOMMATE_TRISTATE).withMessage('Invalid lifestyle.partying'),
-  body('lifestyle.cleanliness').optional().isIn(ROOMMATE_CLEANLINESS).withMessage('Invalid lifestyle.cleanliness'),
-  body('lifestyle.schedule').optional().isIn(ROOMMATE_SCHEDULE).withMessage('Invalid lifestyle.schedule'),
+  body('lifestyle.partying')
+    .optional()
+    .isIn(ROOMMATE_TRISTATE)
+    .withMessage('Invalid lifestyle.partying'),
+  body('lifestyle.cleanliness')
+    .optional()
+    .isIn(ROOMMATE_CLEANLINESS)
+    .withMessage('Invalid lifestyle.cleanliness'),
+  body('lifestyle.schedule')
+    .optional()
+    .isIn(ROOMMATE_SCHEDULE)
+    .withMessage('Invalid lifestyle.schedule'),
   body('interests').optional().isArray().withMessage('interests must be an array'),
-  body('interests.*').optional().isString().isLength({ max: 100 }).withMessage('Each interest must be a string'),
-  handleValidationErrors
+  body('interests.*')
+    .optional()
+    .isString()
+    .isLength({ max: 100 })
+    .withMessage('Each interest must be a string'),
+  handleValidationErrors,
 ];
 
 /**
@@ -467,7 +680,7 @@ const validateRoommatePreferences = [
  */
 const validateRoommateToggle = [
   body('enabled').isBoolean().withMessage('enabled must be a boolean'),
-  handleValidationErrors
+  handleValidationErrors,
 ];
 
 /**
@@ -476,18 +689,29 @@ const validateRoommateToggle = [
  */
 const validateRoommateRequestId = [
   param('requestId').isMongoId().withMessage('Invalid roommate request ID'),
-  handleValidationErrors
+  handleValidationErrors,
 ];
 
 /** Roommate listing pagination + filter validation (GET /api/roommates). */
 const validateRoommateListQuery = [
   query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
   query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1-100'),
-  query('minMatchPercentage').optional().isInt({ min: 0, max: 100 }).withMessage('minMatchPercentage must be between 0 and 100'),
+  query('minMatchPercentage')
+    .optional()
+    .isInt({ min: 0, max: 100 })
+    .withMessage('minMatchPercentage must be between 0 and 100'),
   query('maxBudget').optional().isFloat({ min: 0 }).withMessage('maxBudget must be non-negative'),
-  query('gender').optional().isString().isLength({ max: 50 }).withMessage('gender must be a string'),
-  query('location').optional().isString().isLength({ max: 200 }).withMessage('location max length is 200'),
-  handleValidationErrors
+  query('gender')
+    .optional()
+    .isString()
+    .isLength({ max: 50 })
+    .withMessage('gender must be a string'),
+  query('location')
+    .optional()
+    .isString()
+    .isLength({ max: 200 })
+    .withMessage('location max length is 200'),
+  handleValidationErrors,
 ];
 
 export {
@@ -511,20 +735,37 @@ export {
  */
 const validateLeaseCreate = [
   body('propertyId').custom(requireEntityId).withMessage('Valid propertyId is required'),
-  body('tenantOxyUserId').optional().custom(requireEntityId).withMessage('tenantOxyUserId must be a valid id'),
+  body('tenantOxyUserId')
+    .optional()
+    .custom(requireEntityId)
+    .withMessage('tenantOxyUserId must be a valid id'),
   body('tenantId').optional().custom(requireEntityId).withMessage('tenantId must be a valid id'),
-  body('leaseTerms.startDate').optional().isISO8601().withMessage('leaseTerms.startDate must be a valid date'),
-  body('leaseTerms.endDate').optional().isISO8601().withMessage('leaseTerms.endDate must be a valid date'),
-  body('leaseTerms.endDate').optional().custom((value, { req }) => {
-    const start = req.body?.leaseTerms?.startDate;
-    if (value && start && new Date(value) <= new Date(start)) {
-      throw new Error('leaseTerms.endDate must be after leaseTerms.startDate');
-    }
-    return true;
-  }),
-  body('rentDetails.monthlyRent').optional().isFloat({ min: 0 }).withMessage('rentDetails.monthlyRent must be non-negative'),
-  body('rentDetails.deposit').optional().isFloat({ min: 0 }).withMessage('rentDetails.deposit must be non-negative'),
-  handleValidationErrors
+  body('leaseTerms.startDate')
+    .optional()
+    .isISO8601()
+    .withMessage('leaseTerms.startDate must be a valid date'),
+  body('leaseTerms.endDate')
+    .optional()
+    .isISO8601()
+    .withMessage('leaseTerms.endDate must be a valid date'),
+  body('leaseTerms.endDate')
+    .optional()
+    .custom((value, { req }) => {
+      const start = req.body?.leaseTerms?.startDate;
+      if (value && start && new Date(value) <= new Date(start)) {
+        throw new Error('leaseTerms.endDate must be after leaseTerms.startDate');
+      }
+      return true;
+    }),
+  body('rentDetails.monthlyRent')
+    .optional()
+    .isFloat({ min: 0 })
+    .withMessage('rentDetails.monthlyRent must be non-negative'),
+  body('rentDetails.deposit')
+    .optional()
+    .isFloat({ min: 0 })
+    .withMessage('rentDetails.deposit must be non-negative'),
+  handleValidationErrors,
 ];
 
 /**
@@ -536,41 +777,57 @@ const validateLeaseCreate = [
  */
 const validateLeaseUpdate = [
   param('id').custom(requireEntityId).withMessage('Invalid lease ID'),
-  body('leaseTerms.startDate').optional().isISO8601().withMessage('leaseTerms.startDate must be a valid date'),
-  body('leaseTerms.endDate').optional().isISO8601().withMessage('leaseTerms.endDate must be a valid date'),
-  body('leaseTerms.endDate').optional().custom((value, { req }) => {
-    const start = req.body?.leaseTerms?.startDate;
-    if (value && start && new Date(value) <= new Date(start)) {
-      throw new Error('leaseTerms.endDate must be after leaseTerms.startDate');
-    }
-    return true;
-  }),
-  body('rentDetails.monthlyRent').optional().isFloat({ min: 0 }).withMessage('rentDetails.monthlyRent must be non-negative'),
-  body('rentDetails.deposit').optional().isFloat({ min: 0 }).withMessage('rentDetails.deposit must be non-negative'),
-  handleValidationErrors
+  body('leaseTerms.startDate')
+    .optional()
+    .isISO8601()
+    .withMessage('leaseTerms.startDate must be a valid date'),
+  body('leaseTerms.endDate')
+    .optional()
+    .isISO8601()
+    .withMessage('leaseTerms.endDate must be a valid date'),
+  body('leaseTerms.endDate')
+    .optional()
+    .custom((value, { req }) => {
+      const start = req.body?.leaseTerms?.startDate;
+      if (value && start && new Date(value) <= new Date(start)) {
+        throw new Error('leaseTerms.endDate must be after leaseTerms.startDate');
+      }
+      return true;
+    }),
+  body('rentDetails.monthlyRent')
+    .optional()
+    .isFloat({ min: 0 })
+    .withMessage('rentDetails.monthlyRent must be non-negative'),
+  body('rentDetails.deposit')
+    .optional()
+    .isFloat({ min: 0 })
+    .withMessage('rentDetails.deposit must be non-negative'),
+  handleValidationErrors,
 ];
 
 /** Lease id parameter validation (GET/DELETE /api/leases/:id). */
 const validateLeaseId = [
   param('id').custom(requireEntityId).withMessage('Invalid lease ID'),
-  handleValidationErrors
+  handleValidationErrors,
 ];
 
 /** Lease listing pagination + filter validation (GET /api/leases). */
 const validateLeaseListQuery = [
   query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
   query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1-100'),
-  query('status').optional().isString().isLength({ max: 50 }).withMessage('status must be a string'),
-  query('propertyId').optional().custom(requireEntityId).withMessage('propertyId must be a valid id'),
-  handleValidationErrors
+  query('status')
+    .optional()
+    .isString()
+    .isLength({ max: 50 })
+    .withMessage('status must be a string'),
+  query('propertyId')
+    .optional()
+    .custom(requireEntityId)
+    .withMessage('propertyId must be a valid id'),
+  handleValidationErrors,
 ];
 
-export {
-  validateLeaseCreate,
-  validateLeaseUpdate,
-  validateLeaseId,
-  validateLeaseListQuery,
-};
+export { validateLeaseCreate, validateLeaseUpdate, validateLeaseId, validateLeaseListQuery };
 
 /**
  * Viewing request update validation rules (PUT /api/viewings/:viewingId)
@@ -582,27 +839,32 @@ export {
 const validateViewingUpdate = [
   param('viewingId').isMongoId().withMessage('Invalid viewing request ID'),
   body('date').isISO8601().withMessage('Valid date is required'),
-  body('time').matches(/^\d{2}:\d{2}$/).withMessage('Time must be in HH:MM format'),
-  body('message').optional().isString().isLength({ max: 1000 }).withMessage('Message max length is 1000'),
-  handleValidationErrors
+  body('time')
+    .matches(/^\d{2}:\d{2}$/)
+    .withMessage('Time must be in HH:MM format'),
+  body('message')
+    .optional()
+    .isString()
+    .isLength({ max: 1000 })
+    .withMessage('Message max length is 1000'),
+  handleValidationErrors,
 ];
 
 /** Viewing request id parameter validation (POST .../approve|decline|cancel). */
 const validateViewingId = [
   param('viewingId').isMongoId().withMessage('Invalid viewing request ID'),
-  handleValidationErrors
+  handleValidationErrors,
 ];
 
 /** Current-user viewing list pagination + status filter (GET /api/viewings/me). */
 const validateViewingListQuery = [
   query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
   query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1-100'),
-  query('status').optional().isIn(['pending', 'approved', 'declined', 'cancelled']).withMessage('Invalid status filter'),
-  handleValidationErrors
+  query('status')
+    .optional()
+    .isIn(['pending', 'approved', 'declined', 'cancelled'])
+    .withMessage('Invalid status filter'),
+  handleValidationErrors,
 ];
 
-export {
-  validateViewingUpdate,
-  validateViewingId,
-  validateViewingListQuery,
-};
+export { validateViewingUpdate, validateViewingId, validateViewingListQuery };

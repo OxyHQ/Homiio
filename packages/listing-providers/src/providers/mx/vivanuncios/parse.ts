@@ -73,7 +73,11 @@ function collectImages(node: Record<string, unknown>): string[] {
   return images;
 }
 
-function inferOperation(url: string, title: string | undefined, category: string | undefined): 'rent' | 'sale' {
+function inferOperation(
+  url: string,
+  title: string | undefined,
+  category: string | undefined,
+): 'rent' | 'sale' {
   const hay = `${url} ${title ?? ''} ${category ?? ''}`;
   if (/venta|sale|buy|a-venta/i.test(hay)) return 'sale';
   return 'rent';
@@ -92,8 +96,7 @@ function nodeToRaw(node: Record<string, unknown>): VivanunciosRawListing | undef
   const price = asNumberEu(offer?.price) ?? asNumberEu(node.price);
   const address = isRecord(node.address) ? node.address : undefined;
   const city = asString(address?.addressLocality);
-  const urlRaw =
-    asString(node.url) ?? (typeof node['@id'] === 'string' ? node['@id'] : undefined);
+  const urlRaw = asString(node.url) ?? (typeof node['@id'] === 'string' ? node['@id'] : undefined);
   if (price === undefined || !city || !urlRaw) return undefined;
 
   const url = absoluteUrl(urlRaw);

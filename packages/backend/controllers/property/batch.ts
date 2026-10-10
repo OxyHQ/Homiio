@@ -55,10 +55,17 @@ import { getQueryInteger, getQueryString } from '../queryParams';
 
 /** Split a comma-separated id list into trimmed, non-empty entries. */
 function parseIdList(raw: string): string[] {
-  return raw.split(',').map((entry) => entry.trim()).filter(Boolean);
+  return raw
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter(Boolean);
 }
 
-export async function getPropertiesByIds(req: ControllerRequest, res: ControllerResponse, next: ControllerNext) {
+export async function getPropertiesByIds(
+  req: ControllerRequest,
+  res: ControllerResponse,
+  next: ControllerNext,
+) {
   try {
     const { ids } = req.query;
     if (!ids) return res.status(400).json({ success: false, message: 'ids is required' });
@@ -70,13 +77,29 @@ export async function getPropertiesByIds(req: ControllerRequest, res: Controller
     if (!list.length) return res.json(paginationResponse([], 1, 0, 0, 'No valid IDs provided'));
 
     const hydrated = await findProperties({
-      where: allOf([idIn(list), notDeleted(), notModerationRestricted(), statusVisibleToNonOwner()]),
+      where: allOf([
+        idIn(list),
+        notDeleted(),
+        notModerationRestricted(),
+        statusVisibleToNonOwner(),
+      ]),
     });
-    return res.json(successResponse(hydrated.map((listing) => serializeProperty(listing, 'public')), 'Properties fetched by IDs'));
-  } catch (error) { next(error); }
+    return res.json(
+      successResponse(
+        hydrated.map((listing) => serializeProperty(listing, 'public')),
+        'Properties fetched by IDs',
+      ),
+    );
+  } catch (error) {
+    next(error);
+  }
 }
 
-export async function getPropertiesByOwner(req: ControllerRequest, res: ControllerResponse, next: ControllerNext) {
+export async function getPropertiesByOwner(
+  req: ControllerRequest,
+  res: ControllerResponse,
+  next: ControllerNext,
+) {
   try {
     const { oxyUserId } = req.params;
     const exclude = getQueryString(req.query.exclude);
@@ -99,6 +122,16 @@ export async function getPropertiesByOwner(req: ControllerRequest, res: Controll
       findProperties({ where, orderBy: propertyOrderBy(NEWEST_FIRST), limit, offset: skip }),
       countProperties(where),
     ]);
-    res.json(paginationResponse(hydrated.map((listing) => serializeProperty(listing, 'public')), page, limit, total, "Owner's properties retrieved successfully"));
-  } catch (error) { next(error); }
+    res.json(
+      paginationResponse(
+        hydrated.map((listing) => serializeProperty(listing, 'public')),
+        page,
+        limit,
+        total,
+        "Owner's properties retrieved successfully",
+      ),
+    );
+  } catch (error) {
+    next(error);
+  }
 }

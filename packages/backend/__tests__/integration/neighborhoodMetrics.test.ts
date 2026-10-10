@@ -112,7 +112,6 @@ beforeEach(async () => {
   await resetGeoTables();
 });
 
-
 describe('GET /api/neighborhoods/by-property/:propertyId', () => {
   it('returns real, listing-derived metrics for the property neighborhood', async () => {
     const chain = await seedGeoChain({ cityName: 'Barcelona' });

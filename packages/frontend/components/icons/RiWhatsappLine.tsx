@@ -17,7 +17,15 @@ const PATH =
 export const RiWhatsappLine = forwardRef<Svg, IconProps>(function RiWhatsappLine(props, ref) {
   const { fill, size, style, gradient, ...rest } = useCommonSVGProps(props);
   return (
-    <Svg fill="none" {...rest} ref={ref} viewBox="0 0 24 24" width={size} height={size} style={[style]}>
+    <Svg
+      fill="none"
+      {...rest}
+      ref={ref}
+      viewBox="0 0 24 24"
+      width={size}
+      height={size}
+      style={[style]}
+    >
       {gradient}
       <Path fill={fill} fillRule="evenodd" clipRule="evenodd" d={PATH} />
     </Svg>

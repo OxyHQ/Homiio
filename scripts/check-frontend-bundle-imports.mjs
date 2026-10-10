@@ -63,7 +63,9 @@ const BARRELS = [
     // Any non-English locale file, by alias or relative path. Web fetches the
     // active locale from public/locales/, so one static import puts that whole
     // language back into every web page's JavaScript.
-    pattern: new RegExp(`${SPECIFIER_PREFIX}['"](?:@/|(?:\\.\\.?/)+)(?:[^'"]*/)?locales/(?!en\\.json['"])[^'"/]+\\.json['"]`),
+    pattern: new RegExp(
+      `${SPECIFIER_PREFIX}['"](?:@/|(?:\\.\\.?/)+)(?:[^'"]*/)?locales/(?!en\\.json['"])[^'"/]+\\.json['"]`,
+    ),
     exempt: (file) => file === 'utils/localeResources.ts' || file.startsWith('__tests__/'),
     message:
       'Do not import a non-English locale JSON in app code; switch languages with setStoredLanguage (utils/languagePreference.ts), which loads it on demand.',

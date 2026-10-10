@@ -42,11 +42,21 @@ function buildApp(oxyUserId: string): Express {
     authed.userId = oxyUserId;
     next();
   });
-  app.post('/applications', (req, res, next) => applicationController.createApplication(req, res, next));
-  app.get('/applications', (req, res, next) => applicationController.listMyApplications(req, res, next));
-  app.get('/applications/:id', (req, res, next) => applicationController.getApplicationById(req, res, next));
-  app.patch('/applications/:id', (req, res, next) => applicationController.updateApplicationStatus(req, res, next));
-  app.post('/applications/:id/create-lease', (req, res, next) => applicationController.createLeaseFromApplication(req, res, next));
+  app.post('/applications', (req, res, next) =>
+    applicationController.createApplication(req, res, next),
+  );
+  app.get('/applications', (req, res, next) =>
+    applicationController.listMyApplications(req, res, next),
+  );
+  app.get('/applications/:id', (req, res, next) =>
+    applicationController.getApplicationById(req, res, next),
+  );
+  app.patch('/applications/:id', (req, res, next) =>
+    applicationController.updateApplicationStatus(req, res, next),
+  );
+  app.post('/applications/:id/create-lease', (req, res, next) =>
+    applicationController.createLeaseFromApplication(req, res, next),
+  );
   app.use(errorHandler);
   return app;
 }
@@ -85,7 +95,12 @@ function applicationBody(propertyId: string, overrides: Record<string, unknown> 
     monthlyIncome: 45000,
     employmentStatus: 'employed',
     referenceContacts: [
-      { name: 'Ada Ref', relationship: 'employer', phone: '+34600000000', email: 'Ada@Example.TEST' },
+      {
+        name: 'Ada Ref',
+        relationship: 'employer',
+        phone: '+34600000000',
+        email: 'Ada@Example.TEST',
+      },
     ],
     ...overrides,
   };
@@ -132,11 +147,13 @@ describe('createApplication', () => {
     const res = await request(buildApp('oxy-applicant'))
       .post('/applications')
       // A forged landlord, status and decision must be ignored.
-      .send(applicationBody(propertyId, {
-        landlordOxyUserId: 'attacker',
-        status: 'approved',
-        decidedAt: '2020-01-01T00:00:00.000Z',
-      }));
+      .send(
+        applicationBody(propertyId, {
+          landlordOxyUserId: 'attacker',
+          status: 'approved',
+          decidedAt: '2020-01-01T00:00:00.000Z',
+        }),
+      );
 
     expect(res.status).toBe(201);
     const persisted = await applicationRow(res.body.data.id);
@@ -168,11 +185,13 @@ describe('createApplication', () => {
     const propertyId = await seedRentalProperty();
     const res = await request(buildApp('oxy-applicant'))
       .post('/applications')
-      .send(applicationBody(propertyId, {
-        referenceContacts: [
-          { name: 'X', relationship: 'astrologer', phone: '+34600000000', email: 'x@y.test' },
-        ],
-      }));
+      .send(
+        applicationBody(propertyId, {
+          referenceContacts: [
+            { name: 'X', relationship: 'astrologer', phone: '+34600000000', email: 'x@y.test' },
+          ],
+        }),
+      );
 
     expect(res.status).toBe(400);
     // Neither the parent NOR the children — the only assertion that
@@ -182,20 +201,38 @@ describe('createApplication', () => {
   });
 
   it('refuses an external listing, one not offered for long-term rent, and your own', async () => {
-    const external = (await seedListingWithGeo({
-      countryCode: nextCountryCode(),
-      overrides: { oxyUserId: 'oxy-landlord', isExternal: true, source: 'idealista', sourceUrl: 'https://x.test/1' },
-    })).propertyId;
-    expect((await request(buildApp('oxy-a')).post('/applications').send(applicationBody(external))).status).toBe(400);
+    const external = (
+      await seedListingWithGeo({
+        countryCode: nextCountryCode(),
+        overrides: {
+          oxyUserId: 'oxy-landlord',
+          isExternal: true,
+          source: 'idealista',
+          sourceUrl: 'https://x.test/1',
+        },
+      })
+    ).propertyId;
+    expect(
+      (await request(buildApp('oxy-a')).post('/applications').send(applicationBody(external)))
+        .status,
+    ).toBe(400);
 
-    const notOffered = (await seedListingWithGeo({
-      countryCode: nextCountryCode(),
-      overrides: { oxyUserId: 'oxy-landlord', status: 'published' },
-    })).propertyId;
-    expect((await request(buildApp('oxy-a')).post('/applications').send(applicationBody(notOffered))).status).toBe(400);
+    const notOffered = (
+      await seedListingWithGeo({
+        countryCode: nextCountryCode(),
+        overrides: { oxyUserId: 'oxy-landlord', status: 'published' },
+      })
+    ).propertyId;
+    expect(
+      (await request(buildApp('oxy-a')).post('/applications').send(applicationBody(notOffered)))
+        .status,
+    ).toBe(400);
 
     const own = await seedRentalProperty();
-    expect((await request(buildApp('oxy-landlord')).post('/applications').send(applicationBody(own))).status).toBe(403);
+    expect(
+      (await request(buildApp('oxy-landlord')).post('/applications').send(applicationBody(own)))
+        .status,
+    ).toBe(403);
 
     expect(await getDb().select().from(tenantApplications)).toHaveLength(0);
   });
@@ -212,7 +249,11 @@ describe('createApplication', () => {
     // The permit half: a rule scoped to the pair WITHOUT the active statuses
     // passes the refusal above and eats this.
     expect(
-      (await request(buildApp('oxy-landlord')).patch(`/applications/${first}`).send({ status: 'rejected' })).status,
+      (
+        await request(buildApp('oxy-landlord'))
+          .patch(`/applications/${first}`)
+          .send({ status: 'rejected' })
+      ).status,
     ).toBe(200);
 
     const again = await request(buildApp('oxy-applicant'))
@@ -244,7 +285,9 @@ describe('updateApplicationStatus — the `decided_at` equivalence', () => {
     // refuses: `reviewing` is still open, so a decision date on it would sort a
     // live application as if it were closed.
     const id = await createApplicationFor(await seedRentalProperty());
-    const res = await request(buildApp('oxy-landlord')).patch(`/applications/${id}`).send({ status: 'reviewing' });
+    const res = await request(buildApp('oxy-landlord'))
+      .patch(`/applications/${id}`)
+      .send({ status: 'reviewing' });
     expect(res.status).toBe(200);
     expect((await applicationRow(id)).decidedAt).toBeNull();
   });
@@ -265,11 +308,15 @@ describe('updateApplicationStatus — the `decided_at` equivalence', () => {
     };
 
     await expect(
-      getDb().insert(tenantApplications).values({ ...base, status: 'approved' }),
+      getDb()
+        .insert(tenantApplications)
+        .values({ ...base, status: 'approved' }),
     ).rejects.toThrow();
 
     await expect(
-      getDb().insert(tenantApplications).values({ ...base, status: 'submitted', decidedAt: new Date() }),
+      getDb()
+        .insert(tenantApplications)
+        .values({ ...base, status: 'submitted', decidedAt: new Date() }),
     ).rejects.toThrow();
   });
 
@@ -277,25 +324,57 @@ describe('updateApplicationStatus — the `decided_at` equivalence', () => {
     const propertyId = await seedRentalProperty();
 
     const byApplicant = await createApplicationFor(propertyId);
-    expect((await request(buildApp('oxy-applicant')).patch(`/applications/${byApplicant}`).send({ status: 'approved' })).status).toBe(403);
+    expect(
+      (
+        await request(buildApp('oxy-applicant'))
+          .patch(`/applications/${byApplicant}`)
+          .send({ status: 'approved' })
+      ).status,
+    ).toBe(403);
     expect((await applicationRow(byApplicant)).status).toBe('submitted');
 
-    expect((await request(buildApp('oxy-landlord')).patch(`/applications/${byApplicant}`).send({ status: 'withdrawn' })).status).toBe(403);
+    expect(
+      (
+        await request(buildApp('oxy-landlord'))
+          .patch(`/applications/${byApplicant}`)
+          .send({ status: 'withdrawn' })
+      ).status,
+    ).toBe(403);
     expect((await applicationRow(byApplicant)).status).toBe('submitted');
 
-    expect((await request(buildApp('oxy-stranger')).patch(`/applications/${byApplicant}`).send({ status: 'approved' })).status).toBe(403);
+    expect(
+      (
+        await request(buildApp('oxy-stranger'))
+          .patch(`/applications/${byApplicant}`)
+          .send({ status: 'approved' })
+      ).status,
+    ).toBe(403);
   });
 
   it('refuses a SECOND decision — the precondition is in the UPDATE', async () => {
     const id = await createApplicationFor(await seedRentalProperty());
-    expect((await request(buildApp('oxy-landlord')).patch(`/applications/${id}`).send({ status: 'approved' })).status).toBe(200);
-    expect((await request(buildApp('oxy-landlord')).patch(`/applications/${id}`).send({ status: 'rejected' })).status).toBe(400);
+    expect(
+      (
+        await request(buildApp('oxy-landlord'))
+          .patch(`/applications/${id}`)
+          .send({ status: 'approved' })
+      ).status,
+    ).toBe(200);
+    expect(
+      (
+        await request(buildApp('oxy-landlord'))
+          .patch(`/applications/${id}`)
+          .send({ status: 'rejected' })
+      ).status,
+    ).toBe(400);
     expect((await applicationRow(id)).status).toBe('approved');
   });
 
   it('refuses an unsupported status', async () => {
     const id = await createApplicationFor(await seedRentalProperty());
-    const res = await request(buildApp('oxy-landlord')).patch(`/applications/${id}`).send({ status: 'nonsense' });
+    const res = await request(buildApp('oxy-landlord'))
+      .patch(`/applications/${id}`)
+      .send({ status: 'nonsense' });
     expect(res.status).toBe(400);
   });
 });
@@ -335,7 +414,9 @@ describe('createLeaseFromApplication', () => {
   it('drafts a lease from an APPROVED application, priced from the listing', async () => {
     const propertyId = await seedRentalProperty();
     const id = await createApplicationFor(propertyId);
-    await request(buildApp('oxy-landlord')).patch(`/applications/${id}`).send({ status: 'approved' });
+    await request(buildApp('oxy-landlord'))
+      .patch(`/applications/${id}`)
+      .send({ status: 'approved' });
 
     const res = await request(buildApp('oxy-landlord')).post(`/applications/${id}/create-lease`);
     expect(res.status).toBe(201);
@@ -355,18 +436,28 @@ describe('createLeaseFromApplication', () => {
     const propertyId = await seedRentalProperty();
     const id = await createApplicationFor(propertyId);
 
-    expect((await request(buildApp('oxy-landlord')).post(`/applications/${id}/create-lease`)).status).toBe(400);
-    expect((await request(buildApp('oxy-applicant')).post(`/applications/${id}/create-lease`)).status).toBe(403);
+    expect(
+      (await request(buildApp('oxy-landlord')).post(`/applications/${id}/create-lease`)).status,
+    ).toBe(400);
+    expect(
+      (await request(buildApp('oxy-applicant')).post(`/applications/${id}/create-lease`)).status,
+    ).toBe(403);
     expect(await getDb().select().from(leases)).toHaveLength(0);
   });
 
   it('refuses a second lease for the same tenant and property', async () => {
     const propertyId = await seedRentalProperty();
     const id = await createApplicationFor(propertyId);
-    await request(buildApp('oxy-landlord')).patch(`/applications/${id}`).send({ status: 'approved' });
+    await request(buildApp('oxy-landlord'))
+      .patch(`/applications/${id}`)
+      .send({ status: 'approved' });
 
-    expect((await request(buildApp('oxy-landlord')).post(`/applications/${id}/create-lease`)).status).toBe(201);
-    expect((await request(buildApp('oxy-landlord')).post(`/applications/${id}/create-lease`)).status).toBe(409);
+    expect(
+      (await request(buildApp('oxy-landlord')).post(`/applications/${id}/create-lease`)).status,
+    ).toBe(201);
+    expect(
+      (await request(buildApp('oxy-landlord')).post(`/applications/${id}/create-lease`)).status,
+    ).toBe(409);
     expect(await getDb().select().from(leases)).toHaveLength(1);
   });
 
@@ -408,9 +499,11 @@ describe('documents', () => {
     const other = await seedRentalProperty('oxy-landlord-2');
     const bad = await request(buildApp('oxy-applicant'))
       .post('/applications')
-      .send(applicationBody(other, {
-        documents: [{ type: 'passport', url: 'https://x.test/p.pdf', filename: 'p.pdf' }],
-      }));
+      .send(
+        applicationBody(other, {
+          documents: [{ type: 'passport', url: 'https://x.test/p.pdf', filename: 'p.pdf' }],
+        }),
+      );
     expect(bad.status).toBe(400);
   });
 });

@@ -22,7 +22,11 @@ const SENTINEL_STYLE = { height: 1 } as const;
  * a screen wires BOTH (this for web, `onScroll`/`onEndReached` for native) and
  * each platform uses the one that applies. Ported from Mention's `LoadMoreSentinel`.
  */
-export function LoadMoreSentinel({ onLoadMore, enabled, rootMargin = '600px' }: LoadMoreSentinelProps) {
+export function LoadMoreSentinel({
+  onLoadMore,
+  enabled,
+  rootMargin = '600px',
+}: LoadMoreSentinelProps) {
   const viewRef = useRef<View>(null);
   // Keep the latest callback without re-subscribing the observer every render.
   // Assigned in an effect, not during render: the observer only ever reads it
@@ -33,7 +37,11 @@ export function LoadMoreSentinel({ onLoadMore, enabled, rootMargin = '600px' }: 
   }, [onLoadMore]);
 
   useEffect(() => {
-    if (Platform.OS !== 'web' || typeof window === 'undefined' || !('IntersectionObserver' in window)) {
+    if (
+      Platform.OS !== 'web' ||
+      typeof window === 'undefined' ||
+      !('IntersectionObserver' in window)
+    ) {
       return;
     }
     if (!enabled) return;

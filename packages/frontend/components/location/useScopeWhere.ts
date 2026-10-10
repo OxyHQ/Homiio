@@ -46,7 +46,12 @@ export function useScopeWhere(scope: LocationScope, current: LocationSelection |
   return useMemo(() => {
     const formatDistanceValue = (metres: number): string => formatDistance(metres, locale);
     const radius = formatDistanceValue(DEVICE_SCOPE_RADIUS_METERS);
-    const state = deviceOptionState({ source, resolution, deviceIssue, geolocationSupported: supported });
+    const state = deviceOptionState({
+      source,
+      resolution,
+      deviceIssue,
+      geolocationSupported: supported,
+    });
     const lastArea =
       lastChosenArea && (!current || locationKey(current) !== locationKey(lastChosenArea))
         ? lastChosenArea
@@ -67,5 +72,17 @@ export function useScopeWhere(scope: LocationScope, current: LocationSelection |
       geolocationSupported: supported,
       radius,
     };
-  }, [selection, isGlobal, resolution, nearbyPlace, source, deviceIssue, supported, lastChosenArea, current, locale, t]);
+  }, [
+    selection,
+    isGlobal,
+    resolution,
+    nearbyPlace,
+    source,
+    deviceIssue,
+    supported,
+    lastChosenArea,
+    current,
+    locale,
+    t,
+  ]);
 }

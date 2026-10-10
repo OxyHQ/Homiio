@@ -5,15 +5,18 @@ import { useMediaQuery } from 'react-responsive';
  * Optimized media query hook that prevents unnecessary rerenders
  * by creating stable query objects
  */
-export function useOptimizedMediaQuery(query: { minWidth?: number; maxWidth?: number; minHeight?: number; maxHeight?: number }) {
+export function useOptimizedMediaQuery(query: {
+  minWidth?: number;
+  maxWidth?: number;
+  minHeight?: number;
+  maxHeight?: number;
+}) {
   // Memoize the query object to prevent unnecessary rerenders
-  const stableQuery = useMemo(() => query, [
-    query.minWidth, 
-    query.maxWidth, 
-    query.minHeight, 
-    query.maxHeight
-  ]);
-  
+  const stableQuery = useMemo(
+    () => query,
+    [query.minWidth, query.maxWidth, query.minHeight, query.maxHeight],
+  );
+
   return useMediaQuery(stableQuery);
 }
 

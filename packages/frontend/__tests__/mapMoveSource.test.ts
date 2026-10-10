@@ -141,8 +141,8 @@ describe('the native document', () => {
   it('forwards the causing event into the emitter', () => {
     // Without this the emitter has nothing to read the marker off and every
     // movement reports 'user', including the frame that opens the search.
-    expect(document).toContain("map.on(ev, (e) => { emit(false, e); })");
-    expect(document).toContain("map.on(ev, (e) => { emit(true, e); })");
+    expect(document).toContain('map.on(ev, (e) => { emit(false, e); })');
+    expect(document).toContain('map.on(ev, (e) => { emit(true, e); })');
   });
 
   it('marks each of its own camera commands', () => {

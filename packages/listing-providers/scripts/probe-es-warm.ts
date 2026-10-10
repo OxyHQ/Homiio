@@ -3,7 +3,12 @@
  * Usage: LISTING_RESIDENTIAL_PROXY_URL='http://...' bun run packages/listing-providers/scripts/probe-es-warm.ts
  */
 
-import { createProxiedFetch, createProxySessionId, parseResidentialProxyUrl, toPlaywrightProxy } from '../src/proxy';
+import {
+  createProxiedFetch,
+  createProxySessionId,
+  parseResidentialProxyUrl,
+  toPlaywrightProxy,
+} from '../src/proxy';
 import { loadPlaywright } from '../src/browser';
 import { idealistaWarmSearchUrl } from '../src/providers/idealista/georeach';
 import { habitacliaWarmSearchUrl } from '../src/providers/habitaclia/listainmuebles';

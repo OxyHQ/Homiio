@@ -54,9 +54,9 @@ export async function getSavedPropertyFolders(req: Request, res: Response, next:
     const oxyUserId = ownerOf(req);
 
     if (!oxyUserId) {
-      return res.status(401).json(
-        errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
-      );
+      return res
+        .status(401)
+        .json(errorResponse('Authentication required', 'AUTHENTICATION_REQUIRED'));
     }
 
     const folders = await listSavedFolders(getDb(), oxyUserId);
@@ -66,10 +66,12 @@ export async function getSavedPropertyFolders(req: Request, res: Response, next:
       folders.map((folder) => folder.id),
     );
 
-    res.json(successResponse(
-      { folders: folders.map((folder) => toSavedFolderDTO(folder, counts.get(folder.id) ?? 0)) },
-      "Saved property folders retrieved successfully",
-    ));
+    res.json(
+      successResponse(
+        { folders: folders.map((folder) => toSavedFolderDTO(folder, counts.get(folder.id) ?? 0)) },
+        'Saved property folders retrieved successfully',
+      ),
+    );
   } catch (error) {
     next(error);
   }
@@ -84,15 +86,13 @@ export async function createSavedPropertyFolder(req: Request, res: Response, nex
     const { name, description, color, icon } = req.body;
 
     if (!oxyUserId) {
-      return res.status(401).json(
-        errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
-      );
+      return res
+        .status(401)
+        .json(errorResponse('Authentication required', 'AUTHENTICATION_REQUIRED'));
     }
 
     if (typeof name !== 'string' || !name.trim()) {
-      return res.status(400).json(
-        errorResponse("Folder name is required", "FOLDER_NAME_REQUIRED")
-      );
+      return res.status(400).json(errorResponse('Folder name is required', 'FOLDER_NAME_REQUIRED'));
     }
 
     let folder;
@@ -110,14 +110,16 @@ export async function createSavedPropertyFolder(req: Request, res: Response, nex
       });
     } catch (error) {
       if (error instanceof SavedFolderNameTakenError) {
-        return res.status(409).json(
-          errorResponse("Folder with this name already exists", "FOLDER_NAME_EXISTS")
-        );
+        return res
+          .status(409)
+          .json(errorResponse('Folder with this name already exists', 'FOLDER_NAME_EXISTS'));
       }
       throw error;
     }
 
-    res.status(201).json(successResponse(toSavedFolderDTO(folder, 0), "Folder created successfully"));
+    res
+      .status(201)
+      .json(successResponse(toSavedFolderDTO(folder, 0), 'Folder created successfully'));
   } catch (error) {
     next(error);
   }
@@ -133,15 +135,13 @@ export async function updateSavedPropertyFolder(req: Request, res: Response, nex
     const { name, description, color, icon } = req.body;
 
     if (!oxyUserId) {
-      return res.status(401).json(
-        errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
-      );
+      return res
+        .status(401)
+        .json(errorResponse('Authentication required', 'AUTHENTICATION_REQUIRED'));
     }
 
     if (!folderId) {
-      return res.status(400).json(
-        errorResponse("Folder ID is required", "FOLDER_ID_REQUIRED")
-      );
+      return res.status(400).json(errorResponse('Folder ID is required', 'FOLDER_ID_REQUIRED'));
     }
 
     // Read first, because the default folder is refused BEFORE anything is
@@ -149,14 +149,12 @@ export async function updateSavedPropertyFolder(req: Request, res: Response, nex
     // 404, the caller's own default folder is a 400.
     const existing = await findSavedFolder(getDb(), folderId, oxyUserId);
     if (!existing) {
-      return res.status(404).json(
-        errorResponse("Folder not found", "FOLDER_NOT_FOUND")
-      );
+      return res.status(404).json(errorResponse('Folder not found', 'FOLDER_NOT_FOUND'));
     }
     if (existing.isDefault) {
-      return res.status(400).json(
-        errorResponse("Cannot update default folder", "CANNOT_UPDATE_DEFAULT_FOLDER")
-      );
+      return res
+        .status(400)
+        .json(errorResponse('Cannot update default folder', 'CANNOT_UPDATE_DEFAULT_FOLDER'));
     }
 
     let folder;
@@ -169,25 +167,25 @@ export async function updateSavedPropertyFolder(req: Request, res: Response, nex
       });
     } catch (error) {
       if (error instanceof SavedFolderNameTakenError) {
-        return res.status(409).json(
-          errorResponse("Folder with this name already exists", "FOLDER_NAME_EXISTS")
-        );
+        return res
+          .status(409)
+          .json(errorResponse('Folder with this name already exists', 'FOLDER_NAME_EXISTS'));
       }
       throw error;
     }
 
     if (!folder) {
-      return res.status(404).json(
-        errorResponse("Folder not found", "FOLDER_NOT_FOUND")
-      );
+      return res.status(404).json(errorResponse('Folder not found', 'FOLDER_NOT_FOUND'));
     }
 
     const counts = await countSavedPropertiesByFolder(getDb(), oxyUserId, [folder.id]);
 
-    res.json(successResponse(
-      toSavedFolderDTO(folder, counts.get(folder.id) ?? 0),
-      "Folder updated successfully",
-    ));
+    res.json(
+      successResponse(
+        toSavedFolderDTO(folder, counts.get(folder.id) ?? 0),
+        'Folder updated successfully',
+      ),
+    );
   } catch (error) {
     next(error);
   }
@@ -202,39 +200,33 @@ export async function deleteSavedPropertyFolder(req: Request, res: Response, nex
     const { folderId } = req.params;
 
     if (!oxyUserId) {
-      return res.status(401).json(
-        errorResponse("Authentication required", "AUTHENTICATION_REQUIRED")
-      );
+      return res
+        .status(401)
+        .json(errorResponse('Authentication required', 'AUTHENTICATION_REQUIRED'));
     }
 
     if (!folderId) {
-      return res.status(400).json(
-        errorResponse("Folder ID is required", "FOLDER_ID_REQUIRED")
-      );
+      return res.status(400).json(errorResponse('Folder ID is required', 'FOLDER_ID_REQUIRED'));
     }
 
     const existing = await findSavedFolder(getDb(), folderId, oxyUserId);
     if (!existing) {
-      return res.status(404).json(
-        errorResponse("Folder not found", "FOLDER_NOT_FOUND")
-      );
+      return res.status(404).json(errorResponse('Folder not found', 'FOLDER_NOT_FOUND'));
     }
     if (existing.isDefault) {
-      return res.status(400).json(
-        errorResponse("Cannot delete default folder", "CANNOT_DELETE_DEFAULT_FOLDER")
-      );
+      return res
+        .status(400)
+        .json(errorResponse('Cannot delete default folder', 'CANNOT_DELETE_DEFAULT_FOLDER'));
     }
 
     // The saves filed in it survive: `saved_items.folder_id` is
     // `ON DELETE SET NULL`, so they return to "not in a folder" here.
     const deleted = await deleteSavedFolderRow(getDb(), folderId, oxyUserId);
     if (!deleted) {
-      return res.status(404).json(
-        errorResponse("Folder not found", "FOLDER_NOT_FOUND")
-      );
+      return res.status(404).json(errorResponse('Folder not found', 'FOLDER_NOT_FOUND'));
     }
 
-    res.json(successResponse(null, "Folder deleted successfully"));
+    res.json(successResponse(null, 'Folder deleted successfully'));
   } catch (error) {
     next(error);
   }

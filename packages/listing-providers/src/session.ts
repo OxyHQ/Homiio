@@ -290,7 +290,10 @@ async function gotoWarmUrl(page: SessionPage, warmUrl: string, timeoutMs: number
   }
 }
 
-export async function warmBrowserPage(page: SessionPage, options: WarmBrowserPageOptions): Promise<void> {
+export async function warmBrowserPage(
+  page: SessionPage,
+  options: WarmBrowserPageOptions,
+): Promise<void> {
   const perGotoTimeoutMs = options.timeoutMs ?? DEFAULT_SESSION_TIMEOUT_MS;
   const challengeWaitMs = options.challengeWaitMs ?? perGotoTimeoutMs;
   const selector = options.contentSelector ?? DEFAULT_CONTENT_SELECTORS;
@@ -327,10 +330,7 @@ export async function warmBrowserPage(page: SessionPage, options: WarmBrowserPag
       return;
     } catch {
       const settledHtml = await page.content();
-      if (
-        settledHtml.length >= 4_096 &&
-        !isWarmPageChallenge(settledHtml, options.isChallenge)
-      ) {
+      if (settledHtml.length >= 4_096 && !isWarmPageChallenge(settledHtml, options.isChallenge)) {
         return;
       }
       await page.waitForTimeout(CHALLENGE_POLL_MS);

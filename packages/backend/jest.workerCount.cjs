@@ -62,10 +62,7 @@ function computeMaxWorkers() {
     DECLARED_MAX_WORKERS,
     POSTGRES_WORKER_CEILING,
     Math.max(1, cpus().length - 1),
-    Math.max(
-      1,
-      Math.floor((totalmem() * MEMORY_BUDGET_FRACTION - JEST_BASE_BYTES) / WORKER_BYTES),
-    ),
+    Math.max(1, Math.floor((totalmem() * MEMORY_BUDGET_FRACTION - JEST_BASE_BYTES) / WORKER_BYTES)),
   );
 }
 

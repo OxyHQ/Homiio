@@ -52,7 +52,12 @@ import { coarserListingAddressPrecision, type ListingAddressPrecision } from '@h
 
 import imageUploadService from '../../services/imageUploadService';
 import { publicColumns } from '../schema/protectedColumns';
-import { properties, propertyAvailabilityWindows, propertyDocuments, propertyImages } from '../schema';
+import {
+  properties,
+  propertyAvailabilityWindows,
+  propertyDocuments,
+  propertyImages,
+} from '../schema';
 import type { AddressWithGeoNames } from '../addresses/addressSerializer';
 import { serializeAddressRow } from '../addresses/addressSerializer';
 
@@ -204,7 +209,9 @@ export function propertyAudienceFor(
   sessionOxyUserId: string | null | undefined,
 ): PropertyAudience {
   const owner = hydrated.property.oxyUserId;
-  return typeof sessionOxyUserId === 'string' && sessionOxyUserId.length > 0 && owner === sessionOxyUserId
+  return typeof sessionOxyUserId === 'string' &&
+    sessionOxyUserId.length > 0 &&
+    owner === sessionOxyUserId
     ? 'owner'
     : 'public';
 }
@@ -246,52 +253,64 @@ export function serializeProperty(
   const row = hydrated.property;
   const precision = publishedAddressPrecision(row, audience);
 
-  const longTermRent = row.longTermRentMonthlyAmount === null ? undefined : withoutAbsent({
-    monthlyAmount: row.longTermRentMonthlyAmount,
-    currency: row.longTermRentCurrency,
-    deposit: row.longTermRentDeposit,
-    applicationFee: row.longTermRentApplicationFee,
-    lateFee: row.longTermRentLateFee,
-    utilities: row.longTermRentUtilities,
-  });
+  const longTermRent =
+    row.longTermRentMonthlyAmount === null
+      ? undefined
+      : withoutAbsent({
+          monthlyAmount: row.longTermRentMonthlyAmount,
+          currency: row.longTermRentCurrency,
+          deposit: row.longTermRentDeposit,
+          applicationFee: row.longTermRentApplicationFee,
+          lateFee: row.longTermRentLateFee,
+          utilities: row.longTermRentUtilities,
+        });
 
-  const shortTermRent = row.shortTermRentNightlyRate === null ? undefined : withoutAbsent({
-    nightlyRate: row.shortTermRentNightlyRate,
-    currency: row.shortTermRentCurrency,
-    cleaningFee: row.shortTermRentCleaningFee,
-    serviceFee: row.shortTermRentServiceFee,
-    taxesPercent: row.shortTermRentTaxesPercent,
-    minNights: row.shortTermRentMinNights,
-    maxNights: row.shortTermRentMaxNights,
-    instantBook: row.shortTermRentInstantBook,
-    deposit: row.shortTermRentDeposit,
-  });
+  const shortTermRent =
+    row.shortTermRentNightlyRate === null
+      ? undefined
+      : withoutAbsent({
+          nightlyRate: row.shortTermRentNightlyRate,
+          currency: row.shortTermRentCurrency,
+          cleaningFee: row.shortTermRentCleaningFee,
+          serviceFee: row.shortTermRentServiceFee,
+          taxesPercent: row.shortTermRentTaxesPercent,
+          minNights: row.shortTermRentMinNights,
+          maxNights: row.shortTermRentMaxNights,
+          instantBook: row.shortTermRentInstantBook,
+          deposit: row.shortTermRentDeposit,
+        });
 
-  const sale = row.salePrice === null ? undefined : withoutAbsent({
-    price: row.salePrice,
-    currency: row.saleCurrency,
-    pricePerSqm: row.salePricePerSqm,
-    estimatedYield: row.saleEstimatedYield,
-    isPriceReduced: row.saleIsPriceReduced,
-    chainStatus: row.saleChainStatus,
-  });
+  const sale =
+    row.salePrice === null
+      ? undefined
+      : withoutAbsent({
+          price: row.salePrice,
+          currency: row.saleCurrency,
+          pricePerSqm: row.salePricePerSqm,
+          estimatedYield: row.saleEstimatedYield,
+          isPriceReduced: row.saleIsPriceReduced,
+          chainStatus: row.saleChainStatus,
+        });
 
   // The exchange block carries its own calendar, which shares
   // `property_availability_windows` with the listing calendar under
   // `scope = 'exchange'`. Splitting by scope here is what lets ONE table and one
   // GiST index serve both, as the schema intends.
-  const exchange = row.exchangeMode === null ? undefined : withoutAbsent({
-    mode: row.exchangeMode,
-    availabilityWindows: hydrated.availabilityWindows
-      .filter((window) => window.scope === 'exchange')
-      .map(serializeAvailabilityWindow),
-    minStay: row.exchangeMinStay,
-    maxStay: row.exchangeMaxStay,
-    welcomeNote: row.exchangeWelcomeNote,
-    languages: row.exchangeLanguages,
-    mealsIncluded: row.exchangeMealsIncluded,
-    requiresReciprocity: row.exchangeRequiresReciprocity,
-  });
+  const exchange =
+    row.exchangeMode === null
+      ? undefined
+      : withoutAbsent({
+          mode: row.exchangeMode,
+          availabilityWindows: hydrated.availabilityWindows
+            .filter((window) => window.scope === 'exchange')
+            .map(serializeAvailabilityWindow),
+          minStay: row.exchangeMinStay,
+          maxStay: row.exchangeMaxStay,
+          welcomeNote: row.exchangeWelcomeNote,
+          languages: row.exchangeLanguages,
+          mealsIncluded: row.exchangeMealsIncluded,
+          requiresReciprocity: row.exchangeRequiresReciprocity,
+        });
 
   return withoutAbsent({
     id: row.id,
@@ -348,7 +367,7 @@ export function serializeProperty(
     // an unavoidable `0`. Both silences have to look the same on the wire, or a
     // reader learns from a `null` that the owner published a floor they do not
     // have, which is not a fact about the home.
-    floor: precision === 'exact' ? row.floor ?? undefined : undefined,
+    floor: precision === 'exact' ? (row.floor ?? undefined) : undefined,
     yearBuilt: row.yearBuilt,
 
     hasElevator: row.hasElevator,

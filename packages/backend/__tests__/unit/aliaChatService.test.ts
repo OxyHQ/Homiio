@@ -17,7 +17,10 @@ const ASSERTION = 'requester.assertion.minted-by-oxy';
 
 const encode = (text: string): Uint8Array => new TextEncoder().encode(text);
 
-function sseResponse(chunks: readonly string[], contentType = 'text/event-stream; charset=utf-8'): Response {
+function sseResponse(
+  chunks: readonly string[],
+  contentType = 'text/event-stream; charset=utf-8',
+): Response {
   return new Response(
     new ReadableStream<Uint8Array>({
       start(controller) {
@@ -44,7 +47,10 @@ async function collect(stream: AsyncIterable<string>): Promise<string> {
 }
 
 function createService(
-  input: Omit<ConstructorParameters<typeof AliaChatService>[0], 'serviceToken' | 'requesterAssertion'> & {
+  input: Omit<
+    ConstructorParameters<typeof AliaChatService>[0],
+    'serviceToken' | 'requesterAssertion'
+  > & {
     requesterAssertion?: ConstructorParameters<typeof AliaChatService>[0]['requesterAssertion'];
   },
 ): AliaChatService {
@@ -73,18 +79,22 @@ describe('AliaChatService', () => {
       status: 503,
       body: { error: 'Sindi chat is temporarily unavailable', code: 'chat_unavailable' },
     });
-    expect(JSON.stringify(aliaChatHttpFailure(new AliaChatError(403)))).not.toMatch(/SERVICE_ACTING_AS|permission/i);
+    expect(JSON.stringify(aliaChatHttpFailure(new AliaChatError(403)))).not.toMatch(
+      /SERVICE_ACTING_AS|permission/i,
+    );
   });
 
   it('streams the exact Alia agent with the Sindi service token and a requester assertion', async () => {
-    const fetchClient = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>().mockResolvedValue(
-      sseResponse([
-        ': keep-alive\n\n',
-        `data: ${chatChunk('Ho')}\n\n`,
-        `data: ${chatChunk('la')}\n\n`,
-        `data: ${chatChunk()}\n\ndata: [DONE]\n\n`,
-      ]),
-    );
+    const fetchClient = jest
+      .fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>()
+      .mockResolvedValue(
+        sseResponse([
+          ': keep-alive\n\n',
+          `data: ${chatChunk('Ho')}\n\n`,
+          `data: ${chatChunk('la')}\n\n`,
+          `data: ${chatChunk()}\n\ndata: [DONE]\n\n`,
+        ]),
+      );
     const service = createService({
       apiUrl: 'https://api.alia.onl/',
       agentId: sindiAgentId,
@@ -125,58 +135,72 @@ describe('AliaChatService', () => {
     const firstEvent = `data: ${chatChunk('Aquí tienes. <PROPERTIES_JSON>["0199bb4e-')}\r\n\r\n`;
     const secondEvent = `data: ${chatChunk('0341-725e-a905-11001c3659b4"]</PROPERTIES_JSON>')}\r\n\r\n`;
     const wire = `${firstEvent}${secondEvent}data: [DONE]\r\n\r\n`;
-    const fetchClient = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>().mockResolvedValue(
-      sseResponse([wire.slice(0, 7), wire.slice(7, 41), wire.slice(41, 113), wire.slice(113)]),
-    );
+    const fetchClient = jest
+      .fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>()
+      .mockResolvedValue(
+        sseResponse([wire.slice(0, 7), wire.slice(7, 41), wire.slice(41, 113), wire.slice(113)]),
+      );
     const service = createService({
       apiUrl: 'https://api.alia.onl',
       agentId: sindiAgentId,
       fetch: fetchClient,
     });
 
-    const text = await collect(await service.streamText({
-      requester: REQUESTER,
-      messages: [{ role: 'user', content: 'Enséñame pisos' }],
-    }));
+    const text = await collect(
+      await service.streamText({
+        requester: REQUESTER,
+        messages: [{ role: 'user', content: 'Enséñame pisos' }],
+      }),
+    );
 
     expect(text).toBe(`Aquí tienes. <PROPERTIES_JSON>["${propertyId}"]</PROPERTIES_JSON>`);
   });
 
   it('ignores Alia named events and stops reading at DONE', async () => {
-    const fetchClient = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>().mockResolvedValue(
-      sseResponse([
-        'event: alia.reasoning\ndata: {"eventVersion":1,"content":"private"}\n\n',
-        `event: message\ndata: ${chatChunk('visible')}\n\n`,
-        'data: [DONE]\n\n',
-        'event: alia.title\ndata: {"eventVersion":1,"title":"A title"}\n\n',
-      ]),
-    );
+    const fetchClient = jest
+      .fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>()
+      .mockResolvedValue(
+        sseResponse([
+          'event: alia.reasoning\ndata: {"eventVersion":1,"content":"private"}\n\n',
+          `event: message\ndata: ${chatChunk('visible')}\n\n`,
+          'data: [DONE]\n\n',
+          'event: alia.title\ndata: {"eventVersion":1,"title":"A title"}\n\n',
+        ]),
+      );
     const service = createService({
       apiUrl: 'https://api.alia.onl',
       agentId: sindiAgentId,
       fetch: fetchClient,
     });
 
-    await expect(collect(await service.streamText({
-      requester: REQUESTER,
-      messages: [{ role: 'user', content: 'Hola' }],
-    }))).resolves.toBe('visible');
+    await expect(
+      collect(
+        await service.streamText({
+          requester: REQUESTER,
+          messages: [{ role: 'user', content: 'Hola' }],
+        }),
+      ),
+    ).resolves.toBe('visible');
   });
 
   it('fails a truncated stream that reaches EOF without DONE', async () => {
-    const fetchClient = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>().mockResolvedValue(
-      sseResponse([`data: ${chatChunk('partial')}\n\n`]),
-    );
+    const fetchClient = jest
+      .fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>()
+      .mockResolvedValue(sseResponse([`data: ${chatChunk('partial')}\n\n`]));
     const service = createService({
       apiUrl: 'https://api.alia.onl',
       agentId: sindiAgentId,
       fetch: fetchClient,
     });
 
-    await expect(collect(await service.streamText({
-      requester: REQUESTER,
-      messages: [{ role: 'user', content: 'Hola' }],
-    }))).rejects.toMatchObject({ name: 'AliaChatError', status: 502 });
+    await expect(
+      collect(
+        await service.streamText({
+          requester: REQUESTER,
+          messages: [{ role: 'user', content: 'Hola' }],
+        }),
+      ),
+    ).rejects.toMatchObject({ name: 'AliaChatError', status: 502 });
   });
 
   it('fails closed before the network when the provisioned Sindi agent is absent', async () => {
@@ -198,27 +222,30 @@ describe('AliaChatService', () => {
     ` ${CANONICAL_SINDI_ALIA_AGENT_ID}`,
     `${CANONICAL_SINDI_ALIA_AGENT_ID} `,
     CANONICAL_SINDI_ALIA_AGENT_ID.toUpperCase(),
-  ])('fails closed before the network when the configured agent id is not the exact reserved PK: %s', async (agentId) => {
-    const fetchClient = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>();
-    const service = createService({
-      apiUrl: 'https://api.alia.onl',
-      agentId,
-      fetch: fetchClient,
-    });
+  ])(
+    'fails closed before the network when the configured agent id is not the exact reserved PK: %s',
+    async (agentId) => {
+      const fetchClient = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>();
+      const service = createService({
+        apiUrl: 'https://api.alia.onl',
+        agentId,
+        fetch: fetchClient,
+      });
 
-    await expect(
-      service.streamText({
-        requester: REQUESTER,
-        messages: [{ role: 'user', content: 'Hola' }],
-      }),
-    ).rejects.toBeInstanceOf(AliaChatConfigurationError);
-    expect(fetchClient).not.toHaveBeenCalled();
-  });
+      await expect(
+        service.streamText({
+          requester: REQUESTER,
+          messages: [{ role: 'user', content: 'Hola' }],
+        }),
+      ).rejects.toBeInstanceOf(AliaChatConfigurationError);
+      expect(fetchClient).not.toHaveBeenCalled();
+    },
+  );
 
   it('does not expose an upstream response body on failure', async () => {
-    const fetchClient = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>().mockResolvedValue(
-      new Response('provider detail must stay private', { status: 503 }),
-    );
+    const fetchClient = jest
+      .fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>()
+      .mockResolvedValue(new Response('provider detail must stay private', { status: 503 }));
     const service = createService({
       apiUrl: 'https://api.alia.onl',
       agentId: sindiAgentId,
@@ -238,9 +265,9 @@ describe('AliaChatService', () => {
   });
 
   it('sends no human bearer and no delegated user id to Alia, anywhere in the request', async () => {
-    const fetchClient = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>().mockResolvedValue(
-      sseResponse([`data: ${chatChunk('ok')}\n\ndata: [DONE]\n\n`]),
-    );
+    const fetchClient = jest
+      .fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>()
+      .mockResolvedValue(sseResponse([`data: ${chatChunk('ok')}\n\ndata: [DONE]\n\n`]));
     const minted: unknown[] = [];
     const service = createService({
       apiUrl: 'https://api.alia.onl',
@@ -252,22 +279,36 @@ describe('AliaChatService', () => {
       },
     });
 
-    await collect(await service.streamText({ requester: REQUESTER, messages: [{ role: 'user', content: 'Hola' }] }));
+    await collect(
+      await service.streamText({
+        requester: REQUESTER,
+        messages: [{ role: 'user', content: 'Hola' }],
+      }),
+    );
 
     // The bearer went to the Oxy mint, and only there.
-    expect(minted).toEqual([{ subjectToken: HUMAN_BEARER, requesterAccountId: 'oxy-user-id', agentId: sindiAgentId }]);
+    expect(minted).toEqual([
+      { subjectToken: HUMAN_BEARER, requesterAccountId: 'oxy-user-id', agentId: sindiAgentId },
+    ]);
     expect(fetchClient).toHaveBeenCalledTimes(1);
     const [url, init] = fetchClient.mock.calls[0] ?? [];
     const wire = JSON.stringify({ url, headers: init?.headers, body: init?.body });
     expect(wire).not.toContain(HUMAN_BEARER);
-    const headerNames = Object.keys((init?.headers ?? {}) as Record<string, string>).map((name) => name.toLowerCase());
+    const headerNames = Object.keys((init?.headers ?? {}) as Record<string, string>).map((name) =>
+      name.toLowerCase(),
+    );
     expect(headerNames).not.toContain('x-oxy-user-id');
-    expect((init?.headers as Record<string, string>).Authorization).toBe('Bearer oxy-homiio-service-token');
+    expect((init?.headers as Record<string, string>).Authorization).toBe(
+      'Bearer oxy-homiio-service-token',
+    );
   });
 
   it('mints a fresh assertion for every turn, because Oxy consumes each one', async () => {
-    const fetchClient = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>()
-      .mockImplementation(async () => sseResponse([`data: ${chatChunk('ok')}\n\ndata: [DONE]\n\n`]));
+    const fetchClient = jest
+      .fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>()
+      .mockImplementation(async () =>
+        sseResponse([`data: ${chatChunk('ok')}\n\ndata: [DONE]\n\n`]),
+      );
     let counter = 0;
     const service = createService({
       apiUrl: 'https://api.alia.onl',
@@ -276,46 +317,82 @@ describe('AliaChatService', () => {
       requesterAssertion: async () => `assertion-${(counter += 1)}`,
     });
     for (let turn = 0; turn < 2; turn += 1) {
-      await collect(await service.streamText({ requester: REQUESTER, messages: [{ role: 'user', content: 'Hola' }] }));
+      await collect(
+        await service.streamText({
+          requester: REQUESTER,
+          messages: [{ role: 'user', content: 'Hola' }],
+        }),
+      );
     }
-    const sent = fetchClient.mock.calls.map(([, init]) => (init?.headers as Record<string, string>)['X-Oxy-Requester-Assertion']);
+    const sent = fetchClient.mock.calls.map(
+      ([, init]) => (init?.headers as Record<string, string>)['X-Oxy-Requester-Assertion'],
+    );
     expect(sent).toEqual(['assertion-1', 'assertion-2']);
   });
 
   it.each([
-    ['Oxy refuses the requester (signed out, revoked, other app)', new SindiRequesterAssertionError('refused'), 401],
+    [
+      'Oxy refuses the requester (signed out, revoked, other app)',
+      new SindiRequesterAssertionError('refused'),
+      401,
+    ],
     ['Oxy cannot mint right now', new SindiRequesterAssertionError('unavailable'), 503],
-    ['the minted assertion fails the identity canary', new Error('Oxy minted a requester assertion for an unexpected Sindi identity'), 503],
+    [
+      'the minted assertion fails the identity canary',
+      new Error('Oxy minted a requester assertion for an unexpected Sindi identity'),
+      503,
+    ],
   ])('does not call Alia when %s', async (_label, failure, status) => {
     const fetchClient = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>();
     const service = createService({
       apiUrl: 'https://api.alia.onl',
       agentId: sindiAgentId,
       fetch: fetchClient,
-      requesterAssertion: async () => { throw failure; },
+      requesterAssertion: async () => {
+        throw failure;
+      },
     });
-    await expect(service.streamText({ requester: REQUESTER, messages: [{ role: 'user', content: 'Hola' }] }))
-      .rejects.toMatchObject({ name: 'AliaChatError', status });
+    await expect(
+      service.streamText({ requester: REQUESTER, messages: [{ role: 'user', content: 'Hola' }] }),
+    ).rejects.toMatchObject({ name: 'AliaChatError', status });
     expect(fetchClient).not.toHaveBeenCalled();
   });
 
   it('refuses a turn with no verified person or bearer before minting anything', async () => {
     const minter = jest.fn(async () => ASSERTION);
     const fetchClient = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>();
-    const service = createService({ apiUrl: 'https://api.alia.onl', agentId: sindiAgentId, fetch: fetchClient, requesterAssertion: minter });
-    for (const requester of [{ accountId: 'oxy-user-id', accessToken: '' }, { accountId: '', accessToken: HUMAN_BEARER }]) {
-      await expect(service.streamText({ requester, messages: [{ role: 'user', content: 'Hola' }] }))
-        .rejects.toMatchObject({ status: 401 });
+    const service = createService({
+      apiUrl: 'https://api.alia.onl',
+      agentId: sindiAgentId,
+      fetch: fetchClient,
+      requesterAssertion: minter,
+    });
+    for (const requester of [
+      { accountId: 'oxy-user-id', accessToken: '' },
+      { accountId: '', accessToken: HUMAN_BEARER },
+    ]) {
+      await expect(
+        service.streamText({ requester, messages: [{ role: 'user', content: 'Hola' }] }),
+      ).rejects.toMatchObject({ status: 401 });
     }
     expect(minter).not.toHaveBeenCalled();
     expect(fetchClient).not.toHaveBeenCalled();
   });
 
   it('turns an upstream acting-as refusal into a plain auth failure, never consent', async () => {
-    const fetchClient = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>().mockResolvedValue(
-      Response.json({ code: 'SERVICE_ACTING_AS_UNAUTHORIZED', message: 'private upstream detail' }, { status: 403 }),
-    );
-    const service = createService({ apiUrl: 'https://api.alia.onl', agentId: sindiAgentId, fetch: fetchClient });
+    const fetchClient = jest
+      .fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>()
+      .mockResolvedValue(
+        Response.json(
+          { code: 'SERVICE_ACTING_AS_UNAUTHORIZED', message: 'private upstream detail' },
+          { status: 403 },
+        ),
+      );
+    const service = createService({
+      apiUrl: 'https://api.alia.onl',
+      agentId: sindiAgentId,
+      fetch: fetchClient,
+    });
     const error = await service
       .streamText({ requester: REQUESTER, messages: [{ role: 'user', content: 'Hola' }] })
       .catch((reason: unknown) => reason);
@@ -325,19 +402,21 @@ describe('AliaChatService', () => {
   });
 
   it('rejects a successful non-SSE response instead of buffering a fallback shape', async () => {
-    const fetchClient = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>().mockResolvedValue(
-      sseResponse(['{}'], 'application/json'),
-    );
+    const fetchClient = jest
+      .fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>()
+      .mockResolvedValue(sseResponse(['{}'], 'application/json'));
     const service = createService({
       apiUrl: 'https://api.alia.onl',
       agentId: sindiAgentId,
       fetch: fetchClient,
     });
 
-    await expect(service.streamText({
-      requester: REQUESTER,
-      messages: [{ role: 'user', content: 'Hola' }],
-    })).rejects.toMatchObject({ name: 'AliaChatError', status: 502 });
+    await expect(
+      service.streamText({
+        requester: REQUESTER,
+        messages: [{ role: 'user', content: 'Hola' }],
+      }),
+    ).rejects.toMatchObject({ name: 'AliaChatError', status: 502 });
   });
 
   /**
@@ -350,16 +429,25 @@ describe('AliaChatService', () => {
    * below is the one that cannot be forgotten.
    */
   it('reports the server error code when Alia ends the stream with an error', async () => {
-    const fetchClient = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>().mockResolvedValue(
-      sseResponse([
-        `data: ${chatChunk('Un mom')}\n\n`,
-        'data: {"error":{"message":"The agent is unavailable.","type":"server_error","code":"agent_unavailable","param":null}}\n\n',
-        'data: [DONE]\n\n',
-      ]),
-    );
-    const service = createService({ apiUrl: 'https://api.alia.onl', agentId: sindiAgentId, fetch: fetchClient });
+    const fetchClient = jest
+      .fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>()
+      .mockResolvedValue(
+        sseResponse([
+          `data: ${chatChunk('Un mom')}\n\n`,
+          'data: {"error":{"message":"The agent is unavailable.","type":"server_error","code":"agent_unavailable","param":null}}\n\n',
+          'data: [DONE]\n\n',
+        ]),
+      );
+    const service = createService({
+      apiUrl: 'https://api.alia.onl',
+      agentId: sindiAgentId,
+      fetch: fetchClient,
+    });
 
-    const stream = await service.streamText({ requester: REQUESTER, messages: [{ role: 'user', content: 'Hola' }] });
+    const stream = await service.streamText({
+      requester: REQUESTER,
+      messages: [{ role: 'user', content: 'Hola' }],
+    });
     const seen: string[] = [];
     const error = await (async () => {
       try {
@@ -383,15 +471,27 @@ describe('AliaChatService', () => {
 
   it('names the SHAPE of a chunk it cannot read, and never its content', async () => {
     const prompt = 'the person asked about 12 Privet Drive';
-    const fetchClient = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>().mockResolvedValue(
-      sseResponse([`data: ${JSON.stringify({ id: 'x', prompt, choices: 'nope' })}\n\ndata: [DONE]\n\n`]),
-    );
-    const service = createService({ apiUrl: 'https://api.alia.onl', agentId: sindiAgentId, fetch: fetchClient });
+    const fetchClient = jest
+      .fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>()
+      .mockResolvedValue(
+        sseResponse([
+          `data: ${JSON.stringify({ id: 'x', prompt, choices: 'nope' })}\n\ndata: [DONE]\n\n`,
+        ]),
+      );
+    const service = createService({
+      apiUrl: 'https://api.alia.onl',
+      agentId: sindiAgentId,
+      fetch: fetchClient,
+    });
 
-    await expect(collect(await service.streamText({
-      requester: REQUESTER,
-      messages: [{ role: 'user', content: 'Hola' }],
-    }))).rejects.toMatchObject({ name: 'AliaChatError', status: 502 });
+    await expect(
+      collect(
+        await service.streamText({
+          requester: REQUESTER,
+          messages: [{ role: 'user', content: 'Hola' }],
+        }),
+      ),
+    ).rejects.toMatchObject({ name: 'AliaChatError', status: 502 });
 
     expect(mockLogger.error).toHaveBeenCalledWith('Alia stream could not be read', {
       reason: 'unexpected_chunk',
@@ -402,15 +502,25 @@ describe('AliaChatService', () => {
   });
 
   it('reports a truncated stream as a truncated stream, not as an unreadable chunk', async () => {
-    const fetchClient = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>().mockResolvedValue(
-      sseResponse([`data: ${chatChunk('partial')}\n\n`]),
-    );
-    const service = createService({ apiUrl: 'https://api.alia.onl', agentId: sindiAgentId, fetch: fetchClient });
+    const fetchClient = jest
+      .fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>()
+      .mockResolvedValue(sseResponse([`data: ${chatChunk('partial')}\n\n`]));
+    const service = createService({
+      apiUrl: 'https://api.alia.onl',
+      agentId: sindiAgentId,
+      fetch: fetchClient,
+    });
 
-    await expect(collect(await service.streamText({
-      requester: REQUESTER,
-      messages: [{ role: 'user', content: 'Hola' }],
-    }))).rejects.toMatchObject({ name: 'AliaChatError', status: 502 });
-    expect(mockLogger.error).toHaveBeenCalledWith('Alia stream could not be read', { reason: 'truncated' });
+    await expect(
+      collect(
+        await service.streamText({
+          requester: REQUESTER,
+          messages: [{ role: 'user', content: 'Hola' }],
+        }),
+      ),
+    ).rejects.toMatchObject({ name: 'AliaChatError', status: 502 });
+    expect(mockLogger.error).toHaveBeenCalledWith('Alia stream could not be read', {
+      reason: 'truncated',
+    });
   });
 });

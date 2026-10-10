@@ -1,4 +1,8 @@
-import type { OxyInferenceRequestOptions, OxyInferenceResponse, OxyResponsesRequest } from '@oxy.so/core/inference';
+import type {
+  OxyInferenceRequestOptions,
+  OxyInferenceResponse,
+  OxyResponsesRequest,
+} from '@oxy.so/core/inference';
 
 // This suite injects its own client. Keep the module-level production singleton
 // from constructing the registry-installed pre-23.2 client while the exact-ID
@@ -38,10 +42,9 @@ const response = (text: string): OxyInferenceResponse => ({
 
 describe('HomiioInferenceService', () => {
   it('selects only the configured Oxy routing profile and delegates attribution', async () => {
-    const respond = jest.fn<
-      Promise<OxyInferenceResponse>,
-      [OxyResponsesRequest, OxyInferenceRequestOptions?]
-    >().mockResolvedValue(response('hello'));
+    const respond = jest
+      .fn<Promise<OxyInferenceResponse>, [OxyResponsesRequest, OxyInferenceRequestOptions?]>()
+      .mockResolvedValue(response('hello'));
     const service = new HomiioInferenceService({
       client: { respond },
       routingProfileId: '018f25d8-9c52-7b9e-84f9-512a11c8642a',
@@ -93,10 +96,9 @@ describe('HomiioInferenceService', () => {
   });
 
   it('does not trim or otherwise repair an opaque routing profile ID', async () => {
-    const respond = jest.fn<
-      Promise<OxyInferenceResponse>,
-      [OxyResponsesRequest, OxyInferenceRequestOptions?]
-    >().mockResolvedValue(response('hello'));
+    const respond = jest
+      .fn<Promise<OxyInferenceResponse>, [OxyResponsesRequest, OxyInferenceRequestOptions?]>()
+      .mockResolvedValue(response('hello'));
     const service = new HomiioInferenceService({
       client: { respond },
       routingProfileId: ' profile-id-with-whitespace ',

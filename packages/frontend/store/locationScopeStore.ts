@@ -129,13 +129,23 @@ export const useLocationScopeStore = create<LocationScopeState>()(
         })),
 
       exploreGlobal: () =>
-        set({ explicitGlobal: true, sessionSelection: null, deviceRequested: false, autoScope: null }),
+        set({
+          explicitGlobal: true,
+          sessionSelection: null,
+          deviceRequested: false,
+          autoScope: null,
+        }),
 
       // Clears the session choice: pressing "use my location" is a newer choice
       // than the place picked before it, and the ladder ranks a session choice
       // above the device.
       requestDevice: () =>
-        set({ deviceRequested: true, explicitGlobal: false, sessionSelection: null, autoScope: null }),
+        set({
+          deviceRequested: true,
+          explicitGlobal: false,
+          sessionSelection: null,
+          autoScope: null,
+        }),
 
       commitAutoScope: (scope) => set((state) => (state.autoScope ? {} : { autoScope: scope })),
 

@@ -129,8 +129,8 @@ export const PROTECTED_COLUMNS: readonly ProtectedColumn[] = [
     reason:
       'A credential for a real network, stored in plaintext on the most-read ' +
       'table in the product. Mongoose hid it BY ACCIDENT, not by design — it ' +
-      'is not `select: false`; it simply never appeared in any DTO\'s field ' +
-      'list, so every one of this package\'s `.lean()` reads carried it and ' +
+      "is not `select: false`; it simply never appeared in any DTO's field " +
+      "list, so every one of this package's `.lean()` reads carried it and " +
       'nothing shipped it only because no serializer happened to look. Under ' +
       'drizzle the equivalent read is a bare `select()`, which returns every ' +
       'column, so the accident stops protecting it the day someone writes one.',
@@ -139,8 +139,8 @@ export const PROTECTED_COLUMNS: readonly ProtectedColumn[] = [
     table: profiles,
     property: 'personalInfoAnnualIncome',
     reason:
-      'A person\'s income, and the profile schema itself says it is private: ' +
-      '`settings.privacy.showIncome` defaults to FALSE, so the product\'s own ' +
+      "A person's income, and the profile schema itself says it is private: " +
+      "`settings.privacy.showIncome` defaults to FALSE, so the product's own " +
       'default is that nobody sees it. Mongoose did not mark it `select: false` ' +
       '— it stayed out of responses only because the profile serializer reads a ' +
       'field list — so the ported read, a bare `select()`, returns it. The ' +
@@ -170,10 +170,10 @@ export const PROTECTED_COLUMNS: readonly ProtectedColumn[] = [
     table: evictionCases,
     property: 'contactPhone',
     reason:
-      'The organizer\'s phone number on a PUBLIC board, and the one place in ' +
+      "The organizer's phone number on a PUBLIC board, and the one place in " +
       'this schema where a leak is a physical-safety problem rather than a ' +
       'privacy one: an eviction notice names a time and a place where a ' +
-      'confrontation is expected, and the organizer is the person a landlord\'s ' +
+      "confrontation is expected, and the organizer is the person a landlord's " +
       'agent would most like to reach. The whole `contactInfo` block is served ' +
       'only to a viewer the controller decides may have it.',
   },

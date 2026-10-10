@@ -33,12 +33,7 @@ export const ListSkeleton: React.FC<ListSkeletonProps> = ({
 }) => (
   <View style={[{ gap }, style]}>
     {Array.from({ length: rows }).map((_, index) => (
-      <Skeleton.Box
-        key={index}
-        width="100%"
-        height={rowHeight}
-        borderRadius={16}
-      />
+      <Skeleton.Box key={index} width="100%" height={rowHeight} borderRadius={16} />
     ))}
   </View>
 );

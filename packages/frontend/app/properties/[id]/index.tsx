@@ -16,13 +16,7 @@
  *    background and aligns to one gutter.
  *  - Action bar (footer): PropertyActionBar for every other listing.
  */
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Platform,
   StyleSheet,
@@ -31,11 +25,7 @@ import {
   type LayoutChangeEvent,
   type ViewStyle,
 } from 'react-native';
-import {
-  runOnJS,
-  useAnimatedReaction,
-  useSharedValue,
-} from 'react-native-reanimated';
+import { runOnJS, useAnimatedReaction, useSharedValue } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -181,9 +171,7 @@ export default function PropertyDetailPage() {
   const showPriceRangeSection =
     !areaInsightsError && (areaInsightsLoading || Boolean(areaInsights));
   const showSimilarHomesSection =
-    !areaInsightsError &&
-    !areaInsightsLoading &&
-    (areaInsights?.comparables.length ?? 0) > 0;
+    !areaInsightsError && !areaInsightsLoading && (areaInsights?.comparables.length ?? 0) > 0;
 
   // "What's nearby" — same gating story as the price block: read the shared
   // React Query cache here (the child section reuses the same key, so this
@@ -200,10 +188,7 @@ export default function PropertyDetailPage() {
 
   const nearbyHasContent =
     Boolean(nearbyServices) &&
-    !(
-      nearbyServices?.partial &&
-      !nearbyServices.categories.some((category) => category.present)
-    );
+    !(nearbyServices?.partial && !nearbyServices.categories.some((category) => category.present));
   const showNearbyServicesSection =
     !nearbyServicesError && (nearbyServicesLoading || nearbyHasContent);
 
@@ -310,9 +295,7 @@ export default function PropertyDetailPage() {
         });
         const viewings = Array.isArray(response?.data) ? response.data : [];
         const hasActive = viewings.some(
-          (v) =>
-            v.propertyId === id &&
-            ['pending', 'approved'].includes(v.status),
+          (v) => v.propertyId === id && ['pending', 'approved'].includes(v.status),
         );
         setHasActiveViewing(hasActive);
       } catch {
@@ -463,7 +446,6 @@ export default function PropertyDetailPage() {
     }
   }, [property]);
 
-
   // Sale-listing primary CTA: open the existing viewing-request flow.
   const handleRequestViewing = useCallback(() => {
     const targetId = apiProperty?.id;
@@ -572,7 +554,15 @@ export default function PropertyDetailPage() {
     if (apiProperty?.id) {
       router.push(`/properties/${apiProperty.id}/apply`);
     }
-  }, [apiProperty, rentalMode, router, handleContact, handlePublicHousingApply, showBookingBar, stay]);
+  }, [
+    apiProperty,
+    rentalMode,
+    router,
+    handleContact,
+    handlePublicHousingApply,
+    showBookingBar,
+    stay,
+  ]);
 
   if (isLoading) {
     return <PropertyDetailSkeleton />;
@@ -592,10 +582,8 @@ export default function PropertyDetailPage() {
             icon={RiHomeLine}
             title={t('property.notFound', 'Property not found') || 'Property not found'}
             description={
-              t(
-                'property.notFoundHelp',
-                'It may have been removed or the link is broken.',
-              ) || 'It may have been removed or the link is broken.'
+              t('property.notFoundHelp', 'It may have been removed or the link is broken.') ||
+              'It may have been removed or the link is broken.'
             }
             retryLabel={t('goBack', 'Go back') || 'Go back'}
             onRetry={() => router.back()}
@@ -615,18 +603,14 @@ export default function PropertyDetailPage() {
   // Whether this listing is (also) for sale. Drives the Sale Details + Mortgage
   // sections below. Both additionally require the `sale` sub-payload to render,
   // so a sale listing with no stored sale block never leaves a bare divider.
-  const isSaleListing = Boolean(
-    apiProperty && hasOffering(apiProperty, OfferingType.SALE),
-  );
+  const isSaleListing = Boolean(apiProperty && hasOffering(apiProperty, OfferingType.SALE));
   const saleData = isSaleListing ? apiProperty?.sale : undefined;
 
   // Whether this listing is open to home exchange (swap / free hosting). Drives
   // the Exchange section + the action-bar CTA. Like sale, the section also
   // requires the `exchange` sub-payload to render, so an exchange listing with
   // no stored exchange block never leaves a bare divider.
-  const isExchangeListing = Boolean(
-    apiProperty && hasOffering(apiProperty, OfferingType.EXCHANGE),
-  );
+  const isExchangeListing = Boolean(apiProperty && hasOffering(apiProperty, OfferingType.EXCHANGE));
   const exchangeData = isExchangeListing ? apiProperty?.exchange : undefined;
 
   // On wide screens the booking/apply card is rendered in the app shell's
@@ -638,9 +622,7 @@ export default function PropertyDetailPage() {
     (bookingMode !== 'none' || Boolean(apiProperty?.isExternal)) && !isRightBarVisible;
 
   const headerFacts = [
-    apiProperty?.type
-      ? t(`properties.titles.types.${apiProperty.type}`, { defaultValue: '' })
-      : '',
+    apiProperty?.type ? t(`properties.titles.types.${apiProperty.type}`, { defaultValue: '' }) : '',
     property.bedrooms ? t('listing.card.beds', { count: property.bedrooms }) : '',
     property.bathrooms ? t('listing.card.baths', { count: property.bathrooms }) : '',
     property.size > 0
@@ -696,18 +678,11 @@ export default function PropertyDetailPage() {
       </View>
     ) : null;
 
-  const showSleepArrangement =
-    rentalMode === 'vacation' && isVacationRentable;
+  const showSleepArrangement = rentalMode === 'vacation' && isVacationRentable;
 
   return (
     <View style={styles.scrollContainer}>
-      <View
-        style={
-          Platform.OS === 'web'
-            ? styles.webHeaderWrapper
-            : styles.nativeHeaderWrapper
-        }
-      >
+      <View style={Platform.OS === 'web' ? styles.webHeaderWrapper : styles.nativeHeaderWrapper}>
         <Header
           options={{
             showBackButton: true,
@@ -768,10 +743,7 @@ export default function PropertyDetailPage() {
       <PageScrollView
         scrollY={scrollY}
         style={styles.scroll}
-        contentContainerStyle={[
-          styles.scrollContent,
-          { paddingBottom: spacing['7xl'] },
-        ]}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: spacing['7xl'] }]}
       >
         <View onLayout={handlePageLayout}>
           {photosLead ? photoGrid : listingHeader}
@@ -796,9 +768,7 @@ export default function PropertyDetailPage() {
             {property.alsoAvailable ? (
               <View style={styles.alsoAvailableRow}>
                 <RiShapesLine width={14} height={14} fill={colors.COLOR_BLACK_LIGHT_3} />
-                <BloomText style={styles.alsoAvailableText}>
-                  {property.alsoAvailable}
-                </BloomText>
+                <BloomText style={styles.alsoAvailableText}>{property.alsoAvailable}</BloomText>
               </View>
             ) : null}
           </View>
@@ -845,10 +815,7 @@ export default function PropertyDetailPage() {
 
           {saleData ? (
             <View style={[styles.section, styles.divider]}>
-              <MortgageCalculatorSection
-                salePrice={saleData.price}
-                currency={saleData.currency}
-              />
+              <MortgageCalculatorSection salePrice={saleData.price} currency={saleData.currency} />
             </View>
           ) : null}
 
@@ -865,9 +832,7 @@ export default function PropertyDetailPage() {
                    somewhere else. `PropertyActionBar` and `BookingCard` have
                    always branched on `isExternal` first; this section was the
                    one that did not. */
-                onRequestExchange={
-                  apiProperty?.isExternal ? undefined : handleRequestExchange
-                }
+                onRequestExchange={apiProperty?.isExternal ? undefined : handleRequestExchange}
               />
             </View>
           ) : null}
@@ -908,10 +873,7 @@ export default function PropertyDetailPage() {
           {/* Community Notes — community-verified notes about the building —
               shown on every listing. */}
           <View style={[styles.section, styles.divider]}>
-            <CommunityNotesSection
-              property={apiProperty as Property}
-              variant="preview"
-            />
+            <CommunityNotesSection property={apiProperty as Property} variant="preview" />
           </View>
 
           {/* Reviews of the ADDRESS — past residents on the place itself, on
@@ -929,10 +891,7 @@ export default function PropertyDetailPage() {
               bare hairline divider behind. */}
           {showPriceRangeSection ? (
             <View style={[styles.section, styles.divider]}>
-              <PriceRangeSection
-                propertyId={property.id}
-                bedrooms={property.bedrooms}
-              />
+              <PriceRangeSection propertyId={property.id} bedrooms={property.bedrooms} />
             </View>
           ) : null}
 
@@ -983,22 +942,22 @@ export default function PropertyDetailPage() {
           style={styles.bookingBar}
         />
       ) : (
-      <PropertyActionBar
-        property={apiProperty}
-        price={property.price}
-        priceAccessibilityLabel={property.priceAccessibilityLabel}
-        canCall={Boolean(
-          apiProperty?.isExternal &&
-            (apiProperty.externalContact?.phone || apiProperty.externalContact?.whatsapp),
-        )}
-        onContact={handleContact}
-        onCall={handleCall}
-        onApplyPublic={handlePublicHousingApply}
-        isSaleListing={isSaleListing}
-        onRequestViewing={handleRequestViewing}
-        isExchangeListing={isExchangeListing}
-        onRequestExchange={handleRequestExchange}
-      />
+        <PropertyActionBar
+          property={apiProperty}
+          price={property.price}
+          priceAccessibilityLabel={property.priceAccessibilityLabel}
+          canCall={Boolean(
+            apiProperty?.isExternal &&
+              (apiProperty.externalContact?.phone || apiProperty.externalContact?.whatsapp),
+          )}
+          onContact={handleContact}
+          onCall={handleCall}
+          onApplyPublic={handlePublicHousingApply}
+          isSaleListing={isSaleListing}
+          onRequestViewing={handleRequestViewing}
+          isExchangeListing={isExchangeListing}
+          onRequestExchange={handleRequestExchange}
+        />
       )}
       {stay.dialog}
 

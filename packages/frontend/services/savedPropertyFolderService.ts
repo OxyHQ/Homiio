@@ -28,9 +28,12 @@ class SavedPropertyFolderService {
     };
   }
 
-  async createSavedPropertyFolder(
-    folderData: { name: string; description?: string; color?: string; icon?: string },
-  ): Promise<SavedPropertyFolder> {
+  async createSavedPropertyFolder(folderData: {
+    name: string;
+    description?: string;
+    color?: string;
+    icon?: string;
+  }): Promise<SavedPropertyFolder> {
     const response = await api.post('/api/profiles/me/saved-property-folders', folderData);
     return response.data.data;
   }
@@ -39,7 +42,10 @@ class SavedPropertyFolderService {
     folderId: string,
     folderData: { name?: string; description?: string; color?: string; icon?: string },
   ): Promise<SavedPropertyFolder> {
-    const response = await api.put(`/api/profiles/me/saved-property-folders/${folderId}`, folderData);
+    const response = await api.put(
+      `/api/profiles/me/saved-property-folders/${folderId}`,
+      folderData,
+    );
     return response.data.data;
   }
 

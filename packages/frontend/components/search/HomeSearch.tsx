@@ -504,7 +504,8 @@ export function HomeSearch({
         priceMax: undefined,
         ...(isShortTerm ? {} : { dates: undefined, guests: undefined }),
       }));
-      if (!isShortTerm && (openStep === 'dates' || openStep === 'guests')) onOpenStepChange('price');
+      if (!isShortTerm && (openStep === 'dates' || openStep === 'guests'))
+        onOpenStepChange('price');
     },
     [openStep, onOpenStepChange],
   );
@@ -631,9 +632,17 @@ export function HomeSearch({
           />
         );
       case 'type':
-        return <TypeStep offering={draft.offering} selected={draft.propertyTypes} onChange={handleTypes} />;
+        return (
+          <TypeStep
+            offering={draft.offering}
+            selected={draft.propertyTypes}
+            onChange={handleTypes}
+          />
+        );
       case 'dates':
-        return <DatesStep value={draft.dates} onChange={handleDates} visibleMonths={wide ? 2 : 1} />;
+        return (
+          <DatesStep value={draft.dates} onChange={handleDates} visibleMonths={wide ? 2 : 1} />
+        );
       case 'guests':
         return (
           <GuestsStep
@@ -668,8 +677,7 @@ export function HomeSearch({
       label: t(STEP_LABEL_KEYS[step]),
       value: stepValue(step) ?? undefined,
       placeholder: step === 'where' ? wherePlaceholder : t(STEP_EMPTY_KEYS[step]),
-      flex:
-        SEGMENT_FLEX[step] + (index === segmentSteps.length - 1 ? LAST_SEGMENT_BUTTON_FLEX : 0),
+      flex: SEGMENT_FLEX[step] + (index === segmentSteps.length - 1 ? LAST_SEGMENT_BUTTON_FLEX : 0),
     }));
 
     const handleSegment = (segment: SearchStep | null) => {
@@ -815,7 +823,11 @@ export function HomeSearch({
                 key={step}
                 label={t(STEP_LABEL_KEYS[step])}
                 title={t(STEP_TITLE_KEYS[step])}
-                summary={step === 'where' ? (whereValue(draft.location) ?? wherePlaceholder) : (stepValue(step) ?? t(STEP_EMPTY_KEYS[step]))}
+                summary={
+                  step === 'where'
+                    ? (whereValue(draft.location) ?? wherePlaceholder)
+                    : (stepValue(step) ?? t(STEP_EMPTY_KEYS[step]))
+                }
                 expanded={openStep === step}
                 onPress={() => onOpenStepChange(step)}
               >
@@ -836,7 +848,9 @@ export function HomeSearch({
               size="lg"
               icon={RiSearchLine}
               onPress={handleSubmit}
-              accessibilityLabel={t('search.actions.search')} tone="accent" appearance="solid"
+              accessibilityLabel={t('search.actions.search')}
+              tone="accent"
+              appearance="solid"
             >
               {t('search.actions.search')}
             </Button>

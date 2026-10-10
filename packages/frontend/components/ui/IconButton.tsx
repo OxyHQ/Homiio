@@ -27,7 +27,13 @@ import type { ButtonIconComponent } from '@oxy.so/bloom/button';
 import { Loading } from '@oxy.so/bloom/loading';
 
 import { colors } from '@/styles/colors';
-import { barIconButton, barIconButtonPressed, barIconSize, radius, spacing } from '@/constants/styles';
+import {
+  barIconButton,
+  barIconButtonPressed,
+  barIconSize,
+  radius,
+  spacing,
+} from '@/constants/styles';
 
 export type IconButtonVariant = 'ghost' | 'overlay' | 'filled';
 
@@ -104,9 +110,7 @@ export const IconButton: React.FC<IconButtonProps> = ({
   const [hovered, setHovered] = useState(false);
   const interactive = pressed || hovered;
 
-  const glyphColor = active && activeColor
-    ? activeColor
-    : color ?? VARIANT_ICON_COLOR[variant];
+  const glyphColor = active && activeColor ? activeColor : (color ?? VARIANT_ICON_COLOR[variant]);
 
   const glyph = loading ? (
     <Loading iconSize={size} color={glyphColor} showText={false} />

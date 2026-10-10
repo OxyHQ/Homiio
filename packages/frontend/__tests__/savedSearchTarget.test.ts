@@ -30,7 +30,15 @@ const polygon: LocationSelection = {
   kind: 'polygon',
   polygon: {
     type: 'Polygon',
-    coordinates: [[[2.0, 41.3], [2.3, 41.3], [2.3, 41.5], [2.0, 41.5], [2.0, 41.3]]],
+    coordinates: [
+      [
+        [2.0, 41.3],
+        [2.3, 41.3],
+        [2.3, 41.5],
+        [2.0, 41.5],
+        [2.0, 41.3],
+      ],
+    ],
   },
   bounds: { west: 2.0, south: 41.3, east: 2.3, north: 41.5 },
   label: { primary: 'search.summary.drawnArea', kind: 'generated' },

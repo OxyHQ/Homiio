@@ -77,8 +77,7 @@ export default function ReportRepairScreen(): React.ReactElement {
     [t],
   );
 
-  const canSubmit =
-    title.trim().length > 0 && description.trim().length > 0 && !report.isPending;
+  const canSubmit = title.trim().length > 0 && description.trim().length > 0 && !report.isPending;
 
   const submit = (): void => {
     if (!lease || !canSubmit) return;
@@ -171,7 +170,9 @@ export default function ReportRepairScreen(): React.ReactElement {
             disabled={!canSubmit}
             loading={report.isPending}
             onPress={submit}
-            accessibilityLabel={t('maintenance.report.submitAccessible')} tone="accent" appearance="solid"
+            accessibilityLabel={t('maintenance.report.submitAccessible')}
+            tone="accent"
+            appearance="solid"
           >
             {t('maintenance.report.submit')}
           </Button>

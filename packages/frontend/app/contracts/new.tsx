@@ -62,8 +62,7 @@ export default function NewContractScreen() {
       toast.success(t('contracts.new.toastCreated'));
       router.replace(`/contracts/${lease.id}`);
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : t('contracts.new.toastCreateFailed');
+      const message = error instanceof Error ? error.message : t('contracts.new.toastCreateFailed');
       toast.error(message);
     }
   }, [applicationId, createLease, router, t]);
@@ -127,9 +126,7 @@ export default function NewContractScreen() {
   }
 
   const isApproved = application.status === TenantApplicationStatus.APPROVED;
-  const propertyTitle = property
-    ? getPropertyTitle(property)
-    : t('contracts.new.propertyFallback');
+  const propertyTitle = property ? getPropertyTitle(property) : t('contracts.new.propertyFallback');
   const imageSource = property ? getPropertyImageSource(property) : null;
 
   return (
@@ -147,7 +144,9 @@ export default function NewContractScreen() {
 
           <Card radius="radius-16" className="p-5" appearance="outline">
             <H2 style={styles.title}>{propertyTitle}</H2>
-            <BloomText style={[styles.subtitle, { color: themeColors.textSecondary }]}>{t('contracts.new.subtitle')}</BloomText>
+            <BloomText style={[styles.subtitle, { color: themeColors.textSecondary }]}>
+              {t('contracts.new.subtitle')}
+            </BloomText>
           </Card>
 
           <SettingsListGroup title={t('contracts.new.seededTerms')}>
@@ -172,7 +171,9 @@ export default function NewContractScreen() {
             onPress={handleCreate}
             disabled={!isApproved || createLease.isPending}
             loading={createLease.isPending}
-            style={styles.footerButton} tone="accent" appearance="solid"
+            style={styles.footerButton}
+            tone="accent"
+            appearance="solid"
           >
             {t('contracts.new.createButton')}
           </Button>

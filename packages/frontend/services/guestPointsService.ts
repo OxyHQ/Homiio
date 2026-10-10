@@ -47,9 +47,7 @@ export function guestPointsIdempotencyKeyFor(
   // Dates reduced to their calendar day: the wire carries a full ISO instant,
   // and two taps a second apart must not read as two different intents.
   const day = (value: string) => value.slice(0, 10).replace(/-/g, '');
-  return `gp-${propertyId}-${day(start)}-${day(end)}`
-    .replace(/[^A-Za-z0-9_-]/g, '')
-    .slice(0, 64);
+  return `gp-${propertyId}-${day(start)}-${day(end)}`.replace(/[^A-Za-z0-9_-]/g, '').slice(0, 64);
 }
 
 class GuestPointsService {

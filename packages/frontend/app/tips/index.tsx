@@ -13,12 +13,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { Card } from '@oxy.so/bloom/card';
 import { Chip } from '@oxy.so/bloom/chip';
-import {
-  RiAlertLine,
-  RiCalendarLine,
-  RiNewspaperLine,
-  RiTimeLine,
-} from '@oxy.so/bloom/icons';
+import { RiAlertLine, RiCalendarLine, RiNewspaperLine, RiTimeLine } from '@oxy.so/bloom/icons';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { H2, H3, Text as BloomText } from '@oxy.so/bloom/typography';
 import { useMediaQuery } from 'react-responsive';
@@ -61,11 +56,7 @@ const TipCard: React.FC<TipCardProps> = ({ tip, onPress, featured = false }) => 
       accessibilityRole="button"
       accessibilityLabel={tip.title}
     >
-      <Card
-        radius={featured ? 'radius-24' : 'radius-16'}
-        clipContent
-        appearance="subtle"
-      >
+      <Card radius={featured ? 'radius-24' : 'radius-16'} clipContent appearance="subtle">
         <View style={[styles.tipImageContainer, featured && styles.tipImageFeatured]}>
           {tip.coverImageUrl ? (
             // The photo zooms inside its mask on hover anywhere on the card / press;
@@ -157,10 +148,7 @@ export default function TipsScreen() {
     return Array.from(tags).sort();
   }, [allTips]);
 
-  const featuredTip = useMemo(
-    () => tips.find((tip) => tip.featured) ?? tips[0] ?? null,
-    [tips],
-  );
+  const featuredTip = useMemo(() => tips.find((tip) => tip.featured) ?? tips[0] ?? null, [tips]);
 
   const gridTips = useMemo(
     () => (featuredTip ? tips.filter((tip) => tip.slug !== featuredTip.slug) : tips),
@@ -179,9 +167,7 @@ export default function TipsScreen() {
         <View style={styles.titleBlock}>
           <SectionEyebrow>{t('home.tips.eyebrow')}</SectionEyebrow>
           <H2 style={styles.title}>{t('home.tips.title')}</H2>
-          <BloomText style={styles.subtitle}>
-            {t('home.tips.subtitle')}
-          </BloomText>
+          <BloomText style={styles.subtitle}>{t('home.tips.subtitle')}</BloomText>
         </View>
 
         {allTags.length > 0 ? (

@@ -152,17 +152,13 @@ export async function buildModerationReportInput(
       externalReportId: report.id,
       subject: snapshot.subject,
       content: snapshot.content,
-      ...(snapshot.attachments === undefined
-        ? {}
-        : { attachments: snapshot.attachments }),
+      ...(snapshot.attachments === undefined ? {} : { attachments: snapshot.attachments }),
       ...(snapshot.context === undefined ? {} : { context: snapshot.context }),
       /**
        * One reason per report, so one allegation. The reporter's own words ride
        * on it — and they are the reporter's CLAIM, never evidence for it.
        */
-      allegations: [
-        details ? { code, details: details.slice(0, MAX_DETAILS_LENGTH) } : { code },
-      ],
+      allegations: [details ? { code, details: details.slice(0, MAX_DETAILS_LENGTH) } : { code }],
       /**
        * The Oxy subject IS the binding proof. Homiio stores reporters as Oxy
        * user ids resolved from the session, so there is no separate binding step

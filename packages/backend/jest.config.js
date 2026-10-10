@@ -46,10 +46,5 @@ module.exports = {
       },
     ],
   },
-  collectCoverageFrom: [
-    'controllers/**/*.ts',
-    'services/**/*.ts',
-    'utils/**/*.ts',
-    '!**/*.d.ts',
-  ],
+  collectCoverageFrom: ['controllers/**/*.ts', 'services/**/*.ts', 'utils/**/*.ts', '!**/*.d.ts'],
 };

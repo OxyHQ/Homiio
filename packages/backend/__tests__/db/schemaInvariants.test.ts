@@ -84,9 +84,9 @@ describe('schema invariants', () => {
       select extname from pg_extension order by extname
     `);
     const installed = new Set(rows.map((row) => row.extname));
-    const missing = REQUIRED_EXTENSIONS
-      .map((extension) => extension.name)
-      .filter((name) => !installed.has(name));
+    const missing = REQUIRED_EXTENSIONS.map((extension) => extension.name).filter(
+      (name) => !installed.has(name),
+    );
     expect(missing).toEqual([]);
     // Vacuity floor: an empty `pg_extension` read would make the filter above
     // pass by comparing against nothing.
@@ -96,9 +96,9 @@ describe('schema invariants', () => {
   it('gives every extension a reason', () => {
     // The registry is data precisely so a reader can enumerate it. An entry with
     // no reason is a dependency nobody has justified.
-    const unexplained = REQUIRED_EXTENSIONS
-      .filter((extension) => extension.reason.trim().length < 40)
-      .map((extension) => extension.name);
+    const unexplained = REQUIRED_EXTENSIONS.filter(
+      (extension) => extension.reason.trim().length < 40,
+    ).map((extension) => extension.name);
     expect(unexplained).toEqual([]);
   });
 

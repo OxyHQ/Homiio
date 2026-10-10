@@ -111,8 +111,7 @@ export const maintenanceCategoryKey = (category: MaintenanceCategory): string =>
 export const maintenanceUrgencyKey = (urgency: MaintenanceUrgency): string =>
   `maintenance.urgency.${urgency}`;
 
-export const maintenanceStatusKey = (status: MaintenanceStatus): string =>
-  STATUS_LABEL_KEY[status];
+export const maintenanceStatusKey = (status: MaintenanceStatus): string => STATUS_LABEL_KEY[status];
 
 /**
  * What formatting a card needs.

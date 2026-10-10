@@ -61,14 +61,12 @@ export const TruncatedDescription: React.FC<TruncatedDescriptionProps> = ({
             onPress={handleToggle}
             size="sm"
             accessibilityLabel={
-              expanded
-                ? t('property.description.showLess')
-                : t('property.description.showMore')
-            } tone="accent" appearance="subtle"
+              expanded ? t('property.description.showLess') : t('property.description.showMore')
+            }
+            tone="accent"
+            appearance="subtle"
           >
-            {expanded
-              ? t('property.description.showLess')
-              : t('property.description.showMore')}
+            {expanded ? t('property.description.showLess') : t('property.description.showMore')}
           </Button>
         </View>
       ) : null}

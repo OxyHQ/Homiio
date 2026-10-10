@@ -70,14 +70,7 @@ export type AreaBucketKm2 = (typeof AREA_BUCKETS_KM2)[number];
  * The integer is a proxy for scale and its meaning differs per renderer; the
  * label does not.
  */
-export const ZOOM_BUCKETS = [
-  'world',
-  'country',
-  'region',
-  'city',
-  'district',
-  'street',
-] as const;
+export const ZOOM_BUCKETS = ['world', 'country', 'region', 'city', 'district', 'street'] as const;
 export type ZoomBucket = (typeof ZOOM_BUCKETS)[number];
 
 /**
@@ -186,7 +179,9 @@ export function priceSpreadBucketPct(
   if (first === undefined) return undefined;
   if (members.some((member) => member.currency !== first.currency)) return undefined;
 
-  const amounts = members.map((member) => member.amount).filter((amount) => Number.isFinite(amount));
+  const amounts = members
+    .map((member) => member.amount)
+    .filter((amount) => Number.isFinite(amount));
   if (amounts.length !== members.length) return undefined;
 
   const min = Math.min(...amounts);

@@ -522,9 +522,7 @@ describe('the mandatory picker is unreachable', () => {
                   expect({
                     discovery: state.discovery,
                     resolving: state.resolution.status === 'resolving',
-                  }).toEqual(
-                    expect.objectContaining({}),
-                  );
+                  }).toEqual(expect.objectContaining({}));
                   expect(state.discovery || state.resolution.status === 'resolving').toBe(true);
                 }
                 checked += 1;

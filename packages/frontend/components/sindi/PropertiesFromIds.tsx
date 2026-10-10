@@ -30,9 +30,7 @@ export const PropertiesFromIds = React.memo<PropertiesFromIdsProps>(({ ids }) =>
     queryKey: ['chat-properties', ...ids],
     enabled: ids.length > 0,
     queryFn: async () => {
-      const results = await Promise.all(
-        ids.map((id) => propertyService.getPropertyById(id)),
-      );
+      const results = await Promise.all(ids.map((id) => propertyService.getPropertyById(id)));
       return results.filter((property): property is Property => property !== null);
     },
   });

@@ -25,7 +25,11 @@ import type {
   RawListing,
 } from '../../../types';
 import { createFetchRuntime } from '../../../runtime';
-import { defaultProviderMetrics, type ProviderMetricsReader, type ProviderMetricsSink } from '../../../metrics';
+import {
+  defaultProviderMetrics,
+  type ProviderMetricsReader,
+  type ProviderMetricsSink,
+} from '../../../metrics';
 import { DEFAULT_US_CITIES } from '../portals';
 import {
   REALTOR_GRAPHQL_HEADERS,
@@ -101,9 +105,12 @@ function buildAddress(listing: RecordedRealtorListing): NormalizedListingAddress
 }
 
 function asRealtorComRaw(payload: unknown): RealtorComRaw {
-  const record = payload as
-    | { sourceId?: unknown; url?: unknown; kind?: unknown; listing?: unknown }
-    | null;
+  const record = payload as {
+    sourceId?: unknown;
+    url?: unknown;
+    kind?: unknown;
+    listing?: unknown;
+  } | null;
   if (
     !record ||
     typeof record.sourceId !== 'string' ||

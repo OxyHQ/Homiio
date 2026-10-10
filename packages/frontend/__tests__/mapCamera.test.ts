@@ -44,11 +44,16 @@ const OUTSIDE = [
  * two numbers: a camera is correct exactly when it contains what the database
  * contains and excludes what the database excludes.
  */
-function cameraContains(bounds: GeoBounds, point: { longitude: number; latitude: number }): boolean {
+function cameraContains(
+  bounds: GeoBounds,
+  point: { longitude: number; latitude: number },
+): boolean {
   const [[west, south], [east, north]] = toCameraBounds(bounds);
   // Carry the probe point into the same continuous space the camera uses.
   const longitude = point.longitude < west ? point.longitude + 360 : point.longitude;
-  return longitude >= west && longitude <= east && point.latitude >= south && point.latitude <= north;
+  return (
+    longitude >= west && longitude <= east && point.latitude >= south && point.latitude <= north
+  );
 }
 
 describe('a box that crosses the antimeridian frames the strip, not its complement', () => {

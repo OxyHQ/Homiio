@@ -31,11 +31,10 @@ export function NightlyPricingStep({
 
   // es/it/ca numeric keyboards emit a comma decimal; normalise before parse.
   const handleNumber = useCallback(
-    (field: 'nightlyRate' | 'cleaningFee' | 'serviceFee' | 'taxesPercent') =>
-      (text: string) => {
-        const parsed = parseLocaleNumber(text);
-        updateFormField('pricing', field, Number.isNaN(parsed) ? 0 : parsed);
-      },
+    (field: 'nightlyRate' | 'cleaningFee' | 'serviceFee' | 'taxesPercent') => (text: string) => {
+      const parsed = parseLocaleNumber(text);
+      updateFormField('pricing', field, Number.isNaN(parsed) ? 0 : parsed);
+    },
     [updateFormField],
   );
 

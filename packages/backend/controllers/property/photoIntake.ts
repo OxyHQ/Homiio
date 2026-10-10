@@ -56,7 +56,10 @@
 import type { ImageVariantName } from '@homiio/shared-types';
 
 import { findImagesByIds, type ImageRow } from '../../db/images/imageWrites';
-import type { NewPropertyImageUpload, PropertyImageInput } from '../../db/properties/propertyWrites';
+import type {
+  NewPropertyImageUpload,
+  PropertyImageInput,
+} from '../../db/properties/propertyWrites';
 import imageUploadService from '../../services/imageUploadService';
 import { validateImageStoreKey } from '../../utils/imageStoreKey';
 import { AppError } from '../../middlewares/errorHandler';
@@ -110,7 +113,9 @@ function variantKeys(entry: Record<string, unknown>, index: number): Record<stri
 
   const validated: Record<string, string> = {};
   for (const variant of VARIANTS) {
-    const raw = text(variant === 'original' ? (keys.original ?? variants.original) : variants[variant]);
+    const raw = text(
+      variant === 'original' ? (keys.original ?? variants.original) : variants[variant],
+    );
     if (raw === undefined) reject(index, `is missing the ${variant} variant key`);
     const check = validateImageStoreKey(raw);
     // The rejection reason is echoed: these keys came from our own upload

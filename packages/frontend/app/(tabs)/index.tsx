@@ -54,7 +54,12 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { View, RefreshControl } from 'react-native';
 import { Image } from 'expo-image';
-import Animated, { FadeInDown, interpolate, useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
+import Animated, {
+  FadeInDown,
+  interpolate,
+  useAnimatedStyle,
+  useSharedValue,
+} from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -126,8 +131,13 @@ export default function HomePage() {
     sectionCount: home.sections.length,
   });
 
-  const { properties: recentlyViewedProperties, refetch: refetchRecentlyViewed } = useRecentlyViewed();
-  const { savedProperties, isLoading: savedLoading, loadSavedProperties } = useSavedPropertiesContext();
+  const { properties: recentlyViewedProperties, refetch: refetchRecentlyViewed } =
+    useRecentlyViewed();
+  const {
+    savedProperties,
+    isLoading: savedLoading,
+    loadSavedProperties,
+  } = useSavedPropertiesContext();
 
   const heroSearchSeed: SearchQuery = { ...activeQuery, offering: browseOffering };
 
@@ -140,7 +150,8 @@ export default function HomePage() {
    * `exploreHref` applies, for the same reason.
    */
   const exploreScopedHref = useMemo((): string | null => {
-    if (!scope.selection) return exploreHref({ ...activeQuery, offering: browseOffering, location: null });
+    if (!scope.selection)
+      return exploreHref({ ...activeQuery, offering: browseOffering, location: null });
     const token = serializeLocationToken(scope.selection);
     if (!token.ok) return null;
     return exploreHref({ ...activeQuery, offering: browseOffering, location: scope.selection });
@@ -192,7 +203,10 @@ export default function HomePage() {
           style={{ zIndex: searchStep !== null ? 10 : 0 }}
         >
           <View className="absolute inset-0 overflow-hidden" style={{ pointerEvents: 'none' }}>
-            <Animated.View className="absolute inset-x-0" style={[{ top: -80, bottom: -80 }, heroParallaxStyle]}>
+            <Animated.View
+              className="absolute inset-x-0"
+              style={[{ top: -80, bottom: -80 }, heroParallaxStyle]}
+            >
               <Image
                 source={require('@/assets/images/hero.jpg')}
                 className="h-full w-full object-cover object-center"
@@ -220,7 +234,12 @@ export default function HomePage() {
                 onPress={openMobileDrawer}
                 icon={RiMenuLine}
                 accessibilityLabel={t('sidebar.open')}
-                hitSlop={{ top: spacing.sm, bottom: spacing.sm, left: spacing.sm, right: spacing.sm }}
+                hitSlop={{
+                  top: spacing.sm,
+                  bottom: spacing.sm,
+                  left: spacing.sm,
+                  right: spacing.sm,
+                }}
               />
             </View>
           ) : null}
@@ -247,7 +266,9 @@ export default function HomePage() {
 
             <View
               className={
-                isWide ? 'z-20 mt-1 w-full max-w-[880px] self-center' : 'z-20 mt-1 w-full max-w-[520px] self-center'
+                isWide
+                  ? 'z-20 mt-1 w-full max-w-[880px] self-center'
+                  : 'z-20 mt-1 w-full max-w-[520px] self-center'
               }
             >
               <HomeSearch
@@ -287,7 +308,9 @@ export default function HomePage() {
           {/* Served from the offline snapshot: said once, above what it describes. */}
           {home.staleAt && surface === 'sections' ? (
             <P className={`text-[13px] text-muted-foreground ${PAGE_GUTTER_CLASS}`}>
-              {t('location.scope.showingCached', { when: formatRelativeDate(home.staleAt, locale) })}
+              {t('location.scope.showingCached', {
+                when: formatRelativeDate(home.staleAt, locale),
+              })}
             </P>
           ) : null}
 
@@ -303,7 +326,13 @@ export default function HomePage() {
           {surface === 'failed' ? (
             <View className={`gap-2 ${PAGE_GUTTER_CLASS}`}>
               <P className="text-sm text-muted-foreground">{t('home.sections.error')}</P>
-              <Button size="md" onPress={onRefresh} accessibilityLabel={t('common.retry')} tone="neutral" appearance="outline">
+              <Button
+                size="md"
+                onPress={onRefresh}
+                accessibilityLabel={t('common.retry')}
+                tone="neutral"
+                appearance="outline"
+              >
                 {t('common.retry')}
               </Button>
             </View>
@@ -311,7 +340,10 @@ export default function HomePage() {
 
           {home.sections.map((section) => (
             <Animated.View key={section.id} entering={FadeInDown.duration(420)}>
-              <HomeSectionBand section={section} {...(exploreScopedHref ? { onSeeAll: openExplore } : {})} />
+              <HomeSectionBand
+                section={section}
+                {...(exploreScopedHref ? { onSeeAll: openExplore } : {})}
+              />
             </Animated.View>
           ))}
 
@@ -327,7 +359,9 @@ export default function HomePage() {
                 <Button
                   size="md"
                   onPress={openExplore}
-                  accessibilityLabel={t('home.empty.changeFiltersAccessible')} tone="neutral" appearance="outline"
+                  accessibilityLabel={t('home.empty.changeFiltersAccessible')}
+                  tone="neutral"
+                  appearance="outline"
                 >
                   {t('home.empty.changeFilters')}
                 </Button>
@@ -335,7 +369,9 @@ export default function HomePage() {
                   <Button
                     size="md"
                     onPress={scope.exploreGlobal}
-                    accessibilityLabel={t('location.scope.exploreGlobalAccessible')} tone="neutral" appearance="outline"
+                    accessibilityLabel={t('location.scope.exploreGlobalAccessible')}
+                    tone="neutral"
+                    appearance="outline"
                   >
                     {t('location.scope.exploreGlobal')}
                   </Button>
@@ -388,7 +424,9 @@ export default function HomePage() {
                 size="md"
                 onPress={openExplore}
                 disabled={exploreScopedHref === null}
-                accessibilityLabel={t('home.explore.ctaAccessible')} tone="accent" appearance="solid"
+                accessibilityLabel={t('home.explore.ctaAccessible')}
+                tone="accent"
+                appearance="solid"
               >
                 {t('home.explore.cta')}
               </Button>

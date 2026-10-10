@@ -1,10 +1,7 @@
 import { Request, Response } from 'express';
 import { resolveStorageFolder } from '../services/imageUploadService';
 import type { ImageEntityType } from '@homiio/shared-types';
-import imageUploadService, {
-  UploadedImage,
-  ImageDocument,
-} from '../services/imageUploadService';
+import imageUploadService, { UploadedImage, ImageDocument } from '../services/imageUploadService';
 import { validateImageStoreKey } from '../utils/imageStoreKey';
 import { isLiveEntityId } from '../db/ids';
 import { logUnexpectedError } from '../middlewares/errorHandler';
@@ -81,7 +78,11 @@ function parseOrder(value: unknown): number | undefined {
 }
 
 /** Validate a single file's MIME type + size; returns an error message or null. */
-function validateFile(file: { mimetype: string; size: number; originalname?: string }): string | null {
+function validateFile(file: {
+  mimetype: string;
+  size: number;
+  originalname?: string;
+}): string | null {
   if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
     const suffix = file.originalname ? ` for ${file.originalname}` : '';
     return `Invalid file type${suffix}. Only JPEG, PNG, WebP, and GIF are allowed.`;
@@ -139,7 +140,7 @@ export class ImageController {
             isPrimary: isTrue(req.body.isPrimary),
             order: parseOrder(req.body.order),
             folder,
-          }
+          },
         );
       }
 
@@ -177,7 +178,9 @@ export class ImageController {
       // Normalize req.files which can be an array or a field map depending on multer usage
       const files: UploadedFile[] = Array.isArray(req.files)
         ? (req.files as unknown as UploadedFile[])
-        : (Object.values(req.files as Record<string, UploadedFile[]>).flat().filter(Boolean) as UploadedFile[]);
+        : (Object.values(req.files as Record<string, UploadedFile[]>)
+            .flat()
+            .filter(Boolean) as UploadedFile[]);
 
       // Allow-listed, not merely typed. `typeof === 'string'` let
       // `{"folder": "../../.."}` through to a `path.join` against the store root.
@@ -224,7 +227,7 @@ export class ImageController {
                 isPrimary: nextOrder === 0 && isTrue(req.body.isPrimary),
                 order: nextOrder,
                 folder,
-              }
+              },
             );
             nextOrder += 1;
           }

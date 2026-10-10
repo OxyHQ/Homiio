@@ -58,7 +58,7 @@ export function toPropertyImages(images: readonly ImageDocument[]): PropertyImag
   const ordered = [...images].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
   const primaryIndex = Math.max(
     0,
-    ordered.findIndex((image) => image.isPrimary === true)
+    ordered.findIndex((image) => image.isPrimary === true),
   );
 
   return ordered.map((image, index) => ({

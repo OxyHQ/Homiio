@@ -396,10 +396,20 @@ describe('source_url', () => {
     // `(source, source_id)` — the real dedup key — stays distinct.
     const shared = 'https://www.habitaclia.com/alquiler-madrid.htm';
     expect(
-      await attempt({ source: 'habitaclia', isExternal: true, sourceId: '52795000011615', sourceUrl: shared }),
+      await attempt({
+        source: 'habitaclia',
+        isExternal: true,
+        sourceId: '52795000011615',
+        sourceUrl: shared,
+      }),
     ).toBeUndefined();
     expect(
-      await attempt({ source: 'habitaclia', isExternal: true, sourceId: '39875000001003', sourceUrl: shared }),
+      await attempt({
+        source: 'habitaclia',
+        isExternal: true,
+        sourceId: '39875000001003',
+        sourceUrl: shared,
+      }),
     ).toBeUndefined();
   });
 });

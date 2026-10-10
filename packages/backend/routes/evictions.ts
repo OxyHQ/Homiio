@@ -55,10 +55,7 @@ export default function () {
   router.get('/:id/location/exact', asyncHandler(eviction.getExactLocation));
   router.get('/:id/location/grants', asyncHandler(eviction.listLocationGrants));
   router.post('/:id/location/grants', asyncHandler(eviction.createLocationGrant));
-  router.post(
-    '/:id/location/grants/:oxyUserId/revoke',
-    asyncHandler(eviction.revokeLocationGrant),
-  );
+  router.post('/:id/location/grants/:oxyUserId/revoke', asyncHandler(eviction.revokeLocationGrant));
   router.get('/:id/location/audit', asyncHandler(eviction.getLocationAccessAudit));
 
   // Comment thread writes.

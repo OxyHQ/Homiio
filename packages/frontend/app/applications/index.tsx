@@ -24,10 +24,7 @@ import {
 import { useTheme } from '@oxy.so/bloom/theme';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 import { useOxy, openAccountDialog } from '@oxy.so/services';
-import {
-  TenantApplication,
-  TenantApplicationStatus,
-} from '@homiio/shared-types';
+import { TenantApplication, TenantApplicationStatus } from '@homiio/shared-types';
 
 import { Header } from '@/components/Header';
 import { PageScrollView } from '@/components/PageScrollView';
@@ -187,9 +184,7 @@ export default function MyApplicationsScreen() {
           <View style={styles.centerWrap}>
             <ErrorState
               title={t('applications.list.loadError')}
-              description={
-                applicationsQuery.error?.message ?? t('applications.list.tryAgain')
-              }
+              description={applicationsQuery.error?.message ?? t('applications.list.tryAgain')}
               retryLabel={t('applications.list.retry')}
               onRetry={() => applicationsQuery.refetch()}
             />
@@ -222,21 +217,18 @@ export default function MyApplicationsScreen() {
                 }
                 actionText={filter === 'all' ? t('applications.list.exploreStays') : undefined}
                 actionIcon={filter === 'all' ? RiSearchLine : undefined}
-                onAction={
-                  filter === 'all' ? () => router.push('/explore') : undefined
-                }
+                onAction={filter === 'all' ? () => router.push('/explore') : undefined}
               />
             </View>
           ) : (
             dateGroups.map((group) => (
               <View key={group.label} style={styles.section}>
-                <BloomText style={[styles.sectionEyebrow, { color: theme.colors.textSecondary }]}>{group.label}</BloomText>
+                <BloomText style={[styles.sectionEyebrow, { color: theme.colors.textSecondary }]}>
+                  {group.label}
+                </BloomText>
                 <View style={styles.cards}>
                   {group.items.map((application) => (
-                    <ApplicationCard
-                      key={application.id}
-                      application={application}
-                    />
+                    <ApplicationCard key={application.id} application={application} />
                   ))}
                 </View>
               </View>

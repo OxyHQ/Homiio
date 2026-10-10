@@ -82,7 +82,9 @@ const AgencyReviewItem: React.FC<AgencyReviewItemProps> = ({ review, author, onP
         trailingIcon={RiArrowRightSLine}
         onPress={onPressAddress}
         accessibilityLabel={label}
-        style={styles.addressLink} tone="accent" appearance="subtle"
+        style={styles.addressLink}
+        tone="accent"
+        appearance="subtle"
       >
         {label}
       </Button>
@@ -241,9 +243,7 @@ export default function AgencyProfileScreen() {
                     key={review.id}
                     review={review}
                     author={review.oxyUserId ? usersById.get(review.oxyUserId) : undefined}
-                    onPressAddress={() =>
-                      router.push(`/addresses/${review.addressId}?tab=reviews`)
-                    }
+                    onPressAddress={() => router.push(`/addresses/${review.addressId}?tab=reviews`)}
                   />
                 ))}
                 <LoadMoreSentinel

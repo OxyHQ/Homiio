@@ -139,7 +139,9 @@ export function usePriceFormatter(
  * distribution cannot count without mixing currencies. Converting them at a
  * rate we do not have and cannot version is exactly what ADR 0004 §6.5 forbids.
  */
-export const PriceHistogramNote: React.FC<{ histogram?: SearchPriceHistogram }> = ({ histogram }) => {
+export const PriceHistogramNote: React.FC<{ histogram?: SearchPriceHistogram }> = ({
+  histogram,
+}) => {
   const { t } = useTranslation();
   const colors = useColors();
   if (!histogram) return null;
@@ -198,14 +200,23 @@ interface PriceStepProps {
   ) => void;
 }
 
-export const PriceStep: React.FC<PriceStepProps> = ({ offering, priceMin, priceMax, histogram, onChange }) => {
+export const PriceStep: React.FC<PriceStepProps> = ({
+  offering,
+  priceMin,
+  priceMax,
+  histogram,
+  onChange,
+}) => {
   const { t } = useTranslation();
   const colors = useColors();
   const track = priceTrackFor(offering);
   const formatPrice = usePriceFormatter(track, histogram?.currency);
   const unitKey = priceUnitKey(offering);
 
-  const value = useMemo(() => priceRangeValue(priceMin, priceMax, track), [priceMin, priceMax, track]);
+  const value = useMemo(
+    () => priceRangeValue(priceMin, priceMax, track),
+    [priceMin, priceMax, track],
+  );
 
   const handleChange = useCallback(
     (next: [number, number]) => {

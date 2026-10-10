@@ -47,12 +47,10 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
         <Icon width={ICON_SIZES.xl} height={ICON_SIZES.xl} fill={colors.COLOR_BLACK_LIGHT_3} />
       </View>
       <H3 style={styles.title}>{title}</H3>
-      {description ? (
-        <BloomText style={styles.description}>{description}</BloomText>
-      ) : null}
+      {description ? <BloomText style={styles.description}>{description}</BloomText> : null}
       {onRetry ? (
         <View style={styles.action}>
-          <Button onPress={onRetry}  size="md" tone="accent" appearance="solid">
+          <Button onPress={onRetry} size="md" tone="accent" appearance="solid">
             {retryLabel}
           </Button>
         </View>

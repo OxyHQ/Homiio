@@ -179,7 +179,9 @@ function EditFolderForm({ folder }: { folder: SavedPropertyFolder }) {
             leadingIcon={RiDeleteBinLine}
             onPress={() => void handleDelete()}
             loading={deleting}
-            disabled={locked} tone="danger" appearance="solid"
+            disabled={locked}
+            tone="danger"
+            appearance="solid"
           >
             {t('saved.folders.deleteTitle')}
           </Button>

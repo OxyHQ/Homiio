@@ -76,15 +76,15 @@ export const NeighborhoodInfo: React.FC<Props> = ({ property }) => {
         ) : null}
       </View>
       {vsCity ? (
-        <Chip
-          size="large"
-          color={vsCity.percentDiff < 0 ? 'success' : 'default'}
-        >
+        <Chip size="large" color={vsCity.percentDiff < 0 ? 'success' : 'default'}>
           {vsCity.percentDiff === 0
             ? t('property.neighborhood.onParWithCity')
             : t('property.neighborhood.pctVsCity', {
                 pct: Math.abs(vsCity.percentDiff),
-                dir: vsCity.percentDiff < 0 ? t('property.neighborhood.cheaper') : t('property.neighborhood.pricier'),
+                dir:
+                  vsCity.percentDiff < 0
+                    ? t('property.neighborhood.cheaper')
+                    : t('property.neighborhood.pricier'),
               })}
         </Chip>
       ) : null}

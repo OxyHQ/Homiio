@@ -247,7 +247,9 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
     }
 
     if (instantBook !== undefined) {
-      conditions.push(booleanIs(properties.shortTermRentInstantBook, String(instantBook) === 'true'));
+      conditions.push(
+        booleanIs(properties.shortTermRentInstantBook, String(instantBook) === 'true'),
+      );
     }
 
     if (minGuests !== undefined) {
@@ -270,7 +272,10 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
     // an error anywhere.
     const checkInDate = parseDateParam(checkIn);
     const checkOutDate = parseDateParam(checkOut);
-    const hasStay = checkInDate !== null && checkOutDate !== null && checkOutDate.getTime() > checkInDate.getTime();
+    const hasStay =
+      checkInDate !== null &&
+      checkOutDate !== null &&
+      checkOutDate.getTime() > checkInDate.getTime();
 
     if (hasStay && checkInDate && checkOutDate) {
       conditions.push(calendarIsFree(checkInDate, checkOutDate));
@@ -302,7 +307,7 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
     if (boundMin !== undefined || boundMax !== undefined) {
       const priceColumn = saleQuery
         ? properties.salePrice
-        : priceColumnForOffering(resolvedOffering) ?? DEFAULT_PRICE_COLUMN;
+        : (priceColumnForOffering(resolvedOffering) ?? DEFAULT_PRICE_COLUMN);
       const currencyColumn = currencyColumnForOffering(resolvedOffering);
       const min = boundMin === undefined ? undefined : parseFloat(String(boundMin));
       const max = boundMax === undefined ? undefined : parseFloat(String(boundMax));
@@ -371,12 +376,15 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
     // unpopular and looks exactly like a quiet feed.
     const savesMap = await countSavesByPropertyIds(getDb(), ids);
 
-    const preferredRadiusMeters = radius ? parseFloat(String(radius)) : DEFAULT_PREFERRED_RADIUS_METERS;
+    const preferredRadiusMeters = radius
+      ? parseFloat(String(radius))
+      : DEFAULT_PREFERRED_RADIUS_METERS;
     let ordered: ListingForScoring[];
 
     if (wantsDistance) {
       const decorated = serialized.map((property, index) => {
-        const distance = typeof property.distance === 'number' ? property.distance : Number.POSITIVE_INFINITY;
+        const distance =
+          typeof property.distance === 'number' ? property.distance : Number.POSITIVE_INFINITY;
         const savesCount = savesMap.get(String(property.id)) ?? 0;
         return {
           index,
@@ -395,9 +403,17 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
         if (a.distance !== b.distance) return a.distance - b.distance;
         return a.index - b.index;
       });
-      ordered = decorated.map((entry) => ({ ...entry.prop, savesCount: entry.savesCount, distance: entry.distance }));
+      ordered = decorated.map((entry) => ({
+        ...entry.prop,
+        savesCount: entry.savesCount,
+        distance: entry.distance,
+      }));
     } else {
-      ordered = serialized.map((property) => ({ ...property, savesCount: savesMap.get(String(property.id)) ?? 0, isSaved: false }));
+      ordered = serialized.map((property) => ({
+        ...property,
+        savesCount: savesMap.get(String(property.id)) ?? 0,
+        isSaved: false,
+      }));
     }
 
     // Narrowed to a `string` in ONE place rather than re-derived: the Mongo
@@ -429,18 +445,22 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
           recentlyViewedIds.add(viewPropId);
           const property = orderedMap.get(viewPropId);
           if (property) {
-            preferenceWeights.propertyTypes[String(property.type)] = (preferenceWeights.propertyTypes[String(property.type)] || 0) + 1;
+            preferenceWeights.propertyTypes[String(property.type)] =
+              (preferenceWeights.propertyTypes[String(property.type)] || 0) + 1;
             const price = representativePrice(property);
             if (price > 0) {
               const priceRange = priceBucket(price);
-              preferenceWeights.priceRanges[priceRange] = (preferenceWeights.priceRanges[priceRange] || 0) + 1;
+              preferenceWeights.priceRanges[priceRange] =
+                (preferenceWeights.priceRanges[priceRange] || 0) + 1;
             }
             const viewCityId = cityIdKey(property);
             if (viewCityId) {
-              preferenceWeights.locations[viewCityId] = (preferenceWeights.locations[viewCityId] || 0) + 1;
+              preferenceWeights.locations[viewCityId] =
+                (preferenceWeights.locations[viewCityId] || 0) + 1;
             }
             for (const amenity of property.amenities ?? []) {
-              preferenceWeights.amenities[amenity] = (preferenceWeights.amenities[amenity] || 0) + 1;
+              preferenceWeights.amenities[amenity] =
+                (preferenceWeights.amenities[amenity] || 0) + 1;
             }
           }
         }
@@ -456,7 +476,8 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
             personalizedScore += (preferenceWeights.priceRanges[priceRange] || 0) * 12;
           }
           const scoreCityId = cityIdKey(property);
-          if (scoreCityId) personalizedScore += (preferenceWeights.locations[scoreCityId] || 0) * 20;
+          if (scoreCityId)
+            personalizedScore += (preferenceWeights.locations[scoreCityId] || 0) * 20;
           for (const amenity of property.amenities ?? []) {
             personalizedScore += (preferenceWeights.amenities[amenity] || 0) * 5;
           }
@@ -497,7 +518,7 @@ export const getProperties = async (req: Request, res: Response, next: NextFunct
         pageNumber,
         limitNumber,
         total,
-        'Properties retrieved successfully'
+        'Properties retrieved successfully',
       ),
       // The unit the price bound was read in, when there was one. The server
       // may have chosen it, so a feed labelled "under 1,200" can say 1,200 of

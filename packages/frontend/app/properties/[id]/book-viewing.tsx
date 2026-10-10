@@ -120,14 +120,12 @@ export default function BookViewingPage() {
 
   // Check if we're in modify mode
   const isModifyMode = Boolean(modifyViewingId);
-  const modifyViewingIdString = Array.isArray(modifyViewingId) ? modifyViewingId[0] : modifyViewingId;
+  const modifyViewingIdString = Array.isArray(modifyViewingId)
+    ? modifyViewingId[0]
+    : modifyViewingId;
 
   const normalizedId = Array.isArray(id) ? id[0] : id;
-  const {
-    property: apiProperty,
-    loading,
-    loadProperty,
-  } = useProperty(normalizedId || '');
+  const { property: apiProperty, loading, loadProperty } = useProperty(normalizedId || '');
 
   useEffect(() => {
     loadProperty();
@@ -181,8 +179,7 @@ export default function BookViewingPage() {
     try {
       if (err instanceof ApiError) {
         const resp = (err.response ?? undefined) as ApiErrorResponse | undefined;
-        const errorObject =
-          resp?.error && typeof resp.error === 'object' ? resp.error : undefined;
+        const errorObject = resp?.error && typeof resp.error === 'object' ? resp.error : undefined;
         const errorString = typeof resp?.error === 'string' ? resp.error : undefined;
         const code = errorObject?.code || resp?.code || errorString;
         let msg: string | undefined;
@@ -266,12 +263,10 @@ export default function BookViewingPage() {
 
       try {
         // Get user's viewing requests and find the one we're modifying
-        const response = await ViewingService.listMyViewingRequests(
-          { page: 1, limit: 50 },
-        );
+        const response = await ViewingService.listMyViewingRequests({ page: 1, limit: 50 });
 
         const viewings = Array.isArray(response?.data) ? response.data : [];
-        const viewing = viewings.find(v => v.id === modifyViewingIdString);
+        const viewing = viewings.find((v) => v.id === modifyViewingIdString);
 
         if (viewing) {
           setExistingViewing(viewing);
@@ -561,7 +556,9 @@ export default function BookViewingPage() {
           onPress={handleSubmit}
           size="lg"
           disabled={!selectedDate || !activeTime || submitting}
-          loading={submitting} tone="accent" appearance="solid"
+          loading={submitting}
+          tone="accent"
+          appearance="solid"
         >
           {isModifyMode ? t('viewings.actions.modify') : t('properties.bookViewing')}
         </Button>

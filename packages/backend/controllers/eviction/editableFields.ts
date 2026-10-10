@@ -57,7 +57,4 @@ export const CREATABLE_EVICTION_FIELDS: readonly string[] = [
  * Fields the owner may change on an existing case. The creatable set PLUS
  * `status`, the lifecycle transition an owner drives from the case.
  */
-export const EDITABLE_EVICTION_FIELDS: readonly string[] = [
-  ...CREATABLE_EVICTION_FIELDS,
-  'status',
-];
+export const EDITABLE_EVICTION_FIELDS: readonly string[] = [...CREATABLE_EVICTION_FIELDS, 'status'];

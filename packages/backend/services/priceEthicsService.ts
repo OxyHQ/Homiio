@@ -7,10 +7,7 @@
 
 import { OfferingType } from '@homiio/shared-types';
 import type { PropertyPriceEthics } from '@homiio/shared-types';
-import {
-  validateEthicalPricing,
-  type EthicalPricingCharacteristics,
-} from '@homiio/shared-types';
+import { validateEthicalPricing, type EthicalPricingCharacteristics } from '@homiio/shared-types';
 import { findPropertyById } from '../db/properties/propertyReads';
 import { serializeProperty } from '../db/properties/propertySerializer';
 import { setPropertyPriceEthics } from '../db/properties/propertyWrites';
@@ -203,7 +200,9 @@ export async function scoreAndPersistProperty(propertyId: string): Promise<void>
     return;
   }
 
-  const priceEthics = await computePriceEthics(serializeProperty(hydrated, 'system') as ScorableProperty);
+  const priceEthics = await computePriceEthics(
+    serializeProperty(hydrated, 'system') as ScorableProperty,
+  );
   if (!priceEthics) {
     logger.warn('Price ethics scoring produced no result', { propertyId });
     return;

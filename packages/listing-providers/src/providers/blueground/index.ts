@@ -28,7 +28,11 @@ import type {
 } from '../../types';
 import { createFetchRuntime } from '../../runtime';
 import { fetchListingViaLadder } from '../../strategy';
-import { defaultProviderMetrics, type ProviderMetricsReader, type ProviderMetricsSink } from '../../metrics';
+import {
+  defaultProviderMetrics,
+  type ProviderMetricsReader,
+  type ProviderMetricsSink,
+} from '../../metrics';
 import { validateMonthlyRentAmount } from '../../parse/price';
 import {
   BLUEGROUND_BASE_URL,
@@ -56,7 +60,15 @@ const PROVIDER_ID: ProviderId = 'blueground';
 /** City slugs for `/m/furnished-apartments/<slug>` search pages. */
 const DEFAULT_CITIES: Readonly<Partial<Record<ListingMarket, readonly string[]>>> = {
   ES: ['madrid-esp', 'barcelona-esp', 'valencia-esp', 'sevilla-esp'],
-  US: ['nyc-usa', 'los-angeles-usa', 'boston-usa', 'chicago-usa', 'washington-dc-usa', 'miami-usa', 'san-francisco-usa'],
+  US: [
+    'nyc-usa',
+    'los-angeles-usa',
+    'boston-usa',
+    'chicago-usa',
+    'washington-dc-usa',
+    'miami-usa',
+    'san-francisco-usa',
+  ],
   IT: ['rome-ita', 'milan-ita'],
   GB: ['london-gbr'],
   DE: ['berlin-deu'],
@@ -139,12 +151,16 @@ export class BluegroundProvider implements ListingProvider {
 
     for (const city of cities) {
       if (yielded >= limit) return;
-      const { html } = await fetchListingViaLadder(job.runtime ?? this.runtime, bluegroundCitySearchUrl(city), {
-        provider: this.id,
-        isChallenge: isBluegroundChallenge,
-        metrics: this.metrics,
-        init: { signal: job.signal },
-      });
+      const { html } = await fetchListingViaLadder(
+        job.runtime ?? this.runtime,
+        bluegroundCitySearchUrl(city),
+        {
+          provider: this.id,
+          isChallenge: isBluegroundChallenge,
+          metrics: this.metrics,
+          init: { signal: job.signal },
+        },
+      );
       for (const ref of parseBluegroundSearch(html)) {
         if (yielded >= limit) return;
         if (seen.has(ref.sourceId)) continue;
@@ -227,7 +243,11 @@ export class BluegroundProvider implements ListingProvider {
     const snapshot = this.metrics.snapshot(this.id);
     if (snapshot && snapshot.attempts > 0) {
       const status =
-        snapshot.challengeRate >= 0.8 ? 'unhealthy' : snapshot.challengeRate >= 0.3 ? 'degraded' : 'healthy';
+        snapshot.challengeRate >= 0.8
+          ? 'unhealthy'
+          : snapshot.challengeRate >= 0.3
+            ? 'degraded'
+            : 'healthy';
       return {
         provider: this.id,
         status,

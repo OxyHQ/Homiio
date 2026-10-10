@@ -21,7 +21,11 @@ const LEASE_STATUS_MAP: Record<`${LeaseStatus}` | 'pending', StatusEntry> = {
 
 const UNKNOWN: StatusEntry = { hue: 'soft', i18nKey: 'statusBadge.unknown' };
 
-export function ContractStatusBadge({ status }: { status: LeaseStatus | `${LeaseStatus}` | string }) {
+export function ContractStatusBadge({
+  status,
+}: {
+  status: LeaseStatus | `${LeaseStatus}` | string;
+}) {
   const { t } = useTranslation();
   const entry = LEASE_STATUS_MAP[status as keyof typeof LEASE_STATUS_MAP] ?? UNKNOWN;
   return (

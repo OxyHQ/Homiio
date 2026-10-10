@@ -113,10 +113,10 @@ class ReviewService {
     page = 1,
     limit = 10,
   ): Promise<AddressReviewsResult> {
-    const { data } = await api.get<AddressReviewsBody>(
-      `/api/reviews/address/${addressId}`,
-      { params: { page, limit }, requireAuth: false },
-    );
+    const { data } = await api.get<AddressReviewsBody>(`/api/reviews/address/${addressId}`, {
+      params: { page, limit },
+      requireAuth: false,
+    });
     const buildingReviews = toReviewList(data.buildingReviews);
     const unitReviews = toReviewList(data.unitReviews);
     return {
@@ -147,18 +147,14 @@ class ReviewService {
   }
 
   async getReviewById(reviewId: string): Promise<ReviewDTO> {
-    const { data } = await api.get<{ review: ReviewDTO }>(
-      `/api/reviews/${reviewId}`,
-      { requireAuth: false },
-    );
+    const { data } = await api.get<{ review: ReviewDTO }>(`/api/reviews/${reviewId}`, {
+      requireAuth: false,
+    });
     return data.review;
   }
 
   async updateReview(reviewId: string, payload: UpdateReviewPayload): Promise<ReviewDTO> {
-    const { data } = await api.put<{ review: ReviewDTO }>(
-      `/api/reviews/${reviewId}`,
-      payload,
-    );
+    const { data } = await api.put<{ review: ReviewDTO }>(`/api/reviews/${reviewId}`, payload);
     return data.review;
   }
 
@@ -214,10 +210,10 @@ class ReviewService {
   // -----------------------------------------------------------------------
 
   async searchAgencies(q: string): Promise<AgencySummary[]> {
-    const { data } = await api.get<{ agencies?: AgencySummary[] }>(
-      '/api/agencies/search',
-      { params: { q }, requireAuth: false },
-    );
+    const { data } = await api.get<{ agencies?: AgencySummary[] }>('/api/agencies/search', {
+      params: { q },
+      requireAuth: false,
+    });
     return Array.isArray(data.agencies) ? data.agencies : [];
   }
 
@@ -267,10 +263,9 @@ class ReviewService {
   // -----------------------------------------------------------------------
 
   async getExploreCities(): Promise<ExploreCitySummary[]> {
-    const { data } = await api.get<{ cities?: ExploreCitySummary[] }>(
-      '/api/reviews/explore',
-      { requireAuth: false },
-    );
+    const { data } = await api.get<{ cities?: ExploreCitySummary[] }>('/api/reviews/explore', {
+      requireAuth: false,
+    });
     return Array.isArray(data.cities) ? data.cities : [];
   }
 

@@ -98,8 +98,7 @@ export const ExchangeSection: React.FC<Props> = ({ exchange, onRequestExchange }
     () => (exchange.availabilityWindows ?? []).slice(0, MAX_WINDOWS_SHOWN),
     [exchange.availabilityWindows],
   );
-  const extraWindows =
-    (exchange.availabilityWindows?.length ?? 0) - windows.length;
+  const extraWindows = (exchange.availabilityWindows?.length ?? 0) - windows.length;
 
   const stayLabel = useMemo(() => {
     const { minStay, maxStay } = exchange;
@@ -128,12 +127,8 @@ export const ExchangeSection: React.FC<Props> = ({ exchange, onRequestExchange }
           <RiArrowLeftRightLine width={ICON_SIZE} height={ICON_SIZE} fill={colors.exchangeAccent} />
         </View>
         <View style={styles.modeText}>
-          <BloomText style={styles.modeTitle}>
-            {t(mode.titleKey)}
-          </BloomText>
-          <BloomText style={styles.modeHelp}>
-            {t(mode.helpKey)}
-          </BloomText>
+          <BloomText style={styles.modeTitle}>{t(mode.titleKey)}</BloomText>
+          <BloomText style={styles.modeHelp}>{t(mode.helpKey)}</BloomText>
         </View>
       </View>
 
@@ -185,10 +180,7 @@ export const ExchangeSection: React.FC<Props> = ({ exchange, onRequestExchange }
           />
         ) : null}
         {exchange.mealsIncluded ? (
-          <FactRow
-            icon={RiRestaurantLine}
-            label={t('listing.exchange.mealsIncludedFact')}
-          />
+          <FactRow icon={RiRestaurantLine} label={t('listing.exchange.mealsIncludedFact')} />
         ) : null}
         <FactRow
           icon={exchange.requiresReciprocity ? RiRepeatLine : RiGiftLine}
@@ -204,7 +196,9 @@ export const ExchangeSection: React.FC<Props> = ({ exchange, onRequestExchange }
         <Button
           size="lg"
           onPress={onRequestExchange}
-          style={styles.cta} tone="accent" appearance="solid"
+          style={styles.cta}
+          tone="accent"
+          appearance="solid"
         >
           {t('listing.exchange.requestCta')}
         </Button>

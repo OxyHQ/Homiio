@@ -40,14 +40,56 @@ function legacySlug(city: string): string {
 
 /** The configured GB market, verbatim from the worker's task definition. */
 const GB_CITIES = [
-  'London', 'Manchester', 'Birmingham', 'Leeds', 'Glasgow', 'Sheffield', 'Bradford',
-  'Edinburgh', 'Liverpool', 'Bristol', 'Cardiff', 'Coventry', 'Leicester', 'Nottingham',
-  'Newcastle upon Tyne', 'Southampton', 'Brighton', 'Plymouth', 'Reading', 'Derby',
-  'Wolverhampton', 'Northampton', 'Norwich', 'Luton', 'Bolton', 'Bournemouth', 'Swindon',
-  'Swansea', 'Southend-on-Sea', 'Middlesbrough', 'Sunderland', 'Milton Keynes',
-  'Peterborough', 'York', 'Oxford', 'Cambridge', 'Ipswich', 'Slough', 'Gloucester',
-  'Exeter', 'Bath', 'Cheltenham', 'Stoke-on-Trent', 'Hull', 'Aberdeen', 'Dundee',
-  'Stirling', 'Inverness', 'Belfast', 'Derry',
+  'London',
+  'Manchester',
+  'Birmingham',
+  'Leeds',
+  'Glasgow',
+  'Sheffield',
+  'Bradford',
+  'Edinburgh',
+  'Liverpool',
+  'Bristol',
+  'Cardiff',
+  'Coventry',
+  'Leicester',
+  'Nottingham',
+  'Newcastle upon Tyne',
+  'Southampton',
+  'Brighton',
+  'Plymouth',
+  'Reading',
+  'Derby',
+  'Wolverhampton',
+  'Northampton',
+  'Norwich',
+  'Luton',
+  'Bolton',
+  'Bournemouth',
+  'Swindon',
+  'Swansea',
+  'Southend-on-Sea',
+  'Middlesbrough',
+  'Sunderland',
+  'Milton Keynes',
+  'Peterborough',
+  'York',
+  'Oxford',
+  'Cambridge',
+  'Ipswich',
+  'Slough',
+  'Gloucester',
+  'Exeter',
+  'Bath',
+  'Cheltenham',
+  'Stoke-on-Trent',
+  'Hull',
+  'Aberdeen',
+  'Dundee',
+  'Stirling',
+  'Inverness',
+  'Belfast',
+  'Derry',
 ];
 
 describe('the copied GB slug snippet', () => {
@@ -82,7 +124,9 @@ describe('Kleinanzeigen price patterns, pathological input', () => {
     const pathological = `<html><body>${'id="viewad-price"'.repeat(36_000)}</body></html>`;
 
     const started = Date.now();
-    expect(() => parseKleinanzeigenDetail(pathological, 'https://www.kleinanzeigen.de/s-anzeige/x/1-2-3')).toThrow();
+    expect(() =>
+      parseKleinanzeigenDetail(pathological, 'https://www.kleinanzeigen.de/s-anzeige/x/1-2-3'),
+    ).toThrow();
     expect(Date.now() - started).toBeLessThan(2_000);
   });
 
@@ -91,7 +135,9 @@ describe('Kleinanzeigen price patterns, pathological input', () => {
     const pathological = `<html><body>${'class="boxedarticle--price"'.repeat(36_000)}</body></html>`;
 
     const started = Date.now();
-    expect(() => parseKleinanzeigenDetail(pathological, 'https://www.kleinanzeigen.de/s-anzeige/x/1-2-3')).toThrow();
+    expect(() =>
+      parseKleinanzeigenDetail(pathological, 'https://www.kleinanzeigen.de/s-anzeige/x/1-2-3'),
+    ).toThrow();
     expect(Date.now() - started).toBeLessThan(2_000);
   });
 });

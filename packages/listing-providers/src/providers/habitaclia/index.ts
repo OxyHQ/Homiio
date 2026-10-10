@@ -29,9 +29,17 @@ import type {
 } from '../../types';
 import { createFetchRuntime } from '../../runtime';
 import { fetchListingViaLadder, classifyOutcome } from '../../strategy';
-import { defaultProviderMetrics, type ProviderMetricsReader, type ProviderMetricsSink } from '../../metrics';
+import {
+  defaultProviderMetrics,
+  type ProviderMetricsReader,
+  type ProviderMetricsSink,
+} from '../../metrics';
 import { providerMaxSearchPages } from '../../discoverLimits';
-import { BrowserSessionChallengeError, type BrowserSession, type BrowserStorageState } from '../../browserSession';
+import {
+  BrowserSessionChallengeError,
+  type BrowserSession,
+  type BrowserStorageState,
+} from '../../browserSession';
 import { createProxySessionId, envBool } from '../../proxy';
 import { HABITACLIA_BASE_URL, type HabitacliaRawListing } from './fixtures';
 import { habitacliaSourceIdFromUrl, parseHabitacliaDetail, parseHabitacliaSearch } from './parse';
@@ -133,7 +141,8 @@ export class HabitacliaProvider implements ListingProvider {
 
   constructor(options: HabitacliaProviderOptions = {}) {
     this.runtime = options.runtime ?? createFetchRuntime();
-    this.cities = options.cities && options.cities.length > 0 ? options.cities : habitacliaCitiesFromEnv();
+    this.cities =
+      options.cities && options.cities.length > 0 ? options.cities : habitacliaCitiesFromEnv();
     this.metrics = options.metrics ?? defaultProviderMetrics;
     this.maxSearchPages = providerMaxSearchPages(PROVIDER_ID, DEFAULT_MAX_SEARCH_PAGES, 'ES');
   }
@@ -152,7 +161,15 @@ export class HabitacliaProvider implements ListingProvider {
     for (const city of cities) {
       if (yielded.count >= limit) return;
       const http = { challenged: false };
-      for await (const ref of this.discoverCityViaHttp(runtime, city, job.signal, seen, limit, yielded, http)) {
+      for await (const ref of this.discoverCityViaHttp(
+        runtime,
+        city,
+        job.signal,
+        seen,
+        limit,
+        yielded,
+        http,
+      )) {
         yield ref;
       }
       // Escalate ONLY cities cold HTTP was actually blocked on — a city that
@@ -531,7 +548,11 @@ export class HabitacliaProvider implements ListingProvider {
     const snapshot = this.metrics.snapshot(this.id);
     if (snapshot && snapshot.attempts > 0) {
       const status =
-        snapshot.challengeRate >= 0.8 ? 'unhealthy' : snapshot.challengeRate >= 0.3 ? 'degraded' : 'healthy';
+        snapshot.challengeRate >= 0.8
+          ? 'unhealthy'
+          : snapshot.challengeRate >= 0.3
+            ? 'degraded'
+            : 'healthy';
       return {
         provider: this.id,
         status,

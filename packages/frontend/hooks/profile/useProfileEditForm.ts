@@ -253,7 +253,9 @@ export function useProfileEditForm() {
   }, []);
 
   const updateRentalHistory = useCallback((index: number, updates: Partial<RentalHistoryForm>) => {
-    setRentalHistory((prev) => prev.map((entry, i) => (i === index ? { ...entry, ...updates } : entry)));
+    setRentalHistory((prev) =>
+      prev.map((entry, i) => (i === index ? { ...entry, ...updates } : entry)),
+    );
     setHasUnsavedChanges(true);
   }, []);
 
@@ -277,7 +279,8 @@ export function useProfileEditForm() {
     });
 
     if (!validation.success) {
-      const message = validation.error.issues[0]?.message || 'Please review the form and try again.';
+      const message =
+        validation.error.issues[0]?.message || 'Please review the form and try again.';
       toast.error(message);
       return;
     }
@@ -303,7 +306,15 @@ export function useProfileEditForm() {
     } finally {
       setIsSaving(false);
     }
-  }, [activeProfile, personalInfo, preferences, references, rentalHistory, settings, updateProfile]);
+  }, [
+    activeProfile,
+    personalInfo,
+    preferences,
+    references,
+    rentalHistory,
+    settings,
+    updateProfile,
+  ]);
 
   return {
     activeProfile,

@@ -169,12 +169,14 @@ const REASON_FOR_LEAVING_MAP: Record<ReasonForLeavingValue, ReasonForLeaving> = 
   other: ReasonForLeaving.OTHER,
 };
 
-const PROFILE_VISIBILITY_MAP: Record<SettingsForm['privacy']['profileVisibility'], ProfileVisibility> =
-  {
-    public: ProfileVisibility.PUBLIC,
-    private: ProfileVisibility.PRIVATE,
-    contacts_only: ProfileVisibility.CONTACTS_ONLY,
-  };
+const PROFILE_VISIBILITY_MAP: Record<
+  SettingsForm['privacy']['profileVisibility'],
+  ProfileVisibility
+> = {
+  public: ProfileVisibility.PUBLIC,
+  private: ProfileVisibility.PRIVATE,
+  contacts_only: ProfileVisibility.CONTACTS_ONLY,
+};
 
 const toOptionalInt = (val: string): number | undefined => (val ? parseInt(val, 10) : undefined);
 

@@ -151,8 +151,10 @@ describe('clientAddressOf', () => {
   it('prefers req.ip over the socket peer', () => {
     // Behind the ALB the socket peer IS the ALB. Reading it in preference to
     // `req.ip` would locate every visitor in the datacentre.
-    expect(
-      clientAddressOf({ ip: '203.0.113.5', socket: { remoteAddress: '10.0.3.14' } }),
-    ).toEqual({ kind: 'public', address: '203.0.113.5', family: 'ipv4' });
+    expect(clientAddressOf({ ip: '203.0.113.5', socket: { remoteAddress: '10.0.3.14' } })).toEqual({
+      kind: 'public',
+      address: '203.0.113.5',
+      family: 'ipv4',
+    });
   });
 });

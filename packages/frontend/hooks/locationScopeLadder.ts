@@ -80,9 +80,8 @@ export type LocationScopeSource =
  * every one of them has to make the same disclosure — "Bucharest · approximate
  * area" — and a surface that forgets states a guess as a fact.
  */
-export const INFERRED_SCOPE_SOURCES: ReadonlySet<LocationScopeSource> = new Set<LocationScopeSource>(
-  ['device', 'ip'],
-);
+export const INFERRED_SCOPE_SOURCES: ReadonlySet<LocationScopeSource> =
+  new Set<LocationScopeSource>(['device', 'ip']);
 
 /**
  * What the device rung currently knows.
@@ -401,12 +400,7 @@ export function resolveLocationScope(inputs: LocationScopeInputs): LocationScope
 
   // 6. The network. No prompt, no permission, no precision claimed.
   if (inputs.approximate.status === 'resolved') {
-    return scoped(
-      inputs.approximate.selection,
-      'ip',
-      base,
-      inputs.approximate.granularity,
-    );
+    return scoped(inputs.approximate.selection, 'ip', base, inputs.approximate.granularity);
   }
 
   // 7. Still waiting on something that can answer. A skeleton, not a board.

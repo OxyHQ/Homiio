@@ -33,18 +33,12 @@ import {
   RiVolumeUpLine,
 } from '@oxy.so/bloom/icons';
 import { Switch } from '@oxy.so/bloom/switch';
-import {
-  SettingsListGroup,
-  SettingsListItem,
-} from '@oxy.so/bloom/settings-list';
+import { SettingsListGroup, SettingsListItem } from '@oxy.so/bloom/settings-list';
 import { useTheme } from '@oxy.so/bloom/theme';
 
 import { Header } from '@/components/Header';
 import { confirm } from '@oxy.so/bloom/surfaces';
-import {
-  useNotifications,
-  type NotificationPreferences,
-} from '@/context/NotificationContext';
+import { useNotifications, type NotificationPreferences } from '@/context/NotificationContext';
 import {
   createPropertyNotification,
   createMessageNotification,
@@ -97,18 +91,12 @@ export default function NotificationSettingsScreen() {
     try {
       const granted = await requestPermissions();
       if (granted) {
-        toast.success(
-          t('notification.permissions.granted'),
-        );
+        toast.success(t('notification.permissions.granted'));
       } else {
-        toast.error(
-          t('notification.permissions.denied'),
-        );
+        toast.error(t('notification.permissions.denied'));
       }
     } catch {
-      toast.error(
-        t('notification.permissions.error'),
-      );
+      toast.error(t('notification.permissions.error'));
     }
   }, [requestPermissions, t]);
 
@@ -123,13 +111,9 @@ export default function NotificationSettingsScreen() {
     if (!ok) return;
     try {
       await clearAllNotifications();
-      toast.success(
-        t('notification.clearAll.success'),
-      );
+      toast.success(t('notification.clearAll.success'));
     } catch {
-      toast.error(
-        t('notification.clearAll.error'),
-      );
+      toast.error(t('notification.clearAll.error'));
     }
   }, [clearAllNotifications, t]);
 
@@ -199,68 +183,65 @@ export default function NotificationSettingsScreen() {
     },
   ];
 
-  const testActions: { label: string; icon: SettingsIconComponent; run: () => Promise<unknown> }[] = [
-    {
-      label: t('notification.test.property'),
-      icon: RiHomeLine,
-      run: () =>
-        createPropertyNotification(
-          'test-property-id',
-          'New property available',
-          'A new property matching your search criteria is now available.',
-          { test: true },
-        ),
-    },
-    {
-      label: t('notification.test.message'),
-      icon: RiChat3Line,
-      run: () =>
-        createMessageNotification(
-          'test-message-id',
-          'John Doe',
-          'Hi! I am interested in your property.',
-          { test: true },
-        ),
-    },
-    {
-      label: t('notification.test.reminder'),
-      icon: RiTimeLine,
-      run: () => {
-        const tomorrow = new Date();
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        tomorrow.setHours(10, 0, 0, 0);
-        return createReminderNotification(
-          'Property viewing reminder',
-          'You have a property viewing scheduled for tomorrow at 10:00 AM.',
-          tomorrow,
-          { test: true },
-        );
+  const testActions: { label: string; icon: SettingsIconComponent; run: () => Promise<unknown> }[] =
+    [
+      {
+        label: t('notification.test.property'),
+        icon: RiHomeLine,
+        run: () =>
+          createPropertyNotification(
+            'test-property-id',
+            'New property available',
+            'A new property matching your search criteria is now available.',
+            { test: true },
+          ),
       },
-    },
-    {
-      label: t('notification.test.repeating'),
-      icon: RiRepeatLine,
-      run: () =>
-        createRepeatingNotification(
-          'Daily property update',
-          'Check out the latest properties in your area.',
-          'day',
-          { test: true },
-        ),
-    },
-  ];
+      {
+        label: t('notification.test.message'),
+        icon: RiChat3Line,
+        run: () =>
+          createMessageNotification(
+            'test-message-id',
+            'John Doe',
+            'Hi! I am interested in your property.',
+            { test: true },
+          ),
+      },
+      {
+        label: t('notification.test.reminder'),
+        icon: RiTimeLine,
+        run: () => {
+          const tomorrow = new Date();
+          tomorrow.setDate(tomorrow.getDate() + 1);
+          tomorrow.setHours(10, 0, 0, 0);
+          return createReminderNotification(
+            'Property viewing reminder',
+            'You have a property viewing scheduled for tomorrow at 10:00 AM.',
+            tomorrow,
+            { test: true },
+          );
+        },
+      },
+      {
+        label: t('notification.test.repeating'),
+        icon: RiRepeatLine,
+        run: () =>
+          createRepeatingNotification(
+            'Daily property update',
+            'Check out the latest properties in your area.',
+            'day',
+            { test: true },
+          ),
+      },
+    ];
 
   const runTest = useCallback(
     async (run: () => Promise<unknown>): Promise<void> => {
       try {
         await run();
-        toast.success(
-          t('notification.test.success'),
-        );
+        toast.success(t('notification.test.success'));
       } catch {
-        toast.error(
-          t('notification.test.error'),
-        );
+        toast.error(t('notification.test.error'));
       }
     },
     [t],
@@ -291,7 +272,9 @@ export default function NotificationSettingsScreen() {
                 <AdmonitionText style={styles.permissionTitle}>
                   {t('notification.permissions.disabled.title')}
                 </AdmonitionText>
-                <AdmonitionText>{t('notification.permissions.disabled.description')}</AdmonitionText>
+                <AdmonitionText>
+                  {t('notification.permissions.disabled.description')}
+                </AdmonitionText>
                 <AdmonitionButton onPress={() => void handleRequestPermissions()}>
                   {t('notification.permissions.enable')}
                 </AdmonitionButton>
@@ -300,9 +283,7 @@ export default function NotificationSettingsScreen() {
           </AdmonitionRoot>
         )}
 
-        <SettingsListGroup
-          title={t('notification.settings.categories')}
-        >
+        <SettingsListGroup title={t('notification.settings.categories')}>
           {categoryRows.map((row) => (
             <SettingsListItem
               key={row.key}
@@ -312,9 +293,7 @@ export default function NotificationSettingsScreen() {
               rightElement={
                 <Switch
                   checked={preferences[row.key]}
-                  onCheckedChange={(value) =>
-                    handlePreferenceChange(row.key, value)
-                  }
+                  onCheckedChange={(value) => handlePreferenceChange(row.key, value)}
                   disabled={isUpdating}
                 />
               }
@@ -322,9 +301,7 @@ export default function NotificationSettingsScreen() {
           ))}
         </SettingsListGroup>
 
-        <SettingsListGroup
-          title={t('notification.settings.behavior')}
-        >
+        <SettingsListGroup title={t('notification.settings.behavior')}>
           {behaviorRows.map((row) => (
             <SettingsListItem
               key={row.key}
@@ -334,9 +311,7 @@ export default function NotificationSettingsScreen() {
               rightElement={
                 <Switch
                   checked={preferences[row.key]}
-                  onCheckedChange={(value) =>
-                    handlePreferenceChange(row.key, value)
-                  }
+                  onCheckedChange={(value) => handlePreferenceChange(row.key, value)}
                   disabled={isUpdating}
                 />
               }
@@ -360,9 +335,7 @@ export default function NotificationSettingsScreen() {
           </SettingsListGroup>
         ) : null}
 
-        <SettingsListGroup
-          title={t('notification.settings.manage')}
-        >
+        <SettingsListGroup title={t('notification.settings.manage')}>
           <SettingsListItem
             icon={<SettingsRowIcon icon={RiDeleteBinLine} destructive />}
             title={t('notification.settings.clearAll')}

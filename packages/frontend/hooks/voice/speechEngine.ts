@@ -13,9 +13,8 @@ import type { SpeechCallbacks, StartSpeechRecognition } from './speechTypes';
  * client or store build). Here such a build reports `unsupported` and the
  * composer shows "not available on this device" instead of crashing the chat.
  */
-const nativeModule = requireOptionalNativeModule<ExpoSpeechRecognitionModuleType>(
-  'ExpoSpeechRecognition',
-);
+const nativeModule =
+  requireOptionalNativeModule<ExpoSpeechRecognitionModuleType>('ExpoSpeechRecognition');
 
 export const startSpeechRecognition: StartSpeechRecognition = (
   lang: string,

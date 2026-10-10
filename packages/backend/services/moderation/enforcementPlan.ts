@@ -51,38 +51,37 @@ export interface PlannedEnforcementAction {
 }
 
 /** What a recommended action becomes in Homiio. */
-const RECOMMENDATION_TO_ACTION: Readonly<
-  Record<RecommendedAction, ModerationEnforcementAction>
-> = Object.freeze({
-  remove: 'restrict',
-  remove_or_restrict: 'restrict',
-  hide: 'restrict',
+const RECOMMENDATION_TO_ACTION: Readonly<Record<RecommendedAction, ModerationEnforcementAction>> =
+  Object.freeze({
+    remove: 'restrict',
+    remove_or_restrict: 'restrict',
+    hide: 'restrict',
 
-  // Homiio has no content warning and no distribution dial. The closest honest
-  // thing is marking the object contested where such a mark exists.
-  label: 'flag_for_review',
-  allow_with_label: 'flag_for_review',
-  age_gate: 'flag_for_review',
-  reduce_distribution: 'flag_for_review',
+    // Homiio has no content warning and no distribution dial. The closest honest
+    // thing is marking the object contested where such a mark exists.
+    label: 'flag_for_review',
+    allow_with_label: 'flag_for_review',
+    age_gate: 'flag_for_review',
+    reduce_distribution: 'flag_for_review',
 
-  allow: 'none',
-  no_action: 'none',
-  no_global_effect: 'none',
-  restore: 'restore',
+    allow: 'none',
+    no_action: 'none',
+    no_global_effect: 'none',
+    restore: 'restore',
 
-  // Homiio holds none of the levers these ask for. Recorded, queued for a human.
-  suspend_user: 'manual_review',
-  freeze_transaction: 'manual_review',
-  request_changes: 'manual_review',
-  request_more_context: 'manual_review',
-  hold: 'manual_review',
-  local_manual_review: 'manual_review',
-  keep_restricted_temporarily: 'manual_review',
-  escalate: 'manual_review',
-  specialist_queue: 'manual_review',
-  legal_queue: 'manual_review',
-  safety_queue: 'manual_review',
-});
+    // Homiio holds none of the levers these ask for. Recorded, queued for a human.
+    suspend_user: 'manual_review',
+    freeze_transaction: 'manual_review',
+    request_changes: 'manual_review',
+    request_more_context: 'manual_review',
+    hold: 'manual_review',
+    local_manual_review: 'manual_review',
+    keep_restricted_temporarily: 'manual_review',
+    escalate: 'manual_review',
+    specialist_queue: 'manual_review',
+    legal_queue: 'manual_review',
+    safety_queue: 'manual_review',
+  });
 
 /**
  * The action a violation gets when the decision recommended nothing.
@@ -95,13 +94,12 @@ const RECOMMENDATION_TO_ACTION: Readonly<
  * "restrict" and "preserve and escalate" carries legal weight that a mapping
  * table is the wrong place to decide.
  */
-const SEVERITY_FALLBACK: Readonly<Record<Severity, ModerationEnforcementAction>> =
-  Object.freeze({
-    critical: 'manual_review',
-    high: 'restrict',
-    medium: 'flag_for_review',
-    low: 'manual_review',
-  });
+const SEVERITY_FALLBACK: Readonly<Record<Severity, ModerationEnforcementAction>> = Object.freeze({
+  critical: 'manual_review',
+  high: 'restrict',
+  medium: 'flag_for_review',
+  low: 'manual_review',
+});
 
 const SEVERITY_ORDER: readonly Severity[] = ['low', 'medium', 'high', 'critical'];
 
@@ -140,10 +138,7 @@ function withRestoreForNoViolation(
 ): readonly PlannedEnforcementAction[] {
   if (decision.outcome !== 'no_violation') return planned;
   if (planned.some((entry) => entry.action === 'restore')) return planned;
-  return [
-    ...planned,
-    { action: 'restore', reason: 'No violation: undo any earlier restriction' },
-  ];
+  return [...planned, { action: 'restore', reason: 'No violation: undo any earlier restriction' }];
 }
 
 /**
@@ -157,9 +152,7 @@ function withRestoreForNoViolation(
  * because something else was also done is how a `suspend_user` recommendation
  * gets lost.
  */
-function collapse(
-  actions: readonly PlannedEnforcementAction[],
-): PlannedEnforcementAction[] {
+function collapse(actions: readonly PlannedEnforcementAction[]): PlannedEnforcementAction[] {
   const byAction = new Map<ModerationEnforcementAction, PlannedEnforcementAction>();
   for (const planned of actions) {
     if (!byAction.has(planned.action)) byAction.set(planned.action, planned);
@@ -231,9 +224,7 @@ export function planEnforcement(decision: Decision): PlannedEnforcementAction[] 
        * checked and there was nothing to undo" stays distinguishable from "we
        * never looked".
        */
-      return [
-        { action: 'restore', reason: 'No violation: undo any earlier restriction' },
-      ];
+      return [{ action: 'restore', reason: 'No violation: undo any earlier restriction' }];
 
     case 'insufficient_context':
     case 'inconclusive':
@@ -252,9 +243,7 @@ export function planEnforcement(decision: Decision): PlannedEnforcementAction[] 
 
     case 'content_unavailable':
     case 'duplicate':
-      return [
-        { action: 'none', reason: `Outcome ${decision.outcome}: nothing to enforce` },
-      ];
+      return [{ action: 'none', reason: `Outcome ${decision.outcome}: nothing to enforce` }];
 
     default:
       /**

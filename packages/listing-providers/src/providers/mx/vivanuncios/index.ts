@@ -32,7 +32,11 @@ import type {
 } from '../../../types';
 import { createFetchRuntime } from '../../../runtime';
 import { ChallengeError, fetchListingViaLadder } from '../../../strategy';
-import { defaultProviderMetrics, type ProviderMetricsReader, type ProviderMetricsSink } from '../../../metrics';
+import {
+  defaultProviderMetrics,
+  type ProviderMetricsReader,
+  type ProviderMetricsSink,
+} from '../../../metrics';
 import { VIVANUNCIOS_BASE_URL, VIVANUNCIOS_HOUSING_SLUGS } from './fixtures';
 import {
   isVivanunciosChallenge,
@@ -204,7 +208,11 @@ export class VivanunciosProvider implements ListingProvider {
   normalize(raw: RawListing): NormalizedListing {
     const listing = asRaw(raw.payload);
     if (!isHousingCategoryUrl(listing.url, VIVANUNCIOS_HOUSING_SLUGS)) {
-      throw new NonHousingListingError(this.id, listing.sourceId, `url is not housing: ${listing.url}`);
+      throw new NonHousingListingError(
+        this.id,
+        listing.sourceId,
+        `url is not housing: ${listing.url}`,
+      );
     }
     const isSale = listing.operation === 'sale';
     const isHouse = /casa/i.test(listing.url) || /casa/i.test(listing.category ?? '');

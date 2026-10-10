@@ -496,7 +496,9 @@ const sendRoommateRequest = async (req: Request, res: Response): Promise<Respons
       });
     } catch (error) {
       if (error instanceof PendingRoommateRequestExistsError) {
-        return res.status(409).json({ error: 'A pending roommate request already exists between these users' });
+        return res
+          .status(409)
+          .json({ error: 'A pending roommate request already exists between these users' });
       }
       throw error;
     }
@@ -546,7 +548,11 @@ const createRelationshipForAcceptedRequest = async (request: RoommateRequestRow)
 };
 
 // Respond to a roommate request (accept/decline) - only the recipient may respond
-const respondToRoommateRequest = async (req: Request, res: Response, status: 'accepted' | 'declined'): Promise<Response | void> => {
+const respondToRoommateRequest = async (
+  req: Request,
+  res: Response,
+  status: 'accepted' | 'declined',
+): Promise<Response | void> => {
   const action = status === 'accepted' ? 'accept' : 'decline';
   try {
     const { requestId } = req.params;
@@ -707,7 +713,10 @@ const endRoommateRelationship = async (req: Request, res: Response): Promise<Res
  * bypassed the transform by reading `profile._id` directly, and #287 made the
  * rename the wire contract.
  */
-const getCurrentUserRoommateStatus = async (req: Request, res: Response): Promise<Response | void> => {
+const getCurrentUserRoommateStatus = async (
+  req: Request,
+  res: Response,
+): Promise<Response | void> => {
   try {
     const oxyUserId = resolveOxyUserId(req);
     if (!oxyUserId) {
@@ -746,5 +755,5 @@ export default {
   declineRoommateRequest,
   getRoommateRelationships,
   endRoommateRelationship,
-  getCurrentUserRoommateStatus
+  getCurrentUserRoommateStatus,
 };

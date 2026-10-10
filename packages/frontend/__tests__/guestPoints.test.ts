@@ -38,9 +38,7 @@ function movement(overrides: Partial<GuestPointMovement>): GuestPointMovement {
 
 describe('guestPointsForWindow — one point per night', () => {
   it('counts nights on a half-open window', () => {
-    expect(
-      guestPointsForWindow(new Date(BASE), new Date(BASE + 3 * DAY)),
-    ).toBe(3);
+    expect(guestPointsForWindow(new Date(BASE), new Date(BASE + 3 * DAY))).toBe(3);
     expect(guestPointsForWindow(new Date(BASE), new Date(BASE + DAY))).toBe(1);
     // Seven nights, not eight: the window is `[start, end)`, matching the
     // calendar's own bounds. An inclusive count would charge a night nobody
@@ -129,18 +127,34 @@ describe('guestPointStanding — available is not balance', () => {
 
 describe('the reservation key', () => {
   it('is the same for the same intent and different for a different one', () => {
-    const a = guestPointsIdempotencyKeyFor('prop-1', '2026-06-01T10:00:00.000Z', '2026-06-04T10:00:00.000Z');
+    const a = guestPointsIdempotencyKeyFor(
+      'prop-1',
+      '2026-06-01T10:00:00.000Z',
+      '2026-06-04T10:00:00.000Z',
+    );
     // The same stay, asked for a second later. A key that carried the clock
     // would make this a different intent, which is the property an idempotency
     // key exists to destroy.
-    const b = guestPointsIdempotencyKeyFor('prop-1', '2026-06-01T10:00:41.000Z', '2026-06-04T09:00:00.000Z');
+    const b = guestPointsIdempotencyKeyFor(
+      'prop-1',
+      '2026-06-01T10:00:41.000Z',
+      '2026-06-04T09:00:00.000Z',
+    );
     expect(a).toBe(b);
 
     expect(a).not.toBe(
-      guestPointsIdempotencyKeyFor('prop-2', '2026-06-01T10:00:00.000Z', '2026-06-04T10:00:00.000Z'),
+      guestPointsIdempotencyKeyFor(
+        'prop-2',
+        '2026-06-01T10:00:00.000Z',
+        '2026-06-04T10:00:00.000Z',
+      ),
     );
     expect(a).not.toBe(
-      guestPointsIdempotencyKeyFor('prop-1', '2026-06-02T10:00:00.000Z', '2026-06-04T10:00:00.000Z'),
+      guestPointsIdempotencyKeyFor(
+        'prop-1',
+        '2026-06-02T10:00:00.000Z',
+        '2026-06-04T10:00:00.000Z',
+      ),
     );
   });
 

@@ -28,7 +28,9 @@ export const ExploreRow: React.FC<ExploreRowProps> = ({ title, subtitle, rating,
   const theme = useTheme();
   const { t } = useTranslation();
   const hasRating = typeof rating === 'number' && rating > 0;
-  const ratingLabel = hasRating ? t('reviews.ratingA11y', { rating: Number(rating.toFixed(2)) }) : '';
+  const ratingLabel = hasRating
+    ? t('reviews.ratingA11y', { rating: Number(rating.toFixed(2)) })
+    : '';
   return (
     <Item
       role="listitem"

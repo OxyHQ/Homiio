@@ -78,13 +78,7 @@ class NotificationController {
         return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
       }
 
-      const {
-        page = 1,
-        limit = 20,
-        unreadOnly = false,
-        type,
-        priority,
-      } = req.query;
+      const { page = 1, limit = 20, unreadOnly = false, type, priority } = req.query;
 
       const pageNumber = Math.max(1, parseInt(String(page), 10) || 1);
       const limitNumber = Math.min(100, Math.max(1, parseInt(String(limit), 10) || 20));
@@ -132,9 +126,7 @@ class NotificationController {
       const { type, title, message, app, priority, data } = req.body;
 
       if (!type || !title || !message) {
-        return next(
-          new AppError('type, title and message are required', 400, 'VALIDATION_ERROR')
-        );
+        return next(new AppError('type, title and message are required', 400, 'VALIDATION_ERROR'));
       }
 
       const notification = await createNotification(getDb(), {
@@ -152,9 +144,11 @@ class NotificationController {
 
       logger.info('Notification created', { notificationId: notification.id, oxyUserId, type });
 
-      res.status(201).json(
-        successResponse(toNotificationDTO(notification), 'Notification created successfully')
-      );
+      res
+        .status(201)
+        .json(
+          successResponse(toNotificationDTO(notification), 'Notification created successfully'),
+        );
     } catch (error) {
       next(error);
     }
@@ -178,7 +172,7 @@ class NotificationController {
       }
 
       res.json(
-        successResponse(toNotificationDTO(notification), 'Notification retrieved successfully')
+        successResponse(toNotificationDTO(notification), 'Notification retrieved successfully'),
       );
     } catch (error) {
       next(error);
@@ -214,7 +208,7 @@ class NotificationController {
       logger.info('Notification updated', { notificationId, oxyUserId });
 
       res.json(
-        successResponse(toNotificationDTO(notification), 'Notification updated successfully')
+        successResponse(toNotificationDTO(notification), 'Notification updated successfully'),
       );
     } catch (error) {
       next(error);
@@ -285,9 +279,7 @@ class NotificationController {
 
       logger.info('All notifications marked as read', { oxyUserId, modifiedCount });
 
-      res.json(
-        successResponse({ modifiedCount }, 'All notifications marked as read')
-      );
+      res.json(successResponse({ modifiedCount }, 'All notifications marked as read'));
     } catch (error) {
       next(error);
     }
@@ -307,9 +299,7 @@ class NotificationController {
 
       logger.info('All notifications cleared', { oxyUserId, deletedCount });
 
-      res.json(
-        successResponse({ deletedCount }, 'All notifications cleared successfully')
-      );
+      res.json(successResponse({ deletedCount }, 'All notifications cleared successfully'));
     } catch (error) {
       next(error);
     }

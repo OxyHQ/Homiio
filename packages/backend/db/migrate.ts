@@ -152,10 +152,10 @@ export function findMigrationsFolder(): string {
 
   throw new Error(
     `No drizzle/meta/_journal.json found above ${__dirname}. Migrations cannot ` +
-    'be applied from a tree that does not contain them — and a missing folder ' +
-    'does NOT fail on its own: drizzle applies nothing and exits 0, which is ' +
-    'indistinguishable from an up-to-date database. In a container this means ' +
-    'the image was built without `COPY … packages/backend/drizzle`.',
+      'be applied from a tree that does not contain them — and a missing folder ' +
+      'does NOT fail on its own: drizzle applies nothing and exits 0, which is ' +
+      'indistinguishable from an up-to-date database. In a container this means ' +
+      'the image was built without `COPY … packages/backend/drizzle`.',
   );
 }
 
@@ -180,9 +180,9 @@ export function readMigrationRun(argv: readonly string[]): MigrationRun {
   if (flags.length === 0) {
     throw new Error(
       `--phase is required. Use one of: ${MIGRATION_RUNS.map((run) => `${prefix}${run}`).join(', ')}. ` +
-      '`--phase=all` is the right answer for a developer database, the jest ' +
-      'harness or a manual dispatch; a deploy states `pre` before the rollout ' +
-      'and `post` after it.',
+        '`--phase=all` is the right answer for a developer database, the jest ' +
+        'harness or a manual dispatch; a deploy states `pre` before the rollout ' +
+        'and `post` after it.',
     );
   }
   if (flags.length > 1) {
@@ -191,9 +191,7 @@ export function readMigrationRun(argv: readonly string[]): MigrationRun {
 
   const value = flags[0].slice(prefix.length);
   if (!(MIGRATION_RUNS as readonly string[]).includes(value)) {
-    throw new Error(
-      `Unrecognised --phase=${value}. Use one of: ${MIGRATION_RUNS.join(', ')}.`,
-    );
+    throw new Error(`Unrecognised --phase=${value}. Use one of: ${MIGRATION_RUNS.join(', ')}.`);
   }
   return value as MigrationRun;
 }
@@ -286,7 +284,7 @@ async function main(): Promise<void> {
   if (!url) {
     throw new Error(
       'DATABASE_URL is not set. Start a local Postgres with: ' +
-      'docker compose -f docker-compose.postgres.yml up -d postgres',
+        'docker compose -f docker-compose.postgres.yml up -d postgres',
     );
   }
 

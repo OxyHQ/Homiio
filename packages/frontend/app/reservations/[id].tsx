@@ -10,12 +10,7 @@
  *   `colors.muted`) — no more raw hex literals.
  */
 import React, { useCallback, useMemo } from 'react';
-import {
-  Image,
-  ScrollView,
-  StyleSheet,
-  View,
-} from 'react-native';
+import { Image, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { format } from 'date-fns';
@@ -25,28 +20,18 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@oxy.so/bloom/button';
 import { Loading } from '@oxy.so/bloom/loading';
 import { Text as BloomText, H2 } from '@oxy.so/bloom/typography';
-import {
-  CancellationPolicy,
-  Reservation,
-  ReservationStatus,
-} from '@homiio/shared-types';
+import { CancellationPolicy, Reservation, ReservationStatus } from '@homiio/shared-types';
 
 import { Header } from '@/components/Header';
 import { useProperty } from '@/hooks';
 import { useProfile } from '@/context/ProfileContext';
-import {
-  useReservationQuery,
-  useUpdateReservation,
-} from '@/hooks/useReservationQueries';
+import { useReservationQuery, useUpdateReservation } from '@/hooks/useReservationQueries';
 import { PriceBreakdown } from '@/components/PriceBreakdown';
 import { ReservationStatusBadge } from '@/components/ReservationStatusBadge';
 import { confirm } from '@oxy.so/bloom/surfaces';
 import { Card } from '@oxy.so/bloom/card';
 import { ErrorState } from '@/components/ui/ErrorState';
-import {
-  getPropertyImageSource,
-  getPropertyTitle,
-} from '@/utils/propertyUtils';
+import { getPropertyImageSource, getPropertyTitle } from '@/utils/propertyUtils';
 import { colors } from '@/styles/colors';
 import { radius, spacing, tracker } from '@/constants/styles';
 import { RiAlertLine } from '@oxy.so/bloom/icons';
@@ -112,7 +97,8 @@ export default function ReservationDetailScreen() {
               : 'reservations.detail.toastCancelled';
         toast.success(t(toastKey));
       } catch (error) {
-        const message = error instanceof Error ? error.message : t('reservations.detail.toastUpdateFailed');
+        const message =
+          error instanceof Error ? error.message : t('reservations.detail.toastUpdateFailed');
         toast.error(message);
       }
     },
@@ -207,7 +193,9 @@ export default function ReservationDetailScreen() {
     );
   }
 
-  const propertyTitle = property ? getPropertyTitle(property) : t('reservations.card.propertyFallback');
+  const propertyTitle = property
+    ? getPropertyTitle(property)
+    : t('reservations.card.propertyFallback');
   const imageSource = property ? getPropertyImageSource(property) : null;
   const showGuestCancel =
     role === 'guest' &&
@@ -249,7 +237,9 @@ export default function ReservationDetailScreen() {
           </Card>
 
           <Card radius="radius-16" className="p-5" appearance="outline">
-            <BloomText style={styles.sectionLabel}>{t('reservations.detail.tripDetails')}</BloomText>
+            <BloomText style={styles.sectionLabel}>
+              {t('reservations.detail.tripDetails')}
+            </BloomText>
             <DetailRow
               label={t('reservations.detail.checkIn')}
               value={format(new Date(reservation.checkIn), 'EEE, MMM d, yyyy')}
@@ -291,7 +281,7 @@ export default function ReservationDetailScreen() {
             />
           </Card>
 
-          {(showHostApproveDecline || showGuestCancel || showHostCancel) ? (
+          {showHostApproveDecline || showGuestCancel || showHostCancel ? (
             <View style={styles.actionRow}>
               {showHostApproveDecline ? (
                 <>
@@ -299,7 +289,9 @@ export default function ReservationDetailScreen() {
                     size="md"
                     onPress={() => void confirmAction('confirm')}
                     disabled={updateMutation.isPending}
-                    style={styles.actionButton} tone="accent" appearance="solid"
+                    style={styles.actionButton}
+                    tone="accent"
+                    appearance="solid"
                   >
                     {t('reservations.detail.approve')}
                   </Button>
@@ -307,7 +299,9 @@ export default function ReservationDetailScreen() {
                     size="md"
                     onPress={() => void confirmAction('decline')}
                     disabled={updateMutation.isPending}
-                    style={styles.actionButton} tone="neutral" appearance="outline"
+                    style={styles.actionButton}
+                    tone="neutral"
+                    appearance="outline"
                   >
                     {t('reservations.detail.decline')}
                   </Button>
@@ -318,7 +312,9 @@ export default function ReservationDetailScreen() {
                   size="md"
                   onPress={() => void confirmAction('cancel')}
                   disabled={updateMutation.isPending}
-                  style={styles.actionButton} tone="accent" appearance="subtle"
+                  style={styles.actionButton}
+                  tone="accent"
+                  appearance="subtle"
                 >
                   {t('reservations.detail.cancelReservation')}
                 </Button>

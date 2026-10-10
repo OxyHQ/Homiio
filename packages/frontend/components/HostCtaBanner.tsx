@@ -68,10 +68,7 @@ export function HostCtaBanner({
       <View
         onPointerEnter={Platform.OS === 'web' ? () => setHovered(true) : undefined}
         onPointerLeave={Platform.OS === 'web' ? () => setHovered(false) : undefined}
-        style={[
-          styles.banner,
-          fill ? styles.bannerFill : { aspectRatio },
-        ]}
+        style={[styles.banner, fill ? styles.bannerFill : { aspectRatio }]}
       >
         {/* The photo zooms inside the banner's rounded mask on hover anywhere on
             the banner; the banner never moves. Scrim + copy are siblings, so
@@ -93,10 +90,7 @@ export function HostCtaBanner({
         />
         <View style={[styles.copy, { padding: isWide ? spacing.xl : spacing.lg }]}>
           <BloomText
-            style={[
-              styles.title,
-              { fontSize: isWide ? 22 : 18, lineHeight: isWide ? 28 : 24 },
-            ]}
+            style={[styles.title, { fontSize: isWide ? 22 : 18, lineHeight: isWide ? 28 : 24 }]}
             numberOfLines={2}
           >
             {title}

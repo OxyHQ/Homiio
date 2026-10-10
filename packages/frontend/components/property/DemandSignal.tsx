@@ -47,10 +47,7 @@ const daysSince = (createdAt: string | undefined): number | null => {
   return diff < 0 ? 0 : diff;
 };
 
-export const DemandSignal: React.FC<DemandSignalProps> = ({
-  propertyId,
-  createdAt,
-}) => {
+export const DemandSignal: React.FC<DemandSignalProps> = ({ propertyId, createdAt }) => {
   const { t } = useTranslation();
   const { stats } = usePropertyStats(propertyId);
 
@@ -66,8 +63,7 @@ export const DemandSignal: React.FC<DemandSignalProps> = ({
 
   if (!listedLabel) return null;
 
-  const savedLabel =
-    savesCount > 0 ? t('property.demand.saved', { count: savesCount }) : null;
+  const savedLabel = savesCount > 0 ? t('property.demand.saved', { count: savesCount }) : null;
 
   return (
     <View style={styles.row}>

@@ -32,11 +32,7 @@ import {
   type BrowserSession,
 } from './session';
 
-export {
-  BrowserSessionChallengeError,
-  type BrowserSession,
-  type BrowserStorageState,
-};
+export { BrowserSessionChallengeError, type BrowserSession, type BrowserStorageState };
 
 export interface BrowserSessionOptions extends WarmBrowserPageOptions {
   locale?: string;
@@ -121,7 +117,10 @@ class PlaywrightBrowserSession implements BrowserSession {
     });
   }
 
-  async request(url: string, init?: BrowserSessionRequestInit): Promise<BrowserSessionRequestResult> {
+  async request(
+    url: string,
+    init?: BrowserSessionRequestInit,
+  ): Promise<BrowserSessionRequestResult> {
     return fetchJsonInPage(this.page, url, {
       ...init,
       referer: init?.referer ?? this.pageUrl(),
@@ -242,7 +241,9 @@ export class PlaywrightSessionPool {
       const browser = await this.ensureBrowser();
       const sessionId =
         options.proxySessionId ??
-        (this.stickyProxySession || options.stickyProxySession ? createProxySessionId() : undefined);
+        (this.stickyProxySession || options.stickyProxySession
+          ? createProxySessionId()
+          : undefined);
       const locale = options.locale ?? 'es-ES';
       const acceptLanguage =
         options.acceptLanguage ?? `${locale},${locale.split('-')[0]};q=0.9,en;q=0.8`;

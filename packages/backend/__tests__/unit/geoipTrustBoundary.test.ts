@@ -40,16 +40,20 @@ function geoipSources(): { file: string; source: string }[] {
  * the prose that exists to prevent the bug. Only code is scanned.
  */
 function codeOnly(source: string): string {
-  return source
-    .replace(/\/\*[\s\S]*?\*\//g, '')
-    .replace(/(^|[^:])\/\/.*$/gm, '$1');
+  return source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
 }
 
 describe('the GeoIP path never reads a client-supplied address', () => {
   it('parses no forwarding header of its own', () => {
     for (const { file, source } of geoipSources()) {
       const code = codeOnly(source);
-      for (const header of ['x-forwarded-for', 'x-real-ip', 'forwarded', 'cf-connecting-ip', 'true-client-ip']) {
+      for (const header of [
+        'x-forwarded-for',
+        'x-real-ip',
+        'forwarded',
+        'cf-connecting-ip',
+        'true-client-ip',
+      ]) {
         expect({ file, header, found: code.toLowerCase().includes(header) }).toEqual({
           file,
           header,
@@ -81,7 +85,9 @@ describe('the GeoIP path never reads a client-supplied address', () => {
       path.join(__dirname, '../../controllers/geoController.ts'),
       'utf8',
     );
-    const handler = controller.slice(controller.indexOf('export async function approximateLocation'));
+    const handler = controller.slice(
+      controller.indexOf('export async function approximateLocation'),
+    );
     expect(handler).not.toMatch(/req\.query\.(ip|address|clientIp)/);
     // The one query parameter it may read is the label language.
     expect(handler).toContain('parseLanguage(req.query.language');
@@ -92,7 +98,9 @@ describe('the GeoIP path never reads a client-supplied address', () => {
       path.join(__dirname, '../../controllers/geoController.ts'),
       'utf8',
     );
-    const handler = controller.slice(controller.indexOf('export async function approximateLocation'));
+    const handler = controller.slice(
+      controller.indexOf('export async function approximateLocation'),
+    );
     // A shared cache anywhere on the path would hand one visitor's city to the
     // next one. Both epics name the header explicitly.
     expect(handler).toContain("'Cache-Control', 'private, no-store'");

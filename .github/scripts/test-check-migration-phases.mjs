@@ -9,21 +9,21 @@
 // a gate that fails without saying which file is wrong sends whoever hits it
 // hunting, and a gate that passes an empty scan protects nothing at all.
 
-import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const gateScript = resolve(dirname(fileURLToPath(import.meta.url)), "check-migration-phases.mjs");
-const workingDirectory = await mkdtemp(join(tmpdir(), "homiio-migration-phases-"));
+const gateScript = resolve(dirname(fileURLToPath(import.meta.url)), 'check-migration-phases.mjs');
+const workingDirectory = await mkdtemp(join(tmpdir(), 'homiio-migration-phases-'));
 const decoder = new TextDecoder();
 const failures = [];
 
 function runGate(folder) {
   const result = Bun.spawnSync({
     cmd: [process.execPath, gateScript, folder],
-    stdout: "pipe",
-    stderr: "pipe",
+    stdout: 'pipe',
+    stderr: 'pipe',
   });
   return {
     exitCode: result.exitCode,
@@ -37,17 +37,17 @@ function runGate(folder) {
  */
 async function buildFolder(name, files, { journalTags } = {}) {
   const folder = join(workingDirectory, name);
-  await mkdir(join(folder, "meta"), { recursive: true });
+  await mkdir(join(folder, 'meta'), { recursive: true });
 
   const tags = journalTags ?? Object.keys(files);
   await writeFile(
-    join(folder, "meta", "_journal.json"),
+    join(folder, 'meta', '_journal.json'),
     JSON.stringify({
-      version: "7",
-      dialect: "postgresql",
+      version: '7',
+      dialect: 'postgresql',
       entries: tags.map((tag, index) => ({
         idx: index,
-        version: "7",
+        version: '7',
         when: 1_700_000_000_000 + index,
         tag,
         breakpoints: true,
@@ -75,75 +75,79 @@ async function expectVerdict(caseName, folder, expectedExitCode, expectedFragmen
   }
 }
 
-const GOOD = "-- oxy:deploy-phase=pre\nCREATE TABLE a (id text primary key);\n";
+const GOOD = '-- oxy:deploy-phase=pre\nCREATE TABLE a (id text primary key);\n';
 
 // The control. Without it, a gate that failed on EVERYTHING would pass every
 // other case here and look perfectly healthy.
 await expectVerdict(
-  "a correctly marked migration",
-  await buildFolder("good", { "0000_good": GOOD }),
+  'a correctly marked migration',
+  await buildFolder('good', { '0000_good': GOOD }),
   0,
-  "0000_good: pre",
+  '0000_good: pre',
 );
 
 await expectVerdict(
-  "a post-phase migration",
-  await buildFolder("post", {
-    "0000_drop": "-- oxy:deploy-phase=post\nALTER TABLE a DROP COLUMN b;\n",
+  'a post-phase migration',
+  await buildFolder('post', {
+    '0000_drop': '-- oxy:deploy-phase=post\nALTER TABLE a DROP COLUMN b;\n',
   }),
   0,
-  "0000_drop: post",
+  '0000_drop: post',
 );
 
 await expectVerdict(
-  "no marker at all",
-  await buildFolder("unmarked", { "0000_unmarked": "CREATE TABLE a (id text);\n" }),
+  'no marker at all',
+  await buildFolder('unmarked', { '0000_unmarked': 'CREATE TABLE a (id text);\n' }),
   1,
-  "0000_unmarked",
+  '0000_unmarked',
 );
 
 await expectVerdict(
-  "two markers",
-  await buildFolder("double", {
-    "0000_double": "-- oxy:deploy-phase=pre\n-- oxy:deploy-phase=post\nSELECT 1;\n",
+  'two markers',
+  await buildFolder('double', {
+    '0000_double': '-- oxy:deploy-phase=pre\n-- oxy:deploy-phase=post\nSELECT 1;\n',
   }),
   1,
-  "0000_double",
+  '0000_double',
 );
 
 await expectVerdict(
-  "an unrecognised phase",
-  await buildFolder("bogus", { "0000_bogus": "-- oxy:deploy-phase=later\nSELECT 1;\n" }),
+  'an unrecognised phase',
+  await buildFolder('bogus', { '0000_bogus': '-- oxy:deploy-phase=later\nSELECT 1;\n' }),
   1,
-  "0000_bogus",
+  '0000_bogus',
 );
 
 await expectVerdict(
-  "a journalled migration with no .sql file",
-  await buildFolder("missing", { "0000_missing": null }),
+  'a journalled migration with no .sql file',
+  await buildFolder('missing', { '0000_missing': null }),
   1,
-  "0000_missing",
+  '0000_missing',
 );
 
 await expectVerdict(
-  "a .sql file absent from the journal",
-  await buildFolder("orphan", { "0000_good": GOOD, "0001_orphan": GOOD }, {
-    journalTags: ["0000_good"],
-  }),
+  'a .sql file absent from the journal',
+  await buildFolder(
+    'orphan',
+    { '0000_good': GOOD, '0001_orphan': GOOD },
+    {
+      journalTags: ['0000_good'],
+    },
+  ),
   1,
-  "0001_orphan",
+  '0001_orphan',
 );
 
 // An empty journal is the vacuity case: it produces no per-file complaint, so a
 // gate that only iterated entries would report success over a folder that
 // applies nothing.
-await expectVerdict("an empty journal", await buildFolder("empty", {}), 1, "lists no migrations");
+await expectVerdict('an empty journal', await buildFolder('empty', {}), 1, 'lists no migrations');
 
 await expectVerdict(
-  "a folder that does not exist",
-  join(workingDirectory, "nonexistent"),
+  'a folder that does not exist',
+  join(workingDirectory, 'nonexistent'),
   1,
-  "Could not read the migration journal",
+  'Could not read the migration journal',
 );
 
 await rm(workingDirectory, { recursive: true, force: true });
@@ -154,4 +158,4 @@ if (failures.length > 0) {
   process.exit(1);
 }
 
-console.log("check-migration-phases.mjs: 9 case(s) passed — the gate still discriminates.");
+console.log('check-migration-phases.mjs: 9 case(s) passed — the gate still discriminates.');

@@ -46,15 +46,26 @@ interface MoneyRow {
  * Whether the block has anything to show — the detail screen uses it to skip the
  * section wrapper (and its divider) instead of leaving an empty band.
  */
-export function hasPricingDetails(property: Property | null | undefined, mode: RentalMode): boolean {
+export function hasPricingDetails(
+  property: Property | null | undefined,
+  mode: RentalMode,
+): boolean {
   if (!property) return false;
   const isVacation = mode === 'vacation';
-  if (!hasOffering(property, isVacation ? OfferingType.SHORT_TERM_RENT : OfferingType.LONG_TERM_RENT)) {
+  if (
+    !hasOffering(property, isVacation ? OfferingType.SHORT_TERM_RENT : OfferingType.LONG_TERM_RENT)
+  ) {
     return false;
   }
   const block = isVacation ? property.shortTermRent : property.longTermRent;
-  const rent = isVacation ? property.shortTermRent?.nightlyRate : property.longTermRent?.monthlyAmount;
-  return Boolean(rent) || block?.deposit !== undefined || (!isVacation && property.longTermRent?.utilities !== undefined);
+  const rent = isVacation
+    ? property.shortTermRent?.nightlyRate
+    : property.longTermRent?.monthlyAmount;
+  return (
+    Boolean(rent) ||
+    block?.deposit !== undefined ||
+    (!isVacation && property.longTermRent?.utilities !== undefined)
+  );
 }
 
 export const PricingDetails: React.FC<Props> = ({ property, mode }) => {
@@ -84,11 +95,7 @@ export const PricingDetails: React.FC<Props> = ({ property, mode }) => {
   const utilitiesIncluded =
     utilitiesValue === undefined ? undefined : utilitiesValue === 'included';
 
-  if (
-    rentAmount === undefined &&
-    deposit === undefined &&
-    utilitiesIncluded === undefined
-  ) {
+  if (rentAmount === undefined && deposit === undefined && utilitiesIncluded === undefined) {
     return null;
   }
 
@@ -178,11 +185,7 @@ export const PricingDetails: React.FC<Props> = ({ property, mode }) => {
           <View style={styles.row}>
             <BloomText style={styles.label}>{row.label}</BloomText>
             <BloomText style={styles.value}>
-              <MoneyText
-                amount={row.amount}
-                currency={currency}
-                style={styles.value}
-              />
+              <MoneyText amount={row.amount} currency={currency} style={styles.value} />
               {row.key === 'rent' ? (
                 <BloomText style={styles.unit}>{` /${rentUnit}`}</BloomText>
               ) : null}
@@ -196,9 +199,7 @@ export const PricingDetails: React.FC<Props> = ({ property, mode }) => {
         <>
           <Divider />
           <View style={styles.row}>
-            <BloomText style={styles.label}>
-              {t('property.sections.utilitiesIncluded')}
-            </BloomText>
+            <BloomText style={styles.label}>{t('property.sections.utilitiesIncluded')}</BloomText>
             <BloomText style={styles.value}>
               {utilitiesIncluded
                 ? t('propertyCreate.amenities.yes')
@@ -210,32 +211,20 @@ export const PricingDetails: React.FC<Props> = ({ property, mode }) => {
 
       {showMoveIn ? (
         <View style={styles.moveIn}>
-          <BloomText style={styles.moveInTitle}>
-            {t('property.moveInCost.title')}
-          </BloomText>
+          <BloomText style={styles.moveInTitle}>{t('property.moveInCost.title')}</BloomText>
           <View style={styles.moveInRows}>
             {moveInRows.map((row) => (
               <View key={row.key} style={styles.moveInRow}>
                 <BloomText style={styles.moveInLabel}>{row.label}</BloomText>
-                <MoneyText
-                  amount={row.amount}
-                  currency={currency}
-                  style={styles.moveInValue}
-                />
+                <MoneyText amount={row.amount} currency={currency} style={styles.moveInValue} />
               </View>
             ))}
           </View>
           <View style={styles.moveInTotalRow}>
             <BloomText style={styles.moveInTotalLabel}>{totalLabel}</BloomText>
-            <MoneyText
-              amount={total}
-              currency={currency}
-              style={styles.moveInTotalValue}
-            />
+            <MoneyText amount={total} currency={currency} style={styles.moveInTotalValue} />
           </View>
-          <BloomText style={styles.moveInNote}>
-            {t('property.moveInCost.note')}
-          </BloomText>
+          <BloomText style={styles.moveInNote}>{t('property.moveInCost.note')}</BloomText>
         </View>
       ) : null}
     </Section>

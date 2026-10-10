@@ -60,7 +60,7 @@ describe('renameWireIds', () => {
     expect(out.data[0].id).toBe('1');
     expect(out.data[0]).not.toHaveProperty('_id');
     expect((out.data[0].address as Record<string, unknown>).id).toBe('2');
-    expect((out.data[0].address as Record<string, unknown>)).not.toHaveProperty('_id');
+    expect(out.data[0].address as Record<string, unknown>).not.toHaveProperty('_id');
     expect(out.data[1].id).toBe('3');
   });
 

@@ -164,10 +164,7 @@ describe('expiry sweep registry', () => {
     // (ADR 0003 §7.5 keeps the anonymised outcome deliberately). Registering it
     // as a sweep target would delete a notice ninety days after its last edit
     // and would read as housekeeping in the diff.
-    expect(forbidden).toEqual([
-      'conversations.sharing_expires_at',
-      'eviction_cases.archived_at',
-    ]);
+    expect(forbidden).toEqual(['conversations.sharing_expires_at', 'eviction_cases.archived_at']);
     expect(forbidden.filter((label) => registered.has(label))).toEqual([]);
 
     const unexplained = EXPIRY_COLUMNS_THAT_MUST_NOT_DELETE.filter(
@@ -181,9 +178,9 @@ describe('expiry sweep registry', () => {
     // which is exactly the reading that ports a destructive TTL faithfully. The
     // one Homiio has that is NOT safe — `Conversation.sharing.expiresAt`, which
     // deletes the whole conversation — must never appear here as a delete.
-    const unexplained = EXPIRY_SWEEP_TARGETS
-      .filter((target) => target.reason.trim().length < 40)
-      .map((target) => getTableName(target.table));
+    const unexplained = EXPIRY_SWEEP_TARGETS.filter(
+      (target) => target.reason.trim().length < 40,
+    ).map((target) => getTableName(target.table));
     expect(unexplained).toEqual([]);
 
     const negative = EXPIRY_SWEEP_TARGETS.filter((target) => target.retentionSeconds < 0);

@@ -149,7 +149,10 @@ const PropertyGroupBlock: React.FC<PropertyGroupBlockProps> = ({
             application={application}
             variant="landlord"
             href={`/landlord/applications/${application.id}`}
-            applicantName={getProfileDisplayName(applicant, t('applications.card.applicantFallback'))}
+            applicantName={getProfileDisplayName(
+              applicant,
+              t('applications.card.applicantFallback'),
+            )}
             applicantAvatarFileId={getProfileAvatarFileId(applicant, getAvatarFileId)}
           />
         );
@@ -335,10 +338,7 @@ const ApplicationsSkeleton: React.FC = () => {
   return (
     <View style={styles.skeletonGroup}>
       {Array.from({ length: 3 }).map((_, idx) => (
-        <View
-          key={idx}
-          style={[styles.skeletonCard, { borderColor: theme.colors.border }]}
-        >
+        <View key={idx} style={[styles.skeletonCard, { borderColor: theme.colors.border }]}>
           <Skeleton.Box width={84} height={84} borderRadius={radius.md} />
           <View style={styles.skeletonBody}>
             <Skeleton.Text style={{ width: 180, lineHeight: 18 }} />
@@ -411,7 +411,10 @@ export default function LandlordApplicationsScreen() {
     if (!trimmed) return items;
     return items.filter((application) => {
       const applicant = applicantMap.get(String(application.applicantOxyUserId));
-      const name = getProfileDisplayName(applicant, t('applications.card.applicantFallback')).toLowerCase();
+      const name = getProfileDisplayName(
+        applicant,
+        t('applications.card.applicantFallback'),
+      ).toLowerCase();
       return name.includes(trimmed);
     });
   }, [items, applicantMap, searchQuery, t]);
@@ -534,9 +537,7 @@ export default function LandlordApplicationsScreen() {
             <ErrorState
               icon={RiAlertLine}
               title={t('applications.landlord.loadError')}
-              description={
-                applicationsQuery.error?.message ?? t('applications.list.tryAgain')
-              }
+              description={applicationsQuery.error?.message ?? t('applications.list.tryAgain')}
               onRetry={() => applicationsQuery.refetch()}
             />
           ) : null}

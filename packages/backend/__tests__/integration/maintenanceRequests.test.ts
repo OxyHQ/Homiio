@@ -174,7 +174,9 @@ describe('who may report a repair', () => {
       { ...NEW_REQUEST, urgency: 'catastrophic' },
       { ...NEW_REQUEST, title: '' },
     ]) {
-      const res = await request(buildApp(TENANT)).post('/maintenance').send({ leaseId, ...body });
+      const res = await request(buildApp(TENANT))
+        .post('/maintenance')
+        .send({ leaseId, ...body });
       expect(res.status).toBe(400);
     }
     expect(await getDb().select().from(maintenanceRequests)).toHaveLength(0);
@@ -230,7 +232,10 @@ describe('the state machine', () => {
     const landlord = buildApp(LANDLORD);
     const tenant = buildApp(TENANT);
 
-    expect((await request(landlord).post(`/maintenance/${id}/status`).send({ status: 'acknowledged' })).status).toBe(200);
+    expect(
+      (await request(landlord).post(`/maintenance/${id}/status`).send({ status: 'acknowledged' }))
+        .status,
+    ).toBe(200);
     expect(
       (
         await request(landlord)
@@ -238,8 +243,13 @@ describe('the state machine', () => {
           .send({ status: 'scheduled', scheduledFor: '2026-10-01T09:00:00.000Z' })
       ).status,
     ).toBe(200);
-    expect((await request(landlord).post(`/maintenance/${id}/status`).send({ status: 'resolved' })).status).toBe(200);
-    expect((await request(tenant).post(`/maintenance/${id}/status`).send({ status: 'closed' })).status).toBe(200);
+    expect(
+      (await request(landlord).post(`/maintenance/${id}/status`).send({ status: 'resolved' }))
+        .status,
+    ).toBe(200);
+    expect(
+      (await request(tenant).post(`/maintenance/${id}/status`).send({ status: 'closed' })).status,
+    ).toBe(200);
 
     expect((await rowOf(id)).status).toBe('closed');
     expect(await eventsOf(id)).toHaveLength(5);
@@ -263,7 +273,9 @@ describe('the state machine', () => {
   it('refuses a move the OTHER role owns', async () => {
     const { leaseId } = await seedLease();
     const id = await report(leaseId);
-    await request(buildApp(LANDLORD)).post(`/maintenance/${id}/status`).send({ status: 'acknowledged' });
+    await request(buildApp(LANDLORD))
+      .post(`/maintenance/${id}/status`)
+      .send({ status: 'acknowledged' });
 
     // A tenant cannot declare their own repair fixed: "resolved" is a claim
     // about work somebody else owes.
@@ -281,7 +293,9 @@ describe('the state machine', () => {
     await request(landlord).post(`/maintenance/${id}/status`).send({ status: 'acknowledged' });
     await request(landlord).post(`/maintenance/${id}/status`).send({ status: 'resolved' });
 
-    expect((await request(landlord).post(`/maintenance/${id}/status`).send({ status: 'closed' })).status).toBe(409);
+    expect(
+      (await request(landlord).post(`/maintenance/${id}/status`).send({ status: 'closed' })).status,
+    ).toBe(409);
     expect((await rowOf(id)).status).toBe('resolved');
   });
 
@@ -291,7 +305,10 @@ describe('the state machine', () => {
     const landlord = buildApp(LANDLORD);
     await request(landlord).post(`/maintenance/${id}/status`).send({ status: 'acknowledged' });
 
-    expect((await request(landlord).post(`/maintenance/${id}/status`).send({ status: 'scheduled' })).status).toBe(400);
+    expect(
+      (await request(landlord).post(`/maintenance/${id}/status`).send({ status: 'scheduled' }))
+        .status,
+    ).toBe(400);
     await request(landlord)
       .post(`/maintenance/${id}/status`)
       .send({ status: 'scheduled', scheduledFor: '2026-10-01T09:00:00.000Z' });
@@ -424,7 +441,9 @@ describe('the list', () => {
     const { leaseId } = await seedLease();
     const open = await report(leaseId);
     const withdrawn = await report(leaseId);
-    await request(buildApp(TENANT)).post(`/maintenance/${withdrawn}/status`).send({ status: 'closed' });
+    await request(buildApp(TENANT))
+      .post(`/maintenance/${withdrawn}/status`)
+      .send({ status: 'closed' });
 
     const all = await request(buildApp(TENANT)).get('/maintenance');
     const openRes = await request(buildApp(TENANT)).get('/maintenance?openOnly=true');

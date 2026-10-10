@@ -9,12 +9,7 @@
  * rolls back on error; on success it writes the server's authoritative
  * `{ helpfulCount, viewerHasVotedHelpful }`.
  */
-import {
-  useMutation,
-  useQueryClient,
-  type InfiniteData,
-  type Query,
-} from '@tanstack/react-query';
+import { useMutation, useQueryClient, type InfiniteData, type Query } from '@tanstack/react-query';
 
 import type { ReviewDTO, ReviewReportReason } from '@homiio/shared-types';
 

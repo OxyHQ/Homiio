@@ -47,11 +47,7 @@ export function resolveHeadlinePrice(
   t: TFunction,
   formatting: Formatting,
 ): HeadlinePrice {
-  const offering = resolvePrimaryOffering(
-    property,
-    browseMode,
-    t('listing.exchange.free'),
-  );
+  const offering = resolvePrimaryOffering(property, browseMode, t('listing.exchange.free'));
   const price = toPriceDescriptor(offering);
   const options = { unitLabels: formatting.priceUnitLabels };
 

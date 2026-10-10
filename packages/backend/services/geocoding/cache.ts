@@ -187,11 +187,7 @@ const REVERSE_GRID_DECIMALS = 4;
  * before it becomes a string satisfies §8.2 structurally rather than by
  * argument about where the map happens to live today.
  */
-export function reverseCacheKey(
-  longitude: number,
-  latitude: number,
-  language: string,
-): string {
+export function reverseCacheKey(longitude: number, latitude: number, language: string): string {
   const gridded = `${longitude.toFixed(REVERSE_GRID_DECIMALS)},${latitude.toFixed(REVERSE_GRID_DECIMALS)}`;
   return ['geo:v1:reverse', language, gridded].join('|');
 }

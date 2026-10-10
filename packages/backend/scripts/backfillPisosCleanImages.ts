@@ -109,11 +109,19 @@ function parseCli(argv: string[]): CliOptions {
     const [rawIndex, rawTotal] = shardEntry.slice('--shard='.length).split('/');
     const total = Number.parseInt(rawTotal ?? '', 10);
     const index = Number.parseInt(rawIndex ?? '', 10);
-    if (Number.isFinite(total) && total > 0 && Number.isFinite(index) && index >= 0 && index < total) {
+    if (
+      Number.isFinite(total) &&
+      total > 0 &&
+      Number.isFinite(index) &&
+      index >= 0 &&
+      index < total
+    ) {
       shardIndex = index;
       shardTotal = total;
     } else {
-      throw new Error(`Invalid --shard value "${shardEntry}", expected INDEX/TOTAL with 0<=INDEX<TOTAL`);
+      throw new Error(
+        `Invalid --shard value "${shardEntry}", expected INDEX/TOTAL with 0<=INDEX<TOTAL`,
+      );
     }
   }
   return {
@@ -233,12 +241,7 @@ async function scan(minWidth: number): Promise<ScanResult> {
   };
 }
 
-type ReplaceStatus =
-  | 'replaced'
-  | 'refetch-no-images'
-  | 'ingest-no-images'
-  | 'gone'
-  | 'fetch-error';
+type ReplaceStatus = 'replaced' | 'refetch-no-images' | 'ingest-no-images' | 'gone' | 'fetch-error';
 
 interface ReplaceOutcome {
   status: ReplaceStatus;

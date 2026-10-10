@@ -56,9 +56,7 @@ class PropertyService {
   private baseUrl = '/api/properties';
 
   // Get all properties with filters (legacy method)
-  async getProperties(
-    filters?: PropertyFilters,
-  ): Promise<{
+  async getProperties(filters?: PropertyFilters): Promise<{
     properties: Property[];
     total: number;
     page: number;
@@ -71,14 +69,12 @@ class PropertyService {
       properties: response.data.data || response.data.results || response.data.properties || [],
       total: response.data.pagination?.total || response.data.total || 0,
       page: response.data.pagination?.page || response.data.page || 1,
-      totalPages: response.data.pagination?.totalPages || response.data.totalPages || 1
+      totalPages: response.data.pagination?.totalPages || response.data.totalPages || 1,
     };
   }
 
   // Get all available rooms
-  async getRooms(
-    filters?: PropertyFilters,
-  ): Promise<{
+  async getRooms(filters?: PropertyFilters): Promise<{
     rooms: Property[];
     total: number;
     page: number;
@@ -87,14 +83,14 @@ class PropertyService {
     const response = await api.get(this.baseUrl, {
       params: {
         ...filters,
-        type: PropertyType.ROOM
+        type: PropertyType.ROOM,
       },
     });
     return {
       rooms: response.data.data || response.data.results || response.data.properties || [],
       total: response.data.pagination?.total || response.data.total || 0,
       page: response.data.pagination?.page || response.data.page || 1,
-      totalPages: response.data.pagination?.totalPages || response.data.totalPages || 1
+      totalPages: response.data.pagination?.totalPages || response.data.totalPages || 1,
     };
   }
 
@@ -115,14 +111,12 @@ class PropertyService {
       properties: response.data.data || response.data.results || response.data.properties || [],
       total: response.data.pagination?.total || response.data.total || 0,
       page: response.data.pagination?.page || response.data.page || 1,
-      totalPages: response.data.pagination?.totalPages || response.data.totalPages || 1
+      totalPages: response.data.pagination?.totalPages || response.data.totalPages || 1,
     };
   }
 
   // Get property details by ID
-  async getPropertyById(
-    propertyId: string,
-  ): Promise<Property | null> {
+  async getPropertyById(propertyId: string): Promise<Property | null> {
     try {
       const response = await api.get(`${this.baseUrl}/${propertyId}`);
       return response.data.data;
@@ -135,7 +129,10 @@ class PropertyService {
   }
 
   // Get properties owned by the authenticated user (session oxyUserId)
-  async getMyProperties(page = 1, limit = 10): Promise<{
+  async getMyProperties(
+    page = 1,
+    limit = 10,
+  ): Promise<{
     properties: Property[];
     total: number;
     page: number;
@@ -175,7 +172,7 @@ class PropertyService {
       properties: response.data.data || response.data.results || response.data.properties || [],
       total: response.data.pagination?.total || response.data.total || 0,
       page: response.data.pagination?.page || response.data.page || 1,
-      totalPages: response.data.pagination?.totalPages || response.data.totalPages || 1
+      totalPages: response.data.pagination?.totalPages || response.data.totalPages || 1,
     };
   }
 
@@ -216,7 +213,7 @@ class PropertyService {
       const locationMatch = preferences.preferredLocations.some(
         (loc: any) =>
           property.address.cityName?.toLowerCase() === loc.city?.toLowerCase() &&
-          property.address.regionName?.toLowerCase() === loc.state?.toLowerCase()
+          property.address.regionName?.toLowerCase() === loc.state?.toLowerCase(),
       );
       if (!locationMatch) {
         score -= 15;
@@ -250,8 +247,9 @@ class PropertyService {
     if (preferences.moveInDate && property.availableFrom) {
       const preferredDate = new Date(preferences.moveInDate);
       const availableDate = new Date(property.availableFrom);
-      const diffDays = Math.abs(preferredDate.getTime() - availableDate.getTime()) / (1000 * 60 * 60 * 24);
-      
+      const diffDays =
+        Math.abs(preferredDate.getTime() - availableDate.getTime()) / (1000 * 60 * 60 * 24);
+
       if (diffDays > 30) {
         score -= 15;
       }
@@ -259,8 +257,8 @@ class PropertyService {
 
     // Amenities match
     if (preferences.desiredAmenities && property.amenities) {
-      const matchedAmenities = preferences.desiredAmenities.filter((a: string) => 
-        property.amenities?.includes(a)
+      const matchedAmenities = preferences.desiredAmenities.filter((a: string) =>
+        property.amenities?.includes(a),
       );
       if (matchedAmenities.length < preferences.desiredAmenities.length / 2) {
         score -= 10;
@@ -299,8 +297,8 @@ class PropertyService {
   getPrimaryImageUrl(property: Property): string | null {
     if (!property.images || property.images.length === 0) return null;
 
-    const primaryImage = property.images.find(img =>
-      typeof img === 'object' && 'isPrimary' in img && img.isPrimary
+    const primaryImage = property.images.find(
+      (img) => typeof img === 'object' && 'isPrimary' in img && img.isPrimary,
     ) as PropertyImage | undefined;
 
     if (primaryImage && typeof primaryImage === 'object' && 'url' in primaryImage) {
@@ -325,7 +323,10 @@ class PropertyService {
 
   // Get property type display name
   getPropertyTypeDisplay(type: PropertyType): string {
-    return type.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+    return type
+      .split('_')
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
   }
 
   // Find properties within bounds
@@ -341,7 +342,7 @@ class PropertyService {
     const params = {
       ...filters,
       bounds: `${bounds.west},${bounds.south},${bounds.east},${bounds.north}`,
-      limit: 50 // Increase limit for map view
+      limit: 50, // Increase limit for map view
     };
 
     const response = await api.get(`${this.baseUrl}/search`, {
@@ -352,14 +353,12 @@ class PropertyService {
       properties: response.data.data || response.data.results || response.data.properties || [],
       total: response.data.total || 0,
       page: response.data.page || 1,
-      totalPages: response.data.totalPages || 1
+      totalPages: response.data.totalPages || 1,
     };
   }
 
   // Get property statistics
-  async getPropertyStats(
-    propertyId: string,
-  ): Promise<any> {
+  async getPropertyStats(propertyId: string): Promise<any> {
     try {
       const response = await api.get(`${this.baseUrl}/${propertyId}/stats`);
       return response.data.data;
@@ -380,9 +379,7 @@ class PropertyService {
    * so the calling React Query hook owns the loading/error/empty states (and
    * the detail screen can fail soft by hiding the section).
    */
-  async getAreaInsights(
-    propertyId: string,
-  ): Promise<PropertyAreaInsights> {
+  async getAreaInsights(propertyId: string): Promise<PropertyAreaInsights> {
     const response = await api.get<{ data: PropertyAreaInsights }>(
       `${this.baseUrl}/${propertyId}/area-insights`,
     );
@@ -400,9 +397,7 @@ class PropertyService {
    * loading/error/empty states (the detail screen fails soft by hiding the
    * section).
    */
-  async getNearbyServices(
-    propertyId: string,
-  ): Promise<PropertyNearbyServices> {
+  async getNearbyServices(propertyId: string): Promise<PropertyNearbyServices> {
     const response = await api.get<{ data: PropertyNearbyServices }>(
       `${this.baseUrl}/${propertyId}/nearby-services`,
     );
@@ -412,9 +407,7 @@ class PropertyService {
   // Create property. Accepts the create DTO whose `address` is an AddressInput
   // (place NAMES + coordinates the backend resolves into the relational geo
   // chain), not a serialized Property.
-  async createProperty(
-    data: CreatePropertyData,
-  ): Promise<Property> {
+  async createProperty(data: CreatePropertyData): Promise<Property> {
     try {
       const response = await api.post(this.baseUrl, data);
       return response.data.data;
@@ -425,10 +418,7 @@ class PropertyService {
 
   // Update property. Accepts a partial update DTO (same AddressInput-based
   // `address` resolution as create).
-  async updateProperty(
-    propertyId: string,
-    data: UpdatePropertyData,
-  ): Promise<Property> {
+  async updateProperty(propertyId: string, data: UpdatePropertyData): Promise<Property> {
     try {
       const response = await api.put(`${this.baseUrl}/${propertyId}`, data);
       return response.data.data;
@@ -438,9 +428,7 @@ class PropertyService {
   }
 
   // Delete property
-  async deleteProperty(
-    propertyId: string,
-  ): Promise<void> {
+  async deleteProperty(propertyId: string): Promise<void> {
     try {
       await api.delete(`${this.baseUrl}/${propertyId}`);
     } catch (error) {

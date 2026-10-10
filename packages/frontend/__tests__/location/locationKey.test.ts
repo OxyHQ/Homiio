@@ -39,7 +39,11 @@ type MapBoundsSelection = Extract<LocationSelection, { kind: 'map_bounds' }>;
 // Fixtures
 // ---------------------------------------------------------------------------
 
-const PLACE_LABEL: PlaceLabel = { primary: 'Barcelona', secondary: 'Catalonia, Spain', kind: 'place' };
+const PLACE_LABEL: PlaceLabel = {
+  primary: 'Barcelona',
+  secondary: 'Catalonia, Spain',
+  kind: 'place',
+};
 
 /**
  * Barcelona, Catalonia, Spain — the one a wrong implementation picks, because
@@ -119,7 +123,10 @@ describe('locationKey: current_location emits no coordinate', () => {
   it('contains no digit that is not part of the radius', () => {
     // Sanity: the fixture really does have disjoint digit sets, or this
     // assertion passes for a reason that has nothing to do with the code.
-    const coordinateDigits = `${HERE.center.longitude}${HERE.center.latitude}`.replace(/[^0-9]/g, '');
+    const coordinateDigits = `${HERE.center.longitude}${HERE.center.latitude}`.replace(
+      /[^0-9]/g,
+      '',
+    );
     expect(coordinateDigits.length).toBeGreaterThan(6);
     for (const digit of coordinateDigits) {
       expect(RADIUS_DIGITS.has(digit)).toBe(false);
@@ -334,7 +341,11 @@ describe('locationKey: absence and composition', () => {
    * real one — otherwise a global feed and a real search share a cache entry.
    */
   it('does not collide with any selection key', () => {
-    for (const selection of [BARCELONA_ES, BARCELONA_VE, mapBounds({ west: 0, south: 0, east: 1, north: 1 })]) {
+    for (const selection of [
+      BARCELONA_ES,
+      BARCELONA_VE,
+      mapBounds({ west: 0, south: 0, east: 1, north: 1 }),
+    ]) {
       expect(locationKey(selection)).not.toBe('none');
     }
   });

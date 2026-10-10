@@ -30,11 +30,7 @@ import { ErrorState } from '@/components/ui/ErrorState';
 import type { BrowseMode } from '@/components/search/types';
 import { useRentalMode } from '@/context/RentalModeContext';
 import type { SavedProperty } from '@/services/savedPropertyService';
-import {
-  getPropertyTitle,
-  resolvePrimaryOffering,
-  type OfferingKind,
-} from '@/utils/propertyUtils';
+import { getPropertyTitle, resolvePrimaryOffering, type OfferingKind } from '@/utils/propertyUtils';
 
 import { SavedSection } from './SavedSection';
 
@@ -167,7 +163,13 @@ export function SavedHomesSection({
         <Text variant="body-2-regular" style={{ color: theme.colors.textSecondary }}>
           {t('saved.noPropertiesDescription')}
         </Text>
-        <Button size="sm" leadingIcon={RiSearchLine} onPress={() => router.push('/explore')} tone="neutral" appearance="outline">
+        <Button
+          size="sm"
+          leadingIcon={RiSearchLine}
+          onPress={() => router.push('/explore')}
+          tone="neutral"
+          appearance="outline"
+        >
           {t('saved.exploreCta')}
         </Button>
       </View>
@@ -208,10 +210,18 @@ export function SavedHomesSection({
           <View style={{ gap: 40 }}>
             {groups.map((group) => (
               <View key={group.kind} style={{ gap: 16 }} testID={`saved-homes-${group.kind}`}>
-                <Text role="heading" aria-level={3} variant="body-semibold" style={{ color: theme.colors.text }}>
+                <Text
+                  role="heading"
+                  aria-level={3}
+                  variant="body-semibold"
+                  style={{ color: theme.colors.text }}
+                >
                   {t(`saved.groups.${group.kind}`)}
                 </Text>
-                <PropertyResultsGrid properties={group.properties} onPropertyPress={handlePropertyPress} />
+                <PropertyResultsGrid
+                  properties={group.properties}
+                  onPropertyPress={handlePropertyPress}
+                />
               </View>
             ))}
             <LoadMoreSentinel enabled={hasMore} onLoadMore={loadMore} />

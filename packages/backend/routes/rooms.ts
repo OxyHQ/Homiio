@@ -8,7 +8,7 @@ import express from 'express';
 import { asyncHandler } from '../middlewares';
 const { roomController } = controllers;
 
-export default function() {
+export default function () {
   const router = express.Router();
 
   router.get('/', asyncHandler(roomController.getRooms));
@@ -18,4 +18,4 @@ export default function() {
   router.delete('/:id', asyncHandler(roomController.deleteRoom));
 
   return router;
-};
+}

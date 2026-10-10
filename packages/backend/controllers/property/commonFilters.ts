@@ -116,10 +116,13 @@ export function buildCommonPropertyFilters(query: RawQuery): (SQL | undefined)[]
     conditions.push(inRange(properties.bathrooms, minBathrooms, maxBathrooms));
   } else {
     const bathrooms = num(query.bathrooms);
-    if (bathrooms !== undefined) conditions.push(inRange(properties.bathrooms, bathrooms, bathrooms));
+    if (bathrooms !== undefined)
+      conditions.push(inRange(properties.bathrooms, bathrooms, bathrooms));
   }
 
-  conditions.push(inRange(properties.squareFootage, num(query.minSquareFootage), num(query.maxSquareFootage)));
+  conditions.push(
+    inRange(properties.squareFootage, num(query.minSquareFootage), num(query.maxSquareFootage)),
+  );
   conditions.push(inRange(properties.yearBuilt, num(query.minYearBuilt), num(query.maxYearBuilt)));
 
   // ALL must match, the same reading as `/properties/search`. This used to be
@@ -148,24 +151,40 @@ export function buildCommonPropertyFilters(query: RawQuery): (SQL | undefined)[]
   const petFriendly = tristate(query.petFriendly);
   if (petFriendly !== undefined) conditions.push(booleanIs(properties.petFriendly, petFriendly));
   const utilitiesIncluded = tristate(query.utilitiesIncluded);
-  if (utilitiesIncluded !== undefined) conditions.push(booleanIs(properties.utilitiesIncluded, utilitiesIncluded));
+  if (utilitiesIncluded !== undefined)
+    conditions.push(booleanIs(properties.utilitiesIncluded, utilitiesIncluded));
   const proximityToTransport = tristate(query.proximityToTransport);
-  if (proximityToTransport !== undefined) conditions.push(booleanIs(properties.proximityToTransport, proximityToTransport));
+  if (proximityToTransport !== undefined)
+    conditions.push(booleanIs(properties.proximityToTransport, proximityToTransport));
   const proximityToSchools = tristate(query.proximityToSchools);
-  if (proximityToSchools !== undefined) conditions.push(booleanIs(properties.proximityToSchools, proximityToSchools));
+  if (proximityToSchools !== undefined)
+    conditions.push(booleanIs(properties.proximityToSchools, proximityToSchools));
   const proximityToShopping = tristate(query.proximityToShopping);
-  if (proximityToShopping !== undefined) conditions.push(booleanIs(properties.proximityToShopping, proximityToShopping));
+  if (proximityToShopping !== undefined)
+    conditions.push(booleanIs(properties.proximityToShopping, proximityToShopping));
 
-  conditions.push(inDateRange(properties.availableFrom, date(query.availableFromAfter), date(query.availableFromBefore)));
+  conditions.push(
+    inDateRange(
+      properties.availableFrom,
+      date(query.availableFromAfter),
+      date(query.availableFromBefore),
+    ),
+  );
 
   const excludeIds = getQueryString(query.excludeIds);
   if (excludeIds) {
     // No id-SHAPE filter — see `db/properties/propertyFilters.idNotIn`. The two
     // copies of this that used to live in `geospatial.ts` each dropped anything
     // that was not a 24-char hex, so an excluded listing silently reappeared.
-    conditions.push(idNotIn(excludeIds.split(',').map((id) => id.trim()).filter(Boolean)));
+    conditions.push(
+      idNotIn(
+        excludeIds
+          .split(',')
+          .map((id) => id.trim())
+          .filter(Boolean),
+      ),
+    );
   }
 
   return conditions;
 }
-

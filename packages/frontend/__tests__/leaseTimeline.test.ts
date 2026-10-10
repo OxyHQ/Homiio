@@ -109,7 +109,10 @@ describe('the timeline comes from event rows', () => {
           event('signed', { actorOxyUserId: TENANT, detail: 'tenant' }),
           event('activated'),
         ],
-        signatureRecords: [signature(), signature({ id: 'sig-2', party: 'landlord', signerOxyUserId: LANDLORD })],
+        signatureRecords: [
+          signature(),
+          signature({ id: 'sig-2', party: 'landlord', signerOxyUserId: LANDLORD }),
+        ],
       }),
       context,
     );
@@ -166,7 +169,9 @@ describe('the timeline comes from event rows', () => {
       context,
     );
 
-    const terminated = timeline.find((entry) => entry.title === 'contracts.tenancy.event.terminated');
+    const terminated = timeline.find(
+      (entry) => entry.title === 'contracts.tenancy.event.terminated',
+    );
     expect(terminated?.description).toBe('Moving abroad');
     expect(terminated?.tone).toBe('error');
     expect(timeline.map((entry) => entry.title)).not.toContain('contracts.tenancy.ends');
@@ -193,7 +198,11 @@ describe('a signature entry says WHAT was signed', () => {
 
   it('names the document and the terms when the bytes were recorded', () => {
     const entry = signedTimeline(
-      signature({ documentId: 'doc-1', documentName: 'Contract.pdf', documentSha256: 'b'.repeat(64) }),
+      signature({
+        documentId: 'doc-1',
+        documentName: 'Contract.pdf',
+        documentSha256: 'b'.repeat(64),
+      }),
     );
     expect(entry.description).toBe('contracts.tenancy.signedDocument:Contract.pdf');
   });

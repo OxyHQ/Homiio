@@ -243,7 +243,7 @@ describe('which selections become an area at all', () => {
     expect(watchAreaFromSelection(selection)).toBeNull();
   });
 
-  it('uses a place\'s bounds when it has them', () => {
+  it("uses a place's bounds when it has them", () => {
     const selection: LocationSelection = {
       kind: 'place',
       source: { kind: 'homiio', entity: 'city', id: 'city-1' },

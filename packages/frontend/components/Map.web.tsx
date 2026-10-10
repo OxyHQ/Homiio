@@ -49,11 +49,7 @@ import {
   pointOverlayState,
   type OverlayItem,
 } from './mapOverlays';
-import {
-  DEFAULT_STYLE_URL,
-  fetchSanitizedMapStyle,
-  installMissingImageFallback,
-} from './mapStyle';
+import { DEFAULT_STYLE_URL, fetchSanitizedMapStyle, installMissingImageFallback } from './mapStyle';
 import { colors } from '@/styles/colors';
 import { PROGRAMMATIC_MOVE, moveSourceOf } from './mapTypes';
 import type {
@@ -114,7 +110,15 @@ export interface MapProps {
   onAddressSelect?: (address: GeocodedAddress, coordinates: LonLat) => void;
   onAddressLookupStart?: () => void;
   onAddressLookupEnd?: () => void;
-  onRegionChange?: (e: { center: LonLat; zoom: number; bearing: number; pitch: number; bounds: { west: number; south: number; east: number; north: number }; isFinal?: boolean; source: MapMoveSource }) => void;
+  onRegionChange?: (e: {
+    center: LonLat;
+    zoom: number;
+    bearing: number;
+    pitch: number;
+    bounds: { west: number; south: number; east: number; north: number };
+    isFinal?: boolean;
+    source: MapMoveSource;
+  }) => void;
   onMarkerPress?: (e: { id: string; lngLat: LonLat }) => void;
   onClusterPress?: (e: { leaves: ClusterLeaf[] }) => void;
 }
@@ -172,7 +176,9 @@ type ClusterLeafCache = Map<number, readonly string[]>;
 const createClusterLeafCache = (): ClusterLeafCache => new Map<number, readonly string[]>();
 
 // Address lookup function using backend API (Nominatim-backed, no API key).
-const lookupAddressFromCoordinates = async (coordinates: LonLat): Promise<GeocodedAddress | null> => {
+const lookupAddressFromCoordinates = async (
+  coordinates: LonLat,
+): Promise<GeocodedAddress | null> => {
   try {
     const [longitude, latitude] = coordinates;
     const { data: result } = await api.get<ApiResponse<GeocodedAddress>>('/api/geocoding/reverse', {
@@ -236,11 +242,14 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
   const initialCenterRef = useRef<LonLat>(savedState?.center ?? initialCoordinates);
   const initialZoomRef = useRef<number>(savedState?.zoom ?? initialZoom);
 
-  const clusterFinal = useMemo<Required<ClusterOptions>>(() => ({
-    enabled: cluster?.enabled ?? true,
-    radius: cluster?.radius ?? 40,
-    maxZoom: cluster?.maxZoom ?? 17,
-  }), [cluster]);
+  const clusterFinal = useMemo<Required<ClusterOptions>>(
+    () => ({
+      enabled: cluster?.enabled ?? true,
+      radius: cluster?.radius ?? 40,
+      maxZoom: cluster?.maxZoom ?? 17,
+    }),
+    [cluster],
+  );
 
   // Imperative handles to the live maplibre instance + per-marker DOM bubbles.
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -493,9 +502,10 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
         });
 
         // Render any markers/state that arrived before `load` completed.
-        const initialFeatures = savedState?.markers && savedState.markers.length > 0
-          ? savedState.markers
-          : markersRef.current;
+        const initialFeatures =
+          savedState?.markers && savedState.markers.length > 0
+            ? savedState.markers
+            : markersRef.current;
         setData(initialFeatures);
       });
 
@@ -515,18 +525,22 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
             .setLngLat(coordinates)
             .addTo(map);
 
-          lookupAddressFromCoordinates(coordinates).then((address) => {
-            if (address) onAddressSelectRef.current?.(address, coordinates);
-          }).catch(() => {
-            // Reverse geocoding is best-effort; ignore lookup failures.
-          });
+          lookupAddressFromCoordinates(coordinates)
+            .then((address) => {
+              if (address) onAddressSelectRef.current?.(address, coordinates);
+            })
+            .catch(() => {
+              // Reverse geocoding is best-effort; ignore lookup failures.
+            });
         }
       });
 
       const onMove = (event: unknown) => emitRegion(false, event);
       const onMoveEnd = (event: unknown) => emitRegion(true, event);
       (['move', 'zoom', 'rotate', 'pitch'] as const).forEach((ev) => map.on(ev, onMove));
-      (['moveend', 'zoomend', 'rotateend', 'pitchend'] as const).forEach((ev) => map.on(ev, onMoveEnd));
+      (['moveend', 'zoomend', 'rotateend', 'pitchend'] as const).forEach((ev) =>
+        map.on(ev, onMoveEnd),
+      );
 
       // Recompute size when the flex/grid parent resolves or resizes — the GL
       // canvas needs an explicit pixel size and the container starts at 0×0 until
@@ -572,14 +586,17 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
     if (!screenId || markers.length === 0) return;
     const current = getMapState(screenId);
     const currentMarkers = current?.markers ?? [];
-    const changed = markers.length !== currentMarkers.length ||
+    const changed =
+      markers.length !== currentMarkers.length ||
       markers.some((marker, index) => {
         const prev = currentMarkers[index];
-        return !prev ||
+        return (
+          !prev ||
           marker.id !== prev.id ||
           marker.coordinates[0] !== prev.coordinates[0] ||
           marker.coordinates[1] !== prev.coordinates[1] ||
-          marker.priceLabel !== prev.priceLabel;
+          marker.priceLabel !== prev.priceLabel
+        );
       });
     if (changed) setMapState(screenId, { markers });
   }, [markers, screenId, getMapState, setMapState]);
@@ -604,8 +621,7 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
     if (!startFromCurrentLocation || hasCenteredOnce.current || savedState) return;
 
     const hasSpecificInitialCoords =
-      initialCoordinates[0] !== DEFAULT_CENTER[0] ||
-      initialCoordinates[1] !== DEFAULT_CENTER[1];
+      initialCoordinates[0] !== DEFAULT_CENTER[0] || initialCoordinates[1] !== DEFAULT_CENTER[1];
     if (hasSpecificInitialCoords) return;
 
     let cancelled = false;
@@ -622,9 +638,10 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
         const map = mapRef.current;
         if (!map) return;
         const accuracy = loc.coords.accuracy ?? null;
-        const zoom = accuracy && accuracy > COARSE_ACCURACY_M
-          ? Math.max(initialZoom, COARSE_ZOOM)
-          : Math.max(initialZoom, FINE_ZOOM);
+        const zoom =
+          accuracy && accuracy > COARSE_ACCURACY_M
+            ? Math.max(initialZoom, COARSE_ZOOM)
+            : Math.max(initialZoom, FINE_ZOOM);
         map.easeTo(
           { center: [loc.coords.longitude, loc.coords.latitude], zoom },
           PROGRAMMATIC_MOVE,
@@ -654,88 +671,99 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
     const map = mapRef.current;
     const source = map?.getSource<GeoJSONSource>(SOURCE_ID);
     if (!map || !source) return;
-    source.getClusterExpansionZoom(clusterId).then((zoom) => {
-      // Expanding a cluster is a press on a cluster, not a statement about
-      // which area to search — so it must not arm the button.
-      map.easeTo({ center: coordinates, zoom }, PROGRAMMATIC_MOVE);
-    }).catch(() => {
-      // Cluster expansion is best-effort; ignore lookup failures.
-    });
+    source
+      .getClusterExpansionZoom(clusterId)
+      .then((zoom) => {
+        // Expanding a cluster is a press on a cluster, not a statement about
+        // which area to search — so it must not arm the button.
+        map.easeTo({ center: coordinates, zoom }, PROGRAMMATIC_MOVE);
+      })
+      .catch(() => {
+        // Cluster expansion is best-effort; ignore lookup failures.
+      });
 
     if (!onClusterPressRef.current) return;
-    source.getClusterLeaves(clusterId, Infinity, 0).then((features) => {
-      const inputs = markerInputsRef.current;
-      const leaves = features.flatMap<ClusterLeaf>((feature) => {
-        const input = inputs.get(String(feature.properties?.id ?? ''));
-        // Positions come from the published input, never the tile geometry.
-        return input
-          ? [{
-              geometry: { type: 'Point', coordinates: input.coordinates },
-              properties: { id: String(input.id), price: input.priceLabel },
-            }]
-          : [];
+    source
+      .getClusterLeaves(clusterId, Infinity, 0)
+      .then((features) => {
+        const inputs = markerInputsRef.current;
+        const leaves = features.flatMap<ClusterLeaf>((feature) => {
+          const input = inputs.get(String(feature.properties?.id ?? ''));
+          // Positions come from the published input, never the tile geometry.
+          return input
+            ? [
+                {
+                  geometry: { type: 'Point', coordinates: input.coordinates },
+                  properties: { id: String(input.id), price: input.priceLabel },
+                },
+              ]
+            : [];
+        });
+        onClusterPressRef.current?.({ leaves });
+      })
+      .catch(() => {
+        // Stale cluster id after a zoom; nothing to report.
       });
-      onClusterPressRef.current?.({ leaves });
-    }).catch(() => {
-      // Stale cluster id after a zoom; nothing to report.
-    });
   }, []);
 
   // Raise the highlighted pill (or the cluster holding it) above its
   // neighbours, which Bloom leaves to the app that positions it.
   useEffect(() => {
     overlays.forEach((item) => {
-      const active = item.kind === 'point'
-        ? item.id === highlightedId
-        : clusterOverlayState(item.leafIds, highlightedId) === 'active';
+      const active =
+        item.kind === 'point'
+          ? item.id === highlightedId
+          : clusterOverlayState(item.leafIds, highlightedId) === 'active';
       item.element.style.zIndex = active ? '2' : '';
     });
   }, [overlays, highlightedId]);
 
   // Expose the imperative MapApi — identical to the native component.
-  useImperativeHandle(ref, () => ({
-    navigateToLocation: (center: LonLat, zoom: number = 15) => {
-      mapRef.current?.easeTo({ center, zoom, duration: NAVIGATE_DURATION_MS }, PROGRAMMATIC_MOVE);
-    },
-    fitBounds: (bounds, options) => {
-      const map = mapRef.current;
-      if (!map) return;
-      // See `Map.tsx` — the same two decisions, taken from the same helpers, so
-      // the two platforms cannot drift on either the wrap or the degenerate box.
-      if (isDegenerateBounds(bounds)) {
-        const centre = boundsCenter(bounds);
-        map.easeTo(
+  useImperativeHandle(
+    ref,
+    () => ({
+      navigateToLocation: (center: LonLat, zoom: number = 15) => {
+        mapRef.current?.easeTo({ center, zoom, duration: NAVIGATE_DURATION_MS }, PROGRAMMATIC_MOVE);
+      },
+      fitBounds: (bounds, options) => {
+        const map = mapRef.current;
+        if (!map) return;
+        // See `Map.tsx` — the same two decisions, taken from the same helpers, so
+        // the two platforms cannot drift on either the wrap or the degenerate box.
+        if (isDegenerateBounds(bounds)) {
+          const centre = boundsCenter(bounds);
+          map.easeTo(
+            {
+              center: [centre.longitude, centre.latitude],
+              zoom: DEGENERATE_BOUNDS_ZOOM,
+              duration: options?.duration ?? NAVIGATE_DURATION_MS,
+            },
+            PROGRAMMATIC_MOVE,
+          );
+          return;
+        }
+        map.fitBounds(
+          toCameraBounds(bounds),
           {
-            center: [centre.longitude, centre.latitude],
-            zoom: DEGENERATE_BOUNDS_ZOOM,
+            padding: options?.padding ?? FIT_BOUNDS_PADDING,
             duration: options?.duration ?? NAVIGATE_DURATION_MS,
           },
           PROGRAMMATIC_MOVE,
         );
-        return;
-      }
-      map.fitBounds(
-        toCameraBounds(bounds),
-        {
-          padding: options?.padding ?? FIT_BOUNDS_PADDING,
-          duration: options?.duration ?? NAVIGATE_DURATION_MS,
-        },
-        PROGRAMMATIC_MOVE,
-      );
-    },
-    highlightMarker: (id: string | null) => {
-      setHighlightedId(id ? String(id) : null);
-    },
-    lookupAddress: async (coordinates: LonLat) => lookupAddressFromCoordinates(coordinates),
-  }), []);
+      },
+      highlightMarker: (id: string | null) => {
+        setHighlightedId(id ? String(id) : null);
+      },
+      lookupAddress: async (coordinates: LonLat) => lookupAddressFromCoordinates(coordinates),
+    }),
+    [],
+  );
 
   return (
     <View style={[rootStyle, style]}>
       {showInstructions && enableAddressLookup && (
         <View style={addressInstructionStyles.overlay}>
-          <Text style={addressInstructionStyles.text}>
-            Tap on the map to select a location
-          </Text>
+          <Text style={addressInstructionStyles.text}>Tap on the map to select a location</Text>
         </View>
       )}
       <div ref={containerRef} style={mapDivStyle} />
@@ -770,7 +798,10 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
 // global `Map` so the marker-bookkeeping `Map<string, Marker>` resolves to the
 // JS built-in rather than this component value.
 const MemoizedMap = React.memo(MapComponent, (prevProps, nextProps) => {
-  if (nextProps.screenId === 'create-property' || nextProps.screenId === 'create-property-fullscreen') {
+  if (
+    nextProps.screenId === 'create-property' ||
+    nextProps.screenId === 'create-property-fullscreen'
+  ) {
     return (
       prevProps.screenId === nextProps.screenId &&
       prevProps.enableAddressLookup === nextProps.enableAddressLookup &&

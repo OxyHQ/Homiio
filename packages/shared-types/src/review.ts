@@ -21,7 +21,7 @@ export enum TemperatureRating {
   COLD = 'cold',
   MODERATE = 'moderate',
   WARM = 'warm',
-  VERY_WARM = 'very_warm'
+  VERY_WARM = 'very_warm',
 }
 
 export enum NoiseLevel {
@@ -29,7 +29,7 @@ export enum NoiseLevel {
   QUIET = 'quiet',
   MODERATE = 'moderate',
   NOISY = 'noisy',
-  VERY_NOISY = 'very_noisy'
+  VERY_NOISY = 'very_noisy',
 }
 
 export enum LightLevel {
@@ -37,7 +37,7 @@ export enum LightLevel {
   DARK = 'dark',
   MODERATE = 'moderate',
   BRIGHT = 'bright',
-  VERY_BRIGHT = 'very_bright'
+  VERY_BRIGHT = 'very_bright',
 }
 
 export enum ConditionRating {
@@ -45,7 +45,7 @@ export enum ConditionRating {
   FAIR = 'fair',
   GOOD = 'good',
   VERY_GOOD = 'very_good',
-  EXCELLENT = 'excellent'
+  EXCELLENT = 'excellent',
 }
 
 export enum LandlordTreatment {
@@ -53,7 +53,7 @@ export enum LandlordTreatment {
   POOR = 'poor',
   FAIR = 'fair',
   GOOD = 'good',
-  EXCELLENT = 'excellent'
+  EXCELLENT = 'excellent',
 }
 
 export enum ResponseRating {
@@ -62,7 +62,7 @@ export enum ResponseRating {
   SLOW = 'slow',
   REASONABLE = 'reasonable',
   FAST = 'fast',
-  VERY_FAST = 'very_fast'
+  VERY_FAST = 'very_fast',
 }
 
 export enum NeighborRating {
@@ -70,7 +70,7 @@ export enum NeighborRating {
   UNFRIENDLY = 'unfriendly',
   NEUTRAL = 'neutral',
   FRIENDLY = 'friendly',
-  VERY_FRIENDLY = 'very_friendly'
+  VERY_FRIENDLY = 'very_friendly',
 }
 
 export enum NeighborRelations {
@@ -78,7 +78,7 @@ export enum NeighborRelations {
   POOR = 'poor',
   FAIR = 'fair',
   GOOD = 'good',
-  EXCELLENT = 'excellent'
+  EXCELLENT = 'excellent',
 }
 
 export enum CleaningRating {
@@ -86,7 +86,7 @@ export enum CleaningRating {
   DIRTY = 'dirty',
   ACCEPTABLE = 'acceptable',
   CLEAN = 'clean',
-  VERY_CLEAN = 'very_clean'
+  VERY_CLEAN = 'very_clean',
 }
 
 export enum TouristLevel {
@@ -94,7 +94,7 @@ export enum TouristLevel {
   FEW = 'few',
   MODERATE = 'moderate',
   MANY = 'many',
-  OVERWHELMING = 'overwhelming'
+  OVERWHELMING = 'overwhelming',
 }
 
 export enum SecurityLevel {
@@ -102,7 +102,7 @@ export enum SecurityLevel {
   UNSAFE = 'unsafe',
   NEUTRAL = 'neutral',
   SAFE = 'safe',
-  VERY_SAFE = 'very_safe'
+  VERY_SAFE = 'very_safe',
 }
 
 export enum ServiceType {
@@ -115,7 +115,7 @@ export enum ServiceType {
   CONCIERGE = 'concierge',
   SECURITY = 'security',
   MAINTENANCE = 'maintenance',
-  CLEANING = 'cleaning'
+  CLEANING = 'cleaning',
 }
 
 // ---------------------------------------------------------------------------
@@ -125,13 +125,13 @@ export enum ServiceType {
 export enum DepositReturn {
   FULL = 'full',
   PARTIAL = 'partial',
-  NO = 'no'
+  NO = 'no',
 }
 
 export enum ReviewModerationStatus {
   ACTIVE = 'active',
   UNDER_REVIEW = 'under_review',
-  REMOVED = 'removed'
+  REMOVED = 'removed',
 }
 
 /**
@@ -163,7 +163,7 @@ export enum ReviewReportReason {
   OFFENSIVE = 'offensive',
   PERSONAL_DATA = 'personal_data',
   SPAM = 'spam',
-  OTHER = 'other'
+  OTHER = 'other',
 }
 
 // ---------------------------------------------------------------------------

@@ -24,10 +24,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@oxy.so/bloom/button';
 import { Calendar, RangeCalendar, type DateRange } from '@oxy.so/bloom/date-picker';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
-import {
-  AvailabilityWindow,
-  AvailabilityWindowStatus,
-} from '@homiio/shared-types';
+import { AvailabilityWindow, AvailabilityWindowStatus } from '@homiio/shared-types';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { formatLocalized, getFormatLocale } from '@/utils/dateLocale';
 import { useIsScreenNotMobile } from '@/hooks/useOptimizedMediaQuery';
@@ -222,7 +219,13 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
           <Button size="md" onPress={handleClear} tone="accent" appearance="subtle">
             {t('common.clear')}
           </Button>
-          <Button size="md" onPress={handleApply} disabled={isIncomplete} tone="accent" appearance="solid">
+          <Button
+            size="md"
+            onPress={handleApply}
+            disabled={isIncomplete}
+            tone="accent"
+            appearance="solid"
+          >
             {t('booking.calendar.apply', 'Apply')}
           </Button>
         </View>

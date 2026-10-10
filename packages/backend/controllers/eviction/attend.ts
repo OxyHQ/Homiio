@@ -75,7 +75,11 @@ export async function toggleAttend(
 
     // Milestone notification to the owner on a FRESH RSVP crossing a threshold.
     // The COUNT only — never who.
-    if (attending && ATTENDEE_MILESTONES.has(attendeeCount) && evictionCase.oxyUserId !== oxyUserId) {
+    if (
+      attending &&
+      ATTENDEE_MILESTONES.has(attendeeCount) &&
+      evictionCase.oxyUserId !== oxyUserId
+    ) {
       await notificationDispatchService.createForUser(evictionCase.oxyUserId, {
         type: 'eviction_rsvp',
         title: 'People are showing up',
@@ -148,9 +152,7 @@ export async function vouchForSupporter(
       minTenureDays: evictionCase.contactUnlockMinTenureDays,
     });
 
-    res.json(
-      successResponse({ vouched: true, confirmed: basis !== undefined }, 'Vouch recorded'),
-    );
+    res.json(successResponse({ vouched: true, confirmed: basis !== undefined }, 'Vouch recorded'));
   } catch (error) {
     next(error);
   }

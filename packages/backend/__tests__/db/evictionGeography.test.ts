@@ -17,7 +17,13 @@
  */
 
 import { eq, sql } from 'drizzle-orm';
-import { CHECK_VIOLATION, GENERATED_ALWAYS, constraintNameOf, sqlStateOf, uuidv7 } from '@oxy.so/db';
+import {
+  CHECK_VIOLATION,
+  GENERATED_ALWAYS,
+  constraintNameOf,
+  sqlStateOf,
+  uuidv7,
+} from '@oxy.so/db';
 import { closePostgres, connectPostgres, type Database } from '../../db/postgres';
 import { evictionCases } from '../../db/schema';
 

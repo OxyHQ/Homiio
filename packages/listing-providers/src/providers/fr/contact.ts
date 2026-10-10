@@ -17,7 +17,9 @@ export function contactFromBieniciRelative(value: unknown): NormalizedListingCon
     asString(value.phoneToDisplay) ?? asString(value.phone) ?? asString(value.telephone);
   const email = asString(value.emailToDisplay) ?? asString(value.email);
   const agencyName =
-    asString(value.agencyNameToDisplay) ?? asString(value.agencyName) ?? asString(value.companyName);
+    asString(value.agencyNameToDisplay) ??
+    asString(value.agencyName) ??
+    asString(value.companyName);
   const name = asString(value.contactNameToDisplay) ?? asString(value.contactName) ?? agencyName;
   const isAgency = value.contactIsAgency === true || value.contactIsPro === true;
   return buildContact({

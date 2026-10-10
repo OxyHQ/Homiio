@@ -16,7 +16,10 @@ const provider = new RealtorComProvider();
 
 function graphqlRuntime(responses: Map<string, string>): FetchRuntime {
   return {
-    async fetchHttp(url: string, init?: { body?: string }): Promise<{ status: number; body: string }> {
+    async fetchHttp(
+      url: string,
+      init?: { body?: string },
+    ): Promise<{ status: number; body: string }> {
       if (responses.has(url)) {
         return { status: 200, body: responses.get(url) ?? '' };
       }

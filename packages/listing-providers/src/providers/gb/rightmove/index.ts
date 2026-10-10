@@ -18,10 +18,7 @@ import {
   type NormalizedRemoteImage,
   type ProviderId,
 } from '@homiio/shared-types';
-import type {
-  BrowserSession,
-  BrowserStorageState,
-} from '../../../browserSession';
+import type { BrowserSession, BrowserStorageState } from '../../../browserSession';
 import { BrowserSessionChallengeError } from '../../../browserSession';
 import { createProxySessionId, envBool } from '../../../proxy';
 import type {
@@ -35,14 +32,16 @@ import type {
 } from '../../../types';
 import { createFetchRuntime } from '../../../runtime';
 import { ChallengeError, fetchListingViaLadder } from '../../../strategy';
-import { defaultProviderMetrics, type ProviderMetricsReader, type ProviderMetricsSink } from '../../../metrics';
+import {
+  defaultProviderMetrics,
+  type ProviderMetricsReader,
+  type ProviderMetricsSink,
+} from '../../../metrics';
 import { providerMaxSearchPages } from '../../../discoverLimits';
 import { DEFAULT_GB_CITIES } from '../../../parse/defaultMarketCities';
 import { isGbPortalChallenge } from '../challenge';
 import { resolveGbPropertyType, splitGbDisplayAddress } from '../housing';
-import {
-  RIGHTMOVE_BASE_URL,
-} from './fixtures';
+import { RIGHTMOVE_BASE_URL } from './fixtures';
 import {
   parseRightmoveDetail,
   parseRightmoveSearchJson,
@@ -89,9 +88,7 @@ function toRemoteImages(urls: readonly string[]): NormalizedRemoteImage[] {
 function buildAddress(listing: RightmoveListingJson): NormalizedListingAddress {
   const split = splitGbDisplayAddress(listing.displayAddress);
   const postalCode =
-    listing.outcode && listing.incode
-      ? `${listing.outcode} ${listing.incode}`
-      : split.postalCode;
+    listing.outcode && listing.incode ? `${listing.outcode} ${listing.incode}` : split.postalCode;
   const address: NormalizedListingAddress = {
     street: split.street,
     city: split.city,
@@ -124,7 +121,11 @@ export class RightmoveProvider implements ListingProvider {
     this.maxSearchPages = providerMaxSearchPages(PROVIDER_ID, DEFAULT_MAX_SEARCH_PAGES, 'GB');
   }
 
-  private async resolveLocationId(runtime: FetchRuntime, city: string, signal?: AbortSignal): Promise<string | undefined> {
+  private async resolveLocationId(
+    runtime: FetchRuntime,
+    city: string,
+    signal?: AbortSignal,
+  ): Promise<string | undefined> {
     const key = city.toLowerCase();
     const cached = this.locationCache.get(key);
     if (cached) return cached;
@@ -345,8 +346,12 @@ export class RightmoveProvider implements ListingProvider {
       address: buildAddress(listing),
       type: resolveGbPropertyType(listing.propertySubType) as PropertyType,
       offerings: isSale ? [OfferingType.SALE] : [OfferingType.LONG_TERM_RENT],
-      longTermRent: isSale ? undefined : { monthlyAmount: listing.priceAmount, currency: listing.priceCurrency ?? 'GBP' },
-      sale: isSale ? { price: listing.priceAmount, currency: listing.priceCurrency ?? 'GBP' } : undefined,
+      longTermRent: isSale
+        ? undefined
+        : { monthlyAmount: listing.priceAmount, currency: listing.priceCurrency ?? 'GBP' },
+      sale: isSale
+        ? { price: listing.priceAmount, currency: listing.priceCurrency ?? 'GBP' }
+        : undefined,
       remoteImages: toRemoteImages(listing.images),
       status: 'published',
     };
@@ -365,7 +370,11 @@ export class RightmoveProvider implements ListingProvider {
     const snapshot = this.metrics.snapshot(this.id);
     if (snapshot && snapshot.attempts > 0) {
       const status =
-        snapshot.challengeRate >= 0.8 ? 'unhealthy' : snapshot.challengeRate >= 0.3 ? 'degraded' : 'healthy';
+        snapshot.challengeRate >= 0.8
+          ? 'unhealthy'
+          : snapshot.challengeRate >= 0.3
+            ? 'degraded'
+            : 'healthy';
       return {
         provider: this.id,
         status,

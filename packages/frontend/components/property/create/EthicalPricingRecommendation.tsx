@@ -10,10 +10,7 @@ import {
 import { StatBar } from '@oxy.so/bloom/stat-bar';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { PropertyType, formatMoney } from '@homiio/shared-types';
-import {
-  validateEthicalPricing,
-  type EthicalPricingCharacteristics,
-} from '@/utils/ethicalPricing';
+import { validateEthicalPricing, type EthicalPricingCharacteristics } from '@/utils/ethicalPricing';
 import type { CreatePropertyFormData } from '@/store/createPropertyFormStore';
 import { useFormatting } from '@/utils/format';
 

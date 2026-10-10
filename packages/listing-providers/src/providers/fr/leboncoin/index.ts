@@ -29,7 +29,11 @@ import type {
   RawListing,
 } from '../../../types';
 import { createFetchRuntime } from '../../../runtime';
-import { defaultProviderMetrics, type ProviderMetricsReader, type ProviderMetricsSink } from '../../../metrics';
+import {
+  defaultProviderMetrics,
+  type ProviderMetricsReader,
+  type ProviderMetricsSink,
+} from '../../../metrics';
 import { LEBONCOIN_BASE_URL, LEBONCOIN_FINDER_URL } from './fixtures';
 import {
   leboncoinFinderBody,
@@ -38,11 +42,7 @@ import {
   parseLeboncoinSearch,
   type LeboncoinRawListing,
 } from './parse';
-import {
-  findNextDataArray,
-  findNextDataRecord,
-  parseNextData,
-} from '../../../parse/nextData';
+import { findNextDataArray, findNextDataRecord, parseNextData } from '../../../parse/nextData';
 import { isRecord } from '../../../parse/guards';
 
 const PROVIDER_ID: ProviderId = 'leboncoin';
@@ -63,7 +63,12 @@ export interface LeboncoinProviderOptions {
 }
 
 function asLeboncoinRaw(payload: unknown): LeboncoinRawListing {
-  const record = payload as { sourceId?: unknown; url?: unknown; price?: unknown; city?: unknown } | null;
+  const record = payload as {
+    sourceId?: unknown;
+    url?: unknown;
+    price?: unknown;
+    city?: unknown;
+  } | null;
   if (
     !record ||
     typeof record.sourceId !== 'string' ||
@@ -369,7 +374,11 @@ export class LeboncoinProvider implements ListingProvider {
     const snapshot = this.metrics.snapshot(this.id);
     if (snapshot && snapshot.attempts > 0) {
       const status =
-        snapshot.challengeRate >= 0.8 ? 'unhealthy' : snapshot.challengeRate >= 0.3 ? 'degraded' : 'healthy';
+        snapshot.challengeRate >= 0.8
+          ? 'unhealthy'
+          : snapshot.challengeRate >= 0.3
+            ? 'degraded'
+            : 'healthy';
       return {
         provider: this.id,
         status,

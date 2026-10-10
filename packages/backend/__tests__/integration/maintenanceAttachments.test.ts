@@ -69,10 +69,7 @@ function buildApp(oxyUserId: string): Express {
     upload.single('photo'),
     maintenanceController.attachToRequest,
   );
-  app.get(
-    '/maintenance/:id/attachments/:attachmentId',
-    maintenanceController.getRequestAttachment,
-  );
+  app.get('/maintenance/:id/attachments/:attachmentId', maintenanceController.getRequestAttachment);
   app.use(errorHandler);
   return app;
 }

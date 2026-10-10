@@ -115,13 +115,16 @@ function trackedSourceFiles(): string[] {
     .filter((file) => SCANNED_EXTENSIONS.some((extension) => file.endsWith(extension)));
 }
 
-const describeFinding = (finding: Finding): string => `${finding.file}:${finding.line}  ${finding.text}`;
+const describeFinding = (finding: Finding): string =>
+  `${finding.file}:${finding.line}  ${finding.text}`;
 
 describe('the predicate can tell code from prose', () => {
   it('matches a real function-form style prop', () => {
     // The POSITIVE control. Without it, a scan that stopped matching anything at
     // all would report a clean tree forever.
-    expect(scanSource('probe.tsx', '<Pressable style={({ pressed }) => [styles.x]} />')).toHaveLength(1);
+    expect(
+      scanSource('probe.tsx', '<Pressable style={({ pressed }) => [styles.x]} />'),
+    ).toHaveLength(1);
   });
 
   it('matches the other function forms, not just `pressed`', () => {
@@ -143,7 +146,7 @@ describe('the predicate can tell code from prose', () => {
     // it. This is the exact text that stood in `components/location/LocationScopeBar.tsx`.
     const comment = [
       '/**',
-      " * `style={({ pressed }) => [...]}` — the css-interop swallows the function",
+      ' * `style={({ pressed }) => [...]}` — the css-interop swallows the function',
       ' * form and the element renders with no style at all.',
       ' */',
       'const x = 1;',

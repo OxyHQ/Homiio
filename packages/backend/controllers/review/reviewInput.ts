@@ -75,7 +75,14 @@ const MAX_RATING = 5;
  * (legacy rows predate the field) while the CONTROLLER requires one for a new
  * submission, with its own minimum length and its own message.
  */
-const CREATE_REQUIRED = ['price', 'rating', 'recommendation', 'opinion', 'livedFrom', 'livedTo'] as const;
+const CREATE_REQUIRED = [
+  'price',
+  'rating',
+  'recommendation',
+  'opinion',
+  'livedFrom',
+  'livedTo',
+] as const;
 
 /** A patch that carries every column a create needs. */
 export type ReviewCreateFields = ReviewPatch &
@@ -139,7 +146,11 @@ function optionalEnum<T extends string>(
   return value as T;
 }
 
-function optionalBoolean(errors: Errors, field: string, value: unknown): boolean | null | undefined {
+function optionalBoolean(
+  errors: Errors,
+  field: string,
+  value: unknown,
+): boolean | null | undefined {
   if (value === undefined) return undefined;
   if (value === null) return null;
   if (typeof value !== 'boolean') {
@@ -205,7 +216,10 @@ function serviceList(errors: Errors, value: unknown): string[] | undefined {
   }
   const services: string[] = [];
   for (const entry of value) {
-    if (typeof entry !== 'string' || !SERVICE_TYPES.includes(entry as (typeof SERVICE_TYPES)[number])) {
+    if (
+      typeof entry !== 'string' ||
+      !SERVICE_TYPES.includes(entry as (typeof SERVICE_TYPES)[number])
+    ) {
       errors.add(`services must contain only: ${SERVICE_TYPES.join(', ')}`);
       return undefined;
     }
@@ -224,7 +238,12 @@ function serviceList(errors: Errors, value: unknown): string[] | undefined {
  */
 function tenancyDate(errors: Errors, field: string, value: unknown): Date | undefined {
   if (value === undefined) return undefined;
-  const parsed = value instanceof Date ? value : typeof value === 'string' || typeof value === 'number' ? new Date(value) : undefined;
+  const parsed =
+    value instanceof Date
+      ? value
+      : typeof value === 'string' || typeof value === 'number'
+        ? new Date(value)
+        : undefined;
   if (parsed === undefined || Number.isNaN(parsed.getTime())) {
     errors.add(`${field} is not a valid date`);
     return undefined;
@@ -250,10 +269,20 @@ function normalize(picked: Record<string, unknown>): ReviewInputResult<ReviewPat
   const title = optionalText(errors, 'title', picked.title, MAX_TITLE_LENGTH);
   if (title !== undefined) values.title = title;
 
-  const adviceToAgency = optionalText(errors, 'adviceToAgency', picked.adviceToAgency, MAX_ADVICE_LENGTH);
+  const adviceToAgency = optionalText(
+    errors,
+    'adviceToAgency',
+    picked.adviceToAgency,
+    MAX_ADVICE_LENGTH,
+  );
   if (adviceToAgency !== undefined) values.adviceToAgency = adviceToAgency;
 
-  const adviceToLandlord = optionalText(errors, 'adviceToLandlord', picked.adviceToLandlord, MAX_ADVICE_LENGTH);
+  const adviceToLandlord = optionalText(
+    errors,
+    'adviceToLandlord',
+    picked.adviceToLandlord,
+    MAX_ADVICE_LENGTH,
+  );
   if (adviceToLandlord !== undefined) values.adviceToLandlord = adviceToLandlord;
 
   if (picked.opinion !== undefined) {
@@ -327,10 +356,20 @@ function normalize(picked: Record<string, unknown>): ReviewInputResult<ReviewPat
   const services = serviceList(errors, picked.services);
   if (services !== undefined) values.services = services;
 
-  const summerTemperature = optionalEnum(errors, 'summerTemperature', picked.summerTemperature, TEMPERATURE_RATINGS);
+  const summerTemperature = optionalEnum(
+    errors,
+    'summerTemperature',
+    picked.summerTemperature,
+    TEMPERATURE_RATINGS,
+  );
   if (summerTemperature !== undefined) values.summerTemperature = summerTemperature;
 
-  const winterTemperature = optionalEnum(errors, 'winterTemperature', picked.winterTemperature, TEMPERATURE_RATINGS);
+  const winterTemperature = optionalEnum(
+    errors,
+    'winterTemperature',
+    picked.winterTemperature,
+    TEMPERATURE_RATINGS,
+  );
   if (winterTemperature !== undefined) values.winterTemperature = winterTemperature;
 
   const noise = optionalEnum(errors, 'noise', picked.noise, NOISE_LEVELS);
@@ -339,22 +378,53 @@ function normalize(picked: Record<string, unknown>): ReviewInputResult<ReviewPat
   const light = optionalEnum(errors, 'light', picked.light, LIGHT_LEVELS);
   if (light !== undefined) values.light = light;
 
-  const conditionAndMaintenance = optionalEnum(errors, 'conditionAndMaintenance', picked.conditionAndMaintenance, CONDITION_RATINGS);
-  if (conditionAndMaintenance !== undefined) values.conditionAndMaintenance = conditionAndMaintenance;
+  const conditionAndMaintenance = optionalEnum(
+    errors,
+    'conditionAndMaintenance',
+    picked.conditionAndMaintenance,
+    CONDITION_RATINGS,
+  );
+  if (conditionAndMaintenance !== undefined)
+    values.conditionAndMaintenance = conditionAndMaintenance;
 
-  const landlordTreatment = optionalEnum(errors, 'landlordTreatment', picked.landlordTreatment, LANDLORD_TREATMENTS);
+  const landlordTreatment = optionalEnum(
+    errors,
+    'landlordTreatment',
+    picked.landlordTreatment,
+    LANDLORD_TREATMENTS,
+  );
   if (landlordTreatment !== undefined) values.landlordTreatment = landlordTreatment;
 
-  const problemResponse = optionalEnum(errors, 'problemResponse', picked.problemResponse, RESPONSE_RATINGS);
+  const problemResponse = optionalEnum(
+    errors,
+    'problemResponse',
+    picked.problemResponse,
+    RESPONSE_RATINGS,
+  );
   if (problemResponse !== undefined) values.problemResponse = problemResponse;
 
-  const depositReturned = optionalEnum(errors, 'depositReturned', picked.depositReturned, DEPOSIT_RETURNS);
+  const depositReturned = optionalEnum(
+    errors,
+    'depositReturned',
+    picked.depositReturned,
+    DEPOSIT_RETURNS,
+  );
   if (depositReturned !== undefined) values.depositReturned = depositReturned;
 
-  const staircaseNeighbors = optionalEnum(errors, 'staircaseNeighbors', picked.staircaseNeighbors, NEIGHBOR_RATINGS);
+  const staircaseNeighbors = optionalEnum(
+    errors,
+    'staircaseNeighbors',
+    picked.staircaseNeighbors,
+    NEIGHBOR_RATINGS,
+  );
   if (staircaseNeighbors !== undefined) values.staircaseNeighbors = staircaseNeighbors;
 
-  const neighborRelations = optionalEnum(errors, 'neighborRelations', picked.neighborRelations, NEIGHBOR_RELATIONS);
+  const neighborRelations = optionalEnum(
+    errors,
+    'neighborRelations',
+    picked.neighborRelations,
+    NEIGHBOR_RELATIONS,
+  );
   if (neighborRelations !== undefined) values.neighborRelations = neighborRelations;
 
   const cleaning = optionalEnum(errors, 'cleaning', picked.cleaning, CLEANING_RATINGS);
@@ -369,7 +439,12 @@ function normalize(picked: Record<string, unknown>): ReviewInputResult<ReviewPat
   const areaNoise = optionalEnum(errors, 'areaNoise', picked.areaNoise, NOISE_LEVELS);
   if (areaNoise !== undefined) values.areaNoise = areaNoise;
 
-  const areaCleanliness = optionalEnum(errors, 'areaCleanliness', picked.areaCleanliness, CLEANING_RATINGS);
+  const areaCleanliness = optionalEnum(
+    errors,
+    'areaCleanliness',
+    picked.areaCleanliness,
+    CLEANING_RATINGS,
+  );
   if (areaCleanliness !== undefined) values.areaCleanliness = areaCleanliness;
 
   const touristApartments = optionalBoolean(errors, 'touristApartments', picked.touristApartments);
@@ -417,7 +492,10 @@ export function normalizeReviewCreateInput(
   const result = normalize(picked);
   if (!result.ok) return result;
   if (!hasCreateRequirements(result.values)) {
-    return { ok: false, errors: missingCreateFields(result.values).map((field) => `${field} is required`) };
+    return {
+      ok: false,
+      errors: missingCreateFields(result.values).map((field) => `${field} is required`),
+    };
   }
   return { ok: true, values: result.values };
 }

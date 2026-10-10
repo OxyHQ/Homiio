@@ -142,7 +142,9 @@ const translations = NON_ENGLISH_FILES.map((file) => ({
 /** Keys carrying the English value in EVERY non-English locale. */
 const identicalEverywhere = [...english.entries()]
   .filter(([key, value]) =>
-    translations.every(({ values }) => values.has(key) && sameValue(values.get(key) as Json, value)),
+    translations.every(
+      ({ values }) => values.has(key) && sameValue(values.get(key) as Json, value),
+    ),
   )
   .map(([key]) => key);
 
@@ -170,8 +172,14 @@ describe('the comparison itself is not vacuous', () => {
   it('finds a planted untranslated key, and does not flag a translated one', () => {
     // The predicate under test, exercised directly on both sides of the
     // distinction it exists to make.
-    const enSample = new Map<string, Json>([['x', 'Save'], ['y', 'Search']]);
-    const localeSample = new Map<string, Json>([['x', 'Save'], ['y', 'Buscar']]);
+    const enSample = new Map<string, Json>([
+      ['x', 'Save'],
+      ['y', 'Search'],
+    ]);
+    const localeSample = new Map<string, Json>([
+      ['x', 'Save'],
+      ['y', 'Buscar'],
+    ]);
     const flagged = [...enSample.entries()]
       .filter(([key, value]) => sameValue(localeSample.get(key) as Json, value))
       .map(([key]) => key);
@@ -264,7 +272,10 @@ describe('the surfaces #413 named are translated', () => {
     // A translation that drops `{{place}}` renders a sentence with a hole in it,
     // and nothing else in this repository would notice.
     const placeholders = (value: Json): string =>
-      [...String(value).matchAll(/\{\{\s*([^}]+?)\s*\}\}/g)].map((match) => match[1]).sort().join(',');
+      [...String(value).matchAll(/\{\{\s*([^}]+?)\s*\}\}/g)]
+        .map((match) => match[1])
+        .sort()
+        .join(',');
 
     const broken: string[] = [];
     for (const [key, value] of english) {

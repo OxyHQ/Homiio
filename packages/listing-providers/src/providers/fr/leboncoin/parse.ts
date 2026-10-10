@@ -6,10 +6,7 @@ import type { NormalizedListingContact } from '@homiio/shared-types';
 import { NonHousingListingError, assertHousingListing } from '../../../parse/classifieds';
 import { contactFromUnknown } from '../../../parse/contact';
 import { asNumber, asString, isRecord } from '../../../parse/guards';
-import {
-  LEBONCOIN_BASE_URL,
-  LEBONCOIN_HOUSING_CATEGORY_IDS,
-} from './fixtures';
+import { LEBONCOIN_BASE_URL, LEBONCOIN_HOUSING_CATEGORY_IDS } from './fixtures';
 
 export interface LeboncoinRawListing {
   sourceId: string;
@@ -207,7 +204,12 @@ export function parseLeboncoinDetail(body: string, url: string): LeboncoinRawLis
   return listing;
 }
 
-export function leboncoinFinderBody(city: string, categoryId: '9' | '10', offset = 0, limit = 35): string {
+export function leboncoinFinderBody(
+  city: string,
+  categoryId: '9' | '10',
+  offset = 0,
+  limit = 35,
+): string {
   return JSON.stringify({
     filters: {
       category: { id: categoryId },
@@ -227,6 +229,8 @@ export function leboncoinWarmSearchUrl(city: string, categoryId: '9' | '10' = '1
 }
 
 export function leboncoinSourceIdFromUrl(url: string): string | undefined {
-  const match = url.match(/\/(?:ad\/(?:locations|ventes_immobilieres)|locations|ventes_immobilieres)\/(\d+)/i);
+  const match = url.match(
+    /\/(?:ad\/(?:locations|ventes_immobilieres)|locations|ventes_immobilieres)\/(\d+)/i,
+  );
   return match?.[1];
 }

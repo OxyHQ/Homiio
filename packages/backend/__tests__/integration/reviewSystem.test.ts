@@ -61,14 +61,22 @@ function buildApp(oxyUserId?: string): Express {
   app.get('/agencies/search', (req, res) => reviewController.searchAgencies(req, res));
   app.get('/agencies/:slug', (req, res) => reviewController.getAgencyBySlug(req, res));
   app.get('/agencies/:slug/reviews', (req, res) => reviewController.getAgencyReviews(req, res));
-  app.get('/agencies/:slug/properties', (req, res) => reviewController.getAgencyProperties(req, res));
+  app.get('/agencies/:slug/properties', (req, res) =>
+    reviewController.getAgencyProperties(req, res),
+  );
 
-  app.get('/addresses/:addressId/reviews', (req, res) => reviewController.getReviewsByAddress(req, res));
-  app.get('/addresses/:addressId/stats', (req, res) => reviewController.getAddressReviewStats(req, res));
+  app.get('/addresses/:addressId/reviews', (req, res) =>
+    reviewController.getReviewsByAddress(req, res),
+  );
+  app.get('/addresses/:addressId/stats', (req, res) =>
+    reviewController.getAddressReviewStats(req, res),
+  );
 
   app.get('/reviews-explore', (req, res) => reviewController.getExploreCities(req, res));
   app.get('/reviews-explore/city/:cityId', (req, res) => reviewController.getExploreCity(req, res));
-  app.get('/reviews-explore/neighborhood/:neighborhoodId', (req, res) => reviewController.getExploreNeighborhood(req, res));
+  app.get('/reviews-explore/neighborhood/:neighborhoodId', (req, res) =>
+    reviewController.getExploreNeighborhood(req, res),
+  );
 
   return app;
 }
@@ -132,7 +140,13 @@ async function postReview(
 /** Attribute a stored review to an agency and/or move its moderation state. */
 async function amendReview(
   reviewId: string,
-  patch: { agencyId?: string; moderationStatus?: 'active' | 'under_review' | 'removed'; rating?: number; recommendation?: boolean; depositReturned?: 'full' | 'partial' | 'no' },
+  patch: {
+    agencyId?: string;
+    moderationStatus?: 'active' | 'under_review' | 'removed';
+    rating?: number;
+    recommendation?: boolean;
+    depositReturned?: 'full' | 'partial' | 'no';
+  },
 ): Promise<void> {
   await getDb().update(reviewsTable).set(patch).where(eq(reviewsTable.id, reviewId));
 }
@@ -192,7 +206,10 @@ describe('createReview (allowlist + agency + geo)', () => {
     expect(res.body.review.reports).toBeUndefined();
     expect(res.body.review.helpfulCount).toBe(0);
     expect(res.body.review.livedDurationText).toBe('1 year 5 months');
-    expect(res.body.review.agency).toMatchObject({ name: `Fincas García ${SUITE}`, slug: `fincas-garcia-${SUITE}` });
+    expect(res.body.review.agency).toMatchObject({
+      name: `Fincas García ${SUITE}`,
+      slug: `fincas-garcia-${SUITE}`,
+    });
   });
 
   it('rejects a review without a title', async () => {
@@ -200,8 +217,13 @@ describe('createReview (allowlist + agency + geo)', () => {
       .post('/reviews')
       .send({
         address: addressBody({ street: `Carrer X ${SUITE}`, number: '1' }),
-        price: 1000, currency: 'EUR', livedFrom: '2020-01-01', livedTo: '2021-01-01',
-        rating: 4, recommendation: true, opinion: 'A reasonable opinion string here.',
+        price: 1000,
+        currency: 'EUR',
+        livedFrom: '2020-01-01',
+        livedTo: '2021-01-01',
+        rating: 4,
+        recommendation: true,
+        opinion: 'A reasonable opinion string here.',
       });
     expect(res.status).toBe(400);
   });
@@ -217,8 +239,13 @@ describe('createReview (allowlist + agency + geo)', () => {
       .send({
         address: addressBody({ street: `Carrer Rating ${SUITE}`, number: '2' }),
         title: 'A perfectly reasonable title',
-        price: 1000, currency: 'EUR', livedFrom: '2020-01-01', livedTo: '2021-01-01',
-        rating: 9, recommendation: true, opinion: 'A reasonable opinion string here.',
+        price: 1000,
+        currency: 'EUR',
+        livedFrom: '2020-01-01',
+        livedTo: '2021-01-01',
+        rating: 9,
+        recommendation: true,
+        opinion: 'A reasonable opinion string here.',
       });
     expect(res.status).toBe(400);
     expect(res.body.errors).toEqual(expect.arrayContaining([expect.stringContaining('rating')]));
@@ -230,8 +257,13 @@ describe('createReview (allowlist + agency + geo)', () => {
       .send({
         address: addressBody({ street: `Carrer Enum ${SUITE}`, number: '3' }),
         title: 'A perfectly reasonable title',
-        price: 1000, currency: 'EUR', livedFrom: '2020-01-01', livedTo: '2021-01-01',
-        rating: 4, recommendation: true, opinion: 'A reasonable opinion string here.',
+        price: 1000,
+        currency: 'EUR',
+        livedFrom: '2020-01-01',
+        livedTo: '2021-01-01',
+        rating: 4,
+        recommendation: true,
+        opinion: 'A reasonable opinion string here.',
         noise: 'deafening',
       });
     expect(res.status).toBe(400);
@@ -245,8 +277,13 @@ describe('createReview (allowlist + agency + geo)', () => {
       .send({
         address: addressBody(address),
         title: 'A perfectly reasonable title',
-        price: 1000, currency: 'EUR', livedFrom: '2020-01-01', livedTo: '2021-01-01',
-        rating: 4, recommendation: true, opinion: 'A reasonable opinion string here.',
+        price: 1000,
+        currency: 'EUR',
+        livedFrom: '2020-01-01',
+        livedTo: '2021-01-01',
+        rating: 4,
+        recommendation: true,
+        opinion: 'A reasonable opinion string here.',
       });
     expect(res.status).toBe(400);
     expect(res.body.message).toContain('already reviewed');
@@ -255,7 +292,9 @@ describe('createReview (allowlist + agency + geo)', () => {
 
 describe('updateReview (mass-assignment guard + ownership)', () => {
   it('applies allowlisted edits and ignores injected server fields', async () => {
-    const created = await postReview('oxy-owner', { address: { street: `Carrer Edit ${SUITE}`, number: '5' } });
+    const created = await postReview('oxy-owner', {
+      address: { street: `Carrer Edit ${SUITE}`, number: '5' },
+    });
 
     const res = await request(buildApp('oxy-owner'))
       .put(`/reviews/${created.id}`)
@@ -280,7 +319,9 @@ describe('updateReview (mass-assignment guard + ownership)', () => {
   });
 
   it('returns 404 for a non-owner PUT', async () => {
-    const created = await postReview('oxy-owner-2', { address: { street: `Carrer Guard ${SUITE}`, number: '6' } });
+    const created = await postReview('oxy-owner-2', {
+      address: { street: `Carrer Guard ${SUITE}`, number: '6' },
+    });
     const res = await request(buildApp('oxy-stranger'))
       .put(`/reviews/${created.id}`)
       .send({ title: 'Stranger edit attempt here' });
@@ -288,30 +329,44 @@ describe('updateReview (mass-assignment guard + ownership)', () => {
   });
 
   it('returns 404 for a non-owner DELETE and leaves the review intact', async () => {
-    const created = await postReview('oxy-owner-3', { address: { street: `Carrer Keep ${SUITE}`, number: '7' } });
+    const created = await postReview('oxy-owner-3', {
+      address: { street: `Carrer Keep ${SUITE}`, number: '7' },
+    });
     const res = await request(buildApp('oxy-stranger')).delete(`/reviews/${created.id}`);
     expect(res.status).toBe(404);
-    const rows = await getDb().select().from(reviewsTable).where(eq(reviewsTable.id, String(created.id)));
+    const rows = await getDb()
+      .select()
+      .from(reviewsTable)
+      .where(eq(reviewsTable.id, String(created.id)));
     expect(rows).toHaveLength(1);
   });
 
   it('lets the owner delete their review', async () => {
-    const created = await postReview('oxy-owner-4', { address: { street: `Carrer Gone ${SUITE}`, number: '8' } });
+    const created = await postReview('oxy-owner-4', {
+      address: { street: `Carrer Gone ${SUITE}`, number: '8' },
+    });
     const res = await request(buildApp('oxy-owner-4')).delete(`/reviews/${created.id}`);
     expect(res.status).toBe(200);
-    const rows = await getDb().select().from(reviewsTable).where(eq(reviewsTable.id, String(created.id)));
+    const rows = await getDb()
+      .select()
+      .from(reviewsTable)
+      .where(eq(reviewsTable.id, String(created.id)));
     expect(rows).toHaveLength(0);
   });
 });
 
 describe('getReviewById + getUserReviews and the removed-review rule', () => {
   it('hides a removed review from a stranger and shows it to its author', async () => {
-    const created = await postReview('oxy-removed-author', { address: { street: `Carrer Hidden ${SUITE}`, number: '9' } });
+    const created = await postReview('oxy-removed-author', {
+      address: { street: `Carrer Hidden ${SUITE}`, number: '9' },
+    });
     await amendReview(String(created.id), { moderationStatus: 'removed' });
 
     expect((await request(buildApp('oxy-nobody')).get(`/reviews/${created.id}`)).status).toBe(404);
     expect((await request(buildApp()).get(`/reviews/${created.id}`)).status).toBe(404);
-    expect((await request(buildApp('oxy-removed-author')).get(`/reviews/${created.id}`)).status).toBe(200);
+    expect(
+      (await request(buildApp('oxy-removed-author')).get(`/reviews/${created.id}`)).status,
+    ).toBe(200);
   });
 
   /**
@@ -325,8 +380,12 @@ describe('getReviewById + getUserReviews and the removed-review rule', () => {
    */
   it('lists a removed review to its author and to nobody else', async () => {
     const author = `oxy-my-reviews-${SUITE}`;
-    const visible = await postReview(author, { address: { street: `Carrer Mine A ${SUITE}`, number: '1' } });
-    const removed = await postReview(author, { address: { street: `Carrer Mine B ${SUITE}`, number: '2' } });
+    const visible = await postReview(author, {
+      address: { street: `Carrer Mine A ${SUITE}`, number: '1' },
+    });
+    const removed = await postReview(author, {
+      address: { street: `Carrer Mine B ${SUITE}`, number: '2' },
+    });
     await amendReview(String(removed.id), { moderationStatus: 'removed' });
 
     const mine = await request(buildApp(author)).get(`/reviews/user/${author}`);
@@ -336,16 +395,22 @@ describe('getReviewById + getUserReviews and the removed-review rule', () => {
     );
 
     const theirs = await request(buildApp('oxy-someone-else')).get(`/reviews/user/${author}`);
-    expect(theirs.body.reviews.map((review: { id: string }) => review.id)).toEqual([String(visible.id)]);
+    expect(theirs.body.reviews.map((review: { id: string }) => review.id)).toEqual([
+      String(visible.id),
+    ]);
 
     const anonymous = await request(buildApp()).get(`/reviews/user/${author}`);
-    expect(anonymous.body.reviews.map((review: { id: string }) => review.id)).toEqual([String(visible.id)]);
+    expect(anonymous.body.reviews.map((review: { id: string }) => review.id)).toEqual([
+      String(visible.id),
+    ]);
   });
 });
 
 describe('toggleHelpful', () => {
   it('toggles on then off (1 → 0)', async () => {
-    const created = await postReview('oxy-vote-author', { address: { street: `Carrer Vote ${SUITE}`, number: '11' } });
+    const created = await postReview('oxy-vote-author', {
+      address: { street: `Carrer Vote ${SUITE}`, number: '11' },
+    });
     const app = buildApp('oxy-voter');
 
     const first = await request(app).post(`/reviews/${created.id}/helpful`);
@@ -360,7 +425,9 @@ describe('toggleHelpful', () => {
   });
 
   it('rejects voting on your own review with 400', async () => {
-    const created = await postReview('oxy-self-vote', { address: { street: `Carrer Self ${SUITE}`, number: '12' } });
+    const created = await postReview('oxy-self-vote', {
+      address: { street: `Carrer Self ${SUITE}`, number: '12' },
+    });
     const res = await request(buildApp('oxy-self-vote')).post(`/reviews/${created.id}/helpful`);
     expect(res.status).toBe(400);
   });
@@ -373,7 +440,9 @@ describe('toggleHelpful', () => {
    * very suite.
    */
   it('accepts a uuid v7 review id, which the deleted guards would have refused', async () => {
-    const created = await postReview('oxy-uuid-author', { address: { street: `Carrer Uuid ${SUITE}`, number: '13' } });
+    const created = await postReview('oxy-uuid-author', {
+      address: { street: `Carrer Uuid ${SUITE}`, number: '13' },
+    });
     expect(String(created.id)).not.toMatch(/^[0-9a-f]{24}$/);
     const res = await request(buildApp('oxy-uuid-voter')).post(`/reviews/${created.id}/helpful`);
     expect(res.status).toBe(200);
@@ -396,7 +465,9 @@ async function moderationStatusOf(reviewId: string): Promise<string | undefined>
 
 describe('reportReview', () => {
   it('dedupes repeat reports from the same reporter', async () => {
-    const created = await postReview('oxy-report-author', { address: { street: `Carrer Report ${SUITE}`, number: '14' } });
+    const created = await postReview('oxy-report-author', {
+      address: { street: `Carrer Report ${SUITE}`, number: '14' },
+    });
     const reviewId = String(created.id);
     const app = buildApp('oxy-reporter');
 
@@ -413,18 +484,26 @@ describe('reportReview', () => {
   });
 
   it('requires details when the reason is "other"', async () => {
-    const created = await postReview('oxy-other-author', { address: { street: `Carrer Other ${SUITE}`, number: '15' } });
-    const res = await request(buildApp('oxy-reporter')).post(`/reviews/${created.id}/report`).send({ reason: 'other' });
+    const created = await postReview('oxy-other-author', {
+      address: { street: `Carrer Other ${SUITE}`, number: '15' },
+    });
+    const res = await request(buildApp('oxy-reporter'))
+      .post(`/reviews/${created.id}/report`)
+      .send({ reason: 'other' });
     expect(res.status).toBe(400);
   });
 
   it('escalates to under_review after 3 distinct reporters', async () => {
-    const created = await postReview('oxy-escalate-author', { address: { street: `Carrer Escalate ${SUITE}`, number: '16' } });
+    const created = await postReview('oxy-escalate-author', {
+      address: { street: `Carrer Escalate ${SUITE}`, number: '16' },
+    });
     const reviewId = String(created.id);
 
     expect(await moderationStatusOf(reviewId)).toBe('active');
     for (const reporter of ['r1', 'r2', 'r3']) {
-      const res = await request(buildApp(reporter)).post(`/reviews/${reviewId}/report`).send({ reason: 'fake' });
+      const res = await request(buildApp(reporter))
+        .post(`/reviews/${reviewId}/report`)
+        .send({ reason: 'fake' });
       expect(res.status).toBe(201);
     }
 
@@ -437,8 +516,12 @@ describe('reportReview', () => {
     expect(agency).not.toBeNull();
     if (!agency) return;
 
-    const shown = await postReview('oxy-a', { address: { street: `Carrer Visible ${SUITE}`, number: '17' } });
-    const hidden = await postReview('oxy-b', { address: { street: `Carrer Visible ${SUITE}`, number: '18' } });
+    const shown = await postReview('oxy-a', {
+      address: { street: `Carrer Visible ${SUITE}`, number: '17' },
+    });
+    const hidden = await postReview('oxy-b', {
+      address: { street: `Carrer Visible ${SUITE}`, number: '18' },
+    });
     await amendReview(String(shown.id), { agencyId: agency.id, moderationStatus: 'under_review' });
     await amendReview(String(hidden.id), { agencyId: agency.id, moderationStatus: 'removed' });
 
@@ -451,7 +534,10 @@ describe('reportReview', () => {
 
 /** A published Postgres listing managed by an agency. */
 async function seedAgencyListing(agencyId: string, label: string): Promise<string> {
-  const chain = await seedGeoChain({ cityName: `Listings ${label} ${SUITE}`, countryCode: `L${label.slice(0, 1).toUpperCase()}` });
+  const chain = await seedGeoChain({
+    cityName: `Listings ${label} ${SUITE}`,
+    countryCode: `L${label.slice(0, 1).toUpperCase()}`,
+  });
   const addressId = await seedAddress({ chain, street: `Carrer Listing ${label} ${SUITE}` });
   return seedProperty({
     addressId,
@@ -477,10 +563,24 @@ describe('agency reads', () => {
 
     await seedAgencyListing(agency.id, 'stats');
 
-    const first = await postReview('oxy-stats-a', { address: { street: `Carrer Stats ${SUITE}`, number: '19' } });
-    const second = await postReview('oxy-stats-b', { address: { street: `Carrer Stats ${SUITE}`, number: '20' } });
-    await amendReview(String(first.id), { agencyId: agency.id, rating: 5, recommendation: true, depositReturned: 'full' });
-    await amendReview(String(second.id), { agencyId: agency.id, rating: 3, recommendation: false, depositReturned: 'no' });
+    const first = await postReview('oxy-stats-a', {
+      address: { street: `Carrer Stats ${SUITE}`, number: '19' },
+    });
+    const second = await postReview('oxy-stats-b', {
+      address: { street: `Carrer Stats ${SUITE}`, number: '20' },
+    });
+    await amendReview(String(first.id), {
+      agencyId: agency.id,
+      rating: 5,
+      recommendation: true,
+      depositReturned: 'full',
+    });
+    await amendReview(String(second.id), {
+      agencyId: agency.id,
+      rating: 3,
+      recommendation: false,
+      depositReturned: 'no',
+    });
 
     const res = await request(buildApp()).get(`/agencies/${agency.slug}`);
     expect(res.status).toBe(200);
@@ -511,7 +611,9 @@ describe('agency reads', () => {
     await findOrCreateAgencyByName(`Fincas Buscada ${SUITE}`);
     await findOrCreateAgencyByName(`Other Realty ${SUITE}`);
 
-    const res = await request(buildApp()).get('/agencies/search').query({ q: `fincas buscada ${SUITE}` });
+    const res = await request(buildApp())
+      .get('/agencies/search')
+      .query({ q: `fincas buscada ${SUITE}` });
     expect(res.status).toBe(200);
     expect(res.body.agencies).toHaveLength(1);
     expect(res.body.agencies[0]).toMatchObject({ name: `Fincas Buscada ${SUITE}` });
@@ -540,8 +642,12 @@ describe('agency reads', () => {
 describe('the hierarchical address reads', () => {
   it('answers a BUILDING address with its own reviews, its flats, and the rollup', async () => {
     const street = `Carrer Hierarchy ${SUITE}`;
-    const buildingReview = await postReview('oxy-h-building', { address: { street, number: '30' } });
-    const flatReview = await postReview('oxy-h-flat', { address: { street, number: '30', unit: '1a' } });
+    const buildingReview = await postReview('oxy-h-building', {
+      address: { street, number: '30' },
+    });
+    const flatReview = await postReview('oxy-h-flat', {
+      address: { street, number: '30', unit: '1a' },
+    });
 
     const [storedFlat] = await getDb()
       .select()
@@ -554,8 +660,12 @@ describe('the hierarchical address reads', () => {
     const res = await request(buildApp()).get(`/addresses/${buildingReview.addressId}/reviews`);
     expect(res.status).toBe(200);
     expect(res.body.level).toBe('BUILDING');
-    expect(res.body.buildingReviews.map((review: { id: string }) => review.id)).toEqual([String(buildingReview.id)]);
-    expect(res.body.unitReviews.map((review: { id: string }) => review.id)).toEqual([String(flatReview.id)]);
+    expect(res.body.buildingReviews.map((review: { id: string }) => review.id)).toEqual([
+      String(buildingReview.id),
+    ]);
+    expect(res.body.unitReviews.map((review: { id: string }) => review.id)).toEqual([
+      String(flatReview.id),
+    ]);
     expect(res.body.aggregatedStats.totalReviews).toBe(2);
     expect(res.body.totalReviews).toBe(2);
 
@@ -571,12 +681,16 @@ describe('the hierarchical address reads', () => {
   it('answers a UNIT address with its own reviews and its building summary', async () => {
     const street = `Carrer Unit ${SUITE}`;
     await postReview('oxy-u-building', { address: { street, number: '40' } });
-    const flatReview = await postReview('oxy-u-flat', { address: { street, number: '40', unit: '2b' } });
+    const flatReview = await postReview('oxy-u-flat', {
+      address: { street, number: '40', unit: '2b' },
+    });
 
     const res = await request(buildApp()).get(`/addresses/${flatReview.addressId}/reviews`);
     expect(res.status).toBe(200);
     expect(res.body.level).toBe('UNIT');
-    expect(res.body.unitReviews.map((review: { id: string }) => review.id)).toEqual([String(flatReview.id)]);
+    expect(res.body.unitReviews.map((review: { id: string }) => review.id)).toEqual([
+      String(flatReview.id),
+    ]);
     // The building summary counts BUILDING-level reviews only, which is why it
     // reads 1 rather than 2.
     expect(res.body.buildingSummary.totalReviews).toBe(1);
@@ -605,7 +719,9 @@ describe('the hierarchical address reads', () => {
 
   it('404s an address that does not exist, for every id shape', async () => {
     expect((await request(buildApp()).get(`/addresses/${uuidv7()}/reviews`)).status).toBe(404);
-    expect((await request(buildApp()).get('/addresses/6a78735979b1a7d9f19af7a7/reviews')).status).toBe(404);
+    expect(
+      (await request(buildApp()).get('/addresses/6a78735979b1a7d9f19af7a7/reviews')).status,
+    ).toBe(404);
     expect((await request(buildApp()).get('/addresses/not-an-id-at-all/reviews')).status).toBe(404);
   });
 });
@@ -632,7 +748,9 @@ describe('review explore aggregations', () => {
     expect(barcelona).toBeTruthy();
     expect(barcelona.reviewCount).toBeGreaterThanOrEqual(2);
 
-    const neighborhoods = await request(buildApp()).get(`/reviews-explore/city/${barcelona.cityId}`);
+    const neighborhoods = await request(buildApp()).get(
+      `/reviews-explore/city/${barcelona.cityId}`,
+    );
     expect(neighborhoods.status).toBe(200);
     const explorable = neighborhoods.body.neighborhoods.find(
       (entry: { name: string }) => entry.name === neighborhood,
@@ -643,26 +761,43 @@ describe('review explore aggregations', () => {
     // The neighborhood the rest of the file uses is a DIFFERENT row in the same
     // city, which is what makes the grouping — rather than the city filter —
     // the thing under test.
-    expect(neighborhoods.body.neighborhoods.some((entry: { name: string }) => entry.name === NEIGHBORHOOD)).toBe(true);
+    expect(
+      neighborhoods.body.neighborhoods.some(
+        (entry: { name: string }) => entry.name === NEIGHBORHOOD,
+      ),
+    ).toBe(true);
 
-    const buildings = await request(buildApp()).get(`/reviews-explore/neighborhood/${explorable.neighborhoodId}`);
+    const buildings = await request(buildApp()).get(
+      `/reviews-explore/neighborhood/${explorable.neighborhoodId}`,
+    );
     expect(buildings.status).toBe(200);
     expect(buildings.body.buildings).toHaveLength(2);
     expect(
-      buildings.body.buildings.every((building: { street: string }) => building.street === `Carrer Explore ${SUITE}`),
+      buildings.body.buildings.every(
+        (building: { street: string }) => building.street === `Carrer Explore ${SUITE}`,
+      ),
     ).toBe(true);
-    expect(buildings.body.buildings.map((building: { number: string }) => building.number).sort()).toEqual(['60', '61']);
+    expect(
+      buildings.body.buildings.map((building: { number: string }) => building.number).sort(),
+    ).toEqual(['60', '61']);
   });
 
   it('excludes removed reviews from explore coverage', async () => {
     const isolatedCity = `Quietville ${uuidv7()}`;
     const created = await postReview('oxy-e-removed', {
-      address: { street: `Carrer Quiet ${SUITE}`, number: '70', city: isolatedCity, neighborhood: `Silent ${SUITE}` },
+      address: {
+        street: `Carrer Quiet ${SUITE}`,
+        number: '70',
+        city: isolatedCity,
+        neighborhood: `Silent ${SUITE}`,
+      },
     });
     await amendReview(String(created.id), { moderationStatus: 'removed' });
 
     const cities = await request(buildApp()).get('/reviews-explore');
-    expect(cities.body.cities.find((city: { name: string }) => city.name === isolatedCity)).toBeUndefined();
+    expect(
+      cities.body.cities.find((city: { name: string }) => city.name === isolatedCity),
+    ).toBeUndefined();
   });
 
   it('accepts a uuid v7 city id, which the deleted guard would have refused', async () => {

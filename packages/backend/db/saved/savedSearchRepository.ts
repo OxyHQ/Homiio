@@ -366,11 +366,7 @@ export async function updateSavedSearch(
        * window, still inside the area, and still after the ORIGINAL
        * `alerts_active_from`. "Turn alerts on" must mean "from now".
        */
-      if (
-        input.cadence !== undefined &&
-        input.cadence !== 'off' &&
-        existing.cadence === 'off'
-      ) {
+      if (input.cadence !== undefined && input.cadence !== 'off' && existing.cadence === 'off') {
         values.alertsActiveFrom = new Date();
       }
 

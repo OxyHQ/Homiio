@@ -170,7 +170,7 @@ const writeCache = async (
   key: string,
   cell: CoordinateCell,
   radiusM: number,
-  categories: NearbyServiceCategory[]
+  categories: NearbyServiceCategory[],
 ): Promise<void> => {
   const now = Date.now();
   await upsertCachedCell({
@@ -196,8 +196,7 @@ const haversineMeters = (lat1: number, lon1: number, lat2: number, lon2: number)
   const sinLat = Math.sin(dLat / 2);
   const sinLon = Math.sin(dLon / 2);
   const a =
-    sinLat * sinLat +
-    Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) * sinLon * sinLon;
+    sinLat * sinLat + Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) * sinLon * sinLon;
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return EARTH_RADIUS_M * c;
 };
@@ -211,8 +210,8 @@ const haversineMeters = (lat1: number, lon1: number, lat2: number, lon2: number)
 const buildOverpassQuery = (longitude: number, latitude: number, radiusM: number): string => {
   const clauses = CATEGORY_KEYS.flatMap((key) =>
     CATEGORY_TAG_FILTERS[key].map(
-      (selector) => `nwr(around:${radiusM},${latitude},${longitude})[${selector}];`
-    )
+      (selector) => `nwr(around:${radiusM},${latitude},${longitude})[${selector}];`,
+    ),
   ).join('');
   return `[out:json][timeout:${OVERPASS_QUERY_TIMEOUT_S}];(${clauses});out center;`;
 };
@@ -278,7 +277,7 @@ const classifyElement = (el: OverpassElement): CategorizedPoint | null => {
 const buildCategories = (
   elements: OverpassElement[],
   longitude: number,
-  latitude: number
+  latitude: number,
 ): NearbyServiceCategory[] => {
   const counts = new Map<NearbyServiceKey, number>();
   const nearest = new Map<NearbyServiceKey, number>();
@@ -323,7 +322,7 @@ export function emptyNearbyServices(radiusM: number = RADIUS_M): PropertyNearbyS
 const fetchOverpassElements = async (
   longitude: number,
   latitude: number,
-  radiusM: number
+  radiusM: number,
 ): Promise<OverpassElement[]> => {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), OVERPASS_ABORT_MS);
@@ -362,7 +361,7 @@ const fetchOverpassElements = async (
 export async function getNearbyServices(
   longitude: number,
   latitude: number,
-  radiusM: number = RADIUS_M
+  radiusM: number = RADIUS_M,
 ): Promise<PropertyNearbyServices> {
   if (
     longitude < COORD_BOUNDS.minLongitude ||

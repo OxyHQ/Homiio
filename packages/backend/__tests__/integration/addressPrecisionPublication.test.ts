@@ -300,7 +300,8 @@ function addressBodiesIn(body: unknown): Record<string, unknown>[] {
  */
 function expectPublishedAtBuilding(body: unknown, unitAddressId: string, where: string): void {
   const bodies = addressBodiesIn(body);
-  if (bodies.length === 0) throw new Error(`${where}: no address carrying "${STREET}" is in the response`);
+  if (bodies.length === 0)
+    throw new Error(`${where}: no address carrying "${STREET}" is in the response`);
 
   for (const address of bodies) {
     // The floor, not the assertion: street and number are tier C and stay.
@@ -313,7 +314,10 @@ function expectPublishedAtBuilding(body: unknown, unitAddressId: string, where: 
       expect({ where, key, present: key in address }).toEqual({ where, key, present: false });
     }
     const [lng, lat] = (address.coordinates as { coordinates: [number, number] }).coordinates;
-    expect({ where, rounded: checkPublicPrecisionWithinPolicy({ lat, lng }, 'building').ok }).toEqual({
+    expect({
+      where,
+      rounded: checkPublicPrecisionWithinPolicy({ lat, lng }, 'building').ok,
+    }).toEqual({
       where,
       rounded: true,
     });
@@ -324,15 +328,22 @@ function expectPublishedAtBuilding(body: unknown, unitAddressId: string, where: 
   // handle that names one household.
   const serialized = JSON.stringify(body);
   for (const secret of Object.values(SECRETS)) {
-    expect({ where, leaked: serialized.includes(secret) ? secret : null }).toEqual({ where, leaked: null });
+    expect({ where, leaked: serialized.includes(secret) ? secret : null }).toEqual({
+      where,
+      leaked: null,
+    });
   }
-  expect({ where, unitIdInBody: serialized.includes(unitAddressId) }).toEqual({ where, unitIdInBody: false });
+  expect({ where, unitIdInBody: serialized.includes(unitAddressId) }).toEqual({
+    where,
+    unitIdInBody: false,
+  });
 }
 
 /** The related half: every stored detail is served. */
 function expectExact(body: unknown, unitAddressId: string, where: string): void {
   const bodies = addressBodiesIn(body);
-  if (bodies.length === 0) throw new Error(`${where}: no address carrying "${STREET}" is in the response`);
+  if (bodies.length === 0)
+    throw new Error(`${where}: no address carrying "${STREET}" is in the response`);
   for (const address of bodies) {
     expect({
       where,
@@ -347,7 +358,10 @@ function expectExact(body: unknown, unitAddressId: string, where: string): void 
       unit: SECRETS.unit,
       subunit: SECRETS.subunit,
     });
-    expect({ where, lng: (address.coordinates as { coordinates: number[] }).coordinates[0] }).toEqual({
+    expect({
+      where,
+      lng: (address.coordinates as { coordinates: number[] }).coordinates[0],
+    }).toEqual({
       where,
       lng: POINT.longitude,
     });
@@ -380,10 +394,14 @@ afterAll(reset);
 describe('the address surfaces publish the building and withhold the dwelling', () => {
   const cases: Array<[string, (s: Seeded) => string]> = [
     ['GET /api/addresses/:id (the unit itself)', (s) => `/api/addresses/${s.unitId}`],
-    ['GET /api/addresses/search, by street', () => `/api/addresses/search?query=${encodeURIComponent(STREET)}`],
+    [
+      'GET /api/addresses/search, by street',
+      () => `/api/addresses/search?query=${encodeURIComponent(STREET)}`,
+    ],
     [
       'GET /api/addresses/nearby',
-      () => `/api/addresses/nearby?lat=${POINT.latitude}&lng=${POINT.longitude}&radius=5000&limit=50`,
+      () =>
+        `/api/addresses/nearby?lat=${POINT.latitude}&lng=${POINT.longitude}&radius=5000&limit=50`,
     ],
   ];
 
@@ -400,7 +418,9 @@ describe('the address surfaces publish the building and withhold the dwelling', 
   });
 
   it('answers a UNIT id with its BUILDING’s id, and with none where no building is recorded', async () => {
-    const withParent = await request(addressApp(STRANGER)).get(`/api/addresses/${seeded.unitId}`).expect(200);
+    const withParent = await request(addressApp(STRANGER))
+      .get(`/api/addresses/${seeded.unitId}`)
+      .expect(200);
     expect(withParent.body.address.id).toBe(seeded.buildingId);
     expect(withParent.body.address).not.toHaveProperty('addressLevel');
 
@@ -427,14 +447,19 @@ describe('the address surfaces publish the building and withhold the dwelling', 
   });
 
   it('publishes a BUILDING row’s own id and level — the reduction is not unconditional', async () => {
-    const res = await request(addressApp(STRANGER)).get(`/api/addresses/${seeded.buildingId}`).expect(200);
+    const res = await request(addressApp(STRANGER))
+      .get(`/api/addresses/${seeded.buildingId}`)
+      .expect(200);
     expect(res.body.address.id).toBe(seeded.buildingId);
     expect(res.body.address.addressLevel).toBe('BUILDING');
     expect(res.body.address.number).toBe(NUMBER);
   });
 
   it('PUT with an empty patch is a read, and answers like one', async () => {
-    const res = await request(addressApp(STRANGER)).put(`/api/addresses/${seeded.unitId}`).send({}).expect(200);
+    const res = await request(addressApp(STRANGER))
+      .put(`/api/addresses/${seeded.unitId}`)
+      .send({})
+      .expect(200);
     expectPublishedAtBuilding(res.body, seeded.unitId, 'PUT, empty patch');
   });
 
@@ -506,11 +531,15 @@ describe('a review is filed at the unit and published at the building', () => {
   });
 
   it('GET /api/reviews/:id and /api/reviews/user/:oxyUserId reduce for a non-author', async () => {
-    const one = await request(reviewApp(STRANGER)).get(`/api/reviews/${seeded.unitReviewId}`).expect(200);
+    const one = await request(reviewApp(STRANGER))
+      .get(`/api/reviews/${seeded.unitReviewId}`)
+      .expect(200);
     expectPublishedAtBuilding(one.body, seeded.unitId, 'review detail, stranger');
 
     // Naming the author in the URL confers nothing: the audience is the SESSION.
-    const theirs = await request(reviewApp(STRANGER)).get(`/api/reviews/user/${AUTHOR}`).expect(200);
+    const theirs = await request(reviewApp(STRANGER))
+      .get(`/api/reviews/user/${AUTHOR}`)
+      .expect(200);
     expectPublishedAtBuilding(theirs.body, seeded.unitId, 'author feed, stranger');
   });
 
@@ -528,7 +557,9 @@ describe('a review is filed at the unit and published at the building', () => {
   });
 
   it('leaves a BUILDING-level review naming its own place', async () => {
-    const res = await request(publicApp()).get(`/api/reviews/address/${seeded.buildingId}`).expect(200);
+    const res = await request(publicApp())
+      .get(`/api/reviews/address/${seeded.buildingId}`)
+      .expect(200);
     const [review] = res.body.buildingReviews as Record<string, unknown>[];
     expect(review.id).toBe(seeded.buildingReviewId);
     expect(review.addressId).toBe(seeded.buildingId);
@@ -536,7 +567,9 @@ describe('a review is filed at the unit and published at the building', () => {
   });
 
   it('serves the AUTHOR their own review exactly as they filed it', async () => {
-    const res = await request(reviewApp(AUTHOR)).get(`/api/reviews/${seeded.unitReviewId}`).expect(200);
+    const res = await request(reviewApp(AUTHOR))
+      .get(`/api/reviews/${seeded.unitReviewId}`)
+      .expect(200);
     expectExact(res.body, seeded.unitId, 'review detail, author');
     expect(res.body.review.addressId).toBe(seeded.unitId);
     expect(res.body.review.unitLevelId).toBe(seeded.unitId);
@@ -547,7 +580,9 @@ describe('a review is filed at the unit and published at the building', () => {
   });
 
   it('gives the author nothing on the ADDRESS routes — filing a review is self-service', async () => {
-    const res = await request(addressApp(AUTHOR)).get(`/api/addresses/${seeded.unitId}`).expect(200);
+    const res = await request(addressApp(AUTHOR))
+      .get(`/api/addresses/${seeded.unitId}`)
+      .expect(200);
     expectPublishedAtBuilding(res.body, seeded.unitId, 'address detail, review author');
   });
 });
@@ -561,12 +596,16 @@ describe('a recorded relation to the dwelling, and what it is worth', () => {
   });
 
   it('serves the TENANT on an active lease every stored detail', async () => {
-    const res = await request(addressApp(TENANT)).get(`/api/addresses/${seeded.unitId}`).expect(200);
+    const res = await request(addressApp(TENANT))
+      .get(`/api/addresses/${seeded.unitId}`)
+      .expect(200);
     expectExact(res.body, seeded.unitId, 'address detail, active tenant');
   });
 
   it('withholds it from a tenant whose lease has ENDED', async () => {
-    const res = await request(addressApp(FORMER_TENANT)).get(`/api/addresses/${seeded.unitId}`).expect(200);
+    const res = await request(addressApp(FORMER_TENANT))
+      .get(`/api/addresses/${seeded.unitId}`)
+      .expect(200);
     expectPublishedAtBuilding(res.body, seeded.unitId, 'address detail, former tenant');
   });
 
@@ -592,7 +631,9 @@ describe('a recorded relation to the dwelling, and what it is worth', () => {
       expectPublishedAtBuilding(search.body, seeded.unitId, `search, ${who}`);
 
       const nearby = await request(addressApp(viewer))
-        .get(`/api/addresses/nearby?lat=${POINT.latitude}&lng=${POINT.longitude}&radius=5000&limit=50`)
+        .get(
+          `/api/addresses/nearby?lat=${POINT.latitude}&lng=${POINT.longitude}&radius=5000&limit=50`,
+        )
         .expect(200);
       expectPublishedAtBuilding(nearby.body, seeded.unitId, `nearby, ${who}`);
     }

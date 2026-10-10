@@ -1,6 +1,11 @@
 import { api } from '@/utils/api';
 import { OxyServices } from '@oxy.so/core';
-import { Profile, PersonalProfile, PropertyPreferences, RoommatePreferences } from '@homiio/shared-types';
+import {
+  Profile,
+  PersonalProfile,
+  PropertyPreferences,
+  RoommatePreferences,
+} from '@homiio/shared-types';
 
 // Re-export the types for backward compatibility
 export type { Profile, PersonalProfile, RoommatePreferences };
@@ -171,12 +176,15 @@ class RoommateService {
     _activeSessionId?: string,
   ): Promise<{ enabled: boolean; message: string }> {
     try {
-      const response = await api.patch<ToggleMatchingResponse>(`${this.baseUrl}/toggle`, { enabled });
+      const response = await api.patch<ToggleMatchingResponse>(`${this.baseUrl}/toggle`, {
+        enabled,
+      });
       const data = response.data;
       // Fallback if backend doesn't include enabled for some reason
       return {
         enabled: typeof data.enabled === 'boolean' ? data.enabled : enabled,
-        message: data.message ?? `Roommate matching ${enabled ? 'enabled' : 'disabled'} successfully`,
+        message:
+          data.message ?? `Roommate matching ${enabled ? 'enabled' : 'disabled'} successfully`,
       };
     } catch (error) {
       throw error;
@@ -205,9 +213,9 @@ class RoommateService {
     sent: RoommateRequestDTO[];
     received: RoommateRequestDTO[];
   }> {
-    const response = await api.get<{ data?: { sent?: RoommateRequestDTO[]; received?: RoommateRequestDTO[] } }>(
-      `${this.baseUrl}/requests`,
-    );
+    const response = await api.get<{
+      data?: { sent?: RoommateRequestDTO[]; received?: RoommateRequestDTO[] };
+    }>(`${this.baseUrl}/requests`);
     const data = response.data.data;
     return {
       sent: data?.sent ?? [],
@@ -366,8 +374,7 @@ class RoommateService {
       age: undefined,
       occupation: personal?.personalInfo?.occupation || 'Not specified',
       bio: userData?.bio || personal?.personalInfo?.bio || 'No bio available',
-      location:
-        userData?.location || this.extractLocation(personal?.preferences),
+      location: userData?.location || this.extractLocation(personal?.preferences),
       budget: {
         min: roommatePrefs?.budget?.min || 0,
         max: roommatePrefs?.budget?.max || 0,
@@ -376,8 +383,7 @@ class RoommateService {
       moveInDate: roommatePrefs?.moveInDate || 'Flexible',
       duration: roommatePrefs?.leaseDuration || 'Flexible',
       isVerified: Boolean(verification?.identity),
-      hasReferences:
-        (personal?.references?.length ?? 0) > 0 || Boolean(verification?.references),
+      hasReferences: (personal?.references?.length ?? 0) > 0 || Boolean(verification?.references),
       rentalHistory:
         (personal?.rentalHistory?.length ?? 0) > 0 || Boolean(verification?.rentalHistory),
     };

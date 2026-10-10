@@ -73,9 +73,7 @@ export default function AgentScreen() {
     if (!isPartner) {
       joinMutation.mutate(undefined, {
         onError: () => {
-          toast.error(
-            t('agent.join.error'),
-          );
+          toast.error(t('agent.join.error'));
         },
       });
       return;
@@ -102,11 +100,7 @@ export default function AgentScreen() {
     <View className="flex-1">
       <Header options={{ transparent: true, showBackButton: true }} scrollY={scrollY} />
 
-      <PageScrollView
-        scrollY={scrollY}
-        className="flex-1"
-        showsVerticalScrollIndicator={false}
-      >
+      <PageScrollView scrollY={scrollY} className="flex-1" showsVerticalScrollIndicator={false}>
         <AgentHero
           title={t('agent.hero.title')}
           subtitle={t('agent.hero.subtitle')}

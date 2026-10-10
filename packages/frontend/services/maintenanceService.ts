@@ -81,9 +81,11 @@ class MaintenanceService {
       // The envelope carries pagination beside `data`; a caller that only needs
       // the page does not have to know its shape.
       total:
-        (data as unknown as { pagination?: { total?: number }; total?: number }).pagination?.total ??
+        (data as unknown as { pagination?: { total?: number }; total?: number }).pagination
+          ?.total ??
         (data as unknown as { total?: number }).total ??
-        (data.data?.length ?? 0),
+        data.data?.length ??
+        0,
     };
   }
 

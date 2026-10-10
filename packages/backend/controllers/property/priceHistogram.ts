@@ -58,7 +58,14 @@ export const MIN_HISTOGRAM_BUCKETS = 8;
 export const MAX_HISTOGRAM_BUCKETS = 40;
 
 /** Every price-bound param the search accepts — none of them narrows a histogram. */
-const PRICE_BOUND_PARAMS = ['priceMin', 'priceMax', 'minRent', 'maxRent', 'minSalePrice', 'maxSalePrice'] as const;
+const PRICE_BOUND_PARAMS = [
+  'priceMin',
+  'priceMax',
+  'minRent',
+  'maxRent',
+  'minSalePrice',
+  'maxSalePrice',
+] as const;
 
 type RawQuery = Record<string, string | string[] | undefined>;
 
@@ -66,13 +73,20 @@ function badRequest(res: Response, message: string): void {
   res.status(400).json({ success: false, message, error: 'INVALID_HISTOGRAM' });
 }
 
-export async function getSearchPriceHistogram(req: Request, res: Response, next: NextFunction): Promise<void> {
+export async function getSearchPriceHistogram(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
   try {
     const raw = req.query as RawQuery;
 
     const histogramMin = parseFloatParam(raw.histogramMin);
     const histogramMax = parseFloatParam(raw.histogramMax);
-    if ((histogramMin !== undefined && histogramMin < 0) || (histogramMax !== undefined && histogramMax < 0)) {
+    if (
+      (histogramMin !== undefined && histogramMin < 0) ||
+      (histogramMax !== undefined && histogramMax < 0)
+    ) {
       badRequest(res, 'histogramMin and histogramMax must not be negative');
       return;
     }
@@ -81,7 +95,10 @@ export async function getSearchPriceHistogram(req: Request, res: Response, next:
       return;
     }
     const requestedBuckets = parseIntParam(raw.histogramBuckets) ?? DEFAULT_HISTOGRAM_BUCKETS;
-    const bucketCount = Math.min(MAX_HISTOGRAM_BUCKETS, Math.max(MIN_HISTOGRAM_BUCKETS, requestedBuckets));
+    const bucketCount = Math.min(
+      MAX_HISTOGRAM_BUCKETS,
+      Math.max(MIN_HISTOGRAM_BUCKETS, requestedBuckets),
+    );
     // Checked against the vocabulary the COLUMN holds, not against a shape.
     // The old `^[A-Z]{3}$` accepted any three letters — so `currency=XYZ` was
     // answered with a silent `null` histogram that reads as "nothing here" —

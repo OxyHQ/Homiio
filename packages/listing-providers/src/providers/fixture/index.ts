@@ -52,7 +52,11 @@ function toRemoteImages(raw: FixtureRawListing): NormalizedRemoteImage[] {
 
 /** Narrow an opaque `RawListing.payload` back to a {@link FixtureRawListing}. */
 function asFixture(payload: unknown): FixtureRawListing {
-  if (!payload || typeof payload !== 'object' || typeof (payload as { id?: unknown }).id !== 'string') {
+  if (
+    !payload ||
+    typeof payload !== 'object' ||
+    typeof (payload as { id?: unknown }).id !== 'string'
+  ) {
     throw new Error('fixture provider received a payload that is not a FixtureRawListing');
   }
   return payload as FixtureRawListing;

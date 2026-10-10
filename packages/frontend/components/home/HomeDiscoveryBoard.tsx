@@ -120,11 +120,7 @@ export function HomeDiscoveryBoard({ onChoose }: HomeDiscoveryBoardProps) {
             "declarar su ámbito por colección y no aparentar cercanía". */}
         <P className="text-sm text-muted-foreground">{t('home.discovery.body')}</P>
       </View>
-      <CityShowcaseSection
-        title={t('home.discovery.title')}
-        items={cities}
-        onPressCity={choose}
-      />
+      <CityShowcaseSection title={t('home.discovery.title')} items={cities} onPressCity={choose} />
     </View>
   );
 }

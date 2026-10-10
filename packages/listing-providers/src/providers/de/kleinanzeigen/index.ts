@@ -29,7 +29,11 @@ import type {
 import { NonHousingListingError } from '../../../classifieds';
 import { createFetchRuntime } from '../../../runtime';
 import { ChallengeError, fetchListingViaLadder } from '../../../strategy';
-import { defaultProviderMetrics, type ProviderMetricsReader, type ProviderMetricsSink } from '../../../metrics';
+import {
+  defaultProviderMetrics,
+  type ProviderMetricsReader,
+  type ProviderMetricsSink,
+} from '../../../metrics';
 import { KLEINANZEIGEN_BASE_URL } from './fixtures';
 import {
   isKleinanzeigenChallenge,
@@ -71,7 +75,9 @@ function asKleinanzeigenRaw(payload: unknown): KleinanzeigenRawListing {
     typeof record.url !== 'string' ||
     typeof record.categoryId !== 'string'
   ) {
-    throw new Error('kleinanzeigen: normalize received a payload that is not a KleinanzeigenRawListing');
+    throw new Error(
+      'kleinanzeigen: normalize received a payload that is not a KleinanzeigenRawListing',
+    );
   }
   return payload as KleinanzeigenRawListing;
 }
@@ -160,7 +166,8 @@ export class KleinanzeigenProvider implements ListingProvider {
     if (listing.price === undefined) {
       throw new Error(`kleinanzeigen: listing ${listing.sourceId} has no resolvable price`);
     }
-    const city = listing.address.city || listing.address.region || listing.address.neighborhood || '';
+    const city =
+      listing.address.city || listing.address.region || listing.address.neighborhood || '';
     const street = listing.address.street || city;
     if (!city || !street) {
       throw new Error(`kleinanzeigen: listing ${listing.sourceId} missing address city/street`);
@@ -183,9 +190,14 @@ export class KleinanzeigenProvider implements ListingProvider {
             ? { lat: listing.address.lat, lng: listing.address.lng }
             : undefined,
       },
-      type: listing.categoryId === '205' || listing.categoryId === '207' ? PropertyType.HOUSE : PropertyType.APARTMENT,
+      type:
+        listing.categoryId === '205' || listing.categoryId === '207'
+          ? PropertyType.HOUSE
+          : PropertyType.APARTMENT,
       offerings: isSale ? [OfferingType.SALE] : [OfferingType.LONG_TERM_RENT],
-      longTermRent: isSale ? undefined : { monthlyAmount: listing.price, currency: listing.currency },
+      longTermRent: isSale
+        ? undefined
+        : { monthlyAmount: listing.price, currency: listing.currency },
       sale: isSale ? { price: listing.price, currency: listing.currency } : undefined,
       remoteImages: toRemoteImages(listing.images),
       status: 'published',

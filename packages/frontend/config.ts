@@ -80,8 +80,7 @@ function buildDevUrl(scheme: 'http' | 'ws'): string {
  * 3. In production, fall back to the deployed API domain.
  */
 export const API_URL =
-  process.env.EXPO_PUBLIC_API_URL ||
-  (__DEV__ ? buildDevUrl('http') : 'https://api.homiio.com');
+  process.env.EXPO_PUBLIC_API_URL || (__DEV__ ? buildDevUrl('http') : 'https://api.homiio.com');
 
 // Oxy is ALWAYS the production identity provider — deliberately no dev branch.
 // Oxy owns the account, and a build pointing identity at a local port nothing is

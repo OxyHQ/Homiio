@@ -29,7 +29,11 @@ import type {
 } from '../../../types';
 import { createFetchRuntime } from '../../../runtime';
 import { ChallengeError, fetchListingViaLadder } from '../../../strategy';
-import { defaultProviderMetrics, type ProviderMetricsReader, type ProviderMetricsSink } from '../../../metrics';
+import {
+  defaultProviderMetrics,
+  type ProviderMetricsReader,
+  type ProviderMetricsSink,
+} from '../../../metrics';
 import { providerMaxSearchPages } from '../../../discoverLimits';
 import { DEFAULT_GB_CITIES } from '../../../parse/defaultMarketCities';
 import { isGbPortalChallenge } from '../challenge';
@@ -142,7 +146,12 @@ export class OnTheMarketProvider implements ListingProvider {
           if (seen.has(ref.sourceId)) continue;
           seen.add(ref.sourceId);
           yielded += 1;
-          yield { provider: PROVIDER_ID, sourceId: ref.sourceId, url: ref.url, hints: { kind: 'rent' } };
+          yield {
+            provider: PROVIDER_ID,
+            sourceId: ref.sourceId,
+            url: ref.url,
+            hints: { kind: 'rent' },
+          };
         }
       }
     }
@@ -214,7 +223,9 @@ export class OnTheMarketProvider implements ListingProvider {
       longTermRent: isSale
         ? undefined
         : { monthlyAmount: listing.priceAmount, currency: listing.priceCurrency ?? 'GBP' },
-      sale: isSale ? { price: listing.priceAmount, currency: listing.priceCurrency ?? 'GBP' } : undefined,
+      sale: isSale
+        ? { price: listing.priceAmount, currency: listing.priceCurrency ?? 'GBP' }
+        : undefined,
       remoteImages: toRemoteImages(listing.images),
       status: 'published',
     };
@@ -231,7 +242,11 @@ export class OnTheMarketProvider implements ListingProvider {
     const snapshot = this.metrics.snapshot(this.id);
     if (snapshot && snapshot.attempts > 0) {
       const status =
-        snapshot.challengeRate >= 0.8 ? 'unhealthy' : snapshot.challengeRate >= 0.3 ? 'degraded' : 'healthy';
+        snapshot.challengeRate >= 0.8
+          ? 'unhealthy'
+          : snapshot.challengeRate >= 0.3
+            ? 'degraded'
+            : 'healthy';
       return {
         provider: this.id,
         status,

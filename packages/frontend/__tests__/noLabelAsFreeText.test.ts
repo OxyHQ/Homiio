@@ -124,8 +124,9 @@ function scanSource(file: string, source: string): Finding[] {
     .split('\n')
     .forEach((text, index) => {
       const rules: string[] = [];
-      if (QUERY_TEXT_FROM_LABEL.test(text)) rules.push("a place label written into `queryText`");
-      if (SET_QUERY_TEXT_FROM_LABEL.test(text)) rules.push('a place label passed to `setQueryText`');
+      if (QUERY_TEXT_FROM_LABEL.test(text)) rules.push('a place label written into `queryText`');
+      if (SET_QUERY_TEXT_FROM_LABEL.test(text))
+        rules.push('a place label passed to `setQueryText`');
       if (Q_PARAM_FROM_LABEL.test(text)) rules.push('a place label sent as the `q` request param');
       if (SPREAD_MAP_BOUNDS_SELECTION.test(text)) {
         rules.push('a map-area selection assembled by spreading, which can keep the old label');
@@ -143,12 +144,14 @@ function trackedSourceFiles(): string[] {
     encoding: 'utf8',
     maxBuffer: 32 * 1024 * 1024,
   });
-  return output
-    .split('\n')
-    .filter(Boolean)
-    .filter((file) => SCANNED_EXTENSIONS.some((extension) => file.endsWith(extension)))
-    // This file quotes the very patterns it forbids, so it cannot scan itself.
-    .filter((file) => !file.endsWith('__tests__/noLabelAsFreeText.test.ts'));
+  return (
+    output
+      .split('\n')
+      .filter(Boolean)
+      .filter((file) => SCANNED_EXTENSIONS.some((extension) => file.endsWith(extension)))
+      // This file quotes the very patterns it forbids, so it cannot scan itself.
+      .filter((file) => !file.endsWith('__tests__/noLabelAsFreeText.test.ts'))
+  );
 }
 
 describe('a place label is never free text', () => {
@@ -164,14 +167,18 @@ describe('a place label is never free text', () => {
     // quietly become vacuous — which is the state this gate exists to prevent
     // in the code it is watching.
     const probe = [
-      "const next = { ...query, queryText: query.location.label.primary };",
-      "store.setQueryText(selectionLabel(selection)?.primary ?? null);",
-      "if (query.location) params.q = locationDisplayLabel(query.location, t);",
-      "const params = { q: selection.shortLabel, swLat: box.south };",
-      "onCommitLocation({ ...mapBoundsSelection(bounds), label: query.location.label });",
+      'const next = { ...query, queryText: query.location.label.primary };',
+      'store.setQueryText(selectionLabel(selection)?.primary ?? null);',
+      'if (query.location) params.q = locationDisplayLabel(query.location, t);',
+      'const params = { q: selection.shortLabel, swLat: box.south };',
+      'onCommitLocation({ ...mapBoundsSelection(bounds), label: query.location.label });',
     ].join('\n');
 
-    expect(scanSource('probe.ts', probe).map((finding) => finding.rule).sort()).toEqual([
+    expect(
+      scanSource('probe.ts', probe)
+        .map((finding) => finding.rule)
+        .sort(),
+    ).toEqual([
       'a map-area selection assembled by spreading, which can keep the old label',
       'a place label passed to `setQueryText`',
       'a place label sent as the `q` request param',
@@ -224,7 +231,9 @@ describe('a place label is never free text', () => {
 
     expect(unreadable).toEqual([]);
     expect(
-      findings.map((finding) => `${finding.file}:${finding.line}  [${finding.rule}]  ${finding.text}`),
+      findings.map(
+        (finding) => `${finding.file}:${finding.line}  [${finding.rule}]  ${finding.text}`,
+      ),
     ).toEqual([]);
   });
 });

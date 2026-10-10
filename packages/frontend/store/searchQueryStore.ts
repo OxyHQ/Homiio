@@ -107,9 +107,7 @@ export function mapBoundsSelection(bounds: GeoBounds): LocationSelection {
  * merge — a `patchQuery({ location: … })` is exactly the shape that lets half
  * a location survive, and a type that permits it is a type that will see it.
  */
-export type SearchFilterPatch = Partial<
-  Omit<SearchQuery, 'location' | 'queryText' | 'offering'>
->;
+export type SearchFilterPatch = Partial<Omit<SearchQuery, 'location' | 'queryText' | 'offering'>>;
 
 interface SearchQueryState {
   /** The current active query. */
@@ -246,9 +244,7 @@ export const useSearchQueryStore = create<SearchQueryState>()((set) => ({
   togglePropertyType: (type) =>
     set((state) => {
       const current = state.query.propertyTypes;
-      const next = current.includes(type)
-        ? current.filter((t) => t !== type)
-        : [...current, type];
+      const next = current.includes(type) ? current.filter((t) => t !== type) : [...current, type];
       return { query: { ...state.query, propertyTypes: next } };
     }),
 

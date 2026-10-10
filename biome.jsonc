@@ -61,7 +61,11 @@
     // error are not repeated). Generated with `biome migrate eslint`, then
     // trimmed to what the preset does not already cover.
     {
-      "includes": ["packages/backend/**", "packages/listing-providers/**", "packages/shared-types/**"],
+      "includes": [
+        "packages/backend/**",
+        "packages/listing-providers/**",
+        "packages/shared-types/**"
+      ],
       "linter": {
         "rules": {
           "complexity": {
@@ -145,7 +149,17 @@
         "packages/frontend/**/*.test.*"
       ],
       "javascript": {
-        "globals": ["jest", "describe", "it", "test", "expect", "beforeAll", "beforeEach", "afterAll", "afterEach"]
+        "globals": [
+          "jest",
+          "describe",
+          "it",
+          "test",
+          "expect",
+          "beforeAll",
+          "beforeEach",
+          "afterAll",
+          "afterEach"
+        ]
       }
     },
     // ── Ported from packages/frontend/eslint.config.js (eslint-config-expo) ──

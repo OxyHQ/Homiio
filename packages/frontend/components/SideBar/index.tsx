@@ -77,8 +77,7 @@ const MODE_ROWS: readonly { mode: BrowseMode; icon: SidebarIcon; labelKey: strin
   { mode: 'exchange', icon: RiArrowLeftRightLine, labelKey: 'sidebar.mode.exchange' },
 ];
 
-const isBrowseMode = (key: string): key is BrowseMode =>
-  MODE_ROWS.some((row) => row.mode === key);
+const isBrowseMode = (key: string): key is BrowseMode => MODE_ROWS.some((row) => row.mode === key);
 
 const isSameDay = (a: Date, b: Date): boolean =>
   a.getDate() === b.getDate() &&
@@ -114,8 +113,7 @@ function useModeShortcuts(setBrowseMode: (mode: BrowseMode) => void) {
       const target = e.target;
       if (
         target instanceof HTMLElement &&
-        (target.isContentEditable ||
-          ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName))
+        (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName))
       ) {
         return;
       }
@@ -209,7 +207,12 @@ export function useHomiioSidebarProps(): HomiioSidebarProps {
   const items = React.useMemo<SidebarNavItem[]>(() => {
     const entries: SidebarNavItem[] = [
       { key: 'home', label: t('sidebar.navigation.home'), icon: RiHomeLine, href: '/' },
-      { key: 'search', label: t('sidebar.navigation.explore'), icon: RiSearchLine, href: '/explore' },
+      {
+        key: 'search',
+        label: t('sidebar.navigation.explore'),
+        icon: RiSearchLine,
+        href: '/explore',
+      },
     ];
 
     // Mode-dependent secondary nav: Applications for long-term tenants,
@@ -223,23 +226,53 @@ export function useHomiioSidebarProps(): HomiioSidebarProps {
               icon: RiFileTextLine,
               href: '/applications',
             }
-          : { key: 'stays', label: t('sidebar.navigation.stays'), icon: RiHotelBedLine, href: '/stays' },
+          : {
+              key: 'stays',
+              label: t('sidebar.navigation.stays'),
+              icon: RiHotelBedLine,
+              href: '/stays',
+            },
         // The tenant's current lease, rent and documents. Any signed-in account:
         // the screen itself says when there is no active tenancy.
-        { key: 'my-home', label: t('sidebar.navigation.myHome'), icon: RiHomeHeartLine, href: '/my-home' },
+        {
+          key: 'my-home',
+          label: t('sidebar.navigation.myHome'),
+          icon: RiHomeHeartLine,
+          href: '/my-home',
+        },
       );
     }
 
     entries.push(
-      { key: 'profile', label: t('sidebar.navigation.profile'), icon: RiUserLine, href: '/profile' },
+      {
+        key: 'profile',
+        label: t('sidebar.navigation.profile'),
+        icon: RiUserLine,
+        href: '/profile',
+      },
       { key: 'tips', label: t('sidebar.navigation.tips'), icon: RiLightbulbLine, href: '/tips' },
-      { key: 'evictions', label: t('sidebar.navigation.evictions'), icon: RiMegaphoneLine, href: '/evictions' },
+      {
+        key: 'evictions',
+        label: t('sidebar.navigation.evictions'),
+        icon: RiMegaphoneLine,
+        href: '/evictions',
+      },
       // Reviews explore — public (address reputation).
-      { key: 'reviews', label: t('sidebar.navigation.reviews'), icon: RiStarLine, href: '/reviews' },
+      {
+        key: 'reviews',
+        label: t('sidebar.navigation.reviews'),
+        icon: RiStarLine,
+        href: '/reviews',
+      },
     );
 
     if (canAccessRoommates) {
-      entries.push({ key: 'roommates', label: t('sidebar.navigation.roommates'), icon: RiGroupLine, href: '/roommates' });
+      entries.push({
+        key: 'roommates',
+        label: t('sidebar.navigation.roommates'),
+        icon: RiGroupLine,
+        href: '/roommates',
+      });
     }
 
     if (isHost) {
@@ -254,7 +287,12 @@ export function useHomiioSidebarProps(): HomiioSidebarProps {
     entries.push(
       { key: 'saved', label: t('sidebar.navigation.saved'), icon: RiBookmarkLine, href: '/saved' },
       // An action row: a docked panel on wide screens, a route from the drawer.
-      { key: 'sindi', label: t('sidebar.navigation.sindi'), icon: SindiSidebarIcon, onPress: handleSindi },
+      {
+        key: 'sindi',
+        label: t('sidebar.navigation.sindi'),
+        icon: SindiSidebarIcon,
+        onPress: handleSindi,
+      },
     );
 
     return entries;
@@ -309,8 +347,18 @@ export function useHomiioSidebarProps(): HomiioSidebarProps {
         {
           id: 'account',
           items: [
-            { key: 'profile', label: t('sidebar.navigation.profile'), icon: RiUserLine, onPress: handleProfile },
-            { key: 'settings', label: t('sidebar.navigation.settings'), icon: RiSettings3Line, onPress: handleSettings },
+            {
+              key: 'profile',
+              label: t('sidebar.navigation.profile'),
+              icon: RiUserLine,
+              onPress: handleProfile,
+            },
+            {
+              key: 'settings',
+              label: t('sidebar.navigation.settings'),
+              icon: RiSettings3Line,
+              onPress: handleSettings,
+            },
             {
               key: 'account',
               label: t('sidebar.menu.account'),

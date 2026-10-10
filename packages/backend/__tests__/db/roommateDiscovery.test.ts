@@ -328,14 +328,22 @@ describe('hydration of a page', () => {
     // smallest fixture that can see it.
     const first = await seedCandidate('oxy-first');
     const second = await seedCandidate('oxy-second');
-    await getDb().insert(profilePreferredLocations).values([
-      { profileId: first, city: 'Barcelona' },
-      { profileId: second, city: 'Madrid' },
-    ]);
-    await getDb().insert(profileRoommateHistory).values([
-      { profileId: first, startDate: new Date('2024-01-01T00:00:00.000Z'), location: 'Gràcia' },
-      { profileId: second, startDate: new Date('2024-01-01T00:00:00.000Z'), location: 'Lavapiés' },
-    ]);
+    await getDb()
+      .insert(profilePreferredLocations)
+      .values([
+        { profileId: first, city: 'Barcelona' },
+        { profileId: second, city: 'Madrid' },
+      ]);
+    await getDb()
+      .insert(profileRoommateHistory)
+      .values([
+        { profileId: first, startDate: new Date('2024-01-01T00:00:00.000Z'), location: 'Gràcia' },
+        {
+          profileId: second,
+          startDate: new Date('2024-01-01T00:00:00.000Z'),
+          location: 'Lavapiés',
+        },
+      ]);
 
     const page = await search({});
     const byOxyUserId = new Map(

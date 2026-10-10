@@ -25,21 +25,21 @@ import React, { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import {
-    RiArrowUpCircleLine,
-    RiBox3Line,
-    RiCarLine,
-    RiHomeHeartLine,
-    RiHomeLine,
-    RiLeafLine,
+  RiArrowUpCircleLine,
+  RiBox3Line,
+  RiCarLine,
+  RiHomeHeartLine,
+  RiHomeLine,
+  RiLeafLine,
 } from '@oxy.so/bloom/icons';
 
 import { Section } from '@/components/property/Section';
 import {
-    DetailIcon,
-    DetailIconCell,
-    DetailIconGrid,
-    DetailIconRow,
-    type DetailFallbackIcon,
+  DetailIcon,
+  DetailIconCell,
+  DetailIconGrid,
+  DetailIconRow,
+  type DetailFallbackIcon,
 } from '@/components/property/DetailIconGrid';
 import { getIconArt } from '@/constants/iconArt';
 
@@ -48,27 +48,27 @@ type ParkingType = 'none' | 'street' | 'assigned' | 'garage';
 type PetPolicy = 'allowed' | 'not_allowed' | 'case_by_case';
 
 interface Props {
-    property?: {
-        furnishedStatus?: FurnishedStatus;
-        hasBalcony?: boolean;
-        hasGarden?: boolean;
-        hasElevator?: boolean;
-        parkingType?: ParkingType;
-        petPolicy?: PetPolicy;
-    } | null;
+  property?: {
+    furnishedStatus?: FurnishedStatus;
+    hasBalcony?: boolean;
+    hasGarden?: boolean;
+    hasElevator?: boolean;
+    parkingType?: ParkingType;
+    petPolicy?: PetPolicy;
+  } | null;
 }
 
 interface FeatureRowData {
-    label: string;
-    /** Amenity catalog id to resolve a PNG; `undefined` ⇒ always use the glyph. */
-    imageId?: string;
-    /** Fallback (or sole) line glyph when no PNG resolves. */
-    icon: DetailFallbackIcon;
+  label: string;
+  /** Amenity catalog id to resolve a PNG; `undefined` ⇒ always use the glyph. */
+  imageId?: string;
+  /** Fallback (or sole) line glyph when no PNG resolves. */
+  icon: DetailFallbackIcon;
 }
 
 /** Keyed variant used only for the list; `key` is consumed by the cell, never the row. */
 interface FeatureRow extends FeatureRowData {
-    key: string;
+  key: string;
 }
 
 /**
@@ -77,77 +77,82 @@ interface FeatureRow extends FeatureRowData {
  * `DetailIconRow` so it can't drift from the amenities grid.
  */
 const FeatureIconRow: React.FC<FeatureRowData> = ({ label, imageId, icon }) => (
-    <DetailIconRow
-        icon={<DetailIcon image={imageId ? getIconArt(imageId) : undefined} fallbackIcon={icon} />}
-        label={label}
-    />
+  <DetailIconRow
+    icon={<DetailIcon image={imageId ? getIconArt(imageId) : undefined} fallbackIcon={icon} />}
+    label={label}
+  />
 );
 
 export const PropertyFeatures: React.FC<Props> = ({ property }) => {
-    const { t } = useTranslation();
-    const furnishedStatus = property?.furnishedStatus;
-    const hasBalcony = property?.hasBalcony;
-    const hasGarden = property?.hasGarden;
-    const hasElevator = property?.hasElevator;
-    const parkingType = property?.parkingType;
-    const petPolicy = property?.petPolicy;
+  const { t } = useTranslation();
+  const furnishedStatus = property?.furnishedStatus;
+  const hasBalcony = property?.hasBalcony;
+  const hasGarden = property?.hasGarden;
+  const hasElevator = property?.hasElevator;
+  const parkingType = property?.parkingType;
+  const petPolicy = property?.petPolicy;
 
-    const rows = useMemo<FeatureRow[]>(() => {
-        const next: FeatureRow[] = [];
+  const rows = useMemo<FeatureRow[]>(() => {
+    const next: FeatureRow[] = [];
 
-        if (furnishedStatus !== undefined) {
-            const label =
-                furnishedStatus === 'furnished'
-                    ? t('property.sections.furnished')
-                    : furnishedStatus === 'partially_furnished'
-                        ? t('property.sections.partiallyFurnished')
-                        : t('property.sections.unfurnished');
-            next.push({ key: 'furnished', label, imageId: 'furnished', icon: RiBox3Line });
-        }
-        if (hasBalcony === true) {
-            next.push({ key: 'balcony', label: t('property.sections.balcony'), imageId: 'balcony', icon: RiHomeLine });
-        }
-        if (hasGarden === true) {
-            next.push({ key: 'garden', label: t('property.sections.garden'), icon: RiLeafLine });
-        }
-        if (hasElevator === true) {
-            next.push({
-                key: 'elevator',
-                label: t('property.sections.elevator'),
-                imageId: 'elevator',
-                icon: RiArrowUpCircleLine,
-            });
-        }
-        if (parkingType !== undefined && parkingType !== 'none') {
-            next.push({
-                key: 'parking',
-                label: t(`parkingType.${parkingType}`),
-                imageId: 'parking',
-                icon: RiCarLine,
-            });
-        }
-        // The API also sends `not_specified`, which is the absence of a policy,
-        // not a feature to list.
-        if (petPolicy === 'allowed' || petPolicy === 'not_allowed' || petPolicy === 'case_by_case') {
-            next.push({ key: 'petPolicy', label: t(`petPolicy.${petPolicy}`), icon: RiHomeHeartLine });
-        }
+    if (furnishedStatus !== undefined) {
+      const label =
+        furnishedStatus === 'furnished'
+          ? t('property.sections.furnished')
+          : furnishedStatus === 'partially_furnished'
+            ? t('property.sections.partiallyFurnished')
+            : t('property.sections.unfurnished');
+      next.push({ key: 'furnished', label, imageId: 'furnished', icon: RiBox3Line });
+    }
+    if (hasBalcony === true) {
+      next.push({
+        key: 'balcony',
+        label: t('property.sections.balcony'),
+        imageId: 'balcony',
+        icon: RiHomeLine,
+      });
+    }
+    if (hasGarden === true) {
+      next.push({ key: 'garden', label: t('property.sections.garden'), icon: RiLeafLine });
+    }
+    if (hasElevator === true) {
+      next.push({
+        key: 'elevator',
+        label: t('property.sections.elevator'),
+        imageId: 'elevator',
+        icon: RiArrowUpCircleLine,
+      });
+    }
+    if (parkingType !== undefined && parkingType !== 'none') {
+      next.push({
+        key: 'parking',
+        label: t(`parkingType.${parkingType}`),
+        imageId: 'parking',
+        icon: RiCarLine,
+      });
+    }
+    // The API also sends `not_specified`, which is the absence of a policy,
+    // not a feature to list.
+    if (petPolicy === 'allowed' || petPolicy === 'not_allowed' || petPolicy === 'case_by_case') {
+      next.push({ key: 'petPolicy', label: t(`petPolicy.${petPolicy}`), icon: RiHomeHeartLine });
+    }
 
-        return next;
-    }, [furnishedStatus, hasBalcony, hasGarden, hasElevator, parkingType, petPolicy, t]);
+    return next;
+  }, [furnishedStatus, hasBalcony, hasGarden, hasElevator, parkingType, petPolicy, t]);
 
-    if (rows.length === 0) return null;
+  if (rows.length === 0) return null;
 
-    return (
-        <Section title={t('property.sections.features')}>
-            <DetailIconGrid>
-                {rows.map(({ key, ...data }) => (
-                    <DetailIconCell key={key}>
-                        <FeatureIconRow {...data} />
-                    </DetailIconCell>
-                ))}
-            </DetailIconGrid>
-        </Section>
-    );
+  return (
+    <Section title={t('property.sections.features')}>
+      <DetailIconGrid>
+        {rows.map(({ key, ...data }) => (
+          <DetailIconCell key={key}>
+            <FeatureIconRow {...data} />
+          </DetailIconCell>
+        ))}
+      </DetailIconGrid>
+    </Section>
+  );
 };
 
 export default PropertyFeatures;

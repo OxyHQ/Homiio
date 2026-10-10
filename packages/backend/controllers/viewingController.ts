@@ -159,7 +159,8 @@ async function resolveRequestedTime(
     return { ok: false, error: new AppError('Invalid date or time', 400, 'INVALID_DATETIME') };
   }
 
-  const modality = body.modality === undefined || body.modality === null ? 'in_person' : body.modality;
+  const modality =
+    body.modality === undefined || body.modality === null ? 'in_person' : body.modality;
   if (!isViewingModality(modality)) {
     return { ok: false, error: new AppError('Unknown viewing modality', 400, 'INVALID_MODALITY') };
   }
@@ -244,7 +245,11 @@ class ViewingController {
   /**
    * Create a new viewing request for a property
    */
-  async createViewingRequest(req: Request, res: Response, next: NextFunction): Promise<void | Response> {
+  async createViewingRequest(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void | Response> {
     try {
       const { propertyId } = req.params;
       const { date, time, modality, message } = req.body;
@@ -276,24 +281,32 @@ class ViewingController {
           return { error: new AppError('Property is not active', 400, 'PROPERTY_INACTIVE') };
         }
         if (property.isExternal) {
-          return { error: new AppError('Cannot book viewings for external properties', 400, 'EXTERNAL_PROPERTY') };
+          return {
+            error: new AppError(
+              'Cannot book viewings for external properties',
+              400,
+              'EXTERNAL_PROPERTY',
+            ),
+          };
         }
 
         const ownerOxyUserId = property.oxyUserId;
-        if (!ownerOxyUserId) return { error: new AppError('Property has no owner', 400, 'INVALID_PROPERTY') };
+        if (!ownerOxyUserId)
+          return { error: new AppError('Property has no owner', 400, 'INVALID_PROPERTY') };
         if (ownerOxyUserId === oxyUserId) {
-          return { error: new AppError('You cannot book a viewing for your own property', 403, 'FORBIDDEN') };
+          return {
+            error: new AppError(
+              'You cannot book a viewing for your own property',
+              403,
+              'FORBIDDEN',
+            ),
+          };
         }
 
         // The zone, the schedule and the slot the caller asked for — resolved
         // INSIDE the lock, because the owner's calendar is one of the things
         // two concurrent requests are deciding against.
-        const resolved = await resolveRequestedTime(
-          tx,
-          propertyId,
-          { date, time, modality },
-          now,
-        );
+        const resolved = await resolveRequestedTime(tx, propertyId, { date, time, modality }, now);
         if (!resolved.ok) return { error: resolved.error };
 
         // One active request per person per property.
@@ -303,7 +316,13 @@ class ViewingController {
           requesterOxyUserId,
         );
         if (existingActiveForProfile) {
-          return { error: new AppError('You already have an active viewing request for this property', 409, 'ALREADY_REQUESTED') };
+          return {
+            error: new AppError(
+              'You already have an active viewing request for this property',
+              409,
+              'ALREADY_REQUESTED',
+            ),
+          };
         }
 
         // Nothing active may OVERLAP the appointment — not merely share its
@@ -366,10 +385,15 @@ class ViewingController {
   /**
    * List viewing requests for current user (requester)
    */
-  async listMyViewingRequests(req: Request, res: Response, next: NextFunction): Promise<void | Response> {
+  async listMyViewingRequests(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void | Response> {
     try {
       const oxyUserId = callerOf(req);
-      if (!oxyUserId) return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
+      if (!oxyUserId)
+        return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
 
       const { status } = req.query;
       const { page, limit, skip } = parsePagination(req.query);
@@ -411,11 +435,16 @@ class ViewingController {
    * If requester calls this, returns only their own requests for that property
    * If owner calls this, returns all requests for the property
    */
-  async listPropertyViewingRequests(req: Request, res: Response, next: NextFunction): Promise<void | Response> {
+  async listPropertyViewingRequests(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void | Response> {
     try {
       const { propertyId } = req.params;
       const oxyUserId = callerOf(req);
-      if (!oxyUserId) return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
+      if (!oxyUserId)
+        return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
 
       const db = getDb();
       const property = await findPropertyBookingBasis(db, propertyId);
@@ -456,11 +485,16 @@ class ViewingController {
   }
 
   /** Approve a pending viewing request (owner only) */
-  async approveViewingRequest(req: Request, res: Response, next: NextFunction): Promise<void | Response> {
+  async approveViewingRequest(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void | Response> {
     try {
       const { viewingId } = req.params;
       const oxyUserId = callerOf(req);
-      if (!oxyUserId) return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
+      if (!oxyUserId)
+        return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
 
       const db = getDb();
       const viewing = await findViewingById(db, viewingId);
@@ -481,11 +515,15 @@ class ViewingController {
         viewing.durationMinutes,
         { excludeId: viewing.id, statuses: ['approved'] },
       );
-      if (conflict) return next(new AppError('Time slot already approved for another request', 409, 'TIME_CONFLICT'));
+      if (conflict)
+        return next(
+          new AppError('Time slot already approved for another request', 409, 'TIME_CONFLICT'),
+        );
 
       const response = asText(req.body?.response);
       const approved = await decideViewing(db, viewingId, oxyUserId, 'approved', response);
-      if (!approved) return next(new AppError('Only pending requests can be approved', 400, 'INVALID_STATE'));
+      if (!approved)
+        return next(new AppError('Only pending requests can be approved', 400, 'INVALID_STATE'));
 
       // Notify the requester that their viewing was approved. The owner's own
       // words, when they wrote any: a fixed English sentence is what the
@@ -515,11 +553,16 @@ class ViewingController {
   }
 
   /** Decline a pending viewing request (owner only) */
-  async declineViewingRequest(req: Request, res: Response, next: NextFunction): Promise<void | Response> {
+  async declineViewingRequest(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void | Response> {
     try {
       const { viewingId } = req.params;
       const oxyUserId = callerOf(req);
-      if (!oxyUserId) return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
+      if (!oxyUserId)
+        return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
 
       const db = getDb();
       const viewing = await findViewingById(db, viewingId);
@@ -534,7 +577,8 @@ class ViewingController {
 
       const response = asText(req.body?.response);
       const declined = await decideViewing(db, viewingId, oxyUserId, 'declined', response);
-      if (!declined) return next(new AppError('Only pending requests can be declined', 400, 'INVALID_STATE'));
+      if (!declined)
+        return next(new AppError('Only pending requests can be declined', 400, 'INVALID_STATE'));
 
       // The owner's own words. "Sorry, it went yesterday" and "I can do
       // Thursday instead" are different answers, and before `owner_response`
@@ -562,11 +606,16 @@ class ViewingController {
   }
 
   /** Cancel a viewing request (requester or owner) */
-  async cancelViewingRequest(req: Request, res: Response, next: NextFunction): Promise<void | Response> {
+  async cancelViewingRequest(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void | Response> {
     try {
       const { viewingId } = req.params;
       const oxyUserId = callerOf(req);
-      if (!oxyUserId) return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
+      if (!oxyUserId)
+        return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
 
       const db = getDb();
       const viewing = await findViewingById(db, viewingId);
@@ -574,7 +623,8 @@ class ViewingController {
 
       const isRequester = viewing.requesterOxyUserId === oxyUserId;
       const isOwner = viewing.ownerOxyUserId === oxyUserId;
-      if (!isRequester && !isOwner) return next(new AppError('Not authorized to cancel this request', 403, 'FORBIDDEN'));
+      if (!isRequester && !isOwner)
+        return next(new AppError('Not authorized to cancel this request', 403, 'FORBIDDEN'));
 
       const zone = await resolveViewingTimeZone(db, viewing.propertyId);
 
@@ -637,7 +687,11 @@ class ViewingController {
   }
 
   /** Update a pending viewing request (requester only) */
-  async updateViewingRequest(req: Request, res: Response, next: NextFunction): Promise<void | Response> {
+  async updateViewingRequest(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void | Response> {
     try {
       const { viewingId } = req.params;
       const { date, time, modality, message } = req.body;
@@ -658,7 +712,9 @@ class ViewingController {
 
       // Only allow requester to modify
       if (viewing.requesterOxyUserId !== oxyUserId) {
-        return next(new AppError('Not authorized to modify this viewing request', 403, 'FORBIDDEN'));
+        return next(
+          new AppError('Not authorized to modify this viewing request', 403, 'FORBIDDEN'),
+        );
       }
 
       const now = new Date();

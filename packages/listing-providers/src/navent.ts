@@ -154,7 +154,9 @@ function postingToRaw(
   const region = asString(isRecord(addressNode?.state) ? addressNode.state.name : undefined);
   const street = asString(addressNode?.name) ?? asString(addressNode?.streetAddress);
   const opName = asString(isRecord(posting.operationType) ? posting.operationType.name : undefined);
-  const propType = asString(isRecord(posting.realEstateType) ? posting.realEstateType.name : undefined);
+  const propType = asString(
+    isRecord(posting.realEstateType) ? posting.realEstateType.name : undefined,
+  );
   const features = posting.mainFeatures;
   const images: string[] = [];
   if (Array.isArray(posting.pictures)) {
@@ -223,7 +225,10 @@ export function parseNaventSearch(config: NaventSiteConfig, html: string): Naven
   }
   const out: NaventSearchRef[] = [];
   const seen = new Set<string>();
-  const hrefRe = new RegExp(config.hrefRe.source, config.hrefRe.flags.includes('g') ? config.hrefRe.flags : `${config.hrefRe.flags}g`);
+  const hrefRe = new RegExp(
+    config.hrefRe.source,
+    config.hrefRe.flags.includes('g') ? config.hrefRe.flags : `${config.hrefRe.flags}g`,
+  );
   for (const match of html.matchAll(hrefRe)) {
     const pathOrUrl = match[1] ?? '';
     const sourceId = match[2];
@@ -251,10 +256,22 @@ function listingFromJsonLd(
     });
   if (!node) return undefined;
 
-  const subject = isRecord(node.about) ? node.about : isRecord(node.mainEntity) ? node.mainEntity : node;
-  const offer = isRecord(node.offers) ? node.offers : isRecord(subject.offers) ? subject.offers : undefined;
+  const subject = isRecord(node.about)
+    ? node.about
+    : isRecord(node.mainEntity)
+      ? node.mainEntity
+      : node;
+  const offer = isRecord(node.offers)
+    ? node.offers
+    : isRecord(subject.offers)
+      ? subject.offers
+      : undefined;
   const price = asNumber(offer?.price) ?? asNumber(node.price);
-  const address = isRecord(subject.address) ? subject.address : isRecord(node.address) ? node.address : undefined;
+  const address = isRecord(subject.address)
+    ? subject.address
+    : isRecord(node.address)
+      ? node.address
+      : undefined;
   const city = asString(address?.addressLocality) ?? asString(address?.city);
   if (price === undefined || !city) return undefined;
 
@@ -280,9 +297,16 @@ function listingFromJsonLd(
   }
 
   const phone = asString(node.telephone) ?? asString(subject.telephone);
-  const contact = mergeContact(buildContact({ phone }), contactFromUnknown(node.seller ?? node.publisher));
+  const contact = mergeContact(
+    buildContact({ phone }),
+    contactFromUnknown(node.seller ?? node.publisher),
+  );
 
-  const floorSize = isRecord(subject.floorSize) ? subject.floorSize : isRecord(node.floorSize) ? node.floorSize : undefined;
+  const floorSize = isRecord(subject.floorSize)
+    ? subject.floorSize
+    : isRecord(node.floorSize)
+      ? node.floorSize
+      : undefined;
 
   return {
     sourceId,
@@ -292,7 +316,10 @@ function listingFromJsonLd(
     operation,
     price,
     currency: asString(offer?.priceCurrency) ?? config.defaultCurrency,
-    bedrooms: asNumber(subject.numberOfRooms) ?? asNumber(subject.numberOfBedrooms) ?? asNumber(node.numberOfRooms),
+    bedrooms:
+      asNumber(subject.numberOfRooms) ??
+      asNumber(subject.numberOfBedrooms) ??
+      asNumber(node.numberOfRooms),
     bathrooms: asNumber(subject.numberOfBathroomsTotal) ?? asNumber(node.numberOfBathroomsTotal),
     squareMeters: asNumber(floorSize?.value) ?? asNumber(floorSize),
     address: {

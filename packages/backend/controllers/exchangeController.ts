@@ -28,10 +28,7 @@
  */
 
 import type { Request, Response, NextFunction } from 'express';
-import type {
-  CreateExchangeRequestData,
-  UpdateExchangeRequestData,
-} from '@homiio/shared-types';
+import type { CreateExchangeRequestData, UpdateExchangeRequestData } from '@homiio/shared-types';
 
 import { getDb } from '../db/postgres';
 import {
@@ -46,10 +43,7 @@ import {
   type ExchangeStatusValue,
   type ExchangeWindowInput,
 } from '../db/exchanges/exchangeReads';
-import {
-  findOccupancyConflict,
-  type OccupancyConflict,
-} from '../db/availability/occupancy';
+import { findOccupancyConflict, type OccupancyConflict } from '../db/availability/occupancy';
 import {
   lockPropertyBookingBases,
   type PropertyBookingBasis,
@@ -142,10 +136,9 @@ function occupancyError(conflict: OccupancyConflict, role: 'requested' | 'offere
 }
 
 function resolveOxyUserId(req: Request): string | undefined {
-  const user = (req as Request & { user?: { id?: string; _id?: string }; userId?: string });
+  const user = req as Request & { user?: { id?: string; _id?: string }; userId?: string };
   return user.user?.id || user.user?._id || user.userId;
 }
-
 
 /**
  * Whether this request is paid for in guest points, and with which key.
@@ -169,9 +162,8 @@ function readGuestPointsIntent(
       'POINTS_NOT_APPLICABLE',
     );
   }
-  const key = typeof body.guestPointsIdempotencyKey === 'string'
-    ? body.guestPointsIdempotencyKey.trim()
-    : '';
+  const key =
+    typeof body.guestPointsIdempotencyKey === 'string' ? body.guestPointsIdempotencyKey.trim() : '';
   if (!GUEST_POINT_IDEMPOTENCY_KEY_PATTERN.test(key)) {
     throw new AppError(
       'guestPointsIdempotencyKey must be 8-64 characters of letters, digits, hyphen or underscore',
@@ -199,7 +191,6 @@ function readGuestPointsIntent(
 function hostCreditKey(exchangeRequestId: string): string {
   return `gp-earn-${exchangeRequestId}`.replace(/[^A-Za-z0-9_-]/g, '').slice(0, 64);
 }
-
 
 /**
  * A transition that RELEASES a points reservation, in one transaction.
@@ -282,7 +273,8 @@ class ExchangeController {
       const { propertyId, mode, offeredPropertyId, requestedWindow, offeredWindow, message } = body;
 
       const oxyUserId = resolveOxyUserId(req);
-      if (!oxyUserId) return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
+      if (!oxyUserId)
+        return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
 
       // The `ObjectId.isValid` guards are DELETED rather than widened
       // (`db/ids.ts`): post-cutover every listing id is a uuid v7, which they
@@ -311,11 +303,15 @@ class ExchangeController {
       let offered: ExchangeWindowInput | undefined;
       if (mode === ExchangeMode.SWAP) {
         if (!offeredPropertyId) {
-          return next(new AppError('A swap requires an offered property', 400, 'OFFERED_PROPERTY_REQUIRED'));
+          return next(
+            new AppError('A swap requires an offered property', 400, 'OFFERED_PROPERTY_REQUIRED'),
+          );
         }
         const parsed = parseWindow(offeredWindow);
         if (!parsed) {
-          return next(new AppError('A swap requires a valid offered window', 400, 'OFFERED_WINDOW_REQUIRED'));
+          return next(
+            new AppError('A swap requires a valid offered window', 400, 'OFFERED_WINDOW_REQUIRED'),
+          );
         }
         if (parsed.start.getTime() < now.getTime()) {
           return next(new AppError('Offered window must start in the future', 400, 'DATE_IN_PAST'));
@@ -328,9 +324,7 @@ class ExchangeController {
       // appear and vanish. The COST is derived from the window the server
       // parsed, never from the body.
       const pointsIntent = readGuestPointsIntent(body, mode);
-      const pointsCost = pointsIntent
-        ? guestPointsForWindow(requested.start, requested.end)
-        : 0;
+      const pointsCost = pointsIntent ? guestPointsForWindow(requested.start, requested.end) : 0;
 
       /**
        * A swap commits TWO homes, so BOTH are locked and both are decided
@@ -354,28 +348,56 @@ class ExchangeController {
         const property = locked.get(String(propertyId));
         if (!property) return { error: new AppError('Property not found', 404, 'NOT_FOUND') };
         if (property.isExternal) {
-          return { error: new AppError('Cannot request an exchange on external listings', 400, 'EXTERNAL_PROPERTY') };
+          return {
+            error: new AppError(
+              'Cannot request an exchange on external listings',
+              400,
+              'EXTERNAL_PROPERTY',
+            ),
+          };
         }
         if (!hasExchangeOffering(property)) {
-          return { error: new AppError('This property is not open to home exchange', 400, 'NOT_EXCHANGEABLE') };
+          return {
+            error: new AppError(
+              'This property is not open to home exchange',
+              400,
+              'NOT_EXCHANGEABLE',
+            ),
+          };
         }
         const listingMode = property.exchangeMode;
         if (!listingMode || !modeAccepts(listingMode, mode)) {
-          return { error: new AppError(`This listing does not accept "${mode}" exchanges`, 400, 'MODE_NOT_ACCEPTED') };
+          return {
+            error: new AppError(
+              `This listing does not accept "${mode}" exchanges`,
+              400,
+              'MODE_NOT_ACCEPTED',
+            ),
+          };
         }
 
         const hostOxyUserId = property.oxyUserId;
-        if (!hostOxyUserId) return { error: new AppError('Property has no host', 400, 'INVALID_PROPERTY') };
+        if (!hostOxyUserId)
+          return { error: new AppError('Property has no host', 400, 'INVALID_PROPERTY') };
         if (hostOxyUserId === oxyUserId) {
-          return { error: new AppError('You cannot request an exchange with your own property', 403, 'FORBIDDEN') };
+          return {
+            error: new AppError(
+              'You cannot request an exchange with your own property',
+              403,
+              'FORBIDDEN',
+            ),
+          };
         }
 
         let resolvedOfferedPropertyId: string | undefined;
         if (offered) {
           const offeredProperty = locked.get(String(offeredPropertyId));
-          if (!offeredProperty) return { error: new AppError('Offered property not found', 404, 'NOT_FOUND') };
+          if (!offeredProperty)
+            return { error: new AppError('Offered property not found', 404, 'NOT_FOUND') };
           if (offeredProperty.oxyUserId !== oxyUserId) {
-            return { error: new AppError('Offered property does not belong to you', 403, 'FORBIDDEN') };
+            return {
+              error: new AppError('Offered property does not belong to you', 403, 'FORBIDDEN'),
+            };
           }
           // An EXTERNAL listing is an advertisement Homiio copied from
           // somewhere else: nobody here can promise anybody a night in it. The
@@ -383,10 +405,22 @@ class ExchangeController {
           // in return was not, so a requester could offer a scraped listing as
           // if it were theirs to give.
           if (offeredProperty.isExternal) {
-            return { error: new AppError('Cannot offer an external listing in an exchange', 400, 'OFFERED_EXTERNAL_PROPERTY') };
+            return {
+              error: new AppError(
+                'Cannot offer an external listing in an exchange',
+                400,
+                'OFFERED_EXTERNAL_PROPERTY',
+              ),
+            };
           }
           if (!hasExchangeOffering(offeredProperty)) {
-            return { error: new AppError('Offered property is not open to home exchange', 400, 'OFFERED_NOT_EXCHANGEABLE') };
+            return {
+              error: new AppError(
+                'Offered property is not open to home exchange',
+                400,
+                'OFFERED_NOT_EXCHANGEABLE',
+              ),
+            };
           }
           resolvedOfferedPropertyId = offeredProperty.id;
         }
@@ -400,7 +434,11 @@ class ExchangeController {
         // And the OFFERED home over ITS window — otherwise a requester could
         // promise a home they have already committed elsewhere.
         if (resolvedOfferedPropertyId && offered) {
-          const offeredConflict = await findOccupancyConflict(tx, resolvedOfferedPropertyId, offered);
+          const offeredConflict = await findOccupancyConflict(
+            tx,
+            resolvedOfferedPropertyId,
+            offered,
+          );
           if (offeredConflict) return { error: occupancyError(offeredConflict, 'offered') };
         }
 
@@ -458,7 +496,14 @@ class ExchangeController {
         guestPoints: pointsCost,
       });
 
-      res.status(201).json(successResponse(serializeExchangeRequest(outcome.exchangeRequest), 'Exchange request created'));
+      res
+        .status(201)
+        .json(
+          successResponse(
+            serializeExchangeRequest(outcome.exchangeRequest),
+            'Exchange request created',
+          ),
+        );
     } catch (error) {
       next(error);
     }
@@ -473,7 +518,8 @@ class ExchangeController {
     try {
       const { page = 1, limit = DEFAULT_PAGE_SIZE, status, asHost } = req.query;
       const oxyUserId = resolveOxyUserId(req);
-      if (!oxyUserId) return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
+      if (!oxyUserId)
+        return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
 
       // The `Profile.findByOxyUserId` guard is DROPPED, not ported. It was not an
       // authorisation check — both branches below are already scoped by the
@@ -483,7 +529,10 @@ class ExchangeController {
       // another batch owns, to reproduce a check that protected nothing. Same
       // call, same reasoning, as `savedSearches` in #301.
       const pageNumber = Math.max(1, parseInt(String(page), 10) || 1);
-      const limitNumber = Math.min(MAX_PAGE_SIZE, Math.max(1, parseInt(String(limit), 10) || DEFAULT_PAGE_SIZE));
+      const limitNumber = Math.min(
+        MAX_PAGE_SIZE,
+        Math.max(1, parseInt(String(limit), 10) || DEFAULT_PAGE_SIZE),
+      );
       const skip = (pageNumber - 1) * limitNumber;
 
       const asHostView = String(asHost) === 'true';
@@ -497,7 +546,15 @@ class ExchangeController {
         { limit: limitNumber, offset: skip },
       );
 
-      res.json(paginationResponse(result.rows.map(serializeExchangeRequest), pageNumber, limitNumber, result.total, 'Exchange requests retrieved'));
+      res.json(
+        paginationResponse(
+          result.rows.map(serializeExchangeRequest),
+          pageNumber,
+          limitNumber,
+          result.total,
+          'Exchange requests retrieved',
+        ),
+      );
     } catch (error) {
       next(error);
     }
@@ -511,10 +568,12 @@ class ExchangeController {
     try {
       const { id } = req.params;
       const oxyUserId = resolveOxyUserId(req);
-      if (!oxyUserId) return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
+      if (!oxyUserId)
+        return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
 
       const exchangeRequest = await findExchangeRequestById(getDb(), id);
-      if (!exchangeRequest) return next(new AppError('Exchange request not found', 404, 'NOT_FOUND'));
+      if (!exchangeRequest)
+        return next(new AppError('Exchange request not found', 404, 'NOT_FOUND'));
 
       const isRequester = exchangeRequest.requesterOxyUserId === oxyUserId;
       const isHost = exchangeRequest.hostOxyUserId === oxyUserId;
@@ -522,7 +581,9 @@ class ExchangeController {
         return next(new AppError('Not authorized to view this exchange request', 403, 'FORBIDDEN'));
       }
 
-      res.json(successResponse(serializeExchangeRequest(exchangeRequest), 'Exchange request retrieved'));
+      res.json(
+        successResponse(serializeExchangeRequest(exchangeRequest), 'Exchange request retrieved'),
+      );
     } catch (error) {
       next(error);
     }
@@ -537,22 +598,30 @@ class ExchangeController {
    *   - Either:    confirmed -> completed (only after the requested window ended)
    * Any other transition is rejected as INVALID_STATE.
    */
-  async updateExchangeRequestStatus(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async updateExchangeRequestStatus(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
       const { id } = req.params;
       const { status: nextStatus, message } = req.body as UpdateExchangeRequestData;
 
       const oxyUserId = resolveOxyUserId(req);
-      if (!oxyUserId) return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
+      if (!oxyUserId)
+        return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
 
       const db = getDb();
       const exchangeRequest = await findExchangeRequestById(db, id);
-      if (!exchangeRequest) return next(new AppError('Exchange request not found', 404, 'NOT_FOUND'));
+      if (!exchangeRequest)
+        return next(new AppError('Exchange request not found', 404, 'NOT_FOUND'));
 
       const isRequester = exchangeRequest.requesterOxyUserId === oxyUserId;
       const isHost = exchangeRequest.hostOxyUserId === oxyUserId;
       if (!isRequester && !isHost) {
-        return next(new AppError('Not authorized to update this exchange request', 403, 'FORBIDDEN'));
+        return next(
+          new AppError('Not authorized to update this exchange request', 403, 'FORBIDDEN'),
+        );
       }
 
       const now = new Date();
@@ -574,10 +643,20 @@ class ExchangeController {
       let updated: Awaited<ReturnType<typeof transitionExchangeRequest>>;
       let fromStatuses: readonly ExchangeStatusValue[];
 
-      if (nextStatus === ExchangeRequestStatus.CONFIRMED || nextStatus === ExchangeRequestStatus.DECLINED) {
-        if (!isHost) return next(new AppError('Only the host can confirm or decline', 403, 'FORBIDDEN'));
+      if (
+        nextStatus === ExchangeRequestStatus.CONFIRMED ||
+        nextStatus === ExchangeRequestStatus.DECLINED
+      ) {
+        if (!isHost)
+          return next(new AppError('Only the host can confirm or decline', 403, 'FORBIDDEN'));
         if (exchangeRequest.status !== ExchangeRequestStatus.PENDING) {
-          return next(new AppError('Only pending requests can be confirmed or declined', 400, 'INVALID_STATE'));
+          return next(
+            new AppError(
+              'Only pending requests can be confirmed or declined',
+              400,
+              'INVALID_STATE',
+            ),
+          );
         }
         fromStatuses = [ExchangeRequestStatus.PENDING];
         if (nextStatus === ExchangeRequestStatus.CONFIRMED) {
@@ -604,11 +683,23 @@ class ExchangeController {
               return { error: new AppError('Property no longer exists', 404, 'NOT_FOUND') };
             }
             if (!hasExchangeOffering(targetProperty)) {
-              return { error: new AppError('This property is no longer open to home exchange', 409, 'NOT_EXCHANGEABLE') };
+              return {
+                error: new AppError(
+                  'This property is no longer open to home exchange',
+                  409,
+                  'NOT_EXCHANGEABLE',
+                ),
+              };
             }
             const listingMode = targetProperty.exchangeMode;
             if (!listingMode || !modeAccepts(listingMode, exchangeRequest.mode)) {
-              return { error: new AppError(`This listing no longer accepts "${exchangeRequest.mode}" exchanges`, 409, 'MODE_NOT_ACCEPTED') };
+              return {
+                error: new AppError(
+                  `This listing no longer accepts "${exchangeRequest.mode}" exchanges`,
+                  409,
+                  'MODE_NOT_ACCEPTED',
+                ),
+              };
             }
 
             // The TARGET home first…
@@ -616,9 +707,14 @@ class ExchangeController {
               start: exchangeRequest.requestedWindowStart,
               end: exchangeRequest.requestedWindowEnd,
             };
-            const targetConflict = await findOccupancyConflict(tx, exchangeRequest.propertyId, requested, {
-              excludeExchangeId: exchangeRequest.id,
-            });
+            const targetConflict = await findOccupancyConflict(
+              tx,
+              exchangeRequest.propertyId,
+              requested,
+              {
+                excludeExchangeId: exchangeRequest.id,
+              },
+            );
             if (targetConflict) return { error: occupancyError(targetConflict, 'requested') };
 
             // …and, for a SWAP, the OFFERED home, which must still exist, still
@@ -637,27 +733,58 @@ class ExchangeController {
               }
               const offeredProperty = locked.get(exchangeRequest.offeredPropertyId);
               if (!offeredProperty) {
-                return { error: new AppError('The offered home no longer exists', 409, 'OFFERED_NOT_FOUND') };
+                return {
+                  error: new AppError(
+                    'The offered home no longer exists',
+                    409,
+                    'OFFERED_NOT_FOUND',
+                  ),
+                };
               }
               if (offeredProperty.oxyUserId !== exchangeRequest.requesterOxyUserId) {
-                return { error: new AppError('The offered home no longer belongs to the requester', 409, 'OFFERED_NOT_OWNED') };
+                return {
+                  error: new AppError(
+                    'The offered home no longer belongs to the requester',
+                    409,
+                    'OFFERED_NOT_OWNED',
+                  ),
+                };
               }
               if (!hasExchangeOffering(offeredProperty)) {
-                return { error: new AppError('The offered home is no longer open to home exchange', 409, 'OFFERED_NOT_EXCHANGEABLE') };
+                return {
+                  error: new AppError(
+                    'The offered home is no longer open to home exchange',
+                    409,
+                    'OFFERED_NOT_EXCHANGEABLE',
+                  ),
+                };
               }
               const offered = {
                 start: exchangeRequest.offeredWindowStart,
                 end: exchangeRequest.offeredWindowEnd,
               };
-              const offeredConflict = await findOccupancyConflict(tx, exchangeRequest.offeredPropertyId, offered, {
-                excludeExchangeId: exchangeRequest.id,
-              });
+              const offeredConflict = await findOccupancyConflict(
+                tx,
+                exchangeRequest.offeredPropertyId,
+                offered,
+                {
+                  excludeExchangeId: exchangeRequest.id,
+                },
+              );
               if (offeredConflict) return { error: occupancyError(offeredConflict, 'offered') };
             }
 
-            const confirmed = await transitionExchangeRequest(tx, id, nextStatus, fromStatuses, { message: nextMessage });
+            const confirmed = await transitionExchangeRequest(tx, id, nextStatus, fromStatuses, {
+              message: nextMessage,
+            });
             if (!confirmed) {
-              return { error: new AppError('Only pending requests can be confirmed or declined', 400, 'INVALID_STATE') };
+              return {
+                error: new AppError(
+                  'Only pending requests can be confirmed or declined',
+                  400,
+                  'INVALID_STATE',
+                ),
+              };
             }
 
             if (exchangeRequest.usesGuestPoints) {
@@ -693,49 +820,101 @@ class ExchangeController {
         } else {
           // A decline gives the guest their points back, in the same
           // transaction as the transition.
-          updated = await transitionAndReleaseGuestPoints(db, exchangeRequest, nextStatus, fromStatuses, {
-            message: nextMessage,
-          });
+          updated = await transitionAndReleaseGuestPoints(
+            db,
+            exchangeRequest,
+            nextStatus,
+            fromStatuses,
+            {
+              message: nextMessage,
+            },
+          );
           if (!updated) {
-            return next(new AppError('Only pending requests can be confirmed or declined', 400, 'INVALID_STATE'));
+            return next(
+              new AppError(
+                'Only pending requests can be confirmed or declined',
+                400,
+                'INVALID_STATE',
+              ),
+            );
           }
         }
       } else if (nextStatus === ExchangeRequestStatus.CANCELLED) {
-        if (!isRequester) return next(new AppError('Only the requester can cancel', 403, 'FORBIDDEN'));
+        if (!isRequester)
+          return next(new AppError('Only the requester can cancel', 403, 'FORBIDDEN'));
         if (exchangeRequest.status === ExchangeRequestStatus.CANCELLED) {
           // Already in the state the caller asked for. The message is still
           // applied, matching the Mongoose handler's convergence path.
-          const converged = nextMessage === undefined
-            ? exchangeRequest
-            : (await setExchangeRequestMessage(db, id, nextMessage)) ?? exchangeRequest;
-          res.json(successResponse(serializeExchangeRequest(converged), 'Exchange request already cancelled'));
+          const converged =
+            nextMessage === undefined
+              ? exchangeRequest
+              : ((await setExchangeRequestMessage(db, id, nextMessage)) ?? exchangeRequest);
+          res.json(
+            successResponse(
+              serializeExchangeRequest(converged),
+              'Exchange request already cancelled',
+            ),
+          );
           return;
         }
         fromStatuses = [ExchangeRequestStatus.PENDING, ExchangeRequestStatus.CONFIRMED];
-        updated = await transitionAndReleaseGuestPoints(db, exchangeRequest, nextStatus, fromStatuses, {
-          message: nextMessage,
-        });
+        updated = await transitionAndReleaseGuestPoints(
+          db,
+          exchangeRequest,
+          nextStatus,
+          fromStatuses,
+          {
+            message: nextMessage,
+          },
+        );
         if (!updated) {
-          return next(new AppError('Only pending or confirmed requests can be cancelled', 400, 'INVALID_STATE'));
+          return next(
+            new AppError(
+              'Only pending or confirmed requests can be cancelled',
+              400,
+              'INVALID_STATE',
+            ),
+          );
         }
       } else if (nextStatus === ExchangeRequestStatus.COMPLETED) {
         if (exchangeRequest.status !== ExchangeRequestStatus.CONFIRMED) {
-          return next(new AppError('Only confirmed exchanges can be completed', 400, 'INVALID_STATE'));
+          return next(
+            new AppError('Only confirmed exchanges can be completed', 400, 'INVALID_STATE'),
+          );
         }
         if (exchangeRequest.requestedWindowEnd.getTime() > now.getTime()) {
-          return next(new AppError('An exchange can only be completed after the stay window has passed', 400, 'STAY_NOT_ENDED'));
+          return next(
+            new AppError(
+              'An exchange can only be completed after the stay window has passed',
+              400,
+              'STAY_NOT_ENDED',
+            ),
+          );
         }
         // A SWAP only completes once BOTH legs have ended. Host-mode requests
         // have no offered window and keep the requested-only check above.
         if (exchangeRequest.mode === ExchangeMode.SWAP) {
-          if (!exchangeRequest.offeredWindowEnd || exchangeRequest.offeredWindowEnd.getTime() > now.getTime()) {
-            return next(new AppError('A swap can only be completed after both stay windows have passed', 400, 'STAY_NOT_ENDED'));
+          if (
+            !exchangeRequest.offeredWindowEnd ||
+            exchangeRequest.offeredWindowEnd.getTime() > now.getTime()
+          ) {
+            return next(
+              new AppError(
+                'A swap can only be completed after both stay windows have passed',
+                400,
+                'STAY_NOT_ENDED',
+              ),
+            );
           }
         }
         fromStatuses = [ExchangeRequestStatus.CONFIRMED];
-        updated = await transitionExchangeRequest(db, id, nextStatus, fromStatuses, { message: nextMessage });
+        updated = await transitionExchangeRequest(db, id, nextStatus, fromStatuses, {
+          message: nextMessage,
+        });
         if (!updated) {
-          return next(new AppError('Only confirmed exchanges can be completed', 400, 'INVALID_STATE'));
+          return next(
+            new AppError('Only confirmed exchanges can be completed', 400, 'INVALID_STATE'),
+          );
         }
       } else {
         return next(new AppError('Unsupported status transition', 400, 'INVALID_STATE'));

@@ -63,9 +63,7 @@ async function closeUndeliverable(reportId: string, reason: string): Promise<voi
 }
 
 /** Handle one `report.submit` outbox event. */
-export async function deliverReportOutboxEvent(
-  event: ModerationOutboxEvent,
-): Promise<void> {
+export async function deliverReportOutboxEvent(event: ModerationOutboxEvent): Promise<void> {
   const reportId = event.payload.reportId;
   if (reportId === undefined) {
     throw new ModerationDeliveryRejectedError('A report.submit event carried no reportId.');
@@ -125,10 +123,7 @@ export async function deliverReportOutboxEvent(
      */
     await updateModerationReport(reportId, {
       localStatus: 'delivery_failed',
-      lastDeliveryError: (error instanceof Error
-        ? error.message
-        : String(error)
-      ).slice(0, 2_000),
+      lastDeliveryError: (error instanceof Error ? error.message : String(error)).slice(0, 2_000),
     });
     throw error;
   }

@@ -150,7 +150,7 @@ function isPositiveNumber(value: unknown): value is number {
  */
 export function computeCommission(
   offering: CommissionOffering,
-  dealValue: number
+  dealValue: number,
 ): ComputedCommission {
   const { payout, currency } = COMMISSION_CONFIG;
   const entry = payout[offering];
@@ -230,7 +230,7 @@ function resolveDealBasis(property: TransactableProperty): DealBasis | null {
  * offering to compute against). A second call for the same property is a no-op.
  */
 export async function onPropertyTransacted(
-  property: TransactableProperty
+  property: TransactableProperty,
 ): Promise<CommissionDocument | null> {
   if (!property?.sourcedByPartner) {
     return null;
@@ -273,7 +273,8 @@ export async function onPropertyTransacted(
 
   const computed = computeCommission(basis.offering, basis.dealValue);
 
-  const earnedBonus = Math.floor(computed.amount / POINTS_EARNED_STEP) * POINTS_CONFIG.perThousandEarned;
+  const earnedBonus =
+    Math.floor(computed.amount / POINTS_EARNED_STEP) * POINTS_CONFIG.perThousandEarned;
   const pointsAwarded = POINTS_CONFIG.perClosedDeal + earnedBonus;
 
   // The commission row and the points award in ONE transaction. They are one
@@ -352,7 +353,9 @@ function randomSuffix(): string {
  *
  * @param nameOrUsername the user's display name or username (best-effort)
  */
-export async function generateReferralCode(nameOrUsername: string | undefined | null): Promise<string> {
+export async function generateReferralCode(
+  nameOrUsername: string | undefined | null,
+): Promise<string> {
   const base = slugifyBase(typeof nameOrUsername === 'string' ? nameOrUsername : '');
 
   for (let attempt = 0; attempt < REFERRAL_MAX_ATTEMPTS; attempt += 1) {

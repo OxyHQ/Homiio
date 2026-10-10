@@ -19,17 +19,15 @@ const SEARCH_PAGE_PROPS = {
         title: 'Spacious 1BR | Sea View | High Floor',
         description: 'Bright apartment with marina views and premium finishes.',
         category: [{ slug: 'apartments' }],
-        location: [
-          { name: 'UAE' },
-          { name: 'Dubai' },
-          { name: 'Dubai Marina' },
-        ],
+        location: [{ name: 'UAE' }, { name: 'Dubai' }, { name: 'Dubai Marina' }],
         coverPhoto: {
           url: 'https://bayut-production.s3.eu-central-1.amazonaws.com/image/example-rent.jpg',
         },
         photos: [
           { url: 'https://bayut-production.s3.eu-central-1.amazonaws.com/image/example-rent.jpg' },
-          { url: 'https://bayut-production.s3.eu-central-1.amazonaws.com/image/example-rent-2.jpg' },
+          {
+            url: 'https://bayut-production.s3.eu-central-1.amazonaws.com/image/example-rent-2.jpg',
+          },
         ],
         agency: { name: 'Premium Properties LLC' },
         contactName: 'John Smith',
@@ -47,15 +45,13 @@ const SEARCH_PAGE_PROPS = {
         title: 'Luxury 2BR in Downtown Dubai',
         description: 'Corner unit with Burj Khalifa views.',
         category: [{ slug: 'apartments' }],
-        location: [
-          { name: 'UAE' },
-          { name: 'Dubai' },
-          { name: 'Downtown Dubai' },
-        ],
+        location: [{ name: 'UAE' }, { name: 'Dubai' }, { name: 'Downtown Dubai' }],
         coverPhoto: {
           url: 'https://bayut-production.s3.eu-central-1.amazonaws.com/image/example-sale.jpg',
         },
-        photos: [{ url: 'https://bayut-production.s3.eu-central-1.amazonaws.com/image/example-sale.jpg' }],
+        photos: [
+          { url: 'https://bayut-production.s3.eu-central-1.amazonaws.com/image/example-sale.jpg' },
+        ],
         agency: { name: 'Elite Homes Real Estate' },
         contactName: 'Sarah Khan',
         phoneNumber: { mobile: '+971509876543' },

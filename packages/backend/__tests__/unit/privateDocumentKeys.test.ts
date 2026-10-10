@@ -124,7 +124,10 @@ describe('recovering the key a stored row points at', () => {
     ).toBe('applications/documents/a.jpeg');
     // The same URL with no endpoint configured names nothing we store.
     expect(
-      storedDocumentKey(`https://minio.local:9000/${S3.bucketName}/applications/documents/a.jpeg`, S3),
+      storedDocumentKey(
+        `https://minio.local:9000/${S3.bucketName}/applications/documents/a.jpeg`,
+        S3,
+      ),
     ).toBeNull();
   });
 
@@ -143,9 +146,9 @@ describe('recovering the key a stored row points at', () => {
   it('decodes percent-escapes exactly once', () => {
     // Once, so a real space survives; only once, so `%252e%252e` cannot become
     // `..` on the way to the store.
-    expect(
-      storedDocumentKey('https://api.homiio.com/api/images/file/private/a%20b.jpeg', S3),
-    ).toBe('private/a b.jpeg');
+    expect(storedDocumentKey('https://api.homiio.com/api/images/file/private/a%20b.jpeg', S3)).toBe(
+      'private/a b.jpeg',
+    );
     expect(
       storedDocumentKey('https://api.homiio.com/api/images/file/private/%252e%252e/a.jpeg', S3),
     ).toBe('private/%2e%2e/a.jpeg');

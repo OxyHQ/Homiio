@@ -11,11 +11,7 @@
  * calling React Query hooks own loading/error/empty state.
  */
 import { api, ApiError, type ApiResponse } from '@/utils/api';
-import type {
-  Commission,
-  PartnerMeResponse,
-  Property,
-} from '@homiio/shared-types';
+import type { Commission, PartnerMeResponse, Property } from '@homiio/shared-types';
 
 const BASE_URL = '/api/partners';
 

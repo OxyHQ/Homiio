@@ -57,13 +57,8 @@ export default function TabsLayout() {
       rippleColor={colors.primarySubtle}
     >
       <NativeTabs.Trigger name="index">
-        <NativeTabs.Trigger.Icon
-          sf={{ default: 'safari', selected: 'safari.fill' }}
-          md="explore"
-        />
-        <NativeTabs.Trigger.Label>
-          {t('sidebar.navigation.home')}
-        </NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf={{ default: 'safari', selected: 'safari.fill' }} md="explore" />
+        <NativeTabs.Trigger.Label>{t('sidebar.navigation.home')}</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="saved">
@@ -71,36 +66,22 @@ export default function TabsLayout() {
           sf={{ default: 'bookmark', selected: 'bookmark.fill' }}
           md="bookmark"
         />
-        <NativeTabs.Trigger.Label>
-          {t('sidebar.navigation.saved')}
-        </NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Label>{t('sidebar.navigation.saved')}</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="sindi">
         <NativeTabs.Trigger.Icon sf="sparkles" md="auto_awesome" />
-        <NativeTabs.Trigger.Label>
-          {t('sidebar.navigation.sindi')}
-        </NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Label>{t('sidebar.navigation.sindi')}</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="inbox">
-        <NativeTabs.Trigger.Icon
-          sf={{ default: 'tray', selected: 'tray.fill' }}
-          md="inbox"
-        />
-        <NativeTabs.Trigger.Label>
-          {t('sidebar.navigation.inbox')}
-        </NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf={{ default: 'tray', selected: 'tray.fill' }} md="inbox" />
+        <NativeTabs.Trigger.Label>{t('sidebar.navigation.inbox')}</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="profile">
-        <NativeTabs.Trigger.Icon
-          sf={{ default: 'person', selected: 'person.fill' }}
-          md="person"
-        />
-        <NativeTabs.Trigger.Label>
-          {t('sidebar.navigation.profile')}
-        </NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf={{ default: 'person', selected: 'person.fill' }} md="person" />
+        <NativeTabs.Trigger.Label>{t('sidebar.navigation.profile')}</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
     </NativeTabs>
   );

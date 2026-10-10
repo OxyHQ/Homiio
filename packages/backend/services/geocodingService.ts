@@ -106,7 +106,10 @@ const COORD_BOUNDS = {
  * @param longitude - Longitude coordinate ([-180, 180])
  * @param latitude - Latitude coordinate ([-90, 90])
  */
-export async function reverseGeocode(longitude: number, latitude: number): Promise<GeocodingResult> {
+export async function reverseGeocode(
+  longitude: number,
+  latitude: number,
+): Promise<GeocodingResult> {
   if (
     !Number.isFinite(longitude) ||
     !Number.isFinite(latitude) ||

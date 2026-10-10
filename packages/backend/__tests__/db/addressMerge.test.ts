@@ -300,10 +300,10 @@ describe('the relation registry cannot go stale', () => {
       join pg_attribute a on a.attrelid = c.conrelid and a.attnum = k.attnum
       where c.contype = 'f' and c.confrelid = 'addresses'::regclass
     `);
-    const fromCatalogue = [...rows]
-      .map((row) => `${row.table_name}.${row.column_name}`)
+    const fromCatalogue = [...rows].map((row) => `${row.table_name}.${row.column_name}`).sort();
+    const fromSchema = addressForeignKeys()
+      .map((fk) => `${fk.table}.${fk.column}`)
       .sort();
-    const fromSchema = addressForeignKeys().map((fk) => `${fk.table}.${fk.column}`).sort();
     expect(fromSchema).toEqual(fromCatalogue);
   });
 });
@@ -349,10 +349,7 @@ describe('a merge moves the relations and records what it did', () => {
     const survivor = await makeAddress('Carrer del Consell', '10');
     const loser = await makeAddress('Carrer del Consel', '10');
     const child = await makeAddress('Carrer del Consell', '10');
-    await db
-      .update(addresses)
-      .set({ parentAddressId: loser })
-      .where(eq(addresses.id, child));
+    await db.update(addresses).set({ parentAddressId: loser }).where(eq(addresses.id, child));
 
     await merge(survivor, loser);
 
@@ -432,10 +429,7 @@ describe('a merge moves the relations and records what it did', () => {
     await makeProperty(loser);
 
     const result = await merge(survivor, loser);
-    const [row] = await db
-      .select()
-      .from(addressMerges)
-      .where(eq(addressMerges.id, result.mergeId));
+    const [row] = await db.select().from(addressMerges).where(eq(addressMerges.id, result.mergeId));
 
     expect(row.movedRelationCount).toBe(result.movedCount);
     expect(row.status).toBe('applied');
@@ -595,7 +589,7 @@ describe('the polymorphic holders, which the database will not protect', () => {
 });
 
 describe('the loser still resolves after the merge', () => {
-  it('finds the survivor from the loser\'s own normalized key', async () => {
+  it("finds the survivor from the loser's own normalized key", async () => {
     // Confirmed rather than reasoned about, because it is the path every future
     // ingest takes: a listing carrying the loser's key must land on the survivor
     // rather than resurrect the retired row. It works because the merge REDIRECTS
@@ -675,9 +669,7 @@ describe('the database refuses to delete a merged address', () => {
     await makeProperty(loser);
     await merge(survivor, loser);
 
-    await expect(
-      db.execute(sql`delete from addresses where id = ${loser}`),
-    ).rejects.toBeDefined();
+    await expect(db.execute(sql`delete from addresses where id = ${loser}`)).rejects.toBeDefined();
 
     // Still there, which is the property that makes the merge reversible.
     const [{ count }] = await db
@@ -705,9 +697,7 @@ describe('the shared test cleanup can still reset the schema', () => {
     const applied = await merge(survivor, loser);
 
     await db.delete(addressMerges).where(eq(addressMerges.id, applied.mergeId));
-    await expect(
-      db.delete(addresses).where(eq(addresses.id, loser)),
-    ).resolves.toBeDefined();
+    await expect(db.delete(addresses).where(eq(addresses.id, loser))).resolves.toBeDefined();
   });
 });
 

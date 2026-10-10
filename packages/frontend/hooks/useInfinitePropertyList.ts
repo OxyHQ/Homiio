@@ -40,13 +40,15 @@ export interface PropertyListPage {
 }
 
 /** The infinite-query result plus the flattened `properties` + server `total`. */
-export type PropertyListResult<TPage extends PropertyListPage> =
-  UseInfiniteQueryResult<InfiniteData<TPage>, Error> & {
-    /** All loaded properties flattened across pages. */
-    properties: Property[];
-    /** Total match count reported by the server. */
-    total: number;
-  };
+export type PropertyListResult<TPage extends PropertyListPage> = UseInfiniteQueryResult<
+  InfiniteData<TPage>,
+  Error
+> & {
+  /** All loaded properties flattened across pages. */
+  properties: Property[];
+  /** Total match count reported by the server. */
+  total: number;
+};
 
 interface UseInfinitePropertyListArgs<TResponse, TPage extends PropertyListPage> {
   /** Cache key for this feed (namespace-first). All pages share one entry. */
@@ -81,8 +83,7 @@ export function useInfinitePropertyList<TResponse, TPage extends PropertyListPag
       });
       return mapResponse(data, pageParam);
     },
-    getNextPageParam: (lastPage) =>
-      lastPage.hasMore ? lastPage.page + 1 : undefined,
+    getNextPageParam: (lastPage) => (lastPage.hasMore ? lastPage.page + 1 : undefined),
   });
 
   const properties = useMemo<Property[]>(

@@ -87,8 +87,12 @@ describe('timeline position', () => {
   it('numbers entries 1, 2, 3 — the bigint-as-string trap needs more than one append', async () => {
     const id = await createCase('oxy-owner');
     // Entry 1 is `case_created`, written by the create handler.
-    await request(buildApp('oxy-owner')).post(`/evictions/${id}/updates`).send({ message: 'second' });
-    await request(buildApp('oxy-owner')).post(`/evictions/${id}/updates`).send({ message: 'third' });
+    await request(buildApp('oxy-owner'))
+      .post(`/evictions/${id}/updates`)
+      .send({ message: 'second' });
+    await request(buildApp('oxy-owner'))
+      .post(`/evictions/${id}/updates`)
+      .send({ message: 'third' });
 
     const rows = await getDb()
       .select()
@@ -105,7 +109,9 @@ describe('timeline position', () => {
     // And the DTO reports them as numbers, not strings, so a client sorting on
     // `position` sorts numerically.
     const detail = await request(buildApp()).get(`/evictions/${id}`);
-    const positions = detail.body.data.timeline.map((entry: { position: unknown }) => entry.position);
+    const positions = detail.body.data.timeline.map(
+      (entry: { position: unknown }) => entry.position,
+    );
     expect(positions).toEqual([1, 2, 3]);
     for (const position of positions) expect(typeof position).toBe('number');
   });
@@ -176,7 +182,9 @@ describe('status transitions', () => {
 
     for (const target of legal) {
       const id = await createCase('oxy-owner');
-      const res = await request(buildApp('oxy-owner')).put(`/evictions/${id}`).send({ status: target });
+      const res = await request(buildApp('oxy-owner'))
+        .put(`/evictions/${id}`)
+        .send({ status: target });
       expect(res.status).toBe(200);
       expect(res.body.data.eviction.status).toBe(target);
     }
@@ -186,7 +194,9 @@ describe('status transitions', () => {
     const id = await createCase('oxy-owner');
     await request(buildApp('oxy-owner')).put(`/evictions/${id}`).send({ status: 'cancelled' });
 
-    const res = await request(buildApp('oxy-owner')).put(`/evictions/${id}`).send({ status: 'upcoming' });
+    const res = await request(buildApp('oxy-owner'))
+      .put(`/evictions/${id}`)
+      .send({ status: 'upcoming' });
     expect(res.status).toBe(409);
     expect(res.body.error?.code ?? res.body.code).toBe('INVALID_STATUS_TRANSITION');
 
@@ -225,9 +235,9 @@ describe('status transitions', () => {
     // And it IS still findable under its own status, so "off the board" is not
     // "deleted".
     const cancelled = await request(buildApp()).get('/evictions?global=true&status=cancelled');
-    expect(
-      cancelled.body.data.evictions.map((row: { title: string }) => row.title),
-    ).toContain('cancelled-one');
+    expect(cancelled.body.data.evictions.map((row: { title: string }) => row.title)).toContain(
+      'cancelled-one',
+    );
   });
 
   it('records the status change as its OWN event type, not as a note', async () => {
@@ -250,7 +260,9 @@ describe('notification idempotency', () => {
     const id = await createCase('oxy-owner');
     await request(buildApp('oxy-watcher')).post(`/evictions/${id}/follow`);
 
-    await request(buildApp('oxy-owner')).put(`/evictions/${id}`).send({ scheduledAt: inDays(10) });
+    await request(buildApp('oxy-owner'))
+      .put(`/evictions/${id}`)
+      .send({ scheduledAt: inDays(10) });
 
     const first = await getDb()
       .select()
@@ -292,7 +304,9 @@ describe('notification idempotency', () => {
     const id = await createCase('oxy-owner');
     await request(buildApp('oxy-watcher')).post(`/evictions/${id}/follow`);
 
-    await request(buildApp('oxy-owner')).put(`/evictions/${id}`).send({ scheduledAt: inDays(10) });
+    await request(buildApp('oxy-owner'))
+      .put(`/evictions/${id}`)
+      .send({ scheduledAt: inDays(10) });
     await request(buildApp('oxy-owner')).put(`/evictions/${id}`).send({ status: 'postponed' });
 
     expect(

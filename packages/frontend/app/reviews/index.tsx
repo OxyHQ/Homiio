@@ -41,7 +41,9 @@ export default function ReviewExploreScreen() {
               size="lg"
               onPress={() => router.push('/reviews/write')}
               leadingIcon={RiEditBoxLine}
-              style={styles.cta} tone="accent" appearance="solid"
+              style={styles.cta}
+              tone="accent"
+              appearance="solid"
             >
               {t('reviews.explore.writeCta')}
             </Button>

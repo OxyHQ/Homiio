@@ -145,7 +145,9 @@ export function SindiActionCard({ execution, onTake }: SindiActionCardProps) {
           <Button
             size="sm"
             onPress={take}
-            accessibilityLabel={t('sindi.actions.takeAccessible')} tone="neutral" appearance="outline"
+            accessibilityLabel={t('sindi.actions.takeAccessible')}
+            tone="neutral"
+            appearance="outline"
           >
             {t('sindi.actions.take')}
           </Button>

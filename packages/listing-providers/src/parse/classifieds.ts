@@ -22,29 +22,117 @@ export class NonHousingListingError extends Error {
 }
 
 const HOUSING_CATEGORY_TOKENS: ReadonlySet<string> = new Set([
-  'inmobiliaria', 'inmueble', 'inmuebles', 'vivienda', 'viviendas', 'piso', 'pisos',
-  'apartamento', 'apartamentos', 'departamento', 'departamentos', 'casa', 'casas',
-  'chalet', 'chalets', 'atico', 'duplex', 'estudio', 'habitacion', 'habitaciones',
-  'alquiler', 'renta', 'venta', 'rent', 'sale', 'holiday', 'vacacional',
-  'immobiliare', 'immobili', 'appartamenti', 'case', 'affitto', 'vendita',
-  'immobilier', 'locations', 'ventes',
-  'haus_kaufen', 'haus_mieten', 'wohnung_kaufen', 'wohnung_mieten', 'immobilien',
-  'real-estate', 'realestate', 'real_estate', 'property', 'properties',
-  'imobiliare', 'apartament', 'apartamente', 'garsoniera', 'inchiriere', 'vanzare',
-  'monoambiente', 'monoambientes', 'ph', 'cochera', 'oficina', 'oficinas',
-  'quinta', 'quintas', 'lote', 'lotes', 'terreno', 'terrenos',
+  'inmobiliaria',
+  'inmueble',
+  'inmuebles',
+  'vivienda',
+  'viviendas',
+  'piso',
+  'pisos',
+  'apartamento',
+  'apartamentos',
+  'departamento',
+  'departamentos',
+  'casa',
+  'casas',
+  'chalet',
+  'chalets',
+  'atico',
+  'duplex',
+  'estudio',
+  'habitacion',
+  'habitaciones',
+  'alquiler',
+  'renta',
+  'venta',
+  'rent',
+  'sale',
+  'holiday',
+  'vacacional',
+  'immobiliare',
+  'immobili',
+  'appartamenti',
+  'case',
+  'affitto',
+  'vendita',
+  'immobilier',
+  'locations',
+  'ventes',
+  'haus_kaufen',
+  'haus_mieten',
+  'wohnung_kaufen',
+  'wohnung_mieten',
+  'immobilien',
+  'real-estate',
+  'realestate',
+  'real_estate',
+  'property',
+  'properties',
+  'imobiliare',
+  'apartament',
+  'apartamente',
+  'garsoniera',
+  'inchiriere',
+  'vanzare',
+  'monoambiente',
+  'monoambientes',
+  'ph',
+  'cochera',
+  'oficina',
+  'oficinas',
+  'quinta',
+  'quintas',
+  'lote',
+  'lotes',
+  'terreno',
+  'terrenos',
 ]);
 
 const NON_HOUSING_CATEGORY_TOKENS: ReadonlySet<string> = new Set([
-  'coche', 'coches', 'moto', 'motos', 'motor', 'auto', 'autos', 'car', 'cars', 'vehicle',
-  'empleo', 'trabajo', 'jobs', 'job', 'electronica', 'moviles', 'telefonia', 'informatica',
-  'moda', 'deportes', 'servicios', 'mascotas', 'bebes', 'hogar', 'muebles', 'jardin',
-  'formacion', 'negocio', 'negocios', 'automotive', 'electronics',
-  'locdemunca', 'angajare', 'masina', 'masini', 'electronice', 'mobila', 'servicii',
+  'coche',
+  'coches',
+  'moto',
+  'motos',
+  'motor',
+  'auto',
+  'autos',
+  'car',
+  'cars',
+  'vehicle',
+  'empleo',
+  'trabajo',
+  'jobs',
+  'job',
+  'electronica',
+  'moviles',
+  'telefonia',
+  'informatica',
+  'moda',
+  'deportes',
+  'servicios',
+  'mascotas',
+  'bebes',
+  'hogar',
+  'muebles',
+  'jardin',
+  'formacion',
+  'negocio',
+  'negocios',
+  'automotive',
+  'electronics',
+  'locdemunca',
+  'angajare',
+  'masina',
+  'masini',
+  'electronice',
+  'mobila',
+  'servicii',
 ]);
 
 function tokenizeCategory(value: string): string[] {
-  return deaccent(value).split(/[^a-z0-9]+/).filter((token) => token.length > 0);
+  return deaccent(value)
+    .split(/[^a-z0-9]+/)
+    .filter((token) => token.length > 0);
 }
 
 export function isHousingCategory(category: string | undefined | null): boolean {
@@ -102,8 +190,15 @@ export function assertHousingListing(
     (input.squareMeters !== undefined && input.squareMeters > 0) ||
     (input.bedrooms !== undefined && input.bedrooms >= 0) ||
     (input.bathrooms !== undefined && input.bathrooms > 0);
-  if (input.category && tokenizeCategory(input.category).some((t) => NON_HOUSING_CATEGORY_TOKENS.has(t))) {
-    throw new NonHousingListingError(provider, sourceId, `non-housing category "${input.category}"`);
+  if (
+    input.category &&
+    tokenizeCategory(input.category).some((t) => NON_HOUSING_CATEGORY_TOKENS.has(t))
+  ) {
+    throw new NonHousingListingError(
+      provider,
+      sourceId,
+      `non-housing category "${input.category}"`,
+    );
   }
   if (!categoryOk && !propertySignals) {
     throw new NonHousingListingError(

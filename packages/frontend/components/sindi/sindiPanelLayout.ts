@@ -58,7 +58,10 @@ export function useSindiPanelLayout(): SindiPanelLayout {
     const maxDockable = viewport - sidebarWidth - SHELL_ASIDE_INSET - MIN_MAIN_CONTENT_WIDTH;
     width = Math.max(PANEL_MIN_WIDTH, Math.min(ideal, maxDockable));
   } else {
-    width = Math.max(PANEL_MIN_WIDTH, Math.min(PANEL_IDEAL_WIDTH, viewport - PANEL_OVERLAY_EDGE_GAP));
+    width = Math.max(
+      PANEL_MIN_WIDTH,
+      Math.min(PANEL_IDEAL_WIDTH, viewport - PANEL_OVERLAY_EDGE_GAP),
+    );
   }
 
   return { visible, docked, width };

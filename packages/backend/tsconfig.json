@@ -22,32 +22,16 @@
     // of TS2593/TS2304. `node` is listed for the same reason: it currently
     // arrives transitively through `@types/express`, which is an accident of
     // that package's dependencies rather than something this project states.
-    "types": [
-      "node",
-      "jest"
-    ],
+    "types": ["node", "jest"],
     "paths": {
-      "@homiio/shared-types": [
-        "../shared-types/src"
-      ],
-      "@homiio/shared-types/*": [
-        "../shared-types/src/*"
-      ],
-      "@homiio/listing-providers": [
-        "../listing-providers/src"
-      ],
-      "@homiio/listing-providers/*": [
-        "../listing-providers/src/*"
-      ]
+      "@homiio/shared-types": ["../shared-types/src"],
+      "@homiio/shared-types/*": ["../shared-types/src/*"],
+      "@homiio/listing-providers": ["../listing-providers/src"],
+      "@homiio/listing-providers/*": ["../listing-providers/src/*"]
     }
   },
-  "include": [
-    "**/*.ts",
-    "package.json"
-  ],
-  "exclude": [
-    "dist"
-  ],
+  "include": ["**/*.ts", "package.json"],
+  "exclude": ["dist"],
   "references": [
     {
       "path": "../shared-types"

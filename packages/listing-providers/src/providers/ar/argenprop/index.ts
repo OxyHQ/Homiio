@@ -27,8 +27,7 @@ export const ARGENPROP_SITE: NaventSiteConfig = {
   countryCode: 'AR',
   defaultCity: 'Buenos Aires',
   defaultCurrency: 'ARS',
-  hrefRe:
-    /href="((?:https:\/\/www\.argenprop\.com)?\/[^"]*?--(\d{6,})(?:\.html)?(?:\?[^"]*)?)"/i,
+  hrefRe: /href="((?:https:\/\/www\.argenprop\.com)?\/[^"]*?--(\d{6,})(?:\.html)?(?:\?[^"]*)?)"/i,
 };
 
 const DEFAULT_CITIES: readonly string[] = [

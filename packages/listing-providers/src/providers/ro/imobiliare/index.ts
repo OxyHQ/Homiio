@@ -29,7 +29,11 @@ import type {
 } from '../../../types';
 import { createFetchRuntime } from '../../../runtime';
 import { ChallengeError, fetchListingViaLadder } from '../../../strategy';
-import { defaultProviderMetrics, type ProviderMetricsReader, type ProviderMetricsSink } from '../../../metrics';
+import {
+  defaultProviderMetrics,
+  type ProviderMetricsReader,
+  type ProviderMetricsSink,
+} from '../../../metrics';
 import { IMOBILIARE_RO_BASE_URL } from './fixtures';
 import {
   isImobiliareRoChallenge,
@@ -59,7 +63,11 @@ export interface ImobiliareRoProviderOptions {
   metrics?: ProviderMetricsSink & ProviderMetricsReader;
 }
 
-function searchUrl(city: string, page: number, kind: 'inchirieri' | 'vanzare' = 'inchirieri'): string {
+function searchUrl(
+  city: string,
+  page: number,
+  kind: 'inchirieri' | 'vanzare' = 'inchirieri',
+): string {
   const path =
     kind === 'inchirieri'
       ? `${IMOBILIARE_RO_BASE_URL}/inchirieri-apartamente/${citySlug(city)}`
@@ -133,7 +141,14 @@ export class ImobiliareRoProvider implements ListingProvider {
       if (yielded.count >= limit) return;
 
       if (viaSession.length === 0) {
-        for await (const ref of this.discoverViaLadder(runtime, city, job.signal, seen, limit, yielded)) {
+        for await (const ref of this.discoverViaLadder(
+          runtime,
+          city,
+          job.signal,
+          seen,
+          limit,
+          yielded,
+        )) {
           yield ref;
         }
       }
@@ -351,7 +366,9 @@ export class ImobiliareRoProvider implements ListingProvider {
       },
       type: PropertyType.APARTMENT,
       offerings: isSale ? [OfferingType.SALE] : [OfferingType.LONG_TERM_RENT],
-      longTermRent: isSale ? undefined : { monthlyAmount: listing.price, currency: listing.currency },
+      longTermRent: isSale
+        ? undefined
+        : { monthlyAmount: listing.price, currency: listing.currency },
       sale: isSale ? { price: listing.price, currency: listing.currency } : undefined,
       remoteImages: toRemoteImages(listing.images),
       status: 'published',

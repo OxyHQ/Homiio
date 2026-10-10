@@ -71,7 +71,10 @@ describe('the action union is closed', () => {
     // reason would tell somebody their place does not exist when it exists
     // twice.
     ['a clarification with no place', { kind: 'clarify_location', reason: 'ambiguous' }],
-    ['a clarification with an empty place', { kind: 'clarify_location', requested: '', reason: 'not_found' }],
+    [
+      'a clarification with an empty place',
+      { kind: 'clarify_location', requested: '', reason: 'not_found' },
+    ],
     ['a clarification with no reason', { kind: 'clarify_location', requested: 'Barcelona' }],
     [
       'a clarification with an invented reason',

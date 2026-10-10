@@ -33,7 +33,7 @@ const DEFAULT_PAGE_SIZE = 10;
 const MAX_PAGE_SIZE = 100;
 
 function resolveOxyUserId(req: Request): string | undefined {
-  const user = (req as Request & { user?: { id?: string; _id?: string }; userId?: string });
+  const user = req as Request & { user?: { id?: string; _id?: string }; userId?: string };
   return user.user?.id || user.user?._id || user.userId;
 }
 
@@ -53,13 +53,15 @@ class ExchangeReviewController {
       };
 
       const oxyUserId = resolveOxyUserId(req);
-      if (!oxyUserId) return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
+      if (!oxyUserId)
+        return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
 
       // The `ObjectId.isValid` guard is deleted rather than widened
       // (`db/ids.ts`) — the lookup already 404s for an id naming nothing.
       const db = getDb();
       const exchangeRequest = await findExchangeRequestById(db, id);
-      if (!exchangeRequest) return next(new AppError('Exchange request not found', 404, 'NOT_FOUND'));
+      if (!exchangeRequest)
+        return next(new AppError('Exchange request not found', 404, 'NOT_FOUND'));
 
       const isRequester = exchangeRequest.requesterOxyUserId === oxyUserId;
       const isHost = exchangeRequest.hostOxyUserId === oxyUserId;
@@ -68,7 +70,9 @@ class ExchangeReviewController {
       }
 
       if (exchangeRequest.status !== ExchangeRequestStatus.COMPLETED) {
-        return next(new AppError('You can only review a completed exchange', 400, 'EXCHANGE_NOT_COMPLETED'));
+        return next(
+          new AppError('You can only review a completed exchange', 400, 'EXCHANGE_NOT_COMPLETED'),
+        );
       }
 
       if (typeof rating !== 'number' || !Number.isFinite(rating)) {
@@ -98,7 +102,9 @@ class ExchangeReviewController {
         });
       } catch (error) {
         if (error instanceof ExchangeAlreadyReviewedError) {
-          return next(new AppError('You have already reviewed this exchange', 409, 'ALREADY_REVIEWED'));
+          return next(
+            new AppError('You have already reviewed this exchange', 409, 'ALREADY_REVIEWED'),
+          );
         }
         throw error;
       }
@@ -108,7 +114,9 @@ class ExchangeReviewController {
         exchangeRequestId: exchangeRequest.id,
       });
 
-      res.status(201).json(successResponse(serializeExchangeReview(review), 'Exchange review created'));
+      res
+        .status(201)
+        .json(successResponse(serializeExchangeReview(review), 'Exchange review created'));
     } catch (error) {
       next(error);
     }
@@ -122,11 +130,13 @@ class ExchangeReviewController {
     try {
       const { id } = req.params;
       const oxyUserId = resolveOxyUserId(req);
-      if (!oxyUserId) return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
+      if (!oxyUserId)
+        return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
 
       const db = getDb();
       const exchangeRequest = await findExchangeRequestById(db, id);
-      if (!exchangeRequest) return next(new AppError('Exchange request not found', 404, 'NOT_FOUND'));
+      if (!exchangeRequest)
+        return next(new AppError('Exchange request not found', 404, 'NOT_FOUND'));
 
       const isRequester = exchangeRequest.requesterOxyUserId === oxyUserId;
       const isHost = exchangeRequest.hostOxyUserId === oxyUserId;
@@ -157,7 +167,10 @@ class ExchangeReviewController {
       }
 
       const pageNumber = Math.max(1, parseInt(String(page), 10) || 1);
-      const limitNumber = Math.min(MAX_PAGE_SIZE, Math.max(1, parseInt(String(limit), 10) || DEFAULT_PAGE_SIZE));
+      const limitNumber = Math.min(
+        MAX_PAGE_SIZE,
+        Math.max(1, parseInt(String(limit), 10) || DEFAULT_PAGE_SIZE),
+      );
       const skip = (pageNumber - 1) * limitNumber;
 
       const result = await listReviewsForSubject(getDb(), oxyUserId, {

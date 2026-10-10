@@ -417,7 +417,10 @@ describe('external listing ingest (fixture -> IngestionService)', () => {
     const ingestion = buildIngestionService(true);
     // A substantial, shared agency description (>= 40 tokens) so the listings are
     // dedup-eligible; the tail word differs so Jaccard is ~0.97 (> 0.95 floor).
-    const shared = Array.from({ length: 60 }, (_, i) => `palabra${String(i).padStart(3, '0')}`).join(' ');
+    const shared = Array.from(
+      { length: 60 },
+      (_, i) => `palabra${String(i).padStart(3, '0')}`,
+    ).join(' ');
     const makeListing = (sourceId: string, tail: string): NormalizedListing => ({
       source: 'pisos',
       sourceId,

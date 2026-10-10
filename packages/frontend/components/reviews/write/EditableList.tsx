@@ -13,12 +13,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Button } from '@oxy.so/bloom/button';
 import { Card } from '@oxy.so/bloom/card';
-import {
-  RiAddCircleLine,
-  RiAddLine,
-  RiCloseCircleLine,
-  RiCloseLine,
-} from '@oxy.so/bloom/icons';
+import { RiAddCircleLine, RiAddLine, RiCloseCircleLine, RiCloseLine } from '@oxy.so/bloom/icons';
 import { Label } from '@oxy.so/bloom/label';
 import { TextFieldInput } from '@oxy.so/bloom/text-field';
 import { useTheme } from '@oxy.so/bloom/theme';
@@ -79,7 +74,7 @@ export const EditableList: React.FC<EditableListProps> = ({
       {items.length > 0 ? (
         <View className="gap-2">
           {items.map((item, index) => (
-            <Card key={`${item}-${index}`}  radius="radius-12" appearance="outline">
+            <Card key={`${item}-${index}`} radius="radius-12" appearance="outline">
               <View className="flex-row items-center gap-2 py-1 pl-3 pr-1">
                 <ToneIcon width={16} height={16} fill={toneColor} />
                 <BloomText className="flex-1 text-sm text-foreground">{item}</BloomText>
@@ -88,7 +83,9 @@ export const EditableList: React.FC<EditableListProps> = ({
                   iconOnly
                   leadingIcon={RiCloseLine}
                   onPress={() => removeItem(index)}
-                  accessibilityLabel={removeLabel} tone="accent" appearance="subtle"
+                  accessibilityLabel={removeLabel}
+                  tone="accent"
+                  appearance="subtle"
                 />
               </View>
             </Card>
@@ -112,7 +109,9 @@ export const EditableList: React.FC<EditableListProps> = ({
             size="md"
             leadingIcon={RiAddLine}
             onPress={addItem}
-            disabled={draft.trim().length === 0} tone="neutral" appearance="outline"
+            disabled={draft.trim().length === 0}
+            tone="neutral"
+            appearance="outline"
           >
             {addLabel}
           </Button>

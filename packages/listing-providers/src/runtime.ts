@@ -108,8 +108,7 @@ export class HttpFetchRuntime implements FetchRuntime {
     this.defaultTimeoutMs = options.defaultTimeoutMs ?? DEFAULT_TIMEOUT_MS;
     // Portals block the ingest UA; when routing through a residential proxy use a
     // desktop Chrome UA so cold HTTP discover/fetch matches the browser tier.
-    this.userAgent =
-      options.userAgent ?? (options.proxy ? BROWSER_USER_AGENT : DEFAULT_USER_AGENT);
+    this.userAgent = options.userAgent ?? (options.proxy ? BROWSER_USER_AGENT : DEFAULT_USER_AGENT);
     this.fixturesDir = options.fixturesDir;
     this.proxy = options.proxy;
   }

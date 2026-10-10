@@ -86,9 +86,7 @@ export function normalizePropertyIds(raw: unknown, max = MAX_PROPERTY_IDS): stri
   };
 
   const ingest = (value: string | number): void => {
-    String(value)
-      .split(ID_SEPARATOR_REGEX)
-      .forEach(pushToken);
+    String(value).split(ID_SEPARATOR_REGEX).forEach(pushToken);
   };
 
   if (Array.isArray(raw)) {
@@ -126,12 +124,9 @@ export function extractPropertiesJson(content: string): ParsedPropertiesContent 
     return { visible: content, ids: null };
   }
 
-  const jsonStr = content
-    .substring(startIdx + PROPERTIES_JSON_START.length, endIdx)
-    .trim();
+  const jsonStr = content.substring(startIdx + PROPERTIES_JSON_START.length, endIdx).trim();
   const visible = (
-    content.substring(0, startIdx) +
-    content.substring(endIdx + PROPERTIES_JSON_END.length)
+    content.substring(0, startIdx) + content.substring(endIdx + PROPERTIES_JSON_END.length)
   ).trim();
 
   const result = PropertyIdsSchema.safeParse(safeJsonParse(jsonStr));

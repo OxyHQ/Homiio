@@ -18,21 +18,12 @@ import { useTranslation } from 'react-i18next';
 import { parseISO } from 'date-fns';
 
 import { Button } from '@oxy.so/bloom/button';
-import {
-  RiAlertLine,
-  RiCheckLine,
-  RiCloseCircleLine,
-  RiCloseLine,
-} from '@oxy.so/bloom/icons';
+import { RiAlertLine, RiCheckLine, RiCloseCircleLine, RiCloseLine } from '@oxy.so/bloom/icons';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { Loading } from '@oxy.so/bloom/loading';
 import { SettingsListGroup, SettingsListItem } from '@oxy.so/bloom/settings-list';
 import { Text as BloomText, H2 } from '@oxy.so/bloom/typography';
-import {
-  ExchangeMode,
-  ExchangeRequestStatus,
-  type ExchangeWindow,
-} from '@homiio/shared-types';
+import { ExchangeMode, ExchangeRequestStatus, type ExchangeWindow } from '@homiio/shared-types';
 
 import { Header } from '@/components/Header';
 import { useProperty } from '@/hooks';
@@ -96,10 +87,7 @@ export default function ExchangeRequestDetailScreen() {
   });
   const sessionOxyUserId = profile?.oxyUserId;
   const alreadyReviewed = useMemo(
-    () =>
-      (reviewsQuery.data ?? []).some(
-        (review) => review.reviewerOxyUserId === sessionOxyUserId,
-      ),
+    () => (reviewsQuery.data ?? []).some((review) => review.reviewerOxyUserId === sessionOxyUserId),
     [reviewsQuery.data, sessionOxyUserId],
   );
 
@@ -117,9 +105,7 @@ export default function ExchangeRequestDetailScreen() {
         toast.success(toastKey[status] ?? t('listing.exchange.toasts.updated'));
       } catch (error) {
         const message =
-          error instanceof Error
-            ? error.message
-            : t('listing.exchange.errors.failed');
+          error instanceof Error ? error.message : t('listing.exchange.errors.failed');
         toast.error(message);
       }
     },
@@ -222,9 +208,7 @@ export default function ExchangeRequestDetailScreen() {
   const propertyTitle = property ? getPropertyTitle(property) : t('listing.exchange.cardFallback');
   const imageSource = property ? getPropertyImageSource(property) : null;
   const isSwap = request.mode === ExchangeMode.SWAP;
-  const modeLabel = isSwap
-    ? t('listing.exchange.mode.swap')
-    : t('listing.exchange.mode.host');
+  const modeLabel = isSwap ? t('listing.exchange.mode.swap') : t('listing.exchange.mode.host');
 
   // Whether the requested stay window has already ended (gates "complete"),
   // compared against the `now` snapshot captured above so render stays pure.
@@ -237,8 +221,7 @@ export default function ExchangeRequestDetailScreen() {
     role === 'guest' &&
     (request.status === ExchangeRequestStatus.PENDING ||
       request.status === ExchangeRequestStatus.CONFIRMED);
-  const showComplete =
-    request.status === ExchangeRequestStatus.CONFIRMED && stayEnded;
+  const showComplete = request.status === ExchangeRequestStatus.CONFIRMED && stayEnded;
   const showReviewForm =
     request.status === ExchangeRequestStatus.COMPLETED &&
     role !== null &&
@@ -265,7 +248,9 @@ export default function ExchangeRequestDetailScreen() {
             </View>
             {property?.address ? (
               <BloomText style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
-                {[property.address.cityName, property.address.countryName].filter(Boolean).join(', ')}
+                {[property.address.cityName, property.address.countryName]
+                  .filter(Boolean)
+                  .join(', ')}
               </BloomText>
             ) : null}
           </Card>
@@ -295,11 +280,13 @@ export default function ExchangeRequestDetailScreen() {
               <BloomText style={[styles.sectionLabel, { color: theme.colors.textSecondary }]}>
                 {t('listing.exchange.messageHeading')}
               </BloomText>
-              <BloomText style={[styles.messageText, { color: theme.colors.text }]}>{request.message}</BloomText>
+              <BloomText style={[styles.messageText, { color: theme.colors.text }]}>
+                {request.message}
+              </BloomText>
             </Card>
           ) : null}
 
-          {(showHostConfirmDecline || showRequesterCancel || showComplete) ? (
+          {showHostConfirmDecline || showRequesterCancel || showComplete ? (
             <View style={styles.actionRow}>
               {showHostConfirmDecline ? (
                 <>
@@ -308,7 +295,9 @@ export default function ExchangeRequestDetailScreen() {
                     leadingIcon={RiCheckLine}
                     onPress={() => void confirmAction('confirm')}
                     disabled={updateMutation.isPending}
-                    style={styles.actionButton} tone="accent" appearance="solid"
+                    style={styles.actionButton}
+                    tone="accent"
+                    appearance="solid"
                   >
                     {t('listing.exchange.actions.approve')}
                   </Button>
@@ -317,7 +306,9 @@ export default function ExchangeRequestDetailScreen() {
                     leadingIcon={RiCloseLine}
                     onPress={() => void confirmAction('decline')}
                     disabled={updateMutation.isPending}
-                    style={styles.actionButton} tone="neutral" appearance="outline"
+                    style={styles.actionButton}
+                    tone="neutral"
+                    appearance="outline"
                   >
                     {t('listing.exchange.actions.decline')}
                   </Button>
@@ -329,7 +320,9 @@ export default function ExchangeRequestDetailScreen() {
                   leadingIcon={RiCheckLine}
                   onPress={() => void confirmAction('complete')}
                   disabled={updateMutation.isPending}
-                  style={styles.actionButton} tone="accent" appearance="solid"
+                  style={styles.actionButton}
+                  tone="accent"
+                  appearance="solid"
                 >
                   {t('listing.exchange.actions.complete')}
                 </Button>
@@ -340,7 +333,9 @@ export default function ExchangeRequestDetailScreen() {
                   leadingIcon={RiCloseCircleLine}
                   onPress={() => void confirmAction('cancel')}
                   disabled={updateMutation.isPending}
-                  style={styles.actionButton} tone="accent" appearance="subtle"
+                  style={styles.actionButton}
+                  tone="accent"
+                  appearance="subtle"
                 >
                   {t('listing.exchange.actions.cancel')}
                 </Button>

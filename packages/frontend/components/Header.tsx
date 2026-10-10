@@ -1,4 +1,10 @@
-import React, { ReactNode, createContext, useContext, useLayoutEffect, useSyncExternalStore } from 'react';
+import React, {
+  ReactNode,
+  createContext,
+  useContext,
+  useLayoutEffect,
+  useSyncExternalStore,
+} from 'react';
 import { Platform, type ViewStyle } from 'react-native';
 import type { SharedValue } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';

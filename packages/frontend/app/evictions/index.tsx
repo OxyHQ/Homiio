@@ -199,7 +199,9 @@ export default function EvictionsBoardScreen() {
       size="sm"
       onPress={handlePublish}
       leadingIcon={RiAddLine}
-      accessibilityLabel={t('evictions.publishCta')} tone="accent" appearance="solid"
+      accessibilityLabel={t('evictions.publishCta')}
+      tone="accent"
+      appearance="solid"
     >
       {t('evictions.publishCta')}
     </Button>
@@ -216,7 +218,9 @@ export default function EvictionsBoardScreen() {
         <Button
           size="md"
           onPress={() => setAreaPickerOpen(true)}
-          leadingIcon={RiMapPinLine} tone="accent" appearance="solid"
+          leadingIcon={RiMapPinLine}
+          tone="accent"
+          appearance="solid"
         >
           {t('location.scope.chooseArea')}
         </Button>
@@ -259,7 +263,9 @@ export default function EvictionsBoardScreen() {
             size="md"
             onPress={handlePublish}
             leadingIcon={RiAddLine}
-            style={styles.emptyCta} tone="accent" appearance="solid"
+            style={styles.emptyCta}
+            tone="accent"
+            appearance="solid"
           >
             {t('evictions.publishCta')}
           </Button>
@@ -332,7 +338,6 @@ export default function EvictionsBoardScreen() {
 
             {boardScope ? (
               <>
-
                 {/* One paginated server status at a time: a single-choice
                     strip, not a set of toggles. */}
                 <Tabs

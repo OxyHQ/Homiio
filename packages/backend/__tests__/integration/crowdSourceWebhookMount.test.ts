@@ -272,9 +272,17 @@ describe('crowdsource webhook mount', () => {
    * claimed event id can never be delivered again.
    */
   it.each<[string, RefusalOverrides, string]>([
-    ['a signature from the wrong secret', { wrongSecret: 'a-different-secret-entirely' }, 'signature_mismatch'],
+    [
+      'a signature from the wrong secret',
+      { wrongSecret: 'a-different-secret-entirely' },
+      'signature_mismatch',
+    ],
     ['a timestamp outside the freshness window', { expired: true }, 'timestamp_out_of_window'],
-    ['a body that does not match what was signed', { tamperedBody: '{"id":"evt_swapped"}' }, 'signature_mismatch'],
+    [
+      'a body that does not match what was signed',
+      { tamperedBody: '{"id":"evt_swapped"}' },
+      'signature_mismatch',
+    ],
     /**
      * Two distinct forgeries, because they exercise different code.
      *
@@ -284,8 +292,16 @@ describe('crowdsource webhook mount', () => {
      * (`sha256=` + zeroes) and answered `malformed_signature` — so it had never
      * tested the comparison at all, and would have survived deleting it.
      */
-    ['a well-formed signature that is simply wrong', { signature: `v1=${'0'.repeat(64)}` }, 'signature_mismatch'],
-    ['a signature header in the wrong shape', { signature: `sha256=${'0'.repeat(64)}` }, 'malformed_signature'],
+    [
+      'a well-formed signature that is simply wrong',
+      { signature: `v1=${'0'.repeat(64)}` },
+      'signature_mismatch',
+    ],
+    [
+      'a signature header in the wrong shape',
+      { signature: `sha256=${'0'.repeat(64)}` },
+      'malformed_signature',
+    ],
   ])('refuses %s and records nothing', async (_name, overrides, expectedRejection) => {
     const observed: { body: unknown } = { body: 'never set' };
     const event = envelope({

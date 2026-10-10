@@ -1,5 +1,9 @@
 import { PropertyStatus } from '@homiio/shared-types';
-import { applyOfferingRulesForUpdate, OfferingValidationError, type OfferingBearingPayload } from './offeringRules';
+import {
+  applyOfferingRulesForUpdate,
+  OfferingValidationError,
+  type OfferingBearingPayload,
+} from './offeringRules';
 import { EDITABLE_PROPERTY_FIELDS, invalidAddressPublishedPrecision } from './editableFields';
 import { normalizePropertyPhotos } from './photoIntake';
 import { pickFields } from '../../utils/pickFields';
@@ -8,7 +12,10 @@ import { schedulePriceEthicsScore } from '../../services/priceEthicsService';
 import { findOrCreateCanonicalAddress } from '../../services/addressService';
 import { findPropertyById } from '../../db/properties/propertyReads';
 import { serializeProperty } from '../../db/properties/propertySerializer';
-import { softDeleteProperty, updateProperty as updatePropertyRow } from '../../db/properties/propertyWrites';
+import {
+  softDeleteProperty,
+  updateProperty as updatePropertyRow,
+} from '../../db/properties/propertyWrites';
 import { getDb } from '../../db/postgres';
 import {
   readPropertySnapshot,
@@ -23,7 +30,11 @@ import type { ControllerNext, ControllerRequest, ControllerResponse } from '../c
 /** Statuses that close a deal and (for sourced listings) earn a commission. */
 const TERMINAL_STATUSES: ReadonlyArray<string> = [PropertyStatus.RENTED, PropertyStatus.SOLD];
 
-export async function updateProperty(req: ControllerRequest, res: ControllerResponse, next: ControllerNext) {
+export async function updateProperty(
+  req: ControllerRequest,
+  res: ControllerResponse,
+  next: ControllerNext,
+) {
   try {
     const { propertyId } = req.params;
     const updateData = pickFields<OfferingBearingPayload>(req.body, EDITABLE_PROPERTY_FIELDS);
@@ -115,7 +126,11 @@ export async function updateProperty(req: ControllerRequest, res: ControllerResp
   }
 }
 
-export async function deleteProperty(req: ControllerRequest, res: ControllerResponse, next: ControllerNext) {
+export async function deleteProperty(
+  req: ControllerRequest,
+  res: ControllerResponse,
+  next: ControllerNext,
+) {
   try {
     const { propertyId } = req.params;
     const oxyUserId = requireSessionOxyUserId(req);

@@ -81,6 +81,9 @@ export function placeKindOf(types: readonly PropertyType[]): PlaceKind {
   return 'any';
 }
 
-function matchesExactly(selected: ReadonlySet<PropertyType>, side: readonly PropertyType[]): boolean {
+function matchesExactly(
+  selected: ReadonlySet<PropertyType>,
+  side: readonly PropertyType[],
+): boolean {
   return selected.size === side.length && side.every((type) => selected.has(type));
 }

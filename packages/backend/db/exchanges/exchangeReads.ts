@@ -44,10 +44,7 @@ import { and, desc, eq, inArray, ne, or, sql } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
 import type { DatabaseOrTransaction } from '../postgres';
 import { exchangeRequests } from '../schema';
-import {
-  EXCHANGE_REQUEST_MODES,
-  EXCHANGE_REQUEST_STATUSES,
-} from '../schema/exchanges';
+import { EXCHANGE_REQUEST_MODES, EXCHANGE_REQUEST_STATUSES } from '../schema/exchanges';
 
 /** An exchange mode the CHECK accepts. */
 export type ExchangeModeValue = (typeof EXCHANGE_REQUEST_MODES)[number];
@@ -283,10 +280,7 @@ export async function listExchangeRequests(
       .orderBy(desc(exchangeRequests.createdAt))
       .limit(page.limit)
       .offset(page.offset),
-    db
-      .select({ value: sql<number>`count(*)::int` })
-      .from(exchangeRequests)
-      .where(where),
+    db.select({ value: sql<number>`count(*)::int` }).from(exchangeRequests).where(where),
   ]);
   return { rows, total: totalRow.value };
 }
@@ -311,12 +305,7 @@ export async function transitionExchangeRequest(
   const [row] = await db
     .update(exchangeRequests)
     .set(values)
-    .where(
-      and(
-        eq(exchangeRequests.id, id),
-        inArray(exchangeRequests.status, [...fromStatuses]),
-      ),
-    )
+    .where(and(eq(exchangeRequests.id, id), inArray(exchangeRequests.status, [...fromStatuses])))
     .returning();
   return row;
 }

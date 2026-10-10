@@ -36,10 +36,7 @@ import { StepArea } from '@/components/reviews/write/StepArea';
 import { StepPriceDates } from '@/components/reviews/write/StepPriceDates';
 import { StepTexts } from '@/components/reviews/write/StepTexts';
 import { StepPhotosRecommend } from '@/components/reviews/write/StepPhotosRecommend';
-import {
-  INITIAL_WIZARD_DATA,
-  type ReviewWizardData,
-} from '@/components/reviews/write/types';
+import { INITIAL_WIZARD_DATA, type ReviewWizardData } from '@/components/reviews/write/types';
 import { reviewService } from '@/services/reviewService';
 import { api } from '@/utils/api';
 import type { CreateReviewPayload, CreateReviewAddressInput } from '@homiio/shared-types';
@@ -180,15 +177,10 @@ export default function WriteReviewPage() {
     switch (step) {
       case 0:
         return Boolean(
-          data.street.trim() &&
-            data.city.trim() &&
-            data.postal_code.trim() &&
-            data.country.trim(),
+          data.street.trim() && data.city.trim() && data.postal_code.trim() && data.country.trim(),
         );
       case 5:
-        return Boolean(
-          Number(data.price) > 0 && data.livedFrom.trim() && data.livedTo.trim(),
-        );
+        return Boolean(Number(data.price) > 0 && data.livedFrom.trim() && data.livedTo.trim());
       case 6:
         return (
           data.title.trim().length >= MIN_TITLE_LENGTH &&
@@ -273,7 +265,9 @@ export default function WriteReviewPage() {
   }, [data]);
 
   const isComplete =
-    Boolean(data.street.trim() && data.city.trim() && data.postal_code.trim() && data.country.trim()) &&
+    Boolean(
+      data.street.trim() && data.city.trim() && data.postal_code.trim() && data.country.trim(),
+    ) &&
     Number(data.price) > 0 &&
     Boolean(data.livedFrom.trim() && data.livedTo.trim()) &&
     data.title.trim().length >= MIN_TITLE_LENGTH &&

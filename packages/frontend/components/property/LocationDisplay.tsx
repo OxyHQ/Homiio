@@ -20,9 +20,7 @@ interface LocationDisplayProps {
   property: Property;
 }
 
-const isValidCoordinate = (
-  coords: unknown,
-): coords is [number, number] => {
+const isValidCoordinate = (coords: unknown): coords is [number, number] => {
   if (!Array.isArray(coords) || coords.length !== 2) return false;
   const [lng, lat] = coords;
   if (typeof lng !== 'number' || typeof lat !== 'number') return false;
@@ -35,9 +33,7 @@ export const LocationDisplay: React.FC<LocationDisplayProps> = ({ property }) =>
 
   const coordinates = useMemo(() => {
     const raw =
-      address?.coordinates?.type === 'Point'
-        ? address.coordinates.coordinates
-        : undefined;
+      address?.coordinates?.type === 'Point' ? address.coordinates.coordinates : undefined;
     return isValidCoordinate(raw) ? raw : undefined;
   }, [address?.coordinates]);
 
@@ -61,7 +57,9 @@ export const LocationDisplay: React.FC<LocationDisplayProps> = ({ property }) =>
       <SectionHeader title={t('property.location.title')} />
       <View style={styles.body}>
         {neighborhoodSummary ? (
-          <BloomText variant="headline-regular" style={styles.summary}>{neighborhoodSummary}</BloomText>
+          <BloomText variant="headline-regular" style={styles.summary}>
+            {neighborhoodSummary}
+          </BloomText>
         ) : null}
         {coordinates ? (
           <View style={styles.mapWrapper}>

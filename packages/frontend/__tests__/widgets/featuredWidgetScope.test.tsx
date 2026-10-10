@@ -170,7 +170,18 @@ async function flush(): Promise<void> {
 }
 
 /** The geographic parameters the search endpoint understands. */
-const GEO_PARAMS = ['city', 'state', 'neighborhood', 'lat', 'lng', 'radius', 'swLat', 'swLng', 'neLat', 'neLng'];
+const GEO_PARAMS = [
+  'city',
+  'state',
+  'neighborhood',
+  'lat',
+  'lng',
+  'radius',
+  'swLat',
+  'swLng',
+  'neLat',
+  'neLng',
+];
 
 beforeEach(() => {
   apiGet.mockReset();

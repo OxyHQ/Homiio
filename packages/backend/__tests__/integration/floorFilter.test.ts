@@ -34,7 +34,12 @@ import { OfferingType, PropertyStatus, PropertyType } from '@homiio/shared-types
 import { searchProperties } from '../../controllers/property/search';
 import { errorHandler } from '../../middlewares/errorHandler';
 import { serializeWireIds } from '../../middlewares/wireIds';
-import { resetGeoTables, seedAddress, seedGeoChain, seedProperty } from '../helpers/postgresGeoFixtures';
+import {
+  resetGeoTables,
+  seedAddress,
+  seedGeoChain,
+  seedProperty,
+} from '../helpers/postgresGeoFixtures';
 
 function buildApp(): Express {
   const app = express();
@@ -87,16 +92,42 @@ beforeEach(async () => {
       } as never,
     });
 
-  groundPublished = await seed({ floor: 0, addressPublishedPrecision: 'exact', showAddressNumber: true });
-  groundWithheld = await seed({ floor: 0, addressPublishedPrecision: 'building', showAddressNumber: true });
-  groundNumberHidden = await seed({ floor: 0, addressPublishedPrecision: 'exact', showAddressNumber: false });
-  thirdPublished = await seed({ floor: 3, addressPublishedPrecision: 'exact', showAddressNumber: true });
-  basementPublished = await seed({ floor: -1, addressPublishedPrecision: 'exact', showAddressNumber: true });
-  floorUnstated = await seed({ floor: null, addressPublishedPrecision: 'exact', showAddressNumber: true });
+  groundPublished = await seed({
+    floor: 0,
+    addressPublishedPrecision: 'exact',
+    showAddressNumber: true,
+  });
+  groundWithheld = await seed({
+    floor: 0,
+    addressPublishedPrecision: 'building',
+    showAddressNumber: true,
+  });
+  groundNumberHidden = await seed({
+    floor: 0,
+    addressPublishedPrecision: 'exact',
+    showAddressNumber: false,
+  });
+  thirdPublished = await seed({
+    floor: 3,
+    addressPublishedPrecision: 'exact',
+    showAddressNumber: true,
+  });
+  basementPublished = await seed({
+    floor: -1,
+    addressPublishedPrecision: 'exact',
+    showAddressNumber: true,
+  });
+  floorUnstated = await seed({
+    floor: null,
+    addressPublishedPrecision: 'exact',
+    showAddressNumber: true,
+  });
 });
 
 const search = (query: Record<string, string>) =>
-  request(buildApp()).get('/properties/search').query({ city, ...query });
+  request(buildApp())
+    .get('/properties/search')
+    .query({ city, ...query });
 
 describe('a floor nobody stated is not a ground floor', () => {
   it('returns only the listing that is on the ground floor AND says so', async () => {

@@ -11,7 +11,10 @@ export function useSindiAuthenticatedFetch(): typeof globalThis.fetch {
   const { oxyServices, activeSessionId } = useOxy();
   // A pure identity per committed owner transition also fences A → B → A.
   // The memo allocates no linked client or subscription during render.
-  const generation = useMemo(() => ({ owner: oxyServices, sessionId: activeSessionId }), [oxyServices, activeSessionId]);
+  const generation = useMemo(
+    () => ({ owner: oxyServices, sessionId: activeSessionId }),
+    [oxyServices, activeSessionId],
+  );
   const resource = useRef<{ generation: object; linked: LinkedHttpClient } | null>(null);
   useEffect(() => {
     const current = { generation, linked: oxyServices.createLinkedClient({ baseURL: API_URL }) };
@@ -21,13 +24,18 @@ export function useSindiAuthenticatedFetch(): typeof globalThis.fetch {
       current.linked.dispose();
     };
   }, [oxyServices, generation]);
-  return useCallback<typeof globalThis.fetch>((input, init) => {
-    const current = resource.current;
-    if (!current || current.generation !== generation) {
-      return Promise.reject(new Error('Sindi transport is not mounted'));
-    }
-    return createSindiLinkedFetch(current.linked.client,
-      Platform.OS === 'web' ? globalThis.fetch : expoFetch as ResponseTransport)(input, init);
-    // Session changes also identify a new stream owner to the conversation hook.
-  }, [generation]);
+  return useCallback<typeof globalThis.fetch>(
+    (input, init) => {
+      const current = resource.current;
+      if (!current || current.generation !== generation) {
+        return Promise.reject(new Error('Sindi transport is not mounted'));
+      }
+      return createSindiLinkedFetch(
+        current.linked.client,
+        Platform.OS === 'web' ? globalThis.fetch : (expoFetch as ResponseTransport),
+      )(input, init);
+      // Session changes also identify a new stream owner to the conversation hook.
+    },
+    [generation],
+  );
 }

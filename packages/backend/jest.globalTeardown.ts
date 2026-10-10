@@ -42,7 +42,7 @@ function removeWorkerImageStores(): void {
   } catch (error) {
     console.warn(
       `Could not scan for per-worker image stores: ` +
-      `${error instanceof Error ? error.message : String(error)}`,
+        `${error instanceof Error ? error.message : String(error)}`,
     );
     return;
   }
@@ -53,7 +53,7 @@ function removeWorkerImageStores(): void {
     } catch (error) {
       console.warn(
         `Could not remove the per-worker image store ${entry}: ` +
-        `${error instanceof Error ? error.message : String(error)}`,
+          `${error instanceof Error ? error.message : String(error)}`,
       );
     }
   }
@@ -71,11 +71,13 @@ export default async function globalTeardown(): Promise<void> {
   let urls: string[];
   try {
     const parsed: unknown = JSON.parse(readFileSync(manifestPath, 'utf8'));
-    urls = Array.isArray(parsed) ? parsed.filter((url): url is string => typeof url === 'string') : [];
+    urls = Array.isArray(parsed)
+      ? parsed.filter((url): url is string => typeof url === 'string')
+      : [];
   } catch (error) {
     console.warn(
       `Could not read the Jest database manifest at ${manifestPath}; throwaway ` +
-      `databases may need dropping by hand: ${error instanceof Error ? error.message : String(error)}`,
+        `databases may need dropping by hand: ${error instanceof Error ? error.message : String(error)}`,
     );
     return;
   }
@@ -86,7 +88,7 @@ export default async function globalTeardown(): Promise<void> {
     } catch (error) {
       console.warn(
         `Could not drop the throwaway database at ${url}: ` +
-        `${error instanceof Error ? error.message : String(error)}`,
+          `${error instanceof Error ? error.message : String(error)}`,
       );
     }
   }
@@ -96,7 +98,7 @@ export default async function globalTeardown(): Promise<void> {
   } catch (error) {
     console.warn(
       `Could not remove the Jest database manifest at ${manifestPath}: ` +
-      `${error instanceof Error ? error.message : String(error)}`,
+        `${error instanceof Error ? error.message : String(error)}`,
     );
   }
 }

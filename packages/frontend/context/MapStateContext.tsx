@@ -57,7 +57,7 @@ export const MapStateProvider: React.FC<MapStateProviderProps> = ({ children }) 
       center: [2.16538, 41.38723], // Default center
       zoom: 12,
     };
-    
+
     mapStates.current.set(screenId, {
       ...currentState,
       ...state,
@@ -79,9 +79,5 @@ export const MapStateProvider: React.FC<MapStateProviderProps> = ({ children }) 
     clearAllMapStates,
   };
 
-  return (
-    <MapStateContext.Provider value={value}>
-      {children}
-    </MapStateContext.Provider>
-  );
+  return <MapStateContext.Provider value={value}>{children}</MapStateContext.Provider>;
 };

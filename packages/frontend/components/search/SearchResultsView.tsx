@@ -269,9 +269,7 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
       return [selection.center.longitude, selection.center.latitude];
     }
     if (selection.bounds) return boundsCameraTarget(selection.bounds);
-    return selection.center
-      ? [selection.center.longitude, selection.center.latitude]
-      : undefined;
+    return selection.center ? [selection.center.longitude, selection.center.latitude] : undefined;
   }, [query.location]);
 
   /**
@@ -313,17 +311,14 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
   }, [framedBoundsKey]);
 
   const selectedProperty = useMemo(
-    () => (highlightedId ? properties.find((p) => p.id === highlightedId) ?? null : null),
+    () => (highlightedId ? (properties.find((p) => p.id === highlightedId) ?? null) : null),
     [highlightedId, properties],
   );
 
-  const handleMarkerPress = useCallback(
-    ({ id }: { id: string }) => {
-      setHighlightedId(id);
-      mapRef.current?.highlightMarker(id);
-    },
-    [],
-  );
+  const handleMarkerPress = useCallback(({ id }: { id: string }) => {
+    setHighlightedId(id);
+    mapRef.current?.highlightMarker(id);
+  }, []);
 
   // Card → chip (web only, wired in PropertyResultsGrid). Hovering a result card
   // highlights its map price chip imperatively — the same `.is-selected` look a
@@ -454,7 +449,9 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
         // The unit was resolved against the OLD offering's price column, so it
         // goes with the range it described.
         priceCurrency: undefined,
-        ...(offering === OfferingType.SHORT_TERM_RENT ? {} : { dates: undefined, guests: undefined }),
+        ...(offering === OfferingType.SHORT_TERM_RENT
+          ? {}
+          : { dates: undefined, guests: undefined }),
       });
     },
     [onSubmitSearch, query, setBrowseMode],
@@ -533,8 +530,10 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
       );
     }
     if (total === 0) {
-      return t('search.header.noResults', 'No properties match this search') ||
-        'No properties match this search';
+      return (
+        t('search.header.noResults', 'No properties match this search') ||
+        'No properties match this search'
+      );
     }
     // Pass `count` as interpolation options so i18next selects the pluralized
     // `search.header.count_one`/`_other` variant and fills `{{count}}`.
@@ -600,7 +599,9 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
             )
           }
           onPress={handleSaveSearch}
-          accessibilityLabel={saveLabel} tone="neutral" appearance="outline"
+          accessibilityLabel={saveLabel}
+          tone="neutral"
+          appearance="outline"
         />
       </View>
       <View style={styles.categoryRow}>
@@ -648,17 +649,14 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
   // only when an ultra-wide window genuinely gives the list column the room).
   const listBody = () => {
     if (isLoading && properties.length === 0) {
-      return (
-        <PropertyResultsGridSkeleton
-          count={SKELETON_COUNT}
-          style={styles.gridPadding}
-        />
-      );
+      return <PropertyResultsGridSkeleton count={SKELETON_COUNT} style={styles.gridPadding} />;
     }
     if (isError) {
       return (
         <ErrorState
-          title={t('search.error.title', 'Could not load properties') || 'Could not load properties'}
+          title={
+            t('search.error.title', 'Could not load properties') || 'Could not load properties'
+          }
           description={error?.message}
           retryLabel={t('common.tryAgain', 'Try again') || 'Try again'}
           onRetry={() => void refetch()}
@@ -727,10 +725,7 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
       </View>
       {listBody()}
       {isFetchingNextPage ? (
-        <PropertyResultsGridSkeleton
-          count={NEXT_PAGE_SKELETON_COUNT}
-          style={styles.gridPadding}
-        />
+        <PropertyResultsGridSkeleton count={NEXT_PAGE_SKELETON_COUNT} style={styles.gridPadding} />
       ) : null}
       <LoadMoreSentinel enabled={hasNextPage} onLoadMore={handleEndReached} />
     </ScrollView>
@@ -762,7 +757,9 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
               leadingIcon={RiRefreshLine}
               accessibilityLabel={
                 t('search.actions.searchArea', 'Search this area') || 'Search this area'
-              } tone="accent" appearance="solid"
+              }
+              tone="accent"
+              appearance="solid"
             >
               {t('search.actions.searchArea', 'Search this area') || 'Search this area'}
             </Button>
@@ -779,7 +776,9 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
                 accessibilityLabel={
                   t('search.actions.backToSearchedArea', 'Back to searched area') ||
                   'Back to searched area'
-                } tone="neutral" appearance="outline"
+                }
+                tone="neutral"
+                appearance="outline"
               >
                 {t('search.actions.backToSearchedArea', 'Back to searched area') ||
                   'Back to searched area'}

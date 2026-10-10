@@ -57,10 +57,9 @@ const hslToHex = (h: number, s: number, l: number): string => {
  * the conversion is total.
  */
 const toHex = (value: string): string => {
-  const match =
-    /^hsl\(\s*([\d.]+)\s*(?:,\s*|\s+)([\d.]+)%\s*(?:,\s*|\s+)([\d.]+)%\s*\)$/i.exec(
-      value,
-    );
+  const match = /^hsl\(\s*([\d.]+)\s*(?:,\s*|\s+)([\d.]+)%\s*(?:,\s*|\s+)([\d.]+)%\s*\)$/i.exec(
+    value,
+  );
   if (match) {
     return hslToHex(Number(match[1]), Number(match[2]), Number(match[3]));
   }

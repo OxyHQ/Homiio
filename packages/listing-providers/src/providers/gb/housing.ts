@@ -15,7 +15,10 @@ export function splitGbDisplayAddress(
   locality?: string,
 ): { street: string; city: string; postalCode?: string } {
   if (!displayAddress) return { street: '', city: locality ?? '' };
-  const parts = displayAddress.split(',').map((part) => part.trim()).filter(Boolean);
+  const parts = displayAddress
+    .split(',')
+    .map((part) => part.trim())
+    .filter(Boolean);
   if (parts.length === 0) return { street: '', city: locality ?? '' };
   if (parts.length === 1) return { street: parts[0], city: locality ?? parts[0] };
 
@@ -34,7 +37,8 @@ export function splitGbDisplayAddress(
   return {
     street: streetParts.join(', ') || city,
     city,
-    postalCode: postcodeMatch?.[1]?.toUpperCase() ?? (postcodeOnly ? last.toUpperCase() : undefined),
+    postalCode:
+      postcodeMatch?.[1]?.toUpperCase() ?? (postcodeOnly ? last.toUpperCase() : undefined),
   };
 }
 

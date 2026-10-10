@@ -23,12 +23,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
 import { Card } from '@oxy.so/bloom/card';
-import {
-  RiChat3Line,
-  RiDiscussLine,
-  RiHomeLine,
-  RiSearchLine,
-} from '@oxy.so/bloom/icons';
+import { RiChat3Line, RiDiscussLine, RiHomeLine, RiSearchLine } from '@oxy.so/bloom/icons';
 import { WriteReviewPrompt } from '@oxy.so/bloom/place-reviews';
 import { Tabs, TabsTrigger } from '@oxy.so/bloom/tabs';
 import { H2, H3 } from '@oxy.so/bloom/typography';

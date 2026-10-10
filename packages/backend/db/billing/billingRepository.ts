@@ -317,9 +317,7 @@ export async function recordSubscriptionPayment(
   const rows = await db
     .update(billing)
     .set({ lastPaymentAt: paidAt })
-    .where(
-      and(eq(billing.plusStripeSubscriptionId, subscriptionId), eq(billing.plusActive, true)),
-    )
+    .where(and(eq(billing.plusStripeSubscriptionId, subscriptionId), eq(billing.plusActive, true)))
     .returning({ id: billing.id });
   return rows.length;
 }

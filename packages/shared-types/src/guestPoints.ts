@@ -184,9 +184,7 @@ export function guestPointsForWindow(start: Date | string, end: Date | string): 
  * `released` is counted nowhere at all — it is history, and adding it back
  * would double-credit every declined request.
  */
-export function guestPointStanding(
-  movements: readonly GuestPointMovement[],
-): GuestPointBalance {
+export function guestPointStanding(movements: readonly GuestPointMovement[]): GuestPointBalance {
   let earned = 0;
   let spent = 0;
   let reserved = 0;

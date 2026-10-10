@@ -1,12 +1,7 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Chip } from '@oxy.so/bloom/chip';
-import {
-  RiAlertLine,
-  RiFileTextLine,
-  RiQuestionLine,
-  RiSearchLine,
-} from '@oxy.so/bloom/icons';
+import { RiAlertLine, RiFileTextLine, RiQuestionLine, RiSearchLine } from '@oxy.so/bloom/icons';
 import { Text } from '@oxy.so/bloom/typography';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { SindiIcon } from '@/assets/icons';
