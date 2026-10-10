@@ -397,9 +397,9 @@ export function fotocasaRefsFromSearchCards(
     // `detailUrl`, and `detailWithParams` is the same path carrying tracking.
     // Preferring `detail` keeps the tracking query out of `sourceUrl`.
     const path =
-      localisedPath(card['detail']) ??
-      localisedPath(card['detailUrl']) ??
-      localisedPath(card['detailWithParams']);
+      localisedPath(card.detail) ??
+      localisedPath(card.detailUrl) ??
+      localisedPath(card.detailWithParams);
     if (!path) continue;
     const url = absoluteFotocasaUrl(path);
     if (url) refs.push({ sourceId, url });

@@ -482,7 +482,7 @@ export class HabitacliaProvider implements ListingProvider {
    * rather than quietly as an empty result.
    */
   async fetch(ref: ExternalListingRef, ctx: FetchContext): Promise<RawListing> {
-    const carried = asRecord(ref.hints)?.['listing'];
+    const carried = asRecord(ref.hints)?.listing;
     if (carried) return { ref, payload: asHabitaclia(carried) };
 
     const { html } = await fetchListingViaLadder(ctx.runtime, ref.url, {

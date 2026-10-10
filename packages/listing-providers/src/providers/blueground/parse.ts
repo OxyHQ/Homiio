@@ -158,8 +158,8 @@ const BLUEGROUND_FLOOR_KEY = 'floor';
 function readBluegroundFloor(entries: readonly unknown[]): number | undefined {
   for (const entry of entries) {
     const record = asRecord(entry);
-    if (asString(record?.['key']) !== BLUEGROUND_FLOOR_KEY) continue;
-    const value = record?.['value'];
+    if (asString(record?.key) !== BLUEGROUND_FLOOR_KEY) continue;
+    const value = record?.value;
     const numeric =
       typeof value === 'number'
         ? value
@@ -202,7 +202,7 @@ export function readBluegroundAmenities(html: string): { amenities: string[]; fl
       continue;
     }
     for (const entry of entries) {
-      const key = asString(asRecord(entry)?.['key']);
+      const key = asString(asRecord(entry)?.key);
       if (!key) continue;
       const canonical = canonicalAmenity(key);
       if (canonical && canonical !== FURNISHED_TOKEN) amenities.add(canonical);

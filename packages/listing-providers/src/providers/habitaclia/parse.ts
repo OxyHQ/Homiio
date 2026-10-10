@@ -123,13 +123,13 @@ function extractJsonLdNodes(html: string): Record<string, unknown>[] {
 
 /** Whether a JSON-LD node looks like the real-estate listing (has price+address). */
 function isListingNode(node: Record<string, unknown>): boolean {
-  return Boolean(asRecord(node['offers']) && asRecord(node['address']));
+  return Boolean(asRecord(node.offers) && asRecord(node.address));
 }
 
 function toImages(node: Record<string, unknown>): HabitacliaRawImage[] {
   const images: HabitacliaRawImage[] = [];
-  asArray(node['image']).forEach((entry, index) => {
-    const url = typeof entry === 'string' ? entry : asString(asRecord(entry)?.['url']);
+  asArray(node.image).forEach((entry, index) => {
+    const url = typeof entry === 'string' ? entry : asString(asRecord(entry)?.url);
     if (url) images.push({ url, isPrimary: index === 0 });
   });
   return images;
@@ -139,11 +139,11 @@ function toAmenities(node: Record<string, unknown>): { amenities: string[]; furn
   const amenities: string[] = [];
   const seen = new Set<string>();
   let furnished: boolean | undefined;
-  for (const entry of asArray(node['amenityFeature'])) {
+  for (const entry of asArray(node.amenityFeature)) {
     const record = asRecord(entry);
-    const name = asString(record?.['name']);
+    const name = asString(record?.name);
     if (!name) continue;
-    if (record?.['value'] === false) continue;
+    if (record?.value === false) continue;
     const key = canonicalAmenity(name);
     if (!key) continue;
     if (key === FURNISHED_TOKEN) {
@@ -166,7 +166,7 @@ export function habitacliaSourceIdFromUrl(url: string): string | undefined {
 
 /** Infer rent vs sale from a JSON-LD offer's business function or the URL. */
 function resolveOperationFromOffer(offer: Record<string, unknown>, url: string): 'rent' | 'sale' {
-  const businessFunction = asString(offer['businessFunction'])?.toLowerCase() ?? '';
+  const businessFunction = asString(offer.businessFunction)?.toLowerCase() ?? '';
   if (businessFunction.includes('leaseout') || businessFunction.includes('rent')) return 'rent';
   if (businessFunction.includes('sell') || businessFunction.includes('sale')) return 'sale';
   return url.includes('/venta') ? 'sale' : 'rent';
@@ -239,52 +239,52 @@ function parseHabitacliaDetailFromJsonLd(
   node: Record<string, unknown>,
   url: string,
 ): HabitacliaRawListing {
-  const offer = asRecord(node['offers']) ?? {};
-  const address = asRecord(node['address']) ?? {};
-  const geo = asRecord(node['geo']);
-  const floorSize = asRecord(node['floorSize']);
-  const price = asNumber(offer['price']);
+  const offer = asRecord(node.offers) ?? {};
+  const address = asRecord(node.address) ?? {};
+  const geo = asRecord(node.geo);
+  const floorSize = asRecord(node.floorSize);
+  const price = asNumber(offer.price);
   if (price === undefined) {
     throw new Error(`habitaclia: listing at ${url} has no parseable price`);
   }
 
-  const canonicalUrl = asString(node['url']) ?? url;
+  const canonicalUrl = asString(node.url) ?? url;
   const sourceId = habitacliaSourceIdFromUrl(canonicalUrl) ?? habitacliaSourceIdFromUrl(url);
   if (!sourceId) {
     throw new Error(`habitaclia: cannot derive a source id from ${url}`);
   }
 
-  const city = asString(address['addressLocality']);
+  const city = asString(address.addressLocality);
   if (!city) {
     throw new Error(`habitaclia: listing at ${url} has no city`);
   }
 
   const { amenities, furnished } = toAmenities(node);
   const countryValue =
-    asString(address['addressCountry']) ?? asString(asRecord(address['addressCountry'])?.['name']);
+    asString(address.addressCountry) ?? asString(asRecord(address.addressCountry)?.name);
 
   return {
     id: sourceId,
     url: canonicalUrl,
     propertyType: resolvePropertyType(node),
-    title: asString(node['name']),
-    description: asString(node['description']),
+    title: asString(node.name),
+    description: asString(node.description),
     price,
-    currency: asString(offer['priceCurrency']) ?? 'EUR',
+    currency: asString(offer.priceCurrency) ?? 'EUR',
     operation: resolveOperationFromOffer(offer, canonicalUrl),
     address: {
-      street: asString(address['streetAddress']),
+      street: asString(address.streetAddress),
       city,
-      region: asString(address['addressRegion']),
-      postalCode: asString(address['postalCode']),
+      region: asString(address.addressRegion),
+      postalCode: asString(address.postalCode),
       country: countryValue && countryValue.length > 2 ? countryValue : undefined,
       countryCode: countryValue && countryValue.length === 2 ? countryValue.toUpperCase() : 'ES',
-      lat: geo ? asCoordinate(geo['latitude']) : undefined,
-      lng: geo ? asCoordinate(geo['longitude']) : undefined,
+      lat: geo ? asCoordinate(geo.latitude) : undefined,
+      lng: geo ? asCoordinate(geo.longitude) : undefined,
     },
-    bedrooms: asNumber(node['numberOfRooms']),
-    bathrooms: asNumber(node['numberOfBathroomsTotal']),
-    squareMeters: sanitizeLivingArea(floorSize ? asNumber(floorSize['value']) : undefined),
+    bedrooms: asNumber(node.numberOfRooms),
+    bathrooms: asNumber(node.numberOfBathroomsTotal),
+    squareMeters: sanitizeLivingArea(floorSize ? asNumber(floorSize.value) : undefined),
     furnished,
     amenities: amenities.length > 0 ? amenities : undefined,
     images: toImages(node),

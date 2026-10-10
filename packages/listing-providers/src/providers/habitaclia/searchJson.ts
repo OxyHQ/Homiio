@@ -64,14 +64,14 @@ export function parseHabitacliaSearchJson(html: string): HabitacliaSearchPage | 
   if (!props) return undefined;
 
   const results = asRecord(
-    asRecord(asRecord(props['initialSearchResultsPage'])?.['initialSearchContext'])?.['results'],
+    asRecord(asRecord(props.initialSearchResultsPage)?.initialSearchContext)?.results,
   );
   if (!results) return undefined;
 
-  const items = Array.isArray(results['items']) ? results['items'] : undefined;
+  const items = Array.isArray(results.items) ? results.items : undefined;
   if (!items) return undefined;
 
-  const pagination = asRecord(results['pagination']);
+  const pagination = asRecord(results.pagination);
   const refs: HabitacliaSearchRef[] = [];
   const seen = new Set<string>();
 
@@ -85,8 +85,8 @@ export function parseHabitacliaSearchJson(html: string): HabitacliaSearchPage | 
 
   return {
     refs,
-    totalPages: positiveInteger(pagination?.['totalPages']),
-    totalCount: positiveInteger(pagination?.['totalCount']),
+    totalPages: positiveInteger(pagination?.totalPages),
+    totalCount: positiveInteger(pagination?.totalCount),
   };
 }
 
@@ -105,7 +105,7 @@ function refFromItem(
 ): { sourceId: string; url: string } | undefined {
   if (!item) return undefined;
 
-  const sourceId = asString(item['legacyNumericId'])?.trim();
+  const sourceId = asString(item.legacyNumericId)?.trim();
   if (!sourceId || !/^\d{6,}$/.test(sourceId)) return undefined;
 
   return { sourceId, url: detailUrlFor(item, sourceId) };
@@ -121,7 +121,7 @@ function refFromItem(
  * `sourceUrl`, which is a link real people click.
  */
 function detailUrlFor(item: Record<string, unknown>, sourceId: string): string {
-  const navigation = asString(item['navigationUrl'])?.trim();
+  const navigation = asString(item.navigationUrl)?.trim();
   const path = navigation?.startsWith('/') ? navigation.split('?')[0] : `/i${sourceId}.htm`;
   return `${HABITACLIA_BASE_URL}${path}`;
 }
@@ -203,49 +203,45 @@ export function habitacliaListingFromSearchItem(raw: unknown): HabitacliaRawList
   const ref = refFromItem(item);
   if (!item || !ref) return undefined;
 
-  const summary = asRecord(item['summary']) ?? {};
-  const property = asRecord(item['property']) ?? {};
-  const transaction = asRecord(item['transaction']) ?? {};
-  const location = asRecord(summary['location']) ?? {};
+  const summary = asRecord(item.summary) ?? {};
+  const property = asRecord(item.property) ?? {};
+  const transaction = asRecord(item.transaction) ?? {};
+  const location = asRecord(summary.location) ?? {};
 
-  const price = finiteNumber(asRecord(transaction['price'])?.['amount']);
+  const price = finiteNumber(asRecord(transaction.price)?.amount);
   if (price === undefined || price <= 0) return undefined;
 
-  const operation = asString(transaction['type'])?.toLowerCase() === 'rent' ? 'rent' : 'sale';
-  const category =
-    asString(property['propertySubtype']) ?? asString(property['propertyType']) ?? '';
+  const operation = asString(transaction.type)?.toLowerCase() === 'rent' ? 'rent' : 'sale';
+  const category = asString(property.propertySubtype) ?? asString(property.propertyType) ?? '';
 
   return {
     id: ref.sourceId,
     url: ref.url,
     propertyType: PROPERTY_CATEGORIES[category.toLowerCase()] ?? 'apartment',
-    title: asString(summary['title']),
-    description: asString(summary['description']),
+    title: asString(summary.title),
+    description: asString(summary.description),
     price,
     // The portal leaves `currency` null on every Spanish listing observed, which
     // is a statement about its own UI rather than about the money. These are
     // euro amounts on a Spanish portal; defaulting is safe here and would not be
     // on a multi-currency market.
-    currency: asString(asRecord(transaction['price'])?.['currency']) ?? 'EUR',
+    currency: asString(asRecord(transaction.price)?.currency) ?? 'EUR',
     operation,
     address: addressFromLocation(location),
-    bedrooms: finiteNumber(property['rooms']),
-    bathrooms: finiteNumber(property['bathrooms']),
-    squareMeters: finiteNumber(property['builtSurface']),
-    floor: floorFromName(asString(property['floor'])),
+    bedrooms: finiteNumber(property.rooms),
+    bathrooms: finiteNumber(property.bathrooms),
+    squareMeters: finiteNumber(property.builtSurface),
+    floor: floorFromName(asString(property.floor)),
     amenities: amenitiesFrom(property),
     images: imagesFrom(summary),
-    contact: contactFrom(asRecord(item['contact'])),
+    contact: contactFrom(asRecord(item.contact)),
   };
 }
 
 function addressFromLocation(location: Record<string, unknown>): HabitacliaRawListing['address'] {
-  const address = asRecord(location['address']) ?? {};
-  const coordinates = asRecord(location['coordinates']) ?? {};
-  const street = [
-    asString(address['streetName'])?.trim(),
-    asString(address['streetNumber'])?.trim(),
-  ]
+  const address = asRecord(location.address) ?? {};
+  const coordinates = asRecord(location.coordinates) ?? {};
+  const street = [asString(address.streetName)?.trim(), asString(address.streetNumber)?.trim()]
     .filter(Boolean)
     .join(' ')
     .trim();
@@ -256,16 +252,16 @@ function addressFromLocation(location: Record<string, unknown>): HabitacliaRawLi
     // is the region above it. City is required by the raw shape, so fall back
     // through the coarser fields rather than emitting an empty string.
     city:
-      asString(location['municipality']) ??
-      asString(location['province']) ??
-      asString(location['region']) ??
+      asString(location.municipality) ??
+      asString(location.province) ??
+      asString(location.region) ??
       '',
-    region: asString(location['province']) ?? asString(location['region']),
+    region: asString(location.province) ?? asString(location.region),
     neighborhood: neighbourhoodFrom(location),
     country: 'España',
     countryCode: 'ES',
-    lat: finiteNumber(coordinates['latitude']),
-    lng: finiteNumber(coordinates['longitude']),
+    lat: finiteNumber(coordinates.latitude),
+    lng: finiteNumber(coordinates.longitude),
   };
 }
 
@@ -277,20 +273,20 @@ function addressFromLocation(location: Record<string, unknown>): HabitacliaRawLi
  * name. Falls back to the district when no layer is present.
  */
 function neighbourhoodFrom(location: Record<string, unknown>): string | undefined {
-  const layers = Array.isArray(location['layers']) ? location['layers'] : [];
+  const layers = Array.isArray(location.layers) ? location.layers : [];
   for (const entry of layers) {
     const layer = asRecord(entry);
-    if (asString(layer?.['type']) === 'neighbourhood') {
-      const value = asString(layer?.['value'])?.trim();
+    if (asString(layer?.type) === 'neighbourhood') {
+      const value = asString(layer?.value)?.trim();
       if (value) return value;
     }
   }
-  return asString(location['district']) ?? undefined;
+  return asString(location.district) ?? undefined;
 }
 
 /** `features.has` is a flat list of upper-snake tokens; lower-case them. */
 function amenitiesFrom(property: Record<string, unknown>): string[] | undefined {
-  const has = asRecord(property['features'])?.['has'];
+  const has = asRecord(property.features)?.has;
   const tokens = Array.isArray(has) ? has : [];
   const amenities = tokens
     .map((token) => asString(token)?.toLowerCase().trim())
@@ -299,11 +295,11 @@ function amenitiesFrom(property: Record<string, unknown>): string[] | undefined 
 }
 
 function imagesFrom(summary: Record<string, unknown>): HabitacliaRawImage[] {
-  const images = asRecord(summary['multimedia'])?.['images'];
+  const images = asRecord(summary.multimedia)?.images;
   const entries = Array.isArray(images) ? images : [];
   const urls: HabitacliaRawImage[] = [];
   for (const entry of entries) {
-    const url = asString(asRecord(entry)?.['url'])?.trim();
+    const url = asString(asRecord(entry)?.url)?.trim();
     if (!url || !/^https?:\/\//i.test(url)) continue;
     urls.push({ url, isPrimary: urls.length === 0 });
     if (urls.length >= maxImagesPerListingFromEnv()) break;
@@ -315,8 +311,8 @@ function imagesFrom(summary: Record<string, unknown>): HabitacliaRawImage[] {
 function contactFrom(
   contact: Record<string, unknown> | undefined,
 ): HabitacliaRawListing['contact'] {
-  const phone = asString(contact?.['phone'])?.trim();
-  const email = asString(contact?.['email'])?.trim();
+  const phone = asString(contact?.phone)?.trim();
+  const email = asString(contact?.email)?.trim();
   if (!phone && !email) return undefined;
   return { phone: phone || undefined, email: email || undefined };
 }

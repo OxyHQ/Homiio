@@ -99,14 +99,14 @@ function asRecord(value: unknown): Record<string, unknown> | undefined {
  */
 export function coerceBluegroundListing(payload: unknown): BluegroundRawListing {
   const record = asRecord(payload);
-  const monthlyRent = asRecord(record?.['monthlyRent']);
-  const address = asRecord(record?.['address']);
-  const amount = monthlyRent?.['amount'];
-  const city = address?.['city'];
+  const monthlyRent = asRecord(record?.monthlyRent);
+  const address = asRecord(record?.address);
+  const amount = monthlyRent?.amount;
+  const city = address?.city;
   if (
     !record ||
-    typeof record['id'] !== 'string' ||
-    typeof record['url'] !== 'string' ||
+    typeof record.id !== 'string' ||
+    typeof record.url !== 'string' ||
     typeof amount !== 'number' ||
     typeof city !== 'string' ||
     city.length === 0
