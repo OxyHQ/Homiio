@@ -336,7 +336,7 @@ class TelegramService {
     let descriptionSection = '';
     if (description && description.trim()) {
       const truncatedDescription =
-        description.length > 200 ? description.substring(0, 200) + '...' : description;
+        description.length > 200 ? `${description.substring(0, 200)}...` : description;
       descriptionSection = `\n📝 **${t.__('telegram.description')}:**\n${this.escapeMarkdown(truncatedDescription)}\n`;
     }
 

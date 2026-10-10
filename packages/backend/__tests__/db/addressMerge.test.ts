@@ -85,13 +85,13 @@ beforeAll(async () => {
   // generated, and naming a column that does not exist fails every case in the
   // file at once rather than the one that needed it.
   await db.execute(
-    sql`insert into countries (id, name, code) values (${countryId}, ${'Testland ' + SUITE}, ${'T' + SUITE.slice(-1)})`,
+    sql`insert into countries (id, name, code) values (${countryId}, ${`Testland ${SUITE}`}, ${`T${SUITE.slice(-1)}`})`,
   );
   await db.execute(
-    sql`insert into regions (id, country_id, name) values (${regionId}, ${countryId}, ${'Region ' + SUITE})`,
+    sql`insert into regions (id, country_id, name) values (${regionId}, ${countryId}, ${`Region ${SUITE}`})`,
   );
   await db.execute(
-    sql`insert into cities (id, country_id, region_id, name) values (${cityId}, ${countryId}, ${regionId}, ${'City ' + SUITE})`,
+    sql`insert into cities (id, country_id, region_id, name) values (${cityId}, ${countryId}, ${regionId}, ${`City ${SUITE}`})`,
   );
   geo = { countryId, regionId, cityId };
 });

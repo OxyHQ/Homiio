@@ -132,7 +132,7 @@ const GALLERY_IMG_RE = /data-imgsrc=["'](https:\/\/img\.kleinanzeigen\.de\/[^"']
 const IMAGE_RULE_RE = /\?rule=\$_\d+\.[A-Za-z]+$/i;
 
 function largestImageVariant(url: string): string {
-  return url.replace(IMAGE_RULE_RE, '') + '?rule=$_57.AUTO';
+  return `${url.replace(IMAGE_RULE_RE, '')}?rule=$_57.AUTO`;
 }
 
 function extractGalleryImages(html: string, ogImage: string | undefined): string[] {

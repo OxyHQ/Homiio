@@ -25,7 +25,7 @@ const PAYLOAD_JSON =
  */
 export const HABITACLIA_SEARCH_JSON_HTML = [
   '<!doctype html><html><head><title>Alquiler Barcelona</title></head><body>',
-  '<script>window.__INITIAL_PROPS__ = JSON.parse(' + JSON.stringify(PAYLOAD_JSON) + ');</script>',
+  `<script>window.__INITIAL_PROPS__ = JSON.parse(${JSON.stringify(PAYLOAD_JSON)});</script>`,
   '</body></html>',
 ].join('');
 
@@ -36,7 +36,7 @@ export const HABITACLIA_SEARCH_JSON_HTML = [
  */
 export const ADEVINTA_SEARCH_JSON_SCRIPT_TAG_HTML = [
   '<!doctype html><html><head></head><body>',
-  '<script id="__initial_props__" type="application/json">' + PAYLOAD_JSON + '</script>',
+  `<script id="__initial_props__" type="application/json">${PAYLOAD_JSON}</script>`,
   '</body></html>',
 ].join('');
 

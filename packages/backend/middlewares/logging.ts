@@ -107,7 +107,7 @@ const log = (level: string, message: string, meta: Record<string, unknown> = {})
       return;
     }
     try {
-      const logLine = JSON.stringify(logEntry) + '\n';
+      const logLine = `${JSON.stringify(logEntry)}\n`;
       fs.appendFileSync(config.logging.file, logLine);
     } catch (error) {
       // Disable file logging for the rest of the process and report once.

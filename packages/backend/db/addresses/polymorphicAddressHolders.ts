@@ -101,7 +101,7 @@ export async function derivePolymorphicAddressHolders(
   // Hoisted rather than interpolated inline: a nested template literal inside a
   // tagged template is a parse error here, and the pattern is easier to read as
   // a named value anyway.
-  const quotedAddressValue = "%'" + ADDRESS_SUBJECT_VALUE + "'::text%";
+  const quotedAddressValue = `%'${ADDRESS_SUBJECT_VALUE}'::text%`;
   const discriminatorSuffix = '%\\_type';
 
   const rows = await db.execute<{

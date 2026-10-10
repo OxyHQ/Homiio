@@ -90,7 +90,7 @@ describe('removePropertyNumber keeps the building number out of a title', () => 
 
   it('finishes on a street that is mostly whitespace', () => {
     // The old pattern took 248ms at 16k and about a second at 32k.
-    const street = 'Carrer de Mallorca' + ' '.repeat(64_000) + '401';
+    const street = `Carrer de Mallorca${' '.repeat(64_000)}401`;
 
     const started = Date.now();
     const result = removePropertyNumber(street);
@@ -140,7 +140,7 @@ describe('the Blueground title parser', () => {
     // because the leftmost `in` is the one at the start of the padding, so the
     // capture is the whole run. That is what the original did too, and a
     // hand-written expectation here would assert the padding away.
-    const padded = 'Street - ' + 'in '.repeat(32_000) + 'Barcelona | Blueground';
+    const padded = `Street - ${'in '.repeat(32_000)}Barcelona | Blueground`;
     const locationPart = padded
       .split(' - ')[1]
       .replace(/\|\s*Blueground.*$/i, '')
@@ -160,7 +160,7 @@ describe('the Blueground title parser', () => {
   });
 
   it('finishes on a pipe-heavy title, which the old suffix strip walked', () => {
-    const padded = 'Street - Apartment in Barcelona' + ' '.repeat(64_000) + '| Blueground';
+    const padded = `Street - Apartment in Barcelona${' '.repeat(64_000)}| Blueground`;
 
     const started = Date.now();
     parseOgTitle(padded);

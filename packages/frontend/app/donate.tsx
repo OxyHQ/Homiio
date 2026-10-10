@@ -202,7 +202,7 @@ export default function DonatePage() {
           showsVerticalScrollIndicator={false}
         >
           {/* Hero — preserved. */}
-          <LinearGradient colors={[colors.info, colors.info + '90']} style={styles.heroSection}>
+          <LinearGradient colors={[colors.info, `${colors.info}90`]} style={styles.heroSection}>
             <RiHeartFill width={48} height={48} fill={colors.white} />
             <BloomText style={styles.heroTitle}>{t('donations.page.subtitle')}</BloomText>
             <BloomText style={styles.heroDescription}>{t('donations.page.description')}</BloomText>

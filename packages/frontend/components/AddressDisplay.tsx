@@ -227,7 +227,7 @@ const styles = StyleSheet.create({
     padding: 8,
     marginLeft: 8,
     borderRadius: 6,
-    backgroundColor: colors.primaryColor + '10',
+    backgroundColor: `${colors.primaryColor}10`,
   },
   mapPlaceholder: {
     marginTop: 12,
@@ -283,7 +283,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 12,
-    backgroundColor: colors.primaryColor + '10',
+    backgroundColor: `${colors.primaryColor}10`,
     borderRadius: 8,
     flex: 1,
     marginHorizontal: 4,

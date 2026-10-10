@@ -416,7 +416,7 @@ export const useSavedSearches = (): UseSavedSearches => {
             : undefined;
         const responseMessage =
           typeof response?.message === 'string' ? response.message : t('search.duplicateName');
-        toast.error(responseMessage + '. ' + t('search.tryDifferentName'));
+        toast.error(`${responseMessage}. ${t('search.tryDifferentName')}`);
         return;
       }
       toast.error(getErrorMessage(error, t('search.widgets.savedSearches.saveFailed')));
@@ -516,7 +516,7 @@ export const useSavedSearches = (): UseSavedSearches => {
         (s) => s.name.toLowerCase() === normalizedName.toLowerCase(),
       );
       if (duplicateByName) {
-        toast.error(t('search.duplicateName') + '. ' + t('search.tryDifferentName'));
+        toast.error(`${t('search.duplicateName')}. ${t('search.tryDifferentName')}`);
         return false;
       }
 

@@ -162,10 +162,9 @@ export class MetricsService {
         recent: recentScrapes.length,
         successRate:
           recentScrapes.length > 0
-            ? (
-                (recentScrapes.filter((s) => s.success).length / recentScrapes.length) *
-                100
-              ).toFixed(2) + '%'
+            ? `${(
+                (recentScrapes.filter((s) => s.success).length / recentScrapes.length) * 100
+              ).toFixed(2)}%`
             : '0%',
         averageDuration:
           recentScrapes.length > 0
@@ -179,9 +178,9 @@ export class MetricsService {
         recent: recentCycles.length,
         successRate:
           recentCycles.length > 0
-            ? ((recentCycles.filter((c) => c.success).length / recentCycles.length) * 100).toFixed(
-                2,
-              ) + '%'
+            ? `${(
+                (recentCycles.filter((c) => c.success).length / recentCycles.length) * 100
+              ).toFixed(2)}%`
             : '0%',
         averageDuration:
           recentCycles.length > 0

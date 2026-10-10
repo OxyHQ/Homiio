@@ -116,7 +116,7 @@ describe('the scan is linear where the old pattern was quadratic', () => {
     // Four times the work for twice the input, which is the definition. The
     // split scan takes 1ms on the same string. The budget sits between them:
     // four times under the old pattern, two thousand times over the new one.
-    const html = `<a href="` + '/inmueble/12'.repeat(24_000);
+    const html = `<a href="${'/inmueble/12'.repeat(24_000)}`;
 
     const started = Date.now();
     const ids = [...detailIds(html, 'inmueble')];

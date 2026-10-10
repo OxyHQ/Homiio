@@ -79,7 +79,7 @@ function sendTestWebhook() {
   console.log('🔔 Sending test webhook...');
   console.log('URL:', config.webhookUrl);
   console.log('Event Type:', config.testEvent.type);
-  console.log('Signature:', signature.substring(0, 50) + '...');
+  console.log('Signature:', `${signature.substring(0, 50)}...`);
 
   const req = client.request(options, (res) => {
     let data = '';
