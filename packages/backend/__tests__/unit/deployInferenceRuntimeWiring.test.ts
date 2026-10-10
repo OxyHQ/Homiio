@@ -41,7 +41,11 @@ const apiStep = stepBody('Register immutable task definition and deploy (API)');
 const workerStep = stepBody(
   'Register immutable task definition and deploy (listing worker)',
 );
-const syncStep = stepBody('Sync GitHub secrets -> SSM (GitHub is the source of truth)');
+/** Every executable line of the deploy workflow (comments dropped). */
+const workflowDirectives = workflow
+  .split('\n')
+  .filter((line) => !/^\s*#/.test(line))
+  .join('\n');
 
 const SERVICE_KEY_ARN =
   'arn:aws:ssm:us-west-2:237343248947:parameter/oxy/homiio/OXY_SERVICE_API_KEY';
@@ -53,10 +57,9 @@ const SINDI_SERVICE_SECRET_ARN =
   'arn:aws:ssm:us-west-2:237343248947:parameter/oxy/homiio/SINDI_OXY_SERVICE_API_SECRET';
 
 describe('Homiio deployment preserves the exact inference runtime boundary', () => {
-  it('reads all three load-bearing workflow steps', () => {
+  it('reads both load-bearing workflow steps', () => {
     expect(apiStep).not.toBe('');
     expect(workerStep).not.toBe('');
-    expect(syncStep).not.toBe('');
     expect(apiStep).toContain('bash .github/scripts/deploy-ecs-image.sh');
     expect(workerStep).toContain('bash .github/scripts/deploy-ecs-image.sh');
   });
@@ -106,9 +109,9 @@ describe('Homiio deployment preserves the exact inference runtime boundary', () 
     expect(apiStep).not.toContain(SINDI_SERVICE_KEY_ARN);
     expect(apiStep).not.toContain(SINDI_SERVICE_SECRET_ARN);
     expect(apiStep).not.toContain('TASK_SECRET_OVERRIDES_JSON');
-    expect(syncStep).not.toContain('require_secure_string "/oxy/$APP/SINDI_OXY_SERVICE_API_KEY"');
-    expect(syncStep).not.toContain('require_secure_string "/oxy/$APP/SINDI_OXY_SERVICE_API_SECRET"');
-    expect(syncStep).not.toContain('--with-decryption');
+    expect(workflowDirectives).not.toContain('require_secure_string "/oxy/$APP/SINDI_OXY_SERVICE_API_KEY"');
+    expect(workflowDirectives).not.toContain('require_secure_string "/oxy/$APP/SINDI_OXY_SERVICE_API_SECRET"');
+    expect(workflowDirectives).not.toContain('--with-decryption');
   });
 
   /**

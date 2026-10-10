@@ -18,7 +18,7 @@ Workflow: `.github/workflows/deploy-aws.yml`
   (`237343248947.dkr.ecr.us-west-2.amazonaws.com/oxy/homiio`), then rolls their
   corresponding ECS services by immutable digest.
 - Auth is GitHub OIDC assuming the `oxy-github-deploy` role — no AWS keys are stored in GitHub.
-- Secrets: GitHub Actions secrets are the source of truth. The workflow syncs them to AWS SSM (`/oxy/homiio/*`; shared secrets to `/oxy/_shared/*`) and ECS injects them into the container. To change a secret, edit it in GitHub — the next deploy applies it.
+- Secrets: AWS SSM is the ONLY copy (`/oxy/homiio/*`, SecureString; shared ones under `/oxy/_shared/*` are owned by oxy-infra). ECS injects them into the container at task start; the deploy writes none, and GitHub holds no runtime secret. To change one: `aws ssm put-parameter --type SecureString --overwrite --name /oxy/homiio/<NAME> --value '…'`, then force a new deployment of `homiio` (and `homiio-worker` if it reads it). A NEW secret is written to SSM before a task definition names it (oxy-infra runbook 46).
 - Listing-ingestion worker: browser-enabled `worker` target from the same
   compiled commit, separate ECS service (`app-homiio-worker.tf` in oxy-infra);
   command runs `packages/backend/dist/worker.js`. The API deploys the `api`
@@ -78,7 +78,7 @@ EXPO_PUBLIC_STRIPE_LINK_PLUS=https://buy.stripe.com/...   # optional
 EXPO_PUBLIC_STRIPE_LINK_FILE=https://buy.stripe.com/...   # optional
 ```
 
-**Backend (GitHub secrets → SSM → ECS):**
+**Backend (SSM and task-definition environment → ECS):**
 
 ```
 NODE_ENV=production

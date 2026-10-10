@@ -181,10 +181,10 @@ an env var set to `""` is indistinguishable from an unset one to this code, so
 the line would be inert configuration claiming a capability the deployment does
 not have.
 
-There is no secret, so nothing needs adding to `deploy-aws.yml`'s SSM sync
-allowlist. If the dataset is ever switched to one requiring a licence key (a
-MaxMind move, say), that key **is** a secret and the allowlist entry must land in
-the same change — see `AGENTS.md`, and
+There is no secret. If the dataset is ever switched to one requiring a licence
+key (a MaxMind move, say), that key **is** a secret: it goes into SSM
+`/oxy/homiio/` with `aws ssm put-parameter` BEFORE the task definition names it,
+never into GitHub — see `AGENTS.md`, and
 `packages/backend/__tests__/unit/deploySecretSync.test.ts`, which is the gate.
 
 ## Operating it
