@@ -1,5 +1,9 @@
 version: 2
 updates:
+  # The labels are QUOTED on purpose. Unquoted, `- type: deps` is a YAML
+  # mapping ({type: deps}), not the string "type: deps", and Dependabot rejects
+  # the whole file: from 2026-05-21, when this config was written, until the fix
+  # no `bun` or `github_actions` version-update job ever ran in this repository.
   - package-ecosystem: bun
     directory: /
     schedule:
@@ -11,7 +15,7 @@ updates:
       minor-and-patch:
         update-types: [minor, patch]
     labels:
-      - type: deps
+      - "type: deps"
     open-pull-requests-limit: 10
 
   - package-ecosystem: github-actions
@@ -19,4 +23,4 @@ updates:
     schedule:
       interval: monthly
     labels:
-      - type: infra
+      - "type: infra"
