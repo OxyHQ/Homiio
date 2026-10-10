@@ -78,9 +78,9 @@ function generateShortPropertyTitle(propertyData: BackendPropertyData): string {
   const { type = 'apartment', address = {}, bedrooms = 0, geo = null } = propertyData;
 
   const street = (address.street || '').trim();
-  const city = (geo && geo.city) || '';
-  const state = (geo && geo.region) || '';
-  const neighborhood = (geo && geo.neighborhood) || '';
+  const city = geo?.city || '';
+  const state = geo?.region || '';
+  const neighborhood = geo?.neighborhood || '';
 
   const streetWithoutNumber = street.replace(/\d+/, '').trim();
 
@@ -97,8 +97,8 @@ function generateLargePropertyTitle(propertyData: BackendPropertyData): string {
   const { type = 'apartment', address = {}, bedrooms = 0, geo = null } = propertyData;
 
   const street = (address.street || '').trim();
-  const city = (geo && geo.city) || '';
-  const state = (geo && geo.region) || '';
+  const city = geo?.city || '';
+  const state = geo?.region || '';
 
   const typeLabel = largeTypeLabel(type, bedrooms);
   const location = buildLargeTitleLocation({ street, city, state }, FALLBACK_LOCATION);

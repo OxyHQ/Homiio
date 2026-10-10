@@ -223,7 +223,7 @@ class TelegramService {
 
     // Find primary image first
     const primaryImage = property.images.find((img: PropertyImageLike) => img.isPrimary);
-    if (primaryImage && primaryImage.url) {
+    if (primaryImage?.url) {
       logger.debug('Using primary image for property', {
         propertyId: property._id,
         imageUrl: primaryImage.url,
@@ -233,7 +233,7 @@ class TelegramService {
 
     // Fall back to first image
     const firstImage = property.images[0];
-    if (firstImage && firstImage.url) {
+    if (firstImage?.url) {
       logger.debug('Using first image for property', {
         propertyId: property._id,
         imageUrl: firstImage.url,
@@ -334,7 +334,7 @@ class TelegramService {
 
     // Build description section only if description exists
     let descriptionSection = '';
-    if (description && description.trim()) {
+    if (description?.trim()) {
       const truncatedDescription =
         description.length > 200 ? `${description.substring(0, 200)}...` : description;
       descriptionSection = `\n📝 **${t.__('telegram.description')}:**\n${this.escapeMarkdown(truncatedDescription)}\n`;
@@ -351,8 +351,8 @@ class TelegramService {
 
     // City/region labels are relational (resolved from the canonical geo docs);
     // only the building-level street + postal code come off the address.
-    const cityLabel = (geo && geo.city) || '';
-    const regionLabel = (geo && geo.region) || '';
+    const cityLabel = geo?.city || '';
+    const regionLabel = geo?.region || '';
     const postalCode = address?.postal_code || '';
     const locationLine = [
       removePropertyNumber(address?.street),
@@ -414,7 +414,7 @@ ${t.__('telegram.hashtags.newProperty')}${cityHashtag} #${this.escapeMarkdown(pr
       // Get the group configuration
       const groupConfig = this.getDefaultGroup();
 
-      if (!groupConfig || !groupConfig.id) {
+      if (!groupConfig?.id) {
         logger.warn('No Telegram group configured. Skipping notification.', {
           city,
           country,

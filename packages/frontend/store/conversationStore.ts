@@ -324,7 +324,7 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
         if (response.ok) {
           const data = await response.json();
 
-          if (data.success && data.conversation && data.conversation.id) {
+          if (data.success && data.conversation?.id) {
             const newConversation: Conversation = {
               id: data.conversation.id,
               title: data.conversation.title || title,

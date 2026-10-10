@@ -159,7 +159,7 @@ function mutate(sql, mutation) {
   const replacement = mutation.unique ? `CREATE INDEX "${mutation.constraint}"` : '$1(true or ';
 
   const matches = sql.match(pattern);
-  if (!matches || matches.length !== 1) {
+  if (matches?.length !== 1) {
     throw new Error(
       `Mutation for ${mutation.constraint} matched ${matches ? matches.length : 0} times in ` +
         `${MIGRATION}; expected exactly 1. The migration changed shape and this script is ` +

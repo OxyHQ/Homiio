@@ -488,12 +488,11 @@ async function notifyAddressOwners(params: {
 export const createReview = async (req: Request, res: Response) => {
   try {
     const oxyUserId = getRequiredOxyUserId(req);
-    const addressData = (req.body || {}).address as Record<string, string> | undefined;
+    const addressData = req.body?.address as Record<string, string> | undefined;
     const picked = pickFields<Record<string, unknown>>(req.body, CREATABLE_REVIEW_FIELDS);
 
     if (
-      !addressData ||
-      !addressData.street ||
+      !addressData?.street ||
       !addressData.city ||
       !addressData.postal_code ||
       !addressData.country

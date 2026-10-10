@@ -115,7 +115,7 @@ function listingFromCard(card: Record<string, unknown>): SelogerRawListing | und
   const contact = contactFromUnknown(card.contact ?? card.agency ?? card.advertiser);
   if (contact) listing.contact = contact;
   const explicitUrl = asString(card.url) ?? asString(card.permalink);
-  if (explicitUrl && explicitUrl.startsWith('http')) listing.url = explicitUrl;
+  if (explicitUrl?.startsWith('http')) listing.url = explicitUrl;
 
   return listing;
 }

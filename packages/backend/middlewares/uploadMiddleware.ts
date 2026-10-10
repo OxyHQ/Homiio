@@ -31,7 +31,7 @@ export const handleUploadError = (error: any, req: Request, res: Response, next:
     });
   }
 
-  if (error.message && error.message.includes('Invalid file type')) {
+  if (error.message?.includes('Invalid file type')) {
     return res.status(400).json({
       success: false,
       message: error.message,

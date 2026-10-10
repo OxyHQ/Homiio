@@ -195,7 +195,7 @@ export class PlaywrightSessionPool {
   }
 
   private async ensureBrowser(): Promise<PwBrowser> {
-    if (this.browser && this.browser.isConnected()) return this.browser;
+    if (this.browser?.isConnected()) return this.browser;
     if (this.launching) return this.launching;
     const chromium = this.playwright.chromium as PwChromium;
     // `headless: false` (this.headed) requires a live X display — the worker runs

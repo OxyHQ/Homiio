@@ -136,7 +136,7 @@ export function useSearchPriceHistogram(
     if (!runnable || !data || data.location?.status === 'unresolved') return undefined;
     const histogram = data.priceHistogram;
     // Only a histogram over exactly the slider's span can be drawn under it.
-    if (!histogram || histogram.min !== 0 || histogram.max !== track.max) return undefined;
+    if (histogram?.min !== 0 || histogram.max !== track.max) return undefined;
     const currency = parseListingCurrency(histogram.currency);
     if (!currency) return undefined;
     const counts = histogram.buckets.map((bucket) => bucket.count);

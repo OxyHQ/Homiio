@@ -590,7 +590,7 @@ export function classifyListingContent(
   const flags: ListingFlags = {};
   for (const rule of RULES) {
     if (!rule.triggers.some((re) => re.test(normalized))) continue;
-    if (rule.vetoes && rule.vetoes.some((re) => re.test(normalized))) continue;
+    if (rule.vetoes?.some((re) => re.test(normalized))) continue;
     flags[rule.flag] = true;
   }
 

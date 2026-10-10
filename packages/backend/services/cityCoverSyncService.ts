@@ -150,8 +150,7 @@ async function fetchImageBuffer(url: string): Promise<ImageBufferInput> {
       throw new Error(`Image fetch failed: ${response.status} ${response.statusText}`);
     }
     const contentType = response.headers.get('content-type');
-    const mimetype =
-      contentType && contentType.startsWith('image/') ? contentType : DEFAULT_IMAGE_MIME;
+    const mimetype = contentType?.startsWith('image/') ? contentType : DEFAULT_IMAGE_MIME;
     const arrayBuffer = await response.arrayBuffer();
     return { buffer: Buffer.from(arrayBuffer), mimetype };
   } finally {

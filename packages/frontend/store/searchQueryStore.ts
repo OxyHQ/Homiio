@@ -207,7 +207,7 @@ export const useSearchQueryStore = create<SearchQueryState>()((set) => ({
   setQueryText: (text) =>
     set((state) => ({
       // Empty and whitespace-only text is absence, not a query for nothing.
-      query: { ...state.query, queryText: text && text.trim() ? text : null },
+      query: { ...state.query, queryText: text?.trim() ? text : null },
     })),
 
   setPendingViewport: (bounds) => set({ pendingViewport: bounds }),

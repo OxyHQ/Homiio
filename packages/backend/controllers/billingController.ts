@@ -587,7 +587,7 @@ export async function createCustomerPortalSession(req: Request, res: Response) {
 
     // Find the billing record to get the subscription details
     const billing = await findBillingByOxyUserId(oxyUserId);
-    if (!billing || !billing.plusStripeSubscriptionId) {
+    if (!billing?.plusStripeSubscriptionId) {
       return res.status(404).json({
         success: false,
         error: { message: 'Subscription not found', code: 'SUBSCRIPTION_NOT_FOUND' },
@@ -608,7 +608,7 @@ export async function createCustomerPortalSession(req: Request, res: Response) {
       return res.json({ success: true, url: session.url });
     } catch (stripeError: any) {
       // Check if it's a configuration error
-      if (stripeError.message && stripeError.message.includes('No configuration provided')) {
+      if (stripeError.message?.includes('No configuration provided')) {
         return res.status(503).json({
           success: false,
           error: {
@@ -790,7 +790,7 @@ export async function cancelSubscription(req: Request, res: Response) {
 
     // Find the billing record to get the subscription ID
     const billing = await findBillingByOxyUserId(oxyUserId);
-    if (!billing || !billing.plusStripeSubscriptionId) {
+    if (!billing?.plusStripeSubscriptionId) {
       return res
         .status(404)
         .json({ success: false, error: { message: 'No subscription found to cancel' } });
@@ -853,7 +853,7 @@ export async function reactivateSubscription(req: Request, res: Response) {
 
     // Find the billing record to get the subscription ID
     const billing = await findBillingByOxyUserId(oxyUserId);
-    if (!billing || !billing.plusStripeSubscriptionId) {
+    if (!billing?.plusStripeSubscriptionId) {
       return res
         .status(404)
         .json({ success: false, error: { message: 'No subscription found to reactivate' } });

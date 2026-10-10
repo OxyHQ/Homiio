@@ -98,7 +98,7 @@ function hasExchangeOffering(property: PropertyBookingBasis): boolean {
 function parseWindow(
   window: { start: Date | string; end: Date | string } | undefined,
 ): { start: Date; end: Date } | null {
-  if (!window || !window.start || !window.end) {
+  if (!window?.start || !window.end) {
     return null;
   }
   const start = window.start instanceof Date ? window.start : new Date(window.start);

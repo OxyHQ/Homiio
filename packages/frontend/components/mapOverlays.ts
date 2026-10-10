@@ -135,5 +135,5 @@ export function clusterOverlayState(
   leafIds: readonly string[] | null,
   activeId: string | null,
 ): MapMarkerState {
-  return activeId !== null && leafIds !== null && leafIds.includes(activeId) ? 'active' : 'default';
+  return activeId !== null && leafIds?.includes(activeId) === true ? 'active' : 'default';
 }

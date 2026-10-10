@@ -235,7 +235,7 @@ const toAddressParts = (address: NominatimAddress | undefined): ProviderAddressP
  * greater than `east` is NOT rejected — that is the legal antimeridian case.
  */
 const toBounds = (boundingbox: NominatimPlace['boundingbox']): ProviderBounds | undefined => {
-  if (!boundingbox || boundingbox.length !== 4) return undefined;
+  if (boundingbox?.length !== 4) return undefined;
   const south = Number.parseFloat(boundingbox[0]);
   const north = Number.parseFloat(boundingbox[1]);
   const west = Number.parseFloat(boundingbox[2]);

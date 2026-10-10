@@ -201,7 +201,7 @@ export class PlaywrightBrowserPool implements UrlFetcher {
 
   /** Lazily launch (or relaunch after a crash) the single shared browser. */
   private async ensureBrowser(): Promise<PwBrowser> {
-    if (this.browser && this.browser.isConnected()) return this.browser;
+    if (this.browser?.isConnected()) return this.browser;
     if (this.launching) return this.launching;
     // `headless: false` (this.headed) requires a live X display — the worker runs
     // under `xvfb-run` when LISTING_BROWSER_HEADED=true (see Dockerfile header).

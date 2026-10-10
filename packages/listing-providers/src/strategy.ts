@@ -69,7 +69,7 @@ export function classifyOutcome(
 ): ProviderOutcome {
   if (status === 429 || status === 503) return 'challenge';
   if (isAntiBotChallenge(body)) return 'challenge';
-  if (isChallenge && isChallenge(body)) return 'challenge';
+  if (isChallenge?.(body)) return 'challenge';
   if (status === 403) return 'forbidden';
   if (status >= 400) return 'error';
   return 'success';

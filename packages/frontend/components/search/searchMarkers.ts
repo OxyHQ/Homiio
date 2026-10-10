@@ -49,12 +49,7 @@ export function toMarkers(
   return properties
     .map((p) => {
       const coords = p.address?.coordinates?.coordinates ?? p.location?.coordinates;
-      if (
-        !coords ||
-        coords.length !== 2 ||
-        typeof coords[0] !== 'number' ||
-        typeof coords[1] !== 'number'
-      ) {
+      if (coords?.length !== 2 || typeof coords[0] !== 'number' || typeof coords[1] !== 'number') {
         return null;
       }
       // Price the pin off the ACTIVE offering's block (monthly / nightly / sale).

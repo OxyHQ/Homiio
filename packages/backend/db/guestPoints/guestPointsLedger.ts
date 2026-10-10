@@ -301,7 +301,7 @@ export async function settleStayPoints(
           ),
         )
         .limit(1);
-      if (!existing || existing.state !== 'settled') {
+      if (existing?.state !== 'settled') {
         return { ok: false as const, reason: 'no_reservation' as const };
       }
       const [earned] = await tx

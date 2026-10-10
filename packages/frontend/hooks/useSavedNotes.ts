@@ -19,7 +19,7 @@ export function useSavedNotesMutation() {
 
       const previous = queryClient.getQueryData<any>(['savedProperties']);
 
-      if (previous && previous.properties && Array.isArray(previous.properties)) {
+      if (previous?.properties && Array.isArray(previous.properties)) {
         const next = {
           ...previous,
           properties: previous.properties.map((p: any) => {

@@ -110,7 +110,7 @@ export function extractNeighborhoodFromStreet(streetWithoutNumber: string): stri
 
   for (const pattern of NEIGHBORHOOD_PATTERNS) {
     const match = streetWithoutNumber.match(pattern);
-    if (match && match[1]) {
+    if (match?.[1]) {
       return match[1];
     }
   }

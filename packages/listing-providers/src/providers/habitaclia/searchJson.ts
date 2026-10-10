@@ -122,8 +122,7 @@ function refFromItem(
  */
 function detailUrlFor(item: Record<string, unknown>, sourceId: string): string {
   const navigation = asString(item['navigationUrl'])?.trim();
-  const path =
-    navigation && navigation.startsWith('/') ? navigation.split('?')[0] : `/i${sourceId}.htm`;
+  const path = navigation?.startsWith('/') ? navigation.split('?')[0] : `/i${sourceId}.htm`;
   return `${HABITACLIA_BASE_URL}${path}`;
 }
 

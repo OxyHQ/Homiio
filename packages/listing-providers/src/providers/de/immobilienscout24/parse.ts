@@ -106,7 +106,7 @@ export function parseIs24Search(body: string): Is24SearchRef[] {
   const refs: Is24SearchRef[] = [];
   for (const entry of items) {
     const wrapper = asRecord(entry);
-    if (!wrapper || wrapper.type !== 'EXPOSE_RESULT') continue;
+    if (wrapper?.type !== 'EXPOSE_RESULT') continue;
     const item = asRecord(wrapper.item);
     const sourceId = asString(item?.id);
     if (!sourceId || seen.has(sourceId)) continue;

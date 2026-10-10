@@ -68,7 +68,7 @@ function kindFromCategory(categoryId: string): 'rent' | 'sale' {
 
 function listingUrl(ad: Record<string, unknown>, sourceId: string, kind: 'rent' | 'sale'): string {
   const url = asString(ad.url);
-  if (url && url.startsWith('http')) return url;
+  if (url?.startsWith('http')) return url;
   const slug = kind === 'sale' ? 'ventes_immobilieres' : 'locations';
   return `${LEBONCOIN_BASE_URL}/ad/${slug}/${sourceId}`;
 }

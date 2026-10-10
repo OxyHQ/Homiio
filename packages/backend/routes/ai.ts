@@ -473,7 +473,7 @@ const buildSearchParams = (
   base: { limit?: number; query?: string; excludeIds?: string[] } = {},
 ) => {
   const params = new URLSearchParams();
-  if (base.query && base.query.trim()) params.set('query', base.query);
+  if (base.query?.trim()) params.set('query', base.query);
   params.set('limit', String(base.limit ?? DEFAULT_LIST_LIMIT));
   if (base.excludeIds?.length) params.set('excludeIds', base.excludeIds.join(','));
 
@@ -1040,7 +1040,7 @@ Return only the JSON array, no other text.`;
       const taggedPayload =
         taggedContent(lastContent, FILE_DATA_URL_TAG) ??
         taggedContent(lastContent, IMAGE_DATA_URL_TAG);
-      const hasInlineFile = taggedPayload !== null && taggedPayload.startsWith('data:');
+      const hasInlineFile = taggedPayload?.startsWith('data:') === true;
       const cleanedLastContent = hasInlineFile
         ? withoutTag(withoutTag(lastContent, FILE_DATA_URL_TAG), IMAGE_DATA_URL_TAG).trim()
         : lastContent;

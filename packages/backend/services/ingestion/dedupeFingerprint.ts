@@ -173,7 +173,7 @@ export function toDedupComparable(input: DedupListingInput): DedupComparable | n
   if (typeof squareFootage !== 'number' || squareFootage <= 0) return null;
 
   const pricing = extractPrimaryPricing(input);
-  if (!pricing || !pricing.currency) return null;
+  if (!pricing?.currency) return null;
 
   const descriptionTokens = normalizeDescriptionTokens(input.description);
   if (descriptionTokens.size < MIN_DESCRIPTION_TOKENS) return null;
