@@ -55,8 +55,8 @@
 import express, { Router, type Express, type Request } from 'express';
 import bodyParser from 'body-parser';
 import request from 'supertest';
-import { readFileSync } from 'fs';
-import { join } from 'path';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { count } from 'drizzle-orm';
 import {
   caseDecidedEventFixture,

@@ -8,8 +8,8 @@
  * serves or exports the locale files of the very checkout it is building.
  * `locales/` stays the only source of truth; `public/locales/` is gitignored.
  */
-const fs = require('fs');
-const path = require('path');
+const fs = require('node:fs');
+const path = require('node:path');
 
 const FRONTEND_ROOT = path.dirname(require.resolve('../package.json'));
 const SOURCE_DIR = path.join(FRONTEND_ROOT, 'locales');

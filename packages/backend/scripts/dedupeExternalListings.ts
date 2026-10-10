@@ -18,7 +18,7 @@
  *   node dedupeExternalListings.js --apply --limit-groups=50
  */
 
-import path from 'path';
+import path from 'node:path';
 import dotenv from 'dotenv';
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
 

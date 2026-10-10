@@ -3,8 +3,8 @@
  * Request logging and application logging utilities
  */
 
-import fs from 'fs';
-import path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
 import type { Request, Response, NextFunction } from 'express';
 import config from '../config';
 

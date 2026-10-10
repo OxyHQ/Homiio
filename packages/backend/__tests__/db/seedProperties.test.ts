@@ -32,7 +32,7 @@
  * Unsplash to observe it would be measuring the network.
  */
 
-import fs from 'fs/promises';
+import fs from 'node:fs/promises';
 import { and, eq, inArray, isNotNull } from 'drizzle-orm';
 import { closePostgres, connectPostgres, getDb } from '../../db/postgres';
 import { cities, images, properties, propertyImages } from '../../db/schema';

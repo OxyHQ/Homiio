@@ -7,7 +7,7 @@
  *   bun run packages/backend/scripts/cleanup-absurd-external-prices.ts --apply
  */
 
-import path from 'path';
+import path from 'node:path';
 import dotenv from 'dotenv';
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
 

@@ -53,7 +53,7 @@
  * disagreement between two observations from a change in the rules between them.
  */
 
-import * as crypto from 'crypto';
+import * as crypto from 'node:crypto';
 import type { ADDRESS_LEVELS } from '../db/schema/addresses';
 
 export type AddressLevel = (typeof ADDRESS_LEVELS)[number];

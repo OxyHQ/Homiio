@@ -6,9 +6,9 @@ import {
 } from '@aws-sdk/client-s3';
 import sharp from 'sharp';
 import { v4 as uuidv4 } from 'uuid';
-import { createHash } from 'crypto';
-import path from 'path';
-import { promises as fs, realpathSync } from 'fs';
+import { createHash } from 'node:crypto';
+import path from 'node:path';
+import { promises as fs, realpathSync } from 'node:fs';
 import type {
   ImageEntityType,
   ImageVariantKeys,

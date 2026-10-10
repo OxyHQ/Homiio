@@ -7,8 +7,8 @@
  * and can receive events from Stripe.
  */
 
-const https = require('https');
-const http = require('http');
+const https = require('node:https');
+const http = require('node:http');
 
 // Configuration
 const config = {
@@ -47,7 +47,7 @@ const config = {
 
 // Create webhook signature
 function createWebhookSignature(payload, secret) {
-  const crypto = require('crypto');
+  const crypto = require('node:crypto');
   const timestamp = Math.floor(Date.now() / 1000);
   const signedPayload = `${timestamp}.${payload}`;
   const signature = crypto.createHmac('sha256', secret).update(signedPayload, 'utf8').digest('hex');

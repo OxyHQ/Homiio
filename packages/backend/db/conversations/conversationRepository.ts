@@ -63,7 +63,7 @@
  */
 
 import { and, asc, desc, eq, gt, inArray, lte, sql } from 'drizzle-orm';
-import crypto from 'crypto';
+import crypto from 'node:crypto';
 import { qualified } from '../casing';
 import type { DatabaseOrTransaction } from '../postgres';
 import { conversationMessageAttachments, conversationMessages, conversations } from '../schema';

@@ -5,8 +5,8 @@
  * lands on a language whose strings were not registered first, and that the
  * web copy step and the loader agree on file names.
  */
-import fs from 'fs';
-import path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
 import i18n from 'i18next';
 
 import enUS from '@/locales/en.json';

@@ -21,7 +21,7 @@
  * uses the address's own id for the unit level.
  */
 
-import * as crypto from 'crypto';
+import * as crypto from 'node:crypto';
 import { and, eq, ne, sql, type SQL } from 'drizzle-orm';
 
 import { getDb, type DatabaseOrTransaction } from '../db/postgres';

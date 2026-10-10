@@ -42,7 +42,7 @@
  *   ... --apply --limit=25 --concurrency=2 --min-width=700
  */
 
-import path from 'path';
+import path from 'node:path';
 import dotenv from 'dotenv';
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
 

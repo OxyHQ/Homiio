@@ -14,7 +14,7 @@
  * gate) and the service (defense-in-depth fs gate) so the two layers can never
  * drift apart on what "safe" means.
  */
-import path from 'path';
+import path from 'node:path';
 
 /**
  * Image file extensions the local store is allowed to serve, mapped to the

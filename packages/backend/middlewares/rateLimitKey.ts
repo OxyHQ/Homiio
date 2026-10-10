@@ -17,7 +17,7 @@
  * transiently and discarded — it is never logged or persisted.
  */
 
-import crypto from 'crypto';
+import crypto from 'node:crypto';
 import type { Request } from 'express';
 import { ipKeyGenerator } from 'express-rate-limit';
 

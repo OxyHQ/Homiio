@@ -30,7 +30,7 @@
  * it already has the id for.
  */
 
-import path from 'path';
+import path from 'node:path';
 
 import type { Request, Response, NextFunction } from 'express';
 import { LeaseStatus } from '@homiio/shared-types';

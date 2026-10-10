@@ -9,7 +9,7 @@
  *   bun run packages/backend/scripts/backfillPriceEthics.ts --apply --batch-size=25
  */
 
-import path from 'path';
+import path from 'node:path';
 import dotenv from 'dotenv';
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
 

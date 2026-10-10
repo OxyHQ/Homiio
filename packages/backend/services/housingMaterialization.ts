@@ -71,7 +71,7 @@
  * Performing one is a follow-up.
  */
 
-import * as crypto from 'crypto';
+import * as crypto from 'node:crypto';
 import { and, eq, inArray, isNull, sql, type AnyColumn } from 'drizzle-orm';
 
 import { getDb, type DatabaseOrTransaction } from '../db/postgres';

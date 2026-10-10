@@ -5,7 +5,7 @@
 
 import TelegramBot from 'node-telegram-bot-api';
 import i18n from 'i18n';
-import path from 'path';
+import path from 'node:path';
 import config from '../config';
 import { logger } from '../middlewares/logging';
 import { generateLargePropertyTitle } from '../utils/propertyTitleGenerator';

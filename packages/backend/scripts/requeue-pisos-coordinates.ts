@@ -11,7 +11,7 @@
  * Requires REDIS_URL (Valkey) for --apply. DATABASE_URL via the standard backend .env.
  */
 
-import path from 'path';
+import path from 'node:path';
 import dotenv from 'dotenv';
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
 

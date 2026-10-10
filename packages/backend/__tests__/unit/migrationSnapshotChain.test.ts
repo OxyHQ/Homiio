@@ -51,8 +51,8 @@
  * no assertion, because a reader takes it for a gate.
  */
 
-import * as fs from 'fs';
-import * as path from 'path';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 
 import * as schema from '../../db/schema';
 import { getTableName } from 'drizzle-orm';

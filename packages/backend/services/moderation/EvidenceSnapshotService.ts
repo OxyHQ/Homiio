@@ -28,7 +28,7 @@
  * of stored state.
  */
 
-import { createHash } from 'crypto';
+import { createHash } from 'node:crypto';
 import type { ReportInput } from '@crowdsource.you/core';
 import { ModerationReportedType } from '@homiio/shared-types';
 import type { ModerationReportRow } from '../../db/moderation/moderationReportRepository';

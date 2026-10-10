@@ -25,7 +25,7 @@
  * exists to catch. Callers import it from the repository, or they do not get it.
  */
 
-import { randomUUID } from 'crypto';
+import { randomUUID } from 'node:crypto';
 import {
   claimModerationOutboxEvent,
   completeModerationOutboxEvent,
