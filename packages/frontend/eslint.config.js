@@ -1,7 +1,12 @@
 // Minimal ESLint: ONLY the rules Biome does not implement. Biome
 // (`biome.jsonc` at the repo root) owns formatting and every other lint rule,
 // including the ones eslint-config-expo used to supply. Run both with
-// `bun run lint` at the root; `expo lint` runs this file alone.
+// `bun run lint` at the root; `bun run lint` here runs this file alone.
+//
+// The script is `expo lint .`, not bare `expo lint`: bare `expo lint` only
+// walks `app/`, `components/` and `src/`, so it never read `config.ts` (where
+// the `EXPO_PUBLIC_*` reads live), `hooks/` or `context/`. A destructured env
+// read planted in `config.ts` passed bare `expo lint` and fails `expo lint .`.
 const { defineConfig } = require('eslint/config');
 const tsParser = require('@typescript-eslint/parser');
 const expo = require('eslint-plugin-expo');

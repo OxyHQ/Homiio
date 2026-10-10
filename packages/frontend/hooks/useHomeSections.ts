@@ -204,6 +204,9 @@ export function useHomeSections(
     hasLiveData: query.data !== undefined,
     servedFromSnapshot: restored !== null,
     failed: query.isError,
+    // Re-read on every render on purpose: the age must grow while the payload is on screen.
+    // Pure only matters under the React Compiler, which this app does not run (docs/cold-start.md).
+    // eslint-disable-next-line react-hooks/purity -- see the two lines above
     ageMs: generatedAt ? Date.now() - new Date(generatedAt).getTime() : null,
   });
 
