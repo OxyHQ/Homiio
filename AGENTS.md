@@ -163,9 +163,9 @@ measurements and the migration history: **`docs/postgres.md`**.
 `~/Oxy/oxy-infra/terraform-uswest2/`; deploy is `.github/workflows/deploy-aws.yml`
 on push to `main`. Detail: `docs/deployment.mdx`.
 
-- **A secret added to either task definition must be added to `deploy-aws.yml`'s
-  explicit sync allowlist in the SAME change**, or it is silently never synced to
-  SSM.
+- **Runtime secrets live ONLY in SSM `/oxy/homiio/*`** (oxy-infra runbook 46). Write
+  a new one with `aws ssm put-parameter` BEFORE a task definition names it; no
+  workflow writes SSM or reads a runtime repo secret (`deploySecretSync.test.ts`).
 - **Automated PR reviews run on `listing-providers` and `backend`.** Address the
   high-confidence security and correctness findings before merge.
 

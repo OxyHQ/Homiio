@@ -1,260 +1,114 @@
 /**
- * The deploy workflow's SSM sync names every secret it copies, and the two
- * places it names them cannot drift apart.
+ * No workflow ships a runtime secret: SSM is the only copy.
  *
- * ## Two different failures, one step
+ * ## The rule
  *
- * **The pattern.** `.github/workflows/deploy-aws.yml` used to expand the whole
- * `secrets` context with `toJSON(secrets)` and walk it into a shell loop. That
- * shape is indistinguishable from an exfiltration payload, so GitHub's
- * malicious-workflow detection holds every run of the workflow as
- * `action_required` with ZERO jobs until a human clicks "Approve and run" in the
- * UI — per run, and with no automatable escape (the REST approve endpoint only
- * serves fork pull requests). Measured across the org on 2026-08-08: every repo
- * carrying the pattern was held; the two using explicit allowlists never were.
- * Nothing in a normal CI run reports it, because the runs never start. #283
- * removed it here.
+ * Runtime secrets live ONLY in SSM `/oxy/homiio/*` (SecureString) and the
+ * oxy-infra-owned `/oxy/_shared/*` (oxy-infra runbooks 45 and 46). Both task
+ * definitions read them at task start; a value is set or rotated with
+ * `aws ssm put-parameter --overwrite`, and a NEW one is written before a task
+ * definition names it. GitHub holds only what CI itself spends.
  *
- * **The half-edit.** An allowlist then has its own failure mode, and it is
- * quieter: the step reports success on the names it was given, so a secret the
- * task definition reads but the list omits is never written, and the deploy is
- * green. That happened. `DATABASE_URL` was added to the repository secrets and
- * to both task definitions during the Postgres cutover on 2026-08-09 and not
- * added to the list; `/oxy/homiio/DATABASE_URL` was set by hand and every
- * subsequent deploy synced the other six and said so.
+ * ## What it replaced, and why
  *
- * ## What these assertions are worth, and what they are not
+ * Until 2026-10-10 the deploy copied `DATABASE_URL`, `JWT_SECRET`,
+ * `JWT_REFRESH_SECRET` and `LISTING_RESIDENTIAL_PROXY_URL` from repo secrets
+ * into SSM on every run. That made GitHub a second, overriding source of every
+ * production credential, and an explicit allowlist had its own quiet failure:
+ * a secret the task definitions read but the list omitted was never written,
+ * and the deploy stayed green (`DATABASE_URL`, 2026-08-09). Earlier still, the
+ * step expanded the whole `secrets` context, which GitHub holds as an
+ * exfiltration payload (`action_required`, zero jobs) — #283.
  *
- * They are exact about the two spellings INSIDE the workflow — the `env:`
- * bindings and the `sync_secret` calls — because that is the drift that
- * actually happens and it is fully observable from the repository. A name bound
- * but never synced reaches nothing; a name synced from an unbound variable is
- * read as empty and skipped with a warning nobody sees until the deploy that
- * needed it; a name written to the wrong namespace is invisible to the
- * container, which reads the other one.
+ * ## What these assertions are worth
  *
- * They are NOT a check that the list matches the LIVE task definitions — that
- * needs AWS, which this suite has no credentials for and should not. What
- * `EXPECTED_SYNCED_SECRETS` buys instead is that widening the workflow forces a
- * deliberate edit here, in a file whose docblock says where the truth lives.
- * The derivation is in the workflow's own comment, next to the list.
+ * They read every workflow, with comment lines dropped so the rule can be
+ * explained where it applies. They cannot check that the parameters the task
+ * definitions name EXIST — that needs AWS, which this suite has no credentials
+ * for and should not.
  */
 
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 /** The repository root — four levels above `packages/backend/__tests__/unit`. */
 const REPOSITORY_ROOT = join(__dirname, '..', '..', '..', '..');
-const WORKFLOW_PATH = join(REPOSITORY_ROOT, '.github', 'workflows', 'deploy-aws.yml');
-const workflow = readFileSync(WORKFLOW_PATH, 'utf8');
+const WORKFLOWS_DIR = join(REPOSITORY_ROOT, '.github', 'workflows');
 
-/**
- * Every parameter the two task definitions read as a `secret` after the Sindi
- * inference rollout. The seven pre-existing entries were re-derived from
- * `oxy-homiio:48` and `oxy-homiio-worker:55` on 2026-08-09; the two Sindi
- * service credential parameters are intentionally absent: Oxy's exact-ID
- * provisioner owns them and this deploy only verifies their SecureString type.
- * Homiio's OWN service credential is absent for a stronger reason — no task
- * definition reads it any more, because the API attests its ECS task role
- * instead (oxy ADR 0026).
- *
- * Everything synced lands under `/oxy/homiio/`. The `/oxy/_shared/` parameters
- * both task definitions also read (`AWS_ACCESS_KEY_ID`,
- * `AWS_SECRET_ACCESS_KEY`, `REDIS_URL`) are NOT synced: shared parameters are
- * owned by oxy-infra, not by any app, and are rotated once, centrally
- * (oxy-infra docs/runbooks/45-shared-ssm-parameters.md). Several app deploys
- * each copied their own secret into `/oxy/_shared/REDIS_URL`; two held
- * different values and every deploy flipped it (incident 2026-09-27).
- *
- * `MONGODB_URI` is GONE from this list, and the order of operations is the
- * point: it was deleted from SSM first and CAME BACK, because this sync
- * recreated it on the next deploy. Removing a value does not remove the thing
- * that produces it. Neither task definition carries it any more, so a sync
- * would now write a parameter nothing reads — and this list is what stops it
- * being re-added without somebody noticing.
- */
-const EXPECTED_SYNCED_SECRETS = {
-  APP: [
-    'DATABASE_URL',
-    'JWT_REFRESH_SECRET',
-    'JWT_SECRET',
-    'LISTING_RESIDENTIAL_PROXY_URL',
-  ],
-};
+/** The only repo secrets a workflow may read: what CI itself spends. */
+const CI_ONLY_SECRETS = new Set([
+  'GITHUB_TOKEN',
+  'CLOUDFLARE_API_TOKEN',
+  'CLOUDFLARE_ACCOUNT_ID',
+  'NPM_TOKEN',
+  'ADD_TO_PROJECT_TOKEN',
+]);
 
-/** Shared names this deploy must never bind or write (oxy-infra owns them). */
-const INFRA_OWNED_SHARED_SECRETS = [
-  'AWS_ACCESS_KEY_ID',
-  'AWS_SECRET_ACCESS_KEY',
-  'REDIS_URL',
-  'LIVEKIT_API_KEY',
-  'LIVEKIT_API_SECRET',
-];
+const directivesOnly = (text: string): string =>
+  text
+    .split('\n')
+    .filter((line) => !/^\s*#/.test(line))
+    .join('\n');
 
-/**
- * The body of the sync step: from its `- name:` line to the next step at the
- * same indentation. Scoping matters — the workflow has other steps with `env:`
- * blocks, and assertions that read the whole file would pass on bindings that
- * belong to the build or the rollout.
- */
-const syncStep = ((): string => {
-  const start = workflow.indexOf('      - name: Sync GitHub secrets');
-  if (start === -1) return '';
-  const rest = workflow.slice(start + 1);
-  const end = rest.search(/^ {6}- name: /m);
-  return end === -1 ? rest : rest.slice(0, end);
-})();
+const workflows = readdirSync(WORKFLOWS_DIR)
+  .filter((file) => /\.ya?ml$/.test(file))
+  .map((file) => {
+    const raw = readFileSync(join(WORKFLOWS_DIR, file), 'utf8');
+    return { file, raw, directives: directivesOnly(raw) };
+  });
 
-/** `PREFIX_NAME: ${{ secrets.NAME }}` bindings, as `[prefix, envName, secretName]`. */
-const envBindings = [...syncStep.matchAll(/^ {10}(APP|SHARED)_([A-Z0-9_]+): \$\{\{ secrets\.([A-Z0-9_]+) \}\}$/gm)];
+const deployWorkflow = workflows.find(({ file }) => file === 'deploy-aws.yml');
 
-/** `sync_secret NAME "$VAR" "PATH"` calls, as `[name, variable, path]`. */
-const syncCalls = [...syncStep.matchAll(/^ *sync_secret ([A-Z0-9_]+) "\$([A-Z0-9_]+)" "([^"]+)"$/gm)];
+describe('the deploy holds no runtime secret', () => {
+  it('reads the real workflows', () => {
+    // Vacuity floor: every assertion below is a negative one over this list.
+    expect(workflows.length).toBeGreaterThan(3);
+    expect(deployWorkflow?.directives).toContain('bash .github/scripts/deploy-ecs-image.sh');
+  });
 
-describe('the deploy workflow syncs an explicit allowlist', () => {
-  it('has a sync step with bindings and calls at all', () => {
-    // Vacuity floor. Every assertion below reads one of these three; an empty
-    // step or a regex that stopped matching would make them all trivially true,
-    // which is exactly how a gate stops gating without anyone noticing.
-    // An empty string here means the step was renamed or removed.
-    //
-    // LOWERED FROM 8 TO 7 by the `MONGODB_URI` removal — deliberately, in the
-    // same change that removes the secret, which is the only way a floor should
-    // ever come down. It is a MINIMUM, so a secret ADDED to the task definitions
-    // without being synced still has to raise it.
-    //
-    // LOWERED FROM 7 TO 4 by the shared-parameter removal, on the same terms:
-    // the change that stops writing the three oxy-infra-owned /oxy/_shared/
-    // parameters.
-    expect(syncStep).not.toBe('');
-    expect(syncStep).toContain('bash .github/scripts/put-secure-parameter.sh "$path"');
-    expect(syncStep).not.toContain('aws ssm put-parameter');
-    expect(syncStep).not.toContain('--value "$value"');
-    expect(envBindings.length).toBeGreaterThanOrEqual(4);
-    expect(syncCalls.length).toBeGreaterThanOrEqual(4);
+  it('no workflow writes SSM', () => {
+    const writers = workflows
+      .filter(({ directives }) =>
+        // `put-secure-parameter` is the stdin helper the old sync step called.
+        /\bssm\s+(put-parameter|delete-parameters?|label-parameter-version)\b|put-secure-parameter/i.test(
+          directives,
+        ),
+      )
+      .map(({ file }) => file);
+    expect(writers).toEqual([]);
+    expect(deployWorkflow?.raw).not.toMatch(/- name: Sync GitHub secrets/);
+  });
+
+  it('no workflow reads a repo secret beyond the CI-only allow-list', () => {
+    const runtime = workflows.flatMap(({ file, directives }) =>
+      [...directives.matchAll(/\bsecrets\.([A-Za-z_][A-Za-z0-9_]*)/g)]
+        .map((match) => match[1])
+        .filter((name) => !CI_ONLY_SECRETS.has(name))
+        .map((name) => `${file}: ${name}`),
+    );
+    expect(runtime).toEqual([]);
   });
 
   it('never enumerates the whole secrets context', () => {
-    // Matched as an EXPRESSION, not as prose: the step's own comment explains
-    // the block by name, so a plain substring check would fail on the
-    // explanation rather than on the payload — and would then be "fixed" by
-    // deleting the explanation.
-    expect(workflow).not.toMatch(/\$\{\{[^}]*toJSON\s*\(\s*secrets\s*\)/);
-  });
-
-  it('binds each secret under a prefix, and never under its own name', () => {
-    // The prefix is not cosmetic. `aws-actions/configure-aws-credentials`
-    // exports AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY into the job
-    // environment, so a secret bound under its raw name shadows the assumed
-    // OIDC role and fails this step with UnrecognizedClientException.
-    const envBlock = syncStep.slice(syncStep.indexOf('env:'), syncStep.indexOf('run:'));
-    for (const line of envBlock.split('\n')) {
-      const binding = /^ {10}([A-Za-z0-9_]+):/.exec(line);
-      if (binding) expect(binding[1]).toMatch(/^APP_/);
+    // Matched as an EXPRESSION, not as prose, so an explanation never trips it.
+    for (const { raw } of workflows) {
+      expect(raw).not.toMatch(/\$\{\{[^}]*toJSON\s*\(\s*secrets\s*\)/i);
     }
-    // The variable must be named after the secret it carries, or the loop below
-    // cannot tell which value a call is actually sending.
-    for (const [, , envName, secretName] of envBindings) {
-      expect(envName).toBe(secretName);
-    }
-  });
-
-  it('syncs exactly the secrets it binds, from the variables it binds them to', () => {
-    const bound = envBindings.map(([, prefix, name]) => `${prefix}_${name}`).sort();
-    const consumed = syncCalls.map(([, , variable]) => variable).sort();
-    expect(consumed).toEqual(bound);
-
-    // Three independent spellings of one name per call — the label the warning
-    // prints, the variable the value comes from, and the parameter SSM stores —
-    // cross-checked against each other and against the namespace in the path.
-    // A mismatch means a skipped secret is reported under another one's name, or
-    // a shared value written where nothing reads it.
-    for (const [, name, variable, path] of syncCalls) {
-      const namespace = path.startsWith('/oxy/_shared/') ? 'SHARED' : 'APP';
-      expect(variable).toBe(`${namespace}_${name}`);
-      expect(path.split('/').pop()).toBe(name);
-    }
-  });
-
-  it('routes every secret to the app namespace', () => {
-    // A name with no call at all returns the empty string, which fails the
-    // comparison naming the missing secret — the case this whole file exists for.
-    const pathFor = (name: string): string =>
-      syncCalls.find(([, candidate]) => candidate === name)?.[3] ?? '';
-    for (const name of EXPECTED_SYNCED_SECRETS.APP) expect(pathFor(name)).toBe(`/oxy/$APP/${name}`);
   });
 
   it('never writes a /oxy/_shared/ parameter, which oxy-infra owns', () => {
-    // Matched against the whole workflow, not just this step: a write from any
-    // step would split the readers the same way. A task-definition ARN
-    // (`parameter/oxy/_shared/...`) is a READ and is allowed.
-    const executable = workflow.split('\n').filter((line) => !line.trimStart().startsWith('#'));
-    expect(executable.filter((line) => /(?<!parameter)\/oxy\/_shared\//.test(line))).toEqual([]);
-    expect(envBindings.filter(([, prefix]) => prefix === 'SHARED')).toEqual([]);
-    for (const name of INFRA_OWNED_SHARED_SECRETS) {
-      expect(workflow).not.toContain(`secrets.${name} }}`);
+    // A task-definition ARN (`parameter/oxy/_shared/...`) is a READ and is
+    // allowed. Several app deploys each copied their own value into
+    // `/oxy/_shared/REDIS_URL` and every deploy flipped it (incident 2026-09-27).
+    for (const { directives } of workflows) {
+      const lines = directives.split('\n');
+      expect(lines.filter((line) => /(?<!parameter)\/oxy\/_shared\//.test(line))).toEqual([]);
     }
   });
 
-  it('covers exactly the secrets required by the matching task definitions', () => {
-    // Widening this list is the deliberate edit the workflow comment asks for.
-    // Narrowing it means a container reads a parameter no deploy maintains.
-    expect(syncCalls.map(([, name]) => name).sort()).toEqual(
-      [...EXPECTED_SYNCED_SECRETS.APP].sort(),
-    );
-  });
-
-  it('still refuses placeholders', () => {
-    // The guard predates the allowlist. A secret left empty or set to a single
-    // dash is a mistake, not an instruction to overwrite production with
-    // garbage: skipping leaves whatever SSM already holds.
-    expect(syncStep).toContain('[ "$value" = "-" ]');
-  });
-
-  it('does not source Oxy service credentials from GitHub and verifies exact SSM paths', () => {
-    const executableSync = syncStep
-      .split('\n')
-      .filter((line) => !line.trimStart().startsWith('#'))
-      .join('\n');
-    expect(syncStep).not.toMatch(/secrets\.(?:SINDI_)?OXY_SERVICE_API_(?:KEY|SECRET)/);
-    expect(syncStep).not.toMatch(/sync_secret (?:SINDI_)?OXY_SERVICE_API_(?:KEY|SECRET)/);
-    /**
-     * And it no longer REQUIRES Sindi's pair to exist either — the inverse of
-     * what stood here, for a reason that arrived rather than a rule that moved.
-     *
-     * The pre-flight refused to roll out unless both parameters were SSM
-     * SecureStrings, which was right while the deploy injected them. It stopped
-     * injecting them: Oxy now mints Sindi's requester assertion for an attested
-     * caller (oxy#1351 lets the native-agent entry point declare the WORKLOAD it
-     * admits, not only a credential UUID), and Homiio's canary accepts either
-     * id. A pre-flight that still demanded the parameters would block every
-     * rollout the moment they are deleted from SSM.
-     */
-    expect(syncStep).not.toContain('require_secure_string "/oxy/$APP/SINDI_OXY_SERVICE_API_KEY"');
-    expect(syncStep).not.toContain('require_secure_string "/oxy/$APP/SINDI_OXY_SERVICE_API_SECRET"');
-    expect(executableSync).not.toContain('--with-decryption');
-  });
-
-  /**
-   * Homiio's own service credential is not merely unsynced — nothing in this
-   * step may depend on it existing.
-   *
-   * A `require_secure_string` on a parameter the task definition no longer
-   * references is a gate with no consumer, and the day those two SSM parameters
-   * are retired it would fail a deploy that is working correctly. Asserted on
-   * the EXECUTABLE lines only, because the step's comment explains the omission
-   * by naming both variables.
-   */
-  it('no longer requires Homiio own service credential parameters to exist', () => {
-    const executableSync = syncStep
-      .split('\n')
-      .filter((line) => !line.trimStart().startsWith('#'))
-      .join('\n');
-    expect(executableSync).not.toContain(
-      'require_secure_string "/oxy/$APP/OXY_SERVICE_API_KEY"',
-    );
-    expect(executableSync).not.toContain(
-      'require_secure_string "/oxy/$APP/OXY_SERVICE_API_SECRET"',
-    );
+  it('never decrypts a parameter', () => {
+    for (const { directives } of workflows) {
+      expect(directives).not.toContain('--with-decryption');
+    }
   });
 });
