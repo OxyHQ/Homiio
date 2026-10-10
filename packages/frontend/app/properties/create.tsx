@@ -116,6 +116,7 @@ export default function CreatePropertyScreen() {
   // Gated on `hasHydrated` because the restore is asynchronous: acting on the
   // first render would read the defaults, see no draft, and reset over the very
   // work being restored.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: runs once per visit to the create screen, after the restore has been attempted
   useEffect(() => {
     if (isEditMode || !hasHydrated) return;
     let cancelled = false;
@@ -137,7 +138,6 @@ export default function CreatePropertyScreen() {
       cancelled = true;
     };
     // Once per visit to the create screen, after the restore has been attempted.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEditMode, hasHydrated]);
 
   const persistDraft = useCallback(async (): Promise<boolean> => {

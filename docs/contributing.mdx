@@ -33,7 +33,9 @@ bun run dev:frontend     # Expo tunnel
 bun run dev:backend      # nodemon + ts-node
 bun run build            # All
 bun run test             # All
-bun run lint             # All
+bun run lint             # Biome (format + lint) + the frontend's minimal ESLint
+bun run lint:fix         # Biome check with safe fixes applied
+bun run format           # Biome format --write
 bun run clean            # Remove dist + node_modules
 ```
 
@@ -152,7 +154,7 @@ Add the route to [`docs/routes.mdx`](./routes) in the same change —
 ## Pull requests
 
 1. Branch from `main`. Branch names: `feat/<scope>`, `fix/<scope>`, `chore/<scope>`, `docs/<scope>`.
-2. Run `bun run lint` and `bun run build` locally — both must pass.
+2. Run `bun run lint` and `bun run build` locally — both must pass. Formatting and linting are Biome (`biome.jsonc`); `packages/frontend/eslint.config.js` keeps only the rules Biome lacks (eslint-plugin-expo, react-hooks). There is no Prettier.
 3. Commit message follows Conventional Commits (`feat(frontend): ...`, `fix(backend): ...`, `docs: ...`).
 4. PR description: what changed, why, and any migration notes.
 5. CI runs the same lint + build matrix; do not merge if red.

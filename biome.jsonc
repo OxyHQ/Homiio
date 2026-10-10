@@ -1,0 +1,329 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.5.15/schema.json",
+  "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true, "defaultBranch": "main" },
+  "files": {
+    "ignoreUnknown": true,
+    "includes": [
+      "**",
+      "!**/node_modules",
+      "!.worktrees",
+      "!**/dist",
+      "!**/coverage",
+      "!**/.expo",
+      "!**/.next",
+      "!**/drizzle/meta",
+      "!**/*.generated.*",
+      // Audit evidence: captured inputs, logs and receipts whose bytes are
+      // recorded (sha256) in the proof.json files beside them. Reformatting
+      // them would falsify the record.
+      "!docs/audits",
+      // Committed native Android sources of the widgets module.
+      "!packages/frontend/modules/homiio-widgets/android",
+      // tsc output that a misconfigured project can emit next to the sources
+      // (see .gitignore, "Accidental tsc emit alongside listing-providers
+      // sources"). Never source; the old eslint configs ignored it too.
+      "!packages/listing-providers/src/**/*.js",
+      "!packages/listing-providers/src/**/*.d.ts",
+      "!packages/shared-types/src/**/*.js",
+      "!packages/shared-types/src/**/*.d.ts"
+    ]
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 100,
+    "lineEnding": "lf"
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "single",
+      "jsxQuoteStyle": "double",
+      "semicolons": "always",
+      "trailingCommas": "all",
+      "arrowParentheses": "always",
+      "bracketSpacing": true
+    }
+  },
+  "json": { "formatter": { "trailingCommas": "none" } },
+  "css": { "parser": { "tailwindDirectives": true } },
+  "assist": { "enabled": true, "actions": { "source": { "organizeImports": "off" } } },
+  "linter": {
+    "enabled": true,
+    "rules": { "preset": "recommended" }
+  },
+  "overrides": [
+    // ── Ported from packages/{backend,listing-providers,shared-types}/eslint.config.mjs ──
+    // Those three configs were js.configs.recommended + typescript-eslint's
+    // recommended set, with `@typescript-eslint/no-unused-vars` at error and
+    // `no-explicit-any` at warn. Every rule they enforced at ERROR that Biome
+    // implements stays at error here (rules Biome's preset already reports at
+    // error are not repeated). Generated with `biome migrate eslint`, then
+    // trimmed to what the preset does not already cover.
+    {
+      "includes": ["packages/backend/**", "packages/listing-providers/**", "packages/shared-types/**"],
+      "linter": {
+        "rules": {
+          "complexity": {
+            "noAdjacentSpacesInRegex": "error",
+            "noExtraBooleanCast": "error",
+            "noUselessCatch": "error",
+            "noUselessEscapeInRegex": "error"
+          },
+          "correctness": {
+            "noUnusedLabels": "error",
+            // @typescript-eslint/no-unused-vars covered imports as well
+            "noUnusedImports": "error",
+            "noUnusedVariables": "error"
+          },
+          "suspicious": {
+            "noCatchAssign": "error",
+            "noConstantBinaryExpressions": "error",
+            "noEmptyBlockStatements": "error",
+            "noIrregularWhitespace": "error",
+            "noPrototypeBuiltins": "error",
+            "noUselessRegexBackrefs": "error",
+            "noExplicitAny": "warn"
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "packages/backend/**/*.ts",
+        "packages/listing-providers/**/*.ts",
+        "packages/shared-types/**/*.ts"
+      ],
+      "linter": {
+        "rules": {
+          "complexity": {
+            "noArguments": "error",
+            "noUselessTypeConstraint": "error"
+          },
+          "style": {
+            "useConst": "error",
+            "useSpreadOverApply": "error",
+            // @typescript-eslint/no-require-imports
+            "noCommonJs": "error",
+            "noNamespace": "error",
+            "useArrayLiterals": "error",
+            "useAsConstAssertion": "error"
+          },
+          "suspicious": {
+            "noVar": "error",
+            "noDuplicateEnumValues": "error",
+            "noExtraNonNullAssertion": "error"
+          }
+        }
+      }
+    },
+    {
+      // `no-undef` stayed armed on plain JavaScript only: on TypeScript the
+      // compiler owns undefined names, and `no-undef` cannot see a type (it
+      // reported `RequestInit`, `NodeJS` and the `Express` namespace as
+      // undefined globals). Same scoping here.
+      "includes": [
+        "packages/backend/**/*.{js,mjs,cjs}",
+        "packages/listing-providers/**/*.{js,mjs,cjs}",
+        "packages/shared-types/**/*.{js,mjs,cjs}"
+      ],
+      "linter": { "rules": { "correctness": { "noUndeclaredVariables": "error" } } }
+    },
+    {
+      // typescript-eslint's `no-namespace` allows namespaces in declaration
+      // files (`allowDefinitionFiles`), which is where Express's ambient
+      // augmentation has to live.
+      "includes": ["**/*.d.ts"],
+      "linter": { "rules": { "style": { "noNamespace": "off" } } }
+    },
+    {
+      // Jest's globals, in the only place they exist (the backend's TypeScript
+      // tests need none: `no-undef` is off for TypeScript).
+      "includes": [
+        "packages/frontend/jest.setup.js",
+        "packages/frontend/**/__tests__/**",
+        "packages/frontend/**/*.test.*"
+      ],
+      "javascript": {
+        "globals": ["jest", "describe", "it", "test", "expect", "beforeAll", "beforeEach", "afterAll", "afterEach"]
+      }
+    },
+    // ── Ported from packages/frontend/eslint.config.js (eslint-config-expo) ──
+    // Rules that config enforced at error and Biome implements. What Biome
+    // lacks (eslint-plugin-expo, react-hooks' compiler rules) stays in the
+    // minimal packages/frontend/eslint.config.js.
+    {
+      "includes": ["packages/frontend/**"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            // unused-imports/no-unused-imports
+            "noUnusedImports": "error",
+            // react-hooks/rules-of-hooks
+            "useHookAtTopLevel": "error",
+            "noChildrenProp": "error",
+            "useJsxKeyInIterable": "error"
+          },
+          "security": { "noDangerouslySetInnerHtmlWithChildren": "error" },
+          "suspicious": {
+            "noCommentText": "error",
+            "noDuplicateJsxProps": "error",
+            "noVar": "error"
+          }
+        }
+      }
+    },
+    {
+      // eslint-config-expo turns `no-undef` off for TypeScript and leaves it on
+      // for JavaScript.
+      "includes": ["packages/frontend/**/*.{js,jsx,mjs,cjs}"],
+      "linter": { "rules": { "correctness": { "noUndeclaredVariables": "error" } } }
+    },
+    // ── Baseline (measured at adoption; the number is the violation count) ──
+    // Rules that fire on the existing code are downgraded to "warn", per
+    // package, so `biome ci` passes without touching code. Each line is a
+    // tightening follow-up: fix the findings, then delete the line. These
+    // overrides come LAST so they win over the ported-error blocks above;
+    // where a ported rule appears here, Biome's rule is broader than the
+    // ESLint rule it replaces (e.g. noUnusedImports counts the `React` default
+    // import that eslint-plugin-react's jsx-uses-react treated as used).
+    {
+      "includes": ["packages/backend/**"],
+      "linter": {
+        "rules": {
+          "complexity": {
+            "noUselessSwitchCase": "warn", // 4
+            "useOptionalChain": "warn" // 29
+          },
+          "correctness": {
+            "noUnsafeOptionalChaining": "warn", // 3
+            "noUnusedFunctionParameters": "warn", // 21
+            "useParseIntRadix": "warn" // 7
+          },
+          "style": {
+            "noNonNullAssertion": "warn", // 13
+            "useImportType": "warn", // 32
+            "useNodejsImportProtocol": "warn", // 33
+            "useTemplate": "warn" // 14
+          },
+          "suspicious": {
+            "noAssignInExpressions": "warn", // 1
+            "noConfusingVoidType": "warn", // 27
+            "noEmptyBlockStatements": "warn", // 7
+            "noExplicitAny": "warn", // 104
+            "noExportsInTest": "warn", // 3
+            "noGlobalIsNan": "warn", // 7
+            "noImplicitAnyLet": "warn", // 23
+            "noPrototypeBuiltins": "warn", // 5
+            "noShadowRestrictedNames": "warn", // 2
+            "noTemplateCurlyInString": "warn", // 7
+            "useIterableCallbackReturn": "warn" // 1
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/listing-providers/**"],
+      "linter": {
+        "rules": {
+          "complexity": {
+            "noUselessContinue": "warn", // 3
+            "useLiteralKeys": "warn", // 93
+            "useOptionalChain": "warn" // 7
+          },
+          "correctness": {
+            "noUnreachable": "warn" // 1
+          },
+          "style": {
+            "noNonNullAssertion": "warn", // 6
+            "useImportType": "warn", // 1
+            "useTemplate": "warn" // 3
+          },
+          "suspicious": {
+            "noShadowRestrictedNames": "warn" // 1
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/shared-types/**"],
+      "linter": {
+        "rules": {
+          "complexity": {
+            "useOptionalChain": "warn" // 1
+          },
+          "style": {
+            "useImportType": "warn" // 19
+          },
+          "suspicious": {
+            "useIterableCallbackReturn": "warn" // 1
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/frontend/**"],
+      "linter": {
+        "rules": {
+          "a11y": {
+            "noSvgWithoutTitle": "warn" // 3
+          },
+          "complexity": {
+            "noBannedTypes": "warn", // 1
+            "noImportantStyles": "warn", // 6
+            "noStaticOnlyClass": "warn", // 1
+            "noUselessCatch": "warn", // 11
+            "noUselessSwitchCase": "warn", // 3
+            "useArrowFunction": "warn", // 2
+            "useOptionalChain": "warn" // 6
+          },
+          "correctness": {
+            "noUnusedFunctionParameters": "warn", // 23
+            "noUnusedImports": "warn", // 135
+            "noUnusedVariables": "warn", // 19
+            "useExhaustiveDependencies": "warn", // 8
+            "useHookAtTopLevel": "warn" // 3
+          },
+          "performance": {
+            "noAccumulatingSpread": "warn" // 1
+          },
+          "style": {
+            "noNonNullAssertion": "warn", // 8
+            "useExponentiationOperator": "warn", // 1
+            "useImportType": "warn", // 273
+            "useNodejsImportProtocol": "warn", // 13
+            "useShorthandFunctionType": "warn", // 1
+            "useTemplate": "warn" // 6
+          },
+          "suspicious": {
+            "noArrayIndexKey": "warn", // 51
+            "noAssignInExpressions": "warn", // 2
+            "noExplicitAny": "warn", // 91
+            "noExportsInTest": "warn", // 5
+            "noGlobalIsNan": "warn", // 1
+            "noPrototypeBuiltins": "warn", // 1
+            "noShadowRestrictedNames": "warn", // 10
+            "noTemplateCurlyInString": "warn", // 13
+            "useIterableCallbackReturn": "warn" // 9
+          }
+        }
+      }
+    },
+    {
+      "includes": ["scripts/**", ".github/**"],
+      "linter": {
+        "rules": {
+          "complexity": {
+            "noUselessLoneBlockStatements": "warn" // 1
+          },
+          "correctness": {
+            "noUnusedImports": "warn" // 2
+          },
+          "style": {
+            "useTemplate": "warn" // 3
+          }
+        }
+      }
+    }
+  ]
+}

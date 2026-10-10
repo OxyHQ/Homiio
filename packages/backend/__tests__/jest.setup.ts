@@ -65,7 +65,7 @@ beforeAll(async () => {
   // symptom is not a Postgres failure at all: the webhook route decides it is
   // unconfigured and 404s, and the image-URL validator rejects every ingested
   // listing. Measured — a top-level import turned 8 unrelated suites red.
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  // biome-ignore lint/style/noCommonJs: lazy require so config reads process.env after the assignments above
   const { connectPostgres } = require('../db/postgres') as typeof import('../db/postgres');
   await connectPostgres();
 });

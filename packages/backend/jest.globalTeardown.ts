@@ -59,7 +59,7 @@ function removeWorkerImageStores(): void {
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
+// biome-ignore lint/style/noCommonJs: jest.workerCount.cjs is CommonJS, shared with jest.config.js
 const { HOMIIO_JEST_DATABASE_MANIFEST } = require('./jest.workerCount.cjs');
 
 export default async function globalTeardown(): Promise<void> {

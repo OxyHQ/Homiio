@@ -304,12 +304,12 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
   const framedBoundsKey = framedBounds
     ? `${framedBounds.west},${framedBounds.south},${framedBounds.east},${framedBounds.north}`
     : null;
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `framedBoundsKey` is the dependency that matters; `framedBounds` is the value it stands for
   useEffect(() => {
     if (!framedBounds) return;
     mapRef.current?.fitBounds(framedBounds);
     // `framedBoundsKey` is the dependency that matters; `framedBounds` is the
     // value it stands for.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [framedBoundsKey]);
 
   const selectedProperty = useMemo(

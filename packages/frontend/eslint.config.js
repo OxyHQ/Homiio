@@ -1,6 +1,11 @@
-// https://docs.expo.dev/guides/using-eslint/
+// Minimal ESLint: ONLY the rules Biome does not implement. Biome
+// (`biome.jsonc` at the repo root) owns formatting and every other lint rule,
+// including the ones eslint-config-expo used to supply. Run both with
+// `bun run lint` at the root; `expo lint` runs this file alone.
 const { defineConfig } = require('eslint/config');
-const expoConfig = require('eslint-config-expo/flat');
+const tsParser = require('@typescript-eslint/parser');
+const expo = require('eslint-plugin-expo');
+const reactHooks = require('eslint-plugin-react-hooks');
 
 module.exports = defineConfig([
   {
@@ -8,40 +13,39 @@ module.exports = defineConfig([
     // also carries `rules`, `ignores` only exempts those files from THAT
     // object. `dist/**` rather than `dist/*` for the same reason a single `*`
     // stops at one level.
-    ignores: ['dist/**'],
+    ignores: ['dist/**', 'android/app/build'],
   },
-  expoConfig,
   {
-    plugins: {
-      'unused-imports': require('eslint-plugin-unused-imports'),
-    },
+    files: ['**/*.{ts,tsx}'],
+    languageOptions: { parser: tsParser },
+  },
+  {
+    files: ['**/*.{js,jsx,mjs,cjs}'],
+    languageOptions: { parserOptions: { ecmaFeatures: { jsx: true } } },
+  },
+  {
+    plugins: { expo, 'react-hooks': reactHooks },
     rules: {
-      'no-unused-vars': 'off',
-      '@typescript-eslint/no-unused-vars': 'off',
-      'unused-imports/no-unused-imports': 'error',
-      'unused-imports/no-unused-vars': [
-        'warn',
-        {
-          args: 'after-used',
-          argsIgnorePattern: '^_',
-          vars: 'all',
-          varsIgnorePattern: '^_',
-        },
-      ],
-    },
-  },
-  {
-    /**
-     * Jest's globals, in the only place they exist.
-     *
-     * `jest.setup.js` and the suites use `jest`, `describe`, `it` and `expect`,
-     * and nothing told eslint where the tests are — so `no-undef` reported six
-     * of them as undefined globals. The rule is right; the config had simply
-     * never been told. Same fix #249 applied to the backend.
-     */
-    files: ['jest.setup.js', '**/__tests__/**/*.{ts,tsx,js,jsx}', '**/*.test.{ts,tsx,js,jsx}'],
-    languageOptions: {
-      globals: require('globals').jest,
+      // `EXPO_PUBLIC_*` reads Metro can only inline when written out in full
+      // (`process.env.EXPO_PUBLIC_X`). A destructured or computed read is
+      // silently `undefined` in the bundle. Biome has no equivalent.
+      'expo/no-env-var-destructuring': 'error',
+      'expo/no-dynamic-env-var': 'error',
+      'expo/use-dom-exports': 'error',
+
+      // eslint-plugin-react-hooks v7's recommended set, minus exhaustive-deps,
+      // which Biome's `useExhaustiveDependencies` now owns. The React Compiler
+      // rules (`set-state-in-effect`, `immutability`, `refs`, `purity`, …) have
+      // no Biome equivalent; see docs/cold-start.md for which of them are
+      // genuine findings in an app that does not run the compiler.
+      //
+      // `rules-of-hooks` stays HERE at error even though Biome has
+      // `useHookAtTopLevel`: Biome's rule also treats any member call named
+      // `use*` as a hook (`scope.useCurrentLocation()` inside a callback), so
+      // it can only run at warn here without false errors. This one keeps the
+      // guard armed.
+      ...reactHooks.configs.recommended.rules,
+      'react-hooks/exhaustive-deps': 'off',
     },
   },
   {

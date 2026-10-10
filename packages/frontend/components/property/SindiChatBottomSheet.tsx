@@ -40,6 +40,7 @@ export function SindiChatBottomSheet({ property, initialMessage }: SindiChatBott
     // refresh plumbing here.
     const authenticatedFetch = useSindiAuthenticatedFetch();
 
+    // biome-ignore lint/correctness/useExhaustiveDependencies: only depend on auth state
     useEffect(() => {
         // Prevent multiple initializations and ensure auth is ready
         if (isInitialized.current || !oxyServices || !activeSessionId) return;
@@ -114,7 +115,6 @@ export function SindiChatBottomSheet({ property, initialMessage }: SindiChatBott
         };
 
         initializeConversation();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [oxyServices, activeSessionId]); // Only depend on auth state
 
     // Check if user is authenticated

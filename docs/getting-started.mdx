@@ -124,7 +124,8 @@ The frontend web export is what the Cloudflare Worker serves. The backend is dep
 
 ```sh
 bun run test            # Run tests across all packages
-bun run lint            # Lint all packages
+bun run lint            # Biome + the frontend's minimal ESLint
+bun run format          # Format with Biome
 bun run clean           # Remove dist directories and node_modules
 ```
 

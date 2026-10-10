@@ -10,7 +10,6 @@
     "build": "bunx tsc",
     "dev": "bunx tsc --watch",
     "clean": "rm -rf dist tsconfig.tsbuildinfo",
-    "lint": "eslint src --ext .ts",
     "test": "cd ../backend && bun run test -- --testPathPattern=\"listing|provider|ingest|proxy|browser|strategy|blueground|fixture|klein|idealista|fotocasa|habitaclia|price|contact|classifieds|registry|realtor|realestate|bayut\""
   },
   "keywords": [
@@ -34,12 +33,7 @@
     }
   },
   "devDependencies": {
-    "@eslint/js": "^9.39.5",
     "@types/node": "^22.20.1",
-    "@typescript-eslint/eslint-plugin": "^8.64.0",
-    "@typescript-eslint/parser": "^8.64.0",
-    "eslint": "^9.39.5",
-    "globals": "^17.7.0",
     "typescript": "^6.0.3"
   },
   "files": [

@@ -113,6 +113,7 @@ export default function RoommatesPage() {
   );
 
   // Tab-driven fetch (kept as effect since data is owned by the legacy hook)
+  // biome-ignore lint/correctness/useExhaustiveDependencies: useRoommate fns are stable but lint can't always see that
   useEffect(() => {
     if (!hasProfile || !hasProfile) return;
     switch (activeTab) {
@@ -129,18 +130,18 @@ export default function RoommatesPage() {
         break;
     }
     // useRoommate fns are stable but lint can't always see that
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, hasProfile, hasProfile]);
 
   // When the user just enabled matching, refresh the discover list
+  // biome-ignore lint/correctness/useExhaustiveDependencies: refresh the discover list only when matching is switched on
   useEffect(() => {
     if (hasRoommateMatching && activeTab === 'discover') {
       fetchProfiles();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasRoommateMatching]);
 
   // Auth-bound re-fetch on first mount so we don't race the auth context
+  // biome-ignore lint/correctness/useExhaustiveDependencies: auth-bound re-fetch; re-runs only when the auth session changes
   useEffect(() => {
     if (!oxyServices || !activeSessionId) return;
     if (!hasProfile || !hasProfile) return;
@@ -148,7 +149,6 @@ export default function RoommatesPage() {
     if (activeTab === 'discover') fetchProfiles();
     if (activeTab === 'requests') fetchRequests();
     if (activeTab === 'relationships') fetchRelationships();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [oxyServices, activeSessionId]);
 
   const onRefresh = useCallback(async () => {

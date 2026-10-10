@@ -187,6 +187,7 @@ jobs:
             shared:
               - 'bun.lock'
               - 'package.json'
+              - 'biome.jsonc'
               - 'bunfig.toml'
               - 'tsconfig.json'
               - '.github/**'
@@ -481,10 +482,12 @@ jobs:
   lint:
     needs: changes
     if: ${{ !cancelled() && !failure() && (github.event_name != 'pull_request' || needs.changes.outputs.code == 'true') }}
-    # ARMED. `bun run lint` exits 0 across all four packages.
+    # ARMED. Biome (formatting + linting, config in `biome.jsonc`) across the
+    # whole repository, plus the minimal frontend ESLint that carries only the
+    # rules Biome does not implement (eslint-plugin-expo, react-hooks).
     #
-    # It was gated on `vars.HOMIIO_LINT_GATE == 'ready'` from #254 until this
-    # commit, and that variable was never set — at the repository or the org —
+    # It was gated on `vars.HOMIIO_LINT_GATE == 'ready'` from #254 until it was
+    # armed, and that variable was never set — at the repository or the org —
     # so the job was SKIPPED on every run it ever appeared in. A skipped job is
     # not a neutral outcome on a pull request: `gh pr checks` prints it as
     # `skipping` in the same list as the passes, the run concludes `success`,
@@ -492,40 +495,31 @@ jobs:
     # reads the whole thing as green. The presence of a job says nothing about
     # what it ran.
     #
-    # The debt the switch was waiting on is gone, and not because a rule was
-    # relaxed: no severity in any of the four eslint configs has changed since
-    # #254. `require(` in backend `.ts` went 268 -> 15 while the package GREW
-    # from 302 to 449 files, which is the Postgres port paying off the 272
-    # `no-require-imports` that made up most of the original 344.
+    # Warnings do not fail the job. That is deliberate and it is a REAL gap —
+    # nothing here stops the warning count growing. The rules that fired on the
+    # code when Biome was adopted are downgraded to "warn" in the baseline
+    # block at the end of `biome.jsonc`, each with its count; they are
+    # tightening follow-ups, not settled policy.
     #
-    # Measured on this commit, `bun run lint`: backend 0 errors / 102 warnings,
-    # frontend 0 / 23, listing-providers and shared-types clean. Warnings do not
-    # fail the job. That is deliberate for now and it is a REAL gap — nothing
-    # here stops the warning count growing — but 101 of the 102 backend warnings
-    # are `@typescript-eslint/no-explicit-any`, and pinning a ceiling before
-    # those are typed would only teach the next person to raise the ceiling.
-    #
-    # NOTHING IS BUILT IN THIS JOB, ON PURPOSE — eslint does not typecheck, so a
-    # build buys nothing and costs minutes. The generated output that used to
-    # make this dangerous (`bun run lint` reporting 344 on a clean tree and 558
-    # after `bun run build`) is now excluded by `ignores: ['dist/**']` in the
-    # backend and frontend configs rather than by hoping nobody builds first.
+    # NOTHING IS BUILT IN THIS JOB, ON PURPOSE — neither tool typechecks, so a
+    # build buys nothing and costs minutes. Generated output (`dist/`, stray tsc
+    # emit beside listing-providers/shared-types sources) is excluded in
+    # `biome.jsonc` and the ESLint config rather than by hoping nobody builds
+    # first.
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: ${{ env.BUN_VERSION }}
-      # Scripts stay ENABLED so the root postinstall builds shared-types. Not for
-      # types — eslint does not typecheck — but because the frontend's config
-      # carries eslint-plugin-import, which resolves modules for real and would
-      # report @homiio/shared-types as unresolved without its dist. Building
-      # shared-types is safe here; what must not happen is building the BACKEND,
-      # per the note above.
+      # Biome comes from the devDependency so its version is the lockfile's.
       - name: Install
         run: bash .github/scripts/bun-install.sh --frozen-lockfile
-      - name: Lint every package
-        run: bun run lint
+      # `biome ci` checks formatting AND lint, and fails on any unformatted file.
+      - name: Biome
+        run: bunx biome ci .
+      - name: Frontend ESLint (rules Biome lacks)
+        run: bun run --cwd packages/frontend lint
 
   frontend-typecheck:
     needs: changes

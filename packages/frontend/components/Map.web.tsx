@@ -429,6 +429,7 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
   // Construct the maplibre map once, against the real DOM container. The empty
   // dep array is the point: the instance is created a single time and lives for
   // the component's lifetime — live props are read through the refs above.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the map is intentionally created once; live values flow through refs
   useEffect(() => {
     const container = containerRef.current;
     if (!container || mapRef.current) return;
@@ -559,7 +560,6 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
       map = null;
     };
     // The map is intentionally created once; live values flow through refs.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Stream marker updates to the live map.
