@@ -1,26 +1,17 @@
 /**
  * What the `controllers/profile/*` handlers share.
  *
- * ## Nothing here re-exports a Mongoose model any more
+ * Every handler in this directory reads Postgres through `db/profiles/*`,
+ * `db/saved/*` and `db/properties/*`.
  *
- * `Saved`, `SavedPropertyFolder`, `RecentlyViewed` and `Property` went with the
- * saved-items port; `Profile` goes with this one. Every handler in this
- * directory now reads Postgres through `db/profiles/*`, `db/saved/*` and
- * `db/properties/*`, so the models are no longer reachable from here at all —
- * which is what makes "the profile is served from Postgres" a property of the
- * module graph rather than of everybody remembering.
+ * ## No profile cache, and no seeded defaults
  *
- * ## The profile cache and `_createDefaultProfile` are gone
- *
- * Both belonged to the Mongo profile read and both were removed with it:
- *
- *  - the five-minute in-process `Map` could only ever be correct in a single
- *    process, and Homiio runs several ECS tasks — see `crud.ts`;
- *  - `_createDefaultProfile` seeded a `personalProfile` block with the schema's
- *    defaults, which made "the user chose UTC" indistinguishable from "nobody
- *    ever asked". `ensureProfile` in `db/profiles/profileRepository.ts` creates
- *    the row with every column NULL, which is what `db/schema/profiles.ts`
- *    declares them nullable FOR.
+ *  - an in-process cache could only ever be correct in a single process, and
+ *    Homiio runs several ECS tasks — see `crud.ts`;
+ *  - seeding a new profile with defaults would make "the user chose UTC"
+ *    indistinguishable from "nobody ever asked". `ensureProfile` in
+ *    `db/profiles/profileRepository.ts` creates the row with every column NULL,
+ *    which is what `db/schema/profiles.ts` declares them nullable FOR.
  */
 
 import { successResponse } from '../../middlewares/errorHandler';

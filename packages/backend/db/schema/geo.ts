@@ -34,9 +34,8 @@ export const countries = pgTable(
     /**
      * ISO-3166-1 alpha-2 code, uppercase (`ES`).
      *
-     * Mongoose declared `uppercase: true` and a `^[A-Z]{2}$` validator. Neither
-     * becomes a constraint here — see CONVENTIONS.md §"Mongoose behaviour that
-     * has no schema counterpart" and §"Format validators are deferred".
+     * Uppercased at the call site and never format-checked by a constraint — see
+     * CONVENTIONS.md §"Which rules become constraints, and which do not".
      */
     code: text().notNull(),
     /** Canonical English display name (`Spain`). */
@@ -54,14 +53,12 @@ export const countries = pgTable(
   },
   (table) => [
     uniqueIndex('countries_code_key').on(table.code),
-    // `geoResolutionService` and `cityController` look a country up by
-    // `{ $regex: '^name$', $options: 'i' }` — a case-insensitive EQUALITY, not a
-    // search. A functional index on `lower(name)` is what makes the Postgres
-    // form (`lower(name) = lower($1)`) index-backed.
+    // `geoResolutionService` and `cityController` look a country up by a
+    // case-insensitive EQUALITY, not a search. A functional index on
+    // `lower(name)` is what makes `lower(name) = lower($1)` index-backed.
     //
-    // The Mongo `{ name: 'text' }` index is deliberately NOT ported: nothing
-    // ever issued a `$text` query against countries, so it was dead weight. And
-    // no trigram index here either — countries are never typeahead-searched, and
+    // No full-text index: nothing searches countries that way. And no trigram
+    // index here either — countries are never typeahead-searched, and
     // an index nobody queries is a write cost with no read.
     index('countries_name_lower_idx').on(sql`lower(${table.name})`),
     check(
@@ -103,8 +100,8 @@ export const regions = pgTable(
     // A region name is unique within its country ("Valencia" is a province in
     // Spain and a state in Venezuela).
     uniqueIndex('regions_country_name_key').on(table.countryId, table.name),
-    // Mongo's standalone `{ countryId: 1 }` is NOT ported: it is the leading
-    // prefix of the unique index above, and a btree serves any leading prefix.
+    // No standalone `country_id` index: it is the leading prefix of the unique
+    // index above, and a btree serves any leading prefix.
     index('regions_name_lower_idx').on(sql`lower(${table.name})`),
     // The SCOPED case-insensitive lookup, and it is a different query from the
     // one above rather than a duplicate of it. `cityController.lookupCity`
@@ -158,9 +155,8 @@ export const cities = pgTable(
      * Centre point, for map framing only.
      *
      * PLAIN COLUMNS, with NO `geography` column and NO GiST index — deliberately
-     * different from `addresses`, and the difference is the point. Mongo has no
-     * `2dsphere` index on `cities.coordinates` and nothing queries a city
-     * spatially: a "cities near me" search resolves through `addresses`, which
+     * different from `addresses`, and the difference is the point. Nothing
+     * queries a city spatially: a "cities near me" search resolves through `addresses`, which
      * is where the real spatial index lives. Adding a generated point here
      * because the columns look like the ones on `addresses` is exactly the
      * speculative index CONVENTIONS.md forbids — it would cost every write and
@@ -288,17 +284,16 @@ export const cities = pgTable(
      * one of those duplicates — now infers its `ON CONFLICT` from this index.
      */
     uniqueIndex('cities_region_slug_key').on(table.regionId, table.slug),
-    // `{ countryId: 1 }` IS ported (a country's cities are listed directly);
-    // Mongo's standalone `{ regionId: 1 }` is not, being the leading prefix of
-    // the unique index above.
+    // `country_id` IS indexed (a country's cities are listed directly);
+    // `region_id` alone is not, being the leading prefix of the unique index
+    // above.
     index('cities_country_id_idx').on(table.countryId),
-    // Mongo carried `{ isActive: 1 }` and `{ propertiesCount: -1 }` as two
-    // separate single-field indexes, and every real query uses them TOGETHER:
+    // Every real query uses `is_active` and `properties_count` TOGETHER:
     // `cityController.listCities`, `.searchCities` and `getPopularCities` all
-    // filter `isActive: true` and sort `{ propertiesCount: -1, name: 1 }`. One
-    // partial composite answers all three; the two singles answered none of them
-    // completely. This is the "add the index Mongo needed and lacked" case, not
-    // a speculative one — it is derived from three existing call sites.
+    // filter on `is_active` and sort by `properties_count desc, name`. One
+    // partial composite answers all three; two single-column indexes would
+    // answer none of them completely. Derived from three existing call sites,
+    // not speculation.
     index('cities_active_popularity_idx')
       .on(sql`${table.propertiesCount} desc`, table.name)
       .where(sql`${table.isActive}`),
@@ -362,14 +357,13 @@ export const neighborhoods = pgTable(
     latitude: doublePrecision(),
     longitude: doublePrecision(),
 
-    // Mongo stored the bounding box as `bbox: [Number]` — a four-element array
-    // whose ORDER carries its entire meaning (`[west, south, east, north]`).
+    // The wire's `bbox` is a four-element array whose ORDER carries its entire
+    // meaning (`[west, south, east, north]`).
     // Four NAMED columns make a transposition unrepresentable: `[2.1, 41.3,
     // 2.2, 41.4]` and `[41.3, 2.1, 41.4, 2.2]` are both valid arrays and only
     // one is Barcelona, whereas `bbox_west = 41.3` is obviously wrong to anyone
-    // who reads it. The Mongo validator ("length 0 or 4") becomes the
-    // all-or-none CHECK below, which is the same rule stated where the database
-    // can enforce it.
+    // who reads it. "Length 0 or 4" is the all-or-none CHECK below, stated where
+    // the database can enforce it.
     bboxWest: doublePrecision(),
     bboxSouth: doublePrecision(),
     bboxEast: doublePrecision(),
@@ -382,8 +376,8 @@ export const neighborhoods = pgTable(
   },
   (table) => [
     uniqueIndex('neighborhoods_city_name_key').on(table.cityId, table.name),
-    // Mongo's standalone `{ cityId: 1 }` is the leading prefix of the unique
-    // index above and is not ported.
+    // No standalone `city_id` index: it is the leading prefix of the unique
+    // index above.
     index('neighborhoods_name_lower_idx').on(sql`lower(${table.name})`),
     // The city-scoped case-insensitive lookup — `getNeighborhoodByName` with a
     // `city`, and the neighborhood branch of `resolveGeoFilterAddressIds`. This

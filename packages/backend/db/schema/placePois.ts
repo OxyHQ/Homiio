@@ -11,11 +11,11 @@
  *
  * ## This table carries a TTL, and it is a genuine one
  *
- * `{ expiresAt: 1 }, { expireAfterSeconds: 0 }`. Unlike
+ * `expires_at` is a real row deadline. Unlike
  * `conversations.sharing_expires_at`, which destroys a user's transcript, this
  * one deletes a cached copy of somebody else's public data and the service
  * re-fetches it on the next miss. It is registered in `db/expiry.ts`, and it has
- * to be: Mongo reaped these rows and Postgres will not.
+ * to be: Postgres reaps nothing on its own.
  *
  * ## `categories[]` becomes a table, not twelve triples of columns and not jsonb
  *
@@ -25,7 +25,7 @@
  * opposite reason: the shape is CLOSED and known, which is the test
  * `CONVENTIONS.md` sets for when `jsonb` is NOT the answer.
  *
- * The child table also buys a constraint the Mongo array could not express —
+ * The child table also buys a constraint an array could not express —
  * `UNIQUE(place_poi_id, key)`, i.e. one summary per category per cell. A
  * duplicated key made `present` and `count` depend on which element a reader
  * happened to take first.
@@ -108,14 +108,13 @@ export const placePois = pgTable(
      * The expiry sweep's range scan, and it is REQUIRED rather than nice to
      * have: `findUnsupportedExpiryColumns` fails the build for a registered
      * column with no leading btree, because without one the sweep is a full scan
-     * on a schedule. Mongo's TTL index carried the same obligation implicitly.
+     * on a schedule.
      */
     index('place_pois_expires_at_idx').on(table.expiresAt),
     /** `min: 1` from the schema — a zero-metre radius is a cache key for nothing. */
     check('place_pois_radius_check', sql`${table.radiusM} >= 1`),
     /**
-     * The coordinate bounds. Mongo declared `min`/`max` on both, and unlike most
-     * range validators in this migration these are not deferred: the columns are
+     * The coordinate bounds. Unlike most range rules these are not deferred: the columns are
      * half of a cache KEY, so a wrapped coordinate does not fail, it silently
      * serves one place's amenities for another's.
      */
@@ -156,7 +155,7 @@ export const placePoiCategories = pgTable(
     check('place_poi_categories_count_check', sql`${table.count} >= 0`),
     /**
      * `present`, `count` and `nearest_m` are three views of one measurement and
-     * Mongo let them disagree — `present: false` with `count: 5` was
+     * must not disagree — without this CHECK `present: false` with `count: 5` is
      * representable, and the widget renders from `present`. A category is present
      * exactly when it was counted, and a distance to the nearest match exists
      * exactly then too.

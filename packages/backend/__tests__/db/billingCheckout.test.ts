@@ -89,10 +89,10 @@ describe('creditCheckoutSession applies a session exactly once', () => {
   });
 
   /**
-   * Two deliveries arriving AT ONCE, which is the case the Mongo
-   * read-modify-write of `processedSessions[]` could not survive: both read an
-   * array without the session, both appended, both saved, and the account was
-   * credited twice for one payment.
+   * Two deliveries arriving AT ONCE, which is the case a read-modify-write of
+   * the processed sessions could not survive: both read a list without the
+   * session, both appended, both saved, and the account was credited twice for
+   * one payment.
    */
   it('credits once when two deliveries race', async () => {
     const oxyUserId = account();
@@ -325,7 +325,7 @@ describe('readEntitlements', () => {
     expect(entitlements?.processedSessions).toHaveLength(2);
   });
 
-  it('carries no Mongo baggage', async () => {
+  it('names its identity `id`, with no `_id` or `__v`', async () => {
     const oxyUserId = account();
     await ensureBilling(oxyUserId);
 

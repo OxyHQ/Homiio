@@ -73,9 +73,7 @@ const TERMINAL_STATUSES: ReadonlyArray<string> = [PropertyStatus.RENTED, Propert
  * The sortable columns the room feed accepts.
  *
  * An ALLOW-LIST, not a lookup with a fallback: `sortBy` comes straight off the
- * query string, and the Mongo version interpolated it into a sort document,
- * where an unknown field sorted by nothing. Against SQL a column name has to be
- * resolved to a real column, so an unknown one is answered with the default
+ * query string. A column name has to be resolved to a real column, so an unknown one is answered with the default
  * rather than reaching the statement.
  */
 const ROOM_SORT_COLUMNS = {
@@ -326,8 +324,7 @@ class RoomController {
   /**
    * Delete (archive) a room owned by the authenticated user.
    *
-   * Archives AND stamps `deleted_at`, where the Mongo version set only the
-   * status. That is a deliberate correction, not a drift: every catalogue read
+   * Archives AND stamps `deleted_at`: every catalogue read
    * filters on `deleted_at IS NULL`, so a room archived without the stamp stays
    * visible to any read that does not also exclude archived rows — and the
    * property delete endpoint next door has always set both.

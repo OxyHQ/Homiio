@@ -158,8 +158,8 @@ function toRentalHistoryDTO(
           verified: row.verified,
         }
       : {}),
-    // `landlordContact` was a closed three-field subdocument in Mongo and is
-    // three columns here; the wire keeps the object, for the same reason the
+    // `landlordContact` is a closed three-field object on the wire and three
+    // columns here; the wire keeps the object, for the same reason the
     // `personalProfile` wrapper is rebuilt.
     ...(disclose.contact
       ? {
@@ -195,11 +195,9 @@ function toChatMessageDTO(row: ProfileChatMessageRow): Record<string, unknown> {
 /**
  * Whether the person has stated ANY roommate preference.
  *
- * The flattened columns cost one distinction that Mongo got for free:
- * `personalProfile` was declared with no `default`, so mongoose never
- * materialised it and `settings.roommate.preferences` was genuinely
- * `undefined` for anybody who had not filled the form in. Every column here is
- * nullable precisely to keep that fact, and this is the predicate that reads
+ * The flattened columns have to preserve one distinction: for anybody who has
+ * not filled the form in, `settings.roommate.preferences` is genuinely absent.
+ * Every column here is nullable precisely to keep that fact, and this is the predicate that reads
  * it back — `GET /api/roommates/preferences` answers `data: null` on it, and
  * `controllers/roommate/matching.ts` decides whether a person can be scored at
  * all on the same question.
@@ -239,8 +237,8 @@ export function hasStatedRoommatePreferences(profile: ProfileRow): boolean {
  * definition and both routes are served by it.
  *
  * `interests` and `location` are here for the first time: their columns were
- * added by migration 0008 because mongoose strict mode had made them
- * unstorable — see `db/schema/profiles.ts`.
+ * added by migration 0008 so they could be stored at all — see
+ * `db/schema/profiles.ts`.
  */
 export function toRoommatePreferencesDTO(profile: ProfileRow): Record<string, unknown> {
   return {
@@ -271,9 +269,8 @@ export function toRoommatePreferencesDTO(profile: ProfileRow): Record<string, un
  * The `personalProfile` subtree, rebuilt from the flattened columns and the
  * child rows.
  *
- * Every value is emitted as stored, NULL included. Mongoose never materialized
- * `personalProfile` (it is declared with no `default`), so a column being NULL
- * means the person never answered — which is a different fact from the schema's
+ * Every value is emitted as stored, NULL included. A column being NULL means
+ * the person never answered — which is a different fact from the schema's
  * default, and the edit form renders the two differently.
  */
 function toPersonalProfile(
@@ -287,13 +284,10 @@ function toPersonalProfile(
   // the scope the caller passed rather than inside the repository — the
   // repository cannot know who asked.
   //
-  // Mongo returned the entire document on both public routes, income and
-  // landlord phone numbers included. That is a deliberate behaviour CHANGE here,
-  // not a discovery: `showReferences` and `showRentalHistory` default to FALSE,
+  // Neither public route returns income or landlord phone numbers:
+  // `showReferences` and `showRentalHistory` default to FALSE,
   // so the product's own default already says a stranger does not see either
-  // block, and `/api/public/profiles/*` needs no authentication at all. It costs
-  // nothing today — both child tables hold ZERO rows in production — which is
-  // why this is the batch to make it true in.
+  // block, and `/api/public/profiles/*` needs no authentication at all.
   const owner = visibility === 'owner';
   const showReferences = owner || profile.settingsPrivacyShowReferences === true;
   const showTenancy = owner || profile.settingsPrivacyShowRentalHistory === true;
@@ -368,7 +362,7 @@ function toPersonalProfile(
     },
     // The Sindi transcript kept on the profile. Owner-only: it is the person's
     // own conversation with the assistant and no privacy flag ever gated it,
-    // because in Mongo it was only ever read back by its owner.
+    // because it is only ever read back by its owner.
     chatHistory: visibility === 'owner' ? hydrated.chatHistory.map(toChatMessageDTO) : [],
   };
 }
@@ -376,8 +370,7 @@ function toPersonalProfile(
 /**
  * The wire shape `GET /api/profiles/me` and the two public reads return.
  *
- * `id` and not `_id`: Mongoose's `toJSON` transform renamed it and PR #287 made
- * that a clean cut across the wire contract.
+ * `id` and not `_id`: PR #287 made that a clean cut across the wire contract.
  */
 export function toProfileDTO(
   hydrated: HydratedProfile,

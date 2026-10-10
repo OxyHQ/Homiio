@@ -1,25 +1,19 @@
 /**
  * The agency repository — resolving a raw agency name to a persisted row.
  *
- * Ported from `AgencySchema.statics.findOrCreateByName`, which the schema header
- * calls "the SOLE write path for the collection" and which the census confirms:
- * three static call sites (`reviewController` twice, `IngestionService` once)
- * plus one dynamic one (`controllers/eviction/shared.ts`, resolving through
- * `mongoose.models.Agency`). Agencies are DERIVED — no authenticated endpoint
+ * {@link findOrCreateAgencyByName} is the SOLE write path for the table, called
+ * by `reviewController`, `IngestionService` and `controllers/eviction/shared.ts`.
+ * Agencies are DERIVED — no authenticated endpoint
  * creates one — so keeping the single entry point is what stops a second
  * spelling of "normalize, then dedupe" appearing beside this one.
  *
- * ## The read-then-write became an INSERT that handles `23505`
+ * ## An INSERT that handles `23505`, not a read-then-write
  *
- * `db/MIGRATION-CONTRACT.md` names this collection specifically: idempotency
- * that was a read-then-write with a race window becomes a unique KEY, and the
- * ported code inserts and handles the violation rather than re-implementing the
- * read. `agencies_normalized_name_key` is that key.
+ * `db/MIGRATION-CONTRACT.md` names this table specifically: idempotency lives in
+ * a unique KEY, and the code inserts and handles the violation rather than
+ * re-implementing the read. `agencies_normalized_name_key` is that key.
  *
- * The Mongoose static already handled the race — it caught 11000 and re-read —
- * so this is not new behaviour, it is the same behaviour expressed against an
- * index that actually enforces it. What IS new is that the two unique indexes
- * are told apart: a `normalized_name` violation means a concurrent writer
+ * The two unique indexes are told apart: a `normalized_name` violation means a concurrent writer
  * created the SAME agency and the winner is reused, while a `slug` violation
  * means a DIFFERENT agency wanted the same URL and the suffix advances. Matching
  * on `23505` alone would treat the second as the first and return somebody
@@ -59,7 +53,7 @@ const MAX_NAME_LENGTH = 120;
 /**
  * Bounded slug-suffix search before falling back to a timestamp suffix.
  *
- * Verbatim from the Mongoose static. Fifty deterministic attempts keep
+ * Fifty deterministic attempts keep
  * `agency`, `agency-2`, … readable for every realistic collision; beyond that
  * the name is pathological and a stable-but-ugly slug beats an unbounded loop.
  */
@@ -71,7 +65,7 @@ export type AgencyRow = typeof agencies.$inferSelect;
  * Resolve a raw agency name to a persisted agency, creating it on first sight.
  *
  * Returns `null` when the name is empty or too short to identify an agency —
- * the caller simply skips agency attribution, exactly as it did against Mongo.
+ * the caller simply skips agency attribution.
  * That is a deliberate non-failure: an unparseable contact block must not fail
  * an ingest or a review.
  *

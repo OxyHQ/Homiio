@@ -215,7 +215,6 @@ shape are in [Routes](./routes).
 
 ## The `id` serialization contract
 
-<!-- vocabulary-exempt:start states the wire contract by naming the token it forbids; the rule is unstatable without it -->
 
 **Homiio's wire format names every identity `id`.** Nothing this API returns is
 called `_id`.
@@ -243,7 +242,6 @@ guarantee is one pass over a response body and the cost of losing it was paid
 once already: a wire-contract change shipped with the backend rolled by hand and
 the frontend left behind, and production served `id` to a bundle reading `._id`.
 
-<!-- vocabulary-exempt:end -->
 
 ## Search and PostGIS
 
@@ -405,5 +403,5 @@ have exactly one implementation:
 | Worker entry | `packages/backend/worker.ts` |
 | App shell + providers | `packages/frontend/app/_layout.tsx` |
 | Backend client | `packages/frontend/utils/api.ts` |
-| Migration history and porting rules | `packages/backend/db/MIGRATION-CONTRACT.md` |
+| Migration and repository rules | `packages/backend/db/MIGRATION-CONTRACT.md` |
 | Per-table schema decisions | `packages/backend/db/schema/CONVENTIONS.md` |

@@ -119,11 +119,10 @@ const rateLimitKey = (req: Request): string => rateLimitKeyFor(req, 'rl');
 /**
  * Open the store before serving traffic.
  *
- * Postgres is the only one now, and it is not optional: every request path
- * reads it, and `getDb()` throws when no pool has been published. A process
- * that boots without it would answer its first request with a 500 instead of
- * failing at startup, so this exits non-zero — the same contract the Mongo
- * connection carried before it was removed.
+ * Postgres is the only one, and it is not optional: every request path reads
+ * it, and `getDb()` throws when no pool has been published. A process that
+ * boots without it would answer its first request with a 500 instead of failing
+ * at startup, so this exits non-zero.
  */
 async function initializeDatabase() {
   try {

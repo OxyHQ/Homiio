@@ -36,9 +36,8 @@ import { serializeProperty } from '../../db/properties/propertySerializer';
  * Resolve a property's `[longitude, latitude]` from its populated address.
  *
  * The address is nested under `address` on the wire and carries the historical
- * GeoJSON `[lng, lat]` pair, so that is what this reads. The
- * populate-or-raw-`addressId` fallback it replaces existed because Mongoose's
- * post-find hook renamed the populated reference; a join has no such ambiguity.
+ * GeoJSON `[lng, lat]` pair, so that is what this reads; a join has no
+ * populated-or-raw ambiguity.
  * Returns null when no usable numeric coordinate pair is present.
  */
 function resolveCoordinates(property: Record<string, unknown>): [number, number] | null {

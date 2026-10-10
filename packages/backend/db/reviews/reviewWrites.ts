@@ -2,23 +2,21 @@
  * The review WRITE repository — create, edit, delete and the helpful-vote
  * toggle.
  *
- * Three Mongoose behaviours had to be re-expressed here rather than ported, and
- * each is the reason a piece of this module exists:
+ * Three rules, and each is the reason a piece of this module exists:
  *
- *  - **`pre('validate')`'s `livedForMonths`.** A required, `NOT NULL` column
- *    that is NEVER user-supplied — `CREATABLE_REVIEW_FIELDS` does not list it —
- *    and the hook recomputed it on every `save()`, so an EDIT that moved the
- *    dates moved the duration with them. {@link deriveLivedForMonths} is the one
+ *  - **`livedForMonths`.** A required, `NOT NULL` column that is NEVER
+ *    user-supplied — `CREATABLE_REVIEW_FIELDS` does not list it — and it is
+ *    recomputed on every write, so an EDIT that moves the dates moves the
+ *    duration with them. {@link deriveLivedForMonths} is the one
  *    definition and both write paths call it; nothing else in this package may
  *    set the column. `reviews_lived_order_check` backs it from the database
  *    side, so a wrong pair fails loudly rather than storing a negative tenancy.
- *  - **The duplicate check.** `Review.findOne({ oxyUserId, addressId })` before
- *    an insert is a read-then-write two concurrent submissions both pass.
+ *  - **The duplicate check.** A read before an insert is a read-then-write two
+ *    concurrent submissions both pass.
  *    `reviews_author_address_key` is the rule; this module INSERTS and answers
  *    the violation, which is the shape `db/MIGRATION-CONTRACT.md` prescribes.
- *  - **`$addToSet` / `$pull` on `helpfulVoters`.** The controller read the array,
- *    decided, and wrote — reintroducing the race `$addToSet` had closed. The
- *    toggle is now a DELETE whose `RETURNING` set IS the decision, so of two
+ *  - **The helpful-vote toggle.** Reading, deciding and writing races. The
+ *    toggle is a DELETE whose `RETURNING` set IS the decision, so of two
  *    concurrent togglers exactly one deletes and the other inserts.
  *
  * ## Ownership is in the STATEMENT, never in a preceding read
@@ -125,10 +123,9 @@ export async function resolveAuthorPseudonym(
  * current_transaction_is_aborted`. `inSavepoint` unwinds to the savepoint only,
  * so the refusal costs the caller nothing.
  *
- * That is the same regression `db/postgres.ts`'s own docblock describes for the
- * report intake, and it is a PORT regression in both cases: Mongo detected the
- * duplicate with a `findOne` before the insert, so nothing was ever aborted, and
- * moving that check into the index is exactly what introduced it.
+ * That is the same hazard `db/postgres.ts`'s own docblock describes for the
+ * report intake: a duplicate check that lives in the index aborts the
+ * transaction unless the insert runs in a savepoint.
  *
  * @throws {DuplicateReviewError} From `reviews_author_address_key`.
  */
@@ -260,8 +257,8 @@ export interface HelpfulToggleResult {
  * The DELETE goes first and its `RETURNING` set IS the decision, which is what
  * makes the toggle race-free without a read: two concurrent togglers both issue
  * it, exactly one deletes a row, and the other — seeing nothing deleted —
- * inserts. Mongo's `alreadyVoted` read chose the operation BEFORE the write, so
- * both could pick `$addToSet` and one of the two answers was simply wrong.
+ * inserts. A read that chose the operation BEFORE the write would let both pick
+ * "add", and one of the two answers would simply be wrong.
  *
  * The insert is `ON CONFLICT DO NOTHING` on the same key rather than a caught
  * `23505`: the row existing is the state this branch is trying to reach, so

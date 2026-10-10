@@ -14,9 +14,7 @@
  * asking the reader to keep it in sync with two other places by hand. It did
  * not stay in sync: `interests` and `location` were on it, were sent by the
  * client, and were written to `personalProfile.settings.roommate.preferences.*`
- * — paths `personalProfileSchema` never declared, so mongoose strict mode
- * discarded both on every save, silently, for as long as the endpoint has
- * existed.
+ * paths nothing stored, so both were discarded on every save, silently.
  *
  * As a `const` tuple it is also the domain of
  * `roommatePreferenceColumns`, whose `switch` is exhaustive over

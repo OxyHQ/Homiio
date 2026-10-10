@@ -30,11 +30,6 @@ import { commissions, partners } from '../db/schema';
 import { logger } from '../middlewares/logging';
 
 /**
- * A persisted Commission document, narrowed to the surface the trigger's
- * callers consume (the Mongoose model adds the rest). `toJSON()` yields the
- * API-shaped {@link Commission}.
- */
-/**
  * A persisted commission, in the shape callers put on the wire.
  *
  * `toJSON()` is kept because `markPropertyTransacted` calls it, and it returns
@@ -69,9 +64,7 @@ export function toCommissionDocument(row: CommissionRow): CommissionDocument {
     amount: row.amount,
     currency: row.currency,
     status: row.status,
-    // ISO strings, which is what the contract declares. The Mongo path emitted
-    // `Date` objects and let `res.json` stringify them — same bytes on the
-    // wire, but a type that was never true.
+    // ISO strings, which is what the contract declares.
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
     basis:

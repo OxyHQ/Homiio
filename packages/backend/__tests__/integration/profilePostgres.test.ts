@@ -11,11 +11,10 @@
  *  2. **Ownership.** The owner comes from the session and never from the body.
  *  3. **Privacy.** `/api/public/profiles/*` needs no authentication, so what a
  *     stranger gets is decided by the flags rather than by what happens to be
- *     stored. Mongo returned the whole document there, income included.
- *  4. **`/ai/history` writes ANYTHING AT ALL.** It used to read and write
- *     `profile.chatHistory` while `ProfileSchema` declares the array at
- *     `personalProfile.chatHistory`, so strict mode dropped it: `GET` always
- *     answered `[]`, `POST` stored nothing, `DELETE` was a no-op. All five
+ *     stored — never the whole profile, income included.
+ *  4. **`/ai/history` writes ANYTHING AT ALL.** It once read and wrote
+ *     `profile.chatHistory` where the transcript lives at
+ *     `personalProfile.chatHistory`, so `GET` always answered `[]`, `POST` stored nothing, `DELETE` was a no-op. All five
  *     production profiles have an empty transcript for that reason, so a test
  *     that only checked "the endpoint answers 200" would have passed against
  *     the broken version.
@@ -64,11 +63,9 @@ describe('GET /profiles/me — get or create', () => {
     expect(res.status).toBe(200);
     expect(res.body.data.oxyUserId).toBe(oxyUserId);
 
-    // NOT seeded with the schema's defaults. `_createDefaultProfile` used to
-    // write `language: 'en'`, `timezone: 'UTC'`, `profileVisibility: 'public'`,
-    // which made "the user chose UTC" indistinguishable from "nobody asked".
-    // Mongoose never materialized the sub-document either, so none of the five
-    // production rows carries them.
+    // NOT seeded with defaults. Writing `language: 'en'`, `timezone: 'UTC'`,
+    // `profileVisibility: 'public'` would make "the user chose UTC"
+    // indistinguishable from "nobody asked".
     const [stored] = await getDb().select().from(profiles).where(eq(profiles.oxyUserId, oxyUserId));
     expect(stored.settingsLanguage).toBeNull();
     expect(stored.settingsTimezone).toBeNull();
@@ -186,8 +183,8 @@ describe('PUT /profiles/me — the allow-listed write', () => {
     const read = await request(app).get('/profiles/me');
     const p = read.body.data.personalProfile;
 
-    // Trimmed and lowercased at the CALL SITE — Mongo's `trim`/`lowercase` are
-    // application behaviour with no Postgres counterpart.
+    // Trimmed and lowercased at the CALL SITE — application behaviour with no
+    // Postgres counterpart.
     expect(p.personalInfo.bio).toBe('Tenant in Gràcia');
     expect(p.preferences.preferredAmenities).toEqual(['balcony', 'lift']);
 
@@ -515,7 +512,7 @@ describe('/ai/history — the transcript that never persisted', () => {
 
     const get = await request(app).get('/ai/history');
     expect(get.status).toBe(200);
-    // Newest first, matching the Mongo handler's `[...].reverse()`.
+    // Newest first.
     expect(get.body.history.map((m: { content: string }) => m.content)).toEqual([
       'A deposit.',
       'What is a fianza?',
@@ -524,8 +521,8 @@ describe('/ai/history — the transcript that never persisted', () => {
   });
 
   it('keeps the pair in order across appends, on position and not on timestamp', async () => {
-    // Both turns of one call share a timestamp, exactly as the Mongo handler's
-    // single `new Date()` did — so `position` is the only thing that can order
+    // Both turns of one call share a timestamp — one `new Date()` — so
+    // `position` is the only thing that can order
     // them.
     const oxyUserId = owner();
     const app = buildApp(oxyUserId);

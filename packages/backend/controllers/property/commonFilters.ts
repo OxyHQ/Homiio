@@ -79,8 +79,7 @@ function tristate(value: unknown): boolean | undefined {
  * `column = value` for a closed-vocabulary text column.
  *
  * These six columns carry CHECK-constrained vocabularies, so a value outside the
- * set matches nothing — the same answer Mongo gave for an unknown value, and
- * without the enum-literal friction `eq` would impose on a value that arrives as
+ * set matches nothing, without the enum-literal friction `eq` would impose on a value that arrives as
  * a bare query string.
  */
 function textColumnIs(column: AnyPgColumn, value: string): SQL {

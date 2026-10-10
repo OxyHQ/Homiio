@@ -158,9 +158,7 @@ export function planDeduplication(rows: Row[]): DedupGroup[] {
 async function main(): Promise<void> {
   await connectPostgres();
 
-  // An ordinary join. The `$lookup` + `$arrayElemAt` this replaces existed only
-  // because Mongo had no join and its post-find hook mangled `addressId` on
-  // lean reads — neither problem exists here.
+  // An ordinary join.
   const docs: PropertyDoc[] = await getDb()
     .select({
       id: properties.id,
@@ -282,7 +280,7 @@ async function main(): Promise<void> {
     // `status = archived`. Do NOT touch `expires_at` — `db/expiry.ts`'s sweep
     // reaps on it, so stamping it now would make the archive irreversible
     // within one sweep. Leaving it at its existing future value keeps this
-    // recoverable, which is the same reasoning the Mongo TTL index forced.
+    // recoverable.
     const archived = await getDb()
       .update(properties)
       .set({ deletedAt: new Date(), status: PropertyStatus.ARCHIVED, updatedAt: new Date() })

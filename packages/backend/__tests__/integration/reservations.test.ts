@@ -456,8 +456,8 @@ describe('the range CHECKs', () => {
     const checkIn = new Date(Date.now() + 10 * DAY);
     const checkOut = new Date(Date.now() + 15 * DAY);
 
-    // `reservations_stay_order_check` — Mongo declared this as a `validate` on
-    // `checkOut`, which does not run on an update.
+    // `reservations_stay_order_check` — a CHECK, so no update path can skip
+    // it.
     await expect(
       getDb()
         .insert(reservations)

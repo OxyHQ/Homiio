@@ -7,8 +7,8 @@
  * signature → 400) or return a crafted event (valid → dispatch). Uses a dummy
  * `whsec_test` secret; no real secret is referenced.
  *
- * The billing assertions moved from the in-memory Mongo to Postgres with the
- * port. What that buys is not tidiness: the idempotency this endpoint depends on
+ * The billing assertions run against Postgres. What that buys is not
+ * tidiness: the idempotency this endpoint depends on
  * is now `billing_processed_sessions_key`, a real unique index, and the
  * redelivery case below is the one an in-memory document array could not have
  * failed on.
@@ -124,9 +124,8 @@ describe('stripeWebhook signature verification', () => {
   /**
    * The case the endpoint exists to survive, end to end. Stripe retries any
    * non-2xx and the confirm redirect races this handler for the same session by
-   * design, so a redelivery is ORDINARY. Under Mongo the guard was a
-   * read-modify-write of `processedSessions[]`; it is a unique index now, and
-   * this asserts the account is credited ONCE across two full HTTP deliveries.
+   * design, so a redelivery is ORDINARY. The guard is a unique index, and this
+   * asserts the account is credited ONCE across two full HTTP deliveries.
    */
   it('credits only once when Stripe redelivers the same session', async () => {
     constructEvent.mockReturnValue({
@@ -179,9 +178,8 @@ describe('stripeWebhook signature verification', () => {
 
   /**
    * An unrecognised product must credit NOTHING rather than fall into a default
-   * branch. Mongo's three `if`/`else if` arms did this by omission; the port
-   * narrows the metadata explicitly, so this pins the refusal rather than the
-   * accident.
+   * branch. The handler narrows the metadata explicitly, and this pins the
+   * refusal.
    */
   it('creates no record for a product this server does not sell', async () => {
     constructEvent.mockReturnValue({
@@ -204,8 +202,7 @@ describe('stripeWebhook signature verification', () => {
   /**
    * `customer.subscription.deleted` carries a `Subscription`, whose own `id` is
    * the subscription; `invoice.payment_failed` carries an `Invoice`, which NAMES
-   * one. Mongo read `sub.id || sub.subscription` off an `any` and happened to be
-   * right; this pins both shapes, because reading the wrong field would
+   * one. This pins both shapes, because reading the wrong field would
    * deactivate nothing and leave a lapsed subscriber entitled.
    */
   it('deactivates on customer.subscription.deleted', async () => {

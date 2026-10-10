@@ -7,8 +7,8 @@
  *    listing. Homiio ingests external listings from many markets, and each portal
  *    emits its local currency (Otodom → PLN, MercadoLibre MX → MXN, Zonaprop →
  *    ARS, …). This set therefore MUST cover every market the provider registry
- *    can ingest, otherwise the Property mongoose enum rejects a real listing at
- *    ingest. `FAIR` (FairCoin) is included for the ethical-pricing exchange flow
+ *    can ingest, otherwise the `properties` currency CHECK rejects a real
+ *    listing at ingest. `FAIR` (FairCoin) is included for the ethical-pricing exchange flow
  *    and is the only non-ISO-4217, 4-character code.
  *
  * 2. {@link PAYMENT_CURRENCIES} — money that actually MOVES through Homiio's

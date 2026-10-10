@@ -1,11 +1,8 @@
 /**
  * The COHERENCE checks — the constraints that say two columns must agree.
  *
- * Every one of them ports a rule this package already had and could not
- * enforce: a Mongoose `pre('save')` hook or a `validate`, both of which are
- * bypassed by `findOneAndUpdate`, which is how most of these tables are actually
- * written. So none of these is a new rule; each is an existing rule moved to
- * where an update cannot walk past it.
+ * Every one of them is a rule the application already states, enforced where
+ * an update cannot walk past it.
  *
  * ## Why they are asserted in BOTH directions
  *
@@ -392,8 +389,8 @@ describe('place_poi_categories — presence, count and distance agree', () => {
   });
 
   it('refuses `present: false` with a non-zero count', async () => {
-    // The widget renders from `present`. Mongo let the two disagree, so a cell
-    // with five pharmacies could render as having none.
+    // The widget renders from `present`. If the two could disagree, a cell with
+    // five pharmacies could render as having none.
     const { state, constraint } = await violation(() =>
       db
         .insert(placePoiCategories)
@@ -657,9 +654,8 @@ describe('the remaining single-table coherence rules', () => {
   });
 
   it('requires a UNIT review to name a unit and a BUILDING review not to', async () => {
-    // The rule the whole street → building → unit rollup depends on. Mongo
-    // declared it as a `validate` on `unitLevelId`, which does not run on an
-    // update — and a BUILDING review carrying a `unit_level_id` is counted twice
+    // The rule the whole street → building → unit rollup depends on. A BUILDING
+    // review carrying a `unit_level_id` is counted twice
     // by `getBuildingViewData`.
     const review = {
       addressId: scaffold.addressId,

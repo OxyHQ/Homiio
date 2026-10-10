@@ -4,12 +4,10 @@
  *
  * ## Why this exists, and why it is not two regexes
  *
- * Two gates in this repository scan comment-stripped source — the currency and
- * locale gate (`packages/frontend/__tests__/noHardcodedCurrency.test.ts`, #357)
- * and the Mongo reintroduction gate
- * (`packages/backend/__tests__/unit/mongoUnreachable.test.ts`). Both stripped
- * comments with the same pair of regexes, and both were wrong in the direction
- * that reports a CLEAN tree:
+ * Several gates in this repository scan comment-stripped source — the currency
+ * and locale gate (`packages/frontend/__tests__/noHardcodedCurrency.test.ts`,
+ * #357) among them. Two earlier strippers used a pair of regexes, and both were
+ * wrong in the direction that reports a CLEAN tree:
  *
  *  1. **`line.indexOf('//')` truncates a line at a URL's scheme separator.** The
  *     `//` in `'https://example.test'` is not a comment, so everything from it
@@ -24,9 +22,8 @@
  *     real configuration with it.
  *
  * Both faults DELETE code before the gate ever sees it, so a violation sitting
- * in the blanked region passes silently. For the Mongo gate that is the whole
- * point of the file: a reintroduced `mongoose` import inside such a region would
- * not fail the build.
+ * in the blanked region passes silently — a forbidden import inside such a
+ * region would not fail the build.
  *
  * ## What this does instead
  *
@@ -49,8 +46,7 @@
  * (7 files, 10 lines), which is why the heuristic is here rather than omitted.
  *
  * Measured on 2026-08-10 at bf3ef48b, the two regexes this replaces hid 1,047
- * lines of real code across 128 of the 952 files the currency gate scans, and
- * 227 lines across 21 of the 254 the Mongo gate scans.
+ * lines of real code across 128 of the 952 files the currency gate scans.
  *
  * JSX text is not JavaScript, and a `//` inside it is not a comment. This
  * treats it as code, which is the safe direction: it can only leave text in for

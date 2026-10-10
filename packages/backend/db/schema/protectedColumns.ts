@@ -1,25 +1,19 @@
 /**
  * Columns That Must Not Reach a Client
  *
- * ## Why this exists while it is empty
+ * ## Why this exists
  *
- * Mongoose has `select: false`, and Homiio DOES use it — `EvictionCase.attendees`
- * is declared that way today. Mongoose therefore left those fields out of a
- * document unless a query asked for them, which is a per-QUERY default.
- *
- * **Drizzle has no such default.** `db.select().from(t)` enumerates every column
- * explicitly, so a naive port LEAKS exactly what `select: false` was hiding, and
- * it leaks it on the first query anyone writes. The same is true of the much
- * larger set of columns that were never `select: false` at all and stayed out of
- * responses only because no DTO happened to list them — Homiio has **153
- * `.lean()` call sites**, and a `.lean()` read returns the whole document already;
- * their ported form is a bare `select()` that returns the whole ROW.
+ * **Drizzle has no per-query "hidden column" default.** `db.select().from(t)`
+ * enumerates every column explicitly, so a secret column LEAKS on the first
+ * query anyone writes. A column that stays out of responses only because no DTO
+ * happens to list it is protected by luck: a bare `select()` returns the whole
+ * ROW.
  *
  * Migration 0000 carried `countries`, `regions`, `cities`, `neighborhoods`,
  * `images` and `addresses`, and not one column in those six is a secret — so
  * the registry was legitimately empty, and the module existed so the mechanism
  * was in the repository BEFORE the first secret arrived rather than being
- * invented while porting the table that needed it.
+ * invented alongside the table that needed it.
  *
  * Migration 0001 brings the first one; migrations 0003-0007 bring the rest, so
  * the list the tracking issue predicted is now complete:
@@ -32,7 +26,7 @@
  * | `eviction_cases.contact_*` (5) | Organizer PII on a PUBLIC board |
  *
  * The tracking issue named `profiles.annual_income`; the column is
- * `personal_info_annual_income`, because `profiles.ts` keeps the Mongo path
+ * `personal_info_annual_income`, because `profiles.ts` keeps the wire path
  * minus the `personalProfile` wrapper. Recorded rather than silently corrected —
  * an entry naming a column that does not exist protects nothing, which is the
  * failure `__tests__/db/protectedColumns.test.ts` is built to catch.
@@ -128,12 +122,9 @@ export const PROTECTED_COLUMNS: readonly ProtectedColumn[] = [
     property: 'accommodationDetailsWifiPassword',
     reason:
       'A credential for a real network, stored in plaintext on the most-read ' +
-      'table in the product. Mongoose hid it BY ACCIDENT, not by design — it ' +
-      "is not `select: false`; it simply never appeared in any DTO's field " +
-      "list, so every one of this package's `.lean()` reads carried it and " +
-      'nothing shipped it only because no serializer happened to look. Under ' +
-      'drizzle the equivalent read is a bare `select()`, which returns every ' +
-      'column, so the accident stops protecting it the day someone writes one.',
+      "table in the product. Leaving it out of every DTO's field list protects " +
+      'it only by accident: a bare `select()` returns every column, so the ' +
+      'accident stops protecting it the day someone writes one.',
   },
   {
     table: profiles,
@@ -141,9 +132,8 @@ export const PROTECTED_COLUMNS: readonly ProtectedColumn[] = [
     reason:
       "A person's income, and the profile schema itself says it is private: " +
       "`settings.privacy.showIncome` defaults to FALSE, so the product's own " +
-      'default is that nobody sees it. Mongoose did not mark it `select: false` ' +
-      '— it stayed out of responses only because the profile serializer reads a ' +
-      'field list — so the ported read, a bare `select()`, returns it. The ' +
+      'default is that nobody sees it. A field list in the profile serializer ' +
+      'is not enough — a bare `select()` returns it. The ' +
       'privacy FLAG is a per-viewer decision the application still has to make; ' +
       'this registry only makes forgetting to ask a compile error rather than a ' +
       'disclosure.',

@@ -83,7 +83,7 @@ function computeIsFairPrice(
  * A listing as this scorer reads it — the serialized wire shape, extending the
  * comparable shape with the characteristics the ethical-pricing model uses.
  * Structural on purpose: nothing here needs a column the wire omits, and typing
- * it against a Mongoose document was what tied this module to the old store.
+ * it against a row would tie this module to the store.
  */
 export interface ScorableProperty extends ComparableProperty {
   offerings?: string[];

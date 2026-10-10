@@ -29,35 +29,26 @@
  * about in its own comments. Anything this file did to the data could therefore
  * still be happening after the deploy gave up. It counts, and it exits.
  *
- * ## STILL NOT WIRED IN, and the reason has changed — read this before wiring it
+ * ## NOT WIRED IN — read this before wiring it
  *
- * This asserts that Postgres is AUTHORITATIVE. That was false before the
- * cutover, and would have been false again after the planned rollback to Mongo,
- * so the original plan was for the cutover commit to append this file's entry to
- * `MIGRATION_TASK_COMMANDS_JSON` in `deploy-ecs-image.sh` and for a revert to
- * remove it — the guard's lifetime tied to the lifetime of the claim it makes,
- * with no env flag, because a flag is a second thing to remember at the moment
- * nobody has attention to spare. That is also why this stays out of `/health`: a
- * permanent claim about the app becomes a trap for whoever first boots on a
- * fresh database.
+ * Wiring it means appending this file's entry to `MIGRATION_TASK_COMMANDS_JSON`
+ * in `deploy-ecs-image.sh`, with no env flag, because a flag is a second thing
+ * to remember at the moment nobody has attention to spare. It stays out of
+ * `/health`: a permanent claim about the app becomes a trap for whoever first
+ * boots on a fresh database.
  *
- * The cutover happened, and there is no rollback target left (see `AGENTS.md`).
- * The entry was never appended, and the objection that kept it out is gone.
- *
- * WHAT REPLACES IT IS A MEASUREMENT, NOT AN ARGUMENT. Every floor below is a
- * number from the Mongo census of 2026-08-06, and nobody has counted what
+ * WHAT GATES IT IS A MEASUREMENT, NOT AN ARGUMENT. Every floor below is a
+ * number from the production census of 2026-08-06, and nobody has counted what
  * Postgres holds now. A floor production does not clear blocks every deploy —
  * the exact failure this guard exists to prevent, caused by the guard. So:
  * count the five tables against production first, adjust or justify each floor
  * against what you measured, and only then append the entry. Wiring it on the
  * strength of this paragraph is not the same as wiring it on a count.
  *
- * ## It needs no "we are mid-migration" escape hatch
+ * ## It needs no escape hatch
  *
- * The cutover stops both services at desiredCount 0, runs the copy, and only
- * then deploys. The one moment the store is legitimately empty is a moment no
- * deploy is running. That dependency on the runbook's ORDER is executable here
- * rather than prose: change the order and this is what notices.
+ * The one moment the store is legitimately empty is a fresh database before it
+ * is populated, and no production deploy runs then.
  */
 
 import postgres from 'postgres';
@@ -82,11 +73,12 @@ export interface PopulationFloor {
 /**
  * Five tables, not one, and not all of them.
  *
- * One is not enough: the copy walks collections in dependency order, so it can
- * write `countries` and `cities` and die before `properties`, and a single-table
- * floor would report a partial copy as a healthy one. The five below are written
- * at five DIFFERENT points of that order, which is what makes the SET able to
- * tell a partial copy from an empty one — a property no individual entry has.
+ * One is not enough: a restore or a copy walks tables in dependency order, so
+ * it can write `countries` and `cities` and die before `properties`, and a
+ * single-table floor would report a partial load as a healthy one. The five
+ * below are written at five DIFFERENT points of that order, which is what makes
+ * the SET able to tell a partial load from an empty one — a property no
+ * individual entry has.
  *
  * Every floor is well below its measured production count and well above any
  * plausible residue. Exact counts are NOT asserted, and must not be: external
@@ -97,7 +89,7 @@ export interface PopulationFloor {
  * either, which is the specific mistake that let a trunk image serve a database
  * holding 0.016% of production.
  *
- * Source counts: production Mongo census, 2026-08-06 (issue #281, Fase 0).
+ * Source counts: production census, 2026-08-06 (issue #281, Fase 0).
  *
  * DELIBERATELY NOT A FLOOR — `countries` (7 rows). It is a seeded reference
  * table: a fresh, entirely unpopulated database gets all 7 from the seed path,

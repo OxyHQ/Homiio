@@ -11,8 +11,8 @@
  * not `_id`, and the reporter column is `reporter_oxy_user_id`.
  *
  * Nothing asserted here changed meaning. The one thing that had to be ADDED is
- * the truncation below: Mongo's `jest.setup.ts` wiped every collection after
- * each test, and the reconciliation counters (`awaitingDecision`, `localOnly`)
+ * the truncation below: nothing wipes the database between tests, and the
+ * reconciliation counters (`awaitingDecision`, `localOnly`)
  * are whole-table counts — a row left by an earlier test, or by an earlier FILE
  * sharing this worker's database, would make them measure history instead of
  * the sweep.

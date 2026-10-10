@@ -20,8 +20,7 @@
  *
  * ## The children are inserted with the parent, in one transaction
  *
- * `reference_contacts[]` and `documents[]` were `{ _id: false }` subdocuments —
- * they had no ids and the backfill mints them (`db/MIGRATION-CONTRACT.md`). An
+ * `reference_contacts[]` and `documents[]` are child tables of the application. An
  * application that committed without its references is one a landlord judges on
  * incomplete information, so they are not a follow-up write.
  */
@@ -356,8 +355,7 @@ export async function decideApplication(
 /**
  * The wire shape the applications screens read.
  *
- * The Mongoose handlers returned `application.toJSON()` — every field, with the
- * two arrays inline — so this rebuilds that shape from the child tables. `id`,
+ * Every field, with the two arrays inline — rebuilt from the child tables. `id`,
  * never `_id`.
  */
 export function serializeApplication(hydrated: HydratedApplication): Record<string, unknown> {

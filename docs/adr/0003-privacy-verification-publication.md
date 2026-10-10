@@ -43,7 +43,7 @@ inventing parallel ones.
 | Per-viewer profile disclosure | `packages/backend/db/profiles/profileSerializer.ts:297-336` | The strongest existing example of what this ADR generalises: `owner` vs `public` scope, three independent privacy flags, and an **absent** key rather than `null` when undisclosed |
 | Coarse coordinates for an outbound snapshot | `packages/backend/services/moderation/subjects/propertySubject.ts:86-91` | `COARSE_COORDINATE_DECIMALS = 2` (~1.1 km) before anything leaves for CrowdSource |
 | Publication-choice flag | `packages/backend/db/schema/properties.ts:539`, honoured at `services/moderation/subjects/propertySubject.ts:144` | `show_address_number` — the advertiser's own decision about the building number |
-| Retention sweep registry | `packages/backend/db/expiry.ts` | Replaces Mongo's TTL indexes; the module itself records that a registered target is only half a port until `services/cron.ts` runs it |
+| Retention sweep registry | `packages/backend/db/expiry.ts` | The module itself records that a registered target does nothing until `services/cron.ts` runs it |
 
 Two things that are **not** there and that shape the decisions below:
 

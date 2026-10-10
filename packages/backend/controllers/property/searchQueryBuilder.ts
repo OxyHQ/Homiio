@@ -4,29 +4,18 @@
  * Pure, typed helpers that translate validated HTTP query parameters into the
  * SQL predicates and ordering the public property search endpoint runs.
  *
- * ## What changed with the Postgres port, and why it is a rewrite
+ * ## No intermediate id sets
  *
- * This module used to emit Mongoose filter objects, and half of it existed to
- * work around a store that could not join. A property has no coordinates of its
- * own — geo lives on the referenced address — so every geo-scoped read resolved
- * matching Address ids FIRST and then constrained properties by
- * `addressId: { $in: [...] }`, with `boundingBoxToAddressQuery` and
- * `centerRadiusToAddressQuery` building the first half of that pair. Both are
- * gone: `db/properties/propertyGeo.ts` applies the spatial predicate to
+ * A property has no coordinates of its own — geo lives on the referenced
+ * address. `db/properties/propertyGeo.ts` applies the spatial predicate to
  * `addresses.geo` in the same statement as the property read, so there is no
  * intermediate id set to build, cap or ship.
  *
- * Three other exports went with them, each because its reason for existing did:
- *
- *  - **`EARTH_RADIUS_METERS`** converted a radius to radians for
- *    `$centerSphere`. `ST_DWithin` on `geography` takes METRES.
- *  - **`escapeRegExp`** escaped a term for a Mongo `$regex`. The Postgres form
- *    is `ILIKE`, whose metacharacter set is completely different —
- *    `db/likePattern.ts` carries that escape and the table of how the two
- *    disagree.
- *  - **The Mongo field-path constants** (`'longTermRent.monthlyAmount'` and
- *    friends) are now real columns, so {@link priceColumnForOffering} returns
- *    something the compiler checks instead of a string nothing did.
+ *  - **Radii are METRES**: `ST_DWithin` on `geography` takes them directly.
+ *  - **Text terms are `ILIKE` patterns**, escaped by `db/likePattern.ts`, which
+ *    carries the escape and the table of how it differs from a regex escape.
+ *  - **Price fields are real columns**, so {@link priceColumnForOffering}
+ *    returns something the compiler checks instead of a string nothing did.
  *
  * The parsing half — pagination, sort fields, bounding-box and centre+radius
  * VALIDATION — is unchanged and still pure, which is what keeps it unit
@@ -804,8 +793,7 @@ export function buildSearchPlan(query: Record<string, RawQueryValue>): {
  *
  * `has_images DESC` is NOT prepended here — `propertyOrderBy` in
  * `db/properties/propertyReads` does it for every feed, so a caller cannot
- * forget it. In the Mongo original that prepending was duplicated at four call
- * sites.
+ * forget it.
  */
 export function buildSort(params: ParsedSearchParams, textTerm?: string): SQL[] {
   const direction = params.sortDirection === SORT_ASC ? SORT_ASC : SORT_DESC;

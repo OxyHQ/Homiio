@@ -4,19 +4,13 @@
  * Single authority for comparable-market verdict thresholds and aggregation
  * logic used by area-insights and price-ethics scoring.
  *
- * ## The two-phase geo query is gone, and that is the whole shape of the port
+ * ## Scopes are predicates, never id lists
  *
- * Mongo could not join, so every scope here was a two-phase query: find the
- * matching ADDRESS ids (`$near`, by city, by neighbourhood), collect them into
- * an array, then `$in` that array against `properties.addressId`. The arrays
- * were UNCAPPED — a city-wide comparison loaded every address id in the city
- * into memory to build one aggregate.
- *
- * `properties INNER JOIN addresses` makes each of those an ordinary predicate,
- * so the functions that used to RETURN id lists now return `SQL` scopes and the
- * aggregates run in one statement. Nothing intermediate is materialised, and
- * the caps that existed only to bound the id array are unnecessary rather than
- * merely raised.
+ * `properties INNER JOIN addresses` makes every scope (radius, city,
+ * neighbourhood) an ordinary predicate, so the scope functions return `SQL` and
+ * the aggregates run in one statement. Nothing intermediate is materialised —
+ * an uncapped list of a city's every address id would be loaded into memory to
+ * build one aggregate.
  */
 
 import { and, eq, gt, gte, lte, ne, sql, type SQL } from 'drizzle-orm';
@@ -100,7 +94,7 @@ export interface PopulatedGeoAddress {
 
 /**
  * A listing as this module reads it — the serialized wire shape, not a row and
- * not a Mongoose document. Structural on purpose: the callers hold a
+ * not a document. Structural on purpose: the callers hold a
  * `serializeProperty` result and nothing here needs a column the wire omits.
  */
 export interface ComparableProperty {
@@ -193,10 +187,8 @@ export function roundInt(value: number): number {
  * Min / max / avg / median / the whole sorted price list, plus the average
  * price per m², over one scope.
  *
- * `percentile_cont` is an EXACT median where Mongo's `$median` was declared
- * `method: 'approximate'`; on the sample sizes this runs over (a
- * neighbourhood's listings) the exact one costs nothing and the approximate one
- * was never the intent, only what was available.
+ * `percentile_cont` is an EXACT median; on the sample sizes this runs over (a
+ * neighbourhood's listings) the exact one costs nothing.
  *
  * `avg_price_per_sqm` filters to listings with a real area rather than dividing
  * by zero — the `$cond` + `$$REMOVE` this replaces, said in SQL.
@@ -444,12 +436,8 @@ export function buildTargetContext(
  * "This neighbourhood versus the rest of the city", or null when the contrast
  * would be meaningless.
  *
- * The Mongo version decided "the neighbourhood IS the whole city" by comparing
- * the LENGTHS of two address-id arrays — which is what it could do, having
- * materialised both. With scopes there are no arrays to compare, so the same
- * question is asked directly: count the listings in each and refuse when the
- * neighbourhood contributes every one of the city's. Same answer, and it no
- * longer needs the city's every address id in memory to reach it.
+ * "The neighbourhood IS the whole city" is asked directly: count the listings in
+ * each and refuse when the neighbourhood contributes every one of the city's.
  */
 export async function buildNeighborhoodContrast(
   target: TargetContext,
@@ -486,12 +474,8 @@ export async function countComparables(baseFilter: SQL, scope: SQL): Promise<num
 /**
  * The nearest comparable listings, closest first.
  *
- * The Mongo version could not order by distance — `$near` gave it a
- * distance-ordered ADDRESS list, it over-fetched listings by an arbitrary
- * factor, and then re-sorted them in JS against a `Map` of that address order,
- * which is what `COMPARABLES_OVERFETCH_FACTOR` and `extractAddressId` existed
- * for. `ORDER BY <geo distance>` does it in the statement, so the over-fetch is
- * gone and the limit is the real limit.
+ * `ORDER BY <geo distance>` orders in the statement, so nothing is over-fetched
+ * and re-sorted in JS, and the limit is the real limit.
  */
 export async function fetchComparables(
   baseFilter: SQL,

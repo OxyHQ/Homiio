@@ -91,8 +91,7 @@ async function rentCreateBody(referralCode?: string) {
   };
 }
 
-// Postgres persists for the whole jest worker, where the in-memory Mongo this
-// suite used to run against was wiped between tests. Every case here joins as
+// Postgres persists for the whole jest worker. Every case here joins as
 // the SAME Oxy user, so without this reset the second one meets the first's
 // partner row — and its points assertion fails by exactly one award, which
 // reads as a broken idempotency guard rather than as leftover state.

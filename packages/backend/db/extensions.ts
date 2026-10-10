@@ -78,8 +78,7 @@ const CLOSE_TIMEOUT_SECONDS = 5;
  *
  * NOT `'english'`, and not `'simple'` unaided. Homiio's corpus is
  * Spanish-first — property titles and descriptions from Idealista, Fotocasa,
- * Habitaclia and the rest — while Mongo's text index applied ENGLISH stemming
- * by default, so a faithful port of the config would carry a bug rather than a
+ * Habitaclia and the rest — so ENGLISH stemming would be a bug rather than a
  * behaviour. `simple` does no stemming at all, which is the honest choice for a
  * multi-language corpus; `unaccent` in front of it is what makes a search for
  * `malaga` find `Málaga`, which is the single most common miss in this data.
@@ -118,8 +117,8 @@ export const REQUIRED_EXTENSIONS: readonly RequiredExtension[] = [
     name: 'postgis',
     reason:
       '`addresses.geo` is a generated `geography` point column with a GiST ' +
-      'index, replacing the Mongo `2dsphere` index that every `$near` / ' +
-      '`$geoWithin` / `$centerSphere` property search runs against. ' +
+      'index, which every radius, viewport and nearby property search runs ' +
+      'against. ' +
       '`geography`, `ST_MakePoint`, `ST_DWithin` and `ST_Distance` all come ' +
       'from PostGIS.',
   },
@@ -135,8 +134,7 @@ export const REQUIRED_EXTENSIONS: readonly RequiredExtension[] = [
     name: 'pg_trgm',
     reason:
       'the unanchored name typeahead in `cityController.searchCities` and ' +
-      '`neighborhoodController` is a `/q/i` regex in Mongo. Its Postgres form ' +
-      "is `ILIKE '%q%'`, which only uses an index with a `gin_trgm_ops` GIN " +
+      "`neighborhoodController` is `ILIKE '%q%'`, which only uses an index with a `gin_trgm_ops` GIN " +
       'index — without it every keystroke is a sequential scan of the whole ' +
       'cities table.',
   },

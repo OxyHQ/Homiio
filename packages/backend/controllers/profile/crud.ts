@@ -1,23 +1,17 @@
 /**
  * The RE sidecar profile — one per Oxy account, served from Postgres.
  *
- * `db/profiles/profileRepository.ts` carries the measurement this port rests on
- * (five rows in Mongo, the same five in Postgres) and the reason the table is
- * that small. This file is the HTTP edge: it resolves the caller, decides who is
+ * `db/profiles/profileRepository.ts` carries the row count (five) and the
+ * reason the table is that small. This file is the HTTP edge: it resolves the caller, decides who is
  * looking, and hands the repository an allow-listed write.
  *
- * ## The five-minute in-process cache is GONE, deliberately
+ * ## No in-process cache, deliberately
  *
- * `shared.ts` kept a `Map` of profiles for 300 seconds, cleared on the owner's
- * own `PUT`. It existed because a Mongo profile read loaded a whole document
- * with an unbounded `chatHistory` array inside it; the Postgres read is one
- * lookup on a unique index over a five-row table plus five small child reads.
- *
- * It was also WRONG, and would have stayed wrong: Homiio runs several ECS tasks,
- * so a `PUT` served by one task cleared that task's copy and left every other
- * task serving the pre-edit profile for up to five minutes. A cache with one
- * invalidation path per process is a cache that can only be correct in a single
- * process. Removing it is a behaviour change and this is where it is stated.
+ * The read is one lookup on a unique index plus five small child reads. And an
+ * in-process cache would be WRONG: Homiio runs several ECS tasks, so a `PUT`
+ * served by one task would clear that task's copy and leave every other task
+ * serving the pre-edit profile. A cache with one invalidation path per process
+ * can only be correct in a single process.
  */
 
 import { getDb } from '../../db/postgres';

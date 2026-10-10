@@ -1,25 +1,22 @@
 /**
  * `recently_viewed` — the listings a person has looked at, on Postgres.
  *
- * Ported from `models/schemas/RecentlyViewedSchema.ts`. The collection held **0
- * documents in production** (measured), and the reason is not that nobody uses
- * the feature — see "The write path was dead" below.
+ * The table measured **0 rows in production**, and the reason is not that
+ * nobody uses the feature — see "The write path was dead" below.
  *
  * ## This table is APPEND-HEAVY, and its bound is 90 days
  *
  * It is the only table in this domain that grows on READS rather than on
  * deliberate user action, so it is the one that leaks if nothing prunes it.
- * Mongo bounded it in exactly one way, and this port keeps that way and invents
- * no other:
+ * It is bounded in exactly one way:
  *
  *  - **A 90-day retention sweep**, `services/cleanupService.cleanupOldData()`,
  *    run from `services/cron.ts`. {@link pruneRecentlyViewedBefore} is its
  *    Postgres half; `RECENTLY_VIEWED_RETENTION_DAYS` stays in `cleanupService`,
  *    where the ViewingRequest window it sits beside also lives.
- *  - **There is NO per-user row cap**, and none is invented here. Mongo had
- *    none: the cap a reader might remember is the `?limit=` on the READ
- *    (default 10), which bounds the response and not the table. Adding one
- *    would be a new product rule wearing a migration's clothes.
+ *  - **There is NO per-user row cap.** The cap a reader might remember is the
+ *    `?limit=` on the READ (default 10), which bounds the response and not the
+ *    table. Adding one would be a new product rule.
  *
  * The unique key does most of the work regardless: one row per person per
  * listing, so a user's row count is bounded by the number of DISTINCT listings
@@ -40,11 +37,9 @@
  *    mounted on the same handler — because a shipped mobile build cannot be
  *    recalled, and correcting only the client would leave every installed app
  *    still writing nothing.
- *  - `controllers/property/retrieve.ts` also upserts a view, keyed
- *    `{ profileId, propertyId }` — and `profileId` is not a field of
- *    `RecentlyViewedSchema`, so mongoose strict mode drops it while the required
- *    `oxyUserId` is never supplied. That write is left ALONE here: it is one of
- *    the two Mongo writes that file's header reserves for the write batch.
+ *  - `controllers/property/retrieve.ts` upserted a view keyed by a `profileId`
+ *    the table does not have, so the required owner was never supplied. It now
+ *    calls {@link trackPropertyView}.
  *
  * The consequence is deliberate and worth stating plainly: this table starts
  * receiving rows for the first time, which is precisely what the 90-day sweep
@@ -75,9 +70,9 @@ export class ViewedPropertyNotFoundError extends Error {
 /**
  * Record that this person opened this listing.
  *
- * The Mongo handler read for an existing row and then either `save()`d it or
- * constructed a new one — a read-then-write two concurrent opens of the same
- * listing both pass, which then fails on the unique index anyway.
+ * A read for an existing row followed by an update or an insert is a
+ * read-then-write two concurrent opens of the same listing both pass, which
+ * then fails on the unique index anyway.
  * `recently_viewed_owner_property_key` makes it one statement.
  *
  * `viewed_at` and `updated_at` both move, and `created_at` deliberately does
@@ -111,10 +106,9 @@ export async function trackPropertyView(
 /**
  * The listings this person opened most recently, newest first.
  *
- * The Mongo handler de-duplicated the result into a `Map` keyed by property id
- * after reading. That is not ported: the unique key makes a second row for the
- * same `(owner, listing)` pair unrepresentable, so the de-duplication could only
- * ever have been a no-op — and re-implementing it would hide a broken index
+ * No de-duplication after reading: the unique key makes a second row for the
+ * same `(owner, listing)` pair unrepresentable, so de-duplicating could only
+ * ever be a no-op — and re-implementing it would hide a broken index
  * rather than reveal one.
  *
  * @param limit How many rows to return. Bounds the RESPONSE only; see the header
@@ -151,8 +145,7 @@ export async function clearRecentlyViewed(
  * Deliberately NOT scoped to an owner — this is the table's only bound, and it
  * has to run across all of them. `recently_viewed_owner_viewed_at_idx` leads
  * with `oxy_user_id`, so this is a sequential scan; that is the right trade for
- * a job that runs from cron against a table whose live set is 90 days wide, and
- * it is what the Mongo `deleteMany` did too.
+ * a job that runs from cron against a table whose live set is 90 days wide.
  *
  * @param cutoff Rows with `viewed_at` strictly before this are removed.
  * @returns How many rows went.

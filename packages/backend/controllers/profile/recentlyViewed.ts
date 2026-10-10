@@ -1,9 +1,8 @@
 /**
  * Recently-viewed listings, on Postgres.
  *
- * Ported from the Mongo `RecentlyViewed` collection to
- * `db/saved/recentlyViewedRepository.ts`. The collection held 0 documents in
- * production — and, unlike the rest of this domain, that is not because nobody
+ * Backed by `db/saved/recentlyViewedRepository.ts`. The table measured 0 rows
+ * in production — and, unlike the rest of this domain, that is not because nobody
  * used the feature. See the repository header: the client posted to a route no
  * router served, so every view was a swallowed 404.
  *
@@ -53,8 +52,8 @@ const DEFAULT_RECENT_LIMIT = 10;
 /**
  * The most rows one request may ask for.
  *
- * Mongo's `parseInt(limit)` was unbounded, so `?limit=1000000` hydrated a
- * million listings — and hydration here is a catalogue read with four joins and
+ * Without it `?limit=1000000` would hydrate a million listings — and hydration
+ * here is a catalogue read with four joins and
  * three batched child queries, not a `find()`. The cap is the response's bound;
  * the TABLE's bound is the 90-day retention sweep (see the repository header).
  */

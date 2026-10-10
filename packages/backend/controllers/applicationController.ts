@@ -150,8 +150,7 @@ function parseReferenceContacts(raw: unknown): ParsedReferenceContact[] {
       );
     }
     // Narrowed HERE rather than left to `tenant_application_references_
-    // relationship_check`: Mongoose validated this enum on `create`, and an
-    // undeclared value arriving as a `23514` would be a 500 where the caller
+    // relationship_check`: an undeclared value arriving as a `23514` would be a 500 where the caller
     // earned a 400 naming the field.
     if (!isReferenceRelationship(ref.relationship)) {
       throw new AppError(

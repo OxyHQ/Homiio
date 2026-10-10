@@ -173,8 +173,7 @@ describe('createApplication', () => {
 
     expect(references).toHaveLength(1);
     expect(references[0].relationship).toBe('employer');
-    // Mongoose `lowercase: true` has no Postgres counterpart and is re-applied
-    // at the call site.
+    // Lowercased at the call site.
     expect(references[0].email).toBe('ada@example.test');
   });
 

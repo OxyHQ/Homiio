@@ -29,8 +29,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const TOP_CITIES_LIMIT = 6;
 
 /**
- * The monthly-rent bands the public stats endpoint reports, verbatim from the
- * Mongo `$bucket` boundaries this replaces.
+ * The monthly-rent bands the public stats endpoint reports.
  */
 const PRICE_BUCKET_BOUNDARIES = [0, 500, 1000, 1500, 2000, 3000, 5000, 10000] as const;
 
@@ -38,10 +37,9 @@ const PRICE_BUCKET_BOUNDARIES = [0, 500, 1000, 1500, 2000, 3000, 5000, 10000] as
  * Label each band and drop the empty ones.
  *
  * `width_bucket` numbers bands from 1, and returns `boundaries.length` for
- * anything at or above the last boundary — which is the `default: '10000+'`
- * overflow the Mongo version declared. A band nobody's listing falls in is
- * ABSENT from the map, and stays absent from the response, exactly as `$bucket`
- * omitted it.
+ * anything at or above the last boundary — the `'10000+'` overflow band. A band
+ * nobody's listing falls in is ABSENT from the map, and stays absent from the
+ * response.
  */
 function priceBucketLabels(
   counts: ReadonlyMap<number, number>,
@@ -86,13 +84,7 @@ class AnalyticsController {
 
       // A GATE, not a lookup: nothing below reads this row — every figure is
       // keyed by `oxyUserId` — so its only job is "does this person have a
-      // Homiio profile at all". It is the last Mongo read in this file's own
-      // handler and it was SOUND, unlike the three defects the rest of this
-      // endpoint carried: `Profile.findByOxyUserId` is a plain
-      // `findOne({ oxyUserId })` on a declared, indexed path. It moves anyway,
-      // because profiles are WRITTEN to Postgres now — leaving it on Mongo
-      // would answer zeros forever for anyone whose profile was created after
-      // that port landed.
+      // Homiio profile at all".
       const db = getDb();
       const activeProfile = await findProfileByOxyUserId(db, oxyUserId);
       if (!activeProfile) {
@@ -112,11 +104,8 @@ class AnalyticsController {
         );
       }
 
-      // The owner key is `oxy_user_id`. The Mongo original filtered on
-      // `profileId`, which `PropertySchema` does not declare — so it matched no
-      // document, `propertyIds` was always empty, and the two guarded
-      // aggregates below never ran. Every number this endpoint reported has
-      // been 0 since it was written; see `db/analytics/ownerAnalytics.ts`.
+      // The owner key is `oxy_user_id`, and nothing else; see
+      // `db/analytics/ownerAnalytics.ts`.
       const propertyIds = await listOwnedPropertyIds(db, oxyUserId);
 
       const [views, savesTotal, viewingBuckets] = await Promise.all([

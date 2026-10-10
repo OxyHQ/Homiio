@@ -120,7 +120,7 @@ describe('restricted listings and public reads', () => {
    * The successor to "keeps listings that predate the moderation field" — see
    * the module doc. A listing nobody has moderated sits at the column DEFAULT,
    * and this is what fails if that default is ever flipped to `true`, which
-   * would hide the whole catalogue exactly as the old Mongo trap would have.
+   * would hide the whole catalogue.
    */
   it('keeps a listing that has never been moderated, i.e. at the column default', async () => {
     const untouched = await listing();

@@ -4,22 +4,18 @@
  * Empty in production. Distinct from `reviews`, which rates an ADDRESS; this one
  * rates a PERSON and is scoped to one exchange.
  *
- * ## The "already reviewed" pre-check is GONE, and the index is the answer
+ * ## No "already reviewed" pre-check — the index is the answer
  *
- * The Mongoose controller read for an existing review, then inserted, then ALSO
- * caught the duplicate-key error — a read-then-write with a window plus a
- * backstop. `exchange_reviews_request_reviewer_key` is a real UNIQUE, so the
- * insert IS the check: `db/MIGRATION-CONTRACT.md` says the ported code should
- * INSERT and handle `23505` rather than re-implement the read, and keeping the
- * read would leave a redundant round trip in front of a constraint that already
- * decides it.
+ * `exchange_reviews_request_reviewer_key` is a real UNIQUE, so the insert IS
+ * the check: `db/MIGRATION-CONTRACT.md` says to INSERT and handle `23505` rather
+ * than re-implement the read, and a read would leave a redundant round trip in
+ * front of a constraint that already decides it.
  *
- * The 409 is unchanged; it is raised from the index's own violation now.
+ * The 409 is raised from the index's own violation.
  *
  * ## The average is `avg()`, and it is rounded in ONE place
  *
- * Mongo used a `$group` pipeline and rounded in JS. Postgres does the same work
- * in the same query as the count, so the page, the total and the average cannot
+ * The average is computed in the same query as the count, so the page, the total and the average cannot
  * come from three different snapshots of the table.
  */
 
@@ -132,8 +128,7 @@ export async function listReviewsForSubject(
       .select({
         total: sql<number>`count(*)::int`,
         // `round(...)` needs a numeric; `rating` is double precision, hence the
-        // cast. `coalesce` makes an empty set 0 rather than NULL, matching the
-        // Mongo handler's `aggregate.length > 0 ? … : 0`.
+        // cast. `coalesce` makes an empty set 0 rather than NULL.
         averageRating: sql<number>`coalesce(round(avg(${exchangeReviews.rating})::numeric, 2), 0)::float8`,
       })
       .from(exchangeReviews)
@@ -146,9 +141,7 @@ export async function listReviewsForSubject(
  * The wire shape the exchange-review screens read.
  *
  * `categories` is RE-NESTED from its four columns, and emitted only when at
- * least one is present — the sub-document never materialized in Mongo when the
- * client sent nothing, so an empty shell would be a new field rather than a
- * preserved one.
+ * least one is present — a client that sent nothing gets no empty shell.
  */
 export function serializeExchangeReview(row: ExchangeReviewRow): Record<string, unknown> {
   const categories = {

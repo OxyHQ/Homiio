@@ -5,29 +5,23 @@
  * country and a region by id; their canonical names come from a JOIN, not a
  * populate.
  *
- * ## Nothing in this file is Mongo any more
- *
- * `getPropertiesByCity` and `updateCityPropertiesCount` were the two holdouts,
- * because both COUNT PROPERTIES and `properties` did not exist in Postgres yet.
- * They now read it through `db/properties/propertyReads` — and in doing so lose
- * the uncapped `Address.find({cityId}).select('_id')` both ran to get an id list
- * for an `$in`, which for a large city was tens of thousands of ids
- * materialized before a single property was looked at.
+ * `getPropertiesByCity` and `updateCityPropertiesCount` count properties
+ * through `db/properties/propertyReads`, as one join — never an uncapped list
+ * of a large city's tens of thousands of address ids materialized before a
+ * single property is looked at.
  *
  * ## The wire format
  *
- * A city serializes with ONE id, `id` — these responses used to carry `_id`
- * beside it and no longer do. It still nests the country / region / cover image
+ * A city serializes with ONE id, `id`. It nests the country / region / cover image
  * as objects with their own `id`, and still reports the city centre as
  * `coordinates: { lat, lng }` even though the table stores named `latitude` /
  * `longitude` columns. {@link serializeCity} is the single place that shape is
- * built, and it OMITS absent values rather than emitting `null`, because
- * Mongoose omitted an unset path and `res.json` ships an explicit `null`.
+ * built, and it OMITS absent values rather than emitting `null`, because the
+ * wire omits an unset field and `res.json` ships an explicit `null`.
  *
- * The one field that is genuinely gone is `imageIds` — a denormalized second
- * copy of the `images.(entity_type, entity_id)` relation that could disagree
- * with it, deleted by `db/schema/CONVENTIONS.md` §"Arrays and objects" and read
- * by nothing in the frontend.
+ * There is no `imageIds` — it would be a denormalized second copy of the
+ * `images.(entity_type, entity_id)` relation that could disagree with it
+ * (`db/schema/CONVENTIONS.md` §"Arrays and objects").
  */
 
 import { Request, Response } from 'express';
@@ -118,7 +112,7 @@ function cityQuery() {
 
 type CityQueryRow = Awaited<ReturnType<typeof cityQuery>>[number];
 
-/** Drop keys whose value is null/undefined, matching Mongoose's omission of unset paths. */
+/** Drop keys whose value is null/undefined, so an unset field is omitted from the wire. */
 function withoutAbsent(record: Record<string, unknown>): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(record)) {
@@ -315,8 +309,8 @@ class CityController {
       const [rows, totals] = await Promise.all([
         cityQuery()
           .where(where)
-          // `properties_count` and `name` are both NOT NULL, so Mongo's
-          // "missing sorts first" and Postgres' "NULLs last" cannot differ here.
+          // `properties_count` and `name` are both NOT NULL, so NULL ordering
+          // cannot matter here.
           //
           // `id` last (#295): two cities can share a name AND a listing count —
           // the two Barcelonas do — and without a unique final key their order
@@ -594,12 +588,9 @@ class CityController {
 
       // Keep the cached count fresh (cheap, single field write when it drifts).
       //
-      // This is the ONE write in the ported read paths, and it is safe to make
-      // here: `cities.properties_count` was copied verbatim by the geo backfill
-      // precisely because properties did not exist in Postgres yet, and the
-      // Mongo `City` document is no longer read by any endpoint on this route.
-      // It is a cache of a count this statement just computed, not a fact only
-      // Mongo holds.
+      // This is the ONE write in a read path, and it is safe to make here:
+      // `cities.properties_count` is a cache of a count this statement just
+      // computed.
       if (cityRows[0].city.propertiesCount !== total) {
         await getDb()
           .update(cities)
@@ -695,9 +686,7 @@ class CityController {
    * Recompute a city's properties count from its addresses.
    * PUT /api/cities/:id/update-count
    *
-   * The Mongoose method this replaces (`City.updatePropertiesCount`) ran the
-   * same uncapped two-phase query as the city feed did — every address id in the
-   * city, then a `countDocuments` under an `$in` of them. Here it is one join.
+   * One join — never every address id in the city first.
    *
    * It counts EVERY property at an address in the city, with no status or
    * visibility filter, exactly as the method did — which is why the number it

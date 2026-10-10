@@ -5,20 +5,13 @@
  * `parent_property_id` points at this one, or this listing itself when it IS a
  * room — so every count here is over `properties` with that predicate.
  *
- * ## All three stores this touched had already moved
+ * It reads `properties`, `leases` and `saved_items`.
  *
- * This file read Mongo `Property`, `Lease` AND `Saved`, and all three are
- * Postgres tables now. That is why every figure it returned had quietly become
- * wrong rather than merely stale: a listing created after the cutover exists in
- * neither the Mongo `properties` collection nor its leases, so the endpoint
- * answered 404 for it, and for an older listing it reported zero rooms, zero
- * revenue and zero saves.
+ * ## No `.catch(() => 0)` around an aggregate
  *
- * The `.catch(() => 0)` fallbacks the Mongo version wrapped each aggregate in
- * are gone with it. They existed to keep one failing aggregate from taking the
- * whole response down, and they are exactly what let this endpoint report a
- * confident `0` for a query that never ran — the failure mode this port is
- * about. A statistic that cannot be computed is an error, not a zero.
+ * A fallback that keeps one failing aggregate from taking the whole response
+ * down is exactly what lets an endpoint report a confident `0` for a query that
+ * never ran. A statistic that cannot be computed is an error, not a zero.
  */
 
 import { and, eq, gt, gte, isNull, lte, or, sql } from 'drizzle-orm';
@@ -35,10 +28,9 @@ export async function getPropertyStats(
 ) {
   try {
     const { propertyId } = req.params;
-    // No id-SHAPE guard. `mongoose.Types.ObjectId.isValid` answered `false` for
-    // every listing minted after the cutover, so this endpoint 400'd on exactly
-    // the listings most likely to be looked at. A `text` primary key takes any
-    // string and a nonsense id simply matches no row — see `db/ids.ts`.
+    // No id-SHAPE guard. A 24-hex test answers `false` for every uuid v7, so
+    // it would 400 on exactly the listings most likely to be looked at. A
+    // `text` primary key takes any string and a nonsense id simply matches no row — see `db/ids.ts`.
     const [target] = await getDb()
       .select({
         id: properties.id,

@@ -18,15 +18,13 @@
  * happen — while still being impossible to apply twice itself. Drop `revision`
  * and an upheld appeal can never put a listing back.
  *
- * ## Two `isValidObjectId` guards are deliberately NOT ported
+ * ## No id-shape guard
  *
- * The Mongo effects opened with `if (!mongoose.isValidObjectId(subject.id))
- * return { changed: false }`. `db/ids.ts` states the rule that retires them: a
- * shape guard is for a 400 at an API boundary and is NEVER a precondition on a
- * query. Post-cutover every id minted by `generatedId()` is a uuid v7, for which
- * `isValidObjectId` is FALSE — so keeping the guard would silently make every
- * listing and review created after the cutover permanently un-enforceable, while
- * still reporting `changed: false` as though it had looked. The query already
+ * `db/ids.ts` states the rule: a shape guard is for a 400 at an API boundary and
+ * is NEVER a precondition on a query. Every id minted by `generatedId()` is a
+ * uuid v7, so a guard that tested for a 24-char hex id would silently make every
+ * new listing and review permanently un-enforceable, while still reporting
+ * `changed: false` as though it had looked. The query already
  * answers "no such row" for free, and for every id shape.
  *
  * ## `previousState` is what makes reversibility real

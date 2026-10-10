@@ -10,8 +10,7 @@
  * **Signature material can no longer be returned by accident.** The two
  * `digital_signature` columns are protected (`db/schema/protectedColumns.ts`)
  * and reads go through `publicColumns(leases)`, so they are absent from the row
- * TYPE — a serializer that tried to emit one would fail `tsc`. Under Mongoose
- * they were hidden only by their absence from `toLeaseDTO`'s field list.
+ * TYPE — a serializer that tried to emit one would fail `tsc`.
  *
  * **`renewLease` no longer copies a document.** It read the whole lease with
  * `toObject()`, deleted six keys and spread the rest into a new one — which

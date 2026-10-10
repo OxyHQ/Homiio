@@ -2,39 +2,35 @@
  * `reviews` and its two child tables — the public address rating (reviucasa
  * parity).
  *
- * Ported from `models/Review.ts` (872 lines, 13 Mongo indexes). Empty in
- * production, which is what makes the constraints below expressible: every one
- * of them is a rule the source declared as a VALIDATOR, and a Mongoose validator
- * does not run on an update in this package.
+ * Empty in production, which is what makes the constraints below expressible:
+ * every one of them is a rule the application also validates, and only a CHECK
+ * holds on every write path.
  *
  * ## The four-level address hierarchy is the shape of this table
  *
  * A review is attached at BUILDING or UNIT level and carries a denormalized
  * reference to each level above it (`street_level_id`, `building_level_id`,
  * `unit_level_id`) so an aggregation can roll up without walking the tree. Those
- * are NOT a Mongo workaround that stops travelling — they are the group keys of
+ * are NOT a redundant copy — they are the group keys of
  * every explore aggregation, and re-deriving them per row would put a recursive
  * join inside a `GROUP BY`.
  *
  * `addresses.address_level` is a GENERATED column, so the level a review claims
  * and the level its address actually is can be checked against each other. Doing
  * that check in the database would need a subquery, which a CHECK may not
- * contain; what IS expressible — and what Mongo's validator was actually about —
- * is the relationship between `address_level` and `unit_level_id`, below.
+ * contain; what IS expressible is the relationship between `address_level` and `unit_level_id`, below.
  *
- * ## Two embedded arrays become tables, and both gain a constraint Mongo lacked
+ * ## Two sets are tables, each with a unique key
  *
- * `helpfulVoters[]` is a `[String]` set maintained with `$addToSet`/`$pull`, and
- * its LENGTH is the helpful count the DTO publishes. `reports[]` is a
- * `{ _id: false }` array whose length crossing three flips the review into
- * `under_review`. Both are read-modify-write sets whose "have they already?"
- * check races its own write; as tables with a unique key, the second attempt
- * fails on the insert instead.
+ * The helpful voters are a set whose SIZE is the helpful count the DTO
+ * publishes. The reports are a set whose size crossing three flips the review
+ * into `under_review`. Both are "have they already?" sets whose check would race
+ * its own write; as tables with a unique key, the second attempt fails on the
+ * insert instead.
  *
- * ## What is deliberately NOT ported
+ * ## What is deliberately NOT indexed
  *
- * Mongo's `{ rating: -1 }`, `{ recommendation: 1 }` and `{ verified: 1 }` —
- * three single-field indexes on columns with two, two and five distinct values,
+ * `rating`, `recommendation` and `verified` alone — on columns with two, two and five distinct values,
  * and no query in this package filters or sorts by any of them alone. Every read
  * is scoped by an address, a city, a neighborhood or an agency first. A btree
  * nothing chooses is a write cost with no read.
@@ -273,9 +269,9 @@ export const reviews = pgTable(
     /**
      * Tenancy length in whole months.
      *
-     * `bigint`, not `double precision`, and this is one of the few Mongo
-     * `Number`s that earns it: the value is never user-supplied — `pre('validate')`
-     * computes `Math.ceil(days / 30.44)` on every save, so it is always a whole
+     * `bigint`, not `double precision`, and this is one of the few numbers that
+     * earns it: the value is never user-supplied — `deriveLivedForMonths`
+     * computes `Math.ceil(days / 30.44)` on every write, so it is always a whole
      * number generated inside this package. Same exception as
      * `properties.rating_count`.
      */
@@ -300,7 +296,7 @@ export const reviews = pgTable(
      * would be the over-normalization `CONVENTIONS.md` forbids.
      */
     images: text().array().notNull().default(sql`'{}'::text[]`),
-    /** 1-5 stars. `bigint` because Mongo validated `Number.isInteger`. */
+    /** 1-5 stars. `bigint` because a rating is always a whole number. */
     rating: bigint({ mode: 'number' }).notNull(),
 
     // ── Environmental conditions. Every one optional; NULL means unanswered. ──
@@ -376,11 +372,10 @@ export const reviews = pgTable(
   (table) => [
     /**
      * Every public read and every aggregation applies the SAME filter —
-     * `moderationStatus: { $ne: 'removed' }`, spelled `VISIBLE_MODERATION` in
-     * the model — and Mongo carried none of it in any of its thirteen indexes.
-     * Making the scoped indexes PARTIAL on that predicate is the "add the index
-     * Mongo needed and lacked" case: it is derived from the six aggregation
-     * pipelines and three finders that all begin with it, not from speculation.
+     * `moderation_status <> 'removed'`, spelled `visibleModeration()`. Making
+     * the scoped indexes PARTIAL on that predicate is derived from the six
+     * aggregations and three finders that all begin with it, not from
+     * speculation.
      */
     index('reviews_address_created_idx')
       .on(table.addressId, sql`${table.createdAt} desc`)
@@ -412,9 +407,9 @@ export const reviews = pgTable(
     /**
      * The moderation queue. Partial and INVERTED relative to the indexes above:
      * `active` is the overwhelming majority, so the queue is everything else and
-     * the index is the size of the work rather than the size of the table. Mongo
-     * had a plain `index: true` on this column, which is the same index with
-     * ~99% of its entries unread.
+     * the index is the size of the work rather than the size of the table. A
+     * plain index on this column would be the same index with ~99% of its
+     * entries unread.
      */
     index('reviews_moderation_queue_idx')
       .on(table.moderationStatus, sql`${table.createdAt} desc`)
@@ -449,9 +444,8 @@ export const reviews = pgTable(
     /**
      * A UNIT review names a unit; a BUILDING review does not.
      *
-     * Mongo declared exactly this as a `validate` on `unitLevelId` — and, like
-     * every validator in this package, it did not run on an update. It is the
-     * rule the whole street → building → unit rollup depends on: a BUILDING
+     * A CHECK rather than an application validator, so no update path can skip
+     * it. It is the rule the whole street → building → unit rollup depends on: a BUILDING
      * review carrying a `unit_level_id` is counted twice by
      * `getBuildingViewData`, once as a building review and once through the unit
      * it should not name.
@@ -545,7 +539,7 @@ export const reviews = pgTable(
      * a whole neighbourhood.
      */
     check('reviews_rating_check', sql`${table.rating} between 1 and 5`),
-    /** Mongo's `validate` on `livedTo` (`value > this.livedFrom`). */
+    /** A tenancy ends after it starts. */
     check('reviews_lived_order_check', sql`${table.livedTo} > ${table.livedFrom}`),
   ],
 );
@@ -577,12 +571,10 @@ export const reviewHelpfulVotes = pgTable(
 /**
  * `reports[]` — trust & safety reports filed against a review.
  *
- * Declared `{ _id: false }` in Mongo, so these subdocuments have NO id to
- * preserve and the backfill mints a uuid v7 per row. That is the case
- * `db/MIGRATION-CONTRACT.md` calls out by name.
+ * Rows carry a deterministically minted uuid v7 (`db/MIGRATION-CONTRACT.md`,
+ * "Ids are text, and two shapes coexist").
  *
- * Stripped from every public DTO in Mongo by `toReviewDTO` deleting the key.
- * Here they are simply not in the table anyone selects from, which is the same
+ * Never in a public DTO: they are simply not in the table anyone selects from, which is the same
  * strengthening `eviction_case_attendees` gets.
  */
 export const reviewReports = pgTable(

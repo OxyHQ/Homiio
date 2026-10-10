@@ -3,18 +3,15 @@
  *
  * ## What this suite is FOR
  *
- * `BillingSchema` carried a `pre('save')` hook and six instance methods. A
- * Mongoose hook has no Postgres counterpart and vanishes silently — invisible
- * in a schema diff, to `tsc`, and to any suite that only supplies valid input,
- * because a rule that refuses bad input is unseen by every test that supplies
- * good input. So each case below is written against the RULE the hook enforced,
- * not against the happy path:
+ * A rule that refuses bad input is unseen by every test that supplies good
+ * input. So each case below is written against the RULE, not against the happy
+ * path:
  *
- *  - the hook refused a second record per user → asserted by racing two
- *    creates, not by creating one;
- *  - `consumeFileCredit` refused to spend what was not there → asserted by
+ *  - a second record per user is refused → asserted by racing two creates, not
+ *    by creating one;
+ *  - `consumeFileCredit` refuses to spend what is not there → asserted by
  *    spending concurrently, which is the case a read-then-write loses;
- *  - `addProcessedSession` was idempotent → asserted by claiming twice AND by
+ *  - claiming a session is idempotent → asserted by claiming twice AND by
  *    checking the row did not move.
  *
  * A mocked drizzle cannot reproduce any of them: there is no unique index to

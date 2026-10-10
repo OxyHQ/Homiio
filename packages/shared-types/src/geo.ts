@@ -27,8 +27,8 @@ import type { ListingCurrency } from './currency';
  * A geo entity's cover-image reference as serialized by the API: the bare Image
  * `id` (string) when un-populated, or the populated {@link Image} document when
  * the endpoint expands it (the `/api/cities*` routes populate
- * `coverImageId` → `{ urls, caption, width, height }`). Same Mongoose field,
- * either form — consumers read `urls` off the populated shape.
+ * `coverImageId` → `{ urls, caption, width, height }`). Same field, either
+ * form — consumers read `urls` off the populated shape.
  */
 export type CoverImageRef = string | Image;
 

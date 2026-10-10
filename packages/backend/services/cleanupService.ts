@@ -8,9 +8,8 @@ import { pruneClosedViewingsBefore } from '../db/bookings/viewingReads';
  * The ONLY bound on `recently_viewed`, which is the one table in the saved-items
  * domain that grows on reads rather than on deliberate user action.
  *
- * Ported unchanged from the Mongo sweep. There is deliberately no per-user row
- * cap beside it — Mongo had none, and the `?limit=` on the read bounds the
- * RESPONSE, not the table. The unique key does the rest: one row per person per
+ * There is deliberately no per-user row cap beside it — the `?limit=` on the
+ * read bounds the RESPONSE, not the table. The unique key does the rest: one row per person per
  * listing, so a user's footprint is the number of DISTINCT listings they opened
  * in the window, however often they opened them.
  */

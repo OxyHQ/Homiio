@@ -417,8 +417,7 @@ export default function () {
   // `is_shared`, a non-null token and a deadline in the future), so an expired
   // link is 404 whether or not the share-link sweep has run since. That is what
   // keeps the sweep pure housekeeping rather than a correctness dependency —
-  // and it is why Mongo's TTL index, which deleted the whole conversation 24
-  // hours after anybody shared it, was never needed for this route to be right.
+  // nothing has to delete the conversation for this route to be right.
   //
   // The `try/catch` that used to swallow every failure into a 500 is gone:
   // `asyncHandler` forwards to `errorHandler`, which is the one place that

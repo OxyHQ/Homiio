@@ -314,12 +314,10 @@ export class IngestionService {
       if (!incoming || !cityId) return null;
 
       // Selective scalar prefilter (same type, bedrooms, m² and price) joined to
-      // the address's `city_id`. The `$lookup` + `$addFields` + second `$match`
-      // this replaces existed only because Mongo could not express a join in a
-      // filter; here the city predicate is an ordinary join condition, so the
-      // "same-city match must run BEFORE the limit" hazard the Mongo pipeline
-      // had to be careful about cannot arise — the LIMIT applies to the joined,
-      // fully-filtered result by construction.
+      // the address's `city_id`. The city predicate is an ordinary join
+      // condition, so a "same-city match must run BEFORE the limit" hazard
+      // cannot arise — the LIMIT applies to the joined, fully-filtered result by
+      // construction.
       const candidates: DuplicateCandidateRow[] = await getDb()
         .select({
           id: properties.id,
@@ -421,7 +419,7 @@ export class IngestionService {
   }
 
   /**
-   * Mongo filter matching the primary offering's price + currency. `amount` is the
+   * Predicate matching the primary offering's price + currency. `amount` is the
    * rounded integer from the comparable, but stored prices may carry decimals, so
    * the filter is a half-unit range `[amount - 0.5, amount + 0.5)` — every stored
    * value that rounds to `amount` matches (the exact per-listing equality is then

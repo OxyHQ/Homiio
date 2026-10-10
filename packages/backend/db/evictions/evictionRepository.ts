@@ -21,13 +21,13 @@
  * {@link readCaseContact} and {@link readExactLocation}. That is the sanctioned
  * escape hatch, and it reads differently from an ordinary select on purpose.
  *
- * ## Three Mongo read-then-writes became constraints, and none is re-implemented
+ * ## Three rules are constraints, and none is re-implemented as a read
  *
- * **The RSVP toggle** was a two-step `$push` guarded by `$not $elemMatch`.
- * `eviction_case_attendees_case_user_key` makes the insert itself the check, and
+ * **The RSVP toggle**: `eviction_case_attendees_case_user_key` makes the insert
+ * itself the check, and
  * the count is `count(*)` over the roster. See {@link toggleAttendance}.
  *
- * **`attendeeCount` is NOT ported at all.** An indexed `count(*)` answers it,
+ * **`attendeeCount` is NOT stored.** An indexed `count(*)` answers it,
  * and it is not a SORT key of any feed, so no `ORDER BY` has to survive a
  * correlated aggregate.
  *
@@ -178,10 +178,8 @@ function scopeWhere(scope: EvictionScope) {
     case 'global':
       return undefined;
     case 'city':
-      // Case-insensitive exact match, replacing Mongo's anchored `RegExp` with
-      // the user's string escaped into it. `lower(...) = lower(...)` needs no
-      // escaping at all, so the escape helper the Mongo path required has no
-      // counterpart.
+      // Case-insensitive exact match. `lower(...) = lower(...)` needs no
+      // escaping at all, unlike an anchored regex built from the user's string.
       return sql`lower(${evictionCases.locationCity}) = lower(${scope.city})`;
     case 'bbox':
       // Against the GENERATED geography column the GiST index covers.
@@ -840,8 +838,8 @@ export interface AttendanceToggle {
  *
  * The insert IS the "are they already attending?" check — `23505` from
  * `eviction_case_attendees_case_user_key` means they were, so the toggle removes
- * them instead. Mongo's read-then-write let two concurrent RSVPs from one person
- * both pass the guard and double-count them on a number the public board shows
+ * them instead. A read-then-write would let two concurrent RSVPs from one
+ * person both pass the guard and double-count them on a number the public board shows
  * as turnout.
  *
  * An RSVP no longer unlocks anything on its own: confirmation is a separate

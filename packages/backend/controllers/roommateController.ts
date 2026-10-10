@@ -2,30 +2,20 @@
  * Roommate matching — discovery, preferences, the request handshake and the
  * relationships it produces.
  *
- * `roommate_requests` and `roommate_relationships` moved to Postgres with the
- * roommate batch; this file finishes the job by moving the PROFILE reads that
- * sat beside them. Until now they read Mongo `profiles` while every profile
- * WRITE already went to Postgres, so the two stores had begun to diverge: a
- * preference saved through `PUT /api/profiles/me` was invisible to every
- * roommate endpoint, and a preference saved through this controller was
- * invisible to the profile screen.
+ * Requests, relationships AND the profile reads beside them all use the same
+ * `profiles` table the profile screen writes, so a preference saved through
+ * `PUT /api/profiles/me` and one saved through this controller are the same
+ * fact.
  *
- * ## Three filters here matched NOTHING, and are repaired rather than ported
+ * ## Three filters once matched NOTHING, and are repaired
  *
- * `getRoommateProfiles` filtered on `personalProfile.gender`,
- * `personalProfile.location` and `personalProfile.dateOfBirth`.
- * `personalProfileSchema` declares none of them, and `database/connection.ts`
- * sets `strictQuery: false`, so mongoose passed all three through to MongoDB
- * rather than stripping them — where they matched no document, because strict
- * mode (which is ON for writes) meant nothing had ever been stored at those
- * paths. `?gender=`, `?location=` and `?ageRange=` have therefore returned an
- * empty page for the whole life of the feature.
- *
+ * `?gender=`, `?location=` and `?ageRange=` once filtered on fields no row
+ * stored and returned an empty page for the whole life of the feature.
  * `db/profiles/profileRepository.ts`'s `roommateCandidateFilter` carries what
  * each one means now. The short version: gender and ageRange are re-pointed at
  * the roommate PREFERENCE the product really stores, and `location` gets a
- * column, because the write allow-list had been accepting a field mongoose was
- * discarding.
+ * column, because the write allow-list had been accepting a field nothing
+ * stored.
  *
  * ## Two behaviour changes worth stating out loud
  *
@@ -89,9 +79,8 @@ function resolveOxyUserId(req: Request): string | undefined {
 
 /**
  * A page of candidates is hydrated (five child reads per page), so an uncapped
- * `?limit=` is a request a client can make arbitrarily expensive. Mongo's
- * `.limit()` took whatever arrived, including a negative number that would make
- * the Postgres `OFFSET` invalid.
+ * `?limit=` is a request a client can make arbitrarily expensive, and a negative
+ * number would make the Postgres `OFFSET` invalid.
  */
 const MAX_DISCOVER_PAGE_SIZE = 100;
 const DEFAULT_DISCOVER_PAGE_SIZE = 20;
@@ -279,8 +268,8 @@ const getMyRoommatePreferences = async (req: Request, res: Response): Promise<Re
 /**
  * Update the caller's roommate preferences.
  *
- * PARTIAL at the field level, which is what the Mongo version's per-path `$set`
- * did: a body naming `budget` alone must not blank `lifestyle`. That is the
+ * PARTIAL at the field level: a body naming `budget` alone must not blank
+ * `lifestyle`. That is the
  * whole difference from `PUT /api/profiles/me`, which sends the block and
  * replaces it — and it is expressed by WHICH fields are passed to
  * `roommatePreferenceColumns`, not by a second mapping.
@@ -333,10 +322,9 @@ const updateRoommatePreferences = async (req: Request, res: Response): Promise<R
 /**
  * Turn roommate matching on or off.
  *
- * A non-boolean `enabled` is a 400. Mongoose CAST whatever arrived to the
- * column's declared Boolean and stored the result, so `'yes'` was an error and
- * `'true'` was silently a `true`; the sibling handler above already treats a
- * non-boolean `enabled` as "not provided". For an endpoint whose entire payload
+ * A non-boolean `enabled` is a 400 — `'true'` is not silently a `true`; the
+ * sibling handler above already treats a non-boolean `enabled` as "not
+ * provided". For an endpoint whose entire payload
  * is that one flag, guessing is worse than saying so.
  */
 const toggleRoommateMatching = async (req: Request, res: Response): Promise<Response | void> => {
@@ -709,9 +697,7 @@ const endRoommateRelationship = async (req: Request, res: Response): Promise<Res
 /**
  * The caller's own matching status.
  *
- * `id` and not `_id`: the Mongoose `toJSON` transform renamed it, this handler
- * bypassed the transform by reading `profile._id` directly, and #287 made the
- * rename the wire contract.
+ * `id` and not `_id`: #287 made that the wire contract.
  */
 const getCurrentUserRoommateStatus = async (
   req: Request,

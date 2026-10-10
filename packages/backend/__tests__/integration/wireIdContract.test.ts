@@ -5,9 +5,8 @@
  * every consumer reads `id`. `middlewares/wireIds.ts` is the one place any other
  * spelling is resolved.
  *
- * Mongo is GONE — every row this API serves comes from Postgres, where the
- * column is already `id` — so the middleware no longer has a producer of `_id`
- * to correct. It is kept, and kept tested, as the boundary that makes "nothing
+ * Every row this API serves comes from Postgres, where the column is already
+ * `id`, so the middleware has no producer of `_id` to correct. It is kept, and kept tested, as the boundary that makes "nothing
  * this API returns is named `_id`" a checked property of the WIRE rather than a
  * claim about the ~100 call sites behind it. The sweep below is the part that
  * still earns its keep; the unit cases pin the branches it relies on.
@@ -73,13 +72,9 @@ describe('renameWireIds', () => {
   /**
    * A NON-STRING `_id` is stringified rather than emitted as an object.
    *
-   * The fixture used to be a real `mongoose.Types.ObjectId`, which is what this
-   * branch was written for. Nothing produces one any more — the models are gone
-   * and every id in Postgres is already `text` — so the fixture is now the
-   * SHAPE the branch actually handles: a value whose string form comes from its
-   * own `toString`. That is precisely what `String(raw)` consumes, so the
-   * substitution loses no coverage; asserting a real ObjectId here would only
-   * pin a type this service can no longer construct.
+   * The fixture is the SHAPE the branch handles: a value whose string form
+   * comes from its own `toString`. That is precisely what `String(raw)`
+   * consumes.
    */
   it('stringifies a non-string `_id` rather than emitting it as an object', () => {
     const hex = '507f1f77bcf86cd799439011';
@@ -99,10 +94,7 @@ describe('renameWireIds', () => {
    * `toPlain` runs `toJSON` BEFORE the walk, so the rename applies to the
    * REDUCED shape rather than to the wrapper's own enumerable properties.
    *
-   * This case was written against a real Mongoose document created through the
-   * `Country` model — the one thing in the codebase that defined `toJSON` and
-   * carried `_id`. Both are gone, so the fixture is now stated directly: an
-   * object whose `toJSON` yields `_id`, with a decoy enumerable property that
+   * The fixture is stated directly: an object whose `toJSON` yields `_id`, with a decoy enumerable property that
    * `toJSON` does NOT expose. The decoy is what keeps this honest — a
    * `renameWireIds` that skipped `toPlain` and walked the wrapper would emit
    * `notOnTheWire` and no `id`, so it fails rather than passing on a shape that
@@ -223,8 +215,8 @@ describe('the wire contract, over a real request', () => {
    * real entity data, and the assertion names the path that failed.
    *
    * The city endpoints read Postgres, so they need the Postgres fixtures seeded
-   * — they were ported in an earlier batch and stopped reading the Mongo `City`
-   * model, which is the concrete way that first draft was silently empty.
+   * — an unseeded city table is the concrete way that first draft was silently
+   * empty.
    *
    * ## What this deliberately does NOT catch, so nobody reads it as a hole
    *

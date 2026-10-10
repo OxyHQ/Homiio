@@ -1,24 +1,21 @@
 /**
- * The expiry registry — the replacement for Homiio's Mongo TTL indexes, and
- * the risk this migration ranks FIRST because it fails more quietly than
- * anything else in it.
+ * The expiry registry — how rows whose deadline has passed are deleted, and the
+ * quietest failure in this package.
  *
- * Mongo reaps; Postgres does not. A table ported without a registry entry grows
- * forever, with no error, no failing test and no symptom of any kind until
- * disk — and it is invisible in review, because the thing doing the work was
- * never in Homiio's code to be missed. There is no deleted call site to notice.
+ * Postgres deletes nothing on a deadline. A table without a registry entry
+ * grows forever, with no error, no failing test and no symptom of any kind
+ * until disk — and it is invisible in review, because there is no call site to
+ * notice missing.
  *
- * `properties.expires_at` is the first entry, and the most consequential one
- * this migration will produce: the census measured it as populated on **100% of
- * production rows**, so the entire external-listing inventory is under an
- * active scythe today and stops being reaped the moment the cutover lands.
+ * `properties.expires_at` is the most consequential entry: the census measured
+ * it as populated on **100% of production rows**, so the entire
+ * external-listing inventory is reaped by it.
  *
- * ## What this file does NOT prove
+ * ## What the registry alone does NOT prove
  *
  * That the sweep RUNS. `EXPIRY_SWEEP_TARGETS` is data; `services/cron.ts` has
- * to call `sweepAllExpiredRows` with it, and that wiring is a later batch. The
- * registry makes the omission visible, it does not close it — stated here so a
- * green run is not mistaken for a working sweep.
+ * to call `sweepAllExpiredRows` with it. The scheduling case below is what
+ * checks that wiring — a green registry is not a working sweep.
  */
 
 import { getTableName, sql } from 'drizzle-orm';
@@ -94,8 +91,8 @@ async function propertyExists(db: Database, id: string): Promise<boolean> {
 describe('expiry sweep registry', () => {
   it('backs every registered column with a leading btree index', async () => {
     // Against the REAL catalogue, not the declarations: the sweep's predicate
-    // is `column <= now() - retention`, which is a range scan, and Mongo's TTL
-    // index carried the same obligation implicitly. Without the index the sweep
+    // is `column <= now() - retention`, which is a range scan. Without the index
+    // the sweep
     // is a full scan of the largest table in the schema, on a schedule.
     const violations = await findUnsupportedExpiryColumns(db, EXPIRY_SWEEP_TARGETS);
     expect(violations).toEqual([]);
@@ -107,27 +104,21 @@ describe('expiry sweep registry', () => {
     // nothing at all. Naming the entries is what makes that assertion mean
     // something.
     //
-    // The set is CLOSED and this is the whole census: `grep -rn
-    // expireAfterSeconds models/` returns FIVE TTL indexes, and the fifth —
-    // `conversations.sharing_expires_at` — is the one that must never be swept.
-    // Asserting the exact list in both directions is what makes "five in the
-    // source, four here, one refused" a checked statement rather than an
-    // arithmetic claim in a comment.
+    // The set is CLOSED: asserting the exact list in both directions makes it
+    // a checked statement rather than an arithmetic claim in a comment.
+    // `conversations.sharing_expires_at` is the deadline column that must never
+    // be swept, and is checked separately below.
     //
     // `housing_domain_events.expires_at` (#356) and `address_candidates.expires_at`
-    // (#360) are the fifth and sixth entries and have no Mongo ancestor at all —
-    // both were registered when the table was created rather than found by that
-    // census. That is the shape this registry wants every future table to arrive
-    // in, and it is why the count in this test's NAME is the registry's size
-    // rather than the census's: the two stopped being the same number the moment
-    // a table was born on Postgres.
+    // (#360) were registered when their tables were created. That is the shape
+    // this registry wants every future table to arrive in.
     const registered = EXPIRY_SWEEP_TARGETS.map(
       (target) => `${getTableName(target.table)}.${sqlColumnName(target.column)}`,
     ).sort();
     expect(registered).toEqual([
       // #360's candidate table is the SIXTH entry and, like
-      // `housing_domain_events` below, has no Mongo ancestor: it was registered
-      // when the table was created rather than found by that census. A candidate
+      // `housing_domain_events` below, was registered when the table was
+      // created. A candidate
       // is an OBSERVATION whose every audit-relevant fact is copied by value
       // onto `address_materializations` at materialization time, so the sweep
       // costs a materialized place nothing.
@@ -191,9 +182,8 @@ describe('expiry sweep registry', () => {
     // The gap this closes, stated as a test rather than as a comment. The
     // registry was complete and correct for weeks and nothing ran it, so every
     // registered table grew forever — no error, no failing test, no symptom of
-    // any kind until disk. Measured in production hours after the property
-    // cutover: 124 listings past their deadline, 121 already reaped from Mongo,
-    // all still being served.
+    // any kind until disk. Measured in production on 2026-08-09: 124 listings
+    // past their deadline, all still being served.
     //
     // A registry entry cannot detect its own absence from the scheduler. This
     // can.
@@ -223,8 +213,7 @@ describe('expiry sweep registry', () => {
   it('sweeps a deadline that has passed and spares one that has not', async () => {
     // The registry is a claim about SEMANTICS — "delete where the column is
     // more than N seconds in the past" — and `retentionSeconds: 0` on a column
-    // that already holds the deadline is the shape Mongo's
-    // `expireAfterSeconds: 0` meant. Asserting the predicate against real
+    // that already holds the deadline means "delete at the deadline". Asserting the predicate against real
     // timestamps is what distinguishes that reading from the other one
     // (`0` meaning "never expire"), and they are indistinguishable from the
     // registry entry alone.

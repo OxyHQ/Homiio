@@ -5,38 +5,14 @@
  *
  * ## The row counts, and what the zero actually means
  *
- * Measured 2026-08-09 from a one-shot on the live task definition:
+ * Measured 2026-08-09 from a one-shot on the live task definition: `conversations`
+ * / `conversation_messages` / `…_attachments` held **0 / 0 / 0** rows.
  *
- * | store | rows |
- * |---|--:|
- * | Mongo `conversations` | **0** |
- * | Mongo messages, summed across every document | **0** |
- * | Postgres `conversations` / `conversation_messages` / `…_attachments` | **0 / 0 / 0** |
- *
- * Zero is not "nobody used the assistant". **Every write path was broken**, and
- * the port is what fixes it, so the number is evidence and not a licence to
- * treat the domain as dead:
- *
- *  - `2d1376a` renamed `Conversation.profileId` to `oxyUserId` and updated the
- *    handlers that lived in `controllers/ai/`. `eeb4845` later deleted that
- *    directory, and `routes/ai.ts` — the file actually mounted at `/api/ai`,
- *    checked against `routes/index.ts` — kept the OLD spelling.
- *  - So every write was `new Conversation({ profileId: … })`. mongoose strict
- *    mode DROPS a path the schema does not declare, `oxyUserId` is
- *    `required: true`, and `save()` therefore throws `ValidationError` every
- *    time. Verified against this repository's mongoose 8.24.1 rather than
- *    reasoned about: the constructed document holds `undefined` for BOTH fields
- *    and `validateSync()` reports "Path `oxyUserId` is required."
- *  - The reads matched: `find({ profileId })` filters on a field no document has
- *    and returns `[]`, so the client saw an empty history rather than an error.
- *  - The collection still carries both generations of index (`profileId_1`,
- *    `oxyUserId_1_status_1_updatedAt_-1`, …), which is the fingerprint of the
- *    half-finished rename.
- *
- * The TTL index is the second reason to distrust a low count here, and
- * `db/expiry.ts` carries it: Mongo deleted the whole conversation 24 hours after
- * anybody shared it. Both hazards point the same way — this table's emptiness
- * says nothing about demand.
+ * Zero is not "nobody used the assistant": every write path keyed the owner by
+ * a stale `profileId` spelling (`routes/ai.ts` kept it after `2d1376a` renamed
+ * the field to `oxyUserId`), so every write failed validation and every read
+ * filtered on a field no row had and returned `[]`. The number is evidence and
+ * not a licence to treat the domain as dead.
  *
  * ## ORDERING: never by the primary key, and this is the table where it bites
  *
@@ -54,11 +30,10 @@
  * top — and it would do it silently, and only for the conversations that span
  * the cutover, which is the set no hand-written fixture contains. So:
  *
- *  - messages are ordered by **`position`**, the array index Mongo's
- *    `messages[]` carried, with `timestamp` as the tiebreaker;
+ *  - messages are ordered by **`position`**, the transcript's own index, with
+ *    `timestamp` as the tiebreaker;
  *  - conversations are ordered by **`updated_at desc`**, with the id as a
- *    tiebreaker ONLY, exactly as the Mongo handler's `sort({ updatedAt: -1 })`
- *    did.
+ *    tiebreaker ONLY.
  *
  * `__tests__/db/conversationOrdering.test.ts` pins both against a fixture that
  * MIXES a legacy hex id with a uuid v7 and arranges the timestamps so an id sort
@@ -67,11 +42,11 @@
  *
  * ## What is denormalised, what became a query, and why each
  *
- * | Mongo | Here | Why |
+ * | Wire field | Here | Why |
  * |---|---|---|
- * | `analytics.messageCount` | `count(*)`, in {@link listConversations}' lateral | A `pre('save')` hook maintained it. There is no hook here, and it is not a sort key of anything, so a stored counter would have a writer nobody can see and no reader that needs it to be cheap |
- * | `lastMessage` (a virtual) | the same lateral | It was already computed per read in Mongo — a virtual over the loaded array. Storing it would be new denormalisation, not a port |
- * | `analytics.lastActivity` | KEPT, and {@link touchActivity} is its hook | Not derivable: Mongo moved it on any save, not only on an append, so it and `updated_at` are two different facts. It only stays honest because this module is the sole writer and stamps it on every mutation — a stored value with no maintainer is worse than a join |
+ * | `analytics.messageCount` | `count(*)`, in {@link listConversations}' lateral | It is not a sort key of anything, so a stored counter would have a writer nobody can see and no reader that needs it to be cheap |
+ * | `lastMessage` | the same lateral | Computed per read; storing it would be denormalisation nothing needs |
+ * | `analytics.lastActivity` | KEPT, and {@link touchActivity} maintains it | Not derivable: it moves on any change, not only on an append, so it and `updated_at` are two different facts. It only stays honest because this module is the sole writer and stamps it on every mutation — a stored value with no maintainer is worse than a join |
  * | `analytics.totalTokens` | KEPT, written by {@link addTokens} | Comes from the provider's response, not from the stored text, so nothing can recompute it |
  *
  * The prompt's other two candidates do not exist in this model: a conversation
@@ -82,8 +57,8 @@
  *
  * `conversations_sharing_coherent_check` makes the four `sharing_*` columns move
  * together, so {@link shareConversation} and {@link revokeSharing} write all
- * four or none. Mongo enforced nothing, which allowed a conversation flagged
- * `isShared` with no token (unreachable by its own link) and a token with the
+ * four or none. Without it a conversation could be flagged `isShared` with no
+ * token (unreachable by its own link) and a token with the
  * flag false (a live secret nobody could revoke through the UI).
  */
 
@@ -101,7 +76,7 @@ export type ConversationAttachmentRow = typeof conversationMessageAttachments.$i
 /** A message role the `conversation_messages_role_check` accepts. */
 export type ConversationMessageRole = ConversationMessageRow['role'];
 
-/** How long a share link lives, matching Mongo's `generateShareToken(24)`. */
+/** How long a share link lives, in hours. */
 export const SHARE_LINK_HOURS = 24;
 
 /** Bytes of entropy in a share token — `crypto.randomBytes(32)`, as hex. */
@@ -218,8 +193,7 @@ export async function findConversationForOwner(
 /**
  * A person's conversations, newest activity first, with their counts.
  *
- * `updated_at desc` reproduces the Mongo handler's `sort({ updatedAt: -1 })`;
- * the id is a TIEBREAKER and nothing else. Two conversations sharing a
+ * `updated_at desc`; the id is a TIEBREAKER and nothing else. Two conversations sharing a
  * millisecond is not hypothetical here — `date_trunc('milliseconds', now())` is
  * the column default, so a batch write lands them on the same value — and a sort
  * with no tiebreaker is not stable across two calls, which is what makes a
@@ -431,10 +405,9 @@ export async function appendMessages(
 /**
  * Move `analytics.last_activity` to now.
  *
- * This is the hook the Mongo `pre('save')` was. `last_activity` is kept as a
- * stored column — see the header — and a stored value whose maintainer went
- * missing in the port is exactly the failure the prompt names, so every mutation
- * in this module ends here.
+ * `last_activity` is kept as a stored column — see the header — and a stored
+ * value whose maintainer goes missing is exactly the failure to avoid, so every
+ * mutation in this module ends here.
  *
  * `updated_at` moves too, via drizzle's `$onUpdate`, and that is correct: they
  * are two facts that agree on this path and diverge on the ones that do not
@@ -505,9 +478,9 @@ export async function setConversationStatus(
 /**
  * Replace a conversation's whole transcript.
  *
- * `PUT /conversations/:id` accepts a `messages` array and Mongo assigned it over
- * the embedded array, so the ported form deletes and re-inserts. Positions are
- * re-numbered from zero, which is what the assignment did implicitly.
+ * `PUT /conversations/:id` accepts a `messages` array that replaces the whole
+ * transcript, so this deletes and re-inserts. Positions are re-numbered from
+ * zero.
  *
  * The caller supplies the transaction: a delete that committed without its
  * re-insert is a transcript the user cannot get back.
@@ -547,13 +520,14 @@ export async function deleteConversation(
  *
  * All four `sharing_*` columns are written in one statement because
  * `conversations_sharing_coherent_check` refuses any other combination — which
- * is the schema doing what Mongo's `generateShareToken` only did by convention.
+ * is the schema enforcing what a convention alone would not.
  *
- * **The deadline is on the LINK, not on the row.** Mongo carried a TTL index on
- * `sharing.expiresAt` that deleted the whole conversation, transcript included,
- * 24 hours later. `db/expiry.ts` names the column in
+ * **The deadline is on the LINK, not on the row.** Deleting the row at the
+ * deadline would delete the whole conversation, transcript included, 24 hours
+ * later. `db/expiry.ts` names the column in
  * `EXPIRY_COLUMNS_THAT_MUST_NOT_DELETE` and a test fails the build if it is ever
- * registered as a sweep target; {@link expireShareLinks} is the correct port.
+ * registered as a sweep target; {@link expireShareLinks} is the correct
+ * handling.
  */
 export async function shareConversation(
   db: DatabaseOrTransaction,
@@ -607,8 +581,7 @@ export async function revokeSharing(
 /**
  * The conversation behind a LIVE share token, with its transcript.
  *
- * The freshness predicate is in the query, exactly as Mongo's
- * `findByShareToken` had it, so an expired link answers "not found" whether or
+ * The freshness predicate is in the query, so an expired link answers "not found" whether or
  * not {@link expireShareLinks} has run since. That is what makes the sweep pure
  * housekeeping rather than a correctness dependency — `db/expiry.ts` calls out
  * the coexistence rule, and this is the read side of it.
@@ -638,11 +611,9 @@ export async function findConversationByShareToken(
  * Clear every share link whose deadline has passed. Returns how many were
  * cleared.
  *
- * **This is the port of Mongo's TTL index on `sharing.expiresAt`, and it must
- * never delete a row.** That index deleted the whole conversation — every
- * message in it — 24 hours after anybody pressed Share, so a near-zero row count
- * in the source is evidence of the DAMAGE rather than of safety.
- * `db/schema/conversations.ts` and `db/expiry.ts` both say so; this is where it
+ * **It must never delete a row.** Deleting at the deadline would delete the
+ * whole conversation — every message in it — 24 hours after anybody pressed
+ * Share. `db/schema/conversations.ts` and `db/expiry.ts` both say so; this is where it
  * stops being advice.
  *
  * The four columns are cleared together because the coherence CHECK accepts no
@@ -668,7 +639,7 @@ export async function expireShareLinks(
 }
 
 /**
- * A title derived from the first user turn, matching Mongo's `pre('save')`.
+ * A title derived from the first user turn.
  *
  * Fifty characters, trimmed, with an ellipsis when it was cut. Exported so the
  * AI-generated title path and the fallback agree on the shape rather than each

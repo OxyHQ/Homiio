@@ -2,15 +2,9 @@
  * Refusing a write that was handed the ROOT connection where a TRANSACTION was
  * required.
  *
- * ## What this replaces, and why a type is not enough
+ * ## Why a type is not enough
  *
- * Under Mongo the invariant was `session.inTransaction()`. The TYPE made the
- * session mandatory; that runtime check made it mandatory that a transaction was
- * actually OPEN — because a required parameter is satisfied by any session,
- * including a bare `startSession()` nobody opened a transaction on, which
- * type-checks perfectly and commits the row on its own.
- *
- * Drizzle has the same hole, and a wider one. `DatabaseOrTransaction` is the
+ * `DatabaseOrTransaction` is the
  * parameter type every repository in this package takes, and the ROOT `Database`
  * satisfies it — so `enqueueModerationOutboxEvent(input, getDb())` compiles,
  * runs, commits the outbox row alone, and passes any test that only asserts the

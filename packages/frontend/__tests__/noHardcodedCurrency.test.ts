@@ -30,9 +30,7 @@
  *    fails instead of passing.
  *  - **Comments and this file are stripped/excluded.** Several modules explain
  *    the bug they fixed by quoting it (`what `€${amount}` did`), and a comment
- *    renders to nobody. Stripping them is the same call
- *    `__tests__/unit/mongoUnreachable.test.ts` makes in the backend, for the
- *    same reason — and both now make it through the SAME implementation,
+ *    renders to nobody. Stripping goes through the shared implementation,
  *    `@homiio/shared-types/testing/stripComments`. The two regexes that used to
  *    sit here truncated a line at the `//` of a URL and let a `/*` mentioned
  *    inside a `//` comment open a block, which blanked real code and made this

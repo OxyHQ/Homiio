@@ -207,9 +207,8 @@ function serializeReviews(
 /**
  * Page a list in the APPLICATION, as the hierarchical reads have always done.
  *
- * Carried across verbatim rather than pushed into SQL, because these endpoints
- * publish `totalReviews` over the WHOLE set beside a page of it and the Mongo
- * implementation derived both from one array. Pushing the slice into the query
+ * Not pushed into SQL, because these endpoints publish `totalReviews` over the
+ * WHOLE set beside a page of it, and both are derived from one array. Pushing the slice into the query
  * would need a second count and would change what `totalReviews` means for a
  * BUILDING read, where it counts building AND unit reviews while the page slices
  * only the unit ones.
@@ -268,8 +267,7 @@ async function loadHierarchy(
       summarizeUnit(address.id),
     ]);
     // The building this unit belongs to comes off the unit's own reviews, which
-    // are already in hand — Mongo issued a separate `findOne` for a "sample
-    // review" purely to read that one column off it.
+    // are already in hand — no separate read of a "sample review" is needed.
     const buildingSummary = await summarizeBuildingOfUnit(unitReviews[0]?.review.buildingLevelId);
     return { level: 'UNIT', unitReviews, unitStats, buildingSummary };
   }
@@ -694,7 +692,7 @@ export const updateReview = async (req: Request, res: Response) => {
     const picked = pickFields<Record<string, unknown>>(req.body, EDITABLE_REVIEW_FIELDS);
 
     // Write-only input, removed before normalization for the same reason as on
-    // the create path. An EMPTY name is not a clear: Mongo ignored it, and
+    // the create path. An EMPTY name is not a clear: it is ignored, because
     // treating it as "detach" would let a stray empty field silently unlink a
     // review from the agency its author named.
     const agencyName = typeof picked.agencyName === 'string' ? picked.agencyName.trim() : '';
@@ -767,10 +765,9 @@ export const getUserReviews = async (req: Request, res: Response) => {
      * `reviews_oxy_user_created_idx` is the one scoped index that is NOT partial
      * on `moderation_status <> 'removed'`, and its docblock says why — hiding a
      * removal from its author makes it indistinguishable from a lost submission.
-     * The Mongo filter applied `$ne: 'removed'` to everyone including the
-     * author, which contradicted both that index and `getReviewById`, where the
-     * author-visibility rule was already implemented. This is the same rule in
-     * both places now.
+     * Hiding it from the author too would contradict both that index and
+     * `getReviewById`, where the author-visibility rule is implemented. This is
+     * the same rule in both places.
      *
      * Nothing is exposed to a third party: the branch is on the viewer BEING the
      * author, so the public shape of this endpoint is unchanged.
@@ -961,8 +958,8 @@ export const reportReview = async (req: Request, res: Response) => {
  * What the public may see of an agency's catalogue: published, not archived,
  * not restricted by a jury.
  *
- * A drizzle predicate rather than a Mongo filter object — the agency listing
- * count and the agency listing page both read Postgres. It is a FUNCTION
+ * A drizzle predicate shared by the agency listing count and the agency listing
+ * page. It is a FUNCTION
  * because a `SQL` fragment carries its own bound parameters and must not be
  * shared between two statements as a constant.
  */

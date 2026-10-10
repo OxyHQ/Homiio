@@ -1,41 +1,32 @@
 /**
  * `leases` and its six child tables — the tenancy contract.
  *
- * Ported from `models/schemas/LeaseSchema.ts` (561 lines). Empty in production.
+ * ## Two rules the schema states rather than trusts
  *
- * ## Two findings this port fixes rather than carries
+ * **`room_id` is a foreign key into `properties`.** There is no rooms table —
+ * `roomController.createRoom` creates a **Property** with `type: 'room'` and a
+ * `parentPropertyId` — so the link is real and points at a property.
  *
- * **`roomId` referenced a model that does not exist.** Mongo declared
- * `{ ref: 'Room' }` and there is no `Room` model registered anywhere in this
- * package — `roomController.createRoom` creates a **Property** with
- * `type: 'room'` and a `parentPropertyId`. Nothing populates the path, which is
- * why `MissingSchemaError` never fired. The LINK is real; only the name was
- * wrong, so it becomes a foreign key into `properties`. The prime directive is
- * that no relational link is lost, and this one was already half lost.
+ * **A payment cannot be marked paid without a payment.** `status`, `paidDate`,
+ * `paidAmount` and `paymentMethod` are written together, and the CHECK
+ * on `lease_payment_schedule` states the relationship between them, so a `paid`
+ * row carrying none of the three is not representable.
  *
- * **A payment could be marked paid without a payment.** `recordPayment` sets
- * `status`, `paidDate`, `paidAmount` and `paymentMethod` together, and Mongo
- * enforced no relationship between them, so a `paid` row carrying none of the
- * three was representable. The CHECK on `lease_payment_schedule` states it.
- *
- * ## Nullability follows the measured mongoose rule, and it produces one oddity
+ * ## Nullability, and the one oddity it produces
  *
  * `leaseTerms`, `rentDetails`, `utilities`, `rules`, `signatures` and
- * `terminationNotice` are NESTED PATHS carrying defaults, not sub-schemas
- * declared `default: undefined` — so mongoose materializes every one of them on
- * construction and their defaults really are in the stored BSON.
- * `CONVENTIONS.md` records that measurement; the consequence here is that
+ * `terminationNotice` are blocks present on every lease, so their defaults
+ * really are stored (`CONVENTIONS.md`). The consequence here is that
  * `termination_notice_acknowledged` is `NOT NULL DEFAULT false` on every lease,
  * including the overwhelming majority that have no termination notice at all.
- * That is faithful rather than tidy: it is exactly what the source holds, and
- * the notice's PRESENCE is read from `termination_notice_given_date`, not from
+ * That is faithful rather than tidy, and the notice's PRESENCE is read from `termination_notice_given_date`, not from
  * this flag.
  *
  * ## Signature material is PROTECTED
  *
  * `signatures_landlord_digital_signature` and its tenant counterpart are in
- * `protectedColumns.ts`. Mongoose hid them only by their absence from
- * `toLeaseDTO`'s field list; a bare drizzle `select()` returns them.
+ * `protectedColumns.ts`. Absence from `toLeaseDTO`'s field list is not enough;
+ * a bare drizzle `select()` returns them.
  */
 
 import {
@@ -252,9 +243,9 @@ export const leases = pgTable(
 
     /**
      * `findActive` asks "is `now()` inside this lease's term?", which is a
-     * CONTAINMENT question, and Mongo's `{ startDate: 1, endDate: 1 }` compound
-     * cannot answer it: a btree narrows by start OR by end and filters the rest
-     * by hand. That index is NOT ported; this one answers `@> now()` directly.
+     * CONTAINMENT question, and a `(start_date, end_date)` btree cannot answer
+     * it: a btree narrows by start OR by end and filters the rest by hand. This
+     * one answers `@> now()` directly.
      *
      * **CLOSED bounds `'[]'`, unlike `property_availability_windows`' `'[)'`,**
      * and the difference is the source rather than a preference: `findActive`
@@ -299,17 +290,15 @@ export const leases = pgTable(
       sql`${table.rulesPetsTypes} <@ ${sql.raw(textArrayLiteral(LEASE_PET_TYPES))}`,
     ),
     /**
-     * Mongoose declared `min: 1, max: 31` on `rentDetails.dueDate` — a range
-     * validator, which `CONVENTIONS.md` normally defers because a CHECK would
+     * `rentDetails.dueDate` is a day of the month, `1..31` — a range rule, which `CONVENTIONS.md` normally defers because a CHECK would
      * reject production rows the census has not measured. Expressed here because
      * the table is EMPTY: there is nothing to reject, and the alternative is a
      * payment schedule generated against day 0 or day 47 of a month.
      */
     check('leases_rent_due_date_check', sql`${table.rentDetailsDueDate} between 1 and 31`),
     /**
-     * Mongo's own validator lived on `Reservation.checkOut` and on the exchange
-     * window but NOT here — a lease could end before it started. Same reasoning
-     * as the row above: zero rows, and `generatePaymentSchedule` loops from
+     * A lease ends after it starts, like a reservation and an exchange window.
+     * Same reasoning as the row above: zero rows, and `generatePaymentSchedule` loops from
      * `startDate` to `endDate`, so an inverted term silently produces an empty
      * schedule and a lease nobody ever has to pay.
      */
@@ -323,12 +312,12 @@ export const leases = pgTable(
 /**
  * `coTenants[]` — the other people on the lease.
  *
- * Every child table below CASCADEs from `leases`: mongoose deleted these with
- * the parent document by construction, and none of them has meaning without it.
+ * Every child table below CASCADEs from `leases`: none of them has meaning
+ * without it.
  *
  * ## A co-tenant SIGNS (#518 §7.4)
  *
- * `signed_date` and `status` were ported from Mongo and had no writer at all:
+ * `signed_date` and `status` once had no writer at all:
  * `signLease` never touched them and `leaseController` refused a co-tenant's
  * signature outright, while `partyFilter` treated them as a party for reads and
  * `isFullySigned` read the status they could never reach. Two columns that
@@ -337,8 +326,7 @@ export const leases = pgTable(
  *
  * So the lease now becomes `active` only once the landlord, the tenant AND
  * every co-tenant has signed. That ends the disagreement `leaseSerializer.ts`
- * documented between `status` and `isFullySigned` — faithful to Mongo, and a
- * lease reading `active` while a named tenant has not signed is the same
+ * documented between `status` and `isFullySigned` — a lease reading `active` while a named tenant has not signed is the same
  * confident lie the rent ledger removed from the payment side.
  *
  * These two columns are a CACHE of `lease_signatures`, exactly as the lease's
@@ -363,8 +351,7 @@ export const leaseCoTenants = pgTable(
   },
   (table) => [
     /**
-     * One row per person per lease. Mongo could not express it, and the
-     * `isFullySigned` virtual reads `coTenants.every(status === 'signed')` — a
+     * One row per person per lease. `isFullySigned` reads `coTenants.every(status === 'signed')` — a
      * duplicated co-tenant makes that answer depend on which copy was updated.
      */
     index('lease_co_tenants_lease_id_idx').on(table.leaseId),
@@ -412,11 +399,8 @@ export const leaseSharedUtilityCosts = pgTable(
 /**
  * `paymentSchedule[]` — the rent, deposit and fee instalments.
  *
- * A child table for the reason `CONVENTIONS.md` gives and no other: Mongo
- * INDEXED it by element (`{ 'paymentSchedule.dueDate': 1,
- * 'paymentSchedule.status': 1 }`), so it is queried by element by definition.
- * Its subdocuments are declared `{ _id: true }`, so every row keeps the id
- * `recordPayment` already looks it up by.
+ * A child table for the reason `CONVENTIONS.md` gives and no other: it is
+ * queried by element (`due_date`, `status`). Every row has its own id.
  */
 export const leasePaymentSchedule = pgTable(
   'lease_payment_schedule',
@@ -437,8 +421,7 @@ export const leasePaymentSchedule = pgTable(
     transactionId: text(),
   },
   (table) => [
-    // The port of Mongo's element index, plus the lease scope the array
-    // membership used to supply implicitly.
+    // The element lookups, scoped to a lease and across leases.
     index('lease_payment_schedule_lease_due_idx').on(table.leaseId, table.dueDate),
     index('lease_payment_schedule_due_status_idx').on(table.dueDate, table.status),
     check(
@@ -456,9 +439,9 @@ export const leasePaymentSchedule = pgTable(
     /**
      * A `paid` instalment carries the evidence that it was paid.
      *
-     * `recordPayment` writes all four together and Mongo enforced nothing, so a
-     * row marked `paid` with no date, no amount and no method was representable —
-     * and it is indistinguishable, afterwards, from a payment somebody recorded
+     * The four are written together. Without this CHECK a row marked
+     * `paid` with no date, no amount and no method is representable — and it is
+     * indistinguishable, afterwards, from a payment somebody recorded
      * by hand. The reverse half matters too: a `paid_date` on a `pending` row is
      * a payment nobody counted.
      */
@@ -505,7 +488,7 @@ export const leaseDocuments = pgTable(
     name: text().notNull(),
     url: text().notNull(),
     type: text({ enum: LEASE_DOCUMENT_TYPES }).notNull().default('other'),
-    /** Mongo's `uploadedBy`, renamed: `leaseController` writes the session Oxy id. */
+    /** Named for what it holds: `leaseController` writes the session Oxy id. */
     uploadedByOxyUserId: text().notNull(),
     uploadedDate: timestamptz().notNull(),
     /** SHA-256 of the STORED bytes, lowercase hex. NULL before this column existed. */

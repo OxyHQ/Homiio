@@ -7,20 +7,11 @@
  * Also covers the "no neighborhood → 404 / hidden" and unknown-city → empty
  * paths, plus popular-by-listing-count ranking and nearest-by-location lookup.
  *
- * ## The fixtures are Postgres-only, and no longer straddle two stores
+ * ## The fixtures seed exactly what the router reads
  *
- * Geo, addresses and listings are all Postgres, so every row this file seeds
- * goes there. It used to also create a Mongo `Profile` per test, purely to
- * obtain an `oxyUserId` to own the listings with — the neighborhood router
- * never read it, in either store. Measured: with the in-memory Mongo switched
- * off, exactly the seven tests that called that fixture failed, and they failed
- * inside the fixture rather than at an assertion.
- *
- * That is worth naming rather than quietly deleting, because a seed against a
- * store the code under test does not read is worse than a redundant one: it
- * passes while proving nothing about the store production uses, and it keeps
- * `mongoose` in this file's module graph, which is what stops it leaving
- * `package.json`.
+ * Geo, addresses and listings, all in Postgres. A seed of something the code
+ * under test does not read is worse than a redundant one: it passes while
+ * proving nothing about what production uses.
  *
  * An owner id is just a string here — Oxy owns identity and these columns carry
  * no foreign key — so {@link nextOwnerId} mints one directly.
@@ -66,8 +57,7 @@ async function seedStreet(
 }
 
 /**
- * A fresh owner id per test — the same cardinality the Mongo `Profile` fixture
- * this replaced produced, so no case gains or loses an owner boundary.
+ * A fresh owner id per test, so no case gains or loses an owner boundary.
  *
  * A counter rather than the previous `Math.random()`, because a failure naming
  * `oxy-neighborhood-owner-3` says which case seeded the row and a random suffix
@@ -82,9 +72,7 @@ function nextOwnerId(): string {
 /**
  * A published listing at a given address.
  *
- * POSTGRES, because that is the store the metrics now read: this endpoint used
- * to hop through Mongo for the listing half, and a fixture seeded there would
- * make the test assert against rows the handler cannot see.
+ * POSTGRES, because that is the store the metrics read.
  */
 async function seedListing(
   oxyUserId: string,

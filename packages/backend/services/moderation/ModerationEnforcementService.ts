@@ -107,12 +107,10 @@ async function applyToProperty(
   subject: EnforcementSubject,
   decision: Decision,
 ): Promise<EffectResult> {
-  // The Mongo version opened with `if (!mongoose.isValidObjectId(subject.id))`.
-  // That guard is deliberately NOT ported: `db/ids.ts` states the rule, and
-  // post-cutover every id `generatedId()` mints is a uuid v7, for which
-  // `isValidObjectId` is FALSE — so keeping it would silently make every listing
-  // created after the cutover permanently un-enforceable while still reporting
-  // `changed: false` as though it had looked. The read below already answers "no
+  // No id-shape guard (`db/ids.ts`): every id `generatedId()` mints is a uuid
+  // v7, so a 24-hex test would silently make every new listing permanently
+  // un-enforceable while still reporting `changed: false` as though it had
+  // looked. The read below already answers "no
   // such row", for every id shape.
   const restricted = await findPropertyRestriction(subject.id);
   if (restricted === undefined) {

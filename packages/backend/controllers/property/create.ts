@@ -106,9 +106,8 @@ export async function createProperty(
       typeof req.body.referralCode === 'string' ? req.body.referralCode.trim() : '';
     if (referralCode) {
       // Resolved against the POSTGRES `partners` table, which is the table
-      // `properties.sourced_by_partner_id` actually references — reading the
-      // Mongo collection here would stamp an id no foreign key can resolve and
-      // fail every referred listing with a `23503`.
+      // `properties.sourced_by_partner_id` actually references, so the stamped
+      // id always resolves and a referred listing never fails with a `23503`.
       const [partner] = await getDb()
         .select({ id: partners.id, referralCode: partners.referralCode })
         .from(partners)

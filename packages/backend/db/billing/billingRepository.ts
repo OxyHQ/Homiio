@@ -2,35 +2,29 @@
  * The billing repository — one row per Oxy user, plus the Stripe sessions
  * already applied to it.
  *
- * Ported from `models/schemas/BillingSchema.ts`, whose behaviour lived in six
- * instance methods, three statics and a `pre('save')` hook. Each is accounted
- * for below rather than left to be noticed missing: a Mongoose hook has no
- * Postgres counterpart and vanishes silently — invisible in a schema diff, to
- * `tsc`, and to any suite that only supplies valid input.
+ * Every billing behaviour, and where it lives:
  *
- * | Mongoose | here |
+ * | Behaviour | here |
  * |---|---|
- * | `pre('save')` refusing a second record per user | `billing_oxy_user_id_key`, and {@link ensureBilling} handles the violation |
+ * | refusing a second record per user | `billing_oxy_user_id_key`, and {@link ensureBilling} handles the violation |
  * | `findByOxyUserId` / `findByStripeSubscriptionId` / `findActiveSubscriptions` | the three finders below |
  * | `addFileCredit` | {@link addFileCredits}, incremented IN SQL |
  * | `consumeFileCredit` | {@link consumeFileCredit}, a guarded atomic decrement |
  * | `activatePlus` / `deactivatePlus` | {@link setPlusActive} |
  * | `addProcessedSession` / `isSessionProcessed` | {@link claimStripeSession} |
  *
- * ## The hook was a read-then-write, and the index is strictly stronger
+ * ## The index, not a read-then-write
  *
- * `pre('save')` did `findOne({ oxyUserId })` and threw if it found one — a
- * check with a window between it and the insert, so two concurrent first
+ * A read before the insert is a check with a window, so two concurrent first
  * payments for the same user could both pass it. `billing_oxy_user_id_key`
  * closes that window, and {@link ensureBilling} INSERTs and handles `23505`
- * rather than re-implementing the read. So the rule survives the port and gets
- * a guarantee it never had.
+ * rather than re-implementing the read.
  *
  * ## Credits are changed IN SQL, never read-modify-written
  *
- * `addFileCredit`/`consumeFileCredit` mutated a loaded document and saved it.
- * Two concurrent consumes could each read `1` and each write `0`, spending one
- * credit twice. Both are single statements here, and the decrement carries its
+ * Mutating a loaded row and saving it would let two concurrent consumes each
+ * read `1` and each write `0`, spending one credit twice. Both are single
+ * statements here, and the decrement carries its
  * own `file_credits > 0` predicate so the guard and the write cannot
  * interleave. `billing_file_credits_non_negative_check` is the backstop
  * underneath, not the mechanism.
@@ -301,7 +295,7 @@ export async function deactivateSubscriptionByStripeId(
 /**
  * Stamp a successful renewal, found by Stripe's id.
  *
- * Scoped to ACTIVE records verbatim from the Mongo handler: an invoice paid
+ * Scoped to ACTIVE records: an invoice paid
  * against a subscription Homiio already believes is cancelled must not silently
  * revive it, and reconciling that disagreement is `syncSubscriptionStatus`'s
  * job, which reads Stripe rather than inferring from one event.
@@ -330,9 +324,8 @@ export type BillingEntitlements = BillingRow & { processedSessions: string[] };
  *
  * ONE projection, because there are nine handlers that return it — the profile
  * router, the confirm redirect, manual activate and cancel, sync, the Stripe
- * cancel and reactivate, and the debug endpoint. Under Mongo each assembled its
- * own (`toObject()`, a `.lean()` document, or a literal), which is how they
- * drifted apart.
+ * cancel and reactivate, and the debug endpoint. Nine hand-assembled copies
+ * would drift apart.
  *
  * `null` when the account has never paid. A read never CREATES the row: the
  * record is minted by a payment, so answering a page view by writing one would
@@ -358,8 +351,7 @@ export type CheckoutProduct = 'plus' | 'file' | 'founder';
  * did. Every caller — the Stripe webhook, the post-redirect confirm endpoint and
  * the manual-activation fallback — routes through here, which is what makes
  * "Stripe delivered this twice" and "the user pressed the button twice" the same
- * question with the same answer. Under Mongo those were three independently
- * written copies of one guard.
+ * question with the same answer.
  *
  * @param stripeSubscriptionId Passed through to {@link setPlusActive}, which
  *   leaves the stored id alone when this is absent — so the manual fallback,

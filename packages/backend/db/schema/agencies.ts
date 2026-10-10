@@ -51,7 +51,7 @@ export const agencies = pgTable(
      */
     index('agencies_name_trgm_idx').using('gin', sql`${table.name} gin_trgm_ops`),
     /**
-     * Mongoose declared `minlength: 2` on `name` and `findOrCreateByName` refuses
+     * `findOrCreateByName` refuses
      * a normalized name shorter than two characters — so the shortest possible
      * row is two characters and this rejects nothing that exists. It is expressed
      * because an empty `normalized_name` would collide with every other empty one

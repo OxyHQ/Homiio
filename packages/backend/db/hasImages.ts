@@ -4,48 +4,38 @@
  *
  * ## Why a denormalized flag exists at all in a schema that forbids them
  *
- * `CONVENTIONS.md` says Mongo's join-less workarounds do not travel, and a
- * counter maintained beside the thing it counts is the archetype of one. This
- * column is the deliberate exception, and the reason is that the honest
+ * `CONVENTIONS.md` says a queryable relation is not copied onto its parent, and
+ * a flag maintained beside the thing it summarises is the archetype of one.
+ * This column is the deliberate exception, and the reason is that the honest
  * relational spelling is not merely slower here — it is unindexable.
  *
  * `has_images` is the PRIMARY SORT KEY of every discovery feed
- * (`{ hasImages: -1, createdAt: -1 }` in Mongo, `properties_has_images_created_at_idx`
- * here). Written honestly, that sort is
+ * (`properties_has_images_created_at_idx`). Written honestly, that sort is
  *
  *   ORDER BY EXISTS (SELECT 1 FROM property_images pi WHERE pi.property_id = p.id) DESC,
  *            p.created_at DESC
  *
- * — a CORRELATED SUBQUERY in an `ORDER BY`, which Postgres can no more serve
- * from an index than Mongo could. Every page of the main feed becomes a full
+ * — a CORRELATED SUBQUERY in an `ORDER BY`, which Postgres cannot serve from an
+ * index. Every page of the main feed becomes a full
  * sort of the table. So the flag stays, and pays for itself by carrying an
  * obligation instead of a promise:
  *
  *  1. **One writer.** {@link syncHasImages} is it. No controller, service,
- *     backfill or script assigns the column directly, and it is absent from
+ *     or script assigns the column directly, and it is absent from
  *     `CREATABLE_PROPERTY_FIELDS` / `EDITABLE_PROPERTY_FIELDS` so no request
  *     body can reach it either.
- *  2. **Derived, never copied** — including by the backfill. Production already
- *     holds a row where the stored flag disagrees with its own array
- *     (`6a515dd9c196de4ad2a8550e`, `fotocasa/190185722`: `hasImages: false`
- *     with twelve images), so copying the stored value would import a
- *     known-wrong answer. That id carries `expiresAt: 2026-08-09`, which makes
- *     it useful for VERIFYING the derivation ran and useless as a hand-written
- *     exception — if the cutover falls after that date the TTL will have swept
- *     it and a named rule would point at nothing.
+ *  2. **Derived, never copied.** A stored flag can disagree with its own photo
+ *     rows, so it is always recomputed from them rather than trusted.
  *  3. **Reconcilable.** {@link findHasImagesDisagreements} answers "has it
  *     drifted?" in one query. A denormalized value with no way to detect drift
  *     is a value that will drift, and nothing will say so.
  *
- * ## This replaces a HOOK, not a controller
+ * ## Schema behaviour, so it lives beside the schema
  *
- * Mongoose maintained the flag in `propertySchema.pre('save')` and a second
- * `pre(['findOneAndUpdate','updateOne','updateMany'])` that re-derived it
- * whenever an update happened to mention `images`. Both are schema behaviour,
- * which is why their replacement lives beside the schema rather than in a
- * service — and why the replacement is one function rather than two: a hook
- * that only fires when the caller mentions a field is a hook that silently does
- * not fire, and the array it watched is now a table with its own writes.
+ * Maintaining the flag is a property of the table, which is why it lives here
+ * rather than in a service — and why it is one function rather than one per
+ * write path: logic that only runs when the caller mentions a field is logic
+ * that silently does not run.
  *
  * ## The one path this cannot cover, stated rather than hidden
  *

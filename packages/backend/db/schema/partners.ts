@@ -58,8 +58,8 @@ export const partners = pgTable(
     /**
      * The Oxy account. One partner per account.
      *
-     * Mongo named this `userId`; it is renamed here because the column holds an
-     * OXY account id and `deferredForeignKeys.isOxyAccountColumn` is what stops
+     * Named `oxy_user_id`, not `user_id`, because the column holds an OXY
+     * account id and `deferredForeignKeys.isOxyAccountColumn` is what stops
      * an id-shaped column shipping unclassified — a column named `user_id` would
      * fall through that predicate and read as a missing foreign key into a table
      * that does not exist. The collection is empty, so the rename costs the
@@ -90,10 +90,9 @@ export const partners = pgTable(
   (table) => [
     uniqueIndex('partners_oxy_user_id_key').on(table.oxyUserId),
     uniqueIndex('partners_referral_code_key').on(table.referralCode),
-    // Mongo's standalone `{ status: 1 }`. Ported: `partnerController` lists
-    // active partners, and the column has two values, so this earns its keep
-    // only once the table is large. Kept because it is Mongo's, and dropping an
-    // index on an empty table is a decision better taken with rows in it.
+    // `partnerController` lists active partners, and the column has two values,
+    // so this earns its keep only once the table is large. Dropping an index on
+    // an empty table is a decision better taken with rows in it.
     index('partners_status_idx').on(table.status),
     check('partners_status_check', sql`${table.status} in (${sql.raw(inList(PARTNER_STATUSES))})`),
   ],
@@ -147,10 +146,9 @@ export const commissions = pgTable(
     /**
      * Three-letter code, uppercased at the call site.
      *
-     * NO CHECK against `LISTING_CURRENCIES`: Mongoose declared `minlength: 3`
-     * and `maxlength: 3` with no `enum`, so the vocabulary was never enforced and
-     * deriving one here is the deferred-validator case `CONVENTIONS.md` states.
-     * The length rule is not ported either, for the same reason.
+     * NO CHECK against `LISTING_CURRENCIES`: the vocabulary has never been
+     * enforced, and deriving one here is the deferred-validator case
+     * `CONVENTIONS.md` states. No length CHECK either, for the same reason.
      */
     currency: text().notNull().default('EUR'),
 
@@ -174,16 +172,16 @@ export const commissions = pgTable(
     /**
      * One commission per property, ever.
      *
-     * This is the close trigger's idempotency, and Mongo already declared it
-     * unique — `onPropertyTransacted` also guards with a read, which is the
+     * This is the close trigger's idempotency — `onPropertyTransacted` also
+     * guards with a read, which is the
      * window a concurrent second close arrives in. The index is what actually
      * closes it.
      */
     uniqueIndex('commissions_property_id_key').on(table.propertyId),
     // The partner earnings ledger, newest first.
     index('commissions_partner_created_idx').on(table.partnerId, sql`${table.createdAt} desc`),
-    // Mongo's standalone `{ partnerId: 1 }` is the leading prefix of the index
-    // above and is not ported. `{ status: 1 }` is: an operator listing
+    // No standalone `partner_id` index: it is the leading prefix of the index
+    // above. `status` gets one: an operator listing
     // `approved` payouts to pay filters on it alone.
     index('commissions_status_idx').on(table.status),
     check(
@@ -201,9 +199,8 @@ export const commissions = pgTable(
     /**
      * The payout component matches the payout kind, in BOTH directions.
      *
-     * `computeCommission` sets exactly one of the two and Mongo enforced
-     * neither, so a `flat` basis carrying a `rate` was representable and would
-     * make an audit of how a payout was derived ambiguous — which is the only
+     * `computeCommission` sets exactly one of the two. Without this CHECK a
+     * `flat` basis carrying a `rate` is representable and would make an audit of how a payout was derived ambiguous — which is the only
      * thing `basis` exists for.
      */
     check(

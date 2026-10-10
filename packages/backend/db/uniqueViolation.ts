@@ -3,12 +3,10 @@
  *
  * ## Why this exists at all
  *
- * `db/MIGRATION-CONTRACT.md` records a class of change this migration makes
- * repeatedly: idempotency that used to be a read-then-write with a window
- * (`SavedPropertyFolder.addProperty`, `reviewController`'s `alreadyVoted` and
- * `alreadyReported`, `evictionController`'s RSVP check,
- * `Agency.findOrCreateByName`) is now a unique KEY, and the ported code should
- * INSERT and handle `23505` rather than re-implement the read. That instruction
+ * `db/MIGRATION-CONTRACT.md` records a rule this package applies repeatedly:
+ * idempotency (adding a property to a saved folder, review votes and reports,
+ * the eviction RSVP, agency find-or-create) lives in a unique KEY, and the code
+ * should INSERT and handle `23505` rather than re-implement a read. That instruction
  * only pays off if "handle `23505`" is done precisely — which is what this
  * module is for.
  *
@@ -101,9 +99,9 @@ export function isUniqueViolation(error: unknown, constraintName: string): boole
  * NAMED foreign key.
  *
  * The same reasoning as {@link isUniqueViolation}, one SQLSTATE over. It exists
- * because Mongo let a reference point at nothing and Postgres does not: writes
- * that accept an id from the CLIENT — saving a listing, recording that one was
- * viewed — used to store a dangling pointer silently and now raise `23503`. That
+ * because a reference may not point at nothing: writes that accept an id from
+ * the CLIENT — saving a listing, recording that one was viewed — raise `23503`
+ * rather than storing a dangling pointer. That
  * is a 404 the caller earned, not the 500 an unhandled driver error would be.
  *
  * Naming the constraint matters as much here as it does above: a statement can

@@ -216,10 +216,9 @@ export async function stripeWebhook(req: Request, res: Response) {
 
         // Idempotency is the `billing_processed_sessions` claim, taken in the
         // same transaction as the credit it authorises — see
-        // `db/billing/billingRepository.ts`. The three per-product branches
-        // Mongo needed (each opening with its own find-or-create) collapse into
-        // one call, because the only thing that ever differed between them was
-        // which columns the credit sets.
+        // `db/billing/billingRepository.ts`. One call for every product, because
+        // the only thing that differs between them is which columns the credit
+        // sets.
         const subscriptionId = subscriptionIdOf(session.subscription);
         await creditCheckoutSession({
           oxyUserId,
@@ -298,9 +297,8 @@ export async function confirmCheckoutSession(req: Request, res: Response) {
 
     // The SAME claim the webhook takes, so a user landing on the success page
     // before Stripe's delivery arrives — or after it — is credited exactly once
-    // either way. Under Mongo these were two independently written copies of one
-    // guard; the session claim is now a single row and neither path can outrun
-    // the other.
+    // either way. The session claim is a single row and neither path can
+    // outrun the other.
     const subscriptionId = subscriptionIdOf(session.subscription);
     await creditCheckoutSession({
       oxyUserId,
@@ -309,11 +307,8 @@ export async function confirmCheckoutSession(req: Request, res: Response) {
       ...(subscriptionId ? { stripeSubscriptionId: subscriptionId } : {}),
     });
 
-    // Verbatim from the Mongo handler: `file` deliberately answers with the
-    // generic message rather than entitlements, while `plus` and `founder`
-    // return them. The Mongo `plus` branch also re-read the record a second time
-    // when the session had already been processed and answered with exactly the
-    // same object — that read is gone, the response is not.
+    // `file` deliberately answers with the generic message rather than
+    // entitlements, while `plus` and `founder` return them.
     if (product === 'file') {
       return res.json({ success: true, message: 'Session processed successfully' });
     }
@@ -530,18 +525,16 @@ export async function manuallyActivateSubscription(req: Request, res: Response) 
       return res.status(400).json({ success: false, error: { message: 'Missing session_id' } });
     }
 
-    // `founder` is deliberately NOT accepted here, matching the Mongo handler:
-    // this endpoint is the fallback for a Plus or file purchase whose webhook
+    // `founder` is deliberately NOT accepted here: this endpoint is the fallback for a Plus or file purchase whose webhook
     // never arrived, and it grants an entitlement without any Stripe evidence,
-    // so its product list stays as narrow as it was.
+    // so its product list stays narrow.
     if (product !== 'plus' && product !== 'file') {
       return res.status(400).json({ success: false, error: { message: 'Invalid product type' } });
     }
 
-    // The product is validated BEFORE the session is claimed, where Mongo
-    // checked `processedSessions` first. The only case that answers differently
-    // is an invalid product naming an ALREADY-SPENT session — 200 "already
-    // activated" before, 400 "Invalid product type" now — and refusing a product
+    // The product is validated BEFORE the session is claimed, so an invalid
+    // product naming an ALREADY-SPENT session answers 400 "Invalid product
+    // type" rather than 200 "already activated" — and refusing a product
     // this server does not sell is the better of the two answers.
     const credited = await creditCheckoutSession({
       oxyUserId,
@@ -656,10 +649,8 @@ export async function manuallyCancelSubscription(req: Request, res: Response) {
       });
     }
 
-    // Mongo answered 404 on `modifiedCount === 0`, which meant "no record" and
-    // nothing else — `plusCanceledAt` was set to a fresh `new Date()` on every
-    // call, so a matched row always counted as modified. `RETURNING` on a
-    // matched row says exactly the same thing without depending on that.
+    // 404 means "no record" and nothing else: `RETURNING` on a matched row
+    // says the record exists, whatever it held before.
     const entitlements = await applySubscriptionState(oxyUserId, {
       plusActive: false,
       plusCanceledAt: new Date(),
@@ -740,13 +731,12 @@ export async function syncSubscriptionStatus(req: Request, res: Response) {
       }
     } else if (subscription.status === 'active' && !subscription.cancel_at_period_end) {
       if (!billing.plusActive || billing.plusCanceledAt) {
-        // `null`, not `undefined`. Mongoose STRIPS an `undefined` from a `$set`,
-        // so this branch never actually cleared the cancellation — and its own
-        // guard reads `|| billing.plusCanceledAt`, so it then re-fired on every
-        // later sync and reported `statusChanged: true` forever for anyone who
-        // had ever cancelled and come back. drizzle omits an `undefined` from
-        // the SET clause too, so porting the spelling would have carried the
-        // defect across invisibly.
+        // `null`, not `undefined`. drizzle OMITS an `undefined` from a SET
+        // clause, so `undefined` would never actually clear the cancellation —
+        // and this branch's own guard reads `|| billing.plusCanceledAt`, so it
+        // would then re-fire on every later sync and report
+        // `statusChanged: true` forever for anyone who had ever cancelled and
+        // come back.
         updateData = { plusActive: true, plusCanceledAt: null };
       }
     } else if (subscription.status === 'canceled' || subscription.status === 'unpaid') {
@@ -875,9 +865,9 @@ export async function reactivateSubscription(req: Request, res: Response) {
     });
 
     // Update the database to reflect the reactivation. `null` CLEARS the
-    // cancellation stamp — the Mongo spelling was `undefined`, which Mongoose
-    // strips from a `$set`, so a reactivated subscriber kept a cancellation date
-    // they no longer had. Same defect and same fix as `syncSubscriptionStatus`.
+    // cancellation stamp — an `undefined` is omitted from the SET clause, so a
+    // reactivated subscriber would keep a cancellation date they no longer had.
+    // Same rule as `syncSubscriptionStatus`.
     const entitlements = await applySubscriptionState(oxyUserId, {
       plusActive: true,
       plusCanceledAt: null,

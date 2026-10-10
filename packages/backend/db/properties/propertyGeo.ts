@@ -1,25 +1,14 @@
 /**
- * Spatial predicates for the property read path — where the two-phase geo query
- * collapses into one join.
+ * Spatial predicates for the property read path — one join, never two phases.
  *
- * ## What this replaces, and why it was a live landmine
+ * ## Why one statement
  *
  * A property has no coordinates of its own; it reaches its place through
- * `address_id`. Mongo could not join, so every geo-scoped property read ran in
- * TWO phases:
- *
- * ```
- * const ids = await Address.find({ coordinates: { $near: … } }).select('_id');   // no .limit()
- * return Property.find({ addressId: { $in: ids } });
- * ```
- *
- * — `services/geoQueryService.resolveGeoFilterAddressIds`, `Property.findNearby`
- * and `Property.findWithinRadius` all had that shape. The first phase is
- * **uncapped**: it materializes every address id in the radius (or in the city)
- * into a JavaScript array and then ships them back as an `$in`. Barcelona alone
- * is tens of thousands of ids, and the cost is paid twice — once building the
- * array, once as a query document large enough to matter on the wire — on a
- * request path behind no feature flag.
+ * `address_id`. Resolving the address ids first and then filtering properties
+ * by that list is **uncapped**: it materializes every address id in the radius
+ * (or in the city) into a JavaScript array and ships them back as a parameter.
+ * Barcelona alone is tens of thousands of ids, on a request path behind no
+ * feature flag.
  *
  * Here it is ONE statement. `properties` inner-joins `addresses` (the reference
  * is `NOT NULL` with an `ON DELETE RESTRICT` foreign key, so the join can drop
@@ -45,10 +34,8 @@
  *
  * ## The envelope's edges are GREAT CIRCLES, and two things follow
  *
- * This paragraph used to claim the opposite — that `ST_MakeEnvelope` gives
- * edges "straight in lat/lon space", disagreeing with Mongo's geodesic
- * `$geoWithin` polygon only inside a very large box. That is wrong, and wrong
- * in the direction that reassures: {@link withinBoundingBox} casts the envelope
+ * It is tempting to believe `ST_MakeEnvelope` gives edges "straight in lat/lon
+ * space". That is wrong, and wrong in the direction that reassures: {@link withinBoundingBox} casts the envelope
  * to `::geography`, and a `geography` polygon's edges are great-circle arcs.
  * Measured against `postgis/postgis:17-3.5` on 2026-08-10 (fixtures and full
  * numbers in `__tests__/integration/antimeridianBoundingBox.test.ts`):
@@ -106,10 +93,8 @@ export function geoPoint(longitude: number, latitude: number): SQL {
 /**
  * Addresses within `radiusMeters` of the circle's centre.
  *
- * The port of Mongo's `$near`/`$maxDistance` and `$centerSphere`. `ST_DWithin`
- * on `geography` measures true spheroid distance in METRES, so the radius needs
- * none of the radians conversion `$centerSphere` demanded (`EARTH_RADIUS_METERS`
- * exists for that conversion and has no counterpart here).
+ * `ST_DWithin` on `geography` measures true spheroid distance in METRES, so the
+ * radius needs no radians conversion.
  */
 export function withinCircle(circle: GeoCircle): SQL {
   return sql`ST_DWithin(${addresses.geo}, ${geoPoint(circle.longitude, circle.latitude)}, ${circle.radiusMeters})`;

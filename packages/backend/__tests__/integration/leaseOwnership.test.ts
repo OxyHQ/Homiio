@@ -195,8 +195,7 @@ describe('leaseController.createLease', () => {
 
   it('refuses an inverted term — the CHECK, not the controller', async () => {
     // `leases_term_order_check` was expressible only because the table is
-    // empty. Mongo had no validator here at all, and `generatePaymentSchedule`
-    // on an inverted term silently produces a lease nobody ever has to pay.
+    // empty. `generatePaymentSchedule` on an inverted term silently produces a lease nobody ever has to pay.
     const propertyId = await seedOwnedProperty();
     const res = await request(buildApp('oxy-landlord'))
       .post('/leases')
@@ -299,8 +298,7 @@ describe('leaseController.updateLease', () => {
   });
 
   it('REPLACES the co-tenant roster rather than merging it', async () => {
-    // Assigning an embedded array replaced it wholesale in Mongoose. Merging
-    // would be a new behaviour, and a landlord removing a co-tenant would find
+    // The roster is replaced wholesale. Merging would mean a landlord removing a co-tenant would find
     // them still on the lease.
     const id = await createDraftLease(await seedOwnedProperty(), {
       coTenants: [{ oxyUserId: 'oxy-co-1' }, { oxyUserId: 'oxy-co-2' }],
@@ -409,14 +407,10 @@ describe('leaseController.signLease — signatures, status and the schedule', ()
   });
 
   it('does NOT activate while a co-tenant has not signed (#518 §7.4)', async () => {
-    // Mongo's two rules disagreed on purpose: `signAsLandlord` consulted only
-    // the other principal while `isFullySigned` consulted the co-tenants too,
-    // so a lease read `status: 'active'` and `isFullySigned: false` at the same
-    // time. This test used to pin that disagreement.
-    //
-    // It was faithful and it was a lease calling itself active while a person
-    // named on it had not signed — in a schema where that person had no way to
-    // sign at all. Co-tenants sign now, activation waits for every party, and
+    // Activation once consulted only the other principal while `isFullySigned`
+    // consulted the co-tenants too, so a lease read `status: 'active'` and
+    // `isFullySigned: false` at the same time — a lease calling itself active
+    // while a person named on it had not signed. Co-tenants sign now, activation waits for every party, and
     // the two answers agree. Both are asserted, so a future change that moved
     // one without the other goes red here.
     const id = await createDraftLease(await seedOwnedProperty(), {

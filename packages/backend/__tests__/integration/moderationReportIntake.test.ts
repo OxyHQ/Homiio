@@ -9,24 +9,16 @@
  *
  * The mutation each assertion is guarding against is named in its own test.
  *
- * ## Postgres, and what changed in the port
+ * ## Two assertions worth explaining
  *
- * `withReportIntakeSession` became {@link withReportIntakeTransaction} and hands
- * out a drizzle transaction handle rather than a mongoose `ClientSession`; the
- * three tables are read with drizzle rather than through models. Two assertions
- * changed SHAPE and neither was dropped:
+ * {@link withReportIntakeTransaction} hands out a drizzle transaction handle.
  *
- *  - "refuses to enqueue outside an open transaction" used a bare
- *    `startSession()` — a session that satisfies the type with no transaction
- *    open. Postgres has no such object; the equivalent hole is the ROOT
- *    connection, which satisfies `DatabaseOrTransaction` exactly as a bare
- *    session satisfied `ClientSession`. So the same guard is asserted against
- *    `getDb()`.
- *  - "refuses an identifier that is not a string" was about a Mongo operator
- *    (`{$ne: null}`) reaching a `findOne` filter. Parameterised SQL has no
- *    counterpart to that particular hole, but `requireIdentifier` is still in
- *    the service and is still what stops a row keyed by `"[object Object]"` —
- *    so the `TypeError` is asserted, now with the reason stated in the test.
+ *  - "refuses to enqueue outside an open transaction": the hole is the ROOT
+ *    connection, which satisfies `DatabaseOrTransaction` with no transaction
+ *    open. So the guard is asserted against `getDb()`.
+ *  - "refuses an identifier that is not a string": `requireIdentifier` is what
+ *    stops a row keyed by `"[object Object]"` — so the `TypeError` is asserted,
+ *    with the reason stated in the test.
  */
 
 import express, { type Express } from 'express';
@@ -98,9 +90,8 @@ async function countRows(
  *
  * The counts below are the assertions — "nothing was left behind" is
  * `countRows(...) === 0` — so a row a previous test wrote would make them
- * measure the file's history rather than the transaction under test. Mongo got
- * this from `jest.setup.ts`'s collection wipe; Postgres fixtures are not
- * truncated globally, so it is stated here.
+ * measure the file's history rather than the transaction under test. Postgres
+ * fixtures are not truncated globally, so it is stated here.
  *
  * Order matters: `listing_reports.property_id` CASCADEs from `properties`, but
  * `moderation_outbox.report_id` CASCADEs from `moderation_reports`, so the
@@ -297,10 +288,8 @@ describe('moderation report intake', () => {
   /**
    * A non-string identifier is refused at the point the row is built.
    *
-   * Under Mongo this was an injection: a truthy non-string reached a `findOne`
-   * filter, so `{$ne: null}` matched an UNRELATED report and answered "you
-   * already reported this" about somebody else's row. Parameterised SQL closes
-   * that particular hole, and the guard is still what this asserts — without it
+   * Parameterised SQL cannot be injected with an operator object such as
+   * `{$ne: null}`, and the guard is still what this asserts — without it
    * the value is stringified into `reported_id` and the report is keyed by
    * `"[object Object]"`, which is a row nothing can ever be delivered for.
    */

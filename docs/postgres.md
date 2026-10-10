@@ -1,8 +1,7 @@
 # Data storage: PostgreSQL, and nothing else
 
-> Moved out of `AGENTS.md` unchanged. Porting rules are
-> `packages/backend/db/MIGRATION-CONTRACT.md`; schema decisions are
-> `packages/backend/db/schema/CONVENTIONS.md`.
+> Schema decisions are `packages/backend/db/schema/CONVENTIONS.md`; migration
+> rules are `packages/backend/db/MIGRATION-CONTRACT.md`.
 
 
 PostgreSQL is the only store. Database `homiio` on the shared RDS instance
@@ -10,27 +9,6 @@ PostgreSQL is the only store. Database `homiio` on the shared RDS instance
 trusted extension — the app role that owns the database cannot install it
 itself). `DATABASE_URL` is the only database secret either process needs, and
 `initializeDatabase()` exits non-zero without it.
-
-<!-- vocabulary-exempt:start states what was REMOVED and names the reintroduction gate; both need the old vocabulary to be checkable -->
-**The Mongo→Postgres migration is finished.** `database/connection.ts`,
-`models/`, `db/backfill/`, `mongoose` and `mongodb-memory-server` are all
-deleted, `config.ts` reads no `MONGODB_URI` and has no `config.database` key,
-and `homiio-production` is archived. There is no rollback target: the only copy
-of the old data is an offline dump.
-
-`__tests__/unit/mongoUnreachable.test.ts` stays, and is now a REINTRODUCTION
-GATE rather than a progress tracker — its `PENDING_MONGO_FILES` map is empty, so
-any module that imports mongoose or opens a Mongo connection fails the build. It
-scans COMMENT-STRIPPED source on purpose, because several modules here document
-what they no longer do in exactly that vocabulary. Bringing Mongo back is
-allowed, but it has to be a decision somebody makes on purpose and writes down.
-<!-- vocabulary-exempt:end -->
-
-**The porting rules — id preservation, the census-before-porting discipline,
-schema-fixture pitfalls already found and fixed once — live in
-`packages/backend/db/MIGRATION-CONTRACT.md`, and the table-by-table schema
-decisions in `packages/backend/db/schema/CONVENTIONS.md`. Those two documents are
-HISTORY plus durable rules; this section is the current state.**
 
 - **Every domain is on Postgres.** Repository code lives under
   `packages/backend/db/<domain>/`; controllers call a repository, never an ORM
@@ -42,35 +20,6 @@ HISTORY plus durable rules; this section is the current state.**
   viewed, conversations, profiles, notifications and saved searches, the roommate
   handshake, the CrowdSource moderation pipeline, evictions, billing, partner
   commissions, analytics and the listing-ingestion pipeline.
-- **There is no divided authority left, and there is no split-store caveat to
-  work around.** Earlier revisions of this file described property writes and
-  profile reads as still living on the pre-migration store. That was true when
-  written and is not now — re-measure rather than trusting either statement:
-
-  <!-- vocabulary-exempt:start a reintroduction census must name the term it searches for, or it measures nothing -->
-
-  ```bash
-  # Real imports, not prose. Expect ZERO.
-  git ls-files -- 'packages/' | grep -E '\.(ts|tsx|js|mjs|cjs)$' \
-    | xargs grep -nE "from ['\"]mongoose['\"]|require\(['\"]mongoose['\"]\)"
-  # Positive control — the same shape against a package that IS imported.
-  git ls-files -- 'packages/' | grep -E '\.(ts|tsx|js|mjs|cjs)$' \
-    | xargs grep -lE "from ['\"]drizzle-orm['\"]" | wc -l
-  ```
-
-  Measured on `docs/architecture-vocabulary-349` at base `bf3ef48b`
-  (2026-08-10): **0 real mongoose imports** against **161 files importing
-  `drizzle-orm`**, over 1,181 scanned source files. The only textual hits are
-  `__tests__/unit/mongoUnreachable.test.ts`'s own detector fixtures, one
-  assertion in `reviewSystem.test.ts`, and a commented-out line in
-  `scripts/test-telegram-topics.js`. A bare `grep -i mongoose` matches prose and
-  is the wrong instrument — it returns non-zero on a clean tree.
-
-  <!-- vocabulary-exempt:end -->
-- **Counting the port's remaining work is no longer a thing to do.** If you need
-  to know whether a domain reads Postgres, read its controller's imports. The
-  file-count figures this section used to carry moved every week and were the
-  single most misleading thing in this document.
 - **Migrations:** `bun run db:migrate` (`db/migrate.ts --phase=all` for a
   developer database). Never `drizzle-kit migrate`.
 

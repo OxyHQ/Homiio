@@ -58,8 +58,8 @@ async function propertyRow(id: string) {
 /**
  * The resolved address, with its coordinates as the NAMED columns.
  *
- * The Mongo assertions read `address.coordinates.coordinates` — a positional
- * `[lng, lat]` array whose order nothing enforced. The table has named
+ * Never a positional `[lng, lat]` array whose order nothing enforces. The table
+ * has named
  * `longitude` / `latitude` columns and GENERATES its PostGIS point from them,
  * so a transposition is unrepresentable rather than merely unlikely; the
  * assertions below compare the two numbers by name for that reason.
@@ -109,9 +109,8 @@ function buildIngestionService(): IngestionService {
 beforeEach(async () => {
   mockedForwardGeocode.mockReset();
   mockedReverseGeocode.mockReset();
-  // Postgres persists for the whole jest WORKER, where the in-memory Mongo this
-  // suite ran against was wiped after every test. That difference is not
-  // cosmetic here: the geo tables ARE the shortcut under test —
+  // Postgres persists for the whole jest WORKER, and that is not cosmetic
+  // here: the geo tables ARE the shortcut under test —
   // `resolveCityCentroid` reads a city back rather than geocoding it — so a
   // city left behind by the previous case makes the NEXT one take the DB path
   // and issue one geocode where it asserts two. Wiping them is what keeps each

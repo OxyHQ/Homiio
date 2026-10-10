@@ -30,9 +30,7 @@ export const roommateRequests = pgTable(
   },
   (table) => [
     /**
-     * At most one PENDING request per ordered pair — Mongo's
-     * `partialFilterExpression: { status: 'pending' }`, which
-     * `CONVENTIONS.md` maps directly onto a Postgres partial unique index.
+     * At most one PENDING request per ordered pair — a partial unique index.
      *
      * Partial rather than plain, and the partiality is the whole point: a
      * declined request must not stop the same person asking again later.
@@ -40,8 +38,7 @@ export const roommateRequests = pgTable(
     uniqueIndex('roommate_requests_pending_pair_key')
       .on(table.fromOxyUserId, table.toOxyUserId)
       .where(sql`${table.status} = 'pending'`),
-    // Mongo's standalone `{ fromOxyUserId: 1 }` is the leading prefix of the
-    // partial index above — but a PARTIAL index cannot serve an unfiltered
+    // `from_oxy_user_id` is the leading prefix of the partial index above — but a PARTIAL index cannot serve an unfiltered
     // prefix scan, so the sender's own list ("requests I have sent", any status)
     // needs its own index. That asymmetry with a plain unique index is exactly
     // the kind of thing that reads as a duplicate and is not.
@@ -70,9 +67,9 @@ export const roommateRelationships = pgTable(
      *
      * The sort is what makes the partial unique index below mean "at most one
      * active relationship between these two people" rather than "at most one per
-     * direction". Mongo stated it in a doc comment and enforced nothing, so a
-     * writer that skipped the sort produced a second, invisible row for the same
-     * pair. The CHECK makes it a property of the row.
+     * direction". Without the CHECK a writer that skipped the sort would produce
+     * a second, invisible row for the same pair. The CHECK makes it a property
+     * of the row.
      */
     oxyUser1Id: text().notNull(),
     oxyUser2Id: text().notNull(),
@@ -96,7 +93,7 @@ export const roommateRelationships = pgTable(
     updatedAt: updatedAt(),
   },
   (table) => [
-    /** At most one ACTIVE relationship per sorted pair — Mongo's partial unique index. */
+    /** At most one ACTIVE relationship per sorted pair — a partial unique index. */
     uniqueIndex('roommate_relationships_active_pair_key')
       .on(table.oxyUser1Id, table.oxyUser2Id)
       .where(sql`${table.status} = 'active'`),

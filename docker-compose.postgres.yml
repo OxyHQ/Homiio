@@ -1,5 +1,5 @@
 ##
-## Docker Compose — local PostgreSQL for the Mongo→Postgres migration.
+## Docker Compose — local PostgreSQL for the backend.
 ##
 ## Holds only the database a developer needs running next to
 ## `bun run dev:backend` and `bun run --cwd packages/backend test`. The suite
@@ -19,8 +19,8 @@
 services:
   postgres:
     # PostGIS, not plain Postgres: `addresses.geo` is a GENERATED `geography`
-    # column with a GiST index (the port of the Mongo `2dsphere` index that
-    # every `$near`/`$geoWithin` property search uses), so `CREATE EXTENSION
+    # column with a GiST index (the index every radius and viewport property
+    # search uses), so `CREATE EXTENSION
     # postgis` has to succeed before the migration that names the type.
     #
     # `postgis/postgis` is the PostGIS project's own image and is pinned on BOTH

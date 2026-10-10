@@ -25,9 +25,8 @@
  * ## The pair is SORTED before it is written, and the CHECK is why that is safe
  *
  * `roommate_relationships_sorted_pair_check` enforces `oxy_user1_id <
- * oxy_user2_id`. Mongo stated the ordering in a doc comment and enforced
- * nothing, so a writer that skipped the sort produced a second, invisible row
- * for the same pair — and the "at most one active relationship" rule silently
+ * oxy_user2_id`. Without it a writer that skipped the sort would produce a
+ * second, invisible row for the same pair — and the "at most one active relationship" rule silently
  * stopped holding. {@link sortPair} is the one place the ordering is applied,
  * and the CHECK is what makes forgetting it a loud `23514` rather than a quiet
  * duplicate.

@@ -2,41 +2,25 @@
  * `saved_property_folders` — a person's collections of saved listings, on
  * Postgres.
  *
- * Ported from `models/schemas/SavedPropertyFolderSchema.ts`. The collection held
- * **0 documents in production** (measured, not assumed), so this port has no
- * backfill and no consistency window.
- *
  * ## `saved_property_folder_items` is NOT written, and that is the point
  *
- * The schema carries that table because the Mongo document carried a
- * `properties[]` array and a schema port may not silently drop a field. But
- * folder MEMBERSHIP has one representation and it is `saved_items.folder_id`:
- * that is what `saveProperty` wrote, what the folder counts aggregated, and what
- * every read in this package consults. The `properties[]` array was a second
- * copy of the same fact, and the four Mongoose methods that maintained it
- * (`addProperty`, `removeProperty`, `hasProperty`, `updatePropertyNotes`) have
- * **zero call sites** — the only code that ever touched the array was a
- * best-effort `try {} catch {}` mirror in `updateSavedPropertyNotes`, which
- * swallowed its own failures and could therefore drift from `Saved` unobserved.
- *
- * Writing both would mean two representations of one fact, which is the failure
- * this codebase names repeatedly. So the mirror is dropped rather than ported,
- * and `saved_property_folder_items` is left with no writer — a fact recorded
+ * Folder MEMBERSHIP has one representation and it is `saved_items.folder_id`:
+ * that is what `saveProperty` writes, what the folder counts aggregate, and what
+ * every read in this package consults. `saved_property_folder_items` would be a
+ * second copy of the same fact, and two representations of one fact is the
+ * failure this codebase names repeatedly. So it is left with no writer — a fact recorded
  * here, and in the PR, because a table with no producer is a trap for the next
  * reader. Removing it is a `post`-phase migration and a separate, deliberate
  * change; it is not smuggled in here.
  *
  * ## The case-insensitive name rule is the INDEX now
  *
- * Both handlers checked for a duplicate name with
- * `{ $regex: new RegExp('^' + name + '$', 'i') }` and then wrote — a
- * read-then-write with a window, and an unescaped regex built from user input
- * besides (a folder named `.*` matched every existing name and made the folder
- * unnameable). `saved_property_folders_owner_name_key` is a functional unique on
- * `lower(name)`, so the port INSERTs and handles `23505`, which
- * `db/MIGRATION-CONTRACT.md` names as the required shape for exactly this class
- * of change. {@link SavedFolderNameTakenError} is what the controller turns back
- * into the 409 the Mongo handler returned.
+ * A duplicate-name check followed by a write is a read-then-write with a
+ * window. `saved_property_folders_owner_name_key` is a functional unique on
+ * `lower(name)`, so this INSERTs and handles `23505`, which
+ * `db/MIGRATION-CONTRACT.md` names as the required shape for exactly this
+ * class. {@link SavedFolderNameTakenError} is what the controller turns into a
+ * 409.
  */
 
 import { and, asc, eq } from 'drizzle-orm';
@@ -50,7 +34,7 @@ export type SavedFolderRow = typeof savedPropertyFolders.$inferSelect;
 
 /**
  * The name of the folder `saveProperty` creates when a person saves their first
- * listing without naming a folder. Mongo's literals, kept verbatim.
+ * listing without naming a folder.
  */
 const DEFAULT_FOLDER = {
   name: 'Favorites',
@@ -93,9 +77,8 @@ function normalizeDescription(description: string | null | undefined): string | 
  *
  * `color` and `icon` are passed through as `undefined` when absent so the COLUMN
  * defaults apply. Passing an explicit `null` would fail `NOT NULL`, which is the
- * same trap `notificationRepository` documents: mongoose applies a default at
- * document construction, drizzle omits an `undefined` key and lets the server
- * decide.
+ * same trap `notificationRepository` documents: drizzle omits an `undefined`
+ * key and lets the server decide.
  *
  * @throws {SavedFolderNameTakenError} Raised from the index's own `23505` rather
  *   than from a preceding read, so two concurrent requests cannot both succeed.
@@ -135,8 +118,8 @@ export async function listSavedFolders(
       .select()
       .from(savedPropertyFolders)
       .where(eq(savedPropertyFolders.oxyUserId, oxyUserId))
-      // `{ isDefault: -1, createdAt: 1 }`, unchanged. `desc` on a boolean puts
-      // `true` first in Postgres, which is the same order Mongo produced.
+      // Default folder first, then oldest first. `desc` on a boolean puts `true`
+      // first in Postgres.
       .orderBy(sql`${savedPropertyFolders.isDefault} desc`, asc(savedPropertyFolders.createdAt))
   );
 }
@@ -231,7 +214,7 @@ export async function deleteSavedFolder(
  *    insert collides on the same index, and the re-read finds THAT folder, which
  *    is the only sane answer — the alternative is a 500 on a save.
  *
- * `is_default` carries no unique index (Mongo had none either), so two default
+ * `is_default` carries no unique index, so two default
  * folders remain representable. The lookup is therefore ORDERED, so which one is
  * chosen is stable rather than whatever the heap returns first.
  */
@@ -288,7 +271,7 @@ export async function ensureDefaultFolder(
 /**
  * The wire shape the saved screen reads.
  *
- * `id`, never `_id`. `propertyCount` is the Mongoose virtual, now computed from
+ * `id`, never `_id`. `propertyCount` is computed from
  * `saved_items` by {@link countSavedPropertiesByFolder} and passed in — the
  * folder row itself stores no count, so there is nothing that can go stale.
  */

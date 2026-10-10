@@ -55,9 +55,9 @@
  * No statement inside is allowed to fail on a constraint: every insert that can
  * conflict is `ON CONFLICT DO NOTHING` plus a read-back, never
  * INSERT-and-catch. In PostgreSQL a failed statement aborts the WHOLE
- * transaction (`25P02`), so the Mongo idiom — let the duplicate raise, then read
- * the row that already existed — does not port: the recovery read is the
- * statement that dies. `db/postgres.ts`'s `inSavepoint` is the escape hatch for
+ * transaction (`25P02`), so "let the duplicate raise, then read the row that
+ * already existed" does not work: the recovery read is the statement that
+ * dies. `db/postgres.ts`'s `inSavepoint` is the escape hatch for
  * a failure that genuinely must happen; nothing here needs one, which is better
  * than needing one and remembering it.
  *

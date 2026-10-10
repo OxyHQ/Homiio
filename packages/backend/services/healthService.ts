@@ -47,8 +47,7 @@ export class HealthService {
    *
    * Reports `unhealthy` when no pool has been published (nothing ever
    * connected), `degraded` when a pool exists but a trivial query does not come
-   * back, and `healthy` when it does. Same three states the Mongo probe
-   * reported, so `/health`'s body keeps its meaning across the migration.
+   * back, and `healthy` when it does.
    *
    * The query is BOUNDED. `checkPostgresHealth` never throws, but postgres.js
    * queues a query when every connection in the pool is busy, so an unbounded

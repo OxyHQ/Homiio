@@ -77,7 +77,7 @@ describe('GET /api/addresses/:id', () => {
     expect(res.body.address.location).toBe('Barcelona, Catalonia, Spain');
   });
 
-  it('keeps the Mongo field spellings and the GeoJSON coordinate pair', async () => {
+  it('keeps the wire field spellings and the GeoJSON coordinate pair', async () => {
     const chain = await seedGeoChain({});
     const addressId = await seedAddress({
       chain,

@@ -12,27 +12,22 @@ import { logger } from './logging';
 /**
  * Reject a value that is not one of the two id shapes this schema stores.
  *
- * ## `isMongoId()` had to go, and leaving it would have been a live 400
+ * ## Never a 24-hex-only validator
  *
- * `express-validator`'s `isMongoId()` accepts a 24-character ObjectId hex and
- * NOTHING else. Every row created after the cutover carries a **uuid v7**
- * (`generatedId()` in `db/schema`), so a validator still spelling `isMongoId()`
- * on a ported domain rejects the ids that domain now mints — 400 on a perfectly
- * valid lease, before the handler runs, with a message blaming the caller. That
- * is the express-validator guise of the guard sweep `db/ids.ts` documents, and
- * it fails in the LOUD direction rather than the silent one, which is the only
- * reason it is easy to find.
+ * A validator that accepts only a 24-character hex id rejects every **uuid v7**
+ * (`generatedId()` in `db/schema`) — 400 on a perfectly valid lease, before the
+ * handler runs, with a message blaming the caller. That is the express-validator
+ * guise of the rule `db/ids.ts` documents.
  *
  * `isLiveEntityId` accepts both shapes and nothing else, which keeps the reason
  * the check exists in the first place: a bare `.isString()` would admit an
- * OPERATOR OBJECT (`{$ne: null}`) from a JSON body, and while a `text` column
- * cannot be injected the way a Mongo query could, a query built from one still
+ * OPERATOR OBJECT (`{$ne: null}`) from a JSON body, and a query built from one
  * has no business being issued.
  *
  * Used with `.custom()` rather than as a standalone rule so the existing
  * `.optional()` / `.withMessage()` chains keep working unchanged.
  *
- * @throws {Error} When `value` is neither an ObjectId hex nor a uuid v7 —
+ * @throws {Error} When `value` is neither a 24-char hex id nor a uuid v7 —
  *   express-validator turns a throw into the field's validation failure.
  */
 function requireEntityId(value: unknown): true {
@@ -573,15 +568,13 @@ export { validateExchangeRequest, validateExchangeUpdate, validateExchangeReview
 // `routes/reviews.ts` and `routes/public.ts` mount the review handlers bare. So
 // they enforced nothing, while accumulating three rules that are now wrong:
 //
-//  - `param('reviewId').isMongoId()`, on two of them. That is the
-//    express-validator guise of the guard sweep `db/ids.ts` documents, and it is
-//    INVISIBLE to that file's census, which greps `isValidObjectId` /
-//    `ObjectId.isValid`. Every review created after the cutover carries a uuid
-//    v7, so wiring either one would 400 every new review before its handler ran.
+//  - a 24-hex-only `reviewId` param check, on two of them — the
+//    express-validator guise of the rule `db/ids.ts` documents. Every new review
+//    carries a uuid v7, so wiring either one would 400 every new review before
+//    its handler ran.
 //  - `body('depositReturned').optional().isBoolean()`. `depositReturned` became
-//    the `DepositReturn` enum (`full` / `partial` / `no`); the one-shot script
-//    that converted the legacy booleans is gone with this port. This rule would
-//    refuse every valid value.
+//    the `DepositReturn` enum (`full` / `partial` / `no`). This rule would refuse
+//    every valid value.
 //  - `body('livedForMonths').optional().isInt()`. That column is DERIVED from
 //    the tenancy dates by `db/reviews/reviewWrites.deriveLivedForMonths` and is
 //    absent from `CREATABLE_REVIEW_FIELDS`; a validator that accepts one from a
@@ -688,7 +681,7 @@ const validateRoommateToggle = [
  * (POST /api/roommates/requests/:requestId/accept|decline).
  */
 const validateRoommateRequestId = [
-  param('requestId').isMongoId().withMessage('Invalid roommate request ID'),
+  param('requestId').custom(requireEntityId).withMessage('Invalid roommate request ID'),
   handleValidationErrors,
 ];
 
@@ -837,7 +830,7 @@ export { validateLeaseCreate, validateLeaseUpdate, validateLeaseId, validateLeas
  * the id param and the date/time/message shape.
  */
 const validateViewingUpdate = [
-  param('viewingId').isMongoId().withMessage('Invalid viewing request ID'),
+  param('viewingId').custom(requireEntityId).withMessage('Invalid viewing request ID'),
   body('date').isISO8601().withMessage('Valid date is required'),
   body('time')
     .matches(/^\d{2}:\d{2}$/)
@@ -852,7 +845,7 @@ const validateViewingUpdate = [
 
 /** Viewing request id parameter validation (POST .../approve|decline|cancel). */
 const validateViewingId = [
-  param('viewingId').isMongoId().withMessage('Invalid viewing request ID'),
+  param('viewingId').custom(requireEntityId).withMessage('Invalid viewing request ID'),
   handleValidationErrors,
 ];
 

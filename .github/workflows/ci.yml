@@ -211,8 +211,7 @@ jobs:
       # fully-migrated database per worker on. Separate from DATABASE_URL so the
       # harness never has to guess which server it may create databases on.
       TEST_DATABASE_URL: postgres://homiio:homiio@127.0.0.1:5434/postgres
-    # Postgres is the only store the suite needs; the Mongo replica set this job
-    # used to boot went with `mongodb-memory-server`.
+    # Postgres is the only store the suite needs.
     services:
       postgres:
         # The SAME pin as docker-compose.postgres.yml, on BOTH versions. A
@@ -313,8 +312,8 @@ jobs:
       # against the real Postgres — measured 1320 -> 1351. Before that it went
       # 1190 -> 1225 for the first zero-row domain port
       # (notifications, saved searches, roommate requests/relationships), which
-      # added `savedSearches.test.ts` and rewrote two Mongo-seeded suites
-      # against the real Postgres — measured 1233 -> 1264. Before that it went
+      # added `savedSearches.test.ts` and rewrote two suites against the real
+      # Postgres — measured 1233 -> 1264. Before that it went
       # 1150 -> 1190 for the geo backfill, which added 36 tests in
       # `__tests__/db/geoBackfill.test.ts` (measured 1190 -> 1226); and
       # 1100 -> 1150 for the remaining-schema batch (#281), which added
@@ -420,11 +419,9 @@ jobs:
       # whole job for one markdown scan is minutes of queue time for seconds of
       # work.
       #
-      # It is a REAL gate and not a linter: `main` has carried a README badge
-      # advertising a datastore this repository does not use, an API page whose
-      # every response example used a field name the wire contract forbids, and a
-      # contributing guide telling people to add an index type that does not
-      # exist here. None of that breaks a test, which is exactly why it survived.
+      # It is a REAL gate and not a linter: a rotted internal link or a route the
+      # route table does not list breaks no test, which is exactly why either
+      # would survive without it.
       - name: Verify the documentation still describes this repository
         run: bun run check:docs
 

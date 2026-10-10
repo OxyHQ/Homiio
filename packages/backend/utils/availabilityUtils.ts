@@ -6,7 +6,7 @@
  * `[start, end)`: the start instant is included, the end instant is excluded, so
  * two adjacent stays (one ending exactly when the next begins) do NOT collide.
  *
- * No mongoose, no Express, no side effects — just date math. The callers cast
+ * No database, no Express, no side effects — just date math. The callers cast
  * their own documents into the small `DateWindow` shape before checking.
  */
 

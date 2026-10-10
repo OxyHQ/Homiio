@@ -3,8 +3,7 @@
  * two referential rules that replaced application code.
  *
  * The real handlers against the REAL Postgres this worker owns, mounted behind a
- * fake-auth middleware. Both Mongo collections were empty in production, so
- * nothing here asserts a preserved row; what it asserts is that the rules the
+ * fake-auth middleware. What it asserts is that the rules the
  * schema now carries actually hold, in BOTH directions.
  *
  * ## Why a mocked drizzle could not have caught any of this
@@ -18,9 +17,9 @@
  *    `UNIQUE(target_id)` would break while still passing every "rejects a
  *    duplicate" assertion — is invisible without a real index.
  *  - `saved_items.folder_id` is `ON DELETE SET NULL`, which is what now re-files
- *    a deleted folder's saves. The Mongo handler did that with an explicit
- *    `updateMany`; the port deleted that statement, so if the constraint were
- *    wrong the saves would vanish with the folder and no unit test would know.
+ *    a deleted folder's saves. No application statement does it, so if the
+ *    constraint were wrong the saves would vanish with the folder and no unit
+ *    test would know.
  *  - `saved_items.target_id` is `ON DELETE CASCADE` against a real foreign key.
  *    Both the 404 on saving a listing that does not exist and the disappearance
  *    of a save when its listing is reaped are the server's behaviour, not the
@@ -183,8 +182,7 @@ describe('saveProperty', () => {
   });
 
   it('answers 404 for a listing that does not exist, and stores nothing', async () => {
-    // Mongo stored a bare string with nothing behind it, so this used to
-    // succeed. The foreign key refuses it; without the `23503` handler the
+    // The foreign key refuses it; without the `23503` handler the
     // caller would get a 500 instead.
     const res = await request(buildApp('oxy-a'))
       .post('/save-property')
@@ -217,8 +215,7 @@ describe('saveProperty', () => {
   });
 
   it('stores a blank note as NULL and puts an empty string on the wire', async () => {
-    // The two Mongo writers disagreed — one stored `null`, the other `''`. The
-    // column is nullable with no default, so absence has one spelling now.
+    // The column is nullable with no default, so absence has one spelling.
     await request(buildApp('oxy-a'))
       .post('/save-property')
       .send({ propertyId: listingA, notes: '   ' });
@@ -264,9 +261,8 @@ describe('getSavedProperties', () => {
 
     await getDb().delete(propertiesTable).where(eq(propertiesTable.id, listingA));
 
-    // The Mongo handler needed an application-side `if (!prop) return null` for
-    // exactly this case, because its `targetId` pointed at nothing. Here the row
-    // is already gone.
+    // No application-side `if (!prop) return null` is needed for this case: the
+    // row is already gone.
     expect(await savesOf('oxy-a')).toHaveLength(0);
     const res = await request(buildApp('oxy-a')).get('/saved-properties');
     expect(res.body.data).toEqual([]);
@@ -340,7 +336,7 @@ describe('saved-property folders', () => {
     // stored bytes, so an untrimmed name would retire the duplicate rule.
     expect(res.body.data.name).toBe('Barcelona');
     expect(res.body.data.description).toBe('by the sea');
-    // Column defaults, not mongoose document defaults.
+    // Column defaults.
     expect(res.body.data.color).toBe('#3B82F6');
     expect(res.body.data.icon).toBe('folder-outline');
   });
@@ -474,9 +470,8 @@ describe('saved-property folders', () => {
   });
 
   it('KEEPS the saves when their folder is deleted, un-filing them', async () => {
-    // The load-bearing case of this port. The Mongo handler ran an explicit
-    // `Saved.updateMany({ folderId }, { folderId: null })` before deleting; that
-    // statement is GONE, and `ON DELETE SET NULL` is what replaced it. If the
+    // The load-bearing case. No application statement un-files the saves;
+    // `ON DELETE SET NULL` does. If the
     // constraint were CASCADE — or absent — a person would lose every saved
     // listing by tidying up a folder.
     const app = buildApp('oxy-a');
@@ -523,10 +518,8 @@ describe('saved-property folders', () => {
 
 describe('the folder membership table has no writer', () => {
   it('files a save through `saved_items.folder_id` and never `saved_property_folder_items`', async () => {
-    // The Mongo document carried BOTH a `Saved.folderId` pointer and a
-    // `SavedPropertyFolder.properties[]` array — two representations of one
-    // fact, kept in step by a best-effort `try {} catch {}`. Only the pointer
-    // survives; this pins that the port did not quietly start maintaining both.
+    // Folder membership has ONE representation, the `saved_items.folder_id`
+    // pointer; this pins that nothing quietly starts maintaining a second.
     const app = buildApp('oxy-a');
     const folder = await request(app).post('/folders').send({ name: 'Beach' });
     await request(app)

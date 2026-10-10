@@ -2,10 +2,8 @@
  * `property_images` — the one-primary-per-listing constraint, and the
  * `has_images` derivation that depends on it.
  *
- * Mongo enforced "at most one primary photo" in a `pre('save')` hook that
- * walked the array and un-set every extra `isPrimary` — a hook `updateOne` and
- * `findOneAndUpdate` never ran. Here it is a partial unique index, so there is
- * no write path that can produce a second one.
+ * "At most one primary photo" is a partial unique index, so there is no write
+ * path that can produce a second one.
  *
  * The constraint is safe to impose from day one, and that is MEASURED rather
  * than hoped: the census counted primaries per property across all 17,644
@@ -153,8 +151,7 @@ describe('one primary photo per listing', () => {
   });
 
   it('refuses PROMOTING a second photo to primary — property_images_one_primary_key covers UPDATE too', async () => {
-    // The path Mongo's `pre('save')` hook could not see: `updateOne` never ran
-    // it, so a promotion produced a second primary silently. An index-backed
+    // A promotion is an UPDATE, not an insert. An index-backed
     // constraint covers the UPDATE as well as the INSERT, and a test that only
     // inserts cannot tell the two apart.
     const propertyId = await createProperty();
@@ -185,7 +182,7 @@ describe('one primary photo per listing', () => {
     // created: an unscoped `where is_primary` reads every row in the worker's
     // database, so it also fails whenever a sibling FILE in the same worker
     // leaves a primary photo behind — a Postgres database outlives the file that
-    // wrote to it, unlike the in-memory Mongo this replaced. That made the
+    // wrote to it. That made the
     // assertion depend on how jest happened to distribute files across workers,
     // which is a property of the schedule and not of the index. Scoping loses
     // nothing, because the floor was never the unscoped read.

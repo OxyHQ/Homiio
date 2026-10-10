@@ -6,9 +6,7 @@
  *
  * Singular table name, deliberately, and the one exception to
  * `CONVENTIONS.md`'s "plural" rule: `billing` is a mass noun, `billings` is not
- * a word anybody uses, and the Mongo collection is already `billings` only
- * because `pluralize()` said so — which the naming section names as an artifact
- * rather than a design. The child table is plural because its rows are countable.
+ * a word anybody uses. The child table is plural because its rows are countable.
  */
 
 import { bigint, boolean, check, index, pgTable, text, uniqueIndex } from 'drizzle-orm/pg-core';
@@ -57,10 +55,9 @@ export const billing = pgTable(
   },
   (table) => [
     /**
-     * Mongo declared this unique AND guarded it a second time with a
-     * `pre('save')` read ("Billing record already exists for Oxy user"). The
-     * read is the window a concurrent second checkout arrives in; the index is
-     * what actually closes it, which is why only the index is ported.
+     * One billing row per Oxy account. A preceding read ("Billing record already
+     * exists") would be the window a concurrent second checkout arrives in; the
+     * index is what actually closes it, which is why there is only the index.
      */
     uniqueIndex('billing_oxy_user_id_key').on(table.oxyUserId),
     // `findActiveSubscriptions` filters on this alone.
@@ -74,10 +71,8 @@ export const billing = pgTable(
       .on(table.plusStripeSubscriptionId)
       .where(sql`${table.plusStripeSubscriptionId} is not null`),
     /**
-     * Mongo declared `min: 0` nowhere on `fileCredits`, and `consumeFileCredit`
-     * throws before decrementing past zero — so a negative balance is
-     * unreachable through the application and this rejects nothing that exists.
-     * It is expressed because the ported form of that method is
+     * A negative balance is unreachable through the application, so this rejects
+     * nothing that exists. It is expressed because `consumeFileCredit` is
      * `UPDATE … SET file_credits = file_credits - 1`, which has no such guard
      * unless the database carries it.
      */
@@ -98,7 +93,7 @@ export const billing = pgTable(
  *
  * As a row with `UNIQUE(billing_id, session_id)`, the second credit attempt
  * fails on the insert. That is the same shape the moderation tables use for the
- * same reason, and it is strictly stronger than what Mongo could express.
+ * same reason, and it is strictly stronger than a preceding read.
  */
 export const billingProcessedSessions = pgTable(
   'billing_processed_sessions',

@@ -1,10 +1,9 @@
 /**
  * The shared comment stripper, and the two regressions that produced it.
  *
- * Two repo gates scan comment-stripped source — the currency and locale gate in
- * this directory (#357) and the backend's Mongo reintroduction gate. Both used
- * the same pair of regexes, and both were wrong in the direction that reports a
- * CLEAN tree. The cases below pin each fault against the exact naive code that
+ * Several repo gates scan comment-stripped source — the currency and locale
+ * gate in this directory (#357) among them. Two earlier strippers were wrong in
+ * the direction that reports a CLEAN tree. The cases below pin each fault against the exact naive code that
  * had it, so a future "simplification" back to two regexes fails loudly instead
  * of quietly reopening a blind spot.
  *
@@ -14,11 +13,11 @@
 import { stripComments } from '@homiio/shared-types/testing/stripComments';
 
 /**
- * The stripper `packages/backend/__tests__/unit/mongoUnreachable.test.ts`
- * carried, verbatim. Reproduced so the regression is pinned against the real
+ * A naive whole-file block-comment regex stripper, verbatim from a gate that
+ * once carried it. Reproduced so the regression is pinned against the real
  * thing rather than a paraphrase of it.
  */
-function naiveMongoStripper(source: string): string {
+function naiveBlockRegexStripper(source: string): string {
   return source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
 }
 
@@ -103,7 +102,7 @@ describe('stripComments', () => {
     });
 
     it('is the fault the naive stripper had — it ate the code between', () => {
-      const naive = naiveMongoStripper(source);
+      const naive = naiveBlockRegexStripper(source);
       expect(naive).not.toContain('publicUrl');
       expect(naive).not.toContain('windowMs');
       expect(naive).not.toContain('rateLimit');
@@ -139,7 +138,7 @@ describe('stripComments', () => {
 
       // The naive stripper paired the string's `/*` with that doc comment's
       // `*/` and swallowed the real code sitting between them.
-      const naive = naiveMongoStripper(source);
+      const naive = naiveBlockRegexStripper(source);
       expect(naive).not.toContain('const real = 1;');
       // What it leaves is the half of the opening line before the string's
       // `/*`, then nothing until the doc comment's `*/`.
@@ -216,8 +215,8 @@ describe('stripComments', () => {
       expect(lines[4].trimEnd()).toBe('const second = 2;');
     });
 
-    it('is the fault the mongo stripper had — it collapsed the header away', () => {
-      const naive = naiveMongoStripper(source);
+    it('is the fault the block-regex stripper had — it collapsed the header away', () => {
+      const naive = naiveBlockRegexStripper(source);
       expect(naive.split('\n').length).toBeLessThan(source.split('\n').length);
     });
 

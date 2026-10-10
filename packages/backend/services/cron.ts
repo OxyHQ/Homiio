@@ -93,10 +93,8 @@ class CronJobManager {
    * statement, updating only the rows that actually disagree — so a boot where
    * nothing has drifted writes nothing.
    *
-   * The Mongo version this replaces filtered on `hasImages: { $exists: false }`,
-   * i.e. it only ever touched documents predating the field and could not
-   * notice a row whose stored flag had gone WRONG. Production already holds one
-   * of those, which is why the port reconciles rather than backfills.
+   * It reconciles rather than backfills: a filter on "flag missing" could not
+   * notice a row whose stored flag had gone WRONG.
    */
   private async backfillPropertyHasImages(): Promise<void> {
     const modified = await syncAllHasImages(getDb());
@@ -148,10 +146,9 @@ class CronJobManager {
   /**
    * Setup the share-link expiry sweep — hourly.
    *
-   * **This is the port of Mongo's TTL index on `Conversation.sharing.expiresAt`,
-   * and it CLEARS four columns where Mongo deleted the whole row.** That index
-   * destroyed the conversation and every message in it 24 hours after anybody
-   * pressed Share, so replicating it would be replicating data loss;
+   * **It CLEARS four columns and never deletes the row.** Deleting would destroy
+   * the conversation and every message in it 24 hours after anybody pressed
+   * Share;
    * `db/expiry.ts` names the column in `EXPIRY_COLUMNS_THAT_MUST_NOT_DELETE` and
    * `__tests__/db/expiry.test.ts` fails the build if it is ever registered as a
    * sweep target, which is why this job is here and not in `EXPIRY_SWEEP_TARGETS`.
@@ -358,21 +355,16 @@ class CronJobManager {
    * Setup the expiry sweep — every five minutes.
    *
    * **This is the call `db/expiry.ts` says the registry does not make.** The
-   * registry is data; nothing ran it, and a table registered there still grew
-   * forever until this landed. Mongo reaped those rows with a TTL index — a
-   * behaviour of the SOURCE that no code search can find, because it was never
-   * in Homiio's code to be missed — and Postgres does not.
+   * registry is data; without this job a table registered there grows forever,
+   * because Postgres deletes nothing on a deadline.
    *
-   * The gap was not theoretical. Measured 2026-08-09, hours after the property
-   * cutover: 124 listings in Postgres were past their deadline, 121 of them had
-   * already been reaped from Mongo, and every one was still being served. The
-   * intersection was exact — nothing was absent for any other reason — which is
-   * what identifies the TTL index as the whole cause rather than one of several.
+   * The gap is not theoretical. Measured 2026-08-09: 124 listings were past
+   * their deadline and every one was still being served.
    *
    * ## Five minutes, not daily
    *
-   * Mongo's TTL monitor runs every 60 seconds, so that is the cadence the read
-   * paths were written against. `db/expiry.ts` warns that a read depending on a
+   * The read paths were written against roughly minute-level reaping.
+   * `db/expiry.ts` warns that a read depending on a
    * swept row already being GONE turns the sweep interval into a correctness
    * window; five minutes keeps that window close to what the application has
    * always had, and the sweep is cheap — a range scan on an index that exists

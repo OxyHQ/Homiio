@@ -1,53 +1,24 @@
 /**
- * Address Service — the Postgres port of `models/Address.ts`'s statics
+ * Address Service — resolving, creating and finding canonical addresses
  *
  * A BUILDING-level record. Administrative geo is NOT free text: an address
  * references `countries` / `regions` / `cities` / `neighborhoods` by id
  * (`geoResolutionService` resolves the chain) and the only denormalized geo
  * field is `country_code`.
  *
- * ## What did NOT need porting, because the schema absorbed it
+ * ## What the schema does, so this module does not
  *
- * Three of the Mongoose model's members have no counterpart here, and their
- * absence is the point rather than an omission:
- *
- *  - **`getAddressLevel()`** is now `addresses.address_level`, a
- *    `GENERATED ALWAYS … STORED` column. A method is bypassable — every one of
- *    this package's `.lean()` reads skipped it — and the whole street → building
- *    → unit review hierarchy is built on the answer. As a generated column no
+ *  - **The address LEVEL** is `addresses.address_level`, a
+ *    `GENERATED ALWAYS … STORED` column. The whole street → building → unit
+ *    review hierarchy is built on the answer, and as a generated column no
  *    write path can produce a row whose level disagrees with its fields.
- *  - **`setLocation()` / `getCoordinates()`** existed to hide Mongo's positional
- *    `coordinates: [lng, lat]` array behind named arguments. The table has NAMED
- *    `longitude` / `latitude` columns and generates the PostGIS point from them,
- *    so reading or writing a coordinate is now an ordinary column read or
- *    `update`, and an accessor pair would be Mongo baggage wearing a helper's
- *    clothes.
+ *  - **Coordinates** are NAMED `longitude` / `latitude` columns with the
+ *    PostGIS point generated from them, so reading or writing a coordinate is
+ *    an ordinary column read or `update` and needs no accessor pair.
  *
- * `createStreetLevel()` / `createBuildingLevel()` / `createUnitLevel()` HAVE
- * landed, as {@link resolveAddressHierarchy} — see its docblock, which records
- * the defect the Mongo trio carried and what replaced it. `createUnitLevel()`
- * has no counterpart at all: it projected an address onto itself, and the review
- * path used its own `_id` for the unit level rather than calling it.
- *
- * ## `models/Address.ts` and `geoResolutionService.ts` are deliberately still alive
- *
- * Six call sites still write addresses through the Mongoose model
- * (`property/create`, `property/updateDelete`, `roomController`,
- * `reviewController`, `scraperService`, `IngestionService`). Every one of them
- * writes a Mongo `Property`, `Room` or `Review` in the same breath, and those
- * tables do not exist yet.
- *
- * The blocker is not style, it is one column: `resolveGeoChain` returns a
- * `cities.id` minted by Postgres, which is a **uuid v7**, and
- * `AddressSchema.cityId` is a Mongoose `ObjectId` path. Pointing the Mongo model
- * at this module does not degrade the ingest, it stops it dead with
- * `Cast to ObjectId failed for value "019fd591-…"` — measured while writing this
- * batch, not predicted. So the Mongo chain stays where it is and both halves
- * move together with `properties` in batch 3; `models/Address.ts` and
- * `services/geoResolutionService.ts` are deleted there.
- *
- * `POST /api/addresses` is the one write path that goes through THIS module
- * today, which is what keeps it exercised rather than speculative.
+ * The street / building / unit parents are {@link resolveAddressHierarchy} —
+ * see its docblock. A unit has no separate "unit level" row: the review path
+ * uses the address's own id for the unit level.
  */
 
 import * as crypto from 'crypto';
@@ -89,8 +60,7 @@ const UNKNOWN_REGION = 'Unknown';
 /**
  * Two coordinates are "the same building" below this many degrees of drift.
  *
- * Carried over verbatim from the Mongoose static: re-resolving the same
- * building from a slightly different geocode must not rewrite its point on every
+ * Re-resolving the same building from a slightly different geocode must not rewrite its point on every
  * ingest, but a genuine correction must land. ~0.0005° is ~55 m of latitude.
  */
 const COORDINATE_DRIFT_EPSILON = 0.0005;
@@ -185,9 +155,9 @@ export function normalizeAddressAliases(input: AddressCanonicalInput): AddressCa
 // creates no duplicate row.
 //
 // Each upsert is SELECT → INSERT … ON CONFLICT DO NOTHING → SELECT, and the
-// order is deliberate. Mongo's `findOneAndUpdate({ $setOnInsert }, { upsert })`
-// is insert-only-if-absent — it NEVER overwrites — and `on conflict do nothing`
-// is its faithful form, but that returns no row when it conflicts, so the id has
+// order is deliberate. The rule is insert-only-if-absent — it NEVER overwrites —
+// and `on conflict do nothing` is its faithful form, but that returns no row
+// when it conflicts, so the id has
 // to be read separately. Leading with the SELECT makes the common case (the
 // place already exists) one indexed lookup and no write at all; the trailing
 // SELECT is the branch a concurrent inserter takes.
@@ -271,8 +241,8 @@ async function upsertCity(
   const existing = await db.select({ id: cities.id }).from(cities).where(match).limit(1);
   if (existing[0]) return existing[0].id;
 
-  // Mongo stored the centre point as `{ lat, lng }`; the table has NAMED
-  // columns, so the pair cannot be transposed by position on the way in.
+  // The table has NAMED coordinate columns, so the pair cannot be transposed
+  // by position on the way in.
   const sanitized = coordinates ? sanitizeGeoJsonCoordinates(coordinates) : null;
   const inserted = await db
     .insert(cities)
@@ -378,11 +348,9 @@ function resolveCountryCodeAndName(names: GeoNames): { code: string; name: strin
  * country/region/city/neighborhood row. The geocoder is consulted at most once,
  * and only when the caller's names are incomplete.
  *
- * There is deliberately NO in-memory resolution cache here, unlike the Mongo
- * implementation this ports. That cache exists for the INGEST burst — hundreds
- * of listings in one city — and ingest is still Mongo (batch 3). Carrying an
- * empty cache across would be machinery for a load nothing currently applies,
- * and a cache that can hand back an id for a deleted row is not free.
+ * There is deliberately NO in-memory resolution cache here: a cache that can
+ * hand back an id for a deleted row is not free, and every lookup is already
+ * one indexed query.
  *
  * @throws GeoResolutionError when neither names nor coordinates yield a city.
  */
@@ -563,9 +531,8 @@ export interface NormalizedKeyFields {
  * fields plus the resolved `cityId` and `countryCode` (geo is relational, so the
  * city ID — not a free-text city string — anchors the building to its place).
  *
- * **Byte-for-byte identical to the Mongoose method**, field order and all, and
- * it must stay that way: `addresses.normalized_key` is copied VERBATIM by the
- * backfill and never recomputed, so a change here would silently stop matching
+ * **The input, field order and all, must never change**: `addresses.normalized_key`
+ * is never recomputed for an existing row, so a change here would silently stop matching
  * every key already stored and re-create every building on its next ingest. The
  * hash input has already changed shape once (`cityId` was added).
  */
@@ -662,10 +629,9 @@ export async function findOrCreateCanonicalAddress(
       neighborhoodId: resolved.neighborhoodId ?? null,
       countryCode: resolved.countryCode,
       street: normalized.street,
-      // Mongoose declared `postal_code` required and callers rely on that, but
-      // the aliases above can leave it unset; `''` would be a VALUE under the
-      // NOT NULL column and reads identically to a real empty postcode, which is
-      // what the source stored, so it is carried across unchanged.
+      // `postal_code` is NOT NULL and callers rely on that, but the aliases above
+      // can leave it unset; `''` reads identically to a real empty postcode,
+      // which is what older rows hold.
       postalCode: normalized.postal_code ?? '',
       number: normalized.number ?? null,
       buildingName: normalized.building_name ?? null,
@@ -692,7 +658,7 @@ export async function findOrCreateCanonicalAddress(
     //
     // `where` is NOT optional here and it is not a row filter — it is the index
     // PREDICATE. `addresses_normalized_key_key` is a PARTIAL unique index
-    // (`where normalized_key is not null`, the port of Mongo's `sparse: true`),
+    // (`where normalized_key is not null`),
     // and Postgres will not infer a partial index from its columns alone: without
     // the matching predicate the statement fails outright with "there is no
     // unique or exclusion constraint matching the ON CONFLICT specification".
@@ -828,24 +794,15 @@ export interface AddressHierarchy {
  * Resolve the street / building / unit ids for an address a review is attached
  * to, creating the parent rows on first sight.
  *
- * ## This fixes the Mongo trio rather than porting it
+ * ## Parents are found by COLUMN VALUES, never by a subset filter
  *
- * `Address.findOne(address.createBuildingLevel())` looked correct and was not.
- * A Mongo filter constrains only the fields it NAMES, and the building-level
- * projection of a unit address is a strict SUBSET of that unit address's own
- * fields — so the filter matched the unit row itself.
- *
- * MEASURED against the real Mongoose model on the in-memory replica set, not
- * inferred: for a canonical `Carrer Probe 42, 1a` at UNIT level, both
- * `findOne(createBuildingLevel())` and `findOne(createStreetLevel())` returned
- * that same unit document, so a UNIT review stored
- * `streetLevelId === buildingLevelId === addressId`.
- *
- * The visible consequence is that two flats in one building never rolled up
- * together: `getBuildingSummaries` groups by `building_level_id`, so the
- * neighbourhood explore page showed one card per FLAT rather than one per
- * building, and `getBuildingViewData` for a real building address found nothing
- * at all.
+ * A filter that constrains only the fields it NAMES matches the unit row itself
+ * when asked for its building, because the building-level projection of a unit
+ * address is a strict SUBSET of that unit address's own fields. A UNIT review
+ * would then store `streetLevelId === buildingLevelId === addressId`, and two
+ * flats in one building would never roll up together: `getBuildingSummaries`
+ * groups by `building_level_id`, so the neighbourhood explore page would show
+ * one card per FLAT rather than one per building.
  *
  * Projecting onto explicit COLUMN VALUES and deduping on `normalized_key` has no
  * such subset semantics: the parent row is found or created, and it is the same
@@ -912,9 +869,8 @@ export async function selectAddressWithGeoNames(options: {
 /**
  * Addresses within `radiusMeters` of a point, nearest first.
  *
- * `ST_DWithin` in the predicate + the KNN `<->` operator in the ORDER BY is the
- * port of Mongo's `$near` + `$maxDistance`, and the pairing is not
- * interchangeable with the obvious spelling: `ST_Distance(geo, p) < r` in a
+ * `ST_DWithin` in the predicate + the KNN `<->` operator in the ORDER BY, and
+ * the pairing is not interchangeable with the obvious spelling: `ST_Distance(geo, p) < r` in a
  * WHERE clause cannot use the GiST index and degrades to a sequential scan over
  * every address on the planet. `ST_DWithin` is index-backed, and `<->` on
  * `geography` gives the true spheroid ordering.

@@ -46,8 +46,8 @@
  * is a real `INSERT … ON CONFLICT DO NOTHING … RETURNING` rather than an
  * in-process map. Every event id below is a FIXED string (`evt_bad`,
  * `evt_decided`, …) and `moderation_events.id` IS the dedupe key, so the
- * truncation in `beforeEach` is load-bearing: Mongo got it from `jest.setup.ts`'s
- * per-test collection wipe, and without an equivalent a row left by an earlier
+ * truncation in `beforeEach` is load-bearing: nothing wipes the database
+ * between tests, so without it a row left by an earlier
  * test — or by an earlier FILE sharing this worker's database — would make the
  * receiver answer "already processed" and every count below measure history.
  */

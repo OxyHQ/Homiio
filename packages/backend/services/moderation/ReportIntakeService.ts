@@ -52,10 +52,9 @@ import { subjectProviderFor } from './subjects/registry';
  * Refuses an identifier that is not a string, at the point the QUERY is built.
  *
  * The types say these are strings and every route rejects a missing one, but a
- * type is erased at runtime. Under Mongo a truthiness check happily passed
- * `{$ne: null}`, which matched an UNRELATED report and answered "you already
- * reported this" about somebody else's row. Parameterised SQL does not have that
- * particular hole, but the guard is kept and is still worth its lines: it turns
+ * type is erased at runtime. An operator object such as `{$ne: null}` passes a
+ * truthiness check. Parameterised SQL cannot be injected that way, but the guard
+ * is still worth its lines: it turns
  * a malformed id into a loud `TypeError` at the boundary instead of a row keyed
  * by `"[object Object]"`.
  *

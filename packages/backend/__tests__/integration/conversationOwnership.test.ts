@@ -9,10 +9,9 @@
  *     rename, append to, share or delete user A's transcript — and must get the
  *     same 404 as for a conversation that does not exist, since a 403 would
  *     confirm the id is real.
- *  2. **That the surface WORKS AT ALL.** It did not. `routes/ai.ts` wrote
- *     `profileId`, which `ConversationSchema` does not declare, so mongoose
- *     strict mode dropped it and `required: true` on `oxyUserId` failed every
- *     save; the reads filtered on the same phantom field and returned `[]`.
+ *  2. **That the surface WORKS AT ALL.** It once did not: `routes/ai.ts` keyed
+ *     the owner by a stale `profileId`, so every save failed and the reads
+ *     filtered on the same phantom field and returned `[]`.
  *     Production holds zero conversations for that reason. A test that only
  *     checked the IDOR would have passed against the broken version too, so the
  *     happy paths below are load-bearing rather than decoration.
@@ -101,7 +100,7 @@ describe('POST /ai/conversations — the write path that never worked', () => {
     });
 
     // The row really exists, and its owner is the session's Oxy id rather than
-    // any profile id — the exact thing the Mongo version got wrong.
+    // any profile id.
     const stored = await findConversation(res.body.conversation.id);
     expect(stored?.oxyUserId).toBe(oxyUserId);
     expect(stored?.status).toBe('active');
@@ -109,8 +108,8 @@ describe('POST /ai/conversations — the write path that never worked', () => {
   });
 
   it('does not need a profile row to exist first', async () => {
-    // The Mongo handler resolved a `Profile` and 404'd without one, which
-    // refused a chat to anybody who had never opened the profile screen.
+    // Resolving a `Profile` first and 404ing without one would refuse a chat to
+    // anybody who had never opened the profile screen.
     const res = await request(buildApp(owner()))
       .post('/ai/conversations')
       .send({ initialMessage: 'hello' });
@@ -240,10 +239,8 @@ describe('GET /ai/conversations/:id — ownership', () => {
   });
 
   it('404s a malformed id instead of 400ing it', async () => {
-    // The `mongoose.Types.ObjectId.isValid` guard that used to 400 here is
-    // DELETED, not widened: post-cutover it answers `false` for every uuid v7,
-    // so it would have rejected every conversation created from the cutover on.
-    // A `text` column takes any string and the lookup simply finds nothing.
+    // No id-shape guard: a 24-hex test answers `false` for every uuid v7, so it
+    // would reject every new conversation. A `text` column takes any string and the lookup simply finds nothing.
     const res = await request(buildApp(owner())).get('/ai/conversations/not-an-id-at-all');
     expect(res.status).toBe(404);
   });
@@ -282,7 +279,7 @@ describe('PUT /ai/conversations/:id — ownership and transcript replacement', (
       'and answered',
     ]);
 
-    // Re-numbered from zero, as assigning the embedded array did in Mongo.
+    // Re-numbered from zero.
     const stored = await messagesOf(id);
     expect(stored.map((row) => row.position).sort((a, b) => a - b)).toEqual([0, 1]);
   });
@@ -437,11 +434,11 @@ describe('sharing — the link expires, the conversation does not', () => {
     expect(followed.status).toBe(404);
   });
 
-  it('CLEARS an expired link and keeps the conversation — Mongo deleted the row', async () => {
-    // This is the single most important assertion in the file. Mongo carried
-    // `{ 'sharing.expiresAt': 1 }, { expireAfterSeconds: 0 }`, and
-    // `generateShareToken` set that deadline to +24h — so every conversation
-    // anybody ever shared was destroyed a day later, with its transcript.
+  it('CLEARS an expired link and keeps the conversation — never deletes the row', async () => {
+    // This is the single most important assertion in the file.
+    // `generateShareToken` sets the link deadline to +24h — so deleting the row
+    // at the deadline would destroy every shared conversation a day later,
+    // with its transcript.
     // `db/expiry.ts` names the column in `EXPIRY_COLUMNS_THAT_MUST_NOT_DELETE`;
     // this proves the replacement clears four columns rather than reaping a row.
     const oxyUserId = owner();

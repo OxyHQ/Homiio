@@ -1,43 +1,31 @@
 /**
  * `leases` and its six child tables — reads and writes, on Postgres.
  *
- * Empty in production, so this port has no backfill and no consistency window.
+ * ## Lease behaviour, and where it lives
  *
- * ## Mongoose behaviour absorbed here rather than dropped
+ * `db/MIGRATION-CONTRACT.md` §"Behaviour the repository layer owns" lists it.
+ * For `leases`:
  *
- * `db/MIGRATION-CONTRACT.md` §"Model BEHAVIOUR the repository layer still has to
- * absorb" lists what a Mongoose method, hook or virtual used to do and now has
- * no counterpart. For `leases`:
- *
- *  - **`pre('save')`** did two things and BOTH move into {@link signLease}:
- *    promote `pending_signatures` → `active` once the lease is fully signed, and
- *    generate the payment schedule the first time a lease becomes `active`. A
- *    hook that fires on every save is replaced by the ONE transition that can
- *    trigger it, which is also the only place either condition can newly become
- *    true. `updateLease` cannot make a lease active — `EDITABLE_LEASE_FIELDS`
+ *  - **Activation** happens in {@link signLease}: promote `pending_signatures`
+ *    → `active` once the lease is fully signed, and generate the payment
+ *    schedule the first time a lease becomes `active`. That is the ONE
+ *    transition that can trigger either, and the only place either condition
+ *    can newly become true. `updateLease` cannot make a lease active — `EDITABLE_LEASE_FIELDS`
  *    has never contained `status`.
- *  - **`signAsLandlord` / `signAsTenant`** collapse into {@link signLease},
- *    which takes the side. They differed only in which columns they wrote.
- *    Since #518 §7.4 it takes a THIRD side (`co_tenant`), writes a row in
+ *  - **Signing** is {@link signLease}, which takes the side. Since #518 §7.4 it takes a THIRD side (`co_tenant`), writes a row in
  *    `lease_signatures` bound to the terms and the contract document, and waits
  *    for every party before activating — see that function's own header.
- *  - **`recordPayment`** is DELETED, not ported. It had no caller anywhere in
- *    the package, so nothing in Homiio had ever recorded a payment. The rent
- *    LEDGER (`./paymentLedger.ts`) is now the one way one is recorded, and
- *    keeping this would have left a second writer able to mark an obligation
- *    `paid` with no evidence of who confirmed it. Same reasoning as
- *    `scheduleInspection` below — a method with no caller is a write path to
- *    invent, not one to preserve — with the ledger as the replacement.
+ *  - **Payments** are recorded ONLY through the rent LEDGER
+ *    (`./paymentLedger.ts`). A second writer would be able to mark an
+ *    obligation `paid` with no evidence of who confirmed it.
  *  - **`generatePaymentSchedule`** is `./paymentSchedule.ts`, a pure function.
- *  - **`scheduleInspection`** is NOT ported: nothing in this package calls it,
- *    and `lease_inspections.inspector` is declared free text on exactly that
- *    ground (see the schema). Porting a method with no caller would invent a
- *    write path rather than preserve one.
- *  - **The four virtuals** are computed by `./leaseSerializer.ts`.
- *  - **The five statics** (`findByProperty`, `findByTenant`, `findByLandlord`,
- *    `findActive`, `findExpiringSoon`) have no caller in this package either.
- *    `findActive`'s containment question is what `leases_term_range_gist`
- *    exists for; the index is in place for whoever writes that read.
+ *  - **Inspection scheduling** has no writer: nothing in this package asks for
+ *    one, and `lease_inspections.inspector` is declared free text on exactly
+ *    that ground (see the schema).
+ *  - **The four computed fields** are `./leaseSerializer.ts`.
+ *  - **"Active now"** is a containment question, which is what
+ *    `leases_term_range_gist` exists for; the index is in place for whoever
+ *    writes that read.
  *
  * ## Everything a lease writes happens in ONE transaction
  *
@@ -706,10 +694,8 @@ export type SignLeaseOutcome =
  * the status, and generate the schedule if this completed the lease. ONE
  * transaction.
  *
- * This is `signAsLandlord`/`signAsTenant` PLUS the Mongoose `pre('save')` hook,
- * together, because that is what they were: the methods set the status and
- * `save()` ran the hook. Splitting them would let a lease commit as `active`
- * with no payment schedule, which is the state `generatePaymentSchedule` exists
+ * Signing, activating and scheduling are ONE step. Splitting them would let a
+ * lease commit as `active` with no payment schedule, which is the state `generatePaymentSchedule` exists
  * to prevent.
  *
  * ## What changed, and why each half had to
@@ -724,9 +710,8 @@ export type SignLeaseOutcome =
  * co-tenant's signature outright. So the completion rule changes with them: a
  * lease goes `active` once the landlord, the tenant and EVERY co-tenant has
  * signed, rather than as soon as the two principals have. `status` and
- * `isFullySigned` now agree, which ends a disagreement `leaseSerializer.ts`
- * carried over from Mongo deliberately and which was always a lease calling
- * itself active while a named tenant had not signed.
+ * `isFullySigned` now agree, which ends a disagreement that was always a lease
+ * calling itself active while a named tenant had not signed.
  *
  * **The cache is written FROM the signatures, not beside them.** The four
  * columns on `leases` and the two on `lease_co_tenants` are recomputed in this

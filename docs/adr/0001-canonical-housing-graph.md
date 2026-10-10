@@ -31,20 +31,8 @@ Every claim below was re-measured on branch `adr/345-housing-graph`, base
 `c4d73a43`, on 2026-08-10. Do not carry any of it to a sibling Oxy repo without
 re-deriving it there.
 
-PostgreSQL + PostGIS is the only store. The Mongo→Postgres migration is
-finished:
-
-```bash
-$ git grep -n "from 'mongoose'\|require('mongoose')\|from \"mongoose\"" -- 'packages/**'
-packages/backend/__tests__/integration/reviewSystem.test.ts:710:    expect(source).not.toMatch(/from 'mongoose'/);
-packages/backend/__tests__/unit/mongoUnreachable.test.ts:59: ...
-packages/backend/scripts/test-telegram-topics.js:7:// const mongoose = require('mongoose');
-```
-
-Every hit is a reintroduction gate or a commented-out line; there is no live
-import. `packages/backend/models/` and `packages/backend/database/` do not
-exist. No `package.json` in the repository names a mongo package
-(`git grep -n 'mongo' -- 'packages/*/package.json' 'package.json'` exits 1).
+PostgreSQL + PostGIS is the only store; every repository module under
+`packages/backend/db/` reads and writes it through drizzle.
 
 The infrastructure agrees. Read live, 2026-08-10:
 
@@ -55,7 +43,7 @@ $ aws ecs describe-task-definition --task-definition oxy-homiio-worker \
 ["REDIS_URL","AWS_ACCESS_KEY_ID","AWS_SECRET_ACCESS_KEY","LISTING_RESIDENTIAL_PROXY_URL","DATABASE_URL"]
 ```
 
-`DATABASE_URL` and no `MONGODB_URI`.
+`DATABASE_URL` is the only database secret.
 
 The schema is 61 tables:
 
@@ -64,19 +52,11 @@ $ grep -rhn "= pgTable(" packages/backend/db/schema/*.ts | wc -l
 61
 ```
 
-**One caution for anyone reading the files this ADR cites.**
-`packages/backend/services/addressService.ts` still carries a header section
-titled *"`models/Address.ts` and `geoResolutionService.ts` are deliberately still
-alive"*, and line 324 says *"ingest is still Mongo (batch 3)"*. Both statements
-are now false — `models/Address.ts` does not exist and ingest writes Postgres —
-and they are the exact failure mode `~/Oxy/AGENTS.md` records: a comment
-asserting live behaviour that has been removed, which nothing recomputes. The
-same drift exists in the repository's own `AGENTS.md`, whose "Data storage"
-section correctly says the migration is finished and whose bullet list still says
-"Still Mongoose, around three dozen backend files". Fixing both is
-[#349](https://github.com/OxyHQ/Homiio/issues/349); this ADR does not touch those
-files, and every claim it makes was re-derived from code and from a running
-database rather than from a comment.
+**One caution for anyone reading the files this ADR cites.** A code comment
+asserting live behaviour is not evidence of it — it is the exact failure mode
+`~/Oxy/AGENTS.md` records, because nothing recomputes a comment. Every claim
+this ADR makes was re-derived from code and from a running database rather than
+from a comment.
 
 ### 1.2 What already exists, and is good
 
@@ -664,7 +644,7 @@ of them measured:
    one of those review columns, which is precisely the destructive migration the
    issue forbids without a census.
 2. **The level derivation is already in the database**, as a generated column
-   whose predicate deliberately preserves Mongo truthiness semantics
+   whose predicate deliberately treats an empty string as absent
    (`coalesce(x,'') <> ''` rather than `is not null`). We measured that it still
    behaves: an empty-string `floor` yields `BUILDING`, not `UNIT`. A new table
    would have to reproduce this and could disagree with it.
@@ -978,7 +958,6 @@ roman-numeral pair stays 2 rows.
 
 | Claim | How |
 |---|---|
-| No live mongoose import; `models/`, `database/` gone; no mongo dependency | `git grep`, `ls`, `git grep -- '*/package.json'` |
 | 61 tables | `grep -rhn "= pgTable(" db/schema/*.ts \| wc -l` |
 | `identity` key omits `floor`/`entrance`/`subunit`; 4 collision classes over 14 fixtures, positive control passes | `scratchpad/adr-345/keyprobe.ts` against the real function |
 | One row is the building, 3r, 4t and entrance B at once; units 1a/2a stay distinct | `scratchpad/adr-345/e2e.ts` against a real migrated PostGIS database |
@@ -1078,7 +1057,7 @@ real functions and a real PostGIS server.
 ### 11.3 Figures carried from an earlier census (dated, not re-measured here)
 
 Recorded in `packages/backend/db/assertPostgresPopulated.ts` and in the schema
-files; **source: production Mongo census, 2026-08-06, issue #281 Fase 0.** They
+files; **source: production census, 2026-08-06, issue #281 Fase 0.** They
 describe the source at that date, not the database today, and external listings
 carry a TTL that reaps continuously.
 

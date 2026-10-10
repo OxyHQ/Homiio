@@ -113,7 +113,7 @@ describe('GET /profiles/me/entitlements', () => {
     expect(res.body.entitlements.founderSupporter).toBe(false);
     expect(res.body.entitlements.processedSessions).toEqual([sessionId]);
     expect(typeof res.body.entitlements.plusSince).toBe('string');
-    // Mongo baggage does not travel.
+    // The identity is `id`; no `_id` or `__v`.
     expect(res.body.entitlements).not.toHaveProperty('_id');
     expect(res.body.entitlements).not.toHaveProperty('__v');
   });
@@ -257,8 +257,7 @@ describe('POST /billing/manual-activate — the fallback when a webhook never ar
 
   /**
    * `founder` is deliberately NOT reachable here: this endpoint grants an
-   * entitlement with no Stripe evidence, so its product list stays as narrow as
-   * the Mongo handler's was.
+   * entitlement with no Stripe evidence, so its product list stays narrow.
    */
   it('refuses a product it does not sell, and creates nothing', async () => {
     const oxyUserId = account();
@@ -295,10 +294,10 @@ describe('cancel, reactivate and sync', () => {
   });
 
   /**
-   * Reactivating must CLEAR the cancellation stamp. The Mongo spelling was
-   * `$set: { plusCanceledAt: undefined }`, which Mongoose strips — so it never
-   * did, and `syncSubscriptionStatus`'s guard (`|| billing.plusCanceledAt`) then
-   * reported `statusChanged: true` on every later call, forever. The fixture
+   * Reactivating must CLEAR the cancellation stamp. An `undefined` is omitted
+   * from the SET clause, so writing `undefined` would never clear it, and
+   * `syncSubscriptionStatus`'s guard (`|| billing.plusCanceledAt`) would then
+   * report `statusChanged: true` on every later call, forever. The fixture
    * CANCELS first, because clearing an already-absent value cannot tell a real
    * clear from a no-op.
    */

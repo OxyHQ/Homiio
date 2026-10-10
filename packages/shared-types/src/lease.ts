@@ -1,8 +1,9 @@
 /**
  * Lease-related types shared across Homiio frontend and backend.
  *
- * The Mongoose `Lease` schema (`packages/backend/models/schemas/LeaseSchema.ts`)
- * and the `toLeaseDTO` serializer are the single authority for this shape. These
+ * The `leases` schema (`packages/backend/db/schema/leases.ts`) and its
+ * serializer (`packages/backend/db/leases/leaseSerializer.ts`) are the single
+ * authority for this shape. These
  * interfaces mirror that authority: owner references are session `landlordOxyUserId` /
  * `tenantOxyUserId`, terms live under `leaseTerms`, money under `rentDetails`,
  * and `status` uses the schema enum (`pending_signatures`, plural). There is no

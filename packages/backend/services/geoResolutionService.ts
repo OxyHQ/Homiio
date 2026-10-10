@@ -1,41 +1,13 @@
 /**
  * Geo Resolution Service
  *
- * The core of "own the external geo data". Given coordinates and/or place names,
- * this resolves the canonical DB-owned geo chain — Country → Region → City →
- * (Neighborhood) — and returns their `_id`s. The external geocoder (Nominatim)
- * is consulted at most ONCE per resolution (only to discover names when the
- * caller's names are incomplete); the resolved hierarchy is then UPSERTED into
- * our own collections so every request-time read hits OUR database, not the
- * live API.
+ * The ingest coordinate fallback ({@link resolveCityCentroid}) plus the types the
+ * geo chain shares. The canonical Country → Region → City → (Neighborhood)
+ * resolution and upsert is `addressService.resolveGeoChain`, over the
+ * `countries` / `regions` / `cities` / `neighborhoods` tables.
  *
- * Idempotent & de-duped:
- *   - Country  by ISO-2 `code`
- *   - Region   by (`countryId`, `name`)
- *   - City     by (`regionId`, `name`)
- *   - Neighborhood by (`cityId`, `name`)
- * Re-resolving the same place returns the same ids and creates no duplicate rows.
- *
- * A small in-memory cache short-circuits repeated resolutions of the same
- * coordinate/name within the process lifetime (the underlying geocoder also
- * caches), keeping us well within the OSM usage policy.
- *
- * ## STILL MONGO, and it cannot move before `properties` does
- *
- * The Postgres port of this chain exists — `addressService.resolveGeoChain`,
- * over the `countries` / `regions` / `cities` / `neighborhoods` tables — and it
- * is what `POST /api/addresses` writes through. This implementation stays alive
- * because its ONLY caller is `models/Address.ts`'s `findOrCreateCanonical`,
- * whose six remaining callers (`property/create`, `property/updateDelete`,
- * `roomController`, `reviewController`, `scraperService`, `IngestionService`)
- * each write a Mongo document in the same breath.
- *
- * The blocker is one column: a `cities.id` minted by Postgres is a **uuid v7**,
- * and `AddressSchema.cityId` is a Mongoose `ObjectId` path. Pointing this
- * function at Postgres therefore does not degrade the ingest, it stops it dead
- * with `Cast to ObjectId failed for value "019fd591-…"` — measured, not
- * predicted. Both halves move together with `properties` in batch 3, and this
- * file is deleted there.
+ * The external geocoder (Nominatim) is consulted at most ONCE per resolution,
+ * and its own cache keeps us well within the OSM usage policy.
  */
 
 import { forwardGeocode } from './geocodingService';
@@ -100,9 +72,9 @@ export async function resolveCityCentroid(names: GeoNames): Promise<[number, num
   if (countryCode) {
     // POSTGRES, because that is where the city was created. `addressService`'s
     // `resolveGeoChain` owns the geo upsert now, so the centroid this reads
-    // back is the one the previous listing's ingest just persisted — reading
-    // Mongo here would find nothing and send every placeholder-street listing
-    // to the geocoder, which is the exact flood this shortcut exists to avoid.
+    // back is the one the previous listing's ingest just persisted, so a
+    // placeholder-street listing does not go to the geocoder — the exact flood
+    // this shortcut exists to avoid.
     //
     // ONE statement with two LEFT JOINs, not four sequential lookups: the state
     // name narrows the match when it is given and is simply absent from the
@@ -116,7 +88,7 @@ export async function resolveCityCentroid(names: GeoNames): Promise<[number, num
       .leftJoin(regions, eq(cities.regionId, regions.id))
       .where(and(eq(countries.code, countryCode), eq(cities.name, cityName)))
       // A city matching the named region ranks above one matched on country
-      // alone — the same preference the two sequential Mongo lookups encoded.
+      // alone.
       .orderBy(
         stateName === undefined
           ? sql`1`

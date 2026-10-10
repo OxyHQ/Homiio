@@ -63,13 +63,8 @@ export const savedItems = pgTable(
      * name a single parent, while this one's discriminator has exactly one value
      * and every call site in the package writes `targetType: 'property'`.
      *
-     * It also fixes a live bug by construction. `controllers/property/stats.ts`
-     * counts saves with `targetId: new mongoose.Types.ObjectId(propertyId)`
-     * against a column Mongo declared `String` — a BSON type mismatch, so the
-     * count has always been 0. Under Postgres both sides are `text` and the
-     * comparison simply works. A save count that starts being non-zero after the
-     * cutover is an EXPECTED condition, not a defect to diagnose; it is the same
-     * class of finding as `properties.views`.
+     * Both sides of the join are `text`, so `controllers/property/stats.ts`'s
+     * save count compares like with like.
      */
     targetId: text()
       .notNull()
@@ -82,19 +77,14 @@ export const savedItems = pgTable(
     folderId: text().references(() => savedPropertyFolders.id, { onDelete: 'set null' }),
 
     /**
-     * ONE column, where Mongo had two.
-     *
-     * `SavedSchema` declares an explicit `createdAt: { default: Date.now }` AND
-     * `timestamps: true`; mongoose lets the explicit declaration win and writes
-     * one field, so there is one fact and one column. The same collapse applies
-     * to `saved_searches` below, which declares both `createdAt` and `updatedAt`
-     * beside `timestamps: true`.
+     * ONE creation column: there is one fact, so there is one column. The same
+     * applies to `saved_searches` below.
      */
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
   (table) => [
-    /** One save per person per listing — Mongo's own unique compound. */
+    /** One save per person per listing. */
     uniqueIndex('saved_items_owner_target_key').on(
       table.oxyUserId,
       table.targetType,
@@ -265,8 +255,8 @@ export const savedSearches = pgTable(
     index('saved_searches_owner_created_idx').on(table.oxyUserId, sql`${table.createdAt} desc`),
     /**
      * The alert sweep — "which saved searches want a notification?" — and the
-     * only reason `notifications_enabled` is indexed at all. PARTIAL, where Mongo
-     * carried the full `{ oxyUserId, notificationsEnabled }` compound: the sweep
+     * only reason `notifications_enabled` is indexed at all. PARTIAL, not an
+     * `(oxy_user_id, notifications_enabled)` compound: the sweep
      * runs across ALL users, so scoping it by owner answers the wrong question,
      * and the enabled set is the minority.
      */
@@ -349,10 +339,9 @@ export const savedPropertyFolders = pgTable(
     /**
      * Hex colour (`#3B82F6`).
      *
-     * No format CHECK. Mongoose validated `/^#[0-9A-F]{6}$/i`, and
+     * No format CHECK. The application validates `/^#[0-9A-F]{6}$/i`, and
      * `CONVENTIONS.md` defers FORMAT validators as a class — the same line that
-     * leaves `countries.code` and every `isEmail`/`isURL` validator in this
-     * migration unconstrained. Range and relational rules are expressed on empty
+     * leaves `countries.code` and every `isEmail`/`isURL` rule unconstrained. Range and relational rules are expressed on empty
      * tables; string-shape rules are not, so the boundary is one a reader can
      * apply rather than a list to memorise.
      */
@@ -367,9 +356,8 @@ export const savedPropertyFolders = pgTable(
     /**
      * One folder name per person, CASE-INSENSITIVELY.
      *
-     * Mongo expressed it as `collation: { locale: 'en', strength: 2 }` on the
-     * unique index. Postgres has no per-index collation strength, so the
-     * equivalent is a functional unique index on `lower(name)` — which is also
+     * Postgres has no per-index collation strength, so it is a functional
+     * unique index on `lower(name)` — which is also
      * what the case-insensitive lookups on `cities`, `regions` and
      * `neighborhoods` use.
      */
@@ -383,9 +371,8 @@ export const savedPropertyFolders = pgTable(
 /**
  * `SavedPropertyFolder.properties[]` — a listing filed in a folder.
  *
- * A child table on the ground `CONVENTIONS.md` states plainly: Mongo indexed it
- * BY ELEMENT (`{ 'properties.propertyId': 1 }`), so it is queried by element by
- * definition. It is also an array of IDS, which the same section says becomes a
+ * A child table on the ground `CONVENTIONS.md` states plainly: it is queried
+ * BY ELEMENT (`property_id`). It is also an array of IDS, which the same section says becomes a
  * real junction table or nothing.
  */
 export const savedPropertyFolderItems = pgTable(

@@ -3,10 +3,9 @@
  *
  * ## Why this suite exists
  *
- * The reservation half of the availability check read Mongo into an id list and
- * applied it only `if (ids.length > 0)`. Once `reservations` moved to Postgres
- * that read returned nothing, the guard skipped the exclusion, and every booked
- * listing was reported free.
+ * The reservation half of the availability check once read an id list and
+ * applied it only `if (ids.length > 0)`. When that read returned nothing, the
+ * guard skipped the exclusion, and every booked listing was reported free.
  *
  * Nothing errored. An availability check with no bookings in front of it
  * APPROVES — so the wrong answer was the successful-looking one, and the

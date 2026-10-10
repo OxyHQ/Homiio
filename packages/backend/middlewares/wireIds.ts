@@ -2,34 +2,22 @@
  * The outbound id serializer — the ONE place `_id` stops being part of Homiio's
  * wire contract.
  *
- * Every DTO in `@homiio/shared-types` names a document's identity `id`. Mongoose
- * still stores `_id` underneath and will keep doing so until the Postgres port
- * finishes, so something has to rename it on the way out. That rename cannot
- * live in the models, because the two response paths this API uses reach
- * `res.json` by different routes and only one of them passes through a model at
- * all:
- *
- *   - `res.json(doc)` on a Mongoose document calls the schema's `toJSON`, so a
- *     per-schema transform would cover it — and roughly a dozen schemas already
- *     carry one.
- *   - `res.json(await Query.lean())` does NOT. A lean result is a plain object
- *     that never sees `toJSON`, and there are ~90 `.lean()` reads behind these
- *     routers. Those emit `_id` and no `id` whatsoever.
- *
- * So the cut is made here, at the boundary both paths share, rather than in ~100
- * call sites where the next `.lean()` added would silently reopen it.
+ * Every DTO in `@homiio/shared-types` names a document's identity `id`. Every
+ * row comes from drizzle with an `id` column, so this is a belt-and-braces
+ * guarantee rather than a live translation: the cut is made here, at the
+ * boundary every response path shares, rather than at each call site where the
+ * next one added could silently reopen it.
  *
  * ## What it does, precisely
  *
  * Rebuilds the outgoing body and, on every object carrying `_id`, moves that
- * value to `id` (stringified — an `ObjectId` reaching a consumer as an object
+ * value to `id` (stringified — an id object reaching a consumer as an object
  * rather than a string is the bug this exists to prevent) and drops `_id`. An
- * `id` already present WINS: a schema transform or a DTO mapper that set one
- * made the more specific decision and this must not overwrite it.
+ * `id` already present WINS: a DTO mapper that set one made the more specific
+ * decision and this must not overwrite it.
  *
- * It rebuilds rather than mutates. The input may be a cached object or a
- * Mongoose document, and a serializer that edits its argument would corrupt the
- * first and try to `delete` a schema path on the second.
+ * It rebuilds rather than mutates. The input may be a cached object, and a
+ * serializer that edits its argument would corrupt it.
  *
  * ## Exactly what it touches, and what it leaves alone
  *
@@ -99,8 +87,7 @@ interface JsonSerializable {
 }
 
 /**
- * Reduce a Mongoose document (or `ObjectId`, or anything else defining `toJSON`)
- * to the value `JSON.stringify` would have produced for it, so the walk below
+ * Reduce anything defining `toJSON` to the value `JSON.stringify` would have produced for it, so the walk below
  * only ever sees plain data. A `Date` is left alone — `res.json` renders it the
  * same way and unwrapping it here would only lose the type earlier.
  */

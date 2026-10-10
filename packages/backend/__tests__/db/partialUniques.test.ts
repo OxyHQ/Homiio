@@ -1,9 +1,9 @@
 /**
  * The partial unique indexes, asserted against a REAL server.
  *
- * `CONVENTIONS.md` maps Mongo's `sparse` / `partialFilterExpression` onto a
- * Postgres partial unique index in one line. That line hides two things a
- * declaration cannot tell you and only a server can:
+ * `CONVENTIONS.md` states a rule over a subset of rows as a Postgres partial
+ * unique index in one line. That line hides two things a declaration cannot
+ * tell you and only a server can:
  *
  *  1. **The partiality has to be real.** A PLAIN unique index passes every
  *     "rejects a duplicate" test — the assertions that fail are the ones about
@@ -12,8 +12,8 @@
  *     after the first was resolved. Those are the rows a full unique index eats,
  *     silently, months later, as "you already reported this" on a listing that
  *     is still wrong.
- *  2. **NULL is DISTINCT in Postgres and was not in Mongo's `sparse`.** A
- *     sparse-unique column must be written NULL and never `''` — an empty string
+ *  2. **NULL is DISTINCT in Postgres.** A sparse-unique column must be written
+ *     NULL and never `''` — an empty string
  *     is a VALUE, so it collides for real. Asserting that N NULLs coexist and
  *     that two `''`s do not is what makes the difference visible.
  *
@@ -81,8 +81,8 @@ describe('listing_reports — one OPEN report per reporter per property', () => 
   });
 
   it('ACCEPTS a re-file once the first report is resolved', async () => {
-    // The half a plain unique index would break. Mongo's
-    // `partialFilterExpression: { status: 'open' }` exists precisely so a listing
+    // The half a plain unique index would break. The `status = 'open'`
+    // predicate exists precisely so a listing
     // that is still wrong after a dismissal can be reported again — without this
     // assertion, dropping `.where(...)` from the index passes the whole file.
     const reporter = oxy();
@@ -196,8 +196,8 @@ describe('roommate_relationships — one ACTIVE relationship per sorted pair', (
 
 describe('sparse uniques permit many NULLs and exactly one of any value', () => {
   it('lets every unshared conversation coexist, and refuses a duplicate token', async () => {
-    // `sharing_share_token` is Mongo's `unique: true, sparse: true`. The NULL
-    // half is the one that matters: without it, the SECOND conversation anybody
+    // `sharing_share_token` is unique over the shared set. The NULL half is the
+    // one that matters: without it, the SECOND conversation anybody
     // creates fails to insert.
     const owner = oxy();
     await db.insert(conversations).values([
@@ -259,9 +259,8 @@ describe('sparse uniques permit many NULLs and exactly one of any value', () => 
 
 describe('saved_property_folders — one name per person, case-INSENSITIVELY', () => {
   it('refuses a folder whose name differs only in case', async () => {
-    // Mongo expressed this as `collation: { locale: 'en', strength: 2 }`, which
-    // Postgres has no per-index equivalent for. A functional unique index on
-    // `lower(name)` is the port — and a plain `UNIQUE(oxy_user_id, name)` would
+    // Postgres has no per-index collation strength. A functional unique index
+    // on `lower(name)` is the rule — and a plain `UNIQUE(oxy_user_id, name)` would
     // pass every test that only inserts differently-spelled names.
     const owner = oxy();
     await db.insert(savedPropertyFolders).values({ oxyUserId: owner, name: 'Barcelona' });
@@ -446,8 +445,8 @@ describe('the partial indexes really are partial', () => {
     const named = rows.map((row) => row.indexname);
 
     // Every partial UNIQUE index in the schema, named. A new one has to be added
-    // here deliberately, which is the point — it is the list a reviewer checks
-    // against the Mongo `partialFilterExpression`s.
+    // here deliberately, which is the point — it is the list a reviewer
+    // checks.
     expect(named).toEqual([
       // #360's two, both for the same reason `addresses_normalized_key_key`
       // below is partial: the column is NULL on every row written by any other

@@ -52,14 +52,13 @@ export const images = pgTable(
 
     // ── the four processed variants, flattened ──
     //
-    // Mongo stored these as two `_id: false` subdocuments (`keys` and `urls`)
-    // with the same four fixed fields each. The variant set is CLOSED and known
+    // The wire carries two objects (`keys` and `urls`) with the same four fixed
+    // fields each. The variant set is CLOSED and known
     // at schema time, so eight named columns are the honest shape: a child table
     // would model a cardinality that does not exist, and `jsonb` would make
     // `urls.medium` — the single most-read value in the product — unindexable
-    // and untyped. The names keep the Mongo path (`keys.medium` →
-    // `keys_medium`), which is what lets the backfill's column-coverage check
-    // map source to target mechanically.
+    // and untyped. The names keep the wire path (`keys.medium` →
+    // `keys_medium`), which is what lets a serializer map them mechanically.
     keysOriginal: text().notNull(),
     keysSmall: text().notNull(),
     keysMedium: text().notNull(),
@@ -88,9 +87,8 @@ export const images = pgTable(
     updatedAt: updatedAt(),
   },
   (table) => [
-    // The primary access pattern, unchanged from Mongo: an entity's ordered
-    // photo list. The two standalone `index: true` declarations Mongo carried on
-    // `entityType` and `entityId` are NOT ported — `entity_type` is a leading
+    // The primary access pattern: an entity's ordered photo list. No standalone
+    // index on `entity_type` or `entity_id` — `entity_type` is a leading
     // prefix of this index and a btree serves any leading prefix, and nothing
     // queries an `entity_id` without knowing its type.
     index('images_entity_order_idx').on(table.entityType, table.entityId, table.order),

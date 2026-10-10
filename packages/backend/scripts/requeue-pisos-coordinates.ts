@@ -38,14 +38,9 @@ const COORD_EPSILON = 0.0002;
 async function main(): Promise<void> {
   await connectPostgres();
 
-  // ONE join, and the centroid test is a WHERE clause.
-  //
-  // The Mongo version could do neither: it opened a raw cursor over every
-  // published pisos listing and issued an `Address.findById` PER ROW to read
-  // two coordinates, then filtered in JS. It also had to unwrap three possible
-  // shapes of the address reference (`addressId`, a legacy `address`, and a
-  // populated object) — `properties.address_id` is a `text` foreign key with
-  // exactly one shape, so that unwrapping is gone rather than ported.
+  // ONE join, and the centroid test is a WHERE clause — never a lookup per row
+  // filtered in JS. `properties.address_id` is a `text` foreign key with
+  // exactly one shape, so there is nothing to unwrap.
   const stuckRows = await getDb()
     .select({
       sourceId: properties.sourceId,

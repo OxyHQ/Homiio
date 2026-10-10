@@ -168,7 +168,7 @@ export interface UrlFetcher {
 
 /**
  * A listing provider plugin. Implementations are pure w.r.t. persistence: they
- * never touch Mongo or S3 — they only turn a portal into a
+ * never touch the database or S3 — they only turn a portal into a
  * {@link NormalizedListing} for the backend `IngestionService`.
  */
 export interface ListingProvider {

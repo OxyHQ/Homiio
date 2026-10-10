@@ -108,9 +108,9 @@ export const reservations = pgTable(
     taxes: doublePrecision().notNull().default(0),
     total: doublePrecision().notNull(),
     /**
-     * Three-letter code, uppercased at the call site. No vocabulary CHECK —
-     * Mongoose declared `minlength`/`maxlength` and no `enum`, the same
-     * deferred-validator case as `commissions.currency`.
+     * Three-letter code, uppercased at the call site. No vocabulary CHECK — a
+     * length rule and no closed set, the same deferred-validator case as
+     * `commissions.currency`.
      */
     currency: text().notNull().default('EUR'),
 
@@ -126,8 +126,8 @@ export const reservations = pgTable(
     /**
      * The double-booking check.
      *
-     * Mongo's `{ propertyId: 1, checkIn: 1, checkOut: 1 }` cannot answer "does
-     * anything overlap these dates?" — a btree narrows by one endpoint and
+     * A `(property_id, check_in, check_out)` btree cannot answer "does anything
+     * overlap these dates?" — a btree narrows by one endpoint and
      * filters the rest, the same limitation `property_availability_windows`
      * records. `[)` bounds, matching the availability calendar this competes
      * with: a stay that ends on the morning another begins is not a conflict.
@@ -154,9 +154,9 @@ export const reservations = pgTable(
       sql`${table.cancellationPolicy} in (${sql.raw(inList(RESERVATION_CANCELLATION_POLICIES))})`,
     ),
     /**
-     * Mongo declared this as a `validate` on `checkOut` — which, like every
-     * validator in this package, does not run on an update. A reservation whose
-     * checkout precedes its checkin prices at a negative subtotal.
+     * A CHECK rather than an application validator, so no update path can skip
+     * it. A reservation whose checkout precedes its checkin prices at a negative
+     * subtotal.
      */
     check('reservations_stay_order_check', sql`${table.checkOut} > ${table.checkIn}`),
     /**
@@ -220,8 +220,7 @@ export const viewingRequests = pgTable(
   },
   (table) => [
     /**
-     * Both of Mongo's compounds, ported as they are — and now carrying the
-     * overlap search as well, which is why there is still no GiST index here
+     * Two compounds — now carrying the overlap search as well, which is why there is still no GiST index here
      * even though a viewing has become a RANGE.
      *
      * The range is `[scheduled_at, scheduled_at + duration)`, and
@@ -248,7 +247,7 @@ export const viewingRequests = pgTable(
       table.scheduledAt,
       table.status,
     ),
-    // Mongo's standalone `{ requesterOxyUserId: 1 }` — the requester's own list,
+    // The requester's own list,
     // and the leading prefix of nothing above it.
     index('viewing_requests_requester_idx').on(table.requesterOxyUserId),
     check(
@@ -262,8 +261,8 @@ export const viewingRequests = pgTable(
     /**
      * `cancelled_by` is set exactly when the request was cancelled.
      *
-     * Mongo allowed a `pending` request to name a canceller and a `cancelled`
-     * one to name nobody. The second is the damaging half — a cancellation with
+     * Without it a `pending` request could name a canceller and a `cancelled`
+     * one name nobody. The second is the damaging half — a cancellation with
      * no attribution is one neither party can be shown to have made.
      */
     check(

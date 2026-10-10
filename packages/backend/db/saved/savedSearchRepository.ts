@@ -22,19 +22,16 @@
  * `saveSearch` read for an existing name and then inserted, which is a
  * read-then-write with a window between the two: two requests from the same
  * person with the same name both find nothing and both insert.
- * `saved_searches_owner_name_key` is a real UNIQUE, so the correct port INSERTS
- * and handles `23505` — `db/MIGRATION-CONTRACT.md` lists this class of change
- * explicitly, and re-implementing the read would keep the race in a new costume
- * while the index quietly made it impossible.
+ * `saved_searches_owner_name_key` is a real UNIQUE, so this INSERTS and handles
+ * `23505` — `db/MIGRATION-CONTRACT.md` lists this class explicitly, and
+ * re-implementing the read would keep the race in a new costume while the index
+ * quietly made it impossible.
  *
- * {@link SavedSearchNameTakenError} is what the controller turns into the 409
- * the Mongo handler returned, so the wire behaviour is unchanged and only the
- * race is gone.
+ * {@link SavedSearchNameTakenError} is what the controller turns into a 409.
  *
  * ## `name` and `query` are trimmed at the CALL SITE
  *
- * `CONVENTIONS.md` says a mongoose `trim` becomes nothing in Postgres and is
- * re-applied where the value enters. Both are trimmed by the controller before
+ * `CONVENTIONS.md` says trimming is applied where the value enters. Both are trimmed by the controller before
  * they reach here, which matters for more than tidiness: the unique index is on
  * the stored bytes, so `'Madrid'` and `'Madrid '` would be two rows and the
  * duplicate-name rule would silently stop holding.

@@ -99,11 +99,11 @@ export const DEFERRED_FOREIGN_KEYS: readonly DeferredForeignKey[] = [];
  * one of them, and repeating it would bury the entries that have a reason of
  * their own.
  *
- * Through migration 0002 this set was populated IN ADVANCE, from the Mongoose
- * schemas the columns were expected to come from — none of those names existed
- * yet, because the geo tables and `images` have no owner. Migrations 0003-0007
- * land every remaining table, so it is now a MEASURED set rather than a
- * predicted one, and six predicted names turned out never to exist:
+ * Through migration 0002 this set was populated IN ADVANCE, from the names the
+ * columns were expected to have — none of those names existed yet, because the
+ * geo tables and `images` have no owner. Migrations 0003-0007 land every
+ * remaining table, so it is now a MEASURED set rather than a predicted one, and
+ * six predicted names turned out never to exist:
  *
  * | Predicted | What the schema actually has |
  * |---|---|
@@ -247,7 +247,7 @@ export const ID_COLUMNS_WITHOUT_FOREIGN_KEY: readonly IdColumnWithoutForeignKey[
       '`cities.id`, `regions.id`, `countries.id` or `profiles.id`. A single ' +
       'column cannot reference five tables, so this is permanent rather than ' +
       'deferred: it does not become expressible when the missing tables land. ' +
-      'Mongo declared it with no `ref` for the same reason, and every read is ' +
+      'Every read is ' +
       'already scoped by the `(entity_type, entity_id)` PAIR rather than by the ' +
       'id alone — which is the index this table carries and the reason a ' +
       'dangling id costs nothing beyond returning no rows.',
@@ -258,7 +258,7 @@ export const ID_COLUMNS_WITHOUT_FOREIGN_KEY: readonly IdColumnWithoutForeignKey[
     reason:
       "Not an id INTO anything — it is the PORTAL's own identifier for the " +
       "ad (Idealista's listing number, Otodom's slug id), and the only " +
-      'reason it ends in `_id` is that Mongo named it `sourceId`. It is half ' +
+      'reason it ends in `_id` is that the wire names it `sourceId`. It is half ' +
       'of the `(source, source_id)` dedup key and references no table here or ' +
       'anywhere else. Listed rather than renamed because the name is what ' +
       'every provider plugin and the whole ingest path already call it.',

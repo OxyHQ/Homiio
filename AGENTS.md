@@ -64,16 +64,9 @@ compiled build: only `worker` carries Playwright/Chromium/X11.
 Database `homiio` on the shared RDS instance `oxy-postgres`, with **PostGIS**
 installed once by a privileged role (not a trusted extension — the owning app
 role cannot install it). `DATABASE_URL` is the only database secret either
-process needs; `initializeDatabase()` exits non-zero without it. Full state,
-measurements and the migration history: **`docs/postgres.md`**.
+process needs; `initializeDatabase()` exits non-zero without it. Full state and
+measurements: **`docs/postgres.md`**.
 
-<!-- vocabulary-exempt:start names the store that was REMOVED and the gate that keeps it out; both need the old vocabulary to be checkable -->
-- **The Mongo→Postgres migration is FINISHED and there is no rollback target.**
-  `__tests__/unit/mongoUnreachable.test.ts` is now a REINTRODUCTION GATE: its
-  `PENDING_MONGO_FILES` map is empty, so any module importing mongoose fails the
-  build. Bringing Mongo back is allowed — it just has to be a decision somebody
-  makes on purpose.
-<!-- vocabulary-exempt:end -->
 - **Controllers call a repository under `packages/backend/db/<domain>/`, never an
   ORM model.**
 - **Migrations: `bun run db:migrate`, never `drizzle-kit migrate`.** Production

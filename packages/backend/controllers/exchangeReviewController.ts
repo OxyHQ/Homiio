@@ -88,8 +88,8 @@ class ExchangeReviewController {
 
       // No "already reviewed?" pre-read: `exchange_reviews_request_reviewer_key`
       // is a real UNIQUE, so the INSERT is the check and the 409 comes from its
-      // own violation. The Mongoose version did both, which left a redundant
-      // round trip in front of a constraint that already decides it.
+      // own violation. A pre-read would be a redundant round trip in front of a
+      // constraint that already decides it.
       let review;
       try {
         review = await createExchangeReview(db, {
