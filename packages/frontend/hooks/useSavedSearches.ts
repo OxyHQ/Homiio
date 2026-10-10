@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from 'react';
-import { type SavedSearch, type SavedSearchFilters } from '@/store/savedSearchesStore';
+import type { SavedSearch, SavedSearchFilters } from '@/store/savedSearchesStore';
 import { toast } from '@oxy.so/bloom/toast';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';

@@ -30,7 +30,7 @@
  */
 
 import { and, type SQL } from 'drizzle-orm';
-import { OfferingType, type HomeLocationSummary, type HomeSection } from '@homiio/shared-types';
+import type { OfferingType, HomeLocationSummary, HomeSection } from '@homiio/shared-types';
 
 import {
   hasOffering,

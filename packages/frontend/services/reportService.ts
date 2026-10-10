@@ -6,8 +6,8 @@
  * against a listing; the backend attributes it to the reporter's active
  * profile and queues it for internal review.
  */
-import { api, ApiError, ApiResponse } from '@/utils/api';
-import { CreateListingReportInput, ListingReport } from '@homiio/shared-types';
+import { api, ApiError, type ApiResponse } from '@/utils/api';
+import type { CreateListingReportInput, ListingReport } from '@homiio/shared-types';
 
 export type { CreateListingReportInput, ListingReport } from '@homiio/shared-types';
 

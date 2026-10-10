@@ -2,7 +2,7 @@
  * Property-related types shared across Homiio frontend and backend
  */
 
-import {
+import type {
   PropertyType,
   PropertyStatus,
   HousingType,
@@ -16,8 +16,8 @@ import {
   ExchangeMode,
   DeepPartial,
 } from './common';
-import { Address, AddressInput, ListingAddressPrecision, PropertyAddress } from './address';
-import { PropertyImageRef, PropertyImageWrite } from './media';
+import type { Address, AddressInput, ListingAddressPrecision, PropertyAddress } from './address';
+import type { PropertyImageRef, PropertyImageWrite } from './media';
 
 /**
  * Long-term (monthly) rent pricing for a listing carrying the

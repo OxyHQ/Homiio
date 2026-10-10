@@ -7,7 +7,8 @@
  * Mirrors the reservations list patterns (Bloom Chip + Skeleton + Empty/Error
  * states), keyed on the exchange service/hooks.
  */
-import React, { useMemo, useState } from 'react';
+import type React from 'react';
+import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -21,7 +22,7 @@ import {
 } from '@oxy.so/bloom/segmented-control';
 import { confirm } from '@oxy.so/bloom/surfaces';
 import { useOxy, openAccountDialog } from '@oxy.so/services';
-import { ExchangeRequest, ExchangeRequestStatus } from '@homiio/shared-types';
+import { type ExchangeRequest, ExchangeRequestStatus } from '@homiio/shared-types';
 
 import { Header } from '@/components/Header';
 import { ExchangeRequestCard } from '@/components/exchange/ExchangeRequestCard';

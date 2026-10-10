@@ -24,7 +24,7 @@
  * (`db/schema/CONVENTIONS.md` §"Arrays and objects").
  */
 
-import { Request, Response } from 'express';
+import type { Request, Response } from 'express';
 import { and, asc, count, desc, eq, ilike, or, sql, type SQL } from 'drizzle-orm';
 import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 

@@ -21,7 +21,7 @@
  * to handle both arms.
  */
 
-import { type ApproximateLocation, type ApiResponse } from '@homiio/shared-types';
+import type { ApproximateLocation, ApiResponse } from '@homiio/shared-types';
 
 import { api } from '@/utils/api';
 

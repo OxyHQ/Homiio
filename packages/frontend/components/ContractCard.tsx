@@ -8,7 +8,7 @@
  * pressable, so its action row carries the lease status chip and the "View"
  * button that opens the contract.
  */
-import React from 'react';
+import type React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@oxy.so/bloom/button';

@@ -39,7 +39,7 @@ function setNested(obj: JsonObject, parts: string[], value: unknown): void {
 }
 
 function enUsesFlatKey(en: JsonObject, path: string): boolean {
-  return Object.prototype.hasOwnProperty.call(en, path);
+  return Object.hasOwn(en, path);
 }
 
 const en = JSON.parse(readFileSync(join(LOCALES_DIR, 'en.json'), 'utf8')) as JsonObject;

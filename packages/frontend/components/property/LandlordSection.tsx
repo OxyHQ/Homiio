@@ -11,7 +11,8 @@
  * and link to its application website instead. Below the card: follow the
  * host, and the host's other listings.
  */
-import React, { useMemo } from 'react';
+import type React from 'react';
+import { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';

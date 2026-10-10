@@ -25,7 +25,7 @@ import { colors } from '@/styles/colors';
 import { spacing } from '@/constants/styles';
 import { logger } from '@/utils/logger';
 import { coverFirst } from '@/utils/propertyPhotos';
-import { imageUploadService, UploadedImage } from '@/services/imageUploadService';
+import { imageUploadService, type UploadedImage } from '@/services/imageUploadService';
 
 interface ImageUploadProps {
   images: UploadedImage[];

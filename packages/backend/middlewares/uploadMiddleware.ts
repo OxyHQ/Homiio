@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
+import type { Request, Response, NextFunction } from 'express';
 import multer from 'multer';
 
 export const handleUploadError = (error: any, req: Request, res: Response, next: NextFunction) => {

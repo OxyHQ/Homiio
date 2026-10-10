@@ -71,7 +71,7 @@ import {
   evictionSupporterVouches,
   evictionUpdateNotifications,
 } from '../schema/evictions';
-import { PROTECTED_COLUMNS_BY_TABLE, publicColumns } from '../schema/protectedColumns';
+import { type PROTECTED_COLUMNS_BY_TABLE, publicColumns } from '../schema/protectedColumns';
 import { isUniqueViolation } from '../uniqueViolation';
 
 /**

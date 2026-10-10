@@ -52,9 +52,9 @@ import {
 } from '../schema';
 import {
   LEASE_PAYMENT_METHODS,
-  LEASE_PAYMENT_STATUSES,
-  LEASE_SIGNATURE_PARTIES,
-  LEASE_STATUSES,
+  type LEASE_PAYMENT_STATUSES,
+  type LEASE_SIGNATURE_PARTIES,
+  type LEASE_STATUSES,
 } from '../schema/leases';
 import { generatePaymentSchedule } from './paymentSchedule';
 import { appendLeaseEvent, listLeaseEventsByLease } from './leaseEvents';

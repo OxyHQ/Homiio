@@ -5,7 +5,7 @@
  * Remix icons do not inherit a colour, so the fill comes from the theme here:
  * secondary text for an ordinary row, the error ink for a destructive one.
  */
-import React from 'react';
+import type React from 'react';
 import { StyleSheet } from 'react-native';
 import { useTheme } from '@oxy.so/bloom/theme';
 

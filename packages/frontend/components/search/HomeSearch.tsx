@@ -55,7 +55,8 @@
  * build the query inline (`{ ...activeQuery, offering }`), so identity would
  * change on every render.
  */
-import React, { useCallback, useMemo, useState } from 'react';
+import type React from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   ScrollView,
   StyleSheet,

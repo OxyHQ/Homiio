@@ -7,7 +7,7 @@
  * state looks like a deferred version of the loaded state, not a separate
  * UI.
  */
-import React from 'react';
+import type React from 'react';
 import { View, type StyleProp, type ViewStyle } from 'react-native';
 
 import * as Skeleton from '@oxy.so/bloom/skeleton';

@@ -5,11 +5,15 @@ import {
   type UseMutationResult,
   type UseQueryResult,
 } from '@tanstack/react-query';
-import { CreateReservationData, Reservation, UpdateReservationData } from '@homiio/shared-types';
+import type {
+  CreateReservationData,
+  Reservation,
+  UpdateReservationData,
+} from '@homiio/shared-types';
 import {
-  ListReservationsParams,
-  PropertyAvailabilityResponse,
-  ReservationListResponse,
+  type ListReservationsParams,
+  type PropertyAvailabilityResponse,
+  type ReservationListResponse,
   reservationService,
 } from '@/services/reservationService';
 

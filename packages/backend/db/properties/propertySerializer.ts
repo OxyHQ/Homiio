@@ -49,9 +49,9 @@ import imageUploadService from '../../services/imageUploadService';
 import { publicColumns } from '../schema/protectedColumns';
 import {
   properties,
-  propertyAvailabilityWindows,
-  propertyDocuments,
-  propertyImages,
+  type propertyAvailabilityWindows,
+  type propertyDocuments,
+  type propertyImages,
 } from '../schema';
 import type { AddressWithGeoNames } from '../addresses/addressSerializer';
 import { serializeAddressRow } from '../addresses/addressSerializer';

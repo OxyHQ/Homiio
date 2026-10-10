@@ -14,7 +14,8 @@
  * NativeWind-incompatible function-form `style` (AGENTS.md §NativeWind Pressable).
  * Standalone component, so it is safe inside a `.map` / a component array.
  */
-import React, { useState } from 'react';
+import type React from 'react';
+import { useState } from 'react';
 import {
   Platform,
   Pressable,

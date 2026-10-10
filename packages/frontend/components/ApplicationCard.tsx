@@ -4,14 +4,15 @@
  * date. Tap routes to the appropriate detail screen (applicant vs landlord
  * lives under different routes; the parent supplies `href`).
  */
-import React, { useMemo } from 'react';
+import type React from 'react';
+import { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { Avatar } from '@oxy.so/bloom/avatar';
-import { TenantApplication, formatMoney } from '@homiio/shared-types';
+import { type TenantApplication, formatMoney } from '@homiio/shared-types';
 import { ApplicationStatusBadge } from '@/components/ApplicationStatusBadge';
 import { Card } from '@oxy.so/bloom/card';
 import { ThumbnailImage } from '@/components/ui/ThumbnailImage';

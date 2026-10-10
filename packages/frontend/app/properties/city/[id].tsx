@@ -12,7 +12,7 @@ import { Header } from '@/components/Header';
 import { PropertyResultsGrid } from '@/components/ui/PropertyResultsGrid';
 import { PropertyResultsGridSkeleton } from '@/components/ui/PropertyResultsGridSkeleton';
 import { LoadMoreSentinel } from '@/components/common/LoadMoreSentinel';
-import { Property, formatNumber } from '@homiio/shared-types';
+import { type Property, formatNumber } from '@homiio/shared-types';
 import { useFormatting } from '@/utils/format';
 import { useCity } from '@/hooks/useCityQueries';
 import {

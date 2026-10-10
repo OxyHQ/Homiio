@@ -5,7 +5,7 @@
  * the shared `IconButton` (which owns its own pressed state), so this row needs
  * no interaction hooks and is safe inside the thread's `.map`.
  */
-import React from 'react';
+import type React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Avatar } from '@oxy.so/bloom/avatar';
 import { Text as BloomText } from '@oxy.so/bloom/typography';

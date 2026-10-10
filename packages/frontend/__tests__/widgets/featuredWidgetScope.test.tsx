@@ -31,7 +31,8 @@
  * fetches anything at all, so without a case proving a request DOES happen when
  * it should, this whole file passes against a component rendering an empty div.
  */
-import React, { type ReactNode } from 'react';
+import type React from 'react';
+import type { ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BloomThemeProvider } from '@oxy.so/bloom/theme';
 import { act, render, waitFor } from '@testing-library/react-native';

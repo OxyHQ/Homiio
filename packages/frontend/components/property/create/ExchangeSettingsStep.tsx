@@ -11,7 +11,11 @@ import { Item } from '@oxy.so/bloom/item';
 import { RadioGroup } from '@oxy.so/bloom/radio';
 import { SwitchFilterRow, ToggleChipGroup } from '@oxy.so/bloom/stay-filters';
 import { Textarea } from '@oxy.so/bloom/textarea';
-import { AvailabilityWindow, AvailabilityWindowStatus, ExchangeMode } from '@homiio/shared-types';
+import {
+  type AvailabilityWindow,
+  AvailabilityWindowStatus,
+  type ExchangeMode,
+} from '@homiio/shared-types';
 
 import { ThemedText } from '@/components/ThemedText';
 import {

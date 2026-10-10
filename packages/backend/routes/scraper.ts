@@ -8,7 +8,7 @@ import {
   runExternalScrape,
   getScraperHealth,
   cleanupExpiredProperties,
-  ScraperOptions,
+  type ScraperOptions,
 } from '../services/scraperService';
 import { asyncHandler } from '../middlewares';
 import { requireAdmin } from '../middlewares/requireAdmin';

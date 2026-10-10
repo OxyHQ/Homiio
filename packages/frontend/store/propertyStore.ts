@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Property, PropertyFilters } from '@homiio/shared-types';
+import type { Property, PropertyFilters } from '@homiio/shared-types';
 
 // Property State Interface
 interface PropertyState {

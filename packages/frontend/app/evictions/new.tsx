@@ -10,7 +10,8 @@
  * then `router.replace`s to the case. Edit mode prefills from the loaded case;
  * the form initialises its state from that snapshot (no prefill `useEffect`).
  */
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import type React from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -30,7 +31,7 @@ import { TextFieldInput } from '@oxy.so/bloom/text-field';
 import { Textarea } from '@oxy.so/bloom/textarea';
 import { H2, Text as BloomText } from '@oxy.so/bloom/typography';
 
-import { CreateEvictionCaseData, EvictionCase } from '@homiio/shared-types';
+import type { CreateEvictionCaseData, EvictionCase } from '@homiio/shared-types';
 import { Header } from '@/components/Header';
 import Map, { type MapApi, type GeocodedAddress, type LonLat } from '@/components/Map';
 import { ErrorState } from '@/components/ui/ErrorState';

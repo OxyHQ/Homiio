@@ -22,7 +22,7 @@
  * disabled: `ActionBar`'s icon button has no disabled state, and an icon that
  * does nothing when pressed reads as broken.
  */
-import React from 'react';
+import type React from 'react';
 import { Platform, type ViewStyle } from 'react-native';
 import { useTranslation } from 'react-i18next';
 

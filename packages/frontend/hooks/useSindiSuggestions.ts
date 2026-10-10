@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Property, SindiSuggestion } from '@homiio/shared-types';
+import type { Property, SindiSuggestion } from '@homiio/shared-types';
 import { api } from '@/utils/api';
 import { useOxy } from '@oxy.so/services';
 

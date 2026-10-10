@@ -7,7 +7,8 @@
  * `usePropertyStats().savesCount`). Deliberately secondary text — not a loud
  * badge. Renders nothing if we can't derive a sensible "listed" label.
  */
-import React, { useMemo } from 'react';
+import type React from 'react';
+import { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { RiTimeLine } from '@oxy.so/bloom/icons';

@@ -20,7 +20,8 @@
  * needs. Rows are Bloom `Item`s instead (see `NotificationItem`). Deletes ask
  * through `confirm()`; relative timestamps come from `formatRelativeTime`.
  */
-import React, { useCallback, useMemo, useState } from 'react';
+import type React from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   FlatList,
   RefreshControl,

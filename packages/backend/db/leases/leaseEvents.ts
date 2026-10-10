@@ -23,7 +23,7 @@
 import { and, asc, eq, inArray, sql } from 'drizzle-orm';
 
 import type { DatabaseOrTransaction } from '../postgres';
-import { LEASE_EVENT_TYPES, leaseEvents } from '../schema/leases';
+import { type LEASE_EVENT_TYPES, leaseEvents } from '../schema/leases';
 
 /** An event type the CHECK accepts. */
 export type LeaseEventType = (typeof LEASE_EVENT_TYPES)[number];

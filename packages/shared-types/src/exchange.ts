@@ -9,7 +9,7 @@
  * MUST NOT depend on the backend's storage. The backend parses dates to `Date`.
  */
 
-import { ExchangeMode, ExchangeRequestStatus, ISODate } from './common';
+import type { ExchangeMode, ExchangeRequestStatus, ISODate } from './common';
 
 /** A half-open date range `[start, end)` for an exchange stay. */
 export interface ExchangeWindow {

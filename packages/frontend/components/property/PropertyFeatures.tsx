@@ -21,7 +21,8 @@
  * All labels come from the shared `parkingType.*` / `petPolicy.*` enum vocab.
  * No rows → renders nothing.
  */
-import React, { useMemo } from 'react';
+import type React from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import {

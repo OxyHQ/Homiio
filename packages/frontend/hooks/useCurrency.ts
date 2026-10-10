@@ -11,7 +11,7 @@
  * only, on the picker screen.
  */
 import { useCurrencyStore } from '@/store/currencyStore';
-import { getCurrencyByCode, Currency } from '@/utils/currency';
+import { getCurrencyByCode, type Currency } from '@/utils/currency';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect } from 'react';
 

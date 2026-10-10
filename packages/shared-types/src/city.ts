@@ -7,7 +7,7 @@
  * presentation type used by the area-insights UI.
  */
 
-import { Coordinates, Pagination } from './common';
+import type { Coordinates, Pagination } from './common';
 import type {
   AdminHierarchy,
   LocationSelection,
@@ -17,8 +17,8 @@ import type {
   PlaceType,
 } from './location';
 import type { ListingCurrency } from './currency';
-import { City } from './geo';
-import { Property } from './property';
+import type { City } from './geo';
+import type { Property } from './property';
 
 export interface CityFilters {
   search?: string;

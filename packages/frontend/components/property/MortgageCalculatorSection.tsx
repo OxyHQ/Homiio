@@ -15,7 +15,8 @@
  *
  * The calculator draws its own heading, so the section adds none.
  */
-import React, { useCallback, useMemo } from 'react';
+import type React from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { MortgageCalculator, type MortgageCalculatorLabels } from '@oxy.so/bloom/listing-actions';

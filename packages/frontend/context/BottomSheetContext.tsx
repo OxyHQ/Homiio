@@ -1,4 +1,5 @@
-import React, { createContext, ReactNode, useRef, useCallback, useState, useMemo } from 'react';
+import type React from 'react';
+import { createContext, type ReactNode, useRef, useCallback, useState, useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import BottomSheet, { type BottomSheetRef } from '@oxy.so/bloom/bottom-sheet';
 import { SavedPropertiesProvider } from './SavedPropertiesContext';

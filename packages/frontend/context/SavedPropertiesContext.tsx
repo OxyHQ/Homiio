@@ -1,14 +1,15 @@
-import React, { createContext, useContext, useState, useCallback, useMemo, ReactNode } from 'react';
+import type React from 'react';
+import { createContext, useContext, useState, useCallback, useMemo, type ReactNode } from 'react';
 import { toast } from '@oxy.so/bloom/toast';
 import i18next from 'i18next';
 import { useOxy } from '@oxy.so/services';
 import savedPropertyFolderService, {
-  SavedPropertyFolder,
-  SavedPropertyFoldersResponse,
+  type SavedPropertyFolder,
+  type SavedPropertyFoldersResponse,
 } from '@/services/savedPropertyFolderService';
 import savedPropertyService, {
-  SavedProperty,
-  SavedPropertiesResponse,
+  type SavedProperty,
+  type SavedPropertiesResponse,
 } from '@/services/savedPropertyService';
 
 import { useQuery, useQueryClient } from '@tanstack/react-query';

@@ -5,7 +5,8 @@
  * `ZoomableImage`), tag filters and the category pill are Bloom `Chip`s, and
  * meta glyphs are Remix icons.
  */
-import React, { useMemo, useState } from 'react';
+import type React from 'react';
+import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';

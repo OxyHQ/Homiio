@@ -34,11 +34,11 @@ import { useOxy } from '@oxy.so/services';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 
-import {
-  type LocationResolution,
-  type LocationSelection,
-  type LocationTokenFailure,
-  type Property,
+import type {
+  LocationResolution,
+  LocationSelection,
+  LocationTokenFailure,
+  Property,
 } from '@homiio/shared-types';
 
 import { SearchResultsView } from '@/components/search/SearchResultsView';

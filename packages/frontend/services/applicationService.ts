@@ -12,16 +12,16 @@
  * let the browser/native runtime set the multipart boundary header itself.
  */
 import { Platform } from 'react-native';
-import {
+import type {
   EmploymentStatus,
   ReferenceRelationship,
   TenantApplication,
   TenantApplicationDocumentType,
   TenantApplicationStatus,
-  type DocumentVerificationStatus,
+  DocumentVerificationStatus,
 } from '@homiio/shared-types';
 
-import { api, ApiError, ApiResponse } from '@/utils/api';
+import { api, ApiError, type ApiResponse } from '@/utils/api';
 
 export type ApplicationReferenceInput = {
   name: string;

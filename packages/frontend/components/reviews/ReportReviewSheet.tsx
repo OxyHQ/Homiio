@@ -9,7 +9,8 @@
  * Actions use `shouldCloseOnPress: false` so the dialog stays up (and disabled)
  * while the mutation runs; the parent closes it on success.
  */
-import React, { useState } from 'react';
+import type React from 'react';
+import { useState } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 

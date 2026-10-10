@@ -3,7 +3,8 @@
  * people in it. Ending it asks through Bloom `confirm()` and reports the
  * outcome with a `toast`.
  */
-import React, { useState } from 'react';
+import type React from 'react';
+import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { AvatarGroup } from '@oxy.so/bloom/avatar-group';

@@ -16,7 +16,7 @@
  */
 import React from 'react';
 
-import { type Property } from '@homiio/shared-types';
+import type { Property } from '@homiio/shared-types';
 
 import { BaseWidget } from '@/components/widgets/BaseWidget';
 import { BookingCard } from '@/components/property/BookingCard';

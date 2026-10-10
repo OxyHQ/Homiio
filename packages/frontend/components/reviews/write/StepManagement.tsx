@@ -8,7 +8,8 @@
  * timer ref that publishes the debounced term into a `useQuery` key. The
  * suggestions are Bloom `Item` rows (`role="option"`) on an outlined `Card`.
  */
-import React, { useRef, useState } from 'react';
+import type React from 'react';
+import { useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';

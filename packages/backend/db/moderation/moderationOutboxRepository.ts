@@ -41,7 +41,7 @@
 
 import { and, asc, eq, gt, lte, or, sql } from 'drizzle-orm';
 import { getDb, type DatabaseOrTransaction } from '../postgres';
-import { MODERATION_OUTBOX_KINDS, moderationOutbox } from '../schema/moderation';
+import { type MODERATION_OUTBOX_KINDS, moderationOutbox } from '../schema/moderation';
 import { requireTransaction } from './transactionGuard';
 
 /** What kind of work an event represents. */

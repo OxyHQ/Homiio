@@ -19,7 +19,8 @@
  * Data comes from `usePropertySearch` keyed by the active query; this component
  * owns no fetching logic beyond reading that hook and forwarding map bounds.
  */
-import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import type React from 'react';
+import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, ScrollView, StyleSheet, View, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';

@@ -12,7 +12,8 @@
  * denomination), not the user's display currency, so the dashboard never
  * mis-states a payout via FX. Loading and empty states are handled inline.
  */
-import React, { useMemo } from 'react';
+import type React from 'react';
+import { useMemo } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useMediaQuery } from 'react-responsive';

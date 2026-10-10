@@ -89,11 +89,11 @@ import { Text as BloomText, H2 } from '@oxy.so/bloom/typography';
 import { useOxy, openAccountDialog } from '@oxy.so/services';
 import { useTranslation } from 'react-i18next';
 import {
-  AvailabilityWindow,
+  type AvailabilityWindow,
   AvailabilityWindowStatus,
-  ExchangeRequest,
-  Property,
-  Reservation,
+  type ExchangeRequest,
+  type Property,
+  type Reservation,
   ReservationStatus,
 } from '@homiio/shared-types';
 import { Header } from '@/components/Header';

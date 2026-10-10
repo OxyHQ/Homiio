@@ -10,7 +10,8 @@
  * a window at a time: the shared sentinel on web, and on native the screen's
  * own `onScroll`, which bumps `loadMoreSignal`.
  */
-import React, { useCallback, useMemo, useState } from 'react';
+import type React from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { View } from 'react-native';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';

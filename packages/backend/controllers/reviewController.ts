@@ -38,7 +38,7 @@
  * every id shape — a `text` primary key takes any string.
  */
 
-import { Request, Response } from 'express';
+import type { Request, Response } from 'express';
 import { forwardGeocode } from '../services/geocodingService';
 import { getRequiredOxyUserId, getOxyUserId } from '@oxy.so/core/server';
 import {
@@ -696,7 +696,7 @@ export const updateReview = async (req: Request, res: Response) => {
     // treating it as "detach" would let a stray empty field silently unlink a
     // review from the agency its author named.
     const agencyName = typeof picked.agencyName === 'string' ? picked.agencyName.trim() : '';
-    const agencySupplied = Object.prototype.hasOwnProperty.call(picked, 'agencyName');
+    const agencySupplied = Object.hasOwn(picked, 'agencyName');
     delete picked.agencyName;
 
     const normalized = normalizeReviewEditInput(picked);

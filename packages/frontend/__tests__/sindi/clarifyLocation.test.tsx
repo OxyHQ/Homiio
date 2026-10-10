@@ -20,7 +20,7 @@
  *     which is the same failure wearing a different coat.
  */
 
-import React from 'react';
+import type React from 'react';
 import { render, renderHook } from '@testing-library/react-native';
 
 import { BloomThemeProvider } from '@oxy.so/bloom/theme';

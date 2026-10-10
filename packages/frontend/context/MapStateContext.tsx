@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useRef, useCallback } from 'react';
+import type React from 'react';
+import { createContext, useContext, useRef, useCallback } from 'react';
 
 export interface MapState {
   center: [number, number];

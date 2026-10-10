@@ -18,7 +18,8 @@
  *
  * Authors are hydrated ONCE (`useOxyAvatars`).
  */
-import React, { useMemo } from 'react';
+import type React from 'react';
+import { useMemo } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';

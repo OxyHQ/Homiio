@@ -1,4 +1,4 @@
-import { CronConfig } from '../types/cron';
+import type { CronConfig } from '../types/cron';
 
 /**
  * Cron service configuration.
