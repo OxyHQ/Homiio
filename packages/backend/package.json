@@ -59,7 +59,7 @@
     "postgres": "3.4.9",
     "qrcode-terminal": "^0.12.0",
     "sharp": "^0.35.3",
-    "stripe": "^16.12.0",
+    "stripe": "^23.0.0",
     "telegraf": "^4.16.3",
     "uuid": "^11.1.1",
     "validator": "^13.15.35",
