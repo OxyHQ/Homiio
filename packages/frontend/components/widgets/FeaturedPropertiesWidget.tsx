@@ -37,7 +37,7 @@
  * quieter form; the issue's requirement is that a surface STATES its area, and
  * "no area chosen yet" is a statement about the area.
  */
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { View } from 'react-native';
 import { Admonition } from '@oxy.so/bloom/admonition';
 import { Loading } from '@oxy.so/bloom/loading';

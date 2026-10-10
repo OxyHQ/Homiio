@@ -10,7 +10,7 @@
  * `DatePicker` move-in date (stored as `YYYY-MM-DD`, converted at the
  * boundary), `Chip` option rows, `Switch`, and a `toast` for the save outcome.
  */
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';

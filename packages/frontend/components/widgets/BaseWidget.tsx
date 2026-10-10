@@ -1,4 +1,4 @@
-import React, { type ReactNode } from 'react';
+import { type ReactNode } from 'react';
 import { View } from 'react-native';
 
 import { Text as BloomText } from '@oxy.so/bloom/typography';

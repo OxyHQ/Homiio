@@ -4,7 +4,6 @@
  * primitives — `LoadMoreSentinel` (web) + `useInfiniteScroll` (native). Tapping a
  * building opens its address page on the reviews tab.
  */
-import React from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';

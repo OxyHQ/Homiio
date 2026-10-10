@@ -13,7 +13,7 @@
  * - Party names are the Oxy accounts' display names, resolved in one batch;
  *   an account that does not resolve shows a dash, never an id.
  */
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';

@@ -12,7 +12,7 @@
  * old `SearchBar` + view-mode toggle were removed. The "clear history" action is
  * preserved as a header action.
  */
-import React, { useCallback } from 'react';
+import { useCallback } from 'react';
 import { Platform, ScrollView, StyleSheet, View, type ViewStyle } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';

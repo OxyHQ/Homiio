@@ -7,7 +7,7 @@
  * UI is removed until a real service ships. The behaviour toggles and the
  * "reset" affordance remain available.
  */
-import React, { useCallback, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { toast } from '@oxy.so/bloom/toast';

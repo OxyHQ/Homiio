@@ -27,7 +27,7 @@
  * under a heading naming the place. `failed` renders an error naming the reason
  * and issues no request at all.
  */
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useOxy } from '@oxy.so/services';

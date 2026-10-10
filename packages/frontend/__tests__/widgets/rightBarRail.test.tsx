@@ -17,7 +17,6 @@
  * The rail's own visibility rules (the breakpoint, the Sindi panel) are forced ON, so a
  * failure here is about the ROUTE and never about a breakpoint.
  */
-import React from 'react';
 import { render } from '@testing-library/react-native';
 
 import { RightBar } from '@/components/RightBar';

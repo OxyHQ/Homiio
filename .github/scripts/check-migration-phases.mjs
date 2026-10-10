@@ -24,8 +24,7 @@
 // lists, so an orphan file is a migration nobody runs, and an orphan entry is an
 // image shipped without its migrations.
 
-import { readdirSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { readdirSync } from 'node:fs';
 import { readJournal, readMigrationPhases } from '@oxy.so/db/migrate';
 
 const folder = process.argv[2] ?? 'packages/backend/drizzle';

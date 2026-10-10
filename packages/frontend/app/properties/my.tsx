@@ -15,7 +15,7 @@
  * to each card via the grid's `renderFooter` slot. Delete confirmation uses the
  * Bloom `confirm()` surface (the RN `Alert` it replaced is a no-op on web).
  */
-import React, { useCallback, useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { Platform, ScrollView, StyleSheet, View, type ViewStyle } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';

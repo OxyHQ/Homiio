@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { StyleSheet, View, useWindowDimensions } from 'react-native';
 import { ChatContent } from '@/components/sindi/ChatContent';
 import type { Property } from '@homiio/shared-types';

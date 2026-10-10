@@ -25,7 +25,6 @@
  * The classification (what counts as upcoming, and until when) lives in
  * `utils/upcomingBookings.ts` and is shared with My home.
  */
-import React from 'react';
 import { View, type StyleProp, type ViewStyle } from 'react-native';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';

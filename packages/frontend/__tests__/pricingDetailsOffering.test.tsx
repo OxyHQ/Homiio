@@ -3,7 +3,6 @@
  * that rent. A sale listing carrying an empty `longTermRent` block used to
  * render "Monthly Rent $0" beneath its sale price.
  */
-import React from 'react';
 import { BloomThemeProvider } from '@oxy.so/bloom/theme';
 import { render } from '@testing-library/react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';

@@ -1,4 +1,3 @@
-import React from 'react';
 import Svg, { Path, Line } from 'react-native-svg';
 import type { ViewStyle } from 'react-native';
 import { colors } from '@/styles/colors';

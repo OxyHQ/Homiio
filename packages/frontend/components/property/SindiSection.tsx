@@ -22,7 +22,7 @@
  * primary CTA — its label/icon use `colors.primaryForeground` (BLACK on the
  * `yellow` preset), resolved automatically by the Bloom `Button`.
  */
-import React, { useContext } from 'react';
+import { useContext } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { Button } from '@oxy.so/bloom/button';

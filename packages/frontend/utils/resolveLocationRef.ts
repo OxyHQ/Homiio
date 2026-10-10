@@ -38,7 +38,6 @@ import {
   citySelection,
   type LocationRef,
   type LocationResolution,
-  type LocationSelection,
 } from '@homiio/shared-types';
 
 import { cityService } from '@/services/cityService';

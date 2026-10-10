@@ -10,7 +10,7 @@
  * The backend owns the authoritative transition rules; this screen mirrors them
  * to avoid surfacing actions that would always fail. Modeled on reservations/[id].
  */
-import React, { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Image, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';

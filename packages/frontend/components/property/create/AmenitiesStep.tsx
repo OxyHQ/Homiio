@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Field } from '@oxy.so/bloom/field';

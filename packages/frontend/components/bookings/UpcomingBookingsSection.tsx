@@ -26,7 +26,6 @@
  * strength of a 500, which is the silent-empty failure this codebase keeps
  * having to fix.
  */
-import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';

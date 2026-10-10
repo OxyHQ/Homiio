@@ -3,7 +3,6 @@
  * SettingsList primitives with a row per currency and an active-state
  * checkmark on the right.
  */
-import React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';

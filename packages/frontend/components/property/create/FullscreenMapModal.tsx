@@ -1,4 +1,4 @@
-import React, { type MutableRefObject } from 'react';
+import { type MutableRefObject } from 'react';
 import { Modal, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';

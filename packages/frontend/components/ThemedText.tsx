@@ -5,7 +5,6 @@
  * longer set `fontFamily` here. Sizes/weights remain to match the
  * existing call sites.
  */
-import React from 'react';
 import { StyleSheet, type StyleProp, type TextProps, type TextStyle } from 'react-native';
 
 import { H1, H2, P, Text } from '@oxy.so/bloom/typography';

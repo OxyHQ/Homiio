@@ -16,7 +16,7 @@
  *    background and aligns to one gutter.
  *  - Action bar (footer): PropertyActionBar for every other listing.
  */
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Platform,
   StyleSheet,

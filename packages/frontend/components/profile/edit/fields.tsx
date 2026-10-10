@@ -8,7 +8,7 @@
  * - `DateField` — a Bloom `DatePicker` over a `YYYY-MM-DD` string.
  * - `PhoneField` — a Bloom `PhoneInput` over a single `+<dial> <number>` string.
  */
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { DatePicker } from '@oxy.so/bloom/date-picker';

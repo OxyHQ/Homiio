@@ -15,7 +15,7 @@
  * (partner only) referral link + dashboard → closing CTA banner. Sections are
  * flat with per-section gutter; the page root is the app background.
  */
-import React, { useCallback, useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { View } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';

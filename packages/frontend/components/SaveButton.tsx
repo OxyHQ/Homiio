@@ -14,7 +14,7 @@
  * The saved count still renders (binary 0/1): a corner badge (`countDisplayMode:
  * 'badge'`, default) or inline beside the heart (`'inline'`).
  */
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { StyleSheet, type ViewStyle, View, type StyleProp } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { RiBookmarkFill, RiBookmarkLine, RiHeartFill, RiHeartLine } from '@oxy.so/bloom/icons';

@@ -14,7 +14,7 @@
  * the shared toast + `ApiError` handling. No `useEffect` — form state is local,
  * the email prefill is derived from `useOxy`, and validity is `useMemo`.
  */
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useLocalSearchParams, useRouter } from 'expo-router';

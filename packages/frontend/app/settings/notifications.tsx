@@ -3,7 +3,7 @@
  * toggles, Bloom Switch for booleans, a Bloom `Admonition` (with its enable
  * button) while permission is missing, and `confirm()` for clear-all.
  */
-import React, { useCallback, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { toast } from '@oxy.so/bloom/toast';

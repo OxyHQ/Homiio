@@ -1,4 +1,3 @@
-import React from 'react';
 import { View } from 'react-native';
 import { ImageUpload } from '@/components/ImageUpload';
 import { MAX_PROPERTY_IMAGES, PROPERTY_IMAGE_FOLDER } from './constants';

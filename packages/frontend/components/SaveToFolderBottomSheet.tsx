@@ -9,7 +9,7 @@
  * as `FolderColorSwatches` (with `FolderEmojiChips`) so the Saved screen's
  * "New folder" dialog and the folder edit screen draw the same ones.
  */
-import React, { useCallback, useContext, useEffect, useState } from 'react';
+import { useCallback, useContext, useEffect, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQueryClient } from '@tanstack/react-query';

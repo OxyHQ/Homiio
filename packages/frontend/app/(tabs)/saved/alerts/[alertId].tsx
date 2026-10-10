@@ -18,7 +18,7 @@
  * WIDER area than the one being watched.
  */
 
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';

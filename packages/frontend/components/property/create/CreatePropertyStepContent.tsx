@@ -1,4 +1,4 @@
-import React, { type MutableRefObject } from 'react';
+import { type MutableRefObject } from 'react';
 import type { MapApi, GeocodedAddress } from '@/components/Map';
 import type { CreatePropertyFormData } from '@/store/createPropertyFormStore';
 import type { StepValidationErrors } from '@/utils/propertyFormSchema';

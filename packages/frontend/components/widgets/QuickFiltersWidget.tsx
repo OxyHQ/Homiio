@@ -16,7 +16,7 @@
  *    No structured fields are smuggled through route params (the search screen only
  *    parses `query`/`city`/`offering`), so this is the lossless apply path.
  */
-import React, { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { usePathname, useRouter } from 'expo-router';

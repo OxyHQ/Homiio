@@ -4,7 +4,6 @@
  * `Item` rows on one outlined `Card`. Tapping a city drills into its
  * neighborhoods.
  */
-import React from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';

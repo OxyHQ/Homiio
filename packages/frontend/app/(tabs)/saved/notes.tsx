@@ -7,7 +7,7 @@
  * controlled `Dialog` holding a `Textarea` for editing, `confirm()` before a
  * delete and `toast` for the outcome.
  */
-import React, { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { FlatList, Image, StyleSheet, View, type ImageSourcePropType } from 'react-native';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';

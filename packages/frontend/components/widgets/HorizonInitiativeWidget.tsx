@@ -1,4 +1,3 @@
-import React from 'react';
 import * as Linking from 'expo-linking';
 import { useTranslation } from 'react-i18next';
 

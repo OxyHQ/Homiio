@@ -14,8 +14,6 @@
  * or when the listing has no booking/apply surface for the current mode, so
  * the column never shows a broken card.
  */
-import React from 'react';
-
 import type { Property } from '@homiio/shared-types';
 
 import { BaseWidget } from '@/components/widgets/BaseWidget';

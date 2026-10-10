@@ -12,7 +12,7 @@
  * refuses to run a search that cannot state its place (ADR 0002). "Edit" opens
  * the watch's settings (name, cadence, rules); delete asks first.
  */
-import React, { useCallback } from 'react';
+import { useCallback } from 'react';
 import { View } from 'react-native';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';

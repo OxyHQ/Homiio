@@ -17,7 +17,7 @@
  * Sections sit on outlined Bloom `Card`s; the Properties/Reviews switch and the
  * review sub-tabs are Bloom `Tabs`.
  */
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';

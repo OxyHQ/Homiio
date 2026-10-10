@@ -12,7 +12,7 @@
  * stays arrived and the viewings did not, so the right answer is BOTH the rows
  * and the admission, never one or the other.
  */
-import React, { type ReactNode } from 'react';
+import { type ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderHook, waitFor } from '@testing-library/react-native';
 import { ReservationStatus } from '@homiio/shared-types';

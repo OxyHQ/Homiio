@@ -4,7 +4,7 @@
  * form store — so the right rail and the Preview step read the same form and
  * say the same thing. The data they draw is `listingDraft.ts`'s.
  */
-import React, { useCallback, useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ListingPreviewPane,

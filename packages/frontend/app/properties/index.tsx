@@ -15,7 +15,7 @@
  * truth, so the browse refinements never clobber an in-flight search. No
  * `useEffect` — the grid is pure derived/React-Query state.
  */
-import React, { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Platform, ScrollView, StyleSheet, View, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';

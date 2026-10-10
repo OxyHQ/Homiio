@@ -19,7 +19,7 @@
  * Backend remains the source of truth for every transition; the UI only
  * surfaces actions the backend would accept.
  */
-import React, { useCallback, useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { Image, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';

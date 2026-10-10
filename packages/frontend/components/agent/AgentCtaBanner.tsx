@@ -8,7 +8,7 @@
  * Like `HostCtaBanner`, the banner itself is NOT pressable — only the Bloom
  * Button is the tap target — so web never renders a nested `<button>`.
  */
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';

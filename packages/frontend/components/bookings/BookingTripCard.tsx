@@ -18,7 +18,6 @@
  * a viewing is an instant and belongs in the reader's own zone, named, with the
  * clock time that instant actually lands on.
  */
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { router } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';

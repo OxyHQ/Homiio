@@ -2,7 +2,6 @@
  * Review explore — a city's neighborhoods (name + review count + average
  * rating). Tapping a neighborhood drills into its reviewed buildings.
  */
-import React from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';

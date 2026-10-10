@@ -1,4 +1,3 @@
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Chip, type ChipHue } from '@oxy.so/bloom/chip';
 import { ReservationStatus } from '@homiio/shared-types';

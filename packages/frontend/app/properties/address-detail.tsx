@@ -1,7 +1,6 @@
 import { AddressDisplay } from '@/components/AddressDisplay';
 import { ThemedText } from '@/components/ThemedText';
 import { useRouter } from 'expo-router';
-import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Button } from '@oxy.so/bloom/button';
 

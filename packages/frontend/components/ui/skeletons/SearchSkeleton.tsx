@@ -1,4 +1,3 @@
-import React from 'react';
 import { View, ScrollView } from 'react-native';
 import * as Skeleton from '@oxy.so/bloom/skeleton';
 import { colors } from '@/styles/colors';

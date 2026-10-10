@@ -5,7 +5,6 @@
  * checklist moves into the step itself, so the rail keeps only the preview;
  * below the rail's breakpoint the step draws both.
  */
-import React from 'react';
 import { View } from 'react-native';
 
 import {

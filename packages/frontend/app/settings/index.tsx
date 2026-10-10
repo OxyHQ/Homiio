@@ -6,7 +6,7 @@
  * destructive actions. Sections: Account → Preferences → Notifications →
  * Data → Support → About → Sign out.
  */
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';

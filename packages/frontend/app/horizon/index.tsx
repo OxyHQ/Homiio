@@ -5,7 +5,6 @@
  * `Avatar` discs for the steps, initials `Avatar`s on the member stories and a
  * Bloom `Button` for the external join link.
  */
-import React from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import * as Linking from 'expo-linking';

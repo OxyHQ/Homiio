@@ -6,7 +6,7 @@
  *
  * Sits as a closing visual beat on the home page (paired with AgentCtaBanner).
  */
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';

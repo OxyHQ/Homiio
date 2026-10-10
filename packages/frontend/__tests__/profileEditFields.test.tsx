@@ -5,7 +5,6 @@
  * string adapters that sit between those controls and the form's storage
  * shape: `+<dial> <number>` phones and `YYYY-MM-DD` dates.
  */
-import React from 'react';
 import { BloomThemeProvider } from '@oxy.so/bloom/theme';
 import { render } from '@testing-library/react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';

@@ -10,7 +10,7 @@
  *   - Shared EmptyState + Loading (Bloom) component.
  *   - Flat wrappers (hairline border) around list content.
  */
-import React, { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';

@@ -14,7 +14,7 @@
  * Chip-based `ApplicationStatusBadge`. Loading is Bloom `Loading`, errors the
  * shared ErrorState component.
  */
-import React, { useCallback, useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { Image, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';

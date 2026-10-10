@@ -13,7 +13,7 @@
  * - **Saved homes** (`ListingCardGrid` through `PropertyResultsGrid`), grouped
  *   by the offering each card prices.
  */
-import React, { useCallback, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 

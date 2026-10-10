@@ -10,7 +10,6 @@
  * Use this everywhere instead of inline "Nothing here yet" Text. Pairs
  * with ErrorState (network/fetch failure) and Skeleton.Box (loading).
  */
-import React from 'react';
 import { StyleSheet, View, type ViewStyle } from 'react-native';
 
 import { Button } from '@oxy.so/bloom/button';

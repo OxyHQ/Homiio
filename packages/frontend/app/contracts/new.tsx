@@ -8,7 +8,7 @@
  * param; without it we guide the user to their applications instead of faking a
  * manual form we cannot wire (there is no standalone tenant picker).
  */
-import React, { useCallback } from 'react';
+import { useCallback } from 'react';
 import { Image, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';

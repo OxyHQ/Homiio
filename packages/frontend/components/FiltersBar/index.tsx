@@ -7,7 +7,7 @@
  * that feed applies — verified, eco-friendly, minimum bedrooms and bathrooms —
  * and nothing it would ignore.
  */
-import React, { useCallback, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';

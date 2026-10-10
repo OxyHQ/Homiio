@@ -51,7 +51,7 @@
  * a line naming the provenance with a one-tap way to change it. Neither ever
  * claims "your home" or "you are here": an inferred city is a framing device.
  */
-import React, { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { View, RefreshControl } from 'react-native';
 import { Image } from 'expo-image';
 import Animated, {

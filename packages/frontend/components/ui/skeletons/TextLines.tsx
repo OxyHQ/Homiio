@@ -1,4 +1,3 @@
-import React from 'react';
 import { View, type DimensionValue, type ViewStyle } from 'react-native';
 import * as Skeleton from '@oxy.so/bloom/skeleton';
 

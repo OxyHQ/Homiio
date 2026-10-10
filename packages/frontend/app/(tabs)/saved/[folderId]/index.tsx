@@ -5,7 +5,7 @@
  * shared EmptyState / ErrorState / ListSkeleton states, and surface tokens
  * for the page background.
  */
-import React, { useCallback, useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';

@@ -12,7 +12,6 @@
  * OPTIONAL and clearable, which a radio cannot express, and a wrapped chip row
  * keeps a dozen short enum values scannable.
  */
-import React from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 

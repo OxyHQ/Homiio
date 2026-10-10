@@ -9,7 +9,7 @@
  * `showBottomSheet('LanguageSelector')`, exactly like `ManageAccount` and
  * `FileManagement` in Settings). This screen no longer hand-rolls a picker.
  */
-import React, { useCallback } from 'react';
+import { useCallback } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useOxy } from '@oxy.so/services';

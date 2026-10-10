@@ -18,7 +18,6 @@
  * TypeScript error here rather than a generic sentence in production.
  */
 
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 import { formatMoney, type AlertExplanationDetail } from '@homiio/shared-types';

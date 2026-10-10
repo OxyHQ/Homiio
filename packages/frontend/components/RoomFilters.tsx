@@ -16,7 +16,7 @@
  * stored with (`private_bathroom`, `smoking_allowed`, and `furnished`, which is
  * a structured field rather than an amenity) — controls that changed nothing.
  */
-import React, { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';

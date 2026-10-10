@@ -5,7 +5,6 @@
  * Homiio's `AppShell`/`Header` stay the frame; the template's `HousingHeader`
  * is not adopted. The header leads to Notes and to the alert history.
  */
-import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';

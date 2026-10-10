@@ -6,7 +6,6 @@
  * `ScrollView.onScroll` offset math and the absolutely positioned arrow buttons
  * it used to carry are gone.
  */
-import React from 'react';
 import { Platform, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { router } from 'expo-router';
