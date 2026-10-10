@@ -22,7 +22,7 @@
   "author": "Homiio Team",
   "devDependencies": {
     "typescript": "^6.0.3",
-    "@types/node": "^22.20.1"
+    "@types/node": "^26.6.4"
   },
   "files": [
     "dist/**/*"

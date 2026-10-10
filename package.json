@@ -35,7 +35,7 @@
   "devDependencies": {
     "@biomejs/biome": "2.5.15",
     "@oxy.so/doctor": "1.1.0",
-    "@types/node": "^22.20.1",
+    "@types/node": "^26.6.4",
     "ajv": "^8.20.0",
     "ajv-keywords": "^5.1.0",
     "tailwindcss": "4.2.2",
