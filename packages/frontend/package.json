@@ -24,7 +24,7 @@
   },
   "dependencies": {
     "@oxy.so/telemetry": "1.2.0",
-    "@ai-sdk/react": "^1.2.12",
+    "@ai-sdk/react": "^4.0.134",
     "@bitdrift/react-native": "^0.12.12",
     "@expo/vector-icons": "^15.1.1",
     "@homiio/shared-types": "workspace:*",
