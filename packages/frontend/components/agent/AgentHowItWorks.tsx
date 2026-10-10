@@ -7,7 +7,7 @@
  * the home-screen "per-section gutter" rule) so the screen page container can
  * stay padding-free.
  */
-import React from 'react';
+import type React from 'react';
 import { Platform, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';

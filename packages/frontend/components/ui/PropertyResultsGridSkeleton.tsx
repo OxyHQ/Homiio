@@ -5,7 +5,7 @@
  * state, so the placeholders take exactly the columns, photo ratio and text
  * lines the loaded grid will — nothing shifts when results arrive.
  */
-import React from 'react';
+import type React from 'react';
 import { View, type StyleProp, type ViewStyle } from 'react-native';
 import { ListingCard, ListingCardGrid } from '@oxy.so/bloom/listing-card';
 

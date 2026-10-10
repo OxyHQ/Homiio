@@ -12,7 +12,7 @@
  * Note: pre-existing copies in `NeighborhoodRatingWidget` and `PropertyCard`
  * could adopt this later — left untouched here to keep the change focused.
  */
-import React from 'react';
+import type React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { RiStarFill, RiStarLine } from '@oxy.so/bloom/icons';
 

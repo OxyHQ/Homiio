@@ -5,7 +5,8 @@
  * about inside Homiio. Without a `sourceUrl` the button says so rather than
  * inventing another way to reach the advertiser.
  */
-import React, { useCallback } from 'react';
+import type React from 'react';
+import { useCallback } from 'react';
 import { Linking } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@oxy.so/bloom/button';

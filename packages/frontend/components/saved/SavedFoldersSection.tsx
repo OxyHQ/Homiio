@@ -15,7 +15,8 @@
  * in one. The glyph is decorative there (the card marks it `aria-hidden`), so
  * nothing is lost by it not being a real icon.
  */
-import React, { useCallback, useMemo, useState } from 'react';
+import type React from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Text as RNText, View, type LayoutChangeEvent } from 'react-native';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';

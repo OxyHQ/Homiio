@@ -2,7 +2,8 @@
  * Direct contact row for external aggregator listings when portal AJAX
  * captured phone / email / WhatsApp on ingest.
  */
-import React, { useCallback } from 'react';
+import type React from 'react';
+import { useCallback } from 'react';
 import { Linking, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 

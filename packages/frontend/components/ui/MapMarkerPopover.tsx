@@ -8,7 +8,8 @@
  * orientation so we don't duplicate the styling. A Bloom Button (ghost,
  * small) provides the dismiss affordance.
  */
-import React, { useCallback } from 'react';
+import type React from 'react';
+import { useCallback } from 'react';
 import { Platform, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { Button } from '@oxy.so/bloom/button';

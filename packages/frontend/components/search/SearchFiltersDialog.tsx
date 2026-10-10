@@ -26,7 +26,8 @@
  * scope and draft filters, without the price bounds, so releasing a thumb
  * refetches the count and not the bars.
  */
-import React, { useCallback, useMemo, useState } from 'react';
+import type React from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';

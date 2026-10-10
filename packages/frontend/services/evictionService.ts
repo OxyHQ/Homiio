@@ -1,5 +1,5 @@
-import { api, ApiResponse } from '@/utils/api';
-import {
+import { api, type ApiResponse } from '@/utils/api';
+import type {
   CreateEvictionCaseData,
   CreateEvictionReportInput,
   CreateEvictionTimelineEventData,

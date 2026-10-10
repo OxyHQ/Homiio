@@ -5,8 +5,8 @@ import {
   TouchableOpacity,
   Platform,
   Linking,
-  StyleProp,
-  ViewStyle,
+  type StyleProp,
+  type ViewStyle,
 } from 'react-native';
 import { ThemedText } from './ThemedText';
 import { colors } from '@/styles/colors';

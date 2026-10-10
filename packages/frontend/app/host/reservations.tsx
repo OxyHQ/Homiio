@@ -9,7 +9,8 @@
  *
  * Declining asks for confirmation through Bloom `confirm()` in both layouts.
  */
-import React, { useCallback, useMemo, useState } from 'react';
+import type React from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -40,7 +41,12 @@ import * as Skeleton from '@oxy.so/bloom/skeleton';
 import { H2, Text as BloomText } from '@oxy.so/bloom/typography';
 import { useOxy, openAccountDialog } from '@oxy.so/services';
 import { useTranslation } from 'react-i18next';
-import { Reservation, ReservationStatus, formatMoney, type Property } from '@homiio/shared-types';
+import {
+  type Reservation,
+  ReservationStatus,
+  formatMoney,
+  type Property,
+} from '@homiio/shared-types';
 import { Header } from '@/components/Header';
 import { ReservationCard } from '@/components/ReservationCard';
 import { ReservationStatusBadge } from '@/components/ReservationStatusBadge';

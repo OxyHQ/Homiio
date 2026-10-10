@@ -1,5 +1,5 @@
-import React from 'react';
-import { TextProps } from 'react-native';
+import type React from 'react';
+import type { TextProps } from 'react-native';
 
 import { formatMoney, type CurrencyDisplay } from '@homiio/shared-types';
 

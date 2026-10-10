@@ -11,7 +11,8 @@
  *     only lease-create entry point.
  *   - Shared EmptyState / ErrorState components.
  */
-import React, { useCallback, useMemo, useState } from 'react';
+import type React from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Image, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -35,7 +36,11 @@ import * as Skeleton from '@oxy.so/bloom/skeleton';
 import { Text as BloomText, H2, H3 } from '@oxy.so/bloom/typography';
 import { Avatar } from '@oxy.so/bloom/avatar';
 import { Textarea } from '@oxy.so/bloom/textarea';
-import { Profile, TenantApplication, TenantApplicationStatus } from '@homiio/shared-types';
+import {
+  type Profile,
+  type TenantApplication,
+  TenantApplicationStatus,
+} from '@homiio/shared-types';
 import { Header } from '@/components/Header';
 import { PageScrollView } from '@/components/PageScrollView';
 import { ApplicationStatusBadge } from '@/components/ApplicationStatusBadge';

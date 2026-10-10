@@ -9,7 +9,8 @@
  * → clipboard fallback), so it behaves like every other share in the app.
  * Buttons are Bloom `Button`s so they inherit the brand styling.
  */
-import React, { useCallback, useState } from 'react';
+import type React from 'react';
+import { useCallback, useState } from 'react';
 import { View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { useTranslation } from 'react-i18next';

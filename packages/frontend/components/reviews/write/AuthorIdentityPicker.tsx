@@ -20,7 +20,7 @@
  * renders it as *"a resident"* until #364 builds verification, and the copy here
  * promises exactly that and no more.
  */
-import React from 'react';
+import type React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 

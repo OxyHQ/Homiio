@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import profileService from '@/services/profileService';
-import { Profile, UpdateProfileData } from '@homiio/shared-types';
+import type { Profile, UpdateProfileData } from '@homiio/shared-types';
 
 interface ProfileState {
   profile: Profile | null;

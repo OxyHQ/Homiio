@@ -1,7 +1,7 @@
-import React from 'react';
-import { View, ViewStyle } from 'react-native';
+import type React from 'react';
+import { View, type ViewStyle } from 'react-native';
 import Svg, { Path, Circle } from 'react-native-svg';
-import { IconProps } from './types';
+import type { IconProps } from './types';
 import { colors } from '@/styles/colors';
 
 export const ProfileIcon: React.FC<IconProps> = ({ size = 24, color = colors.primaryColor }) => {

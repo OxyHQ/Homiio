@@ -12,7 +12,8 @@
  * The adults/children split is not part of the query (a listing's capacity is
  * one number), so a reopened picker shows the total as adults.
  */
-import React, { useCallback, useMemo } from 'react';
+import type React from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { GuestPicker, type GuestCounts, type GuestKind } from '@oxy.so/bloom/stay-search';

@@ -14,7 +14,8 @@
  * Nothing here routes to a moderator. A threshold fires, a column is stamped and
  * the organiser is notified; there is no queue and no reviewer.
  */
-import React, { useMemo, useState } from 'react';
+import type React from 'react';
+import { useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@oxy.so/bloom/button';

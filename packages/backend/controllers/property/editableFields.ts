@@ -80,7 +80,7 @@ export const CREATABLE_PROPERTY_FIELDS: readonly string[] = [
 export function invalidAddressPublishedPrecision(
   payload: Record<string, unknown>,
 ): AppError | null {
-  if (!Object.prototype.hasOwnProperty.call(payload, 'addressPublishedPrecision')) return null;
+  if (!Object.hasOwn(payload, 'addressPublishedPrecision')) return null;
   if (isListingAddressPrecision(payload.addressPublishedPrecision)) return null;
   return new AppError(
     `addressPublishedPrecision must be one of: ${LISTING_ADDRESS_PRECISIONS.join(', ')}`,

@@ -9,7 +9,8 @@
  * - Bloom typography across the board, semantic color tokens (`colors.surface`,
  *   `colors.muted`) — no more raw hex literals.
  */
-import React, { useCallback, useMemo } from 'react';
+import type React from 'react';
+import { useCallback, useMemo } from 'react';
 import { Image, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -20,7 +21,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@oxy.so/bloom/button';
 import { Loading } from '@oxy.so/bloom/loading';
 import { Text as BloomText, H2 } from '@oxy.so/bloom/typography';
-import { CancellationPolicy, Reservation, ReservationStatus } from '@homiio/shared-types';
+import { CancellationPolicy, type Reservation, ReservationStatus } from '@homiio/shared-types';
 
 import { Header } from '@/components/Header';
 import { useProperty } from '@/hooks';

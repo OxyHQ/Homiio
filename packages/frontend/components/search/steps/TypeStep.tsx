@@ -5,7 +5,8 @@
  * adapts to the active offering (short-term phrases "Whole houses" / "Private
  * rooms"). An empty selection means "any type".
  */
-import React, { useMemo } from 'react';
+import type React from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { RiBuilding2Line, RiDoorOpenLine, RiHome4Line, RiHotelBedLine } from '@oxy.so/bloom/icons';

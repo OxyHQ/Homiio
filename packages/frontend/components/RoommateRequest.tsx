@@ -2,7 +2,8 @@
  * A sent or received roommate request. Built from Bloom `Card`, `Avatar`,
  * `Chip` and `Textarea`; the outcome of accept/decline is a Bloom `toast`.
  */
-import React, { useState } from 'react';
+import type React from 'react';
+import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { deviceTimeZone, formatDate } from '@homiio/shared-types';

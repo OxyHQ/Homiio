@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import type { Request, Response } from 'express';
 import { getOxyUserId } from '@oxy.so/core/server';
 import config from '../config';
 import {

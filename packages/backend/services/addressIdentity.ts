@@ -54,7 +54,7 @@
  */
 
 import * as crypto from 'crypto';
-import { ADDRESS_LEVELS } from '../db/schema/addresses';
+import type { ADDRESS_LEVELS } from '../db/schema/addresses';
 
 export type AddressLevel = (typeof ADDRESS_LEVELS)[number];
 

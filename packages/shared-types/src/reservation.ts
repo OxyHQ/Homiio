@@ -6,7 +6,7 @@
  * for the long-term rent flow).
  */
 
-import { CancellationPolicy, ISODate } from './common';
+import type { CancellationPolicy, ISODate } from './common';
 
 export enum ReservationStatus {
   PENDING = 'pending',

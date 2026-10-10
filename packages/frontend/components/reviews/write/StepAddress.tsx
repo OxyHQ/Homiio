@@ -4,7 +4,8 @@
  * and auto-fills the address via `onAddressSelect` (owned by `write.tsx` so it
  * can update several fields + navigate the map at once).
  */
-import React, { type RefObject } from 'react';
+import type React from 'react';
+import type { RefObject } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 

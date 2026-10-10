@@ -22,7 +22,8 @@
  * `DetailIconGrid` (the same 2-column responsive grid + icon/label row as
  * `AmenitiesGrid`) — no cards, no shadows.
  */
-import React, { useMemo } from 'react';
+import type React from 'react';
+import { useMemo } from 'react';
 import { StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import {

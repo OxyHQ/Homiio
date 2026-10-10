@@ -34,7 +34,7 @@ import {
 import { TextFieldInput } from '@oxy.so/bloom/text-field';
 
 import { PropertyType } from '@homiio/shared-types';
-import { PropertyFilters } from '@/services/propertyService';
+import type { PropertyFilters } from '@/services/propertyService';
 import { getAmenityById } from '@/constants/amenities';
 import { usePriceFormatter } from '@/components/search/steps/PriceStep';
 import { spacing } from '@/constants/styles';

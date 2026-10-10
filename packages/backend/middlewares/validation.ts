@@ -3,7 +3,7 @@
  * Handles request validation using various validation schemas
  */
 
-import { Request, Response, NextFunction } from 'express';
+import type { Request, Response, NextFunction } from 'express';
 import { body, param, query, validationResult } from 'express-validator';
 import { LISTING_CURRENCIES } from '@homiio/shared-types';
 import { isLiveEntityId } from '../db/ids';

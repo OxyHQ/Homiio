@@ -1,13 +1,13 @@
-import { api, ApiResponse } from '@/utils/api';
+import { api, type ApiResponse } from '@/utils/api';
 import {
-  AvailabilityWindow,
+  type AvailabilityWindow,
   AvailabilityWindowStatus,
-  CancellationPolicy,
-  CreateReservationData,
-  OfferingType,
-  Reservation,
-  ReservationStatus,
-  UpdateReservationData,
+  type CancellationPolicy,
+  type CreateReservationData,
+  type OfferingType,
+  type Reservation,
+  type ReservationStatus,
+  type UpdateReservationData,
 } from '@homiio/shared-types';
 
 /**

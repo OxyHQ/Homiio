@@ -9,7 +9,7 @@
  * which is exactly what the wizard stores — `data.rating` is 1..5, and 0 is
  * "not answered yet" rather than a value the group can express.
  */
-import React from 'react';
+import type React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 

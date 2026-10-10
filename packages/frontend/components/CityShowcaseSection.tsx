@@ -14,10 +14,11 @@
  * so re-renders feel instant; when a city has no cover image the gradient
  * fallback inherited from the underlying View shows through.
  */
-import React, { useRef, useState } from 'react';
+import type React from 'react';
+import { useRef, useState } from 'react';
 import {
-  NativeScrollEvent,
-  NativeSyntheticEvent,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
   Pressable,
   ScrollView,
   StyleSheet,

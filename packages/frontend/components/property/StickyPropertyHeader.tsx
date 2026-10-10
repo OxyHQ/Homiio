@@ -14,7 +14,7 @@
  * floating `Header` absolutely. zIndex sits above the
  * `Header`'s 1000.
  */
-import React from 'react';
+import type React from 'react';
 import { Platform, type ViewStyle } from 'react-native';
 import { useTranslation } from 'react-i18next';
 

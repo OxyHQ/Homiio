@@ -9,7 +9,8 @@
  * for the new day and hour, `Chip`s for the (deselectable) status, `confirm()`
  * for the cancellation.
  */
-import React, { useMemo, useState } from 'react';
+import type React from 'react';
+import { useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@oxy.so/bloom/button';

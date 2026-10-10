@@ -3,7 +3,7 @@
  * Handles geocoding-related API endpoints
  */
 
-import { Request, Response, NextFunction } from 'express';
+import type { Request, Response, NextFunction } from 'express';
 import { reverseGeocode, forwardGeocode } from '../services/geocodingService';
 import { successResponse, AppError } from '../middlewares/errorHandler';
 

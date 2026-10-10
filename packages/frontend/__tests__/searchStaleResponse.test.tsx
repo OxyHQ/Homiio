@@ -19,7 +19,8 @@
  *    a proxy, a shared cache or a mis-served request produces — and rendering
  *    it would put one search's rows under another's heading and count.
  */
-import React, { type ReactNode } from 'react';
+import type React from 'react';
+import type { ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderHook, waitFor } from '@testing-library/react-native';
 import { OfferingType, type LocationSelection } from '@homiio/shared-types';

@@ -12,7 +12,8 @@
  * Section rhythm is owned entirely by the parent (NativeWind `gap`); this
  * component renders only its header + carousel and carries no outer margin.
  */
-import React, { useState } from 'react';
+import type React from 'react';
+import { useState } from 'react';
 import { View, Pressable } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useMediaQuery } from 'react-responsive';

@@ -9,14 +9,14 @@ import {
   type UseMutationResult,
 } from '@tanstack/react-query';
 import {
-  TenantApplication,
+  type TenantApplication,
   TenantApplicationStatus,
   type DocumentVerificationStatus,
 } from '@homiio/shared-types';
 
 import {
-  CreateApplicationInput,
-  UpdateApplicationInput,
+  type CreateApplicationInput,
+  type UpdateApplicationInput,
   applicationService,
 } from '@/services/applicationService';
 import { useOxy } from '@oxy.so/services';

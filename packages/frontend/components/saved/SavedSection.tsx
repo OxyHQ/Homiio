@@ -3,7 +3,7 @@
  * it, an optional action at the right, then the content — the Bloom housing
  * template's `Section`, in Homiio's theme.
  */
-import React from 'react';
+import type React from 'react';
 import { View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { useTheme } from '@oxy.so/bloom/theme';

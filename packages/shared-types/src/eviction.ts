@@ -33,7 +33,7 @@
  * marking such fields private (ADR 0003 §7.2).
  */
 
-import { ISODate } from './common';
+import type { ISODate } from './common';
 
 /** Lifecycle of an eviction case. Defaults to `UPCOMING` at creation. */
 export enum EvictionCaseStatus {

@@ -1,6 +1,6 @@
 import React from 'react';
 import Svg, { Rect } from 'react-native-svg';
-import { ViewStyle, Animated, Easing } from 'react-native';
+import { type ViewStyle, Animated, Easing } from 'react-native';
 import { colors } from '@/styles/colors';
 import { USE_NATIVE_DRIVER } from '@/utils/animation';
 

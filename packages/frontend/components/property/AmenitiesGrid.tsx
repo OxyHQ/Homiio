@@ -17,7 +17,8 @@
  * rest of the app. The sheet keeps the catalog's illustrated icons; the
  * in-page list draws the line glyphs, which is all `AmenityList` takes.
  */
-import React, { useCallback, useContext, useMemo } from 'react';
+import type React from 'react';
+import { useCallback, useContext, useMemo } from 'react';
 import { ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { AmenityList, type Amenity as ListedAmenity } from '@oxy.so/bloom/listing-details';

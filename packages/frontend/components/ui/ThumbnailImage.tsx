@@ -10,7 +10,7 @@
  * parent box by default (the cards size it via a fixed-dimension wrapper). Pass
  * `style` to size/shape that wrapper directly.
  */
-import React from 'react';
+import type React from 'react';
 import {
   Image,
   StyleSheet,

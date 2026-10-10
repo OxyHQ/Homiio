@@ -1,4 +1,4 @@
-import { QueryClient } from '@tanstack/react-query';
+import type { QueryClient } from '@tanstack/react-query';
 import { propertyService } from '@/services/propertyService';
 
 export async function prefetchProperty(queryClient: QueryClient, id: string) {
