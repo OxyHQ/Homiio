@@ -41,7 +41,7 @@ jobs:
     outputs:
       deploy: ${{ steps.filter.outputs.deploy }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ env.DEPLOY_SHA }}
           # The scope diff reads <sha>^1..<sha>, so the parent has to be present.
@@ -61,7 +61,7 @@ jobs:
     if: needs.scope.outputs.deploy == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ env.DEPLOY_SHA }}
       - uses: actions/setup-node@v4
