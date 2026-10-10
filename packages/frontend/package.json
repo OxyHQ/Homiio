@@ -53,7 +53,7 @@
     "expo-file-system": "~56.0.8",
     "expo-font": "~56.0.7",
     "expo-haptics": "~56.0.3",
-    "expo-image": "~56.0.11",
+    "expo-image": "~57.0.5",
     "expo-image-manipulator": "~56.0.22",
     "expo-image-picker": "~56.0.21",
     "expo-linear-gradient": "~56.0.4",
