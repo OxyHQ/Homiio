@@ -70,10 +70,15 @@ interface Fixture {
   obligationId: string;
 }
 
+// countries.code is unique, and a file seeds many leases: a random two-digit
+// suffix collided often enough to fail CI. A counter cannot repeat.
+let countrySequence = 0;
+
 /** An active tenancy with one €900 rent obligation. */
 async function seedLeaseWithObligation(): Promise<Fixture> {
+  countrySequence += 1;
   const { propertyId } = await seedListingWithGeo({
-    countryCode: `L${Math.floor(Math.random() * 90 + 10)}`,
+    countryCode: `L${countrySequence}`,
     overrides: { status: PropertyStatus.PUBLISHED, oxyUserId: LANDLORD },
   });
   const [lease] = await getDb()
