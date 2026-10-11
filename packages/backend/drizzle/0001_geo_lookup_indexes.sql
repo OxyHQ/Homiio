@@ -9,10 +9,9 @@
 -- and the one arriving finds them already in place.
 --
 -- `addresses_street_trgm_idx` — `addressController.searchAddresses` matches
--- `street` with an unanchored, case-insensitive term. Mongo indexed that with
--- nothing at all (an unanchored `/i` regex is a collection scan) and `ILIKE
--- '%…%'` only uses an index with `gin_trgm_ops`, so this is the "add the index
--- Mongo needed and lacked" case rather than a port.
+-- `street` with an unanchored, case-insensitive term. `ILIKE '%…%'` only uses
+-- an index with `gin_trgm_ops`; without this one every search is a sequential
+-- scan of `addresses`.
 --
 -- The three `(<parent_id>, lower(name))` btrees back the SCOPED case-insensitive
 -- equality lookups (`getCityByLocation`, `resolveRegionRef`,

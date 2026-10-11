@@ -11,8 +11,8 @@
 -- The SECOND and last PostGIS column in the migration lands here:
 -- `eviction_cases.location_geo`, `GENERATED ALWAYS AS
 -- (ST_MakePoint(location_longitude, location_latitude)::geography) STORED`,
--- with a GiST index — the port of Mongo's `{ 'location.coordinates':
--- '2dsphere' }`. It depends on the `postgis` extension `db/extensions.ts`
+-- with a GiST index for the geographic queries over eviction cases. It
+-- depends on the `postgis` extension `db/extensions.ts`
 -- installs before any migration runs, exactly as `addresses.geo` does.
 --
 CREATE TABLE "eviction_case_attendees" (

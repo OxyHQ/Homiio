@@ -12,8 +12,9 @@
 -- `properties.expires_at`, and `place_pois_expires_at_idx` is the btree its
 -- sweep needs — `findUnsupportedExpiryColumns` fails the build without it.
 -- `conversations.sharing_expires_at` gets an index too and deliberately gets NO
--- registry entry: that Mongo TTL deletes the whole conversation, so it is named
--- in `EXPIRY_COLUMNS_THAT_MUST_NOT_DELETE` instead.
+-- registry entry: it is the deadline of a share link, and a deleting sweep on
+-- it would delete the whole conversation, so it is named in
+-- `EXPIRY_COLUMNS_THAT_MUST_NOT_DELETE` instead.
 --
 CREATE TABLE "conversation_message_attachments" (
 	"id" text PRIMARY KEY NOT NULL,
