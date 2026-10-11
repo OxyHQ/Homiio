@@ -4,7 +4,7 @@
 --
 -- ADDITIVE, and safe to apply ahead of the rollout on both counts: `reviews` is
 -- EMPTY in production (measured 2026-08-09), so the index rejects no existing
--- row, and the image currently serving traffic writes reviews to MONGO — it
+-- row, and the image currently serving traffic does not write to `reviews` — it
 -- cannot produce a duplicate this index would refuse.
 --
 -- It replaces `reviewController.createReview`'s

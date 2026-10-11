@@ -32,10 +32,10 @@
 --     column.
 --
 -- `property_availability_windows_range_gist` indexes
--- `tstzrange(starts_at, ends_at)` rather than the two btrees Mongo carried on
--- `availabilityWindows.start` and `.end`. Two independent btrees cannot answer
--- an overlap query — the planner narrows on one and filters the rest by hand —
--- so those two indexes are deliberately not ported. `tstzrange(timestamptz,
+-- `tstzrange(starts_at, ends_at)` rather than one btree on `starts_at` and
+-- another on `ends_at`. Two independent btrees cannot answer an overlap query —
+-- the planner narrows on one and filters the rest by hand — so the range index
+-- is deliberately the only one. `tstzrange(timestamptz,
 -- timestamptz)` is IMMUTABLE, which the expression index requires, and it
 -- defaults to `[)` bounds, which is the half-open contract `shared-types`
 -- specifies.
