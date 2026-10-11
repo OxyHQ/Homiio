@@ -131,8 +131,9 @@ describe('Homiio deployment preserves the exact inference runtime boundary', () 
     const apiWithoutRemovalList = apiStep.replace(/^\s*TASK_CONFIGURATION_REMOVALS_JSON:.*$/m, '');
     expect(apiWithoutRemovalList).not.toContain(SERVICE_KEY_ARN);
     expect(apiWithoutRemovalList).not.toContain(SERVICE_SECRET_ARN);
-    // Anchored so `SINDI_OXY_SERVICE_API_KEY` — a different identity, still
-    // injected — does not satisfy a bare substring search and hide a relapse.
+    // Anchored so `SINDI_OXY_SERVICE_API_KEY` — the retired Sindi pair, named
+    // only in the removal list — does not satisfy a bare substring search and
+    // hide a relapse.
     expect(apiWithoutRemovalList).not.toMatch(/(?<![A-Z_])OXY_SERVICE_API_(?:KEY|SECRET)/);
   });
 

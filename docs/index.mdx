@@ -100,9 +100,7 @@ OXY_SERVICE_API_KEY=oxy_dk_...
 OXY_SERVICE_API_SECRET=...
 OXY_INFERENCE_ROUTING_PROFILE_ID=01a06477-94f5-74f0-bc25-4c5c13b93ccd
 
-# Separate product-service identity for the private Sindi agent
-SINDI_OXY_SERVICE_API_KEY=oxy_dk_...
-SINDI_OXY_SERVICE_API_SECRET=...
+# The private Sindi agent (Sindi is the attested task role; it has no key pair)
 SINDI_ALIA_AGENT_ID=01a0646a-078f-7514-9800-9f43ceed7df8
 
 # Image pipeline (production bucket from oxy-infra)
@@ -162,7 +160,7 @@ The frontend's `ProfileProvider` loads profiles immediately after `useOxy()` rep
 
 ### Sindi (AI tenant-rights assistant)
 
-Sindi is the in-app AI assistant designed as a private Alia agent backed by its canonical bot account. Once the Oxy desired state is applied and read back, its interactive, persisted chat route sends the byte-exact `SINDI_ALIA_AGENT_ID` to Alia with Homiio's Oxy service credential and a present-requester assertion (`X-Oxy-Requester-Assertion`, OxyHQServices ADR 0025). Homiio mints that assertion per turn by sending the request's verified Oxy bearer to Oxy — and only to Oxy — so the human bearer never reaches Alia; Oxy binds it to Sindi, the Sindi credential and the signed-in person for two minutes, and Alia consumes it once through Oxy's live introspection. Alia therefore remains the owner of the agent, chat, tools and memory before inference reaches Oxy and Kaana. The reserved target is project account `6a50444ce8026582b949089d`, bot account `01a0646a-078f-7974-9645-a5e8be237f47`, agent `01a0646a-078f-7514-9800-9f43ceed7df8`, service app `6a2f851751b784a86fd0e922` and service credential `01a0648e-ad3f-7608-aa8b-c07bfef6cf73`. Those relations are pending until provisioner apply plus exact-ID readback; source values alone are not evidence that Sindi is live. Homiio never creates, rebinds, normalizes or discovers those IDs by name/list/order, and Sindi's intended capability grant is exactly `web`.
+Sindi is the in-app AI assistant designed as a private Alia agent backed by its canonical bot account. Once the Oxy desired state is applied and read back, its interactive, persisted chat route sends the byte-exact `SINDI_ALIA_AGENT_ID` to Alia with Homiio's attested Oxy service token (its ECS task role, oxy ADR 0026; no key pair) and a present-requester assertion (`X-Oxy-Requester-Assertion`, OxyHQServices ADR 0025). Homiio mints that assertion per turn by sending the request's verified Oxy bearer to Oxy — and only to Oxy — so the human bearer never reaches Alia; Oxy binds it to Sindi, the Homiio task role and the signed-in person for two minutes, and Alia consumes it once through Oxy's live introspection. Alia therefore remains the owner of the agent, chat, tools and memory before inference reaches Oxy and Kaana. The reserved target is project account `6a50444ce8026582b949089d`, bot account `01a0646a-078f-7974-9645-a5e8be237f47`, agent `01a0646a-078f-7514-9800-9f43ceed7df8`, service app `6a2f851751b784a86fd0e922` and task role `arn:aws:iam::237343248947:role/oxy-homiio-task` (the former service credential `01a0648e-ad3f-7608-aa8b-c07bfef6cf73` is retired). Those relations are pending until provisioner apply plus exact-ID readback; source values alone are not evidence that Sindi is live. Homiio never creates, rebinds, normalizes or discovers those IDs by name/list/order, and Sindi's intended capability grant is exactly `web`.
 
 Chat asks for no consent: the person is signed in and present, which is what the assertion proves, and a signed-out or revoked session simply fails the turn (`chat_auth_required`). Offline delegation (`acting-as:offline` through `X-Oxy-User-Id`) is reserved for future work with no person present; the frontend's consent action (`hooks/sindiConsent.ts`) stays for that lane and is unreachable from chat.
 
