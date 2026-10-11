@@ -79,7 +79,7 @@ describe('Homiio deployment preserves the exact inference runtime boundary', () 
     expect(apiStep).toContain('SINDI_ALIA_AGENT_ID: $sindiAgentId');
     expect(apiStep).toContain('OXY_INFERENCE_ROUTING_PROFILE_ID: $routingProfileId');
     expect(apiStep).toContain(
-      'TASK_CONFIGURATION_REMOVALS_JSON: \'["OXY_INFERENCE_ROUTING_PROFILE","OXY_SERVICE_API_KEY","OXY_SERVICE_API_SECRET","OXY_ACTIVITY_API_KEY","OXY_ACTIVITY_API_SECRET"]\'',
+      'TASK_CONFIGURATION_REMOVALS_JSON: \'["OXY_INFERENCE_ROUTING_PROFILE","OXY_SERVICE_API_KEY","OXY_SERVICE_API_SECRET","OXY_ACTIVITY_API_KEY","OXY_ACTIVITY_API_SECRET","SINDI_OXY_SERVICE_API_KEY","SINDI_OXY_SERVICE_API_SECRET"]\'',
     );
   });
 
@@ -135,6 +135,22 @@ describe('Homiio deployment preserves the exact inference runtime boundary', () 
     // only in the removal list — does not satisfy a bare substring search and
     // hide a relapse.
     expect(apiWithoutRemovalList).not.toMatch(/(?<![A-Z_])OXY_SERVICE_API_(?:KEY|SECRET)/);
+  });
+
+  /**
+   * The retired Sindi pair has to be TAKEN OFF the API revision too, not only
+   * left unsupplied: a revision rendered from an older task definition (or a
+   * Terraform apply that still declares it) would otherwise keep referencing
+   * `/oxy/homiio/SINDI_OXY_SERVICE_API_*`, and once those parameters are
+   * deleted a task naming them fails to start.
+   */
+  it('actively removes the retired Sindi pair from the API revision', () => {
+    const removalMatch = apiStep.match(/TASK_CONFIGURATION_REMOVALS_JSON:\s*'(\[[^']*\])'/);
+    expect(removalMatch).not.toBeNull();
+    const removals: string[] = JSON.parse(removalMatch?.[1] ?? '[]');
+    expect(removals).toEqual(
+      expect.arrayContaining(['SINDI_OXY_SERVICE_API_KEY', 'SINDI_OXY_SERVICE_API_SECRET']),
+    );
   });
 
   it('actively removes inference configuration from the listing worker', () => {
