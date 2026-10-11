@@ -79,7 +79,7 @@ describe('Homiio deployment preserves the exact inference runtime boundary', () 
     expect(apiStep).toContain('SINDI_ALIA_AGENT_ID: $sindiAgentId');
     expect(apiStep).toContain('OXY_INFERENCE_ROUTING_PROFILE_ID: $routingProfileId');
     expect(apiStep).toContain(
-      'TASK_CONFIGURATION_REMOVALS_JSON: \'["OXY_INFERENCE_ROUTING_PROFILE","OXY_SERVICE_API_KEY","OXY_SERVICE_API_SECRET"]\'',
+      'TASK_CONFIGURATION_REMOVALS_JSON: \'["OXY_INFERENCE_ROUTING_PROFILE","OXY_SERVICE_API_KEY","OXY_SERVICE_API_SECRET","OXY_ACTIVITY_API_KEY","OXY_ACTIVITY_API_SECRET"]\'',
     );
   });
 
