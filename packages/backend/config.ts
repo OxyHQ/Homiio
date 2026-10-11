@@ -80,9 +80,6 @@ export interface Config {
     apiUrl: string;
     /** Existing Alia entity id backed 1:1 by the provisioned Sindi bot account. */
     sindiAgentId?: string;
-    /** Dedicated, exact Sindi service credential; never reused by point inference. */
-    sindiServiceApiKey?: string;
-    sindiServiceApiSecret?: string;
   };
   telegram: {
     botToken?: string;
@@ -332,9 +329,9 @@ const config: Config = {
 
   alia: {
     apiUrl: process.env.ALIA_API_URL || 'https://api.alia.onl',
+    // Sindi holds no credential: it is Homiio's attested task role (oxy ADR
+    // 0026). `SINDI_OXY_SERVICE_API_*` is retired and deliberately not read.
     sindiAgentId: optionalExactIdentifier(process.env.SINDI_ALIA_AGENT_ID),
-    sindiServiceApiKey: optionalEnvironmentValue(process.env.SINDI_OXY_SERVICE_API_KEY),
-    sindiServiceApiSecret: optionalEnvironmentValue(process.env.SINDI_OXY_SERVICE_API_SECRET),
   },
 
   // Telegram Bot Configuration

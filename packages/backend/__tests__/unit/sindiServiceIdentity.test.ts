@@ -1,14 +1,18 @@
 import crypto from 'node:crypto';
+import { readdirSync, readFileSync } from 'node:fs';
+import path from 'node:path';
 
 import {
   SINDI_OXY_APPLICATION_ID,
   SINDI_OXY_OWNER_ACCOUNT_ID,
-  SINDI_OXY_SERVICE_CREDENTIAL_ID,
   SINDI_OXY_TASK_ROLE_ARN,
   SINDI_OXY_WORKLOAD_ATTESTATION_ID,
   assertCanonicalSindiRequesterAssertion,
   assertCanonicalSindiServiceToken,
 } from '../../services/oxy';
+
+/** The Sindi service credential that was retired when Homiio began attesting. */
+const RETIRED_SINDI_CREDENTIAL_ID = '01a0648e-ad3f-7608-aa8b-c07bfef6cf73';
 
 function token(payload: Record<string, unknown>): string {
   return `e30.${Buffer.from(JSON.stringify(payload)).toString('base64url')}.signature`;
@@ -17,7 +21,7 @@ function token(payload: Record<string, unknown>): string {
 describe('Sindi service identity canary', () => {
   const canonical = {
     appId: SINDI_OXY_APPLICATION_ID,
-    credentialId: SINDI_OXY_SERVICE_CREDENTIAL_ID,
+    credentialId: SINDI_OXY_WORKLOAD_ATTESTATION_ID,
     ownerAccountId: SINDI_OXY_OWNER_ACCOUNT_ID,
     scopes: ['inference:invoke', 'acting-as:offline'],
     exp: Math.floor(Date.now() / 1000) + 600,
@@ -32,7 +36,7 @@ describe('Sindi service identity canary', () => {
     ).toThrow('unexpected Sindi service identity');
   });
 
-  it('accepts only the exact app, dedicated credential and project owner claims', () => {
+  it('accepts only the exact app, task-role handle and project owner claims', () => {
     const value = token(canonical);
     expect(assertCanonicalSindiServiceToken(value)).toBe(value);
   });
@@ -40,6 +44,9 @@ describe('Sindi service identity canary', () => {
   it.each([
     { ...canonical, appId: '6a2f851751b784a86fd0e923' },
     { ...canonical, credentialId: '01a0648e-ad3f-7608-aa8b-c07bfef6cf74' },
+    // Retired with its key pair: Oxy's Sindi entry point no longer admits it,
+    // so a token naming it is not Sindi.
+    { ...canonical, credentialId: RETIRED_SINDI_CREDENTIAL_ID },
     { ...canonical, ownerAccountId: '69b2d3df5d12f58c9800d651' },
   ])('rejects a well-shaped but different attribution tuple: %j', (payload) => {
     expect(() => assertCanonicalSindiServiceToken(token(payload))).toThrow(
@@ -58,12 +65,11 @@ describe('Sindi service identity canary', () => {
   });
 
   /**
-   * The attestation path (oxy ADR 0026). The pair is gone from the task
-   * definition and the same token arrives attributed to the task ROLE instead
-   * of to a credential. Everything else about the token is unchanged.
+   * The attestation path (oxy ADR 0026) — the only path. The token arrives
+   * attributed to the task ROLE; there is no credential to name.
    */
-  describe('the same identity arriving by workload attestation', () => {
-    const attested = { ...canonical, credentialId: SINDI_OXY_WORKLOAD_ATTESTATION_ID };
+  describe('the identity arriving by workload attestation', () => {
+    const attested = canonical;
 
     /**
      * The handle is pinned by DERIVATION, from the same canonical subject and
@@ -131,7 +137,7 @@ describe('Sindi requester assertion canary (ADR 0025)', () => {
     iat: Math.floor(Date.now() / 1000),
     exp: Math.floor(Date.now() / 1000) + 120,
     azp: SINDI_OXY_APPLICATION_ID,
-    cid: SINDI_OXY_SERVICE_CREDENTIAL_ID,
+    cid: SINDI_OXY_WORKLOAD_ATTESTATION_ID,
     agentId,
   };
   const grant = (payload: Record<string, unknown>, overrides: Record<string, unknown> = {}) => ({
@@ -142,15 +148,8 @@ describe('Sindi requester assertion canary (ADR 0025)', () => {
     ...overrides,
   });
 
-  it('passes an assertion naming exactly Sindi, the Sindi credential and this requester', () => {
+  it('passes an assertion naming exactly Sindi, the Homiio task role and this requester', () => {
     const value = grant(claims);
-    expect(assertCanonicalSindiRequesterAssertion(value, { requesterAccountId, agentId })).toBe(
-      value.assertion,
-    );
-  });
-
-  it('passes an assertion whose cid is the Homiio task role handle', () => {
-    const value = grant({ ...claims, cid: SINDI_OXY_WORKLOAD_ATTESTATION_ID });
     expect(assertCanonicalSindiRequesterAssertion(value, { requesterAccountId, agentId })).toBe(
       value.assertion,
     );
@@ -170,6 +169,7 @@ describe('Sindi requester assertion canary (ADR 0025)', () => {
     ['another agent', grant({ ...claims, agentId: '01a0646a-078f-7642-95ef-439952f4f3f9' })],
     ['another application', grant({ ...claims, azp: '6a2f851751b784a86fd0e934' })],
     ['another credential', grant({ ...claims, cid: '01a0648b-8d74-7240-adba-80707fdfdf9c' })],
+    ['the retired Sindi credential', grant({ ...claims, cid: RETIRED_SINDI_CREDENTIAL_ID })],
     ['another audience', grant({ ...claims, aud: 'syra' })],
     ['an expired assertion', grant({ ...claims, exp: Math.floor(Date.now() / 1000) - 1 })],
     ['no assertion at all', { requesterAccountId, agentId }],
@@ -177,5 +177,32 @@ describe('Sindi requester assertion canary (ADR 0025)', () => {
     expect(() =>
       assertCanonicalSindiRequesterAssertion(value, { requesterAccountId, agentId }),
     ).toThrow('unexpected Sindi identity');
+  });
+});
+
+/**
+ * The pair is retired, so nothing may read it back in. A variable the backend
+ * still read would be a way to hand Sindi's client a credential again — and the
+ * only credential it could name is one Oxy has revoked.
+ */
+describe('the retired Sindi key pair', () => {
+  const backendRoot = path.resolve(__dirname, '../..');
+
+  function sources(dir: string): string[] {
+    return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+      if (['node_modules', '__tests__', 'dist', 'coverage'].includes(entry.name)) return [];
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) return sources(full);
+      return /\.(?:ts|js|mjs|cjs)$/.test(entry.name) ? [full] : [];
+    });
+  }
+
+  it('is read by no backend source', () => {
+    const readers = sources(backendRoot).filter((file) =>
+      /SINDI_OXY_SERVICE_API_(?:KEY|SECRET)|sindiServiceApi(?:Key|Secret)/.test(
+        readFileSync(file, 'utf8'),
+      ),
+    );
+    expect(readers).toEqual([]);
   });
 });

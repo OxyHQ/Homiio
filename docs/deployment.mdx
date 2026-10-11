@@ -92,8 +92,6 @@ STRIPE_SUCCESS_URL=https://homiio.com/profile/subscriptions?session_id={CHECKOUT
 STRIPE_CANCEL_URL=https://homiio.com/profile/subscriptions
 OXY_INFERENCE_ROUTING_PROFILE_ID=01a06477-94f5-74f0-bc25-4c5c13b93ccd
 ALIA_API_URL=https://api.alia.onl
-SINDI_OXY_SERVICE_API_KEY=oxy_dk_...
-SINDI_OXY_SERVICE_API_SECRET=...
 SINDI_ALIA_AGENT_ID=01a0646a-078f-7514-9800-9f43ceed7df8
 AWS_ACCESS_KEY_ID=...
 AWS_SECRET_ACCESS_KEY=...
@@ -111,11 +109,13 @@ renders from the task definition the service is already RUNNING, removing the
 pair took an explicit entry in the API lane's `TASK_CONFIGURATION_REMOVALS_JSON`
 — deleting the lines that supplied it would have left it inherited forever.
 
-Sindi's separate `SINDI_OXY_SERVICE_API_*` pair is a different identity that
-Alia verifies, so it is still injected: written directly to the exact
-`/oxy/homiio/` SSM SecureStrings by Oxy's exact-application-ID credential
-provisioner. It is not a Homiio GitHub secret; deploy only verifies those
-parameters without decryption before using their exact ARNs.
+**Sindi carries no key pair either.** Sindi is the same attested task role:
+Oxy's Sindi entry point admits only the handle derived from `oxy-homiio-task`
+(`wl_f28159178c5e993eb03b8cc1`), and the backend's Sindi client is constructed
+with no credential at all. The `SINDI_OXY_SERVICE_API_*` pair and its credential
+`01a0648e-ad3f-7608-aa8b-c07bfef6cf73` are retired; the backend no longer reads
+those variables, and the deploy keeps stripping them from both task
+definitions in case an old revision still carries them.
 `SINDI_ALIA_AGENT_ID` and `OXY_INFERENCE_ROUTING_PROFILE_ID` are non-secret GitHub
 repository **variables** copied byte-for-byte into only the API task definition.
 The deploy refuses a missing/malformed value and never discovers an agent or
@@ -134,8 +134,8 @@ directly or through an `oxy.so` alias.
 The reserved Oxy desired state names the other Sindi identities: project account
 `6a50444ce8026582b949089d`, bot account
 `01a0646a-078f-7974-9645-a5e8be237f47`, service application
-`6a2f851751b784a86fd0e922`, and service credential
-`01a0648e-ad3f-7608-aa8b-c07bfef6cf73`. After apply, the agent must be private, its
+`6a2f851751b784a86fd0e922`, and its task role
+`arn:aws:iam::237343248947:role/oxy-homiio-task`. After apply, the agent must be private, its
 `oxyAccountId` is the bot account, and its capability grant is exactly `web`.
 These are opaque primary keys, never names or list positions; no public Homiio
 request may create or rebind them. These are not assertions about current live
