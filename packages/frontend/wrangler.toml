@@ -17,7 +17,7 @@ compatibility_date = "2026-09-09"
 
 workers_dev = false
 
-# The Worker observes each request before streaming the asset response.
+# The Worker passes every request straight to the ASSETS binding.
 [assets]
 binding = "ASSETS"
 run_worker_first = true
