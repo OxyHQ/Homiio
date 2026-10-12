@@ -9,7 +9,8 @@
  * - Date-grouped subhead so a long history breaks into Today / This week /
  *   Earlier instead of one wall of cards
  */
-import React, { useMemo, useState } from 'react';
+import type React from 'react';
+import { useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -24,7 +25,7 @@ import {
 import { useTheme } from '@oxy.so/bloom/theme';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 import { useOxy, openAccountDialog } from '@oxy.so/services';
-import { TenantApplication, TenantApplicationStatus } from '@homiio/shared-types';
+import { type TenantApplication, TenantApplicationStatus } from '@homiio/shared-types';
 
 import { Header } from '@/components/Header';
 import { PageScrollView } from '@/components/PageScrollView';

@@ -10,7 +10,8 @@
  *    `minStay` / `maxStay` (Bloom accepts any two presses);
  *  - the nights summary and the Clear / Apply footer.
  */
-import React, { useCallback, useMemo, useState } from 'react';
+import type React from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import {
   addMonths,
@@ -24,7 +25,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@oxy.so/bloom/button';
 import { Calendar, RangeCalendar, type DateRange } from '@oxy.so/bloom/date-picker';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
-import { AvailabilityWindow, AvailabilityWindowStatus } from '@homiio/shared-types';
+import { type AvailabilityWindow, AvailabilityWindowStatus } from '@homiio/shared-types';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { formatLocalized, getFormatLocale } from '@/utils/dateLocale';
 import { useIsScreenNotMobile } from '@/hooks/useOptimizedMediaQuery';

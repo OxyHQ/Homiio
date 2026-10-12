@@ -42,7 +42,7 @@ import {
   OfferingType,
   AvailabilityWindowStatus,
 } from '@homiio/shared-types';
-import { RESERVATION_CANCELLATION_POLICIES } from '../db/schema/bookings';
+import type { RESERVATION_CANCELLATION_POLICIES } from '../db/schema/bookings';
 
 /** Default currency used when a short-term block somehow lacks one. */
 const DEFAULT_CURRENCY = 'EUR';

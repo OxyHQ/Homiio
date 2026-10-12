@@ -6,7 +6,7 @@
  * this wrapper owns the position. The caller may still lift it (`style.bottom`)
  * to clear a home indicator or an action bar.
  */
-import React from 'react';
+import type React from 'react';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { Fab } from '@oxy.so/bloom/fab';

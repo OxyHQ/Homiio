@@ -7,7 +7,7 @@
  * listings whose `intents` include `sale` (the screen gates it), reusing the
  * flat `Section` primitive + Bloom typography so it matches the rest of the page.
  */
-import React from 'react';
+import type React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 

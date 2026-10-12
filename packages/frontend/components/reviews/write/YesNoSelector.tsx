@@ -5,7 +5,7 @@
  * The answer is tri-state: `null`/`undefined` means "not answered yet", which
  * the control renders with no segment selected (no thumb) until the user picks.
  */
-import React from 'react';
+import type React from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 

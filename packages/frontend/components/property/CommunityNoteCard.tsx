@@ -8,7 +8,8 @@
  * pros/cons (falling back to the legacy `positiveComment`/`negativeComment`),
  * the recommendation, a read-only helpful count, and an under-review flag.
  */
-import React, { useState } from 'react';
+import type React from 'react';
+import { useState } from 'react';
 import {
   StyleSheet,
   View,

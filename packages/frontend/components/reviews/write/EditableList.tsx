@@ -7,7 +7,8 @@
  * Not a `Chip` list: a chip truncates to one line and its close button carries
  * a fixed English label, while an entry here runs to 140 characters.
  */
-import React, { useState } from 'react';
+import type React from 'react';
+import { useState } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 

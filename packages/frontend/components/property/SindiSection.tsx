@@ -38,7 +38,7 @@ import { SindiChatBottomSheet } from './SindiChatBottomSheet';
 import { useSindiSuggestions } from '@/hooks/useSindiSuggestions';
 import { colors } from '@/styles/colors';
 import { radius, spacing } from '@/constants/styles';
-import { Property, SindiSuggestion } from '@homiio/shared-types';
+import type { Property, SindiSuggestion } from '@homiio/shared-types';
 
 interface SindiSectionProps {
   property: Property;

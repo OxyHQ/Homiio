@@ -6,12 +6,12 @@ import {
   type UseQueryResult,
 } from '@tanstack/react-query';
 import { useOxy } from '@oxy.so/services';
-import { Lease, LeaseDocument } from '@homiio/shared-types';
+import type { Lease, LeaseDocument } from '@homiio/shared-types';
 import {
-  LeaseFilters,
-  LeaseListResponse,
-  TerminateLeaseData,
-  UploadLeaseDocumentInput,
+  type LeaseFilters,
+  type LeaseListResponse,
+  type TerminateLeaseData,
+  type UploadLeaseDocumentInput,
   leaseService,
 } from '@/services/leaseService';
 import { propertyService } from '@/services/propertyService';

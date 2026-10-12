@@ -1,10 +1,10 @@
-import { generatePropertyTitle, TitleFormat } from './propertyTitleGenerator';
+import { generatePropertyTitle, type TitleFormat } from './propertyTitleGenerator';
 import {
   OfferingType,
   PriceUnit,
-  Property,
-  PropertyAddress,
-  PropertyImage,
+  type Property,
+  type PropertyAddress,
+  type PropertyImage,
   priceFrequencyFromPriceUnit,
   type ImageVariantName,
   type PriceDescriptor,

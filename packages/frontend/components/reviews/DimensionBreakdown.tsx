@@ -5,7 +5,7 @@
  * enum value as a Bloom `RatingBar` (a category list: the label flexes, the
  * bar is proportional to the block's most common value, the count on the right). Renders nothing when the section has no data.
  */
-import React from 'react';
+import type React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 

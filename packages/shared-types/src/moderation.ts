@@ -15,7 +15,7 @@
  * place for that to become a type error in a shipped app bundle.
  */
 
-import { ISODate } from './common';
+import type { ISODate } from './common';
 
 /**
  * The Homiio objects a report can be filed against.

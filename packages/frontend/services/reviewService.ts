@@ -14,7 +14,7 @@
 
 import { api } from '@/utils/api';
 import type { Property } from '@homiio/shared-types';
-import {
+import type {
   ReviewDTO,
   CreateReviewPayload,
   UpdateReviewPayload,

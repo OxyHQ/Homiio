@@ -17,7 +17,8 @@
  * the property detail screen; this component bails on the bedroom
  * gate so it can also be dropped in elsewhere without footguns.
  */
-import React, { useMemo } from 'react';
+import type React from 'react';
+import { useMemo } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 

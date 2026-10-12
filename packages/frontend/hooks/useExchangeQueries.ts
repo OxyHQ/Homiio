@@ -5,17 +5,17 @@ import {
   type UseMutationResult,
   type UseQueryResult,
 } from '@tanstack/react-query';
-import {
+import type {
   CreateExchangeRequestData,
   ExchangeRequest,
   ExchangeReview,
   UpdateExchangeRequestData,
 } from '@homiio/shared-types';
 import {
-  CreateExchangeReviewBody,
-  ExchangeRequestListResponse,
-  ListExchangeRequestsParams,
-  ProfileExchangeReviewsResponse,
+  type CreateExchangeReviewBody,
+  type ExchangeRequestListResponse,
+  type ListExchangeRequestsParams,
+  type ProfileExchangeReviewsResponse,
   exchangeService,
 } from '@/services/exchangeService';
 import { useInvalidateGuestPoints } from '@/hooks/useGuestPointsQueries';

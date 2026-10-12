@@ -18,7 +18,7 @@
  * dimensions are categorical answers, not ratings), and a rate with no answers
  * behind it is omitted rather than shown as 0%.
  */
-import React from 'react';
+import type React from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { PlaceReviewSummary } from '@oxy.so/bloom/place-reviews';

@@ -275,7 +275,7 @@ export function collectJsonLdNodes(html: string): Record<string, unknown>[] {
     try {
       collectNodes(JSON.parse(body) as unknown, nodes);
     } catch {
-      continue;
+      // A malformed JSON-LD block is skipped; the next one may still parse.
     }
   }
   return nodes;
@@ -314,7 +314,7 @@ function extractEurSchemaListings(html: string, config: EurJsonLdConfig): EurSch
     try {
       collectNodes(JSON.parse(body) as unknown, nodes);
     } catch {
-      continue;
+      // A malformed JSON-LD block is skipped; the next one may still parse.
     }
   }
   return nodes.map((node) => toEurListing(node, config));
@@ -442,7 +442,7 @@ export function extractSchemaOrgListings(html: string): SchemaOrgListing[] {
     try {
       collectNodes(JSON.parse(body) as unknown, nodes);
     } catch {
-      continue;
+      // A malformed JSON-LD block is skipped; the next one may still parse.
     }
   }
   return nodes.map(toUsListing);

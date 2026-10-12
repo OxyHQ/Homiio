@@ -1,4 +1,4 @@
-import React, { ReactNode, useMemo } from 'react';
+import React, { type ReactNode, useMemo } from 'react';
 import { View } from 'react-native';
 import { FeaturedPropertiesWidget } from './FeaturedPropertiesWidget';
 import { EcoCertificationWidget } from './EcoCertificationWidget';

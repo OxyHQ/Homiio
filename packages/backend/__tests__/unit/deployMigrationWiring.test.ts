@@ -55,6 +55,31 @@ const reviewedRecipes = (
     readFileSync(join(REPOSITORY_ROOT, '.github', 'scripts', 'reviewed-images.json'), 'utf8'),
   ) as { recipes: { name: string; target: string | null }[] }
 ).recipes;
+const dockerfile = readFileSync(join(REPOSITORY_ROOT, 'packages', 'backend', 'Dockerfile'), 'utf8');
+
+/**
+ * The runtime a Dockerfile TARGET runs: the first word of its exec-form `CMD`.
+ *
+ * Each migrator one-shot runs on one target's image: `pre` on the API lane's,
+ * `post` on the worker's. Both run Bun now, from different bases (the worker
+ * keeps Debian + Node for Playwright, with bun copied in), and a one-shot naming
+ * a runtime its image does not run either dies (`bun` against a Node-only
+ * image) or silently runs something it does not name (`node` against the
+ * `oven/bun` image is a symlink to bun). Reading the
+ * runtime off the image keeps the commands tied to it instead of to a literal
+ * that a runtime change would leave behind. Returns '' when the target or its
+ * CMD is missing, which no assertion below accepts.
+ */
+const targetRuntime = (target: string): string => {
+  const start = dockerfile.search(new RegExp(`^FROM \\S+ AS ${target}$`, 'm'));
+  if (start === -1) return '';
+  const rest = dockerfile.slice(start + 1);
+  const next = rest.search(/^FROM /m);
+  const stage = next === -1 ? rest : rest.slice(0, next);
+  const cmds = [...stage.matchAll(/^CMD (\[.*\])$/gm)];
+  if (cmds.length !== 1) return '';
+  return (JSON.parse(cmds[0][1]) as string[])[0] ?? '';
+};
 
 /** The name of each lane's step, in the order the job runs them. */
 const BUILD_STEP = 'Build and push API + listing worker (linux/arm64)';
@@ -212,12 +237,18 @@ describe('the deploy applies migrations', () => {
     expect(pre[0]).toContain('--phase=pre');
     expect(post[0]).toContain('--phase=post');
 
-    // `node`, not `bun`: the runtime image installs production dependencies
-    // only and its CMD is node. The path this replaced named a file that has
-    // never existed here, which is why `RUN_MIGRATIONS=true` could not have
-    // worked even had something set it.
+    // Each phase names the runtime of the image it runs on: `pre` the API
+    // target's, `post` the worker target's — Bun for both since the worker
+    // moved. The literals pin the current state so a change to either is
+    // deliberate; the comparison with
+    // the Dockerfile is what keeps a command from outliving its image. The path
+    // the original command named never existed here, which is why
+    // `RUN_MIGRATIONS=true` could not have worked even had something set it.
+    expect(targetRuntime('api')).toBe('bun');
+    expect(targetRuntime('worker')).toBe('bun');
+    expect(pre[0][0]).toBe(targetRuntime('api'));
+    expect(post[0][0]).toBe(targetRuntime('worker'));
     for (const command of [pre[0], post[0]]) {
-      expect(command[0]).toBe('node');
       expect(command[1]).toBe('packages/backend/dist/db/migrate.js');
     }
 
@@ -229,6 +260,24 @@ describe('the deploy applies migrations', () => {
       command.find((argument) => argument.startsWith('--target-database=')) ?? '';
     expect(target(pre[0])).toBe('--target-database=homiio');
     expect(target(post[0])).toBe(target(pre[0]));
+  });
+
+  it("runs the worker service on its image's runtime, declared by the deploy", () => {
+    // The worker service ignores terraform's task-definition changes and every
+    // release renders from the LIVE revision, so the command — which is where
+    // the worker's runtime is named, since ECS overrides the image's CMD — only
+    // changes if this lane declares it. The API lane declares none: it runs its
+    // image's CMD, and an override there could drift from it unseen.
+    const declared = [...workerStep.matchAll(/^ {10}TASK_COMMAND_JSON: '(.*)'$/gm)];
+    expect(declared).toHaveLength(1);
+    expect(apiStep).not.toContain('TASK_COMMAND_JSON:');
+
+    const command = JSON.parse(declared[0][1]) as string[];
+    // Under the virtual display the headed browser tier needs, then the
+    // worker image's runtime on the compiled worker entrypoint, and nothing
+    // after it.
+    expect(command.slice(0, 3)).toEqual(['xvfb-run', '-a', '--server-args=-screen 0 1920x1080x24']);
+    expect(command.slice(3)).toEqual([targetRuntime('worker'), 'packages/backend/dist/worker.js']);
   });
 
   it('keeps the post phase unconditional, so it cannot rot until it matters', () => {

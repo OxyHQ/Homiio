@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import i18next from 'i18next';
 import { useProfileStore } from '@/store/profileStore';
-import profileService, { UpdateProfileData } from '@/services/profileService';
+import profileService, { type UpdateProfileData } from '@/services/profileService';
 import { useOxy } from '@oxy.so/services';
 import { toast } from '@oxy.so/bloom/toast';
 

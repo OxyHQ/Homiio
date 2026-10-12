@@ -1,5 +1,5 @@
 import { Logger } from './logger';
-import { ScrapeMetrics, HealthMetrics, CleanupMetrics } from '../types/cron';
+import type { ScrapeMetrics, HealthMetrics, CleanupMetrics } from '../types/cron';
 import { describeErrorForLog } from '../middlewares/errorHandler';
 
 /**

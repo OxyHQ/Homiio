@@ -11,7 +11,7 @@
  * (app/_layout.tsx). We disable `fonts` so the provider renders children
  * synchronously with no async font-loading side effects.
  */
-import React from 'react';
+import type React from 'react';
 import { StyleSheet } from 'react-native';
 import { render, screen } from '@testing-library/react-native';
 // Import from the dedicated `theme` subpath (as the app does for `portal`/

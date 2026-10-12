@@ -240,7 +240,7 @@ jobs:
           --health-retries 10
           --health-start-period 10s
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: oven-sh/setup-bun@v2
         with:
@@ -330,12 +330,33 @@ jobs:
           bun .github/scripts/assert-test-floor.mjs
           "$RUNNER_TEMP/backend-tests.json" packages/backend 1520
 
+      # The API runs on Bun in production (packages/backend/Dockerfile's `api`
+      # target), so the unit suite also runs under Bun's runtime, not only under
+      # jest on Node. Seven files stay jest-only, listed in the `test:bun`
+      # script: three need the per-worker Postgres jest.globalSetup provisions,
+      # and four use runner features bun:test lacks (`jest.requireActual`, and
+      # partial `jest.mock` factories that bun applies as the WHOLE module).
+      # `--isolate` gives each file its own module registry, as jest does.
+      # Measured 2026-10-12: 1266 tests under Bun, the same 1266 that pass under
+      # jest, plus 51 in the seven files = jest's 1317 in __tests__/unit.
+      # The floor is the same guard as above: an empty run exits 0 here too.
+      - name: Test backend units under Bun (the API's runtime)
+        run: |
+          set -o pipefail
+          bun run --cwd packages/backend test:bun 2>&1 | tee "$RUNNER_TEMP/backend-bun-tests.log"
+          ran=$(sed -nE 's/^Ran ([0-9]+) tests? across.*/\1/p' "$RUNNER_TEMP/backend-bun-tests.log" | tail -1)
+          echo "bun test ran ${ran:-0} tests"
+          if [ "${ran:-0}" -lt 1200 ]; then
+            echo "::error::bun test ran ${ran:-0} unit tests, below the floor of 1200"
+            exit 1
+          fi
+
   frontend:
     needs: changes
     if: ${{ !cancelled() && !failure() && (github.event_name != 'pull_request' || needs.changes.outputs.code == 'true') }}
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: oven-sh/setup-bun@v2
         with:
@@ -386,7 +407,7 @@ jobs:
   lockfile:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: oven-sh/setup-bun@v2
         with:
@@ -467,7 +488,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 70
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: oven-sh/setup-bun@v2
         with:
@@ -519,7 +540,7 @@ jobs:
     # first.
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: ${{ env.BUN_VERSION }}
@@ -554,7 +575,7 @@ jobs:
     # references still expect the built project.
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: ${{ env.BUN_VERSION }}
@@ -602,6 +623,78 @@ jobs:
   # return. If it ever exhibits the same conclusion, move it here too.
   # ─────────────────────────────────────────────────────────────────────────
 
+  # The images as ECS runs them. Nothing else in CI builds the Dockerfile, so
+  # before this job a broken runtime stage was first noticed by a production
+  # deploy. Both targets run on Bun, and each migrator one-shot names its own
+  # image's runtime; .github/scripts/smoke-api-image.sh runs the deploy's real
+  # migrator commands on the right image, boots the API image's default CMD to
+  # /health, asserts Bun under tini, a graceful exit 0 on SIGTERM, and a
+  # non-zero exit when the store is unreachable.
+  # .github/scripts/smoke-worker-image.sh then runs the worker image with the
+  # deploy's own worker command (deploy-aws.yml's TASK_COMMAND_JSON): Playwright
+  # launching Chromium headless and headed under xvfb-run on Bun, a BullMQ boot
+  # with the browser tier loaded, bun under tini -> xvfb-run, SIGTERM reaching
+  # the worker and ending in exit 0, and a non-zero exit with no database.
+  #
+  # amd64, although production is linux/arm64: postgis/postgis publishes no
+  # arm64 image, and an ARM runner cannot run an amd64 service container. The
+  # Dockerfile is architecture-neutral (sharp installs its prebuild for the
+  # build's own platform), and the deploy still builds and rolls arm64.
+  image-smoke:
+    needs: changes
+    if: ${{ !cancelled() && !failure() && (github.event_name != 'pull_request' || needs.changes.outputs.code == 'true') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    services:
+      postgres:
+        # The same PostGIS pin as the backend job and docker-compose.postgres.yml.
+        image: postgis/postgis:17-3.5
+        env:
+          POSTGRES_USER: homiio
+          POSTGRES_PASSWORD: homiio
+          POSTGRES_DB: homiio
+        ports:
+          - 5435:5432
+        options: >-
+          --health-cmd "pg_isready -U homiio -d homiio"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+          --health-start-period 10s
+      # The worker boots onto BullMQ, so its smoke needs a Redis to connect to.
+      redis:
+        image: redis:7.4-alpine
+        ports:
+          - 6385:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Build the API and worker images
+        run: |
+          docker build -f packages/backend/Dockerfile --target api -t homiio-api:ci .
+          docker build -f packages/backend/Dockerfile --target worker -t homiio-worker:ci .
+
+      - name: Smoke the images under their runtimes
+        env:
+          API_IMAGE: homiio-api:ci
+          WORKER_IMAGE: homiio-worker:ci
+          DATABASE_URL: postgres://homiio:homiio@127.0.0.1:5435/homiio
+        run: bash .github/scripts/smoke-api-image.sh
+
+      # After the API smoke, which has migrated this database with the deploy's
+      # own commands.
+      - name: Smoke the worker image under Bun (Playwright, xvfb-run, SIGTERM)
+        env:
+          WORKER_IMAGE: homiio-worker:ci
+          DATABASE_URL: postgres://homiio:homiio@127.0.0.1:5435/homiio
+          REDIS_URL: redis://127.0.0.1:6385
+        run: bash .github/scripts/smoke-worker-image.sh
+
   # THE required check. Branch protection requires this one job instead of
   # naming every job above, because on a pull request those jobs may be
   # SKIPPED by `changes`, and a required check should be a statement about the
@@ -612,7 +705,7 @@ jobs:
   ci-complete:
     name: CI complete
     if: always()
-    needs: [changes, backend, frontend, lockfile, frontend-bundle, lint, frontend-typecheck]
+    needs: [changes, backend, frontend, lockfile, frontend-bundle, lint, frontend-typecheck, image-smoke]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
@@ -632,7 +725,7 @@ jobs:
     name: Deploy backend to AWS
     # `lint` IS DELIBERATELY ABSENT FROM `needs`. Do not add it for symmetry.
     #
-    # The five listed here are correctness gates — a red one means the code is
+    # The six listed here are correctness gates — a red one means the code is
     # wrong. `lint` is a quality gate, and a style or typing finding should not
     # hold a production rollout.
     #
@@ -647,7 +740,7 @@ jobs:
     # this job rather than before it, and a lint failure is loud without being
     # blocking. If that is ever the wrong trade, the change is to add `lint` to
     # this list on purpose, not to assume it is missing by oversight.
-    needs: [backend, frontend, frontend-typecheck, lockfile, frontend-bundle]
+    needs: [backend, frontend, frontend-typecheck, lockfile, frontend-bundle, image-smoke]
     # Each need is named and required to be `success`, not left to the implicit
     # `success()`. That implicit check walks EVERY ancestor, and `changes` (an
     # ancestor through backend/frontend) is SKIPPED on every push, so the plain
@@ -662,7 +755,8 @@ jobs:
       && needs.frontend.result == 'success'
       && needs.frontend-typecheck.result == 'success'
       && needs.lockfile.result == 'success'
-      && needs.frontend-bundle.result == 'success') }}
+      && needs.frontend-bundle.result == 'success'
+      && needs.image-smoke.result == 'success') }}
     permissions:
       id-token: write
       contents: read

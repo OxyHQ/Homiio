@@ -42,7 +42,7 @@
  *  - **There is no `DELETE`.** See the note where the handler used to be.
  */
 
-import { Request, Response } from 'express';
+import type { Request, Response } from 'express';
 import { count, desc, eq, ilike, or, type SQL } from 'drizzle-orm';
 import { getOxyUserId } from '@oxy.so/core/server';
 import type { ListingAddressPrecision } from '@homiio/shared-types';

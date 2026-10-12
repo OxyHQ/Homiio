@@ -20,7 +20,8 @@
  * No affordance is drawn for something that cannot work. See
  * `docs/housing-parity.md`.
  */
-import React, { useCallback, useState } from 'react';
+import type React from 'react';
+import { useCallback, useState } from 'react';
 import { Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useLocalSearchParams, useRouter } from 'expo-router';

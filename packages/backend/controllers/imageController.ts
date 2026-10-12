@@ -1,7 +1,10 @@
-import { Request, Response } from 'express';
+import type { Request, Response } from 'express';
 import { resolveStorageFolder } from '../services/imageUploadService';
 import type { ImageEntityType } from '@homiio/shared-types';
-import imageUploadService, { UploadedImage, ImageDocument } from '../services/imageUploadService';
+import imageUploadService, {
+  type UploadedImage,
+  type ImageDocument,
+} from '../services/imageUploadService';
 import { validateImageStoreKey } from '../utils/imageStoreKey';
 import { isLiveEntityId } from '../db/ids';
 import { logUnexpectedError } from '../middlewares/errorHandler';

@@ -8,7 +8,7 @@
  * presentational: it owns no partner state and just renders the title, subtitle,
  * an optional trust line, and the primary action.
  */
-import React from 'react';
+import type React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';

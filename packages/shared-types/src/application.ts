@@ -9,7 +9,7 @@
  * `ViewingRequest` (in-person tour scheduling).
  */
 
-import { EmploymentStatus, ISODate, ReferenceRelationship } from './common';
+import type { EmploymentStatus, ISODate, ReferenceRelationship } from './common';
 
 export enum TenantApplicationStatus {
   SUBMITTED = 'submitted',

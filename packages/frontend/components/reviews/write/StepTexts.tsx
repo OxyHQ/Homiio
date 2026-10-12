@@ -2,7 +2,7 @@
  * StepTexts — the written review: a required title + opinion (≥10 chars) and the
  * optional pros / cons lists (max 10 items each, ≤140 chars).
  */
-import React from 'react';
+import type React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 

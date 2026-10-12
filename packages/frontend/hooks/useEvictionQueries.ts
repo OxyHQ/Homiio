@@ -9,7 +9,7 @@ import {
   type UseQueryResult,
 } from '@tanstack/react-query';
 import { useMemo } from 'react';
-import {
+import type {
   CreateEvictionCaseData,
   CreateEvictionReportInput,
   CreateEvictionTimelineEventData,
@@ -18,12 +18,12 @@ import {
   UpdateEvictionCaseData,
 } from '@homiio/shared-types';
 import {
-  EvictionAttendResult,
-  EvictionCommentListResponse,
-  EvictionListResponse,
-  EvictionWriteResult,
-  JurisdictionResourcesResponse,
-  ListEvictionsParams,
+  type EvictionAttendResult,
+  type EvictionCommentListResponse,
+  type EvictionListResponse,
+  type EvictionWriteResult,
+  type JurisdictionResourcesResponse,
+  type ListEvictionsParams,
   evictionService,
 } from '@/services/evictionService';
 

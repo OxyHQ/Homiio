@@ -4,7 +4,7 @@
  */
 
 import { API_URL } from '@/config';
-import { ApiResponse } from '../types/api';
+import type { ApiResponse } from '../types/api';
 
 export interface AddressData {
   id: string;

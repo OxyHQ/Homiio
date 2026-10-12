@@ -7,7 +7,8 @@
  * (ID, payslips, prior-landlord references); a single multipart POST to
  * `/api/applications` uploads the files and creates the application.
  */
-import React, { useMemo, useState } from 'react';
+import type React from 'react';
+import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -43,7 +44,7 @@ import {
 import { Header } from '@/components/Header';
 import { useProperty } from '@/hooks';
 import { useCreateApplicationMutation } from '@/hooks/useApplicationQueries';
-import {
+import type {
   ApplicationDocumentUpload,
   ApplicationReferenceInput,
 } from '@/services/applicationService';

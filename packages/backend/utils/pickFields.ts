@@ -25,7 +25,7 @@ export function pickFields<T extends object>(
   const source = body && typeof body === 'object' ? (body as Record<string, unknown>) : {};
   const picked: Record<string, unknown> = {};
   for (const key of allowed) {
-    if (Object.prototype.hasOwnProperty.call(source, key)) {
+    if (Object.hasOwn(source, key)) {
       picked[key] = source[key];
     }
   }

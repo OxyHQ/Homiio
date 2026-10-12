@@ -1,12 +1,12 @@
 import { Platform } from 'react-native';
 
-import { api, ApiError, ApiResponse } from '@/utils/api';
+import { api, ApiError, type ApiResponse } from '@/utils/api';
 import {
-  Lease,
+  type Lease,
   LeaseStatus,
-  LeasePayment,
-  LeaseDocument,
-  LeaseDocumentType,
+  type LeasePayment,
+  type LeaseDocument,
+  type LeaseDocumentType,
 } from '@homiio/shared-types';
 
 // Re-export the lease contract types so existing consumers keep a single import site.

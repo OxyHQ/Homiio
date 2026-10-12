@@ -15,7 +15,7 @@
  * web hover reports the card's id, and the card whose marker was chosen is
  * outlined — plus an optional per-card footer (owner actions, saved notes).
  */
-import React from 'react';
+import type React from 'react';
 import { Platform, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { ListingCardGrid } from '@oxy.so/bloom/listing-card';
 

@@ -3,7 +3,7 @@
  * (`app/properties/[id]/report.tsx`).
  */
 import { useMutation } from '@tanstack/react-query';
-import { CreateListingReportInput, ListingReport } from '@homiio/shared-types';
+import type { CreateListingReportInput, ListingReport } from '@homiio/shared-types';
 
 import { reportService } from '@/services/reportService';
 

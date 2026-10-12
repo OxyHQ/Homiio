@@ -18,7 +18,7 @@
  * nightly rate, sale → sale price). Each returned property exposes
  * `address.coordinates.coordinates` as `[lng, lat]` for map pins.
  */
-import { type InfiniteData, type UseInfiniteQueryResult } from '@tanstack/react-query';
+import type { InfiniteData, UseInfiniteQueryResult } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import {
   OfferingType,

@@ -11,7 +11,7 @@
  * Flat sections, per-section gutter (the rail bleeds to the edge; the header
  * stays inset), image/icon-forward — consistent with the home merchandising.
  */
-import React from 'react';
+import type React from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useMediaQuery } from 'react-responsive';

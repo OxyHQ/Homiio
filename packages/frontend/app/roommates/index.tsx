@@ -44,7 +44,7 @@ import { useProfile } from '@/context/ProfileContext';
 import { useIsScreenNotMobile } from '@/hooks/useOptimizedMediaQuery';
 import { useRoommate } from '@/hooks/useRoommate';
 import { roommateService } from '@/services/roommateService';
-import { type PropertyFilters } from '@/services/propertyService';
+import type { PropertyFilters } from '@/services/propertyService';
 import { useProfileStore } from '@/store/profileStore';
 import { spacing } from '@/constants/styles';
 import { colors } from '@/styles/colors';

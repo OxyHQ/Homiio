@@ -1,4 +1,4 @@
-import { Router, Request } from 'express';
+import { Router, type Request } from 'express';
 import multer from 'multer';
 import imageController from '../controllers/imageController';
 import handleUploadError from '../middlewares/uploadMiddleware';

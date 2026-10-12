@@ -26,7 +26,7 @@ import type { ClusterOptions, LonLat } from './mapTypes';
  * maplibre-gl 6 is ESM-only: the document imports `maplibre-gl.mjs` from a
  * module script, and that module imports `./maplibre-gl-shared.mjs`.
  */
-export const MAPLIBRE_VERSION = '6.10.0';
+export const MAPLIBRE_VERSION = '6.13.0';
 const MAPLIBRE_DIST_URL = `https://unpkg.com/maplibre-gl@${MAPLIBRE_VERSION}/dist`;
 
 /**
@@ -41,10 +41,10 @@ const MAPLIBRE_DIST_URL = `https://unpkg.com/maplibre-gl@${MAPLIBRE_VERSION}/dis
  * anywhere: a worker does not inherit the document's import map.
  */
 export const MAPLIBRE_INTEGRITY = {
-  'maplibre-gl.mjs': 'sha384-2g0hrGNSeleJsCzq4bdDa1QEBwj09vTce/Hf9TbggAsMv37hy9xmKfJfCfOojhyx',
+  'maplibre-gl.mjs': 'sha384-tG0qQdL7veKvVoyu6PbnmddDls/OVkTjaK9oVY5eq9afBA6zYptFui69Dx57duAh',
   'maplibre-gl-shared.mjs':
-    'sha384-jw07Ono+c6G30wWc0ndm4f9k5wolLAdoHS5hC/WiNNVmg8Sfk4cJKfVGefVigjwA',
-  'maplibre-gl.css': 'sha384-Q5Blg3vUVAlUKqIPJYz7wGnz40Vwrx4pVuFVicI73+8c/26Zr5hhckfuIiIUflLE',
+    'sha384-OLBgp1GsljhM2TJ+sbHjaiH9txEUvgdDTAzHv2P24donTt6/529l+9Ua0vFImLlb',
+  'maplibre-gl.css': 'sha384-yFNc3bs28S14jOJo1ZO9SnLiAmtyY2a3H9be8GkLMpDGlO5r1zZNP8fYu+fOCE/w',
 } as const;
 
 const MAPLIBRE_JS_URL = `${MAPLIBRE_DIST_URL}/maplibre-gl.mjs`;

@@ -28,7 +28,7 @@
  */
 
 import api, { ApiError } from '@/utils/api';
-import {
+import type {
   City,
   CityFilters,
   CityLookupResult,

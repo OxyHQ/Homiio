@@ -150,7 +150,7 @@ function member(block: Block, key: string): never | unknown {
 
 /** Whether a payload mentions a key at all — `null` counts as mentioning it. */
 function mentions(input: PropertyWriteInput, key: string): boolean {
-  return Object.prototype.hasOwnProperty.call(input, key);
+  return Object.hasOwn(input, key);
 }
 
 /**

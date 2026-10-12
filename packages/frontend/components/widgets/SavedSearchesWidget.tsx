@@ -7,7 +7,7 @@
  * free-text query, a legacy notifications switch). Renaming now lives on the
  * watch's settings screen beside the cadence that replaced that switch.
  */
-import React from 'react';
+import type React from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';

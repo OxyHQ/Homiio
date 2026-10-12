@@ -20,7 +20,7 @@
  * transcript.
  */
 
-import express, { Request, Response } from 'express';
+import express, { type Request, type Response } from 'express';
 import multer from 'multer';
 import { formatDataStreamPart, pipeDataStreamToResponse, type JSONValue } from 'ai';
 import { OxyInferenceError } from '@oxy.so/core/inference';

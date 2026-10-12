@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import {
   OfferingType,
-  PropertyType,
+  type PropertyType,
   boundsCenter,
   type GeoBounds,
   type ListingCurrency,

@@ -22,7 +22,8 @@
  * **Never show the attendee roster.** Only the count is published, to anybody,
  * the organiser included.
  */
-import React, { useCallback, useContext, useMemo, useState } from 'react';
+import type React from 'react';
+import { useCallback, useContext, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';

@@ -10,8 +10,8 @@
  * legacy flat shape.
  */
 
-import { Property } from './property';
-import { Profile } from './profile';
+import type { Property } from './property';
+import type { Profile } from './profile';
 
 export enum LeaseStatus {
   DRAFT = 'draft',

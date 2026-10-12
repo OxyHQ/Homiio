@@ -24,7 +24,7 @@
  * A rating is drawn only from the real review aggregate of the listing's
  * address (the same source the reviews section reads) and omitted without one.
  */
-import React from 'react';
+import type React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';

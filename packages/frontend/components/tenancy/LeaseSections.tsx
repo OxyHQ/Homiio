@@ -5,7 +5,7 @@
  *
  * `leaseTenancy.ts` does the mapping; these only lay the parts out.
  */
-import React from 'react';
+import type React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { DocumentList, RentPaymentList, TenancyTimeline } from '@oxy.so/bloom/tenancy';

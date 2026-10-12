@@ -9,7 +9,8 @@
  *   lease once approved — through `/contracts/new?application=<id>`, the one
  *   lease-create entry point).
  */
-import React, { useMemo, useState } from 'react';
+import type React from 'react';
+import { useMemo, useState } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -39,8 +40,8 @@ import {
 } from '@oxy.so/bloom/icons';
 import { useOxy, openAccountDialog } from '@oxy.so/services';
 import {
-  Profile,
-  TenantApplication,
+  type Profile,
+  type TenantApplication,
   TenantApplicationStatus,
   formatMoney,
 } from '@homiio/shared-types';

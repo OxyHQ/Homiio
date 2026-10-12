@@ -6,7 +6,8 @@
  * `Item` conversation rows (`ConversationList`) and `Skeleton` rows while the
  * list loads; the shared `EmptyState` covers the signed-out and empty cases.
  */
-import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import type React from 'react';
+import { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';

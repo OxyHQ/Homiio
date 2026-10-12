@@ -6,7 +6,8 @@
  * Uses Bloom Typography for the body so it inherits the app's font and
  * line-height tokens. No raw `<Text>` or inline font sizes.
  */
-import React, { useCallback, useState } from 'react';
+import type React from 'react';
+import { useCallback, useState } from 'react';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { useTranslation } from 'react-i18next';
 

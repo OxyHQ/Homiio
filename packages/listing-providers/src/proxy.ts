@@ -106,7 +106,7 @@ export function browserBlockAssetsFromEnv(): boolean {
  * `true`, the worker process MUST run under an X server — a headed launch with no
  * `DISPLAY` throws. The sanctioned command (see the backend Dockerfile header) is:
  *
- *   xvfb-run -a --server-args="-screen 0 1920x1080x24" node packages/backend/dist/worker.js
+ *   xvfb-run -a --server-args="-screen 0 1920x1080x24" bun packages/backend/dist/worker.js
  *
  * Default `false` preserves the current headless behaviour, so this flag is inert
  * until infra flips it together with the xvfb-run worker command.
@@ -348,7 +348,12 @@ function isUndiciModule(value: unknown): value is UndiciModule {
 async function loadUndici(): Promise<UndiciModule | undefined> {
   const specifier = 'undici';
   try {
-    const mod: unknown = await import(specifier);
+    // This package compiles to CommonJS, so `require` is the loader every host
+    // that runs it provides — including jest's VM, which cannot execute a
+    // native `import()` and made this read as "undici is not installed".
+    const mod: unknown =
+      // biome-ignore lint/style/noCommonJs: this package compiles to CommonJS; see above
+      typeof require === 'function' ? require(specifier) : await import(specifier);
     if (isUndiciModule(mod)) return mod;
     const wrapped = (mod as { default?: unknown }).default;
     return isUndiciModule(wrapped) ? wrapped : undefined;
@@ -430,9 +435,6 @@ export async function createProxiedFetch(
 //     exactly how 19,497 failed jobs read as ordinary scraping noise.
 //     {@link describeProxyFailure} flattens the chain and lifts the status out.
 
-/** The tunnelling error undici raises when a proxy refuses CONNECT. */
-const PROXY_TUNNEL_STATUS_RE = /Proxy response \((\d{3})\) !== 200 when HTTP Tunneling/;
-
 /** How deep to walk an error's `cause` chain. undici's is three; allow slack. */
 const MAX_CAUSE_DEPTH = 8;
 
@@ -445,11 +447,68 @@ export interface ProxyFailureDescription {
 }
 
 /**
+ * WHICH CLIENT REFUSED THE TUNNEL DEPENDS ON THE RUNTIME, and the two report it
+ * in unrelated shapes. {@link createProxiedFetch} uses Bun's native `fetch({
+ * proxy })` under Bun and undici's `ProxyAgent` under Node, so the worker's
+ * runtime decides which of these it meets. Both were captured from a local TCP
+ * server answering CONNECT with each status (Bun 1.4.3, undici 8.10.2):
+ *
+ *   Bun:    Error: Proxy refused to open a tunnel: 402 Payment Required
+ *             { status: 402, statusText: 'Payment Required', headers: Headers }
+ *
+ *   undici: TypeError: fetch failed
+ *             DOMException
+ *               AbortError: Proxy response (402) !== 200 when HTTP Tunneling
+ *                 { code: 'UND_ERR_ABORTED' }   <- the status is in the TEXT only
+ *
+ * Reading only undici's wording is what made a Bun worker report an exhausted
+ * balance as `network` — a warning, never the `listing-proxy-unusable` marker
+ * the alarm counts. So the STRUCTURED status is read first, wherever a client
+ * provides one, and wording is the fallback for the client that does not.
+ */
+function tunnelStatusOf(
+  err: { status?: unknown; statusText?: unknown; headers?: unknown },
+  message: string,
+): number | undefined {
+  // Bun hands back the proxy's own response line on the error. Requiring all
+  // three fields keeps an unrelated error that merely has a numeric `status`
+  // (an upstream HTTP error a provider threw) from posing as a proxy refusal.
+  if (
+    isHttpStatus(err.status) &&
+    typeof err.statusText === 'string' &&
+    typeof err.headers === 'object' &&
+    err.headers !== null &&
+    typeof (err.headers as { get?: unknown }).get === 'function'
+  ) {
+    return err.status;
+  }
+  for (const pattern of TUNNEL_STATUS_MESSAGES) {
+    const matched = pattern.exec(message);
+    if (matched) return Number(matched[1]);
+  }
+  return undefined;
+}
+
+/**
+ * Wording fallbacks. undici's is the ONLY place its status exists; Bun's is a
+ * second line of defence should a release stop attaching `status`.
+ */
+const TUNNEL_STATUS_MESSAGES: readonly RegExp[] = [
+  /Proxy response \((\d{3})\) !== 200 when HTTP Tunneling/,
+  /^Proxy refused to open a tunnel: (\d{3})\b/,
+];
+
+function isHttpStatus(value: unknown): value is number {
+  return typeof value === 'number' && Number.isInteger(value) && value >= 100 && value <= 599;
+}
+
+/**
  * Flatten an error's `cause` chain and lift out the proxy's CONNECT status.
  *
  * Node's `fetch` reports a refused tunnel as a bare `TypeError: fetch failed`
- * and hides the status in nested causes, so this is the only way to tell "the
- * proxy refused us" apart from "the portal is down" without guessing.
+ * and hides the status in nested causes; Bun throws one error carrying it as a
+ * field (see {@link tunnelStatusOf}). This is the only way to tell "the proxy
+ * refused us" apart from "the portal is down" without guessing.
  */
 export function describeProxyFailure(error: unknown): ProxyFailureDescription {
   const chain: string[] = [];
@@ -461,13 +520,19 @@ export function describeProxyFailure(error: unknown): ProxyFailureDescription {
       chain.push(String(current));
       break;
     }
-    const err = current as { name?: unknown; message?: unknown; cause?: unknown };
+    const err = current as {
+      name?: unknown;
+      message?: unknown;
+      cause?: unknown;
+      status?: unknown;
+      statusText?: unknown;
+      headers?: unknown;
+    };
     const name = typeof err.name === 'string' ? err.name : 'Error';
     const message = typeof err.message === 'string' ? err.message : String(err.message ?? '');
     chain.push(`${name}: ${message}`);
 
-    const matched = PROXY_TUNNEL_STATUS_RE.exec(message);
-    if (matched && proxyStatus === undefined) proxyStatus = Number(matched[1]);
+    if (proxyStatus === undefined) proxyStatus = tunnelStatusOf(err, message);
 
     current = err.cause;
   }

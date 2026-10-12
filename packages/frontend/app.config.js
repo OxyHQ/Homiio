@@ -1,7 +1,7 @@
 const pkg = require('./package.json');
 const { oxySplashScreenPlugin } = require('@oxy.so/expo-splash/config');
 
-module.exports = function (config) {
+module.exports = (config) => {
   /**
    * App version number. Should be incremented as part of a release cycle.
    */

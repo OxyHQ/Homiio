@@ -2,7 +2,7 @@
  * The Saved page's "Saved searches" section: every saved search as a
  * `SavedSearchCard`, with loading, error and empty states.
  */
-import React from 'react';
+import type React from 'react';
 import { View } from 'react-native';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';

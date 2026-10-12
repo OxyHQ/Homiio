@@ -68,6 +68,7 @@ xauth -f "$auth_file" add ":$server_num" . "$(mcookie)"
 Xvfb ":$server_num" $server_args -nolisten tcp -auth "$auth_file" >"$error_file" 2>&1 &
 xvfb_pid=$!
 command_pid=''
+stop_signal=''
 
 cleanup() {
   trap - EXIT INT TERM
@@ -78,7 +79,25 @@ cleanup() {
   wait "$xvfb_pid" 2>/dev/null || true
   rm -rf "$run_dir"
 }
-trap cleanup EXIT INT TERM
+
+# A STOP SIGNAL IS FORWARDED, AND THEN WAITED OUT.
+#
+# This wrapper is the direct child of tini (PID 1), so the SIGTERM ECS sends on
+# a rollout lands HERE, not on the worker. It used to run cleanup and exit 143
+# at once: tini then exited, the container went with it, and the worker was
+# killed mid-shutdown — its graceful close of BullMQ and Postgres never ran and
+# the task exited 143 instead of the worker's own 0. Now the signal goes to the
+# command, the wrapper keeps waiting until the command has actually exited, and
+# the container's exit code is the command's.
+forward() {
+  stop_signal=$1
+  if [ -n "$command_pid" ]; then
+    kill "-$1" "$command_pid" 2>/dev/null || true
+  fi
+}
+trap cleanup EXIT
+trap 'forward TERM' TERM
+trap 'forward INT' INT
 
 attempt=0
 while [ "$attempt" -lt 200 ]; do
@@ -100,11 +119,23 @@ if [ ! -S "/tmp/.X11-unix/X${server_num}" ]; then
   exit 1
 fi
 
+# Stopped before the command ever started: there is nothing to hand over to.
+if [ -n "$stop_signal" ]; then
+  exit 143
+fi
+
 DISPLAY=":$server_num" XAUTHORITY="$auth_file" "$@" &
 command_pid=$!
+# `wait` returns early (status > 128) whenever a trapped signal arrives, while
+# the command is still shutting down. Keep waiting until it is really gone: a
+# finished child stays visible to `kill -0` until a `wait` reaps it, so the
+# loop ends only on the `wait` that returned the command's own status.
 set +e
-wait "$command_pid"
-status=$?
+while :; do
+  wait "$command_pid"
+  status=$?
+  kill -0 "$command_pid" 2>/dev/null || break
+done
 set -e
 command_pid=''
 exit "$status"

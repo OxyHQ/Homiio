@@ -16,7 +16,8 @@
  * function-form-`style` constraint (AGENTS.md §NativeWind Pressable); it's its own
  * component, so there are never hooks inside a `.map`.
  */
-import React, { useState } from 'react';
+import type React from 'react';
+import { useState } from 'react';
 import { Platform, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
 const IS_WEB = Platform.OS === 'web';

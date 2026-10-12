@@ -1,4 +1,4 @@
-import { ScraperOptions } from '../services/scraperService';
+import type { ScraperOptions } from '../services/scraperService';
 
 export interface ScrapeSource extends ScraperOptions {
   pages?: number;

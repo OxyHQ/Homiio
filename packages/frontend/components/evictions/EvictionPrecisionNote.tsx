@@ -20,7 +20,7 @@
  *  - **published** — a centre and a radius.
  */
 
-import React from 'react';
+import type React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Admonition } from '@oxy.so/bloom/admonition';
 import {

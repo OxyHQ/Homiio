@@ -12,7 +12,7 @@
  * there are no comparables, the call errors, or while loading — the price block
  * above already owns the section's loading/empty affordances.
  */
-import React from 'react';
+import type React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 

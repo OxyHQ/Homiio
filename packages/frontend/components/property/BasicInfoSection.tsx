@@ -11,7 +11,7 @@
  * Bloom Typography + Chip (source) + Admonition (viewing banner) + Button —
  * no raw `<Text>`, no hand-rolled chips or banners.
  */
-import React from 'react';
+import type React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
@@ -31,7 +31,7 @@ import { TruncatedDescription } from '@/components/ui/TruncatedDescription';
 import { SECTION_GUTTER } from '@/components/property/Section';
 import { colors } from '@/styles/colors';
 import { spacing } from '@/constants/styles';
-import { type Property } from '@homiio/shared-types';
+import type { Property } from '@homiio/shared-types';
 import type { RentalMode } from '@/utils/propertyUtils';
 
 interface Props {

@@ -121,7 +121,7 @@ export function applyOfferingRulesForUpdate(
   // `validateOfferings` inspects each block structurally (object-presence +
   // numeric price), so the raw whitelisted values flow through unchanged.
   const pick = (key: keyof OfferingBearing): unknown =>
-    Object.prototype.hasOwnProperty.call(data, key) ? data[key] : current[key];
+    Object.hasOwn(data, key) ? data[key] : current[key];
 
   const effective: OfferingBearing = {
     offerings: pick('offerings'),

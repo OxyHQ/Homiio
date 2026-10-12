@@ -23,7 +23,7 @@
  *    out of user input. The five real sort fields are the only ones honoured.
  */
 
-import { Request, Response, NextFunction } from 'express';
+import type { Request, Response, NextFunction } from 'express';
 import { sql, type SQL } from 'drizzle-orm';
 import { describeErrorForLog, paginationResponse } from '../../middlewares/errorHandler';
 import { logger } from '../../middlewares/logging';

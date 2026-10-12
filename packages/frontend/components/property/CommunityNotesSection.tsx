@@ -12,7 +12,8 @@
  * `CommunityNoteCard`s capped at `maxVisible` with a "Show all" toggle + a
  * "View all" link to the address page.
  */
-import React, { useMemo, useState } from 'react';
+import type React from 'react';
+import { useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';

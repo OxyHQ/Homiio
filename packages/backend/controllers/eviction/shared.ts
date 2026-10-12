@@ -33,7 +33,7 @@
  */
 
 import { eq } from 'drizzle-orm';
-import {
+import type {
   EvictionHelpNeedType,
   EvictionLocationAccessPurpose,
   EvictionReportReason,
