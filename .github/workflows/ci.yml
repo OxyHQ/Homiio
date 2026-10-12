@@ -139,7 +139,8 @@ permissions:
   contents: read
 
 env:
-  # Same bun as deploy-frontends.yml AND packages/backend/Dockerfile. A lockfile
+  # Same bun as package.json's `packageManager`, which deploy-frontends.yml reads
+  # directly, AND packages/backend/Dockerfile. A lockfile
   # read by two different bun versions is how `lockfile had changes, but lockfile
   # is frozen` arrives in a deploy that changed nothing.
   #
@@ -148,8 +149,9 @@ env:
   # true and it is the argument FOR pinning it, not against: with no lockfile the
   # bun version is the only thing deciding how those ranges resolve, so an
   # unpinned install lets an identical commit produce different images. It is a
-  # third pin now, and `.github/scripts/check-version-pins.sh` is what keeps the
-  # three in step instead of goodwill.
+  # third pin now, and `.github/scripts/check-version-pins.sh` holds this value,
+  # the Dockerfile's and any literal workflow `bun-version:` to `packageManager`
+  # instead of goodwill.
   BUN_VERSION: '1.4.3'
 
 jobs:

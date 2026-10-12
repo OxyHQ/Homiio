@@ -35,8 +35,8 @@
 ##
 
 # ── Build stage ───────────────────────────────────────────────────
-# Kept in step with `BUN_VERSION` in .github/workflows/ci.yml by
-# .github/scripts/check-version-pins.sh, which fails CI if the two drift.
+# Must equal `packageManager` in the root package.json (and ci.yml's
+# `BUN_VERSION`); .github/scripts/check-version-pins.sh fails CI if they drift.
 ARG BUN_VERSION=1.4.3
 
 # Bun comes from its own published image at that version, copied in as one

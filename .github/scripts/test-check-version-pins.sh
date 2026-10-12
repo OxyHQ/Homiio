@@ -25,7 +25,7 @@ seed() {
   rm -rf "$WORKDIR/tree"
   mkdir -p "$WORKDIR/tree/.github/scripts" "$WORKDIR/tree/.github/workflows" "$WORKDIR/tree/packages/backend"
   cp "$SCRIPTS/check-version-pins.sh" "$WORKDIR/tree/.github/scripts/"
-  cp "$REPO/.github/workflows/ci.yml" "$WORKDIR/tree/.github/workflows/"
+  cp "$REPO"/.github/workflows/*.yml "$WORKDIR/tree/.github/workflows/"
   cp "$REPO/packages/backend/Dockerfile" "$WORKDIR/tree/packages/backend/"
   cp "$REPO/package.json" "$WORKDIR/tree/"
 }
@@ -67,6 +67,29 @@ expect "bun installed through npm is caught" 1 "unpinned bun install through npm
 seed
 sed -i '/oven\/bun/d' "$WORKDIR/tree/packages/backend/Dockerfile"
 expect "a missing bun stage fails instead of passing vacuously" 1 "cannot pass vacuously"
+
+seed
+sed -i -E 's/"packageManager": "bun@[^"]+"/"packageManager": "bun@9.9.9"/' "$WORKDIR/tree/package.json"
+expect "a packageManager bump the image and CI did not follow is caught" 1 "package.json pins bun@9.9.9"
+
+seed
+sed -i "s/^  BUN_VERSION: '.*'/  BUN_VERSION: '9.9.9'/" "$WORKDIR/tree/.github/workflows/ci.yml"
+expect "ci.yml drifting from packageManager is caught" 1 "ci.yml BUN_VERSION says '9.9.9'"
+
+seed
+cat > "$WORKDIR/tree/.github/workflows/stray.yml" <<'YAML'
+jobs:
+  x:
+    steps:
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "9.9.9"
+YAML
+expect "a literal bun-version in another workflow is caught" 1 "stray.yml"
+
+seed
+sed -i -E 's/"packageManager": "bun@[^"]+"/"packageManager": "bun"/' "$WORKDIR/tree/package.json"
+expect "a missing packageManager pin fails instead of passing vacuously" 1 "cannot pass vacuously"
 
 seed
 sed -i 's/^FROM node:[0-9]*/FROM node:18/' "$WORKDIR/tree/packages/backend/Dockerfile"
