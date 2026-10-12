@@ -68,6 +68,11 @@ ENV PUPPETEER_SKIP_DOWNLOAD=true \
 # resolve, so an unpinned bun means the image built today and the image built
 # next month can install different dependency graphs from an identical commit.
 COPY --from=bun-bin /usr/local/bin/bun /usr/local/bin/bun
+# `bunx` is bun invoked under that name; the official install ships it as a
+# symlink, and copying only the binary dropped it. The workspace `build`
+# scripts run `bunx tsc`, so without it this stage fails with exit 127 (every
+# deploy from #627 to the change that added this line).
+RUN ln -s bun /usr/local/bin/bunx && test "$(bunx --version)" = "$BUN_VERSION"
 
 WORKDIR /app
 
