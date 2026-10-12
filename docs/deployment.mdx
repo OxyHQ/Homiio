@@ -23,6 +23,37 @@ Workflow: `.github/workflows/deploy-aws.yml`
   compiled commit, separate ECS service (`app-homiio-worker.tf` in oxy-infra);
   command runs `packages/backend/dist/worker.js`. The API deploys the `api`
   target, which does not contain Playwright/Chromium/X11.
+- Runtimes, per target (since 2026-10): the `api` target runs on **Bun**
+  (`oven/bun:<packageManager version>-slim`, Debian/glibc, `CMD ["bun",
+  "packages/backend/dist/server.js"]` under tini), and the `pre` migrator
+  one-shot in `.github/scripts/deploy-ecs-image.sh` runs `bun`. The `worker`
+  target stays on **Node** (`node:22-bookworm-slim`, no bun in the image): its
+  command lives in the running task definition (`xvfb-run … node
+  packages/backend/dist/worker.js`, from oxy-infra and carried forward by every
+  deploy, since the worker service ignores terraform task-definition changes),
+  and the `post` migrator in `deploy-aws.yml` runs `node` on that image. Every
+  command must name its own image's runtime: `bun` against the worker image
+  dies, and `node` against the API image silently runs Bun (the `oven/bun`
+  image's `node` is a symlink to bun). `deployMigrationWiring.test.ts` reads
+  each target's `CMD` and holds the two migrator commands to it.
+- Why the worker is not on Bun yet, measured 2026-10-12: Playwright 1.61.1
+  launches headless and headed (Xvfb) Chromium under Bun, but the residential
+  proxy path is runtime-dependent. Under Bun, `createProxiedFetch` uses Bun's
+  native `fetch` `proxy` option instead of undici's `ProxyAgent`, and a proxy
+  refusing CONNECT with 402 surfaces as `Proxy refused to open a tunnel: 402
+  Payment Required`, which `describeProxyFailure` does not parse. The proxy
+  check then reports `network` instead of `billing`, so the
+  `listing-proxy-unusable` alarm (oxy-infra) would never fire for the outage it
+  exists for. Moving the worker needs that classification fixed, the proxied
+  fetch path proven on the real proxy, the worker image to ship bun, and only
+  then the worker command switched (in the deploy, since terraform no longer
+  reaches the running revision).
+- CI's `image-smoke` job builds both targets and runs
+  `.github/scripts/smoke-api-image.sh`: the deploy's own migrator commands on
+  their lanes' images, `/health` 200 from the API image's default CMD, Bun under
+  tini, exit 0 on SIGTERM, and a non-zero exit when the database is
+  unreachable. The backend job also runs the unit suite under `bun test`
+  (`test:bun`).
 
 ## Frontend (Cloudflare Worker)
 
