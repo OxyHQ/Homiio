@@ -50,6 +50,30 @@ const deployScript = readFileSync(
   join(REPOSITORY_ROOT, '.github', 'scripts', 'deploy-ecs-image.sh'),
   'utf8',
 );
+const dockerfile = readFileSync(join(REPOSITORY_ROOT, 'packages', 'backend', 'Dockerfile'), 'utf8');
+
+/**
+ * The runtime a Dockerfile TARGET runs: the first word of its exec-form `CMD`.
+ *
+ * The two targets run different runtimes (the API Bun, the worker Node), and
+ * each migrator one-shot runs on one of them: `pre` on the API lane's image,
+ * `post` on the worker's. A one-shot naming the other target's runtime either
+ * dies (`bun` against the Node worker image) or silently runs something it does
+ * not name (`node` against the Bun image is a symlink to bun). Reading the
+ * runtime off the image keeps the commands tied to it instead of to a literal
+ * that a runtime change would leave behind. Returns '' when the target or its
+ * CMD is missing, which no assertion below accepts.
+ */
+const targetRuntime = (target: string): string => {
+  const start = dockerfile.search(new RegExp(`^FROM \\S+ AS ${target}$`, 'm'));
+  if (start === -1) return '';
+  const rest = dockerfile.slice(start + 1);
+  const next = rest.search(/^FROM /m);
+  const stage = next === -1 ? rest : rest.slice(0, next);
+  const cmds = [...stage.matchAll(/^CMD (\[.*\])$/gm)];
+  if (cmds.length !== 1) return '';
+  return (JSON.parse(cmds[0][1]) as string[])[0] ?? '';
+};
 
 /** The name of each lane's step, in the order the job runs them. */
 const BUILD_STEP = 'Build and push API + listing worker (linux/arm64)';
@@ -196,12 +220,17 @@ describe('the deploy applies migrations', () => {
     expect(pre[0]).toContain('--phase=pre');
     expect(post[0]).toContain('--phase=post');
 
-    // `node`, not `bun`: the runtime image installs production dependencies
-    // only and its CMD is node. The path this replaced named a file that has
-    // never existed here, which is why `RUN_MIGRATIONS=true` could not have
-    // worked even had something set it.
+    // Each phase names the runtime of the image it runs on: `pre` the API
+    // target's (Bun), `post` the worker target's (Node). The literals pin the
+    // current split so a change to either is deliberate; the comparison with
+    // the Dockerfile is what keeps a command from outliving its image. The path
+    // the original command named never existed here, which is why
+    // `RUN_MIGRATIONS=true` could not have worked even had something set it.
+    expect(targetRuntime('api')).toBe('bun');
+    expect(targetRuntime('worker')).toBe('node');
+    expect(pre[0][0]).toBe(targetRuntime('api'));
+    expect(post[0][0]).toBe(targetRuntime('worker'));
     for (const command of [pre[0], post[0]]) {
-      expect(command[0]).toBe('node');
       expect(command[1]).toBe('packages/backend/dist/db/migrate.js');
     }
 

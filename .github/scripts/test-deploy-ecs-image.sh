@@ -631,7 +631,7 @@ diff -u \
 # and so recorded the wrong one by name.
 run_release migration-failure false true false 1
 printf '%s\n' \
-  'task:node packages/backend/dist/db/migrate.js --target-database=homiio --phase=pre' \
+  'task:bun packages/backend/dist/db/migrate.js --target-database=homiio --phase=pre' \
   tasklogs \
   >"$test_directory/migration-failure/expected.log"
 diff -u \
@@ -640,13 +640,15 @@ diff -u \
 assert_output_contains migration-failure "[migration] fixture failure"
 assert_aws_log_lacks_pattern migration-failure '^service:' "Failed migration reached update-service."
 # The path this replaced -- `bun packages/backend/dist/scripts/migrate.js` -- was
-# wrong three ways at once, and the last one is why nothing noticed: `bun` is not
-# in the runtime image (it runs `node`), `tsconfig.build.json` EXCLUDES
+# wrong three ways at once, and the last one is why nothing noticed: `bun` was not
+# in the runtime image then (it ran `node`), `tsconfig.build.json` EXCLUDES
 # `scripts/` from the emit, and no `scripts/migrate.ts` has ever existed here. So
 # `RUN_MIGRATIONS=true` had never once worked in this repository. Asserting the
 # absence of the old path keeps a future edit from reintroducing either half.
 assert_aws_log_lacks migration-failure "dist/scripts/migrate.js" "The migration one-shot ran the nonexistent scripts/migrate.js path."
-assert_aws_log_lacks_pattern migration-failure '^task:bun ' "The migration one-shot invoked bun; the runtime image only has node."
+# The `pre` one-shot runs on the API image, which is Bun: its `node` is only a
+# symlink to bun, so a `node` command there would run Bun while saying otherwise.
+assert_aws_log_lacks_pattern migration-failure '^task:node ' "The pre migration one-shot invoked node; it runs on the API image, whose runtime is bun."
 
 # ORDER IS THE ASSERTION: the migration one-shot runs BEFORE `update-service`.
 #
@@ -656,7 +658,7 @@ assert_aws_log_lacks_pattern migration-failure '^task:bun ' "The migration one-s
 # for both entries would pass either way round.
 run_release migration-order true true false 0
 printf '%s\n' \
-  'task:node packages/backend/dist/db/migrate.js --target-database=homiio --phase=pre' \
+  'task:bun packages/backend/dist/db/migrate.js --target-database=homiio --phase=pre' \
   'service:arn:aws:ecs:test:task-definition/deploy-test:2:desired=1' \
   smoke \
   task:reconcile \
@@ -698,7 +700,7 @@ DEPLOY_TEST_APP=deploy-test \
 DEPLOY_TEST_MIGRATION_SERVICE=deploy-test \
   run_release owning-lane-runs-migration true true false 0
 printf '%s\n' \
-  'task:node packages/backend/dist/db/migrate.js --target-database=homiio --phase=pre' \
+  'task:bun packages/backend/dist/db/migrate.js --target-database=homiio --phase=pre' \
   'service:arn:aws:ecs:test:task-definition/deploy-test:2:desired=1' \
   smoke \
   task:reconcile \
@@ -810,7 +812,7 @@ DEPLOY_TEST_MIGRATION_SERVICE="$workflow_migration_service" \
 DEPLOY_TEST_POST_DEPLOY_TASK_COMMAND_JSON=none \
   run_release workflow-api-lane-migrates true "$workflow_run_migrations" false 0
 printf '%s\n' \
-  'task:node packages/backend/dist/db/migrate.js --target-database=homiio --phase=pre' \
+  'task:bun packages/backend/dist/db/migrate.js --target-database=homiio --phase=pre' \
   'service:arn:aws:ecs:test:task-definition/deploy-test:2:desired=1' \
   smoke \
   >"$test_directory/workflow-api-lane-migrates/expected.log"
@@ -857,7 +859,7 @@ DEPLOY_TEST_TASK_LAST_STATUS=RUNNING
 run_release migration-task-never-stops false true false 0
 DEPLOY_TEST_TASK_LAST_STATUS=STOPPED
 printf '%s\n' \
-  'task:node packages/backend/dist/db/migrate.js --target-database=homiio --phase=pre' \
+  'task:bun packages/backend/dist/db/migrate.js --target-database=homiio --phase=pre' \
   >"$test_directory/migration-task-never-stops/expected.log"
 diff -u \
   "$test_directory/migration-task-never-stops/expected.log" \
@@ -967,7 +969,7 @@ assert_output_contains smoke-no-rollback-failure "Nothing was rolled back; this 
 # alia: four consecutive merges deployed red behind an unapplied 0016.
 run_release zero-desired-count true true false 0 false 0
 printf '%s\n' \
-  'task:node packages/backend/dist/db/migrate.js --target-database=homiio --phase=pre' \
+  'task:bun packages/backend/dist/db/migrate.js --target-database=homiio --phase=pre' \
   'service:arn:aws:ecs:test:task-definition/deploy-test:2:desired=0' \
   'task:reconcile' \
   >"$test_directory/zero-desired-count/expected.log"

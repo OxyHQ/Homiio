@@ -53,14 +53,18 @@ MIGRATION_SERVICE="${MIGRATION_SERVICE:-}"
 # than before it. Run first, a failure costs nothing, because nothing has been
 # routed yet.
 #
-# `node`, NOT `bun`: the production image runs `CMD ["node",
-# "packages/backend/dist/server.js"]` and its runtime stage installs production
-# dependencies only, so there is no bun in it. The path is `dist/db/migrate.js`
+# `bun`, because this table runs on the API lane's image, and the API target in
+# packages/backend/Dockerfile is `oven/bun` with `CMD ["bun",
+# "packages/backend/dist/server.js"]`. A command must name the runtime its image
+# ships: the API image has no real Node (its `node` is a symlink to bun), and
+# the WORKER image has no bun at all, which is why the `post` phase that runs on
+# the worker lane (deploy-aws.yml) still says `node`. Rolling the API back to a
+# Node image means reverting this line with it. The path is `dist/db/migrate.js`
 # because `tsconfig.build.json` EXCLUDES `scripts/` from the emit, which is why
 # the migrator lives at `packages/backend/db/migrate.ts` in the first place.
 #
 # This replaces a hardcoded `["bun","packages/backend/dist/scripts/migrate.js"]`
-# that was wrong on both counts and named a file that has never existed in this
+# that was wrong on both counts at the time (the image then ran Node) and named a file that has never existed in this
 # repository — so `RUN_MIGRATIONS=true` could never once have worked here. It
 # was also never set: nothing turned it on until 2026-08-10, by which point
 # production was four migrations behind and answering 500 on two routes.
@@ -82,7 +86,7 @@ MIGRATION_SERVICE="${MIGRATION_SERVICE:-}"
 #   ,
 #   {
 #     "label": "Postgres population floor",
-#     "command": ["node", "packages/backend/dist/db/assertPostgresPopulated.js"]
+#     "command": ["bun", "packages/backend/dist/db/assertPostgresPopulated.js"]
 #   }
 #
 # It goes LAST because it counts rows, so the schema has to exist before there is
@@ -90,7 +94,7 @@ MIGRATION_SERVICE="${MIGRATION_SERVICE:-}"
 MIGRATION_TASK_COMMANDS_JSON='[
   {
     "label": "Postgres migration",
-    "command": ["node", "packages/backend/dist/db/migrate.js", "--target-database=homiio", "--phase=pre"]
+    "command": ["bun", "packages/backend/dist/db/migrate.js", "--target-database=homiio", "--phase=pre"]
   }
 ]'
 # Exit code a smoke script uses to say "this failed, and rolling back cannot fix

@@ -18,6 +18,15 @@
 ## worker target contains Playwright, Chromium and X11; the API never scrapes
 ## and therefore must not carry or patch those bytes.
 ##
+## RUNTIMES DIFFER BY TARGET, ON PURPOSE. The API runs on Bun (`oven/bun`,
+## Debian/glibc like the install stages, so sharp's glibc prebuild matches); its
+## CMD and the `pre` migrator one-shot in .github/scripts/deploy-ecs-image.sh
+## both say `bun`. The worker stays on Node: its command lives in the running
+## task definition (oxy-infra `app-homiio-worker.tf`, carried forward by every
+## deploy) and its `post` migrator in deploy-aws.yml both say `node`, and the
+## residential-proxy client it depends on behaves differently under Bun (see
+## docs/deployment.mdx). A command must always name the runtime its image ships.
+##
 ## HEADED browser tier (LISTING_BROWSER_HEADED=true): DataDome/Kasada block
 ## headless Chromium, so the worker can launch a real HEADED browser to clear
 ## them. A headed launch needs an X display; this image bundles Xvfb (the
@@ -117,9 +126,9 @@ RUN bun run --filter @homiio/backend build
 RUN cp -r packages/backend/locales packages/backend/dist/locales
 
 # ── Production dependency stages ─────────────────────────────────
-# Bun and the native build toolchain live only in throwaway install stages.
-# The compiled runtime and migration tasks use Node, so shipping Bun added
-# hundreds of MiB without providing a supported production entry point.
+# The native build toolchain lives only in throwaway install stages. They are
+# glibc (Debian bookworm), the same libc as both runtime stages below, so the
+# sharp prebuild installed here is the one each runtime loads.
 FROM node:22-bookworm-slim AS production-manifests
 ARG BUN_VERSION
 
@@ -153,7 +162,8 @@ RUN node -e "const fs=require('fs'); const file='packages/backend/package.json';
     && rm -rf node_modules/@img/sharp-linuxmusl-* \
               node_modules/@img/sharp-libvips-linuxmusl-*
 
-# ── Common runtime ────────────────────────────────────────────────
+# ── Worker runtime (Node) ─────────────────────────────────────────
+# Node, not Bun: see the header. The API target at the bottom is the Bun one.
 FROM node:22-bookworm-slim AS runtime-common
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -206,18 +216,51 @@ RUN chmod 755 /usr/local/bin/xvfb-run \
 USER node
 CMD ["node", "packages/backend/dist/worker.js"]
 
-# ── API target (default/final stage) ──────────────────────────────
-FROM runtime-common AS api
+# ── API target (default/final stage): Bun ─────────────────────────
+# The pinned Bun image, Debian slim (glibc) like every install stage, so the
+# sharp prebuild api-deps installed is the one this runtime loads. It ships no
+# real Node: `node` on its PATH (/usr/local/bun-node-fallback-bin/node) is a
+# symlink to bun, so a stale `node ...` override would still run Bun while
+# claiming otherwise. Every command that targets this image names `bun`.
+#
+# The API ran on Node (node:22-bookworm-slim) until 2026-10. Rolling back is
+# reverting the change that made this switch: it moved this stage, its CMD and
+# the `pre` migrator command in deploy-ecs-image.sh together.
+FROM oven/bun:${BUN_VERSION}-slim AS api
+ARG BUN_VERSION
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      ca-certificates tini \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV NODE_ENV=production \
+    PUPPETEER_SKIP_DOWNLOAD=true \
+    PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
+    LOG_FILE=/tmp/homiio-app.log
+
+WORKDIR /app
+
+COPY --from=builder /app/packages/shared-types/dist packages/shared-types/dist
+COPY --from=builder /app/packages/listing-providers/dist packages/listing-providers/dist
+COPY --from=builder /app/packages/backend/dist packages/backend/dist
+COPY --from=builder /app/packages/backend/drizzle packages/backend/drizzle
 
 COPY --from=api-deps /app/package.json ./
 COPY --from=api-deps /app/packages packages/
 COPY --from=api-deps /app/node_modules node_modules/
 
-RUN node -e "require('sharp'); require('@homiio/shared-types'); require('@homiio/listing-providers')" \
+RUN bun -e "require('sharp'); require('@homiio/shared-types'); require('@homiio/listing-providers')" \
+    && test "$(bun --version)" = "$BUN_VERSION" \
+    && test "$(readlink -f "$(command -v node)")" = "$(readlink -f "$(command -v bun)")" \
     && test ! -d node_modules/playwright \
     && test ! -d /ms-playwright \
-    && test ! -e /usr/local/bin/bun \
     && test ! -e /usr/bin/Xvfb
 
-USER node
-CMD ["node", "packages/backend/dist/server.js"]
+EXPOSE 4000
+# tini is PID 1 and forwards SIGTERM to Bun, whose handler in server.ts drains
+# the server and the moderation outbox and exits 0. CI's image smoke
+# (.github/scripts/smoke-api-image.sh) asserts that whole chain.
+ENTRYPOINT ["/usr/bin/tini", "--"]
+# The image's own unprivileged user, uid/gid 1000 like Node's `node`.
+USER bun
+CMD ["bun", "packages/backend/dist/server.js"]
