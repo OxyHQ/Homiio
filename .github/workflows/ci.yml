@@ -150,7 +150,7 @@ env:
   # unpinned install lets an identical commit produce different images. It is a
   # third pin now, and `.github/scripts/check-version-pins.sh` is what keeps the
   # three in step instead of goodwill.
-  BUN_VERSION: '1.3.14'
+  BUN_VERSION: '1.4.3'
 
 jobs:
   # Which parts of the tree a PULL REQUEST touches, so the jobs whose inputs it

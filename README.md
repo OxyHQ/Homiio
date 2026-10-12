@@ -92,7 +92,7 @@ bun run dev:backend
 bun run dev:frontend
 ```
 
-Bun 1.3.14 and Node 22. Use `bun` and `bunx`, never npm, yarn or npx.
+Bun 1.4.3 and Node 22. Use `bun` and `bunx`, never npm, yarn or npx.
 
 The compose file runs `postgis/postgis:17-3.5` on port **5434** rather than 5432, because sibling Oxy services already hold 5432 and 5433 on a developer machine. Migrations run through `packages/backend/db/migrate.ts`; never `drizzle-kit migrate`, which does not understand this repo's `pre` / `post` deploy phases.
 
