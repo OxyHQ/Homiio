@@ -124,6 +124,20 @@ class OneSourceOfTruth(Fixture):
         self.write('.github/workflows/deploy.yml', GUARDED.replace('--recipe api', '--recipe api-worker'))
         self.assertEqual(self.run_check(), 1)
 
+    def test_a_second_workflow_that_lost_its_guard_fails(self):
+        # One guarded workflow must not cover another that builds the same
+        # recipe from guard outputs it no longer produces.
+        self.write('.github/workflows/one-shot.yml', 'jobs:\n  run:\n    steps:\n      - run: true # reviewed-image.py guard --recipe api\n'
+                   '      - uses: docker/build-push-action@x\n        with:\n          file: ${{ steps.reviewed.outputs.dockerfile }}\n')
+        self.assertEqual(self.run_check(), 1)
+
+    def test_a_per_recipe_step_id_that_lost_its_guard_fails(self):
+        # Two recipes in one job need distinct step ids (`reviewed_api`,
+        # `reviewed_worker`); those consumers are covered too.
+        self.write('.github/workflows/one-shot.yml', 'jobs:\n  run:\n    steps:\n'
+                   '      - run: docker build -f "$F" .\n        env:\n          F: ${{ steps.reviewed_worker.outputs.dockerfile }}\n')
+        self.assertEqual(self.run_check(), 1)
+
     def test_unknown_field_is_refused(self):
         self.set_recipe(dockerfileSha256='0' * 64)
         self.assertEqual(self.run_check(), 1)
