@@ -37,7 +37,7 @@
 # ── Build stage ───────────────────────────────────────────────────
 # Kept in step with `BUN_VERSION` in .github/workflows/ci.yml by
 # .github/scripts/check-version-pins.sh, which fails CI if the two drift.
-ARG BUN_VERSION=1.3.14
+ARG BUN_VERSION=1.4.3
 
 FROM node:22-bookworm-slim AS builder
 ARG BUN_VERSION
