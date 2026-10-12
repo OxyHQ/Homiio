@@ -22,7 +22,7 @@
   "dependencies": {
     "@homiio/shared-types": "workspace:*",
     "lz-string": "^1.5.0",
-    "undici": "^8.7.0"
+    "undici": "^8.11.2"
   },
   "peerDependencies": {
     "playwright": ">=1.40.0"
