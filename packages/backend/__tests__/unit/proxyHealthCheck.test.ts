@@ -23,7 +23,10 @@
  *    server, which exercises whichever client the executing runtime selects —
  *    undici under jest on Node, Bun's native fetch under `bun test`. CI runs
  *    this file both ways, which is the point: a wording change in either client
- *    turns one of them red instead of silencing the alarm.
+ *    turns one of them red instead of silencing the alarm. Under jest on Node 22
+ *    undici's fetch needs the host realm's `Symbol.dispose`, which
+ *    `jest.setupHostRealmSymbols.cjs` provides; without it every live undici
+ *    case dies in `removeAbortListener is not a function`, not in the code here.
  */
 
 import { createServer, type Server, type Socket } from 'node:net';
