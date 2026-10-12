@@ -39,12 +39,20 @@
 # `BUN_VERSION`); .github/scripts/check-version-pins.sh fails CI if they drift.
 ARG BUN_VERSION=1.4.3
 
+# Base images are pinned by multi-arch INDEX digest (linux/arm64 included).
+# The digest is what the build uses; the tag is only for readers and for
+# check-version-pins.sh. Moving to another bun or node release, or picking up a
+# rebuilt base for OS patches, needs a new digest here — and that edit changes
+# the build inputs, so it needs a new owner review and re-pin in
+# .github/scripts/reviewed-images.json.
+#
 # Bun comes from its own published image at that version, copied in as one
 # binary. Installing it through npm put a second package manager in the
-# build just to fetch the first.
-FROM oven/bun:${BUN_VERSION}-slim AS bun-bin
+# build just to fetch the first. A BUN_VERSION bump that forgets the digest
+# would silently keep the old bun, so the builder asserts the version below.
+FROM oven/bun:${BUN_VERSION}-slim@sha256:14a223fa35747ec728bce300ef85888bc5f7958164d15bbba6a54b22b52a3288 AS bun-bin
 
-FROM node:22-bookworm-slim AS builder
+FROM node:22.23-bookworm-slim@sha256:c3de60bf2f9dd0ac6370e6117950ff62d6e339527e7472301c9c78a017978392 AS builder
 ARG BUN_VERSION
 
 # Toolchain for any node-gyp fallback (sharp ships arm64 glibc prebuilds, but
@@ -68,6 +76,7 @@ ENV PUPPETEER_SKIP_DOWNLOAD=true \
 # resolve, so an unpinned bun means the image built today and the image built
 # next month can install different dependency graphs from an identical commit.
 COPY --from=bun-bin /usr/local/bin/bun /usr/local/bin/bun
+RUN test "$(bun --version)" = "$BUN_VERSION"
 
 WORKDIR /app
 
@@ -115,7 +124,7 @@ RUN cp -r packages/backend/locales packages/backend/dist/locales
 # Bun and the native build toolchain live only in throwaway install stages.
 # The compiled runtime and migration tasks use Node, so shipping Bun added
 # hundreds of MiB without providing a supported production entry point.
-FROM node:22-bookworm-slim AS production-manifests
+FROM node:22.23-bookworm-slim@sha256:c3de60bf2f9dd0ac6370e6117950ff62d6e339527e7472301c9c78a017978392 AS production-manifests
 ARG BUN_VERSION
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -149,7 +158,7 @@ RUN node -e "const fs=require('fs'); const file='packages/backend/package.json';
               node_modules/@img/sharp-libvips-linuxmusl-*
 
 # ── Common runtime ────────────────────────────────────────────────
-FROM node:22-bookworm-slim AS runtime-common
+FROM node:22.23-bookworm-slim@sha256:c3de60bf2f9dd0ac6370e6117950ff62d6e339527e7472301c9c78a017978392 AS runtime-common
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
       ca-certificates tini \

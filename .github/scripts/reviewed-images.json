@@ -7,7 +7,7 @@
       "dockerfile": "packages/backend/Dockerfile",
       "context": ".",
       "target": "api",
-      "buildInputsSha256": "3bf2f26234c83ff4c8db38b56d724bf9b3c118077bb7ac12639fd45ea659fd0d"
+      "buildInputsSha256": "3d939b5ae1b3c9bf8d2b1fe497127733063d5a3529871130ce89f5cefddfcdd6"
     },
     {
       "name": "homiio-worker",
@@ -15,7 +15,7 @@
       "dockerfile": "packages/backend/Dockerfile",
       "context": ".",
       "target": "worker",
-      "buildInputsSha256": "990aba814deb11d0860e3c30f4aecc67c71c2782d5be1c4a145be046c0ef8370"
+      "buildInputsSha256": "a98a3670e8ca09575afe8b9618310e138af7cfdab99dcfc28913c9abe26664bd"
     }
   ]
 }
