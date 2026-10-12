@@ -6,7 +6,7 @@
     "start": "RCT_METRO_PORT=8130 expo start --reset-cache --tunnel --clear",
     "dev": "RCT_METRO_PORT=8130 expo start --reset-cache --tunnel --clear",
     "reset-project": "node ./scripts/reset-project.js",
-    "clear-cache": "node ./scripts/clear-cache.js",
+    "clear-cache": "bun ./scripts/clear-cache.js",
     "android": "RCT_METRO_PORT=8130 expo run:android",
     "ios": "RCT_METRO_PORT=8130 expo run:ios",
     "web": "RCT_METRO_PORT=8130 expo start --web",

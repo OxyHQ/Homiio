@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Fails when a toolchain version is pinned in two places that have drifted.
 #
-# `packages/backend/Dockerfile` used to install bun with a bare
+# `packages/backend/Dockerfile` once installed bun with a bare
 # `npm install -g bun`, which is not a pin at all: the image built today and the
 # image built next month could resolve different bun versions from the same
 # commit. That matters more here than anywhere else in the repository, because
@@ -44,21 +44,28 @@ else
   printf 'bun pinned to %s in both ci.yml and packages/backend/Dockerfile\n' "$ci_bun"
 fi
 
-# Every `npm install -g bun` must carry the pin; one that does not is unpinned
-# however carefully the ARG above is maintained.
+# Bun enters the image only as the `oven/bun:${BUN_VERSION}` stage. Any other
+# oven/bun reference, or bun installed through npm, is unpinned however
+# carefully the ARG above is maintained.
 #
-# Matched on RUN lines only. Matching the bare phrase anywhere in the file
-# reported the comment above this Dockerfile's own install step — a check that
-# fires on prose about itself is the kind that gets deleted rather than fixed.
-run_installs=0
+# Matched on FROM/COPY/RUN lines only. Matching the bare phrase anywhere in the
+# file reported the Dockerfile's own comments — a check that fires on prose
+# about itself is the kind that gets deleted rather than fixed.
+pinned_stages=0
 while IFS= read -r line; do
-  run_installs=$((run_installs + 1))
-  [[ "$line" == *'bun@${BUN_VERSION}'* ]] && continue
-  fail "unpinned bun install in $DOCKERFILE: $line"
-done < <(grep -nE '^[[:space:]]*RUN .*npm install -g bun' "$DOCKERFILE" || true)
+  if [[ "$line" == *'oven/bun:${BUN_VERSION}'* ]]; then
+    pinned_stages=$((pinned_stages + 1))
+  else
+    fail "unpinned bun image in $DOCKERFILE: $line"
+  fi
+done < <(grep -nE '^[[:space:]]*(FROM|COPY)[^#]*oven/bun' "$DOCKERFILE" || true)
 
-if [[ "$run_installs" -eq 0 ]]; then
-  fail "no 'RUN … npm install -g bun' found in $DOCKERFILE — the check cannot pass vacuously"
+while IFS= read -r line; do
+  fail "unpinned bun install through npm in $DOCKERFILE: $line"
+done < <(grep -nE '^[[:space:]]*RUN .*npm (install|i) (-g|--global) bun' "$DOCKERFILE" || true)
+
+if [[ "$pinned_stages" -eq 0 ]]; then
+  fail "no 'FROM oven/bun:\${BUN_VERSION}' stage found in $DOCKERFILE — the check cannot pass vacuously"
 fi
 
 # --- node -------------------------------------------------------------------
