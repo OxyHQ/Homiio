@@ -149,7 +149,7 @@ export interface BrowserPoolOptions {
    * DataDome/Kasada fingerprint and block headless; a real headed browser under a
    * virtual display clears those challenges. The worker MUST then run under an X
    * server (no `DISPLAY` → headed launch throws), e.g.
-   * `xvfb-run -a --server-args="-screen 0 1920x1080x24" node packages/backend/dist/worker.js`.
+   * `xvfb-run -a --server-args="-screen 0 1920x1080x24" bun packages/backend/dist/worker.js`.
    * Default false → current headless behaviour.
    */
   headed?: boolean;

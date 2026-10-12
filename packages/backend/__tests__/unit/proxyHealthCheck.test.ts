@@ -2,27 +2,34 @@
  * The residential-proxy health check, and the cause-chain flattening that makes
  * its verdict readable in CloudWatch.
  *
- * WHERE THE ERROR SHAPES COME FROM. undici reports a refused CONNECT as a bare
- * `TypeError: fetch failed` with the status buried two `cause` levels down, and
- * `describeProxyFailure` exists only to survive that exact shape. The chains
- * below are not invented: they were captured from a real undici ProxyAgent
- * tunnelling to a local TCP server that answered CONNECT with each status, and
- * transcribed here verbatim.
+ * TWO CLIENTS, TWO ERROR SHAPES. `createProxiedFetch` uses Bun's native
+ * `fetch({ proxy })` under Bun and undici's `ProxyAgent` under Node, so the
+ * worker's RUNTIME decides which shape a refused CONNECT arrives in:
  *
- * They are a RECORDED FIXTURE rather than a live probe on purpose. Driving
- * undici's `fetch` inside this suite couples it to whichever runtime executes
- * the jest workers, and the two disagree: CI runs them under bun, where
- * `events.removeAbortListener` is missing and undici's fetch throws before
- * reaching any assertion, while a local run gets Node. A test that passes on
- * one machine and fails on the other measures the runtime, not this code.
+ *   undici: `TypeError: fetch failed` with the status only in the WORDING of an
+ *           `AbortError` two `cause` levels down.
+ *   Bun:    one `Error: Proxy refused to open a tunnel: 402 Payment Required`
+ *           carrying `status`, `statusText` and `headers` as fields.
  *
- * The cost is that an undici upgrade could change the wording without turning
- * anything red here. That is a real gap and the honest bound on what this file
- * proves: re-capture these strings when undici crosses a major, and note the
- * live pipeline surfaces the same failure through the `listing-proxy-unusable`
- * alarm regardless of how the message is worded.
+ * Only undici's was understood once, so a Bun worker read an exhausted balance
+ * as a `network` blip and the `listing-proxy-unusable` alarm could never fire.
+ *
+ * This file proves it twice:
+ *
+ *  - RECORDED FIXTURES of both shapes (captured from Bun 1.4.3 and undici 8.10.2
+ *    tunnelling to a local server answering CONNECT with each status), run on
+ *    either runtime, so the classifier is held to BOTH whichever one executes it.
+ *  - A LIVE PROBE through the real `createProxiedFetch` against a local CONNECT
+ *    server, which exercises whichever client the executing runtime selects —
+ *    undici under jest on Node, Bun's native fetch under `bun test`. CI runs
+ *    this file both ways, which is the point: a wording change in either client
+ *    turns one of them red instead of silencing the alarm. Under jest on Node 22
+ *    undici's fetch needs the host realm's `Symbol.dispose`, which
+ *    `jest.setupHostRealmSymbols.cjs` provides; without it every live undici
+ *    case dies in `removeAbortListener is not a function`, not in the code here.
  */
 
+import { createServer, type Server, type Socket } from 'node:net';
 import {
   checkResidentialProxy,
   describeProxyFailure,
@@ -30,13 +37,14 @@ import {
   parseResidentialProxyUrl,
   proxyCheckIntervalMinutesFromEnv,
   proxyHealthcheckUrlFromEnv,
+  type ResidentialProxyConfig,
 } from '@homiio/listing-providers';
 
 /**
  * The real chain undici produces when a proxy refuses CONNECT, captured as
  * described in this file's header. `status` is what the proxy answered with.
  */
-function refusedTunnelError(status: number): Error {
+function undiciRefusedTunnelError(status: number): Error {
   const inner = Object.assign(new Error(`Proxy response (${status}) !== 200 when HTTP Tunneling`), {
     name: 'AbortError',
     code: 'UND_ERR_ABORTED',
@@ -44,6 +52,20 @@ function refusedTunnelError(status: number): Error {
   const middle = Object.assign(new Error('Request was cancelled.'), { cause: inner });
   return Object.assign(new TypeError('fetch failed'), { cause: middle });
 }
+
+/** What Bun's native `fetch({ proxy })` throws for the same refusal. */
+function bunRefusedTunnelError(status: number, statusText = 'Payment Required'): Error {
+  return Object.assign(new Error(`Proxy refused to open a tunnel: ${status} ${statusText}`), {
+    status,
+    statusText,
+    headers: new Headers({ 'content-type': 'text/plain' }),
+  });
+}
+
+const REFUSED_TUNNEL_SHAPES = [
+  ['undici (Node)', undiciRefusedTunnelError],
+  ['Bun native fetch', bunRefusedTunnelError],
+] as const;
 
 /** What undici throws when the proxy host itself is unreachable — no status. */
 function unreachableProxyError(): Error {
@@ -80,6 +102,30 @@ describe('describeProxyFailure', () => {
     expect(described.chain).toHaveLength(3);
   });
 
+  it("reads Bun's structured status, not its wording", () => {
+    // Wording a regex would never match: only the fields can carry the status.
+    const reworded = Object.assign(new Error('tunnel said no'), {
+      status: 402,
+      statusText: 'Payment Required',
+      headers: new Headers(),
+    });
+
+    expect(describeProxyFailure(reworded).proxyStatus).toBe(402);
+  });
+
+  it("falls back to Bun's wording should the fields ever go missing", () => {
+    const bare = new Error('Proxy refused to open a tunnel: 402 Payment Required');
+
+    expect(describeProxyFailure(bare).proxyStatus).toBe(402);
+  });
+
+  it('does not mistake an upstream HTTP error with a numeric status for a refused tunnel', () => {
+    // A provider error carrying the PORTAL's status is not the proxy's answer.
+    const upstream = Object.assign(new Error('HTTP 403: Forbidden'), { status: 403 });
+
+    expect(describeProxyFailure(upstream).proxyStatus).toBeUndefined();
+  });
+
   it('reports no status when the failure is not a refused tunnel', () => {
     const described = describeProxyFailure(new TypeError('fetch failed'));
 
@@ -102,39 +148,41 @@ describe('describeProxyFailure', () => {
 });
 
 describe('checkResidentialProxy', () => {
-  it('classifies a 402 as billing — the failure no retry can fix', async () => {
-    const result = await checkResidentialProxy(PROXY, {
-      fetchImpl: () => Promise.reject(refusedTunnelError(402)),
+  describe.each(REFUSED_TUNNEL_SHAPES)('a refusal as %s reports it', (_client, refusal) => {
+    it('classifies a 402 as billing — the failure no retry can fix', async () => {
+      const result = await checkResidentialProxy(PROXY, {
+        fetchImpl: () => Promise.reject(refusal(402)),
+      });
+
+      expect(result.ok).toBe(false);
+      if (result.ok) throw new Error('unreachable');
+      expect(result.reason).toBe('billing');
+      expect(result.proxyStatus).toBe(402);
+      // The detail is what a responder reads at 3am; it must name the status.
+      expect(result.detail).toContain('402');
     });
 
-    expect(result.ok).toBe(false);
-    if (result.ok) throw new Error('unreachable');
-    expect(result.reason).toBe('billing');
-    expect(result.proxyStatus).toBe(402);
-    // The detail is what a responder reads at 3am; it must name the status.
-    expect(result.detail).toContain('402');
-  });
+    it('classifies a 407 as auth', async () => {
+      const result = await checkResidentialProxy(PROXY, {
+        fetchImpl: () => Promise.reject(refusal(407)),
+      });
 
-  it('classifies a 407 as auth', async () => {
-    const result = await checkResidentialProxy(PROXY, {
-      fetchImpl: () => Promise.reject(refusedTunnelError(407)),
+      expect(result.ok).toBe(false);
+      if (result.ok) throw new Error('unreachable');
+      expect(result.reason).toBe('auth');
+      expect(result.proxyStatus).toBe(407);
     });
 
-    expect(result.ok).toBe(false);
-    if (result.ok) throw new Error('unreachable');
-    expect(result.reason).toBe('auth');
-    expect(result.proxyStatus).toBe(407);
-  });
+    it.each([403, 502, 503])('classifies a %i as refused, not as a blip', async (status) => {
+      const result = await checkResidentialProxy(PROXY, {
+        fetchImpl: () => Promise.reject(refusal(status)),
+      });
 
-  it('classifies any other refusal as refused, not as a blip', async () => {
-    const result = await checkResidentialProxy(PROXY, {
-      fetchImpl: () => Promise.reject(refusedTunnelError(403)),
+      expect(result.ok).toBe(false);
+      if (result.ok) throw new Error('unreachable');
+      expect(result.reason).toBe('refused');
+      expect(result.proxyStatus).toBe(status);
     });
-
-    expect(result.ok).toBe(false);
-    if (result.ok) throw new Error('unreachable');
-    expect(result.reason).toBe('refused');
-    expect(result.proxyStatus).toBe(403);
   });
 
   it('classifies an unreachable proxy as network, so a blip never pages anyone', async () => {
@@ -170,6 +218,104 @@ describe('checkResidentialProxy', () => {
     });
 
     expect(result.ok).toBe(false);
+  });
+});
+
+/**
+ * A local stand-in for the residential proxy: answers every CONNECT with
+ * `respond`, and records the request line so the test can prove the real
+ * client tunnelled THROUGH it rather than failing somewhere before it.
+ */
+async function startConnectProxy(
+  respond: (socket: Socket) => void,
+): Promise<{ port: number; requestLines: string[]; close: () => Promise<void> }> {
+  const requestLines: string[] = [];
+  const sockets = new Set<Socket>();
+  const server: Server = createServer((socket) => {
+    sockets.add(socket);
+    socket.on('close', () => sockets.delete(socket));
+    socket.on('error', () => undefined);
+    socket.once('data', (chunk) => {
+      requestLines.push(chunk.toString('latin1').split('\r\n')[0] ?? '');
+      respond(socket);
+    });
+  });
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const address = server.address();
+  if (address === null || typeof address === 'string') throw new Error('no port');
+  return {
+    port: address.port,
+    requestLines,
+    close: () =>
+      new Promise<void>((resolve) => {
+        for (const socket of sockets) socket.destroy();
+        server.close(() => resolve());
+      }),
+  };
+}
+
+function answerConnectWith(status: number, reason: string): (socket: Socket) => void {
+  return (socket) => {
+    const body = 'out of balance\n';
+    socket.end(
+      `HTTP/1.1 ${status} ${reason}\r\nContent-Type: text/plain\r\n` +
+        `Content-Length: ${body.length}\r\nConnection: close\r\n\r\n${body}`,
+    );
+  };
+}
+
+function proxyConfigAt(port: number): ResidentialProxyConfig {
+  const config = parseResidentialProxyUrl(`http://user:pass@127.0.0.1:${port}`);
+  if (!config) throw new Error('unparseable local proxy URL');
+  return config;
+}
+
+const RUNTIME_CLIENT =
+  typeof process.versions.bun === 'string' ? "Bun's native fetch" : "undici's ProxyAgent";
+
+describe(`checkResidentialProxy through a real CONNECT proxy (${RUNTIME_CLIENT})`, () => {
+  // No `fetchImpl`: this is `createProxiedFetch`, so the client under test is
+  // the one this runtime would use in the worker. The target is never reached —
+  // the proxy refuses the tunnel — so `.invalid` keeps it off the network.
+  const TARGET = 'https://homiio-proxy-check.invalid/generate_204';
+
+  it.each([
+    [402, 'Payment Required', 'billing'],
+    [407, 'Proxy Authentication Required', 'auth'],
+    [403, 'Forbidden', 'refused'],
+    [502, 'Bad Gateway', 'refused'],
+    [503, 'Service Unavailable', 'refused'],
+  ] as const)('a CONNECT answered %i %s is %s', async (status, reason, expected) => {
+    const proxy = await startConnectProxy(answerConnectWith(status, reason));
+    try {
+      const result = await checkResidentialProxy(proxyConfigAt(proxy.port), {
+        url: TARGET,
+        timeoutMs: 10_000,
+      });
+
+      expect(proxy.requestLines[0]).toMatch(/^CONNECT homiio-proxy-check\.invalid:443 HTTP\/1\.1$/);
+      expect(result).toMatchObject({ ok: false, reason: expected, proxyStatus: status });
+    } finally {
+      await proxy.close();
+    }
+  });
+
+  it('a proxy that hangs up without answering is a network blip, with no status', async () => {
+    const proxy = await startConnectProxy((socket) => socket.destroy());
+    try {
+      const result = await checkResidentialProxy(proxyConfigAt(proxy.port), {
+        url: TARGET,
+        timeoutMs: 10_000,
+      });
+
+      expect(proxy.requestLines).toHaveLength(1);
+      expect(result.ok).toBe(false);
+      if (result.ok) throw new Error('unreachable');
+      expect(result.reason).toBe('network');
+      expect(result.proxyStatus).toBeUndefined();
+    } finally {
+      await proxy.close();
+    }
   });
 });
 

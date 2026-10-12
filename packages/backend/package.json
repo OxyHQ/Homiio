@@ -19,6 +19,7 @@
     "seed:properties": "ts-node --transpile-only scripts/seedProperties.ts",
     "test": "cd ../listing-providers && bun run build && cd ../backend && NODE_OPTIONS='--max-old-space-size=6144' jest",
     "test:watch": "jest --watch",
+    "test:bun": "bun test --isolate --path-ignore-patterns='**/likePattern.test.ts' --path-ignore-patterns='**/gbIngest.test.ts' --path-ignore-patterns='**/ingestionGeocode.test.ts' --path-ignore-patterns='**/cityCoverSync.test.ts' --path-ignore-patterns='**/cityPropertiesPagination.test.ts' --path-ignore-patterns='**/responseInternalLeaks.test.ts' --path-ignore-patterns='**/priceEthicsService.test.ts' __tests__/unit",
     "test:constraints:mutate": "node scripts/mutation-test-property-constraints.mjs",
     "test:images": "ts-node --transpile-only scripts/test-image-upload.ts",
     "test:webhook": "node scripts/test-stripe-webhook.js",
