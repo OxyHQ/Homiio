@@ -22,7 +22,12 @@ module.exports = {
   // see jest.globalSetup.ts for why skipping is not an option.
   globalSetup: '<rootDir>/jest.globalSetup.ts',
   globalTeardown: '<rootDir>/jest.globalTeardown.ts',
-  setupFiles: ['<rootDir>/jest.setupWorkerDatabase.cjs'],
+  // jest.setupHostRealmSymbols.cjs: Node 22's Symbol.dispose is per-realm; see
+  // that file for why undici's real fetch needs it inside the sandbox.
+  setupFiles: [
+    '<rootDir>/jest.setupHostRealmSymbols.cjs',
+    '<rootDir>/jest.setupWorkerDatabase.cjs',
+  ],
   setupFilesAfterEnv: ['<rootDir>/__tests__/jest.setup.ts'],
   moduleNameMapper: {
     '^@homiio/shared-types$': '<rootDir>/../shared-types/src',

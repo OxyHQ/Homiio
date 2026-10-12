@@ -159,9 +159,10 @@ on push to `main`. Detail: `docs/deployment.mdx`.
 - **Runtime secrets live ONLY in SSM `/oxy/homiio/*`** (oxy-infra runbook 46). Write
   a new one with `aws ssm put-parameter` BEFORE a task definition names it; no
   workflow writes SSM or reads a runtime repo secret (`deploySecretSync.test.ts`).
-- **The `api` image runs Bun, the `worker` image Node.** Every command run on
-  an image (CMD, migrator one-shots, the worker's task-definition command)
-  names THAT image's runtime; why the worker stays on Node: `docs/deployment.mdx`.
+- **Both images run Bun.** Every command run on an image (CMD, migrator
+  one-shots, the worker's command) names THAT image's runtime. The worker's ECS
+  command comes from deploy-aws.yml's `TASK_COMMAND_JSON`, not terraform:
+  `docs/deployment.mdx`.
 - **Automated PR reviews run on `listing-providers` and `backend`.** Address the
   high-confidence security and correctness findings before merge.
 
