@@ -449,6 +449,18 @@ jobs:
           bash .github/scripts/test-check-version-pins.sh
           bash .github/scripts/test-deploy-ecs-image.sh
 
+      # The production images' build inputs (Dockerfile, context, target and
+      # both .dockerignore files) must match the reviewed pins in
+      # .github/scripts/reviewed-images.json. The deploy refuses to build on a
+      # mismatch, so catching it here is what stops a merge from stranding main
+      # undeployable. In this job because it is the one that runs on every pull
+      # request (no `if:`), inside `CI complete` and the deploy's `needs`. The
+      # fixture tests run first so a green check means the gate can fail.
+      - name: Prove the reviewed-image gate can fail
+        run: python3 -B -m unittest discover -s .github/scripts -p test_reviewed_image.py
+      - name: Verify the production image's build inputs are reviewed
+        run: python3 -B .github/scripts/reviewed-image.py check
+
   frontend-bundle:
     needs: changes
     if: ${{ !cancelled() && !failure() && (github.event_name != 'pull_request' || needs.changes.outputs.frontend == 'true') }}
