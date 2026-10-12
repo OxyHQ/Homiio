@@ -7,7 +7,8 @@
  * - Shared EmptyState / ErrorState components
  * - Bloom typography for every label
  */
-import React, { useMemo, useState } from 'react';
+import type React from 'react';
+import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -19,7 +20,7 @@ import {
   SegmentedControlItemText,
 } from '@oxy.so/bloom/segmented-control';
 import { useOxy, openAccountDialog } from '@oxy.so/services';
-import { Reservation, ReservationStatus } from '@homiio/shared-types';
+import { type Reservation, ReservationStatus } from '@homiio/shared-types';
 
 import { Header } from '@/components/Header';
 import { ReservationCard } from '@/components/ReservationCard';

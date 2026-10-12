@@ -3,7 +3,7 @@
  * Tracks slow queries and provides performance insights
  */
 
-import { Request, Response, NextFunction } from 'express';
+import type { Request, Response, NextFunction } from 'express';
 import { logger } from './logging';
 
 const SLOW_QUERY_THRESHOLD = 100; // 100ms

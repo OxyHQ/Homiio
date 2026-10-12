@@ -10,7 +10,8 @@
  * `PropertyResultsGrid`). Infinite scroll wires BOTH primitives —
  * `LoadMoreSentinel` (web) + `useInfiniteScroll` (native).
  */
-import React, { useState } from 'react';
+import type React from 'react';
+import { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';

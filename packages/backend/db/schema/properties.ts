@@ -100,20 +100,20 @@ import {
   updatedAt,
 } from '@oxy.so/db';
 import {
-  AvailabilityWindowStatus,
-  CancellationPolicy,
-  ExchangeMode,
-  HousingType,
-  LayoutType,
-  LeaseDuration,
+  type AvailabilityWindowStatus,
+  type CancellationPolicy,
+  type ExchangeMode,
+  type HousingType,
+  type LayoutType,
+  type LeaseDuration,
   LISTING_ADDRESS_PRECISIONS,
   LISTING_CURRENCIES,
   TENANT_APPLICATION_DOCUMENT_TYPE_VALUES,
-  OfferingType,
+  type OfferingType,
   PROVIDER_IDS,
-  PropertyStatus,
-  PropertyType,
-  UtilitiesIncluded,
+  type PropertyStatus,
+  type PropertyType,
+  type UtilitiesIncluded,
 } from '@homiio/shared-types';
 import { TEXT_SEARCH_CONFIGURATION } from '../extensions';
 import { addresses } from './addresses';

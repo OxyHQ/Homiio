@@ -1,6 +1,11 @@
 {
   "compilerOptions": {
     "target": "ES2020",
+    // The libs `target: ES2020` implies, with ES2020 raised to ES2022 so
+    // `Object.hasOwn` type-checks (Biome's noPrototypeBuiltins fix). The runtime is
+    // Node 22. `target` stays ES2020: raising it would also flip
+    // `useDefineForClassFields`, which changes how class fields are emitted.
+    "lib": ["ES2022", "DOM", "DOM.Iterable", "WebWorker.ImportScripts", "ScriptHost"],
     "module": "Node16",
     "moduleResolution": "node16",
     "rootDir": "./",

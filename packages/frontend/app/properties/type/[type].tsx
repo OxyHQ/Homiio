@@ -36,7 +36,7 @@ import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import { DEFAULT_SEARCH_QUERY } from '@/store/searchQueryStore';
 import { colors } from '@/styles/colors';
 import { contentClamp, spacing } from '@/constants/styles';
-import { PropertyType, type Property } from '@homiio/shared-types';
+import type { PropertyType, Property } from '@homiio/shared-types';
 
 /** Number of skeleton cards shown during the first load. */
 const SKELETON_COUNT = 6;

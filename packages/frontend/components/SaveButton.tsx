@@ -15,14 +15,14 @@
  * 'badge'`, default) or inline beside the heart (`'inline'`).
  */
 import React, { useState } from 'react';
-import { StyleSheet, ViewStyle, View, StyleProp } from 'react-native';
+import { StyleSheet, type ViewStyle, View, type StyleProp } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { RiBookmarkFill, RiBookmarkLine, RiHeartFill, RiHeartLine } from '@oxy.so/bloom/icons';
 import { colors } from '@/styles/colors';
 import { barIconSize, spacing } from '@/constants/styles';
 import { IconButton, type IconButtonVariant } from '@/components/ui/IconButton';
 import { useOpenSaveToFolderSheet } from './SaveToFolderBottomSheet';
-import { Property } from '@homiio/shared-types';
+import type { Property } from '@homiio/shared-types';
 import { ThemedText } from '@/components/ThemedText';
 import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
 

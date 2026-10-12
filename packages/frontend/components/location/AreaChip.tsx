@@ -12,7 +12,8 @@
  *
  * `open` is controlled so the surface's own empty state can open the picker.
  */
-import React, { useCallback, useState } from 'react';
+import type React from 'react';
+import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Chip } from '@oxy.so/bloom/chip';

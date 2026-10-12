@@ -6,7 +6,8 @@
  * subscription immediately) is a Bloom `confirm()`, which — unlike the
  * `Alert.alert` with buttons it replaced — also works on web.
  */
-import React, { useEffect } from 'react';
+import type React from 'react';
+import { useEffect } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useOxy } from '@oxy.so/services';

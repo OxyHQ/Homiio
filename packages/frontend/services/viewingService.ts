@@ -1,4 +1,4 @@
-import { api, ApiResponse } from '@/utils/api';
+import { api, type ApiResponse } from '@/utils/api';
 import type {
   ViewingAvailability,
   ViewingModality,

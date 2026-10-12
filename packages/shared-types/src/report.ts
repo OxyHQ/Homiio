@@ -8,7 +8,7 @@
  * public visibility.
  */
 
-import { ISODate } from './common';
+import type { ISODate } from './common';
 
 /**
  * Why a listing is being reported. `OTHER` requires free-text details.

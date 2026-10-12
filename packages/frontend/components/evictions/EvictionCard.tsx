@@ -19,7 +19,8 @@
  *    RSVP carries its loading state and the contact its unlock rules. Buttons
  *    inside a pressable card would also nest one control in another.
  */
-import React, { useState } from 'react';
+import type React from 'react';
+import { useState } from 'react';
 import { Pressable, StyleSheet } from 'react-native';
 import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';

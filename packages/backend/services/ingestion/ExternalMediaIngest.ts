@@ -25,7 +25,7 @@ import {
   type ResidentialProxyConfig,
 } from '@homiio/listing-providers';
 import imageUploadService, {
-  ImageUploadService,
+  type ImageUploadService,
   type ImageBufferInput,
   type ImageDocument,
 } from '../imageUploadService';

@@ -1,8 +1,8 @@
 import { api } from '@/utils/api';
 import {
-  Profile,
-  PersonalProfile,
-  UpdateProfileData,
+  type Profile,
+  type PersonalProfile,
+  type UpdateProfileData,
   EmploymentStatus,
   LeaseDuration,
   ReferenceRelationship,

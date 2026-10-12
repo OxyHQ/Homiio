@@ -10,8 +10,8 @@
  * a join.
  */
 
-import { GeoJSONPoint } from './common';
-import { Country, Region, City, Neighborhood } from './geo';
+import type { GeoJSONPoint } from './common';
+import type { Country, Region, City, Neighborhood } from './geo';
 
 export interface Address {
   // ---- Relational geo references (resolved from coordinates/names) ----

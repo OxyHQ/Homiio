@@ -1,6 +1,6 @@
 import { api } from '@/utils/api';
-import { OxyServices } from '@oxy.so/core';
-import {
+import type { OxyServices } from '@oxy.so/core';
+import type {
   Profile,
   PersonalProfile,
   PropertyPreferences,

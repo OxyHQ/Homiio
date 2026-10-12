@@ -4,7 +4,8 @@
  * surface, then a Bloom-typography neighborhood blurb below. Owns the
  * Airbnb-2026 visual for the property location block.
  */
-import React, { useMemo } from 'react';
+import type React from 'react';
+import { useMemo } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 

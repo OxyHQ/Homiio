@@ -7,7 +7,8 @@
  * the booking card on a listing, the reservation detail and the host's nightly
  * pricing preview, so all three read one total.
  */
-import React, { useMemo } from 'react';
+import type React from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 import {

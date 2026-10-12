@@ -1,9 +1,10 @@
-import React, { useMemo } from 'react';
+import type React from 'react';
+import { useMemo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
-import { Reservation, formatMoney } from '@homiio/shared-types';
+import { type Reservation, formatMoney } from '@homiio/shared-types';
 import { ReservationStatusBadge } from '@/components/ReservationStatusBadge';
 import { Card, CardFooter } from '@oxy.so/bloom/card';
 import { ThumbnailImage } from '@/components/ui/ThumbnailImage';

@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useEffect, useState, useCallback } from 'react';
-import { Platform, View, ViewStyle, Text } from 'react-native';
+import { Platform, View, type ViewStyle, Text } from 'react-native';
 import { WebView, type WebViewMessageEvent } from 'react-native-webview';
 import type { StyleSpecification } from 'maplibre-gl';
 import * as Location from 'expo-location';

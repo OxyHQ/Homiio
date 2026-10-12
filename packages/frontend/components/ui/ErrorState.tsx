@@ -11,7 +11,7 @@
  * screen. If the caller doesn't pass `onRetry`, the button is hidden and
  * we fall back to a help link.
  */
-import React from 'react';
+import type React from 'react';
 import { StyleSheet, View, type ViewStyle } from 'react-native';
 
 import { Button } from '@oxy.so/bloom/button';

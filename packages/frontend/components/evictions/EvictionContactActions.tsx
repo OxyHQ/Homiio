@@ -7,7 +7,7 @@
  * block sits inside the detail screen's "How to help" card, which already
  * paints the `card` colour, so a `plain` group would lose its edge there.
  */
-import React from 'react';
+import type React from 'react';
 import { Linking, StyleSheet, View } from 'react-native';
 import { SettingsListGroup, SettingsListItem } from '@oxy.so/bloom/settings-list';
 import { Text as BloomText } from '@oxy.so/bloom/typography';

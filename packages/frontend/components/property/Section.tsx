@@ -20,7 +20,7 @@
  * with a consistent title→content gap, and `SectionRow` for a label/value
  * fact line (a Bloom `Item`) inside a section body.
  */
-import React from 'react';
+import type React from 'react';
 import { StyleSheet, View, type ViewStyle } from 'react-native';
 
 import { Item } from '@oxy.so/bloom/item';

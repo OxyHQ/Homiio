@@ -13,7 +13,8 @@
  *
  * `dialog` is the dates dialog; whoever calls the hook renders it once.
  */
-import React, { useCallback, useMemo, useState } from 'react';
+import type React from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Dialog } from '@oxy.so/bloom/dialog';

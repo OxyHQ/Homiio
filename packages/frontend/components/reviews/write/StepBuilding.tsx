@@ -3,7 +3,7 @@
  * apartments (yes/no), neighbour relations, common-area cleaning, and the
  * building's shared services (multi-select). All optional.
  */
-import React from 'react';
+import type React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 

@@ -12,7 +12,7 @@
  * Bloom draws. Bloom's own rendering is Bloom's to test.
  */
 
-import React from 'react';
+import type React from 'react';
 import { render, waitFor } from '@testing-library/react-native';
 import { Text } from 'react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';

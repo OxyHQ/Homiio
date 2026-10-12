@@ -6,7 +6,7 @@
  * `livedForMonths` is NOT collected — the server derives it from the dates.
  * Hard-required: price, both dates.
  */
-import React from 'react';
+import type React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { format, isValid, parse } from 'date-fns';

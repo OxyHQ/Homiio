@@ -7,7 +7,7 @@
  *   <SectionEyebrow>{t('home.recommended.eyebrow')}</SectionEyebrow>
  *   <H1>{t('home.recommended.title')}</H1>
  */
-import React from 'react';
+import type React from 'react';
 
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 

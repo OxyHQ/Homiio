@@ -24,7 +24,8 @@
  * answer arrives there is nothing local to state, so the labels fall back to
  * {@link SEARCH_PRICE_CURRENCY}.
  */
-import React, { useCallback, useMemo } from 'react';
+import type React from 'react';
+import { useCallback, useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 

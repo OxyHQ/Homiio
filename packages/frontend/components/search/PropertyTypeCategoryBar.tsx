@@ -6,7 +6,8 @@
  * `propertyTypes: [type]`. A query holding several types (chosen in the search
  * composer's Type step) selects no item rather than pretending to be one of them.
  */
-import React, { useMemo } from 'react';
+import type React from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { CategoryBar, type CategoryBarItem } from '@oxy.so/bloom/category-bar';

@@ -19,8 +19,8 @@
  * Address is `countryCode` (ISO-2) for fast country filtering without a join.
  */
 
-import { Coordinates } from './common';
-import { Image } from './media';
+import type { Coordinates } from './common';
+import type { Image } from './media';
 import type { ListingCurrency } from './currency';
 
 /**

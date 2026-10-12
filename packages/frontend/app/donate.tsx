@@ -18,7 +18,8 @@
  * store uses) — the previous `/api/billing/create-checkout-session` path was
  * never mounted, so the old flow 404'd.
  */
-import React, { useMemo, useState } from 'react';
+import type React from 'react';
+import { useMemo, useState } from 'react';
 import { Linking, ScrollView, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { StyleSheet, View, useWindowDimensions } from 'react-native';
 import { ChatContent } from '@/components/sindi/ChatContent';
-import { Property } from '@homiio/shared-types';
+import type { Property } from '@homiio/shared-types';
 import { useOxy } from '@oxy.so/services';
 import { useConversationStore } from '@/store/conversationStore';
 import type { Conversation } from '@/store/conversationStore';

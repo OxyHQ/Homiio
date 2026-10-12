@@ -5,9 +5,14 @@ import React, {
   useEffect,
   useCallback,
   useRef,
-  ReactNode,
+  type ReactNode,
 } from 'react';
-import { AppState, AppStateStatus, NativeEventSubscription, Platform } from 'react-native';
+import {
+  AppState,
+  type AppStateStatus,
+  type NativeEventSubscription,
+  Platform,
+} from 'react-native';
 import type { EventSubscription } from 'expo-modules-core';
 import { useRouter } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
@@ -24,10 +29,10 @@ import {
   createNotification,
   scheduleNotification,
   getNotificationsModule,
-  NotificationData,
-  NotificationContent,
+  type NotificationData,
+  type NotificationContent,
 } from '@/utils/notifications';
-import { notificationService, Notification } from '@/services/notificationService';
+import { notificationService, type Notification } from '@/services/notificationService';
 import { useOxy } from '@oxy.so/services';
 import { logger } from '@/utils/logger';
 import { getData, storeData } from '@/utils/storage';

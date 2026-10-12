@@ -73,11 +73,7 @@
 
 import { useCallback, useMemo, useRef } from 'react';
 import { useRouter } from 'expo-router';
-import {
-  type SindiAction,
-  type SindiActionEnvelope,
-  type SindiActionOutcome,
-} from '@homiio/shared-types';
+import type { SindiAction, SindiActionEnvelope, SindiActionOutcome } from '@homiio/shared-types';
 
 import {
   controlCapabilityOf,

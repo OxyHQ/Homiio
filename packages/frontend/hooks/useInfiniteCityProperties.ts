@@ -10,7 +10,7 @@
  * resolved SERVER-side so pagination stays correct — no client-side re-filtering
  * of already-loaded pages.
  */
-import { type InfiniteData, type UseInfiniteQueryResult } from '@tanstack/react-query';
+import type { InfiniteData, UseInfiniteQueryResult } from '@tanstack/react-query';
 import { useMemo } from 'react';
 
 import type { Property } from '@homiio/shared-types';

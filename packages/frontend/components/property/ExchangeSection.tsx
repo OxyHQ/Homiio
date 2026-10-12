@@ -9,7 +9,8 @@
  * `exchange` (the screen gates it), reusing the flat `Section` primitive +
  * Bloom typography so it matches the rest of the page.
  */
-import React, { useMemo } from 'react';
+import type React from 'react';
+import { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { format, parseISO } from 'date-fns';

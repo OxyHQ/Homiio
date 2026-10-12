@@ -30,7 +30,7 @@
  *
  * Fails soft: hides itself entirely on error.
  */
-import React from 'react';
+import type React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 

@@ -11,7 +11,8 @@
  * Footer: a real Helpful toggle (disabled on your own review) + a Report action
  * (a per-user community report — never a moderator action), both Bloom `Button`s.
  */
-import React, { useState } from 'react';
+import type React from 'react';
+import { useState } from 'react';
 import { Image, ScrollView, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 

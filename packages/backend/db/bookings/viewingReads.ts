@@ -46,7 +46,7 @@ import {
 } from '@homiio/shared-types';
 import type { DatabaseOrTransaction } from '../postgres';
 import { viewingRequests } from '../schema';
-import { VIEWING_REQUEST_CANCELLERS, VIEWING_REQUEST_STATUSES } from '../schema/bookings';
+import { type VIEWING_REQUEST_CANCELLERS, VIEWING_REQUEST_STATUSES } from '../schema/bookings';
 
 /** A viewing status the CHECK accepts. */
 export type ViewingStatusValue = (typeof VIEWING_REQUEST_STATUSES)[number];

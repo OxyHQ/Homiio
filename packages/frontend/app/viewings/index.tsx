@@ -8,7 +8,8 @@
  *   - Shared EmptyState / ErrorState components.
  *   - Confirm cancel via Bloom `confirm()`.
  */
-import React, { useMemo, useState } from 'react';
+import type React from 'react';
+import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -28,7 +29,7 @@ import { confirm } from '@oxy.so/bloom/surfaces';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
-import { viewingService, ViewingRequest } from '@/services/viewingService';
+import { viewingService, type ViewingRequest } from '@/services/viewingService';
 import { ApiError } from '@/utils/api';
 import { spacing } from '@/constants/styles';
 import { colors } from '@/styles/colors';

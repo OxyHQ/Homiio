@@ -43,7 +43,7 @@ import { and, desc, eq, inArray, ne, or, sql } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
 import type { DatabaseOrTransaction } from '../postgres';
 import { exchangeRequests } from '../schema';
-import { EXCHANGE_REQUEST_MODES, EXCHANGE_REQUEST_STATUSES } from '../schema/exchanges';
+import { type EXCHANGE_REQUEST_MODES, EXCHANGE_REQUEST_STATUSES } from '../schema/exchanges';
 
 /** An exchange mode the CHECK accepts. */
 export type ExchangeModeValue = (typeof EXCHANGE_REQUEST_MODES)[number];

@@ -7,7 +7,8 @@
  * The active option is resolved from the (sortBy, sortOrder) pair, so the
  * button label and the checked row can never disagree.
  */
-import React, { useCallback } from 'react';
+import type React from 'react';
+import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@oxy.so/bloom/button';

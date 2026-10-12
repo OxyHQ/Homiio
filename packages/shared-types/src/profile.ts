@@ -3,7 +3,7 @@
  * Profile is a thin RE sidecar keyed uniquely by oxyUserId.
  */
 
-import {
+import type {
   EmploymentStatus,
   LeaseDuration,
   PriceUnit,

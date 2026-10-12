@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Property, RecentlyViewedType } from '@homiio/shared-types';
+import { type Property, RecentlyViewedType } from '@homiio/shared-types';
 
 // Recently Viewed State Interface
 interface RecentlyViewedState {

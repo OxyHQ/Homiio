@@ -1,6 +1,4 @@
-interface LoggerFunction {
-  (message: string, ...args: any[]): void;
-}
+type LoggerFunction = (message: string, ...args: any[]) => void;
 
 interface Logger {
   info: LoggerFunction;

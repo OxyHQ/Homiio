@@ -5,7 +5,7 @@
 
 import fs from 'fs';
 import path from 'path';
-import { Request, Response, NextFunction } from 'express';
+import type { Request, Response, NextFunction } from 'express';
 import config from '../config';
 
 /**

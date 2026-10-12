@@ -39,7 +39,8 @@
  * surface showing results can display it, and a client cannot render what it
  * was never given.
  */
-import React, { useCallback, useMemo } from 'react';
+import type React from 'react';
+import { useCallback, useMemo } from 'react';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { useTranslation } from 'react-i18next';
 

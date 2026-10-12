@@ -12,7 +12,7 @@
 
 import {
   OfferingType,
-  PropertyType,
+  type PropertyType,
   type NormalizedListing,
   type NormalizedListingAddress,
   type NormalizedRemoteImage,

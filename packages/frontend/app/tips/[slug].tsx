@@ -5,7 +5,8 @@
  * tips are Bloom `Card`s whose thumbnail zooms inside its mask
  * (`ZoomableImage`), matching the tips index.
  */
-import React, { useMemo, useState } from 'react';
+import type React from 'react';
+import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useLocalSearchParams, useRouter } from 'expo-router';
