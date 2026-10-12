@@ -30,6 +30,7 @@ import { leasePaymentMovements, leasePaymentSchedule, leases } from '../../db/sc
 import { errorHandler } from '../../middlewares/errorHandler';
 import { serializeWireIds } from '../../middlewares/wireIds';
 import { objectIdHex, resetGeoTables, seedListingWithGeo } from '../helpers/postgresGeoFixtures';
+import { containsNumberToken } from '../helpers/leakSweep';
 
 const LANDLORD = 'oxy-landlord';
 const TENANT = 'oxy-tenant';
@@ -183,8 +184,14 @@ describe('a receipt exists only for money that arrived', () => {
 
     expect(res.status).toBe(200);
     const html = Buffer.from(res.body.data.base64, 'base64').toString('utf8');
-    expect(html).toContain('400');
-    expect(html).not.toContain('900');
+    // Tokens, not substrings: the receipt prints the movement's uuid as its
+    // reference, and `900` occurs inside a random uuid v7 on about 0.7% of runs
+    // (measured over 2M ids) — a substring check fails those runs with nothing
+    // leaked, and its positive half can pass on the id instead of the amount.
+    expect({
+      paid: containsNumberToken(html, 400),
+      obligation: containsNumberToken(html, 900),
+    }).toEqual({ paid: true, obligation: false });
   });
 });
 

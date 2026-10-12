@@ -44,6 +44,7 @@ import {
   type RoommateCandidateQuery,
 } from '../../db/profiles/profileRepository';
 import { profilePreferredLocations, profileRoommateHistory, profiles } from '../../db/schema';
+import { containsNumberToken, leafPathsEqualTo } from '../helpers/leakSweep';
 
 let db: Database;
 
@@ -382,7 +383,12 @@ describe('hydration of a page', () => {
 
     const [candidate] = (await search({})).candidates;
     expect(Object.keys(candidate.profile)).not.toContain('personalInfoAnnualIncome');
-    expect(JSON.stringify(candidate)).not.toContain('48000');
+    // A token and a leaf, never a substring: the body carries uuid ids,
+    // and `48000` can occur inside a random one, which fails a run with no leak.
+    expect({
+      at: leafPathsEqualTo(candidate, 48000),
+      inText: containsNumberToken(JSON.stringify(candidate), 48000),
+    }).toEqual({ at: [], inText: false });
   });
 });
 
