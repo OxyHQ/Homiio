@@ -149,7 +149,9 @@ describe('the deploy applies migrations', () => {
     expect(workflow).toContain('reviewed-image.py guard --recipe homiio\n');
     expect(workflow).toContain('reviewed-image.py guard --recipe homiio-worker\n');
     expect(reviewedRecipes.find((recipe) => recipe.name === 'homiio')?.target).toBe('api');
-    expect(reviewedRecipes.find((recipe) => recipe.name === 'homiio-worker')?.target).toBe('worker');
+    expect(reviewedRecipes.find((recipe) => recipe.name === 'homiio-worker')?.target).toBe(
+      'worker',
+    );
     expect(buildStep).toContain('api_digest=$API_DIGEST');
     expect(buildStep).toContain('worker_digest=$WORKER_DIGEST');
 
