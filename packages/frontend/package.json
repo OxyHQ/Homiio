@@ -73,7 +73,7 @@
     "i18next": "^26.3.6",
     "lightningcss": "1.33.0",
     "maplibre-gl": "6.13.0",
-    "nativewind": "5.0.0-preview.3",
+    "nativewind": "5.0.0-rc.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-i18next": "^17.0.16",
