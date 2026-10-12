@@ -57,8 +57,16 @@ sed -i 's/^ARG BUN_VERSION=.*/ARG BUN_VERSION=9.9.9/' "$WORKDIR/tree/packages/ba
 expect "bun drift is caught and named" 1 "bun pin drift"
 
 seed
-sed -i 's/npm install -g bun@${BUN_VERSION}/npm install -g bun/' "$WORKDIR/tree/packages/backend/Dockerfile"
-expect "an unpinned bun install is caught" 1 "unpinned bun install"
+sed -i 's|oven/bun:${BUN_VERSION}|oven/bun:latest|' "$WORKDIR/tree/packages/backend/Dockerfile"
+expect "an unpinned bun image is caught" 1 "unpinned bun image"
+
+seed
+printf 'RUN npm install -g bun\n' >> "$WORKDIR/tree/packages/backend/Dockerfile"
+expect "bun installed through npm is caught" 1 "unpinned bun install through npm"
+
+seed
+sed -i '/oven\/bun/d' "$WORKDIR/tree/packages/backend/Dockerfile"
+expect "a missing bun stage fails instead of passing vacuously" 1 "cannot pass vacuously"
 
 seed
 sed -i 's/^FROM node:[0-9]*/FROM node:18/' "$WORKDIR/tree/packages/backend/Dockerfile"

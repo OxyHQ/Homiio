@@ -6,14 +6,14 @@ console.log('🧹 Clearing all caches...');
 
 // Clear Expo cache
 try {
-  execSync('npx expo start --clear', { stdio: 'inherit' });
+  execSync('bunx expo start --clear', { stdio: 'inherit' });
 } catch (error) {
   console.log('Expo cache cleared');
 }
 
 // Clear Metro cache
 try {
-  execSync('npx expo start --reset-cache', { stdio: 'inherit' });
+  execSync('bunx expo start --reset-cache', { stdio: 'inherit' });
 } catch (error) {
   console.log('Metro cache cleared');
 }
@@ -47,4 +47,4 @@ try {
 }
 
 console.log('✅ All caches cleared successfully!');
-console.log('🚀 You can now run: npm run start');
+console.log('🚀 You can now run: bun run start');

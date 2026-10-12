@@ -39,6 +39,11 @@
 # .github/scripts/check-version-pins.sh, which fails CI if the two drift.
 ARG BUN_VERSION=1.4.3
 
+# Bun comes from its own published image at that version, copied in as one
+# binary. Installing it through npm put a second package manager in the
+# build just to fetch the first.
+FROM oven/bun:${BUN_VERSION}-slim AS bun-bin
+
 FROM node:22-bookworm-slim AS builder
 ARG BUN_VERSION
 
@@ -60,10 +65,9 @@ ENV PUPPETEER_SKIP_DOWNLOAD=true \
 # NOT apply here: this stage narrows `workspaces` and deliberately never copies
 # bun.lock. That makes the pin MORE load-bearing, not less. With no lockfile,
 # the bun version is the only thing deciding how the version ranges below
-# resolve, so an unpinned `npm install -g bun` means the image built today and
-# the image built next month can install different dependency graphs from an
-# identical commit.
-RUN npm install -g bun@${BUN_VERSION}
+# resolve, so an unpinned bun means the image built today and the image built
+# next month can install different dependency graphs from an identical commit.
+COPY --from=bun-bin /usr/local/bin/bun /usr/local/bin/bun
 
 WORKDIR /app
 
@@ -116,8 +120,8 @@ ARG BUN_VERSION
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
       python3 make g++ ca-certificates \
-    && rm -rf /var/lib/apt/lists/* \
-    && npm install -g bun@${BUN_VERSION}
+    && rm -rf /var/lib/apt/lists/*
+COPY --from=bun-bin /usr/local/bin/bun /usr/local/bin/bun
 
 ENV PUPPETEER_SKIP_DOWNLOAD=true \
     PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true

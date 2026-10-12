@@ -75,7 +75,7 @@ jobs:
         run: |
           cd packages/shared-types
           rm -rf dist tsconfig.tsbuildinfo
-          ./node_modules/.bin/tsc || npx tsc
+          ./node_modules/.bin/tsc || bunx tsc
           ls -la dist/
       - name: Build frontend
         run: cd packages/frontend && bun run build
