@@ -29,20 +29,21 @@ export const oxyService = new OxyServer({
     ? { serviceAuth: { apiKey: config.oxy.serviceApiKey, apiSecret: config.oxy.serviceApiSecret } }
     : {}),
 });
-const sindiOxyService = new OxyServer({
-  baseURL: config.oxy.baseURL,
-  ...(config.alia.sindiServiceApiKey && config.alia.sindiServiceApiSecret
-    ? {
-        serviceAuth: {
-          apiKey: config.alia.sindiServiceApiKey,
-          apiSecret: config.alia.sindiServiceApiSecret,
-        },
-      }
-    : {}),
-});
+/**
+ * Sindi's Oxy client. It holds NO credential, ever: Sindi is Homiio's task role
+ * attested (oxy ADR 0026), and that is the only identity Oxy's Sindi entry
+ * point admits. The key pair it used to carry (`SINDI_OXY_SERVICE_API_*`,
+ * credential `01a0648e-ad3f-7608-aa8b-c07bfef6cf73`) is retired and revoked, so
+ * there is nothing to configure here — a process that cannot attest cannot
+ * speak as Sindi, which is the honest answer on a laptop.
+ *
+ * Deliberately a separate instance from `oxyService`: that one may still be
+ * handed a local-development pair, and a token minted from it would be Homiio's
+ * own credential, never Sindi.
+ */
+const sindiOxyService = new OxyServer({ baseURL: config.oxy.baseURL });
 
 export const SINDI_OXY_APPLICATION_ID = '6a2f851751b784a86fd0e922';
-export const SINDI_OXY_SERVICE_CREDENTIAL_ID = '01a0648e-ad3f-7608-aa8b-c07bfef6cf73';
 // The Homiio PROJECT account that owns application 6a2f851751b784a86fd0e922 —
 // Oxy signs `ownerAccountId` from `applications.owner_account_id`. Oxy's
 // native-product bootstrap ADOPTED this existing project rather than minting
@@ -63,16 +64,15 @@ export const SINDI_OXY_OWNER_ACCOUNT_ID = '6a50444ce8026582b949089d';
 export const SINDI_OXY_TASK_ROLE_ARN = 'arn:aws:iam::237343248947:role/oxy-homiio-task';
 
 /**
- * The SECOND identifier the ONE Sindi identity can arrive under.
+ * The ONE identifier the Sindi identity arrives under.
  *
- * Under oxy ADR 0026 the same token is minted two ways, and the two paths
- * attribute it differently. A credential mint sets `credentialId` to the
- * credential's UUID; an attestation mint has no credential to name and sets it
- * to the binding's ATTESTATION HANDLE instead — `wl_` plus 96 bits of SHA-256
- * over the canonical role ARN, computed by `workloadAttestationHandle()` in
- * OxyHQServices `packages/api/src/services/workloadAttestation.service.ts`.
- * Every other claim is identical, because both paths mint for the same
- * application (`6a2f851751b784a86fd0e922`) owned by the same project account.
+ * Under oxy ADR 0026 an attested token has no credential to name, so its
+ * `credentialId` is the binding's ATTESTATION HANDLE — `wl_` plus 96 bits of
+ * SHA-256 over the canonical role ARN, computed by `workloadAttestationHandle()`
+ * in OxyHQServices `packages/api/src/services/workloadAttestation.service.ts`.
+ * The credential UUID Sindi used to arrive under
+ * (`01a0648e-ad3f-7608-aa8b-c07bfef6cf73`) is retired, and the canary no
+ * longer accepts it: Oxy's own Sindi entry point admits only this handle.
  *
  * It is DERIVED here rather than copied, because a value observed once is a
  * value that can silently stop being the one the mint produces. The handle is a
@@ -89,16 +89,12 @@ export const SINDI_OXY_WORKLOAD_ATTESTATION_ID = `wl_${crypto
   .slice(0, 24)}`;
 
 /**
- * Whether a `credentialId`/`cid` claim names the Sindi service identity.
- *
- * Both accepted values name the same identity by construction: the UUID is
- * Sindi's own credential, and the handle is Homiio's own task role, which is
- * bound to Sindi's own application. Accepting either is what lets the pair be
- * dropped without the canary losing its job — it still refuses a token minted
- * for anything else, under either path.
+ * Whether a `credentialId`/`cid` claim names the Sindi service identity: the
+ * Homiio task role's handle, and nothing else — not another service's handle,
+ * and not the retired Sindi credential.
  */
 function namesSindiServiceIdentity(value: unknown): boolean {
-  return value === SINDI_OXY_SERVICE_CREDENTIAL_ID || value === SINDI_OXY_WORKLOAD_ATTESTATION_ID;
+  return value === SINDI_OXY_WORKLOAD_ATTESTATION_ID;
 }
 
 /**

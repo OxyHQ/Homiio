@@ -28,6 +28,7 @@ import { profiles, roommateRelationships, roommateRequests } from '../../db/sche
 import { sortPair } from '../../db/roommates/roommateRepository';
 import { asyncHandler } from '../../middlewares';
 import { errorHandler } from '../../middlewares/errorHandler';
+import { containsNumberToken, leafPathsEqualTo } from '../helpers/leakSweep';
 
 beforeAll(() => {
   (global as unknown as { fetch: jest.Mock }).fetch = jest.fn(async () => ({
@@ -310,8 +311,14 @@ describe('the wire shape the roommate endpoints serve', () => {
     const discover = await request(buildApp('oxy-me')).get('/roommates');
     const requests = await request(buildApp('oxy-me')).get('/roommates/requests');
 
-    expect(JSON.stringify(discover.body)).not.toContain('48000');
-    expect(JSON.stringify(requests.body)).not.toContain('48000');
+    // A token and a leaf, never a substring: the body carries uuid ids,
+    // and `48000` can occur inside a random one, which fails a run with no leak.
+    for (const body of [discover.body, requests.body]) {
+      expect({
+        at: leafPathsEqualTo(body, 48000),
+        inText: containsNumberToken(JSON.stringify(body), 48000),
+      }).toEqual({ at: [], inText: false });
+    }
     expect(discover.body.profiles[0].personalProfile.personalInfo).not.toHaveProperty(
       'annualIncome',
     );

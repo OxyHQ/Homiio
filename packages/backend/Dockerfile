@@ -11,21 +11,31 @@
 ##   Worker build:
 ##     docker build -f packages/backend/Dockerfile --target worker -t homiio-worker .
 ##   API:    docker run --env-file packages/backend/.env -p 4000:4000 homiio-api
-##   Worker: docker run --env-file packages/backend/.env \
-##             homiio-worker node packages/backend/dist/worker.js
+##   Worker: docker run --env-file packages/backend/.env homiio-worker
 ##
 ## Both targets contain the same compiled commit and migration ledger. Only the
 ## worker target contains Playwright, Chromium and X11; the API never scrapes
 ## and therefore must not carry or patch those bytes.
 ##
+## BOTH TARGETS RUN ON BUN, FROM DIFFERENT BASES. The API is `oven/bun`
+## (Debian/glibc like the install stages, so sharp's glibc prebuild matches); its
+## CMD and the `pre` migrator one-shot in .github/scripts/deploy-ecs-image.sh
+## both say `bun`. The worker keeps the `node:22-bookworm-slim` base with the
+## pinned bun binary copied in: Playwright's `install --with-deps` and its
+## Chromium/X11 system packages are installed and proven on that base, and the
+## real Node left beside bun makes rolling the worker back a command change, not
+## an image change. Its ECS command (deploy-aws.yml's TASK_COMMAND_JSON, which
+## replaces the live task definition's) and its `post` migrator both say `bun`.
+## A command must always name the runtime its image ships.
+##
 ## HEADED browser tier (LISTING_BROWSER_HEADED=true): DataDome/Kasada block
 ## headless Chromium, so the worker can launch a real HEADED browser to clear
 ## them. A headed launch needs an X display; this image bundles Xvfb (the
 ## virtual framebuffer) for that. When the flag is on, the worker command MUST
-## wrap node in xvfb-run:
+## wrap the runtime in xvfb-run:
 ##
 ##   xvfb-run -a --server-args="-screen 0 1920x1080x24" \
-##     node packages/backend/dist/worker.js
+##     bun packages/backend/dist/worker.js
 ##
 ## The flag defaults OFF (headless) and is set by infra alongside the xvfb-run
 ## command — the image supports both modes; nothing here forces headed.
@@ -35,9 +45,14 @@
 ##
 
 # ── Build stage ───────────────────────────────────────────────────
-# Kept in step with `BUN_VERSION` in .github/workflows/ci.yml by
-# .github/scripts/check-version-pins.sh, which fails CI if the two drift.
-ARG BUN_VERSION=1.3.14
+# Must equal `packageManager` in the root package.json (and ci.yml's
+# `BUN_VERSION`); .github/scripts/check-version-pins.sh fails CI if they drift.
+ARG BUN_VERSION=1.4.3
+
+# Bun comes from its own published image at that version, copied in as one
+# binary. Installing it through npm put a second package manager in the
+# build just to fetch the first.
+FROM oven/bun:${BUN_VERSION}-slim AS bun-bin
 
 FROM node:22-bookworm-slim AS builder
 ARG BUN_VERSION
@@ -60,10 +75,14 @@ ENV PUPPETEER_SKIP_DOWNLOAD=true \
 # NOT apply here: this stage narrows `workspaces` and deliberately never copies
 # bun.lock. That makes the pin MORE load-bearing, not less. With no lockfile,
 # the bun version is the only thing deciding how the version ranges below
-# resolve, so an unpinned `npm install -g bun` means the image built today and
-# the image built next month can install different dependency graphs from an
-# identical commit.
-RUN npm install -g bun@${BUN_VERSION}
+# resolve, so an unpinned bun means the image built today and the image built
+# next month can install different dependency graphs from an identical commit.
+COPY --from=bun-bin /usr/local/bin/bun /usr/local/bin/bun
+# `bunx` is bun invoked under that name; the official install ships it as a
+# symlink, and copying only the binary dropped it. The workspace `build`
+# scripts run `bunx tsc`, so without it this stage fails with exit 127 (every
+# deploy from #627 to the change that added this line).
+RUN ln -s bun /usr/local/bin/bunx && test "$(bunx --version)" = "$BUN_VERSION"
 
 WORKDIR /app
 
@@ -108,16 +127,16 @@ RUN bun run --filter @homiio/backend build
 RUN cp -r packages/backend/locales packages/backend/dist/locales
 
 # ── Production dependency stages ─────────────────────────────────
-# Bun and the native build toolchain live only in throwaway install stages.
-# The compiled runtime and migration tasks use Node, so shipping Bun added
-# hundreds of MiB without providing a supported production entry point.
+# The native build toolchain lives only in throwaway install stages. They are
+# glibc (Debian bookworm), the same libc as both runtime stages below, so the
+# sharp prebuild installed here is the one each runtime loads.
 FROM node:22-bookworm-slim AS production-manifests
 ARG BUN_VERSION
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
       python3 make g++ ca-certificates \
-    && rm -rf /var/lib/apt/lists/* \
-    && npm install -g bun@${BUN_VERSION}
+    && rm -rf /var/lib/apt/lists/*
+COPY --from=bun-bin /usr/local/bin/bun /usr/local/bin/bun
 
 ENV PUPPETEER_SKIP_DOWNLOAD=true \
     PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
@@ -144,7 +163,8 @@ RUN node -e "const fs=require('fs'); const file='packages/backend/package.json';
     && rm -rf node_modules/@img/sharp-linuxmusl-* \
               node_modules/@img/sharp-libvips-linuxmusl-*
 
-# ── Common runtime ────────────────────────────────────────────────
+# ── Worker runtime base (Debian + Node, bun copied in below) ──────
+# See the header for why the worker keeps this base rather than `oven/bun`.
 FROM node:22-bookworm-slim AS runtime-common
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -171,8 +191,15 @@ ENTRYPOINT ["/usr/bin/tini", "--"]
 
 # ── Listing worker target ─────────────────────────────────────────
 FROM runtime-common AS worker
+ARG BUN_VERSION
 
 ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+
+# The worker's runtime: the same pinned binary as every other stage, plus the
+# `bunx` name the official install ships as a symlink (copying the binary alone
+# drops it — see the builder stage).
+COPY --from=bun-bin /usr/local/bin/bun /usr/local/bin/bun
+RUN ln -s bun /usr/local/bin/bunx
 
 COPY --from=worker-deps /app/package.json ./
 COPY --from=worker-deps /app/packages packages/
@@ -186,7 +213,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends xauth \
     && ./node_modules/.bin/playwright install --with-deps chromium \
     && chmod -R a+rX /ms-playwright \
     && node -e "require('playwright'); require('sharp')" \
-    && test ! -e /usr/local/bin/bun
+    && bun -e "require('playwright'); require('sharp'); require('@homiio/shared-types'); require('@homiio/listing-providers')" \
+    && test "$(bun --version)" = "$BUN_VERSION" \
+    && test "$(bunx --version)" = "$BUN_VERSION"
 # Debian's xvfb-run can wait forever for SIGUSR1 in a container even after Xvfb
 # has created a live display socket. Use the bounded, socket-gated wrapper and
 # stage the shared directory before privileges drop.
@@ -195,20 +224,56 @@ RUN chmod 755 /usr/local/bin/xvfb-run \
     && mkdir -p /tmp/.X11-unix \
     && chmod 1777 /tmp/.X11-unix
 USER node
-CMD ["node", "packages/backend/dist/worker.js"]
+# ECS never runs this CMD — the task definition's command wraps it in xvfb-run
+# (deploy-aws.yml's TASK_COMMAND_JSON) — but it names the same runtime, so a
+# bare `docker run` and deployMigrationWiring.test.ts both see Bun here.
+CMD ["bun", "packages/backend/dist/worker.js"]
 
-# ── API target (default/final stage) ──────────────────────────────
-FROM runtime-common AS api
+# ── API target (default/final stage): Bun ─────────────────────────
+# The pinned Bun image, Debian slim (glibc) like every install stage, so the
+# sharp prebuild api-deps installed is the one this runtime loads. It ships no
+# real Node: `node` on its PATH (/usr/local/bun-node-fallback-bin/node) is a
+# symlink to bun, so a stale `node ...` override would still run Bun while
+# claiming otherwise. Every command that targets this image names `bun`.
+#
+# The API ran on Node (node:22-bookworm-slim) until 2026-10. Rolling back is
+# reverting the change that made this switch: it moved this stage, its CMD and
+# the `pre` migrator command in deploy-ecs-image.sh together.
+FROM oven/bun:${BUN_VERSION}-slim AS api
+ARG BUN_VERSION
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      ca-certificates tini \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV NODE_ENV=production \
+    PUPPETEER_SKIP_DOWNLOAD=true \
+    PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
+    LOG_FILE=/tmp/homiio-app.log
+
+WORKDIR /app
+
+COPY --from=builder /app/packages/shared-types/dist packages/shared-types/dist
+COPY --from=builder /app/packages/listing-providers/dist packages/listing-providers/dist
+COPY --from=builder /app/packages/backend/dist packages/backend/dist
+COPY --from=builder /app/packages/backend/drizzle packages/backend/drizzle
 
 COPY --from=api-deps /app/package.json ./
 COPY --from=api-deps /app/packages packages/
 COPY --from=api-deps /app/node_modules node_modules/
 
-RUN node -e "require('sharp'); require('@homiio/shared-types'); require('@homiio/listing-providers')" \
+RUN bun -e "require('sharp'); require('@homiio/shared-types'); require('@homiio/listing-providers')" \
+    && test "$(bun --version)" = "$BUN_VERSION" \
+    && test "$(readlink -f "$(command -v node)")" = "$(readlink -f "$(command -v bun)")" \
     && test ! -d node_modules/playwright \
     && test ! -d /ms-playwright \
-    && test ! -e /usr/local/bin/bun \
     && test ! -e /usr/bin/Xvfb
 
-USER node
-CMD ["node", "packages/backend/dist/server.js"]
+EXPOSE 4000
+# tini is PID 1 and forwards SIGTERM to Bun, whose handler in server.ts drains
+# the server and the moderation outbox and exits 0. CI's image smoke
+# (.github/scripts/smoke-api-image.sh) asserts that whole chain.
+ENTRYPOINT ["/usr/bin/tini", "--"]
+# The image's own unprivileged user, uid/gid 1000 like Node's `node`.
+USER bun
+CMD ["bun", "packages/backend/dist/server.js"]

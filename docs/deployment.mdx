@@ -23,6 +23,58 @@ Workflow: `.github/workflows/deploy-aws.yml`
   compiled commit, separate ECS service (`app-homiio-worker.tf` in oxy-infra);
   command runs `packages/backend/dist/worker.js`. The API deploys the `api`
   target, which does not contain Playwright/Chromium/X11.
+- Runtimes (since 2026-10): **both targets run on Bun**, from different bases.
+  The `api` target is `oven/bun:<packageManager version>-slim` (Debian/glibc,
+  `CMD ["bun", "packages/backend/dist/server.js"]` under tini), and the `pre`
+  migrator one-shot in `.github/scripts/deploy-ecs-image.sh` runs `bun`. The
+  `worker` target keeps `node:22-bookworm-slim` with the pinned bun binary (and
+  its `bunx` symlink) copied in, because Playwright's `install --with-deps` and
+  its Chromium/X11 packages are installed and proven on that base; the real
+  Node left beside bun is what makes a worker rollback a command change. The
+  worker's ECS command is declared by the deploy — `TASK_COMMAND_JSON` on the
+  worker lane of `deploy-aws.yml`, `xvfb-run … bun
+  packages/backend/dist/worker.js` — which replaces the command on every
+  revision it registers, because the worker service ignores terraform's
+  task-definition changes and a release otherwise carries the live command
+  forward. oxy-infra's declaration must agree with it but does not reach the
+  running service. The `post` migrator on that lane runs `bun` too. Every
+  command must name its own image's runtime: `bun` against a Node-only image
+  dies, and `node` against the API image silently runs Bun (the `oven/bun`
+  image's `node` is a symlink to bun). `deployMigrationWiring.test.ts` reads
+  each target's `CMD` and holds the two migrator commands and the worker's
+  command to it.
+- Rolling the worker back to Node: change `bun` to `node` in the worker lane's
+  `TASK_COMMAND_JSON` and `POST_DEPLOY_TASK_COMMAND_JSON`. The image still
+  carries Node, so nothing else changes. Do not plain-revert the change that
+  introduced `TASK_COMMAND_JSON` while a bun revision is live: the lane would
+  stop declaring a command, carry the live `bun` one forward, and pair it with a
+  Node-only image (the circuit breaker would roll that back, and the deploy
+  would go red).
+- The residential proxy is a runtime-dependent client. `createProxiedFetch`
+  uses Bun's native `fetch({ proxy })` under Bun and undici's `ProxyAgent`
+  under Node, and the two report a CONNECT refusal differently: Bun throws
+  `Proxy refused to open a tunnel: 402 Payment Required` with `status` /
+  `statusText` / `headers` fields, and undici buries `Proxy response (402) !==
+  200 when HTTP Tunneling` two `cause` levels down. `describeProxyFailure`
+  reads Bun's structured `status` first and either wording second, so a 402 is
+  `billing` (and fires the `listing-proxy-unusable` alarm in oxy-infra) on
+  both. `proxyHealthCheck.test.ts` holds it to recorded fixtures of both shapes
+  and to a live local CONNECT proxy, and CI runs it under jest on Node and
+  under `bun test`.
+- CI's `image-smoke` job builds both targets. `.github/scripts/smoke-api-image.sh`
+  runs the deploy's own migrator commands on their lanes' images, `/health` 200
+  from the API image's default CMD, Bun under tini, exit 0 on SIGTERM, and a
+  non-zero exit when the database is unreachable.
+  `.github/scripts/smoke-worker-image.sh` runs the worker image with the
+  deploy's own worker command: Playwright launching Chromium headless and
+  headed under `xvfb-run` on Bun, a BullMQ boot (against a throwaway Redis)
+  with the browser tier loaded, bun under tini and `xvfb-run`, SIGTERM reaching
+  the worker and ending in exit 0, and a non-zero exit with no database. The
+  backend job also runs the unit suite under `bun test` (`test:bun`).
+- `xvfb-run` in the worker image is `packages/backend/scripts/xvfb-run-ready.sh`.
+  It is tini's direct child, so it FORWARDS SIGTERM to the worker and waits for
+  it: the container's exit code is the worker's own. Before 2026-10 it exited
+  143 on the signal and took the container down mid-shutdown.
 
 ## Frontend (Cloudflare Worker)
 
@@ -92,8 +144,6 @@ STRIPE_SUCCESS_URL=https://homiio.com/profile/subscriptions?session_id={CHECKOUT
 STRIPE_CANCEL_URL=https://homiio.com/profile/subscriptions
 OXY_INFERENCE_ROUTING_PROFILE_ID=01a06477-94f5-74f0-bc25-4c5c13b93ccd
 ALIA_API_URL=https://api.alia.onl
-SINDI_OXY_SERVICE_API_KEY=oxy_dk_...
-SINDI_OXY_SERVICE_API_SECRET=...
 SINDI_ALIA_AGENT_ID=01a0646a-078f-7514-9800-9f43ceed7df8
 AWS_ACCESS_KEY_ID=...
 AWS_SECRET_ACCESS_KEY=...
@@ -111,11 +161,13 @@ renders from the task definition the service is already RUNNING, removing the
 pair took an explicit entry in the API lane's `TASK_CONFIGURATION_REMOVALS_JSON`
 — deleting the lines that supplied it would have left it inherited forever.
 
-Sindi's separate `SINDI_OXY_SERVICE_API_*` pair is a different identity that
-Alia verifies, so it is still injected: written directly to the exact
-`/oxy/homiio/` SSM SecureStrings by Oxy's exact-application-ID credential
-provisioner. It is not a Homiio GitHub secret; deploy only verifies those
-parameters without decryption before using their exact ARNs.
+**Sindi carries no key pair either.** Sindi is the same attested task role:
+Oxy's Sindi entry point admits only the handle derived from `oxy-homiio-task`
+(`wl_f28159178c5e993eb03b8cc1`), and the backend's Sindi client is constructed
+with no credential at all. The `SINDI_OXY_SERVICE_API_*` pair and its credential
+`01a0648e-ad3f-7608-aa8b-c07bfef6cf73` are retired; the backend no longer reads
+those variables, and the deploy keeps stripping them from both task
+definitions in case an old revision still carries them.
 `SINDI_ALIA_AGENT_ID` and `OXY_INFERENCE_ROUTING_PROFILE_ID` are non-secret GitHub
 repository **variables** copied byte-for-byte into only the API task definition.
 The deploy refuses a missing/malformed value and never discovers an agent or
@@ -134,8 +186,8 @@ directly or through an `oxy.so` alias.
 The reserved Oxy desired state names the other Sindi identities: project account
 `6a50444ce8026582b949089d`, bot account
 `01a0646a-078f-7974-9645-a5e8be237f47`, service application
-`6a2f851751b784a86fd0e922`, and service credential
-`01a0648e-ad3f-7608-aa8b-c07bfef6cf73`. After apply, the agent must be private, its
+`6a2f851751b784a86fd0e922`, and its task role
+`arn:aws:iam::237343248947:role/oxy-homiio-task`. After apply, the agent must be private, its
 `oxyAccountId` is the bot account, and its capability grant is exactly `web`.
 These are opaque primary keys, never names or list positions; no public Homiio
 request may create or rebind them. These are not assertions about current live

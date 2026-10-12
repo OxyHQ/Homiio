@@ -31,6 +31,7 @@ import { getDb } from '../../db/postgres';
 import { profileChatMessages, profiles } from '../../db/schema';
 import { errorHandler } from '../../middlewares/errorHandler';
 import { PROFILE_CHAT_HISTORY_LIMIT, ensureProfile } from '../../db/profiles/profileRepository';
+import { containsNumberToken, leafPathsEqualTo } from '../helpers/leakSweep';
 
 function buildApp(oxyUserId: string | null): Express {
   const app = express();
@@ -392,7 +393,12 @@ describe('the public read — what a stranger gets', () => {
     expect(stored[0].personalInfoAnnualIncome).toBe(48000);
 
     const publicRead = await request(buildApp(null)).get(`/public/profiles/oxy/${oxyUserId}`);
-    expect(JSON.stringify(publicRead.body)).not.toContain('48000');
+    // A token and a leaf, never a substring: the body carries `oxy-<uuid>` ids,
+    // and `48000` can occur inside a random one, which fails a run with no leak.
+    expect({
+      at: leafPathsEqualTo(publicRead.body, 48000),
+      inText: containsNumberToken(JSON.stringify(publicRead.body), 48000),
+    }).toEqual({ at: [], inText: false });
     expect(publicRead.body.data.personalProfile.personalInfo).not.toHaveProperty('annualIncome');
   });
 

@@ -13,11 +13,14 @@
  *
  * ## Four properties are what let it fail
  *
- *  - **Sentinel values, swept over the WHOLE serialized body.** The exact rent
- *    and the exact tenancy days are distinctive numbers, and the sweep is a
- *    string search over the entire response — so a copy under a key nobody
- *    thought of is still found. The author's Oxy id is swept the same way: it is
- *    the handle that names one person.
+ *  - **Sentinel values, swept over the WHOLE body.** The exact rent and the
+ *    exact tenancy days are distinctive values, and the sweep covers the entire
+ *    response — every parsed leaf, and the serialized text — so a copy under a
+ *    key nobody thought of is still found. The author's Oxy id is swept the same
+ *    way: it is the handle that names one person. The rent is swept as a NUMBER
+ *    TOKEN (`helpers/leakSweep.ts`), never as a substring: the body is full of
+ *    random hex ids, and a substring search for a four-digit rent failed this
+ *    suite on clean runs.
  *  - **Every sweep is floored.** Each asserts the review really is in the body,
  *    with its opinion and its rating. A response that 404'd, or that silently
  *    dropped the review, would otherwise pass every "the exact figure is absent"
@@ -44,6 +47,7 @@ import { getDb } from '../../db/postgres';
 import { insertReview } from '../../db/reviews/reviewWrites';
 import { addresses, reviews } from '../../db/schema';
 import { assertFound } from '../helpers/assertFound';
+import { containsNumberToken, leafPathsEqualTo } from '../helpers/leakSweep';
 import { resetGeoTables, seedGeoChain, type GeoChain } from '../helpers/postgresGeoFixtures';
 
 /** Chose `pseudonymous` — the default. */
@@ -63,12 +67,19 @@ const NUMBER = '11';
 const POSTAL_CODE = '08013';
 
 /**
- * The exact facts that must not reach a third party, chosen so a string sweep
- * cannot match them by accident: a rent nobody rounds to and tenancy days that
- * are not the first of a month.
+ * The exact facts that must not reach a third party, chosen so a sweep cannot
+ * match them by accident: a rent nobody rounds to and tenancy days that are not
+ * the first of a month.
+ *
+ * The rent carries CENTS on purpose. A uuid, a hex pseudonym or a legacy hex id
+ * can hold `1337` — this fixture's ids did on 4 of 4,000 measured runs, and a
+ * substring sweep failed each of them with nothing leaked — but none of them,
+ * nor an ISO instant, can hold `1337.29`: ids have no `.`, and an instant's only
+ * `.` follows two digits of seconds. Its whole part is swept too, as a token, so
+ * a leak that rounds it is still a leak.
  */
 const EXACT = {
-  price: 1337,
+  price: 1337.29,
   from: new Date('2023-03-17T00:00:00.000Z'),
   to: new Date('2024-08-23T00:00:00.000Z'),
 } as const;
@@ -315,11 +326,26 @@ function expectPublishedReduced(body: unknown, where: string): void {
     });
   }
 
-  // The whole body, not the keys named above. `1337` is the exact rent and
-  // `-17` / `-23` are the exact tenancy DAYS: an ISO instant that survived under
-  // some other key would carry them.
+  // The whole body, not the keys named above.
+  //
+  // The rent, as a value under ANY key, exact or with its cents dropped…
+  const rents = [EXACT.price, Math.trunc(EXACT.price)];
+  for (const rent of rents) {
+    expect({ where, rent, at: leafPathsEqualTo(body, rent) }).toEqual({ where, rent, at: [] });
+  }
+  // …and as a token anywhere in the text, so a rent formatted into a string is
+  // found too. A token, not a substring: `1337` inside a random id is not a leak.
   const serialized = JSON.stringify(body);
-  for (const leak of [String(EXACT.price), EXACT.from.toISOString(), EXACT.to.toISOString()]) {
+  for (const rent of rents) {
+    expect({ where, rent, inText: containsNumberToken(serialized, rent) }).toEqual({
+      where,
+      rent,
+      inText: false,
+    });
+  }
+  // `-17` / `-23` are the exact tenancy DAYS: an ISO instant that survived under
+  // some other key would carry them. A whole instant cannot occur by chance.
+  for (const leak of [EXACT.from.toISOString(), EXACT.to.toISOString()]) {
     expect({ where, leaked: serialized.includes(leak) ? leak : null }).toEqual({
       where,
       leaked: null,
