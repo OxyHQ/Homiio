@@ -69,7 +69,10 @@ jobs:
           node-version: '22'
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: "1.4.3"
+          # `packageManager` in package.json is the pin, read here rather than
+          # copied: ci.yml, the backend image and this deploy cannot disagree
+          # about which bun wrote bun.lock (.github/scripts/check-version-pins.sh).
+          bun-version-file: package.json
       - run: bun install --frozen-lockfile
       - name: Build shared types
         run: |
