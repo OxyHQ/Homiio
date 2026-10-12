@@ -23,6 +23,17 @@ AWS_ACCOUNT_ID="${AWS_ACCOUNT_ID:-}"
 AWS_PARTITION="${AWS_PARTITION:-aws}"
 POST_DEPLOY_SMOKE_SCRIPT="${POST_DEPLOY_SMOKE_SCRIPT:-}"
 POST_DEPLOY_TASK_COMMAND_JSON="${POST_DEPLOY_TASK_COMMAND_JSON:-}"
+# The container's `command`, REPLACED on the rendered revision instead of carried
+# forward from the live one. Unset keeps today's carry-forward.
+#
+# Every release renders from the revision the service is RUNNING, so a command
+# set anywhere else — terraform included, since the worker service ignores
+# terraform's task-definition changes — never reaches production. That makes the
+# command the one piece of a task definition a deploy could not change, and the
+# runtime is IN the command: the worker's ECS command is what says `node` or
+# `bun`, not its image's CMD. Declaring it here puts the command in the same
+# commit as the image it has to match, so the two can only move together.
+TASK_COMMAND_JSON="${TASK_COMMAND_JSON:-}"
 # Which ECS service's deploy lane runs the one-shot migrations.
 #
 # Homiio's two services share ONE image, and `deploy-aws.yml` rolls the API and
@@ -57,9 +68,10 @@ MIGRATION_SERVICE="${MIGRATION_SERVICE:-}"
 # packages/backend/Dockerfile is `oven/bun` with `CMD ["bun",
 # "packages/backend/dist/server.js"]`. A command must name the runtime its image
 # ships: the API image has no real Node (its `node` is a symlink to bun), and
-# the WORKER image has no bun at all, which is why the `post` phase that runs on
-# the worker lane (deploy-aws.yml) still says `node`. Rolling the API back to a
-# Node image means reverting this line with it. The path is `dist/db/migrate.js`
+# the worker lane (deploy-aws.yml) names the worker image's runtime instead —
+# also `bun` since the worker moved to it, through that lane's
+# TASK_COMMAND_JSON. Rolling the API back to a Node image means reverting this
+# line with it. The path is `dist/db/migrate.js`
 # because `tsconfig.build.json` EXCLUDES `scripts/` from the emit, which is why
 # the migrator lives at `packages/backend/db/migrate.ts` in the first place.
 #
@@ -153,6 +165,15 @@ if [[ -n "$POST_DEPLOY_TASK_COMMAND_JSON" ]] &&
      all(.[]; type == "string" and length > 0)
    ' <<<"$POST_DEPLOY_TASK_COMMAND_JSON" >/dev/null; then
   echo "::error::POST_DEPLOY_TASK_COMMAND_JSON must be a non-empty JSON string array."
+  exit 1
+fi
+if [[ -n "$TASK_COMMAND_JSON" ]] &&
+   ! jq -e '
+     type == "array" and
+     length > 0 and
+     all(.[]; type == "string" and length > 0)
+   ' <<<"$TASK_COMMAND_JSON" >/dev/null; then
+  echo "::error::TASK_COMMAND_JSON must be a non-empty JSON string array."
   exit 1
 fi
 if [[ -z "$TASK_ENV_OVERRIDES_JSON" ]]; then
@@ -587,6 +608,7 @@ jq \
   --argjson taskEnvironmentOverrides "$task_environment_overrides" \
   --argjson taskSecretOverrides "$task_secret_overrides" \
   --argjson taskConfigurationRemovals "$TASK_CONFIGURATION_REMOVALS_JSON" \
+  --argjson taskCommand "${TASK_COMMAND_JSON:-null}" \
   '
     del(
       .taskDefinitionArn,
@@ -602,6 +624,7 @@ jq \
     | .containerDefinitions |= map(
         if .name == $name then
           .image = $image
+          | if $taskCommand != null then .command = $taskCommand else . end
           | if $internalMetricsSecretArn != "" then
               .secrets = (
                 (.secrets // [])

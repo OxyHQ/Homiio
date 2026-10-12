@@ -32,17 +32,21 @@ export DEPLOY_TEST_ROLLOUT_SCENARIO=healthy
 # `lastStatus` the mocked describe-tasks reports. Only the never-stops case moves
 # it, and it is what reaches the EXIT trap's unfinished-task warning.
 export DEPLOY_TEST_TASK_LAST_STATUS=STOPPED
+# Opt-in, so the older cases' expected logs stay exactly as they were.
+export DEPLOY_TEST_LOG_TASK_COMMAND=false
 
 # Vacuity floor. Without it this suite's only output on success is one line, so a
 # traversal that silently stopped after two cases is indistinguishable from a
 # full green run -- and every guarantee below would read as verified while never
 # having executed. Incremented by run_release, checked at the very end.
 cases_run=0
+# 18 -> 21: the three TASK_COMMAND_JSON cases (carried forward, replaced,
+# refused) that came with the worker's move to Bun.
 # 24 -> 18: the six ALLOW_ZERO_DESIRED_COUNT cases and the standalone zero-count
 # REFUSAL case went with the opt-in they tested, replaced by one `zero-desired-count`
 # case asserting the release lands. Lower this ONLY alongside a deletion you can
 # name; a floor quietly reduced to match whatever ran is not a floor.
-MINIMUM_CASES=18
+MINIMUM_CASES=21
 
 aws() {
   local service_json='{
@@ -138,6 +142,7 @@ aws() {
           "name": "deploy-test",
           "image": "example.invalid/deploy-test:old",
           "essential": true,
+          "command": ["old-runtime", "old-entry.js"],
           "environment": [
             {"name": "EXTRA_TASK_ENV", "value": "stale-value"},
             {"name": "EXTRA_TASK_SECRET", "value": "stale-plaintext"},
@@ -278,6 +283,27 @@ aws() {
           printf 'task-removal:clean:MISMATCH\n' >>"$DEPLOY_TEST_LOG"
         fi
       fi
+      if [[ "$DEPLOY_TEST_LOG_TASK_COMMAND" == "true" ]]; then
+        local previous_argument=""
+        local input_json=""
+        local argument
+        for argument in "$@"; do
+          if [[ "$previous_argument" == "--cli-input-json" ]]; then
+            input_json="${argument#file://}"
+            break
+          fi
+          previous_argument="$argument"
+        done
+        # The command the registered revision will RUN, logged whole so a diff
+        # names it: replaced when the lane declares one, carried forward from the
+        # live revision when it does not.
+        printf 'task-command:%s\n' "$(jq -r '
+          .containerDefinitions[]
+          | select(.name == "deploy-test")
+          | (.command // ["<none>"])
+          | join(" ")
+        ' "$input_json")" >>"$DEPLOY_TEST_LOG"
+      fi
       printf '%s\n' "arn:aws:ecs:test:task-definition/deploy-test:2"
       ;;
     "ecs update-service")
@@ -405,6 +431,7 @@ run_release() {
   export DEPLOY_TEST_SERVICE_DESIRED_COUNT
   export DEPLOY_TEST_ROLLOUT_SCENARIO
   export DEPLOY_TEST_TASK_LAST_STATUS
+  export DEPLOY_TEST_LOG_TASK_COMMAND
 
   # The generated smoke fixture expands DEPLOY_TEST_LOG when it runs; its exit
   # code is the entire interface deploy-ecs-image.sh reads, so each case picks
@@ -437,6 +464,9 @@ run_release() {
     release_environment+=(
       INTERNAL_METRICS_PARAMETER="$DEPLOY_TEST_METRICS_PARAMETER"
     )
+  fi
+  if [[ -n "${DEPLOY_TEST_TASK_COMMAND_JSON:-}" ]]; then
+    release_environment+=(TASK_COMMAND_JSON="$DEPLOY_TEST_TASK_COMMAND_JSON")
   fi
   if [[ "$inject_task_overrides" == "true" ]]; then
     release_environment+=(
@@ -709,6 +739,45 @@ diff -u \
   "$test_directory/owning-lane-runs-migration/expected.log" \
   "$test_directory/owning-lane-runs-migration/aws.log"
 
+# THE CONTAINER COMMAND: carried forward unless a lane declares one.
+#
+# The runtime lives in the command (`xvfb-run … node|bun …`), and every release
+# renders from the LIVE revision, so without TASK_COMMAND_JSON a command can only
+# ever be what it already was. Both halves are asserted: a declared command must
+# replace the live one, and an undeclared one must survive untouched — the API
+# lane declares none and relies on its image's CMD.
+DEPLOY_TEST_LOG_TASK_COMMAND=true
+run_release task-command-carried-forward true false false 0
+DEPLOY_TEST_TASK_COMMAND_JSON='["new-runtime","packages/backend/dist/worker.js"]' \
+  run_release task-command-replaced true false false 0
+DEPLOY_TEST_LOG_TASK_COMMAND=false
+printf '%s\n' \
+  'task-command:old-runtime old-entry.js' \
+  'service:arn:aws:ecs:test:task-definition/deploy-test:2:desired=1' \
+  smoke \
+  task:reconcile \
+  >"$test_directory/task-command-carried-forward/expected.log"
+diff -u \
+  "$test_directory/task-command-carried-forward/expected.log" \
+  "$test_directory/task-command-carried-forward/aws.log"
+printf '%s\n' \
+  'task-command:new-runtime packages/backend/dist/worker.js' \
+  'service:arn:aws:ecs:test:task-definition/deploy-test:2:desired=1' \
+  smoke \
+  task:reconcile \
+  >"$test_directory/task-command-replaced/expected.log"
+diff -u \
+  "$test_directory/task-command-replaced/expected.log" \
+  "$test_directory/task-command-replaced/aws.log"
+
+# A malformed command is refused before anything is registered: an empty array
+# would register a revision that runs the image's CMD while the lane believes it
+# chose something else.
+DEPLOY_TEST_TASK_COMMAND_JSON='[]' \
+  run_release task-command-invalid false false false 0
+assert_no_aws_calls task-command-invalid "An empty TASK_COMMAND_JSON must be refused before register-task-definition."
+assert_output_contains task-command-invalid "TASK_COMMAND_JSON must be a non-empty JSON string array."
+
 # ── THE WIRING ITSELF, READ OUT OF deploy-aws.yml ───────────────────────────
 #
 # Every case above proves the SCRIPT behaves correctly when it is handed
@@ -804,6 +873,24 @@ if ! jq -e 'type == "array" and length > 0' <<<"$workflow_post_command" >/dev/nu
 fi
 workflow_post_command_line="task:$(jq -r 'join(" ")' <<<"$workflow_post_command")"
 
+# The worker lane's container command, read the same way. Exactly one lane
+# declares it: the API runs its image's CMD, and the worker's command carries the
+# runtime (`xvfb-run … bun …`) that has to match the worker image.
+workflow_task_command_matches="$(grep -cE "^ {10}TASK_COMMAND_JSON:" "$workflow_file" || true)"
+if [[ "$workflow_task_command_matches" != "1" ]]; then
+  echo "ASSERTION FAILED: expected exactly one lane in $workflow_file to set TASK_COMMAND_JSON, found $workflow_task_command_matches." >&2
+  exit 1
+fi
+workflow_task_command="$(grep -E "^ {10}TASK_COMMAND_JSON:" "$workflow_file" | head -1)"
+workflow_task_command="${workflow_task_command#*: }"
+workflow_task_command="${workflow_task_command%\'}"
+workflow_task_command="${workflow_task_command#\'}"
+if ! jq -e 'type == "array" and length > 0' <<<"$workflow_task_command" >/dev/null; then
+  echo "ASSERTION FAILED: the worker command in $workflow_file is not a non-empty JSON array: $workflow_task_command" >&2
+  exit 1
+fi
+workflow_task_command_line="task-command:$(jq -r 'join(" ")' <<<"$workflow_task_command")"
+
 # The API lane, with the workflow's own values. It runs the `pre` migrator before
 # `update-service` and declares NO post-deploy task, which is why this case sets
 # `none` rather than inheriting the harness's `reconcile` fixture.
@@ -825,11 +912,15 @@ assert_aws_log_lacks workflow-api-lane-migrates "--phase=post" "The API lane ran
 # MIGRATION_SERVICE names the API, and it runs the `post` phase AFTER its own
 # rollout — the first moment no old code is serving, since both targets carry
 # the same compiled commit and this one rolls last.
+DEPLOY_TEST_LOG_TASK_COMMAND=true
 DEPLOY_TEST_APP="${workflow_app}-worker" \
 DEPLOY_TEST_MIGRATION_SERVICE="$workflow_migration_service" \
 DEPLOY_TEST_POST_DEPLOY_TASK_COMMAND_JSON="$workflow_post_command" \
+DEPLOY_TEST_TASK_COMMAND_JSON="$workflow_task_command" \
   run_release workflow-worker-lane-migrates-post true "$workflow_run_migrations" false 0
+DEPLOY_TEST_LOG_TASK_COMMAND=false
 printf '%s\n' \
+  "$workflow_task_command_line" \
   'service:arn:aws:ecs:test:task-definition/deploy-test:2:desired=1' \
   smoke \
   "$workflow_post_command_line" \
@@ -843,6 +934,11 @@ assert_output_contains workflow-worker-lane-migrates-post "Skipping migrations f
 # migration recorded before `update-service` would be a DROP applied while the
 # previous image was still serving.
 assert_output_contains workflow-worker-lane-migrates-post "ECS rollout reached a healthy steady state"
+# The worker runs on Bun, and both of its commands say so: the service command
+# and the `post` one-shot run on the same worker image. Either one saying `node`
+# would run Node there while the image's CMD and the docs say Bun.
+assert_aws_log_contains workflow-worker-lane-migrates-post "task-command:xvfb-run -a --server-args=-screen 0 1920x1080x24 bun packages/backend/dist/worker.js" "The worker lane must run the worker under xvfb-run on bun."
+assert_aws_log_lacks_pattern workflow-worker-lane-migrates-post '^task:node ' "The post migration one-shot invoked node; it runs on the worker image, whose runtime is bun."
 
 # A migration one-shot that never STOPS is the case that reaches the EXIT trap's
 # unfinished-task warning -- the only signal that a migration may still be

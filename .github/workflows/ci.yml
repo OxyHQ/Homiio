@@ -613,11 +613,16 @@ jobs:
 
   # The images as ECS runs them. Nothing else in CI builds the Dockerfile, so
   # before this job a broken runtime stage was first noticed by a production
-  # deploy. The API target runs on Bun and the worker on Node, and each migrator
-  # one-shot names its own image's runtime; .github/scripts/smoke-api-image.sh
-  # runs the deploy's real migrator commands on the right image, boots the API
-  # image's default CMD to /health, asserts Bun under tini, a graceful exit 0 on
-  # SIGTERM, and a non-zero exit when the store is unreachable.
+  # deploy. Both targets run on Bun, and each migrator one-shot names its own
+  # image's runtime; .github/scripts/smoke-api-image.sh runs the deploy's real
+  # migrator commands on the right image, boots the API image's default CMD to
+  # /health, asserts Bun under tini, a graceful exit 0 on SIGTERM, and a
+  # non-zero exit when the store is unreachable.
+  # .github/scripts/smoke-worker-image.sh then runs the worker image with the
+  # deploy's own worker command (deploy-aws.yml's TASK_COMMAND_JSON): Playwright
+  # launching Chromium headless and headed under xvfb-run on Bun, a BullMQ boot
+  # with the browser tier loaded, bun under tini -> xvfb-run, SIGTERM reaching
+  # the worker and ending in exit 0, and a non-zero exit with no database.
   #
   # amd64, although production is linux/arm64: postgis/postgis publishes no
   # arm64 image, and an ARM runner cannot run an amd64 service container. The
@@ -644,6 +649,16 @@ jobs:
           --health-timeout 5s
           --health-retries 10
           --health-start-period 10s
+      # The worker boots onto BullMQ, so its smoke needs a Redis to connect to.
+      redis:
+        image: redis:7.4-alpine
+        ports:
+          - 6385:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v4
 
@@ -658,6 +673,15 @@ jobs:
           WORKER_IMAGE: homiio-worker:ci
           DATABASE_URL: postgres://homiio:homiio@127.0.0.1:5435/homiio
         run: bash .github/scripts/smoke-api-image.sh
+
+      # After the API smoke, which has migrated this database with the deploy's
+      # own commands.
+      - name: Smoke the worker image under Bun (Playwright, xvfb-run, SIGTERM)
+        env:
+          WORKER_IMAGE: homiio-worker:ci
+          DATABASE_URL: postgres://homiio:homiio@127.0.0.1:5435/homiio
+          REDIS_URL: redis://127.0.0.1:6385
+        run: bash .github/scripts/smoke-worker-image.sh
 
   # THE required check. Branch protection requires this one job instead of
   # naming every job above, because on a pull request those jobs may be

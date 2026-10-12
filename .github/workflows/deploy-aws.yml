@@ -409,7 +409,25 @@ jobs:
           # registry inverted to on-by-default, and a unit test pins that. This
           # removes them so the task definition says what is true.
           TASK_CONFIGURATION_REMOVALS_JSON: '["ALIA_API_URL","OXY_API_URL","OXY_SERVICE_API_KEY","OXY_SERVICE_API_SECRET","SINDI_OXY_SERVICE_API_KEY","SINDI_OXY_SERVICE_API_SECRET","OXY_INFERENCE_ROUTING_PROFILE","OXY_INFERENCE_ROUTING_PROFILE_ID","SINDI_ALIA_AGENT_ID","PROVIDER_APARTMENTS_COM_ENABLED","PROVIDER_BLUEGROUND_ENABLED","PROVIDER_DAFT_ENABLED","PROVIDER_FOTOCASA_ENABLED","PROVIDER_HABITACLIA_ENABLED","PROVIDER_IDEALISTA_ENABLED","PROVIDER_IMMOBILIENSCOUT24_ENABLED","PROVIDER_IMMOWEB_ENABLED","PROVIDER_IMMOWELT_ENABLED","PROVIDER_INDOMIO_ENABLED","PROVIDER_KLEINANZEIGEN_ENABLED","PROVIDER_MERCADOLIBRE_AR_ENABLED","PROVIDER_MERCADOLIBRE_MX_ENABLED","PROVIDER_MILANUNCIOS_ENABLED","PROVIDER_ONTHEMARKET_ENABLED","PROVIDER_OPENRENT_ENABLED","PROVIDER_OTODOM_ENABLED","PROVIDER_PISOS_ENABLED","PROVIDER_RIGHTMOVE_ENABLED","PROVIDER_YAENCONTRE_ENABLED","PROVIDER_ZILLOW_ENABLED","PROVIDER_ZOOPLA_ENABLED","LISTING_BROWSER_MAX_CONCURRENCY","LISTING_FETCH_CONCURRENCY","OXY_ACTIVITY_API_KEY","OXY_ACTIVITY_API_SECRET"]'
-          POST_DEPLOY_TASK_COMMAND_JSON: '["node","packages/backend/dist/db/migrate.js","--target-database=homiio","--phase=post"]'
+          # BOTH COMMANDS NAME THE WORKER IMAGE'S RUNTIME, AND IT IS BUN.
+          #
+          # The worker's command used to live only in the running task
+          # definition (`xvfb-run … node …`, from oxy-infra), carried forward by
+          # every release because this service ignores terraform's
+          # task-definition changes. TASK_COMMAND_JSON replaces it on the
+          # revision this step registers, in the same commit as the image that
+          # has to contain the runtime it names — packages/backend/Dockerfile's
+          # `worker` target ships bun beside Node. oxy-infra's declaration is
+          # documentation that has to agree with this line, not its source.
+          #
+          # Rolling the worker back to Node is `bun` -> `node` in both lines
+          # below: the worker image still carries Node, so no image change is
+          # needed. A plain revert of the change that added TASK_COMMAND_JSON
+          # is NOT a rollback while a bun revision is live: the lane would stop
+          # declaring a command, carry the live `bun` one forward, and pair it
+          # with a Node-only image.
+          TASK_COMMAND_JSON: '["xvfb-run","-a","--server-args=-screen 0 1920x1080x24","bun","packages/backend/dist/worker.js"]'
+          POST_DEPLOY_TASK_COMMAND_JSON: '["bun","packages/backend/dist/db/migrate.js","--target-database=homiio","--phase=post"]'
         run: |
           export APP="${APP}-worker"
           # CONTAINER_NAME is left to default to APP, which is what the
