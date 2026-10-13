@@ -789,6 +789,96 @@ jobs:
           REDIS_URL: redis://127.0.0.1:6385
         run: bash .github/scripts/smoke-worker-image.sh
 
+  # The image smoke above is amd64 (PostGIS publishes no arm64 image), but
+  # production runs linux/arm64, and two things in the images are per
+  # architecture: the prebuilt native addons the lockfile installs (sharp,
+  # msgpackr-extract) and the Chromium copied from the Playwright image. This
+  # builds both targets for arm64 on an ARM runner, as the deploy does, and
+  # checks what does not need a database: every installed package against the
+  # lockfiles, the native addons loading on Bun, and Chromium launching
+  # headless and headed under the deploy's xvfb-run arguments. It reads the
+  # deploy's GHA cache scopes and never writes them.
+  image-arm64:
+    needs: changes
+    if: ${{ !cancelled() && !failure() && (github.event_name != 'pull_request' || needs.changes.outputs.code == 'true') }}
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Refuse unreviewed API image build inputs
+        id: reviewed_api
+        run: python3 -B .github/scripts/reviewed-image.py guard --recipe homiio
+
+      - name: Refuse unreviewed listing worker image build inputs
+        id: reviewed_worker
+        run: python3 -B .github/scripts/reviewed-image.py guard --recipe homiio-worker
+
+      # The same pinned BuildKit as deploy-aws.yml (see the comment there).
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+        with:
+          driver-opts: image=moby/buildkit:v0.33.1@sha256:cec9f139f45e93c5c69c60f8b07cfad9f43f4ef6b6a6cd917527fea5ff2e3dea
+
+      # `--cache-from type=gha` needs the Actions runtime token, which only
+      # JavaScript actions receive. Read only: no `--cache-to` here.
+      - name: Expose the Actions cache to buildx
+        uses: crazy-max/ghaction-github-runtime@v4
+
+      - name: Build the API and worker images (linux/arm64)
+        env:
+          API_DOCKERFILE: ${{ steps.reviewed_api.outputs.dockerfile }}
+          API_CONTEXT: ${{ steps.reviewed_api.outputs.context }}
+          API_TARGET: ${{ steps.reviewed_api.outputs.target }}
+          WORKER_DOCKERFILE: ${{ steps.reviewed_worker.outputs.dockerfile }}
+          WORKER_CONTEXT: ${{ steps.reviewed_worker.outputs.context }}
+          WORKER_TARGET: ${{ steps.reviewed_worker.outputs.target }}
+        run: |
+          docker buildx build --load --platform linux/arm64 \
+            --cache-from type=gha,scope=homiio-api \
+            -f "$API_DOCKERFILE" --target "$API_TARGET" -t homiio-api:arm64 "$API_CONTEXT"
+          docker buildx build --load --platform linux/arm64 \
+            --cache-from type=gha,scope=homiio-worker \
+            -f "$WORKER_DOCKERFILE" --target "$WORKER_TARGET" -t homiio-worker:arm64 "$WORKER_CONTEXT"
+
+      - name: Every installed package is a version the lockfiles record
+        run: |
+          set -euo pipefail
+          assert() {
+            local image="$1"; shift
+            docker run --rm --entrypoint bun \
+              -v "$PWD/.github/scripts/assert-image-lockfile.mjs:/check/assert.mjs:ro" \
+              -v "$PWD/bun.lock:/check/bun.lock:ro" \
+              -v "$PWD/packages/backend/worker-runtime/bun.lock:/check/worker-runtime.lock:ro" \
+              "$image" /check/assert.mjs "$@"
+          }
+          assert homiio-api:arm64 /app 400 /check/bun.lock
+          assert homiio-worker:arm64 /app 400 /check/bun.lock /check/worker-runtime.lock
+
+      - name: Native addons load and Chromium launches on arm64
+        run: |
+          set -euo pipefail
+          [ "$(docker image inspect -f '{{.Architecture}}' homiio-worker:arm64)" = arm64 ]
+          [ "$(docker image inspect -f '{{.Architecture}}' homiio-api:arm64)" = arm64 ]
+          docker run --rm homiio-api:arm64 bun -e "require('sharp'); require('msgpackr-extract'); console.log('api addons ok', process.arch)"
+          probe='
+          const { chromium } = require("playwright");
+          (async () => {
+            for (const headless of [true, false]) {
+              const browser = await chromium.launch({ headless });
+              const page = await browser.newPage({ viewport: null });
+              await page.setContent("<p id=probe>rendered</p>");
+              const text = await page.textContent("#probe");
+              const width = await page.evaluate(() => screen.width);
+              console.log(`chromium ${browser.version()} headless=${headless} text=${text} screen.width=${width} arch=${process.arch}`);
+              await browser.close();
+              if (text !== "rendered" || (!headless && width !== 1920)) process.exit(1);
+            }
+          })().catch((error) => { console.error(error); process.exit(1); });
+          '
+          docker run --rm homiio-worker:arm64 \
+            xvfb-run -a --server-args="-screen 0 1920x1080x24" bun -e "$probe"
+
   # THE required check. Branch protection requires this one job instead of
   # naming every job above, because on a pull request those jobs may be
   # SKIPPED by `changes`, and a required check should be a statement about the
@@ -799,7 +889,7 @@ jobs:
   ci-complete:
     name: CI complete
     if: always()
-    needs: [changes, backend, frontend, lockfile, frontend-bundle, lint, frontend-typecheck, image-smoke]
+    needs: [changes, backend, frontend, lockfile, frontend-bundle, lint, frontend-typecheck, image-smoke, image-arm64]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
