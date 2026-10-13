@@ -72,8 +72,9 @@ FROM oven/bun:${BUN_VERSION}-slim@sha256:14a223fa35747ec728bce300ef85888bc5f7958
 # the digest pins the browser bytes, which `playwright install` never checked
 # against anything this file controls. Only Chromium, its headless shell and
 # ffmpeg (what `playwright install chromium` fetches) leave this stage. Chromium
-# is one generic linux build for every distro, so it runs on the worker's
-# Debian base; its system libraries come from Debian, below.
+# is one generic linux build per architecture (Playwright downloads the same
+# archive for ubuntu24.04 and debian12, amd64 and arm64 alike), so it runs on
+# the worker's Debian base; its system libraries come from Debian, below.
 FROM mcr.microsoft.com/playwright:v${PLAYWRIGHT_VERSION}-noble@sha256:5b8f294aff9041b7191c34a4bab3ac270157a28774d4b0660e9743297b697e48 AS playwright-browsers
 RUN mkdir /browsers \
     && cp -a /ms-playwright/chromium-* /ms-playwright/chromium_headless_shell-* /ms-playwright/ffmpeg-* /browsers/
@@ -276,7 +277,8 @@ COPY --from=playwright-browsers /browsers /ms-playwright
 # from Debian's signed repositories: the browsers were copied in above and
 # nothing is fetched from Playwright's CDN. The checks prove the npm package is
 # the release the browsers came from, and that headed Chromium and the headless
-# shell (what the smoke launches) are both present.
+# shell (`chrome-headless-shell` on amd64, `headless_shell` on arm64) are both
+# present.
 USER root
 RUN apt-get update && apt-get install -y --no-install-recommends xauth \
     && ./node_modules/.bin/playwright install-deps chromium \
@@ -284,7 +286,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends xauth \
     && chmod -R a+rX /ms-playwright \
     && test "$(node -p "require('playwright/package.json').version")" = "$PLAYWRIGHT_VERSION" \
     && test -x "$(node -p "require('playwright').chromium.executablePath()")" \
-    && test -n "$(find /ms-playwright -maxdepth 3 -name 'chrome-headless-shell' -type f -perm -u+x)" \
+    && find /ms-playwright/chromium_headless_shell-* -maxdepth 2 -type f -perm -u+x \
+         \( -name chrome-headless-shell -o -name headless_shell \) | grep -q . \
     && node -e "require('playwright'); require('sharp'); require('msgpackr-extract')" \
     && bun -e "require('playwright'); require('sharp'); require('msgpackr-extract'); require('@homiio/shared-types'); require('@homiio/listing-providers')" \
     && test "$(bun --version)" = "$BUN_VERSION" \
