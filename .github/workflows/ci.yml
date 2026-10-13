@@ -22,6 +22,11 @@ on:
   pull_request:
   push:
     branches: [main]
+  # bump-base-digests.yml dispatches this on its bump branch: a pull request it
+  # opens with GITHUB_TOKEN triggers no `pull_request` run. A dispatched run is
+  # treated like a push (`changes` skips, every job runs) except that
+  # `deploy-backend` requires `push` and so never deploys from it.
+  workflow_dispatch:
 
 # A superseded run proves nothing about the commit that replaced it — on a pull
 # request. On main it proves something that cannot be re-derived: whether the
@@ -144,12 +149,8 @@ env:
   # read by two different bun versions is how `lockfile had changes, but lockfile
   # is frozen` arrives in a deploy that changed nothing.
   #
-  # The Dockerfile used to be exempt on the grounds that it narrows `workspaces`
-  # and never copies bun.lock, resolving fresh from the version ranges. That is
-  # true and it is the argument FOR pinning it, not against: with no lockfile the
-  # bun version is the only thing deciding how those ranges resolve, so an
-  # unpinned install lets an identical commit produce different images. It is a
-  # third pin now, and `.github/scripts/check-version-pins.sh` holds this value,
+  # The Dockerfile installs frozen from the same bun.lock, so it is a third
+  # pin, and `.github/scripts/check-version-pins.sh` holds this value,
   # the Dockerfile's and any literal workflow `bun-version:` to `packageManager`
   # instead of goodwill.
   BUN_VERSION: '1.4.3'
@@ -199,6 +200,9 @@ jobs:
               - 'packages/backend/**'
               - 'packages/listing-providers/**'
               - 'docker-compose.postgres.yml'
+              # The image's build context ignore file: a hashed build input the
+              # image smoke must rebuild for.
+              - '.dockerignore'
             frontend:
               - 'packages/frontend/**'
               - 'tailwind.config.js'
@@ -428,6 +432,11 @@ jobs:
       - name: Verify bun.lock was committed with its manifest change
         run: bun run check:lockfile
 
+      # The worker image's Playwright comes from its own one-dependency lockfile
+      # (see packages/backend/Dockerfile, worker-deps); same two layers.
+      - name: Verify the worker runtime's bun.lock matches its manifest
+        run: bun .github/scripts/check-worker-runtime-lockfile.mjs
+
       # Every gate in this repository carries a mutation test that breaks what it
       # guards and fails if the guard still passes. Running them is what keeps a
       # gate that has silently stopped discriminating from reading as coverage.
@@ -469,6 +478,8 @@ jobs:
           bash .github/scripts/test-deployment-scope.sh
           bash .github/scripts/test-check-version-pins.sh
           bash .github/scripts/test-deploy-ecs-image.sh
+          bun .github/scripts/test-assert-image-lockfile.mjs
+          bun .github/scripts/test-check-worker-runtime-lockfile.mjs
 
       # The production images' build inputs (Dockerfile, context, target and
       # both .dockerignore files) must match the reviewed pins in
@@ -479,6 +490,8 @@ jobs:
       # fixture tests run first so a green check means the gate can fail.
       - name: Prove the reviewed-image gate can fail
         run: python3 -B -m unittest discover -s .github/scripts -p test_reviewed_image.py
+      - name: Prove the base-image digest bump works on fixtures
+        run: python3 -B -m unittest discover -s .github/scripts -p test_bump_base_digests.py
       - name: Verify the production image's build inputs are reviewed
         run: python3 -B .github/scripts/reviewed-image.py check
 
@@ -674,10 +687,70 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # The images are built from what the deploy's guards hand out, so the
+      # smoke tests the reviewed Dockerfile, context and targets, and a PR that
+      # changed them without a re-pin stops here as it would in the deploy.
+      - name: Refuse unreviewed API image build inputs
+        id: reviewed_api
+        run: python3 -B .github/scripts/reviewed-image.py guard --recipe homiio
+
+      - name: Refuse unreviewed listing worker image build inputs
+        id: reviewed_worker
+        run: python3 -B .github/scripts/reviewed-image.py guard --recipe homiio-worker
+
+      # The same pinned BuildKit as deploy-aws.yml (see the comment there).
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+        with:
+          driver-opts: image=moby/buildkit:v0.33.1@sha256:cec9f139f45e93c5c69c60f8b07cfad9f43f4ef6b6a6cd917527fea5ff2e3dea
+
+      # No cache: the deploy's GHA scopes hold linux/arm64 layers, which an
+      # amd64 build cannot use, and a pull request must never write them.
+      # The builder stage is loaded too, so the lockfile check below also
+      # covers the node_modules `dist` was compiled against.
       - name: Build the API and worker images
+        env:
+          API_DOCKERFILE: ${{ steps.reviewed_api.outputs.dockerfile }}
+          API_CONTEXT: ${{ steps.reviewed_api.outputs.context }}
+          API_TARGET: ${{ steps.reviewed_api.outputs.target }}
+          API_BUILD_INPUTS_SHA256: ${{ steps.reviewed_api.outputs.build_inputs_sha256 }}
+          WORKER_DOCKERFILE: ${{ steps.reviewed_worker.outputs.dockerfile }}
+          WORKER_CONTEXT: ${{ steps.reviewed_worker.outputs.context }}
+          WORKER_TARGET: ${{ steps.reviewed_worker.outputs.target }}
+          WORKER_BUILD_INPUTS_SHA256: ${{ steps.reviewed_worker.outputs.build_inputs_sha256 }}
+          SOURCE_TREE: ${{ steps.reviewed_api.outputs.source_tree }}
         run: |
-          docker build -f packages/backend/Dockerfile --target api -t homiio-api:ci .
-          docker build -f packages/backend/Dockerfile --target worker -t homiio-worker:ci .
+          docker buildx build --load \
+            -f "$API_DOCKERFILE" --target "$API_TARGET" \
+            --label "io.oxy.source.tree=$SOURCE_TREE" \
+            --label "io.oxy.build-inputs.sha256=$API_BUILD_INPUTS_SHA256" \
+            -t homiio-api:ci "$API_CONTEXT"
+          docker buildx build --load \
+            -f "$WORKER_DOCKERFILE" --target "$WORKER_TARGET" \
+            --label "io.oxy.source.tree=$SOURCE_TREE" \
+            --label "io.oxy.build-inputs.sha256=$WORKER_BUILD_INPUTS_SHA256" \
+            -t homiio-worker:ci "$WORKER_CONTEXT"
+          docker buildx build --load \
+            -f "$API_DOCKERFILE" --target builder \
+            -t homiio-builder:ci "$API_CONTEXT"
+
+      # Every package installed in each image must be a version the lockfiles
+      # record: bun.lock for the app, plus packages/backend/worker-runtime/bun.lock
+      # for the worker's Playwright. Run inside each image, by its own bun.
+      - name: Every installed package is a version the lockfiles record
+        run: |
+          set -euo pipefail
+          assert() {
+            local image="$1"; shift
+            docker run --rm --entrypoint bun \
+              -v "$PWD/.github/scripts/assert-image-lockfile.mjs:/check/assert.mjs:ro" \
+              -v "$PWD/bun.lock:/check/bun.lock:ro" \
+              -v "$PWD/packages/backend/worker-runtime/bun.lock:/check/worker-runtime.lock:ro" \
+              "$image" /check/assert.mjs "$@"
+          }
+          assert homiio-builder:ci /app 1000 /check/bun.lock
+          assert homiio-api:ci /app 400 /check/bun.lock
+          assert homiio-worker:ci /app 400 /check/bun.lock /check/worker-runtime.lock
 
       - name: Smoke the images under their runtimes
         env:

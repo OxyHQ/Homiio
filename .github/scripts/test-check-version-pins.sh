@@ -23,7 +23,8 @@ trap cleanup EXIT INT TERM
 # A fixture tree the script can run against without touching the real one.
 seed() {
   rm -rf "$WORKDIR/tree"
-  mkdir -p "$WORKDIR/tree/.github/scripts" "$WORKDIR/tree/.github/workflows" "$WORKDIR/tree/packages/backend"
+  mkdir -p "$WORKDIR/tree/.github/scripts" "$WORKDIR/tree/.github/workflows" "$WORKDIR/tree/packages/backend/worker-runtime"
+  cp "$REPO/packages/backend/worker-runtime/package.json" "$WORKDIR/tree/packages/backend/worker-runtime/"
   cp "$SCRIPTS/check-version-pins.sh" "$WORKDIR/tree/.github/scripts/"
   cp "$REPO"/.github/workflows/*.yml "$WORKDIR/tree/.github/workflows/"
   cp "$REPO/packages/backend/Dockerfile" "$WORKDIR/tree/packages/backend/"
@@ -102,6 +103,26 @@ expect "a missing bun pin fails instead of passing vacuously" 1 "cannot pass vac
 seed
 sed -i "s/  BUN_VERSION: '.*'/  NOT_BUN_VERSION: 'x'/" "$WORKDIR/tree/.github/workflows/ci.yml"
 expect "a missing ci.yml pin fails instead of passing vacuously" 1 "cannot pass vacuously"
+
+seed
+sed -i -E 's/"playwright": "[^"]+"/"playwright": "9.9.9"/' "$WORKDIR/tree/packages/backend/worker-runtime/package.json"
+expect "a playwright package bump the browser image did not follow is caught" 1 "playwright pin drift"
+
+seed
+sed -i 's/^ARG PLAYWRIGHT_VERSION=.*/ARG PLAYWRIGHT_VERSION=9.9.9/' "$WORKDIR/tree/packages/backend/Dockerfile"
+expect "a browser image bump the playwright package did not follow is caught" 1 "playwright pin drift"
+
+seed
+sed -i 's|mcr.microsoft.com/playwright:v${PLAYWRIGHT_VERSION}-|mcr.microsoft.com/playwright:v1.0.0-|' "$WORKDIR/tree/packages/backend/Dockerfile"
+expect "a browser image tag that ignores PLAYWRIGHT_VERSION is caught" 1 "not pinned to PLAYWRIGHT_VERSION"
+
+seed
+sed -i '/mcr.microsoft.com\/playwright/d' "$WORKDIR/tree/packages/backend/Dockerfile"
+expect "a missing browser image stage fails instead of passing vacuously" 1 "cannot pass vacuously"
+
+seed
+sed -i 's/^ARG PLAYWRIGHT_VERSION=.*/ARG NOT_THE_PIN=1.0.0/' "$WORKDIR/tree/packages/backend/Dockerfile"
+expect "a missing playwright pin fails instead of passing vacuously" 1 "cannot pass vacuously"
 
 if [[ "$FAILURES" -ne 0 ]]; then
   printf '\n%d mutation(s) went undetected.\n' "$FAILURES"
