@@ -81,10 +81,9 @@ RUN mkdir /browsers \
 FROM node:22.23-bookworm-slim@sha256:c3de60bf2f9dd0ac6370e6117950ff62d6e339527e7472301c9c78a017978392 AS builder
 ARG BUN_VERSION
 
-# No compiler toolchain: every install below runs with --ignore-scripts, so
-# nothing can invoke node-gyp. The closure's native addons (sharp,
-# msgpackr-extract) load prebuilt platform packages, and both runtime targets
-# require them at build time.
+# No compiler toolchain: this stage installs with --ignore-scripts and only runs
+# tsc, which loads no native addon. The one addon the runtime has to compile is
+# built in `production-deps`, below.
 RUN apt-get update && apt-get install -y --no-install-recommends \
       ca-certificates \
     && rm -rf /var/lib/apt/lists/*
@@ -126,9 +125,10 @@ WORKDIR /app
 #
 # `--ignore-scripts`: no dependency lifecycle script runs, and neither does the
 # root `postinstall` (build:shared-types, built explicitly below). The closure's
-# install scripts are msgpackr-extract's (selects its prebuilt addon),
-# puppeteer's (a browser download, already skipped by PUPPETEER_SKIP_DOWNLOAD)
-# and, in this stage only, esbuild's; installs with and without them produced
+# install scripts are puppeteer's (a browser download, already skipped by
+# PUPPETEER_SKIP_DOWNLOAD), esbuild's (this stage only; tsc does not use it)
+# and msgpackr-extract's, whose one job the runtime needs is done explicitly in
+# `production-deps`. On linux/amd64 installs with and without them produced
 # byte-identical node_modules (measured 2026-10-13).
 COPY package.json bun.lock ./
 
@@ -167,12 +167,15 @@ RUN cp -r packages/backend/locales packages/backend/dist/locales
 # Throwaway install stages. They are glibc (Debian bookworm), the same libc as
 # both runtime stages below, so the sharp prebuild installed here is the one
 # each runtime loads. Same lockfile, flags and filter as the builder, minus
-# devDependencies, so `dist` was compiled against the versions that ship.
-FROM node:22.23-bookworm-slim@sha256:c3de60bf2f9dd0ac6370e6117950ff62d6e339527e7472301c9c78a017978392 AS production-manifests
+# devDependencies, so `dist` was compiled against the versions that ship. The
+# API and the worker take the same `node_modules`; the worker adds Playwright.
+FROM node:22.23-bookworm-slim@sha256:c3de60bf2f9dd0ac6370e6117950ff62d6e339527e7472301c9c78a017978392 AS production-deps
 ARG BUN_VERSION
 
+# The compiler toolchain, for msgpackr-extract only (below). It stays in this
+# throwaway stage; neither runtime target carries it.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-      ca-certificates \
+      python3 make g++ ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=bun-bin /usr/local/bin/bun /usr/local/bin/bun
 
@@ -187,13 +190,31 @@ COPY packages/shared-types/package.json packages/shared-types/
 COPY packages/listing-providers/package.json packages/listing-providers/
 COPY packages/backend/package.json packages/backend/
 
-FROM production-manifests AS api-deps
+# msgpackr-extract (BullMQ's msgpackr decoder) publishes prebuilt addons for
+# linux/amd64 glibc but only MUSL builds for linux/arm64, which is production.
+# Its install script, skipped here, would find no usable prebuild there and run
+# `node-gyp rebuild`, fetching whatever node-gyp and Node headers it can reach.
+# This does that step explicitly and offline, only when no prebuild loads: the
+# node-gyp bundled with this digest-pinned image's npm, the image's own Node
+# headers (--nodedir), and ENABLE_V8_FUNCTIONS=false for a pure N-API build,
+# the flavour Bun (the API's runtime) loads. Both runtimes are then required to
+# load it, here and again in each target.
 RUN bun install --frozen-lockfile --production --omit peer --ignore-scripts \
       --filter @homiio/shared-types --filter @homiio/listing-providers --filter @homiio/backend \
     && rm -rf node_modules/@img/sharp-linuxmusl-* \
-              node_modules/@img/sharp-libvips-linuxmusl-*
+              node_modules/@img/sharp-libvips-linuxmusl-* \
+    && if ! node -e "require('msgpackr-extract')" 2>/dev/null; then \
+         cd node_modules/msgpackr-extract \
+         && ENABLE_V8_FUNCTIONS=false node /usr/local/lib/node_modules/npm/node_modules/node-gyp/bin/node-gyp.js \
+              rebuild --nodedir=/usr/local \
+         && find build -mindepth 1 -maxdepth 1 ! -name Release -exec rm -rf {} + \
+         && find build/Release -mindepth 1 -maxdepth 1 ! -name '*.node' -exec rm -rf {} + \
+         && cd /app; \
+       fi \
+    && node -e "require('msgpackr-extract')" \
+    && bun -e "require('msgpackr-extract')"
 
-FROM production-manifests AS worker-deps
+FROM production-deps AS worker-deps
 # Playwright is the worker's alone and is not in bun.lock: listing-providers
 # declares it only as an optional peer, so no repository install pulls it. It
 # comes from packages/backend/worker-runtime, a one-dependency project (not a
@@ -201,14 +222,10 @@ FROM production-manifests AS worker-deps
 # into the hoisted node_modules, where listing-providers' `import('playwright')`
 # finds it. The `test ! -e` lines refuse a second copy from the main closure.
 COPY packages/backend/worker-runtime/package.json packages/backend/worker-runtime/bun.lock /opt/worker-runtime/
-RUN bun install --frozen-lockfile --production --omit peer --ignore-scripts \
-      --filter @homiio/shared-types --filter @homiio/listing-providers --filter @homiio/backend \
-    && bun install --cwd /opt/worker-runtime --frozen-lockfile --production --ignore-scripts \
+RUN bun install --cwd /opt/worker-runtime --frozen-lockfile --production --ignore-scripts \
     && test ! -e node_modules/playwright \
     && test ! -e node_modules/playwright-core \
-    && cp -a /opt/worker-runtime/node_modules/. node_modules/ \
-    && rm -rf node_modules/@img/sharp-linuxmusl-* \
-              node_modules/@img/sharp-libvips-linuxmusl-*
+    && cp -a /opt/worker-runtime/node_modules/. node_modules/
 
 # ── Worker runtime base (Debian + Node, bun copied in below) ──────
 # See the header for why the worker keeps this base rather than `oven/bun`.
@@ -287,7 +304,7 @@ CMD ["bun", "packages/backend/dist/worker.js"]
 
 # ── API target (default/final stage): Bun ─────────────────────────
 # The pinned Bun image, Debian slim (glibc) like every install stage, so the
-# sharp prebuild api-deps installed is the one this runtime loads. It ships no
+# sharp prebuild production-deps installed is the one this runtime loads. It ships no
 # real Node: `node` on its PATH (/usr/local/bun-node-fallback-bin/node) is a
 # symlink to bun, so a stale `node ...` override would still run Bun while
 # claiming otherwise. Every command that targets this image names `bun`.
@@ -314,9 +331,9 @@ COPY --from=builder /app/packages/listing-providers/dist packages/listing-provid
 COPY --from=builder /app/packages/backend/dist packages/backend/dist
 COPY --from=builder /app/packages/backend/drizzle packages/backend/drizzle
 
-COPY --from=api-deps /app/package.json ./
-COPY --from=api-deps /app/packages packages/
-COPY --from=api-deps /app/node_modules node_modules/
+COPY --from=production-deps /app/package.json ./
+COPY --from=production-deps /app/packages packages/
+COPY --from=production-deps /app/node_modules node_modules/
 
 RUN bun -e "require('sharp'); require('msgpackr-extract'); require('@homiio/shared-types'); require('@homiio/listing-providers')" \
     && test "$(bun --version)" = "$BUN_VERSION" \
