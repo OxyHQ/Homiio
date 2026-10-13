@@ -752,6 +752,27 @@ jobs:
           assert homiio-api:ci /app 400 /check/bun.lock
           assert homiio-worker:ci /app 400 /check/bun.lock /check/worker-runtime.lock
 
+      # What the runtime images ship and who can change it: uid 1000, app
+      # files and node_modules not writable by that user, no devDependencies
+      # (the builder's tsc/jest) and nothing of the Expo frontend.
+      - name: The runtime images run unprivileged and ship production dependencies only
+        run: |
+          set -euo pipefail
+          for image in homiio-api:ci homiio-worker:ci; do
+            docker run --rm --entrypoint sh "$image" -c '
+              set -e
+              test "$(id -u)" = 1000 || { echo "runs as uid $(id -u), expected 1000"; exit 1; }
+              for path in /app/package.json /app/packages/backend/dist/server.js /app/node_modules/express/package.json; do
+                test -e "$path" || { echo "$path is missing"; exit 1; }
+                if [ -w "$path" ] || [ -w "$(dirname "$path")" ]; then echo "$path is writable by the runtime user"; exit 1; fi
+              done
+              for pkg in typescript jest ts-jest ts-node expo react-native react-dom @biomejs/biome; do
+                if [ -e "/app/node_modules/$pkg" ]; then echo "$pkg ships in the runtime image"; exit 1; fi
+              done
+              echo "ok: uid $(id -u), read-only app, no dev or frontend packages"
+            ' || { echo "::error::$image failed its runtime-content checks"; exit 1; }
+          done
+
       - name: Smoke the images under their runtimes
         env:
           API_IMAGE: homiio-api:ci
