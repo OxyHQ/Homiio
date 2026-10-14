@@ -188,8 +188,18 @@ jobs:
       - name: Login to ECR
         uses: aws-actions/amazon-ecr-login@v2
 
+      # BuildKit (the daemon AND its built-in Dockerfile frontend, since the
+      # Dockerfile has no `# syntax=` line) is part of what turns the reviewed
+      # inputs into an image. Left alone, setup-buildx-action starts
+      # `moby/buildkit:buildx-stable-1`, a tag that moves with every release.
+      # Pinned here by multi-arch index digest (linux/arm64 listed) to v0.33.1,
+      # the release buildx-stable-1 pointed to on 2026-10-13, so the bytes are
+      # what this deploy already ran. The same pin is in ci.yml's image smoke
+      # and refresh-build-cache.yml; moving it is an owner-reviewed change.
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
+        with:
+          driver-opts: image=moby/buildkit:v0.33.1@sha256:cec9f139f45e93c5c69c60f8b07cfad9f43f4ef6b6a6cd917527fea5ff2e3dea
 
       # `--cache-from/--cache-to type=gha` below need the Actions runtime token
       # and cache URL, which GitHub gives to JavaScript actions and NOT to `run:`

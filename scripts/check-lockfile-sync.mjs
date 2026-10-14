@@ -11,10 +11,11 @@
 // surfaces later, as a broken frontend deploy or a red CI run on somebody else's
 // change.
 //
-// (The backend image is deliberately NOT covered by this: packages/backend/
-// Dockerfile narrows `workspaces` to three packages and therefore does not copy
-// bun.lock at all, resolving fresh from the version ranges. That is intentional —
-// do not "fix" it by copying the lockfile in.)
+// The backend image depends on this check too: packages/backend/Dockerfile
+// installs with `--frozen-lockfile --filter` from this same bun.lock, so a
+// desynced lockfile is now also an image that cannot build. (Its Playwright
+// comes from packages/backend/worker-runtime/bun.lock, which
+// .github/scripts/check-worker-runtime-lockfile.mjs checks the same way.)
 //
 // WHY NOT `--frozen-lockfile`
 //

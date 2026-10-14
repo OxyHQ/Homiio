@@ -1,0 +1,9 @@
+{
+  "name": "@homiio/worker-runtime",
+  "version": "1.0.0",
+  "private": true,
+  "description": "The listing worker image's browser runtime: Playwright, installed only into the worker target from this directory's own bun.lock. Not a workspace, so a repository install never pulls Playwright. See packages/backend/Dockerfile (worker-deps).",
+  "dependencies": {
+    "playwright": "1.61.1"
+  }
+}
