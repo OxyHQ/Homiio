@@ -21,10 +21,16 @@ packages/frontend
 .git
 .github
 
-# Local env & secrets — never bake into the image
+# Local env & secrets — never bake into the image. No `.env.example` exception:
+# the build reads none of them, so none needs to reach the builder stage.
 **/.env
 **/.env.*
-!**/.env.example
+
+# Local git worktrees and agent checkouts (each a whole copy of the repo).
+# Nothing in the Dockerfile COPYs them; this only keeps local build contexts
+# from shipping them to the daemon.
+.worktrees
+.claude
 
 # Expo
 **/.expo

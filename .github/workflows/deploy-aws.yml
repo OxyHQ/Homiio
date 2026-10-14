@@ -54,7 +54,6 @@ env:
   ECR_REGISTRY: 237343248947.dkr.ecr.us-west-2.amazonaws.com
   APP: homiio
   CLUSTER: oxy-cluster
-  DOCKERFILE: packages/backend/Dockerfile
   # Which of the two lanes below owns the one-shot `pre` migrations. Both roll
   # the SAME compiled ledger through deploy-ecs-image.sh, and the migrator holds no
   # cross-process advisory lock, so it must run exactly once per release. Naming
@@ -189,8 +188,18 @@ jobs:
       - name: Login to ECR
         uses: aws-actions/amazon-ecr-login@v2
 
+      # BuildKit (the daemon AND its built-in Dockerfile frontend, since the
+      # Dockerfile has no `# syntax=` line) is part of what turns the reviewed
+      # inputs into an image. Left alone, setup-buildx-action starts
+      # `moby/buildkit:buildx-stable-1`, a tag that moves with every release.
+      # Pinned here by multi-arch index digest (linux/arm64 listed) to v0.33.1,
+      # the release buildx-stable-1 pointed to on 2026-10-13, so the bytes are
+      # what this deploy already ran. The same pin is in ci.yml's image smoke
+      # and refresh-build-cache.yml; moving it is an owner-reviewed change.
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
+        with:
+          driver-opts: image=moby/buildkit:v0.33.1@sha256:cec9f139f45e93c5c69c60f8b07cfad9f43f4ef6b6a6cd917527fea5ff2e3dea
 
       # `--cache-from/--cache-to type=gha` below need the Actions runtime token
       # and cache URL, which GitHub gives to JavaScript actions and NOT to `run:`
@@ -199,10 +208,37 @@ jobs:
       - name: Expose the Actions cache to buildx
         uses: crazy-max/ghaction-github-runtime@v4
 
+      # Production builds only what the owner reviewed. Each target's
+      # Dockerfile, context, target and both .dockerignore files are hashed and
+      # compared with its ONE pin in .github/scripts/reviewed-images.json; a
+      # mismatch stops here, before anything is built or pushed. The Dockerfile
+      # path, context, target and the label values below are these steps'
+      # outputs, so the build cannot use a different file or target than the one
+      # checked, and no hash is spelled out in this workflow to drift from the
+      # pin. CI runs the same check on every pull request (`reviewed-image.py
+      # check`, in the `lockfile` job), so a change that would stop here fails
+      # before it can merge.
+      - name: Refuse unreviewed API image build inputs
+        id: reviewed_api
+        run: python3 -B .github/scripts/reviewed-image.py guard --recipe homiio
+
+      - name: Refuse unreviewed listing worker image build inputs
+        id: reviewed_worker
+        run: python3 -B .github/scripts/reviewed-image.py guard --recipe homiio-worker
+
       - name: Build and push API + listing worker (linux/arm64)
         id: build
         env:
           COMMIT_TAG: ${{ github.sha }}
+          API_DOCKERFILE: ${{ steps.reviewed_api.outputs.dockerfile }}
+          API_CONTEXT: ${{ steps.reviewed_api.outputs.context }}
+          API_TARGET: ${{ steps.reviewed_api.outputs.target }}
+          API_BUILD_INPUTS_SHA256: ${{ steps.reviewed_api.outputs.build_inputs_sha256 }}
+          WORKER_DOCKERFILE: ${{ steps.reviewed_worker.outputs.dockerfile }}
+          WORKER_CONTEXT: ${{ steps.reviewed_worker.outputs.context }}
+          WORKER_TARGET: ${{ steps.reviewed_worker.outputs.target }}
+          WORKER_BUILD_INPUTS_SHA256: ${{ steps.reviewed_worker.outputs.build_inputs_sha256 }}
+          SOURCE_TREE: ${{ steps.reviewed_api.outputs.source_tree }}
         run: |
           IMG=$ECR_REGISTRY/oxy/$APP
           # The digest comes out of the build itself, via --metadata-file.
@@ -214,25 +250,33 @@ jobs:
             --platform linux/arm64 \
             --cache-from type=gha,scope=$APP-api \
             --cache-to type=gha,scope=$APP-api,mode=max,ignore-error=true \
-            -f "$DOCKERFILE" \
-            --target api \
+            -f "$API_DOCKERFILE" \
+            --target "$API_TARGET" \
+            --label "org.opencontainers.image.revision=$GITHUB_SHA" \
+            --label "org.opencontainers.image.source=https://github.com/$GITHUB_REPOSITORY" \
+            --label "io.oxy.source.tree=$SOURCE_TREE" \
+            --label "io.oxy.build-inputs.sha256=$API_BUILD_INPUTS_SHA256" \
             -t "$IMG:$COMMIT_TAG-api" \
             -t "$IMG:latest" \
             --metadata-file "$RUNNER_TEMP/build-api-metadata.json" \
             --push \
-            .
+            "$API_CONTEXT"
 
           docker buildx build \
             --platform linux/arm64 \
             --cache-from type=gha,scope=$APP-worker \
             --cache-to type=gha,scope=$APP-worker,mode=max,ignore-error=true \
-            -f "$DOCKERFILE" \
-            --target worker \
+            -f "$WORKER_DOCKERFILE" \
+            --target "$WORKER_TARGET" \
+            --label "org.opencontainers.image.revision=$GITHUB_SHA" \
+            --label "org.opencontainers.image.source=https://github.com/$GITHUB_REPOSITORY" \
+            --label "io.oxy.source.tree=$SOURCE_TREE" \
+            --label "io.oxy.build-inputs.sha256=$WORKER_BUILD_INPUTS_SHA256" \
             -t "$IMG:$COMMIT_TAG-worker" \
             -t "$IMG:latest-worker" \
             --metadata-file "$RUNNER_TEMP/build-worker-metadata.json" \
             --push \
-            .
+            "$WORKER_CONTEXT"
 
           # :latest is still moved, but nothing that deploys reads it. It exists
           # so a from-scratch `terraform apply` -- whose app-service module

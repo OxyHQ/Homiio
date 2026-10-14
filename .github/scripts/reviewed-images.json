@@ -3,23 +3,19 @@
   "recipes": [
     {
       "name": "homiio",
-      "services": ["homiio"],
       "ecrRepository": "oxy/homiio",
       "dockerfile": "packages/backend/Dockerfile",
-      "dockerfileSha256": "5e2dbd0194e858f3efcb6791f3ae2941e5422146f1195a79c2eaca4955986473",
+      "context": ".",
       "target": "api",
-      "tagSuffix": "-api",
-      "cacheScope": "homiio-api"
+      "buildInputsSha256": "815d2084eb74e2ca227525594552914ce3d7f048bb8a55523fc3c9837bf332a5"
     },
     {
       "name": "homiio-worker",
-      "services": ["homiio-worker"],
       "ecrRepository": "oxy/homiio",
       "dockerfile": "packages/backend/Dockerfile",
-      "dockerfileSha256": "5e2dbd0194e858f3efcb6791f3ae2941e5422146f1195a79c2eaca4955986473",
+      "context": ".",
       "target": "worker",
-      "tagSuffix": "-worker",
-      "cacheScope": "homiio-worker"
+      "buildInputsSha256": "ca1720d7b92db5542e13cf1d75160e26926e3e78bc78c2abf2eaec20ea74778b"
     }
   ]
 }

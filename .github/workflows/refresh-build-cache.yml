@@ -13,7 +13,9 @@ name: Refresh build cache
 # default branch (schedule) or a dispatch from main, so it writes main's cache,
 # which only main-branch deploys read; no pull_request workflow writes a scope.
 # Same Dockerfile, context, platform and target(s) as deploy-aws.yml, so the
-# layers it writes are the ones the deploy looks up.
+# layers it writes are the ones the deploy looks up: they come from the same
+# `reviewed-image.py guard` steps, so this path builds only reviewed inputs too
+# and a stale pin stops it before it writes a layer. Same pinned BuildKit.
 
 on:
   schedule:
@@ -35,8 +37,19 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - name: Refuse unreviewed API image build inputs
+        id: reviewed_api
+        run: python3 -B .github/scripts/reviewed-image.py guard --recipe homiio
+
+      - name: Refuse unreviewed listing worker image build inputs
+        id: reviewed_worker
+        run: python3 -B .github/scripts/reviewed-image.py guard --recipe homiio-worker
+
+      # The same pinned BuildKit as deploy-aws.yml (see the comment there).
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
+        with:
+          driver-opts: image=moby/buildkit:v0.33.1@sha256:cec9f139f45e93c5c69c60f8b07cfad9f43f4ef6b6a6cd917527fea5ff2e3dea
 
       # `--cache-to type=gha` needs the Actions runtime token and cache URL,
       # which GitHub gives to JavaScript actions and NOT to `run:` steps.
@@ -46,25 +59,33 @@ jobs:
       # No output: the result lives only in the exported cache. A failed export
       # fails the job, since writing the cache is the whole point.
       - name: Rebuild the API image from scratch into the cache
+        env:
+          DOCKERFILE: ${{ steps.reviewed_api.outputs.dockerfile }}
+          CONTEXT: ${{ steps.reviewed_api.outputs.context }}
+          TARGET: ${{ steps.reviewed_api.outputs.target }}
         run: |
           docker buildx build \
             --platform linux/arm64 \
             --no-cache \
             --pull \
             --cache-to type=gha,scope=homiio-api,mode=max \
-            -f packages/backend/Dockerfile \
-            --target api \
-            .
+            -f "$DOCKERFILE" \
+            --target "$TARGET" \
+            "$CONTEXT"
 
       # No output: the result lives only in the exported cache. A failed export
       # fails the job, since writing the cache is the whole point.
       - name: Rebuild the listing-worker image from scratch into the cache
+        env:
+          DOCKERFILE: ${{ steps.reviewed_worker.outputs.dockerfile }}
+          CONTEXT: ${{ steps.reviewed_worker.outputs.context }}
+          TARGET: ${{ steps.reviewed_worker.outputs.target }}
         run: |
           docker buildx build \
             --platform linux/arm64 \
             --no-cache \
             --pull \
             --cache-to type=gha,scope=homiio-worker,mode=max \
-            -f packages/backend/Dockerfile \
-            --target worker \
-            .
+            -f "$DOCKERFILE" \
+            --target "$TARGET" \
+            "$CONTEXT"

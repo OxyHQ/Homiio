@@ -21,8 +21,8 @@
 ## (Debian/glibc like the install stages, so sharp's glibc prebuild matches); its
 ## CMD and the `pre` migrator one-shot in .github/scripts/deploy-ecs-image.sh
 ## both say `bun`. The worker keeps the `node:22-bookworm-slim` base with the
-## pinned bun binary copied in: Playwright's `install --with-deps` and its
-## Chromium/X11 system packages are installed and proven on that base, and the
+## pinned bun binary copied in: Playwright's Chromium/X11 system packages are
+## installed and proven on that base (Debian's, via `playwright install-deps`), and the
 ## real Node left beside bun makes rolling the worker back a command change, not
 ## an image change. Its ECS command (deploy-aws.yml's TASK_COMMAND_JSON, which
 ## replaces the live task definition's) and its `post` migrator both say `bun`.
@@ -48,19 +48,45 @@
 # Must equal `packageManager` in the root package.json (and ci.yml's
 # `BUN_VERSION`); .github/scripts/check-version-pins.sh fails CI if they drift.
 ARG BUN_VERSION=1.4.3
+# Must equal `playwright` in packages/backend/worker-runtime/package.json, the
+# npm package the worker installs; check-version-pins.sh holds the two together.
+# Playwright refuses to launch a browser built for another release, so the
+# browsers copied from the image below must come from the same version.
+ARG PLAYWRIGHT_VERSION=1.61.1
 
+# Base images are pinned by multi-arch INDEX digest (linux/arm64 included).
+# The digest is what the build uses; the tag is only for readers and for
+# check-version-pins.sh. Moving to another bun or node release, or picking up a
+# rebuilt base for OS patches, needs a new digest here — and that edit changes
+# the build inputs, so it needs a new owner review and re-pin in
+# .github/scripts/reviewed-images.json.
+#
 # Bun comes from its own published image at that version, copied in as one
 # binary. Installing it through npm put a second package manager in the
-# build just to fetch the first.
-FROM oven/bun:${BUN_VERSION}-slim AS bun-bin
+# build just to fetch the first. A BUN_VERSION bump that forgets the digest
+# would silently keep the old bun, so the builder asserts the version below.
+FROM oven/bun:${BUN_VERSION}-slim@sha256:14a223fa35747ec728bce300ef85888bc5f7958164d15bbba6a54b22b52a3288 AS bun-bin
 
-FROM node:22-bookworm-slim AS builder
+# Chromium for the listing worker, taken from Microsoft's Playwright image for
+# the same release instead of downloaded from Playwright's CDN at build time:
+# the digest pins the browser bytes, which `playwright install` never checked
+# against anything this file controls. Only Chromium, its headless shell and
+# ffmpeg (what `playwright install chromium` fetches) leave this stage. Chromium
+# is one generic linux build per architecture (Playwright downloads the same
+# archive for ubuntu24.04 and debian12, amd64 and arm64 alike), so it runs on
+# the worker's Debian base; its system libraries come from Debian, below.
+FROM mcr.microsoft.com/playwright:v${PLAYWRIGHT_VERSION}-noble@sha256:5b8f294aff9041b7191c34a4bab3ac270157a28774d4b0660e9743297b697e48 AS playwright-browsers
+RUN mkdir /browsers \
+    && cp -a /ms-playwright/chromium-* /ms-playwright/chromium_headless_shell-* /ms-playwright/ffmpeg-* /browsers/
+
+FROM node:22.23-bookworm-slim@sha256:c3de60bf2f9dd0ac6370e6117950ff62d6e339527e7472301c9c78a017978392 AS builder
 ARG BUN_VERSION
 
-# Toolchain for any node-gyp fallback (sharp ships arm64 glibc prebuilds, but
-# keep the compiler available so a source build never fails the image).
+# No compiler toolchain: this stage installs with --ignore-scripts and only runs
+# tsc, which loads no native addon. The one addon the runtime has to compile is
+# built in `production-deps`, below.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-      python3 make g++ ca-certificates \
+      ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 # whatsapp-web.js depends on puppeteer; never download Chromium into the image
@@ -69,14 +95,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 ENV PUPPETEER_SKIP_DOWNLOAD=true \
     PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 
-# Pinned, and pinned to the SAME version as CI and deploy-frontends.
-#
-# The usual argument for pinning bun — one lockfile read by two versions — does
-# NOT apply here: this stage narrows `workspaces` and deliberately never copies
-# bun.lock. That makes the pin MORE load-bearing, not less. With no lockfile,
-# the bun version is the only thing deciding how the version ranges below
-# resolve, so an unpinned bun means the image built today and the image built
-# next month can install different dependency graphs from an identical commit.
+# Pinned, and pinned to the SAME version as CI and deploy-frontends: every
+# install below reads the repository's bun.lock, and a lockfile read by another
+# bun can abort a frozen install.
 COPY --from=bun-bin /usr/local/bin/bun /usr/local/bin/bun
 # `bunx` is bun invoked under that name; the official install ships it as a
 # symlink, and copying only the binary dropped it. The workspace `build`
@@ -86,15 +107,31 @@ RUN ln -s bun /usr/local/bin/bunx && test "$(bunx --version)" = "$BUN_VERSION"
 
 WORKDIR /app
 
-# Copy the workspace root and narrow `workspaces` to just the packages the
-# API/worker need (shared-types + listing-providers + backend). This excludes
-# the heavy Expo frontend.
-# Narrowing the workspace set invalidates bun.lock, so it is NOT copied — bun
-# resolves fresh from the package.json version ranges (still deterministic).
-# The root `postinstall` (build:shared-types) is stripped: source is not present
-# yet at install time, and shared-types is built explicitly below.
-COPY package.json ./
-RUN node -e "const p=require('./package.json'); p.workspaces=['packages/shared-types','packages/listing-providers','packages/backend']; p.dependencies={}; delete p.scripts.postinstall; require('fs').writeFileSync('package.json', JSON.stringify(p, null, 2));"
+# THE LOCKFILE. Every install in this file is `bun install --frozen-lockfile`
+# against the repository's own bun.lock, unmodified, with `--filter` picking the
+# three workspaces the API and worker need (shared-types, listing-providers,
+# backend). The root workspace and the Expo frontend are not installed, and the
+# frontend's manifest is not in the build context: bun installs a filtered set
+# from the lockfile without it.
+#
+# Until 2026-10 these stages rewrote `workspaces` to that subset, which made
+# bun.lock unusable, so it was not copied and every transitive version resolved
+# against the registry at build time, separately in each install stage.
+# Measured on 2026-10-13: 32 of the 567 packages that install put in the API's
+# node_modules were versions bun.lock does not record at all (@oxy.so/db 1.1.0
+# where it records 1.0.0; @messageformat/date-skeleton 2.0.0-0, a prerelease,
+# where it records 1.1.0). CI's image smoke now checks every package installed
+# in the builder and both runtime targets against the lockfiles
+# (.github/scripts/assert-image-lockfile.mjs).
+#
+# `--ignore-scripts`: no dependency lifecycle script runs, and neither does the
+# root `postinstall` (build:shared-types, built explicitly below). The closure's
+# install scripts are puppeteer's (a browser download, already skipped by
+# PUPPETEER_SKIP_DOWNLOAD), esbuild's (this stage only; tsc does not use it)
+# and msgpackr-extract's, whose one job the runtime needs is done explicitly in
+# `production-deps`. On linux/amd64 installs with and without them produced
+# byte-identical node_modules (measured 2026-10-13).
+COPY package.json bun.lock ./
 
 # bunfig.toml pins `linker = "hoisted"`. This is REQUIRED: with bun's default
 # isolated linker, @types/express-serve-static-core lands at a deeply-nested
@@ -108,8 +145,9 @@ COPY packages/shared-types/package.json packages/shared-types/
 COPY packages/listing-providers/package.json packages/listing-providers/
 COPY packages/backend/package.json packages/backend/
 
-# Install all dependencies (incl. dev: tsc/typescript) for the workspace subset.
-RUN bun install
+# Every dependency of the three workspaces, dev included (tsc).
+RUN bun install --frozen-lockfile --ignore-scripts \
+      --filter @homiio/shared-types --filter @homiio/listing-providers --filter @homiio/backend
 
 # Copy the source for all workspace packages.
 COPY packages/shared-types/ packages/shared-types/
@@ -127,12 +165,16 @@ RUN bun run --filter @homiio/backend build
 RUN cp -r packages/backend/locales packages/backend/dist/locales
 
 # ── Production dependency stages ─────────────────────────────────
-# The native build toolchain lives only in throwaway install stages. They are
-# glibc (Debian bookworm), the same libc as both runtime stages below, so the
-# sharp prebuild installed here is the one each runtime loads.
-FROM node:22-bookworm-slim AS production-manifests
+# Throwaway install stages. They are glibc (Debian bookworm), the same libc as
+# both runtime stages below, so the sharp prebuild installed here is the one
+# each runtime loads. Same lockfile, flags and filter as the builder, minus
+# devDependencies, so `dist` was compiled against the versions that ship. The
+# API and the worker take the same `node_modules`; the worker adds Playwright.
+FROM node:22.23-bookworm-slim@sha256:c3de60bf2f9dd0ac6370e6117950ff62d6e339527e7472301c9c78a017978392 AS production-deps
 ARG BUN_VERSION
 
+# The compiler toolchain, for msgpackr-extract only (below). It stays in this
+# throwaway stage; neither runtime target carries it.
 RUN apt-get update && apt-get install -y --no-install-recommends \
       python3 make g++ ca-certificates \
     && rm -rf /var/lib/apt/lists/*
@@ -143,29 +185,52 @@ ENV PUPPETEER_SKIP_DOWNLOAD=true \
 
 WORKDIR /app
 
-COPY package.json ./
-RUN node -e "const p=require('./package.json'); p.workspaces=['packages/shared-types','packages/listing-providers','packages/backend']; p.dependencies={}; delete p.scripts.postinstall; require('fs').writeFileSync('package.json', JSON.stringify(p, null, 2));"
+COPY package.json bun.lock ./
 COPY bunfig.toml ./
 COPY packages/shared-types/package.json packages/shared-types/
 COPY packages/listing-providers/package.json packages/listing-providers/
 COPY packages/backend/package.json packages/backend/
 
-FROM production-manifests AS api-deps
-RUN bun install --production --omit peer \
+# msgpackr-extract (BullMQ's msgpackr decoder) publishes prebuilt addons for
+# linux/amd64 glibc but only MUSL builds for linux/arm64, which is production.
+# Its install script, skipped here, would find no usable prebuild there and run
+# `node-gyp rebuild`, fetching whatever node-gyp and Node headers it can reach.
+# This does that step explicitly and offline, only when no prebuild loads: the
+# node-gyp bundled with this digest-pinned image's npm, the image's own Node
+# headers (--nodedir), and ENABLE_V8_FUNCTIONS=false for a pure N-API build,
+# the flavour Bun (the API's runtime) loads. Both runtimes are then required to
+# load it, here and again in each target.
+RUN bun install --frozen-lockfile --production --omit peer --ignore-scripts \
+      --filter @homiio/shared-types --filter @homiio/listing-providers --filter @homiio/backend \
     && rm -rf node_modules/@img/sharp-linuxmusl-* \
-              node_modules/@img/sharp-libvips-linuxmusl-*
+              node_modules/@img/sharp-libvips-linuxmusl-* \
+    && if ! node -e "require('msgpackr-extract')" 2>/dev/null; then \
+         cd node_modules/msgpackr-extract \
+         && ENABLE_V8_FUNCTIONS=false node /usr/local/lib/node_modules/npm/node_modules/node-gyp/bin/node-gyp.js \
+              rebuild --nodedir=/usr/local \
+         && find build -mindepth 1 -maxdepth 1 ! -name Release -exec rm -rf {} + \
+         && find build/Release -mindepth 1 -maxdepth 1 ! -name '*.node' -exec rm -rf {} + \
+         && cd /app; \
+       fi \
+    && node -e "require('msgpackr-extract')" \
+    && bun -e "require('msgpackr-extract')"
 
-FROM production-manifests AS worker-deps
-# Editing the manifest before the single production install avoids `bun add`,
-# which first installed every devDependency and left them in node_modules.
-RUN node -e "const fs=require('fs'); const file='packages/backend/package.json'; const p=require('./'+file); p.dependencies={...p.dependencies,playwright:'1.61.1'}; fs.writeFileSync(file, JSON.stringify(p, null, 2));" \
-    && bun install --production --omit peer \
-    && rm -rf node_modules/@img/sharp-linuxmusl-* \
-              node_modules/@img/sharp-libvips-linuxmusl-*
+FROM production-deps AS worker-deps
+# Playwright is the worker's alone and is not in bun.lock: listing-providers
+# declares it only as an optional peer, so no repository install pulls it. It
+# comes from packages/backend/worker-runtime, a one-dependency project (not a
+# workspace) with its own bun.lock, installed frozen beside the app and copied
+# into the hoisted node_modules, where listing-providers' `import('playwright')`
+# finds it. The `test ! -e` lines refuse a second copy from the main closure.
+COPY packages/backend/worker-runtime/package.json packages/backend/worker-runtime/bun.lock /opt/worker-runtime/
+RUN bun install --cwd /opt/worker-runtime --frozen-lockfile --production --ignore-scripts \
+    && test ! -e node_modules/playwright \
+    && test ! -e node_modules/playwright-core \
+    && cp -a /opt/worker-runtime/node_modules/. node_modules/
 
 # ── Worker runtime base (Debian + Node, bun copied in below) ──────
 # See the header for why the worker keeps this base rather than `oven/bun`.
-FROM node:22-bookworm-slim AS runtime-common
+FROM node:22.23-bookworm-slim@sha256:c3de60bf2f9dd0ac6370e6117950ff62d6e339527e7472301c9c78a017978392 AS runtime-common
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
       ca-certificates tini \
@@ -192,6 +257,7 @@ ENTRYPOINT ["/usr/bin/tini", "--"]
 # ── Listing worker target ─────────────────────────────────────────
 FROM runtime-common AS worker
 ARG BUN_VERSION
+ARG PLAYWRIGHT_VERSION
 
 ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 
@@ -204,16 +270,26 @@ RUN ln -s bun /usr/local/bin/bunx
 COPY --from=worker-deps /app/package.json ./
 COPY --from=worker-deps /app/packages packages/
 COPY --from=worker-deps /app/node_modules node_modules/
+COPY --from=playwright-browsers /browsers /ms-playwright
 
 # Chromium and its X11 libraries exist only in the worker image. xauth is
-# needed by the documented headed `xvfb-run` mode.
+# needed by the documented headed `xvfb-run` mode. `install-deps` is apt only,
+# from Debian's signed repositories: the browsers were copied in above and
+# nothing is fetched from Playwright's CDN. The checks prove the npm package is
+# the release the browsers came from, and that headed Chromium and the headless
+# shell (`chrome-headless-shell` on amd64, `headless_shell` on arm64) are both
+# present.
 USER root
 RUN apt-get update && apt-get install -y --no-install-recommends xauth \
+    && ./node_modules/.bin/playwright install-deps chromium \
     && rm -rf /var/lib/apt/lists/* \
-    && ./node_modules/.bin/playwright install --with-deps chromium \
     && chmod -R a+rX /ms-playwright \
-    && node -e "require('playwright'); require('sharp')" \
-    && bun -e "require('playwright'); require('sharp'); require('@homiio/shared-types'); require('@homiio/listing-providers')" \
+    && test "$(node -p "require('playwright/package.json').version")" = "$PLAYWRIGHT_VERSION" \
+    && test -x "$(node -p "require('playwright').chromium.executablePath()")" \
+    && find /ms-playwright/chromium_headless_shell-* -maxdepth 2 -type f -perm -u+x \
+         \( -name chrome-headless-shell -o -name headless_shell \) | grep -q . \
+    && node -e "require('playwright'); require('sharp'); require('msgpackr-extract')" \
+    && bun -e "require('playwright'); require('sharp'); require('msgpackr-extract'); require('@homiio/shared-types'); require('@homiio/listing-providers')" \
     && test "$(bun --version)" = "$BUN_VERSION" \
     && test "$(bunx --version)" = "$BUN_VERSION"
 # Debian's xvfb-run can wait forever for SIGUSR1 in a container even after Xvfb
@@ -231,7 +307,7 @@ CMD ["bun", "packages/backend/dist/worker.js"]
 
 # ── API target (default/final stage): Bun ─────────────────────────
 # The pinned Bun image, Debian slim (glibc) like every install stage, so the
-# sharp prebuild api-deps installed is the one this runtime loads. It ships no
+# sharp prebuild production-deps installed is the one this runtime loads. It ships no
 # real Node: `node` on its PATH (/usr/local/bun-node-fallback-bin/node) is a
 # symlink to bun, so a stale `node ...` override would still run Bun while
 # claiming otherwise. Every command that targets this image names `bun`.
@@ -239,7 +315,7 @@ CMD ["bun", "packages/backend/dist/worker.js"]
 # The API ran on Node (node:22-bookworm-slim) until 2026-10. Rolling back is
 # reverting the change that made this switch: it moved this stage, its CMD and
 # the `pre` migrator command in deploy-ecs-image.sh together.
-FROM oven/bun:${BUN_VERSION}-slim AS api
+FROM oven/bun:${BUN_VERSION}-slim@sha256:14a223fa35747ec728bce300ef85888bc5f7958164d15bbba6a54b22b52a3288 AS api
 ARG BUN_VERSION
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -258,11 +334,11 @@ COPY --from=builder /app/packages/listing-providers/dist packages/listing-provid
 COPY --from=builder /app/packages/backend/dist packages/backend/dist
 COPY --from=builder /app/packages/backend/drizzle packages/backend/drizzle
 
-COPY --from=api-deps /app/package.json ./
-COPY --from=api-deps /app/packages packages/
-COPY --from=api-deps /app/node_modules node_modules/
+COPY --from=production-deps /app/package.json ./
+COPY --from=production-deps /app/packages packages/
+COPY --from=production-deps /app/node_modules node_modules/
 
-RUN bun -e "require('sharp'); require('@homiio/shared-types'); require('@homiio/listing-providers')" \
+RUN bun -e "require('sharp'); require('msgpackr-extract'); require('@homiio/shared-types'); require('@homiio/listing-providers')" \
     && test "$(bun --version)" = "$BUN_VERSION" \
     && test "$(readlink -f "$(command -v node)")" = "$(readlink -f "$(command -v bun)")" \
     && test ! -d node_modules/playwright \

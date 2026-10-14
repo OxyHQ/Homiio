@@ -4,10 +4,8 @@
 # `packages/backend/Dockerfile` once installed bun with a bare
 # `npm install -g bun`, which is not a pin at all: the image built today and the
 # image built next month could resolve different bun versions from the same
-# commit. That matters more here than anywhere else in the repository, because
-# this Dockerfile narrows `workspaces` and deliberately never copies `bun.lock`
-# — with no lockfile, the bun version is the only thing deciding how the
-# dependency ranges resolve.
+# commit. The image now installs frozen from `bun.lock`, and a lockfile read by
+# a bun other than the one that wrote it can abort that install.
 #
 # Pinning it introduces the problem the ci.yml header was avoiding: a third copy
 # of a version number to keep in step. This script is the answer to that. It is
@@ -96,6 +94,38 @@ done < <(grep -nE '^[[:space:]]*RUN .*npm (install|i) (-g|--global) bun' "$DOCKE
 
 if [[ "$pinned_stages" -eq 0 ]]; then
   fail "no 'FROM oven/bun:\${BUN_VERSION}' stage found in $DOCKERFILE — the check cannot pass vacuously"
+fi
+
+# --- playwright ---------------------------------------------------------------
+# The worker installs the `playwright` npm package from
+# packages/backend/worker-runtime and copies its browsers from Microsoft's
+# Playwright image, `mcr.microsoft.com/playwright:v${PLAYWRIGHT_VERSION}-...`.
+# Playwright refuses to launch a browser revision built for another release,
+# so the package and the image must be the same version; a drift fails the
+# worker's launch, not its build.
+WORKER_RUNTIME="$ROOT/packages/backend/worker-runtime/package.json"
+runtime_playwright="$(sed -nE 's/^[[:space:]]*"playwright":[[:space:]]*"([^"]+)".*/\1/p' "$WORKER_RUNTIME" 2>/dev/null | head -1)"
+docker_playwright="$(sed -nE 's/^ARG PLAYWRIGHT_VERSION=(.+)$/\1/p' "$DOCKERFILE" | head -1)"
+if [[ -z "$runtime_playwright" ]]; then
+  fail "could not read the playwright dependency from $WORKER_RUNTIME — the check cannot pass vacuously"
+elif [[ -z "$docker_playwright" ]]; then
+  fail "could not read 'ARG PLAYWRIGHT_VERSION=' from $DOCKERFILE — the check cannot pass vacuously"
+elif [[ "$runtime_playwright" != "$docker_playwright" ]]; then
+  fail "playwright pin drift: worker-runtime/package.json installs playwright '$runtime_playwright', packages/backend/Dockerfile copies browsers for '$docker_playwright'"
+else
+  playwright_stages=0
+  while IFS= read -r line; do
+    if [[ "$line" == *'mcr.microsoft.com/playwright:v${PLAYWRIGHT_VERSION}-'* ]]; then
+      playwright_stages=$((playwright_stages + 1))
+    else
+      fail "playwright image not pinned to PLAYWRIGHT_VERSION in $DOCKERFILE: $line"
+    fi
+  done < <(grep -nE '^[[:space:]]*(FROM|COPY)[^#]*mcr\.microsoft\.com/playwright' "$DOCKERFILE" || true)
+  if [[ "$playwright_stages" -eq 0 ]]; then
+    fail "no 'FROM mcr.microsoft.com/playwright:v\${PLAYWRIGHT_VERSION}-' stage found in $DOCKERFILE — the check cannot pass vacuously"
+  else
+    printf 'playwright pinned to %s in worker-runtime/package.json and the browser image\n' "$runtime_playwright"
+  fi
 fi
 
 # --- node -------------------------------------------------------------------

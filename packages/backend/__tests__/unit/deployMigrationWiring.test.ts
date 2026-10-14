@@ -50,6 +50,11 @@ const deployScript = readFileSync(
   join(REPOSITORY_ROOT, '.github', 'scripts', 'deploy-ecs-image.sh'),
   'utf8',
 );
+const reviewedRecipes = (
+  JSON.parse(
+    readFileSync(join(REPOSITORY_ROOT, '.github', 'scripts', 'reviewed-images.json'), 'utf8'),
+  ) as { recipes: { name: string; target: string | null }[] }
+).recipes;
 const dockerfile = readFileSync(join(REPOSITORY_ROOT, 'packages', 'backend', 'Dockerfile'), 'utf8');
 
 /**
@@ -159,8 +164,19 @@ describe('the deploy applies migrations', () => {
   });
 
   it('deploys the browser-free API and browser-enabled worker digests to their own lanes', () => {
-    expect(buildStep).toContain('--target api');
-    expect(buildStep).toContain('--target worker');
+    // The targets come from the reviewed recipes (`homiio` is `api`,
+    // `homiio-worker` is `worker` in .github/scripts/reviewed-images.json),
+    // through the guard steps that verified them, never from a literal here.
+    expect(buildStep).toContain('API_TARGET: ${{ steps.reviewed_api.outputs.target }}');
+    expect(buildStep).toContain('WORKER_TARGET: ${{ steps.reviewed_worker.outputs.target }}');
+    expect(buildStep).toContain('--target "$API_TARGET"');
+    expect(buildStep).toContain('--target "$WORKER_TARGET"');
+    expect(workflow).toContain('reviewed-image.py guard --recipe homiio\n');
+    expect(workflow).toContain('reviewed-image.py guard --recipe homiio-worker\n');
+    expect(reviewedRecipes.find((recipe) => recipe.name === 'homiio')?.target).toBe('api');
+    expect(reviewedRecipes.find((recipe) => recipe.name === 'homiio-worker')?.target).toBe(
+      'worker',
+    );
     expect(buildStep).toContain('api_digest=$API_DIGEST');
     expect(buildStep).toContain('worker_digest=$WORKER_DIGEST');
 
