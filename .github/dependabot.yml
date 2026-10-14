@@ -7,11 +7,15 @@ updates:
   - package-ecosystem: bun
     directory: /
     schedule:
-      interval: weekly
+      interval: daily
     groups:
+      # Listed BEFORE minor-and-patch: a dependency joins the first group it
+      # matches. This group auto-merges (automerge-first-party.yml).
       oxy-platform:
         patterns:
           - "@oxy.so/*"
+          - "@alia.onl/*"
+          - "@clarity.surf/*"
       minor-and-patch:
         update-types: [minor, patch]
     labels:
