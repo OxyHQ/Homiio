@@ -3558,6 +3558,7 @@
       "timeline": "Updates",
       "comments": "Comments",
       "share": "Share",
+      "shareInMention": "Share in Mention",
       "shareCopied": "Link copied to clipboard",
       "shareFailed": "Couldn't share this case",
       "instructions": "Instructions",

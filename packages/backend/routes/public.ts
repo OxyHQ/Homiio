@@ -4,6 +4,7 @@
  */
 
 import express from 'express';
+import { publicApiRouter } from './publicApi';
 import rateLimit from 'express-rate-limit';
 import neighborhoodRoutes from './neighborhoods';
 import cityController from '../controllers/cityController';
@@ -79,6 +80,7 @@ function getPropertyAdjustmentFactor(propertyType: unknown): number {
 
 export default function () {
   const router = express.Router();
+  router.use('/v1', publicApiRouter);
 
   // FIRST, so every body below leaves as `id` and never `_id`. See wireIds.ts.
   router.use(serializeWireIds);

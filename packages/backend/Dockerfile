@@ -141,20 +141,23 @@ COPY package.json bun.lock ./
 COPY bunfig.toml ./
 
 # Copy package manifests first for a cacheable dependency install layer.
+COPY packages/contracts/package.json packages/contracts/
 COPY packages/shared-types/package.json packages/shared-types/
 COPY packages/listing-providers/package.json packages/listing-providers/
 COPY packages/backend/package.json packages/backend/
 
 # Every dependency of the three workspaces, dev included (tsc).
 RUN bun install --frozen-lockfile --ignore-scripts \
-      --filter @homiio/shared-types --filter @homiio/listing-providers --filter @homiio/backend
+      --filter @homiio/contracts --filter @homiio/shared-types --filter @homiio/listing-providers --filter @homiio/backend
 
 # Copy the source for all workspace packages.
+COPY packages/contracts/ packages/contracts/
 COPY packages/shared-types/ packages/shared-types/
 COPY packages/listing-providers/ packages/listing-providers/
 COPY packages/backend/ packages/backend/
 
 # Build in dependency order: shared-types → listing-providers → backend.
+RUN bun run --filter @homiio/contracts build
 RUN bun run --filter @homiio/shared-types build
 RUN bun run --filter @homiio/listing-providers build
 RUN bun run --filter @homiio/backend build
@@ -187,6 +190,7 @@ WORKDIR /app
 
 COPY package.json bun.lock ./
 COPY bunfig.toml ./
+COPY packages/contracts/package.json packages/contracts/
 COPY packages/shared-types/package.json packages/shared-types/
 COPY packages/listing-providers/package.json packages/listing-providers/
 COPY packages/backend/package.json packages/backend/
@@ -201,7 +205,7 @@ COPY packages/backend/package.json packages/backend/
 # the flavour Bun (the API's runtime) loads. Both runtimes are then required to
 # load it, here and again in each target.
 RUN bun install --frozen-lockfile --production --omit peer --ignore-scripts \
-      --filter @homiio/shared-types --filter @homiio/listing-providers --filter @homiio/backend \
+      --filter @homiio/contracts --filter @homiio/shared-types --filter @homiio/listing-providers --filter @homiio/backend \
     && rm -rf node_modules/@img/sharp-linuxmusl-* \
               node_modules/@img/sharp-libvips-linuxmusl-* \
     && if ! node -e "require('msgpackr-extract')" 2>/dev/null; then \
@@ -243,6 +247,7 @@ ENV NODE_ENV=production \
 
 WORKDIR /app
 
+COPY --from=builder /app/packages/contracts/dist packages/contracts/dist
 COPY --from=builder /app/packages/shared-types/dist packages/shared-types/dist
 COPY --from=builder /app/packages/listing-providers/dist packages/listing-providers/dist
 COPY --from=builder /app/packages/backend/dist packages/backend/dist
@@ -329,6 +334,7 @@ ENV NODE_ENV=production \
 
 WORKDIR /app
 
+COPY --from=builder /app/packages/contracts/dist packages/contracts/dist
 COPY --from=builder /app/packages/shared-types/dist packages/shared-types/dist
 COPY --from=builder /app/packages/listing-providers/dist packages/listing-providers/dist
 COPY --from=builder /app/packages/backend/dist packages/backend/dist

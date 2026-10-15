@@ -52,6 +52,22 @@ Two consequences:
 
 All under `/api`. Source: `packages/backend/routes/public.ts`.
 
+### Cross-product public case cards
+
+| Method | Path | Notes |
+|---|---|---|
+| `POST` | `/api/v1/cases/batch` | 1–50 opaque IDs, deduplicated; current public fields only. Archived, held and missing cases return `unavailableIds`. `Cache-Control: no-store`. |
+| `GET` | `/api/v1/openapi.json` | Generated OpenAPI 3.1 from `@homiio/contracts`; checked in CI. |
+
+`@homiio/sdk` resolves batches with `HomiioClient.getPublicCases(ids, { signal })`.
+The response contains `items` and `unavailableIds`. Cards carry only `id`, public
+`title`, coarse `area`, `scheduledAt`, `status` and a canonical Homiio `url`.
+The SDK validates responses, deduplicates and chunks references, and retains no
+content cache. Consumers must remove stale content on failure or withdrawal.
+`getHomiioCaseUrl` / `parseHomiioCaseUrl` support pasted links;
+`getMentionShareUrl` opens Mention's composer with only `homiioCaseId`.
+Participation continues in Homiio.
+
 ### Listings
 
 | Method | Path | Notes |

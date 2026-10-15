@@ -17,6 +17,7 @@ import { notFound, errorHandler } from './middlewares/errorHandler';
 import { rateLimitKeyFor } from './middlewares/rateLimitKey';
 import { connectPostgres } from './db/postgres';
 import publicRoutes from './routes/public';
+import { publicApiBodyErrorHandler } from './routes/publicApi';
 import {
   OxyServer,
   createOptionalOxyAuth,
@@ -219,6 +220,24 @@ const apiLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   skip: isRateLimitExempt,
+  handler: (req, res) => {
+    const resetTime = (req as Request & { rateLimit?: { resetTime?: Date } }).rateLimit?.resetTime;
+    const retryAfterSeconds = Math.max(
+      1,
+      Math.ceil(
+        ((resetTime?.getTime() ?? Date.now() + config.rateLimit.windowMs) - Date.now()) / 1000,
+      ),
+    );
+    res.set('Retry-After', String(retryAfterSeconds));
+    if (req.path.startsWith('/v1/')) res.set('Cache-Control', 'no-store');
+    res.status(429).json({
+      error: {
+        code: 'rate_limited',
+        message: 'Too many requests.',
+        details: { retryAfterSeconds },
+      },
+    });
+  },
 });
 app.use('/api', apiLimiter);
 
@@ -318,6 +337,9 @@ app.get('/health', async (req, res) => {
     },
   });
 });
+
+// The v1 API keeps parser errors in its public contract as well.
+app.use(publicApiBodyErrorHandler);
 
 // Mount public API routes (no authentication required)
 app.use('/api', publicRoutes());
