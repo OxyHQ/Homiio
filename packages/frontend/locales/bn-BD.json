@@ -3755,7 +3755,22 @@
         "official_info": "Official information"
       }
     },
-    "privacyNote": "পরিবারকে সুরক্ষিত রাখতে, কেসে শুধু নম্বরবিহীন রাস্তা, এলাকা বা আনুমানিক অঞ্চল দেখানো হয়।"
+    "privacyNote": "পরিবারকে সুরক্ষিত রাখতে, কেসে শুধু নম্বরবিহীন রাস্তা, এলাকা বা আনুমানিক অঞ্চল দেখানো হয়।",
+    "team": {
+      "title": "Case team",
+      "personal": "This case belongs to its creator. Collaborators can edit it and post updates.",
+      "account": "Oxy username",
+      "addTitle": "Add collaborator",
+      "warning": "{{account}} will be able to edit this case, publish updates and read the exact address authorized by the household. Only you can manage collaborators or delete the case.",
+      "add": "Add collaborator",
+      "remove": "Remove collaborator",
+      "failed": "The change could not be saved. Check your access and try again.",
+      "location": "Read exact location",
+      "locationDenied": "The exact location is unavailable or your access has ended.",
+      "exactAddress": "Exact address (private)",
+      "saveAddress": "Save exact address",
+      "hide": "Hide exact location"
+    }
   },
   "agency": {
     "title": "Agency",

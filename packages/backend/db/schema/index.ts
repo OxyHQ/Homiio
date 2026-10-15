@@ -50,6 +50,8 @@ export {
   conversations,
 } from './conversations';
 export {
+  evictionCaseCollaborators,
+  evictionCaseChanges,
   evictionCaseAttendees,
   evictionCaseFollowers,
   evictionCaseHelpNeeds,

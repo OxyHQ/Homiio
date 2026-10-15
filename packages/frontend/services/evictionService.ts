@@ -6,6 +6,8 @@ import type {
   EvictionBoardScope,
   EvictionBoardSort,
   EvictionCase,
+  EvictionCaseTeam,
+  EvictionLocationPrivate,
   EvictionCaseStatus,
   EvictionComment,
   EvictionHelpNeedType,
@@ -138,6 +140,31 @@ function scopeParams(scope: EvictionBoardScope): Record<string, string | number>
 
 class EvictionService {
   private baseUrl = '/api/evictions';
+
+  async getTeam(id: string): Promise<EvictionCaseTeam> {
+    const response = await api.get<ApiResponse<EvictionCaseTeam>>(`${this.baseUrl}/${id}/team`);
+    if (!response.data.data) throw new Error('Case team unavailable');
+    return response.data.data;
+  }
+
+  async addCollaborator(id: string, oxyUserId: string): Promise<void> {
+    await api.post(`${this.baseUrl}/${id}/collaborators`, {
+      oxyUserId,
+      acknowledgeExactLocationAccess: true,
+    });
+  }
+
+  async removeCollaborator(id: string, oxyUserId: string): Promise<void> {
+    await api.delete(`${this.baseUrl}/${id}/collaborators/${encodeURIComponent(oxyUserId)}`);
+  }
+
+  async getExactLocation(id: string): Promise<EvictionLocationPrivate> {
+    const response = await api.get<ApiResponse<EvictionLocationPrivate>>(
+      `${this.baseUrl}/${id}/location/exact`,
+    );
+    if (!response.data.data) throw new Error('Exact location unavailable');
+    return response.data.data;
+  }
 
   /** Public board list. The scope is mandatory — see the module header. */
   async list(params: ListEvictionsParams): Promise<EvictionListResponse> {

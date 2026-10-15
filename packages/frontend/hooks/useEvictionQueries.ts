@@ -320,3 +320,16 @@ export function useReportEviction(
     mutationFn: (input) => evictionService.report(id, input),
   });
 }
+
+/** Team rights are account-scoped and refreshed while the screen is open. */
+export function useEvictionTeam(caseId: string, accountId?: string) {
+  return useQuery({
+    queryKey: ['eviction-team', caseId, accountId],
+    queryFn: () => evictionService.getTeam(caseId),
+    enabled: Boolean(caseId && accountId),
+    retry: false,
+    staleTime: 0,
+    gcTime: 0,
+    refetchInterval: 10_000,
+  });
+}

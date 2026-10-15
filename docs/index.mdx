@@ -152,6 +152,12 @@ A listing is either first-party (`oxyUserId` set) or external (`isExternal: true
 
 See [Listings](./listings) for the full DTO, the address relation, the filters and external ingest.
 
+### Personal case collaborators
+
+A case keeps its creator as owner. From the case detail, the creator adds an existing Oxy account after confirming that collaborators may edit the case, publish updates and read its exact address. Only the creator manages this team or deletes the case. The team is separate from attendance and from an organization attribution.
+
+The authenticated team endpoint drives the editing controls. Exact location is requested separately, never carried in the public case or public SDK cards, and still requires the household authorization recorded when the case was opened. Removing a collaborator revokes their editing rights and any previous exact-location grant. Reads, edits and team changes serialize on the case row, so a request waiting behind removal rechecks the current membership. Actor-only change records include content edits, team changes, location reads and deletion, without copying address or contact data. The deletion record survives the case.
+
 ### Profiles, not users
 
 Homiio sits behind Oxy identity. Each Oxy user gets one or more **profiles** (Personal, Agency, Business, Cooperative). Personal profiles include an auto-calculated trust score from profile completion, verification status, rental history, and references.

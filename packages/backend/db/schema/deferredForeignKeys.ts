@@ -198,6 +198,7 @@ export const OXY_ACCOUNT_COLUMN_NAMES: ReadonlySet<string> = new Set([
   //  - the two sides of an exact-location grant;
   //  - the two sides of a supporter vouch.
   'actor_oxy_user_id',
+  'added_by_oxy_user_id',
   'grantee_oxy_user_id',
   'granted_by_oxy_user_id',
   'voucher_oxy_user_id',
