@@ -132,7 +132,6 @@ WORKDIR /app
 # `production-deps`. On linux/amd64 installs with and without them produced
 # byte-identical node_modules (measured 2026-10-13).
 COPY package.json bun.lock ./
-COPY vendor/allo ./vendor/allo/
 
 # bunfig.toml pins `linker = "hoisted"`. This is REQUIRED: with bun's default
 # isolated linker, @types/express-serve-static-core lands at a deeply-nested
@@ -190,7 +189,6 @@ ENV PUPPETEER_SKIP_DOWNLOAD=true \
 WORKDIR /app
 
 COPY package.json bun.lock ./
-COPY vendor/allo ./vendor/allo/
 COPY bunfig.toml ./
 COPY packages/contracts/package.json packages/contracts/
 COPY packages/shared-types/package.json packages/shared-types/

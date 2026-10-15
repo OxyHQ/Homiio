@@ -66,8 +66,8 @@
     "validator": "^13.15.35",
     "whatsapp-web.js": "^1.34.7",
     "@oxy.so/homiio-contracts": "workspace:*",
-    "@allo/sdk": "file:../../vendor/allo/allo-sdk-0.1.0-b0ba781b0166.tgz",
-    "@allo/contracts": "file:../../vendor/allo/allo-contracts-0.1.0-384e54ffe17d.tgz"
+    "@oxy.so/allo-sdk": "0.1.0",
+    "@oxy.so/allo-contracts": "0.1.0"
   },
   "devDependencies": {
     "@types/bcryptjs": "^3.0.0",

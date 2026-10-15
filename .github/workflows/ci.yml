@@ -461,6 +461,7 @@ jobs:
       - name: Public API contracts and SDK
         run: |
           bun run check:openapi
+          bun run --filter @oxy.so/homiio-contracts build
           bun run --filter @oxy.so/homiio-sdk build
           bun test packages/sdk/tests
 

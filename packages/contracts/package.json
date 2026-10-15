@@ -1,6 +1,6 @@
 {
   "name": "@oxy.so/homiio-contracts",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Homiio public case contracts",
   "license": "SEE LICENSE IN LICENSE",
   "main": "dist/index.js",
@@ -17,5 +17,15 @@
   },
   "devDependencies": {
     "typescript": "^6.0.3"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./links": {
+      "types": "./dist/links.d.ts",
+      "default": "./dist/links.js"
+    }
   }
 }

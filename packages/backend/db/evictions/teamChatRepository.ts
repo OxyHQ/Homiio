@@ -1,6 +1,6 @@
 import { and, eq } from 'drizzle-orm';
 import type { BeginTeamOperation, TeamOperation } from '@oxy.so/homiio-contracts';
-import { AlloTeamAccessClient } from '@allo/sdk';
+import { AlloTeamAccessClient } from '@oxy.so/allo-sdk';
 import { getDb, type DatabaseOrTransaction } from '../postgres';
 import {
   evictionTeamChats,

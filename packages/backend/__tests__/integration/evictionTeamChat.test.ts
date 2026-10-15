@@ -1,7 +1,7 @@
 import express from 'express';
 import request from 'supertest';
 import { eq } from 'drizzle-orm';
-import type { TeamSnapshot } from '@allo/sdk';
+import type { TeamSnapshot } from '@oxy.so/allo-sdk';
 import evictionRoutes from '../../routes/evictions';
 import { getDb, closePostgres } from '../../db/postgres';
 import {

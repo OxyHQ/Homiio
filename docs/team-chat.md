@@ -2,7 +2,7 @@
 
 The creator opens **Team chat** from the authenticated case team panel. The Allo page uses the current account's Oxy linked client to read and finalize Homiio operations, and `@allo/core` to create and change the encrypted group. A collaborator opens the existing Allo conversation. The group uses a generic name; no title, address, case description or messages move into the other product's database.
 
-Homiio keeps one encrypted opaque Allo read reference, separate from public case projections. It contains no conversation snapshot. The read grant reveals only the group's owner, account membership, epoch and operation status, through `@allo/sdk`; it does not authorize writes or decrypt messages. Allo hashes this reference. Operation-specific Homiio read capabilities are HMAC-derived, sent in headers only, and never returned in case or team DTOs. All remote origins are fixed by their owning SDK. Human bearers go directly from the frontend to the receiving product's Oxy verifier.
+Homiio keeps one encrypted opaque Allo read reference, separate from public case projections. It contains no conversation snapshot. The read grant reveals only the group's owner, account membership, epoch and operation status, through `@oxy.so/allo-sdk`; it does not authorize writes or decrypt messages. Allo hashes this reference. Operation-specific Homiio read capabilities are HMAC-derived, sent in headers only, and never returned in case or team DTOs. All remote origins are fixed by their owning SDK. Human bearers go directly from the frontend to the receiving product's Oxy verifier.
 
 ## Interrupted changes
 
