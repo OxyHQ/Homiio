@@ -1,11 +1,16 @@
 import express from 'express';
+import cors from 'cors';
+import { publicCaseCors } from '../../middlewares/publicCaseCors';
 import request from 'supertest';
 import { eq } from 'drizzle-orm';
 import { publicApiBodyErrorHandler, publicApiRouter } from '../../routes/publicApi';
-import { getDb } from '../../db/postgres';
+import { getDb, closePostgres } from '../../db/postgres';
 import { evictionCases } from '../../db/schema/evictions';
 
 const app = express();
+app.use('/api/v1/cases', publicCaseCors);
+// The general app policy declines Mention; it must not undo this public policy.
+app.use(cors({ origin: false }));
 app.use(express.json());
 app.use(publicApiBodyErrorHandler);
 app.use('/api/v1', publicApiRouter);
@@ -128,4 +133,51 @@ test('legacy number-first addresses and contacts are reduced before cross-app pu
     .expect(200);
   expect(res.body.items[0].title).toBe('Support Main Street, phone');
   expect(res.body.items[0].area.label).toBe('Main Street');
+});
+
+test.each(['https://mention.earth', 'https://www.mention.earth'])(
+  'Mention browser preflight and POST are permitted for %s',
+  async (origin) => {
+    const preflight = await request(app)
+      .options('/api/v1/cases/batch')
+      .set('Origin', origin)
+      .set('Access-Control-Request-Method', 'POST')
+      .set('Access-Control-Request-Headers', 'content-type')
+      .expect(204);
+    expect(preflight.headers['access-control-allow-origin']).toBe(origin);
+    expect(preflight.headers['access-control-allow-methods']).toContain('POST');
+    expect(preflight.headers['access-control-allow-headers']).toBe('Content-Type');
+    expect(preflight.headers['access-control-allow-credentials']).toBeUndefined();
+    const response = await request(app)
+      .post('/api/v1/cases/batch')
+      .set('Origin', origin)
+      .send({ ids: [id] })
+      .expect(200);
+    expect(response.headers['access-control-allow-origin']).toBe(origin);
+    expect(response.body.items[0].id).toBe(id);
+    expect(JSON.stringify(response.body)).not.toContain('Private address');
+    const invalid = await request(app)
+      .post('/api/v1/cases/batch')
+      .set('Origin', origin)
+      .send({ ids: [] })
+      .expect(400);
+    expect(invalid.headers['access-control-allow-origin']).toBe(origin);
+  },
+);
+
+test('Mention CORS does not apply to private endpoints or lookalike origins', async () => {
+  const privateResponse = await request(app)
+    .options('/api/evictions/any/location/exact')
+    .set('Origin', 'https://mention.earth')
+    .set('Access-Control-Request-Method', 'GET');
+  expect(privateResponse.headers['access-control-allow-origin']).toBeUndefined();
+  const lookalike = await request(app)
+    .post('/api/v1/cases/batch')
+    .set('Origin', 'https://mention.earth.attacker.example')
+    .send({ ids: [id] });
+  expect(lookalike.headers['access-control-allow-origin']).toBeUndefined();
+});
+
+afterAll(async () => {
+  await closePostgres();
 });
