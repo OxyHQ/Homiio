@@ -24,7 +24,7 @@
   },
   "dependencies": {
     "@ai-sdk/react": "^1.2.12",
-    "@alia.onl/sdk": "^13.1.0",
+    "@alia.onl/sdk": "^13.2.0",
     "@bitdrift/react-native": "^0.14.1",
     "@expo/vector-icons": "^15.1.1",
     "@homiio/shared-types": "workspace:*",
