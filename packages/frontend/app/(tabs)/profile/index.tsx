@@ -166,7 +166,7 @@ export default function ProfileScreen() {
                     content={badge.label}
                     color="info"
                     variant="subtle"
-                    size="small"
+                    size="sm"
                   />
                 ))}
               </View>

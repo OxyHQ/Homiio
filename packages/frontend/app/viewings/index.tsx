@@ -115,12 +115,12 @@ const ViewingCard: React.FC<ViewingCardProps> = ({ viewing, onCancel, onModify, 
         <H3 style={styles.cardTitle}>
           {formatDateTime(viewing.scheduledAt, locale, viewing.timeZone ?? deviceTimeZone())}
         </H3>
-        <Chip size="small" hue={token.hue}>
+        <Chip size="sm" hue={token.hue}>
           {t(token.i18nKey)}
         </Chip>
       </View>
       <View style={styles.metaRow}>
-        <Chip size="small">{t(`viewings.modality.${viewing.modality ?? 'in_person'}`)}</Chip>
+        <Chip size="sm">{t(`viewings.modality.${viewing.modality ?? 'in_person'}`)}</Chip>
         {viewing.durationMinutes ? (
           <BloomText className="text-sm text-muted-foreground">
             {t('viewings.durationMinutes', { minutes: viewing.durationMinutes })}

@@ -253,7 +253,7 @@ export default function TipArticleScreen() {
               <RiNewspaperLine width={56} height={56} fill={theme.colors.textSecondary} />
             </View>
           )}
-          <Chip size="small" variant="solid" color="default" style={styles.heroBadge}>
+          <Chip size="sm" variant="solid" color="default" style={styles.heroBadge}>
             {tip.category}
           </Chip>
         </View>

@@ -187,7 +187,7 @@ export const CommunityNoteCard: React.FC<CommunityNoteCardProps> = ({ note }) =>
           <Chip
             variant="subtle"
             color="warning"
-            size="small"
+            size="sm"
             startIcon={<RiAlertLine width={12} height={12} fill={colors.warning} />}
             style={styles.underReview}
           >

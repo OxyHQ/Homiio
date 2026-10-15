@@ -466,7 +466,7 @@ export default function BookViewingPage() {
               {offeredModalities.map((value) => (
                 <Chip
                   key={value}
-                  size="large"
+                  size="lg"
                   selected={modality === value}
                   onPress={() => setModality(value)}
                   accessibilityLabel={t(`viewings.modality.${value}`)}
@@ -505,7 +505,7 @@ export default function BookViewingPage() {
                   {daySlots.map((slot) => (
                     <Chip
                       key={slot.startsAt}
-                      size="large"
+                      size="lg"
                       selected={activeTime === slot.time}
                       onPress={() => setSelectedTime(slot.time)}
                       style={styles.timeSlot}

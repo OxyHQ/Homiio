@@ -25,7 +25,7 @@ export function ApplicationStatusBadge({ status }: { status: TenantApplicationSt
   const { t } = useTranslation();
   const entry = STATUS_MAP[status];
   return (
-    <Chip size="small" hue={entry.hue}>
+    <Chip size="sm" hue={entry.hue}>
       {t(entry.i18nKey)}
     </Chip>
   );

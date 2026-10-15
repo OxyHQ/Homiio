@@ -543,7 +543,7 @@ export default function HostCalendarScreen() {
                 actions={
                   <View style={styles.legendRow}>
                     {(Object.keys(SPAN_STYLE) as SpanKind[]).map((kind) => (
-                      <Chip key={kind} size="small" hue={SPAN_STYLE[kind].hue}>
+                      <Chip key={kind} size="sm" hue={SPAN_STYLE[kind].hue}>
                         {t(SPAN_STYLE[kind].i18nKey)}
                       </Chip>
                     ))}

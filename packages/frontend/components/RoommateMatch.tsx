@@ -121,7 +121,7 @@ export const RoommateMatch: React.FC<RoommateMatchProps> = ({
           <BloomText style={styles.sectionTitle}>{t('roommates.match.preferences')}</BloomText>
           <View style={styles.chipRow}>
             <Chip
-              size="small"
+              size="sm"
               variant="subtle"
               startIcon={
                 <RiWallet3Line
@@ -142,7 +142,7 @@ export const RoommateMatch: React.FC<RoommateMatchProps> = ({
               )}
             </Chip>
             <Chip
-              size="small"
+              size="sm"
               variant="subtle"
               startIcon={
                 <RiCalendarLine
@@ -155,7 +155,7 @@ export const RoommateMatch: React.FC<RoommateMatchProps> = ({
               {preferences.moveInDate || t('roommates.match.flexible')}
             </Chip>
             <Chip
-              size="small"
+              size="sm"
               variant="subtle"
               startIcon={
                 <RiHomeLine

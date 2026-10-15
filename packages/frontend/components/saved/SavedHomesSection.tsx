@@ -193,7 +193,7 @@ export function SavedHomesSection({
                   key={chip.value}
                   variant={active ? 'solid' : 'outlined'}
                   color={active ? 'primary' : 'default'}
-                  size="medium"
+                  size="md"
                   selected={active}
                   onPress={() => setRecency(chip.value)}
                 >

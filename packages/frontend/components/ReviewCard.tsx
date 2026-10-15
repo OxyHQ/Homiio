@@ -96,7 +96,7 @@ const DimensionGroup: React.FC<DimensionGroupProps> = ({ title, chips }) => {
         {chips.map((chip) => {
           const text = chip.label ? `${chip.label}: ${chip.value}` : chip.value;
           return (
-            <Chip key={text} size="small" hue="gray">
+            <Chip key={text} size="sm" hue="gray">
               {text}
             </Chip>
           );
@@ -204,7 +204,7 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ review, author, onPressA
             </BloomText>
             {review.verified ? (
               <Chip
-                size="small"
+                size="sm"
                 variant="subtle"
                 color="success"
                 startIcon={
@@ -216,7 +216,7 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ review, author, onPressA
             ) : null}
             {isUnderReview ? (
               <Chip
-                size="small"
+                size="sm"
                 variant="subtle"
                 color="warning"
                 startIcon={<RiAlertLine width={12} height={12} fill={theme.colors.warning} />}

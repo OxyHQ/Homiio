@@ -86,7 +86,7 @@ const TipCard: React.FC<TipCardProps> = ({ tip, onPress, featured = false }) => 
               />
             </View>
           )}
-          <Chip size="small" variant="solid" color="default" style={styles.tipCategoryBadge}>
+          <Chip size="sm" variant="solid" color="default" style={styles.tipCategoryBadge}>
             {tip.category}
           </Chip>
         </View>

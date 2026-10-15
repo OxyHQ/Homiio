@@ -146,7 +146,7 @@ export default function SharedConversationView() {
 
       <View style={styles.badge}>
         <Chip
-          size="small"
+          size="sm"
           startIcon={<RiShare2Line width={14} height={14} fill={colors.textSecondary} />}
         >
           {t('sindi.shared.badge')}

@@ -73,7 +73,7 @@ export const BasicInfoSection: React.FC<Props> = ({
 
       {property?.isExternal && property?.source && property.source !== 'internal' ? (
         <Chip
-          size="large"
+          size="lg"
           startIcon={<RiGlobalLine width={14} height={14} fill={colors.COLOR_BLACK_LIGHT_3} />}
         >
           {`${t('property.sections.sourcedFrom')} ${property.source.charAt(0).toUpperCase()}${property.source.slice(1)}`}

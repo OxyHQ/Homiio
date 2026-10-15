@@ -62,7 +62,7 @@ export const ChatEmptyState = React.memo<ChatEmptyStateProps>(({ onSuggestionPre
         {SUGGESTIONS.map(({ icon: Icon, label, prompt }) => (
           <Chip
             key={label}
-            size="medium"
+            size="md"
             onPress={() => onSuggestionPress(prompt)}
             startIcon={<Icon width={16} height={16} fill={colors.textSecondary} />}
             accessibilityLabel={prompt}

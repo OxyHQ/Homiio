@@ -622,7 +622,7 @@ export default function ApplyToRentScreen() {
                     {DOCUMENT_TYPE_OPTIONS.map((option) => (
                       <Chip
                         key={option.value}
-                        size="small"
+                        size="sm"
                         selected={doc.type === option.value}
                         variant={doc.type === option.value ? 'solid' : 'outlined'}
                         onPress={() => handleDocumentTypeChange(doc.id, option.value)}

@@ -106,7 +106,7 @@ export function SindiSection({ property }: SindiSectionProps) {
             {visibleSuggestions.map((suggestion: SindiSuggestion, index: number) => (
               <Chip
                 key={`${suggestion.text}-${index}`}
-                size="medium"
+                size="md"
                 onPress={() => openSindi(suggestion.text)}
                 accessibilityLabel={suggestion.text}
               >

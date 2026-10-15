@@ -206,7 +206,7 @@ export const BookingCard: React.FC<BookingCardProps> = ({ property, stay }) => {
           ) : null}
           {hasRating ? (
             <Rating
-              size="small"
+              size="sm"
               value={ratingSummary.averageRating}
               count={ratingSummary.totalReviews}
             />

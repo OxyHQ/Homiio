@@ -132,7 +132,7 @@ export const RoommateRequestComponent: React.FC<RoommateRequestProps> = ({
           </BloomText>
         </View>
 
-        <Chip size="small" variant="subtle" color={statusTone(request.status)}>
+        <Chip size="sm" variant="subtle" color={statusTone(request.status)}>
           {statusText(request.status)}
         </Chip>
       </View>

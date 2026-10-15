@@ -90,7 +90,6 @@ export function WizardSelect({
 }: WizardSelectProps) {
   const { t } = useTranslation();
   const [open, setOpen] = React.useState(false);
-  const close = React.useCallback(() => setOpen(false), []);
   const items = React.useMemo<CommandItem[]>(
     () =>
       options.map((option) => ({
@@ -115,8 +114,8 @@ export function WizardSelect({
         {value || placeholder}
       </Button>
       <Command
-        visible={open}
-        onClose={close}
+        open={open}
+        onOpenChange={setOpen}
         items={items}
         placeholder={`${t('common.search')}…`}
         emptyText={t('common.noResults')}

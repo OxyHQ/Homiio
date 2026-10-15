@@ -40,9 +40,7 @@ export const ExploreRow: React.FC<ExploreRowProps> = ({ title, subtitle, rating,
       accessibilityLabel={[title, subtitle, ratingLabel].filter(Boolean).join(', ')}
       trailing={
         <View style={styles.trailing}>
-          {hasRating ? (
-            <Rating value={rating} size="small" accessibilityLabel={ratingLabel} />
-          ) : null}
+          {hasRating ? <Rating value={rating} size="sm" accessibilityLabel={ratingLabel} /> : null}
           <RiArrowRightSLine width={20} height={20} fill={theme.colors.textTertiary} />
         </View>
       }

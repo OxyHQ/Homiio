@@ -9,6 +9,7 @@ import {
   type ComposerPanelAttachment,
   type ComposerPanelAttachmentKind,
   type ComposerPanelLabels,
+  type ComposerVoiceState,
 } from '@oxy.so/bloom/composer-panel';
 import { RiAttachment2, RiStopFill } from '@oxy.so/bloom/icons';
 import { useVoiceDraft } from '@/hooks/voice/useVoiceDraft';
@@ -107,6 +108,11 @@ export const ChatComposer = React.memo<ChatComposerProps>(
       value: input,
       onChange: handleChange,
     });
+
+    const onVoiceStateChange = useCallback(
+      (state: ComposerVoiceState) => setListening(state === 'recording'),
+      [setListening],
+    );
 
     const labels = useMemo<ComposerPanelLabels>(
       () => ({
@@ -210,8 +216,8 @@ export const ChatComposer = React.memo<ChatComposerProps>(
           permissions={[]}
           addMenu={addMenu}
           onAddMenuSelect={onAddMenuSelect}
-          listening={listening}
-          onListeningChange={setListening}
+          voiceState={listening ? 'recording' : 'idle'}
+          onVoiceStateChange={onVoiceStateChange}
           attachments={attachments}
           onRemoveAttachment={onRemoveAttachment}
           labels={labels}
