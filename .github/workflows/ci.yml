@@ -714,22 +714,23 @@ jobs:
       - name: Expose the Actions cache to buildx
         uses: crazy-max/ghaction-github-runtime@v4
 
-      # Two amd64 cache scopes of their own (the deploy's `homiio-api` and
-      # `homiio-worker` scopes hold linux/arm64 layers, which an amd64 build
-      # cannot use).
+      # Pull requests and dispatched runs READ two amd64 cache scopes of their
+      # own (the deploy's `homiio-api`/`homiio-worker` scopes hold linux/arm64
+      # layers, which an amd64 build cannot use). Nothing here writes them:
+      # refresh-build-cache.yml rebuilds them from scratch weekly, on main only.
+      # A layer is reused only when its instruction and every input below it are
+      # byte-identical to that build's, so a change to the Dockerfile or to
+      # anything it copies re-executes from that point down, and the assertions
+      # and smokes below still run the built images.
       #
       # A PUSH TO MAIN builds exactly as before this cache existed: a fresh
-      # builder, no `--cache-from`, every layer executed — the uncached build is
-      # what found the missing `bunx` on 2026-10-12, and main is the commit that
-      # deploys. It then WRITES the scopes (mode=max, so the builder stage is in
-      # them too). `ignore-error` because a cache-service hiccup must not fail
-      # the job the backend deploy needs.
-      #
-      # Everything else (pull requests, dispatched runs) only READS them, and
-      # never writes: a layer is reused only when its instruction and every
-      # input below it are byte-identical to main's, so a change to the
-      # Dockerfile or to anything it copies re-executes from that point down,
-      # and the assertions and smokes below still run the built images.
+      # builder, no cache, every layer executed. That uncached build is what
+      # found the missing `bunx` on 2026-10-12, and main is the commit that
+      # deploys. It does not write the cache either, measured: an uncached build
+      # produces new layer digests every time, so a per-push `--cache-to` (#661)
+      # re-uploaded ~2 GB on every merge, added 327 s to this job (227 s -> 530 s
+      # build) and churned the 10 GB repository cache that also holds the
+      # deploy's arm64 layers.
       #
       # The builder stage is loaded too, so the lockfile check below also
       # covers the node_modules `dist` was compiled against.
@@ -744,29 +745,27 @@ jobs:
           WORKER_TARGET: ${{ steps.reviewed_worker.outputs.target }}
           WORKER_BUILD_INPUTS_SHA256: ${{ steps.reviewed_worker.outputs.build_inputs_sha256 }}
           SOURCE_TREE: ${{ steps.reviewed_api.outputs.source_tree }}
-          WRITE_CACHE: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+          READ_CACHE: ${{ !(github.event_name == 'push' && github.ref == 'refs/heads/main') }}
         run: |
           set -euo pipefail
-          if [ "$WRITE_CACHE" = true ]; then
-            api_cache=(--cache-to type=gha,scope=homiio-api-amd64,mode=max,ignore-error=true)
-            worker_cache=(--cache-to type=gha,scope=homiio-worker-amd64,mode=max,ignore-error=true)
-            builder_cache=()
-          else
+          api_cache=()
+          worker_cache=()
+          if [ "$READ_CACHE" = true ]; then
             api_cache=(--cache-from type=gha,scope=homiio-api-amd64)
             worker_cache=(--cache-from type=gha,scope=homiio-worker-amd64)
-            builder_cache=(--cache-from type=gha,scope=homiio-api-amd64)
           fi
-          docker buildx build --load "${api_cache[@]}" \
+          docker buildx build --load ${api_cache[@]+"${api_cache[@]}"} \
             -f "$API_DOCKERFILE" --target "$API_TARGET" \
             --label "io.oxy.source.tree=$SOURCE_TREE" \
             --label "io.oxy.build-inputs.sha256=$API_BUILD_INPUTS_SHA256" \
             -t homiio-api:ci "$API_CONTEXT"
-          docker buildx build --load "${worker_cache[@]}" \
+          docker buildx build --load ${worker_cache[@]+"${worker_cache[@]}"} \
             -f "$WORKER_DOCKERFILE" --target "$WORKER_TARGET" \
             --label "io.oxy.source.tree=$SOURCE_TREE" \
             --label "io.oxy.build-inputs.sha256=$WORKER_BUILD_INPUTS_SHA256" \
             -t homiio-worker:ci "$WORKER_CONTEXT"
-          docker buildx build --load ${builder_cache[@]+"${builder_cache[@]}"} \
+          # Same builder instance: reuses the API build's builder stage locally.
+          docker buildx build --load \
             -f "$API_DOCKERFILE" --target builder \
             -t homiio-builder:ci "$API_CONTEXT"
 
