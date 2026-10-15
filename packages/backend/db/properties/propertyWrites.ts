@@ -486,23 +486,31 @@ async function resolveImageRows(
 }
 
 /**
- * Replace a listing's photos, then re-derive `has_images`.
+ * Replace a listing's photos, then re-derive `has_images` — atomically.
  *
  * A replace rather than a diff, because the caller sends the whole photo list
  * and because the partial unique index makes an incremental update of `is_primary` a two-
- * statement dance that can transiently hold two primaries. The rows are cheap
- * and the listing is locked by the enclosing transaction.
+ * statement dance that can transiently hold two primaries.
+ *
+ * ALWAYS one transaction, whether or not the caller brought one (on a caller's
+ * transaction this is a savepoint). The ingest worker and the scripts call it
+ * bare, and three autocommit statements left a window — delete committed,
+ * insert failed — where a listing had lost its photos and kept
+ * `has_images = true`. That window is why a whole-table reconcile once ran on
+ * every boot; closing it here is what makes the flag unable to drift.
  */
 export async function replacePropertyImages(
   propertyId: string,
   input: readonly PropertyImageInput[],
   db: DatabaseOrTransaction = getDb(),
 ): Promise<void> {
-  await db.delete(propertyImages).where(eq(propertyImages.propertyId, propertyId));
-  if (input.length > 0) {
-    await db.insert(propertyImages).values(await resolveImageRows(propertyId, input, db));
-  }
-  await syncHasImages(db, propertyId);
+  await db.transaction(async (tx) => {
+    await tx.delete(propertyImages).where(eq(propertyImages.propertyId, propertyId));
+    if (input.length > 0) {
+      await tx.insert(propertyImages).values(await resolveImageRows(propertyId, input, tx));
+    }
+    await syncHasImages(tx, propertyId);
+  });
 }
 
 export async function replacePropertyDocuments(

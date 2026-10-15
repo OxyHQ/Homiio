@@ -15,7 +15,8 @@
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import { UNIQUE_VIOLATION, constraintNameOf, sqlStateOf, uuidv7 } from '@oxy.so/db';
 import { closePostgres, connectPostgres, type Database } from '../../db/postgres';
-import { findHasImagesDisagreements, syncAllHasImages, syncHasImages } from '../../db/hasImages';
+import { findHasImagesDisagreements, syncHasImages } from '../../db/hasImages';
+import { replacePropertyImages } from '../../db/properties/propertyWrites';
 import { images, properties, propertyImages } from '../../db/schema';
 import {
   createPropertyScaffold,
@@ -331,13 +332,10 @@ describe('has_images', () => {
     expect(rows[0].hasImages).toBe(false);
   });
 
-  it('reports a disagreement, and repairs it', async () => {
-    // The reconciliation half of the trade-off written on the column. A
-    // denormalized value with no way to detect drift is a value that will
-    // drift. The state forced here is the exact shape of the one production row
-    // that already disagrees (`6a515dd9c196de4ad2a8550e`: flag false, twelve
-    // photos), which is why the backfill must DERIVE the flag rather than copy
-    // it.
+  it('reports a disagreement', async () => {
+    // The audit half of the trade-off written on the column. The state forced
+    // here is the shape of the Mongo-era row that once disagreed
+    // (`6a515dd9c196de4ad2a8550e`: flag false, twelve photos).
     const propertyId = await createProperty();
     await attachPhoto(propertyId);
     await db.update(properties).set({ hasImages: false }).where(eq(properties.id, propertyId));
@@ -345,8 +343,7 @@ describe('has_images', () => {
     const drifted = await findHasImagesDisagreements(db);
     expect(drifted).toContainEqual({ propertyId, stored: false, actual: true });
 
-    const repaired = await syncAllHasImages(db);
-    expect(repaired).toBeGreaterThanOrEqual(1);
+    await syncHasImages(db, propertyId);
     expect(await findHasImagesDisagreements(db)).toEqual([]);
   });
 
@@ -359,6 +356,69 @@ describe('has_images', () => {
     await attachPhoto(withPhoto);
     await createProperty();
 
+    expect(await findHasImagesDisagreements(db)).toEqual([]);
+  });
+});
+
+describe('replacePropertyImages keeps has_images in step', () => {
+  async function storedHasImages(propertyId: string): Promise<boolean> {
+    const [row] = await db
+      .select({ hasImages: properties.hasImages })
+      .from(properties)
+      .where(eq(properties.id, propertyId));
+    return row.hasImages;
+  }
+
+  async function photoCount(propertyId: string): Promise<number> {
+    const rows = await db
+      .select({ id: propertyImages.id })
+      .from(propertyImages)
+      .where(eq(propertyImages.propertyId, propertyId));
+    return rows.length;
+  }
+
+  it('sets the flag when photos arrive and clears it when they are replaced with none', async () => {
+    const propertyId = await createProperty();
+    const imageId = await createImage(propertyId);
+
+    await replacePropertyImages(propertyId, [{ imageId, isPrimary: true }], db);
+    expect(await storedHasImages(propertyId)).toBe(true);
+
+    await replacePropertyImages(propertyId, [], db);
+    expect(await storedHasImages(propertyId)).toBe(false);
+    expect(await photoCount(propertyId)).toBe(0);
+  });
+
+  it('is atomic: a replace whose insert fails leaves the old photos AND the flag', async () => {
+    // The regression this pins. Called without a transaction — as the ingest
+    // worker calls it — the replace used to be three autocommit statements, so
+    // a failing insert left the delete committed: photos gone, `has_images`
+    // still true. That drift window is the only reason a whole-table reconcile
+    // ever ran on boot. Two primaries trip `property_images_one_primary_key`
+    // on the INSERT, after the DELETE has run.
+    const propertyId = await createProperty();
+    const kept = await createImage(propertyId);
+    await replacePropertyImages(propertyId, [{ imageId: kept, isPrimary: true }], db);
+
+    const first = await createImage(propertyId);
+    const second = await createImage(propertyId);
+    let caught: unknown;
+    try {
+      await replacePropertyImages(
+        propertyId,
+        [
+          { imageId: first, isPrimary: true },
+          { imageId: second, isPrimary: true },
+        ],
+        db,
+      );
+    } catch (error) {
+      caught = error;
+    }
+
+    expect(constraintNameOf(caught)).toBe('property_images_one_primary_key');
+    expect(await photoCount(propertyId)).toBe(1);
+    expect(await storedHasImages(propertyId)).toBe(true);
     expect(await findHasImagesDisagreements(db)).toEqual([]);
   });
 });

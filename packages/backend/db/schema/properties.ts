@@ -860,7 +860,9 @@ export const properties = pgTable(
      *     carries `expiresAt: 2026-08-09`, so it is useful for VERIFYING the
      *     derivation ran and useless as a hand-coded exception.
      *  2. It is maintained by exactly ONE helper, `db/hasImages.ts`, called by
-     *     every `property_images` write. Nothing else may assign it.
+     *     every `property_images` write IN THE SAME TRANSACTION
+     *     (`replacePropertyImages`). Nothing else may assign it, and nothing
+     *     re-derives it on a schedule — there is no drift to sweep for.
      *  3. It is never settable from a request body — it must stay out of
      *     `CREATABLE_PROPERTY_FIELDS` / `EDITABLE_PROPERTY_FIELDS`, exactly as
      *     it is out of them today.
