@@ -11,7 +11,6 @@ import { reconcileModerationReports } from './moderation/ModerationReconciliatio
 import { expireShareLinks } from '../db/conversations/conversationRepository';
 import { getDb } from '../db/postgres';
 import config from '../config';
-import { syncAllHasImages } from '../db/hasImages';
 import { EXPIRY_SWEEP_TARGETS, sweepAllExpiredRows } from '../db/expiry';
 import { releaseExpiredReservations } from '../db/guestPoints/guestPointsLedger';
 import { deliverDueDigests, runHousingAlertSweep } from './watches/housingAlertSweep';
@@ -67,11 +66,6 @@ class CronJobManager {
 
   private async runBootHousekeeping(): Promise<void> {
     try {
-      await this.backfillPropertyHasImages();
-    } catch (error) {
-      this.logger.error('Boot hasImages backfill failed', error);
-    }
-    try {
       const repaired = await repairCorruptCityCoordinates(200);
       this.logger.info('Boot city coordinate repair completed', { repaired });
     } catch (error) {
@@ -82,24 +76,6 @@ class CronJobManager {
       this.logger.info('Boot city cover sync completed', { processed });
     } catch (error) {
       this.logger.error('Boot city cover sync failed', error);
-    }
-  }
-
-  /**
-   * Idempotent reconciliation of the denormalized `has_images` flag.
-   *
-   * `db/hasImages.ts` is the ONE writer of that column and `syncAllHasImages`
-   * re-derives it from `property_images` for the whole table in a single
-   * statement, updating only the rows that actually disagree — so a boot where
-   * nothing has drifted writes nothing.
-   *
-   * It reconciles rather than backfills: a filter on "flag missing" could not
-   * notice a row whose stored flag had gone WRONG.
-   */
-  private async backfillPropertyHasImages(): Promise<void> {
-    const modified = await syncAllHasImages(getDb());
-    if (modified > 0) {
-      this.logger.info('Reconciled hasImages on properties', { modified });
     }
   }
 

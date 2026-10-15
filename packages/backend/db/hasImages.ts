@@ -26,9 +26,23 @@
  *     body can reach it either.
  *  2. **Derived, never copied.** A stored flag can disagree with its own photo
  *     rows, so it is always recomputed from them rather than trusted.
- *  3. **Reconcilable.** {@link findHasImagesDisagreements} answers "has it
- *     drifted?" in one query. A denormalized value with no way to detect drift
- *     is a value that will drift, and nothing will say so.
+ *  3. **Atomic with the photo write.** Every `property_images` write goes
+ *     through `replacePropertyImages`, which runs the delete, the insert and
+ *     {@link syncHasImages} in ONE transaction. A crash between them rolls all
+ *     three back, so there is no window in which the photos changed and the
+ *     flag did not.
+ *  4. **Auditable.** {@link findHasImagesDisagreements} answers "has it
+ *     drifted?" in one query, and the tests assert it.
+ *
+ * ## Why there is no periodic reconcile
+ *
+ * There was one: every API task re-derived the flag for the WHOLE table on boot,
+ * a Mongo-era safety net. On production (156,912 listings, 1.9M photo rows) it
+ * was a sequential scan with a correlated probe per row — ~771k buffer reads,
+ * 0.8 s with a warm cache, and 40-80 s of mostly-IO load on the shared RDS per
+ * deploy, because both tasks booted and ran it at once — and in thirty days of
+ * logs it repaired ZERO rows. The guarantee belongs at write time (3 above),
+ * where it costs one indexed row update, not on a schedule.
  *
  * ## Schema behaviour, so it lives beside the schema
  *
@@ -141,45 +155,4 @@ export async function findHasImagesDisagreements(
     stored: row.stored,
     actual: row.actual,
   }));
-}
-
-/**
- * Re-derive `has_images` for EVERY listing, in one statement.
- *
- * For the backfill (which must derive the flag rather than copy it) and for
- * repairing a drift {@link findHasImagesDisagreements} reported. Not for a
- * request path: it writes every row.
- *
- * @returns How many listings the statement changed.
- */
-export async function syncAllHasImages(db: DatabaseOrTransaction): Promise<number> {
-  const rows = await db
-    .update(properties)
-    .set({
-      hasImages: hasPhotoRow(),
-      // `updated_at` ASSIGNED FROM ITSELF, and it is load-bearing rather than
-      // decorative — the trap `CONVENTIONS.md` §Timestamps was corrected to name.
-      // drizzle applies `$onUpdate` to any column NOT in `.set()`, so the obvious
-      // spelling stamps every row this touches with the caller's clock. The
-      // callers here are a backfill and a drift repair; neither is a change to
-      // the listing, and narrowing the `where` bounds how many rows are damaged
-      // without making any of them right.
-      //
-      // On a first copy that is not a rounding error: the column defaults to
-      // `false` on insert, so this fires on every image-bearing listing (16,585
-      // of 17,644 at the census) and would replace their real `updated_at`
-      // wholesale. In an `UPDATE … SET` the right-hand side reads the OLD row,
-      // so this is an explicit no-op that displaces the automatic one.
-      //
-      // {@link syncHasImages} deliberately does NOT do this: it is called from a
-      // photo write, where the listing really did change.
-      updatedAt: sql`${properties.updatedAt}`,
-    })
-    // Touch only the rows that are actually wrong — fewer rows rewritten, and a
-    // returned count that means "how many were repaired" rather than "how many
-    // exist".
-    .where(ne(properties.hasImages, hasPhotoRow()))
-    .returning({ id: properties.id });
-
-  return rows.length;
 }
