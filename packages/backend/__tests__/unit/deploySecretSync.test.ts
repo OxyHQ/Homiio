@@ -41,7 +41,6 @@ const CI_ONLY_SECRETS = new Set([
   'CLOUDFLARE_API_TOKEN',
   'CLOUDFLARE_ACCOUNT_ID',
   'NPM_TOKEN',
-  'ADD_TO_PROJECT_TOKEN',
 ]);
 
 const directivesOnly = (text: string): string =>
