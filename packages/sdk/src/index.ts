@@ -75,3 +75,5 @@ export class HomiioClient {
     };
   }
 }
+
+export * from './team';
