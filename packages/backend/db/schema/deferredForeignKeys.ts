@@ -130,6 +130,8 @@ export const OXY_ACCOUNT_COLUMN_NAMES: ReadonlySet<string> = new Set([
   // single most common column in the schema, and the one `AGENTS.md` forbids
   // accepting from a client.
   'oxy_user_id',
+  // Canonical company account owned by Oxy; agencies retain housing-domain references.
+  'oxy_account_id',
   // `RoommateRelationship` stores its pair SORTED, so neither side has a role
   // to be named after. Listed individually because the names do not end in
   // `oxy_user_id` and no pattern would catch them.

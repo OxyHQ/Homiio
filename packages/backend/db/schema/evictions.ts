@@ -171,16 +171,18 @@ export const EVICTION_MAX_PUBLIC_RADIUS_METERS = 2500;
  * bailiff's employer organised the picket.
  *
  * `verified_at` is never written by any API route — see the table's own
- * verification note in `@homiio/shared-types`. Anybody may name an organisation
- * on their own case; nobody can make one verified by doing so.
+ * verification note in `@homiio/shared-types`. Authors select a canonical Oxy
+ * organization; selection never verifies its contact channels or claims ownership.
  */
 export const evictionOrganizations = pgTable(
   'eviction_organizations',
   {
     id: generatedId(),
-    name: text().notNull(),
-    /** Casefolded dedup key, so two spellings do not become two collectives. */
-    normalizedName: text().notNull(),
+    oxyAccountId: text(),
+    identityStatus: text({ enum: ['unresolved', 'linked', 'not_organization'] })
+      .notNull()
+      .default('unresolved'),
+    /** Housing-support activity context; canonical organization profile facts live in Oxy. */
     description: text(),
     /**
      * The collective's own published channels, as
@@ -200,7 +202,15 @@ export const evictionOrganizations = pgTable(
     updatedAt: updatedAt(),
   },
   (table) => [
-    uniqueIndex('eviction_organizations_normalized_name_key').on(table.normalizedName),
+    check(
+      'eviction_organizations_identity_status_check',
+      sql`${table.identityStatus} in ('unresolved','linked','not_organization')`,
+    ),
+    check(
+      'eviction_organizations_identity_link_check',
+      sql`(${table.identityStatus} = 'linked') = (${table.oxyAccountId} is not null)`,
+    ),
+    index('eviction_organizations_oxy_account_id_idx').on(table.oxyAccountId),
     /**
      * A source is what makes a verification checkable, so a verified row without
      * one is a claim nobody can audit. Stated as a biconditional in ONE
@@ -888,4 +898,19 @@ export const jurisdictionResources = pgTable(
       sql`${table.validUntil} is null or ${table.validUntil} > ${table.verifiedAt}`,
     ),
   ],
+);
+
+/** Immutable source evidence; never a public organizing-collective identity. */
+export const evictionOrganizationIdentityArchives = pgTable(
+  'eviction_organization_identity_archives',
+  {
+    id: generatedId(),
+    organizationId: text()
+      .notNull()
+      .references(() => evictionOrganizations.id, { onDelete: 'restrict' }),
+    observedName: text().notNull(),
+    normalizedName: text().notNull(),
+    archivedAt: createdAt(),
+  },
+  (t) => [uniqueIndex('eviction_org_identity_archives_organization_id_key').on(t.organizationId)],
 );

@@ -40,7 +40,7 @@ import { checkPublicPrecisionWithinPolicy } from '@homiio/shared-types';
 import addressRoutes from '../../routes/addresses';
 import publicRoutes from '../../routes/public';
 import reviewRoutes from '../../routes/reviews';
-import { findOrCreateAgencyByName } from '../../db/agencies/agencyWrites';
+import { createAgencyFixture } from '../helpers/organizationDirectory';
 import { getDb } from '../../db/postgres';
 import { insertReview } from '../../db/reviews/reviewWrites';
 import { addresses, leases, properties, reviews } from '../../db/schema';
@@ -197,7 +197,7 @@ async function seed(): Promise<Seeded> {
     overrides: { oxyUserId: OWNER, title: 'Corner flat', floor: 3 },
   });
 
-  const agency = await findOrCreateAgencyByName(`Precisio Agency ${Date.now()}`);
+  const agency = await createAgencyFixture(`Precisio Agency ${Date.now()}`);
   assertFound(agency, 'agency');
 
   // A UNIT review — the one §5.1 publishes at the building — and a BUILDING one

@@ -31,6 +31,7 @@ export type ReviewRow = typeof reviews.$inferSelect;
 
 /** The agency projection a review carries inline, when it names one. */
 export interface ReviewAgencySummary {
+  readonly oxyAccountId: string;
   readonly id: string;
   readonly name: string;
   readonly slug: string;

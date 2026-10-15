@@ -42,7 +42,7 @@ import publicRoutes from '../../routes/public';
 import reviewRoutes from '../../routes/reviews';
 import { errorHandler } from '../../middlewares/errorHandler';
 import { serializeWireIds } from '../../middlewares/wireIds';
-import { findOrCreateAgencyByName } from '../../db/agencies/agencyWrites';
+import { createAgencyFixture } from '../helpers/organizationDirectory';
 import { getDb } from '../../db/postgres';
 import { insertReview } from '../../db/reviews/reviewWrites';
 import { addresses, reviews } from '../../db/schema';
@@ -189,7 +189,7 @@ async function seed(): Promise<Seeded> {
   });
   const otherBuildingId = await seedAddressRow({ chain, street: OTHER_STREET });
 
-  const agency = await findOrCreateAgencyByName(`Publicacio Agency ${uuidv7().slice(-8)}`);
+  const agency = await createAgencyFixture(`Publicacio Agency ${uuidv7().slice(-8)}`);
   assertFound(agency, 'agency');
 
   const base = {

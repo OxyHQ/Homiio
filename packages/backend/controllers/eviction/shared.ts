@@ -32,7 +32,6 @@
  * coordinate.
  */
 
-import { eq } from 'drizzle-orm';
 import type {
   EvictionHelpNeedType,
   EvictionLocationAccessPurpose,
@@ -47,7 +46,6 @@ import {
   type EvictionCaseRow,
 } from '../../db/evictions/evictionRepository';
 import { findProfileByOxyUserId } from '../../db/profiles/profileRepository';
-import { agencies } from '../../db/schema';
 import {
   EVICTION_CASE_STATUSES,
   EVICTION_HELP_NEED_TYPES,
@@ -55,7 +53,8 @@ import {
   EVICTION_PUBLIC_PRECISIONS,
   EVICTION_REPORT_REASONS,
 } from '../../db/schema/evictions';
-import { normalizeAgencyName } from '../../utils/agencyName';
+import { resolveOrganizationSelection } from '../../services/organizations/directory';
+import { findOrCreateAgencyReference } from '../../db/agencies/agencyWrites';
 import {
   notificationDispatchService,
   type DispatchPayload,
@@ -284,29 +283,6 @@ export function sanitizeHelpNeeds(input: unknown): readonly SanitizedHelpNeed[] 
 }
 
 /**
- * Resolve an agency NAME to the `agencies.id` a case may reference.
- *
- * A pure lookup on the dedup key `findOrCreateAgencyByName` writes, so a name
- * that matches an existing agency links to it and one that does not resolves to
- * nothing. This deliberately does NOT create: the eviction board is a public
- * notice surface where anybody may type any name, and letting it mint agency
- * rows would make an unauthenticated-in-effect write path out of a read.
- *
- * A Postgres failure here is the same failure the insert two lines later would
- * hit, and swallowing it would report a database outage as "no agency named".
- */
-export async function resolveAgencyId(agencyName: string): Promise<string | undefined> {
-  const normalized = normalizeAgencyName(agencyName);
-  if (!normalized) return undefined;
-  const [row] = await getDb()
-    .select({ id: agencies.id })
-    .from(agencies)
-    .where(eq(agencies.normalizedName, normalized))
-    .limit(1);
-  return row?.id;
-}
-
-/**
  * Try to satisfy ADR 0003 §7.3.1's second factor for one supporter.
  *
  * Two bases, and both are things this deployment can actually observe:
@@ -407,4 +383,10 @@ export function sanitizeDescription(input: string): {
 } {
   const scrubbed = sanitizePublicText(input);
   return { text: scrubbed.text.slice(0, MAX_DESCRIPTION_LENGTH).trim(), removed: scrubbed.removed };
+}
+
+/** Canonical directory selection, with identity checked before the local reference write. */
+export async function resolveAgencyId(oxyAccountId: string): Promise<string | undefined> {
+  const accountId = await resolveOrganizationSelection(oxyAccountId);
+  return accountId ? (await findOrCreateAgencyReference(accountId)).id : undefined;
 }

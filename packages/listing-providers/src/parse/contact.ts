@@ -13,6 +13,7 @@ export interface PortalContact {
   whatsapp?: string;
   name?: string;
   agencyName?: string;
+  agencySourceId?: string;
   kind?: NormalizedListingContact['kind'];
 }
 
@@ -246,6 +247,8 @@ export function contactFromRecord(value: unknown): PortalContact {
   if (email) contact.email = email;
   if (whatsapp) contact.whatsapp = whatsapp;
   if (name) contact.name = name;
+  const agencySourceId = firstString(data.agencyId, data.companyId);
+  if (agencySourceId) contact.agencySourceId = agencySourceId;
   if (agencyName) contact.agencyName = agencyName;
   else if (kind === 'agency' && name) contact.agencyName = name;
   if (kind) contact.kind = kind;
@@ -271,6 +274,7 @@ export function buildContact(parts: PortalContact): NormalizedListingContact | u
   if (whatsapp) contact.whatsapp = whatsapp;
   if (parts.name) contact.name = parts.name;
   if (parts.agencyName) contact.agencyName = parts.agencyName;
+  if (parts.agencySourceId) contact.agencySourceId = parts.agencySourceId;
   if (parts.kind) contact.kind = parts.kind;
   return contact.phone || contact.email || contact.whatsapp || contact.name || contact.agencyName
     ? contact
@@ -294,7 +298,12 @@ export function mergePortalContact(
     if (part.email) merged.email = part.email;
     if (part.whatsapp) merged.whatsapp = part.whatsapp;
     if (part.name) merged.name = part.name;
-    if (part.agencyName) merged.agencyName = part.agencyName;
+    if (part.agencyName) {
+      merged.agencyName = part.agencyName;
+      // A key belongs to this source observation, not to another blob's later label.
+      if (part.agencySourceId) merged.agencySourceId = part.agencySourceId;
+      else delete merged.agencySourceId;
+    }
     if ('kind' in part && part.kind) merged.kind = part.kind;
   }
   return merged.phone || merged.email || merged.whatsapp || merged.name || merged.agencyName

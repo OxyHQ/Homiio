@@ -123,6 +123,8 @@ export interface NormalizedListingContact {
   /** Person or agency display name when the portal exposes one. */
   name?: string;
   agencyName?: string;
+  /** Stable company identifier supplied by this provider, never a normalized display name. */
+  agencySourceId?: string;
   /** Whether the contact is a private owner or an agency (when known). */
   kind?: 'owner' | 'agency' | 'private' | 'unknown';
 }

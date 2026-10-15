@@ -549,8 +549,9 @@ the payment it authorises must commit together, so it opens a transaction and
 calls `ensureBilling` inside it. That path runs on **every payment after an
 account's first** — the row exists, so the insert always conflicts — which means
 without `inSavepoint` the second purchase by any existing subscriber 500s. 
-`findOrCreateAgencyByName` has the same shape under the review create path. The
-rule: a
+Agency references now use canonical Oxy account IDs and serialize creation with
+a transaction advisory lock; the former name-based writer was retired. The
+rule remains: a
 repository function that catches a constraint violation and then READS is not
 transaction-safe until its write is wrapped, and nothing about it looks wrong
 until somebody wraps a transaction around it.

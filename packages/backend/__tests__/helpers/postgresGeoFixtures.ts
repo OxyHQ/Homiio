@@ -477,8 +477,8 @@ export async function seedAgency(options: {
     .insert(agencies)
     .values({
       id: options.id,
-      name: options.name,
-      normalizedName: options.normalizedName ?? options.name.toLowerCase(),
+      oxyAccountId: options.id,
+      identityStatus: 'linked',
       slug: options.slug ?? options.name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
     })
     .returning({ id: agencies.id });

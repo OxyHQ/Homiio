@@ -28,7 +28,7 @@
  * household authorised it. That is the one place a client-supplied coordinate
  * reaches this domain, and it leaves again in the same function.
  *
- * `agencyName` and `organizationName` are create-time conveniences resolved to
+ * `agencyOxyAccountId` and `organizationOxyAccountId` are create-time conveniences resolved to
  * ids and then discarded; neither is persisted as a raw field.
  */
 
@@ -40,8 +40,8 @@ export const CREATABLE_EVICTION_FIELDS: readonly string[] = [
   'scheduledAt',
   'contactInfo',
   'coverImage',
-  'agencyName',
-  'organizationName',
+  'agencyOxyAccountId',
+  'organizationOxyAccountId',
   'helpNeeds',
   // The affected household's own authorisation. A boolean the organiser asserts
   // on the household's behalf is the weakest part of this design and it is

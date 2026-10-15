@@ -49,7 +49,11 @@ import {
 import { pickFields } from '../utils/pickFields';
 import { CREATABLE_REVIEW_FIELDS, EDITABLE_REVIEW_FIELDS } from './review/editableFields';
 import { notificationDispatchService } from '../services/notificationDispatchService';
-import { normalizeAgencyName } from '../utils/agencyName';
+import { oxyService } from '../services/oxy';
+import {
+  getAgencySummaries,
+  resolveOrganizationSelection,
+} from '../services/organizations/directory';
 import { logger } from '../middlewares/logging';
 import { eq, type SQL } from 'drizzle-orm';
 import {
@@ -80,8 +84,8 @@ import {
 } from '../db/moderation/reviewReportRepository';
 import { getDb } from '../db/postgres';
 import { addresses } from '../db/schema';
-import { findAgenciesByNamePrefix, findAgencyBySlug } from '../db/agencies/agencyReads';
-import { findOrCreateAgencyByName, type AgencyRow } from '../db/agencies/agencyWrites';
+import { findAgencyBySlug } from '../db/agencies/agencyReads';
+import { findOrCreateAgencyReference, type AgencyRow } from '../db/agencies/agencyWrites';
 import {
   findOrCreateCanonicalAddress,
   resolveAddressHierarchy,
@@ -128,7 +132,7 @@ import {
   updateOwnReview,
   type ReviewPatch,
 } from '../db/reviews/reviewWrites';
-import { describeErrorForLog } from '../middlewares/errorHandler';
+import { AppError, describeErrorForLog } from '../middlewares/errorHandler';
 
 const ok = (res: Response, data: Record<string, unknown>) =>
   res.status(200).json({ success: true, ...data });
@@ -488,12 +492,11 @@ async function notifyAddressOwners(params: {
 export const createReview = async (req: Request, res: Response) => {
   try {
     const oxyUserId = getRequiredOxyUserId(req);
-    const addressData = (req.body || {}).address as Record<string, string> | undefined;
+    const addressData = req.body?.address as Record<string, string> | undefined;
     const picked = pickFields<Record<string, unknown>>(req.body, CREATABLE_REVIEW_FIELDS);
 
     if (
-      !addressData ||
-      !addressData.street ||
+      !addressData?.street ||
       !addressData.city ||
       !addressData.postal_code ||
       !addressData.country
@@ -517,11 +520,9 @@ export const createReview = async (req: Request, res: Response) => {
       });
     }
 
-    // The submitted agency NAME is a write-only input: it is resolved into a
-    // canonical agency and only the id is persisted, so it is removed before the
-    // body is normalized into column values.
-    const agencyName = typeof picked.agencyName === 'string' ? picked.agencyName : undefined;
-    delete picked.agencyName;
+    // Validate the canonical selection before opening a database transaction.
+    const selectedCompanyId = await resolveOrganizationSelection(picked.agencyOxyAccountId);
+    delete picked.agencyOxyAccountId;
 
     const normalized = normalizeReviewCreateInput(picked);
     if (!normalized.ok) {
@@ -601,10 +602,10 @@ export const createReview = async (req: Request, res: Response) => {
     let review;
     try {
       review = await getDb().transaction(async (tx) => {
-        // Inside the transaction so an agency created for a review that never
-        // lands rolls back with it. `findOrCreateAgencyByName` takes the handle
-        // for exactly this call site.
-        const agency = agencyName?.trim() ? await findOrCreateAgencyByName(agencyName, tx) : null;
+        // The local housing reference and review commit together; no network inside the transaction.
+        const agency = selectedCompanyId
+          ? await findOrCreateAgencyReference(selectedCompanyId, tx)
+          : null;
 
         return insertReview(tx, {
           ...normalized.values,
@@ -642,6 +643,10 @@ export const createReview = async (req: Request, res: Response) => {
     }
     return created(res, { review: serializeReview(hydrated, 'author') });
   } catch (error) {
+    if (error instanceof AppError)
+      return res
+        .status(error.statusCode)
+        .json({ success: false, message: error.message, code: error.code });
     logger.error('Error creating review', { error: describeErrorForLog(error) });
     return serverError(res, { message: 'Failed to create review' });
   }
@@ -691,13 +696,10 @@ export const updateReview = async (req: Request, res: Response) => {
 
     const picked = pickFields<Record<string, unknown>>(req.body, EDITABLE_REVIEW_FIELDS);
 
-    // Write-only input, removed before normalization for the same reason as on
-    // the create path. An EMPTY name is not a clear: it is ignored, because
-    // treating it as "detach" would let a stray empty field silently unlink a
-    // review from the agency its author named.
-    const agencyName = typeof picked.agencyName === 'string' ? picked.agencyName.trim() : '';
-    const agencySupplied = Object.hasOwn(picked, 'agencyName');
-    delete picked.agencyName;
+    // A supplied empty selection explicitly clears attribution; absence preserves it.
+    const agencySupplied = Object.hasOwn(picked, 'agencyOxyAccountId');
+    const selectedCompanyId = await resolveOrganizationSelection(picked.agencyOxyAccountId);
+    delete picked.agencyOxyAccountId;
 
     const normalized = normalizeReviewEditInput(picked);
     if (!normalized.ok) {
@@ -705,17 +707,16 @@ export const updateReview = async (req: Request, res: Response) => {
     }
     const patch: ReviewPatch = { ...normalized.values };
 
-    if (agencySupplied && agencyName) {
-      const agency = await findOrCreateAgencyByName(agencyName);
-      if (agency) patch.agencyId = agency.id;
-    }
-
-    // Ownership + existence in ONE statement: a non-owner (or missing) review is
-    // a 404, never a leaky 400 that reveals the review exists.
-    const updated = await updateOwnReview({ reviewId, oxyUserId, patch });
-    if (!updated) {
-      return notFound(res, { message: 'Review not found' });
-    }
+    const updated = await getDb().transaction(async (tx) => {
+      if (agencySupplied) {
+        patch.agencyId = selectedCompanyId
+          ? (await findOrCreateAgencyReference(selectedCompanyId, tx)).id
+          : null;
+      }
+      const owned = await updateOwnReview({ reviewId, oxyUserId, patch }, tx);
+      if (!owned) throw new AppError('Review not found', 404, 'NOT_FOUND');
+      return owned;
+    });
 
     const hydrated = await findReviewById(updated.id, oxyUserId);
     if (!hydrated) {
@@ -723,6 +724,10 @@ export const updateReview = async (req: Request, res: Response) => {
     }
     return ok(res, { review: serializeReview(hydrated, 'author') });
   } catch (error) {
+    if (error instanceof AppError)
+      return res
+        .status(error.statusCode)
+        .json({ success: false, message: error.message, code: error.code });
     logger.error('Error updating review', { error: describeErrorForLog(error) });
     return serverError(res, { message: 'Failed to update review' });
   }
@@ -972,8 +977,8 @@ function publicAgencyListings(agencyId: string): SQL | undefined {
   ]);
 }
 
-function toAgencySummary(agency: AgencyRow): { id: string; name: string; slug: string } {
-  return { id: agency.id, name: agency.name, slug: agency.slug };
+async function toAgencySummary(agency: AgencyRow) {
+  return (await getAgencySummaries([agency.id])).get(agency.id);
 }
 
 export const searchAgencies = async (req: Request, res: Response) => {
@@ -983,13 +988,16 @@ export const searchAgencies = async (req: Request, res: Response) => {
       return ok(res, { agencies: [] });
     }
 
-    const normalized = normalizeAgencyName(q);
-    if (!normalized) {
-      return ok(res, { agencies: [] });
-    }
-
-    const agencies = await findAgenciesByNamePrefix(normalized);
-    return ok(res, { agencies: agencies.map(toAgencySummary) });
+    const result = await oxyService.organizations.search({
+      query: q,
+      organizationType: 'business',
+      limit: 10,
+    });
+    return ok(res, {
+      agencies: result.items
+        .filter((company) => company.status === 'active')
+        .map((company) => ({ oxyAccountId: company.accountId, name: company.name })),
+    });
   } catch (error) {
     logger.error('Error searching agencies', { error: describeErrorForLog(error) });
     return serverError(res, { message: 'Failed to search agencies' });
@@ -1002,6 +1010,14 @@ export const getAgencyBySlug = async (req: Request, res: Response) => {
     if (!agency) {
       return notFound(res, { message: 'Agency not found' });
     }
+    if (agency.identityStatus !== 'linked')
+      return res.status(409).json({
+        success: false,
+        error: 'agency_identity_unresolved',
+        message: 'This historical agency reference is awaiting organization identity resolution.',
+      });
+    const company = await toAgencySummary(agency);
+    if (!company) return notFound(res, { message: 'Agency not found' });
 
     const [stats, listingsCount] = await Promise.all([
       getAgencyStats(agency.id),
@@ -1009,7 +1025,7 @@ export const getAgencyBySlug = async (req: Request, res: Response) => {
     ]);
 
     return ok(res, {
-      agency: toAgencySummary(agency),
+      agency: company,
       stats: { ...stats, listingsCount },
     });
   } catch (error) {
@@ -1027,6 +1043,14 @@ export const getAgencyReviews = async (req: Request, res: Response) => {
     if (!agency) {
       return notFound(res, { message: 'Agency not found' });
     }
+    if (agency.identityStatus !== 'linked')
+      return res.status(409).json({
+        success: false,
+        error: 'agency_identity_unresolved',
+        message: 'This historical agency reference is awaiting organization identity resolution.',
+      });
+    const company = await toAgencySummary(agency);
+    if (!company) return notFound(res, { message: 'Agency not found' });
 
     const where = allOfReviews([ofAgency(agency.id), visibleModeration()]);
     const offset = (page - 1) * limit;
@@ -1038,7 +1062,7 @@ export const getAgencyReviews = async (req: Request, res: Response) => {
 
     const totalPages = Math.ceil(totalReviews / limit);
     return ok(res, {
-      agency: toAgencySummary(agency),
+      agency: company,
       reviews: serializeReviews(hydrated, viewer),
       pagination: { currentPage: page, totalPages, totalReviews, limit },
       hasMore: page < totalPages,
@@ -1058,6 +1082,14 @@ export const getAgencyProperties = async (req: Request, res: Response) => {
     if (!agency) {
       return notFound(res, { message: 'Agency not found' });
     }
+    if (agency.identityStatus !== 'linked')
+      return res.status(409).json({
+        success: false,
+        error: 'agency_identity_unresolved',
+        message: 'This historical agency reference is awaiting organization identity resolution.',
+      });
+    const company = await toAgencySummary(agency);
+    if (!company) return notFound(res, { message: 'Agency not found' });
 
     const where = publicAgencyListings(agency.id);
     const skip = (page - 1) * limit;

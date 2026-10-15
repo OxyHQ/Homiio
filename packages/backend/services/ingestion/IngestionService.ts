@@ -1,3 +1,4 @@
+import { resolveListingAgency } from '../organizations/ingestion';
 /**
  * Ingestion service.
  *
@@ -35,7 +36,6 @@ import {
   updateProperty,
   type PropertyWriteInput,
 } from '../../db/properties/propertyWrites';
-import { findOrCreateAgencyByName } from '../../db/agencies/agencyWrites';
 import {
   readPropertySnapshot,
   recordPropertyChangeEvents,
@@ -151,14 +151,10 @@ export class IngestionService {
     const addressId = await this.resolveAddress(listing.address);
     const fields = this.buildPropertyFields(listing, addressId);
 
-    // Attribute the listing to a canonical Agency when the portal contact AJAX
-    // exposed an agency name. `findOrCreateByName` is the sole Agency write path
-    // and dedupes by normalized name — the raw string stays on `externalContact`.
-    if (listing.contact?.agencyName) {
-      const agency = await findOrCreateAgencyByName(listing.contact.agencyName);
-      if (agency) fields.agencyId = agency.id;
-    }
-
+    // A portal label is a sourced contact observation, not proof of company identity.
+    // Stable provider company keys are resolved by the organizations ingestion boundary.
+    const agencyId = await resolveListingAgency(listing);
+    if (agencyId) fields.agencyId = agencyId;
     const existing = await findPropertyBySource(listing.source, listing.sourceId);
 
     // Before minting a NEW Property, check whether this is the SAME unit
