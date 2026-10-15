@@ -33,10 +33,10 @@ Both pre changes precede the post migration because the migration ledger is a hi
 The backfill is dry-run by default and requires the actual database name to match both the configured URL and connected database:
 
 ```sh
-bun packages/backend/scripts/backfillCentralOrganizations.ts \
+bun packages/backend/dist/scripts/backfillCentralOrganizations.js \
   --target-database=homiio --role=housing_agency --plan-output=/secure/agency-plan.json
 
-bun packages/backend/scripts/backfillCentralOrganizations.ts \
+bun packages/backend/dist/scripts/backfillCentralOrganizations.js \
   --target-database=homiio --role=housing_agency --apply --plan-sha256=<reviewed-sha256>
 ```
 

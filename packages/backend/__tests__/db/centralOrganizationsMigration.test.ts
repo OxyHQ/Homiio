@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -75,6 +76,17 @@ it('preserves unresolved source references, freezes identity writers and permits
     expect(
       await db`select external_contact_agency_source_id from properties where id='historical-listing'`,
     ).toEqual([{ external_contact_agency_source_id: 'source-advertiser-42' }]);
+    const packageRoot = join(findMigrationsFolder(), '..');
+    execFileSync('bun', ['run', 'build'], { cwd: packageRoot, stdio: 'pipe' });
+    const dryRun = execFileSync(
+      'bun',
+      [
+        join(packageRoot, 'dist/scripts/backfillCentralOrganizations.js'),
+        `--target-database=${new URL(url).pathname.slice(1)}`,
+      ],
+      { env: { ...process.env, DATABASE_URL: url }, encoding: 'utf8' },
+    );
+    expect(dryRun).toContain('dry-run');
     expect(
       await db`select organization_id,observed_name from eviction_organization_identity_archives`,
     ).toEqual([{ organization_id: 'support', observed_name: 'Housing collective' }]);
