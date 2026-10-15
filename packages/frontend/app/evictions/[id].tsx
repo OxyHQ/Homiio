@@ -24,7 +24,8 @@
  */
 import type React from 'react';
 import { useCallback, useContext, useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { Linking, ScrollView, StyleSheet, View } from 'react-native';
+import { getMentionShareUrl } from '@homiio/contracts';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -346,6 +347,17 @@ export default function EvictionDetailScreen() {
           ) : null}
 
           <H2 style={styles.title}>{eviction.title}</H2>
+          <Button
+            tone="neutral"
+            appearance="outline"
+            onPress={() => {
+              void Linking.openURL(getMentionShareUrl(caseId)).catch(() =>
+                toast.error(t('evictions.detail.shareFailed')),
+              );
+            }}
+          >
+            {t('evictions.detail.shareInMention', { defaultValue: 'Share in Mention' })}
+          </Button>
 
           {/* Status, the day, the time and how far off it is, the PUBLISHED
               area, the description and the turnout. The attend toggle stays
