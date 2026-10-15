@@ -5,11 +5,11 @@ export class HomiioTeamClient {
   constructor(private readonly options: { transport?: HomiioAuthenticatedTransport; fetch?: typeof fetch } = {}) {}
   async begin(caseId: string, input: BeginTeamOperation): Promise<PrivateTeamOperation> {
     if (!this.options.transport) throw new Error('An Oxy linked transport is required');
-    return privateTeamOperationSchema.parse(await this.options.transport('POST', `/api/v1/cases/${encodeURIComponent(caseId)}/team-chat/operations`, input));
+    return privateTeamOperationSchema.parse(await this.options.transport('POST', `/api/evictions/${encodeURIComponent(caseId)}/team-chat/operations`, input));
   }
   async finalize(operationId: string): Promise<TeamOperation> {
     if (!this.options.transport) throw new Error('An Oxy linked transport is required');
-    return teamOperationSchema.parse(await this.options.transport('POST', '/api/v1/team-chat/finalize', { operationId }));
+    return teamOperationSchema.parse(await this.options.transport('POST', '/api/team-chat/finalize', { operationId }));
   }
   async read(operationId: string, capability: string): Promise<TeamOperation> {
     const response = await (this.options.fetch ?? globalThis.fetch)('https://api.homiio.com/api/v1/team-chat/operations/read', {
