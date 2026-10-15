@@ -1,0 +1,15 @@
+{
+  "repository": "OxyHQ/Allo",
+  "packages": {
+    "@allo/contracts": {
+      "file": "allo-contracts-0.1.0-384e54ffe17d.tgz",
+      "sha256": "384e54ffe17d03942d5bb22ac2e76040516b977794e5076630c5a93295a7a5df",
+      "sourceCommit": "4bb0969a05ee372c362f9f52d9edfc3d67d096ab"
+    },
+    "@allo/sdk": {
+      "file": "allo-sdk-0.1.0-b0ba781b0166.tgz",
+      "sha256": "b0ba781b0166440e6a6ae5d9cef11dfb07922fb239b2f0fb7132271493e88828",
+      "sourceCommit": "4bb0969a05ee372c362f9f52d9edfc3d67d096ab"
+    }
+  }
+}

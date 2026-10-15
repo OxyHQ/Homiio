@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View } from 'react-native';
+import { Linking, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useOxy } from '@oxy.so/services';
 import { useOxyAvatars } from '@/hooks/useOxyAvatars';
@@ -46,6 +46,12 @@ export function EvictionCollaborators({
         cancelLabel: t('common.cancel'),
       });
       if (!accepted) return;
+      if (team.hasTeamChat) {
+        await Linking.openURL(
+          `https://allo.you/homiio-team?caseId=${encodeURIComponent(caseId)}&action=add&accountId=${encodeURIComponent(selected.id)}`,
+        );
+        return;
+      }
       await evictionService.addCollaborator(caseId, selected.id);
       setAccount('');
       onChanged();
@@ -60,6 +66,12 @@ export function EvictionCollaborators({
     if (busy) return;
     setBusy(true);
     try {
+      if (team.hasTeamChat) {
+        await Linking.openURL(
+          `https://allo.you/homiio-team?caseId=${encodeURIComponent(caseId)}&action=remove&accountId=${encodeURIComponent(oxyUserId)}`,
+        );
+        return;
+      }
       await evictionService.removeCollaborator(caseId, oxyUserId);
       onChanged();
     } catch {
@@ -103,6 +115,21 @@ export function EvictionCollaborators({
     <Card appearance="outline" radius="radius-16" style={{ padding: spacing.lg, gap: spacing.md }}>
       <H3>{t('evictions.team.title')}</H3>
       <Text>{t('evictions.team.personal')}</Text>
+      {team.isOwner || team.hasTeamChat ? (
+        <Button
+          disabled={busy}
+          onPress={() => {
+            setBusy(true);
+            void evictionService
+              .getTeamChatUrl(caseId)
+              .then((url) => Linking.openURL(url))
+              .catch(() => toast.error(t('evictions.team.failed')))
+              .finally(() => setBusy(false));
+          }}
+        >
+          {t('evictions.team.chat')}
+        </Button>
+      ) : null}
       {team.collaborators.map((member) => (
         <View key={member.oxyUserId} style={{ gap: spacing.sm }}>
           <Text>

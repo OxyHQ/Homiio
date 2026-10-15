@@ -3770,7 +3770,8 @@
       "locationDenied": "The exact location is unavailable or your access has ended.",
       "exactAddress": "Exact address (private)",
       "saveAddress": "Save exact address",
-      "hide": "Hide exact location"
+      "hide": "Hide exact location",
+      "chat": "Obrolan tim"
     }
   },
   "agency": {

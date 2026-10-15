@@ -225,6 +225,13 @@
       "when": 1792048690517,
       "tag": "0031_case_collaborators",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1792051427571,
+      "tag": "0032_team_chat",
+      "breakpoints": true
     }
   ]
 }

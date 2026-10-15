@@ -147,6 +147,16 @@ class EvictionService {
     return response.data.data;
   }
 
+  async getTeamChatUrl(id: string): Promise<string> {
+    const response = await api.get<ApiResponse<{ url: string }>>(
+      `${this.baseUrl}/${encodeURIComponent(id)}/team-chat`,
+    );
+    const url = response.data.data?.url;
+    if (!url || new URL(url).origin !== 'https://allo.you')
+      throw new Error('Team chat unavailable');
+    return url;
+  }
+
   async addCollaborator(id: string, oxyUserId: string): Promise<void> {
     await api.post(`${this.baseUrl}/${id}/collaborators`, {
       oxyUserId,

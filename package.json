@@ -61,7 +61,8 @@
     "@oxy.so/services": "11.2.0",
     "@oxy.so/mcp": "1.1.0",
     "react-native-keyboard-controller": "1.21.13",
-    "@types/express": "^4.17.25"
+    "@types/express": "^4.17.25",
+    "@allo/contracts": "file:./vendor/allo/allo-contracts-0.1.0-384e54ffe17d.tgz"
   },
   "resolutions": {
     "@oxy.so/core": "4.5.0"

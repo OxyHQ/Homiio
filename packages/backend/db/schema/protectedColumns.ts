@@ -63,6 +63,7 @@ import {
   publicColumns as excludeProtectedColumns,
 } from '@oxy.so/db/assert';
 import type { PgTable } from 'drizzle-orm/pg-core';
+import { evictionTeamChats } from './teamChat';
 import { evictionCases } from './evictions';
 import { leases } from './leases';
 import { profiles } from './profiles';
@@ -84,6 +85,7 @@ import { properties } from './properties';
  * does not exist, which is a silent no-op rather than an error.
  */
 export const PROTECTED_COLUMNS_BY_TABLE = {
+  eviction_team_chats: ['referenceCiphertext'],
   eviction_cases: [
     'contactPhone',
     'contactEmail',
@@ -117,6 +119,12 @@ export interface ProtectedColumn {
  * they cannot drift.
  */
 export const PROTECTED_COLUMNS: readonly ProtectedColumn[] = [
+  {
+    table: evictionTeamChats,
+    property: 'referenceCiphertext',
+    reason:
+      'An encrypted resource-scoped Allo read capability. Only the team operation repository decrypts it; team and public projections never include it.',
+  },
   {
     table: properties,
     property: 'accommodationDetailsWifiPassword',

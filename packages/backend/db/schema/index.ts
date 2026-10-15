@@ -122,3 +122,5 @@ export {
   savedSearches,
 } from './saved';
 export { housingAlerts, housingDomainEvents, housingWatchRules } from './watches';
+
+export * from './teamChat';
