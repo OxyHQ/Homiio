@@ -46,7 +46,7 @@
   },
   "overrides": {
     "@oxy.so/core": "4.5.0",
-    "@oxy.so/bloom": "10.4.0",
+    "@oxy.so/bloom": "10.7.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "@react-native-async-storage/async-storage": "2.2.0",
@@ -69,6 +69,6 @@
   "cacheDirectories": [],
   "dependencies": {
     "@oxy.so/core": "4.5.0",
-    "@oxy.so/bloom": "10.4.0"
+    "@oxy.so/bloom": "10.7.0"
   }
 }
