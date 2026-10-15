@@ -25,7 +25,7 @@
 import type React from 'react';
 import { useCallback, useContext, useMemo, useState } from 'react';
 import { Linking, ScrollView, StyleSheet, View } from 'react-native';
-import { getMentionShareUrl } from '@homiio/contracts';
+import { getMentionShareUrl } from '@oxy.so/homiio-contracts';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';

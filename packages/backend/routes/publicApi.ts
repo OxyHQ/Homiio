@@ -1,6 +1,6 @@
 import { readChatOperation } from '../controllers/eviction/teamChat';
 import { Router, type ErrorRequestHandler } from 'express';
-import { generateOpenApi } from '@homiio/contracts/dist/openapi';
+import { generateOpenApi } from '@oxy.so/homiio-contracts/dist/openapi';
 import { getPublicCaseCards } from '../controllers/eviction/publicCards';
 
 export const publicApiRouter = Router();

@@ -1,6 +1,6 @@
 import { pgTable, text, boolean, uniqueIndex, check } from 'drizzle-orm/pg-core';
 import { generatedId, createdAt, inList } from '@oxy.so/db';
-import { TEAM_OPERATION_ACTIONS } from '@homiio/contracts';
+import { TEAM_OPERATION_ACTIONS } from '@oxy.so/homiio-contracts';
 import { sql } from 'drizzle-orm';
 import { evictionCases } from './evictions';
 /** Encrypted opaque Allo read reference, never content or a conversation member mirror. */

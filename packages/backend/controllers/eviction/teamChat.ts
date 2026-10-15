@@ -3,7 +3,7 @@ import {
   beginTeamOperationSchema,
   teamOperationIdRequestSchema,
   HOMIIO_TEAM_OPERATION_HEADER,
-} from '@homiio/contracts';
+} from '@oxy.so/homiio-contracts';
 import {
   beginTeamOperation,
   finalizeTeamOperation,

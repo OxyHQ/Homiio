@@ -1,5 +1,5 @@
 {
-  "name": "@homiio/sdk",
+  "name": "@oxy.so/homiio-sdk",
   "version": "0.1.0",
   "description": "Homiio public case sdk",
   "license": "SEE LICENSE IN LICENSE",
@@ -14,7 +14,7 @@
     "prepack": "bun run build"
   },
   "dependencies": {
-    "@homiio/contracts": "0.1.0"
+    "@oxy.so/homiio-contracts": "0.1.0"
   },
   "devDependencies": {
     "typescript": "^6.0.3"

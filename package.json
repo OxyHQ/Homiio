@@ -30,7 +30,7 @@
     "install:all": "bun install",
     "start:frontend": "bun run --filter @homiio/frontend start",
     "start:backend": "bun run --filter @homiio/backend start",
-    "postinstall": "bun run --filter @homiio/contracts build && bun run build:shared-types",
+    "postinstall": "bun run --filter @oxy.so/homiio-contracts build && bun run build:shared-types",
     "check:openapi": "bun scripts/generate-openapi.ts --check",
     "generate:openapi": "bun scripts/generate-openapi.ts"
   },

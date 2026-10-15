@@ -5,14 +5,14 @@ import {
   MAX_PUBLIC_CASE_BATCH,
   type ApiErrorCode,
   type PublicCaseBatchResponse,
-} from '@homiio/contracts';
+} from '@oxy.so/homiio-contracts';
 export {
   getHomiioCaseUrl,
   parseHomiioCaseUrl,
   getMentionShareUrl,
   MAX_PUBLIC_CASE_BATCH,
-} from '@homiio/contracts';
-export type { PublicCase, PublicCaseBatchResponse, ApiErrorCode } from '@homiio/contracts';
+} from '@oxy.so/homiio-contracts';
+export type { PublicCase, PublicCaseBatchResponse, ApiErrorCode } from '@oxy.so/homiio-contracts';
 
 export class HomiioApiError extends Error {
   constructor(

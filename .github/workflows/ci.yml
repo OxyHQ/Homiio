@@ -461,7 +461,7 @@ jobs:
       - name: Public API contracts and SDK
         run: |
           bun run check:openapi
-          bun run --filter @homiio/sdk build
+          bun run --filter @oxy.so/homiio-sdk build
           bun test packages/sdk/tests
 
       # AGENTS.md is prepended to EVERY agent session, so its bytes are paid on

@@ -2,7 +2,7 @@ import {
   getHomiioCaseUrl,
   publicCaseBatchRequestSchema,
   publicCaseBatchResponseSchema,
-} from '@homiio/contracts';
+} from '@oxy.so/homiio-contracts';
 import type { Request, Response } from 'express';
 import { listPublicCaseCards } from '../../db/evictions/publicCaseRepository';
 import { sanitizePublicText } from './sanitizePublicText';

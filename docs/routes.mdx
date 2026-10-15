@@ -57,9 +57,9 @@ All under `/api`. Source: `packages/backend/routes/public.ts`.
 | Method | Path | Notes |
 |---|---|---|
 | `POST` | `/api/v1/cases/batch` | 1–50 opaque IDs, deduplicated; current public fields only. Archived, held and missing cases return `unavailableIds`. `Cache-Control: no-store`. |
-| `GET` | `/api/v1/openapi.json` | Generated OpenAPI 3.1 from `@homiio/contracts`; checked in CI. |
+| `GET` | `/api/v1/openapi.json` | Generated OpenAPI 3.1 from `@oxy.so/homiio-contracts`; checked in CI. |
 
-`@homiio/sdk` resolves batches with `HomiioClient.getPublicCases(ids, { signal })`.
+`@oxy.so/homiio-sdk` resolves batches with `HomiioClient.getPublicCases(ids, { signal })`.
 The response contains `items` and `unavailableIds`. Cards carry only `id`, public
 `title`, coarse `area`, `scheduledAt`, `status` and a canonical Homiio `url`.
 The SDK validates responses, deduplicates and chunks references, and retains no
