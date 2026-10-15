@@ -30,7 +30,6 @@ import {
   RiMegaphoneLine,
   RiSearchLine,
   RiSettings3Line,
-  RiSparklingLine,
   RiShieldLine,
   RiStarLine,
   RiUserLine,
@@ -38,6 +37,7 @@ import {
 import { getAccountDisplayName, getAccountFallbackHandle } from '@oxy.so/core';
 import { openAccountDialog, useAuth, useOxy } from '@oxy.so/services';
 
+import { AliaAvatarIcon } from '@alia.onl/sdk/avatar';
 import { LogoIcon } from '@/assets/logo';
 import { useAskAlia } from '@/context/AskAliaContext';
 import { useRentalMode } from '@/context/RentalModeContext';
@@ -306,7 +306,7 @@ export function useHomiioSidebarProps(): HomiioSidebarProps {
       {
         key: 'alia',
         label: t('sidebar.navigation.askAlia'),
-        icon: RiSparklingLine,
+        icon: AliaAvatarIcon,
         onPress: handleAskAlia,
       },
     );
