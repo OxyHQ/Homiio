@@ -1,3 +1,4 @@
+import { agencySourceKey } from './sourceIdentity';
 import type { NormalizedListing } from '@homiio/shared-types';
 import { oxyService } from '../oxy';
 import { findOrCreateAgencyReference } from '../../db/agencies/agencyWrites';
@@ -9,7 +10,7 @@ export async function resolveListingAgency(
   const contact = listing.contact;
   if (contact?.kind !== 'agency' || !contact.agencyName?.trim() || !contact.agencySourceId?.trim())
     return undefined;
-  const externalId = `provider:${listing.source}:${contact.agencySourceId}`;
+  const externalId = agencySourceKey(listing.source, contact.agencySourceId);
   const result = await oxyService.organizations.importBatch({
     namespace: 'homiio',
     items: [

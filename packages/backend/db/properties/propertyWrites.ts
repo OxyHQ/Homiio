@@ -239,6 +239,7 @@ export function toPropertyColumns(input: PropertyWriteInput): PropertyUpdate {
     columns.externalContactWhatsapp = member(block, 'whatsapp');
     columns.externalContactName = member(block, 'name');
     columns.externalContactAgencyName = member(block, 'agencyName');
+    columns.externalContactAgencySourceId = member(block, 'agencySourceId');
     columns.externalContactKind = member(block, 'kind');
   }
 

@@ -70,7 +70,11 @@ it('preserves unresolved source references, freezes identity writers and permits
       db`update eviction_organizations set name='Local rename' where id='support'`,
     ).rejects.toThrow('owned by Oxy');
     await db`insert into eviction_organizations(id,oxy_account_id,identity_status) values ('new-support','oxy-company','linked')`;
+    await db`update properties set external_contact_agency_source_id='source-advertiser-42' where id='historical-listing'`;
     await through(url, '0032_retire_local_organization_identity', 'post');
+    expect(
+      await db`select external_contact_agency_source_id from properties where id='historical-listing'`,
+    ).toEqual([{ external_contact_agency_source_id: 'source-advertiser-42' }]);
     expect(
       await db`select organization_id,observed_name from eviction_organization_identity_archives`,
     ).toEqual([{ organization_id: 'support', observed_name: 'Housing collective' }]);

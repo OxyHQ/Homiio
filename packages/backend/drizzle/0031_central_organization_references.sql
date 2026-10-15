@@ -23,6 +23,7 @@ ALTER TABLE "agencies" ADD COLUMN "oxy_account_id" text;--> statement-breakpoint
 ALTER TABLE "agencies" ADD COLUMN "identity_status" text DEFAULT 'unresolved' NOT NULL;--> statement-breakpoint
 ALTER TABLE "eviction_organizations" ADD COLUMN "oxy_account_id" text;--> statement-breakpoint
 ALTER TABLE "eviction_organizations" ADD COLUMN "identity_status" text DEFAULT 'unresolved' NOT NULL;--> statement-breakpoint
+ALTER TABLE "properties" ADD COLUMN "external_contact_agency_source_id" text;--> statement-breakpoint
 ALTER TABLE "agency_identity_archives" ADD CONSTRAINT "agency_identity_archives_agency_id_agencies_id_fk" FOREIGN KEY ("agency_id") REFERENCES "public"."agencies"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "eviction_organization_identity_archives" ADD CONSTRAINT "eviction_organization_identity_archives_organization_id_eviction_organizations_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."eviction_organizations"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 CREATE UNIQUE INDEX "agency_identity_archives_agency_id_key" ON "agency_identity_archives" USING btree ("agency_id");--> statement-breakpoint

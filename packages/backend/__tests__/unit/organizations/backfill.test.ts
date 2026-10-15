@@ -19,6 +19,8 @@ const record = (
       source,
       kind,
       count: 1,
+      agencySourceId: `advertiser-${id}`,
+      propertyIds: [`property-${id}`],
       examplePropertyId: `property-${id}`,
       exampleSourceUrl: `https://source.example/${id}`,
     },
@@ -28,6 +30,18 @@ const record = (
 describe('agency source classification', () => {
   it('requires an audited actual advertiser category and keeps missing/mixed evidence unresolved', () => {
     expect(classifyAgency(record('a')).action).toBe('import');
+    expect(
+      classifyAgency({
+        ...record('a'),
+        evidence: record('a').evidence.map((row) => ({ ...row, agencySourceId: null })),
+      }).action,
+    ).toBe('unresolved');
+    expect(
+      classifyAgency({
+        ...record('a'),
+        evidence: [...record('a').evidence, ...record('b').evidence],
+      }).action,
+    ).toBe('unresolved');
     expect(classifyAgency(record('a', 'rightmove')).action).toBe('unresolved');
     expect(classifyAgency(record('a', 'otodom', null)).action).toBe('unresolved');
     expect(classifyAgency({ ...record('a'), evidence: [] }).action).toBe('unresolved');
@@ -143,4 +157,47 @@ it('keeps support collectives unresolved until an evidence-backed staff link wit
   expect(save).toHaveBeenCalledWith([
     { agencyId: 'collective', accountId: 'canonical-community', status: 'linked' },
   ]);
+});
+
+it('requires complete per-listing proof for reviewed agency links and binds the future provider key', async () => {
+  const records = [
+    {
+      ...record('a', 'fotocasa'),
+      evidence: record('a', 'fotocasa').evidence.map((row) => ({ ...row, agencySourceId: null })),
+    },
+  ];
+  const mapping = {
+    agencyId: 'a',
+    accountId: 'canonical',
+    evidenceReference: 'review:all-source-listings',
+    sourceIdentity: {
+      source: 'fotocasa',
+      agencySourceId: 'advertiser-a',
+      propertyIds: ['property-a'],
+    },
+  };
+  const importBatch = jest.fn();
+  const importExternal = jest.fn().mockResolvedValue({ accountId: 'canonical', created: false });
+  const save = jest.fn();
+  await applyAgencyBackfill({
+    records,
+    reviewedMappings: [mapping],
+    expectedPlanSha256: planAgencyBackfill(records, [mapping]).sha256,
+    directory: { importBatch },
+    reviewedDirectory: { importExternal },
+    save,
+  });
+  expect(importBatch).not.toHaveBeenCalled();
+  expect(importExternal.mock.calls[0][0].externalId).toBe('provider:fotocasa:advertiser-a');
+  const incomplete = { ...mapping, sourceIdentity: { ...mapping.sourceIdentity, propertyIds: [] } };
+  await expect(
+    applyAgencyBackfill({
+      records,
+      reviewedMappings: [incomplete],
+      expectedPlanSha256: planAgencyBackfill(records, [incomplete]).sha256,
+      directory: { importBatch },
+      reviewedDirectory: { importExternal },
+      save,
+    }),
+  ).rejects.toThrow('every historical property');
 });

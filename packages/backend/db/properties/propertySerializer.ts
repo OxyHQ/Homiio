@@ -324,6 +324,7 @@ export function serializeProperty(
       whatsapp: row.externalContactWhatsapp,
       name: row.externalContactName,
       agencyName: row.externalContactAgencyName,
+      agencySourceId: row.externalContactAgencySourceId,
       kind: row.externalContactKind,
     }),
 

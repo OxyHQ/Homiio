@@ -1,6 +1,6 @@
 {
-  "id": "3e8fa241-e5ba-4db0-8790-13d530fbb5fd",
-  "prevId": "58e7b1e9-fbd0-4518-9a60-2b520c91629b",
+  "id": "1572fdd6-0bd8-426a-80a2-890598b77cf6",
+  "prevId": "d33a4594-30bf-43b6-9d86-b308bc86541e",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -11179,6 +11179,12 @@
         },
         "external_contact_agency_name": {
           "name": "external_contact_agency_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "external_contact_agency_source_id": {
+          "name": "external_contact_agency_source_id",
           "type": "text",
           "primaryKey": false,
           "notNull": false

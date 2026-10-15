@@ -1,3 +1,5 @@
+import { applyAgencyBackfill, planAgencyBackfill } from '../../services/organizations/backfill';
+import { resolveListingAgency } from '../../services/organizations/ingestion';
 import { uuidv7 } from '@oxy.so/db';
 import { inArray } from 'drizzle-orm';
 import { connectPostgres, closePostgres, getDb } from '../../db/postgres';
@@ -87,5 +89,123 @@ it('keeps housing agency and support roles distinct while sharing the same canon
     await getDb()
       .delete(evictionOrganizations)
       .where(inArray(evictionOrganizations.id, [support.id]));
+  }
+});
+
+it('backfill and refresh reuse the same source mapping and historical agency reference', async () => {
+  const company = registerCompany('Stable advertiser');
+  const agencyId = uuidv7();
+  await getDb()
+    .insert(agencies)
+    .values({ id: agencyId, slug: agencyId, identityStatus: 'unresolved' });
+  const record = {
+    id: agencyId,
+    observedName: 'Former source label',
+    oxyAccountId: null,
+    identityStatus: 'unresolved' as const,
+    evidence: [
+      {
+        source: 'fotocasa',
+        kind: 'agency',
+        count: 1,
+        agencySourceId: 'company-42',
+        propertyIds: ['property-42'],
+        examplePropertyId: 'property-42',
+        exampleSourceUrl: 'https://source.example/property-42',
+      },
+    ],
+  };
+  const keys = new Set<string>();
+  const batch = jest
+    .spyOn(oxyService.organizations, 'importBatch')
+    .mockImplementation(async ({ items }) => ({
+      items: items.map((item) => {
+        const created = !keys.has(item.externalId);
+        keys.add(item.externalId);
+        return { externalId: item.externalId, accountId: company.accountId, created };
+      }),
+    }));
+  try {
+    await applyAgencyBackfill({
+      records: [record],
+      reviewedMappings: [],
+      expectedPlanSha256: planAgencyBackfill([record]).sha256,
+      directory: oxyService.organizations,
+      save: async (items) => {
+        for (const item of items)
+          await getDb()
+            .update(agencies)
+            .set({ oxyAccountId: item.accountId, identityStatus: item.status })
+            .where(inArray(agencies.id, [item.agencyId]));
+      },
+    });
+    const linked = await resolveListingAgency({
+      source: 'fotocasa',
+      sourceId: 'property-42',
+      sourceUrl: 'https://source.example/property-42',
+      contact: { kind: 'agency', agencyName: 'Renamed source label', agencySourceId: 'company-42' },
+    } as import('@homiio/shared-types').NormalizedListing);
+    expect(linked).toBe(agencyId);
+    expect([...keys]).toEqual(['provider:fotocasa:company-42']);
+    expect(batch).toHaveBeenCalledTimes(2);
+  } finally {
+    await getDb()
+      .delete(agencies)
+      .where(inArray(agencies.id, [agencyId]));
+  }
+});
+
+it('leaves a mixed legacy name group unresolved when a listing refresh identifies one advertiser', async () => {
+  const legacyId = uuidv7();
+  await getDb()
+    .insert(agencies)
+    .values({ id: legacyId, slug: legacyId, identityStatus: 'unresolved' });
+  const record = {
+    id: legacyId,
+    observedName: 'Same normalized label',
+    oxyAccountId: null,
+    identityStatus: 'unresolved' as const,
+    evidence: ['one', 'two'].map((id) => ({
+      source: 'fotocasa',
+      kind: 'agency',
+      count: 1,
+      agencySourceId: id,
+      propertyIds: [id],
+      examplePropertyId: id,
+      exampleSourceUrl: `https://source.example/${id}`,
+    })),
+  };
+  const company = registerCompany('One real advertiser');
+  const batch = jest.spyOn(oxyService.organizations, 'importBatch').mockResolvedValue({
+    items: [{ externalId: 'provider:fotocasa:one', accountId: company.accountId, created: true }],
+  });
+  const save = jest.fn();
+  let refreshedId: string | undefined;
+  try {
+    await applyAgencyBackfill({
+      records: [record],
+      reviewedMappings: [],
+      expectedPlanSha256: planAgencyBackfill([record]).sha256,
+      directory: oxyService.organizations,
+      save,
+    });
+    expect(batch).not.toHaveBeenCalled();
+    expect(save).not.toHaveBeenCalled();
+    refreshedId = await resolveListingAgency({
+      source: 'fotocasa',
+      sourceId: 'one',
+      sourceUrl: 'https://source.example/one',
+      contact: { kind: 'agency', agencyName: record.observedName, agencySourceId: 'one' },
+    } as import('@homiio/shared-types').NormalizedListing);
+    expect(refreshedId).not.toBe(legacyId);
+    const [legacy] = await getDb()
+      .select()
+      .from(agencies)
+      .where(inArray(agencies.id, [legacyId]));
+    expect(legacy).toMatchObject({ oxyAccountId: null, identityStatus: 'unresolved' });
+  } finally {
+    await getDb()
+      .delete(agencies)
+      .where(inArray(agencies.id, [legacyId, ...(refreshedId ? [refreshedId] : [])]));
   }
 });

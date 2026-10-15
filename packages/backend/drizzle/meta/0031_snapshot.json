@@ -1,5 +1,5 @@
 {
-  "id": "58e7b1e9-fbd0-4518-9a60-2b520c91629b",
+  "id": "d33a4594-30bf-43b6-9d86-b308bc86541e",
   "prevId": "db3cadc5-f658-4fba-9dc7-53b32b6cfb13",
   "version": "7",
   "dialect": "postgresql",
@@ -1828,6 +1828,10 @@
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {
+        "agencies_normalized_name_not_empty_check": {
+          "name": "agencies_normalized_name_not_empty_check",
+          "value": "length(\"agencies\".\"normalized_name\") > 0"
+        },
         "agencies_identity_status_check": {
           "name": "agencies_identity_status_check",
           "value": "\"agencies\".\"identity_status\" in ('unresolved', 'linked', 'not_organization')"
@@ -1835,10 +1839,6 @@
         "agencies_identity_link_check": {
           "name": "agencies_identity_link_check",
           "value": "(\"agencies\".\"identity_status\" = 'linked') = (\"agencies\".\"oxy_account_id\" is not null)"
-        },
-        "agencies_normalized_name_not_empty_check": {
-          "name": "agencies_normalized_name_not_empty_check",
-          "value": "length(\"agencies\".\"normalized_name\") > 0"
         },
         "agencies_slug_not_empty_check": {
           "name": "agencies_slug_not_empty_check",
@@ -11252,6 +11252,12 @@
         },
         "external_contact_agency_name": {
           "name": "external_contact_agency_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "external_contact_agency_source_id": {
+          "name": "external_contact_agency_source_id",
           "type": "text",
           "primaryKey": false,
           "notNull": false

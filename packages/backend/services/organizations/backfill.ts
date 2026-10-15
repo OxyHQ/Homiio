@@ -1,3 +1,4 @@
+import { agencySourceKey } from './sourceIdentity';
 import { createHash } from 'node:crypto';
 import type { OxyServer } from '@oxy.so/core/server';
 
@@ -14,6 +15,8 @@ export interface AgencySourceEvidence {
   source: string;
   kind: string | null;
   count: number;
+  agencySourceId: string | null;
+  propertyIds: string[];
   examplePropertyId: string;
   exampleSourceUrl: string | null;
 }
@@ -28,6 +31,8 @@ export interface ReviewedAgencyMapping {
   agencyId: string;
   accountId: string;
   evidenceReference: string;
+  /** Mandatory for agency mappings: every historical property must be covered by this reviewed source identity. */
+  sourceIdentity?: { source: string; agencySourceId: string; propertyIds: string[] };
 }
 
 export function classifyAgency(record: AgencyMigrationRecord) {
@@ -49,17 +54,27 @@ export function classifyAgency(record: AgencyMigrationRecord) {
       (source) =>
         source.kind === 'agency' &&
         DECLARED_AGENCY_PROVIDERS.has(source.source) &&
-        source.exampleSourceUrl,
+        source.exampleSourceUrl &&
+        source.agencySourceId?.trim(),
     )
   ) {
-    return {
-      action: 'import' as const,
-      reason: 'Consistent source-declared commercial advertiser category from audited parsers',
-    };
+    const keys = new Set(
+      record.evidence.map((source) => {
+        if (!source.agencySourceId) throw new Error('Stable source identity required');
+        return agencySourceKey(source.source, source.agencySourceId);
+      }),
+    );
+    if (keys.size === 1)
+      return {
+        action: 'import' as const,
+        externalId: [...keys][0],
+        reason: 'Every referenced listing proves the same stable provider advertiser identity',
+      };
   }
   return {
     action: 'unresolved' as const,
-    reason: 'Missing, ambiguous, mixed or unaudited source identity evidence',
+    reason:
+      'Missing stable advertiser ID, ambiguous or mixed source identity evidence; category/name alone cannot identify a company',
   };
 }
 
@@ -107,43 +122,57 @@ export async function applyAgencyBackfill(input: {
   if (plan.sha256 !== input.expectedPlanSha256)
     throw new Error('Agency migration plan changed; review a fresh dry-run');
   const reviewedIds = new Set<string>();
+  const reviewedSources = new Map<string, string>();
   for (const mapping of input.reviewedMappings) {
     const record = input.records.find((row) => row.id === mapping.agencyId);
     if (!record || !mapping.evidenceReference.trim() || reviewedIds.has(mapping.agencyId))
       throw new Error('Invalid or duplicate reviewed agency mapping');
     if (record.oxyAccountId && record.oxyAccountId !== mapping.accountId)
       throw new Error('Reviewed mapping conflicts with canonical reference');
+    if (input.role !== 'housing_support') {
+      const source = mapping.sourceIdentity;
+      const referencedIds = record.evidence.flatMap((entry) => entry.propertyIds).sort();
+      const reviewedPropertyIds = source ? [...new Set(source.propertyIds)].sort() : [];
+      if (
+        !source?.agencySourceId.trim() ||
+        !referencedIds.length ||
+        JSON.stringify(referencedIds) !== JSON.stringify(reviewedPropertyIds) ||
+        record.evidence.some(
+          (entry) =>
+            entry.source !== source.source ||
+            (entry.agencySourceId && entry.agencySourceId.trim() !== source.agencySourceId.trim()),
+        )
+      ) {
+        throw new Error(
+          'Reviewed agency mapping must prove one source identity for every historical property; mixed groups remain unresolved',
+        );
+      }
+    }
+    if (mapping.sourceIdentity) {
+      const key = agencySourceKey(
+        mapping.sourceIdentity.source,
+        mapping.sourceIdentity.agencySourceId,
+      );
+      if (reviewedSources.has(key) && reviewedSources.get(key) !== mapping.accountId)
+        throw new Error('Conflicting reviewed source mappings');
+      reviewedSources.set(key, mapping.accountId);
+    }
     reviewedIds.add(mapping.agencyId);
   }
   if (reviewedIds.size && !input.reviewedDirectory)
     throw new Error('Reviewed links require an authorized staff SDK session');
-  const eligible = plan.decisions.filter(
-    (record) => record.decision.action === 'import' && !reviewedIds.has(record.id),
-  );
-  for (let offset = 0; offset < eligible.length; offset += 100) {
-    const chunk = eligible.slice(offset, offset + 100);
-    const imported = await input.directory.importBatch({
-      namespace: 'homiio',
-      items: chunk.map((record) => ({
-        externalId: `legacy:${record.id}`,
-        organization: { name: record.observedName, organizationType: 'business' },
-        evidenceReference: `homiio:agency_identity_archives:${record.id}:property:${record.evidence[0].examplePropertyId}`,
-      })),
-    });
-    const byKey = new Map(imported.items.map((item) => [item.externalId, item.accountId]));
-    const mappings = chunk.map((record) => {
-      const accountId = byKey.get(`legacy:${record.id}`);
-      if (!accountId) throw new Error(`Missing canonical mapping for agency ${record.id}`);
-      return { agencyId: record.id, accountId, status: 'linked' as const };
-    });
-    await input.save(mappings);
-  }
   for (const mapping of input.reviewedMappings) {
     const record = input.records.find((row) => row.id === mapping.agencyId);
     if (!record || !input.reviewedDirectory) throw new Error('Missing reviewed agency');
+    const source = mapping.sourceIdentity;
+    if (input.role !== 'housing_support' && !source)
+      throw new Error('Reviewed source identity required');
     const linked = await input.reviewedDirectory.importExternal({
       namespace: 'homiio',
-      externalId: `${input.role === 'housing_support' ? 'support' : 'legacy'}:${mapping.agencyId}`,
+      externalId:
+        source && input.role !== 'housing_support'
+          ? agencySourceKey(source.source, source.agencySourceId)
+          : `support:${mapping.agencyId}`,
       accountId: mapping.accountId,
       organization: {
         name: record.observedName,
@@ -154,6 +183,41 @@ export async function applyAgencyBackfill(input: {
     await input.save([
       { agencyId: mapping.agencyId, accountId: linked.accountId, status: 'linked' },
     ]);
+  }
+  const eligible = plan.decisions.filter(
+    (record) => record.decision.action === 'import' && !reviewedIds.has(record.id),
+  );
+  const groups = new Map<string, typeof eligible>();
+  for (const record of eligible) {
+    if (record.decision.action !== 'import') throw new Error('Missing stable source identity');
+    groups.set(record.decision.externalId, [
+      ...(groups.get(record.decision.externalId) ?? []),
+      record,
+    ]);
+  }
+  const entries = [...groups.entries()];
+  for (let offset = 0; offset < entries.length; offset += 100) {
+    const chunk = entries.slice(offset, offset + 100);
+    const imported = await input.directory.importBatch({
+      namespace: 'homiio',
+      items: chunk.map(([externalId, records]) => ({
+        externalId,
+        organization: { name: records[0].observedName, organizationType: 'business' },
+        evidenceReference: `homiio:agency_identity_archives:${records[0].id}:property:${records[0].evidence[0].examplePropertyId}`,
+      })),
+    });
+    const byKey = new Map(imported.items.map((item) => [item.externalId, item.accountId]));
+    await input.save(
+      chunk.flatMap(([key, records]) => {
+        const accountId = byKey.get(key);
+        if (!accountId) throw new Error(`Missing canonical mapping for source ${key}`);
+        return records.map((record) => ({
+          agencyId: record.id,
+          accountId,
+          status: 'linked' as const,
+        }));
+      }),
+    );
   }
   const noncompanies = plan.decisions.filter(
     (record) => record.decision.action === 'not_organization' && !reviewedIds.has(record.id),

@@ -46,6 +46,14 @@ async function main() {
               agencyId: z.string().min(1),
               accountId: z.string().min(1),
               evidenceReference: z.string().trim().min(1),
+              sourceIdentity: z
+                .object({
+                  source: z.string().min(1),
+                  agencySourceId: z.string().trim().min(1),
+                  propertyIds: z.array(z.string().min(1)).min(1),
+                })
+                .strict()
+                .optional(),
             })
             .strict(),
         )
@@ -91,13 +99,25 @@ async function main() {
           source: properties.source,
           kind: properties.externalContactKind,
           count: sql<number>`count(*)::int`,
+          agencySourceId: properties.externalContactAgencySourceId,
+          propertyIds: sql<string[]>`array_agg(${properties.id} order by ${properties.id})`,
           examplePropertyId: sql<string>`min(${properties.id})`,
           exampleSourceUrl: sql<string | null>`min(${properties.sourceUrl})`,
         })
         .from(properties)
         .where(sql`${properties.agencyId} is not null`)
-        .groupBy(properties.agencyId, properties.source, properties.externalContactKind)
-        .orderBy(properties.agencyId, properties.source, properties.externalContactKind);
+        .groupBy(
+          properties.agencyId,
+          properties.source,
+          properties.externalContactKind,
+          properties.externalContactAgencySourceId,
+        )
+        .orderBy(
+          properties.agencyId,
+          properties.source,
+          properties.externalContactKind,
+          properties.externalContactAgencySourceId,
+        );
       const byAgency = new Map<string, AgencySourceEvidence[]>();
       for (const row of evidence)
         if (row.agencyId) byAgency.set(row.agencyId, [...(byAgency.get(row.agencyId) ?? []), row]);
