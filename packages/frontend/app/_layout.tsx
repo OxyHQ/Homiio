@@ -43,6 +43,7 @@ import { ProfileProvider } from '@/context/ProfileContext';
 import { SavedPropertiesProvider } from '@/context/SavedPropertiesContext';
 import { BottomSheetProvider } from '@/context/BottomSheetContext';
 import { MapStateProvider } from '@/context/MapStateContext';
+import { AskAliaProvider } from '@/context/AskAliaContext';
 import { SearchModeProvider } from '@/context/SearchModeContext';
 import { RentalModeProvider } from '@/context/RentalModeContext';
 import { NotificationProvider } from '@/context/NotificationContext';
@@ -402,7 +403,9 @@ export default function RootLayout() {
                                     <ErrorBoundary>
                                       <MapStateProvider>
                                         <SearchModeProvider>
-                                          <AppFrame />
+                                          <AskAliaProvider>
+                                            <AppFrame />
+                                          </AskAliaProvider>
                                         </SearchModeProvider>
                                       </MapStateProvider>
                                       <StatusBar style="auto" />

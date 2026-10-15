@@ -73,7 +73,7 @@ export function FolderEmojiChips({ value, onChange }: FolderEmojiChipsProps) {
       {FOLDER_EMOJIS.map((emoji) => (
         <Chip
           key={emoji}
-          size="large"
+          size="lg"
           variant={value === emoji ? 'subtle' : 'outlined'}
           color={value === emoji ? 'primary' : 'default'}
           selected={value === emoji}

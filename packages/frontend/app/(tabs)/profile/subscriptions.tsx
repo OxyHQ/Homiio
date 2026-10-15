@@ -233,7 +233,7 @@ export default function SubscriptionsScreen() {
                 content={t('subscriptions.page.plus.activeBadge')}
                 color="success"
                 variant="subtle"
-                size="small"
+                size="sm"
               />
             ) : plusCanceledAt ? (
               <Badge
@@ -242,7 +242,7 @@ export default function SubscriptionsScreen() {
                 })}
                 color="error"
                 variant="subtle"
-                size="small"
+                size="sm"
               />
             ) : null
           }

@@ -29,7 +29,7 @@ export const HouseRules: React.FC<Props> = ({ property }) => {
             key={key}
             label={t(`propertyCreate.amenities.${key}`)}
             value={
-              <Chip size="large" color={allowed ? 'success' : 'default'}>
+              <Chip size="lg" color={allowed ? 'success' : 'default'}>
                 {allowed ? t('propertyCreate.amenities.yes') : t('propertyCreate.amenities.no')}
               </Chip>
             }

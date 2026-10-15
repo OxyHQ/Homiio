@@ -255,7 +255,7 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({
                 {tierName(currentTier.key)}
               </BloomText>
             </View>
-            <Chip size="medium" hue="gray">
+            <Chip size="md" hue="gray">
               {t('agent.dashboard.pointsValue', { count: points })}
             </Chip>
           </View>
@@ -310,7 +310,7 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({
                 'MMM d, yyyy',
               )}`}
               trailing={
-                <Chip size="medium" hue={STATUS_HUE[commission.status] ?? 'yellow'}>
+                <Chip size="md" hue={STATUS_HUE[commission.status] ?? 'yellow'}>
                   {statusLabel(commission.status)}
                 </Chip>
               }

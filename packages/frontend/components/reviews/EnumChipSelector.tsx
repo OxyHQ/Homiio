@@ -65,7 +65,7 @@ export function EnumChipSelector<T extends string>({
           return (
             <Chip
               key={value}
-              size="medium"
+              size="md"
               variant="outlined"
               selected={selected.includes(value)}
               onPress={() => toggle(value)}

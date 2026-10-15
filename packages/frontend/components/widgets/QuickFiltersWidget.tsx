@@ -167,7 +167,7 @@ export function QuickFiltersWidget() {
                 key={filter.id}
                 variant={isSelected ? 'solid' : 'outlined'}
                 color={isSelected ? 'primary' : 'default'}
-                size="medium"
+                size="md"
                 selected={isSelected}
                 onPress={() => toggleFilter(filter.id)}
                 accessibilityLabel={label}

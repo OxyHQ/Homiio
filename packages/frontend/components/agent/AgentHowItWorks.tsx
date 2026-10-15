@@ -75,7 +75,7 @@ const StepCard: React.FC<StepCardProps> = ({ index, title, body, imageUrl, heigh
           style={[styles.photoScrim, { pointerEvents: 'none' }]}
         />
         <View style={styles.badge}>
-          <Badge content={index} size="large" color="primary" variant="solid" />
+          <Badge content={index} size="lg" color="primary" variant="solid" />
         </View>
       </View>
       <BloomText variant="headline-bold" style={{ color: theme.colors.text }}>

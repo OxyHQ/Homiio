@@ -1939,7 +1939,8 @@
       "hostCalendar": "Calendari d'amfitrió",
       "evictions": "Desnonaments",
       "reviews": "Ressenyes",
-      "myHome": "La meva llar"
+      "myHome": "La meva llar",
+      "askAlia": "Pregunta a l'Alia"
     },
     "actions": {
       "signIn": "Iniciar Sessió"
@@ -4188,6 +4189,15 @@
       "allStays": "Totes les estades",
       "allSwaps": "Totes les sol·licituds d’intercanvi",
       "allViewings": "Totes les visites"
+    }
+  },
+  "alia": {
+    "clientContext": "La persona fa servir Homiio, una aplicació d'habitatge per trobar un lloc on llogar, comprar o allotjar-se, investigar l'historial d'una casa i el que costa de debò, i gestionar o defensar un lloguer.",
+    "onScreen": "Ara mateix és a la pantalla {{path}}.",
+    "suggestion": {
+      "find": "Ajuda'm a trobar un lloc on viure",
+      "costs": "Quant em costarà de debò aquest habitatge?",
+      "rights": "Quins són els meus drets com a llogater?"
     }
   }
 }

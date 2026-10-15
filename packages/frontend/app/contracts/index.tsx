@@ -313,7 +313,7 @@ export default function ContractsScreen() {
               {FILTERS.map((entry) => (
                 <Chip
                   key={entry.id}
-                  size="large"
+                  size="lg"
                   onPress={() => setFilter(entry.id)}
                   selected={filter === entry.id}
                 >

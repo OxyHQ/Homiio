@@ -72,7 +72,7 @@ export function AreaChip({
     <>
       <Chip
         variant={value ? 'outlined' : 'subtle'}
-        size="large"
+        size="lg"
         startIcon={<RiMapPinLine width={ICON_SIZE} height={ICON_SIZE} fill={colors.text} />}
         endIcon={
           <RiArrowDownSLine width={ICON_SIZE} height={ICON_SIZE} fill={colors.textSecondary} />

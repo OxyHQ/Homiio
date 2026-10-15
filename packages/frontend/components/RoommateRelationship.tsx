@@ -128,7 +128,7 @@ export const RoommateRelationshipComponent: React.FC<RoommateRelationshipProps> 
             {t('roommates.relationship.started', { date: formatDate(relationship.startDate) })}
           </BloomText>
         </View>
-        <Chip size="small" variant="subtle" color={statusTone(relationship.status)}>
+        <Chip size="sm" variant="subtle" color={statusTone(relationship.status)}>
           {statusText(relationship.status)}
         </Chip>
       </View>

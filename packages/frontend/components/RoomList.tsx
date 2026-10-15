@@ -393,7 +393,7 @@ export function RoomList({ filters, onFilterChange }: RoomListProps) {
             return (
               <Chip
                 key={key}
-                size="small"
+                size="sm"
                 variant="subtle"
                 color="primary"
                 onPress={remove}

@@ -207,7 +207,7 @@ const TrustBadge: React.FC<{ label: string; active: boolean }> = ({ label, activ
   const Icon = active ? RiCheckboxCircleFill : RiCheckboxBlankCircleLine;
   return (
     <Chip
-      size="small"
+      size="sm"
       variant="subtle"
       color={active ? 'success' : 'default'}
       startIcon={

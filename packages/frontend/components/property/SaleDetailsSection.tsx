@@ -50,7 +50,7 @@ export const SaleDetailsSection: React.FC<Props> = ({ sale }) => {
           <Chip
             variant="subtle"
             color="success"
-            size="small"
+            size="sm"
             startIcon={<RiArrowDownLine width={14} height={14} fill={colors.success} />}
           >
             {t('listing.sale.priceReduced')}
