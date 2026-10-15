@@ -152,6 +152,7 @@ app.use(helmet());
 // CORS configuration — O(1) Set lookup instead of Array.includes per request
 const allowedOriginsSet = new Set([
   'https://homiio.com',
+  'https://allo.you',
   'http://localhost:4130',
   'http://localhost:8130',
   'http://localhost:19006',

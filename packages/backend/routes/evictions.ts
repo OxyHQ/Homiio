@@ -20,6 +20,7 @@
  * is never swallowed by the id matcher (same trick as `routes/properties.ts`).
  */
 
+import { beginChatOperation, getTeamChatUrl } from '../controllers/eviction/teamChat';
 import express from 'express';
 import { asyncHandler } from '../middlewares';
 import * as eviction from '../controllers/eviction';
@@ -35,6 +36,8 @@ export default function () {
   router.get('/me/attending', asyncHandler(eviction.listAttendingEvictions));
   router.get('/me/following', asyncHandler(eviction.listFollowedEvictions));
 
+  router.post('/:id/team-chat/operations', beginChatOperation);
+  router.get('/:id/team-chat', getTeamChatUrl);
   router.get('/:id/team', asyncHandler(eviction.getTeam));
   router.post('/:id/collaborators', asyncHandler(eviction.addCollaborator));
   router.delete('/:id/collaborators/:oxyUserId', asyncHandler(eviction.removeCollaborator));

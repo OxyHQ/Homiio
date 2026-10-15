@@ -1,3 +1,4 @@
+import { findTeamChat, requireTeamMutationProof } from './teamChatRepository';
 import { and, eq, isNull } from 'drizzle-orm';
 import { getDb, type DatabaseOrTransaction } from '../postgres';
 import {
@@ -64,21 +65,31 @@ export async function getCaseTeam(caseId: string, oxyUserId: string) {
       })
       .from(evictionCaseCollaborators)
       .where(eq(evictionCaseCollaborators.caseId, caseId));
-    return { isOwner: owner.oxyUserId === oxyUserId, canEdit: true, collaborators };
+    return {
+      isOwner: owner.oxyUserId === oxyUserId,
+      canEdit: true,
+      collaborators,
+      hasTeamChat: Boolean(await findTeamChat(caseId, tx)),
+    };
   });
 }
 
 /** The creator owns membership; callers cannot insert the creator as a collaborator. */
-export async function changeCollaborator(input: {
-  caseId: string;
-  actorOxyUserId: string;
-  oxyUserId: string;
-  add: boolean;
-}) {
-  return getDb().transaction(async (tx) => {
+export async function changeCollaborator(
+  input: {
+    caseId: string;
+    actorOxyUserId: string;
+    oxyUserId: string;
+    add: boolean;
+    teamOperationId?: string;
+  },
+  db: DatabaseOrTransaction = getDb(),
+) {
+  return db.transaction(async (tx) => {
     const owner = await lockCase(input.caseId, tx);
     if (!owner || owner.oxyUserId !== input.actorOxyUserId) return 'not_found' as const;
     if (owner.oxyUserId === input.oxyUserId) return 'creator' as const;
+    await requireTeamMutationProof(input, tx);
     const predicate = and(
       eq(evictionCaseCollaborators.caseId, input.caseId),
       eq(evictionCaseCollaborators.oxyUserId, input.oxyUserId),

@@ -3,6 +3,7 @@
  * Central route configuration
  */
 
+import { finalizeChatOperation } from '../controllers/eviction/teamChat';
 import express from 'express';
 import properties from './properties';
 import rooms from './rooms';
@@ -55,6 +56,7 @@ export default function () {
   const evictionRoutes = evictions();
 
   const router = express.Router();
+  router.post('/team-chat/finalize', finalizeChatOperation);
 
   // FIRST, so every body below leaves as `id` and never `_id`. See wireIds.ts:
   // `.lean()` reads never pass through a schema `toJSON`, so a per-model

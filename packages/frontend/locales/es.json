@@ -3796,7 +3796,8 @@
       "locationDenied": "La ubicación exacta no está disponible o tu acceso ha terminado.",
       "exactAddress": "Dirección exacta (privada)",
       "saveAddress": "Guardar dirección exacta",
-      "hide": "Ocultar ubicación exacta"
+      "hide": "Ocultar ubicación exacta",
+      "chat": "Chat del equipo"
     }
   },
   "agency": {

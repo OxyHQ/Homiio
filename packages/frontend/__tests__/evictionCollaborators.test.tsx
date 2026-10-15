@@ -1,4 +1,5 @@
 import type React from 'react';
+import { Linking } from 'react-native';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import { EvictionCollaborators } from '@/components/evictions/EvictionCollaborators';
 import { evictionService } from '@/services/evictionService';
@@ -16,6 +17,7 @@ jest.mock('@oxy.so/services', () => ({
 jest.mock('@/hooks/useOxyAvatars', () => ({ useOxyAvatars: () => ({ usersById: new Map() }) }));
 jest.mock('@/services/evictionService', () => ({
   evictionService: {
+    getTeamChatUrl: jest.fn(),
     addCollaborator: jest.fn(),
     removeCollaborator: jest.fn(),
     getExactLocation: jest.fn(),
@@ -131,4 +133,25 @@ it('does not redisplay a previous exact location after a fresh access denial', a
   await waitFor(() => expect(screen.getByDisplayValue('Private address')).toBeTruthy());
   fireEvent.press(screen.getByText('Read exact location'));
   await waitFor(() => expect(screen.queryByDisplayValue('Private address')).toBeNull());
+});
+
+it('routes an existing team change through Allo after warning without granting local access', async () => {
+  jest.mocked(confirm).mockResolvedValue(true);
+  const open = jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined);
+  const screen = render(
+    <EvictionCollaborators
+      caseId="case"
+      team={{ ...team, hasTeamChat: true }}
+      onChanged={jest.fn()}
+    />,
+  );
+  fireEvent.changeText(screen.getByLabelText('Oxy username'), 'target');
+  fireEvent.press(screen.getByText('Add collaborator'));
+  await waitFor(() =>
+    expect(open).toHaveBeenCalledWith(
+      'https://allo.you/homiio-team?caseId=case&action=add&accountId=resolved-target',
+    ),
+  );
+  expect(evictionService.addCollaborator).not.toHaveBeenCalled();
+  open.mockRestore();
 });

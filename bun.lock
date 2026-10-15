@@ -23,6 +23,8 @@
       "version": "1.0.0",
       "dependencies": {
         "@alia.onl/server": "^1.1.0",
+        "@allo/contracts": "file:../../vendor/allo/allo-contracts-0.1.0-384e54ffe17d.tgz",
+        "@allo/sdk": "file:../../vendor/allo/allo-sdk-0.1.0-b0ba781b0166.tgz",
         "@aws-sdk/client-s3": "^3.1148.0",
         "@aws-sdk/s3-request-presigner": "^3.1148.0",
         "@crowdsource.you/contracts": "1.1.0",
@@ -244,6 +246,7 @@
     },
   },
   "overrides": {
+    "@allo/contracts": "file:./vendor/allo/allo-contracts-0.1.0-384e54ffe17d.tgz",
     "@oxy.so/bloom": "10.7.0",
     "@oxy.so/contracts": "4.12.0",
     "@oxy.so/core": "4.5.0",
@@ -273,6 +276,10 @@
     "@alia.onl/sdk": ["@alia.onl/sdk@15.4.0", "", { "dependencies": { "clsx": "^2.1.1", "react-native-markdown-display": "^7.0.2", "socket.io-client": "^4.8.3", "tailwind-merge": "^3.7.0", "zustand": "^5.0.15" }, "peerDependencies": { "@expo/vector-icons": "^15.1.1", "@oxy.so/bloom": ">=10.6.0", "@oxy.so/core": ">=3.0.0", "@oxy.so/services": ">=8.0.0", "@react-native-async-storage/async-storage": "^2.2.0", "expo-audio": "^57.0.0", "expo-blur": "^57.0.0", "expo-clipboard": "^57.0.0", "expo-document-picker": "^57.0.0", "expo-file-system": "^57.0.0", "expo-haptics": "^57.0.0", "expo-image": "^57.0.0", "expo-image-picker": "^57.0.2", "nativewind": "^5.0.0-preview.3", "react": "^19.2.3", "react-native": "^0.86.0", "react-native-audio-api": "^0.13.6", "react-native-gesture-handler": "^2.32.0", "react-native-keyboard-controller": "^1.21.9", "react-native-reanimated": "^4.5.0", "react-native-safe-area-context": "^5.8.0", "react-native-svg": "^15.15.5" }, "optionalPeers": ["expo-clipboard", "nativewind", "react-native-audio-api"] }, "sha512-yDMXKKJSy8O2amVT6V0yZ2WcMscxXblOc/uhS1Baw12MXcjWzucy1aE/bLXqemaHX6oVXFCxW5pcARnn3jtbgg=="],
 
     "@alia.onl/server": ["@alia.onl/server@1.1.0", "", {}, "sha512-iEItL9qdz08FFlCTxAjLYniv64I71l8QtIcIIQ8v8RLtIN+VZseMlWrChgztqQuwTuAjfh3KthFc3ncHvCYAKg=="],
+
+    "@allo/contracts": ["@allo/contracts@./vendor/allo/allo-contracts-0.1.0-384e54ffe17d.tgz", { "dependencies": { "zod": "^4.4.3" } }, "sha512-0YuIZ9ZxuBy9ed1pkKZSjQJ2SdSUxD/Nqz2E3yTLgq0PCOqabYnXpu83gbxeSAgClsx85u7pj/vTlTbV8XE/Yg=="],
+
+    "@allo/sdk": ["@allo/sdk@../../vendor/allo/allo-sdk-0.1.0-b0ba781b0166.tgz", { "dependencies": { "@allo/contracts": "0.1.0" } }, "sha512-YsbTg/HCJVQgYNRdVhARbhJ4UG/DWPJBoShKdi1tvW4po9fkXBnWp0ALoNvh04KaRcD5z9E+DoWlS958WbA8cg=="],
 
     "@alloc/quick-lru": ["@alloc/quick-lru@5.3.0", "", {}, "sha512-U4+70Pc5ZS9osnCBCE5Jha/ciHM+Yp+CNMNC/7HvYbNRk1Ldd+f7qO65W5qfhu/TCv+/ozljlXXe9Nj8419DMA=="],
 

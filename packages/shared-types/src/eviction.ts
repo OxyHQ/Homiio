@@ -542,6 +542,7 @@ export interface CreateEvictionLocationGrantInput {
 
 /** Authenticated team read, never included in the public case projection. */
 export interface EvictionCaseTeam {
+  hasTeamChat?: boolean;
   isOwner: boolean;
   canEdit: boolean;
   collaborators: { oxyUserId: string; addedAt: string }[];
