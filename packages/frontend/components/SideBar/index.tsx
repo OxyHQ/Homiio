@@ -30,6 +30,7 @@ import {
   RiMegaphoneLine,
   RiSearchLine,
   RiSettings3Line,
+  RiSparklingLine,
   RiShieldLine,
   RiStarLine,
   RiUserLine,
@@ -38,6 +39,7 @@ import { getAccountDisplayName, getAccountFallbackHandle } from '@oxy.so/core';
 import { openAccountDialog, useAuth, useOxy } from '@oxy.so/services';
 
 import { LogoIcon } from '@/assets/logo';
+import { useAskAlia } from '@/context/AskAliaContext';
 import { useRentalMode } from '@/context/RentalModeContext';
 import { useProfile } from '@/context/ProfileContext';
 import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
@@ -165,6 +167,7 @@ export function useHomiioSidebarProps(): HomiioSidebarProps {
   const { isHost } = useHostStatus();
   const { user, isAuthenticated, isAuthResolved, signIn } = useAuth();
   const { oxyServices } = useOxy();
+  const { askAlia } = useAskAlia();
 
   const { folders } = useSavedPropertiesContext();
   const { properties: recentProperties } = useRecentlyViewed();
@@ -196,6 +199,13 @@ export function useHomiioSidebarProps(): HomiioSidebarProps {
     }
     handleNavigate('/sindi');
   }, [isMobile, closeMobileDrawer, toggleSindiPanel, handleNavigate]);
+
+  // Opens Alia's chat sheet (or the sign-in dialog when signed out); the drawer
+  // is dismissed first so the sheet is not presented behind it.
+  const handleAskAlia = React.useCallback(() => {
+    closeMobileDrawer();
+    askAlia();
+  }, [closeMobileDrawer, askAlia]);
 
   const handleSettings = React.useCallback(() => handleNavigate('/settings'), [handleNavigate]);
   const handleProfile = React.useCallback(() => handleNavigate('/profile'), [handleNavigate]);
@@ -293,10 +303,16 @@ export function useHomiioSidebarProps(): HomiioSidebarProps {
         icon: SindiSidebarIcon,
         onPress: handleSindi,
       },
+      {
+        key: 'alia',
+        label: t('sidebar.navigation.askAlia'),
+        icon: RiSparklingLine,
+        onPress: handleAskAlia,
+      },
     );
 
     return entries;
-  }, [t, isAuthenticated, mode, canAccessRoommates, isHost, handleSindi]);
+  }, [t, isAuthenticated, mode, canAccessRoommates, isHost, handleSindi, handleAskAlia]);
 
   // Signed out, the account is a "Sign in" row above the legal links; signed
   // in it is the `team` card below. Nothing while auth is still resolving, so

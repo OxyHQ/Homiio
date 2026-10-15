@@ -1553,7 +1553,8 @@
       "hostCalendar": "Host calendar",
       "evictions": "Eviction watch",
       "reviews": "Reviews",
-      "myHome": "Rumah saya"
+      "myHome": "Rumah saya",
+      "askAlia": "Tanya Alia"
     },
     "actions": {
       "signIn": "Sign In"
@@ -4141,6 +4142,15 @@
       "allStays": "Semua menginap",
       "allSwaps": "Semua permintaan tukar rumah",
       "allViewings": "Semua kunjungan"
+    }
+  },
+  "alia": {
+    "clientContext": "Pengguna sedang memakai Homiio, aplikasi hunian untuk mencari tempat yang disewa, dibeli atau disinggahi, menelusuri riwayat sebuah hunian dan biaya sebenarnya, serta mengelola atau membela hak sewa.",
+    "onScreen": "Saat ini pengguna berada di layar {{path}}.",
+    "suggestion": {
+      "find": "Bantu saya mencari tempat tinggal",
+      "costs": "Berapa biaya sebenarnya hunian ini?",
+      "rights": "Apa hak saya sebagai penyewa?"
     }
   }
 }

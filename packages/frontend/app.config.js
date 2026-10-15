@@ -142,22 +142,23 @@ module.exports = (config) => {
             cameraPermission: 'Allow $(PRODUCT_NAME) to access your camera',
             // The one NSMicrophoneUsageDescription: this plugin's Info.plist mod
             // runs after expo-speech-recognition's and overwrites its string, so
-            // the Sindi dictation use is named here.
+            // the dictation and voice uses are named here.
             microphonePermission:
-              'Allow $(PRODUCT_NAME) to access your microphone, including to dictate messages to Sindi',
+              'Allow $(PRODUCT_NAME) to access your microphone, including to dictate messages to Sindi and to talk with Alia',
             recordAudioAndroid: true,
           },
         ],
         'expo-image-picker',
-        // Sindi's composer mic (hooks/voice/speechEngine.ts). Adds the iOS usage
-        // strings and Android RECORD_AUDIO + the speech-service <queries>; a
-        // binary built without it reports "not available on this device".
+        // Sindi's composer mic (hooks/voice/speechEngine.ts) and voice calls with
+        // Alia (`@alia.onl/sdk`'s VoiceSession). Adds the iOS usage strings and
+        // Android RECORD_AUDIO + the speech-service <queries>; a binary built
+        // without it reports "not available on this device".
         [
           'expo-speech-recognition',
           {
             // NSMicrophoneUsageDescription comes from expo-camera above.
             speechRecognitionPermission:
-              'Allow $(PRODUCT_NAME) to turn your speech into text when you dictate messages to Sindi.',
+              'Allow $(PRODUCT_NAME) to turn your speech into text when you dictate messages to Sindi or talk with Alia.',
           },
         ],
         [

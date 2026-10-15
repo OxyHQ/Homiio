@@ -1553,7 +1553,8 @@
       "hostCalendar": "Host calendar",
       "evictions": "Eviction watch",
       "reviews": "Reviews",
-      "myHome": "My home"
+      "myHome": "My home",
+      "askAlia": "Ask Alia"
     },
     "actions": {
       "signIn": "Sign In"
@@ -4137,6 +4138,15 @@
       "allStays": "All stays",
       "allSwaps": "All swap requests",
       "allViewings": "All viewings"
+    }
+  },
+  "alia": {
+    "clientContext": "The person is using Homiio, a housing app for finding a place to rent, buy or stay, researching a home's history and what it really costs, and managing or defending a tenancy.",
+    "onScreen": "They are currently on the screen at {{path}}.",
+    "suggestion": {
+      "find": "Help me find a place to live",
+      "costs": "What will this home really cost me?",
+      "rights": "What are my rights as a tenant?"
     }
   }
 }

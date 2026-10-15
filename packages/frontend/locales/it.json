@@ -1929,7 +1929,8 @@
       "hostCalendar": "Calendario host",
       "evictions": "Sfratti",
       "reviews": "Recensioni",
-      "myHome": "La mia casa"
+      "myHome": "La mia casa",
+      "askAlia": "Chiedi ad Alia"
     },
     "actions": {
       "signIn": "Accedi"
@@ -4166,6 +4167,15 @@
       "allStays": "Tutti i soggiorni",
       "allSwaps": "Tutte le richieste di scambio",
       "allViewings": "Tutte le visite"
+    }
+  },
+  "alia": {
+    "clientContext": "La persona usa Homiio, un'app per la casa che aiuta a trovare un posto in cui affittare, comprare o soggiornare, a ricercare la storia di un immobile e quanto costa davvero, e a gestire o difendere un affitto.",
+    "onScreen": "In questo momento si trova nella schermata {{path}}.",
+    "suggestion": {
+      "find": "Aiutami a trovare un posto dove vivere",
+      "costs": "Quanto mi costerà davvero questa casa?",
+      "rights": "Quali sono i miei diritti da inquilino?"
     }
   }
 }

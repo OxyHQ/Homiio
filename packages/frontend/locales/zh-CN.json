@@ -1553,7 +1553,8 @@
       "hostCalendar": "Host calendar",
       "evictions": "Eviction watch",
       "reviews": "Reviews",
-      "myHome": "我的家"
+      "myHome": "我的家",
+      "askAlia": "询问 Alia"
     },
     "actions": {
       "signIn": "Sign In"
@@ -4141,6 +4142,15 @@
       "allStays": "所有住宿",
       "allSwaps": "所有换房请求",
       "allViewings": "所有看房"
+    }
+  },
+  "alia": {
+    "clientContext": "用户正在使用 Homiio，这是一款住房应用，可用于寻找租住、购买或短住的房源，查询房屋的历史和真实成本，并管理或维护自己的租约。",
+    "onScreen": "他们目前在 {{path}} 这个页面。",
+    "suggestion": {
+      "find": "帮我找个住的地方",
+      "costs": "这套房子实际要花我多少钱？",
+      "rights": "作为租客，我有哪些权利？"
     }
   }
 }

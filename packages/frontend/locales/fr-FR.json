@@ -1553,7 +1553,8 @@
       "hostCalendar": "Host calendar",
       "evictions": "Eviction watch",
       "reviews": "Reviews",
-      "myHome": "Mon logement"
+      "myHome": "Mon logement",
+      "askAlia": "Demander à Alia"
     },
     "actions": {
       "signIn": "Sign In"
@@ -4141,6 +4142,15 @@
       "allStays": "Tous les séjours",
       "allSwaps": "Toutes les demandes d’échange",
       "allViewings": "Toutes les visites"
+    }
+  },
+  "alia": {
+    "clientContext": "La personne utilise Homiio, une application de logement pour trouver où louer, acheter ou séjourner, se renseigner sur l'historique d'un logement et son coût réel, et gérer ou défendre une location.",
+    "onScreen": "Elle se trouve actuellement sur l'écran {{path}}.",
+    "suggestion": {
+      "find": "Aide-moi à trouver un logement",
+      "costs": "Combien ce logement me coûtera-t-il vraiment ?",
+      "rights": "Quels sont mes droits en tant que locataire ?"
     }
   }
 }

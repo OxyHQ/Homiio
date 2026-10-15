@@ -1561,7 +1561,8 @@
       "hostCalendar": "Host calendar",
       "evictions": "Eviction watch",
       "reviews": "Reviews",
-      "myHome": "منزلي"
+      "myHome": "منزلي",
+      "askAlia": "اسأل Alia"
     },
     "actions": {
       "signIn": "Sign In"
@@ -4181,6 +4182,15 @@
       "allStays": "كل الإقامات",
       "allSwaps": "كل طلبات التبادل",
       "allViewings": "كل المعاينات"
+    }
+  },
+  "alia": {
+    "clientContext": "يستخدم الشخص Homiio، وهو تطبيق للسكن يساعد على إيجاد مكان للإيجار أو الشراء أو الإقامة، والبحث في تاريخ المنزل وتكلفته الحقيقية، وإدارة عقد الإيجار أو الدفاع عنه.",
+    "onScreen": "هو الآن في الشاشة {{path}}.",
+    "suggestion": {
+      "find": "ساعدني في العثور على مكان للسكن",
+      "costs": "كم سيكلفني هذا المنزل فعلًا؟",
+      "rights": "ما هي حقوقي كمستأجر؟"
     }
   }
 }
