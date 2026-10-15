@@ -26,6 +26,15 @@
     "./links": {
       "types": "./dist/links.d.ts",
       "default": "./dist/links.js"
-    }
+    },
+    "./dist/*.js": {
+      "types": "./dist/*.d.ts",
+      "default": "./dist/*.js"
+    },
+    "./dist/*": {
+      "types": "./dist/*.d.ts",
+      "default": "./dist/*.js"
+    },
+    "./package.json": "./package.json"
   }
 }
