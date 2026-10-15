@@ -5,10 +5,10 @@ updates:
   # the whole file: from 2026-05-21, when this config was written, until the fix
   # no `bun` or `github_actions` version-update job ever ran in this repository.
   #
-  # WEEKLY, and at most two PRs per run (oxy-platform + minor-and-patch). Daily
-  # updates with one PR per major produced ~139 CI runs a week from Dependabot
-  # alone, each 9 jobs, against the org's 20 concurrent job slots (free plan),
-  # so every other repository queued behind them. Security updates are separate
+  # WEEKLY, and at most three PRs per run (oxy-platform, minor-and-patch,
+  # major). Daily updates with one PR per major produced ~139 CI runs a week
+  # from Dependabot alone, each 9 jobs, against the org's 20 concurrent job
+  # slots (free plan), so every other repository queued behind them. Security updates are separate
   # from this schedule and still open as soon as an advisory lands.
   - package-ecosystem: bun
     directory: /
@@ -23,14 +23,17 @@ updates:
           - "@oxy.so/*"
           - "@alia.onl/*"
           - "@clarity.surf/*"
-      # Everything else, MAJORS INCLUDED, in one PR: the Expo SDK majors move
-      # together anyway. A major that breaks the build reds this PR; drop it
-      # with `@dependabot ignore <dependency> major` rather than splitting the
-      # group back into one PR per package.
+      # Every other minor and patch update, in one PR.
       minor-and-patch:
         patterns:
           - "*"
-        update-types: [major, minor, patch]
+        update-types: ["minor", "patch"]
+      # Majors in a PR of their own, so a breaking major cannot hold the minor
+      # and patch updates back with it, and stays visible until someone ports it.
+      major:
+        patterns:
+          - "*"
+        update-types: ["major"]
     labels:
       - "type: deps"
     open-pull-requests-limit: 10
