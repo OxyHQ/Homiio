@@ -3782,7 +3782,22 @@
         "official_info": "Official information"
       }
     },
-    "privacyNote": "Para proteger a la familia, un caso solo muestra una calle sin número, un barrio o una zona aproximada."
+    "privacyNote": "Para proteger a la familia, un caso solo muestra una calle sin número, un barrio o una zona aproximada.",
+    "team": {
+      "title": "Equipo del caso",
+      "personal": "El caso pertenece a su creador. Los colaboradores pueden editarlo y publicar actualizaciones.",
+      "account": "Nombre de usuario Oxy",
+      "addTitle": "Añadir colaborador",
+      "warning": "{{account}} podrá editar el caso, publicar actualizaciones y consultar la dirección exacta autorizada por el hogar. Solo tú puedes gestionar colaboradores o eliminar el caso.",
+      "add": "Añadir colaborador",
+      "remove": "Retirar colaborador",
+      "failed": "No se ha podido guardar el cambio. Comprueba tu acceso e inténtalo de nuevo.",
+      "location": "Consultar ubicación exacta",
+      "locationDenied": "La ubicación exacta no está disponible o tu acceso ha terminado.",
+      "exactAddress": "Dirección exacta (privada)",
+      "saveAddress": "Guardar dirección exacta",
+      "hide": "Ocultar ubicación exacta"
+    }
   },
   "agency": {
     "title": "Agencia",

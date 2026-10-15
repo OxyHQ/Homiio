@@ -35,7 +35,11 @@ export default function () {
   router.get('/me/attending', asyncHandler(eviction.listAttendingEvictions));
   router.get('/me/following', asyncHandler(eviction.listFollowedEvictions));
 
-  // Owner-only mutations.
+  router.get('/:id/team', asyncHandler(eviction.getTeam));
+  router.post('/:id/collaborators', asyncHandler(eviction.addCollaborator));
+  router.delete('/:id/collaborators/:oxyUserId', asyncHandler(eviction.removeCollaborator));
+
+  // Creator owns deletion; the team may edit and publish updates.
   router.put('/:id', asyncHandler(eviction.updateEviction));
   router.delete('/:id', asyncHandler(eviction.deleteEviction));
   router.post('/:id/updates', asyncHandler(eviction.createUpdate));

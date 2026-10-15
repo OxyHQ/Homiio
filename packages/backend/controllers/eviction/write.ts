@@ -5,7 +5,7 @@
  *   - the owner is the session `oxyUserId` (never from the client),
  *   - only `CREATABLE_EVICTION_FIELDS` / `EDITABLE_EVICTION_FIELDS` are picked,
  *   - nested objects are re-whitelisted key-by-key (never deep-spread),
- *   - update/delete resolve the row by `(id, oxyUserId)` (non-owner → 404).
+ *   - updates require current team membership; deletion requires the creator.
  *
  * ## The true coordinate arrives, is used, and is dropped
  *
@@ -46,7 +46,7 @@ import {
   countEvictionAttendees,
   deleteOwnedEvictionCase,
   findOrCreateOrganizationByName,
-  findOwnedEvictionCase,
+  findEditableEvictionCase,
   insertEvictionCase,
   listEvictionTimeline,
   listHelpNeedsForCases,
@@ -261,7 +261,7 @@ export async function updateEviction(
     // Read first, for the 404 AND for the previous date/status/disc the change
     // detection below compares against. The write re-checks ownership AND the
     // transition in its own `WHERE`, so this read is never the authorization.
-    const existing = await findOwnedEvictionCase(id, oxyUserId);
+    const existing = await findEditableEvictionCase(id, oxyUserId);
     if (!existing) return next(new AppError('Eviction case not found', 404, 'EVICTION_NOT_FOUND'));
 
     const picked = pickFields<Record<string, unknown>>(req.body, EDITABLE_EVICTION_FIELDS);
@@ -321,7 +321,11 @@ export async function updateEviction(
       // The exact pair only ever moves under a household authorisation that
       // already exists on the row; this endpoint cannot create one, because
       // "the household asked for it" is not something a PUT body can assert.
-      if (existing.locationHouseholdAuthorizedAt !== null) {
+      if (
+        existing.locationHouseholdAuthorizedAt !== null &&
+        (location.longitude !== existing.locationLongitude ||
+          location.latitude !== existing.locationLatitude)
+      ) {
         patch.locationExactLongitude = location.longitude;
         patch.locationExactLatitude = location.latitude;
       }
@@ -337,6 +341,22 @@ export async function updateEviction(
           message: `Location updated. Published to within ${resolved.locationRadiusMeters} m.`,
         });
       }
+    }
+
+    if (picked.exactAddress !== undefined) {
+      if (existing.locationHouseholdAuthorizedAt === null) {
+        return next(
+          new AppError(
+            'The household must authorize exact location storage first',
+            409,
+            'HOUSEHOLD_NOT_AUTHORIZED',
+          ),
+        );
+      }
+      if (typeof picked.exactAddress !== 'string' || picked.exactAddress.length > 2000) {
+        return next(new AppError('Invalid exact address', 400, 'INVALID_EXACT_ADDRESS'));
+      }
+      patch.locationExactAddress = picked.exactAddress.trim() || null;
     }
 
     if ('contactInfo' in picked) {
@@ -407,17 +427,15 @@ export async function updateEviction(
       });
     }
 
-    if (picked.helpNeeds !== undefined) {
-      await replaceHelpNeeds(id, sanitizeHelpNeeds(picked.helpNeeds));
-    }
-
     // One call, one transaction: the patch and the timeline entries it explains
     // commit together or not at all.
     const outcome = await updateOwnedEvictionCase({
       caseId: id,
       oxyUserId,
       patch,
+      allowCollaborator: true,
       timelineEntries,
+      helpNeeds: picked.helpNeeds !== undefined ? sanitizeHelpNeeds(picked.helpNeeds) : undefined,
     });
 
     if (outcome.outcome === 'not_found') {

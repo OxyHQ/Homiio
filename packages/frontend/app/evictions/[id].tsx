@@ -71,6 +71,7 @@ import {
   useDeleteEvictionComment,
   useEvictionComments,
   useEvictionDetail,
+  useEvictionTeam,
   useJurisdictionResources,
   useToggleAttend,
   useToggleFollow,
@@ -78,6 +79,7 @@ import {
 import { evictionReportCardProps } from '@/components/evictions/EvictionCard';
 import { EvictionContactActions } from '@/components/evictions/EvictionContactActions';
 import { EvictionCommentRow } from '@/components/evictions/EvictionCommentRow';
+import { EvictionCollaborators } from '@/components/evictions/EvictionCollaborators';
 import { EvictionOwnerControls } from '@/components/evictions/EvictionOwnerControls';
 import { EvictionReportSheet } from '@/components/evictions/EvictionReportSheet';
 import { EvictionHelpNeeds } from '@/components/evictions/EvictionHelpNeeds';
@@ -124,6 +126,7 @@ export default function EvictionDetailScreen() {
     isFetchingNextPage,
   } = useEvictionComments(caseId);
 
+  const team = useEvictionTeam(caseId, user?.id);
   const toggleAttend = useToggleAttend(caseId);
   const toggleFollow = useToggleFollow(caseId);
   const createComment = useCreateEvictionComment(caseId);
@@ -506,7 +509,17 @@ export default function EvictionDetailScreen() {
             )}
           </Card>
 
-          {eviction.isOwner ? (
+          {team.data && !team.isError && user?.id ? (
+            <EvictionCollaborators
+              key={`${caseId}:${user.id}`}
+              caseId={caseId}
+              team={team.data}
+              onChanged={() => {
+                void team.refetch();
+              }}
+            />
+          ) : null}
+          {team.data?.canEdit && !team.isError ? (
             <EvictionOwnerControls
               caseId={caseId}
               currentStatus={eviction.status}

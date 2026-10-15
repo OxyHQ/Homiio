@@ -15,3 +15,5 @@ export * from './resources';
 export * from './updates';
 export * from './comments';
 export * from './report';
+
+export * from './collaborators';

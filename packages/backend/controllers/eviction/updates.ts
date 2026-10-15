@@ -1,7 +1,7 @@
 /**
  * Eviction timeline entries.
  *
- * Owner-only: append an entry to a case's timeline (a reschedule, a status
+ * Creator or collaborator: append an entry to a case's timeline (a reschedule, a status
  * change, a correction, or a plain note). When the entry carries a new schedule
  * or status the case row is updated in the same transaction — a status change
  * visible on the case but missing from the timeline is a change nobody can
@@ -30,7 +30,7 @@ import { EvictionTimelineEventType } from '@homiio/shared-types';
 import { pickFields } from '../../utils/pickFields';
 import {
   countEvictionAttendees,
-  findOwnedEvictionCase,
+  findEditableEvictionCase,
   listEvictionTimeline,
   listHelpNeedsForCases,
   listOrganizationsByIds,
@@ -93,7 +93,7 @@ export async function createUpdate(
     const { id } = req.params;
     const oxyUserId = requireSessionOxyUserId(req);
 
-    const owned = await findOwnedEvictionCase(id, oxyUserId);
+    const owned = await findEditableEvictionCase(id, oxyUserId);
     if (!owned) return next(new AppError('Eviction case not found', 404, 'EVICTION_NOT_FOUND'));
 
     const picked = pickFields<Record<string, unknown>>(req.body, CREATABLE_UPDATE_FIELDS);
@@ -166,6 +166,7 @@ export async function createUpdate(
       caseId: id,
       oxyUserId,
       patch,
+      allowCollaborator: true,
       timelineEntries: [entry],
     });
 
