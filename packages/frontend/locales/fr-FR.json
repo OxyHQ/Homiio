@@ -3578,7 +3578,8 @@
         "not_attending": "Say you'll show up to see the meeting point and how to reach the organisers.",
         "not_confirmed": "Organiser contact opens once your account has been on Homiio for a few days, or once another confirmed supporter vouches for you. This protects organisers from being harvested.",
         "revoked": "The organiser has withdrawn your access to their contact details for this case."
-      }
+      },
+      "shareInMention": "Partager sur Mention"
     },
     "owner": {
       "title": "Manage this case",

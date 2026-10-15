@@ -5,6 +5,7 @@ import { startPlatformActivity } from './services/platformActivity';
 import express from 'express';
 import type { Request, Response } from 'express';
 import cors, { type CorsOptions } from 'cors';
+import { publicCaseCors } from './middlewares/publicCaseCors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import bodyParser from 'body-parser';
@@ -201,6 +202,8 @@ const corsOptions: CorsOptions = {
   maxAge: 86400,
 };
 
+// Anonymous case cards have their own narrow browser integration policy.
+app.use('/api/v1/cases', publicCaseCors);
 // Middleware
 app.use(cors(corsOptions));
 
