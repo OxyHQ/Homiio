@@ -68,3 +68,22 @@ export function parseHomiioCaseUrl(value: string): string | null {
 export function getMentionShareUrl(id: string): string {
   return `https://mention.earth/compose?homiioCaseId=${encodeURIComponent(caseIdSchema.parse(id))}`;
 }
+
+export const HOMIIO_TEAM_OPERATION_HEADER = 'x-homiio-team-operation';
+export const teamOperationActionSchema = z.enum(['open', 'add', 'remove']);
+export const beginTeamOperationSchema = z.strictObject({
+  action: teamOperationActionSchema, oxyUserId: caseIdSchema.optional(),
+  acknowledgeExactLocationAccess: z.boolean().optional(),
+});
+export const teamOperationSchema = z.strictObject({
+  id: caseIdSchema, caseId: caseIdSchema, ownerAccountId: caseIdSchema,
+  action: teamOperationActionSchema, targetAccountIds: z.array(caseIdSchema),
+  teamReferenceHash: z.string().length(64), finalized: z.boolean(),
+});
+export const privateTeamOperationSchema = z.strictObject({
+  operation: teamOperationSchema, capability: z.string(), teamReference: z.string(),
+});
+export const teamOperationIdRequestSchema = z.strictObject({ operationId: caseIdSchema });
+export type TeamOperation = z.infer<typeof teamOperationSchema>;
+export type PrivateTeamOperation = z.infer<typeof privateTeamOperationSchema>;
+export type BeginTeamOperation = z.infer<typeof beginTeamOperationSchema>;
