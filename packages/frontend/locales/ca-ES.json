@@ -1,4 +1,9 @@
 {
+  "agencyDirectory": {
+    "select": "Selecciona una empresa dels resultats o deixa aquest camp opcional buit.",
+    "unavailable": "El directori d’empreses no està disponible. Torna-ho a provar.",
+    "unresolved": "Aquesta referència històrica d’agència té pendent la resolució de la identitat."
+  },
   "amenities": {
     "categories": {
       "essential": "Essencials",
@@ -3618,8 +3623,8 @@
       },
       "localResources": "Local resources",
       "organization": "Organised by",
-      "organizationVerified": "Verified by Homiio against {{source}} on {{when}}.",
-      "organizationUnverified": "Named by whoever posted this case. Homiio has not verified it.",
+      "organizationVerified": "Canals de contacte contrastats amb {{source}} el {{when}}.",
+      "organizationUnverified": "Seleccionada per qui ha publicat el cas. Els canals de contacte no s’han comprovat.",
       "descriptionWithheld": "The description is hidden while a privacy report is reviewed by the organiser.",
       "contactLocked": {
         "not_attending": "Say you'll show up to see the meeting point and how to reach the organisers.",

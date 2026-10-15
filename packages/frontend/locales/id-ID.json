@@ -1,4 +1,9 @@
 {
+  "agencyDirectory": {
+    "select": "Pilih perusahaan dari hasil atau kosongkan kolom opsional ini.",
+    "unavailable": "Direktori perusahaan tidak tersedia. Coba lagi.",
+    "unresolved": "Identitas rujukan agensi historis ini masih perlu dipastikan."
+  },
   "app": {
     "loading": "Loading..."
   },
@@ -3571,8 +3576,8 @@
       },
       "localResources": "Local resources",
       "organization": "Organised by",
-      "organizationVerified": "Verified by Homiio against {{source}} on {{when}}.",
-      "organizationUnverified": "Named by whoever posted this case. Homiio has not verified it.",
+      "organizationVerified": "Saluran kontak diperiksa berdasarkan {{source}} pada {{when}}.",
+      "organizationUnverified": "Dipilih oleh pembuat kasus. Saluran kontak belum diperiksa.",
       "descriptionWithheld": "The description is hidden while a privacy report is reviewed by the organiser.",
       "contactLocked": {
         "not_attending": "Say you'll show up to see the meeting point and how to reach the organisers.",

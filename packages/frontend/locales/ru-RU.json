@@ -1,4 +1,9 @@
 {
+  "agencyDirectory": {
+    "select": "Выберите компанию из результатов или оставьте это необязательное поле пустым.",
+    "unavailable": "Каталог компаний недоступен. Попробуйте ещё раз.",
+    "unresolved": "Личность агентства в этой исторической записи ещё предстоит установить."
+  },
   "app": {
     "loading": "Loading..."
   },
@@ -3591,8 +3596,8 @@
       },
       "localResources": "Local resources",
       "organization": "Organised by",
-      "organizationVerified": "Verified by Homiio against {{source}} on {{when}}.",
-      "organizationUnverified": "Named by whoever posted this case. Homiio has not verified it.",
+      "organizationVerified": "Контактные данные сверены с {{source}} {{when}}.",
+      "organizationUnverified": "Выбрана автором дела. Контактные данные не проверены.",
       "descriptionWithheld": "The description is hidden while a privacy report is reviewed by the organiser.",
       "contactLocked": {
         "not_attending": "Say you'll show up to see the meeting point and how to reach the organisers.",

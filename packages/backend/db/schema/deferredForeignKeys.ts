@@ -256,6 +256,14 @@ export const ID_COLUMNS_WITHOUT_FOREIGN_KEY: readonly IdColumnWithoutForeignKey[
   },
   {
     table: properties,
+    column: properties.externalContactAgencySourceId,
+    reason:
+      'Stable advertiser identifier owned by the source portal, scoped by properties.source. ' +
+      'It is provenance for the Oxy external organization mapping, not a local agency ' +
+      'row ID; no foreign key can span that provider or the canonical identity service.',
+  },
+  {
+    table: properties,
     column: properties.sourceId,
     reason:
       "Not an id INTO anything — it is the PORTAL's own identifier for the " +
