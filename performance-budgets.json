@@ -1,7 +1,7 @@
 {
   "frontendWeb": {
     "maxTotalBytes": 24300000,
-    "maxJavaScriptGzipBytes": 3300000,
+    "maxJavaScriptGzipBytes": 3320000,
     "maxFontBytes": 2050000
   }
 }

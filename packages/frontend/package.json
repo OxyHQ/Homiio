@@ -82,7 +82,7 @@
     "react-native": "0.86.3",
     "react-native-chart-kit": "^6.12.3",
     "react-native-compressor": "^1.19.4",
-    "react-native-css": "^3.0.7",
+    "react-native-css": "3.1.0-rc.0",
     "react-native-gesture-handler": "~2.32.0",
     "react-native-keyboard-controller": "1.21.13",
     "react-native-popup-menu": "^0.19.0",
