@@ -70,18 +70,26 @@ export function getMentionShareUrl(id: string): string {
 }
 
 export const HOMIIO_TEAM_OPERATION_HEADER = 'x-homiio-team-operation';
-export const teamOperationActionSchema = z.enum(['open', 'add', 'remove']);
+export const TEAM_OPERATION_ACTIONS = ['open', 'add', 'remove'] as const;
+export const teamOperationActionSchema = z.enum(TEAM_OPERATION_ACTIONS);
 export const beginTeamOperationSchema = z.strictObject({
-  action: teamOperationActionSchema, oxyUserId: caseIdSchema.optional(),
+  action: teamOperationActionSchema,
+  oxyUserId: caseIdSchema.optional(),
   acknowledgeExactLocationAccess: z.boolean().optional(),
 });
 export const teamOperationSchema = z.strictObject({
-  id: caseIdSchema, caseId: caseIdSchema, ownerAccountId: caseIdSchema,
-  action: teamOperationActionSchema, targetAccountIds: z.array(caseIdSchema),
-  teamReferenceHash: z.string().length(64), finalized: z.boolean(),
+  id: caseIdSchema,
+  caseId: caseIdSchema,
+  ownerAccountId: caseIdSchema,
+  action: teamOperationActionSchema,
+  targetAccountIds: z.array(caseIdSchema).min(1).max(256),
+  teamReferenceHash: z.string().length(64),
+  finalized: z.boolean(),
 });
 export const privateTeamOperationSchema = z.strictObject({
-  operation: teamOperationSchema, capability: z.string(), teamReference: z.string(),
+  operation: teamOperationSchema,
+  capability: z.string(),
+  teamReference: z.string(),
 });
 export const teamOperationIdRequestSchema = z.strictObject({ operationId: caseIdSchema });
 export type TeamOperation = z.infer<typeof teamOperationSchema>;

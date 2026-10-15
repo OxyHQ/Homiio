@@ -77,9 +77,279 @@
           }
         }
       }
+    },
+    "/team-chat/operations/read": {
+      "post": {
+        "operationId": "readTeamOperation",
+        "security": [
+          {
+            "TeamOperationCapability": []
+          }
+        ],
+        "description": "Read one immutable operation using its header-only capability; no message or housing content.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TeamOperationIdRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Current public cards",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamOperation"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "API error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "API error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "API error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/evictions/{id}/team-chat/operations": {
+      "post": {
+        "operationId": "beginTeamOperation",
+        "servers": [
+          {
+            "url": "https://api.homiio.com/api"
+          }
+        ],
+        "security": [
+          {
+            "OxySession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "description": "Creator-only durable operation. Add requires acknowledging access to the exact address. Retries resume the pending operation.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BeginTeamOperation"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Current public cards",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrivateTeamOperation"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "API error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "API error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "API error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "API error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "API error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/team-chat/finalize": {
+      "post": {
+        "operationId": "finalizeTeamOperation",
+        "servers": [
+          {
+            "url": "https://api.homiio.com/api"
+          }
+        ],
+        "security": [
+          {
+            "OxySession": []
+          }
+        ],
+        "description": "Creator-only finalization after Allo confirms the frozen exact account set. Replays return the finalized operation.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TeamOperationIdRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Current public cards",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamOperation"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "API error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "API error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "API error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "API error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
+    "securitySchemes": {
+      "OxySession": {
+        "type": "http",
+        "scheme": "bearer"
+      },
+      "TeamOperationCapability": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-homiio-team-operation"
+      }
+    },
     "schemas": {
       "PublicCaseBatchRequest": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -235,6 +505,178 @@
         },
         "required": [
           "error"
+        ],
+        "additionalProperties": false
+      },
+      "BeginTeamOperation": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "open",
+              "add",
+              "remove"
+            ]
+          },
+          "oxyUserId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "acknowledgeExactLocationAccess": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false
+      },
+      "PrivateTeamOperation": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "operation": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "caseId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "ownerAccountId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "action": {
+                "type": "string",
+                "enum": [
+                  "open",
+                  "add",
+                  "remove"
+                ]
+              },
+              "targetAccountIds": {
+                "minItems": 1,
+                "maxItems": 256,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 200
+                }
+              },
+              "teamReferenceHash": {
+                "type": "string",
+                "minLength": 64,
+                "maxLength": 64
+              },
+              "finalized": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "id",
+              "caseId",
+              "ownerAccountId",
+              "action",
+              "targetAccountIds",
+              "teamReferenceHash",
+              "finalized"
+            ],
+            "additionalProperties": false
+          },
+          "capability": {
+            "type": "string"
+          },
+          "teamReference": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "operation",
+          "capability",
+          "teamReference"
+        ],
+        "additionalProperties": false
+      },
+      "TeamOperation": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "caseId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "ownerAccountId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "open",
+              "add",
+              "remove"
+            ]
+          },
+          "targetAccountIds": {
+            "minItems": 1,
+            "maxItems": 256,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            }
+          },
+          "teamReferenceHash": {
+            "type": "string",
+            "minLength": 64,
+            "maxLength": 64
+          },
+          "finalized": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "caseId",
+          "ownerAccountId",
+          "action",
+          "targetAccountIds",
+          "teamReferenceHash",
+          "finalized"
+        ],
+        "additionalProperties": false
+      },
+      "TeamOperationIdRequest": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "operationId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          }
+        },
+        "required": [
+          "operationId"
         ],
         "additionalProperties": false
       }
