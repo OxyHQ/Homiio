@@ -210,6 +210,13 @@ module.exports = (config) => {
         // this declares and requests so.oxy.permission.IDENTITY and
         // DEVICE_SESSION and adds the <queries> for their providers.
         '@oxy.so/services/plugins/withOxySharedPermissions',
+        // Every Oxy app MUST be release-signed with the one shared Oxy ecosystem
+        // certificate: the signature permissions above are only granted to apps
+        // signed like Commons. This replaces Expo's debug signing of the release
+        // buildType with the OXY_UPLOAD_* Gradle properties (never in the repo;
+        // debug fallback without them, so verify the artefact's certificate) and
+        // swaps in proguard-android-optimize.txt.
+        '@oxy.so/app-preset/plugin/withOxyAndroidRelease',
         // Points the Android home-screen widget (`modules/homiio-widgets`) at a
         // backend. The native module itself is autolinked from `modules/` — this
         // plugin only writes the two origin string resources, and only when a
