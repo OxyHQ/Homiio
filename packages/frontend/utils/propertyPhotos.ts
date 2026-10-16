@@ -70,16 +70,16 @@ export function toPublishImages(images: readonly UploadedImage[] = []): Property
       order: index,
     };
     if (image.storedImageId) return [{ imageId: image.storedImageId, ...common }];
+    const advisory = {
+      bytes: image.metadata?.originalSize,
+      width: image.metadata?.width,
+      height: image.metadata?.height,
+    };
+    // A photo stored in Oxy Files is published by its file id; the server
+    // checks it is the publisher's own.
+    if (image.fileId) return [{ fileId: image.fileId, ...common, ...advisory }];
     const keys = variantKeys(image);
     if (!keys) return [];
-    return [
-      {
-        keys,
-        ...common,
-        bytes: image.metadata?.originalSize,
-        width: image.metadata?.width,
-        height: image.metadata?.height,
-      },
-    ];
+    return [{ keys, ...common, ...advisory }];
   });
 }

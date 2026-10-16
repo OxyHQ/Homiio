@@ -867,7 +867,10 @@
       "sortPriceDesc": "Price: High to Low",
       "noPropertiesFound": "No properties found",
       "tryAdjustFilters": "Try adjusting your filters or check back later",
-      "clearFilters": "Clear Filters"
+      "clearFilters": "Clear Filters",
+      "photoCredit": "照片：{{author}} · {{license}}",
+      "photoCreditNoAuthor": "照片：{{license}}",
+      "photoCreditSource": "查看照片来源和许可"
     }
   },
   "payments": {
@@ -1603,7 +1606,6 @@
     "uploadFailed": "Failed to upload some images. Please try again.",
     "deleteTitle": "Delete Image",
     "deleteMessage": "Are you sure you want to delete this image?",
-    "deleteFailed": "Failed to delete image. Please try again.",
     "takePhoto": "Take Photo",
     "imageCount": "{{current}} of {{max}} images uploaded",
     "helperText": "Upload high-quality images of your property. Include photos of all rooms, exterior, and any special features.",

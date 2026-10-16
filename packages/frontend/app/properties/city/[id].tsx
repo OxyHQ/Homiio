@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, Pressable, Linking } from 'react-native';
 import { Text } from '@oxy.so/bloom/typography';
 import { Image } from 'expo-image';
 import { useTranslation } from 'react-i18next';
@@ -22,7 +22,7 @@ import {
   type CityPropertyFilters,
   type CitySortBy,
 } from '@/hooks/useInfiniteCityProperties';
-import { cityCountryName, getCityImageSource } from '@/utils/cityDisplay';
+import { cityCountryName, getCityImageAttribution, getCityImageSource } from '@/utils/cityDisplay';
 import { LinearGradient } from 'expo-linear-gradient';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
@@ -61,6 +61,8 @@ export default function CityPropertiesPage() {
   // City detail (hero + stats) from the DB-owned relational geo layer.
   const { data: city, isLoading: cityLoading, isError: cityError } = useCity(cityId);
   const cityImageSource = getCityImageSource(city ?? undefined, 'large');
+  // A Commons cover's licence requires its credit beside the photo.
+  const cityImageCredit = cityImageSource ? getCityImageAttribution(city ?? undefined) : null;
   const countryName = cityCountryName(city ?? undefined);
 
   const [filters, setFilters] = useState<CityFilterState>(DEFAULT_FILTERS);
@@ -233,6 +235,24 @@ export default function CityPropertiesPage() {
                   {city.description}
                 </Text>
               ) : null}
+              {cityImageCredit ? (
+                <Pressable
+                  accessibilityRole="link"
+                  accessibilityHint={t('properties.city.photoCreditSource')}
+                  onPress={() => void Linking.openURL(cityImageCredit.sourceUrl)}
+                >
+                  <Text style={styles.heroCredit} numberOfLines={1}>
+                    {cityImageCredit.author
+                      ? t('properties.city.photoCredit', {
+                          author: cityImageCredit.author,
+                          license: cityImageCredit.license,
+                        })
+                      : t('properties.city.photoCreditNoAuthor', {
+                          license: cityImageCredit.license,
+                        })}
+                  </Text>
+                </Pressable>
+              ) : null}
             </View>
           </View>
         </View>
@@ -332,6 +352,12 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: 'rgba(255, 255, 255, 0.9)',
     marginBottom: 12,
+  },
+  heroCredit: {
+    marginTop: 8,
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.8)',
+    textDecorationLine: 'underline',
   },
   heroDescription: {
     fontSize: 16,
