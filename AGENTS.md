@@ -100,8 +100,10 @@ measurements: **`docs/postgres.md`**.
   A new column pointing at `images` must join the trigger set of migration
   `0037_oxy_files`, `services/files/referenceUsage.ts` and
   `db/images/unusedImages.ts` in the SAME change, or Oxy collects a photo still
-  shown, or the sweep deletes one. Private documents go through
-  `services/files/privateDocuments.ts` only.
+  shown, or the sweep deletes one. Private documents (private files in the
+  uploader's account, `oxy:<fileId>` on the row; migration
+  `0038_oxy_private_documents`) go through `services/files/privateDocuments.ts`
+  only, and a client may never name one.
 
 ## Ownership and auth (CRITICAL)
 

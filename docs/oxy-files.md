@@ -7,8 +7,9 @@
 Homiio stores no public photo bytes of its own any more. Every photo it shows
 is a file in **Oxy Files**, and Homiio keeps only its record of showing it (an
 `images` row naming `oxy_file_id`) and the four rendition URLs Oxy serves.
-Private tenancy documents are the one exception, and they wait on Oxy (see
-[Private documents](#private-documents-waiting-on-oxy-stage-4c)).
+Private tenancy documents are PRIVATE files in their uploader's own Oxy
+account, read back through the consent Oxy records when Homiio stores them (see
+[Private documents](#private-documents)).
 
 ## Who owns what
 
@@ -19,7 +20,7 @@ Private tenancy documents are the one exception, and they wait on Oxy (see
 | A Wikimedia city cover | the **Homiio application** | `cityCoverSyncService` → `importAppFile`, credit from Commons `extmetadata` stored on the row (`attribution_*`) and served with the cover | `city` / city id |
 | An eviction case cover | the **organiser's account** | `POST /api/images/upload`, resolved by `controllers/eviction/coverImage.ts` | `eviction_case` / case id |
 | A region cover | the **Homiio application** | (nothing writes one today) | `region` / region id |
-| Lease, application and maintenance documents | the **uploader's account**, PRIVATE — *not yet* | `services/files/privateDocuments.ts`, still Homiio's bucket | — (TODO(oxy-4c)) |
+| Lease, application and maintenance documents | the **uploader's account** (the applicant's, for an application), PRIVATE | `services/files/privateDocuments.ts` → `uploadUserMediaLarge(…, { visibility: 'private' })`; `oxy:<fileId>` on the row | `lease` / lease id, `tenant_application` / application id, `maintenance_request` / request id |
 
 A person's file is theirs: when Homiio stops using it, Oxy shows it to them as
 "not in use" and never deletes it. A Homiio-owned file nobody uses is trashed by
@@ -66,44 +67,89 @@ is hidden everywhere Homiio shows it — listing reads, `has_images`, city
 covers, eviction-case covers — and `file.unblocked` / `file.restored` bring it
 back where it was. Nothing is deleted by an event.
 
-## Private documents (waiting on Oxy stage 4c)
+## Private documents
 
 `services/files/privateDocuments.ts` is the ONE module that stores and reads a
-lease document, an application document or a maintenance photo. Today's Oxy
-cannot hold them: a service upload into a person's account is public-only and
-image/video-only, and a service may only read back a private file whose owner
-referenced it from their own session. Until stage 4c the bytes stay under
-`private/` in Homiio's bucket — PDFs verbatim, photos re-encoded — and every
-read is counted (`legacy_media_reads`, `private_document`). The 4c switch, and
-the copy of the existing documents, change that one module and nothing else;
-its `TODO(oxy-4c)` says exactly how.
+lease document, an application document or a maintenance photo (ADR 0043
+stage 4c, OxyHQ/oxy#1774).
+
+- **Stored** as a PRIVATE file in the uploader's own Oxy account —
+  `uploadUserMediaLarge(owner, bytes, { visibility: 'private', sha256 })`
+  (`files:user-media:write`). A PDF goes verbatim, a photo re-encoded first
+  (EXIF and GPS dropped). The row holds `oxy:<fileId>`
+  (`lease_documents.url`, `tenant_application_documents.url`,
+  `maintenance_request_attachments.storage_key`), and
+  `lease_documents.content_sha256` is the digest Oxy verified. A private file
+  never reaches `public/` or the CDN.
+- **Read back** with `linkedDownloadUrls([fileId])` (`files:linked:read`) —
+  allowed because Homiio stored the file FOR the person, which Oxy records as
+  their consent. The short-lived URL is fetched on the server and never leaves
+  it; the bytes must hash to what Oxy recorded. Who may read is still Homiio's
+  party check in `domain/*` (lease parties, the application's applicant and
+  landlord, the maintenance request's lease parties); Oxy's consent only says
+  Homiio may read the file. When the person revokes Homiio's access in their
+  file manager, or the file is trashed, deleted or taken down, Oxy leaves it
+  out and the route answers 404. A re-upload of bytes whose access was revoked
+  is stored in the bucket instead (the revocation survives the re-upload).
+- **Referenced**: the document row is the use. Migration
+  `0038_oxy_private_documents` marks the pair on every insert, update and
+  delete (cascades included); the drain registers it and the nightly
+  reconciliation covers the three types (`referenceUsage.ts`).
+- **A client never names one.** A listed application document is a link the
+  applicant supplies; one naming a stored document (`oxy:…` or a private
+  bucket URL) is refused with 400 `INVALID_DOCUMENTS`, because the document
+  route reads through Homiio's own access.
+
+**The switch.** New documents go to Oxy only while
+`OXY_PRIVATE_DOCUMENTS_ENABLED=true` (default off). With it off — or when Oxy
+refuses, is down, answers a file that is not private, or answers a file Homiio
+may not read — the document is stored in Homiio's bucket under `private/` as
+before, so an upload never fails because of Oxy. Reading never depends on the
+switch: an `oxy:` row reads from Oxy, a bucket row from the bucket (counted in
+`legacy_media_reads`, `private_document`).
+
+**Moving the existing ones.** `scripts/migratePrivateDocumentsToOxy.ts`
+(preview by default; `--apply`, `--limit`, `--concurrency`, `--report`). Each
+object is read, hashed (a lease document must still match its
+`content_sha256`), uploaded privately to its owner (the uploader; the
+applicant for an application document), READ BACK through Homiio's consent
+and hashed again, and only then is the row switched — compare-and-set, so a
+row that changed meanwhile is left for the next run. The first
+`read_back_refused` stops the run with exit 2: that is an Oxy without stage
+4c (or without `files:linked:read`), and every row stays on the bucket, where
+it still reads; at most `--concurrency` files were stored in owners' accounts,
+which Oxy shows them as "not in use". A row naming nothing Homiio stores (an
+applicant's own link) is `not_stored_here` and never moves. The bucket object
+is kept until the bucket goes.
 
 ## Rollout
 
 In this order. Nothing here runs against production from a developer machine;
 the scripts run as one-off ECS tasks of the API image.
 
-1. **Oxy:** the API deploy carrying ADR 0043 stages 1–4b (in production), and
-   `@oxy.so/contracts` 4.22.0, `@oxy.so/core` 4.18.0 and `@oxy.so/services`
-   11.9.0 published. Stage 4c (private person media) is NOT needed: nothing
-   here calls it, and the private documents stay in the bucket until it ships.
-2. **Exact service-token scopes, then the grant.** Sindi's canary
-   (`services/oxy.ts`, `assertCanonicalSindiServiceToken`) requires the attested
-   token's scopes to be EXACTLY `inference:invoke` + `acting-as:offline`, and the
-   file calls attest as the same workload. So Sindi's client asks Oxy for exactly
-   that subset (`SINDI_SERVICE_TOKEN_SCOPES`, `serviceToken(…, { scopes })`,
-   core 4.18.0 — Oxy #1718), and only the unnarrowed backend lane carries
-   whatever else the application holds. Deploy THIS first; only then do Oxy
-   staff grant the Homiio application and its workload binding `files:read`,
-   `files:app:write`, `files:references:write` and `files:user-media:write`.
-   Granted to a Homiio still minting unnarrowed Sindi tokens, they break Sindi.
+1. **Oxy:** the API deploy carrying ADR 0043 stages 1–4b, and `@oxy.so/contracts`
+   4.24.0, `@oxy.so/core` 4.21.0 and `@oxy.so/services` 11.12.0 published.
+   Stage 4c (OxyHQ/oxy#1774) is needed only for private documents, and only
+   once the switch is on: deploying this before 4c is live changes nothing for
+   them (switch off, every document in the bucket).
+2. **The grant, once no Homiio mints a Sindi token.** Since #677 Sindi is an
+   Alia agent and Homiio mints no Sindi service token, so nothing checks
+   Homiio's token for an EXACT scope set any more: Oxy checks every Homiio call
+   by inclusion. A Homiio from before #677 does — its Sindi canary refuses any
+   token wider than `inference:invoke` + `acting-as:offline`, and Sindi and the
+   backend attest as one workload. So once the running image is #677 or later
+   (this deploy), Oxy staff grant the Homiio application and its workload
+   binding `files:read`, `files:app:write`, `files:app:delete`,
+   `files:references:write`, `files:user-media:write` and — for private
+   documents — `files:linked:read`.
 3. **The webhook secret.** Create `/oxy/homiio/OXY_FILES_WEBHOOK_SECRET`
    (SecureString, any placeholder) — the task definition names its ARN and a
    task does not start without it. Deploy. In the Oxy console (Homiio →
    Webhooks → File events) set `https://api.homiio.com/webhooks/oxy/files`; the
    challenge is answered without the secret. Put the `whsec_…` it shows into the
    parameter and force a new deployment of the API service.
-4. **Migration `0037_oxy_files`** (`pre`) is applied by the deploy.
+4. **Migrations `0037_oxy_files` and `0038_oxy_private_documents`** (both
+   `pre`) are applied by the deploy.
 5. **Orphans:** `scripts/cleanOrphanImages.ts` (preview), then `--apply`.
 6. **Copy:** `scripts/migrateImagesToOxy.ts` (preview), then `--apply
    --report=…` until the preview reports nothing left. Read the
@@ -114,6 +160,13 @@ the scripts run as one-off ECS tasks of the API image.
 7. **Soak.** The legacy door keeps every old URL working: a migrated photo's
    old URL answers 301 to its Oxy rendition, an unmigrated one is still served
    from the bucket. `scripts/oxyFilesStatus.ts` prints the gate daily.
+8. **Private documents, after Oxy stage 4c is deployed** (OxyHQ/oxy#1774) and
+   Homiio holds `files:linked:read`: run `scripts/migratePrivateDocumentsToOxy.ts
+   --apply --limit=5` and read the report — `migrated` lines mean read-back
+   works; exit 2 (`read_back_refused`) means it does not, and nothing moved.
+   Then set `OXY_PRIVATE_DOCUMENTS_ENABLED=true` on the API service so new
+   documents go to Oxy, and run the script without `--limit` until the preview
+   shows nothing `onBucket`.
 
 ## Retiring the bucket
 
@@ -128,5 +181,6 @@ for an absence of reads). Then, in one change:
   redirect's lookup key) and `images_storage_check` requires `oxy_file_id`.
 
 The bucket itself — and `AWS_S3_BUCKET`, the task role's S3 policy and the
-bucket in oxy-infra — goes only when `bucketRetirable` is also true, i.e. after
-the private documents have moved (Oxy stage 4c, `privateDocuments.ts`).
+bucket in oxy-infra — goes only when `bucketRetirable` is also true: no
+private document row names a bucket object any more (step 8) and the
+`private_document` surface served nothing from the bucket for the soak.
