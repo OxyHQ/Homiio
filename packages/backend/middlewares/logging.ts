@@ -80,21 +80,22 @@ const log = (level: string, message: string, meta: Record<string, unknown> = {})
     ...meta,
   };
 
-  // Console output
+  // Console output. The message is an argument, never the format string: a
+  // logged value carrying `%s`/`%o` must not rewrite the line.
   const consoleMessage = `[${timestamp}] ${level}: ${message}`;
 
   switch (level) {
     case 'ERROR':
-      console.error(consoleMessage, meta);
+      console.error('%s', consoleMessage, meta);
       break;
     case 'WARN':
-      console.warn(consoleMessage, meta);
+      console.warn('%s', consoleMessage, meta);
       break;
     case 'DEBUG':
-      console.debug(consoleMessage, meta);
+      console.debug('%s', consoleMessage, meta);
       break;
     default:
-      console.log(consoleMessage, meta);
+      console.log('%s', consoleMessage, meta);
   }
 
   // File output (in production, but not in serverless environments).

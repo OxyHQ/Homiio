@@ -5,7 +5,7 @@ import {
 } from '@oxy.so/homiio-contracts';
 import type { Request, Response } from 'express';
 import { listPublicCaseCards } from '../../db/evictions/publicCaseRepository';
-import { sanitizePublicText } from './sanitizePublicText';
+import { sanitizePublicText } from '../../domain/evictions/sanitizePublicText';
 
 // Legacy titles predate write-side sanitization. Reduce them at this boundary,
 // including number-first English addresses, rather than forwarding raw prose.

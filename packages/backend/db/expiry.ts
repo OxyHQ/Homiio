@@ -43,6 +43,7 @@
 import type { PgColumn, PgTable } from 'drizzle-orm/pg-core';
 import type { ExpirySweepTarget } from '@oxy.so/db/expiry';
 import { addressCandidates } from './schema/addressMaterialization';
+import { capabilityEffectReceipts } from './schema/capabilities';
 import { conversations } from './schema/conversations';
 import { evictionCases } from './schema/evictions';
 import { moderationEvents, moderationOutbox } from './schema/moderation';
@@ -161,6 +162,18 @@ export const EXPIRY_SWEEP_TARGETS: readonly ExpirySweepTarget[] = [
       'BIRTH for the same reason as the one above: a table that grows with ' +
       'every keystroke in an autocomplete is the shape this registry exists to ' +
       'catch.',
+  },
+  {
+    table: capabilityEffectReceipts,
+    column: capabilityEffectReceipts.expiresAt,
+    retentionSeconds: 0,
+    reason:
+      'The 30-day window in which a capability tool call answers its retry ' +
+      '(`capabilities/effectReceipts.ts`). INTENT CHECKED: a receipt is the ' +
+      'stored RESPONSE to a call that already happened, never the effect ' +
+      'itself — the viewing, the declaration, the spent credit live in their ' +
+      'own tables. Deleting one costs only the replay of a key nobody retries ' +
+      'after 30 days. Registered at BIRTH: every agent write adds a row.',
   },
 ];
 

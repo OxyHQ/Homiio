@@ -2,11 +2,11 @@
  * `listing_reports` — a trust & safety report filed against a property listing.
  *
  * It lives under `db/moderation/` rather than `db/properties/` because the
- * moderation intake path is its ONLY writer: `controllers/reportController.ts`
- * creates every row, inside the same transaction as the `moderation_reports` row
- * that will actually be delivered. Nothing else in the backend inserts, updates
- * or deletes one (`git grep ListingReport` reaches exactly that controller, the
- * route that mounts it, and the model barrel). Keeping the repository beside the
+ * moderation intake path is its ONLY writer: `reportListing` in
+ * `domain/listings.ts` creates every row (for the route and the catalogue tool
+ * alike), inside the same transaction as the `moderation_reports` row that will
+ * actually be delivered. Nothing else in the backend inserts, updates or deletes
+ * one. Keeping the repository beside the
  * delivery record it commits with is what stops a second writer appearing
  * somewhere that does not know about the transaction.
  *

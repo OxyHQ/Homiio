@@ -43,6 +43,7 @@ export {
   tenantApplications,
 } from './applications';
 export { billing, billingProcessedSessions } from './billing';
+export { capabilityEffectReceipts } from './capabilities';
 export { propertyViewingWindows, reservations, viewingRequests } from './bookings';
 export {
   conversationMessageAttachments,

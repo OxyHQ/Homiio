@@ -182,6 +182,22 @@ Review **writes** are on the authenticated router. Only reads are public.
 Outside `/api`: `GET /` (welcome), `GET /health` (database status), and
 `POST /webhooks/crowdsource` (signed CrowdSource moderation webhook).
 
+### The capability catalogue's MCP lanes
+
+Mounted in `server.ts` before every middleware (`capabilities/mount.ts`), never
+on either router above. Their authority is the credential the transport
+verifies, not an Oxy session. The tools are the catalogue in
+[`sindi.md`](./sindi.md).
+
+| Method | Path | Host | Auth |
+|---|---|---|---|
+| `POST` | `/_oxy/mcp` | `api.homiio.com` | `Authorization: Capability <ticket>`, verified live with Oxy; 503 until the catalogue is registered |
+| `POST` | `/mcp` | `mcp.homiio.com` | OAuth bearer introspected with Oxy; 401 with `resource_metadata` without one |
+| `GET` | `/.well-known/oauth-protected-resource` | `mcp.homiio.com` | Public metadata |
+
+Each lane answers **421** on any other host, so `api.homiio.com/mcp` is refused
+rather than served.
+
 ## Authenticated routes
 
 All under `/api`, behind `createOxyAuthMiddleware(oxy)`. Source:

@@ -26,10 +26,7 @@
  */
 
 import type { NextFunction, Request, Response } from 'express';
-import { guestPointStanding } from '@homiio/shared-types';
-
-import { getDb } from '../db/postgres';
-import { listMovements, toMovementDTO } from '../db/guestPoints/guestPointsLedger';
+import { getMyGuestPoints as readMyGuestPoints } from '../domain/guestPoints';
 import { successResponse } from '../middlewares/errorHandler';
 import { requireSessionOxyUserId } from '../utils/sessionUser';
 
@@ -48,13 +45,7 @@ export async function getMyGuestPoints(
 ): Promise<void> {
   try {
     const oxyUserId = requireSessionOxyUserId(req);
-    const movements = (await listMovements(getDb(), oxyUserId)).map(toMovementDTO);
-    res.json(
-      successResponse(
-        { balance: guestPointStanding(movements), movements },
-        'Guest points retrieved',
-      ),
-    );
+    res.json(successResponse(await readMyGuestPoints(oxyUserId), 'Guest points retrieved'));
   } catch (error) {
     next(error);
   }

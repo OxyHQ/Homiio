@@ -31,6 +31,7 @@ import { HealthService } from './services/healthService';
 import { createCrowdSourceWebhookRoutes } from './routes/crowdSourceWebhook';
 import { moderationOutboxDispatcher } from './services/moderation/ModerationOutboxDispatcher';
 import { getErrorMessage } from './utils/errors';
+import { createCapabilityLanes, mountCapabilityLanes } from './capabilities/mount';
 
 interface RawBodyRequest extends Request {
   rawBody?: Buffer;
@@ -143,6 +144,17 @@ if (activity) app.use(activity.observeHttp);
 
 // Behind AWS ALB — trust the first proxy hop so req.ip reflects the client IP
 app.set('trust proxy', 1);
+
+/**
+ * The capability catalogue's two MCP lanes — `/_oxy/mcp` (Alia, capability
+ * tickets, host `api.homiio.com`) and `/mcp` (OAuth clients, host
+ * `mcp.homiio.com`). FIRST, above helmet, CORS, the session middleware, the
+ * rate limiter and every body parser: each lane owns its raw body, its host
+ * check and its auth challenge (`capabilities/mount.ts`). Never on
+ * `routes/public.ts`.
+ */
+const capabilityLanes = createCapabilityLanes();
+mountCapabilityLanes(app, capabilityLanes);
 
 // Helmet defaults keep CORP `same-origin` for API routes. Image routes set
 // `Cross-Origin-Resource-Policy: cross-origin` in imageController so listing
@@ -364,6 +376,10 @@ async function startServer() {
 
     const server = app.listen(port, () => {
       activityReady = true;
+      // Register the catalogue now, so a refusal (a missing Oxy scope, a
+      // catalogue Oxy will not parse) is in the boot log, not in Alia's first
+      // call. A failure leaves `/_oxy/mcp` answering 503 and retrying.
+      void capabilityLanes.internal.bound();
       logger.info(`Homio Backend running on port ${port} [${config.environment}]`);
       // Initialize cron jobs (only in non-serverless persistent environments)
       if (!process.env.VERCEL && !process.env.AWS_LAMBDA_FUNCTION_NAME) {

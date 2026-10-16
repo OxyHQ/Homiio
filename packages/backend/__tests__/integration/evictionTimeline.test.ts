@@ -24,7 +24,7 @@ import * as eviction from '../../controllers/eviction';
 import { getDb } from '../../db/postgres';
 import { evictionCaseUpdates, evictionCases, notifications, profiles } from '../../db/schema';
 import { EVICTION_STATUS_TRANSITIONS } from '@homiio/shared-types';
-import { notifyTimelineEvent } from '../../controllers/eviction/shared';
+import { notifyTimelineEvent } from '../../domain/evictions/shared';
 import { errorHandler } from '../../middlewares/errorHandler';
 import { assertFound } from '../helpers/assertFound';
 

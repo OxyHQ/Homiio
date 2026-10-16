@@ -29,151 +29,78 @@
 
 import type { Request, Response, NextFunction } from 'express';
 
-import { getDb } from '../db/postgres';
 import {
-  createNotification,
-  deleteAllNotifications,
-  deleteNotification,
-  findNotificationForRecipient,
-  isNotificationPriority,
-  listNotifications,
-  markAllRead,
-  markRead,
-  toNotificationDTO,
-  updateNotification,
-  type NotificationPriority,
-} from '../db/notifications/notificationRepository';
+  clearAllNotifications,
+  createOwnNotification,
+  getNotification,
+  listMyNotifications,
+  markAllNotificationsRead,
+  markNotificationRead,
+  removeNotification,
+  updateOwnNotification,
+} from '../domain/notifications';
 import { AppError, successResponse } from '../middlewares/errorHandler';
-import { logger } from '../middlewares/logging';
 
 /**
  * Resolve the mailbox owner from the session, in the shape the auth layer sets.
  *
  * `req.userId` is declared `string | null`, so the `||` chain widens to include
- * `null` — coalesced away here rather than at each of the eight call sites,
- * every one of which only ever asks "is there an owner?".
+ * `null` — coalesced away here rather than at each call site, every one of
+ * which only ever asks "is there an owner?".
  */
 function recipientOf(req: Request): string | undefined {
   return req.user?.id || req.user?._id || req.userId || undefined;
 }
 
-/** The `?priority` filter, or `undefined` when absent or not a declared value. */
-function priorityFilter(value: unknown): NotificationPriority | undefined {
-  return isNotificationPriority(value) ? value : undefined;
+function unauthenticated(): AppError {
+  return new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED');
 }
 
+function notificationIdOf(req: Request): string {
+  return req.params.id || req.params.notificationId;
+}
+
+/**
+ * The HTTP edge of the mailbox. Every use case lives in
+ * `domain/notifications.ts`, which the capability catalogue calls too.
+ */
 class NotificationController {
   /**
-   * Get the authenticated user's notifications.
-   *
-   * Supports pagination (`page`, `limit`) and filtering by `unreadOnly`, `type`
-   * and `priority`. Returns a flat body shaped for the frontend
-   * notificationService, which reads `notifications` and `total` directly off
-   * the response body.
+   * The authenticated user's notifications, with pagination (`page`, `limit`)
+   * and `unreadOnly` / `type` / `priority` filters. A flat body shaped for the
+   * frontend notificationService, which reads `notifications` and `total`
+   * directly off the response body.
    */
   async getNotifications(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const oxyUserId = recipientOf(req);
-      if (!oxyUserId) {
-        return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
-      }
-
-      const { page = 1, limit = 20, unreadOnly = false, type, priority } = req.query;
-
-      const pageNumber = Math.max(1, parseInt(String(page), 10) || 1);
-      const limitNumber = Math.min(100, Math.max(1, parseInt(String(limit), 10) || 20));
-
-      const { rows, total, unreadCount } = await listNotifications(
-        getDb(),
-        {
-          recipientOxyUserId: oxyUserId,
-          unreadOnly: String(unreadOnly) === 'true',
-          type: type === undefined ? undefined : String(type),
-          priority: priorityFilter(priority === undefined ? undefined : String(priority)),
-        },
-        { limit: limitNumber, offset: (pageNumber - 1) * limitNumber },
-      );
-
-      const totalPages = Math.ceil(total / limitNumber);
-
-      res.json({
-        success: true,
-        message: 'Notifications retrieved successfully',
-        notifications: rows.map(toNotificationDTO),
-        unreadCount,
-        total,
-        page: pageNumber,
-        limit: limitNumber,
-        totalPages,
-        hasNext: pageNumber < totalPages,
-        hasPrev: pageNumber > 1,
-      });
+      if (!oxyUserId) return next(unauthenticated());
+      const page = await listMyNotifications(oxyUserId, req.query);
+      res.json({ success: true, message: 'Notifications retrieved successfully', ...page });
     } catch (error) {
       next(error);
     }
   }
 
-  /**
-   * Create a notification for the authenticated user.
-   */
+  /** Create a notification in the authenticated user's own mailbox. */
   async createNotification(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const oxyUserId = recipientOf(req);
-      if (!oxyUserId) {
-        return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
-      }
-
-      const { type, title, message, app, priority, data } = req.body;
-
-      if (!type || !title || !message) {
-        return next(new AppError('type, title and message are required', 400, 'VALIDATION_ERROR'));
-      }
-
-      const notification = await createNotification(getDb(), {
-        recipientOxyUserId: oxyUserId,
-        type: String(type),
-        title: String(title),
-        message: String(message),
-        // `undefined` rather than `null`: the column is `NOT NULL DEFAULT`, so
-        // omitting the key is what lets the default apply. See the repository
-        // header.
-        app: app === undefined ? undefined : String(app),
-        priority: priorityFilter(priority),
-        data: data ?? {},
-      });
-
-      logger.info('Notification created', { notificationId: notification.id, oxyUserId, type });
-
-      res
-        .status(201)
-        .json(
-          successResponse(toNotificationDTO(notification), 'Notification created successfully'),
-        );
+      if (!oxyUserId) return next(unauthenticated());
+      const notification = await createOwnNotification(oxyUserId, req.body ?? {});
+      res.status(201).json(successResponse(notification, 'Notification created successfully'));
     } catch (error) {
       next(error);
     }
   }
 
-  /**
-   * Get a single notification owned by the authenticated user.
-   */
+  /** A single notification owned by the authenticated user. */
   async getNotificationById(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const oxyUserId = recipientOf(req);
-      if (!oxyUserId) {
-        return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
-      }
-
-      const notificationId = req.params.id || req.params.notificationId;
-
-      const notification = await findNotificationForRecipient(getDb(), notificationId, oxyUserId);
-      if (!notification) {
-        return next(new AppError('Notification not found', 404, 'NOT_FOUND'));
-      }
-
-      res.json(
-        successResponse(toNotificationDTO(notification), 'Notification retrieved successfully'),
-      );
+      if (!oxyUserId) return next(unauthenticated());
+      const notification = await getNotification(oxyUserId, notificationIdOf(req));
+      res.json(successResponse(notification, 'Notification retrieved successfully'));
     } catch (error) {
       next(error);
     }
@@ -186,120 +113,69 @@ class NotificationController {
   async updateNotification(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const oxyUserId = recipientOf(req);
-      if (!oxyUserId) {
-        return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
-      }
-
-      const notificationId = req.params.id || req.params.notificationId;
-      const { read, title, message, priority, data } = req.body;
-
-      const notification = await updateNotification(getDb(), notificationId, oxyUserId, {
-        read: read === undefined ? undefined : Boolean(read),
-        title: title === undefined ? undefined : String(title),
-        message: message === undefined ? undefined : String(message),
-        priority: priorityFilter(priority),
-        data,
-      });
-
-      if (!notification) {
-        return next(new AppError('Notification not found', 404, 'NOT_FOUND'));
-      }
-
-      logger.info('Notification updated', { notificationId, oxyUserId });
-
-      res.json(
-        successResponse(toNotificationDTO(notification), 'Notification updated successfully'),
+      if (!oxyUserId) return next(unauthenticated());
+      const notification = await updateOwnNotification(
+        oxyUserId,
+        notificationIdOf(req),
+        req.body ?? {},
       );
+      res.json(successResponse(notification, 'Notification updated successfully'));
     } catch (error) {
       next(error);
     }
   }
 
-  /**
-   * Mark a notification as read.
-   */
+  /** Mark a notification as read. */
   async markAsRead(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const oxyUserId = recipientOf(req);
-      if (!oxyUserId) {
-        return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
-      }
-
-      const notificationId = req.params.id || req.params.notificationId;
-
-      const notification = await markRead(getDb(), notificationId, oxyUserId);
-      if (!notification) {
-        return next(new AppError('Notification not found', 404, 'NOT_FOUND'));
-      }
-
-      logger.info('Notification marked as read', { notificationId, oxyUserId });
-
-      res.json(successResponse(toNotificationDTO(notification), 'Notification marked as read'));
+      if (!oxyUserId) return next(unauthenticated());
+      const notification = await markNotificationRead(oxyUserId, notificationIdOf(req));
+      res.json(successResponse(notification, 'Notification marked as read'));
     } catch (error) {
       next(error);
     }
   }
 
-  /**
-   * Delete a notification owned by the authenticated user.
-   */
+  /** Delete a notification owned by the authenticated user. */
   async deleteNotification(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const oxyUserId = recipientOf(req);
-      if (!oxyUserId) {
-        return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
-      }
-
-      const notificationId = req.params.id || req.params.notificationId;
-
-      const deleted = await deleteNotification(getDb(), notificationId, oxyUserId);
-      if (!deleted) {
-        return next(new AppError('Notification not found', 404, 'NOT_FOUND'));
-      }
-
-      logger.info('Notification deleted', { notificationId, oxyUserId });
-
+      if (!oxyUserId) return next(unauthenticated());
+      await removeNotification(oxyUserId, notificationIdOf(req));
       res.json(successResponse(null, 'Notification deleted successfully'));
     } catch (error) {
       next(error);
     }
   }
 
-  /**
-   * Mark all of the authenticated user's notifications as read.
-   */
+  /** Mark all of the authenticated user's notifications as read. */
   async markAllAsRead(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const oxyUserId = recipientOf(req);
-      if (!oxyUserId) {
-        return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
-      }
-
-      const modifiedCount = await markAllRead(getDb(), oxyUserId);
-
-      logger.info('All notifications marked as read', { oxyUserId, modifiedCount });
-
-      res.json(successResponse({ modifiedCount }, 'All notifications marked as read'));
+      if (!oxyUserId) return next(unauthenticated());
+      res.json(
+        successResponse(
+          await markAllNotificationsRead(oxyUserId),
+          'All notifications marked as read',
+        ),
+      );
     } catch (error) {
       next(error);
     }
   }
 
-  /**
-   * Permanently delete all of the authenticated user's notifications.
-   */
+  /** Permanently delete all of the authenticated user's notifications. */
   async clearAllNotifications(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const oxyUserId = recipientOf(req);
-      if (!oxyUserId) {
-        return next(new AppError('Authentication required', 401, 'AUTHENTICATION_REQUIRED'));
-      }
-
-      const deletedCount = await deleteAllNotifications(getDb(), oxyUserId);
-
-      logger.info('All notifications cleared', { oxyUserId, deletedCount });
-
-      res.json(successResponse({ deletedCount }, 'All notifications cleared successfully'));
+      if (!oxyUserId) return next(unauthenticated());
+      res.json(
+        successResponse(
+          await clearAllNotifications(oxyUserId),
+          'All notifications cleared successfully',
+        ),
+      );
     } catch (error) {
       next(error);
     }

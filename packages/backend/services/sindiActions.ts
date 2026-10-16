@@ -58,7 +58,7 @@
 import { randomUUID } from 'node:crypto';
 
 import {
-  citySelection,
+  type citySelection,
   OfferingType,
   parseListingCurrency,
   PropertyType,
@@ -69,7 +69,7 @@ import {
   type SindiSearchPatch,
 } from '@homiio/shared-types';
 
-import { lookupCityPlaces } from '../db/geo/placeLookup';
+import { resolveCity, type UnresolvedPlaceReason } from '../domain/places';
 import { logger } from '../middlewares/logging';
 
 /** The extraction's own fields, as `/ai/stream` already produces them. */
@@ -123,115 +123,14 @@ const echoableName = (name: string): string =>
     ? name
     : name.slice(0, SINDI_REQUESTED_PLACE_MAX_LENGTH);
 
-/**
- * Why a named city produced no area.
- *
- * `ambiguous` and `not_found` used to be flattened into one `null`, on the
- * reasoning that "from the action's point of view they mean the same thing".
- * They mean the same thing to the PATCH — there is no area Homiio can commit to
- * either way — and two different things to the person. "Which Barcelona did you
- * mean?" is answerable by naming a region; "I have no Atlantis" is not, and
- * asking somebody to refine a place that does not exist sends them looking for
- * a spelling mistake they did not make.
- */
-export type UnresolvedPlaceReason = 'ambiguous' | 'not_found';
+/** Why a named city produced no area; see `domain/places.ts`. */
+export type { UnresolvedPlaceReason };
 
 /** A place the turn named and Homiio could not commit to. */
 export interface UnresolvedPlace {
   /** The name as the person used it, clamped to what the client's parser accepts. */
   readonly requested: string;
   readonly reason: UnresolvedPlaceReason;
-}
-
-/**
- * The area a turn names: a selection, or the reason there is none.
- *
- * A union rather than `| null` because the caller has to tell "no area was
- * asked for" from "an area was asked for and lost", and that is the whole
- * distinction ADR 0002 §4.3 turns on: "a request that names no location at all
- * is answered normally… the failure mode this ADR forbids is a location that
- * was requested and lost".
- */
-type CityResolution =
-  | { readonly status: 'resolved'; readonly selection: ReturnType<typeof citySelection> }
-  | { readonly status: 'unresolved'; readonly reason: UnresolvedPlaceReason };
-
-/**
- * How many candidates to look at before judging.
- *
- * More than two, because the duplicate rule below has to SEE the candidates to
- * tell duplicates from homonyms — asking for two is enough to learn that a name
- * is ambiguous and not enough to learn why.
- */
-const CITY_CANDIDATE_LIMIT = 8;
-
-/**
- * The city a turn names, or the reason Homiio cannot say which one.
- *
- * ## Ambiguity is refused, and that is not what was breaking
- *
- * `lookupCityPlaces` answers `ambiguous` rather than picking a row, and the
- * refusal is right: choosing between two real places on a popularity tiebreak
- * is the homonym bug (ADR 0002 §12.2).
- *
- * But it was also refusing "Barcelona". Production carries THREE `cities` rows
- * named Barcelona in Spain, all with the slug `barcelona` and two of them
- * holding **zero** listings. So the most ordinary request Sindi can receive —
- * "show me flats in Barcelona" — produced no location, and with no other
- * constraint in the sentence, no action at all. The person saw nothing happen
- * and nothing said.
- *
- * This comment used to go on to say that two of those three were duplicates
- * that migration 0029 removed by replacing the case-sensitive `(region_id,
- * name)` index with `(region_id, slug)`. **That was wrong, and it is wrong in
- * the direction that matters here, because it reads as though this rule were a
- * stopgap for a migration that has since landed.** The three rows are in three
- * different REGIONS — `Catalonia` (3 listings), `Barcelona` (0) and `barcelona`
- * (0) — so 0029 never saw them as duplicates, and all three are still in the
- * table. Several candidates for one slug ACROSS regions is precisely the case
- * ADR 0002 §12.2 says is legal and must stay legal, so no unique index can ever
- * remove it. This rule is what makes "Barcelona" resolve, today and after any
- * future region merge. `docs/postgres.md` carries the census and the
- * correction.
- *
- * ## The rule, and why it is not "pick the popular one"
- *
- * **A place with no listings cannot answer a question about listings there.**
- * That is not a tiebreak on relevance — `placeLookup`'s own header forbids
- * `properties_count` deciding between candidates, and this does not ask it to.
- * It asks something narrower and true: a row holding nothing is not a possible
- * answer to "what is in it", so it is not a candidate to be ambiguous WITH.
- *
- * Two genuine Barcelonas that both hold listings are still ambiguous and still
- * refused — which is the case the rule exists to protect, and the case a
- * popularity tiebreak would have got wrong.
- *
- * It lives HERE and not in `lookupCityPlaces`, because the rule is a property
- * of the QUESTION. A place picker offering somewhere to browse should still
- * show an empty city; only a search for listings may discount one.
- *
- * ## Why a discounted-to-nothing name is `ambiguous` and not `not_found`
- *
- * When the rule leaves zero candidates — several rows carry the name and none
- * of them holds a listing — the honest sentence is still "which one did you
- * mean?". The places exist; Homiio simply cannot answer "what is in it" for any
- * of them, and telling somebody their name matched nothing would be false.
- */
-async function resolveCity(city: string, state: string | undefined): Promise<CityResolution> {
-  const outcome = await lookupCityPlaces({
-    token: city,
-    ...(state ? { region: state } : {}),
-    limit: CITY_CANDIDATE_LIMIT,
-  });
-  if (outcome.status === 'resolved') {
-    return { status: 'resolved', selection: citySelection(outcome.place) };
-  }
-  if (outcome.status !== 'ambiguous') return { status: 'unresolved', reason: 'not_found' };
-
-  const withListings = outcome.candidates.filter((candidate) => candidate.propertiesCount > 0);
-  return withListings.length === 1
-    ? { status: 'resolved', selection: citySelection(withListings[0]) }
-    : { status: 'unresolved', reason: 'ambiguous' };
 }
 
 /**

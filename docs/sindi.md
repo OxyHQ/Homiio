@@ -27,7 +27,7 @@ Homiio app ──@alia.onl/sdk (person's Oxy session, person's credits)──▶
    │  tool renderers (PropertyCard)                                   │ oxy_homiio__* tools
    └──────────────────────────────────────────────────────────────────┤ capability tickets
                                                                       ▼
-                         api.homiio.com/_oxy/mcp  ◀── one catalogue ──▶ mcp.homiio.oxy.so (OAuth, Claude/ChatGPT/…)
+                         api.homiio.com/_oxy/mcp  ◀── one catalogue ──▶ mcp.homiio.com (OAuth, Claude/ChatGPT/…)
 ```
 
 - **Homiio's backend never calls Alia.** The frontend talks to Alia directly
@@ -53,23 +53,55 @@ agent's configuration: Sindi's ceiling on Homiio is Ver y actuar, plus the
 `finance` package with limits for rent payments. No agent asks for approval
 (Alia ADR 0020 §3).
 
+167 tools, `capabilities/homiio.catalog.ts` (assembled from
+`capabilities/catalog/*`). Each handler (`capabilities/handlers/*`) calls the
+domain use case (`domain/*`) the route calls, and returns the route's JSON body
+without `success`, `message` and `meta`. Every tool acts on the account root
+(`homiio_account`); a write called with an `Idempotency-Key` replays its stored
+receipt (`capability_effect_receipts`, 30 days).
+
 | Domain | Read | Act |
 |---|---|---|
 | Listings | `searchListings`, `findNearbyListings`, `getListing`, `resolvePlace` | `reportListing` |
-| Saved | `listSavedHomes`, `listSavedFolders`, `listSavedSearches` | save/unsave, notes, folders, saved searches and their alerts |
-| Properties and rooms (owner) | `listMyProperties`, `getMyProperty` | create, edit, publish/unpublish, delete, mark transacted |
-| Viewings | `listMyViewingRequests` | request, cancel, reschedule; approve/decline as the listing owner |
-| Applications | `listMyApplications`, `getApplication` | submit (documents through Oxy files), withdraw; accept/reject as owner |
-| Leases | `listMyLeases`, `getLease` | create from an accepted application, edit whitelisted fields, sign |
-| Payments | `listMyPayments` | pay rent, set up payments (Peable), within the `finance` limits |
-| Maintenance | `listMyMaintenanceRequests`, `getMaintenanceRequest` | create, comment, transition status |
-| Evictions | `listEvictionResources`, `getEvictionCase`, `listMyEvictionCases` | report a case, follow, attend, comment |
-| Messages and reviews | `listMyConversations`, `listReviews` | send an enquiry message, write a review |
+| Saved | `listSavedHomes`, `listSavedFolders`, `listSavedSearches`, `listHousingAlerts`, `getHousingAlert`, `listRecentlyViewedHomes` | `saveHome`, `unsaveHome`, `updateSavedHomeNotes`, `createSavedFolder`, `updateSavedFolder`, `deleteSavedFolder`, `createSavedSearch`, `updateSavedSearch`, `deleteSavedSearch`, `setSavedSearchAlerts`, `clearRecentlyViewedHomes` |
+| Properties and rooms (owner) | `listMyProperties`, `getMyProperty`, `listPropertiesByOwner`, `listRooms`, `getRoom`, `getMyAnalytics`, `getAppStats` | `createProperty`, `updateProperty`, `publishProperty`, `unpublishProperty`, `deleteProperty`, `markPropertyTransacted`, `createRoom`, `updateRoom`, `deleteRoom` |
+| Viewings | `listMyViewingRequests`, `listListingViewingRequests`, `getViewingAvailability`, `getViewingWindows` | `requestViewing`, `cancelViewing`, `rescheduleViewing`, `approveViewing`, `declineViewing`, `setViewingWindows` |
+| Short stays | `listMyReservations`, `getReservation`, `getListingAvailability` | `createReservation`, `confirmReservation`, `declineReservation`, `cancelReservation` |
+| Exchanges | `listMyExchangeRequests`, `getExchangeRequest`, `listExchangeReviews`, `listUserExchangeReviews` | `requestExchange`, `confirmExchange`, `declineExchange`, `cancelExchange`, `completeExchange`, `writeExchangeReview` |
+| Applications | `listMyApplications`, `getApplication` | `submitApplication` (documents as base64 through the app's own upload path), `withdrawApplication`, `startReviewingApplication`, `acceptApplication`, `rejectApplication`, `verifyApplicationDocument` |
+| Leases | `listMyLeases`, `getLease`, `listLeaseDocuments` | `createLeaseFromApplication` (the only lease creation), `updateLease`, `signLease`, `renewLease`, `terminateLease`, `deleteLease`, `uploadLeaseDocument` |
+| Rent ledger | `listMyPayments`, `listLeasePayments`, `getLeaseLedger` | `declareRentPayment`, `confirmRentPayment`, `rejectRentPayment`, `refundRentPayment`, `createLeasePaymentObligation` — `finance`, internal only, idempotency required, a limit key on every amount |
+| Maintenance | `listMyMaintenanceRequests`, `getMaintenanceRequest` | `createMaintenanceRequest`, `commentOnMaintenanceRequest`, `transitionMaintenanceRequest` |
+| Evictions | `listEvictionCases`, `getEvictionCase`, `listEvictionComments`, `listEvictionResources`, `listMyEvictionCases`, `listAttendingEvictionCases`, `listFollowedEvictionCases`, `getEvictionTeam`, `getExactEvictionLocation`, `listEvictionLocationGrants`, `getEvictionLocationAudit` | `reportEvictionCase`, `updateEvictionCase`, `deleteEvictionCase`, `postEvictionUpdate`, `clearEvictionHold`, `toggleEvictionAttendance`, `toggleEvictionFollow`, `vouchForSupporter`, `revokeSupporter`, `addEvictionCollaborator`, `removeEvictionCollaborator`, `grantEvictionLocation`, `revokeEvictionLocationGrant`, `commentOnEviction`, `deleteEvictionComment`, `reportEvictionContent` |
+| Reviews | `listReviews`, `getAddressReviewStats`, `getReview`, `listUserReviews` | `writeReview`, `updateReview`, `deleteReview`, `markReviewHelpful`, `reportReview` |
+| Addresses | `searchAddresses`, `findNearbyAddresses`, `getAddress`, `listAddressCorrections` | `createAddress`, `updateAddress`, `proposeAddressCorrection`, `withdrawAddressCorrection` |
+| Profile and notifications | `getMyProfile`, `getUserProfile`, `listMyNotifications`, `getNotification` | `updateMyProfile`, `markNotificationRead`, `markAllNotificationsRead`, `deleteNotification`, `clearAllNotifications` |
+| Roommates | `listRoommateProfiles`, `getRoommateStatus`, `getRoommatePreferences`, `listRoommateRequests`, `listRoommateRelationships` | `updateRoommatePreferences`, `toggleRoommateMatching`, `sendRoommateRequest`, `acceptRoommateRequest`, `declineRoommateRequest`, `endRoommateRelationship` |
+| Partners | `getMyPartnerStatus`, `listMyReferrals`, `getMyPartnerEarnings`, `getMyGuestPoints` | `joinPartnerProgram` |
 | Internal only | `readFileEntitlement` | `consumeFileCredit` (the `sindi.files` feature gate) |
 
-The exact list is generated from the routes when the catalogue is written, and a
-parity test fails if an authenticated user route has no tool and is not on the
-exclusion list below.
+**Messages.** Homiio has no person-to-person messaging product
+([`messaging-audit.md`](./messaging-audit.md)), so there is no conversation
+tool. Reaching an owner is `requestViewing`, `submitApplication`,
+`createReservation` or `requestExchange`; Homiio's own Sindi conversations are
+replaced by Alia's.
+
+**Rent through Peable** is not connected ([`peable-rent-payments.md`](./peable-rent-payments.md)):
+there is no processor and no route, so the payment tools record the ledger and
+"set up payments" does not exist yet.
+
+`capabilities/routeCoverage/*` maps every authenticated route to its tool or a
+written exclusion, and `routeParity.test.ts` walks the real router and fails on
+a route with neither. The exclusions are the Sindi relay (`/api/ai/*`), the
+scraper, Telegram operator tooling, Stripe webhook/debug/manual routes, the
+Homiio+ purchase pages, MLS team chat, raw image uploads, admin city
+maintenance, raw document/attachment/receipt bytes, view tracking, the lease
+create route (a lease only comes from an accepted application), the property
+test endpoint, and the two notification writes that bypass
+`notificationDispatchService`.
+
+**Bump the catalogue `version`** whenever a tool changes: Oxy registers by
+(appId, version, digest), and `catalog.test.ts` pins the pair.
 
 **Never in the catalogue** (owner vetoes and binding ADRs, not agent limits):
 
@@ -140,7 +172,7 @@ replaces in the same change.
    - registration at startup;
    - both MCP mounts.
 
-   This needs `mcp.homiio.oxy.so` in oxy-infra and the workload re-bound with
+   This needs `mcp.homiio.com` in oxy-infra and the workload re-bound with
    the catalogue scopes. The precedent is Mercaria's in-process
    `src/capabilities/*`.
 2. **Frontend** (same PR as phase 3):

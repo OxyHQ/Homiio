@@ -11,18 +11,11 @@ import { asyncHandler } from '../middlewares';
 import handleUploadError from '../middlewares/uploadMiddleware';
 import applicationController from '../controllers/applicationController';
 import * as validation from '../middlewares/validation';
-
-const ALLOWED_DOCUMENT_MIME_TYPES = new Set([
-  'application/pdf',
-  'image/jpeg',
-  'image/jpg',
-  'image/png',
-  'image/webp',
-  'image/gif',
-]);
-
-const MAX_DOCUMENT_BYTES = 10 * 1024 * 1024; // 10 MB
-const MAX_DOCUMENT_COUNT = 10;
+import {
+  ALLOWED_DOCUMENT_MIME_TYPES,
+  MAX_DOCUMENT_BYTES,
+  MAX_DOCUMENT_COUNT,
+} from '../domain/applications';
 
 const documentUpload = multer({
   storage: multer.memoryStorage(),
