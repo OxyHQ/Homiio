@@ -1,5 +1,6 @@
 import React, { useMemo, useRef, useEffect, useState, useCallback } from 'react';
-import { Platform, View, type ViewStyle, Text } from 'react-native';
+import { View, type ViewStyle, Text } from 'react-native';
+import { useQuery } from '@tanstack/react-query';
 import { WebView, type WebViewMessageEvent } from 'react-native-webview';
 import type { StyleSpecification } from 'maplibre-gl';
 import * as Location from 'expo-location';
@@ -137,24 +138,41 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
 
   const { getMapState, setMapState } = useMapState();
 
-  const [userCoord, setUserCoord] = useState<LonLat | null>(null);
-  const [locationAccuracy, setLocationAccuracy] = useState<number | null>(null);
-  const [childReady, setChildReady] = useState(false);
-  const [showInstructions, setShowInstructions] = useState(
-    enableAddressLookup && showAddressInstructions,
-  );
+  // The hint shows while address lookup asks for it, until the first tap on the
+  // map dismisses it. Turning either prop off and on again brings it back.
+  const [instructionsDismissed, setInstructionsDismissed] = useState(false);
+  const instructionsKey = `${enableAddressLookup}|${showAddressInstructions}`;
+  const [prevInstructionsKey, setPrevInstructionsKey] = useState(instructionsKey);
+  if (instructionsKey !== prevInstructionsKey) {
+    setPrevInstructionsKey(instructionsKey);
+    setInstructionsDismissed(false);
+  }
+  const showInstructions = enableAddressLookup && showAddressInstructions && !instructionsDismissed;
+
+  /**
+   * Messages sent before the document has said `ready` wait here. Readiness is
+   * a ref, written by the `ready` message and the WebView's detach, because it
+   * gates the bridge — not anything drawn.
+   */
   const pending = useRef<string[]>([]);
-  const mapInitialized = useRef(false);
+  const readyRef = useRef(false);
+  const hasCenteredOnce = useRef(false);
 
   // The OpenFreeMap liberty style ships layer filters that throw on null-numeric
   // tile properties (`Expected value to be of type number, but found null`). We
-  // fetch + harden it (sanitizeMapStyle) once and feed the WebView document the
-  // patched style OBJECT, so the WebView builds the map ONCE against the hardened
-  // style (no reload). `styleSettled` gates the WebView mount until the fetch
-  // resolves; on failure it settles to the raw URL so the map always renders
+  // fetch + harden it (sanitizeMapStyle) once per URL and feed the WebView
+  // document the patched style OBJECT, so the WebView builds the map ONCE
+  // against the hardened style (no reload). The WebView mounts once the query
+  // settles; on failure it settles to the raw URL so the map always renders
   // (worst case: the original noisy log returns, but it's the same map).
-  const [resolvedStyle, setResolvedStyle] = useState<string | StyleSpecification>(styleURL);
-  const [styleSettled, setStyleSettled] = useState(false);
+  const styleQuery = useQuery<string | StyleSpecification>({
+    queryKey: ['mapStyle', styleURL],
+    queryFn: () => fetchSanitizedMapStyle(styleURL).catch(() => styleURL),
+    staleTime: Number.POSITIVE_INFINITY,
+    retry: false,
+  });
+  const styleSettled = !styleQuery.isPending;
+  const resolvedStyle = styleQuery.data ?? styleURL;
 
   // Get saved map state if screenId is provided
   const savedState = screenId ? getMapState(screenId) : null;
@@ -183,72 +201,6 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
   const { t } = useTranslation();
   const clusterLabel = t('map.clusterLabel', { count: CLUSTER_COUNT_TOKEN });
 
-  // Fetch + sanitize the style once per URL, then mount the WebView with it.
-  // Settling to the raw URL on failure guarantees the map still renders.
-  useEffect(() => {
-    let cancelled = false;
-    setStyleSettled(false);
-    fetchSanitizedMapStyle(styleURL)
-      .then((style) => {
-        if (cancelled) return;
-        setResolvedStyle(style);
-      })
-      .catch(() => {
-        if (cancelled) return;
-        // Network/parse failure: fall back to the raw URL so the document still
-        // builds. No throw — the map must not fail to mount.
-        setResolvedStyle(styleURL);
-      })
-      .finally(() => {
-        if (!cancelled) setStyleSettled(true);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [styleURL]);
-
-  /**
-   * The user's own position, ONLY when permission has already been granted.
-   *
-   * This used to call `requestForegroundPermissionsAsync` in an effect, which
-   * meant opening Explore without initial coordinates showed the OS location
-   * prompt — a prompt nobody asked for, on a screen whose job is to show homes.
-   * Both #518 and #519 name this exact call site ("Suprimir los permisos
-   * solicitados por montaje"; "No hay permisos solicitados automáticamente
-   * desde Home, mapa u otros montajes de descubrimiento").
-   *
-   * It now READS the permission and stops when it is not granted. Asking is a
-   * separate, explicit action the user takes ("use my location" in the search
-   * bar's panel), routed through `useLocationScope` — the one place in the app
-   * allowed to prompt.
-   */
-  useEffect(() => {
-    if (!startFromCurrentLocation) return;
-
-    const getUserLocation = async () => {
-      try {
-        const { status } = await Location.getForegroundPermissionsAsync();
-        if (status !== 'granted') {
-          return;
-        }
-
-        // Get location with high accuracy and fresh data
-        const loc = await Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.High,
-          timeInterval: 10000,
-          distanceInterval: 10,
-        });
-
-        setLocationAccuracy(loc.coords.accuracy || null);
-        setUserCoord([loc.coords.longitude, loc.coords.latitude]);
-      } catch {
-        // Silently handle location errors
-      }
-    };
-
-    getUserLocation();
-  }, [startFromCurrentLocation]);
-
   // Generate HTML once with frozen initial coordinates to prevent iframe reloads
   const html = useMemo(
     () =>
@@ -265,260 +217,176 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
   );
 
   const webviewRef = useRef<WebView | null>(null);
-  const iframeRef = useRef<HTMLIFrameElement | null>(null);
 
-  // Memoize post function
   const reallyPost = useCallback((str: string) => {
-    if (Platform.OS === 'web' && iframeRef.current?.contentWindow) {
-      iframeRef.current.contentWindow.postMessage(str, '*');
-    } else {
-      webviewRef.current?.postMessage?.(str);
-      webviewRef.current?.injectJavaScript?.(
-        `window.dispatchEvent(new MessageEvent('message',{data:${JSON.stringify(str)}})); true;`,
-      );
-    }
+    webviewRef.current?.postMessage?.(str);
+    webviewRef.current?.injectJavaScript?.(
+      `window.dispatchEvent(new MessageEvent('message',{data:${JSON.stringify(str)}})); true;`,
+    );
   }, []);
 
   const post = useCallback(
     (payload: OutboundMapMessage) => {
       const str = JSON.stringify(payload);
-      if (childReady) {
+      if (readyRef.current) {
         reallyPost(str);
       } else {
         pending.current.push(str);
       }
     },
-    [childReady, reallyPost],
+    [reallyPost],
   );
 
+  /**
+   * The WebView IS the map instance, so its attach/detach is the map's
+   * lifecycle: on detach the document is gone, and a new one (a new style URL
+   * remounts it) must say `ready` again before anything is posted to it.
+   */
+  const attachWebView = useCallback((view: WebView | null) => {
+    webviewRef.current = view;
+    return () => {
+      webviewRef.current = null;
+      readyRef.current = false;
+    };
+  }, []);
+
+  /*
+   * The two effects left in this file push PROPS into the WebView document.
+   * The document is an imperative MapLibre instance behind a postMessage
+   * bridge: there is no declarative binding for its source data or its paint,
+   * and no event in this component coincides with a new marker set or a theme
+   * change — both simply arrive on a re-render. A native map component with
+   * declarative `markers` / paint props (a MapLibre React Native map rather than
+   * a WebView document) is what would retire them. `post` queues until the
+   * document is ready, so neither has to wait for readiness itself.
+   */
   useEffect(() => {
     if (paint === initialPaintRef.current) return;
     post({ type: 'setPaint', paint });
   }, [paint, post]);
 
-  const flushPending = useCallback(() => {
-    while (pending.current.length) {
-      reallyPost(pending.current.shift() as string);
-    }
-  }, [reallyPost]);
-
-  // Handle marker updates efficiently
+  // The marker set drawn is also the one kept for this screen's next mount.
   useEffect(() => {
-    if (childReady && mapInitialized.current && screenId) {
-      // Only update markers if they've actually changed
-      const currentState = getMapState(screenId);
-      const currentMarkers = currentState?.markers || [];
+    post({ type: 'setData', features: markers });
+    if (screenId && markers.length > 0) setMapState(screenId, { markers });
+  }, [markers, post, screenId, setMapState]);
 
-      const markersChanged =
-        markers.length !== currentMarkers.length ||
-        markers.some((marker, index) => {
-          const current = currentMarkers[index];
-          return (
-            !current ||
-            marker.id !== current.id ||
-            marker.coordinates[0] !== current.coordinates[0] ||
-            marker.coordinates[1] !== current.coordinates[1] ||
-            marker.priceLabel !== current.priceLabel
-          );
-        });
+  /**
+   * The user's own position, ONLY when permission has already been granted.
+   *
+   * This used to call `requestForegroundPermissionsAsync` in an effect, which
+   * meant opening Explore without initial coordinates showed the OS location
+   * prompt — a prompt nobody asked for, on a screen whose job is to show homes.
+   * Both #518 and #519 name this exact call site ("Suprimir los permisos
+   * solicitados por montaje"; "No hay permisos solicitados automáticamente
+   * desde Home, mapa u otros montajes de descubrimiento").
+   *
+   * It now READS the permission and stops when it is not granted. Asking is a
+   * separate, explicit action the user takes ("use my location" in the search
+   * bar's panel), routed through `useLocationScope` — the one place in the app
+   * allowed to prompt. It runs when the document reports `ready`, the moment
+   * there is a map to show the position on.
+   */
+  const showDevicePosition = async () => {
+    if (!startFromCurrentLocation) return;
+    try {
+      const { status } = await Location.getForegroundPermissionsAsync();
+      if (status !== 'granted') return;
 
-      if (markersChanged) {
-        post({ type: 'setData', features: markers });
+      // Get location with high accuracy and fresh data
+      const loc = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+        timeInterval: 10000,
+        distanceInterval: 10,
+      });
+      const userCoord: LonLat = [loc.coords.longitude, loc.coords.latitude];
+      const locationAccuracy = loc.coords.accuracy || null;
+
+      post({ type: 'setUserLocation', coordinates: userCoord });
+
+      // Only auto-center on user location if no specific initialCoordinates were provided
+      const hasSpecificInitialCoords =
+        initialCoordinates !== DEFAULT_CENTER &&
+        (initialCoordinates[0] !== DEFAULT_CENTER[0] ||
+          initialCoordinates[1] !== DEFAULT_CENTER[1]);
+
+      if (!hasCenteredOnce.current && !savedState && !hasSpecificInitialCoords) {
+        // If location accuracy is poor, use a lower zoom level to show a wider area
+        const zoomLevel =
+          locationAccuracy && locationAccuracy > 1000
+            ? Math.max(initialZoom, 10) // Lower zoom for poor accuracy
+            : Math.max(initialZoom, 14); // Higher zoom for good accuracy
+
+        post({ type: 'setView', center: userCoord, zoom: zoomLevel });
+        hasCenteredOnce.current = true;
       }
-    } else if (childReady && mapInitialized.current) {
-      // If no screenId, always update markers
-      post({ type: 'setData', features: markers });
+    } catch {
+      // Silently handle location errors
     }
-  }, [markers, childReady, post, screenId, getMapState]);
+  };
 
-  // Send markers when map becomes initialized
-  useEffect(() => {
-    if (childReady && mapInitialized.current && markers.length > 0) {
-      post({ type: 'setData', features: markers });
-    }
-  }, [childReady, markers, post]);
+  const handleMessage = (event: WebViewMessageEvent) => {
+    try {
+      const msg = JSON.parse(event.nativeEvent.data || '{}') as MapEvent;
 
-  // Fallback: Send markers after a delay if map doesn't initialize
-  useEffect(() => {
-    if (childReady && !mapInitialized.current && markers.length > 0) {
-      const timeoutId = setTimeout(() => {
-        mapInitialized.current = true; // Force initialization
-        post({ type: 'setData', features: markers });
-      }, 2000);
+      if (msg.type === 'ready') {
+        readyRef.current = true;
+        while (pending.current.length) {
+          reallyPost(pending.current.shift() as string);
+        }
 
-      return () => clearTimeout(timeoutId);
-    }
-  }, [childReady, markers, post]);
+        // Restore saved markers while this mount has none of its own yet. The
+        // document already opened at the saved camera (`initialCenterRef`).
+        if (markers.length === 0 && savedState?.markers?.length) {
+          post({ type: 'setData', features: savedState.markers });
+        }
 
-  // Save markers to state
-  useEffect(() => {
-    if (screenId && markers.length > 0) {
-      const currentState = getMapState(screenId);
-      const currentMarkers = currentState?.markers || [];
-
-      const markersChanged =
-        markers.length !== currentMarkers.length ||
-        markers.some((marker, index) => {
-          const current = currentMarkers[index];
-          return (
-            !current ||
-            marker.id !== current.id ||
-            marker.coordinates[0] !== current.coordinates[0] ||
-            marker.coordinates[1] !== current.coordinates[1] ||
-            marker.priceLabel !== current.priceLabel
-          );
-        });
-
-      if (markersChanged) {
-        setMapState(screenId, { markers });
+        void showDevicePosition();
+        return;
       }
-    }
-  }, [markers, screenId, setMapState, getMapState]);
 
-  // Handle user location centering
-  const hasCenteredOnce = useRef(false);
-
-  // Initialize instructions visibility based on address lookup mode
-  useEffect(() => {
-    if (showAddressInstructions && enableAddressLookup) {
-      setShowInstructions(true);
-    } else {
-      setShowInstructions(false);
-    }
-  }, [showAddressInstructions, enableAddressLookup]);
-
-  useEffect(() => {
-    if (!userCoord) return;
-
-    post({ type: 'setUserLocation', coordinates: userCoord });
-
-    // Only auto-center on user location if no specific initialCoordinates were provided
-    const hasSpecificInitialCoords =
-      initialCoordinates !== DEFAULT_CENTER &&
-      (initialCoordinates[0] !== DEFAULT_CENTER[0] || initialCoordinates[1] !== DEFAULT_CENTER[1]);
-
-    if (!hasCenteredOnce.current && !savedState && !hasSpecificInitialCoords) {
-      // If location accuracy is poor, use a lower zoom level to show a wider area
-      const zoomLevel =
-        locationAccuracy && locationAccuracy > 1000
-          ? Math.max(initialZoom, 10) // Lower zoom for poor accuracy
-          : Math.max(initialZoom, 14); // Higher zoom for good accuracy
-
-      post({ type: 'setView', center: userCoord, zoom: zoomLevel });
-      hasCenteredOnce.current = true;
-    }
-  }, [userCoord, post, initialZoom, savedState, locationAccuracy, initialCoordinates]);
-
-  // Memoize message handler
-  const handleMessage = useCallback(
-    (event: MessageEvent | WebViewMessageEvent) => {
-      try {
-        const rawData =
-          'data' in event && typeof event.data === 'string'
-            ? event.data
-            : 'nativeEvent' in event
-              ? event.nativeEvent.data
-              : undefined;
-        const msg = JSON.parse(rawData || '{}') as MapEvent;
-
-        if (msg.type === 'ready') {
-          setChildReady(true);
-          mapInitialized.current = true;
-          flushPending();
-
-          // Set the view if we have saved state (otherwise HTML already has correct coordinates)
-          if (savedState) {
-            post({
-              type: 'setView',
-              center: savedState.center,
-              zoom: savedState.zoom,
-              duration: 0,
-            });
-          }
-
-          // Restore saved markers
-          if (savedState?.markers && savedState.markers.length > 0) {
-            post({ type: 'setData', features: savedState.markers });
-          }
-
-          return;
-        }
-
-        if (msg.type === 'mapClick') {
-          // Hide instructions when user clicks on map (for address lookup)
-          if (enableAddressLookup && showInstructions) {
-            setShowInstructions(false);
-          }
-          onMapPress?.(msg);
-        }
-        if (msg.type === 'markerClick') onMarkerPress?.(msg);
-        if (msg.type === 'clusterClick') onClusterPress?.(msg);
-        if (msg.type === 'addressLookup' && onAddressSelect) {
-          onAddressSelect(msg.address, msg.coordinates);
-        }
-        if (msg.type === 'requestAddressLookup' && onAddressSelect) {
-          // Handle address lookup request using the TypeScript function
-          lookupAddressFromCoordinates(msg.coordinates)
-            .then((address) => {
-              if (address) {
-                onAddressSelect(address, msg.coordinates);
-              }
-            })
-            .catch(() => {
-              // Silently handle address lookup errors
-            });
-        }
-        if (msg.type === 'region') {
-          if (screenId) {
-            setMapState(screenId, {
-              center: msg.center,
-              zoom: msg.zoom,
-              bounds: msg.bounds,
-            });
-          }
-          // The document is the ONLY producer of this message and it always
-          // stamps a source (`buildMapDocument`, pinned by
-          // `__tests__/mapMoveSource.test.ts`). Normalising anyway means a
-          // payload this host cannot read is treated as "the app moved the
-          // camera" — the reading that changes nothing — rather than arming a
-          // button off a message that arrived malformed.
-          onRegionChange?.({ ...msg, source: msg.source === 'user' ? 'user' : 'programmatic' });
-        }
-      } catch {
-        // Silently handle message parsing errors
+      if (msg.type === 'mapClick') {
+        // Hide instructions when user clicks on map (for address lookup)
+        if (enableAddressLookup) setInstructionsDismissed(true);
+        onMapPress?.(msg);
       }
-    },
-    [
-      onMapPress,
-      onMarkerPress,
-      onClusterPress,
-      onAddressSelect,
-      onRegionChange,
-      screenId,
-      setMapState,
-      flushPending,
-      post,
-      savedState,
-      enableAddressLookup,
-      showInstructions,
-    ],
-  );
-
-  // Set up message listeners
-  useEffect(() => {
-    if (Platform.OS !== 'web') return;
-
-    window.addEventListener('message', handleMessage);
-    return () => {
-      window.removeEventListener('message', handleMessage);
-      mapInitialized.current = false;
-    };
-  }, [handleMessage]);
-
-  const handleNativeMessage = useCallback(
-    (event: WebViewMessageEvent) => handleMessage(event),
-    [handleMessage],
-  );
+      if (msg.type === 'markerClick') onMarkerPress?.(msg);
+      if (msg.type === 'clusterClick') onClusterPress?.(msg);
+      if (msg.type === 'addressLookup' && onAddressSelect) {
+        onAddressSelect(msg.address, msg.coordinates);
+      }
+      if (msg.type === 'requestAddressLookup' && onAddressSelect) {
+        // Handle address lookup request using the TypeScript function
+        lookupAddressFromCoordinates(msg.coordinates)
+          .then((address) => {
+            if (address) {
+              onAddressSelect(address, msg.coordinates);
+            }
+          })
+          .catch(() => {
+            // Silently handle address lookup errors
+          });
+      }
+      if (msg.type === 'region') {
+        if (screenId) {
+          setMapState(screenId, {
+            center: msg.center,
+            zoom: msg.zoom,
+            bounds: msg.bounds,
+          });
+        }
+        // The document is the ONLY producer of this message and it always
+        // stamps a source (`buildMapDocument`, pinned by
+        // `__tests__/mapMoveSource.test.ts`). Normalising anyway means a
+        // payload this host cannot read is treated as "the app moved the
+        // camera" — the reading that changes nothing — rather than arming a
+        // button off a message that arrived malformed.
+        onRegionChange?.({ ...msg, source: msg.source === 'user' ? 'user' : 'programmatic' });
+      }
+    } catch {
+      // Silently handle message parsing errors
+    }
+  };
 
   // Expose map API
   React.useImperativeHandle(
@@ -564,35 +432,10 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
     [post],
   );
 
-  if (Platform.OS === 'web') {
-    return (
-      <View style={{ flex: 1, ...style }}>
-        {showInstructions && enableAddressLookup && (
-          <View style={addressInstructionStyles.overlay}>
-            <Text style={addressInstructionStyles.text}>Tap on the map to select a location</Text>
-          </View>
-        )}
-        {/* Mount once the hardened style has settled so the document builds a
-            single time against the sanitized style (no reload). */}
-        {styleSettled ? (
-          <iframe
-            ref={iframeRef}
-            title="map"
-            srcDoc={html}
-            style={{ border: '0', width: '100%', height: '100%' }}
-            sandbox="allow-scripts allow-same-origin"
-            onLoad={() => {
-              mapInitialized.current = false;
-            }}
-          />
-        ) : null}
-      </View>
-    );
-  }
-
+  // Web resolves `Map.web.tsx` instead of this file, so this is the native map.
   return (
     <View style={[{ flex: 1 }, style]}>
-      {showInstructions && enableAddressLookup && (
+      {showInstructions && (
         <View style={addressInstructionStyles.overlay}>
           <Text style={addressInstructionStyles.text}>Tap on the map to select a location</Text>
         </View>
@@ -601,10 +444,10 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
           single document against the sanitized style (no reload). */}
       {styleSettled ? (
         <WebView
-          ref={webviewRef}
+          ref={attachWebView}
           originWhitelist={['*']}
           source={{ html, baseUrl: MAP_DOCUMENT_BASE_URL }}
-          onMessage={handleNativeMessage}
+          onMessage={handleMessage}
           javaScriptEnabled
           domStorageEnabled
           allowFileAccess

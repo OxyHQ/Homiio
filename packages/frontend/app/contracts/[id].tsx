@@ -20,10 +20,11 @@
  * surfaces actions the backend would accept.
  */
 import React, { useCallback, useMemo } from 'react';
-import { Image, ScrollView, StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Image, StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
+import { PageHeader } from '@oxy.so/bloom/page-header';
 import * as DocumentPicker from 'expo-document-picker';
 import { toast } from '@oxy.so/bloom/toast';
 
@@ -34,7 +35,6 @@ import { Loading } from '@oxy.so/bloom/loading';
 import { LeaseSummaryCard } from '@oxy.so/bloom/tenancy';
 import { LeaseStatus } from '@homiio/shared-types';
 
-import { Header } from '@/components/Header';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { ContractStatusBadge } from '@/components/ContractStatusBadge';
 import { leaseSummaryProps, signingSubject } from '@/components/tenancy/leaseTenancy';
@@ -44,7 +44,6 @@ import {
   LeasePaymentsSection,
 } from '@/components/tenancy/LeaseSections';
 import { useLeaseFormatContext } from '@/components/tenancy/useLeaseFormatContext';
-import { useIsDesktop } from '@/hooks/useOptimizedMediaQuery';
 import { confirm } from '@oxy.so/bloom/surfaces';
 import { useProperty } from '@/hooks';
 import { useProfile } from '@/context/ProfileContext';
@@ -75,7 +74,6 @@ export default function ContractDetailScreen() {
   const id = typeof params.id === 'string' ? params.id : params.id?.[0];
 
   const { colors } = useTheme();
-  const isDesktop = useIsDesktop();
   const leaseQuery = useLease(id);
   const lease = leaseQuery.data;
   const leases = useMemo(() => [lease], [lease]);
@@ -236,17 +234,18 @@ export default function ContractDetailScreen() {
   }, [id, uploadMutation, t]);
 
   const header = (
-    <Header
-      options={{
-        showBackButton: true,
-        title: t('contracts.detail.title'),
-      }}
+    <PageHeader
+      title={t('contracts.detail.title')}
+      titleAlign="center"
+      leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+      onBack={router.canGoBack() ? router.back : undefined}
+      backLabel={t('goBack')}
     />
   );
 
   if (!id) {
     return (
-      <View style={[styles.root, { backgroundColor: colors.background }]}>
+      <>
         {header}
         <View style={styles.centerWrap}>
           <ErrorState
@@ -257,24 +256,24 @@ export default function ContractDetailScreen() {
             onRetry={() => router.back()}
           />
         </View>
-      </View>
+      </>
     );
   }
 
   if (leaseQuery.isPending) {
     return (
-      <View style={[styles.root, { backgroundColor: colors.background }]}>
+      <>
         {header}
         <View style={styles.centerWrap}>
           <Loading variant="spinner" size="md" />
         </View>
-      </View>
+      </>
     );
   }
 
   if (leaseQuery.isError || !lease) {
     return (
-      <View style={[styles.root, { backgroundColor: colors.background }]}>
+      <>
         {header}
         <View style={styles.centerWrap}>
           <ErrorState
@@ -284,7 +283,7 @@ export default function ContractDetailScreen() {
             onRetry={() => router.back()}
           />
         </View>
-      </View>
+      </>
     );
   }
 
@@ -371,8 +370,6 @@ export default function ContractDetailScreen() {
     ? [property.address.cityName, property.address.countryName].filter(Boolean).join(', ')
     : '';
 
-  const history = <LeaseHistorySection lease={lease} format={format} compact={isDesktop} />;
-
   const thumbnail = imageSource ? (
     <View style={[styles.thumbWrap, { backgroundColor: colors.backgroundSecondary }]}>
       <Image source={imageSource} style={styles.thumb} resizeMode="cover" />
@@ -380,7 +377,7 @@ export default function ContractDetailScreen() {
   ) : null;
 
   const main = (
-    <View style={styles.column}>
+    <View className="gap-4 lg:min-w-0 lg:flex-1">
       <View style={styles.statusRow}>
         <ContractStatusBadge status={lease.status} />
       </View>
@@ -391,7 +388,9 @@ export default function ContractDetailScreen() {
         actions={actions}
       />
 
-      {isDesktop ? null : history}
+      <View className="lg:hidden">
+        <LeaseHistorySection lease={lease} format={format} />
+      </View>
 
       <LeasePaymentsSection lease={lease} format={format} />
 
@@ -421,40 +420,25 @@ export default function ContractDetailScreen() {
   );
 
   return (
-    <View style={[styles.root, { backgroundColor: colors.background }]}>
+    <>
       {header}
-      <SafeAreaView edges={['bottom']} style={styles.safeArea}>
-        <ScrollView contentContainerStyle={styles.content}>
-          {isDesktop ? (
-            <View style={styles.wideRow}>
-              {main}
-              <View style={styles.aside}>
-                {thumbnail}
-                {history}
-              </View>
-            </View>
-          ) : (
-            <>
-              {thumbnail}
-              {main}
-            </>
-          )}
-        </ScrollView>
-      </SafeAreaView>
-    </View>
+      <View style={styles.content}>
+        <View className="gap-4 lg:flex-row lg:items-start lg:gap-6">
+          {thumbnail ? <View className="lg:hidden">{thumbnail}</View> : null}
+          {main}
+          <View style={styles.aside} className="hidden lg:flex">
+            {thumbnail}
+            <LeaseHistorySection lease={lease} format={format} compact />
+          </View>
+        </View>
+      </View>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-  },
-  safeArea: {
-    flex: 1,
-  },
   content: {
     padding: spacing.lg,
-    gap: spacing.lg,
     paddingBottom: spacing['4xl'],
   },
   centerWrap: {
@@ -462,16 +446,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: spacing['2xl'],
-  },
-  wideRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing['2xl'],
-  },
-  column: {
-    flex: 1,
-    minWidth: 0,
-    gap: spacing.lg,
   },
   aside: {
     width: 340,

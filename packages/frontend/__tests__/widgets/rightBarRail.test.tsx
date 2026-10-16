@@ -30,12 +30,6 @@ jest.mock('expo-router', () => ({
   usePathname: () => mockUsePathname(),
 }));
 
-// The rail is desktop-only; this file is not about the breakpoint.
-jest.mock('@/hooks/useOptimizedMediaQuery', () => ({
-  useIsRightBarVisible: () => true,
-  useIsLargeDesktop: () => true,
-}));
-
 jest.mock('@/store/uiStore', () => ({
   useUIStore: (selector: (state: { sindiPanelOpen: boolean }) => unknown) =>
     selector({ sindiPanelOpen: false }),

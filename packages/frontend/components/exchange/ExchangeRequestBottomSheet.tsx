@@ -450,5 +450,3 @@ const styles = StyleSheet.create({
     gap: 2,
   },
 });
-
-export default ExchangeRequestBottomSheet;

@@ -1,7 +1,6 @@
 import { api } from '@/utils/api';
 import {
   type Profile,
-  type PersonalProfile,
   type UpdateProfileData,
   EmploymentStatus,
   LeaseDuration,
@@ -11,7 +10,7 @@ import {
   PriceUnit,
 } from '@homiio/shared-types';
 
-export type { Profile, PersonalProfile, UpdateProfileData };
+export type { Profile, UpdateProfileData };
 
 export {
   EmploymentStatus,

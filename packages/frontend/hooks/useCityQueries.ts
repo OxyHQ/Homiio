@@ -9,7 +9,7 @@
  */
 
 import { useQuery } from '@tanstack/react-query';
-import type { City, CityFilters, CityPropertiesResponse } from '@homiio/shared-types';
+import type { City, CityFilters } from '@homiio/shared-types';
 import { cityService } from '@/services/cityService';
 
 /** Cities change slowly (seed-time geo + counts), so cache them generously. */
@@ -17,21 +17,12 @@ const CITIES_STALE_TIME = 1000 * 60 * 10;
 const CITIES_GC_TIME = 1000 * 60 * 60;
 
 /** Stable query-key roots so related caches invalidate together. */
-export const cityQueryKeys = {
+const cityQueryKeys = {
   all: ['cities'] as const,
-  list: (filters: CityFilters) => ['cities', 'list', filters] as const,
   popular: (limit: number, filters: CityFilters) =>
     ['cities', 'popular', { limit, ...filters }] as const,
   byId: (id: string) => ['cities', 'detail', id] as const,
-  properties: (id: string, limit: number) =>
-    ['cities', 'detail', id, 'properties', { limit }] as const,
 };
-
-/** Options accepted when listing a city's properties. */
-export interface CityPropertiesOptions {
-  limit?: number;
-  sort?: string;
-}
 
 /**
  * Popular cities (by property count), optionally narrowed to a country/region.
@@ -66,22 +57,6 @@ export function usePopularCities(limit = 8, filters: CityFilters = {}) {
 }
 
 /**
- * A filtered list of cities. Backed by `GET /api/cities` (server-side filtering
- * by `countryId`/`countryCode`/`regionId`/`search`).
- */
-export function useCities(filters: CityFilters = {}) {
-  return useQuery<City[]>({
-    queryKey: cityQueryKeys.list(filters),
-    queryFn: async () => {
-      const res = await cityService.getCities(filters);
-      return res.data ?? [];
-    },
-    staleTime: CITIES_STALE_TIME,
-    gcTime: CITIES_GC_TIME,
-  });
-}
-
-/**
  * A single city by id, with its populated country/region and cover image.
  * Backed by `GET /api/cities/:id`. Disabled when no id is supplied.
  */
@@ -95,28 +70,6 @@ export function useCity(cityId: string | undefined) {
     },
     enabled: Boolean(cityId),
     staleTime: CITIES_STALE_TIME,
-    gcTime: CITIES_GC_TIME,
-  });
-}
-
-/**
- * Published properties in a city (resolved relationally by `Address.cityId`),
- * each serialized with its resolved geo display names. Backed by
- * `GET /api/cities/:id/properties`. Disabled when no id is supplied.
- */
-export function usePropertiesByCity(
-  cityId: string | undefined,
-  options: CityPropertiesOptions = {},
-) {
-  const limit = options.limit ?? 50;
-  return useQuery<CityPropertiesResponse | null>({
-    queryKey: cityQueryKeys.properties(cityId ?? '', limit),
-    queryFn: async () => {
-      if (!cityId) return null;
-      return cityService.getPropertiesByCity(cityId, { limit, sort: options.sort ?? 'createdAt' });
-    },
-    enabled: Boolean(cityId),
-    staleTime: 1000 * 60,
     gcTime: CITIES_GC_TIME,
   });
 }

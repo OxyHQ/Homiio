@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getData, storeData } from '@/utils/storage';
-import { logger } from '@/utils/logger';
 import {
   ACTIVE_SECTION_STORAGE_KEY,
   PERSISTABLE_SECTIONS,
@@ -14,45 +14,36 @@ interface UseProfileEditTabsResult {
   tabs: ProfileTab[];
 }
 
+const savedSectionKey = ['local-storage', ACTIVE_SECTION_STORAGE_KEY] as const;
+
+const isPersistableSection = (section: string | null | undefined): section is string =>
+  Boolean(section) && (PERSISTABLE_SECTIONS as readonly string[]).includes(section as string);
+
 export function useProfileEditTabs(canPersist: boolean): UseProfileEditTabsResult {
-  const [activeSection, setActiveSectionState] = useState<string>('personal');
+  const queryClient = useQueryClient();
+  // The tab the user last left the editor on is an async storage read, so a
+  // query loads it; `getData` already turns a read failure into `null`.
+  const { data: savedSection } = useQuery({
+    queryKey: savedSectionKey,
+    queryFn: () => getData<string>(ACTIVE_SECTION_STORAGE_KEY),
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+  // A tab picked on this visit wins; until then the saved one (once loaded).
+  const [chosenSection, setChosenSection] = useState<string | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
-    const restore = async () => {
-      try {
-        const savedTab = await getData<string>(ACTIVE_SECTION_STORAGE_KEY);
-        if (cancelled) return;
-        if (savedTab && (PERSISTABLE_SECTIONS as readonly string[]).includes(savedTab)) {
-          setActiveSectionState(savedTab);
-        } else {
-          setActiveSectionState('personal');
-        }
-      } catch (error) {
-        logger.error('Error loading saved tab state', error);
-        if (!cancelled) {
-          setActiveSectionState('personal');
-        }
-      }
-    };
-
-    restore();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const activeSection =
+    chosenSection ?? (isPersistableSection(savedSection) ? savedSection : 'personal');
 
   const setActiveSection = useCallback(
     (section: string) => {
-      setActiveSectionState(section);
+      setChosenSection(section);
       if (canPersist) {
+        queryClient.setQueryData(savedSectionKey, section);
         storeData(ACTIVE_SECTION_STORAGE_KEY, section);
       }
     },
-    [canPersist],
+    [canPersist, queryClient],
   );
 
-  const tabs = useMemo(() => PERSONAL_TABS, []);
-
-  return { activeSection, setActiveSection, tabs };
+  return { activeSection, setActiveSection, tabs: PERSONAL_TABS };
 }

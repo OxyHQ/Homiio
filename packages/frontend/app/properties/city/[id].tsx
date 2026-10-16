@@ -1,14 +1,15 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { View, Text, StyleSheet, Platform, ScrollView, type ViewStyle } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 import { useTranslation } from 'react-i18next';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { Card } from '@oxy.so/bloom/card';
 import { Loading } from '@oxy.so/bloom/loading';
+import { PageHeader } from '@oxy.so/bloom/page-header';
 import { colors } from '@/styles/colors';
 import { spacing } from '@/constants/styles';
 
-import { Header } from '@/components/Header';
 import { PropertyResultsGrid } from '@/components/ui/PropertyResultsGrid';
 import { PropertyResultsGridSkeleton } from '@/components/ui/PropertyResultsGridSkeleton';
 import { LoadMoreSentinel } from '@/components/common/LoadMoreSentinel';
@@ -20,7 +21,6 @@ import {
   type CityPropertyFilters,
   type CitySortBy,
 } from '@/hooks/useInfiniteCityProperties';
-import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import { cityCountryName, getCityImageSource } from '@/utils/cityDisplay';
 import { LinearGradient } from 'expo-linear-gradient';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -55,7 +55,6 @@ export default function CityPropertiesPage() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const cityId = typeof id === 'string' ? id : undefined;
-  const [headerHeight, setHeaderHeight] = useState(0);
 
   // City detail (hero + stats) from the DB-owned relational geo layer.
   const { data: city, isLoading: cityLoading, isError: cityError } = useCity(cityId);
@@ -88,17 +87,13 @@ export default function CityPropertiesPage() {
     refetch,
   } = useInfiniteCityProperties(cityId, filters.sortBy, propertyFilters);
 
-  // Shared infinite-scroll primitive: native fires `onScroll` end-detect, web
-  // uses the `<LoadMoreSentinel>` at the grid's end.
+  // The shell owns the scroll: the `<LoadMoreSentinel>` at the grid's end
+  // triggers the guarded loader.
   const handleEndReached = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) {
       void fetchNextPage();
     }
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
-  const { onScroll: handleListScroll } = useInfiniteScroll({
-    onEndReached: handleEndReached,
-    enabled: hasNextPage,
-  });
 
   const handleApplyFilters = useCallback(
     (next: CityFilterValues) => setFilters((prev) => ({ ...prev, ...next })),
@@ -121,51 +116,39 @@ export default function CityPropertiesPage() {
 
   if (cityLoading) {
     return (
-      <View style={styles.safeArea}>
-        <View
-          style={styles.stickyHeaderWrapper}
-          onLayout={(e) => setHeaderHeight(e.nativeEvent.layout.height)}
-        >
-          <Header
-            options={{
-              showBackButton: true,
-              title: t('app.loading'),
-            }}
-          />
+      <>
+        <PageHeader
+          title={t('app.loading')}
+          titleAlign="center"
+          leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+          onBack={router.canGoBack() ? router.back : undefined}
+          backLabel={t('goBack')}
+        />
+        <View style={styles.loadingContainer}>
+          <Loading variant="spinner" size="lg" text={t('properties.city.loadingProperties')} />
         </View>
-        <View style={{ paddingTop: headerHeight, flex: 1 }}>
-          <View style={styles.loadingContainer}>
-            <Loading variant="spinner" size="lg" text={t('properties.city.loadingProperties')} />
-          </View>
-        </View>
-      </View>
+      </>
     );
   }
 
   if (cityError || !city) {
     return (
-      <View style={styles.safeArea}>
-        <View
-          style={styles.stickyHeaderWrapper}
-          onLayout={(e) => setHeaderHeight(e.nativeEvent.layout.height)}
-        >
-          <Header
-            options={{
-              showBackButton: true,
-              title: t('common.error'),
-            }}
-          />
-        </View>
-        <View style={{ paddingTop: headerHeight, flex: 1 }}>
-          <EmptyState
-            icon={RiErrorWarningFill}
-            title={t('properties.city.notFound')}
-            actionText={t('common.goBack')}
-            actionIcon={RiArrowLeftLine}
-            onAction={() => router.back()}
-          />
-        </View>
-      </View>
+      <>
+        <PageHeader
+          title={t('common.error')}
+          titleAlign="center"
+          leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+          onBack={router.canGoBack() ? router.back : undefined}
+          backLabel={t('goBack')}
+        />
+        <EmptyState
+          icon={RiErrorWarningFill}
+          title={t('properties.city.notFound')}
+          actionText={t('common.goBack')}
+          actionIcon={RiArrowLeftLine}
+          onAction={() => router.back()}
+        />
+      </>
     );
   }
 
@@ -208,25 +191,15 @@ export default function CityPropertiesPage() {
   };
 
   return (
-    <View style={styles.safeArea}>
-      <View
-        style={styles.stickyHeaderWrapper}
-        onLayout={(e) => setHeaderHeight(e.nativeEvent.layout.height)}
-      >
-        <Header
-          options={{
-            showBackButton: true,
-            title: city?.name || '',
-          }}
-        />
-      </View>
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={{ paddingTop: headerHeight, paddingBottom: spacing['4xl'] }}
-        onScroll={handleListScroll}
-        scrollEventThrottle={16}
-        showsVerticalScrollIndicator={false}
-      >
+    <>
+      <PageHeader
+        title={city.name}
+        titleAlign="center"
+        leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+        onBack={router.canGoBack() ? router.back : undefined}
+        backLabel={t('goBack')}
+      />
+      <View style={styles.content}>
         {/* Hero Section — DB-stored cover image (self-hosted) behind a scrim,
             falling back to a brand gradient when the city has no cover image. */}
         <View style={styles.heroSection}>
@@ -296,25 +269,19 @@ export default function CityPropertiesPage() {
 
           <View style={styles.propertiesList}>{propertiesBody()}</View>
         </View>
-      </ScrollView>
-    </View>
+      </View>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: colors.background,
+  content: {
+    paddingBottom: spacing['4xl'],
   },
-  scroll: Platform.select<ViewStyle>({
-    web: { flex: 1, overflow: 'auto' } as unknown as ViewStyle,
-    default: { flex: 1 },
-  }) as ViewStyle,
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: colors.background,
   },
 
   // Hero Section
@@ -417,13 +384,5 @@ const styles = StyleSheet.create({
   },
   nextPageSkeleton: {
     marginTop: spacing.lg,
-  },
-  stickyHeaderWrapper: {
-    zIndex: 100,
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: colors.primaryLight,
   },
 });

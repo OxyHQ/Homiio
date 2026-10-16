@@ -402,24 +402,6 @@ export function getPropertyTitle(property: Property, format: TitleFormat = 'defa
 }
 
 /**
- * Get a display-friendly property title for UI components
- * @param property - Property object
- * @returns The property title for display
- */
-export function getDisplayPropertyTitle(property: Property): string {
-  return getPropertyTitle(property, 'short');
-}
-
-/**
- * Get a detailed property title for property detail pages
- * @param property - Property object
- * @returns The detailed property title
- */
-export function getDetailedPropertyTitle(property: Property): string {
-  return getPropertyTitle(property, 'large');
-}
-
-/**
  * Get the single cover image source for a property, falling back to the bundled
  * placeholder when no usable image is available. Suitable directly as an
  * `Image`/`expo-image` `source` prop.
@@ -487,7 +469,7 @@ export function getPropertyImageSource(
  * @param variant - Optional Sharp rendition for every entry (see
  *   {@link getPropertyImageSource}).
  */
-export function getPropertyImageSources(
+function getPropertyImageSources(
   images: Property['images'] | (string | PropertyImage)[] | undefined,
   coverIndex?: number,
   variant?: ImageVariantName,

@@ -10,8 +10,6 @@
 import api, { ApiError } from '@/utils/api';
 import type { NeighborhoodMetrics } from '@homiio/shared-types';
 
-export type { NeighborhoodMetrics };
-
 /** Envelope shape returned by the single-neighborhood endpoints. */
 interface SingleEnvelope {
   success?: boolean;
@@ -24,7 +22,7 @@ interface ListEnvelope {
   data?: NeighborhoodMetrics[];
 }
 
-export interface NeighborhoodSearchFilters {
+interface NeighborhoodSearchFilters {
   /** City id or name to scope the search. */
   city?: string;
   /** Free-text neighborhood-name filter. */
@@ -82,15 +80,6 @@ class NeighborhoodService {
     });
     return response.data.data ?? [];
   }
-
-  /** A city's neighborhoods ranked by real listing count. */
-  async getPopular(city: string, limit = 10): Promise<NeighborhoodMetrics[]> {
-    const response = await api.get<ListEnvelope>('/api/neighborhoods/popular', {
-      params: { city, limit },
-    });
-    return response.data.data ?? [];
-  }
 }
 
 export const neighborhoodService = new NeighborhoodService();
-export default neighborhoodService;

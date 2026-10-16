@@ -1,5 +1,6 @@
 import type React from 'react';
-import { createContext, useContext, useEffect, useMemo } from 'react';
+import { createContext, useContext, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useOxy } from '@oxy.so/services';
 import { useProfileStore } from '@/store/profileStore';
 import type { Profile } from '@/services/profileService';
@@ -15,32 +16,32 @@ const ProfileContext = createContext<ProfileContextType | undefined>(undefined);
 
 export function ProfileProvider({ children }: { children: React.ReactNode }) {
   const { oxyServices, activeSessionId, isAuthenticated } = useOxy();
-  // SELECTORS, not `useProfileStore()`. Subscribing to the whole store re-renders
-  // this provider on every `set()` — including the `set({ isLoading: true })`
-  // that `fetchProfile` issues synchronously, which is the cascading render the
-  // effect below was reported for. Nothing here reads `isLoading`, so selecting
-  // only what is used removes the re-render rather than hiding it.
-  const profile = useProfileStore((s) => s.profile);
-  const setProfile = useProfileStore((s) => s.setProfile);
-  const fetchProfile = useProfileStore((s) => s.fetchProfile);
+  // SELECTOR, not `useProfileStore()`: nothing here reads `isLoading`, so the
+  // `set({ isLoading: true })` each fetch issues must not re-render the provider.
+  const storedProfile = useProfileStore((s) => s.profile);
+  const signedIn = Boolean(isAuthenticated && oxyServices && activeSessionId);
 
-  useEffect(() => {
-    let mounted = true;
-
-    if (isAuthenticated && oxyServices && activeSessionId) {
-      fetchProfile().catch((loadError) => {
-        if (mounted) {
+  // Loading the signed-in user's profile is a fetch, so React Query owns WHEN
+  // it happens (once per session, keyed on it). The store's `fetchProfile`
+  // stays the mechanism because other screens refresh and update the same
+  // store entry; the query is what triggers it.
+  const sessionProfile = useQuery({
+    queryKey: ['profile', 'me', activeSessionId ?? null],
+    queryFn: () =>
+      useProfileStore
+        .getState()
+        .fetchProfile()
+        .catch((loadError: unknown) => {
           logger.error('ProfileContext: fetchProfile failed', loadError);
-        }
-      });
-    } else if (!isAuthenticated) {
-      setProfile(null);
-    }
+          throw loadError;
+        }),
+    enabled: signedIn,
+  });
 
-    return () => {
-      mounted = false;
-    };
-  }, [isAuthenticated, oxyServices, activeSessionId, fetchProfile, setProfile]);
+  // The store entry only belongs to this session once this session's fetch has
+  // landed; until then (and whenever signed out) there is no profile, so a
+  // previous account's profile can never show through.
+  const profile = signedIn && sessionProfile.data !== undefined ? storedProfile : null;
 
   const hasProfile = profile !== null;
 

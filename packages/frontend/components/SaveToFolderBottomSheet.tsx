@@ -9,7 +9,7 @@
  * as `FolderColorSwatches` (with `FolderEmojiChips`) so the Saved screen's
  * "New folder" dialog and the folder edit screen draw the same ones.
  */
-import React, { useCallback, useContext, useEffect, useState } from 'react';
+import React, { useCallback, useContext, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -123,7 +123,7 @@ export function FolderColorSwatches({ value, onChange, disabled }: FolderColorSw
   );
 }
 
-export function SaveToFolderBottomSheet({
+function SaveToFolderBottomSheet({
   propertyId,
   propertyTitle,
   property,
@@ -132,7 +132,7 @@ export function SaveToFolderBottomSheet({
 }: SaveToFolderBottomSheetProps) {
   const { t } = useTranslation();
   const { colors: theme } = useTheme();
-  const { folders, isLoading, loadFolders } = useSavedPropertiesContext();
+  const { folders, isLoading } = useSavedPropertiesContext();
   const queryClient = useQueryClient();
 
   const [showCreateFolder, setShowCreateFolder] = useState(false);
@@ -166,10 +166,6 @@ export function SaveToFolderBottomSheet({
       toast.error(t('saved.toast.folderCreateFailed'));
     },
   });
-
-  useEffect(() => {
-    loadFolders();
-  }, [loadFolders]);
 
   const handleSaveToFolder = useCallback(
     async (folderId: string | null) => {
@@ -402,13 +398,15 @@ export function useOpenSaveToFolderSheet(): (
   propertyId: string,
 ) => Promise<void> {
   const { openBottomSheet, closeBottomSheet } = useContext(BottomSheetContext);
-  const { savePropertyToFolder, isPropertySaved } = useSavedPropertiesContext();
+  const { savePropertyToFolder, isPropertySaved, loadFolders } = useSavedPropertiesContext();
 
   return useCallback(
     async (property: Property, propertyId: string) => {
       if (!isPropertySaved(propertyId)) {
         await savePropertyToFolder(propertyId, null, property).catch(() => undefined);
       }
+      // Opening the sheet is what asks for fresh folder counts.
+      void loadFolders();
       openBottomSheet(
         <SaveToFolderBottomSheet
           propertyId={propertyId}
@@ -420,6 +418,6 @@ export function useOpenSaveToFolderSheet(): (
         />,
       );
     },
-    [openBottomSheet, closeBottomSheet, savePropertyToFolder, isPropertySaved],
+    [openBottomSheet, closeBottomSheet, savePropertyToFolder, isPropertySaved, loadFolders],
   );
 }

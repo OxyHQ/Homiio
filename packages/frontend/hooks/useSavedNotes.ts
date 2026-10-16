@@ -47,5 +47,3 @@ export function useSavedNotesMutation() {
     },
   });
 }
-
-export default useSavedNotesMutation;

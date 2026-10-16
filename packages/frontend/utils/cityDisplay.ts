@@ -26,7 +26,7 @@ function isNamedRef(value: unknown): value is { name: string } {
 }
 
 /** The city's populated region, when `regionId` was expanded. */
-export function cityRegion(city: City | undefined): Region | undefined {
+function cityRegion(city: City | undefined): Region | undefined {
   if (city && isNamedRef(city.regionId)) return city.regionId as Region;
   return undefined;
 }

@@ -24,7 +24,7 @@ export interface ListExchangeRequestsParams {
   limit?: number;
 }
 
-export interface ExchangePagination {
+interface ExchangePagination {
   page: number;
   limit: number;
   total: number;
@@ -34,18 +34,6 @@ export interface ExchangePagination {
 export interface ExchangeRequestListResponse {
   items: ExchangeRequest[];
   pagination: ExchangePagination;
-}
-
-/** Aggregate trust meta returned alongside a profile's exchange reviews. */
-export interface ProfileExchangeReviewsMeta {
-  averageRating: number;
-  reviewCount: number;
-}
-
-export interface ProfileExchangeReviewsResponse {
-  items: ExchangeReview[];
-  pagination: ExchangePagination;
-  meta: ProfileExchangeReviewsMeta;
 }
 
 export interface CreateExchangeReviewBody {
@@ -137,32 +125,6 @@ class ExchangeService {
     const response = await api.get<ApiResponse<ExchangeReview[]>>(`${this.baseUrl}/${id}/reviews`);
     return response.data.data ?? [];
   }
-
-  /**
-   * Reviews where a profile is the SUBJECT (trust signal), paginated, with an
-   * aggregate average rating + count carried in `meta`.
-   */
-  async getProfileReviews(
-    oxyUserId: string,
-    params: { page?: number; limit?: number } = {},
-  ): Promise<ProfileExchangeReviewsResponse> {
-    const response = await api.get<{
-      data?: ExchangeReview[];
-      pagination?: ExchangePagination;
-      meta?: Partial<ProfileExchangeReviewsMeta>;
-    }>(`/api/profiles/oxy/${encodeURIComponent(oxyUserId)}/exchange-reviews`, {
-      params: { page: params.page, limit: params.limit },
-    });
-    const items = response.data.data ?? [];
-    const pagination = response.data.pagination ?? emptyPagination(items.length);
-    const meta: ProfileExchangeReviewsMeta = {
-      averageRating: response.data.meta?.averageRating ?? 0,
-      reviewCount: response.data.meta?.reviewCount ?? pagination.total,
-    };
-    return { items, pagination, meta };
-  }
 }
 
 export const exchangeService = new ExchangeService();
-
-export default exchangeService;

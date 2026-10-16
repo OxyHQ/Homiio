@@ -109,5 +109,3 @@ const styles = {
     default: {},
   }),
 };
-
-export default PropertyActionBar;

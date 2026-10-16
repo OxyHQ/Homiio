@@ -1,20 +1,20 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { View, ScrollView, Platform, KeyboardAvoidingView } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { View } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { Header } from '@/components/Header';
 import { useReferralStore } from '@/store/referralStore';
 import { useCreatePropertyFormStore } from '@/store/createPropertyFormStore';
 import { Admonition } from '@oxy.so/bloom/admonition';
+import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { Button } from '@oxy.so/bloom/button';
 import { RiArrowLeftLine } from '@oxy.so/bloom/icons';
 import { Loading } from '@oxy.so/bloom/loading';
+import { PageHeader } from '@oxy.so/bloom/page-header';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { toast } from '@oxy.so/bloom/toast';
 import { WizardFooter, WizardProgress, type WizardStep } from '@oxy.so/bloom/wizard';
 import type { GeocodedAddress } from '@/components/Map';
 import { useHasRightBar } from '@/components/RightBar';
-import { useIsRightBarVisible } from '@/hooks/useOptimizedMediaQuery';
 import { usePropertyCreateForm } from '@/hooks/usePropertyCreateForm';
 import { useCreatePropertyWizard } from '@/hooks/useCreatePropertyWizard';
 import { logger } from '@/utils/logger';
@@ -37,9 +37,9 @@ import {
  * `buildPropertyPayload`'s, unchanged). Each step is a co-located component
  * under `components/property/create`.
  *
- * Frame: `WizardProgress` names the step at the top of the scroll, and
- * `WizardFooter` (Back / Next, Publish on the last step) sits after the scroll
- * view, so it stays put on native and is sticky on web. The live preview and
+ * Frame: `WizardProgress` names the step at the top of the page, and
+ * `WizardFooter` (Back / Next, Publish on the last step) follows the step
+ * content; on web it is sticky to the bottom of the document scroll. The live preview and
  * the quality checklist are the right rail's (`PropertyPreviewWidget`); below
  * the rail's breakpoint the Preview step draws them.
  *
@@ -59,23 +59,18 @@ export default function CreatePropertyScreen() {
   const router = useRouter();
   const { id, ref } = useLocalSearchParams();
   const propertyId = typeof id === 'string' ? id : undefined;
-  const scrollRef = useRef<ScrollView | null>(null);
 
-  // Capture a partner referral code carried on the create-property link
-  // (`…/properties/create?ref=<code>`) into the persisted referral store. This
-  // is an external-store write (not React state of this component), so doing it
-  // in a `useMemo` keyed on the param is effect-free and runs only when the
-  // inbound `ref` actually changes — no `useEffect` needed. The store setter
-  // no-ops on a blank value, so navigating here without a `ref` never clears a
-  // previously captured code. Only meaningful on a new listing (the param is
-  // never present in edit mode), so attribution applies to the property the
-  // referral was for.
+  // A partner referral code carried on the create-property link
+  // (`…/properties/create?ref=<code>`) is captured into the persisted referral
+  // store when the host acts on the flow — advancing a step, saving a draft or
+  // publishing — so the submit (which reads the store) attributes the listing,
+  // and an interrupted flow finished later still does. The store setter no-ops
+  // on a blank value, so acting here without a `ref` never clears a previously
+  // captured code. New listings only (the param is never present in edit mode).
   const referralParam = Array.isArray(ref) ? ref[0] : ref;
-  useMemo(() => {
-    if (!propertyId) {
-      useReferralStore.getState().setReferralCode(referralParam);
-    }
-  }, [referralParam, propertyId]);
+  const captureReferral = useCallback(() => {
+    if (!propertyId) useReferralStore.getState().setReferralCode(referralParam);
+  }, [propertyId, referralParam]);
 
   const {
     formData,
@@ -156,9 +151,10 @@ export default function CreatePropertyScreen() {
   }, []);
 
   const handleSaveDraft = useCallback(async () => {
+    captureReferral();
     if (await persistDraft()) toast.success(t('propertyCreate.draftSaved'));
     else toast.error(t('propertyCreate.draftSaveFailed'));
-  }, [persistDraft, t]);
+  }, [captureReferral, persistDraft, t]);
 
   const { handleSubmit } = useCreatePropertyWizard(propertyId, {
     onCreated: () => {
@@ -171,12 +167,15 @@ export default function CreatePropertyScreen() {
   });
 
   // --- Navigation -------------------------------------------------------------
+  // The shell owns the scroll: on web that is the document (`scrollTo` is a
+  // no-op where there is no window to scroll).
   const scrollToTop = useCallback(() => {
-    scrollRef.current?.scrollTo({ y: 0, animated: false });
+    globalThis.scrollTo?.(0, 0);
   }, []);
 
   const isLastStep = stepIndex === steps.length - 1;
   const handleNext = useCallback(() => {
+    captureReferral();
     if (isLastStep) {
       handleSubmit();
       return;
@@ -184,7 +183,15 @@ export default function CreatePropertyScreen() {
     if (!handleNextStep()) return;
     scrollToTop();
     if (!isEditMode) void persistDraft();
-  }, [isLastStep, handleSubmit, handleNextStep, scrollToTop, isEditMode, persistDraft]);
+  }, [
+    captureReferral,
+    isLastStep,
+    handleSubmit,
+    handleNextStep,
+    scrollToTop,
+    isEditMode,
+    persistDraft,
+  ]);
 
   const handleBack = useCallback(() => {
     handlePrevStep();
@@ -208,9 +215,7 @@ export default function CreatePropertyScreen() {
     [t],
   );
 
-  const railIsWide = useIsRightBarVisible();
   const routeHasRail = useHasRightBar();
-  const railShowsPreview = railIsWide && routeHasRail;
 
   const [showFullscreenMap, setShowFullscreenMap] = useState(false);
 
@@ -230,20 +235,32 @@ export default function CreatePropertyScreen() {
   // Show loading state when in edit mode and property is loading
   if (isEditMode && propertyLoading) {
     return (
-      <View style={styles.container}>
-        <Header options={{ title, showBackButton: true }} />
+      <>
+        <PageHeader
+          title={title}
+          titleAlign="center"
+          leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+          onBack={router.canGoBack() ? router.back : undefined}
+          backLabel={t('goBack')}
+        />
         <View style={styles.centeredState}>
           <Loading size="lg" text={t('propertyCreate.loading')} />
         </View>
-      </View>
+      </>
     );
   }
 
   // Show error state if property failed to load in edit mode
   if (isEditMode && propertyError) {
     return (
-      <View style={styles.container}>
-        <Header options={{ title, showBackButton: true }} />
+      <>
+        <PageHeader
+          title={title}
+          titleAlign="center"
+          leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+          onBack={router.canGoBack() ? router.back : undefined}
+          backLabel={t('goBack')}
+        />
         <View style={styles.centeredState}>
           <Admonition type="error">
             {t('propertyCreate.loadError', { error: propertyError || t('property.notFound') })}
@@ -252,24 +269,21 @@ export default function CreatePropertyScreen() {
             {t('common.goBack')}
           </Button>
         </View>
-      </View>
+      </>
     );
   }
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
-    >
-      <Header options={{ title, showBackButton: true }} />
+    <>
+      <PageHeader
+        title={title}
+        titleAlign="center"
+        leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+        onBack={router.canGoBack() ? router.back : undefined}
+        backLabel={t('goBack')}
+      />
 
-      <ScrollView
-        ref={scrollRef}
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-      >
+      <View style={styles.scrollContent}>
         <WizardProgress
           steps={wizardSteps}
           current={stepIndex}
@@ -298,7 +312,7 @@ export default function CreatePropertyScreen() {
           fieldsToShow={fieldsToShow}
           isLoading={isLoading}
           submitError={submitError}
-          railShowsPreview={railShowsPreview}
+          routeHasRail={routeHasRail}
           mapRef={mapRef}
           updateFormField={updateFormField}
           setFormData={setFormData}
@@ -309,7 +323,7 @@ export default function CreatePropertyScreen() {
           onShowFloorToggle={handleShowFloorToggle}
           onAmenityToggle={handleAmenityToggle}
         />
-      </ScrollView>
+      </View>
 
       <WizardFooter
         onBack={stepIndex > 0 ? handleBack : undefined}
@@ -336,6 +350,6 @@ export default function CreatePropertyScreen() {
         onClose={closeFullscreenMap}
         onAddressSelect={handleFullscreenAddressSelect}
       />
-    </KeyboardAvoidingView>
+    </>
   );
 }

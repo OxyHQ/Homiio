@@ -93,5 +93,3 @@ const styles = StyleSheet.create({
     outlineOffset: 4,
   },
 });
-
-export default PropertyResultsGrid;

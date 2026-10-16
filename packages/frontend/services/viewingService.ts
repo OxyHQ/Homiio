@@ -47,16 +47,6 @@ export interface ViewingSchedule {
   windows: ViewingWindow[];
 }
 
-export interface ViewingListResponse {
-  items: ViewingRequest[];
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-  };
-}
-
 export const viewingService = {
   /**
    * The slots this listing offers, in the PROPERTY's zone.

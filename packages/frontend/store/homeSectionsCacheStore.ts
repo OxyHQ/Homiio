@@ -43,7 +43,7 @@ import type { HomeSection, Property } from '@homiio/shared-types';
 const PERSIST_KEY = '@homiio/home-sections-snapshot-v1';
 
 /** Items kept per section on disk. See the module header. */
-export const SNAPSHOT_ITEMS_PER_SECTION = 4;
+const SNAPSHOT_ITEMS_PER_SECTION = 4;
 
 export interface HomeSnapshot {
   /** The {@link locationKey} this was fetched for. Never a coordinate. */

@@ -75,5 +75,3 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
 });
-
-export default EvictionHelpNeeds;

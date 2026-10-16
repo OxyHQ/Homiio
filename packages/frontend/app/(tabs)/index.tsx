@@ -51,32 +51,25 @@
  * a line naming the provenance with a one-tap way to change it. Neither ever
  * claims "your home" or "you are here": an inferred city is a framing device.
  */
-import React, { useCallback, useMemo, useState } from 'react';
-import { View, RefreshControl } from 'react-native';
+import { useCallback, useMemo, useState } from 'react';
+import { View } from 'react-native';
 import { Image } from 'expo-image';
-import Animated, {
-  FadeInDown,
-  interpolate,
-  useAnimatedStyle,
-  useSharedValue,
-} from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 
-import { Button } from '@oxy.so/bloom/button';
-import { FrostedIconButton } from '@oxy.so/bloom/frosted-icon-button';
-import { RiMenuLine } from '@oxy.so/bloom/icons';
+import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
+import { EmptyState } from '@oxy.so/bloom/empty-state';
+import { Shelf, ShelfSkeleton } from '@oxy.so/bloom/media-shelf';
+import { PageHeader } from '@oxy.so/bloom/page-header';
 import { H1, P } from '@oxy.so/bloom/typography';
 
 import { formatRelativeDate, serializeLocationToken, type Property } from '@homiio/shared-types';
 
 import { useLocationScope } from '@/hooks/useLocationScope';
 import { homeSurfaceState, useHomeSections } from '@/hooks/useHomeSections';
-import { HomeSectionBand } from '@/components/home/HomeSectionBand';
 import { HomeDiscoveryBoard } from '@/components/home/HomeDiscoveryBoard';
 import { ApproximateAreaNotice } from '@/components/home/ApproximateAreaNotice';
-import { PropertyResultsGridSkeleton } from '@/components/ui/PropertyResultsGridSkeleton';
 import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
 import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
 import { useRentalMode } from '@/context/RentalModeContext';
@@ -84,35 +77,26 @@ import { useSearchQueryStore } from '@/store/searchQueryStore';
 import { useFormatting } from '@/utils/format';
 
 import { PropertyCard } from '@/components/PropertyCard';
-import { HomeCarouselSection } from '@/components/HomeCarouselSection';
 import { HomeSearch } from '@/components/search/HomeSearch';
 import type { SearchQuery, SearchStep } from '@/components/search/types';
-import { HostCtaBanner } from '@/components/HostCtaBanner';
-import { AgentCtaBanner } from '@/components/agent/AgentCtaBanner';
-import { PageScrollView } from '@/components/PageScrollView';
-import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
+import { CtaBanner } from '@/components/CtaBanner';
 import { exploreHref } from '@/utils/searchUrl';
-import { useMediaQuery } from 'react-responsive';
-import { useIsScreenNotMobile } from '@/hooks/useOptimizedMediaQuery';
-import { useUIStore } from '@/store/uiStore';
-import { spacing, tracker, PAGE_GUTTER_CLASS } from '@/constants/styles';
 
-/** Hero photo for the Host CTA at the foot of the page. */
+/** Photos for the two closing calls to action. */
 const HOST_CTA_IMAGE =
   'https://images.unsplash.com/photo-1505691938895-1758d7feb511?auto=format&fit=crop&w=1600&q=80';
+const AGENT_CTA_IMAGE =
+  'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=1600&q=80';
 
-/** How many skeleton cards stand in for a section while the surface loads. */
-const SKELETON_CARDS = 4;
+/** The width every card in a row is laid out at. */
+const CARD_WIDTH = 240;
+/** The page gutter; rows bleed through it to the panel's edges. */
+const GUTTER = 16;
 
 export default function HomePage() {
   const { t } = useTranslation();
   const router = useRouter();
-  const { offering: browseOffering, setBrowseMode } = useRentalMode();
-  const [refreshing, setRefreshing] = useState(false);
-  const isWide = useMediaQuery({ minWidth: 768 });
-  const isXL = useMediaQuery({ minWidth: 1024 });
-  const isScreenNotMobile = useIsScreenNotMobile();
-  const openMobileDrawer = useUIStore((s) => s.openMobileDrawer);
+  const { browseMode, offering: browseOffering, setBrowseMode } = useRentalMode();
 
   const activeQuery = useSearchQueryStore((s) => s.query);
   const [searchStep, setSearchStep] = useState<SearchStep | null>(null);
@@ -120,6 +104,10 @@ export default function HomePage() {
   const scope = useLocationScope();
   const { locale } = useFormatting();
   const home = useHomeSections(scope.selection, browseOffering, { enabled: scope.canQuery });
+  const { properties: recentlyViewedProperties } = useRecentlyViewed();
+  const { savedProperties } = useSavedPropertiesContext();
+  const { sections } = home;
+  const savedHomes = savedProperties as Property[] | undefined;
 
   // ONE exclusive answer, so "we could not load this" can never be rendered as
   // "there is nothing here" — see `homeSurfaceState`.
@@ -130,14 +118,6 @@ export default function HomePage() {
     hasError: home.error !== null,
     sectionCount: home.sections.length,
   });
-
-  const { properties: recentlyViewedProperties, refetch: refetchRecentlyViewed } =
-    useRecentlyViewed();
-  const {
-    savedProperties,
-    isLoading: savedLoading,
-    loadSavedProperties,
-  } = useSavedPropertiesContext();
 
   const heroSearchSeed: SearchQuery = { ...activeQuery, offering: browseOffering };
 
@@ -161,317 +141,171 @@ export default function HomePage() {
     if (exploreScopedHref) router.push(exploreScopedHref);
   }, [exploreScopedHref, router]);
 
-  /**
-   * Pull-to-refresh.
-   *
-   * It refetches the SAME scope and never re-runs the location ladder, which is
-   * the acceptance criterion "pull-to-refresh mantiene exactamente la misma
-   * ubicación" — met by not touching the scope rather than by restoring it
-   * afterwards. Your own lists refresh alongside, because they are not scoped and
-   * cannot move you anywhere.
-   */
-  const onRefresh = useCallback(async () => {
-    setRefreshing(true);
-    try {
-      await Promise.all([home.refresh(), loadSavedProperties(), refetchRecentlyViewed()]);
-    } finally {
-      setRefreshing(false);
-    }
-  }, [home, loadSavedProperties, refetchRecentlyViewed]);
+  const openProperty = useCallback(
+    (property: Property) => router.push(`/properties/${property.id}`),
+    [router],
+  );
 
-  const chooseArea = useCallback(() => setSearchStep('where'), []);
-
-  const scrollY = useSharedValue(0);
-  const heroParallaxStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: interpolate(scrollY.value, [-300, 0, 800], [-80, 0, 160], 'clamp') }],
-  }));
+  const propertyCards = (properties: readonly Property[]) =>
+    properties.map((property) => (
+      <PropertyCard
+        key={property.id}
+        property={property}
+        enableImageCarousel={false}
+        onPress={() => openProperty(property)}
+      />
+    ));
 
   return (
-    <View className="flex-1">
-      <PageScrollView
-        scrollY={scrollY}
-        className="flex-1"
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-        showsVerticalScrollIndicator={false}
+    <>
+      {/* Over the hero: the photo runs behind it (and behind the notch). */}
+      <PageHeader
+        placement="overlap"
+        leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+      />
+
+      {/* The hero does NOT clip: the wide search bar's panel drops below it,
+          over the sections. The photo clips in its own layer instead, and the
+          hero lifts above the sections while a panel is open (RN-Web gives
+          every View `z-index: 0`, so a later sibling would paint over it). */}
+      <View
+        className="relative h-[320px] w-full justify-end md:h-[360px] xl:h-[400px]"
+        style={{ zIndex: searchStep !== null ? 10 : 0 }}
       >
-        {/* The hero does NOT clip: the wide search bar's panel drops below it,
-            over the sections. The photo clips in its own layer instead, and the
-            hero lifts above the sections while a panel is open (RN-Web gives
-            every View `z-index: 0`, so a later sibling would paint over it). */}
-        <View
-          className="relative h-[320px] w-full justify-end md:h-[356px] xl:h-[min(400px,44vh)]"
-          style={{ zIndex: searchStep !== null ? 10 : 0 }}
-        >
-          <View className="absolute inset-0 overflow-hidden" style={{ pointerEvents: 'none' }}>
-            <Animated.View
-              className="absolute inset-x-0"
-              style={[{ top: -80, bottom: -80 }, heroParallaxStyle]}
-            >
-              <Image
-                source={require('@/assets/images/hero.jpg')}
-                className="h-full w-full object-cover object-center"
-                contentFit="cover"
-                contentPosition="center"
-              />
-            </Animated.View>
+        <View className="absolute inset-0 overflow-hidden" style={{ pointerEvents: 'none' }}>
+          <Image
+            source={require('@/assets/images/hero.jpg')}
+            className="absolute inset-0"
+            contentFit="cover"
+          />
+          <LinearGradient
+            colors={['rgba(0,0,0,0.1)', 'rgba(0,0,0,0.7)']}
+            className="absolute inset-0"
+          />
+        </View>
 
-            <LinearGradient
-              colors={[
-                'rgba(0,0,0,0.10)',
-                'rgba(0,0,0,0.20)',
-                'rgba(0,0,0,0.35)',
-                'rgba(0,0,0,0.55)',
-                'rgba(0,0,0,0.72)',
-              ]}
-              locations={[0, 0.35, 0.6, 0.85, 1]}
-              className="absolute inset-0"
+        <View className="w-full items-start gap-3 px-4 pb-4 md:items-center md:px-8">
+          <H1 className="text-display-4-bold text-white md:text-center lg:text-display-3-bold">
+            {t(`home.hero.title.${browseMode}`)}
+          </H1>
+          <View className="z-20 w-full max-w-[880px] self-center">
+            <HomeSearch
+              query={heroSearchSeed}
+              openStep={searchStep}
+              onOpenStepChange={setSearchStep}
+              // Explore by mode: the tabs switch the offering Home browses — the
+              // same selection as the sidebar — and the scoped sections follow.
+              modeTabs="segmented"
+              onModeChange={setBrowseMode}
+              // The first segment IS the scope statement (see the header).
+              where="scope"
+              onSubmit={(query) => {
+                const href = exploreHref(query);
+                if (!href) return;
+                useSearchQueryStore.getState().replaceSearch(query);
+                router.push(href);
+              }}
+              // Closing the bar keeps what it shows: the edited query becomes
+              // the live one without navigating.
+              onApply={(query) => useSearchQueryStore.getState().replaceSearch(query)}
             />
           </View>
+        </View>
+      </View>
 
-          {!isScreenNotMobile ? (
-            <View className="absolute left-4 top-[max(0.75rem,env(safe-area-inset-top))] z-10">
-              <FrostedIconButton
-                onPress={openMobileDrawer}
-                icon={RiMenuLine}
-                accessibilityLabel={t('sidebar.open')}
-                hitSlop={{
-                  top: spacing.sm,
-                  bottom: spacing.sm,
-                  left: spacing.sm,
-                  right: spacing.sm,
-                }}
-              />
-            </View>
-          ) : null}
+      <View className="gap-10 pb-14 pt-6" style={{ paddingHorizontal: GUTTER }}>
+        {/* Where an area came from, when Homiio inferred it rather than being
+            told. Above the sections it describes, said once, with the one-tap
+            way to change it. */}
+        <ApproximateAreaNotice scope={scope} onChangeArea={() => setSearchStep('where')} />
 
-          <View
-            className={
-              isWide
-                ? 'w-full max-w-[1200px] self-center items-center px-10 pb-4'
-                : 'w-full max-w-[1200px] self-center items-start px-5 pb-4'
-            }
+        {/* NO mandatory picker: with no area, Home offers real destinations. */}
+        {surface === 'discovery' ? (
+          <HomeDiscoveryBoard onChoose={scope.choose} contentInset={GUTTER} />
+        ) : null}
+
+        {/* Served from the offline snapshot: said once, above what it describes. */}
+        {home.staleAt && surface === 'sections' ? (
+          <P className="text-sm text-muted-foreground">
+            {t('location.scope.showingCached', { when: formatRelativeDate(home.staleAt, locale) })}
+          </P>
+        ) : null}
+
+        {surface === 'loading' ? (
+          <>
+            <ShelfSkeleton itemWidth={CARD_WIDTH} count={4} />
+            <ShelfSkeleton itemWidth={CARD_WIDTH} count={4} />
+          </>
+        ) : null}
+
+        {surface === 'failed' ? (
+          <EmptyState
+            title={t('home.sections.error')}
+            action={{ label: t('common.retry'), onPress: home.refresh }}
+          />
+        ) : null}
+
+        {sections.map((section) => (
+          <Shelf
+            key={section.id}
+            title={t(`home.sections.${section.id}.title`)}
+            itemWidth={CARD_WIDTH}
+            contentInset={GUTTER}
+            onTitlePress={exploreScopedHref ? openExplore : undefined}
           >
-            <H1
-              className={
-                isXL
-                  ? 'mb-2 max-w-[720px] text-center text-[40px] font-bold leading-[44px] text-white'
-                  : isWide
-                    ? 'mb-2 max-w-[720px] text-center text-[32px] font-bold leading-[36px] text-white'
-                    : 'mb-2 max-w-[720px] text-left text-[26px] font-bold leading-[30px] text-white'
-              }
-              style={{ letterSpacing: tracker.tight }}
-            >
-              {t('home.hero.title')}
-            </H1>
+            {propertyCards(section.items)}
+          </Shelf>
+        ))}
 
-            <View
-              className={
-                isWide
-                  ? 'z-20 mt-1 w-full max-w-[880px] self-center'
-                  : 'z-20 mt-1 w-full max-w-[520px] self-center'
-              }
-            >
-              <HomeSearch
-                query={heroSearchSeed}
-                openStep={searchStep}
-                onOpenStepChange={setSearchStep}
-                // Explore by mode: the tabs switch the offering Home browses — the
-                // same selection as the sidebar — and the scoped sections follow.
-                modeTabs="segmented"
-                onModeChange={setBrowseMode}
-                // The first segment IS the scope statement (see the header).
-                where="scope"
-                onSubmit={(query) => {
-                  const href = exploreHref(query);
-                  if (href) router.push(href);
-                }}
-                // Closing the bar keeps what it shows: the edited query becomes
-                // the live one without navigating.
-                onApply={(query) => useSearchQueryStore.getState().replaceSearch(query)}
-              />
-            </View>
-          </View>
+        {surface === 'empty' ? (
+          <EmptyState
+            title={t('home.empty.title')}
+            description={t('home.empty.body')}
+            action={{ label: t('home.empty.changeFilters'), onPress: openExplore }}
+            secondaryAction={
+              scope.isGlobal
+                ? undefined
+                : { label: t('location.scope.exploreGlobal'), onPress: scope.exploreGlobal }
+            }
+          />
+        ) : null}
+
+        {/* Your own things. Deliberately NOT scoped: a home you were looking at
+            last week is yours wherever you are standing today. */}
+        {recentlyViewedProperties && recentlyViewedProperties.length > 0 ? (
+          <Shelf
+            title={t('home.recentlyViewed.continue')}
+            itemWidth={CARD_WIDTH}
+            contentInset={GUTTER}
+          >
+            {propertyCards(recentlyViewedProperties)}
+          </Shelf>
+        ) : null}
+
+        {savedHomes && savedHomes.length > 0 ? (
+          <Shelf title={t('home.saved.title')} itemWidth={CARD_WIDTH} contentInset={GUTTER}>
+            {propertyCards(savedHomes)}
+          </Shelf>
+        ) : null}
+
+        <View className="gap-6 md:flex-row md:gap-8">
+          <CtaBanner
+            title={t(`home.hostCta.${browseMode}.title`)}
+            subtitle={t(`home.hostCta.${browseMode}.subtitle`)}
+            ctaLabel={t(`home.hostCta.${browseMode}.cta`)}
+            imageUrl={HOST_CTA_IMAGE}
+            onPress={() => router.push('/properties/create')}
+          />
+          <CtaBanner
+            title={t('agent.banner.title')}
+            subtitle={t('agent.banner.subtitle')}
+            ctaLabel={t('agent.banner.cta')}
+            imageUrl={AGENT_CTA_IMAGE}
+            trustLine={t('agent.banner.trust')}
+            onPress={() => router.push('/agent')}
+          />
         </View>
-
-        <View className="gap-6 md:gap-8 pb-14 pt-6">
-          {/* Where an area came from, when Homiio inferred it rather than being
-              told. Above the sections it describes, said once, with the one-tap
-              way to change it. */}
-          <ApproximateAreaNotice scope={scope} onChangeArea={chooseArea} />
-
-          {/* NO mandatory picker. When nothing has been chosen and neither the
-              device nor the network can place the visitor, Home offers real
-              destinations — never a worldwide list, and never a step that has
-              to be completed before the rest of the page works. */}
-          {surface === 'discovery' ? <HomeDiscoveryBoard onChoose={scope.choose} /> : null}
-
-          {/* Served from the offline snapshot: said once, above what it describes. */}
-          {home.staleAt && surface === 'sections' ? (
-            <P className={`text-[13px] text-muted-foreground ${PAGE_GUTTER_CLASS}`}>
-              {t('location.scope.showingCached', {
-                when: formatRelativeDate(home.staleAt, locale),
-              })}
-            </P>
-          ) : null}
-
-          {/* Skeletons that PRESERVE the layout, so nothing jumps when the
-              sections land. */}
-          {surface === 'loading' ? (
-            <View className={`gap-6 ${PAGE_GUTTER_CLASS}`}>
-              <PropertyResultsGridSkeleton count={SKELETON_CARDS} />
-              <PropertyResultsGridSkeleton count={SKELETON_CARDS} />
-            </View>
-          ) : null}
-
-          {surface === 'failed' ? (
-            <View className={`gap-2 ${PAGE_GUTTER_CLASS}`}>
-              <P className="text-sm text-muted-foreground">{t('home.sections.error')}</P>
-              <Button
-                size="md"
-                onPress={onRefresh}
-                accessibilityLabel={t('common.retry')}
-                tone="neutral"
-                appearance="outline"
-              >
-                {t('common.retry')}
-              </Button>
-            </View>
-          ) : null}
-
-          {home.sections.map((section) => (
-            <Animated.View key={section.id} entering={FadeInDown.duration(420)}>
-              <HomeSectionBand
-                section={section}
-                {...(exploreScopedHref ? { onSeeAll: openExplore } : {})}
-              />
-            </Animated.View>
-          ))}
-
-          {/* A USEFUL empty state: what to do, not an apology. Only shown once the
-              surface has actually answered, so it never flashes during a load. */}
-          {surface === 'empty' ? (
-            <View className={`gap-3 ${PAGE_GUTTER_CLASS}`}>
-              <H1 className="text-[22px] font-bold leading-7 tracking-tight text-foreground">
-                {t('home.empty.title')}
-              </H1>
-              <P className="text-sm text-muted-foreground">{t('home.empty.body')}</P>
-              <View className="flex-row flex-wrap gap-3">
-                <Button
-                  size="md"
-                  onPress={openExplore}
-                  accessibilityLabel={t('home.empty.changeFiltersAccessible')}
-                  tone="neutral"
-                  appearance="outline"
-                >
-                  {t('home.empty.changeFilters')}
-                </Button>
-                {scope.isGlobal ? null : (
-                  <Button
-                    size="md"
-                    onPress={scope.exploreGlobal}
-                    accessibilityLabel={t('location.scope.exploreGlobalAccessible')}
-                    tone="neutral"
-                    appearance="outline"
-                  >
-                    {t('location.scope.exploreGlobal')}
-                  </Button>
-                )}
-              </View>
-            </View>
-          ) : null}
-
-          {/* Your own things. Deliberately NOT scoped: a home you were looking at
-              last week is yours wherever you are standing today. */}
-          {recentlyViewedProperties && recentlyViewedProperties.length > 0 ? (
-            <HomeCarouselSection
-              title={t('home.recentlyViewed.continue')}
-              items={recentlyViewedProperties}
-              loading={false}
-              renderItem={(property) => (
-                <PropertyCard
-                  property={property}
-                  enableImageCarousel={false}
-                  onPress={() => router.push(`/properties/${property.id}`)}
-                />
-              )}
-            />
-          ) : null}
-
-          {savedProperties && savedProperties.length > 0 ? (
-            <HomeCarouselSection<Property>
-              title={t('home.saved.title')}
-              items={savedProperties as Property[]}
-              loading={savedLoading}
-              renderItem={(property) => (
-                <PropertyCard
-                  property={property}
-                  enableImageCarousel={false}
-                  onPress={() => router.push(`/properties/${property.id}`)}
-                />
-              )}
-            />
-          ) : null}
-
-          {/* The page ENDS. "Explore more" is a link to the surface that owns an
-              unbounded list; Home does not paginate any more. */}
-          <View className={`gap-3 ${PAGE_GUTTER_CLASS}`}>
-            <SectionEyebrow>{t('home.explore.eyebrow')}</SectionEyebrow>
-            <H1 className="text-[24px] font-bold leading-7 tracking-tight text-foreground">
-              {t('home.explore.title')}
-            </H1>
-            <View className="flex-row">
-              <Button
-                size="md"
-                onPress={openExplore}
-                disabled={exploreScopedHref === null}
-                accessibilityLabel={t('home.explore.ctaAccessible')}
-                tone="accent"
-                appearance="solid"
-              >
-                {t('home.explore.cta')}
-              </Button>
-            </View>
-          </View>
-
-          {isWide ? (
-            <View className={`flex-row items-stretch gap-6 md:gap-8 ${PAGE_GUTTER_CLASS}`}>
-              <HostCtaBanner
-                fill
-                title={t('home.hostCta.title')}
-                subtitle={t('home.hostCta.subtitle')}
-                ctaLabel={t('home.hostCta.cta')}
-                imageUrl={HOST_CTA_IMAGE}
-                onPress={() => router.push('/properties/create')}
-              />
-              <AgentCtaBanner
-                fill
-                title={t('agent.banner.title')}
-                subtitle={t('agent.banner.subtitle')}
-                ctaLabel={t('agent.banner.cta')}
-                trustLine={t('agent.banner.trust')}
-                onPress={() => router.push('/agent')}
-              />
-            </View>
-          ) : (
-            <>
-              <HostCtaBanner
-                title={t('home.hostCta.title')}
-                subtitle={t('home.hostCta.subtitle')}
-                ctaLabel={t('home.hostCta.cta')}
-                imageUrl={HOST_CTA_IMAGE}
-                onPress={() => router.push('/properties/create')}
-              />
-              <AgentCtaBanner
-                title={t('agent.banner.title')}
-                subtitle={t('agent.banner.subtitle')}
-                ctaLabel={t('agent.banner.cta')}
-                trustLine={t('agent.banner.trust')}
-                onPress={() => router.push('/agent')}
-              />
-            </>
-          )}
-        </View>
-      </PageScrollView>
-    </View>
+      </View>
+    </>
   );
 }

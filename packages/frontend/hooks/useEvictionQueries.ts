@@ -41,7 +41,7 @@ const EVICTION_ATTENDING_KEY = 'eviction-attending';
 const EVICTION_FOLLOWING_KEY = 'eviction-following';
 const EVICTION_RESOURCES_KEY = 'eviction-resources';
 
-export const evictionKeys = {
+const evictionKeys = {
   list: (params: ListEvictionsParams) => [EVICTION_LIST_KEY, params] as const,
   detail: (id: string) => [EVICTION_DETAIL_KEY, id] as const,
   comments: (id: string) => [EVICTION_COMMENTS_KEY, id] as const,

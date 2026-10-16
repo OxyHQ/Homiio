@@ -121,5 +121,3 @@ export const EditableList: React.FC<EditableListProps> = ({
     </View>
   );
 };
-
-export default EditableList;

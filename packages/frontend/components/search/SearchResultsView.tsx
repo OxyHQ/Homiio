@@ -1,6 +1,6 @@
 /**
  * SearchResultsView — the responsive results surface mounted by the results
- * route. Single component, breakpoint-driven from `useIsScreenNotMobile()`:
+ * route. Single tree, laid out by NativeWind breakpoint classes (`sm:`):
  *
  *  - Wide: a scrollable list of property cards on the left + a sticky map on
  *    the right. Selecting a pin highlights the matching card; selecting a card
@@ -22,7 +22,6 @@
 import type React from 'react';
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, ScrollView, StyleSheet, View, type ViewStyle } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@oxy.so/bloom/button';
@@ -50,7 +49,6 @@ import { SaveSearchBottomSheet } from '@/components/SaveSearchBottomSheet';
 
 import { BottomSheetContext } from '@/context/BottomSheetContext';
 import { useRentalMode } from '@/context/RentalModeContext';
-import { useIsScreenNotMobile } from '@/hooks/useOptimizedMediaQuery';
 import { usePropertySearch } from '@/hooks/usePropertySearch';
 import { useColors } from '@/hooks/useThemeColor';
 import { colors } from '@/styles/colors';
@@ -142,8 +140,6 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
 }) => {
   const { t } = useTranslation();
   const formatting = useFormatting();
-  const isWide = useIsScreenNotMobile();
-  const insets = useSafeAreaInsets();
   const bottomSheet = useContext(BottomSheetContext);
   const themeColors = useColors();
   const { setBrowseMode } = useRentalMode();
@@ -293,6 +289,10 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
    *
    * `fitBounds` is imperative and `initialCoordinates` is a mount-time prop, so
    * this cannot be expressed as a prop: the ref is null on the first render.
+   * It stays an effect because the box comes from `query.location`, which
+   * changes from the URL (a place picked, a saved search applied, back/forward,
+   * a deep link) rather than from an event this view handles; a declarative
+   * camera-bounds prop on the map is what would retire it.
    * Keyed on the SERIALISED box rather than the object so a re-render with an
    * equal box does not re-animate the camera under the user.
    *
@@ -361,24 +361,26 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
   );
 
   /**
-   * Leaving the screen discards the pending viewport.
+   * The map's handle — and, when the map goes, the end of its pending viewport.
    *
-   * The store outlives this component, so without this a box the user drifted
-   * to, walked away from and never confirmed is still pending when they come
-   * back — and "Search this area" is offered on arrival, over an area they have
-   * no memory of choosing. #354 lists abandoning the screen as a discard
-   * trigger for exactly that reason.
+   * A pending viewport is a box over THIS map, and the map lives exactly as
+   * long as this view (the narrow layout hides it, never unmounts it), so its
+   * detach is leaving the screen. The store outlives both, so without this a
+   * box the user drifted to, walked away from and never confirmed is still
+   * pending when they come back — and "Search this area" is offered on arrival,
+   * over an area they have no memory of choosing. #354 lists abandoning the
+   * screen as a discard trigger for exactly that reason.
    *
-   * An effect is right here: it updates an EXTERNAL store on unmount, which is
-   * the case effects are for, and the empty dependency list is accurate — the
-   * cleanup reads the store through `getState()` rather than closing over it.
+   * Stable (`[]`), so React attaches it once; the cleanup reads the store
+   * through `getState()` rather than closing over it.
    */
-  useEffect(
-    () => () => {
+  const attachMap = useCallback((api: MapApi | null) => {
+    mapRef.current = api;
+    return () => {
+      mapRef.current = null;
       useSearchQueryStore.getState().setPendingViewport(null);
-    },
-    [],
-  );
+    };
+  }, []);
 
   /**
    * Take the map back to the area the results actually describe.
@@ -569,15 +571,12 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
   const unmappableCount = properties.length - markers.length;
 
   // --- shared sub-renders ---
-  // The route wraps this screen in a plain View (no SafeAreaView) and the
-  // top bar is the first element, so it must clear the status bar itself.
-  // The bar's surfaceElevated background fills the inset region; on web
-  // `insets.top` is 0 so the `position: sticky; top: 0` placement is
-  // unchanged.
   const saveLabel = isSearchSaved ? t('search.actions.saved') : t('search.actions.save');
   const topBar = (
-    <View style={[styles.topBar, { paddingTop: insets.top }]}>
-      <View style={[styles.topBarContent, isWide && styles.topBarContentWithTabs]}>
+    <View style={styles.topBar}>
+      {/* With the mode tabs above the bar (wide), the row aligns on the bar (the
+          bottom of the composer) rather than on the tabs-plus-bar column. */}
+      <View className="items-center sm:items-end" style={styles.topBarContent}>
         <HomeSearch
           query={query}
           openStep={openStep}
@@ -588,9 +587,10 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
           style={styles.composer}
         />
         {/* A sibling of the composer, never inside it: its own named control. */}
+        {/* `sm:mb-[11px]` centres the 44-tall save button on the 66-tall bar. */}
         <Button
-          size={isWide ? 'lg' : 'md'}
-          style={isWide ? styles.saveBesideBar : undefined}
+          size="lg"
+          className="sm:mb-[11px]"
           iconOnly
           icon={
             isSearchSaved ? (
@@ -623,12 +623,21 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
                     : t('search.actions.filters')
                 }
               />
-              <SortMenu
-                sortBy={query.sortBy}
-                sortOrder={query.sortOrder}
-                onChange={handleSortChange}
-                iconOnly={!isWide}
-              />
+              <View className="sm:hidden">
+                <SortMenu
+                  sortBy={query.sortBy}
+                  sortOrder={query.sortOrder}
+                  onChange={handleSortChange}
+                  iconOnly
+                />
+              </View>
+              <View className="hidden sm:flex">
+                <SortMenu
+                  sortBy={query.sortBy}
+                  sortOrder={query.sortOrder}
+                  onChange={handleSortChange}
+                />
+              </View>
             </View>
           }
         />
@@ -735,7 +744,7 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
   const mapPanel = (
     <View style={styles.mapPanel} nativeID={`search-map-${queryId}`}>
       <MapView
-        ref={mapRef}
+        ref={attachMap}
         style={styles.mapFill}
         screenId="search-results"
         startFromCurrentLocation={!initialCoordinates}
@@ -789,16 +798,9 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
         </View>
       ) : null}
       {selectedProperty ? (
-        <View
-          style={[
-            styles.popoverWrap,
-            isWide
-              ? styles.popoverWrapWide
-              : // Narrow: the popover floats over the full-screen map above the
-                // home indicator and the MapFab toggle.
-                { bottom: spacing['2xl'] + insets.bottom },
-          ]}
-        >
+        // Narrow: the popover floats over the full-screen map, level with the
+        // MapFab toggle; wide: a centred card of reading width.
+        <View className="sm:max-w-[420px] sm:self-center" style={styles.popoverWrap}>
           <MapMarkerPopover
             property={selectedProperty}
             onPress={() => onPropertyPress(selectedProperty)}
@@ -812,40 +814,37 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
     </View>
   );
 
-  // Wide: list + sticky map side-by-side.
-  if (isWide) {
-    return (
-      <View style={styles.container}>
-        {topBar}
-        <View style={styles.splitRow}>
-          <View style={styles.splitListColumn}>{listScroll}</View>
-          <View style={styles.splitMapColumn}>{mapPanel}</View>
-        </View>
-      </View>
-    );
-  }
-
-  // Narrow: list with a floating Map toggle → full-screen map.
+  // Wide: list + sticky map side-by-side. Narrow: one column at a time, the list
+  // or the full-screen map, switched by the floating Map/List toggle.
   return (
     <View style={styles.container}>
       {topBar}
-      {showMobileMap ? (
-        <View style={styles.fullColumn}>{mapPanel}</View>
-      ) : (
-        <View style={styles.fullColumn}>{listScroll}</View>
-      )}
-      <MapFab
-        onPress={toggleResultsView}
-        label={
-          showMobileMap
-            ? t('search.fab.list', 'List') || 'List'
-            : t('search.fab.map', 'Map') || 'Map'
-        }
-        icon={showMobileMap ? 'list' : 'map'}
-        // Lift the floating toggle above the home indicator (the FAB's default
-        // bottom offset is measured from the screen edge).
-        style={{ bottom: spacing['2xl'] + insets.bottom }}
-      />
+      <View style={styles.splitRow}>
+        <View
+          className={showMobileMap ? 'hidden sm:flex' : undefined}
+          style={styles.splitListColumn}
+        >
+          {listScroll}
+        </View>
+        <View
+          className={showMobileMap ? undefined : 'hidden sm:flex'}
+          style={styles.splitMapColumn}
+        >
+          {mapPanel}
+        </View>
+      </View>
+      {/* Zero-height bottom strip: the FAB anchors itself above it. */}
+      <View className="absolute inset-x-0 bottom-0 sm:hidden">
+        <MapFab
+          onPress={toggleResultsView}
+          label={
+            showMobileMap
+              ? t('search.fab.list', 'List') || 'List'
+              : t('search.fab.map', 'Map') || 'Map'
+          }
+          icon={showMobileMap ? 'list' : 'map'}
+        />
+      </View>
     </View>
   );
 };
@@ -861,11 +860,9 @@ const styles = StyleSheet.create({
       flex: 1,
       height: '100%',
       overflow: 'hidden',
-      backgroundColor: colors.background,
     } as unknown as ViewStyle,
     default: {
       flex: 1,
-      backgroundColor: colors.background,
     },
   }) as ViewStyle,
   topBar: Platform.select<ViewStyle>({
@@ -885,27 +882,14 @@ const styles = StyleSheet.create({
   }) as ViewStyle,
   topBarContent: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.sm,
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
     paddingBottom: spacing.sm,
-    maxWidth: 1440,
-    width: '100%',
-    alignSelf: 'center',
     // Above the category row: RN-Web gives every View `z-index: 0`, so the
     // composer's open panel would otherwise paint under the later sibling.
     zIndex: 2,
-  },
-  // With the mode tabs above the bar, the row aligns on the bar (the bottom of
-  // the composer) rather than on the tabs-plus-bar column.
-  topBarContentWithTabs: {
-    alignItems: 'flex-end',
-  },
-  // Centres the 44-tall save button on the 66-tall bar.
-  saveBesideBar: {
-    marginBottom: 11,
   },
   // The composer takes the row; on a wide screen it stops at a readable bar
   // width and sits centred with the save button beside it.
@@ -917,9 +901,6 @@ const styles = StyleSheet.create({
   categoryRow: {
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.xs,
-    maxWidth: 1440,
-    width: '100%',
-    alignSelf: 'center',
   },
   trailing: {
     flexDirection: 'row',
@@ -976,9 +957,6 @@ const styles = StyleSheet.create({
       borderLeftColor: hairline.color,
     },
   }) as ViewStyle,
-  fullColumn: {
-    flex: 1,
-  },
   listScroll: Platform.select<ViewStyle>({
     web: { flex: 1, overflow: 'auto' } as unknown as ViewStyle,
     default: { flex: 1 },
@@ -1057,10 +1035,4 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
   },
-  popoverWrapWide: {
-    maxWidth: 420,
-    alignSelf: 'center',
-  },
 });
-
-export default SearchResultsView;

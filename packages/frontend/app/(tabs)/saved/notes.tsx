@@ -7,11 +7,12 @@
  * controlled `Dialog` holding a `Textarea` for editing, `confirm()` before a
  * delete and `toast` for the outcome.
  */
-import React, { useCallback, useMemo, useState } from 'react';
-import { FlatList, Image, StyleSheet, View, type ImageSourcePropType } from 'react-native';
+import { useCallback, useMemo, useState } from 'react';
+import { Image, StyleSheet, View, type ImageSourcePropType } from 'react-native';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
+import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { Button } from '@oxy.so/bloom/button';
 import { Card } from '@oxy.so/bloom/card';
 import { Dialog } from '@oxy.so/bloom/dialog';
@@ -24,6 +25,7 @@ import {
   RiPushpinLine,
 } from '@oxy.so/bloom/icons';
 import { Item } from '@oxy.so/bloom/item';
+import { PageHeader } from '@oxy.so/bloom/page-header';
 import { confirm } from '@oxy.so/bloom/surfaces';
 import { Tabs, TabsTrigger } from '@oxy.so/bloom/tabs';
 import { Textarea } from '@oxy.so/bloom/textarea';
@@ -32,7 +34,6 @@ import { toast } from '@oxy.so/bloom/toast';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 import { formatMoney, priceFrequencyFromPriceUnit } from '@homiio/shared-types';
 
-import { Header } from '@/components/Header';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { spacing } from '@/constants/styles';
 import { useRentalMode } from '@/context/RentalModeContext';
@@ -205,8 +206,14 @@ export default function NotesScreen() {
   );
 
   return (
-    <View style={styles.container}>
-      <Header options={{ title: t('saved.notes.title'), showBackButton: true }} />
+    <>
+      <PageHeader
+        title={t('saved.notes.title')}
+        titleAlign="center"
+        leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+        onBack={router.canGoBack() ? router.back : undefined}
+        backLabel={t('goBack')}
+      />
       <View style={styles.tabs}>
         <Tabs value={filter} onValueChange={(next) => setFilter(next as NotesFilter)}>
           <TabsTrigger value="all" label={t('common.all')} />
@@ -215,32 +222,31 @@ export default function NotesScreen() {
           <TabsTrigger value="archived" label={t('saved.notes.filters.archived')} />
         </Tabs>
       </View>
-      <FlatList
-        data={visibleNotes}
-        keyExtractor={(item) => `${item.propertyId}-${item.note.id}`}
-        numColumns={2}
-        columnWrapperStyle={styles.gridRow}
-        contentContainerStyle={styles.content}
-        ListEmptyComponent={
-          <EmptyState
-            icon={RiFileTextLine}
-            title={t('saved.notes.emptyTitle')}
-            description={t('saved.notes.emptyDescription')}
-          />
-        }
-        renderItem={({ item }) => (
-          <NoteCard
-            item={item}
-            onEdit={() => {
-              setEditing({ propertyId: item.propertyId, note: item.note });
-              setText(item.note.text);
-            }}
-            onTogglePin={() => void handleToggle(item.propertyId, item.note.id, 'pin')}
-            onToggleArchive={() => void handleToggle(item.propertyId, item.note.id, 'archive')}
-            onDelete={() => void handleDeleteNote(item.propertyId, item.note.id)}
-          />
+      <View style={styles.content}>
+        {visibleNotes.length === 0 ? (
+          <View className="w-full">
+            <EmptyState
+              icon={RiFileTextLine}
+              title={t('saved.notes.emptyTitle')}
+              description={t('saved.notes.emptyDescription')}
+            />
+          </View>
+        ) : (
+          visibleNotes.map((item) => (
+            <NoteCard
+              key={`${item.propertyId}-${item.note.id}`}
+              item={item}
+              onEdit={() => {
+                setEditing({ propertyId: item.propertyId, note: item.note });
+                setText(item.note.text);
+              }}
+              onTogglePin={() => void handleToggle(item.propertyId, item.note.id, 'pin')}
+              onToggleArchive={() => void handleToggle(item.propertyId, item.note.id, 'archive')}
+              onDelete={() => void handleDeleteNote(item.propertyId, item.note.id)}
+            />
+          ))
         )}
-      />
+      </View>
 
       <Dialog
         placement="center"
@@ -276,7 +282,7 @@ export default function NotesScreen() {
           editable={!saving}
         />
       </Dialog>
-    </View>
+    </>
   );
 }
 
@@ -356,23 +362,21 @@ function NoteCard({ item, onEdit, onTogglePin, onToggleArchive, onDelete }: Note
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
   tabs: {
     paddingHorizontal: spacing.lg,
   },
+  // Two columns: each card takes half a row; a lone last card stays half wide.
   content: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     padding: spacing.lg,
     paddingBottom: spacing['6xl'],
     gap: spacing.md,
-    flexGrow: 1,
-  },
-  gridRow: {
-    gap: spacing.md,
   },
   noteCard: {
-    flex: 1,
+    flexGrow: 1,
+    flexBasis: '40%',
+    maxWidth: '50%',
     padding: spacing.md,
     gap: spacing.sm,
   },

@@ -15,7 +15,6 @@ import {
   type CreateExchangeReviewBody,
   type ExchangeRequestListResponse,
   type ListExchangeRequestsParams,
-  type ProfileExchangeReviewsResponse,
   exchangeService,
 } from '@/services/exchangeService';
 import { useInvalidateGuestPoints } from '@/hooks/useGuestPointsQueries';
@@ -29,7 +28,7 @@ const LIST_STALE_TIME = 1000 * 60;
 const DETAIL_STALE_TIME = 1000 * 30;
 const REVIEWS_STALE_TIME = 1000 * 60 * 5;
 
-export const exchangeKeys = {
+const exchangeKeys = {
   list: (params: ListExchangeRequestsParams) => [EXCHANGE_LIST_KEY, params] as const,
   detail: (id: string) => [EXCHANGE_DETAIL_KEY, id] as const,
   requestReviews: (id: string) => [EXCHANGE_REVIEWS_KEY, id] as const,
@@ -77,26 +76,6 @@ export function useExchangeRequestReviews(
       return exchangeService.getRequestReviews(id);
     },
     enabled: Boolean(id) && (options.enabled ?? true),
-    staleTime: REVIEWS_STALE_TIME,
-  });
-}
-
-/**
- * Exchange reviews where a profile is the SUBJECT — a trust signal surfaced on
- * the host/profile area. Carries an aggregate average rating + count in `meta`.
- */
-export function useProfileExchangeReviews(
-  profileId: string | undefined,
-  params: { page?: number; limit?: number } = {},
-  options: { enabled?: boolean } = {},
-): UseQueryResult<ProfileExchangeReviewsResponse, Error> {
-  return useQuery<ProfileExchangeReviewsResponse, Error>({
-    queryKey: exchangeKeys.profileReviews(profileId ?? ''),
-    queryFn: () => {
-      if (!profileId) throw new Error('Profile id is required');
-      return exchangeService.getProfileReviews(profileId, params);
-    },
-    enabled: Boolean(profileId) && (options.enabled ?? true),
     staleTime: REVIEWS_STALE_TIME,
   });
 }

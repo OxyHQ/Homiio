@@ -16,7 +16,7 @@
  * state).
  */
 import React, { useCallback, useMemo, useState } from 'react';
-import { Platform, ScrollView, StyleSheet, View, type ViewStyle } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
@@ -32,10 +32,8 @@ import { SortMenu } from '@/components/search/SortMenu';
 import { SearchFiltersDialog, countActiveFilters } from '@/components/search/SearchFiltersDialog';
 import type { SearchQuery, SearchSortBy, SearchSortOrder } from '@/components/search/types';
 import { usePropertySearch } from '@/hooks/usePropertySearch';
-import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import { DEFAULT_SEARCH_QUERY } from '@/store/searchQueryStore';
-import { colors } from '@/styles/colors';
-import { contentClamp, spacing } from '@/constants/styles';
+import { spacing } from '@/constants/styles';
 import type { PropertyType, Property } from '@homiio/shared-types';
 
 /** Number of skeleton cards shown during the first load. */
@@ -119,10 +117,6 @@ export default function PropertyTypeScreen() {
       void fetchNextPage();
     }
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
-  const { onScroll: handleListScroll } = useInfiniteScroll({
-    onEndReached: handleEndReached,
-    enabled: hasNextPage,
-  });
 
   const typeName = getTypeName(typeId);
   const subtitle = isLoading
@@ -167,18 +161,12 @@ export default function PropertyTypeScreen() {
   })();
 
   return (
-    <View style={styles.container}>
+    <>
       <PropertyListHeader
         title={t('properties.type.title', { type: typeName })}
         subtitle={subtitle}
       />
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
-        onScroll={handleListScroll}
-        scrollEventThrottle={16}
-        showsVerticalScrollIndicator={false}
-      >
+      <View style={styles.scrollContent}>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -197,7 +185,7 @@ export default function PropertyTypeScreen() {
           <PropertyResultsGridSkeleton count={2} style={styles.gridPadding} />
         ) : null}
         <LoadMoreSentinel enabled={hasNextPage} onLoadMore={handleEndReached} />
-      </ScrollView>
+      </View>
       <SearchFiltersDialog
         open={filtersOpen}
         onClose={() => setFiltersOpen(false)}
@@ -205,25 +193,14 @@ export default function PropertyTypeScreen() {
         onApply={patchQuery}
         showTypes={false}
       />
-    </View>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  scroll: Platform.select<ViewStyle>({
-    web: { flex: 1, overflow: 'auto' } as unknown as ViewStyle,
-    default: { flex: 1 },
-  }) as ViewStyle,
   scrollContent: {
     paddingTop: spacing.md,
     paddingBottom: spacing['4xl'],
-    maxWidth: contentClamp.page,
-    width: '100%',
-    alignSelf: 'center',
   },
   actionsScroll: {
     flexGrow: 0,

@@ -114,7 +114,7 @@ export const LeasePaymentsSection: React.FC<SectionProps> = ({ lease, format }) 
  * The failure is SHOWN. A silent catch here is indistinguishable from a row
  * that does nothing when pressed.
  */
-export function openLeaseDocument(document: LeaseDocument, failedLabel: string): void {
+function openLeaseDocument(document: LeaseDocument, failedLabel: string): void {
   void openPrivateDocument(document.downloadPath).catch(() => toast.error(failedLabel));
 }
 

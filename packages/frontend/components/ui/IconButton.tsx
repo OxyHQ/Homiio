@@ -36,7 +36,7 @@ import {
   spacing,
 } from '@/constants/styles';
 
-export type IconButtonVariant = 'ghost' | 'overlay' | 'filled';
+type IconButtonVariant = 'ghost' | 'overlay' | 'filled';
 
 const IS_WEB = Platform.OS === 'web';
 
@@ -158,5 +158,3 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
 });
-
-export default IconButton;

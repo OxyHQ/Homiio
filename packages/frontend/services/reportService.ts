@@ -28,5 +28,3 @@ export const reportService = {
     return report;
   },
 };
-
-export default reportService;

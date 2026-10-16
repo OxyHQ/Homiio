@@ -1,9 +1,9 @@
 /**
  * Host reservations inbox.
  *
- * - Phones (and native): status Chip filter row over `ReservationCard`s with
- *   approve / decline / view buttons in each card footer.
- * - Wide web: a Bloom `DataTable` — status filter and property search in the
+ * - Phones and narrow windows: status Chip filter row over `ReservationCard`s
+ *   with approve / decline / view buttons in each card footer.
+ * - Wide windows (`lg:`): a Bloom `DataTable` — status filter and property search in the
  *   toolbar, sortable dates / guests / nights / price, and approve / decline /
  *   view as row actions — so a host can triage many requests at once.
  *
@@ -11,8 +11,7 @@
  */
 import type React from 'react';
 import { useCallback, useMemo, useState } from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useQueries } from '@tanstack/react-query';
 import { format, parseISO } from 'date-fns';
@@ -41,26 +40,25 @@ import * as Skeleton from '@oxy.so/bloom/skeleton';
 import { H2, Text as BloomText } from '@oxy.so/bloom/typography';
 import { useOxy, openAccountDialog } from '@oxy.so/services';
 import { useTranslation } from 'react-i18next';
+import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
+import { PageHeader } from '@oxy.so/bloom/page-header';
 import {
   type Reservation,
   ReservationStatus,
   formatMoney,
   type Property,
 } from '@homiio/shared-types';
-import { Header } from '@/components/Header';
 import { ReservationCard } from '@/components/ReservationCard';
 import { ReservationStatusBadge } from '@/components/ReservationStatusBadge';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
 import { ThumbnailImage } from '@/components/ui/ThumbnailImage';
-import { useIsDesktop } from '@/hooks/useOptimizedMediaQuery';
 import { useReservationsQuery, useUpdateReservation } from '@/hooks/useReservationQueries';
 import { propertyService } from '@/services/propertyService';
 import { getPropertyImageSource, getPropertyTitle } from '@/utils/propertyUtils';
 import { useFormatting } from '@/utils/format';
 import { spacing } from '@/constants/styles';
-import { colors } from '@/styles/colors';
 
 type StatusFilter = 'all' | ReservationStatus;
 
@@ -398,11 +396,10 @@ const ReservationsTable: React.FC<ReservationsTableProps> = ({
 
 export default function HostReservationsScreen() {
   const { t } = useTranslation();
+  const router = useRouter();
   const { oxyServices, activeSessionId } = useOxy();
   const isAuthed = Boolean(oxyServices && activeSessionId);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
-  const isDesktop = useIsDesktop();
-  const showTable = Platform.OS === 'web' && isDesktop;
 
   const reservationsQuery = useReservationsQuery(
     {
@@ -423,28 +420,31 @@ export default function HostReservationsScreen() {
     label: t(entry.labelKey),
   }));
 
+  const header = (
+    <PageHeader
+      title={t('host.reservations.title')}
+      titleAlign="center"
+      leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+      onBack={router.canGoBack() ? router.back : undefined}
+      backLabel={t('goBack')}
+    />
+  );
+
   if (!isAuthed) {
     return (
-      <View style={styles.root}>
-        <Header
-          options={{
-            showBackButton: true,
-            title: t('host.reservations.title'),
-          }}
-        />
-        <SafeAreaView edges={['bottom']} style={styles.safeArea}>
-          <View style={styles.emptyWrap}>
-            <EmptyState
-              icon={RiMailLine}
-              title={t('host.reservations.signInTitle')}
-              description={t('host.reservations.signInDescription')}
-              actionText={t('host.reservations.signIn')}
-              actionIcon={RiLoginBoxLine}
-              onAction={() => openAccountDialog()}
-            />
-          </View>
-        </SafeAreaView>
-      </View>
+      <>
+        {header}
+        <View style={styles.emptyWrap}>
+          <EmptyState
+            icon={RiMailLine}
+            title={t('host.reservations.signInTitle')}
+            description={t('host.reservations.signInDescription')}
+            actionText={t('host.reservations.signIn')}
+            actionIcon={RiLoginBoxLine}
+            onAction={() => openAccountDialog()}
+          />
+        </View>
+      </>
     );
   }
 
@@ -457,46 +457,41 @@ export default function HostReservationsScreen() {
   const isError = reservationsQuery.isError;
 
   return (
-    <View style={styles.root}>
-      <Header
-        options={{
-          showBackButton: true,
-          title: t('host.reservations.title'),
-        }}
-      />
-      <SafeAreaView edges={['bottom']} style={styles.safeArea}>
-        <ScrollView contentContainerStyle={styles.content}>
-          {!showTable ? (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.filterRow}
-            >
-              {filters.map((entry) => (
-                <Chip
-                  key={entry.id}
-                  variant="subtle"
-                  selected={statusFilter === entry.id}
-                  onPress={() => setStatusFilter(entry.id)}
-                >
-                  {entry.label}
-                </Chip>
-              ))}
-            </ScrollView>
-          ) : null}
+    <>
+      {header}
+      <View style={styles.content}>
+        <View className="lg:hidden">
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filterRow}
+          >
+            {filters.map((entry) => (
+              <Chip
+                key={entry.id}
+                variant="subtle"
+                selected={statusFilter === entry.id}
+                onPress={() => setStatusFilter(entry.id)}
+              >
+                {entry.label}
+              </Chip>
+            ))}
+          </ScrollView>
+        </View>
 
-          {isLoading ? <ReservationListSkeleton /> : null}
+        {isLoading ? <ReservationListSkeleton /> : null}
 
-          {isError ? (
-            <ErrorState
-              icon={RiAlertLine}
-              title={t('host.reservations.loadError')}
-              description={reservationsQuery.error?.message ?? t('host.reservations.tryAgain')}
-              onRetry={() => reservationsQuery.refetch()}
-            />
-          ) : null}
+        {isError ? (
+          <ErrorState
+            icon={RiAlertLine}
+            title={t('host.reservations.loadError')}
+            description={reservationsQuery.error?.message ?? t('host.reservations.tryAgain')}
+            onRetry={() => reservationsQuery.refetch()}
+          />
+        ) : null}
 
-          {showTable && !isLoading && !isError ? (
+        {!isLoading && !isError ? (
+          <View className="hidden lg:flex">
             <ReservationsTable
               items={items}
               statusFilter={statusFilter}
@@ -504,48 +499,41 @@ export default function HostReservationsScreen() {
               filters={filters}
               activeLabel={activeLabel}
             />
-          ) : null}
+          </View>
+        ) : null}
 
-          {!showTable && !isLoading && !isError && items.length === 0 ? (
-            <View style={styles.emptyWrap}>
-              <EmptyState
-                icon={RiMailLine}
-                title={t('host.reservations.emptyTitle')}
-                description={t('host.reservations.emptyDescription')}
+        {!isLoading && !isError && items.length === 0 ? (
+          <View style={styles.emptyWrap} className="lg:hidden">
+            <EmptyState
+              icon={RiMailLine}
+              title={t('host.reservations.emptyTitle')}
+              description={t('host.reservations.emptyDescription')}
+            />
+          </View>
+        ) : null}
+
+        {items.length > 0 ? (
+          <View style={styles.listWrap} className="lg:hidden">
+            <View style={styles.sectionHeader}>
+              <SectionEyebrow>{t('host.reservations.title')}</SectionEyebrow>
+              <H2 style={styles.sectionTitle}>{activeLabel}</H2>
+            </View>
+            {items.map((reservation) => (
+              <ReservationCard
+                key={reservation.id}
+                reservation={reservation}
+                variant="host"
+                actions={<CardActions reservation={reservation} />}
               />
-            </View>
-          ) : null}
-
-          {!showTable && items.length > 0 ? (
-            <View style={styles.listWrap}>
-              <View style={styles.sectionHeader}>
-                <SectionEyebrow>{t('host.reservations.title')}</SectionEyebrow>
-                <H2 style={styles.sectionTitle}>{activeLabel}</H2>
-              </View>
-              {items.map((reservation) => (
-                <ReservationCard
-                  key={reservation.id}
-                  reservation={reservation}
-                  variant="host"
-                  actions={<CardActions reservation={reservation} />}
-                />
-              ))}
-            </View>
-          ) : null}
-        </ScrollView>
-      </SafeAreaView>
-    </View>
+            ))}
+          </View>
+        ) : null}
+      </View>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  safeArea: {
-    flex: 1,
-  },
   content: {
     padding: spacing.lg,
     gap: spacing.lg,

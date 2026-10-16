@@ -1,11 +1,4 @@
-import React, {
-  type ErrorInfo,
-  type ReactNode,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from 'react';
+import React, { type ErrorInfo, type ReactNode, useCallback, useState } from 'react';
 import {
   View,
   StyleSheet,
@@ -18,7 +11,6 @@ import { useTranslation } from 'react-i18next';
 import * as Clipboard from 'expo-clipboard';
 import * as Device from 'expo-device';
 import Constants from 'expo-constants';
-import { useMediaQuery } from 'react-responsive';
 
 import { ErrorBoundary as BloomErrorBoundary } from '@oxy.so/bloom/error-boundary';
 import { Button } from '@oxy.so/bloom/button';
@@ -132,20 +124,11 @@ function ErrorFallback({
   const [badgePressed, setBadgePressed] = useState(false);
   const [errorIdPressed, setErrorIdPressed] = useState(false);
   const [detailsTogglePressed, setDetailsTogglePressed] = useState(false);
-  const isWide = useMediaQuery({ minWidth: 768 });
 
-  // Stable id per error instance. The id is generated from impure sources
-  // (`Date.now`/`Math.random`) which may not run during render, so we seed it
-  // once via a lazy initializer and regenerate only when a genuinely new error
-  // instance is caught — driven from an effect, not from render.
-  const [errorId, setErrorId] = useState(generateErrorId);
-  const errorIdSourceRef = useRef(error);
-  useEffect(() => {
-    if (errorIdSourceRef.current !== error) {
-      errorIdSourceRef.current = error;
-      setErrorId(generateErrorId());
-    }
-  }, [error]);
+  // Stable id per caught error. Bloom's boundary unmounts this fallback on
+  // retry and mounts a fresh one for the next error it catches, so each error
+  // instance gets its own mount — and its own lazily-initialized id.
+  const [errorId] = useState(generateErrorId);
 
   const handleRetry = useCallback(() => {
     if (retryCount >= maxRetries) {
@@ -208,12 +191,12 @@ function ErrorFallback({
   });
 
   return (
-    <ScrollView
-      contentContainerStyle={styles.scrollContent}
-      style={styles.scrollRoot}
-      keyboardShouldPersistTaps="handled"
-    >
-      <View {...a11yAlertProps} style={[styles.card, isWide && styles.cardWide]}>
+    <View style={styles.content}>
+      <View
+        {...a11yAlertProps}
+        className="px-5 py-10 md:max-w-[480px] md:border md:border-border md:px-8 md:py-14"
+        style={styles.card}
+      >
         <Pressable
           onPress={handleBadgePress}
           onPressIn={() => setBadgePressed(true)}
@@ -240,7 +223,9 @@ function ErrorFallback({
           style={[styles.errorIdChip, errorIdPressed && styles.errorIdChipPressed]}
         >
           <BloomText style={styles.errorIdLabel}>{t('error.boundary.errorId')}</BloomText>
-          <BloomText style={styles.errorIdValue}>{errorId}</BloomText>
+          <BloomText className="font-bloom-mono" style={styles.errorIdValue}>
+            {errorId}
+          </BloomText>
           <RiFileCopyLine
             width={12}
             height={12}
@@ -249,8 +234,8 @@ function ErrorFallback({
           />
         </Pressable>
 
-        <View style={[styles.actions, isWide && styles.actionsWide]}>
-          <View style={isWide ? styles.actionWide : styles.actionFull}>
+        <View className="mt-8 w-full flex-col gap-3 md:flex-row md:justify-center md:gap-4">
+          <View className="w-full md:w-auto md:min-w-[180px]">
             <Button
               size="lg"
               onPress={handleRetry}
@@ -265,7 +250,7 @@ function ErrorFallback({
                 : t('error.boundary.retry')}
             </Button>
           </View>
-          <View style={isWide ? styles.actionWide : styles.actionFull}>
+          <View className="w-full md:w-auto md:min-w-[180px]">
             <Button
               size="lg"
               onPress={handleReportIssue}
@@ -323,23 +308,23 @@ function ErrorFallback({
               <BloomText style={styles.detailLabel}>
                 {t('error.boundary.deviceInformation')}
               </BloomText>
-              <BloomText style={styles.deviceLine}>
+              <BloomText className="font-bloom-mono" style={styles.deviceLine}>
                 {`Platform: ${Platform.OS} ${Platform.Version ?? ''}`.trim()}
               </BloomText>
-              <BloomText style={styles.deviceLine}>
+              <BloomText className="font-bloom-mono" style={styles.deviceLine}>
                 {`Device: ${Device.brand ?? 'unknown'} ${Device.modelName ?? ''}`.trim()}
               </BloomText>
-              <BloomText style={styles.deviceLine}>
+              <BloomText className="font-bloom-mono" style={styles.deviceLine}>
                 {`OS: ${Device.osName ?? 'unknown'} ${Device.osVersion ?? ''}`.trim()}
               </BloomText>
-              <BloomText style={styles.deviceLine}>
+              <BloomText className="font-bloom-mono" style={styles.deviceLine}>
                 {`App: ${Constants.expoConfig?.version ?? 'unknown'}`}
               </BloomText>
             </View>
           </View>
         )}
       </View>
-    </ScrollView>
+    </View>
   );
 }
 
@@ -353,7 +338,12 @@ function DetailRow({ label, value, mono }: DetailRowProps) {
   return (
     <View style={styles.detailRow}>
       <BloomText style={styles.detailLabel}>{label}</BloomText>
-      <BloomText style={mono ? styles.detailValueMono : styles.detailValue}>{value}</BloomText>
+      <BloomText
+        className={mono ? 'font-bloom-mono' : undefined}
+        style={mono ? styles.detailValueMono : styles.detailValue}
+      >
+        {value}
+      </BloomText>
     </View>
   );
 }
@@ -368,7 +358,9 @@ function DetailBlock({ label, value }: DetailBlockProps) {
     <View style={styles.detailRow}>
       <BloomText style={styles.detailLabel}>{label}</BloomText>
       <ScrollView style={styles.codeBlock} nestedScrollEnabled>
-        <BloomText style={styles.codeText}>{value}</BloomText>
+        <BloomText className="font-bloom-mono" style={styles.codeText}>
+          {value}
+        </BloomText>
       </ScrollView>
     </View>
   );
@@ -376,7 +368,7 @@ function DetailBlock({ label, value }: DetailBlockProps) {
 
 /**
  * Generates a unique, human-shareable error id. Uses impure sources, so it
- * must only ever be called from a lazy state initializer or an event/effect —
+ * must only ever be called from a lazy state initializer or an event handler —
  * never directly during render.
  */
 function generateErrorId(): string {
@@ -422,15 +414,8 @@ Please share this report with the development team.
 }
 
 const ICON_BADGE_SIZE = 96;
-const CARD_MAX_WIDTH = 480;
-const MONO_FONT = Platform.OS === 'ios' ? 'Menlo' : 'monospace';
-
 const styles = StyleSheet.create({
-  scrollRoot: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  scrollContent: {
+  content: {
     flexGrow: 1,
     alignItems: 'center',
     justifyContent: 'center',
@@ -442,15 +427,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: colors.surfaceElevated,
     borderRadius: radius.xl,
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing['4xl'],
-  },
-  cardWide: {
-    maxWidth: CARD_MAX_WIDTH,
-    paddingHorizontal: spacing['3xl'],
-    paddingVertical: spacing['5xl'],
-    borderWidth: 1,
-    borderColor: colors.border,
   },
   iconBadge: {
     width: ICON_BADGE_SIZE,
@@ -498,29 +474,11 @@ const styles = StyleSheet.create({
   },
   errorIdValue: {
     fontSize: 12,
-    fontFamily: MONO_FONT,
     color: colors.COLOR_BLACK,
     fontWeight: '600',
   },
   errorIdCopyIcon: {
     marginLeft: spacing.xs,
-  },
-  actions: {
-    marginTop: spacing['3xl'],
-    width: '100%',
-    flexDirection: 'column',
-    gap: spacing.md,
-  },
-  actionsWide: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: spacing.lg,
-  },
-  actionFull: {
-    width: '100%',
-  },
-  actionWide: {
-    minWidth: 180,
   },
   button: {
     width: '100%',
@@ -574,7 +532,6 @@ const styles = StyleSheet.create({
   detailValueMono: {
     fontSize: 13,
     color: colors.COLOR_BLACK,
-    fontFamily: MONO_FONT,
   },
   codeBlock: {
     maxHeight: 160,
@@ -586,7 +543,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     lineHeight: 16,
     color: colors.COLOR_BLACK_LIGHT_3,
-    fontFamily: MONO_FONT,
   },
   deviceBlock: {
     gap: spacing.xs,
@@ -597,7 +553,6 @@ const styles = StyleSheet.create({
   deviceLine: {
     fontSize: 12,
     color: colors.COLOR_BLACK_LIGHT_3,
-    fontFamily: MONO_FONT,
   },
 });
 

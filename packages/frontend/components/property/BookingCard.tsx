@@ -181,7 +181,7 @@ export const BookingCard: React.FC<BookingCardProps> = ({ property, stay }) => {
           footer={
             <View style={styles.footer}>
               {policy ? (
-                <BloomText variant="body-2-regular" className="text-center text-muted-foreground">
+                <BloomText className="text-body-2-regular text-center text-muted-foreground">
                   {policy}
                 </BloomText>
               ) : null}
@@ -393,5 +393,3 @@ const styles = StyleSheet.create({
     gap: 8,
   },
 });
-
-export default BookingCard;

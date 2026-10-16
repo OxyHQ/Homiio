@@ -207,6 +207,24 @@ const toFeatureCollection = (list: MarkerInput[]): FeatureCollection<Point> => (
   })),
 });
 
+/**
+ * Raise the highlighted pill (or the cluster holding it) above its neighbours,
+ * which Bloom leaves to the app that positions it. Called by the two things
+ * that change the answer: a new drawn set and a new highlight.
+ */
+const applyStacking = (
+  items: readonly OverlayItem<HTMLDivElement>[],
+  highlightedId: string | null,
+): void => {
+  for (const item of items) {
+    const active =
+      item.kind === 'point'
+        ? item.id === highlightedId
+        : clusterOverlayState(item.leafIds, highlightedId) === 'active';
+    item.element.style.zIndex = active ? '2' : '';
+  }
+};
+
 const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref) {
   const {
     style,
@@ -231,9 +249,16 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
   const { getMapState, setMapState } = useMapState();
   const { t } = useTranslation();
 
-  const [showInstructions, setShowInstructions] = useState(
-    enableAddressLookup && showAddressInstructions,
-  );
+  // The hint shows while address lookup asks for it, until the first tap on the
+  // map dismisses it. Turning either prop off and on again brings it back.
+  const [instructionsDismissed, setInstructionsDismissed] = useState(false);
+  const instructionsKey = `${enableAddressLookup}|${showAddressInstructions}`;
+  const [prevInstructionsKey, setPrevInstructionsKey] = useState(instructionsKey);
+  if (instructionsKey !== prevInstructionsKey) {
+    setPrevInstructionsKey(instructionsKey);
+    setInstructionsDismissed(false);
+  }
+  const showInstructions = enableAddressLookup && showAddressInstructions && !instructionsDismissed;
 
   // Get saved map state if screenId is provided.
   const savedState = screenId ? getMapState(screenId) : null;
@@ -252,7 +277,6 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
   );
 
   // Imperative handles to the live maplibre instance + per-marker DOM bubbles.
-  const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const overlayMarkersRef = useRef<OverlayMarkerMap>(createOverlayMarkerMap());
   /** The published marker inputs by id — the only source of a pin's position. */
@@ -284,12 +308,10 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
   const setMapStateRef = useRef(setMapState);
   setMapStateRef.current = setMapState;
 
-  // Mirror the latest markers/instructions into refs read by the construction
-  // effect's listeners (the `load` and map-`click` handlers are bound once).
+  // Mirror the latest markers into a ref read by the construction ref's
+  // listeners (the `load` handler is bound once).
   const markersRef = useRef<MarkerInput[]>(markers);
   markersRef.current = markers;
-  const showInstructionsRef = useRef(showInstructions);
-  showInstructionsRef.current = showInstructions;
 
   /**
    * The markers drawn over the canvas: one Bloom pill per unclustered point and
@@ -302,6 +324,13 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
    */
   const [overlays, setOverlays] = useState<OverlayItem<HTMLDivElement>[]>([]);
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
+  /**
+   * The same two values for the code that runs outside render: `syncOverlays`
+   * (a map `render` listener) and `highlightMarker` (an imperative call). Both
+   * are the events that change what is drawn, so they restack the pills there.
+   */
+  const overlayItemsRef = useRef<OverlayItem<HTMLDivElement>[]>([]);
+  const highlightedIdRef = useRef<string | null>(null);
   const [visitedIds, setVisitedIds] = useState<ReadonlySet<string>>(() => new Set<string>());
 
   /**
@@ -376,6 +405,8 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
     const signature = overlaySignature(items);
     if (signature !== overlaySignatureRef.current) {
       overlaySignatureRef.current = signature;
+      overlayItemsRef.current = items;
+      applyStacking(items, highlightedIdRef.current);
       setOverlays(items);
     }
   }, []);
@@ -435,14 +466,17 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
     });
   }, []);
 
-  // Construct the maplibre map once, against the real DOM container. The empty
-  // dep array is the point: the instance is created a single time and lives for
-  // the component's lifetime — live props are read through the refs above.
+  /**
+   * Construct the maplibre map against the real DOM container the moment React
+   * attaches it, and tear it down when React detaches it (a React 19 ref
+   * callback's returned cleanup). The `[]` is the point: a stable callback is
+   * attached once per mount, so the instance is created a single time and lives
+   * for the component's lifetime — live props are read through the refs above,
+   * mount-time props (camera, style, clustering, saved state) from this first
+   * render's closure.
+   */
   // biome-ignore lint/correctness/useExhaustiveDependencies: the map is intentionally created once; live values flow through refs
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container || mapRef.current) return;
-
+  const attachMap = useCallback((container: HTMLDivElement) => {
     // The overlay-marker store is created once and never reassigned; capture it
     // for the cleanup so it doesn't read a possibly-changed ref at teardown time.
     const overlayMarkers = overlayMarkersRef.current;
@@ -456,7 +490,7 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
     let disposed = false;
 
     const buildMap = (style: string | StyleSpecification) => {
-      if (disposed || !containerRef.current || mapRef.current) return;
+      if (disposed || mapRef.current) return;
       const mapOptions: MapOptions = {
         container,
         style,
@@ -477,6 +511,46 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
       );
 
       wireMap(map);
+      void centerOnDevice();
+    };
+
+    /**
+     * Centre on the device location once, only when no explicit initial centre
+     * and no restored state were provided — and ONLY when permission is already
+     * granted (mirrors the native behaviour).
+     *
+     * The `requestForegroundPermissionsAsync` this replaced fired the browser's
+     * location prompt on mount, for anybody opening Explore without coordinates.
+     * See the note on the native map: asking is an explicit action, and
+     * `useLocationScope` owns it.
+     */
+    const centerOnDevice = async () => {
+      if (!startFromCurrentLocation || savedState) return;
+      const hasSpecificInitialCoords =
+        initialCoordinates[0] !== DEFAULT_CENTER[0] || initialCoordinates[1] !== DEFAULT_CENTER[1];
+      if (hasSpecificInitialCoords) return;
+      try {
+        const { status } = await Location.getForegroundPermissionsAsync();
+        if (status !== 'granted' || disposed) return;
+        const loc = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.High,
+          timeInterval: 10000,
+          distanceInterval: 10,
+        });
+        const map = mapRef.current;
+        if (disposed || !map) return;
+        const accuracy = loc.coords.accuracy ?? null;
+        const zoom =
+          accuracy && accuracy > COARSE_ACCURACY_M
+            ? Math.max(initialZoom, COARSE_ZOOM)
+            : Math.max(initialZoom, FINE_ZOOM);
+        map.easeTo(
+          { center: [loc.coords.longitude, loc.coords.latitude], zoom },
+          PROGRAMMATIC_MOVE,
+        );
+      } catch {
+        // Location is best-effort; the map keeps its initial camera.
+      }
     };
 
     const wireMap = (map: maplibregl.Map) => {
@@ -514,9 +588,7 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
       map.on('click', (event: MapMouseEvent) => {
         const coordinates: LonLat = [event.lngLat.lng, event.lngLat.lat];
 
-        if (enableAddressLookupRef.current && showInstructionsRef.current) {
-          setShowInstructions(false);
-        }
+        if (enableAddressLookupRef.current) setInstructionsDismissed(true);
         onMapPressRef.current?.({ lngLat: coordinates });
 
         if (enableAddressLookupRef.current) {
@@ -573,89 +645,23 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
       map?.remove();
       map = null;
     };
-    // The map is intentionally created once; live values flow through refs.
   }, []);
 
-  // Stream marker updates to the live map.
+  /**
+   * Stream marker updates to the live map.
+   *
+   * The one effect left in this file, and deliberately so: `markers` is a prop,
+   * the GL source is an imperative maplibre object with no declarative binding,
+   * and no event in this component coincides with a new marker set — it simply
+   * arrives on a re-render. A declarative source (`<MapSource data={markers}>`
+   * in a shared map SDK that owns this sync) is what would retire it. The set
+   * drawn is also the one kept for this screen's next mount, which draws it on
+   * `load` before its own results arrive.
+   */
   useEffect(() => {
     setData(markers);
-  }, [markers, setData]);
-
-  // Persist markers to shared state for cross-screen restoration.
-  useEffect(() => {
-    if (!screenId || markers.length === 0) return;
-    const current = getMapState(screenId);
-    const currentMarkers = current?.markers ?? [];
-    const changed =
-      markers.length !== currentMarkers.length ||
-      markers.some((marker, index) => {
-        const prev = currentMarkers[index];
-        return (
-          !prev ||
-          marker.id !== prev.id ||
-          marker.coordinates[0] !== prev.coordinates[0] ||
-          marker.coordinates[1] !== prev.coordinates[1] ||
-          marker.priceLabel !== prev.priceLabel
-        );
-      });
-    if (changed) setMapState(screenId, { markers });
-  }, [markers, screenId, getMapState, setMapState]);
-
-  // Keep instructions visibility in sync with the address-lookup props.
-  useEffect(() => {
-    setShowInstructions(showAddressInstructions && enableAddressLookup);
-  }, [showAddressInstructions, enableAddressLookup]);
-
-  /**
-   * Centre on the device location once, only when no explicit initial centre
-   * and no restored state were provided — and ONLY when permission is already
-   * granted (mirrors the native behaviour).
-   *
-   * The `requestForegroundPermissionsAsync` this replaced fired the browser's
-   * location prompt on mount, for anybody opening Explore without coordinates.
-   * See the note on the native map: asking is an explicit action, and
-   * `useLocationScope` owns it.
-   */
-  const hasCenteredOnce = useRef(false);
-  useEffect(() => {
-    if (!startFromCurrentLocation || hasCenteredOnce.current || savedState) return;
-
-    const hasSpecificInitialCoords =
-      initialCoordinates[0] !== DEFAULT_CENTER[0] || initialCoordinates[1] !== DEFAULT_CENTER[1];
-    if (hasSpecificInitialCoords) return;
-
-    let cancelled = false;
-    (async () => {
-      try {
-        const { status } = await Location.getForegroundPermissionsAsync();
-        if (status !== 'granted' || cancelled) return;
-        const loc = await Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.High,
-          timeInterval: 10000,
-          distanceInterval: 10,
-        });
-        if (cancelled || hasCenteredOnce.current) return;
-        const map = mapRef.current;
-        if (!map) return;
-        const accuracy = loc.coords.accuracy ?? null;
-        const zoom =
-          accuracy && accuracy > COARSE_ACCURACY_M
-            ? Math.max(initialZoom, COARSE_ZOOM)
-            : Math.max(initialZoom, FINE_ZOOM);
-        map.easeTo(
-          { center: [loc.coords.longitude, loc.coords.latitude], zoom },
-          PROGRAMMATIC_MOVE,
-        );
-        hasCenteredOnce.current = true;
-      } catch {
-        // Location is best-effort; the map keeps its initial camera.
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [startFromCurrentLocation, savedState, initialCoordinates, initialZoom]);
+    if (screenId && markers.length > 0) setMapState(screenId, { markers });
+  }, [markers, setData, screenId, setMapState]);
 
   const handlePointPress = useCallback((id: string, coordinates: LonLat) => {
     setVisitedIds((previous) => {
@@ -706,18 +712,6 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
       });
   }, []);
 
-  // Raise the highlighted pill (or the cluster holding it) above its
-  // neighbours, which Bloom leaves to the app that positions it.
-  useEffect(() => {
-    overlays.forEach((item) => {
-      const active =
-        item.kind === 'point'
-          ? item.id === highlightedId
-          : clusterOverlayState(item.leafIds, highlightedId) === 'active';
-      item.element.style.zIndex = active ? '2' : '';
-    });
-  }, [overlays, highlightedId]);
-
   // Expose the imperative MapApi — identical to the native component.
   useImperativeHandle(
     ref,
@@ -752,7 +746,10 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
         );
       },
       highlightMarker: (id: string | null) => {
-        setHighlightedId(id ? String(id) : null);
+        const next = id ? String(id) : null;
+        highlightedIdRef.current = next;
+        applyStacking(overlayItemsRef.current, next);
+        setHighlightedId(next);
       },
       lookupAddress: async (coordinates: LonLat) => lookupAddressFromCoordinates(coordinates),
     }),
@@ -766,7 +763,7 @@ const MapComponent = React.forwardRef<MapApi, MapProps>(function Map(props, ref)
           <Text style={addressInstructionStyles.text}>Tap on the map to select a location</Text>
         </View>
       )}
-      <div ref={containerRef} style={mapDivStyle} />
+      <div ref={attachMap} style={mapDivStyle} />
       {overlays.map((item) =>
         createPortal(
           item.kind === 'point' ? (

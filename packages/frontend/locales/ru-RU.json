@@ -138,24 +138,19 @@
       "topProperties": "Популярные объекты"
     },
     "hero": {
-      "title": "Найдите своё этичное жильё"
+      "title": {
+        "long_term": "Найдите своё этичное жильё",
+        "vacation": "Найдите жильё для следующей поездки",
+        "buy": "Найдите дом для покупки",
+        "exchange": "Меняйтесь жильём и путешествуйте иначе"
+      }
     },
     "category": {
       "petFriendly": "Можно с животными"
     },
-    "horizon": {
-      "learnMore": "Подробнее"
-    },
-    "eco": {
-      "title": "Жильё с экосертификатом",
-      "description": "Найдите экологичное жильё, которое отвечает нашим требованиям к энергоэффективности и бережному отношению к среде"
-    },
     "featured": {
       "title": "Избранные объекты",
-      "empty": "Сейчас избранных объектов нет",
-      "titleIn": "Избранное в районе {{area}}",
-      "chooseArea": "Выберите район, чтобы увидеть избранное жильё.",
-      "loadFailed": "Не удалось загрузить избранное жильё для этого района."
+      "titleIn": "Избранное в районе {{area}}"
     },
     "viewAll": "Показать всё",
     "recentlyViewed": {
@@ -180,68 +175,59 @@
       "title": "Рекомендуем",
       "eyebrow": "Для вас"
     },
-    "explore": {
-      "eyebrow": "Смотреть дальше",
-      "title": "Больше вариантов жилья",
-      "cta": "Показать всё жильё здесь",
-      "ctaAccessible": "Открыть «Обзор» с районом, в котором вы ищете"
-    },
     "hostCta": {
-      "cta": "Стать хозяином",
-      "subtitle": "Найдите проверенных арендаторов по всей Испании: размещение бесплатное, комиссии честные, поддержку оказывают живые люди.",
-      "title": "Разместите своё жильё и найдите хорошего арендатора"
+      "long_term": {
+        "title": "Разместите своё жильё и найдите хорошего арендатора",
+        "subtitle": "Найдите проверенных арендаторов по всей Испании: размещение бесплатное, комиссии честные, поддержку оказывают живые люди.",
+        "cta": "Стать хозяином"
+      },
+      "vacation": {
+        "title": "Принимайте путешественников у себя",
+        "subtitle": "Сдавайте жильё на короткий срок — понятные цены, без скрытых сборов.",
+        "cta": "Стать хозяином"
+      },
+      "buy": {
+        "title": "Продаёте жильё?",
+        "subtitle": "Разместите объявление бесплатно и найдите покупателей, которые видят всю историю.",
+        "cta": "Разместить жильё"
+      },
+      "exchange": {
+        "title": "Обменяйтесь жильём",
+        "subtitle": "Меняйтесь жильём с теми, кому доверяете, и путешествуйте дешевле.",
+        "cta": "Предложить обмен"
+      }
     },
     "sections": {
-      "explain": "{{reason}} · Источник: {{source}}",
-      "explainAccessible": "Почему эти объекты: {{reason}}. Источник: {{source}}.",
       "error": "Не удалось загрузить этот район. Ничего не скрыто — запрос завершился ошибкой.",
-      "source": {
-        "listing_created_at": "даты публикации объявлений",
-        "listing_sale_price_reduced_flag": "отметку о снижении цены, которую публикует портал",
-        "listing_status": "изменения статуса объявления",
-        "listing_agency_fee_flag": "поле об агентской комиссии в объявлении",
-        "listing_cost_fields": "поля расходов в объявлении",
-        "resident_reviews": "отзывы тех, кто здесь жил",
-        "listing_verification": "записи проверок Homiio",
-        "listing_housing_type": "поле типа жилья в объявлении"
-      },
       "new_in_area": {
-        "eyebrow": "Новое",
         "title": "Новое в вашем районе",
         "reason": "Опубликованы позже всего в районе, где вы ищете"
       },
       "price_reduced": {
-        "eyebrow": "Изменение цены",
         "title": "Цена снижена",
         "reason": "Продавец опубликовал снижение цены. Homiio не хранит историю арендных ставок, поэтому сюда попадает только жильё на продажу"
       },
       "no_longer_available": {
-        "eyebrow": "Ушли с рынка",
         "title": "Больше не доступны",
         "reason": "Отмечены собственником как сданные или проданные, сначала самые свежие: что действительно ушло и по какой цене"
       },
       "no_agency_fee": {
-        "eyebrow": "Расходы",
         "title": "Без комиссии агентства",
         "reason": "В объявлении указано, что агентской комиссии нет. Объявления, где об этом ничего не сказано, сюда не попадают"
       },
       "transparent_total_cost": {
-        "eyebrow": "Расходы",
         "title": "Полная стоимость указана",
         "reason": "В объявлении есть все регулярные расходы: аренда с коммунальными и залогом либо цена за ночь с уборкой и сервисным сбором"
       },
       "with_resident_reviews": {
-        "eyebrow": "Доверие",
         "title": "С отзывами жильцов",
         "reason": "Кто-то, кто жил по этому адресу, написал отзыв"
       },
       "verified": {
-        "eyebrow": "Доверие",
         "title": "Адрес или автор проверены",
         "reason": "Homiio проверил адрес или того, кто разместил объявление"
       },
       "public_housing": {
-        "eyebrow": "Государственное",
         "title": "Социальное жильё",
         "reason": "Размещено как социальное жильё. У Homiio пока нет поля для кооперативного или общинного жилья, поэтому оно сюда не попадает"
       },
@@ -254,9 +240,17 @@
       "changeFiltersAccessible": "Открыть «Обзор», чтобы изменить фильтры для этого района"
     },
     "discovery": {
-      "eyebrow": "Изучите направления",
-      "title": "Где вы хотели бы жить?",
-      "body": "Мы не смогли определить ваш район, поэтому это города, где на Homiio есть жильё, а не места рядом с вами."
+      "title": "Где вы хотели бы жить?"
+    },
+    "neighbourSupport": {
+      "title": "Соседям нужна поддержка",
+      "viewAll": "Смотреть все"
+    },
+    "mission": {
+      "title": "Мы на вашей стороне",
+      "body": "Homiio появился из того же жилищного кризиса, который переживаете вы. Мы слушаем арендаторов и создаём сервис вместе с ними.",
+      "support": "Поддержать Homiio",
+      "readStory": "Зачем существует Homiio"
     }
   },
   "agent": {
@@ -455,9 +449,6 @@
       "other": "Other"
     },
     "widgets": {
-      "common": {
-        "signIn": "Sign in"
-      },
       "quickFilters": {
         "title": "Quick Filters",
         "furnished": "Furnished",
@@ -474,7 +465,6 @@
       "alerts": {
         "title": "Property Alerts",
         "subtitle": "Get notified when new properties match your criteria",
-        "signInPrompt": "Sign in to create property alerts",
         "location": "Location",
         "minPrice": "Min Price",
         "maxPrice": "Max Price",
@@ -490,10 +480,7 @@
       },
       "savedSearches": {
         "title": "Saved Searches",
-        "empty": "No saved searches yet",
         "emptyHelper": "Save a search to get quick access and alerts here",
-        "signInPrompt": "Sign in to save searches",
-        "createNew": "Create New Search",
         "viewAllCount": "View All ({{count}} more)",
         "nameAndQueryRequired": "Search name and query are required",
         "loadFailed": "Failed to load saved searches",
@@ -782,11 +769,6 @@
         "rentalLabel": "Rental {{index}}"
       }
     },
-    "toast": {
-      "loadFailed": "Failed to load profiles",
-      "updateSuccess": "Profile updated successfully",
-      "updateFailed": "Failed to update profile"
-    },
     "subscriptionsDescription": "Manage Homiio Plus or buy one-time file analysis.",
     "subscriptions": "Subscriptions",
     "stays": "Stays",
@@ -833,10 +815,6 @@
       "transactDone": "Listing marked as closed",
       "transactCommission": "Deal closed — commission recorded",
       "viewingTimes": "Время просмотров"
-    },
-    "details": {
-      "bedrooms": "Bedrooms",
-      "bathrooms": "Bathrooms"
     },
     "titles": {
       "forRent": "for rent in",
@@ -1253,56 +1231,6 @@
       "viewProfile": "View Profile",
       "sendRequest": "Send Request",
       "fallbackName": "Roommate"
-    }
-  },
-  "horizon": {
-    "title": "Horizon Initiative",
-    "description": "Global initiative for fair housing, healthcare, and travel support",
-    "page": {
-      "benefits": {
-        "fairHousing": {
-          "title": "Fair Housing",
-          "description": "Access to affordable housing in 120+ cities worldwide with standardized ethical rental agreements"
-        },
-        "healthcare": {
-          "title": "Healthcare Access",
-          "description": "Universal healthcare coverage with partner clinics and telehealth services in every Horizon city"
-        },
-        "travel": {
-          "title": "Travel Network",
-          "description": "Discounted transportation and accommodation when traveling between Horizon locations"
-        },
-        "community": {
-          "title": "Community Support",
-          "description": "Connect with local members for cultural integration, language exchange, and social activities"
-        }
-      },
-      "heroTitle": "Global Housing Initiative",
-      "heroSubtitle": "Creating a world of ethical housing, healthcare, and mobility",
-      "aboutTitle": "About Horizon",
-      "aboutBody1": "Horizon is a global initiative designed to make housing more accessible, affordable, and ethical for everyone. By joining a network of properties across 120+ cities worldwide, members gain access to fair housing, healthcare benefits, and travel support.",
-      "aboutBody2": "Our mission is to create sustainable living environments that foster community and wellbeing while reducing the environmental impact of housing.",
-      "benefitsTitle": "Member Benefits",
-      "howItWorksTitle": "How It Works",
-      "steps": {
-        "apply": {
-          "title": "Apply for Membership",
-          "description": "Complete your profile and submit a membership application with your housing needs and preferences."
-        },
-        "verify": {
-          "title": "Get Verified",
-          "description": "Our team reviews your application and verifies your identity and background information."
-        },
-        "access": {
-          "title": "Access the Network",
-          "description": "Once approved, browse and book properties across our global network with priority access."
-        }
-      },
-      "joinTitle": "Ready to join Horizon?",
-      "joinSubtitle": "Apply today and take the first step toward ethical, accessible housing worldwide.",
-      "storiesTitle": "Member Stories",
-      "story1": "Horizon made my relocation so much easier. I found an ethical apartment in Berlin within a week and the healthcare coverage saved me when I needed emergency care.",
-      "story2": "As a digital nomad, having access to quality housing in multiple cities has been life-changing. The community aspect is what makes Horizon truly special."
     }
   },
   "settings": {
@@ -2112,11 +2040,6 @@
     }
   },
   "donations": {
-    "widget": {
-      "title": "Support Our Mission",
-      "description": "Help us build the future of ethical housing. Your support makes a difference.",
-      "button": "Donate to Homiio"
-    },
     "page": {
       "title": "Donate to Homiio",
       "subtitle": "Support the future of ethical housing",
@@ -3868,15 +3791,6 @@
       "exploreGlobalAccessible": "Смотреть жильё везде, без фильтра по району",
       "pickerTitle": "Где вы ищете жильё?",
       "showingCached": "Сохранённая копия от {{when}}. Данные не актуальны.",
-      "failure": {
-        "permission_denied": "Геолокация выключена, поэтому мы не можем искать рядом с вами. Выберите место — геолокация не обязательна.",
-        "position_unavailable": "Не удалось определить ваше местоположение. Выберите место.",
-        "network": "Не удалось связаться с Homiio для этого запроса. Проверьте соединение и попробуйте снова.",
-        "rate_limited": "Слишком много запросов мест подряд. Попробуйте через минуту.",
-        "ambiguous": "Под это название подходит несколько мест. Выберите нужное.",
-        "no_results": "Мы не нашли это место. Попробуйте другое название.",
-        "unsupported": "Homiio пока не умеет искать по такому типу места. Выберите город."
-      },
       "chooseArea": "Выберите район",
       "useCurrentHint": "В радиусе {{distance}} от вас",
       "locationOff": "Геолокация отключена в настройках",

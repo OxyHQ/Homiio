@@ -27,7 +27,7 @@ import { leaseLedgerService, type LeaseLedger } from '@/services/leaseLedgerServ
 
 const LEDGER_KEY = 'leaseLedger';
 
-export const leaseLedgerKeys = {
+const leaseLedgerKeys = {
   detail: (leaseId: string) => [LEDGER_KEY, leaseId] as const,
 };
 

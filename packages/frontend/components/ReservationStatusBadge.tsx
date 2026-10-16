@@ -21,5 +21,3 @@ export function ReservationStatusBadge({ status }: { status: ReservationStatus }
     </Chip>
   );
 }
-
-export default ReservationStatusBadge;

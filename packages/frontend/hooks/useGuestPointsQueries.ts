@@ -22,7 +22,7 @@ import { guestPointsService, type GuestPointsLedger } from '@/services/guestPoin
 
 const GUEST_POINTS_KEY = 'guest-points';
 
-export const guestPointsKeys = {
+const guestPointsKeys = {
   mine: () => [GUEST_POINTS_KEY, 'mine'] as const,
 };
 

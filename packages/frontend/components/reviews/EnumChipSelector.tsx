@@ -79,5 +79,3 @@ export function EnumChipSelector<T extends string>({
     </View>
   );
 }
-
-export default EnumChipSelector;

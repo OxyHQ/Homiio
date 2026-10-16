@@ -42,21 +42,38 @@ function joinDraft(...parts: string[]): string {
  * Web uses the Web Speech API; native uses `expo-speech-recognition`, which
  * needs a binary built with that module (see `speechEngine.ts`).
  */
+/**
+ * Close the mic when the app goes to the background / the tab is hidden, and
+ * (web) when the window loses focus. Returns the detach.
+ */
+function closeOnLeave(close: () => void): () => void {
+  const subscription = AppState.addEventListener('change', (state) => {
+    if (state === 'background') close();
+  });
+  const canListenToWindow = Platform.OS === 'web' && typeof window !== 'undefined';
+  if (canListenToWindow) window.addEventListener('blur', close);
+  return () => {
+    subscription.remove();
+    if (canListenToWindow) window.removeEventListener('blur', close);
+  };
+}
+
+const noop = () => {};
+
 export function useVoiceDraft({ value, onChange }: UseVoiceDraftArgs): UseVoiceDraftResult {
   const { t, i18n } = useTranslation();
   const [listening, setListeningState] = useState(false);
-  /** The mic is actually capturing (permission granted), not just requested. */
-  const [capturing, setCapturing] = useState(false);
 
   const sessionRef = useRef<SpeechSession | null>(null);
   /** Incremented per session; callbacks from an older session are ignored. */
   const generationRef = useRef(0);
-  const valueRef = useRef(value);
-  const onChangeRef = useRef(onChange);
-  useEffect(() => {
-    valueRef.current = value;
-    onChangeRef.current = onChange;
-  }, [value, onChange]);
+  /** Detaches the current session's background/blur guards (see `onCapture`). */
+  const releaseGuardsRef = useRef<() => void>(noop);
+
+  const releaseGuards = useCallback(() => {
+    releaseGuardsRef.current();
+    releaseGuardsRef.current = noop;
+  }, []);
 
   const announceFailure = useCallback(
     (failure: SpeechFailure) => {
@@ -77,12 +94,20 @@ export function useVoiceDraft({ value, onChange }: UseVoiceDraftArgs): UseVoiceD
     [t],
   );
 
+  const stop = useCallback(() => {
+    releaseGuards();
+    sessionRef.current?.stop();
+    setListeningState(false);
+  }, [releaseGuards]);
+
+  // Opening the mic is the press, so it reads the draft and the change handler
+  // it continues from right here rather than through refs synced after render.
   const start = useCallback(() => {
     if (sessionRef.current) return;
     const generation = ++generationRef.current;
     const isCurrent = () => generationRef.current === generation;
 
-    const base = valueRef.current;
+    const base = value;
     let settled = '';
     let ended = false;
     setListeningState(true);
@@ -92,13 +117,18 @@ export function useVoiceDraft({ value, onChange }: UseVoiceDraftArgs): UseVoiceD
         if (!isCurrent()) return;
         if (isFinal) {
           settled = joinDraft(settled, transcript);
-          onChangeRef.current(joinDraft(base, settled));
+          onChange(joinDraft(base, settled));
         } else {
-          onChangeRef.current(joinDraft(base, settled, transcript));
+          onChange(joinDraft(base, settled, transcript));
         }
       },
       onCapture: () => {
-        if (isCurrent()) setCapturing(true);
+        if (!isCurrent()) return;
+        // Armed only once audio capture has begun: a permission prompt can blur
+        // the window (web) or make the app `inactive` (iOS), and closing on that
+        // would make the first tap never listen.
+        releaseGuards();
+        releaseGuardsRef.current = closeOnLeave(stop);
       },
       onFailure: (failure) => {
         if (!isCurrent()) return;
@@ -107,19 +137,14 @@ export function useVoiceDraft({ value, onChange }: UseVoiceDraftArgs): UseVoiceD
       onEnd: () => {
         ended = true;
         if (!isCurrent()) return;
+        releaseGuards();
         sessionRef.current = null;
         setListeningState(false);
-        setCapturing(false);
       },
     });
     // An engine that cannot start ends synchronously, before it returns.
     if (!ended) sessionRef.current = session;
-  }, [announceFailure, i18n.language]);
-
-  const stop = useCallback(() => {
-    sessionRef.current?.stop();
-    setListeningState(false);
-  }, []);
+  }, [announceFailure, i18n.language, value, onChange, releaseGuards, stop]);
 
   const cancel = useCallback(() => {
     const session = sessionRef.current;
@@ -127,10 +152,10 @@ export function useVoiceDraft({ value, onChange }: UseVoiceDraftArgs): UseVoiceD
     // Detach first so nothing the recogniser flushes reaches the draft.
     generationRef.current += 1;
     sessionRef.current = null;
+    releaseGuards();
     session.abort();
     setListeningState(false);
-    setCapturing(false);
-  }, []);
+  }, [releaseGuards]);
 
   const setListening = useCallback(
     (next: boolean) => {
@@ -140,24 +165,9 @@ export function useVoiceDraft({ value, onChange }: UseVoiceDraftArgs): UseVoiceD
     [start, stop],
   );
 
-  // Close the mic when the app goes to the background / the tab is hidden, and
-  // (web) when the window loses focus. Armed only once audio capture has begun:
-  // a permission prompt can blur the window (web) or make the app `inactive`
-  // (iOS), and closing on that would make the first tap never listen.
-  useEffect(() => {
-    if (!listening || !capturing) return;
-    const subscription = AppState.addEventListener('change', (state) => {
-      if (state === 'background') stop();
-    });
-    const onWindowBlur = () => stop();
-    const canListenToWindow = Platform.OS === 'web' && typeof window !== 'undefined';
-    if (canListenToWindow) window.addEventListener('blur', onWindowBlur);
-    return () => {
-      subscription.remove();
-      if (canListenToWindow) window.removeEventListener('blur', onWindowBlur);
-    };
-  }, [listening, capturing, stop]);
-
+  // Unmount closes the mic. Still an effect: the hook owns no node to hang a
+  // ref-callback cleanup on. A ref the composer attaches (or the composer panel
+  // owning the dictation session itself) would replace it.
   useEffect(() => cancel, [cancel]);
 
   return { listening, setListening, cancel };

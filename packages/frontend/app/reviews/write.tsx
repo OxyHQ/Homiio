@@ -5,7 +5,7 @@
  * `?addressId=` prefill (seeds the address step from an existing Homiio
  * address), and the submit → `CreateReviewPayload`. Each step is a component
  * under `components/reviews/write/`. Bloom's `wizard` draws the frame: the
- * `WizardProgress` bar names the step at the top of the scroll, and the
+ * `WizardProgress` bar names the step at the top of the page, and the
  * `WizardFooter` under it is Back / Next (Submit on the last step).
  *
  * Hard-required steps gate `Next`/`Submit` (address, price + dates, title +
@@ -15,18 +15,19 @@
  * derives it from the dates.
  */
 import type React from 'react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Platform, ScrollView, StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useCallback, useMemo, useRef, useState } from 'react';
+import { StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { useQuery } from '@tanstack/react-query';
 
 import { Admonition } from '@oxy.so/bloom/admonition';
+import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
+import { PageHeader } from '@oxy.so/bloom/page-header';
 import * as Skeleton from '@oxy.so/bloom/skeleton';
 import { WizardFooter, WizardProgress, type WizardStep } from '@oxy.so/bloom/wizard';
 import { useOxy } from '@oxy.so/services';
 
-import { Header } from '@/components/Header';
 import type { MapApi, GeocodedAddress } from '@/components/Map';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { StepAddress } from '@/components/reviews/write/StepAddress';
@@ -42,7 +43,6 @@ import { reviewService } from '@/services/reviewService';
 import { api } from '@/utils/api';
 import type { CreateReviewPayload, CreateReviewAddressInput } from '@homiio/shared-types';
 import { radius, spacing } from '@/constants/styles';
-import { colors } from '@/styles/colors';
 import { RiAlertLine } from '@oxy.so/bloom/icons';
 
 /** The steps, in order: each one's copy lives at `reviews.write.steps.<key>`. */
@@ -72,18 +72,128 @@ const WriteReviewSkeleton: React.FC = () => (
   </View>
 );
 
+/** The fields of `GET /api/addresses/:id` the prefill reads. */
+interface AddressPayload {
+  street?: string;
+  cityName?: string;
+  city?: string;
+  regionName?: string;
+  state?: string;
+  postal_code?: string;
+  zipCode?: string;
+  countryName?: string;
+  country?: string;
+  number?: string;
+  building_name?: string;
+  floor?: string;
+  unit?: string;
+  neighborhoodName?: string;
+  neighborhood?: string;
+  coordinates?: { coordinates?: [number, number] };
+}
+
+/**
+ * The address step's fields, prefilled from an existing Homiio address.
+ *
+ * `floor` and `unit` arrive only when the endpoint serves them — the person
+ * owns a listing at that address, or holds an active lease there (ADR 0003
+ * §3.2; `db/addresses/addressAudience.ts`). For everybody else they are ABSENT
+ * by design and the two steps start empty, which is correct: the author names
+ * the flat THEY lived in, and nobody else's door should be typed into their
+ * review for them.
+ */
+function prefillFromAddress(address: AddressPayload): ReviewWizardData {
+  return {
+    ...INITIAL_WIZARD_DATA,
+    street: address.street || '',
+    city: address.cityName || address.city || '',
+    state: address.regionName || address.state || '',
+    postal_code: address.postal_code || address.zipCode || '',
+    country: address.countryName || address.country || '',
+    number: address.number || '',
+    building_name: address.building_name || '',
+    floor: address.floor || '',
+    unit: address.unit || '',
+    neighborhood: address.neighborhoodName || address.neighborhood || '',
+    latitude: address.coordinates?.coordinates?.[1],
+    longitude: address.coordinates?.coordinates?.[0],
+  };
+}
+
+function WriteReviewHeader() {
+  const router = useRouter();
+  const { t } = useTranslation();
+  return (
+    <PageHeader
+      title={t('reviews.write.title')}
+      titleAlign="center"
+      leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+      onBack={router.canGoBack() ? router.back : undefined}
+      backLabel={t('goBack')}
+    />
+  );
+}
+
 export default function WriteReviewPage() {
   const { addressId } = useLocalSearchParams<{ addressId?: string }>();
   const router = useRouter();
   const { t } = useTranslation();
   const { oxyServices, activeSessionId } = useOxy();
-  const mapRef = useRef<MapApi | null>(null);
-  const scrollRef = useRef<ScrollView | null>(null);
 
-  const [data, setData] = useState<ReviewWizardData>(INITIAL_WIZARD_DATA);
+  // Prefill the address step when arriving from an existing Homiio address.
+  // Keyed on the session too: what the endpoint serves depends on who asks.
+  const addressQuery = useQuery({
+    queryKey: ['address', addressId, 'reviewPrefill', activeSessionId],
+    queryFn: async () => {
+      const response = await api.get<{ address?: AddressPayload } & AddressPayload>(
+        `/api/addresses/${addressId}`,
+      );
+      return prefillFromAddress(response.data?.address || response.data);
+    },
+    enabled: Boolean(addressId && oxyServices && activeSessionId),
+  });
+
+  if (addressQuery.isLoading) {
+    return (
+      <>
+        <WriteReviewHeader />
+        <WriteReviewSkeleton />
+      </>
+    );
+  }
+
+  if (addressQuery.isError) {
+    return (
+      <>
+        <WriteReviewHeader />
+        <ErrorState
+          icon={RiAlertLine}
+          title={t('reviews.write.loadAddressFailed')}
+          description={t('reviews.write.loadAddressFailed')}
+          retryLabel={t('common.goBack')}
+          onRetry={() => router.back()}
+        />
+      </>
+    );
+  }
+
+  // Keyed so a different prefill starts a fresh wizard rather than editing
+  // over the previous one.
+  return (
+    <WriteReviewWizard
+      key={addressQuery.data ? `address:${addressId}` : 'blank'}
+      initialData={addressQuery.data ?? INITIAL_WIZARD_DATA}
+    />
+  );
+}
+
+function WriteReviewWizard({ initialData }: { initialData: ReviewWizardData }) {
+  const router = useRouter();
+  const { t } = useTranslation();
+  const mapRef = useRef<MapApi | null>(null);
+
+  const [data, setData] = useState<ReviewWizardData>(initialData);
   const [step, setStep] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [loadError, setLoadError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
@@ -107,54 +217,6 @@ export default function WriteReviewPage() {
     },
     [],
   );
-
-  // Prefill the address step when arriving from an existing Homiio address.
-  //
-  // `floor` and `unit` arrive only when the endpoint serves them — the person
-  // owns a listing at that address, or holds an active lease there (ADR 0003
-  // §3.2; `db/addresses/addressAudience.ts`). For everybody else they are
-  // ABSENT by design and the two steps below start empty, which is correct:
-  // the author names the flat THEY lived in, and nobody else's door should be
-  // typed into their review for them.
-  useEffect(() => {
-    if (!addressId || !oxyServices || !activeSessionId) return;
-    let cancelled = false;
-    const load = async () => {
-      setLoading(true);
-      try {
-        const response = await api.get(`/api/addresses/${addressId}`);
-        if (cancelled) return;
-        const address = response.data?.address || response.data;
-        setData((prev) => ({
-          ...prev,
-          street: address.street || '',
-          city: address.cityName || address.city || '',
-          state: address.regionName || address.state || '',
-          postal_code: address.postal_code || address.zipCode || '',
-          country: address.countryName || address.country || '',
-          number: address.number || '',
-          building_name: address.building_name || '',
-          floor: address.floor || '',
-          unit: address.unit || '',
-          neighborhood: address.neighborhoodName || address.neighborhood || '',
-          latitude: address.coordinates?.coordinates?.[1],
-          longitude: address.coordinates?.coordinates?.[0],
-        }));
-        if (address.coordinates?.coordinates && mapRef.current) {
-          const [lng, lat] = address.coordinates.coordinates;
-          mapRef.current.navigateToLocation([lng, lat], 15);
-        }
-      } catch {
-        if (!cancelled) setLoadError(t('reviews.write.loadAddressFailed'));
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    };
-    void load();
-    return () => {
-      cancelled = true;
-    };
-  }, [addressId, oxyServices, activeSessionId, t]);
 
   const handleAddressSelect = useCallback(
     (address: GeocodedAddress, coordinates: [number, number]) => {
@@ -194,20 +256,14 @@ export default function WriteReviewPage() {
     }
   }, [step, data]);
 
-  const scrollToTop = useCallback(() => {
-    scrollRef.current?.scrollTo({ y: 0, animated: true });
-  }, []);
-
   const goNext = useCallback(() => {
     if (!canProceed) return;
     setStep((prev) => Math.min(prev + 1, LAST_STEP));
-    scrollToTop();
-  }, [canProceed, scrollToTop]);
+  }, [canProceed]);
 
   const goBack = useCallback(() => {
     setStep((prev) => Math.max(prev - 1, 0));
-    scrollToTop();
-  }, [scrollToTop]);
+  }, []);
 
   const buildPayload = useCallback((): CreateReviewPayload => {
     const address: CreateReviewAddressInput = {
@@ -319,77 +375,36 @@ export default function WriteReviewPage() {
     }
   };
 
-  if (loading) {
-    return (
-      <View style={styles.root}>
-        <Header options={{ title: t('reviews.write.title'), showBackButton: true }} />
-        <ScrollView>
-          <WriteReviewSkeleton />
-        </ScrollView>
-      </View>
-    );
-  }
-
-  if (loadError) {
-    return (
-      <View style={styles.root}>
-        <Header options={{ title: t('reviews.write.title'), showBackButton: true }} />
-        <ErrorState
-          icon={RiAlertLine}
-          title={t('reviews.write.loadAddressFailed')}
-          description={loadError}
-          retryLabel={t('common.goBack')}
-          onRetry={() => router.back()}
-        />
-      </View>
-    );
-  }
-
   return (
-    <View style={styles.root}>
-      <Header options={{ title: t('reviews.write.title'), showBackButton: true }} />
-      <SafeAreaView edges={['bottom']} style={styles.safeArea}>
-        <ScrollView
-          ref={scrollRef}
-          contentContainerStyle={styles.content}
-          keyboardShouldPersistTaps="handled"
-        >
-          <WizardProgress
-            steps={wizardSteps}
-            current={step}
-            currentProgress={canProceed ? 1 : 0.5}
-            formatStepCount={formatStepCount}
-            headingLevel={2}
-            testID="review-wizard-progress"
-          />
-          {renderStep()}
-          {submitError ? <Admonition type="error">{submitError}</Admonition> : null}
-        </ScrollView>
-        <WizardFooter
-          onBack={step > 0 ? goBack : undefined}
-          backLabel={t('common.back')}
-          backDisabled={submitting}
-          onNext={step === LAST_STEP ? handleSubmit : goNext}
-          nextLabel={step === LAST_STEP ? t('reviews.write.submit') : t('common.next')}
-          nextDisabled={!canProceed}
-          loading={step === LAST_STEP && submitting}
-          testID="review-wizard-footer"
+    <>
+      <WriteReviewHeader />
+      <View style={styles.content}>
+        <WizardProgress
+          steps={wizardSteps}
+          current={step}
+          currentProgress={canProceed ? 1 : 0.5}
+          formatStepCount={formatStepCount}
+          headingLevel={2}
+          testID="review-wizard-progress"
         />
-      </SafeAreaView>
-    </View>
+        {renderStep()}
+        {submitError ? <Admonition type="error">{submitError}</Admonition> : null}
+      </View>
+      <WizardFooter
+        onBack={step > 0 ? goBack : undefined}
+        backLabel={t('common.back')}
+        backDisabled={submitting}
+        onNext={step === LAST_STEP ? handleSubmit : goNext}
+        nextLabel={step === LAST_STEP ? t('reviews.write.submit') : t('common.next')}
+        nextDisabled={!canProceed}
+        loading={step === LAST_STEP && submitting}
+        testID="review-wizard-footer"
+      />
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    // A viewport tall on web (document scroll), so the footer sits at the bottom.
-    ...(Platform.OS === 'web' ? { minHeight: '100dvh' as unknown as number } : null),
-    backgroundColor: colors.background,
-  },
-  safeArea: {
-    flex: 1,
-  },
   content: {
     padding: spacing.lg,
     gap: spacing.lg,

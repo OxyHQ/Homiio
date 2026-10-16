@@ -13,18 +13,19 @@ import { AgencyDirectoryField } from '@/components/agencies/AgencyDirectoryField
  */
 import type React from 'react';
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { Platform, ScrollView, StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Platform, StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { getLocales } from 'expo-localization';
+import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { Button } from '@oxy.so/bloom/button';
 import { Card, CardTitle } from '@oxy.so/bloom/card';
 import { DatePicker, TimeField } from '@oxy.so/bloom/date-picker';
 import { Field } from '@oxy.so/bloom/field';
 import { RiAlertLine, RiImageAddLine } from '@oxy.so/bloom/icons';
+import { PageHeader } from '@oxy.so/bloom/page-header';
 import { PhoneInput } from '@oxy.so/bloom/phone-input';
 import * as Skeleton from '@oxy.so/bloom/skeleton';
 import { Switch } from '@oxy.so/bloom/switch';
@@ -33,7 +34,6 @@ import { Textarea } from '@oxy.so/bloom/textarea';
 import { H2, Text as BloomText } from '@oxy.so/bloom/typography';
 
 import type { CreateEvictionCaseData, EvictionCase } from '@homiio/shared-types';
-import { Header } from '@/components/Header';
 import Map, { type MapApi, type GeocodedAddress, type LonLat } from '@/components/Map';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
@@ -338,229 +338,228 @@ const EvictionForm: React.FC<EvictionFormProps> = ({ mode, editId, existing }) =
   const coverPreview = cover?.url ? resolveBackendImageUrl(cover.url) : undefined;
 
   return (
-    <View style={styles.root}>
-      <Header
-        options={{
-          showBackButton: true,
-          title: mode === 'edit' ? t('evictions.form.editTitle') : t('evictions.form.title'),
-        }}
+    <>
+      <PageHeader
+        title={mode === 'edit' ? t('evictions.form.editTitle') : t('evictions.form.title')}
+        titleAlign="center"
+        leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+        onBack={router.canGoBack() ? router.back : undefined}
+        backLabel={t('goBack')}
       />
-      <SafeAreaView edges={['bottom']} style={styles.safeArea}>
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-          <View style={styles.titleBlock}>
-            <SectionEyebrow>{t('evictions.eyebrow')}</SectionEyebrow>
-            <H2 style={styles.pageTitle}>
-              {mode === 'edit' ? t('evictions.form.editTitle') : t('evictions.form.title')}
-            </H2>
-            <BloomText style={styles.subtitle}>{t('evictions.form.subtitle')}</BloomText>
-          </View>
+      <View style={styles.content}>
+        <View style={styles.titleBlock}>
+          <SectionEyebrow>{t('evictions.eyebrow')}</SectionEyebrow>
+          <H2 style={styles.pageTitle}>
+            {mode === 'edit' ? t('evictions.form.editTitle') : t('evictions.form.title')}
+          </H2>
+          <BloomText style={styles.subtitle}>{t('evictions.form.subtitle')}</BloomText>
+        </View>
 
-          <Card radius="radius-16" style={styles.section} appearance="outline">
-            <CardTitle>{t('evictions.form.whatSection')}</CardTitle>
-            <Field label={t('evictions.form.titleLabel')}>
-              <TextFieldInput
-                label={t('evictions.form.titleLabel')}
-                placeholder={t('evictions.form.titlePlaceholder')}
-                value={form.title}
-                onChangeText={(text) => update('title', text)}
-              />
-            </Field>
-            <Textarea
-              label={t('evictions.form.descriptionLabel')}
-              placeholder={t('evictions.form.descriptionPlaceholder')}
-              value={form.description}
-              onChangeText={(text) => update('description', text)}
-              required
-              rows={4}
-              autoResize
-              maxRows={12}
+        <Card radius="radius-16" style={styles.section} appearance="outline">
+          <CardTitle>{t('evictions.form.whatSection')}</CardTitle>
+          <Field label={t('evictions.form.titleLabel')}>
+            <TextFieldInput
+              label={t('evictions.form.titleLabel')}
+              placeholder={t('evictions.form.titlePlaceholder')}
+              value={form.title}
+              onChangeText={(text) => update('title', text)}
             />
-          </Card>
+          </Field>
+          <Textarea
+            label={t('evictions.form.descriptionLabel')}
+            placeholder={t('evictions.form.descriptionPlaceholder')}
+            value={form.description}
+            onChangeText={(text) => update('description', text)}
+            required
+            rows={4}
+            autoResize
+            maxRows={12}
+          />
+        </Card>
 
-          <Card radius="radius-16" style={styles.section} appearance="outline">
-            <CardTitle>{t('evictions.form.whereSection')}</CardTitle>
-            <View style={styles.mapWrap}>
-              <Map
-                ref={mapRef}
-                style={styles.mapInner}
-                enableAddressLookup
-                showAddressInstructions
-                onAddressSelect={handleAddressSelect}
-                initialCoordinates={initialCoordinates}
-                startFromCurrentLocation={!initialCoordinates}
-                screenId="eviction-create"
-              />
-            </View>
-            <BloomText style={styles.hint}>{t('evictions.form.mapHint')}</BloomText>
-            <Field label={t('evictions.form.labelLabel')}>
-              <TextFieldInput
-                label={t('evictions.form.labelLabel')}
-                placeholder={t('evictions.form.labelPlaceholder')}
-                value={form.label}
-                onChangeText={(text) => update('label', text)}
-              />
-            </Field>
-            <Field label={t('evictions.form.cityLabel')}>
-              <TextFieldInput
-                label={t('evictions.form.cityLabel')}
-                placeholder={t('evictions.form.cityPlaceholder')}
-                value={form.city}
-                onChangeText={(text) => update('city', text)}
-              />
-            </Field>
-            {/* The published pin is ALWAYS a disc — there is no control for
+        <Card radius="radius-16" style={styles.section} appearance="outline">
+          <CardTitle>{t('evictions.form.whereSection')}</CardTitle>
+          <View style={styles.mapWrap}>
+            <Map
+              ref={mapRef}
+              style={styles.mapInner}
+              enableAddressLookup
+              showAddressInstructions
+              onAddressSelect={handleAddressSelect}
+              initialCoordinates={initialCoordinates}
+              startFromCurrentLocation={!initialCoordinates}
+              screenId="eviction-create"
+            />
+          </View>
+          <BloomText style={styles.hint}>{t('evictions.form.mapHint')}</BloomText>
+          <Field label={t('evictions.form.labelLabel')}>
+            <TextFieldInput
+              label={t('evictions.form.labelLabel')}
+              placeholder={t('evictions.form.labelPlaceholder')}
+              value={form.label}
+              onChangeText={(text) => update('label', text)}
+            />
+          </Field>
+          <Field label={t('evictions.form.cityLabel')}>
+            <TextFieldInput
+              label={t('evictions.form.cityLabel')}
+              placeholder={t('evictions.form.cityPlaceholder')}
+              value={form.city}
+              onChangeText={(text) => update('city', text)}
+            />
+          </Field>
+          {/* The published pin is ALWAYS a disc — there is no control for
                 that, because there is no value that publishes an exact point.
                 What this asks is whether the affected household authorised
                 storing the exact location so it can later be shared with a
                 named actor under an expiring, revocable, audited grant. */}
-            <View style={styles.switchRow}>
-              <View style={styles.switchText}>
-                <BloomText style={styles.switchLabel}>
-                  {t('evictions.form.householdAuthorizedLabel')}
-                </BloomText>
-                <BloomText style={styles.switchHint}>
-                  {t('evictions.form.householdAuthorizedHint')}
-                </BloomText>
-              </View>
-              <Switch
-                checked={householdAuthorizedExact}
-                onCheckedChange={setHouseholdAuthorizedExact}
-              />
+          <View style={styles.switchRow}>
+            <View style={styles.switchText}>
+              <BloomText style={styles.switchLabel}>
+                {t('evictions.form.householdAuthorizedLabel')}
+              </BloomText>
+              <BloomText style={styles.switchHint}>
+                {t('evictions.form.householdAuthorizedHint')}
+              </BloomText>
             </View>
-            <BloomText style={styles.switchHint}>
-              {t('evictions.form.approximateAlwaysNotice')}
-            </BloomText>
-          </Card>
+            <Switch
+              checked={householdAuthorizedExact}
+              onCheckedChange={setHouseholdAuthorizedExact}
+            />
+          </View>
+          <BloomText style={styles.switchHint}>
+            {t('evictions.form.approximateAlwaysNotice')}
+          </BloomText>
+        </Card>
 
-          <Card radius="radius-16" style={styles.section} appearance="outline">
-            <CardTitle>{t('evictions.form.whenSection')}</CardTitle>
-            <View style={styles.row}>
-              <Field label={t('evictions.form.dateLabel')} required style={styles.rowField}>
-                <DatePicker
-                  value={form.date}
-                  onChange={(day) => update('date', day)}
-                  locale={i18n.language}
-                  accessibilityLabel={t('evictions.form.dateLabel')}
-                />
-              </Field>
-              <View style={styles.rowField}>
-                <Field label={t('evictions.form.timeLabel')}>
-                  {/* `TimeField` commits on blur/submit and reverts a draft it
+        <Card radius="radius-16" style={styles.section} appearance="outline">
+          <CardTitle>{t('evictions.form.whenSection')}</CardTitle>
+          <View style={styles.row}>
+            <Field label={t('evictions.form.dateLabel')} required style={styles.rowField}>
+              <DatePicker
+                value={form.date}
+                onChange={(day) => update('date', day)}
+                locale={i18n.language}
+                accessibilityLabel={t('evictions.form.dateLabel')}
+              />
+            </Field>
+            <View style={styles.rowField}>
+              <Field label={t('evictions.form.timeLabel')}>
+                {/* `TimeField` commits on blur/submit and reverts a draft it
                       cannot parse, so `form.time` only ever holds a real 24h
                       `HH:mm` — the shape `combineDateAndTime` already required
                       and the free-text box could not promise. Empty is `null`
                       there and `''` here, which is the string the rest of the
                       form and `splitDateAndTime` speak. */}
-                  <TimeField
-                    value={form.time || null}
-                    onChange={(time) => update('time', time ?? '')}
-                    accessibilityLabel={t('evictions.form.timeLabel')}
-                  />
-                </Field>
-              </View>
+                <TimeField
+                  value={form.time || null}
+                  onChange={(time) => update('time', time ?? '')}
+                  accessibilityLabel={t('evictions.form.timeLabel')}
+                />
+              </Field>
             </View>
-          </Card>
+          </View>
+        </Card>
 
-          <Card radius="radius-16" style={styles.section} appearance="outline">
-            <CardTitle>{t('evictions.form.helpSection')}</CardTitle>
-            <PhoneInput
-              label={t('evictions.detail.contact.phone')}
-              placeholder="600 000 000"
-              country={form.phone.country}
-              onCountryChange={(iso2) => update('phone', withPhoneCountry(form.phone, iso2))}
-              value={form.phone.number}
-              onValueChange={(number) => update('phone', withPhoneNumber(form.phone, number))}
+        <Card radius="radius-16" style={styles.section} appearance="outline">
+          <CardTitle>{t('evictions.form.helpSection')}</CardTitle>
+          <PhoneInput
+            label={t('evictions.detail.contact.phone')}
+            placeholder="600 000 000"
+            country={form.phone.country}
+            onCountryChange={(iso2) => update('phone', withPhoneCountry(form.phone, iso2))}
+            value={form.phone.number}
+            onValueChange={(number) => update('phone', withPhoneNumber(form.phone, number))}
+          />
+          <PhoneInput
+            label={t('evictions.detail.contact.whatsapp')}
+            placeholder="600 000 000"
+            country={form.whatsapp.country}
+            onCountryChange={(iso2) => update('whatsapp', withPhoneCountry(form.whatsapp, iso2))}
+            value={form.whatsapp.number}
+            onValueChange={(number) => update('whatsapp', withPhoneNumber(form.whatsapp, number))}
+          />
+          <Field label={t('evictions.detail.contact.telegram')}>
+            <TextFieldInput
+              label={t('evictions.detail.contact.telegram')}
+              placeholder="@canal"
+              value={form.telegram}
+              onChangeText={(text) => update('telegram', text)}
+              autoCapitalize="none"
             />
-            <PhoneInput
-              label={t('evictions.detail.contact.whatsapp')}
-              placeholder="600 000 000"
-              country={form.whatsapp.country}
-              onCountryChange={(iso2) => update('whatsapp', withPhoneCountry(form.whatsapp, iso2))}
-              value={form.whatsapp.number}
-              onValueChange={(number) => update('whatsapp', withPhoneNumber(form.whatsapp, number))}
+          </Field>
+          <Field label={t('evictions.detail.contact.email')}>
+            <TextFieldInput
+              label={t('evictions.detail.contact.email')}
+              placeholder="solidaridad@example.org"
+              value={form.email}
+              onChangeText={(text) => update('email', text)}
+              keyboardType="email-address"
+              autoCapitalize="none"
             />
-            <Field label={t('evictions.detail.contact.telegram')}>
-              <TextFieldInput
-                label={t('evictions.detail.contact.telegram')}
-                placeholder="@canal"
-                value={form.telegram}
-                onChangeText={(text) => update('telegram', text)}
-                autoCapitalize="none"
-              />
-            </Field>
-            <Field label={t('evictions.detail.contact.email')}>
-              <TextFieldInput
-                label={t('evictions.detail.contact.email')}
-                placeholder="solidaridad@example.org"
-                value={form.email}
-                onChangeText={(text) => update('email', text)}
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
-            </Field>
-            <Textarea
-              label={t('evictions.form.instructionsLabel')}
-              placeholder={t('evictions.form.instructionsPlaceholder')}
-              value={form.instructions}
-              onChangeText={(text) => update('instructions', text)}
-              rows={3}
-              autoResize
-              maxRows={8}
-            />
-          </Card>
+          </Field>
+          <Textarea
+            label={t('evictions.form.instructionsLabel')}
+            placeholder={t('evictions.form.instructionsPlaceholder')}
+            value={form.instructions}
+            onChangeText={(text) => update('instructions', text)}
+            rows={3}
+            autoResize
+            maxRows={8}
+          />
+        </Card>
 
-          <Card radius="radius-16" style={styles.section} appearance="outline">
-            <CardTitle>{t('evictions.form.agencySection')}</CardTitle>
-            <AgencyDirectoryField
-              label={t('evictions.form.agencyLabel')}
-              placeholder={t('evictions.form.agencyPlaceholder')}
-              name={form.agencyName}
-              accountId={form.agencyOxyAccountId}
-              onChange={(name, accountId) => {
-                update('agencyName', name);
-                update('agencyOxyAccountId', accountId);
-              }}
+        <Card radius="radius-16" style={styles.section} appearance="outline">
+          <CardTitle>{t('evictions.form.agencySection')}</CardTitle>
+          <AgencyDirectoryField
+            label={t('evictions.form.agencyLabel')}
+            placeholder={t('evictions.form.agencyPlaceholder')}
+            name={form.agencyName}
+            accountId={form.agencyOxyAccountId}
+            onChange={(name, accountId) => {
+              update('agencyName', name);
+              update('agencyOxyAccountId', accountId);
+            }}
+          />
+        </Card>
+
+        <Card radius="radius-16" style={styles.section} appearance="outline">
+          <CardTitle>{t('evictions.form.photoSection')}</CardTitle>
+          {coverPreview ? (
+            <Image
+              source={{ uri: coverPreview }}
+              style={styles.coverPreview}
+              contentFit="cover"
+              accessibilityIgnoresInvertColors
             />
-          </Card>
-
-          <Card radius="radius-16" style={styles.section} appearance="outline">
-            <CardTitle>{t('evictions.form.photoSection')}</CardTitle>
-            {coverPreview ? (
-              <Image
-                source={{ uri: coverPreview }}
-                style={styles.coverPreview}
-                contentFit="cover"
-                accessibilityIgnoresInvertColors
-              />
-            ) : null}
-            <Button
-              size="md"
-              onPress={handlePickCover}
-              loading={uploading}
-              disabled={uploading}
-              leadingIcon={RiImageAddLine}
-              style={styles.photoButton}
-              tone="neutral"
-              appearance="outline"
-            >
-              {cover?.imageId ? t('evictions.form.photoChange') : t('evictions.form.photoAdd')}
-            </Button>
-          </Card>
-
+          ) : null}
           <Button
-            size="lg"
-            onPress={handleSubmit}
-            loading={submitting}
-            disabled={submitting}
-            style={styles.submit}
-            tone="accent"
-            appearance="solid"
+            size="md"
+            onPress={handlePickCover}
+            loading={uploading}
+            disabled={uploading}
+            leadingIcon={RiImageAddLine}
+            style={styles.photoButton}
+            tone="neutral"
+            appearance="outline"
           >
-            {mode === 'edit' ? t('evictions.form.saveChanges') : t('evictions.form.publish')}
+            {cover?.imageId ? t('evictions.form.photoChange') : t('evictions.form.photoAdd')}
           </Button>
-        </ScrollView>
-      </SafeAreaView>
-    </View>
+        </Card>
+
+        <Button
+          size="lg"
+          onPress={handleSubmit}
+          loading={submitting}
+          disabled={submitting}
+          style={styles.submit}
+          tone="accent"
+          appearance="solid"
+        >
+          {mode === 'edit' ? t('evictions.form.saveChanges') : t('evictions.form.publish')}
+        </Button>
+      </View>
+    </>
   );
 };
 
@@ -573,23 +572,33 @@ export default function EvictionsFormScreen() {
 
   const { data: existing, isLoading, isError } = useEvictionDetail(editId);
 
+  const editHeader = (
+    <PageHeader
+      title={t('evictions.form.editTitle')}
+      titleAlign="center"
+      leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+      onBack={router.canGoBack() ? router.back : undefined}
+      backLabel={t('goBack')}
+    />
+  );
+
   if (isEdit && isLoading) {
     return (
-      <View style={styles.root}>
-        <Header options={{ showBackButton: true, title: t('evictions.form.editTitle') }} />
+      <>
+        {editHeader}
         <View style={styles.content}>
           <Skeleton.Box width="100%" height={48} borderRadius={radius.md} />
           <Skeleton.Box width="100%" height={200} borderRadius={radius.lg} />
           <Skeleton.Box width="100%" height={48} borderRadius={radius.md} />
         </View>
-      </View>
+      </>
     );
   }
 
   if (isEdit && (isError || !existing)) {
     return (
-      <View style={styles.root}>
-        <Header options={{ showBackButton: true, title: t('evictions.form.editTitle') }} />
+      <>
+        {editHeader}
         <ErrorState
           icon={RiAlertLine}
           title={t('evictions.loadError')}
@@ -597,7 +606,7 @@ export default function EvictionsFormScreen() {
           retryLabel={t('common.goBack')}
           onRetry={() => router.back()}
         />
-      </View>
+      </>
     );
   }
 
@@ -611,13 +620,6 @@ export default function EvictionsFormScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  safeArea: {
-    flex: 1,
-  },
   content: {
     padding: spacing.lg,
     gap: spacing.lg,

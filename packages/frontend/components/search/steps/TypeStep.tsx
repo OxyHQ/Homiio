@@ -83,5 +83,3 @@ export const TypeStep: React.FC<TypeStepProps> = ({ offering, selected, onChange
     />
   );
 };
-
-export default TypeStep;

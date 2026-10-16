@@ -103,5 +103,3 @@ const styles = StyleSheet.create({
   label: { color: colors.COLOR_BLACK_LIGHT_3 },
   value: { color: colors.COLOR_BLACK },
 });
-
-export default PropertyDetailsCard;

@@ -88,5 +88,3 @@ const styles = StyleSheet.create({
     zIndex: 5,
   },
 });
-
-export default MapMarkerPopover;

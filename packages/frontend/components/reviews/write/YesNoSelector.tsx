@@ -50,5 +50,3 @@ export const YesNoSelector: React.FC<YesNoSelectorProps> = ({ label, value, onCh
     </View>
   );
 };
-
-export default YesNoSelector;

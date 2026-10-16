@@ -228,5 +228,3 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
 });
-
-export default ReviewsSection;

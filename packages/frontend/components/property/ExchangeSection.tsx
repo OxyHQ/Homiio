@@ -286,5 +286,3 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
   },
 });
-
-export default ExchangeSection;

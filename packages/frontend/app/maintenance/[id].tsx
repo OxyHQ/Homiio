@@ -22,11 +22,12 @@
  */
 import type React from 'react';
 import { useCallback, useState } from 'react';
-import { Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
+import { PageHeader } from '@oxy.so/bloom/page-header';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@oxy.so/bloom/button';
 import { Field } from '@oxy.so/bloom/field';
@@ -36,7 +37,6 @@ import { toast } from '@oxy.so/bloom/toast';
 import { P } from '@oxy.so/bloom/typography';
 import { MAINTENANCE_COMMENT_MAX, type MaintenanceStatus } from '@homiio/shared-types';
 
-import { Header } from '@/components/Header';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { ListSkeleton } from '@/components/ui/ListSkeleton';
 import {
@@ -186,32 +186,40 @@ export default function MaintenanceRequestScreen(): React.ReactElement {
     );
   }, [comment, draft, id, t]);
 
+  const header = (
+    <PageHeader
+      title={!isLoading && !error && request ? request.title : t('maintenance.section.title')}
+      titleAlign="center"
+      leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+    />
+  );
+
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.screen}>
-        <Header options={{ title: t('maintenance.section.title') }} />
+      <>
+        {header}
         <ListSkeleton rows={3} />
-      </SafeAreaView>
+      </>
     );
   }
 
   if (error || !request) {
     return (
-      <SafeAreaView style={styles.screen}>
-        <Header options={{ title: t('maintenance.section.title') }} />
+      <>
+        {header}
         <ErrorState
           title={t('maintenance.errors.loadFailed')}
           onRetry={() => void refetch()}
           retryLabel={t('common.retry')}
         />
-      </SafeAreaView>
+      </>
     );
   }
 
   return (
-    <SafeAreaView style={styles.screen}>
-      <Header options={{ title: request.title }} />
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+    <>
+      {header}
+      <View style={styles.content}>
         <MaintenanceRequestCard
           {...maintenanceCardProps(request, { t })}
           actions={
@@ -341,13 +349,12 @@ export default function MaintenanceRequestScreen(): React.ReactElement {
             {t('maintenance.report.goToMyHome')}
           </Button>
         </View>
-      </ScrollView>
-    </SafeAreaView>
+      </View>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1 },
   content: { gap: spacing.lg, padding: spacing.lg, paddingBottom: spacing['3xl'] },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   thread: { gap: spacing.md },

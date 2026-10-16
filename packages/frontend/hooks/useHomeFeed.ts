@@ -21,7 +21,7 @@ import * as Location from 'expo-location';
 
 export type UserCoordinates = { latitude: number; longitude: number };
 
-export const homeFeedQueryKeys = {
+const homeFeedQueryKeys = {
   coordinates: ['userCoordinates'] as const,
 };
 

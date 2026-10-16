@@ -277,5 +277,3 @@ const styles = StyleSheet.create({
     color: colors.COLOR_BLACK_LIGHT_5,
   },
 });
-
-export default DetailIconGrid;

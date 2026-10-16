@@ -60,5 +60,3 @@ export const partnerApi = {
     return response.data?.data?.commissions ?? [];
   },
 };
-
-export default partnerApi;

@@ -6,39 +6,33 @@
  *    and save) and `ListingPhotoGrid` (1 + 4 grid from 744 wide, a full-bleed
  *    carousel below, where the photos lead) opening `ZoomableMediaGallery`.
  *  - The booking/apply card lives in the app shell's right column on wide
- *    screens and inline on narrow ones; a short stay then gets Bloom's
- *    `BookingBar` pinned under the page, sharing the card's selection.
- *  - On scroll past the photo grid, a slim sticky breadcrumb header
- *    (StickyPropertyHeader) appears with title + price + CTA.
+ *    screens and inline on narrow ones (`lg:hidden`); a short stay then gets
+ *    Bloom's `BookingBar` pinned under the page, sharing the card's selection.
+ *  - A transparent Bloom `PageHeader` over the photos reveals the title and
+ *    price once the page scrolls.
  *  - Sections are flat (no cards/shadows): shared Bloom Typography, a
  *    consistent vertical rhythm (`styles.section`), and a single
  *    hairline divider between blocks. Content sits directly on the page
  *    background and aligns to one gutter.
  *  - Action bar (footer): PropertyActionBar for every other listing.
  */
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  Platform,
-  StyleSheet,
-  View,
-  useWindowDimensions,
-  type LayoutChangeEvent,
-  type ViewStyle,
-} from 'react-native';
-import { runOnJS, useAnimatedReaction, useSharedValue } from 'react-native-reanimated';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Platform, StyleSheet, View, type ViewStyle } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useQuery } from '@tanstack/react-query';
 import { toast } from '@oxy.so/bloom/toast';
 import * as Haptics from 'expo-haptics';
 import * as Linking from 'expo-linking';
 
 import { useOxy, openAccountDialog } from '@oxy.so/services';
+import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
+import { ButtonGroup, ButtonGroupItem } from '@oxy.so/bloom/button-group';
+import { PageHeader } from '@oxy.so/bloom/page-header';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 import {
   RiAccountCircleLine,
   RiCalendarLine,
-  RiCheckLine,
   RiHeartFill,
   RiHeartLine,
   RiHomeLine,
@@ -47,7 +41,6 @@ import {
 } from '@oxy.so/bloom/icons';
 import { BookingBar } from '@oxy.so/bloom/booking';
 import {
-  LISTING_PHOTO_GRID_BREAKPOINT,
   ListingHeader,
   ListingHeaderAction,
   ListingPhotoGrid,
@@ -57,8 +50,6 @@ import {
   type ZoomableMediaGalleryHandle,
 } from '@oxy.so/bloom/zoomable-media-gallery';
 
-import { Header } from '@/components/Header';
-import { PageScrollView } from '@/components/PageScrollView';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { useAreaInsights, useNearbyServices, useProperty } from '@/hooks';
 import { useAddressReviews } from '@/hooks/useAddressReviews';
@@ -66,7 +57,6 @@ import { useStayBooking } from '@/hooks/useStayBooking';
 import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
 import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
 import { useRentalMode } from '@/context/RentalModeContext';
-import { useIsRightBarVisible } from '@/hooks/useOptimizedMediaQuery';
 import { resolveHeadlinePrice } from '@/utils/propertyPricing';
 import { useFormatting } from '@/utils/format';
 import {
@@ -78,8 +68,9 @@ import {
 } from '@/utils/propertyUtils';
 import { shareContent } from '@/utils/share';
 import { propertyService } from '@/services/propertyService';
-import profileService, { type Profile } from '@/services/profileService';
-import ViewingService from '@/services/viewingService';
+import profileService from '@/services/profileService';
+import ViewingService, { type ViewingRequest } from '@/services/viewingService';
+import { MY_VIEWINGS_KEY } from '@/hooks/useUpcomingBookings';
 import { formatArea, OfferingType, type Property } from '@homiio/shared-types';
 
 import { PropertyDetailSkeleton } from '@/components/ui/skeletons/PropertyDetailSkeleton';
@@ -110,10 +101,8 @@ import { PriceRangeSection } from '@/components/property/PriceRangeSection';
 import { SimilarHomesSection } from '@/components/property/SimilarHomesSection';
 import { DemandSignal } from '@/components/property/DemandSignal';
 import { PropertyActionBar } from '@/components/property/PropertyActionBar';
-import { StickyPropertyHeader } from '@/components/property/StickyPropertyHeader';
 import { Section, SECTION_GUTTER } from '@/components/property/Section';
 import { BookingCard } from '@/components/property/BookingCard';
-import { IconButton } from '@/components/ui/IconButton';
 
 import { resolveBookingMode } from '@/utils/bookingMode';
 import { colors } from '@/styles/colors';
@@ -133,8 +122,6 @@ interface PropertyDetailViewModel {
   size: number;
 }
 
-const STICKY_HEADER_THRESHOLD = 480;
-
 export default function PropertyDetailPage() {
   const { t } = useTranslation();
   const formatting = useFormatting();
@@ -143,19 +130,9 @@ export default function PropertyDetailPage() {
   const { oxyServices, activeSessionId } = useOxy();
   const { mode: rentalMode, browseMode } = useRentalMode();
   const { addProperty } = useRecentlyViewed();
-  // On wide screens the booking/apply card lives in the app shell's right
-  // column (RightBar → PropertyBookingWidget). When the RightBar is hidden
-  // (mobile/narrow), the screen inlines the card instead — gated below.
-  const isRightBarVisible = useIsRightBarVisible();
-
   const propertyIdParam = typeof id === 'string' ? id : '';
 
-  const {
-    property: apiProperty,
-    loading: isLoading,
-    error,
-    loadProperty,
-  } = useProperty(propertyIdParam);
+  const { property: apiProperty, loading: isLoading, error } = useProperty(propertyIdParam);
 
   // Area price-insights drive the "Prices in this area" + "Similar homes"
   // block. We read it here (the child sections share the same React Query
@@ -192,33 +169,39 @@ export default function PropertyDetailPage() {
   const showNearbyServicesSection =
     !nearbyServicesError && (nearbyServicesLoading || nearbyHasContent);
 
-  const hasViewedRef = useRef(false);
-  const [hasActiveViewing, setHasActiveViewing] = useState(false);
-  const [landlordProfile, setLandlordProfile] = useState<Profile | null>(null);
-  const [ownerProperties, setOwnerProperties] = useState<Property[]>([]);
-  const [stickyHeaderVisible, setStickyHeaderVisible] = useState(false);
+  const trackedViewIdRef = useRef<string | null>(null);
   const [exchangeSheetVisible, setExchangeSheetVisible] = useState(false);
 
   const landlordOxyUserId = apiProperty?.oxyUserId;
 
-  useEffect(() => {
-    const fetchLandlordData = async () => {
-      if (!landlordOxyUserId) return;
-      try {
-        const profile = await profileService.getPublicProfileByOxyUserId(landlordOxyUserId);
-        setLandlordProfile(profile);
-        const { properties } = await propertyService.getOwnerProperties(
-          landlordOxyUserId,
-          typeof id === 'string' ? id : '',
-        );
-        setOwnerProperties(properties);
-      } catch {
-        setLandlordProfile(null);
-        setOwnerProperties([]);
-      }
-    };
-    fetchLandlordData();
-  }, [landlordOxyUserId, id]);
+  // The landlord's public profile and their other listings. Either failing
+  // hides both — the section draws nothing rather than half a landlord.
+  const landlordQuery = useQuery({
+    queryKey: ['property', propertyIdParam, 'landlord', landlordOxyUserId],
+    queryFn: async () => {
+      const userId = landlordOxyUserId as string;
+      const profile = await profileService.getPublicProfileByOxyUserId(userId);
+      const { properties } = await propertyService.getOwnerProperties(userId, propertyIdParam);
+      return { profile, properties };
+    },
+    enabled: Boolean(landlordOxyUserId),
+  });
+  const landlordProfile = landlordQuery.data?.profile ?? null;
+  const ownerProperties: Property[] = landlordQuery.data?.properties ?? [];
+
+  // Whether the user already booked a viewing here — read from the same list
+  // (and cache entry) `/viewings` uses. A failure just leaves the banner off.
+  const myViewingsQuery = useQuery<ViewingRequest[], Error>({
+    queryKey: MY_VIEWINGS_KEY,
+    queryFn: async () => {
+      const response = await ViewingService.listMyViewingRequests({ page: 1, limit: 50 });
+      return Array.isArray(response?.data) ? response.data : [];
+    },
+    enabled: Boolean(propertyIdParam && oxyServices && activeSessionId),
+  });
+  const hasActiveViewing = (myViewingsQuery.data ?? []).some(
+    (v) => v.propertyId === propertyIdParam && ['pending', 'approved'].includes(v.status),
+  );
 
   // Property view-model derived from the API payload.
   const property = useMemo<PropertyDetailViewModel | null>(() => {
@@ -262,48 +245,17 @@ export default function PropertyDetailPage() {
     };
   }, [apiProperty, browseMode, t, formatting]);
 
-  // Track property view once per page load.
+  // Track the view once per property shown.
+  //
+  // Left as an effect on purpose: recording a view belongs to the navigation
+  // that opens a property, and that is ~25 call sites plus `PropertyCard`'s
+  // `href`, deep links and the sidebar — not one handler this screen owns.
   useEffect(() => {
-    if (apiProperty && !hasViewedRef.current) {
-      const propertyId = apiProperty.id;
-      const currentId = typeof id === 'string' ? id : undefined;
-      if (propertyId && currentId && propertyId === currentId) {
-        hasViewedRef.current = true;
-        addProperty(apiProperty);
-      }
-    }
-  }, [apiProperty, id, addProperty]);
-
-  // Reset view tracker on id change.
-  useEffect(() => {
-    hasViewedRef.current = false;
-  }, [id]);
-
-  // Trigger property fetch on id change.
-  useEffect(() => {
-    if (id) loadProperty();
-  }, [id, loadProperty]);
-
-  // Check whether the user already booked a viewing.
-  useEffect(() => {
-    const checkActiveViewing = async () => {
-      if (!id || !oxyServices || !activeSessionId) return;
-      try {
-        const response = await ViewingService.listMyViewingRequests({
-          page: 1,
-          limit: 50,
-        });
-        const viewings = Array.isArray(response?.data) ? response.data : [];
-        const hasActive = viewings.some(
-          (v) => v.propertyId === id && ['pending', 'approved'].includes(v.status),
-        );
-        setHasActiveViewing(hasActive);
-      } catch {
-        /* swallow — banner just stays off */
-      }
-    };
-    checkActiveViewing();
-  }, [id, oxyServices, activeSessionId]);
+    if (!apiProperty?.id || apiProperty.id !== propertyIdParam) return;
+    if (trackedViewIdRef.current === apiProperty.id) return;
+    trackedViewIdRef.current = apiProperty.id;
+    addProperty(apiProperty);
+  }, [apiProperty, propertyIdParam, addProperty]);
 
   const handleContact = useCallback(async () => {
     if (apiProperty?.isExternal) {
@@ -464,22 +416,6 @@ export default function PropertyDetailPage() {
     setExchangeSheetVisible(true);
   }, [oxyServices, activeSessionId]);
 
-  // Sticky header trigger driven by scrollY. The value stays UI-thread native
-  // (written by the sole scroll owner: the document on web via `PageScrollView`,
-  // the screen's `Animated.ScrollView` on native); React state is toggled via
-  // `runOnJS` only when crossing the threshold.
-  const scrollY = useSharedValue(0);
-
-  useAnimatedReaction(
-    () => scrollY.value > STICKY_HEADER_THRESHOLD,
-    (isPast, wasPast) => {
-      if (isPast !== wasPast) {
-        runOnJS(setStickyHeaderVisible)(isPast);
-      }
-    },
-    [scrollY],
-  );
-
   // Photos cover-first with captions; the grid and the fullscreen gallery read
   // the SAME list, so a tapped tile opens that photo.
   const photos = useMemo(
@@ -513,56 +449,13 @@ export default function PropertyDetailPage() {
     action.catch(() => undefined);
   }, [apiProperty, isSaved, savePropertyToFolder, unsaveProperty]);
 
-  // Photos lead on a narrow page (a full-bleed carousel, like a phone listing);
-  // the title leads once the grid has room for its 1 + 4 layout.
-  const { width: windowWidth } = useWindowDimensions();
-  const [pageWidth, setPageWidth] = useState(0);
-  const handlePageLayout = useCallback((event: LayoutChangeEvent) => {
-    setPageWidth(event.nativeEvent.layout.width);
-  }, []);
-  const photosLead = (pageWidth || windowWidth) < LISTING_PHOTO_GRID_BREAKPOINT;
-
   const bookingMode = apiProperty
     ? resolveBookingMode(apiProperty as Property, rentalMode, browseMode)
     : 'none';
   // The phone booking bar and the inline booking card share one selection.
-  const stay = useStayBooking(apiProperty, {
-    enabled: !isRightBarVisible && bookingMode === 'vacation',
-  });
-  const showBookingBar = !isRightBarVisible && bookingMode === 'vacation' && stay.bookable;
-
-  const handleCtaPress = useCallback(() => {
-    if (apiProperty?.housingType === 'public') {
-      handlePublicHousingApply();
-      return;
-    }
-    if (apiProperty?.isExternal) {
-      handleContact();
-      return;
-    }
-    if (rentalMode === 'vacation') {
-      // A stay is reserved through the same booking selection the phone bar
-      // and inline card share (dates first when none are picked) — not the
-      // viewing-request flow, which is for sale listings.
-      if (showBookingBar) {
-        stay.reserve();
-      } else {
-        handleContact();
-      }
-      return;
-    }
-    if (apiProperty?.id) {
-      router.push(`/properties/${apiProperty.id}/apply`);
-    }
-  }, [
-    apiProperty,
-    rentalMode,
-    router,
-    handleContact,
-    handlePublicHousingApply,
-    showBookingBar,
-    stay,
-  ]);
+  // Both are hidden from `lg` up, where the rail's booking widget takes over.
+  const stay = useStayBooking(apiProperty, { enabled: bookingMode === 'vacation' });
+  const showBookingBar = bookingMode === 'vacation' && stay.bookable;
 
   if (isLoading) {
     return <PropertyDetailSkeleton />;
@@ -570,26 +463,25 @@ export default function PropertyDetailPage() {
 
   if (error || !property) {
     return (
-      <View style={styles.errorRoot}>
-        <Header
-          options={{
-            showBackButton: true,
-            title: t('property.error', 'Error') || 'Error',
-          }}
+      <>
+        <PageHeader
+          title={t('property.error', 'Error') || 'Error'}
+          titleAlign="center"
+          leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+          onBack={router.canGoBack() ? router.back : undefined}
+          backLabel={t('goBack')}
         />
-        <SafeAreaView style={styles.errorBody} edges={['bottom']}>
-          <ErrorState
-            icon={RiHomeLine}
-            title={t('property.notFound', 'Property not found') || 'Property not found'}
-            description={
-              t('property.notFoundHelp', 'It may have been removed or the link is broken.') ||
-              'It may have been removed or the link is broken.'
-            }
-            retryLabel={t('goBack', 'Go back') || 'Go back'}
-            onRetry={() => router.back()}
-          />
-        </SafeAreaView>
-      </View>
+        <ErrorState
+          icon={RiHomeLine}
+          title={t('property.notFound', 'Property not found') || 'Property not found'}
+          description={
+            t('property.notFoundHelp', 'It may have been removed or the link is broken.') ||
+            'It may have been removed or the link is broken.'
+          }
+          retryLabel={t('goBack', 'Go back') || 'Go back'}
+          onRetry={() => router.back()}
+        />
+      </>
     );
   }
 
@@ -614,12 +506,11 @@ export default function PropertyDetailPage() {
   const exchangeData = isExchangeListing ? apiProperty?.exchange : undefined;
 
   // On wide screens the booking/apply card is rendered in the app shell's
-  // right column (RightBar → PropertyBookingWidget), so the inline card only
-  // shows when the RightBar is hidden (mobile/narrow). The screen stays
+  // right column (RightBar → PropertyBookingWidget), so the inline card is
+  // hidden from `lg` up (where the RightBar shows). The screen stays
   // single-column either way. `resolveBookingMode` is the ONE branching source
   // shared with BookingCard — the mobile inline path renders the SAME card.
-  const showInlineBookingCard =
-    (bookingMode !== 'none' || Boolean(apiProperty?.isExternal)) && !isRightBarVisible;
+  const showInlineBookingCard = bookingMode !== 'none' || Boolean(apiProperty?.isExternal);
 
   const headerFacts = [
     apiProperty?.type ? t(`properties.titles.types.${apiProperty.type}`, { defaultValue: '' }) : '',
@@ -661,10 +552,10 @@ export default function PropertyDetailPage() {
   );
   const photoGrid =
     photos.length > 0 ? (
-      <View style={photosLead ? null : styles.photoGridWide}>
+      <View className="md:p-6">
         <ListingPhotoGrid
           photos={photos}
-          layout={photosLead ? 'carousel' : 'grid'}
+          layout="auto"
           onPressPhoto={openGallery}
           onShowAll={() => openGallery(0)}
           showAllLabel={t('property.photos.showAll')}
@@ -680,75 +571,60 @@ export default function PropertyDetailPage() {
 
   const showSleepArrangement = rentalMode === 'vacation' && isVacationRentable;
 
-  return (
-    <View style={styles.scrollContainer}>
-      <View style={Platform.OS === 'web' ? styles.webHeaderWrapper : styles.nativeHeaderWrapper}>
-        <Header
-          options={{
-            showBackButton: true,
-            title: '',
-            transparent: true,
-            scrollThreshold: 100,
-            // Once the sticky property bar takes over the top, it owns
-            // the back / share / save affordances — strip them here so
-            // the two bars don't double up.
-            rightComponents: stickyHeaderVisible
-              ? []
-              : [
-                  landlordOxyUserId ? (
-                    <IconButton
-                      key="profile"
-                      icon={RiAccountCircleLine}
-                      variant="overlay"
-                      onPress={() => router.push(`/roommates/${landlordOxyUserId}`)}
-                      accessibilityLabel={t('property.host.openProfile')}
-                    />
-                  ) : null,
-                  <IconButton
-                    key="viewings"
-                    icon={RiCalendarLine}
-                    variant="overlay"
-                    onPress={() => router.push('/viewings')}
-                    accessibilityLabel="View bookings"
-                    badge={
-                      hasActiveViewing ? (
-                        <View style={styles.viewingBadge}>
-                          <RiCheckLine width={12} height={12} fill={colors.primaryForeground} />
-                        </View>
-                      ) : undefined
-                    }
-                  />,
-                ],
-          }}
-        />
-      </View>
+  const actionBar = (
+    <PropertyActionBar
+      property={apiProperty}
+      price={property.price}
+      priceAccessibilityLabel={property.priceAccessibilityLabel}
+      canCall={Boolean(
+        apiProperty?.isExternal &&
+          (apiProperty.externalContact?.phone || apiProperty.externalContact?.whatsapp),
+      )}
+      onContact={handleContact}
+      onCall={handleCall}
+      onApplyPublic={handlePublicHousingApply}
+      isSaleListing={isSaleListing}
+      onRequestViewing={handleRequestViewing}
+      isExchangeListing={isExchangeListing}
+      onRequestExchange={handleRequestExchange}
+    />
+  );
 
-      <StickyPropertyHeader
+  return (
+    <>
+      <PageHeader
         title={property.title}
-        priceLabel={property.price}
-        property={apiProperty ?? null}
-        rentalMode={rentalMode}
-        visible={stickyHeaderVisible}
-        onBack={() => router.back()}
-        onShare={handleShare}
-        onCtaPress={
-          // Wide screens pin the booking card in the rail beside the page, so a
-          // second Reserve button in the sticky header would only duplicate it.
-          isRightBarVisible && bookingMode === 'vacation' && !apiProperty?.isExternal
-            ? undefined
-            : handleCtaPress
+        subtitle={property.price}
+        titleAlign="center"
+        leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+        onBack={router.canGoBack() ? router.back : undefined}
+        backLabel={t('goBack')}
+        actions={
+          <ButtonGroup>
+            {landlordOxyUserId ? (
+              <ButtonGroupItem
+                iconOnly
+                leadingIcon={RiAccountCircleLine}
+                onPress={() => router.push(`/roommates/${landlordOxyUserId}`)}
+                accessibilityLabel={t('property.host.openProfile')}
+              />
+            ) : null}
+            <ButtonGroupItem
+              iconOnly
+              leadingIcon={RiCalendarLine}
+              selected={hasActiveViewing}
+              onPress={() => router.push('/viewings')}
+              accessibilityLabel={t('viewings.title')}
+            />
+          </ButtonGroup>
         }
+        placement="overlap"
+        titleReveal="onScroll"
       />
 
-      <PageScrollView
-        scrollY={scrollY}
-        style={styles.scroll}
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: spacing['7xl'] }]}
-      >
-        <View onLayout={handlePageLayout}>
-          {photosLead ? photoGrid : listingHeader}
-          {photosLead ? listingHeader : photoGrid}
-        </View>
+      <View style={styles.content}>
+        {photoGrid}
+        {listingHeader}
 
         <View style={styles.infoContainer}>
           {apiProperty ? (
@@ -774,7 +650,7 @@ export default function PropertyDetailPage() {
           </View>
 
           {showInlineBookingCard && apiProperty ? (
-            <View style={[styles.section, styles.divider]}>
+            <View className="lg:hidden" style={[styles.section, styles.divider]}>
               <Section>
                 <BookingCard
                   property={apiProperty as Property}
@@ -896,7 +772,7 @@ export default function PropertyDetailPage() {
           ) : null}
 
           {showSimilarHomesSection ? (
-            <View style={[styles.section, styles.divider]}>
+            <View style={[styles.section, styles.divider, { paddingHorizontal: SECTION_GUTTER }]}>
               <SimilarHomesSection propertyId={property.id} />
             </View>
           ) : null}
@@ -921,43 +797,34 @@ export default function PropertyDetailPage() {
             <FraudWarning text={t('property.fraudWarning')} />
           </View>
         </View>
-      </PageScrollView>
+      </View>
 
       {showBookingBar ? (
-        <BookingBar
-          price={stay.price}
-          priceUnit={stay.priceUnit}
-          priceAccessibilityLabel={stay.priceAccessibilityLabel}
-          dates={stay.datesSummary ?? t('search.summary.addDates')}
-          onPressDates={() => stay.openDates('checkIn')}
-          reserveLabel={
-            !stay.range
-              ? t('booking.widget.checkAvailability')
-              : stay.instantBook
-                ? t('property.cta.reserve')
-                : t('booking.widget.requestToBook')
-          }
-          onReserve={stay.reserve}
-          loading={stay.reserving}
-          style={styles.bookingBar}
-        />
+        <View className="lg:hidden" style={styles.bookingBar}>
+          <BookingBar
+            price={stay.price}
+            priceUnit={stay.priceUnit}
+            priceAccessibilityLabel={stay.priceAccessibilityLabel}
+            dates={stay.datesSummary ?? t('search.summary.addDates')}
+            onPressDates={() => stay.openDates('checkIn')}
+            reserveLabel={
+              !stay.range
+                ? t('booking.widget.checkAvailability')
+                : stay.instantBook
+                  ? t('property.cta.reserve')
+                  : t('booking.widget.requestToBook')
+            }
+            onReserve={stay.reserve}
+            loading={stay.reserving}
+          />
+        </View>
+      ) : null}
+      {showBookingBar ? (
+        <View className="hidden lg:flex" style={styles.bookingBar}>
+          {actionBar}
+        </View>
       ) : (
-        <PropertyActionBar
-          property={apiProperty}
-          price={property.price}
-          priceAccessibilityLabel={property.priceAccessibilityLabel}
-          canCall={Boolean(
-            apiProperty?.isExternal &&
-              (apiProperty.externalContact?.phone || apiProperty.externalContact?.whatsapp),
-          )}
-          onContact={handleContact}
-          onCall={handleCall}
-          onApplyPublic={handlePublicHousingApply}
-          isSaleListing={isSaleListing}
-          onRequestViewing={handleRequestViewing}
-          isExchangeListing={isExchangeListing}
-          onRequestExchange={handleRequestExchange}
-        />
+        actionBar
       )}
       {stay.dialog}
 
@@ -972,26 +839,18 @@ export default function PropertyDetailPage() {
           onClose={() => setExchangeSheetVisible(false)}
         />
       ) : null}
-    </View>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  scrollContainer: { flex: 1, backgroundColor: colors.background },
-  scroll: { flex: 1 },
-  scrollContent: { paddingBottom: spacing['6xl'] },
-  errorRoot: { flex: 1 },
-  errorBody: { flex: 1 },
+  content: { paddingBottom: spacing['7xl'] },
   listingHeader: {
     paddingHorizontal: SECTION_GUTTER,
     paddingTop: spacing.xl,
     paddingBottom: spacing.xl,
   },
   // The 1 + 4 grid sits inside the page gutter; the narrow carousel is full-bleed.
-  photoGridWide: {
-    paddingHorizontal: SECTION_GUTTER,
-    paddingBottom: spacing.xl,
-  },
   // RN-Web supports `position: 'sticky'`, absent from RN's ViewStyle.
   bookingBar: Platform.select({
     web: { position: 'sticky', bottom: 0, zIndex: 1000 } as unknown as ViewStyle,
@@ -1034,30 +893,4 @@ const styles = StyleSheet.create({
     borderTopWidth: hairline.width,
     borderTopColor: hairline.color,
   },
-  webHeaderWrapper: Platform.select({
-    web: { position: 'sticky', top: 0, left: 0, right: 0, zIndex: 1000 },
-    default: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 1000 },
-  }) as ViewStyleSticky,
-  nativeHeaderWrapper: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 1000,
-  },
-  viewingBadge: {
-    position: 'absolute',
-    top: -4,
-    right: -4,
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: colors.primaryColor,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
 });
-
-// RN-Web supports `position: 'sticky'` even though the type doesn't.
-// Wrap as a type alias so we can pass through `Platform.select` cleanly.
-type ViewStyleSticky = ReturnType<typeof StyleSheet.create>['x'];

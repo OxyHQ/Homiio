@@ -55,7 +55,7 @@ function vendorMaplibreWorker() {
   return targetDir;
 }
 
-module.exports = { vendorMaplibreWorker, WORKER_FILES };
+module.exports = { vendorMaplibreWorker };
 
 if (require.main === module) {
   console.log(

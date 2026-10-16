@@ -310,7 +310,7 @@ export const BROWSE_MODE_OFFERING: Record<BrowseMode, OfferingType> = {
 };
 
 /** Inverse of {@link BROWSE_MODE_OFFERING}: the browse mode for an offering. */
-export const OFFERING_BROWSE_MODE: Record<OfferingType, BrowseMode> = {
+const OFFERING_BROWSE_MODE: Record<OfferingType, BrowseMode> = {
   [OfferingType.LONG_TERM_RENT]: 'long_term',
   [OfferingType.SHORT_TERM_RENT]: 'vacation',
   [OfferingType.SALE]: 'buy',

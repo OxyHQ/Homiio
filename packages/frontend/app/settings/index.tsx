@@ -6,14 +6,15 @@
  * destructive actions. Sections: Account → Preferences → Notifications →
  * Data → Support → About → Sign out.
  */
-import React, { useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { useState } from 'react';
+import { View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useOxy } from '@oxy.so/services';
 import Constants from 'expo-constants';
 import { toast } from '@oxy.so/bloom/toast';
 
+import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import {
   RiChat3Line,
   RiCodeSSlashLine,
@@ -33,11 +34,11 @@ import {
   RiUserLine,
   RiWrenchLine,
 } from '@oxy.so/bloom/icons';
+import { PageHeader } from '@oxy.so/bloom/page-header';
 import { Switch } from '@oxy.so/bloom/switch';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { SettingsListGroup, SettingsListItem } from '@oxy.so/bloom/settings-list';
 
-import { Header } from '@/components/Header';
 import { confirm } from '@oxy.so/bloom/surfaces';
 import { useCurrency } from '@/hooks/useCurrency';
 import { SettingsRowIcon, settingsScreenStyles } from '@/components/profile/SettingsRowIcon';
@@ -103,14 +104,15 @@ export default function SettingsScreen() {
   };
 
   return (
-    <View style={[styles.root, { backgroundColor: theme.background }]}>
-      <Header
-        options={{
-          title: t('settings.title'),
-          showBackButton: true,
-        }}
+    <>
+      <PageHeader
+        title={t('settings.title')}
+        titleAlign="center"
+        leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+        onBack={router.canGoBack() ? router.back : undefined}
+        backLabel={t('goBack')}
       />
-      <ScrollView contentContainerStyle={settingsScreenStyles.content}>
+      <View style={settingsScreenStyles.content}>
         <SettingsListGroup title={t('settings.sections.account')}>
           <SettingsListItem
             icon={<SettingsRowIcon icon={RiUserLine} />}
@@ -253,13 +255,7 @@ export default function SettingsScreen() {
             onPress={() => void handleSignOut()}
           />
         </SettingsListGroup>
-      </ScrollView>
-    </View>
+      </View>
+    </>
   );
 }
-
-const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-  },
-});

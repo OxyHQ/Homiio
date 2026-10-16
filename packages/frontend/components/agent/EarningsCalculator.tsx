@@ -37,10 +37,8 @@ import {
 } from '@oxy.so/bloom/segmented-control';
 
 import { Slider } from '@oxy.so/bloom/slider';
-import { resolvePagePadding } from '@/constants/styles';
 import { formatMoney } from '@homiio/shared-types';
 import { useFormatting } from '@/utils/format';
-import { useMediaQuery } from 'react-responsive';
 import { COMMISSION_CONFIG, commissionAmount, type CommissionOffering } from '@homiio/shared-types';
 
 /** Tabular figures so the live amounts don't jitter while the slider drags. */
@@ -132,8 +130,6 @@ export const EarningsCalculator: React.FC = () => {
   const { t } = useTranslation();
   const theme = useTheme();
   const { locale } = useFormatting();
-  const isWide = useMediaQuery({ minWidth: 768 });
-  const horizontalPadding = resolvePagePadding(isWide);
 
   const [offering, setOffering] = useState<CommissionOffering>('rent');
   const [rent, setRent] = useState<number>(RENT_RANGE.default);
@@ -174,7 +170,7 @@ export const EarningsCalculator: React.FC = () => {
       : t('agent.calculator.flatNoteExchange');
 
   return (
-    <View style={{ paddingHorizontal: horizontalPadding }}>
+    <View className="px-4 md:px-8">
       <Card
         radius="radius-24"
         className="w-full max-w-[720px] self-center gap-6 p-6"
@@ -226,5 +222,3 @@ export const EarningsCalculator: React.FC = () => {
     </View>
   );
 };
-
-export default EarningsCalculator;

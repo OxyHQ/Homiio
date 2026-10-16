@@ -44,7 +44,6 @@ import {
   FeaturedPropertiesWidget,
   featuredSearchQuery,
   rankFeatured,
-  scopeNotice,
   type FeaturedProperty,
 } from '@/components/widgets/FeaturedPropertiesWidget';
 
@@ -96,6 +95,16 @@ const DEVICE: LocationSelection = {
   precision: 'exact',
 };
 
+/** A committed, queryable Barcelona scope. */
+function barcelona(): Partial<LocationScope> {
+  return {
+    selection: BARCELONA,
+    resolution: { status: 'resolved', selection: BARCELONA },
+    discovery: false,
+    canQuery: true,
+  };
+}
+
 /** A scope in whichever state the case needs. Every field the widget reads. */
 function scope(overrides: Partial<LocationScope>): LocationScope {
   return {
@@ -120,12 +129,12 @@ function scope(overrides: Partial<LocationScope>): LocationScope {
 }
 
 /** One page of results, in the shape `usePropertySearch` reads. */
-function page(): { data: unknown } {
+function page(listings: { id: string }[] = [{ id: 'listing-1' }]): { data: unknown } {
   return {
     data: {
       success: true,
-      data: [{ id: 'listing-1' }],
-      total: 1,
+      data: listings,
+      total: listings.length,
       page: 1,
       limit: 24,
       totalPages: 1,
@@ -143,6 +152,17 @@ function wrapper({ children }: { children: ReactNode }): React.JSX.Element {
     <BloomThemeProvider>
       <QueryClientProvider client={client}>{children}</QueryClientProvider>
     </BloomThemeProvider>
+  );
+}
+
+/**
+ * Whether the widget drew anything at all. Both titles are checked because the
+ * heading is the first thing the widget renders whenever it renders anything.
+ */
+function rendersNothing(view: ReturnType<typeof render>): boolean {
+  return (
+    view.queryByText('home.featured.title') === null &&
+    view.queryByText('home.featured.titleIn') === null
   );
 }
 
@@ -206,35 +226,34 @@ describe('with no area chosen', () => {
     expect(apiGet).not.toHaveBeenCalled();
   });
 
-  it('says the area is missing rather than rendering an empty list', async () => {
-    // "There are no featured homes" and "you have not told us where" are
-    // different facts, and only one of them is true here.
+  it('renders nothing', async () => {
+    // The area is chosen in the page's own "where?" control; the rail widget
+    // appears only once it has homes to show.
     mockScope.mockReturnValue(scope({ resolution: { status: 'idle' }, discovery: true }));
 
     const view = render(<FeaturedPropertiesWidget />, { wrapper });
     await flush();
 
-    expect(view.getByText('home.featured.chooseArea')).toBeTruthy();
-    expect(view.queryByText('home.featured.empty')).toBeNull();
+    expect(rendersNothing(view)).toBe(true);
   });
 });
 
 describe('while the scope is still resolving', () => {
-  it('issues NO request, and does not claim the area is unset', async () => {
+  it('issues NO request, and renders nothing', async () => {
     mockScope.mockReturnValue(scope({ resolution: { status: 'resolving' }, discovery: false }));
 
     const view = render(<FeaturedPropertiesWidget />, { wrapper });
     await flush();
 
     expect(searchCalls()).toEqual([]);
-    expect(view.getByText('location.scope.resolving')).toBeTruthy();
+    expect(rendersNothing(view)).toBe(true);
   });
 });
 
 describe('when the device rung failed', () => {
-  it('issues NO request, and names the reason', async () => {
+  it('issues NO request, and renders nothing', async () => {
     // The rung the old code fell through: a denied permission used to end at a
-    // worldwide list. It ends at a sentence.
+    // worldwide list. It ends at no widget.
     mockScope.mockReturnValue(
       scope({
         resolution: { status: 'failed', reason: 'permission_denied' },
@@ -247,7 +266,7 @@ describe('when the device rung failed', () => {
     await flush();
 
     expect(searchCalls()).toEqual([]);
-    expect(view.getByText('location.scope.failure.permission_denied')).toBeTruthy();
+    expect(rendersNothing(view)).toBe(true);
   });
 });
 
@@ -288,6 +307,43 @@ describe('with a committed city', () => {
     await waitFor(() => expect(view.getByText('home.featured.titleIn')).toBeTruthy());
     expect(view.queryByText('home.featured.title')).toBeNull();
     await flush();
+  });
+
+  it('renders nothing while the search is in flight', async () => {
+    mockScope.mockReturnValue(scope(barcelona()));
+    let respond: (value: unknown) => void = () => {};
+    apiGet.mockReturnValue(new Promise((resolve) => (respond = resolve)) as never);
+
+    const view = render(<FeaturedPropertiesWidget />, { wrapper });
+    await waitFor(() => expect(searchCalls()).toHaveLength(1));
+
+    expect(rendersNothing(view)).toBe(true);
+
+    // Settled so the suite does not exit with a request still pending.
+    respond(page());
+    await waitFor(() => expect(view.getByText('home.featured.titleIn')).toBeTruthy());
+  });
+
+  it('renders nothing when the area has no homes', async () => {
+    mockScope.mockReturnValue(scope(barcelona()));
+    apiGet.mockResolvedValue(page([]) as never);
+
+    const view = render(<FeaturedPropertiesWidget />, { wrapper });
+    await waitFor(() => expect(searchCalls()).toHaveLength(1));
+    await flush();
+
+    expect(rendersNothing(view)).toBe(true);
+  });
+
+  it('renders nothing when the search fails', async () => {
+    mockScope.mockReturnValue(scope(barcelona()));
+    apiGet.mockRejectedValue(new Error('boom'));
+
+    const view = render(<FeaturedPropertiesWidget />, { wrapper });
+    await waitFor(() => expect(searchCalls()).toHaveLength(1));
+    await flush();
+
+    expect(rendersNothing(view)).toBe(true);
   });
 });
 
@@ -396,28 +452,5 @@ describe('rankFeatured', () => {
     const input = [listing('a', 1), listing('b', 9)];
     rankFeatured(input);
     expect(input.map((p) => p.id)).toEqual(['a', 'b']);
-  });
-});
-
-describe('scopeNotice', () => {
-  const t = ((key: string) => key) as never;
-
-  it('names the failure reason rather than a generic sentence', () => {
-    // "Location is off" and "we could not reach Homiio" call for different
-    // actions; one message for both sends half of its readers to the wrong place.
-    expect(scopeNotice({ status: 'failed', reason: 'network' }, t)).toBe(
-      'location.scope.failure.network',
-    );
-    expect(scopeNotice({ status: 'failed', reason: 'permission_denied' }, t)).toBe(
-      'location.scope.failure.permission_denied',
-    );
-  });
-
-  it('asks for an area when nothing has been tried', () => {
-    expect(scopeNotice({ status: 'idle' }, t)).toBe('home.featured.chooseArea');
-  });
-
-  it('says it is still resolving rather than asking for an area', () => {
-    expect(scopeNotice({ status: 'resolving' }, t)).toBe('location.scope.resolving');
   });
 });

@@ -16,7 +16,7 @@
  * Bloom `confirm()` surface (the RN `Alert` it replaced is a no-op on web).
  */
 import React, { useCallback, useMemo } from 'react';
-import { Platform, ScrollView, StyleSheet, View, type ViewStyle } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 
@@ -41,8 +41,7 @@ import { useUserProperties, useDeleteProperty } from '@/hooks/usePropertyQueries
 import { useMarkPropertyTransacted } from '@/hooks/usePartner';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
 import { toast } from '@oxy.so/bloom/toast';
-import { colors } from '@/styles/colors';
-import { contentClamp, spacing } from '@/constants/styles';
+import { spacing } from '@/constants/styles';
 import { OfferingType, PropertyStatus, type Property } from '@homiio/shared-types';
 import { logger } from '@/utils/logger';
 
@@ -283,7 +282,7 @@ export default function MyPropertiesScreen() {
   })();
 
   return (
-    <View style={styles.container}>
+    <>
       <PropertyListHeader
         title={t('properties.my.title')}
         right={
@@ -299,32 +298,15 @@ export default function MyPropertiesScreen() {
           </Button>
         }
       />
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {body}
-      </ScrollView>
-    </View>
+      <View style={styles.scrollContent}>{body}</View>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  scroll: Platform.select<ViewStyle>({
-    web: { flex: 1, overflow: 'auto' } as unknown as ViewStyle,
-    default: { flex: 1 },
-  }) as ViewStyle,
   scrollContent: {
     paddingTop: spacing.lg,
     paddingBottom: spacing['4xl'],
-    maxWidth: contentClamp.page,
-    width: '100%',
-    alignSelf: 'center',
   },
   gridPadding: {
     paddingHorizontal: spacing.lg,

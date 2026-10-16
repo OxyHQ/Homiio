@@ -2,8 +2,7 @@
  * SimilarHomesSection — "Similar homes nearby" horizontal carousel on the
  * property detail screen (companion to the price-transparency block).
  *
- * Reuses the home-page `HomeCarouselSection` row (same gutter/bleed + snap
- * behaviour) and `PropertyCard`. Cards pass `enableImageCarousel={false}` so an
+ * A Bloom `Shelf` row of `PropertyCard`s, like the home sections. Cards pass `enableImageCarousel={false}` so an
  * in-card photo pager never fights the row swipe — the established rule for
  * cards inside a horizontal scroller.
  *
@@ -16,8 +15,9 @@ import type React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 
-import { HomeCarouselSection } from '@/components/HomeCarouselSection';
+import { Shelf } from '@oxy.so/bloom/media-shelf';
 import { PropertyCard } from '@/components/PropertyCard';
+import { SECTION_GUTTER } from '@/components/property/Section';
 import { useAreaInsights } from '@/hooks';
 import type { Property } from '@homiio/shared-types';
 
@@ -37,20 +37,16 @@ export const SimilarHomesSection: React.FC<SimilarHomesSectionProps> = ({ proper
   }
 
   return (
-    <HomeCarouselSection<Property>
-      title={t('property.similarHomes.title')}
-      items={insights.comparables}
-      loading={false}
-      renderItem={(item) => (
+    <Shelf title={t('property.similarHomes.title')} itemWidth={240} contentInset={SECTION_GUTTER}>
+      {insights.comparables.map((item: Property) => (
         <PropertyCard
+          key={item.id}
           property={item}
           enableImageCarousel={false}
           showSaveButton={false}
           onPress={() => router.push(`/properties/${item.id}`)}
         />
-      )}
-    />
+      ))}
+    </Shelf>
   );
 };
-
-export default SimilarHomesSection;

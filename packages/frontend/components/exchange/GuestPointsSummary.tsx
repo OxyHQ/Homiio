@@ -119,5 +119,3 @@ const styles = StyleSheet.create({
     lineHeight: 17,
   },
 });
-
-export default GuestPointsSummary;

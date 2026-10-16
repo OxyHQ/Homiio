@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { View, ScrollView, StyleSheet, Platform, type ViewStyle } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLocalSearchParams } from 'expo-router';
+import { useState, useEffect } from 'react';
+import { View, StyleSheet } from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { fetch as expoFetch } from 'expo/fetch';
 import { useTranslation } from 'react-i18next';
 import {
@@ -11,15 +10,16 @@ import {
   AdmonitionRow,
   AdmonitionText,
 } from '@oxy.so/bloom/admonition';
+import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { Chip } from '@oxy.so/bloom/chip';
 import { RiShare2Line } from '@oxy.so/bloom/icons';
 import { Loading } from '@oxy.so/bloom/loading';
+import { PageHeader } from '@oxy.so/bloom/page-header';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { Text } from '@oxy.so/bloom/typography';
 import { deviceTimeZone, formatDate } from '@homiio/shared-types';
 import { API_URL } from '@/config';
 import { SindiIcon } from '@/assets/icons';
-import { Header } from '@/components/Header';
 import { ChatMessage } from '@/components/sindi/ChatMessage';
 import { logger } from '@/utils/logger';
 import { useFormatting } from '@/utils/format';
@@ -45,19 +45,6 @@ interface SharedConversationResponse {
 }
 
 /**
- * Web shell: a viewport-tall column whose transcript scrolls inside it.
- * Viewport units are valid on react-native-web but absent from RN's types.
- */
-const webContainer: ViewStyle | undefined =
-  Platform.OS === 'web'
-    ? {
-        height: '100vh' as unknown as ViewStyle['height'],
-        display: 'flex',
-        flexDirection: 'column',
-      }
-    : undefined;
-
-/**
  * A read-only shared Sindi transcript (`/sindi/shared/<token>`), drawn with the
  * same Bloom ai-chat turns as the live chat, each turn settled and footnoted
  * with its real timestamp.
@@ -67,6 +54,7 @@ export default function SharedConversationView() {
   const { colors } = useTheme();
   const { token } = useLocalSearchParams<{ token: string }>();
   const { t } = useTranslation();
+  const router = useRouter();
   const [conversation, setConversation] = useState<SharedConversation | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -102,21 +90,31 @@ export default function SharedConversationView() {
     loadSharedConversation();
   }, [token, t]);
 
-  const containerStyle = [styles.container, { backgroundColor: colors.background }, webContainer];
-
   if (loading) {
     return (
-      <SafeAreaView style={containerStyle} edges={['bottom']}>
-        <Header options={{ title: t('sindi.shared.loading'), showBackButton: true }} />
+      <>
+        <PageHeader
+          title={t('sindi.shared.loading')}
+          titleAlign="center"
+          leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+          onBack={router.canGoBack() ? router.back : undefined}
+          backLabel={t('goBack')}
+        />
         <Loading size="lg" text={t('sindi.shared.loadingMessage')} style={styles.fill} />
-      </SafeAreaView>
+      </>
     );
   }
 
   if (error || !conversation) {
     return (
-      <SafeAreaView style={containerStyle} edges={['bottom']}>
-        <Header options={{ title: t('sindi.shared.error.title'), showBackButton: true }} />
+      <>
+        <PageHeader
+          title={t('sindi.shared.error.title')}
+          titleAlign="center"
+          leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+          onBack={router.canGoBack() ? router.back : undefined}
+          backLabel={t('goBack')}
+        />
         <AdmonitionRoot type="error" style={styles.callout}>
           <AdmonitionRow>
             <AdmonitionIcon />
@@ -128,20 +126,21 @@ export default function SharedConversationView() {
             </AdmonitionContent>
           </AdmonitionRow>
         </AdmonitionRoot>
-      </SafeAreaView>
+      </>
     );
   }
 
   const lastIndex = conversation.messages.length - 1;
 
   return (
-    <SafeAreaView style={containerStyle} edges={['bottom']}>
-      <Header
-        options={{
-          title: conversation.title,
-          subtitle: t('sindi.shared.subtitle'),
-          showBackButton: true,
-        }}
+    <>
+      <PageHeader
+        title={conversation.title}
+        subtitle={t('sindi.shared.subtitle')}
+        titleAlign="center"
+        leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+        onBack={router.canGoBack() ? router.back : undefined}
+        backLabel={t('goBack')}
       />
 
       <View style={styles.badge}>
@@ -153,11 +152,7 @@ export default function SharedConversationView() {
         </Chip>
       </View>
 
-      <ScrollView
-        style={styles.fill}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.thread}
-      >
+      <View style={styles.thread}>
         {conversation.messages.length === 0 ? (
           <View style={styles.empty}>
             <SindiIcon size={48} color={colors.primary} />
@@ -190,7 +185,7 @@ export default function SharedConversationView() {
             />
           ))
         )}
-      </ScrollView>
+      </View>
 
       <Text
         variant="caption-1-regular"
@@ -198,14 +193,11 @@ export default function SharedConversationView() {
       >
         {t('sindi.shared.footer')}
       </Text>
-    </SafeAreaView>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
   fill: {
     flex: 1,
   },

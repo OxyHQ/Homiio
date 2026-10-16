@@ -138,24 +138,19 @@
       "topProperties": "Properti teratas"
     },
     "hero": {
-      "title": "Temukan hunian yang etis"
+      "title": {
+        "long_term": "Temukan hunian yang etis",
+        "vacation": "Temukan tempat menginap berikutnya",
+        "buy": "Temukan rumah untuk dibeli",
+        "exchange": "Tukar rumah, bepergian dengan cara berbeda"
+      }
     },
     "category": {
       "petFriendly": "Boleh bawa hewan"
     },
-    "horizon": {
-      "learnMore": "Pelajari selengkapnya"
-    },
-    "eco": {
-      "title": "Properti bersertifikat ramah lingkungan",
-      "description": "Temukan properti berkelanjutan yang memenuhi standar efisiensi energi dan ramah lingkungan kami"
-    },
     "featured": {
       "title": "Properti pilihan",
-      "empty": "Belum ada properti pilihan saat ini",
-      "titleIn": "Pilihan di {{area}}",
-      "chooseArea": "Pilih sebuah area untuk melihat properti pilihan.",
-      "loadFailed": "Tidak bisa memuat properti pilihan untuk area ini."
+      "titleIn": "Pilihan di {{area}}"
     },
     "viewAll": "Lihat semua",
     "recentlyViewed": {
@@ -180,68 +175,59 @@
       "title": "Hunian yang direkomendasikan",
       "eyebrow": "Untukmu"
     },
-    "explore": {
-      "eyebrow": "Terus menjelajah",
-      "title": "Jelajahi lebih banyak hunian",
-      "cta": "Lihat semua hunian di sini",
-      "ctaAccessible": "Buka Jelajahi dengan area yang sedang kamu cari"
-    },
     "hostCta": {
-      "cta": "Jadi tuan rumah",
-      "subtitle": "Jangkau penyewa terverifikasi di seluruh Spanyol — memasang iklan gratis, biayanya adil, dan didukung orang sungguhan.",
-      "title": "Iklankan tempatmu, temukan penyewa yang tepat"
+      "long_term": {
+        "title": "Iklankan tempatmu, temukan penyewa yang tepat",
+        "subtitle": "Jangkau penyewa terverifikasi di seluruh Spanyol — memasang iklan gratis, biayanya adil, dan didukung orang sungguhan.",
+        "cta": "Jadi tuan rumah"
+      },
+      "vacation": {
+        "title": "Sambut pelancong di rumah Anda",
+        "subtitle": "Bagikan tempat Anda untuk menginap singkat — harga jelas, tanpa biaya tersembunyi.",
+        "cta": "Jadi tuan rumah"
+      },
+      "buy": {
+        "title": "Menjual rumah Anda?",
+        "subtitle": "Pasang gratis dan jangkau pembeli yang melihat seluruh ceritanya.",
+        "cta": "Pasang rumah Anda"
+      },
+      "exchange": {
+        "title": "Tukar rumah Anda",
+        "subtitle": "Bertukar rumah dengan orang yang Anda percayai dan bepergian lebih hemat.",
+        "cta": "Tawarkan pertukaran"
+      }
     },
     "sections": {
-      "explain": "{{reason}} · Sumber: {{source}}",
-      "explainAccessible": "Mengapa hunian ini: {{reason}}. Sumber: {{source}}.",
       "error": "Kami tidak bisa memuat area ini. Tidak ada yang disembunyikan — permintaannya gagal.",
-      "source": {
-        "listing_created_at": "tanggal penayangan iklan",
-        "listing_sale_price_reduced_flag": "penanda penurunan harga yang ditayangkan portal",
-        "listing_status": "perubahan status iklan",
-        "listing_agency_fee_flag": "kolom biaya agen pada iklan",
-        "listing_cost_fields": "kolom biaya pada iklan",
-        "resident_reviews": "ulasan yang ditulis orang yang pernah tinggal di sana",
-        "listing_verification": "catatan verifikasi Homiio",
-        "listing_housing_type": "kolom jenis hunian pada iklan"
-      },
       "new_in_area": {
-        "eyebrow": "Baru",
         "title": "Baru di areamu",
         "reason": "Paling baru ditayangkan di dalam area yang kamu cari"
       },
       "price_reduced": {
-        "eyebrow": "Perubahan harga",
         "title": "Harga diturunkan",
         "reason": "Penjual menayangkan penurunan harga. Homiio tidak menyimpan riwayat harga sewa, jadi bagian ini hanya mencakup hunian yang dijual"
       },
       "no_longer_available": {
-        "eyebrow": "Keluar dari pasar",
         "title": "Sudah tidak tersedia",
         "reason": "Ditandai tersewa atau terjual oleh pemiliknya, dari yang terbaru: apa yang benar-benar lepas, dan di harga berapa"
       },
       "no_agency_fee": {
-        "eyebrow": "Biaya",
         "title": "Tanpa biaya agen",
         "reason": "Iklan menyatakan tidak ada biaya agen yang harus dibayar. Iklan yang tidak menyebutkan apa pun tidak dimasukkan"
       },
       "transparent_total_cost": {
-        "eyebrow": "Biaya",
         "title": "Total biaya dicantumkan",
         "reason": "Semua biaya rutin tercantum di iklan: sewa termasuk tagihan dan deposit, atau tarif per malam dengan biaya kebersihan dan layanan"
       },
       "with_resident_reviews": {
-        "eyebrow": "Kepercayaan",
         "title": "Diulas oleh penghuni",
         "reason": "Seseorang yang pernah tinggal di alamat ini menulis ulasan"
       },
       "verified": {
-        "eyebrow": "Kepercayaan",
         "title": "Alamat atau pengiklan terverifikasi",
         "reason": "Homiio memverifikasi alamatnya atau orang yang memasang iklannya"
       },
       "public_housing": {
-        "eyebrow": "Publik",
         "title": "Rumah subsidi",
         "reason": "Ditayangkan sebagai rumah subsidi. Homiio belum punya kolom untuk hunian koperasi atau komunitas, jadi yang itu belum dimasukkan"
       },
@@ -254,9 +240,17 @@
       "changeFiltersAccessible": "Buka Jelajahi untuk mengubah filter area ini"
     },
     "discovery": {
-      "eyebrow": "Jelajahi destinasi",
-      "title": "Di mana Anda ingin tinggal?",
-      "body": "Kami tidak dapat menentukan wilayah Anda, jadi ini adalah kota-kota dengan hunian di Homiio, bukan tempat di dekat Anda."
+      "title": "Di mana Anda ingin tinggal?"
+    },
+    "neighbourSupport": {
+      "title": "Tetangga yang butuh dukungan",
+      "viewAll": "Lihat semua"
+    },
+    "mission": {
+      "title": "Kami di pihakmu",
+      "body": "Homiio lahir dari krisis perumahan yang sama dengan yang sedang kamu alami. Kami mendengarkan penyewa dan membangun bersama mereka.",
+      "support": "Dukung Homiio",
+      "readStory": "Mengapa Homiio ada"
     }
   },
   "agent": {
@@ -453,9 +447,6 @@
       "other": "Other"
     },
     "widgets": {
-      "common": {
-        "signIn": "Sign in"
-      },
       "quickFilters": {
         "title": "Quick Filters",
         "furnished": "Furnished",
@@ -472,7 +463,6 @@
       "alerts": {
         "title": "Property Alerts",
         "subtitle": "Get notified when new properties match your criteria",
-        "signInPrompt": "Sign in to create property alerts",
         "location": "Location",
         "minPrice": "Min Price",
         "maxPrice": "Max Price",
@@ -488,10 +478,7 @@
       },
       "savedSearches": {
         "title": "Saved Searches",
-        "empty": "No saved searches yet",
         "emptyHelper": "Save a search to get quick access and alerts here",
-        "signInPrompt": "Sign in to save searches",
-        "createNew": "Create New Search",
         "viewAllCount": "View All ({{count}} more)",
         "nameAndQueryRequired": "Search name and query are required",
         "loadFailed": "Failed to load saved searches",
@@ -780,11 +767,6 @@
         "rentalLabel": "Rental {{index}}"
       }
     },
-    "toast": {
-      "loadFailed": "Failed to load profiles",
-      "updateSuccess": "Profile updated successfully",
-      "updateFailed": "Failed to update profile"
-    },
     "subscriptionsDescription": "Manage Homiio Plus or buy one-time file analysis.",
     "subscriptions": "Subscriptions",
     "stays": "Stays",
@@ -831,10 +813,6 @@
       "transactDone": "Listing marked as closed",
       "transactCommission": "Deal closed — commission recorded",
       "viewingTimes": "Waktu kunjungan"
-    },
-    "details": {
-      "bedrooms": "Bedrooms",
-      "bathrooms": "Bathrooms"
     },
     "titles": {
       "forRent": "for rent in",
@@ -1249,56 +1227,6 @@
       "viewProfile": "View Profile",
       "sendRequest": "Send Request",
       "fallbackName": "Roommate"
-    }
-  },
-  "horizon": {
-    "title": "Horizon Initiative",
-    "description": "Global initiative for fair housing, healthcare, and travel support",
-    "page": {
-      "benefits": {
-        "fairHousing": {
-          "title": "Fair Housing",
-          "description": "Access to affordable housing in 120+ cities worldwide with standardized ethical rental agreements"
-        },
-        "healthcare": {
-          "title": "Healthcare Access",
-          "description": "Universal healthcare coverage with partner clinics and telehealth services in every Horizon city"
-        },
-        "travel": {
-          "title": "Travel Network",
-          "description": "Discounted transportation and accommodation when traveling between Horizon locations"
-        },
-        "community": {
-          "title": "Community Support",
-          "description": "Connect with local members for cultural integration, language exchange, and social activities"
-        }
-      },
-      "heroTitle": "Global Housing Initiative",
-      "heroSubtitle": "Creating a world of ethical housing, healthcare, and mobility",
-      "aboutTitle": "About Horizon",
-      "aboutBody1": "Horizon is a global initiative designed to make housing more accessible, affordable, and ethical for everyone. By joining a network of properties across 120+ cities worldwide, members gain access to fair housing, healthcare benefits, and travel support.",
-      "aboutBody2": "Our mission is to create sustainable living environments that foster community and wellbeing while reducing the environmental impact of housing.",
-      "benefitsTitle": "Member Benefits",
-      "howItWorksTitle": "How It Works",
-      "steps": {
-        "apply": {
-          "title": "Apply for Membership",
-          "description": "Complete your profile and submit a membership application with your housing needs and preferences."
-        },
-        "verify": {
-          "title": "Get Verified",
-          "description": "Our team reviews your application and verifies your identity and background information."
-        },
-        "access": {
-          "title": "Access the Network",
-          "description": "Once approved, browse and book properties across our global network with priority access."
-        }
-      },
-      "joinTitle": "Ready to join Horizon?",
-      "joinSubtitle": "Apply today and take the first step toward ethical, accessible housing worldwide.",
-      "storiesTitle": "Member Stories",
-      "story1": "Horizon made my relocation so much easier. I found an ethical apartment in Berlin within a week and the healthcare coverage saved me when I needed emergency care.",
-      "story2": "As a digital nomad, having access to quality housing in multiple cities has been life-changing. The community aspect is what makes Horizon truly special."
     }
   },
   "settings": {
@@ -2102,11 +2030,6 @@
     }
   },
   "donations": {
-    "widget": {
-      "title": "Support Our Mission",
-      "description": "Help us build the future of ethical housing. Your support makes a difference.",
-      "button": "Donate to Homiio"
-    },
     "page": {
       "title": "Donate to Homiio",
       "subtitle": "Support the future of ethical housing",
@@ -3848,15 +3771,6 @@
       "exploreGlobalAccessible": "Jelajahi hunian di mana saja, tanpa filter area",
       "pickerTitle": "Kamu sedang mencari hunian di mana?",
       "showingCached": "Salinan tersimpan dari {{when}}. Belum diperbarui.",
-      "failure": {
-        "permission_denied": "Lokasi sedang nonaktif, jadi kami tidak bisa mencari di dekatmu. Pilih tempat saja — lokasi bersifat opsional.",
-        "position_unavailable": "Kami tidak bisa mendapatkan posisimu. Pilih sebuah tempat.",
-        "network": "Kami tidak bisa menghubungi Homiio untuk pencarian itu. Periksa koneksimu lalu coba lagi.",
-        "rate_limited": "Terlalu banyak pencarian tempat sekaligus. Coba lagi sebentar.",
-        "ambiguous": "Ada beberapa tempat dengan nama itu. Pilih yang kamu maksud.",
-        "no_results": "Kami tidak menemukan tempat itu. Coba nama lain.",
-        "unsupported": "Homiio belum bisa mencari di jenis tempat itu. Pilih sebuah kota."
-      },
       "chooseArea": "Pilih area",
       "useCurrentHint": "Dalam radius {{distance}} dari lokasimu",
       "locationOff": "Lokasi dimatikan di pengaturan",

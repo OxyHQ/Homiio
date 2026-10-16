@@ -13,35 +13,31 @@
  *
  * Section order: hero → how-it-works → earnings calculator → rewards teaser →
  * (partner only) referral link + dashboard → closing CTA banner. Sections are
- * flat with per-section gutter; the page root is the app background.
+ * flat with per-section gutter on the shell's content surface.
  */
 import React, { useCallback, useMemo } from 'react';
 import { View } from 'react-native';
-import { useSharedValue } from 'react-native-reanimated';
+import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
+import { PageHeader } from '@oxy.so/bloom/page-header';
 import { openAccountDialog, useOxy } from '@oxy.so/services';
 
-import { Header } from '@/components/Header';
-import { PageScrollView } from '@/components/PageScrollView';
 import { AgentHero } from '@/components/agent/AgentHero';
 import { AgentHowItWorks } from '@/components/agent/AgentHowItWorks';
 import { EarningsCalculator } from '@/components/agent/EarningsCalculator';
 import { RewardsTeaser } from '@/components/agent/RewardsTeaser';
 import { ReferralLinkCard } from '@/components/agent/ReferralLinkCard';
 import { PartnerDashboard } from '@/components/agent/PartnerDashboard';
-import { AgentCtaBanner } from '@/components/agent/AgentCtaBanner';
+import { CtaBanner } from '@/components/CtaBanner';
 import { usePartnerMe, useJoinPartner, useReferrals, useEarnings } from '@/hooks/usePartner';
 import { shareReferralLink } from '@/utils/shareReferral';
 import { toast } from '@oxy.so/bloom/toast';
 
 export default function AgentScreen() {
   const { t } = useTranslation();
+  const router = useRouter();
   const { isAuthenticated } = useOxy();
-
-  // Drive the transparent Header's scroll-in background from the sole scroll
-  // owner: the document on web (mirrored by `PageScrollView`), the screen's own
-  // `Animated.ScrollView` on native.
-  const scrollY = useSharedValue(0);
 
   const meQuery = usePartnerMe();
   const joinMutation = useJoinPartner();
@@ -97,54 +93,63 @@ export default function AgentScreen() {
   }, [isAuthenticated, isPartner, link, joinMutation, t]);
 
   return (
-    <View className="flex-1">
-      <Header options={{ transparent: true, showBackButton: true }} scrollY={scrollY} />
+    <>
+      <PageHeader
+        title={t('agent.menu.title')}
+        titleAlign="center"
+        leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+        onBack={router.canGoBack() ? router.back : undefined}
+        backLabel={t('goBack')}
+        transparent
+        titleReveal="onScroll"
+      />
 
-      <PageScrollView scrollY={scrollY} className="flex-1" showsVerticalScrollIndicator={false}>
-        <AgentHero
-          title={t('agent.hero.title')}
-          subtitle={t('agent.hero.subtitle')}
-          ctaLabel={ctaLabel}
-          onPressCta={handleHeroCta}
-          ctaLoading={joinMutation.isPending}
-          trustLine={t('agent.hero.trust')}
-        />
+      <AgentHero
+        title={t('agent.hero.title')}
+        subtitle={t('agent.hero.subtitle')}
+        ctaLabel={ctaLabel}
+        onPressCta={handleHeroCta}
+        ctaLoading={joinMutation.isPending}
+        trustLine={t('agent.hero.trust')}
+      />
 
-        {/* Section rhythm owned here by NativeWind `gap` (24px mobile / 32px
+      {/* Section rhythm owned here by NativeWind `gap` (24px mobile / 32px
             web); post-hero sections only. Hero sits outside so it does not
             participate in the gap stack. */}
-        <View className="gap-6 md:gap-8 pb-20">
-          <AgentHowItWorks />
+      <View className="gap-6 md:gap-8 pb-20">
+        <AgentHowItWorks />
 
-          <EarningsCalculator />
+        <EarningsCalculator />
 
-          <RewardsTeaser points={partner?.points} />
+        <RewardsTeaser points={partner?.points} />
 
-          {/* Partner-only: referral link + dashboard. Rendered only once the
+        {/* Partner-only: referral link + dashboard. Rendered only once the
               join has succeeded (or on a returning partner) — derived purely
               from the query, no effect. */}
-          {isPartner && link ? <ReferralLinkCard link={link} /> : null}
+        {isPartner && link ? <ReferralLinkCard link={link} /> : null}
 
-          {isPartner && stats ? (
-            <PartnerDashboard
-              stats={stats}
-              points={partner?.points ?? 0}
-              referrals={referralsQuery.data ?? []}
-              commissions={earningsQuery.data ?? []}
-              referralsLoading={referralsQuery.isLoading}
-              earningsLoading={earningsQuery.isLoading}
-            />
-          ) : null}
+        {isPartner && stats ? (
+          <PartnerDashboard
+            stats={stats}
+            points={partner?.points ?? 0}
+            referrals={referralsQuery.data ?? []}
+            commissions={earningsQuery.data ?? []}
+            referralsLoading={referralsQuery.isLoading}
+            earningsLoading={earningsQuery.isLoading}
+          />
+        ) : null}
 
-          <AgentCtaBanner
+        <View className="px-4 md:px-8">
+          <CtaBanner
             title={t('agent.banner.title')}
             subtitle={t('agent.banner.subtitle')}
             ctaLabel={t('agent.banner.cta')}
+            imageUrl="https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=1600&q=80"
             trustLine={t('agent.banner.trust')}
             onPress={handleHeroCta}
           />
         </View>
-      </PageScrollView>
-    </View>
+      </View>
+    </>
   );
 }

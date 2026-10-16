@@ -104,5 +104,3 @@ const styles = StyleSheet.create({
     color: colors.COLOR_BLACK_LIGHT_3,
   },
 });
-
-export default SleepArrangement;

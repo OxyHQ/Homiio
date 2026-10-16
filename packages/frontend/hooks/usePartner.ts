@@ -24,7 +24,7 @@ import { partnerApi } from '@/services/partnerApi';
 import { propertyService, type MarkTransactedResult } from '@/services/propertyService';
 
 /** Stable query-key factory so invalidation never drifts from the queries. */
-export const partnerKeys = {
+const partnerKeys = {
   all: ['partner'] as const,
   me: () => [...partnerKeys.all, 'me'] as const,
   referrals: () => [...partnerKeys.all, 'referrals'] as const,

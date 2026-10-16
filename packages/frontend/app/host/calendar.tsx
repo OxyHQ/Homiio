@@ -37,8 +37,7 @@
  * incomplete is worse than one that admits it.
  */
 import React, { useCallback, useMemo, useState } from 'react';
-import { Platform, ScrollView, StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
   addDays,
@@ -88,6 +87,8 @@ import { useTheme } from '@oxy.so/bloom/theme';
 import { Text as BloomText, H2 } from '@oxy.so/bloom/typography';
 import { useOxy, openAccountDialog } from '@oxy.so/services';
 import { useTranslation } from 'react-i18next';
+import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
+import { PageHeader } from '@oxy.so/bloom/page-header';
 import {
   type AvailabilityWindow,
   AvailabilityWindowStatus,
@@ -96,7 +97,6 @@ import {
   type Reservation,
   ReservationStatus,
 } from '@homiio/shared-types';
-import { Header } from '@/components/Header';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
@@ -112,9 +112,6 @@ import { propertyService } from '@/services/propertyService';
 import { getPropertyTitle } from '@/utils/propertyUtils';
 import { getFormatLocale } from '@/utils/dateLocale';
 import { radius, spacing } from '@/constants/styles';
-
-/** Web scrolls the document; native screens own their ScrollView. */
-const IS_WEB = Platform.OS === 'web';
 
 type SpanKind = 'confirmed' | 'pending' | 'blocked' | 'exchangeConfirmed' | 'exchangePending';
 
@@ -394,31 +391,37 @@ export default function HostCalendarScreen() {
     }
   }, [blockState.range, closeDialog, effectivePropertyId, queryClient, t]);
 
-  const header = <Header options={{ showBackButton: true, title: t('host.calendar.title') }} />;
+  const header = (
+    <PageHeader
+      title={t('host.calendar.title')}
+      titleAlign="center"
+      leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+      onBack={router.canGoBack() ? router.back : undefined}
+      backLabel={t('goBack')}
+    />
+  );
 
   if (!isAuthed) {
     return (
-      <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
+      <>
         {header}
-        <SafeAreaView edges={['bottom']} style={styles.safeArea}>
-          <View style={styles.emptyWrap}>
-            <EmptyState
-              icon={RiCalendarLine}
-              title={t('host.calendar.signInTitle')}
-              description={t('host.calendar.signInDescription')}
-              actionText={t('host.calendar.signIn')}
-              actionIcon={RiLoginBoxLine}
-              onAction={() => openAccountDialog()}
-            />
-          </View>
-        </SafeAreaView>
-      </View>
+        <View style={styles.emptyWrap}>
+          <EmptyState
+            icon={RiCalendarLine}
+            title={t('host.calendar.signInTitle')}
+            description={t('host.calendar.signInDescription')}
+            actionText={t('host.calendar.signIn')}
+            actionIcon={RiLoginBoxLine}
+            onAction={() => openAccountDialog()}
+          />
+        </View>
+      </>
     );
   }
 
   if (propertiesQuery.isLoading) {
     return (
-      <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
+      <>
         {header}
         <View style={styles.content}>
           <View style={styles.stack}>
@@ -431,47 +434,43 @@ export default function HostCalendarScreen() {
           </View>
           <Skeleton.Box height={320} borderRadius={radius.lg} />
         </View>
-      </View>
+      </>
     );
   }
 
   if (propertiesQuery.error) {
     return (
-      <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
+      <>
         {header}
-        <SafeAreaView edges={['bottom']} style={styles.safeArea}>
-          <ErrorState
-            icon={RiAlertLine}
-            title={t('host.calendar.loadPropertiesError')}
-            description={
-              typeof propertiesQuery.error === 'string'
-                ? propertiesQuery.error
-                : t('host.calendar.tryAgain')
-            }
-            onRetry={() => propertiesQuery.refetch()}
-          />
-        </SafeAreaView>
-      </View>
+        <ErrorState
+          icon={RiAlertLine}
+          title={t('host.calendar.loadPropertiesError')}
+          description={
+            typeof propertiesQuery.error === 'string'
+              ? propertiesQuery.error
+              : t('host.calendar.tryAgain')
+          }
+          onRetry={() => propertiesQuery.refetch()}
+        />
+      </>
     );
   }
 
   if (properties.length === 0) {
     return (
-      <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
+      <>
         {header}
-        <SafeAreaView edges={['bottom']} style={styles.safeArea}>
-          <View style={styles.emptyWrap}>
-            <EmptyState
-              icon={RiHomeLine}
-              title={t('host.calendar.emptyTitle')}
-              description={t('host.calendar.emptyDescription')}
-              actionText={t('host.calendar.createListing')}
-              actionIcon={RiAddLine}
-              onAction={() => router.push('/properties/create')}
-            />
-          </View>
-        </SafeAreaView>
-      </View>
+        <View style={styles.emptyWrap}>
+          <EmptyState
+            icon={RiHomeLine}
+            title={t('host.calendar.emptyTitle')}
+            description={t('host.calendar.emptyDescription')}
+            actionText={t('host.calendar.createListing')}
+            actionIcon={RiAddLine}
+            onAction={() => router.push('/properties/create')}
+          />
+        </View>
+      </>
     );
   }
 
@@ -591,75 +590,67 @@ export default function HostCalendarScreen() {
   );
 
   return (
-    <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
+    <>
       {header}
-      <SafeAreaView edges={['bottom']} style={styles.safeArea}>
-        {IS_WEB ? body : <ScrollView>{body}</ScrollView>}
+      {body}
 
-        <Dialog
-          placement="center"
-          open={blockState.visible}
-          onClose={closeDialog}
-          dismissOnBackdrop={!submitting}
-          maxWidth={420}
-          title={t('host.calendar.blockTitle')}
-          label={t('host.calendar.blockTitle')}
-          description={
-            blockRange
-              ? t('host.calendar.blockBodyRange', {
-                  start: format(blockRange.start, 'EEE, MMM d'),
-                  end: format(blockRange.end, 'EEE, MMM d, yyyy'),
-                })
-              : t('host.calendar.blockBodySingle')
-          }
-          actions={[
-            {
-              label: t('host.calendar.blockConfirm'),
-              disabled: submitting || !blockRange,
-              shouldCloseOnPress: false,
-              onPress: () => void handleConfirmBlock(),
-            },
-            {
-              label: t('common.cancel'),
-              color: 'cancel',
-              disabled: submitting,
-              shouldCloseOnPress: false,
-              onPress: closeDialog,
-            },
-          ]}
-        >
-          <View style={styles.dialogBody}>
-            <RangeCalendar
-              value={blockRange}
-              onChange={handleRange}
-              minDate={startOfDay(new Date())}
-              isDateUnavailable={isDateUnavailable}
-              weekStartsOn={1}
-              locale={locale}
-              defaultMonth={month}
-              accessibilityLabel={t('host.calendar.blockTitle')}
-            />
-            <TextFieldInput
-              label={t('host.calendar.blockReasonLabel')}
-              value={blockState.reason}
-              onChangeText={(reason) => setBlockState((state) => ({ ...state, reason }))}
-              editable={!submitting}
-              placeholder={t('host.calendar.blockReasonPlaceholder')}
-            />
-          </View>
-        </Dialog>
-      </SafeAreaView>
-    </View>
+      <Dialog
+        placement="center"
+        open={blockState.visible}
+        onClose={closeDialog}
+        dismissOnBackdrop={!submitting}
+        maxWidth={420}
+        title={t('host.calendar.blockTitle')}
+        label={t('host.calendar.blockTitle')}
+        description={
+          blockRange
+            ? t('host.calendar.blockBodyRange', {
+                start: format(blockRange.start, 'EEE, MMM d'),
+                end: format(blockRange.end, 'EEE, MMM d, yyyy'),
+              })
+            : t('host.calendar.blockBodySingle')
+        }
+        actions={[
+          {
+            label: t('host.calendar.blockConfirm'),
+            disabled: submitting || !blockRange,
+            shouldCloseOnPress: false,
+            onPress: () => void handleConfirmBlock(),
+          },
+          {
+            label: t('common.cancel'),
+            color: 'cancel',
+            disabled: submitting,
+            shouldCloseOnPress: false,
+            onPress: closeDialog,
+          },
+        ]}
+      >
+        <View style={styles.dialogBody}>
+          <RangeCalendar
+            value={blockRange}
+            onChange={handleRange}
+            minDate={startOfDay(new Date())}
+            isDateUnavailable={isDateUnavailable}
+            weekStartsOn={1}
+            locale={locale}
+            defaultMonth={month}
+            accessibilityLabel={t('host.calendar.blockTitle')}
+          />
+          <TextFieldInput
+            label={t('host.calendar.blockReasonLabel')}
+            value={blockState.reason}
+            onChangeText={(reason) => setBlockState((state) => ({ ...state, reason }))}
+            editable={!submitting}
+            placeholder={t('host.calendar.blockReasonPlaceholder')}
+          />
+        </View>
+      </Dialog>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-  },
-  safeArea: {
-    flex: 1,
-  },
   content: {
     padding: spacing.lg,
     gap: spacing['2xl'],

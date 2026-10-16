@@ -52,5 +52,3 @@ const styles = StyleSheet.create({
     pointerEvents: 'auto',
   },
 });
-
-export default MapFab;

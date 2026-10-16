@@ -40,12 +40,12 @@ interface NewsroomListResponse {
   total: number;
 }
 
-export interface TipsListResult {
+interface TipsListResult {
   data: TipArticle[];
   total: number;
 }
 
-export interface TipsQueryParams {
+interface TipsQueryParams {
   tag?: string;
   search?: string;
   locale?: string;

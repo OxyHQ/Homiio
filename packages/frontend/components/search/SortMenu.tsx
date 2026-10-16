@@ -103,5 +103,3 @@ export const SortMenu: React.FC<SortMenuProps> = ({
     </DropdownMenu>
   );
 };
-
-export default SortMenu;

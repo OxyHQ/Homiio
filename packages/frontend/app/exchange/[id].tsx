@@ -11,10 +11,11 @@
  * to avoid surfacing actions that would always fail. Modeled on reservations/[id].
  */
 import React, { useCallback, useMemo, useState } from 'react';
-import { Image, ScrollView, StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Image, StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
+import { PageHeader } from '@oxy.so/bloom/page-header';
 import { parseISO } from 'date-fns';
 
 import { Button } from '@oxy.so/bloom/button';
@@ -25,7 +26,6 @@ import { SettingsListGroup, SettingsListItem } from '@oxy.so/bloom/settings-list
 import { Text as BloomText, H2 } from '@oxy.so/bloom/typography';
 import { ExchangeMode, ExchangeRequestStatus, type ExchangeWindow } from '@homiio/shared-types';
 
-import { Header } from '@/components/Header';
 import { useProperty } from '@/hooks';
 import { useProfile } from '@/context/ProfileContext';
 import {
@@ -153,17 +153,18 @@ export default function ExchangeRequestDetailScreen() {
   );
 
   const header = (
-    <Header
-      options={{
-        showBackButton: true,
-        title: t('listing.exchange.detailTitle'),
-      }}
+    <PageHeader
+      title={t('listing.exchange.detailTitle')}
+      titleAlign="center"
+      leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+      onBack={router.canGoBack() ? router.back : undefined}
+      backLabel={t('goBack')}
     />
   );
 
   if (!id) {
     return (
-      <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
+      <>
         {header}
         <View style={styles.centerWrap}>
           <ErrorState
@@ -174,24 +175,24 @@ export default function ExchangeRequestDetailScreen() {
             onRetry={() => router.back()}
           />
         </View>
-      </View>
+      </>
     );
   }
 
   if (requestQuery.isPending) {
     return (
-      <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
+      <>
         {header}
         <View style={styles.centerWrap}>
           <Loading variant="spinner" size="md" />
         </View>
-      </View>
+      </>
     );
   }
 
   if (requestQuery.isError || !request) {
     return (
-      <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
+      <>
         {header}
         <View style={styles.centerWrap}>
           <ErrorState
@@ -201,7 +202,7 @@ export default function ExchangeRequestDetailScreen() {
             onRetry={() => router.back()}
           />
         </View>
-      </View>
+      </>
     );
   }
 
@@ -229,147 +230,137 @@ export default function ExchangeRequestDetailScreen() {
     !alreadyReviewed;
 
   return (
-    <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
+    <>
       {header}
-      <SafeAreaView edges={['bottom']} style={styles.safeArea}>
-        <ScrollView contentContainerStyle={styles.content}>
-          <View style={[styles.thumbWrap, { backgroundColor: theme.colors.backgroundTertiary }]}>
-            {imageSource ? (
-              <Image source={imageSource} style={styles.thumb} resizeMode="cover" />
-            ) : (
-              <View style={styles.thumb} />
-            )}
+      <View style={styles.content}>
+        <View style={[styles.thumbWrap, { backgroundColor: theme.colors.backgroundTertiary }]}>
+          {imageSource ? (
+            <Image source={imageSource} style={styles.thumb} resizeMode="cover" />
+          ) : (
+            <View style={styles.thumb} />
+          )}
+        </View>
+
+        <Card radius="radius-16" className="p-5" appearance="outline">
+          <View style={styles.headerRow}>
+            <H2 style={styles.title}>{propertyTitle}</H2>
+            <ExchangeStatusBadge status={request.status} />
           </View>
-
-          <Card radius="radius-16" className="p-5" appearance="outline">
-            <View style={styles.headerRow}>
-              <H2 style={styles.title}>{propertyTitle}</H2>
-              <ExchangeStatusBadge status={request.status} />
-            </View>
-            {property?.address ? (
-              <BloomText style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
-                {[property.address.cityName, property.address.countryName]
-                  .filter(Boolean)
-                  .join(', ')}
-              </BloomText>
-            ) : null}
-          </Card>
-
-          <SettingsListGroup title={t('listing.exchange.detailsLabel')}>
-            <SettingsListItem title={t('listing.exchange.modeLabelShort')} value={modeLabel} />
-            <SettingsListItem
-              title={t('listing.exchange.requestedStay')}
-              value={formatWindow(request.requestedWindow)}
-            />
-            {isSwap && request.offeredWindow ? (
-              <SettingsListItem
-                title={t('listing.exchange.offeredStay')}
-                value={formatWindow(request.offeredWindow)}
-              />
-            ) : null}
-            {isSwap && offeredProperty ? (
-              <SettingsListItem
-                title={t('listing.exchange.offeredHome')}
-                value={getPropertyTitle(offeredProperty)}
-              />
-            ) : null}
-          </SettingsListGroup>
-
-          {request.message ? (
-            <Card radius="radius-16" className="p-5" appearance="outline">
-              <BloomText style={[styles.sectionLabel, { color: theme.colors.textSecondary }]}>
-                {t('listing.exchange.messageHeading')}
-              </BloomText>
-              <BloomText style={[styles.messageText, { color: theme.colors.text }]}>
-                {request.message}
-              </BloomText>
-            </Card>
+          {property?.address ? (
+            <BloomText style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
+              {[property.address.cityName, property.address.countryName].filter(Boolean).join(', ')}
+            </BloomText>
           ) : null}
+        </Card>
 
-          {showHostConfirmDecline || showRequesterCancel || showComplete ? (
-            <View style={styles.actionRow}>
-              {showHostConfirmDecline ? (
-                <>
-                  <Button
-                    size="md"
-                    leadingIcon={RiCheckLine}
-                    onPress={() => void confirmAction('confirm')}
-                    disabled={updateMutation.isPending}
-                    style={styles.actionButton}
-                    tone="accent"
-                    appearance="solid"
-                  >
-                    {t('listing.exchange.actions.approve')}
-                  </Button>
-                  <Button
-                    size="md"
-                    leadingIcon={RiCloseLine}
-                    onPress={() => void confirmAction('decline')}
-                    disabled={updateMutation.isPending}
-                    style={styles.actionButton}
-                    tone="neutral"
-                    appearance="outline"
-                  >
-                    {t('listing.exchange.actions.decline')}
-                  </Button>
-                </>
-              ) : null}
-              {showComplete ? (
+        <SettingsListGroup title={t('listing.exchange.detailsLabel')}>
+          <SettingsListItem title={t('listing.exchange.modeLabelShort')} value={modeLabel} />
+          <SettingsListItem
+            title={t('listing.exchange.requestedStay')}
+            value={formatWindow(request.requestedWindow)}
+          />
+          {isSwap && request.offeredWindow ? (
+            <SettingsListItem
+              title={t('listing.exchange.offeredStay')}
+              value={formatWindow(request.offeredWindow)}
+            />
+          ) : null}
+          {isSwap && offeredProperty ? (
+            <SettingsListItem
+              title={t('listing.exchange.offeredHome')}
+              value={getPropertyTitle(offeredProperty)}
+            />
+          ) : null}
+        </SettingsListGroup>
+
+        {request.message ? (
+          <Card radius="radius-16" className="p-5" appearance="outline">
+            <BloomText style={[styles.sectionLabel, { color: theme.colors.textSecondary }]}>
+              {t('listing.exchange.messageHeading')}
+            </BloomText>
+            <BloomText style={[styles.messageText, { color: theme.colors.text }]}>
+              {request.message}
+            </BloomText>
+          </Card>
+        ) : null}
+
+        {showHostConfirmDecline || showRequesterCancel || showComplete ? (
+          <View style={styles.actionRow}>
+            {showHostConfirmDecline ? (
+              <>
                 <Button
                   size="md"
                   leadingIcon={RiCheckLine}
-                  onPress={() => void confirmAction('complete')}
+                  onPress={() => void confirmAction('confirm')}
                   disabled={updateMutation.isPending}
                   style={styles.actionButton}
                   tone="accent"
                   appearance="solid"
                 >
-                  {t('listing.exchange.actions.complete')}
+                  {t('listing.exchange.actions.approve')}
                 </Button>
-              ) : null}
-              {showRequesterCancel ? (
                 <Button
                   size="md"
-                  leadingIcon={RiCloseCircleLine}
-                  onPress={() => void confirmAction('cancel')}
+                  leadingIcon={RiCloseLine}
+                  onPress={() => void confirmAction('decline')}
                   disabled={updateMutation.isPending}
                   style={styles.actionButton}
-                  tone="accent"
-                  appearance="subtle"
+                  tone="neutral"
+                  appearance="outline"
                 >
-                  {t('listing.exchange.actions.cancel')}
+                  {t('listing.exchange.actions.decline')}
                 </Button>
-              ) : null}
-            </View>
-          ) : null}
+              </>
+            ) : null}
+            {showComplete ? (
+              <Button
+                size="md"
+                leadingIcon={RiCheckLine}
+                onPress={() => void confirmAction('complete')}
+                disabled={updateMutation.isPending}
+                style={styles.actionButton}
+                tone="accent"
+                appearance="solid"
+              >
+                {t('listing.exchange.actions.complete')}
+              </Button>
+            ) : null}
+            {showRequesterCancel ? (
+              <Button
+                size="md"
+                leadingIcon={RiCloseCircleLine}
+                onPress={() => void confirmAction('cancel')}
+                disabled={updateMutation.isPending}
+                style={styles.actionButton}
+                tone="accent"
+                appearance="subtle"
+              >
+                {t('listing.exchange.actions.cancel')}
+              </Button>
+            ) : null}
+          </View>
+        ) : null}
 
-          {showReviewForm ? (
-            <Card radius="radius-16" className="p-5" appearance="outline">
-              <ExchangeReviewForm
-                exchangeRequestId={request.id}
-                onSubmitted={() => reviewsQuery.refetch()}
-              />
-            </Card>
-          ) : null}
+        {showReviewForm ? (
+          <Card radius="radius-16" className="p-5" appearance="outline">
+            <ExchangeReviewForm
+              exchangeRequestId={request.id}
+              onSubmitted={() => reviewsQuery.refetch()}
+            />
+          </Card>
+        ) : null}
 
-          {request.status === ExchangeRequestStatus.COMPLETED && alreadyReviewed ? (
-            <BloomText style={[styles.note, { color: theme.colors.textSecondary }]}>
-              {t('listing.exchange.review.alreadyLeft')}
-            </BloomText>
-          ) : null}
-        </ScrollView>
-      </SafeAreaView>
-    </View>
+        {request.status === ExchangeRequestStatus.COMPLETED && alreadyReviewed ? (
+          <BloomText style={[styles.note, { color: theme.colors.textSecondary }]}>
+            {t('listing.exchange.review.alreadyLeft')}
+          </BloomText>
+        ) : null}
+      </View>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-  },
-  safeArea: {
-    flex: 1,
-  },
   content: {
     padding: spacing.lg,
     gap: spacing.lg,

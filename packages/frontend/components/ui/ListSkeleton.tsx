@@ -37,5 +37,3 @@ export const ListSkeleton: React.FC<ListSkeletonProps> = ({
     ))}
   </View>
 );
-
-export default ListSkeleton;

@@ -106,7 +106,7 @@ export function savedSearchTarget(search: SavedSearch): SavedSearchTarget {
 }
 
 /** i18n key of each offering's short label, as the browse-mode switch names it. */
-export const OFFERING_LABEL_KEYS: Record<OfferingType, string> = {
+const OFFERING_LABEL_KEYS: Record<OfferingType, string> = {
   [OfferingType.LONG_TERM_RENT]: 'search.mode.longTerm',
   [OfferingType.SHORT_TERM_RENT]: 'search.mode.vacation',
   [OfferingType.SALE]: 'search.mode.buy',

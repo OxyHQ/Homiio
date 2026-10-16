@@ -46,7 +46,7 @@ export interface ListEvictionsParams {
   limit?: number;
 }
 
-export interface EvictionPagination {
+interface EvictionPagination {
   page: number;
   limit: number;
   total: number;
@@ -330,5 +330,3 @@ class EvictionService {
 }
 
 export const evictionService = new EvictionService();
-
-export default evictionService;

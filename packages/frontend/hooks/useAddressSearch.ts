@@ -17,7 +17,8 @@
  * global feed, which looks like a working app returning the wrong homes.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import type { GeoPlace } from '@homiio/shared-types';
 
 import {
@@ -64,7 +65,7 @@ export interface UseAddressSearchReturn {
   readonly state: AddressSearchState;
   /** The attribution the provider requires be displayed beside its results. */
   readonly attribution?: GeoAttribution;
-  readonly search: (query: string) => Promise<void>;
+  readonly search: (query: string) => void;
   readonly clear: () => void;
 }
 
@@ -77,14 +78,13 @@ const DEFAULTS = {
 /**
  * Place autocomplete against the gateway.
  *
- * Requests are sequenced rather than cancelled: `utils/api.ts` does not expose
- * an `AbortSignal`, so a superseded response is DISCARDED on arrival by
- * comparing a monotonic request id. That is not merely a nicety — without it a
- * slow response for "Bar" can land after a fast one for "Barcelona" and replace
- * the correct suggestions with stale ones, which reads as the autocomplete
- * being wrong rather than late.
+ * The lookup is a React Query keyed on the submitted text, so a superseded
+ * response can never replace the current one: a slow answer for "Bar" lands in
+ * the cache under "Bar" and is simply not what the screen is reading once the
+ * query is "Barcelona". That is not merely a nicety — without it the
+ * autocomplete reads as wrong rather than late.
  */
-export const useAddressSearch = (options: AddressSearchOptions = {}): UseAddressSearchReturn => {
+const useAddressSearch = (options: AddressSearchOptions = {}): UseAddressSearchReturn => {
   const {
     minQueryLength = DEFAULTS.minQueryLength,
     maxResults = DEFAULTS.maxResults,
@@ -92,71 +92,49 @@ export const useAddressSearch = (options: AddressSearchOptions = {}): UseAddress
     types,
   } = options;
 
-  const [state, setState] = useState<AddressSearchState>({ status: 'idle' });
-  const [attribution, setAttribution] = useState<GeoAttribution | undefined>(undefined);
-
-  const latestRequest = useRef(0);
-  // A ref so the identity of `search` does not change when a request completes.
-  const isMounted = useRef(true);
-  useEffect(
-    () => () => {
-      isMounted.current = false;
-    },
-    [],
-  );
-
+  const [query, setQuery] = useState('');
   const typesKey = types?.join(',') ?? '';
+  const enabled = query.length >= minQueryLength;
 
-  const search = useCallback(
-    async (query: string) => {
-      const trimmed = query.trim();
-      const requestId = latestRequest.current + 1;
-      latestRequest.current = requestId;
+  const lookup = useQuery({
+    queryKey: ['geo', 'search', query, maxResults, countryCode ?? null, typesKey],
+    queryFn: () =>
+      searchPlaces({
+        q: query,
+        limit: maxResults,
+        ...(countryCode ? { countryCode } : {}),
+        ...(typesKey ? { types: typesKey.split(',') } : {}),
+      }),
+    enabled,
+    // A failure is surfaced as-is (a rate limit must not be retried into).
+    retry: false,
+  });
 
-      if (trimmed.length < minQueryLength) {
-        setState({ status: 'idle' });
-        return;
-      }
+  const { data, error } = lookup;
+  const state = useMemo<AddressSearchState>(() => {
+    if (!enabled) return { status: 'idle' };
+    if (data) {
+      return data.candidates.length > 0
+        ? { status: 'results', places: data.candidates, degraded: data.degraded }
+        : { status: 'empty' };
+    }
+    if (error) {
+      // A failure is NEVER reported as an empty list.
+      const geoError = error instanceof GeoRequestError ? error : null;
+      return {
+        status: 'failed',
+        reason: geoError?.reason ?? 'unknown',
+        ...(geoError?.retryAfterSeconds === undefined
+          ? {}
+          : { retryAfterSeconds: geoError.retryAfterSeconds }),
+      };
+    }
+    return { status: 'loading' };
+  }, [enabled, data, error]);
+  const attribution = enabled ? data?.attribution : undefined;
 
-      setState({ status: 'loading' });
-      try {
-        const result = await searchPlaces({
-          q: trimmed,
-          limit: maxResults,
-          ...(countryCode ? { countryCode } : {}),
-          ...(typesKey ? { types: typesKey.split(',') } : {}),
-        });
-        // A superseded or unmounted request must not write.
-        if (!isMounted.current || latestRequest.current !== requestId) return;
-
-        if (result.attribution) setAttribution(result.attribution);
-        setState(
-          result.candidates.length > 0
-            ? { status: 'results', places: result.candidates, degraded: result.degraded }
-            : { status: 'empty' },
-        );
-      } catch (error) {
-        if (!isMounted.current || latestRequest.current !== requestId) return;
-        // A failure is NEVER reported as an empty list.
-        const geoError = error instanceof GeoRequestError ? error : null;
-        setState({
-          status: 'failed',
-          reason: geoError?.reason ?? 'unknown',
-          ...(geoError?.retryAfterSeconds === undefined
-            ? {}
-            : { retryAfterSeconds: geoError.retryAfterSeconds }),
-        });
-      }
-    },
-    [minQueryLength, maxResults, countryCode, typesKey],
-  );
-
-  const clear = useCallback(() => {
-    // Bump the sequence so an in-flight response cannot repopulate the list
-    // after the user cleared it.
-    latestRequest.current += 1;
-    setState({ status: 'idle' });
-  }, []);
+  const search = useCallback((next: string) => setQuery(next.trim()), []);
+  const clear = useCallback(() => setQuery(''), []);
 
   return useMemo(
     () => ({ state, search, clear, ...(attribution ? { attribution } : {}) }),
@@ -179,38 +157,47 @@ export const useDebouncedAddressSearch = (
   const minQueryLength = searchOptions.minQueryLength ?? DEFAULTS.minQueryLength;
 
   const inner = useAddressSearch(searchOptions);
-  const { search, clear } = inner;
+  const { search, clear: clearInner } = inner;
 
-  const [pending, setPending] = useState('');
   // Distinguishes "the user just typed and we are waiting out the debounce"
   // from "idle", so the picker can show a spinner from the first keystroke
   // instead of appearing frozen for `debounceDelay`.
   const [isDebouncing, setIsDebouncing] = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
-  useEffect(() => {
-    if (!isDebouncing) return undefined;
-    const timer = setTimeout(() => {
-      setIsDebouncing(false);
-      if (pending.trim().length >= minQueryLength) {
-        void search(pending);
-      } else {
-        clear();
-      }
-    }, debounceDelay);
-    return () => clearTimeout(timer);
-  }, [pending, isDebouncing, debounceDelay, minQueryLength, search, clear]);
+  // The debounce runs in the keystroke handler itself: each keystroke restarts
+  // the timer, and the timer submits the text it was started with.
+  const debouncedSearch = useCallback(
+    (query: string) => {
+      clearTimeout(timer.current);
+      setIsDebouncing(true);
+      timer.current = setTimeout(() => {
+        setIsDebouncing(false);
+        if (query.trim().length >= minQueryLength) {
+          search(query);
+        } else {
+          clearInner();
+        }
+      }, debounceDelay);
+    },
+    [debounceDelay, minQueryLength, search, clearInner],
+  );
 
-  const debouncedSearch = useCallback((query: string) => {
-    setPending(query);
-    setIsDebouncing(true);
-  }, []);
+  // Clearing also drops a keystroke still waiting out the debounce, so it
+  // cannot fire afterwards and repopulate the list.
+  const clear = useCallback(() => {
+    clearTimeout(timer.current);
+    setIsDebouncing(false);
+    clearInner();
+  }, [clearInner]);
 
   return useMemo(
     () => ({
       ...inner,
+      clear,
       state: isDebouncing && inner.state.status === 'idle' ? { status: 'debouncing' } : inner.state,
       debouncedSearch,
     }),
-    [inner, isDebouncing, debouncedSearch],
+    [inner, clear, isDebouncing, debouncedSearch],
   );
 };

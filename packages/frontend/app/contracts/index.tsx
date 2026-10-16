@@ -3,7 +3,7 @@
  *
  * - Phones: Bloom Chip status filters over a ContractCard (`LeaseSummaryCard`)
  *   list. The viewer's own home is `/my-home`.
- * - Wide web (1024px+): a Bloom DataTable — sortable columns, a status filter
+ * - Wide windows (`lg:`): a Bloom DataTable — sortable columns, a status filter
  *   and a search over property and party names in its toolbar, and a "View"
  *   row action — so a landlord scanning many leases gets a real table.
  * - "New contract" routes to `/contracts/new`, which only creates a lease from
@@ -14,9 +14,10 @@
  *   an account that does not resolve shows a dash, never an id.
  */
 import React, { useMemo, useState } from 'react';
-import { Platform, ScrollView, StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
+import { PageHeader } from '@oxy.so/bloom/page-header';
 import { useRouter } from 'expo-router';
 import { Button } from '@oxy.so/bloom/button';
 import { Chip } from '@oxy.so/bloom/chip';
@@ -30,7 +31,6 @@ import {
 import { RiAddLine, RiAlertLine, RiEyeLine, RiFileTextLine, RiHomeLine } from '@oxy.so/bloom/icons';
 import { H2, Text as BloomText } from '@oxy.so/bloom/typography';
 import { formatMoney } from '@homiio/shared-types';
-import { Header } from '@/components/Header';
 import { ContractCard } from '@/components/ContractCard';
 import { ContractStatusBadge } from '@/components/ContractStatusBadge';
 import { useLeaseFormatContext } from '@/components/tenancy/useLeaseFormatContext';
@@ -39,7 +39,6 @@ import { ListSkeleton } from '@/components/ui/ListSkeleton';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
 import { useUserLeases, useHasRentalProperties } from '@/hooks/useLeaseQueries';
-import { useIsDesktop } from '@/hooks/useOptimizedMediaQuery';
 import type { Lease } from '@/services/leaseService';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
 import { useFormatting } from '@/utils/format';
@@ -99,8 +98,6 @@ export default function ContractsScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const { locale } = useFormatting();
-  const isDesktop = useIsDesktop();
-  const showTable = Platform.OS === 'web' && isDesktop;
   const [filter, setFilter] = useState<FilterOption>('all');
   const [query, setQuery] = useState('');
 
@@ -135,14 +132,14 @@ export default function ContractsScreen() {
   const filteredContracts = useMemo(() => {
     const byStatus =
       filter === 'all' ? contracts : contracts.filter((contract) => contract.status === filter);
-    const needle = showTable ? query.trim().toLowerCase() : '';
+    const needle = query.trim().toLowerCase();
     if (!needle) return byStatus;
     return byStatus.filter((contract) =>
       [contract.propertyName, contract.landlordName, contract.tenantName].some((value) =>
         value.toLowerCase().includes(needle),
       ),
     );
-  }, [contracts, filter, query, showTable]);
+  }, [contracts, filter, query]);
 
   const handleContractPress = (contractId: string) => {
     router.push(`/contracts/${contractId}`);
@@ -242,6 +239,14 @@ export default function ContractsScreen() {
     [t, locale, router],
   );
 
+  const header = (
+    <PageHeader
+      title={t('contracts.list.title')}
+      titleAlign="center"
+      leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+    />
+  );
+
   if (
     !hasPropertiesLoading &&
     !hasRentalProperties &&
@@ -250,91 +255,78 @@ export default function ContractsScreen() {
     contracts.length === 0
   ) {
     return (
-      <View style={styles.root}>
-        <Header
-          options={{
-            title: t('contracts.list.title'),
-          }}
+      <>
+        {header}
+        <EmptyState
+          icon={RiFileTextLine}
+          title={t('contracts.list.noRentalPropertiesTitle')}
+          description={t('contracts.list.noRentalPropertiesDescription')}
+          actionText={t('contracts.list.browseProperties')}
+          actionIcon={RiHomeLine}
+          onAction={() => router.push('/')}
         />
-        <SafeAreaView edges={['bottom']} style={styles.safeArea}>
-          <EmptyState
-            icon={RiFileTextLine}
-            title={t('contracts.list.noRentalPropertiesTitle')}
-            description={t('contracts.list.noRentalPropertiesDescription')}
-            actionText={t('contracts.list.browseProperties')}
-            actionIcon={RiHomeLine}
-            onAction={() => router.push('/')}
-          />
-        </SafeAreaView>
-      </View>
+      </>
     );
   }
-
-  const newContractButton = (
-    <Button
-      size={showTable ? 'md' : 'lg'}
-      onPress={handleAddNewContract}
-      leadingIcon={RiAddLine}
-      style={showTable ? undefined : styles.footerButton}
-      tone="accent"
-      appearance="solid"
-    >
-      {t('contracts.list.newContract')}
-    </Button>
-  );
 
   const isLoading = leasesLoading || hasPropertiesLoading;
   const hasNoContracts = !leasesLoading && !leasesError && contracts.length === 0;
 
   return (
-    <View style={styles.root}>
-      <Header
-        options={{
-          title: t('contracts.list.title'),
-        }}
-      />
-      <SafeAreaView edges={['bottom']} style={styles.safeArea}>
-        <ScrollView contentContainerStyle={styles.content}>
-          <View style={styles.titleRow}>
-            <View style={styles.titleBlock}>
-              <SectionEyebrow>{t('contracts.list.eyebrow')}</SectionEyebrow>
-              <H2 style={styles.title}>{t('contracts.list.title')}</H2>
-              <BloomText style={styles.subtitle}>{t('contracts.list.subtitle')}</BloomText>
-            </View>
-            {showTable ? newContractButton : null}
+    <>
+      {header}
+      <View style={styles.content}>
+        <View style={styles.titleRow}>
+          <View style={styles.titleBlock}>
+            <SectionEyebrow>{t('contracts.list.eyebrow')}</SectionEyebrow>
+            <H2 style={styles.title}>{t('contracts.list.title')}</H2>
+            <BloomText style={styles.subtitle}>{t('contracts.list.subtitle')}</BloomText>
           </View>
-
-          {!showTable ? (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.filterRow}
+          <View className="hidden lg:flex">
+            <Button
+              size="md"
+              onPress={handleAddNewContract}
+              leadingIcon={RiAddLine}
+              tone="accent"
+              appearance="solid"
             >
-              {FILTERS.map((entry) => (
-                <Chip
-                  key={entry.id}
-                  size="lg"
-                  onPress={() => setFilter(entry.id)}
-                  selected={filter === entry.id}
-                >
-                  {t(entry.i18nKey)}
-                </Chip>
-              ))}
-            </ScrollView>
-          ) : null}
+              {t('contracts.list.newContract')}
+            </Button>
+          </View>
+        </View>
 
-          {isLoading ? <ListSkeleton rows={3} rowHeight={280} /> : null}
+        <View className="lg:hidden">
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filterRow}
+          >
+            {FILTERS.map((entry) => (
+              <Chip
+                key={entry.id}
+                size="lg"
+                onPress={() => setFilter(entry.id)}
+                selected={filter === entry.id}
+              >
+                {t(entry.i18nKey)}
+              </Chip>
+            ))}
+          </ScrollView>
+        </View>
 
-          {leasesError ? (
-            <ErrorState
-              icon={RiAlertLine}
-              title={t('contracts.list.loadError')}
-              description={leasesError?.message || t('contracts.list.tryAgain')}
-              onRetry={() => refetchLeases()}
-            />
-          ) : null}
+        {isLoading ? <ListSkeleton rows={3} rowHeight={280} /> : null}
 
-          {showTable && !isLoading && !leasesError && !hasNoContracts ? (
+        {leasesError ? (
+          <ErrorState
+            icon={RiAlertLine}
+            title={t('contracts.list.loadError')}
+            description={leasesError?.message || t('contracts.list.tryAgain')}
+            onRetry={() => refetchLeases()}
+          />
+        ) : null}
+
+        {!isLoading && !leasesError && !hasNoContracts ? (
+          <View className="hidden lg:flex">
             <DataTable
               accessibilityLabel={t('contracts.list.title')}
               rows={filteredContracts}
@@ -365,52 +357,56 @@ export default function ContractsScreen() {
                 </BloomText>
               }
             />
-          ) : null}
+          </View>
+        ) : null}
 
-          {!isLoading &&
-          !leasesError &&
-          (showTable ? hasNoContracts : filteredContracts.length === 0) ? (
-            <View style={styles.emptyWrap}>
-              <EmptyState
-                icon={RiFileTextLine}
-                title={t('contracts.list.emptyTitle')}
-                description={emptyDescription}
-                actionText={t('contracts.list.createNew')}
-                actionIcon={RiAddLine}
-                onAction={handleAddNewContract}
+        {/* No contracts at all: empty state everywhere. A filter that matches
+            nothing: only the card list needs it — the table has its own. */}
+        {!isLoading && !leasesError && filteredContracts.length === 0 ? (
+          <View style={styles.emptyWrap} className={hasNoContracts ? undefined : 'lg:hidden'}>
+            <EmptyState
+              icon={RiFileTextLine}
+              title={t('contracts.list.emptyTitle')}
+              description={emptyDescription}
+              actionText={t('contracts.list.createNew')}
+              actionIcon={RiAddLine}
+              onAction={handleAddNewContract}
+            />
+          </View>
+        ) : null}
+
+        {filteredContracts.length > 0 ? (
+          <View style={styles.listWrap} className="lg:hidden">
+            {filteredContracts.map((contract) => (
+              <ContractCard
+                key={contract.id}
+                lease={contract.lease}
+                title={contract.propertyName}
+                format={format}
+                onPress={() => handleContractPress(contract.id)}
               />
-            </View>
-          ) : null}
+            ))}
+          </View>
+        ) : null}
+      </View>
 
-          {!showTable && filteredContracts.length > 0 ? (
-            <View style={styles.listWrap}>
-              {filteredContracts.map((contract) => (
-                <ContractCard
-                  key={contract.id}
-                  lease={contract.lease}
-                  title={contract.propertyName}
-                  format={format}
-                  onPress={() => handleContractPress(contract.id)}
-                />
-              ))}
-            </View>
-          ) : null}
-        </ScrollView>
-
-        {!showTable ? <View style={styles.footer}>{newContractButton}</View> : null}
-      </SafeAreaView>
-    </View>
+      <View style={styles.footer} className="lg:hidden">
+        <Button
+          size="lg"
+          onPress={handleAddNewContract}
+          leadingIcon={RiAddLine}
+          style={styles.footerButton}
+          tone="accent"
+          appearance="solid"
+        >
+          {t('contracts.list.newContract')}
+        </Button>
+      </View>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  safeArea: {
-    flex: 1,
-  },
   content: {
     padding: spacing.lg,
     gap: spacing.lg,

@@ -1,18 +1,19 @@
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useOxy } from '@oxy.so/services';
 
+import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { Button } from '@oxy.so/bloom/button';
 import { Field } from '@oxy.so/bloom/field';
 import { RiDeleteBinLine, RiFolderOpenLine } from '@oxy.so/bloom/icons';
+import { PageHeader } from '@oxy.so/bloom/page-header';
 import { confirm } from '@oxy.so/bloom/surfaces';
 import { TextFieldInput } from '@oxy.so/bloom/text-field';
 import { toast } from '@oxy.so/bloom/toast';
 
-import { Header } from '@/components/Header';
 import { FolderColorSwatches, FOLDER_COLORS } from '@/components/SaveToFolderBottomSheet';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ListSkeleton } from '@/components/ui/ListSkeleton';
@@ -43,8 +44,14 @@ export default function EditFolderScreen() {
 
   if (!folder) {
     return (
-      <View style={styles.container}>
-        <Header options={{ title: t('saved.title'), showBackButton: true }} />
+      <>
+        <PageHeader
+          title={t('saved.title')}
+          titleAlign="center"
+          leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+          onBack={router.canGoBack() ? router.back : undefined}
+          backLabel={t('goBack')}
+        />
         {isLoading ? (
           <View style={styles.form}>
             <ListSkeleton rows={3} rowHeight={56} />
@@ -56,7 +63,7 @@ export default function EditFolderScreen() {
             description={t('saved.noFolderDescription')}
           />
         )}
-      </View>
+      </>
     );
   }
 
@@ -133,12 +140,13 @@ function EditFolderForm({ folder }: { folder: SavedPropertyFolder }) {
   };
 
   return (
-    <View style={styles.container}>
-      <Header
-        options={{
-          title: `${emoji} ${folder.isDefault ? t('saved.defaultFolder') : t('saved.editFolder')}`,
-          showBackButton: true,
-        }}
+    <>
+      <PageHeader
+        title={`${emoji} ${folder.isDefault ? t('saved.defaultFolder') : t('saved.editFolder')}`}
+        titleAlign="center"
+        leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+        onBack={router.canGoBack() ? router.back : undefined}
+        backLabel={t('goBack')}
       />
       <View style={styles.form}>
         <Field label={t('common.emoji')}>
@@ -187,15 +195,11 @@ function EditFolderForm({ folder }: { folder: SavedPropertyFolder }) {
           </Button>
         )}
       </View>
-    </View>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    paddingBottom: spacing['3xl'],
-  },
   form: {
     width: '100%',
     maxWidth: contentClamp.copy,

@@ -45,20 +45,3 @@ export const useCurrencyStore = create<CurrencyState>((set, get) => ({
   setError: (error) => set({ error }),
   clearError: () => set({ error: null }),
 }));
-
-// Selector hooks for easier access
-export const useCurrencySelectors = () => {
-  const currentCurrency = useCurrencyStore((state) => state.currentCurrency);
-  const exchangeRates = useCurrencyStore((state) => state.exchangeRates);
-  const currencies = useCurrencyStore((state) => state.currencies);
-  const isLoading = useCurrencyStore((state) => state.isLoading);
-  const error = useCurrencyStore((state) => state.error);
-
-  return {
-    currentCurrency,
-    exchangeRates,
-    currencies,
-    isLoading,
-    error,
-  };
-};

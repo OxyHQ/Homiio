@@ -50,14 +50,3 @@ export function useNeighborhood({ propertyId, name, city }: UseNeighborhoodArgs)
     retry: false,
   });
 }
-
-/** A city's neighborhoods ranked by real listing count. */
-export function usePopularNeighborhoods(city: string | undefined, limit = 10) {
-  return useQuery<NeighborhoodMetrics[]>({
-    queryKey: ['neighborhood', 'popular', city ?? '', limit],
-    queryFn: async () => (city ? neighborhoodService.getPopular(city, limit) : []),
-    enabled: Boolean(city),
-    staleTime: NEIGHBORHOOD_STALE_TIME,
-    gcTime: NEIGHBORHOOD_GC_TIME,
-  });
-}

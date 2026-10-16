@@ -177,7 +177,7 @@ const hardenFilterNode = (node: FilterNode): FilterNode => {
  * {@link hardenFilterNode} so no typed ordering comparison can throw on a null
  * property. The input style is not mutated.
  */
-export const sanitizeMapStyle = (style: StyleSpecification): StyleSpecification => {
+const sanitizeMapStyle = (style: StyleSpecification): StyleSpecification => {
   if (!Array.isArray(style.layers)) return style;
   return {
     ...style,

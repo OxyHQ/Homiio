@@ -1,7 +1,7 @@
 /**
  * HomeSearch — the search composer, on Bloom's `home-search` family.
  *
- * One component, two presentations chosen by width (`useIsScreenNotMobile()`):
+ * One component, two presentations chosen by the width it is laid out in:
  *
  *  - **Wide:** `HomeSearchBar` with the offering's own segments — Where · When ·
  *    Who for a stay, Where · Price · Type for every other offering — and a
@@ -61,7 +61,6 @@ import {
   ScrollView,
   StyleSheet,
   View,
-  useWindowDimensions,
   type LayoutChangeEvent,
   type StyleProp,
   type ViewStyle,
@@ -96,7 +95,6 @@ import {
   type DeviceOptionState,
 } from '@/components/location/scopeWhere';
 import { useLocationScope } from '@/hooks/useLocationScope';
-import { useIsScreenNotMobile } from '@/hooks/useOptimizedMediaQuery';
 import { useSearchPriceHistogram } from '@/hooks/useSearchPriceHistogram';
 import { useColors } from '@/hooks/useThemeColor';
 import { useFormatting } from '@/utils/format';
@@ -191,9 +189,6 @@ const LAST_SEGMENT_BUTTON_FLEX = 0.9;
 /** Below this measured width the segmented bar truncates its labels; show the compact pill instead. */
 const WIDE_BAR_MIN_WIDTH = 640;
 
-/** The narrow sheet's height, as a share of the window: fixed, so it never jumps between steps. */
-const SHEET_HEIGHT_RATIO = 0.88;
-
 /** Wide panel widths per segment content. */
 const WHERE_PANEL_WIDTH = 440;
 const PRICE_PANEL_WIDTH = 440;
@@ -270,20 +265,18 @@ export function HomeSearch({
 }: HomeSearchProps): React.ReactElement {
   const { t } = useTranslation();
   const { locale } = useFormatting();
-  const isScreenWide = useIsScreenNotMobile();
   // The bar's segments need real room, and the page column can be narrow on a
   // wide screen (the AppShell sidebar plus the right-hand aside leave ~500px at
   // 1024-1279). Decide from the space THIS component actually gets; until it has
-  // been measured, trust the screen.
+  // been measured, render the compact (mobile-first) trigger.
   const [containerWidth, setContainerWidth] = useState(0);
   const handleContainerLayout = useCallback((event: LayoutChangeEvent) => {
     const next = Math.round(event.nativeEvent.layout.width);
     setContainerWidth((prev) => (prev === next ? prev : next));
   }, []);
-  const isWide = isScreenWide && (containerWidth === 0 || containerWidth >= WIDE_BAR_MIN_WIDTH);
+  const isWide = containerWidth >= WIDE_BAR_MIN_WIDTH;
   const insets = useSafeAreaInsets();
   const colors = useColors();
-  const { height: windowHeight } = useWindowDimensions();
   const addRecentSearch = useRecentSearchesStore((s) => s.addSearch);
   const apply = onApply ?? onSubmit;
 
@@ -805,7 +798,8 @@ export function HomeSearch({
         scrollable={false}
         maxHeightRatio={0.95}
       >
-        <View style={{ height: Math.round(windowHeight * SHEET_HEIGHT_RATIO) }}>
+        {/* 88% of the window: fixed, so the sheet never jumps between steps. */}
+        <View className="h-[88vh]">
           <View style={styles.sheetHeader}>
             <View style={styles.sheetTitleRow}>
               <H3>{t('search.panel.title')}</H3>
@@ -910,5 +904,3 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
   },
 });
-
-export default HomeSearch;

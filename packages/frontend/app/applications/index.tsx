@@ -12,11 +12,12 @@
 import type React from 'react';
 import { useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { isThisWeek, isToday } from 'date-fns';
 
+import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
+import { PageHeader } from '@oxy.so/bloom/page-header';
 import {
   SegmentedControl,
   SegmentedControlItem,
@@ -27,8 +28,6 @@ import { Text as BloomText } from '@oxy.so/bloom/typography';
 import { useOxy, openAccountDialog } from '@oxy.so/services';
 import { type TenantApplication, TenantApplicationStatus } from '@homiio/shared-types';
 
-import { Header } from '@/components/Header';
-import { PageScrollView } from '@/components/PageScrollView';
 import { ApplicationCard } from '@/components/ApplicationCard';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
@@ -135,109 +134,102 @@ export default function MyApplicationsScreen() {
   const dateGroups = useMemo(() => groupByDate(filtered, t), [filtered, t]);
 
   const header = (
-    <Header
-      options={{
-        showBackButton: true,
-        title: t('applications.list.title'),
-      }}
+    <PageHeader
+      title={t('applications.list.title')}
+      titleAlign="center"
+      leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+      onBack={router.canGoBack() ? router.back : undefined}
+      backLabel={t('goBack')}
     />
   );
 
   if (!isAuthenticated) {
     return (
-      <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
+      <>
         {header}
-        <SafeAreaView edges={['bottom']} style={styles.safeArea}>
-          <View style={styles.centerWrap}>
-            <EmptyState
-              icon={RiFileTextLine}
-              title={t('applications.list.signInTitle')}
-              description={t('applications.list.signInDescription')}
-              actionText={t('applications.list.signIn')}
-              actionIcon={RiLoginBoxLine}
-              onAction={() => openAccountDialog()}
-            />
-          </View>
-        </SafeAreaView>
-      </View>
+        <View style={styles.centerWrap}>
+          <EmptyState
+            icon={RiFileTextLine}
+            title={t('applications.list.signInTitle')}
+            description={t('applications.list.signInDescription')}
+            actionText={t('applications.list.signIn')}
+            actionIcon={RiLoginBoxLine}
+            onAction={() => openAccountDialog()}
+          />
+        </View>
+      </>
     );
   }
 
   if (applicationsQuery.isPending) {
     return (
-      <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
+      <>
         {header}
-        <SafeAreaView edges={['bottom']} style={styles.safeArea}>
-          <View style={styles.content}>
-            <FilterRow value={filter} onChange={setFilter} t={t} />
-            <ListSkeleton rows={5} rowHeight={120} />
-          </View>
-        </SafeAreaView>
-      </View>
+        <View style={styles.content}>
+          <FilterRow value={filter} onChange={setFilter} t={t} />
+          <ListSkeleton rows={5} rowHeight={120} />
+        </View>
+      </>
     );
   }
 
   if (applicationsQuery.isError) {
     return (
-      <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
+      <>
         {header}
-        <SafeAreaView edges={['bottom']} style={styles.safeArea}>
-          <View style={styles.centerWrap}>
-            <ErrorState
-              title={t('applications.list.loadError')}
-              description={applicationsQuery.error?.message ?? t('applications.list.tryAgain')}
-              retryLabel={t('applications.list.retry')}
-              onRetry={() => applicationsQuery.refetch()}
-            />
-          </View>
-        </SafeAreaView>
-      </View>
+        <View style={styles.centerWrap}>
+          <ErrorState
+            title={t('applications.list.loadError')}
+            description={applicationsQuery.error?.message ?? t('applications.list.tryAgain')}
+            retryLabel={t('applications.list.retry')}
+            onRetry={() => applicationsQuery.refetch()}
+          />
+        </View>
+      </>
     );
   }
 
   return (
-    <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
+    <>
       {header}
-      <SafeAreaView edges={['bottom']} style={styles.safeArea}>
-        <PageScrollView contentContainerStyle={styles.content}>
-          <FilterRow value={filter} onChange={setFilter} t={t} />
+      <View style={styles.content}>
+        <FilterRow value={filter} onChange={setFilter} t={t} />
 
-          {filtered.length === 0 ? (
-            <View style={styles.emptyWrap}>
-              <EmptyState
-                icon={RiFileTextLine}
-                title={
-                  filter === 'all'
-                    ? t('applications.list.emptyAllTitle')
-                    : t('applications.list.emptyFilteredTitle')
-                }
-                description={
-                  filter === 'all'
-                    ? t('applications.list.emptyAllDescription')
-                    : t('applications.list.emptyFilteredDescription')
-                }
-                actionText={filter === 'all' ? t('applications.list.exploreStays') : undefined}
-                actionIcon={filter === 'all' ? RiSearchLine : undefined}
-                onAction={filter === 'all' ? () => router.push('/explore') : undefined}
-              />
-            </View>
-          ) : (
-            dateGroups.map((group) => (
-              <View key={group.label} style={styles.section}>
-                <BloomText style={[styles.sectionEyebrow, { color: theme.colors.textSecondary }]}>
-                  {group.label}
-                </BloomText>
-                <View style={styles.cards}>
-                  {group.items.map((application) => (
-                    <ApplicationCard key={application.id} application={application} />
-                  ))}
-                </View>
+        {filtered.length === 0 ? (
+          <View style={styles.emptyWrap}>
+            <EmptyState
+              icon={RiFileTextLine}
+              title={
+                filter === 'all'
+                  ? t('applications.list.emptyAllTitle')
+                  : t('applications.list.emptyFilteredTitle')
+              }
+              description={
+                filter === 'all'
+                  ? t('applications.list.emptyAllDescription')
+                  : t('applications.list.emptyFilteredDescription')
+              }
+              actionText={filter === 'all' ? t('applications.list.exploreStays') : undefined}
+              actionIcon={filter === 'all' ? RiSearchLine : undefined}
+              onAction={filter === 'all' ? () => router.push('/explore') : undefined}
+            />
+          </View>
+        ) : (
+          dateGroups.map((group) => (
+            <View key={group.label} style={styles.section}>
+              <BloomText style={[styles.sectionEyebrow, { color: theme.colors.textSecondary }]}>
+                {group.label}
+              </BloomText>
+              <View style={styles.cards}>
+                {group.items.map((application) => (
+                  <ApplicationCard key={application.id} application={application} />
+                ))}
               </View>
-            ))
-          )}
-        </PageScrollView>
-      </SafeAreaView>
-    </View>
+            </View>
+          ))
+        )}
+      </View>
+    </>
   );
 }
 
@@ -263,12 +255,6 @@ const FilterRow: React.FC<FilterRowProps> = ({ value, onChange, t }) => (
 );
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-  },
-  safeArea: {
-    flex: 1,
-  },
   content: {
     padding: spacing.lg,
     gap: spacing['2xl'],

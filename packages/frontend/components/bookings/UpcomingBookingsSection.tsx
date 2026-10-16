@@ -145,5 +145,3 @@ const styles = StyleSheet.create({
   cards: { gap: spacing.md },
   links: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
 });
-
-export default UpcomingBookingsSection;

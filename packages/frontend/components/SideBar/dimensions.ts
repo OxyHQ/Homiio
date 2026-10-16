@@ -21,10 +21,10 @@ import { useUIStore } from '@/store/uiStore';
 export const SIDEBAR_IN_FLOW_FROM = 1024;
 
 /** Width (px) of Bloom's expanded `Sidebar` panel. */
-export const SIDEBAR_PANEL_EXPANDED_WIDTH = 260;
+const SIDEBAR_PANEL_EXPANDED_WIDTH = 260;
 
 /** Width (px) of Bloom's collapsed `Sidebar` rail. */
-export const SIDEBAR_PANEL_COLLAPSED_WIDTH = 52;
+const SIDEBAR_PANEL_COLLAPSED_WIDTH = 52;
 
 /** `AppShell`'s frame padding left of the rail plus the gap right of it. */
 const SHELL_INSET = 12 + 16;

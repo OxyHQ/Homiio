@@ -12,7 +12,7 @@ export interface Notification {
   data?: any;
 }
 
-export interface NotificationFilters {
+interface NotificationFilters {
   unreadOnly?: boolean;
   type?: string;
   priority?: string;

@@ -13,8 +13,8 @@ These primitives were removed in favour of Bloom; do not re-add local copies.
 | Slider | `Slider` from `@oxy.so/bloom/slider` |
 | Progress bar | `StatBar` from `@oxy.so/bloom/stat-bar` |
 | Card surface, thumbnail card, card action row | `Card` / `CardFooter` from `@oxy.so/bloom/card` |
-| Horizontal card row | `HomeCarouselSection` (on Bloom `Carousel`) |
-| Screen header | `Header` (on Bloom `PageHeader`) |
+| Titled row of cards | `Shelf` from `@oxy.so/bloom/media-shelf` |
+| Screen header | `PageHeader` from `@oxy.so/bloom/page-header`, led by `AppShellMenuButton` |
 | Status badge | `Chip` with a data `hue` from `@oxy.so/bloom/chip` (see `ApplicationStatusBadge`, `ContractStatusBadge`) |
 | Date / date-range picking | `@oxy.so/bloom/date-picker`; listing availability through `AvailabilityCalendar` |
 | Listing card, results grid | `ListingCard` / `ListingCardGrid` from `@oxy.so/bloom/listing-card`, through `PropertyCard` / `PropertyResultsGrid` |

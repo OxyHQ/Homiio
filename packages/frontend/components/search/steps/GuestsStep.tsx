@@ -36,7 +36,7 @@ interface GuestsStepProps {
 }
 
 /** The picker rows a query implies. */
-export function guestCountsFor(value: GuestsValue): GuestCounts {
+function guestCountsFor(value: GuestsValue): GuestCounts {
   return {
     adults: value.guests ?? 0,
     children: 0,
@@ -46,7 +46,7 @@ export function guestCountsFor(value: GuestsValue): GuestCounts {
 }
 
 /** The query fields a picker state means. */
-export function guestsValueFor(counts: GuestCounts): GuestsValue {
+function guestsValueFor(counts: GuestCounts): GuestsValue {
   const guests = counts.adults + counts.children;
   return {
     guests: guests > 0 ? guests : undefined,
@@ -109,5 +109,3 @@ export const GuestsStep: React.FC<GuestsStepProps> = ({
     />
   );
 };
-
-export default GuestsStep;

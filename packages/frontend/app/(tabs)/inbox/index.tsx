@@ -4,11 +4,11 @@
  * This is a notifications screen (not a chat/conversation list): it renders
  * server-backed `Notification`s from `NotificationContext`, with optional
  * locally-scheduled reminders surfaced in their own section. The screen is a
- * tab root, so it owns a `Header` (no back button) with mark-all-read +
+ * tab root, so it owns a `PageHeader` (no back button) with mark-all-read +
  * settings actions on the right.
  *
  * Layout, top → bottom:
- *   Header (title + mark-all-read / settings icon buttons)
+ *   PageHeader (title + mark-all-read / settings icon buttons)
  *   Search + All/Unread SegmentedControl   (flat controls strip)
  *   [permission Admonition]   (only when notifications are disabled)
  *   [scheduled reminders]     (a SettingsListGroup, only when present)
@@ -22,14 +22,7 @@
  */
 import type React from 'react';
 import { useCallback, useMemo, useState } from 'react';
-import {
-  FlatList,
-  RefreshControl,
-  StyleSheet,
-  View,
-  type ImageSourcePropType,
-  type ListRenderItem,
-} from 'react-native';
+import { StyleSheet, View, type ImageSourcePropType } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
@@ -43,6 +36,7 @@ import {
   AdmonitionRow,
   AdmonitionText,
 } from '@oxy.so/bloom/admonition';
+import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { Button, CloseButton } from '@oxy.so/bloom/button';
 import {
   RiCheckboxCircleLine,
@@ -55,6 +49,7 @@ import {
   SegmentedControlItem,
   SegmentedControlItemText,
 } from '@oxy.so/bloom/segmented-control';
+import { PageHeader } from '@oxy.so/bloom/page-header';
 import { Search } from '@oxy.so/bloom/search';
 import { SettingsListGroup, SettingsListItem } from '@oxy.so/bloom/settings-list';
 import { confirm } from '@oxy.so/bloom/surfaces';
@@ -64,7 +59,6 @@ import { H3, Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { useNotifications } from '@/context/NotificationContext';
 import { NotificationItem } from '@/components/NotificationItem';
-import { Header } from '@/components/Header';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { ListSkeleton } from '@/components/ui/ListSkeleton';
@@ -116,7 +110,6 @@ export default function InboxScreen() {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState<InboxFilter>('all');
-  const [refreshing, setRefreshing] = useState(false);
 
   const isFiltered = filter !== 'all' || searchQuery.trim().length > 0;
 
@@ -134,13 +127,10 @@ export default function InboxScreen() {
   }, [notifications, filter, searchQuery]);
 
   const handleRefresh = useCallback(async () => {
-    setRefreshing(true);
     try {
       await refreshAll();
     } catch (refreshError: unknown) {
       logger.error('Failed to refresh notifications:', refreshError);
-    } finally {
-      setRefreshing(false);
     }
   }, [refreshAll]);
 
@@ -218,52 +208,6 @@ export default function InboxScreen() {
     }
   }, [requestPermissions, t]);
 
-  const renderNotificationItem = useCallback<ListRenderItem<Notification>>(
-    ({ item }) => (
-      <NotificationItem
-        type={item.type}
-        title={item.title}
-        description={item.message}
-        time={formatRelativeTime(new Date(item.createdAt))}
-        read={item.read}
-        onPress={() => void handleNotificationPress(item)}
-        onLongPress={() => void handleDeleteNotification(item)}
-        onDelete={() => void handleDeleteNotification(item)}
-      />
-    ),
-    [handleNotificationPress, handleDeleteNotification],
-  );
-
-  const header = (
-    <Header
-      options={{
-        title: t('inbox.title'),
-        rightComponents: [
-          unreadCount > 0 ? (
-            <Button
-              key="mark-all"
-              iconOnly
-              leadingIcon={RiCheckboxCircleLine}
-              accessibilityLabel={t('notification.markAllRead.action')}
-              onPress={() => void handleMarkAllAsRead()}
-              tone="accent"
-              appearance="subtle"
-            />
-          ) : null,
-          <Button
-            key="settings"
-            iconOnly
-            leadingIcon={RiSettings3Line}
-            accessibilityLabel={t('notification.settings.title')}
-            onPress={() => router.push('/settings/notifications')}
-            tone="accent"
-            appearance="subtle"
-          />,
-        ],
-      }}
-    />
-  );
-
   const listHeader = (
     <View style={styles.listHeader}>
       {!hasPermission ? (
@@ -306,8 +250,34 @@ export default function InboxScreen() {
   );
 
   return (
-    <View style={[styles.root, { backgroundColor: theme.background }]}>
-      {header}
+    <>
+      <PageHeader
+        title={t('inbox.title')}
+        titleAlign="center"
+        leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+        actions={
+          <>
+            {unreadCount > 0 ? (
+              <Button
+                iconOnly
+                leadingIcon={RiCheckboxCircleLine}
+                accessibilityLabel={t('notification.markAllRead.action')}
+                onPress={() => void handleMarkAllAsRead()}
+                tone="accent"
+                appearance="subtle"
+              />
+            ) : null}
+            <Button
+              iconOnly
+              leadingIcon={RiSettings3Line}
+              accessibilityLabel={t('notification.settings.title')}
+              onPress={() => router.push('/settings/notifications')}
+              tone="accent"
+              appearance="subtle"
+            />
+          </>
+        }
+      />
 
       <View style={styles.controls}>
         <Search
@@ -350,50 +320,49 @@ export default function InboxScreen() {
           />
         </View>
       ) : (
-        <FlatList
-          data={filteredNotifications}
-          renderItem={renderNotificationItem}
-          keyExtractor={(item) => item.id}
-          ListHeaderComponent={listHeader}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={handleRefresh}
-              colors={[theme.primary]}
-              tintColor={theme.primary}
-            />
-          }
-          ListEmptyComponent={
-            isFiltered ? (
-              <View style={styles.emptyWrap}>
-                <EmptyState
-                  icon={RiFilterLine}
-                  title={t('notification.empty.filteredTitle')}
-                  description={t('notification.empty.filtered')}
-                />
-              </View>
-            ) : (
-              <View style={styles.illustrationEmpty}>
-                <Image
-                  source={EMPTY_INBOX_ILLUSTRATION}
-                  style={styles.illustrationImage}
-                  contentFit="contain"
-                  accessibilityIgnoresInvertColors
-                />
-                <H3 style={[styles.illustrationTitle, { color: theme.text }]}>
-                  {t('notification.empty.title')}
-                </H3>
-                <BloomText style={[styles.illustrationMessage, { color: theme.textSecondary }]}>
-                  {t('notification.empty.message')}
-                </BloomText>
-              </View>
-            )
-          }
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-        />
+        <View style={styles.listContent}>
+          {listHeader}
+          {filteredNotifications.length > 0 ? (
+            filteredNotifications.map((item) => (
+              <NotificationItem
+                key={item.id}
+                type={item.type}
+                title={item.title}
+                description={item.message}
+                time={formatRelativeTime(new Date(item.createdAt))}
+                read={item.read}
+                onPress={() => void handleNotificationPress(item)}
+                onLongPress={() => void handleDeleteNotification(item)}
+                onDelete={() => void handleDeleteNotification(item)}
+              />
+            ))
+          ) : isFiltered ? (
+            <View style={styles.emptyWrap}>
+              <EmptyState
+                icon={RiFilterLine}
+                title={t('notification.empty.filteredTitle')}
+                description={t('notification.empty.filtered')}
+              />
+            </View>
+          ) : (
+            <View style={styles.illustrationEmpty}>
+              <Image
+                source={EMPTY_INBOX_ILLUSTRATION}
+                style={styles.illustrationImage}
+                contentFit="contain"
+                accessibilityIgnoresInvertColors
+              />
+              <H3 style={[styles.illustrationTitle, { color: theme.text }]}>
+                {t('notification.empty.title')}
+              </H3>
+              <BloomText style={[styles.illustrationMessage, { color: theme.textSecondary }]}>
+                {t('notification.empty.message')}
+              </BloomText>
+            </View>
+          )}
+        </View>
       )}
-    </View>
+    </>
   );
 }
 
@@ -426,9 +395,6 @@ const ScheduledRow: React.FC<ScheduledRowProps> = ({
 };
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-  },
   controls: {
     width: '100%',
     maxWidth: contentClamp.copy,

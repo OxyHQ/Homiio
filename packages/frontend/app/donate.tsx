@@ -20,11 +20,12 @@
  */
 import type React from 'react';
 import { useMemo, useState } from 'react';
-import { Linking, ScrollView, StyleSheet, View } from 'react-native';
+import { Linking, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 
+import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { Button } from '@oxy.so/bloom/button';
 import {
   RiCheckboxCircleFill,
@@ -35,6 +36,7 @@ import {
   RiShieldCheckLine,
   RiWrenchLine,
 } from '@oxy.so/bloom/icons';
+import { PageHeader } from '@oxy.so/bloom/page-header';
 import { RadioCard } from '@oxy.so/bloom/radio';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { toast } from '@oxy.so/bloom/toast';
@@ -45,7 +47,6 @@ import {
 } from '@oxy.so/bloom/segmented-control';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 
-import { Header } from '@/components/Header';
 import { Section } from '@/components/property/Section';
 import {
   DetailIconGrid,
@@ -89,6 +90,7 @@ type ImpactArea = {
 
 export default function DonatePage() {
   const { t } = useTranslation();
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [frequency, setFrequency] = useState<DonationFrequency>('monthly');
   const { colors: theme } = useTheme();
@@ -187,142 +189,129 @@ export default function DonatePage() {
   };
 
   return (
-    <View style={styles.root}>
-      <Header
-        options={{
-          title: t('donations.page.title'),
-          showBackButton: true,
-        }}
+    <>
+      <PageHeader
+        title={t('donations.page.title')}
+        titleAlign="center"
+        leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+        onBack={router.canGoBack() ? router.back : undefined}
+        backLabel={t('goBack')}
       />
+      <View style={styles.scrollContent}>
+        {/* Hero — preserved. */}
+        <LinearGradient colors={[colors.info, colors.info + '90']} style={styles.heroSection}>
+          <RiHeartFill width={48} height={48} fill={colors.white} />
+          <BloomText style={styles.heroTitle}>{t('donations.page.subtitle')}</BloomText>
+          <BloomText style={styles.heroDescription}>{t('donations.page.description')}</BloomText>
+        </LinearGradient>
 
-      <SafeAreaView style={styles.flex} edges={['bottom']}>
-        <ScrollView
-          style={styles.flex}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Hero — preserved. */}
-          <LinearGradient colors={[colors.info, colors.info + '90']} style={styles.heroSection}>
-            <RiHeartFill width={48} height={48} fill={colors.white} />
-            <BloomText style={styles.heroTitle}>{t('donations.page.subtitle')}</BloomText>
-            <BloomText style={styles.heroDescription}>{t('donations.page.description')}</BloomText>
-          </LinearGradient>
-
-          {/* Contribution picker — frequency toggle + flat tier list. */}
-          <View style={[styles.section, styles.firstSection]}>
-            <Section title={t('donations.page.chooseContribution')} bodyStyle={styles.pickerBody}>
-              <SegmentedControl<DonationFrequency>
-                label={t('donations.page.frequency.label')}
-                type="tabs"
-                value={frequency}
-                onChange={handleFrequencyChange}
-              >
-                <SegmentedControlItem value="monthly">
-                  <SegmentedControlItemText>
-                    {t('donations.page.frequency.monthly')}
-                  </SegmentedControlItemText>
-                </SegmentedControlItem>
-                <SegmentedControlItem value="one-time">
-                  <SegmentedControlItemText>
-                    {t('donations.page.frequency.oneTime')}
-                  </SegmentedControlItemText>
-                </SegmentedControlItem>
-              </SegmentedControl>
-
-              <View style={styles.tierList}>
-                {visibleTiers.map((tier) => {
-                  const period =
-                    tier.frequency === 'monthly' ? t('donations.page.frequency.perMonth') : '';
-                  const price = formatMoney(tier.amount, tier.currency, locale, {
-                    maximumFractionDigits: 0,
-                  });
-                  // Spoken form for the radio's label: "5 euros" beats "€5",
-                  // which a screen reader may read as "E five".
-                  const spokenPrice = formatMoney(tier.amount, tier.currency, locale, {
-                    currencyDisplay: 'name',
-                    maximumFractionDigits: 0,
-                  });
-                  return (
-                    <RadioCard
-                      key={tier.id}
-                      value={tier.id}
-                      title={`${tier.title} · ${price}${period}`}
-                      description={tier.subtitle}
-                      checked={selectedTier?.id === tier.id}
-                      onValueChange={setSelectedTierId}
-                      accessibilityLabel={`${tier.title}, ${spokenPrice}${period}`}
-                    />
-                  );
-                })}
-              </View>
-
-              <Button
-                size="lg"
-                onPress={handleDonate}
-                loading={loading}
-                disabled={!selectedTier}
-                fullWidth
-                leadingIcon={RiHeartFill}
-                tone="accent"
-                appearance="solid"
-              >
-                {selectedTier?.ctaLabel ?? t('donations.page.tiers.monthly.button')}
-              </Button>
-            </Section>
-          </View>
-
-          {/* What your support enables — flat icon list. */}
-          <View style={[styles.section, styles.divider]}>
-            <Section title={t('donations.page.impact.title')}>
-              <DetailIconGrid>
-                {impactAreas.map((area) => (
-                  <DetailIconCell key={area.title}>
-                    <DetailIconRow
-                      icon={
-                        <area.icon
-                          width={DETAIL_ICON_SIZE}
-                          height={DETAIL_ICON_SIZE}
-                          fill={theme.text}
-                        />
-                      }
-                      label={area.title}
-                    />
-                  </DetailIconCell>
-                ))}
-              </DetailIconGrid>
-            </Section>
-          </View>
-
-          {/* Mission — concise lead + flat checklist. */}
-          <View style={[styles.section, styles.divider]}>
-            <Section
-              title={t('donations.page.mission.title')}
-              subtitle={t('donations.page.mission.description')}
+        {/* Contribution picker — frequency toggle + flat tier list. */}
+        <View style={[styles.section, styles.firstSection]}>
+          <Section title={t('donations.page.chooseContribution')} bodyStyle={styles.pickerBody}>
+            <SegmentedControl<DonationFrequency>
+              label={t('donations.page.frequency.label')}
+              type="tabs"
+              value={frequency}
+              onChange={handleFrequencyChange}
             >
-              <View style={styles.goalList}>
-                {missionGoals.map((goal) => (
-                  <View key={goal} style={styles.goalRow}>
-                    <RiCheckboxCircleFill width={20} height={20} fill={theme.primary} />
-                    <BloomText style={styles.goalText}>{goal}</BloomText>
-                  </View>
-                ))}
-              </View>
-            </Section>
-          </View>
-        </ScrollView>
-      </SafeAreaView>
-    </View>
+              <SegmentedControlItem value="monthly">
+                <SegmentedControlItemText>
+                  {t('donations.page.frequency.monthly')}
+                </SegmentedControlItemText>
+              </SegmentedControlItem>
+              <SegmentedControlItem value="one-time">
+                <SegmentedControlItemText>
+                  {t('donations.page.frequency.oneTime')}
+                </SegmentedControlItemText>
+              </SegmentedControlItem>
+            </SegmentedControl>
+
+            <View style={styles.tierList}>
+              {visibleTiers.map((tier) => {
+                const period =
+                  tier.frequency === 'monthly' ? t('donations.page.frequency.perMonth') : '';
+                const price = formatMoney(tier.amount, tier.currency, locale, {
+                  maximumFractionDigits: 0,
+                });
+                // Spoken form for the radio's label: "5 euros" beats "€5",
+                // which a screen reader may read as "E five".
+                const spokenPrice = formatMoney(tier.amount, tier.currency, locale, {
+                  currencyDisplay: 'name',
+                  maximumFractionDigits: 0,
+                });
+                return (
+                  <RadioCard
+                    key={tier.id}
+                    value={tier.id}
+                    title={`${tier.title} · ${price}${period}`}
+                    description={tier.subtitle}
+                    checked={selectedTier?.id === tier.id}
+                    onValueChange={setSelectedTierId}
+                    accessibilityLabel={`${tier.title}, ${spokenPrice}${period}`}
+                  />
+                );
+              })}
+            </View>
+
+            <Button
+              size="lg"
+              onPress={handleDonate}
+              loading={loading}
+              disabled={!selectedTier}
+              fullWidth
+              leadingIcon={RiHeartFill}
+              tone="accent"
+              appearance="solid"
+            >
+              {selectedTier?.ctaLabel ?? t('donations.page.tiers.monthly.button')}
+            </Button>
+          </Section>
+        </View>
+
+        {/* What your support enables — flat icon list. */}
+        <View style={[styles.section, styles.divider]}>
+          <Section title={t('donations.page.impact.title')}>
+            <DetailIconGrid>
+              {impactAreas.map((area) => (
+                <DetailIconCell key={area.title}>
+                  <DetailIconRow
+                    icon={
+                      <area.icon
+                        width={DETAIL_ICON_SIZE}
+                        height={DETAIL_ICON_SIZE}
+                        fill={theme.text}
+                      />
+                    }
+                    label={area.title}
+                  />
+                </DetailIconCell>
+              ))}
+            </DetailIconGrid>
+          </Section>
+        </View>
+
+        {/* Mission — concise lead + flat checklist. */}
+        <View style={[styles.section, styles.divider]}>
+          <Section
+            title={t('donations.page.mission.title')}
+            subtitle={t('donations.page.mission.description')}
+          >
+            <View style={styles.goalList}>
+              {missionGoals.map((goal) => (
+                <View key={goal} style={styles.goalRow}>
+                  <RiCheckboxCircleFill width={20} height={20} fill={theme.primary} />
+                  <BloomText style={styles.goalText}>{goal}</BloomText>
+                </View>
+              ))}
+            </View>
+          </Section>
+        </View>
+      </View>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  flex: {
-    flex: 1,
-  },
   scrollContent: {
     paddingBottom: spacing['6xl'],
   },

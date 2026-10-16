@@ -23,7 +23,7 @@ import { FollowButton, useOxy } from '@oxy.so/services';
 import { deviceTimeZone, formatDate, type Profile, type Property } from '@homiio/shared-types';
 
 import { Section, SECTION_GUTTER } from '@/components/property/Section';
-import { HomeCarouselSection } from '@/components/HomeCarouselSection';
+import { Shelf } from '@oxy.so/bloom/media-shelf';
 import { PropertyCard } from '@/components/PropertyCard';
 import { useOxyAvatars } from '@/hooks/useOxyAvatars';
 import { useFormatting } from '@/utils/format';
@@ -131,20 +131,22 @@ export const LandlordSection: React.FC<LandlordSectionProps> = ({
 
         {ownerProperties.length > 0 ? (
           <View style={styles.ownerProperties}>
-            <HomeCarouselSection
+            <Shelf
               title={t('listing.cta.moreByOwner')}
-              items={ownerProperties}
-              loading={false}
-              renderItem={(prop) => (
+              itemWidth={240}
+              contentInset={SECTION_GUTTER}
+            >
+              {ownerProperties.map((prop) => (
                 <PropertyCard
+                  key={prop.id}
                   property={prop}
                   variant="compact"
                   onPress={() => router.push(`/properties/${prop.id}`)}
                   showSaveButton={false}
                   showVerifiedBadge={false}
                 />
-              )}
-            />
+              ))}
+            </Shelf>
           </View>
         ) : null}
       </View>
@@ -168,5 +170,3 @@ const styles = StyleSheet.create({
     borderTopColor: hairline.color,
   },
 });
-
-export default LandlordSection;

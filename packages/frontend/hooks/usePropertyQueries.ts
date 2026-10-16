@@ -1,14 +1,10 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback } from 'react';
 import { usePropertyStore, usePropertySelectors } from '@/store/propertyStore';
-import { type PropertyFilters, propertyService } from '@/services/propertyService';
-import type {
-  CreatePropertyData,
-  PropertyAreaInsights,
-  PropertyNearbyServices,
-} from '@homiio/shared-types';
+import { propertyService } from '@/services/propertyService';
+import type { PropertyAreaInsights, PropertyNearbyServices } from '@homiio/shared-types';
 import { toast } from '@oxy.so/bloom/toast';
 import i18next from 'i18next';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useOxy } from '@oxy.so/services';
 
 /** Area-scale lookups (price insights, nearby services) are comparatively
@@ -19,65 +15,16 @@ import { useOxy } from '@oxy.so/services';
 const AREA_INSIGHTS_STALE_TIME = 1000 * 60 * 5;
 const AREA_INSIGHTS_GC_TIME = 1000 * 60 * 30;
 
-// Property Hooks
-export const useProperties = () => {
-  const { properties, loading, error, pagination } = usePropertySelectors();
-  const { setProperties, clearError, setFilters, clearFilters, setPagination } = usePropertyStore();
-  const queryClient = useQueryClient();
-
-  const loadProperties = useCallback(
-    async (filters?: PropertyFilters) => {
-      const result = await queryClient.fetchQuery({
-        queryKey: ['properties', { filters: filters ?? null }],
-        queryFn: async () => propertyService.getProperties(filters),
-        staleTime: 1000 * 30,
-        gcTime: 1000 * 60 * 10,
-      });
-      setProperties(result.properties);
-      setPagination({
-        page: result.page,
-        total: result.total,
-        totalPages: result.totalPages,
-        limit: 10,
-      });
-      if (filters) setFilters(filters);
-      return result;
-    },
-    [queryClient, setPagination, setProperties, setFilters],
-  );
-
-  const clearErrorAction = useCallback(() => {
-    clearError();
-  }, [clearError]);
-
-  const setFiltersAction = useCallback(
-    (newFilters: PropertyFilters) => {
-      setFilters(newFilters);
-    },
-    [setFilters],
-  );
-
-  const clearFiltersAction = useCallback(() => {
-    clearFilters();
-  }, [clearFilters]);
-
-  return {
-    properties,
-    loading: loading.properties,
-    error,
-    pagination,
-    loadProperties,
-    clearError: clearErrorAction,
-    setFilters: setFiltersAction,
-    clearFilters: clearFiltersAction,
-  };
-};
-
+/**
+ * One property, straight from React Query.
+ *
+ * Read-only, so there is no Zustand copy: it used to mirror every fetch into
+ * `propertyStore.currentProperty` from an effect and fall back to that copy,
+ * which made a card still loading property B show whichever property was
+ * fetched LAST anywhere in the app. The cache is keyed by id, so nothing else
+ * is needed.
+ */
 export const useProperty = (id: string) => {
-  const { currentProperty } = usePropertySelectors();
-  const { setCurrentProperty, clearCurrentProperty } = usePropertyStore();
-  const queryClient = useQueryClient();
-
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['property', id],
     queryFn: async () => propertyService.getPropertyById(id),
@@ -86,30 +33,16 @@ export const useProperty = (id: string) => {
     gcTime: 1000 * 60 * 10,
   });
 
-  useEffect(() => {
-    if (data) setCurrentProperty(data);
-  }, [data, setCurrentProperty]);
-
-  const clearCurrentPropertyAction = useCallback(() => {
-    clearCurrentProperty();
-    if (id) {
-      queryClient.removeQueries({ queryKey: ['property', id], exact: true });
-    }
-  }, [clearCurrentProperty, queryClient, id]);
-
   return {
-    property: data ?? currentProperty,
+    property: data ?? null,
     loading: isLoading,
     error: error instanceof Error ? error.message : null,
     loadProperty: refetch,
-    clearCurrentProperty: clearCurrentPropertyAction,
   };
 };
 
+/** A property's stats, straight from React Query (keyed by id; no store copy). */
 export const usePropertyStats = (id: string) => {
-  const { propertyStats } = usePropertySelectors();
-  const { setPropertyStats } = usePropertyStore();
-
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['propertyStats', id],
     queryFn: async () => propertyService.getPropertyStats(id),
@@ -118,14 +51,8 @@ export const usePropertyStats = (id: string) => {
     gcTime: 1000 * 60 * 10,
   });
 
-  useEffect(() => {
-    if (data) {
-      setPropertyStats(id, data);
-    }
-  }, [data, id, setPropertyStats]);
-
   return {
-    stats: data ?? propertyStats[id] ?? null,
+    stats: data ?? null,
     loading: isLoading,
     error: error instanceof Error ? error.message : null,
     loadStats: refetch,
@@ -175,110 +102,6 @@ export const useNearbyServices = (propertyId: string) => {
     loading: isLoading,
     error: error instanceof Error ? error.message : null,
     refetch,
-  };
-};
-
-export const useSearchProperties = (query?: string, filters?: PropertyFilters) => {
-  const { setSearchResults, setError, setPagination } = usePropertyStore();
-  const enabled = Boolean(query && query.length > 0);
-
-  const result = useQuery({
-    queryKey: ['propertiesSearch', { query, filters: filters ?? null }],
-    queryFn: async () => propertyService.searchProperties(query || '', filters),
-    enabled,
-    staleTime: 1000 * 30,
-    gcTime: 1000 * 60 * 10,
-  });
-
-  useEffect(() => {
-    if (result.data) {
-      setSearchResults(result.data.properties || []);
-      setPagination({
-        page: 1,
-        total: result.data.total || 0,
-        totalPages: Math.ceil((result.data.total || 0) / 10),
-        limit: 10,
-      });
-    }
-  }, [result.data, setSearchResults, setPagination]);
-
-  useEffect(() => {
-    if (result.error) {
-      const e = result.error as Error;
-      setError(e.message || 'Failed to search properties');
-    }
-  }, [result.error, setError]);
-
-  return result;
-};
-
-export const useCreateProperty = () => {
-  const { loading, error } = usePropertySelectors();
-  const { setLoading, setError } = usePropertyStore();
-
-  const create = useCallback(
-    async (data: CreatePropertyData) => {
-      try {
-        setLoading('create', true);
-        setError(null);
-
-        // Use the propertyService instead of propertyApi
-        const response = await propertyService.createProperty(data);
-
-        toast.success(i18next.t('property.toast.createSuccess'));
-        return response;
-      } catch (error: any) {
-        const errorMessage =
-          error instanceof Error ? error.message : i18next.t('property.toast.createFailed');
-        setError(errorMessage);
-        toast.error(errorMessage);
-        throw error;
-      } finally {
-        setLoading('create', false);
-      }
-    },
-    [setLoading, setError],
-  );
-
-  return {
-    create,
-    loading: loading.create,
-    error,
-  };
-};
-
-export const useUpdateProperty = () => {
-  const { loading, error } = usePropertySelectors();
-  const { setLoading, setError } = usePropertyStore();
-
-  const update = useCallback(
-    async (id: string, data: Partial<CreatePropertyData>) => {
-      try {
-        setLoading('update', true);
-        setError(null);
-
-        // Use propertyService instead of propertyApi
-        const response = await propertyService.updateProperty(id, data);
-
-        toast.success(i18next.t('property.toast.updateSuccess'));
-        return response;
-      } catch (error: any) {
-        const errorMessage =
-          error instanceof Error ? error.message : i18next.t('property.toast.updateFailed');
-        setError(errorMessage);
-        toast.error(errorMessage);
-        throw error;
-      } finally {
-        setLoading('update', false);
-      }
-    },
-    [setLoading, setError],
-  );
-
-  return {
-    update,
-    loading: loading.update,
-    error,
   };
 };
 

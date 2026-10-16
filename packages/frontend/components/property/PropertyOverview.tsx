@@ -71,5 +71,3 @@ export const PropertyOverview: React.FC<Props> = ({ property }) => {
     </Section>
   );
 };
-
-export default PropertyOverview;

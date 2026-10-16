@@ -109,5 +109,3 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
 });
-
-export default EvictionResources;

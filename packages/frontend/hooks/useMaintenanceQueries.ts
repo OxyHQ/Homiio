@@ -41,7 +41,7 @@ import {
 const LIST_KEY = 'maintenanceRequests';
 const DETAIL_KEY = 'maintenanceRequest';
 
-export const maintenanceKeys = {
+const maintenanceKeys = {
   list: (filters?: MaintenanceListFilters) => [LIST_KEY, filters ?? null] as const,
   detail: (id: string) => [DETAIL_KEY, id] as const,
 };

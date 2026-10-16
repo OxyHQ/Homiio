@@ -123,5 +123,3 @@ export const reservationService = {
     };
   },
 };
-
-export default reservationService;

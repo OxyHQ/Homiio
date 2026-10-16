@@ -197,5 +197,3 @@ export const applicationService = {
     return updated;
   },
 };
-
-export default applicationService;

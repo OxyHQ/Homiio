@@ -1,9 +1,10 @@
-import React, { useEffect, useCallback, useMemo, useRef, useState } from 'react';
-import { View, Animated } from 'react-native';
+import type React from 'react';
+import { memo } from 'react';
+import { View } from 'react-native';
+import Animated, { runOnJS, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { LogoIcon } from '@/assets/logo';
 import { Loading } from '@oxy.so/bloom/loading';
 import { colors } from '@/styles/colors';
-import { USE_NATIVE_DRIVER } from '@/utils/animation';
 import { LinearGradient, type LinearGradientProps } from 'expo-linear-gradient';
 import { styled } from 'nativewind';
 
@@ -18,65 +19,31 @@ const StyledLinearGradient: React.ComponentType<LinearGradientProps> = styled(Li
   className: 'style',
 });
 
+const FADE_DURATION_MS = 500;
+const containerStyle = { flex: 1 } as const;
+const logoContainerStyle = { alignItems: 'center', justifyContent: 'center' } as const;
+const spinnerContainerStyle = { marginTop: 32 } as const;
+// Bloom's `info` blue → cream: a fixed semantic token across presets, so the
+// splash keeps its signature gradient regardless of the runtime accent.
+const gradientColors = [colors.info, colors.secondaryLight] as const;
+
 const AppSplashScreen: React.FC<AppSplashScreenProps> = ({ onFadeComplete, startFade = false }) => {
-  // Lazy-init keeps a single Animated.Value across renders without reading a
-  // ref during render (which the React Compiler / react-hooks rules forbid).
-  const [fadeAnim] = useState(() => new Animated.Value(1));
-  const animationRef = useRef<Animated.CompositeAnimation | null>(null);
-
-  // Memoize the fade completion callback to prevent recreating it
-  const handleFadeComplete = useCallback(
-    (finished: boolean) => {
-      if (finished && onFadeComplete) {
-        onFadeComplete();
-      }
-    },
-    [onFadeComplete],
+  // The fade is declared, not triggered: the animated style is a function of
+  // `startFade`, and Reanimated runs the 500ms timing the moment it flips to
+  // true (and cancels it if the splash unmounts first).
+  const fadeStyle = useAnimatedStyle(
+    () => ({
+      opacity: startFade
+        ? withTiming(0, { duration: FADE_DURATION_MS }, (finished) => {
+            if (finished && onFadeComplete) runOnJS(onFadeComplete)();
+          })
+        : 1,
+    }),
+    [startFade, onFadeComplete],
   );
-
-  useEffect(() => {
-    if (startFade) {
-      // Cancel any existing animation
-      if (animationRef.current) {
-        animationRef.current.stop();
-      }
-
-      // Start fade out immediately when startFade becomes true, taking 500ms to complete
-      animationRef.current = Animated.timing(fadeAnim, {
-        toValue: 0,
-        duration: 500,
-        useNativeDriver: USE_NATIVE_DRIVER,
-      });
-
-      animationRef.current.start(({ finished }) => {
-        handleFadeComplete(finished);
-      });
-    }
-
-    // Cleanup function to stop animation if component unmounts
-    return () => {
-      if (animationRef.current) {
-        animationRef.current.stop();
-      }
-    };
-  }, [startFade, fadeAnim, handleFadeComplete]);
-
-  // Memoize styles to prevent recreation on every render
-  const containerStyle = useMemo(() => ({ flex: 1, opacity: fadeAnim }), [fadeAnim]);
-  const logoContainerStyle = useMemo(
-    () => ({ alignItems: 'center' as const, justifyContent: 'center' as const }),
-    [],
-  );
-  const spinnerContainerStyle = useMemo(() => ({ marginTop: 32 }), []);
-
-  // Memoize gradient colors to prevent array recreation. The splash keeps its
-  // signature blue→cream gradient (with the gold logo/spinner) via Bloom's
-  // `info` blue — a fixed semantic token across presets, so it's NOT tied to
-  // the runtime accent (now the yellow primary).
-  const gradientColors = useMemo(() => [colors.info, colors.secondaryLight] as const, []);
 
   return (
-    <Animated.View style={containerStyle}>
+    <Animated.View style={[containerStyle, fadeStyle]}>
       <StyledLinearGradient colors={gradientColors} className="flex-1 items-center justify-center">
         <View style={logoContainerStyle}>
           <LogoIcon size={100} color={colors.secondaryColor} />
@@ -89,4 +56,4 @@ const AppSplashScreen: React.FC<AppSplashScreenProps> = ({ onFadeComplete, start
   );
 };
 
-export default React.memo(AppSplashScreen);
+export default memo(AppSplashScreen);

@@ -160,27 +160,6 @@ export async function searchPlaces(params: GeoSearchParams): Promise<GeoSearchRe
   }
 }
 
-/**
- * Resolve a `loc` token to the place it names.
- *
- * Throws `not_found` rather than returning null, because an unresolvable token
- * in a shared link is a FAILURE the screen must show — never an absence it may
- * quietly ignore by falling back to everything (ADR §5.2).
- */
-export async function resolvePlace(loc: string, language?: string): Promise<GeoPlace> {
-  try {
-    const { data: result } = await api.get<ApiResponse<GeoPlacePayload>>('/api/geo/resolve', {
-      params: { loc, ...(language ? { language } : {}) },
-      requireAuth: false,
-    });
-    const place = result.data?.place;
-    if (!place) throw new GeoRequestError('not_found', 'That place could not be resolved');
-    return place;
-  } catch (error) {
-    throw toGeoError(error);
-  }
-}
-
 /** The place a coordinate falls in. */
 export async function reversePlace(
   longitude: number,

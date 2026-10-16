@@ -40,7 +40,7 @@ import { usePriceFormatter } from '@/components/search/steps/PriceStep';
 import { spacing } from '@/constants/styles';
 
 /** Direction used when sorting room results. */
-export type RoomSortOrder = 'asc' | 'desc';
+type RoomSortOrder = 'asc' | 'desc';
 
 /**
  * Filters used by the rooms feature. Extends the shared {@link PropertyFilters}

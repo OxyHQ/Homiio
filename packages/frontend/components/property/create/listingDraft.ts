@@ -42,9 +42,9 @@ import {
 } from './constants';
 
 /** Photos a complete listing carries. */
-export const QUALITY_MIN_PHOTOS = 5;
+const QUALITY_MIN_PHOTOS = 5;
 /** Characters a complete description carries. */
-export const QUALITY_MIN_DESCRIPTION = 120;
+const QUALITY_MIN_DESCRIPTION = 120;
 
 /** Homiio's offering axis → Bloom's offering vocabulary (the same four values). */
 const BLOOM_OFFERING: Record<OfferingType, Offering> = {
@@ -55,7 +55,7 @@ const BLOOM_OFFERING: Record<OfferingType, Offering> = {
 };
 
 /** The localized offering labels the badges draw (the same words the listing page uses). */
-export function offeringLabels(t: TFunction): Record<Offering, string> {
+function offeringLabels(t: TFunction): Record<Offering, string> {
   return {
     long_term_rent: t('listing.offering.summary.longTerm'),
     short_term_rent: t('listing.offering.summary.nightly'),

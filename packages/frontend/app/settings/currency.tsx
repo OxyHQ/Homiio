@@ -3,25 +3,27 @@
  * SettingsList primitives with a row per currency and an active-state
  * checkmark on the right.
  */
-import React from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 import { toast } from '@oxy.so/bloom/toast';
 
+import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { RiCheckLine } from '@oxy.so/bloom/icons';
+import { PageHeader } from '@oxy.so/bloom/page-header';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { SettingsListGroup, SettingsListItem } from '@oxy.so/bloom/settings-list';
 
-import { Header } from '@/components/Header';
 import { useCurrency } from '@/hooks/useCurrency';
 import { CURRENCIES, getExchangeRateDisplay } from '@/utils/currency';
+import { useExchangeRates } from '@/utils/exchangeRates';
 import { useFormatting } from '@/utils/format';
 import { settingsScreenStyles } from '@/components/profile/SettingsRowIcon';
 
 export default function CurrencySettingsScreen() {
   const { t } = useTranslation();
   const router = useRouter();
+  const rates = useExchangeRates();
   const { currentCurrency, changeCurrency } = useCurrency();
   const { locale } = useFormatting();
   const { colors: theme } = useTheme();
@@ -37,14 +39,15 @@ export default function CurrencySettingsScreen() {
   };
 
   return (
-    <View style={[styles.root, { backgroundColor: theme.background }]}>
-      <Header
-        options={{
-          title: t('settings.currency.title'),
-          showBackButton: true,
-        }}
+    <>
+      <PageHeader
+        title={t('settings.currency.title')}
+        titleAlign="center"
+        leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+        onBack={router.canGoBack() ? router.back : undefined}
+        backLabel={t('goBack')}
       />
-      <ScrollView contentContainerStyle={settingsScreenStyles.content}>
+      <View style={settingsScreenStyles.content}>
         <SettingsListGroup
           title={t('settings.currency.selectCurrency')}
           footer={t('settings.currency.description')}
@@ -54,7 +57,7 @@ export default function CurrencySettingsScreen() {
             const exchangeRate =
               currency.code === currentCurrency
                 ? undefined
-                : getExchangeRateDisplay(currentCurrency, currency.code, locale);
+                : getExchangeRateDisplay(currentCurrency, currency.code, locale, rates);
             const description = exchangeRate ? `${currency.code} · ${exchangeRate}` : currency.code;
             return (
               <SettingsListItem
@@ -72,15 +75,12 @@ export default function CurrencySettingsScreen() {
             );
           })}
         </SettingsListGroup>
-      </ScrollView>
-    </View>
+      </View>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-  },
   flag: {
     fontSize: 18,
     lineHeight: 20,

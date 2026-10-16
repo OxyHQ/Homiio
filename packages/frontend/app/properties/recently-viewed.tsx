@@ -13,7 +13,7 @@
  * preserved as a header action.
  */
 import React, { useCallback } from 'react';
-import { Platform, ScrollView, StyleSheet, View, type ViewStyle } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 
@@ -25,8 +25,7 @@ import { PropertyResultsGridSkeleton } from '@/components/ui/PropertyResultsGrid
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
-import { colors } from '@/styles/colors';
-import { contentClamp, spacing } from '@/constants/styles';
+import { spacing } from '@/constants/styles';
 import type { Property } from '@homiio/shared-types';
 import { RiHomeLine, RiTimeLine } from '@oxy.so/bloom/icons';
 
@@ -89,7 +88,7 @@ export default function RecentlyViewedScreen() {
   })();
 
   return (
-    <View style={styles.container}>
+    <>
       <PropertyListHeader
         title={t('home.recentlyViewed.title')}
         subtitle={
@@ -111,32 +110,15 @@ export default function RecentlyViewedScreen() {
           ) : undefined
         }
       />
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {body}
-      </ScrollView>
-    </View>
+      <View style={styles.scrollContent}>{body}</View>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  scroll: Platform.select<ViewStyle>({
-    web: { flex: 1, overflow: 'auto' } as unknown as ViewStyle,
-    default: { flex: 1 },
-  }) as ViewStyle,
   scrollContent: {
     paddingTop: spacing.lg,
     paddingBottom: spacing['4xl'],
-    maxWidth: contentClamp.page,
-    width: '100%',
-    alignSelf: 'center',
   },
   gridPadding: {
     paddingHorizontal: spacing.lg,

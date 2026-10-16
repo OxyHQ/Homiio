@@ -53,7 +53,7 @@ import type { ViewingRequest } from '@/services/viewingService';
 /** A stay or swap stays current through the whole of its checkout day. */
 export const CHECKOUT_GRACE_MS = 24 * 60 * 60 * 1000;
 
-export type BookingKind = 'stay' | 'swap' | 'viewing';
+type BookingKind = 'stay' | 'swap' | 'viewing';
 
 /** The two statuses a row can carry while it is still ahead of somebody. */
 export type OpenBookingStatus = Extract<TripStatus, 'pending' | 'confirmed'>;
@@ -118,14 +118,14 @@ export function viewingIsUpcoming(
 }
 
 /** `ReservationStatus` narrowed to the two a surface draws. */
-export function reservationStatus(status: string): OpenBookingStatus | null {
+function reservationStatus(status: string): OpenBookingStatus | null {
   if (status === ReservationStatus.CONFIRMED) return 'confirmed';
   if (status === ReservationStatus.PENDING) return 'pending';
   return null;
 }
 
 /** `ExchangeRequestStatus` narrowed the same way. */
-export function exchangeStatus(status: string): OpenBookingStatus | null {
+function exchangeStatus(status: string): OpenBookingStatus | null {
   if (status === ExchangeRequestStatus.CONFIRMED) return 'confirmed';
   if (status === ExchangeRequestStatus.PENDING) return 'pending';
   return null;
@@ -135,7 +135,7 @@ export function exchangeStatus(status: string): OpenBookingStatus | null {
  * A viewing's own vocabulary is `approved`, not `confirmed` — the word the
  * server uses, mapped here once rather than at three call sites.
  */
-export function viewingStatus(status: string): OpenBookingStatus | null {
+function viewingStatus(status: string): OpenBookingStatus | null {
   if (status === 'approved') return 'confirmed';
   if (status === 'pending') return 'pending';
   return null;

@@ -39,5 +39,3 @@ export const HouseRules: React.FC<Props> = ({ property }) => {
     </Section>
   );
 };
-
-export default HouseRules;

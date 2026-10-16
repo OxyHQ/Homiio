@@ -7,17 +7,18 @@
  * would be offering a field the API refuses to read — and the shape
  * `AGENTS.md` forbids, wearing a different name.
  *
- * Mirrors `properties/[id]/report.tsx`: `Header`, Bloom `Field` + `RadioGroup`
+ * Mirrors `properties/[id]/report.tsx`: `PageHeader`, Bloom `Field` + `RadioGroup`
  * + `Textarea`, the same auth gate, `useMutation`, and the shared toast and
  * `ApiError` handling. No `useEffect`; form state is local and validity is
  * derived.
  */
 import type React from 'react';
 import { useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
+import { PageHeader } from '@oxy.so/bloom/page-header';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@oxy.so/bloom/button';
 import { Field } from '@oxy.so/bloom/field';
@@ -35,7 +36,6 @@ import {
   type MaintenanceUrgency,
 } from '@homiio/shared-types';
 
-import { Header } from '@/components/Header';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useReportRepair } from '@/hooks/useMaintenanceQueries';
 import {
@@ -96,17 +96,25 @@ export default function ReportRepairScreen(): React.ReactElement {
     );
   };
 
+  const header = (
+    <PageHeader
+      title={t('maintenance.report.title')}
+      titleAlign="center"
+      leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+    />
+  );
+
   if (!isAuthenticated) {
     return (
-      <SafeAreaView style={styles.screen}>
-        <Header options={{ title: t('maintenance.report.title') }} />
+      <>
+        {header}
         <EmptyState
           title={t('sindi.auth.required')}
           description={t('sindi.auth.message')}
           actionText={t('common.signIn')}
           onAction={() => openAccountDialog()}
         />
-      </SafeAreaView>
+      </>
     );
   }
 
@@ -114,22 +122,22 @@ export default function ReportRepairScreen(): React.ReactElement {
     // A repair is filed against a TENANCY. With no lease there is nothing to
     // file it against, and inventing one is not available.
     return (
-      <SafeAreaView style={styles.screen}>
-        <Header options={{ title: t('maintenance.report.title') }} />
+      <>
+        {header}
         <EmptyState
           title={t('maintenance.report.noLeaseTitle')}
           description={t('maintenance.report.noLeaseBody')}
           actionText={t('maintenance.report.goToMyHome')}
           onAction={() => router.replace('/my-home')}
         />
-      </SafeAreaView>
+      </>
     );
   }
 
   return (
-    <SafeAreaView style={styles.screen}>
-      <Header options={{ title: t('maintenance.report.title') }} />
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+    <>
+      {header}
+      <View style={styles.content}>
         <Field label={t('maintenance.field.title')}>
           <TextField>
             {/* The accessible name goes on the INPUT, which is what Bloom's
@@ -178,13 +186,12 @@ export default function ReportRepairScreen(): React.ReactElement {
             {t('maintenance.report.submit')}
           </Button>
         </View>
-      </ScrollView>
-    </SafeAreaView>
+      </View>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1 },
   content: { gap: spacing.lg, padding: spacing.lg, paddingBottom: spacing['3xl'] },
   footer: { flexDirection: 'row' },
 });

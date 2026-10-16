@@ -11,7 +11,7 @@ import { StyleSheet, type StyleProp, type TextProps, type TextStyle } from 'reac
 import { H1, H2, P, Text } from '@oxy.so/bloom/typography';
 import { colors } from '@/styles/colors';
 
-export type ThemedTextType = 'default' | 'title' | 'defaultSemiBold' | 'subtitle' | 'link';
+type ThemedTextType = 'default' | 'title' | 'defaultSemiBold' | 'subtitle' | 'link';
 
 export type ThemedTextProps = TextProps & {
   lightColor?: string;

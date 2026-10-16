@@ -1,8 +1,7 @@
 import React, { type ReactNode, useMemo } from 'react';
 import { View } from 'react-native';
 import { FeaturedPropertiesWidget } from './FeaturedPropertiesWidget';
-import { EcoCertificationWidget } from './EcoCertificationWidget';
-import { HorizonInitiativeWidget } from './HorizonInitiativeWidget';
+import { NeighbourSupportWidget } from './NeighbourSupportWidget';
 import { SavedSearchesWidget } from './SavedSearchesWidget';
 import { PropertyAlertWidget } from './PropertyAlertWidget';
 import { NeighborhoodRatingWidget } from './NeighborhoodRatingWidget';
@@ -10,7 +9,7 @@ import { RecentlyViewedWidget } from './RecentlyViewedWidget';
 import { QuickFiltersWidget } from './QuickFiltersWidget';
 import { PropertyPreviewWidget } from './PropertyPreviewWidget';
 import { PropertyBookingWidget } from './PropertyBookingWidget';
-import { DonationWidget } from './DonationWidget';
+import { MissionWidget } from './MissionWidget';
 import type { ScreenId } from './screenIds';
 
 // Feature flag: controls whether the Neighborhood widget is rendered.
@@ -46,9 +45,8 @@ export const WidgetManager = React.memo(function WidgetManager({
       home: [
         <RecentlyViewedWidget key="recently-viewed" />,
         <FeaturedPropertiesWidget key="featured-properties" />,
-        <DonationWidget key="donation" />,
-        <HorizonInitiativeWidget key="horizon" />,
-        <EcoCertificationWidget key="eco-cert" />,
+        <MissionWidget key="mission" />,
+        <NeighbourSupportWidget key="neighbour-support" />,
       ],
       properties: [
         <PropertyAlertWidget key="property-alert" />,
@@ -59,7 +57,7 @@ export const WidgetManager = React.memo(function WidgetManager({
           city={city}
           state={state}
         />,
-        <EcoCertificationWidget key="eco-cert" />,
+        <NeighbourSupportWidget key="neighbour-support" />,
       ],
       'property-details': [
         <PropertyBookingWidget key="booking" propertyId={propertyId} />,
@@ -71,9 +69,9 @@ export const WidgetManager = React.memo(function WidgetManager({
           state={state}
         />,
         <RecentlyViewedWidget key="recently-viewed" />,
-        <EcoCertificationWidget key="eco-cert" />,
+        <NeighbourSupportWidget key="neighbour-support" />,
       ],
-      profile: [<DonationWidget key="donation" />],
+      profile: [<MissionWidget key="mission" />],
       explore: [
         <QuickFiltersWidget key="quick-filters" />,
         <SavedSearchesWidget key="saved-searches" />,

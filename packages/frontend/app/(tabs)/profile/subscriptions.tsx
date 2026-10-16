@@ -7,25 +7,28 @@
  * `Alert.alert` with buttons it replaced — also works on web.
  */
 import type React from 'react';
-import { useEffect } from 'react';
-import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { Linking, StyleSheet, View } from 'react-native';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useOxy } from '@oxy.so/services';
 
+import { Admonition } from '@oxy.so/bloom/admonition';
+import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { Badge } from '@oxy.so/bloom/badge';
 import { Button } from '@oxy.so/bloom/button';
 import { Card } from '@oxy.so/bloom/card';
 import { IconCircle } from '@oxy.so/bloom/icon-circle';
 import { RiCheckboxCircleFill, RiFileTextLine, RiHeartLine, RiStarLine } from '@oxy.so/bloom/icons';
+import { PageHeader } from '@oxy.so/bloom/page-header';
 import { SettingsListGroup, SettingsListItem } from '@oxy.so/bloom/settings-list';
 import { confirm } from '@oxy.so/bloom/surfaces';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { toast } from '@oxy.so/bloom/toast';
 import { H1, H3, Text as BloomText } from '@oxy.so/bloom/typography';
 
-import { Header } from '@/components/Header';
 import { contentClamp, spacing } from '@/constants/styles';
-import { useSubscriptionStore } from '@/store/subscriptionStore';
+import type { Entitlements } from '@/store/subscriptionStore';
 import { api } from '@/utils/api';
 import { getFormatLocale } from '@/utils/dateLocale';
 import { logger } from '@/utils/logger';
@@ -35,67 +38,93 @@ type IconComponent = React.ComponentType<{ width?: number; height?: number; fill
 const getErrorMessage = (error: unknown, fallback: string): string =>
   error instanceof Error ? error.message : fallback;
 
+const DEFAULT_ENTITLEMENTS: Entitlements = {
+  plusActive: false,
+  fileCredits: 0,
+  founderSupporter: false,
+  processedSessions: [],
+};
+
+type EntitlementsResponse = { success: boolean; entitlements: Entitlements };
+
+/** Posts a billing action that answers with the account's new entitlements. */
+async function postForEntitlements(endpoint: string, body: object, failure: string) {
+  const { data } = await api.post<EntitlementsResponse>(endpoint, body);
+  if (!data?.success) throw new Error(failure);
+  return data.entitlements || DEFAULT_ENTITLEMENTS;
+}
+
 export default function SubscriptionsScreen() {
   const { t, i18n } = useTranslation();
+  const router = useRouter();
   const { colors: theme } = useTheme();
   const { oxyServices, activeSessionId } = useOxy();
 
-  const {
-    entitlements,
-    isLoading,
-    error,
-    loadingStates,
-    fetchEntitlements,
-    startCheckout,
-    openCustomerPortal,
-    syncSubscription,
-    cancelSubscription,
-    resetError,
-  } = useSubscriptionStore();
+  const queryClient = useQueryClient();
 
-  // Fetch entitlements on mount
-  useEffect(() => {
-    if (oxyServices && activeSessionId) {
-      fetchEntitlements(oxyServices, activeSessionId);
-    }
-  }, [oxyServices, activeSessionId, fetchEntitlements]);
+  const entitlementsKey = ['profiles', 'me', 'entitlements', activeSessionId] as const;
+  const entitlementsQuery = useQuery({
+    queryKey: entitlementsKey,
+    queryFn: async () => {
+      const { data } = await api.get<EntitlementsResponse>('/api/profiles/me/entitlements');
+      if (!data?.success) throw new Error('Failed to load entitlements');
+      return data.entitlements || DEFAULT_ENTITLEMENTS;
+    },
+    enabled: Boolean(oxyServices && activeSessionId),
+  });
+  const entitlements = entitlementsQuery.data ?? null;
 
-  // Surface store errors
-  useEffect(() => {
-    if (error) {
-      toast.error(error);
-      resetError();
+  const checkoutMutation = useMutation({
+    mutationFn: async (product: 'plus' | 'file' | 'founder') => {
+      // Prevent a redundant purchase while Plus is active.
+      if (product === 'plus' && entitlements?.plusActive) {
+        throw new Error('You already have Homiio+ subscription');
+      }
+      if (product === 'file' && entitlements?.plusActive) {
+        throw new Error('File uploads are included in your Homiio+ subscription');
+      }
+      const { data } = await api.post<{ success: boolean; url: string }>('/api/billing/checkout', {
+        product,
+      });
+      if (!data?.success) throw new Error('Failed to create checkout session');
+      await Linking.openURL(data.url);
+    },
+  });
+
+  const openCustomerPortal = async () => {
+    const subscriptionId = entitlements?.plusStripeSubscriptionId;
+    if (!subscriptionId) throw new Error('No subscription found to manage');
+    const { data } = await api.post<{
+      success: boolean;
+      url: string;
+      error?: { code: string; message: string };
+    }>('/api/billing/customer-portal', { subscriptionId });
+    if (!data?.success) {
+      throw new Error(data?.error?.message || 'Failed to create customer portal session');
     }
-  }, [error, resetError]);
+    await Linking.openURL(data.url);
+  };
 
   const plusActive = entitlements?.plusActive || false;
   const plusSince = entitlements?.plusSince;
   const plusCanceledAt = entitlements?.plusCanceledAt;
   const fileCredits = entitlements?.fileCredits || 0;
   const lastPayment = entitlements?.lastPaymentAt;
-  const checkoutBusy = loadingStates.checkout;
-
-  const onRefresh = async () => {
-    if (oxyServices && activeSessionId) {
-      await fetchEntitlements(oxyServices, activeSessionId);
-    }
-  };
+  const checkoutBusy = checkoutMutation.isPending;
 
   /** Runs `action` with a session, or explains why it cannot. */
-  const withSession = async (
-    action: (services: NonNullable<typeof oxyServices>, sessionId: string) => Promise<void>,
-  ) => {
+  const withSession = async (action: () => Promise<void>) => {
     if (!oxyServices || !activeSessionId) {
       toast.error(t('subscriptions.authRequired'));
       return;
     }
-    await action(oxyServices, activeSessionId);
+    await action();
   };
 
   const handleStartCheckout = (product: 'plus' | 'file' | 'founder') =>
-    withSession(async (services, sessionId) => {
+    withSession(async () => {
       try {
-        await startCheckout(product, services, sessionId);
+        await checkoutMutation.mutateAsync(product);
       } catch (checkoutError: unknown) {
         logger.error('Failed to start checkout:', checkoutError);
         toast.error(getErrorMessage(checkoutError, t('subscriptions.checkoutFailed')));
@@ -103,9 +132,9 @@ export default function SubscriptionsScreen() {
     });
 
   const handleManageSubscription = () =>
-    withSession(async (services, sessionId) => {
+    withSession(async () => {
       try {
-        await openCustomerPortal(services, sessionId);
+        await openCustomerPortal();
       } catch (portalError: unknown) {
         logger.error('Failed to open subscription management:', portalError);
         toast.error(getErrorMessage(portalError, t('subscriptions.portalFailed')));
@@ -113,9 +142,14 @@ export default function SubscriptionsScreen() {
     });
 
   const handleSyncSubscription = () =>
-    withSession(async (services, sessionId) => {
+    withSession(async () => {
       try {
-        await syncSubscription(services, sessionId);
+        const next = await postForEntitlements(
+          '/api/billing/sync-subscription',
+          {},
+          'Failed to sync subscription',
+        );
+        queryClient.setQueryData(entitlementsKey, next);
         toast.success(t('subscriptions.syncSuccess'));
       } catch (syncError: unknown) {
         logger.error('Failed to sync subscription:', syncError);
@@ -124,7 +158,7 @@ export default function SubscriptionsScreen() {
     });
 
   const handleCancelSubscription = (immediate: boolean) =>
-    withSession(async (services, sessionId) => {
+    withSession(async () => {
       if (immediate) {
         const ok = await confirm({
           title: t('subscriptions.page.cancelImmediateTitle'),
@@ -136,7 +170,12 @@ export default function SubscriptionsScreen() {
         if (!ok) return;
       }
       try {
-        await cancelSubscription(immediate, services, sessionId);
+        const next = await postForEntitlements(
+          '/api/billing/cancel-subscription',
+          { immediate },
+          'Failed to cancel subscription',
+        );
+        queryClient.setQueryData(entitlementsKey, next);
         toast.success(
           immediate
             ? t('subscriptions.cancelImmediateSuccess')
@@ -185,12 +224,15 @@ export default function SubscriptionsScreen() {
       : t('subscriptions.page.plus.subscribeNow');
 
   return (
-    <View style={[styles.root, { backgroundColor: theme.background }]}>
-      <Header options={{ title: t('subscriptions.title'), showBackButton: true }} />
-      <ScrollView
-        contentContainerStyle={styles.scroll}
-        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={onRefresh} />}
-      >
+    <>
+      <PageHeader
+        title={t('subscriptions.title')}
+        titleAlign="center"
+        leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+        onBack={router.canGoBack() ? router.back : undefined}
+        backLabel={t('goBack')}
+      />
+      <View style={styles.scroll}>
         <View style={styles.hero}>
           <IconCircle icon={RiStarLine} size="lg" />
           <H1 style={styles.heroTitle}>{t('subscriptions.page.headerTitle')}</H1>
@@ -201,6 +243,10 @@ export default function SubscriptionsScreen() {
             {t('subscriptions.page.introText')}
           </BloomText>
         </View>
+
+        {entitlementsQuery.isError ? (
+          <Admonition type="error">{entitlementsQuery.error.message}</Admonition>
+        ) : null}
 
         <ProductCard
           icon={RiFileTextLine}
@@ -337,8 +383,8 @@ export default function SubscriptionsScreen() {
             </SettingsListGroup>
           </View>
         ) : null}
-      </ScrollView>
-    </View>
+      </View>
+    </>
   );
 }
 
@@ -386,9 +432,6 @@ const ProductCard: React.FC<ProductCardProps> = ({
 };
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-  },
   scroll: {
     width: '100%',
     maxWidth: contentClamp.copy,

@@ -42,7 +42,7 @@ export interface CityFilterValues {
   bathrooms?: number;
 }
 
-export const EMPTY_CITY_FILTERS: CityFilterValues = {
+const EMPTY_CITY_FILTERS: CityFilterValues = {
   verified: false,
   ecoFriendly: false,
   bedrooms: undefined,
@@ -50,7 +50,7 @@ export const EMPTY_CITY_FILTERS: CityFilterValues = {
 };
 
 /** How many of the filters are applied, for the trigger's badge. */
-export function countCityFilters(values: CityFilterValues): number {
+function countCityFilters(values: CityFilterValues): number {
   return (
     (values.verified ? 1 : 0) +
     (values.ecoFriendly ? 1 : 0) +

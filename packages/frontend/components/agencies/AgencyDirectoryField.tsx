@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { View } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { Card } from '@oxy.so/bloom/card';
@@ -25,13 +25,9 @@ export function AgencyDirectoryField({
   const { t } = useTranslation();
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
+  // Debounce lives in the change handler. A tick that lands after unmount only
+  // sets state on an unmounted component, which React ignores.
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(
-    () => () => {
-      if (timer.current) clearTimeout(timer.current);
-    },
-    [],
-  );
   const search = useQuery({
     queryKey: ['agencyDirectory', query],
     queryFn: () => reviewService.searchAgencies(query),

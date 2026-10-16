@@ -16,9 +16,10 @@
  */
 import React, { useCallback, useMemo } from 'react';
 import { Image, StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
+import { PageHeader } from '@oxy.so/bloom/page-header';
 import { toast } from '@oxy.so/bloom/toast';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { RiAlertLine, RiCloseLine, RiEditLine } from '@oxy.so/bloom/icons';
@@ -28,8 +29,6 @@ import { Loading } from '@oxy.so/bloom/loading';
 import { Text as BloomText, H2 } from '@oxy.so/bloom/typography';
 import { TenantApplicationStatus } from '@homiio/shared-types';
 
-import { Header } from '@/components/Header';
-import { PageScrollView } from '@/components/PageScrollView';
 import { ApplicationStatusBadge } from '@/components/ApplicationStatusBadge';
 import {
   ApplicationDocumentsGroup,
@@ -113,17 +112,18 @@ export default function ApplicationDetailScreen() {
   }, [id, router]);
 
   const header = (
-    <Header
-      options={{
-        showBackButton: true,
-        title: 'Application',
-      }}
+    <PageHeader
+      title="Application"
+      titleAlign="center"
+      leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+      onBack={router.canGoBack() ? router.back : undefined}
+      backLabel={t('goBack')}
     />
   );
 
   if (!id) {
     return (
-      <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
+      <>
         {header}
         <View style={styles.centerWrap}>
           <ErrorState
@@ -134,24 +134,24 @@ export default function ApplicationDetailScreen() {
             onRetry={() => router.back()}
           />
         </View>
-      </View>
+      </>
     );
   }
 
   if (applicationQuery.isPending) {
     return (
-      <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
+      <>
         {header}
         <View style={styles.centerWrap}>
           <Loading variant="spinner" size="md" />
         </View>
-      </View>
+      </>
     );
   }
 
   if (applicationQuery.isError || !application) {
     return (
-      <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
+      <>
         {header}
         <View style={styles.centerWrap}>
           <ErrorState
@@ -161,7 +161,7 @@ export default function ApplicationDetailScreen() {
             onRetry={() => router.back()}
           />
         </View>
-      </View>
+      </>
     );
   }
 
@@ -170,88 +170,78 @@ export default function ApplicationDetailScreen() {
   const imageSource = property ? getPropertyImageSource(property) : null;
 
   return (
-    <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
+    <>
       {header}
-      <SafeAreaView edges={['bottom']} style={styles.safeArea}>
-        <PageScrollView contentContainerStyle={styles.content}>
-          <View style={[styles.thumbWrap, { backgroundColor: theme.colors.backgroundSecondary }]}>
-            {imageSource ? (
-              <Image source={imageSource} style={styles.thumb} resizeMode="cover" />
-            ) : (
-              <View style={styles.thumb} />
-            )}
-          </View>
+      <View style={styles.content}>
+        <View style={[styles.thumbWrap, { backgroundColor: theme.colors.backgroundSecondary }]}>
+          {imageSource ? (
+            <Image source={imageSource} style={styles.thumb} resizeMode="cover" />
+          ) : (
+            <View style={styles.thumb} />
+          )}
+        </View>
 
+        <Card radius="radius-16" className="p-5" appearance="outline">
+          <View style={styles.headerRow}>
+            <H2 style={styles.title}>{propertyTitle}</H2>
+            <ApplicationStatusBadge status={application.status} />
+          </View>
+          {property?.address ? (
+            <BloomText style={[styles.subtitle, secondaryText]}>
+              {[property.address.cityName, property.address.countryName].filter(Boolean).join(', ')}
+            </BloomText>
+          ) : null}
+        </Card>
+
+        <View style={styles.groups}>
+          <ApplicationTermsGroup application={application} />
+          <ApplicationFinancesGroup application={application} />
+          <ApplicationReferencesGroup application={application} />
+          <ApplicationDocumentsGroup application={application} />
+        </View>
+
+        {application.notes ? (
           <Card radius="radius-16" className="p-5" appearance="outline">
-            <View style={styles.headerRow}>
-              <H2 style={styles.title}>{propertyTitle}</H2>
-              <ApplicationStatusBadge status={application.status} />
-            </View>
-            {property?.address ? (
-              <BloomText style={[styles.subtitle, secondaryText]}>
-                {[property.address.cityName, property.address.countryName]
-                  .filter(Boolean)
-                  .join(', ')}
-              </BloomText>
-            ) : null}
+            <BloomText style={[styles.sectionLabel, secondaryText]}>Notes</BloomText>
+            <BloomText style={styles.notesBody}>{application.notes}</BloomText>
           </Card>
+        ) : null}
 
-          <View style={styles.groups}>
-            <ApplicationTermsGroup application={application} />
-            <ApplicationFinancesGroup application={application} />
-            <ApplicationReferencesGroup application={application} />
-            <ApplicationDocumentsGroup application={application} />
+        {showCreateLease || canWithdraw ? (
+          <View style={styles.actionRow}>
+            {showCreateLease ? (
+              <Button
+                size="md"
+                leadingIcon={RiEditLine}
+                onPress={handleCreateLease}
+                style={styles.actionButton}
+                tone="accent"
+                appearance="solid"
+              >
+                Create lease
+              </Button>
+            ) : null}
+            {canWithdraw ? (
+              <Button
+                size="md"
+                leadingIcon={RiCloseLine}
+                onPress={() => void handleWithdraw()}
+                disabled={updateMutation.isPending}
+                style={styles.actionButton}
+                tone="accent"
+                appearance="subtle"
+              >
+                Withdraw application
+              </Button>
+            ) : null}
           </View>
-
-          {application.notes ? (
-            <Card radius="radius-16" className="p-5" appearance="outline">
-              <BloomText style={[styles.sectionLabel, secondaryText]}>Notes</BloomText>
-              <BloomText style={styles.notesBody}>{application.notes}</BloomText>
-            </Card>
-          ) : null}
-
-          {showCreateLease || canWithdraw ? (
-            <View style={styles.actionRow}>
-              {showCreateLease ? (
-                <Button
-                  size="md"
-                  leadingIcon={RiEditLine}
-                  onPress={handleCreateLease}
-                  style={styles.actionButton}
-                  tone="accent"
-                  appearance="solid"
-                >
-                  Create lease
-                </Button>
-              ) : null}
-              {canWithdraw ? (
-                <Button
-                  size="md"
-                  leadingIcon={RiCloseLine}
-                  onPress={() => void handleWithdraw()}
-                  disabled={updateMutation.isPending}
-                  style={styles.actionButton}
-                  tone="accent"
-                  appearance="subtle"
-                >
-                  Withdraw application
-                </Button>
-              ) : null}
-            </View>
-          ) : null}
-        </PageScrollView>
-      </SafeAreaView>
-    </View>
+        ) : null}
+      </View>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-  },
-  safeArea: {
-    flex: 1,
-  },
   content: {
     padding: spacing.lg,
     gap: spacing.lg,

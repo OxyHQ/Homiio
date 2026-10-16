@@ -37,7 +37,7 @@ interface CreatePropertyStepContentProps {
   fieldsToShow: readonly string[];
   isLoading: boolean;
   submitError: string | null;
-  railShowsPreview: boolean;
+  routeHasRail: boolean;
   mapRef: MutableRefObject<MapApi | null>;
   updateFormField: UpdateFormField;
   setFormData: SetFormData;
@@ -60,7 +60,7 @@ export function CreatePropertyStepContent({
   fieldsToShow,
   isLoading,
   submitError,
-  railShowsPreview,
+  routeHasRail,
   mapRef,
   updateFormField,
   setFormData,
@@ -116,7 +116,7 @@ export function CreatePropertyStepContent({
         <MediaStep formData={formData} updateFormField={updateFormField} isLoading={isLoading} />
       );
     case STEP_PREVIEW:
-      return <PreviewStep submitError={submitError} railShowsPreview={railShowsPreview} />;
+      return <PreviewStep submitError={submitError} routeHasRail={routeHasRail} />;
     default:
       return null;
   }

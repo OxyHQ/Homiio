@@ -18,17 +18,18 @@
  * WIDER area than the one being watched.
  */
 
-import React, { useMemo } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { useMemo } from 'react';
+import { StyleSheet, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '@oxy.so/bloom/theme';
+import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { Button } from '@oxy.so/bloom/button';
 import { Card } from '@oxy.so/bloom/card';
 import { Loading } from '@oxy.so/bloom/loading';
+import { PageHeader } from '@oxy.so/bloom/page-header';
 import { H3, Text as BloomText } from '@oxy.so/bloom/typography';
 import { deviceTimeZone, formatDate } from '@homiio/shared-types';
-import { Header } from '@/components/Header';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { AlertExplanationText } from '@/components/watches/AlertExplanationText';
 import { useAlertReason } from '@/hooks/useHousingAlerts';
@@ -48,32 +49,44 @@ export default function AlertReasonScreen() {
 
   if (isLoading) {
     return (
-      <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
-        <Header options={{ title: t('alerts.reason.title') }} />
+      <>
+        <PageHeader
+          title={t('alerts.reason.title')}
+          titleAlign="center"
+          leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+        />
         <Loading style={styles.loading} />
-      </View>
+      </>
     );
   }
 
   if (isError || !data) {
     return (
-      <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
-        <Header options={{ title: t('alerts.reason.title') }} />
+      <>
+        <PageHeader
+          title={t('alerts.reason.title')}
+          titleAlign="center"
+          leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+        />
         <EmptyState
           icon={RiQuestionLine}
           title={t('alerts.reason.missingTitle')}
           description={t('alerts.reason.missingDescription')}
         />
-      </View>
+      </>
     );
   }
 
   const { alert, watch, event } = data;
 
   return (
-    <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
-      <Header options={{ title: t('alerts.reason.title') }} />
-      <ScrollView contentContainerStyle={styles.content}>
+    <>
+      <PageHeader
+        title={t('alerts.reason.title')}
+        titleAlign="center"
+        leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+      />
+      <View style={styles.content}>
         <Card radius="radius-16" style={styles.card} appearance="outline">
           <H3>{t('alerts.reason.whatChanged')}</H3>
           <AlertExplanationText
@@ -130,8 +143,8 @@ export default function AlertReasonScreen() {
             {t('alerts.reason.adjustRules')}
           </Button>
         ) : null}
-      </ScrollView>
-    </View>
+      </View>
+    </>
   );
 }
 

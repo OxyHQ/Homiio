@@ -1,22 +1,22 @@
 /**
  * Saved → Folder detail. Grid of property cards inside the folder.
  *
- * Bloom Button (with a Remix `leadingIcon`) for the header edit action,
- * shared EmptyState / ErrorState / ListSkeleton states, and surface tokens
- * for the page background.
+ * Bloom Button (with a Remix `leadingIcon`) for the header edit action, and
+ * shared EmptyState / ErrorState / ListSkeleton states.
  */
-import React, { useCallback, useMemo } from 'react';
-import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { useCallback, useMemo } from 'react';
+import { StyleSheet, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useOxy } from '@oxy.so/services';
 
+import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { Button } from '@oxy.so/bloom/button';
 import { RiEditLine, RiFolderLine, RiFolderOpenLine, RiSearchLine } from '@oxy.so/bloom/icons';
+import { PageHeader } from '@oxy.so/bloom/page-header';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 
-import { Header } from '@/components/Header';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { ListSkeleton } from '@/components/ui/ListSkeleton';
@@ -105,33 +105,32 @@ export default function SavedFolderScreen() {
 
   const isLoading = savedQuery.isPending || foldersQuery.isPending;
   const isError = savedQuery.isError || foldersQuery.isError;
-  const isRefreshing = savedQuery.isFetching || foldersQuery.isFetching;
+
+  const fallbackHeader = (
+    <PageHeader
+      title={t('saved.title')}
+      titleAlign="center"
+      leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+      onBack={router.canGoBack() ? router.back : undefined}
+      backLabel={t('goBack')}
+    />
+  );
 
   if (isLoading) {
     return (
-      <View style={styles.root}>
-        <Header
-          options={{
-            title: t('saved.title'),
-            showBackButton: true,
-          }}
-        />
+      <>
+        {fallbackHeader}
         <View style={styles.skeletonWrap}>
           <ListSkeleton rows={4} rowHeight={160} />
         </View>
-      </View>
+      </>
     );
   }
 
   if (isError) {
     return (
-      <View style={styles.root}>
-        <Header
-          options={{
-            title: t('saved.title'),
-            showBackButton: true,
-          }}
-        />
+      <>
+        {fallbackHeader}
         <View style={styles.centerWrap}>
           <ErrorState
             title={t('saved.loadFailed')}
@@ -139,19 +138,14 @@ export default function SavedFolderScreen() {
             onRetry={handleRefresh}
           />
         </View>
-      </View>
+      </>
     );
   }
 
   if (!folder) {
     return (
-      <View style={styles.root}>
-        <Header
-          options={{
-            title: t('saved.title'),
-            showBackButton: true,
-          }}
-        />
+      <>
+        {fallbackHeader}
         <View style={styles.centerWrap}>
           <EmptyState
             icon={RiFolderOpenLine}
@@ -159,45 +153,34 @@ export default function SavedFolderScreen() {
             description={t('saved.noFolderDescription')}
           />
         </View>
-      </View>
+      </>
     );
   }
 
   return (
-    <View style={styles.root}>
-      <Header
-        options={{
-          title: `${folder.icon || '📁'} ${folder.name}`,
-          showBackButton: true,
-          rightComponents: folder.isDefault
-            ? []
-            : [
-                <Button
-                  key="editFolder"
-                  size="sm"
-                  onPress={() => router.push(`/saved/${folderId}/edit`)}
-                  leadingIcon={RiEditLine}
-                  tone="accent"
-                  appearance="subtle"
-                >
-                  {t('common.edit')}
-                </Button>,
-              ],
-        }}
+    <>
+      <PageHeader
+        title={`${folder.icon || '📁'} ${folder.name}`}
+        titleAlign="center"
+        leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+        onBack={router.canGoBack() ? router.back : undefined}
+        backLabel={t('goBack')}
+        actions={
+          folder.isDefault ? undefined : (
+            <Button
+              size="sm"
+              onPress={() => router.push(`/saved/${folderId}/edit`)}
+              leadingIcon={RiEditLine}
+              tone="accent"
+              appearance="subtle"
+            >
+              {t('common.edit')}
+            </Button>
+          )
+        }
       />
 
-      <ScrollView
-        contentContainerStyle={styles.gridContent}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={isRefreshing}
-            onRefresh={handleRefresh}
-            colors={[colors.primaryColor]}
-            tintColor={colors.primaryColor}
-          />
-        }
-      >
+      <View style={styles.gridContent}>
         {folderProperties.length === 0 ? (
           <View style={styles.emptyInner}>
             <EmptyState
@@ -216,16 +199,12 @@ export default function SavedFolderScreen() {
             renderFooter={renderNoteFooter}
           />
         )}
-      </ScrollView>
-    </View>
+      </View>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
   centerWrap: {
     flex: 1,
     justifyContent: 'center',

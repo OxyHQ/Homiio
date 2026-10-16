@@ -53,5 +53,3 @@ export const recentlyViewedService = {
     }
   },
 };
-
-export default recentlyViewedService;

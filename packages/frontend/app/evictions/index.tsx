@@ -22,23 +22,23 @@
  * on this board a pin the list does not explain is a place nobody can account
  * for.
  *
- * Layout: Header (+ auth-gated "Publicar") → the privacy note → the filter
- * row, led by the area chip (`AreaChip`: the area stated, its picker behind it)
- * beside the count → status and help-need filters → sort → `EvictionCard` list (Bloom
- * `EvictionReportCard`s) → floating map toggle. Paginates
- * through BOTH infinite-scroll primitives (native `onScroll` + web
- * `LoadMoreSentinel`).
+ * Layout: PageHeader (map/list toggle + auth-gated "Publicar") → the privacy
+ * note → the filter row, led by the area chip (`AreaChip`: the area stated, its
+ * picker behind it) beside the count → status and help-need filters → sort →
+ * `EvictionCard` list (Bloom `EvictionReportCard`s). Paginates through
+ * `LoadMoreSentinel` at the end of the list (the shell owns scrolling).
  */
 import React, { useCallback, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View, type ImageSourcePropType } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import { Admonition } from '@oxy.so/bloom/admonition';
+import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { Button } from '@oxy.so/bloom/button';
 import { Chip } from '@oxy.so/bloom/chip';
-import { RiAddLine, RiAlertLine, RiMapPinLine } from '@oxy.so/bloom/icons';
+import { RiAddLine, RiAlertLine, RiListUnordered, RiMapPinLine } from '@oxy.so/bloom/icons';
+import { PageHeader } from '@oxy.so/bloom/page-header';
 import { Tabs, TabsTrigger } from '@oxy.so/bloom/tabs';
 import { H2, H3, Text as BloomText } from '@oxy.so/bloom/typography';
 import { useOxy, openAccountDialog } from '@oxy.so/services';
@@ -49,16 +49,13 @@ import {
   type EvictionBoardScope,
   type EvictionBoardSort,
 } from '@homiio/shared-types';
-import { Header } from '@/components/Header';
 import Map from '@/components/Map';
-import { MapFab } from '@/components/ui/MapFab';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { ListSkeleton } from '@/components/ui/ListSkeleton';
 import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
 import { LoadMoreSentinel } from '@/components/common/LoadMoreSentinel';
 import { AreaChip } from '@/components/location/AreaChip';
 import { useLocationScope } from '@/hooks/useLocationScope';
-import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import { useEvictions } from '@/hooks/useEvictionQueries';
 import { EvictionCard } from '@/components/evictions/EvictionCard';
 import { selectionToBoardScope } from '@/components/evictions/evictionScope';
@@ -155,7 +152,6 @@ export default function EvictionsBoardScreen() {
   const handleEndReached = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) void fetchNextPage();
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
-  const { onScroll } = useInfiniteScroll({ onEndReached: handleEndReached, enabled: hasNextPage });
 
   /**
    * Map markers, from the SAME array the list renders.
@@ -195,7 +191,6 @@ export default function EvictionsBoardScreen() {
 
   const publishButton = (
     <Button
-      key="publish"
       size="sm"
       onPress={handlePublish}
       leadingIcon={RiAddLine}
@@ -289,123 +284,122 @@ export default function EvictionsBoardScreen() {
   };
 
   return (
-    <View style={styles.root}>
-      <Header options={{ title: t('evictions.title'), rightComponents: [publishButton] }} />
-      <SafeAreaView edges={['bottom']} style={styles.safeArea}>
-        {showMap && boardScope ? (
-          <View style={styles.mapPanel}>
-            <Map
-              style={styles.mapFill}
-              screenId="evictions-map"
-              markers={markers}
-              onMarkerPress={({ id }) => openDetail(id)}
-              cluster={{ enabled: true }}
-            />
-          </View>
-        ) : (
-          <ScrollView
-            contentContainerStyle={styles.content}
-            onScroll={onScroll}
-            scrollEventThrottle={16}
-            showsVerticalScrollIndicator={false}
-          >
-            <View style={styles.titleBlock}>
-              <SectionEyebrow>{t('evictions.eyebrow')}</SectionEyebrow>
-              <H2 style={styles.title}>{t('evictions.title')}</H2>
-              <BloomText style={styles.subtitle}>{t('evictions.subtitle')}</BloomText>
-            </View>
-
-            {/* Why no card names a home: said once, before the first case,
-                so a coarse area reads as protection rather than as missing data. */}
-            <Admonition type="info">{t('evictions.privacyNote')}</Admonition>
-
-            {/* The area, stated where the filters are: the first control of
-                the filter row, with the count of what it holds beside it. */}
-            <View style={styles.scopeRow}>
-              <AreaChip
-                scope={scope}
-                title={t('evictions.scope.title')}
-                open={areaPickerOpen}
-                onOpenChange={setAreaPickerOpen}
-                testID="evictions-area"
-              />
-              {boardScope && !(isLoading && cases.length === 0) ? (
-                <BloomText style={styles.count} accessibilityRole="header">
-                  {t('evictions.countInScope', { count: total })}
-                </BloomText>
-              ) : null}
-            </View>
-
+    <>
+      <PageHeader
+        title={t('evictions.title')}
+        titleAlign="center"
+        leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+        actions={
+          <>
             {boardScope ? (
-              <>
-                {/* One paginated server status at a time: a single-choice
-                    strip, not a set of toggles. */}
-                <Tabs
-                  variant="filled"
-                  value={status}
-                  onValueChange={(next) => setStatus(next as EvictionCaseStatus)}
-                >
-                  {STATUS_FILTERS.map((entry) => (
-                    <TabsTrigger key={entry.status} value={entry.status} label={t(entry.i18nKey)} />
-                  ))}
-                </Tabs>
-
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.filterRow}
-                >
-                  {HELP_FILTERS.map((need) => {
-                    const isActive = helpNeed === need;
-                    return (
-                      <Chip
-                        key={need}
-                        onPress={() => setHelpNeed(isActive ? undefined : need)}
-                        variant={isActive ? 'solid' : 'outlined'}
-                        selected={isActive}
-                      >
-                        {t(`evictions.help.need.${need}`)}
-                      </Chip>
-                    );
-                  })}
-                </ScrollView>
-
-                <Tabs
-                  variant="pill"
-                  value={effectiveSort}
-                  onValueChange={(next) => setSort(next as EvictionBoardSort)}
-                >
-                  {SORTS.filter((entry) => entry !== 'distance' || hasCentre).map((entry) => (
-                    <TabsTrigger key={entry} value={entry} label={t(`evictions.sort.${entry}`)} />
-                  ))}
-                </Tabs>
-              </>
+              <Button
+                size="sm"
+                onPress={() => setShowMap((prev) => !prev)}
+                leadingIcon={showMap ? RiListUnordered : RiMapPinLine}
+                accessibilityLabel={showMap ? t('evictions.showList') : t('evictions.showMap')}
+                tone="neutral"
+                appearance="outline"
+              >
+                {showMap ? t('evictions.showList') : t('evictions.showMap')}
+              </Button>
             ) : null}
-
-            {listBody()}
-          </ScrollView>
-        )}
-
-        {boardScope ? (
-          <MapFab
-            onPress={() => setShowMap((prev) => !prev)}
-            label={showMap ? t('evictions.showList') : t('evictions.showMap')}
-            icon={showMap ? 'list' : 'map'}
+            {publishButton}
+          </>
+        }
+      />
+      {showMap && boardScope ? (
+        <View className="relative h-[75vh]">
+          <Map
+            style={styles.mapFill}
+            screenId="evictions-map"
+            markers={markers}
+            onMarkerPress={({ id }) => openDetail(id)}
+            cluster={{ enabled: true }}
           />
-        ) : null}
-      </SafeAreaView>
-    </View>
+        </View>
+      ) : (
+        <View style={styles.content}>
+          <View style={styles.titleBlock}>
+            <SectionEyebrow>{t('evictions.eyebrow')}</SectionEyebrow>
+            <H2 style={styles.title}>{t('evictions.title')}</H2>
+            <BloomText style={styles.subtitle}>{t('evictions.subtitle')}</BloomText>
+          </View>
+
+          {/* Why no card names a home: said once, before the first case,
+                so a coarse area reads as protection rather than as missing data. */}
+          <Admonition type="info">{t('evictions.privacyNote')}</Admonition>
+
+          {/* The area, stated where the filters are: the first control of
+                the filter row, with the count of what it holds beside it. */}
+          <View style={styles.scopeRow}>
+            <AreaChip
+              scope={scope}
+              title={t('evictions.scope.title')}
+              open={areaPickerOpen}
+              onOpenChange={setAreaPickerOpen}
+              testID="evictions-area"
+            />
+            {boardScope && !(isLoading && cases.length === 0) ? (
+              <BloomText style={styles.count} accessibilityRole="header">
+                {t('evictions.countInScope', { count: total })}
+              </BloomText>
+            ) : null}
+          </View>
+
+          {boardScope ? (
+            <>
+              {/* One paginated server status at a time: a single-choice
+                    strip, not a set of toggles. */}
+              <Tabs
+                variant="filled"
+                value={status}
+                onValueChange={(next) => setStatus(next as EvictionCaseStatus)}
+              >
+                {STATUS_FILTERS.map((entry) => (
+                  <TabsTrigger key={entry.status} value={entry.status} label={t(entry.i18nKey)} />
+                ))}
+              </Tabs>
+
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.filterRow}
+              >
+                {HELP_FILTERS.map((need) => {
+                  const isActive = helpNeed === need;
+                  return (
+                    <Chip
+                      key={need}
+                      onPress={() => setHelpNeed(isActive ? undefined : need)}
+                      variant={isActive ? 'solid' : 'outlined'}
+                      selected={isActive}
+                    >
+                      {t(`evictions.help.need.${need}`)}
+                    </Chip>
+                  );
+                })}
+              </ScrollView>
+
+              <Tabs
+                variant="pill"
+                value={effectiveSort}
+                onValueChange={(next) => setSort(next as EvictionBoardSort)}
+              >
+                {SORTS.filter((entry) => entry !== 'distance' || hasCentre).map((entry) => (
+                  <TabsTrigger key={entry} value={entry} label={t(`evictions.sort.${entry}`)} />
+                ))}
+              </Tabs>
+            </>
+          ) : null}
+
+          {listBody()}
+        </View>
+      )}
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  safeArea: {
-    flex: 1,
-  },
   content: {
     padding: spacing.lg,
     gap: spacing.lg,
@@ -481,10 +475,6 @@ const styles = StyleSheet.create({
   },
   emptyCta: {
     alignSelf: 'center',
-  },
-  mapPanel: {
-    flex: 1,
-    position: 'relative',
   },
   mapFill: {
     ...StyleSheet.absoluteFill,

@@ -17,7 +17,6 @@
  */
 import React, { useCallback, useMemo, useState } from 'react';
 import { Platform, ScrollView, StyleSheet, View, type ViewStyle } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 
@@ -44,8 +43,6 @@ import {
 } from '@/components/search/types';
 
 import { usePropertySearch } from '@/hooks/usePropertySearch';
-import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
-import { useIsScreenNotMobile } from '@/hooks/useOptimizedMediaQuery';
 import { DEFAULT_SEARCH_QUERY } from '@/store/searchQueryStore';
 import { colors } from '@/styles/colors';
 import { hairline, spacing } from '@/constants/styles';
@@ -59,8 +56,6 @@ export default function PropertiesScreen() {
   const { t } = useTranslation();
   const { locale } = useFormatting();
   const router = useRouter();
-  const insets = useSafeAreaInsets();
-  const isWide = useIsScreenNotMobile();
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   // Local browse query (NOT the shared search store — see file header). Filters
@@ -102,18 +97,13 @@ export default function PropertiesScreen() {
   );
   const handleFiltersPress = useCallback(() => setFiltersOpen(true), []);
 
-  // Shared infinite-scroll primitive: native fires `onScroll` end-detect, web
-  // uses the `<LoadMoreSentinel>` at the grid's end. Both funnel through the same
-  // guarded loader (no hand-rolled distance math).
+  // Infinite scroll: the shell owns the scroll, so the `<LoadMoreSentinel>` at
+  // the grid's end triggers the guarded loader.
   const handleEndReached = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) {
       void fetchNextPage();
     }
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
-  const { onScroll: handleListScroll } = useInfiniteScroll({
-    onEndReached: handleEndReached,
-    enabled: hasNextPage,
-  });
 
   const resultsHeading = useMemo(() => {
     if (isLoading) {
@@ -160,11 +150,8 @@ export default function PropertiesScreen() {
     );
   })();
 
-  // The route mounts this screen in a plain View, so the sticky top bar clears
-  // the status bar itself (mirrors SearchResultsView). On web `insets.top` is 0
-  // and the `position: sticky; top: 0` placement is unchanged.
   const topBar = (
-    <View style={[styles.topBar, { paddingTop: insets.top }]}>
+    <View style={styles.topBar}>
       <View style={styles.topBarContent}>
         <StaySearchCompact
           onPress={handleEditSearch}
@@ -191,30 +178,51 @@ export default function PropertiesScreen() {
                 : t('search.actions.filters')
             }
           />
-          <SortMenu
-            sortBy={query.sortBy}
-            sortOrder={query.sortOrder}
-            onChange={handleSortChange}
-            iconOnly={!isWide}
-          />
-          <Button
-            size="md"
-            icon={RiTimeLine}
-            iconOnly={!isWide}
-            onPress={() => router.push('/properties/recently-viewed')}
-            accessibilityLabel={t('properties.actions.recent')}
-            tone="neutral"
-            appearance="outline"
-          >
-            {isWide ? t('properties.actions.recent') : undefined}
-          </Button>
+          <View className="sm:hidden">
+            <SortMenu
+              sortBy={query.sortBy}
+              sortOrder={query.sortOrder}
+              onChange={handleSortChange}
+              iconOnly
+            />
+          </View>
+          <View className="hidden sm:flex">
+            <SortMenu
+              sortBy={query.sortBy}
+              sortOrder={query.sortOrder}
+              onChange={handleSortChange}
+            />
+          </View>
+          <View className="sm:hidden">
+            <Button
+              size="md"
+              icon={RiTimeLine}
+              iconOnly
+              onPress={() => router.push('/properties/recently-viewed')}
+              accessibilityLabel={t('properties.actions.recent')}
+              tone="neutral"
+              appearance="outline"
+            />
+          </View>
+          <View className="hidden sm:flex">
+            <Button
+              size="md"
+              icon={RiTimeLine}
+              onPress={() => router.push('/properties/recently-viewed')}
+              accessibilityLabel={t('properties.actions.recent')}
+              tone="neutral"
+              appearance="outline"
+            >
+              {t('properties.actions.recent')}
+            </Button>
+          </View>
         </ScrollView>
       </View>
     </View>
   );
 
   return (
-    <View style={styles.container}>
+    <View>
       {topBar}
       <SearchFiltersDialog
         open={filtersOpen}
@@ -222,13 +230,7 @@ export default function PropertiesScreen() {
         query={query}
         onApply={patchQuery}
       />
-      <ScrollView
-        style={styles.listScroll}
-        contentContainerStyle={styles.listScrollContent}
-        onScroll={handleListScroll}
-        scrollEventThrottle={16}
-        showsVerticalScrollIndicator={false}
-      >
+      <View style={styles.listContent}>
         <View style={styles.resultsHeader}>
           <BloomText style={styles.resultsTitle}>{resultsHeading}</BloomText>
         </View>
@@ -237,9 +239,9 @@ export default function PropertiesScreen() {
           <PropertyResultsGridSkeleton count={2} style={styles.gridPadding} />
         ) : null}
         <LoadMoreSentinel enabled={hasNextPage} onLoadMore={handleEndReached} />
-      </ScrollView>
+      </View>
       {/* Bloom 6 leaves a FAB's position to its parent: this anchor is it. */}
-      <View style={[styles.fabAnchor, { bottom: insets.bottom + spacing['3xl'] }]}>
+      <View style={styles.fabAnchor}>
         <Fab
           icon={RiAddLine}
           size="lg"
@@ -257,11 +259,8 @@ const styles = StyleSheet.create({
   fabAnchor: {
     position: 'absolute',
     right: spacing['2xl'],
+    bottom: spacing['3xl'],
     pointerEvents: 'box-none',
-  },
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
   },
   topBar: Platform.select<ViewStyle>({
     web: {
@@ -284,9 +283,6 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
-    maxWidth: 1440,
-    width: '100%',
-    alignSelf: 'center',
   },
   summaryWrap: {
     flex: 1,
@@ -302,15 +298,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
   },
-  listScroll: Platform.select<ViewStyle>({
-    web: { flex: 1, overflow: 'auto' } as unknown as ViewStyle,
-    default: { flex: 1 },
-  }) as ViewStyle,
-  listScrollContent: {
+  listContent: {
     paddingBottom: spacing['4xl'],
-    maxWidth: 1440,
-    width: '100%',
-    alignSelf: 'center',
   },
   resultsHeader: {
     paddingHorizontal: spacing.lg,

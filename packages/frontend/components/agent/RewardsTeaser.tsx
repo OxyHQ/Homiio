@@ -14,7 +14,6 @@
 import type React from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { useMediaQuery } from 'react-responsive';
 
 import { Card } from '@oxy.so/bloom/card';
 import {
@@ -25,7 +24,7 @@ import {
 import { useTheme } from '@oxy.so/bloom/theme';
 import { H1, Text as BloomText } from '@oxy.so/bloom/typography';
 
-import { resolvePagePadding, spacing, tracker } from '@/constants/styles';
+import { spacing, tracker } from '@/constants/styles';
 import {
   REWARD_TIERS,
   tierForPoints,
@@ -53,7 +52,6 @@ interface TierCardProps {
   perks: string[];
   reached: boolean;
   isCurrent: boolean;
-  width: number;
 }
 
 const TierCard: React.FC<TierCardProps> = ({
@@ -63,16 +61,15 @@ const TierCard: React.FC<TierCardProps> = ({
   perks,
   reached,
   isCurrent,
-  width,
 }) => {
   const theme = useTheme();
   const tint = TIER_TINTS[tier.key];
   return (
     <Card
       radius="radius-16"
-      className="gap-3 p-5"
+      className="w-[220px] gap-3 p-5 md:w-[260px]"
       border={isCurrent ? 'medium' : undefined}
-      style={[{ width }, isCurrent && { borderColor: theme.colors.primary }]}
+      style={isCurrent ? { borderColor: theme.colors.primary } : undefined}
       appearance="outline"
     >
       <View style={[styles.medal, { backgroundColor: `${tint}22` }]}>
@@ -121,18 +118,14 @@ interface RewardsTeaserProps {
 export const RewardsTeaser: React.FC<RewardsTeaserProps> = ({ points }) => {
   const { t } = useTranslation();
   const theme = useTheme();
-  const isWide = useMediaQuery({ minWidth: 768 });
-  const horizontalPadding = resolvePagePadding(isWide);
 
   const currentTierKey = points !== undefined ? tierForPoints(points).key : undefined;
-
-  const cardWidth = isWide ? 260 : 220;
 
   const tierName = (key: RewardTierKey): string => t(`agent.rewards.tiers.${key}`);
 
   return (
     <View>
-      <View style={[styles.header, { paddingHorizontal: horizontalPadding }]}>
+      <View className="px-4 md:px-8" style={styles.header}>
         <H1 style={[styles.title, { color: theme.colors.text }]}>{t('agent.rewards.title')}</H1>
         <BloomText style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
           {t('agent.rewards.subtitle')}
@@ -142,7 +135,8 @@ export const RewardsTeaser: React.FC<RewardsTeaserProps> = ({ points }) => {
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={[styles.rail, { paddingHorizontal: horizontalPadding }]}
+        contentContainerClassName="px-4 md:px-8"
+        contentContainerStyle={styles.rail}
       >
         {REWARD_TIERS.map((tier) => {
           const reached = points !== undefined && points >= tier.minPoints;
@@ -155,7 +149,6 @@ export const RewardsTeaser: React.FC<RewardsTeaserProps> = ({ points }) => {
               perks={tier.perkKeys.map((perkKey) => t(`agent.rewards.perks.${perkKey}`))}
               reached={reached}
               isCurrent={currentTierKey === tier.key}
-              width={cardWidth}
             />
           );
         })}
@@ -203,5 +196,3 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
 });
-
-export default RewardsTeaser;

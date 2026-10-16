@@ -8,8 +8,8 @@
  * always rounds to the nearest valid step.
  *
  * Usage:
- *   import { cardShadow, radius, spacing, tracker, withShadow } from '@/constants/styles';
- *   <View style={[styles.card, withShadow('md')]} />
+ *   import { cardShadow, radius, spacing, tracker } from '@/constants/styles';
+ *   <View style={[styles.card, cardShadow.md]} />
  *   <Text style={{ letterSpacing: tracker.eyebrow }} />
  *   <View style={{ gap: spacing.lg, padding: spacing.xl }} />
  */
@@ -33,24 +33,6 @@ export const cardShadow: Record<ShadowLevel, ShadowStyle> = {
   md: shadowToken({ y: 4, blur: 12, color: colors.COLOR_BLACK, opacity: 0.08, elevation: 5 }),
   lg: shadowToken({ y: 12, blur: 32, color: colors.COLOR_BLACK, opacity: 0.12, elevation: 12 }),
 };
-
-/**
- * Web-only `boxShadow` strings — useful when the consumer wants to skip
- * the RN shadow* props (e.g. inside a className-driven layout that
- * targets Tailwind's `[boxShadow:_X]` arbitrary value).
- */
-export const cardBoxShadowWeb = {
-  sm: '0 1px 4px rgba(0, 0, 0, 0.06)',
-  md: '0 4px 12px rgba(0, 0, 0, 0.08)',
-  lg: '0 12px 32px rgba(0, 0, 0, 0.12)',
-} as const;
-
-/**
- * Resolve the platform-appropriate shadow style. Use this in `style={[…]}`
- * arrays instead of indexing `cardShadow` directly so consumers can swap
- * elevation tiers without thinking about which prop to call.
- */
-export const withShadow = (level: ShadowLevel): ShadowStyle => cardShadow[level];
 
 /**
  * Single source of truth for corner radii. Pulled from the Airbnb-2026
@@ -93,29 +75,6 @@ export const ICON_SIZES = {
   xl: 28,
 } as const;
 
-export type IconSizeKey = keyof typeof ICON_SIZES;
-
-/**
- * Section spacing rhythm. Web is a touch more generous; mobile keeps
- * content dense enough to avoid scroll fatigue but still breathes.
- *
- * Airbnb-2026 rhythm (32 web / 24 mobile). Home uses NativeWind
- * `gap-6 md:gap-8`; this constant is the JS fallback for screens that
- * still resolve spacing imperatively.
- */
-export const sectionSpacing = {
-  web: 32,
-  mobile: 24,
-} as const;
-
-/**
- * Resolve the platform-appropriate section gap. Pass the `isWide`
- * boolean derived from your media query hook to switch between mobile
- * and web rhythm.
- */
-export const resolveSectionSpacing = (isWide: boolean): number =>
-  isWide ? sectionSpacing.web : sectionSpacing.mobile;
-
 /**
  * 4-point spacing scale. Every padding/margin/gap value in the app should
  * snap to one of these tokens. Any inline `padding: 13` or `gap: 17` is
@@ -149,8 +108,6 @@ export const spacing = {
   '7xl': 96,
 } as const;
 
-export type SpacingKey = keyof typeof spacing;
-
 /**
  * Letter-spacing constants. Use these instead of inline numbers so
  * uppercase eyebrow labels, tight display titles, and normal body copy
@@ -165,39 +122,6 @@ export const tracker = {
   wide: 0.5,
   /** 1.5 — uppercase eyebrow labels above section titles. */
   eyebrow: 1.5,
-} as const;
-
-/**
- * Grid gap presets for `gap` style or `gap-X` className. Use `tight` for
- * dense badge clusters, `normal` for typical cards-in-row, and `comfortable`
- * for hero-tier photo grids. Property results grids take their gaps from
- * Bloom's `ListingCardGrid`, not from here.
- */
-export const gridGap = {
-  tight: 8,
-  cozy: 12,
-  normal: 16,
-  comfortable: 24,
-} as const;
-
-/**
- * Modal/sheet backdrop alpha — same value everywhere so dialogs and
- * the photo gallery feel consistent.
- */
-export const backdrop = {
-  color: colors.overlay,
-} as const;
-
-/**
- * Convenience NativeWind class strings for use in `className`. Keeps
- * a card recipe colocated with the token definitions so consumers
- * don't reinvent the styles in every component.
- */
-export const cardSurface = {
-  /** Soft, lifted card: white background, rounded-2xl, md shadow. */
-  classNameMd: 'bg-white rounded-2xl',
-  /** Hero/elevated card: white background, rounded-3xl, lg shadow. */
-  classNameLg: 'bg-white rounded-3xl',
 } as const;
 
 /**
@@ -222,59 +146,22 @@ export const contentClamp = {
 } as const;
 
 /**
- * Responsive horizontal page padding. Phones get 16px, tablets 24px, large
- * desktops 32px. Use this everywhere instead of inline numbers so sections
- * align to the same vertical gutter.
- */
-export const pagePadding = {
-  mobile: spacing.lg,
-  tablet: spacing['2xl'],
-  desktop: spacing['3xl'],
-} as const;
-
-/**
- * Resolve the platform-appropriate horizontal page padding. Pass the
- * `isWide` boolean derived from your media query hook.
- */
-export const resolvePagePadding = (isWide: boolean): number =>
-  isWide ? pagePadding.desktop : pagePadding.mobile;
-
-/**
- * NativeWind class for responsive horizontal page gutters. Matches
- * {@link resolvePagePadding}: 16px mobile (`px-4`), 32px from `md` (`px-8`).
+ * NativeWind class for responsive horizontal page gutters: 16px mobile
+ * (`px-4`), 32px from `md` (`px-8`).
  */
 export const PAGE_GUTTER_CLASS = 'px-4 md:px-8';
 
 /**
- * Minimum height for a full-bleed CTA banner rendered in grid (`fill`) mode —
- * i.e. two banners side-by-side as equal-height columns on wide screens. In
- * that mode the banners drop their intrinsic `aspectRatio` and stretch to the
- * taller sibling via row `alignItems: 'stretch'`; this floor keeps a half-width
- * column from collapsing when its content is short (~Airbnb card density).
- * Standalone full-width banners keep using `aspectRatio` and ignore this token.
- */
-export const BANNER_FILL_MIN_HEIGHT = 200;
-
-/**
  * Shared bar chrome for the bars Bloom `PageHeader` does not draw (the property
- * floating-header actions, `IconButton`, `SaveButton`). `Header` and
- * `StickyPropertyHeader` are Bloom `PageHeader`s and take none of these.
+ * floating-header actions, `IconButton`, `SaveButton`). Page headers are
+ * Bloom `PageHeader`s and take none of these.
  *
- * - `barContent`: clamp the inner content row to `contentClamp.page`, centered,
- *   so titles/actions line up on wide web instead of running edge-to-edge (the
- *   surrounding bar background still spans full width).
  * - `barIconButton` (+ `barIconButtonPressed`): ONE circular icon button for the
  *   back button and every left/right icon action. Pair the two via a `pressed`
  *   `useState` + a static style array — never the NativeWind-incompatible
  *   function-form `style` (§NativeWind Pressable).
  * - `barIconSize`: ONE compact glyph scale (`20`) for bar action icons.
  */
-export const barContent: ViewStyle = {
-  maxWidth: contentClamp.page,
-  width: '100%',
-  alignSelf: 'center',
-};
-
 export const barIconButton: ViewStyle = {
   padding: spacing.sm,
   borderRadius: radius.pill,

@@ -1,11 +1,9 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { formatMoney, formatMoneyRange } from '@homiio/shared-types';
-import { openAccountDialog } from '@oxy.so/services';
 import { Button } from '@oxy.so/bloom/button';
-import { IconCircle } from '@oxy.so/bloom/icon-circle';
 import { RiNotification3Line } from '@oxy.so/bloom/icons';
 import { Item } from '@oxy.so/bloom/item';
 import { Switch } from '@oxy.so/bloom/switch';
@@ -74,8 +72,8 @@ function formatPriceRange(
  * saved search (location and/or price range) that the backend notifies them
  * about when new matching listings appear.
  *
- * Auth is gated on the real Oxy signal: logged-out users see a compact sign-in
- * prompt instead of the form. The backend `SavedSearch` model only stores a
+ * Signed out it renders nothing — an alert needs an account, and a rail widget
+ * appears only when it has something real to offer. The backend `SavedSearch` model only stores a
  * single `notificationsEnabled` flag, so this exposes one "notify me" toggle
  * rather than faking per-channel (email/push) delivery.
  */
@@ -102,11 +100,6 @@ export function PropertyAlertWidget() {
   };
 
   const handleCreateAlert = async () => {
-    if (!isAuthenticated) {
-      openAccountDialog();
-      return;
-    }
-
     const trimmedLocation = location.trim();
     const parsedMin = parsePrice(minPrice);
     const parsedMax = parsePrice(maxPrice);
@@ -151,29 +144,21 @@ export function PropertyAlertWidget() {
     if (success) resetForm();
   };
 
-  const headerIcon = (
-    <RiNotification3Line width={ALERT_ICON_SIZE} height={ALERT_ICON_SIZE} fill={colors.primary} />
-  );
-
-  // Logged-out: compact sign-in empty state instead of the form.
   if (!isAuthenticated) {
-    return (
-      <BaseWidget title={t('search.widgets.alerts.title')} icon={headerIcon}>
-        <View className="items-center gap-3 py-1">
-          <IconCircle icon={RiNotification3Line} size="lg" />
-          <BloomText className="text-center text-sm text-muted-foreground">
-            {t('search.widgets.alerts.signInPrompt')}
-          </BloomText>
-          <Button size="md" onPress={() => openAccountDialog()} tone="accent" appearance="solid">
-            {t('search.widgets.common.signIn')}
-          </Button>
-        </View>
-      </BaseWidget>
-    );
+    return null;
   }
 
   return (
-    <BaseWidget title={t('search.widgets.alerts.title')} icon={headerIcon}>
+    <BaseWidget
+      title={t('search.widgets.alerts.title')}
+      icon={
+        <RiNotification3Line
+          width={ALERT_ICON_SIZE}
+          height={ALERT_ICON_SIZE}
+          fill={colors.primary}
+        />
+      }
+    >
       <View className="gap-3">
         <BloomText className="text-sm text-muted-foreground">
           {t('search.widgets.alerts.subtitle')}

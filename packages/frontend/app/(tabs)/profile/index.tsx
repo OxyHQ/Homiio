@@ -1,6 +1,6 @@
 import type React from 'react';
 import { useCallback, useMemo } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { toast } from '@oxy.so/bloom/toast';
@@ -17,15 +17,16 @@ import {
 } from '@oxy.so/bloom/icons';
 import { useTheme } from '@oxy.so/bloom/theme';
 
+import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { Avatar } from '@oxy.so/bloom/avatar';
 import { Badge } from '@oxy.so/bloom/badge';
 import { Button } from '@oxy.so/bloom/button';
+import { PageHeader } from '@oxy.so/bloom/page-header';
 import { SettingsListGroup, SettingsListItem } from '@oxy.so/bloom/settings-list';
 import { H1, H2, Text as BloomText } from '@oxy.so/bloom/typography';
 import { useOxy } from '@oxy.so/services';
 import { TenantApplicationStatus } from '@homiio/shared-types';
 
-import { Header } from '@/components/Header';
 import { SettingsRowIcon } from '@/components/profile/SettingsRowIcon';
 import { Card } from '@oxy.so/bloom/card';
 import { ErrorState } from '@/components/ui/ErrorState';
@@ -36,7 +37,7 @@ import { useMyApplications } from '@/hooks/useApplicationQueries';
 import { useReservationsQuery } from '@/hooks/useReservationQueries';
 import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
 import { colors } from '@/styles/colors';
-import { contentClamp, spacing } from '@/constants/styles';
+import { spacing } from '@/constants/styles';
 import { logger } from '@/utils/logger';
 
 export default function ProfileScreen() {
@@ -84,32 +85,32 @@ export default function ProfileScreen() {
   }, [logout, router, t]);
 
   const header = (
-    <Header
-      options={{
-        title: t('profile.title'),
-      }}
+    <PageHeader
+      title={t('profile.title')}
+      titleAlign="center"
+      leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
     />
   );
 
   if (isLoading) {
     return (
-      <View style={styles.root}>
+      <>
         {header}
-        <ScrollView contentContainerStyle={styles.scroll}>
+        <View style={styles.scroll}>
           <View style={styles.heroSkeleton}>
             <ListSkeleton rows={2} rowHeight={120} />
           </View>
           <View style={styles.groups}>
             <ListSkeleton rows={3} rowHeight={72} />
           </View>
-        </ScrollView>
-      </View>
+        </View>
+      </>
     );
   }
 
   if (isError) {
     return (
-      <View style={styles.root}>
+      <>
         {header}
         <View style={styles.centerWrap}>
           <ErrorState
@@ -119,7 +120,7 @@ export default function ProfileScreen() {
             onRetry={() => profileQuery.refetch()}
           />
         </View>
-      </View>
+      </>
     );
   }
 
@@ -136,9 +137,9 @@ export default function ProfileScreen() {
     verifiedBadges.push({ label: 'Background verified', key: 'background' });
 
   return (
-    <View style={styles.root}>
+    <>
       {header}
-      <ScrollView contentContainerStyle={styles.scroll}>
+      <View style={styles.scroll}>
         <View style={styles.heroWrap}>
           <View style={styles.heroContent}>
             <View style={styles.heroRow}>
@@ -268,8 +269,8 @@ export default function ProfileScreen() {
             />
           </SettingsListGroup>
         </View>
-      </ScrollView>
-    </View>
+      </View>
+    </>
   );
 }
 
@@ -307,10 +308,6 @@ const StatTile: React.FC<StatTileProps> = ({ label, value, description, onPress 
 };
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
   scroll: {
     paddingTop: spacing.lg,
     paddingBottom: spacing['4xl'],
@@ -328,13 +325,9 @@ const styles = StyleSheet.create({
   heroWrap: {
     marginBottom: spacing.lg,
   },
-  // Mirrors `StickyPropertyHeader.content` so the flat hero lines up with the
-  // pinned header on wide web: ONE width clamp + ONE horizontal padding + ONE
-  // uniform vertical gap between the identity row, badges, and action.
+  // ONE horizontal padding + ONE uniform vertical gap between the identity
+  // row, badges, and action.
   heroContent: {
-    maxWidth: contentClamp.page,
-    width: '100%',
-    alignSelf: 'center',
     paddingHorizontal: spacing.lg,
     gap: spacing.lg,
   },
@@ -359,9 +352,6 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   statsWrap: {
-    width: '100%',
-    maxWidth: contentClamp.page,
-    alignSelf: 'center',
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.md,
@@ -399,11 +389,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   // Bloom 2's SettingsListGroup draws no horizontal inset of its own, so the
-  // screen supplies the gutter (and the same width clamp as the hero).
+  // screen supplies the gutter.
   groups: {
-    width: '100%',
-    maxWidth: contentClamp.page,
-    alignSelf: 'center',
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing['2xl'],
   },

@@ -30,5 +30,3 @@ export function ApplicationStatusBadge({ status }: { status: TenantApplicationSt
     </Chip>
   );
 }
-
-export default ApplicationStatusBadge;

@@ -28,5 +28,3 @@ export const PropertyResultsGridSkeleton: React.FC<PropertyResultsGridSkeletonPr
     </ListingCardGrid>
   </View>
 );
-
-export default PropertyResultsGridSkeleton;

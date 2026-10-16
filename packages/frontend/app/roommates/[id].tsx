@@ -6,9 +6,8 @@
  */
 import type React from 'react';
 import { useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLocalSearchParams } from 'expo-router';
+import { StyleSheet, View } from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { Avatar } from '@oxy.so/bloom/avatar';
 import { Button } from '@oxy.so/bloom/button';
@@ -21,8 +20,9 @@ import { toast } from '@oxy.so/bloom/toast';
 import { H2, H3, Text as BloomText } from '@oxy.so/bloom/typography';
 import { FollowButton, useFollow, useOxy } from '@oxy.so/services';
 import { useTranslation } from 'react-i18next';
+import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
+import { PageHeader } from '@oxy.so/bloom/page-header';
 
-import { Header } from '@/components/Header';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
 import { useRoommate } from '@/hooks/useRoommate';
@@ -34,6 +34,7 @@ import { colors } from '@/styles/colors';
 export default function RoommateProfilePage() {
   const { t } = useTranslation();
   const theme = useTheme();
+  const router = useRouter();
   const { user } = useOxy();
   const params = useLocalSearchParams<{ id: string }>();
   const oxyUserId = String(params.id);
@@ -90,7 +91,7 @@ export default function RoommateProfilePage() {
     }
 
     return (
-      <ScrollView contentContainerStyle={styles.content}>
+      <View style={styles.content}>
         <Card radius="radius-16" style={styles.headerCard} appearance="outline">
           <Avatar name={info.name} size={72} style={styles.avatar} />
           <SectionEyebrow>{t('roommates.profileDetail.title')}</SectionEyebrow>
@@ -182,22 +183,21 @@ export default function RoommateProfilePage() {
             ? t('roommates.profileDetail.sending')
             : t('roommates.profileDetail.sendRequest')}
         </Button>
-      </ScrollView>
+      </View>
     );
   };
 
   return (
-    <View style={styles.root}>
-      <Header
-        options={{
-          title: t('roommates.profileDetail.title'),
-          showBackButton: true,
-        }}
+    <>
+      <PageHeader
+        title={t('roommates.profileDetail.title')}
+        titleAlign="center"
+        leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+        onBack={router.canGoBack() ? router.back : undefined}
+        backLabel={t('goBack')}
       />
-      <SafeAreaView edges={['bottom']} style={styles.safeArea}>
-        {renderBody()}
-      </SafeAreaView>
-    </View>
+      {renderBody()}
+    </>
   );
 }
 
@@ -224,13 +224,6 @@ const TrustBadge: React.FC<{ label: string; active: boolean }> = ({ label, activ
 };
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  safeArea: {
-    flex: 1,
-  },
   centered: {
     flex: 1,
     alignItems: 'center',

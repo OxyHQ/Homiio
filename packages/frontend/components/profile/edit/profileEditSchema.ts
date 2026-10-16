@@ -46,7 +46,7 @@ const reasonForLeavingSchema = z.enum([
   'other',
 ]);
 
-export const personalInfoSchema = z.object({
+const personalInfoSchema = z.object({
   bio: z.string(),
   occupation: z.string(),
   employer: z.string(),
@@ -56,7 +56,7 @@ export const personalInfoSchema = z.object({
   leaseDuration: leaseDurationSchema,
 });
 
-export const preferencesSchema = z.object({
+const preferencesSchema = z.object({
   propertyTypes: z.array(z.string()),
   maxRent: z.string(),
   priceUnit: priceUnitSchema,
@@ -70,14 +70,14 @@ export const preferencesSchema = z.object({
   accessibility: z.boolean(),
 });
 
-export const referenceSchema = z.object({
+const referenceSchema = z.object({
   name: z.string(),
   relationship: referenceRelationshipSchema,
   phone: z.string().optional(),
   email: z.string().optional(),
 });
 
-export const rentalHistorySchema = z.object({
+const rentalHistorySchema = z.object({
   address: z.string(),
   startDate: z.string(),
   endDate: z.string().optional(),
@@ -90,7 +90,7 @@ export const rentalHistorySchema = z.object({
   }),
 });
 
-export const settingsSchema = z.object({
+const settingsSchema = z.object({
   notifications: z.object({
     email: z.boolean(),
     push: z.boolean(),

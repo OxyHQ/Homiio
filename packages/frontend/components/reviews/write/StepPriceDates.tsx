@@ -113,5 +113,3 @@ const styles = StyleSheet.create({
     flexBasis: 160,
   },
 });
-
-export default StepPriceDates;
