@@ -15,8 +15,15 @@
     "noEmit": false
   },
   "exclude": ["dist", "__tests__", "scripts"],
-  // Reviewed migration CLI must ship in the ECS worker image; other operational scripts stay excluded.
-  "files": ["scripts/backfillCentralOrganizations.ts"],
+  // Reviewed migration CLIs must ship in the ECS images (they run as one-off tasks);
+  // other operational scripts stay excluded. The three Oxy Files ones are the move
+  // off Homiio's bucket (docs/oxy-files.md § Rollout).
+  "files": [
+    "scripts/backfillCentralOrganizations.ts",
+    "scripts/migrateImagesToOxy.ts",
+    "scripts/cleanOrphanImages.ts",
+    "scripts/oxyFilesStatus.ts"
+  ],
   // `extends` does NOT inherit `references`, and without them tsc stops
   // redirecting `@homiio/*` path mappings to the sibling projects' declaration
   // output and pulls their `src` into this program instead — every one of those
