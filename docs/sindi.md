@@ -47,22 +47,37 @@ mounted on `routes/public.ts`. Handlers call **domain use cases**
 (`packages/backend/domain/*`), which the Express controllers call too, so a
 route and its tool share one implementation.
 
-| Kind | Tools |
-|---|---|
-| Read | `searchListings`, `findNearbyListings`, `getListing`, `resolvePlace`, `listSavedHomes`, `listSavedFolders`, `listSavedSearches`, `listMyViewingRequests`, `listMyApplications`, `getApplication`, `listMyMaintenanceRequests`, `getMaintenanceRequest`, `listEvictionResources`, `getEvictionCase` (public fields), `listMyEvictionCases` |
-| Write (idempotent) | `saveHome`, `unsaveHome`, `updateSavedHomeNotes`, `createSavedFolder`, `saveSearch`, `setSavedSearchNotifications`, `requestViewing`, `cancelViewingRequest`, `createMaintenanceRequest`, `commentOnMaintenanceRequest`, `reportListing`, `reportEvictionCase`, `followEvictionCase` |
-| Internal only | `readFileEntitlement`, `consumeFileCredit` (the `sindi.files` feature gate) |
+**The catalogue covers everything a signed-in person can do in Homiio**, as that
+person. Sindi, Alia and any MCP client get the same tools, bounded only by the
+agent's configuration: Sindi's ceiling on Homiio is Ver y actuar, plus the
+`finance` package with limits for rent payments. No agent asks for approval
+(Alia ADR 0020 §3).
 
-**Never in the catalogue:**
+| Domain | Read | Act |
+|---|---|---|
+| Listings | `searchListings`, `findNearbyListings`, `getListing`, `resolvePlace` | `reportListing` |
+| Saved | `listSavedHomes`, `listSavedFolders`, `listSavedSearches` | save/unsave, notes, folders, saved searches and their alerts |
+| Properties and rooms (owner) | `listMyProperties`, `getMyProperty` | create, edit, publish/unpublish, delete, mark transacted |
+| Viewings | `listMyViewingRequests` | request, cancel, reschedule; approve/decline as the listing owner |
+| Applications | `listMyApplications`, `getApplication` | submit (documents through Oxy files), withdraw; accept/reject as owner |
+| Leases | `listMyLeases`, `getLease` | create from an accepted application, edit whitelisted fields, sign |
+| Payments | `listMyPayments` | pay rent, set up payments (Peable), within the `finance` limits |
+| Maintenance | `listMyMaintenanceRequests`, `getMaintenanceRequest` | create, comment, transition status |
+| Evictions | `listEvictionResources`, `getEvictionCase`, `listMyEvictionCases` | report a case, follow, attend, comment |
+| Messages and reviews | `listMyConversations`, `listReviews` | send an enquiry message, write a review |
+| Internal only | `readFileEntitlement` | `consumeFileCredit` (the `sindi.files` feature gate) |
 
-- admin or moderation tools, scraper tools, or the `removed` status (vetoed);
-- exact eviction locations and location grants;
-- team chat;
-- creating or editing properties;
-- creating or signing leases;
-- submitting applications with documents;
-- approving or declining viewings;
-- anything under `/search`.
+The exact list is generated from the routes when the catalogue is written, and a
+parity test fails if an authenticated user route has no tool and is not on the
+exclusion list below.
+
+**Never in the catalogue** (owner vetoes and binding ADRs, not agent limits):
+
+- admin or moderation tools, scraper tools and the `removed` status — the owner's
+  veto in `AGENTS.md`;
+- anything under `/search`;
+- data at a precision the API would not publish to that person (ADR 0003): a tool
+  returns exactly what the same route returns.
 
 Rules the handlers must keep:
 
@@ -71,6 +86,11 @@ Rules the handlers must keep:
   (external). It never comes from `requireSessionOxyUserId` and never from the
   input. Ownership stays in the repository query, so a non-owner gets
   not-found.
+- **Property, lease and application writes** keep their field whitelists
+  (`controllers/property/editableFields.ts`, `controllers/lease/editableFields.ts`)
+  and a lease is only ever created from an accepted application, as
+  `/contracts/new?application=<id>` is the only lease entry point in the UI.
+- **Re-marking a property transacted** stays idempotent (`onPropertyTransacted`).
 - **`requestViewing` on an `isExternal` listing** returns
   `external_listing { sourceUrl }`. It is never routed to an enquiry flow, and a
   contact is never invented.
@@ -100,7 +120,8 @@ Rules the handlers must keep:
 
 **New:**
 
-- writes, each behind an approval card unless the person allows them;
+- every action a person can take in Homiio, fully autonomous within Sindi's
+  configuration, with no approval cards;
 - Alia consulting Sindi from any app (Sindi joins the conversation with Bloom's
   avatar flight);
 - Homiio's public MCP.
@@ -108,7 +129,8 @@ Rules the handlers must keep:
 ## Phases in this repository
 
 Each phase ships as a PR to `main` with auto-merge, and the frontend never ships
-while a backend deploy is failing.
+while a backend deploy is failing. Nothing old is kept: each cut deletes what it
+replaces in the same change.
 
 1. **Backend expand:**
    - domain use cases (no behaviour change);
@@ -121,15 +143,15 @@ while a backend deploy is failing.
    This needs `mcp.homiio.oxy.so` in oxy-infra and the workload re-bound with
    the catalogue scopes. The precedent is Mercaria's in-process
    `src/capabilities/*`.
-2. **Frontend:**
+2. **Frontend** (same PR as phase 3):
    - `@alia.onl/sdk` 19 and `AliaAskProvider`;
    - host tools from `useSindiActions` / `useSindiAppContext`;
    - renderers;
    - the SDK on every Sindi surface;
    - delete Homiio's own chat components, hooks, store and unused `sindi.*` keys.
-3. **Contract:**
-   - `routes/ai.ts` answers 410 for one store cycle, because old native binaries
-     still call it. It is then deleted together with `aliaChatService`,
+3. **The cut, in one change with the frontend:**
+   - delete `routes/ai.ts` (no 410 handler, no compatibility window; old native
+     binaries get 404 until they update) together with `aliaChatService`,
      `oxyInferenceService`, `sindiActions` (server), `chatTags`,
      `db/conversations/*` and `/ai/shared/:token`;
    - remove the `conversations.sharingExpiresAt` entry in `db/expiry.ts`;
