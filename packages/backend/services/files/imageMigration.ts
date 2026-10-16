@@ -1,5 +1,5 @@
 /**
- * Copying the photos in Homiio's bucket into Oxy Files (ADR 0041 stage 4) —
+ * Copying the photos in Homiio's bucket into Oxy Files (ADR 0043 stage 4) —
  * the logic behind `scripts/migrateImagesToOxy.ts`, kept here so it is tested.
  *
  * ## What moves, and to whom

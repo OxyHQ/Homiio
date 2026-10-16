@@ -1,6 +1,6 @@
 /**
  * Drains `file_reference_changes`: makes Oxy's record of which Homiio entities
- * use which file agree with Homiio's own tables (ADR 0041 D4).
+ * use which file agree with Homiio's own tables (ADR 0043 D4).
  *
  * The triggers of migration `0037_oxy_files` mark a (file, entity) pair in the
  * transaction of every change that could move its answer. This loop claims

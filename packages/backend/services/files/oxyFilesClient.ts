@@ -1,5 +1,5 @@
 /**
- * The ONE handle on Oxy Files (ADR 0041) for the whole backend.
+ * The ONE handle on Oxy Files (ADR 0043) for the whole backend.
  *
  * Every photo Homiio shows lives in Oxy Files: Homiio's own (scraped listing
  * photos, Wikimedia covers) owned by the Homiio APPLICATION, and a person's
@@ -9,7 +9,7 @@
  * reference — never a header or a body field.
  *
  * The scopes the Homiio application needs, granted by Oxy staff (they are
- * staff-only for a first-party application, ADR 0041 D11):
+ * staff-only for a first-party application, ADR 0043 D11):
  *
  * - `files:app:write` — import and upload Homiio's own photos;
  * - `files:references:write` — register and remove Homiio's uses, reconcile;

@@ -2,7 +2,7 @@
  * An eviction case's cover photo — resolved from the request, then written.
  *
  * The cover is a photo the organiser uploaded through `POST /api/images/upload`
- * into THEIR OWN Oxy account (ADR 0041). The request names it by the Oxy file
+ * into THEIR OWN Oxy account (ADR 0043). The request names it by the Oxy file
  * id the upload answered (`coverImage.imageId`), and an edit that leaves the
  * cover alone names the case's existing `images` row instead.
  *

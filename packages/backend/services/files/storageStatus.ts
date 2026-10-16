@@ -10,7 +10,7 @@
  *     that old — so "no rows" cannot be mistaken for "no reads".
  *
  * The bucket as a whole additionally needs the private documents out of it,
- * which waits on Oxy stage 4b (`privateDocuments.ts`, `TODO(oxy-4b)`); until
+ * which waits on Oxy stage 4c (`privateDocuments.ts`, `TODO(oxy-4c)`); until
  * then `privateDocuments` is non-zero and `bucketRetirable` is false.
  */
 

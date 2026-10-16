@@ -1,5 +1,5 @@
 /**
- * Public photos in Oxy Files (ADR 0041) — every way one enters Homiio.
+ * Public photos in Oxy Files (ADR 0043) — every way one enters Homiio.
  *
  * | What                                  | Owner                 | How                         |
  * |---------------------------------------|-----------------------|-----------------------------|
@@ -118,7 +118,7 @@ function fromImport(result: ApplicationFileImport): StoredPublicImage {
  * Oxy fetches only `https`. Most portal and Commons hosts serve the same path
  * over both, so an `http:` source is asked for over `https:` rather than
  * fetched here — Homiio keeps no fetcher of its own for public photos
- * (ADR 0041 D7). One that has no https twin fails like any unreachable photo.
+ * (ADR 0043 D7). One that has no https twin fails like any unreachable photo.
  */
 export function importableSourceUrl(url: string): string {
   return url.startsWith('http://') ? `https://${url.slice('http://'.length)}` : url;

@@ -20,7 +20,7 @@ function remoteImages(count: number) {
 }
 
 describe('ExternalMediaIngest.ingestForProperty', () => {
-  // The photos are imported by Oxy itself (ADR 0041 D7): the throughput question
+  // The photos are imported by Oxy itself (ADR 0043 D7): the throughput question
   // is now "one request per listing, not one per photo", and the download
   // concurrency is Oxy's (four at a time per batch).
   const silent = { warn: () => {}, info: () => {}, error: () => {}, debug: () => {} } as never;

@@ -1,5 +1,5 @@
 /**
- * Oxy file events (ADR 0041 D9) — what Homiio does when a file it shows is
+ * Oxy file events (ADR 0043 D9) — what Homiio does when a file it shows is
  * deleted, trashed, taken down after a rights claim, restored or made private.
  *
  * `POST /webhooks/oxy/files`, mounted before every body parser (the signature

@@ -116,7 +116,7 @@ describe('Homiio deployment keeps the API off every inference runtime', () => {
     expect(apiStep).not.toContain(SINDI_SERVICE_KEY_ARN);
     expect(apiStep).not.toContain(SINDI_SERVICE_SECRET_ARN);
     // Team-chat capability encryption has a separate, reviewed key, and Oxy
-    // file events (ADR 0041 D9) their signing secret. Allow only those two
+    // file events (ADR 0043 D9) their signing secret. Allow only those two
     // bindings; legacy inference credentials must never return via overrides.
     const secretMatch = apiStep.match(/TASK_SECRET_OVERRIDES_JSON:\s*'(\{[^']*\})'/);
     expect(secretMatch).not.toBeNull();

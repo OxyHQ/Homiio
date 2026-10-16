@@ -14,7 +14,7 @@
  * pull against each other: going parallel is easy, going parallel WITHOUT
  * reordering the gallery or losing a listing to one dead photo is the work.
  *
- * Since ADR 0041 the downloads are Oxy's (`importAppFiles`, four at a time per
+ * Since ADR 0043 the downloads are Oxy's (`importAppFiles`, four at a time per
  * batch), so for a listing the property is ONE request rather than thirty —
  * `__tests__/integration/externalMediaIngest.test.ts` asserts that, against
  * Postgres. `mapWithConcurrency` stays tested here, database-free.

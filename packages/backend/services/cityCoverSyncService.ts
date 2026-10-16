@@ -1,6 +1,6 @@
 /**
  * Assigns city cover photos from Wikimedia Commons — imported once into Oxy
- * Files as HOMIIO's own files (ADR 0041), stored as `entityType: 'city'`
+ * Files as HOMIIO's own files (ADR 0043), stored as `entityType: 'city'`
  * images, credited. Never links listing/property photos.
  *
  * ## Imported by Oxy, credited by Homiio

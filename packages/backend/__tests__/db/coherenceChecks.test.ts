@@ -548,7 +548,7 @@ describe('the moderation tables', () => {
         )
       order by 1
     `);
-    // The two Oxy Files tables (ADR 0041): a reference change's id IS its
+    // The two Oxy Files tables (ADR 0043): a reference change's id IS its
     // (entity, file) pair, which is what makes a repeated mark converge, and a
     // file event's id is Oxy's event id, which is the webhook dedupe.
     expect(rows.map((row) => row.table_name)).toEqual([

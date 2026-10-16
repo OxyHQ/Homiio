@@ -4,12 +4,12 @@
  *
  * A lease document (usually a PDF), an application's payslip or identity
  * document, a maintenance photo: each is a person's own private file, shown
- * only to the parties Homiio authorizes, never public. Under ADR 0041 each
+ * only to the parties Homiio authorizes, never public. Under ADR 0043 each
  * belongs in Oxy Files as a PRIVATE file owned by the person who uploaded it,
  * referenced by the entity that uses it, and read back through a short-lived
  * signed URL Homiio asks Oxy for after its own party check.
  *
- * TODO(oxy-4b): move these into Oxy Files. Today's Oxy API cannot hold them,
+ * TODO(oxy-4c): move these into Oxy Files. Today's Oxy API cannot hold them,
  * for two reasons that are both on Oxy's side:
  *   1. a service upload into a person's account (`uploadUserMedia`) is
  *      PUBLIC-only and image/video-only (≤ 40 MiB) — a lease PDF can be
@@ -17,14 +17,14 @@
  *   2. a service may mint a signed URL (`linkedDownloadUrls`) only for a file
  *      whose OWNER referenced it to the service through their own session, so
  *      a file Homiio stored for them could never be read back by Homiio.
- * Stage 4b brings any-type private uploads into an account by a service and the
+ * Stage 4c brings any-type private uploads into an account by a service and the
  * read-back. The switch is then THIS FILE only: `storePrivateImage` /
  * `storePrivateFile` upload into `owner.ownerOxyUserId`'s account as private
  * (registering `{ entityType: owner.kind, entityId: owner.entityId }`),
  * return `oxy:<fileId>` as the ref, and `readPrivateDocument` answers an
  * `oxy:` ref through a signed URL — while an old `private/…` key keeps
  * reading from the bucket until `scripts/migratePrivateDocumentsToOxy` (to be
- * written with 4b, the same shape as `migrateImagesToOxy`) has copied them.
+ * written with 4c, the same shape as `migrateImagesToOxy`) has copied them.
  * Every caller already passes the owner and entity that switch needs, and
  * already stores the ref this returns, so no controller changes with it.
  *

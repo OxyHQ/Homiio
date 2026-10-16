@@ -216,7 +216,7 @@ class CronJobManager {
   }
 
   /**
-   * Oxy Files housekeeping (ADR 0041), nightly — `docs/oxy-files.md`.
+   * Oxy Files housekeeping (ADR 0043), nightly — `docs/oxy-files.md`.
    *
    * - **03:40 — the unused-image sweep** (`db/images/unusedImages.ts`): an
    *   `images` row nothing has shown for 24 hours is deleted. Without it the

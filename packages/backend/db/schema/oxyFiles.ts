@@ -1,5 +1,5 @@
 /**
- * The three tables that keep Homiio's use of Oxy Files honest (ADR 0041).
+ * The three tables that keep Homiio's use of Oxy Files honest (ADR 0043).
  *
  * `docs/oxy-files.md` is the model; this file states only what each table is
  * FOR, because each one exists to close a specific way the model would drift.

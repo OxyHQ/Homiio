@@ -276,7 +276,7 @@ app.use('/api', apiLimiter);
 app.use('/webhooks', createCrowdSourceWebhookRoutes());
 
 /**
- * Oxy file events (ADR 0041 D9): takedowns, deletions and visibility changes
+ * Oxy file events (ADR 0043 D9): takedowns, deletions and visibility changes
  * of the files Homiio shows. Before every body parser and outside `/api`, for
  * the CrowdSource webhook's reasons — `routes/oxyFilesWebhook.ts`.
  */

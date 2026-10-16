@@ -485,7 +485,7 @@ export const ID_COLUMNS_WITHOUT_FOREIGN_KEY: readonly IdColumnWithoutForeignKey[
     table: images,
     column: images.oxyFileId,
     reason:
-      "An Oxy Files id — a foreign SERVICE's key (ADR 0041), the same class as " +
+      "An Oxy Files id — a foreign SERVICE's key (ADR 0043), the same class as " +
       '`oxy_user_id` but a file rather than an account. Oxy owns the file and ' +
       'tells Homiio when it is trashed, blocked or deleted (file events), which ' +
       'is what a foreign key would otherwise have enforced.',

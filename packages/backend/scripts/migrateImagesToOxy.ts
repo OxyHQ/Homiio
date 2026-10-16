@@ -1,5 +1,5 @@
 /**
- * Copy the photos in Homiio's own bucket into Oxy Files (ADR 0041 stage 4).
+ * Copy the photos in Homiio's own bucket into Oxy Files (ADR 0043 stage 4).
  *
  * `services/files/imageMigration.ts` is the logic and says what moves to whom;
  * `docs/oxy-files.md` is the runbook. This is the command:

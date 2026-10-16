@@ -1,7 +1,7 @@
 /**
  * `/api/images/*` — a person's photo uploads, and the legacy photo door.
  *
- * ## Uploads go to the uploader's own Oxy account (ADR 0041)
+ * ## Uploads go to the uploader's own Oxy account (ADR 0043)
  *
  * `POST /api/images/upload` and `/upload-multiple` store each photo in the
  * signed-in person's Oxy Files, as THEIR public file

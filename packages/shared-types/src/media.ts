@@ -3,7 +3,7 @@
  *
  * A single, reusable Image collection backs every photo in the product —
  * property listings, geo entities (city / region / country), eviction case
- * covers and profiles. The bytes live in Oxy Files (ADR 0041): the Image record
+ * covers and profiles. The bytes live in Oxy Files (ADR 0043): the Image record
  * names the Oxy file and carries four ready-to-render URLs of its renditions
  * (small / medium / large / original). Records written before the move name
  * four objects in Homiio's old bucket instead (`keys`).

@@ -10,7 +10,7 @@ export interface UploadedImage {
   imageId: string;
   /**
    * The Oxy file the upload stored the photo as, in the uploader's own Oxy
-   * account (ADR 0041). Publishing sends it; the server checks it is yours.
+   * account (ADR 0043). Publishing sends it; the server checks it is yours.
    */
   fileId?: string;
   /**

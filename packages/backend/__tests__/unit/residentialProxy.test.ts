@@ -373,7 +373,7 @@ describe('createListingFetchRuntime — explicit HTTP proxy option', () => {
 /* -------------------------------------------------------------------------- */
 
 describe('ExternalMediaIngest — media proxy policy', () => {
-  // Oxy imports listing photos itself (ADR 0041 D7); the residential proxy is
+  // Oxy imports listing photos itself (ADR 0043 D7); the residential proxy is
   // only a fallback for a photo Oxy could not fetch, and only when asked for.
   it('has no fallback by default (no proxy env)', () => {
     delete process.env.LISTING_RESIDENTIAL_PROXY_URL;

@@ -178,7 +178,7 @@ export const EXPIRY_SWEEP_TARGETS: readonly ExpirySweepTarget[] = [
     column: oxyFileEvents.expiresAt,
     retentionSeconds: 0,
     reason:
-      'The dedupe window of Oxy file events (ADR 0041 D9). INTENT CHECKED: the ' +
+      'The dedupe window of Oxy file events (ADR 0043 D9). INTENT CHECKED: the ' +
       'row is only "this event was already applied", and Oxy retires a delivery ' +
       '30 days after creating it, so no redelivery can arrive after the ' +
       'deadline. What the event CHANGED lives on `images` and is untouched. ' +

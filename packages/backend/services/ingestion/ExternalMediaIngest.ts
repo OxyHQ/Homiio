@@ -1,7 +1,7 @@
 /**
  * External media ingest — a scraped listing's photos, into Oxy Files.
  *
- * Each source photo is imported ONCE by Oxy itself (ADR 0041 D7,
+ * Each source photo is imported ONCE by Oxy itself (ADR 0043 D7,
  * `importAppFiles`): Oxy fetches it with its own SSRF-safe fetcher, stores it
  * as a file owned by the HOMIIO APPLICATION (nobody uploaded it, so no person
  * owns it), registers this listing's use in the same request, and remembers

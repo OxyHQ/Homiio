@@ -1,5 +1,5 @@
 /**
- * Homiio's OWN bucket — the storage Homiio is leaving (ADR 0041 stage 4).
+ * Homiio's OWN bucket — the storage Homiio is leaving (ADR 0043 stage 4).
  *
  * Since the move to Oxy Files nothing PUBLIC is written here. Three things
  * still touch it, and each has a named end:
@@ -10,7 +10,7 @@
  *    has read zero `served` for the soak (`docs/oxy-files.md`).
  * 2. **Private documents** — lease documents, application documents,
  *    maintenance photos — through `privateDocuments.ts`, the one adapter that
- *    waits on Oxy stage 4b (`TODO(oxy-4b)` there).
+ *    waits on Oxy stage 4c (`TODO(oxy-4c)` there).
  * 3. **The migration script**, reading each object once to copy it.
  *
  * ## There is no local-disk fallback any more

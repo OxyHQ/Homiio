@@ -126,7 +126,7 @@ describe('expiry sweep registry', () => {
       // The capability tool receipt (`capabilities/effectReceipts.ts`): the
       // stored RESPONSE to a call that already happened, never the effect.
       'capability_effect_receipts.expires_at',
-      // Oxy Files (ADR 0041), both registered at birth: a reference change
+      // Oxy Files (ADR 0043), both registered at birth: a reference change
       // Oxy has already accepted (kept a week for the reconciliation's
       // re-check), and the dedupe window of file events (Oxy retries 30 days).
       'file_reference_changes.settled_at',

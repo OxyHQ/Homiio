@@ -5,7 +5,7 @@
  *
  * Prints the status as JSON and exits 0 only when the PUBLIC photos may leave
  * the bucket (`publicImagesRetirable`); `bucketRetirable` says whether the
- * whole bucket may (it may not until the private documents move, Oxy 4b).
+ * whole bucket may (it may not until the private documents move, Oxy 4c).
  * Read-only.
  */
 

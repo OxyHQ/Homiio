@@ -1,7 +1,7 @@
 /**
  * `images` — the one reusable image table behind every photo in the product.
  *
- * A row is Homiio's record of ONE photo it shows, and since ADR 0041 (Oxy
+ * A row is Homiio's record of ONE photo it shows, and since ADR 0043 (Oxy
  * Files) the bytes live in Oxy: `oxy_file_id` names the file and the four
  * `urls_*` are its Oxy CDN renditions (`services/files/imageUrls.ts`). A row
  * written before the move names four objects in Homiio's own bucket instead
@@ -38,7 +38,7 @@ export const IMAGE_ENTITY_TYPES = [
 ] as const satisfies readonly ImageEntityType[];
 
 /**
- * Who owns the Oxy file a row shows (ADR 0041 D1).
+ * Who owns the Oxy file a row shows (ADR 0043 D1).
  *
  * - `application`: Homiio itself — scraped listing photos, Wikimedia city
  *   covers. Oxy garbage-collects one nobody references (trash after 24 hours,
@@ -109,7 +109,7 @@ export const images = pgTable(
     /** Sort order within the entity's image list (ascending). */
     order: integer().notNull().default(0),
 
-    // ── Oxy Files (ADR 0041) ──
+    // ── Oxy Files (ADR 0043) ──
 
     /** The Oxy file holding the bytes. NULL only on a row not yet migrated. */
     oxyFileId: text(),

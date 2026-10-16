@@ -290,7 +290,7 @@ export interface Config {
      */
     enforcementMode: ModerationEnforcementMode;
   };
-  /** Oxy Files (ADR 0041) — where every photo lives. `docs/oxy-files.md`. */
+  /** Oxy Files (ADR 0043) — where every photo lives. `docs/oxy-files.md`. */
   oxyFiles: {
     /**
      * The `whsec_…` secret Oxy showed once when Homiio's file-events endpoint
