@@ -3,6 +3,11 @@
   "version": "0.1.1",
   "description": "Homiio public case contracts",
   "license": "SEE LICENSE IN LICENSE",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/OxyHQ/Homiio.git",
+    "directory": "packages/contracts"
+  },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
