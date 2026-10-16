@@ -233,12 +233,15 @@ export default function () {
   router.get('/agencies/:slug/reviews', asyncHandler(reviewController.getAgencyReviews));
   router.get('/agencies/:slug/properties', asyncHandler(reviewController.getAgencyProperties));
 
-  // Public self-hosted image store: serve a processed image's bytes by its
-  // bucket-relative key (used when object storage is not configured). Images are
-  // public assets — render-time photos must load without a token — so this lives
-  // on the public router. Mounted before `/cities` etc.; the wildcard captures
-  // the full key, e.g. GET /api/images/file/city/<uuid>-medium.webp.
-  router.get('/images/file/*', asyncHandler(imageController.serveLocalImage.bind(imageController)));
+  // The LEGACY photo door: an old `/api/images/file/<key>` URL redirects to the
+  // photo's Oxy file once it has been migrated, and is served from Homiio's
+  // bucket until then (`services/files/legacyImages.ts`). Public, because
+  // render-time photos load without a token. The wildcard captures the full
+  // key, e.g. GET /api/images/file/city/<uuid>-medium.webp.
+  router.get(
+    '/images/file/*',
+    asyncHandler(imageController.serveLegacyImage.bind(imageController)),
+  );
 
   // Public city routes
   router.get('/cities', asyncHandler(cityController.getCities));

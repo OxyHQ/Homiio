@@ -7,9 +7,6 @@
  * a row projection only this file knows how to read.
  */
 
-import { promises as fs } from 'node:fs';
-import path from 'node:path';
-
 import {
   OpenRentProvider,
   RightmoveProvider,
@@ -22,7 +19,6 @@ import { OfferingType, PropertyType } from '@homiio/shared-types';
 
 import { IngestionService } from '../../services/ingestion/IngestionService';
 import { ExternalMediaIngest } from '../../services/ingestion/ExternalMediaIngest';
-import type { ImageBufferInput } from '../../services/imageUploadService';
 
 import { and, eq } from 'drizzle-orm';
 
@@ -58,24 +54,11 @@ jest.mock('../../services/geocodingService', () => {
 
 installNoNetworkGuard('gbIngest');
 
-const ONE_BY_ONE_PNG = Buffer.from(
-  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
-  'base64',
-);
-
-const LOCAL_IMAGE_STORE_DIR = path.join(__dirname, '..', '..', '.local-image-store-gb');
-
-const fetchImage = jest.fn(
-  async (): Promise<ImageBufferInput> => ({ buffer: ONE_BY_ONE_PNG, mimetype: 'image/png' }),
-);
-
+// Photos are imported by the suite's in-memory Oxy Files (`__tests__/jest.setup.ts`);
+// the proxy fallback is off, so nothing here can fetch.
 function buildIngestionService(): IngestionService {
-  return new IngestionService({ mediaIngest: new ExternalMediaIngest({ fetchImage }) });
+  return new IngestionService({ mediaIngest: new ExternalMediaIngest({ proxyFallback: null }) });
 }
-
-afterAll(async () => {
-  await fs.rm(LOCAL_IMAGE_STORE_DIR, { recursive: true, force: true });
-});
 
 /** The ingested listing in its wire shape, by portal identity. */
 async function readIngested(
@@ -107,7 +90,6 @@ beforeEach(async () => {
   // Postgres persists for the whole worker. Without the reset the second would meet
   // `properties_source_source_id_key` instead of a clean table.
   await resetGeoTables();
-  fetchImage.mockClear();
 });
 
 describe('GB listing ingest mapping', () => {

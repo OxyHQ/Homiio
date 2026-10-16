@@ -65,7 +65,8 @@
 import { eq, ne, sql, type SQL } from 'drizzle-orm';
 import { qualified } from './casing';
 import type { DatabaseOrTransaction } from './postgres';
-import { properties, propertyImages } from './schema';
+import { images, properties, propertyImages } from './schema';
+import { servableImageCondition } from './images/servableImages';
 
 /**
  * A listing whose stored `has_images` disagrees with its photo rows.
@@ -95,9 +96,15 @@ export interface HasImagesDisagreement {
  * port, where it read as "every profile has zero followers".
  */
 function hasPhotoRow(): SQL<boolean> {
+  // A photo counts only while it can be SHOWN (`servableImageCondition`): a
+  // listing whose only photo Oxy took down after a rights claim has no photo
+  // to sort first with. `services/files/fileEvents.ts` re-derives the flag of
+  // every listing an event touches, in the event's transaction.
   return sql<boolean>`exists (
     select 1 from ${propertyImages}
-    where ${propertyImages.propertyId} = ${qualified(properties.id)}
+    inner join ${images} on ${qualified(images.id)} = ${qualified(propertyImages.imageId)}
+    where ${qualified(propertyImages.propertyId)} = ${qualified(properties.id)}
+      and ${servableImageCondition()}
   )`;
 }
 

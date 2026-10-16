@@ -21,9 +21,6 @@
  * here it also has to leave the BUCKET alone, which is asserted separately.
  */
 
-import { promises as fs } from 'node:fs';
-import path from 'node:path';
-
 import express, { type Express } from 'express';
 import multer from 'multer';
 import request from 'supertest';
@@ -42,7 +39,7 @@ import {
 } from '../../db/schema';
 import { errorHandler } from '../../middlewares/errorHandler';
 import { serializeWireIds } from '../../middlewares/wireIds';
-import { LOCAL_IMAGE_STORE_DIR } from '../../services/imageUploadService';
+import { type MemoryObjectStore, legacyObjectStore } from '../../services/files/legacyObjectStore';
 import { objectIdHex, resetGeoTables, seedListingWithGeo } from '../helpers/postgresGeoFixtures';
 
 const LANDLORD = 'oxy-landlord';
@@ -77,7 +74,7 @@ function buildApp(oxyUserId: string): Express {
 /** The PUBLIC image route, mounted exactly as `routes/public.ts` mounts it. */
 function publicImages(): Express {
   const app = express();
-  app.get('/images/file/*', (req, res) => imageController.serveLocalImage(req, res));
+  app.get('/images/file/*', (req, res) => imageController.serveLegacyImage(req, res));
   app.use(errorHandler);
   return app;
 }
@@ -206,7 +203,9 @@ describe('attaching a photo', () => {
 
     await attach(requestId, TENANT);
     const [row] = await rowsOf(requestId);
-    const stored = await fs.readFile(path.join(LOCAL_IMAGE_STORE_DIR, row.storageKey));
+    const object = await legacyObjectStore().get(row.storageKey);
+    if (!object) throw new Error('the attachment was not stored');
+    const stored = object.buffer;
 
     const metadata = await sharp(stored).metadata();
     // Re-encoded, so the whole EXIF block is gone — not the GPS tag edited out
@@ -237,8 +236,9 @@ describe('attaching a photo', () => {
     expect(await rowsOf(requestId)).toHaveLength(0);
     // And the BUCKET is untouched — authorization runs before any object is
     // written, so a stranger's upload never reaches storage.
-    const folder = path.join(LOCAL_IMAGE_STORE_DIR, 'private', 'maintenance', requestId);
-    await expect(fs.readdir(folder)).rejects.toThrow();
+    const store = legacyObjectStore() as MemoryObjectStore;
+    const prefix = `private/maintenance/${requestId}/`;
+    expect([...store.objects.keys()].filter((key) => key.startsWith(prefix))).toEqual([]);
   });
 
   it('refuses past the per-request ceiling', async () => {

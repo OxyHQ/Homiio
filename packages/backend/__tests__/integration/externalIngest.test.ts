@@ -19,8 +19,6 @@
  * those files are cleaned up afterwards.
  */
 
-import { promises as fs } from 'node:fs';
-
 import {
   FixtureProvider,
   ListingValidationError,
@@ -31,7 +29,7 @@ import { OfferingType, PropertyType, type NormalizedListing } from '@homiio/shar
 
 import { IngestionService } from '../../services/ingestion/IngestionService';
 import { ExternalMediaIngest } from '../../services/ingestion/ExternalMediaIngest';
-import { LOCAL_IMAGE_STORE_DIR, type ImageBufferInput } from '../../services/imageUploadService';
+import { fakeOxyFiles } from '../helpers/fakeOxyFiles';
 
 import { and, eq } from 'drizzle-orm';
 
@@ -73,12 +71,6 @@ jest.mock('../../services/geocodingService', () => {
   };
 });
 
-// A 1x1 transparent PNG — a real, Sharp-decodable image with no network fetch.
-const ONE_BY_ONE_PNG = Buffer.from(
-  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
-  'base64',
-);
-
 const FIRST_SOURCE_ID = 'fixture-bcn-0001';
 const FIRST_SOURCE_URL = 'https://fixtures.homiio.com/es/barcelona/fixture-bcn-0001';
 
@@ -87,20 +79,27 @@ const FIRST_SOURCE_URL = 'https://fixtures.homiio.com/es/barcelona/fixture-bcn-0
 const provider: ListingProvider = new FixtureProvider();
 const ctx: FetchContext = { runtime: createFetchRuntime() };
 
-const fetchImage = jest.fn(
-  async (): Promise<ImageBufferInput> => ({ buffer: ONE_BY_ONE_PNG, mimetype: 'image/png' }),
-);
+/**
+ * How many photo URLs the ingest asked Oxy to import — the in-memory Oxy
+ * Files (`__tests__/jest.setup.ts`) records every batch. What a fetch counter
+ * used to measure: a repeat of an unchanged listing imports nothing.
+ */
+function importedPhotos(): number {
+  return fakeOxyFiles
+    .callsOf('importAppFiles')
+    .reduce((sum, [items]) => sum + (items as unknown[]).length, 0);
+}
 
 /**
  * Every service this file builds, so `afterAll` can drain the background work
- * they started before removing the image store. `ingest()` deliberately does not
- * await the city-cover fetch, so without this the write lands DURING the
- * teardown's `fs.rm` and the removal fails with `ENOTEMPTY`.
+ * they started before resetting the tables. `ingest()` deliberately does not
+ * await the city-cover work, so without this a write can land DURING the
+ * teardown.
  */
 const ingestionServices: IngestionService[] = [];
 
 function buildIngestionService(dedupeEnabled = false): IngestionService {
-  const mediaIngest = new ExternalMediaIngest({ fetchImage });
+  const mediaIngest = new ExternalMediaIngest({ proxyFallback: null });
   const service = new IngestionService({ mediaIngest, dedupeEnabled });
   ingestionServices.push(service);
   return service;
@@ -175,7 +174,7 @@ beforeEach(async () => {
   // rather than a clean table, and would fail for a reason unrelated to what it
   // asserts.
   await resetGeoTables();
-  fetchImage.mockClear();
+  fakeOxyFiles.calls.length = 0;
 });
 
 afterAll(async () => {
@@ -190,15 +189,10 @@ afterAll(async () => {
   // counted this file's leftover as a third. The failure lands two files away
   // from its cause and moves around as the file-to-worker distribution shifts,
   // which is why adding an unrelated test file appeared to break it.
-  // Drain first. `ingest()` starts the city-cover fetch WITHOUT awaiting it, so
-  // the write can still be in flight here; if it lands while `fs.rm` is walking
-  // the tree, the final `rmdir` fails with `ENOTEMPTY` and this suite fails with
-  // every one of its tests passing. Draining is the only fix that keeps the
-  // removal meaningful — retrying it, or ignoring its error, would leave the
-  // written bytes behind for whatever runs next.
+  // Drain first. `ingest()` starts the city-cover work WITHOUT awaiting it, so
+  // a write can still be in flight here and would land after the reset.
   await Promise.all(ingestionServices.map((service) => service.whenIdle()));
   await resetGeoTables();
-  await fs.rm(LOCAL_IMAGE_STORE_DIR, { recursive: true, force: true });
 });
 
 installNoNetworkGuard('externalIngest');
@@ -240,16 +234,24 @@ describe('external listing ingest (fixture -> IngestionService)', () => {
     for (const image of propertyImagesServed) {
       expect(image.imageId).toBeTruthy();
       expect(typeof image.url).toBe('string');
-      // Runtime URL points at OUR host, never the foreign portal CDN.
+      // Runtime URL points at Oxy Files, never the foreign portal CDN.
       expect(image.url).not.toContain('unsplash.com');
-      expect(image.url.startsWith('https://api.homiio.test')).toBe(true);
+      // An Oxy rendition (the medium one, `w640`), never the portal's URL.
+      expect(image.url.startsWith('https://cloud.oxy.test/')).toBe(true);
+      expect(image.url).toContain('variant=w640');
     }
 
     // The canonical `images` rows were persisted for this listing.
     expect(await imageRowsFor(String(property.id))).toHaveLength(2);
 
-    // Each remote image was fetched exactly once across both fixtures (2 + 1).
-    expect(fetchImage).toHaveBeenCalledTimes(3);
+    // Each remote image was imported exactly once across both fixtures (2 + 1),
+    // as Homiio's file, with the listing's use registered in the same request.
+    expect(importedPhotos()).toBe(3);
+    const [items] = fakeOxyFiles.callsOf('importAppFiles')[0] as [
+      Array<{ visibility: string; reference?: { entityType: string; entityId: string } }>,
+    ];
+    expect(items[0].visibility).toBe('public');
+    expect(items[0].reference?.entityType).toBe('property');
   });
 
   it('upserts on re-ingest without duplicating the property or re-fetching media', async () => {
@@ -258,7 +260,7 @@ describe('external listing ingest (fixture -> IngestionService)', () => {
 
     const created = await ingestion.ingest(first);
     expect(created.status).toBe('created');
-    expect(fetchImage).toHaveBeenCalledTimes(2);
+    expect(importedPhotos()).toBe(2);
 
     const updated = await ingestion.ingest(first);
     expect(updated.status).toBe('updated');
@@ -266,7 +268,7 @@ describe('external listing ingest (fixture -> IngestionService)', () => {
 
     // No second listing, and the already-hosted media is not re-fetched.
     expect(await countBySource('fixture', FIRST_SOURCE_ID)).toBe(1);
-    expect(fetchImage).toHaveBeenCalledTimes(2);
+    expect(importedPhotos()).toBe(2);
 
     const property = await readIngested('fixture', FIRST_SOURCE_ID);
     assertFound(property, 'property');
@@ -323,7 +325,7 @@ describe('external listing ingest (fixture -> IngestionService)', () => {
       contact: { phone: '+34111111111', name: 'First Agent' },
     };
     await ingestion.ingest(initial);
-    expect(fetchImage).toHaveBeenCalledTimes(2);
+    expect(importedPhotos()).toBe(2);
 
     const updatedContact: NormalizedListing = {
       ...first,
@@ -336,7 +338,7 @@ describe('external listing ingest (fixture -> IngestionService)', () => {
     };
     const result = await ingestion.ingest(updatedContact);
     expect(result.status).toBe('updated');
-    expect(fetchImage).toHaveBeenCalledTimes(2);
+    expect(importedPhotos()).toBe(2);
 
     const property = await readIngested('fixture', FIRST_SOURCE_ID);
     expect(property?.externalContact).toEqual({
@@ -409,7 +411,7 @@ describe('external listing ingest (fixture -> IngestionService)', () => {
 
     await expect(ingestion.ingest(absurdListing)).rejects.toBeInstanceOf(ListingValidationError);
     expect(await countBySource('blueground', 'bcn-1549599p')).toBe(0);
-    expect(fetchImage).not.toHaveBeenCalled();
+    expect(importedPhotos()).toBe(0);
   });
 
   it('skips a re-listing of the same unit under a new sourceId (dedup fingerprint)', async () => {

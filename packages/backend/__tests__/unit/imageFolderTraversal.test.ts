@@ -1,84 +1,79 @@
 /**
- * `POST /api/images/upload` chose its own storage folder.
+ * No request chooses where bytes are stored.
  *
- * The handler read `req.body.folder` with a `typeof === 'string'` check and
- * passed it through to `key = ${folder}/${uuid}-${variant}.${ext}`, which
- * reaches `path.join(LOCAL_IMAGE_STORE_DIR, key)` on the self-hosted path and
- * an arbitrary object key on S3. A body of `{"folder": "../../../../tmp"}`
- * wrote outside the store. CodeQL: `js/path-injection`, high.
- *
- * **What let it survive is the part worth remembering.** `writeToLocalStore`'s
- * own doc comment asserted the key was "already a safe, server-generated
- * `<folder>/<uuid>-<variant>.<ext>`". True of the uuid, false of the folder —
- * and a confident comment is why nobody looked. Meanwhile the READ path two
- * functions below carries two independent traversal gates and a paragraph
- * explaining why one is not enough.
- *
- * So there are two gates now, and both are tested: the caller resolves the
- * folder against an allowlist, and the writer refuses to leave the store even
- * if a future caller forgets to.
+ * `POST /api/images/upload` used to take its storage folder from
+ * `req.body.folder` and build an object key from it — `{"folder":
+ * "../../../../tmp"}` wrote outside the local store (CodeQL
+ * `js/path-injection`, high), and on S3 to any prefix. The fix at the time was
+ * an allowlist. The root is gone now: a public photo goes to the uploader's
+ * Oxy account and Homiio builds no key for it at all
+ * (`__tests__/integration/imageUpload.test.ts` asserts `folder` is ignored),
+ * and a private document's key is built from the document's KIND and its
+ * entity's id (`services/files/privateDocuments.ts`). This file pins the
+ * second: whatever an id looks like, the key stays under `private/<kind>/`.
  */
 
-import path from 'node:path';
-import { resolveStorageFolder } from '../../services/imageUploadService';
+import {
+  MemoryObjectStore,
+  setLegacyObjectStoreForTests,
+} from '../../services/files/legacyObjectStore';
+import { storePrivateFile } from '../../services/files/privateDocuments';
+import { validatePrivateDocumentKey } from '../../utils/imageStoreKey';
 
-describe('resolveStorageFolder', () => {
-  it('keeps the folders the app actually uses', () => {
-    for (const folder of ['general', 'property', 'profile', 'applications/documents']) {
-      expect(resolveStorageFolder(folder)).toBe(folder);
-    }
+// Installed here rather than relied on from the jest setup, so the file runs
+// the same under Bun's runner (`test:bun`), which has no setup files.
+beforeAll(() => {
+  setLegacyObjectStoreForTests(new MemoryObjectStore());
+});
+
+afterAll(() => {
+  setLegacyObjectStoreForTests(null);
+});
+
+const PDF = Buffer.from('%PDF-1.4\n%fake\n');
+
+describe('private document keys', () => {
+  it('are built from the kind and a real-looking entity id', async () => {
+    const stored = await storePrivateFile(
+      { ownerOxyUserId: 'user-1', kind: 'lease', entityId: '0192f4a2-aaaa-7bbb-8ccc-1234567890ab' },
+      PDF,
+      'application/pdf',
+      '.pdf',
+    );
+    expect(stored.ref).toMatch(
+      /^private\/leases\/0192f4a2-aaaa-7bbb-8ccc-1234567890ab\/[0-9a-f-]{36}\.pdf$/,
+    );
+    expect(validatePrivateDocumentKey(stored.ref).ok).toBe(true);
   });
 
-  it('refuses every traversal shape a request body can carry', () => {
-    // An allowlist rather than a sanitiser precisely because this list is
-    // open-ended: a sanitiser must be right about every encoding a filesystem
-    // accepts, a list only about the folders that exist.
+  it('drop an entity id that is not plainly an id, instead of joining it', async () => {
     for (const hostile of [
       '../../../../tmp',
       '..',
-      'general/../../../etc',
+      'a/../../etc',
       '/etc/passwd',
       'C:\\Windows',
-      '\\\\server\\share',
-      'general\u0000/x',
-      './general',
-      'general/',
-      'GENERAL/../..',
+      'id\u0000x',
+      'x'.repeat(65),
     ]) {
-      expect(resolveStorageFolder(hostile)).toBe('general');
+      const stored = await storePrivateFile(
+        { ownerOxyUserId: 'user-1', kind: 'maintenance_request', entityId: hostile },
+        PDF,
+        'application/pdf',
+        '.pdf',
+      );
+      expect(stored.ref).toMatch(/^private\/maintenance\/[0-9a-f-]{36}\.pdf$/);
     }
   });
 
-  it('falls back instead of throwing, and does not confirm what exists', () => {
-    // An upload naming an odd folder is a client bug, not an attack worth
-    // failing a user's request over — and a rejection would tell a prober which
-    // folders are real.
-    expect(resolveStorageFolder('nope-not-a-folder')).toBe('general');
-    expect(resolveStorageFolder(undefined)).toBe('general');
-    expect(resolveStorageFolder(null)).toBe('general');
-    expect(resolveStorageFolder(42)).toBe('general');
-    expect(resolveStorageFolder({ toString: () => '../etc' })).toBe('general');
-  });
-
-  it('normalises case and surrounding space the way a form would send it', () => {
-    expect(resolveStorageFolder('  Property  ')).toBe('property');
-  });
-});
-
-describe('the containment check in writeToLocalStore', () => {
-  it('is the property the check enforces', () => {
-    // The writer resolves `key` against the store root and requires the result
-    // to stay inside it. Asserted here on `path` itself, because the private
-    // method is not reachable from a test and the interesting part is the rule,
-    // not the plumbing: this is what a traversal key does to a join.
-    const root = path.resolve('/var/lib/homiio/images');
-
-    const safe = path.resolve(root, 'general/abc-small.webp');
-    expect(safe.startsWith(root + path.sep)).toBe(true);
-
-    for (const hostile of ['../../../../tmp/x.webp', '../images-evil/x.webp']) {
-      const escaped = path.resolve(root, hostile);
-      expect(escaped === root || escaped.startsWith(root + path.sep)).toBe(false);
-    }
+  it('record the digest of what was stored', async () => {
+    const stored = await storePrivateFile(
+      { ownerOxyUserId: 'user-1', kind: 'tenant_application' },
+      PDF,
+      'application/pdf',
+      '.pdf',
+    );
+    expect(stored.sha256).toMatch(/^[0-9a-f]{64}$/);
+    expect(stored.ref).toMatch(/^private\/applications\/[0-9a-f-]{36}\.pdf$/);
   });
 });

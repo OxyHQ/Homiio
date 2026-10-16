@@ -2,11 +2,11 @@
  * Media (Image) types shared across Homiio frontend and backend.
  *
  * A single, reusable Image collection backs every photo in the product —
- * property listings, geo entities (city / region / country) and profiles. Each
- * stored photo is processed once through the Sharp pipeline into four variants
- * (small / medium / large / original) and persisted to object storage; the
- * Image document is the canonical record of those variants, their storage keys
- * and the source metadata.
+ * property listings, geo entities (city / region / country), eviction case
+ * covers and profiles. The bytes live in Oxy Files (ADR 0041): the Image record
+ * names the Oxy file and carries four ready-to-render URLs of its renditions
+ * (small / medium / large / original). Records written before the move name
+ * four objects in Homiio's old bucket instead (`keys`).
  *
  * Consumers reference an Image by `id` and read a ready-to-render `urls` map.
  * The legacy property `images[{ url, caption, isPrimary }]` shape is preserved
@@ -19,7 +19,26 @@
  * The kind of entity an Image belongs to. Drives the
  * `{ entityType, entityId }` lookup that lists an entity's photos.
  */
-export type ImageEntityType = 'property' | 'city' | 'region' | 'country' | 'profile';
+export type ImageEntityType =
+  | 'property'
+  | 'city'
+  | 'region'
+  | 'country'
+  | 'profile'
+  | 'eviction_case';
+
+/**
+ * The credit a licensed photo carries (a Wikimedia Commons city cover). Shown
+ * wherever the photo is, because the licence requires it.
+ */
+export interface ImageAttribution {
+  /** The page the photo came from. */
+  sourceUrl: string;
+  /** The licence's short name, e.g. `CC BY-SA 4.0`. */
+  license: string;
+  licenseUrl?: string;
+  author?: string;
+}
 
 /** The four processed renditions every stored image is resized into. */
 export type ImageVariantName = 'original' | 'small' | 'medium' | 'large';
@@ -41,8 +60,10 @@ export interface Image {
   entityType: ImageEntityType;
   /** The owning entity's `id` (Property / City / Region / Country / Profile). */
   entityId: string;
-  /** Object-storage keys (bucket-relative) for each processed variant. */
-  keys: ImageVariantKeys;
+  /** The Oxy file holding the bytes; absent only on a record not yet migrated. */
+  oxyFileId?: string;
+  /** Legacy object-storage keys; absent on a record born in Oxy Files. */
+  keys?: ImageVariantKeys;
   /** Publicly resolvable URLs for each processed variant. */
   urls: ImageVariantUrls;
   /** Pixel width of the source image, when known. */
@@ -55,6 +76,8 @@ export interface Image {
   bytes: number;
   /** Optional human caption. */
   caption?: string;
+  /** The credit a licensed photo carries; shown wherever the photo is. */
+  attribution?: ImageAttribution;
   /** Whether this is the entity's primary/cover image. */
   isPrimary?: boolean;
   /** Sort order within the entity's image list (ascending). */
@@ -94,14 +117,24 @@ export interface PropertyImageRef {
  * instead and the server mints the canonical row at publish
  * (`controllers/property/photoIntake`).
  *
- * Exactly one of `imageId` / `keys` is set. Nothing else here is trusted: every
- * key is re-validated and every URL is derived server-side from the keys, so
- * this type carries no URL at all.
+ * Exactly one of `imageId` / `fileId` / `keys` is set. Nothing else here is
+ * trusted: the server checks that a `fileId` is an Oxy file the publishing
+ * account itself owns, re-validates every key, and derives every URL itself,
+ * so this type carries no URL at all.
  */
 export interface PropertyImageWrite {
   /** The canonical {@link Image} this photo already is — an edit's photos. */
   imageId?: string;
-  /** The four processed variant keys, for a photo with no row yet. */
+  /**
+   * The Oxy file `POST /api/images/upload` stored the photo as, for a photo
+   * with no row yet.
+   */
+  fileId?: string;
+  /**
+   * The four variant keys, for a photo with no row yet. An upload answers them
+   * as `oxy:<fileId>` (so an app build that only knows `keys` still publishes
+   * the right file); a legacy bucket key is accepted until the bucket retires.
+   */
   keys?: ImageVariantKeys;
   caption?: string;
   /** At most one photo per listing may claim this; the first that does wins. */

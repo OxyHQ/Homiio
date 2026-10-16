@@ -32,19 +32,12 @@
  * Unsplash to observe it would be measuring the network.
  */
 
-import fs from 'fs/promises';
 import { and, eq, inArray, isNotNull } from 'drizzle-orm';
 import { closePostgres, connectPostgres, getDb } from '../../db/postgres';
 import { cities, images, properties, propertyImages } from '../../db/schema';
-import { LOCAL_IMAGE_STORE_DIR, type ImageBufferInput } from '../../services/imageUploadService';
+import { fakeOxyFiles } from '../helpers/fakeOxyFiles';
 import { resetGeoTables } from '../helpers/postgresGeoFixtures';
 import { SEED_OWNER_OXY_USER_ID, seedProperties } from '../../scripts/seedProperties';
-
-// A 1x1 transparent PNG — a real, Sharp-decodable image with no network fetch.
-const ONE_BY_ONE_PNG = Buffer.from(
-  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
-  'base64',
-);
 
 /**
  * Listings in the seed dataset. An EQUALITY rather than a floor, so adding a
@@ -53,9 +46,17 @@ const ONE_BY_ONE_PNG = Buffer.from(
  */
 const SEED_LISTING_COUNT = 21;
 
-const fetchImage = jest.fn(
-  async (): Promise<ImageBufferInput> => ({ buffer: ONE_BY_ONE_PNG, mimetype: 'image/png' }),
-);
+/**
+ * How many photos the seed asked Oxy Files to import (the suite's in-memory
+ * one). The seed reaches no network itself: Oxy does the fetching, so what a
+ * repeat must not do is ASK for any.
+ */
+function importsRequested(): number {
+  const batched = fakeOxyFiles
+    .callsOf('importAppFiles')
+    .reduce((sum, [items]) => sum + (items as unknown[]).length, 0);
+  return batched + fakeOxyFiles.callsOf('importAppFile').length;
+}
 
 /** The seeded listings' own id set, plus the tables that hang off them. */
 interface Snapshot {
@@ -143,14 +144,14 @@ afterAll(async () => {
   // which is exactly the leftover that broke them. `resetGeoTables` deletes in
   // FK order and covers all three.
   await resetGeoTables();
-  await fs.rm(LOCAL_IMAGE_STORE_DIR, { recursive: true, force: true });
   await closePostgres();
 });
 
 describe('seedProperties is idempotent', () => {
   it('creates on the first run and changes nothing on the second', async () => {
     // Run 1 — from a known-empty state, which is what `fresh` is for.
-    const first = await seedProperties({ fresh: true, fetchImage });
+    fakeOxyFiles.calls.length = 0;
+    const first = await seedProperties({ fresh: true });
     const afterFirst = await snapshot();
 
     // Vacuity floor. Every assertion below is satisfied by a seeder that did
@@ -159,14 +160,14 @@ describe('seedProperties is idempotent', () => {
     expect(first).toEqual({ created: SEED_LISTING_COUNT, unchanged: 0 });
     expect(afterFirst.properties).toHaveLength(SEED_LISTING_COUNT);
     expect(afterFirst.images.length).toBeGreaterThan(90);
-    // One stored `images` row per fetch — the invariant that makes the
-    // "no fetches on run 2" assertion below mean "no new image rows".
-    expect(afterFirst.images).toHaveLength(fetchImage.mock.calls.length);
+    // One stored `images` row per import — the invariant that makes the
+    // "no imports on run 2" assertion below mean "no new image rows".
+    expect(afterFirst.images).toHaveLength(importsRequested());
 
-    fetchImage.mockClear();
+    fakeOxyFiles.calls.length = 0;
 
     // Run 2 — the same invocation a developer repeats, WITHOUT `fresh`.
-    const second = await seedProperties({ fetchImage });
+    const second = await seedProperties({});
     const afterSecond = await snapshot();
 
     // Nothing was created, and every listing was recognised.
@@ -179,6 +180,6 @@ describe('seedProperties is idempotent', () => {
     // And a genuine no-op reaches for no bytes at all — so no orphaned `images`
     // row can accumulate behind the `cities.cover_image_id` / `property_images`
     // pointers.
-    expect(fetchImage).not.toHaveBeenCalled();
+    expect(importsRequested()).toBe(0);
   }, 300_000);
 });

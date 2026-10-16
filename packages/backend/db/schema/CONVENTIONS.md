@@ -96,15 +96,17 @@ identifier it emits. Hand-written SQL must quote it too.
 foreign key holds by construction — there is no remapping table, so there is
 nothing to get wrong.
 
-**Two tables deviate, and the deviation IS the mechanism.**
+**Four tables deviate, and the deviation IS the mechanism.**
 `moderation_outbox.id` and `moderation_events.id` are `text().primaryKey()` with
 NO default, because their ids are not Homiio's to mint: the outbox id is
 DETERMINISTIC (`moderation:report.submit:<reportId>`), so two concurrent
 submissions converge on one row instead of delivering the same report twice, and
 the event id IS the CrowdSource event id, so the primary key is the webhook
-dedupe. Minting a uuid in either place would silently delete the property the
+dedupe. `file_reference_changes.id` (`<entity_type>:<entity_id>:<oxy_file_id>`,
+minted by the trigger that marks the pair) and `oxy_file_events.id` (Oxy's event
+id) are the same two shapes for Oxy Files (`db/schema/oxyFiles.ts`). Minting a uuid in either place would silently delete the property the
 table exists for. No default means a caller who forgets fails on the insert;
-`__tests__/db/coherenceChecks.test.ts` asserts both columns really have none.
+`__tests__/db/coherenceChecks.test.ts` asserts all four really have none.
 Deviate here only where an id carries a MEANING a generated one cannot.
 
 **v7 is generated in the application**, not by a database `DEFAULT`: Postgres 17

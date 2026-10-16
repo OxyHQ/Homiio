@@ -3,75 +3,40 @@ import multer from 'multer';
 import imageController from '../controllers/imageController';
 import handleUploadError from '../middlewares/uploadMiddleware';
 
+/**
+ * `/api/images` (authenticated): a person's photo uploads into their own Oxy
+ * account. The legacy delivery door `GET /api/images/file/*` is on the PUBLIC
+ * router. `controllers/imageController.ts` says what was removed and why.
+ */
 const router = Router();
 
-// Configure multer for memory storage
-const storage = multer.memoryStorage();
+const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
 
-// File filter to only allow images
-const fileFilter = (req: Request, file: any, cb: multer.FileFilterCallback) => {
-  const allowedMimeTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
-
-  if (allowedMimeTypes.includes(file.mimetype)) {
-    cb(null, true);
-  } else {
-    cb(new Error('Invalid file type. Only JPEG, PNG, WebP, and GIF are allowed.'));
-  }
-};
-
-// Configure multer upload with debugging
 const upload = multer({
-  storage,
-  fileFilter,
-  limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB limit
-    files: 10, // Maximum 10 files for multiple upload
-  },
-});
-
-// Test multer configuration
-const testUpload = multer({
   storage: multer.memoryStorage(),
+  fileFilter: (_req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+    if (ALLOWED_MIME_TYPES.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only JPEG, PNG, WebP, and GIF are allowed.'));
+    }
+  },
   limits: {
-    fileSize: 10 * 1024 * 1024,
+    fileSize: 10 * 1024 * 1024, // 10MB
     files: 10,
   },
 });
 
-// Debug middleware (no-op)
-const debugMulter = (req: any, res: any, next: any) => {
-  next();
-};
-
-const debugAfterMulter = (req: any, res: any, next: any) => {
-  next();
-};
-
-// Single image upload
 router.post('/upload', upload.single('image'), handleUploadError, imageController.uploadImage);
 
-// Multiple images upload
 router.post(
   '/upload-multiple',
-  debugMulter,
-  testUpload.array('images', 10),
-  debugAfterMulter,
+  upload.array('images', 10),
   handleUploadError,
   imageController.uploadMultipleImages,
 );
 
-// Delete single image
-router.delete('/:imageKey', imageController.deleteImage);
-
-// Delete multiple image variants
-router.delete('/variants', imageController.deleteImageVariants);
-
-// Get image info
-router.get('/info/:imageKey', imageController.getImageInfo);
-
-// Test endpoint to verify route is mounted
-router.get('/test', (req, res) => {
-  res.json({ message: 'Images route is working', timestamp: new Date().toISOString() });
-});
+// Removing a photo from the picker. Deletes nothing (see the controller).
+router.delete('/:imageKey', imageController.forgetUpload);
 
 export default router;

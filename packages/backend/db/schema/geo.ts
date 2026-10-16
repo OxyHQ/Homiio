@@ -97,6 +97,13 @@ export const regions = pgTable(
     updatedAt: updatedAt(),
   },
   (table) => [
+    /**
+     * Every "is this photo still shown?" question asks it by image id — the
+     * foreign key's own SET NULL on an image delete, the unused-image sweep
+     * (`db/images/unusedImages.ts`) and the reference triggers of migration
+     * `0037_oxy_files`. Postgres does not index a foreign key's child column.
+     */
+    index('regions_cover_image_id_idx').on(table.coverImageId),
     // A region name is unique within its country ("Valencia" is a province in
     // Spain and a state in Venezuela).
     uniqueIndex('regions_country_name_key').on(table.countryId, table.name),
@@ -244,6 +251,13 @@ export const cities = pgTable(
     updatedAt: updatedAt(),
   },
   (table) => [
+    /**
+     * Every "is this photo still shown?" question asks it by image id — the
+     * foreign key's own SET NULL on an image delete, the unused-image sweep
+     * (`db/images/unusedImages.ts`) and the reference triggers of migration
+     * `0037_oxy_files`. Postgres does not index a foreign key's child column.
+     */
+    index('cities_cover_image_id_idx').on(table.coverImageId),
     /**
      * A city is unique within its region BY SLUG, not by name.
      *

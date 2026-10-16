@@ -57,7 +57,7 @@ import {
   toMaintenanceRequestDTO,
 } from '../db/maintenance/maintenanceSerializer';
 import { AppError } from '../middlewares/errorHandler';
-import imageUploadService from '../services/imageUploadService';
+import { readPrivateDocument, storePrivateImage } from '../services/files/privateDocuments';
 import notificationDispatchService from '../services/notificationDispatchService';
 
 /**
@@ -316,16 +316,15 @@ export async function attachMaintenancePhoto(
     );
   }
 
-  const stored = await imageUploadService.uploadPrivateImage(
+  const stored = await storePrivateImage(
+    { ownerOxyUserId: oxyUserId, kind: 'maintenance_request', entityId: requestId },
     file.buffer,
-    file.mimetype,
-    `maintenance/${requestId}`,
   );
 
   const outcome = await addMaintenanceAttachment(getDb(), {
     requestId,
     oxyUserId,
-    storageKey: stored.key,
+    storageKey: stored.ref,
     contentType: stored.contentType,
     bytes: stored.bytes,
   });
@@ -352,7 +351,7 @@ export async function readMaintenanceAttachment(
   });
   if (!attachment) throw new AppError('Attachment not found', 404, 'NOT_FOUND');
 
-  const file = await imageUploadService.readPrivateDocument(attachment.storageKey);
+  const file = await readPrivateDocument(attachment.storageKey);
   // The row survives its object only if something deleted the bytes behind it.
   if (!file) throw new AppError('Attachment not found', 404, 'NOT_FOUND');
 

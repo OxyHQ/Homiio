@@ -1,65 +1,64 @@
 /**
  * Image serializer.
  *
- * Projects canonical {@link ImageDocument} records into the shapes consumers
- * expect. The single source of truth for how an Image becomes a property's
- * embedded `images[]` entry, so the historical `{ url, caption, isPrimary }`
- * read shape is defined in exactly one place and can never drift.
+ * Projects `images` rows into the denormalized `Property.images[]` entries the
+ * write path stores on `property_images` — the single source of truth for the
+ * historical `{ url, caption, isPrimary }` read shape, so it can never drift.
  *
- * `url` resolves to the stored MEDIUM variant — a sensible default for card and
- * list rendering — while the full `urls` map is carried alongside so callers
- * can opt into a specific rendition (e.g. `large` on a detail hero).
+ * `url` is the MEDIUM rendition — the default for card and list rendering —
+ * and the full `urls` map is carried alongside so callers can opt into another
+ * (e.g. `large` on a detail hero). For a photo in Oxy Files those are Oxy CDN
+ * renditions (`services/files/imageUrls.ts`); for a legacy row, the legacy
+ * route, rewritten from a direct S3 URL if the row predates even that.
  *
- * ## This is now a WRITE-path module only
- *
- * `db/properties/propertySerializer` rewrites legacy direct-S3 URLs on the way
- * OUT of a read. What lives here builds the image refs at INGEST time
- * (`ExternalMediaIngest`, `scripts/seedImages`).
+ * A WRITE-path module: `db/properties/propertySerializer` handles reads.
  */
 
 import type { ImageVariantName, PropertyImageRef } from '@homiio/shared-types';
-import imageUploadService, { type ImageDocument } from './imageUploadService';
+
+import type { ImageRow } from '../db/images/imageWrites';
+import { resolveStoredImageUrl } from './files/legacyImages';
 
 /** The variant used as the default `url` on a denormalized property image entry. */
 const DEFAULT_DISPLAY_VARIANT: ImageVariantName = 'medium';
 
-/**
- * Build the denormalized `Property.images[]` entry for one Image document.
- * `url` is the stored medium variant (preserving the legacy shape every reader
- * consumes); `urls` carries every variant for opt-in use.
- */
-export function toPropertyImageRef(image: ImageDocument): PropertyImageRef {
-  const urls = Object.fromEntries(
-    Object.entries(image.urls).map(([variant, url]) => [
-      variant,
-      imageUploadService.resolveStoredImageUrl(url),
-    ]),
-  ) as PropertyImageRef['urls'];
-
+/** The four rendition URLs of a row, each through the legacy rewrite. */
+function urlsOf(row: ImageRow): Record<ImageVariantName, string> {
   return {
-    imageId: image.id,
-    url: imageUploadService.resolveStoredImageUrl(image.urls[DEFAULT_DISPLAY_VARIANT]),
-    caption: image.caption,
-    isPrimary: image.isPrimary ?? false,
-    order: image.order ?? 0,
+    original: resolveStoredImageUrl(row.urlsOriginal),
+    small: resolveStoredImageUrl(row.urlsSmall),
+    medium: resolveStoredImageUrl(row.urlsMedium),
+    large: resolveStoredImageUrl(row.urlsLarge),
+  };
+}
+
+/** The denormalized `Property.images[]` entry for one row. */
+export function toPropertyImageRef(row: ImageRow): PropertyImageRef {
+  const urls = urlsOf(row);
+  return {
+    imageId: row.id,
+    url: urls[DEFAULT_DISPLAY_VARIANT],
+    caption: row.caption ?? undefined,
+    isPrimary: row.isPrimary ?? false,
+    order: row.order ?? 0,
     urls,
   };
 }
 
 /**
- * Build a property's full embedded `images[]` array from its Image documents,
- * ordered by each image's `order` (ascending, stable). Exactly one entry is
- * marked primary: the first image flagged `isPrimary`, else the first by order.
+ * A property's full embedded `images[]` array from its rows, ordered by each
+ * row's `order` (ascending, stable). Exactly one entry is marked primary: the
+ * first flagged `isPrimary`, else the first by order.
  */
-export function toPropertyImages(images: readonly ImageDocument[]): PropertyImageRef[] {
-  const ordered = [...images].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+export function toPropertyImages(rows: readonly ImageRow[]): PropertyImageRef[] {
+  const ordered = [...rows].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
   const primaryIndex = Math.max(
     0,
-    ordered.findIndex((image) => image.isPrimary === true),
+    ordered.findIndex((row) => row.isPrimary === true),
   );
 
-  return ordered.map((image, index) => ({
-    ...toPropertyImageRef(image),
+  return ordered.map((row, index) => ({
+    ...toPropertyImageRef(row),
     isPrimary: index === primaryIndex,
     order: index,
   }));

@@ -50,7 +50,8 @@ import { TENANT_APPLICATION_DOCUMENT_TYPES } from '../db/schema/applications';
 import { REFERENCE_RELATIONSHIPS } from '../db/schema/profiles';
 import { AppError } from '../middlewares/errorHandler';
 import { logger } from '../middlewares/logging';
-import imageUploadService from '../services/imageUploadService';
+import { legacyImageUrl } from '../services/files/legacyImages';
+import { readPrivateDocument, storePrivateUpload } from '../services/files/privateDocuments';
 import { storedDocumentKey } from '../utils/storedDocumentKey';
 import { type ExternalListingOutcome, externalListingOutcome } from './bookingOutcomes';
 
@@ -124,8 +125,6 @@ const ACTIVE_LEASE_STATUSES: readonly LeaseStatusValue[] = [
   LeaseStatus.PENDING_SIGNATURES,
   LeaseStatus.ACTIVE,
 ];
-
-const APPLICATION_DOCUMENTS_FOLDER = 'applications/documents';
 
 /** The most a rejection reason may carry. */
 const DOCUMENT_REJECTION_REASON_MAX = 500;
@@ -318,20 +317,34 @@ function parseDocumentTypes(raw: unknown, count: number): ApplicationDocumentTyp
   });
 }
 
-/** Upload each file to the private store and return parsed document entries. */
+/**
+ * Store each uploaded document as the APPLICANT's private document and return
+ * the parsed entries.
+ *
+ * Through the one private-document adapter (`services/files/privateDocuments`):
+ * a PDF byte for byte, a photo re-encoded (EXIF and its GPS tag dropped), both
+ * under `private/`. This used to run every file through the PUBLIC image
+ * pipeline — which made a PDF payslip throw inside Sharp (500 on every PDF the
+ * route's own allowlist accepts) and stored a photographed identity document
+ * as four public-cache renditions. The row keeps a URL in the delivery-route
+ * shape `storedDocumentKey` reads; nothing serves it publicly, because the
+ * public route refuses the private prefix.
+ */
 async function uploadDocumentFiles(
   files: readonly UploadedApplicationFile[],
   types: readonly ApplicationDocumentType[],
+  applicantOxyUserId: string,
 ): Promise<ParsedDocument[]> {
   const uploaded: ParsedDocument[] = [];
   for (let i = 0; i < files.length; i += 1) {
     const file = files[i];
-    const type = types[i];
-    const uploadedImage = await imageUploadService.uploadImage(file, APPLICATION_DOCUMENTS_FOLDER);
-    const urls = imageUploadService.getAllImageUrls(uploadedImage);
+    const stored = await storePrivateUpload(
+      { ownerOxyUserId: applicantOxyUserId, kind: 'tenant_application' },
+      file,
+    );
     uploaded.push({
-      type,
-      url: urls.original,
+      type: types[i],
+      url: legacyImageUrl(stored.ref),
       filename: file.originalname,
     });
   }
@@ -419,7 +432,7 @@ export async function submitApplication(
   let uploadedDocs: ParsedDocument[] = [];
   if (files.length > 0) {
     const types = parseDocumentTypes(input.documentTypes, files.length);
-    uploadedDocs = await uploadDocumentFiles(files, types);
+    uploadedDocs = await uploadDocumentFiles(files, types, oxyUserId);
   }
 
   const allDocuments = [...parsedDocumentsFromBody, ...uploadedDocs];
@@ -518,7 +531,7 @@ export async function readApplicationDocument(
     bucketName: config.s3.bucketName,
     endpoint: config.s3.endpoint,
   });
-  const file = key ? await imageUploadService.readPrivateDocument(key) : null;
+  const file = key ? await readPrivateDocument(key) : null;
   if (!file) throw new AppError('Document not found', 404, 'NOT_FOUND');
 
   return {

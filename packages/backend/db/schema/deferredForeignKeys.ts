@@ -42,6 +42,7 @@ import { addressMergeRelationMoves } from './addressMerges';
 import { billing, billingProcessedSessions } from './billing';
 import { housingAlerts, housingDomainEvents } from './watches';
 import { images } from './images';
+import { fileReferenceChanges, oxyFileEvents } from './oxyFiles';
 import { leasePaymentSchedule } from './leases';
 import {
   moderationEnforcements,
@@ -479,6 +480,39 @@ export const ID_COLUMNS_WITHOUT_FOREIGN_KEY: readonly IdColumnWithoutForeignKey[
       'hard-deleted by the expiry sweep, and the record that materializing a ' +
       'place was authorised by that listing is exactly what a later merge audit ' +
       'needs after the advertisement is gone.',
+  },
+  {
+    table: images,
+    column: images.oxyFileId,
+    reason:
+      "An Oxy Files id — a foreign SERVICE's key (ADR 0041), the same class as " +
+      '`oxy_user_id` but a file rather than an account. Oxy owns the file and ' +
+      'tells Homiio when it is trashed, blocked or deleted (file events), which ' +
+      'is what a foreign key would otherwise have enforced.',
+  },
+  {
+    table: fileReferenceChanges,
+    column: fileReferenceChanges.oxyFileId,
+    reason:
+      'The Oxy file of a pending reference change. Deliberately no key into ' +
+      '`images`: the pair must survive the images row whose deletion created ' +
+      'it, or the removal it exists to deliver would be lost with it.',
+  },
+  {
+    table: fileReferenceChanges,
+    column: fileReferenceChanges.entityId,
+    reason:
+      'Polymorphic by `entity_type` (a `properties.id`, `cities.id`, ' +
+      '`regions.id` or `eviction_cases.id`), and it must OUTLIVE the entity: ' +
+      'a listing deleted by the expiry sweep is exactly the change whose ' +
+      'removal this row carries to Oxy.',
+  },
+  {
+    table: oxyFileEvents,
+    column: oxyFileEvents.oxyFileId,
+    reason:
+      "The Oxy file an applied event was about — Oxy's key, and the event " +
+      'outlives any images row it touched (the row may be deleted by the event).',
   },
 ];
 

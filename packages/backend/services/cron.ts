@@ -13,6 +13,8 @@ import config from '../config';
 import { EXPIRY_SWEEP_TARGETS, sweepAllExpiredRows } from '../db/expiry';
 import { releaseExpiredReservations } from '../db/guestPoints/guestPointsLedger';
 import { deliverDueDigests, runHousingAlertSweep } from './watches/housingAlertSweep';
+import { reconcileFileReferences } from './files/referenceReconcile';
+import { sweepUnusedImages } from '../db/images/unusedImages';
 
 // Initialize services
 const logger = new Logger('CronService');
@@ -52,6 +54,7 @@ class CronJobManager {
     this.setupExpirySweepJob();
     this.setupGuestPointReleaseJob();
     this.setupHousingAlertJobs();
+    this.setupOxyFilesJobs();
     // Boot sweeps: repair mangled coords + start Wikimedia cover backfill
     // without waiting for the top of the hour.
     void this.runBootHousekeeping();
@@ -209,6 +212,73 @@ class CronJobManager {
       this.logger.error('Eviction archival sweep failed', error);
     } finally {
       this.jobStatus.set('evictionArchival', { isRunning: false, lastRun: new Date() });
+    }
+  }
+
+  /**
+   * Oxy Files housekeeping (ADR 0041), nightly — `docs/oxy-files.md`.
+   *
+   * - **03:40 — the unused-image sweep** (`db/images/unusedImages.ts`): an
+   *   `images` row nothing has shown for 24 hours is deleted. Without it the
+   *   rows behind every expired listing and replaced photo accumulate forever,
+   *   which is how ~950 of them did. Every task runs it; the delete claims
+   *   rows `FOR UPDATE SKIP LOCKED`.
+   * - **04:10 — the reference reconciliation** (`referenceReconcile.ts`): Oxy's
+   *   record of Homiio's uses made equal to Homiio's tables, per entity type —
+   *   the safety net under the triggers, and what keeps Oxy from collecting a
+   *   Homiio-owned file Homiio still shows. One task per type (advisory lock).
+   */
+  private setupOxyFilesJobs(): void {
+    const sweep = cron.schedule(
+      '40 3 * * *',
+      async () => {
+        await this.runUnusedImageSweep();
+      },
+      { timezone: 'UTC', scheduled: false },
+    );
+    this.jobs.set('unusedImageSweep', sweep);
+    this.jobStatus.set('unusedImageSweep', { isRunning: true });
+    sweep.start();
+
+    const reconcile = cron.schedule(
+      '10 4 * * *',
+      async () => {
+        await this.runFileReferenceReconcile();
+      },
+      { timezone: 'UTC', scheduled: false },
+    );
+    this.jobs.set('fileReferenceReconcile', reconcile);
+    this.jobStatus.set('fileReferenceReconcile', { isRunning: true });
+    reconcile.start();
+  }
+
+  async runUnusedImageSweep(): Promise<number> {
+    this.jobStatus.set('unusedImageSweep', { isRunning: true, lastRun: new Date() });
+    try {
+      const deleted = await sweepUnusedImages(getDb());
+      this.logger.info('Unused image sweep completed', { deleted });
+      return deleted;
+    } catch (error) {
+      // Logged, never rethrown: a cron tick's rejection takes the process down,
+      // and tomorrow's pass picks up whatever this one left.
+      this.logger.error('Unused image sweep failed', error);
+      return 0;
+    } finally {
+      this.jobStatus.set('unusedImageSweep', { isRunning: false, lastRun: new Date() });
+    }
+  }
+
+  async runFileReferenceReconcile(): Promise<void> {
+    this.jobStatus.set('fileReferenceReconcile', { isRunning: true, lastRun: new Date() });
+    try {
+      const { failed } = await reconcileFileReferences();
+      if (failed.length > 0) {
+        this.logger.error('File reference reconciliation failed for some types', { failed });
+      }
+    } catch (error) {
+      this.logger.error('File reference reconciliation failed', error);
+    } finally {
+      this.jobStatus.set('fileReferenceReconcile', { isRunning: false, lastRun: new Date() });
     }
   }
 
@@ -733,6 +803,19 @@ export async function runEvictionArchivalNow(): Promise<void> {
  */
 export async function runGuestPointReleaseNow(): Promise<void> {
   await cronManager.runGuestPointRelease();
+}
+
+/**
+ * Run the Oxy Files jobs once, now — the same seam as the others: a test can
+ * assert the scheduled job calls the real sweep, and an operator can clear a
+ * backlog without waiting for the night.
+ */
+export async function runUnusedImageSweepNow(): Promise<number> {
+  return cronManager.runUnusedImageSweep();
+}
+
+export async function runFileReferenceReconcileNow(): Promise<void> {
+  await cronManager.runFileReferenceReconcile();
 }
 
 export async function runExpirySweepNow(): Promise<void> {

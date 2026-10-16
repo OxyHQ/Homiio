@@ -533,7 +533,7 @@ describe('the moderation tables', () => {
     expect(second.constraint).toBe('moderation_events_queued_at_check');
   });
 
-  it('requires a caller-supplied primary key on the two dedupe tables', async () => {
+  it('requires a caller-supplied primary key on the four dedupe tables', async () => {
     // The deviation from `generatedId()`, asserted rather than described. If
     // either column ever gained a default, a caller that forgot its deterministic
     // id would silently get a uuid — and the deduplication those tables exist for
@@ -543,10 +543,20 @@ describe('the moderation tables', () => {
       from information_schema.columns
       where table_schema = 'public'
         and column_name = 'id'
-        and table_name in ('moderation_outbox', 'moderation_events')
+        and table_name in (
+          'moderation_outbox', 'moderation_events', 'file_reference_changes', 'oxy_file_events'
+        )
       order by 1
     `);
-    expect(rows.map((row) => row.table_name)).toEqual(['moderation_events', 'moderation_outbox']);
+    // The two Oxy Files tables (ADR 0041): a reference change's id IS its
+    // (entity, file) pair, which is what makes a repeated mark converge, and a
+    // file event's id is Oxy's event id, which is the webhook dedupe.
+    expect(rows.map((row) => row.table_name)).toEqual([
+      'file_reference_changes',
+      'moderation_events',
+      'moderation_outbox',
+      'oxy_file_events',
+    ]);
     expect(rows.every((row) => row.column_default === null)).toBe(true);
   });
 });

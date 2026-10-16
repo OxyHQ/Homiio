@@ -12,7 +12,6 @@ import {
 
 import { IngestionService } from '../../services/ingestion/IngestionService';
 import { ExternalMediaIngest } from '../../services/ingestion/ExternalMediaIngest';
-import type { ImageBufferInput } from '../../services/imageUploadService';
 import { forwardGeocode, reverseGeocode } from '../../services/geocodingService';
 
 jest.mock('../../services/geocodingService', () => ({
@@ -82,11 +81,6 @@ const mockedReverseGeocode = reverseGeocode as jest.MockedFunction<typeof revers
 
 const EXTERNAL_POSTAL_FALLBACK = '00000';
 
-const ONE_BY_ONE_PNG = Buffer.from(
-  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
-  'base64',
-);
-
 const baseListing: NormalizedListing = {
   source: 'fixture',
   sourceId: 'geocode-test-1',
@@ -100,10 +94,8 @@ const baseListing: NormalizedListing = {
 };
 
 function buildIngestionService(): IngestionService {
-  const fetchImage = jest.fn(
-    async (): Promise<ImageBufferInput> => ({ buffer: ONE_BY_ONE_PNG, mimetype: 'image/png' }),
-  );
-  return new IngestionService({ mediaIngest: new ExternalMediaIngest({ fetchImage }) });
+  // Photos go to the suite's in-memory Oxy Files; no proxy fallback, no fetch.
+  return new IngestionService({ mediaIngest: new ExternalMediaIngest({ proxyFallback: null }) });
 }
 
 beforeEach(async () => {

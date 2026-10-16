@@ -98,7 +98,7 @@ describe('expiry sweep registry', () => {
     expect(violations).toEqual([]);
   });
 
-  it('registers exactly the seven columns that mean "delete this row"', async () => {
+  it('registers exactly the nine columns that mean "delete this row"', async () => {
     // A vacuity floor with teeth: `findUnsupportedExpiryColumns` over an EMPTY
     // registry returns `[]` and passes the assertion above while checking
     // nothing at all. Naming the entries is what makes that assertion mean
@@ -126,9 +126,14 @@ describe('expiry sweep registry', () => {
       // The capability tool receipt (`capabilities/effectReceipts.ts`): the
       // stored RESPONSE to a call that already happened, never the effect.
       'capability_effect_receipts.expires_at',
+      // Oxy Files (ADR 0041), both registered at birth: a reference change
+      // Oxy has already accepted (kept a week for the reconciliation's
+      // re-check), and the dedupe window of file events (Oxy retries 30 days).
+      'file_reference_changes.settled_at',
       'housing_domain_events.expires_at',
       'moderation_events.expires_at',
       'moderation_outbox.expires_at',
+      'oxy_file_events.expires_at',
       'place_pois.expires_at',
       'properties.expires_at',
     ]);

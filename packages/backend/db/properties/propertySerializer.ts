@@ -45,7 +45,7 @@
 import type { InferSelectModel } from 'drizzle-orm';
 import { coarserListingAddressPrecision, type ListingAddressPrecision } from '@homiio/shared-types';
 
-import imageUploadService from '../../services/imageUploadService';
+import { resolveStoredImageUrl } from '../../services/files/legacyImages';
 import { publicColumns } from '../schema/protectedColumns';
 import {
   properties,
@@ -139,7 +139,7 @@ function blockIfAny(record: Record<string, unknown>): Record<string, unknown> | 
  */
 function serializeImage(row: PropertyImageRow): Record<string, unknown> {
   const resolve = (url: string | null): string | null =>
-    url === null ? null : imageUploadService.resolveStoredImageUrl(url);
+    url === null ? null : resolveStoredImageUrl(url);
 
   const urls = blockIfAny({
     original: resolve(row.urlsOriginal),
