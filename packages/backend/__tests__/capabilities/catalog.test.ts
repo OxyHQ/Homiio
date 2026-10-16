@@ -19,7 +19,7 @@ const catalog = HOMIIO_CAPABILITY_CATALOG;
  */
 const PINNED = {
   version: '1.0.0',
-  digest: 'd956d73998fb9e821186740cf6135356cdf73c8a96e1ac3c947c40c32a2fd9e1',
+  digest: '21e15e4404fe54004273436c22fe6ac6cfaf6771025ad77ce9ecd264c1e1e32e',
 };
 
 describe('HOMIIO_CAPABILITY_CATALOG', () => {
@@ -34,7 +34,7 @@ describe('HOMIIO_CAPABILITY_CATALOG', () => {
       internalBaseUrl: 'https://api.homiio.com',
       internalTransport: 'mcp',
       accountResourceType: 'homiio_account',
-      externalMcp: { resource: 'https://mcp.homiio.oxy.so' },
+      externalMcp: { resource: 'https://mcp.homiio.com' },
     });
     expect(catalog.features).toEqual([
       expect.objectContaining({

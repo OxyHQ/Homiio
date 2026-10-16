@@ -192,8 +192,8 @@ verifies, not an Oxy session. The tools are the catalogue in
 | Method | Path | Host | Auth |
 |---|---|---|---|
 | `POST` | `/_oxy/mcp` | `api.homiio.com` | `Authorization: Capability <ticket>`, verified live with Oxy; 503 until the catalogue is registered |
-| `POST` | `/mcp` | `mcp.homiio.oxy.so` | OAuth bearer introspected with Oxy; 401 with `resource_metadata` without one |
-| `GET` | `/.well-known/oauth-protected-resource` | `mcp.homiio.oxy.so` | Public metadata |
+| `POST` | `/mcp` | `mcp.homiio.com` | OAuth bearer introspected with Oxy; 401 with `resource_metadata` without one |
+| `GET` | `/.well-known/oauth-protected-resource` | `mcp.homiio.com` | Public metadata |
 
 Each lane answers **421** on any other host, so `api.homiio.com/mcp` is refused
 rather than served.

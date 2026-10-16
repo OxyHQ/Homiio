@@ -159,7 +159,7 @@ describe('/_oxy/mcp refuses', () => {
   it('a request sent to another host (421)', async () => {
     const res = await request(buildApp())
       .post('/_oxy/mcp')
-      .set('Host', 'mcp.homiio.oxy.so')
+      .set('Host', 'mcp.homiio.com')
       .set('Authorization', `Capability ${ticketFor(uuidv7())}`)
       .send({});
     expect(res.status).toBe(421);

@@ -1,7 +1,7 @@
 /**
  * Homiio's capability catalogue — everything a signed-in person can do in
  * Homiio, as that person, for Alia (`/_oxy/mcp`) and for any OAuth MCP client
- * (`mcp.homiio.oxy.so/mcp`). The accepted design is `docs/sindi.md`.
+ * (`mcp.homiio.com/mcp`). The accepted design is `docs/sindi.md`.
  *
  * One tool per person action. Each tool's handler (`homiio.handlers.ts`) calls
  * the SAME domain use case the Express route calls (`domain/*`), as the
@@ -44,7 +44,7 @@ export const HOMIIO_CAPABILITY_CATALOG: AppCapabilityCatalog = {
   internalBaseUrl: 'https://api.homiio.com',
   internalTransport: 'mcp',
   accountResourceType: 'homiio_account',
-  externalMcp: { resource: 'https://mcp.homiio.oxy.so' },
+  externalMcp: { resource: 'https://mcp.homiio.com' },
   features: [
     {
       key: HOMIIO_SINDI_FILES_FEATURE,

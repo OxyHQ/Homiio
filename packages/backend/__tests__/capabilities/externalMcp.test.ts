@@ -1,5 +1,5 @@
 /**
- * `mcp.homiio.oxy.so/mcp` over real HTTP: the OAuth challenge, the host
+ * `mcp.homiio.com/mcp` over real HTTP: the OAuth challenge, the host
  * check, the protected-resource metadata, which tools are public, and that a
  * call acts as the connection's ACTIVE account.
  *
@@ -16,8 +16,8 @@ import { createHomiioMcpHttpService } from '../../capabilities/homiio-mcp-http';
 import { mountCapabilityLanes } from '../../capabilities/mount';
 import { createHomiioInternalMcpReceiver } from '../../capabilities/homiio-internal-mcp';
 
-const RESOURCE = 'https://mcp.homiio.oxy.so';
-const HOST = 'mcp.homiio.oxy.so';
+const RESOURCE = 'https://mcp.homiio.com';
+const HOST = 'mcp.homiio.com';
 const ISSUER = 'https://api.oxy.so';
 const METADATA_URL = `${RESOURCE}/.well-known/oauth-protected-resource`;
 
@@ -98,7 +98,7 @@ beforeEach(() => {
   introspected = null;
 });
 
-describe('mcp.homiio.oxy.so/mcp', () => {
+describe('mcp.homiio.com/mcp', () => {
   it('answers 401 with the protected-resource metadata URL when there is no token', async () => {
     const res = await request(buildApp())
       .post('/mcp')

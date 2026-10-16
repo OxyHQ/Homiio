@@ -1,5 +1,5 @@
 /**
- * `mcp.homiio.oxy.so/mcp` — Homiio's public MCP, for any OAuth client (Claude,
+ * `mcp.homiio.com/mcp` — Homiio's public MCP, for any OAuth client (Claude,
  * ChatGPT, …), served by the same process as the API.
  *
  * The shared transport owns the protocol: it answers 421 to a request sent to

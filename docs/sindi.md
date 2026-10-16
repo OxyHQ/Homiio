@@ -27,7 +27,7 @@ Homiio app ──@alia.onl/sdk (person's Oxy session, person's credits)──▶
    │  tool renderers (PropertyCard)                                   │ oxy_homiio__* tools
    └──────────────────────────────────────────────────────────────────┤ capability tickets
                                                                       ▼
-                         api.homiio.com/_oxy/mcp  ◀── one catalogue ──▶ mcp.homiio.oxy.so (OAuth, Claude/ChatGPT/…)
+                         api.homiio.com/_oxy/mcp  ◀── one catalogue ──▶ mcp.homiio.com (OAuth, Claude/ChatGPT/…)
 ```
 
 - **Homiio's backend never calls Alia.** The frontend talks to Alia directly
@@ -172,7 +172,7 @@ replaces in the same change.
    - registration at startup;
    - both MCP mounts.
 
-   This needs `mcp.homiio.oxy.so` in oxy-infra and the workload re-bound with
+   This needs `mcp.homiio.com` in oxy-infra and the workload re-bound with
    the catalogue scopes. The precedent is Mercaria's in-process
    `src/capabilities/*`.
 2. **Frontend** (same PR as phase 3):

@@ -35,7 +35,7 @@ function principalFor(accountId: string, lane: 'oauth' | 'capability', tool: str
       originAccountId: accountId,
       activeAccountId: accountId,
       scopes: [],
-      resource: 'https://mcp.homiio.oxy.so',
+      resource: 'https://mcp.homiio.com',
     };
   }
   return {

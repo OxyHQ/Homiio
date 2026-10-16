@@ -148,7 +148,7 @@ app.set('trust proxy', 1);
 /**
  * The capability catalogue's two MCP lanes — `/_oxy/mcp` (Alia, capability
  * tickets, host `api.homiio.com`) and `/mcp` (OAuth clients, host
- * `mcp.homiio.oxy.so`). FIRST, above helmet, CORS, the session middleware, the
+ * `mcp.homiio.com`). FIRST, above helmet, CORS, the session middleware, the
  * rate limiter and every body parser: each lane owns its raw body, its host
  * check and its auth challenge (`capabilities/mount.ts`). Never on
  * `routes/public.ts`.

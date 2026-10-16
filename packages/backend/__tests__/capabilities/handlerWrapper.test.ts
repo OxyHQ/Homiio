@@ -65,7 +65,7 @@ function oauthContext(tool: CatalogTool, activeAccountId: string, key?: string) 
       originAccountId: 'origin',
       activeAccountId,
       scopes: [],
-      resource: 'https://mcp.homiio.oxy.so',
+      resource: 'https://mcp.homiio.com',
     },
     request: { requestInfo: { headers: key ? { 'idempotency-key': key } : {} } },
   } as unknown as InvocationContext;
