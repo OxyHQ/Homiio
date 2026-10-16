@@ -1,4 +1,9 @@
 {
+  "agencyDirectory": {
+    "select": "اختر شركة من النتائج أو اترك هذا الحقل الاختياري فارغًا.",
+    "unavailable": "دليل الشركات غير متاح. حاول مرة أخرى.",
+    "unresolved": "لا تزال هوية مرجع الوكالة التاريخي هذا بحاجة إلى تحديد."
+  },
   "app": {
     "loading": "Loading..."
   },
@@ -3611,8 +3616,8 @@
       },
       "localResources": "Local resources",
       "organization": "Organised by",
-      "organizationVerified": "Verified by Homiio against {{source}} on {{when}}.",
-      "organizationUnverified": "Named by whoever posted this case. Homiio has not verified it.",
+      "organizationVerified": "تمت مراجعة وسائل التواصل بالرجوع إلى {{source}} بتاريخ {{when}}.",
+      "organizationUnverified": "اختارها ناشر الحالة. لم تتم مراجعة وسائل التواصل.",
       "descriptionWithheld": "The description is hidden while a privacy report is reviewed by the organiser.",
       "contactLocked": {
         "not_attending": "Say you'll show up to see the meeting point and how to reach the organisers.",

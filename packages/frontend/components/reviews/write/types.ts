@@ -47,6 +47,7 @@ export interface ReviewWizardData {
 
   // Management.
   agencyName: string;
+  agencyOxyAccountId: string;
   landlordTreatment?: LandlordTreatment;
   problemResponse?: ResponseRating;
   depositReturned?: DepositReturn;
@@ -112,6 +113,7 @@ export const INITIAL_WIZARD_DATA: ReviewWizardData = {
   light: undefined,
   conditionAndMaintenance: undefined,
   agencyName: '',
+  agencyOxyAccountId: '',
   landlordTreatment: undefined,
   problemResponse: undefined,
   depositReturned: undefined,

@@ -130,6 +130,8 @@ export const OXY_ACCOUNT_COLUMN_NAMES: ReadonlySet<string> = new Set([
   // single most common column in the schema, and the one `AGENTS.md` forbids
   // accepting from a client.
   'oxy_user_id',
+  // Canonical company account owned by Oxy; agencies retain housing-domain references.
+  'oxy_account_id',
   // `RoommateRelationship` stores its pair SORTED, so neither side has a role
   // to be named after. Listed individually because the names do not end in
   // `oxy_user_id` and no pattern would catch them.
@@ -251,6 +253,14 @@ export const ID_COLUMNS_WITHOUT_FOREIGN_KEY: readonly IdColumnWithoutForeignKey[
       'already scoped by the `(entity_type, entity_id)` PAIR rather than by the ' +
       'id alone — which is the index this table carries and the reason a ' +
       'dangling id costs nothing beyond returning no rows.',
+  },
+  {
+    table: properties,
+    column: properties.externalContactAgencySourceId,
+    reason:
+      'Stable advertiser identifier owned by the source portal, scoped by properties.source. ' +
+      'It is provenance for the Oxy external organization mapping, not a local agency ' +
+      'row ID; no foreign key can span that provider or the canonical identity service.',
   },
   {
     table: properties,

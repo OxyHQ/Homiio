@@ -1,4 +1,9 @@
 {
+  "agencyDirectory": {
+    "select": "ফলাফল থেকে একটি কোম্পানি বেছে নিন অথবা এই ঐচ্ছিক ঘরটি খালি রাখুন।",
+    "unavailable": "কোম্পানির তালিকা পাওয়া যাচ্ছে না। আবার চেষ্টা করুন।",
+    "unresolved": "এজেন্সির এই পুরোনো তথ্যের পরিচয় এখনও নির্ধারণ করা বাকি।"
+  },
   "app": {
     "loading": "Loading..."
   },
@@ -3571,8 +3576,8 @@
       },
       "localResources": "Local resources",
       "organization": "Organised by",
-      "organizationVerified": "Verified by Homiio against {{source}} on {{when}}.",
-      "organizationUnverified": "Named by whoever posted this case. Homiio has not verified it.",
+      "organizationVerified": "{{when}} তারিখে {{source}} অনুযায়ী যোগাযোগের মাধ্যম যাচাই করা হয়েছে।",
+      "organizationUnverified": "ঘটনার লেখক নির্বাচন করেছেন। যোগাযোগের মাধ্যম যাচাই করা হয়নি।",
       "descriptionWithheld": "The description is hidden while a privacy report is reviewed by the organiser.",
       "contactLocked": {
         "not_attending": "Say you'll show up to see the meeting point and how to reach the organisers.",

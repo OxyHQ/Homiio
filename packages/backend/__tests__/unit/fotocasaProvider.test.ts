@@ -149,6 +149,7 @@ describe('FotocasaProvider.normalize', () => {
     // Contact is the TOP-LEVEL phone + clientAlias (agency), not a nested node.
     expect(listing.contact?.phone).toBe('+34670501198');
     expect(listing.contact?.agencyName).toBe('Nolkers Consulting');
+    expect(listing.contact?.agencySourceId).toBe('9202768176409');
     expect(listing.contact?.kind).toBe('agency');
   });
 
@@ -696,6 +697,7 @@ describe('FotocasaProvider.fetch property JSON path', () => {
     );
     expect(listing.contact?.phone).toBe('+34670501198');
     expect(listing.contact?.agencyName).toBe('Nolkers Consulting');
+    expect(listing.contact?.agencySourceId).toBe('9202768176409');
   });
 
   it('throws ChallengeError when property JSON and detail HTML stay blocked', async () => {

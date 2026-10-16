@@ -242,7 +242,7 @@ export default function WriteReviewPage() {
       // Store the display URL (reviews have no server-side image pipeline), so
       // the card can render the photo directly via `resolveBackendImageUrl`.
       images: data.images.map((image) => image.urls.medium || image.urls.original),
-      agencyName: data.agencyName.trim() || undefined,
+      agencyOxyAccountId: data.agencyOxyAccountId || undefined,
       adviceToAgency: data.adviceToAgency.trim() || undefined,
       adviceToLandlord: data.adviceToLandlord.trim() || undefined,
       summerTemperature: data.summerTemperature,
@@ -266,6 +266,7 @@ export default function WriteReviewPage() {
   }, [data]);
 
   const isComplete =
+    (!data.agencyName.trim() || Boolean(data.agencyOxyAccountId)) &&
     Boolean(
       data.street.trim() && data.city.trim() && data.postal_code.trim() && data.country.trim(),
     ) &&
@@ -313,7 +314,6 @@ export default function WriteReviewPage() {
         return <StepPriceDates data={data} update={update} />;
       case 6:
         return <StepTexts data={data} update={update} />;
-      case 7:
       default:
         return <StepPhotosRecommend data={data} update={update} />;
     }

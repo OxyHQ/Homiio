@@ -1,3 +1,4 @@
+import { AgencyDirectoryField } from '@/components/agencies/AgencyDirectoryField';
 /**
  * Publish / edit an eviction case (publicar).
  *
@@ -73,6 +74,7 @@ interface EvictionFormState {
   whatsapp: EvictionPhoneValue;
   instructions: string;
   agencyName: string;
+  agencyOxyAccountId: string;
 }
 
 const emptyState = (phoneCountry: string): EvictionFormState => ({
@@ -88,6 +90,7 @@ const emptyState = (phoneCountry: string): EvictionFormState => ({
   whatsapp: emptyEvictionPhone(phoneCountry),
   instructions: '',
   agencyName: '',
+  agencyOxyAccountId: '',
 });
 
 const buildInitialState = (
@@ -111,6 +114,7 @@ const buildInitialState = (
     whatsapp: splitEvictionPhone(existing.contactInfo?.whatsapp, phoneCountry),
     instructions: existing.contactInfo?.instructions ?? '',
     agencyName: '',
+    agencyOxyAccountId: '',
   };
 };
 
@@ -237,6 +241,10 @@ const EvictionForm: React.FC<EvictionFormProps> = ({ mode, editId, existing }) =
   }, [t]);
 
   const handleSubmit = useCallback(async () => {
+    if (form.agencyName.trim() && !form.agencyOxyAccountId) {
+      toast.error(t('agencyDirectory.select'));
+      return;
+    }
     if (!form.title.trim()) {
       toast.error(t('evictions.form.titleRequired'));
       return;
@@ -283,7 +291,7 @@ const EvictionForm: React.FC<EvictionFormProps> = ({ mode, editId, existing }) =
       scheduledAt,
       contactInfo: hasContact ? contactInfo : undefined,
       coverImage: cover?.imageId ? cover : undefined,
-      agencyName: form.agencyName.trim() || undefined,
+      agencyOxyAccountId: form.agencyOxyAccountId || undefined,
     };
 
     try {
@@ -503,14 +511,16 @@ const EvictionForm: React.FC<EvictionFormProps> = ({ mode, editId, existing }) =
 
           <Card radius="radius-16" style={styles.section} appearance="outline">
             <CardTitle>{t('evictions.form.agencySection')}</CardTitle>
-            <Field label={t('evictions.form.agencyLabel')}>
-              <TextFieldInput
-                label={t('evictions.form.agencyLabel')}
-                placeholder={t('evictions.form.agencyPlaceholder')}
-                value={form.agencyName}
-                onChangeText={(text) => update('agencyName', text)}
-              />
-            </Field>
+            <AgencyDirectoryField
+              label={t('evictions.form.agencyLabel')}
+              placeholder={t('evictions.form.agencyPlaceholder')}
+              name={form.agencyName}
+              accountId={form.agencyOxyAccountId}
+              onChange={(name, accountId) => {
+                update('agencyName', name);
+                update('agencyOxyAccountId', accountId);
+              }}
+            />
           </Card>
 
           <Card radius="radius-16" style={styles.section} appearance="outline">

@@ -179,6 +179,8 @@ export interface Property {
    * instead of only opening `sourceUrl`.
    */
   externalContact?: {
+    /** Advertiser ID in this listing source, not a global company ID. */
+    agencySourceId?: string;
     phone?: string;
     email?: string;
     whatsapp?: string;

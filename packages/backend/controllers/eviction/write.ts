@@ -1,3 +1,7 @@
+import {
+  listOrganizationsByIds,
+  resolveSupportOrganization,
+} from '../../services/organizations/supportOrganizations';
 /**
  * Eviction-case write handlers (create / update / delete).
  *
@@ -45,12 +49,10 @@ import {
   appendTimelineEntry,
   countEvictionAttendees,
   deleteOwnedEvictionCase,
-  findOrCreateOrganizationByName,
   findOwnedEvictionCase,
   insertEvictionCase,
   listEvictionTimeline,
   listHelpNeedsForCases,
-  listOrganizationsByIds,
   readCaseContact,
   replaceHelpNeeds,
   updateOwnedEvictionCase,
@@ -158,13 +160,13 @@ export async function createEviction(
         : null;
 
     const agencyId =
-      typeof picked.agencyName === 'string' && picked.agencyName.trim()
-        ? await resolveAgencyId(picked.agencyName)
+      typeof picked.agencyOxyAccountId === 'string' && picked.agencyOxyAccountId.trim()
+        ? await resolveAgencyId(picked.agencyOxyAccountId)
         : undefined;
 
     const organization =
-      typeof picked.organizationName === 'string' && picked.organizationName.trim()
-        ? await findOrCreateOrganizationByName(picked.organizationName)
+      typeof picked.organizationOxyAccountId === 'string' && picked.organizationOxyAccountId.trim()
+        ? await resolveSupportOrganization(picked.organizationOxyAccountId)
         : undefined;
 
     const contact = sanitizeContactInfo(picked.contactInfo);
@@ -361,9 +363,10 @@ export async function updateEviction(
       patch.coverImageUrl = coverImage.coverImageUrl;
     }
 
-    if (picked.organizationName !== undefined) {
-      const name = typeof picked.organizationName === 'string' ? picked.organizationName : '';
-      const organization = name.trim() ? await findOrCreateOrganizationByName(name) : undefined;
+    if (picked.organizationOxyAccountId !== undefined) {
+      const name =
+        typeof picked.organizationOxyAccountId === 'string' ? picked.organizationOxyAccountId : '';
+      const organization = name.trim() ? await resolveSupportOrganization(name) : undefined;
       patch.organizationId = organization?.id ?? null;
     }
 

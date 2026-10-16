@@ -1,3 +1,4 @@
+import { ApiError } from '@/utils/api';
 /**
  * Agency profile — an agency's aggregate reputation, reviews, and listings.
  *
@@ -151,7 +152,11 @@ export default function AgencyProfileScreen() {
         <ErrorState
           icon={RiBuilding2Line}
           title={t('agency.notFound')}
-          description={t('agency.notFoundDescription')}
+          description={
+            agencyQuery.error instanceof ApiError && agencyQuery.error.status === 409
+              ? t('agencyDirectory.unresolved')
+              : t('agency.notFoundDescription')
+          }
           retryLabel={t('common.goBack')}
           onRetry={() => router.back()}
         />

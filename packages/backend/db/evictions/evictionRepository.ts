@@ -111,7 +111,7 @@ export interface EvictionCaseWithTimeline {
   readonly timeline: readonly EvictionCaseUpdateRow[];
   readonly attendeeCount: number;
   readonly helpNeeds: readonly EvictionHelpNeedRow[];
-  readonly organization?: EvictionOrganizationRow;
+  readonly organization?: EvictionOrganizationRow & { name: string; oxyAccountId: string };
   readonly distanceMeters?: number;
 }
 
@@ -520,55 +520,40 @@ export async function listHelpNeedsForCases(
   return byCase;
 }
 
-/** The organisations named by a whole page of cases, in ONE query. */
-export async function listOrganizationsByIds(
+/** Local support-role references; identity presentation is hydrated by the organizations service. */
+export async function listSupportOrganizationReferences(
   ids: readonly string[],
   db: DatabaseOrTransaction = getDb(),
-): Promise<ReadonlyMap<string, EvictionOrganizationRow>> {
-  const unique = [...new Set(ids)];
-  if (unique.length === 0) return new Map();
-  const rows = await db
+): Promise<EvictionOrganizationRow[]> {
+  if (!ids.length) return [];
+  return db
     .select()
     .from(evictionOrganizations)
-    .where(inArray(evictionOrganizations.id, unique));
-  return new Map(rows.map((row) => [row.id, row]));
+    .where(inArray(evictionOrganizations.id, [...new Set(ids)]));
 }
 
-/**
- * Resolve an organisation NAME to a row, creating an UNVERIFIED one if needed.
- *
- * Creating is allowed here and NOT allowed for `agencies` (whose resolver is a
- * pure lookup), and the asymmetry is the point: naming the collective you belong
- * to is the ordinary case on this board, while minting an `agencies` row from a
- * public notice surface would let a read path write to the entity that property
- * listings and reviews are keyed by.
- *
- * A created row is never verified, and no route can make it so.
- */
-export async function findOrCreateOrganizationByName(
-  name: string,
+export async function findOrCreateSupportOrganizationReference(
+  oxyAccountId: string,
   db: DatabaseOrTransaction = getDb(),
-): Promise<EvictionOrganizationRow | undefined> {
-  const trimmed = name.trim();
-  if (!trimmed) return undefined;
-  const normalized = trimmed.toLocaleLowerCase();
-
-  // `DO NOTHING` rather than letting the insert fail: a duplicate here is the
-  // expected case, and a failed statement would abort the caller's whole
-  // transaction (`25P02`) for something that is not an error.
-  const inserted = await db
-    .insert(evictionOrganizations)
-    .values({ name: trimmed, normalizedName: normalized })
-    .onConflictDoNothing({ target: evictionOrganizations.normalizedName })
-    .returning();
-  if (inserted[0]) return inserted[0];
-
-  const [existing] = await db
-    .select()
-    .from(evictionOrganizations)
-    .where(eq(evictionOrganizations.normalizedName, normalized))
-    .limit(1);
-  return existing;
+): Promise<EvictionOrganizationRow> {
+  return db.transaction(async (tx) => {
+    await tx.execute(
+      sql`select pg_advisory_xact_lock(hashtextextended(${`homiio-support-organization:${oxyAccountId}`}, 0))`,
+    );
+    const [existing] = await tx
+      .select()
+      .from(evictionOrganizations)
+      .where(eq(evictionOrganizations.oxyAccountId, oxyAccountId))
+      .orderBy(asc(evictionOrganizations.id))
+      .limit(1);
+    if (existing) return existing;
+    const [created] = await tx
+      .insert(evictionOrganizations)
+      .values({ oxyAccountId, identityStatus: 'linked' })
+      .returning();
+    if (!created) throw new Error('Support organization reference creation returned no row');
+    return created;
+  });
 }
 
 /** Open a case. */

@@ -214,6 +214,12 @@ function readFotocasaContact(
   const cardContact = buildContact({
     phone: asString(record.phone),
     agencyName: asString(record.clientAlias),
+    agencySourceId:
+      typeof record.clientId === 'number' &&
+      Number.isSafeInteger(record.clientId) &&
+      record.clientId > 0
+        ? String(record.clientId)
+        : asString(record.clientId),
     kind: fotocasaContactKind(record),
   });
   return mergeContact(

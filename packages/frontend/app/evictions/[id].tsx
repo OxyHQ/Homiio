@@ -386,7 +386,7 @@ export default function EvictionDetailScreen() {
               <BloomText style={styles.muted}>
                 {/* Verification is STRICTLY stronger than authorship, and the
                     UI has to say which one it is showing. */}
-                {eviction.organization.verified
+                {eviction.organization.channelsVerified
                   ? t('evictions.detail.organizationVerified', {
                       source: eviction.organization.verificationSource ?? '',
                       when: eviction.organization.verifiedAt

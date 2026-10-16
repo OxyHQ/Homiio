@@ -39,7 +39,7 @@ import { updateProperty } from '../../controllers/property/updateDelete';
 import * as recentlyViewedController from '../../controllers/profile/recentlyViewed';
 import * as savedPropertiesController from '../../controllers/profile/savedProperties';
 import roomController from '../../controllers/roomController';
-import { findOrCreateAgencyByName } from '../../db/agencies/agencyWrites';
+import { createAgencyFixture } from '../helpers/organizationDirectory';
 import { getDb } from '../../db/postgres';
 import { findPropertyById } from '../../db/properties/propertyReads';
 import { addresses, properties, recentlyViewed, savedItems } from '../../db/schema';
@@ -181,7 +181,7 @@ async function seed(): Promise<Seeded> {
     .returning({ id: addresses.id });
   const unitId = await seedUnitAddress(chain, building.id);
   const orphanUnitId = await seedUnitAddress(chain, null);
-  const agency = await findOrCreateAgencyByName(`Precision Agency ${Date.now()}`);
+  const agency = await createAgencyFixture(`Precision Agency ${Date.now()}`);
   assertFound(agency, 'agency');
 
   const listing = (overrides: Parameters<typeof seedProperty>[0]['overrides'] = {}) => ({

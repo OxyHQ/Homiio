@@ -75,8 +75,6 @@
   "evictions.detail.descriptionWithheld",
   "evictions.detail.localResources",
   "evictions.detail.organization",
-  "evictions.detail.organizationUnverified",
-  "evictions.detail.organizationVerified",
   "evictions.empty.scoped",
   "evictions.filter.cancelled",
   "evictions.follow",

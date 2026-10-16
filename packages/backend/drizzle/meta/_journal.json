@@ -218,6 +218,20 @@
       "when": 1789891376332,
       "tag": "0030_placeholder_region_merge",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1792046477402,
+      "tag": "0031_central_organization_references",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1792046478414,
+      "tag": "0032_retire_local_organization_identity",
+      "breakpoints": true
     }
   ]
 }

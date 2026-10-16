@@ -36,7 +36,7 @@ export {
   addressMergeRelationMoves,
   addressMerges,
 } from './addressMerges';
-export { agencies } from './agencies';
+export { agencies, agencyIdentityArchives } from './agencies';
 export {
   tenantApplicationDocuments,
   tenantApplicationReferences,
@@ -59,6 +59,7 @@ export {
   evictionLocationAccessAudit,
   evictionLocationGrants,
   evictionOrganizations,
+  evictionOrganizationIdentityArchives,
   evictionReports,
   evictionSupporterVouches,
   evictionUpdateNotifications,

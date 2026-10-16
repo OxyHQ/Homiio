@@ -440,6 +440,8 @@ export const properties = pgTable(
     externalContactWhatsapp: text(),
     externalContactName: text(),
     externalContactAgencyName: text(),
+    /** Provider-owned advertiser ID, scoped by source; never a canonical company name. */
+    externalContactAgencySourceId: text(),
     externalContactKind: text({ enum: EXTERNAL_CONTACT_KINDS }),
 
     // ── Restriction flags derived from the listing free text at ingest ──

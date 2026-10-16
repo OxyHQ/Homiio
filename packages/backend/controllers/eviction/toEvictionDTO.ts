@@ -252,14 +252,17 @@ function toHelpNeed(row: EvictionHelpNeedRow): EvictionHelpNeed {
  * publicly, whatever flag the storing user set."* Verification is what makes the
  * channel the collective's OWN published act.
  */
-function toOrganization(row: EvictionOrganizationRow): EvictionOrganization {
+function toOrganization(
+  row: EvictionOrganizationRow & { name: string; oxyAccountId: string },
+): EvictionOrganization {
   const verified = row.verifiedAt !== null;
   return {
     id: row.id,
     name: row.name,
+    oxyAccountId: row.oxyAccountId,
     description: optionalText(row.description),
     publicChannels: verified ? row.publicChannels : [],
-    verified,
+    channelsVerified: verified,
     verifiedAt: row.verifiedAt === null ? undefined : row.verifiedAt.toISOString(),
     verificationSource: verified ? optionalText(row.verificationSource) : undefined,
   };
