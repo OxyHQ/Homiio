@@ -6,7 +6,7 @@ order: 0
 
 # Homiio
 
-Homiio is the housing trust and transparency layer: find a place, research its history, learn what it really costs, understand what living there was like, and manage or defend the tenancy. The frontend is a single Expo / React Native codebase targeting iOS, Android and Web. The backend is a Node + Express API on PostgreSQL with PostGIS, plus Stripe for subscriptions, AWS S3 + Sharp for media, and **Sindi**, the housing agent on Alia that the app opens through `@alia.onl/sdk`.
+Homiio is the housing trust and transparency layer: find a place, research its history, learn what it really costs, understand what living there was like, and manage or defend the tenancy. The frontend is a single Expo / React Native codebase targeting iOS, Android and Web. The backend is a Node + Express API on PostgreSQL with PostGIS, plus Stripe for subscriptions, Oxy Files for photos and private documents ([Oxy Files](./oxy-files)), and **Sindi**, the housing agent on Alia that the app opens through `@alia.onl/sdk`.
 
 <Badge variant="success">App</Badge> <Badge>iOS / Android / Web</Badge>
 
@@ -33,7 +33,7 @@ Inside the repo:
 | Package | Role |
 |---------|------|
 | `frontend` (`@homiio/frontend`) | Expo Router app. NativeWind + Tailwind for styling, Zustand for local state, TanStack Query for server state, `@oxy.so/bloom` for primitives. |
-| `backend` (`@homiio/backend`) | Express 4 + drizzle-orm (PostgreSQL + PostGIS) API, plus a separate worker process. Stripe billing, Sharp + S3 image pipeline, BullMQ ingestion, and the capability catalogue Alia and MCP clients call. |
+| `backend` (`@homiio/backend`) | Express 4 + drizzle-orm (PostgreSQL + PostGIS) API, plus a separate worker process. Stripe billing, photos in Oxy Files (private tenancy documents in S3 until Oxy stage 4b), BullMQ ingestion, and the capability catalogue Alia and MCP clients call. |
 | `listing-providers` (`@homiio/listing-providers`) | The provider plugin contract, the shared fetch runtime, and the portal plugins. Consumed by the worker. |
 | `shared-types` (`@homiio/shared-types`) | Pure TypeScript — the entity DTOs, the `format/` money/unit/date module, and the observability event schema. Built first via `postinstall`. |
 
@@ -236,6 +236,7 @@ The complete table — every path, its method, and whether it needs a session �
 - [Analytics](./analytics) — Owner insights, marketplace aggregates, privacy-safe observability.
 - [Auth](./auth) — Oxy integration on RN and the server, profile bootstrap, request flow.
 - [Deployment](./deployment) — AWS ECS + a Cloudflare Worker, environment, cron, the image pipeline.
+- [Oxy Files](./oxy-files) — who owns each photo and document, references, file events, and retiring Homiio's bucket.
 - [Contributing](./contributing) — Repo layout, code conventions, the agent-first workflow.
 - [Dependency updates](./dependencies) — Reviewable Oxy updates and the read-only Doctor gate.
 - [ADRs](./adr/README) — The four decision records and what each one binds.
