@@ -4,7 +4,7 @@ title: Sindi is an Alia agent
 
 # Sindi is an Alia agent
 
-> **Status: proposed design, not shipped.** It is bound by Alia ADR 0020 ("Every
+> **Status: accepted design, not shipped yet.** It is bound by Alia ADR 0020 ("Every
 > agent is the same agent") and Oxy ADR 0042 ("agent requester ceilings"). Until
 > those are accepted and the phases below land, the running system is the one
 > [`sindi-actions.md`](./sindi-actions.md) describes. That document is deleted in
