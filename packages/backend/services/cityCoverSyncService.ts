@@ -98,11 +98,13 @@ export function plainText(value: unknown): string | undefined {
   const text = value
     .replace(/<[^>]*>/g, ' ')
     .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
     .replace(/&quot;/g, '"')
     .replace(/&#0?39;/g, "'")
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
+    // `&amp;` LAST: decoded first, `&amp;lt;` would become `<` — the text
+    // says `&lt;`, and a second pass must not unescape what the first made.
+    .replace(/&amp;/g, '&')
     .replace(/\s+/g, ' ')
     .trim();
   return text.length > 0 ? text.slice(0, 500) : undefined;

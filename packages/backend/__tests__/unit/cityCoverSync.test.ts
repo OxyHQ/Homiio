@@ -18,7 +18,12 @@ import { eq } from 'drizzle-orm';
 import { OfferingType, PropertyType, PropertyStatus } from '@homiio/shared-types';
 
 import { fakeOxyFiles } from '../helpers/fakeOxyFiles';
-import { ensureCover, syncCovers, syncMissingCovers } from '../../services/cityCoverSyncService';
+import {
+  ensureCover,
+  plainText,
+  syncCovers,
+  syncMissingCovers,
+} from '../../services/cityCoverSyncService';
 import publicRoutes from '../../routes/public';
 
 import { getDb } from '../../db/postgres';
@@ -172,6 +177,24 @@ beforeEach(async () => {
 afterEach(() => {
   (global as { fetch: typeof originalFetch }).fetch = originalFetch;
   jest.clearAllMocks();
+});
+
+describe('cityCoverSyncService.plainText (a Commons credit as text)', () => {
+  it('reduces tags and entities to words', () => {
+    expect(plainText('<a href="https://x">Jane &amp; John</a>&nbsp;(CC&nbsp;BY-SA)')).toBe(
+      'Jane & John (CC BY-SA)',
+    );
+  });
+
+  it('decodes once: an escaped entity stays the entity the author wrote', () => {
+    expect(plainText('Tom &amp;lt;3 Barcelona')).toBe('Tom &lt;3 Barcelona');
+    expect(plainText('&amp;quot;quoted&amp;quot;')).toBe('&quot;quoted&quot;');
+  });
+
+  it('is undefined for nothing', () => {
+    expect(plainText('<br/>')).toBeUndefined();
+    expect(plainText(42)).toBeUndefined();
+  });
 });
 
 describe('cityCoverSyncService.ensureCover', () => {
