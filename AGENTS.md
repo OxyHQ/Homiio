@@ -98,7 +98,7 @@ measurements: **`docs/postgres.md`**.
   `docs/oxy-files.md`. A person's upload is THEIR file (`uploadUserMedia`);
   scraped photos and covers are the Homiio APPLICATION's (`importAppFile[s]`).
   A new column pointing at `images` must join the trigger set of migration
-  `0036_oxy_files`, `services/files/referenceUsage.ts` and
+  `0037_oxy_files`, `services/files/referenceUsage.ts` and
   `db/images/unusedImages.ts` in the SAME change, or Oxy collects a photo still
   shown, or the sweep deletes one. Private documents go through
   `services/files/privateDocuments.ts` only.

@@ -9,7 +9,7 @@
 // Neither module loads `config` or the SDK at runtime (the seam and the fake
 // import only types), so importing them here cannot freeze the environment
 // below — the reason `db/postgres` is required lazily further down.
-import { setOxyFilesForTests } from '../services/files/oxyFilesSeam';
+import { setLinkedDownloadForTests, setOxyFilesForTests } from '../services/files/oxyFilesSeam';
 import { fakeOxyFiles } from './helpers/fakeOxyFiles';
 
 // Give config a real https public URL so self-hosted image URLs
@@ -54,6 +54,7 @@ beforeAll(async () => {
   // a suite that stores a photo needs somewhere for it to go.
   fakeOxyFiles.reset();
   setOxyFilesForTests(fakeOxyFiles.api());
+  setLinkedDownloadForTests((url) => fakeOxyFiles.download(url));
 
   // Postgres, for every suite rather than only the `__tests__/db` ones:
   // from batch 1 on, request-path code (geo, addresses, cities, neighborhoods)

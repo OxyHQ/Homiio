@@ -5,8 +5,9 @@
  *
  * Prints the status as JSON and exits 0 only when the PUBLIC photos may leave
  * the bucket (`publicImagesRetirable`); `bucketRetirable` says whether the
- * whole bucket may (it may not until the private documents move, Oxy 4c).
- * Read-only.
+ * whole bucket may (not until `scripts/migratePrivateDocumentsToOxy.ts` has
+ * moved every private document into its owner's Oxy account and the private
+ * surface has read nothing from the bucket for the soak). Read-only.
  */
 
 import path from 'path';

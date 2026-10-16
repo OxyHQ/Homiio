@@ -40,7 +40,7 @@ goes — a photo removed from a listing, a listing deleted (by its host or by th
 expiry sweep, through the CASCADE), a cover replaced or cleared.
 `services/files/referenceUsage.ts` holds that definition and nothing else does.
 
-- **Triggers mark, the drain decides.** Migration `0036_oxy_files` installs
+- **Triggers mark, the drain decides.** Migration `0037_oxy_files` installs
   triggers on `property_images`, `cities`, `regions`, `eviction_cases` and
   `images` that mark every pair a write could have moved, in the transaction of
   the write (`file_reference_changes`; cascades included). The drain
@@ -103,7 +103,7 @@ the scripts run as one-off ECS tasks of the API image.
    Webhooks → File events) set `https://api.homiio.com/webhooks/oxy/files`; the
    challenge is answered without the secret. Put the `whsec_…` it shows into the
    parameter and force a new deployment of the API service.
-4. **Migration `0036_oxy_files`** (`pre`) is applied by the deploy.
+4. **Migration `0037_oxy_files`** (`pre`) is applied by the deploy.
 5. **Orphans:** `scripts/cleanOrphanImages.ts` (preview), then `--apply`.
 6. **Copy:** `scripts/migrateImagesToOxy.ts` (preview), then `--apply
    --report=…` until the preview reports nothing left. Read the

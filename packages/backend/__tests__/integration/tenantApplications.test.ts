@@ -505,4 +505,26 @@ describe('documents', () => {
       );
     expect(bad.status).toBe(400);
   });
+
+  it.each([
+    ['an Oxy file Homiio stored for somebody else', 'oxy:file000001'],
+    [
+      'a private bucket document',
+      'https://api.homiio.com/api/images/file/private/applications/a/b.pdf',
+    ],
+  ])('refuses a listed document that names %s', async (_label, url) => {
+    const propertyId = await seedRentalProperty();
+
+    const res = await request(buildApp('oxy-applicant'))
+      .post('/applications')
+      .send(
+        applicationBody(propertyId, { documents: [{ type: 'income', url, filename: 'x.pdf' }] }),
+      );
+
+    // The document route reads a stored document through HOMIIO's access to
+    // it; naming one here would hand an applicant somebody else's payslip.
+    expect(res.status).toBe(400);
+    expect(res.body.error?.code ?? res.body.code).toBe('INVALID_DOCUMENTS');
+    expect(await getDb().select().from(tenantApplicationDocuments)).toHaveLength(0);
+  });
 });

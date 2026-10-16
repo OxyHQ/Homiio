@@ -27,14 +27,29 @@ import { createdAt, generatedId, inList, timestamptz, updatedAt } from '@oxy.so/
  *
  * - `property` — a listing showing the photo (`property_images`);
  * - `city`, `region` — a geo page's cover (`cities/regions.cover_image_id`);
- * - `eviction_case` — a case's cover (`eviction_cases.cover_image_id`).
+ * - `eviction_case` — a case's cover (`eviction_cases.cover_image_id`);
+ * - `lease`, `tenant_application`, `maintenance_request` — a private document
+ *   stored in its uploader's Oxy account (`oxy:<fileId>` in
+ *   `lease_documents.url`, `tenant_application_documents.url`,
+ *   `maintenance_request_attachments.storage_key`).
  *
  * The entity id is that row's own id. `services/files/referenceUsage.ts` holds
  * the one query per type that says whether a pair is still in use, and the
- * triggers in migration `0037_oxy_files` mark a pair whenever a write could
- * have changed the answer.
+ * triggers in migrations `0037_oxy_files` and `0038_oxy_private_documents`
+ * mark a pair whenever a write could have changed the answer.
  */
-export const FILE_REFERENCE_ENTITY_TYPES = ['property', 'city', 'region', 'eviction_case'] as const;
+export const FILE_REFERENCE_ENTITY_TYPES = [
+  'property',
+  'city',
+  'region',
+  'eviction_case',
+  // A person's PRIVATE documents, stored in their own Oxy account
+  // (`services/files/privateDocuments.ts`): the lease, application or
+  // maintenance request that holds the document row is the use.
+  'lease',
+  'tenant_application',
+  'maintenance_request',
+] as const;
 
 /**
  * `file_reference_changes` — a (file, entity) pair whose registration with Oxy

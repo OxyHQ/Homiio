@@ -8,7 +8,10 @@
  * - import by URL remembered per owner (a repeat answers `existing`, no fetch);
  * - references unique per (file, entity type, entity id); `add` answers
  *   `not_found` for a file that is gone or not active;
- * - a reconciliation adds what the inventory lists and removes what it does not.
+ * - a reconciliation adds what the inventory lists and removes what it does not;
+ * - consent (stage 4c): a person's file Homiio stored for them is readable
+ *   through `linkedDownloadUrls` until the person revokes Homiio
+ *   ({@link FakeOxyFiles.revokeAccess}); absence from the answer is the refusal.
  *
  * Installed for every suite by `__tests__/jest.setup.ts`, so no test can reach
  * a real Oxy; a test that needs to see what was sent imports {@link fakeOxyFiles}.
@@ -29,6 +32,8 @@ import type {
 } from '@oxy.so/core';
 
 import type { OxyFilesApi } from '../../services/files/oxyFilesSeam';
+
+type ServiceLinkedDownloadUrl = Awaited<ReturnType<OxyFilesApi['linkedDownloadUrls']>>[number];
 
 export const FAKE_HOMIIO_APP_ID = 'homiio-app';
 
@@ -67,6 +72,18 @@ export class FakeOxyFiles {
   readonly calls: Array<{ method: string; args: unknown[] }> = [];
   /** When set, every references call throws this. */
   referencesError: Error | null = null;
+  /** When set, every large upload throws this (an outage, a refusal). */
+  largeUploadError: Error | null = null;
+  /** When set, a large upload answers this visibility whatever was asked (a pre-4c API). */
+  largeUploadVisibilityOverride: FakeFile['visibility'] | null = null;
+  /** When true, `linkedDownloadUrls` omits every person's file (Oxy before stage 4c). */
+  consentReadUnavailable = false;
+  /** Person files Homiio stored for them (an upload grant), by id. */
+  readonly grants = new Set<string>();
+  /** Person files whose owner revoked Homiio's access. */
+  readonly revoked = new Set<string>();
+  /** Linked URLs whose download answers these bytes instead (a tampered transfer). */
+  readonly tamperedDownloads = new Map<string, Buffer>();
   private counter = 0;
 
   reset(): void {
@@ -77,6 +94,32 @@ export class FakeOxyFiles {
     this.failingSources.clear();
     this.calls.length = 0;
     this.referencesError = null;
+    this.largeUploadError = null;
+    this.largeUploadVisibilityOverride = null;
+    this.consentReadUnavailable = false;
+    this.grants.clear();
+    this.revoked.clear();
+    this.tamperedDownloads.clear();
+  }
+
+  /** The person withdraws Homiio's access to their file (`DELETE /assets/:id/access/:app`). */
+  revokeAccess(fileId: string): void {
+    this.revoked.add(fileId);
+  }
+
+  /** The URL `linkedDownloadUrls` mints for a file. */
+  linkedUrl(fileId: string): string {
+    return `https://cloud.oxy.test/linked/${fileId}?signature=fake`;
+  }
+
+  /** What fetching a linked URL answers: the file's bytes, unless tampered. */
+  async download(url: string): Promise<Buffer> {
+    const tampered = this.tamperedDownloads.get(url);
+    if (tampered) return tampered;
+    const match = /^https:\/\/cloud\.oxy\.test\/linked\/([^?]+)\?/.exec(url);
+    const file = match ? this.files.get(match[1]) : undefined;
+    if (!file || file.status !== 'active') throw oxyError(403, 'EXPIRED');
+    return file.bytes;
   }
 
   callsOf(method: string): unknown[][] {
@@ -217,6 +260,67 @@ export class FakeOxyFiles {
           mime: file.mime,
           visibility: file.visibility,
         };
+      },
+
+      uploadUserMediaLarge: async (
+        ownerUserId: string,
+        source: Uint8Array | ArrayBuffer | Blob | string,
+        options: { mime: string; visibility?: FakeFile['visibility']; sha256?: string },
+      ) => {
+        this.calls.push({ method: 'uploadUserMediaLarge', args: [ownerUserId, options] });
+        if (this.largeUploadError) throw this.largeUploadError;
+        if (this.refusedUsers.has(ownerUserId)) throw oxyError(403, 'FORBIDDEN');
+        if (typeof source === 'string' || source instanceof Blob) {
+          throw new Error('the fake takes bytes');
+        }
+        const buffer = Buffer.from(source as Uint8Array);
+        if (options.sha256 && options.sha256 !== sha(buffer)) {
+          throw oxyError(422, 'CHECKSUM_MISMATCH');
+        }
+        const visibility =
+          this.largeUploadVisibilityOverride ?? options.visibility ?? ('public' as const);
+        const { file, deduplicated } = this.store(
+          buffer,
+          options.mime,
+          { userId: ownerUserId },
+          visibility,
+        );
+        // Stored FOR the person: Homiio may read it until they revoke that.
+        this.grants.add(file.id);
+        return {
+          file: {
+            id: file.id,
+            sha256: file.sha256,
+            size: file.size,
+            mime: file.mime,
+            visibility: file.visibility,
+            status: file.status === 'deleted' ? 'trash' : file.status,
+          },
+          deduplicated,
+          uploadId: deduplicated ? null : `upload-${file.id}`,
+        };
+      },
+
+      linkedDownloadUrls: async (ids: string[]): Promise<ServiceLinkedDownloadUrl[]> => {
+        this.calls.push({ method: 'linkedDownloadUrls', args: [ids] });
+        return ids.flatMap((id) => {
+          const file = this.files.get(id);
+          if (!file || file.status !== 'active') return [];
+          const readable =
+            file.ownerApplicationId !== null ||
+            (!this.consentReadUnavailable && this.grants.has(id) && !this.revoked.has(id));
+          if (!readable) return [];
+          return [
+            {
+              id,
+              url: this.linkedUrl(id),
+              expiresIn: 300,
+              mime: file.mime,
+              size: file.size,
+              sha256: file.sha256,
+            },
+          ];
+        });
       },
 
       importAppFile: async (

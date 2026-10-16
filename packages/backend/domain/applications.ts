@@ -24,7 +24,6 @@ import {
   type DocumentVerificationStatus,
 } from '@homiio/shared-types';
 
-import config from '../config';
 import { getDb } from '../db/postgres';
 import {
   ACTIVE_APPLICATION_STATUSES,
@@ -50,9 +49,12 @@ import { TENANT_APPLICATION_DOCUMENT_TYPES } from '../db/schema/applications';
 import { REFERENCE_RELATIONSHIPS } from '../db/schema/profiles';
 import { AppError } from '../middlewares/errorHandler';
 import { logger } from '../middlewares/logging';
-import { legacyImageUrl } from '../services/files/legacyImages';
-import { readPrivateDocument, storePrivateUpload } from '../services/files/privateDocuments';
-import { storedDocumentKey } from '../utils/storedDocumentKey';
+import {
+  privateDocumentRefFromRowUrl,
+  privateDocumentRowUrl,
+  readPrivateDocument,
+  storePrivateUpload,
+} from '../services/files/privateDocuments';
 import { type ExternalListingOutcome, externalListingOutcome } from './bookingOutcomes';
 
 // ── The document upload contract, shared by the route and the tool ─────────
@@ -267,6 +269,19 @@ function parseDocumentsFromBody(raw: unknown): ParsedDocument[] {
         'INVALID_DOCUMENT_TYPE',
       );
     }
+    // A listed document is a LINK the applicant supplies, never one of the
+    // documents Homiio stores: those arrive as uploads. A row naming a stored
+    // document (`oxy:<fileId>`, or a private bucket key in delivery-route
+    // shape) would make the document route read somebody else's file through
+    // Homiio's own access to it, behind a party check that only proves the
+    // caller is this application's applicant.
+    if (typeof doc.url !== 'string' || privateDocumentRefFromRowUrl(doc.url) !== null) {
+      throw new AppError(
+        `documents[${index}] must be uploaded, not named by a stored document's address`,
+        400,
+        'INVALID_DOCUMENTS',
+      );
+    }
     return {
       type: doc.type,
       url: doc.url,
@@ -323,12 +338,13 @@ function parseDocumentTypes(raw: unknown, count: number): ApplicationDocumentTyp
  *
  * Through the one private-document adapter (`services/files/privateDocuments`):
  * a PDF byte for byte, a photo re-encoded (EXIF and its GPS tag dropped), both
- * under `private/`. This used to run every file through the PUBLIC image
- * pipeline — which made a PDF payslip throw inside Sharp (500 on every PDF the
- * route's own allowlist accepts) and stored a photographed identity document
- * as four public-cache renditions. The row keeps a URL in the delivery-route
- * shape `storedDocumentKey` reads; nothing serves it publicly, because the
- * public route refuses the private prefix.
+ * a private file in the applicant's own Oxy account (or, with the switch off
+ * or Oxy refusing, under the bucket's `private/`). This used to run every file
+ * through the PUBLIC image pipeline — which made a PDF payslip throw inside
+ * Sharp (500 on every PDF the route's own allowlist accepts) and stored a
+ * photographed identity document as four public-cache renditions. The row
+ * keeps the adapter's row value (`oxy:<fileId>`, or a delivery-route URL);
+ * the wire shape never carries it, and nothing serves it publicly.
  */
 async function uploadDocumentFiles(
   files: readonly UploadedApplicationFile[],
@@ -344,7 +360,7 @@ async function uploadDocumentFiles(
     );
     uploaded.push({
       type: types[i],
-      url: legacyImageUrl(stored.ref),
+      url: privateDocumentRowUrl(stored.ref),
       filename: file.originalname,
     });
   }
@@ -527,11 +543,10 @@ export async function readApplicationDocument(
   const document = hydrated.documents.find((row) => row.id === documentId);
   if (!document) throw new AppError('Document not found', 404, 'NOT_FOUND');
 
-  const key = storedDocumentKey(document.url, {
-    bucketName: config.s3.bucketName,
-    endpoint: config.s3.endpoint,
-  });
-  const file = key ? await readPrivateDocument(key) : null;
+  // The party check above is the authorization; this only fetches the bytes
+  // (from the uploader's Oxy account, or the bucket for an unmigrated one).
+  const ref = privateDocumentRefFromRowUrl(document.url);
+  const file = ref ? await readPrivateDocument(ref) : null;
   if (!file) throw new AppError('Document not found', 404, 'NOT_FOUND');
 
   return {

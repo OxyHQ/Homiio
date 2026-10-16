@@ -49,6 +49,8 @@ import { errorHandler } from '../../middlewares/errorHandler';
 import { legacyObjectStore } from '../../services/files/legacyObjectStore';
 import { legacyImageUrl } from '../../services/files/legacyImages';
 import config from '../../config';
+import { createHash } from 'node:crypto';
+import { fakeOxyFiles } from '../helpers/fakeOxyFiles';
 import { resetGeoTables, seedListingWithGeo } from '../helpers/postgresGeoFixtures';
 
 const LANDLORD = 'oxy-landlord';
@@ -388,5 +390,65 @@ describe('a lease document can be a PDF, and the client no longer names where it
     expect(
       await getDb().select().from(leaseDocuments).where(eq(leaseDocuments.leaseId, leaseId)),
     ).toHaveLength(0);
+  });
+});
+
+describe('in the uploader’s Oxy account (stage 4c)', () => {
+  beforeEach(() => {
+    fakeOxyFiles.reset();
+    config.oxyFiles.privateDocumentsEnabled = true;
+  });
+  afterEach(() => {
+    config.oxyFiles.privateDocumentsEnabled = false;
+  });
+
+  it('stores a PDF as the uploader’s private file, bound to its digest, and serves the parties', async () => {
+    const fixture = await seedLeaseWithDocument();
+    await getDb().delete(leaseDocuments).where(eq(leaseDocuments.leaseId, fixture.leaseId));
+    const pdf = Buffer.from('%PDF-1.7 the signed agreement, in Oxy');
+
+    const created = await request(authed(LANDLORD))
+      .post(`/leases/${fixture.leaseId}/documents`)
+      .field('name', 'Signed agreement')
+      .attach('document', pdf, { filename: 'contract.pdf', contentType: 'application/pdf' });
+
+    expect(created.status).toBe(201);
+    const [row] = await getDb()
+      .select()
+      .from(leaseDocuments)
+      .where(eq(leaseDocuments.leaseId, fixture.leaseId));
+    expect(row.url).toMatch(/^oxy:/);
+    expect(row.contentSha256).toBe(createHash('sha256').update(pdf).digest('hex'));
+    expect(fakeOxyFiles.files.get(row.url.slice(4))).toMatchObject({
+      ownerUserId: LANDLORD,
+      visibility: 'private',
+      mime: 'application/pdf',
+    });
+    for (const viewer of [TENANT, CO_TENANT]) {
+      const res = await request(authed(viewer)).get(
+        `/leases/${fixture.leaseId}/documents/${created.body.data.id}`,
+      );
+      expect(res.status).toBe(200);
+      expect(res.body.data.contentType).toBe('application/pdf');
+      expect(Buffer.from(res.body.data.base64, 'base64')).toEqual(pdf);
+    }
+    const stranger = await request(authed(STRANGER)).get(
+      `/leases/${fixture.leaseId}/documents/${created.body.data.id}`,
+    );
+    expect(stranger.status).toBe(404);
+    // The bytes and the URL that reached them never left the server.
+    expect(JSON.stringify(created.body)).not.toContain('cloud.oxy.test');
+  });
+
+  it('keeps reading a document stored in the bucket before the switch', async () => {
+    const fixture = await seedLeaseWithDocument();
+
+    const res = await request(authed(TENANT)).get(
+      `/leases/${fixture.leaseId}/documents/${fixture.documentId}`,
+    );
+
+    expect(res.status).toBe(200);
+    expect(Buffer.from(res.body.data.base64, 'base64')).toEqual(fixture.bytes);
+    expect(fakeOxyFiles.callsOf('linkedDownloadUrls')).toHaveLength(0);
   });
 });

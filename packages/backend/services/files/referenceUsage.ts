@@ -13,15 +13,24 @@
  * | `region`        | `regions.cover_image_id`              |
  * | `eviction_case` | `eviction_cases.cover_image_id`       |
  *
+ * And a person's private document stored in their own Oxy account
+ * (`privateDocuments.ts`), whose row holds `oxy:<fileId>`:
+ *
+ * | entity type           | held by                                        |
+ * |-----------------------|------------------------------------------------|
+ * | `lease`               | a `lease_documents` row (`url`)                |
+ * | `tenant_application`  | a `tenant_application_documents` row (`url`)   |
+ * | `maintenance_request` | a `maintenance_request_attachments` row (`storage_key`) |
+ *
  * And it stops being in use at the moment that row goes: a photo removed from
  * the listing, a listing deleted (by its host or by the expiry sweep, through
  * the cascade), a cover replaced or cleared. Nothing else — an `images` row
  * with no entity showing it is not a use, which is how the orphaned rows of
  * deleted listings stop holding storage (`scripts/cleanOrphanImages.ts`).
  *
- * If this table gains a row, the trigger set in migration `0037_oxy_files`
- * gains the matching trigger in the same change, and
- * `FILE_REFERENCE_ENTITY_TYPES` its type.
+ * If a table here gains a row, the trigger set in migration `0037_oxy_files`
+ * (photos) or `0038_oxy_private_documents` (documents) gains the matching
+ * trigger in the same change, and `FILE_REFERENCE_ENTITY_TYPES` its type.
  */
 
 import { sql, type SQL } from 'drizzle-orm';
@@ -50,6 +59,15 @@ function pairsOf(entityType: FileReferenceEntityType): SQL {
       return sql`select e.id as entity_id, i.oxy_file_id
         from eviction_cases e join images i on i.id = e.cover_image_id
         where i.oxy_file_id is not null`;
+    case 'lease':
+      return sql`select d.lease_id as entity_id, substr(d.url, 5) as oxy_file_id
+        from lease_documents d where d.url like 'oxy:%'`;
+    case 'tenant_application':
+      return sql`select d.application_id as entity_id, substr(d.url, 5) as oxy_file_id
+        from tenant_application_documents d where d.url like 'oxy:%'`;
+    case 'maintenance_request':
+      return sql`select a.request_id as entity_id, substr(a.storage_key, 5) as oxy_file_id
+        from maintenance_request_attachments a where a.storage_key like 'oxy:%'`;
   }
 }
 

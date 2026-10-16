@@ -9,15 +9,18 @@
  *  3. the counter has been running for at least the soak — its first row is
  *     that old — so "no rows" cannot be mistaken for "no reads".
  *
- * The bucket as a whole additionally needs the private documents out of it,
- * which waits on Oxy stage 4c (`privateDocuments.ts`, `TODO(oxy-4c)`); until
- * then `privateDocuments` is non-zero and `bucketRetirable` is false.
+ * The bucket as a whole additionally needs the private documents out of it:
+ * every lease, application and maintenance document moved into its owner's
+ * Oxy account (`scripts/migratePrivateDocumentsToOxy.ts`, ADR 0043 stage 4c),
+ * so that no row names a bucket object (`privateDocuments` = 0), and the
+ * private surface read nothing from the bucket for the soak.
  */
 
 import { sql } from 'drizzle-orm';
 
 import { getDb } from '../../db/postgres';
 import { countLegacyImages } from './imageMigration';
+import { countLegacyPrivateDocuments } from './privateDocumentMigration';
 
 export interface StorageStatus {
   soakDays: number;
@@ -26,7 +29,7 @@ export interface StorageStatus {
   recentReads: Array<{ surface: string; outcome: string; reads: number }>;
   /** When the counter first recorded anything, or null. */
   countingSince: string | null;
-  /** Private documents still in the bucket (lease, application, maintenance). */
+  /** Private documents whose row still names a bucket object (lease, application, maintenance). */
   privateDocuments: number;
   /** Reference changes not yet accepted by Oxy, and the oldest one's age. */
   pendingReferenceChanges: { rows: number; oldestCreatedAt: string | null; maxAttempts: number };
@@ -46,13 +49,7 @@ export async function storageRetirementStatus(soakDays = 14): Promise<StorageSta
   const [since] = await db.execute<{ first: string | null }>(sql`
     select min(day)::text as first from legacy_media_reads
   `);
-  const [privateDocs] = await db.execute<{ rows: string }>(sql`
-    select (
-      (select count(*) from lease_documents)
-      + (select count(*) from tenant_application_documents)
-      + (select count(*) from maintenance_request_attachments)
-    )::text as rows
-  `);
+  const privateDocs = await countLegacyPrivateDocuments();
   const [pending] = await db.execute<{
     rows: string;
     oldest: string | null;
@@ -76,7 +73,10 @@ export async function storageRetirementStatus(soakDays = 14): Promise<StorageSta
     Date.now() - new Date(`${countingSince}T00:00:00Z`).getTime() >= soakDays * 24 * 60 * 60 * 1000;
   const publicImagesRetirable =
     legacyImages.every((row) => row.rows === 0) && servedPublic === 0 && countedLongEnough;
-  const privateDocuments = Number(privateDocs?.rows ?? 0);
+  const privateDocuments = privateDocs.reduce((sum, row) => sum + row.onBucket, 0);
+  const servedPrivate = recentReads
+    .filter((row) => row.surface === 'private_document' && row.outcome === 'served')
+    .reduce((sum, row) => sum + row.reads, 0);
 
   return {
     soakDays,
@@ -90,6 +90,6 @@ export async function storageRetirementStatus(soakDays = 14): Promise<StorageSta
       maxAttempts: pending?.max_attempts ?? 0,
     },
     publicImagesRetirable,
-    bucketRetirable: publicImagesRetirable && privateDocuments === 0,
+    bucketRetirable: publicImagesRetirable && privateDocuments === 0 && servedPrivate === 0,
   };
 }

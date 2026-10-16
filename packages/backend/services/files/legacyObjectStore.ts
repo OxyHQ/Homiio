@@ -9,9 +9,11 @@
  *    `scripts/migrateImagesToOxy.ts` has copied every used row and the counter
  *    has read zero `served` for the soak (`docs/oxy-files.md`).
  * 2. **Private documents** — lease documents, application documents,
- *    maintenance photos — through `privateDocuments.ts`, the one adapter that
- *    waits on Oxy stage 4c (`TODO(oxy-4c)` there).
- * 3. **The migration script**, reading each object once to copy it.
+ *    maintenance photos — through `privateDocuments.ts`: those stored before
+ *    the move, and new ones while `OXY_PRIVATE_DOCUMENTS_ENABLED` is off or
+ *    Oxy refuses one. Ends when `scripts/migratePrivateDocumentsToOxy.ts` has
+ *    moved every row into its owner's Oxy account (ADR 0043 stage 4c).
+ * 3. **The migration scripts**, reading each object once to copy it.
  *
  * ## There is no local-disk fallback any more
  *

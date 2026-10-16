@@ -32,7 +32,9 @@ import {
   tenantApplicationDocuments,
   tenantApplications,
 } from '../../db/schema';
+import config from '../../config';
 import { callTool } from '../helpers/capabilityHarness';
+import { fakeOxyFiles } from '../helpers/fakeOxyFiles';
 import { resetGeoTables, seedListingWithGeo } from '../helpers/postgresGeoFixtures';
 
 const LANDLORD = 'oxy-cap-landlord';
@@ -159,6 +161,50 @@ describe('submitApplication', () => {
     await expect(readApplicationDocument(STRANGER, id, document.id)).rejects.toMatchObject({
       statusCode: 404,
     });
+  });
+
+  it('stores it in the applicant’s Oxy account when stage 4c is switched on', async () => {
+    const propertyId = await seedRental();
+    const png = await sharp({
+      create: { width: 4, height: 4, channels: 3, background: '#000000' },
+    })
+      .png()
+      .toBuffer();
+    config.oxyFiles.privateDocumentsEnabled = true;
+    try {
+      const result = await callTool(
+        'submitApplication',
+        APPLICANT,
+        applicationInput(propertyId, {
+          documents: [
+            {
+              type: 'income',
+              filename: 'payslip.png',
+              mimeType: 'image/png',
+              contentBase64: png.toString('base64'),
+            },
+          ],
+        }),
+      );
+      expect(result.isError).toBe(false);
+      const id = (result.structuredContent.data as { id: string }).id;
+      const [document] = await getDb()
+        .select()
+        .from(tenantApplicationDocuments)
+        .where(eq(tenantApplicationDocuments.applicationId, id));
+      expect(document.url).toMatch(/^oxy:/);
+      expect(fakeOxyFiles.files.get(document.url.slice(4))).toMatchObject({
+        ownerUserId: APPLICANT,
+        visibility: 'private',
+      });
+      const read = await readApplicationDocument(LANDLORD, id, document.id);
+      expect(read.base64.length).toBeGreaterThan(0);
+      await expect(readApplicationDocument(STRANGER, id, document.id)).rejects.toMatchObject({
+        statusCode: 404,
+      });
+    } finally {
+      config.oxyFiles.privateDocumentsEnabled = false;
+    }
   });
 
   it('refuses a document type outside the allowlist before anything is stored', async () => {

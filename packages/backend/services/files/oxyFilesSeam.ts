@@ -14,6 +14,8 @@ export type OxyFilesApi = Pick<
   | 'importAppFile'
   | 'importAppFiles'
   | 'uploadUserMedia'
+  | 'uploadUserMediaLarge'
+  | 'linkedDownloadUrls'
   | 'metadataByIds'
   | 'references'
   | 'publicUrl'
@@ -33,4 +35,23 @@ export function oxyFilesOverride(): OxyFilesApi | null {
  */
 export function setOxyFilesForTests(api: OxyFilesApi | null): void {
   override = api;
+}
+
+/**
+ * Fetch the bytes behind a short-lived Oxy download URL (`linkedDownloadUrls`).
+ * A seam of its own because the URL is a real network address: the suite's
+ * in-memory Oxy hands out URLs only it can answer.
+ */
+export type LinkedDownload = (url: string) => Promise<Buffer>;
+
+let downloadOverride: LinkedDownload | null = null;
+
+/** The installed stand-in, if any. */
+export function linkedDownloadOverride(): LinkedDownload | null {
+  return downloadOverride;
+}
+
+/** Replace the downloader — tests only. `null` restores `fetch`. */
+export function setLinkedDownloadForTests(download: LinkedDownload | null): void {
+  downloadOverride = download;
 }
