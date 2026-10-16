@@ -162,6 +162,19 @@ module.exports = (config) => {
           },
         ],
         [
+          // The SDK's voice call with Alia (`@alia.onl/sdk/voice`) captures and plays audio through
+          // react-native-audio-api; the plugin declares RECORD_AUDIO. Its Info.plist mod would
+          // overwrite the microphone usage string, so it is the one expo-camera above writes.
+          'react-native-audio-api',
+          {
+            iosMicrophonePermission:
+              'Allow $(PRODUCT_NAME) to access your microphone, including to dictate messages to Sindi and to talk with Alia',
+            iosBackgroundMode: false,
+            androidForegroundService: false,
+            androidPermissions: ['android.permission.RECORD_AUDIO'],
+          },
+        ],
+        [
           'expo-secure-store',
           {
             configureAndroidBackup: true,

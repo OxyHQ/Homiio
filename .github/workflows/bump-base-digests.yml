@@ -15,7 +15,10 @@ name: Bump base image digests
 
 on:
   schedule:
-    - cron: '23 5 * * 1'
+    # Wednesday, not Monday: this workflow was copied to eight repositories
+    # with the same Monday 05:23 slot, and each run dispatches CI on its PR
+    # against the org's 20 concurrent job slots. Each copy has its own slot.
+    - cron: '23 5 * * 3'
   workflow_dispatch:
 
 permissions: {}

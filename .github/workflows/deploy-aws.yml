@@ -164,6 +164,13 @@ jobs:
     needs: [scope, tip]
     if: needs.scope.outputs.deploy == 'true' && needs.tip.outputs.is_tip == 'true'
     runs-on: ubuntu-24.04-arm
+    # A CEILING, deliberately far above the work: a job killed by its timeout
+    # is cancelled mid-rollout exactly like the cancellations described above.
+    # deploy-ecs-image.sh bounds each wait (pre-migrate, API rollout, worker
+    # rollout, post-migrate) by MAX_WAIT_SECS=1200, so a run that is still
+    # making progress finishes in under ~90 minutes; measured runs take 12-17.
+    # Without it a hung job held one of the org's 20 job slots for 6 hours.
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v7
         with:
