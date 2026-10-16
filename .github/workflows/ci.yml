@@ -196,6 +196,8 @@ jobs:
               - '.github/**'
               - 'scripts/**'
               - 'packages/shared-types/**'
+              - 'packages/contracts/**'
+              - 'packages/sdk/**'
             backend:
               - 'packages/backend/**'
               - 'packages/listing-providers/**'
@@ -459,6 +461,12 @@ jobs:
       # would survive without it.
       - name: Verify the documentation still describes this repository
         run: bun run check:docs
+      - name: Public API contracts and SDK
+        run: |
+          bun run check:openapi
+          bun run --filter @oxy.so/homiio-contracts build
+          bun run --filter @oxy.so/homiio-sdk build
+          bun test packages/sdk/tests
 
       # AGENTS.md is prepended to EVERY agent session, so its bytes are paid on
       # every task forever. It reached 52 KB here by accretion — a subsystem

@@ -28,7 +28,7 @@
  *
  * Two independent gates, and both must pass: the affected household must have
  * authorised exact disclosure AT ALL (`location_household_authorized_at`), and
- * this caller must hold a live grant. A case with a stored exact point and no
+ * this caller must belong to the case team or hold a live grant. A case with a stored exact point and no
  * grant discloses nothing; a grant on a case the household never authorised
  * discloses nothing either.
  */
@@ -41,6 +41,7 @@ import {
   evictionLocationAccessAudit,
   evictionLocationGrants,
 } from '../schema/evictions';
+import { auditCaseChange, canEditCase, lockCase } from './collaboratorRepository';
 import { readExactLocation } from './evictionRepository';
 
 export type EvictionLocationGrantRow = typeof evictionLocationGrants.$inferSelect;
@@ -226,6 +227,11 @@ export async function resolveExactLocation(
   },
   db: DatabaseOrTransaction = getDb(),
 ): Promise<ExactLocationOutcome> {
+  if (typeof (db as { rollback?: unknown }).rollback !== 'function') {
+    return (db as ReturnType<typeof getDb>).transaction((tx) => resolveExactLocation(input, tx));
+  }
+  const owner = await lockCase(input.caseId, db);
+  if (!owner) return { outcome: 'denied', reason: 'no_grant' };
   const stored = await readExactLocation(input.caseId, db);
 
   const deny = async (
@@ -247,8 +253,9 @@ export async function resolveExactLocation(
     return deny('not_authorized_by_household');
   }
 
+  const teamAccess = await canEditCase(input.caseId, input.requesterOxyUserId, db);
   const grant = await findLiveGrant(input.caseId, input.requesterOxyUserId, db);
-  if (!grant) {
+  if (!teamAccess && !grant) {
     // A revoked or expired grant is a DIFFERENT fact from never having had one,
     // and the audit has to say which — so the reason comes from the row's own
     // state rather than from the absence of a live one.
@@ -275,11 +282,13 @@ export async function resolveExactLocation(
       caseId: input.caseId,
       actorOxyUserId: input.requesterOxyUserId,
       action: 'read',
-      purpose: PURPOSE_BY_COLUMN_VALUE[grant.purpose],
+      purpose: grant ? PURPOSE_BY_COLUMN_VALUE[grant.purpose] : undefined,
     },
     db,
   );
 
+  if (teamAccess)
+    await auditCaseChange(input.caseId, input.requesterOxyUserId, 'team_location_read', db);
   return {
     outcome: 'granted',
     location: {

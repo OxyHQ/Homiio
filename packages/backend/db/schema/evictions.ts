@@ -900,6 +900,51 @@ export const jurisdictionResources = pgTable(
   ],
 );
 
+/** A personal case's editors; the creator remains the sole owner. */
+export const evictionCaseCollaborators = pgTable(
+  'eviction_case_collaborators',
+  {
+    id: generatedId(),
+    caseId: text()
+      .notNull()
+      .references(() => evictionCases.id, { onDelete: 'cascade' }),
+    oxyUserId: text().notNull(),
+    addedByOxyUserId: text().notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex('eviction_case_collaborators_case_user_key').on(t.caseId, t.oxyUserId)],
+);
+
+export const EVICTION_CHANGE_ACTIONS = [
+  'case_created',
+  'case_updated',
+  'case_deleted',
+  'collaborator_added',
+  'collaborator_removed',
+  'team_location_read',
+] as const;
+/** Actor-only audit: no copies of descriptions, addresses or contact details. */
+export const evictionCaseChanges = pgTable(
+  'eviction_case_changes',
+  {
+    id: generatedId(),
+    caseId: text().references(() => evictionCases.id, { onDelete: 'set null' }),
+    // Kept when the case is deleted so the deletion itself remains attributable.
+    caseReference: text().notNull(),
+    actorOxyUserId: text().notNull(),
+    subjectOxyUserId: text(),
+    action: text({ enum: EVICTION_CHANGE_ACTIONS }).notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index('eviction_case_changes_case_idx').on(t.caseId),
+    check(
+      'eviction_case_changes_action_check',
+      sql`${t.action} in (${sql.raw(inList(EVICTION_CHANGE_ACTIONS))})`,
+    ),
+  ],
+);
+
 /** Immutable source evidence; never a public organizing-collective identity. */
 export const evictionOrganizationIdentityArchives = pgTable(
   'eviction_organization_identity_archives',

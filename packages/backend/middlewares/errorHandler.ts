@@ -249,7 +249,14 @@ const errorHandler = (err: any, req: Request, res: Response, next: NextFunction)
     errorResponse.request = {
       method: req.method,
       url: req.originalUrl,
-      headers: req.headers,
+      headers: Object.fromEntries(
+        Object.entries(req.headers).map(([key, value]) => [
+          key,
+          /^(authorization|cookie|x-allo-team-capability|x-homiio-team-operation)$/i.test(key)
+            ? '[REDACTED]'
+            : value,
+        ]),
+      ),
       body: req.body,
       params: req.params,
       query: req.query,

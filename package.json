@@ -30,7 +30,9 @@
     "install:all": "bun install",
     "start:frontend": "bun run --filter @homiio/frontend start",
     "start:backend": "bun run --filter @homiio/backend start",
-    "postinstall": "bun run build:shared-types"
+    "postinstall": "bun run --filter @oxy.so/homiio-contracts build && bun run build:shared-types",
+    "check:openapi": "bun scripts/generate-openapi.ts --check",
+    "generate:openapi": "bun scripts/generate-openapi.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",
@@ -60,7 +62,8 @@
     "@oxy.so/mcp": "1.1.0",
     "react-native-keyboard-controller": "1.21.13",
     "@types/express": "^4.17.25",
-    "react-native-css": "3.1.0-rc.0"
+    "react-native-css": "3.1.0-rc.0",
+    "@oxy.so/allo-contracts": "0.1.0"
   },
   "resolutions": {
     "@oxy.so/core": "4.10.0",
@@ -69,6 +72,7 @@
   "cacheDirectories": [],
   "dependencies": {
     "@oxy.so/core": "4.10.0",
-    "@oxy.so/bloom": "10.7.0"
+    "@oxy.so/bloom": "10.7.0",
+    "zod": "3.25.76"
   }
 }

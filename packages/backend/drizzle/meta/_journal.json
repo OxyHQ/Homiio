@@ -232,6 +232,20 @@
       "when": 1792046478414,
       "tag": "0032_retire_local_organization_identity",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1792048690517,
+      "tag": "0033_case_collaborators",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1792051427571,
+      "tag": "0034_team_chat",
+      "breakpoints": true
     }
   ]
 }

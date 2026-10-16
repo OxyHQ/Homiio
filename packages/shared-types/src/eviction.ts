@@ -141,8 +141,8 @@ export interface EvictionLocationAccessPolicy {
  * The private half of a case's location.
  *
  * NEVER a field of {@link EvictionCase}. It is the body of
- * `GET /api/evictions/:id/location/exact`, served only to the holder of an
- * unexpired, unrevoked {@link EvictionLocationAccessGrant}, and every service of
+ * `GET /api/evictions/:id/location/exact`, served to the current case team or a
+ * holder of a live {@link EvictionLocationAccessGrant}, and every service of
  * it writes an audit row.
  */
 export interface EvictionLocationPrivate {
@@ -539,4 +539,12 @@ export interface CreateEvictionLocationGrantInput {
   purpose: EvictionLocationAccessPurpose;
   /** Clamped server-side to the policy's `maxGrantHours`. */
   hours: number;
+}
+
+/** Authenticated team read, never included in the public case projection. */
+export interface EvictionCaseTeam {
+  hasTeamChat?: boolean;
+  isOwner: boolean;
+  canEdit: boolean;
+  collaborators: { oxyUserId: string; addedAt: string }[];
 }

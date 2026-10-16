@@ -1,0 +1,22 @@
+{
+  "name": "@oxy.so/homiio-sdk",
+  "version": "0.1.1",
+  "description": "Homiio public case sdk",
+  "license": "SEE LICENSE IN LICENSE",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "bun test tests",
+    "prepack": "bun run build"
+  },
+  "dependencies": {
+    "@oxy.so/homiio-contracts": "0.1.1"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3"
+  }
+}

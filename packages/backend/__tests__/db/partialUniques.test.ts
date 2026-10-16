@@ -472,6 +472,9 @@ describe('the partial indexes really are partial', () => {
       // carry the arbiter predicate (`42P10` at runtime otherwise).
       'eviction_location_grants_live_key',
       'eviction_reports_open_reporter_key',
+      // Only one unfinished membership operation per case; finalized history
+      // must not prevent later collaborator changes.
+      'eviction_team_chat_operations_pending_key',
       // A processor's own reference identifies ONE movement (#518 §7.2). Partial
       // on `processor_reference is not null`, because it is null for every
       // manual declaration — a TOTAL unique index would permit exactly one

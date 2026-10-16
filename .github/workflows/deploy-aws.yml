@@ -322,6 +322,8 @@ jobs:
           IMAGE_URI: ${{ env.ECR_REGISTRY }}/oxy/${{ env.APP }}@${{ steps.build.outputs.api_digest }}
           # Non-secret, exact identifiers provisioned outside this workflow.
           # There is no display-name query, list ordering or fallback id.
+          # Provision this SecureString before rollout. Only its ARN enters the task definition.
+          TASK_SECRET_OVERRIDES_JSON: '{"HOMIIO_TEAM_CHAT_KEY":"arn:aws:ssm:us-west-2:237343248947:parameter/oxy/homiio/HOMIIO_TEAM_CHAT_KEY"}'
           HOMIIO_SINDI_ALIA_AGENT_ID: ${{ vars.SINDI_ALIA_AGENT_ID }}
           HOMIIO_OXY_INFERENCE_ROUTING_PROFILE_ID: ${{ vars.OXY_INFERENCE_ROUTING_PROFILE_ID }}
           # Taken away from inherited live revisions: the superseded slug

@@ -5,6 +5,7 @@ import { startPlatformActivity } from './services/platformActivity';
 import express from 'express';
 import type { Request, Response } from 'express';
 import cors, { type CorsOptions } from 'cors';
+import { publicCaseCors } from './middlewares/publicCaseCors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import bodyParser from 'body-parser';
@@ -17,6 +18,7 @@ import { notFound, errorHandler } from './middlewares/errorHandler';
 import { rateLimitKeyFor } from './middlewares/rateLimitKey';
 import { connectPostgres } from './db/postgres';
 import publicRoutes from './routes/public';
+import { publicApiBodyErrorHandler } from './routes/publicApi';
 import {
   OxyServer,
   createOptionalOxyAuth,
@@ -150,6 +152,7 @@ app.use(helmet());
 // CORS configuration — O(1) Set lookup instead of Array.includes per request
 const allowedOriginsSet = new Set([
   'https://homiio.com',
+  'https://allo.you',
   'http://localhost:4130',
   'http://localhost:8130',
   'http://localhost:19006',
@@ -200,6 +203,8 @@ const corsOptions: CorsOptions = {
   maxAge: 86400,
 };
 
+// Anonymous case cards have their own narrow browser integration policy.
+app.use('/api/v1/cases', publicCaseCors);
 // Middleware
 app.use(cors(corsOptions));
 
@@ -219,6 +224,24 @@ const apiLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   skip: isRateLimitExempt,
+  handler: (req, res) => {
+    const resetTime = (req as Request & { rateLimit?: { resetTime?: Date } }).rateLimit?.resetTime;
+    const retryAfterSeconds = Math.max(
+      1,
+      Math.ceil(
+        ((resetTime?.getTime() ?? Date.now() + config.rateLimit.windowMs) - Date.now()) / 1000,
+      ),
+    );
+    res.set('Retry-After', String(retryAfterSeconds));
+    if (req.path.startsWith('/v1/')) res.set('Cache-Control', 'no-store');
+    res.status(429).json({
+      error: {
+        code: 'rate_limited',
+        message: 'Too many requests.',
+        details: { retryAfterSeconds },
+      },
+    });
+  },
 });
 app.use('/api', apiLimiter);
 
@@ -318,6 +341,9 @@ app.get('/health', async (req, res) => {
     },
   });
 });
+
+// The v1 API keeps parser errors in its public contract as well.
+app.use(publicApiBodyErrorHandler);
 
 // Mount public API routes (no authentication required)
 app.use('/api', publicRoutes());

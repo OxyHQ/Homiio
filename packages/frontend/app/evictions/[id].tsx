@@ -24,7 +24,8 @@
  */
 import type React from 'react';
 import { useCallback, useContext, useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { Linking, ScrollView, StyleSheet, View } from 'react-native';
+import { getMentionShareUrl } from '@oxy.so/homiio-contracts/links';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -70,6 +71,7 @@ import {
   useDeleteEvictionComment,
   useEvictionComments,
   useEvictionDetail,
+  useEvictionTeam,
   useJurisdictionResources,
   useToggleAttend,
   useToggleFollow,
@@ -77,6 +79,7 @@ import {
 import { evictionReportCardProps } from '@/components/evictions/EvictionCard';
 import { EvictionContactActions } from '@/components/evictions/EvictionContactActions';
 import { EvictionCommentRow } from '@/components/evictions/EvictionCommentRow';
+import { EvictionCollaborators } from '@/components/evictions/EvictionCollaborators';
 import { EvictionOwnerControls } from '@/components/evictions/EvictionOwnerControls';
 import { EvictionReportSheet } from '@/components/evictions/EvictionReportSheet';
 import { EvictionHelpNeeds } from '@/components/evictions/EvictionHelpNeeds';
@@ -123,6 +126,7 @@ export default function EvictionDetailScreen() {
     isFetchingNextPage,
   } = useEvictionComments(caseId);
 
+  const team = useEvictionTeam(caseId, user?.id);
   const toggleAttend = useToggleAttend(caseId);
   const toggleFollow = useToggleFollow(caseId);
   const createComment = useCreateEvictionComment(caseId);
@@ -346,6 +350,17 @@ export default function EvictionDetailScreen() {
           ) : null}
 
           <H2 style={styles.title}>{eviction.title}</H2>
+          <Button
+            tone="neutral"
+            appearance="outline"
+            onPress={() => {
+              void Linking.openURL(getMentionShareUrl(caseId)).catch(() =>
+                toast.error(t('evictions.detail.shareFailed')),
+              );
+            }}
+          >
+            {t('evictions.detail.shareInMention', { defaultValue: 'Share in Mention' })}
+          </Button>
 
           {/* Status, the day, the time and how far off it is, the PUBLISHED
               area, the description and the turnout. The attend toggle stays
@@ -494,7 +509,17 @@ export default function EvictionDetailScreen() {
             )}
           </Card>
 
-          {eviction.isOwner ? (
+          {team.data && !team.isError && user?.id ? (
+            <EvictionCollaborators
+              key={`${caseId}:${user.id}`}
+              caseId={caseId}
+              team={team.data}
+              onChanged={() => {
+                void team.refetch();
+              }}
+            />
+          ) : null}
+          {team.data?.canEdit && !team.isError ? (
             <EvictionOwnerControls
               caseId={caseId}
               currentStatus={eviction.status}

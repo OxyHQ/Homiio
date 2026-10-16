@@ -43,6 +43,7 @@
  * beside it, and visible to a test that counts rows.
  */
 
+import { auditCaseChange, canEditCase, lockCase } from './collaboratorRepository';
 import {
   and,
   asc,
@@ -331,6 +332,16 @@ export async function findOwnedEvictionCase(
   return row;
 }
 
+/** Preliminary editor read; mutation repeats this check under the case lock. */
+export async function findEditableEvictionCase(
+  caseId: string,
+  oxyUserId: string,
+  db: DatabaseOrTransaction = getDb(),
+) {
+  if (!(await canEditCase(caseId, oxyUserId, db))) return undefined;
+  return findEvictionCase(caseId, db);
+}
+
 /** The organiser's contact block. One of the two sanctioned protected reads. */
 export interface EvictionCaseContact {
   readonly contactPhone: string | null;
@@ -561,8 +572,13 @@ export async function insertEvictionCase(
   values: EvictionCaseInsert,
   db: DatabaseOrTransaction = getDb(),
 ): Promise<EvictionCaseRow> {
-  const [row] = await db.insert(evictionCases).values(values).returning(publicCaseColumns);
-  return row;
+  const run = async (tx: DatabaseOrTransaction) => {
+    const [row] = await tx.insert(evictionCases).values(values).returning(publicCaseColumns);
+    await auditCaseChange(row.id, values.oxyUserId, 'case_created', tx);
+    return row;
+  };
+  if (typeof (db as { rollback?: unknown }).rollback === 'function') return run(db);
+  return (db as ReturnType<typeof getDb>).transaction(run);
 }
 
 /**
@@ -710,14 +726,27 @@ export async function updateOwnedEvictionCase(
     readonly oxyUserId: string;
     readonly patch: EvictionCasePatch;
     readonly timelineEntries?: readonly EvictionTimelineEntryInput[];
+    readonly helpNeeds?: readonly {
+      readonly needType: EvictionHelpNeedType;
+      readonly note?: string;
+    }[];
+    readonly allowCollaborator?: boolean;
   },
   db: DatabaseOrTransaction = getDb(),
 ): Promise<EvictionUpdateOutcome> {
   const run = async (tx: DatabaseOrTransaction): Promise<EvictionUpdateOutcome> => {
+    const locked = await lockCase(input.caseId, tx);
+    if (
+      !locked ||
+      (input.allowCollaborator
+        ? !(await canEditCase(input.caseId, input.oxyUserId, tx))
+        : locked.oxyUserId !== input.oxyUserId)
+    )
+      return { outcome: 'not_found' };
     const hasPatch = Object.keys(input.patch).length > 0;
     const ownership = and(
       eq(evictionCases.id, input.caseId),
-      eq(evictionCases.oxyUserId, input.oxyUserId),
+      eq(evictionCases.oxyUserId, locked.oxyUserId),
     );
     const nextStatus = input.patch.status;
 
@@ -755,6 +784,8 @@ export async function updateOwnedEvictionCase(
         : { outcome: 'not_found' };
     }
 
+    if (input.helpNeeds !== undefined) await replaceHelpNeeds(input.caseId, input.helpNeeds, tx);
+    await auditCaseChange(input.caseId, input.oxyUserId, 'case_updated', tx);
     const written: EvictionCaseUpdateRow[] = [];
     for (const entry of input.timelineEntries ?? []) {
       written.push(await appendTimelineEntry(input.caseId, entry, tx));
@@ -784,11 +815,18 @@ export async function deleteOwnedEvictionCase(
   oxyUserId: string,
   db: DatabaseOrTransaction = getDb(),
 ): Promise<boolean> {
-  const deleted = await db
-    .delete(evictionCases)
-    .where(and(eq(evictionCases.id, caseId), eq(evictionCases.oxyUserId, oxyUserId)))
-    .returning({ id: evictionCases.id });
-  return deleted.length === 1;
+  const run = async (tx: DatabaseOrTransaction) => {
+    const owner = await lockCase(caseId, tx);
+    if (!owner || owner.oxyUserId !== oxyUserId) return false;
+    await auditCaseChange(caseId, oxyUserId, 'case_deleted', tx);
+    const deleted = await tx
+      .delete(evictionCases)
+      .where(and(eq(evictionCases.id, caseId), eq(evictionCases.oxyUserId, oxyUserId)))
+      .returning({ id: evictionCases.id });
+    return deleted.length === 1;
+  };
+  if (typeof (db as { rollback?: unknown }).rollback === 'function') return run(db);
+  return (db as ReturnType<typeof getDb>).transaction(run);
 }
 
 /** Replace a case's help needs wholesale — a payload names the complete set. */

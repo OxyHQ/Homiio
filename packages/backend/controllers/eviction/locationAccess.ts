@@ -18,7 +18,7 @@
  * ## Two gates, and both are the organiser's to open
  *
  * The affected household must have authorised exact disclosure at all, and the
- * caller must hold a live grant. `resolveExactLocation` checks both and audits
+ * caller must belong to the case team or hold a live grant. `resolveExactLocation` checks both and audits
  * every outcome including the refusals — an audit that records only successes
  * cannot answer "did anybody try".
  *
