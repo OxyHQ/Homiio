@@ -63,7 +63,8 @@ All under `/api`. Source: `packages/backend/routes/public.ts`.
 The response contains `items` and `unavailableIds`. Cards carry only `id`, public
 `title`, coarse `area`, `scheduledAt`, `status` and a canonical Homiio `url`.
 The SDK validates responses, deduplicates and chunks references, and retains no
-content cache. Consumers must remove stale content on failure or withdrawal.
+content cache. Browsers import `@oxy.so/homiio-sdk/client`, which checks the same
+contract by hand and loads no Zod; the root entry adds the team-chat client. Consumers must remove stale content on failure or withdrawal.
 `getHomiioCaseUrl` / `parseHomiioCaseUrl` support pasted links;
 `getMentionShareUrl` opens Mention's composer with only `homiioCaseId`.
 Participation continues in Homiio.

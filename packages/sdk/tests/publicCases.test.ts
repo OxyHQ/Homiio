@@ -75,3 +75,27 @@ describe('current public case references', () => {
     }
   });
 });
+
+describe('client entry', () => {
+  test('resolves cards without loading the schema runtime', () => {
+    const probe = Bun.spawnSync(
+      [
+        process.execPath,
+        '-e',
+        "require('./dist/client.js'); console.log(Object.keys(require.cache).some((k) => k.includes('/zod/')))",
+      ],
+      { cwd: `${import.meta.dir}/..` },
+    );
+    expect(probe.stdout.toString().trim()).toBe('false');
+  });
+  test('rejects error bodies outside the contract', async () => {
+    for (const body of [
+      { error: { code: 'teapot', message: 'no' } },
+      { error: { code: 'not_found', message: 'gone', details: { nested: { a: 1 } } } },
+      { error: { code: 'not_found', message: 'gone', extra: true } },
+    ]) {
+      const client = new HomiioClient({ fetch: (async () => reply(body, 404)) as typeof fetch });
+      await expect(client.getPublicCases(['a'])).rejects.toBeInstanceOf(TypeError);
+    }
+  });
+});
