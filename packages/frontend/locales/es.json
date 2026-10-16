@@ -135,21 +135,16 @@
       "topProperties": "Propiedades destacadas"
     },
     "hero": {
-      "title": "Encuentra tu hogar ético"
-    },
-    "horizon": {
-      "learnMore": "Saber Más"
-    },
-    "eco": {
-      "title": "Propiedades Eco-Certificadas",
-      "description": "Encuentra propiedades sostenibles que cumplen nuestros estándares de eficiencia energética y ecológicos"
+      "title": {
+        "long_term": "Encuentra tu hogar ético",
+        "vacation": "Encuentra tu próxima estancia",
+        "buy": "Encuentra una casa para comprar",
+        "exchange": "Intercambia casa, viaja distinto"
+      }
     },
     "featured": {
       "title": "Propiedades Destacadas",
-      "empty": "No hay propiedades destacadas disponibles en este momento",
-      "titleIn": "Destacadas en {{area}}",
-      "chooseArea": "Elige una zona para ver viviendas destacadas.",
-      "loadFailed": "No se han podido cargar las viviendas destacadas de esta zona."
+      "titleIn": "Destacadas en {{area}}"
     },
     "viewAll": "Ver Todo",
     "recentlyViewed": {
@@ -175,71 +170,62 @@
       "title": "Viviendas recomendadas",
       "eyebrow": "Para ti"
     },
-    "explore": {
-      "eyebrow": "Sigue explorando",
-      "title": "Explora más viviendas",
-      "cta": "Ver todas las viviendas de aquí",
-      "ctaAccessible": "Abrir Explorar con la zona en la que estás buscando"
-    },
     "hostCta": {
-      "cta": "Publica tu vivienda",
-      "subtitle": "Llega a inquilinos verificados de toda España: publicar es gratis, las comisiones son justas y detrás hay personas de verdad.",
-      "title": "Publica tu espacio y encuentra buenos inquilinos"
+      "long_term": {
+        "title": "Publica tu espacio y encuentra buenos inquilinos",
+        "subtitle": "Llega a inquilinos verificados de toda España: publicar es gratis, las comisiones son justas y detrás hay personas de verdad.",
+        "cta": "Publica tu vivienda"
+      },
+      "vacation": {
+        "title": "Recibe viajeros en tu casa",
+        "subtitle": "Comparte tu espacio para estancias cortas: precios claros, sin comisiones ocultas.",
+        "cta": "Hazte anfitrión"
+      },
+      "buy": {
+        "title": "¿Vendes tu casa?",
+        "subtitle": "Publícala gratis y llega a compradores que ven toda la historia.",
+        "cta": "Publica tu casa"
+      },
+      "exchange": {
+        "title": "Intercambia tu casa",
+        "subtitle": "Intercambia casa con gente de confianza y viaja por menos.",
+        "cta": "Ofrece un intercambio"
+      }
     },
     "category": {
       "petFriendly": "Admite mascotas"
     },
     "sections": {
-      "explain": "{{reason}} · Fuente: {{source}}",
-      "explainAccessible": "Por qué estas viviendas: {{reason}}. Fuente: {{source}}.",
       "error": "No hemos podido cargar esta zona. No se oculta nada: la petición ha fallado.",
-      "source": {
-        "listing_created_at": "las fechas de publicación de los anuncios",
-        "listing_sale_price_reduced_flag": "el indicador de bajada de precio que publica el portal",
-        "listing_status": "los cambios de estado del anuncio",
-        "listing_agency_fee_flag": "el campo de honorarios de agencia del anuncio",
-        "listing_cost_fields": "los campos de costes del anuncio",
-        "resident_reviews": "reseñas escritas por quienes vivieron allí",
-        "listing_verification": "los registros de verificación de Homiio",
-        "listing_housing_type": "el campo de tipo de vivienda del anuncio"
-      },
       "new_in_area": {
-        "eyebrow": "Nuevo",
         "title": "Nuevo en tu zona",
         "reason": "Lo último publicado dentro de la zona en la que buscas"
       },
       "price_reduced": {
-        "eyebrow": "Cambio de precio",
         "title": "Precio rebajado",
         "reason": "La parte vendedora ha publicado una bajada de precio. Homiio no guarda histórico de precios de alquiler, así que esto solo incluye viviendas en venta"
       },
       "no_longer_available": {
-        "eyebrow": "Fuera del mercado",
         "title": "Ya no disponibles",
         "reason": "Marcadas como alquiladas o vendidas por su propietario, de más reciente a menos: qué se fue de verdad y a qué precio"
       },
       "no_agency_fee": {
-        "eyebrow": "Costes",
         "title": "Sin honorarios de agencia",
         "reason": "El anuncio indica que no hay honorarios de agencia. Los anuncios que no dicen nada no se incluyen"
       },
       "transparent_total_cost": {
-        "eyebrow": "Costes",
         "title": "Coste total indicado",
         "reason": "Todos los costes recurrentes están en el anuncio: el alquiler con los suministros incluidos y la fianza, o el precio por noche con la limpieza y los gastos de servicio"
       },
       "with_resident_reviews": {
-        "eyebrow": "Confianza",
         "title": "Con reseñas de residentes",
         "reason": "Alguien que vivió en esta dirección ha escrito una reseña"
       },
       "verified": {
-        "eyebrow": "Confianza",
         "title": "Dirección o anunciante verificados",
         "reason": "Homiio ha verificado la dirección o a quien publica el anuncio"
       },
       "public_housing": {
-        "eyebrow": "Pública",
         "title": "Vivienda pública",
         "reason": "Publicada como vivienda pública. Homiio todavía no tiene un campo para vivienda cooperativa o comunitaria, así que esas no se incluyen"
       },
@@ -252,9 +238,17 @@
       "changeFiltersAccessible": "Abrir Explorar para cambiar los filtros de esta zona"
     },
     "discovery": {
-      "eyebrow": "Explora destinos",
-      "title": "¿Dónde te gustaría vivir?",
-      "body": "No hemos podido determinar tu zona, así que estas son ciudades con viviendas en Homiio, no lugares cercanos a ti."
+      "title": "¿Dónde te gustaría vivir?"
+    },
+    "neighbourSupport": {
+      "title": "Vecinos que necesitan apoyo",
+      "viewAll": "Ver todas"
+    },
+    "mission": {
+      "title": "Estamos de tu lado",
+      "body": "Homiio nació de la misma crisis de vivienda que estás viviendo. Escuchamos a quienes alquilan y construimos con ellos.",
+      "support": "Apoya a Homiio",
+      "readStory": "Por qué existe Homiio"
     }
   },
   "agent": {
@@ -436,9 +430,6 @@
       "other": "Other"
     },
     "widgets": {
-      "common": {
-        "signIn": "Iniciar sesión"
-      },
       "quickFilters": {
         "title": "Filtros Rápidos",
         "furnished": "Amueblado",
@@ -455,7 +446,6 @@
       "alerts": {
         "title": "Alertas de propiedades",
         "subtitle": "Recibe avisos cuando nuevas propiedades coincidan con tus criterios",
-        "signInPrompt": "Inicia sesión para crear alertas de propiedades",
         "location": "Ubicación",
         "minPrice": "Precio mínimo",
         "maxPrice": "Precio máximo",
@@ -471,10 +461,7 @@
       },
       "savedSearches": {
         "title": "Búsquedas Guardadas",
-        "empty": "Aún no hay búsquedas guardadas",
         "emptyHelper": "Guarda una búsqueda para acceder rápido y recibir alertas aquí",
-        "signInPrompt": "Inicia sesión para guardar búsquedas",
-        "createNew": "Crear nueva búsqueda",
         "viewAllCount": "Ver todo ({{count}} más)",
         "nameAndQueryRequired": "El nombre y la consulta de búsqueda son obligatorios",
         "loadFailed": "No se pudieron cargar las búsquedas guardadas",
@@ -766,11 +753,6 @@
         "rentalLabel": "Alquiler {{index}}"
       }
     },
-    "toast": {
-      "loadFailed": "No se pudieron cargar los perfiles",
-      "updateSuccess": "Perfil actualizado correctamente",
-      "updateFailed": "No se pudo actualizar el perfil"
-    },
     "subscriptionsDescription": "Manage Homiio Plus or buy one-time file analysis.",
     "subscriptions": "Subscriptions",
     "stays": "Stays",
@@ -809,10 +791,6 @@
       "transactDone": "Listing marked as closed",
       "transactCommission": "Deal closed — commission recorded",
       "viewingTimes": "Horas de visita"
-    },
-    "details": {
-      "bedrooms": "Habitaciones",
-      "bathrooms": "Baños"
     },
     "titles": {
       "forRent": "en alquiler en",
@@ -1616,56 +1594,6 @@
       }
     }
   },
-  "horizon": {
-    "title": "Horizon Initiative",
-    "description": "Iniciativa global para vivienda justa, atención médica y apoyo de viaje",
-    "page": {
-      "benefits": {
-        "fairHousing": {
-          "title": "Vivienda justa",
-          "description": "Acceso a vivienda asequible en más de 120 ciudades con contratos éticos estandarizados"
-        },
-        "healthcare": {
-          "title": "Acceso a la salud",
-          "description": "Cobertura sanitaria universal con clínicas asociadas y telemedicina en cada ciudad Horizon"
-        },
-        "travel": {
-          "title": "Red de viajes",
-          "description": "Transporte y alojamiento con descuento al viajar entre ubicaciones Horizon"
-        },
-        "community": {
-          "title": "Apoyo comunitario",
-          "description": "Conecta con miembros locales para integración cultural, intercambio de idiomas y actividades sociales"
-        }
-      },
-      "heroTitle": "Iniciativa global de vivienda",
-      "heroSubtitle": "Creando un mundo de vivienda, salud y movilidad éticas",
-      "aboutTitle": "Sobre Horizon",
-      "aboutBody1": "Horizon es una iniciativa global diseñada para hacer la vivienda más accesible, asequible y ética para todos. Al unirte a una red de propiedades en más de 120 ciudades, los miembros acceden a vivienda justa, beneficios sanitarios y apoyo de viaje.",
-      "aboutBody2": "Nuestra misión es crear entornos de vida sostenibles que fomenten la comunidad y el bienestar, reduciendo el impacto ambiental de la vivienda.",
-      "benefitsTitle": "Beneficios para miembros",
-      "howItWorksTitle": "Cómo funciona",
-      "steps": {
-        "apply": {
-          "title": "Solicitar membresía",
-          "description": "Completa tu perfil y envía una solicitud con tus necesidades y preferencias de vivienda."
-        },
-        "verify": {
-          "title": "Verificación",
-          "description": "Nuestro equipo revisa tu solicitud y verifica tu identidad e información de antecedentes."
-        },
-        "access": {
-          "title": "Accede a la red",
-          "description": "Una vez aprobado, explora y reserva propiedades en nuestra red global con acceso prioritario."
-        }
-      },
-      "joinTitle": "¿Listo para unirte a Horizon?",
-      "joinSubtitle": "Solicítalo hoy y da el primer paso hacia una vivienda ética y accesible en todo el mundo.",
-      "storiesTitle": "Historias de miembros",
-      "story1": "Horizon facilitó mucho mi mudanza. Encontré un piso ético en Berlín en una semana y la cobertura sanitaria me ayudó cuando necesité atención urgente.",
-      "story2": "Como nómada digital, tener acceso a vivienda de calidad en varias ciudades ha cambiado mi vida. El aspecto comunitario es lo que hace especial a Horizon."
-    }
-  },
   "settings": {
     "title": "Configuración",
     "signOut": "Cerrar Sesión",
@@ -2113,11 +2041,6 @@
     }
   },
   "donations": {
-    "widget": {
-      "title": "Apoya Nuestra Misión",
-      "description": "Ayúdanos a construir el futuro de la vivienda ética. Tu apoyo marca la diferencia.",
-      "button": "Donar a Homiio"
-    },
     "page": {
       "title": "Donar a Homiio",
       "subtitle": "Apoya el futuro de la vivienda ética",
@@ -3874,15 +3797,6 @@
       "exploreGlobalAccessible": "Explorar viviendas de todas partes, sin filtro de zona",
       "pickerTitle": "¿Dónde buscas vivienda?",
       "showingCached": "Copia guardada de {{when}}. No está actualizada.",
-      "failure": {
-        "permission_denied": "La ubicación está desactivada, así que no podemos buscar cerca de ti. Elige un lugar: la ubicación es opcional.",
-        "position_unavailable": "No hemos podido obtener tu posición. Elige un lugar.",
-        "network": "No hemos podido conectar con Homiio para consultarlo. Revisa tu conexión e inténtalo de nuevo.",
-        "rate_limited": "Demasiadas búsquedas de lugares seguidas. Inténtalo dentro de un momento.",
-        "ambiguous": "Hay varios lugares con ese nombre. Elige el que querías.",
-        "no_results": "No hemos encontrado ese lugar. Prueba con otro nombre.",
-        "unsupported": "Homiio todavía no puede buscar en ese tipo de lugar. Elige una ciudad."
-      },
       "chooseArea": "Elige una zona",
       "useCurrentHint": "En un radio de {{distance}} de donde estás",
       "locationOff": "La ubicación está desactivada en los ajustes",

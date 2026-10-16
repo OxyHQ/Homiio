@@ -22,12 +22,12 @@
  */
 
 import React, { useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
+import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { Button } from '@oxy.so/bloom/button';
 import { Admonition } from '@oxy.so/bloom/admonition';
 import { Card } from '@oxy.so/bloom/card';
@@ -35,6 +35,7 @@ import { Chip } from '@oxy.so/bloom/chip';
 import { Field } from '@oxy.so/bloom/field';
 import { RiAddLine, RiCalendarLine, RiDeleteBinLine } from '@oxy.so/bloom/icons';
 import { Loading } from '@oxy.so/bloom/loading';
+import { PageHeader } from '@oxy.so/bloom/page-header';
 import { TextFieldInput } from '@oxy.so/bloom/text-field';
 import { toast } from '@oxy.so/bloom/toast';
 import { Text } from '@oxy.so/bloom/typography';
@@ -52,7 +53,6 @@ import {
   type ViewingWindowInput,
 } from '@homiio/shared-types';
 
-import { Header } from '@/components/Header';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { viewingService } from '@/services/viewingService';
@@ -214,14 +214,24 @@ export default function ViewingAvailabilityPage() {
   const patch = (key: string, changes: Partial<WindowDraft>) =>
     setDrafts((rows) => rows.map((row) => (row.key === key ? { ...row, ...changes } : row)));
 
+  const header = (
+    <PageHeader
+      title={t('viewings.schedule.title')}
+      titleAlign="center"
+      leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+      onBack={router.canGoBack() ? router.back : undefined}
+      backLabel={t('goBack')}
+    />
+  );
+
   if (scheduleQuery.isLoading) {
     return (
-      <SafeAreaView style={styles.safeArea} edges={['bottom']}>
-        <Header options={{ showBackButton: true, title: t('viewings.schedule.title') }} />
+      <>
+        {header}
         <View style={styles.centered}>
           <Loading variant="spinner" size="lg" />
         </View>
-      </SafeAreaView>
+      </>
     );
   }
 
@@ -231,20 +241,20 @@ export default function ViewingAvailabilityPage() {
     // that does not exist. That is the intended outcome, not an error to
     // explain away.
     return (
-      <SafeAreaView style={styles.safeArea} edges={['bottom']}>
-        <Header options={{ showBackButton: true, title: t('viewings.schedule.title') }} />
+      <>
+        {header}
         <ErrorState
           title={t('viewings.schedule.notYours')}
           description={t('viewings.schedule.notYoursDescription')}
         />
-      </SafeAreaView>
+      </>
     );
   }
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['bottom']}>
-      <Header options={{ showBackButton: true, title: t('viewings.schedule.title') }} />
-      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <>
+      {header}
+      <View style={styles.content}>
         <Admonition type="info">{t('viewings.schedule.explainer')}</Admonition>
 
         {scheduleQuery.data?.timeZoneSource === 'fallback' ? (
@@ -365,14 +375,12 @@ export default function ViewingAvailabilityPage() {
         >
           {t('viewings.schedule.save')}
         </Button>
-      </ScrollView>
-    </SafeAreaView>
+      </View>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1 },
-  container: { flex: 1 },
   content: {
     width: '100%',
     maxWidth: 880,

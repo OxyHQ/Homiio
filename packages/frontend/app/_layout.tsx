@@ -1,29 +1,16 @@
 import type React from 'react';
-import { useEffect, useState, useCallback, useMemo } from 'react';
-import {
-  Platform,
-  View,
-  AppState,
-  type AppStateStatus,
-  useWindowDimensions,
-  type ViewStyle,
-} from 'react-native';
-import {
-  SafeAreaProvider,
-  initialWindowMetrics,
-  useSafeAreaInsets,
-} from 'react-native-safe-area-context';
+import { useState, useCallback, useMemo, useSyncExternalStore } from 'react';
+import { Platform, View, AppState } from 'react-native';
+import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { preventNativeSplashAutoHide, useHideNativeSplashWhenReady } from '@oxy.so/expo-splash';
 import { Slot, ThemeProvider, usePathname } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useIsScreenNotMobile } from '@/hooks/useOptimizedMediaQuery';
-import { useHomiioSidebarProps, type HomiioSidebarProps } from '@/components/SideBar';
-import { SIDEBAR_IN_FLOW_FROM } from '@/components/SideBar/dimensions';
+import { useHomiioSidebarProps } from '@/components/SideBar';
 import { RightBar, RIGHT_BAR_WIDTH, useHasRightBar } from '@/components/RightBar';
 import { SindiPanel } from '@/components/sindi/SindiPanel';
 import { useSindiPanelLayout } from '@/components/sindi/sindiPanelLayout';
-import { InAppShellContext, useIsScreenHeaderMounted } from '@/components/Header';
+import { HomiioBottomBar } from '@/components/HomiioBottomBar';
 import { useUIStore } from '@/store/uiStore';
 import { AppShell } from '@oxy.so/bloom/app-shell';
 import { ConnectionStatusToasts } from '@oxy.so/bloom/connection-status';
@@ -44,7 +31,6 @@ import { SavedPropertiesProvider } from '@/context/SavedPropertiesContext';
 import { BottomSheetProvider } from '@/context/BottomSheetContext';
 import { MapStateProvider } from '@/context/MapStateContext';
 import { AskAliaProvider } from '@/context/AskAliaContext';
-import { SearchModeProvider } from '@/context/SearchModeContext';
 import { RentalModeProvider } from '@/context/RentalModeContext';
 import { NotificationProvider } from '@/context/NotificationContext';
 import { OxyProvider, useOxy } from '@oxy.so/services';
@@ -52,6 +38,7 @@ import { BloomProvider } from '@oxy.so/bloom/provider';
 import { useNavigationTheme, useTheme } from '@oxy.so/bloom/theme';
 import { ImageResolverProvider, type ImageResolver } from '@oxy.so/bloom/image-resolver';
 import { PortalProvider, PortalOutlet } from '@oxy.so/bloom/portal';
+import { expoRouterScrollAdapter } from '@oxy.so/bloom/scroll/expo-router';
 import '../styles/global.css';
 import { OXY_BASE_URL, OXY_CLIENT_ID } from '@/config';
 import {
@@ -71,7 +58,7 @@ import {
 
 i18nUse(initReactI18next);
 
-i18nInit({
+const i18nReady = i18nInit({
   // Only the fallback language is registered up front. Every other locale is
   // loaded on first use by `setStoredLanguage` (utils/localeResources*), which on
   // web keeps eleven locale files out of the JavaScript bundle.
@@ -93,6 +80,65 @@ i18nInit({
 // app.config.js). The custom `AppSplashScreen` React overlay is gated to web
 // only. No-op on web (the shared helper guards `Platform.OS === 'web'`).
 preventNativeSplashAutoHide();
+
+// TanStack Query follows the device: NetInfo drives `onlineManager` (refetch on
+// reconnect) and AppState drives `focusManager` (refetch on foreground). Both are
+// app-lifetime subscriptions owned by the managers themselves, so they are wired
+// once here rather than from a component.
+onlineManager.setEventListener((setOnline) =>
+  NetInfo.addEventListener((state) => {
+    setOnline(Boolean(state.isConnected && state.isInternetReachable !== false));
+  }),
+);
+focusManager.setEventListener((setFocused) => {
+  const subscription = AppState.addEventListener('change', (status) => {
+    setFocused(status === 'active');
+  });
+  return () => subscription.remove();
+});
+
+/**
+ * One-time app bootstrap, started at module load: set up notifications (native
+ * only), then mark initialization complete. On web completion starts the custom
+ * JS splash fade; on native it flips `appIsReady` (via the readiness gate in
+ * `RootLayout`), which hides the held OS splash. A failure is logged and still
+ * completes, so the app never hangs on the splash.
+ *
+ * Completion is a tiny external store read with `useSyncExternalStore`.
+ */
+let bootstrapComplete = false;
+const bootstrapListeners = new Set<() => void>();
+
+async function bootstrapApp() {
+  // The welcome notification is translated, so i18n goes first.
+  await i18nReady;
+  if (Platform.OS === 'web') return;
+  await setupNotifications();
+  const hasPermission = await requestNotificationPermissions();
+  if (hasPermission && __DEV__) {
+    await scheduleDemoNotification();
+  }
+}
+
+bootstrapApp()
+  .catch((error: unknown) => {
+    logger.warn('Failed to set up notifications:', error);
+  })
+  .finally(() => {
+    bootstrapComplete = true;
+    for (const listener of bootstrapListeners) listener();
+  });
+
+function subscribeBootstrap(listener: () => void) {
+  bootstrapListeners.add(listener);
+  return () => {
+    bootstrapListeners.delete(listener);
+  };
+}
+const getBootstrapComplete = () => bootstrapComplete;
+// Server (static web) render always shows the splash, matching the client's
+// first render before hydration.
+const getServerBootstrapComplete = () => false;
 
 /**
  * App-wide media chokepoint for Bloom `Avatar`/image components.
@@ -119,44 +165,19 @@ function MediaResolverProvider({ children }: { children: React.ReactNode }) {
   return <ImageResolverProvider value={resolver}>{children}</ImageResolverProvider>;
 }
 
-/** A header that draws nothing: the page (or nothing at all) owns the menu button. */
-const NO_SHELL_HEADER = <></>;
-
 /**
- * The page frame is Bloom's `AppShell`: the sidebar in flow from `lg` (1024)
- * and an overlay drawer below it, the route's right rail as the `aside`, and
- * the routed screen as the content. Everything below chooses its props.
+ * The frame is Bloom's `AppShell`, composed as Noted's: the sidebar in flow
+ * from `lg` and a drawer below it, every page inside the shell's framed
+ * `ContentPanel`, the route's right rail as the `aside`, and Bloom's
+ * `BottomBar` while the sidebar is a drawer.
  *
- * ONE scroll owner per surface and NO page-level `ScrollView`:
- * - Web: `scroll="document"` — the document scrolls, the rail and aside are
- *   sticky. `/explore` is `scroll="fixed"` instead: one `100dvh` screen where
- *   nothing scrolls, so the explore surface pins its map and scrolls only its
- *   results list.
- * - Native tablets (>= 500): `scroll="fixed"` everywhere. Native has no
- *   document, and `document`/`container` would wrap every screen in the shell's
- *   `ScrollView` on top of the screen's own — a double scroller.
- * - Native phones: the `(tabs)` `NativeTabs` navigator owns the screen, so
- *   `<Slot/>` renders full-bleed and each screen's own scroll view is the owner.
- *   `AppShell` is mounted beside it in a zero-size box purely for its drawer
- *   (portaled to the root `PortalOutlet`), which home's hero menu button opens.
- *
- * The drawer's open state is `uiStore.mobileDrawerOpen`, so screens and the
- * sidebar's own navigation (which closes it) share one switch.
- *
- * The menu button: a screen `Header` renders `AppShellMenuButton` itself; a
- * screen without one gets `AppShell`'s default header, which below `lg` is
- * that button alone. Home below 500 draws its own in the hero.
- *
- * The aside: the open Sindi panel from `lg`, otherwise the route's right rail
- * (if it has one). Between 500 and `lg` the panel is an overlay, mounted as the
- * shell's `overlay` and rendering nothing outside that tier.
+ * `scroll="document"`: the browser document scrolls on web, and Bloom gives
+ * native its container scroll view — pages render no scroll view of their own.
+ * Each page draws its own Bloom `PageHeader`, led by `AppShellMenuButton`.
+ * `/explore` is `fixed`: its map pins one screen and scrolls only its list.
  */
 function AppFrame() {
-  const isScreenNotMobile = useIsScreenNotMobile();
   const pathname = usePathname() || '/';
-  const { width } = useWindowDimensions();
-  const insets = useSafeAreaInsets();
-
   const sidebar = useHomiioSidebarProps();
   const drawerOpen = useUIStore((s) => s.mobileDrawerOpen);
   const openMobileDrawer = useUIStore((s) => s.openMobileDrawer);
@@ -167,70 +188,33 @@ function AppFrame() {
   );
   const hasRightBar = useHasRightBar();
   const sindiPanel = useSindiPanelLayout();
-  const screenHeaderMounted = useIsScreenHeaderMounted();
-
-  const isNative = Platform.OS !== 'web';
-  const railInFlow = width >= SIDEBAR_IN_FLOW_FROM;
-
-  // Native: keep the rail clear of the status bar and home indicator. The
-  // in-flow rail stretches in the shell's row; the drawer's fills its column.
-  const nativeSidebar = useMemo<HomiioSidebarProps>(() => {
-    const safeArea: ViewStyle = {
-      marginTop: insets.top,
-      marginBottom: insets.bottom,
-      height: undefined,
-    };
-    return {
-      ...sidebar,
-      style: railInFlow
-        ? { ...safeArea, alignSelf: 'stretch' }
-        : { ...safeArea, flex: 1, minHeight: 0 },
-    };
-  }, [sidebar, insets.top, insets.bottom, railInFlow]);
-
-  if (isNative && !isScreenNotMobile) {
-    return (
-      <>
-        <Slot />
-        <View
-          pointerEvents="none"
-          style={{ position: 'absolute', width: 0, height: 0, overflow: 'hidden' }}
-        >
-          <AppShell
-            sidebar={nativeSidebar}
-            header={NO_SHELL_HEADER}
-            drawerOpen={drawerOpen}
-            onDrawerOpenChange={onDrawerOpenChange}
-            scroll="fixed"
-          />
-        </View>
-      </>
-    );
-  }
-
   const isExploreRoute = pathname === '/explore' || pathname.startsWith('/explore/');
-  const pageDrawsMenuButton = screenHeaderMounted || (pathname === '/' && !isScreenNotMobile);
 
   return (
-    <InAppShellContext.Provider value>
-      <AppShell
-        sidebar={isNative ? nativeSidebar : sidebar}
-        drawer="overlay"
-        drawerOpen={drawerOpen}
-        onDrawerOpenChange={onDrawerOpenChange}
-        header={pageDrawsMenuButton ? NO_SHELL_HEADER : undefined}
-        aside={
-          sindiPanel.docked ? <SindiPanel placement="aside" /> : hasRightBar ? <RightBar /> : null
-        }
-        asideWidth={sindiPanel.docked ? sindiPanel.width : RIGHT_BAR_WIDTH}
-        asideFrom="lg"
-        asideCollapse="hidden"
-        scroll={isNative || isExploreRoute ? 'fixed' : 'document'}
-        overlay={<SindiPanel placement="overlay" />}
-      >
-        <Slot />
-      </AppShell>
-    </InAppShellContext.Provider>
+    <AppShell
+      variant="feed"
+      panel
+      scroll={isExploreRoute ? 'fixed' : 'document'}
+      sidebar={sidebar}
+      drawer="reveal"
+      drawerOpen={drawerOpen}
+      onDrawerOpenChange={onDrawerOpenChange}
+      header={null}
+      contentWidth={1800}
+      navigationAlign="content"
+      navigationGap={8}
+      gutter={8}
+      aside={
+        sindiPanel.docked ? <SindiPanel placement="aside" /> : hasRightBar ? <RightBar /> : null
+      }
+      asideWidth={sindiPanel.docked ? sindiPanel.width : RIGHT_BAR_WIDTH}
+      asideFrom="lg"
+      asideCollapse="hidden"
+      bottomBar={<HomiioBottomBar />}
+      overlay={<SindiPanel placement="overlay" />}
+    >
+      <Slot />
+    </AppShell>
   );
 }
 
@@ -255,7 +239,11 @@ export default function RootLayout() {
   // `startFade` is fully derived from initialization completing — there is no
   // other trigger — so we keep a single source of truth and derive the fade
   // flag instead of syncing it in an effect (which caused cascading renders).
-  const [initializationComplete, setInitializationComplete] = useState(false);
+  const initializationComplete = useSyncExternalStore(
+    subscribeBootstrap,
+    getBootstrapComplete,
+    getServerBootstrapComplete,
+  );
   const [fadeComplete, setFadeComplete] = useState(false);
   const startFade = initializationComplete;
 
@@ -293,8 +281,8 @@ export default function RootLayout() {
   //   the OS splash would hang forever.
   //
   // This was a `useState` latched by an effect. The latch could never differ
-  // from the expression: `setInitializationComplete` and `setFadeComplete` are
-  // each only ever called with `true` and neither is ever reset, so once the
+  // from the expression: bootstrap completion and `setFadeComplete` each only
+  // ever go to `true` and neither is ever reset, so once the
   // condition holds it holds forever. Deriving it drops a render — the splash
   // used to persist for one extra commit while the effect caught up.
   const appIsReady =
@@ -304,56 +292,6 @@ export default function RootLayout() {
   // no-op on web (the OS splash was never held; the custom overlay handles the
   // transition there).
   useHideNativeSplashWhenReady(appIsReady);
-
-  useEffect(() => {
-    // React Query online manager using NetInfo
-    const unsubscribeNetInfo = NetInfo.addEventListener((state) => {
-      onlineManager.setOnline(Boolean(state.isConnected && state.isInternetReachable !== false));
-    });
-
-    // React Query focus manager using AppState
-    const onAppStateChange = (status: AppStateStatus) => {
-      focusManager.setFocused(status === 'active');
-    };
-    const appStateSub = AppState.addEventListener('change', onAppStateChange);
-
-    return () => {
-      unsubscribeNetInfo();
-      appStateSub.remove();
-    };
-  }, []);
-
-  // One-time app bootstrap: set up notifications (native only), then mark
-  // initialization complete. On web this starts the custom JS splash fade; on
-  // native it flips `appIsReady` (via the readiness gate) which hides the held OS
-  // splash. The completion state is set in an async continuation (after `await`)
-  // and guarded by `active` so it never runs synchronously within the effect or
-  // after unmount.
-  useEffect(() => {
-    let active = true;
-    (async () => {
-      try {
-        if (Platform.OS !== 'web') {
-          await setupNotifications();
-          const hasPermission = await requestNotificationPermissions();
-          if (hasPermission && __DEV__) {
-            await scheduleDemoNotification();
-          }
-        }
-        if (active) {
-          setInitializationComplete(true);
-        }
-      } catch (error: unknown) {
-        logger.warn('Failed to set up notifications:', error);
-        if (active) {
-          setInitializationComplete(true);
-        }
-      }
-    })();
-    return () => {
-      active = false;
-    };
-  }, []);
 
   return (
     <View className="flex-1">
@@ -374,7 +312,7 @@ export default function RootLayout() {
           <BloomProvider
             mode="light"
             colorPreset="yellow"
-            fonts
+            scrollAdapter={expoRouterScrollAdapter}
             onFontsLoading={Platform.OS === 'web' ? <AppSplashScreen /> : null}
           >
             <BloomNavigationTheme>
@@ -424,11 +362,9 @@ export default function RootLayout() {
                                     <PortalProvider>
                                       <ErrorBoundary>
                                         <MapStateProvider>
-                                          <SearchModeProvider>
-                                            <AskAliaProvider>
-                                              <AppFrame />
-                                            </AskAliaProvider>
-                                          </SearchModeProvider>
+                                          <AskAliaProvider>
+                                            <AppFrame />
+                                          </AskAliaProvider>
                                         </MapStateProvider>
                                       </ErrorBoundary>
                                       {/*

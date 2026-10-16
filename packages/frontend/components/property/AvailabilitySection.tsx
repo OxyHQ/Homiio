@@ -53,5 +53,3 @@ export const AvailabilitySection: React.FC<Props> = ({ property }) => {
     </Section>
   );
 };
-
-export default AvailabilitySection;

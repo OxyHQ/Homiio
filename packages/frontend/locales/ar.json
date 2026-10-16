@@ -138,24 +138,19 @@
       "topProperties": "أبرز العقارات"
     },
     "hero": {
-      "title": "اعثر على سكنك العادل"
+      "title": {
+        "long_term": "اعثر على سكنك العادل",
+        "vacation": "اعثر على إقامتك القادمة",
+        "buy": "اعثر على منزل للشراء",
+        "exchange": "بادل منزلك وسافر بطريقة مختلفة"
+      }
     },
     "category": {
       "petFriendly": "تسمح بالحيوانات الأليفة"
     },
-    "horizon": {
-      "learnMore": "اعرف المزيد"
-    },
-    "eco": {
-      "title": "عقارات حاصلة على شهادة بيئية",
-      "description": "اعثر على عقارات مستدامة تستوفي معاييرنا لكفاءة الطاقة والحفاظ على البيئة"
-    },
     "featured": {
       "title": "عقارات مختارة",
-      "empty": "لا توجد عقارات مختارة في الوقت الحالي",
-      "titleIn": "مختارات في {{area}}",
-      "chooseArea": "اختر منطقة لعرض العقارات المختارة.",
-      "loadFailed": "تعذّر تحميل العقارات المختارة لهذه المنطقة."
+      "titleIn": "مختارات في {{area}}"
     },
     "viewAll": "عرض الكل",
     "recentlyViewed": {
@@ -180,68 +175,59 @@
       "title": "مساكن مقترحة",
       "eyebrow": "لك"
     },
-    "explore": {
-      "eyebrow": "واصل الاستكشاف",
-      "title": "استكشف مزيدًا من المساكن",
-      "cta": "عرض كل المساكن هنا",
-      "ctaAccessible": "فتح «استكشاف» بالمنطقة التي تبحث فيها"
-    },
     "hostCta": {
-      "cta": "كن مضيفًا",
-      "subtitle": "اعرض سكنك على مستأجرين موثّقين في جميع أنحاء إسبانيا: الإعلان مجاني، والرسوم منصفة، والدعم من بشر حقيقيين.",
-      "title": "أعلن عن مساحتك واعثر على مستأجر جيد"
+      "long_term": {
+        "title": "أعلن عن مساحتك واعثر على مستأجر جيد",
+        "subtitle": "اعرض سكنك على مستأجرين موثّقين في جميع أنحاء إسبانيا: الإعلان مجاني، والرسوم منصفة، والدعم من بشر حقيقيين.",
+        "cta": "كن مضيفًا"
+      },
+      "vacation": {
+        "title": "استضف المسافرين في منزلك",
+        "subtitle": "شارك مكانك للإقامات القصيرة — أسعار واضحة ودون رسوم خفية.",
+        "cta": "كن مضيفًا"
+      },
+      "buy": {
+        "title": "هل تبيع منزلك؟",
+        "subtitle": "اعرضه مجانًا وتواصل مع مشترين يرون القصة كاملة.",
+        "cta": "اعرض منزلك"
+      },
+      "exchange": {
+        "title": "بادل منزلك",
+        "subtitle": "بادل المنازل مع أشخاص تثق بهم وسافر بتكلفة أقل.",
+        "cta": "اعرض مبادلة"
+      }
     },
     "sections": {
-      "explain": "{{reason}} · المصدر: {{source}}",
-      "explainAccessible": "لماذا هذه المساكن: {{reason}}. المصدر: {{source}}.",
       "error": "تعذّر تحميل هذه المنطقة. لا نخفي شيئًا — الطلب أخفق.",
-      "source": {
-        "listing_created_at": "تواريخ نشر الإعلانات",
-        "listing_sale_price_reduced_flag": "مؤشّر خفض السعر الذي تنشره المنصة",
-        "listing_status": "تغيّرات حالة الإعلان",
-        "listing_agency_fee_flag": "حقل عمولة الوكالة في الإعلان",
-        "listing_cost_fields": "حقول التكاليف في الإعلان",
-        "resident_reviews": "تقييمات كتبها من سكنوا هناك",
-        "listing_verification": "سجلات التوثيق لدى Homiio",
-        "listing_housing_type": "حقل نوع السكن في الإعلان"
-      },
       "new_in_area": {
-        "eyebrow": "جديد",
         "title": "جديد في منطقتك",
         "reason": "الأحدث نشرًا داخل المنطقة التي تبحث فيها"
       },
       "price_reduced": {
-        "eyebrow": "تغيّر السعر",
         "title": "انخفاض السعر المطلوب",
         "reason": "نشر البائع خفضًا في السعر. لا يحتفظ Homiio بسجل لأسعار الإيجار، لذا يشمل هذا القسم المساكن المعروضة للبيع فقط"
       },
       "no_longer_available": {
-        "eyebrow": "خرجت من السوق",
         "title": "لم تعد متاحة",
         "reason": "وضع مالكوها علامة مؤجَّر أو مُباع، من الأحدث إلى الأقدم: ما الذي خرج فعلًا، وبأي سعر"
       },
       "no_agency_fee": {
-        "eyebrow": "التكاليف",
         "title": "بدون عمولة وكالة",
         "reason": "ينص الإعلان على عدم وجود عمولة وكالة. الإعلانات التي لا تذكر شيئًا غير مُدرجة"
       },
       "transparent_total_cost": {
-        "eyebrow": "التكاليف",
         "title": "التكلفة الكاملة مذكورة",
         "reason": "كل التكاليف المتكررة مذكورة في الإعلان: الإيجار شاملًا الفواتير والتأمين، أو السعر الليلي مع رسوم التنظيف والخدمة"
       },
       "with_resident_reviews": {
-        "eyebrow": "الثقة",
         "title": "بتقييمات من سكنوا فيها",
         "reason": "كتب شخص سكن في هذا العنوان تقييمًا"
       },
       "verified": {
-        "eyebrow": "الثقة",
         "title": "العنوان أو المعلِن موثّق",
         "reason": "وثّق Homiio العنوان أو الشخص الذي نشر الإعلان"
       },
       "public_housing": {
-        "eyebrow": "عام",
         "title": "الإسكان العام",
         "reason": "منشورة بوصفها إسكانًا عامًا. لا يملك Homiio بعد حقلًا للإسكان التعاوني أو المجتمعي، لذا فهي غير مُدرجة"
       },
@@ -254,9 +240,17 @@
       "changeFiltersAccessible": "فتح «استكشاف» لتغيير عوامل التصفية لهذه المنطقة"
     },
     "discovery": {
-      "eyebrow": "استكشف الوجهات",
-      "title": "أين تودّ أن تسكن؟",
-      "body": "تعذّر علينا تحديد منطقتك، لذا هذه مدن تتوفّر فيها مساكن على Homiio، وليست أماكن قريبة منك."
+      "title": "أين تودّ أن تسكن؟"
+    },
+    "neighbourSupport": {
+      "title": "جيران يحتاجون إلى الدعم",
+      "viewAll": "عرض الكل"
+    },
+    "mission": {
+      "title": "نحن إلى جانبك",
+      "body": "وُلد Homiio من أزمة السكن نفسها التي تعيشها. نستمع إلى المستأجرين ونبني معهم.",
+      "support": "ادعم Homiio",
+      "readStory": "لماذا وُجد Homiio"
     }
   },
   "agent": {
@@ -457,9 +451,6 @@
       "other": "Other"
     },
     "widgets": {
-      "common": {
-        "signIn": "Sign in"
-      },
       "quickFilters": {
         "title": "Quick Filters",
         "furnished": "Furnished",
@@ -476,7 +467,6 @@
       "alerts": {
         "title": "Property Alerts",
         "subtitle": "Get notified when new properties match your criteria",
-        "signInPrompt": "Sign in to create property alerts",
         "location": "Location",
         "minPrice": "Min Price",
         "maxPrice": "Max Price",
@@ -492,10 +482,7 @@
       },
       "savedSearches": {
         "title": "Saved Searches",
-        "empty": "No saved searches yet",
         "emptyHelper": "Save a search to get quick access and alerts here",
-        "signInPrompt": "Sign in to save searches",
-        "createNew": "Create New Search",
         "viewAllCount": "View All ({{count}} more)",
         "nameAndQueryRequired": "Search name and query are required",
         "loadFailed": "Failed to load saved searches",
@@ -784,11 +771,6 @@
         "rentalLabel": "Rental {{index}}"
       }
     },
-    "toast": {
-      "loadFailed": "Failed to load profiles",
-      "updateSuccess": "Profile updated successfully",
-      "updateFailed": "Failed to update profile"
-    },
     "subscriptionsDescription": "Manage Homiio Plus or buy one-time file analysis.",
     "subscriptions": "Subscriptions",
     "stays": "Stays",
@@ -835,10 +817,6 @@
       "transactDone": "Listing marked as closed",
       "transactCommission": "Deal closed — commission recorded",
       "viewingTimes": "أوقات المعاينة"
-    },
-    "details": {
-      "bedrooms": "Bedrooms",
-      "bathrooms": "Bathrooms"
     },
     "titles": {
       "forRent": "for rent in",
@@ -1257,56 +1235,6 @@
       "viewProfile": "View Profile",
       "sendRequest": "Send Request",
       "fallbackName": "Roommate"
-    }
-  },
-  "horizon": {
-    "title": "Horizon Initiative",
-    "description": "Global initiative for fair housing, healthcare, and travel support",
-    "page": {
-      "benefits": {
-        "fairHousing": {
-          "title": "Fair Housing",
-          "description": "Access to affordable housing in 120+ cities worldwide with standardized ethical rental agreements"
-        },
-        "healthcare": {
-          "title": "Healthcare Access",
-          "description": "Universal healthcare coverage with partner clinics and telehealth services in every Horizon city"
-        },
-        "travel": {
-          "title": "Travel Network",
-          "description": "Discounted transportation and accommodation when traveling between Horizon locations"
-        },
-        "community": {
-          "title": "Community Support",
-          "description": "Connect with local members for cultural integration, language exchange, and social activities"
-        }
-      },
-      "heroTitle": "Global Housing Initiative",
-      "heroSubtitle": "Creating a world of ethical housing, healthcare, and mobility",
-      "aboutTitle": "About Horizon",
-      "aboutBody1": "Horizon is a global initiative designed to make housing more accessible, affordable, and ethical for everyone. By joining a network of properties across 120+ cities worldwide, members gain access to fair housing, healthcare benefits, and travel support.",
-      "aboutBody2": "Our mission is to create sustainable living environments that foster community and wellbeing while reducing the environmental impact of housing.",
-      "benefitsTitle": "Member Benefits",
-      "howItWorksTitle": "How It Works",
-      "steps": {
-        "apply": {
-          "title": "Apply for Membership",
-          "description": "Complete your profile and submit a membership application with your housing needs and preferences."
-        },
-        "verify": {
-          "title": "Get Verified",
-          "description": "Our team reviews your application and verifies your identity and background information."
-        },
-        "access": {
-          "title": "Access the Network",
-          "description": "Once approved, browse and book properties across our global network with priority access."
-        }
-      },
-      "joinTitle": "Ready to join Horizon?",
-      "joinSubtitle": "Apply today and take the first step toward ethical, accessible housing worldwide.",
-      "storiesTitle": "Member Stories",
-      "story1": "Horizon made my relocation so much easier. I found an ethical apartment in Berlin within a week and the healthcare coverage saved me when I needed emergency care.",
-      "story2": "As a digital nomad, having access to quality housing in multiple cities has been life-changing. The community aspect is what makes Horizon truly special."
     }
   },
   "settings": {
@@ -2122,11 +2050,6 @@
     }
   },
   "donations": {
-    "widget": {
-      "title": "Support Our Mission",
-      "description": "Help us build the future of ethical housing. Your support makes a difference.",
-      "button": "Donate to Homiio"
-    },
     "page": {
       "title": "Donate to Homiio",
       "subtitle": "Support the future of ethical housing",
@@ -3888,15 +3811,6 @@
       "exploreGlobalAccessible": "استكشاف المساكن في كل الأماكن، بدون تحديد منطقة",
       "pickerTitle": "أين تبحث عن سكن؟",
       "showingCached": "نسخة محفوظة من {{when}}. غير محدَّثة.",
-      "failure": {
-        "permission_denied": "تحديد الموقع مُعطَّل، لذا لا يمكننا البحث بالقرب منك. اختر مكانًا بدلًا من ذلك — تحديد الموقع اختياري.",
-        "position_unavailable": "تعذّر الحصول على موقعك. اختر مكانًا بدلًا من ذلك.",
-        "network": "تعذّر الاتصال بـ Homiio لإجراء هذا البحث. تحقق من اتصالك ثم أعد المحاولة.",
-        "rate_limited": "عمليات بحث كثيرة عن الأماكن في وقت قصير. أعد المحاولة بعد قليل.",
-        "ambiguous": "عدة أماكن تطابق هذا الاسم. اختر المكان الذي تقصده.",
-        "no_results": "لم نعثر على هذا المكان. جرّب اسمًا آخر.",
-        "unsupported": "لا يستطيع Homiio البحث في هذا النوع من الأماكن بعد. اختر مدينة."
-      },
       "chooseArea": "اختر منطقة",
       "useCurrentHint": "ضمن {{distance}} من موقعك",
       "locationOff": "خدمة الموقع متوقفة في الإعدادات",

@@ -113,21 +113,16 @@
   },
   "home": {
     "hero": {
-      "title": "Troba la teva llar ètica"
-    },
-    "horizon": {
-      "learnMore": "Saber Més"
-    },
-    "eco": {
-      "title": "Propietats Eco-Certificades",
-      "description": "Troba propietats sostenibles que compleixen els nostres estàndards d'eficiència energètica i ecològics"
+      "title": {
+        "long_term": "Troba la teva llar ètica",
+        "vacation": "Troba la teva propera estada",
+        "buy": "Troba una casa per comprar",
+        "exchange": "Intercanvia casa, viatja diferent"
+      }
     },
     "featured": {
       "title": "Propietats Destacades",
-      "empty": "No hi ha propietats destacades disponibles en aquest moment",
-      "titleIn": "Destacats a {{area}}",
-      "chooseArea": "Tria una zona per veure habitatges destacats.",
-      "loadFailed": "No s'han pogut carregar els habitatges destacats d'aquesta zona."
+      "titleIn": "Destacats a {{area}}"
     },
     "viewAll": "Veure Tot",
     "recentlyViewed": {
@@ -196,71 +191,62 @@
       "title": "Habitatges recomanats",
       "eyebrow": "Per a tu"
     },
-    "explore": {
-      "eyebrow": "Continua explorant",
-      "title": "Explora més habitatges",
-      "cta": "Mostra tots els habitatges d'aquí",
-      "ctaAccessible": "Obre Explora amb la zona on estàs cercant"
-    },
     "hostCta": {
-      "cta": "Publica el teu habitatge",
-      "subtitle": "Arriba a llogaters verificats de tot Espanya: publicar és gratuït, les comissions són justes i al darrere hi ha persones de veritat.",
-      "title": "Publica el teu espai i troba bons llogaters"
+      "long_term": {
+        "title": "Publica el teu espai i troba bons llogaters",
+        "subtitle": "Arriba a llogaters verificats de tot Espanya: publicar és gratuït, les comissions són justes i al darrere hi ha persones de veritat.",
+        "cta": "Publica el teu habitatge"
+      },
+      "vacation": {
+        "title": "Acull viatgers a casa teva",
+        "subtitle": "Comparteix el teu espai per a estades curtes: preus clars, sense comissions amagades.",
+        "cta": "Fes-te amfitrió"
+      },
+      "buy": {
+        "title": "Vens casa teva?",
+        "subtitle": "Publica-la gratis i arriba a compradors que en veuen tota la història.",
+        "cta": "Publica la teva casa"
+      },
+      "exchange": {
+        "title": "Intercanvia casa teva",
+        "subtitle": "Intercanvia casa amb gent de confiança i viatja per menys.",
+        "cta": "Ofereix un intercanvi"
+      }
     },
     "category": {
       "petFriendly": "Admet mascotes"
     },
     "sections": {
-      "explain": "{{reason}} · Font: {{source}}",
-      "explainAccessible": "Per què aquests habitatges: {{reason}}. Font: {{source}}.",
       "error": "No hem pogut carregar aquesta zona. No s'amaga res: la petició ha fallat.",
-      "source": {
-        "listing_created_at": "les dates de publicació dels anuncis",
-        "listing_sale_price_reduced_flag": "l'indicador de baixada de preu que publica el portal",
-        "listing_status": "els canvis d'estat de l'anunci",
-        "listing_agency_fee_flag": "el camp d'honoraris d'agència de l'anunci",
-        "listing_cost_fields": "els camps de costos de l'anunci",
-        "resident_reviews": "ressenyes escrites per qui hi va viure",
-        "listing_verification": "els registres de verificació de Homiio",
-        "listing_housing_type": "el camp de tipus d'habitatge de l'anunci"
-      },
       "new_in_area": {
-        "eyebrow": "Nou",
         "title": "Nou a la teva zona",
         "reason": "El més recent publicat dins la zona on cerques"
       },
       "price_reduced": {
-        "eyebrow": "Canvi de preu",
         "title": "Preu rebaixat",
         "reason": "La part venedora ha publicat una baixada de preu. Homiio no desa històric de preus de lloguer, així que això només inclou habitatges en venda"
       },
       "no_longer_available": {
-        "eyebrow": "Fora del mercat",
         "title": "Ja no disponibles",
         "reason": "Marcats com a llogats o venuts pel seu propietari, del més recent al menys: què va marxar de debò i a quin preu"
       },
       "no_agency_fee": {
-        "eyebrow": "Costos",
         "title": "Sense honoraris d'agència",
         "reason": "L'anunci indica que no hi ha honoraris d'agència. Els anuncis que no diuen res no s'hi inclouen"
       },
       "transparent_total_cost": {
-        "eyebrow": "Costos",
         "title": "Cost total indicat",
         "reason": "Tots els costos recurrents són a l'anunci: el lloguer amb els subministraments inclosos i la fiança, o el preu per nit amb la neteja i les despeses de servei"
       },
       "with_resident_reviews": {
-        "eyebrow": "Confiança",
         "title": "Amb ressenyes de residents",
         "reason": "Algú que va viure en aquesta adreça hi ha escrit una ressenya"
       },
       "verified": {
-        "eyebrow": "Confiança",
         "title": "Adreça o anunciant verificats",
         "reason": "Homiio ha verificat l'adreça o qui publica l'anunci"
       },
       "public_housing": {
-        "eyebrow": "Pública",
         "title": "Habitatge públic",
         "reason": "Publicat com a habitatge públic. Homiio encara no té un camp per a habitatge cooperatiu o comunitari, així que aquests no s'hi inclouen"
       },
@@ -273,9 +259,17 @@
       "changeFiltersAccessible": "Obre Explora per canviar els filtres d'aquesta zona"
     },
     "discovery": {
-      "eyebrow": "Explora destinacions",
-      "title": "On t’agradaria viure?",
-      "body": "No hem pogut determinar la teva zona, així que aquestes són ciutats amb habitatges a Homiio, no llocs a prop teu."
+      "title": "On t’agradaria viure?"
+    },
+    "neighbourSupport": {
+      "title": "Veïns que necessiten suport",
+      "viewAll": "Veure-les totes"
+    },
+    "mission": {
+      "title": "Som al teu costat",
+      "body": "Homiio va néixer de la mateixa crisi de l'habitatge que estàs vivint. Escoltem qui lloga i construïm amb ells.",
+      "support": "Dona suport a Homiio",
+      "readStory": "Per què existeix Homiio"
     }
   },
   "agent": {
@@ -457,9 +451,6 @@
       "other": "Other"
     },
     "widgets": {
-      "common": {
-        "signIn": "Inicia la sessió"
-      },
       "quickFilters": {
         "title": "Filtres Ràpids",
         "furnished": "Moblat",
@@ -476,7 +467,6 @@
       "alerts": {
         "title": "Alertes de propietats",
         "subtitle": "Rep avisos quan noves propietats coincideixin amb els teus criteris",
-        "signInPrompt": "Inicia la sessió per crear alertes de propietats",
         "location": "Ubicació",
         "minPrice": "Preu mínim",
         "maxPrice": "Preu màxim",
@@ -492,10 +482,7 @@
       },
       "savedSearches": {
         "title": "Cerques Guardades",
-        "empty": "Encara no hi ha cerques guardades",
         "emptyHelper": "Desa una cerca per accedir-hi ràpidament i rebre alertes aquí",
-        "signInPrompt": "Inicia la sessió per desar cerques",
-        "createNew": "Crea una cerca nova",
         "viewAllCount": "Mostra-ho tot ({{count}} més)",
         "nameAndQueryRequired": "El nom i la consulta de cerca són obligatoris",
         "loadFailed": "No s’han pogut carregar les cerques guardades",
@@ -787,11 +774,6 @@
         "rentalLabel": "Lloguer {{index}}"
       }
     },
-    "toast": {
-      "loadFailed": "No s'han pogut carregar els perfils",
-      "updateSuccess": "Perfil actualitzat correctament",
-      "updateFailed": "No s'ha pogut actualitzar el perfil"
-    },
     "subscriptionsDescription": "Manage Homiio Plus or buy one-time file analysis.",
     "subscriptions": "Subscriptions",
     "stays": "Stays",
@@ -830,10 +812,6 @@
       "transactDone": "Listing marked as closed",
       "transactCommission": "Deal closed — commission recorded",
       "viewingTimes": "Hores de visita"
-    },
-    "details": {
-      "bedrooms": "Habitacions",
-      "bathrooms": "Banys"
     },
     "titles": {
       "forRent": "en lloguer a",
@@ -1637,56 +1615,6 @@
       }
     }
   },
-  "horizon": {
-    "title": "Horizon Initiative",
-    "description": "Iniciativa global per a habitatge just, assistència sanitària i suport de viatge",
-    "page": {
-      "benefits": {
-        "fairHousing": {
-          "title": "Habitatge just",
-          "description": "Accés a habitatge assequible en més de 120 ciutats amb contractes ètics estandarditzats"
-        },
-        "healthcare": {
-          "title": "Accés a la salut",
-          "description": "Cobertura sanitària universal amb clíniques associades i telemedicina a cada ciutat Horizon"
-        },
-        "travel": {
-          "title": "Xarxa de viatges",
-          "description": "Transport i allotjament amb descompte en viatjar entre ubicacions Horizon"
-        },
-        "community": {
-          "title": "Suport comunitari",
-          "description": "Connecta amb membres locals per a integració cultural, intercanvi d'idiomes i activitats socials"
-        }
-      },
-      "heroTitle": "Iniciativa global d'habitatge",
-      "heroSubtitle": "Creant un món d'habitatge, salut i mobilitat ètiques",
-      "aboutTitle": "Sobre Horizon",
-      "aboutBody1": "Horizon és una iniciativa global dissenyada per fer l'habitatge més accessible, assequible i ètic per a tothom. En unir-te a una xarxa de propietats en més de 120 ciutats, els membres accedeixen a habitatge just, beneficis sanitaris i suport de viatge.",
-      "aboutBody2": "La nostra missió és crear entorns de vida sostenibles que fomentin la comunitat i el benestar, reduint l'impacte ambiental de l'habitatge.",
-      "benefitsTitle": "Beneficis per a membres",
-      "howItWorksTitle": "Com funciona",
-      "steps": {
-        "apply": {
-          "title": "Sol·licitar membresia",
-          "description": "Completa el teu perfil i envia una sol·licitud amb les teves necessitats i preferències d'habitatge."
-        },
-        "verify": {
-          "title": "Verificació",
-          "description": "El nostre equip revisa la sol·licitud i verifica la identitat i la informació de fons."
-        },
-        "access": {
-          "title": "Accedeix a la xarxa",
-          "description": "Un cop aprovat, explora i reserva propietats a la xarxa global amb accés prioritari."
-        }
-      },
-      "joinTitle": "Preparat per unir-te a Horizon?",
-      "joinSubtitle": "Sol·licita-ho avui i fes el primer pas cap a un habitatge ètic i accessible arreu del món.",
-      "storiesTitle": "Històries de membres",
-      "story1": "Horizon em va facilitar molt la meva mudança. Vaig trobar un pis ètic a Berlín en una setmana i la cobertura sanitària em va ajudar quan vaig necessitar atenció urgent.",
-      "story2": "Com a nòmada digital, tenir accés a habitatge de qualitat en diverses ciutats ha canviat la meva vida. L'aspecte comunitari és el que fa especial Horizon."
-    }
-  },
   "settings": {
     "title": "Configuració",
     "signOut": "Tancar Sessió",
@@ -2383,11 +2311,6 @@
     "related": "Related tips"
   },
   "donations": {
-    "widget": {
-      "title": "Support Our Mission",
-      "description": "Help us build the future of ethical housing. Your support makes a difference.",
-      "button": "Donate to Homiio"
-    },
     "page": {
       "title": "Donate to Homiio",
       "subtitle": "Support the future of ethical housing",
@@ -3895,15 +3818,6 @@
       "exploreGlobalAccessible": "Explora habitatges d'arreu, sense filtre de zona",
       "pickerTitle": "On busques habitatge?",
       "showingCached": "Còpia desada de {{when}}. No està actualitzada.",
-      "failure": {
-        "permission_denied": "La ubicació està desactivada, així que no podem cercar a prop teu. Tria un lloc: la ubicació és opcional.",
-        "position_unavailable": "No hem pogut obtenir la teva posició. Tria un lloc.",
-        "network": "No hem pogut connectar amb Homiio per consultar-ho. Revisa la connexió i torna-ho a provar.",
-        "rate_limited": "Massa cerques de llocs seguides. Torna-ho a provar d'aquí a un moment.",
-        "ambiguous": "Hi ha diversos llocs amb aquest nom. Tria el que volies.",
-        "no_results": "No hem trobat aquest lloc. Prova amb un altre nom.",
-        "unsupported": "Homiio encara no pot cercar en aquest tipus de lloc. Tria una ciutat."
-      },
       "chooseArea": "Tria una zona",
       "useCurrentHint": "En un radi de {{distance}} d'on ets",
       "locationOff": "La ubicació està desactivada a la configuració",

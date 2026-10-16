@@ -82,7 +82,7 @@ export const DEFAULT_SEARCH_QUERY: SearchQuery = {
  * a store is the wrong place to hold a user-facing sentence, and this value
  * has to survive a language change without being re-committed.
  */
-export const MAP_AREA_LABEL = { primary: 'search.summary.mapArea', kind: 'generated' } as const;
+const MAP_AREA_LABEL = { primary: 'search.summary.mapArea', kind: 'generated' } as const;
 
 /** Build the `map_bounds` selection for a confirmed viewport. */
 export function mapBoundsSelection(bounds: GeoBounds): LocationSelection {

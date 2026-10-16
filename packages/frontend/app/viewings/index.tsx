@@ -11,9 +11,10 @@
 import type React from 'react';
 import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
+import { PageHeader } from '@oxy.so/bloom/page-header';
 import { deviceTimeZone, formatDate } from '@homiio/shared-types';
 import { useFormatting } from '@/utils/format';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -24,7 +25,6 @@ import { Chip, type ChipHue } from '@oxy.so/bloom/chip';
 import * as Skeleton from '@oxy.so/bloom/skeleton';
 import { Text as BloomText, H2, H3 } from '@oxy.so/bloom/typography';
 import { useOxy, openAccountDialog } from '@oxy.so/services';
-import { Header } from '@/components/Header';
 import { confirm } from '@oxy.so/bloom/surfaces';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
@@ -259,116 +259,105 @@ export default function ViewingsPage() {
     return list.filter((v) => v.status === filter);
   }, [filter, viewingsQuery.data]);
 
+  const header = (
+    <PageHeader
+      title={t('viewings.title')}
+      titleAlign="center"
+      leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+      onBack={router.canGoBack() ? router.back : undefined}
+      backLabel={t('goBack')}
+    />
+  );
+
   if (!isAuthed) {
     return (
-      <View style={styles.root}>
-        <Header
-          options={{
-            showBackButton: true,
-            title: t('viewings.title'),
-          }}
-        />
-        <SafeAreaView edges={['bottom']} style={styles.safeArea}>
-          <View style={styles.emptyWrap}>
-            <EmptyState
-              icon={RiCalendarLine}
-              title="Sign in to see your viewings"
-              description="Schedule property visits and track host responses."
-              actionText={t('common.signIn')}
-              actionIcon={RiLoginBoxLine}
-              onAction={() => openAccountDialog()}
-            />
-          </View>
-        </SafeAreaView>
-      </View>
+      <>
+        {header}
+        <View style={styles.emptyWrap}>
+          <EmptyState
+            icon={RiCalendarLine}
+            title="Sign in to see your viewings"
+            description="Schedule property visits and track host responses."
+            actionText={t('common.signIn')}
+            actionIcon={RiLoginBoxLine}
+            onAction={() => openAccountDialog()}
+          />
+        </View>
+      </>
     );
   }
 
   return (
-    <View style={styles.root}>
-      <Header
-        options={{
-          showBackButton: true,
-          title: t('viewings.title'),
-        }}
-      />
-      <SafeAreaView edges={['bottom']} style={styles.safeArea}>
-        <ScrollView contentContainerStyle={styles.content}>
-          <View style={styles.titleBlock}>
-            <SectionEyebrow>Upcoming visits</SectionEyebrow>
-            <H2 style={styles.title}>Your viewings</H2>
-            <BloomText style={styles.subtitle}>
-              Track every visit you have requested and reschedule or cancel with one tap.
-            </BloomText>
-          </View>
+    <>
+      {header}
+      <View style={styles.content}>
+        <View style={styles.titleBlock}>
+          <SectionEyebrow>Upcoming visits</SectionEyebrow>
+          <H2 style={styles.title}>Your viewings</H2>
+          <BloomText style={styles.subtitle}>
+            Track every visit you have requested and reschedule or cancel with one tap.
+          </BloomText>
+        </View>
 
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.filterRow}
-          >
-            {FILTERS.map((entry) => {
-              return (
-                <Chip
-                  key={entry.id}
-                  onPress={() => setFilter(entry.id)}
-                  variant="subtle"
-                  selected={filter === entry.id}
-                >
-                  {t(entry.i18nKey)}
-                </Chip>
-              );
-            })}
-          </ScrollView>
-
-          {viewingsQuery.isLoading ? <ViewingsSkeleton /> : null}
-
-          {viewingsQuery.isError ? (
-            <ErrorState
-              icon={RiAlertLine}
-              title={t('viewings.error.generic')}
-              description={viewingsQuery.error?.message ?? t('common.tryAgain')}
-              onRetry={() => viewingsQuery.refetch()}
-            />
-          ) : null}
-
-          {!viewingsQuery.isLoading && !viewingsQuery.isError && filteredViewings.length === 0 ? (
-            <View style={styles.emptyWrap}>
-              <EmptyState
-                icon={RiCalendarLine}
-                title={t('viewings.empty.title')}
-                description={t('viewings.empty.description')}
-              />
-            </View>
-          ) : null}
-
-          {filteredViewings.length > 0 ? (
-            <View style={styles.listWrap}>
-              {filteredViewings.map((viewing) => (
-                <ViewingCard
-                  key={viewing.id}
-                  viewing={viewing}
-                  cancelling={cancelMutation.isPending && cancelTarget?.id === viewing.id}
-                  onCancel={() => void handleCancel(viewing)}
-                  onModify={() => handleModify(viewing)}
-                />
-              ))}
-            </View>
-          ) : null}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filterRow}
+        >
+          {FILTERS.map((entry) => {
+            return (
+              <Chip
+                key={entry.id}
+                onPress={() => setFilter(entry.id)}
+                variant="subtle"
+                selected={filter === entry.id}
+              >
+                {t(entry.i18nKey)}
+              </Chip>
+            );
+          })}
         </ScrollView>
-      </SafeAreaView>
-    </View>
+
+        {viewingsQuery.isLoading ? <ViewingsSkeleton /> : null}
+
+        {viewingsQuery.isError ? (
+          <ErrorState
+            icon={RiAlertLine}
+            title={t('viewings.error.generic')}
+            description={viewingsQuery.error?.message ?? t('common.tryAgain')}
+            onRetry={() => viewingsQuery.refetch()}
+          />
+        ) : null}
+
+        {!viewingsQuery.isLoading && !viewingsQuery.isError && filteredViewings.length === 0 ? (
+          <View style={styles.emptyWrap}>
+            <EmptyState
+              icon={RiCalendarLine}
+              title={t('viewings.empty.title')}
+              description={t('viewings.empty.description')}
+            />
+          </View>
+        ) : null}
+
+        {filteredViewings.length > 0 ? (
+          <View style={styles.listWrap}>
+            {filteredViewings.map((viewing) => (
+              <ViewingCard
+                key={viewing.id}
+                viewing={viewing}
+                cancelling={cancelMutation.isPending && cancelTarget?.id === viewing.id}
+                onCancel={() => void handleCancel(viewing)}
+                onModify={() => handleModify(viewing)}
+              />
+            ))}
+          </View>
+        ) : null}
+      </View>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  safeArea: {
-    flex: 1,
-  },
   content: {
     padding: spacing.lg,
     gap: spacing.lg,

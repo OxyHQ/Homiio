@@ -38,7 +38,7 @@ const DOCUMENT_ICON: Record<TenantApplicationDocument['type'], SettingsIconCompo
   other: RiFileTextLine,
 };
 
-export const formatApplicationDate = (raw: string): string => {
+const formatApplicationDate = (raw: string): string => {
   const date = new Date(raw);
   return Number.isNaN(date.getTime()) ? raw : formatLocalized(date, 'EEE, d MMM yyyy');
 };

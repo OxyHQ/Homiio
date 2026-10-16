@@ -79,7 +79,7 @@ const ACTION_KEY: Record<MaintenanceStatus, string> = {
  * find, and so the detail screen — which CAN ask for a date — offers exactly
  * the complement.
  */
-export const NEEDS_A_DATE: MaintenanceStatus = 'scheduled';
+const NEEDS_A_DATE: MaintenanceStatus = 'scheduled';
 
 export function MaintenanceSection({
   leaseId,

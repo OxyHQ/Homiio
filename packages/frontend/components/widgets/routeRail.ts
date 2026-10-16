@@ -218,7 +218,6 @@ export const ROUTE_RAIL: Readonly<Record<string, RailAssignment>> = {
   '/tips': NO_RAIL,
   '/tips/[slug]': NO_RAIL,
   '/donate': NO_RAIL,
-  '/horizon': NO_RAIL,
 };
 
 /** What a pathname resolves to. `pattern` is `null` when nothing matched. */

@@ -3,19 +3,18 @@
  * rating). Tapping a neighborhood drills into its reviewed buildings.
  */
 import React from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
+import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
+import { PageHeader } from '@oxy.so/bloom/page-header';
 import * as Skeleton from '@oxy.so/bloom/skeleton';
 
-import { Header } from '@/components/Header';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { ExploreList, ExploreRow } from '@/components/reviews/ExploreRow';
 import { useExploreCity } from '@/hooks/useExploreReviews';
-import { colors } from '@/styles/colors';
 import { radius, spacing } from '@/constants/styles';
 import { RiAlertLine, RiMapPinLine } from '@oxy.so/bloom/icons';
 
@@ -27,59 +26,54 @@ export default function ReviewExploreCityScreen() {
   const neighborhoods = cityQuery.data ?? [];
 
   return (
-    <View style={styles.root}>
-      <Header options={{ title: t('reviews.explore.neighborhoodsTitle'), showBackButton: true }} />
-      <SafeAreaView edges={['bottom']} style={styles.safeArea}>
-        <ScrollView contentContainerStyle={styles.content}>
-          {cityQuery.isLoading ? (
-            <View style={styles.list}>
-              {Array.from({ length: 5 }).map((_, idx) => (
-                <Skeleton.Box key={idx} width="100%" height={56} borderRadius={radius.md} />
-              ))}
-            </View>
-          ) : cityQuery.isError ? (
-            <ErrorState
-              icon={RiAlertLine}
-              title={t('reviews.explore.errorTitle')}
-              description={t('reviews.explore.errorDescription')}
-              retryLabel={t('common.tryAgain')}
-              onRetry={() => cityQuery.refetch()}
-            />
-          ) : neighborhoods.length === 0 ? (
-            <EmptyState
-              icon={RiMapPinLine}
-              title={t('reviews.explore.emptyNeighborhoodsTitle')}
-              description={t('reviews.explore.emptyNeighborhoodsDescription')}
-            />
-          ) : (
-            <ExploreList>
-              {neighborhoods.map((neighborhood) => (
-                <ExploreRow
-                  key={neighborhood.neighborhoodId}
-                  title={neighborhood.name}
-                  subtitle={t('reviews.explore.reviewCount', { count: neighborhood.reviewCount })}
-                  rating={neighborhood.averageRating}
-                  onPress={() =>
-                    router.push(`/reviews/neighborhood/${neighborhood.neighborhoodId}`)
-                  }
-                />
-              ))}
-            </ExploreList>
-          )}
-        </ScrollView>
-      </SafeAreaView>
-    </View>
+    <>
+      <PageHeader
+        title={t('reviews.explore.neighborhoodsTitle')}
+        titleAlign="center"
+        leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+        onBack={router.canGoBack() ? router.back : undefined}
+        backLabel={t('goBack')}
+      />
+      <View style={styles.content}>
+        {cityQuery.isLoading ? (
+          <View style={styles.list}>
+            {Array.from({ length: 5 }).map((_, idx) => (
+              <Skeleton.Box key={idx} width="100%" height={56} borderRadius={radius.md} />
+            ))}
+          </View>
+        ) : cityQuery.isError ? (
+          <ErrorState
+            icon={RiAlertLine}
+            title={t('reviews.explore.errorTitle')}
+            description={t('reviews.explore.errorDescription')}
+            retryLabel={t('common.tryAgain')}
+            onRetry={() => cityQuery.refetch()}
+          />
+        ) : neighborhoods.length === 0 ? (
+          <EmptyState
+            icon={RiMapPinLine}
+            title={t('reviews.explore.emptyNeighborhoodsTitle')}
+            description={t('reviews.explore.emptyNeighborhoodsDescription')}
+          />
+        ) : (
+          <ExploreList>
+            {neighborhoods.map((neighborhood) => (
+              <ExploreRow
+                key={neighborhood.neighborhoodId}
+                title={neighborhood.name}
+                subtitle={t('reviews.explore.reviewCount', { count: neighborhood.reviewCount })}
+                rating={neighborhood.averageRating}
+                onPress={() => router.push(`/reviews/neighborhood/${neighborhood.neighborhoodId}`)}
+              />
+            ))}
+          </ExploreList>
+        )}
+      </View>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  safeArea: {
-    flex: 1,
-  },
   content: {
     padding: spacing.lg,
     gap: spacing.md,

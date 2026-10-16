@@ -28,24 +28,7 @@
  */
 
 import api, { ApiError } from '@/utils/api';
-import type {
-  City,
-  CityFilters,
-  CityLookupResult,
-  CityPlaceCandidate,
-  CityPropertiesResponse,
-  CitiesResponse,
-} from '@homiio/shared-types';
-
-// Re-export the types for backward compatibility
-export type {
-  City,
-  CityFilters,
-  CityLookupResult,
-  CityPlaceCandidate,
-  CityPropertiesResponse,
-  CitiesResponse,
-};
+import type { City, CityLookupResult } from '@homiio/shared-types';
 
 /**
  * What a caller may hand the lookup besides the token.
@@ -53,7 +36,7 @@ export type {
  * Every field is a DISCRIMINATOR the server applies as a filter, except `near`,
  * which biases the order of an ambiguous list and never removes a candidate.
  */
-export interface CityLookupOptions {
+interface CityLookupOptions {
   /** ISO-3166-1 alpha-2. There is no default country — see the module comment. */
   countryCode?: string;
   countryId?: string;
@@ -68,25 +51,6 @@ export interface CityLookupOptions {
 }
 
 class CityService {
-  /**
-   * Get all cities with optional filtering
-   */
-  async getCities(filters: CityFilters = {}): Promise<CitiesResponse> {
-    const params = new URLSearchParams();
-
-    // Geo is relational: cities filter by country/region IDS (or ISO-2 country
-    // code), resolved server-side — there is no free-text state/country param.
-    if (filters.search) params.append('search', filters.search);
-    if (filters.countryId) params.append('countryId', filters.countryId);
-    if (filters.countryCode) params.append('countryCode', filters.countryCode);
-    if (filters.regionId) params.append('regionId', filters.regionId);
-    if (filters.limit) params.append('limit', filters.limit.toString());
-    if (filters.page) params.append('page', filters.page.toString());
-
-    const response = await api.get(`/api/cities?${params.toString()}`);
-    return response.data;
-  }
-
   /**
    * Get popular cities
    */
@@ -138,41 +102,6 @@ class CityService {
       if (error instanceof ApiError && error.status === 404) return { status: 'not_found' };
       throw error;
     }
-  }
-
-  /**
-   * Get properties by city
-   */
-  async getPropertiesByCity(
-    cityId: string,
-    options: {
-      limit?: number;
-      page?: number;
-      sort?: string;
-      verified?: boolean;
-      eco?: boolean;
-      minBedrooms?: number;
-      maxPrice?: number;
-      minPrice?: number;
-    } = {},
-  ): Promise<CityPropertiesResponse> {
-    const params = new URLSearchParams();
-
-    if (options.limit) params.append('limit', options.limit.toString());
-    if (options.page) params.append('page', options.page.toString());
-    if (options.sort) params.append('sort', options.sort);
-    if (options.verified !== undefined) params.append('verified', options.verified.toString());
-    if (options.eco !== undefined) params.append('eco', options.eco.toString());
-    if (options.minBedrooms) params.append('minBedrooms', options.minBedrooms.toString());
-    if (options.maxPrice) params.append('maxPrice', options.maxPrice.toString());
-    if (options.minPrice) params.append('minPrice', options.minPrice.toString());
-
-    const response = await api.get(`/api/cities/${cityId}/properties?${params.toString()}`);
-    // The endpoint wraps the payload as `{ success, data: { city, properties,
-    // pagination } }`; unwrap to the `CityPropertiesResponse` shape (tolerating a
-    // flat body for safety).
-    const body = response.data;
-    return (body?.data ?? body) as CityPropertiesResponse;
   }
 
   /**

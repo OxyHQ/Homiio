@@ -127,7 +127,7 @@ const COORDINATES_ERROR = 'Please select a location on the map';
  * checks, and the `superRefine` enforces the "required before format" ordering
  * for the postal code.
  */
-export const locationStepSchema = z
+const locationStepSchema = z
   .object({
     address: z.string().trim().min(1, 'Street address is required'),
     city: z.string().trim().min(1, 'City is required'),

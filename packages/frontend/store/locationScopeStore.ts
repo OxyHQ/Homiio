@@ -99,7 +99,7 @@ interface LocationScopeState {
  * store, and so the rule reads as a named predicate at the one call site that
  * has to apply it.
  */
-export function isPersistableArea(selection: LocationSelection): boolean {
+function isPersistableArea(selection: LocationSelection): boolean {
   return selection.kind !== 'current_location';
 }
 

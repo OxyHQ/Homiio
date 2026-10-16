@@ -12,14 +12,12 @@ import type React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useMediaQuery } from 'react-responsive';
 
 import { Button } from '@oxy.so/bloom/button';
 import { H1, Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { colors } from '@/styles/colors';
-import { resolvePagePadding, spacing, tracker } from '@/constants/styles';
+import { spacing, tracker } from '@/constants/styles';
 
 /**
  * Aspirational hero photo. Reuses the Unsplash open library (no API key, cached
@@ -48,13 +46,8 @@ export const AgentHero: React.FC<AgentHeroProps> = ({
   trustLine,
   ctaLoading = false,
 }) => {
-  const isWide = useMediaQuery({ minWidth: 768 });
-  const isXL = useMediaQuery({ minWidth: 1280 });
-  const insets = useSafeAreaInsets();
-  const horizontalPadding = resolvePagePadding(isWide);
-
   return (
-    <View style={[styles.hero, { minHeight: isXL ? 560 : isWide ? 480 : 520 }]}>
+    <View className="min-h-[520px] md:min-h-[480px] xl:min-h-[560px]" style={styles.hero}>
       <Image
         source={{ uri: HERO_IMAGE }}
         style={styles.image}
@@ -69,29 +62,16 @@ export const AgentHero: React.FC<AgentHeroProps> = ({
         style={[styles.scrim, { pointerEvents: 'none' }]}
       />
       <View
-        style={[
-          styles.content,
-          {
-            paddingHorizontal: horizontalPadding,
-            paddingTop: insets.top + spacing['4xl'],
-            paddingBottom: isWide ? spacing['5xl'] : spacing['4xl'],
-            alignItems: isWide ? 'center' : 'flex-start',
-          },
-        ]}
+        className="items-start px-4 pt-10 pb-10 md:items-center md:px-8 md:pb-14"
+        style={styles.content}
       >
         <H1
-          style={[
-            styles.title,
-            {
-              fontSize: isXL ? 52 : isWide ? 42 : 34,
-              lineHeight: isXL ? 58 : isWide ? 48 : 40,
-              textAlign: isWide ? 'center' : 'left',
-            },
-          ]}
+          className="text-left text-[34px] leading-[40px] md:text-center md:text-[42px] md:leading-[48px] xl:text-[52px] xl:leading-[58px]"
+          style={styles.title}
         >
           {title}
         </H1>
-        <BloomText style={[styles.subtitle, { textAlign: isWide ? 'center' : 'left' }]}>
+        <BloomText className="text-left md:text-center" style={styles.subtitle}>
           {subtitle}
         </BloomText>
 
@@ -108,7 +88,7 @@ export const AgentHero: React.FC<AgentHeroProps> = ({
         </Button>
 
         {trustLine ? (
-          <BloomText style={[styles.trustLine, { textAlign: isWide ? 'center' : 'left' }]}>
+          <BloomText className="text-left md:text-center" style={styles.trustLine}>
             {trustLine}
           </BloomText>
         ) : null}
@@ -165,5 +145,3 @@ const styles = StyleSheet.create({
     maxWidth: 420,
   },
 });
-
-export default AgentHero;

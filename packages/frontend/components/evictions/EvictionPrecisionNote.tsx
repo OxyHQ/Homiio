@@ -56,5 +56,3 @@ export const EvictionPrecisionNote: React.FC<EvictionPrecisionNoteProps> = ({
     <Admonition type={moderation.precautionaryHold ? 'warning' : 'info'}>{message}</Admonition>
   );
 };
-
-export default EvictionPrecisionNote;

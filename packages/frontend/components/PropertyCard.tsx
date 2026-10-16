@@ -57,8 +57,8 @@ const NEW_LISTING_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 
 const IS_WEB = Platform.OS === 'web';
 
-export type PropertyCardVariant = 'default' | 'compact';
-export type PropertyCardOrientation = 'vertical' | 'horizontal';
+type PropertyCardVariant = 'default' | 'compact';
+type PropertyCardOrientation = 'vertical' | 'horizontal';
 
 /**
  * Property objects can be momentarily flagged as `isSaved` by the server
@@ -253,5 +253,3 @@ export const PropertyCard = React.memo(function PropertyCard({
 const styles = StyleSheet.create({
   footer: { marginTop: 12 },
 });
-
-export default PropertyCard;

@@ -45,8 +45,8 @@ export type OverlayItem<E = HTMLElement> = OverlayDescriptor & {
   leafIds: readonly string[] | null;
 };
 
-export const pointOverlayKey = (id: string): string => `p:${id}`;
-export const clusterOverlayKey = (clusterId: number): string => `c:${clusterId}`;
+const pointOverlayKey = (id: string): string => `p:${id}`;
+const clusterOverlayKey = (clusterId: number): string => `c:${clusterId}`;
 
 const toLonLat = (value: unknown): LonLat | null => {
   if (!Array.isArray(value) || value.length < 2) return null;

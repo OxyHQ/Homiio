@@ -15,21 +15,21 @@
  * `suppression_reason` is a stored column instead of an inference.
  */
 
-import React, { useCallback, useMemo } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { useCallback, useMemo } from 'react';
+import { StyleSheet, View } from 'react-native';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { Card } from '@oxy.so/bloom/card';
 import { RiMapPinLine, RiNotification3Line, RiPauseLine } from '@oxy.so/bloom/icons';
 import { Loading } from '@oxy.so/bloom/loading';
+import { PageHeader } from '@oxy.so/bloom/page-header';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { H3, Text as BloomText } from '@oxy.so/bloom/typography';
-import { Header } from '@/components/Header';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { AlertExplanationText } from '@/components/watches/AlertExplanationText';
 import { LoadMoreSentinel } from '@/components/common/LoadMoreSentinel';
 import { useHousingAlerts, type HousingAlert } from '@/hooks/useHousingAlerts';
-import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import { contentClamp, spacing } from '@/constants/styles';
 import { useFormatting } from '@/utils/format';
 import { deviceTimeZone, formatDate } from '@homiio/shared-types';
@@ -45,7 +45,6 @@ interface DayGroup {
 
 export default function AlertHistoryScreen() {
   const { t } = useTranslation();
-  const theme = useTheme();
   const { locale } = useFormatting();
   // The reader's own zone. A day boundary computed in UTC puts a 01:30 alert on
   // the previous date for everybody west of Greenwich, which reads as the
@@ -70,14 +69,6 @@ export default function AlertHistoryScreen() {
     if (hasNextPage && !isFetchingNextPage) void fetchNextPage();
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  // Both platforms are wired, and each only fires its own: the sentinel below
-  // is inert on native, and this handler is what the screen's own ScrollView
-  // uses there. `enabled` gates both on there being another page.
-  const { onScroll } = useInfiniteScroll({
-    onEndReached: loadMore,
-    enabled: Boolean(hasNextPage) && !isFetchingNextPage,
-  });
-
   const groups = useMemo<DayGroup[]>(() => {
     const alerts = data?.pages.flatMap((page) => page.alerts) ?? [];
     const byDay = new Map<string, HousingAlert[]>();
@@ -100,21 +91,25 @@ export default function AlertHistoryScreen() {
 
   if (isLoading) {
     return (
-      <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
-        <Header options={{ title: t('alerts.history.title') }} />
+      <>
+        <PageHeader
+          title={t('alerts.history.title')}
+          titleAlign="center"
+          leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+        />
         <Loading style={styles.loading} />
-      </View>
+      </>
     );
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
-      <Header options={{ title: t('alerts.history.title') }} />
-      <ScrollView
-        contentContainerStyle={styles.content}
-        onScroll={onScroll}
-        scrollEventThrottle={16}
-      >
+    <>
+      <PageHeader
+        title={t('alerts.history.title')}
+        titleAlign="center"
+        leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+      />
+      <View style={styles.content}>
         {groups.length === 0 ? (
           <EmptyState
             icon={RiNotification3Line}
@@ -134,8 +129,8 @@ export default function AlertHistoryScreen() {
           ))
         )}
         <LoadMoreSentinel onLoadMore={loadMore} enabled={Boolean(hasNextPage)} />
-      </ScrollView>
-    </View>
+      </View>
+    </>
   );
 }
 

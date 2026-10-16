@@ -28,9 +28,8 @@ import { Text as BloomText } from '@oxy.so/bloom/typography';
 import { type AvailabilityWindow, AvailabilityWindowStatus } from '@homiio/shared-types';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { formatLocalized, getFormatLocale } from '@/utils/dateLocale';
-import { useIsScreenNotMobile } from '@/hooks/useOptimizedMediaQuery';
 
-export type AvailabilityCalendarMode = 'inline' | 'modal';
+type AvailabilityCalendarMode = 'inline' | 'modal';
 
 /**
  * Selection behavior:
@@ -38,7 +37,7 @@ export type AvailabilityCalendarMode = 'inline' | 'modal';
  * - `'single'`: every tap picks a single day (long-term move-in flow); the range
  *   is collapsed onto `checkIn === checkOut`.
  */
-export type AvailabilityCalendarSelectionMode = 'range' | 'single';
+type AvailabilityCalendarSelectionMode = 'range' | 'single';
 
 export interface AvailabilityCalendarRange {
   /** Selected check-in date (start of day). */
@@ -105,7 +104,6 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
   const { t, i18n } = useTranslation();
   const theme = useTheme();
   const locale = getFormatLocale(i18n.language);
-  const isLarge = useIsScreenNotMobile();
   const [selection, setSelection] = useState<AvailabilityCalendarRange | null>(initialRange);
 
   const [today] = useState(() => startOfDay(new Date()));
@@ -205,7 +203,7 @@ export const AvailabilityCalendar: React.FC<AvailabilityCalendarProps> = ({
         ) : (
           <RangeCalendar
             {...constraints}
-            visibleMonths={isLarge ? 2 : 1}
+            visibleMonths={1}
             value={
               selection && !isIncomplete
                 ? { start: selection.checkIn, end: selection.checkOut }
@@ -257,5 +255,3 @@ const styles = StyleSheet.create({
     gap: 12,
   },
 });
-
-export default AvailabilityCalendar;

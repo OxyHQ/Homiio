@@ -176,7 +176,7 @@ const normalizeSearch = (
 });
 
 /** What the alert-settings screen may change about a watch. */
-export interface WatchAlertSettingsInput {
+interface WatchAlertSettingsInput {
   cadence?: WatchCadence;
   channels?: AlertChannel[];
   alertRules?: HousingAlertRule[];

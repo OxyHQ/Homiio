@@ -44,7 +44,7 @@ const SEARCH_ENDPOINT = '/api/properties/search';
  * Read rather than re-derived: the client's belief about the request it sent is
  * the one thing that cannot arbitrate "map in Madrid, list from Barcelona".
  */
-export interface SearchLocationEcho {
+interface SearchLocationEcho {
   status: 'resolved' | 'unresolved' | 'none';
   /** The coarse scope the query really ran under. Absent on an older server. */
   appliedLocationKind?: LocationKind;
@@ -76,7 +76,7 @@ interface SearchResponse {
 }
 
 /** One page of results plus paging metadata used by `getNextPageParam`. */
-export interface PropertySearchPage {
+interface PropertySearchPage {
   properties: Property[];
   page: number;
   totalPages: number;
@@ -97,7 +97,7 @@ export interface PropertySearchPage {
  * error state, which already carries a retry and keeps the previous map and
  * filters (ADR 0002 §6.3, invariant 5 of #354).
  */
-export class StaleSearchResponseError extends Error {
+class StaleSearchResponseError extends Error {
   constructor(
     readonly expected: string,
     readonly received: string,

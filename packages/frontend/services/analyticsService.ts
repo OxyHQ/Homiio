@@ -1,11 +1,11 @@
 import { api } from '@/utils/api';
 
-export type AnalyticsTrends = {
+type AnalyticsTrends = {
   propertyRevenue: { current: number; change: number; period: string };
   tenantSatisfaction: { current: number; change: number; period: string };
 };
 
-export type AnalyticsInsights = {
+type AnalyticsInsights = {
   totalInteractions: number;
   appsUsed: string[];
   crossAppActions: number;
@@ -14,7 +14,7 @@ export type AnalyticsInsights = {
   trends: AnalyticsTrends;
 };
 
-export type AppStats = {
+type AppStats = {
   totals: { properties: number; cities: number; saves: number; uniqueSavers: number };
   pricing: { averageRent: number; minRent: number; maxRent: number };
   topCities: { city: string; state: string; properties: number; averageRent: number }[];

@@ -1,7 +1,7 @@
 import type React from 'react';
 import { createContext, useContext, useRef, useCallback } from 'react';
 
-export interface MapState {
+interface MapState {
   center: [number, number];
   zoom: number;
   bounds?: {

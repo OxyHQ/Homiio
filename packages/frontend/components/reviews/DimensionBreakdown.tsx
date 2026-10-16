@@ -131,5 +131,3 @@ const styles = StyleSheet.create({
     color: colors.COLOR_BLACK,
   },
 });
-
-export default DimensionBreakdown;

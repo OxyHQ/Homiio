@@ -22,7 +22,7 @@ export const PROPERTY_TYPE_IDS = [
 ] as const;
 
 export const DEFAULT_PROPERTY_TYPE = 'apartment';
-export const FALLBACK_PROPERTY_TYPE = 'other';
+const FALLBACK_PROPERTY_TYPE = 'other';
 
 // --- Wizard step names (named so the flow-resolver and the step switch stay
 //     in sync — no stringly-typed drift between the two). ---
@@ -96,7 +96,7 @@ const flow = (...middle: string[]): string[] => [
   STEP_PREVIEW,
 ];
 
-export const STEP_FLOWS: Record<string, string[]> = {
+const STEP_FLOWS: Record<string, string[]> = {
   apartment: flow(STEP_AMENITIES),
   house: flow(STEP_AMENITIES),
   room: flow(STEP_AMENITIES),

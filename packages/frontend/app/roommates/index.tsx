@@ -10,10 +10,9 @@
  *   - Shared EmptyState + Loading (Bloom) component.
  *   - Flat wrappers (hairline border) around list content.
  */
-import React, { useCallback, useEffect, useState } from 'react';
-import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@oxy.so/bloom/button';
 import {
@@ -41,8 +40,12 @@ import { RoommateRequestComponent } from '@/components/RoommateRequest';
 import { RoommateRelationshipComponent } from '@/components/RoommateRelationship';
 import { RoomList } from '@/components/RoomList';
 import { useProfile } from '@/context/ProfileContext';
-import { useIsScreenNotMobile } from '@/hooks/useOptimizedMediaQuery';
-import { useRoommate } from '@/hooks/useRoommate';
+import {
+  useRoommate,
+  type RoommateProfile,
+  type RoommateRelationship,
+  type RoommateRequest,
+} from '@/hooks/useRoommate';
 import { roommateService } from '@/services/roommateService';
 import type { PropertyFilters } from '@/services/propertyService';
 import { useProfileStore } from '@/store/profileStore';
@@ -65,30 +68,57 @@ export default function RoommatesPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { oxyServices, activeSessionId } = useOxy();
-  const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>('discover');
-  // On a phone the four icons alone cost ~96px, which is what pushed the last
-  // tab off a 390px screen. Labels carry the meaning; longer translations still
-  // scroll, and Bloom `Tabs` centres the selected trigger when they do.
-  const isWide = useIsScreenNotMobile();
   const [isToggling, setIsToggling] = useState(false);
 
-  const {
-    profiles,
-    requests,
-    relationships,
-    isLoading,
-    error,
-    fetchProfiles,
-    fetchRequests,
-    fetchRelationships,
-    sendRequest,
-    acceptRequest,
-    declineRequest,
-    endRelationship,
-  } = useRoommate();
+  // The legacy hook is used for its mutations only; each one invalidates the
+  // `['roommates', …]` lists below, which refetch themselves.
+  const { sendRequest, acceptRequest, declineRequest, endRelationship } = useRoommate();
 
   const { profile, hasProfile } = useProfile();
+
+  // Each tab's list is a query that runs while its tab is open (the profile
+  // itself is loaded once per session by `ProfileContext`). Keyed on the
+  // session so switching account never shows the previous one's lists.
+  const canLoadLists = Boolean(oxyServices && activeSessionId && hasProfile);
+  const listQueryOptions = { staleTime: 1000 * 30, gcTime: 1000 * 60 * 10 } as const;
+
+  const profilesQuery = useQuery({
+    queryKey: ['roommates', 'profiles', activeSessionId],
+    queryFn: async () => {
+      const response = await roommateService.getRoommateProfiles();
+      return (response.profiles || []) as RoommateProfile[];
+    },
+    enabled: canLoadLists && activeTab === 'discover',
+    ...listQueryOptions,
+  });
+
+  const requestsQuery = useQuery({
+    queryKey: ['roommates', 'requests', activeSessionId],
+    queryFn: async () => {
+      const response = await roommateService.getRoommateRequests();
+      return {
+        sent: (response?.sent ?? []) as RoommateRequest[],
+        received: (response?.received ?? []) as RoommateRequest[],
+      };
+    },
+    enabled: canLoadLists && activeTab === 'requests',
+    ...listQueryOptions,
+  });
+
+  const relationshipsQuery = useQuery({
+    queryKey: ['roommates', 'relationships', activeSessionId],
+    queryFn: async () => {
+      const response = await roommateService.getRoommateRelationships();
+      return (response.data || []) as RoommateRelationship[];
+    },
+    enabled: canLoadLists && activeTab === 'relationships',
+    ...listQueryOptions,
+  });
+
+  const profiles = profilesQuery.data ?? [];
+  const requests = requestsQuery.data ?? { sent: [], received: [] };
+  const relationships = relationshipsQuery.data ?? [];
 
   const statusQuery = useQuery({
     queryKey: ['roommates', 'status'],
@@ -106,66 +136,6 @@ export default function RoommatesPage() {
   const hasRoommateMatching = Boolean(
     statusQuery.data?.hasRoommateMatching ?? computedEnabledFromProfile,
   );
-
-  // Tab-driven fetch (kept as effect since data is owned by the legacy hook)
-  // biome-ignore lint/correctness/useExhaustiveDependencies: useRoommate fns are stable but lint can't always see that
-  useEffect(() => {
-    if (!hasProfile || !hasProfile) return;
-    switch (activeTab) {
-      case 'discover':
-        fetchProfiles();
-        break;
-      case 'requests':
-        fetchRequests();
-        break;
-      case 'relationships':
-        fetchRelationships();
-        break;
-      default:
-        break;
-    }
-    // useRoommate fns are stable but lint can't always see that
-  }, [activeTab, hasProfile, hasProfile]);
-
-  // When the user just enabled matching, refresh the discover list
-  // biome-ignore lint/correctness/useExhaustiveDependencies: refresh the discover list only when matching is switched on
-  useEffect(() => {
-    if (hasRoommateMatching && activeTab === 'discover') {
-      fetchProfiles();
-    }
-  }, [hasRoommateMatching]);
-
-  // Auth-bound re-fetch on first mount so we don't race the auth context
-  // biome-ignore lint/correctness/useExhaustiveDependencies: auth-bound re-fetch; re-runs only when the auth session changes
-  useEffect(() => {
-    if (!oxyServices || !activeSessionId) return;
-    if (!hasProfile || !hasProfile) return;
-    useProfileStore.getState().fetchProfile();
-    if (activeTab === 'discover') fetchProfiles();
-    if (activeTab === 'requests') fetchRequests();
-    if (activeTab === 'relationships') fetchRelationships();
-  }, [oxyServices, activeSessionId]);
-
-  const onRefresh = useCallback(async () => {
-    setRefreshing(true);
-    try {
-      switch (activeTab) {
-        case 'discover':
-          await fetchProfiles();
-          break;
-        case 'requests':
-          await fetchRequests();
-          break;
-        case 'relationships':
-          await fetchRelationships();
-          break;
-        default:
-          break;
-      }
-    } finally {
-      setRefreshing(false);
-    }
-  }, [activeTab, fetchProfiles, fetchRequests, fetchRelationships]);
 
   const personalProfileEmpty = (
     <EmptyState
@@ -194,7 +164,8 @@ export default function RoommatesPage() {
         hasRoommateMatching: result.enabled,
       });
       if (result.enabled) {
-        fetchProfiles();
+        // Newly visible to matching: the discover list changes with it.
+        await queryClient.invalidateQueries({ queryKey: ['roommates', 'profiles'] });
       }
       toast.success(
         result.message ||
@@ -207,15 +178,7 @@ export default function RoommatesPage() {
     } finally {
       setIsToggling(false);
     }
-  }, [
-    oxyServices,
-    activeSessionId,
-    isToggling,
-    hasRoommateMatching,
-    queryClient,
-    fetchProfiles,
-    t,
-  ]);
+  }, [oxyServices, activeSessionId, isToggling, hasRoommateMatching, queryClient, t]);
 
   const handleViewProfile = (profileId: string) => {
     router.push(`/roommates/${profileId}`);
@@ -254,7 +217,7 @@ export default function RoommatesPage() {
       return personalProfileEmpty;
     }
 
-    if (isLoading) {
+    if (profilesQuery.isLoading) {
       return (
         <View style={styles.loadingWrap}>
           <Loading variant="spinner" />
@@ -262,12 +225,12 @@ export default function RoommatesPage() {
       );
     }
 
-    if (error && profiles.length === 0) {
+    if (profilesQuery.isError && profiles.length === 0) {
       return (
         <ErrorState
           title={t('roommates.screen.loadError')}
-          description={error}
-          onRetry={fetchProfiles}
+          description={profilesQuery.error.message}
+          onRetry={() => void profilesQuery.refetch()}
         />
       );
     }
@@ -301,10 +264,7 @@ export default function RoommatesPage() {
     }
 
     return (
-      <ScrollView
-        contentContainerStyle={styles.listContent}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-      >
+      <View style={styles.listContent}>
         {profiles.map((profile) => (
           <RoommateMatch
             key={profile.id}
@@ -313,7 +273,7 @@ export default function RoommatesPage() {
             onViewProfile={handleViewProfile}
           />
         ))}
-      </ScrollView>
+      </View>
     );
   };
 
@@ -322,7 +282,7 @@ export default function RoommatesPage() {
       return personalProfileEmpty;
     }
 
-    if (isLoading) {
+    if (requestsQuery.isLoading) {
       return (
         <View style={styles.loadingWrap}>
           <Loading variant="spinner" />
@@ -330,12 +290,12 @@ export default function RoommatesPage() {
       );
     }
 
-    if (error && requests.sent.length === 0 && requests.received.length === 0) {
+    if (requestsQuery.isError && requests.sent.length === 0 && requests.received.length === 0) {
       return (
         <ErrorState
           title={t('roommates.screen.loadRequestsError')}
-          description={error}
-          onRetry={fetchRequests}
+          description={requestsQuery.error.message}
+          onRetry={() => void requestsQuery.refetch()}
         />
       );
     }
@@ -354,10 +314,7 @@ export default function RoommatesPage() {
     }
 
     return (
-      <ScrollView
-        contentContainerStyle={styles.listContent}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-      >
+      <View style={styles.listContent}>
         {requests.received.map((request) => (
           <RoommateRequestComponent
             key={request.id}
@@ -376,7 +333,7 @@ export default function RoommatesPage() {
             onViewProfile={handleViewProfile}
           />
         ))}
-      </ScrollView>
+      </View>
     );
   };
 
@@ -385,7 +342,7 @@ export default function RoommatesPage() {
       return personalProfileEmpty;
     }
 
-    if (isLoading) {
+    if (relationshipsQuery.isLoading) {
       return (
         <View style={styles.loadingWrap}>
           <Loading variant="spinner" />
@@ -393,12 +350,12 @@ export default function RoommatesPage() {
       );
     }
 
-    if (error && relationships.length === 0) {
+    if (relationshipsQuery.isError && relationships.length === 0) {
       return (
         <ErrorState
           title={t('roommates.screen.loadRelationshipsError')}
-          description={error}
-          onRetry={fetchRelationships}
+          description={relationshipsQuery.error.message}
+          onRetry={() => void relationshipsQuery.refetch()}
         />
       );
     }
@@ -417,10 +374,7 @@ export default function RoommatesPage() {
     }
 
     return (
-      <ScrollView
-        contentContainerStyle={styles.listContent}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-      >
+      <View style={styles.listContent}>
         {relationships.map((relationship) => (
           <RoommateRelationshipComponent
             key={relationship.id}
@@ -429,7 +383,7 @@ export default function RoommatesPage() {
             onViewProfile={handleViewProfile}
           />
         ))}
-      </ScrollView>
+      </View>
     );
   };
 
@@ -470,54 +424,80 @@ export default function RoommatesPage() {
   };
 
   return (
-    <View style={styles.root}>
-      <SafeAreaView edges={['top']} style={styles.headerWrap}>
+    <>
+      <View style={styles.headerWrap}>
         <View style={styles.headerInner}>
           <View style={styles.titleBlock}>
             <SectionEyebrow>{t('roommates.screen.eyebrow')}</SectionEyebrow>
             <H1 style={styles.title}>{t('roommates.screen.title')}</H1>
           </View>
-          <Button
-            size="sm"
-            onPress={() => router.push('/roommates/preferences')}
-            leadingIcon={RiSettings3Line}
-            iconOnly={!isWide}
-            accessibilityLabel={t('roommates.preferences')}
-            style={styles.headerAction}
-            tone="neutral"
-            appearance="outline"
-          >
-            {isWide ? t('roommates.preferences') : null}
-          </Button>
-        </View>
-        <Tabs
-          variant="pill"
-          value={activeTab}
-          onValueChange={(value) => {
-            if (isTab(value)) setActiveTab(value);
-          }}
-        >
-          {TAB_IDS.map((entry) => (
-            <TabsTrigger
-              key={entry.id}
-              value={entry.id}
-              label={t(entry.labelKey)}
-              leadingIcon={isWide ? entry.icon : undefined}
+          <View style={styles.headerAction} className="sm:hidden">
+            <Button
+              size="sm"
+              onPress={() => router.push('/roommates/preferences')}
+              leadingIcon={RiSettings3Line}
+              iconOnly
+              accessibilityLabel={t('roommates.preferences')}
+              tone="neutral"
+              appearance="outline"
             />
-          ))}
-        </Tabs>
-      </SafeAreaView>
+          </View>
+          <View style={styles.headerAction} className="hidden sm:flex">
+            <Button
+              size="sm"
+              onPress={() => router.push('/roommates/preferences')}
+              leadingIcon={RiSettings3Line}
+              accessibilityLabel={t('roommates.preferences')}
+              tone="neutral"
+              appearance="outline"
+            >
+              {t('roommates.preferences')}
+            </Button>
+          </View>
+        </View>
+        {/* On a phone the four icons alone cost ~96px, which is what pushed the
+            last tab off a 390px screen. Labels carry the meaning; longer
+            translations still scroll, and Bloom `Tabs` centres the selected
+            trigger when they do. */}
+        <View className="sm:hidden">
+          <Tabs
+            variant="pill"
+            value={activeTab}
+            onValueChange={(value) => {
+              if (isTab(value)) setActiveTab(value);
+            }}
+          >
+            {TAB_IDS.map((entry) => (
+              <TabsTrigger key={entry.id} value={entry.id} label={t(entry.labelKey)} />
+            ))}
+          </Tabs>
+        </View>
+        <View className="hidden sm:flex">
+          <Tabs
+            variant="pill"
+            value={activeTab}
+            onValueChange={(value) => {
+              if (isTab(value)) setActiveTab(value);
+            }}
+          >
+            {TAB_IDS.map((entry) => (
+              <TabsTrigger
+                key={entry.id}
+                value={entry.id}
+                label={t(entry.labelKey)}
+                leadingIcon={entry.icon}
+              />
+            ))}
+          </Tabs>
+        </View>
+      </View>
 
       <View style={styles.content}>{renderTabContent()}</View>
-    </View>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
   headerWrap: {
     backgroundColor: colors.surfaceElevated,
     paddingHorizontal: spacing.lg,

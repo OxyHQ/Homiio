@@ -8,16 +8,16 @@ import { ApiError } from '@/utils/api';
  * Bloom `Tabs`: Reviews
  * (paginated `useAgencyReviews`, each review linking to its address page) and
  * Listings (paginated `useAgencyProperties` rendered with the shared
- * `PropertyResultsGrid`). Infinite scroll wires BOTH primitives —
- * `LoadMoreSentinel` (web) + `useInfiniteScroll` (native).
+ * `PropertyResultsGrid`). Infinite scroll via `LoadMoreSentinel` at the end of
+ * each list (the shell owns scrolling).
  */
 import type React from 'react';
 import { useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
+import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { Button } from '@oxy.so/bloom/button';
 import { Card } from '@oxy.so/bloom/card';
 import {
@@ -27,13 +27,13 @@ import {
   RiHomeLine,
   RiMapPinLine,
 } from '@oxy.so/bloom/icons';
+import { PageHeader } from '@oxy.so/bloom/page-header';
 import * as Skeleton from '@oxy.so/bloom/skeleton';
 import { Rating } from '@oxy.so/bloom/rating';
 import { Tabs, TabsTrigger } from '@oxy.so/bloom/tabs';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { H1, Text as BloomText } from '@oxy.so/bloom/typography';
 
-import { Header } from '@/components/Header';
 import { ReviewCard } from '@/components/ReviewCard';
 import {
   AGGREGATE_MIN_AUTHORS,
@@ -46,7 +46,6 @@ import { PropertyResultsGrid } from '@/components/ui/PropertyResultsGrid';
 import { LoadMoreSentinel } from '@/components/common/LoadMoreSentinel';
 import { useAgency, useAgencyReviews, useAgencyProperties } from '@/hooks/useAgencyReviews';
 import { useOxyAvatars } from '@/hooks/useOxyAvatars';
-import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import type { ReviewDTO } from '@homiio/shared-types';
 import type { User } from '@oxy.so/core';
 import { colors } from '@/styles/colors';
@@ -121,34 +120,35 @@ export default function AgencyProfileScreen() {
     }
   };
 
-  const onReviewsTab = tab === 'reviews';
-  const { onScroll } = useInfiniteScroll({
-    onEndReached: onReviewsTab ? loadMoreReviews : loadMoreProperties,
-    enabled: onReviewsTab
-      ? Boolean(reviewsQuery.hasNextPage)
-      : Boolean(propertiesQuery.hasNextPage),
-  });
-
   const agency = agencyQuery.data?.agency;
   const stats = agencyQuery.data?.stats;
   const title = agency?.name ?? t('agency.title');
+  const header = (
+    <PageHeader
+      title={title}
+      titleAlign="center"
+      leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+      onBack={router.canGoBack() ? router.back : undefined}
+      backLabel={t('goBack')}
+    />
+  );
 
   if (agencyQuery.isLoading) {
     return (
-      <View style={styles.root}>
-        <Header options={{ title: t('agency.title'), showBackButton: true }} />
+      <>
+        {header}
         <View style={styles.content}>
           <Skeleton.Box width="60%" height={28} borderRadius={radius.md} />
           <Skeleton.Box width="100%" height={80} borderRadius={radius.md} />
         </View>
-      </View>
+      </>
     );
   }
 
   if (agencyQuery.isError || !agency || !stats) {
     return (
-      <View style={styles.root}>
-        <Header options={{ title: t('agency.title'), showBackButton: true }} />
+      <>
+        {header}
         <ErrorState
           icon={RiBuilding2Line}
           title={t('agency.notFound')}
@@ -160,7 +160,7 @@ export default function AgencyProfileScreen() {
           retryLabel={t('common.goBack')}
           onRetry={() => router.back()}
         />
-      </View>
+      </>
     );
   }
 
@@ -177,121 +177,108 @@ export default function AgencyProfileScreen() {
     (stats.distinctAuthors ?? 0) >= AGGREGATE_MIN_AUTHORS;
 
   return (
-    <View style={styles.root}>
-      <Header options={{ title, showBackButton: true }} />
-      <SafeAreaView edges={['bottom']} style={styles.safeArea}>
-        <ScrollView
-          contentContainerStyle={styles.content}
-          onScroll={onScroll}
-          scrollEventThrottle={16}
-        >
-          <View style={styles.headerBlock}>
-            <View style={[styles.agencyIcon, { backgroundColor: theme.colors.primarySubtle }]}>
-              <RiBuilding2Line width={28} height={28} fill={theme.colors.primary} />
-            </View>
-            <View style={styles.agencyTitle}>
-              <H1 style={styles.agencyName}>{agency.name}</H1>
-              {hasReviews ? null : (
-                <Rating
-                  value={null}
-                  count={0}
-                  newLabel={t('reviews.write.ratingNone')}
-                  accessibilityLabel={t('reviews.write.ratingNone')}
-                />
-              )}
-            </View>
+    <>
+      {header}
+      <View style={styles.content}>
+        <View style={styles.headerBlock}>
+          <View style={[styles.agencyIcon, { backgroundColor: theme.colors.primarySubtle }]}>
+            <RiBuilding2Line width={28} height={28} fill={theme.colors.primary} />
           </View>
-
-          {hasReviews ? (
-            <PlaceReviewsSummary
-              stats={{
-                averageRating: stats.averageRating,
-                totalReviews: stats.totalReviews,
-                // Shares publish only above the aggregate floor — see
-                // `publishShares` above for which halves it checks and why the
-                // author count has to be the server's.
-                ...(publishShares
-                  ? {
-                      recommendRate: stats.recommendationPercentage / 100,
-                      ...(typeof stats.depositFullPct === 'number'
-                        ? { depositReturnedRate: stats.depositFullPct / 100 }
-                        : {}),
-                    }
-                  : {}),
-              }}
-            />
-          ) : null}
-
-          {typeof stats.listingsCount === 'number' ? (
-            <View style={styles.statsRow}>
-              <StatTile value={String(stats.listingsCount)} label={t('agency.stats.listings')} />
-            </View>
-          ) : null}
-
-          <Tabs value={tab} onValueChange={(next) => setTab(next as AgencyTab)}>
-            <TabsTrigger value="reviews" label={t('agency.tabs.reviews')} />
-            <TabsTrigger value="listings" label={t('agency.tabs.listings')} />
-          </Tabs>
-
-          {tab === 'reviews' ? (
-            reviewsQuery.isLoading ? (
-              <Skeleton.Box width="100%" height={120} borderRadius={radius.md} />
-            ) : reviews.length === 0 ? (
-              <EmptyState
-                icon={RiDiscussLine}
-                title={t('agency.emptyReviewsTitle')}
-                description={t('agency.emptyReviewsDescription')}
+          <View style={styles.agencyTitle}>
+            <H1 style={styles.agencyName}>{agency.name}</H1>
+            {hasReviews ? null : (
+              <Rating
+                value={null}
+                count={0}
+                newLabel={t('reviews.write.ratingNone')}
+                accessibilityLabel={t('reviews.write.ratingNone')}
               />
-            ) : (
-              <View style={styles.reviewsList}>
-                {reviews.map((review) => (
-                  <AgencyReviewItem
-                    key={review.id}
-                    review={review}
-                    author={review.oxyUserId ? usersById.get(review.oxyUserId) : undefined}
-                    onPressAddress={() => router.push(`/addresses/${review.addressId}?tab=reviews`)}
-                  />
-                ))}
-                <LoadMoreSentinel
-                  onLoadMore={loadMoreReviews}
-                  enabled={Boolean(reviewsQuery.hasNextPage)}
-                />
-              </View>
-            )
-          ) : propertiesQuery.isLoading ? (
-            <Skeleton.Box width="100%" height={200} borderRadius={radius.md} />
-          ) : properties.length === 0 ? (
+            )}
+          </View>
+        </View>
+
+        {hasReviews ? (
+          <PlaceReviewsSummary
+            stats={{
+              averageRating: stats.averageRating,
+              totalReviews: stats.totalReviews,
+              // Shares publish only above the aggregate floor — see
+              // `publishShares` above for which halves it checks and why the
+              // author count has to be the server's.
+              ...(publishShares
+                ? {
+                    recommendRate: stats.recommendationPercentage / 100,
+                    ...(typeof stats.depositFullPct === 'number'
+                      ? { depositReturnedRate: stats.depositFullPct / 100 }
+                      : {}),
+                  }
+                : {}),
+            }}
+          />
+        ) : null}
+
+        {typeof stats.listingsCount === 'number' ? (
+          <View style={styles.statsRow}>
+            <StatTile value={String(stats.listingsCount)} label={t('agency.stats.listings')} />
+          </View>
+        ) : null}
+
+        <Tabs value={tab} onValueChange={(next) => setTab(next as AgencyTab)}>
+          <TabsTrigger value="reviews" label={t('agency.tabs.reviews')} />
+          <TabsTrigger value="listings" label={t('agency.tabs.listings')} />
+        </Tabs>
+
+        {tab === 'reviews' ? (
+          reviewsQuery.isLoading ? (
+            <Skeleton.Box width="100%" height={120} borderRadius={radius.md} />
+          ) : reviews.length === 0 ? (
             <EmptyState
-              icon={RiHomeLine}
-              title={t('agency.emptyListingsTitle')}
-              description={t('agency.emptyListingsDescription')}
+              icon={RiDiscussLine}
+              title={t('agency.emptyReviewsTitle')}
+              description={t('agency.emptyReviewsDescription')}
             />
           ) : (
-            <View>
-              <PropertyResultsGrid
-                properties={properties}
-                onPropertyPress={(property) => router.push(`/properties/${property.id}`)}
-              />
+            <View style={styles.reviewsList}>
+              {reviews.map((review) => (
+                <AgencyReviewItem
+                  key={review.id}
+                  review={review}
+                  author={review.oxyUserId ? usersById.get(review.oxyUserId) : undefined}
+                  onPressAddress={() => router.push(`/addresses/${review.addressId}?tab=reviews`)}
+                />
+              ))}
               <LoadMoreSentinel
-                onLoadMore={loadMoreProperties}
-                enabled={Boolean(propertiesQuery.hasNextPage)}
+                onLoadMore={loadMoreReviews}
+                enabled={Boolean(reviewsQuery.hasNextPage)}
               />
             </View>
-          )}
-        </ScrollView>
-      </SafeAreaView>
-    </View>
+          )
+        ) : propertiesQuery.isLoading ? (
+          <Skeleton.Box width="100%" height={200} borderRadius={radius.md} />
+        ) : properties.length === 0 ? (
+          <EmptyState
+            icon={RiHomeLine}
+            title={t('agency.emptyListingsTitle')}
+            description={t('agency.emptyListingsDescription')}
+          />
+        ) : (
+          <View>
+            <PropertyResultsGrid
+              properties={properties}
+              onPropertyPress={(property) => router.push(`/properties/${property.id}`)}
+            />
+            <LoadMoreSentinel
+              onLoadMore={loadMoreProperties}
+              enabled={Boolean(propertiesQuery.hasNextPage)}
+            />
+          </View>
+        )}
+      </View>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  safeArea: {
-    flex: 1,
-  },
   content: {
     padding: spacing.lg,
     gap: spacing.lg,

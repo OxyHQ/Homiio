@@ -22,22 +22,6 @@ export interface NotificationContent {
   badge?: number;
 }
 
-export interface ScheduledNotification {
-  id: string;
-  content: NotificationContent;
-  trigger: any;
-  repeats?: boolean;
-}
-
-export type NotificationCategory =
-  | 'property'
-  | 'message'
-  | 'contract'
-  | 'payment'
-  | 'reminder'
-  | 'system'
-  | 'marketing';
-
 export async function requestNotificationPermissions() {
   if (!Notifications) return false;
 

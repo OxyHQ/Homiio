@@ -23,7 +23,7 @@ import {
 import { SEARCH_PRICE_CURRENCY, type SearchQuery } from './types';
 
 /** i18n key for a single property type label. */
-export const PROPERTY_TYPE_LABEL_KEYS: Record<PropertyType, string> = {
+const PROPERTY_TYPE_LABEL_KEYS: Record<PropertyType, string> = {
   [PropertyType.APARTMENT]: 'properties.titles.types.apartment',
   [PropertyType.HOUSE]: 'properties.titles.types.house',
   [PropertyType.ROOM]: 'properties.titles.types.room',
@@ -42,11 +42,6 @@ export const PROPERTY_TYPE_LABEL_KEYS: Record<PropertyType, string> = {
 
 const money = (amount: number, locale: string, currency: string): string =>
   formatMoney(amount, currency, locale, { maximumFractionDigits: 0 });
-
-/** Whether the query carries a price bound. */
-export function hasPrice(query: SearchQuery): boolean {
-  return query.priceMin !== undefined || query.priceMax !== undefined;
-}
 
 /**
  * The price range: an explicit min–max, a one-sided bound, or `null` when there

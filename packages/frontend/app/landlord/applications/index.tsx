@@ -3,7 +3,7 @@
  *
  * - Phones and narrow windows: Bloom Search + a Chip status filter row over
  *   `ApplicationCard`s grouped by property.
- * - Wide web (desktop breakpoint): a Bloom `DataTable` — sortable columns for
+ * - Wide windows (`lg:`): a Bloom `DataTable` — sortable columns for
  *   applicant, income, move-in and submission date, a status filter and an
  *   applicant search in its toolbar, and per-row actions (open, and create the
  *   lease once approved — through `/contracts/new?application=<id>`, the one
@@ -11,11 +11,12 @@
  */
 import type React from 'react';
 import { useMemo, useState } from 'react';
-import { Platform, StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useQueries } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
+import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
+import { PageHeader } from '@oxy.so/bloom/page-header';
 import { H2, H3, Text as BloomText } from '@oxy.so/bloom/typography';
 import { Chip } from '@oxy.so/bloom/chip';
 import { Avatar } from '@oxy.so/bloom/avatar';
@@ -45,8 +46,6 @@ import {
   TenantApplicationStatus,
   formatMoney,
 } from '@homiio/shared-types';
-import { Header } from '@/components/Header';
-import { PageScrollView } from '@/components/PageScrollView';
 import { ApplicationCard } from '@/components/ApplicationCard';
 import { ApplicationStatusBadge } from '@/components/ApplicationStatusBadge';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -56,7 +55,6 @@ import { useHostStatus } from '@/hooks/useHostStatus';
 import { useLandlordApplications } from '@/hooks/useApplicationQueries';
 import { useProperty } from '@/hooks';
 import { useOxyAvatars } from '@/hooks/useOxyAvatars';
-import { useIsDesktop } from '@/hooks/useOptimizedMediaQuery';
 import profileService from '@/services/profileService';
 import { getPropertyTitle } from '@/utils/propertyUtils';
 import { useFormatting } from '@/utils/format';
@@ -354,11 +352,10 @@ const ApplicationsSkeleton: React.FC = () => {
 
 export default function LandlordApplicationsScreen() {
   const { t } = useTranslation();
+  const router = useRouter();
   const theme = useTheme();
   const { isAuthenticated } = useOxy();
   const { isHost, isLoading: hostLoading } = useHostStatus();
-  const isDesktop = useIsDesktop();
-  const showTable = Platform.OS === 'web' && isDesktop;
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -435,115 +432,109 @@ export default function LandlordApplicationsScreen() {
     [filteredItems, applicantMap, getAvatarFileId, t],
   );
 
-  const rootStyle = [styles.root, { backgroundColor: theme.colors.background }];
   const header = (
-    <Header
-      options={{
-        showBackButton: true,
-        title: t('applications.landlord.inboxTitle'),
-      }}
+    <PageHeader
+      title={t('applications.landlord.inboxTitle')}
+      titleAlign="center"
+      leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+      onBack={router.canGoBack() ? router.back : undefined}
+      backLabel={t('goBack')}
     />
   );
 
   if (!isAuthenticated) {
     return (
-      <View style={rootStyle}>
+      <>
         {header}
-        <SafeAreaView edges={['bottom']} style={styles.safeArea}>
-          <View style={styles.emptyWrap}>
-            <EmptyState
-              icon={RiGroupLine}
-              title={t('applications.landlord.signInTitle')}
-              description={t('applications.landlord.signInDescription')}
-              actionText={t('applications.list.signIn')}
-              actionIcon={RiLoginBoxLine}
-              onAction={() => openAccountDialog()}
-            />
-          </View>
-        </SafeAreaView>
-      </View>
+        <View style={styles.emptyWrap}>
+          <EmptyState
+            icon={RiGroupLine}
+            title={t('applications.landlord.signInTitle')}
+            description={t('applications.landlord.signInDescription')}
+            actionText={t('applications.list.signIn')}
+            actionIcon={RiLoginBoxLine}
+            onAction={() => openAccountDialog()}
+          />
+        </View>
+      </>
     );
   }
 
   if (hostLoading) {
     return (
-      <View style={rootStyle}>
+      <>
         {header}
-        <PageScrollView contentContainerStyle={styles.content}>
+        <View style={styles.content}>
           <ApplicationsSkeleton />
-        </PageScrollView>
-      </View>
+        </View>
+      </>
     );
   }
 
   if (!isHost) {
     return (
-      <View style={rootStyle}>
+      <>
         {header}
-        <SafeAreaView edges={['bottom']} style={styles.safeArea}>
-          <View style={styles.emptyWrap}>
-            <EmptyState
-              icon={RiLockLine}
-              title={t('applications.landlord.hostsOnlyTitle')}
-              description={t('applications.landlord.hostsOnlyDescription')}
-            />
-          </View>
-        </SafeAreaView>
-      </View>
+        <View style={styles.emptyWrap}>
+          <EmptyState
+            icon={RiLockLine}
+            title={t('applications.landlord.hostsOnlyTitle')}
+            description={t('applications.landlord.hostsOnlyDescription')}
+          />
+        </View>
+      </>
     );
   }
 
   const listReady = !applicationsQuery.isPending && !applicationsQuery.isError;
 
   return (
-    <View style={rootStyle}>
+    <>
       {header}
-      <SafeAreaView edges={['bottom']} style={styles.safeArea}>
-        <PageScrollView contentContainerStyle={styles.content}>
-          <View style={styles.titleBlock}>
-            <SectionEyebrow>{t('applications.landlord.inboxEyebrow')}</SectionEyebrow>
-            <H2 style={styles.title}>{t('applications.landlord.title')}</H2>
-            <BloomText style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
-              {t('applications.landlord.subtitle')}
-            </BloomText>
+      <View style={styles.content}>
+        <View style={styles.titleBlock}>
+          <SectionEyebrow>{t('applications.landlord.inboxEyebrow')}</SectionEyebrow>
+          <H2 style={styles.title}>{t('applications.landlord.title')}</H2>
+          <BloomText style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
+            {t('applications.landlord.subtitle')}
+          </BloomText>
+        </View>
+
+        <View className="gap-4 lg:hidden">
+          <Search
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            onClearText={() => setSearchQuery('')}
+            label={t('applications.landlord.searchLabel')}
+          />
+
+          <View style={styles.filterRow}>
+            {FILTERS.map((entry) => (
+              <Chip
+                key={entry.id}
+                variant="outlined"
+                selected={statusFilter === entry.id}
+                onPress={() => setStatusFilter(entry.id)}
+              >
+                {t(entry.i18nKey)}
+              </Chip>
+            ))}
           </View>
+        </View>
 
-          {!showTable ? (
-            <>
-              <Search
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                onClearText={() => setSearchQuery('')}
-                label={t('applications.landlord.searchLabel')}
-              />
+        {applicationsQuery.isPending ? <ApplicationsSkeleton /> : null}
 
-              <View style={styles.filterRow}>
-                {FILTERS.map((entry) => (
-                  <Chip
-                    key={entry.id}
-                    variant="outlined"
-                    selected={statusFilter === entry.id}
-                    onPress={() => setStatusFilter(entry.id)}
-                  >
-                    {t(entry.i18nKey)}
-                  </Chip>
-                ))}
-              </View>
-            </>
-          ) : null}
+        {applicationsQuery.isError ? (
+          <ErrorState
+            icon={RiAlertLine}
+            title={t('applications.landlord.loadError')}
+            description={applicationsQuery.error?.message ?? t('applications.list.tryAgain')}
+            onRetry={() => applicationsQuery.refetch()}
+          />
+        ) : null}
 
-          {applicationsQuery.isPending ? <ApplicationsSkeleton /> : null}
-
-          {applicationsQuery.isError ? (
-            <ErrorState
-              icon={RiAlertLine}
-              title={t('applications.landlord.loadError')}
-              description={applicationsQuery.error?.message ?? t('applications.list.tryAgain')}
-              onRetry={() => applicationsQuery.refetch()}
-            />
-          ) : null}
-
-          {listReady && showTable ? (
+        {listReady ? (
+          <View className="hidden lg:flex">
             <ApplicantsTable
               rows={tableRows}
               statusFilter={statusFilter}
@@ -551,20 +542,21 @@ export default function LandlordApplicationsScreen() {
               searchQuery={searchQuery}
               onSearchQueryChange={setSearchQuery}
             />
-          ) : null}
+          </View>
+        ) : null}
 
-          {listReady && !showTable && groups.length === 0 ? (
-            <View style={styles.emptyWrap}>
-              <EmptyState
-                icon={RiGroupLine}
-                title={t('applications.landlord.emptyTitle')}
-                description={t('applications.landlord.emptyDescription')}
-              />
-            </View>
-          ) : null}
-
-          {listReady && !showTable
-            ? groups.map((group) => (
+        {listReady ? (
+          <View className="gap-4 lg:hidden">
+            {groups.length === 0 ? (
+              <View style={styles.emptyWrap}>
+                <EmptyState
+                  icon={RiGroupLine}
+                  title={t('applications.landlord.emptyTitle')}
+                  description={t('applications.landlord.emptyDescription')}
+                />
+              </View>
+            ) : (
+              groups.map((group) => (
                 <PropertyGroupBlock
                   key={group.propertyId}
                   propertyId={group.propertyId}
@@ -573,20 +565,15 @@ export default function LandlordApplicationsScreen() {
                   getAvatarFileId={getAvatarFileId}
                 />
               ))
-            : null}
-        </PageScrollView>
-      </SafeAreaView>
-    </View>
+            )}
+          </View>
+        ) : null}
+      </View>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-  },
-  safeArea: {
-    flex: 1,
-  },
   content: {
     padding: spacing.lg,
     gap: spacing.lg,

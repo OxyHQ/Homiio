@@ -13,42 +13,37 @@
 import { useCurrencyStore } from '@/store/currencyStore';
 import { getCurrencyByCode, type Currency } from '@/utils/currency';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useEffect } from 'react';
 
 const CURRENCY_STORAGE_KEY = '@homiio_currency';
+
+/**
+ * The saved currency is read from AsyncStorage ONCE, when this module loads,
+ * straight into the store — not on every mount of a screen that shows it. A
+ * choice made before the read lands is the newer one and is kept.
+ */
+let currencyChosen = false;
+useCurrencyStore.getState().setLoading(true);
+AsyncStorage.getItem(CURRENCY_STORAGE_KEY)
+  .then((savedCurrencyCode) => {
+    if (savedCurrencyCode && !currencyChosen) {
+      useCurrencyStore.getState().setCurrentCurrency(savedCurrencyCode);
+    }
+  })
+  .catch(() => {
+    useCurrencyStore.getState().setError('Failed to load saved currency');
+  })
+  .finally(() => {
+    useCurrencyStore.getState().setLoading(false);
+  });
 
 export const useCurrency = () => {
   const { currentCurrency, isLoading, error, setCurrentCurrency, setLoading, setError } =
     useCurrencyStore();
 
-  // Load the saved currency once on mount. Inlined into the effect: it was a
-  // `const` arrow declared BELOW this effect and called from inside it, so the
-  // effect closed over whichever instance the first render happened to make.
-  // It is used nowhere else and is not returned from the hook, so there is
-  // nothing for it to be a named function for.
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        setLoading(true);
-        const savedCurrencyCode = await AsyncStorage.getItem(CURRENCY_STORAGE_KEY);
-        if (!cancelled && savedCurrencyCode) {
-          setCurrentCurrency(savedCurrencyCode);
-        }
-      } catch {
-        if (!cancelled) setError('Failed to load saved currency');
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [setCurrentCurrency, setError, setLoading]);
-
   const changeCurrency = async (currencyCode: string) => {
     try {
       setLoading(true);
+      currencyChosen = true;
       setCurrentCurrency(currencyCode);
       await AsyncStorage.setItem(CURRENCY_STORAGE_KEY, currencyCode);
     } catch (error) {

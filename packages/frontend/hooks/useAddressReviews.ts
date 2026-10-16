@@ -18,7 +18,7 @@ import type { Property, ReviewDTO } from '@homiio/shared-types';
 import { reviewService } from '@/services/reviewService';
 
 /** Aggregated rating summary derived from a property's reviews. */
-export interface ReviewRatingSummary {
+interface ReviewRatingSummary {
   /** Mean of every review's `rating` (0 when there are no reviews). */
   averageRating: number;
   /** Total number of reviews returned for the address. */
@@ -30,7 +30,7 @@ export interface ReviewRatingSummary {
  * serialize the address id as `id`, but it is absent when the address ref was
  * never expanded, so this still probes rather than reading it directly.
  */
-export function getReviewAddressId(property: Property | null | undefined): string | undefined {
+function getReviewAddressId(property: Property | null | undefined): string | undefined {
   const address = property?.address;
   if (!address || typeof address !== 'object') return undefined;
   if ('id' in address) {
@@ -41,7 +41,7 @@ export function getReviewAddressId(property: Property | null | undefined): strin
 }
 
 /** Compute the rating summary for a loaded review list. */
-export function computeReviewRatingSummary(reviews: ReviewDTO[]): ReviewRatingSummary {
+function computeReviewRatingSummary(reviews: ReviewDTO[]): ReviewRatingSummary {
   if (reviews.length === 0) {
     return { averageRating: 0, totalReviews: 0 };
   }

@@ -40,7 +40,7 @@ import type { ApproximatePositionState } from './locationScopeLadder';
  * the cache for a field that changes only labels, and keying on a screen would
  * reintroduce the fan-out.
  */
-export const APPROXIMATE_LOCATION_QUERY_KEY = ['approximateLocation'] as const;
+const APPROXIMATE_LOCATION_QUERY_KEY = ['approximateLocation'] as const;
 
 /**
  * How long the app waits for an answer before showing destinations.

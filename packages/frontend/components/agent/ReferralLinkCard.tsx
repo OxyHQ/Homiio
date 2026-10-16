@@ -14,7 +14,6 @@ import { useCallback, useState } from 'react';
 import { View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { useTranslation } from 'react-i18next';
-import { useMediaQuery } from 'react-responsive';
 
 import { Button } from '@oxy.so/bloom/button';
 import { Card } from '@oxy.so/bloom/card';
@@ -24,7 +23,6 @@ import { toast } from '@oxy.so/bloom/toast';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { shareReferralLink } from '@/utils/shareReferral';
-import { resolvePagePadding } from '@/constants/styles';
 
 interface ReferralLinkCardProps {
   link: string;
@@ -33,8 +31,6 @@ interface ReferralLinkCardProps {
 export const ReferralLinkCard: React.FC<ReferralLinkCardProps> = ({ link }) => {
   const { t } = useTranslation();
   const theme = useTheme();
-  const isWide = useMediaQuery({ minWidth: 768 });
-  const horizontalPadding = resolvePagePadding(isWide);
   const [copied, setCopied] = useState(false);
 
   const handleCopy = useCallback(async () => {
@@ -63,7 +59,7 @@ export const ReferralLinkCard: React.FC<ReferralLinkCardProps> = ({ link }) => {
   }, [link, t]);
 
   return (
-    <View style={{ paddingHorizontal: horizontalPadding }}>
+    <View className="px-4 md:px-8">
       <Card
         radius="radius-24"
         className="w-full max-w-[720px] self-center gap-4 p-6"
@@ -118,5 +114,3 @@ export const ReferralLinkCard: React.FC<ReferralLinkCardProps> = ({ link }) => {
     </View>
   );
 };
-
-export default ReferralLinkCard;

@@ -7,11 +7,12 @@
  */
 import type React from 'react';
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
+import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { Card } from '@oxy.so/bloom/card';
 import { Chip } from '@oxy.so/bloom/chip';
 import {
@@ -21,10 +22,10 @@ import {
   RiTimeLine,
   RiUserLine,
 } from '@oxy.so/bloom/icons';
+import { PageHeader } from '@oxy.so/bloom/page-header';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { H1, H2, H3, Text as BloomText } from '@oxy.so/bloom/typography';
 
-import { Header } from '@/components/Header';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
 import { TipDetailSkeleton } from '@/components/ui/skeletons/TipsSkeleton';
@@ -188,10 +189,20 @@ export default function TipArticleScreen() {
     return scored.map((item) => item.entry).slice(0, 3);
   }, [allTips, slug, currentTipTags]);
 
+  const header = (
+    <PageHeader
+      title={t('tips.article')}
+      titleAlign="center"
+      leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+      onBack={router.canGoBack() ? router.back : undefined}
+      backLabel={t('goBack')}
+    />
+  );
+
   if (!slug) {
     return (
-      <View style={styles.root}>
-        <Header options={{ title: t('tips.article'), showBackButton: true }} />
+      <>
+        {header}
         <ErrorState
           icon={RiFileTextLine}
           title={t('tips.unavailable')}
@@ -199,23 +210,23 @@ export default function TipArticleScreen() {
           retryLabel={t('common.goBack')}
           onRetry={() => router.back()}
         />
-      </View>
+      </>
     );
   }
 
   if (tipQuery.isPending) {
     return (
-      <View style={styles.root}>
-        <Header options={{ title: t('tips.article'), showBackButton: true }} />
+      <>
+        {header}
         <TipDetailSkeleton />
-      </View>
+      </>
     );
   }
 
   if (tipQuery.isError || !tipQuery.data) {
     return (
-      <View style={styles.root}>
-        <Header options={{ title: t('tips.article'), showBackButton: true }} />
+      <>
+        {header}
         <ErrorState
           icon={RiFileTextLine}
           title={t('tips.unavailable')}
@@ -223,16 +234,16 @@ export default function TipArticleScreen() {
           retryLabel={t('common.goBack')}
           onRetry={() => router.back()}
         />
-      </View>
+      </>
     );
   }
 
   const tip = tipQuery.data;
 
   return (
-    <View style={styles.root}>
-      <Header options={{ title: t('tips.article'), showBackButton: true }} />
-      <ScrollView contentContainerStyle={styles.content}>
+    <>
+      {header}
+      <View style={styles.content}>
         <View style={styles.hero}>
           {tip.coverImageUrl ? (
             <Image
@@ -296,16 +307,12 @@ export default function TipArticleScreen() {
             </View>
           </View>
         ) : null}
-      </ScrollView>
-    </View>
+      </View>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
   content: {
     padding: spacing.lg,
     gap: spacing['2xl'],

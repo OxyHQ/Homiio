@@ -86,5 +86,3 @@ export const MortgageCalculatorSection: React.FC<Props> = ({ salePrice, currency
     </Section>
   );
 };
-
-export default MortgageCalculatorSection;

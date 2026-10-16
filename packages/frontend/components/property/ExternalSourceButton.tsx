@@ -46,5 +46,3 @@ export const ExternalSourceButton: React.FC<ExternalSourceButtonProps> = ({ prop
     </Button>
   );
 };
-
-export default ExternalSourceButton;

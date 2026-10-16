@@ -138,24 +138,19 @@
       "topProperties": "热门房源"
     },
     "hero": {
-      "title": "找到你的理想之家"
+      "title": {
+        "long_term": "找到你的理想之家",
+        "vacation": "找到你的下一次住宿",
+        "buy": "找到想买的房子",
+        "exchange": "换房旅行，换种方式出发"
+      }
     },
     "category": {
       "petFriendly": "可携宠物"
     },
-    "horizon": {
-      "learnMore": "了解更多"
-    },
-    "eco": {
-      "title": "环保认证房源",
-      "description": "查找符合我们能效与环保标准的可持续房源"
-    },
     "featured": {
       "title": "精选房源",
-      "empty": "目前没有精选房源",
-      "titleIn": "{{area}}的精选房源",
-      "chooseArea": "请先选择一个区域，才能看到精选房源。",
-      "loadFailed": "无法加载该区域的精选房源。"
+      "titleIn": "{{area}}的精选房源"
     },
     "viewAll": "查看全部",
     "recentlyViewed": {
@@ -180,68 +175,59 @@
       "title": "为你推荐的房源",
       "eyebrow": "为你推荐"
     },
-    "explore": {
-      "eyebrow": "继续探索",
-      "title": "探索更多房源",
-      "cta": "查看这里的全部房源",
-      "ctaAccessible": "以当前搜索区域打开“探索”"
-    },
     "hostCta": {
-      "cta": "成为房东",
-      "subtitle": "面向全西班牙的实名租客：免费发布、费用公道、真人客服。",
-      "title": "发布你的房源，找到合适的租客"
+      "long_term": {
+        "title": "发布你的房源，找到合适的租客",
+        "subtitle": "面向全西班牙的实名租客：免费发布、费用公道、真人客服。",
+        "cta": "成为房东"
+      },
+      "vacation": {
+        "title": "在你家接待旅客",
+        "subtitle": "短租分享你的空间——价格清晰，没有隐藏费用。",
+        "cta": "成为房东"
+      },
+      "buy": {
+        "title": "要卖房吗？",
+        "subtitle": "免费发布，让买家看到房子的完整信息。",
+        "cta": "发布房源"
+      },
+      "exchange": {
+        "title": "交换你的房子",
+        "subtitle": "与信任的人换房，用更少的钱去旅行。",
+        "cta": "发起换房"
+      }
     },
     "sections": {
-      "explain": "{{reason}} · 数据来源：{{source}}",
-      "explainAccessible": "为什么是这些房源：{{reason}}。数据来源：{{source}}。",
       "error": "无法加载该区域。我们没有隐藏任何内容——是请求失败了。",
-      "source": {
-        "listing_created_at": "房源的发布日期",
-        "listing_sale_price_reduced_flag": "门户网站发布的降价标记",
-        "listing_status": "房源状态的变化",
-        "listing_agency_fee_flag": "房源中的中介费字段",
-        "listing_cost_fields": "房源中的费用字段",
-        "resident_reviews": "住过这里的人写下的评价",
-        "listing_verification": "Homiio 的核实记录",
-        "listing_housing_type": "房源中的住房类型字段"
-      },
       "new_in_area": {
-        "eyebrow": "新上",
         "title": "你所在区域的新房源",
         "reason": "在你搜索的区域内最新发布的房源"
       },
       "price_reduced": {
-        "eyebrow": "价格变动",
         "title": "报价已下调",
         "reason": "卖方发布了降价信息。Homiio 不保留租金历史，因此这里只包含出售房源"
       },
       "no_longer_available": {
-        "eyebrow": "已离开市场",
         "title": "已不可租售",
         "reason": "被业主标记为已出租或已售出，按时间从新到旧：真正成交的是哪些，成交价多少"
       },
       "no_agency_fee": {
-        "eyebrow": "费用",
         "title": "无中介费",
         "reason": "房源写明无需支付中介费。未作说明的房源不计入"
       },
       "transparent_total_cost": {
-        "eyebrow": "费用",
         "title": "已写明全部费用",
         "reason": "所有经常性费用都写在房源里：含水电杂费的租金和押金，或每晚房价加清洁费和服务费"
       },
       "with_resident_reviews": {
-        "eyebrow": "可信度",
         "title": "有住户评价",
         "reason": "有人在这个地址住过并写下了评价"
       },
       "verified": {
-        "eyebrow": "可信度",
         "title": "地址或发布者已核实",
         "reason": "Homiio 已核实该地址或发布房源的人"
       },
       "public_housing": {
-        "eyebrow": "公共",
         "title": "公共住房",
         "reason": "发布为公共住房。Homiio 目前还没有合作社住房或社区住房的字段，因此这类房源不计入"
       },
@@ -254,9 +240,17 @@
       "changeFiltersAccessible": "打开“探索”以修改该区域的筛选条件"
     },
     "discovery": {
-      "eyebrow": "探索目的地",
-      "title": "你想住在哪里？",
-      "body": "我们无法确定你所在的区域，因此这些是 Homiio 上有房源的城市，而不是你附近的地点。"
+      "title": "你想住在哪里？"
+    },
+    "neighbourSupport": {
+      "title": "需要支持的邻居",
+      "viewAll": "查看全部"
+    },
+    "mission": {
+      "title": "我们站在你这边",
+      "body": "Homiio 诞生于你正在经历的同一场住房危机。我们倾听租客的声音，并与他们一起建设。",
+      "support": "支持 Homiio",
+      "readStory": "Homiio 为何存在"
     }
   },
   "agent": {
@@ -453,9 +447,6 @@
       "other": "Other"
     },
     "widgets": {
-      "common": {
-        "signIn": "Sign in"
-      },
       "quickFilters": {
         "title": "Quick Filters",
         "furnished": "Furnished",
@@ -472,7 +463,6 @@
       "alerts": {
         "title": "Property Alerts",
         "subtitle": "Get notified when new properties match your criteria",
-        "signInPrompt": "Sign in to create property alerts",
         "location": "Location",
         "minPrice": "Min Price",
         "maxPrice": "Max Price",
@@ -488,10 +478,7 @@
       },
       "savedSearches": {
         "title": "Saved Searches",
-        "empty": "No saved searches yet",
         "emptyHelper": "Save a search to get quick access and alerts here",
-        "signInPrompt": "Sign in to save searches",
-        "createNew": "Create New Search",
         "viewAllCount": "View All ({{count}} more)",
         "nameAndQueryRequired": "Search name and query are required",
         "loadFailed": "Failed to load saved searches",
@@ -780,11 +767,6 @@
         "rentalLabel": "Rental {{index}}"
       }
     },
-    "toast": {
-      "loadFailed": "Failed to load profiles",
-      "updateSuccess": "Profile updated successfully",
-      "updateFailed": "Failed to update profile"
-    },
     "subscriptionsDescription": "Manage Homiio Plus or buy one-time file analysis.",
     "subscriptions": "Subscriptions",
     "stays": "Stays",
@@ -831,10 +813,6 @@
       "transactDone": "Listing marked as closed",
       "transactCommission": "Deal closed — commission recorded",
       "viewingTimes": "看房时间"
-    },
-    "details": {
-      "bedrooms": "Bedrooms",
-      "bathrooms": "Bathrooms"
     },
     "titles": {
       "forRent": "for rent in",
@@ -1249,56 +1227,6 @@
       "viewProfile": "View Profile",
       "sendRequest": "Send Request",
       "fallbackName": "Roommate"
-    }
-  },
-  "horizon": {
-    "title": "Horizon Initiative",
-    "description": "Global initiative for fair housing, healthcare, and travel support",
-    "page": {
-      "benefits": {
-        "fairHousing": {
-          "title": "Fair Housing",
-          "description": "Access to affordable housing in 120+ cities worldwide with standardized ethical rental agreements"
-        },
-        "healthcare": {
-          "title": "Healthcare Access",
-          "description": "Universal healthcare coverage with partner clinics and telehealth services in every Horizon city"
-        },
-        "travel": {
-          "title": "Travel Network",
-          "description": "Discounted transportation and accommodation when traveling between Horizon locations"
-        },
-        "community": {
-          "title": "Community Support",
-          "description": "Connect with local members for cultural integration, language exchange, and social activities"
-        }
-      },
-      "heroTitle": "Global Housing Initiative",
-      "heroSubtitle": "Creating a world of ethical housing, healthcare, and mobility",
-      "aboutTitle": "About Horizon",
-      "aboutBody1": "Horizon is a global initiative designed to make housing more accessible, affordable, and ethical for everyone. By joining a network of properties across 120+ cities worldwide, members gain access to fair housing, healthcare benefits, and travel support.",
-      "aboutBody2": "Our mission is to create sustainable living environments that foster community and wellbeing while reducing the environmental impact of housing.",
-      "benefitsTitle": "Member Benefits",
-      "howItWorksTitle": "How It Works",
-      "steps": {
-        "apply": {
-          "title": "Apply for Membership",
-          "description": "Complete your profile and submit a membership application with your housing needs and preferences."
-        },
-        "verify": {
-          "title": "Get Verified",
-          "description": "Our team reviews your application and verifies your identity and background information."
-        },
-        "access": {
-          "title": "Access the Network",
-          "description": "Once approved, browse and book properties across our global network with priority access."
-        }
-      },
-      "joinTitle": "Ready to join Horizon?",
-      "joinSubtitle": "Apply today and take the first step toward ethical, accessible housing worldwide.",
-      "storiesTitle": "Member Stories",
-      "story1": "Horizon made my relocation so much easier. I found an ethical apartment in Berlin within a week and the healthcare coverage saved me when I needed emergency care.",
-      "story2": "As a digital nomad, having access to quality housing in multiple cities has been life-changing. The community aspect is what makes Horizon truly special."
     }
   },
   "settings": {
@@ -2102,11 +2030,6 @@
     }
   },
   "donations": {
-    "widget": {
-      "title": "Support Our Mission",
-      "description": "Help us build the future of ethical housing. Your support makes a difference.",
-      "button": "Donate to Homiio"
-    },
     "page": {
       "title": "Donate to Homiio",
       "subtitle": "Support the future of ethical housing",
@@ -3848,15 +3771,6 @@
       "exploreGlobalAccessible": "浏览全部地区的房源，不限定区域",
       "pickerTitle": "你想在哪里找房？",
       "showingCached": "{{when}}保存的副本，内容可能已过时。",
-      "failure": {
-        "permission_denied": "定位已关闭，无法搜索你附近的房源。请改为选择一个地点——定位不是必需的。",
-        "position_unavailable": "无法获取你的位置。请改为选择一个地点。",
-        "network": "无法连接 Homiio 完成这次查询。请检查网络后重试。",
-        "rate_limited": "短时间内地点查询次数过多。请稍后再试。",
-        "ambiguous": "有多个地点符合这个名称。请选择你要找的那个。",
-        "no_results": "找不到这个地点。请换个名称再试。",
-        "unsupported": "Homiio 暂时无法搜索这类地点。请改选一个城市。"
-      },
       "chooseArea": "选择区域",
       "useCurrentHint": "你所在位置 {{distance}} 范围内",
       "locationOff": "设置中已关闭定位",

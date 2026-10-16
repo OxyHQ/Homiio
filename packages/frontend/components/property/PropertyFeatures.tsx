@@ -155,5 +155,3 @@ export const PropertyFeatures: React.FC<Props> = ({ property }) => {
     </Section>
   );
 };
-
-export default PropertyFeatures;

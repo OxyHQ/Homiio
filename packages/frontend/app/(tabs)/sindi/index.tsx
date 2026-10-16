@@ -8,11 +8,12 @@
  */
 import type React from 'react';
 import { useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { Platform, ScrollView, StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { Button } from '@oxy.so/bloom/button';
+import { PageHeader } from '@oxy.so/bloom/page-header';
 import { Search } from '@oxy.so/bloom/search';
 import * as Skeleton from '@oxy.so/bloom/skeleton';
 import { Card } from '@oxy.so/bloom/card';
@@ -30,7 +31,6 @@ import { useTheme } from '@oxy.so/bloom/theme';
 import { H1, H3, Text } from '@oxy.so/bloom/typography';
 import { useOxy, openAccountDialog } from '@oxy.so/services';
 import { SindiIcon } from '@/assets/icons';
-import { Header } from '@/components/Header';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
 import { ConversationItem, ConversationList } from '@/components/sindi/ConversationItem';
@@ -120,22 +120,16 @@ export default function Sindi() {
     }
   }, [isAuthenticated, loadConversations, conversationFetch]);
 
-  // Web container CSS uses viewport units that RN's StyleSheet types reject
-  // outright. Casting to ViewStyle here is the standard escape hatch for
-  // platform-specific web overrides used elsewhere in the app.
-  const webContainerStyle =
-    Platform.OS === 'web'
-      ? {
-          height: '100vh' as unknown as number,
-          display: 'flex' as const,
-          flexDirection: 'column' as const,
-        }
-      : undefined;
-
   if (!isAuthenticated) {
     return (
-      <View style={styles.root}>
-        <Header options={{ title: t('sindi.title'), showBackButton: true }} />
+      <>
+        <PageHeader
+          title={t('sindi.title')}
+          titleAlign="center"
+          leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+          onBack={router.canGoBack() ? router.back : undefined}
+          backLabel={t('goBack')}
+        />
         <EmptyState
           icon={RiLockLine}
           title={t('sindi.auth.required')}
@@ -145,21 +139,22 @@ export default function Sindi() {
           onAction={() => openAccountDialog()}
           iconColor={staticColors.primaryColor}
         />
-      </View>
+      </>
     );
   }
 
   return (
-    <SafeAreaView style={[styles.root, webContainerStyle]} edges={['bottom']}>
-      <Header
-        options={{
-          title: t('sindi.title'),
-          subtitle: t('sindi.subtitle'),
-          showBackButton: true,
-        }}
+    <>
+      <PageHeader
+        title={t('sindi.title')}
+        subtitle={t('sindi.subtitle')}
+        titleAlign="center"
+        leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+        onBack={router.canGoBack() ? router.back : undefined}
+        backLabel={t('goBack')}
       />
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <View style={styles.content}>
         <Card radius="radius-24" style={styles.heroCard} appearance="outline">
           <SindiIcon size={56} color={colors.primary} />
           <SectionEyebrow>Meet Sindi</SectionEyebrow>
@@ -247,16 +242,12 @@ export default function Sindi() {
             </ConversationList>
           )}
         </View>
-      </ScrollView>
-    </SafeAreaView>
+      </View>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: staticColors.background,
-  },
   content: {
     padding: spacing.lg,
     gap: spacing.lg,

@@ -13,9 +13,10 @@
  * The URL used to be a write-once SEED: `?city`, `?query` and `?offering` were
  * read on mount and pushed into Zustand, and nothing ever wrote back, so a
  * search could not be shared, bookmarked, reloaded or reached with Back. Now the
- * URL holds the committed query and the store is its cache. `commitQuery` is the
- * only path that writes either, which is what stops the two disagreeing — and it
- * runs on native too, where expo-router carries route params just as it does on
+ * URL holds the committed query and this screen renders the query DERIVED from
+ * it — nothing is copied from the URL into a store. `commitQuery` is the only
+ * path that writes the URL (and the store, for the surfaces off this route that
+ * read the last search), and it runs on native too, where expo-router carries route params just as it does on
  * web, because a store-only native path is exactly how two platforms drift.
  *
  * ## A location that fails to resolve NEVER runs a query
@@ -27,9 +28,9 @@
  * under a heading naming the place. `failed` renders an error naming the reason
  * and issues no request at all.
  */
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useOxy } from '@oxy.so/services';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -50,14 +51,12 @@ import { useUserCoordinates } from '@/hooks/useHomeFeed';
 import { useSearchQueryStore, type SearchFilterPatch } from '@/store/searchQueryStore';
 import {
   buildSearchParamsForUrl,
+  exploreHref,
   isNavigationChange,
   parseSearchParams,
-  readParam,
   type ParsedLocation,
 } from '@/utils/searchUrl';
 import { resolveLegacyCityParam, resolveLocationRef } from '@/utils/resolveLocationRef';
-import { onApplySavedSearch } from '@/utils/searchEvents';
-import { savedSearchFiltersToQuery } from '@/utils/savedSearchQuery';
 
 export default function SearchScreen() {
   const router = useRouter();
@@ -66,18 +65,9 @@ export default function SearchScreen() {
   const { isAuthenticated } = useOxy();
   const { data: deviceFix } = useUserCoordinates();
 
-  const query = useSearchQueryStore((s) => s.query);
+  /** The last committed query — shown only while a requested location resolves. */
+  const committedQuery = useSearchQueryStore((s) => s.query);
   const [openStep, setOpenStep] = useState<SearchStep | null>(null);
-  /**
-   * A saved search whose place could not be read, awaiting the user's answer.
-   *
-   * Held rather than silently dropped: the row is not runnable, and the person
-   * who saved it is the only one who can say which place they meant.
-   */
-  const [pendingConfirmation, setPendingConfirmation] = useState<{
-    name: string;
-    label: string;
-  } | null>(null);
   /**
    * A committed location the URL grammar cannot express, if one was attempted.
    *
@@ -88,11 +78,14 @@ export default function SearchScreen() {
 
   // Parsing is pure, so it is derived rather than an effect.
   //
-  // `useLocalSearchParams()` returns a NEW OBJECT on every render, so this memo
-  // recomputes every render and `parsed.query` has a fresh identity every time.
-  // That is fine for rendering and lethal for an effect dependency — see the
-  // guard in the store-sync effect below, which is what stops it.
-  const parsed = useMemo(() => parseSearchParams(params), [params]);
+  // `useLocalSearchParams()` returns a NEW OBJECT on every render, so the parse
+  // is keyed on the params' serialised VALUE: `parsed.query` (and the `query`
+  // derived from it below) keeps its identity until the URL actually changes.
+  const paramsKey = JSON.stringify(params);
+  const parsed = useMemo(
+    () => parseSearchParams(JSON.parse(paramsKey) as typeof params),
+    [paramsKey],
+  );
   const locationRequest = parsed.location;
   const requestKey = locationRequestKey(locationRequest);
 
@@ -150,69 +143,39 @@ export default function SearchScreen() {
     resolutionQuery.data,
   ]);
 
-  /**
-   * Sync the derived query into the store.
-   *
-   * This writes an EXTERNAL store (zustand), not this component's state, so it
-   * is the "update external systems with the latest state from React" case an
-   * effect is actually for. Only a `resolved` location is ever committed — the
-   * `resolving` and `failed` branches deliberately leave the previous query
-   * alone rather than clearing it, because clearing it is how a failure becomes
-   * a global feed.
-   */
   const resolvedSelection = resolution.status === 'resolved' ? resolution.selection : null;
 
-  useEffect(() => {
-    // Nothing to commit until a requested location has actually resolved.
-    // Writing `null` here instead would be the "a failure becomes a global
-    // feed" bug, one layer in.
-    if (locationRequest.kind !== 'none' && !resolvedSelection) return;
-
-    const next: SearchQuery = { ...parsed.query, location: resolvedSelection };
-
-    // WRITE ONLY ON A REAL CHANGE.
-    //
-    // Not an optimisation — without it this is an infinite render loop, and it
-    // was one: `useLocalSearchParams()` hands back a new object every render,
-    // so `parsed.query` is a new identity every render, so this effect fires
-    // every render, so `replaceSearch` re-renders, forever. It surfaced as
-    // React error #185 and an error boundary on `/explore`, caught by the
-    // cold-start check rather than by tsc or jest, neither of which can see it.
-    //
-    // Zustand's `set` notifies every subscriber whether or not the value
-    // changed, so identity alone cannot break the cycle — the comparison has to
-    // be on the VALUE.
-    const current = useSearchQueryStore.getState().query;
-    if (JSON.stringify(current) === JSON.stringify(next)) return;
-
-    useSearchQueryStore.getState().replaceSearch(next);
-  }, [locationRequest.kind, parsed.query, resolvedSelection]);
+  /**
+   * The query this screen shows — derived from the URL, never copied out of it.
+   *
+   * Only a `resolved` location is ever in force. While a requested location is
+   * `resolving` (or has `failed`) the last committed query stays on screen
+   * rather than a cleared one, because clearing it is how a failure becomes a
+   * global feed.
+   */
+  const urlQueryInForce = locationRequest.kind === 'none' || resolvedSelection !== null;
+  const query: SearchQuery = useMemo(
+    () => (urlQueryInForce ? { ...parsed.query, location: resolvedSelection } : committedQuery),
+    [urlQueryInForce, parsed.query, resolvedSelection, committedQuery],
+  );
 
   /**
-   * Normalise a legacy URL once its single match is known.
-   *
-   * `setParams`, not `push`: the user did not navigate, the address bar is
-   * being corrected under them. Several matches never reach here — they resolve
-   * to a failure and open the picker instead of auto-picking one.
+   * A legacy URL (`?city=`, `?query=`) rewritten to its canonical form once its
+   * single match is known. The address bar is corrected under the user with a
+   * `replace` — they did not navigate. Several matches never reach here: they
+   * resolve to a failure and open the picker instead of auto-picking one.
    */
-  useEffect(() => {
-    if (!parsed.needsNormalising || !resolvedSelection) return;
-    const { params: normalised } = buildSearchParamsForUrl({
-      ...parsed.query,
-      location: resolvedSelection,
-    });
-    // Same guard, same reason: `setParams` re-renders, and this effect's deps
-    // change on every render. Once the URL carries no legacy param,
-    // `needsNormalising` is false and this stops firing at all — but it must
-    // not loop during the one render where it is still true.
-    if (normalised.loc === readParam(params.loc)) return;
-    router.setParams(normalised);
-  }, [parsed.needsNormalising, parsed.query, resolvedSelection, router, params.loc]);
+  const normalisedHref =
+    parsed.needsNormalising && resolvedSelection
+      ? exploreHref({ ...parsed.query, location: resolvedSelection })
+      : null;
 
   /**
    * The ONE writer. Serialises the query to `loc`/`q`/filters and navigates;
-   * the store then updates from the resulting params, so there is no path that
-   * writes the store without writing the URL.
+   * this screen re-derives from the resulting params. The store is written in
+   * the same step so the surfaces off this route that read the last search
+   * (Home's composer seed) agree with the URL, and so a newly pushed location
+   * shows this query, not an older one, while it resolves.
    *
    * A location change is a `push` — somewhere the user navigated to and can
    * leave with Back. A filter or sort tweak is a `replace`, because burying the
@@ -253,38 +216,6 @@ export default function SearchScreen() {
     (patch: SearchFilterPatch) => commitQuery({ ...query, ...patch }),
     [commitQuery, query],
   );
-
-  /**
-   * Saved searches pushed over the event bus while the user is already here.
-   *
-   * A row that NEEDS CONFIRMATION does not run — and that refusal is the whole
-   * point of the branch. A legacy row predates the location column, so all it
-   * has is a place LABEL in `query`; applying it would commit free text with NO
-   * geographic scope and answer globally under the name "Madrid". That is the
-   * degradation ADR 0002 §4.3 forbids in the words "not for a legacy saved
-   * search", and it is worse than the homonym bug it replaced, because a wrong
-   * city at least looks wrong.
-   *
-   * Re-geocoding the label here is equally forbidden and for the older reason:
-   * one label, several cities, and taking the first is how a saved alert
-   * silently changes country.
-   */
-  useEffect(() => {
-    const unsubscribe = onApplySavedSearch((payload) => {
-      // Absent status is read as `needs_confirmation`: an older payload shape
-      // must land on the cautious side rather than run unscoped.
-      const status =
-        payload.locationStatus ?? (payload.location ? 'resolved' : 'needs_confirmation');
-      if (status !== 'resolved' || !payload.location) {
-        setPendingConfirmation({ name: payload.name ?? payload.query, label: payload.query });
-        return;
-      }
-      commitQuery({ ...savedSearchFiltersToQuery(payload), location: payload.location });
-    });
-    return () => {
-      unsubscribe();
-    };
-  }, [commitQuery]);
 
   const handleEditSearch = useCallback(() => setOpenStep('where'), []);
 
@@ -348,32 +279,6 @@ export default function SearchScreen() {
     );
   }
 
-  // A legacy saved search asks which place it meant, and runs nothing until it
-  // is told. Rendered before the results surface for the same reason `failed`
-  // is: neither state may issue a query.
-  if (pendingConfirmation) {
-    return (
-      <View style={styles.root}>
-        {searchPanel}
-        <ErrorState
-          title={t('search.savedSearch.confirmTitle', 'Which place did you mean?') ?? undefined}
-          description={
-            t('search.savedSearch.confirmDescription', {
-              name: pendingConfirmation.label,
-              defaultValue:
-                'This saved search was created before we stored places by name, so we cannot tell which one it means. Choose it again and we will remember.',
-            }) ?? undefined
-          }
-          retryLabel={t('search.location.chooseAnother', 'Choose a place') ?? undefined}
-          onRetry={() => {
-            setPendingConfirmation(null);
-            setOpenStep('where');
-          }}
-        />
-      </View>
-    );
-  }
-
   // A failed resolution shows the reason and issues NO request. This is the
   // branch that used to be a silent fall-through to the global feed.
   if (resolution.status === 'failed') {
@@ -397,6 +302,7 @@ export default function SearchScreen() {
 
   return (
     <View style={styles.root}>
+      {normalisedHref ? <Redirect href={normalisedHref} /> : null}
       <SearchResultsView
         query={query}
         onQueryChange={patchFilters}
@@ -415,8 +321,8 @@ export default function SearchScreen() {
 /**
  * A stable string for "which location did the URL ask for".
  *
- * The effect above keys on this rather than on the parsed object, which is a
- * new object every render and would re-resolve — and re-render — forever.
+ * The resolution query keys on this rather than on the parsed object, so it
+ * re-resolves when the location changes and not when an unrelated filter does.
  */
 function locationRequestKey(location: ParsedLocation): string {
   switch (location.kind) {

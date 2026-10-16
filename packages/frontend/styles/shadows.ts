@@ -131,35 +131,12 @@ interface ShadowInput {
  * hex/rgba color in this app, so an unfoldable value is a programming error we
  * want surfaced rather than silently dropped.
  */
-export const boxShadow = ({
-  x = 0,
-  y = 0,
-  blur = 0,
-  color,
-  opacity = OPAQUE,
-}: ShadowInput): string => {
+const boxShadow = ({ x = 0, y = 0, blur = 0, color, opacity = OPAQUE }: ShadowInput): string => {
   const rgba = toRgba(color, opacity);
   if (rgba === null) {
     throw new Error(`boxShadow: cannot resolve color "${color}" to rgba`);
   }
   return `${x}px ${y}px ${blur}px ${rgba}`;
-};
-
-/**
- * Resolve a color to its `"r, g, b"` channel triple (no alpha). Useful when a
- * shadow's alpha is animated (e.g. a Reanimated worklet building an animated
- * `boxShadow`): precompute the channels from the theme color once on the JS
- * thread, then interpolate only the alpha inside the worklet —
- * `` `0px 2px 3px rgba(${channels}, ${alpha})` ``. Avoids hardcoding magic
- * channel literals at the call site. Throws on an unfoldable color, matching
- * `boxShadow`.
- */
-export const colorChannels = (color: string): string => {
-  const parsed = parseColor(color);
-  if (parsed === null) {
-    throw new Error(`colorChannels: cannot resolve color "${color}" to rgb`);
-  }
-  return `${clampChannel(parsed.r)}, ${clampChannel(parsed.g)}, ${clampChannel(parsed.b)}`;
 };
 
 interface ShadowTokenInput extends ShadowInput {

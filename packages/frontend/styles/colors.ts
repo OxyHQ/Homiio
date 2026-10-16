@@ -27,8 +27,8 @@ import { buildTheme } from '@oxy.so/bloom/theme';
 import type { ThemeColors } from '@oxy.so/bloom/theme';
 
 /** Bloom `yellow` resolved palettes — the single source of truth. */
-export const BLOOM_LIGHT: ThemeColors = buildTheme('yellow', 'light').colors;
-export const BLOOM_DARK: ThemeColors = buildTheme('yellow', 'dark').colors;
+const BLOOM_LIGHT: ThemeColors = buildTheme('yellow', 'light').colors;
+const BLOOM_DARK: ThemeColors = buildTheme('yellow', 'dark').colors;
 
 const channelToHex = (value: number): string =>
   Math.round(Math.max(0, Math.min(255, value)))

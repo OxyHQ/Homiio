@@ -92,24 +92,3 @@ export const useRecentlyViewedStore = create<RecentlyViewedState>()((set, get) =
   setError: (error) => set({ error }),
   clearError: () => set({ error: null }),
 }));
-
-// Selector hooks for easier access
-export const useRecentlyViewedSelectors = () => {
-  const items = useRecentlyViewedStore((state) => state.items);
-  const isLoading = useRecentlyViewedStore((state) => state.isLoading);
-  const isInitialized = useRecentlyViewedStore((state) => state.isInitialized);
-  const error = useRecentlyViewedStore((state) => state.error);
-  const getRecentProperties = useRecentlyViewedStore((state) => state.getRecentProperties);
-  const getRecentRooms = useRecentlyViewedStore((state) => state.getRecentRooms);
-  const getRecentRoommates = useRecentlyViewedStore((state) => state.getRecentRoommates);
-
-  return {
-    items,
-    isLoading,
-    isInitialized,
-    error,
-    getRecentProperties,
-    getRecentRooms,
-    getRecentRoommates,
-  };
-};

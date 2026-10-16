@@ -1,12 +1,13 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import * as Location from 'expo-location';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { MapApi, GeocodedAddress } from '@/components/Map';
 import {
   useCreatePropertyFormStore,
   useCreatePropertyFormSelectors,
 } from '@/store/createPropertyFormStore';
 import { useProperty } from '@/hooks/usePropertyQueries';
+import { propertyService } from '@/services/propertyService';
 import type { UploadedImage } from '@/services/imageUploadService';
 import {
   ExchangeMode,
@@ -99,6 +100,149 @@ const mapPropertyImages = (images: Property['images']): UploadedImage[] => {
   return images.map((image, index) => toUploadedImage(image, index));
 };
 
+/** Resolves once the persisted form has been read back (or the read gave up). */
+function whenFormRestored(): Promise<void> {
+  if (useCreatePropertyFormStore.getState().hasHydrated) return Promise.resolve();
+  return new Promise((resolve) => {
+    const unsubscribe = useCreatePropertyFormStore.subscribe((state) => {
+      if (!state.hasHydrated) return;
+      unsubscribe();
+      resolve();
+    });
+  });
+}
+
+/**
+ * Seed the form store from a stored listing, for editing it.
+ *
+ * Called by the edit-session loader once BOTH the listing and the persisted
+ * form are in, which is what makes the dirty-edit check below reachable.
+ */
+function seedEditForm(property: Property) {
+  const store = useCreatePropertyFormStore.getState();
+  if (store.editingPropertyId === property.id && store.isDirty) {
+    // An edit of THIS listing was interrupted and the store restored it.
+    // Overwriting it with the server's copy would discard exactly the changes
+    // the restore preserved — the server's copy is what they were editing
+    // AWAY from. Waiting for the restore (`whenFormRestored`) is what makes this reachable:
+    // the restore lands after the first renders.
+    return;
+  }
+  // Anything else in the store belongs to a different listing. An unsaved NEW
+  // listing is parked in the drafts list first, so opening an edit never
+  // silently discards a listing somebody was part-way through writing.
+  if (!store.editingPropertyId && store.isDirty) {
+    saveDraft(store.draftId ?? newDraftId(), store.formData, store.currentStep).catch(
+      (error: unknown) => logger.error('Error parking in-progress listing before edit', error),
+    );
+  }
+  store.resetForm();
+  store.setEditingPropertyId(property.id);
+
+  store.setFormData('basicInfo', {
+    propertyType: property.type || 'apartment',
+    bedrooms: property.bedrooms || 1,
+    bathrooms: property.bathrooms || 1,
+    squareFootage: property.squareFootage || 0,
+    yearBuilt: property.yearBuilt,
+    description: property.description || '',
+  });
+
+  const coordinates = property.address?.coordinates;
+  const hasPoint = coordinates?.type === 'Point';
+
+  store.setFormData('location', {
+    address: property.address?.street || '',
+    floor: property.floor,
+    // The stored publication choice, not whether a floor exists: a listing
+    // with a floor and no choice publishes `building`, which is private.
+    showFloor: property.addressPublishedPrecision === 'exact',
+    // Geo is relational: seed the form's resolution inputs from the address's
+    // resolved display NAMES (the geo `*Id` fields are ids, not strings).
+    neighborhood: property.address?.neighborhoodName || '',
+    city: property.address?.cityName || '',
+    state: property.address?.regionName || '',
+    postal_code: property.address?.postal_code || '',
+    country: property.address?.countryName || '',
+    latitude: hasPoint ? coordinates.coordinates[1] : undefined,
+    longitude: hasPoint ? coordinates.coordinates[0] : undefined,
+    availableFrom: '',
+    leaseTerm: '',
+    number: property.address?.number || '',
+    building_name: property.address?.building_name || '',
+    block: property.address?.block || '',
+    entrance: property.address?.entrance || '',
+    unit: property.address?.unit || '',
+    subunit: property.address?.subunit || '',
+    district: property.address?.district || '',
+    address_lines: property.address?.address_lines || [],
+    po_box: property.address?.po_box || '',
+    reference: property.address?.reference || '',
+  });
+
+  // Hydrate the per-offering pricing back from the stored blocks so editing
+  // round-trips every field (including deposit/fees, fixing the prior
+  // reset-to-0 gap). `offerings` is read straight off the property — it is the
+  // authoritative axis, equal to the set of present priced blocks.
+  const longTerm = property.longTermRent;
+  const shortTerm = property.shortTermRent;
+  const storedOfferings =
+    Array.isArray(property.offerings) && property.offerings.length > 0
+      ? property.offerings
+      : [OfferingType.LONG_TERM_RENT];
+  // Shared currency: prefer the long-term block's, else the short-term one.
+  const pricingCurrency = longTerm?.currency || shortTerm?.currency || 'EUR';
+  store.setFormData('pricing', {
+    offerings: storedOfferings,
+    currency: pricingCurrency,
+    monthlyRent: longTerm?.monthlyAmount ?? 0,
+    securityDeposit: longTerm?.deposit ?? 0,
+    applicationFee: longTerm?.applicationFee ?? 0,
+    lateFee: longTerm?.lateFee ?? 0,
+    nightlyRate: shortTerm?.nightlyRate ?? 0,
+    cleaningFee: shortTerm?.cleaningFee ?? 0,
+    serviceFee: shortTerm?.serviceFee ?? 0,
+    taxesPercent: shortTerm?.taxesPercent ?? 0,
+    minNights: shortTerm?.minNights,
+    maxNights: shortTerm?.maxNights,
+    instantBook: shortTerm?.instantBook ?? false,
+  });
+
+  store.setFormData('amenities', {
+    selectedAmenities: property.amenities || [],
+  });
+
+  store.setFormData('media', {
+    images: mapPropertyImages(property.images),
+  });
+
+  store.setFormData('colivingFeatures', {
+    sharedSpaces: false,
+    communityEvents: false,
+    sharedSpacesList: [],
+    otherFeatures: '',
+  });
+
+  // Hydrate the sale + exchange sub-fields. A stored `sale` block seeds the
+  // Sale Details fields and a stored `exchange` block seeds the Exchange
+  // Settings fields so editing those listings round-trips that data.
+  const exchange = property.exchange;
+  store.setFormData('offering', {
+    salePrice: property.sale?.price,
+    saleCurrency: property.sale?.currency,
+    chainStatus: property.sale?.chainStatus,
+    isPriceReduced: property.sale?.isPriceReduced,
+    exchangeMode: exchange?.mode ?? ExchangeMode.BOTH,
+    exchangeAvailabilityWindows: exchange?.availabilityWindows ?? [],
+    exchangeMinStay: exchange?.minStay,
+    exchangeMaxStay: exchange?.maxStay,
+    exchangeWelcomeNote: exchange?.welcomeNote,
+    exchangeLanguages: exchange?.languages ?? [],
+    exchangeMealsIncluded: exchange?.mealsIncluded ?? false,
+    exchangeRequiresReciprocity: exchange?.requiresReciprocity ?? false,
+  });
+}
+
 /**
  * Centralises all state, derived values, side effects, and handlers for the
  * property creation wizard. The screen and step components consume this hook so
@@ -106,23 +250,20 @@ const mapPropertyImages = (images: Property['images']): UploadedImage[] => {
  *
  * Responsibilities:
  *  - Wire the Zustand form store (single source of truth for form data).
- *  - Load + hydrate the form in edit mode via React Query (`useProperty`).
- *  - Resolve the user's location on the Location step via a React Query mutation.
+ *  - Load + hydrate the form in edit mode via React Query (the edit session).
+ *  - Resolve the user's location on arrival at the Location step (from the
+ *    Next/Back press) via a React Query mutation.
  *  - Derive the active step list and visible fields (no effects).
  *  - Run per-step Zod validation and gate progression.
  */
 export function usePropertyCreateForm(id: string | undefined) {
   const isEditMode = Boolean(id);
 
-  const { setFormData, updateFormField, nextStep, setCurrentStep, setEditingPropertyId } =
-    useCreatePropertyFormStore();
+  const { setFormData, updateFormField, nextStep, setCurrentStep } = useCreatePropertyFormStore();
 
   const { formData, currentStep, isLoading, error: submitError } = useCreatePropertyFormSelectors();
-  // Whether the persisted form has been read back. Edit-mode hydration waits
-  // for it, so a restored in-progress edit is never overwritten by the server.
-  const hasHydrated = useCreatePropertyFormStore((state) => state.hasHydrated);
 
-  const { property, loading: propertyLoading, error: propertyError } = useProperty(id ?? '');
+  const { loading: propertyLoading, error: propertyError } = useProperty(id ?? '');
 
   const [validationErrors, setValidationErrors] = useState<StepValidationErrors>({});
   const mapRef = useRef<MapApi | null>(null);
@@ -147,136 +288,29 @@ export function usePropertyCreateForm(id: string | undefined) {
   );
 
   // --- Edit-mode hydration --------------------------------------------------
-  // Sync the fetched property into the form store exactly once per loaded id.
-  const hydratedPropertyIdRef = useRef<string | null>(null);
-  useEffect(() => {
-    if (!isEditMode || !property || !hasHydrated) return;
-    if (hydratedPropertyIdRef.current === property.id) return;
-    hydratedPropertyIdRef.current = property.id;
-
-    const store = useCreatePropertyFormStore.getState();
-    if (store.editingPropertyId === property.id && store.isDirty) {
-      // An edit of THIS listing was interrupted and the store restored it.
-      // Overwriting it with the server's copy would discard exactly the changes
-      // the restore preserved — the server's copy is what they were editing
-      // AWAY from. Waiting on `hasHydrated` above is what makes this reachable:
-      // the restore lands after the first renders.
-      return;
-    }
-    // Anything else in the store belongs to a different listing. An unsaved NEW
-    // listing is parked in the drafts list first, so opening an edit never
-    // silently discards a listing somebody was part-way through writing.
-    if (!store.editingPropertyId && store.isDirty) {
-      saveDraft(store.draftId ?? newDraftId(), store.formData, store.currentStep).catch(
-        (error: unknown) => logger.error('Error parking in-progress listing before edit', error),
-      );
-    }
-    store.resetForm();
-    setEditingPropertyId(property.id);
-
-    setFormData('basicInfo', {
-      propertyType: property.type || 'apartment',
-      bedrooms: property.bedrooms || 1,
-      bathrooms: property.bathrooms || 1,
-      squareFootage: property.squareFootage || 0,
-      yearBuilt: property.yearBuilt,
-      description: property.description || '',
-    });
-
-    const coordinates = property.address?.coordinates;
-    const hasPoint = coordinates?.type === 'Point';
-
-    setFormData('location', {
-      address: property.address?.street || '',
-      floor: property.floor,
-      // The stored publication choice, not whether a floor exists: a listing
-      // with a floor and no choice publishes `building`, which is private.
-      showFloor: property.addressPublishedPrecision === 'exact',
-      // Geo is relational: seed the form's resolution inputs from the address's
-      // resolved display NAMES (the geo `*Id` fields are ids, not strings).
-      neighborhood: property.address?.neighborhoodName || '',
-      city: property.address?.cityName || '',
-      state: property.address?.regionName || '',
-      postal_code: property.address?.postal_code || '',
-      country: property.address?.countryName || '',
-      latitude: hasPoint ? coordinates.coordinates[1] : undefined,
-      longitude: hasPoint ? coordinates.coordinates[0] : undefined,
-      availableFrom: '',
-      leaseTerm: '',
-      number: property.address?.number || '',
-      building_name: property.address?.building_name || '',
-      block: property.address?.block || '',
-      entrance: property.address?.entrance || '',
-      unit: property.address?.unit || '',
-      subunit: property.address?.subunit || '',
-      district: property.address?.district || '',
-      address_lines: property.address?.address_lines || [],
-      po_box: property.address?.po_box || '',
-      reference: property.address?.reference || '',
-    });
-
-    // Hydrate the per-offering pricing back from the stored blocks so editing
-    // round-trips every field (including deposit/fees, fixing the prior
-    // reset-to-0 gap). `offerings` is read straight off the property — it is the
-    // authoritative axis, equal to the set of present priced blocks.
-    const longTerm = property.longTermRent;
-    const shortTerm = property.shortTermRent;
-    const storedOfferings =
-      Array.isArray(property.offerings) && property.offerings.length > 0
-        ? property.offerings
-        : [OfferingType.LONG_TERM_RENT];
-    // Shared currency: prefer the long-term block's, else the short-term one.
-    const pricingCurrency = longTerm?.currency || shortTerm?.currency || 'EUR';
-    setFormData('pricing', {
-      offerings: storedOfferings,
-      currency: pricingCurrency,
-      monthlyRent: longTerm?.monthlyAmount ?? 0,
-      securityDeposit: longTerm?.deposit ?? 0,
-      applicationFee: longTerm?.applicationFee ?? 0,
-      lateFee: longTerm?.lateFee ?? 0,
-      nightlyRate: shortTerm?.nightlyRate ?? 0,
-      cleaningFee: shortTerm?.cleaningFee ?? 0,
-      serviceFee: shortTerm?.serviceFee ?? 0,
-      taxesPercent: shortTerm?.taxesPercent ?? 0,
-      minNights: shortTerm?.minNights,
-      maxNights: shortTerm?.maxNights,
-      instantBook: shortTerm?.instantBook ?? false,
-    });
-
-    setFormData('amenities', {
-      selectedAmenities: property.amenities || [],
-    });
-
-    setFormData('media', {
-      images: mapPropertyImages(property.images),
-    });
-
-    setFormData('colivingFeatures', {
-      sharedSpaces: false,
-      communityEvents: false,
-      sharedSpacesList: [],
-      otherFeatures: '',
-    });
-
-    // Hydrate the sale + exchange sub-fields. A stored `sale` block seeds the
-    // Sale Details fields and a stored `exchange` block seeds the Exchange
-    // Settings fields so editing those listings round-trips that data.
-    const exchange = property.exchange;
-    setFormData('offering', {
-      salePrice: property.sale?.price,
-      saleCurrency: property.sale?.currency,
-      chainStatus: property.sale?.chainStatus,
-      isPriceReduced: property.sale?.isPriceReduced,
-      exchangeMode: exchange?.mode ?? ExchangeMode.BOTH,
-      exchangeAvailabilityWindows: exchange?.availabilityWindows ?? [],
-      exchangeMinStay: exchange?.minStay,
-      exchangeMaxStay: exchange?.maxStay,
-      exchangeWelcomeNote: exchange?.welcomeNote,
-      exchangeLanguages: exchange?.languages ?? [],
-      exchangeMealsIncluded: exchange?.mealsIncluded ?? false,
-      exchangeRequiresReciprocity: exchange?.requiresReciprocity ?? false,
-    });
-  }, [isEditMode, property, hasHydrated, setFormData, setEditingPropertyId]);
+  // Opening a listing for editing LOADS an edit session: wait for the persisted
+  // form to be read back, get the listing (through the same cache entry
+  // `useProperty` reads), then seed the form from it. That is one async load,
+  // so React Query runs it — once per visit (`gcTime: 0` drops it when the
+  // screen goes, `staleTime: Infinity` keeps a focus or reconnect from
+  // re-seeding over the host's edits while it is open).
+  const queryClient = useQueryClient();
+  useQuery({
+    queryKey: ['propertyForm', 'editSession', id ?? null],
+    queryFn: async () => {
+      await whenFormRestored();
+      const loaded = await queryClient.ensureQueryData({
+        queryKey: ['property', id],
+        queryFn: async () => propertyService.getPropertyById(id ?? ''),
+      });
+      if (loaded) seedEditForm(loaded);
+      return loaded?.id ?? null;
+    },
+    enabled: isEditMode,
+    staleTime: Number.POSITIVE_INFINITY,
+    gcTime: 0,
+    retry: false,
+  });
 
   // --- User geolocation on the Location step --------------------------------
   const locationMutation = useMutation<GeoCoordinates | null>({
@@ -312,15 +346,18 @@ export function usePropertyCreateForm(id: string | undefined) {
   const needsLocationResolve = !latitude || !longitude || isAtDefaultBarcelona;
 
   // Resolve the user's location the first time they reach the Location step
-  // without usable coordinates. A ref guard keeps the effect's deps honest and
-  // prevents re-triggering as coordinates update mid-resolution.
+  // without usable coordinates. Reaching it is a press (Next / Back), so the
+  // press resolves it; the ref keeps a later visit from asking again.
   const hasRequestedLocationRef = useRef(false);
-  useEffect(() => {
-    if (stepName !== STEP_LOCATION) return;
-    if (!needsLocationResolve || hasRequestedLocationRef.current || isResolvingLocation) return;
-    hasRequestedLocationRef.current = true;
-    resolveUserLocation();
-  }, [stepName, needsLocationResolve, isResolvingLocation, resolveUserLocation]);
+  const resolveLocationOnArrival = useCallback(
+    (arrivingAt: string | undefined) => {
+      if (arrivingAt !== STEP_LOCATION) return;
+      if (!needsLocationResolve || hasRequestedLocationRef.current || isResolvingLocation) return;
+      hasRequestedLocationRef.current = true;
+      resolveUserLocation();
+    },
+    [needsLocationResolve, isResolvingLocation, resolveUserLocation],
+  );
 
   // --- Address autofill from the map ----------------------------------------
   const applyAddressSelection = useCallback(
@@ -422,15 +459,19 @@ export function usePropertyCreateForm(id: string | undefined) {
   const handleNextStep = useCallback((): boolean => {
     if (!validateCurrentStep()) return false;
     nextStep(maxStep);
+    // Mirrors the store's own clamp in `nextStep`.
+    resolveLocationOnArrival(steps[Math.min(currentStep + 1, maxStep)]);
     return true;
-  }, [validateCurrentStep, nextStep, maxStep]);
+  }, [validateCurrentStep, nextStep, maxStep, resolveLocationOnArrival, steps, currentStep]);
 
   const handlePrevStep = useCallback(() => {
     setValidationErrors({});
     // Step back from where the host SEES they are: the clamped index, not a
     // stored one past the end of a flow that shrank.
-    setCurrentStep(Math.max(safeStepIndex - 1, 0));
-  }, [safeStepIndex, setCurrentStep]);
+    const previous = Math.max(safeStepIndex - 1, 0);
+    setCurrentStep(previous);
+    resolveLocationOnArrival(steps[previous]);
+  }, [safeStepIndex, setCurrentStep, resolveLocationOnArrival, steps]);
 
   return {
     // state
@@ -463,5 +504,3 @@ export function usePropertyCreateForm(id: string | undefined) {
     handleNextStep,
   };
 }
-
-export type UsePropertyCreateFormReturn = ReturnType<typeof usePropertyCreateForm>;

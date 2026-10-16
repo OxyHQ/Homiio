@@ -32,7 +32,7 @@ import { getFormatLocale } from '@/utils/dateLocale';
  * missing one renders a readable word rather than a raw key — the convention the
  * offering summaries already follow.
  */
-export function priceUnitLabels(t: TFunction): PriceUnitLabels {
+function priceUnitLabels(t: TFunction): PriceUnitLabels {
   return {
     night: {
       short: t('format.priceUnit.night.short', DEFAULT_PRICE_UNIT_LABELS.night.short),
@@ -65,7 +65,7 @@ export function priceUnitLabels(t: TFunction): PriceUnitLabels {
 }
 
 /** Area unit wording for the reader's language (`m²` stays notation, not a word). */
-export function areaUnitLabels(t: TFunction): AreaUnitLabels {
+function areaUnitLabels(t: TFunction): AreaUnitLabels {
   return {
     sqm: {
       short: DEFAULT_AREA_UNIT_LABELS.sqm.short,

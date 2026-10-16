@@ -14,10 +14,11 @@
 import type React from 'react';
 import { useCallback, useMemo, useState } from 'react';
 import { Image, StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
+import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
+import { PageHeader } from '@oxy.so/bloom/page-header';
 import { useFormatting } from '@/utils/format';
 import { toast } from '@oxy.so/bloom/toast';
 import { Button } from '@oxy.so/bloom/button';
@@ -41,8 +42,6 @@ import {
   type TenantApplication,
   TenantApplicationStatus,
 } from '@homiio/shared-types';
-import { Header } from '@/components/Header';
-import { PageScrollView } from '@/components/PageScrollView';
 import { ApplicationStatusBadge } from '@/components/ApplicationStatusBadge';
 import {
   ApplicationDocumentsGroup,
@@ -206,15 +205,20 @@ export default function LandlordApplicationDetailScreen() {
     }
   }, [id, pendingAction, actionNotes, updateMutation, reviewLabels, t]);
 
+  const header = (
+    <PageHeader
+      title={t('applications.card.applicantFallback')}
+      titleAlign="center"
+      leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+      onBack={router.canGoBack() ? router.back : undefined}
+      backLabel={t('goBack')}
+    />
+  );
+
   if (!id) {
     return (
-      <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
-        <Header
-          options={{
-            showBackButton: true,
-            title: t('applications.card.applicantFallback'),
-          }}
-        />
+      <>
+        {header}
         <ErrorState
           icon={RiErrorWarningFill}
           title={t('applications.landlord.invalidTitle')}
@@ -222,35 +226,23 @@ export default function LandlordApplicationDetailScreen() {
           onRetry={() => router.back()}
           retryLabel={t('goBack')}
         />
-      </View>
+      </>
     );
   }
 
   if (applicationQuery.isPending) {
     return (
-      <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
-        <Header
-          options={{
-            showBackButton: true,
-            title: t('applications.card.applicantFallback'),
-          }}
-        />
-        <PageScrollView>
-          <DetailSkeleton />
-        </PageScrollView>
-      </View>
+      <>
+        {header}
+        <DetailSkeleton />
+      </>
     );
   }
 
   if (applicationQuery.isError || !application) {
     return (
-      <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
-        <Header
-          options={{
-            showBackButton: true,
-            title: t('applications.card.applicantFallback'),
-          }}
-        />
+      <>
+        {header}
         <ErrorState
           icon={RiAlertLine}
           title={t('applications.landlord.unavailableTitle')}
@@ -259,19 +251,14 @@ export default function LandlordApplicationDetailScreen() {
           }
           onRetry={() => applicationQuery.refetch()}
         />
-      </View>
+      </>
     );
   }
 
   if (!isLandlord) {
     return (
-      <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
-        <Header
-          options={{
-            showBackButton: true,
-            title: t('applications.card.applicantFallback'),
-          }}
-        />
+      <>
+        {header}
         <ErrorState
           icon={RiLockLine}
           title={t('applications.landlord.notAuthorisedTitle')}
@@ -279,7 +266,7 @@ export default function LandlordApplicationDetailScreen() {
           onRetry={() => router.back()}
           retryLabel={t('goBack')}
         />
-      </View>
+      </>
     );
   }
 
@@ -303,168 +290,148 @@ export default function LandlordApplicationDetailScreen() {
     application.status === TenantApplicationStatus.REVIEWING;
 
   return (
-    <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
-      <Header
-        options={{
-          showBackButton: true,
-          title: t('applications.card.applicantFallback'),
-        }}
-      />
-      <SafeAreaView edges={['bottom']} style={styles.safeArea}>
-        <PageScrollView contentContainerStyle={styles.content}>
-          <View style={styles.applicantHeader}>
-            <Avatar
-              size={56}
-              name={applicantName}
-              source={applicantAvatar ?? null}
-              variant="thumb"
-            />
-            <View style={styles.applicantHeaderText}>
-              <H2 style={styles.applicantName}>{applicantName}</H2>
-              <BloomText style={[styles.subtitle, secondaryText]}>
-                {t(`profile.edit.options.employmentStatus.${application.employmentStatus}`)} ·{' '}
-                {formatApplicationIncome(application, locale)} {t('applications.card.perMonth')}
-              </BloomText>
-            </View>
-            <ApplicationStatusBadge status={application.status} />
+    <>
+      {header}
+      <View style={styles.content}>
+        <View style={styles.applicantHeader}>
+          <Avatar size={56} name={applicantName} source={applicantAvatar ?? null} variant="thumb" />
+          <View style={styles.applicantHeaderText}>
+            <H2 style={styles.applicantName}>{applicantName}</H2>
+            <BloomText style={[styles.subtitle, secondaryText]}>
+              {t(`profile.edit.options.employmentStatus.${application.employmentStatus}`)} ·{' '}
+              {formatApplicationIncome(application, locale)} {t('applications.card.perMonth')}
+            </BloomText>
           </View>
+          <ApplicationStatusBadge status={application.status} />
+        </View>
 
-          <View style={[styles.heroCard, { backgroundColor: theme.colors.backgroundSecondary }]}>
-            {imageSource ? (
-              <Image source={imageSource} style={styles.thumb} resizeMode="cover" />
-            ) : (
-              <View style={styles.thumb} />
-            )}
-          </View>
+        <View style={[styles.heroCard, { backgroundColor: theme.colors.backgroundSecondary }]}>
+          {imageSource ? (
+            <Image source={imageSource} style={styles.thumb} resizeMode="cover" />
+          ) : (
+            <View style={styles.thumb} />
+          )}
+        </View>
 
-          <Card radius="radius-16" style={styles.card} appearance="outline">
-            <SectionEyebrow>{t('applications.card.propertyFallback')}</SectionEyebrow>
-            <H3 style={styles.cardHeading}>{propertyTitle}</H3>
-            {property?.address ? (
-              <BloomText style={[styles.subtitle, secondaryText]}>
-                {[property.address.cityName, property.address.countryName]
-                  .filter(Boolean)
-                  .join(', ')}
-              </BloomText>
-            ) : null}
-          </Card>
+        <Card radius="radius-16" style={styles.card} appearance="outline">
+          <SectionEyebrow>{t('applications.card.propertyFallback')}</SectionEyebrow>
+          <H3 style={styles.cardHeading}>{propertyTitle}</H3>
+          {property?.address ? (
+            <BloomText style={[styles.subtitle, secondaryText]}>
+              {[property.address.cityName, property.address.countryName].filter(Boolean).join(', ')}
+            </BloomText>
+          ) : null}
+        </Card>
 
-          <ApplicationTermsGroup application={application} />
-          <ApplicationReferencesGroup application={application} />
-          {/* The landlord's own screen: this is where verify and reject live.
+        <ApplicationTermsGroup application={application} />
+        <ApplicationReferencesGroup application={application} />
+        {/* The landlord's own screen: this is where verify and reject live.
               The applicant's copy of the same component draws the states and
               no buttons, which is the point — nothing on their side can move a
               document to `verified`. */}
-          <ApplicationDocumentsGroup application={application} viewerIsLandlord />
+        <ApplicationDocumentsGroup application={application} viewerIsLandlord />
 
-          {application.notes ? (
-            <Card radius="radius-16" style={styles.card} appearance="outline">
-              <SectionEyebrow>{t('applications.landlord.sectionNotes')}</SectionEyebrow>
-              <BloomText style={styles.notesBody}>{application.notes}</BloomText>
-            </Card>
-          ) : null}
+        {application.notes ? (
+          <Card radius="radius-16" style={styles.card} appearance="outline">
+            <SectionEyebrow>{t('applications.landlord.sectionNotes')}</SectionEyebrow>
+            <BloomText style={styles.notesBody}>{application.notes}</BloomText>
+          </Card>
+        ) : null}
 
-          {canCreateLease ? (
-            <View style={styles.actionRow}>
-              <Button
-                size="md"
-                leadingIcon={RiEditLine}
-                onPress={handleCreateLease}
-                style={styles.actionButton}
-                tone="accent"
-                appearance="solid"
-              >
-                {t('applications.landlord.createLease')}
-              </Button>
-            </View>
-          ) : canDecide ? (
-            <View style={styles.actionRow}>
-              <Button
-                size="md"
-                leadingIcon={RiEyeLine}
-                onPress={() => handleOpen('reviewing')}
-                disabled={!canMoveToReviewing || updateMutation.isPending}
-                style={styles.actionButton}
-                tone="neutral"
-                appearance="outline"
-              >
-                {t('applications.landlord.review.reviewing.confirm')}
-              </Button>
-              <Button
-                size="md"
-                leadingIcon={RiCheckLine}
-                onPress={() => handleOpen('approve')}
-                disabled={updateMutation.isPending}
-                style={styles.actionButton}
-                tone="accent"
-                appearance="solid"
-              >
-                {t('applications.landlord.review.approve.confirm')}
-              </Button>
-              <Button
-                size="md"
-                leadingIcon={RiCloseLine}
-                onPress={() => handleOpen('reject')}
-                disabled={updateMutation.isPending}
-                style={styles.actionButton}
-                tone="accent"
-                appearance="subtle"
-              >
-                {t('applications.landlord.review.reject.confirm')}
-              </Button>
-            </View>
-          ) : null}
-        </PageScrollView>
+        {canCreateLease ? (
+          <View style={styles.actionRow}>
+            <Button
+              size="md"
+              leadingIcon={RiEditLine}
+              onPress={handleCreateLease}
+              style={styles.actionButton}
+              tone="accent"
+              appearance="solid"
+            >
+              {t('applications.landlord.createLease')}
+            </Button>
+          </View>
+        ) : canDecide ? (
+          <View style={styles.actionRow}>
+            <Button
+              size="md"
+              leadingIcon={RiEyeLine}
+              onPress={() => handleOpen('reviewing')}
+              disabled={!canMoveToReviewing || updateMutation.isPending}
+              style={styles.actionButton}
+              tone="neutral"
+              appearance="outline"
+            >
+              {t('applications.landlord.review.reviewing.confirm')}
+            </Button>
+            <Button
+              size="md"
+              leadingIcon={RiCheckLine}
+              onPress={() => handleOpen('approve')}
+              disabled={updateMutation.isPending}
+              style={styles.actionButton}
+              tone="accent"
+              appearance="solid"
+            >
+              {t('applications.landlord.review.approve.confirm')}
+            </Button>
+            <Button
+              size="md"
+              leadingIcon={RiCloseLine}
+              onPress={() => handleOpen('reject')}
+              disabled={updateMutation.isPending}
+              style={styles.actionButton}
+              tone="accent"
+              appearance="subtle"
+            >
+              {t('applications.landlord.review.reject.confirm')}
+            </Button>
+          </View>
+        ) : null}
+      </View>
 
-        <Dialog
-          placement="center"
-          open={pendingAction !== null}
-          onClose={handleClose}
-          dismissOnBackdrop={!updateMutation.isPending}
-          maxWidth={420}
-          title={pendingAction ? reviewLabels[pendingAction].title : ''}
-          label={pendingAction ? reviewLabels[pendingAction].title : ''}
-          description={pendingAction ? reviewLabels[pendingAction].message : ''}
-          actions={[
-            {
-              label: pendingAction ? reviewLabels[pendingAction].confirmLabel : '',
-              color: pendingAction === 'reject' ? 'destructive' : 'default',
-              disabled: updateMutation.isPending,
-              shouldCloseOnPress: false,
-              onPress: () => void handleConfirm(),
-            },
-            {
-              label: t('common.cancel'),
-              color: 'cancel',
-              disabled: updateMutation.isPending,
-              shouldCloseOnPress: false,
-              onPress: handleClose,
-            },
-          ]}
-        >
-          <Textarea
-            label={t('applications.landlord.notesLabel')}
-            value={actionNotes}
-            onChangeText={setActionNotes}
-            rows={4}
-            autoResize
-            maxLength={4000}
-            disabled={updateMutation.isPending}
-            placeholder={t('applications.landlord.notesPlaceholder')}
-          />
-        </Dialog>
-      </SafeAreaView>
-    </View>
+      <Dialog
+        placement="center"
+        open={pendingAction !== null}
+        onClose={handleClose}
+        dismissOnBackdrop={!updateMutation.isPending}
+        maxWidth={420}
+        title={pendingAction ? reviewLabels[pendingAction].title : ''}
+        label={pendingAction ? reviewLabels[pendingAction].title : ''}
+        description={pendingAction ? reviewLabels[pendingAction].message : ''}
+        actions={[
+          {
+            label: pendingAction ? reviewLabels[pendingAction].confirmLabel : '',
+            color: pendingAction === 'reject' ? 'destructive' : 'default',
+            disabled: updateMutation.isPending,
+            shouldCloseOnPress: false,
+            onPress: () => void handleConfirm(),
+          },
+          {
+            label: t('common.cancel'),
+            color: 'cancel',
+            disabled: updateMutation.isPending,
+            shouldCloseOnPress: false,
+            onPress: handleClose,
+          },
+        ]}
+      >
+        <Textarea
+          label={t('applications.landlord.notesLabel')}
+          value={actionNotes}
+          onChangeText={setActionNotes}
+          rows={4}
+          autoResize
+          maxLength={4000}
+          disabled={updateMutation.isPending}
+          placeholder={t('applications.landlord.notesPlaceholder')}
+        />
+      </Dialog>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-  },
-  safeArea: {
-    flex: 1,
-  },
   content: {
     padding: spacing.lg,
     gap: spacing.lg,

@@ -120,5 +120,3 @@ export const ReportReviewSheet: React.FC<ReportReviewSheetProps> = ({
     </Dialog>
   );
 };
-
-export default ReportReviewSheet;

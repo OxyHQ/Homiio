@@ -101,5 +101,3 @@ const styles = StyleSheet.create({
   tileLabel: { color: colors.COLOR_BLACK_LIGHT_3 },
   tileValue: { color: colors.COLOR_BLACK },
 });
-
-export default NeighborhoodInfo;

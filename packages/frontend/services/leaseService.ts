@@ -1,19 +1,12 @@
 import { Platform } from 'react-native';
 
 import { api, ApiError, type ApiResponse } from '@/utils/api';
-import {
-  type Lease,
-  LeaseStatus,
-  type LeasePayment,
-  type LeaseDocument,
-  type LeaseDocumentType,
-} from '@homiio/shared-types';
+import type { Lease, LeaseDocument, LeaseDocumentType } from '@homiio/shared-types';
 
 // Re-export the lease contract types so existing consumers keep a single import site.
 // There is deliberately no create/update call here: `/contracts/new?application=<id>`
 // (`createLeaseFromApplication`) is the only way a lease is made.
-export type { Lease, LeasePayment, LeaseDocument };
-export { LeaseStatus };
+export type { Lease };
 
 export interface LeaseFilters {
   status?: string;
@@ -186,4 +179,3 @@ class LeaseService {
 }
 
 export const leaseService = new LeaseService();
-export default leaseService;

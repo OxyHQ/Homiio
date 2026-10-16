@@ -52,8 +52,6 @@ export const ContractCard: React.FC<ContractCardProps> = ({ lease, title, format
   );
 };
 
-export default ContractCard;
-
 const styles = StyleSheet.create({
   actions: {
     flex: 1,

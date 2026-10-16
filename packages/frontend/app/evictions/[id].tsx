@@ -5,7 +5,7 @@
  * published area, description, turnout) → reporter → organisation →
  * "Cómo ayudar" (structured needs + gated organiser contacts) → published disc
  * on a map with the precision explained → local legal resources → timeline →
- * public comment thread. A sticky RSVP CTA drives "Asistiré/Asistiendo" and a
+ * public comment thread. The closing RSVP CTA drives "Asistiré/Asistiendo" and a
  * separate Follow control drives "avísame"; the header carries Share + Report.
  *
  * ## Three things this screen must not do
@@ -24,9 +24,8 @@
  */
 import type React from 'react';
 import { useCallback, useContext, useMemo, useState } from 'react';
-import { Linking, ScrollView, StyleSheet, View } from 'react-native';
+import { Linking, StyleSheet, View } from 'react-native';
 import { getMentionShareUrl } from '@oxy.so/homiio-contracts/links';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Image } from 'expo-image';
@@ -38,6 +37,7 @@ import {
   AdmonitionRow,
   AdmonitionText,
 } from '@oxy.so/bloom/admonition';
+import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { Avatar } from '@oxy.so/bloom/avatar';
 import { Button } from '@oxy.so/bloom/button';
 import { Card, CardTitle } from '@oxy.so/bloom/card';
@@ -52,19 +52,18 @@ import {
   RiShare2Line,
 } from '@oxy.so/bloom/icons';
 import { Loading } from '@oxy.so/bloom/loading';
+import { PageHeader } from '@oxy.so/bloom/page-header';
 import * as Skeleton from '@oxy.so/bloom/skeleton';
 import { Textarea } from '@oxy.so/bloom/textarea';
 import { EvictionReportCard, EvictionTimeline, type EvictionEvent } from '@oxy.so/bloom/eviction';
 import { H2, Text as BloomText } from '@oxy.so/bloom/typography';
 import { useOxy, openAccountDialog } from '@oxy.so/services';
 
-import { Header } from '@/components/Header';
 import Map from '@/components/Map';
 import { IconButton } from '@/components/ui/IconButton';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { ZoomableImage } from '@/components/ui/ZoomableImage';
 import { LoadMoreSentinel } from '@/components/common/LoadMoreSentinel';
-import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import { useOxyAvatars } from '@/hooks/useOxyAvatars';
 import {
   useCreateEvictionComment,
@@ -163,7 +162,6 @@ export default function EvictionDetailScreen() {
   const handleEndReached = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) void fetchNextPage();
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
-  const { onScroll } = useInfiniteScroll({ onEndReached: handleEndReached, enabled: hasNextPage });
 
   const handleShare = useCallback(async () => {
     if (!eviction) return;
@@ -273,7 +271,6 @@ export default function EvictionDetailScreen() {
 
   const shareButton = (
     <IconButton
-      key="share"
       icon={RiShare2Line}
       variant="ghost"
       accessibilityLabel={t('evictions.detail.share')}
@@ -282,7 +279,6 @@ export default function EvictionDetailScreen() {
   );
   const reportButton = (
     <IconButton
-      key="report"
       icon={RiFlagLine}
       variant="ghost"
       accessibilityLabel={t('evictions.report.title')}
@@ -290,26 +286,37 @@ export default function EvictionDetailScreen() {
     />
   );
 
+  const header = (actions?: React.ReactNode) => (
+    <PageHeader
+      title={t('evictions.detail.title')}
+      titleAlign="center"
+      leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+      onBack={router.canGoBack() ? router.back : undefined}
+      backLabel={t('goBack')}
+      actions={actions}
+    />
+  );
+
   if (isLoading) {
     return (
-      <View style={styles.root}>
-        <Header options={{ showBackButton: true, title: t('evictions.detail.title') }} />
+      <>
+        {header()}
         <DetailSkeleton />
-      </View>
+      </>
     );
   }
 
   if (isError || !eviction) {
     return (
-      <View style={styles.root}>
-        <Header options={{ showBackButton: true, title: t('evictions.detail.title') }} />
+      <>
+        {header()}
         <ErrorState
           icon={RiAlertLine}
           title={t('evictions.loadError')}
           description={error?.message ?? t('common.tryAgain')}
           onRetry={() => void refetch()}
         />
-      </View>
+      </>
     );
   }
 
@@ -323,326 +330,310 @@ export default function EvictionDetailScreen() {
   const hasPin = Array.isArray(coords) && coords.length === 2;
 
   return (
-    <View style={styles.root}>
-      <Header
-        options={{
-          showBackButton: true,
-          title: t('evictions.detail.title'),
-          rightComponents: [shareButton, reportButton],
-        }}
-      />
-      <SafeAreaView edges={['bottom']} style={styles.safeArea}>
-        <ScrollView
-          contentContainerStyle={styles.content}
-          onScroll={onScroll}
-          scrollEventThrottle={16}
-          showsVerticalScrollIndicator={false}
+    <>
+      {header(
+        <>
+          {shareButton}
+          {reportButton}
+        </>,
+      )}
+      <View style={styles.content}>
+        {coverUrl ? (
+          <ZoomableImage borderRadius={radius.lg} aspectRatio={16 / 9} style={styles.cover}>
+            <Image
+              source={{ uri: coverUrl }}
+              style={styles.coverImage}
+              contentFit="cover"
+              accessibilityIgnoresInvertColors
+            />
+          </ZoomableImage>
+        ) : null}
+
+        <H2 style={styles.title}>{eviction.title}</H2>
+        <Button
+          tone="neutral"
+          appearance="outline"
+          onPress={() => {
+            void Linking.openURL(getMentionShareUrl(caseId)).catch(() =>
+              toast.error(t('evictions.detail.shareFailed')),
+            );
+          }}
         >
-          {coverUrl ? (
-            <ZoomableImage borderRadius={radius.lg} aspectRatio={16 / 9} style={styles.cover}>
-              <Image
-                source={{ uri: coverUrl }}
-                style={styles.coverImage}
-                contentFit="cover"
-                accessibilityIgnoresInvertColors
-              />
-            </ZoomableImage>
-          ) : null}
+          {t('evictions.detail.shareInMention', { defaultValue: 'Share in Mention' })}
+        </Button>
 
-          <H2 style={styles.title}>{eviction.title}</H2>
-          <Button
-            tone="neutral"
-            appearance="outline"
-            onPress={() => {
-              void Linking.openURL(getMentionShareUrl(caseId)).catch(() =>
-                toast.error(t('evictions.detail.shareFailed')),
-              );
-            }}
-          >
-            {t('evictions.detail.shareInMention', { defaultValue: 'Share in Mention' })}
-          </Button>
-
-          {/* Status, the day, the time and how far off it is, the PUBLISHED
+        {/* Status, the day, the time and how far off it is, the PUBLISHED
               area, the description and the turnout. The attend toggle stays
               in the sticky footer, where it carries its loading state. */}
-          <EvictionReportCard
-            {...evictionReportCardProps(eviction, i18n.language, t)}
-            description={eviction.description}
-            numberOfLines={0}
-            headingLevel={2}
+        <EvictionReportCard
+          {...evictionReportCardProps(eviction, i18n.language, t)}
+          description={eviction.description}
+          numberOfLines={0}
+          headingLevel={2}
+        />
+
+        <View style={styles.authorRow}>
+          <Avatar
+            size={36}
+            name={resolveName(eviction.oxyUserId)}
+            source={getAvatarFileId(eviction.oxyUserId) ?? null}
+            variant="thumb"
           />
-
-          <View style={styles.authorRow}>
-            <Avatar
-              size={36}
-              name={resolveName(eviction.oxyUserId)}
-              source={getAvatarFileId(eviction.oxyUserId) ?? null}
-              variant="thumb"
-            />
-            <View style={styles.authorText}>
-              <BloomText style={styles.authorLabel}>{t('evictions.detail.reportedBy')}</BloomText>
-              <BloomText style={styles.authorName} numberOfLines={1}>
-                {resolveName(eviction.oxyUserId)}
-              </BloomText>
-            </View>
+          <View style={styles.authorText}>
+            <BloomText style={styles.authorLabel}>{t('evictions.detail.reportedBy')}</BloomText>
+            <BloomText style={styles.authorName} numberOfLines={1}>
+              {resolveName(eviction.oxyUserId)}
+            </BloomText>
           </View>
+        </View>
 
-          {eviction.description ? null : (
-            // Withheld ENTIRELY under a precautionary hold rather than partly
-            // redacted: a partial redaction of prose reported as exposing
-            // somebody's details is a guess about which sentence did it.
-            <BloomText style={styles.muted}>{t('evictions.detail.descriptionWithheld')}</BloomText>
-          )}
+        {eviction.description ? null : (
+          // Withheld ENTIRELY under a precautionary hold rather than partly
+          // redacted: a partial redaction of prose reported as exposing
+          // somebody's details is a guess about which sentence did it.
+          <BloomText style={styles.muted}>{t('evictions.detail.descriptionWithheld')}</BloomText>
+        )}
 
-          {eviction.organization ? (
-            <Card radius="radius-16" style={styles.section} appearance="outline">
-              <CardTitle>{t('evictions.detail.organization')}</CardTitle>
-              <BloomText style={styles.organizationName}>{eviction.organization.name}</BloomText>
-              <BloomText style={styles.muted}>
-                {/* Verification is STRICTLY stronger than authorship, and the
-                    UI has to say which one it is showing. */}
-                {eviction.organization.channelsVerified
-                  ? t('evictions.detail.organizationVerified', {
-                      source: eviction.organization.verificationSource ?? '',
-                      when: eviction.organization.verifiedAt
-                        ? formatEvictionFullDate(eviction.organization.verifiedAt, i18n.language)
-                        : '',
-                    })
-                  : t('evictions.detail.organizationUnverified')}
-              </BloomText>
-            </Card>
-          ) : null}
-
+        {eviction.organization ? (
           <Card radius="radius-16" style={styles.section} appearance="outline">
-            <CardTitle>{t('evictions.detail.howToHelp')}</CardTitle>
-            <EvictionHelpNeeds needs={eviction.helpNeeds} />
-            <Divider />
-            {eviction.contactLocked ? (
-              <AdmonitionRoot type="info">
-                <AdmonitionRow>
-                  <AdmonitionIcon />
-                  <AdmonitionContent>
-                    <AdmonitionText>
-                      {/* The REASON, not a generic lock: "RSVP first" and "your
+            <CardTitle>{t('evictions.detail.organization')}</CardTitle>
+            <BloomText style={styles.organizationName}>{eviction.organization.name}</BloomText>
+            <BloomText style={styles.muted}>
+              {/* Verification is STRICTLY stronger than authorship, and the
+                    UI has to say which one it is showing. */}
+              {eviction.organization.channelsVerified
+                ? t('evictions.detail.organizationVerified', {
+                    source: eviction.organization.verificationSource ?? '',
+                    when: eviction.organization.verifiedAt
+                      ? formatEvictionFullDate(eviction.organization.verifiedAt, i18n.language)
+                      : '',
+                  })
+                : t('evictions.detail.organizationUnverified')}
+            </BloomText>
+          </Card>
+        ) : null}
+
+        <Card radius="radius-16" style={styles.section} appearance="outline">
+          <CardTitle>{t('evictions.detail.howToHelp')}</CardTitle>
+          <EvictionHelpNeeds needs={eviction.helpNeeds} />
+          <Divider />
+          {eviction.contactLocked ? (
+            <AdmonitionRoot type="info">
+              <AdmonitionRow>
+                <AdmonitionIcon />
+                <AdmonitionContent>
+                  <AdmonitionText>
+                    {/* The REASON, not a generic lock: "RSVP first" and "your
                           account is too new" ask the reader for different things,
                           and one message for both teaches people to re-tap. */}
-                      {t(
-                        `evictions.detail.contactLocked.${eviction.contactLockReason ?? 'not_attending'}`,
-                      )}
-                    </AdmonitionText>
-                    <AdmonitionButton
-                      onPress={handleRSVP}
-                      loading={toggleAttend.isPending}
-                      leadingIcon={RiMegaphoneLine}
-                    >
-                      {t('evictions.attend')}
-                    </AdmonitionButton>
-                  </AdmonitionContent>
-                </AdmonitionRow>
-              </AdmonitionRoot>
-            ) : (
-              <>
-                <EvictionContactActions
-                  contact={eviction.contactInfo}
-                  labels={contactLabels}
-                  instructionsLabel={t('evictions.detail.instructions')}
-                  openFailedLabel={t('evictions.detail.contactFailed')}
-                />
-                {!eviction.contactInfo ? (
-                  <BloomText style={styles.muted}>{t('evictions.detail.noContact')}</BloomText>
-                ) : null}
-              </>
-            )}
-          </Card>
-
-          <Card radius="radius-16" style={styles.section} appearance="outline">
-            <CardTitle>{t('evictions.detail.where')}</CardTitle>
-            {hasPin ? (
-              <View style={styles.mapWrap}>
-                <Map
-                  style={styles.mapInner}
-                  screenId={`eviction-${caseId}`}
-                  startFromCurrentLocation={false}
-                  initialCoordinates={[coords[0], coords[1]]}
-                  initialZoom={15}
-                  markers={[
-                    {
-                      id: eviction.id,
-                      coordinates: [coords[0], coords[1]],
-                      priceLabel: eviction.location.label,
-                    },
-                  ]}
-                />
-              </View>
-            ) : null}
-            <BloomText style={styles.locationLabel}>{eviction.location.label}</BloomText>
-            <EvictionPrecisionNote
-              location={eviction.location}
-              moderation={eviction.moderation}
-              locale={i18n.language}
-            />
-          </Card>
-
-          <Card radius="radius-16" style={styles.section} appearance="outline">
-            <CardTitle>{t('evictions.detail.localResources')}</CardTitle>
-            <EvictionResources
-              resources={resources.data?.resources ?? []}
-              disclaimer={resources.data?.disclaimer}
-              locale={i18n.language}
-              isLoading={resources.isLoading}
-              isError={resources.isError}
-            />
-          </Card>
-
-          <Card radius="radius-16" style={styles.section} appearance="outline">
-            <CardTitle>{t('evictions.detail.timeline')}</CardTitle>
-            {timelineEvents.length === 0 ? (
-              <BloomText style={styles.muted}>{t('evictions.timeline.empty')}</BloomText>
-            ) : (
-              <EvictionTimeline
-                events={timelineEvents}
-                // The actor IS the source: the organiser, or Homiio for a
-                // system entry — never the people whose reports fired it.
-                formatSource={(source) => source}
-                accessibilityLabel={t('evictions.detail.timeline')}
+                    {t(
+                      `evictions.detail.contactLocked.${eviction.contactLockReason ?? 'not_attending'}`,
+                    )}
+                  </AdmonitionText>
+                  <AdmonitionButton
+                    onPress={handleRSVP}
+                    loading={toggleAttend.isPending}
+                    leadingIcon={RiMegaphoneLine}
+                  >
+                    {t('evictions.attend')}
+                  </AdmonitionButton>
+                </AdmonitionContent>
+              </AdmonitionRow>
+            </AdmonitionRoot>
+          ) : (
+            <>
+              <EvictionContactActions
+                contact={eviction.contactInfo}
+                labels={contactLabels}
+                instructionsLabel={t('evictions.detail.instructions')}
+                openFailedLabel={t('evictions.detail.contactFailed')}
               />
-            )}
-          </Card>
+              {!eviction.contactInfo ? (
+                <BloomText style={styles.muted}>{t('evictions.detail.noContact')}</BloomText>
+              ) : null}
+            </>
+          )}
+        </Card>
 
-          {team.data && !team.isError && user?.id ? (
-            <EvictionCollaborators
-              key={`${caseId}:${user.id}`}
-              caseId={caseId}
-              team={team.data}
-              onChanged={() => {
-                void team.refetch();
-              }}
-            />
+        <Card radius="radius-16" style={styles.section} appearance="outline">
+          <CardTitle>{t('evictions.detail.where')}</CardTitle>
+          {hasPin ? (
+            <View style={styles.mapWrap}>
+              <Map
+                style={styles.mapInner}
+                screenId={`eviction-${caseId}`}
+                startFromCurrentLocation={false}
+                initialCoordinates={[coords[0], coords[1]]}
+                initialZoom={15}
+                markers={[
+                  {
+                    id: eviction.id,
+                    coordinates: [coords[0], coords[1]],
+                    priceLabel: eviction.location.label,
+                  },
+                ]}
+              />
+            </View>
           ) : null}
-          {team.data?.canEdit && !team.isError ? (
-            <EvictionOwnerControls
-              caseId={caseId}
-              currentStatus={eviction.status}
-              onEdit={handleEdit}
+          <BloomText style={styles.locationLabel}>{eviction.location.label}</BloomText>
+          <EvictionPrecisionNote
+            location={eviction.location}
+            moderation={eviction.moderation}
+            locale={i18n.language}
+          />
+        </Card>
+
+        <Card radius="radius-16" style={styles.section} appearance="outline">
+          <CardTitle>{t('evictions.detail.localResources')}</CardTitle>
+          <EvictionResources
+            resources={resources.data?.resources ?? []}
+            disclaimer={resources.data?.disclaimer}
+            locale={i18n.language}
+            isLoading={resources.isLoading}
+            isError={resources.isError}
+          />
+        </Card>
+
+        <Card radius="radius-16" style={styles.section} appearance="outline">
+          <CardTitle>{t('evictions.detail.timeline')}</CardTitle>
+          {timelineEvents.length === 0 ? (
+            <BloomText style={styles.muted}>{t('evictions.timeline.empty')}</BloomText>
+          ) : (
+            <EvictionTimeline
+              events={timelineEvents}
+              // The actor IS the source: the organiser, or Homiio for a
+              // system entry — never the people whose reports fired it.
+              formatSource={(source) => source}
+              accessibilityLabel={t('evictions.detail.timeline')}
             />
-          ) : null}
+          )}
+        </Card>
 
-          <Card radius="radius-16" style={styles.section} appearance="outline">
-            <CardTitle>
-              {`${t('evictions.detail.comments')}${commentTotal > 0 ? ` · ${commentTotal}` : ''}`}
-            </CardTitle>
-            {comments.length === 0 ? (
-              <BloomText style={styles.muted}>{t('evictions.comments.empty')}</BloomText>
-            ) : (
-              <View>
-                {comments.map((comment, index) => {
-                  const canDelete =
-                    isAuthenticated &&
-                    (comment.oxyUserId === user?.id || Boolean(eviction.isOwner));
-                  return (
-                    <View key={comment.id}>
-                      {index > 0 ? <Divider /> : null}
-                      <EvictionCommentRow
-                        comment={comment}
-                        authorName={resolveName(comment.oxyUserId)}
-                        avatarFileId={getAvatarFileId(comment.oxyUserId)}
-                        time={formatRelativeTime(new Date(comment.createdAt))}
-                        canDelete={canDelete}
-                        onDelete={() => handleDeleteComment(comment.id)}
-                        deleteLabel={t('common.delete')}
-                      />
-                    </View>
-                  );
-                })}
-                {isFetchingNextPage ? (
-                  <Loading variant="inline" size="sm" text={t('common.loading')} />
-                ) : null}
-                <LoadMoreSentinel enabled={hasNextPage} onLoadMore={handleEndReached} />
-              </View>
-            )}
+        {team.data && !team.isError && user?.id ? (
+          <EvictionCollaborators
+            key={`${caseId}:${user.id}`}
+            caseId={caseId}
+            team={team.data}
+            onChanged={() => {
+              void team.refetch();
+            }}
+          />
+        ) : null}
+        {team.data?.canEdit && !team.isError ? (
+          <EvictionOwnerControls
+            caseId={caseId}
+            currentStatus={eviction.status}
+            onEdit={handleEdit}
+          />
+        ) : null}
 
-            {isAuthenticated ? (
-              <View style={styles.composer}>
-                <Textarea
-                  accessibilityLabel={t('evictions.comments.placeholder')}
-                  placeholder={t('evictions.comments.placeholder')}
-                  value={commentText}
-                  onChangeText={setCommentText}
-                  rows={2}
-                  autoResize
-                  maxRows={6}
-                />
-                <Button
-                  size="md"
-                  style={styles.composerSend}
-                  onPress={handlePostComment}
-                  disabled={!commentText.trim() || createComment.isPending}
-                  loading={createComment.isPending}
-                  tone="accent"
-                  appearance="solid"
-                >
-                  {t('evictions.comments.send')}
-                </Button>
-              </View>
-            ) : (
+        <Card radius="radius-16" style={styles.section} appearance="outline">
+          <CardTitle>
+            {`${t('evictions.detail.comments')}${commentTotal > 0 ? ` · ${commentTotal}` : ''}`}
+          </CardTitle>
+          {comments.length === 0 ? (
+            <BloomText style={styles.muted}>{t('evictions.comments.empty')}</BloomText>
+          ) : (
+            <View>
+              {comments.map((comment, index) => {
+                const canDelete =
+                  isAuthenticated && (comment.oxyUserId === user?.id || Boolean(eviction.isOwner));
+                return (
+                  <View key={comment.id}>
+                    {index > 0 ? <Divider /> : null}
+                    <EvictionCommentRow
+                      comment={comment}
+                      authorName={resolveName(comment.oxyUserId)}
+                      avatarFileId={getAvatarFileId(comment.oxyUserId)}
+                      time={formatRelativeTime(new Date(comment.createdAt))}
+                      canDelete={canDelete}
+                      onDelete={() => handleDeleteComment(comment.id)}
+                      deleteLabel={t('common.delete')}
+                    />
+                  </View>
+                );
+              })}
+              {isFetchingNextPage ? (
+                <Loading variant="inline" size="sm" text={t('common.loading')} />
+              ) : null}
+              <LoadMoreSentinel enabled={hasNextPage} onLoadMore={handleEndReached} />
+            </View>
+          )}
+
+          {isAuthenticated ? (
+            <View style={styles.composer}>
+              <Textarea
+                accessibilityLabel={t('evictions.comments.placeholder')}
+                placeholder={t('evictions.comments.placeholder')}
+                value={commentText}
+                onChangeText={setCommentText}
+                rows={2}
+                autoResize
+                maxRows={6}
+              />
               <Button
                 size="md"
-                onPress={() => openAccountDialog()}
-                tone="neutral"
-                appearance="outline"
+                style={styles.composerSend}
+                onPress={handlePostComment}
+                disabled={!commentText.trim() || createComment.isPending}
+                loading={createComment.isPending}
+                tone="accent"
+                appearance="solid"
               >
-                {t('evictions.comments.signInToComment')}
+                {t('evictions.comments.send')}
               </Button>
-            )}
-          </Card>
-        </ScrollView>
+            </View>
+          ) : (
+            <Button
+              size="md"
+              onPress={() => openAccountDialog()}
+              tone="neutral"
+              appearance="outline"
+            >
+              {t('evictions.comments.signInToComment')}
+            </Button>
+          )}
+        </Card>
+      </View>
 
-        <View style={styles.footer}>
-          <Button
-            appearance={eviction.isAttending ? 'outline' : 'solid'}
-            tone={eviction.isAttending ? 'neutral' : 'accent'}
-            size="lg"
-            onPress={handleRSVP}
-            loading={toggleAttend.isPending}
-            accessibilityLabel={
-              eviction.isAttending ? t('evictions.attending') : t('evictions.attend')
-            }
-            leadingIcon={eviction.isAttending ? RiCheckboxCircleFill : RiMegaphoneLine}
-            style={styles.footerButton}
-          >
-            {`${eviction.isAttending ? t('evictions.attending') : t('evictions.attend')} · ${t('evictions.attendeesCount', { count: eviction.attendeeCount })}`}
-          </Button>
-          {/* Following is a SEPARATE statement from attending: "tell me if the
+      <View style={styles.footer}>
+        <Button
+          appearance={eviction.isAttending ? 'outline' : 'solid'}
+          tone={eviction.isAttending ? 'neutral' : 'accent'}
+          size="lg"
+          onPress={handleRSVP}
+          loading={toggleAttend.isPending}
+          accessibilityLabel={
+            eviction.isAttending ? t('evictions.attending') : t('evictions.attend')
+          }
+          leadingIcon={eviction.isAttending ? RiCheckboxCircleFill : RiMegaphoneLine}
+          style={styles.footerButton}
+        >
+          {`${eviction.isAttending ? t('evictions.attending') : t('evictions.attend')} · ${t('evictions.attendeesCount', { count: eviction.attendeeCount })}`}
+        </Button>
+        {/* Following is a SEPARATE statement from attending: "tell me if the
               date moves" is not "I will be there", and folding them together
               either spams watchers or inflates the turnout number the page
               exists to report. */}
-          <Button
-            size="lg"
-            onPress={handleFollow}
-            loading={toggleFollow.isPending}
-            accessibilityLabel={
-              eviction.isFollowing ? t('evictions.unfollow') : t('evictions.follow')
-            }
-            leadingIcon={eviction.isFollowing ? RiNotification3Fill : RiNotification3Line}
-            tone="neutral"
-            appearance="outline"
-          >
-            {eviction.isFollowing ? t('evictions.following') : t('evictions.follow')}
-          </Button>
-        </View>
-      </SafeAreaView>
-    </View>
+        <Button
+          size="lg"
+          onPress={handleFollow}
+          loading={toggleFollow.isPending}
+          accessibilityLabel={
+            eviction.isFollowing ? t('evictions.unfollow') : t('evictions.follow')
+          }
+          leadingIcon={eviction.isFollowing ? RiNotification3Fill : RiNotification3Line}
+          tone="neutral"
+          appearance="outline"
+        >
+          {eviction.isFollowing ? t('evictions.following') : t('evictions.follow')}
+        </Button>
+      </View>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  safeArea: {
-    flex: 1,
-  },
   content: {
     padding: spacing.lg,
     gap: spacing.lg,

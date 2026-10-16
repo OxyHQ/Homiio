@@ -1,14 +1,6 @@
 import { api } from '@/utils/api';
 import type { OxyServices } from '@oxy.so/core';
-import type {
-  Profile,
-  PersonalProfile,
-  PropertyPreferences,
-  RoommatePreferences,
-} from '@homiio/shared-types';
-
-// Re-export the types for backward compatibility
-export type { Profile, PersonalProfile, RoommatePreferences };
+import type { Profile, PropertyPreferences, RoommatePreferences } from '@homiio/shared-types';
 
 /**
  * The roommate matching preference values nested inside
@@ -21,13 +13,13 @@ export type RoommateMatchingPreferences = NonNullable<RoommatePreferences['prefe
  * with the backend-hydrated Oxy `displayName` and the computed compatibility
  * `matchScore`.
  */
-export interface RoommateProfile extends Profile {
+interface RoommateProfile extends Profile {
   displayName?: string;
   matchScore?: number;
 }
 
 /** A serialized roommate request as returned by `GET /roommates/requests`. */
-export interface RoommateRequestDTO {
+interface RoommateRequestDTO {
   id: string;
   senderOxyUserId?: string;
   receiverOxyUserId?: string;
@@ -40,7 +32,7 @@ export interface RoommateRequestDTO {
 }
 
 /** A serialized roommate relationship as returned by `GET /roommates/relationships`. */
-export interface RoommateRelationshipDTO {
+interface RoommateRelationshipDTO {
   id: string;
   oxyUser1Id?: string;
   oxyUser2Id?: string;
@@ -52,7 +44,7 @@ export interface RoommateRelationshipDTO {
   endDate?: string;
 }
 
-export interface RoommateFilters {
+interface RoommateFilters {
   minMatchPercentage?: number;
   maxBudget?: number;
   withPets?: boolean;

@@ -9,10 +9,11 @@
  * manual form we cannot wire (there is no standalone tenant picker).
  */
 import React, { useCallback } from 'react';
-import { Image, ScrollView, StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Image, StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
+import { PageHeader } from '@oxy.so/bloom/page-header';
 import { toast } from '@oxy.so/bloom/toast';
 
 import { Admonition } from '@oxy.so/bloom/admonition';
@@ -23,7 +24,6 @@ import { useTheme } from '@oxy.so/bloom/theme';
 import { Text as BloomText, H2 } from '@oxy.so/bloom/typography';
 import { TenantApplicationStatus } from '@homiio/shared-types';
 
-import { Header } from '@/components/Header';
 import { Card } from '@oxy.so/bloom/card';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
@@ -68,48 +68,47 @@ export default function NewContractScreen() {
   }, [applicationId, createLease, router, t]);
 
   const header = (
-    <Header
-      options={{
-        showBackButton: true,
-        title: t('contracts.new.title'),
-      }}
+    <PageHeader
+      title={t('contracts.new.title')}
+      titleAlign="center"
+      leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+      onBack={router.canGoBack() ? router.back : undefined}
+      backLabel={t('goBack')}
     />
   );
 
   if (!applicationId) {
     return (
-      <View style={[styles.root, { backgroundColor: themeColors.background }]}>
+      <>
         {header}
-        <SafeAreaView edges={['bottom']} style={styles.safeArea}>
-          <View style={styles.centerWrap}>
-            <EmptyState
-              icon={RiFileTextLine}
-              title={t('contracts.new.noApplicationTitle')}
-              description={t('contracts.new.noApplicationDescription')}
-              actionText={t('contracts.new.viewApplications')}
-              actionIcon={RiGalleryLine}
-              onAction={() => router.replace('/applications')}
-            />
-          </View>
-        </SafeAreaView>
-      </View>
+        <View style={styles.centerWrap}>
+          <EmptyState
+            icon={RiFileTextLine}
+            title={t('contracts.new.noApplicationTitle')}
+            description={t('contracts.new.noApplicationDescription')}
+            actionText={t('contracts.new.viewApplications')}
+            actionIcon={RiGalleryLine}
+            onAction={() => router.replace('/applications')}
+          />
+        </View>
+      </>
     );
   }
 
   if (applicationQuery.isPending) {
     return (
-      <View style={[styles.root, { backgroundColor: themeColors.background }]}>
+      <>
         {header}
         <View style={styles.centerWrap}>
           <Loading variant="spinner" size="md" />
         </View>
-      </View>
+      </>
     );
   }
 
   if (applicationQuery.isError || !application) {
     return (
-      <View style={[styles.root, { backgroundColor: themeColors.background }]}>
+      <>
         {header}
         <View style={styles.centerWrap}>
           <ErrorState
@@ -121,7 +120,7 @@ export default function NewContractScreen() {
             onRetry={() => router.back()}
           />
         </View>
-      </View>
+      </>
     );
   }
 
@@ -130,66 +129,58 @@ export default function NewContractScreen() {
   const imageSource = property ? getPropertyImageSource(property) : null;
 
   return (
-    <View style={[styles.root, { backgroundColor: themeColors.background }]}>
+    <>
       {header}
-      <SafeAreaView edges={['bottom']} style={styles.safeArea}>
-        <ScrollView contentContainerStyle={styles.content}>
-          <View style={[styles.thumbWrap, { backgroundColor: themeColors.backgroundSecondary }]}>
-            {imageSource ? (
-              <Image source={imageSource} style={styles.thumb} resizeMode="cover" />
-            ) : (
-              <View style={styles.thumb} />
-            )}
-          </View>
-
-          <Card radius="radius-16" className="p-5" appearance="outline">
-            <H2 style={styles.title}>{propertyTitle}</H2>
-            <BloomText style={[styles.subtitle, { color: themeColors.textSecondary }]}>
-              {t('contracts.new.subtitle')}
-            </BloomText>
-          </Card>
-
-          <SettingsListGroup title={t('contracts.new.seededTerms')}>
-            <SettingsListItem
-              title={t('contracts.new.moveIn')}
-              value={formatDate(application.moveInDate)}
-            />
-            <SettingsListItem
-              title={t('contracts.new.leaseTerm')}
-              value={t('contracts.new.leaseTermMonths', { count: application.leaseTermMonths })}
-            />
-          </SettingsListGroup>
-
-          {!isApproved ? (
-            <Admonition type="warning">{t('contracts.new.notApprovedWarning')}</Admonition>
-          ) : null}
-        </ScrollView>
-
-        <View style={styles.footer}>
-          <Button
-            size="lg"
-            onPress={handleCreate}
-            disabled={!isApproved || createLease.isPending}
-            loading={createLease.isPending}
-            style={styles.footerButton}
-            tone="accent"
-            appearance="solid"
-          >
-            {t('contracts.new.createButton')}
-          </Button>
+      <View style={styles.content}>
+        <View style={[styles.thumbWrap, { backgroundColor: themeColors.backgroundSecondary }]}>
+          {imageSource ? (
+            <Image source={imageSource} style={styles.thumb} resizeMode="cover" />
+          ) : (
+            <View style={styles.thumb} />
+          )}
         </View>
-      </SafeAreaView>
-    </View>
+
+        <Card radius="radius-16" className="p-5" appearance="outline">
+          <H2 style={styles.title}>{propertyTitle}</H2>
+          <BloomText style={[styles.subtitle, { color: themeColors.textSecondary }]}>
+            {t('contracts.new.subtitle')}
+          </BloomText>
+        </Card>
+
+        <SettingsListGroup title={t('contracts.new.seededTerms')}>
+          <SettingsListItem
+            title={t('contracts.new.moveIn')}
+            value={formatDate(application.moveInDate)}
+          />
+          <SettingsListItem
+            title={t('contracts.new.leaseTerm')}
+            value={t('contracts.new.leaseTermMonths', { count: application.leaseTermMonths })}
+          />
+        </SettingsListGroup>
+
+        {!isApproved ? (
+          <Admonition type="warning">{t('contracts.new.notApprovedWarning')}</Admonition>
+        ) : null}
+      </View>
+
+      <View style={styles.footer}>
+        <Button
+          size="lg"
+          onPress={handleCreate}
+          disabled={!isApproved || createLease.isPending}
+          loading={createLease.isPending}
+          style={styles.footerButton}
+          tone="accent"
+          appearance="solid"
+        >
+          {t('contracts.new.createButton')}
+        </Button>
+      </View>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-  },
-  safeArea: {
-    flex: 1,
-  },
   content: {
     padding: spacing.lg,
     gap: spacing.lg,

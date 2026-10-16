@@ -26,5 +26,3 @@ export const SectionEyebrow: React.FC<SectionEyebrowProps> = ({ children, classN
     {children}
   </BloomText>
 );
-
-export default SectionEyebrow;

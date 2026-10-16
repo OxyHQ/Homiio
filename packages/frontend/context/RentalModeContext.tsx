@@ -1,5 +1,6 @@
 import type React from 'react';
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useContext, useMemo, useSyncExternalStore } from 'react';
+import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { OfferingType } from '@homiio/shared-types';
@@ -17,7 +18,7 @@ import { useSearchQueryStore } from '@/store/searchQueryStore';
  * rent unit never surfaces for them). Every price/availability surface
  * (PropertyCard, detail headline, booking widget) consumes this.
  */
-export type RentalMode = 'long_term' | 'vacation';
+type RentalMode = 'long_term' | 'vacation';
 
 /**
  * The unified top-level browse selection ({@link BrowseMode}) and its 1:1
@@ -52,8 +53,6 @@ interface RentalModeContextValue {
    * re-deriving the mapping.
    */
   offering: OfferingType;
-  /** True until the persisted mode has been loaded from AsyncStorage. */
-  hydrated: boolean;
 }
 
 const RentalModeContext = createContext<RentalModeContextValue | undefined>(undefined);
@@ -64,57 +63,79 @@ const DEFAULT_BROWSE_MODE: BrowseMode = 'long_term';
 const isBrowseMode = (value: string | null): value is BrowseMode =>
   value === 'long_term' || value === 'vacation' || value === 'buy' || value === 'exchange';
 
+/**
+ * The persisted browse mode, held at module scope as a tiny external store
+ * (read through `useSyncExternalStore`) and hydrated ONCE when this module
+ * loads, not from a component effect.
+ *
+ * On web AsyncStorage is a thin wrapper over `window.localStorage` (same key,
+ * raw value), so the stored mode is read synchronously and the first render
+ * already shows it. On native AsyncStorage is async: the read starts at module
+ * load and lands in the store when it resolves, unless the user has already
+ * picked a mode by then (their choice wins over the stale stored one).
+ */
+let browseModeSnapshot: BrowseMode = DEFAULT_BROWSE_MODE;
+let userHasChosen = false;
+const listeners = new Set<() => void>();
+
+function applyBrowseMode(next: BrowseMode) {
+  browseModeSnapshot = next;
+  // Route the selection into the SAME query the search already filters on.
+  // `setOffering` clears the price range (it is denominated per-offering) and
+  // the short-term-only fields when leaving the short-term offering, so a
+  // stale date range / nightly band can't follow the user into another mode.
+  useSearchQueryStore.getState().setOffering(BROWSE_MODE_OFFERING[next]);
+  for (const listener of listeners) listener();
+}
+
+function hydrateFromStorage(stored: string | null) {
+  // Re-hydrate the active search query too, so a returning user lands on the
+  // same offering they last browsed.
+  if (!userHasChosen && isBrowseMode(stored)) applyBrowseMode(stored);
+}
+
+if (Platform.OS === 'web') {
+  try {
+    hydrateFromStorage(
+      typeof window === 'undefined' ? null : window.localStorage.getItem(STORAGE_KEY),
+    );
+  } catch {
+    // Storage blocked (private mode / disabled) — fall back to the default.
+  }
+} else {
+  AsyncStorage.getItem(STORAGE_KEY)
+    .then(hydrateFromStorage)
+    .catch(() => {
+      // Storage read failure is non-fatal — we fall back to the default.
+    });
+}
+
+function subscribe(listener: () => void) {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
+const getSnapshot = () => browseModeSnapshot;
+
+function setBrowseMode(next: BrowseMode) {
+  userHasChosen = true;
+  applyBrowseMode(next);
+  AsyncStorage.setItem(STORAGE_KEY, next).catch(() => {
+    // Best-effort persistence — UI is already updated.
+  });
+}
+
+/** `long_term`/`vacation` are browse modes too, so this is `setBrowseMode`. */
+const setMode: (mode: RentalMode) => void = setBrowseMode;
+
 interface RentalModeProviderProps {
   children: React.ReactNode;
 }
 
 export const RentalModeProvider: React.FC<RentalModeProviderProps> = ({ children }) => {
-  const [browseMode, setBrowseModeState] = useState<BrowseMode>(DEFAULT_BROWSE_MODE);
-  const [hydrated, setHydrated] = useState(false);
-
-  // AsyncStorage is an async I/O side effect — useEffect is the correct tool here.
-  useEffect(() => {
-    let cancelled = false;
-    AsyncStorage.getItem(STORAGE_KEY)
-      .then((stored) => {
-        if (cancelled) return;
-        if (isBrowseMode(stored)) {
-          setBrowseModeState(stored);
-          // Re-hydrate the active search query so a returning user lands on the
-          // same offering they last browsed. `setOffering` is a plain Zustand
-          // action (no React subscription), safe to call from this effect.
-          useSearchQueryStore.getState().setOffering(BROWSE_MODE_OFFERING[stored]);
-        }
-      })
-      .catch(() => {
-        // Storage read failure is non-fatal — we fall back to the default.
-      })
-      .finally(() => {
-        if (!cancelled) setHydrated(true);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const setBrowseMode = useCallback((next: BrowseMode) => {
-    setBrowseModeState(next);
-    // Route the selection into the SAME query the search already filters on.
-    // `setOffering` clears the price range (it is denominated per-offering) and
-    // the short-term-only fields when leaving the short-term offering, so a
-    // stale date range / nightly band can't follow the user into another mode.
-    useSearchQueryStore.getState().setOffering(BROWSE_MODE_OFFERING[next]);
-    AsyncStorage.setItem(STORAGE_KEY, next).catch(() => {
-      // Best-effort persistence — UI is already updated.
-    });
-  }, []);
-
-  const setMode = useCallback(
-    (next: RentalMode) => {
-      setBrowseMode(next);
-    },
-    [setBrowseMode],
-  );
+  const browseMode = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 
   const offering = BROWSE_MODE_OFFERING[browseMode];
 
@@ -125,9 +146,8 @@ export const RentalModeProvider: React.FC<RentalModeProviderProps> = ({ children
       browseMode,
       setBrowseMode,
       offering,
-      hydrated,
     }),
-    [offering, setMode, browseMode, setBrowseMode, hydrated],
+    [offering, browseMode],
   );
 
   return <RentalModeContext.Provider value={value}>{children}</RentalModeContext.Provider>;

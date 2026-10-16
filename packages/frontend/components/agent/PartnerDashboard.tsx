@@ -16,7 +16,6 @@ import type React from 'react';
 import { useMemo } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { useMediaQuery } from 'react-responsive';
 
 import { Card } from '@oxy.so/bloom/card';
 import { Chip, type ChipHue } from '@oxy.so/bloom/chip';
@@ -39,7 +38,6 @@ import { H2, Text as BloomText } from '@oxy.so/bloom/typography';
 import { formatMoney } from '@homiio/shared-types';
 import { useFormatting } from '@/utils/format';
 import { formatLocalized } from '@/utils/dateLocale';
-import { resolvePagePadding } from '@/constants/styles';
 import {
   REWARD_TIERS,
   tierForPoints,
@@ -160,8 +158,6 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({
   const { t } = useTranslation();
   const theme = useTheme();
   const { locale } = useFormatting();
-  const isWide = useMediaQuery({ minWidth: 768 });
-  const horizontalPadding = resolvePagePadding(isWide);
 
   const currentTier = useMemo(() => tierForPoints(points), [points]);
 
@@ -236,7 +232,7 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({
   const recentCommissions = commissions.slice(0, 4);
 
   return (
-    <View style={{ paddingHorizontal: horizontalPadding }}>
+    <View className="px-4 md:px-8">
       <Card
         radius="radius-24"
         className="w-full max-w-[720px] self-center gap-6 p-6"
@@ -321,5 +317,3 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({
     </View>
   );
 };
-
-export default PartnerDashboard;

@@ -11,8 +11,7 @@
  * boundary), `Chip` option rows, `Switch`, and a `toast` for the save outcome.
  */
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@oxy.so/bloom/button';
@@ -26,15 +25,15 @@ import { useTheme } from '@oxy.so/bloom/theme';
 import { toast } from '@oxy.so/bloom/toast';
 import { H2, H3, Text as BloomText } from '@oxy.so/bloom/typography';
 import { useTranslation } from 'react-i18next';
+import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
+import { PageHeader } from '@oxy.so/bloom/page-header';
 import { LeaseDuration } from '@homiio/shared-types';
-import { Header } from '@/components/Header';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
 import { useProfile } from '@/context/ProfileContext';
 import { roommateService, type RoommateMatchingPreferences } from '@/services/roommateService';
 import { useProfileStore } from '@/store/profileStore';
 import { spacing } from '@/constants/styles';
-import { colors } from '@/styles/colors';
 import { RiAccountCircleLine, RiUserLine } from '@oxy.so/bloom/icons';
 
 type LifestyleChoice = 'yes' | 'no' | 'prefer_not';
@@ -307,172 +306,161 @@ export default function RoommatePreferencesPage() {
 
   const secondary = { color: theme.colors.textSecondary };
 
+  const header = (
+    <PageHeader
+      title={t('roommates.preferencesPage.title')}
+      titleAlign="center"
+      leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+      onBack={router.canGoBack() ? router.back : undefined}
+      backLabel={t('goBack')}
+    />
+  );
+
   if (!hasProfile) {
     return (
-      <View style={styles.root}>
-        <Header
-          options={{
-            title: t('roommates.preferencesPage.title'),
-            showBackButton: true,
-          }}
-        />
-        <SafeAreaView edges={['bottom']} style={styles.safeArea}>
-          <View style={styles.emptyWrap}>
-            <EmptyState
-              icon={RiUserLine}
-              title={t('roommates.preferencesPage.personalProfileRequired')}
-              description={t('roommates.preferencesPage.personalProfileDescription')}
-              actionText={t('roommates.preferencesPage.switchToPersonal')}
-              actionIcon={RiAccountCircleLine}
-              onAction={() => router.push('/profile')}
-            />
-          </View>
-        </SafeAreaView>
-      </View>
+      <>
+        {header}
+        <View style={styles.emptyWrap}>
+          <EmptyState
+            icon={RiUserLine}
+            title={t('roommates.preferencesPage.personalProfileRequired')}
+            description={t('roommates.preferencesPage.personalProfileDescription')}
+            actionText={t('roommates.preferencesPage.switchToPersonal')}
+            actionIcon={RiAccountCircleLine}
+            onAction={() => router.push('/profile')}
+          />
+        </View>
+      </>
     );
   }
 
   return (
-    <View style={styles.root}>
-      <Header
-        options={{
-          title: t('roommates.preferencesPage.title'),
-          showBackButton: true,
-        }}
-      />
-      <SafeAreaView edges={['bottom']} style={styles.safeArea}>
-        <ScrollView contentContainerStyle={styles.content}>
-          <View style={styles.titleBlock}>
-            <SectionEyebrow>{t('roommates.preferencesPage.eyebrow')}</SectionEyebrow>
-            <H2 style={styles.title}>{t('roommates.preferences')}</H2>
-            <BloomText style={[styles.subtitle, secondary]}>
-              {t('roommates.preferencesPage.subtitle')}
-            </BloomText>
-          </View>
+    <>
+      {header}
+      <View style={styles.content}>
+        <View style={styles.titleBlock}>
+          <SectionEyebrow>{t('roommates.preferencesPage.eyebrow')}</SectionEyebrow>
+          <H2 style={styles.title}>{t('roommates.preferences')}</H2>
+          <BloomText style={[styles.subtitle, secondary]}>
+            {t('roommates.preferencesPage.subtitle')}
+          </BloomText>
+        </View>
 
-          <Card radius="radius-16" style={styles.card} appearance="outline">
-            <View style={styles.toggleHeader}>
-              <View style={styles.toggleHeaderText}>
-                <BloomText style={styles.toggleTitle}>
-                  {t('roommates.preferencesPage.enableTitle')}
-                </BloomText>
-                <BloomText style={[styles.toggleDescription, secondary]}>
-                  {t('roommates.preferencesPage.enableDescription')}
-                </BloomText>
-              </View>
-              <Switch
-                checked={roommateEnabled}
-                onCheckedChange={setRoommateEnabled}
-                accessibilityLabel={t('roommates.preferencesPage.enableTitle')}
-              />
+        <Card radius="radius-16" style={styles.card} appearance="outline">
+          <View style={styles.toggleHeader}>
+            <View style={styles.toggleHeaderText}>
+              <BloomText style={styles.toggleTitle}>
+                {t('roommates.preferencesPage.enableTitle')}
+              </BloomText>
+              <BloomText style={[styles.toggleDescription, secondary]}>
+                {t('roommates.preferencesPage.enableDescription')}
+              </BloomText>
             </View>
-          </Card>
+            <Switch
+              checked={roommateEnabled}
+              onCheckedChange={setRoommateEnabled}
+              accessibilityLabel={t('roommates.preferencesPage.enableTitle')}
+            />
+          </View>
+        </Card>
 
-          <Card radius="radius-16" style={styles.card} appearance="outline">
-            <H3 style={styles.cardTitle}>{t('roommates.preferencesPage.budgetTimeline')}</H3>
-            <RangeInputs
-              label={t('roommates.preferencesPage.monthlyBudget')}
-              min={form.budgetMin}
-              max={form.budgetMax}
-              onMinChange={(text) => updateField('budgetMin', text)}
-              onMaxChange={(text) => updateField('budgetMax', text)}
+        <Card radius="radius-16" style={styles.card} appearance="outline">
+          <H3 style={styles.cardTitle}>{t('roommates.preferencesPage.budgetTimeline')}</H3>
+          <RangeInputs
+            label={t('roommates.preferencesPage.monthlyBudget')}
+            min={form.budgetMin}
+            max={form.budgetMax}
+            onMinChange={(text) => updateField('budgetMin', text)}
+            onMaxChange={(text) => updateField('budgetMax', text)}
+          />
+          <Field label={t('roommates.preferencesPage.moveInDate')}>
+            <DatePicker
+              value={parseDay(form.moveInDate)}
+              onChange={(date) => updateField('moveInDate', date ? formatDay(date) : '')}
+              minDate={today}
+              locale={i18n.language}
+              placeholder={t('roommates.match.flexible')}
+              accessibilityLabel={t('roommates.preferencesPage.moveInDate')}
             />
-            <Field label={t('roommates.preferencesPage.moveInDate')}>
-              <DatePicker
-                value={parseDay(form.moveInDate)}
-                onChange={(date) => updateField('moveInDate', date ? formatDay(date) : '')}
-                minDate={today}
-                locale={i18n.language}
-                placeholder={t('roommates.match.flexible')}
-                accessibilityLabel={t('roommates.preferencesPage.moveInDate')}
-              />
-            </Field>
-            <ChipRow
-              label={t('roommates.preferencesPage.leaseLength')}
-              value={form.leaseDuration}
-              options={LEASE_OPTIONS}
-              onChange={(v) => updateField('leaseDuration', v)}
-            />
-          </Card>
+          </Field>
+          <ChipRow
+            label={t('roommates.preferencesPage.leaseLength')}
+            value={form.leaseDuration}
+            options={LEASE_OPTIONS}
+            onChange={(v) => updateField('leaseDuration', v)}
+          />
+        </Card>
 
-          <Card radius="radius-16" style={styles.card} appearance="outline">
-            <H3 style={styles.cardTitle}>{t('roommates.preferencesPage.roommateSection')}</H3>
-            <ChipRow
-              label={t('roommates.preferencesPage.preferredGender')}
-              value={form.gender}
-              options={GENDER_OPTIONS}
-              onChange={(v) => updateField('gender', v)}
-            />
-            <RangeInputs
-              label={t('roommates.preferencesPage.ageRange')}
-              min={form.ageMin}
-              max={form.ageMax}
-              onMinChange={(text) => updateField('ageMin', text)}
-              onMaxChange={(text) => updateField('ageMax', text)}
-            />
-          </Card>
+        <Card radius="radius-16" style={styles.card} appearance="outline">
+          <H3 style={styles.cardTitle}>{t('roommates.preferencesPage.roommateSection')}</H3>
+          <ChipRow
+            label={t('roommates.preferencesPage.preferredGender')}
+            value={form.gender}
+            options={GENDER_OPTIONS}
+            onChange={(v) => updateField('gender', v)}
+          />
+          <RangeInputs
+            label={t('roommates.preferencesPage.ageRange')}
+            min={form.ageMin}
+            max={form.ageMax}
+            onMinChange={(text) => updateField('ageMin', text)}
+            onMaxChange={(text) => updateField('ageMax', text)}
+          />
+        </Card>
 
-          <Card radius="radius-16" style={styles.card} appearance="outline">
-            <H3 style={styles.cardTitle}>{t('roommates.preferencesPage.lifestyle')}</H3>
-            <ChipRow
-              label={t('roommates.preferencesPage.smoking')}
-              value={form.smoking}
-              options={LIFESTYLE_OPTIONS}
-              onChange={(v) => updateField('smoking', v)}
-            />
-            <ChipRow
-              label={t('roommates.preferencesPage.pets')}
-              value={form.pets}
-              options={LIFESTYLE_OPTIONS}
-              onChange={(v) => updateField('pets', v)}
-            />
-            <ChipRow
-              label={t('roommates.preferencesPage.partying')}
-              value={form.partying}
-              options={LIFESTYLE_OPTIONS}
-              onChange={(v) => updateField('partying', v)}
-            />
-            <ChipRow
-              label={t('roommates.preferencesPage.cleanliness')}
-              value={form.cleanliness}
-              options={CLEANLINESS_OPTIONS}
-              onChange={(v) => updateField('cleanliness', v)}
-            />
-            <ChipRow
-              label={t('roommates.preferencesPage.schedule')}
-              value={form.schedule}
-              options={SCHEDULE_OPTIONS}
-              onChange={(v) => updateField('schedule', v)}
-            />
-          </Card>
+        <Card radius="radius-16" style={styles.card} appearance="outline">
+          <H3 style={styles.cardTitle}>{t('roommates.preferencesPage.lifestyle')}</H3>
+          <ChipRow
+            label={t('roommates.preferencesPage.smoking')}
+            value={form.smoking}
+            options={LIFESTYLE_OPTIONS}
+            onChange={(v) => updateField('smoking', v)}
+          />
+          <ChipRow
+            label={t('roommates.preferencesPage.pets')}
+            value={form.pets}
+            options={LIFESTYLE_OPTIONS}
+            onChange={(v) => updateField('pets', v)}
+          />
+          <ChipRow
+            label={t('roommates.preferencesPage.partying')}
+            value={form.partying}
+            options={LIFESTYLE_OPTIONS}
+            onChange={(v) => updateField('partying', v)}
+          />
+          <ChipRow
+            label={t('roommates.preferencesPage.cleanliness')}
+            value={form.cleanliness}
+            options={CLEANLINESS_OPTIONS}
+            onChange={(v) => updateField('cleanliness', v)}
+          />
+          <ChipRow
+            label={t('roommates.preferencesPage.schedule')}
+            value={form.schedule}
+            options={SCHEDULE_OPTIONS}
+            onChange={(v) => updateField('schedule', v)}
+          />
+        </Card>
 
-          <Button
-            size="lg"
-            onPress={handleSave}
-            loading={saveMutation.isPending}
-            disabled={saveMutation.isPending}
-            style={styles.saveButton}
-            tone="accent"
-            appearance="solid"
-          >
-            {saveMutation.isPending
-              ? t('roommates.preferencesPage.saving')
-              : t('roommates.preferencesPage.save')}
-          </Button>
-        </ScrollView>
-      </SafeAreaView>
-    </View>
+        <Button
+          size="lg"
+          onPress={handleSave}
+          loading={saveMutation.isPending}
+          disabled={saveMutation.isPending}
+          style={styles.saveButton}
+          tone="accent"
+          appearance="solid"
+        >
+          {saveMutation.isPending
+            ? t('roommates.preferencesPage.saving')
+            : t('roommates.preferencesPage.save')}
+        </Button>
+      </View>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  safeArea: {
-    flex: 1,
-  },
   content: {
     padding: spacing.lg,
     gap: spacing.lg,

@@ -138,24 +138,19 @@
       "topProperties": "शीर्ष प्रॉपर्टी"
     },
     "hero": {
-      "title": "अपना ईमानदार घर खोजें"
+      "title": {
+        "long_term": "अपना ईमानदार घर खोजें",
+        "vacation": "अपना अगला ठहराव खोजें",
+        "buy": "खरीदने के लिए घर खोजें",
+        "exchange": "घर बदलें, अलग तरह से यात्रा करें"
+      }
     },
     "category": {
       "petFriendly": "पालतू जानवर की अनुमति"
     },
-    "horizon": {
-      "learnMore": "और जानें"
-    },
-    "eco": {
-      "title": "पर्यावरण-प्रमाणित प्रॉपर्टी",
-      "description": "ऐसी टिकाऊ प्रॉपर्टी खोजें जो हमारे ऊर्जा-दक्षता और पर्यावरण-अनुकूल मानकों पर खरी उतरती हों"
-    },
     "featured": {
       "title": "चुनिंदा प्रॉपर्टी",
-      "empty": "अभी कोई चुनिंदा प्रॉपर्टी उपलब्ध नहीं है",
-      "titleIn": "{{area}} में चुनिंदा",
-      "chooseArea": "चुनिंदा घर देखने के लिए कोई इलाक़ा चुनें।",
-      "loadFailed": "इस इलाक़े के चुनिंदा घर लोड नहीं हो सके।"
+      "titleIn": "{{area}} में चुनिंदा"
     },
     "viewAll": "सभी देखें",
     "recentlyViewed": {
@@ -180,68 +175,59 @@
       "title": "सुझाए गए घर",
       "eyebrow": "आपके लिए"
     },
-    "explore": {
-      "eyebrow": "और देखें",
-      "title": "और घर देखें",
-      "cta": "यहाँ के सभी घर देखें",
-      "ctaAccessible": "जिस इलाक़े में आप खोज रहे हैं, उसी के साथ «एक्सप्लोर» खोलें"
-    },
     "hostCta": {
-      "cta": "होस्ट बनें",
-      "subtitle": "पूरे स्पेन के सत्यापित किरायेदारों तक पहुँचें — लिस्टिंग मुफ़्त, शुल्क वाजिब, और मदद के लिए असली लोग।",
-      "title": "अपनी जगह लिस्ट करें, अच्छा किरायेदार पाएँ"
+      "long_term": {
+        "title": "अपनी जगह लिस्ट करें, अच्छा किरायेदार पाएँ",
+        "subtitle": "पूरे स्पेन के सत्यापित किरायेदारों तक पहुँचें — लिस्टिंग मुफ़्त, शुल्क वाजिब, और मदद के लिए असली लोग।",
+        "cta": "होस्ट बनें"
+      },
+      "vacation": {
+        "title": "अपने घर में यात्रियों की मेज़बानी करें",
+        "subtitle": "छोटे ठहराव के लिए अपनी जगह साझा करें — साफ़ कीमतें, कोई छिपा शुल्क नहीं।",
+        "cta": "होस्ट बनें"
+      },
+      "buy": {
+        "title": "अपना घर बेच रहे हैं?",
+        "subtitle": "इसे मुफ़्त में सूचीबद्ध करें और उन खरीदारों तक पहुँचें जो पूरी कहानी देखते हैं।",
+        "cta": "अपना घर सूचीबद्ध करें"
+      },
+      "exchange": {
+        "title": "अपना घर बदलें",
+        "subtitle": "भरोसेमंद लोगों के साथ घर बदलें और कम ख़र्च में यात्रा करें।",
+        "cta": "अदला-बदली प्रस्तावित करें"
+      }
     },
     "sections": {
-      "explain": "{{reason}} · स्रोत: {{source}}",
-      "explainAccessible": "ये घर क्यों: {{reason}}। स्रोत: {{source}}।",
       "error": "यह इलाक़ा लोड नहीं हो सका। कुछ छिपाया नहीं जा रहा — अनुरोध विफल रहा।",
-      "source": {
-        "listing_created_at": "लिस्टिंग के प्रकाशन की तारीख़ें",
-        "listing_sale_price_reduced_flag": "पोर्टल द्वारा प्रकाशित क़ीमत-घटने का संकेत",
-        "listing_status": "लिस्टिंग की स्थिति में बदलाव",
-        "listing_agency_fee_flag": "लिस्टिंग में एजेंसी शुल्क का फ़ील्ड",
-        "listing_cost_fields": "लिस्टिंग में खर्च के फ़ील्ड",
-        "resident_reviews": "वहाँ रह चुके लोगों की लिखी समीक्षाएँ",
-        "listing_verification": "Homiio के सत्यापन रिकॉर्ड",
-        "listing_housing_type": "लिस्टिंग में आवास-प्रकार का फ़ील्ड"
-      },
       "new_in_area": {
-        "eyebrow": "नया",
         "title": "आपके इलाक़े में नया",
         "reason": "जिस इलाक़े में आप खोज रहे हैं, उसमें सबसे हाल में प्रकाशित"
       },
       "price_reduced": {
-        "eyebrow": "क़ीमत में बदलाव",
         "title": "माँगी गई क़ीमत घटी",
         "reason": "विक्रेता ने क़ीमत घटाने की जानकारी दी है। Homiio किराये की क़ीमतों का इतिहास नहीं रखता, इसलिए इसमें सिर्फ़ बिक्री वाले घर आते हैं"
       },
       "no_longer_available": {
-        "eyebrow": "बाज़ार से हटे",
         "title": "अब उपलब्ध नहीं",
         "reason": "मालिक ने किराये पर दिया या बेचा हुआ चिह्नित किया, नए से पुराने क्रम में — असल में क्या गया, और किस क़ीमत पर"
       },
       "no_agency_fee": {
-        "eyebrow": "खर्च",
         "title": "एजेंसी शुल्क नहीं",
         "reason": "लिस्टिंग में लिखा है कि कोई एजेंसी शुल्क देय नहीं है। जिन लिस्टिंग में कुछ नहीं लिखा, वे शामिल नहीं हैं"
       },
       "transparent_total_cost": {
-        "eyebrow": "खर्च",
         "title": "पूरा खर्च बताया गया",
         "reason": "हर नियमित खर्च लिस्टिंग में है: बिल सहित किराया और जमानत राशि, या प्रति रात दर के साथ सफ़ाई और सेवा शुल्क"
       },
       "with_resident_reviews": {
-        "eyebrow": "भरोसा",
         "title": "रह चुके लोगों की समीक्षा",
         "reason": "इस पते पर रह चुके किसी व्यक्ति ने समीक्षा लिखी है"
       },
       "verified": {
-        "eyebrow": "भरोसा",
         "title": "पता या लिस्ट करने वाला सत्यापित",
         "reason": "Homiio ने पते या लिस्ट करने वाले व्यक्ति को सत्यापित किया है"
       },
       "public_housing": {
-        "eyebrow": "सार्वजनिक",
         "title": "सार्वजनिक आवास",
         "reason": "सार्वजनिक आवास के रूप में सूचीबद्ध। Homiio के पास अभी सहकारी या सामुदायिक आवास का फ़ील्ड नहीं है, इसलिए वे शामिल नहीं हैं"
       },
@@ -254,9 +240,17 @@
       "changeFiltersAccessible": "इस इलाक़े के फ़िल्टर बदलने के लिए «एक्सप्लोर» खोलें"
     },
     "discovery": {
-      "eyebrow": "गंतव्य देखें",
-      "title": "आप कहाँ रहना चाहेंगे?",
-      "body": "हम आपका क्षेत्र तय नहीं कर सके, इसलिए ये Homiio पर घरों वाले शहर हैं — आपके आस-पास की जगहें नहीं।"
+      "title": "आप कहाँ रहना चाहेंगे?"
+    },
+    "neighbourSupport": {
+      "title": "पड़ोसी जिन्हें सहारे की ज़रूरत है",
+      "viewAll": "सभी देखें"
+    },
+    "mission": {
+      "title": "हम आपके साथ हैं",
+      "body": "Homiio उसी आवास संकट से जन्मा है जिससे आप गुज़र रहे हैं। हम किरायेदारों की सुनते हैं और उनके साथ मिलकर बनाते हैं।",
+      "support": "Homiio का समर्थन करें",
+      "readStory": "Homiio क्यों है"
     }
   },
   "agent": {
@@ -453,9 +447,6 @@
       "other": "Other"
     },
     "widgets": {
-      "common": {
-        "signIn": "Sign in"
-      },
       "quickFilters": {
         "title": "Quick Filters",
         "furnished": "Furnished",
@@ -472,7 +463,6 @@
       "alerts": {
         "title": "Property Alerts",
         "subtitle": "Get notified when new properties match your criteria",
-        "signInPrompt": "Sign in to create property alerts",
         "location": "Location",
         "minPrice": "Min Price",
         "maxPrice": "Max Price",
@@ -488,10 +478,7 @@
       },
       "savedSearches": {
         "title": "Saved Searches",
-        "empty": "No saved searches yet",
         "emptyHelper": "Save a search to get quick access and alerts here",
-        "signInPrompt": "Sign in to save searches",
-        "createNew": "Create New Search",
         "viewAllCount": "View All ({{count}} more)",
         "nameAndQueryRequired": "Search name and query are required",
         "loadFailed": "Failed to load saved searches",
@@ -780,11 +767,6 @@
         "rentalLabel": "Rental {{index}}"
       }
     },
-    "toast": {
-      "loadFailed": "Failed to load profiles",
-      "updateSuccess": "Profile updated successfully",
-      "updateFailed": "Failed to update profile"
-    },
     "subscriptionsDescription": "Manage Homiio Plus or buy one-time file analysis.",
     "subscriptions": "Subscriptions",
     "stays": "Stays",
@@ -831,10 +813,6 @@
       "transactDone": "Listing marked as closed",
       "transactCommission": "Deal closed — commission recorded",
       "viewingTimes": "देखने का समय"
-    },
-    "details": {
-      "bedrooms": "Bedrooms",
-      "bathrooms": "Bathrooms"
     },
     "titles": {
       "forRent": "for rent in",
@@ -1249,56 +1227,6 @@
       "viewProfile": "View Profile",
       "sendRequest": "Send Request",
       "fallbackName": "Roommate"
-    }
-  },
-  "horizon": {
-    "title": "Horizon Initiative",
-    "description": "Global initiative for fair housing, healthcare, and travel support",
-    "page": {
-      "benefits": {
-        "fairHousing": {
-          "title": "Fair Housing",
-          "description": "Access to affordable housing in 120+ cities worldwide with standardized ethical rental agreements"
-        },
-        "healthcare": {
-          "title": "Healthcare Access",
-          "description": "Universal healthcare coverage with partner clinics and telehealth services in every Horizon city"
-        },
-        "travel": {
-          "title": "Travel Network",
-          "description": "Discounted transportation and accommodation when traveling between Horizon locations"
-        },
-        "community": {
-          "title": "Community Support",
-          "description": "Connect with local members for cultural integration, language exchange, and social activities"
-        }
-      },
-      "heroTitle": "Global Housing Initiative",
-      "heroSubtitle": "Creating a world of ethical housing, healthcare, and mobility",
-      "aboutTitle": "About Horizon",
-      "aboutBody1": "Horizon is a global initiative designed to make housing more accessible, affordable, and ethical for everyone. By joining a network of properties across 120+ cities worldwide, members gain access to fair housing, healthcare benefits, and travel support.",
-      "aboutBody2": "Our mission is to create sustainable living environments that foster community and wellbeing while reducing the environmental impact of housing.",
-      "benefitsTitle": "Member Benefits",
-      "howItWorksTitle": "How It Works",
-      "steps": {
-        "apply": {
-          "title": "Apply for Membership",
-          "description": "Complete your profile and submit a membership application with your housing needs and preferences."
-        },
-        "verify": {
-          "title": "Get Verified",
-          "description": "Our team reviews your application and verifies your identity and background information."
-        },
-        "access": {
-          "title": "Access the Network",
-          "description": "Once approved, browse and book properties across our global network with priority access."
-        }
-      },
-      "joinTitle": "Ready to join Horizon?",
-      "joinSubtitle": "Apply today and take the first step toward ethical, accessible housing worldwide.",
-      "storiesTitle": "Member Stories",
-      "story1": "Horizon made my relocation so much easier. I found an ethical apartment in Berlin within a week and the healthcare coverage saved me when I needed emergency care.",
-      "story2": "As a digital nomad, having access to quality housing in multiple cities has been life-changing. The community aspect is what makes Horizon truly special."
     }
   },
   "settings": {
@@ -2102,11 +2030,6 @@
     }
   },
   "donations": {
-    "widget": {
-      "title": "Support Our Mission",
-      "description": "Help us build the future of ethical housing. Your support makes a difference.",
-      "button": "Donate to Homiio"
-    },
     "page": {
       "title": "Donate to Homiio",
       "subtitle": "Support the future of ethical housing",
@@ -3848,15 +3771,6 @@
       "exploreGlobalAccessible": "बिना इलाक़े के फ़िल्टर के, हर जगह के घर देखें",
       "pickerTitle": "आप कहाँ घर खोज रहे हैं?",
       "showingCached": "{{when}} की सहेजी गई प्रति। यह अद्यतन नहीं है।",
-      "failure": {
-        "permission_denied": "लोकेशन बंद है, इसलिए हम आपके पास खोज नहीं सकते। इसकी जगह कोई स्थान चुनें — लोकेशन ज़रूरी नहीं है।",
-        "position_unavailable": "आपकी स्थिति पता नहीं चल सकी। इसकी जगह कोई स्थान चुनें।",
-        "network": "यह खोजने के लिए हम Homiio से नहीं जुड़ पाए। अपना कनेक्शन जाँचें और दोबारा कोशिश करें।",
-        "rate_limited": "थोड़े समय में बहुत ज़्यादा स्थान खोजे गए। कुछ देर बाद कोशिश करें।",
-        "ambiguous": "इस नाम से कई स्थान मिलते हैं। जो आपका मतलब था, वह चुनें।",
-        "no_results": "यह स्थान नहीं मिला। कोई और नाम आज़माएँ।",
-        "unsupported": "Homiio अभी इस तरह के स्थान में खोज नहीं कर सकता। कोई शहर चुनें।"
-      },
       "chooseArea": "इलाक़ा चुनें",
       "useCurrentHint": "आप जहाँ हैं, वहाँ से {{distance}} के भीतर",
       "locationOff": "सेटिंग्स में लोकेशन बंद है",

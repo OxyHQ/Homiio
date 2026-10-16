@@ -27,21 +27,21 @@
  * state.
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
-import { View, StyleSheet, ScrollView } from 'react-native';
+import React, { useState, useMemo } from 'react';
+import { View, StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Header } from '@/components/Header';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
 import { useProperty } from '@/hooks';
 import { Button } from '@oxy.so/bloom/button';
 import { Admonition } from '@oxy.so/bloom/admonition';
+import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { Card, CardDescription, CardHeader, CardTitle } from '@oxy.so/bloom/card';
 import { Chip } from '@oxy.so/bloom/chip';
 import { Calendar } from '@oxy.so/bloom/date-picker';
 import { RiCalendarLine, RiMapPinLine } from '@oxy.so/bloom/icons';
 import { Loading } from '@oxy.so/bloom/loading';
+import { PageHeader } from '@oxy.so/bloom/page-header';
 import { Textarea } from '@oxy.so/bloom/textarea';
 import { TextFieldInput } from '@oxy.so/bloom/text-field';
 import { useTheme } from '@oxy.so/bloom/theme';
@@ -63,6 +63,7 @@ import { ApiError } from '@/utils/api';
 import { toast } from '@oxy.so/bloom/toast';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { logger } from '@/utils/logger';
+import { MY_VIEWINGS_KEY } from '@/hooks/useUpcomingBookings';
 
 type PropertyData = {
   id: string;
@@ -111,12 +112,13 @@ export default function BookViewingPage() {
   const { id, modifyViewingId } = useLocalSearchParams();
   const { oxyServices, activeSessionId } = useOxy();
   const queryClient = useQueryClient();
-  const [selectedDate, setSelectedDate] = useState<string>('');
-  const [selectedTime, setSelectedTime] = useState<string>('');
-  const [modality, setModality] = useState<ViewingModality>('in_person');
-  const [message, setMessage] = useState<string>('');
+  // What the visitor has entered. `null` means untouched: the field then shows
+  // the viewing being modified (below), or its empty default.
+  const [dateInput, setSelectedDate] = useState<string | null>(null);
+  const [timeInput, setSelectedTime] = useState<string | null>(null);
+  const [modalityInput, setModality] = useState<ViewingModality | null>(null);
+  const [messageInput, setMessage] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [_existingViewing, setExistingViewing] = useState<ViewingRequest | null>(null);
 
   // Check if we're in modify mode
   const isModifyMode = Boolean(modifyViewingId);
@@ -125,11 +127,45 @@ export default function BookViewingPage() {
     : modifyViewingId;
 
   const normalizedId = Array.isArray(id) ? id[0] : id;
-  const { property: apiProperty, loading, loadProperty } = useProperty(normalizedId || '');
+  const { property: apiProperty, loading } = useProperty(normalizedId || '');
 
-  useEffect(() => {
-    loadProperty();
-  }, [id, loadProperty]);
+  /**
+   * The viewing being modified, from the same list (and cache entry) `/viewings`
+   * reads. It PREFILLS the form: every field shows the visitor's own input once
+   * they have touched it, and this viewing's value until then.
+   */
+  const myViewingsQuery = useQuery<ViewingRequest[], Error>({
+    queryKey: MY_VIEWINGS_KEY,
+    queryFn: async () => {
+      const response = await ViewingService.listMyViewingRequests({ page: 1, limit: 50 });
+      return Array.isArray(response?.data) ? response.data : [];
+    },
+    enabled: isModifyMode && Boolean(modifyViewingIdString && oxyServices && activeSessionId),
+  });
+
+  const existingViewing = isModifyMode
+    ? myViewingsQuery.data?.find((v) => v.id === modifyViewingIdString)
+    : undefined;
+
+  const existingCivil = useMemo(() => {
+    if (!existingViewing) return null;
+    // The civil day and clock time the SERVER derived, in the property's zone.
+    // This used to be computed here with `toLocaleTimeString` in the DEVICE's
+    // zone, which prefilled the form with a time the server would then read as
+    // a different moment — and the two only agreed for somebody who happened to
+    // be in the same zone as the flat.
+    const zone = existingViewing.timeZone;
+    return existingViewing.date && existingViewing.time
+      ? { date: existingViewing.date, time: existingViewing.time }
+      : zone
+        ? instantToZonedCivil(new Date(existingViewing.scheduledAt), zone)
+        : null;
+  }, [existingViewing]);
+
+  const selectedDate = dateInput ?? existingCivil?.date ?? '';
+  const selectedTime = timeInput ?? existingCivil?.time ?? '';
+  const modality: ViewingModality = modalityInput ?? existingViewing?.modality ?? 'in_person';
+  const message = messageInput ?? existingViewing?.message ?? '';
 
   /**
    * The owner's real availability.
@@ -254,50 +290,6 @@ export default function BookViewingPage() {
     };
   }, [apiProperty]);
 
-  // Load existing viewing data if in modify mode
-  useEffect(() => {
-    const loadExistingViewing = async () => {
-      if (!isModifyMode || !modifyViewingIdString || !oxyServices || !activeSessionId) {
-        return;
-      }
-
-      try {
-        // Get user's viewing requests and find the one we're modifying
-        const response = await ViewingService.listMyViewingRequests({ page: 1, limit: 50 });
-
-        const viewings = Array.isArray(response?.data) ? response.data : [];
-        const viewing = viewings.find((v) => v.id === modifyViewingIdString);
-
-        if (viewing) {
-          setExistingViewing(viewing);
-          // The civil day and clock time the SERVER derived, in the property's
-          // zone. This used to be computed here with `toLocaleTimeString` in
-          // the DEVICE's zone, which prefilled the form with a time the server
-          // would then read as a different moment — and the two only agreed for
-          // somebody who happened to be in the same zone as the flat.
-          const zone = viewing.timeZone;
-          const civil =
-            viewing.date && viewing.time
-              ? { date: viewing.date, time: viewing.time }
-              : zone
-                ? instantToZonedCivil(new Date(viewing.scheduledAt), zone)
-                : null;
-          if (civil) {
-            setSelectedDate(civil.date);
-            setSelectedTime(civil.time);
-          }
-          setModality(viewing.modality ?? 'in_person');
-          setMessage(viewing.message || '');
-        }
-      } catch (error: unknown) {
-        logger.error('Failed to load existing viewing:', error);
-        toast.error(t('viewings.error.generic'));
-      }
-    };
-
-    loadExistingViewing();
-  }, [isModifyMode, modifyViewingIdString, oxyServices, activeSessionId, t]);
-
   /**
    * Which days the calendar will let somebody land on.
    *
@@ -399,30 +391,32 @@ export default function BookViewingPage() {
 
   if (loading || !property) {
     return (
-      <SafeAreaView style={styles.safeArea} edges={['bottom']}>
-        <Header
-          options={{
-            showBackButton: true,
-            title: t('app.loading'),
-          }}
+      <>
+        <PageHeader
+          title={t('app.loading')}
+          titleAlign="center"
+          leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+          onBack={router.canGoBack() ? router.back : undefined}
+          backLabel={t('goBack')}
         />
         <View style={styles.loadingContainer}>
           <Loading variant="spinner" size="lg" text={t('property.loading')} />
         </View>
-      </SafeAreaView>
+      </>
     );
   }
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['bottom']}>
-      <Header
-        options={{
-          showBackButton: true,
-          title: isModifyMode ? t('viewings.actions.modify') : t('properties.bookViewing'),
-        }}
+    <>
+      <PageHeader
+        title={isModifyMode ? t('viewings.actions.modify') : t('properties.bookViewing')}
+        titleAlign="center"
+        leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+        onBack={router.canGoBack() ? router.back : undefined}
+        backLabel={t('goBack')}
       />
 
-      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <View style={styles.content}>
         <Card radius="radius-16" appearance="outline">
           <CardHeader>
             <CardTitle>{property.title}</CardTitle>
@@ -434,6 +428,10 @@ export default function BookViewingPage() {
             ) : null}
           </CardHeader>
         </Card>
+
+        {myViewingsQuery.isError ? (
+          <Admonition type="error">{t('viewings.error.generic')}</Admonition>
+        ) : null}
 
         {availabilityQuery.isLoading ? (
           <Loading variant="spinner" size="sm" text={t('viewings.loadingSlots')} />
@@ -562,18 +560,12 @@ export default function BookViewingPage() {
         >
           {isModifyMode ? t('viewings.actions.modify') : t('properties.bookViewing')}
         </Button>
-      </ScrollView>
-    </SafeAreaView>
+      </View>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-  },
-  container: {
-    flex: 1,
-  },
   content: {
     width: '100%',
     maxWidth: 880,

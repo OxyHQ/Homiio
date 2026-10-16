@@ -26,7 +26,7 @@ const GC_TIME = 1000 * 60 * 10;
 
 type ListVariant = 'applicant' | 'landlord';
 
-export const applicationQueryKeys = {
+const applicationQueryKeys = {
   all: ['applications'] as const,
   list: (variant: ListVariant, status?: TenantApplicationStatus) =>
     [...applicationQueryKeys.all, variant, status ?? 'any'] as const,

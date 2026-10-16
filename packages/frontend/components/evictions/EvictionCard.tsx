@@ -101,5 +101,3 @@ const styles = StyleSheet.create({
     opacity: 0.85,
   },
 });
-
-export default EvictionCard;

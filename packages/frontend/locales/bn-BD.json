@@ -138,24 +138,19 @@
       "topProperties": "শীর্ষ প্রপার্টি"
     },
     "hero": {
-      "title": "আপনার ন্যায্য বাসা খুঁজুন"
+      "title": {
+        "long_term": "আপনার ন্যায্য বাসা খুঁজুন",
+        "vacation": "আপনার পরবর্তী থাকার জায়গা খুঁজুন",
+        "buy": "কেনার জন্য বাড়ি খুঁজুন",
+        "exchange": "বাড়ি বদলান, ভিন্নভাবে ভ্রমণ করুন"
+      }
     },
     "category": {
       "petFriendly": "পোষা প্রাণী চলবে"
     },
-    "horizon": {
-      "learnMore": "আরও জানুন"
-    },
-    "eco": {
-      "title": "পরিবেশ-সনদপ্রাপ্ত সম্পত্তি",
-      "description": "এমন টেকসই সম্পত্তি খুঁজুন যেগুলো আমাদের জ্বালানি-দক্ষতা ও পরিবেশবান্ধব মান পূরণ করে"
-    },
     "featured": {
       "title": "নির্বাচিত সম্পত্তি",
-      "empty": "এই মুহূর্তে কোনো নির্বাচিত সম্পত্তি নেই",
-      "titleIn": "{{area}}-এ নির্বাচিত",
-      "chooseArea": "নির্বাচিত বাসা দেখতে একটি এলাকা বেছে নিন।",
-      "loadFailed": "এই এলাকার নির্বাচিত বাসা লোড করা যায়নি।"
+      "titleIn": "{{area}}-এ নির্বাচিত"
     },
     "viewAll": "সব দেখুন",
     "recentlyViewed": {
@@ -180,68 +175,59 @@
       "title": "সুপারিশ করা বাসা",
       "eyebrow": "আপনার জন্য"
     },
-    "explore": {
-      "eyebrow": "আরও দেখুন",
-      "title": "আরও বাসা দেখুন",
-      "cta": "এখানকার সব বাসা দেখুন",
-      "ctaAccessible": "আপনি যে এলাকায় খুঁজছেন সেটি নিয়েই «অন্বেষণ» খুলুন"
-    },
     "hostCta": {
-      "cta": "হোস্ট হন",
-      "subtitle": "পুরো স্পেনের যাচাই করা ভাড়াটিয়াদের কাছে পৌঁছান — বিজ্ঞাপন দেওয়া বিনামূল্যে, ফি ন্যায্য, আর সহায়তায় সত্যিকারের মানুষ।",
-      "title": "আপনার জায়গার বিজ্ঞাপন দিন, ভালো ভাড়াটিয়া পান"
+      "long_term": {
+        "title": "আপনার জায়গার বিজ্ঞাপন দিন, ভালো ভাড়াটিয়া পান",
+        "subtitle": "পুরো স্পেনের যাচাই করা ভাড়াটিয়াদের কাছে পৌঁছান — বিজ্ঞাপন দেওয়া বিনামূল্যে, ফি ন্যায্য, আর সহায়তায় সত্যিকারের মানুষ।",
+        "cta": "হোস্ট হন"
+      },
+      "vacation": {
+        "title": "আপনার বাড়িতে ভ্রমণকারীদের আতিথ্য দিন",
+        "subtitle": "স্বল্প সময়ের থাকার জন্য আপনার জায়গা শেয়ার করুন — স্পষ্ট দাম, কোনো লুকানো ফি নেই।",
+        "cta": "হোস্ট হন"
+      },
+      "buy": {
+        "title": "বাড়ি বিক্রি করছেন?",
+        "subtitle": "বিনামূল্যে তালিকাভুক্ত করুন এবং এমন ক্রেতাদের কাছে পৌঁছান যারা পুরো গল্পটা দেখেন।",
+        "cta": "বাড়ি তালিকাভুক্ত করুন"
+      },
+      "exchange": {
+        "title": "আপনার বাড়ি বদলান",
+        "subtitle": "বিশ্বস্ত মানুষের সাথে বাড়ি বদলান এবং কম খরচে ভ্রমণ করুন।",
+        "cta": "বদলের প্রস্তাব দিন"
+      }
     },
     "sections": {
-      "explain": "{{reason}} · উৎস: {{source}}",
-      "explainAccessible": "কেন এই বাসাগুলো: {{reason}}। উৎস: {{source}}।",
       "error": "এই এলাকাটি লোড করা যায়নি। কিছুই আড়াল করা হচ্ছে না — অনুরোধটি ব্যর্থ হয়েছে।",
-      "source": {
-        "listing_created_at": "বিজ্ঞাপন প্রকাশের তারিখ",
-        "listing_sale_price_reduced_flag": "পোর্টালের প্রকাশ করা দাম-কমার চিহ্ন",
-        "listing_status": "বিজ্ঞাপনের অবস্থা পরিবর্তন",
-        "listing_agency_fee_flag": "বিজ্ঞাপনের এজেন্সি ফি ঘর",
-        "listing_cost_fields": "বিজ্ঞাপনের খরচের ঘরগুলো",
-        "resident_reviews": "যাঁরা সেখানে থেকেছেন তাঁদের লেখা রিভিউ",
-        "listing_verification": "Homiio-র যাচাই নথি",
-        "listing_housing_type": "বিজ্ঞাপনের আবাসন-ধরন ঘর"
-      },
       "new_in_area": {
-        "eyebrow": "নতুন",
         "title": "আপনার এলাকায় নতুন",
         "reason": "আপনি যে এলাকায় খুঁজছেন, সেখানে সবচেয়ে সম্প্রতি প্রকাশিত"
       },
       "price_reduced": {
-        "eyebrow": "দামের পরিবর্তন",
         "title": "চাওয়া দাম কমেছে",
         "reason": "বিক্রেতা দাম কমানোর কথা প্রকাশ করেছেন। Homiio ভাড়ার দামের ইতিহাস রাখে না, তাই এতে শুধু বিক্রির বাসা আছে"
       },
       "no_longer_available": {
-        "eyebrow": "বাজার থেকে সরেছে",
         "title": "আর পাওয়া যাচ্ছে না",
         "reason": "মালিক ভাড়া হয়ে গেছে বা বিক্রি হয়ে গেছে বলে চিহ্নিত করেছেন, নতুন থেকে পুরোনো — আসলে কী চলে গেল, আর কত দামে"
       },
       "no_agency_fee": {
-        "eyebrow": "খরচ",
         "title": "এজেন্সি ফি নেই",
         "reason": "বিজ্ঞাপনে লেখা আছে কোনো এজেন্সি ফি দিতে হবে না। যেসব বিজ্ঞাপনে কিছু বলা নেই, সেগুলো এতে নেই"
       },
       "transparent_total_cost": {
-        "eyebrow": "খরচ",
         "title": "পুরো খরচ উল্লেখ করা",
         "reason": "নিয়মিত সব খরচ বিজ্ঞাপনেই আছে: বিল সহ ভাড়া ও জামানত, কিংবা প্রতি রাতের দামের সঙ্গে পরিষ্কার ও সেবা ফি"
       },
       "with_resident_reviews": {
-        "eyebrow": "আস্থা",
         "title": "বাসিন্দাদের রিভিউসহ",
         "reason": "এই ঠিকানায় থেকেছেন এমন কেউ একটি রিভিউ লিখেছেন"
       },
       "verified": {
-        "eyebrow": "আস্থা",
         "title": "ঠিকানা বা বিজ্ঞাপনদাতা যাচাই করা",
         "reason": "Homiio ঠিকানাটি বা যিনি বিজ্ঞাপন দিয়েছেন তাঁকে যাচাই করেছে"
       },
       "public_housing": {
-        "eyebrow": "সরকারি",
         "title": "সরকারি আবাসন",
         "reason": "সরকারি আবাসন হিসেবে দেওয়া। Homiio-তে এখনো সমবায় বা কমিউনিটি আবাসনের ঘর নেই, তাই সেগুলো এতে নেই"
       },
@@ -254,9 +240,17 @@
       "changeFiltersAccessible": "এই এলাকার ফিল্টার বদলাতে «অন্বেষণ» খুলুন"
     },
     "discovery": {
-      "eyebrow": "গন্তব্য ঘুরে দেখুন",
-      "title": "আপনি কোথায় থাকতে চান?",
-      "body": "আমরা আপনার এলাকা নির্ধারণ করতে পারিনি, তাই এগুলো Homiio-তে বাড়ি আছে এমন শহর — আপনার কাছাকাছি জায়গা নয়।"
+      "title": "আপনি কোথায় থাকতে চান?"
+    },
+    "neighbourSupport": {
+      "title": "যে প্রতিবেশীদের সহায়তা দরকার",
+      "viewAll": "সব দেখুন"
+    },
+    "mission": {
+      "title": "আমরা আপনার পাশে আছি",
+      "body": "আপনি যে আবাসন সংকটের মধ্য দিয়ে যাচ্ছেন, Homiio সেখান থেকেই জন্মেছে। আমরা ভাড়াটিয়াদের কথা শুনি এবং তাদের সঙ্গে মিলে গড়ি।",
+      "support": "Homiio-কে সমর্থন করুন",
+      "readStory": "Homiio কেন আছে"
     }
   },
   "agent": {
@@ -453,9 +447,6 @@
       "other": "Other"
     },
     "widgets": {
-      "common": {
-        "signIn": "Sign in"
-      },
       "quickFilters": {
         "title": "Quick Filters",
         "furnished": "Furnished",
@@ -472,7 +463,6 @@
       "alerts": {
         "title": "Property Alerts",
         "subtitle": "Get notified when new properties match your criteria",
-        "signInPrompt": "Sign in to create property alerts",
         "location": "Location",
         "minPrice": "Min Price",
         "maxPrice": "Max Price",
@@ -488,10 +478,7 @@
       },
       "savedSearches": {
         "title": "Saved Searches",
-        "empty": "No saved searches yet",
         "emptyHelper": "Save a search to get quick access and alerts here",
-        "signInPrompt": "Sign in to save searches",
-        "createNew": "Create New Search",
         "viewAllCount": "View All ({{count}} more)",
         "nameAndQueryRequired": "Search name and query are required",
         "loadFailed": "Failed to load saved searches",
@@ -780,11 +767,6 @@
         "rentalLabel": "Rental {{index}}"
       }
     },
-    "toast": {
-      "loadFailed": "Failed to load profiles",
-      "updateSuccess": "Profile updated successfully",
-      "updateFailed": "Failed to update profile"
-    },
     "subscriptionsDescription": "Manage Homiio Plus or buy one-time file analysis.",
     "subscriptions": "Subscriptions",
     "stays": "Stays",
@@ -831,10 +813,6 @@
       "transactDone": "Listing marked as closed",
       "transactCommission": "Deal closed — commission recorded",
       "viewingTimes": "পরিদর্শনের সময়"
-    },
-    "details": {
-      "bedrooms": "Bedrooms",
-      "bathrooms": "Bathrooms"
     },
     "titles": {
       "forRent": "for rent in",
@@ -1249,56 +1227,6 @@
       "viewProfile": "View Profile",
       "sendRequest": "Send Request",
       "fallbackName": "Roommate"
-    }
-  },
-  "horizon": {
-    "title": "Horizon Initiative",
-    "description": "Global initiative for fair housing, healthcare, and travel support",
-    "page": {
-      "benefits": {
-        "fairHousing": {
-          "title": "Fair Housing",
-          "description": "Access to affordable housing in 120+ cities worldwide with standardized ethical rental agreements"
-        },
-        "healthcare": {
-          "title": "Healthcare Access",
-          "description": "Universal healthcare coverage with partner clinics and telehealth services in every Horizon city"
-        },
-        "travel": {
-          "title": "Travel Network",
-          "description": "Discounted transportation and accommodation when traveling between Horizon locations"
-        },
-        "community": {
-          "title": "Community Support",
-          "description": "Connect with local members for cultural integration, language exchange, and social activities"
-        }
-      },
-      "heroTitle": "Global Housing Initiative",
-      "heroSubtitle": "Creating a world of ethical housing, healthcare, and mobility",
-      "aboutTitle": "About Horizon",
-      "aboutBody1": "Horizon is a global initiative designed to make housing more accessible, affordable, and ethical for everyone. By joining a network of properties across 120+ cities worldwide, members gain access to fair housing, healthcare benefits, and travel support.",
-      "aboutBody2": "Our mission is to create sustainable living environments that foster community and wellbeing while reducing the environmental impact of housing.",
-      "benefitsTitle": "Member Benefits",
-      "howItWorksTitle": "How It Works",
-      "steps": {
-        "apply": {
-          "title": "Apply for Membership",
-          "description": "Complete your profile and submit a membership application with your housing needs and preferences."
-        },
-        "verify": {
-          "title": "Get Verified",
-          "description": "Our team reviews your application and verifies your identity and background information."
-        },
-        "access": {
-          "title": "Access the Network",
-          "description": "Once approved, browse and book properties across our global network with priority access."
-        }
-      },
-      "joinTitle": "Ready to join Horizon?",
-      "joinSubtitle": "Apply today and take the first step toward ethical, accessible housing worldwide.",
-      "storiesTitle": "Member Stories",
-      "story1": "Horizon made my relocation so much easier. I found an ethical apartment in Berlin within a week and the healthcare coverage saved me when I needed emergency care.",
-      "story2": "As a digital nomad, having access to quality housing in multiple cities has been life-changing. The community aspect is what makes Horizon truly special."
     }
   },
   "settings": {
@@ -2102,11 +2030,6 @@
     }
   },
   "donations": {
-    "widget": {
-      "title": "Support Our Mission",
-      "description": "Help us build the future of ethical housing. Your support makes a difference.",
-      "button": "Donate to Homiio"
-    },
     "page": {
       "title": "Donate to Homiio",
       "subtitle": "Support the future of ethical housing",
@@ -3848,15 +3771,6 @@
       "exploreGlobalAccessible": "এলাকার ফিল্টার ছাড়াই সব জায়গার বাসা দেখুন",
       "pickerTitle": "আপনি কোথায় বাসা খুঁজছেন?",
       "showingCached": "{{when}}-এর সংরক্ষিত কপি। এটি হালনাগাদ নয়।",
-      "failure": {
-        "permission_denied": "লোকেশন বন্ধ, তাই আপনার কাছাকাছি খোঁজা যাচ্ছে না। বরং একটি জায়গা বেছে নিন — লোকেশন বাধ্যতামূলক নয়।",
-        "position_unavailable": "আপনার অবস্থান জানা যায়নি। বরং একটি জায়গা বেছে নিন।",
-        "network": "এটি খুঁজতে Homiio-র সঙ্গে যোগাযোগ করা যায়নি। সংযোগ দেখে আবার চেষ্টা করুন।",
-        "rate_limited": "অল্প সময়ে অনেকবার জায়গা খোঁজা হয়েছে। একটু পরে আবার চেষ্টা করুন।",
-        "ambiguous": "এই নামে একাধিক জায়গা মিলছে। আপনি যেটি বোঝাতে চেয়েছেন সেটি বেছে নিন।",
-        "no_results": "জায়গাটি খুঁজে পাওয়া যায়নি। অন্য নাম দিয়ে চেষ্টা করুন।",
-        "unsupported": "Homiio এখনো এই ধরনের জায়গায় খুঁজতে পারে না। একটি শহর বেছে নিন।"
-      },
       "chooseArea": "এলাকা বাছাই করুন",
       "useCurrentHint": "আপনি যেখানে আছেন তার {{distance}} এর মধ্যে",
       "locationOff": "সেটিংসে লোকেশন বন্ধ আছে",

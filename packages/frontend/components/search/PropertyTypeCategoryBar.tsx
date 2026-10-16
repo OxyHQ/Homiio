@@ -70,5 +70,3 @@ export function PropertyTypeCategoryBar({
     />
   );
 }
-
-export default PropertyTypeCategoryBar;

@@ -24,12 +24,7 @@ export interface MarkTransactedResult {
 }
 
 // Re-export types for use in other files
-export { Property, PropertyFilters, PropertyType } from '@homiio/shared-types';
-
-export interface PropertySearchResult {
-  property: Property;
-  matchScore: number;
-}
+export { Property, PropertyFilters } from '@homiio/shared-types';
 
 /**
  * ## Transport failures propagate; they are not an empty result

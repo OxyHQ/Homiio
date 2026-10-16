@@ -41,10 +41,11 @@
  */
 import type React from 'react';
 import { useMemo, useState } from 'react';
-import { Image, ScrollView, StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Image, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
+import { PageHeader } from '@oxy.so/bloom/page-header';
 import { Button } from '@oxy.so/bloom/button';
 import { Chip } from '@oxy.so/bloom/chip';
 import {
@@ -58,7 +59,6 @@ import { useTheme } from '@oxy.so/bloom/theme';
 import { openAccountDialog, useOxy } from '@oxy.so/services';
 import { LeaseStatus, type Lease } from '@homiio/shared-types';
 
-import { Header } from '@/components/Header';
 import { UpcomingBookingsSection } from '@/components/bookings/UpcomingBookingsSection';
 import { leaseSummaryProps } from '@/components/tenancy/leaseTenancy';
 import {
@@ -73,7 +73,6 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { ListSkeleton } from '@/components/ui/ListSkeleton';
 import { useUserLeases } from '@/hooks/useLeaseQueries';
-import { useIsDesktop } from '@/hooks/useOptimizedMediaQuery';
 import { useUpcomingBookings } from '@/hooks/useUpcomingBookings';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
 import { getPropertyImageSource } from '@/utils/propertyUtils';
@@ -96,7 +95,6 @@ export default function MyHomeScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const { colors } = useTheme();
-  const isDesktop = useIsDesktop();
   const { user, oxyServices, activeSessionId } = useOxy();
   const isAuthed = Boolean(oxyServices && activeSessionId);
 
@@ -127,14 +125,15 @@ export default function MyHomeScreen() {
     includeViewings: true,
   });
 
-  const header = <Header options={{ title: t('sidebar.navigation.myHome') }} />;
   const frame = (body: React.ReactNode) => (
-    <View style={[styles.root, { backgroundColor: colors.background }]}>
-      {header}
-      <SafeAreaView edges={['bottom']} style={styles.safeArea}>
-        {body}
-      </SafeAreaView>
-    </View>
+    <>
+      <PageHeader
+        title={t('sidebar.navigation.myHome')}
+        titleAlign="center"
+        leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+      />
+      {body}
+    </>
   );
 
   if (!isAuthed) {
@@ -194,10 +193,10 @@ export default function MyHomeScreen() {
       return frame(<View style={styles.centerWrap}>{noTenancy}</View>);
     }
     return frame(
-      <ScrollView contentContainerStyle={styles.content}>
+      <View style={styles.content}>
         <UpcomingBookingsSection bookings={bookings} />
         {noTenancy}
-      </ScrollView>,
+      </View>,
     );
   }
 
@@ -214,10 +213,9 @@ export default function MyHomeScreen() {
       <Image source={imageSource} style={styles.thumb} resizeMode="cover" />
     </View>
   ) : null;
-  const history = <LeaseHistorySection lease={lease} format={format} compact={isDesktop} />;
 
   const main = (
-    <View style={styles.column}>
+    <View className="gap-4 lg:min-w-0 lg:flex-1">
       <LeaseSummaryCard
         {...leaseSummaryProps(lease, title, format)}
         subtitle={cityLine || undefined}
@@ -234,7 +232,9 @@ export default function MyHomeScreen() {
           </Button>
         }
       />
-      {isDesktop ? null : history}
+      <View className="lg:hidden">
+        <LeaseHistorySection lease={lease} format={format} />
+      </View>
       {/* Above the money, and the ledger's own comment below is not being
           overruled: it argues the BALANCE outranks the SCHEDULE, which is
           still true of the two of them. This outranks both for a different
@@ -267,7 +267,7 @@ export default function MyHomeScreen() {
   );
 
   return frame(
-    <ScrollView contentContainerStyle={styles.content}>
+    <View style={styles.content}>
       {homes.length > 1 ? (
         <View style={styles.chipRow}>
           {homes.map((home) => (
@@ -282,31 +282,19 @@ export default function MyHomeScreen() {
         </View>
       ) : null}
 
-      {isDesktop ? (
-        <View style={styles.wideRow}>
-          {main}
-          <View style={styles.aside}>
-            {thumbnail}
-            {history}
-          </View>
-        </View>
-      ) : (
-        <>
+      <View className="gap-4 lg:flex-row lg:items-start lg:gap-6">
+        {thumbnail ? <View className="lg:hidden">{thumbnail}</View> : null}
+        {main}
+        <View style={styles.aside} className="hidden lg:flex">
           {thumbnail}
-          {main}
-        </>
-      )}
-    </ScrollView>,
+          <LeaseHistorySection lease={lease} format={format} compact />
+        </View>
+      </View>
+    </View>,
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-  },
-  safeArea: {
-    flex: 1,
-  },
   content: {
     padding: spacing.lg,
     gap: spacing.lg,
@@ -322,16 +310,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.sm,
-  },
-  wideRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing['2xl'],
-  },
-  column: {
-    flex: 1,
-    minWidth: 0,
-    gap: spacing.lg,
   },
   aside: {
     width: 340,

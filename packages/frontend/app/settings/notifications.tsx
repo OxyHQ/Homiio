@@ -3,8 +3,9 @@
  * toggles, Bloom Switch for booleans, a Bloom `Admonition` (with its enable
  * button) while permission is missing, and `confirm()` for clear-all.
  */
-import React, { useCallback, useState } from 'react';
-import { Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { useCallback, useState } from 'react';
+import { Platform, StyleSheet, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { toast } from '@oxy.so/bloom/toast';
 
@@ -16,6 +17,7 @@ import {
   AdmonitionRow,
   AdmonitionText,
 } from '@oxy.so/bloom/admonition';
+import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import {
   RiBankCardLine,
   RiChat3Line,
@@ -32,11 +34,11 @@ import {
   RiTimeLine,
   RiVolumeUpLine,
 } from '@oxy.so/bloom/icons';
+import { PageHeader } from '@oxy.so/bloom/page-header';
 import { Switch } from '@oxy.so/bloom/switch';
 import { SettingsListGroup, SettingsListItem } from '@oxy.so/bloom/settings-list';
 import { useTheme } from '@oxy.so/bloom/theme';
 
-import { Header } from '@/components/Header';
 import { confirm } from '@oxy.so/bloom/surfaces';
 import { useNotifications, type NotificationPreferences } from '@/context/NotificationContext';
 import {
@@ -61,6 +63,7 @@ interface PreferenceRow {
 
 export default function NotificationSettingsScreen() {
   const { t } = useTranslation();
+  const router = useRouter();
   const {
     preferences,
     hasPermission,
@@ -248,14 +251,15 @@ export default function NotificationSettingsScreen() {
   );
 
   return (
-    <View style={[styles.root, { backgroundColor: theme.background }]}>
-      <Header
-        options={{
-          title: t('notification.settings.title'),
-          showBackButton: true,
-        }}
+    <>
+      <PageHeader
+        title={t('notification.settings.title')}
+        titleAlign="center"
+        leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+        onBack={router.canGoBack() ? router.back : undefined}
+        backLabel={t('goBack')}
       />
-      <ScrollView contentContainerStyle={settingsScreenStyles.content}>
+      <View style={settingsScreenStyles.content}>
         {hasPermission ? (
           <SettingsListGroup>
             <SettingsListItem
@@ -375,15 +379,12 @@ export default function NotificationSettingsScreen() {
             />
           </SettingsListGroup>
         ) : null}
-      </ScrollView>
-    </View>
+      </View>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-  },
   permission: {
     marginBottom: spacing.lg,
   },

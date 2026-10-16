@@ -111,5 +111,3 @@ export function BookingTripCard({
     />
   );
 }
-
-export default BookingTripCard;

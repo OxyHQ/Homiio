@@ -25,14 +25,6 @@ export function isSupportedLanguage(code: string): code is SupportedLanguageCode
   return (SUPPORTED_LANGUAGE_CODES as readonly string[]).includes(code);
 }
 
-export async function getStoredLanguage(): Promise<SupportedLanguageCode | null> {
-  const stored = await AsyncStorage.getItem(STORAGE_KEY);
-  if (stored && isSupportedLanguage(stored)) {
-    return stored;
-  }
-  return null;
-}
-
 /**
  * Register a language's strings before switching to it. English is registered
  * at init; every other locale loads on first use (a static asset on web, a

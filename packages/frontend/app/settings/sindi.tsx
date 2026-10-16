@@ -7,16 +7,18 @@
  * UI is removed until a real service ships. The behaviour toggles and the
  * "reset" affordance remain available.
  */
-import React, { useCallback, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { useCallback, useState } from 'react';
+import { StyleSheet, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { toast } from '@oxy.so/bloom/toast';
 
+import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { RiInformationLine, RiRefreshLine } from '@oxy.so/bloom/icons';
+import { PageHeader } from '@oxy.so/bloom/page-header';
 import { Switch } from '@oxy.so/bloom/switch';
 import { SettingsListGroup, SettingsListItem } from '@oxy.so/bloom/settings-list';
 
-import { Header } from '@/components/Header';
 import { confirm } from '@oxy.so/bloom/surfaces';
 import { SindiIcon } from '@/assets/icons';
 import { colors } from '@/styles/colors';
@@ -25,6 +27,7 @@ import { SettingsRowIcon, settingsScreenStyles } from '@/components/profile/Sett
 
 export default function SindiSettingsScreen() {
   const { t } = useTranslation();
+  const router = useRouter();
   const [showTips, setShowTips] = useState(true);
   const handleResetDefaults = useCallback(async (): Promise<void> => {
     const ok = await confirm({
@@ -40,19 +43,22 @@ export default function SindiSettingsScreen() {
   }, [t]);
 
   return (
-    <View style={styles.root}>
-      <Header
-        options={{
-          title: t('sindi.settings.title'),
-          showBackButton: true,
-          leftComponents: [
-            <View key="logo" style={styles.headerIcon}>
+    <>
+      <PageHeader
+        title={t('sindi.settings.title')}
+        titleAlign="center"
+        leading={
+          <>
+            <AppShellMenuButton accessibilityLabel={t('sidebar.open')} />
+            <View style={styles.headerIcon}>
               <SindiIcon size={20} color={colors.sindiColor} />
-            </View>,
-          ],
-        }}
+            </View>
+          </>
+        }
+        onBack={router.canGoBack() ? router.back : undefined}
+        backLabel={t('goBack')}
       />
-      <ScrollView contentContainerStyle={settingsScreenStyles.content}>
+      <View style={settingsScreenStyles.content}>
         <SettingsListGroup
           title={t('sindi.settings.behavior')}
           footer={t('sindi.settings.behaviorFooter')}
@@ -72,16 +78,12 @@ export default function SindiSettingsScreen() {
             onPress={() => void handleResetDefaults()}
           />
         </SettingsListGroup>
-      </ScrollView>
-    </View>
+      </View>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
   headerIcon: {
     marginLeft: spacing.xs,
   },

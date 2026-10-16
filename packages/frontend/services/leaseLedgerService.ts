@@ -37,7 +37,7 @@ export interface LeaseLedger {
  * obligation are two different intents, and a key that ignored it would fold
  * the second into the first.
  */
-export function idempotencyKeyFor(
+function idempotencyKeyFor(
   action: 'declare' | 'refund',
   subjectId: string,
   amount: number | undefined,

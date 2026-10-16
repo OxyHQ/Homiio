@@ -31,7 +31,7 @@
  * precisely the "no presentarla como actualizada" the issue forbids.
  */
 
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useQuery, type QueryKey } from '@tanstack/react-query';
 import i18next from 'i18next';
 import { toast } from '@oxy.so/bloom/toast';
@@ -190,8 +190,25 @@ export function useHomeSections(
     },
     enabled: options.enabled,
     staleTime: HOME_SECTIONS_STALE_TIME_MS,
-    retry: (failureCount, error) =>
-      failureCount < HOME_SECTIONS_MAX_RETRIES && isRetryableHomeSectionsError(error),
+    /**
+     * ONE message per failed load, and never one per retry.
+     *
+     * React Query asks this after EVERY failed attempt, and the answer `false`
+     * is the moment the load becomes a failure — so that is where the person is
+     * told, once, by the event itself rather than by a render noticing an error
+     * state afterwards. Retries never reach it (they answer `true`), re-renders
+     * and extra observers of the same key never call it at all, and a new scope
+     * is a new query that can fail — and be reported — on its own.
+     *
+     * `i18next.t` rather than `useTranslation`'s `t`, so the message is read at
+     * the moment of failure in whatever language is current.
+     */
+    retry: (failureCount, error) => {
+      const willRetry =
+        failureCount < HOME_SECTIONS_MAX_RETRIES && isRetryableHomeSectionsError(error);
+      if (!willRetry) toast.error(homeSectionsFailureMessage());
+      return willRetry;
+    },
   });
 
   const restored: HomeSnapshot | null = useMemo(
@@ -209,31 +226,6 @@ export function useHomeSections(
     // eslint-disable-next-line react-hooks/purity -- see the two lines above
     ageMs: generatedAt ? Date.now() - new Date(generatedAt).getTime() : null,
   });
-
-  /**
-   * ONE message per distinct failure, and never one per retry.
-   *
-   * The signature is a STRING built from the scope, the offering and the
-   * message, so React Query's own retries — which do not change any of the
-   * three — cannot re-fire it, and switching city after a failure legitimately
-   * can. A ref-based "have I toasted yet" flag would have to be reset on every
-   * scope change by hand, and the hand is what gets forgotten.
-   *
-   * An effect is the right tool here rather than a smell: a toast is an external
-   * system, and updating an external system from React state is the one thing
-   * effects are for.
-   */
-  const failureSignature = query.isError
-    ? `${scopeKey}|${offering}|${query.error instanceof Error ? query.error.message : 'unknown'}`
-    : null;
-
-  useEffect(() => {
-    if (failureSignature === null) return;
-    // `i18next.t` rather than `useTranslation`'s `t`: the latter changes
-    // identity on a language switch, which would re-toast an old failure the
-    // moment somebody changed language.
-    toast.error(homeSectionsFailureMessage());
-  }, [failureSignature]);
 
   const refresh = useCallback(async () => {
     // Refetches the SAME key. The location ladder is untouched, so the scope

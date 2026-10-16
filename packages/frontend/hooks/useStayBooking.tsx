@@ -37,7 +37,7 @@ import { isShortTermRentable } from '@/utils/propertyUtils';
 const DEFAULT_GUESTS: GuestCounts = { adults: 1, children: 0, infants: 0, pets: 0 };
 const DAY_MS = 1000 * 60 * 60 * 24;
 
-export type StayDateField = 'checkIn' | 'checkOut';
+type StayDateField = 'checkIn' | 'checkOut';
 
 export interface StayBooking {
   /** False when the listing cannot be booked in Homiio (no nightly rate, external). */
@@ -73,7 +73,7 @@ export interface StayBooking {
 type TFn = ReturnType<typeof useTranslation>['t'];
 
 /** "2 guests, 1 infant" — infants are listed apart and do not count as guests. */
-export function formatGuestSummary(t: TFn, counts: GuestCounts): string {
+function formatGuestSummary(t: TFn, counts: GuestCounts): string {
   const guests = t('booking.guests.count', { count: counts.adults + counts.children });
   if (counts.infants === 0) return guests;
   return `${guests}, ${t('booking.guests.infantCount', { count: counts.infants })}`;

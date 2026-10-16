@@ -9,10 +9,11 @@
  */
 import type React from 'react';
 import { useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
+import { PageHeader } from '@oxy.so/bloom/page-header';
 
 import {
   SegmentedControl,
@@ -22,14 +23,12 @@ import {
 import { useOxy, openAccountDialog } from '@oxy.so/services';
 import { type Reservation, ReservationStatus } from '@homiio/shared-types';
 
-import { Header } from '@/components/Header';
 import { ReservationCard } from '@/components/ReservationCard';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { ListSkeleton } from '@/components/ui/ListSkeleton';
 import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
 import { useReservationsQuery } from '@/hooks/useReservationQueries';
-import { colors } from '@/styles/colors';
 import { spacing } from '@/constants/styles';
 import { RiHotelBedLine, RiLoginBoxLine, RiSearchLine } from '@oxy.so/bloom/icons';
 
@@ -120,107 +119,100 @@ export default function StaysScreen() {
   }, [filter, buckets, t]);
 
   const header = (
-    <Header
-      options={{
-        showBackButton: true,
-        title: t('stays.list.title'),
-      }}
+    <PageHeader
+      title={t('stays.list.title')}
+      titleAlign="center"
+      leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+      onBack={router.canGoBack() ? router.back : undefined}
+      backLabel={t('goBack')}
     />
   );
 
   if (!isAuthed) {
     return (
-      <View style={styles.root}>
+      <>
         {header}
-        <SafeAreaView edges={['bottom']} style={styles.safeArea}>
-          <View style={styles.centerWrap}>
-            <EmptyState
-              icon={RiHotelBedLine}
-              title={t('stays.list.signInTitle')}
-              description={t('stays.list.signInDescription')}
-              actionText={t('stays.list.signIn')}
-              actionIcon={RiLoginBoxLine}
-              onAction={() => openAccountDialog()}
-            />
-          </View>
-        </SafeAreaView>
-      </View>
+        <View style={styles.centerWrap}>
+          <EmptyState
+            icon={RiHotelBedLine}
+            title={t('stays.list.signInTitle')}
+            description={t('stays.list.signInDescription')}
+            actionText={t('stays.list.signIn')}
+            actionIcon={RiLoginBoxLine}
+            onAction={() => openAccountDialog()}
+          />
+        </View>
+      </>
     );
   }
 
   if (reservationsQuery.isPending) {
     return (
-      <View style={styles.root}>
+      <>
         {header}
-        <SafeAreaView edges={['bottom']} style={styles.safeArea}>
-          <View style={styles.content}>
-            <FilterRow value={filter} onChange={setFilter} t={t} />
-            <ListSkeleton rows={4} rowHeight={140} />
-          </View>
-        </SafeAreaView>
-      </View>
+        <View style={styles.content}>
+          <FilterRow value={filter} onChange={setFilter} t={t} />
+          <ListSkeleton rows={4} rowHeight={140} />
+        </View>
+      </>
     );
   }
 
   if (reservationsQuery.isError) {
     return (
-      <View style={styles.root}>
+      <>
         {header}
-        <SafeAreaView edges={['bottom']} style={styles.safeArea}>
-          <View style={styles.centerWrap}>
-            <ErrorState
-              title={t('stays.list.loadError')}
-              description={reservationsQuery.error?.message ?? t('stays.list.tryAgain')}
-              retryLabel={t('applications.list.retry')}
-              onRetry={() => reservationsQuery.refetch()}
-            />
-          </View>
-        </SafeAreaView>
-      </View>
+        <View style={styles.centerWrap}>
+          <ErrorState
+            title={t('stays.list.loadError')}
+            description={reservationsQuery.error?.message ?? t('stays.list.tryAgain')}
+            retryLabel={t('applications.list.retry')}
+            onRetry={() => reservationsQuery.refetch()}
+          />
+        </View>
+      </>
     );
   }
 
   return (
-    <View style={styles.root}>
+    <>
       {header}
-      <SafeAreaView edges={['bottom']} style={styles.safeArea}>
-        <ScrollView contentContainerStyle={styles.content}>
-          <FilterRow value={filter} onChange={setFilter} t={t} />
+      <View style={styles.content}>
+        <FilterRow value={filter} onChange={setFilter} t={t} />
 
-          {filteredGroups.length === 0 ? (
-            <View style={styles.emptyWrap}>
-              <EmptyState
-                icon={RiHotelBedLine}
-                title={
-                  filter === 'all'
-                    ? t('stays.list.emptyAllTitle')
-                    : t('stays.list.emptyFilteredTitle')
-                }
-                description={
-                  filter === 'all'
-                    ? t('stays.list.emptyAllDescription')
-                    : t('stays.list.emptyFilteredDescription')
-                }
-                actionText={t('stays.list.exploreStays')}
-                actionIcon={RiSearchLine}
-                onAction={() => router.push('/explore?offering=short_term_rent')}
-              />
-            </View>
-          ) : (
-            filteredGroups.map((group) => (
-              <View key={group.label} style={styles.section}>
-                <SectionEyebrow>{group.label}</SectionEyebrow>
-                <View style={styles.cards}>
-                  {group.items.map((reservation) => (
-                    <ReservationCard key={reservation.id} reservation={reservation} />
-                  ))}
-                </View>
+        {filteredGroups.length === 0 ? (
+          <View style={styles.emptyWrap}>
+            <EmptyState
+              icon={RiHotelBedLine}
+              title={
+                filter === 'all'
+                  ? t('stays.list.emptyAllTitle')
+                  : t('stays.list.emptyFilteredTitle')
+              }
+              description={
+                filter === 'all'
+                  ? t('stays.list.emptyAllDescription')
+                  : t('stays.list.emptyFilteredDescription')
+              }
+              actionText={t('stays.list.exploreStays')}
+              actionIcon={RiSearchLine}
+              onAction={() => router.push('/explore?offering=short_term_rent')}
+            />
+          </View>
+        ) : (
+          filteredGroups.map((group) => (
+            <View key={group.label} style={styles.section}>
+              <SectionEyebrow>{group.label}</SectionEyebrow>
+              <View style={styles.cards}>
+                {group.items.map((reservation) => (
+                  <ReservationCard key={reservation.id} reservation={reservation} />
+                ))}
               </View>
-            ))
-          )}
-        </ScrollView>
-      </SafeAreaView>
-    </View>
+            </View>
+          ))
+        )}
+      </View>
+    </>
   );
 }
 
@@ -247,13 +239,6 @@ const FilterRow: React.FC<FilterRowProps> = ({ value, onChange, t }) => (
 );
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  safeArea: {
-    flex: 1,
-  },
   content: {
     padding: spacing.lg,
     gap: spacing['2xl'],

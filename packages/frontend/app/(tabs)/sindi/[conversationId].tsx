@@ -1,14 +1,14 @@
-import React, { useEffect, useMemo } from 'react';
-import { KeyboardAvoidingView, Platform, StyleSheet, View, type ViewStyle } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useEffect, useMemo } from 'react';
+import { KeyboardAvoidingView, Platform, StyleSheet } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import type { Message } from '@ai-sdk/react';
+import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { Button } from '@oxy.so/bloom/button';
 import { RiLockLine, RiLoginBoxLine, RiShare2Line } from '@oxy.so/bloom/icons';
 import { Loading } from '@oxy.so/bloom/loading';
+import { PageHeader } from '@oxy.so/bloom/page-header';
 import { useOxy, openAccountDialog } from '@oxy.so/services';
-import { Header } from '@/components/Header';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ChatContent } from '@/components/sindi/ChatContent';
 import { useSindiShare } from '@/hooks/useSindiShare';
@@ -17,22 +17,8 @@ import { useConversationStore } from '@/store/conversationStore';
 import { logger } from '@/utils/logger';
 import { colors } from '@/styles/colors';
 
-/** iOS keyboard offset accounting for the fixed Header height. */
+/** iOS keyboard offset accounting for the page header height. */
 const IOS_KEYBOARD_OFFSET = 64;
-
-/**
- * Web layout overrides for the screen shell. RN's StyleSheet types reject the
- * web-only `100vh`/sticky values, so they are applied via typed inline
- * overrides (the standard escape hatch used across the app).
- */
-const webContainer: ViewStyle | undefined =
-  Platform.OS === 'web'
-    ? {
-        height: '100vh' as unknown as number,
-        display: 'flex' as const,
-        flexDirection: 'column' as const,
-      }
-    : undefined;
 
 /**
  * Sindi conversation route — a thin orchestrator.
@@ -43,10 +29,9 @@ const webContainer: ViewStyle | undefined =
  * All chat logic lives in `useSindiConversation`; presentation lives in
  * `components/sindi/*`.
  *
- * Safe area: the `Header` owns the top inset; `SafeAreaView edges={['bottom']}`
- * reserves the home-indicator gap; `KeyboardAvoidingView` lifts the composer
- * above the keyboard (iOS padding + Header offset; Android uses the native
- * `pan` layout mode configured in `app.config.js`).
+ * Safe area: the app shell owns the insets; `KeyboardAvoidingView` lifts the
+ * composer above the keyboard (iOS padding + header offset; Android uses the
+ * native `pan` layout mode configured in `app.config.js`).
  */
 export default function ConversationDetail() {
   const { oxyServices, activeSessionId } = useOxy();
@@ -101,8 +86,14 @@ export default function ConversationDetail() {
 
   if (!isAuthenticated) {
     return (
-      <View style={styles.container}>
-        <Header options={{ title: t('sindi.conversation.title'), showBackButton: true }} />
+      <>
+        <PageHeader
+          title={t('sindi.conversation.title')}
+          titleAlign="center"
+          leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+          onBack={router.canGoBack() ? router.back : undefined}
+          backLabel={t('goBack')}
+        />
         <EmptyState
           icon={RiLockLine}
           title={t('sindi.auth.required')}
@@ -112,38 +103,44 @@ export default function ConversationDetail() {
           onAction={() => openAccountDialog()}
           iconColor={colors.primaryColor}
         />
-      </View>
+      </>
     );
   }
 
   if (loading) {
     return (
-      <View style={styles.container}>
-        <Header options={{ title: t('sindi.conversation.loading'), showBackButton: true }} />
+      <>
+        <PageHeader
+          title={t('sindi.conversation.loading')}
+          titleAlign="center"
+          leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+          onBack={router.canGoBack() ? router.back : undefined}
+          backLabel={t('goBack')}
+        />
         <Loading size="lg" text={t('sindi.conversation.loadingMessage')} style={styles.loading} />
-      </View>
+      </>
     );
   }
 
   return (
-    <SafeAreaView style={[styles.container, webContainer]} edges={['bottom']}>
-      <Header
-        options={{
-          title: currentConversation?.title || t('sindi.conversation.title'),
-          subtitle: t('sindi.conversation.subtitle'),
-          showBackButton: true,
-          rightComponents: [
-            <Button
-              key="share"
-              iconOnly
-              leadingIcon={RiShare2Line}
-              onPress={handleShare}
-              accessibilityLabel={t('common.share')}
-              tone="neutral"
-              appearance="outline"
-            />,
-          ],
-        }}
+    <>
+      <PageHeader
+        title={currentConversation?.title || t('sindi.conversation.title')}
+        subtitle={t('sindi.conversation.subtitle')}
+        titleAlign="center"
+        leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+        onBack={router.canGoBack() ? router.back : undefined}
+        backLabel={t('goBack')}
+        actions={
+          <Button
+            iconOnly
+            leadingIcon={RiShare2Line}
+            onPress={handleShare}
+            accessibilityLabel={t('common.share')}
+            tone="neutral"
+            appearance="outline"
+          />
+        }
       />
       <KeyboardAvoidingView
         style={styles.container}
@@ -172,14 +169,13 @@ export default function ConversationDetail() {
           onConversationPersisted={(id) => router.replace(`/sindi/${id}`)}
         />
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
   },
   loading: {
     flex: 1,

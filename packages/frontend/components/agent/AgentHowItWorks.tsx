@@ -8,18 +8,17 @@
  * stay padding-free.
  */
 import type React from 'react';
-import { Platform, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
-import { useMediaQuery } from 'react-responsive';
 
 import { Badge } from '@oxy.so/bloom/badge';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { H1, Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { colors } from '@/styles/colors';
-import { radius, resolvePagePadding, spacing, tracker } from '@/constants/styles';
+import { radius, spacing, tracker } from '@/constants/styles';
 
 interface Step {
   /** i18n suffix under `agent.how.steps.*`. */
@@ -54,14 +53,15 @@ interface StepCardProps {
   title: string;
   body: string;
   imageUrl: string;
-  height: number;
 }
 
-const StepCard: React.FC<StepCardProps> = ({ index, title, body, imageUrl, height }) => {
+const StepCard: React.FC<StepCardProps> = ({ index, title, body, imageUrl }) => {
   const theme = useTheme();
   return (
     <View style={styles.step}>
-      <View style={[styles.photoWrap, { height }]}>
+      {/* A touch landscape at every width: a full-width photo when stacked,
+          one of three in the row on wide screens. */}
+      <View className="aspect-[5/3]" style={styles.photoWrap}>
         <Image
           source={{ uri: imageUrl }}
           style={styles.photo}
@@ -91,37 +91,17 @@ const StepCard: React.FC<StepCardProps> = ({ index, title, body, imageUrl, heigh
 export const AgentHowItWorks: React.FC = () => {
   const { t } = useTranslation();
   const theme = useTheme();
-  const isWide = useMediaQuery({ minWidth: 768 });
-  const { width } = useWindowDimensions();
-  const horizontalPadding = resolvePagePadding(isWide);
-  const isWeb = Platform.OS === 'web';
-
-  // Wide: three photos in a row read best a touch landscape; mobile stacks with
-  // a taller photo per step. Both derive from the viewport so the photos scale
-  // with the layout instead of a hardcoded pixel height.
-  const photoHeight = isWide
-    ? Math.round(Math.min(width, 1100) * 0.18)
-    : Math.round(Math.min(width, 520) * 0.6);
-
   return (
-    <View style={{ paddingHorizontal: horizontalPadding }}>
+    <View className="px-4 md:px-8">
       <View style={styles.header}>
         <H1
-          style={[
-            styles.title,
-            { color: theme.colors.text, textAlign: isWide ? 'center' : 'left' },
-          ]}
+          className="text-left md:text-center"
+          style={[styles.title, { color: theme.colors.text }]}
         >
           {t('agent.how.title')}
         </H1>
       </View>
-      <View
-        style={[
-          styles.steps,
-          isWide ? styles.stepsRow : styles.stepsColumn,
-          isWeb && isWide ? styles.stepsWebGap : null,
-        ]}
-      >
+      <View className="flex-col gap-8 md:flex-row" style={styles.steps}>
         {STEPS.map((step, stepIndex) => (
           <StepCard
             key={step.key}
@@ -129,7 +109,6 @@ export const AgentHowItWorks: React.FC = () => {
             title={t(`agent.how.steps.${step.key}.title`)}
             body={t(`agent.how.steps.${step.key}.body`)}
             imageUrl={step.imageUrl}
-            height={photoHeight}
           />
         ))}
       </View>
@@ -151,17 +130,6 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 1100,
     alignSelf: 'center',
-  },
-  stepsRow: {
-    flexDirection: 'row',
-    gap: spacing['2xl'],
-  },
-  stepsColumn: {
-    flexDirection: 'column',
-    gap: spacing['3xl'],
-  },
-  stepsWebGap: {
-    gap: spacing['3xl'],
   },
   step: {
     flex: 1,
@@ -195,5 +163,3 @@ const styles = StyleSheet.create({
     left: spacing.md,
   },
 });
-
-export default AgentHowItWorks;

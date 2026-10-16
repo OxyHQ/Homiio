@@ -38,7 +38,6 @@ export interface RoommateRelationship {
 export const useRoommate = () => {
   const { roommates: profiles, requests, relationships, isLoading, error } = useRoommateSelectors();
   const {
-    setRoommates,
     setRequests,
     setRelationships,
     setLoading,
@@ -52,17 +51,6 @@ export const useRoommate = () => {
   // Store synchronization happens in the `fetch*` helpers below, using the
   // `refetch()` result, since TanStack Query v5 removed the per-query
   // `onSuccess` / `onError` callbacks.
-  const profilesQuery = useQuery({
-    queryKey: ['roommates', 'profiles'],
-    queryFn: async () => {
-      const response = await roommateService.getRoommateProfiles();
-      return response.profiles || [];
-    },
-    enabled: false,
-    staleTime: 1000 * 30,
-    gcTime: 1000 * 60 * 10,
-  });
-
   const requestsQuery = useQuery({
     queryKey: ['roommates', 'requests'],
     queryFn: async () => {
@@ -84,24 +72,6 @@ export const useRoommate = () => {
     staleTime: 1000 * 30,
     gcTime: 1000 * 60 * 10,
   });
-
-  // Adapter functions to trigger refetch when requested by tabs/UI
-  const fetchProfiles = useCallback(async () => {
-    if (!oxyServices || !activeSessionId) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const result = await profilesQuery.refetch();
-      if (result.error) {
-        setError(result.error.message || 'Failed to fetch profiles');
-        return;
-      }
-      // Copy the array so the store never shares a reference with the query cache.
-      setRoommates(Array.isArray(result.data) ? [...result.data] : []);
-    } finally {
-      setLoading(false);
-    }
-  }, [oxyServices, activeSessionId, profilesQuery, setLoading, setError, setRoommates]);
 
   // Fetch roommate requests
   const fetchRequests = useCallback(async () => {
@@ -270,15 +240,8 @@ export const useRoommate = () => {
     profiles,
     requests,
     relationships,
-    isLoading:
-      isLoading ||
-      profilesQuery.isFetching ||
-      requestsQuery.isFetching ||
-      relationshipsQuery.isFetching,
+    isLoading: isLoading || requestsQuery.isFetching || relationshipsQuery.isFetching,
     error,
-    fetchProfiles,
-    fetchRequests,
-    fetchRelationships,
     sendRequest,
     acceptRequest,
     declineRequest,

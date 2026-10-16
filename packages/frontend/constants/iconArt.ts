@@ -6,7 +6,7 @@ import type { ImageSourcePropType } from 'react-native';
  * one visual source per id (`pet_friendly`, `gym`, `pools`/`swimming_pool`, …).
  * Ids without art return `undefined` so consumers fall back to a Remix line icon.
  */
-export const ICON_ART: Partial<Record<string, ImageSourcePropType>> = {
+const ICON_ART: Partial<Record<string, ImageSourcePropType>> = {
   // Home categories (long-term + vacation)
   studios: require('@/assets/icon-art/studios.png'),
   rooms: require('@/assets/icon-art/rooms.png'),
@@ -62,6 +62,3 @@ export const ICON_ART: Partial<Record<string, ImageSourcePropType>> = {
 };
 
 export const getIconArt = (id: string): ImageSourcePropType | undefined => ICON_ART[id];
-
-/** Placeholder for home categories that do not have dedicated art yet. */
-export const ICON_ART_PLACEHOLDER: ImageSourcePropType = require('@/assets/icon-art/isometric-icon.png');

@@ -677,5 +677,3 @@ const styles = StyleSheet.create({
     marginTop: spacing.xl,
   },
 });
-
-export default SearchFiltersDialog;

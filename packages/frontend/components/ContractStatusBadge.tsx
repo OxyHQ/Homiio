@@ -34,5 +34,3 @@ export function ContractStatusBadge({
     </Chip>
   );
 }
-
-export default ContractStatusBadge;

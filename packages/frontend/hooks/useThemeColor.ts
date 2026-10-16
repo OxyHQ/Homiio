@@ -1,19 +1,15 @@
 /**
  * Theme hooks backed by Bloom — the single source of truth for colors.
  *
- * - `useThemeColor(key)` re-exports Bloom's hook so any Bloom `ThemeColors` key
- *   resolves to the active light/dark value.
  * - `useColors()` returns Bloom's `ThemeColors` merged with Homiio's
  *   `DomainColors` (yellow secondary, chat palette), mirroring the accounts
  *   app's pattern. Prefer this in components that need live light/dark values.
  */
 
 import { useMemo } from 'react';
-import { useTheme, useThemeColor } from '@oxy.so/bloom/theme';
+import { useTheme } from '@oxy.so/bloom/theme';
 import type { ThemeColors } from '@oxy.so/bloom/theme';
 import { DomainColors, type DomainColorKey } from '@/styles/colors';
-
-export { useThemeColor };
 
 /** Bloom theme colors merged with Homiio-specific domain colors. */
 export type AppColors = ThemeColors & Record<DomainColorKey, string>;

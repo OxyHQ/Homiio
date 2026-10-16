@@ -80,8 +80,10 @@ export type LocationScopeSource =
  * every one of them has to make the same disclosure — "Bucharest · approximate
  * area" — and a surface that forgets states a guess as a fact.
  */
-export const INFERRED_SCOPE_SOURCES: ReadonlySet<LocationScopeSource> =
-  new Set<LocationScopeSource>(['device', 'ip']);
+const INFERRED_SCOPE_SOURCES: ReadonlySet<LocationScopeSource> = new Set<LocationScopeSource>([
+  'device',
+  'ip',
+]);
 
 /**
  * What the device rung currently knows.
@@ -176,7 +178,7 @@ export interface LocationScopeInputs {
  * precisión posterior se ofrece como acción cuando implique cambiar la
  * consulta, en vez de saltar automáticamente de ciudad."
  */
-export interface ScopeUpgrade {
+interface ScopeUpgrade {
   readonly source: 'device';
   readonly selection: LocationSelection;
 }

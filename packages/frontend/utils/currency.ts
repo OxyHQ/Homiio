@@ -20,7 +20,7 @@
  */
 import { formatMoney } from '@homiio/shared-types';
 
-import { getRate } from '@/utils/exchangeRates';
+import type { ExchangeRateTable } from '@/utils/exchangeRates';
 
 export interface Currency {
   code: string;
@@ -182,35 +182,15 @@ export function getCurrencyByCode(code: string): Currency | undefined {
   return CURRENCIES.find((currency) => currency.code === code);
 }
 
-/**
- * Get default currency (USD)
- */
-export function getDefaultCurrency(): Currency {
-  return CURRENCIES.find((currency) => currency.code === 'USD') || CURRENCIES[0];
-}
-
-/**
- * Get exchange rate for a currency (relative to USD).
- * Reads the in-memory cache maintained by `@/utils/exchangeRates`.
- */
-export function getExchangeRate(currencyCode: string): number {
-  return getRate(currencyCode);
-}
-
-/**
- * Convert amount from one currency to another
- */
-export function convertCurrency(amount: number, fromCurrency: string, toCurrency: string): number {
-  if (fromCurrency === toCurrency) {
-    return amount;
-  }
-
-  // Convert to USD first (base currency)
-  const fromRate = getExchangeRate(fromCurrency);
-  const toRate = getExchangeRate(toCurrency);
-
-  // Convert: amount / fromRate * toRate
-  return (amount / fromRate) * toRate;
+/** Convert an amount between two currencies with the given USD-based rates. */
+export function convertCurrency(
+  amount: number,
+  fromCurrency: string,
+  toCurrency: string,
+  rates: ExchangeRateTable,
+): number {
+  if (fromCurrency === toCurrency) return amount;
+  return (amount / (rates[fromCurrency] ?? 1)) * (rates[toCurrency] ?? 1);
 }
 
 /**
@@ -224,12 +204,13 @@ export function getExchangeRateDisplay(
   fromCurrency: string,
   toCurrency: string,
   locale: string,
+  rates: ExchangeRateTable,
 ): string {
   if (fromCurrency === toCurrency) {
     return '1:1';
   }
 
-  const rate = convertCurrency(1, fromCurrency, toCurrency);
+  const rate = convertCurrency(1, fromCurrency, toCurrency, rates);
   return `1 ${fromCurrency} = ${formatMoney(rate, toCurrency, locale, { maximumFractionDigits: 4 })}`;
 }
 
@@ -248,13 +229,6 @@ export function parseCurrencyAmount(amountString: string): number {
  */
 export function isValidCurrencyCode(code: string): boolean {
   return CURRENCIES.some((currency) => currency.code === code);
-}
-
-/**
- * Get popular currencies (first 20)
- */
-export function getPopularCurrencies(): Currency[] {
-  return CURRENCIES.slice(0, 20);
 }
 
 /**

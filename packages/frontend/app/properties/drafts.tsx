@@ -13,7 +13,7 @@
  * which also gives us a clean optimistic delete.
  */
 import React, { useCallback } from 'react';
-import { Platform, ScrollView, StyleSheet, View, type ViewStyle } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -45,7 +45,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { confirm } from '@oxy.so/bloom/surfaces';
 import { toast } from '@oxy.so/bloom/toast';
 import { colors } from '@/styles/colors';
-import { contentClamp, spacing } from '@/constants/styles';
+import { spacing } from '@/constants/styles';
 import { logger } from '@/utils/logger';
 import { formatPrice } from '@homiio/shared-types';
 import { useFormatting } from '@/utils/format';
@@ -285,36 +285,19 @@ export default function PropertyDraftsScreen() {
   })();
 
   return (
-    <View style={styles.container}>
+    <>
       <PropertyListHeader
         title={t('property.drafts.title')}
         subtitle={drafts.length > 0 ? `${drafts.length} saved` : undefined}
       />
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {body}
-      </ScrollView>
-    </View>
+      <View style={styles.scrollContent}>{body}</View>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  scroll: Platform.select<ViewStyle>({
-    web: { flex: 1, overflow: 'auto' } as unknown as ViewStyle,
-    default: { flex: 1 },
-  }) as ViewStyle,
   scrollContent: {
     paddingBottom: spacing['4xl'],
-    maxWidth: contentClamp.page,
-    width: '100%',
-    alignSelf: 'center',
   },
   content: {
     padding: spacing.lg,

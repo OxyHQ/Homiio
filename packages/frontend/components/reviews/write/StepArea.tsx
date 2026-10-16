@@ -54,5 +54,3 @@ const styles = StyleSheet.create({
     gap: spacing.xl,
   },
 });
-
-export default StepArea;

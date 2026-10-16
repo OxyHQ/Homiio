@@ -53,7 +53,7 @@
  * search.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Platform } from 'react-native';
 import * as Location from 'expo-location';
@@ -180,7 +180,7 @@ async function takeDeviceFix(mayPrompt: boolean): Promise<DeviceFixOutcome> {
  * that changed every time the GPS jittered by a metre would re-fetch the gateway
  * continuously for an answer that cannot have changed.
  */
-export function deviceAreaKey(longitude: number, latitude: number): string {
+function deviceAreaKey(longitude: number, latitude: number): string {
   const grid = (value: number): number => {
     const factor = 10 ** KEY_COORD_DECIMALS;
     const rounded = Math.round(value * factor) / factor;
@@ -220,20 +220,33 @@ export interface LocationScope extends LocationScopeState {
 /**
  * A one-shot deadline, as a boolean.
  *
- * `true` once `ms` have passed since the hook mounted. The timer is cleared on
- * unmount, so nothing keeps a jest worker — or a backgrounded app — awake.
+ * `true` once `ms` have passed since the hook mounted. The clock is an external
+ * source, so it is read with `useSyncExternalStore`: subscribing (at commit)
+ * starts the timer and unsubscribing (unmount) clears it, so nothing keeps a
+ * jest worker — or a backgrounded app — awake.
  *
  * It is a STATE and not a ref because the ladder has to re-run when it trips:
  * the whole point is that the surface moves from a skeleton to the destinations
  * board at the deadline, and a ref changes nothing on screen.
  */
+function createDeadline(ms: number) {
+  let elapsed = false;
+  return {
+    hasElapsed: () => elapsed,
+    subscribe: (onElapsed: () => void) => {
+      if (elapsed) return () => {};
+      const timer = setTimeout(() => {
+        elapsed = true;
+        onElapsed();
+      }, ms);
+      return () => clearTimeout(timer);
+    },
+  };
+}
+
 function useDeadline(ms: number): boolean {
-  const [elapsed, setElapsed] = useState(false);
-  useEffect(() => {
-    const timer = setTimeout(() => setElapsed(true), ms);
-    return () => clearTimeout(timer);
-  }, [ms]);
-  return elapsed;
+  const [deadline] = useState(() => createDeadline(ms));
+  return useSyncExternalStore(deadline.subscribe, deadline.hasElapsed, deadline.hasElapsed);
 }
 
 /**
@@ -439,10 +452,18 @@ export function useLocationScope(): LocationScope {
   /**
    * Record the FIRST inferred scope of the session.
    *
-   * An effect, because it writes to an external store — the one thing effects
-   * are actually for. It is idempotent at the store (`commitAutoScope` ignores
-   * a second call), so the fact that this runs on every render where an
-   * inference is in force is harmless rather than load-bearing.
+   * Still an effect, deliberately. "The first inference in force" is HISTORY,
+   * not something derivable from the current inputs, and the inference in
+   * force is only known once the ladder has run over three asynchronous
+   * sources (the device fix, the network answer and the startup deadline) plus
+   * the saved-area query. No single event handler sees all of them: the
+   * QueryClient is created inside the root layout, so nothing at module scope
+   * can observe the cache and run the ladder when an answer lands. With a
+   * module-scope QueryClient (a `QueryObserver` over the two inference queries)
+   * this commit would move into that observer's callback and the effect would
+   * go. It is idempotent at the store (`commitAutoScope` ignores a second
+   * call), so running on every render where an inference is in force is
+   * harmless rather than load-bearing.
    *
    * `deviceRequested` is excluded: a scope the user ASKED for is not an
    * inference the app needs to protect them from, and recording it would make

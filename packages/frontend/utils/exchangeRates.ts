@@ -1,28 +1,23 @@
 /**
- * Exchange-rate source for Homiio.
+ * Exchange rates for Homiio, relative to USD.
  *
- * Live rates are fetched from the free, key-less frankfurter.app API
- * (https://www.frankfurter.app) with USD as the base currency. Results are
- * cached in-memory for synchronous lookups and persisted to AsyncStorage so
- * they survive app restarts (TTL: 12h). When the network is unavailable and no
- * fresh cache exists, lookups fall back to the bundled {@link STALE_FALLBACK_RATES}
- * table — clearly named so callers understand these values are last-resort and
- * may be stale.
+ * Live rates come from the free, key-less frankfurter.app API
+ * (https://www.frankfurter.app) through `useExchangeRates()` — React Query owns
+ * the caching (12h). While they load, or if the API is unreachable,
+ * {@link FALLBACK_RATES} stands in: approximate, last-resort values.
  *
- * The public synchronous API (`getRate`) always reads the in-memory cache; call
- * {@link refreshExchangeRates} from app bootstrap to populate live rates.
+ * Listing prices are never converted (see `components/MoneyText.tsx`); rates
+ * only reach the currency picker in settings.
  */
-import { getData, storeData } from '@/utils/storage';
-import { logger } from '@/utils/logger';
+import { useQuery } from '@tanstack/react-query';
 
-export type ExchangeRateTable = Record<string, number>;
+export type ExchangeRateTable = Readonly<Record<string, number>>;
 
 /**
- * Last-resort rates (base: USD). Used only when no live or cached rate is
- * available. These are approximate and intentionally not authoritative —
- * frankfurter.app is the real source.
+ * Last-resort rates (base: USD), used only until live rates arrive or when the
+ * API is unreachable. Approximate and intentionally not authoritative.
  */
-export const STALE_FALLBACK_RATES: ExchangeRateTable = {
+export const FALLBACK_RATES: ExchangeRateTable = {
   USD: 1.0,
   EUR: 0.85,
   GBP: 0.73,
@@ -168,104 +163,34 @@ export const STALE_FALLBACK_RATES: ExchangeRateTable = {
   FAIR: 1.0,
 };
 
-/** Rate that never comes from the live API (no market feed exists). */
+/** Rates that never come from the live API (no market feed exists). */
 const FIXED_RATES: ExchangeRateTable = {
+  // FAIRCoin is pegged 1:1 to the US dollar by design.
   FAIR: 1.0,
 };
 
-const CACHE_STORAGE_KEY = 'homiio.exchangeRates';
-const CACHE_TTL_MS = 12 * 60 * 60 * 1000;
 const FRANKFURTER_LATEST_URL = 'https://api.frankfurter.app/latest?from=USD';
-
-interface CachedRates {
-  rates: ExchangeRateTable;
-  fetchedAt: number;
-}
-
-interface FrankfurterResponse {
-  base: string;
-  date: string;
-  rates: Record<string, number>;
-}
-
-let memoryRates: ExchangeRateTable = { ...STALE_FALLBACK_RATES };
-let lastFetchedAt = 0;
-let inFlight: Promise<ExchangeRateTable> | null = null;
-let hydrated = false;
-
-function applyRates(rates: ExchangeRateTable, fetchedAt: number): void {
-  memoryRates = { ...STALE_FALLBACK_RATES, ...rates, ...FIXED_RATES, USD: 1.0 };
-  lastFetchedAt = fetchedAt;
-}
-
-async function hydrateFromStorage(): Promise<void> {
-  if (hydrated) return;
-  hydrated = true;
-  try {
-    const cached = await getData<CachedRates>(CACHE_STORAGE_KEY);
-    if (cached?.rates && typeof cached.fetchedAt === 'number') {
-      applyRates(cached.rates, cached.fetchedAt);
-    }
-  } catch (error) {
-    logger.warn('ExchangeRates: failed to hydrate cache from storage', error);
-  }
-}
+const RATES_STALE_TIME_MS = 12 * 60 * 60 * 1000;
 
 async function fetchLiveRates(): Promise<ExchangeRateTable> {
   const response = await fetch(FRANKFURTER_LATEST_URL);
   if (!response.ok) {
     throw new Error(`frankfurter.app responded with status ${response.status}`);
   }
-  const data: FrankfurterResponse = await response.json();
+  const data: { rates?: Record<string, number> } = await response.json();
   if (!data?.rates || typeof data.rates !== 'object') {
     throw new Error('frankfurter.app returned an unexpected payload');
   }
-  return { ...data.rates, USD: 1.0 };
+  return { ...FALLBACK_RATES, ...data.rates, ...FIXED_RATES, USD: 1.0 };
 }
 
-/**
- * Refresh exchange rates from the live API. Hydrates from AsyncStorage first;
- * if the cached rates are still within the TTL, the network call is skipped.
- * On network failure the existing (cached or fallback) rates are kept. Safe to
- * call repeatedly — concurrent calls share a single in-flight request.
- */
-export async function refreshExchangeRates(): Promise<ExchangeRateTable> {
-  await hydrateFromStorage();
-
-  const isFresh = Date.now() - lastFetchedAt < CACHE_TTL_MS;
-  if (isFresh && lastFetchedAt > 0) {
-    return memoryRates;
-  }
-
-  if (inFlight) {
-    return inFlight;
-  }
-
-  inFlight = (async () => {
-    try {
-      const rates = await fetchLiveRates();
-      const fetchedAt = Date.now();
-      applyRates(rates, fetchedAt);
-      const cached: CachedRates = { rates, fetchedAt };
-      await storeData(CACHE_STORAGE_KEY, cached);
-      return memoryRates;
-    } catch (error) {
-      logger.warn('ExchangeRates: live refresh failed, using cached/fallback rates', error);
-      return memoryRates;
-    } finally {
-      inFlight = null;
-    }
-  })();
-
-  return inFlight;
-}
-
-/**
- * Synchronous lookup of a currency's rate relative to USD, read from the
- * in-memory cache. Falls back to {@link STALE_FALLBACK_RATES} (and ultimately
- * 1.0) when the currency is unknown. Call {@link refreshExchangeRates} on
- * bootstrap to keep this cache current.
- */
-export function getRate(currencyCode: string): number {
-  return memoryRates[currencyCode] ?? STALE_FALLBACK_RATES[currencyCode] ?? 1.0;
+/** Live rates relative to USD; {@link FALLBACK_RATES} until they arrive or if they fail. */
+export function useExchangeRates(): ExchangeRateTable {
+  const { data } = useQuery({
+    queryKey: ['exchangeRates'],
+    queryFn: fetchLiveRates,
+    staleTime: RATES_STALE_TIME_MS,
+    gcTime: RATES_STALE_TIME_MS,
+  });
+  return data ?? FALLBACK_RATES;
 }

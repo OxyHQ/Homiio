@@ -1,6 +1,5 @@
 import type { ButtonIconComponent } from '@oxy.so/bloom/button';
 
-import { formatMoney } from '@homiio/shared-types';
 import {
   RiAccessibilityLine,
   RiArrowRightUpLine,
@@ -51,23 +50,6 @@ import {
   RiWalkLine,
 } from '@oxy.so/bloom/icons';
 
-/**
- * The currency and locale `ETHICAL_AMENITY_GUIDELINES`' thresholds are stated in.
- *
- * They are fixed USD figures in an untranslated English validation message, so
- * this names what the hardcoded `$` used to assert rather than pretending the
- * threshold follows the reader's currency. Formatting them still matters: the
- * grouping was absent entirely, so a four-figure limit read as `$1200`.
- */
-const AMENITY_GUIDELINE_CURRENCY = 'USD';
-const AMENITY_GUIDELINE_LOCALE = 'en-US';
-
-/** One guideline threshold, formatted. */
-const guidelineMoney = (amount: number): string =>
-  formatMoney(amount, AMENITY_GUIDELINE_CURRENCY, AMENITY_GUIDELINE_LOCALE, {
-    maximumFractionDigits: 0,
-  });
-
 export interface Amenity {
   id: string;
   name: string;
@@ -85,7 +67,7 @@ export interface Amenity {
   maxFairValue?: number; // Maximum ethical value add in USD (many should be 0)
 }
 
-export interface AmenityCategory {
+interface AmenityCategory {
   id: string;
   name: string;
   nameKey?: string; // Translation key for the category name
@@ -95,21 +77,10 @@ export interface AmenityCategory {
   ethicalPriority?: 'high' | 'medium' | 'low'; // How important this category is for ethical housing
 }
 
-// Ethical guidelines for fair housing
-export const ETHICAL_AMENITY_GUIDELINES = {
-  maxValueAddPercentage: 10, // No single amenity should add more than 10% to base rent
-  maxTotalAmenityValue: 200, // Total amenity value shouldn't exceed $200/month
-  accessibilityAmenitiesMaxValue: 0, // Accessibility features should never increase rent
-  essentialAmenitiesMaxValue: 30, // Essential amenities should have minimal value add
-  transparencyRequired: true, // All amenity values must be disclosed to tenants
-  fairHousingCompliance: true, // Must comply with fair housing laws
-  noDiscrimination: true, // Amenities cannot be used to discriminate
-};
-
 // Per-category accent colors. This is a curated multi-hue category palette
 // (one distinct hue per amenity group) used for icon tints, not Bloom theme
 // tokens — kept as literals so the categories stay visually distinguishable.
-export const AMENITY_CATEGORIES: AmenityCategory[] = [
+const AMENITY_CATEGORIES: AmenityCategory[] = [
   {
     id: 'essential',
     name: 'Essentials',
@@ -208,7 +179,7 @@ export const AMENITY_CATEGORIES: AmenityCategory[] = [
   },
 ];
 
-export const AMENITIES: Amenity[] = [
+const AMENITIES: Amenity[] = [
   // Essential Services - Basic necessities for dignified living
   {
     id: 'wifi',
@@ -1348,7 +1319,7 @@ export const AMENITIES: Amenity[] = [
  * `air_conditioning`, `wifi`, `terrace`, `sauna`, `attic`, …) are absent here
  * and pass through unchanged.
  */
-export const CANONICAL_AMENITY_ALIASES: Readonly<Record<string, string>> = {
+const CANONICAL_AMENITY_ALIASES: Readonly<Record<string, string>> = {
   pool: 'swimming_pool',
   parking: 'parking_space',
   garden: 'garden_space',
@@ -1362,7 +1333,7 @@ export const CANONICAL_AMENITY_ALIASES: Readonly<Record<string, string>> = {
 };
 
 /** Resolve a stored amenity slug to its catalog id (identity when not aliased). */
-export const resolveAmenityId = (id: string): string => CANONICAL_AMENITY_ALIASES[id] ?? id;
+const resolveAmenityId = (id: string): string => CANONICAL_AMENITY_ALIASES[id] ?? id;
 
 // Helper functions for ethical amenity management
 export const getAmenityById = (id: string): Amenity | undefined => {
@@ -1433,171 +1404,9 @@ export const groupAmenitiesByCategory = (ids: string[]): AmenityGroup[] => {
   return groups;
 };
 
-export const getAmenitiesByCategory = (categoryId: string): Amenity[] => {
-  return AMENITIES.filter((amenity) => amenity.category === categoryId);
-};
-
-export const getCategoryById = (id: string): AmenityCategory | undefined => {
+const getCategoryById = (id: string): AmenityCategory | undefined => {
   return AMENITY_CATEGORIES.find((category) => category.id === id);
 };
-
-export const getAccessibilityAmenities = (): Amenity[] => {
-  return AMENITIES.filter((amenity) => amenity.accessibility);
-};
-
-export const getEcoFriendlyAmenities = (): Amenity[] => {
-  return AMENITIES.filter((amenity) => amenity.environmental === 'positive');
-};
-
-export const getEssentialAmenities = (): Amenity[] => {
-  return AMENITIES.filter((amenity) => amenity.essential);
-};
-
-// Calculate ethical amenity pricing with fair housing principles
-export const calculateEthicalAmenityValue = (
-  amenityIds: string[],
-  baseRent: number,
-): {
-  totalValue: number;
-  warnings: string[];
-  ethicalScore: 'excellent' | 'good' | 'fair' | 'concerning';
-} => {
-  const selectedAmenities = amenityIds.map((id) => getAmenityById(id)).filter(Boolean) as Amenity[];
-  const totalValue = selectedAmenities.reduce(
-    (sum, amenity) => sum + (amenity.maxFairValue || 0),
-    0,
-  );
-  const warnings: string[] = [];
-
-  // Check for excessive pricing
-  const percentageOfRent = (totalValue / baseRent) * 100;
-  if (percentageOfRent > ETHICAL_AMENITY_GUIDELINES.maxValueAddPercentage) {
-    warnings.push(
-      `Amenity value (${percentageOfRent.toFixed(1)}%) exceeds ethical limit of ${ETHICAL_AMENITY_GUIDELINES.maxValueAddPercentage}%`,
-    );
-  }
-
-  if (totalValue > ETHICAL_AMENITY_GUIDELINES.maxTotalAmenityValue) {
-    warnings.push(
-      `Total amenity value (${guidelineMoney(totalValue)}) exceeds ethical limit of ${guidelineMoney(ETHICAL_AMENITY_GUIDELINES.maxTotalAmenityValue)}`,
-    );
-  }
-
-  // Check for accessibility violations
-  const accessibilityAmenities = selectedAmenities.filter((a) => a.accessibility);
-  const accessibilityValue = accessibilityAmenities.reduce(
-    (sum, amenity) => sum + (amenity.maxFairValue || 0),
-    0,
-  );
-  if (accessibilityValue > 0) {
-    warnings.push(
-      'Accessibility features should never add to rent - this may violate fair housing laws',
-    );
-  }
-
-  // Check for essential amenity overpricing
-  const essentialAmenities = selectedAmenities.filter((a) => a.essential);
-  const essentialValue = essentialAmenities.reduce(
-    (sum, amenity) => sum + (amenity.maxFairValue || 0),
-    0,
-  );
-  if (essentialValue > ETHICAL_AMENITY_GUIDELINES.essentialAmenitiesMaxValue) {
-    warnings.push(
-      `Essential amenities are overpriced (${guidelineMoney(essentialValue)} vs max ${guidelineMoney(ETHICAL_AMENITY_GUIDELINES.essentialAmenitiesMaxValue)})`,
-    );
-  }
-
-  // Determine ethical score
-  let ethicalScore: 'excellent' | 'good' | 'fair' | 'concerning';
-  if (
-    warnings.length === 0 &&
-    totalValue <= ETHICAL_AMENITY_GUIDELINES.maxTotalAmenityValue * 0.6
-  ) {
-    ethicalScore = 'excellent';
-  } else if (warnings.length === 0) {
-    ethicalScore = 'good';
-  } else if (warnings.length <= 1) {
-    ethicalScore = 'fair';
-  } else {
-    ethicalScore = 'concerning';
-  }
-
-  return { totalValue, warnings, ethicalScore };
-};
-
-// Check fair housing compliance
-export const checkFairHousingCompliance = (
-  amenityIds: string[],
-): {
-  compliant: boolean;
-  violations: string[];
-  recommendations: string[];
-} => {
-  const violations: string[] = [];
-  const recommendations: string[] = [];
-
-  // Check for discriminatory amenity combinations
-  const hasAccessibility = amenityIds.some((id) => getAmenityById(id)?.accessibility);
-  const hasEssential = amenityIds.some((id) => getAmenityById(id)?.essential);
-
-  if (!hasEssential) {
-    violations.push('Missing essential amenities for habitability');
-    recommendations.push('Include basic utilities and heating/cooling');
-  }
-
-  if (!hasAccessibility) {
-    recommendations.push('Consider adding accessibility features for universal design');
-  }
-
-  return {
-    compliant: violations.length === 0,
-    violations,
-    recommendations,
-  };
-};
-
-// Most important amenities for basic dignified living
-export const ESSENTIAL_AMENITIES = [
-  'wifi',
-  'electricity',
-  'water',
-  'heating',
-  'trash_pickup',
-  'fire_safety',
-  'laundry_room',
-  'refrigerator',
-  'stove',
-  'natural_light',
-];
-
-// Amenities that promote equity and accessibility
-export const EQUITY_FOCUSED_AMENITIES = [
-  'wheelchair_accessible',
-  'elevator',
-  'grab_bars',
-  'wide_doorways',
-  'ramp_access',
-  'public_transit_access',
-  'bike_storage',
-  'community_room',
-  'playground',
-];
-
-// Popular amenities commonly selected by property owners for listings
-export const POPULAR_AMENITIES = [
-  'wifi',
-  'air_conditioning',
-  'washing_machine',
-  'dryer',
-  'dishwasher',
-  'parking_space',
-  'balcony',
-  'hardwood_floors',
-  'stainless_appliances',
-  'pet_friendly',
-  'gym',
-  'swimming_pool',
-];
 
 // Property type-specific amenity functions
 export const getAmenitiesByPropertyType = (propertyType: string): string[] => {
@@ -1903,42 +1712,5 @@ export const getAmenitiesByPropertyType = (propertyType: string): string[] => {
         'parking',
         'storage',
       ];
-  }
-};
-
-export const getAmenityDescriptionByPropertyType = (propertyType: string): string => {
-  switch (propertyType) {
-    case 'apartment':
-      return 'Select amenities available in your apartment building';
-    case 'house':
-      return 'Choose amenities available in your house';
-    case 'room':
-      return 'Select amenities available to room tenants';
-    case 'studio':
-      return 'Choose amenities in your studio apartment';
-    case 'duplex':
-      return 'Select amenities available in your duplex';
-    case 'penthouse':
-      return 'Choose luxury amenities in your penthouse';
-    case 'couchsurfing':
-      return 'Select what you can offer to couchsurfers';
-    case 'roommates':
-      return 'Choose amenities available to roommates';
-    case 'coliving':
-      return 'Select community amenities in your co-living space';
-    case 'hostel':
-      return 'Choose amenities available to hostel guests';
-    case 'guesthouse':
-      return 'Select amenities for your guesthouse';
-    case 'campsite':
-      return 'Choose camping amenities and facilities';
-    case 'boat':
-      return 'Select amenities available on your boat';
-    case 'treehouse':
-      return 'Choose amenities in your treehouse';
-    case 'yurt':
-      return 'Select amenities in your yurt';
-    default:
-      return 'Select amenities available at your property';
   }
 };

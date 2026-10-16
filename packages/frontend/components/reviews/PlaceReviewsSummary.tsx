@@ -113,5 +113,3 @@ export const PlaceReviewsSummary: React.FC<PlaceReviewsSummaryProps> = ({ stats 
     />
   );
 };
-
-export default PlaceReviewsSummary;

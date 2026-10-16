@@ -28,13 +28,8 @@ import type {
   ExploreBuildingSummary,
 } from '@homiio/shared-types';
 
-// Re-export shared types under the legacy consumer aliases.
-export type ReviewData = ReviewDTO;
-export type CreateReview = CreateReviewPayload;
-export type UpdateReview = UpdateReviewPayload;
-
 /** Paging metadata the list endpoints attach. */
-export interface ReviewPagination {
+interface ReviewPagination {
   currentPage: number;
   totalPages: number;
   limit: number;
@@ -43,7 +38,7 @@ export interface ReviewPagination {
 }
 
 /** Flattened address-review payload consumed by the review sections + hooks. */
-export interface AddressReviewsResult {
+interface AddressReviewsResult {
   level?: 'UNIT' | 'BUILDING' | 'STREET';
   /** Building-level reviews (attached directly to the building address). */
   buildingReviews: ReviewDTO[];
@@ -302,4 +297,3 @@ class ReviewService {
 }
 
 export const reviewService = new ReviewService();
-export default reviewService;

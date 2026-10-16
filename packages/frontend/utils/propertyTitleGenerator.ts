@@ -9,7 +9,6 @@ import i18next from 'i18next';
 import {
   PropertyType,
   buildLargeTitleLocation,
-  buildTitleDetails,
   composeTitle,
   removePropertyNumber,
   resolveShortTitleLocation,
@@ -50,7 +49,7 @@ function locationNotSpecified(): string {
  * @param propertyData - Property data object
  * @returns Short generated title
  */
-export function generateShortPropertyTitle(propertyData: PropertyData): string {
+function generateShortPropertyTitle(propertyData: PropertyData): string {
   const { type = PropertyType.APARTMENT, address = {} } = propertyData;
 
   const propertyType = translatedPropertyType(type);
@@ -73,7 +72,7 @@ export function generateShortPropertyTitle(propertyData: PropertyData): string {
  * @param propertyData - Property data object
  * @returns Large generated title with full details
  */
-export function generateLargePropertyTitle(propertyData: PropertyData): string {
+function generateLargePropertyTitle(propertyData: PropertyData): string {
   const { type = PropertyType.APARTMENT, address = {} } = propertyData;
 
   const propertyType = translatedPropertyType(type);
@@ -114,164 +113,5 @@ export function generatePropertyTitle(
     case 'default':
     default:
       return generateShortPropertyTitle(propertyData);
-  }
-}
-
-/**
- * Generate a property title with additional details (bedroom/bathroom info)
- * @param propertyData - Property data object
- * @param includeDetails - Whether to include bedroom/bathroom details
- * @param format - Title format ('default', 'short', or 'large')
- * @returns Generated title with optional details
- */
-export function generateDetailedPropertyTitle(
-  propertyData: PropertyData,
-  includeDetails = false,
-  format: TitleFormat = 'default',
-): string {
-  const baseTitle = generatePropertyTitle(propertyData, format);
-
-  if (!includeDetails) {
-    return baseTitle;
-  }
-
-  const { bedrooms = 0, bathrooms = 0 } = propertyData;
-
-  const formatBedrooms = (count: number): string => {
-    const bedroomText = translate('properties.details.bedrooms');
-    const bedroomLabel = count === 1 ? bedroomText.slice(0, -1) : bedroomText;
-    return `${count} ${bedroomLabel.toLowerCase()}`;
-  };
-  const formatBathrooms = (count: number): string => {
-    const bathroomText = translate('properties.details.bathrooms');
-    const bathroomLabel = count === 1 ? bathroomText.slice(0, -1) : bathroomText;
-    return `${count} ${bathroomLabel.toLowerCase()}`;
-  };
-
-  const details = buildTitleDetails(bedrooms, bathrooms, formatBedrooms, formatBathrooms);
-
-  return details ? `${baseTitle} - ${details}` : baseTitle;
-}
-
-/**
- * Preview a property title based on current form data
- * @param propertyData - Property data object
- * @param format - Title format ('default', 'short', or 'large')
- * @returns Preview title or null if insufficient data
- */
-export function previewPropertyTitle(
-  propertyData: PropertyData,
-  format: TitleFormat = 'default',
-): string | null {
-  const { type, address } = propertyData;
-
-  // Need at least type and some address info
-  if (!type || !address) {
-    return null;
-  }
-
-  const street = address.street || '';
-  const city = address.city || '';
-
-  if (!street && !city) {
-    return null;
-  }
-
-  return generatePropertyTitle(propertyData, format);
-}
-
-/**
- * Test function to verify property title generation works correctly
- * This function can be used for debugging and testing
- * @param language - Language code to test with
- * @returns Object with test results
- */
-export function testPropertyTitleGeneration(language = 'en-US'): {
-  success: boolean;
-  tests: {
-    name: string;
-    input: PropertyData;
-    expected: string;
-    actual: string;
-    passed: boolean;
-  }[];
-} {
-  const originalLanguage = i18next.language;
-
-  try {
-    // Set language for testing
-    i18next.changeLanguage(language);
-
-    const testCases: {
-      name: string;
-      input: PropertyData;
-      expected: string;
-    }[] = [
-      {
-        name: 'Basic apartment with address',
-        input: {
-          type: PropertyType.APARTMENT,
-          address: {
-            street: 'Calle de Vicente Blasco Ibáñez, 6',
-            city: 'Barcelona',
-            state: 'Catalunya',
-          },
-        },
-        expected: 'Apartment for rent in Calle de Vicente Blasco Ibáñez, Barcelona, Catalunya',
-      },
-      {
-        name: 'House with city only',
-        input: {
-          type: PropertyType.HOUSE,
-          address: {
-            city: 'Madrid',
-          },
-        },
-        expected: 'House for rent in Madrid',
-      },
-      {
-        name: 'Studio with no address',
-        input: {
-          type: PropertyType.STUDIO,
-          address: {},
-        },
-        expected: 'Studio for rent in Location not specified',
-      },
-      {
-        name: 'Detailed apartment with bedrooms and bathrooms',
-        input: {
-          type: PropertyType.APARTMENT,
-          address: {
-            street: 'Gran Via, 123',
-            city: 'Valencia',
-          },
-          bedrooms: 2,
-          bathrooms: 1,
-        },
-        expected: 'Apartment for rent in Gran Via, Valencia - 2 bedroom, 1 bathroom',
-      },
-    ];
-
-    const results = testCases.map((testCase) => {
-      const actual = generateDetailedPropertyTitle(testCase.input, true);
-      return {
-        name: testCase.name,
-        input: testCase.input,
-        expected: testCase.expected,
-        actual,
-        passed:
-          actual.includes('Apartment') || actual.includes('House') || actual.includes('Studio'),
-      };
-    });
-
-    const success = results.every((result) => result.passed);
-
-    return {
-      success,
-      tests: results,
-    };
-  } finally {
-    // Restore original language
-    i18next.changeLanguage(originalLanguage);
   }
 }

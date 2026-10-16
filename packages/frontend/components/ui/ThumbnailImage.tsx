@@ -51,5 +51,3 @@ const styles = StyleSheet.create({
     backgroundColor: colors.COLOR_BLACK_LIGHT_7,
   },
 });
-
-export default ThumbnailImage;

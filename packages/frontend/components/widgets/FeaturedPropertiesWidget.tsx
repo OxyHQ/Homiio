@@ -24,30 +24,24 @@
  * both resolve from one store and one React Query cache, so the rail and the
  * page cannot disagree about where the user is looking.
  *
- * ## With no scope it shows NOTHING, and says so
+ * ## It renders only when it has homes to show
  *
- * `scope.canQuery` is the only gate, and it is true for exactly two states: a
+ * `scope.canQuery` gates the REQUEST, and it is true for exactly two states: a
  * committed selection, or an explicit "explore everywhere" somebody pressed.
  * There is no arm of this component that fetches listings otherwise — a failed
- * device fix, a permission denial and a fresh install all end at a sentence, not
- * at a worldwide list.
+ * device fix, a permission denial and a fresh install issue no request at all.
  *
- * A sentence rather than rendering nothing at all, deliberately. An empty rail
- * reads as "there are no homes here", which is the same false impression in a
- * quieter form; the issue's requirement is that a surface STATES its area, and
- * "no area chosen yet" is a statement about the area.
+ * The RENDER is gated on having at least one home. No scope, loading, an error
+ * and an empty result all render nothing: a rail widget appears only when it
+ * has real content, and the page's own "where?" control is where the area is
+ * stated and chosen.
  */
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { View } from 'react-native';
-import { Admonition } from '@oxy.so/bloom/admonition';
-import { Loading } from '@oxy.so/bloom/loading';
-import { Text as BloomText } from '@oxy.so/bloom/typography';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import type { TFunction } from 'i18next';
 import {
   formatDistance,
-  type LocationResolution,
   type LocationSelection,
   type OfferingType,
   type Property,
@@ -162,84 +156,32 @@ export function FeaturedPropertiesWidget() {
    */
   const seeAllHref = useMemo(() => exploreHref(query), [query]);
 
-  if (!scope.canQuery) {
-    return (
-      <BaseWidget title={title}>
-        <View className="items-center p-5">
-          <BloomText className="text-center text-sm text-muted-foreground">
-            {scopeNotice(scope.resolution, t)}
-          </BloomText>
-        </View>
-      </BaseWidget>
-    );
-  }
-
-  if (search.isError) {
-    return (
-      <BaseWidget title={title}>
-        <Admonition type="error">{t('home.featured.loadFailed')}</Admonition>
-      </BaseWidget>
-    );
+  // Nothing to show — no scope, still loading, failed, or an empty area —
+  // renders nothing at all.
+  if (!scope.canQuery || search.isError || featured.length === 0) {
+    return null;
   }
 
   return (
     <BaseWidget title={title}>
       <View className="gap-3">
-        {search.isLoading ? (
-          <View className="items-center gap-2.5 p-4">
-            <Loading iconSize={16} showText={false} />
-            <BloomText className="text-sm text-muted-foreground">{t('state.loading')}</BloomText>
-          </View>
-        ) : featured.length === 0 ? (
-          <View className="items-center p-5">
-            <BloomText className="text-center text-sm text-muted-foreground">
-              {t('home.featured.empty')}
-            </BloomText>
-          </View>
-        ) : (
-          <>
-            {featured.map((property) => (
-              <PropertyCard
-                key={property.id}
-                property={property}
-                variant="compact"
-                orientation="horizontal"
-                showSaveButton={true}
-                showVerifiedBadge={true}
-                onPress={() => router.push(`/properties/${property.id}`)}
-              />
-            ))}
-            {seeAllHref ? (
-              <Button onPress={() => router.push(seeAllHref)} tone="neutral" appearance="outline">
-                {t('home.viewAll')}
-              </Button>
-            ) : null}
-          </>
-        )}
+        {featured.map((property) => (
+          <PropertyCard
+            key={property.id}
+            property={property}
+            variant="compact"
+            orientation="horizontal"
+            showSaveButton={true}
+            showVerifiedBadge={true}
+            onPress={() => router.push(`/properties/${property.id}`)}
+          />
+        ))}
+        {seeAllHref ? (
+          <Button onPress={() => router.push(seeAllHref)} tone="neutral" appearance="outline">
+            {t('home.viewAll')}
+          </Button>
+        ) : null}
       </View>
     </BaseWidget>
   );
-}
-
-/**
- * What to say when there is nothing to query.
- *
- * The failure REASON when there is one — "location is off" and "we could not
- * reach Homiio" call for different actions, and a single generic sentence sends
- * half of the people who read it to the wrong setting. Same keys the "where?"
- * controls use, so the rail and the page cannot describe one failure two ways.
- */
-export function scopeNotice(resolution: LocationResolution, t: TFunction): string {
-  switch (resolution.status) {
-    case 'resolving':
-      return t('location.scope.resolving');
-    case 'failed':
-      return t(`location.scope.failure.${resolution.reason}`);
-    // `resolved` cannot reach here — a resolved scope can be queried — but it is
-    // spelled out rather than folded into a default so that adding a fifth
-    // status is a compile error instead of a silently generic sentence.
-    case 'idle':
-    case 'resolved':
-      return t('home.featured.chooseArea');
-  }
 }

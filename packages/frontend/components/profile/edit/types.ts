@@ -17,9 +17,9 @@ export type EmploymentStatusValue =
 
 export type LeaseDurationValue = 'monthly' | '3_months' | '6_months' | 'yearly' | 'flexible';
 
-export type PriceUnitValue = 'day' | 'night' | 'week' | 'month' | 'year';
+type PriceUnitValue = 'day' | 'night' | 'week' | 'month' | 'year';
 
-export type ProfileVisibilityValue = 'public' | 'private' | 'contacts_only';
+type ProfileVisibilityValue = 'public' | 'private' | 'contacts_only';
 
 export type ReferenceRelationshipValue = 'landlord' | 'employer' | 'personal' | 'other';
 

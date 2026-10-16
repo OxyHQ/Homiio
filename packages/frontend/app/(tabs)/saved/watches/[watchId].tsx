@@ -20,15 +20,17 @@
  * second before flipping the first and finding out nothing happens.
  */
 
-import React, { useCallback, useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { useCallback, useMemo, useState } from 'react';
+import { StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Admonition } from '@oxy.so/bloom/admonition';
+import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { Button } from '@oxy.so/bloom/button';
 import { Card } from '@oxy.so/bloom/card';
 import { RiCheckLine, RiSearchLine } from '@oxy.so/bloom/icons';
 import { Loading } from '@oxy.so/bloom/loading';
+import { PageHeader } from '@oxy.so/bloom/page-header';
 import { RadioGroup } from '@oxy.so/bloom/radio';
 import { SettingsListGroup, SettingsListItem } from '@oxy.so/bloom/settings-list';
 import { Switch } from '@oxy.so/bloom/switch';
@@ -43,7 +45,6 @@ import {
   type HousingAlertRuleType,
   type WatchCadence,
 } from '@homiio/shared-types';
-import { Header } from '@/components/Header';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { contentClamp, spacing } from '@/constants/styles';
 import { useSavedSearches } from '@/hooks/useSavedSearches';
@@ -123,23 +124,31 @@ export default function WatchAlertSettingsScreen() {
 
   if (isLoading && searches.length === 0) {
     return (
-      <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
-        <Header options={{ title: t('alerts.settings.title') }} />
+      <>
+        <PageHeader
+          title={t('alerts.settings.title')}
+          titleAlign="center"
+          leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+        />
         <Loading style={styles.loading} />
-      </View>
+      </>
     );
   }
 
   if (!watch) {
     return (
-      <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
-        <Header options={{ title: t('alerts.settings.title') }} />
+      <>
+        <PageHeader
+          title={t('alerts.settings.title')}
+          titleAlign="center"
+          leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+        />
         <EmptyState
           icon={RiSearchLine}
           title={t('alerts.settings.missingTitle')}
           description={t('alerts.settings.missingDescription')}
         />
-      </View>
+      </>
     );
   }
 
@@ -147,9 +156,13 @@ export default function WatchAlertSettingsScreen() {
     watch.alertStatus?.status === 'inactive' ? watch.alertStatus.reason : undefined;
 
   return (
-    <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
-      <Header options={{ title: watch.name }} />
-      <ScrollView contentContainerStyle={styles.content}>
+    <>
+      <PageHeader
+        title={watch.name}
+        titleAlign="center"
+        leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+      />
+      <View style={styles.content}>
         {/* Shown BEFORE the switches, so a watch that cannot fire says so while
             somebody is deciding rather than after they have finished. */}
         {inactiveReason && inactiveReason !== 'cadence_off' ? (
@@ -250,8 +263,8 @@ export default function WatchAlertSettingsScreen() {
         >
           {t('alerts.settings.viewHistory')}
         </Button>
-      </ScrollView>
-    </View>
+      </View>
+    </>
   );
 }
 
@@ -297,7 +310,6 @@ function RenameCard({ watch }: { watch: SavedSearch }) {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1 },
   content: {
     width: '100%',
     maxWidth: contentClamp.copy,

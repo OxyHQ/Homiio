@@ -121,5 +121,4 @@ export const api = {
   delete: <T = any>(endpoint: string, options?: Options) =>
     request<T>('DELETE', endpoint, undefined, options),
 };
-export { API_CONFIG };
 export default api;

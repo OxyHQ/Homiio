@@ -27,18 +27,15 @@
  * something behind it. An empty list renders nothing rather than an apology.
  */
 
-import React, { useCallback } from 'react';
-import { View } from 'react-native';
+import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { P } from '@oxy.so/bloom/typography';
+import { Shelf } from '@oxy.so/bloom/media-shelf';
 import type { City, LocationSelection } from '@homiio/shared-types';
 
-import { CityShowcaseSection } from '@/components/CityShowcaseSection';
-import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
+import { CityCard } from '@/components/home/CityCard';
 import { usePopularCities } from '@/hooks/useCityQueries';
 import { cityCountry, cityRegionName } from '@/utils/cityDisplay';
-import { PAGE_GUTTER_CLASS } from '@/constants/styles';
 
 /** How many destinations the board offers. Enough to choose from, few enough to read. */
 const DESTINATION_COUNT = 8;
@@ -97,9 +94,11 @@ export function destinationSelection(city: City): LocationSelection {
 export interface HomeDiscoveryBoardProps {
   /** Commit the chosen destination as the app-wide scope. */
   readonly onChoose: (selection: LocationSelection) => void;
+  /** The page gutter the row bleeds through (Bloom `Shelf` `contentInset`). */
+  readonly contentInset: number;
 }
 
-export function HomeDiscoveryBoard({ onChoose }: HomeDiscoveryBoardProps) {
+export function HomeDiscoveryBoard({ onChoose, contentInset }: HomeDiscoveryBoardProps) {
   const { t } = useTranslation();
   const { data: cities } = usePopularCities(DESTINATION_COUNT);
 
@@ -113,14 +112,10 @@ export function HomeDiscoveryBoard({ onChoose }: HomeDiscoveryBoardProps) {
   if (!cities || cities.length === 0) return null;
 
   return (
-    <View className="gap-3">
-      <View className={`gap-1 ${PAGE_GUTTER_CLASS}`}>
-        <SectionEyebrow>{t('home.discovery.eyebrow')}</SectionEyebrow>
-        {/* The SCOPE of this collection, stated on the collection itself —
-            "declarar su ámbito por colección y no aparentar cercanía". */}
-        <P className="text-sm text-muted-foreground">{t('home.discovery.body')}</P>
-      </View>
-      <CityShowcaseSection title={t('home.discovery.title')} items={cities} onPressCity={choose} />
-    </View>
+    <Shelf title={t('home.discovery.title')} contentInset={contentInset}>
+      {cities.map((city) => (
+        <CityCard key={city.id} city={city} onPress={() => choose(city)} />
+      ))}
+    </Shelf>
   );
 }

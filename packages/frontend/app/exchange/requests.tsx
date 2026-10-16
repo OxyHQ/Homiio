@@ -10,8 +10,10 @@
 import type React from 'react';
 import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
+import { PageHeader } from '@oxy.so/bloom/page-header';
 
 import { Button } from '@oxy.so/bloom/button';
 import { Chip } from '@oxy.so/bloom/chip';
@@ -24,7 +26,6 @@ import { confirm } from '@oxy.so/bloom/surfaces';
 import { useOxy, openAccountDialog } from '@oxy.so/services';
 import { type ExchangeRequest, ExchangeRequestStatus } from '@homiio/shared-types';
 
-import { Header } from '@/components/Header';
 import { ExchangeRequestCard } from '@/components/exchange/ExchangeRequestCard';
 import { GuestPointsSummary } from '@/components/exchange/GuestPointsSummary';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -32,7 +33,6 @@ import { ErrorState } from '@/components/ui/ErrorState';
 import { ListSkeleton } from '@/components/ui/ListSkeleton';
 import { useMyExchangeRequests, useUpdateExchangeStatus } from '@/hooks/useExchangeQueries';
 import { toast } from '@oxy.so/bloom/toast';
-import { useTheme } from '@oxy.so/bloom/theme';
 import { spacing } from '@/constants/styles';
 import { RiAlertLine, RiArrowLeftRightLine, RiLoginBoxLine } from '@oxy.so/bloom/icons';
 
@@ -116,7 +116,7 @@ const HostPendingActions: React.FC<{ request: ExchangeRequest }> = ({ request })
 
 export default function ExchangeRequestsScreen() {
   const { t } = useTranslation();
-  const theme = useTheme();
+  const router = useRouter();
   const { oxyServices, activeSessionId } = useOxy();
   const isAuthed = Boolean(oxyServices && activeSessionId);
 
@@ -135,136 +135,127 @@ export default function ExchangeRequestsScreen() {
   const items = useMemo<ExchangeRequest[]>(() => query.data?.items ?? [], [query.data?.items]);
 
   const header = (
-    <Header
-      options={{
-        showBackButton: true,
-        title: t('listing.exchange.requestsTitle'),
-      }}
+    <PageHeader
+      title={t('listing.exchange.requestsTitle')}
+      titleAlign="center"
+      leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+      onBack={router.canGoBack() ? router.back : undefined}
+      backLabel={t('goBack')}
     />
   );
 
   if (!isAuthed) {
     return (
-      <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
+      <>
         {header}
-        <SafeAreaView edges={['bottom']} style={styles.safeArea}>
-          <View style={styles.centerWrap}>
-            <EmptyState
-              icon={RiArrowLeftRightLine}
-              title={t('listing.exchange.signInTitle')}
-              description={t('listing.exchange.signInBody')}
-              actionText={t('common.signIn')}
-              actionIcon={RiLoginBoxLine}
-              onAction={() => openAccountDialog()}
-            />
-          </View>
-        </SafeAreaView>
-      </View>
+        <View style={styles.centerWrap}>
+          <EmptyState
+            icon={RiArrowLeftRightLine}
+            title={t('listing.exchange.signInTitle')}
+            description={t('listing.exchange.signInBody')}
+            actionText={t('common.signIn')}
+            actionIcon={RiLoginBoxLine}
+            onAction={() => openAccountDialog()}
+          />
+        </View>
+      </>
     );
   }
 
   return (
-    <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
+    <>
       {header}
-      <SafeAreaView edges={['bottom']} style={styles.safeArea}>
-        <ScrollView contentContainerStyle={styles.content}>
-          {/* Role segmented toggle */}
-          <SegmentedControl<RoleView>
-            label={t('listing.exchange.requestsTitle')}
-            type="tabs"
-            value={role}
-            onChange={setRole}
-          >
-            <SegmentedControlItem value="guest">
-              <SegmentedControlItemText>{t('listing.exchange.asGuest')}</SegmentedControlItemText>
-            </SegmentedControlItem>
-            <SegmentedControlItem value="host">
-              <SegmentedControlItemText>{t('listing.exchange.asHost')}</SegmentedControlItemText>
-            </SegmentedControlItem>
-          </SegmentedControl>
+      <View style={styles.content}>
+        {/* Role segmented toggle */}
+        <SegmentedControl<RoleView>
+          label={t('listing.exchange.requestsTitle')}
+          type="tabs"
+          value={role}
+          onChange={setRole}
+        >
+          <SegmentedControlItem value="guest">
+            <SegmentedControlItemText>{t('listing.exchange.asGuest')}</SegmentedControlItemText>
+          </SegmentedControlItem>
+          <SegmentedControlItem value="host">
+            <SegmentedControlItemText>{t('listing.exchange.asHost')}</SegmentedControlItemText>
+          </SegmentedControlItem>
+        </SegmentedControl>
 
-          {/* Status chips */}
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.filterRow}
-          >
-            {STATUS_FILTERS.map((entry) => {
-              const active = statusFilter === entry.id;
-              return (
-                <Chip
-                  key={entry.id}
-                  variant="subtle"
-                  selected={active}
-                  onPress={() => setStatusFilter(entry.id)}
-                >
-                  {t(entry.i18nKey)}
-                </Chip>
-              );
-            })}
-          </ScrollView>
+        {/* Status chips */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filterRow}
+        >
+          {STATUS_FILTERS.map((entry) => {
+            const active = statusFilter === entry.id;
+            return (
+              <Chip
+                key={entry.id}
+                variant="subtle"
+                selected={active}
+                onPress={() => setStatusFilter(entry.id)}
+              >
+                {t(entry.i18nKey)}
+              </Chip>
+            );
+          })}
+        </ScrollView>
 
-          {/* The points balance, on the surface where points are spent and
+        {/* The points balance, on the surface where points are spent and
               earned. Drawn in BOTH views on purpose: a host needs to see what
               hosting has earned them as much as a guest needs to see what they
               can book with, and a balance visible only to one side reads as a
               reward scheme rather than a ledger. */}
-          <GuestPointsSummary compact={role === 'host'} />
+        <GuestPointsSummary compact={role === 'host'} />
 
-          {query.isPending ? <ListSkeleton rows={4} rowHeight={120} /> : null}
+        {query.isPending ? <ListSkeleton rows={4} rowHeight={120} /> : null}
 
-          {query.isError ? (
-            <ErrorState
-              icon={RiAlertLine}
-              title={t('listing.exchange.loadErrorTitle')}
-              description={query.error?.message ?? t('common.tryAgain')}
-              retryLabel={t('common.retry')}
-              onRetry={() => query.refetch()}
+        {query.isError ? (
+          <ErrorState
+            icon={RiAlertLine}
+            title={t('listing.exchange.loadErrorTitle')}
+            description={query.error?.message ?? t('common.tryAgain')}
+            retryLabel={t('common.retry')}
+            onRetry={() => query.refetch()}
+          />
+        ) : null}
+
+        {!query.isPending && !query.isError && items.length === 0 ? (
+          <View style={styles.emptyWrap}>
+            <EmptyState
+              icon={RiArrowLeftRightLine}
+              title={
+                role === 'guest'
+                  ? t('listing.exchange.emptyGuestTitle')
+                  : t('listing.exchange.emptyHostTitle')
+              }
+              description={
+                role === 'guest'
+                  ? t('listing.exchange.emptyGuestBody')
+                  : t('listing.exchange.emptyHostBody')
+              }
             />
-          ) : null}
+          </View>
+        ) : null}
 
-          {!query.isPending && !query.isError && items.length === 0 ? (
-            <View style={styles.emptyWrap}>
-              <EmptyState
-                icon={RiArrowLeftRightLine}
-                title={
-                  role === 'guest'
-                    ? t('listing.exchange.emptyGuestTitle')
-                    : t('listing.exchange.emptyHostTitle')
-                }
-                description={
-                  role === 'guest'
-                    ? t('listing.exchange.emptyGuestBody')
-                    : t('listing.exchange.emptyHostBody')
-                }
+        {items.length > 0 ? (
+          <View style={styles.list}>
+            {items.map((request) => (
+              <ExchangeRequestCard
+                key={request.id}
+                request={request}
+                actions={role === 'host' ? <HostPendingActions request={request} /> : undefined}
               />
-            </View>
-          ) : null}
-
-          {items.length > 0 ? (
-            <View style={styles.list}>
-              {items.map((request) => (
-                <ExchangeRequestCard
-                  key={request.id}
-                  request={request}
-                  actions={role === 'host' ? <HostPendingActions request={request} /> : undefined}
-                />
-              ))}
-            </View>
-          ) : null}
-        </ScrollView>
-      </SafeAreaView>
-    </View>
+            ))}
+          </View>
+        ) : null}
+      </View>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-  },
-  safeArea: {
-    flex: 1,
-  },
   content: {
     padding: spacing.lg,
     gap: spacing.lg,

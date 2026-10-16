@@ -44,14 +44,14 @@ import {
 
 const HOUSING_FEATURE_VALUES = new Set<string>(HOUSING_FEATURES);
 
-import { DEFAULT_SEARCH_QUERY, type SearchFilterPatch } from '@/store/searchQueryStore';
+import { DEFAULT_SEARCH_QUERY } from '@/store/searchQueryStore';
 import type { SearchQuery, SearchSortBy, SearchSortOrder } from '@/components/search/types';
 
 /** Route params as expo-router hands them over, on web AND native. */
 export type RouteParams = Record<string, string | string[] | undefined>;
 
 /** Read a single optional string param (expo-router unions string | string[]). */
-export function readParam(value: string | string[] | undefined): string | undefined {
+function readParam(value: string | string[] | undefined): string | undefined {
   const raw = Array.isArray(value) ? value[0] : value;
   return typeof raw === 'string' && raw.length > 0 ? raw : undefined;
 }
@@ -332,6 +332,3 @@ export function isNavigationChange(previous: SearchQuery, next: SearchQuery): bo
   const afterToken = after?.ok ? after.value : null;
   return beforeToken !== afterToken;
 }
-
-/** Narrow a patch to the filter dimensions the store's `patchFilters` accepts. */
-export type { SearchFilterPatch };

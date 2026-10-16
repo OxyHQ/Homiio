@@ -38,12 +38,12 @@ import type {
 import { formatLocalized, formatRelativeTime, getDateFnsLocale } from '@/utils/dateLocale';
 
 /** A resolved Oxy account: a display name and an avatar file id for the `ImageResolver`. */
-export interface LeasePartyIdentity {
+interface LeasePartyIdentity {
   name: string;
   avatar?: string;
 }
 
-export type ResolveLeaseParty = (oxyUserId: string) => LeasePartyIdentity | null;
+type ResolveLeaseParty = (oxyUserId: string) => LeasePartyIdentity | null;
 
 export interface LeaseFormatContext {
   t: TFunction;
@@ -62,7 +62,7 @@ const toDate = (raw?: string): Date | null => {
   return Number.isNaN(date.getTime()) ? null : date;
 };
 
-export const formatLeaseDate = (raw?: string): string => {
+const formatLeaseDate = (raw?: string): string => {
   const date = toDate(raw);
   return date ? formatLocalized(date, 'd MMM yyyy') : '—';
 };
@@ -98,7 +98,7 @@ function leaseParties(lease: Lease, { t, resolveParty }: LeaseFormatContext): Le
 }
 
 /** The first payment still owed, in due-date order. */
-export function nextOwedPayment(lease: Lease): LeasePayment | undefined {
+function nextOwedPayment(lease: Lease): LeasePayment | undefined {
   return [...(lease.paymentSchedule ?? [])]
     .filter((payment) => payment.status === 'pending' || payment.status === 'overdue')
     .sort((a, b) => (toDate(a.dueDate)?.getTime() ?? 0) - (toDate(b.dueDate)?.getTime() ?? 0))[0];

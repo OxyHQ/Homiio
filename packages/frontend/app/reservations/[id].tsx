@@ -11,19 +11,19 @@
  */
 import type React from 'react';
 import { useCallback, useMemo } from 'react';
-import { Image, ScrollView, StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Image, StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { format } from 'date-fns';
 import { toast } from '@oxy.so/bloom/toast';
 import { useTranslation } from 'react-i18next';
+import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
+import { PageHeader } from '@oxy.so/bloom/page-header';
 
 import { Button } from '@oxy.so/bloom/button';
 import { Loading } from '@oxy.so/bloom/loading';
 import { Text as BloomText, H2 } from '@oxy.so/bloom/typography';
 import { CancellationPolicy, type Reservation, ReservationStatus } from '@homiio/shared-types';
 
-import { Header } from '@/components/Header';
 import { useProperty } from '@/hooks';
 import { useProfile } from '@/context/ProfileContext';
 import { useReservationQuery, useUpdateReservation } from '@/hooks/useReservationQueries';
@@ -140,17 +140,18 @@ export default function ReservationDetailScreen() {
   );
 
   const header = (
-    <Header
-      options={{
-        showBackButton: true,
-        title: t('reservations.detail.title'),
-      }}
+    <PageHeader
+      title={t('reservations.detail.title')}
+      titleAlign="center"
+      leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+      onBack={router.canGoBack() ? router.back : undefined}
+      backLabel={t('goBack')}
     />
   );
 
   if (!id) {
     return (
-      <View style={styles.root}>
+      <>
         {header}
         <View style={styles.centerWrap}>
           <ErrorState
@@ -161,24 +162,24 @@ export default function ReservationDetailScreen() {
             onRetry={() => router.back()}
           />
         </View>
-      </View>
+      </>
     );
   }
 
   if (reservationQuery.isPending) {
     return (
-      <View style={styles.root}>
+      <>
         {header}
         <View style={styles.centerWrap}>
           <Loading variant="spinner" size="md" />
         </View>
-      </View>
+      </>
     );
   }
 
   if (reservationQuery.isError || !reservation) {
     return (
-      <View style={styles.root}>
+      <>
         {header}
         <View style={styles.centerWrap}>
           <ErrorState
@@ -190,7 +191,7 @@ export default function ReservationDetailScreen() {
             onRetry={() => router.back()}
           />
         </View>
-      </View>
+      </>
     );
   }
 
@@ -211,130 +212,124 @@ export default function ReservationDetailScreen() {
     role === 'host' && reservation.status === ReservationStatus.PENDING;
 
   return (
-    <View style={styles.root}>
+    <>
       {header}
-      <SafeAreaView edges={['bottom']} style={styles.safeArea}>
-        <ScrollView contentContainerStyle={styles.content}>
-          <View style={styles.thumbWrap}>
-            {imageSource ? (
-              <Image source={imageSource} style={styles.thumb} resizeMode="cover" />
-            ) : (
-              <View style={[styles.thumb, styles.thumbPlaceholder]} />
-            )}
+      <View style={styles.content}>
+        <View style={styles.thumbWrap}>
+          {imageSource ? (
+            <Image source={imageSource} style={styles.thumb} resizeMode="cover" />
+          ) : (
+            <View style={[styles.thumb, styles.thumbPlaceholder]} />
+          )}
+        </View>
+
+        <Card radius="radius-16" className="p-5" appearance="outline">
+          <View style={styles.headerRow}>
+            <H2 style={styles.title}>{propertyTitle}</H2>
+            <ReservationStatusBadge status={reservation.status} />
           </View>
-
-          <Card radius="radius-16" className="p-5" appearance="outline">
-            <View style={styles.headerRow}>
-              <H2 style={styles.title}>{propertyTitle}</H2>
-              <ReservationStatusBadge status={reservation.status} />
-            </View>
-            {property?.address ? (
-              <BloomText style={styles.subtitle}>
-                {[property.address.cityName, property.address.countryName]
-                  .filter(Boolean)
-                  .join(', ')}
-              </BloomText>
-            ) : null}
-          </Card>
-
-          <Card radius="radius-16" className="p-5" appearance="outline">
-            <BloomText style={styles.sectionLabel}>
-              {t('reservations.detail.tripDetails')}
+          {property?.address ? (
+            <BloomText style={styles.subtitle}>
+              {[property.address.cityName, property.address.countryName].filter(Boolean).join(', ')}
             </BloomText>
-            <DetailRow
-              label={t('reservations.detail.checkIn')}
-              value={format(new Date(reservation.checkIn), 'EEE, MMM d, yyyy')}
-            />
-            <DetailRow
-              label={t('reservations.detail.checkOut')}
-              value={format(new Date(reservation.checkOut), 'EEE, MMM d, yyyy')}
-            />
-            <DetailRow
-              label={t('reservations.detail.guests')}
-              value={`${reservation.guestCount} ${
-                reservation.guestCount === 1
-                  ? t('reservations.card.guest')
-                  : t('reservations.card.guests')
-              }`}
-            />
-            <DetailRow label={t('reservations.detail.nights')} value={String(reservation.nights)} />
-          </Card>
+          ) : null}
+        </Card>
 
-          <Card radius="radius-16" className="p-5" appearance="outline">
-            <BloomText style={styles.sectionLabel}>{t('reservations.detail.price')}</BloomText>
-            <PriceBreakdown
-              nights={reservation.nights}
-              nightlyRate={reservation.nightlyRate}
-              cleaningFee={reservation.cleaningFee}
-              serviceFee={reservation.serviceFee}
-              taxesPercent={
-                reservation.taxes && reservation.subtotal > 0
-                  ? Math.round(
-                      (reservation.taxes /
-                        (reservation.subtotal +
-                          (reservation.cleaningFee ?? 0) +
-                          (reservation.serviceFee ?? 0))) *
-                        10000,
-                    ) / 100
-                  : 0
-              }
-              currency={reservation.currency}
-            />
-          </Card>
+        <Card radius="radius-16" className="p-5" appearance="outline">
+          <BloomText style={styles.sectionLabel}>{t('reservations.detail.tripDetails')}</BloomText>
+          <DetailRow
+            label={t('reservations.detail.checkIn')}
+            value={format(new Date(reservation.checkIn), 'EEE, MMM d, yyyy')}
+          />
+          <DetailRow
+            label={t('reservations.detail.checkOut')}
+            value={format(new Date(reservation.checkOut), 'EEE, MMM d, yyyy')}
+          />
+          <DetailRow
+            label={t('reservations.detail.guests')}
+            value={`${reservation.guestCount} ${
+              reservation.guestCount === 1
+                ? t('reservations.card.guest')
+                : t('reservations.card.guests')
+            }`}
+          />
+          <DetailRow label={t('reservations.detail.nights')} value={String(reservation.nights)} />
+        </Card>
 
-          {showHostApproveDecline || showGuestCancel || showHostCancel ? (
-            <View style={styles.actionRow}>
-              {showHostApproveDecline ? (
-                <>
-                  <Button
-                    size="md"
-                    onPress={() => void confirmAction('confirm')}
-                    disabled={updateMutation.isPending}
-                    style={styles.actionButton}
-                    tone="accent"
-                    appearance="solid"
-                  >
-                    {t('reservations.detail.approve')}
-                  </Button>
-                  <Button
-                    size="md"
-                    onPress={() => void confirmAction('decline')}
-                    disabled={updateMutation.isPending}
-                    style={styles.actionButton}
-                    tone="neutral"
-                    appearance="outline"
-                  >
-                    {t('reservations.detail.decline')}
-                  </Button>
-                </>
-              ) : null}
-              {showGuestCancel || showHostCancel ? (
+        <Card radius="radius-16" className="p-5" appearance="outline">
+          <BloomText style={styles.sectionLabel}>{t('reservations.detail.price')}</BloomText>
+          <PriceBreakdown
+            nights={reservation.nights}
+            nightlyRate={reservation.nightlyRate}
+            cleaningFee={reservation.cleaningFee}
+            serviceFee={reservation.serviceFee}
+            taxesPercent={
+              reservation.taxes && reservation.subtotal > 0
+                ? Math.round(
+                    (reservation.taxes /
+                      (reservation.subtotal +
+                        (reservation.cleaningFee ?? 0) +
+                        (reservation.serviceFee ?? 0))) *
+                      10000,
+                  ) / 100
+                : 0
+            }
+            currency={reservation.currency}
+          />
+        </Card>
+
+        {showHostApproveDecline || showGuestCancel || showHostCancel ? (
+          <View style={styles.actionRow}>
+            {showHostApproveDecline ? (
+              <>
                 <Button
                   size="md"
-                  onPress={() => void confirmAction('cancel')}
+                  onPress={() => void confirmAction('confirm')}
                   disabled={updateMutation.isPending}
                   style={styles.actionButton}
                   tone="accent"
-                  appearance="subtle"
+                  appearance="solid"
                 >
-                  {t('reservations.detail.cancelReservation')}
+                  {t('reservations.detail.approve')}
                 </Button>
-              ) : null}
-            </View>
-          ) : null}
+                <Button
+                  size="md"
+                  onPress={() => void confirmAction('decline')}
+                  disabled={updateMutation.isPending}
+                  style={styles.actionButton}
+                  tone="neutral"
+                  appearance="outline"
+                >
+                  {t('reservations.detail.decline')}
+                </Button>
+              </>
+            ) : null}
+            {showGuestCancel || showHostCancel ? (
+              <Button
+                size="md"
+                onPress={() => void confirmAction('cancel')}
+                disabled={updateMutation.isPending}
+                style={styles.actionButton}
+                tone="accent"
+                appearance="subtle"
+              >
+                {t('reservations.detail.cancelReservation')}
+              </Button>
+            ) : null}
+          </View>
+        ) : null}
 
-          {role === 'guest' &&
-          reservation.status === ReservationStatus.CONFIRMED &&
-          !showGuestCancel ? (
-            <BloomText style={styles.policyNote}>
-              {t('reservations.detail.cancelPolicyNote', {
-                policy: reservation.cancellationPolicy.replace('_', ' '),
-              })}
-            </BloomText>
-          ) : null}
-        </ScrollView>
-      </SafeAreaView>
-    </View>
+        {role === 'guest' &&
+        reservation.status === ReservationStatus.CONFIRMED &&
+        !showGuestCancel ? (
+          <BloomText style={styles.policyNote}>
+            {t('reservations.detail.cancelPolicyNote', {
+              policy: reservation.cancellationPolicy.replace('_', ' '),
+            })}
+          </BloomText>
+        ) : null}
+      </View>
+    </>
   );
 }
 
@@ -351,13 +346,6 @@ const DetailRow: React.FC<DetailRowProps> = ({ label, value }) => (
 );
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  safeArea: {
-    flex: 1,
-  },
   content: {
     padding: spacing.lg,
     gap: spacing.lg,

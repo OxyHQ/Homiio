@@ -1,9 +1,9 @@
-import React from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { StyleSheet, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { Button } from '@oxy.so/bloom/button';
+import { PageHeader } from '@oxy.so/bloom/page-header';
 import { Tabs, TabsTrigger } from '@oxy.so/bloom/tabs';
-import { Header } from '@/components/Header';
 import { ProfileSkeleton } from '@/components/ui/skeletons/ProfileSkeleton';
 import { PersonalProfileSections } from '@/components/profile/edit/PersonalProfileSections';
 import { useProfileEditForm } from '@/hooks/profile/useProfileEditForm';
@@ -11,6 +11,7 @@ import { useProfileEditTabs } from '@/hooks/profile/useProfileEditTabs';
 import { contentClamp, spacing } from '@/constants/styles';
 
 export default function ProfileEditScreen() {
+  const { t } = useTranslation();
   const form = useProfileEditForm();
   const { activeProfile, profileLoading, isFormInitialized } = form;
   const { activeSection, setActiveSection, tabs } = useProfileEditTabs(isFormInitialized);
@@ -18,34 +19,29 @@ export default function ProfileEditScreen() {
   const shouldShowLoading = profileLoading || (!isFormInitialized && Boolean(activeProfile));
 
   if (shouldShowLoading) {
-    return (
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
-        <ProfileSkeleton />
-      </SafeAreaView>
-    );
+    return <ProfileSkeleton />;
   }
 
   const title = `Edit profile${form.hasUnsavedChanges ? ' *' : ''}`;
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['bottom']} key={`edit-${activeProfile?.id}`}>
-      <Header
-        options={{
-          title,
-          rightComponents: [
-            <Button
-              key="save"
-              size="sm"
-              onPress={form.handleSave}
-              disabled={form.isSaving}
-              loading={form.isSaving}
-              tone="accent"
-              appearance="solid"
-            >
-              {form.isSaving ? 'Saving…' : 'Save'}
-            </Button>,
-          ],
-        }}
+    <View key={`edit-${activeProfile?.id}`}>
+      <PageHeader
+        title={title}
+        titleAlign="center"
+        leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+        actions={
+          <Button
+            size="sm"
+            onPress={form.handleSave}
+            disabled={form.isSaving}
+            loading={form.isSaving}
+            tone="accent"
+            appearance="solid"
+          >
+            {form.isSaving ? 'Saving…' : 'Save'}
+          </Button>
+        }
       />
       <View style={styles.tabs}>
         <Tabs value={activeSection} onValueChange={setActiveSection} variant="underline">
@@ -54,7 +50,7 @@ export default function ProfileEditScreen() {
           ))}
         </Tabs>
       </View>
-      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <View style={styles.content}>
         <PersonalProfileSections
           activeSection={activeSection}
           personalInfo={form.personalInfo}
@@ -74,20 +70,14 @@ export default function ProfileEditScreen() {
           updateRentalHistory={form.updateRentalHistory}
           removeRentalHistory={form.removeRentalHistory}
         />
-      </ScrollView>
-    </SafeAreaView>
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-  },
   tabs: {
     paddingHorizontal: spacing.lg,
-  },
-  container: {
-    flex: 1,
   },
   content: {
     width: '100%',

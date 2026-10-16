@@ -292,5 +292,3 @@ const styles = StyleSheet.create({
     marginLeft: 'auto',
   },
 });
-
-export default CommunityNoteCard;

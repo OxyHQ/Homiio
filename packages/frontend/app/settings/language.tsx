@@ -9,22 +9,23 @@
  * `showBottomSheet('LanguageSelector')`, exactly like `ManageAccount` and
  * `FileManagement` in Settings). This screen no longer hand-rolls a picker.
  */
-import React, { useCallback } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { useCallback } from 'react';
+import { View } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useOxy } from '@oxy.so/services';
 import { getNativeLanguageName } from '@oxy.so/core';
+import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { RiGlobalLine } from '@oxy.so/bloom/icons';
-import { useTheme } from '@oxy.so/bloom/theme';
+import { PageHeader } from '@oxy.so/bloom/page-header';
 import { SettingsListGroup, SettingsListItem } from '@oxy.so/bloom/settings-list';
 
-import { Header } from '@/components/Header';
 import { SettingsRowIcon, settingsScreenStyles } from '@/components/profile/SettingsRowIcon';
 
 export default function LanguageSettingsScreen() {
   const { t } = useTranslation();
+  const router = useRouter();
   const { showBottomSheet, currentLanguage, currentLanguages } = useOxy();
-  const { colors: theme } = useTheme();
 
   const openLanguageSelector = useCallback(() => {
     showBottomSheet?.('LanguageSelector');
@@ -39,12 +40,13 @@ export default function LanguageSettingsScreen() {
     .join(', ');
 
   return (
-    <View style={[styles.root, { backgroundColor: theme.background }]}>
-      <Header
-        options={{
-          title: t('settings.language.title'),
-          showBackButton: true,
-        }}
+    <>
+      <PageHeader
+        title={t('settings.language.title')}
+        titleAlign="center"
+        leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+        onBack={router.canGoBack() ? router.back : undefined}
+        backLabel={t('goBack')}
       />
       <View style={settingsScreenStyles.content}>
         <SettingsListGroup title={t('settings.language.choose')}>
@@ -56,12 +58,6 @@ export default function LanguageSettingsScreen() {
           />
         </SettingsListGroup>
       </View>
-    </View>
+    </>
   );
 }
-
-const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-  },
-});

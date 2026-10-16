@@ -9,12 +9,12 @@
  */
 import type React from 'react';
 import { useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as DocumentPicker from 'expo-document-picker';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { toast } from '@oxy.so/bloom/toast';
+import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { Button } from '@oxy.so/bloom/button';
 import { Card, CardBody, CardDescription, CardHeader, CardTitle } from '@oxy.so/bloom/card';
 import { Chip } from '@oxy.so/bloom/chip';
@@ -29,6 +29,7 @@ import {
   RiUploadCloud2Line,
 } from '@oxy.so/bloom/icons';
 import { Item } from '@oxy.so/bloom/item';
+import { PageHeader } from '@oxy.so/bloom/page-header';
 import { PhoneInput, findCountry } from '@oxy.so/bloom/phone-input';
 import { TextField, TextFieldIcon, TextFieldInput } from '@oxy.so/bloom/text-field';
 import { Textarea } from '@oxy.so/bloom/textarea';
@@ -41,7 +42,6 @@ import {
   TenantApplicationDocumentType,
   PropertyType,
 } from '@homiio/shared-types';
-import { Header } from '@/components/Header';
 import { useProperty } from '@/hooks';
 import { useCreateApplicationMutation } from '@/hooks/useApplicationQueries';
 import type {
@@ -380,289 +380,280 @@ export default function ApplyToRentScreen() {
   };
 
   return (
-    <View style={styles.root}>
-      <Header
-        options={{
-          showBackButton: true,
-          title: t('applications.apply.title'),
-        }}
+    <>
+      <PageHeader
+        title={t('applications.apply.title')}
+        titleAlign="center"
+        leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+        onBack={router.canGoBack() ? router.back : undefined}
+        backLabel={t('goBack')}
       />
-      <SafeAreaView style={styles.scrollWrapper} edges={['bottom']}>
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-        >
-          {property && (
-            <Card radius="radius-16" appearance="outline">
-              <CardHeader>
-                <CardTitle>{propertyTitle}</CardTitle>
-                <CardDescription>
-                  {property.address?.cityName}
-                  {property.address?.countryName ? `, ${property.address.countryName}` : ''}
-                </CardDescription>
-                {property.longTermRent && (
-                  <Text style={[styles.propertyPrice, { color: theme.colors.primary }]}>
-                    {property.longTermRent.currency || ''}
-                    {property.longTermRent.monthlyAmount}
-                    {' / '}
-                    {t('common.month')}
-                  </Text>
-                )}
-              </CardHeader>
-            </Card>
-          )}
+      <View style={styles.scrollContent}>
+        {property && (
+          <Card radius="radius-16" appearance="outline">
+            <CardHeader>
+              <CardTitle>{propertyTitle}</CardTitle>
+              <CardDescription>
+                {property.address?.cityName}
+                {property.address?.countryName ? `, ${property.address.countryName}` : ''}
+              </CardDescription>
+              {property.longTermRent && (
+                <Text style={[styles.propertyPrice, { color: theme.colors.primary }]}>
+                  {property.longTermRent.currency || ''}
+                  {property.longTermRent.monthlyAmount}
+                  {' / '}
+                  {t('common.month')}
+                </Text>
+              )}
+            </CardHeader>
+          </Card>
+        )}
 
-          <Section title={t('applications.section.timing')}>
-            <Field
-              label={t('applications.field.moveInDate')}
-              description={t('applications.field.moveInHelper')}
-            >
-              <DatePicker
-                value={moveInDateValue}
-                onChange={(date) => setMoveInDate(date ? toLocalDateString(date) : '')}
-                minDate={moveInBounds.min}
-                maxDate={moveInBounds.max}
-                locale={i18n.language}
-                weekStartsOn={1}
-                placeholder={t('applications.cta.addMoveIn')}
-                accessibilityLabel={t('applications.field.moveInDate')}
-              />
-            </Field>
+        <Section title={t('applications.section.timing')}>
+          <Field
+            label={t('applications.field.moveInDate')}
+            description={t('applications.field.moveInHelper')}
+          >
+            <DatePicker
+              value={moveInDateValue}
+              onChange={(date) => setMoveInDate(date ? toLocalDateString(date) : '')}
+              minDate={moveInBounds.min}
+              maxDate={moveInBounds.max}
+              locale={i18n.language}
+              weekStartsOn={1}
+              placeholder={t('applications.cta.addMoveIn')}
+              accessibilityLabel={t('applications.field.moveInDate')}
+            />
+          </Field>
 
-            <Field label={t('applications.field.leaseTerm')}>
-              <View style={styles.chipRow}>
-                {LEASE_PRESET_MONTHS.map((preset) => {
-                  const isActive = !usingCustomTerm && leaseTermMonths === preset;
-                  return (
-                    <Chip
-                      key={preset}
-                      selected={isActive}
-                      variant={isActive ? 'solid' : 'outlined'}
-                      onPress={() => {
-                        setUsingCustomTerm(false);
-                        setLeaseTermMonths(preset);
-                      }}
-                    >
-                      {t('applications.field.leaseTermMonths', { count: preset })}
-                    </Chip>
-                  );
-                })}
-                <Chip
-                  selected={usingCustomTerm}
-                  variant={usingCustomTerm ? 'solid' : 'outlined'}
-                  onPress={() => setUsingCustomTerm(true)}
-                >
-                  {t('applications.field.leaseTermCustom')}
-                </Chip>
-              </View>
-            </Field>
-            {usingCustomTerm && (
-              <TextFieldInput
-                label={t('applications.field.leaseTermCustom')}
-                value={leaseTermCustom}
-                onChangeText={(text) => setLeaseTermCustom(text.replace(/[^0-9]/g, ''))}
-                placeholder={t('applications.field.leaseTermCustomPlaceholder')}
-                inputMode="numeric"
-                maxLength={2}
-              />
-            )}
-          </Section>
-
-          <Section title={t('applications.section.finances')}>
-            <Field label={t('applications.field.monthlyIncome')}>
-              <TextFieldInput
-                label={t('applications.field.monthlyIncome')}
-                value={monthlyIncome}
-                onChangeText={setMonthlyIncome}
-                placeholder={t('applications.field.monthlyIncomePlaceholder')}
-                inputMode="decimal"
-                keyboardType="decimal-pad"
-              />
-            </Field>
-
-            <Field label={t('applications.field.employment')}>
-              <View style={styles.chipRow}>
-                {EMPLOYMENT_OPTIONS.map((option) => (
+          <Field label={t('applications.field.leaseTerm')}>
+            <View style={styles.chipRow}>
+              {LEASE_PRESET_MONTHS.map((preset) => {
+                const isActive = !usingCustomTerm && leaseTermMonths === preset;
+                return (
                   <Chip
-                    key={option.value}
-                    selected={employmentStatus === option.value}
-                    variant={employmentStatus === option.value ? 'solid' : 'outlined'}
-                    onPress={() => setEmploymentStatus(option.value)}
+                    key={preset}
+                    selected={isActive}
+                    variant={isActive ? 'solid' : 'outlined'}
+                    onPress={() => {
+                      setUsingCustomTerm(false);
+                      setLeaseTermMonths(preset);
+                    }}
                   >
-                    {t(option.labelKey)}
+                    {t('applications.field.leaseTermMonths', { count: preset })}
                   </Chip>
-                ))}
-              </View>
-            </Field>
-          </Section>
-
-          <Section
-            title={t('applications.section.references')}
-            description={t('applications.section.referencesHelp')}
-          >
-            {references.map((reference, index) => (
-              <Card key={index} radius="radius-12" style={styles.referenceCard} appearance="subtle">
-                <View style={styles.referenceHeader}>
-                  <Text style={styles.referenceTitle}>
-                    {t('applications.field.referenceIndex', { index: index + 1 })}
-                  </Text>
-                  {references.length > 1 && (
-                    <Button
-                      size="sm"
-                      iconOnly
-                      leadingIcon={RiCloseLine}
-                      onPress={() => handleRemoveReference(index)}
-                      accessibilityLabel={t('applications.field.removeReference')}
-                      tone="accent"
-                      appearance="subtle"
-                    />
-                  )}
-                </View>
-                <Field label={t('applications.field.name')}>
-                  <TextFieldInput
-                    label={t('applications.field.name')}
-                    value={reference.name}
-                    onChangeText={(value) => handleReferenceChange(index, { name: value })}
-                    placeholder={t('applications.field.namePlaceholder')}
-                    autoCapitalize="words"
-                  />
-                </Field>
-                <Field label={t('applications.field.relationship')}>
-                  <View style={styles.chipRow}>
-                    {RELATIONSHIP_OPTIONS.map((option) => (
-                      <Chip
-                        key={option.value}
-                        selected={reference.relationship === option.value}
-                        variant={reference.relationship === option.value ? 'solid' : 'outlined'}
-                        onPress={() => handleReferenceChange(index, { relationship: option.value })}
-                      >
-                        {t(option.labelKey)}
-                      </Chip>
-                    ))}
-                  </View>
-                </Field>
-                <PhoneInput
-                  label={t('applications.field.phone')}
-                  value={reference.phone}
-                  onValueChange={(value) => handleReferenceChange(index, { phone: value })}
-                  country={reference.phoneCountry}
-                  onCountryChange={(iso2) => handleReferenceChange(index, { phoneCountry: iso2 })}
-                  placeholder="600 000 000"
-                />
-                <Field label={t('applications.field.email')}>
-                  <TextField>
-                    <TextFieldIcon icon={RiMailLine} />
-                    <TextFieldInput
-                      label={t('applications.field.email')}
-                      value={reference.email}
-                      onChangeText={(value) => handleReferenceChange(index, { email: value })}
-                      placeholder="reference@example.com"
-                      inputMode="email"
-                      keyboardType="email-address"
-                      autoCapitalize="none"
-                    />
-                  </TextField>
-                </Field>
-              </Card>
-            ))}
-            {references.length < 3 && (
-              <Button
-                onPress={handleAddReference}
-                leadingIcon={RiAddLine}
-                style={styles.secondaryAction}
-                tone="neutral"
-                appearance="outline"
+                );
+              })}
+              <Chip
+                selected={usingCustomTerm}
+                variant={usingCustomTerm ? 'solid' : 'outlined'}
+                onPress={() => setUsingCustomTerm(true)}
               >
-                {t('applications.field.addReference')}
-              </Button>
-            )}
-          </Section>
+                {t('applications.field.leaseTermCustom')}
+              </Chip>
+            </View>
+          </Field>
+          {usingCustomTerm && (
+            <TextFieldInput
+              label={t('applications.field.leaseTermCustom')}
+              value={leaseTermCustom}
+              onChangeText={(text) => setLeaseTermCustom(text.replace(/[^0-9]/g, ''))}
+              placeholder={t('applications.field.leaseTermCustomPlaceholder')}
+              inputMode="numeric"
+              maxLength={2}
+            />
+          )}
+        </Section>
 
-          <Section
-            title={t('applications.section.documents')}
-            description={t('applications.section.documentsHelp', { max: MAX_DOCUMENTS })}
-          >
+        <Section title={t('applications.section.finances')}>
+          <Field label={t('applications.field.monthlyIncome')}>
+            <TextFieldInput
+              label={t('applications.field.monthlyIncome')}
+              value={monthlyIncome}
+              onChangeText={setMonthlyIncome}
+              placeholder={t('applications.field.monthlyIncomePlaceholder')}
+              inputMode="decimal"
+              keyboardType="decimal-pad"
+            />
+          </Field>
+
+          <Field label={t('applications.field.employment')}>
+            <View style={styles.chipRow}>
+              {EMPLOYMENT_OPTIONS.map((option) => (
+                <Chip
+                  key={option.value}
+                  selected={employmentStatus === option.value}
+                  variant={employmentStatus === option.value ? 'solid' : 'outlined'}
+                  onPress={() => setEmploymentStatus(option.value)}
+                >
+                  {t(option.labelKey)}
+                </Chip>
+              ))}
+            </View>
+          </Field>
+        </Section>
+
+        <Section
+          title={t('applications.section.references')}
+          description={t('applications.section.referencesHelp')}
+        >
+          {references.map((reference, index) => (
+            <Card key={index} radius="radius-12" style={styles.referenceCard} appearance="subtle">
+              <View style={styles.referenceHeader}>
+                <Text style={styles.referenceTitle}>
+                  {t('applications.field.referenceIndex', { index: index + 1 })}
+                </Text>
+                {references.length > 1 && (
+                  <Button
+                    size="sm"
+                    iconOnly
+                    leadingIcon={RiCloseLine}
+                    onPress={() => handleRemoveReference(index)}
+                    accessibilityLabel={t('applications.field.removeReference')}
+                    tone="accent"
+                    appearance="subtle"
+                  />
+                )}
+              </View>
+              <Field label={t('applications.field.name')}>
+                <TextFieldInput
+                  label={t('applications.field.name')}
+                  value={reference.name}
+                  onChangeText={(value) => handleReferenceChange(index, { name: value })}
+                  placeholder={t('applications.field.namePlaceholder')}
+                  autoCapitalize="words"
+                />
+              </Field>
+              <Field label={t('applications.field.relationship')}>
+                <View style={styles.chipRow}>
+                  {RELATIONSHIP_OPTIONS.map((option) => (
+                    <Chip
+                      key={option.value}
+                      selected={reference.relationship === option.value}
+                      variant={reference.relationship === option.value ? 'solid' : 'outlined'}
+                      onPress={() => handleReferenceChange(index, { relationship: option.value })}
+                    >
+                      {t(option.labelKey)}
+                    </Chip>
+                  ))}
+                </View>
+              </Field>
+              <PhoneInput
+                label={t('applications.field.phone')}
+                value={reference.phone}
+                onValueChange={(value) => handleReferenceChange(index, { phone: value })}
+                country={reference.phoneCountry}
+                onCountryChange={(iso2) => handleReferenceChange(index, { phoneCountry: iso2 })}
+                placeholder="600 000 000"
+              />
+              <Field label={t('applications.field.email')}>
+                <TextField>
+                  <TextFieldIcon icon={RiMailLine} />
+                  <TextFieldInput
+                    label={t('applications.field.email')}
+                    value={reference.email}
+                    onChangeText={(value) => handleReferenceChange(index, { email: value })}
+                    placeholder="reference@example.com"
+                    inputMode="email"
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                  />
+                </TextField>
+              </Field>
+            </Card>
+          ))}
+          {references.length < 3 && (
             <Button
-              onPress={handlePickDocuments}
-              disabled={documents.length >= MAX_DOCUMENTS}
-              leadingIcon={RiUploadCloud2Line}
+              onPress={handleAddReference}
+              leadingIcon={RiAddLine}
               style={styles.secondaryAction}
               tone="neutral"
               appearance="outline"
             >
-              {t('applications.field.pickDocuments')}
+              {t('applications.field.addReference')}
             </Button>
-            {documents.map((doc) => {
-              const DocIcon = doc.mimeType?.startsWith('image/') ? RiImageLine : RiFileTextLine;
-              return (
-                <Card
-                  key={doc.id}
-                  radius="radius-12"
-                  style={styles.documentCard}
-                  appearance="subtle"
-                >
-                  <Item
-                    density="compact"
-                    leading={<DocIcon width={20} height={20} fill={theme.colors.primary} />}
-                    title={doc.filename}
-                    subtitle={formatDocumentSize(doc.sizeBytes) ?? undefined}
-                    trailing={
-                      <Button
-                        size="sm"
-                        iconOnly
-                        leadingIcon={RiCloseLine}
-                        onPress={() => handleRemoveDocument(doc.id)}
-                        accessibilityLabel={t('applications.field.removeDocument')}
-                        tone="accent"
-                        appearance="subtle"
-                      />
-                    }
-                  />
-                  <View style={styles.chipRow}>
-                    {DOCUMENT_TYPE_OPTIONS.map((option) => (
-                      <Chip
-                        key={option.value}
-                        size="sm"
-                        selected={doc.type === option.value}
-                        variant={doc.type === option.value ? 'solid' : 'outlined'}
-                        onPress={() => handleDocumentTypeChange(doc.id, option.value)}
-                      >
-                        {t(option.labelKey)}
-                      </Chip>
-                    ))}
-                  </View>
-                </Card>
-              );
-            })}
-          </Section>
+          )}
+        </Section>
 
-          <Section title={t('applications.section.notes')}>
-            <Textarea
-              accessibilityLabel={t('applications.section.notes')}
-              value={notes}
-              onChangeText={setNotes}
-              placeholder={t('applications.field.notesPlaceholder')}
-              rows={4}
-              autoResize
-              maxRows={12}
-              maxLength={4000}
-              showCount
-            />
-          </Section>
-
+        <Section
+          title={t('applications.section.documents')}
+          description={t('applications.section.documentsHelp', { max: MAX_DOCUMENTS })}
+        >
           <Button
-            onPress={handleSubmit}
-            disabled={!formIsValid || isSubmitting}
-            loading={isSubmitting}
-            size="lg"
-            tone="accent"
-            appearance="solid"
+            onPress={handlePickDocuments}
+            disabled={documents.length >= MAX_DOCUMENTS}
+            leadingIcon={RiUploadCloud2Line}
+            style={styles.secondaryAction}
+            tone="neutral"
+            appearance="outline"
           >
-            {t('applications.actions.submit')}
+            {t('applications.field.pickDocuments')}
           </Button>
-        </ScrollView>
-      </SafeAreaView>
-    </View>
+          {documents.map((doc) => {
+            const DocIcon = doc.mimeType?.startsWith('image/') ? RiImageLine : RiFileTextLine;
+            return (
+              <Card key={doc.id} radius="radius-12" style={styles.documentCard} appearance="subtle">
+                <Item
+                  density="compact"
+                  leading={<DocIcon width={20} height={20} fill={theme.colors.primary} />}
+                  title={doc.filename}
+                  subtitle={formatDocumentSize(doc.sizeBytes) ?? undefined}
+                  trailing={
+                    <Button
+                      size="sm"
+                      iconOnly
+                      leadingIcon={RiCloseLine}
+                      onPress={() => handleRemoveDocument(doc.id)}
+                      accessibilityLabel={t('applications.field.removeDocument')}
+                      tone="accent"
+                      appearance="subtle"
+                    />
+                  }
+                />
+                <View style={styles.chipRow}>
+                  {DOCUMENT_TYPE_OPTIONS.map((option) => (
+                    <Chip
+                      key={option.value}
+                      size="sm"
+                      selected={doc.type === option.value}
+                      variant={doc.type === option.value ? 'solid' : 'outlined'}
+                      onPress={() => handleDocumentTypeChange(doc.id, option.value)}
+                    >
+                      {t(option.labelKey)}
+                    </Chip>
+                  ))}
+                </View>
+              </Card>
+            );
+          })}
+        </Section>
+
+        <Section title={t('applications.section.notes')}>
+          <Textarea
+            accessibilityLabel={t('applications.section.notes')}
+            value={notes}
+            onChangeText={setNotes}
+            placeholder={t('applications.field.notesPlaceholder')}
+            rows={4}
+            autoResize
+            maxRows={12}
+            maxLength={4000}
+            showCount
+          />
+        </Section>
+
+        <Button
+          onPress={handleSubmit}
+          disabled={!formIsValid || isSubmitting}
+          loading={isSubmitting}
+          size="lg"
+          tone="accent"
+          appearance="solid"
+        >
+          {t('applications.actions.submit')}
+        </Button>
+      </View>
+    </>
   );
 }
 
@@ -683,12 +674,6 @@ function Section({
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-  },
-  scrollWrapper: {
-    flex: 1,
-  },
   scrollContent: {
     width: '100%',
     maxWidth: 720,

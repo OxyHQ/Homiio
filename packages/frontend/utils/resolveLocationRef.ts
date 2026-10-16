@@ -49,17 +49,6 @@ export interface DeviceFix {
   longitude: number;
 }
 
-/**
- * `citySelection` MOVED to `@homiio/shared-types` (#519 §8.6).
- *
- * The backend gained a second caller — Sindi resolves a city server-side and
- * hands the client a selection that must be identical to one the user could
- * have picked by hand — and two copies of that assembly would agree only until
- * somebody edited one. It is re-exported here so the existing call sites and
- * their tests keep their import path.
- */
-export { citySelection };
-
 /** Map a lookup outcome onto a resolution, without ever choosing a candidate. */
 async function resolveCityToken(token: string): Promise<LocationResolution> {
   try {

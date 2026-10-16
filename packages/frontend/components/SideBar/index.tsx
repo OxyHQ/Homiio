@@ -47,7 +47,6 @@ import { useHostStatus } from '@/hooks/useHostStatus';
 import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
 import { useColors } from '@/hooks/useThemeColor';
 import { useUIStore } from '@/store/uiStore';
-import { useIsScreenNotMobile } from '@/hooks/useOptimizedMediaQuery';
 import { getPropertyTitle } from '@/utils/propertyUtils';
 import { SindiIcon } from '@/assets/icons';
 import type { BrowseMode } from '@/components/search/types';
@@ -154,13 +153,10 @@ export function useHomiioSidebarProps(): HomiioSidebarProps {
   const { t } = useTranslation();
   const colors = useColors();
 
-  const isMobile = !useIsScreenNotMobile();
-
   const sidebarCollapsed = useUIStore((s) => s.sidebarCollapsed);
   const setSidebarCollapsed = useUIStore((s) => s.setSidebarCollapsed);
   const closeMobileDrawer = useUIStore((s) => s.closeMobileDrawer);
   const sindiPanelOpen = useUIStore((s) => s.sindiPanelOpen);
-  const toggleSindiPanel = useUIStore((s) => s.toggleSindiPanel);
 
   const { mode, browseMode, setBrowseMode } = useRentalMode();
   const { canAccessRoommates } = useProfile();
@@ -187,18 +183,9 @@ export function useHomiioSidebarProps(): HomiioSidebarProps {
     [pathname, router, closeMobileDrawer],
   );
 
-  // Sindi is a panel from 500 (the shell's aside from `lg`, an overlay below
-  // it): toggle it, no navigation, and close the drawer it may have been
-  // pressed from. On a phone Sindi keeps navigating to the full-screen `/sindi`
-  // route.
-  const handleSindi = React.useCallback(() => {
-    if (!isMobile) {
-      closeMobileDrawer();
-      toggleSindiPanel();
-      return;
-    }
-    handleNavigate('/sindi');
-  }, [isMobile, closeMobileDrawer, toggleSindiPanel, handleNavigate]);
+  // Sindi opens its full-screen `/sindi` route at every width: whether the
+  // panel exists is a viewport decision the sidebar no longer makes.
+  const handleSindi = React.useCallback(() => handleNavigate('/sindi'), [handleNavigate]);
 
   // Opens Alia's chat sheet (or the sign-in dialog when signed out); the drawer
   // is dismissed first so the sheet is not presented behind it.
@@ -296,23 +283,17 @@ export function useHomiioSidebarProps(): HomiioSidebarProps {
 
     entries.push(
       { key: 'saved', label: t('sidebar.navigation.saved'), icon: RiBookmarkLine, href: '/saved' },
-      // An action row: a docked panel on wide screens, a route from the drawer.
+      // An action row: opens the `/sindi` route (closing the drawer first).
       {
         key: 'sindi',
         label: t('sidebar.navigation.sindi'),
         icon: SindiSidebarIcon,
         onPress: handleSindi,
       },
-      {
-        key: 'alia',
-        label: t('sidebar.navigation.askAlia'),
-        icon: AliaAvatarIcon,
-        onPress: handleAskAlia,
-      },
     );
 
     return entries;
-  }, [t, isAuthenticated, mode, canAccessRoommates, isHost, handleSindi, handleAskAlia]);
+  }, [t, isAuthenticated, mode, canAccessRoommates, isHost, handleSindi]);
 
   // Signed out, the account is a "Sign in" row above the legal links; signed
   // in it is the `team` card below. Nothing while auth is still resolving, so
@@ -521,5 +502,11 @@ export function useHomiioSidebarProps(): HomiioSidebarProps {
     onCollapsedChange: setSidebarCollapsed,
     showThemeToggle: false,
     showSearch: false,
+    surface: 'plain',
+    primaryAction: {
+      label: t('sidebar.navigation.askAlia'),
+      icon: AliaAvatarIcon,
+      onPress: handleAskAlia,
+    },
   };
 }

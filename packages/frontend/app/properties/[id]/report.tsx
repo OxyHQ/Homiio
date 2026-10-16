@@ -9,22 +9,23 @@
  * `/api/properties/:propertyId/report`; the report lands in the internal
  * review queue.
  *
- * Mirrors the long-term apply form (`apply.tsx`): `Header`, Bloom `RadioGroup`
+ * Mirrors the long-term apply form (`apply.tsx`): `PageHeader`, Bloom `RadioGroup`
  * cards for the reason, `Textarea`/`TextFieldInput` fields, the same auth gate (`openAccountDialog`), `useMutation`, and
  * the shared toast + `ApiError` handling. No `useEffect` — form state is local,
  * the email prefill is derived from `useOxy`, and validity is `useMemo`.
  */
 import React, { useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { z } from 'zod';
 
+import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { Button } from '@oxy.so/bloom/button';
 import { Card, CardDescription, CardHeader, CardTitle } from '@oxy.so/bloom/card';
 import { Field } from '@oxy.so/bloom/field';
 import { RiMailLine, RiShieldCheckLine } from '@oxy.so/bloom/icons';
+import { PageHeader } from '@oxy.so/bloom/page-header';
 import { RadioGroup, type RadioOption } from '@oxy.so/bloom/radio';
 import { TextField, TextFieldIcon, TextFieldInput } from '@oxy.so/bloom/text-field';
 import { Textarea } from '@oxy.so/bloom/textarea';
@@ -33,7 +34,6 @@ import { Text } from '@oxy.so/bloom/typography';
 import { openAccountDialog, useOxy } from '@oxy.so/services';
 
 import { ListingReportReason, PropertyType } from '@homiio/shared-types';
-import { Header } from '@/components/Header';
 import { useProperty } from '@/hooks';
 import { useReportListingMutation } from '@/hooks/useReportMutation';
 import { generatePropertyTitle } from '@/utils/propertyTitleGenerator';
@@ -170,109 +170,99 @@ export default function ReportListingScreen() {
   };
 
   return (
-    <View style={styles.root}>
-      <Header
-        options={{
-          showBackButton: true,
-          title: t('property.report.title'),
-        }}
+    <>
+      <PageHeader
+        title={t('property.report.title')}
+        titleAlign="center"
+        leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+        onBack={router.canGoBack() ? router.back : undefined}
+        backLabel={t('goBack')}
       />
-      <SafeAreaView style={styles.scrollWrapper} edges={['bottom']}>
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-        >
-          <Text style={[styles.intro, { color: theme.colors.textSecondary }]}>
-            {t('property.report.intro')}
-          </Text>
+      <View style={styles.scrollContent}>
+        <Text style={[styles.intro, { color: theme.colors.textSecondary }]}>
+          {t('property.report.intro')}
+        </Text>
 
-          {property ? (
-            <Card radius="radius-16" appearance="outline">
-              <CardHeader>
-                <CardTitle>{propertyTitle}</CardTitle>
-                <CardDescription>
-                  {property.address?.cityName}
-                  {property.address?.countryName ? `, ${property.address.countryName}` : ''}
-                </CardDescription>
-              </CardHeader>
-            </Card>
-          ) : null}
+        {property ? (
+          <Card radius="radius-16" appearance="outline">
+            <CardHeader>
+              <CardTitle>{propertyTitle}</CardTitle>
+              <CardDescription>
+                {property.address?.cityName}
+                {property.address?.countryName ? `, ${property.address.countryName}` : ''}
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        ) : null}
 
-          <Field label={t('property.report.section.reason')} required>
-            <RadioGroup
-              variant="card"
-              label={t('property.report.section.reason')}
-              value={reason ?? undefined}
-              onValueChange={setReason}
-              options={reasonOptions}
-            />
-          </Field>
-
-          <Textarea
-            label={
-              detailsRequired
-                ? t('property.report.section.detailsRequired')
-                : t('property.report.section.details')
-            }
-            required={detailsRequired}
-            hint={t('property.report.section.detailsHelp')}
-            value={details}
-            onChangeText={setDetails}
-            placeholder={t('property.report.field.detailsPlaceholder')}
-            rows={5}
-            maxLength={MAX_DETAILS_LENGTH}
-            showCount
+        <Field label={t('property.report.section.reason')} required>
+          <RadioGroup
+            variant="card"
+            label={t('property.report.section.reason')}
+            value={reason ?? undefined}
+            onValueChange={setReason}
+            options={reasonOptions}
           />
+        </Field>
 
-          <Field
-            label={t('property.report.section.contact')}
-            description={t('property.report.section.contactHelp')}
-          >
-            <TextField isInvalid={emailInvalid}>
-              <TextFieldIcon icon={RiMailLine} />
-              <TextFieldInput
-                label={t('property.report.section.contact')}
-                value={contactEmail}
-                onChangeText={setContactEmail}
-                placeholder="you@example.com"
-                inputMode="email"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-            </TextField>
-          </Field>
+        <Textarea
+          label={
+            detailsRequired
+              ? t('property.report.section.detailsRequired')
+              : t('property.report.section.details')
+          }
+          required={detailsRequired}
+          hint={t('property.report.section.detailsHelp')}
+          value={details}
+          onChangeText={setDetails}
+          placeholder={t('property.report.field.detailsPlaceholder')}
+          rows={5}
+          maxLength={MAX_DETAILS_LENGTH}
+          showCount
+        />
 
-          <View style={styles.noticeRow}>
-            <RiShieldCheckLine width={18} height={18} fill={theme.colors.textSecondary} />
-            <Text style={[styles.noticeText, { color: theme.colors.textSecondary }]}>
-              {t('property.report.notice')}
-            </Text>
-          </View>
+        <Field
+          label={t('property.report.section.contact')}
+          description={t('property.report.section.contactHelp')}
+        >
+          <TextField isInvalid={emailInvalid}>
+            <TextFieldIcon icon={RiMailLine} />
+            <TextFieldInput
+              label={t('property.report.section.contact')}
+              value={contactEmail}
+              onChangeText={setContactEmail}
+              placeholder="you@example.com"
+              inputMode="email"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+          </TextField>
+        </Field>
 
-          <Button
-            onPress={handleSubmit}
-            disabled={!formIsValid || isSubmitting}
-            loading={isSubmitting}
-            size="lg"
-            tone="accent"
-            appearance="solid"
-          >
-            {t('property.report.actions.submit')}
-          </Button>
-        </ScrollView>
-      </SafeAreaView>
-    </View>
+        <View style={styles.noticeRow}>
+          <RiShieldCheckLine width={18} height={18} fill={theme.colors.textSecondary} />
+          <Text style={[styles.noticeText, { color: theme.colors.textSecondary }]}>
+            {t('property.report.notice')}
+          </Text>
+        </View>
+
+        <Button
+          onPress={handleSubmit}
+          disabled={!formIsValid || isSubmitting}
+          loading={isSubmitting}
+          size="lg"
+          tone="accent"
+          appearance="solid"
+        >
+          {t('property.report.actions.submit')}
+        </Button>
+      </View>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-  },
-  scrollWrapper: {
-    flex: 1,
-  },
   scrollContent: {
     width: '100%',
     maxWidth: 720,

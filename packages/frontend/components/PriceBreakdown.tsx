@@ -30,7 +30,7 @@ export interface StayQuoteInput {
   taxesPercent?: number;
 }
 
-export interface StayQuote {
+interface StayQuote {
   nights: number;
   nightlyRate: number;
   subtotal: number;
@@ -41,7 +41,7 @@ export interface StayQuote {
 }
 
 /** The quote's amounts. Negative inputs count as zero; taxes and total round to cents. */
-export function computeStayQuote({
+function computeStayQuote({
   nights,
   nightlyRate,
   cleaningFee = 0,
@@ -126,12 +126,10 @@ export const PriceBreakdown: React.FC<PriceBreakdownProps> = (props) => {
   const breakdown = useStayQuoteBreakdown(props);
   if (!breakdown) {
     return (
-      <BloomText variant="body-2-regular" className="text-center text-muted-foreground">
+      <BloomText className="text-body-2-regular text-center text-muted-foreground">
         {t('booking.breakdown.selectDates')}
       </BloomText>
     );
   }
   return <BloomPriceBreakdown {...breakdown} />;
 };
-
-export default PriceBreakdown;

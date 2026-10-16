@@ -16,7 +16,7 @@ import { toast } from '@oxy.so/bloom/toast';
 import * as Haptics from 'expo-haptics';
 import { RiArrowRightSLine, RiFileCopyLine, RiMapPinFill, RiMapPinLine } from '@oxy.so/bloom/icons';
 
-export interface Address {
+interface Address {
   street: string;
   city: string;
   state: string;

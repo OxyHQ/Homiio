@@ -1,22 +1,17 @@
 import React from 'react';
-import { View, ScrollView } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { View } from 'react-native';
 import * as Skeleton from '@oxy.so/bloom/skeleton';
 import { colors } from '@/styles/colors';
 
 export function InsightsSkeleton() {
-  const insets = useSafeAreaInsets();
   return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: colors.primaryLight }}
-      contentContainerStyle={{ paddingBottom: 24 }}
-    >
+    <View style={{ paddingBottom: 24 }}>
       {/* Header */}
       <View
         style={{
           paddingHorizontal: 20,
           paddingBottom: 20,
-          paddingTop: insets.top + 20,
+          paddingTop: 20,
           alignItems: 'center',
         }}
       >
@@ -100,6 +95,6 @@ export function InsightsSkeleton() {
           </View>
         ))}
       </View>
-    </ScrollView>
+    </View>
   );
 }

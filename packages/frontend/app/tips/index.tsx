@@ -12,14 +12,14 @@ import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
+import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { Card } from '@oxy.so/bloom/card';
 import { Chip } from '@oxy.so/bloom/chip';
 import { RiAlertLine, RiCalendarLine, RiNewspaperLine, RiTimeLine } from '@oxy.so/bloom/icons';
+import { PageHeader } from '@oxy.so/bloom/page-header';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { H2, H3, Text as BloomText } from '@oxy.so/bloom/typography';
-import { useMediaQuery } from 'react-responsive';
 
-import { Header } from '@/components/Header';
 import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { TipsSkeleton } from '@/components/ui/skeletons/TipsSkeleton';
@@ -123,7 +123,6 @@ const TipCard: React.FC<TipCardProps> = ({ tip, onPress, featured = false }) => 
 export default function TipsScreen() {
   const { t, i18n } = useTranslation();
   const router = useRouter();
-  const isWide = useMediaQuery({ minWidth: 768 });
   const [activeTag, setActiveTag] = useState<string | undefined>(undefined);
   const locale = toNewsroomLocale(i18n.language);
 
@@ -157,14 +156,15 @@ export default function TipsScreen() {
   );
 
   return (
-    <View style={styles.root}>
-      <Header
-        options={{
-          title: t('home.tips.title'),
-          showBackButton: true,
-        }}
+    <>
+      <PageHeader
+        title={t('home.tips.title')}
+        titleAlign="center"
+        leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+        onBack={router.canGoBack() ? router.back : undefined}
+        backLabel={t('goBack')}
       />
-      <ScrollView contentContainerStyle={styles.content}>
+      <View style={styles.content}>
         <View style={styles.titleBlock}>
           <SectionEyebrow>{t('home.tips.eyebrow')}</SectionEyebrow>
           <H2 style={styles.title}>{t('home.tips.title')}</H2>
@@ -203,7 +203,7 @@ export default function TipsScreen() {
         ) : null}
 
         {tipsQuery.isPending ? (
-          <TipsSkeleton itemCount={isWide ? 4 : 3} />
+          <TipsSkeleton itemCount={4} />
         ) : tipsQuery.isError ? (
           <ErrorState
             icon={RiAlertLine}
@@ -228,9 +228,9 @@ export default function TipsScreen() {
             ) : null}
 
             {gridTips.length > 0 ? (
-              <View style={[styles.grid, isWide && styles.gridWide]}>
+              <View className="gap-4 md:flex-row md:flex-wrap">
                 {gridTips.map((tip) => (
-                  <View key={tip.slug} style={isWide ? styles.gridItem : undefined}>
+                  <View key={tip.slug} className="md:w-[48%] md:grow">
                     <TipCard tip={tip} onPress={() => router.push(`/tips/${tip.slug}`)} />
                   </View>
                 ))}
@@ -238,16 +238,12 @@ export default function TipsScreen() {
             ) : null}
           </View>
         )}
-      </ScrollView>
-    </View>
+      </View>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
   content: {
     padding: spacing.lg,
     gap: spacing.lg,
@@ -269,18 +265,6 @@ const styles = StyleSheet.create({
   },
   magazine: {
     gap: spacing.xl,
-  },
-  grid: {
-    gap: spacing.lg,
-  },
-  gridWide: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.lg,
-  },
-  gridItem: {
-    width: '48%',
-    flexGrow: 1,
   },
   tipImageContainer: {
     position: 'relative',

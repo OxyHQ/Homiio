@@ -7,16 +7,16 @@ import { createPropertyStyles as styles } from './styles';
 
 interface PreviewStepProps {
   submitError: string | null;
-  /** Whether the right rail already draws the preview. */
-  railShowsPreview: boolean;
+  /** Whether this route has a right rail, which draws the preview from `lg`. */
+  routeHasRail: boolean;
 }
 
 /**
  * "Preview" wizard step: the quality checklist, the listing preview (inline
- * only when the right rail is not drawing it), and the submission error.
+ * except from `lg` on a route whose right rail draws it), and the submission error.
  * Publishing is the wizard footer's last-step action.
  */
-export function PreviewStep({ submitError, railShowsPreview }: PreviewStepProps) {
+export function PreviewStep({ submitError, routeHasRail }: PreviewStepProps) {
   const { t } = useTranslation();
 
   return (
@@ -26,7 +26,9 @@ export function PreviewStep({ submitError, railShowsPreview }: PreviewStepProps)
           {t('propertyCreate.submitError', { error: submitError })}
         </Admonition>
       ) : null}
-      {railShowsPreview ? null : <ListingDraftPreview />}
+      <View className={routeHasRail ? 'lg:hidden' : undefined}>
+        <ListingDraftPreview />
+      </View>
       <ListingDraftQuality />
     </View>
   );

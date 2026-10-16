@@ -18,19 +18,19 @@
  * review sub-tabs are Bloom `Tabs`.
  */
 import React, { useMemo, useState } from 'react';
-import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
+import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { Card } from '@oxy.so/bloom/card';
 import { RiChat3Line, RiDiscussLine, RiHomeLine, RiSearchLine } from '@oxy.so/bloom/icons';
+import { PageHeader } from '@oxy.so/bloom/page-header';
 import { WriteReviewPrompt } from '@oxy.so/bloom/place-reviews';
 import { Tabs, TabsTrigger } from '@oxy.so/bloom/tabs';
 import { H2, H3 } from '@oxy.so/bloom/typography';
 import { useTranslation } from 'react-i18next';
 
 import { AddressDisplay } from '@/components/AddressDisplay';
-import { Header } from '@/components/Header';
 import { PropertyCard } from '@/components/PropertyCard';
 import { PropertyListSkeleton } from '@/components/ui/skeletons/PropertyListSkeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -46,7 +46,6 @@ import { reviewService } from '@/services/reviewService';
 import { api } from '@/utils/api';
 import type { Property, ReviewDTO } from '@homiio/shared-types';
 import { spacing } from '@/constants/styles';
-import { colors } from '@/styles/colors';
 
 interface AddressData {
   id: string;
@@ -84,7 +83,6 @@ export default function AddressDetailsPage() {
     tab === 'reviews' ? 'reviews' : 'properties',
   );
   const [reviewTab, setReviewTab] = useState<ReviewTab>('overall');
-  const [refreshing, setRefreshing] = useState(false);
 
   const addressQuery = useQuery<AddressData | null>({
     queryKey: ['address', addressId],
@@ -130,19 +128,6 @@ export default function AddressDetailsPage() {
     return reviews.filter((review) => reviewHasSection(review, reviewTab));
   }, [reviews, reviewTab]);
 
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    try {
-      await Promise.all([
-        addressQuery.refetch(),
-        propertiesQuery.refetch(),
-        reviewsQuery.refetch(),
-      ]);
-    } finally {
-      setRefreshing(false);
-    }
-  };
-
   const getAddressTitle = () => {
     if (!address) return t('addresses.detail.title');
     const parts = [address.street, address.cityName, address.regionName].filter(Boolean);
@@ -160,21 +145,31 @@ export default function AddressDetailsPage() {
     router.push(`/reviews/write?addressId=${addressId}`);
   };
 
-  if (addressQuery.isLoading && !refreshing) {
+  const header = (
+    <PageHeader
+      title={headerTitle}
+      titleAlign="center"
+      leading={<AppShellMenuButton accessibilityLabel={t('sidebar.open')} />}
+      onBack={router.canGoBack() ? router.back : undefined}
+      backLabel={t('goBack')}
+    />
+  );
+
+  if (addressQuery.isLoading) {
     return (
-      <View style={styles.root}>
-        <Header options={{ title: headerTitle, showBackButton: true }} />
-        <ScrollView contentContainerStyle={styles.content}>
+      <>
+        {header}
+        <View style={styles.content}>
           <PropertyListSkeleton viewMode="list" />
-        </ScrollView>
-      </View>
+        </View>
+      </>
     );
   }
 
   if (!address) {
     return (
-      <View style={styles.root}>
-        <Header options={{ title: t('addresses.detail.title'), showBackButton: true }} />
+      <>
+        {header}
         <ErrorState
           icon={RiSearchLine}
           title={t('addresses.detail.notFound')}
@@ -182,7 +177,7 @@ export default function AddressDetailsPage() {
           onRetry={() => router.back()}
           retryLabel={t('common.goBack')}
         />
-      </View>
+      </>
     );
   }
 
@@ -198,146 +193,128 @@ export default function AddressDetailsPage() {
   };
 
   return (
-    <View style={styles.root}>
-      <Header options={{ title: headerTitle, showBackButton: true }} />
-      <SafeAreaView edges={['bottom']} style={styles.safeArea}>
-        <ScrollView
-          contentContainerStyle={styles.content}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={handleRefresh}
-              colors={[colors.primaryColor]}
-            />
-          }
+    <>
+      {header}
+      <View style={styles.content}>
+        <Card radius="radius-16" style={styles.sectionCard} appearance="outline">
+          <AddressDisplay address={addressForDisplay} variant="detailed" showActions />
+        </Card>
+
+        {reviews.length > 0 ? (
+          <Card radius="radius-16" style={styles.sectionCard} appearance="outline">
+            <SectionEyebrow>{t('addresses.detail.reviewsSection')}</SectionEyebrow>
+            <PlaceReviewsSummary stats={summary} />
+          </Card>
+        ) : null}
+
+        <Card radius="radius-16" style={styles.sectionCard} appearance="outline">
+          <NeighborhoodRatingWidget
+            neighborhoodName={address.neighborhoodName || ''}
+            city={address.cityName ?? ''}
+            state={address.regionName ?? ''}
+          />
+        </Card>
+
+        <Tabs
+          variant="pill"
+          fullWidth
+          value={contentTab}
+          onValueChange={(next) => setContentTab(next as ContentTab)}
         >
+          <TabsTrigger
+            value="properties"
+            label={t('addresses.detail.tabProperties', { count: properties.length })}
+            leadingIcon={RiHomeLine}
+          />
+          <TabsTrigger
+            value="reviews"
+            label={t('addresses.detail.tabReviews', { count: reviews.length })}
+            leadingIcon={RiDiscussLine}
+          />
+        </Tabs>
+
+        {contentTab === 'properties' ? (
           <Card radius="radius-16" style={styles.sectionCard} appearance="outline">
-            <AddressDisplay address={addressForDisplay} variant="detailed" showActions />
-          </Card>
-
-          {reviews.length > 0 ? (
-            <Card radius="radius-16" style={styles.sectionCard} appearance="outline">
-              <SectionEyebrow>{t('addresses.detail.reviewsSection')}</SectionEyebrow>
-              <PlaceReviewsSummary stats={summary} />
-            </Card>
-          ) : null}
-
-          <Card radius="radius-16" style={styles.sectionCard} appearance="outline">
-            <NeighborhoodRatingWidget
-              neighborhoodName={address.neighborhoodName || ''}
-              city={address.cityName ?? ''}
-              state={address.regionName ?? ''}
-            />
-          </Card>
-
-          <Tabs
-            variant="pill"
-            fullWidth
-            value={contentTab}
-            onValueChange={(next) => setContentTab(next as ContentTab)}
-          >
-            <TabsTrigger
-              value="properties"
-              label={t('addresses.detail.tabProperties', { count: properties.length })}
-              leadingIcon={RiHomeLine}
-            />
-            <TabsTrigger
-              value="reviews"
-              label={t('addresses.detail.tabReviews', { count: reviews.length })}
-              leadingIcon={RiDiscussLine}
-            />
-          </Tabs>
-
-          {contentTab === 'properties' ? (
-            <Card radius="radius-16" style={styles.sectionCard} appearance="outline">
-              <H3 style={styles.cardHeading}>{t('addresses.detail.propertiesSection')}</H3>
-              {properties.length === 0 ? (
-                <EmptyState
-                  icon={RiHomeLine}
-                  title={t('addresses.detail.emptyPropertiesTitle')}
-                  description={t('addresses.detail.emptyPropertiesDescription')}
-                />
-              ) : (
-                <View style={styles.propertiesList}>
-                  {properties.map((property) => (
-                    <PropertyCard
-                      key={property.id}
-                      property={property}
-                      onPress={() => router.push(`/properties/${property.id}`)}
-                      variant="compact"
-                      orientation="horizontal"
-                    />
-                  ))}
-                </View>
-              )}
-            </Card>
-          ) : (
-            <Card radius="radius-16" style={styles.sectionCard} appearance="outline">
-              <View style={styles.headerText}>
-                <SectionEyebrow>{t('addresses.detail.reviewsSection')}</SectionEyebrow>
-                <H2 style={styles.cardHeading}>{t('addresses.detail.storiesTitle')}</H2>
-              </View>
-
-              <WriteReviewPrompt
-                buildingTitle={address.street || getAddressTitle()}
-                title={t('reviews.prompt.title')}
-                description={
-                  address.street
-                    ? t('reviews.prompt.description', { place: address.street })
-                    : t('addresses.detail.emptyReviewsDescription')
-                }
-                actionLabel={t('addresses.detail.writeReview')}
-                onStart={handleWriteReview}
+            <H3 style={styles.cardHeading}>{t('addresses.detail.propertiesSection')}</H3>
+            {properties.length === 0 ? (
+              <EmptyState
+                icon={RiHomeLine}
+                title={t('addresses.detail.emptyPropertiesTitle')}
+                description={t('addresses.detail.emptyPropertiesDescription')}
               />
-
-              <Tabs
-                variant="filled"
-                value={reviewTab}
-                onValueChange={(next) => setReviewTab(next as ReviewTab)}
-              >
-                {REVIEW_TABS.map((entry) => (
-                  <TabsTrigger key={entry.id} value={entry.id} label={t(entry.labelKey)} />
+            ) : (
+              <View style={styles.propertiesList}>
+                {properties.map((property) => (
+                  <PropertyCard
+                    key={property.id}
+                    property={property}
+                    onPress={() => router.push(`/properties/${property.id}`)}
+                    variant="compact"
+                    orientation="horizontal"
+                  />
                 ))}
-              </Tabs>
+              </View>
+            )}
+          </Card>
+        ) : (
+          <Card radius="radius-16" style={styles.sectionCard} appearance="outline">
+            <View style={styles.headerText}>
+              <SectionEyebrow>{t('addresses.detail.reviewsSection')}</SectionEyebrow>
+              <H2 style={styles.cardHeading}>{t('addresses.detail.storiesTitle')}</H2>
+            </View>
 
-              {reviewTab !== 'overall' && reviews.length > 0 ? (
-                <DimensionBreakdown reviews={reviews} section={reviewTab} />
-              ) : null}
+            <WriteReviewPrompt
+              buildingTitle={address.street || getAddressTitle()}
+              title={t('reviews.prompt.title')}
+              description={
+                address.street
+                  ? t('reviews.prompt.description', { place: address.street })
+                  : t('addresses.detail.emptyReviewsDescription')
+              }
+              actionLabel={t('addresses.detail.writeReview')}
+              onStart={handleWriteReview}
+            />
 
-              {filteredReviews.length === 0 ? (
-                <EmptyState
-                  icon={RiChat3Line}
-                  title={t('addresses.detail.emptyReviewsTitle')}
-                  description={t('addresses.detail.emptyReviewsDescription')}
-                />
-              ) : (
-                <View style={styles.reviewsList}>
-                  {filteredReviews.map((review) => (
-                    <ReviewCard
-                      key={review.id}
-                      review={review}
-                      author={review.oxyUserId ? usersById.get(review.oxyUserId) : undefined}
-                      onPressAgency={(slug) => router.push(`/agency/${slug}`)}
-                    />
-                  ))}
-                </View>
-              )}
-            </Card>
-          )}
-        </ScrollView>
-      </SafeAreaView>
-    </View>
+            <Tabs
+              variant="filled"
+              value={reviewTab}
+              onValueChange={(next) => setReviewTab(next as ReviewTab)}
+            >
+              {REVIEW_TABS.map((entry) => (
+                <TabsTrigger key={entry.id} value={entry.id} label={t(entry.labelKey)} />
+              ))}
+            </Tabs>
+
+            {reviewTab !== 'overall' && reviews.length > 0 ? (
+              <DimensionBreakdown reviews={reviews} section={reviewTab} />
+            ) : null}
+
+            {filteredReviews.length === 0 ? (
+              <EmptyState
+                icon={RiChat3Line}
+                title={t('addresses.detail.emptyReviewsTitle')}
+                description={t('addresses.detail.emptyReviewsDescription')}
+              />
+            ) : (
+              <View style={styles.reviewsList}>
+                {filteredReviews.map((review) => (
+                  <ReviewCard
+                    key={review.id}
+                    review={review}
+                    author={review.oxyUserId ? usersById.get(review.oxyUserId) : undefined}
+                    onPressAgency={(slug) => router.push(`/agency/${slug}`)}
+                  />
+                ))}
+              </View>
+            )}
+          </Card>
+        )}
+      </View>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  safeArea: {
-    flex: 1,
-  },
   content: {
     padding: spacing.lg,
     gap: spacing.lg,

@@ -37,27 +37,7 @@ export interface UploadedImage {
   caption?: string;
 }
 
-export interface UploadResponse {
-  success: boolean;
-  message: string;
-  data: {
-    imageId: string;
-    urls: Record<string, string>;
-    metadata: {
-      originalSize: number;
-      originalFormat: string;
-      uploadedAt: Date;
-      width?: number;
-      height?: number;
-    };
-    keys: {
-      original: string;
-      variants: Record<string, string>;
-    };
-  };
-}
-
-export interface MultipleUploadResponse {
+interface MultipleUploadResponse {
   success: boolean;
   message: string;
   data: {
@@ -181,4 +161,3 @@ class ImageUploadService {
 }
 
 export const imageUploadService = new ImageUploadService();
-export default imageUploadService;

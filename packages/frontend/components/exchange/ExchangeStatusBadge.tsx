@@ -24,5 +24,3 @@ export function ExchangeStatusBadge({ status }: { status: ExchangeRequestStatus 
     </Chip>
   );
 }
-
-export default ExchangeStatusBadge;
