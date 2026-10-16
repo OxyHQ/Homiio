@@ -1739,16 +1739,12 @@
       "conversations": "Converses",
       "empty": "Inicia una nova conversa per rebre ajuda."
     },
-    "status": {
-      "thinking": "Pensant..."
-    },
     "auth": {
       "required": "Autenticació Requerida",
       "message": "Si us plau, inicieu sessió per accedir a Sindi, el vostre defensor de justícia habitacional impulsat per IA"
     },
     "chat": {
-      "placeholder": "Pregunteu a Sindi sobre els vostres drets com a llogater...",
-      "you": "Vosaltres",
+      "placeholder": "Pregunta a {{name}}…",
       "field": "Missatge",
       "attach": "Adjunta un fitxer",
       "send": "Envia el missatge",
@@ -1758,33 +1754,13 @@
       "voice": "Entrada de veu",
       "removeAttachment": "Treu"
     },
-    "errors": {
-      "connection": "Error de Connexió",
-      "connectionMessage": "Si us plau, verifiqueu la vostra connexió i intenteu-ho de nou.",
-      "consentTitle": "Cal permís",
-      "consentMessage": "Permet que Homiio deixi que Sindi continuï ajudant-te quan no hi siguis.",
-      "consentAction": "Revisar permisos",
-      "consentRequesting": "Obrint permisos...",
-      "consentUnavailableTitle": "Permís no disponible",
-      "consentUnavailableMessage": "Actualitza Homiio i torna-ho a provar. No s'ha concedit cap permís.",
-      "uploadFailedTitle": "Error en pujar",
-      "uploadAnalyzeFailed": "No s'ha pogut analitzar el fitxer."
-    },
     "shared": {
-      "loading": "Carregant Conversació Compartida",
-      "loadingMessage": "Carregant conversació...",
       "subtitle": "Conversació Compartida",
       "badge": "Conversació Compartida",
       "footer": "Impulsat per Sindi - El Vostre Defensor de Justícia Habitacional IA",
       "error": {
-        "title": "Conversació No Trobada",
         "notFound": "Aquesta conversació compartida no s'ha pogut trobar o ha caducat.",
-        "failed": "Error carregant conversació compartida. Si us plau, torneu-ho a provar.",
-        "description": "La conversació pot haver estat eliminada o l'enllaç pot ser invàlid."
-      },
-      "empty": {
-        "title": "Conversació Buida",
-        "subtitle": "Aquesta conversació compartida encara no té missatges."
+        "failed": "Error carregant conversació compartida. Si us plau, torneu-ho a provar."
       }
     },
     "share": {
@@ -1795,65 +1771,55 @@
       },
       "error": {
         "title": "No es Pot Compartir Conversació",
-        "saveFirst": "Si us plau deseu la conversació enviant un missatge abans de compartir.",
-        "emptyConversation": "No es pot compartir una conversació buida. Si us plau afegiu alguns missatges primer.",
         "failed": "Error generant enllaç de compartir. Si us plau, torneu-ho a provar."
       }
     },
     "conversation": {
-      "title": "Conversació",
-      "subtitle": "Defensor de Justícia Habitacional IA",
-      "loading": "Carregant Conversació",
-      "loadingMessage": "Carregant conversació..."
+      "title": "Conversació"
     },
     "settings": {
-      "resetMessage": "This will reset all Sindi preferences to their defaults.",
+      "resetMessage": "S'esborraran les teves converses amb la Sindi i les seves preferències tornaran als valors predeterminats.",
       "resetTitle": "Reset Sindi?",
-      "reset": "Reset Sindi to defaults",
+      "reset": "Esborra les converses i restableix",
       "actions": "Actions",
-      "tipsDescription": "Surface inline guidance while you chat.",
+      "tipsDescription": "Suggereix preguntes en començar una conversa.",
       "tips": "Show tips & hints",
       "behaviorFooter": "Tune how Sindi behaves while you browse properties.",
       "behavior": "Behavior",
       "title": "Sindi preferences",
-      "resetDone": "Sindi preferences reset."
+      "resetDone": "S'ha restablert la Sindi.",
+      "resetFailed": "No s'ha pogut restablir la Sindi. Torna-ho a provar."
     },
     "voice": {
-      "unsupportedBrowser": "L'entrada de veu no és compatible amb aquest navegador",
       "unsupportedDevice": "L'entrada de veu no està disponible en aquest dispositiu",
-      "deniedTitle": "S'ha denegat l'accés al micròfon",
       "deniedMessage": "Permet l'accés al micròfon i al reconeixement de veu a la configuració per dictar missatges.",
       "failed": "L'entrada de veu s'ha aturat inesperadament"
-    },
-    "actions": {
-      "take": "Fes-ho",
-      "takeAccessible": "Fer el que proposa la Sindi",
-      "applySearch": "Obrir Explora amb aquests filtres",
-      "showSaved": "Obrir els teus desats",
-      "openListing": "Obrir aquest habitatge",
-      "showMap": "Veure els resultats al mapa",
-      "showList": "Veure els resultats en llista",
-      "navigate": {
-        "explore": "Obrir Explora",
-        "saved": "Obrir Desats",
-        "home": "Obrir la pantalla d’inici",
-        "my_home": "Obrir La meva llar",
-        "evictions": "Obrir el tauler de desnonaments"
-      },
-      "clarifyLocation": {
-        "ambiguous": "No he sabut a quin “{{place}}” et refereixes: n'hi ha més d'un. A quina regió és?",
-        "notFound": "No tinc cap lloc anomenat “{{place}}”, així que he deixat la cerca tal com estava."
-      },
-      "applied": "Fet: {{what}}.",
-      "stale": "Has canviat la cerca tu, així que això s’ha deixat com estava.",
-      "failed": "No s’ha pogut: {{what}}."
     },
     "saved": {
       "loading": "Mirant els teus habitatges desats…",
       "failed": "No s’han pogut carregar els teus habitatges desats.",
       "empty": "Encara no has desat cap habitatge.",
-      "emptyFolder": "Aquesta col·lecció és buida.",
       "more": "i {{count}} més"
+    },
+    "place": {
+      "ambiguous": "No he sabut a quin “{{place}}” et refereixes: n'hi ha més d'un. A quina regió és?",
+      "notFound": "No tinc cap lloc anomenat “{{place}}”, així que he deixat la cerca tal com estava."
+    },
+    "property": {
+      "title": "Pregunta a la Sindi sobre aquest habitatge",
+      "subtitle": "La teva assistent de lloguer 24/7. Pregunta el que vulguis sobre l'habitatge, la zona, els teus drets o els costos ocults.",
+      "subtitleVerified": "La Sindi ha revisat l'autenticitat d'aquest anunci. Pregunta el que vulguis sobre l'habitatge, la zona, els teus drets o els costos ocults.",
+      "verified": "Verificat per la Sindi",
+      "askAccessible": "Pregunta a la Sindi sobre aquest habitatge",
+      "askHint": "Obre un xat amb la Sindi sobre aquest habitatge",
+      "defaultQuestion": "M'ajudes a entendre aquest habitatge i els meus drets com a llogater?",
+      "context": "Sobre aquest habitatge: {{title}} (anunci de Homiio {{id}}).",
+      "prompts": {
+        "budget": "Quant hauria de pressupostar?",
+        "costs": "Hi ha costos ocults?",
+        "area": "Parla'm d'aquesta zona",
+        "rights": "Quins són els meus drets?"
+      }
     }
   },
   "sidebar": {
@@ -4129,7 +4095,6 @@
   },
   "alia": {
     "clientContext": "La persona fa servir Homiio, una aplicació d'habitatge per trobar un lloc on llogar, comprar o allotjar-se, investigar l'historial d'una casa i el que costa de debò, i gestionar o defensar un lloguer.",
-    "onScreen": "Ara mateix és a la pantalla {{path}}.",
     "suggestion": {
       "find": "Ajuda'm a trobar un lloc on viure",
       "costs": "Quant em costarà de debò aquest habitatge?",

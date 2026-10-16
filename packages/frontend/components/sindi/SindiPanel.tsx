@@ -1,5 +1,5 @@
 import type React from 'react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useState } from 'react';
 import {
   Platform,
   Pressable,
@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
-import type { Message } from '@ai-sdk/react';
+import { AliaParticipants, type AliaChatState, useConversations } from '@alia.onl/sdk';
 import { Portal } from '@oxy.so/bloom/portal';
 import { Button } from '@oxy.so/bloom/button';
 import {
@@ -26,15 +26,18 @@ import {
 import { useTheme } from '@oxy.so/bloom/theme';
 import { Text } from '@oxy.so/bloom/typography';
 import * as Skeleton from '@oxy.so/bloom/skeleton';
-import { useOxy, openAccountDialog } from '@oxy.so/services';
+import { useAuth, openAccountDialog } from '@oxy.so/services';
 import { SindiIcon } from '@/assets/icons';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { ChatContent } from '@/components/sindi/ChatContent';
-import { ConversationItem, ConversationList } from '@/components/sindi/ConversationItem';
+import {
+  ConversationItem,
+  ConversationList,
+  conversationsOf,
+} from '@/components/sindi/ConversationItem';
+import { SindiConversation } from '@/components/sindi/SindiConversation';
+import { SINDI_AGENT_ID } from '@/components/sindi/sindiAgent';
 import { useSindiPanelLayout } from '@/components/sindi/sindiPanelLayout';
-import { useSindiAuthenticatedFetch } from '@/hooks/useSindiAuthenticatedFetch';
 import { useUIStore } from '@/store/uiStore';
-import { useConversationStore } from '@/store/conversationStore';
 import { radius, spacing } from '@/constants/styles';
 import { colors } from '@/styles/colors';
 
@@ -127,245 +130,217 @@ const PanelSkeleton: React.FC = () => (
  * Each placement renders nothing outside its own tier, so the layout can mount
  * the overlay unconditionally.
  *
- * Owns a local `activeConversationId`:
- *   - none selected  → a compact landing (intro + new-chat + recent list)
- *   - one selected   → the shared `ChatContent` pane seeded with its history
+ * Owns which conversation is open, locally:
+ *   - none → a compact landing (intro + new chat + Sindi's conversations, from
+ *     Alia: `useConversations({ agentId })`)
+ *   - one, or a new one → the SDK's conversation (`SindiConversation`)
  *
  * Selecting a conversation or starting a new one stays IN the panel (no route
- * push) — the full-screen `/sindi` route is a separate, mobile-facing surface.
+ * push): the panel acts on the page beside it, and replacing that page with the
+ * full-screen chat would be the panel navigating out from under itself (#519
+ * §8.7).
  */
 export function SindiPanel({ placement }: { placement: 'aside' | 'overlay' }) {
   const { t } = useTranslation();
   const { colors: themeColors } = useTheme();
-  const { oxyServices, activeSessionId } = useOxy();
+  const { canUsePrivateApi } = useAuth();
 
   const closeSindiPanel = useUIStore((s) => s.closeSindiPanel);
 
   const layout = useSindiPanelLayout();
   const { height: viewportHeight } = useWindowDimensions();
 
-  const {
-    conversations,
-    currentConversation,
-    loading,
-    loadConversations,
-    loadConversation,
-    createConversation,
-  } = useConversationStore();
-
-  const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
-
-  const isAuthenticated = useMemo(
-    () => Boolean(oxyServices) && Boolean(activeSessionId),
-    [oxyServices, activeSessionId],
-  );
-
-  const conversationFetch = useSindiAuthenticatedFetch();
+  /** `null`: the landing. `{ id: undefined }`: a new conversation, made with its first turn. */
+  const [open, setOpen] = useState<{ id: string | undefined; serial: number } | null>(null);
 
   // Whether THIS placement renders this frame.
   const isVisible = layout.visible && layout.docked === (placement === 'aside');
 
-  // Load the conversation list whenever the panel becomes visible while
-  // authenticated. Genuine side effect (network) gated on open + auth.
-  useEffect(() => {
-    if (isVisible && isAuthenticated) {
-      loadConversations(conversationFetch);
-    }
-  }, [isVisible, isAuthenticated, loadConversations, conversationFetch]);
+  const conversations = useConversations({ agentId: SINDI_AGENT_ID });
+  const sortedConversations = conversationsOf(conversations.data);
 
-  // Load the selected conversation's history into the store (skip
-  // client-generated `conv_*` IDs, which are created lazily on first message).
-  useEffect(() => {
-    if (!isAuthenticated || !activeConversationId) return;
-    if (activeConversationId.startsWith('conv_')) return;
-    loadConversation(activeConversationId, conversationFetch).catch(() => {
-      // loadConversation already logs + falls back to a new conversation.
-    });
-  }, [activeConversationId, isAuthenticated, loadConversation, conversationFetch]);
-
-  const sortedConversations = useMemo(
-    () =>
-      [...conversations].sort(
-        (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
-      ),
-    [conversations],
-  );
-
-  // Seed the AI SDK with the active conversation's persisted history. Mirrors
-  // the route screen's mapping so both surfaces hydrate identically.
-  const initialMessages = useMemo<Message[]>(() => {
-    const stored =
-      currentConversation?.id === activeConversationId ? currentConversation?.messages : undefined;
-    if (!stored || stored.length === 0) return [];
-    return stored.map((msg, index) => {
-      const ts = msg.timestamp ? new Date(msg.timestamp).getTime() : index;
-      const stableId = msg.id || `${msg.role}-${ts}-${(msg.content || '').length}`;
-      return {
-        id: String(stableId),
-        role: msg.role,
-        content: msg.content,
-      };
-    });
-  }, [currentConversation, activeConversationId]);
-
-  const handleNewChat = useCallback(async () => {
-    if (!isAuthenticated) {
+  const handleNewChat = useCallback(() => {
+    if (!canUsePrivateApi) {
       openAccountDialog();
       return;
     }
-    const created = await createConversation('New Conversation', undefined, conversationFetch);
-    setActiveConversationId(created.id);
-    loadConversations(conversationFetch);
-  }, [isAuthenticated, createConversation, conversationFetch, loadConversations]);
+    // A new serial remounts the chat, so "new chat" from inside one starts clean.
+    setOpen((previous) => ({ id: undefined, serial: (previous?.serial ?? 0) + 1 }));
+  }, [canUsePrivateApi]);
 
-  const handleBackToList = useCallback(() => setActiveConversationId(null), []);
+  const handleBackToList = useCallback(() => setOpen(null), []);
 
-  if (!isVisible) return null;
+  // The chat made (or left) its conversation: the panel's selection follows,
+  // and the main pane is never touched.
+  const handleConversationChange = useCallback(
+    (id: string | undefined) => setOpen((previous) => (previous ? { ...previous, id } : previous)),
+    [],
+  );
 
-  const hasActiveConversation = Boolean(activeConversationId);
-
-  // Header + body — shared verbatim by the docked and overlay render paths
-  // below. It owns no hooks, so holding it in a variable is safe.
-  const content = (
-    <>
-      {/* Header */}
-      <View style={[styles.header, panelBorders.headerDivider]}>
-        <View style={styles.headerLeft}>
-          {hasActiveConversation ? (
+  const chrome = useCallback(
+    ({ participants }: AliaChatState) => ({
+      header: (
+        <View style={[styles.header, panelBorders.headerDivider]}>
+          <Button
+            iconOnly
+            leadingIcon={RiArrowLeftSLine}
+            onPress={handleBackToList}
+            accessibilityLabel={t('sindi.panel.conversations')}
+            tone="neutral"
+            appearance="outline"
+          />
+          <View style={styles.headerTitleWrap}>
+            <AliaParticipants participants={participants} />
+          </View>
+          <View style={styles.headerActions}>
             <Button
               iconOnly
-              leadingIcon={RiArrowLeftSLine}
-              onPress={handleBackToList}
-              accessibilityLabel={t('sindi.panel.conversations')}
+              leadingIcon={RiEditBoxLine}
+              onPress={handleNewChat}
+              accessibilityLabel={t('sindi.panel.newChat')}
               tone="neutral"
               appearance="outline"
             />
-          ) : (
-            <View style={[styles.headerBrand, { backgroundColor: themeColors.primarySubtle }]}>
-              <SindiIcon size={22} color={themeColors.primary} />
-            </View>
-          )}
-          <View style={styles.headerTitleWrap}>
-            <Text variant="body-semibold" numberOfLines={1} style={{ color: themeColors.text }}>
-              {t('sindi.panel.title')}
-            </Text>
-            <Text
-              variant="caption-1-regular"
-              numberOfLines={1}
-              style={{ color: themeColors.textSecondary }}
-            >
-              {t('sindi.panel.subtitle')}
-            </Text>
+            <Button
+              iconOnly
+              leadingIcon={RiCloseLine}
+              onPress={closeSindiPanel}
+              accessibilityLabel={t('sindi.panel.close')}
+              tone="neutral"
+              appearance="outline"
+            />
           </View>
         </View>
-        <View style={styles.headerActions}>
-          <Button
-            iconOnly
-            leadingIcon={RiEditBoxLine}
-            onPress={handleNewChat}
-            accessibilityLabel={t('sindi.panel.newChat')}
-            tone="neutral"
-            appearance="outline"
-          />
-          <Button
-            iconOnly
-            leadingIcon={RiCloseLine}
-            onPress={closeSindiPanel}
-            accessibilityLabel={t('sindi.panel.close')}
-            tone="neutral"
-            appearance="outline"
-          />
+      ),
+    }),
+    [t, handleBackToList, handleNewChat, closeSindiPanel],
+  );
+
+  if (!isVisible) return null;
+
+  // The landing's header. An open conversation draws its own (the chat's
+  // participants, through `chrome`).
+  const landingHeader = (
+    <View style={[styles.header, panelBorders.headerDivider]}>
+      <View style={styles.headerLeft}>
+        <View style={[styles.headerBrand, { backgroundColor: themeColors.primarySubtle }]}>
+          <SindiIcon size={22} color={themeColors.primary} />
+        </View>
+        <View style={styles.headerTitleWrap}>
+          <Text variant="body-semibold" numberOfLines={1} style={{ color: themeColors.text }}>
+            {t('sindi.panel.title')}
+          </Text>
+          <Text
+            variant="caption-1-regular"
+            numberOfLines={1}
+            style={{ color: themeColors.textSecondary }}
+          >
+            {t('sindi.panel.subtitle')}
+          </Text>
         </View>
       </View>
-
-      {/* Body */}
-      {!isAuthenticated ? (
-        <EmptyState
-          icon={RiLockLine}
-          title={t('sindi.auth.required')}
-          description={t('sindi.auth.message')}
-          actionText={t('common.signIn')}
-          actionIcon={RiLoginBoxLine}
-          onAction={() => openAccountDialog()}
-          iconColor={colors.primaryColor}
+      <View style={styles.headerActions}>
+        <Button
+          iconOnly
+          leadingIcon={RiEditBoxLine}
+          onPress={handleNewChat}
+          accessibilityLabel={t('sindi.panel.newChat')}
+          tone="neutral"
+          appearance="outline"
         />
-      ) : hasActiveConversation ? (
-        <ChatContent
-          key={`${activeConversationId}|${initialMessages.length}`}
-          // Both placements are the same host: `useSindiPanelLayout` already
-          // tells `docked` (act in the page column beside the chat) from the
-          // overlay tier (act, then close this panel once the answer is written
-          // so the result is not left behind a scrim).
-          host="panel"
-          conversationId={activeConversationId ?? undefined}
-          currentConversation={
-            currentConversation?.id === activeConversationId ? currentConversation : null
-          }
-          isAuthenticated={isAuthenticated}
-          authenticatedFetch={conversationFetch}
-          initialMessages={initialMessages}
-          // The panel updates its OWN selection and leaves the main pane alone.
-          // This replaced an unconditional `router.replace('/sindi/:id')` inside
-          // the hook, which navigated the page the panel was sitting beside —
-          // the exact failure #519 §8.7 describes.
-          onConversationPersisted={setActiveConversationId}
+        <Button
+          iconOnly
+          leadingIcon={RiCloseLine}
+          onPress={closeSindiPanel}
+          accessibilityLabel={t('sindi.panel.close')}
+          tone="neutral"
+          appearance="outline"
         />
-      ) : (
-        <ScrollView contentContainerStyle={styles.landing} showsVerticalScrollIndicator={false}>
-          <View style={styles.intro}>
-            <SindiIcon size={40} color={themeColors.primary} />
-            <Text variant="headline-semibold" style={[styles.center, { color: themeColors.text }]}>
-              {t('sindi.panel.title')}
-            </Text>
-            <Text
-              variant="body-2-regular"
-              style={[styles.center, { color: themeColors.textSecondary }]}
-            >
-              {t('sindi.panel.intro')}
-            </Text>
-          </View>
+      </View>
+    </View>
+  );
 
-          <Button
-            leadingIcon={RiAddLine}
-            onPress={handleNewChat}
-            fullWidth
-            tone="accent"
-            appearance="solid"
+  // Shared verbatim by the docked and overlay render paths below.
+  const content = !canUsePrivateApi ? (
+    <>
+      {landingHeader}
+      <EmptyState
+        icon={RiLockLine}
+        title={t('sindi.auth.required')}
+        description={t('sindi.auth.message')}
+        actionText={t('common.signIn')}
+        actionIcon={RiLoginBoxLine}
+        onAction={() => openAccountDialog()}
+        iconColor={colors.primaryColor}
+      />
+    </>
+  ) : open ? (
+    <SindiConversation
+      key={open.serial}
+      // Both placements are the same host: `useSindiPanelLayout` already tells
+      // docked (act in the page column beside the chat) from the overlay tier
+      // (act, then close this panel once the answer is written).
+      host="panel"
+      conversationId={open.id}
+      onConversationChange={handleConversationChange}
+      chrome={chrome}
+    />
+  ) : (
+    <>
+      {landingHeader}
+      <ScrollView contentContainerStyle={styles.landing} showsVerticalScrollIndicator={false}>
+        <View style={styles.intro}>
+          <SindiIcon size={40} color={themeColors.primary} />
+          <Text variant="headline-semibold" style={[styles.center, { color: themeColors.text }]}>
+            {t('sindi.panel.title')}
+          </Text>
+          <Text
+            variant="body-2-regular"
+            style={[styles.center, { color: themeColors.textSecondary }]}
           >
-            {t('sindi.panel.startNew')}
-          </Button>
+            {t('sindi.panel.intro')}
+          </Text>
+        </View>
 
-          <View style={styles.historyBlock}>
-            <Text variant="body-semibold" style={{ color: themeColors.text }}>
-              {t('sindi.panel.conversations')}
-            </Text>
-            {loading ? (
-              <PanelSkeleton />
-            ) : sortedConversations.length === 0 ? (
-              <View style={styles.emptyHistory}>
-                <RiChat3Line width={28} height={28} fill={themeColors.textTertiary} />
-                <Text
-                  variant="body-2-regular"
-                  style={[styles.center, { color: themeColors.textSecondary }]}
-                >
-                  {t('sindi.panel.empty')}
-                </Text>
-              </View>
-            ) : (
-              <ConversationList>
-                {sortedConversations.map((conversation) => (
-                  <ConversationItem
-                    key={conversation.id}
-                    conversation={conversation}
-                    isActive={conversation.id === activeConversationId}
-                    onPress={() => setActiveConversationId(conversation.id)}
-                  />
-                ))}
-              </ConversationList>
-            )}
-          </View>
-        </ScrollView>
-      )}
+        <Button
+          leadingIcon={RiAddLine}
+          onPress={handleNewChat}
+          fullWidth
+          tone="accent"
+          appearance="solid"
+        >
+          {t('sindi.panel.startNew')}
+        </Button>
+
+        <View style={styles.historyBlock}>
+          <Text variant="body-semibold" style={{ color: themeColors.text }}>
+            {t('sindi.panel.conversations')}
+          </Text>
+          {conversations.isLoading ? (
+            <PanelSkeleton />
+          ) : sortedConversations.length === 0 ? (
+            <View style={styles.emptyHistory}>
+              <RiChat3Line width={28} height={28} fill={themeColors.textTertiary} />
+              <Text
+                variant="body-2-regular"
+                style={[styles.center, { color: themeColors.textSecondary }]}
+              >
+                {t('sindi.panel.empty')}
+              </Text>
+            </View>
+          ) : (
+            <ConversationList>
+              {sortedConversations.map((conversation) => (
+                <ConversationItem
+                  key={conversation.id}
+                  conversation={conversation}
+                  onPress={() => setOpen({ id: conversation.id, serial: 0 })}
+                />
+              ))}
+            </ConversationList>
+          )}
+        </View>
+      </ScrollView>
     </>
   );
 

@@ -232,7 +232,7 @@ Every relation gets a real constraint with an **explicitly decided `ON DELETE`**
 | `properties.agency_id`, `properties.sourced_by_partner_id`, `reviews.agency_id`, `eviction_cases.agency_id`, `eviction_cases.cover_image_id`, `saved_items.folder_id`, `roommate_relationships.request_id` | SET NULL | An attribution, not an ownership. NULL already means "none resolved" on every one of them |
 | `leases`, `reservations`, `tenant_applications`, `viewing_requests`, `exchange_requests`, `commissions` → `properties` | RESTRICT | A record of a human transaction, not a copy of an advertisement |
 | `listing_reports` → `properties` | **CASCADE** | The one exception, and the reason is the expiry sweep — see below |
-| child tables → their parent (`lease_*`, `profile_*`, `eviction_case_*`, `conversation_*`, `review_*`, `tenant_application_*`, `saved_property_folder_items`, `place_poi_categories`, `billing_processed_sessions`, `moderation_outbox.report_id`) | CASCADE | A child row has no meaning without its parent |
+| child tables → their parent (`lease_*`, `profile_*`, `eviction_case_*`, `review_*`, `tenant_application_*`, `saved_property_folder_items`, `place_poi_categories`, `billing_processed_sessions`, `moderation_outbox.report_id`) | CASCADE | A child row has no meaning without its parent |
 
 **The `properties` group is where the delete rules nearly collided, and the
 resolution is worth stating because it will recur.** `properties` is
@@ -278,15 +278,13 @@ The largest entry is `properties.expires_at`, populated on every external
 listing: the whole external-listing inventory is reaped by it.
 
 **Check every deadline for INTENT before registering it.**
-`conversations.sharing_expires_at` is the deadline of a share LINK, and deleting
-the row would delete the whole conversation — messages included — 24 hours after
-anybody shares it. That column is named in
+`eviction_cases.archived_at` is a STAMP recording when a case left the public
+board, and the row must survive it (ADR 0003 §7.5). That column is named in
 `EXPIRY_COLUMNS_THAT_MUST_NOT_DELETE`, and `__tests__/db/expiry.test.ts` fails if
 it ever appears in `EXPIRY_SWEEP_TARGETS`. That list is data rather than a
 warning in a comment for one specific reason: a later reader who finds a
 deadline column missing from the registry closes the gap, and closing it is
-exactly the change that would start deleting people's transcripts.
-Mutation-tested — adding that entry turns the suite red and names the column.
+exactly the change that would start deleting archived cases.
 
 ## Unique constraints
 
@@ -489,15 +487,16 @@ Postgres through the application's own pool.
 | Every registered expiry column has a leading btree; the registry is exactly the four TTLs that mean "delete this row"; and no column in `EXPIRY_COLUMNS_THAT_MUST_NOT_DELETE` is ever registered | `__tests__/db/expiry.test.ts` |
 | Every unmapped column names a real property and keeps its declared shape | `__tests__/db/unmappedColumns.test.ts` |
 | `eviction_cases.location_geo` is generated, SRID 4326, POINT, built as `(longitude, latitude)`, GiST-indexed, unwritable, and measures a real distance; out-of-range latitude AND longitude both refused | `__tests__/db/evictionGeography.test.ts` |
-| Every partial unique index refuses a duplicate **and permits the row it exists to permit**; `''` collides where NULL does not; the case-insensitive folder key is scoped to one person; and the catalogue names all nine partial uniques | `__tests__/db/partialUniques.test.ts` |
-| Eleven two-column coherence CHECKs refuse BOTH incoherent shapes and accept both coherent ones; `place_pois` cascades to its categories; the two moderation dedupe tables really have no id default | `__tests__/db/coherenceChecks.test.ts` |
+| Every partial unique index refuses a duplicate **and permits the row it exists to permit**; `''` collides where NULL does not; the case-insensitive folder key is scoped to one person; and the catalogue names every partial unique | `__tests__/db/partialUniques.test.ts` |
+| The two-column coherence CHECKs refuse BOTH incoherent shapes and accept both coherent ones; `place_pois` cascades to its categories; the two moderation dedupe tables really have no id default | `__tests__/db/coherenceChecks.test.ts` |
 | `leases` uses CLOSED range bounds and `reservations`/`exchange_requests` half-open — asserted at the boundary instant, through the expression read out of `pg_get_indexdef` rather than restated in the test | `__tests__/db/tenancyRanges.test.ts` |
 
 Four of these were mutation-tested when they landed: making
 `listing_reports_open_reporter_key` total, dropping `'[]'` from
 `leases_term_range_gist` (and adding it to `reservations_stay_range_gist`),
 transposing `ST_MakePoint`'s arguments on `eviction_cases`, and registering
-`conversations.sharing_expires_at` as a sweep target. Each turns its suite red
+`conversations.sharing_expires_at` (a table dropped since, in 0036) as a sweep
+target. Each turns its suite red
 and names the offending object. The range file's BEHAVIOURAL half only became
 able to do that after the mutation exposed it reading a string written in the
 test rather than the index — which is the failure mode `~/Oxy/AGENTS.md` calls a

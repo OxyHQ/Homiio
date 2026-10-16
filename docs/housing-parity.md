@@ -487,13 +487,12 @@ Still open, and unchanged:
 
 | #519 §8 | Status | Where |
 |---|---|---|
-| Typed, closed action contract | **live** | `shared-types/sindiAction.ts` |
-| Capability from the effective layout | **live, revised** | `controlCapabilityOf(host, layout)`. The layout alone answered for three surfaces, and `sindiPanelOpen` is persisted, so the full-screen chat acted or refused depending on whether the side panel happened to be open. Every host acts now: the docked panel beside the page, the overlay panel then dismissing itself, the full-screen route by going to the destination. Only the in-property sheet still offers |
-| Executor, dedupe, staleness, turn binding | **live** | `hooks/sindiActionRules.ts` |
-| Side-panel navigation keeps the chat | **live** | #523 |
-| Full-screen answers inline | **superseded** | It did, and the user rejected it after using it ("debería interactuar como hablamos"): a full-screen chat asked for flats now goes to Explore once the answer is written. What survives is the inline ANSWER — `show_saved` renders the saved homes IN the thread — the answer is the list, and a button that leaves the conversation to go and look at it is a worse version of answering. The offer to open the real screen stays beside it. Loading, failure and a genuinely empty collection each say their own sentence, so a failed load never reads as "you have not saved anything". The folder rule is shared with the folder screen (`utils/savedFolders.ts`) so the two cannot list different sets |
-| Conversation-id promotion | **live** | #523; the hook holds no router |
-| Alia tool results | **blocked** | `alia.tool_result` exists in `@alia.onl/server@1.0.1`; Homiio's tools are not known to be provisioned on Sindi's agent |
+| Typed, closed action contract | **live** | `shared-types/sindiAction.ts#SINDI_HOST_TOOLS`: five host tools whose JSON Schema and parser share one field table (Alia ADR 0020 §6) |
+| Capability from the effective layout | **live, revised** | `controlCapabilityOf(host, layout)`. The layout alone answered for three surfaces, and `sindiPanelOpen` is persisted, so the full-screen chat acted or refused depending on whether the side panel happened to be open. Every host acts now: the docked panel beside the page, the overlay panel then dismissing itself, the full-screen route by going to the destination. Only the SDK's sheet ("Ask Alia" / "Ask Sindi") answers `inline` |
+| Executor, staleness, turn binding | **live** | `hooks/useSindiActions.ts`, `hooks/sindiActionRules.ts`; once-per-call and Stop are the SDK's (`toolCallId`, the aborted stream) |
+| Side-panel navigation keeps the chat | **live** | #523; the panel holds its own selection |
+| Full-screen answers inline | **superseded** | It did, and the user rejected it after using it ("debería interactuar como hablamos"): a full-screen chat asked for flats now goes to Explore once the answer is written. What survives is the inline ANSWER: the catalogue's results are drawn as cards in the thread (`components/sindi/sindiToolRenderers.tsx` — listings, one listing, the saved homes). Loading, failure and a genuinely empty saved list each say their own sentence |
+| Alia tool results | **live** | Sindi is an Alia agent with Homiio's capability catalogue; `alia.tool_result` is drawn by Homiio's renderers ([`sindi.md`](./sindi.md)) |
 
 **A defect worth recording:** Sindi answered "show me flats in Barcelona" by
 doing nothing. Production has three `cities` rows named Barcelona in Spain, two
@@ -505,9 +504,9 @@ this paragraph first said** — it is a REGION-level one, not the case-sensitive
 `cities` unique key: the three rows sit under three regions (`Catalonia`,
 `Barcelona`, `barcelona`), so migration 0029's `(region_id, slug)` key neither
 merged them nor could. It is `regions_country_name_key` that still permits a
-fourth. `docs/sindi-actions.md`, `docs/postgres.md`.
+fourth. `docs/sindi.md`, `docs/postgres.md`.
 
-Detail: `docs/sindi-actions.md`.
+Detail: `docs/sindi.md`.
 
 ---
 

@@ -31,7 +31,7 @@ tables across 21 schema files.
 | Geography | `services/geoQueryService.ts`, `services/geoResolutionService.ts` | `countries`, `regions`, `cities`, `neighborhoods` | Place names are ids, never text on another entity |
 | Points of interest | `db/placePois/` | `place_pois`, `place_poi_categories` | A cache of OpenStreetMap data. Stores presence and counts by category, never place names |
 | Images | `db/images/` | `images` | `createImageForEntity` — entity photos reference `images`; never store a foreign CDN URL as a runtime image URL |
-| Profiles | `db/profiles/profileRepository.ts` | `profiles`, `profile_references`, `profile_rental_history`, `profile_preferred_locations`, `profile_roommate_history`, `profile_chat_messages` | `findProfileByOxyUserId`. A client-supplied `profileId` is never trusted |
+| Profiles | `db/profiles/profileRepository.ts` | `profiles`, `profile_references`, `profile_rental_history`, `profile_preferred_locations`, `profile_roommate_history` | `findProfileByOxyUserId`. A client-supplied `profileId` is never trusted |
 | Identity | **Oxy, not Homiio** | none | The session is the authority. `oxyUserId` comes from `requireSessionOxyUserId`, never from a body |
 | Leases | `db/leases/` + `leaseSerializer.ts` | `leases`, `lease_co_tenants`, `lease_shared_utility_costs`, `lease_payment_schedule`, `lease_documents`, `lease_inspections`, `lease_inspection_findings` | A lease is created ONLY by `POST /api/applications/:id/create-lease` from an approved application |
 | Applications | `db/applications/` | `tenant_applications`, `tenant_application_references`, `tenant_application_documents` | |
@@ -45,7 +45,6 @@ tables across 21 schema files.
 | Listing reports | `db/` + `controllers/reportController.ts` | `listing_reports` | |
 | Notifications | **`services/notificationDispatchService.ts`** | `notifications` | The single write chokepoint. Controllers call `createForUser`; nothing writes the repository directly |
 | Saved | `db/saved/` | `saved_items`, `saved_searches`, `saved_property_folders`, `saved_property_folder_items`, `recently_viewed` | |
-| Conversations (Sindi) | `db/conversations/` | `conversations`, `conversation_messages`, `conversation_message_attachments` | `sharing_expires_at` expires the LINK, not the conversation |
 | Billing | `db/billing/billingRepository.ts` | `billing`, `billing_processed_sessions` | Stripe is the authority for subscription state; `billing_processed_sessions` makes webhook handling idempotent |
 | Partners | `db/` + `services/commissionService.ts` | `partners`, `commissions` | `onPropertyTransacted` is idempotent — re-marking never creates a second commission |
 | Analytics | `db/analytics/ownerAnalytics.ts` | reads only | No analytics table. Every figure is aggregated from the rows above at request time |

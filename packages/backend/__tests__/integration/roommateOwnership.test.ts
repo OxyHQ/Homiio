@@ -322,7 +322,6 @@ describe('the wire shape the roommate endpoints serve', () => {
     expect(discover.body.profiles[0].personalProfile.personalInfo).not.toHaveProperty(
       'annualIncome',
     );
-    expect(requests.body.data.received[0].sender.personalProfile.chatHistory).toEqual([]);
   });
 });
 

@@ -89,9 +89,9 @@ const optionalAuth = createOptionalOxyAuth(oxy, oxyAuthOptions);
 /**
  * Paths exempt from the global API rate limiter.
  *
- * Image bytes (self-hosted store + uploads) and AI streaming sub-requests fan
- * out heavily and are individually authorised/validated, so counting each one
- * against the coarse global bucket exhausts it. Liveness probes must never be
+ * Image bytes (self-hosted store + uploads) fan out heavily and are
+ * individually authorised/validated, so counting each one against the coarse
+ * global bucket exhausts it. Liveness probes must never be
  * limited. Shared by the rate limiter's `skip` so the policy lives in one place.
  */
 const isRateLimitExempt = (req: Request): boolean => {
@@ -102,10 +102,7 @@ const isRateLimitExempt = (req: Request): boolean => {
     // Self-hosted image store + image upload endpoints (per-screen fan-out).
     path.startsWith('/api/images/') ||
     path.includes('/images/') ||
-    path.startsWith('/api/files/upload') ||
-    // AI streaming (SSE) sub-requests are long-lived and self-limited.
-    path.startsWith('/api/ai/stream') ||
-    path.startsWith('/api/ai/analyze-file/stream')
+    path.startsWith('/api/files/upload')
   );
 };
 
@@ -296,15 +293,6 @@ app.post(
 // Pre-create body parsers to avoid re-creation per request
 const jsonParser = bodyParser.json({ limit: '1mb' });
 const urlencodedParser = bodyParser.urlencoded({ extended: true, limit: '1mb' });
-// AI chat accepts inline data-URL attachments (<IMAGE_DATA_URL>/<FILE_DATA_URL>) in JSON
-const aiJsonParser = bodyParser.json({ limit: '25mb' });
-app.use('/api/ai', (req, res, next) => {
-  const contentType = req.headers['content-type'] || '';
-  if (contentType.includes('application/json')) {
-    return aiJsonParser(req, res, next);
-  }
-  next();
-});
 
 // Apply body parser based on content type
 app.use((req, res, next) => {

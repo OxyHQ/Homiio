@@ -46,11 +46,6 @@ export { billing, billingProcessedSessions } from './billing';
 export { capabilityEffectReceipts } from './capabilities';
 export { propertyViewingWindows, reservations, viewingRequests } from './bookings';
 export {
-  conversationMessageAttachments,
-  conversationMessages,
-  conversations,
-} from './conversations';
-export {
   evictionCaseCollaborators,
   evictionCaseChanges,
   evictionCaseAttendees,
@@ -100,7 +95,6 @@ export { notifications } from './notifications';
 export { commissions, partners } from './partners';
 export { placePoiCategories, placePois } from './placePois';
 export {
-  profileChatMessages,
   profilePreferredLocations,
   profileReferences,
   profileRentalHistory,

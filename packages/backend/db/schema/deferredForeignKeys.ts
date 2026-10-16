@@ -126,7 +126,7 @@ export const DEFERRED_FOREIGN_KEYS: readonly DeferredForeignKey[] = [];
  */
 export const OXY_ACCOUNT_COLUMN_NAMES: ReadonlySet<string> = new Set([
   // The owner of a property, lease co-tenancy, review, saved item, profile,
-  // conversation, eviction case or comment, partner, billing record … — the
+  // eviction case or comment, partner, billing record … — the
   // single most common column in the schema, and the one `AGENTS.md` forbids
   // accepting from a client.
   'oxy_user_id',

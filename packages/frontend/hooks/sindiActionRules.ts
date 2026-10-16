@@ -8,15 +8,11 @@
  * navigator. The rules are decisions about VALUES; they belong somewhere a test
  * can call them.
  *
- * Both functions are exported from `useSindiActions.ts` as well, so existing
- * call sites and this module's own consumers share one implementation.
+ * Both functions are exported from `useSindiActions.ts` as well, so the
+ * executor and its tests share one implementation.
  */
 
-import type {
-  SindiActionEnvelope,
-  SindiActionOutcome,
-  SindiSearchPatch,
-} from '@homiio/shared-types';
+import type { SindiActionOutcome, SindiSearchPatch } from '@homiio/shared-types';
 
 import type { SearchQuery } from '@/components/search/types';
 
@@ -81,22 +77,23 @@ export function applySearchPatch(query: SearchQuery, patch: SindiSearchPatch): S
 }
 
 /**
- * Whether an envelope may still be applied, and why not when it may not.
+ * Whether an action may still be applied: `stale` when the person changed the
+ * live search by hand after sending the turn — "si el usuario cambia un filtro
+ * manualmente después del contexto enviado, ese cambio gana" (#519 §8.8).
  *
- * A pure function over the four facts, so every refusal is an ordinary
- * assertion rather than a timing simulation. `null` means "go ahead".
+ * `turnRevision` is the query's revision when the turn was SENT (the runtime's
+ * `onTurnStart`), `null` when no turn start was seen, in which case there is
+ * nothing to compare and nothing is refused.
+ *
+ * The other refusals the old data channel needed are structural now: Alia
+ * performs each host call once per `toolCallId`, a stopped turn's stream is
+ * aborted so nothing arrives after Stop, and history never executes — only a
+ * live `alia.host_action` reaches the executor.
  */
-export function envelopeRefusal(input: {
-  readonly envelope: SindiActionEnvelope;
-  readonly activeTurnId: string | null;
-  readonly contextRevision: number;
-  readonly alreadyApplied: boolean;
-}): Extract<SindiActionOutcome, 'stale' | 'rejected'> | null {
-  // Dedupe first: a replayed frame for the active turn is not stale, it is
-  // simply already done, and reporting it as stale would look like a conflict
-  // the user should resolve.
-  if (input.alreadyApplied) return 'rejected';
-  if (input.activeTurnId === null || input.envelope.turnId !== input.activeTurnId) return 'stale';
-  if (input.envelope.contextRevision !== input.contextRevision) return 'stale';
-  return null;
+export function turnRefusal(input: {
+  readonly turnRevision: number | null;
+  readonly currentRevision: number;
+}): Extract<SindiActionOutcome, 'stale'> | null {
+  if (input.turnRevision === null) return null;
+  return input.turnRevision === input.currentRevision ? null : 'stale';
 }

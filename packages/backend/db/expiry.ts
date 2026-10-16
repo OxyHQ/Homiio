@@ -22,10 +22,8 @@
  * A sweep DELETES the row, unconditionally, once the deadline passes. Not every
  * deadline column means that:
  *
- *  - **`conversations.sharing_expires_at` is the deadline of a share LINK.**
- *    `generateShareToken` sets it to +24h; deleting the row would delete the
- *    whole conversation, with its messages, a day after anybody shared it. It
- *    is handled as "clear the sharing fields", NEVER as a delete.
+ *  - **`eviction_cases.archived_at` is a STAMP, not a scythe.** It records
+ *    when a case left the public board, and the row must survive it.
  *  - **`properties.expires_at`** reaps external listings. That one is genuine
  *    housekeeping, and `services/cron.ts` must stay wired to this sweep for it.
  *
@@ -37,14 +35,13 @@
  * window.
  *
  * {@link EXPIRY_COLUMNS_THAT_MUST_NOT_DELETE} exists as data rather than as a
- * warning in a comment for the share-link reason above.
+ * warning in a comment for the archival reason above.
  */
 
 import type { PgColumn, PgTable } from 'drizzle-orm/pg-core';
 import type { ExpirySweepTarget } from '@oxy.so/db/expiry';
 import { addressCandidates } from './schema/addressMaterialization';
 import { capabilityEffectReceipts } from './schema/capabilities';
-import { conversations } from './schema/conversations';
 import { evictionCases } from './schema/evictions';
 import { moderationEvents, moderationOutbox } from './schema/moderation';
 import { placePois } from './schema/placePois';
@@ -195,23 +192,10 @@ export interface NonDeletingExpiryColumn {
  * INTENT" stops being advice the moment somebody tidies up the registry.
  *
  * Without this list, a later reader who finds a deadline column missing from the
- * registry closes the gap — which is the exact change
- * that would start deleting people's conversations.
+ * registry closes the gap — which is the exact change that would start
+ * deleting archived eviction cases.
  */
 export const EXPIRY_COLUMNS_THAT_MUST_NOT_DELETE: readonly NonDeletingExpiryColumn[] = [
-  {
-    table: conversations,
-    column: conversations.sharingExpiresAt,
-    reason:
-      'This deadline belongs to a SHARE LINK, not to the row. Deleting the row ' +
-      'would delete the whole conversation and every message in it, and ' +
-      '`generateShareToken` sets the deadline to +24h — so every conversation ' +
-      'anyone shared would be destroyed a day later, with the transcript the ' +
-      'user was sharing. The correct handling clears the four `sharing_*` ' +
-      'columns, which is exactly what `revokeSharing` already does; the read ' +
-      'side needs nothing, because `findByShareToken` already refuses an expired ' +
-      'token.',
-  },
   {
     table: evictionCases,
     column: evictionCases.archivedAt,

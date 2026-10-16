@@ -1,113 +1,173 @@
 /**
- * The Sindi action contract, as a boundary (#519 §8.4, §8.8).
+ * The Sindi host-tool contract, as a boundary (#519 §8.4, §8.8; Alia
+ * `docs/agent-embedding.md` §2).
  *
- * Everything here is a pure function, deliberately: the rules the issue lists
- * are about WHAT MAY BE APPLIED, and a rule about applicability asserted by
- * rendering a chat and simulating a stream is a test that passes for whichever
- * reason the mock happened to produce. Stated over `parseSindiActionEnvelope`,
- * `envelopeRefusal` and `applySearchPatch`, each is an ordinary assertion.
+ * Everything here is a pure function, deliberately: the rules are about WHAT
+ * MAY BE APPLIED, and a rule about applicability asserted by rendering a chat
+ * and simulating a stream is a test that passes for whichever reason the mock
+ * happened to produce.
  *
  * The negative cases are the point of the file. A validator with no test for
- * what it REFUSES is a validator that will quietly start accepting.
+ * what it REFUSES is a validator that will quietly start accepting — and the
+ * declaration the model reads is pinned to the same field table, so the two
+ * cannot drift apart.
  */
 
 import {
+  OfferingType,
+  PropertyType,
   parseSindiAction,
-  parseSindiActionEnvelope,
+  parseSindiHostCall,
   parseSindiSearchPatch,
-  SINDI_ACTION_VERSION,
-  SINDI_REQUESTED_PLACE_MAX_LENGTH,
-  type SindiActionEnvelope,
+  SINDI_DESTINATIONS,
+  SINDI_HOST_TOOLS,
 } from '@homiio/shared-types';
-import { OfferingType, PropertyType } from '@homiio/shared-types';
 
-import { applySearchPatch, envelopeRefusal } from '@/hooks/sindiActionRules';
+import {
+  actionOfHostCall,
+  hostOutcomeOf,
+  SINDI_HOST_APP,
+  SINDI_HOST_TOOL_DEFINITIONS,
+} from '@/components/sindi/sindiHostTools';
+import { applySearchPatch, turnRefusal } from '@/hooks/sindiActionRules';
 import { DEFAULT_SEARCH_QUERY } from '@/store/searchQueryStore';
 import type { SearchQuery } from '@/components/search/types';
 
-const envelope = (overrides: Partial<SindiActionEnvelope> = {}): SindiActionEnvelope => ({
-  version: SINDI_ACTION_VERSION,
-  actionId: 'a1',
-  turnId: 't1',
-  contextRevision: 7,
-  action: { kind: 'apply_search', patch: { priceMax: 1200 } },
-  ...overrides,
+describe('the declaration Alia receives', () => {
+  it('declares exactly the five intents, under names the wire contract accepts', () => {
+    expect(SINDI_HOST_TOOL_DEFINITIONS.map(({ name }) => name)).toEqual([
+      'apply_search',
+      'show_saved',
+      'open_listing',
+      'set_results_view',
+      'navigate',
+    ]);
+    // `docs/agent-embedding.md` §2: app `^[a-z][a-z0-9-]{0,31}$`, tool
+    // `^[a-z][a-z0-9_]{0,47}$`, at most 16 tools, an object root each.
+    expect(SINDI_HOST_APP).toMatch(/^[a-z][a-z0-9-]{0,31}$/);
+    expect(SINDI_HOST_TOOL_DEFINITIONS.length).toBeLessThanOrEqual(16);
+    for (const tool of SINDI_HOST_TOOL_DEFINITIONS) {
+      expect(tool.name).toMatch(/^[a-z][a-z0-9_]{0,47}$/);
+      expect(tool.inputSchema.type).toBe('object');
+      expect(tool.description.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('serialises to JSON with nothing lost — it travels in every request', () => {
+    expect(JSON.parse(JSON.stringify(SINDI_HOST_TOOL_DEFINITIONS))).toEqual(
+      SINDI_HOST_TOOL_DEFINITIONS,
+    );
+  });
+
+  it('declares no write: no tool names a payment, a signature, an application or a deletion', () => {
+    const declared = JSON.stringify(SINDI_HOST_TOOL_DEFINITIONS.map(({ name }) => name));
+    for (const word of ['pay', 'sign', 'apply_to', 'delete', 'message', 'publish']) {
+      expect(declared).not.toContain(word);
+    }
+  });
+
+  it('offers navigate only the enumerated destinations, never a free string', () => {
+    const navigate = SINDI_HOST_TOOLS.find(({ name }) => name === 'navigate');
+    if (!navigate) throw new Error('navigate is not declared');
+    const properties = navigate.inputSchema.properties as Record<string, { enum?: unknown }>;
+    expect(properties.destination.enum).toEqual([...SINDI_DESTINATIONS]);
+    expect(navigate.inputSchema.required).toEqual(['destination']);
+  });
+
+  it("builds apply_search's schema from the same fields the parser reads", () => {
+    // One source of truth: every property the model is told about is one the
+    // parser keeps, and the parser keeps nothing it was not told about.
+    const applySearch = SINDI_HOST_TOOLS.find(({ name }) => name === 'apply_search');
+    const declared = Object.keys(applySearch?.inputSchema.properties as object).sort();
+    const sample = {
+      offering: OfferingType.SALE,
+      location: { kind: 'place' },
+      queryText: 'loft',
+      propertyTypes: [PropertyType.HOUSE],
+      priceMin: 1,
+      priceMax: 2,
+      bedrooms: 1,
+      bathrooms: 1,
+      amenities: ['parking'],
+      petFriendly: true,
+    };
+    expect(Object.keys(parseSindiSearchPatch(sample) ?? {}).sort()).toEqual(declared);
+  });
 });
 
-describe('the action union is closed', () => {
-  it('accepts each of the six permitted intents', () => {
-    expect(parseSindiAction({ kind: 'apply_search', patch: { priceMax: 1200 } })).toEqual({
+describe('a host-tool call becomes one action of the closed union', () => {
+  it('accepts each of the five permitted intents', () => {
+    expect(parseSindiHostCall('apply_search', { priceMax: 1200 })).toEqual({
       kind: 'apply_search',
       patch: { priceMax: 1200 },
     });
-    expect(parseSindiAction({ kind: 'show_saved' })).toEqual({ kind: 'show_saved' });
-    expect(parseSindiAction({ kind: 'open_listing', propertyId: 'abc123' })).toEqual({
+    expect(parseSindiHostCall('show_saved', {})).toEqual({ kind: 'show_saved' });
+    expect(parseSindiHostCall('show_saved', { folderId: 'f1' })).toEqual({
+      kind: 'show_saved',
+      folderId: 'f1',
+    });
+    expect(parseSindiHostCall('open_listing', { propertyId: 'abc123' })).toEqual({
       kind: 'open_listing',
       propertyId: 'abc123',
     });
-    expect(parseSindiAction({ kind: 'set_results_view', view: 'map' })).toEqual({
+    expect(parseSindiHostCall('set_results_view', { view: 'map' })).toEqual({
       kind: 'set_results_view',
       view: 'map',
     });
-    expect(parseSindiAction({ kind: 'navigate', destination: 'saved' })).toEqual({
+    expect(parseSindiHostCall('navigate', { destination: 'saved' })).toEqual({
       kind: 'navigate',
       destination: 'saved',
     });
-    expect(
-      parseSindiAction({ kind: 'clarify_location', requested: 'Barcelona', reason: 'ambiguous' }),
-    ).toEqual({ kind: 'clarify_location', requested: 'Barcelona', reason: 'ambiguous' });
   });
 
   it.each([
-    ['an unknown intent', { kind: 'delete_account' }],
-    ['a write dressed as a navigation', { kind: 'pay_rent', leaseId: 'x' }],
-    ['a raw URL', { kind: 'navigate', destination: 'https://example.com' }],
-    ['a path instead of a destination', { kind: 'navigate', destination: '/properties/1' }],
-    ['a view that is not list or map', { kind: 'set_results_view', view: 'globe' }],
-    ['a listing id with a path in it', { kind: 'open_listing', propertyId: '../../admin' }],
-    ['a folder id with a quote in it', { kind: 'show_saved', folderId: "a' or 1=1" }],
-    // Both halves of a clarification are load-bearing and neither has an honest
-    // default: with no name the sentence has nothing to quote, and a defaulted
-    // reason would tell somebody their place does not exist when it exists
-    // twice.
-    ['a clarification with no place', { kind: 'clarify_location', reason: 'ambiguous' }],
-    [
-      'a clarification with an empty place',
-      { kind: 'clarify_location', requested: '', reason: 'not_found' },
-    ],
-    ['a clarification with no reason', { kind: 'clarify_location', requested: 'Barcelona' }],
-    [
-      'a clarification with an invented reason',
-      { kind: 'clarify_location', requested: 'Barcelona', reason: 'rate_limited' },
-    ],
-    [
-      'a clarification whose place is longer than the contract carries',
-      { kind: 'clarify_location', requested: 'A'.repeat(121), reason: 'not_found' },
-    ],
-    ['no kind at all', { patch: {} }],
-    ['a string', 'apply_search'],
-    ['null', null],
-  ])('refuses %s', (_label, value) => {
-    expect(parseSindiAction(value)).toBeNull();
+    ['an unknown tool', 'delete_account', {}],
+    ['a write dressed as a navigation', 'pay_rent', { leaseId: 'x' }],
+    ['the retired clarification', 'clarify_location', { requested: 'Barcelona' }],
+    ['a raw URL', 'navigate', { destination: 'https://example.com' }],
+    ['a path instead of a destination', 'navigate', { destination: '/properties/1' }],
+    ['no destination at all', 'navigate', {}],
+    ['a view that is not list or map', 'set_results_view', { view: 'globe' }],
+    ['a listing id with a path in it', 'open_listing', { propertyId: '../../admin' }],
+    ['no listing id', 'open_listing', {}],
+    ['a folder id with a quote in it', 'show_saved', { folderId: "a' or 1=1" }],
+    ['a search that changes nothing', 'apply_search', {}],
+    ['a search of fields nobody declared', 'apply_search', { nonsense: 1 }],
+    ['an input that is not an object', 'navigate', 'explore'],
+    ['a null input', 'show_saved', null],
+  ])('refuses %s', (_label, name, input) => {
+    expect(parseSindiHostCall(name, input)).toBeNull();
   });
 
-  it('carries a clarification at exactly the length the contract allows', () => {
-    // The bound is shared with the server, which clamps to it before emitting.
-    // An off-by-one here would drop the refusal on arrival, which is the
-    // silence `clarify_location` exists to end, one layer further down.
-    const requested = 'A'.repeat(SINDI_REQUESTED_PLACE_MAX_LENGTH);
-    expect(parseSindiAction({ kind: 'clarify_location', requested, reason: 'not_found' })).toEqual({
-      kind: 'clarify_location',
-      requested,
-      reason: 'not_found',
+  it("refuses another app's call even when its name is one of ours", () => {
+    expect(
+      actionOfHostCall({
+        toolCallId: 'c1',
+        app: 'elsewhere',
+        name: 'navigate',
+        input: { destination: 'saved' },
+      }),
+    ).toBeNull();
+    expect(
+      actionOfHostCall({
+        toolCallId: 'c1',
+        app: SINDI_HOST_APP,
+        name: 'navigate',
+        input: { destination: 'saved' },
+      }),
+    ).toEqual({ kind: 'navigate', destination: 'saved' });
+  });
+
+  it('reads an action object the same way (`{ kind, …fields }`)', () => {
+    expect(parseSindiAction({ kind: 'apply_search', patch: { priceMax: 900 } })).toEqual({
+      kind: 'apply_search',
+      patch: { priceMax: 900 },
     });
-  });
-
-  it('refuses an apply_search whose patch changes nothing', () => {
-    // A no-op patch would make Sindi claim to have applied a search while the
-    // screen stayed identical.
-    expect(parseSindiAction({ kind: 'apply_search', patch: {} })).toBeNull();
-    expect(parseSindiAction({ kind: 'apply_search', patch: { nonsense: 1 } })).toBeNull();
+    expect(parseSindiAction({ kind: 'navigate', destination: 'home' })).toEqual({
+      kind: 'navigate',
+      destination: 'home',
+    });
+    expect(parseSindiAction({ patch: {} })).toBeNull();
   });
 });
 
@@ -138,72 +198,48 @@ describe('the patch validator drops what it does not recognise', () => {
     });
   });
 
+  it('drops an offering or a property type outside the enums', () => {
+    expect(
+      parseSindiSearchPatch({ offering: 'timeshare', propertyTypes: ['castle'], priceMax: 1 }),
+    ).toEqual({ priceMax: 1 });
+  });
+
   it('accepts an explicit null queryText, which clears the text dimension', () => {
     expect(parseSindiSearchPatch({ queryText: null })).toEqual({ queryText: null });
   });
 });
 
-describe('the envelope is addressed to one turn', () => {
-  it('accepts a well-formed envelope', () => {
-    expect(parseSindiActionEnvelope(envelope())).toEqual(envelope());
-  });
+describe('what the model reads back', () => {
+  it.each(['applied', 'inline', 'rejected', 'stale', 'failed'] as const)(
+    'reports %s as itself, with a line no longer than the wire carries',
+    (outcome) => {
+      const reported = hostOutcomeOf(outcome);
+      expect(reported.outcome).toBe(outcome);
+      expect(reported.detail?.length).toBeGreaterThan(0);
+      expect(reported.detail?.length).toBeLessThanOrEqual(500);
+    },
+  );
 
-  it('refuses another contract version', () => {
-    // An older client must not guess at a payload whose meaning changed.
-    expect(parseSindiActionEnvelope({ ...envelope(), version: 99 })).toBeNull();
-    expect(parseSindiActionEnvelope({ ...envelope(), version: undefined })).toBeNull();
-  });
-
-  it('refuses an envelope with no turn or no action id', () => {
-    expect(parseSindiActionEnvelope({ ...envelope(), turnId: '' })).toBeNull();
-    expect(parseSindiActionEnvelope({ ...envelope(), actionId: undefined })).toBeNull();
-  });
-
-  it('refuses a missing or negative context revision', () => {
-    expect(parseSindiActionEnvelope({ ...envelope(), contextRevision: undefined })).toBeNull();
-    expect(parseSindiActionEnvelope({ ...envelope(), contextRevision: -1 })).toBeNull();
-  });
-
-  it('refuses an unrelated data frame without throwing', () => {
-    // The data channel is shared. A frame that is not ours must be skipped, not
-    // crash the chat.
-    for (const frame of [null, 42, 'text', [], { hello: 'world' }]) {
-      expect(parseSindiActionEnvelope(frame)).toBeNull();
+  it('never tells the model a refused action happened', () => {
+    for (const outcome of ['inline', 'rejected', 'stale', 'failed'] as const) {
+      expect(hostOutcomeOf(outcome).detail).not.toMatch(/^Done/);
     }
   });
 });
 
 describe('when an action may still be applied', () => {
-  const base = { activeTurnId: 't1', contextRevision: 7, alreadyApplied: false };
-
-  it('lets a fresh action for the active turn through', () => {
-    expect(envelopeRefusal({ ...base, envelope: envelope() })).toBeNull();
+  it('lets an action through when the search is as it was when the turn was sent', () => {
+    expect(turnRefusal({ turnRevision: 7, currentRevision: 7 })).toBeNull();
   });
 
-  it('refuses an action whose id has already run — a replay navigates once', () => {
-    expect(envelopeRefusal({ ...base, envelope: envelope(), alreadyApplied: true })).toBe(
-      'rejected',
-    );
-  });
-
-  it('refuses an action from a CANCELLED turn — this is what makes Stop stop', () => {
-    expect(envelopeRefusal({ ...base, activeTurnId: null, envelope: envelope() })).toBe('stale');
-  });
-
-  it('refuses an action from a previous turn', () => {
-    expect(envelopeRefusal({ ...base, envelope: envelope({ turnId: 't0' }) })).toBe('stale');
-  });
-
-  it('refuses an action whose context the user has since changed by hand', () => {
+  it('refuses an action whose search the person has since changed by hand', () => {
     // #519 §8.8: "Si el usuario cambia un filtro manualmente después del
     // contexto enviado, ese cambio gana."
-    expect(envelopeRefusal({ ...base, contextRevision: 8, envelope: envelope() })).toBe('stale');
+    expect(turnRefusal({ turnRevision: 7, currentRevision: 8 })).toBe('stale');
   });
 
-  it('checks the dedupe BEFORE the turn, so a replay is not reported as a conflict', () => {
-    expect(
-      envelopeRefusal({ ...base, activeTurnId: null, envelope: envelope(), alreadyApplied: true }),
-    ).toBe('rejected');
+  it('has nothing to compare before any turn start was seen', () => {
+    expect(turnRefusal({ turnRevision: null, currentRevision: 8 })).toBeNull();
   });
 });
 

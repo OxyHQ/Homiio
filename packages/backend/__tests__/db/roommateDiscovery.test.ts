@@ -370,7 +370,6 @@ describe('hydration of a page', () => {
     expect(candidate.rentalHistory).toEqual([]);
     expect(candidate.preferredLocations).toEqual([]);
     expect(candidate.roommateHistory).toEqual([]);
-    expect(candidate.chatHistory).toEqual([]);
   });
 
   it('never selects the protected income column', async () => {

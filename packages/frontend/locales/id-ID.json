@@ -1353,16 +1353,12 @@
       "conversations": "Conversations",
       "empty": "Start a new conversation to get help."
     },
-    "status": {
-      "thinking": "Thinking..."
-    },
     "auth": {
       "required": "Authentication Required",
       "message": "Please sign in to access Sindi, your AI-powered housing justice advocate"
     },
     "chat": {
-      "placeholder": "Ask Sindi about your tenant rights...",
-      "you": "You",
+      "placeholder": "Tanya {{name}}…",
       "field": "Pesan",
       "attach": "Lampirkan file",
       "send": "Kirim pesan",
@@ -1372,33 +1368,13 @@
       "voice": "Input suara",
       "removeAttachment": "Hapus"
     },
-    "errors": {
-      "connection": "Connection Error",
-      "connectionMessage": "Please check your connection and try again.",
-      "consentTitle": "Permission needed",
-      "consentMessage": "Allow Homiio to let Sindi continue helping you while you are away.",
-      "consentAction": "Review permissions",
-      "consentRequesting": "Opening permissions...",
-      "consentUnavailableTitle": "Permission unavailable",
-      "consentUnavailableMessage": "Update Homiio and try again. No permission was granted.",
-      "uploadFailedTitle": "Upload failed",
-      "uploadAnalyzeFailed": "Could not analyze the file."
-    },
     "shared": {
-      "loading": "Loading Shared Conversation",
-      "loadingMessage": "Loading conversation...",
       "subtitle": "Shared Conversation",
       "badge": "Shared Conversation",
       "footer": "Powered by Sindi - Your AI Housing Justice Advocate",
       "error": {
-        "title": "Conversation Not Found",
         "notFound": "This shared conversation could not be found or has expired.",
-        "failed": "Failed to load shared conversation. Please try again.",
-        "description": "The conversation may have been removed or the link may be invalid."
-      },
-      "empty": {
-        "title": "Empty Conversation",
-        "subtitle": "This shared conversation doesn't have any messages yet."
+        "failed": "Failed to load shared conversation. Please try again."
       }
     },
     "share": {
@@ -1409,65 +1385,55 @@
       },
       "error": {
         "title": "Cannot Share Conversation",
-        "saveFirst": "Please save the conversation by sending a message before sharing.",
-        "emptyConversation": "Cannot share an empty conversation. Please add some messages first.",
         "failed": "Failed to generate share link. Please try again."
       }
     },
     "conversation": {
-      "title": "Conversation",
-      "subtitle": "AI Housing Justice Advocate",
-      "loading": "Loading Conversation",
-      "loadingMessage": "Loading conversation..."
+      "title": "Conversation"
     },
     "settings": {
-      "resetMessage": "This will reset all Sindi preferences to their defaults.",
+      "resetMessage": "Ini akan menghapus percakapan Anda dengan Sindi dan mengembalikan preferensinya ke bawaan.",
       "resetTitle": "Reset Sindi?",
-      "reset": "Reset Sindi to defaults",
+      "reset": "Hapus percakapan dan atur ulang",
       "actions": "Actions",
-      "tipsDescription": "Surface inline guidance while you chat.",
+      "tipsDescription": "Sarankan pertanyaan saat memulai percakapan.",
       "tips": "Show tips & hints",
       "behaviorFooter": "Tune how Sindi behaves while you browse properties.",
       "behavior": "Behavior",
       "title": "Sindi preferences",
-      "resetDone": "Sindi preferences reset."
+      "resetDone": "Sindi telah diatur ulang.",
+      "resetFailed": "Sindi tidak dapat diatur ulang. Coba lagi."
     },
     "voice": {
-      "unsupportedBrowser": "Input suara tidak didukung di browser ini",
       "unsupportedDevice": "Input suara tidak tersedia di perangkat ini",
-      "deniedTitle": "Akses mikrofon ditolak",
       "deniedMessage": "Izinkan akses mikrofon dan pengenalan ucapan di pengaturan untuk mendikte pesan.",
       "failed": "Input suara berhenti secara tidak terduga"
-    },
-    "actions": {
-      "take": "Lakukan",
-      "takeAccessible": "Jalankan yang disarankan Sindi",
-      "applySearch": "Buka Jelajahi dengan filter ini",
-      "showSaved": "Buka simpanan Anda",
-      "openListing": "Buka hunian ini",
-      "showMap": "Tampilkan hasil di peta",
-      "showList": "Tampilkan hasil sebagai daftar",
-      "navigate": {
-        "explore": "Buka Jelajahi",
-        "saved": "Buka Tersimpan",
-        "home": "Buka layar beranda",
-        "my_home": "Buka Rumah Saya",
-        "evictions": "Buka papan penggusuran"
-      },
-      "clarifyLocation": {
-        "ambiguous": "Saya tidak tahu “{{place}}” yang mana yang Anda maksud — ada lebih dari satu. Di wilayah mana?",
-        "notFound": "Saya tidak punya tempat bernama “{{place}}”, jadi pencarian dibiarkan apa adanya."
-      },
-      "applied": "Selesai: {{what}}.",
-      "stale": "Anda sendiri mengubah pencarian, jadi ini dibiarkan apa adanya.",
-      "failed": "Tidak bisa dilakukan: {{what}}."
     },
     "saved": {
       "loading": "Melihat hunian yang Anda simpan…",
       "failed": "Hunian yang Anda simpan tidak dapat dimuat.",
       "empty": "Anda belum menyimpan hunian apa pun.",
-      "emptyFolder": "Koleksi itu kosong.",
       "more": "dan {{count}} lainnya"
+    },
+    "place": {
+      "ambiguous": "Saya tidak tahu “{{place}}” yang mana yang Anda maksud — ada lebih dari satu. Di wilayah mana?",
+      "notFound": "Saya tidak punya tempat bernama “{{place}}”, jadi pencarian dibiarkan apa adanya."
+    },
+    "property": {
+      "title": "Tanya Sindi tentang hunian ini",
+      "subtitle": "Asisten sewa 24/7 Anda. Tanyakan apa saja tentang hunian, lingkungan, hak Anda, atau biaya tersembunyi.",
+      "subtitleVerified": "Sindi telah memeriksa keaslian iklan ini. Tanyakan apa saja tentang hunian, lingkungan, hak Anda, atau biaya tersembunyi.",
+      "verified": "Diverifikasi oleh Sindi",
+      "askAccessible": "Tanya Sindi tentang hunian ini",
+      "askHint": "Membuka obrolan dengan Sindi tentang hunian ini",
+      "defaultQuestion": "Bisakah Anda membantu saya memahami hunian ini dan hak saya sebagai penyewa?",
+      "context": "Tentang hunian ini: {{title}} (iklan Homiio {{id}}).",
+      "prompts": {
+        "budget": "Berapa anggaran yang harus saya siapkan?",
+        "costs": "Apakah ada biaya tersembunyi?",
+        "area": "Ceritakan tentang lingkungan ini",
+        "rights": "Apa saja hak saya?"
+      }
     }
   },
   "sidebar": {
@@ -4082,7 +4048,6 @@
   },
   "alia": {
     "clientContext": "Pengguna sedang memakai Homiio, aplikasi hunian untuk mencari tempat yang disewa, dibeli atau disinggahi, menelusuri riwayat sebuah hunian dan biaya sebenarnya, serta mengelola atau membela hak sewa.",
-    "onScreen": "Saat ini pengguna berada di layar {{path}}.",
     "suggestion": {
       "find": "Bantu saya mencari tempat tinggal",
       "costs": "Berapa biaya sebenarnya hunian ini?",

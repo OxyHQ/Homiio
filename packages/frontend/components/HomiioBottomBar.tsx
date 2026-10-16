@@ -1,11 +1,11 @@
 import { useMemo } from 'react';
 import { usePathname, useRouter, type Href } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { useAskAgent } from '@alia.onl/sdk';
 import { AliaAvatarIcon } from '@alia.onl/sdk/avatar';
 import { BottomBar } from '@oxy.so/bloom/bottom-bar';
 import { Fab } from '@oxy.so/bloom/fab';
 import { RiBookmarkLine, RiHomeLine, RiInbox2Line, RiUserLine } from '@oxy.so/bloom/icons';
-import { useAskAlia } from '@/context/AskAliaContext';
 
 const DESTINATIONS = ['/saved', '/inbox', '/profile'] as const;
 
@@ -23,7 +23,7 @@ export function HomiioBottomBar() {
   const { t } = useTranslation();
   const router = useRouter();
   const pathname = usePathname() || '/';
-  const { askAlia } = useAskAlia();
+  const { ask } = useAskAgent();
 
   const items = useMemo(
     () => [
@@ -44,7 +44,7 @@ export function HomiioBottomBar() {
         <Fab
           icon={AliaAvatarIcon}
           accessibilityLabel={t('sidebar.navigation.askAlia')}
-          onPress={askAlia}
+          onPress={() => ask('alia')}
         />
       }
     />

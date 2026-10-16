@@ -6,10 +6,9 @@ import { RiChat3Line } from '@oxy.so/bloom/icons';
 import { Item } from '@oxy.so/bloom/item';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { Text } from '@oxy.so/bloom/typography';
+import type { useConversations } from '@alia.onl/sdk';
 import { deviceTimeZone, formatDate } from '@homiio/shared-types';
-import type { Conversation } from '@/store/conversationStore';
 import { useFormatting } from '@/utils/format';
-import { extractPropertiesJson, stripAttachmentDataUrls } from './propertyParsing';
 
 /**
  * Compact label for a conversation's last-activity time (today → time, else
@@ -23,8 +22,20 @@ const formatTimestamp = (date: Date, locale: string, timeZone: string): string =
   return formatDate(date, locale, timeZone, { month: 'short', day: 'numeric' });
 };
 
+/** One row of Alia's conversation list, as `useConversations` pages it. */
+export type ConversationSummary = NonNullable<
+  ReturnType<typeof useConversations>['data']
+>['pages'][number]['conversations'][number];
+
+/** The rows of every page loaded so far, newest activity first. */
+export function conversationsOf(data: ReturnType<typeof useConversations>['data']) {
+  return [...(data?.pages.flatMap((page) => page.conversations) ?? [])].sort(
+    (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+  );
+}
+
 export interface ConversationItemProps {
-  conversation: Conversation;
+  conversation: ConversationSummary;
   onPress: () => void;
   /** Marks the row as the currently open conversation (panel selection). */
   isActive?: boolean;
@@ -33,9 +44,9 @@ export interface ConversationItemProps {
 }
 
 /**
- * One Sindi conversation as a Bloom `Item`: a chat glyph, the title with its
- * last-activity time, and a one-line preview of the latest message (with the
- * machine-only property and attachment tags removed).
+ * One Sindi conversation (Alia's, from `useConversations({ agentId })`) as a
+ * Bloom `Item`: a chat glyph, the title with its last-activity time, and a
+ * one-line preview of the latest message.
  *
  * Shared by the `/sindi` index screen and the docked `SindiPanel`; group rows
  * in a `ConversationList`.
@@ -44,10 +55,7 @@ export const ConversationItem = memo<ConversationItemProps>(
   ({ conversation, onPress, isActive = false, emptyPreview = 'No messages yet' }) => {
     const { colors } = useTheme();
     const { locale } = useFormatting();
-    const last = conversation.messages[conversation.messages.length - 1];
-    const preview = last
-      ? stripAttachmentDataUrls(extractPropertiesJson(last.content || '').visible)
-      : emptyPreview;
+    const preview = conversation.lastMessage?.trim() || emptyPreview;
 
     return (
       <Item

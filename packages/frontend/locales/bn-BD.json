@@ -1353,16 +1353,12 @@
       "conversations": "Conversations",
       "empty": "Start a new conversation to get help."
     },
-    "status": {
-      "thinking": "Thinking..."
-    },
     "auth": {
       "required": "Authentication Required",
       "message": "Please sign in to access Sindi, your AI-powered housing justice advocate"
     },
     "chat": {
-      "placeholder": "Ask Sindi about your tenant rights...",
-      "you": "You",
+      "placeholder": "{{name}}-কে জিজ্ঞাসা করুন…",
       "field": "বার্তা",
       "attach": "ফাইল সংযুক্ত করুন",
       "send": "বার্তা পাঠান",
@@ -1372,33 +1368,13 @@
       "voice": "ভয়েস ইনপুট",
       "removeAttachment": "সরান"
     },
-    "errors": {
-      "connection": "Connection Error",
-      "connectionMessage": "Please check your connection and try again.",
-      "consentTitle": "Permission needed",
-      "consentMessage": "Allow Homiio to let Sindi continue helping you while you are away.",
-      "consentAction": "Review permissions",
-      "consentRequesting": "Opening permissions...",
-      "consentUnavailableTitle": "Permission unavailable",
-      "consentUnavailableMessage": "Update Homiio and try again. No permission was granted.",
-      "uploadFailedTitle": "Upload failed",
-      "uploadAnalyzeFailed": "Could not analyze the file."
-    },
     "shared": {
-      "loading": "Loading Shared Conversation",
-      "loadingMessage": "Loading conversation...",
       "subtitle": "Shared Conversation",
       "badge": "Shared Conversation",
       "footer": "Powered by Sindi - Your AI Housing Justice Advocate",
       "error": {
-        "title": "Conversation Not Found",
         "notFound": "This shared conversation could not be found or has expired.",
-        "failed": "Failed to load shared conversation. Please try again.",
-        "description": "The conversation may have been removed or the link may be invalid."
-      },
-      "empty": {
-        "title": "Empty Conversation",
-        "subtitle": "This shared conversation doesn't have any messages yet."
+        "failed": "Failed to load shared conversation. Please try again."
       }
     },
     "share": {
@@ -1409,65 +1385,55 @@
       },
       "error": {
         "title": "Cannot Share Conversation",
-        "saveFirst": "Please save the conversation by sending a message before sharing.",
-        "emptyConversation": "Cannot share an empty conversation. Please add some messages first.",
         "failed": "Failed to generate share link. Please try again."
       }
     },
     "conversation": {
-      "title": "Conversation",
-      "subtitle": "AI Housing Justice Advocate",
-      "loading": "Loading Conversation",
-      "loadingMessage": "Loading conversation..."
+      "title": "Conversation"
     },
     "settings": {
-      "resetMessage": "This will reset all Sindi preferences to their defaults.",
+      "resetMessage": "এটি সিন্ডির সঙ্গে আপনার কথোপকথন মুছে ফেলবে এবং এর পছন্দগুলো ডিফল্টে ফিরিয়ে দেবে।",
       "resetTitle": "Reset Sindi?",
-      "reset": "Reset Sindi to defaults",
+      "reset": "কথোপকথন মুছুন ও রিসেট করুন",
       "actions": "Actions",
-      "tipsDescription": "Surface inline guidance while you chat.",
+      "tipsDescription": "কথোপকথন শুরু করার সময় প্রশ্ন প্রস্তাব করুন।",
       "tips": "Show tips & hints",
       "behaviorFooter": "Tune how Sindi behaves while you browse properties.",
       "behavior": "Behavior",
       "title": "Sindi preferences",
-      "resetDone": "Sindi preferences reset."
+      "resetDone": "সিন্ডি রিসেট হয়েছে।",
+      "resetFailed": "সিন্ডি রিসেট করা যায়নি। আবার চেষ্টা করুন।"
     },
     "voice": {
-      "unsupportedBrowser": "এই ব্রাউজারে ভয়েস ইনপুট সমর্থিত নয়",
       "unsupportedDevice": "এই ডিভাইসে ভয়েস ইনপুট উপলভ্য নয়",
-      "deniedTitle": "মাইক্রোফোনের অনুমতি দেওয়া হয়নি",
       "deniedMessage": "বার্তা বলে লিখতে সেটিংসে মাইক্রোফোন ও স্পিচ রিকগনিশনের অনুমতি দিন।",
       "failed": "ভয়েস ইনপুট অপ্রত্যাশিতভাবে বন্ধ হয়ে গেছে"
-    },
-    "actions": {
-      "take": "করুন",
-      "takeAccessible": "Sindi যা প্রস্তাব করেছে তা করুন",
-      "applySearch": "এই ফিল্টার দিয়ে এক্সপ্লোর খুলুন",
-      "showSaved": "আপনার সংরক্ষিত বাড়িগুলো খুলুন",
-      "openListing": "এই বাড়িটি খুলুন",
-      "showMap": "ফলাফল মানচিত্রে দেখান",
-      "showList": "ফলাফল তালিকায় দেখান",
-      "navigate": {
-        "explore": "এক্সপ্লোর খুলুন",
-        "saved": "সংরক্ষিত খুলুন",
-        "home": "হোম স্ক্রিন খুলুন",
-        "my_home": "আমার বাড়ি খুলুন",
-        "evictions": "উচ্ছেদ বোর্ড খুলুন"
-      },
-      "clarifyLocation": {
-        "ambiguous": "আপনি কোন “{{place}}”-এর কথা বলছেন বুঝতে পারিনি — এই নামে একাধিক জায়গা আছে। এটি কোন অঞ্চলে?",
-        "notFound": "“{{place}}” নামে আমার কাছে কোনো জায়গা নেই, তাই অনুসন্ধানটি আগের মতোই রয়েছে।"
-      },
-      "applied": "সম্পন্ন: {{what}}।",
-      "stale": "আপনি নিজেই অনুসন্ধান বদলেছেন, তাই এটি অপরিবর্তিত রাখা হয়েছে।",
-      "failed": "এটি করা যায়নি: {{what}}।"
     },
     "saved": {
       "loading": "আপনার সংরক্ষিত বাসা দেখছি…",
       "failed": "আপনার সংরক্ষিত বাসা লোড করা যায়নি।",
       "empty": "আপনি এখনও কোনো বাসা সংরক্ষণ করেননি।",
-      "emptyFolder": "ওই সংগ্রহটি খালি।",
       "more": "এবং আরও {{count}}টি"
+    },
+    "place": {
+      "ambiguous": "আপনি কোন “{{place}}”-এর কথা বলছেন বুঝতে পারিনি — এই নামে একাধিক জায়গা আছে। এটি কোন অঞ্চলে?",
+      "notFound": "“{{place}}” নামে আমার কাছে কোনো জায়গা নেই, তাই অনুসন্ধানটি আগের মতোই রয়েছে।"
+    },
+    "property": {
+      "title": "এই বাড়ি সম্পর্কে সিন্ডিকে জিজ্ঞাসা করুন",
+      "subtitle": "আপনার ২৪/৭ ভাড়া সহকারী। বাড়ি, এলাকা, আপনার অধিকার বা লুকানো খরচ সম্পর্কে যেকোনো কিছু জিজ্ঞাসা করুন।",
+      "subtitleVerified": "সিন্ডি এই বিজ্ঞাপনের সত্যতা যাচাই করেছে। বাড়ি, এলাকা, আপনার অধিকার বা লুকানো খরচ সম্পর্কে যেকোনো কিছু জিজ্ঞাসা করুন।",
+      "verified": "সিন্ডি দ্বারা যাচাইকৃত",
+      "askAccessible": "এই বাড়ি সম্পর্কে সিন্ডিকে জিজ্ঞাসা করুন",
+      "askHint": "এই বাড়ি নিয়ে সিন্ডির সঙ্গে একটি চ্যাট খোলে",
+      "defaultQuestion": "এই বাড়ি এবং ভাড়াটে হিসেবে আমার অধিকার বুঝতে আমাকে সাহায্য করবেন?",
+      "context": "এই বাড়ি সম্পর্কে: {{title}} (Homiio বিজ্ঞাপন {{id}})।",
+      "prompts": {
+        "budget": "আমার কত বাজেট রাখা উচিত?",
+        "costs": "কোনো লুকানো খরচ আছে কি?",
+        "area": "এই এলাকা সম্পর্কে বলুন",
+        "rights": "আমার অধিকারগুলো কী?"
+      }
     }
   },
   "sidebar": {
@@ -4082,7 +4048,6 @@
   },
   "alia": {
     "clientContext": "ব্যবহারকারী Homiio ব্যবহার করছেন, এটি একটি আবাসন অ্যাপ, যা ভাড়া নেওয়া, কেনা বা থাকার জায়গা খুঁজতে, কোনো বাড়ির ইতিহাস ও প্রকৃত খরচ জানতে এবং ভাড়া ব্যবস্থাপনা বা অধিকার রক্ষা করতে সাহায্য করে।",
-    "onScreen": "তিনি এখন {{path}} স্ক্রিনে আছেন।",
     "suggestion": {
       "find": "থাকার জায়গা খুঁজতে আমাকে সাহায্য করুন",
       "costs": "এই বাড়ির আসল খরচ কত হবে?",

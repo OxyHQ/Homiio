@@ -40,11 +40,6 @@ function optionalEnvironmentValue(raw: string | undefined): string | undefined {
   return value || undefined;
 }
 
-/** Preserve an opaque database identity exactly; only the empty value is absent. */
-function optionalExactIdentifier(raw: string | undefined): string | undefined {
-  return raw === undefined || raw.length === 0 ? undefined : raw;
-}
-
 const CROWDSOURCE_ENFORCEMENT_MODES: readonly ModerationEnforcementMode[] = [
   'observe',
   'manual',
@@ -72,14 +67,6 @@ export interface Config {
     serviceApiKey?: string;
     /** Cleartext service credential secret, supplied by the secret manager. */
     serviceApiSecret?: string;
-    /** Exact Oxy routing-profile PK selected for Homiio point inference. */
-    inferenceRoutingProfileId?: string;
-  };
-  alia: {
-    /** Alia product API. Interactive Sindi chat stays on Alia's chat runtime. */
-    apiUrl: string;
-    /** Existing Alia entity id backed 1:1 by the provisioned Sindi bot account. */
-    sindiAgentId?: string;
   };
   telegram: {
     botToken?: string;
@@ -322,16 +309,6 @@ const config: Config = {
     baseURL: process.env.OXY_API_URL || 'https://api.oxy.so',
     serviceApiKey: optionalEnvironmentValue(process.env.OXY_SERVICE_API_KEY),
     serviceApiSecret: optionalEnvironmentValue(process.env.OXY_SERVICE_API_SECRET),
-    inferenceRoutingProfileId: optionalExactIdentifier(
-      process.env.OXY_INFERENCE_ROUTING_PROFILE_ID,
-    ),
-  },
-
-  alia: {
-    apiUrl: process.env.ALIA_API_URL || 'https://api.alia.onl',
-    // Sindi holds no credential: it is Homiio's attested task role (oxy ADR
-    // 0026). `SINDI_OXY_SERVICE_API_*` is retired and deliberately not read.
-    sindiAgentId: optionalExactIdentifier(process.env.SINDI_ALIA_AGENT_ID),
   },
 
   // Telegram Bot Configuration

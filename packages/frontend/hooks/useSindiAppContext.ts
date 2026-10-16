@@ -21,13 +21,18 @@
  *    screen and is what lets Sindi write a sentence naming where it searched.
  *    It is never an address and never a street.
  *
+ * ## How it travels
+ *
+ * {@link serializeSindiAppContext} turns it into the lines Alia receives as the
+ * turn's `clientContext` (`docs/agent-embedding.md` §2): the model reads where
+ * the person is and what they are looking at, and the host tools act on it.
+ *
  * ## The revision is the conflict detector
  *
- * It increments whenever the live query changes, and it rides with the turn.
- * An action carrying an older revision is `stale`: the user changed a filter by
- * hand after the turn was sent, and #519 §8.8 says their change wins. Derived
- * from the query's own value rather than counted by an effect, so it cannot
- * drift out of step with what was actually sent.
+ * A hash of the live query. The executor (`hooks/useSindiActions.ts`) takes it
+ * when a turn is sent and compares it when an action arrives: a different value
+ * means the person changed a filter by hand during the turn, and #519 §8.8 says
+ * their change wins. It is never sent — it means nothing to the model.
  */
 
 import { useMemo } from 'react';
@@ -62,6 +67,16 @@ export function destinationOfPath(pathname: string): SindiDestination | null {
 }
 
 /**
+ * The listing the person is reading, from `/properties/<id>`, or `undefined`.
+ * A listing id is what "this home" means in a turn, and it names nothing the
+ * page does not already show.
+ */
+export function listingOfPath(pathname: string): string | undefined {
+  const match = /^\/properties\/([A-Za-z0-9_-]{1,64})\/?$/.exec(pathname);
+  return match?.[1];
+}
+
+/**
  * A stable revision number for a value.
  *
  * A 32-bit FNV-1a hash of the serialised query. Not a counter: a counter lives
@@ -87,12 +102,9 @@ export function revisionOf(value: unknown): number {
 }
 
 /**
- * The capability is PASSED IN rather than derived here.
- *
- * It depends on the host (`components/sindi/sindiHost.ts`), which only the
- * component rendering the chat knows, and `ChatContent` needs the same value to
- * decide whether to send a context at all. One derivation, two readers, no way
- * for them to disagree about which surface they are describing.
+ * The capability is PASSED IN rather than derived here: it depends on the host
+ * (`components/sindi/sindiHost.ts`), which only the surface rendering the chat
+ * knows.
  */
 export function useSindiAppContext(capability: SindiControlCapability): SindiAppContext {
   const { t } = useTranslation();
@@ -111,6 +123,7 @@ export function useSindiAppContext(capability: SindiControlCapability): SindiApp
       revision: revisionOf(query),
       presentation,
       destination: destinationOfPath(pathname),
+      ...(listingOfPath(pathname) ? { listingId: listingOfPath(pathname) } : {}),
       offering: query.offering,
       // A selection the grammar cannot express sends NO token rather than a
       // broken one. The model then has no area to name, which is honest; a
@@ -128,4 +141,32 @@ export function useSindiAppContext(capability: SindiControlCapability): SindiApp
     };
     return context;
   }, [query, presentation, pathname, t]);
+}
+
+/**
+ * The context as the lines of Alia's `clientContext`: an introduction to the
+ * app (Homiio's i18n, so the model hears the person's language), then one fact
+ * per line. Only the members of {@link SindiAppContext} can appear — the
+ * interface is still the policy.
+ */
+export function serializeSindiAppContext(intro: string, context: SindiAppContext): string {
+  const facts: string[] = [
+    `Presentation: ${
+      context.presentation === 'side_by_side'
+        ? 'the chat is docked beside the app, which stays visible'
+        : 'the chat covers or replaces the app'
+    }.`,
+    `Screen: ${context.destination ?? (context.listingId ? 'a listing' : 'another screen')}.`,
+  ];
+  if (context.listingId) facts.push(`Listing open on screen: ${context.listingId}.`);
+  if (context.offering) facts.push(`Search offering: ${context.offering}.`);
+  if (context.scopeLabel) facts.push(`Search area: ${context.scopeLabel}.`);
+  if (context.locationToken) facts.push(`Search area token (loc): ${context.locationToken}.`);
+  if (context.priceMin !== undefined || context.priceMax !== undefined) {
+    const unit = context.priceCurrency ? ` ${context.priceCurrency}` : '';
+    facts.push(
+      `Search price: ${context.priceMin ?? 'any'} to ${context.priceMax ?? 'any'}${unit}.`,
+    );
+  }
+  return [intro, ...facts].join('\n');
 }

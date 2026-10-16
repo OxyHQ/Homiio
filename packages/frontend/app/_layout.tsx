@@ -30,7 +30,7 @@ import { ProfileProvider } from '@/context/ProfileContext';
 import { SavedPropertiesProvider } from '@/context/SavedPropertiesContext';
 import { BottomSheetProvider } from '@/context/BottomSheetContext';
 import { MapStateProvider } from '@/context/MapStateContext';
-import { AskAliaProvider } from '@/context/AskAliaContext';
+import { AskAgentProvider } from '@/context/AskAgentProvider';
 import { RentalModeProvider } from '@/context/RentalModeContext';
 import { NotificationProvider } from '@/context/NotificationContext';
 import { OxyProvider, useOxy } from '@oxy.so/services';
@@ -362,9 +362,9 @@ export default function RootLayout() {
                                     <PortalProvider>
                                       <ErrorBoundary>
                                         <MapStateProvider>
-                                          <AskAliaProvider>
+                                          <AskAgentProvider>
                                             <AppFrame />
-                                          </AskAliaProvider>
+                                          </AskAgentProvider>
                                         </MapStateProvider>
                                       </ErrorBoundary>
                                       {/*

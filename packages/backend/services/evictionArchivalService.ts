@@ -17,7 +17,7 @@
  *  - **Deleted at 24 months after archival.**
  *
  * `EXPIRY_COLUMNS_THAT_MUST_NOT_DELETE` records `eviction_cases.archived_at`
- * beside `conversations.sharing_expires_at` for exactly this reason: a later
+ * for exactly this reason: a later
  * reader comparing the registry against the deadline columns in the schema finds
  * one short and closes the gap, and that change would start deleting live
  * notices ninety days after their last edit.

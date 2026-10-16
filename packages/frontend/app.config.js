@@ -140,35 +140,22 @@ module.exports = (config) => {
           'expo-camera',
           {
             cameraPermission: 'Allow $(PRODUCT_NAME) to access your camera',
-            // The one NSMicrophoneUsageDescription: this plugin's Info.plist mod
-            // runs after expo-speech-recognition's and overwrites its string, so
-            // the dictation and voice uses are named here.
+            // The one NSMicrophoneUsageDescription, naming the SDK's dictation
+            // (recorded with expo-audio, transcribed by Alia) and voice calls.
             microphonePermission:
-              'Allow $(PRODUCT_NAME) to access your microphone, including to dictate messages to Sindi and to talk with Alia',
+              'Allow $(PRODUCT_NAME) to access your microphone, including to dictate messages and to talk with Sindi and Alia',
             recordAudioAndroid: true,
           },
         ],
         'expo-image-picker',
-        // Sindi's composer mic (hooks/voice/speechEngine.ts) and voice calls with
-        // Alia (`@alia.onl/sdk`'s VoiceSession). Adds the iOS usage strings and
-        // Android RECORD_AUDIO + the speech-service <queries>; a binary built
-        // without it reports "not available on this device".
         [
-          'expo-speech-recognition',
-          {
-            // NSMicrophoneUsageDescription comes from expo-camera above.
-            speechRecognitionPermission:
-              'Allow $(PRODUCT_NAME) to turn your speech into text when you dictate messages to Sindi or talk with Alia.',
-          },
-        ],
-        [
-          // The SDK's voice call with Alia (`@alia.onl/sdk/voice`) captures and plays audio through
+          // The SDK's voice call with Sindi or Alia captures and plays audio through
           // react-native-audio-api; the plugin declares RECORD_AUDIO. Its Info.plist mod would
           // overwrite the microphone usage string, so it is the one expo-camera above writes.
           'react-native-audio-api',
           {
             iosMicrophonePermission:
-              'Allow $(PRODUCT_NAME) to access your microphone, including to dictate messages to Sindi and to talk with Alia',
+              'Allow $(PRODUCT_NAME) to access your microphone, including to dictate messages and to talk with Sindi and Alia',
             iosBackgroundMode: false,
             androidForegroundService: false,
             androidPermissions: ['android.permission.RECORD_AUDIO'],

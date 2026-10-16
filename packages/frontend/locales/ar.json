@@ -1361,16 +1361,12 @@
       "conversations": "Conversations",
       "empty": "Start a new conversation to get help."
     },
-    "status": {
-      "thinking": "Thinking..."
-    },
     "auth": {
       "required": "Authentication Required",
       "message": "Please sign in to access Sindi, your AI-powered housing justice advocate"
     },
     "chat": {
-      "placeholder": "Ask Sindi about your tenant rights...",
-      "you": "You",
+      "placeholder": "اسأل {{name}}…",
       "field": "الرسالة",
       "attach": "إرفاق ملف",
       "send": "إرسال الرسالة",
@@ -1380,33 +1376,13 @@
       "voice": "الإدخال الصوتي",
       "removeAttachment": "إزالة"
     },
-    "errors": {
-      "connection": "Connection Error",
-      "connectionMessage": "Please check your connection and try again.",
-      "consentTitle": "Permission needed",
-      "consentMessage": "Allow Homiio to let Sindi continue helping you while you are away.",
-      "consentAction": "Review permissions",
-      "consentRequesting": "Opening permissions...",
-      "consentUnavailableTitle": "Permission unavailable",
-      "consentUnavailableMessage": "Update Homiio and try again. No permission was granted.",
-      "uploadFailedTitle": "Upload failed",
-      "uploadAnalyzeFailed": "Could not analyze the file."
-    },
     "shared": {
-      "loading": "Loading Shared Conversation",
-      "loadingMessage": "Loading conversation...",
       "subtitle": "Shared Conversation",
       "badge": "Shared Conversation",
       "footer": "Powered by Sindi - Your AI Housing Justice Advocate",
       "error": {
-        "title": "Conversation Not Found",
         "notFound": "This shared conversation could not be found or has expired.",
-        "failed": "Failed to load shared conversation. Please try again.",
-        "description": "The conversation may have been removed or the link may be invalid."
-      },
-      "empty": {
-        "title": "Empty Conversation",
-        "subtitle": "This shared conversation doesn't have any messages yet."
+        "failed": "Failed to load shared conversation. Please try again."
       }
     },
     "share": {
@@ -1417,65 +1393,55 @@
       },
       "error": {
         "title": "Cannot Share Conversation",
-        "saveFirst": "Please save the conversation by sending a message before sharing.",
-        "emptyConversation": "Cannot share an empty conversation. Please add some messages first.",
         "failed": "Failed to generate share link. Please try again."
       }
     },
     "conversation": {
-      "title": "Conversation",
-      "subtitle": "AI Housing Justice Advocate",
-      "loading": "Loading Conversation",
-      "loadingMessage": "Loading conversation..."
+      "title": "Conversation"
     },
     "settings": {
-      "resetMessage": "This will reset all Sindi preferences to their defaults.",
+      "resetMessage": "سيؤدي هذا إلى حذف محادثاتك مع سيندي وإعادة تفضيلاتها إلى الإعدادات الافتراضية.",
       "resetTitle": "Reset Sindi?",
-      "reset": "Reset Sindi to defaults",
+      "reset": "حذف المحادثات وإعادة التعيين",
       "actions": "Actions",
-      "tipsDescription": "Surface inline guidance while you chat.",
+      "tipsDescription": "اقتراح أسئلة عند بدء محادثة.",
       "tips": "Show tips & hints",
       "behaviorFooter": "Tune how Sindi behaves while you browse properties.",
       "behavior": "Behavior",
       "title": "Sindi preferences",
-      "resetDone": "Sindi preferences reset."
+      "resetDone": "تمت إعادة تعيين سيندي.",
+      "resetFailed": "تعذّرت إعادة تعيين سيندي. حاول مرة أخرى."
     },
     "voice": {
-      "unsupportedBrowser": "الإدخال الصوتي غير مدعوم في هذا المتصفح",
       "unsupportedDevice": "الإدخال الصوتي غير متاح على هذا الجهاز",
-      "deniedTitle": "تم رفض الوصول إلى الميكروفون",
       "deniedMessage": "اسمح بالوصول إلى الميكروفون والتعرّف على الكلام من الإعدادات لإملاء الرسائل.",
       "failed": "توقف الإدخال الصوتي بشكل غير متوقع"
-    },
-    "actions": {
-      "take": "نفّذ ذلك",
-      "takeAccessible": "تنفيذ ما اقترحته Sindi",
-      "applySearch": "فتح «استكشاف» بهذه المرشِّحات",
-      "showSaved": "فتح العناصر المحفوظة لديك",
-      "openListing": "فتح هذا المسكن",
-      "showMap": "عرض النتائج على الخريطة",
-      "showList": "عرض النتائج كقائمة",
-      "navigate": {
-        "explore": "فتح «استكشاف»",
-        "saved": "فتح «المحفوظات»",
-        "home": "فتح الشاشة الرئيسية",
-        "my_home": "فتح «مسكني»",
-        "evictions": "فتح لوحة عمليات الإخلاء"
-      },
-      "clarifyLocation": {
-        "ambiguous": "لم أعرف أي «{{place}}» تقصد، فهناك أكثر من مكان بهذا الاسم. في أي منطقة هو؟",
-        "notFound": "لا يوجد لدي مكان اسمه «{{place}}»، لذا بقي البحث كما هو."
-      },
-      "applied": "تمّ: {{what}}.",
-      "stale": "لقد غيّرت البحث بنفسك، لذا تُرك هذا كما هو.",
-      "failed": "تعذّر تنفيذ ذلك: {{what}}."
     },
     "saved": {
       "loading": "أطّلع على المساكن التي حفظتها…",
       "failed": "تعذّر تحميل المساكن المحفوظة.",
       "empty": "لم تحفظ أي مسكن بعد.",
-      "emptyFolder": "هذه المجموعة فارغة.",
       "more": "و{{count}} غيرها"
+    },
+    "place": {
+      "ambiguous": "لم أعرف أي «{{place}}» تقصد، فهناك أكثر من مكان بهذا الاسم. في أي منطقة هو؟",
+      "notFound": "لا يوجد لدي مكان اسمه «{{place}}»، لذا بقي البحث كما هو."
+    },
+    "property": {
+      "title": "اسأل سيندي عن هذا المنزل",
+      "subtitle": "مساعدتك في الإيجار على مدار الساعة. اسأل عن المنزل أو المنطقة أو حقوقك أو التكاليف الخفية.",
+      "subtitleVerified": "راجعت سيندي صحة هذا الإعلان. اسأل عن المنزل أو المنطقة أو حقوقك أو التكاليف الخفية.",
+      "verified": "موثّق من سيندي",
+      "askAccessible": "اسأل سيندي عن هذا المنزل",
+      "askHint": "يفتح محادثة مع سيندي حول هذا المنزل",
+      "defaultQuestion": "هل يمكنك مساعدتي على فهم هذا المنزل وحقوقي كمستأجر؟",
+      "context": "عن هذا المنزل: {{title}} (إعلان Homiio رقم {{id}}).",
+      "prompts": {
+        "budget": "كم يجب أن أخصص في الميزانية؟",
+        "costs": "هل توجد تكاليف خفية؟",
+        "area": "أخبرني عن هذه المنطقة",
+        "rights": "ما هي حقوقي؟"
+      }
     }
   },
   "sidebar": {
@@ -4122,7 +4088,6 @@
   },
   "alia": {
     "clientContext": "يستخدم الشخص Homiio، وهو تطبيق للسكن يساعد على إيجاد مكان للإيجار أو الشراء أو الإقامة، والبحث في تاريخ المنزل وتكلفته الحقيقية، وإدارة عقد الإيجار أو الدفاع عنه.",
-    "onScreen": "هو الآن في الشاشة {{path}}.",
     "suggestion": {
       "find": "ساعدني في العثور على مكان للسكن",
       "costs": "كم سيكلفني هذا المنزل فعلًا؟",

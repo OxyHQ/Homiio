@@ -2,7 +2,7 @@
  * The RE sidecar profile, through the REAL controllers, against the REAL
  * Postgres this worker owns.
  *
- * Four things, and the last two are the ones a port usually gets wrong:
+ * Three things, and the last two are the ones a port usually gets wrong:
  *
  *  1. **The nesting round-trips.** Sixteen frontend modules read
  *     `profile.personalProfile.settings.roommate.…`; the columns are flat with
@@ -12,12 +12,6 @@
  *  3. **Privacy.** `/api/public/profiles/*` needs no authentication, so what a
  *     stranger gets is decided by the flags rather than by what happens to be
  *     stored — never the whole profile, income included.
- *  4. **`/ai/history` writes ANYTHING AT ALL.** It once read and wrote
- *     `profile.chatHistory` where the transcript lives at
- *     `personalProfile.chatHistory`, so `GET` always answered `[]`, `POST` stored nothing, `DELETE` was a no-op. All five
- *     production profiles have an empty transcript for that reason, so a test
- *     that only checked "the endpoint answers 200" would have passed against
- *     the broken version.
  */
 
 import express, { type Express } from 'express';
@@ -25,12 +19,11 @@ import request from 'supertest';
 import { eq } from 'drizzle-orm';
 import { uuidv7 } from '@oxy.so/db';
 
-import aiRouter from '../../routes/ai';
 import * as profileController from '../../controllers/profile';
 import { getDb } from '../../db/postgres';
-import { profileChatMessages, profiles } from '../../db/schema';
+import { profiles } from '../../db/schema';
 import { errorHandler } from '../../middlewares/errorHandler';
-import { PROFILE_CHAT_HISTORY_LIMIT, ensureProfile } from '../../db/profiles/profileRepository';
+import { ensureProfile } from '../../db/profiles/profileRepository';
 import { containsNumberToken, leafPathsEqualTo } from '../helpers/leakSweep';
 
 function buildApp(oxyUserId: string | null): Express {
@@ -45,7 +38,6 @@ function buildApp(oxyUserId: string | null): Express {
   app.get('/public/profiles/oxy/:oxyUserId', (req, res, next) =>
     profileController.getPublicProfileByOxyUserId(req, res, next),
   );
-  app.use('/ai', aiRouter());
   app.use(errorHandler);
   return app;
 }
@@ -503,118 +495,5 @@ describe('the public read — what a stranger gets', () => {
     expect(
       await getDb().select().from(profiles).where(eq(profiles.oxyUserId, stranger)),
     ).toHaveLength(0);
-  });
-});
-
-describe('/ai/history — the transcript that never persisted', () => {
-  it('stores a turn and reads it back newest-first', async () => {
-    const oxyUserId = owner();
-    const app = buildApp(oxyUserId);
-
-    const post = await request(app)
-      .post('/ai/history')
-      .send({ userMessage: 'What is a fianza?', assistantMessage: 'A deposit.' });
-    expect(post.status).toBe(200);
-
-    const get = await request(app).get('/ai/history');
-    expect(get.status).toBe(200);
-    // Newest first.
-    expect(get.body.history.map((m: { content: string }) => m.content)).toEqual([
-      'A deposit.',
-      'What is a fianza?',
-    ]);
-    expect(get.body.history.map((m: { role: string }) => m.role)).toEqual(['assistant', 'user']);
-  });
-
-  it('keeps the pair in order across appends, on position and not on timestamp', async () => {
-    // Both turns of one call share a timestamp — one `new Date()` — so
-    // `position` is the only thing that can order
-    // them.
-    const oxyUserId = owner();
-    const app = buildApp(oxyUserId);
-    await request(app).post('/ai/history').send({ userMessage: 'q1', assistantMessage: 'a1' });
-    await request(app).post('/ai/history').send({ userMessage: 'q2', assistantMessage: 'a2' });
-
-    const get = await request(app).get('/ai/history');
-    expect(get.body.history.map((m: { content: string }) => m.content)).toEqual([
-      'a2',
-      'q2',
-      'a1',
-      'q1',
-    ]);
-  });
-
-  it('trims to the cap, keeping the NEWEST turns', async () => {
-    const oxyUserId = owner();
-    const app = buildApp(oxyUserId);
-    const pairs = PROFILE_CHAT_HISTORY_LIMIT / 2 + 3;
-    for (let i = 0; i < pairs; i += 1) {
-      await request(app)
-        .post('/ai/history')
-        .send({ userMessage: `q${i}`, assistantMessage: `a${i}` });
-    }
-
-    const [profile] = await getDb()
-      .select()
-      .from(profiles)
-      .where(eq(profiles.oxyUserId, oxyUserId));
-    const stored = await getDb()
-      .select()
-      .from(profileChatMessages)
-      .where(eq(profileChatMessages.profileId, profile.id));
-    expect(stored).toHaveLength(PROFILE_CHAT_HISTORY_LIMIT);
-
-    const get = await request(app).get('/ai/history');
-    expect(get.body.history[0].content).toBe(`a${pairs - 1}`);
-    expect(get.body.history).toHaveLength(PROFILE_CHAT_HISTORY_LIMIT);
-    // The oldest turns really went, rather than the newest being refused.
-    expect(get.body.history.map((m: { content: string }) => m.content)).not.toContain('q0');
-  });
-
-  it('clears the transcript and leaves the profile', async () => {
-    const oxyUserId = owner();
-    const app = buildApp(oxyUserId);
-    await request(app).post('/ai/history').send({ userMessage: 'q', assistantMessage: 'a' });
-
-    const del = await request(app).delete('/ai/history');
-    expect(del.status).toBe(200);
-    expect(del.body.cleared).toBe(2);
-
-    expect((await request(app).get('/ai/history')).body.history).toEqual([]);
-    expect(
-      await getDb().select().from(profiles).where(eq(profiles.oxyUserId, oxyUserId)),
-    ).toHaveLength(1);
-  });
-
-  it("never mixes two people's transcripts", async () => {
-    const a = owner();
-    const b = owner();
-    await request(buildApp(a))
-      .post('/ai/history')
-      .send({ userMessage: 'a-q', assistantMessage: 'a-a' });
-    await request(buildApp(b))
-      .post('/ai/history')
-      .send({ userMessage: 'b-q', assistantMessage: 'b-a' });
-
-    const read = await request(buildApp(a)).get('/ai/history');
-    expect(read.body.history.map((m: { content: string }) => m.content)).toEqual(['a-a', 'a-q']);
-  });
-
-  it('400s a call missing either half of the turn', async () => {
-    const app = buildApp(owner());
-    expect((await request(app).post('/ai/history').send({ userMessage: 'q' })).status).toBe(400);
-    expect((await request(app).post('/ai/history').send({ assistantMessage: 'a' })).status).toBe(
-      400,
-    );
-  });
-
-  it('refuses an unauthenticated caller on all three verbs', async () => {
-    const app = buildApp(null);
-    expect((await request(app).get('/ai/history')).status).toBe(401);
-    expect((await request(app).delete('/ai/history')).status).toBe(401);
-    expect(
-      (await request(app).post('/ai/history').send({ userMessage: 'q', assistantMessage: 'a' }))
-        .status,
-    ).toBe(401);
   });
 });

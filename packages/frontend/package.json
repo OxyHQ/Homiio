@@ -23,13 +23,12 @@
     "clean": "rm -rf dist .expo"
   },
   "dependencies": {
-    "@ai-sdk/react": "^1.2.12",
-    "@alia.onl/sdk": "^15.6.0",
+    "@alia.onl/sdk": "^19.0.0",
     "@bitdrift/react-native": "^0.14.1",
     "@expo/vector-icons": "^15.1.1",
     "@homiio/shared-types": "workspace:*",
     "@oxy.so/app-preset": "^3.2.1",
-    "@oxy.so/bloom": "^10.7.0",
+    "@oxy.so/bloom": "^10.9.0",
     "@oxy.so/core": "4.17.0",
     "@oxy.so/expo-splash": "^1.0.0",
     "@oxy.so/services": "11.5.0",
@@ -66,7 +65,6 @@
     "expo-router": "~57.0.27",
     "expo-secure-store": "~57.0.4",
     "expo-sharing": "~57.0.23",
-    "expo-speech-recognition": "~57.1.0",
     "expo-splash-screen": "~57.0.10",
     "expo-status-bar": "~57.0.1",
     "expo-symbols": "~57.0.3",

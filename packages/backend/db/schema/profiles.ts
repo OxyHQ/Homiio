@@ -172,9 +172,6 @@ export const ROOMMATE_LIFESTYLE_ANSWERS = ['yes', 'no', 'prefer_not'] as const;
 export const ROOMMATE_CLEANLINESS_LEVELS = ['very_clean', 'clean', 'average', 'relaxed'] as const;
 export const ROOMMATE_SCHEDULES = ['early_bird', 'night_owl', 'flexible'] as const;
 
-/** `chatHistory[]` roles — the Sindi assistant transcript kept on the profile. */
-export const PROFILE_CHAT_ROLES = ['user', 'assistant', 'system'] as const;
-
 export const profiles = pgTable(
   'profiles',
   {
@@ -486,39 +483,6 @@ export const profileRoommateHistory = pgTable(
     check(
       'profile_roommate_history_order_check',
       sql`${table.endDate} is null or ${table.endDate} >= ${table.startDate}`,
-    ),
-  ],
-);
-
-/**
- * `personalProfile.chatHistory[]` — the Sindi assistant transcript.
- *
- * An UNBOUNDED embedded array, which is the deciding property: it grows with
- * every message, and an array column would be rewritten in full on every
- * append. A child table makes an append an INSERT.
- *
- * `position` is the array index, preserved because the transcript's ORDER is its
- * meaning and `timestamp` cannot substitute for it: it defaults to `Date.now`
- * at millisecond resolution, so two messages appended in the same tick sort
- * arbitrarily. This is the same reason `property_images.order` is carried.
- */
-export const profileChatMessages = pgTable(
-  'profile_chat_messages',
-  {
-    id: generatedId(),
-    profileId: text()
-      .notNull()
-      .references(() => profiles.id, { onDelete: 'cascade' }),
-    role: text({ enum: PROFILE_CHAT_ROLES }).notNull(),
-    content: text().notNull(),
-    timestamp: timestamptz().notNull(),
-    position: doublePrecision().notNull(),
-  },
-  (table) => [
-    index('profile_chat_messages_profile_position_idx').on(table.profileId, table.position),
-    check(
-      'profile_chat_messages_role_check',
-      sql`${table.role} in (${sql.raw(inList(PROFILE_CHAT_ROLES))})`,
     ),
   ],
 );

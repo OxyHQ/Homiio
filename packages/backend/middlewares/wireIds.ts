@@ -56,9 +56,7 @@
  *   - **A third-party payload relayed verbatim.** There is none. The only
  *     upstream bodies this service parses are Nominatim (`lat`/`lon`/
  *     `display_name`), Overpass (`id`/`lat`/`lon`/`tags`) and Wikimedia
- *     (`pageid`) — none of which uses `_id` — plus `routes/ai.ts` calling
- *     Homiio's OWN `/api/properties*` endpoints, whose bodies this middleware
- *     already serialized once, and on which a second pass is a no-op. Oxy's
+ *     (`pageid`) — none of which uses `_id`. Oxy's
  *     `/users/by-ids` is read in `controllers/roommate/serialize.ts` but its
  *     payload is projected into Homiio's own shape and never reaches `res.json`.
  *

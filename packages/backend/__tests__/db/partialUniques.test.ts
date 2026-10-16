@@ -27,7 +27,6 @@ import { closePostgres, connectPostgres, type Database } from '../../db/postgres
 import {
   addressMergeProposals,
   billing,
-  conversations,
   listingReports,
   properties,
   roommateRelationships,
@@ -195,43 +194,6 @@ describe('roommate_relationships — one ACTIVE relationship per sorted pair', (
 });
 
 describe('sparse uniques permit many NULLs and exactly one of any value', () => {
-  it('lets every unshared conversation coexist, and refuses a duplicate token', async () => {
-    // `sharing_share_token` is unique over the shared set. The NULL half is the
-    // one that matters: without it, the SECOND conversation anybody
-    // creates fails to insert.
-    const owner = oxy();
-    await db.insert(conversations).values([
-      { oxyUserId: owner, title: 'a', analyticsLastActivity: new Date() },
-      { oxyUserId: owner, title: 'b', analyticsLastActivity: new Date() },
-      { oxyUserId: owner, title: 'c', analyticsLastActivity: new Date() },
-    ]);
-
-    const rows = await db
-      .select({ id: conversations.id })
-      .from(conversations)
-      .where(eq(conversations.oxyUserId, owner));
-    expect(rows).toHaveLength(3);
-
-    const token = `tok-${uuidv7()}`;
-    const shared = {
-      sharingIsShared: true,
-      sharingShareToken: token,
-      sharingSharedAt: new Date(),
-      sharingExpiresAt: new Date(Date.now() + 86_400_000),
-    };
-    await db.update(conversations).set(shared).where(eq(conversations.id, rows[0].id));
-
-    let caught: unknown;
-    try {
-      await db.update(conversations).set(shared).where(eq(conversations.id, rows[1].id));
-    } catch (error) {
-      caught = error;
-    }
-    expect(sqlStateOf(caught)).toBe(UNIQUE_VIOLATION);
-
-    await db.delete(conversations).where(eq(conversations.oxyUserId, owner));
-  });
-
   it('collides on an EMPTY STRING, which is why it must be written NULL', async () => {
     // The trap `CONVENTIONS.md` records, made visible. `''` is a VALUE under a
     // partial unique index, so writing it instead of NULL turns a non-problem
@@ -465,7 +427,6 @@ describe('the partial indexes really are partial', () => {
       'addresses_identity_key_key',
       'addresses_normalized_key_key',
       'billing_plus_stripe_subscription_id_key',
-      'conversations_share_token_key',
       // ONE live grant per (case, grantee): the partiality is what lets a
       // revoked grant free the slot for a fresh one instead of blocking it
       // forever, and it is why every `ON CONFLICT` against this index has to

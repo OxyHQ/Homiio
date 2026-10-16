@@ -1729,16 +1729,12 @@
       "conversations": "Conversazioni",
       "empty": "Avvia una nuova conversazione per ricevere aiuto."
     },
-    "status": {
-      "thinking": "Pensando..."
-    },
     "auth": {
       "required": "Autenticazione Richiesta",
       "message": "Accedi per utilizzare Sindi, il tuo difensore della giustizia abitativa alimentato dall'IA"
     },
     "chat": {
-      "placeholder": "Chiedi a Sindi sui tuoi diritti come inquilino...",
-      "you": "Tu",
+      "placeholder": "Chiedi a {{name}}…",
       "field": "Messaggio",
       "attach": "Allega un file",
       "send": "Invia messaggio",
@@ -1748,33 +1744,13 @@
       "voice": "Input vocale",
       "removeAttachment": "Rimuovi"
     },
-    "errors": {
-      "connection": "Errore di Connessione",
-      "connectionMessage": "Controlla la tua connessione e riprova.",
-      "consentTitle": "Autorizzazione necessaria",
-      "consentMessage": "Consenti a Homiio di lasciare che Sindi continui ad aiutarti quando non ci sei.",
-      "consentAction": "Rivedi autorizzazioni",
-      "consentRequesting": "Apertura autorizzazioni...",
-      "consentUnavailableTitle": "Autorizzazione non disponibile",
-      "consentUnavailableMessage": "Aggiorna Homiio e riprova. Nessuna autorizzazione è stata concessa.",
-      "uploadFailedTitle": "Caricamento non riuscito",
-      "uploadAnalyzeFailed": "Impossibile analizzare il file."
-    },
     "shared": {
-      "loading": "Loading Shared Conversation",
-      "loadingMessage": "Loading conversation...",
       "subtitle": "Shared Conversation",
       "badge": "Shared Conversation",
       "footer": "Powered by Sindi - Your AI Housing Justice Advocate",
       "error": {
-        "title": "Conversation Not Found",
         "notFound": "This shared conversation could not be found or has expired.",
-        "failed": "Failed to load shared conversation. Please try again.",
-        "description": "The conversation may have been removed or the link may be invalid."
-      },
-      "empty": {
-        "title": "Empty Conversation",
-        "subtitle": "This shared conversation doesn't have any messages yet."
+        "failed": "Failed to load shared conversation. Please try again."
       }
     },
     "share": {
@@ -1785,65 +1761,55 @@
       },
       "error": {
         "title": "Cannot Share Conversation",
-        "saveFirst": "Please save the conversation by sending a message before sharing.",
-        "emptyConversation": "Cannot share an empty conversation. Please add some messages first.",
         "failed": "Failed to generate share link. Please try again."
       }
     },
     "conversation": {
-      "title": "Conversation",
-      "subtitle": "AI Housing Justice Advocate",
-      "loading": "Loading Conversation",
-      "loadingMessage": "Loading conversation..."
+      "title": "Conversation"
     },
     "settings": {
-      "resetMessage": "This will reset all Sindi preferences to their defaults.",
+      "resetMessage": "Le tue conversazioni con Sindi verranno eliminate e le sue preferenze torneranno ai valori predefiniti.",
       "resetTitle": "Reset Sindi?",
-      "reset": "Reset Sindi to defaults",
+      "reset": "Elimina le conversazioni e reimposta",
       "actions": "Actions",
-      "tipsDescription": "Surface inline guidance while you chat.",
+      "tipsDescription": "Suggerisci domande quando inizi una conversazione.",
       "tips": "Show tips & hints",
       "behaviorFooter": "Tune how Sindi behaves while you browse properties.",
       "behavior": "Behavior",
       "title": "Sindi preferences",
-      "resetDone": "Sindi preferences reset."
+      "resetDone": "Sindi è stata reimpostata.",
+      "resetFailed": "Impossibile reimpostare Sindi. Riprova."
     },
     "voice": {
-      "unsupportedBrowser": "L'input vocale non è supportato da questo browser",
       "unsupportedDevice": "L'input vocale non è disponibile su questo dispositivo",
-      "deniedTitle": "Accesso al microfono negato",
       "deniedMessage": "Consenti l'accesso al microfono e al riconoscimento vocale nelle impostazioni per dettare i messaggi.",
       "failed": "L'input vocale si è interrotto inaspettatamente"
-    },
-    "actions": {
-      "take": "Fallo",
-      "takeAccessible": "Esegui ciò che Sindi propone",
-      "applySearch": "Apri Esplora con questi filtri",
-      "showSaved": "Apri i tuoi salvati",
-      "openListing": "Apri questa casa",
-      "showMap": "Mostra i risultati sulla mappa",
-      "showList": "Mostra i risultati come elenco",
-      "navigate": {
-        "explore": "Apri Esplora",
-        "saved": "Apri Salvati",
-        "home": "Apri la schermata iniziale",
-        "my_home": "Apri Casa mia",
-        "evictions": "Apri la bacheca degli sfratti"
-      },
-      "clarifyLocation": {
-        "ambiguous": "Non ho capito a quale “{{place}}” ti riferisci: ce n’è più di uno. In quale regione si trova?",
-        "notFound": "Non ho nessun luogo chiamato “{{place}}”, quindi la ricerca è rimasta com’era."
-      },
-      "applied": "Fatto: {{what}}.",
-      "stale": "Hai modificato tu la ricerca, quindi questo è stato lasciato com’era.",
-      "failed": "Non è stato possibile: {{what}}."
     },
     "saved": {
       "loading": "Sto guardando le case che hai salvato…",
       "failed": "Non è stato possibile caricare le case salvate.",
       "empty": "Non hai ancora salvato nessuna casa.",
-      "emptyFolder": "Quella raccolta è vuota.",
       "more": "e altre {{count}}"
+    },
+    "place": {
+      "ambiguous": "Non ho capito a quale “{{place}}” ti riferisci: ce n’è più di uno. In quale regione si trova?",
+      "notFound": "Non ho nessun luogo chiamato “{{place}}”, quindi la ricerca è rimasta com’era."
+    },
+    "property": {
+      "title": "Chiedi a Sindi di questa casa",
+      "subtitle": "La tua assistente per l'affitto, 24 ore su 24. Chiedi qualsiasi cosa sulla casa, la zona, i tuoi diritti o i costi nascosti.",
+      "subtitleVerified": "Sindi ha verificato l'autenticità di questo annuncio. Chiedi qualsiasi cosa sulla casa, la zona, i tuoi diritti o i costi nascosti.",
+      "verified": "Verificato da Sindi",
+      "askAccessible": "Chiedi a Sindi di questa casa",
+      "askHint": "Apre una chat con Sindi su questa casa",
+      "defaultQuestion": "Mi aiuti a capire questa casa e i miei diritti da inquilino?",
+      "context": "Su questa casa: {{title}} (annuncio Homiio {{id}}).",
+      "prompts": {
+        "budget": "Quanto dovrei mettere in budget?",
+        "costs": "Ci sono costi nascosti?",
+        "area": "Parlami di questa zona",
+        "rights": "Quali sono i miei diritti?"
+      }
     }
   },
   "sidebar": {
@@ -4107,7 +4073,6 @@
   },
   "alia": {
     "clientContext": "La persona usa Homiio, un'app per la casa che aiuta a trovare un posto in cui affittare, comprare o soggiornare, a ricercare la storia di un immobile e quanto costa davvero, e a gestire o difendere un affitto.",
-    "onScreen": "In questo momento si trova nella schermata {{path}}.",
     "suggestion": {
       "find": "Aiutami a trovare un posto dove vivere",
       "costs": "Quanto mi costerà davvero questa casa?",

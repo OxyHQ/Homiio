@@ -4,8 +4,6 @@ import type { RouteCoverage } from './types';
  * Authenticated routes that are not a person's housing actions at all, and so
  * have no tool. Each reason is the decision, not a placeholder.
  */
-const SINDI_RELAY =
-  'The Sindi chat relay. Agents are the replacement for it (docs/sindi.md), and it is deleted in the frontend cut; an agent never calls a chat about itself.';
 const SCRAPER =
   'Listing-provider infrastructure behind `requireAdmin` — the one sanctioned admin surface (AGENTS.md); never an agent action.';
 const TELEGRAM =
@@ -22,22 +20,6 @@ export const PLATFORM_ROUTE_COVERAGE: RouteCoverage = {
   'POST /api/team-chat/finalize': { excluded: TEAM_CHAT },
   'POST /api/evictions/:id/team-chat/operations': { excluded: TEAM_CHAT },
   'GET /api/evictions/:id/team-chat': { excluded: TEAM_CHAT },
-
-  'POST /api/ai/suggestions': { excluded: SINDI_RELAY },
-  'POST /api/ai/stream': { excluded: SINDI_RELAY },
-  'POST /api/ai/analyze-file': { excluded: SINDI_RELAY },
-  'POST /api/ai/analyze-file/stream': { excluded: SINDI_RELAY },
-  'GET /api/ai/health': { excluded: SINDI_RELAY },
-  'GET /api/ai/history': { excluded: SINDI_RELAY },
-  'DELETE /api/ai/history': { excluded: SINDI_RELAY },
-  'POST /api/ai/history': { excluded: SINDI_RELAY },
-  'GET /api/ai/conversations': { excluded: SINDI_RELAY },
-  'POST /api/ai/conversations': { excluded: SINDI_RELAY },
-  'GET /api/ai/conversations/:id': { excluded: SINDI_RELAY },
-  'PUT /api/ai/conversations/:id': { excluded: SINDI_RELAY },
-  'POST /api/ai/conversations/:id/messages': { excluded: SINDI_RELAY },
-  'DELETE /api/ai/conversations/:id': { excluded: SINDI_RELAY },
-  'POST /api/ai/conversations/:id/share': { excluded: SINDI_RELAY },
 
   'GET /api/scraper/health': { excluded: SCRAPER },
   'POST /api/scraper/run': { excluded: SCRAPER },

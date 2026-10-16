@@ -1,12 +1,17 @@
 /**
- * The Homiio API's Sindi/Oxy runtime configuration must survive every deploy.
+ * The Homiio API's Oxy runtime configuration, and what each deploy takes away.
  *
  * The deploy renderer starts from the task definition the ECS service is
  * already running. Terraform can register a newer revision, but the generic
  * app module deliberately does not repoint the service and this script does not
- * derive from Terraform state. Therefore the two exact environment values and
- * two exact SSM references must be overrides on every API deployment. Merely
- * declaring them in oxy-infra is not enough.
+ * derive from Terraform state. So a value the API needs must be an override on
+ * every deployment, and a value it no longer reads must be REMOVED explicitly —
+ * dropping it from this workflow leaves it on every future revision.
+ *
+ * The Sindi relay is gone (Alia ADR 0020): Sindi and Alia are reached from the
+ * frontend through `@alia.onl/sdk`, and the backend never calls Alia. Its three
+ * runtime values — `ALIA_API_URL`, `SINDI_ALIA_AGENT_ID` and
+ * `OXY_INFERENCE_ROUTING_PROFILE_ID` — are therefore removed, never supplied.
  */
 
 import { readFileSync } from 'node:fs';
@@ -54,7 +59,7 @@ const SINDI_SERVICE_KEY_ARN =
 const SINDI_SERVICE_SECRET_ARN =
   'arn:aws:ssm:us-west-2:237343248947:parameter/oxy/homiio/SINDI_OXY_SERVICE_API_SECRET';
 
-describe('Homiio deployment preserves the exact inference runtime boundary', () => {
+describe('Homiio deployment keeps the API off every inference runtime', () => {
   it('reads both load-bearing workflow steps', () => {
     expect(apiStep).not.toBe('');
     expect(workerStep).not.toBe('');
@@ -62,25 +67,31 @@ describe('Homiio deployment preserves the exact inference runtime boundary', () 
     expect(workerStep).toContain('bash .github/scripts/deploy-ecs-image.sh');
   });
 
-  it('takes exact non-secret identifiers from repository variables and validates them', () => {
-    expect(apiStep).toContain('HOMIIO_SINDI_ALIA_AGENT_ID: ${{ vars.SINDI_ALIA_AGENT_ID }}');
+  it('overrides only the Oxy origin, and removes the retired Sindi relay configuration', () => {
     expect(apiStep).toContain(
-      'HOMIIO_OXY_INFERENCE_ROUTING_PROFILE_ID: ${{ vars.OXY_INFERENCE_ROUTING_PROFILE_ID }}',
+      `TASK_ENV_OVERRIDES_JSON=$(jq -cn '{ OXY_API_URL: "https://api.oxy.so" }')`,
     );
-    expect(apiStep).toContain(
-      'SINDI_ALIA_AGENT_ID must equal the reserved Sindi Alia agent primary key',
+
+    const removalMatch = apiStep.match(/TASK_CONFIGURATION_REMOVALS_JSON:\s*'(\[[^']*\])'/);
+    expect(removalMatch).not.toBeNull();
+    const removals: string[] = JSON.parse(removalMatch?.[1] ?? '[]');
+    expect(removals).toEqual(
+      expect.arrayContaining([
+        'ALIA_API_URL',
+        'SINDI_ALIA_AGENT_ID',
+        'OXY_INFERENCE_ROUTING_PROFILE',
+        'OXY_INFERENCE_ROUTING_PROFILE_ID',
+      ]),
     );
-    expect(apiStep).toContain('01a0646a-078f-7514-9800-9f43ceed7df8');
-    expect(apiStep).not.toContain('24-hex or UUIDv7');
-    expect(apiStep).toContain('OXY_INFERENCE_ROUTING_PROFILE_ID must equal the reviewed');
-    expect(apiStep).toContain('01a06477-94f5-74f0-bc25-4c5c13b93ccd');
-    expect(apiStep).toContain('OXY_API_URL: "https://api.oxy.so"');
-    expect(apiStep).toContain('ALIA_API_URL: "https://api.alia.onl"');
-    expect(apiStep).toContain('SINDI_ALIA_AGENT_ID: $sindiAgentId');
-    expect(apiStep).toContain('OXY_INFERENCE_ROUTING_PROFILE_ID: $routingProfileId');
-    expect(apiStep).toContain(
-      'TASK_CONFIGURATION_REMOVALS_JSON: \'["OXY_INFERENCE_ROUTING_PROFILE","OXY_SERVICE_API_KEY","OXY_SERVICE_API_SECRET","OXY_ACTIVITY_API_KEY","OXY_ACTIVITY_API_SECRET","SINDI_OXY_SERVICE_API_KEY","SINDI_OXY_SERVICE_API_SECRET"]\'',
-    );
+
+    // Named only in the removal list: never a repository variable, a
+    // validation or a value handed to the container.
+    const apiWithoutRemovalList = apiStep.replace(/^\s*TASK_CONFIGURATION_REMOVALS_JSON:.*$/m, '');
+    for (const name of ['ALIA_API_URL', 'SINDI_ALIA_AGENT_ID', 'OXY_INFERENCE_ROUTING_PROFILE']) {
+      expect(apiWithoutRemovalList).not.toContain(name);
+    }
+    expect(workflowDirectives).not.toContain('vars.SINDI_ALIA_AGENT_ID');
+    expect(workflowDirectives).not.toContain('vars.OXY_INFERENCE_ROUTING_PROFILE_ID');
   });
 
   /**

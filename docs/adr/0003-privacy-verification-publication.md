@@ -253,7 +253,7 @@ built to find rather than reporting a comfortable emptiness.
 | `profile_rental_history.monthly_rent`, `.reason_for_leaving` | `profiles.ts:416-417` | **R** | |
 | `profile_roommate_history.location`, `.reason` | `profiles.ts:485-487` | **R** | **Not viewer-gated today** (`profileSerializer.ts:363`) |
 | `profile_preferred_locations.city`, `.state`, `.radius` | `profiles.ts:467-469` | C | Where a person is looking |
-| `profile_chat_messages.content` | `profiles.ts:519` | **R** | Owner-only today, correctly |
+| `profile_chat_messages.content` | `profiles.ts:519` | **R** | Owner-only, correctly; the table was dropped with Homiio's own Sindi chat (migration 0036, [`sindi.md`](../sindi.md)) |
 | `conversation_messages.content` | `conversations.ts:175` | **R** | |
 | `conversation_message_attachments.url`, `.name` | `conversations.ts:206-207` | **R** | |
 | `conversations.sharing_share_token` | `conversations.ts:60` | **X** | A bearer capability — §9.3 |

@@ -1,13 +1,14 @@
 /**
- * Sindi conversation index — chat sidebar with conversation history + start
- * new chat affordance.
+ * Sindi conversation index — Sindi's conversations (Alia's, listed with
+ * `useConversations({ agentId })`) and the start-a-new-chat affordance, which
+ * opens `/sindi/new`: the conversation is made by its first turn.
  *
  * Bloom throughout: `Card` surfaces, Remix glyphs, `Button`, `Search`,
  * `Item` conversation rows (`ConversationList`) and `Skeleton` rows while the
  * list loads; the shared `EmptyState` covers the signed-out and empty cases.
  */
 import type React from 'react';
-import { useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { useCallback, useContext, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -29,15 +30,19 @@ import {
 } from '@oxy.so/bloom/icons';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { H1, H3, Text } from '@oxy.so/bloom/typography';
-import { useOxy, openAccountDialog } from '@oxy.so/services';
+import { useConversations } from '@alia.onl/sdk';
+import { useAuth, openAccountDialog } from '@oxy.so/services';
 import { SindiIcon } from '@/assets/icons';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { SectionEyebrow } from '@/components/ui/SectionEyebrow';
-import { ConversationItem, ConversationList } from '@/components/sindi/ConversationItem';
-import { useSindiAuthenticatedFetch } from '@/hooks/useSindiAuthenticatedFetch';
+import {
+  ConversationItem,
+  ConversationList,
+  conversationsOf,
+} from '@/components/sindi/ConversationItem';
+import { NEW_SINDI_CONVERSATION, SINDI_AGENT_ID } from '@/components/sindi/sindiAgent';
 import { BottomSheetContext } from '@/context/BottomSheetContext';
 import { SindiExplanationBottomSheet } from '@/components/SindiExplanationBottomSheet';
-import { useConversationStore } from '@/store/conversationStore';
 import { spacing } from '@/constants/styles';
 import { colors as staticColors } from '@/styles/colors';
 
@@ -63,62 +68,29 @@ const SindiSkeleton: React.FC = () => (
 );
 
 export default function Sindi() {
-  const { oxyServices, activeSessionId } = useOxy();
+  const { canUsePrivateApi } = useAuth();
   const router = useRouter();
   const { t } = useTranslation();
   const { colors } = useTheme();
-  const { conversations, loading, loadConversations, createConversation } = useConversationStore();
+  const conversations = useConversations({ agentId: SINDI_AGENT_ID });
   const [searchQuery, setSearchQuery] = useState('');
   const bottomSheetContext = useContext(BottomSheetContext);
 
-  const isAuthenticated = useMemo(
-    () => Boolean(oxyServices) && Boolean(activeSessionId),
-    [oxyServices, activeSessionId],
-  );
+  const isAuthenticated = canUsePrivateApi;
 
-  // Shared authenticated fetch (single source of truth across every Sindi
-  // surface — web-vs-native split + FormData handling live in the hook).
-  const conversationFetch = useSindiAuthenticatedFetch();
-
-  const createNewConversation = useCallback(async () => {
+  const createNewConversation = useCallback(() => {
     if (!isAuthenticated) return;
-    try {
-      const newConversation = await createConversation(
-        'New Conversation',
-        undefined,
-        conversationFetch,
-      );
-      router.push(`/sindi/${newConversation.id}`);
-      loadConversations(conversationFetch);
-    } catch {
-      const conversationId = `conv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      router.push(`/sindi/${conversationId}`);
-    }
-  }, [isAuthenticated, conversationFetch, router, createConversation, loadConversations]);
+    router.push(`/sindi/${NEW_SINDI_CONVERSATION}`);
+  }, [isAuthenticated, router]);
 
-  const filteredConversations = useMemo(() => {
-    if (!searchQuery.trim()) return conversations;
-    const q = searchQuery.toLowerCase();
-    return conversations.filter(
-      (c) =>
-        c.title.toLowerCase().includes(q) ||
-        (c.messages[c.messages.length - 1]?.content || '').toLowerCase().includes(q),
+  const sortedConversations = useMemo(() => {
+    const all = conversationsOf(conversations.data);
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return all;
+    return all.filter(
+      (c) => c.title.toLowerCase().includes(q) || (c.lastMessage ?? '').toLowerCase().includes(q),
     );
-  }, [conversations, searchQuery]);
-
-  const sortedConversations = useMemo(
-    () =>
-      [...filteredConversations].sort(
-        (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
-      ),
-    [filteredConversations],
-  );
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      loadConversations(conversationFetch);
-    }
-  }, [isAuthenticated, loadConversations, conversationFetch]);
+  }, [conversations.data, searchQuery]);
 
   if (!isAuthenticated) {
     return (
@@ -217,9 +189,9 @@ export default function Sindi() {
             label="Search conversations"
           />
 
-          {loading ? (
+          {conversations.isLoading ? (
             <SindiSkeleton />
-          ) : filteredConversations.length === 0 ? (
+          ) : sortedConversations.length === 0 ? (
             <EmptyState
               icon={RiDiscussLine}
               title={searchQuery ? 'No matches' : 'No conversations yet'}

@@ -68,10 +68,9 @@ an entry grows forever with no error and no failing test — there is no call si
 to notice missing, which is what makes it the quietest failure in the system.
 
 That module also carries `EXPIRY_COLUMNS_THAT_MUST_NOT_DELETE`, as data rather
-than as a comment: `conversations.sharing_expires_at` is a deadline on a share
-LINK, so it must clear four `sharing_*` columns and must never delete the
-conversation. Registering it as a sweep target would start destroying people's
-transcripts, and it would look like tidying up.
+than as a comment: `eviction_cases.archived_at` is a STAMP recording when a case
+left the public board, and the row must survive it. Registering it as a sweep
+target would start deleting cases, and it would look like tidying up.
 
 ## Frontend stack
 
@@ -157,8 +156,7 @@ TanStack Query refetches on reconnect and on foreground.
 | Identity | `@oxy.so/core/server` — `createOxyAuthMiddleware` gates the authenticated router |
 | Billing | `stripe` — Checkout, webhooks, customer portal |
 | Image pipeline | `sharp` + `@aws-sdk/client-s3` |
-| Interactive Sindi chat | Once provisioned and read back, private Sindi agent in Alia (`SINDI_ALIA_AGENT_ID`); Homiio authenticates as its attested ECS task role (no key pair) plus a one-use Oxy requester assertion for the signed-in user (OxyHQServices ADR 0025; no consent, no `X-Oxy-User-Id`); Alia owns chat, tools and memory |
-| Point inference | `@oxy.so/core` → Oxy inference edge for titles, filters, suggestions and file analysis; `ai` formats the buffered frontend data-stream response |
+| Capability catalogue | `capabilities/*` — the tools Alia (Sindi, and Alia herself) and MCP clients call with Oxy capability tickets; the backend never calls Alia and runs no inference ([Sindi](./sindi)) |
 | Queues | `bullmq` over Valkey (`REDIS_URL`); absent, ingestion falls back to inline |
 | Moderation | `@crowdsource.you/*` — community report intake, decisions, enforcement |
 | Messaging integrations | `node-telegram-bot-api`, `telegraf`, `whatsapp-web.js` |
@@ -320,15 +318,16 @@ device-first Oxy session.
   real-estate metadata keyed by `oxyUserId`. It is resolved server side
   (`findProfileByOxyUserId`); a client-supplied `profileId` is never trusted.
 
-Two deliberate exceptions, both documented where they live:
+One deliberate exception, documented where it lives:
 
 - `normalizeEnvelope` in `utils/api.ts` re-wraps the linked client's
   auto-unwrapped payload back into the `{ success, data, ... }` envelope Homiio's
   consumers read. It is an intentional bridge and stays until those consumers
   migrate. Do not remove it piecemeal.
-- `hooks/useSindiAuthenticatedFetch.ts` is the one sanctioned
-  `oxyServices.getAccessToken()` call site, because the linked client is
-  JSON-only and cannot stream. Do not add another.
+
+Sindi and Alia are reached through `@alia.onl/sdk`, which authenticates with the
+person's Oxy session itself. There is no `oxyServices.getAccessToken()` call
+site in the app; do not add one.
 
 Full lifecycle: [Auth](./auth).
 

@@ -24,7 +24,6 @@ import { CHECK_VIOLATION, constraintNameOf, sqlStateOf, uuidv7 } from '@oxy.so/d
 import { closePostgres, connectPostgres, type Database } from '../../db/postgres';
 import {
   commissions,
-  conversations,
   exchangeRequests,
   leasePaymentSchedule,
   leases,
@@ -314,55 +313,6 @@ describe('exchange_requests — a HOST request offers nothing', () => {
     );
     expect(state).toBe(CHECK_VIOLATION);
     expect(constraint).toBe('exchange_requests_offered_window_check');
-  });
-});
-
-describe('conversations — the four sharing columns move together', () => {
-  it('refuses a shared conversation with no token', async () => {
-    const { state, constraint } = await violation(() =>
-      db.insert(conversations).values({
-        oxyUserId: oxy(),
-        title: 'x',
-        analyticsLastActivity: new Date(),
-        sharingIsShared: true,
-      }),
-    );
-    expect(state).toBe(CHECK_VIOLATION);
-    expect(constraint).toBe('conversations_sharing_coherent_check');
-  });
-
-  it('refuses a live token on a conversation flagged unshared', async () => {
-    // The dangerous direction: a token that still resolves while the UI shows
-    // the conversation as private, so nobody can revoke it.
-    const { state, constraint } = await violation(() =>
-      db.insert(conversations).values({
-        oxyUserId: oxy(),
-        title: 'x',
-        analyticsLastActivity: new Date(),
-        sharingShareToken: `tok-${uuidv7()}`,
-      }),
-    );
-    expect(state).toBe(CHECK_VIOLATION);
-    expect(constraint).toBe('conversations_sharing_coherent_check');
-  });
-
-  it('accepts a fully shared conversation and a fully private one', async () => {
-    const owner = oxy();
-    await expect(
-      db.insert(conversations).values([
-        { oxyUserId: owner, title: 'private', analyticsLastActivity: new Date() },
-        {
-          oxyUserId: owner,
-          title: 'shared',
-          analyticsLastActivity: new Date(),
-          sharingIsShared: true,
-          sharingShareToken: `tok-${uuidv7()}`,
-          sharingSharedAt: new Date(),
-          sharingExpiresAt: new Date(Date.now() + 86_400_000),
-        },
-      ]),
-    ).resolves.toBeDefined();
-    await db.delete(conversations).where(eq(conversations.oxyUserId, owner));
   });
 });
 
