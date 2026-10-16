@@ -1,3 +1,4 @@
+import { listOrganizationsByIds } from '../../services/organizations/supportOrganizations';
 /**
  * Eviction board reads.
  *
@@ -60,7 +61,6 @@ import {
   listEvictionCases,
   listEvictionTimeline,
   listHelpNeedsForCases,
-  listOrganizationsByIds,
   listTimelineForCases,
   readCaseContact,
   type EvictionBoardFilter,

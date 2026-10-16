@@ -16,7 +16,7 @@ import { eq } from 'drizzle-orm';
 import { uuidv7 } from '@oxy.so/db';
 
 import { closePostgres, connectPostgres, type Database } from '../../db/postgres';
-import { findOrCreateAgencyByName } from '../../db/agencies/agencyWrites';
+import { findOrCreateAgencyReference } from '../../db/agencies/agencyWrites';
 import {
   deleteOwnReview,
   deriveLivedForMonths,
@@ -231,44 +231,16 @@ describe('one review per person per address', () => {
   });
 });
 
-describe('`findOrCreateAgencyByName` survives a slug collision inside a transaction', () => {
-  /**
-   * The defect this port surfaced, and it was NOT introduced here.
-   *
-   * `findOrCreateAgencyByName` has taken a transaction handle since it was
-   * written — its parameter comment says the handle is there "so the review
-   * create path can use it" — and its slug-collision branch is an insert, a
-   * caught `23505`, and a RETRY on the same handle. On the root connection that
-   * works; inside a transaction the first failure aborts everything, so the
-   * retry dies with `25P02` and `POST /api/reviews` 500s.
-   *
-   * The review create path is the first caller to pass a transaction, so this is
-   * the first test that could see it. Removing `inSavepoint` from
-   * `agencyWrites.ts` turns this red with `current_transaction_is_aborted`.
-   *
-   * The FIXTURE is the discriminating part: two agencies whose names slugify
-   * identically but normalize DIFFERENTLY. Two names that normalize the same
-   * would take the `agencies_normalized_name_key` branch and be reused, and the
-   * retry — the thing under test — would never run.
-   */
-  it('advances the slug suffix without poisoning the caller', async () => {
-    const stem = `Colliding ${uuidv7().slice(0, 8)}`;
-    const first = await findOrCreateAgencyByName(stem);
-    expect(first).not.toBeNull();
-
-    // `!` on the name would slugify the same (`-` collapses runs) while
-    // normalizing to a different key, so the second insert hits the SLUG index.
-    const second = await db.transaction((tx) => findOrCreateAgencyByName(`${stem}!`, tx));
-
-    expect(second).not.toBeNull();
-    expect(second?.id).not.toBe(first?.id);
-    expect(second?.slug).not.toBe(first?.slug);
-
-    const rows = await db
-      .select()
-      .from(agencies)
-      .where(eq(agencies.slug, second?.slug ?? ''));
-    expect(rows).toHaveLength(1);
+describe('canonical agency references', () => {
+  it('reuses one reference per canonical account including transaction callers', async () => {
+    const accountId = uuidv7();
+    const first = await findOrCreateAgencyReference(accountId);
+    const second = await db.transaction((tx) => findOrCreateAgencyReference(accountId, tx));
+    expect(second.id).toBe(first.id);
+    expect(second.oxyAccountId).toBe(accountId);
+    expect(
+      await db.select().from(agencies).where(eq(agencies.oxyAccountId, accountId)),
+    ).toHaveLength(1);
   });
 });
 

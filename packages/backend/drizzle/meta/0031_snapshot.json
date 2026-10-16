@@ -1,5 +1,5 @@
 {
-  "id": "6614649b-1fcf-44e5-b199-c5683d2e6c56",
+  "id": "d33a4594-30bf-43b6-9d86-b308bc86541e",
   "prevId": "db3cadc5-f658-4fba-9dc7-53b32b6cfb13",
   "version": "7",
   "dialect": "postgresql",
@@ -1719,13 +1719,26 @@
           "name": "name",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "normalized_name": {
           "name": "normalized_name",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
+        },
+        "oxy_account_id": {
+          "name": "oxy_account_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "identity_status": {
+          "name": "identity_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'unresolved'"
         },
         "slug": {
           "name": "slug",
@@ -1764,21 +1777,6 @@
           "method": "btree",
           "with": {}
         },
-        "agencies_slug_key": {
-          "name": "agencies_slug_key",
-          "columns": [
-            {
-              "expression": "slug",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
         "agencies_name_trgm_idx": {
           "name": "agencies_name_trgm_idx",
           "columns": [
@@ -1793,6 +1791,36 @@
           "concurrently": false,
           "method": "gin",
           "with": {}
+        },
+        "agencies_oxy_account_id_idx": {
+          "name": "agencies_oxy_account_id_idx",
+          "columns": [
+            {
+              "expression": "oxy_account_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "agencies_slug_key": {
+          "name": "agencies_slug_key",
+          "columns": [
+            {
+              "expression": "slug",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {},
@@ -1804,11 +1832,93 @@
           "name": "agencies_normalized_name_not_empty_check",
           "value": "length(\"agencies\".\"normalized_name\") > 0"
         },
+        "agencies_identity_status_check": {
+          "name": "agencies_identity_status_check",
+          "value": "\"agencies\".\"identity_status\" in ('unresolved', 'linked', 'not_organization')"
+        },
+        "agencies_identity_link_check": {
+          "name": "agencies_identity_link_check",
+          "value": "(\"agencies\".\"identity_status\" = 'linked') = (\"agencies\".\"oxy_account_id\" is not null)"
+        },
         "agencies_slug_not_empty_check": {
           "name": "agencies_slug_not_empty_check",
           "value": "length(\"agencies\".\"slug\") > 0"
         }
       },
+      "isRLSEnabled": false
+    },
+    "public.agency_identity_archives": {
+      "name": "agency_identity_archives",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "agency_id": {
+          "name": "agency_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "observed_name": {
+          "name": "observed_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "normalized_name": {
+          "name": "normalized_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "date_trunc('milliseconds', now())"
+        }
+      },
+      "indexes": {
+        "agency_identity_archives_agency_id_key": {
+          "name": "agency_identity_archives_agency_id_key",
+          "columns": [
+            {
+              "expression": "agency_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "agency_identity_archives_agency_id_agencies_id_fk": {
+          "name": "agency_identity_archives_agency_id_agencies_id_fk",
+          "tableFrom": "agency_identity_archives",
+          "tableTo": "agencies",
+          "columnsFrom": [
+            "agency_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
       "isRLSEnabled": false
     },
     "public.billing": {
@@ -3148,177 +3258,6 @@
       },
       "isRLSEnabled": false
     },
-    "public.eviction_case_changes": {
-      "name": "eviction_case_changes",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "case_id": {
-          "name": "case_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "case_reference": {
-          "name": "case_reference",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "actor_oxy_user_id": {
-          "name": "actor_oxy_user_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "subject_oxy_user_id": {
-          "name": "subject_oxy_user_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "action": {
-          "name": "action",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "date_trunc('milliseconds', now())"
-        }
-      },
-      "indexes": {
-        "eviction_case_changes_case_idx": {
-          "name": "eviction_case_changes_case_idx",
-          "columns": [
-            {
-              "expression": "case_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "eviction_case_changes_case_id_eviction_cases_id_fk": {
-          "name": "eviction_case_changes_case_id_eviction_cases_id_fk",
-          "tableFrom": "eviction_case_changes",
-          "tableTo": "eviction_cases",
-          "columnsFrom": [
-            "case_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {
-        "eviction_case_changes_action_check": {
-          "name": "eviction_case_changes_action_check",
-          "value": "\"eviction_case_changes\".\"action\" in ('case_created', 'case_updated', 'case_deleted', 'collaborator_added', 'collaborator_removed', 'team_location_read')"
-        }
-      },
-      "isRLSEnabled": false
-    },
-    "public.eviction_case_collaborators": {
-      "name": "eviction_case_collaborators",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "case_id": {
-          "name": "case_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "oxy_user_id": {
-          "name": "oxy_user_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "added_by_oxy_user_id": {
-          "name": "added_by_oxy_user_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "date_trunc('milliseconds', now())"
-        }
-      },
-      "indexes": {
-        "eviction_case_collaborators_case_user_key": {
-          "name": "eviction_case_collaborators_case_user_key",
-          "columns": [
-            {
-              "expression": "case_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "oxy_user_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "eviction_case_collaborators_case_id_eviction_cases_id_fk": {
-          "name": "eviction_case_collaborators_case_id_eviction_cases_id_fk",
-          "tableFrom": "eviction_case_collaborators",
-          "tableTo": "eviction_cases",
-          "columnsFrom": [
-            "case_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
     "public.eviction_case_followers": {
       "name": "eviction_case_followers",
       "schema": "",
@@ -4374,6 +4313,80 @@
       },
       "isRLSEnabled": false
     },
+    "public.eviction_organization_identity_archives": {
+      "name": "eviction_organization_identity_archives",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "organization_id": {
+          "name": "organization_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "observed_name": {
+          "name": "observed_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "normalized_name": {
+          "name": "normalized_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "date_trunc('milliseconds', now())"
+        }
+      },
+      "indexes": {
+        "eviction_org_identity_archives_organization_id_key": {
+          "name": "eviction_org_identity_archives_organization_id_key",
+          "columns": [
+            {
+              "expression": "organization_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "eviction_organization_identity_archives_organization_id_eviction_organizations_id_fk": {
+          "name": "eviction_organization_identity_archives_organization_id_eviction_organizations_id_fk",
+          "tableFrom": "eviction_organization_identity_archives",
+          "tableTo": "eviction_organizations",
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.eviction_organizations": {
       "name": "eviction_organizations",
       "schema": "",
@@ -4388,13 +4401,26 @@
           "name": "name",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "normalized_name": {
           "name": "normalized_name",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
+        },
+        "oxy_account_id": {
+          "name": "oxy_account_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "identity_status": {
+          "name": "identity_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'unresolved'"
         },
         "description": {
           "name": "description",
@@ -4451,6 +4477,21 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "eviction_organizations_oxy_account_id_idx": {
+          "name": "eviction_organizations_oxy_account_id_idx",
+          "columns": [
+            {
+              "expression": "oxy_account_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {},
@@ -4458,6 +4499,14 @@
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {
+        "eviction_organizations_identity_status_check": {
+          "name": "eviction_organizations_identity_status_check",
+          "value": "\"eviction_organizations\".\"identity_status\" in ('unresolved','linked','not_organization')"
+        },
+        "eviction_organizations_identity_link_check": {
+          "name": "eviction_organizations_identity_link_check",
+          "value": "(\"eviction_organizations\".\"identity_status\" = 'linked') = (\"eviction_organizations\".\"oxy_account_id\" is not null)"
+        },
         "eviction_organizations_verified_source_check": {
           "name": "eviction_organizations_verified_source_check",
           "value": "\"eviction_organizations\".\"verified_at\" is null or \"eviction_organizations\".\"verification_source\" is not null"
@@ -11203,6 +11252,12 @@
         },
         "external_contact_agency_name": {
           "name": "external_contact_agency_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "external_contact_agency_source_id": {
+          "name": "external_contact_agency_source_id",
           "type": "text",
           "primaryKey": false,
           "notNull": false

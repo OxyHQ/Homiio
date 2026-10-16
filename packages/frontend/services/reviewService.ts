@@ -21,6 +21,7 @@ import type {
   ReviewReportReason,
   ReviewModerationStatus,
   AgencySummary,
+  AgencyDirectoryResult,
   AgencyStats,
   ExploreCitySummary,
   ExploreNeighborhoodSummary,
@@ -209,8 +210,8 @@ class ReviewService {
   // Agencies (public reads).
   // -----------------------------------------------------------------------
 
-  async searchAgencies(q: string): Promise<AgencySummary[]> {
-    const { data } = await api.get<{ agencies?: AgencySummary[] }>('/api/agencies/search', {
+  async searchAgencies(q: string): Promise<AgencyDirectoryResult[]> {
+    const { data } = await api.get<{ agencies?: AgencyDirectoryResult[] }>('/api/agencies/search', {
       params: { q },
       requireAuth: false,
     });

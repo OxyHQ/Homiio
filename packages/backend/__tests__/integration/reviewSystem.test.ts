@@ -25,7 +25,7 @@ import * as reviewController from '../../controllers/reviewController';
 import { OfferingType, PropertyStatus, PropertyType } from '@homiio/shared-types';
 import { seedAddress, seedGeoChain, seedProperty } from '../helpers/postgresGeoFixtures';
 import { getDb } from '../../db/postgres';
-import { findOrCreateAgencyByName } from '../../db/agencies/agencyWrites';
+import { createAgencyFixture, registerCompany } from '../helpers/organizationDirectory';
 import { findOwnerOxyUserIdsAtAddresses } from '../../db/properties/propertyReads';
 import { agencies, reviewReports, reviews as reviewsTable } from '../../db/schema';
 
@@ -150,6 +150,7 @@ async function amendReview(
 
 describe('createReview (allowlist + agency + geo)', () => {
   it('creates a review, resolves the agency, sets cityId, and ignores injected server fields', async () => {
+    const company = registerCompany(`Fincas García ${SUITE}`);
     const res = await request(buildApp('oxy-reviewer'))
       .post('/reviews')
       .send({
@@ -166,7 +167,7 @@ describe('createReview (allowlist + agency + geo)', () => {
         consItems: ['Cold in winter'],
         noise: 'quiet',
         depositReturned: 'full',
-        agencyName: `Fincas García ${SUITE}`,
+        agencyOxyAccountId: company.accountId,
         // Injected server-owned fields — must be ignored.
         oxyUserId: 'attacker',
         verified: true,
@@ -180,9 +181,9 @@ describe('createReview (allowlist + agency + geo)', () => {
     const [agency] = await getDb()
       .select()
       .from(agencies)
-      .where(eq(agencies.normalizedName, `fincas garcia ${SUITE}`));
+      .where(eq(agencies.oxyAccountId, company.accountId));
     expect(agency).toBeDefined();
-    expect(agency.slug).toBe(`fincas-garcia-${SUITE}`);
+    expect(agency.slug).toBe(`agency-${company.accountId}`);
 
     const [stored] = await getDb()
       .select()
@@ -205,7 +206,7 @@ describe('createReview (allowlist + agency + geo)', () => {
     expect(res.body.review.livedDurationText).toBe('1 year 5 months');
     expect(res.body.review.agency).toMatchObject({
       name: `Fincas García ${SUITE}`,
-      slug: `fincas-garcia-${SUITE}`,
+      slug: `agency-${company.accountId}`,
     });
   });
 
@@ -508,7 +509,7 @@ describe('reportReview', () => {
   });
 
   it('keeps under_review reviews visible in agency reads but hides removed ones', async () => {
-    const agency = await findOrCreateAgencyByName(`Visible Agency ${SUITE}`);
+    const agency = await createAgencyFixture(`Visible Agency ${SUITE}`);
     expect(agency).not.toBeNull();
     if (!agency) return;
 
@@ -553,7 +554,7 @@ async function seedAgencyListing(agencyId: string, label: string): Promise<strin
 
 describe('agency reads', () => {
   it('returns agency stats + listings count', async () => {
-    const agency = await findOrCreateAgencyByName(`Stats Agency ${SUITE}`);
+    const agency = await createAgencyFixture(`Stats Agency ${SUITE}`);
     expect(agency).not.toBeNull();
     if (!agency) return;
 
@@ -589,7 +590,7 @@ describe('agency reads', () => {
   });
 
   it('lists agency properties with flat pagination aliases', async () => {
-    const agency = await findOrCreateAgencyByName(`Props Agency ${SUITE}`);
+    const agency = await createAgencyFixture(`Props Agency ${SUITE}`);
     expect(agency).not.toBeNull();
     if (!agency) return;
     const propertyId = await seedAgencyListing(agency.id, 'props');
@@ -603,9 +604,9 @@ describe('agency reads', () => {
     expect(res.body.total).toBe(1);
   });
 
-  it('prefix-searches agencies by normalized name', async () => {
-    await findOrCreateAgencyByName(`Fincas Buscada ${SUITE}`);
-    await findOrCreateAgencyByName(`Other Realty ${SUITE}`);
+  it('searches the canonical organization directory', async () => {
+    await createAgencyFixture(`Fincas Buscada ${SUITE}`);
+    await createAgencyFixture(`Other Realty ${SUITE}`);
 
     const res = await request(buildApp())
       .get('/agencies/search')
@@ -615,14 +616,8 @@ describe('agency reads', () => {
     expect(res.body.agencies[0]).toMatchObject({ name: `Fincas Buscada ${SUITE}` });
   });
 
-  /**
-   * The LIKE escape, not the regex escape.
-   *
-   * The search is `LIKE`, whose metacharacter set is `%`, `_` and `\`. A term containing `%` would silently
-   * stop filtering — see `db/likePattern.ts`.
-   */
   it('treats a wildcard character in the search term literally', async () => {
-    await findOrCreateAgencyByName(`Wildcard ${SUITE}`);
+    await createAgencyFixture(`Wildcard ${SUITE}`);
     const res = await request(buildApp()).get('/agencies/search').query({ q: '%' });
     expect(res.status).toBe(200);
     expect(res.body.agencies).toHaveLength(0);

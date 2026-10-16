@@ -1,3 +1,4 @@
+import { getAgencySummaries } from '../../services/organizations/directory';
 /**
  * The review READ repository — every review list and every single-review read.
  *
@@ -127,7 +128,6 @@ export async function findReviews(
       address: addresses,
       ...ADDRESS_GEO_NAME_COLUMNS,
       agencyId: agencies.id,
-      agencyName: agencies.name,
       agencySlug: agencies.slug,
       helpfulCount: sql<number>`(
         select count(*)::int from ${reviewHelpfulVotes}
@@ -157,11 +157,13 @@ export async function findReviews(
 
   const rows = await query;
 
+  const agencySummaries = await getAgencySummaries(
+    rows.flatMap((row) => (row.agencyId ? [row.agencyId] : [])),
+  );
   return rows.map((row) => {
-    const agency: ReviewAgencySummary | null =
-      row.agencyId !== null && row.agencyName !== null && row.agencySlug !== null
-        ? { id: row.agencyId, name: row.agencyName, slug: row.agencySlug }
-        : null;
+    const agency: ReviewAgencySummary | null = row.agencyId
+      ? (agencySummaries.get(row.agencyId) ?? null)
+      : null;
     return {
       review: row.review,
       address: toAddressWithGeoNames(row),

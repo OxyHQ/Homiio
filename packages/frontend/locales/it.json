@@ -1,4 +1,9 @@
 {
+  "agencyDirectory": {
+    "select": "Seleziona un’azienda dai risultati oppure lascia vuoto questo campo facoltativo.",
+    "unavailable": "La directory delle aziende non è disponibile. Riprova.",
+    "unresolved": "L’identità di questo riferimento storico a un’agenzia deve ancora essere determinata."
+  },
   "amenities": {
     "categories": {
       "essential": "Essenziali",
@@ -3596,8 +3601,8 @@
       },
       "localResources": "Local resources",
       "organization": "Organised by",
-      "organizationVerified": "Verified by Homiio against {{source}} on {{when}}.",
-      "organizationUnverified": "Named by whoever posted this case. Homiio has not verified it.",
+      "organizationVerified": "Canali di contatto verificati tramite {{source}} il {{when}}.",
+      "organizationUnverified": "Selezionata dall’autore del caso. I canali di contatto non sono stati verificati.",
       "descriptionWithheld": "The description is hidden while a privacy report is reviewed by the organiser.",
       "contactLocked": {
         "not_attending": "Say you'll show up to see the meeting point and how to reach the organisers.",

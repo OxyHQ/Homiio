@@ -13,7 +13,7 @@
  * values are storable — casting and validation, and the reason a rejected review is still a 400 rather than a CHECK violation
  * surfacing as a 500.
  *
- * `agencyName` is a WRITE-ONLY input: the controller resolves it into a
+ * `agencyOxyAccountId` is a WRITE-ONLY input: the controller resolves it into a
  * canonical agency and sets `agencyId` server-side — the raw name is never
  * persisted on the review. The address is handled separately (nested
  * `address` object, create-only), so it is intentionally absent here.
@@ -50,7 +50,7 @@ export const CREATABLE_REVIEW_FIELDS: readonly string[] = [
   'adviceToAgency',
   'adviceToLandlord',
   // Write-only: resolved into agencyId server-side.
-  'agencyName',
+  'agencyOxyAccountId',
   'images',
   // How the author is PUBLISHED (ADR 0003 §5.2). A user field, not a server
   // one: the whole point is that the author chooses, and they may change their

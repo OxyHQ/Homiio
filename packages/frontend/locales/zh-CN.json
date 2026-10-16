@@ -1,4 +1,9 @@
 {
+  "agencyDirectory": {
+    "select": "请从结果中选择公司，或清空此可选字段。",
+    "unavailable": "公司目录暂不可用，请重试。",
+    "unresolved": "此历史中介记录的身份仍待确认。"
+  },
   "app": {
     "loading": "Loading..."
   },
@@ -3571,8 +3576,8 @@
       },
       "localResources": "Local resources",
       "organization": "Organised by",
-      "organizationVerified": "Verified by Homiio against {{source}} on {{when}}.",
-      "organizationUnverified": "Named by whoever posted this case. Homiio has not verified it.",
+      "organizationVerified": "联系方式已于 {{when}} 根据 {{source}} 核对。",
+      "organizationUnverified": "由事件发布者选择，联系方式尚未核对。",
       "descriptionWithheld": "The description is hidden while a privacy report is reviewed by the organiser.",
       "contactLocked": {
         "not_attending": "Say you'll show up to see the meeting point and how to reach the organisers.",

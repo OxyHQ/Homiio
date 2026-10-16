@@ -172,6 +172,7 @@ export enum ReviewReportReason {
 /** A property-management / landlord agency reviews can be attributed to. */
 export interface Agency {
   id: string;
+  oxyAccountId: string;
   name: string;
   slug: string;
   createdAt?: Date;
@@ -181,6 +182,7 @@ export interface Agency {
 /** Denormalized agency projection embedded on a {@link ReviewDTO}. */
 export interface AgencySummary {
   id: string;
+  oxyAccountId: string;
   name: string;
   slug: string;
 }
@@ -438,7 +440,7 @@ export type CreatableReviewFields = Omit<
 /**
  * Create-review request body: the nested {@link CreateReviewAddressInput}, the
  * required core fields, any optional creatable fields, and an optional
- * `agencyName` the backend resolves/creates into an {@link Agency}.
+ * `agencyOxyAccountId` the backend validates and references into an {@link Agency}.
  */
 export type CreateReviewPayload = Partial<CreatableReviewFields> &
   // `Required<…>`: `price`, `livedFrom` and `livedTo` are OPTIONAL on the read
@@ -452,7 +454,7 @@ export type CreateReviewPayload = Partial<CreatableReviewFields> &
     >
   > & {
     address: CreateReviewAddressInput;
-    agencyName?: string;
+    agencyOxyAccountId?: string;
   };
 
 /** Update-review request body: any creatable field, no address re-resolution. */
@@ -483,4 +485,10 @@ export interface ExploreBuildingSummary {
   reviewCount: number;
   averageRating: number;
   recommendationPercentage: number;
+}
+
+/** Directory search selections have canonical account IDs, not local housing reference IDs. */
+export interface AgencyDirectoryResult {
+  oxyAccountId: string;
+  name: string;
 }

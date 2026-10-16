@@ -284,21 +284,22 @@ export interface EvictionOrganizationChannel {
 /**
  * The collective coordinating a case — NOT the agency carrying the eviction out.
  *
- * `verified` is strictly stronger than authorship and is never settable through
+ * `channelsVerified` describes a contact-channel check, independent of Oxy ownership, and is never settable through
  * any API route: it means Homiio checked a public source that identifies the
- * collective, and it exists only on curated rows. Anybody may name an
- * organisation on their own case; nobody can make one verified by doing so.
+ * collective, and it exists only on curated rows. Authors may select a
+ * canonical organization on their own case; nobody can verify its channels by doing so.
  *
- * `publicChannels` is served ONLY when `verified` is true. An unverified row's
+ * `publicChannels` is served ONLY when `channelsVerified` is true. An unverified row's
  * channels are a third party's contact details published on the say-so of
  * somebody who is not that third party, which ADR 0003 §4.5 forbids outright.
  */
 export interface EvictionOrganization {
   id: string;
+  oxyAccountId: string;
   name: string;
   description?: string;
   publicChannels: EvictionOrganizationChannel[];
-  verified: boolean;
+  channelsVerified: boolean;
   verifiedAt?: ISODate;
   /** The public source that was checked. Present only when verified. */
   verificationSource?: string;
@@ -507,8 +508,8 @@ export interface CreateEvictionCaseData {
   scheduledAt: ISODate;
   contactInfo?: EvictionContactInfo;
   coverImage?: { imageId?: string; url?: string };
-  agencyName?: string;
-  organizationName?: string;
+  agencyOxyAccountId?: string;
+  organizationOxyAccountId?: string;
   helpNeeds?: EvictionHelpNeed[];
 }
 

@@ -1,4 +1,9 @@
 {
+  "agencyDirectory": {
+    "select": "नतीजों में से कोई कंपनी चुनें या इस वैकल्पिक फ़ील्ड को खाली रखें।",
+    "unavailable": "कंपनी निर्देशिका उपलब्ध नहीं है। फिर कोशिश करें।",
+    "unresolved": "एजेंसी के इस पुराने संदर्भ की पहचान अभी स्पष्ट की जानी है।"
+  },
   "app": {
     "loading": "Loading..."
   },
@@ -3571,8 +3576,8 @@
       },
       "localResources": "Local resources",
       "organization": "Organised by",
-      "organizationVerified": "Verified by Homiio against {{source}} on {{when}}.",
-      "organizationUnverified": "Named by whoever posted this case. Homiio has not verified it.",
+      "organizationVerified": "संपर्क माध्यमों की जाँच {{when}} को {{source}} से की गई।",
+      "organizationUnverified": "मामले के लेखक ने चुना है। संपर्क माध्यमों की जाँच नहीं हुई है।",
       "descriptionWithheld": "The description is hidden while a privacy report is reviewed by the organiser.",
       "contactLocked": {
         "not_attending": "Say you'll show up to see the meeting point and how to reach the organisers.",

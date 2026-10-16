@@ -1,3 +1,4 @@
+import { listOrganizationsByIds } from '../../services/organizations/supportOrganizations';
 /**
  * Eviction timeline entries.
  *
@@ -33,7 +34,6 @@ import {
   findEditableEvictionCase,
   listEvictionTimeline,
   listHelpNeedsForCases,
-  listOrganizationsByIds,
   readCaseContact,
   updateOwnedEvictionCase,
   type EvictionCasePatch,
