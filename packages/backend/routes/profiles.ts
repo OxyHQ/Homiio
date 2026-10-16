@@ -11,11 +11,8 @@ import * as profileController from '../controllers/profile';
 import exchangeReviewController from '../controllers/exchangeReviewController';
 import { asyncHandler } from '../middlewares';
 import performanceMonitor from '../middlewares/performance';
-import {
-  consumeFileCredit,
-  ensureBilling,
-  readEntitlements,
-} from '../db/billing/billingRepository';
+import { consumeFileCredit, readAccountEntitlements } from '../domain/entitlements';
+import { AppError } from '../middlewares/errorHandler';
 
 export default function () {
   const router = express.Router();
@@ -44,67 +41,45 @@ export default function () {
     asyncHandler(profileController.updateSavedPropertyNotes),
   );
 
+  /** The session's Oxy user id, or undefined: these two answer their own 401. */
+  const sessionUserId = (req: unknown): string | undefined =>
+    (req as { user?: { id?: string; _id?: string } }).user?.id ||
+    (req as { user?: { id?: string; _id?: string } }).user?._id;
+
   router.get(
     '/me/entitlements',
     asyncHandler(async (req, res) => {
       res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
       res.set('Pragma', 'no-cache');
       res.set('Expires', '0');
-      const oxyUserId =
-        (req as { user?: { id?: string; _id?: string } }).user?.id ||
-        (req as { user?: { id?: string; _id?: string } }).user?._id;
+      const oxyUserId = sessionUserId(req);
       if (!oxyUserId)
         return res
           .status(401)
           .json({ success: false, error: { message: 'Authentication required' } });
-
-      // A person who has never paid has no row, and that is not an error — the
-      // zeroed shape below is what the client reads. Deliberately NOT created on
-      // read: an entitlements GET that mints a billing row would put a write on
-      // every page load.
-      const entitlements = (await readEntitlements(oxyUserId)) ?? {
-        plusActive: false,
-        fileCredits: 0,
-        founderSupporter: false,
-        processedSessions: [],
-      };
-
-      return res.json({ success: true, entitlements });
+      return res.json({ success: true, entitlements: await readAccountEntitlements(oxyUserId) });
     }),
   );
 
   router.post(
     '/me/entitlements/consume-file-credit',
     asyncHandler(async (req, res) => {
-      const oxyUserId =
-        (req as { user?: { id?: string; _id?: string } }).user?.id ||
-        (req as { user?: { id?: string; _id?: string } }).user?._id;
+      const oxyUserId = sessionUserId(req);
       if (!oxyUserId)
         return res
           .status(401)
           .json({ success: false, error: { message: 'Authentication required' } });
-
-      // Created on first spend rather than on read: this endpoint is a write
-      // either way, so it is the honest place for the row to appear.
-      await ensureBilling(oxyUserId);
-
-      // ONE guarded statement decides all three outcomes. Reading the record,
-      // checking `fileCredits > 0` and then decrementing would let two concurrent
-      // requests each see 1 and each spend it. `consumeFileCredit`
-      // carries the predicate into the UPDATE, so the guard and the write cannot
-      // interleave, and "no row updated" IS the out-of-credits answer.
-      const result = await consumeFileCredit(oxyUserId);
-      if (!result.consumed && result.remaining !== 'unlimited') {
-        return res
-          .status(402)
-          .json({ success: false, error: { message: 'No file credits', code: 'NO_CREDITS' } });
+      try {
+        const result = await consumeFileCredit(oxyUserId);
+        return res.json({ success: true, remaining: result.remaining, consumed: result.consumed });
+      } catch (error) {
+        if (error instanceof AppError && error.code === 'NO_CREDITS') {
+          return res
+            .status(402)
+            .json({ success: false, error: { message: error.message, code: error.code } });
+        }
+        throw error;
       }
-
-      return res.json({
-        success: true,
-        remaining: result.remaining,
-        consumed: result.consumed,
-      });
     }),
   );
 

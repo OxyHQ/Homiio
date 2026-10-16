@@ -98,7 +98,7 @@ describe('expiry sweep registry', () => {
     expect(violations).toEqual([]);
   });
 
-  it('registers exactly the six columns that mean "delete this row"', async () => {
+  it('registers exactly the seven columns that mean "delete this row"', async () => {
     // A vacuity floor with teeth: `findUnsupportedExpiryColumns` over an EMPTY
     // registry returns `[]` and passes the assertion above while checking
     // nothing at all. Naming the entries is what makes that assertion mean
@@ -123,6 +123,9 @@ describe('expiry sweep registry', () => {
       // onto `address_materializations` at materialization time, so the sweep
       // costs a materialized place nothing.
       'address_candidates.expires_at',
+      // The capability tool receipt (`capabilities/effectReceipts.ts`): the
+      // stored RESPONSE to a call that already happened, never the effect.
+      'capability_effect_receipts.expires_at',
       'housing_domain_events.expires_at',
       'moderation_events.expires_at',
       'moderation_outbox.expires_at',

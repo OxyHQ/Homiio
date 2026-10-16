@@ -43,7 +43,8 @@ import { OfferingType, parseListingCurrency } from '@homiio/shared-types';
 
 import { priceHistogramForScope } from '../../db/properties/priceHistogram';
 import { logger } from '../../middlewares/logging';
-import { resolveSearchScope, sendGeoParamError } from './search';
+import { resolveSearchScope } from '../../domain/listings';
+import { sendGeoParamError } from './search';
 import {
   currencyColumnForOffering,
   DEFAULT_PRICE_COLUMN,

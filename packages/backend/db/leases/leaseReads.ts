@@ -953,6 +953,40 @@ export async function listLeasePayments(
   return { rows, total: totalRow.value };
 }
 
+/**
+ * One page of every instalment on every lease the person is a party to
+ * (landlord, tenant or co-tenant), soonest due first, each carrying its
+ * `leaseId`. The party predicate is {@link partyFilter}, in the query, so a
+ * lease the person is not on contributes nothing.
+ */
+export async function listLeasePaymentsForParty(
+  db: DatabaseOrTransaction,
+  oxyUserId: string,
+  filter: { readonly status?: LeasePaymentStatusValue },
+  page: { readonly limit: number; readonly offset: number },
+): Promise<{ rows: readonly (typeof leasePaymentSchedule.$inferSelect)[]; total: number }> {
+  const clauses: SQL[] = [partyFilter(oxyUserId)];
+  if (filter.status !== undefined) clauses.push(eq(leasePaymentSchedule.status, filter.status));
+  const where = and(...clauses) as SQL;
+
+  const [rows, [totalRow]] = await Promise.all([
+    db
+      .select({ payment: leasePaymentSchedule })
+      .from(leasePaymentSchedule)
+      .innerJoin(leases, eq(leases.id, leasePaymentSchedule.leaseId))
+      .where(where)
+      .orderBy(asc(leasePaymentSchedule.dueDate), asc(leasePaymentSchedule.id))
+      .limit(page.limit)
+      .offset(page.offset),
+    db
+      .select({ value: sql<number>`count(*)::int` })
+      .from(leasePaymentSchedule)
+      .innerJoin(leases, eq(leases.id, leasePaymentSchedule.leaseId))
+      .where(where),
+  ]);
+  return { rows: rows.map((row) => row.payment), total: totalRow.value };
+}
+
 /** Append one instalment to a lease's schedule. */
 export async function addLeasePayment(
   db: DatabaseOrTransaction,

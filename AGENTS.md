@@ -101,6 +101,13 @@ measurements: **`docs/postgres.md`**.
   client.** Ownership is enforced in the REPOSITORY QUERY, so a non-owner gets a
   404 rather than a 403. Profile is an optional real-estate sidecar keyed by
   `oxyUserId`, not an ownership authority.
+- **Capability tools act as the effective account and nothing else**: the
+  verified ticket's `effectiveAccountId` on `/_oxy/mcp`, the OAuth connection's
+  active account on `/mcp` (`capabilities/homiio.handlers.ts`) — never an id
+  from tool input, never `requireSessionOxyUserId`. Handlers call `domain/*`,
+  the use case the route calls, never a controller or HTTP. A new authenticated
+  route needs a tool or a written exclusion in `capabilities/routeCoverage/*`
+  (`routeParity.test.ts`), and a changed tool bumps the catalogue `version`.
 - **Field whitelists, never denylists** — `utils/pickFields.ts` is the one guard;
   `controllers/property/editableFields.ts` and
   `controllers/lease/editableFields.ts` must stay in sync with the schemas.

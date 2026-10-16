@@ -30,25 +30,15 @@
  * (`commonFilters.ts`, `searchQueryBuilder.ts`, `reviewController`).
  */
 
-import { PropertyStatus } from '@homiio/shared-types';
-
 import { successResponse, paginationResponse, AppError } from '../../middlewares/errorHandler';
-import {
-  allOf,
-  countProperties,
-  findProperties,
-  propertyOrderBy,
-  NEWEST_FIRST,
-} from '../../db/properties/propertyReads';
+import { allOf, findProperties } from '../../db/properties/propertyReads';
 import {
   idIn,
-  idNotIn,
   notDeleted,
   notModerationRestricted,
-  ownedBy,
-  statusIs,
   statusVisibleToNonOwner,
 } from '../../db/properties/propertyFilters';
+import { listPropertiesByOwner } from '../../domain/properties';
 import { serializeProperty } from '../../db/properties/propertySerializer';
 import type { ControllerNext, ControllerRequest, ControllerResponse } from '../controllerTypes';
 import { getQueryInteger, getQueryString } from '../queryParams';
@@ -108,26 +98,19 @@ export async function getPropertiesByOwner(
     if (!oxyUserId || typeof oxyUserId !== 'string') {
       return next(new AppError('Invalid owner id', 400, 'INVALID_ID'));
     }
-
-    const where = allOf([
-      ownedBy(oxyUserId),
-      notDeleted(),
-      notModerationRestricted(),
-      statusIs(PropertyStatus.PUBLISHED),
-      exclude ? idNotIn([exclude]) : undefined,
-    ]);
-    const skip = (page - 1) * limit;
-    const [hydrated, total] = await Promise.all([
-      // Image-bearing listings first (product rule), then newest.
-      findProperties({ where, orderBy: propertyOrderBy(NEWEST_FIRST), limit, offset: skip }),
-      countProperties(where),
-    ]);
+    // The discovery rules (published, visible, public precision) live in
+    // `domain/properties.listPropertiesByOwner`, shared with the tool.
+    const result = await listPropertiesByOwner(oxyUserId, {
+      page,
+      limit,
+      ...(exclude ? { exclude } : {}),
+    });
     res.json(
       paginationResponse(
-        hydrated.map((listing) => serializeProperty(listing, 'public')),
-        page,
-        limit,
-        total,
+        result.items,
+        result.page,
+        result.limit,
+        result.total,
         "Owner's properties retrieved successfully",
       ),
     );

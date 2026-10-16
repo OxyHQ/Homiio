@@ -14,15 +14,12 @@
  * can only be correct in a single process.
  */
 
-import { getDb } from '../../db/postgres';
 import {
-  ensureProfile,
-  findHydratedProfile,
-  updateProfile,
-} from '../../db/profiles/profileRepository';
-import { toProfileDTO } from '../../db/profiles/profileSerializer';
+  getMyProfile,
+  getPublicProfile,
+  updateMyProfile as writeMyProfile,
+} from '../../domain/profile';
 import { errorResponse, successResponse, _getOxyUserId } from './shared';
-import { toProfileUpdate } from './profileWriteColumns';
 import type { NextFunction, Request, Response } from 'express';
 
 /**
@@ -42,8 +39,7 @@ export async function getOrCreateProfile(req: Request, res: Response, next: Next
         .json(errorResponse('Authentication required', 'AUTHENTICATION_REQUIRED'));
     }
 
-    const hydrated = await ensureProfile(getDb(), oxyUserId, 'owner');
-    res.json(successResponse(toProfileDTO(hydrated, 'owner'), 'Profile retrieved successfully'));
+    res.json(successResponse(await getMyProfile(oxyUserId), 'Profile retrieved successfully'));
   } catch (error) {
     next(error);
   }
@@ -69,12 +65,12 @@ export async function getPublicProfileByOxyUserId(req: Request, res: Response, n
       return res.status(400).json(errorResponse('Oxy user id is required', 'OXY_USER_ID_REQUIRED'));
     }
 
-    const hydrated = await findHydratedProfile(getDb(), oxyUserId);
-    if (!hydrated) {
+    const profile = await getPublicProfile(oxyUserId);
+    if (!profile) {
       return res.status(404).json(errorResponse('Profile not found', 'PROFILE_NOT_FOUND'));
     }
 
-    res.json(successResponse(toProfileDTO(hydrated, 'public'), 'Profile retrieved successfully'));
+    res.json(successResponse(profile, 'Profile retrieved successfully'));
   } catch (error) {
     next(error);
   }
@@ -106,12 +102,9 @@ export async function updateMyProfile(req: Request, res: Response, next: NextFun
         .json(errorResponse('Authentication required', 'AUTHENTICATION_REQUIRED'));
     }
 
-    const update = toProfileUpdate(req.body);
-    const hydrated = await getDb().transaction((tx) =>
-      updateProfile(tx, oxyUserId, update, 'owner'),
+    res.json(
+      successResponse(await writeMyProfile(oxyUserId, req.body), 'Profile updated successfully'),
     );
-
-    res.json(successResponse(toProfileDTO(hydrated, 'owner'), 'Profile updated successfully'));
   } catch (error) {
     next(error);
   }

@@ -15,6 +15,7 @@ import * as leasePaymentController from '../controllers/leasePaymentController';
 import { asyncHandler } from '../middlewares';
 import handleUploadError from '../middlewares/uploadMiddleware';
 import * as validation from '../middlewares/validation';
+import { LEASE_DOCUMENT_MIME_TYPES, MAX_LEASE_DOCUMENT_BYTES } from '../domain/leases';
 const { leaseController } = controllers;
 
 /**
@@ -27,7 +28,7 @@ const { leaseController } = controllers;
  * The allowlist admits PDFs deliberately: a tenancy agreement, an addendum and
  * an insurance certificate are PDFs far more often than photographs, and the
  * old path could not accept one because the image picker and the Sharp
- * re-encode both refused it. `controllers/leaseController.ts` splits on the
+ * re-encode both refused it. `domain/leases.ts` splits on the
  * type — PDFs stored verbatim, images re-encoded — and holds the matching
  * extension map, so a type added here must be added there too.
  *
@@ -35,19 +36,9 @@ const { leaseController } = controllers;
  * the bound that keeps a base64 response about 13 MB. One file at a time means
  * a partial failure loses one document rather than a batch.
  */
-const LEASE_DOCUMENT_MIME_TYPES = new Set([
-  'application/pdf',
-  'image/jpeg',
-  'image/jpg',
-  'image/png',
-  'image/webp',
-  'image/heic',
-  'image/heif',
-]);
-
 const documentUpload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024, files: 1 },
+  limits: { fileSize: MAX_LEASE_DOCUMENT_BYTES, files: 1 },
   fileFilter: (_req, file, cb) => {
     if (LEASE_DOCUMENT_MIME_TYPES.has(file.mimetype)) {
       cb(null, true);
