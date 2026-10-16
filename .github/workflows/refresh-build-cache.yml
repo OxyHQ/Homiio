@@ -12,6 +12,10 @@ name: Refresh build cache
 # It builds only: no AWS credentials, no ECR push, no deploy. It runs on the
 # default branch (schedule) or a dispatch from main, so it writes main's cache,
 # which only main-branch deploys read; no pull_request workflow writes a scope.
+# `refresh` writes the deploy's arm64 scopes. `refresh-amd64` writes the
+# `*-amd64` scopes that ci.yml's image-smoke READS on pull requests; it is their
+# ONLY writer (a per-push write from CI re-uploaded ~2 GB per merge, since an
+# uncached build gets new layer digests every time).
 # Same Dockerfile, context, platform and target(s) as deploy-aws.yml, so the
 # layers it writes are the ones the deploy looks up: they come from the same
 # `reviewed-image.py guard` steps, so this path builds only reviewed inputs too
@@ -89,3 +93,55 @@ jobs:
             -f "$DOCKERFILE" \
             --target "$TARGET" \
             "$CONTEXT"
+
+  # The amd64 counterpart for ci.yml's image-smoke (amd64 because PostGIS
+  # publishes no arm64 image). Same inputs, guards and pinned BuildKit.
+  refresh-amd64:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Refuse unreviewed API image build inputs
+        id: reviewed_api
+        run: python3 -B .github/scripts/reviewed-image.py guard --recipe homiio
+
+      - name: Refuse unreviewed listing worker image build inputs
+        id: reviewed_worker
+        run: python3 -B .github/scripts/reviewed-image.py guard --recipe homiio-worker
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+        with:
+          driver-opts: image=moby/buildkit:v0.33.1@sha256:cec9f139f45e93c5c69c60f8b07cfad9f43f4ef6b6a6cd917527fea5ff2e3dea
+
+      - name: Expose the Actions cache to buildx
+        uses: crazy-max/ghaction-github-runtime@v4
+
+      - name: Rebuild the amd64 API and worker images from scratch into the cache
+        env:
+          API_DOCKERFILE: ${{ steps.reviewed_api.outputs.dockerfile }}
+          API_CONTEXT: ${{ steps.reviewed_api.outputs.context }}
+          API_TARGET: ${{ steps.reviewed_api.outputs.target }}
+          WORKER_DOCKERFILE: ${{ steps.reviewed_worker.outputs.dockerfile }}
+          WORKER_CONTEXT: ${{ steps.reviewed_worker.outputs.context }}
+          WORKER_TARGET: ${{ steps.reviewed_worker.outputs.target }}
+        run: |
+          set -euo pipefail
+          docker buildx build \
+            --platform linux/amd64 \
+            --no-cache \
+            --pull \
+            --cache-to type=gha,scope=homiio-api-amd64,mode=max \
+            -f "$API_DOCKERFILE" \
+            --target "$API_TARGET" \
+            "$API_CONTEXT"
+          docker buildx build \
+            --platform linux/amd64 \
+            --no-cache \
+            --pull \
+            --cache-to type=gha,scope=homiio-worker-amd64,mode=max \
+            -f "$WORKER_DOCKERFILE" \
+            --target "$WORKER_TARGET" \
+            "$WORKER_CONTEXT"
