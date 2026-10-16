@@ -3,6 +3,11 @@
   "version": "0.1.2",
   "description": "Homiio public case sdk",
   "license": "SEE LICENSE IN LICENSE",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/OxyHQ/Homiio.git",
+    "directory": "packages/sdk"
+  },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {
