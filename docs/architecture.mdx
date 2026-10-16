@@ -103,6 +103,7 @@ no console output.
 <SafeAreaProvider>
   <GestureHandlerRootView>
     <BloomProvider mode="light" colorPreset="yellow" fonts>   {/* TOP: wraps the splash branch too */}
+      <BloomNavigationTheme>                                  {/* nav theme + StatusBar from Bloom's mode */}
       <QueryClientProvider>
         <RentalModeProvider>
           <OxyProvider baseURL={OXY_BASE_URL} clientId={OXY_CLIENT_ID}>

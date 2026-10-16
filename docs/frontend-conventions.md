@@ -63,15 +63,20 @@ Use NativeWind `gap-6 md:gap-8` on the section container, **not** per-section
 
 - Wide CTA rows use `flex-row items-stretch gap-6 md:gap-8`.
 
-### Design-token CSS (no hand-copied radius)
+### Design-token CSS (no hand-copied tokens)
 
-`@import "@oxy.so/bloom/design-tokens/theme.css"` in
-`packages/frontend/styles/global.css`, after the Tailwind import. That provides
-`rounded-radius-28`, `p-space-8` and the rest without pasting anything locally.
+`packages/frontend/styles/global.css` starts with
+`@import "@oxy.so/app-preset/css/base.css"`, the same base Inbox and Alia use. It
+brings the Tailwind layers, NativeWind's theme, Bloom's design tokens
+(`rounded-radius-28`, `p-space-8`, the `--color-*` aliases behind `bg-primary`,
+`text-muted-foreground` …) and the SDK `@source` globs. Below it go only
+Homiio's own `@source` globs and the web document-scroll override.
 
-- **Never declare `--radius-radius-*` or other Bloom scales in `global.css`.** The
-  Bloom import is the sole authority.
-- Keep only Homiio-local color seeds and `:root` overrides in `global.css`.
+- **Never declare a Bloom token in `global.css`** — no `@theme` colour aliases,
+  no `--radius-*` scales, no `:root` / `.dark` colour seeds. `BloomProvider`
+  injects the base tokens for the active preset and mode at runtime; a seed
+  copied here drifts (it once painted the blue preset under a yellow app).
+- There is no `tailwind.config.js`: Tailwind v4 reads only the CSS.
 
 ## NativeWind: `Pressable` function-form `style`
 

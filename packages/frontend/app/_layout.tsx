@@ -15,7 +15,7 @@ import {
 } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { preventNativeSplashAutoHide, useHideNativeSplashWhenReady } from '@oxy.so/expo-splash';
-import { Slot, usePathname } from 'expo-router';
+import { Slot, ThemeProvider, usePathname } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useIsScreenNotMobile } from '@/hooks/useOptimizedMediaQuery';
 import { useHomiioSidebarProps, type HomiioSidebarProps } from '@/components/SideBar';
@@ -49,6 +49,7 @@ import { RentalModeProvider } from '@/context/RentalModeContext';
 import { NotificationProvider } from '@/context/NotificationContext';
 import { OxyProvider, useOxy } from '@oxy.so/services';
 import { BloomProvider } from '@oxy.so/bloom/provider';
+import { useNavigationTheme, useTheme } from '@oxy.so/bloom/theme';
 import { ImageResolverProvider, type ImageResolver } from '@oxy.so/bloom/image-resolver';
 import { PortalProvider, PortalOutlet } from '@oxy.so/bloom/portal';
 import '../styles/global.css';
@@ -233,6 +234,23 @@ function AppFrame() {
   );
 }
 
+/**
+ * Hands Bloom's resolved theme to everything outside Bloom: React Navigation's
+ * theme (navigator backgrounds, native tabs, headers) and the status bar. Both
+ * follow Bloom's mode, never the OS — `style="auto"` read the OS appearance and
+ * showed light status-bar text over a light app on a phone in dark mode.
+ */
+function BloomNavigationTheme({ children }: { children: React.ReactNode }) {
+  const navTheme = useNavigationTheme();
+  const { isDark } = useTheme();
+  return (
+    <ThemeProvider value={navTheme}>
+      {children}
+      <StatusBar style={isDark ? 'light' : 'dark'} />
+    </ThemeProvider>
+  );
+}
+
 export default function RootLayout() {
   // `startFade` is fully derived from initialization completing — there is no
   // other trigger — so we keep a single source of truth and derive the fade
@@ -359,77 +377,81 @@ export default function RootLayout() {
             fonts
             onFontsLoading={Platform.OS === 'web' ? <AppSplashScreen /> : null}
           >
-            {!appIsReady ? (
-              // WEB: the custom splash covers font-load + init and fades out; its
-              // `onFadeComplete` gates `appIsReady`. NATIVE renders null here — the
-              // held OS splash is on top, so nothing underneath needs to paint.
-              Platform.OS === 'web' ? (
-                <AppSplashScreen startFade={startFade} onFadeComplete={handleSplashFadeComplete} />
-              ) : null
-            ) : (
-              <QueryClientProvider client={queryClient}>
-                <RentalModeProvider>
-                  <OxyProvider
-                    baseURL={OXY_BASE_URL}
-                    clientId={OXY_CLIENT_ID}
-                    language={{
-                      supportedLocales: SUPPORTED_LANGUAGE_CODES,
-                      fallbackLocale: 'en-US',
-                      onChange: (locale) => {
-                        if (!isSupportedLanguage(locale)) return;
-                        return setStoredLanguage(locale);
-                      },
-                      onError: (error, locale) => {
-                        logger.warn('Failed to follow the Oxy-resolved language', locale, error);
-                      },
-                    }}
-                  >
-                    {/*
+            <BloomNavigationTheme>
+              {!appIsReady ? (
+                // WEB: the custom splash covers font-load + init and fades out; its
+                // `onFadeComplete` gates `appIsReady`. NATIVE renders null here — the
+                // held OS splash is on top, so nothing underneath needs to paint.
+                Platform.OS === 'web' ? (
+                  <AppSplashScreen
+                    startFade={startFade}
+                    onFadeComplete={handleSplashFadeComplete}
+                  />
+                ) : null
+              ) : (
+                <QueryClientProvider client={queryClient}>
+                  <RentalModeProvider>
+                    <OxyProvider
+                      baseURL={OXY_BASE_URL}
+                      clientId={OXY_CLIENT_ID}
+                      language={{
+                        supportedLocales: SUPPORTED_LANGUAGE_CODES,
+                        fallbackLocale: 'en-US',
+                        onChange: (locale) => {
+                          if (!isSupportedLanguage(locale)) return;
+                          return setStoredLanguage(locale);
+                        },
+                        onError: (error, locale) => {
+                          logger.warn('Failed to follow the Oxy-resolved language', locale, error);
+                        },
+                      }}
+                    >
+                      {/*
                     Renders nothing itself — it just pushes to the toast store
                     that `OxyProvider`'s own `<ToastOutlet />` renders. Mounted
                     here (inside `BloomProvider` for theme, inside `OxyProvider`
                     for the toast host) so a lost connection surfaces as a
                     toast instead of a per-screen banner.
                   */}
-                    <ConnectionStatusToasts />
-                    <MediaResolverProvider>
-                      <ProfileProvider>
-                        <SavedPropertiesProvider>
-                          <NotificationProvider>
-                            <I18nextProvider i18n={i18n}>
-                              <BottomSheetProvider>
-                                <MenuProvider>
-                                  <PortalProvider>
-                                    <ErrorBoundary>
-                                      <MapStateProvider>
-                                        <SearchModeProvider>
-                                          <AskAliaProvider>
-                                            <AppFrame />
-                                          </AskAliaProvider>
-                                        </SearchModeProvider>
-                                      </MapStateProvider>
-                                      <StatusBar style="auto" />
-                                    </ErrorBoundary>
-                                    {/*
+                      <ConnectionStatusToasts />
+                      <MediaResolverProvider>
+                        <ProfileProvider>
+                          <SavedPropertiesProvider>
+                            <NotificationProvider>
+                              <I18nextProvider i18n={i18n}>
+                                <BottomSheetProvider>
+                                  <MenuProvider>
+                                    <PortalProvider>
+                                      <ErrorBoundary>
+                                        <MapStateProvider>
+                                          <SearchModeProvider>
+                                            <AskAliaProvider>
+                                              <AppFrame />
+                                            </AskAliaProvider>
+                                          </SearchModeProvider>
+                                        </MapStateProvider>
+                                      </ErrorBoundary>
+                                      {/*
                                   Root overlay outlet. `AppShell`'s navigation
                                   drawer renders here through Bloom's Portal so
                                   the panel and its backdrop cover the whole
                                   viewport. Placed last so it sits above all app
                                   chrome.
                                 */}
-                                    <PortalOutlet />
-                                  </PortalProvider>
-                                </MenuProvider>
-                              </BottomSheetProvider>
-                            </I18nextProvider>
-                          </NotificationProvider>
-                        </SavedPropertiesProvider>
-                      </ProfileProvider>
-                    </MediaResolverProvider>
-                  </OxyProvider>
-                </RentalModeProvider>
-              </QueryClientProvider>
-            )}
+                                      <PortalOutlet />
+                                    </PortalProvider>
+                                  </MenuProvider>
+                                </BottomSheetProvider>
+                              </I18nextProvider>
+                            </NotificationProvider>
+                          </SavedPropertiesProvider>
+                        </ProfileProvider>
+                      </MediaResolverProvider>
+                    </OxyProvider>
+                  </RentalModeProvider>
+                </QueryClientProvider>
+              )}
+            </BloomNavigationTheme>
           </BloomProvider>
         </GestureHandlerRootView>
       </SafeAreaProvider>
