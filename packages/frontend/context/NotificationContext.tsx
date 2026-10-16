@@ -397,12 +397,10 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
   const serverNotifications = mailbox.data?.notifications ?? EMPTY_NOTIFICATIONS;
   const { readIds } = deviceState;
-  let overlaidReads = 0;
-  const notifications = serverNotifications.map((n) => {
-    if (n.read || !readIds.has(n.id)) return n;
-    overlaidReads += 1;
-    return { ...n, read: true };
-  });
+  const notifications = serverNotifications.map((n) =>
+    n.read || !readIds.has(n.id) ? n : { ...n, read: true },
+  );
+  const overlaidReads = serverNotifications.filter((n) => !n.read && readIds.has(n.id)).length;
   const unreadCount = Math.max(0, (mailbox.data?.unreadCount ?? 0) - overlaidReads);
 
   const setMailbox = useCallback(

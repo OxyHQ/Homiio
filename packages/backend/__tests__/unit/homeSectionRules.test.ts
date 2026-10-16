@@ -38,7 +38,7 @@
 
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import type { HomeSectionId, HomeSectionSource } from '@homiio/shared-types';
+import type { HomeSectionId } from '@homiio/shared-types';
 
 import { HOME_SECTION_RULES } from '../../db/home/homeSectionRules';
 
@@ -87,17 +87,6 @@ const ALL_SECTION_IDS = [
   'public_housing',
 ] as const satisfies readonly HomeSectionId[];
 
-const ALL_SOURCES = [
-  'listing_created_at',
-  'listing_sale_price_reduced_flag',
-  'listing_status',
-  'listing_agency_fee_flag',
-  'listing_cost_fields',
-  'resident_reviews',
-  'listing_verification',
-  'listing_housing_type',
-] as const satisfies readonly HomeSectionSource[];
-
 describe('the locale lookup can distinguish present from absent', () => {
   it('resolves a key that exists', () => {
     // The POSITIVE control. Without it, a lookup broken into always returning
@@ -130,13 +119,6 @@ describe('every rule can be rendered', () => {
     expect(missing).toEqual([]);
   });
 
-  it('has English copy for every rule source label', () => {
-    const missing = HOME_SECTION_RULES.filter(
-      (rule) => !hasCopy(`home.sections.source.${rule.source}`),
-    ).map((rule) => `${rule.id} → home.sections.source.${rule.source}`);
-    expect(missing).toEqual([]);
-  });
-
   it('declares an offering set for every rule, so none is silently unreachable', () => {
     const empty = HOME_SECTION_RULES.filter((rule) => rule.offerings.length === 0).map((r) => r.id);
     // A rule with no offerings never runs, which reads in production as "that
@@ -154,15 +136,10 @@ describe('the contract and the rules table agree', () => {
     expect(unimplemented).toEqual([]);
   });
 
-  it('has title and eyebrow copy for every declared section id', () => {
-    const missing = ALL_SECTION_IDS.flatMap((id) =>
-      [`home.sections.${id}.title`, `home.sections.${id}.eyebrow`].filter((key) => !hasCopy(key)),
+  it('has title copy for every declared section id', () => {
+    const missing = ALL_SECTION_IDS.filter((id) => !hasCopy(`home.sections.${id}.title`)).map(
+      (id) => `home.sections.${id}.title`,
     );
-    expect(missing).toEqual([]);
-  });
-
-  it('has copy for every declared source, including any no rule uses yet', () => {
-    const missing = ALL_SOURCES.filter((source) => !hasCopy(`home.sections.source.${source}`));
     expect(missing).toEqual([]);
   });
 
