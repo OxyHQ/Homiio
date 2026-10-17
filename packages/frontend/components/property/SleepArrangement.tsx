@@ -24,10 +24,10 @@ import { useTranslation } from 'react-i18next';
 
 import { Card } from '@oxy.so/bloom/card';
 import { RiHotelBedLine } from '@oxy.so/bloom/icons';
+import { useTheme } from '@oxy.so/bloom/theme';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { SectionHeader, SECTION_GUTTER } from '@/components/property/Section';
-import { colors } from '@/styles/colors';
 import { spacing } from '@/constants/styles';
 import type { Property } from '@homiio/shared-types';
 
@@ -43,6 +43,7 @@ interface BedroomEntry {
 
 export const SleepArrangement: React.FC<SleepArrangementProps> = ({ property }) => {
   const { t } = useTranslation();
+  const { colors } = useTheme();
 
   const bedrooms = useMemo<BedroomEntry[]>(() => {
     const count = property.bedrooms ?? 0;
@@ -69,12 +70,10 @@ export const SleepArrangement: React.FC<SleepArrangementProps> = ({ property }) 
       >
         {bedrooms.map((bedroom) => (
           <Card key={bedroom.id} radius="radius-16" style={styles.bedroomCard} appearance="outline">
-            <RiHotelBedLine width={26} height={26} fill={colors.COLOR_BLACK} />
+            <RiHotelBedLine width={26} height={26} fill={colors.text} />
             <View>
-              <BloomText variant="headline-semibold" style={styles.bedroomTitle}>
-                {bedroom.title}
-              </BloomText>
-              <BloomText variant="body-2-regular" style={styles.bedroomDescription}>
+              <BloomText variant="headline-semibold">{bedroom.title}</BloomText>
+              <BloomText variant="body-2-regular" style={{ color: colors.textSecondary }}>
                 {bedroom.description}
               </BloomText>
             </View>
@@ -96,11 +95,5 @@ const styles = StyleSheet.create({
     height: 140,
     padding: spacing.xl,
     justifyContent: 'space-between',
-  },
-  bedroomTitle: {
-    color: colors.COLOR_BLACK,
-  },
-  bedroomDescription: {
-    color: colors.COLOR_BLACK_LIGHT_3,
   },
 });

@@ -3,10 +3,10 @@ import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { RiArrowDownLine, RiArrowUpLine, RiMapPinLine } from '@oxy.so/bloom/icons';
+import { useTheme } from '@oxy.so/bloom/theme';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { formatMoney } from '@homiio/shared-types';
-import { useColors } from '@/hooks/useThemeColor';
 import { useNeighborhood } from '@/hooks/useNeighborhood';
 import { useFormatting } from '@/utils/format';
 import { BaseWidget } from './BaseWidget';
@@ -42,7 +42,7 @@ export function NeighborhoodRatingWidget({
   city,
 }: NeighborhoodRatingWidgetProps = {}) {
   const { t } = useTranslation();
-  const colors = useColors();
+  const { colors } = useTheme();
   const { locale } = useFormatting();
   const { data: neighborhood, isLoading } = useNeighborhood({
     propertyId,
@@ -64,7 +64,11 @@ export function NeighborhoodRatingWidget({
     <BaseWidget
       title={t('property.neighborhood.title')}
       icon={
-        <RiMapPinLine width={HEADER_ICON_SIZE} height={HEADER_ICON_SIZE} fill={colors.primary} />
+        <RiMapPinLine
+          width={HEADER_ICON_SIZE}
+          height={HEADER_ICON_SIZE}
+          fill={colors.primarySubtleForeground}
+        />
       }
     >
       <View className="gap-3.5 py-2.5">

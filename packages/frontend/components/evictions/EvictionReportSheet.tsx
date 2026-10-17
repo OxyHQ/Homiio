@@ -27,7 +27,6 @@ import { EvictionReportReason, EVICTION_PRECAUTIONARY_HOLD_REASONS } from '@homi
 
 import { useReportEviction } from '@/hooks/useEvictionQueries';
 import { toast } from '@oxy.so/bloom/toast';
-import { colors } from '@/styles/colors';
 import { spacing } from '@/constants/styles';
 
 const REASON_OPTIONS: { value: EvictionReportReason; labelKey: string }[] = [
@@ -100,7 +99,9 @@ export const EvictionReportSheet: React.FC<EvictionReportSheetProps> = ({ caseId
   return (
     <View style={styles.wrap}>
       <H3 style={styles.title}>{t('evictions.report.title')}</H3>
-      <BloomText style={styles.intro}>{t('evictions.report.intro')}</BloomText>
+      <BloomText className="text-muted-foreground" style={styles.intro}>
+        {t('evictions.report.intro')}
+      </BloomText>
 
       <RadioGroup
         label={t('evictions.report.title')}
@@ -151,7 +152,6 @@ const styles = StyleSheet.create({
   },
   intro: {
     fontSize: 14,
-    color: colors.textSecondary,
     lineHeight: 20,
   },
   submit: {

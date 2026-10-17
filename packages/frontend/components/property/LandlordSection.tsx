@@ -130,7 +130,7 @@ export const LandlordSection: React.FC<LandlordSectionProps> = ({
         ) : null}
 
         {ownerProperties.length > 0 ? (
-          <View style={styles.ownerProperties}>
+          <View className="border-border" style={styles.ownerProperties}>
             <Shelf
               title={t('listing.cta.moreByOwner')}
               itemWidth={240}
@@ -167,6 +167,5 @@ const styles = StyleSheet.create({
   ownerProperties: {
     paddingTop: spacing.md,
     borderTopWidth: hairline.width,
-    borderTopColor: hairline.color,
   },
 });

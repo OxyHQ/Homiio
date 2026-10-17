@@ -24,12 +24,12 @@ import {
 } from '@oxy.so/bloom/admonition';
 import { Chip } from '@oxy.so/bloom/chip';
 import { RiCalendarLine, RiGlobalLine } from '@oxy.so/bloom/icons';
+import { useTheme } from '@oxy.so/bloom/theme';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { MoneyText } from '@/components/MoneyText';
 import { TruncatedDescription } from '@/components/ui/TruncatedDescription';
 import { SECTION_GUTTER } from '@/components/property/Section';
-import { colors } from '@/styles/colors';
 import { spacing } from '@/constants/styles';
 import type { Property } from '@homiio/shared-types';
 import type { RentalMode } from '@/utils/propertyUtils';
@@ -49,6 +49,7 @@ export const BasicInfoSection: React.FC<Props> = ({
   onViewingsPress,
 }) => {
   const { t } = useTranslation();
+  const { colors } = useTheme();
   // Read the active mode's priced block — the unit is fixed per block.
   const isVacation = mode === 'vacation';
   const rentAmount = isVacation
@@ -65,7 +66,7 @@ export const BasicInfoSection: React.FC<Props> = ({
   return (
     <View style={styles.container}>
       <View style={styles.priceRow}>
-        <BloomText variant="headline-regular" style={styles.priceLabel}>
+        <BloomText variant="headline-regular" style={{ color: colors.textSecondary }}>
           {rentLabel}
         </BloomText>
         <MoneyText amount={rentAmount} currency={rentCurrency} />
@@ -74,7 +75,7 @@ export const BasicInfoSection: React.FC<Props> = ({
       {property?.isExternal && property?.source && property.source !== 'internal' ? (
         <Chip
           size="lg"
-          startIcon={<RiGlobalLine width={14} height={14} fill={colors.COLOR_BLACK_LIGHT_3} />}
+          startIcon={<RiGlobalLine width={14} height={14} fill={colors.textSecondary} />}
         >
           {`${t('property.sections.sourcedFrom')} ${property.source.charAt(0).toUpperCase()}${property.source.slice(1)}`}
         </Chip>
@@ -92,7 +93,7 @@ export const BasicInfoSection: React.FC<Props> = ({
       {hasActiveViewing ? (
         <AdmonitionRoot type="tip">
           <AdmonitionRow style={styles.viewingRow}>
-            <RiCalendarLine width={20} height={20} fill={colors.primaryColor} />
+            <RiCalendarLine width={20} height={20} fill={colors.primarySubtleForeground} />
             <AdmonitionContent>
               <AdmonitionText>{t('viewings.banner.hasViewing')}</AdmonitionText>
             </AdmonitionContent>
@@ -120,14 +121,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: spacing.md,
   },
-  priceLabel: {
-    color: colors.COLOR_BLACK_LIGHT_3,
-  },
   descriptionBlock: {
     gap: spacing.md,
   },
   aboutTitle: {
-    color: colors.COLOR_BLACK,
     letterSpacing: -0.2,
   },
   viewingRow: {

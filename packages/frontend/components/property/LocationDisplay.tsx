@@ -9,11 +9,11 @@ import { useMemo } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
+import { useTheme } from '@oxy.so/bloom/theme';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 
 import Map from '@/components/Map';
 import { SectionHeader, SECTION_GUTTER } from '@/components/property/Section';
-import { colors } from '@/styles/colors';
 import { radius, spacing } from '@/constants/styles';
 import type { Property } from '@homiio/shared-types';
 
@@ -30,6 +30,7 @@ const isValidCoordinate = (coords: unknown): coords is [number, number] => {
 
 export const LocationDisplay: React.FC<LocationDisplayProps> = ({ property }) => {
   const { t } = useTranslation();
+  const { colors } = useTheme();
   const address = property?.address;
 
   const coordinates = useMemo(() => {
@@ -58,7 +59,7 @@ export const LocationDisplay: React.FC<LocationDisplayProps> = ({ property }) =>
       <SectionHeader title={t('property.location.title')} />
       <View style={styles.body}>
         {neighborhoodSummary ? (
-          <BloomText variant="headline-regular" style={styles.summary}>
+          <BloomText variant="headline-regular" style={{ color: colors.textSecondary }}>
             {neighborhoodSummary}
           </BloomText>
         ) : null}
@@ -83,9 +84,6 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
     gap: spacing.md,
     paddingHorizontal: SECTION_GUTTER,
-  },
-  summary: {
-    color: colors.COLOR_BLACK_LIGHT_3,
   },
   mapWrapper: {
     borderRadius: radius.xl,

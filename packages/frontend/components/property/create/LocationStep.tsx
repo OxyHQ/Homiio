@@ -58,7 +58,7 @@ export function LocationStep({
   return (
     <View style={styles.step}>
       <Field error={validationErrors.coordinates}>
-        <View style={styles.mapContainer}>
+        <View className="border-border" style={styles.mapContainer}>
           <View style={styles.mapWrapper}>
             <Map
               ref={mapRef}

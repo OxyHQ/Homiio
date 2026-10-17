@@ -36,7 +36,6 @@ import { useProfileQuery } from '@/hooks/query/useProfiles';
 import { useMyApplications } from '@/hooks/useApplicationQueries';
 import { useReservationsQuery } from '@/hooks/useReservationQueries';
 import { useSavedPropertiesContext } from '@/context/SavedPropertiesContext';
-import { colors } from '@/styles/colors';
 import { spacing } from '@/constants/styles';
 import { logger } from '@/utils/logger';
 
@@ -282,7 +281,7 @@ interface StatTileProps {
 }
 
 const StatTile: React.FC<StatTileProps> = ({ label, value, description, onPress }) => {
-  const { colors: theme } = useTheme();
+  const { colors } = useTheme();
   return (
     <View style={styles.statTile}>
       <Card
@@ -294,12 +293,21 @@ const StatTile: React.FC<StatTileProps> = ({ label, value, description, onPress 
         appearance="outline"
       >
         <H2 style={styles.statValue}>{value}</H2>
-        <BloomText style={styles.statLabel}>{label}</BloomText>
-        {description ? <BloomText style={styles.statDescription}>{description}</BloomText> : null}
+        <BloomText className="text-muted-foreground" style={styles.statLabel}>
+          {label}
+        </BloomText>
+        {description ? (
+          <BloomText className="text-muted-foreground" style={styles.statDescription}>
+            {description}
+          </BloomText>
+        ) : null}
         {onPress ? (
           <View style={styles.statLink}>
-            <BloomText style={styles.statLinkText}>{`View ${label.toLowerCase()}`}</BloomText>
-            <RiArrowRightSLine width={14} height={14} fill={theme.textSecondary} />
+            <BloomText
+              className="text-primary-text"
+              style={styles.statLinkText}
+            >{`View ${label.toLowerCase()}`}</BloomText>
+            <RiArrowRightSLine width={14} height={14} fill={colors.textSecondary} />
           </View>
         ) : null}
       </Card>
@@ -369,12 +377,10 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     fontSize: 13,
-    color: colors.muted,
     fontWeight: '600',
   },
   statDescription: {
     fontSize: 12,
-    color: colors.muted,
     marginTop: spacing.xs,
   },
   statLink: {
@@ -385,7 +391,6 @@ const styles = StyleSheet.create({
   },
   statLinkText: {
     fontSize: 12,
-    color: colors.primary,
     fontWeight: '600',
   },
   // Bloom 2's SettingsListGroup draws no horizontal inset of its own, so the

@@ -35,7 +35,8 @@ import { RentalModeProvider } from '@/context/RentalModeContext';
 import { NotificationProvider } from '@/context/NotificationContext';
 import { OxyProvider, useOxy } from '@oxy.so/services';
 import { BloomProvider } from '@oxy.so/bloom/provider';
-import { useNavigationTheme, useTheme } from '@oxy.so/bloom/theme';
+import { useNavigationTheme, useTheme, webLocalStorage } from '@oxy.so/bloom/theme';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ImageResolverProvider, type ImageResolver } from '@oxy.so/bloom/image-resolver';
 import { PortalProvider, PortalOutlet } from '@oxy.so/bloom/portal';
 import { expoRouterScrollAdapter } from '@oxy.so/bloom/scroll/expo-router';
@@ -80,6 +81,11 @@ const i18nReady = i18nInit({
 // app.config.js). The custom `AppSplashScreen` React overlay is gated to web
 // only. No-op on web (the shared helper guards `Platform.OS === 'web'`).
 preventNativeSplashAutoHide();
+
+// Bloom owns the theme (system / light / dark) and persists the person's choice.
+// `webLocalStorage` is undefined on native, where AsyncStorage takes over.
+const THEME_PERSIST_KEY = 'homiio.bloom.theme';
+const THEME_STORAGE = webLocalStorage ?? AsyncStorage;
 
 // TanStack Query follows the device: NetInfo drives `onlineManager` (refetch on
 // reconnect) and AppState drives `focusManager` (refetch on foreground). Both are
@@ -297,21 +303,11 @@ export default function RootLayout() {
     <View className="flex-1">
       <SafeAreaProvider initialMetrics={initialWindowMetrics}>
         <GestureHandlerRootView className="flex-1">
-          {/*
-            Pin Bloom to the YELLOW preset in LIGHT mode. `mode="light"` stops Bloom
-            from following the OS into dark — Homiio's static `colors.ts` is a
-            light-only palette, so following the OS produced a light-static /
-            dark-Bloom mismatch. This provider is the single source of truth for
-            theme tokens; `@oxy.so/services` 8.1.2 no longer wraps its children in
-            an internal BloomThemeProvider. `BloomProvider` mounts it for us,
-            together with the rest of Bloom's app-wide state (haptics, scroll
-            restoration, tab-bar minimize progress) so none of them can end up
-            at a different depth. `imageResolver` is not passed here: Homiio's
-            resolver needs `useOxy()`, so it stays its own provider below.
-          */}
           <BloomProvider
-            mode="light"
-            colorPreset="yellow"
+            defaultMode="system"
+            defaultColorPreset="yellow"
+            persistKey={THEME_PERSIST_KEY}
+            storage={THEME_STORAGE}
             scrollAdapter={expoRouterScrollAdapter}
             onFontsLoading={Platform.OS === 'web' ? <AppSplashScreen /> : null}
           >

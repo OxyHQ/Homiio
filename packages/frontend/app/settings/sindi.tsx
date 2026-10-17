@@ -21,11 +21,11 @@ import { AppShellMenuButton } from '@oxy.so/bloom/app-shell';
 import { RiInformationLine, RiRefreshLine } from '@oxy.so/bloom/icons';
 import { PageHeader } from '@oxy.so/bloom/page-header';
 import { Switch } from '@oxy.so/bloom/switch';
+import { useTheme } from '@oxy.so/bloom/theme';
 import { SettingsListGroup, SettingsListItem } from '@oxy.so/bloom/settings-list';
 
 import { confirm } from '@oxy.so/bloom/surfaces';
 import { SindiIcon } from '@/assets/icons';
-import { colors } from '@/styles/colors';
 import { spacing } from '@/constants/styles';
 import { SettingsRowIcon, settingsScreenStyles } from '@/components/profile/SettingsRowIcon';
 import { SINDI_AGENT_ID } from '@/components/sindi/sindiAgent';
@@ -35,6 +35,7 @@ import { logger } from '@/utils/logger';
 export default function SindiSettingsScreen() {
   const { t } = useTranslation();
   const router = useRouter();
+  const { colors } = useTheme();
   const showTips = useSindiPreferences((state) => state.tips);
   const setShowTips = useSindiPreferences((state) => state.setTips);
   const resetPreferences = useSindiPreferences((state) => state.reset);
@@ -81,7 +82,7 @@ export default function SindiSettingsScreen() {
           <>
             <AppShellMenuButton accessibilityLabel={t('sidebar.open')} />
             <View style={styles.headerIcon}>
-              <SindiIcon size={20} color={colors.sindiColor} />
+              <SindiIcon size={20} color={colors.primarySubtleForeground} />
             </View>
           </>
         }

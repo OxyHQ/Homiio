@@ -49,7 +49,6 @@ import { Text as BloomText } from '@oxy.so/bloom/typography';
 import { Section } from '@/components/property/Section';
 import { useAreaInsights } from '@/hooks';
 import { useFormatting } from '@/utils/format';
-import { colors } from '@/styles/colors';
 import { radius, spacing } from '@/constants/styles';
 import { formatMoney, type PropertyAreaInsights } from '@homiio/shared-types';
 
@@ -145,7 +144,9 @@ const PriceRangeContent: React.FC<PriceRangeContentProps> = ({ insights, bedroom
   if (sampleSize === 0) {
     return (
       <Section title={t('property.areaInsights.title')} subtitle={subtitle}>
-        <BloomText style={styles.note}>{t('property.areaInsights.lowDataNote')}</BloomText>
+        <BloomText className="text-muted-foreground" style={styles.note}>
+          {t('property.areaInsights.lowDataNote')}
+        </BloomText>
       </Section>
     );
   }
@@ -157,10 +158,12 @@ const PriceRangeContent: React.FC<PriceRangeContentProps> = ({ insights, bedroom
     return (
       <Section title={t('property.areaInsights.title')} subtitle={subtitle}>
         <View style={styles.body}>
-          <BloomText style={styles.note}>
+          <BloomText className="text-muted-foreground" style={styles.note}>
             {t('property.areaInsights.insufficient', { count: sampleSize })}
           </BloomText>
-          <BloomText style={styles.caption}>{askingNote}</BloomText>
+          <BloomText className="text-muted-foreground" style={styles.caption}>
+            {askingNote}
+          </BloomText>
         </View>
       </Section>
     );
@@ -307,12 +310,10 @@ const styles = StyleSheet.create({
   },
   note: {
     fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_3,
     lineHeight: 20,
   },
   caption: {
     fontSize: 12,
-    color: colors.COLOR_BLACK_LIGHT_4,
     lineHeight: 16,
   },
 });

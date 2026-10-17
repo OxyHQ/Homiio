@@ -12,9 +12,9 @@ import { Text as BloomText } from '@oxy.so/bloom/typography';
 import type { EvictionComment } from '@homiio/shared-types';
 
 import { IconButton } from '@/components/ui/IconButton';
-import { colors } from '@/styles/colors';
 import { spacing } from '@/constants/styles';
 import { RiDeleteBinLine } from '@oxy.so/bloom/icons';
+import { useTheme } from '@oxy.so/bloom/theme';
 
 interface EvictionCommentRowProps {
   comment: EvictionComment;
@@ -34,30 +34,35 @@ export const EvictionCommentRow: React.FC<EvictionCommentRowProps> = ({
   canDelete,
   onDelete,
   deleteLabel,
-}) => (
-  <View style={styles.row}>
-    <Avatar size={40} name={authorName} source={avatarFileId ?? null} variant="thumb" />
-    <View style={styles.body}>
-      <View style={styles.headerRow}>
-        <BloomText style={styles.author} numberOfLines={1}>
-          {authorName}
-        </BloomText>
-        <BloomText style={styles.time}>{time}</BloomText>
-        {canDelete ? (
-          <IconButton
-            icon={RiDeleteBinLine}
-            variant="ghost"
-            size={16}
-            color={colors.textTertiary}
-            accessibilityLabel={deleteLabel}
-            onPress={onDelete}
-          />
-        ) : null}
+}) => {
+  const { colors } = useTheme();
+  return (
+    <View style={styles.row}>
+      <Avatar size={40} name={authorName} source={avatarFileId ?? null} variant="thumb" />
+      <View style={styles.body}>
+        <View style={styles.headerRow}>
+          <BloomText style={styles.author} numberOfLines={1}>
+            {authorName}
+          </BloomText>
+          <BloomText className="text-muted-foreground" style={styles.time}>
+            {time}
+          </BloomText>
+          {canDelete ? (
+            <IconButton
+              icon={RiDeleteBinLine}
+              variant="ghost"
+              size={16}
+              color={colors.textTertiary}
+              accessibilityLabel={deleteLabel}
+              onPress={onDelete}
+            />
+          ) : null}
+        </View>
+        <BloomText style={styles.text}>{comment.body}</BloomText>
       </View>
-      <BloomText style={styles.text}>{comment.body}</BloomText>
     </View>
-  </View>
-);
+  );
+};
 
 const styles = StyleSheet.create({
   row: {
@@ -81,15 +86,12 @@ const styles = StyleSheet.create({
     minWidth: 0,
     fontSize: 14,
     fontWeight: '700',
-    color: colors.text,
   },
   time: {
     fontSize: 12,
-    color: colors.textTertiary,
   },
   text: {
     fontSize: 14,
-    color: colors.text,
     lineHeight: 20,
   },
 });

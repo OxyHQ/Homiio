@@ -95,7 +95,6 @@ import { resolveBackendImageUrl } from '@/utils/imageUrl';
 import { formatRelativeTime } from '@/utils/dateLocale';
 import { confirm } from '@oxy.so/bloom/surfaces';
 import { toast } from '@oxy.so/bloom/toast';
-import { colors } from '@/styles/colors';
 import { radius, spacing } from '@/constants/styles';
 
 const DetailSkeleton: React.FC = () => (
@@ -380,8 +379,10 @@ export default function EvictionDetailScreen() {
             variant="thumb"
           />
           <View style={styles.authorText}>
-            <BloomText style={styles.authorLabel}>{t('evictions.detail.reportedBy')}</BloomText>
-            <BloomText style={styles.authorName} numberOfLines={1}>
+            <BloomText className="text-xs text-muted-foreground">
+              {t('evictions.detail.reportedBy')}
+            </BloomText>
+            <BloomText className="text-sm font-bold text-foreground" numberOfLines={1}>
               {resolveName(eviction.oxyUserId)}
             </BloomText>
           </View>
@@ -391,14 +392,18 @@ export default function EvictionDetailScreen() {
           // Withheld ENTIRELY under a precautionary hold rather than partly
           // redacted: a partial redaction of prose reported as exposing
           // somebody's details is a guess about which sentence did it.
-          <BloomText style={styles.muted}>{t('evictions.detail.descriptionWithheld')}</BloomText>
+          <BloomText className="text-sm text-muted-foreground">
+            {t('evictions.detail.descriptionWithheld')}
+          </BloomText>
         )}
 
         {eviction.organization ? (
           <Card radius="radius-16" style={styles.section} appearance="outline">
             <CardTitle>{t('evictions.detail.organization')}</CardTitle>
-            <BloomText style={styles.organizationName}>{eviction.organization.name}</BloomText>
-            <BloomText style={styles.muted}>
+            <BloomText className="text-[15px] font-bold text-foreground">
+              {eviction.organization.name}
+            </BloomText>
+            <BloomText className="text-sm text-muted-foreground">
               {/* Verification is STRICTLY stronger than authorship, and the
                     UI has to say which one it is showing. */}
               {eviction.organization.channelsVerified
@@ -449,7 +454,9 @@ export default function EvictionDetailScreen() {
                 openFailedLabel={t('evictions.detail.contactFailed')}
               />
               {!eviction.contactInfo ? (
-                <BloomText style={styles.muted}>{t('evictions.detail.noContact')}</BloomText>
+                <BloomText className="text-sm text-muted-foreground">
+                  {t('evictions.detail.noContact')}
+                </BloomText>
               ) : null}
             </>
           )}
@@ -458,7 +465,7 @@ export default function EvictionDetailScreen() {
         <Card radius="radius-16" style={styles.section} appearance="outline">
           <CardTitle>{t('evictions.detail.where')}</CardTitle>
           {hasPin ? (
-            <View style={styles.mapWrap}>
+            <View className="bg-muted" style={styles.mapWrap}>
               <Map
                 style={styles.mapInner}
                 screenId={`eviction-${caseId}`}
@@ -475,7 +482,9 @@ export default function EvictionDetailScreen() {
               />
             </View>
           ) : null}
-          <BloomText style={styles.locationLabel}>{eviction.location.label}</BloomText>
+          <BloomText className="text-sm font-semibold text-foreground">
+            {eviction.location.label}
+          </BloomText>
           <EvictionPrecisionNote
             location={eviction.location}
             moderation={eviction.moderation}
@@ -497,7 +506,9 @@ export default function EvictionDetailScreen() {
         <Card radius="radius-16" style={styles.section} appearance="outline">
           <CardTitle>{t('evictions.detail.timeline')}</CardTitle>
           {timelineEvents.length === 0 ? (
-            <BloomText style={styles.muted}>{t('evictions.timeline.empty')}</BloomText>
+            <BloomText className="text-sm text-muted-foreground">
+              {t('evictions.timeline.empty')}
+            </BloomText>
           ) : (
             <EvictionTimeline
               events={timelineEvents}
@@ -532,7 +543,9 @@ export default function EvictionDetailScreen() {
             {`${t('evictions.detail.comments')}${commentTotal > 0 ? ` · ${commentTotal}` : ''}`}
           </CardTitle>
           {comments.length === 0 ? (
-            <BloomText style={styles.muted}>{t('evictions.comments.empty')}</BloomText>
+            <BloomText className="text-sm text-muted-foreground">
+              {t('evictions.comments.empty')}
+            </BloomText>
           ) : (
             <View>
               {comments.map((comment, index) => {
@@ -596,7 +609,7 @@ export default function EvictionDetailScreen() {
         </Card>
       </View>
 
-      <View style={styles.footer}>
+      <View className="border-t border-border bg-card p-4">
         <Button
           appearance={eviction.isAttending ? 'outline' : 'solid'}
           tone={eviction.isAttending ? 'neutral' : 'accent'}
@@ -658,40 +671,16 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
   },
-  authorLabel: {
-    fontSize: 12,
-    color: colors.textSecondary,
-  },
-  authorName: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: colors.text,
-  },
   section: {
     gap: spacing.md,
     padding: spacing.lg,
   },
-  muted: {
-    fontSize: 14,
-    color: colors.textSecondary,
-  },
   mapWrap: {
     borderRadius: radius.md,
     overflow: 'hidden',
-    backgroundColor: colors.mutedSubtle,
   },
   mapInner: {
     height: 220,
-  },
-  organizationName: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: colors.text,
-  },
-  locationLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.text,
   },
   composer: {
     gap: spacing.sm,
@@ -699,12 +688,6 @@ const styles = StyleSheet.create({
   },
   composerSend: {
     alignSelf: 'flex-end',
-  },
-  footer: {
-    padding: spacing.lg,
-    backgroundColor: colors.surfaceElevated,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
   },
   footerButton: {
     alignSelf: 'stretch',

@@ -35,7 +35,6 @@ import { Text } from '@oxy.so/bloom/typography';
 
 import { SECTION_GUTTER } from '@/components/property/Section';
 import { SindiIcon } from '@/assets/icons';
-import { colors } from '@/styles/colors';
 import { radius, spacing } from '@/constants/styles';
 import { getPropertyTitle } from '@/utils/propertyUtils';
 import type { Property } from '@homiio/shared-types';
@@ -56,7 +55,7 @@ const PROMPT_KEYS = [
 export function SindiSection({ property }: SindiSectionProps) {
   const { t } = useTranslation();
   const { ask } = useAskAgent();
-  const { colors: themeColors } = useTheme();
+  const { colors } = useTheme();
 
   // The listing travels IN the turn, by id, so the question reads "this home"
   // whatever page the sheet is later reopened over.
@@ -77,14 +76,12 @@ export function SindiSection({ property }: SindiSectionProps) {
   return (
     <View>
       <View style={styles.header}>
-        <View style={styles.iconBadge}>
+        <View className="bg-primary" style={styles.iconBadge}>
           <SindiIcon size={SINDI_ICON_SIZE} color={colors.primaryForeground} />
         </View>
         <View style={styles.headerText}>
-          <Text variant="title-3-bold" style={{ color: themeColors.text }}>
-            {t('sindi.property.title')}
-          </Text>
-          <Text variant="body-2-regular" style={{ color: themeColors.textSecondary }}>
+          <Text variant="title-3-bold">{t('sindi.property.title')}</Text>
+          <Text variant="body-2-regular" style={{ color: colors.textSecondary }}>
             {subtitle}
           </Text>
         </View>
@@ -96,7 +93,7 @@ export function SindiSection({ property }: SindiSectionProps) {
             <Chip
               variant="subtle"
               color="success"
-              startIcon={<RiVerifiedBadgeFill width={16} height={16} fill={themeColors.success} />}
+              startIcon={<RiVerifiedBadgeFill width={16} height={16} fill={colors.success} />}
             >
               {t('sindi.property.verified')}
             </Chip>
@@ -144,7 +141,6 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: radius.md,
-    backgroundColor: colors.primaryColor,
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -17,10 +17,10 @@ import { useOxy } from '@oxy.so/services';
 import { Button } from '@oxy.so/bloom/button';
 import { Carousel, CarouselItem } from '@oxy.so/bloom/carousel';
 import { RiArrowRightSLine, RiTimeLine } from '@oxy.so/bloom/icons';
+import { useTheme } from '@oxy.so/bloom/theme';
 
 import type { Property } from '@homiio/shared-types';
 import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
-import { useColors } from '@/hooks/useThemeColor';
 import { PropertyCard } from '@/components/PropertyCard';
 import { BaseWidget } from './BaseWidget';
 
@@ -31,7 +31,7 @@ const CARD_GAP = 12;
 
 export function RecentlyViewedWidget() {
   const { t } = useTranslation();
-  const colors = useColors();
+  const { colors } = useTheme();
   const { oxyServices, activeSessionId } = useOxy();
   const { properties: recentProperties, isLoading, error } = useRecentlyViewed();
 
@@ -51,7 +51,13 @@ export function RecentlyViewedWidget() {
   return (
     <BaseWidget
       title={t('home.recentlyViewed.title')}
-      icon={<RiTimeLine width={HEADER_ICON_SIZE} height={HEADER_ICON_SIZE} fill={colors.primary} />}
+      icon={
+        <RiTimeLine
+          width={HEADER_ICON_SIZE}
+          height={HEADER_ICON_SIZE}
+          fill={colors.primarySubtleForeground}
+        />
+      }
     >
       <Carousel
         accessibilityLabel={t('home.recentlyViewed.title')}

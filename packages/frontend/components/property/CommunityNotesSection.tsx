@@ -32,6 +32,7 @@ import {
 
 import { Button } from '@oxy.so/bloom/button';
 import * as Skeleton from '@oxy.so/bloom/skeleton';
+import { useTheme } from '@oxy.so/bloom/theme';
 import { H1, Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { CommunityNoteCard } from '@/components/property/CommunityNoteCard';
@@ -40,7 +41,6 @@ import { ErrorState } from '@/components/ui/ErrorState';
 import { Stars } from '@/components/ui/Stars';
 import { SectionHeader, SECTION_GUTTER } from '@/components/property/Section';
 import { useAddressReviews } from '@/hooks/useAddressReviews';
-import { colors } from '@/styles/colors';
 import { hairline, radius, spacing } from '@/constants/styles';
 import type { Property, ReviewDTO } from '@homiio/shared-types';
 
@@ -96,13 +96,14 @@ interface RatingSummaryProps {
 
 const RatingSummary: React.FC<RatingSummaryProps> = ({ stats }) => {
   const { t } = useTranslation();
+  const { colors } = useTheme();
   return (
-    <View style={styles.summary}>
+    <View className="border-border" style={styles.summary}>
       <View style={styles.summaryScore}>
         <H1 style={styles.summaryNumber}>{stats.averageRating.toFixed(1)}</H1>
         <View style={styles.summaryScoreMeta}>
           <Stars rating={stats.averageRating} size={SUMMARY_STAR_SIZE} />
-          <BloomText style={styles.summaryCount}>
+          <BloomText className="text-sm text-muted-foreground">
             {t('property.communityNotes.count', { count: stats.totalNotes })}
           </BloomText>
         </View>
@@ -117,12 +118,19 @@ const RatingSummary: React.FC<RatingSummaryProps> = ({ stats }) => {
           const ratio = stats.totalNotes > 0 ? count / stats.totalNotes : 0;
           return (
             <View key={star} style={styles.distributionRow}>
-              <BloomText style={styles.distributionStar}>{star}</BloomText>
-              <RiStarFill width={11} height={11} fill={colors.COLOR_BLACK_LIGHT_5} />
-              <View style={styles.distributionTrack}>
-                <View style={[styles.distributionFill, { width: `${Math.round(ratio * 100)}%` }]} />
+              <BloomText className="text-xs text-muted-foreground" style={styles.distributionStar}>
+                {star}
+              </BloomText>
+              <RiStarFill width={11} height={11} fill={colors.textTertiary} />
+              <View className="bg-muted" style={styles.distributionTrack}>
+                <View
+                  className="bg-foreground"
+                  style={[styles.distributionFill, { width: `${Math.round(ratio * 100)}%` }]}
+                />
               </View>
-              <BloomText style={styles.distributionCount}>{count}</BloomText>
+              <BloomText className="text-xs text-muted-foreground" style={styles.distributionCount}>
+                {count}
+              </BloomText>
             </View>
           );
         })}
@@ -275,7 +283,11 @@ export const CommunityNotesSection: React.FC<CommunityNotesSectionProps> = ({
 
             <View style={styles.notesList}>
               {visibleNotes.map((note, index) => (
-                <View key={note.id} style={[styles.noteRow, index > 0 && styles.noteRowDivider]}>
+                <View
+                  key={note.id}
+                  className={index > 0 ? 'border-border' : undefined}
+                  style={[styles.noteRow, index > 0 && styles.noteRowDivider]}
+                >
                   <CommunityNoteCard note={note} />
                 </View>
               ))}
@@ -338,7 +350,6 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xl,
     marginBottom: spacing.lg,
     borderBottomWidth: hairline.width,
-    borderBottomColor: hairline.color,
   },
   summaryScore: {
     flexDirection: 'row',
@@ -348,15 +359,10 @@ const styles = StyleSheet.create({
   summaryNumber: {
     fontSize: 44,
     fontWeight: '700',
-    color: colors.COLOR_BLACK,
     letterSpacing: -1,
   },
   summaryScoreMeta: {
     gap: spacing.xs,
-  },
-  summaryCount: {
-    fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_3,
   },
   distribution: {
     flex: 1,
@@ -369,8 +375,6 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   distributionStar: {
-    fontSize: 12,
-    color: colors.COLOR_BLACK_LIGHT_3,
     width: 10,
     textAlign: 'right',
   },
@@ -378,17 +382,13 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 6,
     borderRadius: radius.pill,
-    backgroundColor: colors.COLOR_BLACK_LIGHT_7,
     overflow: 'hidden',
   },
   distributionFill: {
     height: '100%',
     borderRadius: radius.pill,
-    backgroundColor: colors.COLOR_BLACK,
   },
   distributionCount: {
-    fontSize: 12,
-    color: colors.COLOR_BLACK_LIGHT_3,
     minWidth: 20,
     textAlign: 'right',
   },
@@ -404,7 +404,6 @@ const styles = StyleSheet.create({
   },
   noteRowDivider: {
     borderTopWidth: hairline.width,
-    borderTopColor: hairline.color,
   },
   actionsRow: {
     flexDirection: 'row',

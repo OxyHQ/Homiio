@@ -9,11 +9,11 @@ import { useTranslation } from 'react-i18next';
 
 import { RiExternalLinkLine, RiMailLine, RiPhoneLine } from '@oxy.so/bloom/icons';
 import { Item } from '@oxy.so/bloom/item';
+import { useTheme } from '@oxy.so/bloom/theme';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { RiWhatsappLine } from '@/components/icons/RiWhatsappLine';
 import { SECTION_GUTTER } from '@/components/property/Section';
-import { colors } from '@/styles/colors';
 import { spacing } from '@/constants/styles';
 import type { Property } from '@homiio/shared-types';
 
@@ -55,20 +55,19 @@ function buildContactLinks(contact: NonNullable<Property['externalContact']>): C
  * bubble would hide which app the link opens.
  */
 function ContactIcon({ kind }: { kind: ContactLink['key'] }) {
+  const { colors } = useTheme();
+  const fill = colors.primarySubtleForeground;
   if (kind === 'phone') {
-    return (
-      <RiPhoneLine width={LINK_ICON_SIZE} height={LINK_ICON_SIZE} fill={colors.primaryColor} />
-    );
+    return <RiPhoneLine width={LINK_ICON_SIZE} height={LINK_ICON_SIZE} fill={fill} />;
   }
   if (kind === 'email') {
-    return <RiMailLine width={LINK_ICON_SIZE} height={LINK_ICON_SIZE} fill={colors.primaryColor} />;
+    return <RiMailLine width={LINK_ICON_SIZE} height={LINK_ICON_SIZE} fill={fill} />;
   }
-  return (
-    <RiWhatsappLine width={LINK_ICON_SIZE} height={LINK_ICON_SIZE} fill={colors.primaryColor} />
-  );
+  return <RiWhatsappLine width={LINK_ICON_SIZE} height={LINK_ICON_SIZE} fill={fill} />;
 }
 
 function ContactLinkRow({ link }: { link: ContactLink }) {
+  const { colors } = useTheme();
   const open = useCallback(async () => {
     try {
       await Linking.openURL(link.href);
@@ -80,19 +79,19 @@ function ContactLinkRow({ link }: { link: ContactLink }) {
   return (
     <Item
       title={link.label}
-      titleStyle={styles.linkText}
+      titleStyle={[styles.linkText, { color: colors.primarySubtleForeground }]}
       leading={<ContactIcon kind={link.key} />}
       trailing={
         <RiExternalLinkLine
           width={TRAILING_ICON_SIZE}
           height={TRAILING_ICON_SIZE}
-          fill={colors.COLOR_BLACK_LIGHT_3}
+          fill={colors.textSecondary}
         />
       }
       onPress={open}
       accessibilityRole="link"
       accessibilityLabel={link.label}
-      style={styles.linkRow}
+      style={{ backgroundColor: colors.backgroundTertiary }}
     />
   );
 }
@@ -110,7 +109,11 @@ export const ExternalContactSection: React.FC<Props> = ({ property }) => {
   return (
     <View style={styles.container}>
       <BloomText style={styles.title}>{t('property.external.contactTitle')}</BloomText>
-      {displayName ? <BloomText style={styles.subtitle}>{displayName}</BloomText> : null}
+      {displayName ? (
+        <BloomText className="text-muted-foreground" style={styles.subtitle}>
+          {displayName}
+        </BloomText>
+      ) : null}
       <View style={styles.links}>
         {links.map((link) => (
           <ContactLinkRow key={link.key} link={link} />
@@ -128,20 +131,14 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 16,
     fontWeight: '600',
-    color: colors.COLOR_BLACK,
   },
   subtitle: {
     fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_3,
   },
   links: {
     gap: spacing.xs,
   },
-  linkRow: {
-    backgroundColor: colors.mutedSubtle,
-  },
   linkText: {
-    color: colors.primaryColor,
     fontWeight: '500',
   },
 });

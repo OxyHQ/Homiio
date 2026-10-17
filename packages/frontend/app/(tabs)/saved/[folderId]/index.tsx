@@ -23,7 +23,6 @@ import { ListSkeleton } from '@/components/ui/ListSkeleton';
 import { PropertyResultsGrid } from '@/components/ui/PropertyResultsGrid';
 import savedPropertyService from '@/services/savedPropertyService';
 import savedPropertyFolderService from '@/services/savedPropertyFolderService';
-import { colors } from '@/styles/colors';
 import { spacing } from '@/constants/styles';
 import { propertiesInFolder } from '@/utils/savedFolders';
 import type { Property } from '@homiio/shared-types';
@@ -93,7 +92,7 @@ export default function SavedFolderScreen() {
       const note = notesById.get(property.id as string);
       if (!note) return undefined;
       return (
-        <BloomText style={styles.noteText} numberOfLines={2}>
+        <BloomText className="pt-1 text-[13px] text-muted-foreground" numberOfLines={2}>
           {note}
         </BloomText>
       );
@@ -217,11 +216,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
     paddingBottom: spacing['4xl'],
-  },
-  noteText: {
-    fontSize: 13,
-    color: colors.muted,
-    paddingTop: spacing.xs,
   },
   emptyInner: {
     paddingVertical: spacing['4xl'],

@@ -2,13 +2,12 @@ import type React from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
 import * as Skeleton from '@oxy.so/bloom/skeleton';
 import { TextLines } from './TextLines';
-import { colors } from '@/styles/colors';
 
 export const PropertyDetailSkeleton: React.FC = () => {
   return (
-    <View style={styles.container}>
+    <View className="flex-1 bg-background">
       {/* Header image skeleton */}
-      <Skeleton.Box width="100%" height={250} borderRadius={0} style={styles.headerImage} />
+      <Skeleton.Box width="100%" height={250} borderRadius={0} />
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Title and location */}
@@ -34,13 +33,7 @@ export const PropertyDetailSkeleton: React.FC = () => {
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             <View style={styles.galleryRow}>
               {Array.from({ length: 3 }).map((_, index) => (
-                <Skeleton.Box
-                  key={index}
-                  width={120}
-                  height={90}
-                  borderRadius={8}
-                  style={styles.galleryImage}
-                />
+                <Skeleton.Box key={index} width={120} height={90} borderRadius={8} />
               ))}
             </View>
           </ScrollView>
@@ -61,7 +54,7 @@ export const PropertyDetailSkeleton: React.FC = () => {
 
         {/* Property details card */}
         <View style={styles.section}>
-          <View style={styles.card}>
+          <View className="border-border bg-card" style={styles.card}>
             <Skeleton.Box width="50%" height={18} style={styles.cardTitle} />
             {Array.from({ length: 5 }).map((_, index) => (
               <View key={index} style={styles.detailRow}>
@@ -74,7 +67,7 @@ export const PropertyDetailSkeleton: React.FC = () => {
 
         {/* Features section */}
         <View style={styles.section}>
-          <View style={styles.card}>
+          <View className="border-border bg-card" style={styles.card}>
             <Skeleton.Box width="40%" height={18} style={styles.cardTitle} />
             <View style={styles.featuresGrid}>
               {Array.from({ length: 6 }).map((_, index) => (
@@ -89,7 +82,7 @@ export const PropertyDetailSkeleton: React.FC = () => {
 
         {/* Pricing section */}
         <View style={styles.section}>
-          <View style={styles.card}>
+          <View className="border-border bg-card" style={styles.card}>
             <Skeleton.Box width="30%" height={18} style={styles.cardTitle} />
             <Skeleton.Box width="60%" height={28} style={{ marginTop: 12 }} />
             {Array.from({ length: 3 }).map((_, index) => (
@@ -103,7 +96,7 @@ export const PropertyDetailSkeleton: React.FC = () => {
 
         {/* Location section */}
         <View style={styles.section}>
-          <View style={styles.card}>
+          <View className="border-border bg-card" style={styles.card}>
             <Skeleton.Box width="35%" height={18} style={styles.cardTitle} />
             <Skeleton.Box width="100%" height={200} borderRadius={12} style={{ marginTop: 12 }} />
             <TextLines
@@ -121,7 +114,7 @@ export const PropertyDetailSkeleton: React.FC = () => {
       </ScrollView>
 
       {/* Action bar skeleton */}
-      <View style={styles.actionBar}>
+      <View className="border-border bg-card" style={styles.actionBar}>
         <View style={styles.priceSection}>
           <Skeleton.Box width={80} height={20} />
           <Skeleton.Box width={60} height={16} style={{ marginTop: 4 }} />
@@ -133,13 +126,6 @@ export const PropertyDetailSkeleton: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.primaryLight,
-  },
-  headerImage: {
-    backgroundColor: colors.COLOR_BLACK_LIGHT_6,
-  },
   content: {
     flex: 1,
   },
@@ -161,9 +147,6 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingHorizontal: 16,
   },
-  galleryImage: {
-    backgroundColor: colors.COLOR_BLACK_LIGHT_6,
-  },
   sectionTitle: {
     marginBottom: 16,
   },
@@ -177,11 +160,9 @@ const styles = StyleSheet.create({
     width: '22%',
   },
   card: {
-    backgroundColor: colors.white,
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
-    borderColor: colors.border,
   },
   cardTitle: {
     marginBottom: 16,
@@ -209,14 +190,12 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: colors.white,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderTopWidth: 1,
-    borderTopColor: colors.COLOR_BLACK_LIGHT_6,
   },
   priceSection: {
     flex: 1,

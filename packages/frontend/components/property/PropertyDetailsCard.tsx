@@ -9,10 +9,10 @@ import {
   RiHome4Line,
   type Props as IconProps,
 } from '@oxy.so/bloom/icons';
+import { useTheme } from '@oxy.so/bloom/theme';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { Section } from '@/components/property/Section';
-import { colors } from '@/styles/colors';
 import { spacing } from '@/constants/styles';
 import type { Property } from '@homiio/shared-types';
 
@@ -31,6 +31,7 @@ interface DetailFact {
 
 export const PropertyDetailsCard: React.FC<Props> = ({ property }) => {
   const { t } = useTranslation();
+  const { colors } = useTheme();
   const type = property?.type;
   const floor = property?.floor;
   const yearBuilt = property?.yearBuilt;
@@ -76,14 +77,12 @@ export const PropertyDetailsCard: React.FC<Props> = ({ property }) => {
       <View style={styles.grid}>
         {facts.map(({ key, icon: Icon, label, value }) => (
           <View key={key} style={styles.item}>
-            <Icon width={ICON_SIZE} height={ICON_SIZE} fill={colors.COLOR_BLACK_LIGHT_3} />
+            <Icon width={ICON_SIZE} height={ICON_SIZE} fill={colors.textSecondary} />
             <View style={styles.text}>
-              <BloomText variant="body-2-regular" style={styles.label}>
+              <BloomText variant="body-2-regular" style={{ color: colors.textSecondary }}>
                 {label}
               </BloomText>
-              <BloomText variant="headline-semibold" style={styles.value}>
-                {value}
-              </BloomText>
+              <BloomText variant="headline-semibold">{value}</BloomText>
             </View>
           </View>
         ))}
@@ -100,6 +99,4 @@ const styles = StyleSheet.create({
   },
   item: { width: '50%', flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
   text: { flex: 1, gap: 2 },
-  label: { color: colors.COLOR_BLACK_LIGHT_3 },
-  value: { color: colors.COLOR_BLACK },
 });

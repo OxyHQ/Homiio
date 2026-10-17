@@ -27,6 +27,7 @@ import {
 } from '@oxy.so/bloom/icons';
 import { Loading } from '@oxy.so/bloom/loading';
 import { Search } from '@oxy.so/bloom/search';
+import { useTheme } from '@oxy.so/bloom/theme';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { ZoomableImage } from '@/components/ui/ZoomableImage';
@@ -37,7 +38,6 @@ import { RoomFilters, type RoomFilterOptions } from '@/components/RoomFilters';
 import { PropertyType, formatArea, formatMoney } from '@homiio/shared-types';
 import { SEARCH_PRICE_CURRENCY } from '@/components/search/types';
 import { useFormatting } from '@/utils/format';
-import { useColors } from '@/hooks/useThemeColor';
 import { spacing } from '@/constants/styles';
 
 const FEATURE_ICON_SIZE = 16;
@@ -58,7 +58,7 @@ interface RoomCardProps {
 const RoomCard = React.memo(({ property, matchScore }: RoomCardProps) => {
   const router = useRouter();
   const { t } = useTranslation();
-  const palette = useColors();
+  const { colors } = useTheme();
   const formatting = useFormatting();
   const { locale, areaUnitLabels } = formatting;
   // Hover anywhere on the card zooms its photo (web). No card transform.
@@ -99,14 +99,8 @@ const RoomCard = React.memo(({ property, matchScore }: RoomCardProps) => {
               <Image source={{ uri: primaryImage }} style={styles.roomImage} resizeMode="cover" />
             </ZoomableImage>
           ) : (
-            <View
-              style={[
-                styles.roomImage,
-                styles.placeholderImage,
-                { backgroundColor: palette.backgroundSecondary },
-              ]}
-            >
-              <RiImageLine size="2xl" fill={palette.textTertiary} />
+            <View className="bg-surface" style={[styles.roomImage, styles.placeholderImage]}>
+              <RiImageLine size="2xl" fill={colors.textTertiary} />
             </View>
           )}
           {score > 0 ? (
@@ -125,12 +119,12 @@ const RoomCard = React.memo(({ property, matchScore }: RoomCardProps) => {
             <BloomText style={styles.roomName} numberOfLines={1}>
               {title}
             </BloomText>
-            <BloomText style={[styles.price, { color: palette.primary }]}>
+            <BloomText className="text-base font-bold text-primary-text">
               {formattedPrice}
             </BloomText>
           </View>
 
-          <BloomText style={[styles.location, { color: palette.textSecondary }]} numberOfLines={1}>
+          <BloomText className="text-muted-foreground" style={styles.location} numberOfLines={1}>
             {[property.address?.cityName, property.address?.regionName].filter(Boolean).join(', ')}
           </BloomText>
 
@@ -139,9 +133,9 @@ const RoomCard = React.memo(({ property, matchScore }: RoomCardProps) => {
               <RiHotelBedLine
                 width={FEATURE_ICON_SIZE}
                 height={FEATURE_ICON_SIZE}
-                fill={palette.textSecondary}
+                fill={colors.textSecondary}
               />
-              <BloomText style={[styles.featureText, { color: palette.textSecondary }]}>
+              <BloomText className="text-[13px] text-muted-foreground">
                 {property.type === PropertyType.ROOM
                   ? t('roommates.rooms.roomType')
                   : propertyService.getPropertyTypeDisplay(property.type)}
@@ -152,9 +146,9 @@ const RoomCard = React.memo(({ property, matchScore }: RoomCardProps) => {
                 <RiExpandDiagonalSLine
                   width={FEATURE_ICON_SIZE}
                   height={FEATURE_ICON_SIZE}
-                  fill={palette.textSecondary}
+                  fill={colors.textSecondary}
                 />
-                <BloomText style={[styles.featureText, { color: palette.textSecondary }]}>
+                <BloomText className="text-[13px] text-muted-foreground">
                   {formatArea(property.squareFootage, 'sqm', locale, { labels: areaUnitLabels })}
                 </BloomText>
               </View>
@@ -163,9 +157,9 @@ const RoomCard = React.memo(({ property, matchScore }: RoomCardProps) => {
               <RiGroupLine
                 width={FEATURE_ICON_SIZE}
                 height={FEATURE_ICON_SIZE}
-                fill={palette.textSecondary}
+                fill={colors.textSecondary}
               />
-              <BloomText style={[styles.featureText, { color: palette.textSecondary }]}>
+              <BloomText className="text-[13px] text-muted-foreground">
                 {t('roommates.rooms.capacity', { count: maxOccupants })}
               </BloomText>
             </View>
@@ -190,7 +184,7 @@ RoomCard.displayName = 'RoomCard';
 export function RoomList({ filters, onFilterChange }: RoomListProps) {
   const { t } = useTranslation();
   const { locale } = useFormatting();
-  const palette = useColors();
+  const { colors } = useTheme();
   // A rent filter bound carries the search-filter currency, like every other
   // numeric price filter in the app.
   const rentBound = (value: unknown): string =>
@@ -305,7 +299,7 @@ export function RoomList({ filters, onFilterChange }: RoomListProps) {
 
   return (
     <View style={styles.container}>
-      <View style={[styles.header, { borderBottomColor: palette.border }]}>
+      <View className="border-border" style={styles.header}>
         <View style={styles.searchBar}>
           <Search
             label={t('roommates.rooms.searchPlaceholder')}
@@ -329,7 +323,8 @@ export function RoomList({ filters, onFilterChange }: RoomListProps) {
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          style={[styles.filtersRow, { borderBottomColor: palette.border }]}
+          className="border-border"
+          style={styles.filtersRow}
           contentContainerStyle={styles.filtersContent}
         >
           {activeFilterChips.map(([key, value]) => {
@@ -376,8 +371,8 @@ export function RoomList({ filters, onFilterChange }: RoomListProps) {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={() => void handleRefresh()}
-            colors={[palette.primary]}
-            tintColor={palette.primary}
+            colors={[colors.primary]}
+            tintColor={colors.primary}
           />
         }
       />
@@ -471,10 +466,6 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: spacing.sm,
   },
-  price: {
-    fontSize: 16,
-    fontWeight: '700',
-  },
   location: {
     fontSize: 14,
     marginBottom: spacing.md,
@@ -489,9 +480,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-  },
-  featureText: {
-    fontSize: 13,
   },
   availability: {
     alignSelf: 'flex-start',

@@ -41,6 +41,7 @@ import {
   RiStethoscopeLine,
 } from '@oxy.so/bloom/icons';
 import * as Skeleton from '@oxy.so/bloom/skeleton';
+import { useTheme } from '@oxy.so/bloom/theme';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { Section } from '@/components/property/Section';
@@ -53,7 +54,6 @@ import {
 } from '@/components/property/DetailIconGrid';
 import { getIconArt } from '@/constants/iconArt';
 import { useNearbyServices } from '@/hooks';
-import { colors } from '@/styles/colors';
 import { radius, spacing } from '@/constants/styles';
 import {
   formatDistance,
@@ -206,6 +206,7 @@ interface NearbyServicesContentProps {
 
 const NearbyServicesContent: React.FC<NearbyServicesContentProps> = ({ t, data }) => {
   const { locale } = useFormatting();
+  const { colors } = useTheme();
   const { categories, partial, radiusM } = data;
 
   // Present first (nearest → farthest), then absent. Sorting buys a tidy "what's
@@ -247,7 +248,10 @@ const NearbyServicesContent: React.FC<NearbyServicesContentProps> = ({ t, data }
         ))}
       </DetailIconGrid>
       {partial ? (
-        <BloomText variant="caption-1-regular" style={styles.partialNote}>
+        <BloomText
+          variant="caption-1-regular"
+          style={[styles.partialNote, { color: colors.textSecondary }]}
+        >
           {t('property.nearbyServices.partialNote')}
         </BloomText>
       ) : null}
@@ -261,7 +265,6 @@ const SKELETON_ROWS = ['s1', 's2', 's3', 's4', 's5', 's6', 's7', 's8'] as const;
 const styles = StyleSheet.create({
   partialNote: {
     marginTop: spacing.lg,
-    color: colors.COLOR_BLACK_LIGHT_4,
     fontStyle: 'italic',
   },
 });

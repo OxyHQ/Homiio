@@ -24,6 +24,7 @@ import {
   RiFolderLine,
   RiGlobalLine,
   RiCoinsLine,
+  RiPaletteLine,
   RiLogoutBoxRLine,
   RiNotification3Line,
   RiEqualizerLine,
@@ -36,7 +37,12 @@ import {
 } from '@oxy.so/bloom/icons';
 import { PageHeader } from '@oxy.so/bloom/page-header';
 import { Switch } from '@oxy.so/bloom/switch';
-import { useTheme } from '@oxy.so/bloom/theme';
+import { useBloomTheme, useTheme } from '@oxy.so/bloom/theme';
+import {
+  SegmentedControl,
+  SegmentedControlItem,
+  SegmentedControlItemText,
+} from '@oxy.so/bloom/segmented-control';
 import { SettingsListGroup, SettingsListItem } from '@oxy.so/bloom/settings-list';
 
 import { confirm } from '@oxy.so/bloom/surfaces';
@@ -44,12 +50,15 @@ import { useCurrency } from '@/hooks/useCurrency';
 import { SettingsRowIcon, settingsScreenStyles } from '@/components/profile/SettingsRowIcon';
 import { LogoIcon } from '@/assets/logo';
 
+const THEME_MODES = ['system', 'light', 'dark'] as const;
+
 export default function SettingsScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const { user, showBottomSheet, logout } = useOxy();
   const { getCurrentCurrency } = useCurrency();
   const { colors: theme } = useTheme();
+  const { mode, setMode } = useBloomTheme();
 
   const [notifications, setNotifications] = useState(true);
   const [autoSync, setAutoSync] = useState(true);
@@ -141,13 +150,27 @@ export default function SettingsScreen() {
             value={`${currentCurrencyInfo.symbol} ${currentCurrencyInfo.code}`}
             onPress={() => router.push('/settings/currency')}
           />
-          {/*
-            Dark mode toggle intentionally omitted: the app currently renders a
-            single light theme (static `colors.ts` is light-only; Bloom is pinned
-            to light in app/_layout.tsx). A live toggle would be misleading until
-            the reactive color migration lands. Re-add a wired Switch here once
-            components consume `useColors()` for live light/dark values.
-          */}
+          <SettingsListItem
+            icon={<SettingsRowIcon icon={RiPaletteLine} />}
+            title={t('settings.appearance.title')}
+            rightElement={
+              <SegmentedControl
+                type="radio"
+                size="sm"
+                label={t('settings.appearance.title')}
+                value={mode === 'light' || mode === 'dark' ? mode : 'system'}
+                onValueChange={setMode}
+              >
+                {THEME_MODES.map((value) => (
+                  <SegmentedControlItem key={value} value={value}>
+                    <SegmentedControlItemText>
+                      {t(`settings.appearance.${value}`)}
+                    </SegmentedControlItemText>
+                  </SegmentedControlItem>
+                ))}
+              </SegmentedControl>
+            }
+          />
         </SettingsListGroup>
 
         <SettingsListGroup title={t('settings.sections.notifications')}>

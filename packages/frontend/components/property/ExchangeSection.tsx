@@ -27,10 +27,10 @@ import {
   RiRepeatLine,
   RiRestaurantLine,
 } from '@oxy.so/bloom/icons';
+import { useTheme } from '@oxy.so/bloom/theme';
 
 import { ExchangeMode, type PropertyExchange } from '@homiio/shared-types';
 import { Section } from '@/components/property/Section';
-import { colors } from '@/styles/colors';
 import { spacing } from '@/constants/styles';
 
 interface Props {
@@ -83,15 +83,21 @@ interface FactRowProps {
   label: string;
 }
 
-const FactRow: React.FC<FactRowProps> = ({ icon: Icon, label }) => (
-  <View style={styles.factRow}>
-    <Icon width={16} height={16} fill={colors.exchangeAccent} />
-    <BloomText style={styles.factText}>{label}</BloomText>
-  </View>
-);
+const FactRow: React.FC<FactRowProps> = ({ icon: Icon, label }) => {
+  const { colors } = useTheme();
+  return (
+    <View style={styles.factRow}>
+      <Icon width={16} height={16} fill={colors.tertiarySubtleForeground} />
+      <BloomText className="text-foreground" style={styles.factText}>
+        {label}
+      </BloomText>
+    </View>
+  );
+};
 
 export const ExchangeSection: React.FC<Props> = ({ exchange, onRequestExchange }) => {
   const { t } = useTranslation();
+  const { colors } = useTheme();
 
   const mode = MODE_COPY[exchange.mode] ?? MODE_COPY[ExchangeMode.BOTH];
 
@@ -124,12 +130,20 @@ export const ExchangeSection: React.FC<Props> = ({ exchange, onRequestExchange }
     <Section title={t('listing.exchange.sectionTitle')}>
       {/* Mode */}
       <View style={styles.modeRow}>
-        <View style={styles.modeBadge}>
-          <RiArrowLeftRightLine width={ICON_SIZE} height={ICON_SIZE} fill={colors.exchangeAccent} />
+        <View className="h-10 w-10 items-center justify-center rounded-full bg-tertiary-subtle">
+          <RiArrowLeftRightLine
+            width={ICON_SIZE}
+            height={ICON_SIZE}
+            fill={colors.tertiarySubtleForeground}
+          />
         </View>
         <View style={styles.modeText}>
-          <BloomText style={styles.modeTitle}>{t(mode.titleKey)}</BloomText>
-          <BloomText style={styles.modeHelp}>{t(mode.helpKey)}</BloomText>
+          <BloomText className="text-foreground" style={styles.modeTitle}>
+            {t(mode.titleKey)}
+          </BloomText>
+          <BloomText className="text-muted-foreground" style={styles.modeHelp}>
+            {t(mode.helpKey)}
+          </BloomText>
         </View>
       </View>
 
@@ -137,7 +151,9 @@ export const ExchangeSection: React.FC<Props> = ({ exchange, onRequestExchange }
       {exchange.welcomeNote ? (
         <>
           <Divider />
-          <BloomText style={styles.welcomeNote}>{exchange.welcomeNote}</BloomText>
+          <BloomText className="text-foreground" style={styles.welcomeNote}>
+            {exchange.welcomeNote}
+          </BloomText>
         </>
       ) : null}
 
@@ -146,19 +162,19 @@ export const ExchangeSection: React.FC<Props> = ({ exchange, onRequestExchange }
         <>
           <Divider />
           <View style={styles.block}>
-            <BloomText style={styles.blockLabel}>
+            <BloomText className="text-muted-foreground" style={styles.blockLabel}>
               {t('listing.exchange.availabilityTitle')}
             </BloomText>
             {windows.map((window) => (
               <View key={`${window.start}_${window.end}`} style={styles.windowRow}>
-                <RiCalendarLine width={15} height={15} fill={colors.COLOR_BLACK_LIGHT_3} />
-                <BloomText style={styles.windowText}>
+                <RiCalendarLine width={15} height={15} fill={colors.textSecondary} />
+                <BloomText className="text-foreground" style={styles.windowText}>
                   {formatWindow(window.start, window.end)}
                 </BloomText>
               </View>
             ))}
             {extraWindows > 0 ? (
-              <BloomText style={styles.moreWindows}>
+              <BloomText className="text-muted-foreground" style={styles.moreWindows}>
                 {t('listing.exchange.moreWindows', {
                   count: extraWindows,
                 })}
@@ -215,14 +231,6 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     paddingBottom: spacing.sm,
   },
-  modeBadge: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.exchangeSubtle,
-  },
   modeText: {
     flex: 1,
     gap: 2,
@@ -230,16 +238,13 @@ const styles = StyleSheet.create({
   modeTitle: {
     fontSize: 17,
     fontWeight: '700',
-    color: colors.COLOR_BLACK,
   },
   modeHelp: {
     fontSize: 14,
-    color: colors.COLOR_BLACK_LIGHT_3,
   },
   welcomeNote: {
     fontSize: 15,
     lineHeight: 22,
-    color: colors.COLOR_BLACK_LIGHT_2,
     paddingVertical: spacing.sm,
   },
   block: {
@@ -249,7 +254,6 @@ const styles = StyleSheet.create({
   blockLabel: {
     fontSize: 13,
     fontWeight: '700',
-    color: colors.COLOR_BLACK_LIGHT_3,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginBottom: spacing.xs,
@@ -261,11 +265,9 @@ const styles = StyleSheet.create({
   },
   windowText: {
     fontSize: 15,
-    color: colors.COLOR_BLACK,
   },
   moreWindows: {
     fontSize: 13,
-    color: colors.COLOR_BLACK_LIGHT_4,
     marginTop: 2,
   },
   factGrid: {
@@ -279,7 +281,6 @@ const styles = StyleSheet.create({
   },
   factText: {
     fontSize: 15,
-    color: colors.COLOR_BLACK,
     flex: 1,
   },
   cta: {

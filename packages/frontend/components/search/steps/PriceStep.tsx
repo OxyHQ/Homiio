@@ -26,7 +26,7 @@
  */
 import type React from 'react';
 import { useCallback, useMemo } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { PriceRangeFilter, SegmentedFilter } from '@oxy.so/bloom/stay-filters';
@@ -37,8 +37,6 @@ import { OfferingType, formatMoney, type ListingCurrency } from '@homiio/shared-
 import { SEARCH_PRICE_CURRENCY } from '@/components/search/types';
 import type { SearchPriceHistogram } from '@/hooks/useSearchPriceHistogram';
 import { useFormatting } from '@/utils/format';
-import { useColors } from '@/hooks/useThemeColor';
-import { spacing } from '@/constants/styles';
 
 /** A slider track: its top is "no maximum", and `step` is its granularity. */
 export interface PriceTrack {
@@ -144,15 +142,14 @@ export const PriceHistogramNote: React.FC<{ histogram?: SearchPriceHistogram }> 
   histogram,
 }) => {
   const { t } = useTranslation();
-  const colors = useColors();
   if (!histogram) return null;
   return (
-    <View style={styles.note}>
-      <BloomText style={[styles.noteText, { color: colors.textSecondary }]}>
+    <View className="gap-1">
+      <BloomText className="text-xs text-muted-foreground">
         {t('search.step.price.inCurrency', { currency: histogram.currency })}
       </BloomText>
       {histogram.otherCurrencyCount > 0 ? (
-        <BloomText style={[styles.noteText, { color: colors.textSecondary }]}>
+        <BloomText className="text-xs text-muted-foreground">
           {t('search.step.price.otherCurrency', { count: histogram.otherCurrencyCount })}
         </BloomText>
       ) : null}
@@ -209,7 +206,6 @@ export const PriceStep: React.FC<PriceStepProps> = ({
   onChange,
 }) => {
   const { t } = useTranslation();
-  const colors = useColors();
   const track = priceTrackFor(offering);
   const formatPrice = usePriceFormatter(track, histogram?.currency);
   const unitKey = priceUnitKey(offering);
@@ -232,9 +228,9 @@ export const PriceStep: React.FC<PriceStepProps> = ({
   );
 
   return (
-    <View style={styles.container}>
+    <View className="gap-3">
       {unitKey ? (
-        <BloomText style={[styles.unit, { color: colors.textSecondary }]}>{t(unitKey)}</BloomText>
+        <BloomText className="text-sm text-muted-foreground">{t(unitKey)}</BloomText>
       ) : null}
       <PriceRangeFilter
         buckets={histogram?.counts}
@@ -259,18 +255,3 @@ export const PriceStep: React.FC<PriceStepProps> = ({
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    gap: spacing.md,
-  },
-  unit: {
-    fontSize: 14,
-  },
-  note: {
-    gap: spacing.xs,
-  },
-  noteText: {
-    fontSize: 12,
-  },
-});

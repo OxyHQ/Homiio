@@ -5,68 +5,48 @@
  * shares one look; future icon buttons reuse it too.
  *
  * Variants:
- *  - `ghost`   flat transparent circle, pressed/hover → `mutedSubtle` bg (the
- *              shared header/bar look) — headers, bars.
- *  - `overlay` frosted-white circle for on-photo use (card save heart, gallery).
+ *  - `ghost`   flat transparent circle, pressed/hover → `bg-muted` (the shared
+ *              header/bar look) — headers, bars.
+ *  - `overlay` frosted card-surface circle for on-photo use (card save heart,
+ *              gallery).
  *  - `filled`  brand-fill circle with a `primaryForeground` glyph.
  *
- * Owns its own pressed + web-hover state via STATIC style arrays — never the
+ * Owns its own pressed + web-hover state via STATIC class strings — never the
  * NativeWind-incompatible function-form `style` (AGENTS.md §NativeWind Pressable).
  * Standalone component, so it is safe inside a `.map` / a component array.
  */
 import type React from 'react';
 import { useState } from 'react';
-import {
-  Platform,
-  Pressable,
-  StyleSheet,
-  View,
-  type StyleProp,
-  type ViewStyle,
-} from 'react-native';
+import { Platform, Pressable, View, type StyleProp, type ViewStyle } from 'react-native';
 import type { ButtonIconComponent } from '@oxy.so/bloom/button';
 import { Loading } from '@oxy.so/bloom/loading';
+import { type ThemeColors, useTheme } from '@oxy.so/bloom/theme';
 
-import { colors } from '@/styles/colors';
-import {
-  barIconButton,
-  barIconButtonPressed,
-  barIconSize,
-  radius,
-  spacing,
-} from '@/constants/styles';
+import { barIconSize } from '@/constants/styles';
 
 type IconButtonVariant = 'ghost' | 'overlay' | 'filled';
 
 const IS_WEB = Platform.OS === 'web';
 
-/** Base chrome per variant. `ghost` reuses the shared bar token. */
-const VARIANT_BASE: Record<IconButtonVariant, ViewStyle> = {
-  ghost: barIconButton,
-  overlay: {
-    padding: spacing.sm,
-    borderRadius: radius.pill,
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-  },
-  filled: {
-    padding: spacing.sm,
-    borderRadius: radius.pill,
-    backgroundColor: colors.primaryColor,
-  },
+/** Base chrome per variant. */
+const VARIANT_BASE: Record<IconButtonVariant, string> = {
+  ghost: 'p-2 rounded-full',
+  overlay: 'p-2 rounded-full bg-card/95',
+  filled: 'p-2 rounded-full bg-primary',
 };
 
 /** Pressed/hovered tint per variant. */
-const VARIANT_ACTIVE: Record<IconButtonVariant, ViewStyle> = {
-  ghost: barIconButtonPressed,
-  overlay: { backgroundColor: colors.white },
-  filled: { opacity: 0.9 },
+const VARIANT_ACTIVE: Record<IconButtonVariant, string> = {
+  ghost: 'bg-muted',
+  overlay: 'bg-card',
+  filled: 'opacity-90',
 };
 
 /** Default glyph colour per variant when the caller doesn't override `color`. */
-const VARIANT_ICON_COLOR: Record<IconButtonVariant, string> = {
-  ghost: colors.COLOR_BLACK,
-  overlay: colors.COLOR_BLACK,
-  filled: colors.primaryForeground,
+const VARIANT_ICON_COLOR: Record<IconButtonVariant, keyof ThemeColors> = {
+  ghost: 'text',
+  overlay: 'text',
+  filled: 'primaryForeground',
 };
 
 interface IconButtonProps {
@@ -107,11 +87,13 @@ export const IconButton: React.FC<IconButtonProps> = ({
   badge,
   style,
 }) => {
+  const { colors } = useTheme();
   const [pressed, setPressed] = useState(false);
   const [hovered, setHovered] = useState(false);
   const interactive = pressed || hovered;
 
-  const glyphColor = active && activeColor ? activeColor : (color ?? VARIANT_ICON_COLOR[variant]);
+  const glyphColor =
+    active && activeColor ? activeColor : (color ?? colors[VARIANT_ICON_COLOR[variant]]);
 
   const glyph = loading ? (
     <Loading iconSize={size} color={glyphColor} showText={false} />
@@ -131,15 +113,13 @@ export const IconButton: React.FC<IconButtonProps> = ({
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       accessibilityState={{ disabled }}
-      style={[
-        VARIANT_BASE[variant],
-        interactive && !disabled ? VARIANT_ACTIVE[variant] : null,
-        disabled ? styles.disabled : null,
-        style,
-      ]}
+      className={`${VARIANT_BASE[variant]} ${
+        disabled ? 'opacity-60' : interactive ? VARIANT_ACTIVE[variant] : ''
+      }`}
+      style={style}
     >
       {badge ? (
-        <View style={styles.badgeWrap}>
+        <View className="relative">
           {glyph}
           {badge}
         </View>
@@ -149,12 +129,3 @@ export const IconButton: React.FC<IconButtonProps> = ({
     </Pressable>
   );
 };
-
-const styles = StyleSheet.create({
-  badgeWrap: {
-    position: 'relative',
-  },
-  disabled: {
-    opacity: 0.6,
-  },
-});

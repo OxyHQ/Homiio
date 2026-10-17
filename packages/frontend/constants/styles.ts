@@ -14,24 +14,20 @@
  *   <View style={{ gap: spacing.lg, padding: spacing.xl }} />
  */
 import { Platform, type ViewStyle } from 'react-native';
-import { colors } from '@/styles/colors';
-import { shadowToken } from '@/styles/shadows';
-
-type ShadowStyle = Pick<ViewStyle, 'boxShadow' | 'elevation'>;
+import { bloomShadowStyle } from '@oxy.so/bloom/design-tokens';
 
 export type ShadowLevel = 'sm' | 'md' | 'lg';
 
 /**
- * Three elevation tiers. All platforms get a cross-platform `boxShadow`
- * (RN 0.83 supports it on web AND native); Android additionally keeps
- * `elevation` since `boxShadow` alone does not reproduce native elevation.
- * Color uses pure black with low opacity so the shadow tints any surface the
- * card sits on (cream, white, light gray) the same way.
+ * Three elevation tiers, backed by Bloom's shadow roles (Bloom owns the
+ * web `boxShadow` / native `shadow*` + `elevation` split): `sm` is Bloom's
+ * subtle `s`, `md` its `floating` rung (between `s` and `m`), `lg` its overlay
+ * `m` (menus, popovers).
  */
-export const cardShadow: Record<ShadowLevel, ShadowStyle> = {
-  sm: shadowToken({ y: 1, blur: 4, color: colors.COLOR_BLACK, opacity: 0.06, elevation: 2 }),
-  md: shadowToken({ y: 4, blur: 12, color: colors.COLOR_BLACK, opacity: 0.08, elevation: 5 }),
-  lg: shadowToken({ y: 12, blur: 32, color: colors.COLOR_BLACK, opacity: 0.12, elevation: 12 }),
+export const cardShadow: Record<ShadowLevel, ViewStyle> = {
+  sm: bloomShadowStyle('s'),
+  md: bloomShadowStyle('floating'),
+  lg: bloomShadowStyle('m'),
 };
 
 /**
@@ -130,7 +126,6 @@ export const tracker = {
  */
 export const hairline = {
   width: Platform.OS === 'web' ? 1 : 0.5,
-  color: 'rgba(0, 0, 0, 0.08)',
 } as const;
 
 /**
@@ -150,26 +145,6 @@ export const contentClamp = {
  * (`px-4`), 32px from `md` (`px-8`).
  */
 export const PAGE_GUTTER_CLASS = 'px-4 md:px-8';
-
-/**
- * Shared bar chrome for the bars Bloom `PageHeader` does not draw (the property
- * floating-header actions, `IconButton`, `SaveButton`). Page headers are
- * Bloom `PageHeader`s and take none of these.
- *
- * - `barIconButton` (+ `barIconButtonPressed`): ONE circular icon button for the
- *   back button and every left/right icon action. Pair the two via a `pressed`
- *   `useState` + a static style array — never the NativeWind-incompatible
- *   function-form `style` (§NativeWind Pressable).
- * - `barIconSize`: ONE compact glyph scale (`20`) for bar action icons.
- */
-export const barIconButton: ViewStyle = {
-  padding: spacing.sm,
-  borderRadius: radius.pill,
-};
-
-export const barIconButtonPressed: ViewStyle = {
-  backgroundColor: colors.mutedSubtle,
-};
 
 /** Glyph size for bar action icons (share, save, host, …). */
 export const barIconSize = 20;

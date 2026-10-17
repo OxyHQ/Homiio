@@ -12,12 +12,12 @@ import { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { RiTimeLine } from '@oxy.so/bloom/icons';
+import { useTheme } from '@oxy.so/bloom/theme';
 import { differenceInCalendarDays } from 'date-fns';
 
 import { Text as BloomText } from '@oxy.so/bloom/typography';
 
 import { usePropertyStats } from '@/hooks';
-import { colors } from '@/styles/colors';
 import { spacing } from '@/constants/styles';
 
 interface DemandSignalProps {
@@ -51,6 +51,7 @@ const daysSince = (createdAt: string | undefined): number | null => {
 export const DemandSignal: React.FC<DemandSignalProps> = ({ propertyId, createdAt }) => {
   const { t } = useTranslation();
   const { stats } = usePropertyStats(propertyId);
+  const { colors } = useTheme();
 
   const listedLabel = useMemo(() => {
     const days = daysSince(createdAt);
@@ -68,13 +69,13 @@ export const DemandSignal: React.FC<DemandSignalProps> = ({ propertyId, createdA
 
   return (
     <View style={styles.row}>
-      <RiTimeLine width={13} height={13} fill={colors.COLOR_BLACK_LIGHT_4} />
-      <BloomText style={styles.text}>
+      <RiTimeLine width={13} height={13} fill={colors.textSecondary} />
+      <BloomText className="text-[13px] text-muted-foreground">
         {listedLabel}
         {savedLabel ? (
           <>
-            <BloomText style={styles.separator}>{'  ·  '}</BloomText>
-            <BloomText style={styles.text}>{savedLabel}</BloomText>
+            <BloomText className="text-[13px] text-text-tertiary">{'  ·  '}</BloomText>
+            <BloomText className="text-[13px] text-muted-foreground">{savedLabel}</BloomText>
           </>
         ) : null}
       </BloomText>
@@ -87,13 +88,5 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-  },
-  text: {
-    fontSize: 13,
-    color: colors.COLOR_BLACK_LIGHT_4,
-  },
-  separator: {
-    fontSize: 13,
-    color: colors.COLOR_BLACK_LIGHT_5,
   },
 });

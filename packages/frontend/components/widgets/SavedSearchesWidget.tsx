@@ -15,9 +15,9 @@ import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 import { Button } from '@oxy.so/bloom/button';
 import { RiBookmarkFill } from '@oxy.so/bloom/icons';
+import { useTheme } from '@oxy.so/bloom/theme';
 
 import { SavedSearchCards } from '@/components/saved/SavedSearchCards';
-import { useColors } from '@/hooks/useThemeColor';
 import { useSavedSearches } from '@/hooks/useSavedSearches';
 import { BaseWidget } from './BaseWidget';
 
@@ -28,7 +28,7 @@ const PREVIEW_COUNT = 3;
 export function SavedSearchesWidget() {
   const { t } = useTranslation();
   const router = useRouter();
-  const colors = useColors();
+  const { colors } = useTheme();
   const { searches, isLoading, error, isAuthenticated } = useSavedSearches();
 
   if (!isAuthenticated || isLoading || error || searches.length === 0) {
@@ -41,7 +41,11 @@ export function SavedSearchesWidget() {
     <BaseWidget
       title={t('search.widgets.savedSearches.title')}
       icon={
-        <RiBookmarkFill width={HEADER_ICON_SIZE} height={HEADER_ICON_SIZE} fill={colors.primary} />
+        <RiBookmarkFill
+          width={HEADER_ICON_SIZE}
+          height={HEADER_ICON_SIZE}
+          fill={colors.primarySubtleForeground}
+        />
       }
     >
       <View className="gap-3">

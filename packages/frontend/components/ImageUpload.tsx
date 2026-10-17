@@ -21,7 +21,6 @@ import { SortablePhotoGrid, type SortablePhoto } from '@oxy.so/bloom/sortable-me
 import { confirm } from '@oxy.so/bloom/surfaces';
 import { toast } from '@oxy.so/bloom/toast';
 import { Text as BloomText } from '@oxy.so/bloom/typography';
-import { colors } from '@/styles/colors';
 import { spacing } from '@/constants/styles';
 import { logger } from '@/utils/logger';
 import { coverFirst } from '@/utils/propertyPhotos';
@@ -270,7 +269,9 @@ export function ImageUpload({
         </Button>
       ) : null}
 
-      <BloomText style={styles.helperText}>{t('imageUpload.helperText')}</BloomText>
+      <BloomText className="text-xs leading-4 text-muted-foreground">
+        {t('imageUpload.helperText')}
+      </BloomText>
     </View>
   );
 }
@@ -281,10 +282,5 @@ const styles = StyleSheet.create({
   },
   cameraButton: {
     alignSelf: 'flex-start',
-  },
-  helperText: {
-    fontSize: 12,
-    color: colors.COLOR_BLACK_LIGHT_4,
-    lineHeight: 16,
   },
 });

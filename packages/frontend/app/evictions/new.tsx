@@ -31,6 +31,7 @@ import * as Skeleton from '@oxy.so/bloom/skeleton';
 import { Switch } from '@oxy.so/bloom/switch';
 import { TextFieldInput } from '@oxy.so/bloom/text-field';
 import { Textarea } from '@oxy.so/bloom/textarea';
+import { useTheme } from '@oxy.so/bloom/theme';
 import { H2, Text as BloomText } from '@oxy.so/bloom/typography';
 
 import type { CreateEvictionCaseData, EvictionCase } from '@homiio/shared-types';
@@ -56,7 +57,6 @@ import {
 import { imageUploadService } from '@/services/imageUploadService';
 import { resolveBackendImageUrl } from '@/utils/imageUrl';
 import { toast } from '@oxy.so/bloom/toast';
-import { colors } from '@/styles/colors';
 import { radius, spacing } from '@/constants/styles';
 
 interface EvictionFormState {
@@ -126,6 +126,7 @@ interface EvictionFormProps {
 
 const EvictionForm: React.FC<EvictionFormProps> = ({ mode, editId, existing }) => {
   const { t, i18n } = useTranslation();
+  const { colors } = useTheme();
   const router = useRouter();
   const mapRef = useRef<MapApi | null>(null);
 
@@ -352,7 +353,9 @@ const EvictionForm: React.FC<EvictionFormProps> = ({ mode, editId, existing }) =
           <H2 style={styles.pageTitle}>
             {mode === 'edit' ? t('evictions.form.editTitle') : t('evictions.form.title')}
           </H2>
-          <BloomText style={styles.subtitle}>{t('evictions.form.subtitle')}</BloomText>
+          <BloomText className="text-sm text-muted-foreground">
+            {t('evictions.form.subtitle')}
+          </BloomText>
         </View>
 
         <Card radius="radius-16" style={styles.section} appearance="outline">
@@ -379,7 +382,7 @@ const EvictionForm: React.FC<EvictionFormProps> = ({ mode, editId, existing }) =
 
         <Card radius="radius-16" style={styles.section} appearance="outline">
           <CardTitle>{t('evictions.form.whereSection')}</CardTitle>
-          <View style={styles.mapWrap}>
+          <View className="bg-muted" style={styles.mapWrap}>
             <Map
               ref={mapRef}
               style={styles.mapInner}
@@ -391,7 +394,9 @@ const EvictionForm: React.FC<EvictionFormProps> = ({ mode, editId, existing }) =
               screenId="eviction-create"
             />
           </View>
-          <BloomText style={styles.hint}>{t('evictions.form.mapHint')}</BloomText>
+          <BloomText className="text-center text-xs text-muted-foreground">
+            {t('evictions.form.mapHint')}
+          </BloomText>
           <Field label={t('evictions.form.labelLabel')}>
             <TextFieldInput
               label={t('evictions.form.labelLabel')}
@@ -415,10 +420,10 @@ const EvictionForm: React.FC<EvictionFormProps> = ({ mode, editId, existing }) =
                 named actor under an expiring, revocable, audited grant. */}
           <View style={styles.switchRow}>
             <View style={styles.switchText}>
-              <BloomText style={styles.switchLabel}>
+              <BloomText className="text-sm font-semibold text-foreground">
                 {t('evictions.form.householdAuthorizedLabel')}
               </BloomText>
-              <BloomText style={styles.switchHint}>
+              <BloomText className="text-xs leading-4 text-muted-foreground">
                 {t('evictions.form.householdAuthorizedHint')}
               </BloomText>
             </View>
@@ -427,7 +432,7 @@ const EvictionForm: React.FC<EvictionFormProps> = ({ mode, editId, existing }) =
               onCheckedChange={setHouseholdAuthorizedExact}
             />
           </View>
-          <BloomText style={styles.switchHint}>
+          <BloomText className="text-xs leading-4 text-muted-foreground">
             {t('evictions.form.approximateAlwaysNotice')}
           </BloomText>
         </Card>
@@ -528,7 +533,7 @@ const EvictionForm: React.FC<EvictionFormProps> = ({ mode, editId, existing }) =
           {coverPreview ? (
             <Image
               source={{ uri: coverPreview }}
-              style={styles.coverPreview}
+              style={[styles.coverPreview, { backgroundColor: colors.backgroundTertiary }]}
               contentFit="cover"
               accessibilityIgnoresInvertColors
             />
@@ -631,10 +636,6 @@ const styles = StyleSheet.create({
   pageTitle: {
     letterSpacing: -0.5,
   },
-  subtitle: {
-    fontSize: 14,
-    color: colors.muted,
-  },
   section: {
     gap: spacing.md,
     padding: spacing.lg,
@@ -642,15 +643,9 @@ const styles = StyleSheet.create({
   mapWrap: {
     borderRadius: radius.md,
     overflow: 'hidden',
-    backgroundColor: colors.mutedSubtle,
   },
   mapInner: {
     height: 260,
-  },
-  hint: {
-    fontSize: 12,
-    color: colors.muted,
-    textAlign: 'center',
   },
   row: {
     flexDirection: 'row',
@@ -670,21 +665,10 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: spacing.xs,
   },
-  switchLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.text,
-  },
-  switchHint: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    lineHeight: 16,
-  },
   coverPreview: {
     width: '100%',
     height: 180,
     borderRadius: radius.md,
-    backgroundColor: colors.mutedSubtle,
   },
   photoButton: {
     alignSelf: 'flex-start',

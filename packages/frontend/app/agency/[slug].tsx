@@ -48,7 +48,6 @@ import { useAgency, useAgencyReviews, useAgencyProperties } from '@/hooks/useAge
 import { useOxyAvatars } from '@/hooks/useOxyAvatars';
 import type { ReviewDTO } from '@homiio/shared-types';
 import type { User } from '@oxy.so/core';
-import { colors } from '@/styles/colors';
 import { hairline, radius, spacing } from '@/constants/styles';
 
 type AgencyTab = 'reviews' | 'listings';
@@ -61,7 +60,9 @@ interface StatTileProps {
 const StatTile: React.FC<StatTileProps> = ({ value, label }) => (
   <Card radius="radius-12" style={styles.statTile} appearance="outline">
     <BloomText style={styles.statValue}>{value}</BloomText>
-    <BloomText style={styles.statLabel}>{label}</BloomText>
+    <BloomText className="text-muted-foreground" style={styles.statLabel}>
+      {label}
+    </BloomText>
   </Card>
 );
 
@@ -76,7 +77,7 @@ const AgencyReviewItem: React.FC<AgencyReviewItemProps> = ({ review, author, onP
   const { t } = useTranslation();
   const label = review.populatedAddress?.street || t('agency.viewAddress');
   return (
-    <View style={styles.reviewItem}>
+    <View className="border-border" style={styles.reviewItem}>
       <Button
         size="sm"
         leadingIcon={RiMapPinLine}
@@ -320,13 +321,11 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 20,
     fontWeight: '700',
-    color: colors.COLOR_BLACK,
     letterSpacing: -0.4,
   },
   statLabel: {
     fontSize: 11,
     fontWeight: '600',
-    color: colors.COLOR_BLACK_LIGHT_3,
     textTransform: 'uppercase',
     letterSpacing: 0.4,
     textAlign: 'center',
@@ -337,7 +336,6 @@ const styles = StyleSheet.create({
   reviewItem: {
     gap: spacing.xs,
     borderBottomWidth: hairline.width,
-    borderBottomColor: hairline.color,
     paddingBottom: spacing.lg,
   },
   addressLink: {

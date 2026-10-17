@@ -2,7 +2,6 @@ import React from 'react';
 import { View } from 'react-native';
 import * as Skeleton from '@oxy.so/bloom/skeleton';
 import { TextLines } from './TextLines';
-import { colors } from '@/styles/colors';
 import { radius, spacing } from '@/constants/styles';
 
 interface TipsSkeletonProps {
@@ -25,13 +24,7 @@ export function TipsSkeleton({ itemCount = 4, featured = true }: TipsSkeletonPro
 
 function FeaturedTipCardSkeleton() {
   return (
-    <View
-      style={{
-        backgroundColor: colors.surfaceElevated,
-        borderRadius: radius.xl,
-        overflow: 'hidden',
-      }}
-    >
+    <View className="overflow-hidden bg-card" style={{ borderRadius: radius.xl }}>
       <Skeleton.Box width="100%" height={260} borderRadius={0} />
       <View style={{ padding: spacing.lg, gap: spacing.sm }}>
         <Skeleton.Box width="90%" height={24} />
@@ -47,13 +40,7 @@ function FeaturedTipCardSkeleton() {
 
 function TipCardSkeleton() {
   return (
-    <View
-      style={{
-        backgroundColor: colors.surfaceElevated,
-        borderRadius: radius.lg,
-        overflow: 'hidden',
-      }}
-    >
+    <View className="overflow-hidden bg-card" style={{ borderRadius: radius.lg }}>
       <Skeleton.Box width="100%" height={180} borderRadius={0} />
       <View style={{ padding: spacing.lg, gap: spacing.sm }}>
         <Skeleton.Box width="90%" height={20} />

@@ -32,7 +32,6 @@ import {
   DetailIconRow,
   type DetailFallbackIcon,
 } from '@/components/property/DetailIconGrid';
-import { colors } from '@/styles/colors';
 import { spacing } from '@/constants/styles';
 import { getIconArt } from '@/constants/iconArt';
 import {
@@ -216,7 +215,6 @@ const styles = StyleSheet.create({
     marginBottom: spacing['2xl'],
   },
   groupTitle: {
-    color: colors.COLOR_BLACK,
     marginBottom: spacing.xs,
     letterSpacing: -0.2,
   },

@@ -16,7 +16,6 @@ import type { EvictionContactInfo } from '@homiio/shared-types';
 
 import { toast } from '@oxy.so/bloom/toast';
 import { SettingsRowIcon } from '@/components/profile/SettingsRowIcon';
-import { colors } from '@/styles/colors';
 import { spacing } from '@/constants/styles';
 import { buildEvictionContactActions, type EvictionContactAction } from './evictionUtils';
 
@@ -68,8 +67,10 @@ export const EvictionContactActions: React.FC<EvictionContactActionsProps> = ({
       ) : null}
       {instructions ? (
         <View style={styles.instructions}>
-          <BloomText style={styles.instructionsLabel}>{instructionsLabel}</BloomText>
-          <BloomText style={styles.instructionsText}>{instructions}</BloomText>
+          <BloomText className="text-xs font-semibold text-muted-foreground">
+            {instructionsLabel}
+          </BloomText>
+          <BloomText className="text-sm leading-5 text-foreground">{instructions}</BloomText>
         </View>
       ) : null}
     </View>
@@ -83,15 +84,5 @@ const styles = StyleSheet.create({
   instructions: {
     gap: spacing.xs,
     paddingHorizontal: spacing.xs,
-  },
-  instructionsLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.textSecondary,
-  },
-  instructionsText: {
-    fontSize: 14,
-    color: colors.text,
-    lineHeight: 20,
   },
 });

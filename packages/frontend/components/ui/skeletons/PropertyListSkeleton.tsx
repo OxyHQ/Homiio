@@ -2,7 +2,6 @@ import type React from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
 import * as Skeleton from '@oxy.so/bloom/skeleton';
 import { TextLines } from './TextLines';
-import { colors } from '@/styles/colors';
 
 interface PropertyListSkeletonProps {
   viewMode?: 'list' | 'grid';
@@ -16,8 +15,8 @@ export const PropertyListSkeleton: React.FC<PropertyListSkeletonProps> = ({
   const renderGridSkeleton = () => (
     <View style={styles.gridContainer}>
       {Array.from({ length: itemCount }).map((_, index) => (
-        <View key={index} style={styles.gridItem}>
-          <Skeleton.Box width="100%" height={180} borderRadius={12} style={styles.gridImage} />
+        <View key={index} className="bg-card" style={styles.gridItem}>
+          <Skeleton.Box width="100%" height={180} borderRadius={12} />
           <View style={styles.gridContent}>
             <TextLines lines={2} lastLineWidth="80%" lineHeight={16} lineSpacing={6} />
             <View style={styles.gridPriceRow}>
@@ -37,8 +36,8 @@ export const PropertyListSkeleton: React.FC<PropertyListSkeletonProps> = ({
   const renderListSkeleton = () => (
     <View style={styles.listContainer}>
       {Array.from({ length: itemCount }).map((_, index) => (
-        <View key={index} style={styles.listItem}>
-          <Skeleton.Box width={120} height={100} borderRadius={12} style={styles.listImage} />
+        <View key={index} className="bg-card" style={styles.listItem}>
+          <Skeleton.Box width={120} height={100} borderRadius={12} />
           <View style={styles.listContent}>
             <TextLines lines={2} lastLineWidth="70%" lineHeight={16} lineSpacing={6} />
             <View style={styles.listPriceRow}>
@@ -56,17 +55,13 @@ export const PropertyListSkeleton: React.FC<PropertyListSkeletonProps> = ({
   );
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <ScrollView className="flex-1 bg-background" showsVerticalScrollIndicator={false}>
       {viewMode === 'grid' ? renderGridSkeleton() : renderListSkeleton()}
     </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.primaryLight,
-  },
   gridContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -76,12 +71,8 @@ const styles = StyleSheet.create({
   },
   gridItem: {
     width: '47%',
-    backgroundColor: colors.white,
     borderRadius: 12,
     overflow: 'hidden',
-  },
-  gridImage: {
-    backgroundColor: colors.COLOR_BLACK_LIGHT_6,
   },
   gridContent: {
     padding: 12,
@@ -103,14 +94,10 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   listItem: {
-    backgroundColor: colors.white,
     borderRadius: 12,
     padding: 12,
     flexDirection: 'row',
     gap: 12,
-  },
-  listImage: {
-    backgroundColor: colors.COLOR_BLACK_LIGHT_6,
   },
   listContent: {
     flex: 1,

@@ -3,7 +3,8 @@
  * SettingsList primitives with a row per currency and an active-state
  * checkmark on the right.
  */
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Text } from '@oxy.so/bloom/typography';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
 import { toast } from '@oxy.so/bloom/toast';

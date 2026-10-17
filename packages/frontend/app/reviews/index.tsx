@@ -20,7 +20,6 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { ExploreList, ExploreRow } from '@/components/reviews/ExploreRow';
 import { useExploreCities } from '@/hooks/useExploreReviews';
-import { colors } from '@/styles/colors';
 import { radius, spacing } from '@/constants/styles';
 
 export default function ReviewExploreScreen() {
@@ -41,7 +40,9 @@ export default function ReviewExploreScreen() {
       <View style={styles.content}>
         <View style={styles.intro}>
           <H1 style={styles.introTitle}>{t('reviews.explore.heroTitle')}</H1>
-          <BloomText style={styles.introText}>{t('reviews.explore.heroSubtitle')}</BloomText>
+          <BloomText className="text-muted-foreground" style={styles.introText}>
+            {t('reviews.explore.heroSubtitle')}
+          </BloomText>
           <Button
             size="lg"
             onPress={() => router.push('/reviews/write')}
@@ -109,7 +110,6 @@ const styles = StyleSheet.create({
   introText: {
     fontSize: 15,
     lineHeight: 22,
-    color: colors.COLOR_BLACK_LIGHT_3,
   },
   cta: {
     alignSelf: 'flex-start',

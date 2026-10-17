@@ -15,8 +15,7 @@
 import type React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { RiStarFill, RiStarLine } from '@oxy.so/bloom/icons';
-
-import { colors } from '@/styles/colors';
+import { useTheme } from '@oxy.so/bloom/theme';
 
 /** Total glyphs rendered (5-star scale). */
 const STAR_COUNT = 5;
@@ -30,15 +29,13 @@ interface StarsProps {
   rating: number;
   /** Glyph size in px. */
   size?: number;
-  /** Filled/half-star tint. */
+  /** Filled/half-star tint. Defaults to Bloom's `warning`. */
   color?: string;
 }
 
-export const Stars: React.FC<StarsProps> = ({
-  rating,
-  size = DEFAULT_STAR_SIZE,
-  color = colors.ratingStar,
-}) => {
+export const Stars: React.FC<StarsProps> = ({ rating, size = DEFAULT_STAR_SIZE, color }) => {
+  const { colors } = useTheme();
+  const tint = color ?? colors.warning;
   // Clamp to [0, STAR_COUNT] first: an out-of-range rating (e.g. > 5 or
   // negative) would otherwise make `emptyStars` negative, and
   // `Array.from({ length: negative })` throws a RangeError that unmounts the
@@ -51,18 +48,18 @@ export const Stars: React.FC<StarsProps> = ({
   return (
     <View style={styles.row}>
       {Array.from({ length: fullStars }).map((_, i) => (
-        <RiStarFill key={`f-${i}`} width={size} height={size} fill={color} />
+        <RiStarFill key={`f-${i}`} width={size} height={size} fill={tint} />
       ))}
       {hasHalf ? (
         <View style={{ width: size, height: size }}>
-          <RiStarLine width={size} height={size} fill={color} />
+          <RiStarLine width={size} height={size} fill={tint} />
           <View style={[styles.halfClip, { width: size / 2, height: size }]}>
-            <RiStarFill width={size} height={size} fill={color} />
+            <RiStarFill width={size} height={size} fill={tint} />
           </View>
         </View>
       ) : null}
       {Array.from({ length: emptyStars }).map((_, i) => (
-        <RiStarLine key={`e-${i}`} width={size} height={size} fill={colors.COLOR_BLACK_LIGHT_5} />
+        <RiStarLine key={`e-${i}`} width={size} height={size} fill={colors.textTertiary} />
       ))}
     </View>
   );

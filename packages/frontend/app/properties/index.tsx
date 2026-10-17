@@ -44,7 +44,6 @@ import {
 
 import { usePropertySearch } from '@/hooks/usePropertySearch';
 import { DEFAULT_SEARCH_QUERY } from '@/store/searchQueryStore';
-import { colors } from '@/styles/colors';
 import { hairline, spacing } from '@/constants/styles';
 import { useFormatting } from '@/utils/format';
 import type { Property } from '@homiio/shared-types';
@@ -151,7 +150,7 @@ export default function PropertiesScreen() {
   })();
 
   const topBar = (
-    <View style={styles.topBar}>
+    <View className="border-border bg-card" style={styles.topBar}>
       <View style={styles.topBarContent}>
         <StaySearchCompact
           onPress={handleEditSearch}
@@ -232,7 +231,7 @@ export default function PropertiesScreen() {
       />
       <View style={styles.listContent}>
         <View style={styles.resultsHeader}>
-          <BloomText style={styles.resultsTitle}>{resultsHeading}</BloomText>
+          <BloomText className="text-xl font-bold text-foreground">{resultsHeading}</BloomText>
         </View>
         {body}
         {isFetchingNextPage ? (
@@ -267,14 +266,10 @@ const styles = StyleSheet.create({
       position: 'sticky',
       top: 0,
       zIndex: 100,
-      backgroundColor: colors.surfaceElevated,
       borderBottomWidth: hairline.width,
-      borderBottomColor: hairline.color,
     } as unknown as ViewStyle,
     default: {
-      backgroundColor: colors.surfaceElevated,
       borderBottomWidth: hairline.width,
-      borderBottomColor: hairline.color,
     },
   }) as ViewStyle,
   topBarContent: {
@@ -304,11 +299,6 @@ const styles = StyleSheet.create({
   resultsHeader: {
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.lg,
-  },
-  resultsTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: colors.COLOR_BLACK,
   },
   gridPadding: {
     paddingHorizontal: spacing.lg,

@@ -96,7 +96,6 @@ import {
 } from '@/components/location/scopeWhere';
 import { useLocationScope } from '@/hooks/useLocationScope';
 import { useSearchPriceHistogram } from '@/hooks/useSearchPriceHistogram';
-import { useColors } from '@/hooks/useThemeColor';
 import { useFormatting } from '@/utils/format';
 import { useRecentSearchesStore, type RecentSearch } from '@/store/recentSearchesStore';
 import { spacing } from '@/constants/styles';
@@ -276,7 +275,6 @@ export function HomeSearch({
   }, []);
   const isWide = containerWidth >= WIDE_BAR_MIN_WIDTH;
   const insets = useSafeAreaInsets();
-  const colors = useColors();
   const addRecentSearch = useRecentSearchesStore((s) => s.addSearch);
   const apply = onApply ?? onSubmit;
 
@@ -808,7 +806,8 @@ export function HomeSearch({
             {renderModeTabs(browseModeFromOffering(draft.offering), handleBrowseMode, 'segmented')}
           </View>
           <ScrollView
-            style={[styles.sheetScroll, { backgroundColor: colors.backgroundSecondary }]}
+            className="bg-surface"
+            style={styles.sheetScroll}
             contentContainerStyle={styles.sheetScrollContent}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
@@ -831,10 +830,8 @@ export function HomeSearch({
             ))}
           </ScrollView>
           <View
-            style={[
-              styles.sheetFooter,
-              { borderTopColor: colors.border, paddingBottom: spacing.md + insets.bottom },
-            ]}
+            className="border-border"
+            style={[styles.sheetFooter, { paddingBottom: spacing.md + insets.bottom }]}
           >
             <LinkButton onPress={handleClear} accessibilityLabel={t('search.actions.clearAll')}>
               {t('search.actions.clearAll')}

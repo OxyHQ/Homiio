@@ -15,7 +15,6 @@ import { Text as BloomText } from '@oxy.so/bloom/typography';
 
 import Map, { type MapApi, type GeocodedAddress } from '@/components/Map';
 import type { StepProps } from '@/components/reviews/write/types';
-import { colors } from '@/styles/colors';
 import { radius, spacing } from '@/constants/styles';
 
 interface StepAddressProps extends StepProps {
@@ -132,7 +131,7 @@ export const StepAddress: React.FC<StepAddressProps> = ({
         />
       </Field>
 
-      <View style={styles.mapWrapper}>
+      <View className="bg-muted" style={styles.mapWrapper}>
         <Map
           ref={mapRef}
           style={styles.mapInner}
@@ -142,7 +141,9 @@ export const StepAddress: React.FC<StepAddressProps> = ({
           screenId="write-review"
         />
       </View>
-      <BloomText style={styles.mapHint}>{t('reviews.write.mapHint')}</BloomText>
+      <BloomText className="text-center text-xs text-muted-foreground">
+        {t('reviews.write.mapHint')}
+      </BloomText>
     </View>
   );
 };
@@ -162,14 +163,8 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
     borderRadius: radius.md,
     overflow: 'hidden',
-    backgroundColor: colors.mutedSubtle,
   },
   mapInner: {
     height: 280,
-  },
-  mapHint: {
-    fontSize: 12,
-    color: colors.muted,
-    textAlign: 'center',
   },
 });

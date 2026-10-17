@@ -16,8 +16,8 @@ import { ErrorBoundary as BloomErrorBoundary } from '@oxy.so/bloom/error-boundar
 import { Button } from '@oxy.so/bloom/button';
 import { H2, P, Text as BloomText } from '@oxy.so/bloom/typography';
 import { toast } from '@oxy.so/bloom/toast';
+import { useTheme } from '@oxy.so/bloom/theme';
 
-import { colors } from '@/styles/colors';
 import { radius, spacing } from '@/constants/styles';
 import {
   RiArrowDownSLine,
@@ -120,6 +120,7 @@ function ErrorFallback({
   showErrorDetails,
 }: ErrorFallbackProps) {
   const { t } = useTranslation();
+  const { colors } = useTheme();
   const [showDetails, setShowDetails] = useState(false);
   const [badgePressed, setBadgePressed] = useState(false);
   const [errorIdPressed, setErrorIdPressed] = useState(false);
@@ -194,7 +195,7 @@ function ErrorFallback({
     <View style={styles.content}>
       <View
         {...a11yAlertProps}
-        className="px-5 py-10 md:max-w-[480px] md:border md:border-border md:px-8 md:py-14"
+        className="bg-card px-5 py-10 md:max-w-[480px] md:border md:border-border md:px-8 md:py-14"
         style={styles.card}
       >
         <Pressable
@@ -203,15 +204,18 @@ function ErrorFallback({
           onPressOut={() => setBadgePressed(false)}
           accessibilityRole="button"
           accessibilityLabel={t('error.boundary.title')}
+          className="bg-error-subtle"
           style={[styles.iconBadge, badgePressed && styles.iconBadgePressed]}
         >
-          <RiErrorWarningFill width={56} height={56} fill={colors.danger} />
+          <RiErrorWarningFill width={56} height={56} fill={colors.error} />
         </Pressable>
 
         <H2 style={styles.title} accessibilityRole="header">
           {t('error.boundary.title')}
         </H2>
-        <P style={styles.message}>{t('error.boundary.message')}</P>
+        <P style={[styles.message, { color: colors.textSecondary }]}>
+          {t('error.boundary.message')}
+        </P>
 
         <Pressable
           onPress={handleCopyErrorId}
@@ -220,16 +224,19 @@ function ErrorFallback({
           accessibilityRole="button"
           accessibilityLabel={t('error.boundary.copyIdHint')}
           accessibilityHint={errorId}
+          className="bg-muted"
           style={[styles.errorIdChip, errorIdPressed && styles.errorIdChipPressed]}
         >
-          <BloomText style={styles.errorIdLabel}>{t('error.boundary.errorId')}</BloomText>
-          <BloomText className="font-bloom-mono" style={styles.errorIdValue}>
+          <BloomText className="text-muted-foreground" style={styles.errorIdLabel}>
+            {t('error.boundary.errorId')}
+          </BloomText>
+          <BloomText className="font-bloom-mono text-foreground" style={styles.errorIdValue}>
             {errorId}
           </BloomText>
           <RiFileCopyLine
             width={12}
             height={12}
-            fill={colors.muted}
+            fill={colors.textSecondary}
             style={styles.errorIdCopyIcon}
           />
         </Pressable>
@@ -274,19 +281,19 @@ function ErrorFallback({
             accessibilityState={{ expanded: showDetails }}
             style={[styles.detailsToggle, detailsTogglePressed && styles.detailsTogglePressed]}
           >
-            <BloomText style={styles.detailsToggleText}>
+            <BloomText className="text-muted-foreground" style={styles.detailsToggleText}>
               {showDetails ? t('error.boundary.hideDetails') : t('error.boundary.showDetails')}
             </BloomText>
             {React.createElement(showDetails ? RiArrowUpSLine : RiArrowDownSLine, {
               width: 14,
               height: 14,
-              fill: colors.muted,
+              fill: colors.textSecondary,
             })}
           </Pressable>
         )}
 
         {showErrorDetails && showDetails && (
-          <View style={styles.details}>
+          <View className="bg-muted" style={styles.details}>
             <BloomText style={styles.detailsTitle}>
               {t('error.boundary.technicalDetails')}
             </BloomText>
@@ -304,20 +311,32 @@ function ErrorFallback({
               />
             ) : null}
 
-            <View style={styles.deviceBlock}>
-              <BloomText style={styles.detailLabel}>
+            <View className="border-border" style={styles.deviceBlock}>
+              <BloomText className="text-muted-foreground" style={styles.detailLabel}>
                 {t('error.boundary.deviceInformation')}
               </BloomText>
-              <BloomText className="font-bloom-mono" style={styles.deviceLine}>
+              <BloomText
+                className="font-bloom-mono text-muted-foreground"
+                style={styles.deviceLine}
+              >
                 {`Platform: ${Platform.OS} ${Platform.Version ?? ''}`.trim()}
               </BloomText>
-              <BloomText className="font-bloom-mono" style={styles.deviceLine}>
+              <BloomText
+                className="font-bloom-mono text-muted-foreground"
+                style={styles.deviceLine}
+              >
                 {`Device: ${Device.brand ?? 'unknown'} ${Device.modelName ?? ''}`.trim()}
               </BloomText>
-              <BloomText className="font-bloom-mono" style={styles.deviceLine}>
+              <BloomText
+                className="font-bloom-mono text-muted-foreground"
+                style={styles.deviceLine}
+              >
                 {`OS: ${Device.osName ?? 'unknown'} ${Device.osVersion ?? ''}`.trim()}
               </BloomText>
-              <BloomText className="font-bloom-mono" style={styles.deviceLine}>
+              <BloomText
+                className="font-bloom-mono text-muted-foreground"
+                style={styles.deviceLine}
+              >
                 {`App: ${Constants.expoConfig?.version ?? 'unknown'}`}
               </BloomText>
             </View>
@@ -337,10 +356,12 @@ interface DetailRowProps {
 function DetailRow({ label, value, mono }: DetailRowProps) {
   return (
     <View style={styles.detailRow}>
-      <BloomText style={styles.detailLabel}>{label}</BloomText>
+      <BloomText className="text-muted-foreground" style={styles.detailLabel}>
+        {label}
+      </BloomText>
       <BloomText
-        className={mono ? 'font-bloom-mono' : undefined}
-        style={mono ? styles.detailValueMono : styles.detailValue}
+        className={mono ? 'font-bloom-mono text-foreground' : undefined}
+        style={styles.detailValue}
       >
         {value}
       </BloomText>
@@ -356,9 +377,11 @@ interface DetailBlockProps {
 function DetailBlock({ label, value }: DetailBlockProps) {
   return (
     <View style={styles.detailRow}>
-      <BloomText style={styles.detailLabel}>{label}</BloomText>
-      <ScrollView style={styles.codeBlock} nestedScrollEnabled>
-        <BloomText className="font-bloom-mono" style={styles.codeText}>
+      <BloomText className="text-muted-foreground" style={styles.detailLabel}>
+        {label}
+      </BloomText>
+      <ScrollView className="bg-card" style={styles.codeBlock} nestedScrollEnabled>
+        <BloomText className="font-bloom-mono text-muted-foreground" style={styles.codeText}>
           {value}
         </BloomText>
       </ScrollView>
@@ -425,14 +448,12 @@ const styles = StyleSheet.create({
   card: {
     width: '100%',
     alignItems: 'center',
-    backgroundColor: colors.surfaceElevated,
     borderRadius: radius.xl,
   },
   iconBadge: {
     width: ICON_BADGE_SIZE,
     height: ICON_BADGE_SIZE,
     borderRadius: ICON_BADGE_SIZE / 2,
-    backgroundColor: colors.dangerSubtle,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -444,12 +465,10 @@ const styles = StyleSheet.create({
     fontSize: 24,
     lineHeight: 30,
     textAlign: 'center',
-    color: colors.COLOR_BLACK,
   },
   message: {
     marginTop: spacing.md,
     textAlign: 'center',
-    color: colors.muted,
     maxWidth: 360,
   },
   errorIdChip: {
@@ -458,7 +477,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    backgroundColor: colors.mutedSubtle,
     borderRadius: radius.pill,
     gap: spacing.sm,
   },
@@ -467,14 +485,12 @@ const styles = StyleSheet.create({
   },
   errorIdLabel: {
     fontSize: 11,
-    color: colors.muted,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     fontWeight: '600',
   },
   errorIdValue: {
     fontSize: 12,
-    color: colors.COLOR_BLACK,
     fontWeight: '600',
   },
   errorIdCopyIcon: {
@@ -496,13 +512,11 @@ const styles = StyleSheet.create({
   },
   detailsToggleText: {
     fontSize: 13,
-    color: colors.muted,
     fontWeight: '500',
   },
   details: {
     marginTop: spacing.lg,
     width: '100%',
-    backgroundColor: colors.mutedSubtle,
     borderRadius: radius.lg,
     padding: spacing.lg,
     gap: spacing.md,
@@ -510,7 +524,6 @@ const styles = StyleSheet.create({
   detailsTitle: {
     fontSize: 13,
     fontWeight: '700',
-    color: colors.COLOR_BLACK,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginBottom: spacing.xs,
@@ -521,38 +534,28 @@ const styles = StyleSheet.create({
   detailLabel: {
     fontSize: 11,
     fontWeight: '600',
-    color: colors.muted,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   detailValue: {
     fontSize: 13,
-    color: colors.COLOR_BLACK,
-  },
-  detailValueMono: {
-    fontSize: 13,
-    color: colors.COLOR_BLACK,
   },
   codeBlock: {
     maxHeight: 160,
-    backgroundColor: colors.surfaceElevated,
     borderRadius: radius.md,
     padding: spacing.md,
   },
   codeText: {
     fontSize: 11,
     lineHeight: 16,
-    color: colors.COLOR_BLACK_LIGHT_3,
   },
   deviceBlock: {
     gap: spacing.xs,
     paddingTop: spacing.md,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.COLOR_BLACK_LIGHT_6,
   },
   deviceLine: {
     fontSize: 12,
-    color: colors.COLOR_BLACK_LIGHT_3,
   },
 });
 

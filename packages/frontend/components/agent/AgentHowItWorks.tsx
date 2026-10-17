@@ -17,7 +17,6 @@ import { Badge } from '@oxy.so/bloom/badge';
 import { useTheme } from '@oxy.so/bloom/theme';
 import { H1, Text as BloomText } from '@oxy.so/bloom/typography';
 
-import { colors } from '@/styles/colors';
 import { radius, spacing, tracker } from '@/constants/styles';
 
 interface Step {
@@ -44,12 +43,12 @@ interface StepCardProps {
 }
 
 const StepCard: React.FC<StepCardProps> = ({ index, title, body, image }) => {
-  const theme = useTheme();
+  const { colors } = useTheme();
   return (
     <View style={styles.step}>
       {/* A touch landscape at every width: a full-width photo when stacked,
           one of three in the row on wide screens. */}
-      <View className="aspect-[5/3]" style={styles.photoWrap}>
+      <View className="aspect-[5/3] bg-muted" style={styles.photoWrap}>
         <Image
           source={image}
           style={styles.photo}
@@ -66,10 +65,8 @@ const StepCard: React.FC<StepCardProps> = ({ index, title, body, image }) => {
           <Badge content={index} size="lg" color="primary" variant="solid" />
         </View>
       </View>
-      <BloomText variant="headline-bold" style={{ color: theme.colors.text }}>
-        {title}
-      </BloomText>
-      <BloomText variant="body-regular" style={{ color: theme.colors.textSecondary }}>
+      <BloomText variant="headline-bold">{title}</BloomText>
+      <BloomText variant="body-regular" style={{ color: colors.textSecondary }}>
         {body}
       </BloomText>
     </View>
@@ -78,14 +75,10 @@ const StepCard: React.FC<StepCardProps> = ({ index, title, body, image }) => {
 
 export const AgentHowItWorks: React.FC = () => {
   const { t } = useTranslation();
-  const theme = useTheme();
   return (
     <View className="px-4 md:px-8">
       <View style={styles.header}>
-        <H1
-          className="text-left md:text-center"
-          style={[styles.title, { color: theme.colors.text }]}
-        >
+        <H1 className="text-left text-foreground md:text-center" style={styles.title}>
           {t('agent.how.title')}
         </H1>
       </View>
@@ -128,7 +121,6 @@ const styles = StyleSheet.create({
     width: '100%',
     borderRadius: radius.photo,
     overflow: 'hidden',
-    backgroundColor: colors.COLOR_BLACK_LIGHT_7,
     marginBottom: spacing.sm,
   },
   photo: {

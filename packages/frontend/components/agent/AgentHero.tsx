@@ -16,7 +16,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Button } from '@oxy.so/bloom/button';
 import { H1, Text as BloomText } from '@oxy.so/bloom/typography';
 
-import { colors } from '@/styles/colors';
 import { spacing, tracker } from '@/constants/styles';
 
 /**
@@ -45,7 +44,7 @@ export const AgentHero: React.FC<AgentHeroProps> = ({
   ctaLoading = false,
 }) => {
   return (
-    <View className="min-h-[520px] md:min-h-[480px] xl:min-h-[560px]" style={styles.hero}>
+    <View className="min-h-[520px] bg-muted md:min-h-[480px] xl:min-h-[560px]" style={styles.hero}>
       <Image
         source={HERO_IMAGE}
         style={styles.image}
@@ -64,7 +63,7 @@ export const AgentHero: React.FC<AgentHeroProps> = ({
         style={styles.content}
       >
         <H1
-          className="text-left text-[34px] leading-[40px] md:text-center md:text-[42px] md:leading-[48px] xl:text-[52px] xl:leading-[58px]"
+          className="text-left text-[34px] text-white leading-[40px] md:text-center md:text-[42px] md:leading-[48px] xl:text-[52px] xl:leading-[58px]"
           style={styles.title}
         >
           {title}
@@ -101,7 +100,6 @@ const styles = StyleSheet.create({
     position: 'relative',
     overflow: 'hidden',
     justifyContent: 'flex-end',
-    backgroundColor: colors.COLOR_BLACK_LIGHT_7,
   },
   image: {
     position: 'absolute',
@@ -123,7 +121,6 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   title: {
-    color: colors.white,
     fontWeight: '700',
     letterSpacing: tracker.tight,
     maxWidth: 640,

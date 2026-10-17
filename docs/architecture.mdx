@@ -100,7 +100,7 @@ no console output.
 ```tsx
 <SafeAreaProvider>
   <GestureHandlerRootView>
-    <BloomProvider mode="light" colorPreset="yellow" fonts>   {/* TOP: wraps the splash branch too */}
+    <BloomProvider defaultMode="system" defaultColorPreset="yellow" persistKey storage>   {/* TOP: wraps the splash branch too */}
       <BloomNavigationTheme>                                  {/* nav theme + StatusBar from Bloom's mode */}
       <QueryClientProvider>
         <RentalModeProvider>
