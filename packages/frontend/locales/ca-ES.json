@@ -2229,7 +2229,7 @@
     "cta": {
       "housingAuthority": "Habitatge públic",
       "landlord": "Propietari",
-      "applyOnStateWebsite": "Sol·licitar al web oficial",
+      "applyOnOfficialWebsite": "Sol·licita al web oficial",
       "viewOnSourceWebsite": "Veure al portal d'origen",
       "callNow": "Trucar ara",
       "moreByOwner": "Més propietats d'aquest propietari"
@@ -3271,9 +3271,6 @@
     }
   },
   "error": {
-    "publicHousing": {
-      "openFailed": "No s'ha pogut obrir el lloc web d'habitatge"
-    },
     "auth": {
       "required": "Inicia sessió per trucar al propietari"
     },

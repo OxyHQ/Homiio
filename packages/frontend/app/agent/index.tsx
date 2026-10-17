@@ -144,7 +144,7 @@ export default function AgentScreen() {
             title={t('agent.banner.title')}
             subtitle={t('agent.banner.subtitle')}
             ctaLabel={t('agent.banner.cta')}
-            imageUrl="https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=1600&q=80"
+            image={require('@/assets/images/cta-agent.jpg')}
             trustLine={t('agent.banner.trust')}
             onPress={handleHeroCta}
           />

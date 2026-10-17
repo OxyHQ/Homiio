@@ -2268,7 +2268,7 @@
     "cta": {
       "housingAuthority": "Housing Authority",
       "landlord": "Landlord",
-      "applyOnStateWebsite": "Apply on State Website",
+      "applyOnOfficialWebsite": "Postuler sur le site officiel",
       "viewOnSourceWebsite": "View on Source Website",
       "callNow": "Call Now",
       "moreByOwner": "More properties by this owner"
@@ -3224,9 +3224,6 @@
     }
   },
   "error": {
-    "publicHousing": {
-      "openFailed": "Could not open the housing website"
-    },
     "auth": {
       "required": "Please sign in to call the owner"
     },

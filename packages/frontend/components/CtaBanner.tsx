@@ -19,7 +19,8 @@ interface CtaBannerProps {
   title: string;
   subtitle: string;
   ctaLabel: string;
-  imageUrl: string;
+  /** A bundled photo (`require(...)`). */
+  image: number;
   onPress: () => void;
   /** Small reassurance line under the button (e.g. "No license needed."). */
   trustLine?: string;
@@ -29,7 +30,7 @@ export function CtaBanner({
   title,
   subtitle,
   ctaLabel,
-  imageUrl,
+  image,
   onPress,
   trustLine,
 }: CtaBannerProps) {
@@ -43,7 +44,7 @@ export function CtaBanner({
     >
       <ZoomableImage active={hovered} style={StyleSheet.absoluteFill}>
         <Image
-          source={{ uri: imageUrl }}
+          source={image}
           className="absolute inset-0"
           contentFit="cover"
           transition={250}

@@ -2219,7 +2219,7 @@
     "cta": {
       "housingAuthority": "Ente per l'abitazione",
       "landlord": "Proprietario",
-      "applyOnStateWebsite": "Richiedi sul sito ufficiale",
+      "applyOnOfficialWebsite": "Candidati sul sito ufficiale",
       "viewOnSourceWebsite": "Vedi sul portale di origine",
       "callNow": "Chiama ora",
       "moreByOwner": "Altri immobili di questo proprietario"
@@ -3249,9 +3249,6 @@
     }
   },
   "error": {
-    "publicHousing": {
-      "openFailed": "Impossibile aprire il sito web abitativo"
-    },
     "auth": {
       "required": "Accedi per chiamare il proprietario"
     },

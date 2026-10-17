@@ -357,26 +357,26 @@ export default function PropertyDetailPage() {
     }
   }, [t, apiProperty]);
 
+  // A public-housing listing is applied for on the programme's own page: the
+  // listing's source, never a guessed authority website.
+  const sourceUrl = apiProperty?.sourceUrl;
   const handlePublicHousingApply = useCallback(async () => {
-    const state = (apiProperty?.address?.regionName || '').toLowerCase();
-    const stateWebsites: Record<string, string> = {
-      california:
-        'https://www.hcd.ca.gov/grants-funding/active-funding/multifamily-housing-program',
-      'new york': 'https://www.nyshcr.org/',
-      texas: 'https://www.tdhca.state.tx.us/',
-      florida: 'https://www.floridahousing.org/',
-    };
-    const websiteUrl =
-      stateWebsites[state] || 'https://www.hud.gov/topics/rental_assistance/phprog';
+    if (!sourceUrl) {
+      toast.error(
+        t('error.source.noUrl', 'Source website URL not available') ||
+          'Source website URL not available',
+      );
+      return;
+    }
     try {
-      await Linking.openURL(websiteUrl);
+      await Linking.openURL(sourceUrl);
     } catch {
       toast.error(
-        t('error.publicHousing.openFailed', 'Could not open the housing website') ||
-          'Could not open the housing website',
+        t('error.source.openFailed', 'Could not open the source website') ||
+          'Could not open the source website',
       );
     }
-  }, [apiProperty?.address?.regionName, t]);
+  }, [sourceUrl, t]);
 
   const handleShare = useCallback(async () => {
     if (!property) return;

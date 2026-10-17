@@ -20,12 +20,10 @@ import { colors } from '@/styles/colors';
 import { spacing, tracker } from '@/constants/styles';
 
 /**
- * Aspirational hero photo. Reuses the Unsplash open library (no API key, cached
- * aggressively by `expo-image`) like the rest of Homiio's merchandising photos —
- * a bright living room that reads as "a home you could bring to Homiio".
+ * Aspirational hero photo, bundled with the app: a bright living room that reads
+ * as "a home you could bring to Homiio".
  */
-const HERO_IMAGE =
-  'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=1600&q=80';
+const HERO_IMAGE = require('@/assets/images/agent-hero.jpg');
 
 interface AgentHeroProps {
   title: string;
@@ -49,7 +47,7 @@ export const AgentHero: React.FC<AgentHeroProps> = ({
   return (
     <View className="min-h-[520px] md:min-h-[480px] xl:min-h-[560px]" style={styles.hero}>
       <Image
-        source={{ uri: HERO_IMAGE }}
+        source={HERO_IMAGE}
         style={styles.image}
         contentFit="cover"
         transition={250}

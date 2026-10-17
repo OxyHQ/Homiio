@@ -82,7 +82,7 @@ export const LandlordSection: React.FC<LandlordSectionProps> = ({
             tone="accent"
             appearance="solid"
           >
-            {t('listing.cta.applyOnStateWebsite')}
+            {t('listing.cta.applyOnOfficialWebsite')}
           </Button>
         </View>
       </Section>

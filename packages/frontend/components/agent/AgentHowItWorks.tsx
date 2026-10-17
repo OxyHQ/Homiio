@@ -23,39 +23,27 @@ import { radius, spacing, tracker } from '@/constants/styles';
 interface Step {
   /** i18n suffix under `agent.how.steps.*`. */
   key: 'find' | 'list' | 'earn';
-  imageUrl: string;
+  image: number;
 }
 
 /**
- * Step photography (Unsplash open library, cached by `expo-image`). Chosen to
- * read as: spotting a place → publishing it → getting paid.
+ * Step photography, bundled with the app. Chosen to read as: spotting a place →
+ * publishing it → getting paid.
  */
 const STEPS: readonly Step[] = [
-  {
-    key: 'find',
-    imageUrl:
-      'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=900&q=80',
-  },
-  {
-    key: 'list',
-    imageUrl:
-      'https://images.unsplash.com/photo-1521791136064-7986c2920216?auto=format&fit=crop&w=900&q=80',
-  },
-  {
-    key: 'earn',
-    imageUrl:
-      'https://images.unsplash.com/photo-1554224155-6726b3ff858f?auto=format&fit=crop&w=900&q=80',
-  },
+  { key: 'find', image: require('@/assets/images/agent-step-find.jpg') },
+  { key: 'list', image: require('@/assets/images/agent-step-list.jpg') },
+  { key: 'earn', image: require('@/assets/images/agent-step-earn.jpg') },
 ] as const;
 
 interface StepCardProps {
   index: number;
   title: string;
   body: string;
-  imageUrl: string;
+  image: number;
 }
 
-const StepCard: React.FC<StepCardProps> = ({ index, title, body, imageUrl }) => {
+const StepCard: React.FC<StepCardProps> = ({ index, title, body, image }) => {
   const theme = useTheme();
   return (
     <View style={styles.step}>
@@ -63,7 +51,7 @@ const StepCard: React.FC<StepCardProps> = ({ index, title, body, imageUrl }) => 
           one of three in the row on wide screens. */}
       <View className="aspect-[5/3]" style={styles.photoWrap}>
         <Image
-          source={{ uri: imageUrl }}
+          source={image}
           style={styles.photo}
           contentFit="cover"
           transition={200}
@@ -108,7 +96,7 @@ export const AgentHowItWorks: React.FC = () => {
             index={stepIndex + 1}
             title={t(`agent.how.steps.${step.key}.title`)}
             body={t(`agent.how.steps.${step.key}.body`)}
-            imageUrl={step.imageUrl}
+            image={step.image}
           />
         ))}
       </View>
