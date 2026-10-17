@@ -347,7 +347,7 @@ describe('leaseController.signLease — signatures, status and the schedule', ()
     // This used to assert the pair "absent from the response, present in the
     // column" — which pinned a real leak-prevention property AND, underneath
     // it, a value that meant nothing: the client chose the string
-    // (`'accepted-in-app'`, a literal in `app/contracts/[id].tsx`), the server
+    // (`'accepted-in-app'`, a literal in `app/(pages)/contracts/[id].tsx`), the server
     // stored whatever arrived, and no read path could ever return it. A field
     // no reader can see and no writer is accountable for is not evidence.
     //

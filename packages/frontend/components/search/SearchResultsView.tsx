@@ -23,7 +23,7 @@ import { useCallback, useContext, useMemo, useRef, useState } from 'react';
 import { Platform, ScrollView, StyleSheet, View, type ViewStyle } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
-import { AppShellSplitPanes, useAppShellPaneAlone } from '@oxy.so/bloom/app-shell';
+import { AppShellPanel, AppShellPanels, useAppShellPanel } from '@oxy.so/bloom/app-shell';
 import { Button } from '@oxy.so/bloom/button';
 import { useBottomEdgeInset } from '@oxy.so/bloom/layout';
 import {
@@ -659,7 +659,7 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
       // browser-level check, or a person with the inspector open, can see that.
       nativeID={`search-list-${queryId}`}
       style={styles.listScroll}
-      // `scroll="fixed"` leaves the bottom bar's clearance to this list.
+      // The bounded panel leaves the bottom bar's clearance to this list.
       contentContainerStyle={{ paddingBottom: spacing['4xl'] + bottomEdge }}
       onScroll={listEnd.onScroll}
       onLayout={listEnd.onLayout}
@@ -765,43 +765,42 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
     </View>
   );
 
-  // Bloom's split panes: results and map side by side, with a draggable divider,
-  // once the panes' own box fits both (`SPLIT_FROM`); below that ONE pane at a
-  // time, switched by the floating Map / List toggle each pane shows while it is
-  // alone. The panes measure themselves, so a sidebar beside them counts.
+  // Two panels, results and map, laid out by Bloom's `AppShellPanels`: each its
+  // own surface with the shell's gutter between them and a divider that drags
+  // the results' width, once the group's own box fits both (`SPLIT_FROM`, the
+  // sidebar beside it counted). Below that ONE panel at a time, switched by the
+  // Map / List toggle each panel shows while it is alone; the map panel then
+  // carries the search bar itself.
   const toList = t('search.fab.list', 'List') || 'List';
   const toMap = t('search.fab.map', 'Map') || 'Map';
   return (
-    <View style={styles.container}>
-      {topBar}
-      <View style={styles.panes}>
-        <AppShellSplitPanes
-          pane={showMobileMap ? 'detail' : 'list'}
-          splitFrom={SPLIT_FROM}
-          listWidth={LIST_WIDTH}
-          listMinWidth={LIST_MIN_WIDTH}
-          listMaxWidth={LIST_MAX_WIDTH}
-          detailMinWidth={MAP_MIN_WIDTH}
-          paneScroll={false}
-          list={
-            <>
-              {listScroll}
-              <PaneToggle label={toMap} icon="map" onPress={toggleResultsView} />
-            </>
-          }
-          detail={
-            <>
-              {mapPanel}
-              <PaneToggle label={toList} icon="list" onPress={toggleResultsView} />
-            </>
-          }
-        />
-      </View>
-    </View>
+    <AppShellPanels collapseBelow={SPLIT_FROM} show={showMobileMap ? 'map' : 'results'}>
+      <AppShellPanel
+        id="results"
+        width={LIST_WIDTH}
+        minWidth={LIST_MIN_WIDTH}
+        maxWidth={LIST_MAX_WIDTH}
+        resizable
+      >
+        {topBar}
+        {listScroll}
+        <PaneToggle label={toMap} icon="map" onPress={toggleResultsView} />
+      </AppShellPanel>
+      <AppShellPanel id="map" minWidth={MAP_MIN_WIDTH}>
+        <WhenAlone>{topBar}</WhenAlone>
+        {mapPanel}
+        <PaneToggle label={toList} icon="list" onPress={toggleResultsView} />
+      </AppShellPanel>
+    </AppShellPanels>
   );
 };
 
-/** The Map / List toggle, shown only while its pane is drawn alone. */
+/** Renders its children only in a panel drawn alone. */
+function WhenAlone({ children }: { children: React.ReactNode }) {
+  return useAppShellPanel().alone ? <>{children}</> : null;
+}
+
+/** The Map / List toggle, shown only while its panel is drawn alone. */
 function PaneToggle({
   label,
   icon,
@@ -811,7 +810,7 @@ function PaneToggle({
   icon: 'map' | 'list';
   onPress: () => void;
 }) {
-  const alone = useAppShellPaneAlone();
+  const { alone } = useAppShellPanel();
   const bottomEdge = useBottomEdgeInset();
   if (!alone) return null;
   return (
@@ -823,21 +822,6 @@ function PaneToggle({
 }
 
 const styles = StyleSheet.create({
-  // The explore surface is mounted inside a fixed-viewport shell (see
-  // `app/_layout.tsx`), so on web it fills that bounded height and hides its own
-  // overflow — the page never scrolls; only the list column does. `height:'100%'`
-  // + `overflow:'hidden'` are web-only CSS values RN's `ViewStyle` lacks, so the
-  // web block is typed whole (same cast pattern as `topBar`/`listScroll` below).
-  container: Platform.select<ViewStyle>({
-    web: {
-      flex: 1,
-      height: '100%',
-      overflow: 'hidden',
-    } as unknown as ViewStyle,
-    default: {
-      flex: 1,
-    },
-  }) as ViewStyle,
   topBar: Platform.select<ViewStyle>({
     web: {
       position: 'sticky',
@@ -875,12 +859,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-  },
-  // The split panes fill what the top bar leaves; `minHeight: 0` keeps them
-  // bounded so each pane, not the page, owns its scroll.
-  panes: {
-    flex: 1,
-    minHeight: 0,
   },
   listScroll: Platform.select<ViewStyle>({
     web: { flex: 1, overflow: 'auto' } as unknown as ViewStyle,

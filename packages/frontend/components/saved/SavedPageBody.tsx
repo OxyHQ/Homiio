@@ -1,6 +1,6 @@
 /**
  * The signed-in Saved page — the Bloom housing template's Saved page, inside
- * Homiio's frame. The route (`app/(tabs)/saved/index.tsx`) owns the `Header`
+ * Homiio's frame. The route (`app/(pages)/(tabs)/saved/index.tsx`) owns the `Header`
  * and the sign-in gate; this owns everything under them, as the screen's scroller.
  *
  * One column, top to bottom, each section from real data only:

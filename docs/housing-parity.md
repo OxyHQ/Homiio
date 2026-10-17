@@ -43,7 +43,7 @@ the unblocked start) and **#523** (Sindi contextual actions).
 
 | Bloom reference | Homiio | Status | Evidence / gap |
 |---|---|---|---|
-| App opens straight into housing | `app/(tabs)/index.tsx` | **live** | #522. The mandatory picker is gone; `locationScopeLadder.ts` ends in `discovery`, and two sweeps fail if a barrier returns. |
+| App opens straight into housing | `app/(pages)/(tabs)/index.tsx` | **live** | #522. The mandatory picker is gone; `locationScopeLadder.ts` ends in `discovery`, and two sweeps fail if a barrier returns. |
 | — (Homiio-only) | `GET /api/geo/approximate-location` | **partial** | #522. Endpoint, matcher, trust boundary and client are live and tested; **the DB-IP City Lite file is not installed yet** (it will be served from GoWay), so production answers `not_configured` and falls back to discovery. `docs/geoip.md`. |
 | `HousingHeader` search | `components/search/HomeSearch.tsx` | **live** | States the area it queries; inferred areas read "· approximate area". `__tests__/location/scopeWhere.test.ts`. |
 | Destinations when unplaced | `components/home/HomeDiscoveryBoard.tsx` | **live** | #522. Real cities with inventory, each declaring its scope; never `global=true`. |
@@ -159,9 +159,9 @@ a lift is not part of the address.
 | Bloom | Homiio | Status | Gap |
 |---|---|---|---|
 | Gallery, facts, amenities | `PropertyOverview`, `AmenitiesGrid`, `DetailIconGrid` | **live** | |
-| Save / share / report | `PropertyActionBar`, `app/properties/[id]/report.tsx` | **live** | |
+| Save / share / report | `PropertyActionBar`, `app/(pages)/properties/[id]/report.tsx` | **live** | |
 | Contact / visit | `LandlordSection`, `book-viewing.tsx`, `viewing-availability.tsx` | **live** | **The slots are real.** An owner publishes recurring weekly windows (`property_viewing_windows`) in the home's own timezone, and `GET /api/properties/:id/viewing-availability` — public, like the stay calendar — is where the booking screen gets its times. The thirteen hardcoded `TIME_SLOTS` are gone; a listing with no published schedule says so and lets a visitor PROPOSE a time instead of picking an invented one. A viewing now carries a duration, a modality (in person / video) and the owner's own words on the decision, so a conflict is an OVERLAP rather than an identical instant. External listings keep their source CTA |
-| Apply | `app/properties/[id]/apply.tsx` | **live** | |
+| Apply | `app/(pages)/properties/[id]/apply.tsx` | **live** | |
 | Place reviews | `ReviewsSection`, `CommunityNotesSection` | **live** | Building/unit reviews, kept distinct from stay reviews |
 | Floor plans | — | **open** | No column, no upload, no render |
 | Energy label | — | **open** | No column |
@@ -176,7 +176,7 @@ a lift is not part of the address.
 
 | Bloom | Homiio | Status | Gap |
 |---|---|---|---|
-| `LeaseSummaryCard` | `app/my-home.tsx` | **live** | |
+| `LeaseSummaryCard` | `app/(pages)/my-home.tsx` | **live** | |
 | `RentPaymentList` | `LeasePaymentsSection`, `LeaseLedgerSection` | **live** | The **ledger** exists (`lease_payment_movements`): obligation, attempt, confirmed payment, manual declaration, partial, refund and a DERIVED balance, with idempotency on every write. A tenant declares a transfer and a landlord confirms it. Receipts are derived from the ledger and downloadable by both parties; the processor is blocked — see below |
 | "Pay rent" (a checkout) | — | **blocked** | Peable backend readiness is deployed and SDK0.2.2/shared-types0.3.0 are published; Mercaria-specific Checkout/TestClock exercises passed against Stripe TEST. Homiio adopts the published verifier in an **unmounted contract seam**, not a live checkout or webhook. Homiio still needs its own verified identity/environment/merchant/rail configuration and authorized ingress/obligation correlation; Mercaria evidence does not establish those. [Current evidence and activation gates](./peable-rent-payments) |
 | `MaintenanceRequestCard` / repairs | `MaintenanceSection`, `/maintenance/*` | **live** | `maintenance_requests` + comments + events + attachments, a declared state machine under a row lock, authorization in the repository query, notifications through the dispatcher. Photos go through the private path — stored under `private/`, re-encoded so the phone's GPS does not travel with them, delivered only to the two sides of the lease |
@@ -188,7 +188,7 @@ a lift is not part of the address.
 | Wishlists / collections | `savedPropertyFolders` | **live** | Owner-scoped |
 | Trips and swaps | `useUpcomingBookings`, `utils/upcomingBookings.ts` | **live** | Real rows, one occupancy rule behind them (`db/availability/occupancy.ts`) — a reservation, a confirmed exchange and a blocked window each block the other two — and one classification in front of them, now drawn as the template's `TripCard`s on BOTH surfaces §7.5 names. **My home** shows what is COMMITTED (a confirmed stay, an accepted swap, an approved viewing), because a lease screen is about dates somebody has to keep. **Saved** shows what is OPEN, pending requests included, because a collection surface is where things under consideration belong — that section already existed and was kept rather than duplicated; what it lacked was honesty, since it returned `null` on a failed fetch and so drew a 500 as an empty diary. Viewings are deliberately absent from Saved: a tour of a rental is not a trip. Loading, total failure, partial failure and genuinely empty are four different renderings, and a `TripCard` on an external listing keeps `ExternalSourceButton` and gets no in-app press |
 | `PublishPage` wizard | `useCreatePropertyWizard`, `properties/create.tsx` | **live** | Real uploads, server validation, no `setTimeout` success anywhere. **Publishing with photos was broken and is fixed**: the body carried `{url, caption, isPrimary}` and `property_images.image_id` is NOT NULL, so every publish with a photo was a `23502`/500 from the Postgres write-path cutover (#281) until #541. A photo now names either the canonical `images` row it already is or the storage keys it was uploaded under — the row is minted at publish, once the listing has an id — and carries its **order**, which the backend always honoured and the body never sent. An interruption now restores what was typed AND the step it was typed on (the form store persists itself; the named drafts remember their step). Drafts remain client-side — there is no server draft resource |
-| `EvictionsPage` | `app/evictions/*` | **live** | Board, detail, timeline, resources, RSVP — a Homiio domain the template only sketches |
+| `EvictionsPage` | `app/(pages)/evictions/*` | **live** | Board, detail, timeline, resources, RSVP — a Homiio domain the template only sketches |
 | `HousingWidgets` | `components/widgets/*` | **partial** | Saved searches and featured are real; the area-price and neighbourhood widgets are gated off by default and show nothing invented |
 
 ---

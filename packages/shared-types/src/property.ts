@@ -514,7 +514,7 @@ export interface SavedProperty extends Property {
    * The collection this save belongs to, or absent for the unfiled list.
    *
    * The API has always returned it; the type did not declare it, so every
-   * reader that needed it cast — `app/(tabs)/saved/[folderId]/index.tsx` did
+   * reader that needed it cast — `app/(pages)/(tabs)/saved/[folderId]/index.tsx` did
    * exactly that to filter a folder's contents. A field that exists on the wire
    * and not in the contract is one every new reader has to rediscover, so it is
    * declared here instead.

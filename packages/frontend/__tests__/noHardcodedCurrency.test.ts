@@ -89,7 +89,7 @@ const ALLOWED: ReadonlyArray<{ path: string; why: string }> = [
   {
     // Deliberately locale-INDEPENDENT: the value is an `HH:MM` key matched
     // against the time-slot list, never rendered. The file says so at the line.
-    path: 'packages/frontend/app/properties/[id]/book-viewing.tsx',
+    path: 'packages/frontend/app/(pages)/properties/[id]/book-viewing.tsx',
     why: 'HH:MM slot key, not a display string (comment at the call site)',
   },
   {

@@ -393,7 +393,10 @@ if the mount is removed.
 
 ## Frontend routes
 
-Expo Router, `packages/frontend/app/`.
+Expo Router, `packages/frontend/app/`. Every section below except `explore`
+lives in the `(pages)` route group, whose layout makes each page ONE reading
+panel (Bloom `AppShellPanel`); a group adds no URL segment. `explore` sits
+outside it because it is two panels — results and a map (`AppShellPanels`).
 
 | Segment | Screens |
 |---|---|

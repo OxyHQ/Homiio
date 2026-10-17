@@ -40,20 +40,20 @@ Domain events (lease signed, viewing approved, roommate request received, …) p
 
 ### Screens
 
-1. **Inbox** (`app/(tabs)/inbox/index.tsx`, route `/inbox`)
+1. **Inbox** (`app/(pages)/(tabs)/inbox/index.tsx`, route `/inbox`)
    - The notifications list: Bloom `Search` plus an All/Unread `SegmentedControl`
    - Server mailbox rows plus locally scheduled reminders (a Bloom `SettingsListGroup`)
    - A Bloom `Admonition` with an enable button while permission is missing
    - Row press marks read and follows the deep link (`data.screen`, else a type fallback)
    - Mark all read from the header; delete from a row's delete button or a long
      press, always behind Bloom `confirm()`
-   - `app/notifications.tsx` is only a redirect to `/inbox`, kept for old links
+   - `app/(pages)/notifications.tsx` is only a redirect to `/inbox`, kept for old links
      and push payloads
    - Bloom `NotificationCenter` is deliberately not used: it is a fixed-size
      popover with its own tabs and local read state, and has no row press,
      search or delete
 
-2. **Notification Settings** (`app/settings/notifications.tsx`)
+2. **Notification Settings** (`app/(pages)/settings/notifications.tsx`)
    - Bloom `SettingsListGroup` + `Switch` rows for categories and behaviour
    - Permission state (a Bloom `Admonition` with an enable button when missing)
    - Test notification functionality (development builds only)

@@ -5,7 +5,7 @@
  * ## A new domain
  *
  * Homiio had no maintenance anything before this table, and
- * `app/my-home.tsx` said so in its own header while both epics rejected that as
+ * `app/(pages)/my-home.tsx` said so in its own header while both epics rejected that as
  * an ending. The nearest existing rows are `lease_inspections` — a landlord's
  * scheduled walkthrough — which is a different fact reported by a different
  * person about a building that is not yet broken.

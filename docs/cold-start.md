@@ -73,7 +73,7 @@ because the rule runs at error.
 `setState({ isLoading: true, error: null })` before its first `await`, called
 from an effect, which is a real cascading render on mount. Unlike `ProfileContext`
 (fixed by deleting dead API) this state is LIVE, since
-`app/(tabs)/inbox/index.tsx` consumes `isLoading` and `error`, so the fix is to
+`app/(pages)/(tabs)/inbox/index.tsx` consumes `isLoading` and `error`, so the fix is to
 move the notifications list to React Query, which is already the design this
 file's own notifications section describes (refetch-on-focus plus invalidation);
 the hand-rolled `useState` is the drift. `notifications`, `unreadCount`,

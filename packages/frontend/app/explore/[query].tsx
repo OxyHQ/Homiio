@@ -1,5 +1,6 @@
 import { Redirect, useLocalSearchParams } from 'expo-router';
 import { View } from 'react-native';
+import { AppShellPanel } from '@oxy.so/bloom/app-shell';
 import { Loading } from '@oxy.so/bloom/loading';
 
 /** `/explore/<query>` — a legacy path, redirected to the explore screen. */
@@ -9,9 +10,11 @@ export default function SearchQueryScreen() {
   const href = query ? `/explore?query=${encodeURIComponent(query)}` : '/explore';
 
   return (
-    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-      <Redirect href={href} />
-      <Loading size="lg" />
-    </View>
+    <AppShellPanel>
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <Redirect href={href} />
+        <Loading size="lg" />
+      </View>
+    </AppShellPanel>
   );
 }

@@ -11,7 +11,7 @@
 as its content, and nothing else as the frame:
 
 ```tsx
-<AppShell variant="feed" panel scroll="page" header={null}
+<AppShell variant="feed" panels scroll="page" header={null}
   sidebar={…} drawer="reveal" aside={…} bottomBar={<HomiioBottomBar />}>
   <Slot />
 </AppShell>
@@ -24,8 +24,13 @@ layout forks.
 
 - `sidebar` is `useHomiioSidebarProps()` (`components/SideBar`): Bloom `Sidebar`
   PROPS, not a component. The drawer's open state is `uiStore.mobileDrawerOpen`.
-- `panel`: every page renders inside the shell's framed `ContentPanel`. A page
-  paints no background, card frame or corner of its own.
+- `panels`: the routes are made of Bloom PANELS, and the shell frames them —
+  the 8px gutter on all four sides and between panels from `lg` (where the
+  sidebar goes in flow), full-bleed with no gutter below it. Every page except
+  explore is ONE panel: it lives in the `app/(pages)/` route group, whose layout
+  is `<AppShellPanel><Slot /></AppShellPanel>` (a group adds no URL segment). A
+  new page goes under `(pages)/`. A page paints no background, card frame or
+  corner of its own.
 - `bottomBar` is `components/HomiioBottomBar.tsx` (Bloom `BottomBar`), shown
   while the sidebar is a drawer.
 - `aside` is `RightBar`. Decide whether there is a column with
@@ -79,11 +84,13 @@ content in one `ScreenScrollView` — no background, no other vertical scroller:
 stays in document flow); on native the shell adds no scroll view and the route's
 `ScreenScrollView` is the scroller. A page that renders its content outside a
 `ScreenScrollView` does not scroll on native. Horizontal rows and scrollers inside
-sheets are fine. `/explore` is the exception: the shell runs `scroll="fixed"`
-there, and the results and the map are Bloom's `AppShellSplitPanes` — side by
-side with a draggable divider once the panes' own box fits both, one at a time
-below that, switched by the Map / List toggle each pane shows while
-`useAppShellPaneAlone()`. Explore has no right rail.
+sheets are fine. `/explore` is TWO panels, results and the map — Bloom's
+`AppShellPanels`, outside the `(pages)` group: side by side with a draggable
+divider once the group's own box fits both, one at a time below that, switched
+by the Map / List toggle each panel shows while `useAppShellPanel().alone`. The
+group is one viewport tall, so explore needs no scroll mode of its own; each
+panel scrolls itself. Its error states are one `AppShellPanel`. Explore has no
+right rail.
 
 ### Breakpoints are NativeWind classes
 
