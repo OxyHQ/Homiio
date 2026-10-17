@@ -30,6 +30,11 @@
  *    `NULLS LAST` explicitly and priced listings always rank above unpriced ones.
  *  - **`has_images DESC` leads every sort** — the product rule, and
  *    the leading column of `properties_has_images_created_at_idx`.
+ *  - **The id closes every sort.** Prices and `created_at` tie — an ingest run
+ *    inserts a batch with one timestamp — and Postgres orders ties however the
+ *    plan reads them, so the same `OFFSET` could cut between equal rows
+ *    differently on the next request and a listing would repeat on page two or
+ *    never appear. `findProperties` appends `id` itself, so no feed can forget.
  *
  * ## What this module does NOT do
  *
@@ -83,7 +88,10 @@ export interface DistanceOrigin {
 
 export interface PropertyReadOptions {
   where?: SQL;
-  /** Applied in order. Callers build these with {@link propertyOrderBy}. */
+  /**
+   * Applied in order, then `id` as the final tie-breaker. Callers build these
+   * with {@link propertyOrderBy}.
+   */
   orderBy?: SQL[];
   limit?: number;
   offset?: number;
@@ -182,7 +190,7 @@ export async function findProperties(options: PropertyReadOptions): Promise<Hydr
     .where(options.where)
     .$dynamic();
 
-  if (options.orderBy && options.orderBy.length > 0) query.orderBy(...options.orderBy);
+  query.orderBy(...(options.orderBy ?? []), asc(properties.id));
   if (options.limit !== undefined) query.limit(options.limit);
   if (options.offset !== undefined) query.offset(options.offset);
 
