@@ -11,7 +11,7 @@
  *   - Flat wrappers (hairline border) around list content.
  */
 import { useCallback, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { RefreshControl, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@oxy.so/bloom/button';
@@ -41,6 +41,7 @@ import { RoommateRequestComponent } from '@/components/RoommateRequest';
 import { RoommateRelationshipComponent } from '@/components/RoommateRelationship';
 import { RoomList } from '@/components/RoomList';
 import { useProfile } from '@/context/ProfileContext';
+import { useRoomsFeed } from '@/hooks/useRoomsFeed';
 import {
   useRoommate,
   type RoommateProfile,
@@ -211,6 +212,9 @@ export default function RoommatesPage() {
       }));
     }
   }
+
+  const showRooms = activeTab === 'rooms' && hasProfile;
+  const roomsFeed = useRoomsFeed(roomFilters, showRooms);
 
   const renderDiscoverTab = () => {
     if (!hasProfile || !hasProfile) {
@@ -403,7 +407,7 @@ export default function RoommatesPage() {
 
     return (
       <View style={styles.roomsWrap}>
-        <RoomList filters={roomFilters} onFilterChange={setRoomFilters} />
+        <RoomList feed={roomsFeed} filters={roomFilters} onFilterChange={setRoomFilters} />
       </View>
     );
   };
@@ -494,20 +498,18 @@ export default function RoommatesPage() {
 
   const tabContent = <View style={styles.content}>{renderTabContent()}</View>;
 
-  // The Rooms tab is `RoomList`, which scrolls and paginates its own list, so it
-  // fills the screen below the title block instead of nesting in a scroller.
-  if (activeTab === 'rooms' && hasProfile) {
-    return (
-      <Screen documentScroll>
-        {titleBlock}
-        {tabContent}
-      </Screen>
-    );
-  }
-
+  // The page owns the one scroller: on the Rooms tab it paginates and refreshes
+  // the room feed, which `RoomList` only renders.
   return (
     <Screen documentScroll>
-      <ScreenScrollView>
+      <ScreenScrollView
+        onEndReached={showRooms ? roomsFeed.loadMore : undefined}
+        refreshControl={
+          showRooms ? (
+            <RefreshControl refreshing={roomsFeed.refreshing} onRefresh={roomsFeed.refresh} />
+          ) : undefined
+        }
+      >
         {titleBlock}
         {tabContent}
       </ScreenScrollView>
